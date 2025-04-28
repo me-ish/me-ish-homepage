@@ -23,22 +23,24 @@ const Step3_SalesAndAgreement = () => {
   }, []);
 
   return (
-    <div className="form-step">
+    <div className="step3-sales-agreement">
+      {/* 販売選択 */}
       <label className="form-label">
-        この作品を販売しますか？
-        <span className="required-inline">※必須</span><br />
+        この作品を販売しますか？ <span className="required-inline">※必須</span><br />
         <label><input type="radio" value="yes" {...register('isForSale', { required: true })} /> はい</label>&nbsp;&nbsp;
         <label><input type="radio" value="no" {...register('isForSale', { required: true })} /> いいえ</label>
       </label>
 
       {isForSale === 'yes' && (
         <>
+          {/* 販売形式選択 */}
           <label className="form-label">
             販売形式 <span className="required-inline">※必須</span><br />
             <label><input type="radio" value="normal" {...register('saleType', { required: true })} /> 通常販売</label>&nbsp;&nbsp;
             <label><input type="radio" value="nft" {...register('saleType', { required: true })} /> NFT販売</label>
           </label>
 
+          {/* 販売価格 */}
           <label className="form-label">
             販売価格（円・税込） <span className="required-inline">※必須</span><br />
             <input
@@ -51,6 +53,7 @@ const Step3_SalesAndAgreement = () => {
             <small style={{ color: '#666' }}>※円単位で半角数字のみ / 税込価格</small>
           </label>
 
+          {/* NFT販売のウォレットアドレス */}
           {saleType === 'nft' && (
             <label className="form-label">
               ウォレットアドレス（任意）<br />
@@ -67,6 +70,7 @@ const Step3_SalesAndAgreement = () => {
 
       <hr style={{ margin: '2rem 0' }} />
 
+      {/* 利用規約 */}
       <div
         className="terms-box"
         ref={scrollRef}
@@ -92,6 +96,7 @@ const Step3_SalesAndAgreement = () => {
         </p>
       </div>
 
+      {/* 利用規約同意チェックボックス */}
       <div className="checkbox-row">
         <input
           type="checkbox"
@@ -102,12 +107,14 @@ const Step3_SalesAndAgreement = () => {
         <span className="required-inline">※必須</span>
       </div>
 
+      {/* 自作確認チェックボックス */}
       <div className="checkbox-row">
         <input type="checkbox" {...register('confirmRights', { required: true })} />
         <span>自作作品であり、第三者の権利を侵害していません</span>
         <span className="required-inline">※必須</span>
       </div>
 
+      {/* AIによる作品確認 */}
       <div className="checkbox-row">
         <input type="checkbox" {...register('confirmOriginal', { required: true })} />
         <span>AIによる自動生成作品ではありません</span>
@@ -118,3 +125,4 @@ const Step3_SalesAndAgreement = () => {
 };
 
 export default Step3_SalesAndAgreement;
+

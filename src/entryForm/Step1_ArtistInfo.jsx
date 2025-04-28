@@ -5,8 +5,7 @@ const Step1_ArtistInfo = () => {
   const { register } = useFormContext();
 
   return (
-    <div className="form-step">
-
+    <div className="step1-artist-info">
       {/* 作家名 */}
       <label className="form-label">
         作家名（公開名）
@@ -59,7 +58,6 @@ const Step1_ArtistInfo = () => {
         {...register('instagramUrl')}
         placeholder="例）https://instagram.com/yourusername"
       />
-
     </div>
   );
 };

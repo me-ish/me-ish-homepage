@@ -22,8 +22,8 @@ const Step2_WorkInfo = () => {
   }, [image]);
 
   return (
-    <div className="form-step">
-      {/* ✅ ギャラリー選択追加 */}
+    <div className="step2-work-info">
+      {/* ギャラリー選択 */}
       <label className="form-label">
         応募先ギャラリー <span className="required-inline">※必須</span>
         <select
@@ -37,6 +37,7 @@ const Step2_WorkInfo = () => {
         </select>
       </label>
 
+      {/* 作品タイトル */}
       <label className="form-label">
         作品タイトル <span className="required-inline">※必須</span>
         <input
@@ -46,6 +47,7 @@ const Step2_WorkInfo = () => {
         />
       </label>
 
+      {/* 作品画像 */}
       <label className="form-label">
         作品画像（jpg/png、10MB以下、推奨サイズ：1200px以上） <span className="required-inline">※必須</span>
         <input
@@ -66,6 +68,7 @@ const Step2_WorkInfo = () => {
         </div>
       )}
 
+      {/* 作品説明 */}
       <label className="form-label">
         作品説明（任意）
         <textarea
@@ -80,3 +83,4 @@ const Step2_WorkInfo = () => {
 };
 
 export default Step2_WorkInfo;
+

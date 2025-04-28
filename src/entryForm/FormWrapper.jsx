@@ -82,21 +82,19 @@ function FormWrapper() {
         .from('artworks')
         .getPublicUrl(fileName).data.publicUrl;
   
-      const { error: insertError } = await supabase.from('entries').insert([
-        {
-          artist_name: data.artistName,
-          email: data.email,
-          sns_links: snsLinksJson,   // 🔥ここ正しく使う！
-          title: data.title,
-          description: data.description || '',
-          is_for_sale: data.isForSale === 'yes',
-          sale_type: data.saleType || '',
-          price: data.price ? Number(data.price) : null,
-          wallet_address: data.wallet || '',
-          image_url: imageUrl,
-          gallery_type: data.gallery_type || '',
-        },
-      ]);
+      const { error: insertError } = await supabase.from('entries').insert([{
+        artist_name: data.artistName,
+        email: data.email,
+        sns_links: snsLinksJson,
+        title: data.title,
+        description: data.description || '',
+        is_for_sale: data.isForSale === 'yes',
+        sale_type: data.saleType || '',
+        price: data.price ? Number(data.price) : null,
+        wallet_address: data.wallet || '',
+        image_url: imageUrl,
+        gallery_type: data.gallery_type || '',
+      }]);
   
       if (insertError) {
         console.error('DB保存エラー:', insertError.message);
@@ -111,7 +109,6 @@ function FormWrapper() {
       alert(`送信中にエラーが発生しました：${e.message}`);
     }
   };
-  
 
   return (
     <FormProvider {...methods}>
@@ -158,26 +155,26 @@ function FormWrapper() {
             </motion.div>
           )}
 
-{step === 5 && (
-  <motion.div
-    key="step5"
-    initial={{ x: 300, opacity: 0 }}
-    animate={{ x: 0, opacity: 1 }}
-    exit={{ x: -300, opacity: 0 }}
-    transition={{ duration: 0.4 }}
-    className="form-complete"
-  >
-    <h2 className="form-title">送信完了！</h2>
-    <p>ご応募ありがとうございました。</p>
-    <p>ご記入いただいた内容を確認し、後日ご連絡いたします。</p>
+          {step === 5 && (
+            <motion.div
+              key="step5"
+              initial={{ x: 300, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -300, opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              className="form-complete"
+            >
+              <h2 className="form-title">送信完了！</h2>
+              <p>ご応募ありがとうございました。</p>
+              <p>ご記入いただいた内容を確認し、後日ご連絡いたします。</p>
 
-    <div className="form-nav">
-      <a href="/float">
-        <button type="button">ギャラリーに戻る</button>
-      </a>
-    </div>
-  </motion.div>
-)}
+              <div className="form-nav">
+                <a href="/float">
+                  <button type="button">ギャラリーに戻る</button>
+                </a>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </form>
     </FormProvider>
@@ -185,3 +182,4 @@ function FormWrapper() {
 }
 
 export default FormWrapper;
+

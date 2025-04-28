@@ -77,4 +77,3 @@ const ConfirmPage = ({ onBack, onSubmit }) => {
 };
 
 export default ConfirmPage;
-
