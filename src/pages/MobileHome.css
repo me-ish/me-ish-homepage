@@ -1,0 +1,80 @@
+/* MobileHome.css */
+
+/* ナビゲーションバー */
+.nav-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .menu-toggle {
+    display: block;
+    font-size: 2rem;
+    background: none;
+    border: none;
+    color: #333;
+    cursor: pointer;
+  }
+  
+  .nav-links {
+    display: none;
+    flex-direction: column;
+  }
+  
+  .nav-links.open {
+    display: flex;
+  }
+  
+  /* Heroセクション */
+  .hero {
+    text-align: center;
+    padding: 20px;
+  }
+  
+  .logo {
+    font-size: 2rem;
+  }
+  
+  .subtitle {
+    font-size: 1.2rem;
+  }
+  
+  /* ギャラリー */
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* ギャラリーカードを縦並び */
+    gap: 1rem;
+  }
+  
+  .gallery-card img {
+    width: 100%;
+    border-radius: 8px;
+  }
+  
+  /* ボタン */
+  .gallery-button, .apply-button, .more-faq-button {
+    padding: 0.8rem 1.6rem;
+    font-size: 1rem;
+  }
+  
+  /* FAQリスト */
+  .faq-list {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .faq-list li {
+    margin: 1rem 0;
+  }
+  
+  /* フッター */
+  .footer-links {
+    display: block;
+    text-align: center;
+  }
+  
+  .footer-links a {
+    display: block;
+    margin: 5px 0;
+  }
+  
