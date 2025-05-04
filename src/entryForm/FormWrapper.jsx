@@ -56,32 +56,35 @@ function FormWrapper() {
         twitter: data.twitterUrl || '',
         instagram: data.instagramUrl || '',
       };
-  
       const snsLinksJson = JSON.stringify(snsLinks);
-  
+
       const imageFile = Array.isArray(data.image) ? data.image[0] : data.image;
       if (!imageFile) {
         alert('画像ファイルが見つかりませんでした');
         return;
       }
-  
-      const safeName = imageFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+
+      // 修正ポイント：アンダーバー2つを維持しつつ不正文字を除外
+      const safeName = imageFile.name
+        .normalize("NFKC")                      // 全角を半角へ、結合文字除去など
+        .replace(/[^\w.\-]/g, '_');             // アンダーバー・英数字・ドット・ハイフンのみ許可
+
       const fileName = `${Date.now()}_${safeName}`;
-  
+
       const { error: uploadError } = await supabase.storage
         .from('artworks')
         .upload(fileName, imageFile);
-  
+
       if (uploadError) {
         console.error('画像アップロードエラー:', uploadError);
         alert('画像のアップロードに失敗しました');
         return;
       }
-  
+
       const imageUrl = supabase.storage
         .from('artworks')
         .getPublicUrl(fileName).data.publicUrl;
-  
+
       const { error: insertError } = await supabase.from('entries').insert([{
         artist_name: data.artistName,
         email: data.email,
@@ -94,16 +97,16 @@ function FormWrapper() {
         wallet_address: data.wallet || '',
         image_url: imageUrl,
         gallery_type: data.gallery_type || '',
+        file_name: fileName,  // Supabaseに正確な名前を登録
       }]);
-  
+
       if (insertError) {
         console.error('DB保存エラー:', insertError.message);
         alert('データの保存に失敗しました');
         return;
       }
-  
+
       setStep(5);
-  
     } catch (e) {
       console.error('送信中のエラー:', e);
       alert(`送信中にエラーが発生しました：${e.message}`);
@@ -182,4 +185,3 @@ function FormWrapper() {
 }
 
 export default FormWrapper;
-

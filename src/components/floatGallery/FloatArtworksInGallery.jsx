@@ -18,7 +18,7 @@ export default function FloatArtworksInGallery({ avatarRef, artworkRefs }) {
       const { data, error } = await supabase
         .from('entries')
         .select('*')
-        .eq('is_approved', true)
+        .eq('confirmed', true)
         .eq('gallery_type', 'float')
         .order('created_at', { ascending: false });
 

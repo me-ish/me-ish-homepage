@@ -13,7 +13,7 @@ export default function GalleryView() {
     const { data, error } = await supabase
       .from('entries')
       .select('*')
-      .eq('is_approved', true)
+      .eq('confirmed', true)
       .order('created_at', { ascending: false });
 
     if (error) {
