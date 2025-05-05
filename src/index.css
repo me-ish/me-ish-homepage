@@ -260,7 +260,7 @@ button:hover {
   font-size: 0.9em;
 }
 
-/* モバイル対応（768px以下） */
+/* モバイル対応（1024px以下） */
 @media (max-width: 768px) {
   .step1-artist-info {
     padding: 15px; /* モバイル用に余白を調整 */

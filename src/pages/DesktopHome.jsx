@@ -3,7 +3,7 @@ import './DesktopHome.css';
 
 const Home = () => {
   return (
-    <div className="home">
+    <div className="desktop-home">
       {/* ナビゲーションバー */}
       <header className="nav-header fade-in">
         <nav className="nav-inner">

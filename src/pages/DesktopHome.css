@@ -1,82 +1,12 @@
-/* === 全体共通 === */
-body {
+.desktop-home {
   margin: 0;
   font-family: 'Zen Maru Gothic', sans-serif;
   background: #fff;
   color: #333;
 }
 
-/* === ナビゲーションバー === */
-.nav-header {
-  position: sticky;
-  top: 0;
-  background-color: white;
-  z-index: 100;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
-  padding: 0.5rem 1.5rem;
-}
-
-/* ヘッダー内コンテナ */
-.nav-inner {
-  display: flex;
-  justify-content: space-between; /* 明示的にロゴとリンクを両端に配置 */
-  align-items: center;
-  max-width: 1200px;
-  justify-content: space-between; 
-  margin: 0 auto;
-  padding: 0 1rem;
-  flex-wrap: nowrap; /* 折り返さないようにする（重要） */
-}
-
-/* ロゴ（左寄せ） */
-.nav-logo {
-  font-family: 'Lilita One', cursive;
-  font-size: 1.8rem;
-  color: #00a1e9;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-}
-
-/* 仮公開中バッジ */
-.beta-badge {
-  font-size: 0.6rem;
-  color: white;
-  background-color: crimson;
-  padding: 2px 6px;
-  margin-left: 10px;
-  border-radius: 4px;
-}
-
-/* ナビゲーションリンク（右寄せ） */
-.nav-links {
-  display: flex;
-  list-style: none;
-  gap: 1.2rem;
-  margin: 0;
-  padding: 0;
-  flex-wrap: nowrap;   /* 念のため折り返し防止 */
-}
-
-.nav-links li {
-  display: inline;
-}
-
-.nav-links a {
-  text-decoration: none;
-  color: #333;
-  font-weight: 500;
-  font-size: 1rem;
-  transition: color 0.2s;
-  white-space: nowrap;
-}
-
-.nav-links a:hover {
-  color: #00a1e9;
-}
-
 /* === Heroセクション === */
-.hero {
+.desktop-home .hero {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -86,7 +16,18 @@ body {
   padding: 40px 20px;
 }
 
-.logo {
+/* 仮公開中バッジ */
+.desktop-home .beta-badge {
+  font-size: 0.6rem;
+  color: white;
+  background-color: crimson;
+  padding: 2px 6px;
+  margin-left: 8px;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+.desktop-home .logo {
   font-family: 'Lilita One', cursive;
   font-size: 4.5rem;
   color: #00a1e9;
@@ -94,8 +35,7 @@ body {
   font-weight: 700;
 }
 
-.subtitle {
-  font-family: 'Zen Maru Gothic', sans-serif;
+.desktop-home .subtitle {
   font-size: 1.8rem;
   color: #333;
   margin-top: 1rem;
@@ -103,20 +43,20 @@ body {
 }
 
 /* === Aboutセクション === */
-.about {
+.desktop-home .about {
   padding: 60px 20px;
   background: #fff;
   color: #333;
 }
 
-.about-inner {
+.desktop-home .about-inner {
   max-width: 800px;
   margin: 0 auto;
   font-size: 1.1rem;
   line-height: 1.8;
 }
 
-.about h2 {
+.desktop-home .about h2 {
   font-size: 2.5rem;
   color: #00a1e9;
   font-weight: 700;
@@ -125,25 +65,71 @@ body {
   font-family: 'Lilita One', cursive;
 }
 
-.about p {
+.desktop-home .about p {
   margin-bottom: 1.2rem;
 }
 
+/* === ナビゲーションバー === */
+.desktop-home .nav-header {
+  position: sticky;
+  top: 0;
+  background-color: white;
+  z-index: 100;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  padding: 0.5rem 1.5rem;
+  transition: top 0.3s;
+}
+
+.desktop-home .nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.desktop-home .nav-logo {
+  font-family: 'Lilita One', cursive;
+  font-size: 1.8rem;
+  color: #00a1e9;
+  font-weight: bold;
+}
+
+.desktop-home .nav-links {
+  list-style: none;
+  display: flex;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+}
+
+.desktop-home .nav-links a {
+  text-decoration: none;
+  color: #333;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: color 0.2s;
+}
+
+.desktop-home .nav-links a:hover {
+  color: #00a1e9;
+}
+
 /* === Galleryセクション === */
-.gallery-section {
+.desktop-home .gallery-section {
   padding: 60px 20px;
   background: #f9f9f9;
   text-align: center;
 }
 
-.gallery-section h2 {
+.desktop-home .gallery-section h2 {
   font-family: 'Lilita One', cursive;
   font-size: 2.2rem;
   color: #00a1e9;
   margin-bottom: 2rem;
 }
 
-.gallery-grid {
+.desktop-home .gallery-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
@@ -151,7 +137,7 @@ body {
   margin: 0 auto;
 }
 
-.gallery-card {
+.desktop-home .gallery-card {
   background: #fff;
   padding: 1.5rem;
   border-radius: 12px;
@@ -159,29 +145,29 @@ body {
   transition: transform 0.2s;
 }
 
-.gallery-card:hover {
+.desktop-home .gallery-card:hover {
   transform: translateY(-5px);
 }
 
-.gallery-card img {
+.desktop-home .gallery-card img {
   width: 100%;
   border-radius: 8px;
   margin-bottom: 1rem;
 }
 
-.gallery-card h3 {
+.desktop-home .gallery-card h3 {
   font-size: 1.4rem;
   margin-bottom: 0.5rem;
   color: #00a1e9;
 }
 
-.gallery-card p {
+.desktop-home .gallery-card p {
   font-size: 0.95rem;
   color: #444;
   margin-bottom: 1rem;
 }
 
-.gallery-button {
+.desktop-home .gallery-button {
   display: inline-block;
   padding: 0.6rem 1.2rem;
   background: #00a1e9;
@@ -192,36 +178,36 @@ body {
   transition: background 0.2s;
 }
 
-.gallery-button:hover {
+.desktop-home .gallery-button:hover {
   background: #008ec4;
 }
 
 /* === Applyセクション === */
-.apply-section {
+.desktop-home .apply-section {
   padding: 80px 20px;
   background: #fff;
   text-align: center;
 }
 
-.apply-inner {
+.desktop-home .apply-inner {
   max-width: 700px;
   margin: 0 auto;
 }
 
-.apply-section h2 {
+.desktop-home .apply-section h2 {
   font-family: 'Lilita One', cursive;
   font-size: 2.2rem;
   color: #00a1e9;
   margin-bottom: 1rem;
 }
 
-.apply-section p {
+.desktop-home .apply-section p {
   font-size: 1.1rem;
   color: #444;
   margin-bottom: 2rem;
 }
 
-.apply-button {
+.desktop-home .apply-button {
   display: inline-block;
   padding: 0.8rem 2rem;
   background-color: #00a1e9;
@@ -233,25 +219,25 @@ body {
   transition: background-color 0.3s ease;
 }
 
-.apply-button:hover {
+.desktop-home .apply-button:hover {
   background-color: #008ec4;
 }
 
 /* === FAQセクション === */
-.faq-section {
+.desktop-home .faq-section {
   padding: 60px 20px;
   background: #f6f8fb;
   text-align: center;
 }
 
-.faq-section h2 {
+.desktop-home .faq-section h2 {
   font-family: 'Lilita One', cursive;
   font-size: 2rem;
   color: #00a1e9;
   margin-bottom: 2rem;
 }
 
-.faq-list {
+.desktop-home .faq-list {
   max-width: 800px;
   margin: 0 auto;
   text-align: left;
@@ -259,97 +245,16 @@ body {
   padding: 0;
 }
 
-.faq-list li {
+.desktop-home .faq-list li {
   margin-bottom: 1.5rem;
 }
 
-.faq-list p {
+.desktop-home .faq-list p {
   margin: 0.5rem 0 0;
   color: #444;
 }
 
-/* === お問い合わせセクション === */
-.contact-section {
-  padding: 60px 20px;
-  background: #fff;
-  text-align: center;
-}
-
-.contact-section h2 {
-  font-family: 'Lilita One', cursive;
-  font-size: 2rem;
-  color: #00a1e9;
-  margin-bottom: 1rem;
-}
-
-.contact-links {
-  list-style: none;
-  padding: 0;
-  margin-top: 1rem;
-}
-
-.contact-links li {
-  margin: 0.5rem 0;
-}
-
-.contact-links a {
-  text-decoration: none;
-  color: #00a1e9;
-  font-weight: 500;
-}
-
-/* === フッター === */
-.footer {
-  background: #f0f0f0;
-  padding: 20px;
-  font-size: 0.9rem;
-  color: #666;
-  text-align: center;
-}
-
-.footer-inner {
-  max-width: 960px;
-  margin: 0 auto;
-}
-
-.footer-links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 0.5rem;
-  list-style: none;
-  padding: 0;
-}
-
-.footer-links li {
-  display: inline;
-}
-
-.footer-links a {
-  color: #333;
-  text-decoration: none;
-}
-
-.footer-links a:hover {
-  color: #00a1e9;
-}
-
-/* === その他 === */
-.fade-in {
-  opacity: 0;
-  transform: translateY(20px);
-  animation: fadeInUp 0.8s ease forwards;
-}
-
-@keyframes fadeInUp {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.more-faq-button {
+.desktop-home .more-faq-button {
   display: inline-block;
   padding: 0.8rem 1.6rem;
   background-color: #00a1e9;
@@ -360,6 +265,87 @@ body {
   transition: background-color 0.3s;
 }
 
-.more-faq-button:hover {
+.desktop-home .more-faq-button:hover {
   background-color: #008ec4;
+}
+
+/* === Contactセクション === */
+.desktop-home .contact-section {
+  padding: 60px 20px;
+  background: #fff;
+  text-align: center;
+}
+
+.desktop-home .contact-section h2 {
+  font-family: 'Lilita One', cursive;
+  font-size: 2rem;
+  color: #00a1e9;
+  margin-bottom: 1rem;
+}
+
+.desktop-home .contact-links {
+  list-style: none;
+  padding: 0;
+  margin-top: 1rem;
+}
+
+.desktop-home .contact-links li {
+  margin: 0.5rem 0;
+}
+
+.desktop-home .contact-links a {
+  text-decoration: none;
+  color: #00a1e9;
+  font-weight: 500;
+}
+
+/* === フッター === */
+.desktop-home .footer {
+  background: #f0f0f0;
+  padding: 20px;
+  font-size: 0.9rem;
+  color: #666;
+  text-align: center;
+}
+
+.desktop-home .footer-inner {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.desktop-home .footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  list-style: none;
+  padding: 0;
+}
+
+.desktop-home .footer-links li {
+  display: inline;
+}
+
+.desktop-home .footer-links a {
+  color: #333;
+  text-decoration: none;
+}
+
+.desktop-home .footer-links a:hover {
+  color: #00a1e9;
+}
+
+/* === アニメーション === */
+.desktop-home .fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.8s ease forwards;
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

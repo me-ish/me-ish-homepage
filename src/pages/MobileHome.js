@@ -1,5 +1,4 @@
-// MobileHome.js
-import React, { useState } from 'react';
+import React, { useState, } from 'react';
 import './MobileHome.css';
 
 const MobileHome = () => {
@@ -36,6 +35,14 @@ const MobileHome = () => {
       <section className="hero fade-in">
         <h1 className="logo">me-ish</h1>
         <p className="subtitle">アートを、もっと近くに</p>
+      </section>
+
+      {/* Aboutセクション（追加） */}
+      <section id="about" className="about fade-in">
+        <div className="about-inner">
+          <h2>me-ishとは</h2>
+          <p>me-ishは、駆け出しや無名のアーティストが、自分の作品を自由に展示し、販売することができるオンラインギャラリーです。NFTや通常販売のどちらにも対応しており、アートをもっと身近に、そしてグローバルに届けることを目指しています。</p>
+        </div>
       </section>
 
       {/* ギャラリーセクション */}
