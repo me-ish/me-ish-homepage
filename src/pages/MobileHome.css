@@ -1,80 +1,292 @@
 /* MobileHome.css */
 
-/* ナビゲーションバー */
+/* ===== 共通設定 ===== */
+body {
+  margin: 0;
+  font-family: 'Zen Maru Gothic', sans-serif;
+  background-color: #fff;
+  color: #333;
+  line-height: 1.6;
+}
+
+section {
+  padding: 2rem 1rem;
+}
+
+/* ===== ナビゲーション ===== */
+.nav-header {
+  background-color: #fff;
+  border-bottom: 1px solid #eee;
+  padding: 0.8rem 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+}
+
 .nav-inner {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #00a1e9;
+}
+
+.beta-badge {
+  font-size: 0.7rem;
+  background-color: #e60039;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 6px;
+  margin-left: 6px;
+}
+
+.menu-toggle {
+  display: block;
+  font-size: 2rem;
+  background: none;
+  border: none;
+  color: #333;
+  cursor: pointer;
+}
+
+.nav-links {
+  display: none;
+  position: absolute;
+  top: 3.5rem;
+  right: 1rem;
+  background-color: white;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  flex-direction: column;
+  gap: 0.8rem;
+  z-index: 1000;
+}
+
+.nav-links.open {
+  display: flex;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: #333;
+  font-size: 1rem;
+}
+
+/* ===== Heroセクション ===== */
+.hero {
+  text-align: center;
+  padding: 3rem 1rem;
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.logo {
+  font-family: 'Lilita One', sans-serif;
+  font-size: 3rem;
+  color: #00a1e9;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  font-size: 1.3rem;
+  color: #444;
+}
+
+/* ===== ギャラリーセクション ===== */
+.gallery-section {
+  background-color: #f9f9f9;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+.gallery-card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  text-align: center;
+}
+
+.gallery-card img {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.gallery-card h3 {
+  margin-top: 1rem;
+  font-size: 1.2rem;
+}
+
+.gallery-card p {
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+  color: #666;
+}
+
+/* ===== 応募ボタンなど共通ボタン ===== */
+.gallery-button,
+.apply-button,
+.more-faq-button {
+  display: inline-block;
+  background-color: #00a1e9;
+  color: white;
+  text-decoration: none;
+  padding: 0.8rem 1.6rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  margin-top: 1rem;
+  font-size: 1rem;
+  transition: background-color 0.3s ease;
+}
+
+.gallery-button:hover,
+.apply-button:hover,
+.more-faq-button:hover {
+  background-color: #008ac4;
+}
+
+/* ===== 応募セクション ===== */
+.apply-section {
+  background-color: #fff;
+  text-align: center;
+}
+
+.apply-section h2 {
+  font-size: 1.5rem;
+}
+
+.apply-section p {
+  font-size: 1rem;
+  color: #555;
+}
+
+/* ===== FAQ ===== */
+.faq-section {
+  background-color: #f4f4f4;
+}
+
+.faq-list {
+  list-style: none;
+  padding: 0;
+}
+
+.faq-list li {
+  margin: 1rem 0;
+}
+
+.faq-list strong {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+/* ===== お問い合わせ ===== */
+.contact-links {
+  list-style: none;
+  padding: 0;
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.contact-links li {
+  margin: 0.5rem 0;
+}
+
+.contact-links a {
+  color: #00a1e9;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+/* ===== フッター ===== */
+.footer {
+  background-color: #eee;
+  padding: 2rem 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.footer-links {
+  list-style: none;
+  padding: 0;
+  margin-top: 1rem;
+}
+
+.footer-links a {
+  display: block;
+  color: #333;
+  margin: 5px 0;
+  text-decoration: none;
+}
+
+/* ===== モバイルレスポンシブ調整 ===== */
+@media (max-width: 768px) {
+
+  .hero {
+    padding: 4rem 1rem;
   }
-  
+
+  .gallery-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .gallery-card {
+    width: 100%;
+  }
+
+  .nav-inner {
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
   .menu-toggle {
     display: block;
     font-size: 2rem;
-    background: none;
-    border: none;
-    color: #333;
-    cursor: pointer;
   }
-  
+
   .nav-links {
-    display: none;
+    position: static;
+    background-color: transparent;
+    padding: 0;
+    border: none;
+    box-shadow: none;
     flex-direction: column;
+    gap: 0.5rem;
   }
-  
+
   .nav-links.open {
     display: flex;
   }
-  
-  /* Heroセクション */
-  .hero {
-    text-align: center;
-    padding: 20px;
+
+  .footer {
+    padding: 1.5rem 1rem;
+    font-size: 0.8rem;
   }
-  
-  .logo {
-    font-size: 2rem;
-  }
-  
-  .subtitle {
-    font-size: 1.2rem;
-  }
-  
-  /* ギャラリー */
-  .gallery-grid {
-    display: grid;
-    grid-template-columns: 1fr; /* ギャラリーカードを縦並び */
-    gap: 1rem;
-  }
-  
-  .gallery-card img {
-    width: 100%;
-    border-radius: 8px;
-  }
-  
-  /* ボタン */
-  .gallery-button, .apply-button, .more-faq-button {
-    padding: 0.8rem 1.6rem;
-    font-size: 1rem;
-  }
-  
-  /* FAQリスト */
-  .faq-list {
-    list-style: none;
-    padding: 0;
-  }
-  
-  .faq-list li {
-    margin: 1rem 0;
-  }
-  
-  /* フッター */
-  .footer-links {
-    display: block;
-    text-align: center;
-  }
-  
+
   .footer-links a {
-    display: block;
-    margin: 5px 0;
+    font-size: 0.9rem;
   }
-  
+
+  /* ボタン調整 */
+  .gallery-button,
+  .apply-button,
+  .more-faq-button {
+    width: 100%;
+    padding: 0.8rem 0;
+  }
+}
