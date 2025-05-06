@@ -261,7 +261,7 @@ button:hover {
 }
 
 /* モバイル対応（1024px以下） */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .step1-artist-info {
     padding: 15px; /* モバイル用に余白を調整 */
   }
@@ -326,7 +326,7 @@ button:hover {
 }
 
 /* モバイル対応 */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .step2-work-info {
     padding: 15px;
   }
@@ -406,7 +406,7 @@ button:hover {
 }
 
 /* モバイル対応 */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .step3-sales-agreement {
     padding: 15px;
   }
@@ -467,7 +467,7 @@ button:hover {
 }
 
 /* モバイル対応 */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .form-step {
     padding: 15px;
   }
@@ -518,7 +518,7 @@ button:hover {
   background-color: #005bb5;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .form-wrapper {
     padding: 15px;
   }
