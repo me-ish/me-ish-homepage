@@ -83,43 +83,37 @@ const Step3_SalesAndAgreement = () => {
           background: '#fafafa',
         }}
       >
-        <p><strong>【利用規約（抜粋）】</strong></p>
-        <p>
-          本サービスに投稿された作品は、運営による展示・販売の対象となります。
-          著作権はアーティストに帰属しますが、me-ishギャラリー内での使用に同意したものとみなします。
-          詳細は公式サイトをご確認ください。
-        </p>
-        <p>
-          ・第三者の著作権、商標権、肖像権等を侵害しないこと<br />
-          ・AIによる自動生成作品は禁止<br />
-          ・審査結果により展示が見送りになる場合があります
-        </p>
+        <p><strong>【利用規約の要点】</strong></p>
+<ul>
+  <li>投稿作品は審査の上、me-ishで展示・販売される場合があります</li>
+  <li>著作権はアーティストに帰属しますが、展示・告知に使用する場合があります</li>
+  <li>購入者には私的鑑賞の範囲での使用が許可されます（著作権の譲渡なし）</li>
+  <li>第三者の権利を侵害する作品は禁止です</li>
+  <li>生成AIによる自動生成作品は禁止です</li>
+</ul>
+<p>詳細は<a href="/terms" target="_blank" rel="noopener noreferrer">公式サイトの利用規約</a>をご確認ください。</p>
       </div>
 
       {/* 利用規約同意チェックボックス */}
-      <div className="checkbox-row">
-        <input
-          type="checkbox"
-          {...register('agreeTerms', { required: true })}
-          disabled={!canCheck}
-        />
-        <span>利用規約に同意します</span>
-        <span className="required-inline">※必須</span>
-      </div>
+<div className="checkbox-row">
+  <input type="checkbox" {...register('agreeTerms', { required: true })} disabled={!canCheck} />
+  <span>上記の利用規約に同意します</span>
+  <span className="required-inline">※必須</span>
+</div>
 
       {/* 自作確認チェックボックス */}
       <div className="checkbox-row">
-        <input type="checkbox" {...register('confirmRights', { required: true })} />
-        <span>自作作品であり、第三者の権利を侵害していません</span>
-        <span className="required-inline">※必須</span>
-      </div>
+  <input type="checkbox" {...register('confirmRights', { required: true })} />
+  <span>自作作品であり、第三者の権利を侵害していません</span>
+  <span className="required-inline">※必須</span>
+</div>
 
       {/* AIによる作品確認 */}
       <div className="checkbox-row">
-        <input type="checkbox" {...register('confirmOriginal', { required: true })} />
-        <span>AIによる自動生成作品ではありません</span>
-        <span className="required-inline">※必須</span>
-      </div>
+  <input type="checkbox" {...register('confirmOriginal', { required: true })} />
+  <span>AIによる自動生成作品ではありません</span>
+  <span className="required-inline">※必須</span>
+</div>
     </div>
   );
 };

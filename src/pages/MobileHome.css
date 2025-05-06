@@ -52,12 +52,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .mobile-home .menu-toggle {
-  font-size: 2rem;
+  font-size: 2.5rem;
   background: none;
   border: none;
   color: #00a1e9;
   cursor: pointer;
-  width: 40px;       /* ← 明示的に幅を指定 */
+  width: 60px;       /* ← 明示的に幅を指定 */
   height: 40px;      /* ← 明示的に高さを指定 */
   display: flex;
   align-items: center;

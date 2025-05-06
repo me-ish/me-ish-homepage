@@ -172,9 +172,7 @@ function FormWrapper() {
               <p>ご記入いただいた内容を確認し、後日ご連絡いたします。</p>
 
               <div className="form-nav">
-                <a href="/float">
-                  <button type="button">ギャラリーに戻る</button>
-                </a>
+              　<a href="/" className="button-link">トップに戻る</a>
               </div>
             </motion.div>
           )}

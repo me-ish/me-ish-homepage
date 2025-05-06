@@ -74,7 +74,8 @@ const MobileHome = () => {
 
       {/* 応募セクション */}
       <section id="apply" className="apply-section fade-in">
-        <h2>あなたのアートを、世界に届けよう。</h2>
+      <h2>あなたのアートを<br />世界に届けよう
+　　　</h2>
         <p>me-ishでは、誰でも気軽に作品を展示できます。</p>
         <a href="/entry" className="apply-button">応募する</a>
       </section>

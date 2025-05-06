@@ -54,24 +54,29 @@ const ConfirmPage = ({ onBack, onSubmit }) => {
 
       {/* 販売情報 */}
       <div className="confirm-section">
-        <h3>販売情報</h3>
-        <p><strong>販売する？：</strong>{data.isForSale === 'yes' ? 'はい' : 'いいえ'}</p>
-        {data.isForSale === 'yes' && (
-          <>
-            <p><strong>形式：</strong>{data.saleType === 'nft' ? 'NFT販売' : '通常販売'}</p>
-            <p><strong>価格：</strong>{data.price} 円</p>
-            {data.saleType === 'nft' && data.wallet && (
-              <p><strong>ウォレット：</strong>{data.wallet}</p>
-            )}
-          </>
-        )}
-      </div>
+  <h3>販売情報</h3>
+  <p><strong>販売する？：</strong>{data.isForSale === 'yes' ? 'はい' : 'いいえ'}</p>
 
-      {/* ボタン */}
-      <div className="confirm-buttons form-nav">
-        <button type="button" onClick={onBack}>戻る</button>
-        <button type="button" onClick={onSubmit}>送信する</button>
-      </div>
+  {data.isForSale === 'yes' ? (
+    <>
+      <p><strong>形式：</strong>{data.saleType === 'nft' ? 'NFT販売' : '通常販売'}</p>
+      <p><strong>価格：</strong>{data.price} 円</p>
+      {data.saleType === 'nft' && data.wallet && (
+        <p><strong>ウォレット：</strong>{data.wallet}</p>
+      )}
+    </>
+  ) : (
+    <p><strong>価格：</strong>非売品</p>
+  )}
+</div>
+
+      <div className="form-nav">
+  <button type="button" onClick={onBack}>戻る</button>
+  <button type="button" onClick={onSubmit}>送信する</button> {/* ←ここだけ修正 */}
+</div>
+
+
+
     </div>
   );
 };
