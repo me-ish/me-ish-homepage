@@ -1,10 +1,11 @@
+// src/app/api/entries/[id]/like/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-// GET: 現在のいいね数を取得（例：初回表示時に呼ぶ）
-export async function GET(_: NextRequest, context: { params: { id: string } }) {
+// GET: 現在のいいね数を取得
+export async function GET(req: NextRequest) {
   const supabase = createClient();
-  const entryId = context.params.id;
+  const entryId = req.nextUrl.pathname.split('/').slice(-2)[0]; // [id]を取得
 
   const { data, error } = await supabase
     .from('entries')
@@ -25,10 +26,10 @@ export async function GET(_: NextRequest, context: { params: { id: string } }) {
   return NextResponse.json({ likes: data.likes ?? 0 });
 }
 
-// POST: いいね数を +1 して更新（ボタン押下時）
-export async function POST(_: NextRequest, context: { params: { id: string } }) {
+// POST: いいね数を +1
+export async function POST(req: NextRequest) {
   const supabase = createClient();
-  const entryId = context.params.id;
+  const entryId = req.nextUrl.pathname.split('/').slice(-2)[0]; // [id]を取得
 
   const { data: current, error: getError } = await supabase
     .from('entries')
