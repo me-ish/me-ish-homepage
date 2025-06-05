@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-// 型定義（contextのparams構造を明示）
-type Params = { params: { id: string } };
-
 // GET: 現在のいいね数を取得（例：初回表示時に呼ぶ）
-export async function GET(_: NextRequest, { params }: Params) {
+export async function GET(_: NextRequest, context: { params: { id: string } }) {
   const supabase = createClient();
-  const entryId = params.id;
+  const entryId = context.params.id;
 
   const { data, error } = await supabase
     .from('entries')
@@ -29,9 +26,9 @@ export async function GET(_: NextRequest, { params }: Params) {
 }
 
 // POST: いいね数を +1 して更新（ボタン押下時）
-export async function POST(_: NextRequest, { params }: Params) {
+export async function POST(_: NextRequest, context: { params: { id: string } }) {
   const supabase = createClient();
-  const entryId = params.id;
+  const entryId = context.params.id;
 
   const { data: current, error: getError } = await supabase
     .from('entries')
@@ -64,4 +61,3 @@ export async function POST(_: NextRequest, { params }: Params) {
 
   return NextResponse.json({ likes: data?.[0]?.likes ?? 0 });
 }
-
