@@ -1,9 +1,11 @@
-// app/api/entries/[id]/like/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+// 型定義（contextのparams構造を明示）
+type Params = { params: { id: string } };
+
 // GET: 現在のいいね数を取得（例：初回表示時に呼ぶ）
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(_: NextRequest, { params }: Params) {
   const supabase = createClient();
   const entryId = params.id;
 
@@ -11,7 +13,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     .from('entries')
     .select('likes')
     .eq('id', entryId)
-    .maybeSingle(); // nullの場合にも安全
+    .maybeSingle();
 
   if (error) {
     console.error('❌ Supabase GET error:', error.message);
@@ -27,11 +29,10 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 }
 
 // POST: いいね数を +1 して更新（ボタン押下時）
-export async function POST(_: Request, { params }: { params: { id: string } }) {
+export async function POST(_: NextRequest, { params }: Params) {
   const supabase = createClient();
   const entryId = params.id;
 
-  // 現在のいいね数を取得
   const { data: current, error: getError } = await supabase
     .from('entries')
     .select('likes')
@@ -50,7 +51,6 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
 
   const currentLikes = current.likes ?? 0;
 
-  // +1して更新
   const { data, error } = await supabase
     .from('entries')
     .update({ likes: currentLikes + 1 })
