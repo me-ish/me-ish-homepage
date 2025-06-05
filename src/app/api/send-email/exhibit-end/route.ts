@@ -1,31 +1,25 @@
-export function generateExhibitEndEmail(name: string) {
-  return {
-    subject: '【me-ish】展示期間が終了しました',
-    html: `
-      <div style="font-family: Helvetica, Arial, sans-serif; font-size: 16px; color: #333; line-height: 1.6;">
-        <p>${name} 様</p>
-        <p>ご出展いただいた作品の展示期間が終了いたしました。</p>
-        <p>この度はme-ishへのご参加、誠にありがとうございました。</p>
+// ✅ OKな構成：export されるのは POST のみ
+import { NextRequest, NextResponse } from 'next/server';
+import { Resend } from 'resend';
+import { generateExhibitEndEmail } from '@/lib/emailTemplates/exhibitEnd';
 
-        <hr style="margin: 24px 0;" />
+const resend = new Resend(process.env.RESEND_API_KEY!);
 
-        <p><strong>🎨 再展示・プラン延長のご案内</strong></p>
-        <p>再展示をご希望の方は、以下のプランからお選びいただけます：</p>
+export async function POST(req: NextRequest) {
+  const { to, name } = await req.json();
+  const { subject, html, text } = generateExhibitEndEmail(name);
 
-        <ul>
-          <li>Free（¥0 / 表示保証なし・ローテーション枠）</li>
-          <li>Mini（¥400 / 月1回保証）</li>
-          <li>Light（¥1,000 / 月3回保証）</li>
-          <li>Standard（¥2,000 / 月7回保証）</li>
-          <li>Premium（¥4,000 / 月15回保証）</li>
-        </ul>
-
-        <p>以下のページよりお手続きください：</p>
-        <p><a href="https://me-ish.art/renew" style="color: #00a1e9;">▶ 再出展・プラン延長はこちら</a></p>
-
-        <p style="margin-top: 2em;">---<br/>me-ish運営事務局</p>
-      </div>
-    `,
-    text: `${name} 様\n\nご出展いただいた作品の展示期間が終了いたしました。\nこの度はme-ishへのご参加、誠にありがとうございました。\n\n----------------------------\n🎨 再展示・プラン延長のご案内\n\n再展示をご希望の方は、以下のプランからお選びいただけます：\n\n・Free（¥0 / 表示保証なし・ローテーション枠）\n・Mini（¥400 / 月1回保証）\n・Light（¥1,000 / 月3回保証）\n・Standard（¥2,000 / 月7回保証）\n・Premium（¥4,000 / 月15回保証）\n\n▶ 再出展・プラン延長はこちら:\nhttps://me-ish.art/renew\n\n---\nme-ish運営事務局`,
-  };
+  try {
+    const data = await resend.emails.send({
+      from: 'me-ish Gallery <noreply@me-ish.art>',
+      to,
+      subject,
+      html,
+      text,
+    });
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
 }
+
