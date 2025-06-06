@@ -117,18 +117,26 @@ const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
         </Html>
       )}
 
-      {/* 内側の発光コア */}
-      <a3.mesh>
-        <sphereGeometry args={[0.4, 64, 64]} />
-        <a3.meshStandardMaterial
-          map={plasticMap}
-          color="#88ccff"
-          metalness={0.2}
-          roughness={0.4}
-          emissive="#88ccff"
-          emissiveIntensity={emissiveIntensity}
-        />
-      </a3.mesh>
+{/* 内側の発光コア */}
+<a3.mesh>
+  <sphereGeometry args={[0.4, 64, 64]} />
+
+  {/* 🛠️ 型の深掘りによる ts(2589) を防ぐ */}
+  {
+    // @ts-ignore
+    <a3.meshStandardMaterial
+      map={plasticMap}
+      color="#88ccff"
+      metalness={0.2}
+      roughness={0.4}
+      emissive="#88ccff"
+      emissiveIntensity={emissiveIntensity}
+      toneMapped={false}
+      transparent
+      attach="material"
+    />
+  }
+</a3.mesh>
 
       {/* 外側リング（回転＋光エフェクト） */}
       <a3.mesh ref={outerRef}>
