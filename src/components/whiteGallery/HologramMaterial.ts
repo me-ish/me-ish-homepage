@@ -8,7 +8,7 @@ interface HologramMaterialUniforms {
   time: number;
   color: THREE.Color;
   opacity: number;
-  [key: string]: any; // uniform拡張エラー防止
+  [key: string]: any; 
 }
 
 // shaderMaterial 作成

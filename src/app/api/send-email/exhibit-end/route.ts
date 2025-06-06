@@ -1,4 +1,4 @@
-// ✅ OKな構成：export されるのは POST のみ
+// export されるのは POST のみ
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { generateExhibitEndEmail } from '@/lib/emailTemplates/exhibitEnd';

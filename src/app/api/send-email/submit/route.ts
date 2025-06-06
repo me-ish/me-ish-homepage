@@ -1,4 +1,4 @@
-// --- /app/api/send-email/submit/route.ts ---
+//--- /app/api/send-email/submit/route.ts ---
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { generateSubmitEmail } from '@/lib/emailTemplates/submit';

@@ -49,9 +49,9 @@ export default function FloatPanelArtworks({ avatarRef, artworkRefs }: Props): J
       {artworks.map((art, i) => (
         <ArtworkFrame
           key={i}
+          id={`artwork-${i}`} 
           position={art.position}
           rotation={art.rotation}
-          ratio={1.2}
           scale={1.8}
           title={`Title ${i + 1}`}
           author={`Artist ${i + 1}`}

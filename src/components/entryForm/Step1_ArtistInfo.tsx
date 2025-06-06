@@ -73,4 +73,3 @@ const Step1_ArtistInfo = () => {
 };
 
 export default Step1_ArtistInfo;
-

@@ -10,7 +10,7 @@ export default function Lighting() {
 
       {/* 🎯 中央のコア位置から全方向に照らす光源 */}
       <pointLight
-        position={[0, 10, 0]} // 👈 CoreSphere の位置に合わせる
+        position={[0, 10, 0]} 
         intensity={2.5}
         distance={50}
         decay={2}

@@ -5,7 +5,6 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { JSX } from 'react';
 
-
 export default function FloatWalls(): JSX.Element {
   const wallHeight = 8;
   const wallLength = 35;
@@ -48,41 +47,41 @@ export default function FloatWalls(): JSX.Element {
   return (
     <group>
       {/* 北側 */}
-      <mesh ref={(el) => (wallRefs.current[0] = el)} position={[-22.5, wallY, -edge]}>
+      <mesh ref={(el) => { wallRefs.current[0] = el; }} position={[-22.5, wallY, -edge]}>
         <boxGeometry args={[wallLength, wallHeight, wallThickness]} />
         <meshStandardMaterial {...materialProps} />
       </mesh>
-      <mesh ref={(el) => (wallRefs.current[1] = el)} position={[22.5, wallY, -edge]}>
+      <mesh ref={(el) => { wallRefs.current[1] = el; }} position={[22.5, wallY, -edge]}>
         <boxGeometry args={[wallLength, wallHeight, wallThickness]} />
         <meshStandardMaterial {...materialProps} />
       </mesh>
 
       {/* 南側 */}
-      <mesh ref={(el) => (wallRefs.current[2] = el)} position={[-22.5, wallY, edge]}>
+      <mesh ref={(el) => { wallRefs.current[2] = el; }} position={[-22.5, wallY, edge]}>
         <boxGeometry args={[wallLength, wallHeight, wallThickness]} />
         <meshStandardMaterial {...materialProps} />
       </mesh>
-      <mesh ref={(el) => (wallRefs.current[3] = el)} position={[22.5, wallY, edge]}>
+      <mesh ref={(el) => { wallRefs.current[3] = el; }} position={[22.5, wallY, edge]}>
         <boxGeometry args={[wallLength, wallHeight, wallThickness]} />
         <meshStandardMaterial {...materialProps} />
       </mesh>
 
       {/* 西側 */}
-      <mesh ref={(el) => (wallRefs.current[4] = el)} position={[-edge, wallY, -22.5]}>
+      <mesh ref={(el) => { wallRefs.current[4] = el; }} position={[-edge, wallY, -22.5]}>
         <boxGeometry args={[wallThickness, wallHeight, wallLength]} />
         <meshStandardMaterial {...materialProps} />
       </mesh>
-      <mesh ref={(el) => (wallRefs.current[5] = el)} position={[-edge, wallY, 22.5]}>
+      <mesh ref={(el) => { wallRefs.current[5] = el; }} position={[-edge, wallY, 22.5]}>
         <boxGeometry args={[wallThickness, wallHeight, wallLength]} />
         <meshStandardMaterial {...materialProps} />
       </mesh>
 
       {/* 東側 */}
-      <mesh ref={(el) => (wallRefs.current[6] = el)} position={[edge, wallY, -22.5]}>
+      <mesh ref={(el) => { wallRefs.current[6] = el; }} position={[edge, wallY, -22.5]}>
         <boxGeometry args={[wallThickness, wallHeight, wallLength]} />
         <meshStandardMaterial {...materialProps} />
       </mesh>
-      <mesh ref={(el) => (wallRefs.current[7] = el)} position={[edge, wallY, 22.5]}>
+      <mesh ref={(el) => { wallRefs.current[7] = el; }} position={[edge, wallY, 22.5]}>
         <boxGeometry args={[wallThickness, wallHeight, wallLength]} />
         <meshStandardMaterial {...materialProps} />
       </mesh>
@@ -101,7 +100,7 @@ export default function FloatWalls(): JSX.Element {
           return (
             <mesh
               key={`beam-${i}`}
-              ref={(el) => (beamRefs.current[i] = el)}
+              ref={(el) => { beamRefs.current[i] = el; }}
               position={[offset, 8.5, 0]}
             >
               <boxGeometry args={[7, 1, 80]} />
@@ -113,4 +112,3 @@ export default function FloatWalls(): JSX.Element {
     </group>
   );
 }
-

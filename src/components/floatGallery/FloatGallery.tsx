@@ -9,8 +9,6 @@ import FloatArtworksInGallery from './FloatArtworksInGallery';
 import FloatPanelArtworks from './FloatPanelArtworks';
 import FloatPanelsCenter from './FloatPanelsCenter';
 import FloatWalls from './FloatWalls';
-import OceanPlane from './OceanPlane';
-import SkyDome from './SkyDome';
 
 import Avatar from '@/components/shared/Avatar';
 import AvatarController from '@/components/shared/AvatarController';
@@ -36,8 +34,6 @@ export default function FloatGallery(): React.JSX.Element {
 
         {/* 光・背景 */}
         <DayLight />
-        <OceanPlane />
-        <SkyDome />
 
         {/* 壁・中央パネル */}
         <FloatWalls />

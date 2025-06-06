@@ -1,5 +1,4 @@
 // src/pages/Tokushoho.jsx
-
 'use client';
 
 import React from 'react';

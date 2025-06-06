@@ -139,8 +139,8 @@ const FormWrapper = () => {
           description: data.description || '',
           is_for_sale: data.isForSale === 'yes',
           sale_type: data.saleType || '',
-          type,                    // ✅ New: entries.type に保存
-          display_plan: displayPlan, // ✅ New: entries.display_plan に保存
+          type,                    //  New: entries.type に保存
+          display_plan: displayPlan, //  New: entries.display_plan に保存
           price: data.price ? Number(data.price) : null,
           wallet_address: data.wallet || '',
           image_url: publicUrl,

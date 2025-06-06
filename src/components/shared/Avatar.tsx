@@ -6,9 +6,9 @@ import {
   useImperativeHandle,
   MutableRefObject,
 } from 'react';
-import { useFrame, useLoader } from '@react-three/fiber';
-import { TextureLoader, AdditiveBlending } from 'three';
-import { Trail } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
+import { AdditiveBlending } from 'three';
+import { Trail, useTexture } from '@react-three/drei';
 import { a, useSpring } from '@react-spring/three';
 import * as THREE from 'three';
 
@@ -22,8 +22,10 @@ const Avatar = forwardRef(function AvatarComponent(
   const internalRef = useRef<THREE.Group>(null);
   const combinedRef = ref ?? internalRef;
 
-  const tilesMap = useLoader(TextureLoader, '/textures/Tiles044_BaseColor.jpg');
+  // ✅ useTexture に変更（型エラー回避）
+  const tilesMap = useTexture('/textures/Tiles044_BaseColor.jpg');
 
+  // ✅ スプリングの定義（位置・拡大・発光）
   const { scale, opacity, position, emissiveIntensity } = useSpring({
     scale: [0.1, 0.1, 0.1],
     opacity: 1,
@@ -32,6 +34,7 @@ const Avatar = forwardRef(function AvatarComponent(
     config: { tension: 0, friction: 0 },
   });
 
+  // ✅ ゆらぎ & 移動制限
   useFrame((state) => {
     const refObj = (combinedRef as MutableRefObject<THREE.Group | null>).current;
     if (refObj) {
@@ -44,9 +47,15 @@ const Avatar = forwardRef(function AvatarComponent(
     }
   });
 
-  useImperativeHandle(ref, () => {
-    return (combinedRef as MutableRefObject<THREE.Group | null>).current;
-  });
+  // ✅ ref に current を expose
+useImperativeHandle(ref, () => {
+  const refObj = (combinedRef as MutableRefObject<THREE.Group | null>).current;
+  if (!refObj) {
+    throw new Error('Avatar groupRef is null — useImperativeHandle failed.');
+  }
+  return refObj;
+});
+
 
   return (
     <Trail
@@ -55,8 +64,14 @@ const Avatar = forwardRef(function AvatarComponent(
       length={4}
       attenuation={(t) => t ** 2.2}
     >
-      <a.group ref={combinedRef} position={position} scale={scale} {...props}>
-        {/* 内核（テクスチャ＋発光） */}
+      <a.group
+        ref={combinedRef}
+        // ✅ to((x,y,z) => [...]) で型を明示的に補完
+        position={position.to((x, y, z) => [x, y, z] as [number, number, number])}
+        scale={scale.to((x, y, z) => [x, y, z] as [number, number, number])}
+        {...props}
+      >
+        {/* 内核：発光球 */}
         <mesh>
           <sphereGeometry args={[0.5, 64, 64]} />
           <a.meshStandardMaterial
@@ -70,7 +85,7 @@ const Avatar = forwardRef(function AvatarComponent(
           />
         </mesh>
 
-        {/* 外殻（光のグロー） */}
+        {/* 外殻：グロー */}
         <mesh>
           <sphereGeometry args={[0.7, 64, 64]} />
           <meshBasicMaterial
@@ -91,3 +106,4 @@ const Avatar = forwardRef(function AvatarComponent(
 >;
 
 export default Avatar;
+

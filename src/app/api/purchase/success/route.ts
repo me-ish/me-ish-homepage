@@ -1,10 +1,10 @@
-// src/app/api/purchase/success/route.ts
+// --- /app/api/purchase/success/route.ts ---
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-04-30.basil' as const,
+  apiVersion: process.env.STRIPE_API_VERSION as Stripe.LatestApiVersion,
 });
 
 const supabase = createClient(
@@ -23,10 +23,10 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // ✅ Stripeセッション取得（名前・メール・金額・metadataを取得）
+    // ✅ Stripeセッション取得
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-    // ✅ 1. entriesテーブルの is_sold を true に更新
+    // ✅ 1. entries の is_sold を true に更新
     const { error: updateError } = await supabase
       .from('entries')
       .update({ is_sold: true })
@@ -36,7 +36,36 @@ export async function GET(req: NextRequest) {
       console.error('entries更新エラー:', updateError.message);
     }
 
-    // ✅ 2. sales テーブルに購入情報を記録
+    // ✅ 2. entries から price を取得 → 手数料 & 報酬を保存
+    const { data: entryData, error: fetchError } = await supabase
+      .from('entries')
+      .select('price')
+      .eq('id', Number(entryId))
+      .single();
+
+    if (fetchError || !entryData) {
+      console.error('価格取得エラー:', fetchError?.message);
+    } else {
+      const price = Number(entryData.price);
+      const fee = Math.round(price * 0.05);
+      const reward = price - fee;
+
+      const { error: payoutError } = await supabase
+        .from('entries')
+        .update({
+          meish_fee_yen: fee,
+          artist_reward_yen: reward,
+          is_paid_to_artist: false,
+          paid_at: null,
+        })
+        .eq('id', Number(entryId));
+
+      if (payoutError) {
+        console.error('報酬計算エラー:', payoutError.message);
+      }
+    }
+
+    // ✅ 3. sales テーブルに購入情報を記録
     const { error: insertError } = await supabase.from('sales').insert([
       {
         entry_id: Number(entryId),
@@ -52,7 +81,7 @@ export async function GET(req: NextRequest) {
       console.error('sales登録エラー:', insertError.message);
     }
 
-    // ✅ 3. 購入者にメール通知
+    // ✅ 4. 購入者にメール通知（Resend）
     if (session.customer_details?.email) {
       await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/send-email/purchase-buyer`, {
         method: 'POST',
@@ -64,7 +93,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // ✅ 最終的に成功画面へリダイレクト
+    // ✅ 5. 購入完了画面にリダイレクト
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_SITE_URL}/purchase/success?entryId=${entryId}`
     );
@@ -73,3 +102,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/purchase/error`);
   }
 }
+

@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-// GET: 現在のいいね数を取得
+// 現在のいいね数を取得
 export async function GET(req: NextRequest) {
   const supabase = createClient();
   const entryId = req.nextUrl.pathname.split('/').slice(-2)[0]; // [id]を取得

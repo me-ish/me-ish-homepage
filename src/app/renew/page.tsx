@@ -18,7 +18,7 @@ const plans = [
 export default function RenewPage() {
   const supabase = createClientComponentClient<Database>();
 
-  const [user, setUser] = useState<any>(null); // nullでも進むように
+  const [user, setUser] = useState<any>(null); 
   const [entries, setEntries] = useState<any[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string>('free');
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
@@ -26,7 +26,7 @@ export default function RenewPage() {
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setUser(user); // ← ユーザーが null でもOK
+      setUser(user); 
       if (user) {
         const { data, error } = await supabase
           .from('entries')

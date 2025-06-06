@@ -6,7 +6,7 @@ import * as THREE from 'three';
 
 type AvatarControllerProps = {
   avatarRef: React.RefObject<THREE.Group>;
-  joystick?: { x: number; y: number }; // ※未使用時は無視される
+  joystick?: { x: number; y: number }; // 
 };
 
 export default function AvatarController({ avatarRef, joystick }: AvatarControllerProps) {

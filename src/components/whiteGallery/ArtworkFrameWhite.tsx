@@ -13,6 +13,7 @@ import * as THREE from 'three'
 import { TextureLoader } from 'three'
 import { a, useSpring } from '@react-spring/three'
 import { useZoomArtwork } from '../shared/ZoomArtworkContext'
+import { useTexture } from '@react-three/drei';
 
 interface ArtworkData {
   position?: [number, number, number]
@@ -76,7 +77,7 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
       rotation[2],
     ]
 
-    const texture = useLoader(TextureLoader, imageUrl)
+    const texture = useTexture(imageUrl || '/textures/fallback.jpg');
 
     const [springs, api] = useSpring(() => ({
       emissiveIntensity: 0,

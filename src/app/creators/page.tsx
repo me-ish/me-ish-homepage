@@ -1,5 +1,4 @@
 // app/creators/page.tsx
-
 'use client';
 
 export default function CreatorsPage() {

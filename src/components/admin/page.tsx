@@ -50,4 +50,3 @@ export default function EntryCard({ entry, refresh }: { entry: any; refresh: () 
     </div>
   );
 }
-    

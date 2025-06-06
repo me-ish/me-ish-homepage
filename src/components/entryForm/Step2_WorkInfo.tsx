@@ -108,4 +108,3 @@ const Step2_WorkInfo = ({
 };
 
 export default Step2_WorkInfo;
-

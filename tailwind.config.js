@@ -2,7 +2,8 @@
 module.exports = {
   content: [
     "./app/**/*.{js,ts,jsx,tsx}",
-    "./src/**/*.{js,ts,jsx,tsx}",
+    "./src/**/*.{js,ts,jsx,tsx,css}",        // ✅ src配下の.cssも含める
+    "./src/app/globals.css",                 // ✅ globals.css を明示的に追加
   ],
   theme: {
     extend: {
@@ -36,5 +37,3 @@ module.exports = {
   },
   plugins: [],
 };
-
-

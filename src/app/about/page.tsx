@@ -1,5 +1,4 @@
 // app/about/page.tsx
-
 'use client';
 
 export default function AboutPage() {

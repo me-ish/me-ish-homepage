@@ -21,4 +21,3 @@ export default function CallbackPage() {
 
   return <p className="text-center mt-20">ログイン処理中です...</p>;
 }
-

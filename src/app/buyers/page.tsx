@@ -121,7 +121,6 @@ export default function BuyersPage() {
   </div>
 </section>
 
-
       {/* 保護処理について */}
       <section className="mb-16">
         <h2 className="text-xl font-bold mb-3">作品の保護と真正性の証明</h2>

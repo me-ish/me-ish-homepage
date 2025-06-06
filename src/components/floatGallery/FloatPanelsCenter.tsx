@@ -19,4 +19,3 @@ export default function FloatPanelsCenter(): JSX.Element {
     </group>
   );
 }
-

@@ -53,4 +53,3 @@ const NftPurchaseButton: React.FC<NftPurchaseButtonProps> = ({
 };
 
 export default NftPurchaseButton;
-

@@ -9,7 +9,7 @@ export default function SuccessPage() {
   const entryId = searchParams.get('entryId');
 
   useEffect(() => {
-    // コンソール確認用（今後処理を追加するならここ）
+    // コンソール確認用
     console.log('entryId:', entryId);
   }, [entryId]);
 

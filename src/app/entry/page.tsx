@@ -1,5 +1,4 @@
 'use client';
-
 import FormWrapper from './FormWrapper';
 
 export default function EntryPage() {

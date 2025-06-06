@@ -1,27 +1,29 @@
-'use client'
+'use client';
 
-import { useLoader, useFrame } from '@react-three/fiber'
-import { TextureLoader, AdditiveBlending } from 'three'
-import * as THREE from 'three'
-import { useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { a as a3, useSpring } from '@react-spring/three'
-import { animated } from '@react-spring/web' // ✅ 安定版
-import { Html } from '@react-three/drei'
-import React from 'react'
+import { useFrame } from '@react-three/fiber';
+import { AdditiveBlending } from 'three';
+import * as THREE from 'three';
+import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { a as a3, useSpring } from '@react-spring/three';
+import { animated } from '@react-spring/web';
+import { Html, useTexture } from '@react-three/drei';
+import React from 'react';
 
 interface CoreSphereProps {
-  avatarRef: React.RefObject<THREE.Object3D>
+  avatarRef: React.RefObject<THREE.Object3D>;
 }
 
 const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
-  const plasticMap = useLoader(TextureLoader, '/textures/Plastic008_BaseColor.jpg')
-  const tilesMap = useLoader(TextureLoader, '/textures/Tiles044_BaseColor.jpg')
-  const outerRef = useRef<THREE.Mesh>(null)
-  const router = useRouter()
+  // ✅ useTexture に変更して型エラー回避
+  const plasticMap = useTexture('/textures/Plastic008_BaseColor.jpg');
+  const tilesMap = useTexture('/textures/Tiles044_BaseColor.jpg');
 
-  const [selected, setSelected] = useState<'white' | 'float' | null>(null)
-  const [showUI, setShowUI] = useState(false)
+  const outerRef = useRef<THREE.Mesh>(null);
+  const router = useRouter();
+
+  const [selected, setSelected] = useState<'white' | 'float' | null>(null);
+  const [showUI, setShowUI] = useState(false);
 
   const { opacity, emissiveIntensity, uiOpacity } = useSpring({
     opacity: selected ? 0 : 0.7,
@@ -31,24 +33,24 @@ const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
     onRest: () => {
       if (selected) {
         setTimeout(() => {
-          if (selected === 'white') router.push('/white')
-          if (selected === 'float') router.push('/float')
-        }, 300)
+          if (selected === 'white') router.push('/white');
+          if (selected === 'float') router.push('/float');
+        }, 300);
       }
     },
-  })
+  });
 
   useFrame(() => {
     if (outerRef.current) {
-      outerRef.current.rotation.y += 0.005
+      outerRef.current.rotation.y += 0.005;
     }
 
     if (avatarRef?.current) {
-      const avatarPos = avatarRef.current.position
-      const dist = avatarPos.distanceTo(new THREE.Vector3(0, 5, 0))
-      setShowUI(dist < 6)
+      const avatarPos = avatarRef.current.position;
+      const dist = avatarPos.distanceTo(new THREE.Vector3(0, 5, 0));
+      setShowUI(dist < 6);
     }
-  })
+  });
 
   const buttonStyle: React.CSSProperties = {
     background: 'linear-gradient(135deg, #00ffff 0%, #007fff 100%)',
@@ -61,17 +63,17 @@ const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
     boxShadow: '0 0 12px #00eaff88',
     transition: 'transform 0.2s, box-shadow 0.2s',
     fontSize: '0.9rem',
-  }
+  };
 
   const hoverIn = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.transform = 'scale(1.05)'
-    e.currentTarget.style.boxShadow = '0 0 20px #00ffffcc'
-  }
+    e.currentTarget.style.transform = 'scale(1.05)';
+    e.currentTarget.style.boxShadow = '0 0 20px #00ffffcc';
+  };
 
   const hoverOut = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.transform = 'scale(1)'
-    e.currentTarget.style.boxShadow = '0 0 12px #00eaff88'
-  }
+    e.currentTarget.style.transform = 'scale(1)';
+    e.currentTarget.style.boxShadow = '0 0 12px #00eaff88';
+  };
 
   return (
     <group position={[0, 5, 0]}>
@@ -142,7 +144,8 @@ const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
         />
       </a3.mesh>
     </group>
-  )
-}
+  );
+};
 
-export default CoreSphere
+export default CoreSphere;
+

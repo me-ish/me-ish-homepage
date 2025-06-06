@@ -85,6 +85,7 @@ export default function FloatArtworksInGallery({
         return (
           <ArtworkFrame
             key={entry.id}
+            id={entry.id.toString()}
             position={pos.position}
             rotation={pos.rotation}
             aspectRatio={1.2}

@@ -1,4 +1,4 @@
-// --- /app/api/send-email/purchase-nft/route.ts ---
+//--- /app/api/send-email/purchase-nft/route.ts ---
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { generatePurchaseNftEmail } from '@/lib/emailTemplates/purchaseNft';

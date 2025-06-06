@@ -1,3 +1,4 @@
+// --- /app/api/send-email/purchase-artist/route.ts ---
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { generatePurchaseArtistEmail } from '@/lib/emailTemplates/purchaseArtist';

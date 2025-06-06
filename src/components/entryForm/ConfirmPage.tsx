@@ -6,7 +6,7 @@ import { useFormContext } from 'react-hook-form';
 interface ConfirmPageProps {
   onBack: () => void;
   onSubmit: (data: any) => void;
-  validateFields: string[]; // ※未使用でもOK
+  validateFields: string[]; 
 }
 
 const displayPlanLabels: Record<string, string> = {

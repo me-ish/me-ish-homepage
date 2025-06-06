@@ -11,7 +11,7 @@ export default function PricingPage() {
       <section className="mb-12">
         <h2 className="text-2xl font-bold mb-3">me-ishは、基本無料でご利用いただけます</h2>
         <p className="mb-4">
-          me-ishは、出展のハードルを下げるために「基本無料」でご利用いただける仕組みを採用しています。
+          me-ishは、出展のハードルを下げるために「基本無料」でご利用いただける仕組みを採用しています。  
         </p>
         <p>
           もっと確実に作品を見てもらいたい方や、優先的に表示されたい方のために、
@@ -90,4 +90,3 @@ export default function PricingPage() {
     </main>
   );
 }
-
