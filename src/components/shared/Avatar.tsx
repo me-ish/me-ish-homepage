@@ -12,7 +12,6 @@ import { Trail, useTexture } from '@react-three/drei';
 import { a, useSpring } from '@react-spring/three';
 import * as THREE from 'three';
 
-// group要素に渡せるすべてのpropsを保持する型
 type AvatarProps = JSX.IntrinsicElements['group'];
 
 const Avatar = forwardRef(function AvatarComponent(
@@ -22,10 +21,8 @@ const Avatar = forwardRef(function AvatarComponent(
   const internalRef = useRef<THREE.Group>(null);
   const combinedRef = ref ?? internalRef;
 
-  // ✅ useTexture に変更（型エラー回避）
   const tilesMap = useTexture('/textures/Tiles044_BaseColor.jpg');
 
-  // ✅ スプリングの定義（位置・拡大・発光）
   const { scale, opacity, position, emissiveIntensity } = useSpring({
     scale: [0.1, 0.1, 0.1],
     opacity: 1,
@@ -34,7 +31,6 @@ const Avatar = forwardRef(function AvatarComponent(
     config: { tension: 0, friction: 0 },
   });
 
-  // ✅ ゆらぎ & 移動制限
   useFrame((state) => {
     const refObj = (combinedRef as MutableRefObject<THREE.Group | null>).current;
     if (refObj) {
@@ -47,15 +43,13 @@ const Avatar = forwardRef(function AvatarComponent(
     }
   });
 
-  // ✅ ref に current を expose
-useImperativeHandle(ref, () => {
-  const refObj = (combinedRef as MutableRefObject<THREE.Group | null>).current;
-  if (!refObj) {
-    throw new Error('Avatar groupRef is null — useImperativeHandle failed.');
-  }
-  return refObj;
-});
-
+  useImperativeHandle(ref, () => {
+    const refObj = (combinedRef as MutableRefObject<THREE.Group | null>).current;
+    if (!refObj) {
+      throw new Error('Avatar groupRef is null — useImperativeHandle failed.');
+    }
+    return refObj;
+  });
 
   return (
     <Trail
@@ -66,7 +60,6 @@ useImperativeHandle(ref, () => {
     >
       <a.group
         ref={combinedRef}
-        // ✅ to((x,y,z) => [...]) で型を明示的に補完
         position={position.to((x, y, z) => [x, y, z] as [number, number, number])}
         scale={scale.to((x, y, z) => [x, y, z] as [number, number, number])}
         {...props}
@@ -74,11 +67,13 @@ useImperativeHandle(ref, () => {
         {/* 内核：発光球 */}
 <mesh>
   <sphereGeometry args={[0.5, 64, 64]} />
+
+  {/* @ts-ignore: suppress deep instantiation error caused by SpringValue */}
   <a.meshStandardMaterial
     map={tilesMap}
     color="#ffffff"
     emissive="#00ffff"
-    emissiveIntensity={emissiveIntensity as unknown as number}
+    emissiveIntensity={emissiveIntensity}
     toneMapped={false}
     transparent
     attach="material"
