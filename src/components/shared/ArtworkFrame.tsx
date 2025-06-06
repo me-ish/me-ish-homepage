@@ -111,12 +111,13 @@ const ArtworkFrame = forwardRef<ArtworkFrameHandle, ArtworkFrameProps>(
 
         <a.mesh position={[0, 0, -0.01]}>
           <planeGeometry args={[width + 0.1, height + 0.1]} />
-          <a.meshStandardMaterial
-            color="#000000"
-            emissive="#ffeeaa"
-            emissiveIntensity={springs.emissiveIntensity}
-            side={THREE.DoubleSide}
-          />
+<a.meshStandardMaterial
+  color="#000000"
+  emissive="#ffeeaa"
+  // @ts-ignore
+  emissiveIntensity={springs.emissiveIntensity}
+  side={THREE.DoubleSide}
+/>
         </a.mesh>
       </group>
     );

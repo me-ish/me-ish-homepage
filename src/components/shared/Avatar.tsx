@@ -72,18 +72,18 @@ useImperativeHandle(ref, () => {
         {...props}
       >
         {/* 内核：発光球 */}
-        <mesh>
-          <sphereGeometry args={[0.5, 64, 64]} />
-          <a.meshStandardMaterial
-            map={tilesMap}
-            color="#ffffff"
-            emissive="#00ffff"
-            emissiveIntensity={emissiveIntensity}
-            toneMapped={false}
-            transparent
-            opacity={opacity}
-          />
-        </mesh>
+<mesh>
+  <sphereGeometry args={[0.5, 64, 64]} />
+  <a.meshStandardMaterial
+    map={tilesMap}
+    color="#ffffff"
+    emissive="#00ffff"
+    emissiveIntensity={emissiveIntensity as unknown as number}
+    toneMapped={false}
+    transparent
+    attach="material"
+  />
+</mesh>
 
         {/* 外殻：グロー */}
         <mesh>
