@@ -1,8 +1,5 @@
-'use client';
+import FloatPageClient from './FloatPageClient';
 
-import React from 'react';
-import FloatGallery from '@/components/floatGallery/FloatGallery';
-
-export default function FloatGalleryPage() {
-  return <FloatGallery />;
+export default function Page() {
+  return <FloatPageClient />;
 }
