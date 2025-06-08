@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+
+  // 🔽 ビルドごとにユニークなIDを生成して chunk キャッシュを強制リセット
+  generateBuildId: async () => {
+    return "build-" + Date.now(); // 任意のユニークID
+  },
 };
 
 export default nextConfig;
