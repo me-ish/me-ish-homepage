@@ -7,8 +7,10 @@ import { Analytics } from '@/components/Analytics' // ★ 追加
 
 export const metadata = {
   title: 'me-ish',
-  description: '誰でも参加できる3Dアートギャラリー',
-}
+  description: 'アートを、もっと近くに。',
+  manifest: '/manifest.json',
+  themeColor: '#00a1e9',
+};
 
 export default function RootLayout({
   children,
