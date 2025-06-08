@@ -8,6 +8,8 @@ export default function HomePage() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    console.log('🧪 REACT VERSION (runtime):', React.version); // ← ここ！
+
     const checkMobile = () => setIsMobile(window.innerWidth <= 1024);
     checkMobile();
     window.addEventListener('resize', checkMobile);
