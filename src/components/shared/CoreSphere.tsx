@@ -15,7 +15,6 @@ interface CoreSphereProps {
 }
 
 const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
-  // ✅ useTexture に変更して型エラー回避
   const plasticMap = useTexture('/textures/Plastic008_BaseColor.jpg');
   const tilesMap = useTexture('/textures/Tiles044_BaseColor.jpg');
 
@@ -45,8 +44,8 @@ const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
       outerRef.current.rotation.y += 0.005;
     }
 
-    if (avatarRef?.current) {
-      const avatarPos = avatarRef.current.position;
+    const avatarPos = avatarRef?.current?.position;
+    if (avatarPos && 'distanceTo' in avatarPos) {
       const dist = avatarPos.distanceTo(new THREE.Vector3(0, 5, 0));
       setShowUI(dist < 6);
     }
@@ -117,26 +116,22 @@ const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
         </Html>
       )}
 
-{/* 内側の発光コア */}
-<a3.mesh>
-  <sphereGeometry args={[0.4, 64, 64]} />
-
-  {/* 🛠️ 型の深掘りによる ts(2589) を防ぐ */}
-  {
-    // @ts-ignore
-    <a3.meshStandardMaterial
-      map={plasticMap}
-      color="#88ccff"
-      metalness={0.2}
-      roughness={0.4}
-      emissive="#88ccff"
-      emissiveIntensity={emissiveIntensity}
-      toneMapped={false}
-      transparent
-      attach="material"
-    />
-  }
-</a3.mesh>
+      {/* 内側の発光コア */}
+      <a3.mesh>
+        <sphereGeometry args={[0.4, 64, 64]} />
+        {/* @ts-ignore */}
+        <a3.meshStandardMaterial
+          map={plasticMap}
+          color="#88ccff"
+          metalness={0.2}
+          roughness={0.4}
+          emissive="#88ccff"
+          emissiveIntensity={emissiveIntensity}
+          toneMapped={false}
+          transparent
+          attach="material"
+        />
+      </a3.mesh>
 
       {/* 外側リング（回転＋光エフェクト） */}
       <a3.mesh ref={outerRef}>
@@ -156,4 +151,5 @@ const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
 };
 
 export default CoreSphere;
+
 

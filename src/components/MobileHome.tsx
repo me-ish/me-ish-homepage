@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import Header from '@/components/shared/Header';
+import InstallPwaNotice from '@/components/shared/InstallPwaNotice';
 
 // アニメーション用フック
 function useFadeInOnScroll() {
@@ -65,6 +66,7 @@ const MobileHome = () => {
       {/* Galleryセクション */}
       <section id="gallery" className="fade-in-start py-[60px] px-5 bg-[#f9f9f9] text-center">
         <h2 className="text-[2.2rem] text-[#00a1e9] mb-8 font-bold">ギャラリーを見る</h2>
+        <InstallPwaNotice />
         <div className="grid gap-8 grid-cols-1 max-w-[960px] mx-auto">
           {[
             {

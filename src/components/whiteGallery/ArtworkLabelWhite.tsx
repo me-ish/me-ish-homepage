@@ -39,7 +39,10 @@ const ArtworkLabelWhite = forwardRef<THREE.Group, ArtworkLabelWhiteProps>(
       if (avatarRef?.current && groupRef.current) {
         const worldPos = new THREE.Vector3()
         groupRef.current.getWorldPosition(worldPos)
-        const dist = avatarRef.current.position.distanceTo(worldPos)
+
+        const avatarPos = avatarRef.current.position
+        const dist = avatarPos?.distanceTo?.(worldPos) ?? Infinity
+
         api.start({ scale: dist < 7 ? 1 : 0 })
       }
     })

@@ -6,7 +6,7 @@ import { Plane } from '@react-three/drei'
 export default function FloorWhite() {
   return (
     <Plane
-      args={[100, 100]} // 床のサイズ（必要なら調整可）
+      args={[68, 68]} // 床のサイズ（必要なら調整可）
       rotation={[-Math.PI / 2, 0, 0]}
       position={[0, 0, 0]} // y=0に設置
       receiveShadow

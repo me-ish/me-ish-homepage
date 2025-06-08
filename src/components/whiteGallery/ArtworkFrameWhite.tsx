@@ -86,22 +86,18 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
 
     const [shouldGlow, setShouldGlow] = useState(false)
 
-    useFrame(() => {
-      if (!avatarRef?.current) return
+useFrame(() => {
+  if (!avatarRef.current || !avatarRef.current.position) return
 
-      const artworkPos = new THREE.Vector3(...position)
-      const avatarPos = avatarRef.current.position
-      const distance = artworkPos.distanceTo(avatarPos)
+  const artworkPos = new THREE.Vector3(...position)
+  const avatarPos = avatarRef.current.position
 
-      api.start({
-        emissiveIntensity: distance < 7 ? 1.5 : 0,
-      })
+  const distance = artworkPos.distanceTo(avatarPos)
 
-      if (distance < 7 && !shouldGlow) {
-        setShouldGlow(true)
-        setTimeout(() => setShouldGlow(false), 1200)
-      }
-    })
+  api.start({
+    emissiveIntensity: distance < 7 ? 1.5 : 0,
+  })
+})
 
     return (
       <group

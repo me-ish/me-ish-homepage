@@ -14,9 +14,9 @@ import * as THREE from 'three';
 
 type AvatarProps = JSX.IntrinsicElements['group'];
 
-const Avatar = forwardRef(function AvatarComponent(
-  props: AvatarProps,
-  ref: React.ForwardedRef<THREE.Group>
+const Avatar = forwardRef<THREE.Group, AvatarProps>(function AvatarComponent(
+  props,
+  ref
 ) {
   const internalRef = useRef<THREE.Group>(null);
   const combinedRef = ref ?? internalRef;
@@ -33,23 +33,19 @@ const Avatar = forwardRef(function AvatarComponent(
 
   useFrame((state) => {
     const refObj = (combinedRef as MutableRefObject<THREE.Group | null>).current;
-    if (refObj) {
+    if (refObj && refObj.position) {
       refObj.position.y += Math.sin(state.clock.elapsedTime * 2) * 0.002;
-
-      const pos = refObj.position;
-      const limit = 38.5;
-      pos.x = Math.max(Math.min(pos.x, limit), -limit);
-      pos.z = Math.max(Math.min(pos.z, limit), -limit);
     }
   });
 
-  useImperativeHandle(ref, () => {
-    const refObj = (combinedRef as MutableRefObject<THREE.Group | null>).current;
-    if (!refObj) {
-      throw new Error('Avatar groupRef is null — useImperativeHandle failed.');
-    }
-    return refObj;
-  });
+  useImperativeHandle<THREE.Group | null, THREE.Group | null>(
+    ref,
+    () => {
+      const refObj = (combinedRef as MutableRefObject<THREE.Group | null>).current;
+      return refObj ?? null;
+    },
+    []
+  );
 
   return (
     <Trail
@@ -65,20 +61,19 @@ const Avatar = forwardRef(function AvatarComponent(
         {...props}
       >
         {/* 内核：発光球 */}
-<mesh>
-  <sphereGeometry args={[0.5, 64, 64]} />
-
-  {/* @ts-ignore: suppress deep instantiation error caused by SpringValue */}
-  <a.meshStandardMaterial
-    map={tilesMap}
-    color="#ffffff"
-    emissive="#00ffff"
-    emissiveIntensity={emissiveIntensity}
-    toneMapped={false}
-    transparent
-    attach="material"
-  />
-</mesh>
+        <mesh>
+          <sphereGeometry args={[0.5, 64, 64]} />
+          {/* @ts-ignore: react-spring 互換対策 */}
+          <a.meshStandardMaterial
+            map={tilesMap}
+            color="#ffffff"
+            emissive="#00ffff"
+            emissiveIntensity={emissiveIntensity}
+            toneMapped={false}
+            transparent
+            attach="material"
+          />
+        </mesh>
 
         {/* 外殻：グロー */}
         <mesh>
@@ -96,9 +91,9 @@ const Avatar = forwardRef(function AvatarComponent(
       </a.group>
     </Trail>
   );
-}) as React.ForwardRefExoticComponent<
-  AvatarProps & React.RefAttributes<THREE.Group>
->;
+});
 
 export default Avatar;
+
+
 
