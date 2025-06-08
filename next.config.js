@@ -1,6 +1,5 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,
@@ -8,8 +7,8 @@ const nextConfig: NextConfig = {
 
   // 🔽 ビルドごとにユニークなIDを生成して chunk キャッシュを強制リセット
   generateBuildId: async () => {
-    return "build-" + Date.now(); // 任意のユニークID
+    return 'build-' + Date.now();
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
