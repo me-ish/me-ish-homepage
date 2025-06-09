@@ -1,15 +1,12 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useZoomArtwork } from './ZoomArtworkContext';
-
-// 遅延読み込み（不要なら普通のimportでもOK）
-const ZoomArtworkDesktopDisplay = dynamic(() => import('./ZoomArtworkDesktopDisplay'));
-const ZoomArtworkMobileDisplay = dynamic(() => import('./ZoomArtworkMobileDisplay'));
+import ZoomArtworkMobileDisplay from './ZoomArtworkMobileDisplay';
+import ZoomArtworkDesktopDisplay from './ZoomArtworkDesktopDisplay';
 
 export default function ZoomArtworkDisplay() {
-  const { zoomedArtwork } = useZoomArtwork();
+  const { zoomedArtwork, setZoomedArtwork } = useZoomArtwork(); // ✅ ここで set を追加
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -21,7 +18,9 @@ export default function ZoomArtworkDisplay() {
 
   if (!zoomedArtwork) return null;
 
-  return isMobile
-    ? <ZoomArtworkMobileDisplay artwork={zoomedArtwork} onClose={() => setZoomedArtwork(null)} />
-    : <ZoomArtworkDesktopDisplay artwork={zoomedArtwork} onClose={() => setZoomedArtwork(null)} />;
+  return isMobile ? (
+    <ZoomArtworkMobileDisplay artwork={zoomedArtwork} onClose={() => setZoomedArtwork(null)} />
+  ) : (
+    <ZoomArtworkDesktopDisplay artwork={zoomedArtwork} onClose={() => setZoomedArtwork(null)} />
+  );
 }
