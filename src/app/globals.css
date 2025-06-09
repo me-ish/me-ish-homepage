@@ -9,13 +9,6 @@ html {
   font-family: 'Zen Maru Gothic', sans-serif;
   color: #333;
   background-color: #fff;
-
-
-  /* ✅ 追加 */
-  overscroll-behavior: none;
-  overflow: hidden;
-  touch-action: none;
-  height: 100%;
 }
 
 body {
@@ -26,12 +19,6 @@ body {
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   position: relative;
-
-    /* ✅ 追加 */
-  overscroll-behavior: none;
-  overflow: hidden;
-  touch-action: none;
-  height: 100%;
 }
 
 a {
