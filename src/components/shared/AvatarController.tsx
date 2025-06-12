@@ -1,12 +1,12 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { useFrame, useThree } from '@react-three/fiber';
 
 type AvatarControllerProps = {
   avatarRef: React.RefObject<THREE.Group>;
-  joystick?: { x: number; y: number }; // 
+  joystick?: { x: number; y: number }; // ← これが必要！
 };
 
 export default function AvatarController({ avatarRef, joystick }: AvatarControllerProps) {
@@ -39,8 +39,8 @@ export default function AvatarController({ avatarRef, joystick }: AvatarControll
     const useJoystick = joystick && (joystick.x !== 0 || joystick.y !== 0);
 
     if (useJoystick) {
-      direction.current.x = joystick.x;
-      direction.current.z = -joystick.y;
+      direction.current.x = joystick!.x;
+      direction.current.z = -joystick!.y;
     } else {
       if (keys.current['w']) direction.current.z -= 1;
       if (keys.current['s']) direction.current.z += 1;
@@ -62,10 +62,9 @@ export default function AvatarController({ avatarRef, joystick }: AvatarControll
       finalMove.addScaledVector(moveDir, -direction.current.z);
       finalMove.addScaledVector(sideDir, -direction.current.x);
 
-      velocity.current.lerp(finalMove, 0.1); // 慣性移動
+      velocity.current.lerp(finalMove, 0.1);
       avatarRef.current.position.add(velocity.current.clone().multiplyScalar(moveSpeed));
     } else {
-      // 停止時の慣性ゼロ化（必要なら）
       velocity.current.set(0, 0, 0);
     }
   });
