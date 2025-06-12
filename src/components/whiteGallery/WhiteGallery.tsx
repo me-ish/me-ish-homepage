@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import Lightning from './Lightning';
@@ -11,12 +11,16 @@ import AvatarController from '@/components/shared/AvatarController';
 import ThirdPersonCamera from '@/components/shared/ThirdPersonCamera';
 import LightCircle from '@/components/shared/LightCircle';
 import FloorWhite from './FloorWhite';
+import VirtualJoystick from '@/components/shared/VirtualJoystick'; // ✅ 追加
+import { useIsMobile } from '@/lib/useIsMobile'; // ✅ 追加
 
 export default function WhiteGallery(): JSX.Element {
   const avatarRef = useRef<THREE.Group>(null);
+  const isMobile = useIsMobile(); // ✅ スマホ判定
+  console.log('📱 isMobile:', isMobile);
+  const [joystickInput, setJoystickInput] = useState({ x: 0, y: 0 }); // ✅ 入力保存
 
   useEffect(() => {
-    // ギャラリー表示時にスクロール・スワイプを無効化
     const originalOverflow = document.body.style.overflow;
     const originalTouchAction = document.body.style.touchAction;
 
@@ -24,7 +28,6 @@ export default function WhiteGallery(): JSX.Element {
     document.body.style.touchAction = 'none';
 
     return () => {
-      // ギャラリー離脱時に元に戻す
       document.body.style.overflow = originalOverflow;
       document.body.style.touchAction = originalTouchAction;
     };
@@ -32,6 +35,11 @@ export default function WhiteGallery(): JSX.Element {
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
+      {/* ✅ Canvas外でUI表示 */}
+      {isMobile && (
+        <VirtualJoystick onMove={(x, y) => setJoystickInput({ x, y })} />
+      )}
+
       <Canvas
         shadows
         style={{ width: '100%', height: '100%' }}
@@ -42,7 +50,7 @@ export default function WhiteGallery(): JSX.Element {
         <CoreSphere avatarRef={avatarRef} />
         <ArtworksInGallery avatarRef={avatarRef} />
         <Avatar ref={avatarRef} />
-        <AvatarController avatarRef={avatarRef} />
+        <AvatarController avatarRef={avatarRef} joystick={joystickInput} />
         <ThirdPersonCamera avatarRef={avatarRef} />
         <FloorWhite />
       </Canvas>

@@ -4,16 +4,14 @@ declare module 'react-nipple' {
   export interface JoystickProps {
     options?: {
       mode?: string;
-      zone?: HTMLElement;
-      color?: string;
       position?: { top: string; left: string };
-      size?: number;
+      color?: string;
     };
     style?: React.CSSProperties;
     onMove?: (evt: any, data: { vector: { x: number; y: number } }) => void;
     onEnd?: () => void;
   }
 
-  export const Joystick: ComponentType<JoystickProps>;
+  const Joystick: ComponentType<JoystickProps>;
   export default Joystick;
 }
