@@ -45,7 +45,7 @@ export default function FloatGallery(): React.JSX.Element {
 
         {/* アバター操作 */}
         <Avatar ref={avatarRef} />
-        <AvatarController avatarRef={avatarRef} />
+        <AvatarController avatarRef={avatarRef} joystickRef={useRef({ x: 0, y: 0 })} />
         <ThirdPersonCamera avatarRef={avatarRef} />
       </Canvas>
 
