@@ -7,91 +7,86 @@ type JoystickInputProps = {
 };
 
 export default function JoystickInput({ onMove }: JoystickInputProps) {
-  const baseRef = useRef<HTMLDivElement | null>(null);
-  const knobRef = useRef<HTMLDivElement | null>(null);
+  const baseRef = useRef<HTMLDivElement>(null);
+  const knobRef = useRef<HTMLDivElement>(null);
+  const [center, setCenter] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
 
-  const getOffset = (touch: Touch, rect: DOMRect) => {
-    const x = touch.clientX - (rect.left + rect.width / 2);
-    const y = touch.clientY - (rect.top + rect.height / 2);
-    const radius = rect.width / 2;
-    return {
-      x: Math.max(-1, Math.min(1, x / radius)),
-      y: Math.max(-1, Math.min(1, y / radius)),
-    };
-  };
-
-  const handleTouchStart = (e: TouchEvent) => {
-    setDragging(true);
-    const rect = baseRef.current!.getBoundingClientRect();
-    const offset = getOffset(e.touches[0], rect);
-    if (knobRef.current) {
-      knobRef.current.style.transform = `translate(calc(-50% + ${offset.x * 40}px), calc(-50% + ${offset.y * 40}px))`;
-    }
-    onMove(offset);
-  };
-
-  const handleTouchMove = (e: TouchEvent) => {
-    if (!dragging) return;
-    const rect = baseRef.current!.getBoundingClientRect();
-    const offset = getOffset(e.touches[0], rect);
-    if (knobRef.current) {
-      knobRef.current.style.transform = `translate(calc(-50% + ${offset.x * 40}px), calc(-50% + ${offset.y * 40}px))`;
-    }
-    onMove(offset);
-  };
-
-  const handleTouchEnd = () => {
-    setDragging(false);
-    if (knobRef.current) {
-      knobRef.current.style.transform = 'translate(-50%, -50%)';
-    }
-    onMove({ x: 0, y: 0 });
-  };
-
   useEffect(() => {
-    const el = baseRef.current;
-    if (!el) return;
-    el.addEventListener('touchstart', handleTouchStart);
-    el.addEventListener('touchmove', handleTouchMove);
-    el.addEventListener('touchend', handleTouchEnd);
-    return () => {
-      el.removeEventListener('touchstart', handleTouchStart);
-      el.removeEventListener('touchmove', handleTouchMove);
-      el.removeEventListener('touchend', handleTouchEnd);
+    const base = baseRef.current;
+    if (!base) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      const rect = base.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      setCenter({ x: cx, y: cy });
+      setDragging(true);
+      updateKnob(touch.clientX, touch.clientY);
     };
-  }, []);
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!dragging) return;
+      const touch = e.touches[0];
+      updateKnob(touch.clientX, touch.clientY);
+    };
+
+    const handleTouchEnd = () => {
+      setDragging(false);
+      resetKnob();
+      onMove({ x: 0, y: 0 });
+    };
+
+    base.addEventListener('touchstart', handleTouchStart, { passive: false });
+    base.addEventListener('touchmove', handleTouchMove, { passive: false });
+    base.addEventListener('touchend', handleTouchEnd);
+    base.addEventListener('touchcancel', handleTouchEnd);
+
+    return () => {
+      base.removeEventListener('touchstart', handleTouchStart);
+      base.removeEventListener('touchmove', handleTouchMove);
+      base.removeEventListener('touchend', handleTouchEnd);
+      base.removeEventListener('touchcancel', handleTouchEnd);
+    };
+  }, [dragging]);
+
+  const updateKnob = (tx: number, ty: number) => {
+    const dx = tx - center.x;
+    const dy = ty - center.y;
+    const distance = Math.min(Math.sqrt(dx * dx + dy * dy), 40);
+    const angle = Math.atan2(dy, dx);
+    const offsetX = distance * Math.cos(angle);
+    const offsetY = distance * Math.sin(angle);
+
+    if (knobRef.current) {
+      knobRef.current.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+    }
+
+    onMove({
+      x: offsetX / 40,
+      y: -offsetY / 40,
+    });
+  };
+
+  const resetKnob = () => {
+    if (knobRef.current) {
+      knobRef.current.style.transform = 'translate(0px, 0px)';
+    }
+  };
 
   return (
-    <div
-      ref={baseRef}
-      style={{
-        position: 'fixed',
-        bottom: 30,
-        left: 30,
-        width: 100,
-        height: 100,
-        borderRadius: '50%',
-        background: 'rgba(0, 153, 255, 0.1)',
-        border: '2px solid #00a1e9',
-        touchAction: 'none',
-        zIndex: 100,
-      }}
-    >
-      <div
-        ref={knobRef}
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: '50%',
-          background: '#00a1e9',
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          transition: dragging ? 'none' : 'transform 0.1s ease',
-        }}
-      />
-    </div>
+<div
+  ref={baseRef}
+  className="fixed bottom-6 left-6 w-[100px] h-[100px] rounded-full bg-cyan-100 border border-cyan-500 z-50 touch-none"
+>
+  <div
+    ref={knobRef}
+    className={`w-10 h-10 rounded-full bg-cyan-500 absolute top-[30px] left-[30px] transition-transform duration-100 ease-out ${
+      dragging ? '' : 'transition'
+    }`}
+  />
+</div>
+
   );
 }
