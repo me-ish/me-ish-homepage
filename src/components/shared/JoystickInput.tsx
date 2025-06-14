@@ -16,8 +16,8 @@ export default function JoystickInput({ onMove }: JoystickInputProps) {
     const y = touch.clientY - (rect.top + rect.height / 2);
     const radius = rect.width / 2;
     return {
-      x: Math.max(-radius, Math.min(radius, x)) / radius,
-      y: Math.max(-radius, Math.min(radius, y)) / radius,
+      x: Math.max(-1, Math.min(1, x / radius)),
+      y: Math.max(-1, Math.min(1, y / radius)),
     };
   };
 
@@ -26,7 +26,7 @@ export default function JoystickInput({ onMove }: JoystickInputProps) {
     const rect = baseRef.current!.getBoundingClientRect();
     const offset = getOffset(e.touches[0], rect);
     if (knobRef.current) {
-      knobRef.current.style.transform = `translate(${offset.x * 40}px, ${offset.y * 40}px)`;
+      knobRef.current.style.transform = `translate(calc(-50% + ${offset.x * 40}px), calc(-50% + ${offset.y * 40}px))`;
     }
     onMove(offset);
   };
@@ -36,7 +36,7 @@ export default function JoystickInput({ onMove }: JoystickInputProps) {
     const rect = baseRef.current!.getBoundingClientRect();
     const offset = getOffset(e.touches[0], rect);
     if (knobRef.current) {
-      knobRef.current.style.transform = `translate(${offset.x * 40}px, ${offset.y * 40}px)`;
+      knobRef.current.style.transform = `translate(calc(-50% + ${offset.x * 40}px), calc(-50% + ${offset.y * 40}px))`;
     }
     onMove(offset);
   };
@@ -44,7 +44,7 @@ export default function JoystickInput({ onMove }: JoystickInputProps) {
   const handleTouchEnd = () => {
     setDragging(false);
     if (knobRef.current) {
-      knobRef.current.style.transform = 'translate(0px, 0px)';
+      knobRef.current.style.transform = 'translate(-50%, -50%)';
     }
     onMove({ x: 0, y: 0 });
   };
@@ -66,16 +66,16 @@ export default function JoystickInput({ onMove }: JoystickInputProps) {
     <div
       ref={baseRef}
       style={{
-        position: 'absolute',
+        position: 'fixed',
         bottom: 30,
         left: 30,
         width: 100,
         height: 100,
         borderRadius: '50%',
-        background: 'rgba(255,255,255,0.1)',
-        border: '1px solid rgba(255,255,255,0.3)',
+        background: 'rgba(0, 153, 255, 0.1)',
+        border: '2px solid #00a1e9',
         touchAction: 'none',
-        zIndex: 20,
+        zIndex: 100,
       }}
     >
       <div
@@ -84,8 +84,11 @@ export default function JoystickInput({ onMove }: JoystickInputProps) {
           width: 40,
           height: 40,
           borderRadius: '50%',
-          background: 'rgba(255,255,255,0.3)',
-          transform: 'translate(0, 0)',
+          background: '#00a1e9',
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
           transition: dragging ? 'none' : 'transform 0.1s ease',
         }}
       />

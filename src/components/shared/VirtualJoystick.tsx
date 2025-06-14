@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import * as Nipple from 'react-nipple'; // ✅ default を明示的に取り出す
+import * as Nipple from 'react-nipple';
 
 const Joystick = Nipple.default;
 
@@ -17,37 +17,43 @@ export default function VirtualJoystick({ onMove }: Props) {
   useEffect(() => {
     const preventScroll = (e: TouchEvent) => e.preventDefault();
     document.body.addEventListener('touchmove', preventScroll, { passive: false });
-    return () => document.body.removeEventListener('touchmove', preventScroll);
+    return () => {
+      document.body.removeEventListener('touchmove', preventScroll);
+    };
   }, []);
 
   return (
     <div
       style={{
         position: 'fixed',
-        bottom: 32,
-        left: 24,
+        bottom: 30,
+        left: 30,
         zIndex: 9999,
         touchAction: 'none',
-        width: 128,
-        height: 128,
-        borderRadius: '50%',
-        backgroundColor: 'rgba(0, 0, 0, 0.2)',
-        boxShadow: '0 0 8px rgba(0, 0, 0, 0.4)',
-        backdropFilter: 'blur(4px)',
-        border: '2px solid white',
+        width: 120,
+        height: 120,
       }}
     >
       <Joystick
         options={{
           mode: 'static',
-          position: { top: '64px', left: '64px' },
-          color: '#ffffff',
+          position: { top: '60px', left: '60px' },
+          color: '#00a1e9',
         }}
-        style={{ width: 128, height: 128 }}
+        style={{
+          width: 120,
+          height: 120,
+        }}
         onMove={((_, data) => {
-          if (data?.vector) onMove(data.vector.x, data.vector.y);
+          const x = data?.vector?.x ?? 0;
+          const y = data?.vector?.y ?? 0;
+          console.log('🕹️ Joystick onMove:', x, y);
+          onMove(x, y);
         }) as JoystickEvent}
-        onEnd={() => onMove(0, 0)}
+        onEnd={() => {
+          console.log('🛑 Joystick end');
+          onMove(0, 0);
+        }}
       />
     </div>
   );

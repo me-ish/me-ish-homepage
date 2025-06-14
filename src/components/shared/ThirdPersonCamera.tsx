@@ -18,17 +18,30 @@ export default function ThirdPersonCamera({ avatarRef }: ThirdPersonCameraProps)
   // マウス操作
   useEffect(() => {
     const dom = document.body;
+
     const onPointerDown = () => (isMouseDown.current = true);
     const onPointerUp = () => (isMouseDown.current = false);
+
     const onPointerMove = (e: PointerEvent) => {
       if (!isMouseDown.current) return;
+
+      // 左下のスティック範囲（半径64px, 中心 x=64, y=window.innerHeight - 64）を除外
+      const dx = e.clientX - 120;
+      const dy = e.clientY - (window.innerHeight - 120);
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < 120) return; // スティック内では視点回転しない
+
+      // 通常の回転処理
       rotation.current.y += e.movementX * 0.005;
       rotation.current.x -= e.movementY * 0.005;
       rotation.current.x = THREE.MathUtils.clamp(rotation.current.x, -1.2, 0.8);
     };
+
     dom.addEventListener('pointerdown', onPointerDown);
     dom.addEventListener('pointerup', onPointerUp);
     dom.addEventListener('pointermove', onPointerMove);
+
     return () => {
       dom.removeEventListener('pointerdown', onPointerDown);
       dom.removeEventListener('pointerup', onPointerUp);
@@ -36,7 +49,7 @@ export default function ThirdPersonCamera({ avatarRef }: ThirdPersonCameraProps)
     };
   }, []);
 
-  // キーボード操作
+  // キーボード操作（PC用）
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       keysPressed.current[e.key] = true;
@@ -55,6 +68,7 @@ export default function ThirdPersonCamera({ avatarRef }: ThirdPersonCameraProps)
   useFrame(() => {
     if (!avatarRef.current) return;
 
+    // キーボードでの回転操作（PC向け）
     if (keysPressed.current['ArrowLeft']) rotation.current.y += 0.03;
     if (keysPressed.current['ArrowRight']) rotation.current.y -= 0.03;
     if (keysPressed.current['ArrowUp']) rotation.current.x -= 0.03;

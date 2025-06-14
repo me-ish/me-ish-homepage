@@ -1,15 +1,15 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 
 type AvatarControllerProps = {
   avatarRef: React.RefObject<THREE.Group>;
-  joystick?: { x: number; y: number }; // スティック入力
+  joystickRef: React.RefObject<{ x: number; y: number }>;
 };
 
-export default function AvatarController({ avatarRef, joystick }: AvatarControllerProps) {
+export default function AvatarController({ avatarRef, joystickRef }: AvatarControllerProps) {
   const velocity = useRef(new THREE.Vector3());
   const keys = useRef<Record<string, boolean>>({});
   const { camera } = useThree();
@@ -30,44 +30,49 @@ export default function AvatarController({ avatarRef, joystick }: AvatarControll
   }, []);
 
   useFrame(() => {
-    if (!avatarRef.current) return;
+    const avatar = avatarRef.current;
+    const joystick = joystickRef.current;
+    if (!avatar || !joystick) return;
 
     const moveSpeed = 0.1;
     const moveVector = new THREE.Vector3();
 
-    let inputX = 0;
-    let inputY = 0;
+    let inputX = joystick.x;
+    let inputY = -joystick.y;
 
-    if (joystick && (joystick.x !== 0 || joystick.y !== 0)) {
-      inputX = joystick.x;
-      inputY = joystick.y;
-    } else {
+    // キーが優先
+    if (
+      keys.current['w'] || keys.current['a'] ||
+      keys.current['s'] || keys.current['d']
+    ) {
+      inputX = 0;
+      inputY = 0;
       if (keys.current['w']) inputY -= 1;
       if (keys.current['s']) inputY += 1;
       if (keys.current['a']) inputX -= 1;
       if (keys.current['d']) inputX += 1;
     }
 
+    console.log('🎮 inputX:', inputX, 'inputY:', inputY);
+
     if (inputX !== 0 || inputY !== 0) {
-      // カメラの前方ベクトル取得
       const forward = new THREE.Vector3();
       camera.getWorldDirection(forward);
       forward.y = 0;
       forward.normalize();
 
-      // カメラの右方向ベクトル取得（forward に垂直なベクトル）
       const right = new THREE.Vector3();
       right.crossVectors(forward, camera.up).normalize();
 
-      // 入力を forward/right に合成
       moveVector
-        .addScaledVector(forward, -inputY) // Yは前後
-        .addScaledVector(right, inputX);   // Xは左右
+        .addScaledVector(forward, -inputY)
+        .addScaledVector(right, inputX)
+        .normalize();
 
-      moveVector.normalize();
+      velocity.current.lerp(moveVector, 0.2);
+      avatar.position.add(velocity.current.clone().multiplyScalar(moveSpeed));
 
-      velocity.current.lerp(moveVector, 0.2); // 慣性
-      avatarRef.current.position.add(velocity.current.clone().multiplyScalar(moveSpeed));
+      console.log('🚶‍♂️ Moved to:', avatar.position.toArray());
     } else {
       velocity.current.set(0, 0, 0);
     }

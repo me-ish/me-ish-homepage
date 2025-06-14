@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  useRef,
-  forwardRef,
-  useImperativeHandle,
-  MutableRefObject,
-} from 'react';
+import { forwardRef, useRef, useImperativeHandle } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending } from 'three';
 import { Trail, useTexture } from '@react-three/drei';
@@ -14,12 +9,11 @@ import * as THREE from 'three';
 
 type AvatarProps = JSX.IntrinsicElements['group'];
 
-const Avatar = forwardRef<THREE.Group, AvatarProps>(function AvatarComponent(
-  props,
-  ref
-) {
-  const internalRef = useRef<THREE.Group>(null);
-  const combinedRef = ref ?? internalRef;
+const Avatar = forwardRef<THREE.Group, AvatarProps>((props, ref) => {
+  const groupRef = useRef<THREE.Group>(null);
+
+  // 外部refを内部refに接続（forwardRefで親のrefに接続可能にする）
+  useImperativeHandle(ref, () => groupRef.current!, []);
 
   const tilesMap = useTexture('/textures/Tiles044_BaseColor.jpg');
 
@@ -32,20 +26,10 @@ const Avatar = forwardRef<THREE.Group, AvatarProps>(function AvatarComponent(
   });
 
   useFrame((state) => {
-    const refObj = (combinedRef as MutableRefObject<THREE.Group | null>).current;
-    if (refObj && refObj.position) {
-      refObj.position.y += Math.sin(state.clock.elapsedTime * 2) * 0.002;
+    if (groupRef.current) {
+      groupRef.current.position.y += Math.sin(state.clock.elapsedTime * 2) * 0.002;
     }
   });
-
-  useImperativeHandle<THREE.Group | null, THREE.Group | null>(
-    ref,
-    () => {
-      const refObj = (combinedRef as MutableRefObject<THREE.Group | null>).current;
-      return refObj ?? null;
-    },
-    []
-  );
 
   return (
     <Trail
@@ -55,7 +39,7 @@ const Avatar = forwardRef<THREE.Group, AvatarProps>(function AvatarComponent(
       attenuation={(t) => t ** 2.2}
     >
       <a.group
-        ref={combinedRef}
+        ref={groupRef}
         position={position.to((x, y, z) => [x, y, z] as [number, number, number])}
         scale={scale.to((x, y, z) => [x, y, z] as [number, number, number])}
         {...props}
