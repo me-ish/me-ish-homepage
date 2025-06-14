@@ -1,7 +1,7 @@
 // components/gallery/WhiteGallery.tsx
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import Lightning from './Lightning';
@@ -14,11 +14,16 @@ import LightCircle from '@/components/shared/LightCircle';
 import FloorWhite from './FloorWhite';
 import JoystickInput from '@/components/shared/JoystickInput';
 import { useIsMobile } from '@/lib/useIsMobile';
+import { GalleryIntroModal } from '@/components/shared/GalleryIntroModal';
+import { OperationHintButton } from '@/components/shared/OperationHintButton';
+import GalleryWelcomeMessage from '@/components/shared/GalleryWelcomeMessage';
+import AIGuideChat from '@/components/shared/AIGuideChat';
 
 export default function WhiteGallery(): JSX.Element {
   const avatarRef = useRef<THREE.Group>(null);
   const isMobile = useIsMobile();
   const joystickRef = useRef({ x: 0, y: 0 }); // モバイル操作用
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
@@ -33,6 +38,11 @@ export default function WhiteGallery(): JSX.Element {
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
+      <GalleryIntroModal />
+      <OperationHintButton />
+      <GalleryWelcomeMessage
+        onOpenChat={() => setChatOpen(true)}
+      />
       {isMobile && (
         <JoystickInput
           onMove={({ x, y }) => {
@@ -55,6 +65,10 @@ export default function WhiteGallery(): JSX.Element {
         <ThirdPersonCamera avatarRef={avatarRef} />
         <FloorWhite />
       </Canvas>
+
+      <AIGuideChat initialMessage={chatOpen ? 'ギャラリーの使い方を教えて' : undefined} />
+
+
     </div>
   );
 }
