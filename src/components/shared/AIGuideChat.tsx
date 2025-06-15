@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { MessageCircle, Send, X, Mic, MicOff } from 'lucide-react';
 
 type AIGuideChatProps = {
   initialMessage?: string;
+  open: boolean;
+  onClose: () => void;
 };
 
 export default function AIGuideChat({ initialMessage }: AIGuideChatProps) {
@@ -11,27 +14,66 @@ export default function AIGuideChat({ initialMessage }: AIGuideChatProps) {
   const [reply, setReply] = useState('');
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [hasSentInitial, setHasSentInitial] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   const handleSubmit = async (text: string) => {
     if (!text.trim()) return;
     setLoading(true);
     const res = await fetch('/api/ai-guide', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: text }),
     });
     const data = await res.json();
     setReply(data.reply);
     setInput('');
     setLoading(false);
+
+    const utterance = new SpeechSynthesisUtterance(data.reply);
+    utterance.lang = 'ja-JP';
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
   };
 
   useEffect(() => {
     if (initialMessage && !hasSentInitial) {
       handleSubmit(initialMessage);
       setHasSentInitial(true);
+      setOpen(true);
     }
   }, [initialMessage, hasSentInitial]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'ja-JP';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        handleSubmit(transcript);
+        setIsRecording(false);
+      };
+
+      recognition.onerror = () => setIsRecording(false);
+      recognitionRef.current = recognition;
+    }
+  }, []);
+
+  const startListening = () => {
+    setIsRecording(true);
+    recognitionRef.current?.start();
+  };
+
+  const stopListening = () => {
+    setIsRecording(false);
+    recognitionRef.current?.stop();
+  };
 
   return (
     <div className={`fixed bottom-2 right-2 z-50 ${open ? 'w-[320px]' : ''}`}>
@@ -49,12 +91,14 @@ export default function AIGuideChat({ initialMessage }: AIGuideChatProps) {
         <div className="bg-white rounded-xl p-4 shadow-lg border border-cyan-300 relative">
           <button
             onClick={() => setOpen(false)}
-            className="absolute top-1 right-2 text-sm text-cyan-600 hover:underline"
+            className="absolute top-1 right-2 text-sm text-cyan-600 hover:underline flex items-center gap-1"
           >
-            ✕ 閉じる
+            <X size={14} /> 閉じる
           </button>
 
-          <h2 className="font-bold mb-2 text-cyan-600">me-ish ガイドAI</h2>
+          <h2 className="font-bold mb-2 text-cyan-600 flex items-center gap-2">
+            <MessageCircle size={18} /> me-ish ガイドAI
+          </h2>
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -62,13 +106,22 @@ export default function AIGuideChat({ initialMessage }: AIGuideChatProps) {
             className="w-full p-2 border rounded text-sm"
             placeholder="me-ishについて質問してみよう"
           />
-          <button
-            onClick={() => handleSubmit(input)}
-            className="mt-2 w-full bg-cyan-500 text-white py-1 rounded hover:bg-cyan-600"
-            disabled={loading}
-          >
-            {loading ? '送信中...' : '送信'}
-          </button>
+          <div className="flex items-center gap-2 mt-2">
+            <button
+              onClick={isRecording ? stopListening : startListening}
+              className="text-cyan-600 hover:text-cyan-800"
+            >
+              {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
+            </button>
+            <button
+              onClick={() => handleSubmit(input)}
+              className="flex-1 bg-cyan-500 text-white py-1 rounded hover:bg-cyan-600 flex items-center justify-center gap-1"
+              disabled={loading}
+            >
+              <Send size={16} />
+              {loading ? '送信中...' : '送信'}
+            </button>
+          </div>
           {reply && (
             <div className="mt-3 p-2 bg-gray-100 rounded text-sm whitespace-pre-line">
               {reply}
