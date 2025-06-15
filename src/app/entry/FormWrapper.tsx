@@ -9,6 +9,7 @@ import Step3_SalesAndAgreement from '@/components/entryForm/Step3_SalesAndAgreem
 import ConfirmPage from '@/components/entryForm/ConfirmPage';
 import CompletePage from '@/components/entryForm/CompletePage'; 
 import { supabase } from '@/lib/supabaseClient';
+import { v4 as uuidv4 } from 'uuid';
 
 export type FormValues = {
   artistName: string;
@@ -92,6 +93,7 @@ const FormWrapper = () => {
 
   const onSubmit = async (data: FormValues) => {
     try {
+      const externalUserId = uuidv4();
       const snsLinksJson = JSON.stringify({
         homepage: data.homepageUrl || '',
         twitter: data.twitterUrl || '',
@@ -146,8 +148,8 @@ const FormWrapper = () => {
           image_url: publicUrl,
           gallery_type: data.gallery_type || '',
           file_name: fileName,
-        },
-      ]);
+          external_user_id: externalUserId,
+        }]);
 
       if (error) {
         alert(`登録に失敗しました: ${error.message}`);
@@ -156,11 +158,15 @@ const FormWrapper = () => {
 
       setStep(5);
 
-      await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: data.email, name: data.artistName }),
-      });
+await fetch('/api/send-email', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    to: data.email,
+    name: data.artistName,
+    externalUserId, 
+  }),
+});
 
     } catch (e: any) {
       alert(`送信中にエラーが発生しました：${e.message}`);

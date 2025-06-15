@@ -1,42 +1,30 @@
+// src/app/login/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
+  const router = useRouter();
 
-  const handleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` },
+  const handleGoogleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${location.origin}/auth/callback`,
+      },
     });
-
-    if (error) {
-      setMessage('ログインリンクの送信に失敗しました。');
-    } else {
-      setMessage('ログインリンクを送信しました。メールをご確認ください。');
-    }
   };
 
   return (
     <main className="p-6 max-w-md mx-auto text-center">
-      <h1 className="text-xl font-bold mb-4">ログイン / 新規登録</h1>
-      <input
-        type="email"
-        placeholder="メールアドレスを入力"
-        className="w-full p-2 border rounded mb-4"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
+      <h1 className="text-xl font-bold mb-6">ログイン</h1>
       <button
-        onClick={handleLogin}
-        className="bg-[#00a1e9] text-white px-6 py-2 rounded hover:bg-[#008ec4] transition"
+        onClick={handleGoogleLogin}
+        className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition"
       >
-        ログインリンクを送信
+        Googleでログイン
       </button>
-      {message && <p className="mt-4 text-sm text-gray-600">{message}</p>}
     </main>
   );
 }

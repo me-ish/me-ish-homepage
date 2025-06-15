@@ -1,5 +1,7 @@
 'use client';
+
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 type Profile = {
@@ -15,27 +17,60 @@ type Profile = {
 export default function MyPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const loadProfile = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (!user || userError) {
+        console.warn('未ログイン or セッション取得失敗:', userError?.message);
+        router.push('/login');
+        return;
+      }
 
       setEmail(user.email ?? null);
 
-      const { data: profileData } = await supabase
+      // profiles から取得（存在しなければ insert）
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (profileData) setProfile(profileData);
+      if (!profileData) {
+        console.log('プロフィールが存在しないため新規作成を実行');
+
+        const { error: insertError } = await supabase.from('profiles').insert({
+          id: user.id,
+          display_name: '',
+          sns_links: {},
+          wallet_address: '',
+        });
+
+        if (insertError) {
+          console.error('プロフィール初期作成に失敗:', insertError.message);
+          return;
+        }
+
+        const { data: newProfile, error: fetchError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (fetchError) {
+          console.error('新規プロフィールの再取得に失敗:', fetchError.message);
+          return;
+        }
+
+        setProfile(newProfile);
+      } else {
+        setProfile(profileData);
+      }
     };
 
     loadProfile();
-  }, []);
+  }, [router]);
 
   return (
     <main className="p-6 max-w-xl mx-auto">
