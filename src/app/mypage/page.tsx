@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation'; // ✅ 追加
 import { supabase } from '@/lib/supabaseClient';
 
 type Profile = {
@@ -17,7 +17,18 @@ type Profile = {
 export default function MyPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState(false); // ✅ 追加
   const router = useRouter();
+  const searchParams = useSearchParams(); // ✅ 追加
+
+  useEffect(() => {
+    // ✅ 紐づけ成功通知チェック
+    if (searchParams.get('linked') === 'success') {
+      setShowToast(true);
+      const timer = setTimeout(() => setShowToast(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -30,7 +41,6 @@ export default function MyPage() {
 
       setEmail(user.email ?? null);
 
-      // profiles から取得（存在しなければ insert）
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -74,6 +84,13 @@ export default function MyPage() {
 
   return (
     <main className="p-6 max-w-xl mx-auto">
+      {/* ✅ トースト通知 */}
+      {showToast && (
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md z-50">
+          ✅ 紐づけが完了しました！
+        </div>
+      )}
+
       <h1 className="text-2xl font-bold mb-4">マイページ</h1>
 
       {profile ? (
@@ -98,3 +115,4 @@ export default function MyPage() {
     </main>
   );
 }
+

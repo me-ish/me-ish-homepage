@@ -47,7 +47,6 @@ const FormWrapper = () => {
       isForSale: '',
       saleType: '',
       price: '',
-      wallet: '',
       gallery_type: '',
       displayPlan: '',
       agreeTerms: false,
@@ -144,7 +143,6 @@ const FormWrapper = () => {
           type,                    //  New: entries.type に保存
           display_plan: displayPlan, //  New: entries.display_plan に保存
           price: data.price ? Number(data.price) : null,
-          wallet_address: data.wallet || '',
           image_url: publicUrl,
           gallery_type: data.gallery_type || '',
           file_name: fileName,
@@ -158,15 +156,16 @@ const FormWrapper = () => {
 
       setStep(5);
 
-await fetch('/api/send-email', {
+await fetch('/api/send-email/submit', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     to: data.email,
     name: data.artistName,
-    externalUserId, 
+    externalUserId,
   }),
 });
+
 
     } catch (e: any) {
       alert(`送信中にエラーが発生しました：${e.message}`);

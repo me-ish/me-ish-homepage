@@ -6,7 +6,7 @@ import { useFormContext } from 'react-hook-form';
 interface ConfirmPageProps {
   onBack: () => void;
   onSubmit: (data: any) => void;
-  validateFields: string[]; 
+  validateFields: string[];
 }
 
 const displayPlanLabels: Record<string, string> = {
@@ -73,10 +73,8 @@ const ConfirmPage: React.FC<ConfirmPageProps> = ({ onBack, onSubmit }) => {
               ? '通常販売'
               : '(未選択)'}
           </p>
-          <p><strong>販売価格：</strong> {data.price} 円</p>
-          {data.saleType === 'nft' && (
-            <p><strong>ウォレットアドレス：</strong> {data.wallet || '(未入力)'}</p>
-          )}
+          <p><strong>販売点数：</strong> {data.editionTotal} 点</p>
+          <p><strong>販売価格：</strong> {data.priceFormatted || Number(data.price).toLocaleString()} 円</p>
           <p><strong>表示保証プラン：</strong> 
             {displayPlanLabels[data.displayPlan] || '(未選択)'}
           </p>

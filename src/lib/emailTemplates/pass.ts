@@ -1,6 +1,6 @@
-// --- /lib/emailTemplates/pass.ts ---
+ // --- /lib/emailTemplates/pass.ts ---
 export function generatePassEmail(name: string, externalUserId: string) {
-  const linkUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/link?external_user_id=${externalUserId}`;
+  const linkUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/link?external=${externalUserId}`;
 
   return {
     subject: '【me-ish】作品が審査を通過しました',

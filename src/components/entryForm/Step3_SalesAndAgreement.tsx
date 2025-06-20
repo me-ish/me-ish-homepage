@@ -125,6 +125,24 @@ const Step3_SalesAndAgreement = () => {
             <small className="text-[#666] mt-1">※円単位で半角数字のみ / 税込価格</small>
           </label>
 
+<label className="flex flex-col font-semibold text-[1rem] text-[#333] mb-6">
+  販売点数（エディション数）
+  <span className="text-[#e63946] text-sm ml-2">※必須</span>
+  <input
+    type="number"
+    min="1"
+    max="10" // ✅ 上限を指定
+    placeholder="例：5"
+    className="w-full px-4 py-3 mt-2 text-base bg-[#fafafa] border border-[#ccc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00a1e9] focus:bg-white"
+    {...register('editionTotal', {
+      required: true,
+      min: { value: 1, message: '1以上を入力してください' },
+      max: { value: 10, message: '最大10点まで指定できます' },
+    })}
+  />
+  <small className="text-[#666] mt-1">※販売点数は1〜10の範囲で指定してください</small>
+</label>
+
           <label className="flex flex-col font-semibold text-[1rem] text-[#333] mb-6">
             表示保証プランの選択
             <span className="text-[#e63946] text-sm ml-2">※必須</span>
@@ -144,17 +162,6 @@ const Step3_SalesAndAgreement = () => {
             </small>
           </label>
 
-          {saleType === 'nft' && (
-            <label className="flex flex-col font-semibold text-[1rem] text-[#333] mb-6">
-              ウォレットアドレス（任意）
-              <input
-                type="text"
-                placeholder="0x..."
-                className="w-full px-4 py-3 mt-2 text-base bg-[#fafafa] border border-[#ccc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00a1e9] focus:bg-white"
-                {...register('wallet')}
-              />
-            </label>
-          )}
         </>
       )}
 
