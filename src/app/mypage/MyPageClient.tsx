@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import ProfileEditModal from './ProfileEditModal';
 
 // Types
 interface Profile {
@@ -29,9 +30,9 @@ export default function MyPageClient() {
   const [email, setEmail] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [showToast, setShowToast] = useState(false);
+  const [editing, setEditing] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     if (searchParams.get('linked') === 'success') {
@@ -87,63 +88,89 @@ export default function MyPageClient() {
   }, [router]);
 
   return (
-    <main className="p-6 max-w-4xl mx-auto space-y-8">
-      {showToast && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md z-50">
-          ✅ 紐づけが完了しました！
-        </div>
+    <>
+      {/* ✅ モーダルは return 内に含める */}
+      {editing && profile && (
+        <ProfileEditModal
+          initialProfile={profile}
+          onCancel={() => setEditing(false)}
+          onSave={async (updated) => {
+            const userId = (await supabase.auth.getUser()).data.user?.id;
+            const { error } = await supabase
+              .from('profiles')
+              .update(updated)
+              .eq('id', userId);
+
+            if (!error) {
+              setProfile({ ...profile, ...updated });
+              setEditing(false);
+            } else {
+              alert('保存に失敗しました');
+            }
+          }}
+        />
       )}
 
-      <section className="space-y-2">
-        <h1 className="text-3xl font-bold">マイページ</h1>
-        <p className="text-gray-700">ようこそ、{profile?.display_name || email || 'ユーザー'} さん</p>
-
-        <div className="bg-gray-50 p-4 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-2">プロフィール情報</h2>
-          // プロフィール情報の下に追加
-<button
-  className="mt-4 px-4 py-2 bg-[#00a1e9] text-white rounded hover:bg-[#008fcc]"
-  onClick={() => setEditing(true)}
->
-  プロフィールを編集
-</button>
-
-          <p><strong>メールアドレス：</strong>{email}</p>
-          <p><strong>表示名：</strong>{profile?.display_name || '未設定'}</p>
-          <div>
-            <p className="font-semibold mt-2">SNSリンク：</p>
-            <ul className="ml-4 list-disc">
-              {profile?.sns_links?.homepage && <li>HP: {profile.sns_links.homepage}</li>}
-              {profile?.sns_links?.twitter && <li>Twitter: {profile.sns_links.twitter}</li>}
-              {profile?.sns_links?.instagram && <li>Instagram: {profile.sns_links.instagram}</li>}
-            </ul>
-          </div>
-          {profile?.wallet_address && <p><strong>ウォレットアドレス：</strong>{profile.wallet_address}</p>}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="text-2xl font-semibold mb-4">あなたの応募作品</h2>
-        {entries.length === 0 ? (
-          <p className="text-gray-500">まだ作品がありません。</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {entries.map(entry => (
-              <div key={entry.id} className="border rounded-lg overflow-hidden shadow-sm bg-white">
-                <img src={entry.image_url} alt={entry.title} className="w-full h-48 object-cover" />
-                <div className="p-4">
-                  <h3 className="font-semibold text-lg truncate mb-1">{entry.title}</h3>
-                  <p className="text-sm text-gray-600">
-                    {entry.confirmed ? '✅ 承認済' : '⏳ 承認待ち'}
-                    <span className="ml-2">({new Date(entry.created_at).toLocaleDateString()})</span>
-                  </p>
-                </div>
-              </div>
-            ))}
+      <main className="p-6 max-w-4xl mx-auto space-y-8">
+        {showToast && (
+          <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md z-50">
+            ✅ 紐づけが完了しました！
           </div>
         )}
-      </section>
-    </main>
+
+        <section className="space-y-2">
+          <h1 className="text-3xl font-bold">マイページ</h1>
+          <p className="text-gray-700">
+            ようこそ、{profile?.display_name || email || 'ユーザー'} さん
+          </p>
+
+          <div className="bg-gray-50 p-4 rounded-lg shadow">
+            <h2 className="text-xl font-semibold mb-2">プロフィール情報</h2>
+            <button
+              className="mt-4 px-4 py-2 bg-[#00a1e9] text-white rounded hover:bg-[#008fcc]"
+              onClick={() => setEditing(true)}
+            >
+              プロフィールを編集
+            </button>
+
+            <p><strong>メールアドレス：</strong>{email}</p>
+            <p><strong>表示名：</strong>{profile?.display_name || '未設定'}</p>
+            <div>
+              <p className="font-semibold mt-2">SNSリンク：</p>
+              <ul className="ml-4 list-disc">
+                {profile?.sns_links?.homepage && <li>HP: {profile.sns_links.homepage}</li>}
+                {profile?.sns_links?.twitter && <li>Twitter: {profile.sns_links.twitter}</li>}
+                {profile?.sns_links?.instagram && <li>Instagram: {profile.sns_links.instagram}</li>}
+              </ul>
+            </div>
+            {profile?.wallet_address && (
+              <p><strong>ウォレットアドレス：</strong>{profile.wallet_address}</p>
+            )}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-semibold mb-4">あなたの応募作品</h2>
+          {entries.length === 0 ? (
+            <p className="text-gray-500">まだ作品がありません。</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {entries.map(entry => (
+                <div key={entry.id} className="border rounded-lg overflow-hidden shadow-sm bg-white">
+                  <img src={entry.image_url} alt={entry.title} className="w-full h-48 object-cover" />
+                  <div className="p-4">
+                    <h3 className="font-semibold text-lg truncate mb-1">{entry.title}</h3>
+                    <p className="text-sm text-gray-600">
+                      {entry.confirmed ? '✅ 承認済' : '⏳ 承認待ち'}
+                      <span className="ml-2">({new Date(entry.created_at).toLocaleDateString()})</span>
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+    </>
   );
 }
-
