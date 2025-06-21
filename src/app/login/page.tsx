@@ -7,14 +7,18 @@ import { supabase } from '@/lib/supabaseClient';
 export default function LoginPage() {
   const router = useRouter();
 
-  const handleGoogleLogin = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: 'https://www.me-ish.art/auth/callback'
-      },
-    });
-  };
+const handleGoogleLogin = async () => {
+  const redirectUrl = `${window.location.origin}/auth/callback`;
+  console.log('✅ redirectTo:', redirectUrl);
+
+  await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: redirectUrl
+    },
+  });
+};
+
 
   return (
     <main className="p-6 max-w-md mx-auto text-center">
