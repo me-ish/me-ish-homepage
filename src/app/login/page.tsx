@@ -8,17 +8,18 @@ export default function LoginPage() {
   const router = useRouter();
 
 const handleGoogleLogin = async () => {
-  const redirectUrl = `${window.location.origin}/auth/callback`;
-  console.log('✅ redirectTo:', redirectUrl);
+  const origin = window.location.origin;
+  const redirect = '/mypage'; // ← 必要に応じて変更可
+  const redirectTo = `${origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`;
+  console.log('✅ redirectTo:', redirectTo);
 
   await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: redirectUrl
+      redirectTo,
     },
   });
 };
-
 
   return (
     <main className="p-6 max-w-md mx-auto text-center">
