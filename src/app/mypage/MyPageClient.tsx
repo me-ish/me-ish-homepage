@@ -31,6 +31,7 @@ export default function MyPageClient() {
   const [showToast, setShowToast] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     if (searchParams.get('linked') === 'success') {
@@ -99,6 +100,14 @@ export default function MyPageClient() {
 
         <div className="bg-gray-50 p-4 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-2">プロフィール情報</h2>
+          // プロフィール情報の下に追加
+<button
+  className="mt-4 px-4 py-2 bg-[#00a1e9] text-white rounded hover:bg-[#008fcc]"
+  onClick={() => setEditing(true)}
+>
+  プロフィールを編集
+</button>
+
           <p><strong>メールアドレス：</strong>{email}</p>
           <p><strong>表示名：</strong>{profile?.display_name || '未設定'}</p>
           <div>
@@ -137,3 +146,4 @@ export default function MyPageClient() {
     </main>
   );
 }
+
