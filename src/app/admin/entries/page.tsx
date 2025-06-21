@@ -11,6 +11,8 @@ type Entry = {
   confirmed: boolean;
   file_name: string;
   processed?: boolean;
+  email: string;
+  external_user_id: string;
 };
 
 export default function AdminEntriesPage() {
@@ -39,7 +41,7 @@ export default function AdminEntriesPage() {
   const fetchEntries = async () => {
     const { data, error } = await supabase
       .from('entries')
-      .select('id, artist_name, title, image_url, confirmed, file_name');
+      .select('id, artist_name, title, image_url, confirmed, file_name, email, external_user_id'); 
 
     if (error) {
       console.error('取得エラー:', error.message);
@@ -81,6 +83,24 @@ export default function AdminEntriesPage() {
     if (urlData?.publicUrl) {
       await supabase.from('entries').update({ image_url: urlData.publicUrl }).eq('id', entry.id);
     }
+
+    // メール送信
+if (entry.email && entry.external_user_id) {
+  try {
+    await fetch('/api/send-email/pass', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: entry.email,
+        name: entry.artist_name,
+        externalUserId: entry.external_user_id,
+      }),
+    });
+  } catch (err) {
+    console.error('📨 メール送信エラー:', err);
+  }
+}
+
 
     fetchEntries();
   };

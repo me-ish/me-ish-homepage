@@ -1,4 +1,5 @@
 // src/types/supabase.ts
+
 export type Database = {
   public: {
     Tables: {
@@ -6,8 +7,13 @@ export type Database = {
         Row: {
           id: string;
           title: string;
-          status: string;
-          user_id: string;
+          artist_name: string;
+          file_name: string;
+          image_url: string;
+          email: string | null;
+          external_user_id: string | null;
+          confirmed: boolean;
+          created_at: string | null;
         };
       };
       renewals: {
