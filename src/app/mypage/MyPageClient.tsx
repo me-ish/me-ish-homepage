@@ -1,10 +1,10 @@
-// /src/app/mypage/MyPageClient.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import ProfileEditModal from './ProfileEditModal';
+import { Globe, Twitter, Instagram } from 'lucide-react'; // ✅ 追加（SNSアイコン用）
 
 // Types
 interface Profile {
@@ -89,7 +89,7 @@ export default function MyPageClient() {
 
   return (
     <>
-      {/* ✅ モーダルは return 内に含める */}
+      {/* ✅ モーダル */}
       {editing && profile && (
         <ProfileEditModal
           initialProfile={profile}
@@ -136,15 +136,45 @@ export default function MyPageClient() {
             <p><strong>メールアドレス：</strong>{email}</p>
             <p><strong>表示名：</strong>{profile?.display_name || '未設定'}</p>
             <div>
-              <p className="font-semibold mt-2">SNSリンク：</p>
-              <ul className="ml-4 list-disc">
-                {profile?.sns_links?.homepage && <li>HP: {profile.sns_links.homepage}</li>}
-                {profile?.sns_links?.twitter && <li>Twitter: {profile.sns_links.twitter}</li>}
-                {profile?.sns_links?.instagram && <li>Instagram: {profile.sns_links.instagram}</li>}
-              </ul>
+              <p className="font-semibold mt-2 mb-1">SNSリンク：</p>
+              <div className="flex items-center space-x-4">
+                {profile?.sns_links?.homepage && (
+                  <a
+                    href={profile.sns_links.homepage}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-600 hover:text-blue-600"
+                    title="ホームページ"
+                  >
+                    <Globe className="w-5 h-5" />
+                  </a>
+                )}
+                {profile?.sns_links?.twitter && (
+                  <a
+                    href={profile.sns_links.twitter}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#1DA1F2] hover:opacity-80"
+                    title="Twitter"
+                  >
+                    <Twitter className="w-5 h-5" />
+                  </a>
+                )}
+                {profile?.sns_links?.instagram && (
+                  <a
+                    href={profile.sns_links.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#E1306C] hover:opacity-80"
+                    title="Instagram"
+                  >
+                    <Instagram className="w-5 h-5" />
+                  </a>
+                )}
+              </div>
             </div>
             {profile?.wallet_address && (
-              <p><strong>ウォレットアドレス：</strong>{profile.wallet_address}</p>
+              <p className="mt-2"><strong>ウォレットアドレス：</strong>{profile.wallet_address}</p>
             )}
           </div>
         </section>
@@ -174,3 +204,4 @@ export default function MyPageClient() {
     </>
   );
 }
+
