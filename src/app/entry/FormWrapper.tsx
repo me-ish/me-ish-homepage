@@ -30,6 +30,7 @@ export type FormValues = {
   agreeTerms: boolean;
   confirmRights: boolean;
   confirmOriginal: boolean;
+  editionTotal: string;
 };
 
 const FormWrapper = () => {
@@ -147,6 +148,8 @@ const FormWrapper = () => {
           gallery_type: data.gallery_type || '',
           file_name: fileName,
           external_user_id: externalUserId,
+          edition_total: data.editionTotal ? Number(data.editionTotal) : null,
+          edition_sold: 0,
         }]);
 
       if (error) {

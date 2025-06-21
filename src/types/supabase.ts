@@ -14,6 +14,8 @@ export type Database = {
           external_user_id: string | null;
           confirmed: boolean;
           created_at: string | null;
+          edition_total: number | null; // ← 追加
+          edition_sold: number | null;  // ← 追加
         };
       };
       renewals: {
