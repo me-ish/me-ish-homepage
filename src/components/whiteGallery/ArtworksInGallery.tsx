@@ -22,7 +22,11 @@ interface ArtworkEntry {
   position: [number, number, number]
   rotation: [number, number, number]
   key: string
+  sale_type?: 'normal' | 'nft'
+  edition_total?: number | null
+  edition_sold?: number | null
 }
+
 
 interface ArtworksInGalleryProps {
   avatarRef: React.RefObject<THREE.Object3D>
@@ -34,14 +38,18 @@ export default function ArtworksInGallery({ avatarRef }: ArtworksInGalleryProps)
 
   useEffect(() => {
     const fetchArtworks = async () => {
-      const { data, error } = await supabase
-        .from('entries')
-        .select('*')
-        .eq('confirmed', true)
-        .eq('display_ready', true)
-        .eq('gallery_type', 'white')
-        .order('created_at', { ascending: true })
-        .limit(100)
+const { data, error } = await supabase
+  .from('entries')
+  .select(`
+    id, artist_name, title, file_name, description, is_for_sale, price, sns_links,
+    created_at, aspect_ratio, sale_type, edition_total, edition_sold
+  `)
+  .eq('confirmed', true)
+  .eq('display_ready', true)
+  .eq('gallery_type', 'white')
+  .order('created_at', { ascending: true })
+  .limit(100)
+
 
       if (error) {
         console.error('エントリー取得エラー:', error)
@@ -54,19 +62,23 @@ export default function ArtworksInGallery({ avatarRef }: ArtworksInGalleryProps)
           .from('artworks')
           .getPublicUrl(`final/${fileName}`).data.publicUrl
 
-        return {
-          title: item.title,
-          author: item.artist_name,
-          imageUrl: finalUrl,
-          description: item.description || '',
-          is_for_sale: item.is_for_sale,
-          price: item.price,
-          sns_links: item.sns_links || '{}',
-          id: item.id,
-          created_at: item.created_at,
-          ratio: item.aspect_ratio || 1,
-          scale: 1.2,
-        }
+return {
+  title: item.title,
+  author: item.artist_name,
+  imageUrl: finalUrl,
+  description: item.description || '',
+  is_for_sale: item.is_for_sale,
+  price: item.price,
+  sns_links: item.sns_links || '{}',
+  id: item.id,
+  created_at: item.created_at,
+  ratio: item.aspect_ratio || 1,
+  scale: 1.2,
+  sale_type: item.sale_type ?? 'normal',
+  edition_total: item.edition_total ?? 1,
+  edition_sold: item.edition_sold ?? 0,
+}
+
       })
 
       const dummyEntries = Array.from({ length: 7 }, (_, i) => ({
