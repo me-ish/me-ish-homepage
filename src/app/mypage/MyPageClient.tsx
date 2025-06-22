@@ -13,7 +13,6 @@ interface Profile {
     twitter?: string;
     instagram?: string;
   };
-  wallet_address?: string;
 }
 
 interface Entry {
@@ -53,6 +52,7 @@ export default function MyPageClient() {
         router.push('/login');
         return;
       }
+
       setEmail(user.email ?? null);
 
       const { data: profileData } = await supabase
@@ -66,7 +66,6 @@ export default function MyPageClient() {
           id: user.id,
           display_name: '',
           sns_links: {},
-          wallet_address: '',
         });
       }
 
@@ -98,14 +97,31 @@ export default function MyPageClient() {
           onCancel={() => setEditing(false)}
           onSave={async (updated) => {
             const userId = (await supabase.auth.getUser()).data.user?.id;
+
+            if (!userId) {
+              alert('ユーザーIDが取得できませんでした');
+              return;
+            }
+
+            const updatePayload = {
+              display_name: updated.display_name ?? '',
+              sns_links: {
+                homepage: updated.sns_links?.homepage ?? '',
+                twitter: updated.sns_links?.twitter ?? '',
+                instagram: updated.sns_links?.instagram ?? '',
+              },
+            };
+
             const { error } = await supabase
               .from('profiles')
-              .update(updated)
+              .update(updatePayload)
               .eq('id', userId);
+
             if (!error) {
-              setProfile({ ...profile, ...updated });
+              setProfile((prev) => ({ ...prev!, ...updatePayload }));
               setEditing(false);
             } else {
+              console.error('保存エラー:', error);
               alert('保存に失敗しました');
             }
           }}
@@ -156,9 +172,6 @@ export default function MyPageClient() {
                 )}
               </div>
             </div>
-            {profile?.wallet_address && (
-              <p className="mt-2"><strong>ウォレットアドレス：</strong>{profile.wallet_address}</p>
-            )}
           </div>
         </section>
 
