@@ -61,13 +61,12 @@ export default function MyPageClient() {
         .maybeSingle();
 
       if (!profileData) {
-        const { error: insertError } = await supabase.from('profiles').insert({
+        await supabase.from('profiles').insert({
           id: user.id,
           display_name: '',
           sns_links: {},
           wallet_address: '',
         });
-        if (insertError) return;
       }
 
       const { data: refreshedProfile } = await supabase
@@ -80,7 +79,7 @@ export default function MyPageClient() {
 
       const { data: entriesData } = await supabase
         .from('entries')
-        .select('id, title, image_url, confirmed, created_at, likes, gallery_type, edition_total, edition_sold')
+        .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -102,7 +101,6 @@ export default function MyPageClient() {
               .from('profiles')
               .update(updated)
               .eq('id', userId);
-
             if (!error) {
               setProfile({ ...profile, ...updated });
               setEditing(false);
@@ -137,7 +135,6 @@ export default function MyPageClient() {
 
             <p><strong>メールアドレス：</strong>{email}</p>
             <p><strong>表示名：</strong>{profile?.display_name || '未設定'}</p>
-
             <div>
               <p className="font-semibold mt-2 mb-1">SNSリンク：</p>
               <div className="flex items-center space-x-4">
@@ -158,7 +155,6 @@ export default function MyPageClient() {
                 )}
               </div>
             </div>
-
             {profile?.wallet_address && (
               <p className="mt-2"><strong>ウォレットアドレス：</strong>{profile.wallet_address}</p>
             )}
@@ -171,18 +167,16 @@ export default function MyPageClient() {
             <p className="text-gray-500">まだ作品がありません。</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {entries
-                .filter((entry) => entry.image_url && entry.image_url.includes('/final/'))
-                .map((entry) => (
+              {entries.map((entry) => {
+                const [visible, setVisible] = useState(true);
+                if (!entry.image_url?.includes('/final/') || !visible) return null;
+                return (
                   <div key={entry.id} className="border rounded-lg overflow-hidden shadow-sm bg-white">
                     <img
                       src={entry.image_url}
                       alt={entry.title}
                       className="w-full h-48 object-cover"
-                      onError={(e) => {
-                        console.warn('画像が読み込めませんでした:', entry.image_url);
-                        e.currentTarget.parentElement?.remove();
-                      }}
+                      onError={() => setVisible(false)}
                     />
                     <div className="p-4">
                       <h3 className="font-semibold text-lg truncate mb-1">{entry.title}</h3>
@@ -197,7 +191,8 @@ export default function MyPageClient() {
                       </div>
                     </div>
                   </div>
-                ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -205,3 +200,4 @@ export default function MyPageClient() {
     </>
   );
 }
+
