@@ -47,16 +47,6 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
         </div>
 
         <div>
-          <label className="block font-semibold mb-1">ウォレットアドレス（任意）</label>
-          <input
-            value={walletAddress}
-            onChange={(e) => setWalletAddress(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
-            placeholder="0x..."
-          />
-        </div>
-
-        <div>
           <label className="block font-semibold mb-1">ホームページ（任意）</label>
           <input
             value={homepage}
