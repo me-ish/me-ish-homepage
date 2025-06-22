@@ -113,14 +113,30 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
         className="flex flex-col items-center"
       >
-        {/* 👇 ここを追加：作品画像 */}
-        {imageUrl && (
-          <img
-            src={imageUrl}
-            alt={title}
-            className="max-w-[60vw] max-h-[80vh] object-contain rounded-xl shadow-lg"
-          />
-        )}
+{/* 👇 作品画像＋バッジを包むコンテナ */}
+{imageUrl && (
+  <div className="relative max-w-[35vw] max-h-[75vh]">
+    <img
+      src={imageUrl}
+      alt={title}
+      className="w-full h-full object-contain rounded-xl shadow-lg"
+    />
+
+    {/* 🪙 販売種別バッジ（画像の右上に固定） */}
+    {sale_type === 'nft' && (
+      <div className="absolute top-2 right-2 text-xs bg-yellow-400 text-black px-2 py-1 rounded-full font-semibold shadow-md">
+        NFT
+      </div>
+    )}
+
+    {sale_type === 'normal' && (
+      <div className="absolute top-2 right-2 text-xs bg-gray-700 text-white px-2 py-1 rounded-full font-semibold shadow-md">
+        通常販売
+      </div>
+    )}
+  </div>
+)}
+
 
 <div className="mt-4 flex flex-wrap justify-center items-center gap-4">
   {is_for_sale && !is_sold && !isEditionSoldOut ? (
@@ -129,13 +145,6 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
       <div className="text-xl font-bold text-[#00a1e9]">
         {price ? `${Number(price).toLocaleString()}円（税込）` : '販売中'}
       </div>
-
-      {/* 🪙 NFTバッジ */}
-      {sale_type === 'nft' && (
-        <div className="text-xs bg-yellow-400 text-black px-2 py-1 rounded-full font-semibold">
-          NFT
-        </div>
-      )}
 
       {/* 📦 残数表示 */}
       {editionTotal !== null && (
