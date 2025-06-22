@@ -32,6 +32,7 @@ export default function MyPageClient() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [visibleMap, setVisibleMap] = useState<Record<number, boolean>>({});
   const [showToast, setShowToast] = useState(false);
   const [editing, setEditing] = useState(false);
   const router = useRouter();
@@ -168,15 +169,18 @@ export default function MyPageClient() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
               {entries.map((entry) => {
-                const [visible, setVisible] = useState(true);
-                if (!entry.image_url?.includes('/final/') || !visible) return null;
+                const isVisible = visibleMap[entry.id] ?? true;
+                if (!entry.image_url?.includes('/final/') || !isVisible) return null;
+
                 return (
                   <div key={entry.id} className="border rounded-lg overflow-hidden shadow-sm bg-white">
                     <img
                       src={entry.image_url}
                       alt={entry.title}
                       className="w-full h-48 object-cover"
-                      onError={() => setVisible(false)}
+                      onError={() =>
+                        setVisibleMap((prev) => ({ ...prev, [entry.id]: false }))
+                      }
                     />
                     <div className="p-4">
                       <h3 className="font-semibold text-lg truncate mb-1">{entry.title}</h3>
