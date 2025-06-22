@@ -93,14 +93,32 @@ const DesktopHome = () => {
           </div>
         </section>
 
-        {/* 応募導線 */}
-        <section id="apply" className="fade-in-start bg-white py-[80px] px-5 text-center">
-          <div className="max-w-[700px] mx-auto">
-            <h2 className="font-bold text-[2.2rem] text-[#00a1e9] mb-4">あなたのアートを<br />世界に届けよう</h2>
-            <p className="text-[1.1rem] text-[#444] mb-8">me-ishでは、誰でも気軽に作品を展示できます。</p>
-            <Link href="/entry" className="button inline-block">応募する</Link>
-          </div>
-        </section>
+{/* 応募導線 */}
+<section
+  id="apply"
+  className="fade-in-start relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-[#dff6ff] via-white to-[#f0f9ff] px-6 py-24 text-center shadow-md transition hover:shadow-xl hover:scale-[1.01] group cursor-pointer"
+>
+  {/* 全体をリンクにする */}
+  <Link
+    href="/entry"
+    className="absolute inset-0 z-10"
+    aria-label="応募ページへ"
+  />
+
+  {/* 表示コンテンツ（クリック非干渉） */}
+  <div className="relative z-20 max-w-xl mx-auto pointer-events-none">
+    <h2 className="text-3xl sm:text-4xl font-bold text-[#00a1e9] leading-tight mb-4 group-hover:underline">
+      あなたのアートを<br />世界に届けよう
+    </h2>
+    <p className="text-gray-600 text-base sm:text-lg mb-6">
+      me-ishでは、誰でも気軽に作品を展示できます。
+    </p>
+    <div className="inline-block bg-[#00a1e9] text-white text-sm sm:text-base font-semibold px-6 py-3 rounded-full shadow group-hover:bg-[#008ed0] transition">
+      応募する
+    </div>
+  </div>
+</section>
+
 
         {/* FAQ */}
         <section id="faq" className="fade-in-start py-[60px] px-5 bg-[#f6f8fb] text-center">
