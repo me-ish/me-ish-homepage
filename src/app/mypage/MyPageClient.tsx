@@ -4,9 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import ProfileEditModal from './ProfileEditModal';
-import { Globe, Twitter, Instagram } from 'lucide-react'; // ✅ 追加（SNSアイコン用）
+import { Globe, Twitter, Instagram } from 'lucide-react';
 
-// Types
 interface Profile {
   display_name: string;
   sns_links: {
@@ -23,10 +22,10 @@ interface Entry {
   image_url: string;
   confirmed: boolean;
   created_at: string;
-  likes?: number;            // ← 追加
-  gallery_type?: string;     // ← 追加
-  edition_total?: number;    // ← 追加
-  edition_sold?: number;     // ← 追加
+  likes?: number;
+  gallery_type?: string;
+  edition_total?: number;
+  edition_sold?: number;
 }
 
 export default function MyPageClient() {
@@ -62,13 +61,12 @@ export default function MyPageClient() {
         .maybeSingle();
 
       if (!profileData) {
-        const { error: insertError } = await supabase.from('profiles').insert({
+        await supabase.from('profiles').insert({
           id: user.id,
           display_name: '',
           sns_links: {},
           wallet_address: '',
         });
-        if (insertError) return;
       }
 
       const { data: refreshedProfile } = await supabase
@@ -81,7 +79,7 @@ export default function MyPageClient() {
 
       const { data: entriesData } = await supabase
         .from('entries')
-        .select('id, title, image_url, confirmed, created_at')
+        .select('id, title, image_url, confirmed, created_at, likes, gallery_type, edition_total, edition_sold')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -93,7 +91,6 @@ export default function MyPageClient() {
 
   return (
     <>
-      {/* ✅ モーダル */}
       {editing && profile && (
         <ProfileEditModal
           initialProfile={profile}
@@ -104,7 +101,6 @@ export default function MyPageClient() {
               .from('profiles')
               .update(updated)
               .eq('id', userId);
-
             if (!error) {
               setProfile({ ...profile, ...updated });
               setEditing(false);
@@ -143,36 +139,18 @@ export default function MyPageClient() {
               <p className="font-semibold mt-2 mb-1">SNSリンク：</p>
               <div className="flex items-center space-x-4">
                 {profile?.sns_links?.homepage && (
-                  <a
-                    href={profile.sns_links.homepage}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-gray-600 hover:text-blue-600"
-                    title="ホームページ"
-                  >
-                    <Globe className="w-5 h-5" />
+                  <a href={profile.sns_links.homepage} target="_blank" rel="noopener noreferrer">
+                    <Globe className="w-5 h-5 text-gray-600 hover:text-blue-600" />
                   </a>
                 )}
                 {profile?.sns_links?.twitter && (
-                  <a
-                    href={profile.sns_links.twitter}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#1DA1F2] hover:opacity-80"
-                    title="Twitter"
-                  >
-                    <Twitter className="w-5 h-5" />
+                  <a href={profile.sns_links.twitter} target="_blank" rel="noopener noreferrer">
+                    <Twitter className="w-5 h-5 text-[#1DA1F2] hover:opacity-80" />
                   </a>
                 )}
                 {profile?.sns_links?.instagram && (
-                  <a
-                    href={profile.sns_links.instagram}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#E1306C] hover:opacity-80"
-                    title="Instagram"
-                  >
-                    <Instagram className="w-5 h-5" />
+                  <a href={profile.sns_links.instagram} target="_blank" rel="noopener noreferrer">
+                    <Instagram className="w-5 h-5 text-[#E1306C] hover:opacity-80" />
                   </a>
                 )}
               </div>
@@ -188,29 +166,48 @@ export default function MyPageClient() {
           {entries.length === 0 ? (
             <p className="text-gray-500">まだ作品がありません。</p>
           ) : (
-<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-  {entries.map(entry => (
-    <div key={entry.id} className="border rounded-lg overflow-hidden shadow-sm bg-white">
-      <img src={entry.image_url} alt={entry.title} className="w-full h-48 object-cover" />
-      <div className="p-4">
-        <h3 className="font-semibold text-lg truncate mb-1">{entry.title}</h3>
-        <p className="text-sm text-gray-600">
-          {entry.confirmed ? '✅ 承認済' : '⏳ 承認待ち'}
-          <span className="ml-2">({new Date(entry.created_at).toLocaleDateString()})</span>
-        </p>
-
-        {/* ✅ 追加情報 */}
-        <div className="text-sm text-gray-700 mt-2 space-y-1">
-          <p>❤️ {entry.likes ?? 0} いいね</p>
-          <p>展示：{entry.gallery_type ? (entry.gallery_type === 'white' ? 'White Gallery' : entry.gallery_type === 'float' ? 'Float Gallery' : entry.gallery_type) : '未定'}</p>
-          <p>エディション：{entry.edition_total ?? 0}点中{" "}{(entry.edition_total ?? 0) - (entry.edition_sold ?? 0)}点残</p>
-
-        </div>
-      </div>
-    </div>
-  ))}
-</div>
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {entries.map(entry => (
+                <div key={entry.id} className="border rounded-lg overflow-hidden shadow-sm bg-white">
+                  {entry.image_url?.includes('final') ? (
+                    <img
+                      src={entry.image_url}
+                      alt={entry.title}
+                      className="w-full h-48 object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-48 flex items-center justify-center bg-gray-100 text-gray-400 text-sm">
+                      🔄 画像処理中（非表示）
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-semibold text-lg truncate mb-1">{entry.title}</h3>
+                    <p className="text-sm text-gray-600">
+                      {entry.confirmed ? '✅ 承認済' : '⏳ 承認待ち'}
+                      <span className="ml-2">
+                        ({new Date(entry.created_at).toLocaleDateString()})
+                      </span>
+                    </p>
+                    <div className="text-sm text-gray-700 mt-2 space-y-1">
+                      <p>❤️ {entry.likes ?? 0} いいね</p>
+                      <p>
+                        展示：{entry.gallery_type
+                          ? entry.gallery_type === 'white'
+                            ? 'White Gallery'
+                            : entry.gallery_type === 'float'
+                            ? 'Float Gallery'
+                            : entry.gallery_type
+                          : '未定'}
+                      </p>
+                      <p>
+                        エディション：{entry.edition_total ?? 0}点中{" "}
+                        {(entry.edition_total ?? 0) - (entry.edition_sold ?? 0)}点残
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </section>
       </main>
