@@ -18,6 +18,7 @@ entries: {
     edition_sold: number | null;    // ✅ エディション販売済数
     likes: number | null;           // ✅ いいね数（もしあればこれも必要）
     gallery_type: string | null;    // ✅ 展示ギャラリー種別（もし使ってるならこれも必要）
+    display_ready: boolean; // ✅ 追加！
   };
 };
 
