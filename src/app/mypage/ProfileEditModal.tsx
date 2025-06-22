@@ -6,6 +6,7 @@ type Props = {
   initialProfile: {
     display_name: string;
     sns_links: {
+      homepage?: string;
       twitter?: string;
       instagram?: string;
     };
@@ -16,6 +17,7 @@ type Props = {
 
 export default function ProfileEditModal({ initialProfile, onSave, onCancel }: Props) {
   const [displayName, setDisplayName] = useState(initialProfile.display_name || '');
+  const [homepage, setHomepage] = useState(initialProfile.sns_links.homepage || '');
   const [twitter, setTwitter] = useState(initialProfile.sns_links.twitter || '');
   const [instagram, setInstagram] = useState(initialProfile.sns_links.instagram || '');
 
@@ -31,6 +33,16 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
             onChange={(e) => setDisplayName(e.target.value)}
             className="w-full border px-3 py-2 rounded"
             placeholder="例：K.Suzuki"
+          />
+        </div>
+
+        <div>
+          <label className="block font-semibold mb-1">ホームページ</label>
+          <input
+            value={homepage}
+            onChange={(e) => setHomepage(e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+            placeholder="https://yourwebsite.com"
           />
         </div>
 
@@ -59,7 +71,7 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
           <button
             onClick={() => onSave({
               display_name: displayName,
-              sns_links: { twitter, instagram },
+              sns_links: { homepage, twitter, instagram },
             })}
             className="px-4 py-2 bg-[#00a1e9] text-white rounded"
           >
