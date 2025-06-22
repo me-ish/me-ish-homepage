@@ -110,7 +110,7 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
         <div className={`self-end mb-2 px-3 py-1 rounded-full text-xs font-semibold shadow-md ${
           sale_type === 'nft'
             ? 'bg-gradient-to-r from-violet-400 to-purple-600 text-white'
-            : 'bg-gray-600 text-white'
+            : 'bg-gradient-to-r from-gray-400 to-gray-600 text-white'
         }`}>
           {sale_type === 'nft' ? 'NFT作品' : '通常販売作品'}
         </div>

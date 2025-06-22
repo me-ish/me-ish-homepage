@@ -113,30 +113,29 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
         className="flex flex-col items-center"
       >
-{/* 👇 作品画像＋バッジを包むコンテナ */}
-{imageUrl && (
-  <div className="relative max-w-[35vw] max-h-[75vh]">
+<div className="relative w-fit">
+  {/* 🪙 バッジ（画像の外・右上） */}
+  {(sale_type === 'nft' || sale_type === 'normal') && (
+    <div className={`
+      absolute -top-7 -right-0.5 text-xs px-2 py-1 rounded-full font-semibold shadow-md
+      ${sale_type === 'nft'
+        ? 'bg-gradient-to-r from-violet-400 to-purple-600 text-white'
+        : 'bg-gradient-to-r from-gray-400 to-gray-600 text-white'
+      }
+    `}>
+      {sale_type === 'nft' ? 'NFT' : '通常販売'}
+    </div>
+  )}
+
+  {/* 🎨 画像本体 */}
+  <div className="max-w-[35vw] max-h-[75vh]">
     <img
       src={imageUrl}
       alt={title}
       className="w-full h-full object-contain rounded-xl shadow-lg"
     />
-
-    {/* 🪙 販売種別バッジ（画像の右上に固定） */}
-    {sale_type === 'nft' && (
-      <div className="absolute top-2 right-2 text-xs bg-yellow-400 text-black px-2 py-1 rounded-full font-semibold shadow-md">
-        NFT
-      </div>
-    )}
-
-    {sale_type === 'normal' && (
-      <div className="absolute top-2 right-2 text-xs bg-gray-700 text-white px-2 py-1 rounded-full font-semibold shadow-md">
-        通常販売
-      </div>
-    )}
   </div>
-)}
-
+</div>
 
 <div className="mt-4 flex flex-wrap justify-center items-center gap-4">
   {is_for_sale && !is_sold && !isEditionSoldOut ? (
