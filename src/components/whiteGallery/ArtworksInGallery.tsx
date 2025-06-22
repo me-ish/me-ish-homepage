@@ -40,10 +40,11 @@ export default function ArtworksInGallery({ avatarRef }: ArtworksInGalleryProps)
     const fetchArtworks = async () => {
 const { data, error } = await supabase
   .from('entries')
-  .select(`
-    id, artist_name, title, file_name, description, is_for_sale, price, sns_links,
-    created_at, aspect_ratio, sale_type, edition_total, edition_sold
-  `)
+.select(`
+  id, artist_name, title, file_name, description, is_for_sale, price, sns_links,
+  created_at, sale_type, edition_total, edition_sold
+`)
+
   .eq('confirmed', true)
   .eq('display_ready', true)
   .eq('gallery_type', 'white')
@@ -72,7 +73,7 @@ return {
   sns_links: item.sns_links || '{}',
   id: item.id,
   created_at: item.created_at,
-  ratio: item.aspect_ratio || 1,
+  ratio: 1,
   scale: 1.2,
   sale_type: item.sale_type ?? 'normal',
   edition_total: item.edition_total ?? 1,
