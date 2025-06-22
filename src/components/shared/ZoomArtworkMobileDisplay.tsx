@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Heart, ShoppingCart } from 'lucide-react';
 import NftPurchaseButton from '@/components/purchase/NftPurchaseButton';
-import { Entry } from '../../types/types'; // 型が未定義なら any でも可
+import { Entry } from '../../types/types';
 
 interface Props {
   artwork: Entry;
@@ -14,6 +14,12 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
   const [likes, setLikes] = useState<number>(artwork.likes ?? 0);
   const [liked, setLiked] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+
+  const editionTotal = artwork.edition_total ?? null;
+  const editionSold = artwork.edition_sold ?? 0;
+  const editionRemaining = editionTotal !== null ? editionTotal - editionSold : null;
+  const isEditionSoldOut =
+    editionTotal !== null && editionRemaining !== null && editionRemaining <= 0;
 
   useEffect(() => {
     const fetchLikes = async () => {
@@ -120,11 +126,18 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
         </div>
 
         <div className="w-full max-w-[90vw] flex justify-center items-center gap-3 flex-wrap">
-          {is_for_sale && !is_sold ? (
+          {is_for_sale && !is_sold && !isEditionSoldOut ? (
             <>
               <div className="text-lg font-bold text-[#00a1e9]">
                 {price ? `${Number(price).toLocaleString()}円（税込）` : '販売中'}
               </div>
+
+              {editionTotal !== null && (
+                <div className="text-sm text-white/80">
+                  残り {editionRemaining} / {editionTotal} 枚
+                </div>
+              )}
+
               {sale_type === 'nft' && token_id ? (
                 <NftPurchaseButton
                   entryId={artwork.id}
@@ -206,4 +219,3 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
     </div>
   );
 }
-

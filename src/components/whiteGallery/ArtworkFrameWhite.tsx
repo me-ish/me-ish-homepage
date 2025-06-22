@@ -57,6 +57,9 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
       sns_links = '{}',
       id = null,
       created_at = null,
+      sale_type = 'normal',
+      edition_total = 1,
+      edition_sold = 0,
     } = data
 
     const groupRef = useRef<THREE.Group>(null)
@@ -120,7 +123,7 @@ useFrame(() => {
             sns_links: sns_links ?? '{}',
             created_at: created_at ?? '',
             is_sold: false,
-            sale_type: 'normal',
+            sale_type,
             token_id: undefined,
             width: undefined,
             height: undefined,

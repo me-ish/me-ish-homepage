@@ -122,42 +122,53 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
           />
         )}
 
-        <div className="mt-4 flex flex-wrap justify-center items-center gap-4">
-          {is_for_sale && !is_sold && !isEditionSoldOut ? (
-            <>
-              <div className="text-xl font-bold text-[#00a1e9]">
-                {price ? `${Number(price).toLocaleString()}円（税込）` : '販売中'}
-              </div>
+<div className="mt-4 flex flex-wrap justify-center items-center gap-4">
+  {is_for_sale && !is_sold && !isEditionSoldOut ? (
+    <>
+      {/* 💰 価格表示 */}
+      <div className="text-xl font-bold text-[#00a1e9]">
+        {price ? `${Number(price).toLocaleString()}円（税込）` : '販売中'}
+      </div>
 
-              {editionTotal !== null && (
-                <div className="text-sm text-white/80">
-                  {editionTotal}枚中 残り{editionRemaining}枚
-                </div>
-              )}
-
-              {sale_type === 'nft' && token_id ? (
-                <NftPurchaseButton
-                  entryId={id!}
-                  title={title}
-                  price={Number(price)}
-                  tokenId={token_id}
-                />
-              ) : (
-                <button
-                  onClick={handlePurchase}
-                  className="flex items-center gap-2 bg-[#00a1e9] hover:bg-[#0090cc] text-white font-semibold py-2 px-5 rounded-xl shadow transition-all"
-                >
-                  <ShoppingCart size={20} />
-                  購入する
-                </button>
-              )}
-            </>
-          ) : (
-            <div className="text-gray-400 bg-gray-600 text-sm py-2 px-4 rounded-lg inline-block">
-              SOLD
-            </div>
-          )}
+      {/* 🪙 NFTバッジ */}
+      {sale_type === 'nft' && (
+        <div className="text-xs bg-yellow-400 text-black px-2 py-1 rounded-full font-semibold">
+          NFT
         </div>
+      )}
+
+      {/* 📦 残数表示 */}
+      {editionTotal !== null && (
+        <div className="text-sm text-white/80">
+          残り {editionRemaining} / {editionTotal} 枚
+        </div>
+      )}
+
+      {/* 🛒 購入ボタン */}
+      {sale_type === 'nft' && token_id ? (
+        <NftPurchaseButton
+          entryId={id!}
+          title={title}
+          price={Number(price)}
+          tokenId={token_id}
+        />
+      ) : (
+        <button
+          onClick={handlePurchase}
+          className="flex items-center gap-2 bg-[#00a1e9] hover:bg-[#0090cc] text-white font-semibold py-2 px-5 rounded-xl shadow transition-all"
+        >
+          <ShoppingCart size={20} />
+          購入する
+        </button>
+      )}
+    </>
+  ) : (
+    <div className="text-gray-400 bg-gray-600 text-sm py-2 px-4 rounded-lg inline-block">
+      SOLD
+    </div>
+  )}
+</div>
+
       </div>
 
       <div
