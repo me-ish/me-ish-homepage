@@ -5,18 +5,28 @@ import { useState } from 'react';
 type Props = {
   initialProfile: {
     display_name: string;
+    wallet_address?: string;
     sns_links: {
       homepage?: string;
       twitter?: string;
       instagram?: string;
     };
   };
-  onSave: (updated: { display_name: string; sns_links: any }) => void;
+  onSave: (updated: {
+    display_name: string;
+    wallet_address?: string;
+    sns_links: {
+      homepage?: string;
+      twitter?: string;
+      instagram?: string;
+    };
+  }) => void;
   onCancel: () => void;
 };
 
 export default function ProfileEditModal({ initialProfile, onSave, onCancel }: Props) {
   const [displayName, setDisplayName] = useState(initialProfile.display_name || '');
+  const [walletAddress, setWalletAddress] = useState(initialProfile.wallet_address || '');
   const [homepage, setHomepage] = useState(initialProfile.sns_links.homepage || '');
   const [twitter, setTwitter] = useState(initialProfile.sns_links.twitter || '');
   const [instagram, setInstagram] = useState(initialProfile.sns_links.instagram || '');
@@ -37,17 +47,27 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
         </div>
 
         <div>
-          <label className="block font-semibold mb-1">ホームページ</label>
+          <label className="block font-semibold mb-1">ウォレットアドレス（任意）</label>
           <input
-            value={homepage}
-            onChange={(e) => setHomepage(e.target.value)}
+            value={walletAddress}
+            onChange={(e) => setWalletAddress(e.target.value)}
             className="w-full border px-3 py-2 rounded"
-            placeholder="https://yourwebsite.com"
+            placeholder="0x..."
           />
         </div>
 
         <div>
-          <label className="block font-semibold mb-1">Twitter</label>
+          <label className="block font-semibold mb-1">ホームページ（任意）</label>
+          <input
+            value={homepage}
+            onChange={(e) => setHomepage(e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+            placeholder="https://example.com"
+          />
+        </div>
+
+        <div>
+          <label className="block font-semibold mb-1">Twitter（任意）</label>
           <input
             value={twitter}
             onChange={(e) => setTwitter(e.target.value)}
@@ -57,7 +77,7 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
         </div>
 
         <div>
-          <label className="block font-semibold mb-1">Instagram</label>
+          <label className="block font-semibold mb-1">Instagram（任意）</label>
           <input
             value={instagram}
             onChange={(e) => setInstagram(e.target.value)}
@@ -67,12 +87,21 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
         </div>
 
         <div className="flex justify-end gap-2 mt-4">
-          <button onClick={onCancel} className="px-4 py-2 bg-gray-300 rounded">キャンセル</button>
+          <button onClick={onCancel} className="px-4 py-2 bg-gray-300 rounded">
+            キャンセル
+          </button>
           <button
-            onClick={() => onSave({
-              display_name: displayName,
-              sns_links: { homepage, twitter, instagram },
-            })}
+            onClick={() =>
+              onSave({
+                display_name: displayName,
+                wallet_address: walletAddress,
+                sns_links: {
+                  homepage,
+                  twitter,
+                  instagram,
+                },
+              })
+            }
             className="px-4 py-2 bg-[#00a1e9] text-white rounded"
           >
             保存
@@ -82,3 +111,4 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
     </div>
   );
 }
+
