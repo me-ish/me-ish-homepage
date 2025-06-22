@@ -3,8 +3,9 @@
 
 import React, { useEffect, useState } from 'react';
 import NftPurchaseButton from '@/components/purchase/NftPurchaseButton';
-import { Heart, ShoppingCart } from 'lucide-react';
+import { Heart, ShoppingCart, Globe, Instagram } from 'lucide-react';
 import { Entry } from '../../types/types';
+import { FaXTwitter } from 'react-icons/fa6';
 
 interface Props {
   artwork: Entry;
@@ -195,28 +196,45 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
           <p className="text-base leading-relaxed text-white/90">{description}</p>
         )}
 
-        {Object.keys(links).length > 0 && (
-          <div className="space-y-2 pt-2">
-            {links.homepage && (
-              <a href={links.homepage} target="_blank" rel="noopener noreferrer"
-                className="block bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-center">
-                🔗 ホームページ
-              </a>
-            )}
-            {links.twitter && (
-              <a href={links.twitter} target="_blank" rel="noopener noreferrer"
-                className="block bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-center">
-                🌟 X（旧Twitter）
-              </a>
-            )}
-            {links.instagram && (
-              <a href={links.instagram} target="_blank" rel="noopener noreferrer"
-                className="block bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-center">
-                📸 Instagram
-              </a>
-            )}
-          </div>
-        )}
+{Object.keys(links).length > 0 && (
+  <div className="space-y-2 pt-2">
+    {links.homepage && (
+      <a
+        href={links.homepage}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
+      >
+        <Globe size={18} />
+        <span>ホームページ</span>
+      </a>
+    )}
+
+    {links.twitter && (
+      <a
+        href={links.twitter}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
+      >
+        <FaXTwitter size={18} />
+        <span>X（旧Twitter）</span>
+      </a>
+    )}
+
+    {links.instagram && (
+      <a
+        href={links.instagram}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
+      >
+        <Instagram size={18} />
+        <span>Instagram</span>
+      </a>
+    )}
+  </div>
+)}
 
         <div className="absolute bottom-6 right-3 z-10">
           <button

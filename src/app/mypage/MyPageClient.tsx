@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import ProfileEditModal from './ProfileEditModal';
-import { Globe, Twitter, Instagram } from 'lucide-react';
+import { Globe, Instagram } from 'lucide-react';
+import { FaXTwitter } from 'react-icons/fa6';
 
 interface Profile {
   display_name: string;
@@ -160,11 +161,18 @@ export default function MyPageClient() {
                     <Globe className="w-5 h-5" />
                   </a>
                 )}
-                {profile?.sns_links?.twitter && (
-                  <a href={profile.sns_links.twitter} target="_blank" rel="noopener noreferrer" className="text-[#1DA1F2] hover:opacity-80" title="Twitter">
-                    <Twitter className="w-5 h-5" />
-                  </a>
-                )}
+{profile?.sns_links?.twitter && (
+  <a
+    href={profile.sns_links.twitter}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-black hover:opacity-80"
+    title="X (旧Twitter)"
+  >
+    <FaXTwitter className="w-5 h-5" />
+  </a>
+)}
+
                 {profile?.sns_links?.instagram && (
                   <a href={profile.sns_links.instagram} target="_blank" rel="noopener noreferrer" className="text-[#E1306C] hover:opacity-80" title="Instagram">
                     <Instagram className="w-5 h-5" />
