@@ -13,6 +13,8 @@ type Entry = {
   processed?: boolean;
   email: string;
   external_user_id: string;
+  edition_total?: number | null;
+  edition_sold?: number | null;
 };
 
 export default function AdminEntriesPage() {

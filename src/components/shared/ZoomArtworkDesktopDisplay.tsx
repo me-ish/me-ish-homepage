@@ -15,6 +15,16 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
   const [likes, setLikes] = useState<number>(artwork.likes ?? 0);
   const [liked, setLiked] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  // 残り枚数を計算
+const editionTotal = artwork.edition_total ?? null;
+const editionSold = artwork.edition_sold ?? 0;
+const editionRemaining = editionTotal !== null ? editionTotal - editionSold : null;
+
+// SOLD条件
+const isEditionSoldOut =
+  editionTotal !== null && editionRemaining !== null && editionRemaining <= 0;
+
+
 
   useEffect(() => {
     const fetchLikes = async () => {
@@ -107,53 +117,43 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
         className="flex flex-col items-center"
       >
-        <div className="relative w-[45vw] h-[80vh] bg-white rounded-2xl shadow-lg flex items-center justify-center">
-          <div
-            className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold shadow-md z-10 ${
-              sale_type === 'nft'
-                ? 'bg-gradient-to-r from-violet-400 to-purple-600 text-white'
-                : 'bg-gray-600 text-white'
-            }`}
-          >
-            {sale_type === 'nft' ? 'NFT作品' : '通常販売作品'}
-          </div>
+<div className="mt-4 flex flex-wrap justify-center items-center gap-4">
+  {is_for_sale && !is_sold && !isEditionSoldOut ? (
+    <>
+      <div className="text-xl font-bold text-[#00a1e9]">
+        {price ? `${Number(price).toLocaleString()}円（税込）` : '販売中'}
+      </div>
 
-          <img
-            src={imageUrl}
-            alt={title}
-            className="max-w-full max-h-full object-contain rounded-lg"
-          />
+      {editionTotal !== null && (
+        <div className="text-sm text-white/80">
+          {editionTotal}枚中 残り{editionRemaining}枚
         </div>
+      )}
 
-        <div className="mt-4 flex flex-wrap justify-center items-center gap-4">
-          {is_for_sale && !is_sold ? (
-            <>
-              <div className="text-xl font-bold text-[#00a1e9]">
-                {price ? `${Number(price).toLocaleString()}円（税込）` : '販売中'}
-              </div>
-              {sale_type === 'nft' && token_id ? (
-                <NftPurchaseButton
-                  entryId={id!}
-                  title={title}
-                  price={Number(price)}
-                  tokenId={token_id}
-                />
-              ) : (
-                <button
-                  onClick={handlePurchase}
-                  className="flex items-center gap-2 bg-[#00a1e9] hover:bg-[#0090cc] text-white font-semibold py-2 px-5 rounded-xl shadow transition-all"
-                >
-                  <ShoppingCart size={20} />
-                  購入する
-                </button>
-              )}
-            </>
-          ) : (
-            <div className="text-gray-400 bg-gray-600 text-sm py-2 px-4 rounded-lg inline-block">
-              SOLD
-            </div>
-          )}
-        </div>
+      {sale_type === 'nft' && token_id ? (
+        <NftPurchaseButton
+          entryId={id!}
+          title={title}
+          price={Number(price)}
+          tokenId={token_id}
+        />
+      ) : (
+        <button
+          onClick={handlePurchase}
+          className="flex items-center gap-2 bg-[#00a1e9] hover:bg-[#0090cc] text-white font-semibold py-2 px-5 rounded-xl shadow transition-all"
+        >
+          <ShoppingCart size={20} />
+          購入する
+        </button>
+      )}
+    </>
+  ) : (
+    <div className="text-gray-400 bg-gray-600 text-sm py-2 px-4 rounded-lg inline-block">
+      SOLD
+    </div>
+  )}
+</div>
+
       </div>
 
       <div

@@ -13,4 +13,6 @@ export interface Entry {
   sale_type?: 'normal' | 'nft';
   token_id?: string;
   likes?: number;
+  edition_total?: number | null;
+  edition_sold?: number | null;
 }
