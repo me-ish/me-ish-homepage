@@ -61,12 +61,13 @@ export default function MyPageClient() {
         .maybeSingle();
 
       if (!profileData) {
-        await supabase.from('profiles').insert({
+        const { error: insertError } = await supabase.from('profiles').insert({
           id: user.id,
           display_name: '',
           sns_links: {},
           wallet_address: '',
         });
+        if (insertError) return;
       }
 
       const { data: refreshedProfile } = await supabase
@@ -101,6 +102,7 @@ export default function MyPageClient() {
               .from('profiles')
               .update(updated)
               .eq('id', userId);
+
             if (!error) {
               setProfile({ ...profile, ...updated });
               setEditing(false);
@@ -135,26 +137,28 @@ export default function MyPageClient() {
 
             <p><strong>メールアドレス：</strong>{email}</p>
             <p><strong>表示名：</strong>{profile?.display_name || '未設定'}</p>
+
             <div>
               <p className="font-semibold mt-2 mb-1">SNSリンク：</p>
               <div className="flex items-center space-x-4">
                 {profile?.sns_links?.homepage && (
-                  <a href={profile.sns_links.homepage} target="_blank" rel="noopener noreferrer">
-                    <Globe className="w-5 h-5 text-gray-600 hover:text-blue-600" />
+                  <a href={profile.sns_links.homepage} target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-blue-600" title="ホームページ">
+                    <Globe className="w-5 h-5" />
                   </a>
                 )}
                 {profile?.sns_links?.twitter && (
-                  <a href={profile.sns_links.twitter} target="_blank" rel="noopener noreferrer">
-                    <Twitter className="w-5 h-5 text-[#1DA1F2] hover:opacity-80" />
+                  <a href={profile.sns_links.twitter} target="_blank" rel="noopener noreferrer" className="text-[#1DA1F2] hover:opacity-80" title="Twitter">
+                    <Twitter className="w-5 h-5" />
                   </a>
                 )}
                 {profile?.sns_links?.instagram && (
-                  <a href={profile.sns_links.instagram} target="_blank" rel="noopener noreferrer">
-                    <Instagram className="w-5 h-5 text-[#E1306C] hover:opacity-80" />
+                  <a href={profile.sns_links.instagram} target="_blank" rel="noopener noreferrer" className="text-[#E1306C] hover:opacity-80" title="Instagram">
+                    <Instagram className="w-5 h-5" />
                   </a>
                 )}
               </div>
             </div>
+
             {profile?.wallet_address && (
               <p className="mt-2"><strong>ウォレットアドレス：</strong>{profile.wallet_address}</p>
             )}
@@ -166,37 +170,38 @@ export default function MyPageClient() {
           {entries.length === 0 ? (
             <p className="text-gray-500">まだ作品がありません。</p>
           ) : (
-<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-  {entries
-    .filter(entry => entry.image_url && entry.image_url.includes('/final/')) // ✅ 画像処理完了済みだけを対象に
-    .map(entry => (
-      <div key={entry.id} className="border rounded-lg overflow-hidden shadow-sm bg-white">
-        <img
-          src={entry.image_url}
-          alt={entry.title}
-          className="w-full h-48 object-cover"
-          onError={(e) => { e.currentTarget.src = '/placeholder.png'; }}
-        />
-        <div className="p-4">
-          <h3 className="font-semibold text-lg truncate mb-1">{entry.title}</h3>
-          <p className="text-sm text-gray-600">
-            {entry.confirmed ? '✅ 承認済' : '⏳ 承認待ち'}
-            <span className="ml-2">({new Date(entry.created_at).toLocaleDateString()})</span>
-          </p>
-          <div className="text-sm text-gray-700 mt-2 space-y-1">
-            <p>❤️ {entry.likes ?? 0} いいね</p>
-            <p>展示：{entry.gallery_type === 'white' ? 'White Gallery' : entry.gallery_type === 'float' ? 'Float Gallery' : '未定'}</p>
-            <p>エディション：{entry.edition_total ?? 0}点中 {(entry.edition_total ?? 0) - (entry.edition_sold ?? 0)}点残</p>
-          </div>
-        </div>
-      </div>
-    ))}
-</div>
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {entries
+                .filter((entry) => entry.image_url && entry.image_url.includes('/final/'))
+                .map((entry) => (
+                  <div key={entry.id} className="border rounded-lg overflow-hidden shadow-sm bg-white">
+                    <img
+                      src={entry.image_url}
+                      alt={entry.title}
+                      className="w-full h-48 object-cover"
+                      onError={(e) => {
+                        console.warn('画像が読み込めませんでした:', entry.image_url);
+                        e.currentTarget.parentElement?.remove();
+                      }}
+                    />
+                    <div className="p-4">
+                      <h3 className="font-semibold text-lg truncate mb-1">{entry.title}</h3>
+                      <p className="text-sm text-gray-600">
+                        {entry.confirmed ? '✅ 承認済' : '⏳ 承認待ち'}
+                        <span className="ml-2">({new Date(entry.created_at).toLocaleDateString()})</span>
+                      </p>
+                      <div className="text-sm text-gray-700 mt-2 space-y-1">
+                        <p>❤️ {entry.likes ?? 0} いいね</p>
+                        <p>展示：{entry.gallery_type === 'white' ? 'White Gallery' : entry.gallery_type === 'float' ? 'Float Gallery' : '未定'}</p>
+                        <p>エディション：{entry.edition_total ?? 0}点中 {(entry.edition_total ?? 0) - (entry.edition_sold ?? 0)}点残</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
           )}
         </section>
       </main>
     </>
   );
 }
-
