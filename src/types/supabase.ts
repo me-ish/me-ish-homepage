@@ -3,21 +3,24 @@
 export type Database = {
   public: {
     Tables: {
-      entries: {
-        Row: {
-          id: string;
-          title: string;
-          artist_name: string;
-          file_name: string;
-          image_url: string;
-          email: string | null;
-          external_user_id: string | null;
-          confirmed: boolean;
-          created_at: string | null;
-          edition_total: number | null; // ← 追加
-          edition_sold: number | null;  // ← 追加
-        };
-      };
+entries: {
+  Row: {
+    id: string;
+    title: string;
+    artist_name: string;
+    file_name: string;
+    image_url: string;
+    email: string | null;
+    external_user_id: string | null;
+    confirmed: boolean;
+    created_at: string | null;
+    edition_total: number | null;   // ✅ エディション総数
+    edition_sold: number | null;    // ✅ エディション販売済数
+    likes: number | null;           // ✅ いいね数（もしあればこれも必要）
+    gallery_type: string | null;    // ✅ 展示ギャラリー種別（もし使ってるならこれも必要）
+  };
+};
+
       renewals: {
         Row: {
           id: string;
