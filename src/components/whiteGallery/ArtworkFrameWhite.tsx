@@ -29,7 +29,7 @@ interface ArtworkData {
   sns_links?: string
   id?: number | null
   created_at?: string | null
-  sale_type?: 'normal' | 'nft'
+  sale_type?: 'normal' | 'nft';
   edition_total?: number | null
   edition_sold?: number | null
 }

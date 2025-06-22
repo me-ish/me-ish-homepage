@@ -43,7 +43,7 @@ export default function AdminEntriesPage() {
   const fetchEntries = async () => {
     const { data, error } = await supabase
       .from('entries')
-      .select('id, artist_name, title, image_url, confirmed, file_name, email, external_user_id'); 
+      .select('id, artist_name, title, image_url, confirmed, file_name, email, external_user_id, edition_total, edition_sold, sale_type'); 
 
     if (error) {
       console.error('取得エラー:', error.message);
