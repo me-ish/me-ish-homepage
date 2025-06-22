@@ -170,4 +170,3 @@ const DesktopHome = () => {
 };
 
 export default DesktopHome;
-
