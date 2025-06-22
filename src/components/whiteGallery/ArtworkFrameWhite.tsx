@@ -29,6 +29,9 @@ interface ArtworkData {
   sns_links?: string
   id?: number | null
   created_at?: string | null
+  sale_type?: 'normal' | 'nft'
+  edition_total?: number | null
+  edition_sold?: number | null
 }
 
 interface ArtworkFrameWhiteProps extends PropsWithChildren {
@@ -122,6 +125,8 @@ useFrame(() => {
             width: undefined,
             height: undefined,
             likes: 0,
+            edition_total: data.edition_total ?? 1,
+            edition_sold: data.edition_sold ?? 0, 
           })
         }}
       >

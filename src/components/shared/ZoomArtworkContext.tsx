@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState } from 'react';
 
 // 🖼 拡大表示用アートワークの型定義
+// 🖼 拡大表示用アートワークの型定義
 export interface ZoomedArtwork {
   id: string;
   imageUrl: string;
@@ -19,6 +20,8 @@ export interface ZoomedArtwork {
   width?: number;
   height?: number;
   likes?: number;
+  edition_total?: number;
+  edition_sold?: number;
 }
 
 interface ZoomArtworkContextType {
