@@ -82,22 +82,36 @@ export default function FloatArtworksInGallery({
         const entry = entries[i];
         if (!entry) return null;
 
+        const lightHeight = 2.2; // 作品の上に配置
+
         return (
-          <ArtworkFrame
-            key={entry.id}
-            id={entry.id.toString()}
-            position={pos.position}
-            rotation={pos.rotation}
-            aspectRatio={1.2}
-            scale={1.8}
-            title={entry.title}
-            author={entry.artist_name}
-            imageUrl={entry.image_url}
-            avatarRef={avatarRef}
-            ref={(el: THREE.Group | null) => {
-              artworkRefs.current[i] = el;
-            }}
-          />
+          <group key={entry.id}>
+            <ArtworkFrame
+              id={entry.id.toString()}
+              position={pos.position}
+              rotation={pos.rotation}
+              aspectRatio={1.2}
+              scale={1.8}
+              title={entry.title}
+              author={entry.artist_name}
+              imageUrl={entry.image_url}
+              avatarRef={avatarRef}
+              ref={(el: THREE.Group | null) => {
+                artworkRefs.current[i] = el;
+              }}
+            />
+            <pointLight
+              position={[
+                pos.position[0],
+                pos.position[1] + lightHeight,
+                pos.position[2],
+              ]}
+              intensity={1.2}
+              distance={8}
+              decay={2}
+              color="#ffffff"
+            />
+          </group>
         );
       })}
     </>

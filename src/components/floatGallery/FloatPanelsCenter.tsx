@@ -10,7 +10,7 @@ export default function FloatPanelsCenter(): JSX.Element {
       {/* 床 */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[80, 80]} />
-        <meshStandardMaterial color="#dcdcdc" />
+        <meshStandardMaterial color="#cccccc" />
       </mesh>
 
       {/* 壁と中央パネル */}

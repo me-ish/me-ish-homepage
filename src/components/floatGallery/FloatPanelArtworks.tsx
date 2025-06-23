@@ -14,6 +14,7 @@ export default function FloatPanelArtworks({ avatarRef, artworkRefs }: Props): J
   const panelY = 3.5;
   const artworkGap = 4.5;
   const distanceFromPanel = 0.4;
+  const lightHeight = 2.2;
 
   const sides = [
     { deg: 45, rotationY: Math.PI / 4 + Math.PI, frontScale: -2 },
@@ -46,22 +47,37 @@ export default function FloatPanelArtworks({ avatarRef, artworkRefs }: Props): J
 
   return (
     <>
-      {artworks.map((art, i) => (
-        <ArtworkFrame
-          key={i}
-          id={`artwork-${i}`} 
-          position={art.position}
-          rotation={art.rotation}
-          scale={1.8}
-          title={`Title ${i + 1}`}
-          author={`Artist ${i + 1}`}
-          imageUrl="/images/sample.jpg"
-          avatarRef={avatarRef}
-          ref={(el) => {
-            artworkRefs.current[i] = el;
-          }}
-        />
-      ))}
+      {artworks.map((art, i) => {
+        const id = `artwork-${i}`;
+        return (
+          <group key={id}>
+            <ArtworkFrame
+              id={id}
+              position={art.position}
+              rotation={art.rotation}
+              scale={1.8}
+              title={`Title ${i + 1}`}
+              author={`Artist ${i + 1}`}
+              imageUrl="/images/sample.jpg"
+              avatarRef={avatarRef}
+              ref={(el) => {
+                artworkRefs.current[i] = el;
+              }}
+            />
+            <pointLight
+              position={[
+                art.position[0],
+                art.position[1] + lightHeight,
+                art.position[2],
+              ]}
+              intensity={1.2}
+              distance={8}
+              decay={2}
+              color="#ffffff"
+            />
+          </group>
+        );
+      })}
     </>
   );
 }

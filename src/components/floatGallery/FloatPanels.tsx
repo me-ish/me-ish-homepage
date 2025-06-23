@@ -30,7 +30,12 @@ export default function FloatPanels(): JSX.Element {
   return (
     <group>
       {panels.map((p, i) => (
-        <mesh key={i} position={p.position} rotation={p.rotation}>
+        <mesh
+          key={i}
+          position={p.position}
+          rotation={p.rotation}
+          receiveShadow // ✅ 追加済み
+        >
           <boxGeometry args={[panelWidth, panelHeight, panelThickness]} />
           <meshStandardMaterial {...materialProps} />
         </mesh>
