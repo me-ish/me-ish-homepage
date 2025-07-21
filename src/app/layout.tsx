@@ -3,7 +3,7 @@ import React from 'react'
 import ZoomArtworkDisplay from '@/components/shared/ZoomArtworkDisplay'
 import { ZoomArtworkProvider } from '@/components/shared/ZoomArtworkContext'
 import ClientWrapper from '@/components/shared/ClientWrapper'
-import { Analytics } from '@/components/Analytics' // ★ 追加
+import { Analytics } from '@/components/Analytics'
 
 export const metadata = {
   title: 'me-ish',
@@ -19,19 +19,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
-      <head /> 
-<body className="relative min-h-screen text-[#333] font-zen overflow-x-hidden">
-  <ZoomArtworkProvider>
-    <ClientWrapper>
-      <div className="max-w-[820px] mx-auto px-4 w-full">
-        {children}
-      </div>
-      <ZoomArtworkDisplay />
-      <Analytics />
-    </ClientWrapper>
-  </ZoomArtworkProvider>
-</body>
-
+      <body className="relative min-h-screen text-[#333] font-zen overflow-x-hidden max-w-[820px] mx-auto px-4">
+        <ZoomArtworkProvider>
+          <ClientWrapper>
+            {children}
+            <ZoomArtworkDisplay />
+            <Analytics />
+          </ClientWrapper>
+        </ZoomArtworkProvider>
+      </body>
     </html>
   )
 }
+
