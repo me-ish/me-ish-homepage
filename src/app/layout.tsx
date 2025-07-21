@@ -20,15 +20,18 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <head /> 
-      <body className="relative min-h-screen text-[#333] font-zen overflow-x-hidden">
-        <ZoomArtworkProvider>
-          <ClientWrapper>
-            {children}
-            <ZoomArtworkDisplay />
-            <Analytics /> 
-          </ClientWrapper>
-        </ZoomArtworkProvider>
-      </body>
+<body className="relative min-h-screen text-[#333] font-zen overflow-x-hidden">
+  <ZoomArtworkProvider>
+    <ClientWrapper>
+      <div className="max-w-[820px] mx-auto px-4 w-full">
+        {children}
+      </div>
+      <ZoomArtworkDisplay />
+      <Analytics />
+    </ClientWrapper>
+  </ZoomArtworkProvider>
+</body>
+
     </html>
   )
 }
