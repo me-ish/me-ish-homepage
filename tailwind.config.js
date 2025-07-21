@@ -1,18 +1,18 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./app/**/*.{js,ts,jsx,tsx}",               // App Router系ファイル
-    "./src/**/*.{js,ts,jsx,tsx,css}",           // src配下の全ファイル
-    "./src/app/globals.css",                    // 明示的にグローバルCSSも追加
-    "./components/**/*.{js,ts,jsx,tsx}",        // 追加：念のためcomponents直下も指定
+    './app/**/*.{js,ts,jsx,tsx}',            // App Router 関連
+    './src/**/*.{js,ts,jsx,tsx,css}',        // src配下すべて
+    './src/app/globals.css',                 // グローバルCSS明示
+    './components/**/*.{js,ts,jsx,tsx}',     // componentsフォルダ（念のため）
   ],
   safelist: [
-    'max-w-[820px]',
-    'mx-auto',
-    'px-4',
-    'w-full',
-    'font-zen',
-    'font-lilita',
+    'max-w-[820px]',   // 表示幅制限（本番でpurgeされないように）
+    'mx-auto',         // 中央寄せ
+    'px-4',            // 横padding
+    'w-full',          // 幅指定
+    'font-zen',        // フォントクラス（Zen Maru Gothic）
+    'font-lilita',     // フォントクラス（Lilita One）
   ],
   theme: {
     extend: {
@@ -45,4 +45,4 @@ module.exports = {
     },
   },
   plugins: [],
-};
+}
