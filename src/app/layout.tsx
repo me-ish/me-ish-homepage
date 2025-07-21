@@ -19,7 +19,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
-      <body className="relative min-h-screen text-[#333] font-zen overflow-x-hidden max-w-[820px] mx-auto px-4">
+      // layout.tsx
+<body className="text-lg leading-relaxed font-zen text-[#333]">
         <ZoomArtworkProvider>
           <ClientWrapper>
             {children}

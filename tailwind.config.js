@@ -17,6 +17,11 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
+            fontSize: {
+      base: '18px',
+      lg: '20px',
+      xl: '24px',
+    },
         lilita: ['"Lilita One"', 'cursive'],
         zen: ['"Zen Maru Gothic"', 'sans-serif'],
       },
