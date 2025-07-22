@@ -71,21 +71,20 @@ const ArtworkLabelWhite = forwardRef<THREE.Group, ArtworkLabelWhiteProps>(
         </mesh>
 
         {/* テキスト */}
-<Text
-  font="/fonts/subset-ZenMaruGothic-Regular.woff"
-  fontSize={0.22}
-  color="#000000"
-  anchorX="center"
-  anchorY="middle"
-  outlineWidth={0.015}
-  outlineColor="#ffffff"
-  position={[0, 0, 0.01]}
-  maxWidth={1.4}
-  textAlign="center"
->
-  {`${title} by ${author}`}
-</Text>
-
+        <Text
+          font="/fonts/subset-ZenMaruGothic-Regular.woff"
+          fontSize={0.22}
+          color="#000000"
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.015}
+          outlineColor="#ffffff"
+          position={[0, 0, 0.01]}
+          maxWidth={1.4}
+          textAlign="center"
+        >
+          {title + '\nby ' + author}
+        </Text>
       </a.group>
     )
   }

@@ -15,11 +15,14 @@ type Entry = {
   external_user_id: string;
   edition_total?: number | null;
   edition_sold?: number | null;
+  sale_type?: string;
+  gallery_type?: string;
 };
 
 export default function AdminEntriesPage() {
   const router = useRouter();
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [selectedGallery, setSelectedGallery] = useState<string>('all');
 
   useEffect(() => {
     const isAdmin = localStorage.getItem('isAdmin');
@@ -29,7 +32,7 @@ export default function AdminEntriesPage() {
     } else {
       fetchEntries();
     }
-  }, []);
+  }, [selectedGallery]);
 
   const checkIfFinalExists = async (fileName: string) => {
     const { data, error } = await supabase.storage.from('artworks').list('final');
@@ -41,9 +44,17 @@ export default function AdminEntriesPage() {
   };
 
   const fetchEntries = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from('entries')
-      .select('id, artist_name, title, image_url, confirmed, file_name, email, external_user_id, edition_total, edition_sold, sale_type'); 
+      .select(
+        'id, artist_name, title, image_url, confirmed, file_name, email, external_user_id, edition_total, edition_sold, sale_type, gallery_type'
+      );
+
+    if (selectedGallery !== 'all') {
+      query = query.eq('gallery_type', selectedGallery);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('取得エラー:', error.message);
@@ -87,22 +98,21 @@ export default function AdminEntriesPage() {
     }
 
     // メール送信
-if (entry.email && entry.external_user_id) {
-  try {
-    await fetch('/api/send-email/pass', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        to: entry.email,
-        name: entry.artist_name,
-        externalUserId: entry.external_user_id,
-      }),
-    });
-  } catch (err) {
-    console.error('📨 メール送信エラー:', err);
-  }
-}
-
+    if (entry.email && entry.external_user_id) {
+      try {
+        await fetch('/api/send-email/pass', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: entry.email,
+            name: entry.artist_name,
+            externalUserId: entry.external_user_id,
+          }),
+        });
+      } catch (err) {
+        console.error('📨 メール送信エラー:', err);
+      }
+    }
 
     fetchEntries();
   };
@@ -110,6 +120,19 @@ if (entry.email && entry.external_user_id) {
   return (
     <main className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">応募作品の管理</h1>
+
+      <div className="mb-6">
+        <label className="mr-2 font-medium">ギャラリーで絞り込み：</label>
+        <select
+          className="p-2 border rounded"
+          value={selectedGallery}
+          onChange={(e) => setSelectedGallery(e.target.value)}
+        >
+          <option value="all">すべて</option>
+          <option value="white">White ギャラリー</option>
+          <option value="float">Float ギャラリー</option>
+        </select>
+      </div>
 
       {entries.length === 0 ? (
         <p>作品がありません。</p>
@@ -127,6 +150,7 @@ if (entry.email && entry.external_user_id) {
               />
               <p><strong>タイトル：</strong>{entry.title}</p>
               <p><strong>作家名：</strong>{entry.artist_name}</p>
+              <p><strong>ギャラリー：</strong>{entry.gallery_type === 'white' ? 'White' : entry.gallery_type === 'float' ? 'Float' : '-'}</p>
               <p><strong>承認状態：</strong>{entry.confirmed ? '✅ 承認済' : '❌ 未承認'}</p>
               <p><strong>処理状態：</strong>{entry.processed ? '✅ 処理済' : '🌀 未処理'}</p>
               <button
