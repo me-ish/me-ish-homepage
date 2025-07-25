@@ -29,6 +29,7 @@ export default function AdminEntriesPage() {
   const [selectedGallery, setSelectedGallery] = useState<string>('all');
   const [sortKey, setSortKey] = useState<'created_at' | 'confirmed_at' | 'display_start_at'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [onlyUnconfirmed, setOnlyUnconfirmed] = useState<boolean>(false);
 
   useEffect(() => {
     const isAdmin = localStorage.getItem('isAdmin');
@@ -38,7 +39,7 @@ export default function AdminEntriesPage() {
     } else {
       fetchEntries();
     }
-  }, [selectedGallery, sortKey, sortOrder]);
+  }, [selectedGallery, sortKey, sortOrder, onlyUnconfirmed]);
 
   const checkIfFinalExists = async (fileName: string) => {
     const { data, error } = await supabase.storage.from('artworks').list('final');
@@ -59,6 +60,10 @@ export default function AdminEntriesPage() {
 
     if (selectedGallery !== 'all') {
       query = query.eq('gallery_type', selectedGallery);
+    }
+
+    if (onlyUnconfirmed) {
+      query = query.eq('confirmed', false);
     }
 
     const { data, error } = await query;
@@ -96,7 +101,10 @@ export default function AdminEntriesPage() {
       if (!e.message.includes('already exists')) console.error('メタ保存エラー:', e.message);
     }
 
-    await supabase.from('entries').update({ confirmed: true, confirmed_at: new Date().toISOString() }).eq('id', entry.id);
+    await supabase.from('entries').update({
+      confirmed: true,
+      confirmed_at: new Date().toISOString(),
+    }).eq('id', entry.id);
 
     const finalPath = `final/${fileName}`;
     const { data: urlData } = supabase.storage.from('artworks').getPublicUrl(finalPath);
@@ -127,7 +135,7 @@ export default function AdminEntriesPage() {
     <main className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">応募作品の管理</h1>
 
-      <div className="mb-6 flex gap-4">
+      <div className="mb-6 flex flex-wrap gap-4 items-center">
         <div>
           <label className="mr-2 font-medium">ギャラリーで絞り込み：</label>
           <select
@@ -160,6 +168,17 @@ export default function AdminEntriesPage() {
             <option value="desc">降順</option>
             <option value="asc">昇順</option>
           </select>
+        </div>
+
+        <div className="flex items-center">
+          <input
+            id="unconfirmed-only"
+            type="checkbox"
+            className="mr-2"
+            checked={onlyUnconfirmed}
+            onChange={() => setOnlyUnconfirmed(!onlyUnconfirmed)}
+          />
+          <label htmlFor="unconfirmed-only" className="font-medium">未承認のみ表示</label>
         </div>
       </div>
 
