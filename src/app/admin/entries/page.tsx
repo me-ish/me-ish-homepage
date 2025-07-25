@@ -19,12 +19,16 @@ type Entry = {
   sale_type?: string;
   gallery_type?: string;
   created_at?: string | null;
+  confirmed_at?: string | null;
+  display_start_at?: string | null;
 };
 
 export default function AdminEntriesPage() {
   const router = useRouter();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [selectedGallery, setSelectedGallery] = useState<string>('all');
+  const [sortKey, setSortKey] = useState<'created_at' | 'confirmed_at' | 'display_start_at'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     const isAdmin = localStorage.getItem('isAdmin');
@@ -34,7 +38,7 @@ export default function AdminEntriesPage() {
     } else {
       fetchEntries();
     }
-  }, [selectedGallery]);
+  }, [selectedGallery, sortKey, sortOrder]);
 
   const checkIfFinalExists = async (fileName: string) => {
     const { data, error } = await supabase.storage.from('artworks').list('final');
@@ -49,9 +53,9 @@ export default function AdminEntriesPage() {
     let query = supabase
       .from('entries')
       .select(
-        'id, artist_name, title, image_url, confirmed, file_name, email, external_user_id, edition_total, edition_sold, sale_type, gallery_type, created_at'
+        'id, artist_name, title, image_url, confirmed, file_name, email, external_user_id, edition_total, edition_sold, sale_type, gallery_type, created_at, confirmed_at, display_start_at'
       )
-      .order('created_at', { ascending: false });
+      .order(sortKey, { ascending: sortOrder === 'asc' });
 
     if (selectedGallery !== 'all') {
       query = query.eq('gallery_type', selectedGallery);
@@ -123,17 +127,40 @@ export default function AdminEntriesPage() {
     <main className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">応募作品の管理</h1>
 
-      <div className="mb-6">
-        <label className="mr-2 font-medium">ギャラリーで絞り込み：</label>
-        <select
-          className="p-2 border rounded"
-          value={selectedGallery}
-          onChange={(e) => setSelectedGallery(e.target.value)}
-        >
-          <option value="all">すべて</option>
-          <option value="white">White ギャラリー</option>
-          <option value="float">Float ギャラリー</option>
-        </select>
+      <div className="mb-6 flex gap-4">
+        <div>
+          <label className="mr-2 font-medium">ギャラリーで絞り込み：</label>
+          <select
+            className="p-2 border rounded"
+            value={selectedGallery}
+            onChange={(e) => setSelectedGallery(e.target.value)}
+          >
+            <option value="all">すべて</option>
+            <option value="white">White ギャラリー</option>
+            <option value="float">Float ギャラリー</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="mr-2 font-medium">並び順：</label>
+          <select
+            className="p-2 border rounded"
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as typeof sortKey)}
+          >
+            <option value="created_at">応募日時</option>
+            <option value="confirmed_at">承認日時</option>
+            <option value="display_start_at">展示開始日時</option>
+          </select>
+          <select
+            className="ml-2 p-2 border rounded"
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
+          >
+            <option value="desc">降順</option>
+            <option value="asc">昇順</option>
+          </select>
+        </div>
       </div>
 
       {entries.length === 0 ? (
@@ -154,6 +181,8 @@ export default function AdminEntriesPage() {
               <p><strong>作家名：</strong>{entry.artist_name}</p>
               <p><strong>ギャラリー：</strong>{entry.gallery_type === 'white' ? 'White' : entry.gallery_type === 'float' ? 'Float' : '-'}</p>
               <p><strong>応募日時：</strong>{entry.created_at ? new Date(entry.created_at).toLocaleString() : '-'}</p>
+              <p><strong>承認日時：</strong>{entry.confirmed_at ? new Date(entry.confirmed_at).toLocaleString() : '-'}</p>
+              <p><strong>展示開始：</strong>{entry.display_start_at ? new Date(entry.display_start_at).toLocaleString() : '-'}</p>
               <p><strong>承認状態：</strong>{entry.confirmed ? '✅ 承認済' : '❌ 未承認'}</p>
               <p><strong>処理状態：</strong>{entry.processed ? '✅ 処理済' : '🌀 未処理'}</p>
               <button
@@ -169,3 +198,4 @@ export default function AdminEntriesPage() {
     </main>
   );
 }
+
