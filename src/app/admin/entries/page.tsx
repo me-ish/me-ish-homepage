@@ -240,12 +240,12 @@ export default function AdminEntriesPage() {
                 onChange={(e) => updateValue(entry.id, 'display_end_at', e.target.value)} />
             </div>
             <div className="flex items-center gap-2">
-              <strong>表示：</strong>
+              <strong>ギャラリー表示中：</strong>
               <input type="checkbox" checked={entry.display_ready || false}
                 onChange={(e) => updateValue(entry.id, 'display_ready', e.target.checked)} />
             </div>
             <div className="flex items-center gap-2">
-              <strong>販売完了：</strong>
+              <strong>完売フラグ：</strong>
               <input type="checkbox" checked={entry.is_sold || false}
                 onChange={(e) => updateValue(entry.id, 'is_sold', e.target.checked)} />
             </div>
