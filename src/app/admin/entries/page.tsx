@@ -198,8 +198,6 @@ export default function AdminEntriesPage() {
         </div>
       </div>
 
-// ...省略（import や useEffect などは元のままでOK）
-
 {entries.length === 0 ? (
   <p>作品がありません。</p>
 ) : (
@@ -214,41 +212,44 @@ export default function AdminEntriesPage() {
           <img
             src={entry.image_url}
             alt={entry.title}
-            className="w-48 rounded shadow"
+            className="w-48 h-48 object-cover rounded shadow"
           />
 
           {/* メタデータ編集エリア */}
-          <div className="grid grid-cols-2 gap-3 text-sm w-full">
+ {/* メタデータ編集エリア */}
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm w-full">
             <div><strong>タイトル：</strong>{entry.title}</div>
             <div><strong>作家名：</strong>{entry.artist_name}</div>
             <div><strong>ギャラリー：</strong>{entry.gallery_type}</div>
-            <div><strong>応募日時：</strong>{entry.created_at ? new Date(entry.created_at).toLocaleString() : '-'}</div>
-            <div><strong>承認日時：</strong>{entry.confirmed_at ? new Date(entry.confirmed_at).toLocaleString() : '-'}</div>
-            <div className="col-span-2 flex gap-2">
-              <label className="flex items-center gap-2">
-                <span className="font-bold">展示開始：</span>
-                <input type="datetime-local" className="border p-1 w-full"
-                  value={entry.display_start_at?.slice(0, 16) || ''}
-                  onChange={(e) => updateValue(entry.id, 'display_start_at', e.target.value)} />
-              </label>
-              <label className="flex items-center gap-2">
-                <span className="font-bold">展示終了：</span>
-                <input type="datetime-local" className="border p-1 w-full"
-                  value={entry.display_end_at?.slice(0, 16) || ''}
-                  onChange={(e) => updateValue(entry.id, 'display_end_at', e.target.value)} />
-              </label>
-            </div>
-            <label className="flex items-center gap-2">
-              <span className="font-bold">表示：</span>
-              <input type="checkbox" checked={entry.display_ready || false}
-                onChange={(e) => updateValue(entry.id, 'display_ready', e.target.checked)} />
-            </label>
-            <div className="flex items-center gap-2">
-              <strong>プラン：</strong>
+            <div><strong>プラン：</strong>
               <input className="border p-1 w-full" value={entry.display_plan || ''}
                 onChange={(e) => updateValue(entry.id, 'display_plan', e.target.value)} />
             </div>
-            <div className="flex items-center gap-2 col-span-2">
+            <div><strong>応募日時：</strong>{entry.created_at ? new Date(entry.created_at).toLocaleString() : '-'}</div>
+            <div><strong>承認日時：</strong>{entry.confirmed_at ? new Date(entry.confirmed_at).toLocaleString() : '-'}</div>
+            <div className="flex items-center gap-2">
+              <strong>展示開始：</strong>
+              <input type="datetime-local" className="border p-1 w-full"
+                value={entry.display_start_at?.slice(0, 16) || ''}
+                onChange={(e) => updateValue(entry.id, 'display_start_at', e.target.value)} />
+            </div>
+            <div className="flex items-center gap-2">
+              <strong>展示終了：</strong>
+              <input type="datetime-local" className="border p-1 w-full"
+                value={entry.display_end_at?.slice(0, 16) || ''}
+                onChange={(e) => updateValue(entry.id, 'display_end_at', e.target.value)} />
+            </div>
+            <div className="flex items-center gap-2">
+              <strong>表示：</strong>
+              <input type="checkbox" checked={entry.display_ready || false}
+                onChange={(e) => updateValue(entry.id, 'display_ready', e.target.checked)} />
+            </div>
+            <div className="flex items-center gap-2">
+              <strong>販売完了：</strong>
+              <input type="checkbox" checked={entry.is_sold || false}
+                onChange={(e) => updateValue(entry.id, 'is_sold', e.target.checked)} />
+            </div>
+            <div className="flex items-center gap-2">
               <strong>エディション：</strong>
               <input className="border p-1 w-16" type="number" value={entry.edition_total || 0}
                 onChange={(e) => updateValue(entry.id, 'edition_total', Number(e.target.value))} /> /
@@ -265,11 +266,6 @@ export default function AdminEntriesPage() {
               <input className="border p-1 w-20" type="number" value={entry.artist_reward_yen || 0}
                 onChange={(e) => updateValue(entry.id, 'artist_reward_yen', Number(e.target.value))} />
             </div>
-            <label className="flex items-center gap-2">
-              <span className="font-bold">販売完了：</span>
-              <input type="checkbox" checked={entry.is_sold || false}
-                onChange={(e) => updateValue(entry.id, 'is_sold', e.target.checked)} />
-            </label>
             <div><strong>承認状態：</strong>{entry.confirmed ? '✅ 承認済' : '❌ 未承認'}</div>
             <div><strong>処理状態：</strong>{entry.processed ? '✅ 処理済' : '🌀 未処理'}</div>
             <div className="col-span-2">
