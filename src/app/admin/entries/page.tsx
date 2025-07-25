@@ -1,3 +1,4 @@
+// src/app/admin/entries/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -21,6 +22,12 @@ type Entry = {
   created_at?: string | null;
   confirmed_at?: string | null;
   display_start_at?: string | null;
+  display_end_at?: string | null;
+  display_plan?: string;
+  display_ready?: boolean;
+  is_sold?: boolean;
+  meish_fee_yen?: number;
+  artist_reward_yen?: number;
 };
 
 export default function AdminEntriesPage() {
@@ -30,6 +37,7 @@ export default function AdminEntriesPage() {
   const [sortKey, setSortKey] = useState<'created_at' | 'confirmed_at' | 'display_start_at'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [onlyUnconfirmed, setOnlyUnconfirmed] = useState<boolean>(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   useEffect(() => {
     const isAdmin = localStorage.getItem('isAdmin');
@@ -53,9 +61,7 @@ export default function AdminEntriesPage() {
   const fetchEntries = async () => {
     let query = supabase
       .from('entries')
-      .select(
-        'id, artist_name, title, image_url, confirmed, file_name, email, external_user_id, edition_total, edition_sold, sale_type, gallery_type, created_at, confirmed_at, display_start_at'
-      )
+      .select('*')
       .order(sortKey, { ascending: sortOrder === 'asc' });
 
     if (selectedGallery !== 'all') {
@@ -74,13 +80,23 @@ export default function AdminEntriesPage() {
     }
 
     const entriesWithStatus = await Promise.all(
-      (data || []).map(async (entry) => {
+      (data || []).map(async (entry: Entry) => {
         const processed = await checkIfFinalExists(entry.file_name);
         return { ...entry, processed };
       })
     );
 
     setEntries(entriesWithStatus);
+  };
+
+  const updateValue = async (id: number, field: keyof Entry, value: any) => {
+    const { error } = await supabase.from('entries').update({ [field]: value }).eq('id', id);
+    if (error) {
+      console.error('更新エラー:', error.message);
+      alert('更新に失敗しました');
+    } else {
+      fetchEntries();
+    }
   };
 
   const approveEntry = async (entry: Entry) => {
@@ -132,7 +148,7 @@ export default function AdminEntriesPage() {
   };
 
   return (
-    <main className="p-6 max-w-4xl mx-auto">
+    <main className="p-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">応募作品の管理</h1>
 
       <div className="mb-6 flex flex-wrap gap-4 items-center">
@@ -198,10 +214,38 @@ export default function AdminEntriesPage() {
               />
               <p><strong>タイトル：</strong>{entry.title}</p>
               <p><strong>作家名：</strong>{entry.artist_name}</p>
-              <p><strong>ギャラリー：</strong>{entry.gallery_type === 'white' ? 'White' : entry.gallery_type === 'float' ? 'Float' : '-'}</p>
+              <p><strong>ギャラリー：</strong>{entry.gallery_type}</p>
               <p><strong>応募日時：</strong>{entry.created_at ? new Date(entry.created_at).toLocaleString() : '-'}</p>
               <p><strong>承認日時：</strong>{entry.confirmed_at ? new Date(entry.confirmed_at).toLocaleString() : '-'}</p>
-              <p><strong>展示開始：</strong>{entry.display_start_at ? new Date(entry.display_start_at).toLocaleString() : '-'}</p>
+              <p><strong>展示開始：</strong>
+                <input type="datetime-local" className="border p-1"
+                  value={entry.display_start_at?.slice(0, 16) || ''}
+                  onChange={(e) => updateValue(entry.id, 'display_start_at', e.target.value)} /></p>
+              <p><strong>展示終了：</strong>
+                <input type="datetime-local" className="border p-1"
+                  value={entry.display_end_at?.slice(0, 16) || ''}
+                  onChange={(e) => updateValue(entry.id, 'display_end_at', e.target.value)} /></p>
+              <p><strong>表示フラグ：</strong>
+                <input type="checkbox" checked={entry.display_ready || false}
+                  onChange={(e) => updateValue(entry.id, 'display_ready', e.target.checked)} /></p>
+              <p><strong>表示プラン：</strong>
+                <input className="border p-1" value={entry.display_plan || ''}
+                  onChange={(e) => updateValue(entry.id, 'display_plan', e.target.value)} /></p>
+              <p><strong>エディション：</strong>
+                <input className="border p-1 w-16" type="number" value={entry.edition_total || 0}
+                  onChange={(e) => updateValue(entry.id, 'edition_total', Number(e.target.value))} /> / 
+                <input className="border p-1 w-16 ml-2" type="number" value={entry.edition_sold || 0}
+                  onChange={(e) => updateValue(entry.id, 'edition_sold', Number(e.target.value))} /></p>
+              <p><strong>販売手数料：</strong>
+                <input className="border p-1 w-24" type="number" value={entry.meish_fee_yen || 0}
+                  onChange={(e) => updateValue(entry.id, 'meish_fee_yen', Number(e.target.value))} /></p>
+              <p><strong>作家報酬：</strong>
+                <input className="border p-1 w-24" type="number" value={entry.artist_reward_yen || 0}
+                  onChange={(e) => updateValue(entry.id, 'artist_reward_yen', Number(e.target.value))} /></p>
+              <p><strong>販売完了：</strong>
+                <input type="checkbox" checked={entry.is_sold || false}
+                  onChange={(e) => updateValue(entry.id, 'is_sold', e.target.checked)} /></p>
+
               <p><strong>承認状態：</strong>{entry.confirmed ? '✅ 承認済' : '❌ 未承認'}</p>
               <p><strong>処理状態：</strong>{entry.processed ? '✅ 処理済' : '🌀 未処理'}</p>
               <button
