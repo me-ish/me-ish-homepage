@@ -31,6 +31,8 @@ export type FormValues = {
   confirmRights: boolean;
   confirmOriginal: boolean;
   editionTotal: string;
+  displayStartAt?: string;
+  displayEndAt?: string;
 };
 
 const FormWrapper = () => {
@@ -107,6 +109,23 @@ const FormWrapper = () => {
         alert('画像ファイルが見つかりませんでした');
         return;
       }
+
+      // display_start_at, display_end_at の自動設定
+const now = new Date();
+let displayStartAt: string | null = null;
+let displayEndAt: string | null = null;
+
+if (data.gallery_type === 'white') {
+  displayStartAt = now.toISOString();
+  displayEndAt = null; // 無期限
+} else if (data.gallery_type === 'float') {
+  const start = now;
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + 1);
+  displayStartAt = start.toISOString();
+  displayEndAt = end.toISOString();
+}
+
 
       const originalName = imageFile.name;
       const extension = originalName.split('.').pop();
