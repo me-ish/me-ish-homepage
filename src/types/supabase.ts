@@ -13,12 +13,16 @@ entries: {
     email: string | null;
     external_user_id: string | null;
     confirmed: boolean;
+    confirmed_at: string | null;         // ← 🆕 承認日時
+    display_start_at: string | null;     // ← 🆕 表示開始日時
+    display_end_at: string | null;       // ← 🆕 表示終了日時
     created_at: string | null;
     edition_total: number | null;   // ✅ エディション総数
     edition_sold: number | null;    // ✅ エディション販売済数
     likes: number | null;           // ✅ いいね数（もしあればこれも必要）
     gallery_type: string | null;    // ✅ 展示ギャラリー種別（もし使ってるならこれも必要）
     display_ready: boolean; // ✅ 追加！
+    
   };
 };
 

@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
@@ -17,6 +18,7 @@ type Entry = {
   edition_sold?: number | null;
   sale_type?: string;
   gallery_type?: string;
+  created_at?: string | null;
 };
 
 export default function AdminEntriesPage() {
@@ -47,8 +49,9 @@ export default function AdminEntriesPage() {
     let query = supabase
       .from('entries')
       .select(
-        'id, artist_name, title, image_url, confirmed, file_name, email, external_user_id, edition_total, edition_sold, sale_type, gallery_type'
-      );
+        'id, artist_name, title, image_url, confirmed, file_name, email, external_user_id, edition_total, edition_sold, sale_type, gallery_type, created_at'
+      )
+      .order('created_at', { ascending: false });
 
     if (selectedGallery !== 'all') {
       query = query.eq('gallery_type', selectedGallery);
@@ -89,7 +92,7 @@ export default function AdminEntriesPage() {
       if (!e.message.includes('already exists')) console.error('メタ保存エラー:', e.message);
     }
 
-    await supabase.from('entries').update({ confirmed: true }).eq('id', entry.id);
+    await supabase.from('entries').update({ confirmed: true, confirmed_at: new Date().toISOString() }).eq('id', entry.id);
 
     const finalPath = `final/${fileName}`;
     const { data: urlData } = supabase.storage.from('artworks').getPublicUrl(finalPath);
@@ -97,7 +100,6 @@ export default function AdminEntriesPage() {
       await supabase.from('entries').update({ image_url: urlData.publicUrl }).eq('id', entry.id);
     }
 
-    // メール送信
     if (entry.email && entry.external_user_id) {
       try {
         await fetch('/api/send-email/pass', {
@@ -151,6 +153,7 @@ export default function AdminEntriesPage() {
               <p><strong>タイトル：</strong>{entry.title}</p>
               <p><strong>作家名：</strong>{entry.artist_name}</p>
               <p><strong>ギャラリー：</strong>{entry.gallery_type === 'white' ? 'White' : entry.gallery_type === 'float' ? 'Float' : '-'}</p>
+              <p><strong>応募日時：</strong>{entry.created_at ? new Date(entry.created_at).toLocaleString() : '-'}</p>
               <p><strong>承認状態：</strong>{entry.confirmed ? '✅ 承認済' : '❌ 未承認'}</p>
               <p><strong>処理状態：</strong>{entry.processed ? '✅ 処理済' : '🌀 未処理'}</p>
               <button

@@ -146,6 +146,8 @@ const FormWrapper = () => {
           price: data.price ? Number(data.price) : null,
           image_url: publicUrl,
           gallery_type: data.gallery_type || '',
+          display_start_at: displayStartAt,
+          display_end_at: displayEndAt,
           file_name: fileName,
           external_user_id: externalUserId,
           edition_total: data.editionTotal ? Number(data.editionTotal) : null,
