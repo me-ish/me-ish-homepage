@@ -122,11 +122,6 @@ export default function AdminEntriesPage() {
       confirmed_at: new Date().toISOString(),
     }).eq('id', entry.id);
 
-    const finalPath = `final/${fileName}`;
-    const { data: urlData } = supabase.storage.from('artworks').getPublicUrl(finalPath);
-    if (urlData?.publicUrl) {
-      await supabase.from('entries').update({ image_url: urlData.publicUrl }).eq('id', entry.id);
-    }
 
     if (entry.email && entry.external_user_id) {
       try {
