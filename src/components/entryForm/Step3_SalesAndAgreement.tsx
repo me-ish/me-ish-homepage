@@ -123,6 +123,21 @@ const Step3_SalesAndAgreement = () => {
               {...register('price', { required: true })}
             />
             <small className="text-[#666] mt-1">※円単位で半角数字のみ / 税込価格</small>
+                        {/* ここに報酬/手数料をリアルタイム表示 */}
+            {(() => {
+              const price = watch('price');
+              const numericPrice = Number(price);
+              if (!isNaN(numericPrice) && numericPrice > 0) {
+                const fee = Math.floor(numericPrice * 0.15);
+                const reward = numericPrice - fee;
+                return (
+                  <p className="text-sm text-gray-700 mt-2">
+                    アーティスト報酬：<span className="font-bold">¥{reward}</span> ／ me-ish手数料：<span className="font-bold">¥{fee}</span>
+                  </p>
+                );
+              }
+              return null;
+            })()}
           </label>
 
 <label className="flex flex-col font-semibold text-[1rem] text-[#333] mb-6">

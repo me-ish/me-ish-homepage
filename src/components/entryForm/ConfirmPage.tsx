@@ -28,6 +28,20 @@ const ConfirmPage: React.FC<ConfirmPageProps> = ({ onBack, onSubmit }) => {
       ? data.image
       : null;
 
+  const handleFinalSubmit = () => {
+    const price = Number(data.price);
+    const meish_fee_yen = Math.floor(price * 0.15);
+    const artist_reward_yen = price - meish_fee_yen;
+
+    const finalData = {
+      ...data,
+      meish_fee_yen,
+      artist_reward_yen,
+    };
+
+    onSubmit(finalData);
+  };
+
   return (
     <div className="w-full max-w-[640px] bg-white p-10 rounded-2xl shadow-lg space-y-8">
       <h2 className="text-xl font-bold text-center border-l-4 border-[#00a1e9] pl-4 text-gray-800">
@@ -92,7 +106,7 @@ const ConfirmPage: React.FC<ConfirmPageProps> = ({ onBack, onSubmit }) => {
         </button>
         <button
           type="button"
-          onClick={handleSubmit(onSubmit)}
+          onClick={handleSubmit(handleFinalSubmit)}
           className="px-5 py-2.5 bg-[#00a1e9] text-white rounded-md font-semibold hover:bg-[#008ec4]"
         >
           送信
@@ -103,3 +117,4 @@ const ConfirmPage: React.FC<ConfirmPageProps> = ({ onBack, onSubmit }) => {
 };
 
 export default ConfirmPage;
+
