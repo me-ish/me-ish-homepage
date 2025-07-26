@@ -93,108 +93,113 @@ const FormWrapper = () => {
 
   const prevStep = () => setStep((prev) => prev - 1);
 
-  const onSubmit = async (data: FormValues) => {
-    try {
-      const externalUserId = uuidv4();
-      const snsLinksJson = JSON.stringify({
-        homepage: data.homepageUrl || '',
-        twitter: data.twitterUrl || '',
-        instagram: data.instagramUrl || '',
-      });
+const onSubmit = async (data: FormValues & {
+  meish_fee_yen?: number;
+  artist_reward_yen?: number;
+}) => {
+  try {
+    const externalUserId = uuidv4();
+    const snsLinksJson = JSON.stringify({
+      homepage: data.homepageUrl || '',
+      twitter: data.twitterUrl || '',
+      instagram: data.instagramUrl || '',
+    });
 
-      const imageFile =
-        data.image instanceof FileList && data.image.length > 0 ? data.image[0] : null;
+    const imageFile =
+      data.image instanceof FileList && data.image.length > 0 ? data.image[0] : null;
 
-      if (!imageFile) {
-        alert('画像ファイルが見つかりませんでした');
-        return;
-      }
-
-      // display_start_at, display_end_at の自動設定
-const now = new Date();
-let displayStartAt: string | null = null;
-let displayEndAt: string | null = null;
-
-if (data.gallery_type === 'white') {
-  displayStartAt = now.toISOString();
-  displayEndAt = null; // 無期限
-} else if (data.gallery_type === 'float') {
-  const start = now;
-  const end = new Date(start);
-  end.setMonth(end.getMonth() + 1);
-  displayStartAt = start.toISOString();
-  displayEndAt = end.toISOString();
-}
-
-
-      const originalName = imageFile.name;
-      const extension = originalName.split('.').pop();
-      const baseName = originalName.split('.').slice(0, -1).join('.');
-      const sanitizedBase = baseName.normalize('NFKC').replace(/[^\w.-]/g, '_');
-      const fileName = `${Date.now()}_${sanitizedBase}.${extension}`;
-
-      const uploadRes = await supabase.storage.from('artworks').upload(fileName, imageFile, {
-        upsert: true,
-      });
-
-      if (uploadRes.error || !uploadRes.data) {
-        alert('画像のアップロードに失敗しました');
-        return;
-      }
-
-      const { publicUrl } = supabase.storage.from('artworks').getPublicUrl(uploadRes.data.path).data;
-      if (!publicUrl) {
-        alert('画像URLの取得に失敗しました');
-        return;
-      }
-
-      const type = data.isForSale === 'yes' ? data.saleType : 'none';
-      const displayPlan = data.isForSale === 'yes' ? data.displayPlan || 'free' : 'free';
-
-      const { error } = await supabase.from('entries').insert([
-        {
-          artist_name: data.artistName,
-          email: data.email,
-          sns_links: snsLinksJson,
-          title: data.title,
-          description: data.description || '',
-          is_for_sale: data.isForSale === 'yes',
-          sale_type: data.saleType || '',
-          type,                    //  New: entries.type に保存
-          display_plan: displayPlan, //  New: entries.display_plan に保存
-          price: data.price ? Number(data.price) : null,
-          image_url: publicUrl,
-          gallery_type: data.gallery_type || '',
-          display_start_at: displayStartAt,
-          display_end_at: displayEndAt,
-          file_name: fileName,
-          external_user_id: externalUserId,
-          edition_total: data.editionTotal ? Number(data.editionTotal) : null,
-          edition_sold: 0,
-        }]);
-
-      if (error) {
-        alert(`登録に失敗しました: ${error.message}`);
-        return;
-      }
-
-      setStep(5);
-
-await fetch('/api/send-email/submit', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    to: data.email,
-    name: data.artistName,
-    externalUserId,
-  }),
-});
-
-
-    } catch (e: any) {
-      alert(`送信中にエラーが発生しました：${e.message}`);
+    if (!imageFile) {
+      alert('画像ファイルが見つかりませんでした');
+      return;
     }
-  };
+
+    // display_start_at, display_end_at の自動設定
+    const now = new Date();
+    let displayStartAt: string | null = null;
+    let displayEndAt: string | null = null;
+
+    if (data.gallery_type === 'white') {
+      displayStartAt = now.toISOString();
+      displayEndAt = null; // 無期限
+    } else if (data.gallery_type === 'float') {
+      const start = now;
+      const end = new Date(start);
+      end.setMonth(end.getMonth() + 1);
+      displayStartAt = start.toISOString();
+      displayEndAt = end.toISOString();
+    }
+
+    const originalName = imageFile.name;
+    const extension = originalName.split('.').pop();
+    const baseName = originalName.split('.').slice(0, -1).join('.');
+    const sanitizedBase = baseName.normalize('NFKC').replace(/[^\w.-]/g, '_');
+    const fileName = `${Date.now()}_${sanitizedBase}.${extension}`;
+
+    const uploadRes = await supabase.storage.from('artworks').upload(fileName, imageFile, {
+      upsert: true,
+    });
+
+    if (uploadRes.error || !uploadRes.data) {
+      alert('画像のアップロードに失敗しました');
+      return;
+    }
+
+    const { publicUrl } = supabase.storage.from('artworks').getPublicUrl(uploadRes.data.path).data;
+    if (!publicUrl) {
+      alert('画像URLの取得に失敗しました');
+      return;
+    }
+
+    const type = data.isForSale === 'yes' ? data.saleType : 'none';
+    const displayPlan = data.isForSale === 'yes' ? data.displayPlan || 'free' : 'free';
+
+    const { error } = await supabase.from('entries').insert([
+      {
+        artist_name: data.artistName,
+        email: data.email,
+        sns_links: snsLinksJson,
+        title: data.title,
+        description: data.description || '',
+        is_for_sale: data.isForSale === 'yes',
+        sale_type: data.saleType || '',
+        type,
+        display_plan: displayPlan,
+        price: data.price ? Number(data.price) : null,
+        image_url: publicUrl,
+        gallery_type: data.gallery_type || '',
+        display_start_at: displayStartAt,
+        display_end_at: displayEndAt,
+        file_name: fileName,
+        external_user_id: externalUserId,
+        edition_total: data.editionTotal ? Number(data.editionTotal) : null,
+        edition_sold: 0,
+        meish_fee_yen: data.meish_fee_yen ?? null,
+        artist_reward_yen: data.artist_reward_yen ?? null,
+      },
+    ]);
+
+    if (error) {
+      alert(`登録に失敗しました: ${error.message}`);
+      return;
+    }
+
+    setStep(5);
+
+    await fetch('/api/send-email/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: data.email,
+        name: data.artistName,
+        externalUserId,
+      }),
+    });
+
+  } catch (e: any) {
+    alert(`送信中にエラーが発生しました：${e.message}`);
+  }
+};
+
 
   return (
     <FormProvider {...methods}>

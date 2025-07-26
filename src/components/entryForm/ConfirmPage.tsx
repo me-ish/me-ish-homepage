@@ -28,19 +28,21 @@ const ConfirmPage: React.FC<ConfirmPageProps> = ({ onBack, onSubmit }) => {
       ? data.image
       : null;
 
-  const handleFinalSubmit = () => {
-    const price = Number(data.price);
-    const meish_fee_yen = Math.floor(price * 0.15);
-    const artist_reward_yen = price - meish_fee_yen;
+const handleFinalSubmit = async () => {
+  const price = Number(data.price);
+  const meish_fee_yen = Math.floor(price * 0.15);
+  const artist_reward_yen = price - meish_fee_yen;
 
-    const finalData = {
-      ...data,
-      meish_fee_yen,
-      artist_reward_yen,
-    };
-
-    onSubmit(finalData);
+  const finalData = {
+    ...data,
+    price,
+    meish_fee_yen,
+    artist_reward_yen,
   };
+
+  onSubmit(finalData); // Supabaseに insert する処理は外で実施
+};
+
 
   return (
     <div className="w-full max-w-[640px] bg-white p-10 rounded-2xl shadow-lg space-y-8">
