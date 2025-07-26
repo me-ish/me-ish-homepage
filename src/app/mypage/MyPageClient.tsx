@@ -26,6 +26,12 @@ interface Entry {
   gallery_type?: string;
   edition_total?: number;
   edition_sold?: number;
+  price?: number;
+  meish_fee_yen?: number;
+  artist_reward_yen?: number;
+  confirmed_at?: string;
+  display_start_at?: string;
+  display_end_at?: string;
 }
 
 export default function MyPageClient() {
@@ -80,7 +86,7 @@ export default function MyPageClient() {
 
       const { data: entriesData } = await supabase
         .from('entries')
-        .select('*')
+        .select('id, title, image_url, confirmed, created_at, likes, gallery_type, edition_total, edition_sold, price, meish_fee_yen, artist_reward_yen, confirmed_at, display_start_at, display_end_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -161,18 +167,11 @@ export default function MyPageClient() {
                     <Globe className="w-5 h-5" />
                   </a>
                 )}
-{profile?.sns_links?.twitter && (
-  <a
-    href={profile.sns_links.twitter}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-black hover:opacity-80"
-    title="X (旧Twitter)"
-  >
-    <FaXTwitter className="w-5 h-5" />
-  </a>
-)}
-
+                {profile?.sns_links?.twitter && (
+                  <a href={profile.sns_links.twitter} target="_blank" rel="noopener noreferrer" className="text-black hover:opacity-80" title="X (旧Twitter)">
+                    <FaXTwitter className="w-5 h-5" />
+                  </a>
+                )}
                 {profile?.sns_links?.instagram && (
                   <a href={profile.sns_links.instagram} target="_blank" rel="noopener noreferrer" className="text-[#E1306C] hover:opacity-80" title="Instagram">
                     <Instagram className="w-5 h-5" />
@@ -199,9 +198,7 @@ export default function MyPageClient() {
                       src={entry.image_url}
                       alt={entry.title}
                       className="w-full h-48 object-cover"
-                      onError={() =>
-                        setVisibleMap((prev) => ({ ...prev, [entry.id]: false }))
-                      }
+                      onError={() => setVisibleMap((prev) => ({ ...prev, [entry.id]: false }))}
                     />
                     <div className="p-4">
                       <h3 className="font-semibold text-lg truncate mb-1">{entry.title}</h3>
@@ -213,6 +210,12 @@ export default function MyPageClient() {
                         <p>❤️ {entry.likes ?? 0} いいね</p>
                         <p>展示：{entry.gallery_type === 'white' ? 'White Gallery' : entry.gallery_type === 'float' ? 'Float Gallery' : '未定'}</p>
                         <p>エディション：{entry.edition_total ?? 0}点中 {(entry.edition_total ?? 0) - (entry.edition_sold ?? 0)}点残</p>
+                        {entry.price !== null && <p>販売価格：¥{entry.price?.toLocaleString()}</p>}
+                        {entry.meish_fee_yen !== null && <p>me-ish手数料：¥{entry.meish_fee_yen?.toLocaleString()}</p>}
+                        {entry.artist_reward_yen !== null && <p>報酬：¥{entry.artist_reward_yen?.toLocaleString()}</p>}
+                        {entry.confirmed_at && <p>承認日：{new Date(entry.confirmed_at).toLocaleDateString()}</p>}
+                        {entry.display_start_at && <p>展示開始：{new Date(entry.display_start_at).toLocaleDateString()}</p>}
+                        {entry.display_end_at && <p>展示終了：{new Date(entry.display_end_at).toLocaleDateString()}</p>}
                       </div>
                     </div>
                   </div>
@@ -225,4 +228,3 @@ export default function MyPageClient() {
     </>
   );
 }
-
