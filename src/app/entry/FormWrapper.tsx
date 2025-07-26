@@ -7,7 +7,7 @@ import Step1_ArtistInfo from '@/components/entryForm/Step1_ArtistInfo';
 import Step2_WorkInfo from '@/components/entryForm/Step2_WorkInfo';
 import Step3_SalesAndAgreement from '@/components/entryForm/Step3_SalesAndAgreement';
 import ConfirmPage from '@/components/entryForm/ConfirmPage';
-import CompletePage from '@/components/entryForm/CompletePage'; 
+import CompletePage from '@/components/entryForm/CompletePage';
 import { supabase } from '@/lib/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -35,6 +35,21 @@ export type FormValues = {
   displayEndAt?: string;
 };
 
+const slideVariants = {
+  enter: (dir: 'left' | 'right') => ({
+    x: dir === 'left' ? -300 : 300,
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+  },
+  exit: (dir: 'left' | 'right') => ({
+    x: dir === 'left' ? 300 : -300,
+    opacity: 0,
+  }),
+};
+
 const FormWrapper = () => {
   const methods = useForm<FormValues>({
     defaultValues: {
@@ -60,6 +75,7 @@ const FormWrapper = () => {
   });
 
   const [step, setStep] = useState(1);
+  const [direction, setDirection] = useState<'left' | 'right'>('right');
   const [preview, setPreview] = useState<string | null>(null);
   const [localImageFile, setLocalImageFile] = useState<File | null>(null);
 
@@ -70,15 +86,18 @@ const FormWrapper = () => {
       case 2:
         return ['gallery_type', 'title', 'image'];
       case 3:
-        return [
-          'isForSale',
-          'agreeTerms',
-          'confirmRights',
-          'confirmOriginal',
-          ...(isForSale === 'yes'
-            ? (['saleType', 'price', 'displayPlan'] as (keyof FormValues)[])
-            : []),
-        ];
+return [
+  'isForSale',
+  'agreeTerms',
+  'confirmRights',
+  'confirmOriginal',
+  ...(
+    isForSale === 'yes'
+      ? (['saleType', 'price', 'displayPlan'] as (keyof FormValues)[])
+      : []
+  ),
+];
+
       default:
         return [];
     }
@@ -88,73 +107,57 @@ const FormWrapper = () => {
     const isForSale = methods.watch('isForSale');
     const fieldsToValidate = getStepFields(step, isForSale);
     const isValid = await methods.trigger(fieldsToValidate);
-    if (isValid) setStep((prev) => prev + 1);
+    if (isValid) {
+      setDirection('right');
+      setStep((prev) => prev + 1);
+    }
   };
 
-  const prevStep = () => setStep((prev) => prev - 1);
+  const prevStep = () => {
+    setDirection('left');
+    setStep((prev) => prev - 1);
+  };
 
-const onSubmit = async (data: FormValues & {
-  meish_fee_yen?: number;
-  artist_reward_yen?: number;
-}) => {
-  try {
-    const externalUserId = uuidv4();
-    const snsLinksJson = JSON.stringify({
-      homepage: data.homepageUrl || '',
-      twitter: data.twitterUrl || '',
-      instagram: data.instagramUrl || '',
-    });
+  const onSubmit = async (data: FormValues & { meish_fee_yen?: number; artist_reward_yen?: number }) => {
+    try {
+      const externalUserId = uuidv4();
+      const snsLinksJson = JSON.stringify({
+        homepage: data.homepageUrl || '',
+        twitter: data.twitterUrl || '',
+        instagram: data.instagramUrl || '',
+      });
 
-    const imageFile =
-      data.image instanceof FileList && data.image.length > 0 ? data.image[0] : null;
+      const imageFile = data.image instanceof FileList && data.image.length > 0 ? data.image[0] : null;
+      if (!imageFile) return alert('画像ファイルが見つかりませんでした');
 
-    if (!imageFile) {
-      alert('画像ファイルが見つかりませんでした');
-      return;
-    }
+      const now = new Date();
+      let displayStartAt: string | null = null;
+      let displayEndAt: string | null = null;
+      if (data.gallery_type === 'white') {
+        displayStartAt = now.toISOString();
+      } else if (data.gallery_type === 'float') {
+        const end = new Date(now);
+        end.setMonth(end.getMonth() + 1);
+        displayStartAt = now.toISOString();
+        displayEndAt = end.toISOString();
+      }
 
-    // display_start_at, display_end_at の自動設定
-    const now = new Date();
-    let displayStartAt: string | null = null;
-    let displayEndAt: string | null = null;
+      const originalName = imageFile.name;
+      const extension = originalName.split('.').pop();
+      const baseName = originalName.split('.').slice(0, -1).join('.');
+      const sanitizedBase = baseName.normalize('NFKC').replace(/[^\w.-]/g, '_');
+      const fileName = `${Date.now()}_${sanitizedBase}.${extension}`;
 
-    if (data.gallery_type === 'white') {
-      displayStartAt = now.toISOString();
-      displayEndAt = null; // 無期限
-    } else if (data.gallery_type === 'float') {
-      const start = now;
-      const end = new Date(start);
-      end.setMonth(end.getMonth() + 1);
-      displayStartAt = start.toISOString();
-      displayEndAt = end.toISOString();
-    }
+      const uploadRes = await supabase.storage.from('artworks').upload(fileName, imageFile, { upsert: true });
+      if (uploadRes.error || !uploadRes.data) return alert('画像のアップロードに失敗しました');
 
-    const originalName = imageFile.name;
-    const extension = originalName.split('.').pop();
-    const baseName = originalName.split('.').slice(0, -1).join('.');
-    const sanitizedBase = baseName.normalize('NFKC').replace(/[^\w.-]/g, '_');
-    const fileName = `${Date.now()}_${sanitizedBase}.${extension}`;
+      const { publicUrl } = supabase.storage.from('artworks').getPublicUrl(uploadRes.data.path).data;
+      if (!publicUrl) return alert('画像URLの取得に失敗しました');
 
-    const uploadRes = await supabase.storage.from('artworks').upload(fileName, imageFile, {
-      upsert: true,
-    });
+      const type = data.isForSale === 'yes' ? data.saleType : 'none';
+      const displayPlan = data.isForSale === 'yes' ? data.displayPlan || 'free' : 'free';
 
-    if (uploadRes.error || !uploadRes.data) {
-      alert('画像のアップロードに失敗しました');
-      return;
-    }
-
-    const { publicUrl } = supabase.storage.from('artworks').getPublicUrl(uploadRes.data.path).data;
-    if (!publicUrl) {
-      alert('画像URLの取得に失敗しました');
-      return;
-    }
-
-    const type = data.isForSale === 'yes' ? data.saleType : 'none';
-    const displayPlan = data.isForSale === 'yes' ? data.displayPlan || 'free' : 'free';
-
-    const { error } = await supabase.from('entries').insert([
-      {
+      const { error } = await supabase.from('entries').insert([{
         artist_name: data.artistName,
         email: data.email,
         sns_links: snsLinksJson,
@@ -175,31 +178,20 @@ const onSubmit = async (data: FormValues & {
         edition_sold: 0,
         meish_fee_yen: data.meish_fee_yen ?? null,
         artist_reward_yen: data.artist_reward_yen ?? null,
-      },
-    ]);
+      }]);
 
-    if (error) {
-      alert(`登録に失敗しました: ${error.message}`);
-      return;
+      if (error) return alert(`登録に失敗しました: ${error.message}`);
+      setStep(5);
+
+      await fetch('/api/send-email/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: data.email, name: data.artistName, externalUserId }),
+      });
+    } catch (e: any) {
+      alert(`送信中にエラーが発生しました：${e.message}`);
     }
-
-    setStep(5);
-
-    await fetch('/api/send-email/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        to: data.email,
-        name: data.artistName,
-        externalUserId,
-      }),
-    });
-
-  } catch (e: any) {
-    alert(`送信中にエラーが発生しました：${e.message}`);
-  }
-};
-
+  };
 
   return (
     <FormProvider {...methods}>
@@ -209,20 +201,25 @@ const onSubmit = async (data: FormValues & {
         ) : step === 4 ? (
           <form onSubmit={methods.handleSubmit(onSubmit)}>
             <ConfirmPage
-              onBack={() => setStep(3)}
+              onBack={() => {
+                setDirection('left');
+                setStep(3);
+              }}
               onSubmit={onSubmit}
               validateFields={['agreeTerms', 'confirmRights', 'confirmOriginal']}
             />
           </form>
         ) : (
           <form onSubmit={methods.handleSubmit(onSubmit)}>
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="wait" custom={direction}>
               {step === 1 && (
                 <motion.div
                   key="step1"
-                  initial={{ x: 300, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: -300, opacity: 0 }}
+                  custom={direction}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
                   transition={{ duration: 0.4 }}
                 >
                   <h2 className="text-2xl font-bold mb-6">STEP 1：アーティスト情報</h2>
@@ -232,13 +229,14 @@ const onSubmit = async (data: FormValues & {
                   </div>
                 </motion.div>
               )}
-
               {step === 2 && (
                 <motion.div
                   key="step2"
-                  initial={{ x: 300, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: -300, opacity: 0 }}
+                  custom={direction}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
                   transition={{ duration: 0.4 }}
                 >
                   <h2 className="text-2xl font-bold mb-6">STEP 2：作品情報</h2>
@@ -254,13 +252,14 @@ const onSubmit = async (data: FormValues & {
                   </div>
                 </motion.div>
               )}
-
               {step === 3 && (
                 <motion.div
                   key="step3"
-                  initial={{ x: 300, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: -300, opacity: 0 }}
+                  custom={direction}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
                   transition={{ duration: 0.4 }}
                 >
                   <h2 className="text-2xl font-bold mb-6">STEP 3：販売・規約</h2>
@@ -280,4 +279,3 @@ const onSubmit = async (data: FormValues & {
 };
 
 export default FormWrapper;
-
