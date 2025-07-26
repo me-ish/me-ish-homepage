@@ -59,7 +59,7 @@ const ArtworkLabelWhite = forwardRef<THREE.Group, ArtworkLabelWhiteProps>(
       >
         {/* 背景パネル */}
         <mesh position={[0, 0, -0.015]}>
-          <planeGeometry args={[2.0, 1.2]} />
+          <planeGeometry args={[1.5, 1.0]} />
           {/* @ts-ignore */}
           <hologramMaterial
             ref={materialRef}
@@ -72,8 +72,8 @@ const ArtworkLabelWhite = forwardRef<THREE.Group, ArtworkLabelWhiteProps>(
 
         {/* テキスト */}
 <Text
-  font="/fonts/subset-ZenMaruGothic-Regular.woff"
-  fontSize={0.18}
+  font="/fonts/ZenMaruGothic-Regular.woff"
+  fontSize={0.22}
   color="#000000"
   anchorX="center"
   anchorY="middle"

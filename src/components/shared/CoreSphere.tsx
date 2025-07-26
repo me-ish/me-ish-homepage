@@ -87,6 +87,7 @@ const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
               padding: '20px 24px',
               backdropFilter: 'blur(10px)',
               boxShadow: '0 0 30px rgba(0, 255, 255, 0.4)',
+              whiteSpace: 'nowrap',
               color: '#00ffff',
               fontWeight: 'bold',
               textAlign: 'center',
