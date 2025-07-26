@@ -210,13 +210,22 @@ export default function MyPageClient() {
                         <p>❤️ {entry.likes ?? 0} いいね</p>
                         <p>展示：{entry.gallery_type === 'white' ? 'White Gallery' : entry.gallery_type === 'float' ? 'Float Gallery' : '未定'}</p>
                         <p>エディション：{entry.edition_total ?? 0}点中 {(entry.edition_total ?? 0) - (entry.edition_sold ?? 0)}点残</p>
-{entry.price !== undefined && entry.artist_reward_yen !== undefined && entry.meish_fee_yen !== undefined && (
+{entry.price != null && (
   <div>
     <p>販売価格：¥{entry.price.toLocaleString()}</p>
-    <p className="text-xs text-gray-500 ml-2">アーティスト報酬：¥{entry.artist_reward_yen.toLocaleString()}</p>
-    <p className="text-xs text-gray-500 ml-2">me-ish手数料：¥{entry.meish_fee_yen.toLocaleString()}</p>
+    {entry.artist_reward_yen != null && (
+      <p className="text-xs text-gray-500 ml-2">
+        アーティスト報酬：¥{entry.artist_reward_yen.toLocaleString()}
+      </p>
+    )}
+    {entry.meish_fee_yen != null && (
+      <p className="text-xs text-gray-500 ml-2">
+        me-ish手数料：¥{entry.meish_fee_yen.toLocaleString()}
+      </p>
+    )}
   </div>
 )}
+
 
 
                         {entry.confirmed_at && <p>承認日：{new Date(entry.confirmed_at).toLocaleDateString()}</p>}
