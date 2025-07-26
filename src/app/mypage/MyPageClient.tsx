@@ -212,12 +212,12 @@ export default function MyPageClient() {
                         <p>エディション：{entry.edition_total ?? 0}点中 {(entry.edition_total ?? 0) - (entry.edition_sold ?? 0)}点残</p>
 {entry.price !== undefined && entry.artist_reward_yen !== undefined && entry.meish_fee_yen !== undefined && (
   <div>
-    <p>販売価格：¥{entry.price?.toLocaleString()}</p>
-    <p className="text-xs text-gray-500 ml-2">
-      （アーティスト報酬：¥{entry.artist_reward_yen?.toLocaleString()} / me-ish手数料：¥{entry.meish_fee_yen?.toLocaleString()}）
-    </p>
+    <p>販売価格：¥{entry.price.toLocaleString()}</p>
+    <p className="text-xs text-gray-500 ml-2">アーティスト報酬：¥{entry.artist_reward_yen.toLocaleString()}</p>
+    <p className="text-xs text-gray-500 ml-2">me-ish手数料：¥{entry.meish_fee_yen.toLocaleString()}</p>
   </div>
 )}
+
 
                         {entry.confirmed_at && <p>承認日：{new Date(entry.confirmed_at).toLocaleDateString()}</p>}
                         {entry.display_start_at && <p>展示開始：{new Date(entry.display_start_at).toLocaleDateString()}</p>}
