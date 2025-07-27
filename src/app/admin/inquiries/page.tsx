@@ -5,9 +5,9 @@ import { supabase } from '@/lib/supabaseClient';
 
 type Inquiry = {
   id: string;
-  name: string;
-  email: string;
-  message: string;
+  name: string | null;
+  email: string | null;
+  message: string | null;
   created_at: string;
   is_read: boolean;
 };
@@ -25,7 +25,7 @@ export default function InquiriesPage() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (data) setInquiries(data);
+    if (data) setInquiries(data as Inquiry[]);
     if (error) console.error('読み込みエラー:', error.message);
   };
 
@@ -38,7 +38,6 @@ export default function InquiriesPage() {
     if (error) {
       console.error('更新エラー:', error.message);
     } else {
-      // 再取得 or ローカル反映
       setInquiries((prev) =>
         prev.map((inq) => (inq.id === id ? { ...inq, is_read: true } : inq))
       );
@@ -62,11 +61,29 @@ export default function InquiriesPage() {
                 backgroundColor: inq.is_read ? '#f5f5f5' : '#fff8e1',
               }}
             >
-              <p><strong>名前:</strong> {inq.name || '（匿名）'}</p>
-              {inq.email && <p><strong>メール:</strong> {inq.email}</p>}
-              <p><strong>内容:</strong> {inq.message}</p>
-              <p><small>{new Date(inq.created_at).toLocaleString()}</small></p>
-              {!inq.is_read && (
+              <p>
+                <strong>名前:</strong>{' '}
+                {typeof inq.name === 'string' && inq.name.trim()
+                  ? inq.name
+                  : '（匿名）'}
+              </p>
+              {typeof inq.email === 'string' && inq.email.trim() && (
+                <p>
+                  <strong>メール:</strong> {inq.email}
+                </p>
+              )}
+              <p>
+                <strong>内容:</strong>{' '}
+                {typeof inq.message === 'string' && inq.message.trim()
+                  ? inq.message
+                  : '（内容なし）'}
+              </p>
+              <p>
+                <small>
+                  {new Date(inq.created_at).toLocaleString('ja-JP')}
+                </small>
+              </p>
+              {!inq.is_read ? (
                 <button
                   onClick={() => handleConfirm(inq.id)}
                   style={{
@@ -81,8 +98,9 @@ export default function InquiriesPage() {
                 >
                   確認
                 </button>
+              ) : (
+                <p style={{ color: '#666' }}>✅ 確認済み</p>
               )}
-              {inq.is_read && <p style={{ color: '#666' }}>✅ 確認済み</p>}
             </li>
           ))}
         </ul>
