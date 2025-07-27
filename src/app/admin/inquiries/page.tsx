@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 
 type Inquiry = {
   id: string;
@@ -9,50 +9,84 @@ type Inquiry = {
   email: string;
   message: string;
   created_at: string;
+  is_read: boolean;
 };
 
 export default function InquiriesPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
 
   useEffect(() => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! // RLSが設定済ならadminユーザーのみ表示される
-    );
-
-    const fetchInquiries = async () => {
-      const { data, error } = await supabase
-        .from('inquiries')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Failed to load inquiries:', error.message);
-      } else {
-        setInquiries(data);
-      }
-    };
-
     fetchInquiries();
   }, []);
 
+  const fetchInquiries = async () => {
+    const { data, error } = await supabase
+      .from('inquiries')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (data) setInquiries(data);
+    if (error) console.error('読み込みエラー:', error.message);
+  };
+
+  const handleConfirm = async (id: string) => {
+    const { error } = await supabase
+      .from('inquiries')
+      .update({ is_read: true })
+      .eq('id', id);
+
+    if (error) {
+      console.error('更新エラー:', error.message);
+    } else {
+      // 再取得 or ローカル反映
+      setInquiries((prev) =>
+        prev.map((inq) => (inq.id === id ? { ...inq, is_read: true } : inq))
+      );
+    }
+  };
+
   return (
-    <main className="p-8">
-      <h1 className="text-2xl font-bold mb-6">お問い合わせ一覧</h1>
+    <div style={{ padding: '2rem', maxWidth: '960px', margin: '0 auto' }}>
+      <h2>お問い合わせ一覧</h2>
       {inquiries.length === 0 ? (
-        <p>まだお問い合わせはありません。</p>
+        <p>問い合わせはまだありません。</p>
       ) : (
-        <ul className="space-y-6">
-          {inquiries.map((inquiry) => (
-            <li key={inquiry.id} className="border rounded-lg p-4 bg-white shadow">
-              <div className="text-sm text-gray-500 mb-1">{new Date(inquiry.created_at).toLocaleString()}</div>
-              <div className="font-semibold mb-1">お名前：{inquiry.name}</div>
-              {inquiry.email && <div className="text-sm mb-2">📧 {inquiry.email}</div>}
-              <p className="whitespace-pre-wrap">{inquiry.message}</p>
+        <ul style={{ marginTop: '1.5rem', listStyle: 'none', padding: 0 }}>
+          {inquiries.map((inq) => (
+            <li
+              key={inq.id}
+              style={{
+                border: '1px solid #ccc',
+                padding: '1rem',
+                marginBottom: '1rem',
+                backgroundColor: inq.is_read ? '#f5f5f5' : '#fff8e1',
+              }}
+            >
+              <p><strong>名前:</strong> {inq.name || '（匿名）'}</p>
+              {inq.email && <p><strong>メール:</strong> {inq.email}</p>}
+              <p><strong>内容:</strong> {inq.message}</p>
+              <p><small>{new Date(inq.created_at).toLocaleString()}</small></p>
+              {!inq.is_read && (
+                <button
+                  onClick={() => handleConfirm(inq.id)}
+                  style={{
+                    marginTop: '0.5rem',
+                    padding: '0.4rem 0.8rem',
+                    backgroundColor: '#00a1e9',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  確認
+                </button>
+              )}
+              {inq.is_read && <p style={{ color: '#666' }}>✅ 確認済み</p>}
             </li>
           ))}
         </ul>
       )}
-    </main>
+    </div>
   );
 }
