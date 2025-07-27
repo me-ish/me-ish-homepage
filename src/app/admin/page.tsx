@@ -26,6 +26,7 @@ export default function AdminDashboard() {
 
       <ul style={{ marginTop: '2rem', lineHeight: '2' }}>
         <li><a href="/admin/entries">応募作品の管理</a></li>
+        <li><a href="/admin/inquiries">お問い合わせ一覧</a></li>
         <li><a href="/admin/users">ユーザー管理（今後実装予定）</a></li>
         <li><a href="/admin/settings">ギャラリー設定（今後実装予定）</a></li>
       </ul>
