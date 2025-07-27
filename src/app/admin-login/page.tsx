@@ -1,36 +1,44 @@
 'use client';
-import React, { useState } from 'react';
+
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function AdminLogin() {
-  const [code, setCode] = useState('');
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (code === 'me-ish0716') {
-      localStorage.setItem('isAdmin', 'true');
-      router.push('/admin');
-    } else {
-      alert('パスコードが間違っています');
-    }
+  const handleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${location.origin}/admin`, // ログイン後にダッシュボードへ
+      },
+    });
   };
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const user = data.session?.user;
+      if (user?.email === 'info@me-ish.art') {
+        router.push('/admin');
+      }
+    });
+  }, [router]);
 
   return (
     <div style={{ padding: '2rem', maxWidth: '480px', margin: '0 auto' }}>
-      <h2>管理ページログイン</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="password"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          placeholder="パスコードを入力"
-          style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
-        />
-        <button type="submit" style={{ width: '100%', padding: '0.5rem' }}>
-          ログイン
-        </button>
-      </form>
+      <h2>管理者ログイン</h2>
+      <button
+        onClick={handleLogin}
+        style={{ width: '100%', padding: '0.5rem', backgroundColor: '#00a1e9', color: '#fff' }}
+      >
+        Googleでログイン
+      </button>
     </div>
   );
 }
