@@ -147,13 +147,16 @@ const DesktopHome = () => {
 {/* Contact */}
 <section id="contact" className="fade-in-start py-[60px] px-5 bg-white text-center">
   <h2 className="font-bold text-[2rem] text-[#00a1e9] mb-4">お問い合わせ</h2>
-  <p className="mb-6">ご質問やご相談は、以下のSNSまたはメールでご連絡ください。</p>
+  <p className="mb-6">ご質問・ご相談などございましたら、以下よりご連絡ください。</p>
 
-  <ul className="text-[#00a1e9] text-sm space-y-3 max-w-xs mx-auto">
-    <li className="flex items-center justify-center gap-2">
-      <Mail className="w-4 h-4" />
-      <a href="mailto:info@me-ish.art" className="hover:underline">info@me-ish.art</a>
-    </li>
+  <ul className="mt-6 text-[#00a1e9] text-sm space-y-3 max-w-xs mx-auto">
+<li className="flex items-center justify-center gap-2">
+  <Mail className="w-4 h-4" />
+  <Link href="/contact/form" className="hover:underline">
+    お問い合わせフォームへ
+  </Link>
+</li>
+
     <li className="flex items-center justify-center gap-2">
       <FaXTwitter className="w-4 h-4" />
       <a href="https://x.com/meishart0716" target="_blank" rel="noopener noreferrer" className="hover:underline">
@@ -162,6 +165,7 @@ const DesktopHome = () => {
     </li>
   </ul>
 </section>
+
 
       </main>
     </div>
