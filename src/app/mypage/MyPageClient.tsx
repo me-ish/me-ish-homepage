@@ -157,6 +157,17 @@ export default function MyPageClient() {
               プロフィールを編集
             </button>
 
+                {/* ✅ ログアウトボタン */}
+    <button
+      className="mt-2 ml-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+      onClick={async () => {
+        await supabase.auth.signOut();
+        router.push('/login');
+      }}
+    >
+      ログアウト
+    </button>
+
             <p><strong>メールアドレス：</strong>{email}</p>
             <p><strong>表示名：</strong>{profile?.display_name || '未設定'}</p>
             <div>
