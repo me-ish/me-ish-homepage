@@ -50,9 +50,6 @@ const handleFinalSubmit = async () => {
 
   return (
     <div className="w-full max-w-[640px] bg-white p-10 rounded-2xl shadow-lg space-y-8">
-      <h2 className="text-xl font-bold text-center border-l-4 border-[#00a1e9] pl-4 text-gray-800">
-        STEP 4：入力内容の確認
-      </h2>
 
       {/* アーティスト情報 */}
       <div className="p-4 bg-[#f9f9f9] border border-[#ddd] rounded-md space-y-2 text-[16px] text-gray-800">
