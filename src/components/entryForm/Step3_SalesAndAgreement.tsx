@@ -36,6 +36,11 @@ const Step3_SalesAndAgreement = () => {
     return () => el.removeEventListener('scroll', handleScroll);
   }, []);
 
+      // 🎯 追加部分：ページトップへスクロール
+    useEffect(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, []);
+
   useEffect(() => {
     getDisplayPlanStats().then((res) => {
       if (!res) return;

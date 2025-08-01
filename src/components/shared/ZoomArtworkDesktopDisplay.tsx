@@ -110,6 +110,13 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
       onClick={onClose}
       className="fixed inset-0 z-[1000] bg-black/90 text-white flex items-center justify-center px-6 py-10 overflow-y-auto cursor-zoom-out"
     >
+        <button
+    onClick={onClose}
+    className="absolute top-4 right-4 text-white hover:text-gray-300 text-3xl font-bold z-[1010]"
+    aria-label="Close"
+  >
+    &times;
+  </button>
       <div
         onClick={(e) => e.stopPropagation()}
         className="flex flex-col items-center"

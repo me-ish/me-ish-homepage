@@ -106,6 +106,13 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
 
   return (
     <div onClick={onClose} className="fixed inset-0 z-[1000] bg-black/90 text-white overflow-y-auto px-4 py-6 cursor-zoom-out">
+          <button
+      onClick={onClose}
+      className="absolute top-4 right-4 text-white hover:text-gray-300 text-4xl font-bold z-[1010]"
+      aria-label="閉じる"
+    >
+      &times;
+    </button>
       <div onClick={(e) => e.stopPropagation()} className="flex flex-col items-center space-y-6">
 
         <div className={`self-end mb-2 px-3 py-1 rounded-full text-xs font-semibold shadow-md ${

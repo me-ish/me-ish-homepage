@@ -36,40 +36,18 @@ export type FormValues = {
 };
 
 const slideVariants = {
-  enter: (dir: 'left' | 'right') => ({
-    x: dir === 'left' ? -300 : 300,
-    opacity: 0,
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-  },
-  exit: (dir: 'left' | 'right') => ({
-    x: dir === 'left' ? 300 : -300,
-    opacity: 0,
-  }),
+  enter: (dir: 'left' | 'right') => ({ x: dir === 'left' ? -300 : 300, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (dir: 'left' | 'right') => ({ x: dir === 'left' ? 300 : -300, opacity: 0 }),
 };
 
 const FormWrapper = () => {
   const methods = useForm<FormValues>({
     defaultValues: {
-      artistName: '',
-      email: '',
-      snsLinks: [''],
-      homepageUrl: '',
-      twitterUrl: '',
-      instagramUrl: '',
-      title: '',
-      image: undefined as unknown as FileList,
-      description: '',
-      isForSale: '',
-      saleType: '',
-      price: '',
-      gallery_type: '',
-      displayPlan: '',
-      agreeTerms: false,
-      confirmRights: false,
-      confirmOriginal: false,
+      artistName: '', email: '', snsLinks: [''], homepageUrl: '',
+      twitterUrl: '', instagramUrl: '', title: '', image: undefined as unknown as FileList,
+      description: '', isForSale: '', saleType: '', price: '', gallery_type: '', displayPlan: '',
+      agreeTerms: false, confirmRights: false, confirmOriginal: false,
     },
     shouldUnregister: false,
   });
@@ -81,25 +59,13 @@ const FormWrapper = () => {
 
   const getStepFields = (step: number, isForSale: string): (keyof FormValues)[] => {
     switch (step) {
-      case 1:
-        return ['artistName', 'email'];
-      case 2:
-        return ['gallery_type', 'title', 'image'];
-      case 3:
-return [
-  'isForSale',
-  'agreeTerms',
-  'confirmRights',
-  'confirmOriginal',
-  ...(
-    isForSale === 'yes'
-      ? (['saleType', 'price', 'displayPlan'] as (keyof FormValues)[])
-      : []
-  ),
-];
-
-      default:
-        return [];
+      case 1: return ['artistName', 'email'];
+      case 2: return ['gallery_type', 'title', 'image'];
+      case 3: return [
+        'isForSale', 'agreeTerms', 'confirmRights', 'confirmOriginal',
+        ...(isForSale === 'yes' ? (['saleType', 'price', 'displayPlan'] as (keyof FormValues)[]) : [])
+      ];
+      default: return [];
     }
   };
 
@@ -198,30 +164,11 @@ return [
       <div className="max-w-[700px] w-full mx-auto px-4 py-10">
         {step === 5 ? (
           <CompletePage />
-        ) : step === 4 ? (
-          <form onSubmit={methods.handleSubmit(onSubmit)}>
-            <ConfirmPage
-              onBack={() => {
-                setDirection('left');
-                setStep(3);
-              }}
-              onSubmit={onSubmit}
-              validateFields={['agreeTerms', 'confirmRights', 'confirmOriginal']}
-            />
-          </form>
         ) : (
           <form onSubmit={methods.handleSubmit(onSubmit)}>
             <AnimatePresence mode="wait" custom={direction}>
               {step === 1 && (
-                <motion.div
-                  key="step1"
-                  custom={direction}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.4 }}
-                >
+                <motion.div key="step1" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4 }}>
                   <h2 className="text-2xl font-bold mb-6">STEP 1：アーティスト情報</h2>
                   <Step1_ArtistInfo />
                   <div className="flex justify-end mt-6">
@@ -230,22 +177,9 @@ return [
                 </motion.div>
               )}
               {step === 2 && (
-                <motion.div
-                  key="step2"
-                  custom={direction}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.4 }}
-                >
+                <motion.div key="step2" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4 }}>
                   <h2 className="text-2xl font-bold mb-6">STEP 2：作品情報</h2>
-                  <Step2_WorkInfo
-                    preview={preview}
-                    setPreview={setPreview}
-                    localImageFile={localImageFile}
-                    setLocalImageFile={setLocalImageFile}
-                  />
+                  <Step2_WorkInfo preview={preview} setPreview={setPreview} localImageFile={localImageFile} setLocalImageFile={setLocalImageFile} />
                   <div className="flex justify-between mt-6">
                     <button type="button" onClick={prevStep} className="button">戻る</button>
                     <button type="button" onClick={nextStep} className="button">次へ</button>
@@ -253,20 +187,29 @@ return [
                 </motion.div>
               )}
               {step === 3 && (
-                <motion.div
-                  key="step3"
-                  custom={direction}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.4 }}
-                >
+                <motion.div key="step3" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4 }}>
                   <h2 className="text-2xl font-bold mb-6">STEP 3：販売・規約</h2>
                   <Step3_SalesAndAgreement />
                   <div className="flex justify-between mt-6">
                     <button type="button" onClick={prevStep} className="button">戻る</button>
                     <button type="button" onClick={nextStep} className="button">次へ</button>
+                  </div>
+                </motion.div>
+              )}
+              {step === 4 && (
+                <motion.div key="step4" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4 }}>
+                  <h2 className="text-2xl font-bold mb-6">STEP 4：入力内容の確認</h2>
+                  <ConfirmPage
+                    onBack={() => {
+                      setDirection('left');
+                      setStep(3);
+                    }}
+                    onSubmit={onSubmit}
+                    validateFields={['agreeTerms', 'confirmRights', 'confirmOriginal']}
+                  />
+                  <div className="flex justify-between mt-6">
+                    <button type="button" onClick={prevStep} className="button">戻る</button>
+                    <button type="submit" className="button bg-[#00a1e9] text-white hover:bg-[#008ec4]">送信</button>
                   </div>
                 </motion.div>
               )}
@@ -279,3 +222,4 @@ return [
 };
 
 export default FormWrapper;
+

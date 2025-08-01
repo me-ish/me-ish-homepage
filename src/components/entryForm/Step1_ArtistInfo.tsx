@@ -1,10 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useFormContext } from 'react-hook-form';
 
 const Step1_ArtistInfo = () => {
   const { register } = useFormContext();
+
+    // 🎯 ページトップへスクロール
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   return (
     <div className="w-full max-w-[700px] mx-auto p-6 bg-white rounded-md">

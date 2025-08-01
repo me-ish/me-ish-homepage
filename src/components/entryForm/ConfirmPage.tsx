@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useFormContext } from 'react-hook-form';
 
 interface ConfirmPageProps {
@@ -43,6 +43,10 @@ const handleFinalSubmit = async () => {
   onSubmit(finalData); // Supabaseに insert する処理は外で実施
 };
 
+  // 🎯 ページトップへスクロール
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   return (
     <div className="w-full max-w-[640px] bg-white p-10 rounded-2xl shadow-lg space-y-8">
@@ -96,24 +100,6 @@ const handleFinalSubmit = async () => {
           </p>
         </div>
       )}
-
-      {/* ボタン */}
-      <div className="mt-8 flex justify-center gap-6">
-        <button
-          type="button"
-          onClick={onBack}
-          className="px-5 py-2.5 bg-[#ccc] text-gray-800 rounded-md font-semibold hover:bg-[#bbb]"
-        >
-          戻る
-        </button>
-        <button
-          type="button"
-          onClick={handleSubmit(handleFinalSubmit)}
-          className="px-5 py-2.5 bg-[#00a1e9] text-white rounded-md font-semibold hover:bg-[#008ec4]"
-        >
-          送信
-        </button>
-      </div>
     </div>
   );
 };

@@ -19,6 +19,11 @@ const Step2_WorkInfo = ({
   const { register, watch } = useFormContext();
   const image = watch('image');
 
+    // 🎯 追加部分：ページトップへスクロール
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   useEffect(() => {
     if (image && image instanceof FileList && image.length > 0) {
       const file = image[0];
