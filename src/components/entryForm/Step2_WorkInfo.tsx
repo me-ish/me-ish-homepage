@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
+import { HelpCircle } from 'lucide-react';
 
 type Step2Props = {
   preview: string | null;
@@ -16,8 +17,9 @@ const Step2_WorkInfo = ({
   localImageFile,
   setLocalImageFile,
 }: Step2Props) => {
-  const { register, watch } = useFormContext();
+  const { register, watch, formState: { errors } } = useFormContext();
   const image = watch('image');
+  const [showHelp, setShowHelp] = useState(false);
 
     // 🎯 追加部分：ページトップへスクロール
   useEffect(() => {
@@ -75,16 +77,55 @@ const Step2_WorkInfo = ({
         />
       </label>
 
-      {/* 画像アップロード */}
-      <label className="flex flex-col mb-6 text-gray-800 font-semibold text-base">
-        作品画像（必須・10MB以下）
-        <input
-          type="file"
-          accept="image/*"
-          {...register('image', { required: true })}
-          className="mt-2 text-sm text-gray-700"
-        />
-      </label>
+{/* 画像アップロード + ヘルプ */}
+<div className="mb-6">
+  <label className="flex items-center text-gray-800 font-semibold text-base mb-2">
+    作品画像（必須・10MB以下）
+    <button
+      type="button"
+      onClick={() => setShowHelp(!showHelp)}
+      className="ml-2 text-[#00a1e9] hover:text-[#007bb8]"
+    >
+      <HelpCircle size={18} />
+    </button>
+  </label>
+
+  <input
+    type="file"
+    accept="image/*"
+    {...register('image', {
+      required: true,
+      validate: {
+        lessThan10MB: (files: FileList) =>
+          files && files[0]?.size <= 10 * 1024 * 1024 || '画像サイズは10MB以下にしてください',
+      },
+    })}
+    className="text-sm text-gray-700"
+  />
+
+  {/* ✅ エラーメッセージ */}
+{errors.image && typeof errors.image.message === 'string' && (
+  <p className="text-sm text-red-600 mt-1">{errors.image.message}</p>
+)}
+
+
+        {showHelp && (
+          <div className="mt-3 p-4 border border-gray-200 rounded-lg bg-[#f9f9f9] text-sm text-gray-700">
+            <p className="font-semibold mb-2">📐 推奨画像サイズ</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>正方形：2000 × 2000px</li>
+              <li>横長：2400 × 1600px（例：3:2）</li>
+              <li>縦長：1600 × 2400px（例：2:3）</li>
+              <li>最大：一辺3000px以内 / 10MB以下</li>
+              <li>形式：JPEG / PNG（sRGB推奨）</li>
+            </ul>
+            <p className="mt-2 text-xs text-gray-500">
+              ※ トリミング防止のため余白を含めた構図推奨
+            </p>
+          </div>
+        )}
+      </div>
+
 
       {/* プレビュー */}
       {preview && (
