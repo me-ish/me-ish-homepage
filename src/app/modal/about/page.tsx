@@ -51,7 +51,7 @@ export default function AboutPage() {
       {/* CTA：ギャラリー誘導 */}
       <div className="text-center mt-16">
         <a
-          href="/gallery"
+          href="/white"
           className="inline-block bg-[#00a1e9] text-white px-8 py-3 rounded-lg text-lg font-bold hover:bg-[#008ec4] transition"
         >
           ギャラリーを見てみる

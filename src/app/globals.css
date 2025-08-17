@@ -9,14 +9,22 @@ html {
   font-family: 'Zen Maru Gothic', sans-serif;
   color: #333;
   background-color: #fff;
-  @apply text-[18px];
+  /* ✅ 基準フォント（デスクトップ） */
+  font-size: 16px; /* ここで rem の基準を明示 */
+}
+
+/* ✅ モバイルだけ少し小さく（例: 14px） */
+@media (max-width: 639px) {
+  html {
+    font-size: 14px;
+  }
 }
 
 body {
   margin: 0;
   padding: 0;
   line-height: 1.6;
-  font-size: 16px;
+  /* ❌ 重複し混乱するので font-size は削除 */
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   position: relative;

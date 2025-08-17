@@ -12,13 +12,12 @@
     }, []); 
 
     const navItems = [
-      { label: 'me-ishとは', href: '/about' },
+      { label: 'me-ishとは', href: '/modal//about' },
       { label: 'ギャラリーを見る', href: '#gallery' },
-      { label: '出展をご希望の方へ', href: '/creators' },
-      { label: 'ギャラリーへの参加・購入方法', href: '/buyers' },
-      { label: '料金プラン', href: '/pricing' },
-      { label: 'よくある質問', href: '/faq' },
-      { label: 'ブログ', href: '/blog' },
+      { label: '出展をご希望の方へ', href: '/modal//creators' },
+      { label: 'ギャラリーへの参加・購入方法', href: '/modal//buyers' },
+      { label: '料金プラン', href: '/modal//pricing' },
+      { label: 'よくある質問', href: '/footer//faq' },
       { label: 'お問い合わせ', href: '#contact' },
     ];
 

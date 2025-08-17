@@ -105,7 +105,7 @@ export default function CreatorsPage() {
           継続展示や表示保証付きプランをご希望の場合は、有料プランをご案内しています。
         </p>
         <p className="mt-2">
-          詳しくは <a href="/pricing" className="text-[#00a1e9] underline font-bold hover:opacity-80">料金プランページ</a> をご確認ください。
+          詳しくは <a href="/modal//pricing" className="text-[#00a1e9] underline font-bold hover:opacity-80">料金プランページ</a> をご確認ください。
         </p>
       </section>
 
