@@ -121,7 +121,19 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
         className="flex flex-col items-center"
       >
-<div className="relative w-fit">
+<div className="relative w-fit select-none"
+onContextMenu={(e) => e.preventDefault()}          // 右クリック抑止
+onMouseDown={(e) => { if (e.button === 2) e.preventDefault(); }} // 右クリック押下
+onDragStart={(e) => e.preventDefault()}            // ドラッグ抑止
+onTouchStart={(e) => { /* iOS長押し抑止用に空のハンドラ */ }}
+>
+  {/* 透明オーバーレイ（クリックや長押しをキャッチ） */}
+  <div
+    aria-hidden
+    className="absolute inset-0 z-[5]"
+    onContextMenu={(e) => e.preventDefault()}
+    onDragStart={(e) => e.preventDefault()}
+  />
   {/* 🪙 バッジ（画像の外・右上） */}
   {(sale_type === 'nft' || sale_type === 'normal') && (
     <div className={`
@@ -140,7 +152,12 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
     <img
       src={imageUrl}
       alt={title}
-      className="w-full h-full object-contain rounded-xl shadow-lg"
+      className="w-full h-full object-contain rounded-xl shadow-lg pointer-events-none select-none"
+      style={{
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+        WebkitTouchCallout: 'none',   // iOSの長押しメニュー抑止
+      }}
     />
   </div>
 </div>

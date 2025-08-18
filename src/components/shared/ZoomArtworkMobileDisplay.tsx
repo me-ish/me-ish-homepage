@@ -106,25 +106,53 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
 
   return (
     <div onClick={onClose} className="fixed inset-0 z-[1000] bg-black/90 text-white overflow-y-auto px-4 py-6 cursor-zoom-out">
-          <button
-      onClick={onClose}
-      className="absolute top-4 right-4 text-white hover:text-gray-300 text-4xl font-bold z-[1010]"
-      aria-label="閉じる"
-    >
-      &times;
-    </button>
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white hover:text-gray-300 text-4xl font-bold z-[1010]"
+        aria-label="閉じる"
+      >
+        &times;
+      </button>
+
       <div onClick={(e) => e.stopPropagation()} className="flex flex-col items-center space-y-6">
 
-        <div className={`self-end mb-2 px-3 py-1 rounded-full text-xs font-semibold shadow-md ${
-          sale_type === 'nft'
-            ? 'bg-gradient-to-r from-violet-400 to-purple-600 text-white'
-            : 'bg-gradient-to-r from-gray-400 to-gray-600 text-white'
-        }`}>
+        <div
+          className={`self-end mb-2 px-3 py-1 rounded-full text-xs font-semibold shadow-md ${
+            sale_type === 'nft'
+              ? 'bg-gradient-to-r from-violet-400 to-purple-600 text-white'
+              : 'bg-gradient-to-r from-gray-400 to-gray-600 text-white'
+          }`}
+        >
           {sale_type === 'nft' ? 'NFT作品' : '通常販売作品'}
         </div>
 
-        <div className="w-full max-w-[90vw] bg-white rounded-xl shadow-lg p-3">
-          <img src={imageUrl} alt={title} className="w-full h-auto object-contain rounded-lg" />
+        {/* 画像枠（相対配置＋ブロック処理はオーバーレイへ集約） */}
+        <div className="relative w-full max-w-[90vw] bg-white rounded-xl shadow-lg p-3 select-none">
+          {/* 透明オーバーレイ（長押し/ドラッグ/右クリックをキャッチ） */}
+          <div
+            aria-hidden
+            className="absolute inset-0 z-[5] rounded-xl"
+            onContextMenu={(e) => e.preventDefault()}
+            onDragStart={(e) => e.preventDefault()}
+            onTouchStart={(e) => { /* iOS長押し抑止用 */ }}
+            style={{
+              WebkitUserSelect: 'none',
+              userSelect: 'none',
+              WebkitTouchCallout: 'none',
+            }}
+          />
+          {/* 画像本体（純表示役） */}
+          <img
+            src={imageUrl}
+            alt={title}
+            draggable={false}
+            className="w-full h-auto object-contain rounded-xl pointer-events-none select-none"
+            style={{
+              WebkitUserSelect: 'none',
+              userSelect: 'none',
+              WebkitTouchCallout: 'none',
+            }}
+          />
         </div>
 
         <div className="w-full max-w-[90vw] text-center space-y-1">
@@ -176,46 +204,45 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
           </div>
         )}
 
-{Object.keys(links).length > 0 && (
-  <div className="space-y-2 pt-2">
-    {links.homepage && (
-      <a
-        href={links.homepage}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
-      >
-        <Globe size={18} />
-        <span>ホームページ</span>
-      </a>
-    )}
+        {Object.keys(links).length > 0 && (
+          <div className="space-y-2 pt-2">
+            {links.homepage && (
+              <a
+                href={links.homepage}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
+              >
+                <Globe size={18} />
+                <span>ホームページ</span>
+              </a>
+            )}
 
-    {links.twitter && (
-      <a
-        href={links.twitter}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
-      >
-        <FaXTwitter size={18} />
-        <span>X（旧Twitter）</span>
-      </a>
-    )}
+            {links.twitter && (
+              <a
+                href={links.twitter}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
+              >
+                <FaXTwitter size={18} />
+                <span>X（旧Twitter）</span>
+              </a>
+            )}
 
-    {links.instagram && (
-      <a
-        href={links.instagram}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
-      >
-        <Instagram size={18} />
-        <span>Instagram</span>
-      </a>
-    )}
-  </div>
-)}
-
+            {links.instagram && (
+              <a
+                href={links.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
+              >
+                <Instagram size={18} />
+                <span>Instagram</span>
+              </a>
+            )}
+          </div>
+        )}
 
         <div className="fixed bottom-5 right-5 z-50">
           <button
@@ -229,9 +256,7 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
               size={24}
               strokeWidth={2}
               className={`relative z-10 transition-all duration-300 ease-out ${
-                liked
-                  ? 'text-pink-500 fill-pink-500 scale-110'
-                  : 'text-gray-400 scale-100'
+                liked ? 'text-pink-500 fill-pink-500 scale-110' : 'text-gray-400 scale-100'
               }`}
             />
             {liked && (
@@ -245,3 +270,4 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
     </div>
   );
 }
+

@@ -136,7 +136,7 @@ const DesktopHome = () => {
             </li>
           </ul>
           <div className="mt-8">
-            <Link href="/faq" className="button inline-block">よくある質問をもっと見る</Link>
+            <Link href="footer//faq" className="button inline-block">よくある質問をもっと見る</Link>
           </div>
         </section>
 

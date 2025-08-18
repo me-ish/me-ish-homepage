@@ -19,7 +19,7 @@ export default function AboutPage() {
         <h2 className="text-2xl font-bold mb-3">me-ishの特長</h2>
         <ul className="list-disc ml-6 space-y-2">
           <li>3D空間での臨場感ある展示体験</li>
-          <li>ウォーターマーク＋Glaze＋ステガノによるAI学習防止</li>
+          <li>サインまたはウォーターマークと、AI認識阻害処理による多層的な保護</li>
           <li>アカウント不要で応募可能な出展フロー</li>
           <li>NFTと通常販売どちらにも対応</li>
           <li>展示保証スロットで確実に作品を届けられる仕組み</li>
