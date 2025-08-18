@@ -59,7 +59,7 @@ export default function DisclaimerPage() {
           （送信時は「[at]」を「@」に置換してください）
         </p>
 
-        <p>制定日：2025年5月（予定）</p>
+        <p>制定日：2025年8月18日</p>
       </article>
     </main>
   );

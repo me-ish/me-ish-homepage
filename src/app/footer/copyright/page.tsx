@@ -65,7 +65,8 @@ export default function CopyrightPolicyPage() {
           <li>微細ノイズ等の付加による学習阻害処理（例：Glaze等の手法）</li>
         </ul>
         <p className="text-sm text-gray-600">
-          ※表示品質や端末性能に配慮しつつ、アーティストの意向と運用ポリシーに基づき付与します。
+          ※表示品質や端末性能に配慮しつつ、アーティストの意向と運用ポリシーに基づき付与します。<br />
+          ※AI学習の完全な防止を保証するものではありません。
         </p>
 
         <h2 id="sec-4"><strong>第4条（生成AI作品の取扱い）</strong></h2>
@@ -116,7 +117,7 @@ export default function CopyrightPolicyPage() {
           <Link href="/contact/form" className="underline underline-offset-2">お問い合わせフォーム</Link>
           または <span>info [at] me-ish.art</span> へお願いします（送信時は「[at]」を「@」に置換）。
         </p>
-        <p>制定日：2025年5月XX日／最終改定日：2025年8月XX日</p>
+        <p>制定日：2025年8月18日</p>
       </article>
     </main>
   );

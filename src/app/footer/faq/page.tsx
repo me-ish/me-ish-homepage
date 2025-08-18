@@ -51,74 +51,57 @@ export default function FAQPage() {
       ],
     },
     {
-  title: '出展について',
-  items: [
-    {
-      question: '出展するにはどうすればいいですか？',
-      answer: (
-        <>
-          {' '}
-          <Link href="/entry" className="underline">
-            応募フォーム
-          </Link>{' '}
-          からご応募ください。
-          不明点がある場合は{' '}
-          <Link href="/contact/form" className="underline">
-            お問い合わせフォーム
-          </Link>{' '}
-          からご連絡ください。
-        </>
-      ),
+      title: '出展について',
+      items: [
+        {
+          question: '出展するにはどうすればいいですか？',
+          answer: (
+            <>
+              <Link href="/entry" className="underline">応募フォーム</Link> からご応募ください。
+              不明点がある場合は <Link href="/contact/form" className="underline">お問い合わせフォーム</Link> からご連絡ください。
+            </>
+          ),
+        },
+        {
+          question: '審査基準は？',
+          answer: (
+            <>
+              主に（1）<strong>オリジナル作品</strong>であること、（2）テーマや展示方針に適合すること、
+              （3）法令や規約に抵触しないこと（権利侵害・公序良俗違反の排除）などです。
+              エントリー方法は <Link href="/entry" className="underline">応募フォーム</Link> の案内をご確認ください。
+              ご不明点は <Link href="/contact/form" className="underline">お問い合わせ</Link> へ。
+            </>
+          ),
+        },
+        {
+          question: '出展料はかかりますか？',
+          answer: (
+            <>
+              β版期間は<strong>出展無料</strong>です。正式リリース後は販売時に手数料（例：販売価格の5%）が発生します。
+              最新の料率は <Link href="/footer/tokushoho" className="underline">特商法表記</Link> をご確認ください。
+            </>
+          ),
+        },
+        {
+          question: '展示期間は？',
+          answer: (
+            <>
+              <strong>White：無期限</strong> / <strong>Float：約30日</strong> を目安としています（運営方針や回遊状況により前後）。
+              SOLD後も表示継続される場合があります。
+            </>
+          ),
+        },
+        {
+          question: '生成AI作品は出展できますか？',
+          answer: (
+            <>
+              できません。<strong>生成AIによる作品の出展は禁止</strong>です（
+              <Link href="/footer/copyright" className="underline">ポリシー 第4条</Link>）。
+            </>
+          ),
+        },
+      ],
     },
-    {
-      question: '審査基準は？',
-      answer: (
-        <>
-          主に（1）<strong>オリジナル作品</strong>であること、（2）テーマや展示方針に適合すること、
-          （3）法令や規約に抵触しないこと（権利侵害・公序良俗違反の排除）などです。
-          エントリー方法は{' '}
-          <Link href="/entry" className="underline">
-            応募フォーム
-          </Link>{' '}
-          の案内をご確認ください。ご不明点は{' '}
-          <Link href="/contact/form" className="underline">
-            お問い合わせ
-          </Link>
-          へ。
-        </>
-      ),
-    },
-    {
-      question: '出展料はかかりますか？',
-      answer: (
-        <>
-          β版期間は<strong>出展無料</strong>です。正式リリース後は販売時に手数料（例：販売価格の5%）が発生します。
-          最新の料率は{' '}
-          <Link href="/footer/tokushoho" className="underline">
-            特商法表記
-          </Link>{' '}
-          をご確認ください。
-        </>
-      ),
-    },
-    {
-      question: '展示期間は？',
-      answer: <>目安は約90日です。企画や回遊状況により前後する場合があります（SOLD後も表示継続あり）。</>,
-    },
-    {
-      question: '生成AI作品は出展できますか？',
-      answer: (
-        <>
-          できません。<strong>生成AIによる作品の出展は禁止</strong>です（
-          <Link href="/footer/copyright" className="underline">
-            ポリシー 第4条
-          </Link>
-          ）。
-        </>
-      ),
-    },
-  ],
-},
     {
       title: '作品販売について',
       items: [
@@ -126,8 +109,8 @@ export default function FAQPage() {
           question: '購入方法は？',
           answer: (
             <>
-              作品ページの「購入する」から手続きしてください。決済は<strong>クレジットカード</strong>に対応しています
-              （NFT販売は Paper 経由のカード決済対応。詳細は作品ページをご確認ください）。
+              作品ページの「購入する」から手続きしてください。決済は<strong>クレジットカード（Stripe）</strong>に対応しています。
+              NFT販売も<strong>Stripe決済</strong>です。
             </>
           ),
         },
@@ -155,7 +138,10 @@ export default function FAQPage() {
           question: '購入後の確認方法は？',
           answer: (
             <>
-              通常販売：メール通知やダウンロードリンクで納品。NFT販売：購入完了メールやご自身のウォレットで確認できます。
+              通常販売：メール通知やダウンロードリンクで納品。<br />
+              NFT販売：Stripe決済完了後に当サービスが即時Mint（運営ウォレットで保管）し、
+              お客様がウォレットアドレスをご登録後、順次ウォレットへ送付します（
+              <Link href="/footer/disclaimer" className="underline">免責事項 第5条</Link>）。
             </>
           ),
         },
@@ -177,8 +163,8 @@ export default function FAQPage() {
           question: 'ウォレットは必要？',
           answer: (
             <>
-              購入時はカードのみで完結できる場合があります。<br />
-              ただし、<strong>外部送付・二次流通を行う場合はウォレットの準備が必要</strong>です（作品ページの案内に従ってください）。
+              購入時は<strong>カード決済のみで完了</strong>できます（ウォレット不要）。<br />
+              受け取り・二次流通を行う場合は<strong>後からウォレットを登録</strong>してください（登録後、順次送付）。
             </>
           ),
         },
@@ -250,7 +236,7 @@ export default function FAQPage() {
           question: '運営者情報は？',
           answer: (
             <>
-              運営者は個人事業主「〇〇〇〇（フリガナ）」です。
+              運営者は個人事業主「大下 唯」です。
               詳細は <Link href="/footer/tokushoho" className="underline">特定商取引法に基づく表記</Link> をご確認ください。
             </>
           ),
@@ -336,7 +322,7 @@ export default function FAQPage() {
         )}
       </section>
 
-      <footer className="mt-10 text-sm text-gray-600">最終更新：2025年8月</footer>
+      <footer className="mt-10 text-sm text-gray-600">最終更新：2025年8月18日</footer>
     </main>
   );
 }

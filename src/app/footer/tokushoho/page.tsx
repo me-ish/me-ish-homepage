@@ -17,20 +17,21 @@ export default function TokushohoPage() {
         <p>me-ish（ミーイッシュ）</p>
 
         <h2><strong>■ 販売責任者</strong></h2>
-        <p>〇〇 〇〇（フルネーム）</p>
+        <p>大下　唯</p>
 
         <h2><strong>■ 所在地</strong></h2>
-        <p>東京都〇〇区〇〇町〇丁目（詳細はご請求があった場合に遅滞なく開示します）</p>
+        <p>仙台市青葉区（詳細はご請求があった場合に遅滞なく開示します）</p>
 
         <h2><strong>■ 電話番号</strong></h2>
-        <p>電話での対応は行っておりません。お問い合わせは下記フォームまたはメールをご利用ください。</p>
+        <p>電話番号は特定商取引法第11条に基づき、ご請求があった場合に遅滞なく開示いたします。<br />
+        お問い合わせは下記フォームまたはメールをご利用ください。</p>
 
         <h2><strong>■ お問い合わせ先</strong></h2>
         <ul>
           <li>
             フォーム：
             <Link href="/contact/form" className="underline underline-offset-2">
-              お問い合わせページ
+              お問い合わせフォーム
             </Link>
           </li>
           <li>
@@ -62,13 +63,13 @@ export default function TokushohoPage() {
         <h2><strong>■ お支払い方法</strong></h2>
         <ul>
           <li>クレジットカード決済（Stripe）</li>
-          <li>クレジットカードまたは暗号資産決済（PaperによるNFT購入）</li>
+          <li>クレジットカード決済（StripeによるNFT購入）</li>
         </ul>
 
         <h2><strong>■ お支払い時期</strong></h2>
         <ul>
           <li>通常販売：購入手続き完了時に即時決済</li>
-          <li>NFT販売：Paper上での購入完了時に決済</li>
+          <li>NFT販売：Stripe決済完了時に即時決済</li>
         </ul>
 
         <h2><strong>■ 商品の引渡時期</strong></h2>
@@ -84,7 +85,7 @@ export default function TokushohoPage() {
         <h2><strong>■ 表現および商品に関する注意書き</strong></h2>
         <p>各作品はアーティストによる創作物です。表現内容は主観的なものであり、品質・効果等を保証するものではありません。</p>
 
-        <p>制定日：2025年5月XX日</p>
+        <p>制定日：2025年8月18日</p>
       </article>
     </main>
   );
