@@ -2,9 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: process.env.STRIPE_API_VERSION as Stripe.LatestApiVersion,
-});
+// /api/purchase/stripe/route.ts
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!); // apiVersion指定しない
 
 export async function POST(req: NextRequest) {
   const body = await req.json();

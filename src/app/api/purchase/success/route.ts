@@ -3,9 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: process.env.STRIPE_API_VERSION as Stripe.LatestApiVersion,
-});
+// /api/purchase/stripe/route.ts
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!); // apiVersion指定しない
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
