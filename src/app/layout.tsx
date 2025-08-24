@@ -9,7 +9,6 @@ export const metadata = {
   title: 'me-ish',
   description: 'アートを、もっと近くに。',
   manifest: '/manifest.json',
-  themeColor: '#00a1e9',
 };
 
 export default function RootLayout({

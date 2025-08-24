@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
@@ -9,7 +9,17 @@ import {
   ShieldCheck, Bell, CreditCard, Image as Img, User, LogIn
 } from 'lucide-react';
 
+/** 外側は Suspense でラップ（← これが重要） */
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginSkeleton />}>
+      <LoginInner />
+    </Suspense>
+  );
+}
+
+/** 中身はそのまま（元の LoginPage を LoginInner にリネーム） */
+function LoginInner() {
   const router = useRouter();
   const search = useSearchParams();
   const [loading, setLoading] = useState(false);
@@ -122,8 +132,20 @@ export default function LoginPage() {
   );
 }
 
-/* ---------- Sub ---------- */
+/** Suspense 用の軽いスケルトン */
+function LoginSkeleton() {
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-white to-[#eaf6ff] px-6 py-12 flex flex-col items-center">
+      <div className="w-full max-w-[520px] rounded-2xl border bg-white shadow-lg p-6 animate-pulse">
+        <div className="h-6 w-40 bg-[#eef5fb] rounded mb-4" />
+        <div className="h-12 w-full bg-[#eef5fb] rounded" />
+        <div className="mt-4 h-16 w-full bg-[#f6f8fb] rounded" />
+      </div>
+    </main>
+  );
+}
 
+/* ---------- Sub ---------- */
 function FeatureCard({
   title,
   items,
