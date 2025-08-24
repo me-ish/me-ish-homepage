@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
       console.error('価格取得エラー:', fetchError?.message);
     } else {
       const price = Number(entryData.price);
-      const fee = Math.round(price * 0.05);
+      const fee = Math.round(price * 0.15);
       const reward = price - fee;
 
       const { error: payoutError } = await supabase
