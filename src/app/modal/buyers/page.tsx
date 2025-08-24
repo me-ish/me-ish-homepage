@@ -1,163 +1,156 @@
 // app/buyers/page.tsx
-
 'use client';
+
+import Link from 'next/link';
+import {
+  ShoppingCart, CreditCard, Wallet, ShieldCheck, Download, Image as Img, ArrowRight, Timer
+} from 'lucide-react';
 
 export default function BuyersPage() {
   return (
-    <main className="px-6 py-16 max-w-3xl mx-auto text-[#333] leading-relaxed">
-      <h1 className="text-4xl font-lilita text-[#00a1e9] mb-10 text-center">
-        ギャラリーへの参加・購入方法
-      </h1>
+    <main className="px-6 py-16 max-w-3xl mx-auto text-[#222] leading-relaxed">
+      <h1 className="text-4xl font-lilita text-[#00a1e9] mb-10 text-center">購入ガイド</h1>
 
       {/* 概要 */}
-      <section className="mb-16">
-        <h2 className="text-2xl font-bold mb-3">me-ishで作品を楽しみ、購入するには</h2>
-        <p>
-          me-ishでは、どなたでも3D空間で展示された作品を自由に鑑賞できます。  
-          気に入った作品があれば、その場で購入することも可能です。販売形式は「通常販売（円建て）」と「NFT販売」の2種類があります。
+      <section className="mb-10">
+        <p className="text-[1.02rem]">
+          me-ishでは、どなたでも展示中の作品を自由に鑑賞できます。気に入った作品はその場で購入可能。
+          <strong>お支払いはクレジットカード（円）のみ</strong>です。
+          作品には<span className="font-semibold">「通常」</span>と<span className="font-semibold">「NFT」</span>の出展形式があり、
+          <span className="font-semibold">NFTと表示された作品のみ</span>購入後にNFTを発行して受け渡します。
         </p>
       </section>
 
-{/* 通常販売（円での購入）の流れ */}
-<section className="mb-16">
-  <h2 className="text-2xl font-bold mb-6 text-center">通常販売（円での購入）の流れ</h2>
+      {/* 通常販売（円） */}
+      <section className="mb-14">
+        <h2 className="text-2xl font-bold mb-6 text-center">通常販売（円）の流れ</h2>
+        <ol className="space-y-5">
+          <li className="flex items-start gap-3">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#e7f2ff] text-[#0a5ea8] font-bold">1</span>
+            <div>
+              <p className="font-semibold flex items-center gap-2"><Img className="w-4 h-4 text-[#00a1e9]" />作品を開く</p>
+              <p className="text-sm text-[#555]">展示内で作品をタップし、価格や説明を確認します。</p>
+            </div>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#e7f2ff] text-[#0a5ea8] font-bold">2</span>
+            <div>
+              <p className="font-semibold flex items-center gap-2"><ShoppingCart className="w-4 h-4 text-[#00a1e9]" />購入手続きへ</p>
+              <p className="text-sm text-[#555]">「購入する」ボタンから手続きに進みます。</p>
+            </div>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#e7f2ff] text-[#0a5ea8] font-bold">3</span>
+            <div>
+              <p className="font-semibold flex items-center gap-2"><CreditCard className="w-4 h-4 text-[#00a1e9]" />クレジット決済</p>
+              <p className="text-sm text-[#555]">Stripe経由で安全に決済（<strong>円のみ</strong>）。</p>
+            </div>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#e7f2ff] text-[#0a5ea8] font-bold">4</span>
+            <div>
+              <p className="font-semibold flex items-center gap-2"><Download className="w-4 h-4 text-[#00a1e9]" />データ受け取り</p>
+              <p className="text-sm text-[#555]">購入完了後、<strong>ダウンロードリンクをメール</strong>でお送りします。</p>
+            </div>
+          </li>
+        </ol>
+      </section>
 
-  <div className="space-y-6">
-    {/* Step 1 */}
-    <div className="flex items-start space-x-4">
-      <div className="w-10 h-10 bg-[#00a1e9] text-white rounded-full flex items-center justify-center font-bold">
-        1
-      </div>
-      <div>
-        <p className="font-bold">作品をクリック</p>
-        <p className="text-sm text-gray-600">展示中の作品をクリックして詳細を表示します</p>
-      </div>
-    </div>
+      {/* NFT出展作品の購入 */}
+      <section className="mb-14">
+        <h2 className="text-2xl font-bold mb-6 text-center">NFT出展作品の購入</h2>
+        <ol className="space-y-5">
+          <li className="flex items-start gap-3">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#e7f2ff] text-[#0a5ea8] font-bold">1</span>
+            <div>
+              <p className="font-semibold flex items-center gap-2"><Img className="w-4 h-4 text-[#00a1e9]" />NFT表示の作品を選ぶ</p>
+              <p className="text-sm text-[#555]">作品詳細に「NFT」出展と明記されています。</p>
+            </div>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#e7f2ff] text-[#0a5ea8] font-bold">2</span>
+            <div>
+              <p className="font-semibold flex items-center gap-2"><CreditCard className="w-4 h-4 text-[#00a1e9]" />クレジットで購入（円）</p>
+              <p className="text-sm text-[#555]">お支払いは通常販売と同じく<strong>クレジットカードのみ</strong>です。</p>
+            </div>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#e7f2ff] text-[#0a5ea8] font-bold">3</span>
+            <div>
+              <p className="font-semibold flex items-center gap-2"><Wallet className="w-4 h-4 text-[#00a1e9]" />受け取り方法を確認</p>
+              <p className="text-sm text-[#555]">
+                ウォレットをお持ちの方はアドレスを入力。お持ちでない場合は<strong>後から作成して受け取り</strong>も可能（メールで案内）。
+              </p>
+            </div>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#e7f2ff] text-[#0a5ea8] font-bold">4</span>
+            <div>
+              <p className="font-semibold flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-[#00a1e9]" />NFTを発行・受け渡し</p>
+              <p className="text-sm text-[#555]">
+                当ギャラリーが購入後にNFTを発行し、指定ウォレットへ移転します（<Timer className="inline w-3.5 h-3.5" /> 発行まで少しお時間をいただきます）。
+              </p>
+            </div>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#e7f2ff] text-[#0a5ea8] font-bold">5</span>
+            <div>
+              <p className="font-semibold flex items-center gap-2"><Download className="w-4 h-4 text-[#00a1e9]" />データも受け取り</p>
+              <p className="text-sm text-[#555]">
+                NFT作品でも、<strong>画像データ（保護済み＋原本）</strong>のダウンロードリンクをメールでお送りします。
+              </p>
+            </div>
+          </li>
+        </ol>
+        <p className="mt-3 text-xs text-[#667]">
+          ※ 暗号資産での支払いはできません。受け取りにはウォレットが必要ですが、後から作成して受領することも可能です。
+        </p>
+      </section>
 
-    {/* Step 2 */}
-    <div className="flex items-start space-x-4">
-      <div className="w-10 h-10 bg-[#00a1e9] text-white rounded-full flex items-center justify-center font-bold">
-        2
-      </div>
-      <div>
-        <p className="font-bold">内容を確認</p>
-        <p className="text-sm text-gray-600">価格・販売形式・作家情報をチェックします</p>
-      </div>
-    </div>
-
-    {/* Step 3 */}
-    <div className="flex items-start space-x-4">
-      <div className="w-10 h-10 bg-[#00a1e9] text-white rounded-full flex items-center justify-center font-bold">
-        3
-      </div>
-      <div>
-        <p className="font-bold">決済を完了</p>
-        <p className="text-sm text-gray-600">Stripe経由でクレジットカード決済が可能です</p>
-      </div>
-    </div>
-
-    {/* Step 4 */}
-    <div className="flex items-start space-x-4">
-      <div className="w-10 h-10 bg-[#00a1e9] text-white rounded-full flex items-center justify-center font-bold">
-        4
-      </div>
-      <div>
-        <p className="font-bold">データを受け取る</p>
-        <p className="text-sm text-gray-600">購入完了後、作品データがメールで届きます</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-
-{/* NFT販売の流れ */}
-<section className="mb-16">
-  <h2 className="text-2xl font-bold mb-6 text-center">NFT販売の流れ</h2>
-
-  <div className="space-y-6">
-    {/* Step 1 */}
-    <div className="flex items-start space-x-4">
-      <div className="w-10 h-10 bg-[#00a1e9] text-white rounded-full flex items-center justify-center font-bold">
-        1
-      </div>
-      <div>
-        <p className="font-bold">NFT作品を選ぶ</p>
-        <p className="text-sm text-gray-600">「NFT販売」と表示された作品をクリックします</p>
-      </div>
-    </div>
-
-    {/* Step 2 */}
-    <div className="flex items-start space-x-4">
-      <div className="w-10 h-10 bg-[#00a1e9] text-white rounded-full flex items-center justify-center font-bold">
-        2
-      </div>
-      <div>
-        <p className="font-bold">支払い方法を選択</p>
-        <p className="text-sm text-gray-600">ウォレット or クレカ（Paper連携）で購入できます</p>
-      </div>
-    </div>
-
-    {/* Step 3 */}
-    <div className="flex items-start space-x-4">
-      <div className="w-10 h-10 bg-[#00a1e9] text-white rounded-full flex items-center justify-center font-bold">
-        3
-      </div>
-      <div>
-        <p className="font-bold">me-ishがmint</p>
-        <p className="text-sm text-gray-600">購入者の名義でNFTを発行し、ウォレットに送信します</p>
-      </div>
-    </div>
-
-    {/* Step 4 */}
-    <div className="flex items-start space-x-4">
-      <div className="w-10 h-10 bg-[#00a1e9] text-white rounded-full flex items-center justify-center font-bold">
-        4
-      </div>
-      <div>
-        <p className="font-bold">証明付きで保有</p>
-        <p className="text-sm text-gray-600">NFTとあわせて、保護済み画像もメールで届きます</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-      {/* 保護処理について */}
-      <section className="mb-16">
-        <h2 className="text-xl font-bold mb-3">作品の保護と真正性の証明</h2>
+      {/* 作品の保護について */}
+      <section className="mb-12">
+        <h2 className="text-xl font-bold mb-3">作品の保護と真正性</h2>
         <ul className="list-disc ml-6 space-y-2 text-sm">
-          <li>すべての作品にはウォーターマーク・Glaze・ステガノグラフィー等のAI学習防止処理が施されています</li>
-          <li>購入者には、<strong>保護済み画像</strong>と<strong>元画像（無加工）</strong>の両方をお渡しします</li>
-          <li>NFT販売では、me-ishのスマートコントラクトで発行された証明付きNFTがあなたのものになります</li>
+          <li>表示用画像にはウォーターマークやAI学習阻害処理（例：Glaze）を適用。</li>
+          <li>購入者には<strong>保護済み画像</strong>と<strong>原本</strong>の両方をお渡しします。</li>
+          <li>NFT出展作品は、ブロックチェーン上で所有が証明されます。</li>
         </ul>
       </section>
 
-      {/* Q&A */}
-      <section className="mb-16">
+      {/* よくある質問 */}
+      <section className="mb-14">
         <h2 className="text-xl font-bold mb-3">よくあるご質問</h2>
         <ul className="space-y-4 text-sm">
           <li>
-            <strong>Q. ウォレットを持っていませんがNFTを買えますか？</strong><br />
-            → はい。Paperという仕組みにより、メールアドレスだけでNFT購入・所有が可能です。
+            <strong>Q. 支払い方法は？</strong><br />
+            → クレジットカード（円）のみです。暗号資産での支払いには対応していません。
           </li>
           <li>
-            <strong>Q. どんな形式のデータがもらえますか？</strong><br />
-            → 購入後にメールで画像データ（保護済み＋原本）をお送りします。
+            <strong>Q. ウォレットがなくてもNFT作品を買えますか？</strong><br />
+            → はい。まずはクレジットで購入し、<strong>後からウォレットを作成して受け取り</strong>できます（メールでご案内します）。
           </li>
           <li>
-            <strong>Q. AIで学習されませんか？</strong><br />
-            → Glaze・ステガノグラフィーなど、AI学習を妨げる処理を全作品に行っております。
+            <strong>Q. キャンセルや返品はできますか？</strong><br />
+            → デジタル商品の性質上、原則キャンセルはできません。誤購入等は
+            <Link href="/#contact" className="underline">お問い合わせ</Link> からご相談ください。
           </li>
         </ul>
       </section>
 
-      {/* ギャラリー誘導 */}
-      <div className="text-center mt-16">
-        <a
-          href="/gallery"
-          className="inline-block bg-[#00a1e9] text-white px-8 py-3 rounded-lg text-lg font-bold hover:bg-[#008ec4] transition"
+      {/* CTA */}
+      <div className="mt-12 grid gap-3 sm:grid-cols-2">
+        <Link
+          href="/#gallery"
+          className="inline-flex items-center justify-center gap-2 rounded-full border border-[#00a1e9] px-5 py-3 text-[#00a1e9] font-semibold hover:bg-[#e8f7ff] transition"
         >
-          ギャラリーを見てみる
-        </a>
+          作品を見に行く <ArrowRight className="w-4 h-4" />
+        </Link>
+        <Link
+          href="/footer/faq"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-[#00a1e9] px-5 py-3 text-white font-semibold hover:brightness-[1.05] transition"
+        >
+          FAQを見る <ArrowRight className="w-4 h-4" />
+        </Link>
       </div>
     </main>
   );
