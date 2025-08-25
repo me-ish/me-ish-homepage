@@ -2,29 +2,18 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseBrowser } from '@/lib/supabaseBrowser';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-// 環境変数にカンマ区切りで許可メールを入れておく: NEXT_PUBLIC_ADMIN_EMAILS="info@me-ish.art,owner@example.com"
 const allowedEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? 'info@me-ish.art')
   .split(',')
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
 export default function AdminLogin() {
+  const supabase = supabaseBrowser();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-
-  const siteOrigin = useMemo(() => {
-    // SSR対策：クライアントでのみ window がある
-    if (typeof window === 'undefined') return undefined;
-    return window.location.origin;
-  }, []);
 
   const isAllowed = (email?: string | null) =>
     !!email && allowedEmails.includes(email.toLowerCase());
@@ -36,22 +25,14 @@ export default function AdminLogin() {
       setMsg(null);
       setLoading(true);
 
-      // Vercel本番/Preview/ローカル どれでも戻れるように動的originを使う
-      const redirectTo = `${window.location.origin}/admin-login`; // 戻り先をこのページにして、ここで判定→/adminへ
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const redirectTo = `${window.location.origin}/admin-login`;
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo,
-          // 必要なら追加
-          // queryParams: { prompt: 'consent', access_type: 'offline' },
-        },
+        options: { redirectTo },
       });
-
       if (error) throw error;
-
-      // Google同意画面に遷移するのでここから先は戻って来てから onAuthStateChange が拾う
+      // 同意画面へ遷移 → 戻ってきたら onAuthStateChange で拾う
     } catch (e: any) {
-      console.error(e);
       setMsg(e?.message ?? 'ログインに失敗しました');
       setLoading(false);
     }
@@ -67,41 +48,43 @@ export default function AdminLogin() {
   useEffect(() => {
     let mounted = true;
 
-    // ① 初回ロード時に既にセッションがあれば判定
+    // 初回ロード：既にログイン済みなら判定
     (async () => {
       const { data } = await supabase.auth.getSession();
       const email = data.session?.user?.email ?? null;
+      if (!mounted) return;
 
       if (email) {
         if (isAllowed(email)) {
           gotoAdmin();
         } else {
-          // 許可外アカウントなら即ログアウトさせる
           await supabase.auth.signOut();
-          if (mounted) setMsg('このアカウントは管理者ではありません');
+          setMsg('このアカウントは管理者ではありません');
         }
       }
     })();
 
-    // ② OAuthコールバック後の変化を確実に拾う
+    // 以後の変化を1つだけ購読
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const email = session?.user?.email ?? null;
+      if (!mounted) return;
+
       if (email) {
         if (isAllowed(email)) {
           gotoAdmin();
         } else {
           await supabase.auth.signOut();
-          if (mounted) setMsg('このアカウントは管理者ではありません');
+          setMsg('このアカウントは管理者ではありません');
         }
       }
-      if (mounted) setLoading(false);
+      setLoading(false);
     });
 
     return () => {
       mounted = false;
       sub.subscription.unsubscribe();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [supabase]); // ← 依存は supabase のみ
 
   return (
     <div style={{ padding: '2rem', maxWidth: 480, margin: '0 auto' }}>
@@ -125,7 +108,7 @@ export default function AdminLogin() {
 
       <button
         onClick={handleLogin}
-        disabled={loading || !siteOrigin}
+        disabled={loading}
         style={{
           width: '100%',
           padding: '12px 16px',
