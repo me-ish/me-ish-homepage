@@ -6,6 +6,8 @@ import Image from 'next/image';
 import Header from '@/components/shared/Header';
 import { Mail, Sparkles, ShieldCheck, Images, ArrowRight, ExternalLink } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
+import { useAnnouncements } from '@/hooks/useAnnouncements';
+
 
 // スクロール時のフェードイン処理
 function useFadeInOnScroll() {
@@ -84,9 +86,34 @@ const DesktopHome = () => {
           </a>
         </section>
 
+        {/* Announcements — お知らせ */}
+<section
+  id="news"
+  className="fade-in-start py-10 px-6 bg-[#f9fbfe]"
+  aria-labelledby="news-title"
+>
+  <div className="max-w-[1040px] mx-auto">
+    <div className="flex items-baseline justify-between mb-4">
+      <h2 id="news-title" className="text-[clamp(1.2rem,2.2vw,1.6rem)] font-bold text-[#00a1e9]">
+        お知らせ
+      </h2>
+      <Link
+        href="/news"
+        className="text-sm text-[#00a1e9] underline underline-offset-4 hover:opacity-80"
+        aria-label="お知らせ一覧を見る"
+      >
+        一覧を見る
+      </Link>
+    </div>
+
+    <AnnouncementsStrip />
+  </div>
+</section>
+
+
         {/* About */}
         <section id="about" className="fade-in-start py-16 px-6 bg-white" aria-labelledby="about-title">
-          <div className="max-w-[1000px] mx-auto">
+          <div className="max-w-[1040px] mx-auto">
             <h2 id="about-title" className="text-center font-bold mb-10">
               <span className="block text-[clamp(1.8rem,3.8vw,2.6rem)]">
                 <span className="text-[#00a1e9] font-lilita">me-ish</span>
@@ -276,5 +303,94 @@ const DesktopHome = () => {
     </div>
   );
 };
+
+function AnnouncementsStrip() {
+  const { items, loading } = useAnnouncements(3);
+
+  if (loading) {
+    return (
+      <ul className="grid gap-4 md:grid-cols-3" aria-busy="true" aria-live="polite">
+        {[0,1,2].map((i) => (
+          <li key={i} className="rounded-2xl border bg-white p-4 shadow-sm">
+            <div className="h-4 w-24 bg-gray-200/70 rounded animate-pulse mb-2" />
+            <div className="h-5 w-3/4 bg-gray-200/80 rounded animate-pulse mb-2" />
+            <div className="h-4 w-full bg-gray-200/60 rounded animate-pulse" />
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  if (!items.length) {
+    return (
+      <div className="rounded-xl border bg-white p-6 text-sm text-[#667]">
+        現在お知らせはありません。
+      </div>
+    );
+  }
+
+  return (
+    <ul className="grid gap-4 md:grid-cols-3">
+      {items.map((n) => (
+        <li
+          key={n.id}
+          className="group rounded-2xl border bg-white p-4 shadow-sm hover:shadow-md transition"
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <Badge type={n.category} />
+            {n.pinned && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
+                固定
+              </span>
+            )}
+            <time className="ml-auto text-xs text-gray-500">
+              {new Date(n.published_at).toLocaleDateString()}
+            </time>
+          </div>
+          <h3 className="font-semibold leading-snug line-clamp-2">
+            {n.title}
+          </h3>
+          <p className="mt-1 text-sm text-[#556] leading-relaxed line-clamp-2">
+            {n.body_md.replace(/\n/g, ' ')}
+          </p>
+          {n.link_url ? (
+            <a
+              href={n.link_url}
+              className="mt-2 inline-block text-sm text-[#00a1e9] underline underline-offset-4 group-hover:opacity-80"
+            >
+              詳しく見る
+            </a>
+          ) : (
+            <Link
+              href={`/news`}
+              className="mt-2 inline-block text-sm text-[#00a1e9] underline underline-offset-4 group-hover:opacity-80"
+            >
+              詳細・一覧へ
+            </Link>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Badge({ type }: { type: 'info' | 'update' | 'maintenance' }) {
+  const styles: Record<string, string> = {
+    info: 'bg-[#e8f4ff] text-[#005a9e]',
+    update: 'bg-[#eafbea] text-[#1b6e2b]',
+    maintenance: 'bg-[#fff1f0] text-[#a23a3a]',
+  };
+  const label: Record<string,string> = {
+    info: 'Info',
+    update: 'Update',
+    maintenance: 'Maintenance',
+  };
+  return (
+    <span className={`text-[10px] px-2 py-0.5 rounded ${styles[type]}`}>
+      {label[type]}
+    </span>
+  );
+}
+
 
 export default DesktopHome;

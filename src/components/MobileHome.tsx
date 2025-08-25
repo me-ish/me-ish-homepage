@@ -6,8 +6,9 @@ import Image from 'next/image';
 import Header from '@/components/shared/Header';
 import { Mail, ArrowRight, ShieldCheck, Images, Sparkles } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
+import { useAnnouncements } from '@/hooks/useAnnouncements';
 
-// スクロール時のフェードイン
+/* スクロール時のフェードイン */
 function useFadeInOnScroll() {
   useEffect(() => {
     const targets = document.querySelectorAll<HTMLElement>('.fade-in-start');
@@ -67,7 +68,8 @@ const MobileHome = () => {
             <Link
               href="/entry"
               className="inline-flex items-center justify-center gap-2 rounded-full bg-[#00a1e9]
-                         px-6 py-3 text-white font-semibold shadow active:scale-[0.99] transition"
+                         px-6 py-3 text-white font-semibold shadow active:scale-[0.99] transition
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00a1e9]/30"
               aria-label="応募する"
             >
               応募する <ArrowRight className="h-4 w-4" />
@@ -76,9 +78,33 @@ const MobileHome = () => {
 
           {/* サブ導線はテキストリンクで軽く */}
           <div className="mt-4">
-            <Link href="#gallery" className="text-[#00a1e9] underline underline-offset-4">
+            <Link
+              href="#gallery"
+              className="text-[#00a1e9] underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00a1e9]/20 rounded"
+            >
               まずはギャラリーを見る
             </Link>
+          </div>
+        </section>
+
+        {/* お知らせ（モバイル簡潔版） */}
+        <section
+          id="news"
+          className="fade-in-start px-5 py-8 bg-[#f9fbfe]"
+          aria-labelledby="news-title"
+        >
+          <div className="max-w-[680px] mx-auto">
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 id="news-title" className="text-base font-bold text-[#00a1e9]">お知らせ</h2>
+              <Link
+                href="/news"
+                className="text-xs text-[#00a1e9] underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00a1e9]/20 rounded"
+                aria-label="お知らせ一覧を見る"
+              >
+                一覧を見る
+              </Link>
+            </div>
+            <AnnouncementsStripMobile />
           </div>
         </section>
 
@@ -225,7 +251,8 @@ const MobileHome = () => {
             <div className="pt-2">
               <Link
                 href="/footer/faq"
-                className="inline-flex items-center gap-2 rounded-full border border-[#00a1e9] px-4 py-2 text-[#00a1e9] font-semibold active:scale-[0.99] transition"
+                className="inline-flex items-center gap-2 rounded-full border border-[#00a1e9] px-4 py-2 text-[#00a1e9] font-semibold active:scale-[0.99] transition
+                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00a1e9]/20"
                 aria-label="よくある質問をもっと見る"
               >
                 もっと見る <ArrowRight className="h-4 w-4" />
@@ -244,7 +271,11 @@ const MobileHome = () => {
           <ul className="text-[#00a1e9] text-sm space-y-3 max-w-[420px] mx-auto">
             <li className="flex items-center justify-center gap-2">
               <Mail className="w-4 h-4" />
-              <Link href="/contact/form" className="underline underline-offset-4" aria-label="お問い合わせフォームへ">
+              <Link
+                href="/contact/form"
+                className="underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00a1e9]/20 rounded"
+                aria-label="お問い合わせフォームへ"
+              >
                 お問い合わせフォームへ
               </Link>
             </li>
@@ -254,7 +285,7 @@ const MobileHome = () => {
                 href="https://x.com/meishart0716"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline underline-offset-4"
+                className="underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00a1e9]/20 rounded"
                 aria-label="me-ish公式X（旧Twitter）を開く"
               >
                 X（旧Twitter）
@@ -268,9 +299,77 @@ const MobileHome = () => {
       <style jsx>{`
         .fade-in-start { opacity: 0; transform: translateY(10px); transition: opacity 600ms ease, transform 600ms ease; }
         .fade-in-start.show { opacity: 1; transform: translateY(0); }
+        @media (prefers-reduced-motion: reduce) {
+          .fade-in-start { transition: none !important; }
+        }
       `}</style>
     </div>
   );
 };
+
+/* ---- お知らせ表示（モバイル用コンパクト） ---- */
+function AnnouncementsStripMobile() {
+  const { items, loading } = useAnnouncements(3);
+
+  if (loading) {
+    return (
+      <ul className="space-y-3" aria-busy="true" aria-live="polite">
+        {[0, 1, 2].map((i) => (
+          <li key={i} className="rounded-xl border bg-white p-4 shadow-sm">
+            <div className="h-3.5 w-20 bg-gray-200/70 rounded animate-pulse mb-2" />
+            <div className="h-4 w-3/4 bg-gray-200/80 rounded animate-pulse mb-2" />
+            <div className="h-3.5 w-full bg-gray-200/60 rounded animate-pulse" />
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  if (!items.length) {
+    return (
+      <div className="rounded-xl border bg-white p-4 text-xs text-[#667]">
+        現在お知らせはありません。
+      </div>
+    );
+  }
+
+  return (
+    <ul className="space-y-3">
+      {items.map((n) => (
+        <li key={n.id} className="rounded-xl border bg-white p-4 shadow-sm active:scale-[0.995] transition">
+          <div className="flex items-center gap-2">
+            <Badge type={n.category} />
+            {n.pinned && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">固定</span>}
+            <time className="ml-auto text-[11px] text-gray-500">
+              {new Date(n.published_at).toLocaleDateString()}
+            </time>
+          </div>
+          <p className="mt-1 font-semibold leading-snug line-clamp-2">{n.title}</p>
+          <p className="mt-0.5 text-xs text-[#556] leading-relaxed line-clamp-2">{n.body_md.replace(/\n/g, ' ')}</p>
+          <Link
+            href="/news"
+            className="mt-1.5 inline-block text-xs text-[#00a1e9] underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00a1e9]/20 rounded"
+          >
+            詳細・一覧へ
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Badge({ type }: { type: 'info' | 'update' | 'maintenance' }) {
+  const styles: Record<string, string> = {
+    info: 'bg-[#e8f4ff] text-[#005a9e]',
+    update: 'bg-[#eafbea] text-[#1b6e2b]',
+    maintenance: 'bg-[#fff1f0] text-[#a23a3a]',
+  };
+  const label: Record<string, string> = {
+    info: 'Info',
+    update: 'Update',
+    maintenance: 'Maintenance',
+  };
+  return <span className={`text-[10px] px-2 py-0.5 rounded ${styles[type]}`}>{label[type]}</span>;
+}
 
 export default MobileHome;
