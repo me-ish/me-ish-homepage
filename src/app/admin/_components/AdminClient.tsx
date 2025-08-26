@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabaseBrowser } from '@/lib/supabaseBrowser';
 
 type Props = {
   adminEmail: string;
@@ -20,45 +20,34 @@ export default function AdminClient({
   const [newEntryCount, setNewEntryCount] = useState(initialNewEntryCount);
   const [newInquiryCount, setNewInquiryCount] = useState(initialNewInquiryCount);
 
-  // 必要ならマウント後に最新値へ更新
   useEffect(() => {
     (async () => {
       const [entriesRes, inquiriesRes] = await Promise.all([
-        supabase.from("entries").select("*", { count: "exact", head: true }).eq("confirmed", false),
-        supabase.from("inquiries").select("*", { count: "exact", head: true }).eq("is_read", false),
+        supabase.from('entries').select('*', { count: 'exact', head: true }).eq('confirmed', false),
+        supabase.from('inquiries').select('*', { count: 'exact', head: true }).eq('is_read', false),
       ]);
-      if (!entriesRes.error && typeof entriesRes.count === "number") {
-        setNewEntryCount(entriesRes.count);
-      }
-      if (!inquiriesRes.error && typeof inquiriesRes.count === "number") {
-        setNewInquiryCount(inquiriesRes.count);
-      }
+      if (!entriesRes.error && typeof entriesRes.count === 'number') setNewEntryCount(entriesRes.count);
+      if (!inquiriesRes.error && typeof inquiriesRes.count === 'number') setNewInquiryCount(inquiriesRes.count);
     })();
   }, [supabase]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.replace("/admin-login");
+    router.replace('/admin-login');
   };
 
   return (
-    <main style={{ padding: "2rem", maxWidth: 960, margin: "0 auto" }}>
+    <main style={{ padding: '2rem', maxWidth: 960, margin: '0 auto' }}>
       <h1>me-ish 管理ダッシュボード</h1>
-      <p style={{ color: "#666" }}>ログイン中: {adminEmail}</p>
+      <p style={{ color: '#666' }}>ログイン中: {adminEmail}</p>
 
-      <ul style={{ marginTop: "2rem", lineHeight: 2 }}>
+      <ul style={{ marginTop: '2rem', lineHeight: 2 }}>
         <li>
           <a href="/admin/entries">
             応募作品の管理
             {newEntryCount > 0 && (
-              <span style={{
-                marginLeft: "0.5em",
-                backgroundColor: "#e63946",
-                color: "white",
-                borderRadius: 12,
-                padding: "2px 8px",
-                fontSize: "0.8rem"
-              }}>
+              <span style={{ marginLeft: '0.5em', background: '#e63946', color: '#fff',
+                borderRadius: 12, padding: '2px 8px', fontSize: '0.8rem' }}>
                 新着{newEntryCount}
               </span>
             )}
@@ -68,14 +57,8 @@ export default function AdminClient({
           <a href="/admin/inquiries">
             お問い合わせ一覧
             {newInquiryCount > 0 && (
-              <span style={{
-                marginLeft: "0.5em",
-                backgroundColor: "#e63946",
-                color: "white",
-                borderRadius: 12,
-                padding: "2px 8px",
-                fontSize: "0.8rem"
-              }}>
+              <span style={{ marginLeft: '0.5em', background: '#e63946', color: '#fff',
+                borderRadius: 12, padding: '2px 8px', fontSize: '0.8rem' }}>
                 新着{newInquiryCount}
               </span>
             )}
@@ -85,10 +68,7 @@ export default function AdminClient({
         <li><a href="/admin/settings">ギャラリー設定（今後実装予定）</a></li>
       </ul>
 
-      <button
-        onClick={handleLogout}
-        style={{ marginTop: "2rem", padding: "0.75rem 1.5rem", backgroundColor: "#ccc", border: "none" }}
-      >
+      <button onClick={handleLogout} style={{ marginTop: '2rem', padding: '0.75rem 1.5rem', background: '#ccc', border: 'none' }}>
         ログアウト
       </button>
     </main>
