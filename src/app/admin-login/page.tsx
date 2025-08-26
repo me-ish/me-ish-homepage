@@ -34,7 +34,7 @@ export default function AdminLogin() {
       const redirectTo = `${window.location.origin}/admin-login`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo },
+        options: { redirectTo: `${window.location.origin}/auth/callback` }, 
       });
       if (error) throw error;
       // ← Google同意画面へ遷移

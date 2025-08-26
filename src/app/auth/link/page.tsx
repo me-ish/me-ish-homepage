@@ -1,39 +1,33 @@
-import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { supabaseServer } from '@/lib/supabaseServer';
 
 export default async function LinkExternalPage({
   searchParams,
 }: {
   searchParams: { external?: string | string[] };
 }) {
-  const externalId = searchParams.external;
-
-  if (!externalId || Array.isArray(externalId)) {
-    return redirect('/mypage?linked=error');
+  // external を 1 値に正規化
+  const raw = searchParams.external;
+  const externalId = Array.isArray(raw) ? raw[0] : raw;
+  if (!externalId) {
+    redirect('/mypage?linked=error');
   }
 
-  const supabase = createClient();
+  const supabase = supabaseServer();
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  const user = session?.user;
-  if (!user) {
-    return redirect(`/login?redirect=/auth/link?external=${externalId}`);
+  // RSC では getUser() でOK（Cookieから判定）
+  const { data: { user }, error: userErr } = await supabase.auth.getUser();
+  if (userErr || !user) {
+    redirect(`/login?redirect=/auth/link?external=${encodeURIComponent(externalId)}`);
   }
 
+  // まだ user_id が入っていない行だけを、ログイン中ユーザーにひも付け
   const { error } = await supabase
     .from('entries')
-    .update({ user_id: user.id })
+    .update({ user_id: user!.id })
     .eq('external_user_id', externalId)
-    .is('user_id', null); 
+    .is('user_id', null);
 
-  if (error) {
-    console.error('Error updating entries:', error);
-    return redirect('/mypage?linked=error');
-  }
-
-  return redirect('/mypage?linked=success');
+  redirect(error ? '/mypage?linked=error' : '/mypage?linked=success');
 }
 
