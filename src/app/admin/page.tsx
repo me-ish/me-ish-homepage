@@ -10,8 +10,9 @@ export default async function AdminPage() {
   const supabase = await supabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   const email = user?.email?.toLowerCase() ?? null;
-  if (!email || !allowed.includes(email)) redirect('/admin-login');
 
-  // …初期データ取得して <AdminClient …/> を返す
+  if (!email) redirect('/admin-login');           // 未ログインはログインへ
+  if (!allowed.includes(email)) redirect('/admin-login?err=unauthorized');
+
   return <AdminClient adminEmail={email} initialNewEntryCount={0} initialNewInquiryCount={0} />;
 }

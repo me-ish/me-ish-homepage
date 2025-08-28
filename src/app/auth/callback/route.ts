@@ -8,6 +8,7 @@ const allowed = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "info@me-ish.art")
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
+  const next = url.searchParams.get("next") || "/"; // ← 行き先
   const supabase = createRouteHandlerClient({ cookies });
   const code = url.searchParams.get("code");
   if (code) await supabase.auth.exchangeCodeForSession(code);
@@ -16,10 +17,11 @@ export async function GET(req: Request) {
   const email = user?.email?.toLowerCase() ?? null;
 
   if (email && allowed.includes(email)) {
-    return NextResponse.redirect(`${url.origin}/admin`);
+    return NextResponse.redirect(`${url.origin}${next}`);
   } else {
     await supabase.auth.signOut();
     return NextResponse.redirect(`${url.origin}/admin-login?err=unauthorized`);
   }
 }
+
 
