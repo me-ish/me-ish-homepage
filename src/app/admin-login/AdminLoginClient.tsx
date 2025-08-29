@@ -1,48 +1,46 @@
+// src/app/admin-login/AdminLoginClient.tsx
 'use client';
-
 import { supabaseBrowser } from '@/lib/supabaseBrowser';
 
 export default function AdminLoginClient({ currentEmail }: { currentEmail: string | null }) {
   const supabase = supabaseBrowser();
 
-  const loginWithGoogle = async () => {
-    const origin =
-      typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_SITE_URL;
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
+  const handleLogin = async () => {
+    const origin = window.location.origin;
+
+    // ★ 型の余剰プロパティチェックを回避（実行時は flowType を渡す）
+    const params /*: any*/ = {
+      provider: 'google' as const,
       options: {
-        // ここで必ず本番のコールバックに戻し、最終的に /admin-login へ戻す
-        redirectTo: `${origin}/auth/callback?redirect=/admin-login`,
-        queryParams: { prompt: 'consent' }, // 必要なら
+        redirectTo: `${origin}/auth/callback`,
+        queryParams: { prompt: 'select_account' },
       },
-    });
+      flowType: 'pkce' as const, // ← 2.56+ で有効
+    } as any;
+
+    await supabase.auth.signInWithOAuth(params);
   };
 
-  const logout = async () => {
+  const handleLogout = async () => {
     await supabase.auth.signOut();
-    // サーバー判定を再度通すため /admin-login をリロード
-    if (typeof window !== 'undefined') window.location.href = '/admin-login';
+    window.location.href = '/admin-login';
   };
 
   return (
-    <main className="mx-auto max-w-md p-6 text-center">
-      {currentEmail && (
-        <p className="mb-3 text-sm text-gray-600">現在ログイン中: {currentEmail}</p>
-      )}
+    <div className="mx-auto max-w-md text-center space-y-4">
+      {currentEmail && <p className="text-sm text-gray-600">現在のログイン: {currentEmail}</p>}
       <button
-        onClick={loginWithGoogle}
-        className="w-full rounded-lg bg-[#00a1e9] px-4 py-3 font-semibold text-white"
+        onClick={handleLogin}
+        className="w-full rounded-lg bg-[#00a1e9] px-4 py-3 font-semibold text-white hover:brightness-105"
       >
         Googleでログイン
       </button>
       <button
-        onClick={logout}
-        className="mt-3 w-full rounded-lg border px-4 py-3"
+        onClick={handleLogout}
+        className="w-full rounded-lg border px-4 py-3 font-semibold hover:bg-gray-50"
       >
         ログアウト
       </button>
-      {/* 確認用に許可リストを出したいときはサーバー側で描画してください（クライアントでは環境変数は出さない） */}
-    </main>
+    </div>
   );
 }
-

@@ -14,7 +14,7 @@
     "@react-three/drei": "9.76.0",
     "@react-three/fiber": "^8.13.2",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
-    "@supabase/supabase-js": "^2.49.4",
+    "@supabase/supabase-js": "^2.56.1",
     "@thirdweb-dev/sdk": "^4.0.99",
     "@types/react": "18.2.15",
     "@types/react-dom": "18.2.7",

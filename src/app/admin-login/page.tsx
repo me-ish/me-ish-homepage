@@ -14,7 +14,7 @@ export default async function Page() {
     redirect('/admin');
   }
 
-  // ✅ ヘッダーの高さぶん余白を入れる（スマホでも余裕を持たせて 80px）
+  // ヘッダーが fixed なので上に余白
   return (
     <main className="px-4 pt-[80px] pb-10">
       <AdminLoginClient currentEmail={email} />

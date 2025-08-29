@@ -1,27 +1,30 @@
-// src/app/auth/callback/route.ts
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/isAdmin';
 
-const allowed = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "info@me-ish.art")
-  .split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const next = url.searchParams.get("next") || "/"; // ← 行き先
-  const supabase = createRouteHandlerClient({ cookies });
-  const code = url.searchParams.get("code");
-  if (code) await supabase.auth.exchangeCodeForSession(code);
+  const code = url.searchParams.get('code');
 
-  const { data: { user } } = await supabase.auth.getUser();
-  const email = user?.email?.toLowerCase() ?? null;
+  const supabase = createClient();
 
-  if (email && allowed.includes(email)) {
-    return NextResponse.redirect(`${url.origin}${next}`);
-  } else {
-    await supabase.auth.signOut();
-    return NextResponse.redirect(`${url.origin}/admin-login?err=unauthorized`);
+  // Google から返ってきた code を Supabase セッションに交換
+  if (code) {
+    await supabase.auth.exchangeCodeForSession(code);
   }
+
+  // 交換できていれば user が取れる
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user?.email && isAdminEmail(user.email)) {
+    // 管理者ならダッシュボードへ
+    return NextResponse.redirect(new URL('/admin', req.url));
+  }
+
+  // 非管理者 or 失敗時はログイン画面へ
+  return NextResponse.redirect(new URL('/admin-login?err=unauthorized', req.url));
 }
 
 
