@@ -1,11 +1,10 @@
+// src/components/shared/AIGuideChat.tsx
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MessageCircle, Send, X, Mic, MicOff } from 'lucide-react';
 
-/* =========================================================
-   最小の SpeechRecognition 型定義（ブラウザ差異を吸収）
-   ========================================================= */
+/* ===== 最小の SpeechRecognition 型定義 ===== */
 type ISpeechRecognition = {
   lang: string;
   continuous: boolean;
@@ -24,48 +23,55 @@ declare global {
   }
 }
 
-/* =========================================================
-   Props（open は任意: 渡せば制御コンポーネント、渡さなければ内部状態）
-   ========================================================= */
-type AIGuideChatProps = {
+/* ===== Props（どちらの開閉APIもOKに） ===== */
+export type AIGuideChatProps = {
   initialMessage?: string;
-  open?: boolean;
+
+  /** 新API（推奨） */
+  controlledOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+
+  /** 旧API（後方互換） */
+  open?: boolean;
+  onClose?: () => void;
+
+  /** 内部状態で使う場合の初期値（任意） */
+  defaultOpen?: boolean;
 };
 
-/* =========================================================
-   Component
-   ========================================================= */
 export default function AIGuideChat({
   initialMessage,
-  open: openProp,
+  controlledOpen,
   onOpenChange,
+  // 旧API互換
+  open,
+  onClose,
+  defaultOpen = false,
 }: AIGuideChatProps) {
-  // --- 開閉（制御/非制御の両対応）
-  const isControlled = typeof openProp === 'boolean';
-  const [openState, setOpenState] = useState<boolean>(false);
-  const isOpen = isControlled ? (openProp as boolean) : openState;
+  // ---- 開閉（controlledOpen > open の優先で制御判定）
+  const controlled = controlledOpen ?? open;
+  const isControlled = typeof controlled === 'boolean';
+
+  const [uncontrolledOpen, setUncontrolledOpen] = useState<boolean>(defaultOpen);
+  const isOpen = isControlled ? Boolean(controlled) : uncontrolledOpen;
+
   const setOpen = (next: boolean) => {
-    if (isControlled) {
-      onOpenChange?.(next);
-    } else {
-      setOpenState(next);
-      onOpenChange?.(next);
-    }
+    if (!isControlled) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+    if (!next) onClose?.(); // 旧APIの onClose 互換
   };
 
-  // --- 会話の状態
+  // ---- 会話の状態
   const [input, setInput] = useState('');
   const [reply, setReply] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasSentInitial, setHasSentInitial] = useState(false);
 
-  // --- 音声認識 / TTS
+  // ---- 音声認識 / TTS
   type SR = ISpeechRecognition;
   const recognitionRef = useRef<SR | null>(null);
   const [isRecording, setIsRecording] = useState(false);
 
-  // 利用可否（SSR安全）
   const srSupported = useMemo(
     () =>
       typeof window !== 'undefined' &&
@@ -73,10 +79,8 @@ export default function AIGuideChat({
     []
   );
 
-  // 音声認識の初期化
   useEffect(() => {
     if (!srSupported) return;
-
     const SRImpl = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!SRImpl) return;
 
@@ -89,10 +93,9 @@ export default function AIGuideChat({
       const transcript = event?.results?.[0]?.[0]?.transcript ?? '';
       if (!transcript) return;
       setInput(transcript);
-      handleSubmit(transcript);
+      void handleSubmit(transcript);
       setIsRecording(false);
     };
-
     recognition.onerror = () => setIsRecording(false);
     recognition.onend = () => setIsRecording(false);
 
@@ -105,17 +108,16 @@ export default function AIGuideChat({
     };
   }, [srSupported]);
 
-  // 初回メッセージが渡されたら自動送信＆ウィジェットを開く
+  // 初回メッセージが渡されたら自動送信＆開く
   useEffect(() => {
     if (initialMessage && !hasSentInitial) {
-      handleSubmit(initialMessage);
+      void handleSubmit(initialMessage);
       setHasSentInitial(true);
       setOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMessage, hasSentInitial]);
 
-  // メッセージ送信
   const handleSubmit = async (text: string) => {
     const q = text?.trim();
     if (!q) return;
@@ -127,8 +129,7 @@ export default function AIGuideChat({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: q }),
       });
-
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       const answer: string = data?.reply ?? '（応答を取得できませんでした）';
 
       setReply(answer);
@@ -141,18 +142,15 @@ export default function AIGuideChat({
           const utt = new SpeechSynthesisUtterance(answer);
           utt.lang = 'ja-JP';
           window.speechSynthesis.speak(utt);
-        } catch {
-          /* no-op */
-        }
+        } catch {}
       }
-    } catch (e) {
+    } catch {
       setReply('エラーが発生しました。少し時間をおいてお試しください。');
     } finally {
       setLoading(false);
     }
   };
 
-  // 音声認識の開始/停止
   const startListening = () => {
     if (!srSupported || !recognitionRef.current) return;
     try {
@@ -167,14 +165,11 @@ export default function AIGuideChat({
     try {
       recognitionRef.current.stop();
       setIsRecording(false);
-    } catch {
-      /* no-op */
-    }
+    } catch {}
   };
 
   return (
     <div className={`fixed bottom-2 right-2 z-50 ${isOpen ? 'w-[320px]' : ''}`}>
-      {/* トグルボタン（閉時のみ表示） */}
       {!isOpen && (
         <button
           onClick={() => setOpen(true)}
@@ -182,15 +177,18 @@ export default function AIGuideChat({
           aria-label="ガイドAIを開く"
           type="button"
         >
-          {/* 画像は装飾：alt は空にして読み上げ抑制 */}
           <img src="/icons/logo-mini.png" alt="" className="w-7 h-7" />
           <span className="text-sm font-semibold">ガイドAI</span>
         </button>
       )}
 
-      {/* 本体（開時のみ表示） */}
       {isOpen && (
-        <div className="bg-white rounded-xl p-4 shadow-lg border border-cyan-300 relative w-[320px]">
+        <div
+          className="bg-white rounded-xl p-4 shadow-lg border border-cyan-300 relative w-[320px]"
+          role="dialog"
+          aria-modal="true"
+          aria-label="me-ish ガイドAI"
+        >
           <button
             onClick={() => setOpen(false)}
             className="absolute top-1 right-2 text-sm text-cyan-600 hover:underline inline-flex items-center gap-1"
