@@ -28,12 +28,10 @@ export default async function AdminPage() {
   const { data: { session } } = await supabase.auth.getSession();
   const email = session?.user?.email ?? null;
 
-  // 管理者チェック（サーバー側のみ）
   if (!email || !isAdminEmail(email)) {
     redirect('/admin-login?err=unauthorized');
   }
 
-  // 集計（未承認作品 / 未読お問い合わせ / NFTミント待ち / 総売上点数）
   const [
     entriesPendingRes,
     inquiriesUnreadRes,
@@ -44,10 +42,8 @@ export default async function AdminPage() {
   ] = await Promise.all([
     supabase.from('entries').select('*', { count: 'exact', head: true }).eq('confirmed', false),
     supabase.from('inquiries').select('*', { count: 'exact', head: true }).eq('is_read', false),
-    // sales: type=nft & mint_status=pending を想定（テーブル名/カラムはご環境に合わせてください）
     supabase.from('sales').select('*', { count: 'exact', head: true }).eq('type', 'nft').eq('mint_status', 'pending'),
     supabase.from('sales').select('*', { count: 'exact', head: true }).in('status', ['paid', 'settled']),
-    // 最近のアクティビティ（各5件）
     supabase.from('entries')
       .select('id,title,artist_name,confirmed,created_at')
       .order('created_at', { ascending: false })
@@ -68,6 +64,9 @@ export default async function AdminPage() {
   const latestEntries = (latestEntriesRes.data ?? []) as EntryRow[];
   const latestInquiries = (latestInquiriesRes.data ?? []) as InquiryRow[];
 
+  const btnOutlineCls =
+    'inline-flex items-center rounded-full border border-[#d9e6f2] bg-white px-3 py-1.5 text-sm font-semibold hover:bg-[#f7fbff]';
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-white to-[#f6fbff] pt-[70px]">
       <div className="mx-auto max-w-6xl px-6 py-8">
@@ -78,10 +77,7 @@ export default async function AdminPage() {
             <p className="text-sm text-[#667]">ログイン中: {email}</p>
           </div>
           <div className="flex gap-2">
-            <Link
-              href="/"
-              className="inline-flex items-center rounded-full border border-[#d9e6f2] bg-white px-4 py-2 text-sm font-semibold hover:bg-[#f7fbff]"
-            >
+            <Link href="/" className={btnOutlineCls}>
               サイトを開く
             </Link>
           </div>
@@ -100,10 +96,10 @@ export default async function AdminPage() {
           <div className="rounded-2xl border bg-white p-4">
             <h2 className="text-sm font-semibold text-[#667] mb-3">クイック操作</h2>
             <div className="flex flex-wrap gap-2">
-              <Link href="/admin/entries" className="btn-outline">応募作品の管理</Link>
-              <Link href="/admin/inquiries" className="btn-outline">お問い合わせ一覧</Link>
-              <Link href="/admin/users" className="btn-outline">出展者一覧</Link>
-              <Link href="/admin/settings" className="btn-outline">ギャラリー設定</Link>
+              <Link href="/admin/entries" className={btnOutlineCls}>応募作品の管理</Link>
+              <Link href="/admin/inquiries" className={btnOutlineCls}>お問い合わせ一覧</Link>
+              <Link href="/admin/users" className={btnOutlineCls}>出展者一覧</Link>
+              <Link href="/admin/settings" className={btnOutlineCls}>ギャラリー設定</Link>
             </div>
           </div>
         </section>
@@ -129,7 +125,11 @@ export default async function AdminPage() {
                         {e.artist_name || 'アーティスト未設定'} ・ {toJP(e.created_at)}
                       </p>
                     </div>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] border ${e.confirmed ? 'bg-[#e8fff1] text-[#0d7a3e] border-[#b9f0cf]' : 'bg-[#fff8e8] text-[#8a5b00] border-[#ffe2a9]'}`}>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] border ${
+                      e.confirmed
+                        ? 'bg-[#e8fff1] text-[#0d7a3e] border-[#b9f0cf]'
+                        : 'bg-[#fff8e8] text-[#8a5b00] border-[#ffe2a9]'
+                    }`}>
                       {e.confirmed ? '承認済' : '承認待ち'}
                     </span>
                   </div>
@@ -169,21 +169,16 @@ export default async function AdminPage() {
           </div>
         </section>
       </div>
-
-      {/* ちょいユーティリティ（Tailwindのクラス短縮） */}
-      <style jsx global>{`
-        .btn-outline {
-          @apply inline-flex items-center rounded-full border border-[#d9e6f2] bg-white px-3 py-1.5 text-sm font-semibold hover:bg-[#f7fbff];
-        }
-      `}</style>
     </main>
   );
 }
 
-/* ---------- small utils ---------- */
+/* ---------- utils ---------- */
 function toJP(d: string) {
   try {
-    return new Date(d).toLocaleString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    return new Date(d).toLocaleString('ja-JP', {
+      month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+    });
   } catch {
     return '';
   }
@@ -200,7 +195,11 @@ function MetricCard({
       <div className="text-xs text-[#667]">{label}</div>
       <div className="mt-1 flex items-baseline gap-2">
         <div className="text-xl font-semibold">{value}</div>
-        {badge && <span className="text-[10px] rounded bg-[#fff6d8] text-[#8a5b00] px-2 py-0.5 border border-[#ffe3a6]">{badge}</span>}
+        {badge && (
+          <span className="text-[10px] rounded bg-[#fff6d8] text-[#8a5b00] px-2 py-0.5 border border-[#ffe3a6]">
+            {badge}
+          </span>
+        )}
       </div>
     </Link>
   );
