@@ -1,18 +1,34 @@
 // src/lib/isAdmin.ts
 
-/** ADMIN_EMAILS(カンマ/改行区切り)に含まれているかを判定 */
+/** ADMIN_EMAILS に含まれているかを判定する */
 export function isAdminEmail(email?: string | null): boolean {
-  const list = (process.env.ADMIN_EMAILS || '')
-    .split(/[,\n]/)               // カンマ or 改行で分割
+  if (!email) return false;
+
+  const e = email.trim().toLowerCase();
+
+  // ADMIN_EMAILS を分解（カンマ/改行/空白区切り）
+  const raw = (process.env.ADMIN_EMAILS || "")
+    .split(/[,\n\s]+/)
     .map(s => s.trim().toLowerCase())
     .filter(Boolean);
 
-  if (!email) return false;
-  const e = email.toLowerCase();
+  if (raw.length === 0) return false;
 
-  // ※Gmail のドット/プラスを無視したいときは下を使う
-  // const normalized = e.replace(/(\+.*)@/, '@').replace(/\.(?=[^@]+@)/g, '');
-  // return list.includes(normalized) || list.includes(e);
+  // 完全一致（メールアドレス列）
+  if (raw.includes(e)) return true;
 
-  return list.includes(e);
+  // ドメイン一致（先頭に @ を付けて登録している想定 / どちらでも許容）
+  const domain = e.split("@")[1];
+  if (domain) {
+    if (raw.includes(`@${domain}`) || raw.includes(domain)) return true;
+  }
+
+  // （任意）Gmail の正規化：+以降を削除、ローカル部のドットを無視
+  const [local, dom] = e.split("@");
+  if (dom === "gmail.com" || dom === "googlemail.com") {
+    const gmailNormalized = `${local.replace(/\+.*/, "").replace(/\./g, "")}@gmail.com`;
+    if (raw.includes(gmailNormalized)) return true;
+  }
+
+  return false;
 }
