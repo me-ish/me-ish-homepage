@@ -1,18 +1,23 @@
-// src/app/admin-login/AdminLoginClient.tsx
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabaseBrowser';
 
 type Props = {
   email: string | null;
-  allowed: string[];     // 画面の注記に使うだけ
-  isAdmin: boolean;      // サーバーで確定済みの判定
+  allowed: string[];
+  isAdmin: boolean;
 };
 
 export default function AdminLoginClient({ email, allowed, isAdmin }: Props) {
   const router = useRouter();
   const supabase = supabaseBrowser();
+
+  // ★ 念のためクライアント側でも保険のリダイレクト
+  useEffect(() => {
+    if (isAdmin) router.replace('/admin');
+  }, [isAdmin, router]);
 
   const loginWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({
@@ -34,9 +39,7 @@ export default function AdminLoginClient({ email, allowed, isAdmin }: Props) {
         </div>
       )}
 
-      {email && (
-        <p className="mb-4 text-sm text-gray-600">現在ログイン中: {email}</p>
-      )}
+      {email && <p className="mb-4 text-sm text-gray-600">現在ログイン中: {email}</p>}
 
       <button
         onClick={loginWithGoogle}
@@ -52,20 +55,7 @@ export default function AdminLoginClient({ email, allowed, isAdmin }: Props) {
         ログアウト
       </button>
 
-      <p className="mt-4 text-xs text-gray-500">
-        許可メール: {allowed.join(', ')}
-      </p>
-
-      {isAdmin && (
-        <div className="mt-6">
-          <a
-            href="/admin"
-            className="inline-block rounded-full border px-4 py-2 text-[#00a1e9] font-semibold hover:bg-[#e8f7ff]"
-          >
-            管理画面へ
-          </a>
-        </div>
-      )}
+      <p className="mt-4 text-xs text-gray-500">許可メール: {allowed.join(', ')}</p>
     </main>
   );
 }
