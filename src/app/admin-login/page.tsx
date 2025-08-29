@@ -13,6 +13,10 @@ export default async function Page() {
   if (email && isAdminEmail(email)) {
     redirect('/admin'); // 許可済みならすぐ管理画面へ
   }
-  return <AdminLoginClient currentEmail={email} />;
+   return (
+    <main className="px-4 pt-[72px]"> {/* ← ヘッダー高さぶんの余白 */}
+      <AdminLoginClient currentEmail={email ?? null} />
+    </main>
+  );
 }
 
