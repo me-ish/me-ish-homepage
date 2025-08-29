@@ -1,26 +1,56 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { supabaseBrowser } from '@/lib/supabaseBrowser';
 
-interface Entry {
-  artist_name: string;
-  sns_links: string[] | string | null;
-  sale_type: string;
-}
+type Entry = {
+  artist_name: string | null;
+  sns_links: unknown;        // ← 型ゆれ対策（JSON文字列/配列/オブジェクト/文字列の可能性）
+  sale_type: string | null;
+};
 
-interface UserGroup {
+type UserGroup = {
   artist_name: string;
   sns_links: string[];
   entry_count: number;
   sale_types: string[];
-}
+};
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserGroup[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Supabase クライアント参照を安定化（レンダー毎に生成されない）
+  const supabase = useMemo(() => supabaseBrowser(), []);
+
   useEffect(() => {
+    const parseLinks = (raw: unknown): string[] => {
+      try {
+        // 1) 文字列なら JSON か URL かを判定
+        if (typeof raw === 'string') {
+          const s = raw.trim();
+          if ((s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'))) {
+            const parsed = JSON.parse(s);
+            return parseLinks(parsed);
+          }
+          return s ? [s] : [];
+        }
+        // 2) 配列なら、文字列だけ抽出
+        if (Array.isArray(raw)) {
+          return raw.filter((v) => typeof v === 'string' && v.trim().length > 0) as string[];
+        }
+        // 3) オブジェクトなら、string値だけ拾う（{ twitter:'', instagram:'' } 想定）
+        if (raw && typeof raw === 'object') {
+          return Object.values(raw as Record<string, unknown>)
+            .filter((v) => typeof v === 'string' && v.trim().length > 0) as string[];
+        }
+      } catch {
+        // 失敗時は空
+      }
+      return [];
+    };
+
     const fetchUsers = async () => {
       const { data, error } = await supabase
         .from('entries')
@@ -34,37 +64,40 @@ export default function AdminUsersPage() {
 
       const grouped = new Map<string, UserGroup>();
 
-      data.forEach((entry: Entry) => {
-        const key = entry.artist_name || '未設定';
-
-        const normalizedLinks = Array.isArray(entry.sns_links)
-          ? entry.sns_links
-          : entry.sns_links
-          ? [entry.sns_links]
-          : [];
+      (data as Entry[]).forEach((entry) => {
+        const key = (entry.artist_name ?? '未設定').trim() || '未設定';
+        const links = parseLinks(entry.sns_links);
+        const sale = (entry.sale_type ?? 'unknown').trim() || 'unknown';
 
         const existing = grouped.get(key);
         if (existing) {
           existing.entry_count += 1;
-          if (!existing.sale_types.includes(entry.sale_type)) {
-            existing.sale_types.push(entry.sale_type);
-          }
+          // SNSリンク追加（重複除去）
+          for (const l of links) if (!existing.sns_links.includes(l)) existing.sns_links.push(l);
+          // 販売形式追加（重複除去）
+          if (!existing.sale_types.includes(sale)) existing.sale_types.push(sale);
         } else {
           grouped.set(key, {
             artist_name: key,
-            sns_links: normalizedLinks,
+            sns_links: [...links],
             entry_count: 1,
-            sale_types: [entry.sale_type],
+            sale_types: [sale],
           });
         }
       });
 
-      setUsers(Array.from(grouped.values()));
+      // 表示しやすく並べ替え：出展数降順 → 名前昇順
+      const list = Array.from(grouped.values()).sort((a, b) => {
+        if (b.entry_count !== a.entry_count) return b.entry_count - a.entry_count;
+        return a.artist_name.localeCompare(b.artist_name, 'ja');
+      });
+
+      setUsers(list);
       setLoading(false);
     };
 
     fetchUsers();
-  }, []);
+  }, [supabase]);
 
   return (
     <main className="p-6 max-w-5xl mx-auto">
@@ -88,7 +121,7 @@ export default function AdminUsersPage() {
             </thead>
             <tbody>
               {users.map((user, index) => (
-                <tr key={index}>
+                <tr key={`${user.artist_name}-${index}`}>
                   <td className="p-3 border">{user.artist_name}</td>
                   <td className="p-3 border">
                     {user.sns_links.length > 0 ? (
@@ -113,12 +146,12 @@ export default function AdminUsersPage() {
                   <td className="p-3 border text-center">{user.entry_count}</td>
                   <td className="p-3 border">{user.sale_types.join(', ')}</td>
                   <td className="p-3 border text-center">
-                    <a
+                    <Link
                       href={`/admin/users/${encodeURIComponent(user.artist_name)}`}
                       className="text-[#00a1e9] underline font-bold hover:opacity-80"
                     >
                       詳細を見る
-                    </a>
+                    </Link>
                   </td>
                 </tr>
               ))}

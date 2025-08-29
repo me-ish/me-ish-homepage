@@ -1,104 +1,209 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MessageCircle, Send, X, Mic, MicOff } from 'lucide-react';
 
-type AIGuideChatProps = {
-  initialMessage?: string;
-  open: boolean;
-  onClose: () => void;
+/* =========================================================
+   最小の SpeechRecognition 型定義（ブラウザ差異を吸収）
+   ========================================================= */
+type ISpeechRecognition = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: ((e: any) => void) | null;
+  onerror: ((e: any) => void) | null;
+  onend: (() => void) | null;
 };
 
-export default function AIGuideChat({ initialMessage }: AIGuideChatProps) {
+declare global {
+  interface Window {
+    SpeechRecognition?: new () => ISpeechRecognition;
+    webkitSpeechRecognition?: new () => ISpeechRecognition;
+  }
+}
+
+/* =========================================================
+   Props（open は任意: 渡せば制御コンポーネント、渡さなければ内部状態）
+   ========================================================= */
+type AIGuideChatProps = {
+  initialMessage?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+};
+
+/* =========================================================
+   Component
+   ========================================================= */
+export default function AIGuideChat({
+  initialMessage,
+  open: openProp,
+  onOpenChange,
+}: AIGuideChatProps) {
+  // --- 開閉（制御/非制御の両対応）
+  const isControlled = typeof openProp === 'boolean';
+  const [openState, setOpenState] = useState<boolean>(false);
+  const isOpen = isControlled ? (openProp as boolean) : openState;
+  const setOpen = (next: boolean) => {
+    if (isControlled) {
+      onOpenChange?.(next);
+    } else {
+      setOpenState(next);
+      onOpenChange?.(next);
+    }
+  };
+
+  // --- 会話の状態
   const [input, setInput] = useState('');
   const [reply, setReply] = useState('');
   const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const [hasSentInitial, setHasSentInitial] = useState(false);
-  const recognitionRef = useRef<any>(null);
 
-  const handleSubmit = async (text: string) => {
-    if (!text.trim()) return;
-    setLoading(true);
-    const res = await fetch('/api/ai-guide', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text }),
-    });
-    const data = await res.json();
-    setReply(data.reply);
-    setInput('');
-    setLoading(false);
+  // --- 音声認識 / TTS
+  type SR = ISpeechRecognition;
+  const recognitionRef = useRef<SR | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
 
-    const utterance = new SpeechSynthesisUtterance(data.reply);
-    utterance.lang = 'ja-JP';
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-  };
+  // 利用可否（SSR安全）
+  const srSupported = useMemo(
+    () =>
+      typeof window !== 'undefined' &&
+      (!!window.webkitSpeechRecognition || !!window.SpeechRecognition),
+    []
+  );
 
+  // 音声認識の初期化
+  useEffect(() => {
+    if (!srSupported) return;
+
+    const SRImpl = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    if (!SRImpl) return;
+
+    const recognition = new SRImpl();
+    recognition.lang = 'ja-JP';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event: any) => {
+      const transcript = event?.results?.[0]?.[0]?.transcript ?? '';
+      if (!transcript) return;
+      setInput(transcript);
+      handleSubmit(transcript);
+      setIsRecording(false);
+    };
+
+    recognition.onerror = () => setIsRecording(false);
+    recognition.onend = () => setIsRecording(false);
+
+    recognitionRef.current = recognition;
+    return () => {
+      try {
+        recognition.stop();
+      } catch {}
+      recognitionRef.current = null;
+    };
+  }, [srSupported]);
+
+  // 初回メッセージが渡されたら自動送信＆ウィジェットを開く
   useEffect(() => {
     if (initialMessage && !hasSentInitial) {
       handleSubmit(initialMessage);
       setHasSentInitial(true);
       setOpen(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMessage, hasSentInitial]);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'ja-JP';
-      recognition.continuous = false;
-      recognition.interimResults = false;
+  // メッセージ送信
+  const handleSubmit = async (text: string) => {
+    const q = text?.trim();
+    if (!q) return;
 
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setInput(transcript);
-        handleSubmit(transcript);
-        setIsRecording(false);
-      };
+    try {
+      setLoading(true);
+      const res = await fetch('/api/ai-guide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: q }),
+      });
 
-      recognition.onerror = () => setIsRecording(false);
-      recognitionRef.current = recognition;
+      const data = await res.json();
+      const answer: string = data?.reply ?? '（応答を取得できませんでした）';
+
+      setReply(answer);
+      setInput('');
+
+      // TTS（対応ブラウザのみ）
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          const utt = new SpeechSynthesisUtterance(answer);
+          utt.lang = 'ja-JP';
+          window.speechSynthesis.speak(utt);
+        } catch {
+          /* no-op */
+        }
+      }
+    } catch (e) {
+      setReply('エラーが発生しました。少し時間をおいてお試しください。');
+    } finally {
+      setLoading(false);
     }
-  }, []);
-
-  const startListening = () => {
-    setIsRecording(true);
-    recognitionRef.current?.start();
   };
 
+  // 音声認識の開始/停止
+  const startListening = () => {
+    if (!srSupported || !recognitionRef.current) return;
+    try {
+      setIsRecording(true);
+      recognitionRef.current.start();
+    } catch {
+      setIsRecording(false);
+    }
+  };
   const stopListening = () => {
-    setIsRecording(false);
-    recognitionRef.current?.stop();
+    if (!srSupported || !recognitionRef.current) return;
+    try {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    } catch {
+      /* no-op */
+    }
   };
 
   return (
-    <div className={`fixed bottom-2 right-2 z-50 ${open ? 'w-[320px]' : ''}`}>
-      {!open && (
+    <div className={`fixed bottom-2 right-2 z-50 ${isOpen ? 'w-[320px]' : ''}`}>
+      {/* トグルボタン（閉時のみ表示） */}
+      {!isOpen && (
         <button
           onClick={() => setOpen(true)}
           className="flex items-center gap-2 bg-white border border-cyan-400 text-cyan-600 px-4 py-2 rounded-full shadow hover:bg-cyan-50"
+          aria-label="ガイドAIを開く"
+          type="button"
         >
-          <img src="/icons/logo-mini.png" alt="me-ish" className="w-7 h-7" />
+          {/* 画像は装飾：alt は空にして読み上げ抑制 */}
+          <img src="/icons/logo-mini.png" alt="" className="w-7 h-7" />
           <span className="text-sm font-semibold">ガイドAI</span>
         </button>
       )}
 
-      {open && (
-        <div className="bg-white rounded-xl p-4 shadow-lg border border-cyan-300 relative">
+      {/* 本体（開時のみ表示） */}
+      {isOpen && (
+        <div className="bg-white rounded-xl p-4 shadow-lg border border-cyan-300 relative w-[320px]">
           <button
             onClick={() => setOpen(false)}
-            className="absolute top-1 right-2 text-sm text-cyan-600 hover:underline flex items-center gap-1"
+            className="absolute top-1 right-2 text-sm text-cyan-600 hover:underline inline-flex items-center gap-1"
+            aria-label="ガイドAIを閉じる"
+            type="button"
           >
             <X size={14} /> 閉じる
           </button>
 
-          <h2 className="font-bold mb-2 text-cyan-600 flex items-center gap-2">
+          <h2 className="font-bold mb-2 text-cyan-600 flex items-center gap-2 text-sm">
             <MessageCircle size={18} /> me-ish ガイドAI
           </h2>
+
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -106,27 +211,36 @@ export default function AIGuideChat({ initialMessage }: AIGuideChatProps) {
             className="w-full p-2 border rounded text-sm"
             placeholder="me-ishについて質問してみよう"
           />
+
           <div className="flex items-center gap-2 mt-2">
-            <button
-              onClick={isRecording ? stopListening : startListening}
-              className="text-cyan-600 hover:text-cyan-800"
-            >
-              {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
-            </button>
+            {srSupported && (
+              <button
+                onClick={isRecording ? stopListening : startListening}
+                className="text-cyan-600 hover:text-cyan-800"
+                aria-label={isRecording ? '音声入力を停止' : '音声入力を開始'}
+                type="button"
+              >
+                {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
+              </button>
+            )}
+
             <button
               onClick={() => handleSubmit(input)}
-              className="flex-1 bg-cyan-500 text-white py-1 rounded hover:bg-cyan-600 flex items-center justify-center gap-1"
+              className="flex-1 bg-cyan-500 text-white py-1 rounded hover:bg-cyan-600 inline-flex items-center justify-center gap-1 disabled:opacity-60"
               disabled={loading}
+              type="button"
             >
               <Send size={16} />
               {loading ? '送信中...' : '送信'}
             </button>
           </div>
+
           {reply && (
             <div className="mt-3 p-2 bg-gray-100 rounded text-sm whitespace-pre-line">
               {reply}
             </div>
           )}
+
           <div className="mt-4 text-xs text-gray-500 text-center">
             不具合などがありましたか？{' '}
             <a

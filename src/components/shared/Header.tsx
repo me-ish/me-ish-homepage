@@ -15,13 +15,10 @@ export default function Header() {
 
   useEffect(() => setMounted(true), []);
 
-  // ルート変更時は自動で閉じる
   useEffect(() => {
     if (menuOpen) setMenuOpen(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  // Escで閉じる・フォーカストラップ・スクロールロック
   useEffect(() => {
     if (!menuOpen) {
       document.body.style.overflow = '';
@@ -50,7 +47,6 @@ export default function Header() {
     };
 
     window.addEventListener('keydown', handleKeydown);
-    // 初期フォーカス
     setTimeout(() => firstFocusRef.current?.focus(), 0);
 
     return () => {
@@ -86,13 +82,15 @@ export default function Header() {
   return (
     <header className="fixed top-0 left-0 w-full h-[70px] bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow z-[100] px-4">
       <nav className="mx-auto max-w-[1200px] flex items-center justify-between h-full">
-        {/* ロゴ */}
-        <Link
-          href="/"
-          className="flex items-center text-[#00a1e9] font-lilita text-[1.8rem] font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60 rounded-sm"
-          aria-label="me-ish ホームへ"
-        >
-          me-ish
+        {/* ロゴとバッジを兄弟要素に分離（Linkの入れ子を解消） */}
+        <div className="flex items-center">
+          <Link
+            href="/"
+            className="flex items-center text-[#00a1e9] font-lilita text-[1.8rem] font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60 rounded-sm"
+            aria-label="me-ish ホームへ"
+          >
+            me-ish
+          </Link>
           <Link
             href="/news"
             className="ml-2 text-[11px] leading-none bg-[#e60039] text-white px-2 py-1 rounded-full hover:brightness-110 transition"
@@ -100,13 +98,13 @@ export default function Header() {
           >
             β公開中
           </Link>
-        </Link>
+        </div>
 
         {/* 右側：ログイン（PCのみ）＋メニュー */}
         <div className="flex items-center gap-3">
           <Link
             href="/login"
-            className="hidden sm:inline-flex items-center justify-center text-[#00a1e9] border border-[#00a1e9] px-3 py-1.5 rounded-full hover:bg-[#00a1e9] hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
+            className="inline-flex items-center justify-center text-[#00a1e9] border border-[#00a1e9] px-3 py-1.5 rounded-full hover:bg-[#00a1e9] hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60 text-sm sm:text-base whitespace-nowrap"
           >
             ログイン
           </Link>
@@ -127,7 +125,6 @@ export default function Header() {
       {mounted &&
         createPortal(
           <>
-            {/* オーバーレイ */}
             <div
               className={`fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
                 menuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -135,8 +132,6 @@ export default function Header() {
               onClick={() => setMenuOpen(false)}
               aria-hidden="true"
             />
-
-            {/* 本体 */}
             <div
               ref={modalRef}
               role="dialog"
@@ -147,7 +142,6 @@ export default function Header() {
                 menuOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
               }`}
             >
-              {/* ヘッダー（統一トーン） */}
               <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white/90 backdrop-blur px-5 py-4">
                 <h2 id="global-menu-title" className="text-[1.05rem] font-semibold text-[#222]">
                   メニュー
@@ -161,20 +155,19 @@ export default function Header() {
                 </button>
               </div>
 
-              {/* コンテンツ */}
               <div className="px-5 py-5">
-                {/* セクション：見る／知る／連絡 */}
                 <div className="mt-6 space-y-6">
-                  {/* 見る */}
                   <section aria-labelledby="sec-view">
                     <h3 id="sec-view" className="text-sm font-semibold text-[#667] mb-2 px-1">
                       見る
                     </h3>
                     <ul className="space-y-2">
-                      {nav.見る.map(({ label, href }) => (
+                      {nav.見る.map(({ label, href }, i) => (
                         <li key={href}>
                           <Link
                             href={href}
+                            // 初期フォーカス先（実装済みのロジックを活かす）
+                            ref={i === 0 ? firstFocusRef : undefined}
                             onClick={() => setMenuOpen(false)}
                             className={`block w-full rounded-xl px-4 py-3 font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60 ${
                               isActive(href)
@@ -190,7 +183,6 @@ export default function Header() {
                     </ul>
                   </section>
 
-                  {/* 知る */}
                   <section aria-labelledby="sec-learn">
                     <h3 id="sec-learn" className="text-sm font-semibold text-[#667] mb-2 px-1">
                       知る
@@ -215,7 +207,6 @@ export default function Header() {
                     </ul>
                   </section>
 
-                  {/* 連絡 */}
                   <section aria-labelledby="sec-contact">
                     <h3 id="sec-contact" className="text-sm font-semibold text-[#667] mb-2 px-1">
                       連絡
@@ -241,7 +232,6 @@ export default function Header() {
                   </section>
                 </div>
 
-                {/* フッター（年号は自動） */}
                 <div className="mt-6 border-t pt-4 text-center text-xs text-[#667]">
                   © {new Date().getFullYear()} me-ish
                 </div>

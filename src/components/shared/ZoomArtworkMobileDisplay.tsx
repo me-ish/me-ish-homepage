@@ -1,10 +1,12 @@
+// src/components/shared/ZoomArtworkMobileDisplay.tsx
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Heart, ShoppingCart, Globe, Instagram } from 'lucide-react';
 import NftPurchaseButton from '@/components/purchase/NftPurchaseButton';
-import { Entry } from '../../types/types';
 import { FaXTwitter } from 'react-icons/fa6';
+import type { Entry } from '../../types/types';
 
 interface Props {
   artwork: Entry;
@@ -35,24 +37,21 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
 
     const alreadyLiked = localStorage.getItem(`liked_${artwork.id}`);
     setLiked(Boolean(alreadyLiked));
-
     fetchLikes();
   }, [artwork.id]);
 
   const handleLike = async () => {
     if (liked) return;
     setIsAnimating(true);
-
     try {
       const res = await fetch(`/api/entries/${artwork.id}/like`, { method: 'POST' });
       const json = await res.json();
       setLikes(json.likes);
       setLiked(true);
       localStorage.setItem(`liked_${artwork.id}`, 'true');
-    } catch (err) {
+    } catch {
       alert('いいねに失敗しました');
     }
-
     setTimeout(() => setIsAnimating(false), 250);
   };
 
@@ -68,6 +67,7 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
     created_at,
     sale_type = 'normal',
     token_id,
+    id,
   } = artwork;
 
   let links: Record<string, string> = {};
@@ -86,26 +86,32 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
     : '登録日不明';
 
   const handlePurchase = async () => {
-    if (!artwork.id || !title || !price) {
+    if (!id || !title || !price) {
       alert('購入情報が不足しています');
       return;
     }
-
     const res = await fetch('/api/purchase/stripe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ entryId: artwork.id, title, price: Number(price) }),
+      body: JSON.stringify({ entryId: id, title, price: Number(price) }),
     });
     const data = await res.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      alert('Stripeへの遷移に失敗しました');
-    }
+    if (data.url) window.location.href = data.url;
+    else alert('Stripeへの遷移に失敗しました');
   };
 
-  return (
-    <div onClick={onClose} className="fixed inset-0 z-[1000] bg-black/90 text-white overflow-y-auto px-4 py-6 cursor-zoom-out">
+  // --- Portal: 親ツリーから独立させて <a> の入れ子/Hydration を回避 ---
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  const node = (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[1000] bg-black/90 text-white overflow-y-auto px-4 py-6 cursor-zoom-out"
+      aria-modal="true"
+      role="dialog"
+    >
       <button
         onClick={onClose}
         className="absolute top-4 right-4 text-white hover:text-gray-300 text-4xl font-bold z-[1010]"
@@ -115,7 +121,7 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
       </button>
 
       <div onClick={(e) => e.stopPropagation()} className="flex flex-col items-center space-y-6">
-
+        {/* バッジ */}
         <div
           className={`self-end mb-2 px-3 py-1 rounded-full text-xs font-semibold shadow-md ${
             sale_type === 'nft'
@@ -126,61 +132,46 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
           {sale_type === 'nft' ? 'NFT作品' : '通常販売作品'}
         </div>
 
-        {/* 画像枠（相対配置＋ブロック処理はオーバーレイへ集約） */}
+        {/* 画像枠 */}
         <div className="relative w-full max-w-[90vw] bg-white rounded-xl shadow-lg p-3 select-none">
-          {/* 透明オーバーレイ（長押し/ドラッグ/右クリックをキャッチ） */}
           <div
             aria-hidden
             className="absolute inset-0 z-[5] rounded-xl"
             onContextMenu={(e) => e.preventDefault()}
             onDragStart={(e) => e.preventDefault()}
-            onTouchStart={(e) => { /* iOS長押し抑止用 */ }}
-            style={{
-              WebkitUserSelect: 'none',
-              userSelect: 'none',
-              WebkitTouchCallout: 'none',
-            }}
+            onTouchStart={() => {}}
+            style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}
           />
-          {/* 画像本体（純表示役） */}
           <img
             src={imageUrl}
             alt={title}
             draggable={false}
             className="w-full h-auto object-contain rounded-xl pointer-events-none select-none"
-            style={{
-              WebkitUserSelect: 'none',
-              userSelect: 'none',
-              WebkitTouchCallout: 'none',
-            }}
+            style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}
           />
         </div>
 
+        {/* タイトル等 */}
         <div className="w-full max-w-[90vw] text-center space-y-1">
           <h2 className="text-2xl font-bold">{title}</h2>
           <p className="text-sm text-gray-400">by {author}</p>
           <p className="text-xs text-gray-500">{formattedDate}</p>
         </div>
 
+        {/* 価格/購入 */}
         <div className="w-full max-w-[90vw] flex justify-center items-center gap-3 flex-wrap">
           {is_for_sale && !is_sold && !isEditionSoldOut ? (
             <>
               <div className="text-lg font-bold text-[#00a1e9]">
                 {price ? `${Number(price).toLocaleString()}円（税込）` : '販売中'}
               </div>
-
               {editionTotal !== null && (
                 <div className="text-sm text-white/80">
                   残り {editionRemaining} / {editionTotal} 枚
                 </div>
               )}
-
               {sale_type === 'nft' && token_id ? (
-                <NftPurchaseButton
-                  entryId={artwork.id}
-                  title={title}
-                  price={Number(price)}
-                  tokenId={token_id}
-                />
+                <NftPurchaseButton entryId={id!} title={title} price={Number(price)} tokenId={token_id} />
               ) : (
                 <button
                   onClick={handlePurchase}
@@ -192,18 +183,13 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
               )}
             </>
           ) : (
-            <div className="text-gray-400 bg-gray-600 text-sm py-2 px-4 rounded-lg inline-block">
-              SOLD
-            </div>
+            <div className="text-gray-400 bg-gray-600 text-sm py-2 px-4 rounded-lg inline-block">SOLD</div>
           )}
         </div>
 
-        {description && (
-          <div className="max-w-[90vw] text-white/90 text-base leading-relaxed">
-            {description}
-          </div>
-        )}
+        {description && <div className="max-w-[90vw] text-white/90 text-base leading-relaxed">{description}</div>}
 
+        {/* SNSリンク（外部リンクは <a> でOK。Portal化で親の <Link> と独立） */}
         {Object.keys(links).length > 0 && (
           <div className="space-y-2 pt-2">
             {links.homepage && (
@@ -217,7 +203,6 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
                 <span>ホームページ</span>
               </a>
             )}
-
             {links.twitter && (
               <a
                 href={links.twitter}
@@ -229,7 +214,6 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
                 <span>X（旧Twitter）</span>
               </a>
             )}
-
             {links.instagram && (
               <a
                 href={links.instagram}
@@ -244,14 +228,13 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
           </div>
         )}
 
+        {/* Like */}
         <div className="fixed bottom-5 right-5 z-50">
           <button
             onClick={handleLike}
             className="relative flex items-center gap-1 px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full transition-all duration-300"
           >
-            {isAnimating && (
-              <span className="absolute inset-0 rounded-full bg-pink-400 opacity-40 animate-ping" />
-            )}
+            {isAnimating && <span className="absolute inset-0 rounded-full bg-pink-400 opacity-40 animate-ping" />}
             <Heart
               size={24}
               strokeWidth={2}
@@ -259,15 +242,12 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
                 liked ? 'text-pink-500 fill-pink-500 scale-110' : 'text-gray-400 scale-100'
               }`}
             />
-            {liked && (
-              <span className="relative z-10 text-base font-semibold text-pink-400">
-                {likes}
-              </span>
-            )}
+            {liked && <span className="relative z-10 text-base font-semibold text-pink-400">{likes}</span>}
           </button>
         </div>
       </div>
     </div>
   );
-}
 
+  return createPortal(node, document.body);
+}

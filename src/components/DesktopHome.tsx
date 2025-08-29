@@ -3,11 +3,10 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import Header from '@/components/shared/Header';
+// import Header from '@/components/shared/Header';  // ← 削除
 import { Mail, Sparkles, ShieldCheck, Images, ArrowRight, ExternalLink } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
-
 
 // スクロール時のフェードイン処理
 function useFadeInOnScroll() {
@@ -32,11 +31,10 @@ const DesktopHome = () => {
 
   return (
     <div className="font-zen text-[#222] bg-white">
-      <Header />
+      {/* Header は layout.tsx 側に任せる */}
 
       {/* ヘッダー固定分の余白 */}
       <main className="pt-[70px]">
-
         {/* Hero */}
         <section
           className="relative flex flex-col items-center justify-center min-h-[82vh] text-center px-6 fade-in-start"
@@ -80,36 +78,31 @@ const DesktopHome = () => {
             </Link>
           </div>
 
-          {/* 下スクロール誘導 */}
+          {/* 下スクロール誘導（同一ページ内は <a> でOK） */}
           <a href="#about" className="mt-10 text-sm text-[#00a1e9]/70 hover:text-[#00a1e9] transition">
             もっと見る
           </a>
         </section>
 
         {/* Announcements — お知らせ */}
-<section
-  id="news"
-  className="fade-in-start py-10 px-6 bg-[#f9fbfe]"
-  aria-labelledby="news-title"
->
-  <div className="max-w-[1040px] mx-auto">
-    <div className="flex items-baseline justify-between mb-4">
-      <h2 id="news-title" className="text-[clamp(1.2rem,2.2vw,1.6rem)] font-bold text-[#00a1e9]">
-        お知らせ
-      </h2>
-      <Link
-        href="/news"
-        className="text-sm text-[#00a1e9] underline underline-offset-4 hover:opacity-80"
-        aria-label="お知らせ一覧を見る"
-      >
-        一覧を見る
-      </Link>
-    </div>
+        <section id="news" className="fade-in-start py-10 px-6 bg-[#f9fbfe]" aria-labelledby="news-title">
+          <div className="max-w-[1040px] mx-auto">
+            <div className="flex items-baseline justify-between mb-4">
+              <h2 id="news-title" className="text-[clamp(1.2rem,2.2vw,1.6rem)] font-bold text-[#00a1e9]">
+                お知らせ
+              </h2>
+              <Link
+                href="/news"
+                className="text-sm text-[#00a1e9] underline underline-offset-4 hover:opacity-80"
+                aria-label="お知らせ一覧を見る"
+              >
+                一覧を見る
+              </Link>
+            </div>
 
-    <AnnouncementsStrip />
-  </div>
-</section>
-
+            <AnnouncementsStrip />
+          </div>
+        </section>
 
         {/* About */}
         <section id="about" className="fade-in-start py-16 px-6 bg-white" aria-labelledby="about-title">
@@ -205,10 +198,16 @@ const DesktopHome = () => {
           className="fade-in-start relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-[#dff6ff] via-white to-[#f0f9ff] px-6 py-20 text-center shadow-md transition hover:shadow-xl hover:scale-[1.01] group mx-6 md:mx-auto md:max-w-[1040px]"
           aria-labelledby="apply-title"
         >
-          <Link href="/entry" className="absolute inset-0 z-10" aria-label="応募ページへ" />
+          {/* 全面Link（子要素必須） */}
+          <Link href="/entry" className="absolute inset-0 z-10" aria-label="応募ページへ">
+            <span className="sr-only">応募ページへ</span>
+          </Link>
 
           <div className="relative z-20 max-w-xl mx-auto pointer-events-none">
-            <h2 id="apply-title" className="text-[clamp(1.5rem,3.2vw,2.2rem)] font-bold text-[#00a1e9] leading-tight mb-3 group-hover:underline underline-offset-4">
+            <h2
+              id="apply-title"
+              className="text-[clamp(1.5rem,3.2vw,2.2rem)] font-bold text-[#00a1e9] leading-tight mb-3 group-hover:underline underline-offset-4"
+            >
               あなたのアートを<br />世界に届けよう
             </h2>
             <p className="text-gray-600 text-[clamp(0.95rem,1.6vw,1.05rem)] mb-6">
@@ -310,7 +309,7 @@ function AnnouncementsStrip() {
   if (loading) {
     return (
       <ul className="grid gap-4 md:grid-cols-3" aria-busy="true" aria-live="polite">
-        {[0,1,2].map((i) => (
+        {[0, 1, 2].map((i) => (
           <li key={i} className="rounded-2xl border bg-white p-4 shadow-sm">
             <div className="h-4 w-24 bg-gray-200/70 rounded animate-pulse mb-2" />
             <div className="h-5 w-3/4 bg-gray-200/80 rounded animate-pulse mb-2" />
@@ -323,9 +322,7 @@ function AnnouncementsStrip() {
 
   if (!items.length) {
     return (
-      <div className="rounded-xl border bg-white p-6 text-sm text-[#667]">
-        現在お知らせはありません。
-      </div>
+      <div className="rounded-xl border bg-white p-6 text-sm text-[#667]">現在お知らせはありません。</div>
     );
   }
 
@@ -339,17 +336,13 @@ function AnnouncementsStrip() {
           <div className="flex items-center gap-2 mb-1">
             <Badge type={n.category} />
             {n.pinned && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
-                固定
-              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">固定</span>
             )}
             <time className="ml-auto text-xs text-gray-500">
               {new Date(n.published_at).toLocaleDateString()}
             </time>
           </div>
-          <h3 className="font-semibold leading-snug line-clamp-2">
-            {n.title}
-          </h3>
+          <h3 className="font-semibold leading-snug line-clamp-2">{n.title}</h3>
           <p className="mt-1 text-sm text-[#556] leading-relaxed line-clamp-2">
             {n.body_md.replace(/\n/g, ' ')}
           </p>
@@ -380,17 +373,13 @@ function Badge({ type }: { type: 'info' | 'update' | 'maintenance' }) {
     update: 'bg-[#eafbea] text-[#1b6e2b]',
     maintenance: 'bg-[#fff1f0] text-[#a23a3a]',
   };
-  const label: Record<string,string> = {
+  const label: Record<string, string> = {
     info: 'Info',
     update: 'Update',
     maintenance: 'Maintenance',
   };
-  return (
-    <span className={`text-[10px] px-2 py-0.5 rounded ${styles[type]}`}>
-      {label[type]}
-    </span>
-  );
+  return <span className={`text-[10px] px-2 py-0.5 rounded ${styles[type]}`}>{label[type]}</span>;
 }
 
-
 export default DesktopHome;
+

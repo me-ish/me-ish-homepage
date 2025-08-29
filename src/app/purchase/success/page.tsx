@@ -2,9 +2,9 @@
 import { Suspense } from 'react';
 import SuccessClient from './SuccessClient';
 
-export default function SuccessPage() {
+export default function Page() {
   return (
-    <Suspense fallback={<div className="text-center py-20">処理中です...</div>}>
+    <Suspense fallback={<div className="py-20 text-center">読み込み中…</div>}>
       <SuccessClient />
     </Suspense>
   );

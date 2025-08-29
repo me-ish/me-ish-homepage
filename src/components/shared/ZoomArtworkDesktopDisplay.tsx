@@ -1,11 +1,12 @@
-// ZoomArtworkDesktopDisplay.tsx
+// src/components/shared/ZoomArtworkDesktopDisplay.tsx
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import NftPurchaseButton from '@/components/purchase/NftPurchaseButton';
 import { Heart, ShoppingCart, Globe, Instagram } from 'lucide-react';
-import { Entry } from '../../types/types';
 import { FaXTwitter } from 'react-icons/fa6';
+import type { Entry } from '../../types/types';
 
 interface Props {
   artwork: Entry;
@@ -13,16 +14,20 @@ interface Props {
 }
 
 export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
+  // --- Likes 状態 ---
   const [likes, setLikes] = useState<number>(artwork.likes ?? 0);
   const [liked, setLiked] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
+  // --- 版数 ---
   const editionTotal = artwork.edition_total ?? null;
   const editionSold = artwork.edition_sold ?? 0;
-  const editionRemaining = editionTotal !== null ? editionTotal - editionSold : null;
+  const editionRemaining =
+    editionTotal !== null ? editionTotal - editionSold : null;
   const isEditionSoldOut =
     editionTotal !== null && editionRemaining !== null && editionRemaining <= 0;
 
+  // --- いいね数取得 & 既にLike済みか ---
   useEffect(() => {
     const fetchLikes = async () => {
       try {
@@ -44,7 +49,9 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
     setIsAnimating(true);
 
     try {
-      const res = await fetch(`/api/entries/${artwork.id}/like`, { method: 'POST' });
+      const res = await fetch(`/api/entries/${artwork.id}/like`, {
+        method: 'POST',
+      });
       const json = await res.json();
       setLikes(json.likes);
       setLiked(true);
@@ -56,6 +63,7 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
     setTimeout(() => setIsAnimating(false), 250);
   };
 
+  // --- 必要フィールド取り出し ---
   const {
     imageUrl,
     title = 'Untitled',
@@ -71,6 +79,7 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
     token_id = null,
   } = artwork;
 
+  // --- SNSリンクのJSONを安全にパース ---
   let links: Record<string, string> = {};
   try {
     links = JSON.parse(sns_links);
@@ -86,6 +95,7 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
       })
     : '登録日不明';
 
+  // --- Stripe 決済へ ---
   const handlePurchase = async () => {
     if (!id || !title || !price) {
       alert('購入情報が不足しています');
@@ -105,105 +115,115 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
     }
   };
 
-  return (
+  // --- Portal で body 直下に描画（親の <a> と独立させて入れ子問題を回避） ---
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  const node = (
     <div
       onClick={onClose}
       className="fixed inset-0 z-[1000] bg-black/90 text-white flex items-center justify-center px-6 py-10 overflow-y-auto cursor-zoom-out"
+      aria-modal="true"
+      role="dialog"
     >
-        <button
-    onClick={onClose}
-    className="absolute top-4 right-4 text-white hover:text-gray-300 text-3xl font-bold z-[1010]"
-    aria-label="Close"
-  >
-    &times;
-  </button>
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="flex flex-col items-center"
+      {/* 閉じるボタン */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white hover:text-gray-300 text-3xl font-bold z-[1010]"
+        aria-label="Close"
       >
-<div className="relative w-fit select-none"
-onContextMenu={(e) => e.preventDefault()}          // 右クリック抑止
-onMouseDown={(e) => { if (e.button === 2) e.preventDefault(); }} // 右クリック押下
-onDragStart={(e) => e.preventDefault()}            // ドラッグ抑止
-onTouchStart={(e) => { /* iOS長押し抑止用に空のハンドラ */ }}
->
-  {/* 透明オーバーレイ（クリックや長押しをキャッチ） */}
-  <div
-    aria-hidden
-    className="absolute inset-0 z-[5]"
-    onContextMenu={(e) => e.preventDefault()}
-    onDragStart={(e) => e.preventDefault()}
-  />
-  {/* 🪙 バッジ（画像の外・右上） */}
-  {(sale_type === 'nft' || sale_type === 'normal') && (
-    <div className={`
-      absolute -top-7 -right-0.5 text-xs px-2 py-1 rounded-full font-semibold shadow-md
-      ${sale_type === 'nft'
-        ? 'bg-gradient-to-r from-violet-400 to-purple-600 text-white'
-        : 'bg-gradient-to-r from-gray-400 to-gray-600 text-white'
-      }
-    `}>
-      {sale_type === 'nft' ? 'NFT' : '通常販売'}
-    </div>
-  )}
+        &times;
+      </button>
 
-  {/* 🎨 画像本体 */}
-  <div className="max-w-[35vw] max-h-[75vh]">
-    <img
-      src={imageUrl}
-      alt={title}
-      className="w-full h-full object-contain rounded-xl shadow-lg pointer-events-none select-none"
-      style={{
-        WebkitUserSelect: 'none',
-        userSelect: 'none',
-        WebkitTouchCallout: 'none',   // iOSの長押しメニュー抑止
-      }}
-    />
-  </div>
-</div>
-
-<div className="mt-4 flex flex-wrap justify-center items-center gap-4">
-  {is_for_sale && !is_sold && !isEditionSoldOut ? (
-    <>
-      {/* 💰 価格表示 */}
-      <div className="text-xl font-bold text-[#00a1e9]">
-        {price ? `${Number(price).toLocaleString()}円（税込）` : '販売中'}
-      </div>
-
-      {/* 📦 残数表示 */}
-      {editionTotal !== null && (
-        <div className="text-sm text-white/80">
-          残り {editionRemaining} / {editionTotal} 枚
-        </div>
-      )}
-
-      {/* 🛒 購入ボタン */}
-      {sale_type === 'nft' && token_id ? (
-        <NftPurchaseButton
-          entryId={id!}
-          title={title}
-          price={Number(price)}
-          tokenId={token_id}
-        />
-      ) : (
-        <button
-          onClick={handlePurchase}
-          className="flex items-center gap-2 bg-[#00a1e9] hover:bg-[#0090cc] text-white font-semibold py-2 px-5 rounded-xl shadow transition-all"
+      {/* 左：作品表示 */}
+      <div onClick={(e) => e.stopPropagation()} className="flex flex-col items-center">
+        <div
+          className="relative w-fit select-none"
+          onContextMenu={(e) => e.preventDefault()} /* 右クリック抑止 */
+          onMouseDown={(e) => {
+            if (e.button === 2) e.preventDefault();
+          }} /* 右クリック押下 */
+          onDragStart={(e) => e.preventDefault()} /* ドラッグ抑止 */
+          onTouchStart={() => { /* iOS長押し抑止用 */ }}
         >
-          <ShoppingCart size={20} />
-          購入する
-        </button>
-      )}
-    </>
-  ) : (
-    <div className="text-gray-400 bg-gray-600 text-sm py-2 px-4 rounded-lg inline-block">
-      SOLD
-    </div>
-  )}
-</div>
+          {/* 透明オーバーレイ（クリックや長押しをキャッチ） */}
+          <div
+            aria-hidden
+            className="absolute inset-0 z-[5]"
+            onContextMenu={(e) => e.preventDefault()}
+            onDragStart={(e) => e.preventDefault()}
+          />
 
+          {/* 🪙 バッジ（画像の外・右上） */}
+          {(sale_type === 'nft' || sale_type === 'normal') && (
+            <div
+              className={`absolute -top-7 -right-0.5 text-xs px-2 py-1 rounded-full font-semibold shadow-md ${
+                sale_type === 'nft'
+                  ? 'bg-gradient-to-r from-violet-400 to-purple-600 text-white'
+                  : 'bg-gradient-to-r from-gray-400 to-gray-600 text-white'
+              }`}
+            >
+              {sale_type === 'nft' ? 'NFT' : '通常販売'}
+            </div>
+          )}
+
+          {/* 🎨 画像本体 */}
+          <div className="max-w-[35vw] max-h-[75vh]">
+            <img
+              src={imageUrl}
+              alt={title}
+              className="w-full h-full object-contain rounded-xl shadow-lg pointer-events-none select-none"
+              style={{
+                userSelect: 'none',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* 価格/残数/購入 */}
+        <div className="mt-4 flex flex-wrap justify-center items-center gap-4">
+          {is_for_sale && !is_sold && !isEditionSoldOut ? (
+            <>
+              {/* 💰 価格表示 */}
+              <div className="text-xl font-bold text-[#00a1e9]">
+                {price ? `${Number(price).toLocaleString()}円（税込）` : '販売中'}
+              </div>
+
+              {/* 📦 残数表示 */}
+              {editionTotal !== null && (
+                <div className="text-sm text-white/80">
+                  残り {editionRemaining} / {editionTotal} 枚
+                </div>
+              )}
+
+              {/* 🛒 購入ボタン */}
+              {sale_type === 'nft' && token_id ? (
+                <NftPurchaseButton
+                  entryId={id!}
+                  title={title}
+                  price={Number(price)}
+                  tokenId={token_id}
+                />
+              ) : (
+                <button
+                  onClick={handlePurchase}
+                  className="flex items-center gap-2 bg-[#00a1e9] hover:bg-[#0090cc] text-white font-semibold py-2 px-5 rounded-xl shadow transition-all"
+                >
+                  <ShoppingCart size={20} />
+                  購入する
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="text-gray-400 bg-gray-600 text-sm py-2 px-4 rounded-lg inline-block">
+              SOLD
+            </div>
+          )}
+        </div>
       </div>
 
+      {/* 右：詳細・SNS・Like */}
       <div
         onClick={(e) => e.stopPropagation()}
         className="ml-10 max-w-[24vw] relative min-h-[80vh] flex flex-col space-y-6 text-white px-4 cursor-default"
@@ -220,46 +240,48 @@ onTouchStart={(e) => { /* iOS長押し抑止用に空のハンドラ */ }}
           <p className="text-base leading-relaxed text-white/90">{description}</p>
         )}
 
-{Object.keys(links).length > 0 && (
-  <div className="space-y-2 pt-2">
-    {links.homepage && (
-      <a
-        href={links.homepage}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
-      >
-        <Globe size={18} />
-        <span>ホームページ</span>
-      </a>
-    )}
+        {/* SNSリンク（外部は <a> でOK。Portal化で親の <Link> と独立） */}
+        {Object.keys(links).length > 0 && (
+          <div className="space-y-2 pt-2">
+            {links.homepage && (
+              <a
+                href={links.homepage}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
+              >
+                <Globe size={18} />
+                <span>ホームページ</span>
+              </a>
+            )}
 
-    {links.twitter && (
-      <a
-        href={links.twitter}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
-      >
-        <FaXTwitter size={18} />
-        <span>X（旧Twitter）</span>
-      </a>
-    )}
+            {links.twitter && (
+              <a
+                href={links.twitter}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
+              >
+                <FaXTwitter size={18} />
+                <span>X（旧Twitter）</span>
+              </a>
+            )}
 
-    {links.instagram && (
-      <a
-        href={links.instagram}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
-      >
-        <Instagram size={18} />
-        <span>Instagram</span>
-      </a>
-    )}
-  </div>
-)}
+            {links.instagram && (
+              <a
+                href={links.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
+              >
+                <Instagram size={18} />
+                <span>Instagram</span>
+              </a>
+            )}
+          </div>
+        )}
 
+        {/* Like */}
         <div className="absolute bottom-6 right-3 z-10">
           <button
             onClick={handleLike}
@@ -273,9 +295,7 @@ onTouchStart={(e) => { /* iOS長押し抑止用に空のハンドラ */ }}
               size={24}
               strokeWidth={2}
               className={`relative z-10 transition-all duration-300 ease-out ${
-                liked
-                  ? 'text-pink-500 fill-pink-500 scale-110'
-                  : 'text-gray-400 scale-100'
+                liked ? 'text-pink-500 fill-pink-500 scale-110' : 'text-gray-400 scale-100'
               }`}
             />
 
@@ -289,5 +309,8 @@ onTouchStart={(e) => { /* iOS長押し抑止用に空のハンドラ */ }}
       </div>
     </div>
   );
+
+  return createPortal(node, document.body);
 }
+
 

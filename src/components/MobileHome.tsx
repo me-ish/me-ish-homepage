@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import Header from '@/components/shared/Header';
+// import Header from '@/components/shared/Header'; // ← 削除
 import { Mail, ArrowRight, ShieldCheck, Images, Sparkles } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
@@ -33,7 +33,7 @@ const MobileHome = () => {
 
   return (
     <div className="font-zen text-[#222] bg-white">
-      <Header />
+      {/* Header は layout.tsx 側に任せる */}
 
       {/* ヘッダー分の余白（モバイルはやや低め） */}
       <main className="pt-[64px]">
@@ -63,7 +63,7 @@ const MobileHome = () => {
             アートを、もっと近くに
           </p>
 
-          {/* 主CTAのみを強調（親指で押しやすい高さ・丸み） */}
+          {/* 主CTAのみを強調 */}
           <div className="mt-7">
             <Link
               href="/entry"
@@ -76,7 +76,7 @@ const MobileHome = () => {
             </Link>
           </div>
 
-          {/* サブ導線はテキストリンクで軽く */}
+          {/* サブ導線 */}
           <div className="mt-4">
             <Link
               href="#gallery"
@@ -87,7 +87,7 @@ const MobileHome = () => {
           </div>
         </section>
 
-        {/* お知らせ（モバイル簡潔版） */}
+        {/* お知らせ */}
         <section
           id="news"
           className="fade-in-start px-5 py-8 bg-[#f9fbfe]"
@@ -108,7 +108,7 @@ const MobileHome = () => {
           </div>
         </section>
 
-        {/* About：短い説明＋価値の3カード */}
+        {/* About */}
         <section id="about" className="fade-in-start px-5 py-10" aria-labelledby="about-title">
           <h2 id="about-title" className="text-center font-bold mb-4 text-[clamp(1.4rem,6.4vw,1.8rem)]">
             <span className="text-[#00a1e9] font-lilita">me-ish</span>
@@ -156,7 +156,7 @@ const MobileHome = () => {
           </div>
         </section>
 
-        {/* Gallery：サムネ比率固定＋タップ領域大きめ */}
+        {/* Gallery */}
         <section id="gallery" className="fade-in-start px-5 py-10 bg-[#f9fbfd]" aria-labelledby="gallery-title">
           <h2 id="gallery-title" className="text-center font-bold text-[#00a1e9] mb-6 text-[clamp(1.3rem,6vw,1.7rem)]">
             ギャラリーを見る
@@ -209,7 +209,11 @@ const MobileHome = () => {
                      mx-5 px-5 py-10 text-center shadow-md active:scale-[0.995] transition"
           aria-labelledby="apply-title"
         >
-          <Link href="/entry" className="absolute inset-0 z-10" aria-label="応募ページへ" />
+          {/* 子要素必須 → sr-only を入れる */}
+          <Link href="/entry" className="absolute inset-0 z-10" aria-label="応募ページへ">
+            <span className="sr-only">応募ページへ</span>
+          </Link>
+
           <div className="relative z-20 max-w-md mx-auto pointer-events-none">
             <h2 id="apply-title" className="text-[clamp(1.2rem,5.6vw,1.6rem)] font-bold text-[#00a1e9] leading-tight mb-2">
               あなたのアートを世界に届けよう
@@ -223,7 +227,7 @@ const MobileHome = () => {
           </div>
         </section>
 
-        {/* FAQ：detailsでアコーディオン */}
+        {/* FAQ */}
         <section id="faq" className="fade-in-start px-5 py-10 bg-[#f6f8fb]" aria-labelledby="faq-title">
           <h2 id="faq-title" className="text-center font-bold text-[#00a1e9] mb-5 text-[clamp(1.2rem,5.6vw,1.6rem)]">
             よくある質問
@@ -373,3 +377,4 @@ function Badge({ type }: { type: 'info' | 'update' | 'maintenance' }) {
 }
 
 export default MobileHome;
+

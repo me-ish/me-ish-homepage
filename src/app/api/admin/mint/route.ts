@@ -5,39 +5,66 @@ import { ThirdwebSDK } from '@thirdweb-dev/sdk';
 import { Resend } from 'resend';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
+// ----- Supabase (server-only admin) -----
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { persistSession: false, autoRefreshToken: false } }
 );
 
-// 管理者APIトークンで簡易認証
+// ----- Simple header token auth -----
 function assertAdmin(req: NextRequest) {
+  const cfg = process.env.ADMIN_API_TOKEN;
   const token = req.headers.get('x-meish-admin-token');
-  if (!token || token !== process.env.ADMIN_API_TOKEN) {
-    throw new Error('unauthorized');
+  if (!cfg || !token || token !== cfg) {
+    const err = new Error('unauthorized');
+    (err as any).status = 401;
+    throw err;
   }
 }
 
-// Thirdweb
-const CHAIN = process.env.CHAIN_NAME || 'polygon'; // 'mumbai' / 'polygon'
-const sdk = ThirdwebSDK.fromPrivateKey(process.env.THIRDWEB_PRIVATE_KEY!, CHAIN);
-const contractAddress = process.env.NFT_CONTRACT_ADDRESS!;
-const fromWallet = process.env.MEISH_WALLET_ADDRESS!;
-
-// Email
+// ----- Resend -----
 const resend = new Resend(process.env.RESEND_API_KEY!);
+
+// 任意：チェーン名の補正（環境で 'mumbai' を渡している場合の保険）
+function normalizeChainName(name: string) {
+  const n = (name || '').toLowerCase();
+  if (n === 'mumbai' || n === 'polygon-mumbai') return 'mumbai';
+  if (n === 'amoy' || n === 'polygon-amoy') return 'amoy';
+  return n || 'polygon';
+}
 
 export async function POST(req: NextRequest) {
   try {
-    assertAdmin(req); // 認可
+    assertAdmin(req);
 
-    const { sessionId, name, imageUrl } = await req.json();
+    const body = await req.json().catch(() => null);
+    const sessionId: string | undefined = body?.sessionId;
+    const name: string | undefined = body?.name;
+    const imageUrl: string | undefined = body?.imageUrl;
+
     if (!sessionId || !name || !imageUrl) {
-      return NextResponse.json({ error: 'sessionId, name, imageUrl は必須です' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'sessionId, name, imageUrl は必須です' },
+        { status: 400 }
+      );
     }
 
-    // 1) sales をセッションで特定（pending のNFTだけ許可）
+    // 簡易URLバリデーション
+    try {
+      // eslint-disable-next-line no-new
+      new URL(imageUrl);
+    } catch {
+      return NextResponse.json(
+        { error: 'imageUrl が不正です' },
+        { status: 400 }
+      );
+    }
+
+    // 1) sale をセッションで特定
     const { data: sale, error: sErr } = await supabaseAdmin
       .from('sales')
       .select('id, entry_id, buyer_email, mint_status, type, edition_no')
@@ -51,16 +78,47 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'not NFT sale' }, { status: 400 });
     }
     if (sale.mint_status === 'minted') {
-      // 冪等：既にMint済みなら結果をそのまま返す
-      return NextResponse.json({ ok: true, message: 'already minted', editionNo: sale.edition_no });
+      return NextResponse.json({
+        ok: true,
+        message: 'already minted',
+        editionNo: sale.edition_no,
+      });
     }
     if (sale.mint_status !== 'pending') {
-      return NextResponse.json({ error: `invalid mint_status: ${sale.mint_status}` }, { status: 409 });
+      return NextResponse.json(
+        { error: `invalid mint_status: ${sale.mint_status}` },
+        { status: 409 }
+      );
     }
 
-    // 2) Mint 実行（fromWallet へ鋳造）
+    // 2) Thirdweb SDK を “ここで” 初期化（secretKey 必須）
+    const chain = normalizeChainName(process.env.CHAIN_NAME || 'polygon');
+    const privateKey = process.env.THIRDWEB_PRIVATE_KEY!;
+    const secretKey = process.env.THIRDWEB_SECRET_KEY!; // ← Vercel に必ず設定
+
+    if (!privateKey || !secretKey) {
+      return NextResponse.json(
+        { error: 'Thirdweb の環境変数が不足しています' },
+        { status: 500 }
+      );
+    }
+
+    const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chain as any, {
+      secretKey, // ★ これがないと本番で "Please provide a secretKey" が出ます
+    });
+
+    const contractAddress = process.env.NFT_CONTRACT_ADDRESS!;
+    const toWallet = process.env.MEISH_WALLET_ADDRESS!;
+
+    if (!contractAddress || !toWallet) {
+      return NextResponse.json(
+        { error: 'NFT_CONTRACT_ADDRESS / MEISH_WALLET_ADDRESS が未設定です' },
+        { status: 500 }
+      );
+    }
+
     const contract = await sdk.getContract(contractAddress);
-    const mintTx = await contract.erc721.mintTo(fromWallet, { name, image: imageUrl });
+    const mintTx = await contract.erc721.mintTo(toWallet, { name, image: imageUrl });
     const tokenId = mintTx.id.toString();
     const txhash = mintTx.receipt.transactionHash;
 
@@ -71,17 +129,19 @@ export async function POST(req: NextRequest) {
       p_txhash: txhash,
       p_minted_by: 'admin',
     });
+
     if (mErr) {
-      // 失敗時は手動ロールバック検討（例：burn）— まずはログだけ
       console.error('[mint] mark_nft_minted error:', mErr);
+      // 必要に応じて手動ロールバック（burn等）を検討
       return NextResponse.json({ error: 'mark minted failed' }, { status: 500 });
     }
 
-    const { entry_id, edition_no } = (rpc?.[0] ?? {}) as { entry_id: number; edition_no: number };
+    const { entry_id, edition_no } = (rpc?.[0] ??
+      {}) as { entry_id: number; edition_no: number };
 
-    // 4) 購入者へメール（失敗しても処理は成功扱い）
+    // 4) メール（失敗しても全体は成功扱い）
     try {
-      const nftUrl = `https://thirdweb.com/${CHAIN}/${contractAddress}/${tokenId}`;
+      const nftUrl = `https://thirdweb.com/${chain}/${contractAddress}/${tokenId}`;
       if (sale.buyer_email) {
         await resend.emails.send({
           from: 'me-ish <noreply@me-ish.art>',
@@ -98,12 +158,16 @@ export async function POST(req: NextRequest) {
       console.warn('[mint] email failed:', e);
     }
 
-    return NextResponse.json({ ok: true, entryId: entry_id, editionNo: edition_no, tokenId, txhash });
+    return NextResponse.json({
+      ok: true,
+      entryId: entry_id,
+      editionNo: edition_no,
+      tokenId,
+      txhash,
+    });
   } catch (e: any) {
-    if (e?.message === 'unauthorized') {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-    }
-    console.error('[mint] error:', e);
-    return NextResponse.json({ error: 'internal error' }, { status: 500 });
+    const status = e?.status ?? (e?.message === 'unauthorized' ? 401 : 500);
+    if (status !== 401) console.error('[mint] error:', e);
+    return NextResponse.json({ error: status === 401 ? 'unauthorized' : 'internal error' }, { status });
   }
 }

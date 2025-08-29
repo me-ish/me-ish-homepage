@@ -54,36 +54,43 @@ export default function MyPageClient() {
   const [q, setQ] = useState('');
   const [sortKey, setSortKey] = useState<'new' | 'likes' | 'priceHigh' | 'priceLow'>('new');
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error || !user) {
-        router.push('/login');
-        return;
-      }
-      setUserId(user.id);
-      setEmail(user.email ?? null);
+useEffect(() => {
+  let cancelled = false;
 
-      // プロフィール取得（なければ作成）
-      const { data: prof0 } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
-      if (!prof0) {
-        await supabase.from('profiles').insert({ id: user.id, display_name: '', sns_links: {} });
-      }
-      const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      setProfile(prof as Profile);
+  (async () => {
+    setLoading(true);
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) {
+      router.replace('/login?redirect=/mypage');
+      return;
+    }
+    if (cancelled) return;
 
-      // 作品一覧
-      const { data: entriesData } = await supabase
-        .from('entries')
-        .select('id, title, image_url, confirmed, created_at, likes, gallery_type, edition_total, edition_sold, price, meish_fee_yen, artist_reward_yen, confirmed_at, display_start_at, display_end_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+    setUserId(user.id);
+    setEmail(user.email ?? null);
 
+    const { data: prof0 } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    if (!prof0) {
+      await supabase.from('profiles').insert({ id: user.id, display_name: '', sns_links: {} });
+    }
+    const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    if (!cancelled) setProfile(prof as Profile);
+
+    const { data: entriesData } = await supabase
+      .from('entries')
+      .select('id, title, image_url, confirmed, created_at, likes, gallery_type, edition_total, edition_sold, price, meish_fee_yen, artist_reward_yen, confirmed_at, display_start_at, display_end_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (!cancelled) {
       setEntries(entriesData || []);
       setLoading(false);
-    })();
-  }, [router]);
+    }
+  })();
+
+  return () => { cancelled = true; };
+}, [router]);
+
 
   // メトリクス
   const metrics = useMemo(() => {
@@ -166,7 +173,7 @@ export default function MyPageClient() {
 
   const logout = async () => {
     await supabase.auth.signOut();
-    router.push('/login');
+    router.replace('/login?redirect=/mypage');
   };
 
   return (
