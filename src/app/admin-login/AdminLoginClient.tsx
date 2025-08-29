@@ -1,5 +1,5 @@
-// src/app/admin-login/AdminLoginClient.tsx
 'use client';
+
 import { supabaseBrowser } from '@/lib/supabaseBrowser';
 
 export default function AdminLoginClient({ currentEmail }: { currentEmail: string | null }) {
@@ -8,17 +8,17 @@ export default function AdminLoginClient({ currentEmail }: { currentEmail: strin
   const handleLogin = async () => {
     const origin = window.location.origin;
 
-    // ★ 型の余剰プロパティチェックを回避（実行時は flowType を渡す）
-    const params /*: any*/ = {
-      provider: 'google' as const,
-      options: {
-        redirectTo: `${origin}/auth/callback`,
-        queryParams: { prompt: 'select_account' },
-      },
-      flowType: 'pkce' as const, // ← 2.56+ で有効
-    } as any;
-
-    await supabase.auth.signInWithOAuth(params);
+    await supabase.auth.signInWithOAuth(
+      {
+        provider: 'google',
+        options: {
+          redirectTo: `${origin}/auth/callback?next=/admin`,
+          queryParams: { prompt: 'select_account' },
+        },
+        // 型定義には無いがランタイムでは有効 → PKCE を強制
+        flowType: 'pkce',
+      } as any // ← もしくはこの cast でもOK
+    );
   };
 
   const handleLogout = async () => {
@@ -29,16 +29,10 @@ export default function AdminLoginClient({ currentEmail }: { currentEmail: strin
   return (
     <div className="mx-auto max-w-md text-center space-y-4">
       {currentEmail && <p className="text-sm text-gray-600">現在のログイン: {currentEmail}</p>}
-      <button
-        onClick={handleLogin}
-        className="w-full rounded-lg bg-[#00a1e9] px-4 py-3 font-semibold text-white hover:brightness-105"
-      >
+      <button onClick={handleLogin} className="w-full rounded bg-[#00a1e9] text-white py-2 font-semibold">
         Googleでログイン
       </button>
-      <button
-        onClick={handleLogout}
-        className="w-full rounded-lg border px-4 py-3 font-semibold hover:bg-gray-50"
-      >
+      <button onClick={handleLogout} className="w-full rounded border py-2">
         ログアウト
       </button>
     </div>

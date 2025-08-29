@@ -1,19 +1,8 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+'use client';
 
-let browserClient: SupabaseClient | null = null;
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
-export function supabaseBrowser(): SupabaseClient {
-  if (browserClient) return browserClient;
-  browserClient = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        storageKey: 'meish-auth',      // 衝突回避
-        persistSession: true,
-        autoRefreshToken: true,
-      },
-    }
-  );
-  return browserClient;
+// NEXT_PUBLIC_SUPABASE_URL / ANON_KEY を自動で読むので引数不要
+export function supabaseBrowser() {
+  return createClientComponentClient();
 }

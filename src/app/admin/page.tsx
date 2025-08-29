@@ -1,18 +1,16 @@
-// src/app/admin/page.tsx
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
-import AdminClient from './_components/AdminClient';
-
-const allowed = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? 'info@me-ish.art')
-  .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+import { isAdminEmail } from '@/lib/isAdmin';
 
 export default async function AdminPage() {
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  const email = user?.email?.toLowerCase() ?? null;
+  const supabase = supabaseServer();
+  const { data: { session } } = await supabase.auth.getSession();
+  const email = session?.user?.email ?? null;
 
-  if (!email) redirect('/admin-login');           // 未ログインはログインへ
-  if (!allowed.includes(email)) redirect('/admin-login?err=unauthorized');
+  if (!email || !isAdminEmail(email)) {
+    redirect('/admin-login?err=unauthorized');
+  }
 
-  return <AdminClient adminEmail={email} initialNewEntryCount={0} initialNewInquiryCount={0} />;
+  // …ここから管理画面の中身…
+  return <div className="p-6">管理ダッシュボード</div>;
 }

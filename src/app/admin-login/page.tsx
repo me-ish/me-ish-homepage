@@ -1,23 +1,18 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseServer } from '@/lib/supabaseServer';
 import { isAdminEmail } from '@/lib/isAdmin';
 import AdminLoginClient from './AdminLoginClient';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Page() {
-  const supabase = createClient();
+  const supabase = supabaseServer();
   const { data: { session } } = await supabase.auth.getSession();
   const email = session?.user?.email ?? null;
 
   if (email && isAdminEmail(email)) {
-    redirect('/admin');
+    redirect('/admin'); // 許可済みならすぐ管理画面へ
   }
-
-  // ヘッダーが fixed なので上に余白
-  return (
-    <main className="px-4 pt-[80px] pb-10">
-      <AdminLoginClient currentEmail={email} />
-    </main>
-  );
+  return <AdminLoginClient currentEmail={email} />;
 }
+
