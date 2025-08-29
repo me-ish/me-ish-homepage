@@ -1,61 +1,48 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabaseBrowser';
 
-type Props = {
-  email: string | null;
-  allowed: string[];
-  isAdmin: boolean;
-};
-
-export default function AdminLoginClient({ email, allowed, isAdmin }: Props) {
-  const router = useRouter();
+export default function AdminLoginClient({ currentEmail }: { currentEmail: string | null }) {
   const supabase = supabaseBrowser();
 
-  // ★ 念のためクライアント側でも保険のリダイレクト
-  useEffect(() => {
-    if (isAdmin) router.replace('/admin');
-  }, [isAdmin, router]);
-
   const loginWithGoogle = async () => {
+    const origin =
+      typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_SITE_URL;
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${location.origin}/admin-login` },
+      options: {
+        // ここで必ず本番のコールバックに戻し、最終的に /admin-login へ戻す
+        redirectTo: `${origin}/auth/callback?redirect=/admin-login`,
+        queryParams: { prompt: 'consent' }, // 必要なら
+      },
     });
   };
 
   const logout = async () => {
     await supabase.auth.signOut();
-    router.refresh();
+    // サーバー判定を再度通すため /admin-login をリロード
+    if (typeof window !== 'undefined') window.location.href = '/admin-login';
   };
 
   return (
-    <main className="max-w-xl mx-auto px-4 py-10 text-center">
-      {email && !isAdmin && (
-        <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 text-amber-700 px-4 py-3">
-          このアカウントは管理者ではありません
-        </div>
+    <main className="mx-auto max-w-md p-6 text-center">
+      {currentEmail && (
+        <p className="mb-3 text-sm text-gray-600">現在ログイン中: {currentEmail}</p>
       )}
-
-      {email && <p className="mb-4 text-sm text-gray-600">現在ログイン中: {email}</p>}
-
       <button
         onClick={loginWithGoogle}
-        className="w-full rounded-lg bg-[#00a1e9] text-white py-3 font-semibold hover:brightness-105"
+        className="w-full rounded-lg bg-[#00a1e9] px-4 py-3 font-semibold text-white"
       >
         Googleでログイン
       </button>
-
       <button
         onClick={logout}
-        className="w-full mt-3 rounded-lg border py-3 font-semibold hover:bg-gray-50"
+        className="mt-3 w-full rounded-lg border px-4 py-3"
       >
         ログアウト
       </button>
-
-      <p className="mt-4 text-xs text-gray-500">許可メール: {allowed.join(', ')}</p>
+      {/* 確認用に許可リストを出したいときはサーバー側で描画してください（クライアントでは環境変数は出さない） */}
     </main>
   );
 }
+

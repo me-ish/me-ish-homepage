@@ -1,30 +1,21 @@
-// src/app/admin-login/page.tsx
-import { createClient } from '@/lib/supabase/server';
-import AdminLoginClient from './AdminLoginClient';
 import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/isAdmin';
+import AdminLoginClient from './AdminLoginClient';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-export default async function AdminLoginPage() {
+export default async function Page() {
   const supabase = createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
+  const { data: { session } } = await supabase.auth.getSession();
   const email = session?.user?.email ?? null;
 
-  // Vercelの環境変数 ADMIN_EMAILS にカンマ区切りで設定 (例: "info@me-ish.art,admin@example.com")
-  const allowed = (process.env.ADMIN_EMAILS ?? 'info@me-ish.art')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-
-  const isAdmin = !!email && allowed.includes(email.toLowerCase());
-
-  // ★ 管理者ならサーバーサイドで即リダイレクト
-  if (isAdmin) {
+  // ここでサーバー側で即判定 → 一致なら /admin へ
+  if (isAdminEmail(email)) {
     redirect('/admin');
   }
 
-  return <AdminLoginClient email={email} allowed={allowed} isAdmin={isAdmin} />;
+  // そうでなければログインUIを表示（現在ログイン中のメールも渡して表示）
+  return <AdminLoginClient currentEmail={email} />;
 }
