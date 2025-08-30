@@ -75,7 +75,7 @@ const DesktopHome = () => {
           </div>
 
           {/* 下スクロール誘導（同一ページ内は <a> でOK） */}
-          <a href="#about" className="mt-10 text-sm text-[#00a1e9]/70 hover:text-[#00a1e9] transition">
+          <a href="modal/about" className="mt-10 text-sm text-[#00a1e9]/70 hover:text-[#00a1e9] transition">
             もっと見る
           </a>
         </section>

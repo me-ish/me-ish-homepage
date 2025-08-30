@@ -76,7 +76,7 @@ export default function Header() {
     連絡: [
       { label: 'お問い合わせ', href: '/#contact' },
       { label: 'お知らせ', href: '/news' },
-    ],
+    ],  
   } as const;
 
   return (
