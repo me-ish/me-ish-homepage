@@ -35,18 +35,17 @@ const MobileHome = () => {
     <div className="font-zen text-[#222] bg-white">
       {/* Header は layout.tsx 側に任せる */}
 
-      {/* ヘッダー分の余白（モバイルはやや低め） */}
-      <main className="pt-[64px]">
-
-        {/* Hero：1アクション集中（応募） */}
-        <section
-          className="relative fade-in-start px-5 py-14 text-center"
-          aria-labelledby="hero-title"
-        >
-          {/* やわらかグラデ背景 */}
-          <div className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(0,161,233,0.12),_transparent_60%),radial-gradient(ellipse_at_bottom,_rgba(0,161,233,0.06),_transparent_60%)]" />
-          </div>
+{/* ヘッダー分の余白（モバイルはやや低め） */}
+<main className="pt-[64px]">
+  {/* Hero：1アクション集中（応募） */}
+  <section
+    className="relative fade-in-start px-5 py-14 text-center"
+    aria-labelledby="hero-title"
+  >
+    {/* やわらかグラデ背景（↑余白ぶんもカバー） */}
+    <div className="pointer-events-none absolute inset-x-0 -z-10 top-[-64px] h-[calc(100%+64px)]">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(0,161,233,0.12),_transparent_60%),radial-gradient(ellipse_at_bottom,_rgba(0,161,233,0.06),_transparent_60%)]" />
+    </div>
 
           <h1
             id="hero-title"
