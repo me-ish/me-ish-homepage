@@ -5,13 +5,22 @@ import { isAdminEmail } from '@/lib/isAdmin';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const supabase = supabaseServer();
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const email = session?.user?.email ?? null;
 
   if (!email || !isAdminEmail(email)) {
     redirect('/admin-login?err=unauthorized');
   }
-  return <>{children}</>;
+
+  // ヘッダ/フッタは付けない（管理画面は独自UI）
+  return <div className="min-h-screen bg-[#f7fbff]">{children}</div>;
 }
+

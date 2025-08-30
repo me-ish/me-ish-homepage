@@ -2,7 +2,6 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabaseBrowser';
 
 type Inquiry = {
@@ -15,7 +14,6 @@ type Inquiry = {
 };
 
 export default function InquiriesPage() {
-  const router = useRouter();
   const supabase = useMemo(() => supabaseBrowser(), []);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -24,18 +22,12 @@ export default function InquiriesPage() {
   const [toast, setToast] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
-  // かんたんクライアントガード（本番はサーバー側で認可済みの想定・保険）
-  useEffect(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('isAdmin') !== 'true') {
-      router.replace('/admin-login?err=unauthorized');
-    }
-  }, [router]);
-
   // 読み込み
   const fetchInquiries = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('inquiries')
+      let query = supabase
+        .from('inquiries')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -56,8 +48,11 @@ export default function InquiriesPage() {
   useEffect(() => {
     mountedRef.current = true;
     fetchInquiries();
+
     const onFocus = () => fetchInquiries();
-    const onVisibility = () => document.visibilityState === 'visible' && fetchInquiries();
+    const onVisibility = () =>
+      document.visibilityState === 'visible' && fetchInquiries();
+
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
@@ -78,8 +73,13 @@ export default function InquiriesPage() {
   useEffect(() => {
     const channel = supabase
       .channel('admin-inquiries')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'inquiries' }, fetchInquiries)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'inquiries' },
+        fetchInquiries
+      )
       .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
     };
@@ -124,7 +124,9 @@ export default function InquiriesPage() {
       i.email ?? '',
       i.message ?? '',
       new Date(i.created_at).toLocaleString('ja-JP'),
-    ].join(' ').toLowerCase();
+    ]
+      .join(' ')
+      .toLowerCase();
     return bag.includes(kw);
   });
 
@@ -182,7 +184,9 @@ export default function InquiriesPage() {
 
       {/* リスト */}
       {filtered.length === 0 ? (
-        <p className="text-gray-500">{loading ? '読み込み中…' : '問い合わせはありません。'}</p>
+        <p className="text-gray-500">
+          {loading ? '読み込み中…' : '問い合わせはありません。'}
+        </p>
       ) : (
         <ul className="space-y-3">
           {filtered.map((inq) => (
