@@ -36,14 +36,10 @@ const DesktopHome = () => {
       {/* ヘッダー固定分の余白 */}
       <main className="pt-[70px]">
         {/* Hero */}
-        <section
-          className="relative flex flex-col items-center justify-center min-h-[82vh] text-center px-6 fade-in-start"
-          aria-labelledby="hero-title"
-        >
-          {/* 背景グラデ & ノイズ */}
-          <div className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(0,161,233,0.10),_transparent_60%),radial-gradient(ellipse_at_bottom,_rgba(0,161,233,0.06),_transparent_60%)]" />
-          </div>
+<section className="relative flex flex-col items-center justify-center min-h-[82vh] text-center px-6 fade-in-start" aria-labelledby="hero-title">
+  <div className="pointer-events-none absolute left-0 right-0 top-[-70px] bottom-0 -z-10">
+    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(0,161,233,0.10),_transparent_60%),radial-gradient(ellipse_at_bottom,_rgba(0,161,233,0.06),_transparent_60%)]" />
+  </div>
 
           <h1
             id="hero-title"
