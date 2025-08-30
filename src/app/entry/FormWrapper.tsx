@@ -50,6 +50,10 @@ const FormWrapper = () => {
       agreeTerms: false, confirmRights: false, confirmOriginal: false,
     },
     shouldUnregister: false,
+    mode: 'onChange',
+    reValidateMode: 'onChange',
+    shouldFocusError: true,
+    criteriaMode: 'all',
   });
 
   const [step, setStep] = useState(1);
@@ -69,20 +73,30 @@ const FormWrapper = () => {
     }
   };
 
-  const nextStep = async () => {
-    const isForSale = methods.watch('isForSale');
-    const fieldsToValidate = getStepFields(step, isForSale);
-    const isValid = await methods.trigger(fieldsToValidate);
-    if (isValid) {
-      setDirection('right');
-      setStep((prev) => prev + 1);
-    }
-  };
+const nextStep = async () => {
+  const isForSale = methods.getValues('isForSale');
+  const fieldsToValidate = getStepFields(step, isForSale);
+  const ok = await methods.trigger(fieldsToValidate, { shouldFocus: true });
 
-  const prevStep = () => {
-    setDirection('left');
-    setStep((prev) => prev - 1);
-  };
+  if (!ok) {
+    const first = fieldsToValidate.find((name) => methods.getFieldState(name).invalid);
+    if (first) {
+      const el = document.querySelector(`[name="${String(first)}"]`) as HTMLElement | null;
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return;
+  }
+  setDirection('right');
+  setStep((prev) => prev + 1);
+};
+
+// ★ 追加：戻る処理
+const prevStep = () => {
+  setDirection('left');
+  setStep((prev) => Math.max(1, prev - 1));
+};
+
+
 
   const onSubmit = async (data: FormValues & { meish_fee_yen?: number; artist_reward_yen?: number }) => {
     try {
