@@ -23,6 +23,15 @@ type InquiryRow = {
   created_at: string;
 };
 
+type AnnRow = {
+  id: string;
+  title: string;
+  category: 'info' | 'update' | 'maintenance' | string;
+  pinned: boolean | null;
+  published_at: string | null;
+  created_at: string;
+};
+
 export default async function AdminPage() {
   const supabase = supabaseServer();
   const { data: { session } } = await supabase.auth.getSession();
@@ -39,6 +48,8 @@ export default async function AdminPage() {
     salesCountRes,
     latestEntriesRes,
     latestInquiriesRes,
+    annsDraftCountRes,
+    latestAnnsRes,
   ] = await Promise.all([
     supabase.from('entries').select('*', { count: 'exact', head: true }).eq('confirmed', false),
     supabase.from('inquiries').select('*', { count: 'exact', head: true }).eq('is_read', false),
@@ -52,6 +63,15 @@ export default async function AdminPage() {
       .select('id,name,email,subject,is_read,created_at')
       .order('created_at', { ascending: false })
       .limit(5),
+
+    // ここから「お知らせ」用
+    supabase.from('announcements').select('*', { count: 'exact', head: true }).is('published_at', null),
+    supabase.from('announcements')
+      .select('id,title,category,pinned,published_at,created_at')
+      .order('pinned', { ascending: false })
+      .order('published_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(5),
   ]);
 
   const metrics = {
@@ -59,10 +79,12 @@ export default async function AdminPage() {
     unreadInquiries: inquiriesUnreadRes.count ?? 0,
     pendingMints: salesPendingMintRes.count ?? 0,
     totalSales: salesCountRes.count ?? 0,
+    draftAnns: annsDraftCountRes.count ?? 0, // 追加：未公開お知らせ
   };
 
   const latestEntries = (latestEntriesRes.data ?? []) as EntryRow[];
   const latestInquiries = (latestInquiriesRes.data ?? []) as InquiryRow[];
+  const latestAnns = (latestAnnsRes.data ?? []) as AnnRow[];
 
   const btnOutlineCls =
     'inline-flex items-center rounded-full border border-[#d9e6f2] bg-white px-3 py-1.5 text-sm font-semibold hover:bg-[#f7fbff]';
@@ -84,11 +106,13 @@ export default async function AdminPage() {
         </div>
 
         {/* メトリクス */}
-        <section className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <MetricCard label="未承認作品" value={metrics.pendingEntries} href="/admin/entries" badge="要対応" />
+        <section className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
+          <MetricCard label="未承認作品" value={metrics.pendingEntries} href="/admin/entries" badge={metrics.pendingEntries > 0 ? '要対応' : undefined} />
           <MetricCard label="未読お問い合わせ" value={metrics.unreadInquiries} href="/admin/inquiries" />
           <MetricCard label="NFTミント待ち" value={metrics.pendingMints} href="/admin/sales" />
           <MetricCard label="売上件数 (累計)" value={metrics.totalSales} href="/admin/sales" />
+          {/* 追加：未公開お知らせ */}
+          <MetricCard label="未公開お知らせ" value={metrics.draftAnns} href="/admin/announcements" badge={metrics.draftAnns > 0 ? '下書きあり' : undefined} />
         </section>
 
         {/* クイックアクション */}
@@ -100,22 +124,20 @@ export default async function AdminPage() {
               <Link href="/admin/inquiries" className={btnOutlineCls}>お問い合わせ一覧</Link>
               <Link href="/admin/users" className={btnOutlineCls}>出展者一覧</Link>
               <Link href="/admin/settings" className={btnOutlineCls}>ギャラリー設定</Link>
+              {/* 追加：お知らせ管理 */}
+              <Link href="/admin/announcements" className={btnOutlineCls}>お知らせ管理</Link>
             </div>
           </div>
         </section>
 
         {/* 最近のアクティビティ */}
-        <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+          {/* 最近の応募 */}
           <div className="rounded-2xl border bg-white">
-            <div className="flex items-center justify-between border-b px-4 py-3">
-              <h3 className="text-sm font-semibold text-[#667]">最近の応募</h3>
-              <Link href="/admin/entries" className="text-xs text-[#00a1e9] underline underline-offset-4">
-                一覧へ
-              </Link>
-            </div>
+            <HeaderWithLink title="最近の応募" href="/admin/entries" />
             <ul className="divide-y">
               {latestEntries.length === 0 ? (
-                <li className="px-4 py-6 text-sm text-[#667]">最近の応募はありません。</li>
+                <EmptyList message="最近の応募はありません。" />
               ) : latestEntries.map((e) => (
                 <li key={e.id} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
@@ -138,16 +160,12 @@ export default async function AdminPage() {
             </ul>
           </div>
 
+          {/* 最近のお問い合わせ */}
           <div className="rounded-2xl border bg-white">
-            <div className="flex items-center justify-between border-b px-4 py-3">
-              <h3 className="text-sm font-semibold text-[#667]">最近のお問い合わせ</h3>
-              <Link href="/admin/inquiries" className="text-xs text-[#00a1e9] underline underline-offset-4">
-                一覧へ
-              </Link>
-            </div>
+            <HeaderWithLink title="最近のお問い合わせ" href="/admin/inquiries" />
             <ul className="divide-y">
               {latestInquiries.length === 0 ? (
-                <li className="px-4 py-6 text-sm text-[#667]">最近のお問い合わせはありません。</li>
+                <EmptyList message="最近のお問い合わせはありません。" />
               ) : latestInquiries.map((q) => (
                 <li key={q.id} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
@@ -167,17 +185,56 @@ export default async function AdminPage() {
               ))}
             </ul>
           </div>
+
+          {/* 追加：最近のお知らせ */}
+          <div className="rounded-2xl border bg-white">
+            <HeaderWithLink title="最近のお知らせ" href="/admin/announcements" />
+            <ul className="divide-y">
+              {latestAnns.length === 0 ? (
+                <EmptyList message="最近のお知らせはありません。" />
+              ) : latestAnns.map((n) => (
+                <li key={n.id} className="px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{n.title}</p>
+                      <p className="truncate text-xs text-[#667]">
+                        {n.published_at ? `公開: ${toJP(n.published_at)}` : `下書き: ${toJP(n.created_at)}`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {n.pinned ? (
+                        <span className="shrink-0 rounded-full bg-rose-100 text-rose-700 border border-rose-200 px-2 py-0.5 text-[11px]">固定</span>
+                      ) : null}
+                      <span className={
+                        'shrink-0 rounded-full px-2 py-0.5 text-[11px] border ' +
+                        (n.category === 'maintenance'
+                          ? 'bg-amber-100 text-amber-800 border-amber-200'
+                          : n.category === 'update'
+                          ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                          : 'bg-sky-100 text-sky-800 border-sky-200')
+                      }>
+                        {n.category}
+                      </span>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       </div>
     </main>
   );
 }
 
-/* ---------- utils ---------- */
+/* ---------- utils / sub components ---------- */
 function toJP(d: string) {
   try {
     return new Date(d).toLocaleString('ja-JP', {
-      month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   } catch {
     return '';
@@ -203,4 +260,19 @@ function MetricCard({
       </div>
     </Link>
   );
+}
+
+function HeaderWithLink({ title, href }: { title: string; href: string }) {
+  return (
+    <div className="flex items-center justify-between border-b px-4 py-3">
+      <h3 className="text-sm font-semibold text-[#667]">{title}</h3>
+      <Link href={href} className="text-xs text-[#00a1e9] underline underline-offset-4">
+        一覧へ
+      </Link>
+    </div>
+  );
+}
+
+function EmptyList({ message }: { message: string }) {
+  return <li className="px-4 py-6 text-sm text-[#667]">{message}</li>;
 }
