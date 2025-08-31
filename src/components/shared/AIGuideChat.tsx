@@ -1,7 +1,6 @@
-// src/components/shared/AIGuideChat.tsx
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { MessageCircle, Send, X, Mic, MicOff } from 'lucide-react';
 
 /* ===== 最小の SpeechRecognition 型定義 ===== */
@@ -48,39 +47,56 @@ export default function AIGuideChat({
   onClose,
   defaultOpen = false,
 }: AIGuideChatProps) {
-  // ---- 開閉（controlledOpen > open の優先で制御判定）
-  const controlled = controlledOpen ?? open;
-  const isControlled = typeof controlled === 'boolean';
+  /* -------------------------------
+   *  開閉（制御/非制御の判定を厳密に）
+   * ----------------------------- */
+  const hasNewControl = typeof controlledOpen === 'boolean';
+  const hasOldControl = typeof open === 'boolean' && (!!onOpenChange || !!onClose);
+  const isControlled = hasNewControl || hasOldControl;
+  const controlled = hasNewControl ? controlledOpen : hasOldControl ? open : undefined;
 
   const [uncontrolledOpen, setUncontrolledOpen] = useState<boolean>(defaultOpen);
   const isOpen = isControlled ? Boolean(controlled) : uncontrolledOpen;
 
   const setOpen = (next: boolean) => {
-    if (!isControlled) setUncontrolledOpen(next);
+    // 制御モードでもハンドラが無ければ内部状態を更新（フォールバック）
+    if (!isControlled || (!onOpenChange && !onClose)) {
+      setUncontrolledOpen(next);
+    }
     onOpenChange?.(next);
     if (!next) onClose?.(); // 旧APIの onClose 互換
   };
 
-  // ---- 会話の状態
+  /* -------------------------------
+   *  マウント判定（SSR/CSR差を吸収）
+   * ----------------------------- */
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  /* -------------------------------
+   *  会話の状態
+   * ----------------------------- */
   const [input, setInput] = useState('');
   const [reply, setReply] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasSentInitial, setHasSentInitial] = useState(false);
 
-  // ---- 音声認識 / TTS
+  /* -------------------------------
+   *  音声認識（マウント後に判定）
+   * ----------------------------- */
   type SR = ISpeechRecognition;
   const recognitionRef = useRef<SR | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-
-  const srSupported = useMemo(
-    () =>
-      typeof window !== 'undefined' &&
-      (!!window.webkitSpeechRecognition || !!window.SpeechRecognition),
-    []
-  );
+  const [srSupported, setSrSupported] = useState(false);
 
   useEffect(() => {
-    if (!srSupported) return;
+    if (!mounted) return;
+    const supported =
+      !!window?.webkitSpeechRecognition || !!window?.SpeechRecognition;
+    setSrSupported(supported);
+
+    if (!supported) return;
+
     const SRImpl = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!SRImpl) return;
 
@@ -100,43 +116,53 @@ export default function AIGuideChat({
     recognition.onend = () => setIsRecording(false);
 
     recognitionRef.current = recognition;
+
     return () => {
       try {
         recognition.stop();
       } catch {}
       recognitionRef.current = null;
     };
-  }, [srSupported]);
+  }, [mounted]);
 
-  // 初回メッセージが渡されたら自動送信＆開く
+  /* -------------------------------
+   *  初回メッセージがあれば送る（マウント後）
+   * ----------------------------- */
   useEffect(() => {
+    if (!mounted) return;
     if (initialMessage && !hasSentInitial) {
       void handleSubmit(initialMessage);
       setHasSentInitial(true);
       setOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialMessage, hasSentInitial]);
+  }, [mounted, initialMessage, hasSentInitial]);
 
+  /* -------------------------------
+   *  送信処理
+   * ----------------------------- */
   const handleSubmit = async (text: string) => {
     const q = text?.trim();
     if (!q) return;
 
+    let alive = true;
+    setLoading(true);
+
     try {
-      setLoading(true);
       const res = await fetch('/api/ai-guide', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: q }),
       });
       const data = await res.json().catch(() => ({}));
-      const answer: string = data?.reply ?? '（応答を取得できませんでした）';
+      if (!alive) return;
 
+      const answer: string = data?.reply ?? '（応答を取得できませんでした）';
       setReply(answer);
       setInput('');
 
-      // TTS（対応ブラウザのみ）
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      // TTS（対応ブラウザのみ・マウント後）
+      if ('speechSynthesis' in window) {
         try {
           window.speechSynthesis.cancel();
           const utt = new SpeechSynthesisUtterance(answer);
@@ -147,8 +173,12 @@ export default function AIGuideChat({
     } catch {
       setReply('エラーが発生しました。少し時間をおいてお試しください。');
     } finally {
-      setLoading(false);
+      if (alive) setLoading(false);
     }
+
+    return () => {
+      alive = false;
+    };
   };
 
   const startListening = () => {
@@ -168,6 +198,9 @@ export default function AIGuideChat({
     } catch {}
   };
 
+  /* -------------------------------
+   *  Render（常に同じラッパーを返す＝水和安定）
+   * ----------------------------- */
   return (
     <div className={`fixed bottom-2 right-2 z-50 ${isOpen ? 'w-[320px]' : ''}`}>
       {!isOpen && (
@@ -211,7 +244,8 @@ export default function AIGuideChat({
           />
 
           <div className="flex items-center gap-2 mt-2">
-            {srSupported && (
+            {/* Micボタンはマウント後にだけ判定して描画（SSR差分防止） */}
+            {mounted && srSupported && (
               <button
                 onClick={isRecording ? stopListening : startListening}
                 className="text-cyan-600 hover:text-cyan-800"

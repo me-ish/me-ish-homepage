@@ -49,17 +49,25 @@ const Step3_SalesAndAgreement = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // 規約スクロール完了で agreeTerms を有効化
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const handleScroll = () => {
-      const isBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
-      if (isBottom) setCanCheck(true);
-    };
-    el.addEventListener('scroll', handleScroll);
-    return () => el.removeEventListener('scroll', handleScroll);
-  }, []);
+// 規約スクロール完了で agreeTerms を有効化（初期判定つき）
+useEffect(() => {
+  const el = scrollRef.current;
+  if (!el) return;
+
+  const handleScroll = () => {
+    const isBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+    if (isBottom) setCanCheck(true);
+  };
+
+  el.addEventListener('scroll', handleScroll);
+
+  // ★ 初期判定：そもそもスクロール不要 or すでに底付近なら即有効化
+  if (el.scrollHeight <= el.clientHeight) setCanCheck(true);
+  else handleScroll();
+
+  return () => el.removeEventListener('scroll', handleScroll);
+}, []);
+
 
   // プラン使用状況を取得
   useEffect(() => {

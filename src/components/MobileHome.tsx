@@ -226,6 +226,32 @@ const MobileHome = () => {
           </div>
         </section>
 
+{/* Special Thanks（見出し自体をリンク化・中央配置） */}
+<section
+  id="special-thanks-link"
+  className="fade-in-start py-10 px-6 bg-white"
+  aria-labelledby="thanks-link-title"
+>
+  <div className="max-w-[1040px] mx-auto">
+    <div className="rounded-2xl border bg-white p-10 shadow-sm flex flex-col items-center justify-center text-center">
+      <h2 id="thanks-link-title" className="text-2xl font-extrabold">
+        <Link
+          href="/special-thanks"
+          className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 bg-clip-text text-transparent focus:outline-none focus:ring-2 focus:ring-[#00a1e9] focus:ring-offset-2 rounded-lg px-2 py-1"
+          aria-label="Special Thanks ページへ"
+          title="Special Thanks ページへ"
+        >
+          <span>✨ Special Thanks ✨</span>
+        </Link>
+      </h2>
+
+      <p className="mt-2 text-sm text-[#445]">
+        me-ish初期ギャラリー(white)に応募してくださった皆さま
+      </p>
+    </div>
+  </div>
+</section>
+
         {/* FAQ */}
         <section id="faq" className="fade-in-start px-5 py-10 bg-[#f6f8fb]" aria-labelledby="faq-title">
           <h2 id="faq-title" className="text-center font-bold text-[#00a1e9] mb-5 text-[clamp(1.2rem,5.6vw,1.6rem)]">
@@ -317,11 +343,9 @@ function AnnouncementsStripMobile() {
   if (loading) {
     return (
       <ul className="space-y-3" aria-busy="true" aria-live="polite">
-        {[0, 1, 2].map((i) => (
-          <li key={i} className="rounded-xl border bg-white p-4 shadow-sm">
-            <div className="h-3.5 w-20 bg-gray-200/70 rounded animate-pulse mb-2" />
-            <div className="h-4 w-3/4 bg-gray-200/80 rounded animate-pulse mb-2" />
-            <div className="h-3.5 w-full bg-gray-200/60 rounded animate-pulse" />
+　       {[0, 1, 2].map((i) => (
+          <li key={i} className="rounded-full border bg-white px-4 py-2 shadow-sm">
+           <div className="h-4 w-2/3 animate-pulse rounded bg-gray-200/70" />
           </li>
         ))}
       </ul>
@@ -337,24 +361,29 @@ function AnnouncementsStripMobile() {
   }
 
   return (
-    <ul className="space-y-3">
+<ul className="space-y-3">
       {items.map((n) => (
-        <li key={n.id} className="rounded-xl border bg-white p-4 shadow-sm active:scale-[0.995] transition">
-          <div className="flex items-center gap-2">
+        <li
+          key={n.id}
+          className="rounded-full border bg-white px-4 py-2 shadow-sm active:scale-[0.995] transition"
+        >
+          {/* 1行ピル：バッジ＋固定（赤）＋日付＋タイトル（省略表示） */}
+          <div className="flex min-h-[36px] items-center gap-2 overflow-hidden">
             <Badge type={n.category} />
-            {n.pinned && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">固定</span>}
-            <time className="ml-auto text-[11px] text-gray-500">
+            {n.pinned && (
+              <span className="rounded bg-rose-100 px-2 py-0.5 text-xs text-rose-700">固定</span>
+            )}
+            <time
+              className="shrink-0 text-[11px] text-gray-500"
+              dateTime={new Date(n.published_at).toISOString()}
+            >
               {new Date(n.published_at).toLocaleDateString()}
             </time>
+            <span className="mx-1 text-gray-300" aria-hidden="true">·</span>
+            <span className="min-w-0 flex-1 truncate font-medium text-[#023]" title={n.title}>
+              {n.title}
+            </span>
           </div>
-          <p className="mt-1 font-semibold leading-snug line-clamp-2">{n.title}</p>
-          <p className="mt-0.5 text-xs text-[#556] leading-relaxed line-clamp-2">{n.body_md.replace(/\n/g, ' ')}</p>
-          <Link
-            href="/news"
-            className="mt-1.5 inline-block text-xs text-[#00a1e9] underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00a1e9]/20 rounded"
-          >
-            詳細・一覧へ
-          </Link>
         </li>
       ))}
     </ul>

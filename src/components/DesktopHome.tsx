@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-// import Header from '@/components/shared/Header';  // ← 削除
-import { Mail, Sparkles, ShieldCheck, Images, ArrowRight, ExternalLink } from 'lucide-react';
+import { Mail, Sparkles, ShieldCheck, Images, ArrowRight, ExternalLink, Globe, Instagram, User } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
+import { supabase } from '@/lib/supabaseClient';
 
-// スクロール時のフェードイン処理
+/* ──────────────────────────────────────────────────────────────
+   スクロール時のフェードイン
+────────────────────────────────────────────────────────────── */
 function useFadeInOnScroll() {
   useEffect(() => {
     const targets = document.querySelectorAll<HTMLElement>('.fade-in-start');
@@ -16,7 +18,7 @@ function useFadeInOnScroll() {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           entry.target.classList.add('show');
-          observer.unobserve(entry.target); // 一度だけ
+          observer.unobserve(entry.target);
         }
       });
     };
@@ -26,37 +28,271 @@ function useFadeInOnScroll() {
   }, []);
 }
 
+/* ──────────────────────────────────────────────────────────────
+   Special Thanks: 型 & フック
+   - Supabase: table "special_thanks"
+────────────────────────────────────────────────────────────── */
+type ThanksPerson = {
+  id: string | number;
+  display_name: string;
+  avatar_url?: string | null;
+  tagline?: string | null;
+  homepage_url?: string | null;
+  twitter_url?: string | null;
+  instagram_url?: string | null;
+};
+
+function useSpecialThanks(limit = 24) {
+  const [items, setItems] = React.useState<ThanksPerson[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('special_thanks')
+          .select('id, display_name, avatar_url, tagline, homepage_url, twitter_url, instagram_url')
+          .order('display_name', { ascending: true })
+          .limit(limit);
+
+        if (error) throw error;
+
+        if (mounted && data && data.length > 0) {
+          setItems(data as ThanksPerson[]);
+        } else if (mounted) {
+          setItems([
+            { id: 's1', display_name: 'hanabi', tagline: 'White応募（初期）', twitter_url: 'https://x.com/' },
+            { id: 's2', display_name: 'momo', tagline: 'illustrator', homepage_url: 'https://example.com' },
+            { id: 's3', display_name: 'ao', tagline: 'digital artist', instagram_url: 'https://instagram.com/' },
+          ]);
+        }
+      } catch {
+        if (mounted) {
+          setItems([
+            { id: 's1', display_name: 'hanabi', tagline: 'White応募（初期）', twitter_url: 'https://x.com/' },
+            { id: 's2', display_name: 'momo', tagline: 'illustrator', homepage_url: 'https://example.com' },
+            { id: 's3', display_name: 'ao', tagline: 'digital artist', instagram_url: 'https://instagram.com/' },
+          ]);
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [limit]);
+
+  return { items, loading };
+}
+
+/* ──────────────────────────────────────────────────────────────
+   SNSアイコン（存在するリンクのみ表示）
+────────────────────────────────────────────────────────────── */
+function SocialIcons({ person }: { person: ThanksPerson }) {
+  return (
+    <div className="flex items-center gap-3 text-[#00a1e9]">
+      {person.homepage_url && (
+        <a
+          href={person.homepage_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${person.display_name} のホームページ`}
+          className="hover:opacity-80"
+        >
+          <Globe className="w-4 h-4" />
+        </a>
+      )}
+      {person.twitter_url && (
+        <a
+          href={person.twitter_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${person.display_name} のX（旧Twitter）`}
+          className="hover:opacity-80"
+        >
+          <FaXTwitter className="w-4 h-4" />
+        </a>
+      )}
+      {person.instagram_url && (
+        <a
+          href={person.instagram_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${person.display_name} のInstagram`}
+          className="hover:opacity-80"
+        >
+          <Instagram className="w-4 h-4" />
+        </a>
+      )}
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Special Thanks カード
+────────────────────────────────────────────────────────────── */
+function ThanksCard({ person }: { person: ThanksPerson }) {
+  return (
+    <div className="group rounded-2xl border bg-white p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition">
+      <div className="flex items-center gap-4">
+        <div className="relative h-14 w-14 shrink-0">
+          {person.avatar_url ? (
+            <Image
+              src={person.avatar_url}
+              alt={`${person.display_name}のアバター`}
+              fill
+              sizes="56px"
+              className="rounded-full object-cover"
+            />
+          ) : (
+            <div className="h-full w-full rounded-full bg-[#eaf6fd] flex items-center justify-center">
+              <User className="w-6 h-6 text-[#00a1e9]" />
+            </div>
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-[#023] truncate">{person.display_name}</p>
+          </div>
+          {person.tagline && (
+            <p className="mt-0.5 text-xs text-[#667] line-clamp-1">{person.tagline}</p>
+          )}
+          <div className="mt-2">
+            <SocialIcons person={person} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────
+   ニュース：デスクトップ専用 / フルブリード / 最大3件 / 1行ピル
+────────────────────────────────────────────────────────────── */
+function AnnouncementsStrip({ max = 3 }: { max?: number }) {
+  // 余裕をもって多めに取得（固定ソートのズレに備える）
+  const { items, loading } = useAnnouncements(max + 3);
+
+  // 例: 2025/08/31 形式
+  const fmt = useMemo(
+    () => new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+    []
+  );
+
+  // 固定（pinned）を先頭 → 公開日の新しい順
+  const ordered = useMemo(() => {
+    return [...items].sort((a: any, b: any) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return new Date(b.published_at).getTime() - new Date(a.published_at).getTime();
+    });
+  }, [items]);
+
+  const list = ordered.slice(0, Math.min(max, 3));
+
+  if (loading) {
+    return (
+      <ul className="space-y-3" aria-busy="true" aria-live="polite">
+        {[0, 1, 2].map((i) => (
+          <li key={i} className="rounded-full border bg-white px-4 py-2 shadow-sm">
+            <div className="h-4 w-2/3 animate-pulse rounded bg-gray-200/70" />
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  if (!list.length) {
+    return (
+      <div className="rounded-2xl border bg-white p-6 text-sm text-[#667]">
+        現在お知らせはありません。
+      </div>
+    );
+  }
+
+  return (
+    <ul className="space-y-3" aria-live="polite">
+      {list.map((n: any) => (
+        <li key={n.id} className="w-full">
+          <div className="flex min-h-[40px] items-center gap-2 rounded-full border bg-white px-4 py-2 shadow-sm">
+            <BadgeInline type={n.category as 'info' | 'update' | 'maintenance'} />
+
+            {n.pinned && (
+<span className="shrink-0 rounded bg-rose-100 px-2 py-0.5 text-xs text-rose-700">
+     固定
+   </span>
+            )}
+
+            <time
+              className="shrink-0 tabular-nums text-xs text-gray-500"
+              dateTime={new Date(n.published_at).toISOString()}
+              aria-label="公開日"
+            >
+              {fmt.format(new Date(n.published_at))}
+            </time>
+
+            <span className="mx-1 text-gray-300" aria-hidden="true">·</span>
+
+            <span className="min-w-0 flex-1 truncate font-medium text-[#023]" title={n.title}>
+              {n.title}
+            </span>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function BadgeInline({ type }: { type: 'info' | 'update' | 'maintenance' }) {
+  const styles: Record<string, string> = {
+    info: 'border-[#bcdfff]/60 bg-[#e8f4ff] text-[#005a9e]',
+    update: 'border-emerald-200 bg-[#eafbea] text-emerald-700',
+    maintenance: 'border-rose-200 bg-[#fff1f0] text-rose-700',
+  };
+  const label: Record<string, string> = {
+    info: 'Info',
+    update: 'Update',
+    maintenance: 'Maintenance',
+  };
+  return (
+    <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] ${styles[type]}`}>
+      {label[type]}
+    </span>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────
+   ページ本体（ニュースは md 以上のみ表示）
+────────────────────────────────────────────────────────────── */
 const DesktopHome = () => {
   useFadeInOnScroll();
 
   return (
     <div className="font-zen text-[#222] bg-white">
-      {/* Header は layout.tsx 側に任せる */}
-
-      {/* ヘッダー固定分の余白 */}
       <main className="pt-[70px]">
         {/* Hero */}
-<section className="relative flex flex-col items-center justify-center min-h-[82vh] text-center px-6 fade-in-start" aria-labelledby="hero-title">
-  <div className="pointer-events-none absolute left-0 right-0 top-[-70px] bottom-0 -z-10">
-    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(0,161,233,0.10),_transparent_60%),radial-gradient(ellipse_at_bottom,_rgba(0,161,233,0.06),_transparent_60%)]" />
-  </div>
+        <section
+          className="relative flex flex-col items-center justify-center min-h-[82vh] text-center px-6 fade-in-start"
+          aria-labelledby="hero-title"
+        >
+          <div className="pointer-events-none absolute left-0 right-0 top-[-70px] bottom-0 -z-10">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(0,161,233,0.10),_transparent_60%),radial-gradient(ellipse_at_bottom,_rgba(0,161,233,0.06),_transparent_60%)]" />
+          </div>
 
           <h1
             id="hero-title"
-            className="font-lilita font-bold leading-none text-[#00a1e9]
-                       text-[clamp(2.8rem,8vw,5rem)] tracking-tight"
+            className="font-lilita font-bold leading-none text-[#00a1e9] text-[clamp(2.8rem,8vw,5rem)] tracking-tight"
           >
             me-ish
           </h1>
           <p className="text-[#00a1e9]/80 uppercase tracking-[0.22em] mt-2 text-[clamp(0.85rem,1.6vw,1.1rem)]">
             — online gallery —
           </p>
+          <p className="mt-8 text-[clamp(1.1rem,2.6vw,1.8rem)] tracking-wide">アートを、もっと近くに</p>
 
-          <p className="mt-8 text-[clamp(1.1rem,2.6vw,1.8rem)] tracking-wide">
-            アートを、もっと近くに
-          </p>
-
-          {/* CTA */}
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link
               href="#gallery"
@@ -74,16 +310,19 @@ const DesktopHome = () => {
             </Link>
           </div>
 
-          {/* 下スクロール誘導（同一ページ内は <a> でOK） */}
           <a href="modal/about" className="mt-10 text-sm text-[#00a1e9]/70 hover:text-[#00a1e9] transition">
             もっと見る
           </a>
         </section>
 
-        {/* Announcements — お知らせ */}
-        <section id="news" className="fade-in-start py-10 px-6 bg-[#f9fbfe]" aria-labelledby="news-title">
-          <div className="max-w-[1040px] mx-auto">
-            <div className="flex items-baseline justify-between mb-4">
+        {/* News（デスクトップ専用・フルブリード） */}
+        <section
+          id="news"
+          className="hidden md:block fade-in-start py-8 mx-[calc(50%-50vw)] bg-[#f7fbff]"
+          aria-labelledby="news-title"
+        >
+          <div className="mx-auto w-full max-w-[1040px] px-6">
+            <div className="mb-4 flex items-center justify-between">
               <h2 id="news-title" className="text-[clamp(1.2rem,2.2vw,1.6rem)] font-bold text-[#00a1e9]">
                 お知らせ
               </h2>
@@ -95,8 +334,7 @@ const DesktopHome = () => {
                 一覧を見る
               </Link>
             </div>
-
-            <AnnouncementsStrip />
+            <AnnouncementsStrip max={3} />
           </div>
         </section>
 
@@ -115,7 +353,6 @@ const DesktopHome = () => {
               作品の“見せ方”と“出会い方”をデザインし、アーティストと鑑賞者の距離を縮めます。
             </p>
 
-            {/* 3つの価値 */}
             <div className="mt-12 grid gap-6 grid-cols-1 md:grid-cols-3">
               <div className="rounded-2xl border bg-white p-6 shadow-sm hover:shadow-md transition">
                 <Sparkles className="h-6 w-6 text-[#00a1e9]" />
@@ -194,16 +431,12 @@ const DesktopHome = () => {
           className="fade-in-start relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-[#dff6ff] via-white to-[#f0f9ff] px-6 py-20 text-center shadow-md transition hover:shadow-xl hover:scale-[1.01] group mx-6 md:mx-auto md:max-w-[1040px]"
           aria-labelledby="apply-title"
         >
-          {/* 全面Link（子要素必須） */}
           <Link href="/entry" className="absolute inset-0 z-10" aria-label="応募ページへ">
             <span className="sr-only">応募ページへ</span>
           </Link>
 
           <div className="relative z-20 max-w-xl mx-auto pointer-events-none">
-            <h2
-              id="apply-title"
-              className="text-[clamp(1.5rem,3.2vw,2.2rem)] font-bold text-[#00a1e9] leading-tight mb-3 group-hover:underline underline-offset-4"
-            >
+            <h2 id="apply-title" className="text-[clamp(1.5rem,3.2vw,2.2rem)] font-bold text-[#00a1e9] leading-tight mb-3 group-hover:underline underline-offset-4">
               あなたのアートを<br />世界に届けよう
             </h2>
             <p className="text-gray-600 text-[clamp(0.95rem,1.6vw,1.05rem)] mb-6">
@@ -214,6 +447,33 @@ const DesktopHome = () => {
             </div>
           </div>
         </section>
+
+{/* Special Thanks（見出し自体をリンク化・中央配置） */}
+<section
+  id="special-thanks-link"
+  className="fade-in-start py-10 px-6 bg-white"
+  aria-labelledby="thanks-link-title"
+>
+  <div className="max-w-[1040px] mx-auto">
+    <div className="rounded-2xl border bg-white p-10 shadow-sm flex flex-col items-center justify-center text-center">
+      <h2 id="thanks-link-title" className="text-2xl font-extrabold">
+        <Link
+          href="/special-thanks"
+          className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 bg-clip-text text-transparent focus:outline-none focus:ring-2 focus:ring-[#00a1e9] focus:ring-offset-2 rounded-lg px-2 py-1"
+          aria-label="Special Thanks ページへ"
+          title="Special Thanks ページへ"
+        >
+          <span>✨ Special Thanks ✨</span>
+        </Link>
+      </h2>
+
+      <p className="mt-2 text-sm text-[#445]">
+        me-ish初期ギャラリー(white)に応募してくださった皆さま
+      </p>
+    </div>
+  </div>
+</section>
+
 
         {/* FAQ */}
         <section id="faq" className="fade-in-start py-16 px-6 bg-[#f6f8fb]" aria-labelledby="faq-title">
@@ -283,7 +543,7 @@ const DesktopHome = () => {
         </section>
       </main>
 
-      {/* フェード用の最小スタイル（Tailwindと併用） */}
+      {/* フェード用の最小スタイル */}
       <style jsx>{`
         .fade-in-start {
           opacity: 0;
@@ -299,83 +559,6 @@ const DesktopHome = () => {
   );
 };
 
-function AnnouncementsStrip() {
-  const { items, loading } = useAnnouncements(3);
-
-  if (loading) {
-    return (
-      <ul className="grid gap-4 md:grid-cols-3" aria-busy="true" aria-live="polite">
-        {[0, 1, 2].map((i) => (
-          <li key={i} className="rounded-2xl border bg-white p-4 shadow-sm">
-            <div className="h-4 w-24 bg-gray-200/70 rounded animate-pulse mb-2" />
-            <div className="h-5 w-3/4 bg-gray-200/80 rounded animate-pulse mb-2" />
-            <div className="h-4 w-full bg-gray-200/60 rounded animate-pulse" />
-          </li>
-        ))}
-      </ul>
-    );
-  }
-
-  if (!items.length) {
-    return (
-      <div className="rounded-xl border bg-white p-6 text-sm text-[#667]">現在お知らせはありません。</div>
-    );
-  }
-
-  return (
-    <ul className="grid gap-4 md:grid-cols-3">
-      {items.map((n) => (
-        <li
-          key={n.id}
-          className="group rounded-2xl border bg-white p-4 shadow-sm hover:shadow-md transition"
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <Badge type={n.category} />
-            {n.pinned && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">固定</span>
-            )}
-            <time className="ml-auto text-xs text-gray-500">
-              {new Date(n.published_at).toLocaleDateString()}
-            </time>
-          </div>
-          <h3 className="font-semibold leading-snug line-clamp-2">{n.title}</h3>
-          <p className="mt-1 text-sm text-[#556] leading-relaxed line-clamp-2">
-            {n.body_md.replace(/\n/g, ' ')}
-          </p>
-          {n.link_url ? (
-            <a
-              href={n.link_url}
-              className="mt-2 inline-block text-sm text-[#00a1e9] underline underline-offset-4 group-hover:opacity-80"
-            >
-              詳しく見る
-            </a>
-          ) : (
-            <Link
-              href={`/news`}
-              className="mt-2 inline-block text-sm text-[#00a1e9] underline underline-offset-4 group-hover:opacity-80"
-            >
-              詳細・一覧へ
-            </Link>
-          )}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function Badge({ type }: { type: 'info' | 'update' | 'maintenance' }) {
-  const styles: Record<string, string> = {
-    info: 'bg-[#e8f4ff] text-[#005a9e]',
-    update: 'bg-[#eafbea] text-[#1b6e2b]',
-    maintenance: 'bg-[#fff1f0] text-[#a23a3a]',
-  };
-  const label: Record<string, string> = {
-    info: 'Info',
-    update: 'Update',
-    maintenance: 'Maintenance',
-  };
-  return <span className={`text-[10px] px-2 py-0.5 rounded ${styles[type]}`}>{label[type]}</span>;
-}
-
 export default DesktopHome;
+
 
