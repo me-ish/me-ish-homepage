@@ -295,7 +295,7 @@ const DesktopHome = () => {
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link
-              href="#gallery"
+              href="/white"
               className="inline-flex items-center gap-2 rounded-full bg-[#00a1e9] px-6 py-3 text-white font-semibold shadow hover:shadow-lg hover:-translate-y-0.5 transition"
               aria-label="ギャラリーを見る"
             >
@@ -392,7 +392,7 @@ const DesktopHome = () => {
     ギャラリーを見る
   </h2>
 
-  <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 max-w-[1040px] mx-auto">
+  <div className="grid gap-6 sm:gap-8 grid-cols-1 sm:grid-cols-2 max-w-[1040px] mx-auto">
     {[
       {
         img: '/images/white-thumb.jpg',
@@ -406,22 +406,35 @@ const DesktopHome = () => {
         desc: '“漂う”ように入れ替わる美術館風ギャラリー。日替わりで多彩な作品を展示。',
         link: '/float',
       },
-    ].map(({ img, title, desc, link }, i) => (
-      <Link key={title} href={link} className="group block text-left">
-        {/* ★ 直上の親を relative + サイズ付与（aspect比か高さ） */}
-        <span className="relative block aspect-[16/9] overflow-hidden rounded-xl">
+    ].map(({ img, title, desc, link }) => (
+      <Link
+        key={title}
+        href={link}
+        aria-label={`${title} へ`}
+        className="group block text-left rounded-2xl bg-white shadow-sm ring-1 ring-gray-100
+                   hover:shadow-md transition focus-visible:outline-none
+                   focus-visible:ring-2 focus-visible:ring-[#00a1e9] focus-visible:ring-offset-2"
+      >
+        {/* hoverズームのため overflow-hidden だけ付与 */}
+        <div className="overflow-hidden rounded-2xl">
           <Image
             src={img}
             alt={`${title} thumbnail`}
-            fill
-            sizes="(max-width: 640px) 100vw, 50vw"
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-            priority={i === 0} // ヒーロー的に最初だけ優先読み込み
+            width={960}              // 16:9 の想定サイズ（任意で変更OK）
+            height={540}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="w-full h-auto object-cover transition-transform duration-300
+                       group-hover:scale-105 motion-reduce:transition-none motion-reduce:transform-none"
+            // priority は外す（プリロード警告の元）
           />
-        </span>
+        </div>
 
-        <h3 className="mt-3 text-lg font-semibold">{title}</h3>
-        <p className="mt-1 text-sm text-[#445]">{desc}</p>
+        <div className="p-4 sm:p-5">
+          <h3 className="text-base sm:text-lg font-semibold">{title}</h3>
+          <p className="mt-1 text-[13px] sm:text-sm text-[#445] line-clamp-2">
+            {desc}
+          </p>
+        </div>
       </Link>
     ))}
   </div>
