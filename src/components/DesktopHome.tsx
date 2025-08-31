@@ -379,51 +379,53 @@ const DesktopHome = () => {
           </div>
         </section>
 
-        {/* Gallery */}
-        <section id="gallery" className="fade-in-start py-16 px-6 bg-[#f9fbfd] text-center" aria-labelledby="gallery-title">
-          <h2 id="gallery-title" className="font-bold text-[clamp(1.6rem,3.4vw,2.2rem)] text-[#00a1e9] mb-8">
-            ギャラリーを見る
-          </h2>
+{/* Gallery */}
+<section
+  id="gallery"
+  className="fade-in-start py-16 px-6 bg-[#f9fbfd] text-center"
+  aria-labelledby="gallery-title"
+>
+  <h2
+    id="gallery-title"
+    className="font-bold text-[clamp(1.6rem,3.4vw,2.2rem)] text-[#00a1e9] mb-8"
+  >
+    ギャラリーを見る
+  </h2>
 
-          <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 max-w-[1040px] mx-auto">
-            {[
-              {
-                img: '/images/white-thumb.jpg',
-                title: 'White Gallery',
-                desc: '「意識の空間」をイメージした真っ白なギャラリー。10作品限定の特別展示。',
-                link: '/white',
-              },
-              {
-                img: '/images/float-thumb.jpg',
-                title: 'Float Gallery',
-                desc: '“漂う”ように入れ替わる美術館風ギャラリー。日替わりで多彩な作品を展示。',
-                link: '/float',
-              },
-            ].map(({ img, title, desc, link }) => (
-              <Link
-                href={link}
-                key={title}
-                className="group block overflow-hidden rounded-2xl bg-white border shadow-sm hover:shadow-lg hover:-translate-y-1 transition"
-                aria-label={`${title}へ`}
-              >
-                <div className="relative aspect-[16/9]">
-                  <Image
-                    src={img}
-                    alt={title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 520px"
-                    className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                    priority={false}
-                  />
-                </div>
-                <div className="p-5 text-left">
-                  <h3 className="text-[1.05rem] font-semibold text-[#00a1e9]">{title}</h3>
-                  <p className="mt-1 text-sm text-[#445] leading-relaxed">{desc}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+  <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 max-w-[1040px] mx-auto">
+    {[
+      {
+        img: '/images/white-thumb.jpg',
+        title: 'White Gallery',
+        desc: '「意識の空間」をイメージした真っ白なギャラリー。10作品限定の特別展示。',
+        link: '/white',
+      },
+      {
+        img: '/images/float-thumb.jpg',
+        title: 'Float Gallery',
+        desc: '“漂う”ように入れ替わる美術館風ギャラリー。日替わりで多彩な作品を展示。',
+        link: '/float',
+      },
+    ].map(({ img, title, desc, link }, i) => (
+      <Link key={title} href={link} className="group block text-left">
+        {/* ★ 直上の親を relative + サイズ付与（aspect比か高さ） */}
+        <span className="relative block aspect-[16/9] overflow-hidden rounded-xl">
+          <Image
+            src={img}
+            alt={`${title} thumbnail`}
+            fill
+            sizes="(max-width: 640px) 100vw, 50vw"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            priority={i === 0} // ヒーロー的に最初だけ優先読み込み
+          />
+        </span>
+
+        <h3 className="mt-3 text-lg font-semibold">{title}</h3>
+        <p className="mt-1 text-sm text-[#445]">{desc}</p>
+      </Link>
+    ))}
+  </div>
+</section>
 
         {/* 応募導線 */}
         <section

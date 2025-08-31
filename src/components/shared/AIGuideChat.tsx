@@ -1,3 +1,4 @@
+// src/components/shared/AIGuideChat.tsx
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -22,7 +23,7 @@ declare global {
   }
 }
 
-/* ===== Props（どちらの開閉APIもOKに） ===== */
+/* ===== Props ===== */
 export type AIGuideChatProps = {
   initialMessage?: string;
 
@@ -42,16 +43,19 @@ export default function AIGuideChat({
   initialMessage,
   controlledOpen,
   onOpenChange,
-  // 旧API互換
+  // 旧API
   open,
   onClose,
   defaultOpen = false,
 }: AIGuideChatProps) {
   /* -------------------------------
-   *  開閉（制御/非制御の判定を厳密に）
+   * 開閉（ハンドラ同梱時のみ制御扱い）
    * ----------------------------- */
-  const hasNewControl = typeof controlledOpen === 'boolean';
-  const hasOldControl = typeof open === 'boolean' && (!!onOpenChange || !!onClose);
+  const hasNewControl =
+    typeof controlledOpen === 'boolean' && typeof onOpenChange === 'function';
+  const hasOldControl =
+    typeof open === 'boolean' && typeof onOpenChange === 'function'; // onClose だけでは制御にしない
+
   const isControlled = hasNewControl || hasOldControl;
   const controlled = hasNewControl ? controlledOpen : hasOldControl ? open : undefined;
 
@@ -59,22 +63,16 @@ export default function AIGuideChat({
   const isOpen = isControlled ? Boolean(controlled) : uncontrolledOpen;
 
   const setOpen = (next: boolean) => {
-    // 制御モードでもハンドラが無ければ内部状態を更新（フォールバック）
-    if (!isControlled || (!onOpenChange && !onClose)) {
+    if (isControlled) {
+      onOpenChange?.(next);   // 親に通知
+      if (!next) onClose?.(); // 旧API互換のクローズ通知
+    } else {
       setUncontrolledOpen(next);
     }
-    onOpenChange?.(next);
-    if (!next) onClose?.(); // 旧APIの onClose 互換
   };
 
   /* -------------------------------
-   *  マウント判定（SSR/CSR差を吸収）
-   * ----------------------------- */
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  /* -------------------------------
-   *  会話の状態
+   * 会話の状態
    * ----------------------------- */
   const [input, setInput] = useState('');
   const [reply, setReply] = useState('');
@@ -82,7 +80,7 @@ export default function AIGuideChat({
   const [hasSentInitial, setHasSentInitial] = useState(false);
 
   /* -------------------------------
-   *  音声認識（マウント後に判定）
+   * 音声認識（マウント後にだけセット）
    * ----------------------------- */
   type SR = ISpeechRecognition;
   const recognitionRef = useRef<SR | null>(null);
@@ -90,9 +88,10 @@ export default function AIGuideChat({
   const [srSupported, setSrSupported] = useState(false);
 
   useEffect(() => {
-    if (!mounted) return;
+    // Mic対応可否はマウント後に判定（SSR差分防止）
     const supported =
-      !!window?.webkitSpeechRecognition || !!window?.SpeechRecognition;
+      typeof window !== 'undefined' &&
+      (!!window.webkitSpeechRecognition || !!window.SpeechRecognition);
     setSrSupported(supported);
 
     if (!supported) return;
@@ -116,38 +115,34 @@ export default function AIGuideChat({
     recognition.onend = () => setIsRecording(false);
 
     recognitionRef.current = recognition;
-
     return () => {
       try {
         recognition.stop();
       } catch {}
       recognitionRef.current = null;
     };
-  }, [mounted]);
+  }, []);
 
   /* -------------------------------
-   *  初回メッセージがあれば送る（マウント後）
+   * 初回メッセージ（マウント後に一度だけ）
    * ----------------------------- */
   useEffect(() => {
-    if (!mounted) return;
-    if (initialMessage && !hasSentInitial) {
-      void handleSubmit(initialMessage);
-      setHasSentInitial(true);
-      setOpen(true);
-    }
+    if (!initialMessage || hasSentInitial) return;
+    // 自動送信 & パネルを開く
+    void handleSubmit(initialMessage);
+    setHasSentInitial(true);
+    setOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, initialMessage, hasSentInitial]);
+  }, [initialMessage, hasSentInitial]);
 
   /* -------------------------------
-   *  送信処理
+   * 送信処理
    * ----------------------------- */
   const handleSubmit = async (text: string) => {
     const q = text?.trim();
     if (!q) return;
 
-    let alive = true;
     setLoading(true);
-
     try {
       const res = await fetch('/api/ai-guide', {
         method: 'POST',
@@ -155,14 +150,13 @@ export default function AIGuideChat({
         body: JSON.stringify({ message: q }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!alive) return;
-
       const answer: string = data?.reply ?? '（応答を取得できませんでした）';
+
       setReply(answer);
       setInput('');
 
-      // TTS（対応ブラウザのみ・マウント後）
-      if ('speechSynthesis' in window) {
+      // TTS（対応ブラウザのみ）
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         try {
           window.speechSynthesis.cancel();
           const utt = new SpeechSynthesisUtterance(answer);
@@ -173,12 +167,8 @@ export default function AIGuideChat({
     } catch {
       setReply('エラーが発生しました。少し時間をおいてお試しください。');
     } finally {
-      if (alive) setLoading(false);
+      setLoading(false);
     }
-
-    return () => {
-      alive = false;
-    };
   };
 
   const startListening = () => {
@@ -199,14 +189,14 @@ export default function AIGuideChat({
   };
 
   /* -------------------------------
-   *  Render（常に同じラッパーを返す＝水和安定）
+   * Render
    * ----------------------------- */
   return (
-    <div className={`fixed bottom-2 right-2 z-50 ${isOpen ? 'w-[320px]' : ''}`}>
+    <div className={`fixed bottom-2 right-2 z-[9999] ${isOpen ? 'w-[320px]' : ''}`}>
       {!isOpen && (
         <button
           onClick={() => setOpen(true)}
-          className="flex items-center gap-2 bg-white border border-cyan-400 text-cyan-600 px-4 py-2 rounded-full shadow hover:bg-cyan-50"
+          className="flex items-center gap-2 bg-white border border-cyan-400 text-cyan-600 px-4 py-2 rounded-full shadow hover:bg-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-2"
           aria-label="ガイドAIを開く"
           type="button"
         >
@@ -224,7 +214,7 @@ export default function AIGuideChat({
         >
           <button
             onClick={() => setOpen(false)}
-            className="absolute top-1 right-2 text-sm text-cyan-600 hover:underline inline-flex items-center gap-1"
+            className="absolute top-1 right-2 text-sm text-cyan-600 hover:underline inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-2 rounded"
             aria-label="ガイドAIを閉じる"
             type="button"
           >
@@ -244,8 +234,8 @@ export default function AIGuideChat({
           />
 
           <div className="flex items-center gap-2 mt-2">
-            {/* Micボタンはマウント後にだけ判定して描画（SSR差分防止） */}
-            {mounted && srSupported && (
+            {/* Micはマウント後に対応判定して描画（SSR差分を防ぐ） */}
+            {srSupported && (
               <button
                 onClick={isRecording ? stopListening : startListening}
                 className="text-cyan-600 hover:text-cyan-800"
@@ -267,8 +257,8 @@ export default function AIGuideChat({
             </button>
           </div>
 
-          {reply && (
-            <div className="mt-3 p-2 bg-gray-100 rounded text-sm whitespace-pre-line">
+          {!!reply && (
+            <div className="mt-3 p-2 bg-gray-100 rounded text-sm whitespace-pre-line" aria-live="polite">
               {reply}
             </div>
           )}
