@@ -4,17 +4,16 @@ import { Resend } from 'resend';
 import { z } from 'zod';
 import { generateSubmitEmail, type SubmitEmailArgs } from '@/lib/emailTemplates/submit';
 
-// ★ ここは環境ごとに設定
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.RESEND_FROM ?? 'me-ish Gallery <noreply@me-ish.art>';
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL ?? 'support@me-ish.art';
 const OPS_BCC = process.env.OP_BCC ?? ''; // 例: 'info@me-ish.art'（不要なら未設定）
 
-// 旧・新どちらの入力にも対応できるスキーマ
+// 入力は最小（to,name）だけでもOK。詳細フィールドは任意。
 const SubmitInputSchema = z.object({
   to: z.string().email(),
   name: z.string().min(1),
-  // 以下は詳細テンプレ用（任意）
+
   entryTitle: z.string().optional(),
   galleryType: z.enum(['WHITE', 'FLOAT', 'SPECIAL']).optional(),
   salesType: z.enum(['normal', 'nft']).optional(),
@@ -42,34 +41,24 @@ export async function POST(req: Request) {
 
     const input = parsed.data;
 
-    // 詳細指定が一切なければ、後方互換（nameのみ）で送る
-    const hasDetails =
-      input.entryTitle !== undefined ||
-      input.galleryType !== undefined ||
-      input.salesType !== undefined ||
-      input.priceYen !== undefined ||
-      input.editionTotal !== undefined ||
-      input.submittedAtISO !== undefined ||
-      input.manageUrl !== undefined ||
-      input.editUrl !== undefined;
+    // ★ ここがポイント：必ず「詳細版」引数を組み立てる
+    const args: SubmitEmailArgs = {
+      name: input.name,
+      entryTitle: input.entryTitle,
+      galleryType: input.galleryType,
+      salesType: input.salesType,
+      priceYen: input.priceYen ?? null,
+      editionTotal: input.editionTotal ?? null,
+      submittedAtISO: input.submittedAtISO,
+      manageUrl: input.manageUrl,
+      editUrl: input.editUrl,
+      faqUrl: input.faqUrl,             // テンプレ側のデフォルトあり
+      termsUrl: input.termsUrl,         // 同上
+      supportEmail: input.supportEmail ?? SUPPORT_EMAIL,
+      slaHours: input.slaHours,         // 未指定ならテンプレ側で72h
+    };
 
-    const { subject, html, text } = hasDetails
-      ? generateSubmitEmail({
-          name: input.name,
-          entryTitle: input.entryTitle,
-          galleryType: input.galleryType,
-          salesType: input.salesType,
-          priceYen: input.priceYen,
-          editionTotal: input.editionTotal,
-          submittedAtISO: input.submittedAtISO,
-          manageUrl: input.manageUrl,
-          editUrl: input.editUrl,
-          faqUrl: input.faqUrl,
-          termsUrl: input.termsUrl,
-          supportEmail: input.supportEmail ?? SUPPORT_EMAIL,
-          slaHours: input.slaHours,
-        } satisfies SubmitEmailArgs)
-      : generateSubmitEmail(input.name);
+    const { subject, html, text } = generateSubmitEmail(args);
 
     const { data, error } = await resend.emails.send({
       from: FROM,
@@ -83,18 +72,13 @@ export async function POST(req: Request) {
         'List-Unsubscribe': `<mailto:${SUPPORT_EMAIL}>`,
         'X-Meish-Template': 'submit',
       },
-      // Resendのtags（対応環境なら）
-      tags: [{ name: 'category', value: 'submit' }],
+      // tags: [{ name: 'category', value: 'submit' }], // SDKが古くて型NGならコメントアウト
     });
+
     if (error) throw error;
 
-    // SDKのレスポンスをそのまま返さず、必要最小限だけ返す
-return NextResponse.json(
-  { id: data?.id ?? null, status: 'sent' },
-  { status: 200 }
-);
+    return NextResponse.json({ id: data?.id ?? null, status: 'sent' }, { status: 200 });
   } catch (err: any) {
-    // 機密は出さず、短いエラーを返す
     console.error('submit email error:', err?.message ?? err);
     return NextResponse.json(
       { error: 'Internal error while sending email' },
