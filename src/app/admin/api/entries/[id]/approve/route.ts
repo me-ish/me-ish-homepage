@@ -1,64 +1,61 @@
-// app/admin/api/entries/[id]/approve/route.ts
-import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+// src/app/admin/api/entries/[id]/approve/route.ts
+import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { isAdminEmail } from '@/lib/isAdmin';
-import { EntryApprove } from '@/lib/schemas/entry';
 
-async function requireAdmin() {
-  const supabase = createRouteHandlerClient({ cookies });
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email)) return null;
-  return user;
+function baseUrl() {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL!;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'http://localhost:3000';
 }
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const user = await requireAdmin();
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  // bodyは現在未使用だが将来拡張
-  const _ = await req.json().catch(() => ({}));
-  const ok = EntryApprove.safeParse(_).success;
-  if (!ok) return NextResponse.json({ error: 'invalid' }, { status: 400 });
-
+export async function POST(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   const id = Number(params.id);
-  const admin = supabaseAdmin();
-
-  // 対象エントリ取得
-  const { data: entry, error: gErr } = await admin.from('entries').select('*').eq('id', id).single();
-  if (gErr || !entry) return NextResponse.json({ error: 'not_found' }, { status: 404 });
-
-  const fileName: string = String(entry.file_name ?? '').trim();
-  if (!fileName) return NextResponse.json({ error: 'no_file' }, { status: 400 });
-
-  // 1) 画像を加工キューへコピー（重複は許容）
-  const copyRes = await admin.storage.from('artworks').copy(fileName, `pending-processing/${fileName}`);
-  if (copyRes.error && !copyRes.error.message.includes('already exists')) {
-    return NextResponse.json({ error: 'storage_copy_failed' }, { status: 500 });
+  if (!Number.isFinite(id)) {
+    return NextResponse.json({ error: 'invalid id' }, { status: 400 });
   }
 
-  // 2) メタJSONを投入
-  const meta = JSON.stringify({ artistName: entry.artist_name, filename: fileName });
-  const upRes = await admin.storage
-    .from('processing-meta')
-    .upload(`pending/${id}.json`, new Blob([meta], { type: 'application/json' }), { upsert: true });
-  if (upRes.error) return NextResponse.json({ error: 'meta_upload_failed' }, { status: 500 });
-
-  // 3) DB 承認
-  const now = new Date().toISOString();
-  const { data: updated, error: uErr } = await admin
+  // 1) 承認フラグ更新 & 送信用データ取得
+  const admin = supabaseAdmin();
+  const { data, error } = await admin
     .from('entries')
-    .update({ confirmed: true, confirmed_at: now, rejected_at: null, reject_reason: null })
+    .update({
+      confirmed: true,
+      confirmed_at: new Date().toISOString(),
+      // 他に必要な更新があればここに
+    })
     .eq('id', id)
-    .select('*')
+    .select('id, email, artist_name, external_user_id, confirmed, confirmed_at, title, image_url, gallery_type')
     .single();
-  if (uErr) return NextResponse.json({ error: 'approve_failed' }, { status: 500 });
 
-  // 4) 合格メール（設定があれば送る。失敗は無視して200を返す）
+  if (error || !data) {
+    return NextResponse.json({ error: error?.message || 'update failed' }, { status: 500 });
+  }
+
+  // 2) 承認メール送信（失敗しても承認自体は維持）
   try {
-    // 既存の送信基盤がResendならここで呼ぶ／なければ内部APIでもOK
-    // await sendPassMail(entry.email, entry.artist_name, entry.external_user_id);
-  } catch { /* noop */ }
+    await fetch(`${baseUrl()}/api/send-email/pass`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-meish-admin-token': process.env.ADMIN_API_TOKEN!, // 内部API認証
+      },
+      body: JSON.stringify({
+        to: data.email,
+        name: data.artist_name,
+        externalUserId: data.external_user_id,
+        // 必要に応じて上書き
+        // siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+        // supportEmail: 'support@me-ish.art',
+      }),
+      cache: 'no-store',
+    });
+  } catch (e) {
+    console.error('[approve] pass mail failed:', e);
+    // ここで 500 にせず、承認は成功として返す（必要ならログだけ）
+  }
 
-  return NextResponse.json(updated);
+  return NextResponse.json(data, { status: 200 });
 }

@@ -59,6 +59,7 @@ const Submit = z.object({
 const Pass = z.object({
   to: z.string().email(),
   name: z.string().min(1),
+  externalUserId: z.string().min(1),
   title: z.string().min(1),
   manageUrl: z.string().url().optional(),
 });
