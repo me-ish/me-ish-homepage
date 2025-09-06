@@ -55,20 +55,28 @@ const Submit = z.object({
   slaHours: z.coerce.number().int().positive().optional(),
 });
 
-// pass / reject
-const Pass = z.object({
-  to: z.string().email(),
-  name: z.string().min(1),
-  externalUserId: z.string().min(1),
-  title: z.string().min(1),
-  manageUrl: z.string().url().optional(),
-});
+// reject（却下メール）
 const Reject = z.object({
   to: z.string().email(),
   name: z.string().min(1),
   title: z.string().min(1),
   reason: z.string().max(500).optional(),
-});
+  // もしテンプレで管理URLを使うなら任意で持たせてOK
+  manageUrl: z.string().url().optional(),
+}).passthrough();
+
+// pass（承認メール）
+const Pass = z.object({
+  to: z.string().email(),
+  name: z.string().min(1),
+  externalUserId: z.string().min(1),   // ★これ必須
+  // 任意（上書きしたい時だけ送る）
+  siteUrl: z.string().url().optional(),
+  supportEmail: z.string().email().optional(),
+  faqUrl: z.string().url().optional(),
+  termsUrl: z.string().url().optional(),
+}).passthrough();
+
 
 // exhibit start / end
 const ExhibitStart = z.object({
