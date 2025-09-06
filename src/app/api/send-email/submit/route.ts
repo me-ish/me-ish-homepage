@@ -19,11 +19,10 @@ const OP_BCC = (process.env.OP_BCC || '')
   .map((s) => s.trim())
   .filter(Boolean);
 
-/** 内部呼び出し専用トークン。クライアント直叩き防止用 */
+// /app/api/send-email/submit/route.ts の認証部分だけ差し替え
 const ADMIN_API_TOKEN = (process.env.ADMIN_API_TOKEN || '').trim();
 
-/* ---------- Auth (header token, timing-safe) ---------- */
-function getIncomingToken(req: Request) {
+function incomingToken(req: Request) {
   const h1 = req.headers.get('x-meish-admin-token')?.trim();
   const h2 = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
   return h1 || h2 || '';
@@ -31,18 +30,16 @@ function getIncomingToken(req: Request) {
 
 function assertAdmin(req: Request): NextResponse | void {
   if (!ADMIN_API_TOKEN) {
-    return NextResponse.json(
-      { error: 'server misconfig: ADMIN_API_TOKEN' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'server misconfig: ADMIN_API_TOKEN' }, { status: 500 });
   }
-  const token = getIncomingToken(req);
+  const token = incomingToken(req);
   const a = Buffer.from(ADMIN_API_TOKEN);
-  const b = Buffer.from(token);
+  const b = Buffer.from(token || '');
   if (a.length !== b.length || !timingSafeEqual(a, b)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 }
+
 
 /* ---------- Validation ---------- */
 const Schema = z.object({
