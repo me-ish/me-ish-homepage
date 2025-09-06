@@ -10,7 +10,7 @@ import ConfirmPage from '@/components/entryForm/ConfirmPage';
 import CompletePage from '@/components/entryForm/CompletePage';
 import { supabase } from '@/lib/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
-import { sendSubmitEmailAction } from '@/app/entry/_actions/sendSubmitEmail';
+
 
 export type FormValues = {
   artistName: string;
@@ -45,23 +45,10 @@ const slideVariants = {
 const FormWrapper = () => {
   const methods = useForm<FormValues>({
     defaultValues: {
-      artistName: '',
-      email: '',
-      snsLinks: [''],
-      homepageUrl: '',
-      twitterUrl: '',
-      instagramUrl: '',
-      title: '',
-      image: undefined as unknown as FileList,
-      description: '',
-      isForSale: '',
-      saleType: '',
-      price: '',
-      gallery_type: '',
-      displayPlan: '',
-      agreeTerms: false,
-      confirmRights: false,
-      confirmOriginal: false,
+      artistName: '', email: '', snsLinks: [''], homepageUrl: '',
+      twitterUrl: '', instagramUrl: '', title: '', image: undefined as unknown as FileList,
+      description: '', isForSale: '', saleType: '', price: '', gallery_type: '', displayPlan: '',
+      agreeTerms: false, confirmRights: false, confirmOriginal: false,
     },
     shouldUnregister: false,
     mode: 'onChange',
@@ -74,57 +61,45 @@ const FormWrapper = () => {
   const [direction, setDirection] = useState<'left' | 'right'>('right');
   const [preview, setPreview] = useState<string | null>(null);
   const [localImageFile, setLocalImageFile] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   const getStepFields = (step: number, isForSale: string): (keyof FormValues)[] => {
     switch (step) {
-      case 1:
-        return ['artistName', 'email'];
-      case 2:
-        return ['gallery_type', 'title', 'image'];
-      case 3:
-        return [
-          'isForSale',
-          'agreeTerms',
-          'confirmRights',
-          'confirmOriginal',
-          ...(isForSale === 'yes'
-            ? (['saleType', 'price', 'displayPlan'] as (keyof FormValues)[])
-            : []),
-        ];
-      default:
-        return [];
+      case 1: return ['artistName', 'email'];
+      case 2: return ['gallery_type', 'title', 'image'];
+      case 3: return [
+        'isForSale', 'agreeTerms', 'confirmRights', 'confirmOriginal',
+        ...(isForSale === 'yes' ? (['saleType', 'price', 'displayPlan'] as (keyof FormValues)[]) : [])
+      ];
+      default: return [];
     }
   };
 
-  const nextStep = async () => {
-    const isForSale = methods.getValues('isForSale');
-    const fieldsToValidate = getStepFields(step, isForSale);
-    const ok = await methods.trigger(fieldsToValidate, { shouldFocus: true });
+const nextStep = async () => {
+  const isForSale = methods.getValues('isForSale');
+  const fieldsToValidate = getStepFields(step, isForSale);
+  const ok = await methods.trigger(fieldsToValidate, { shouldFocus: true });
 
-    if (!ok) {
-      const first = fieldsToValidate.find((name) => methods.getFieldState(name).invalid);
-      if (first) {
-        const el = document.querySelector(`[name="${String(first)}"]`) as HTMLElement | null;
-        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      return;
+  if (!ok) {
+    const first = fieldsToValidate.find((name) => methods.getFieldState(name).invalid);
+    if (first) {
+      const el = document.querySelector(`[name="${String(first)}"]`) as HTMLElement | null;
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    setDirection('right');
-    setStep((prev) => prev + 1);
-  };
+    return;
+  }
+  setDirection('right');
+  setStep((prev) => prev + 1);
+};
 
-  // ★ 追加：戻る処理
-  const prevStep = () => {
-    setDirection('left');
-    setStep((prev) => Math.max(1, prev - 1));
-  };
+// ★ 追加：戻る処理
+const prevStep = () => {
+  setDirection('left');
+  setStep((prev) => Math.max(1, prev - 1));
+};
 
-  const onSubmit = async (
-    data: FormValues & { meish_fee_yen?: number; artist_reward_yen?: number }
-  ) => {
-    if (submitting) return;
-    setSubmitting(true);
+
+
+  const onSubmit = async (data: FormValues & { meish_fee_yen?: number; artist_reward_yen?: number }) => {
     try {
       const externalUserId = uuidv4();
       const snsLinksJson = JSON.stringify({
@@ -133,12 +108,8 @@ const FormWrapper = () => {
         instagram: data.instagramUrl || '',
       });
 
-      const imageFile =
-        data.image instanceof FileList && data.image.length > 0 ? data.image[0] : null;
-      if (!imageFile) {
-        alert('画像ファイルが見つかりませんでした');
-        return;
-      }
+      const imageFile = data.image instanceof FileList && data.image.length > 0 ? data.image[0] : null;
+      if (!imageFile) return alert('画像ファイルが見つかりませんでした');
 
       const now = new Date();
       let displayStartAt: string | null = null;
@@ -158,75 +129,48 @@ const FormWrapper = () => {
       const sanitizedBase = baseName.normalize('NFKC').replace(/[^\w.-]/g, '_');
       const fileName = `${Date.now()}_${sanitizedBase}.${extension}`;
 
-      const uploadRes = await supabase.storage
-        .from('artworks')
-        .upload(fileName, imageFile, { upsert: true });
-      if (uploadRes.error || !uploadRes.data) {
-        alert('画像のアップロードに失敗しました');
-        return;
-      }
+      const uploadRes = await supabase.storage.from('artworks').upload(fileName, imageFile, { upsert: true });
+      if (uploadRes.error || !uploadRes.data) return alert('画像のアップロードに失敗しました');
 
-      const { publicUrl } = supabase.storage.from('artworks').getPublicUrl(uploadRes.data.path)
-        .data;
-      if (!publicUrl) {
-        alert('画像URLの取得に失敗しました');
-        return;
-      }
+      const { publicUrl } = supabase.storage.from('artworks').getPublicUrl(uploadRes.data.path).data;
+      if (!publicUrl) return alert('画像URLの取得に失敗しました');
 
       const type = data.isForSale === 'yes' ? data.saleType : 'none';
       const displayPlan = data.isForSale === 'yes' ? data.displayPlan || 'free' : 'free';
 
-      const { error } = await supabase.from('entries').insert([
-        {
-          artist_name: data.artistName,
-          email: data.email,
-          sns_links: snsLinksJson,
-          title: data.title,
-          description: data.description || '',
-          is_for_sale: data.isForSale === 'yes',
-          sale_type: data.saleType || '',
-          type,
-          display_plan: displayPlan,
-          price: data.price ? Number(data.price) : null,
-          image_url: publicUrl,
-          gallery_type: data.gallery_type || '',
-          display_start_at: displayStartAt,
-          display_end_at: displayEndAt,
-          file_name: fileName,
-          external_user_id: externalUserId,
-          edition_total: data.editionTotal ? Number(data.editionTotal) : null,
-          edition_sold: 0,
-          meish_fee_yen: data.meish_fee_yen ?? null,
-          artist_reward_yen: data.artist_reward_yen ?? null,
-        },
-      ]);
+      const { error } = await supabase.from('entries').insert([{
+        artist_name: data.artistName,
+        email: data.email,
+        sns_links: snsLinksJson,
+        title: data.title,
+        description: data.description || '',
+        is_for_sale: data.isForSale === 'yes',
+        sale_type: data.saleType || '',
+        type,
+        display_plan: displayPlan,
+        price: data.price ? Number(data.price) : null,
+        image_url: publicUrl,
+        gallery_type: data.gallery_type || '',
+        display_start_at: displayStartAt,
+        display_end_at: displayEndAt,
+        file_name: fileName,
+        external_user_id: externalUserId,
+        edition_total: data.editionTotal ? Number(data.editionTotal) : null,
+        edition_sold: 0,
+        meish_fee_yen: data.meish_fee_yen ?? null,
+        artist_reward_yen: data.artist_reward_yen ?? null,
+      }]);
 
-      if (error) {
-        alert(`登録に失敗しました: ${error.message}`);
-        return;
-      }
-
-      // ここでサーバーアクション経由で内部APIを呼ぶ（ブラウザ直叩き禁止）
-      try {
-        await sendSubmitEmailAction({
-          to: data.email,
-          name: data.artistName,
-          // 必要に応じて任意パラメータも渡せます:
-          // manageUrl: `https://www.me-ish.art/mypage/entries`,
-          // faqUrl: 'https://www.me-ish.art/faq',
-          // termsUrl: 'https://www.me-ish.art/footer/terms',
-          // slaHours: 72,
-        });
-      } catch (e) {
-        // メール失敗だけでUXを止めない（ログだけ）
-        console.error('sendSubmitEmailAction error:', e);
-      }
-
+      if (error) return alert(`登録に失敗しました: ${error.message}`);
       setStep(5);
+
+      await fetch('/api/send-email/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: data.email, name: data.artistName, externalUserId }),
+      });
     } catch (e: any) {
       alert(`送信中にエラーが発生しました：${e.message}`);
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -239,83 +183,36 @@ const FormWrapper = () => {
           <form onSubmit={methods.handleSubmit(onSubmit)}>
             <AnimatePresence mode="wait" custom={direction}>
               {step === 1 && (
-                <motion.div
-                  key="step1"
-                  custom={direction}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.4 }}
-                >
+                <motion.div key="step1" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4 }}>
                   <h2 className="text-2xl font-bold mb-6">STEP 1：アーティスト情報</h2>
                   <Step1_ArtistInfo />
                   <div className="flex justify-end mt-6">
-                    <button type="button" onClick={nextStep} className="button">
-                      次へ
-                    </button>
+                    <button type="button" onClick={nextStep} className="button">次へ</button>
                   </div>
                 </motion.div>
               )}
               {step === 2 && (
-                <motion.div
-                  key="step2"
-                  custom={direction}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.4 }}
-                >
+                <motion.div key="step2" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4 }}>
                   <h2 className="text-2xl font-bold mb-6">STEP 2：作品情報</h2>
-                  <Step2_WorkInfo
-                    preview={preview}
-                    setPreview={setPreview}
-                    localImageFile={localImageFile}
-                    setLocalImageFile={setLocalImageFile}
-                  />
+                  <Step2_WorkInfo preview={preview} setPreview={setPreview} localImageFile={localImageFile} setLocalImageFile={setLocalImageFile} />
                   <div className="flex justify-between mt-6">
-                    <button type="button" onClick={prevStep} className="button">
-                      戻る
-                    </button>
-                    <button type="button" onClick={nextStep} className="button">
-                      次へ
-                    </button>
+                    <button type="button" onClick={prevStep} className="button">戻る</button>
+                    <button type="button" onClick={nextStep} className="button">次へ</button>
                   </div>
                 </motion.div>
               )}
               {step === 3 && (
-                <motion.div
-                  key="step3"
-                  custom={direction}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.4 }}
-                >
+                <motion.div key="step3" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4 }}>
                   <h2 className="text-2xl font-bold mb-6">STEP 3：販売・規約</h2>
                   <Step3_SalesAndAgreement />
                   <div className="flex justify-between mt-6">
-                    <button type="button" onClick={prevStep} className="button">
-                      戻る
-                    </button>
-                    <button type="button" onClick={nextStep} className="button">
-                      次へ
-                    </button>
+                    <button type="button" onClick={prevStep} className="button">戻る</button>
+                    <button type="button" onClick={nextStep} className="button">次へ</button>
                   </div>
                 </motion.div>
               )}
               {step === 4 && (
-                <motion.div
-                  key="step4"
-                  custom={direction}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.4 }}
-                >
+                <motion.div key="step4" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4 }}>
                   <h2 className="text-2xl font-bold mb-6">STEP 4：入力内容の確認</h2>
                   <ConfirmPage
                     onBack={() => {
@@ -326,16 +223,8 @@ const FormWrapper = () => {
                     validateFields={['agreeTerms', 'confirmRights', 'confirmOriginal']}
                   />
                   <div className="flex justify-between mt-6">
-                    <button type="button" onClick={prevStep} className="button">
-                      戻る
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="button bg-[#00a1e9] text-white hover:bg-[#008ec4]"
-                    >
-                      {submitting ? '送信中…' : '送信'}
-                    </button>
+                    <button type="button" onClick={prevStep} className="button">戻る</button>
+                    <button type="submit" className="button bg-[#00a1e9] text-white hover:bg-[#008ec4]">送信</button>
                   </div>
                 </motion.div>
               )}
@@ -348,3 +237,4 @@ const FormWrapper = () => {
 };
 
 export default FormWrapper;
+
