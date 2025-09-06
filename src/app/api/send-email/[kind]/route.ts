@@ -163,14 +163,14 @@ export async function POST(req: NextRequest, { params }: { params: { kind: strin
     );
   }
 
-  // メール内容生成（全テンプレ共通で {subject, html, text} を返す前提）
+  // メール本文生成
   // @ts-ignore
   const { subject, html, text } = entry.gen(parsed.data);
 
-  // ★ contact は DB にも保存（管理画面はこのテーブルを参照）
+  // contact は DB にも保存
   if (kind === 'contact') {
     const p = parsed.data as { name: string; email: string; message: string };
-    const { error: insErr } = await supabaseAdmin
+    const { error: insErr } = await supabaseAdmin()
       .from('inquiries')
       .insert({
         name: p.name,
@@ -181,7 +181,7 @@ export async function POST(req: NextRequest, { params }: { params: { kind: strin
     if (insErr) console.error('[inquiries] insert error:', insErr);
   }
 
-  // 宛先と Reply-To を振り分け
+  // 宛先と Reply-To
   const toAddress = kind === 'contact' ? SUPPORT_EMAIL : (parsed.data as any).to;
   const replyToAddress = kind === 'contact' ? (parsed.data as any).email : SUPPORT_EMAIL;
 
