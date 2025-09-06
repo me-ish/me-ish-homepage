@@ -1,6 +1,5 @@
 'use server';
 
-// ★ 'contact' を追加
 export type EmailKind =
   | 'submit'
   | 'pass'
@@ -18,13 +17,13 @@ function baseUrl() {
   return 'http://localhost:3000';
 }
 
-// payload の厳密型付けは後で拡張可。まずは any でOK。
 export async function sendEmail(kind: EmailKind, payload: any) {
   const res = await fetch(`${baseUrl()}/api/send-email/${kind}`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'x-meish-admin-token': process.env.ADMIN_API_TOKEN!, // 内部トークン
+      // ← サーバー側で内部トークンを付与（ブラウザには漏れない）
+      'x-meish-admin-token': process.env.ADMIN_API_TOKEN!,
     },
     body: JSON.stringify(payload),
     cache: 'no-store',
