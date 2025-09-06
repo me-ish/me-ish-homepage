@@ -1,23 +1,19 @@
+// src/app/admin/users/AdminUsersClient.tsx
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { supabaseBrowser } from '@/lib/supabaseBrowser';
-
-type Entry = {
-  artist_name: string | null;
-  sns_links: unknown;            // 文字列 / JSON文字列 / 配列 / オブジェクト を想定
-  sale_type: string | null;      // 例: 'nft' | 'digital' | 'print' | null ...
-};
 
 type UserGroup = {
   artist_name: string;
-  sns_links: string[];           // 正規化後のURL配列（重複除去）
+  sns_links: string[];
   entry_count: number;
-  sale_types: string[];          // 重複除去＆空除外
+  sale_types: string[];
 };
 
-export default function AdminUsersPage() {
+type Props = { adminEmail: string };
+
+export default function AdminUsersClient({ adminEmail }: Props) {
   const [users, setUsers] = useState<UserGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -28,95 +24,21 @@ export default function AdminUsersPage() {
   const [saleFilter, setSaleFilter] = useState<string>('all');
   const [minEntries, setMinEntries] = useState<number>(0);
 
-  // Supabase クライアントは安定化
-  const supabase = useMemo(() => supabaseBrowser(), []);
   const mountedRef = useRef(true);
-
-  /** URL 正規化: 空/不正は除去、プロトコルがなければ https を付与 */
-  const normalizeUrl = (u: string): string | null => {
-    const s = (u || '').trim();
-    if (!s) return null;
-    const withProto = /^https?:\/\//i.test(s) ? s : `https://${s}`;
-    try {
-      const url = new URL(withProto);
-      // 最低限のホスト判定（IP/localhost/ドメインOK）
-      return url.href;
-    } catch {
-      return null;
-    }
+  const showToast = (m: string) => {
+    setToast(m);
+    setTimeout(() => setToast(null), 1200);
   };
 
-  /** sns_links の型ゆれに強いパーサ */
-  const parseLinks = (raw: unknown): string[] => {
-    try {
-      if (typeof raw === 'string') {
-        const s = raw.trim();
-        if (!s) return [];
-        // JSON 文字列の可能性
-        if ((s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'))) {
-          return parseLinks(JSON.parse(s));
-        }
-        const n = normalizeUrl(s);
-        return n ? [n] : [];
-      }
-      if (Array.isArray(raw)) {
-        const arr = raw
-          .map((v) => (typeof v === 'string' ? normalizeUrl(v) : null))
-          .filter((v): v is string => !!v);
-        return Array.from(new Set(arr));
-      }
-      if (raw && typeof raw === 'object') {
-        const arr = Object.values(raw as Record<string, unknown>)
-          .map((v) => (typeof v === 'string' ? normalizeUrl(v) : null))
-          .filter((v): v is string => !!v);
-        return Array.from(new Set(arr));
-      }
-    } catch {
-      // no-op
-    }
-    return [];
-  };
-
-  /** 再読込 */
+  /** 再読込（サーバーAPIから取得） */
   const refresh = async () => {
     setLoading(true);
     setErr(null);
     try {
-      const { data, error } = await supabase
-        .from('entries')
-        .select('artist_name, sns_links, sale_type');
-
-      if (error) throw error;
-
-      const grouped = new Map<string, UserGroup>();
-
-      (data as Entry[]).forEach((entry) => {
-        const key = (entry.artist_name ?? '未設定').trim() || '未設定';
-        const links = parseLinks(entry.sns_links);
-        const sale = (entry.sale_type ?? '').trim();
-        const saleKey = sale || 'unknown';
-
-        const existing = grouped.get(key);
-        if (existing) {
-          existing.entry_count += 1;
-          for (const l of links) if (!existing.sns_links.includes(l)) existing.sns_links.push(l);
-          if (saleKey && !existing.sale_types.includes(saleKey)) existing.sale_types.push(saleKey);
-        } else {
-          grouped.set(key, {
-            artist_name: key,
-            sns_links: [...links],
-            entry_count: 1,
-            sale_types: saleKey ? [saleKey] : [],
-          });
-        }
-      });
-
-      const list = Array.from(grouped.values()).sort((a, b) => {
-        if (b.entry_count !== a.entry_count) return b.entry_count - a.entry_count;
-        return a.artist_name.localeCompare(b.artist_name, 'ja');
-      });
-
-      if (mountedRef.current) setUsers(list);
+      const res = await fetch('/admin/api/users', { cache: 'no-store' });
+      if (!res.ok) throw new Error('fetch_failed');
+      const json = (await res.json()) as { items: UserGroup[]; total: number };
+      if (mountedRef.current) setUsers(json.items ?? []);
     } catch (e: any) {
       console.error('[admin/users] fetch error:', e);
       if (mountedRef.current) setErr(e?.message ?? '取得に失敗しました');
@@ -131,16 +53,16 @@ export default function AdminUsersPage() {
     return () => {
       mountedRef.current = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase]);
+  }, []);
 
-  /** 表示用：フィルタリング */
+  /** 表示用：セールタイプ候補 */
   const saleTypeOptions = useMemo(() => {
     const s = new Set<string>();
     users.forEach((u) => u.sale_types.forEach((t) => t && s.add(t)));
     return ['all', ...Array.from(s).sort()];
   }, [users]);
 
+  /** 表示用：フィルタリング（クライアント側） */
   const filtered = useMemo(() => {
     const kw = q.trim().toLowerCase();
     return users.filter((u) => {
@@ -172,7 +94,7 @@ export default function AdminUsersPage() {
     a.download = 'me-ish_users.csv';
     a.click();
     URL.revokeObjectURL(url);
-    setToast('CSVをエクスポートしました');
+    showToast('CSVをエクスポートしました');
   };
 
   const linkLabel = (url: string) => {
@@ -188,14 +110,14 @@ export default function AdminUsersPage() {
     <main className="p-6 max-w-6xl mx-auto">
       {/* toast */}
       {toast && (
-        <div className="fixed top-4 right-4 z-[999] rounded-lg bg-[#111]/90 text-white px-4 py-2 shadow"
-             onAnimationEnd={() => setTimeout(() => setToast(null), 1200)}>
+        <div className="fixed top-4 right-4 z-[999] rounded-lg bg-[#111]/90 text-white px-4 py-2 shadow">
           {toast}
         </div>
       )}
 
       <div className="flex items-center gap-3 mb-4">
         <h1 className="text-2xl font-bold">出展者一覧</h1>
+        <p className="text-sm text-gray-600">ログイン中: {adminEmail}</p>
         <span className="text-xs rounded-full bg-blue-100 text-blue-700 px-2 py-0.5">
           {users.length} 作家
         </span>

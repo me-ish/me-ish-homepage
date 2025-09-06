@@ -2,6 +2,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabaseServer';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { isAdminEmail } from '@/lib/isAdmin';
 
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,7 @@ type EntryRow = {
   id: number;
   title: string | null;
   artist_name: string | null;
-  confirmed: boolean | null;      // ← 三値に
+  confirmed: boolean | null;      // ← 三値
   created_at: string;
 };
 
@@ -33,13 +34,17 @@ type AnnRow = {
 };
 
 export default async function AdminPage() {
-  const supabase = supabaseServer();
-  const { data: { session } } = await supabase.auth.getSession();
-  const email = session?.user?.email ?? null;
+  // 1) 認証（ユーザーの特定は server client でOK）
+  const sb = supabaseServer();
+  const { data: { user } } = await sb.auth.getUser();
+  const email = user?.email ?? null;
 
   if (!email || !isAdminEmail(email)) {
     redirect('/admin-login?err=unauthorized');
   }
+
+  // 2) 集計/一覧は service role でRLS非依存に
+  const admin = supabaseAdmin();
 
   // 未審査は confirmed IS NULL / 却下は confirmed = FALSE
   const [
@@ -53,23 +58,22 @@ export default async function AdminPage() {
     annsDraftCountRes,
     latestAnnsRes,
   ] = await Promise.all([
-    supabase.from('entries').select('*', { count: 'exact', head: true }).is('confirmed', null),
-    supabase.from('entries').select('*', { count: 'exact', head: true }).eq('confirmed', false),
-    supabase.from('inquiries').select('*', { count: 'exact', head: true }).eq('is_read', false),
-    supabase.from('sales').select('*', { count: 'exact', head: true }).eq('type', 'nft').eq('mint_status', 'pending'),
-    supabase.from('sales').select('*', { count: 'exact', head: true }).in('status', ['paid', 'settled']),
-    supabase.from('entries')
+    admin.from('entries').select('*', { count: 'exact', head: true }).is('confirmed', null),
+    admin.from('entries').select('*', { count: 'exact', head: true }).eq('confirmed', false),
+    admin.from('inquiries').select('*', { count: 'exact', head: true }).eq('is_read', false),
+    admin.from('sales').select('*', { count: 'exact', head: true }).eq('type', 'nft').eq('mint_status', 'pending'),
+    admin.from('sales').select('*', { count: 'exact', head: true }).in('status', ['paid', 'settled']),
+    admin.from('entries')
       .select('id,title,artist_name,confirmed,created_at')
       .order('created_at', { ascending: false })
       .limit(5),
-    supabase.from('inquiries')
+    admin.from('inquiries')
       .select('id,name,email,subject,is_read,created_at')
       .order('created_at', { ascending: false })
       .limit(5),
-
     // お知らせ
-    supabase.from('announcements').select('*', { count: 'exact', head: true }).is('published_at', null),
-    supabase.from('announcements')
+    admin.from('announcements').select('*', { count: 'exact', head: true }).is('published_at', null),
+    admin.from('announcements')
       .select('id,title,category,pinned,published_at,created_at')
       .order('pinned', { ascending: false })
       .order('published_at', { ascending: false })
@@ -166,7 +170,7 @@ export default async function AdminPage() {
           </div>
 
           {/* 最近のお問い合わせ */}
-          <div className="rounded-2xl border bg-white">
+          <div className="rounded-2xl border bg白">
             <HeaderWithLink title="最近のお問い合わせ" href="/admin/inquiries" />
             <ul className="divide-y">
               {latestInquiries.length === 0 ? (
