@@ -20,9 +20,15 @@ const OP_BCC = (process.env.OP_BCC || '')
   .filter(Boolean);
 
 /** 内部呼び出し専用トークン。クライアント直叩き防止用 */
-const ADMIN_API_TOKEN = process.env.ADMIN_API_TOKEN || '';
+const ADMIN_API_TOKEN = (process.env.ADMIN_API_TOKEN || '').trim();
 
 /* ---------- Auth (header token, timing-safe) ---------- */
+function getIncomingToken(req: Request) {
+  const h1 = req.headers.get('x-meish-admin-token')?.trim();
+  const h2 = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
+  return h1 || h2 || '';
+}
+
 function assertAdmin(req: Request): NextResponse | void {
   if (!ADMIN_API_TOKEN) {
     return NextResponse.json(
@@ -30,7 +36,7 @@ function assertAdmin(req: Request): NextResponse | void {
       { status: 500 }
     );
   }
-  const token = req.headers.get('x-meish-admin-token') || '';
+  const token = getIncomingToken(req);
   const a = Buffer.from(ADMIN_API_TOKEN);
   const b = Buffer.from(token);
   if (a.length !== b.length || !timingSafeEqual(a, b)) {
