@@ -1,4 +1,4 @@
-// src/app/(marketing)/contact/form/page.tsx
+// src/app/(marketing)/contact/page.tsx
 import ContactForm from '@/components/ContactForm';
 
 export const metadata = {

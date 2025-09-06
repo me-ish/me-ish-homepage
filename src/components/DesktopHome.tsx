@@ -538,7 +538,7 @@ const DesktopHome = () => {
           <ul className="mt-6 text-[#00a1e9] text-sm space-y-3 max-w-xs mx-auto">
             <li className="flex items-center justify-center gap-2">
               <Mail className="w-4 h-4" />
-              <Link href="/contact/form" className="hover:underline" aria-label="お問い合わせフォームへ">
+              <Link href="/contact" className="hover:underline" aria-label="お問い合わせフォームへ">
                 お問い合わせフォームへ
               </Link>
             </li>

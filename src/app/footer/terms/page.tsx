@@ -154,7 +154,7 @@ export default function TermsPage() {
 
 <p>
   3. 購入者がウォレットアドレスを登録する場合は、当サービスが指定する方法
-  （<Link href="/contact/form" className="underline underline-offset-2">お問い合わせフォーム</Link> 等）を通じて送信するものとします。
+  （<Link href="/contact" className="underline underline-offset-2">お問い合わせフォーム</Link> 等）を通じて送信するものとします。
   当サービスは、登録完了を確認後、合理的な期間内に当該ウォレットへ NFT を移転します。
 </p>
 

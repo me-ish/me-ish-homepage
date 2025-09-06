@@ -112,7 +112,7 @@ export default function CopyrightPolicyPage() {
         </p>
         <p>
           通報は
-          <Link href="/contact/form" className="underline underline-offset-2">お問い合わせフォーム</Link>
+          <Link href="/contact" className="underline underline-offset-2">お問い合わせフォーム</Link>
           または <span>info [at] me-ish.art</span> までお寄せください（送信時は「[at]」を「@」に置換）。
         </p>
 
@@ -127,7 +127,7 @@ export default function CopyrightPolicyPage() {
         <p>本ポリシーは、必要に応じて予告なく改定されることがあります。改定後は当サイト掲載時から効力を生じます。</p>
         <p>
           本ポリシーに関するお問い合わせ・通報は、
-          <Link href="/contact/form" className="underline underline-offset-2">お問い合わせフォーム</Link>
+          <Link href="/contact" className="underline underline-offset-2">お問い合わせフォーム</Link>
           または <span>info [at] me-ish.art</span> へお願いします（送信時は「[at]」を「@」に置換）。
         </p>
         <p>

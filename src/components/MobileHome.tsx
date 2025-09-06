@@ -316,7 +316,7 @@ const MobileHome = () => {
             <li className="flex items-center justify-center gap-2">
               <Mail className="w-4 h-4" />
               <Link
-                href="/contact/form"
+                href="/contact"
                 className="underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00a1e9]/20 rounded"
                 aria-label="お問い合わせフォームへ"
               >
