@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { z } from 'zod';
 import { timingSafeEqual } from 'crypto';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 import { generateSubmitEmail } from '@/lib/emailTemplates/submit';
 import { generatePassEmail } from '@/lib/emailTemplates/pass';
@@ -111,7 +112,7 @@ const PurchaseNft = z.object({
 // contact（運営宛固定／Reply-To は送信者）
 const Contact = z.object({
   name: z.string().min(1).max(100),
-  email: z.string().email(),           // 送信者
+  email: z.string().email(),
   subject: z.string().max(120).optional(),
   message: z.string().min(1).max(4000),
   category: z.enum(['general','bug','howto','entry','purchase','other']).optional(),
@@ -162,20 +163,27 @@ export async function POST(req: NextRequest, { params }: { params: { kind: strin
     );
   }
 
-  // 各テンプレは { subject, html, text } を返す前提
+  // メール内容生成（全テンプレ共通で {subject, html, text} を返す前提）
   // @ts-ignore
   const { subject, html, text } = entry.gen(parsed.data);
 
-  // contact は宛先を SUPPORT_EMAIL に固定、Reply-To を送信者へ
-  const toAddress =
-    kind === 'contact'
-      ? SUPPORT_EMAIL
-      : (parsed.data as any).to;
+  // ★ contact は DB にも保存（管理画面はこのテーブルを参照）
+  if (kind === 'contact') {
+    const p = parsed.data as { name: string; email: string; message: string };
+    const { error: insErr } = await supabaseAdmin
+      .from('inquiries')
+      .insert({
+        name: p.name,
+        email: p.email,
+        message: (p.message ?? '').slice(0, 4000),
+        is_read: false,
+      });
+    if (insErr) console.error('[inquiries] insert error:', insErr);
+  }
 
-  const replyToAddress =
-    kind === 'contact'
-      ? (parsed.data as any).email
-      : SUPPORT_EMAIL;
+  // 宛先と Reply-To を振り分け
+  const toAddress = kind === 'contact' ? SUPPORT_EMAIL : (parsed.data as any).to;
+  const replyToAddress = kind === 'contact' ? (parsed.data as any).email : SUPPORT_EMAIL;
 
   const { data: sent, error } = await resend.emails.send({
     from: FROM,
