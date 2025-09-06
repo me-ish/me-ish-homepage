@@ -40,7 +40,6 @@ function assertAdmin(req: Request): NextResponse | void {
   }
 }
 
-
 /* ---------- Validation ---------- */
 const Schema = z.object({
   to: z.string().email(),
