@@ -55,13 +55,12 @@ const Submit = z.object({
   slaHours: z.coerce.number().int().positive().optional(),
 });
 
-// reject（却下メール）
+// reject
 const Reject = z.object({
   to: z.string().email(),
   name: z.string().min(1),
   title: z.string().min(1),
   reason: z.string().max(500).optional(),
-  // もしテンプレで管理URLを使うなら任意で持たせてOK
   manageUrl: z.string().url().optional(),
 }).passthrough();
 
@@ -69,14 +68,12 @@ const Reject = z.object({
 const Pass = z.object({
   to: z.string().email(),
   name: z.string().min(1),
-  externalUserId: z.string().min(1),   // ★これ必須
-  // 任意（上書きしたい時だけ送る）
+  externalUserId: z.string().min(1),
   siteUrl: z.string().url().optional(),
   supportEmail: z.string().email().optional(),
   faqUrl: z.string().url().optional(),
   termsUrl: z.string().url().optional(),
 }).passthrough();
-
 
 // exhibit start / end
 const ExhibitStart = z.object({
@@ -94,22 +91,35 @@ const ExhibitEnd = z.object({
   displayEndAt: z.string(),   // ISO
 });
 
-// purchase
+// purchase（Buyer）— amountYen / priceYen どちらでもOKにして正規化
 const PurchaseBuyer = z.object({
   to: z.string().email(),
   name: z.string().min(1),
-  title: z.string().min(1),
-  orderId: z.string().min(1),
-  amountYen: z.number().int().nonnegative(),
+  title: z.string().optional(),
+  artistName: z.string().optional(),
+  orderId: z.string().optional(),
+  amountYen: z.number().int().nonnegative().optional(),
+  priceYen:  z.number().int().nonnegative().optional(),
+  editionNo: z.number().int().optional().nullable(),
+  editionTotal: z.number().int().optional().nullable(),
+  salesType: z.string().optional(),
+  deliveryEtaDays: z.number().int().positive().optional(),
+  deliveryAtISO: z.string().optional(),
+  manageUrl: z.string().url().optional(),
+  downloadUrl: z.string().url().optional(),
   receiptUrl: z.string().url().optional(),
-});
+}).transform(d => ({ ...d, priceYen: d.priceYen ?? d.amountYen ?? null }));
+
+// purchase（Artist）— amountYen / priceYen どちらでもOKにして正規化
 const PurchaseArtist = z.object({
   to: z.string().email(),
-  name: z.string().min(1),
-  title: z.string().min(1),
-  amountYen: z.number().int().nonnegative(),
+  name: z.string().min(1),     // 宛名＝作家名
+  title: z.string().optional(),
+  amountYen: z.number().int().nonnegative().optional(),
+  priceYen:  z.number().int().nonnegative().optional(),
   settlementAt: z.string().optional(), // ISO
-});
+}).transform(d => ({ ...d, amountYen: d.amountYen ?? d.priceYen ?? null }));
+
 const PurchaseNft = z.object({
   to: z.string().email(),
   name: z.string().min(1),
@@ -173,8 +183,7 @@ export async function POST(req: NextRequest, { params }: { params: { kind: strin
   }
 
   // メール本文生成
-  // @ts-ignore
-  const { subject, html, text } = entry.gen(parsed.data);
+  const { subject, html, text } = (entry.gen as any)(parsed.data);
 
   // contact は DB にも保存
   if (kind === 'contact') {

@@ -3,7 +3,9 @@ export type PurchaseBuyerEmailArgs = {
   name: string;                      // 宛名（必須）
   title?: string;                    // 作品名
   artistName?: string;               // 作家名
-  priceYen?: number | null;          // 価格（税込）
+  // どちらでも可（どちらかあればOK）
+  priceYen?: number | null;          // 価格
+  amountYen?: number | null;         // 価格（互換）
   editionNo?: number | null;         // 何番（例: 2）
   editionTotal?: number | null;      // 総数（例: 10）
   orderId?: string;                  // 注文番号
@@ -22,13 +24,14 @@ const BRAND_HEX = '#00a1e9';
 
 export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs) {
   // 後方互換：stringのみは name として扱う
-  const a: PurchaseBuyerEmailArgs = typeof arg === 'string' ? { name: arg } : arg;
+  const a0: PurchaseBuyerEmailArgs = typeof arg === 'string' ? { name: arg } : arg;
+  // priceYen / amountYen の統一（どちらでもOK）
+  const price = a0.priceYen ?? a0.amountYen ?? null;
 
   const {
     name,
     title,
     artistName,
-    priceYen = null,
     editionNo = null,
     editionTotal = null,
     orderId,
@@ -41,7 +44,7 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
     faqUrl = 'https://me-ish.art/faq',
     termsUrl = 'https://me-ish.art/footer/terms',
     supportEmail = 'support@me-ish.art',
-  } = a;
+  } = a0;
 
   const preheader = 'ご購入ありがとうございます。購入内容と納品のご案内をお送りします。';
 
@@ -52,11 +55,10 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
 
   const isNFT = String(salesType).toLowerCase() === 'nft';
 
-  // 明細テーブル
   const rows: string[] = [];
   if (title) rows.push(row('作品名', escapeHtml(title)));
   if (artistName) rows.push(row('作家名', escapeHtml(artistName)));
-  if (priceYen != null) rows.push(row('価格', `¥${fmtYen(priceYen)}`));
+  if (price != null) rows.push(row('価格', `¥${fmtYen(price)}`));
   if (editionNo != null || editionTotal != null)
     rows.push(row('エディション', `${editionNo ?? '-'} / ${editionTotal ?? '-'}`));
   if (orderId) rows.push(row('注文番号', escapeHtml(orderId)));
@@ -88,7 +90,6 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
 
   const html = `
   <div style="background:#f7fafc;padding:24px 0;">
-    <!-- preheader -->
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${preheader}</div>
 
     <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:12px;padding:28px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',Meiryo,Arial,sans-serif;color:#1f2937;">
@@ -100,11 +101,7 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
       <p style="margin:0 0 12px 0;">${escapeHtml(name)} 様</p>
       <p style="margin:0 0 12px 0;">この度は <strong>me-ish</strong> での作品ご購入、誠にありがとうございます。お支払いを確認し、納品準備を進めております。</p>
 
-      ${
-        rows.length
-          ? `<table style="width:100%;border-collapse:collapse;margin:16px 0 8px 0;"><tbody>${rows.join('')}</tbody></table>`
-          : ''
-      }
+      ${rows.length ? `<table style="width:100%;border-collapse:collapse;margin:16px 0 8px 0;"><tbody>${rows.join('')}</tbody></table>` : ''}
 
       <div style="margin:14px 0 0 0; padding:12px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px;">
         <div style="font-weight:700; margin-bottom:4px;">納品について</div>
@@ -117,16 +114,8 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
         </div>
       </div>
 
-      ${
-        primaryCta
-          ? `<div style="margin:16px 0 8px 0;">${primaryCta}</div>`
-          : ''
-      }
-      ${
-        secondaryCtas
-          ? `<div style="margin:4px 0 0 0;">${secondaryCtas}</div>`
-          : ''
-      }
+      ${primaryCta ? `<div style="margin:16px 0 8px 0;">${primaryCta}</div>` : ''}
+      ${secondaryCtas ? `<div style="margin:4px 0 0 0;">${secondaryCtas}</div>` : ''}
 
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;" />
 
@@ -146,7 +135,7 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
   textLines.push('この度は me-ish での作品ご購入、誠にありがとうございます。お支払いを確認し、納品準備を進めております。\n');
   if (title) textLines.push(`作品名：${title}`);
   if (artistName) textLines.push(`作家名：${artistName}`);
-  if (priceYen != null) textLines.push(`価格：¥${fmtYen(priceYen)}`);
+  if (price != null) textLines.push(`価格：¥${fmtYen(price)}`);
   if (editionNo != null || editionTotal != null) textLines.push(`エディション：${editionNo ?? '-'} / ${editionTotal ?? '-'}`);
   if (orderId) textLines.push(`注文番号：${orderId}`);
   textLines.push(`形式：${isNFT ? 'NFT' : 'デジタル作品'}`);
@@ -185,4 +174,3 @@ function sanitizeUrl(url?: string) {
   } catch {}
   return '#';
 }
-
