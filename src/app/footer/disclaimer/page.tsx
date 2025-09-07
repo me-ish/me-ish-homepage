@@ -54,7 +54,7 @@ export default function DisclaimerPage() {
         <h2 id="sec-7"><strong>第7条（お問い合わせ）</strong></h2>
         <p>
           本免責事項に関するお問い合わせは、
-          <Link href="/contact/form" className="underline underline-offset-2">お問い合わせフォーム</Link>
+          <Link href="/contact" className="underline underline-offset-2">お問い合わせフォーム</Link>
           または <span>info [at] me-ish.art</span> までご連絡ください。
           （送信時は「[at]」を「@」に置換してください）
         </p>

@@ -30,7 +30,7 @@ export default function TokushohoPage() {
         <ul>
           <li>
             フォーム：
-            <Link href="/contact/form" className="underline underline-offset-2">
+            <Link href="/contact" className="underline underline-offset-2">
               お問い合わせフォーム
             </Link>
           </li>

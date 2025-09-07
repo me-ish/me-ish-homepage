@@ -1,19 +1,16 @@
-// src/app/page.tsx
-// サーバーコンポーネントに戻す（"use client" を置かない）
+// src/app/page.tsx (Server Componentのまま)
+import { headers } from 'next/headers';
 import MobileHome from '@/components/MobileHome';
 import DesktopHome from '@/components/DesktopHome';
 
+function isMobileUA(ua: string) {
+  // ざっくり判定。必要ならTabletも分岐
+  return /Android|iPhone|iPod|iPad|Mobile/i.test(ua);
+}
+
 export default function HomePage() {
-  return (
-    <>
-      {/* 1024px 未満で表示 */}
-      <div className="lg:hidden">
-        <MobileHome />
-      </div>
-      {/* 1024px 以上で表示 */}
-      <div className="hidden lg:block">
-        <DesktopHome />
-      </div>
-    </>
-  );
+  const ua = headers().get('user-agent') ?? '';
+  const isMobile = isMobileUA(ua);
+
+  return isMobile ? <MobileHome /> : <DesktopHome />;
 }

@@ -2,6 +2,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabaseServer';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { isAdminEmail } from '@/lib/isAdmin';
 
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,7 @@ type EntryRow = {
   id: number;
   title: string | null;
   artist_name: string | null;
-  confirmed: boolean | null;
+  confirmed: boolean | null;      // ← 三値
   created_at: string;
 };
 
@@ -33,16 +34,22 @@ type AnnRow = {
 };
 
 export default async function AdminPage() {
-  const supabase = supabaseServer();
-  const { data: { session } } = await supabase.auth.getSession();
-  const email = session?.user?.email ?? null;
+  // 1) 認証（ユーザーの特定は server client でOK）
+  const sb = supabaseServer();
+  const { data: { user } } = await sb.auth.getUser();
+  const email = user?.email ?? null;
 
   if (!email || !isAdminEmail(email)) {
     redirect('/admin-login?err=unauthorized');
   }
 
+  // 2) 集計/一覧は service role でRLS非依存に
+  const admin = supabaseAdmin();
+
+  // 未審査は confirmed IS NULL / 却下は confirmed = FALSE
   const [
-    entriesPendingRes,
+    entriesUnreviewedRes,
+    entriesRejectedRes,
     inquiriesUnreadRes,
     salesPendingMintRes,
     salesCountRes,
@@ -51,22 +58,22 @@ export default async function AdminPage() {
     annsDraftCountRes,
     latestAnnsRes,
   ] = await Promise.all([
-    supabase.from('entries').select('*', { count: 'exact', head: true }).eq('confirmed', false),
-    supabase.from('inquiries').select('*', { count: 'exact', head: true }).eq('is_read', false),
-    supabase.from('sales').select('*', { count: 'exact', head: true }).eq('type', 'nft').eq('mint_status', 'pending'),
-    supabase.from('sales').select('*', { count: 'exact', head: true }).in('status', ['paid', 'settled']),
-    supabase.from('entries')
+    admin.from('entries').select('*', { count: 'exact', head: true }).is('confirmed', null),
+    admin.from('entries').select('*', { count: 'exact', head: true }).eq('confirmed', false),
+    admin.from('inquiries').select('*', { count: 'exact', head: true }).eq('is_read', false),
+    admin.from('sales').select('*', { count: 'exact', head: true }).eq('type', 'nft').eq('mint_status', 'pending'),
+    admin.from('sales').select('*', { count: 'exact', head: true }).in('status', ['paid', 'settled']),
+    admin.from('entries')
       .select('id,title,artist_name,confirmed,created_at')
       .order('created_at', { ascending: false })
       .limit(5),
-    supabase.from('inquiries')
+    admin.from('inquiries')
       .select('id,name,email,subject,is_read,created_at')
       .order('created_at', { ascending: false })
       .limit(5),
-
-    // ここから「お知らせ」用
-    supabase.from('announcements').select('*', { count: 'exact', head: true }).is('published_at', null),
-    supabase.from('announcements')
+    // お知らせ
+    admin.from('announcements').select('*', { count: 'exact', head: true }).is('published_at', null),
+    admin.from('announcements')
       .select('id,title,category,pinned,published_at,created_at')
       .order('pinned', { ascending: false })
       .order('published_at', { ascending: false })
@@ -75,11 +82,12 @@ export default async function AdminPage() {
   ]);
 
   const metrics = {
-    pendingEntries: entriesPendingRes.count ?? 0,
+    unreviewedEntries: entriesUnreviewedRes.count ?? 0, // 未審査
+    rejectedEntries: entriesRejectedRes.count ?? 0,     // 却下
     unreadInquiries: inquiriesUnreadRes.count ?? 0,
     pendingMints: salesPendingMintRes.count ?? 0,
     totalSales: salesCountRes.count ?? 0,
-    draftAnns: annsDraftCountRes.count ?? 0, // 追加：未公開お知らせ
+    draftAnns: annsDraftCountRes.count ?? 0,
   };
 
   const latestEntries = (latestEntriesRes.data ?? []) as EntryRow[];
@@ -99,19 +107,17 @@ export default async function AdminPage() {
             <p className="text-sm text-[#667]">ログイン中: {email}</p>
           </div>
           <div className="flex gap-2">
-            <Link href="/" className={btnOutlineCls}>
-              サイトを開く
-            </Link>
+            <Link href="/" className={btnOutlineCls}>サイトを開く</Link>
           </div>
         </div>
 
         {/* メトリクス */}
         <section className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
-          <MetricCard label="未承認作品" value={metrics.pendingEntries} href="/admin/entries" badge={metrics.pendingEntries > 0 ? '要対応' : undefined} />
+          <MetricCard label="未審査作品" value={metrics.unreviewedEntries} href="/admin/entries" badge={metrics.unreviewedEntries > 0 ? '要対応' : undefined} />
+          <MetricCard label="却下作品" value={metrics.rejectedEntries} href="/admin/entries?status=rejected" />
           <MetricCard label="未読お問い合わせ" value={metrics.unreadInquiries} href="/admin/inquiries" />
           <MetricCard label="NFTミント待ち" value={metrics.pendingMints} href="/admin/sales" />
           <MetricCard label="売上件数 (累計)" value={metrics.totalSales} href="/admin/sales" />
-          {/* 追加：未公開お知らせ */}
           <MetricCard label="未公開お知らせ" value={metrics.draftAnns} href="/admin/announcements" badge={metrics.draftAnns > 0 ? '下書きあり' : undefined} />
         </section>
 
@@ -124,7 +130,6 @@ export default async function AdminPage() {
               <Link href="/admin/inquiries" className={btnOutlineCls}>お問い合わせ一覧</Link>
               <Link href="/admin/users" className={btnOutlineCls}>出展者一覧</Link>
               <Link href="/admin/settings" className={btnOutlineCls}>ギャラリー設定</Link>
-              {/* 追加：お知らせ管理 */}
               <Link href="/admin/announcements" className={btnOutlineCls}>お知らせ管理</Link>
             </div>
           </div>
@@ -138,30 +143,34 @@ export default async function AdminPage() {
             <ul className="divide-y">
               {latestEntries.length === 0 ? (
                 <EmptyList message="最近の応募はありません。" />
-              ) : latestEntries.map((e) => (
-                <li key={e.id} className="px-4 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{e.title || `Untitled (#${e.id})`}</p>
-                      <p className="truncate text-xs text-[#667]">
-                        {e.artist_name || 'アーティスト未設定'} ・ {toJP(e.created_at)}
-                      </p>
+              ) : latestEntries.map((e) => {
+                const status = e.confirmed === true ? 'approved' : e.confirmed === false ? 'rejected' : 'unreviewed';
+                const cls =
+                  status === 'approved'
+                    ? 'bg-[#e8fff1] text-[#0d7a3e] border-[#b9f0cf]'
+                    : status === 'rejected'
+                    ? 'bg-[#ffe9e9] text-[#a11] border-[#ffd0d0]'
+                    : 'bg-[#fff8e8] text-[#8a5b00] border-[#ffe2a9]';
+                const label = status === 'approved' ? '承認' : status === 'rejected' ? '却下' : '未審査';
+                return (
+                  <li key={e.id} className="px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{e.title || `Untitled (#${e.id})`}</p>
+                        <p className="truncate text-xs text-[#667]">
+                          {e.artist_name || 'アーティスト未設定'} ・ {toJP(e.created_at)}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] border ${cls}`}>{label}</span>
                     </div>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] border ${
-                      e.confirmed
-                        ? 'bg-[#e8fff1] text-[#0d7a3e] border-[#b9f0cf]'
-                        : 'bg-[#fff8e8] text-[#8a5b00] border-[#ffe2a9]'
-                    }`}>
-                      {e.confirmed ? '承認済' : '承認待ち'}
-                    </span>
-                  </div>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
           {/* 最近のお問い合わせ */}
-          <div className="rounded-2xl border bg-white">
+          <div className="rounded-2xl border bg白">
             <HeaderWithLink title="最近のお問い合わせ" href="/admin/inquiries" />
             <ul className="divide-y">
               {latestInquiries.length === 0 ? (
@@ -186,7 +195,7 @@ export default async function AdminPage() {
             </ul>
           </div>
 
-          {/* 追加：最近のお知らせ */}
+          {/* 最近のお知らせ */}
           <div className="rounded-2xl border bg-white">
             <HeaderWithLink title="最近のお知らせ" href="/admin/announcements" />
             <ul className="divide-y">
@@ -205,14 +214,16 @@ export default async function AdminPage() {
                       {n.pinned ? (
                         <span className="shrink-0 rounded-full bg-rose-100 text-rose-700 border border-rose-200 px-2 py-0.5 text-[11px]">固定</span>
                       ) : null}
-                      <span className={
-                        'shrink-0 rounded-full px-2 py-0.5 text-[11px] border ' +
-                        (n.category === 'maintenance'
-                          ? 'bg-amber-100 text-amber-800 border-amber-200'
-                          : n.category === 'update'
-                          ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                          : 'bg-sky-100 text-sky-800 border-sky-200')
-                      }>
+                      <span
+                        className={
+                          'shrink-0 rounded-full px-2 py-0.5 text-[11px] border ' +
+                          (n.category === 'maintenance'
+                            ? 'bg-amber-100 text-amber-800 border-amber-200'
+                            : n.category === 'update'
+                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                            : 'bg-sky-100 text-sky-800 border-sky-200')
+                        }
+                      >
                         {n.category}
                       </span>
                     </div>

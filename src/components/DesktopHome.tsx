@@ -295,7 +295,7 @@ const DesktopHome = () => {
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link
-              href="#gallery"
+              href="/white"
               className="inline-flex items-center gap-2 rounded-full bg-[#00a1e9] px-6 py-3 text-white font-semibold shadow hover:shadow-lg hover:-translate-y-0.5 transition"
               aria-label="ギャラリーを見る"
             >
@@ -379,51 +379,66 @@ const DesktopHome = () => {
           </div>
         </section>
 
-        {/* Gallery */}
-        <section id="gallery" className="fade-in-start py-16 px-6 bg-[#f9fbfd] text-center" aria-labelledby="gallery-title">
-          <h2 id="gallery-title" className="font-bold text-[clamp(1.6rem,3.4vw,2.2rem)] text-[#00a1e9] mb-8">
-            ギャラリーを見る
-          </h2>
+{/* Gallery */}
+<section
+  id="gallery"
+  className="fade-in-start py-16 px-6 bg-[#f9fbfd] text-center"
+  aria-labelledby="gallery-title"
+>
+  <h2
+    id="gallery-title"
+    className="font-bold text-[clamp(1.6rem,3.4vw,2.2rem)] text-[#00a1e9] mb-8"
+  >
+    ギャラリーを見る
+  </h2>
 
-          <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 max-w-[1040px] mx-auto">
-            {[
-              {
-                img: '/images/white-thumb.jpg',
-                title: 'White Gallery',
-                desc: '「意識の空間」をイメージした真っ白なギャラリー。10作品限定の特別展示。',
-                link: '/white',
-              },
-              {
-                img: '/images/float-thumb.jpg',
-                title: 'Float Gallery',
-                desc: '“漂う”ように入れ替わる美術館風ギャラリー。日替わりで多彩な作品を展示。',
-                link: '/float',
-              },
-            ].map(({ img, title, desc, link }) => (
-              <Link
-                href={link}
-                key={title}
-                className="group block overflow-hidden rounded-2xl bg-white border shadow-sm hover:shadow-lg hover:-translate-y-1 transition"
-                aria-label={`${title}へ`}
-              >
-                <div className="relative aspect-[16/9]">
-                  <Image
-                    src={img}
-                    alt={title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 520px"
-                    className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                    priority={false}
-                  />
-                </div>
-                <div className="p-5 text-left">
-                  <h3 className="text-[1.05rem] font-semibold text-[#00a1e9]">{title}</h3>
-                  <p className="mt-1 text-sm text-[#445] leading-relaxed">{desc}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+  <div className="grid gap-6 sm:gap-8 grid-cols-1 sm:grid-cols-2 max-w-[1040px] mx-auto">
+    {[
+      {
+        img: '/images/white-thumb.jpg',
+        title: 'White Gallery',
+        desc: '「意識の空間」をイメージした真っ白なギャラリー。10作品限定の特別展示。',
+        link: '/white',
+      },
+      {
+        img: '/images/float-thumb.jpg',
+        title: 'Float Gallery',
+        desc: '“漂う”ように入れ替わる美術館風ギャラリー。日替わりで多彩な作品を展示。',
+        link: '/float',
+      },
+    ].map(({ img, title, desc, link }) => (
+      <Link
+        key={title}
+        href={link}
+        aria-label={`${title} へ`}
+        className="group block text-left rounded-2xl bg-white shadow-sm ring-1 ring-gray-100
+                   hover:shadow-md transition focus-visible:outline-none
+                   focus-visible:ring-2 focus-visible:ring-[#00a1e9] focus-visible:ring-offset-2"
+      >
+        {/* hoverズームのため overflow-hidden だけ付与 */}
+        <div className="overflow-hidden rounded-2xl">
+          <Image
+            src={img}
+            alt={`${title} thumbnail`}
+            width={960}              // 16:9 の想定サイズ（任意で変更OK）
+            height={540}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="w-full h-auto object-cover transition-transform duration-300
+                       group-hover:scale-105 motion-reduce:transition-none motion-reduce:transform-none"
+            // priority は外す（プリロード警告の元）
+          />
+        </div>
+
+        <div className="p-4 sm:p-5">
+          <h3 className="text-base sm:text-lg font-semibold">{title}</h3>
+          <p className="mt-1 text-[13px] sm:text-sm text-[#445] line-clamp-2">
+            {desc}
+          </p>
+        </div>
+      </Link>
+    ))}
+  </div>
+</section>
 
         {/* 応募導線 */}
         <section
@@ -448,36 +463,32 @@ const DesktopHome = () => {
           </div>
         </section>
 
-{/* Special Thanks（リンクだけ） */}
+{/* Special Thanks（見出し自体をリンク化・中央配置） */}
 <section
   id="special-thanks-link"
   className="fade-in-start py-10 px-6 bg-white"
   aria-labelledby="thanks-link-title"
 >
   <div className="max-w-[1040px] mx-auto">
-    <div className="rounded-2xl border bg-white p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-<h2
-  id="thanks-link-title"
-  className="text-2xl font-extrabold bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 bg-clip-text text-transparent flex items-center gap-2"
->
-  <span>✨ Special Thanks ✨</span>
-</h2>
+    <div className="rounded-2xl border bg-white p-10 shadow-sm flex flex-col items-center justify-center text-center">
+      <h2 id="thanks-link-title" className="text-2xl font-extrabold">
+        <Link
+          href="/special-thanks"
+          className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 bg-clip-text text-transparent focus:outline-none focus:ring-2 focus:ring-[#00a1e9] focus:ring-offset-2 rounded-lg px-2 py-1"
+          aria-label="Special Thanks ページへ"
+          title="Special Thanks ページへ"
+        >
+          <span>✨ Special Thanks ✨</span>
+        </Link>
+      </h2>
 
-        <p className="mt-1 text-sm text-[#445]">
-          me-ish初期ギャラリー(white)に応募してくださった皆さま
-        </p>
-      </div>
-      <Link
-        href="/special-thanks"
-        className="inline-flex items-center justify-center rounded-full bg-[#00a1e9] px-5 py-2.5 text-white font-semibold shadow hover:shadow-md hover:-translate-y-0.5 transition"
-        aria-label="Special Thanks ページへ"
-      >
-        一覧を見る
-      </Link>
+      <p className="mt-2 text-sm text-[#445]">
+        me-ish初期ギャラリー(white)に応募してくださった皆さま
+      </p>
     </div>
   </div>
 </section>
+
 
         {/* FAQ */}
         <section id="faq" className="fade-in-start py-16 px-6 bg-[#f6f8fb]" aria-labelledby="faq-title">
@@ -527,7 +538,7 @@ const DesktopHome = () => {
           <ul className="mt-6 text-[#00a1e9] text-sm space-y-3 max-w-xs mx-auto">
             <li className="flex items-center justify-center gap-2">
               <Mail className="w-4 h-4" />
-              <Link href="/contact/form" className="hover:underline" aria-label="お問い合わせフォームへ">
+              <Link href="/contact" className="hover:underline" aria-label="お問い合わせフォームへ">
                 お問い合わせフォームへ
               </Link>
             </li>
