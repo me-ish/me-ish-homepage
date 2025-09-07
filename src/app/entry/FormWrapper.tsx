@@ -10,7 +10,6 @@ import ConfirmPage from '@/components/entryForm/ConfirmPage';
 import CompletePage from '@/components/entryForm/CompletePage';
 import { supabase } from '@/lib/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
-import { sendEmail } from '@/app/_actions/sendEmail'; // ★ 追加：サーバーアクション経由で送信
 
 export type FormValues = {
   artistName: string;
@@ -61,7 +60,6 @@ const FormWrapper = () => {
   const [direction, setDirection] = useState<'left' | 'right'>('right');
   const [preview, setPreview] = useState<string | null>(null);
   const [localImageFile, setLocalImageFile] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false); // ★ 二重送信防止
 
   const getStepFields = (step: number, isForSale: string): (keyof FormValues)[] => {
     switch (step) {
@@ -75,33 +73,32 @@ const FormWrapper = () => {
     }
   };
 
-  const nextStep = async () => {
-    const isForSale = methods.getValues('isForSale');
-    const fieldsToValidate = getStepFields(step, isForSale);
-    const ok = await methods.trigger(fieldsToValidate, { shouldFocus: true });
+const nextStep = async () => {
+  const isForSale = methods.getValues('isForSale');
+  const fieldsToValidate = getStepFields(step, isForSale);
+  const ok = await methods.trigger(fieldsToValidate, { shouldFocus: true });
 
-    if (!ok) {
-      const first = fieldsToValidate.find((name) => methods.getFieldState(name).invalid);
-      if (first) {
-        const el = document.querySelector(`[name="${String(first)}"]`) as HTMLElement | null;
-        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      return;
+  if (!ok) {
+    const first = fieldsToValidate.find((name) => methods.getFieldState(name).invalid);
+    if (first) {
+      const el = document.querySelector(`[name="${String(first)}"]`) as HTMLElement | null;
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    setDirection('right');
-    setStep((prev) => prev + 1);
-  };
+    return;
+  }
+  setDirection('right');
+  setStep((prev) => prev + 1);
+};
 
-  // ★ 追加：戻る処理
-  const prevStep = () => {
-    setDirection('left');
-    setStep((prev) => Math.max(1, prev - 1));
-  };
+// ★ 追加：戻る処理
+const prevStep = () => {
+  setDirection('left');
+  setStep((prev) => Math.max(1, prev - 1));
+};
+
+
 
   const onSubmit = async (data: FormValues & { meish_fee_yen?: number; artist_reward_yen?: number }) => {
-    if (submitting) return;
-    setSubmitting(true);
-
     try {
       const externalUserId = uuidv4();
       const snsLinksJson = JSON.stringify({
@@ -111,11 +108,7 @@ const FormWrapper = () => {
       });
 
       const imageFile = data.image instanceof FileList && data.image.length > 0 ? data.image[0] : null;
-      if (!imageFile) {
-        alert('画像ファイルが見つかりませんでした');
-        setSubmitting(false);
-        return;
-      }
+      if (!imageFile) return alert('画像ファイルが見つかりませんでした');
 
       const now = new Date();
       let displayStartAt: string | null = null;
@@ -129,32 +122,21 @@ const FormWrapper = () => {
         displayEndAt = end.toISOString();
       }
 
-      // ファイル名サニタイズ
       const originalName = imageFile.name;
       const extension = originalName.split('.').pop();
       const baseName = originalName.split('.').slice(0, -1).join('.');
       const sanitizedBase = baseName.normalize('NFKC').replace(/[^\w.-]/g, '_');
       const fileName = `${Date.now()}_${sanitizedBase}.${extension}`;
 
-      // 画像アップロード
       const uploadRes = await supabase.storage.from('artworks').upload(fileName, imageFile, { upsert: true });
-      if (uploadRes.error || !uploadRes.data) {
-        alert('画像のアップロードに失敗しました');
-        setSubmitting(false);
-        return;
-      }
+      if (uploadRes.error || !uploadRes.data) return alert('画像のアップロードに失敗しました');
 
       const { publicUrl } = supabase.storage.from('artworks').getPublicUrl(uploadRes.data.path).data;
-      if (!publicUrl) {
-        alert('画像URLの取得に失敗しました');
-        setSubmitting(false);
-        return;
-      }
+      if (!publicUrl) return alert('画像URLの取得に失敗しました');
 
       const type = data.isForSale === 'yes' ? data.saleType : 'none';
       const displayPlan = data.isForSale === 'yes' ? data.displayPlan || 'free' : 'free';
 
-      // DB 登録
       const { error } = await supabase.from('entries').insert([{
         artist_name: data.artistName,
         email: data.email,
@@ -178,34 +160,16 @@ const FormWrapper = () => {
         artist_reward_yen: data.artist_reward_yen ?? null,
       }]);
 
-      if (error) {
-        alert(`登録に失敗しました: ${error.message}`);
-        setSubmitting(false);
-        return;
-      }
-
-      // 完了画面へ進める
+      if (error) return alert(`登録に失敗しました: ${error.message}`);
       setStep(5);
 
-      // ★ メール送信（サーバーアクション経由＝401回避）
-      //   Submitスキーマ上、必須は to と name。任意パラメータがあれば追送してください。
-      try {
-        await sendEmail('submit', {
-          to: data.email,
-          name: data.artistName,
-          // manageUrl: `https://www.me-ish.art/manage/${externalUserId}`, // 任意
-          // faqUrl: 'https://me-ish.art/faq',
-          // termsUrl: 'https://me-ish.art/footer/terms',
-          // slaHours: 72,
-        });
-      } catch (e) {
-        // メール失敗は致命ではないので、画面は成功のまま
-        console.error('submit mail failed:', e);
-      }
+      await fetch('/api/send-email/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: data.email, name: data.artistName, externalUserId }),
+      });
     } catch (e: any) {
       alert(`送信中にエラーが発生しました：${e.message}`);
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -259,9 +223,7 @@ const FormWrapper = () => {
                   />
                   <div className="flex justify-between mt-6">
                     <button type="button" onClick={prevStep} className="button">戻る</button>
-                    <button type="submit" disabled={submitting} className="button bg-[#00a1e9] text-white hover:bg-[#008ec4] disabled:opacity-60">
-                      送信
-                    </button>
+                    <button type="submit" className="button bg-[#00a1e9] text-white hover:bg-[#008ec4]">送信</button>
                   </div>
                 </motion.div>
               )}
@@ -274,3 +236,4 @@ const FormWrapper = () => {
 };
 
 export default FormWrapper;
+

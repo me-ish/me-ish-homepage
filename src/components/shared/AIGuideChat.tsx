@@ -1,7 +1,7 @@
 // src/components/shared/AIGuideChat.tsx
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MessageCircle, Send, X, Mic, MicOff } from 'lucide-react';
 
 /* ===== 最小の SpeechRecognition 型定義 ===== */
@@ -23,7 +23,7 @@ declare global {
   }
 }
 
-/* ===== Props ===== */
+/* ===== Props（どちらの開閉APIもOKに） ===== */
 export type AIGuideChatProps = {
   initialMessage?: string;
 
@@ -43,59 +43,44 @@ export default function AIGuideChat({
   initialMessage,
   controlledOpen,
   onOpenChange,
-  // 旧API
+  // 旧API互換
   open,
   onClose,
   defaultOpen = false,
 }: AIGuideChatProps) {
-  /* -------------------------------
-   * 開閉（ハンドラ同梱時のみ制御扱い）
-   * ----------------------------- */
-  const hasNewControl =
-    typeof controlledOpen === 'boolean' && typeof onOpenChange === 'function';
-  const hasOldControl =
-    typeof open === 'boolean' && typeof onOpenChange === 'function'; // onClose だけでは制御にしない
-
-  const isControlled = hasNewControl || hasOldControl;
-  const controlled = hasNewControl ? controlledOpen : hasOldControl ? open : undefined;
+  // ---- 開閉（controlledOpen > open の優先で制御判定）
+  const controlled = controlledOpen ?? open;
+  const isControlled = typeof controlled === 'boolean';
 
   const [uncontrolledOpen, setUncontrolledOpen] = useState<boolean>(defaultOpen);
   const isOpen = isControlled ? Boolean(controlled) : uncontrolledOpen;
 
   const setOpen = (next: boolean) => {
-    if (isControlled) {
-      onOpenChange?.(next);   // 親に通知
-      if (!next) onClose?.(); // 旧API互換のクローズ通知
-    } else {
-      setUncontrolledOpen(next);
-    }
+    if (!isControlled) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+    if (!next) onClose?.(); // 旧APIの onClose 互換
   };
 
-  /* -------------------------------
-   * 会話の状態
-   * ----------------------------- */
+  // ---- 会話の状態
   const [input, setInput] = useState('');
   const [reply, setReply] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasSentInitial, setHasSentInitial] = useState(false);
 
-  /* -------------------------------
-   * 音声認識（マウント後にだけセット）
-   * ----------------------------- */
+  // ---- 音声認識 / TTS
   type SR = ISpeechRecognition;
   const recognitionRef = useRef<SR | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [srSupported, setSrSupported] = useState(false);
+
+  const srSupported = useMemo(
+    () =>
+      typeof window !== 'undefined' &&
+      (!!window.webkitSpeechRecognition || !!window.SpeechRecognition),
+    []
+  );
 
   useEffect(() => {
-    // Mic対応可否はマウント後に判定（SSR差分防止）
-    const supported =
-      typeof window !== 'undefined' &&
-      (!!window.webkitSpeechRecognition || !!window.SpeechRecognition);
-    setSrSupported(supported);
-
-    if (!supported) return;
-
+    if (!srSupported) return;
     const SRImpl = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!SRImpl) return;
 
@@ -121,29 +106,24 @@ export default function AIGuideChat({
       } catch {}
       recognitionRef.current = null;
     };
-  }, []);
+  }, [srSupported]);
 
-  /* -------------------------------
-   * 初回メッセージ（マウント後に一度だけ）
-   * ----------------------------- */
+  // 初回メッセージが渡されたら自動送信＆開く
   useEffect(() => {
-    if (!initialMessage || hasSentInitial) return;
-    // 自動送信 & パネルを開く
-    void handleSubmit(initialMessage);
-    setHasSentInitial(true);
-    setOpen(true);
+    if (initialMessage && !hasSentInitial) {
+      void handleSubmit(initialMessage);
+      setHasSentInitial(true);
+      setOpen(true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMessage, hasSentInitial]);
 
-  /* -------------------------------
-   * 送信処理
-   * ----------------------------- */
   const handleSubmit = async (text: string) => {
     const q = text?.trim();
     if (!q) return;
 
-    setLoading(true);
     try {
+      setLoading(true);
       const res = await fetch('/api/ai-guide', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -188,15 +168,12 @@ export default function AIGuideChat({
     } catch {}
   };
 
-  /* -------------------------------
-   * Render
-   * ----------------------------- */
   return (
-    <div className={`fixed bottom-2 right-2 z-[9999] ${isOpen ? 'w-[320px]' : ''}`}>
+    <div className={`fixed bottom-2 right-2 z-50 ${isOpen ? 'w-[320px]' : ''}`}>
       {!isOpen && (
         <button
           onClick={() => setOpen(true)}
-          className="flex items-center gap-2 bg-white border border-cyan-400 text-cyan-600 px-4 py-2 rounded-full shadow hover:bg-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-2"
+          className="flex items-center gap-2 bg-white border border-cyan-400 text-cyan-600 px-4 py-2 rounded-full shadow hover:bg-cyan-50"
           aria-label="ガイドAIを開く"
           type="button"
         >
@@ -214,7 +191,7 @@ export default function AIGuideChat({
         >
           <button
             onClick={() => setOpen(false)}
-            className="absolute top-1 right-2 text-sm text-cyan-600 hover:underline inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-2 rounded"
+            className="absolute top-1 right-2 text-sm text-cyan-600 hover:underline inline-flex items-center gap-1"
             aria-label="ガイドAIを閉じる"
             type="button"
           >
@@ -234,7 +211,6 @@ export default function AIGuideChat({
           />
 
           <div className="flex items-center gap-2 mt-2">
-            {/* Micはマウント後に対応判定して描画（SSR差分を防ぐ） */}
             {srSupported && (
               <button
                 onClick={isRecording ? stopListening : startListening}
@@ -257,8 +233,8 @@ export default function AIGuideChat({
             </button>
           </div>
 
-          {!!reply && (
-            <div className="mt-3 p-2 bg-gray-100 rounded text-sm whitespace-pre-line" aria-live="polite">
+          {reply && (
+            <div className="mt-3 p-2 bg-gray-100 rounded text-sm whitespace-pre-line">
               {reply}
             </div>
           )}
@@ -279,4 +255,3 @@ export default function AIGuideChat({
     </div>
   );
 }
-  

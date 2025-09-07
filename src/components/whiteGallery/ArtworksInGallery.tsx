@@ -27,21 +27,9 @@ interface ArtworkEntry {
   edition_sold?: number | null
 }
 
+
 interface ArtworksInGalleryProps {
   avatarRef: React.RefObject<THREE.Object3D>
-}
-
-// 画像URL解決：image_url があればそれを使い、無ければ .png に正規化して /final/ を組み立て
-function resolveImageUrl(row: any): string {
-  const direct = row.image_url?.trim()
-  if (direct) return direct
-
-  const raw = (row.file_name ?? '').trim()
-  if (!raw) return ''
-
-  const pngName = raw.replace(/\.(?:jpe?g|png|webp|gif|avif|tiff)$/i, '.png')
-  const { data } = supabase.storage.from('artworks').getPublicUrl(`final/${pngName}`)
-  return data.publicUrl // ※ getPublicUrl が自動でエンコード（空白→%20）してくれます
 }
 
 export default function ArtworksInGallery({ avatarRef }: ArtworksInGalleryProps) {
@@ -50,50 +38,50 @@ export default function ArtworksInGallery({ avatarRef }: ArtworksInGalleryProps)
 
   useEffect(() => {
     const fetchArtworks = async () => {
-      const { data, error } = await supabase
-        .from('entries')
-        .select(`
-          id, artist_name, title, file_name, image_url, description,
-          is_for_sale, price, sns_links, created_at,
-          sale_type, edition_total, edition_sold
-        `)
-        .eq('confirmed', true)
-        .eq('display_ready', true)
-        .eq('gallery_type', 'white')
-        .order('created_at', { ascending: true })
-        .limit(100)
+const { data, error } = await supabase
+  .from('entries')
+.select(`
+  id, artist_name, title, file_name, description, is_for_sale, price, sns_links,
+  created_at, sale_type, edition_total, edition_sold
+`)
+
+  .eq('confirmed', true)
+  .eq('display_ready', true)
+  .eq('gallery_type', 'white')
+  .order('created_at', { ascending: true })
+  .limit(100)
+
 
       if (error) {
         console.error('エントリー取得エラー:', error)
         return
       }
 
-      // URL 解決して、URL が空のものは除外
-      const resolved = (data ?? [])
-        .map((item) => {
-          const finalUrl = resolveImageUrl(item)
-          if (!finalUrl) return null
+      const realEntries = (data || []).map((item) => {
+        const fileName = item.file_name
+        const finalUrl = supabase.storage
+          .from('artworks')
+          .getPublicUrl(`final/${fileName}`).data.publicUrl
 
-          return {
-            title: item.title,
-            author: item.artist_name,
-            imageUrl: finalUrl,
-            description: item.description || '',
-            is_for_sale: item.is_for_sale,
-            price: item.price,
-            sns_links: item.sns_links || '{}',
-            id: item.id,
-            created_at: item.created_at,
-            ratio: 1,
-            scale: 1.2,
-            sale_type: item.sale_type ?? 'normal',
-            edition_total: item.edition_total ?? 1,
-            edition_sold: item.edition_sold ?? 0,
-          }
-        })
-        .filter(Boolean) as Omit<ArtworkEntry, 'key' | 'position' | 'rotation'>[]
+return {
+  title: item.title,
+  author: item.artist_name,
+  imageUrl: finalUrl,
+  description: item.description || '',
+  is_for_sale: item.is_for_sale,
+  price: item.price,
+  sns_links: item.sns_links || '{}',
+  id: item.id,
+  created_at: item.created_at,
+  ratio: 1,
+  scale: 1.2,
+  sale_type: item.sale_type ?? 'normal',
+  edition_total: item.edition_total ?? 1,
+  edition_sold: item.edition_sold ?? 0,
+}
 
-      // ダミー
+      })
+
       const dummyEntries = Array.from({ length: 7 }, (_, i) => ({
         title: 'Coming Soon',
         author: 'me-ish',
@@ -108,9 +96,8 @@ export default function ArtworksInGallery({ avatarRef }: ArtworksInGalleryProps)
         scale: 1.0,
       }))
 
-      const combined = [...resolved, ...dummyEntries].slice(0, 10)
+      const combined = [...realEntries, ...dummyEntries].slice(0, 10)
 
-      // 位置・回転の計算
       const prepared = combined.map((art, i, all) => {
         const angle = (i / all.length) * Math.PI * 2 + Math.PI / 10
         const radius = 20
@@ -128,7 +115,7 @@ export default function ArtworksInGallery({ avatarRef }: ArtworksInGalleryProps)
         return {
           key: `art-${i}`,
           position: position.toArray() as [number, number, number],
-          rotation: new THREE.Euler().copy(dummy.rotation).toArray() as [number, number, number],
+          rotation: dummy.rotation.toArray() as [number, number, number],
           ...art,
         }
       })
@@ -143,8 +130,16 @@ export default function ArtworksInGallery({ avatarRef }: ArtworksInGalleryProps)
     <>
       {!zoomedArtwork &&
         artworks.map((art) => (
-          <ArtworkFrameWhite key={art.key} data={art} avatarRef={avatarRef}>
-            <ArtworkLabelWhite avatarRef={avatarRef} title={art.title} author={art.author} />
+          <ArtworkFrameWhite
+            key={art.key}
+            data={art}
+            avatarRef={avatarRef}
+          >
+            <ArtworkLabelWhite
+              avatarRef={avatarRef}
+              title={art.title}
+              author={art.author}
+            />
           </ArtworkFrameWhite>
         ))}
     </>

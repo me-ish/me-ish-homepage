@@ -117,7 +117,7 @@ export default function PrivacyPage() {
         <p>
           利用者は、自身に関する個人情報の開示、訂正、利用停止、削除を請求できます。
           ご希望の際は、
-          <Link href="/contact" className="underline underline-offset-2">
+          <Link href="/contact/form" className="underline underline-offset-2">
             お問い合わせフォーム
           </Link>
           からご連絡ください。本人確認を行った上で、法令に基づき対応します。
@@ -139,7 +139,7 @@ export default function PrivacyPage() {
         <ul>
           <li>
             フォーム：
-            <Link href="/contact" className="underline underline-offset-2">
+            <Link href="/contact/form" className="underline underline-offset-2">
               お問い合わせフォーム
             </Link>
           </li>

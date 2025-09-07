@@ -25,4 +25,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/purchase/error`);
   }
 }
-

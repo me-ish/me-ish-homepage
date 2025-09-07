@@ -1,39 +1,26 @@
 // --- /app/api/ai-guide/route.ts ---
-// 汎用QA：作品名/ID/検索/展示状況/ギャラリー方針（公開済みのみ返す）
-
+// 汎用QA：作品名/ID/検索/展示状況/ギャラリー方針
 import { NextResponse } from 'next/server';
-import type { PostgrestFilterBuilder } from '@supabase/postgrest-js';
-import { createClient } from '@/lib/supabase/server'; // サーバー用 Supabase クライアント
+import { createClient } from '@/lib/supabase/server'; // サーバー用Supabaseクライアント
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
 const MODEL = process.env.GPT_ANSWER_MODEL ?? 'gpt-4o-mini';
 const SAFE_DEBUG = process.env.NODE_ENV !== 'production';
 
-// Supabaseクライアント（service_role 不要の読み取りだけ想定）
+// Supabaseクライアント（必要なら service_role を使う admin 版に差し替え可）
 function sb() {
   return createClient();
 }
 
-// 公開用：返す列（内部金額などは除外）
+// 参照する列（スキーマに合わせて tags を除外）
 const SELECT_COLUMNS = `
   id, title, artist_name, description, image_url,
   price, sale_type, is_for_sale, is_sold,
   likes, gallery_type, confirmed, display_ready,
   confirmed_at, display_start_at, display_end_at,
-  edition_total, edition_sold
+  edition_total, edition_sold,
+  meish_fee_yen, artist_reward_yen
 ` as const;
-
-// Postgrest のフィルタビルダー型（ゆるい型）
-type PB = PostgrestFilterBuilder<any, any, any, any>;
-
-// 公開可のレコード条件（未公開は返さない）
-function applyPublicFilters(q: PB): PB {
-  const nowIso = new Date().toISOString();
-  return q
-    .eq('confirmed', true)
-    .eq('display_ready', true)
-    .lte('display_start_at', nowIso);
-}
 
 /* ===========================
    OpenAI ツール（function calling）
@@ -43,7 +30,7 @@ const tools = [
     type: 'function',
     function: {
       name: 'get_entry_by_id',
-      description: 'entries.id で単一の作品詳細を取得（公開済みのみ）',
+      description: 'entries.id で単一の作品詳細を取得',
       parameters: {
         type: 'object',
         properties: { id: { type: 'number', description: 'entries の主キーID' } },
@@ -56,7 +43,7 @@ const tools = [
     type: 'function',
     function: {
       name: 'get_entry_by_title',
-      description: '作品タイトルの部分一致で検索（公開済み・最大5件）',
+      description: '作品タイトルの部分一致で検索（最大5件）',
       parameters: {
         type: 'object',
         properties: {
@@ -73,7 +60,7 @@ const tools = [
     function: {
       name: 'search_entries',
       description:
-        '簡易検索。フリーテキスト/価格/販売形式/ギャラリー種別/現在展示(onlyLive)で絞り込み（公開済みのみ）',
+        '簡易検索。フリーテキスト/価格/販売形式/ギャラリー種別/現在展示(onlyLive)で絞り込み',
       parameters: {
         type: 'object',
         properties: {
@@ -86,7 +73,7 @@ const tools = [
             type: 'boolean',
             default: false,
             description:
-              'true なら現在展示中（!is_sold && display_end_at が null または 未来）のみ',
+              'true なら現在展示中（confirmed && display_ready && !is_sold && display_end_at is null/未来）のみ',
           },
           limit: { type: 'number', default: 20 },
         },
@@ -109,26 +96,29 @@ const tools = [
 ];
 
 /* ===========================
-   Supabase 実装（PB はすべて any ベース）
+   Supabase 実装
    =========================== */
 async function impl_get_entry_by_id({ id }: { id: number }) {
-  let q = sb().from('entries').select(SELECT_COLUMNS).eq('id', id) as unknown as PB;
-  const { data, error } = await applyPublicFilters(q).single();
+  const { data, error } = await sb()
+    .from('entries')
+    .select(SELECT_COLUMNS)
+    .eq('id', id)
+    .single(); // maybeSingle ではなく single に統一
+
   if (error) throw new Error(`Supabase(get_entry_by_id): ${error.message}`);
   return data;
 }
 
 async function impl_get_entry_by_title({ title_query, limit = 5 }: { title_query: string; limit?: number }) {
-  let q = sb()
+  const { data, error } = await sb()
     .from('entries')
     .select(SELECT_COLUMNS)
     .ilike('title', `%${title_query}%`)
     .order('confirmed_at', { ascending: false })
-    .limit(limit) as unknown as PB;
+    .limit(limit);
 
-  const { data, error } = await applyPublicFilters(q);
   if (error) throw new Error(`Supabase(get_entry_by_title): ${error.message}`);
-  return (data as any[]) ?? [];
+  return data ?? [];
 }
 
 type SearchArgs = {
@@ -142,12 +132,11 @@ type SearchArgs = {
 };
 
 async function impl_search_entries(args: SearchArgs) {
-  let q = sb().from('entries').select(SELECT_COLUMNS) as unknown as PB;
-
-  q = applyPublicFilters(q);
+  let query = sb().from('entries').select(SELECT_COLUMNS);
 
   if (args.q?.trim()) {
-    q = q.or(
+    // タイトル/説明に対する OR 検索（tags は使わない）
+    query = query.or(
       [
         `title.ilike.%${args.q}%`,
         `description.ilike.%${args.q}%`,
@@ -155,23 +144,27 @@ async function impl_search_entries(args: SearchArgs) {
     );
   }
 
-  if (typeof args.priceMin === 'number') q = q.gte('price', args.priceMin);
-  if (typeof args.priceMax === 'number') q = q.lte('price', args.priceMax);
-  if (args.saleType && args.saleType !== 'any') q = q.eq('sale_type', args.saleType);
-  if (args.galleryType && args.galleryType !== 'any') q = q.eq('gallery_type', args.galleryType);
+  if (typeof args.priceMin === 'number') query = query.gte('price', args.priceMin);
+  if (typeof args.priceMax === 'number') query = query.lte('price', args.priceMax);
+  if (args.saleType && args.saleType !== 'any') query = query.eq('sale_type', args.saleType);
+  if (args.galleryType && args.galleryType !== 'any') query = query.eq('gallery_type', args.galleryType);
 
   if (args.onlyLive) {
-    q = q
+    // 現在展示中の基準：confirmed && display_ready && !is_sold && (endがnull or 未来)
+    query = query
+      .eq('confirmed', true)
+      .eq('display_ready', true)
       .eq('is_sold', false)
       .or('display_end_at.is.null,display_end_at.gt.now()');
   }
 
-  const { data, error } = await q.order('likes', { ascending: false }).limit(args.limit ?? 20);
+  const { data, error } = await query.order('likes', { ascending: false }).limit(args.limit ?? 20);
   if (error) throw new Error(`Supabase(search_entries): ${error.message}`);
-  return (data as any[]) ?? [];
+  return data ?? [];
 }
 
 async function impl_get_gallery_status({ galleryType }: { galleryType: 'white' | 'float' | 'special' | 'all' }) {
+  // あなたの運用方針（記録済み）に合わせた固定返答
   const policy = {
     white: {
       rotation: '日替わりしない',
@@ -230,6 +223,7 @@ export async function POST(req: Request) {
     const toolCall = choice?.message?.tool_calls?.[0];
 
     if (!toolCall) {
+      // ツール不要 → そのまま返す
       const text = choice?.message?.content ?? 'うまく解釈できませんでした。作品名やIDを教えてください。';
       return NextResponse.json({ reply: text });
     }

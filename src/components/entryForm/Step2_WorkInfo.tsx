@@ -68,6 +68,7 @@ const Step2_WorkInfo = ({
   } = useFormContext<FormValues>();
 
   const imageField = watch('image');
+  const galleryType = watch('gallery_type');
   const titleValue: string = watch('title') || '';
   const descValue: string = watch('description') || '';
 
@@ -79,11 +80,6 @@ const Step2_WorkInfo = ({
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
-
-  // 念のためマウント時に white を強制セット（hiddenのdefaultValueと二重の安全網）
-  useEffect(() => {
-    setValue('gallery_type', 'white', { shouldDirty: false, shouldValidate: true });
-  }, [setValue]);
 
   // プレビュー／メタ取得／タイトル補完（バリデーションは register 側に集約）
   useEffect(() => {
@@ -108,6 +104,12 @@ const Step2_WorkInfo = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageField]);
+
+  const galleryHint = useMemo(() => {
+    if (galleryType === 'white') return '🧭 ホワイトギャラリー：無期限の常設展示（⽇替わりなし）';
+    if (galleryType === 'float') return '🗓️ フロートギャラリー：1か月展示＋日替わり展示ルール';
+    return '応募先ギャラリーを選択してください。';
+  }, [galleryType]);
 
   // D&Dで投入（FileListをそのままフォーム値にセット）
   const onDrop: React.DragEventHandler<HTMLLabelElement> = async (e) => {
@@ -135,25 +137,27 @@ const Step2_WorkInfo = ({
         </p>
       </header>
 
-      {/* 応募先ギャラリー（White固定） */}
+      {/* 応募先ギャラリー */}
       <div>
-        <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+        <label htmlFor="gallery_type" className="block text-sm font-semibold text-gray-800 mb-1.5">
           応募先ギャラリー <span className="text-red-600">＊</span>
         </label>
-
-        {/* 表示は固定バッジ */}
-        <div className="inline-flex items-center gap-2 rounded-lg border border-[#d9eef8] bg-[#f3fbff] px-3 py-2">
-          <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: BRAND }} aria-hidden />
-          <span className="text-sm font-semibold text-gray-800">ホワイトギャラリー</span>
-          <span className="text-xs text-gray-500">（β中はWhiteのみ募集）</span>
-        </div>
-
-        {/* 送信用：white固定（RHFに値を載せる） */}
-        <input type="hidden" defaultValue="white" {...register('gallery_type')} />
-
-        <p className="mt-1 text-xs text-gray-500">
-          🧭 無期限の常設展示（⽇替わりなし）。フロートギャラリーはβ終了後に募集予定です。
-        </p>
+        <select
+          id="gallery_type"
+          aria-invalid={!!errors.gallery_type}
+          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-[#fafafa] focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#00a1e9]"
+          defaultValue=""
+          {...register('gallery_type', { required: '応募先ギャラリーは必須です。' })}
+        >
+          <option value="" disabled>選択してください</option>
+          <option value="white">ホワイトギャラリー</option>
+          <option value="float">フロートギャラリー</option>
+        </select>
+        <p className="mt-1 text-xs text-gray-500">{galleryHint}</p>
+        {(() => {
+          const m = errMsg(errors.gallery_type);
+          return m ? <p role="alert" className="mt-1.5 text-sm text-red-600">{m}</p> : null;
+        })()}
       </div>
 
       {/* 作品タイトル */}
@@ -224,6 +228,7 @@ const Step2_WorkInfo = ({
             className="sr-only"
             aria-invalid={!!errors.image}
             {...register('image', {
+              // required は使わず、exists で必須チェック
               onChange: async () => { await trigger('image'); },
               validate: {
                 exists: (v: File | FileList) =>

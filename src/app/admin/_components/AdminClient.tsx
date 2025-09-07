@@ -33,22 +33,20 @@ export default function AdminClient({
   }, [router]);
 
   // --- counts fetcher
-const refreshCounts = async () => {
-  setLoading(true);
-  try {
-    const res = await fetch('/admin/api/counts', { cache: 'no-store' });
-    if (!res.ok) throw new Error('failed');
-    const json = await res.json();
-    if (!mountedRef.current) return;
-    setNewEntryCount(json.newEntryCount ?? 0);
-    setNewInquiryCount(json.newInquiryCount ?? 0);
-  } catch {
-    // TODO: ユーザー通知（トースト等）
-  } finally {
-    if (mountedRef.current) setLoading(false);
-  }
-};
-
+  const refreshCounts = async () => {
+    setLoading(true);
+    try {
+      const [{ count: c1, error: e1 }, { count: c2, error: e2 }] = await Promise.all([
+        supabase.from('entries').select('*', { count: 'exact', head: true }).eq('confirmed', false),
+        supabase.from('inquiries').select('*', { count: 'exact', head: true }).eq('is_read', false),
+      ]);
+      if (!mountedRef.current) return;
+      if (!e1 && typeof c1 === 'number') setNewEntryCount(c1);
+      if (!e2 && typeof c2 === 'number') setNewInquiryCount(c2);
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  };
 
   // 初回 + タブ復帰/表示時にリフレッシュ
   useEffect(() => {

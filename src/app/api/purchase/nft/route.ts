@@ -1,58 +1,29 @@
 // /src/app/api/purchase/nft/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { z } from 'zod';
-import { randomUUID } from 'crypto';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  // 使っているバージョンに合わせてOK（未指定でも可）
-  // apiVersion: '2024-06-20' as any,
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-const Body = z.object({
-  entryId: z.union([z.string(), z.number()]),
-});
-
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '');
-
-function httpUrl(u: string): string | null {
-  try {
-    const url = new URL(u);
-    return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
+// 読み取りはサーバー側で（RLS事情に応じて service role を使用）
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(req: NextRequest) {
-  // ---- 入力バリデーション
-  const parsed = Body.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) {
+  const { entryId } = await req.json();
+
+  if (!entryId) {
     return NextResponse.json({ error: 'entryId is required' }, { status: 400 });
   }
-  const entryId = Number(parsed.data.entryId);
-  if (!Number.isInteger(entryId) || entryId <= 0) {
-    return NextResponse.json({ error: 'invalid entryId' }, { status: 400 });
-  }
 
-  // ---- サーバ側で販売可否を厳密チェック
-  const admin = supabaseAdmin();
-  const { data: entry, error } = await admin
+  // 価格・タイトル・在庫をサーバーで確定（改ざん防止）
+  const { data: entry, error } = await supabaseAdmin
     .from('entries')
-    .select(
-      `
-      id, title, price,
-      sale_type, is_for_sale, is_sold,
-      edition_total, edition_sold,
-      confirmed, display_ready,
-      display_start_at, display_end_at
-      `
-    )
+    .select('id, title, price, edition_total, edition_sold, is_nft')
     .eq('id', entryId)
     .single();
 
@@ -60,74 +31,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'entry not found' }, { status: 404 });
   }
 
-  // 整合チェック：NFTのみに限定
-  if (entry.sale_type !== 'nft') {
-    return NextResponse.json({ error: 'not nft entry' }, { status: 400 });
-  }
+  // NFTエディションは1回の決済で1点に固定（複数可にするならここを調整）
+  const qty = 1;
 
-  // 公開・販売条件（必要に応じて調整）
-  const now = new Date();
-  const startOk = !entry.display_start_at || new Date(entry.display_start_at) <= now;
-  const endOk = !entry.display_end_at || new Date(entry.display_end_at) > now;
-  if (!entry.confirmed || !entry.display_ready || !startOk || !endOk) {
-    return NextResponse.json({ error: 'not available for sale' }, { status: 409 });
-  }
-  if (!entry.is_for_sale || entry.is_sold === true) {
-    return NextResponse.json({ error: 'not for sale' }, { status: 409 });
-  }
-
-  // 在庫（NFTは基本 1/1 かエディション制を想定）
-  const total = entry.edition_total ?? 1;
-  const sold = entry.edition_sold ?? 0;
-  if (typeof total === 'number' && sold >= total) {
+  // 在庫プレチェック（最終確定は Webhook/RPC）
+  const total = entry.edition_total ?? null;
+  const sold  = entry.edition_sold ?? 0;
+  const remaining = total === null ? Infinity : Math.max(0, total - sold);
+  if (total !== null && qty > remaining) {
     return NextResponse.json({ error: 'sold out' }, { status: 409 });
   }
 
-  // 価格（Stripe JPYは整数）
-  const unitAmount = Math.floor(Number(entry.price ?? 0));
-  if (!Number.isFinite(unitAmount) || unitAmount <= 0) {
-    return NextResponse.json({ error: 'invalid price' }, { status: 400 });
-  }
+  const unitAmount = Math.max(1, Math.floor(Number(entry.price ?? 0))); // JPYは整数（ゼロ小数）
 
-  // リダイレクト先URL（https のみ許可）
-  const success = httpUrl(`${SITE_URL}/purchase/success?session_id={CHECKOUT_SESSION_ID}`);
-  const cancel = httpUrl(`${SITE_URL}/purchase/cancel`);
-  if (!success || !cancel) {
-    return NextResponse.json({ error: 'server misconfig: NEXT_PUBLIC_SITE_URL' }, { status: 500 });
-  }
-
-  // 1回の決済で1点
-  const qty = 1;
-
-  // ---- Stripe セッション作成（冪等キー付き）
-  const session = await stripe.checkout.sessions.create(
-    {
-      mode: 'payment',
-      locale: 'ja',
-      line_items: [
-        {
-          price_data: {
-            currency: 'jpy',
-            product_data: {
-              name: `me-ish NFT作品：${entry.title || `#${entry.id}`}`,
-            },
-            unit_amount: unitAmount,
-          },
-          quantity: qty,
-        },
-      ],
-      success_url: success,
-      cancel_url: cancel,
-      // 成果確定は Webhook 側でDB更新 & ミント起票
-      metadata: {
-        type: 'nft',
-        entryId: String(entry.id),
-        quantity: String(qty),
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    line_items: [{
+      price_data: {
+        currency: 'jpy',
+        product_data: { name: `me-ish NFT作品：${entry.title}` },
+        unit_amount: unitAmount,
       },
-      client_reference_id: `nft:${entry.id}`,
+      quantity: qty,
+    }],
+    locale: 'ja',
+    // 成果処理は Webhook に集約。success は画面遷移のみ
+    success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/purchase/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/purchase/cancel`,
+    metadata: {
+      type: 'nft',                 // ← ここでNFT購入だと分かる
+      entryId: String(entry.id),
+      quantity: String(qty),
     },
-    { idempotencyKey: randomUUID() }
-  );
+    client_reference_id: `nft:${entry.id}`,
+  });
 
   return NextResponse.json({ url: session.url });
 }

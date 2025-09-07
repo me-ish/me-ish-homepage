@@ -5,50 +5,19 @@ import { useFormContext } from 'react-hook-form';
 
 const BRAND = '#00a1e9';
 
-// 共通：スキーム省略時は https:// を付与（ドメインらしければ）
+// 軽量なURL正規化（スキーム省略時は https:// を付与）
 function normalizeUrl(v: string) {
   if (!v) return '';
-  const s = v.trim();
-  if (/^https?:\/\//i.test(s)) return s;
-  if (/^[\w.-]+\.[a-z]{2,}/i.test(s)) return `https://${s}`;
-  return s; // それ以外はそのまま（後段の専用正規化で処理）
-}
-
-// ---- SNS専用 正規化＆パターン ----
-const xUrlPattern = /^(https?:\/\/)?(x\.com|twitter\.com)\/[A-Za-z0-9_]{1,15}\/?$/i;
-const igUrlPattern = /^(https?:\/\/)?(instagram\.com)\/[A-Za-z0-9._]{1,30}\/?$/i;
-
-function normalizeX(v: string) {
-  if (!v) return '';
-  let s = v.trim();
-
-  // 完全URLならスキーム補完のみ
-  if (/^(https?:\/\/)?(x\.com|twitter\.com)\//i.test(s)) {
-    return /^https?:\/\//i.test(s) ? s : `https://${s}`;
+  const trimmed = v.trim();
+  if (!/^https?:\/\//i.test(trimmed) && /^[\w.-]+\.[a-z]{2,}/i.test(trimmed)) {
+    return `https://${trimmed}`;
   }
-
-  // @name / name を URL に
-  s = s.replace(/^@/, '');
-  if (!s) return '';
-  return `https://x.com/${s}`;
+  return trimmed;
 }
 
-function normalizeInstagram(v: string) {
-  if (!v) return '';
-  let s = v.trim();
-
-  if (/^(https?:\/\/)?instagram\.com\//i.test(s)) {
-    return /^https?:\/\//i.test(s) ? s : `https://${s}`;
-  }
-
-  s = s.replace(/^@/, '');
-  if (!s) return '';
-  return `https://instagram.com/${s}`;
-}
-
-// 既存のゆるめURLパターン（HP用）はこのままでOK
-const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/[^\s]*)?$/i;
-
+// ゆるめのURLパターン（「https://example.com」や「example.com/abc」想定）
+const urlPattern =
+  /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/[^\s]*)?$/i;
 
 const Step1_ArtistInfo: React.FC = () => {
   const { register, setValue, formState: { errors } } = useFormContext();
@@ -151,105 +120,123 @@ const Step1_ArtistInfo: React.FC = () => {
         )}
       </div>
 
-{/* ホームページ */}
-<div className="mb-5">
-  <label
-    htmlFor="homepageUrl"
-    className="block text-sm font-semibold text-gray-800 mb-1.5"
-  >
-    ホームページURL（任意）
-  </label>
-  <input
-    id="homepageUrl"
-    type="url"
-    inputMode="url"
-    autoComplete="url"
-    placeholder="例）https://your-portfolio.com"
-    aria-invalid={!!errors.homepageUrl}
-    aria-describedby="homepageUrl_help"
-    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#00a1e9] placeholder:text-gray-400"
-    {...register('homepageUrl', {
-      setValueAs: (v) => normalizeUrl(v),
-      validate: (v) => !v || urlPattern.test(v) || 'URLの形式が正しくありません。',
-    })}
-  />
-  <div id="homepageUrl_help" className="mt-1 text-xs text-gray-500">
-    スキーム（https://）が無い場合は自動補完されます。
-  </div>
-  {errors.homepageUrl && (
-    <p role="alert" className="mt-1.5 text-sm text-red-600">
-      {/* @ts-ignore */}
-      {errors.homepageUrl.message}
-    </p>
-  )}
-</div>
+      {/* ホームページ */}
+      <div className="mb-5">
+        <label
+          htmlFor="homepageUrl"
+          className="block text-sm font-semibold text-gray-800 mb-1.5"
+        >
+          ホームページURL（任意）
+        </label>
+        <input
+          id="homepageUrl"
+          type="url"
+          inputMode="url"
+          autoComplete="url"
+          placeholder="例）https://your-portfolio.com"
+          aria-invalid={!!errors.homepageUrl}
+          aria-describedby="homepageUrl_help"
+          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#00a1e9] placeholder:text-gray-400"
+          {...register('homepageUrl', {
+            setValueAs: (v) => normalizeUrl(v),
+            validate: (v) =>
+              !v || urlPattern.test(v) || 'URLの形式が正しくありません。'
+          })}
+          onBlur={(e) =>
+            setValue('homepageUrl', normalizeUrl(e.currentTarget.value), {
+              shouldDirty: true,
+              shouldValidate: true,
+            })
+          }
+        />
+        <div id="homepageUrl_help" className="mt-1 text-xs text-gray-500">
+          スキーム（https://）が無い場合は自動補完されます。
+        </div>
+        {errors.homepageUrl && (
+          <p role="alert" className="mt-1.5 text-sm text-red-600">
+            {/* @ts-ignore */}
+            {errors.homepageUrl.message}
+          </p>
+        )}
+      </div>
 
-{/* X（旧Twitter） */}
-<div className="mb-5">
-  <label
-    htmlFor="twitterUrl"
-    className="block text-sm font-semibold text-gray-800 mb-1.5"
-  >
-    X（旧Twitter）URL（任意）
-  </label>
-  <input
-    id="twitterUrl"
-    type="url"
-    inputMode="url"
-    placeholder="例）@yourusername / yourusername / x.com/yourusername"
-    aria-invalid={!!errors.twitterUrl}
-    aria-describedby="twitterUrl_help"
-    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#00a1e9] placeholder:text-gray-400"
-    {...register('twitterUrl', {
-      setValueAs: (v) => normalizeX(v),
-      validate: (v) =>
-        !v || xUrlPattern.test(v) || 'XのURL/ユーザー名が正しくありません。',
-    })}
-  />
-  <div id="twitterUrl_help" className="mt-1 text-xs text-gray-500">
-    <code>@name</code> / <code>name</code> だけでもOK。送信時に <code>https://x.com/name</code> に自動変換します。
-  </div>
-  {errors.twitterUrl && (
-    <p role="alert" className="mt-1.5 text-sm text-red-600">
-      {/* @ts-ignore */}
-      {errors.twitterUrl.message}
-    </p>
-  )}
-</div>
+      {/* X（旧Twitter） */}
+      <div className="mb-5">
+        <label
+          htmlFor="twitterUrl"
+          className="block text-sm font-semibold text-gray-800 mb-1.5"
+        >
+          X（旧Twitter）URL（任意）
+        </label>
+        <input
+          id="twitterUrl"
+          type="url"
+          inputMode="url"
+          placeholder="例）https://x.com/yourusername"
+          aria-invalid={!!errors.twitterUrl}
+          aria-describedby="twitterUrl_help"
+          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#00a1e9] placeholder:text-gray-400"
+          {...register('twitterUrl', {
+            setValueAs: (v) => normalizeUrl(v),
+            validate: (v) =>
+              !v || urlPattern.test(v) || 'URLの形式が正しくありません。',
+          })}
+          onBlur={(e) =>
+            setValue('twitterUrl', normalizeUrl(e.currentTarget.value), {
+              shouldDirty: true,
+              shouldValidate: true,
+            })
+          }
+        />
+        <div id="twitterUrl_help" className="mt-1 text-xs text-gray-500">
+          ユーザー名だけ入力してもOK（<code>yourusername</code> → <code>https://x.com/yourusername</code> に自動補完）。
+        </div>
+        {errors.twitterUrl && (
+          <p role="alert" className="mt-1.5 text-sm text-red-600">
+            {/* @ts-ignore */}
+            {errors.twitterUrl.message}
+          </p>
+        )}
+      </div>
 
-{/* Instagram */}
-<div className="mb-5">
-  <label
-    htmlFor="instagramUrl"
-    className="block text-sm font-semibold text-gray-800 mb-1.5"
-  >
-    Instagram URL（任意）
-  </label>
-  <input
-    id="instagramUrl"
-    type="url"
-    inputMode="url"
-    placeholder="例）@yourusername / yourusername / instagram.com/yourusername"
-    aria-invalid={!!errors.instagramUrl}
-    aria-describedby="instagramUrl_help"
-    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#00a1e9] placeholder:text-gray-400"
-    {...register('instagramUrl', {
-      setValueAs: (v) => normalizeInstagram(v),
-      validate: (v) =>
-        !v || igUrlPattern.test(v) || 'InstagramのURL/ユーザー名が正しくありません。',
-    })}
-  />
-  <div id="instagramUrl_help" className="mt-1 text-xs text-gray-500">
-    <code>@name</code> / <code>name</code> だけでもOK。送信時に <code>https://instagram.com/name</code> に自動変換します。
-  </div>
-  {errors.instagramUrl && (
-    <p role="alert" className="mt-1.5 text-sm text-red-600">
-      {/* @ts-ignore */}
-      {errors.instagramUrl.message}
-    </p>
-  )}
-</div>
-
+      {/* Instagram */}
+      <div className="mb-1">
+        <label
+          htmlFor="instagramUrl"
+          className="block text-sm font-semibold text-gray-800 mb-1.5"
+        >
+          Instagram URL（任意）
+        </label>
+        <input
+          id="instagramUrl"
+          type="url"
+          inputMode="url"
+          placeholder="例）https://instagram.com/yourusername"
+          aria-invalid={!!errors.instagramUrl}
+          aria-describedby="instagramUrl_help"
+          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#00a1e9] placeholder:text-gray-400"
+          {...register('instagramUrl', {
+            setValueAs: (v) => normalizeUrl(v),
+            validate: (v) =>
+              !v || urlPattern.test(v) || 'URLの形式が正しくありません。',
+          })}
+          onBlur={(e) =>
+            setValue('instagramUrl', normalizeUrl(e.currentTarget.value), {
+              shouldDirty: true,
+              shouldValidate: true,
+            })
+          }
+        />
+        <div id="instagramUrl_help" className="mt-1 text-xs text-gray-500">
+          ユーザー名だけでも自動でURL化されます。
+        </div>
+        {errors.instagramUrl && (
+          <p role="alert" className="mt-1.5 text-sm text-red-600">
+            {/* @ts-ignore */}
+            {errors.instagramUrl.message}
+          </p>
+        )}
+      </div>
 
       {/* 補足 */}
       <p className="mt-5 text-[11px] leading-relaxed text-gray-500">

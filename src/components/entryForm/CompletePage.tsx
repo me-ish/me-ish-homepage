@@ -51,13 +51,12 @@ export default function CompletePage() {
             me-ish ホームに戻る
           </Link>
           {/* もう一度応募ボタン（ルートに合わせて変更） */}
-<a
-  href="/entry"
-  className="inline-block px-6 py-2 border border-gray-300 text-gray-700 rounded-md font-semibold hover:bg-gray-50 transition"
->
-  もう一度応募する
-</a>
-
+          <Link
+            href="/entry"
+            className="inline-block px-6 py-2 border border-gray-300 text-gray-700 rounded-md font-semibold hover:bg-gray-50 transition"
+          >
+            もう一度応募する
+          </Link>
         </div>
 
         <p className="text-xs text-gray-500 mt-4">

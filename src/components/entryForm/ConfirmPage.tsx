@@ -17,8 +17,8 @@ const displayPlanLabels: Record<string, string> = {
   free: 'Free（¥0 / 表示保証なし・ローテーション枠）',
   mini: 'Mini（¥400 / 月1回保証）',
   light: 'Light（¥1,000 / 月3回保証）',
-  standard: 'Standard（¥1,400 / 月7回保証）',
-  premium: 'Premium（¥2,800 / 月15回保証）',
+  standard: 'Standard（¥2,000 / 月7回保証）',
+  premium: 'Premium（¥4,000 / 月15回保証）',
 };
 
 const galleryTypeLabel: Record<string, string> = {

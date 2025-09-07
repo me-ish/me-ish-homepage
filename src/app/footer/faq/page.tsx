@@ -44,7 +44,7 @@ export default function FAQPage() {
           answer: (
             <>
               はい。<strong>審査制</strong>です（オリジナル性、テーマ適合、安全性などを確認）。
-              応募方法は <Link href="/contact" className="underline">お問い合わせフォーム</Link> からご案内します。
+              応募方法は <Link href="/contact/form" className="underline">お問い合わせフォーム</Link> からご案内します。
             </>
           ),
         },
@@ -58,7 +58,7 @@ export default function FAQPage() {
           answer: (
             <>
               <Link href="/entry" className="underline">応募フォーム</Link> からご応募ください。
-              不明点がある場合は <Link href="/contact" className="underline">お問い合わせフォーム</Link> からご連絡ください。
+              不明点がある場合は <Link href="/contact/form" className="underline">お問い合わせフォーム</Link> からご連絡ください。
             </>
           ),
         },
@@ -69,7 +69,7 @@ export default function FAQPage() {
               主に（1）<strong>オリジナル作品</strong>であること、（2）テーマや展示方針に適合すること、
               （3）法令や規約に抵触しないこと（権利侵害・公序良俗違反の排除）などです。
               エントリー方法は <Link href="/entry" className="underline">応募フォーム</Link> の案内をご確認ください。
-              ご不明点は <Link href="/contact" className="underline">お問い合わせ</Link> へ。
+              ご不明点は <Link href="/contact/form" className="underline">お問い合わせ</Link> へ。
             </>
           ),
         },
@@ -129,7 +129,7 @@ export default function FAQPage() {
           answer: (
             <>
               デジタル商品の性質上、<strong>原則不可</strong>です。重複決済や重大な不具合等は
-              <Link href="/contact" className="underline">お問い合わせ</Link> ください（
+              <Link href="/contact/form" className="underline">お問い合わせ</Link> ください（
               <Link href="/footer/terms" className="underline">利用規約 第9条</Link>）。
             </>
           ),
@@ -214,7 +214,7 @@ export default function FAQPage() {
           answer: (
             <>
               <Link href="/footer/privacy" className="underline">プライバシーポリシー</Link> に従い、適切に管理します。
-              開示・訂正・削除のご請求は <Link href="/contact" className="underline">お問い合わせフォーム</Link> から。
+              開示・訂正・削除のご請求は <Link href="/contact/form" className="underline">お問い合わせフォーム</Link> から。
             </>
           ),
         },
@@ -245,7 +245,7 @@ export default function FAQPage() {
           question: '問い合わせ方法は？',
           answer: (
             <>
-              <Link href="/contact" className="underline">お問い合わせフォーム</Link> をご利用ください。
+              <Link href="/contact/form" className="underline">お問い合わせフォーム</Link> をご利用ください。
               併せて <span>info [at] me-ish.art</span> でも受け付けます（送信時は「@」に置換）。
             </>
           ),
@@ -282,7 +282,7 @@ export default function FAQPage() {
       <header className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">よくある質問（FAQ）</h1>
         <p className="mt-2 text-sm text-gray-600">
-          困ったときは <Link href="/contact" className="underline">お問い合わせフォーム</Link> へ。通常1–3営業日で返信します。
+          困ったときは <Link href="/contact/form" className="underline">お問い合わせフォーム</Link> へ。通常1–3営業日で返信します。
         </p>
         <div className="mt-4">
           <input
