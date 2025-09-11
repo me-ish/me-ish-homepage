@@ -92,6 +92,8 @@ const ExhibitEnd = z.object({
 });
 
 // purchase（Buyer）— amountYen / priceYen どちらでもOKにして正規化
+// purchase（Buyer）
+// src/app/api/send-email/[kind]/route.ts
 const PurchaseBuyer = z.object({
   to: z.string().email(),
   name: z.string().min(1),
@@ -108,11 +110,10 @@ const PurchaseBuyer = z.object({
   manageUrl: z.string().url().optional(),
   downloadUrl: z.string().url().optional(),
   receiptUrl: z.string().url().optional(),
-  // ★ CoA を受け付ける
   certificateUrl: z.string().url().optional(),
   coaUrl: z.string().url().optional(),
 })
-.passthrough()  // ★未知キーを落とさない（transformの前に！）
+.passthrough()  // ★ 未知キーのサイレント削除を防ぐ（transformより前）
 .transform(d => ({ ...d, priceYen: d.priceYen ?? d.amountYen ?? null }));
 
 // purchase（Artist）— amountYen / priceYen どちらでもOKにして正規化
