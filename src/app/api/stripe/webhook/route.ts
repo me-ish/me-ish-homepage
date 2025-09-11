@@ -3,12 +3,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { createHash, randomUUID } from 'crypto';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+// CoAリンクの有効期限（分）。未設定は30日（60*24*30）
+const CERT_LINK_TTL_MINUTES = Number(process.env.CERT_LINK_TTL_MINUTES || 60 * 24 * 30);
 
 const Meta = z.object({
   entryId: z.coerce.number().int().positive(),
@@ -22,11 +26,25 @@ function baseUrl() {
   return 'http://localhost:3000';
 }
 
+// cert_links にトークンを保存して、表示用の生トークンを返す
+async function createCertToken(entryId: number) {
+  const token = randomUUID().replace(/-/g, '');
+  const token_hash = createHash('sha256').update(token).digest('hex');
+  const expires_at = new Date(Date.now() + CERT_LINK_TTL_MINUTES * 60 * 1000).toISOString();
+
+  const { error } = await supabaseAdmin()
+    .from('cert_links')
+    .insert({ entry_id: entryId, token_hash, expires_at, revoked: false });
+
+  if (error) throw error;
+  return token;
+}
+
 export async function POST(req: NextRequest) {
   const sig = req.headers.get('stripe-signature');
   if (!sig) return new NextResponse('Missing signature', { status: 400 });
 
-  // 生ボディ必須
+  // Stripeは生ボディでの署名検証が必要
   const rawBody = Buffer.from(await req.arrayBuffer());
 
   let event: Stripe.Event;
@@ -106,6 +124,18 @@ export async function POST(req: NextRequest) {
       const buyerName  = session.customer_details?.name  || 'お客様';
 
       if (buyerEmail) {
+        // CoAリンクを生成（token → /cert/[id]?t=token に付与）
+        let certificateUrl: string | undefined;
+        try {
+          const t = await createCertToken(entryId);
+          // CoAページ（表示→DLボタンあり）
+          certificateUrl = `${baseUrl()}/cert/${entryId}?t=${t}`;
+          // もし即ダウンロードにしたい場合は下の行に差し替え
+          // certificateUrl = `${baseUrl()}/api/cert/download?entry=${entryId}&t=${t}`;
+        } catch (e) {
+          console.error('[webhook] cert token create failed:', e);
+        }
+
         await fetch(`${baseUrl()}/api/send-email/purchaseBuyer`, {
           method: 'POST',
           headers: {
@@ -117,11 +147,12 @@ export async function POST(req: NextRequest) {
             name: buyerName,
             title: entryRow?.title,
             artistName: entryRow?.artist_name,
-            priceYen: totalYen,                 // ← priceYen/amountYen どちらでもOK（送信側で正規化済み）
+            priceYen: totalYen, // ← priceYen/amountYen どちらでもOK（送信側で正規化済み）
             editionNo,
             editionTotal,
             orderId: session.id,
             receiptUrl,
+            certificateUrl,      // ★ CoAボタン表示用
           }),
         });
       }
@@ -138,7 +169,7 @@ export async function POST(req: NextRequest) {
             to: entryRow.email,
             name: entryRow.artist_name || 'アーティスト',
             title: entryRow.title,
-            amountYen: totalYen,                // ← こちらも正規化される
+            amountYen: totalYen,  // ← こちらも正規化される
           }),
         });
       }
