@@ -1,6 +1,8 @@
+// app/cert/[id]/page.tsx
 'use client';
 
 import { useMemo, useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; // ★ 追加
 import { createThirdwebClient } from 'thirdweb';
 import { ConnectButton, useActiveAccount } from 'thirdweb/react';
 import { inAppWallet, createWallet, walletConnect } from 'thirdweb/wallets';
@@ -11,25 +13,22 @@ type CoAType = 'nft' | 'normal';
 type PageProps = {
   params: { id: string };
   searchParams?: {
-    // 共通（今回はクエリで簡易に受け取る。将来はサーバーで解決）
-    type?: CoAType;           // 'nft' | 'normal'（既定は 'nft'）
+    type?: CoAType;      // 'nft' | 'normal'（既定は 'nft'）
     title?: string;
     artist?: string;
-    t?: string;               // ワンタイムトークン（将来の検証用）
-    // NFT向け
-    tokenId?: string;         // 例: "0"
-    qty?: string;             // 例: "1"
-    // 通常向け
-    entry?: string;           // Supabase entries.id（/api/cert/download に渡す）
+    t?: string;          // ワンタイムトークン
+    tokenId?: string;    // NFT用
+    qty?: string;        // NFT用
+    entry?: string;      // 通常用（/api/cert/download に渡す）
   };
 };
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || '';
 
-export default function CoAPage({ params, searchParams }: PageProps) {
+/** 内側：実UI（元の実装をそのまま移植） */
+function CoAInner({ params, searchParams }: PageProps) {
   const account = useActiveAccount();
 
-  // ── 表示用データ（本番はAPIでサーバー確定に置き換え） ──────────────
   const type: CoAType = (searchParams?.type === 'normal' ? 'normal' : 'nft');
   const title = searchParams?.title ?? 'Untitled';
   const artist = searchParams?.artist ?? 'Unknown Artist';
@@ -38,11 +37,11 @@ export default function CoAPage({ params, searchParams }: PageProps) {
   const entryId = searchParams?.entry ?? '';
   const token = searchParams?.t ?? '';
 
-  // ── thirdweb client（未設定なら接続UIを出さない） ───────────────────
+  // thirdweb client（未設定なら接続UIを出さない）
   const hasClientId = CLIENT_ID.length > 0;
   const client = hasClientId ? createThirdwebClient({ clientId: CLIENT_ID }) : null;
 
-  // ── UI 状態 ────────────────────────────────────────────────────
+  // UI state
   const [loading, setLoading] = useState(false);
   const [hash, setHash] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -51,7 +50,6 @@ export default function CoAPage({ params, searchParams }: PageProps) {
   const canClaim = type === 'nft' && !!account?.address && !loading;
   const polygonscanTx = (h: string) => `https://polygonscan.com/tx/${h}`;
 
-  // ── NFT 受け取り（claimTo API を叩く） ──────────────────────────
   async function handleClaim() {
     if (!account?.address) return;
     setLoading(true);
@@ -61,11 +59,7 @@ export default function CoAPage({ params, searchParams }: PageProps) {
       const res = await fetch('/api/nft/claim', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          to: account.address,
-          tokenId,
-          quantity,
-        }),
+        body: JSON.stringify({ to: account.address, tokenId, quantity }),
       });
       const json = await res.json();
       if (!res.ok || !json?.ok) throw new Error(json?.error || 'Claim failed');
@@ -77,15 +71,12 @@ export default function CoAPage({ params, searchParams }: PageProps) {
     }
   }
 
-  // ── 通常購入：ダウンロードAPIへリダイレクト ─────────────────────
   async function handleDownload() {
     setLoading(true);
     setErr(null);
     try {
       if (!entryId) throw new Error('missing entry id');
-      const url =
-        `/api/cert/download?entry=${encodeURIComponent(entryId)}` +
-        (token ? `&t=${encodeURIComponent(token)}` : '');
+      const url = `/api/cert/download?entry=${encodeURIComponent(entryId)}${token ? `&t=${encodeURIComponent(token)}` : ''}`;
       window.location.href = url; // 302 でサイン付きURLへ
       setDownloaded(true);
     } catch (e: any) {
@@ -105,13 +96,9 @@ export default function CoAPage({ params, searchParams }: PageProps) {
             <span className="font-mono">Order #{params.id}</span>
             <span className="mx-1">•</span>
             {type === 'nft' ? (
-              <span className="inline-flex items-center rounded-full bg-emerald-900/40 px-2 py-0.5 text-emerald-300 border border-emerald-700/40">
-                NFT
-              </span>
+              <span className="inline-flex items-center rounded-full bg-emerald-900/40 px-2 py-0.5 text-emerald-300 border border-emerald-700/40">NFT</span>
             ) : (
-              <span className="inline-flex items-center rounded-full bg-sky-900/40 px-2 py-0.5 text-sky-300 border border-sky-700/40">
-                Normal
-              </span>
+              <span className="inline-flex items-center rounded-full bg-sky-900/40 px-2 py-0.5 text-sky-300 border border-sky-700/40">Normal</span>
             )}
           </div>
         </header>
@@ -137,7 +124,6 @@ export default function CoAPage({ params, searchParams }: PageProps) {
 
         {/* 接続 / アクション */}
         <section className="rounded-2xl border border-zinc-800 p-4 space-y-4">
-          {/* 接続UI（NFTは必須、通常は任意） */}
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm text-zinc-400">
               {type === 'nft'
@@ -164,7 +150,6 @@ export default function CoAPage({ params, searchParams }: PageProps) {
             )}
           </div>
 
-          {/* アクションボタン */}
           {type === 'nft' ? (
             <button
               onClick={handleClaim}
@@ -185,7 +170,6 @@ export default function CoAPage({ params, searchParams }: PageProps) {
             </button>
           )}
 
-          {/* 結果表示 */}
           {hash && type === 'nft' && (
             <div className="text-sm">
               ✅ Claimed! Tx:{' '}
@@ -195,20 +179,27 @@ export default function CoAPage({ params, searchParams }: PageProps) {
             </div>
           )}
           {downloaded && type === 'normal' && (
-            <div className="text-sm text-zinc-300">
-              ✅ Download started. If it didn’t, please try again or contact support.
-            </div>
+            <div className="text-sm text-zinc-300">✅ Download started. If it didn’t, please try again or contact support.</div>
           )}
           {err && <div className="text-sm text-rose-400">⚠️ {err}</div>}
         </section>
 
-        {/* フッタ */}
         <footer className="text-xs text-zinc-500 space-y-1">
           <p>This page may require a valid token. Request a new link if it has expired.</p>
           <p>Gas fees for NFT claims are covered by the gallery.</p>
         </footer>
       </div>
     </main>
+  );
+}
+
+/** ページエクスポート：QueryClientProvider でラップ（★これが重要） */
+export default function CoAPage(props: PageProps) {
+  const [queryClient] = useState(() => new QueryClient());
+  return (
+    <QueryClientProvider client={queryClient}>
+      <CoAInner {...props} />
+    </QueryClientProvider>
   );
 }
 
