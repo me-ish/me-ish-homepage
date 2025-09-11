@@ -108,7 +108,11 @@ const PurchaseBuyer = z.object({
   manageUrl: z.string().url().optional(),
   downloadUrl: z.string().url().optional(),
   receiptUrl: z.string().url().optional(),
-}).transform(d => ({ ...d, priceYen: d.priceYen ?? d.amountYen ?? null }));
+  certificateUrl: z.string().url().optional(),
+  coaUrl: z.string().url().optional(),
+})
+.passthrough() // ★ 予期せぬ将来拡張も落とさない
+.transform(d => ({ ...d, priceYen: d.priceYen ?? d.amountYen ?? null }));
 
 // purchase（Artist）— amountYen / priceYen どちらでもOKにして正規化
 const PurchaseArtist = z.object({
@@ -124,9 +128,19 @@ const PurchaseNft = z.object({
   to: z.string().email(),
   name: z.string().min(1),
   title: z.string().min(1),
-  tokenId: z.string().min(1),
+  tokenId: z.union([z.string().min(1), z.number()]),
   claimUrl: z.string().url(),
-});
+  network: z.string().optional(),
+  contractAddress: z.string().optional(),
+  explorerTokenUrl: z.string().url().optional(),
+  explorerTxUrl: z.string().url().optional(),
+  manageUrl: z.string().url().optional(),
+  receiptUrl: z.string().url().optional(),
+  certificateUrl: z.string().url().optional(),
+  coaUrl: z.string().url().optional(),
+  expiresAtISO: z.string().optional(),
+  note: z.string().max(2000).optional(),
+}).passthrough();
 
 // contact（運営宛固定／Reply-To は送信者）
 const Contact = z.object({

@@ -10,11 +10,19 @@ export type PurchaseBuyerEmailArgs = {
   editionTotal?: number | null;      // 総数（例: 10）
   orderId?: string;                  // 注文番号
   salesType?: 'normal' | 'nft' | string;
+
+  // 納品
   deliveryEtaDays?: number;          // 納品目安（日） 既定: 3
   deliveryAtISO?: string;            // 納品予定日時（分かれば）
+
+  // 導線
   manageUrl?: string;                // 注文/購入内容の確認
   downloadUrl?: string;              // 作品データの受け取り（任意）
   receiptUrl?: string;               // 領収書/明細URL（任意）
+  certificateUrl?: string;           // ★ 購入証明（COA）表示URL
+  coaUrl?: string;                   // ★ 互換キー（上とどちらかあればOK）
+
+  // 定型リンク・連絡先
   faqUrl?: string;                   // 既定: /faq
   termsUrl?: string;                 // 既定: /footer/terms
   supportEmail?: string;             // 既定: support@me-ish.art
@@ -25,6 +33,7 @@ const BRAND_HEX = '#00a1e9';
 export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs) {
   // 後方互換：stringのみは name として扱う
   const a0: PurchaseBuyerEmailArgs = typeof arg === 'string' ? { name: arg } : arg;
+
   // priceYen / amountYen の統一（どちらでもOK）
   const price = a0.priceYen ?? a0.amountYen ?? null;
 
@@ -46,7 +55,10 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
     supportEmail = 'support@me-ish.art',
   } = a0;
 
-  const preheader = 'ご購入ありがとうございます。購入内容と納品のご案内をお送りします。';
+  // COAリンク（certificateUrl優先、なければcoaUrl）
+  const certificateUrl = a0.certificateUrl ?? a0.coaUrl ?? undefined;
+
+  const preheader = 'ご購入ありがとうございます。購入内容／納品のご案内と、購入証明（CoA）へのリンクをお送りします。';
 
   const fmtYen = (n: number) => new Intl.NumberFormat('ja-JP').format(n);
   const deliveryStr = deliveryAtISO
@@ -64,14 +76,22 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
   if (orderId) rows.push(row('注文番号', escapeHtml(orderId)));
   rows.push(row('形式', isNFT ? 'NFT' : 'デジタル作品'));
 
-  const primaryCta =
+  const manageCta =
     manageUrl &&
     `<a href="${sanitizeUrl(manageUrl)}"
         style="display:inline-block;padding:12px 18px;border-radius:10px;background:${BRAND_HEX};color:#fff;text-decoration:none;font-weight:700;">
         購入内容を確認する
      </a>`;
 
+  const certificateCta = certificateUrl
+    ? `<a href="${sanitizeUrl(certificateUrl)}"
+          style="display:inline-block;padding:10px 14px;border-radius:10px;border:1px solid ${BRAND_HEX};color:${BRAND_HEX};text-decoration:none;font-weight:700;margin-right:8px;">
+          購入証明（CoA）を表示
+       </a>`
+    : '';
+
   const secondaryCtas = [
+    certificateCta,
     downloadUrl
       ? `<a href="${sanitizeUrl(downloadUrl)}"
             style="display:inline-block;padding:10px 14px;border-radius:10px;border:1px solid ${BRAND_HEX};color:${BRAND_HEX};text-decoration:none;font-weight:700;margin-right:8px;">
@@ -111,10 +131,11 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
               ? 'NFT はミント完了後、ウォレットへお届けします。'
               : '作品データのダウンロード案内をお送りします。'
           }
+          ${certificateUrl ? '<br/>※ 購入証明（CoA）は下記リンクからいつでも表示・ダウンロードできます。' : ''}
         </div>
       </div>
 
-      ${primaryCta ? `<div style="margin:16px 0 8px 0;">${primaryCta}</div>` : ''}
+      ${manageCta ? `<div style="margin:16px 0 8px 0;">${manageCta}</div>` : ''}
       ${secondaryCtas ? `<div style="margin:4px 0 0 0;">${secondaryCtas}</div>` : ''}
 
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;" />
@@ -140,6 +161,7 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
   if (orderId) textLines.push(`注文番号：${orderId}`);
   textLines.push(`形式：${isNFT ? 'NFT' : 'デジタル作品'}`);
   textLines.push(`\n[納品について]\n納品予定：${deliveryStr}${isNFT ? '\nNFT はミント完了後にウォレットへお届けします。' : '\n作品データのダウンロード案内をお送りします。'}`);
+  if (certificateUrl) textLines.push(`購入証明（CoA）：${certificateUrl}`);
   if (manageUrl) textLines.push(`購入内容を確認する：${manageUrl}`);
   if (downloadUrl) textLines.push(`作品データを受け取る：${downloadUrl}`);
   if (receiptUrl) textLines.push(`領収書を見る：${receiptUrl}`);
