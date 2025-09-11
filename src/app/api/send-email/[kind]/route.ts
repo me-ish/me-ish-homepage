@@ -108,10 +108,11 @@ const PurchaseBuyer = z.object({
   manageUrl: z.string().url().optional(),
   downloadUrl: z.string().url().optional(),
   receiptUrl: z.string().url().optional(),
+  // ★ CoA を受け付ける
   certificateUrl: z.string().url().optional(),
   coaUrl: z.string().url().optional(),
 })
-.passthrough() // ★ 予期せぬ将来拡張も落とさない
+.passthrough()  // ★未知キーを落とさない（transformの前に！）
 .transform(d => ({ ...d, priceYen: d.priceYen ?? d.amountYen ?? null }));
 
 // purchase（Artist）— amountYen / priceYen どちらでもOKにして正規化
@@ -141,6 +142,7 @@ const PurchaseNft = z.object({
   expiresAtISO: z.string().optional(),
   note: z.string().max(2000).optional(),
 }).passthrough();
+
 
 // contact（運営宛固定／Reply-To は送信者）
 const Contact = z.object({
