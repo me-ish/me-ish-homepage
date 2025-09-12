@@ -2,37 +2,45 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createThirdwebClient } from 'thirdweb';
 import { ThirdwebProvider, ConnectButton, useActiveAccount } from 'thirdweb/react';
-import { inAppWallet, createWallet /*, walletConnect */ } from 'thirdweb/wallets';
+import { inAppWallet, createWallet /* , walletConnect */ } from 'thirdweb/wallets';
 import { polygon } from 'thirdweb/chains';
 
 type CoAType = 'nft' | 'normal';
 
 type PageProps = {
   params: { id: string };
-  searchParams?: {
-    type?: CoAType; title?: string; artist?: string; t?: string;
-    tokenId?: string; qty?: string; entry?: string;
-  };
 };
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || '';
 const TW_CLIENT = CLIENT_ID ? createThirdwebClient({ clientId: CLIENT_ID }) : null;
 
-function CoAInner({ params, searchParams }: PageProps) {
-  const account = useActiveAccount();
+/** 内側UI（URLのクエリは useSearchParams で取得） */
+function CoAInner({ params }: PageProps) {
+  const sp = useSearchParams();
 
-  const type: CoAType =
-  searchParams?.type === 'nft'
-    ? 'nft'
-    : (searchParams?.entry ? 'normal' : 'nft');
-  const title = searchParams?.title ?? 'Untitled';
-  const artist = searchParams?.artist ?? 'Unknown Artist';
-  const tokenId = useMemo(() => Number(searchParams?.tokenId ?? '0'), [searchParams?.tokenId]);
-  const quantity = useMemo(() => Number(searchParams?.qty ?? '1'), [searchParams?.qty]);
-  const entryId = searchParams?.entry ?? '';
-  const token = searchParams?.t ?? '';
+  // URLクエリから値を取得
+  const qType   = sp.get('type');           // 'nft' | 'normal' | null
+  const qTitle  = sp.get('title') ?? undefined;
+  const qArtist = sp.get('artist') ?? undefined;
+  const qToken  = sp.get('t') ?? '';
+  const qTokenId= sp.get('tokenId');
+  const qQty    = sp.get('qty');
+  const qEntry  = sp.get('entry');          // ← 通常作品はこれが付く
+
+  // 判定：明示的に 'nft' のときだけ NFT、それ以外は entry があれば normal
+  const type: CoAType = qType === 'nft' ? 'nft' : (qEntry ? 'normal' : 'nft');
+
+  const title   = qTitle  ?? 'Untitled';
+  const artist  = qArtist ?? 'Unknown Artist';
+  const tokenId = useMemo(() => Number(qTokenId ?? '0'), [qTokenId]);
+  const quantity= useMemo(() => Number(qQty ?? '1'), [qQty]);
+  const entryId = qEntry ?? '';
+  const token   = qToken;
+
+  const account = useActiveAccount();
 
   const [loading, setLoading] = useState(false);
   const [hash, setHash] = useState<string | null>(null);
@@ -69,7 +77,7 @@ function CoAInner({ params, searchParams }: PageProps) {
     try {
       if (!entryId) throw new Error('missing entry id');
       const url = `/api/cert/download?entry=${encodeURIComponent(entryId)}${token ? `&t=${encodeURIComponent(token)}` : ''}`;
-      window.location.href = url;
+      window.location.href = url; // 302 redirect to signed URL
       setDownloaded(true);
     } catch (e: any) {
       setErr(e?.message ?? 'Download failed');
@@ -117,17 +125,17 @@ function CoAInner({ params, searchParams }: PageProps) {
             </div>
 
             {TW_CLIENT ? (
-              <ConnectButton
-                client={TW_CLIENT}
-                chain={polygon}
-                wallets={[
-                  inAppWallet({ auth: { options: ['email', 'google', 'apple'] } }),
-                  createWallet('io.metamask'),
-                  // walletConnect({ projectId: 'YOUR_WALLETCONNECT_PROJECT_ID' }),
-                ]}
-                theme="dark"
-                connectModal={{ size: 'compact', title: type === 'nft' ? 'Receive your NFT' : 'Sign in (optional)' }}
-              />
+<ConnectButton
+  client={TW_CLIENT!}                    // ★ 必須
+  wallets={[
+    inAppWallet({ auth: { options: ['email', 'google', 'apple'] } }),
+    createWallet('io.metamask'),
+    // walletConnect({ projectId: 'YOUR_WC_PROJECT_ID' }),
+  ]}
+  theme="dark"
+  connectModal={{ size: 'compact', title: type === 'nft' ? 'Receive your NFT' : 'Sign in (optional)' }}
+/>
+
             ) : (
               <div className="text-xs text-amber-300 border border-amber-500/40 rounded-md px-2 py-1">
                 NEXT_PUBLIC_THIRDWEB_CLIENT_ID not set
@@ -194,6 +202,7 @@ export default function CoAPage(props: PageProps) {
     </ThirdwebProvider>
   );
 }
+
 
 function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
