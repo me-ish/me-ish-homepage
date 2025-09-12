@@ -2,10 +2,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; // ★ 追加
 import { createThirdwebClient } from 'thirdweb';
-import { ConnectButton, useActiveAccount } from 'thirdweb/react';
-import { inAppWallet, createWallet, walletConnect } from 'thirdweb/wallets';
+import { ThirdwebProvider, ConnectButton, useActiveAccount } from 'thirdweb/react';
+import { inAppWallet, createWallet /*, walletConnect */ } from 'thirdweb/wallets';
 import { polygon } from 'thirdweb/chains';
 
 type CoAType = 'nft' | 'normal';
@@ -13,19 +12,14 @@ type CoAType = 'nft' | 'normal';
 type PageProps = {
   params: { id: string };
   searchParams?: {
-    type?: CoAType;
-    title?: string;
-    artist?: string;
-    t?: string;
-    tokenId?: string;
-    qty?: string;
-    entry?: string;
+    type?: CoAType; title?: string; artist?: string; t?: string;
+    tokenId?: string; qty?: string; entry?: string;
   };
 };
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || '';
+const TW_CLIENT = CLIENT_ID ? createThirdwebClient({ clientId: CLIENT_ID }) : null;
 
-/** 内側UI（元コード） */
 function CoAInner({ params, searchParams }: PageProps) {
   const account = useActiveAccount();
 
@@ -36,9 +30,6 @@ function CoAInner({ params, searchParams }: PageProps) {
   const quantity = useMemo(() => Number(searchParams?.qty ?? '1'), [searchParams?.qty]);
   const entryId = searchParams?.entry ?? '';
   const token = searchParams?.t ?? '';
-
-  const hasClientId = CLIENT_ID.length > 0;
-  const client = hasClientId ? createThirdwebClient({ clientId: CLIENT_ID }) : null;
 
   const [loading, setLoading] = useState(false);
   const [hash, setHash] = useState<string | null>(null);
@@ -92,11 +83,9 @@ function CoAInner({ params, searchParams }: PageProps) {
           <div className="flex items-center gap-2 text-sm text-zinc-400">
             <span className="font-mono">Order #{params.id}</span>
             <span className="mx-1">•</span>
-            {type === 'nft' ? (
-              <span className="inline-flex items-center rounded-full bg-emerald-900/40 px-2 py-0.5 text-emerald-300 border border-emerald-700/40">NFT</span>
-            ) : (
-              <span className="inline-flex items-center rounded-full bg-sky-900/40 px-2 py-0.5 text-sky-300 border border-sky-700/40">Normal</span>
-            )}
+            {type === 'nft'
+              ? <span className="inline-flex items-center rounded-full bg-emerald-900/40 px-2 py-0.5 text-emerald-300 border border-emerald-700/40">NFT</span>
+              : <span className="inline-flex items-center rounded-full bg-sky-900/40 px-2 py-0.5 text-sky-300 border border-sky-700/40">Normal</span>}
           </div>
         </header>
 
@@ -121,19 +110,17 @@ function CoAInner({ params, searchParams }: PageProps) {
         <section className="rounded-2xl border border-zinc-800 p-4 space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm text-zinc-400">
-              {type === 'nft'
-                ? 'Sign in (email or wallet) to receive your NFT.'
-                : 'Sign in is optional for normal purchases.'}
+              {type === 'nft' ? 'Sign in (email or wallet) to receive your NFT.' : 'Sign in is optional for normal purchases.'}
             </div>
 
-            {hasClientId ? (
+            {TW_CLIENT ? (
               <ConnectButton
-                client={client!}
-                chains={[polygon]}
+                client={TW_CLIENT}
+                chain={polygon}
                 wallets={[
                   inAppWallet({ auth: { options: ['email', 'google', 'apple'] } }),
                   createWallet('io.metamask'),
-                  walletConnect(),
+                  // walletConnect({ projectId: 'YOUR_WALLETCONNECT_PROJECT_ID' }),
                 ]}
                 theme="dark"
                 connectModal={{ size: 'compact', title: type === 'nft' ? 'Receive your NFT' : 'Sign in (optional)' }}
@@ -167,7 +154,7 @@ function CoAInner({ params, searchParams }: PageProps) {
 
           {hash && type === 'nft' && (
             <div className="text-sm">
-              ✅ Claimed! Tx:{' '}
+              ✅ Claimed! Tx{' '}
               <a className="underline" href={polygonscanTx(hash)} target="_blank" rel="noreferrer">
                 {hash.slice(0, 10)}…{hash.slice(-6)}
               </a>
@@ -188,13 +175,20 @@ function CoAInner({ params, searchParams }: PageProps) {
   );
 }
 
-/** ここで QueryClientProvider で包む（重要） */
 export default function CoAPage(props: PageProps) {
-  const [queryClient] = useState(() => new QueryClient());
+  if (!TW_CLIENT) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
+        <div className="text-sm text-amber-300 border border-amber-500/40 rounded-md px-3 py-2">
+          NEXT_PUBLIC_THIRDWEB_CLIENT_ID is not set.
+        </div>
+      </main>
+    );
+  }
   return (
-    <QueryClientProvider client={queryClient}>
+    <ThirdwebProvider>
       <CoAInner {...props} />
-    </QueryClientProvider>
+    </ThirdwebProvider>
   );
 }
 

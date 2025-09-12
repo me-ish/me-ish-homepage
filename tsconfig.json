@@ -2,11 +2,7 @@
   "compilerOptions": {
     "jsx": "preserve",
     "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -17,24 +13,22 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "incremental": true,
+   "baseUrl": ".",                      // ★ 追加
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"],
+     "thirdweb/dist/types/react/web/ui/ConnectWallet/defaultTokens.js": [
+       "./thirdweb-defaultTokens-shim"
+     ]
     },
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ]
+    "plugins": [{ "name": "next" }]
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     "next-env.d.ts",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "thirdweb-shims.d.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }
+
