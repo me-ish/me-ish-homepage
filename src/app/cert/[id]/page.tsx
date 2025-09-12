@@ -22,13 +22,13 @@ function CoAInner({ params }: PageProps) {
   const sp = useSearchParams();
 
   // URLクエリから値を取得
-  const qType   = sp.get('type');           // 'nft' | 'normal' | null
+  const qType = (sp.get('type') || '').toLowerCase();           // 'nft' | 'normal' | null
   const qTitle  = sp.get('title') ?? undefined;
   const qArtist = sp.get('artist') ?? undefined;
   const qToken  = sp.get('t') ?? '';
   const qTokenId= sp.get('tokenId');
   const qQty    = sp.get('qty');
-  const qEntry  = sp.get('entry');          // ← 通常作品はこれが付く
+  const qEntry = sp.get('entry');          // ← 通常作品はこれが付く
 
   // 判定：明示的に 'nft' のときだけ NFT、それ以外は entry があれば normal
   const type: CoAType = qType === 'nft' ? 'nft' : (qEntry ? 'normal' : 'nft');

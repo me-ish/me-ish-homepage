@@ -17,7 +17,7 @@ const CERT_LINK_TTL_MINUTES = Number(process.env.CERT_LINK_TTL_MINUTES || 60 * 2
 const Meta = z.object({
   entryId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().int().positive().default(1),
-  type: z.string().optional(), // 'nft' or 'normal'
+  type: z.string().optional(), // 'nft' or 'normal'（未設定は normal 扱い）
 });
 
 function baseUrl() {
@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
   const sig = req.headers.get('stripe-signature');
   if (!sig) return new NextResponse('Missing signature', { status: 400 });
 
+  // 生ボディで検証
   const rawBody = Buffer.from(await req.arrayBuffer());
 
   let event: Stripe.Event;
@@ -66,13 +67,19 @@ export async function POST(req: NextRequest) {
     const paid = session.payment_status === 'paid';
     if (!paid) return NextResponse.json({ received: true });
 
+    // メタデータ取得
     const parsed = Meta.safeParse(session.metadata || {});
     if (!parsed.success) return NextResponse.json({ received: true });
     const { entryId, quantity, type } = parsed.data;
 
+    // v5: 'nft' 明示のときのみ NFT と扱う。未設定/その他は normal 扱い
+    const typeRaw = (type || '').toLowerCase();
+    const isNFT = typeRaw === 'nft';
+
     try {
       const admin = supabaseAdmin();
 
+      // 在庫確定 + sales 作成（重複は UNIQUE で弾く想定）
       const { data: result, error } = await admin.rpc('finalize_sale', {
         p_entry_id: entryId,
         p_quantity: quantity,
@@ -92,12 +99,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'finalize failed' }, { status: 400 });
       }
 
+      // 作品情報（メールに使用）
       const { data: entryRow } = await admin
         .from('entries')
         .select('title, artist_name, edition_total, email')
         .eq('id', entryId)
         .single();
 
+      // Stripe レシートURL（任意）
       let receiptUrl: string | undefined;
       if (session.payment_intent) {
         const pi = await stripe.paymentIntents.retrieve(session.payment_intent as string, {
@@ -107,32 +116,39 @@ export async function POST(req: NextRequest) {
         receiptUrl = ch?.receipt_url;
       }
 
+      // edition 割当
       const edition_from = (result as any)?.edition_from ?? null;
       const editionNo = edition_from ?? null;
       const editionTotal = entryRow?.edition_total ?? null;
 
-      const totalYen =
-        typeof session.amount_total === 'number' ? session.amount_total : null;
+      // 合計金額（表示用で十分）
+      const totalYen = typeof session.amount_total === 'number' ? session.amount_total : null;
 
-      const buyerEmail =
-        session.customer_details?.email || session.customer_email || undefined;
+      // 購入者情報
+      const buyerEmail = session.customer_details?.email || session.customer_email || undefined;
       const buyerName = session.customer_details?.name || 'お客様';
 
       if (buyerEmail) {
+        // CoAリンクを生成
         let certificateUrl: string | undefined;
         try {
           const t = await createCertToken(entryId);
           const params = new URLSearchParams({ t });
 
-          // ★ type が normal の場合は type=normal を明示し、entry/title/artist も渡す
-          if (type === 'normal') {
-            params.set('type', 'normal');
+          if (isNFT) {
+            // NFT のときだけ明示的に nft を付ける（必要に応じ tokenId/qty を追加）
+            params.set('type', 'nft');
+            // 例:
+            // params.set('tokenId', '0');
+            // params.set('qty', String(quantity));
+          } else {
+            // 既定は normal。entry を付ければフロントは normal 表示になる
             params.set('entry', String(entryId));
+            // 便宜的に表示用タイトル/作家名も付与（任意）
             if (entryRow?.title) params.set('title', entryRow.title);
             if (entryRow?.artist_name) params.set('artist', entryRow.artist_name);
-          } else {
-            // NFT想定: tokenId や qty は将来ここで付与
-            params.set('type', 'nft');
+            // type を付けたい場合は以下でもOK（なくても normal 表示）
+            // params.set('type', 'normal');
           }
 
           certificateUrl = `${baseUrl()}/cert/${entryId}?${params.toString()}`;
@@ -140,6 +156,7 @@ export async function POST(req: NextRequest) {
           console.error('[webhook] cert token create failed:', e);
         }
 
+        // 送信：購入者
         await fetch(`${baseUrl()}/api/send-email/purchaseBuyer`, {
           method: 'POST',
           headers: {
@@ -156,11 +173,12 @@ export async function POST(req: NextRequest) {
             editionTotal,
             orderId: session.id,
             receiptUrl,
-            certificateUrl,
+            certificateUrl, // ← CoA ボタン用
           }),
         });
       }
 
+      // 送信：アーティスト（メールアドレスがある場合）
       if (entryRow?.email) {
         await fetch(`${baseUrl()}/api/send-email/purchaseArtist`, {
           method: 'POST',
@@ -177,11 +195,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      console.log('[webhook] finalized & mailed:', {
-        entryId,
-        quantity,
-        session: session.id,
-      });
+      console.log('[webhook] finalized & mailed:', { entryId, quantity, session: session.id, isNFT });
       return NextResponse.json({ ok: true });
     } catch (e) {
       console.error('[webhook] fatal:', e);
@@ -189,5 +203,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // 他イベントは受領のみ
   return NextResponse.json({ received: true });
 }
+
