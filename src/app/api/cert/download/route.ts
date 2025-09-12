@@ -1,116 +1,110 @@
 // src/app/api/cert/download/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { createHash } from 'crypto';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { createHash } from "crypto";
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const runtime = "nodejs";
 
-/** ─ Env ─ **/
-const BUCKET = process.env.SUPABASE_BUCKET || 'certificates';
-const TTL_SEC = Number(process.env.CERT_SIGNED_URL_TTL_SECONDS || 300); // 既定: 5分
-const REQUIRE_TOKEN = (process.env.CERT_REQUIRE_TOKEN || '0') === '1';   // 1でt必須
-const ONE_TIME = (process.env.CERT_ONE_TIME || '0') === '1';             // 1でワンタイム消費
+const SUPABASE_URL = process.env.SUPABASE_URL!;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-/** ─ Utils ─ **/
-function sha256hex(input: string) {
-  return createHash('sha256').update(input).digest('hex');
+// ★ バケットは artworks、プレフィックスは final に固定
+const BUCKET = "artworks";
+const FINAL_PREFIX = "final";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// t= の生トークンを cert_links.token_hash と照合
+async function verifyToken(entryId: number, token?: string | null) {
+  if (!token) return { ok: false as const, error: "missing token" };
+  const token_hash = createHash("sha256").update(token).digest("hex");
+  const { data, error } = await supabase
+    .from("cert_links")
+    .select("id, expires_at, revoked")
+    .eq("entry_id", entryId)
+    .eq("token_hash", token_hash)
+    .maybeSingle();
+
+  if (error || !data) return { ok: false as const, error: "invalid token" };
+  if (data.revoked) return { ok: false as const, error: "revoked token" };
+  if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) {
+    return { ok: false as const, error: "expired token" };
+  }
+  return { ok: true as const };
 }
 
-/** ─ Token validation (cert_links) ─
- * 想定テーブル: cert_links
- * - id (uuid) / entry_id (int) / token_hash (text) / expires_at (timestamptz) / revoked (bool) / used_at (timestamptz)
- */
-async function validateCertToken(
-  supabase: ReturnType<typeof supabaseAdmin>,
-  entryId: number,
-  tokenRaw?: string | null
-): Promise<{ ok: boolean; err?: string }> {
-  if (REQUIRE_TOKEN && !tokenRaw) return { ok: false, err: 'missing token' };
-  if (!tokenRaw) return { ok: true }; // 任意運用: t省略可
-
-  const tokenHash = sha256hex(tokenRaw);
-  const nowIso = new Date().toISOString();
-
-  // cert_links が未作成でも落ちないようにハンドリング
-  const { data: link, error: qErr } = await supabase
-    .from('cert_links')
-    .select('id, revoked, expires_at, used_at')
-    .eq('entry_id', entryId)
-    .eq('token_hash', tokenHash)
-    .limit(1)
-    .single();
-
-  if (qErr) {
-    // テーブル未作成など。必須なら落とす、任意なら通す
-    return REQUIRE_TOKEN ? { ok: false, err: 'token table not ready' } : { ok: true };
-  }
-  if (!link) return { ok: false, err: 'invalid token' };
-  if (link.revoked) return { ok: false, err: 'token revoked' };
-  if (link.expires_at && link.expires_at < nowIso) return { ok: false, err: 'token expired' };
-  if (ONE_TIME && link.used_at) return { ok: false, err: 'token already used' };
-
-  // ワンタイムなら消費マーク
-  if (ONE_TIME) {
-    const { error: updErr } = await supabase
-      .from('cert_links')
-      .update({ used_at: nowIso })
-      .eq('id', link.id);
-    if (updErr) return { ok: false, err: 'token consume failed' };
-  }
-  return { ok: true };
+async function firstFileUnder(path: string): Promise<string | null> {
+  // path 末尾の / は Supabase list では「フォルダ扱い」になる
+  const normalized = path.endsWith("/") ? path : path + "/";
+  const { data, error } = await supabase.storage.from(BUCKET).list(normalized, { limit: 200 });
+  if (error || !data?.length) return null;
+  const file = data.find((o) => o.name && !o.id?.endsWith("/"));
+  return file ? normalized + file.name : null;
 }
 
-/** ─ Handler ─ **/
+async function findInFinalRootByPrefix(entryId: number): Promise<string | null> {
+  // final/ 直下を 200 件だけ見る。ファイル名が "<entryId>_" で始まるものを拾う（暫定）
+  const { data, error } = await supabase.storage.from(BUCKET).list(`${FINAL_PREFIX}/`, { limit: 200 });
+  if (error || !data?.length) return null;
+  const prefix = String(entryId) + "_";
+  const hit = data.find((o) => o.name?.startsWith(prefix));
+  return hit ? `${FINAL_PREFIX}/${hit.name}` : null;
+}
+
 export async function GET(req: NextRequest) {
   try {
-    const supabase = supabaseAdmin(); // ← トップレベル生成禁止。必ずハンドラ内で作成
-
     const { searchParams } = new URL(req.url);
-    const entryParam = searchParams.get('entry'); // 例: /api/cert/download?entry=123&t=xxxx
-    const token = searchParams.get('t');
+    const entryStr = searchParams.get("entry");
+    const token = searchParams.get("t");
 
-    const entryId = Number(entryParam);
-    if (!entryId || !Number.isFinite(entryId) || entryId <= 0) {
-      return NextResponse.json({ ok: false, error: 'invalid entry id' }, { status: 400 });
+    const entryId = Number(entryStr);
+    if (!entryStr || !Number.isFinite(entryId)) {
+      return NextResponse.json({ ok: false, error: "missing entry id" }, { status: 400 });
     }
 
-    // トークン検証（必要に応じて）
-    const tok = await validateCertToken(supabase, entryId, token);
-    if (!tok.ok) {
-      return NextResponse.json({ ok: false, error: tok.err || 'unauthorized' }, { status: 401 });
-    }
+    // トークン検証（使わないなら外してOK）
+    const v = await verifyToken(entryId, token);
+    if (!v.ok) return NextResponse.json({ ok: false, error: v.error }, { status: 401 });
 
-    // entries から file_name を取得
+    // entries から file_name を拾う（最終フォールバックに使う）
     const { data: entry, error: entryErr } = await supabase
-      .from('entries')
-      .select('id, file_name')
-      .eq('id', entryId)
+      .from("entries")
+      .select("id, file_name")
+      .eq("id", entryId)
       .single();
 
     if (entryErr || !entry) {
-      return NextResponse.json({ ok: false, error: 'entry not found' }, { status: 404 });
+      return NextResponse.json({ ok: false, error: "entry not found" }, { status: 404 });
     }
 
-    const filePath: string =
-      entry.file_name?.includes('/') ? entry.file_name : `${entry.id}/${entry.file_name}`;
+    // 探索順：
+    // 1) final/<id>/ 配下の最初のファイル
+    // 2) final/ 直下で "<id>_" で始まるファイル
+    // 3) entries.file_name があれば final/<file_name> を試す
+    let filePath: string | null = null;
 
-    // 署名付きURLをTTLで発行
+    filePath ||= await firstFileUnder(`${FINAL_PREFIX}/${entryId}`);
+    filePath ||= await findInFinalRootByPrefix(entryId);
+
+    if (!filePath && entry.file_name) {
+      filePath = `${FINAL_PREFIX}/${entry.file_name}`;
+    }
+
+    if (!filePath) {
+      return NextResponse.json({ ok: false, error: "file not available" }, { status: 404 });
+    }
+
+    // 5分だけ有効なサイン付きURLを発行
     const { data: signed, error: signErr } = await supabase.storage
       .from(BUCKET)
-      .createSignedUrl(filePath, TTL_SEC);
+      .createSignedUrl(filePath, 60 * 5);
 
     if (signErr || !signed?.signedUrl) {
-      return NextResponse.json({ ok: false, error: 'file not available' }, { status: 404 });
+      return NextResponse.json({ ok: false, error: "file not available" }, { status: 404 });
     }
 
-    // 302でリダイレクト（ブラウザ側でダウンロード開始）
     return NextResponse.redirect(signed.signedUrl, { status: 302 });
   } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: e?.message ?? 'download failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: e?.message ?? "download failed" }, { status: 500 });
   }
 }
