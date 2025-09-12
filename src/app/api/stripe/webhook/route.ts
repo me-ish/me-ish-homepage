@@ -17,7 +17,7 @@ const CERT_LINK_TTL_MINUTES = Number(process.env.CERT_LINK_TTL_MINUTES || 60 * 2
 const Meta = z.object({
   entryId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().int().positive().default(1),
-  type: z.string().optional(), // 'nft' など（任意）
+  type: z.string().optional(), // 'nft' or 'normal'
 });
 
 function baseUrl() {
@@ -44,7 +44,6 @@ export async function POST(req: NextRequest) {
   const sig = req.headers.get('stripe-signature');
   if (!sig) return new NextResponse('Missing signature', { status: 400 });
 
-  // Stripeは生ボディでの署名検証が必要
   const rawBody = Buffer.from(await req.arrayBuffer());
 
   let event: Stripe.Event;
@@ -67,15 +66,13 @@ export async function POST(req: NextRequest) {
     const paid = session.payment_status === 'paid';
     if (!paid) return NextResponse.json({ received: true });
 
-    // メタデータ
     const parsed = Meta.safeParse(session.metadata || {});
     if (!parsed.success) return NextResponse.json({ received: true });
-    const { entryId, quantity } = parsed.data;
+    const { entryId, quantity, type } = parsed.data;
 
     try {
       const admin = supabaseAdmin();
 
-      // 原子的に在庫確定 + sales作成（重複セッションは UNIQUE で弾く想定）
       const { data: result, error } = await admin.rpc('finalize_sale', {
         p_entry_id: entryId,
         p_quantity: quantity,
@@ -95,43 +92,50 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'finalize failed' }, { status: 400 });
       }
 
-      // 作品情報（メールに使う）
       const { data: entryRow } = await admin
         .from('entries')
         .select('title, artist_name, edition_total, email')
         .eq('id', entryId)
         .single();
 
-      // 領収書URL
       let receiptUrl: string | undefined;
       if (session.payment_intent) {
-        const pi = await stripe.paymentIntents.retrieve(session.payment_intent as string, { expand: ['latest_charge'] });
+        const pi = await stripe.paymentIntents.retrieve(session.payment_intent as string, {
+          expand: ['latest_charge'],
+        });
         const ch = (pi.latest_charge as any);
         receiptUrl = ch?.receipt_url;
       }
 
-      // edition の割当（RPCが返す場合を優先）
       const edition_from = (result as any)?.edition_from ?? null;
-      const edition_to   = (result as any)?.edition_to ?? null;
-      const editionNo    = edition_from ?? null;
+      const editionNo = edition_from ?? null;
       const editionTotal = entryRow?.edition_total ?? null;
 
-      // 合計金額（税・送料込みの合計）— 表示用にはこれで十分
-      const totalYen = typeof session.amount_total === 'number' ? session.amount_total : null;
+      const totalYen =
+        typeof session.amount_total === 'number' ? session.amount_total : null;
 
-      // 送信：購入者
-      const buyerEmail = session.customer_details?.email || session.customer_email || undefined;
-      const buyerName  = session.customer_details?.name  || 'お客様';
+      const buyerEmail =
+        session.customer_details?.email || session.customer_email || undefined;
+      const buyerName = session.customer_details?.name || 'お客様';
 
       if (buyerEmail) {
-        // CoAリンクを生成（token → /cert/[id]?t=token に付与）
         let certificateUrl: string | undefined;
         try {
           const t = await createCertToken(entryId);
-          // CoAページ（表示→DLボタンあり）
-          certificateUrl = `${baseUrl()}/cert/${entryId}?t=${t}`;
-          // もし即ダウンロードにしたい場合は下の行に差し替え
-          // certificateUrl = `${baseUrl()}/api/cert/download?entry=${entryId}&t=${t}`;
+          const params = new URLSearchParams({ t });
+
+          // ★ type が normal の場合は type=normal を明示し、entry/title/artist も渡す
+          if (type === 'normal') {
+            params.set('type', 'normal');
+            params.set('entry', String(entryId));
+            if (entryRow?.title) params.set('title', entryRow.title);
+            if (entryRow?.artist_name) params.set('artist', entryRow.artist_name);
+          } else {
+            // NFT想定: tokenId や qty は将来ここで付与
+            params.set('type', 'nft');
+          }
+
+          certificateUrl = `${baseUrl()}/cert/${entryId}?${params.toString()}`;
         } catch (e) {
           console.error('[webhook] cert token create failed:', e);
         }
@@ -147,17 +151,16 @@ export async function POST(req: NextRequest) {
             name: buyerName,
             title: entryRow?.title,
             artistName: entryRow?.artist_name,
-            priceYen: totalYen, // ← priceYen/amountYen どちらでもOK（送信側で正規化済み）
+            priceYen: totalYen,
             editionNo,
             editionTotal,
             orderId: session.id,
             receiptUrl,
-            certificateUrl,      // ★ CoAボタン表示用
+            certificateUrl,
           }),
         });
       }
 
-      // 送信：アーティスト（メールアドレスがある場合）
       if (entryRow?.email) {
         await fetch(`${baseUrl()}/api/send-email/purchaseArtist`, {
           method: 'POST',
@@ -169,12 +172,16 @@ export async function POST(req: NextRequest) {
             to: entryRow.email,
             name: entryRow.artist_name || 'アーティスト',
             title: entryRow.title,
-            amountYen: totalYen,  // ← こちらも正規化される
+            amountYen: totalYen,
           }),
         });
       }
 
-      console.log('[webhook] finalized & mailed:', { entryId, quantity, session: session.id });
+      console.log('[webhook] finalized & mailed:', {
+        entryId,
+        quantity,
+        session: session.id,
+      });
       return NextResponse.json({ ok: true });
     } catch (e) {
       console.error('[webhook] fatal:', e);
@@ -182,6 +189,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 他イベントは受領のみ
   return NextResponse.json({ received: true });
 }

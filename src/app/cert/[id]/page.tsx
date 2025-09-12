@@ -23,7 +23,7 @@ const TW_CLIENT = CLIENT_ID ? createThirdwebClient({ clientId: CLIENT_ID }) : nu
 function CoAInner({ params, searchParams }: PageProps) {
   const account = useActiveAccount();
 
-  const type: CoAType = (searchParams?.type === 'normal' ? 'normal' : 'nft');
+  const type: CoAType =searchParams?.type === 'normal' || searchParams?.entry ? 'normal' : 'nft';
   const title = searchParams?.title ?? 'Untitled';
   const artist = searchParams?.artist ?? 'Unknown Artist';
   const tokenId = useMemo(() => Number(searchParams?.tokenId ?? '0'), [searchParams?.tokenId]);
