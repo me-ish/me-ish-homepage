@@ -13,19 +13,19 @@ type CoAType = 'nft' | 'normal';
 type PageProps = {
   params: { id: string };
   searchParams?: {
-    type?: CoAType;      // 'nft' | 'normal'（既定は 'nft'）
+    type?: CoAType;
     title?: string;
     artist?: string;
-    t?: string;          // ワンタイムトークン
-    tokenId?: string;    // NFT用
-    qty?: string;        // NFT用
-    entry?: string;      // 通常用（/api/cert/download に渡す）
+    t?: string;
+    tokenId?: string;
+    qty?: string;
+    entry?: string;
   };
 };
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || '';
 
-/** 内側：実UI（元の実装をそのまま移植） */
+/** 内側UI（元コード） */
 function CoAInner({ params, searchParams }: PageProps) {
   const account = useActiveAccount();
 
@@ -37,11 +37,9 @@ function CoAInner({ params, searchParams }: PageProps) {
   const entryId = searchParams?.entry ?? '';
   const token = searchParams?.t ?? '';
 
-  // thirdweb client（未設定なら接続UIを出さない）
   const hasClientId = CLIENT_ID.length > 0;
   const client = hasClientId ? createThirdwebClient({ clientId: CLIENT_ID }) : null;
 
-  // UI state
   const [loading, setLoading] = useState(false);
   const [hash, setHash] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -77,7 +75,7 @@ function CoAInner({ params, searchParams }: PageProps) {
     try {
       if (!entryId) throw new Error('missing entry id');
       const url = `/api/cert/download?entry=${encodeURIComponent(entryId)}${token ? `&t=${encodeURIComponent(token)}` : ''}`;
-      window.location.href = url; // 302 でサイン付きURLへ
+      window.location.href = url;
       setDownloaded(true);
     } catch (e: any) {
       setErr(e?.message ?? 'Download failed');
@@ -89,7 +87,6 @@ function CoAInner({ params, searchParams }: PageProps) {
   return (
     <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
       <div className="w-full max-w-2xl space-y-6">
-        {/* ヘッダー */}
         <header className="space-y-2">
           <h1 className="text-2xl font-semibold">Certificate of Authenticity</h1>
           <div className="flex items-center gap-2 text-sm text-zinc-400">
@@ -103,7 +100,6 @@ function CoAInner({ params, searchParams }: PageProps) {
           </div>
         </header>
 
-        {/* 作品情報 */}
         <section className="rounded-2xl border border-zinc-800 p-4">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <InfoRow label="Title" value={title} />
@@ -122,7 +118,6 @@ function CoAInner({ params, searchParams }: PageProps) {
           </div>
         </section>
 
-        {/* 接続 / アクション */}
         <section className="rounded-2xl border border-zinc-800 p-4 space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm text-zinc-400">
@@ -193,7 +188,7 @@ function CoAInner({ params, searchParams }: PageProps) {
   );
 }
 
-/** ページエクスポート：QueryClientProvider でラップ（★これが重要） */
+/** ここで QueryClientProvider で包む（重要） */
 export default function CoAPage(props: PageProps) {
   const [queryClient] = useState(() => new QueryClient());
   return (
@@ -203,7 +198,6 @@ export default function CoAPage(props: PageProps) {
   );
 }
 
-// 小さな表示用コンポーネント
 function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="space-y-1">
