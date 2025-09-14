@@ -56,9 +56,13 @@ export async function POST(req: Request) {
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from('announcements')
-    .insert(payload) // ← published_at に null は絶対入らない
-    .select('*')
-    .single();
+.insert((() => {
+  const v: any = { ...payload };
+  if (v.published_at == null) delete v.published_at; // ★ null/undefinedならキー削除
+  return v as AnnInsert;                              // ★ Insert型に整形
+})())
+.select('*')
+.single();
 
   if (error) {
     console.error('insert_failed:', error);
