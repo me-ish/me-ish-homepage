@@ -23,4 +23,15 @@ const nextConfig = {
   },
 };
 
+export default {
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.alias['pino-pretty'] = false;
+      config.resolve.fallback = { ...config.resolve.fallback, fs: false, module: false, readline: false };
+    }
+    return config;
+  },
+};
+
+
 module.exports = nextConfig;

@@ -16,9 +16,11 @@ const Body = z.object({
   category: z.enum(['info', 'update', 'maintenance']),
   pinned: z.boolean().default(false),
   link_url: z.string().url().optional().nullable(),
-  published_at: z.string().datetime().optional().nullable(), // ← 入力は null 許可で受ける
-  expires_at: z.string().datetime().optional().nullable(),   // ← 任意
+  published_at: z.string().datetime().optional().nullable(), // ← 受け口は null 可
+  expires_at: z.string().datetime().optional().nullable(),
 });
+
+const toU = <T,>(v: T | null | undefined): T | undefined => (v ?? undefined);
 
 async function requireAdmin() {
   const supabase = createRouteHandlerClient<Database>({ cookies });
@@ -38,25 +40,23 @@ export async function POST(req: Request) {
   }
   const p = parsed.data;
 
-  // ★ published_at は null のとき “キーごと入れない” = undefined 扱い
-  const payload: AnnInsert = {
+  // ★ null を undefined に寄せ、null 不可のフィールドは “キー省略”
+  const payload = {
     title: p.title,
     body_md: p.body_md,
     category: p.category,
     pinned: p.pinned,
-    link_url: p.link_url ?? null,                   // ← ここは null 可
-    ...(p.published_at ? { published_at: p.published_at } : {}), // ← ココ！
+    link_url: p.link_url ?? null,        // ← ここは null 可
+    ...(toU(p.published_at) && { published_at: toU(p.published_at)! }), // ← ここがポイント
     ...(p.expires_at === null
-      ? { expires_at: null }
-      : p.expires_at
-      ? { expires_at: p.expires_at }
-      : {}),
-  };
+      ? { expires_at: null }             // ← ここは null 可
+      : toU(p.expires_at) && { expires_at: toU(p.expires_at)! }),
+  } satisfies AnnInsert;
 
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from('announcements')
-    .insert(payload)
+    .insert(payload)        // ← ここで published_at に null が入らない
     .select('*')
     .single();
 
@@ -66,3 +66,4 @@ export async function POST(req: Request) {
   }
   return NextResponse.json(data, { status: 201 });
 }
+
