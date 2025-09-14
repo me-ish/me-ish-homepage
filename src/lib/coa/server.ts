@@ -2,22 +2,20 @@
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-// ---- 設定 -------------------------------------------------
 const ONE_TIME = process.env.CERT_ONE_TIME === '1';
 const REQUIRE_TOKEN = process.env.CERT_REQUIRE_TOKEN !== '0';
 const LINK_TTL_DAYS = Number(process.env.CERT_LINK_TTL_DAYS || 7);
-
-// ---- ユーティリティ ----------------------------------------
-const sha256hex = (s: string) => crypto.createHash('sha256').update(s).digest('hex');
-const sha256b64 = (s: string) => crypto.createHash('sha256').update(s).digest('base64');
-const genToken = () => crypto.randomBytes(32).toString('base64url'); // 平文トークン
 
 type VerifyResult =
   | { ok: true; entryId: number }
   | { ok: false; reason: 'missing' | 'expired' | 'revoked' | 'notfound' };
 
+const sha256hex = (s: string) => crypto.createHash('sha256').update(s).digest('hex');
+const sha256b64 = (s: string) => crypto.createHash('sha256').update(s).digest('base64');
+const genToken   = () => crypto.randomBytes(32).toString('base64url');
+
+/** CoAリンク（平文トークン）を発行して /cert/:id?t=... を返す */
 export async function issueReissueLink(entryId: number, _lang?: string) {
-  // ここは hex 保存を“正”とする
   const sb = supabaseAdmin();
   const token = genToken();
   const tokenHashHex = sha256hex(token);
@@ -30,23 +28,22 @@ export async function issueReissueLink(entryId: number, _lang?: string) {
   if (error) throw error;
 
   const site = process.env.NEXT_PUBLIC_SITE_URL || '';
-  return `${site}/cert/${entryId}?t=${encodeURIComponent(token)}`;
+  return `${site ? site : ''}/cert/${entryId}?t=${encodeURIComponent(token)}`;
 }
 
+/** トークン検証（hex と base64 の両方を後方互換で許容） */
 export async function verifyCertToken(token?: string | null): Promise<VerifyResult> {
   if (!REQUIRE_TOKEN) return { ok: true, entryId: 0 };
   if (!token) return { ok: false, reason: 'missing' };
 
   const sb = supabaseAdmin();
-
-  // ① まず hex で照合 → 見つからなければ ② base64 でも照合（後方互換）
   const hex = sha256hex(token);
   const b64 = sha256b64(token);
 
   const { data, error } = await sb
     .from('cert_links')
     .select('id, entry_id, expires_at, revoked, used_at, created_at')
-    .in('token_hash', [hex, b64]) // ★ どちらでもヒットさせる
+    .in('token_hash', [hex, b64])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -64,37 +61,35 @@ export async function verifyCertToken(token?: string | null): Promise<VerifyResu
   return { ok: true, entryId: data.entry_id };
 }
 
+/** entries の列名ゆらぎを吸収して返す（* で取り列を補完） */
 export async function getEntryForCoA(entryId: number) {
   const sb = supabaseAdmin();
-
-  // sales_type と sale_type の両取り（後で片方に寄せる）
   const { data, error } = await sb
     .from('entries')
-    .select(`
-      id,
-      title,
-      artist_name,
-      edition_total,
-      edition_sold,
-      purchaser_display_name,
-      purchased_at,
-      sales_type,
-      sale_type,
-      token_id,
-      contract_address
-    `)
+    .select('*')
     .eq('id', entryId)
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) return null as any;
+  if (!data) return null;
 
-  // どちらか入っている方を統一キーに寄せる
-  const unified = {
+  const salesType =
+    (data as any).sales_type ??
+    (data as any).sale_type ??
+    null;
+
+  const purchaserDisplayName =
+    (data as any).purchaser_display_name ??
+    (data as any).buyer_display_name ??
+    (data as any).buyer_name ??
+    (data as any).customer_name ??
+    null;
+
+  return {
     ...data,
-    sales_type: (data as any).sales_type ?? (data as any).sale_type ?? null,
-  };
-  return unified as typeof data & { sales_type: string | null };
+    sales_type: salesType,
+    purchaser_display_name: purchaserDisplayName,
+  } as typeof data & { sales_type: string | null; purchaser_display_name: string | null };
 }
 
 export async function resolveLangFromRequest(_sp: URLSearchParams) {
