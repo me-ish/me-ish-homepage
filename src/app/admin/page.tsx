@@ -4,37 +4,17 @@ import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { isAdminEmail } from '@/lib/isAdmin';
+import type { Database } from '@/types/supabase';
 
 export const dynamic = 'force-dynamic';
 
-type EntryRow = {
-  id: number;
-  title: string | null;
-  artist_name: string | null;
-  confirmed: boolean | null;      // ← 三値
-  created_at: string;
-};
-
-type InquiryRow = {
-  id: number;
-  name: string | null;
-  email: string | null;
-  subject: string | null;
-  is_read: boolean | null;
-  created_at: string;
-};
-
-type AnnRow = {
-  id: string;
-  title: string;
-  category: 'info' | 'update' | 'maintenance' | string;
-  pinned: boolean | null;
-  published_at: string | null;
-  created_at: string;
-};
+// DBスキーマ由来の型をそのまま利用（手書き型のズレ防止）
+type EntryRow = Database['public']['Tables']['entries']['Row'];
+type InquiryRow = Database['public']['Tables']['inquiries']['Row'];
+type AnnRow = Database['public']['Tables']['announcements']['Row'];
 
 export default async function AdminPage() {
-  // 1) 認証（ユーザーの特定は server client でOK）
+  // 1) 認証
   const sb = supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   const email = user?.email ?? null;
@@ -43,7 +23,7 @@ export default async function AdminPage() {
     redirect('/admin-login?err=unauthorized');
   }
 
-  // 2) 集計/一覧は service role でRLS非依存に
+  // 2) 集計/一覧は service role で
   const admin = supabaseAdmin();
 
   // 未審査は confirmed IS NULL / 却下は confirmed = FALSE
@@ -68,7 +48,8 @@ export default async function AdminPage() {
       .order('created_at', { ascending: false })
       .limit(5),
     admin.from('inquiries')
-      .select('id,name,email,subject,is_read,created_at')
+      // subject は存在しないので message を取得
+      .select('id,name,email,message,is_read,created_at')
       .order('created_at', { ascending: false })
       .limit(5),
     // お知らせ
@@ -82,17 +63,17 @@ export default async function AdminPage() {
   ]);
 
   const metrics = {
-    unreviewedEntries: entriesUnreviewedRes.count ?? 0, // 未審査
-    rejectedEntries: entriesRejectedRes.count ?? 0,     // 却下
+    unreviewedEntries: entriesUnreviewedRes.count ?? 0,
+    rejectedEntries: entriesRejectedRes.count ?? 0,
     unreadInquiries: inquiriesUnreadRes.count ?? 0,
     pendingMints: salesPendingMintRes.count ?? 0,
     totalSales: salesCountRes.count ?? 0,
     draftAnns: annsDraftCountRes.count ?? 0,
   };
 
-  const latestEntries = (latestEntriesRes.data ?? []) as EntryRow[];
+  const latestEntries  = (latestEntriesRes.data  ?? []) as EntryRow[];
   const latestInquiries = (latestInquiriesRes.data ?? []) as InquiryRow[];
-  const latestAnns = (latestAnnsRes.data ?? []) as AnnRow[];
+  const latestAnns     = (latestAnnsRes.data     ?? []) as AnnRow[];
 
   const btnOutlineCls =
     'inline-flex items-center rounded-full border border-[#d9e6f2] bg-white px-3 py-1.5 text-sm font-semibold hover:bg-[#f7fbff]';
@@ -158,7 +139,7 @@ export default async function AdminPage() {
                       <div className="min-w-0">
                         <p className="truncate font-medium">{e.title || `Untitled (#${e.id})`}</p>
                         <p className="truncate text-xs text-[#667]">
-                          {e.artist_name || 'アーティスト未設定'} ・ {toJP(e.created_at)}
+                          {e.artist_name || 'アーティスト未設定'} ・ {toJP(e.created_at as any)}
                         </p>
                       </div>
                       <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] border ${cls}`}>{label}</span>
@@ -170,7 +151,7 @@ export default async function AdminPage() {
           </div>
 
           {/* 最近のお問い合わせ */}
-          <div className="rounded-2xl border bg白">
+          <div className="rounded-2xl border bg-white">
             <HeaderWithLink title="最近のお問い合わせ" href="/admin/inquiries" />
             <ul className="divide-y">
               {latestInquiries.length === 0 ? (
@@ -179,9 +160,9 @@ export default async function AdminPage() {
                 <li key={q.id} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate font-medium">{q.subject || '(件名なし)'}</p>
+                      <p className="truncate font-medium">{displaySubject(q.message)}</p>
                       <p className="truncate text-xs text-[#667]">
-                        {q.name || q.email || '匿名'} ・ {toJP(q.created_at)}
+                        {q.name || q.email || '匿名'} ・ {toJP(q.created_at as any)}
                       </p>
                     </div>
                     {!q.is_read && (
@@ -207,7 +188,7 @@ export default async function AdminPage() {
                     <div className="min-w-0">
                       <p className="truncate font-medium">{n.title}</p>
                       <p className="truncate text-xs text-[#667]">
-                        {n.published_at ? `公開: ${toJP(n.published_at)}` : `下書き: ${toJP(n.created_at)}`}
+                        {n.published_at ? `公開: ${toJP(n.published_at as any)}` : `下書き: ${toJP(n.created_at as any)}`}
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
@@ -224,7 +205,7 @@ export default async function AdminPage() {
                             : 'bg-sky-100 text-sky-800 border-sky-200')
                         }
                       >
-                        {n.category}
+                        {n.category as any}
                       </span>
                     </div>
                   </div>
@@ -251,6 +232,9 @@ function toJP(d: string) {
     return '';
   }
 }
+
+const displaySubject = (msg: string | null) =>
+  (msg?.split('\n')[0] ?? '').slice(0, 100) || '(件名なし)';
 
 function MetricCard({
   label,

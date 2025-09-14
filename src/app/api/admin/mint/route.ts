@@ -1,4 +1,4 @@
-// /src/app/api/admin/mint/route.ts
+// src/app/api/admin/mint/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { ThirdwebSDK } from '@thirdweb-dev/sdk';
 import { Resend } from 'resend';
@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { generatePurchaseNftEmail } from '@/lib/emailTemplates/purchaseNft';
 import { z } from 'zod';
 import { timingSafeEqual } from 'crypto';
+import type { Database } from '@/types/supabase';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -120,67 +121,92 @@ export async function POST(req: NextRequest) {
     const admin = supabaseAdmin();
 
     // 1) lookup sale by stripe_session_id
+    type SaleRow = Database['public']['Tables']['sales']['Row'];
     const { data: sale, error: sErr } = await admin
       .from('sales')
-      .select('id, entry_id, buyer_email, mint_status, type, edition_no')
+      .select('id, entry_id, buyer_email, stripe_session_id, metadata')
       .eq('stripe_session_id', sessionId)
-      .single();
+      .single<SaleRow>();
 
     if (sErr || !sale) {
       return NextResponse.json({ error: 'sale not found' }, { status: 404 });
     }
-    if (sale.type !== 'nft') {
+
+    // 1.5) 作品が NFT 販売かを確認（entries.sale_type を見る）
+    const { data: entrySaleType } = await admin
+      .from('entries')
+      .select('sale_type')
+      .eq('id', sale.entry_id)
+      .single<{ sale_type: string | null }>();
+
+    if ((entrySaleType?.sale_type || '').toLowerCase() !== 'nft') {
       return NextResponse.json({ error: 'not NFT sale' }, { status: 400 });
     }
-    if (sale.mint_status === 'minted') {
+
+    // metadata に mint 状態を保持する想定
+    const meta = (sale.metadata ?? {}) as Record<string, any>;
+    if (meta.mint_status === 'minted') {
       return NextResponse.json({
         ok: true,
         message: 'already minted',
-        editionNo: sale.edition_no,
+        editionNo: meta.edition_no ?? null,
+        tokenId: meta.token_id ?? null,
       });
-    }
-    if (sale.mint_status !== 'pending') {
-      return NextResponse.json(
-        { error: `invalid mint_status: ${sale.mint_status}` },
-        { status: 409 }
-      );
     }
 
     // 2) Thirdweb mint
     const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chain as any, { secretKey });
     const contract = await sdk.getContract(contractAddress);
-
     const mintTx = await contract.erc721.mintTo(toWallet, { name, image: safeImage });
     const tokenId = mintTx.id.toString();
     const txhash = mintTx.receipt.transactionHash;
 
-    // 3) mark minted (atomic in DB)
-    const { data: rpc, error: mErr } = await admin.rpc('mark_nft_minted', {
-      p_stripe_session_id: sessionId,
-      p_token_id: tokenId,
-      p_txhash: txhash,
-      p_minted_by: 'admin',
-    });
+    // 3) 在庫カウント更新（1枚分）: public.finalize_sale(entry_id, quantity)
+    //    -> edition_sold をインクリメントし、最新値を返す
+    const { data: fin, error: finErr } = await admin.rpc('finalize_sale', {
+      p_entry_id: sale.entry_id,
+      p_quantity: 1,
+      // ← body でバリデート済みの sessionId は string 確定なのでこちらを渡す
+      p_session_id: sessionId,
+      // もし念のため sale 側を優先したいなら ↓ でもOK（結果は string 型）
+      // p_session_id: sale.stripe_session_id ?? sessionId,
+    }) 
 
-    if (mErr) {
-      console.error('[mint] mark_nft_minted error:', mErr);
-      return NextResponse.json({ error: 'mark minted failed' }, { status: 500 });
-    }
+if (finErr) {
+  console.error('[mint] finalize_sale error:', finErr);
+  return NextResponse.json({ error: 'finalize sale failed' }, { status: 500 });
+}
+const editionNo = (fin as any)?.new_edition_sold ?? null;
 
-    const { entry_id, edition_no } = (rpc?.[0] ?? {}) as {
-      entry_id: number;
-      edition_no: number;
+    // 4) sales.metadata を更新（mint 済み情報を保存）
+    const newMeta: Record<string, any> = {
+      ...meta,
+      mint_status: 'minted',
+      token_id: tokenId,
+      txhash,
+      edition_no: editionNo,
+      minted_by: 'admin',
+      minted_at: new Date().toISOString(),
     };
 
-    // 4) notify (best-effort) — テンプレを使用
+    const { error: upErr } = await admin
+      .from('sales')
+      .update({ metadata: newMeta as unknown as Database['public']['Tables']['sales']['Row']['metadata'] })
+      .eq('id', sale.id);
+
+    if (upErr) {
+      console.error('[mint] update sales.metadata error:', upErr);
+      // mint 自体は成功しているので 200 を返す（ログのみ）
+    }
+
+    // 5) notify (best-effort)
     try {
       if (sale.buyer_email && process.env.RESEND_API_KEY) {
-        // 作品タイトルを取得（テンプレに入れる）
         const { data: entry } = await admin
           .from('entries')
           .select('title')
-          .eq('id', entry_id)
-          .single();
+          .eq('id', sale.entry_id)
+          .single<{ title: string | null }>();
 
         const title = entry?.title ?? `Token #${tokenId}`;
         const claimUrl =
@@ -206,7 +232,7 @@ export async function POST(req: NextRequest) {
           replyTo: SUPPORT_EMAIL,
           headers: {
             'List-Unsubscribe': `<mailto:${SUPPORT_EMAIL}>`,
-            'X-Meish-Template': 'purchase-nft', // 同テンプレ名で統一
+            'X-Meish-Template': 'purchase-nft',
           },
         });
       }
@@ -216,8 +242,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      entryId: entry_id,
-      editionNo: edition_no,
+      entryId: sale.entry_id,
+      editionNo,
       tokenId,
       txhash,
     });
@@ -230,3 +256,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

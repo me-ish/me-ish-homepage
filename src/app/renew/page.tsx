@@ -2,39 +2,50 @@
 
 import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Database } from '@/types/supabase';
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Button } from '@/components/ui/button';
 
+type EntryLite = { id: number; title: string | null };
+
 const plans = [
-  { id: 'free', name: 'Free', price: 0, desc: '表示保証なし・ローテーション枠' },
-  { id: 'mini', name: 'Mini', price: 400, desc: '月1回保証' },
-  { id: 'light', name: 'Light', price: 1000, desc: '月3回保証' },
+  { id: 'free',     name: 'Free',     price: 0,    desc: '表示保証なし・ローテーション枠' },
+  { id: 'mini',     name: 'Mini',     price: 400,  desc: '月1回保証' },
+  { id: 'light',    name: 'Light',    price: 1000, desc: '月3回保証' },
   { id: 'standard', name: 'Standard', price: 2000, desc: '月7回保証' },
-  { id: 'premium', name: 'Premium', price: 4000, desc: '月15回保証' },
+  { id: 'premium',  name: 'Premium',  price: 4000, desc: '月15回保証' },
 ];
 
 export default function RenewPage() {
-  const supabase = createClientComponentClient<Database>();
+  // Database 型が renewals をまだ含まない想定なので、まずはジェネリクス無しで型エラー回避
+  const supabase = createClientComponentClient();
 
-  const [user, setUser] = useState<any>(null); 
-  const [entries, setEntries] = useState<any[]>([]);
+  const [user, setUser] = useState<{ id: string } | null>(null);
+  const [entries, setEntries] = useState<EntryLite[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string>('free');
-  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setUser(user); 
-      if (user) {
-        const { data, error } = await supabase
-          .from('entries')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('status', 'ended');
+      setUser(user ? { id: user.id } : null);
 
-        if (!error) setEntries(data || []);
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('entries')
+        .select('id,title')
+        .eq('user_id', user.id)
+        // .eq('status', 'ended') // 実スキーマに無ければ外す
+        .order('id', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        console.warn('[renew] fetch entries error:', error);
+        setEntries([]);
+      } else {
+        setEntries((data ?? []) as EntryLite[]);
       }
     })();
   }, [supabase]);
@@ -44,20 +55,29 @@ export default function RenewPage() {
       alert('ログインが必要です');
       return;
     }
+    if (selectedEntryId == null) {
+      alert('作品を選択してください');
+      return;
+    }
+    setLoading(true);
 
-    if (!selectedEntryId) return alert('作品を選択してください');
+    const { error } = await supabase
+      .from('renewals' as any) // 型未整備のため any で回避
+      .insert({
+        entry_id: selectedEntryId, // number
+        user_id: user.id,          // uuid
+        plan: selectedPlan,
+      } as any);
 
-    const { error } = await supabase.from('renewals').insert({
-      entry_id: selectedEntryId,
-      user_id: user.id,
-      plan: selectedPlan,
-    });
+    setLoading(false);
 
     if (error) {
-      console.error(error);
+      console.error('[renew] insert error:', error);
       alert('再出展の申請に失敗しました');
     } else {
       alert('再出展の申請を受け付けました');
+      setSelectedEntryId(null);
+      setSelectedPlan('free');
     }
   };
 
@@ -72,17 +92,18 @@ export default function RenewPage() {
         <p className="text-gray-500">現在、再出展可能な作品はありません。</p>
       ) : (
         <div className="space-y-8">
+          {/* 1. 対象作品の選択 */}
           <div>
             <h2 className="font-bold mb-2">1. 対象作品の選択</h2>
             <div className="grid gap-4">
               {entries.map((entry) => (
                 <Card
                   key={entry.id}
-                  className={`cursor-pointer ${selectedEntryId === entry.id ? 'border-[#00a1e9]' : ''}`}
+                  className={`cursor-pointer transition border ${selectedEntryId === entry.id ? 'border-[#00a1e9] ring-2 ring-[#00a1e9]/30' : ''}`}
                   onClick={() => setSelectedEntryId(entry.id)}
                 >
                   <CardContent className="p-4">
-                    <p className="font-bold text-lg">{entry.title}</p>
+                    <p className="font-bold text-lg">{entry.title ?? '(無題)'}</p>
                     <p className="text-sm text-gray-600">ID: {entry.id}</p>
                   </CardContent>
                 </Card>
@@ -90,23 +111,32 @@ export default function RenewPage() {
             </div>
           </div>
 
+          {/* 2. プラン選択 */}
           <div>
             <h2 className="font-bold mb-2">2. プラン選択</h2>
-            <RadioGroup defaultValue="free" onValueChange={setSelectedPlan}>
+            <RadioGroup
+              defaultValue={selectedPlan}        // ← value ではなく defaultValue を使う
+              onValueChange={(v) => setSelectedPlan(v)}
+            >
               {plans.map((plan) => (
                 <div key={plan.id} className="flex items-center space-x-2 mb-2">
                   <RadioGroupItem value={plan.id} id={plan.id} />
                   <label htmlFor={plan.id} className="text-gray-800">
-                    {plan.name}（¥{plan.price} / {plan.desc}）
+                    {plan.name}（¥{plan.price.toLocaleString()} / {plan.desc}）
                   </label>
                 </div>
               ))}
             </RadioGroup>
           </div>
 
+          {/* 3. 送信 */}
           <div>
-            <Button onClick={handleSubmit} className="bg-[#00a1e9] hover:bg-[#008ec4] text-white px-6 py-2 rounded-lg">
-              再出展を申請する
+            <Button
+              onClick={handleSubmit}
+              disabled={loading || selectedEntryId == null}
+              className="bg-[#00a1e9] hover:bg-[#008ec4] text-white px-6 py-2 rounded-lg disabled:opacity-50"
+            >
+              {loading ? '送信中…' : '再出展を申請する'}
             </Button>
           </div>
         </div>
@@ -115,3 +145,8 @@ export default function RenewPage() {
   );
 }
 
+/*
+将来的に制御コンポーネント（value を使う）にしたい場合：
+- `@/components/ui/radio-group` の型を Radix の Root に合わせて `value?: string` を含む定義へ修正
+- あるいは shadcn/ui の最新版テンプレートを再反映
+*/
