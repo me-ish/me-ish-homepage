@@ -121,22 +121,21 @@ export default async function CertPage({
           <CoAPdfActions downloadHref={pdfHref} note={t.expiredNote} />
 
           {/* ④ 作品データ受け取り */}
-          <AssetsReceiveSection
-            salesType={purchaseType}
-            labels={{
-              sectionTitle: t.assetsSectionTitle,
-              normalNote: t.normalNote,
-              normalDownloadBtn: t.normalDownloadBtn,
-              nftNote: t.nftNote,
-              nftConnectBtn: t.nftConnectBtn,
-              nftGasNote: t.nftGasNote,
-            }}
-            artworkHref={artworkHref}
-            onNftClaim={() => {
-              location.href = `/claim/${entry.id}?t=${encodeURIComponent(token)}`;
-            }}
-            showOffchainDownloadInNft={false}
-          />
++ <AssetsReceiveSection
+   salesType={purchaseType}
+   labels={{
+     sectionTitle: t.assetsSectionTitle,
+     normalNote: t.normalNote,
+     normalDownloadBtn: t.normalDownloadBtn,
+     nftNote: t.nftNote,
+     nftConnectBtn: t.nftConnectBtn,
+     nftGasNote: t.nftGasNote,
+   }}
+   artworkHref={artworkHref}
+   /** ← ただの文字列として渡す */
+   claimHref={`/claim/${ver.entryId}?t=${encodeURIComponent(token)}`}
+   showOffchainDownloadInNft={false}
+ />
         </div>
       </main>
     );
