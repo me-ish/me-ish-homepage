@@ -117,7 +117,7 @@ export default async function CertPage({
 
     // ★ /public/brand の画像をそのまま使う
     const BRAND = {
-      logoUrl: "/brand/me-ish.svg",
+      logoUrl: "/brand/me-ish.png",
       sealUrl: "/brand/seal.png",
       accent: "#00a1e9",
       issuerName: "me-ish",
