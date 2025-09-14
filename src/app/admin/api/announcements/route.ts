@@ -1,4 +1,3 @@
-// app/admin/api/announcements/route.ts
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
@@ -6,12 +5,15 @@ import { z } from 'zod';
 
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { isAdminEmail } from '@/lib/isAdmin';
-import {
-  AnnouncementInsert,
-} from '@/lib/schemas/announcement';
+import { AnnouncementInsert } from '@/lib/schemas/announcement';
+import type { Database } from '@/types/supabase';
 
 export const revalidate = 0;
 
+type AnnTable  = Database['public']['Tables']['announcements'];
+type AnnInsert = AnnTable['Insert'];
+
+// http/https 以外は null、空や不正も null
 function normalizeHttpUrl(u?: string | null): string | null {
   if (!u) return null;
   try {
@@ -23,9 +25,9 @@ function normalizeHttpUrl(u?: string | null): string | null {
 }
 
 async function requireAdmin() {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = createRouteHandlerClient<Database>({ cookies });
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email)) return null;
+  if (!user || !isAdminEmail(user.email ?? '')) return null;
   return user;
 }
 
@@ -55,20 +57,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid', details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const payload = {
-    ...parsed.data,
-    link_url: normalizeHttpUrl(parsed.data.link_url ?? null),
-    // 誤公開防止：nullを尊重（クライアント初期値はnull推奨）
-    published_at: parsed.data.published_at ?? null,
-  };
+  // ★ published_at をスプレッドに含めず、値がある時だけ追加する
+  const { published_at, expires_at, link_url, ...rest } = parsed.data;
+
+  const values = {
+    ...rest,
+    ...(link_url !== undefined ? { link_url: normalizeHttpUrl(link_url) } : {}),
+    ...(published_at != null ? { published_at } : {}), // ← null/undefined ならキー付与しない
+    ...(expires_at === null
+      ? { expires_at: null }
+      : expires_at
+      ? { expires_at }
+      : {}),
+  } satisfies AnnInsert;
 
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from('announcements')
-    .insert(payload)
+    .insert(values)
     .select('*')
     .single();
 
-  if (error) return NextResponse.json({ error: 'create_failed' }, { status: 500 });
-  return NextResponse.json(data);
+  if (error) return NextResponse.json({ error: 'create_failed', details: error.message }, { status: 500 });
+  return NextResponse.json(data, { status: 201 });
 }

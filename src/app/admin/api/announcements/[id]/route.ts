@@ -1,24 +1,46 @@
-// src/app/admin/api/announcements/route.ts
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { z } from 'zod';
+
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { isAdminEmail } from '@/lib/isAdmin';
+import { AnnouncementUpdate } from '@/lib/schemas/announcement';
 import type { Database } from '@/types/supabase';
 
 type AnnTable  = Database['public']['Tables']['announcements'];
-type AnnInsert = AnnTable['Insert'];
+type AnnRow    = AnnTable['Row'];
+type AnnUpdate = AnnTable['Update'];
 
-const Body = z.object({
-  title: z.string().min(1),
-  body_md: z.string().min(1),
-  category: z.enum(['info', 'update', 'maintenance']),
-  pinned: z.boolean().default(false),
-  link_url: z.string().url().optional().nullable(),
-  published_at: z.string().datetime().optional().nullable(),
-  expires_at: z.string().datetime().optional().nullable(),
-});
+// http/https 以外は null、未指定は変更なし
+function normalizeHttpUrl(u: unknown): string | null | undefined {
+  if (u === undefined) return undefined;
+  const s = (u ?? null) as string | null;
+  if (!s) return null;
+  try {
+    const url = new URL(s);
+    return /^https?:$/.test(url.protocol) ? url.toString() : null;
+  } catch { return null; }
+}
+
+function normalizePatch(v: unknown): Partial<AnnUpdate> {
+  const out: Record<string, unknown> = { ...(v as Record<string, unknown>) };
+
+  if ('link_url' in out) {
+    out.link_url = normalizeHttpUrl(out.link_url);
+  }
+
+  // '' → null、無効な日付 → null、未指定 → 変更なし
+  const fixTs = (val: unknown) => {
+    if (val === undefined) return undefined;
+    if (val === null || val === '') return null;
+    const s = String(val);
+    return isNaN(Date.parse(s)) ? null : s;
+  };
+  if ('published_at' in out) out.published_at = fixTs(out.published_at);
+  if ('expires_at'   in out) out.expires_at   = fixTs(out.expires_at);
+
+  return out as Partial<AnnUpdate>;
+}
 
 async function requireAdmin() {
   const supabase = createRouteHandlerClient<Database>({ cookies });
@@ -27,55 +49,46 @@ async function requireAdmin() {
   return user;
 }
 
-export async function POST(req: Request) {
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const me = await requireAdmin();
   if (!me) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-  const raw = await req.json();
-  const parsed = Body.safeParse(raw);
+  const body = await req.json();
+  const parsed = AnnouncementUpdate.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: 'invalid', details: parsed.error.flatten() }, { status: 400 });
   }
-  const p = parsed.data;
-
-  // ⚠️ “null を入れてから消す”のではなく、“最初から入れない”
-  const payload = {
-    title: p.title,
-    body_md: p.body_md,
-    category: p.category,
-    pinned: p.pinned,
-    link_url: p.link_url ?? null, // ← ここは null 許可
-    ...(p.published_at ? { published_at: p.published_at } : {}), // ← null/undefined なら付けない
-    ...(p.expires_at === null
-      ? { expires_at: null } // ← スキーマが null 許可なら残す
-      : p.expires_at
-      ? { expires_at: p.expires_at }
-      : {}),
-  } satisfies AnnInsert;
 
   const admin = supabaseAdmin();
-// 直前で payload を null-safe にしてから insert する
-const { data, error } = await admin
-  .from('announcements')
-  .insert((() => {
-    // ← ここは "payload" に合わせてください（finalPayload ではない）
-    const v: any = { ...payload };
+  const update: Partial<AnnUpdate> = normalizePatch(parsed.data);
 
-    // published_at が null/undefined ならキー自体を削除（これで Insert型と一致）
-    if (v.published_at == null) delete v.published_at;
-
-    // expires_at はスキーマによっては null 可なので、ここは削除しない
-    // （もし null 不可なら: if (v.expires_at == null) delete v.expires_at; を追加）
-
-    return v as AnnInsert;
-  })())
-  .select('*')
-  .single();
-
+  const { data, error } = await admin
+    .from('announcements')
+    .update(update)
+    .eq('id', params.id as AnnRow['id']) // ← 型に揃える（uuid/text想定）
+    .select('*')
+    .single();
 
   if (error) {
-    console.error('insert_failed:', error);
-    return NextResponse.json({ error: 'insert_failed', details: error.message }, { status: 500 });
+    console.error('update_failed:', error);
+    return NextResponse.json({ error: 'update_failed', details: error.message }, { status: 500 });
   }
-  return NextResponse.json(data, { status: 201 });
+  return NextResponse.json(data);
+}
+
+export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+  const me = await requireAdmin();
+  if (!me) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+
+  const admin = supabaseAdmin();
+  const { error } = await admin
+    .from('announcements')
+    .delete()
+    .eq('id', params.id as AnnRow['id']); // ← 型に揃える
+
+  if (error) {
+    console.error('delete_failed:', error);
+    return NextResponse.json({ error: 'delete_failed', details: error.message }, { status: 500 });
+  }
+  return NextResponse.json({ ok: true });
 }

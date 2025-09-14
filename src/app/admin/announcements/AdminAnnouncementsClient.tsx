@@ -7,13 +7,16 @@ type Props = { adminEmail: string };
 
 type Filter = 'all' | 'public' | 'private';
 
-const emptyDraft = (): Omit<Announcement, 'id' | 'created_at' | 'updated_at'> => ({
+type Draft = Omit<Announcement, 'id' | 'created_at' | 'updated_at'>;
+
+const emptyDraft = (): Draft => ({
   title: '',
   body_md: '',
   category: 'info',
   pinned: false,
   link_url: null,
-  published_at: null, // ← 誤公開防止：デフォルトnull
+  published_at: null, // 未公開デフォルト
+  expires_at: null,   // ★ 追加（必須プロパティ／null可）
 });
 
 function normalizeHttpUrl(u?: string | null): string | null {
