@@ -15,9 +15,9 @@ const Body = z.object({
   body_md: z.string().min(1),
   category: z.enum(['info', 'update', 'maintenance']),
   pinned: z.boolean().default(false),
-  link_url: z.string().url().optional().nullable(),          // ← null 可
-  published_at: z.string().datetime().optional().nullable(), // ← 入力は null 受ける
-  expires_at: z.string().datetime().optional().nullable(),   // ← null 可（スキーマ次第）
+  link_url: z.string().url().optional().nullable(),
+  published_at: z.string().datetime().optional().nullable(),
+  expires_at: z.string().datetime().optional().nullable(),
 });
 
 async function requireAdmin() {
@@ -38,25 +38,25 @@ export async function POST(req: Request) {
   }
   const p = parsed.data;
 
-  // --- ここが核心：AnnInsert を“条件付きスプレッド”で組み立て、null を入れない ---
-  const base = {
+  // ⚠️ “null を入れてから消す”のではなく、“最初から入れない”
+  const payload = {
     title: p.title,
     body_md: p.body_md,
     category: p.category,
     pinned: p.pinned,
-    link_url: p.link_url ?? null, // ← Insert 型が null 許可なのでそのままOK
-    ...(p.expires_at === null ? { expires_at: null } : p.expires_at ? { expires_at: p.expires_at } : {}),
-  };
-
-  const payload = {
-    ...base,
-    ...(p.published_at ? { published_at: p.published_at } : {}), // ← null/undefined ならキー自体を付けない
+    link_url: p.link_url ?? null, // ← ここは null 許可
+    ...(p.published_at ? { published_at: p.published_at } : {}), // ← null/undefined なら付けない
+    ...(p.expires_at === null
+      ? { expires_at: null } // ← スキーマが null 許可なら残す
+      : p.expires_at
+      ? { expires_at: p.expires_at }
+      : {}),
   } satisfies AnnInsert;
 
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from('announcements')
-    .insert(payload) // ← ここに null な published_at は渡らない
+    .insert(payload) // ← published_at に null は絶対入らない
     .select('*')
     .single();
 
