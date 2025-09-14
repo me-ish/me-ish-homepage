@@ -108,11 +108,10 @@ export default async function CertPage({
         (normalizedEntry as any).sale_type ??
         "normal") as "normal" | "nft";
 
-    // ダウンロードAPI等（作品データ受け取りに使用）
+    // 作品データ受け取りエンドポイント
     const artworkHref = `/api/files/download?certToken=${encodeURIComponent(token)}`;
 
-    // PDF生成は DOM → PDF 方式（新API）
-    // PDF化する対象をこのページ側でラップして id を付与する
+    // PDF化ターゲット
     const pdfTargetId = "coa-printable";
     const pdfFilename = "CoA_me-ish";
 
@@ -124,12 +123,28 @@ export default async function CertPage({
             <p className="text-gray-800 text-sm">{t.heroNote}</p>
           </section>
 
-          {/* ② 証明書本体（英語ラベル） + PDF化ターゲット */}
-          <div id={pdfTargetId}>
-            <CoAInfoPanel entry={normalizedEntry} showOnchain={purchaseType === "nft"} />
+          {/* ② 証明書本体（A4台紙に載せてPDF化しやすく） */}
+          <div
+            id={pdfTargetId}
+            className="relative mx-auto bg-white"
+            style={{
+              // A4 (約 794x1123px @96dpi)
+              width: 794,
+              height: 1123,
+              padding: 32,
+            }}
+          >
+            <div className="w-full h-full grid place-items-center">
+              <div className="w-[700px]">
+                <CoAInfoPanel
+                  entry={normalizedEntry}
+                  showOnchain={purchaseType === "nft"}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* ③ 証明書PDF（新API: filename / targetId） */}
+          {/* ③ 証明書PDF（DOM→PDF） */}
           <CoAPdfActions filename={pdfFilename} targetId={pdfTargetId} />
           <p className="mt-2 text-xs text-gray-500">{t.expiredNote}</p>
 
@@ -166,3 +181,4 @@ export default async function CertPage({
     );
   }
 }
+
