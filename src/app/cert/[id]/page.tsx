@@ -1,3 +1,4 @@
+// /src/app/cert/[id]/page.tsx
 import type { Metadata } from "next";
 import Link from "next/link";
 import CoAInfoPanel from "@/components/cert/CoAInfoPanel";
@@ -11,7 +12,7 @@ import {
   issueReissueLink,
 } from "@/lib/coa/server";
 
-// ★ Node ランタイムを明示（Supabase/crypto を使うので必須）
+// Node ランタイム（Supabase/crypto を使うため）
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -28,7 +29,7 @@ export default async function CertPage({
   params: { id: string };
   searchParams: Record<string, string | string[] | undefined>;
 }) {
-  // id の防御（/cert/?t=... のような誤URLで落ちないように）
+  // /cert/?t=... のような誤URLで落ちないように防御
   const idNum = Number(params.id);
   if (!Number.isInteger(idNum) || idNum <= 0) {
     return (
@@ -44,7 +45,7 @@ export default async function CertPage({
     );
   }
 
-  // URLSearchParams を正規化
+  // URLSearchParams 正規化
   const search = new URLSearchParams(
     Object.entries(searchParams).flatMap(([k, v]) =>
       Array.isArray(v) ? v.map((vv) => [k, vv]) : [[k, v ?? ""]]
@@ -53,7 +54,6 @@ export default async function CertPage({
 
   const lang = await resolveLangFromRequest(search);
   const t = coaUi[lang];
-
   const token = search.get("t") || "";
 
   try {
@@ -68,7 +68,7 @@ export default async function CertPage({
               <Link className="px-4 py-2 rounded-xl bg-black text-white" href="/">
                 {t.backToGallery}
               </Link>
-              {/* 再発行はここで新トークンを作って302へ。表示時に一度だけ評価されます */}
+              {/* 再発行リンク（表示時に一度だけ評価） */}
               <a
                 className="px-4 py-2 rounded-xl bg-gray-200"
                 href={await issueReissueLink(idNum, undefined)}
@@ -96,21 +96,25 @@ export default async function CertPage({
       );
     }
 
-    // ★ ここで title を必ず string に正規化
-const normalizedEntry = {
-  ...entry,
-  title: entry.title ?? '(Untitled)',   // ← null を潰す
-};
+    // title を必ず string に
+    const normalizedEntry = {
+      ...entry,
+      title: entry.title ?? "(Untitled)",
+    };
 
-// sales_type / sale_type もこの normalized を使う
-const purchaseType =
-  ((normalizedEntry as any).sales_type ??
-   (normalizedEntry as any).sale_type ??
-   'normal') as 'normal' | 'nft';
+    // sales_type / sale_type どちらでも拾う
+    const purchaseType =
+      ((normalizedEntry as any).sales_type ??
+        (normalizedEntry as any).sale_type ??
+        "normal") as "normal" | "nft";
 
-    // 相対パスで十分。NEXT_PUBLIC_SITE_URL 未設定でも安全
-    const pdfHref = `/api/cert/download?t=${encodeURIComponent(token)}`;
+    // ダウンロードAPI等（作品データ受け取りに使用）
     const artworkHref = `/api/files/download?certToken=${encodeURIComponent(token)}`;
+
+    // PDF生成は DOM → PDF 方式（新API）
+    // PDF化する対象をこのページ側でラップして id を付与する
+    const pdfTargetId = "coa-printable";
+    const pdfFilename = "CoA_me-ish";
 
     return (
       <main className="min-h-[80vh] px-4 py-10">
@@ -120,41 +124,40 @@ const purchaseType =
             <p className="text-gray-800 text-sm">{t.heroNote}</p>
           </section>
 
-          {/* ② 証明書本体（英語ラベル） */}
-          <CoAInfoPanel entry={normalizedEntry} showOnchain={purchaseType === "nft"} />
+          {/* ② 証明書本体（英語ラベル） + PDF化ターゲット */}
+          <div id={pdfTargetId}>
+            <CoAInfoPanel entry={normalizedEntry} showOnchain={purchaseType === "nft"} />
+          </div>
 
-          {/* ③ 証明書PDF */}
-          <CoAPdfActions downloadHref={pdfHref} note={t.expiredNote} />
+          {/* ③ 証明書PDF（新API: filename / targetId） */}
+          <CoAPdfActions filename={pdfFilename} targetId={pdfTargetId} />
+          <p className="mt-2 text-xs text-gray-500">{t.expiredNote}</p>
 
           {/* ④ 作品データ受け取り */}
-+ <AssetsReceiveSection
-   salesType={purchaseType}
-   labels={{
-     sectionTitle: t.assetsSectionTitle,
-     normalNote: t.normalNote,
-     normalDownloadBtn: t.normalDownloadBtn,
-     nftNote: t.nftNote,
-     nftConnectBtn: t.nftConnectBtn,
-     nftGasNote: t.nftGasNote,
-   }}
-   artworkHref={artworkHref}
-   /** ← ただの文字列として渡す */
-   claimHref={`/claim/${ver.entryId}?t=${encodeURIComponent(token)}`}
-   showOffchainDownloadInNft={false}
- />
+          <AssetsReceiveSection
+            salesType={purchaseType}
+            labels={{
+              sectionTitle: t.assetsSectionTitle,
+              normalNote: t.normalNote,
+              normalDownloadBtn: t.normalDownloadBtn,
+              nftNote: t.nftNote,
+              nftConnectBtn: t.nftConnectBtn,
+              nftGasNote: t.nftGasNote,
+            }}
+            artworkHref={artworkHref}
+            claimHref={`/claim/${ver.entryId}?t=${encodeURIComponent(token)}`}
+            showOffchainDownloadInNft={false}
+          />
         </div>
       </main>
     );
   } catch (e: any) {
-    // 例外は Digest になりがちなので画面にも表示（暫定）
     console.error("[CoA] server error:", e);
     return (
       <main className="min-h-[60vh] flex items-center justify-center px-4">
         <div className="w-full max-w-[760px] bg-white p-6 rounded-xl space-y-3 text-center">
           <h1 className="text-xl font-bold">Server Error</h1>
-          <p className="text-gray-700 text-sm break-all">
-            {String(e?.message || e)}
-          </p>
+          <p className="text-gray-700 text-sm break-all">{String(e?.message || e)}</p>
           <Link className="inline-block px-4 py-2 rounded-xl bg-black text-white" href="/">
             {t.backToGallery}
           </Link>
