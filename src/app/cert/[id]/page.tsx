@@ -96,11 +96,17 @@ export default async function CertPage({
       );
     }
 
-    // sales_type / sale_type のゆらぎ吸収（どちらか入っている方を採用）
-    const purchaseType =
-      ((entry as any).sales_type ?? (entry as any).sale_type ?? "normal") as
-        | "normal"
-        | "nft";
+    // ★ ここで title を必ず string に正規化
+const normalizedEntry = {
+  ...entry,
+  title: entry.title ?? '(Untitled)',   // ← null を潰す
+};
+
+// sales_type / sale_type もこの normalized を使う
+const purchaseType =
+  ((normalizedEntry as any).sales_type ??
+   (normalizedEntry as any).sale_type ??
+   'normal') as 'normal' | 'nft';
 
     // 相対パスで十分。NEXT_PUBLIC_SITE_URL 未設定でも安全
     const pdfHref = `/api/cert/download?t=${encodeURIComponent(token)}`;
@@ -115,7 +121,7 @@ export default async function CertPage({
           </section>
 
           {/* ② 証明書本体（英語ラベル） */}
-          <CoAInfoPanel entry={entry} showOnchain={purchaseType === "nft"} />
+          <CoAInfoPanel entry={normalizedEntry} showOnchain={purchaseType === "nft"} />
 
           {/* ③ 証明書PDF */}
           <CoAPdfActions downloadHref={pdfHref} note={t.expiredNote} />
