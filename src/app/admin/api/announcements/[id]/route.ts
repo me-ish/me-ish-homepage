@@ -54,15 +54,24 @@ export async function POST(req: Request) {
   } satisfies AnnInsert;
 
   const admin = supabaseAdmin();
-  const { data, error } = await admin
-    .from('announcements')
-.insert((() => {
-  const v: any = { ...payload };
-  if (v.published_at == null) delete v.published_at; // ★ null/undefinedならキー削除
-  return v as AnnInsert;                              // ★ Insert型に整形
-})())
-.select('*')
-.single();
+// 直前で payload を null-safe にしてから insert する
+const { data, error } = await admin
+  .from('announcements')
+  .insert((() => {
+    // ← ここは "payload" に合わせてください（finalPayload ではない）
+    const v: any = { ...payload };
+
+    // published_at が null/undefined ならキー自体を削除（これで Insert型と一致）
+    if (v.published_at == null) delete v.published_at;
+
+    // expires_at はスキーマによっては null 可なので、ここは削除しない
+    // （もし null 不可なら: if (v.expires_at == null) delete v.expires_at; を追加）
+
+    return v as AnnInsert;
+  })())
+  .select('*')
+  .single();
+
 
   if (error) {
     console.error('insert_failed:', error);
