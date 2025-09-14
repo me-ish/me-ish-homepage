@@ -115,6 +115,15 @@ export default async function CertPage({
     const pdfTargetId = "coa-printable";
     const pdfFilename = "CoA_me-ish";
 
+    // ★ /public/brand の画像をそのまま使う
+    const BRAND = {
+      logoUrl: "/brand/me-ish.svg",
+      sealUrl: "/brand/seal.png",
+      accent: "#00a1e9",
+      issuerName: "me-ish",
+      // 必要なら watermarkOpacity: 0.06 なども
+    } as const;
+
     return (
       <main className="min-h-[80vh] px-4 py-10">
         <div className="mx-auto w-full max-w-[920px] space-y-8">
@@ -139,6 +148,7 @@ export default async function CertPage({
                 <CoAInfoPanel
                   entry={normalizedEntry}
                   showOnchain={purchaseType === "nft"}
+                  {...BRAND}
                 />
               </div>
             </div>
