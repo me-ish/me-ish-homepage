@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Info } from 'lucide-react';
 import type { FormValues } from '@/app/entry/FormWrapper';
 
 type Step2Props = {
@@ -57,6 +57,7 @@ function errMsg(err: unknown): string | undefined {
 const Step2_WorkInfo = ({
   preview,
   setPreview,
+  localImageFile: _localImageFile, // 使わないが型整合のため受ける
   setLocalImageFile,
 }: Step2Props) => {
   const {
@@ -70,6 +71,7 @@ const Step2_WorkInfo = ({
   const imageField = watch('image');
   const titleValue: string = watch('title') || '';
   const descValue: string = watch('description') || '';
+  const hasSignature = watch('has_signature');
 
   const [showHelp, setShowHelp] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -133,7 +135,59 @@ const Step2_WorkInfo = ({
         <p className="mt-2 text-sm text-gray-600">
           画像は<strong>10MB以内・JPEG/PNG・一辺3000px以内</strong>を推奨。短辺は<strong>{MIN_SHORT_EDGE}px以上</strong>が目安です。
         </p>
+
+        {/* 画像保護ポリシーの周知ボックス */}
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] leading-relaxed text-amber-900">
+          <p className="font-semibold flex items-center gap-2">
+            <Info size={16} className="shrink-0" />
+            画像保護とサインについて
+          </p>
+          <ul className="mt-1 list-disc pl-5 space-y-1">
+            <li>基本方針：<strong>作者サイン入りの作品を推奨</strong>しています。</li>
+            <li>サインが<strong>ない場合</strong>、me-ish が <em>「created by 作家名」</em> のウォーターマーク（右下）を自動付与します。</li>
+            <li>公開前に <strong>AI認識阻害処理</strong> も併せて実施します。</li>
+          </ul>
+        </div>
       </header>
+
+      {/* サイン有無（必須） */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+          この作品に<strong>作者サイン</strong>は含まれていますか？ <span className="text-red-600">＊</span>
+        </label>
+        <div role="radiogroup" className="flex flex-wrap gap-3">
+          <label className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+            <input
+              type="radio"
+              value="yes"
+              {...register('has_signature', { required: 'サインの有無を選択してください。' })}
+            />
+            <span className="text-sm text-gray-800">はい（作者サインが入っています）</span>
+          </label>
+          <label className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+            <input
+              type="radio"
+              value="no"
+              {...register('has_signature', { required: 'サインの有無を選択してください。' })}
+            />
+            <span className="text-sm text-gray-800">いいえ（me-ish のWMを付与して公開に同意します）</span>
+          </label>
+        </div>
+        {(() => {
+          const m = errMsg(errors.has_signature);
+          return m ? <p role="alert" className="mt-1.5 text-sm text-red-600">{m}</p> : null;
+        })()}
+        {hasSignature === 'yes' && (
+          <p className="mt-2 text-xs text-gray-600">
+            ※ サインが見切れないよう、余白を少し広めに配置することをおすすめします。
+          </p>
+        )}
+        {hasSignature === 'no' && (
+          <p className="mt-2 text-xs text-gray-600">
+            ※ me-ish のWMは<strong>右下に小さめ</strong>で入ります（白背景でも視認性を確保）。作家名は応募情報の表記に合わせます。
+          </p>
+        )}
+      </div>
 
       {/* 応募先ギャラリー（White固定） */}
       <div>

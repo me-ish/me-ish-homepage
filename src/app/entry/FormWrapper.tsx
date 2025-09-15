@@ -34,6 +34,7 @@ export type FormValues = {
   editionTotal: string;
   displayStartAt?: string;
   displayEndAt?: string;
+  has_signature: 'yes' | 'no'; // ★ 追加：サイン有無
 };
 
 const slideVariants = {
@@ -49,6 +50,7 @@ const FormWrapper = () => {
       twitterUrl: '', instagramUrl: '', title: '', image: undefined as unknown as FileList,
       description: '', isForSale: '', saleType: '', price: '', gallery_type: '', displayPlan: '',
       agreeTerms: false, confirmRights: false, confirmOriginal: false,
+      has_signature: undefined as unknown as 'yes' | 'no', // ★ 追加：未選択スタート（Step2必須）
     },
     shouldUnregister: false,
     mode: 'onChange',
@@ -66,7 +68,7 @@ const FormWrapper = () => {
   const getStepFields = (step: number, isForSale: string): (keyof FormValues)[] => {
     switch (step) {
       case 1: return ['artistName', 'email'];
-      case 2: return ['gallery_type', 'title', 'image'];
+      case 2: return ['gallery_type', 'title', 'image', 'has_signature']; // ★ 追加：Step2で必須確認
       case 3: return [
         'isForSale', 'agreeTerms', 'confirmRights', 'confirmOriginal',
         ...(isForSale === 'yes' ? (['saleType', 'price', 'displayPlan'] as (keyof FormValues)[]) : [])
@@ -176,6 +178,7 @@ const FormWrapper = () => {
         edition_sold: 0,
         meish_fee_yen: data.meish_fee_yen ?? null,
         artist_reward_yen: data.artist_reward_yen ?? null,
+        has_signature: data.has_signature === 'yes', // ★ 追加：booleanで保存
       }]);
 
       if (error) {
@@ -188,18 +191,13 @@ const FormWrapper = () => {
       setStep(5);
 
       // ★ メール送信（サーバーアクション経由＝401回避）
-      //   Submitスキーマ上、必須は to と name。任意パラメータがあれば追送してください。
       try {
         await sendEmail('submit', {
           to: data.email,
           name: data.artistName,
-          // manageUrl: `https://www.me-ish.art/manage/${externalUserId}`, // 任意
-          // faqUrl: 'https://me-ish.art/faq',
-          // termsUrl: 'https://me-ish.art/footer/terms',
-          // slaHours: 72,
+          // manageUrl: `https://www.me-ish.art/manage/${externalUserId}`, // 任意で追加可
         });
       } catch (e) {
-        // メール失敗は致命ではないので、画面は成功のまま
         console.error('submit mail failed:', e);
       }
     } catch (e: any) {

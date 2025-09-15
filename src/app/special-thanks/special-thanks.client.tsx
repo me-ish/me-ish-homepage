@@ -148,7 +148,7 @@ export default function SpecialThanksClient() {
   if (!items.length) {
     return (
       <div className="rounded-2xl border bg-white p-8 text-center text-[#567]">
-        まだ公開準備中です。応募いただいた皆さまは順次掲載していきます。
+        公開準備中です。応募いただいた皆さまは順次掲載していきます。
       </div>
     );
   }
