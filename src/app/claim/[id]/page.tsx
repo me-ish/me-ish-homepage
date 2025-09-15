@@ -1,14 +1,13 @@
 // /src/app/claim/[id]/page.tsx
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createThirdwebClient } from 'thirdweb';
 import {
   ThirdwebProvider,
   ConnectButton,
   useActiveAccount,
-  useConnect,
 } from 'thirdweb/react';
 import { inAppWallet, createWallet /* walletConnect */ } from 'thirdweb/wallets';
 
@@ -16,28 +15,6 @@ type PageProps = { params: { id: string } };
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || '';
 const twClient = CLIENT_ID ? createThirdwebClient({ clientId: CLIENT_ID }) : null;
-
-/** 送信用の互換関数（SDK のバージョンでメソッド名が違うのを吸収） */
-async function sendOtpEmailCompat(
-  wal: ReturnType<typeof inAppWallet>,
-  email: string,
-  client: NonNullable<typeof twClient>,
-) {
-  // いずれかが存在する
-  const anyWal = wal as any;
-  if (typeof anyWal.sendEmailOtp === 'function') {
-    return anyWal.sendEmailOtp({ email, client });
-  }
-  if (typeof anyWal.sendAuthEmailOtp === 'function') {
-    return anyWal.sendAuthEmailOtp({ email, client });
-  }
-  if (typeof anyWal.sendVerificationEmail === 'function') {
-    return anyWal.sendVerificationEmail({ email, client });
-  }
-  throw new Error(
-    'This SDK version does not expose a programmatic email OTP sender. Use the ConnectButton modal.',
-  );
-}
 
 export default function ClaimPage(props: PageProps) {
   return (
@@ -50,8 +27,8 @@ export default function ClaimPage(props: PageProps) {
 function ClaimInner({ params }: PageProps) {
   const sp = useSearchParams();
   const account = useActiveAccount();
-  const { connect, isConnecting } = useConnect();
 
+  // 受け取り対象（任意クエリ）
   const tokenId = useMemo(() => Number(sp.get('tokenId') ?? '0'), [sp]);
   const quantity = useMemo(() => Number(sp.get('qty') ?? '1'), [sp]);
 
@@ -59,61 +36,10 @@ function ClaimInner({ params }: PageProps) {
   const [hash, setHash] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  // メール受け取り用
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [mailBusy, setMailBusy] = useState(false);
-
-  // inAppWallet() が返す実体（＝Wallet）をそのまま保持する
-  type WalletInstance = ReturnType<typeof inAppWallet>;
-  const walletRef = useRef<WalletInstance | null>(null);
-
   const canClaim = !!account?.address && !!twClient && !loading;
   const polygonscanTx = (h: string) => `https://polygonscan.com/tx/${h}`;
 
-  // 1) OTP送信
-  async function sendOtp() {
-    if (!twClient || !email) return;
-    setMailBusy(true);
-    setErr(null);
-    try {
-      const wal = inAppWallet({ auth: { options: ['email'] } });
-      walletRef.current = wal;
-      await sendOtpEmailCompat(wal, email, twClient);
-      setOtpSent(true);
-    } catch (e: any) {
-      setErr(e?.message ?? 'Failed to send code');
-    } finally {
-      setMailBusy(false);
-    }
-  }
-
-  // 2) コード入力で接続（connect の戻りは Wallet 必須）
-  async function connectWithEmailOtp() {
-    if (!twClient || !email || !otp) return;
-    setMailBusy(true);
-    setErr(null);
-    try {
-      await connect(async () => {
-        const wal = walletRef.current ?? inAppWallet({ auth: { options: ['email'] } });
-        // 一部 SDK は connect を wal.connect({...}) で受け付ける
-        await (wal as any).connect?.({
-          client: twClient,
-          strategy: 'email',
-          email,
-          verificationCode: otp,
-        });
-        return wal; // ← ここが Promise<Wallet> を返す
-      });
-    } catch (e: any) {
-      setErr(e?.message ?? 'Sign-in failed');
-    } finally {
-      setMailBusy(false);
-    }
-  }
-
-  // 3) クレーム実行
+  // クレーム実行
   async function handleClaim() {
     if (!account?.address) return;
     setLoading(true);
@@ -125,7 +51,7 @@ function ClaimInner({ params }: PageProps) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           to: account.address,
-          certToken: sp.get('t') || '',
+          certToken: sp.get('t') || '', // CoA 画面から引き継いだトークン
           tokenId,
           quantity,
         }),
@@ -153,7 +79,7 @@ function ClaimInner({ params }: PageProps) {
         <section className="rounded-2xl border border-zinc-800 p-4 space-y-4">
           {twClient ? (
             <>
-              {/* 既存：自由にログイン */}
+              {/* 既存の自由ログイン（メタマスク等） */}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-zinc-400">Sign in to receive your NFT</span>
                 <ConnectButton
@@ -168,54 +94,22 @@ function ClaimInner({ params }: PageProps) {
                 />
               </div>
 
-              {/* 強い導線：メールで受け取る（ウォレット不要） */}
+              {/* 強い導線：メールで受け取る（ウォレット不要） → email 専用の ConnectButton */}
               <div className="space-y-2">
                 <div className="text-sm font-medium">メールで受け取る（ウォレット不要）</div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="flex-1 rounded-md bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm"
+                <div className="w-full">
+                  <ConnectButton
+                    client={twClient}
+                    wallets={[
+                      // メールのみを表示
+                      inAppWallet({ auth: { options: ['email'] } }),
+                    ]}
+                    theme="dark"
+                    connectModal={{ size: 'compact', title: 'メールで受け取る' }}
                   />
-                  <button
-                    onClick={sendOtp}
-                    disabled={!email || mailBusy || isConnecting}
-                    className={`rounded-md px-3 py-2 text-sm font-medium ${
-                      !email || mailBusy || isConnecting
-                        ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed'
-                        : 'bg-white text-black hover:bg-zinc-200'
-                    }`}
-                  >
-                    {mailBusy ? 'Sending…' : 'コード送信'}
-                  </button>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="6桁コード"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    className="flex-1 rounded-md bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm"
-                  />
-                  <button
-                    onClick={connectWithEmailOtp}
-                    disabled={!otpSent || !otp || mailBusy || isConnecting}
-                    className={`rounded-md px-3 py-2 text-sm font-medium ${
-                      !otpSent || !otp || mailBusy || isConnecting
-                        ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed'
-                        : 'bg-white text-black hover:bg-zinc-200'
-                    }`}
-                  >
-                    {mailBusy || isConnecting ? 'Connecting…' : 'メールで接続'}
-                  </button>
-                </div>
-
                 <div className="text-[11px] text-zinc-500">
-                  メール認証だけで受け取れます。コードが届かない場合は迷惑メールをご確認ください。
+                  メールアドレスを入力し、届いたコードでログインすると自動でウォレットが作成されます。
                 </div>
               </div>
             </>
@@ -225,6 +119,7 @@ function ClaimInner({ params }: PageProps) {
             </div>
           )}
 
+          {/* 受け取りボタン */}
           <button
             onClick={handleClaim}
             disabled={!canClaim}
