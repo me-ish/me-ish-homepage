@@ -17,7 +17,7 @@ const CLIENT_ID = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || '';
 const twClient = CLIENT_ID ? createThirdwebClient({ clientId: CLIENT_ID }) : null;
 
 export default function ClaimPage(props: PageProps) {
-  // あなたの SDK 版では clientId プロップは無いので渡さない
+  // v5系では <ThirdwebProvider> に clientId を渡さない実装のため、そのままラップだけ
   return (
     <ThirdwebProvider>
       <ClaimInner {...props} />
@@ -50,7 +50,7 @@ function ClaimInner({ params }: PageProps) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           to: account.address,
-          certToken: sp.get('t') || '',
+          certToken: sp.get('t') || '', // CoAのトークン
           tokenId,
           quantity,
         }),
@@ -88,11 +88,8 @@ function ClaimInner({ params }: PageProps) {
                   <ConnectButton
                     client={twClient}
                     wallets={[
-                      // 既存ウォレット系
                       createWallet('io.metamask'),
-                      // in-app も併記（Google/Apple/Email）
                       inAppWallet({ auth: { options: ['google', 'apple', 'email'] } }),
-                      // walletConnect を使うなら SDK 版に合わせて有効化
                       // walletConnect({ projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID! }),
                     ]}
                     theme="dark"
@@ -106,7 +103,6 @@ function ClaimInner({ params }: PageProps) {
                 <div className="text-sm font-medium">メールで受け取る（ウォレット不要）</div>
                 <ConnectButton
                   client={twClient}
-                  // ← メール認証だけを許可。モーダルがメール入力→OTP→接続まで案内
                   wallets={[inAppWallet({ auth: { options: ['email'] } })]}
                   theme="dark"
                   connectModal={{ size: 'compact', title: 'メールで受け取る' }}
