@@ -1,3 +1,4 @@
+// src/app/white/layout.tsx
 import type { Metadata } from 'next';
 import { ZoomArtworkProvider } from '@/components/shared/ZoomArtworkContext';
 import ClientWrapper from '@/components/shared/ClientWrapper';
@@ -8,18 +9,17 @@ import '@/app/globals.css';
 export const metadata: Metadata = { title: 'me-ish' };
 
 export default function WhiteLayout({ children }: { children: React.ReactNode }) {
+  // ★ <html> / <body> は置かない（ルート layout だけが持つ）
   return (
-    <html lang="ja">
-      <body className="text-lg leading-relaxed font-zen text-[#333]">
-        {/* Header/ Footer は置かない */}
-        <ZoomArtworkProvider>
-          <ClientWrapper>
-            {children}
-            <ZoomArtworkDisplay />
-            <Analytics />
-          </ClientWrapper>
-        </ZoomArtworkProvider>
-      </body>
-    </html>
+    <ZoomArtworkProvider>
+      <ClientWrapper>
+        {/* body に付けていたクラスはここに移す */}
+        <div className="text-lg leading-relaxed font-zen text-[#333]">
+          {children}
+          <ZoomArtworkDisplay />
+          <Analytics />
+        </div>
+      </ClientWrapper>
+    </ZoomArtworkProvider>
   );
 }
