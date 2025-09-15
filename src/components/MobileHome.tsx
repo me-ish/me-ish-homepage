@@ -171,7 +171,7 @@ const MobileHome = () => {
   <div className="grid gap-6 sm:gap-8 grid-cols-1 sm:grid-cols-2 max-w-[1040px] mx-auto">
     {[
       {
-        img: '/images/white-thumb.jpg',
+        img: '/images/white-thumb.png',
         title: 'White Gallery',
         desc: '「意識の空間」をイメージした真っ白なギャラリー。10作品限定の特別展示。',
         link: '/white',
