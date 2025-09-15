@@ -18,11 +18,22 @@ function normalizeChainName(name: string) {
 
 type Ctx = { params: { id: string } };
 
-export async function POST(req: Request, { params }: Ctx) {
+function sanitizeTo(input: string) {
+  return (input ?? '')
+    .trim()
+    // ゼロ幅系や制御文字を除去
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\s+/g, '');
+}
+
+export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
-    const body = await req.json().catch(() => ({} as any));
-    const to: string = body?.to ?? '';
-    const certToken: string = body?.certToken ?? '';
+    const body = await req.json().catch(() => ({}));
+    // ← addressでもtoでもOKにする（後方互換）
+    const toRaw: string = body?.to ?? body?.address ?? '';
+    const to = sanitizeTo(toRaw);
+
+    const certToken: string = body?.certToken ?? body?.token ?? '';
     const tokenIdFromClient = body?.tokenId;
     const quantityFromClient = body?.quantity;
 
