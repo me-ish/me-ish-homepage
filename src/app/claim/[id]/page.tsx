@@ -9,7 +9,7 @@ import {
   ConnectButton,
   useActiveAccount,
 } from 'thirdweb/react';
-import { inAppWallet, createWallet /* walletConnect */ } from 'thirdweb/wallets';
+import { inAppWallet, createWallet /*, walletConnect*/ } from 'thirdweb/wallets';
 
 type PageProps = { params: { id: string } };
 
@@ -17,6 +17,7 @@ const CLIENT_ID = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || '';
 const twClient = CLIENT_ID ? createThirdwebClient({ clientId: CLIENT_ID }) : null;
 
 export default function ClaimPage(props: PageProps) {
+  // あなたの SDK 版では clientId プロップは無いので渡さない
   return (
     <ThirdwebProvider>
       <ClaimInner {...props} />
@@ -28,7 +29,6 @@ function ClaimInner({ params }: PageProps) {
   const sp = useSearchParams();
   const account = useActiveAccount();
 
-  // 受け取り対象（任意クエリ）
   const tokenId = useMemo(() => Number(sp.get('tokenId') ?? '0'), [sp]);
   const quantity = useMemo(() => Number(sp.get('qty') ?? '1'), [sp]);
 
@@ -39,7 +39,6 @@ function ClaimInner({ params }: PageProps) {
   const canClaim = !!account?.address && !!twClient && !loading;
   const polygonscanTx = (h: string) => `https://polygonscan.com/tx/${h}`;
 
-  // クレーム実行
   async function handleClaim() {
     if (!account?.address) return;
     setLoading(true);
@@ -51,7 +50,7 @@ function ClaimInner({ params }: PageProps) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           to: account.address,
-          certToken: sp.get('t') || '', // CoA 画面から引き継いだトークン
+          certToken: sp.get('t') || '',
           tokenId,
           quantity,
         }),
@@ -76,41 +75,45 @@ function ClaimInner({ params }: PageProps) {
           </div>
         </header>
 
-        <section className="rounded-2xl border border-zinc-800 p-4 space-y-4">
+        <section className="rounded-2xl border border-zinc-800 p-4 space-y-5">
           {twClient ? (
             <>
-              {/* 既存の自由ログイン（メタマスク等） */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-400">Sign in to receive your NFT</span>
-                <ConnectButton
-                  client={twClient}
-                  wallets={[
-                    inAppWallet({ auth: { options: ['email', 'google', 'apple'] } }),
-                    createWallet('io.metamask'),
-                    // walletConnect({ projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID! }),
-                  ]}
-                  theme="dark"
-                  connectModal={{ size: 'compact', title: 'Receive your NFT' }}
-                />
-              </div>
-
-              {/* 強い導線：メールで受け取る（ウォレット不要） → email 専用の ConnectButton */}
+              {/* 1) ウォレットをお持ちの方 */}
               <div className="space-y-2">
-                <div className="text-sm font-medium">メールで受け取る（ウォレット不要）</div>
-                <div className="w-full">
+                <div className="text-sm text-zinc-400">ウォレットをお持ちの方</div>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-zinc-500">
+                    MetaMask / Google / Apple など
+                  </div>
                   <ConnectButton
                     client={twClient}
                     wallets={[
-                      // メールのみを表示
-                      inAppWallet({ auth: { options: ['email'] } }),
+                      // 既存ウォレット系
+                      createWallet('io.metamask'),
+                      // in-app も併記（Google/Apple/Email）
+                      inAppWallet({ auth: { options: ['google', 'apple', 'email'] } }),
+                      // walletConnect を使うなら SDK 版に合わせて有効化
+                      // walletConnect({ projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID! }),
                     ]}
                     theme="dark"
-                    connectModal={{ size: 'compact', title: 'メールで受け取る' }}
+                    connectModal={{ size: 'compact', title: 'ウォレットを接続' }}
                   />
                 </div>
-                <div className="text-[11px] text-zinc-500">
+              </div>
+
+              {/* 2) メールで受け取る（ウォレット不要） */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium">メールで受け取る（ウォレット不要）</div>
+                <ConnectButton
+                  client={twClient}
+                  // ← メール認証だけを許可。モーダルがメール入力→OTP→接続まで案内
+                  wallets={[inAppWallet({ auth: { options: ['email'] } })]}
+                  theme="dark"
+                  connectModal={{ size: 'compact', title: 'メールで受け取る' }}
+                />
+                <p className="text-[11px] text-zinc-500">
                   メールアドレスを入力し、届いたコードでログインすると自動でウォレットが作成されます。
-                </div>
+                </p>
               </div>
             </>
           ) : (
@@ -119,7 +122,6 @@ function ClaimInner({ params }: PageProps) {
             </div>
           )}
 
-          {/* 受け取りボタン */}
           <button
             onClick={handleClaim}
             disabled={!canClaim}
