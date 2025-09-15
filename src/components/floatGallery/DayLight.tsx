@@ -30,10 +30,6 @@ lightRef.current.shadow.camera.far = 250;
         position={[10, 60, 10]}
         intensity={1.0}
         color="#fff5e5"
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-bias={-0.0010}
       />
     </>
   );

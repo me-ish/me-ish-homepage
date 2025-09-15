@@ -3,23 +3,18 @@ import { ZoomArtworkProvider } from '@/components/shared/ZoomArtworkContext';
 import ClientWrapper from '@/components/shared/ClientWrapper';
 import ZoomArtworkDisplay from '@/components/shared/ZoomArtworkDisplay';
 import { Analytics } from '@/components/Analytics';
-import '@/app/globals.css';
 
+// nested layout なので <html> / <body> は置かない
 export const metadata: Metadata = { title: 'me-ish' };
 
-export default function WhiteLayout({ children }: { children: React.ReactNode }) {
+export default function FloatLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ja">
-      <body className="text-lg leading-relaxed font-zen text-[#333]">
-        {/* Header/ Footer は置かない */}
-        <ZoomArtworkProvider>
-          <ClientWrapper>
-            {children}
-            <ZoomArtworkDisplay />
-            <Analytics />
-          </ClientWrapper>
-        </ZoomArtworkProvider>
-      </body>
-    </html>
+    <ZoomArtworkProvider>
+      <ClientWrapper>
+        {children}
+        <ZoomArtworkDisplay />
+        <Analytics />
+      </ClientWrapper>
+    </ZoomArtworkProvider>
   );
 }

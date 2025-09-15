@@ -1,148 +1,135 @@
-// /src/app/claim/[id]/page.tsx
-'use client';
+import { NextRequest, NextResponse } from 'next/server';
+import { ThirdwebSDK } from '@thirdweb-dev/sdk';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { verifyCertToken } from '@/lib/coa/server'; // 既存の検証関数を流用
 
-import { useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { createThirdwebClient } from 'thirdweb';
-import {
-  ThirdwebProvider,
-  ConnectButton,
-  useActiveAccount,
-} from 'thirdweb/react';
-import { inAppWallet, createWallet /*, walletConnect*/ } from 'thirdweb/wallets';
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-type PageProps = { params: { id: string } };
+// 必要な環境変数：
+// CHAIN_NAME=polygon | amoy | mumbai など
+// THIRDWEB_PRIVATE_KEY=ウォレットPK（サーバー限定）
+// THIRDWEB_SECRET_KEY=Thirdweb secret key
+// NFT_1155_CONTRACT_ADDRESS=1155コントラクト
+// （任意）ALLOW_OFFCHAIN_DOWNLOAD_FOR_NFT=false
 
-const CLIENT_ID = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || '';
-const twClient = CLIENT_ID ? createThirdwebClient({ clientId: CLIENT_ID }) : null;
-
-export default function ClaimPage(props: PageProps) {
-  // v5系では <ThirdwebProvider> に clientId を渡さない実装のため、そのままラップだけ
-  return (
-    <ThirdwebProvider>
-      <ClaimInner {...props} />
-    </ThirdwebProvider>
-  );
+function normalizeChainName(name: string) {
+  const n = (name || '').toLowerCase();
+  if (n === 'polygon-mumbai' || n === 'mumbai') return 'mumbai';
+  if (n === 'polygon-amoy' || n === 'amoy') return 'amoy';
+  if (n === 'polygon' || n === 'matic' || n === 'mainnet') return 'polygon';
+  return n;
 }
 
-function ClaimInner({ params }: PageProps) {
-  const sp = useSearchParams();
-  const account = useActiveAccount();
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json().catch(() => ({} as any));
+    const to: string = body?.to ?? '';
+    const certToken: string = body?.certToken ?? '';
+    const tokenIdFromClient = body?.tokenId;   // 任意
+    const quantityFromClient = body?.quantity; // 任意
 
-  const tokenId = useMemo(() => Number(sp.get('tokenId') ?? '0'), [sp]);
-  const quantity = useMemo(() => Number(sp.get('qty') ?? '1'), [sp]);
-
-  const [loading, setLoading] = useState(false);
-  const [hash, setHash] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-
-  const canClaim = !!account?.address && !!twClient && !loading;
-  const polygonscanTx = (h: string) => `https://polygonscan.com/tx/${h}`;
-
-  async function handleClaim() {
-    if (!account?.address) return;
-    setLoading(true);
-    setErr(null);
-    setHash(null);
-    try {
-      const res = await fetch('/api/nft/claim', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          to: account.address,
-          certToken: sp.get('t') || '', // CoAのトークン
-          tokenId,
-          quantity,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json?.ok) throw new Error(json?.error || 'Claim failed');
-      setHash(json.txhash);
-    } catch (e: any) {
-      setErr(e?.message ?? 'Unknown error');
-    } finally {
-      setLoading(false);
+    if (!/^0x[a-fA-F0-9]{40}$/.test(to)) {
+      return NextResponse.json({ error: 'invalid_to' }, { status: 400 });
     }
+    if (!certToken) {
+      return NextResponse.json({ error: 'missing_token' }, { status: 400 });
+    }
+
+    // 1) トークン検証 → entryId 解決
+    const ver = await verifyCertToken(certToken);
+    if (!ver.ok) {
+      return NextResponse.json({ error: 'invalid_token' }, { status: 401 });
+    }
+
+    const admin = supabaseAdmin();
+
+    // entries から最小限のカラムのみ取得（型崩れを避ける）
+    const { data: entry, error: entryErr } = await admin
+      .from('entries')
+      .select('id,sale_type,token_id,edition_total,edition_sold')
+      .eq('id', ver.entryId)
+      .maybeSingle();
+
+    if (entryErr) {
+      console.error('[claim] entries lookup error', entryErr, { entryId: ver.entryId, token: certToken });
+    }
+    if (!entry) {
+      return NextResponse.json(
+        { error: 'entry_not_found', details: { entryId: ver.entryId } },
+        { status: 404 },
+      );
+    }
+
+    // 2) NFT 以外は拒否（normalの人はオフチェーンDLに誘導）
+    const saleType = String(entry.sale_type ?? '').toLowerCase();
+    if (saleType !== 'nft') {
+      return NextResponse.json({ error: 'not_nft_entry' }, { status: 409 });
+    }
+
+    // 3) ERC-1155 の tokenId / quantity 決定
+    //    token_id は entries にある（numeric）。client から来ていればそちらを優先してもOK。
+    const tokenId =
+      tokenIdFromClient != null
+        ? Number(tokenIdFromClient)
+        : entry.token_id != null
+        ? Number(entry.token_id)
+        : NaN;
+
+    if (!Number.isFinite(tokenId)) {
+      return NextResponse.json({ error: 'invalid_token_id' }, { status: 400 });
+    }
+
+    // 枚数は1で固定 or クエリから指定（安全のため最小1, 最大edition_total-edition_sold）
+    const maxRemain =
+      typeof entry.edition_total === 'number' && typeof entry.edition_sold === 'number'
+        ? Math.max(0, Number(entry.edition_total) - Number(entry.edition_sold))
+        : 1;
+    const quantity =
+      quantityFromClient != null ? Math.max(1, Math.min(Number(quantityFromClient), maxRemain || 1)) : 1;
+
+    // 4) Thirdweb で claimTo（1155）
+    const chainEnv = process.env.CHAIN_NAME || '';
+    const chain = normalizeChainName(chainEnv);
+    const privateKey = process.env.THIRDWEB_PRIVATE_KEY || '';
+    const secretKey = process.env.THIRDWEB_SECRET_KEY || '';
+    const contractAddress = process.env.NFT_1155_CONTRACT_ADDRESS || '';
+
+    if (!chain || !privateKey || !secretKey || !contractAddress) {
+      console.error('[claim] misconfig', { chainEnv, hasPK: !!privateKey, hasSK: !!secretKey, contractAddress });
+      return NextResponse.json({ error: 'server_misconfig' }, { status: 500 });
+    }
+
+    const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chain as any, { secretKey });
+    const contract = await sdk.getContract(contractAddress);
+
+    // 実行
+    const txRes = await contract.erc1155.claimTo(to, tokenId, quantity);
+    const txhash = txRes.receipt.transactionHash;
+
+    // 5) 任意で集計を進める（edition_sold のカウントアップ等）
+    //    ここはDB設計に合わせてRPCやUPDATEを差し替え。
+    try {
+      if (typeof entry.edition_sold === 'number') {
+        await admin
+          .from('entries')
+          .update({ edition_sold: Number(entry.edition_sold) + quantity })
+          .eq('id', entry.id);
+      }
+    } catch (e) {
+      console.warn('[claim] post update failed (non-fatal):', e);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      entryId: entry.id,
+      tokenId,
+      quantity,
+      txhash,
+    });
+  } catch (e: any) {
+    console.error('[claim] error:', e);
+    return NextResponse.json({ error: 'internal' }, { status: 500 });
   }
-
-  return (
-    <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-      <div className="w-full max-w-md space-y-6">
-        <header className="space-y-2">
-          <h1 className="text-2xl font-semibold">Claim your NFT</h1>
-          <div className="text-sm text-zinc-400">
-            Order <span className="font-mono">#{params.id}</span>
-          </div>
-        </header>
-
-        <section className="rounded-2xl border border-zinc-800 p-4 space-y-5">
-          {twClient ? (
-            <>
-              {/* 1) ウォレットをお持ちの方 */}
-              <div className="space-y-2">
-                <div className="text-sm text-zinc-400">ウォレットをお持ちの方</div>
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-zinc-500">
-                    MetaMask / Google / Apple など
-                  </div>
-                  <ConnectButton
-                    client={twClient}
-                    wallets={[
-                      createWallet('io.metamask'),
-                      inAppWallet({ auth: { options: ['google', 'apple', 'email'] } }),
-                      // walletConnect({ projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID! }),
-                    ]}
-                    theme="dark"
-                    connectModal={{ size: 'compact', title: 'ウォレットを接続' }}
-                  />
-                </div>
-              </div>
-
-              {/* 2) メールで受け取る（ウォレット不要） */}
-              <div className="space-y-2">
-                <div className="text-sm font-medium">メールで受け取る（ウォレット不要）</div>
-                <ConnectButton
-                  client={twClient}
-                  wallets={[inAppWallet({ auth: { options: ['email'] } })]}
-                  theme="dark"
-                  connectModal={{ size: 'compact', title: 'メールで受け取る' }}
-                />
-                <p className="text-[11px] text-zinc-500">
-                  メールアドレスを入力し、届いたコードでログインすると自動でウォレットが作成されます。
-                </p>
-              </div>
-            </>
-          ) : (
-            <div className="text-xs text-amber-300 border border-amber-500/40 rounded-md px-2 py-1">
-              NEXT_PUBLIC_THIRDWEB_CLIENT_ID not set
-            </div>
-          )}
-
-          <button
-            onClick={handleClaim}
-            disabled={!canClaim}
-            className={`w-full rounded-xl px-4 py-3 font-medium transition
-              ${canClaim ? 'bg-white text-black hover:bg-zinc-200' : 'bg-zinc-700 text-zinc-400 cursor-not-allowed'}`}
-          >
-            {loading ? 'Claiming…' : 'Claim to this wallet'}
-          </button>
-
-          {hash && (
-            <div className="text-sm">
-              ✅ Claimed! Tx{' '}
-              <a className="underline" href={polygonscanTx(hash)} target="_blank" rel="noreferrer">
-                {hash.slice(0, 10)}…{hash.slice(-6)}
-              </a>
-            </div>
-          )}
-          {err && <div className="text-sm text-rose-400">⚠️ {err}</div>}
-        </section>
-
-        <footer className="text-xs text-zinc-500 space-y-1">
-          <p>Gas fees may be covered by the gallery if enabled.</p>
-          <p>If something goes wrong, please retry or contact support.</p>
-        </footer>
-      </div>
-    </main>
-  );
 }

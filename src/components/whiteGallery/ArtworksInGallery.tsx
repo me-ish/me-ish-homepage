@@ -85,7 +85,7 @@ export default function ArtworksInGallery({ avatarRef }: ArtworksInGalleryProps)
             id: item.id,
             created_at: item.created_at,
             ratio: 1,
-            scale: 1.2,
+            scale: 2,
             sale_type: item.sale_type ?? 'normal',
             edition_total: item.edition_total ?? 1,
             edition_sold: item.edition_sold ?? 0,
@@ -105,7 +105,7 @@ export default function ArtworksInGallery({ avatarRef }: ArtworksInGalleryProps)
         id: null,
         created_at: null,
         ratio: 1,
-        scale: 1.0,
+        scale: 2.0,
       }))
 
       const combined = [...resolved, ...dummyEntries].slice(0, 10)

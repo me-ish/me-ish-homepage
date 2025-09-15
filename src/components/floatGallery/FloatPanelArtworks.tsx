@@ -1,20 +1,84 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import * as THREE from 'three';
-import ArtworkFrame from '../shared/ArtworkFrame';
+import { useTexture } from '@react-three/drei';
 
 type Props = {
   avatarRef: React.RefObject<THREE.Group>;
   artworkRefs: React.MutableRefObject<(THREE.Group | null)[]>;
 };
 
-export default function FloatPanelArtworks({ avatarRef, artworkRefs }: Props): JSX.Element {
+/* ArtworkFrame(scale=1.8, aspect=1.2) と同じ見た目サイズ */
+const SCALE = 4;
+const ASPECT = 1.2;
+const LIGHT_HEIGHT = 2.2;
+
+function ComingSoonPanel({
+  position,
+  rotation,
+  width = SCALE * ASPECT,
+  height = SCALE,
+}: {
+  position: [number, number, number];
+  rotation: [number, number, number];
+  width?: number;
+  height?: number;
+}) {
+  const map = useTexture('/coming-soon.png'); // public/coming-soon.png
+  useMemo(() => {
+    map.anisotropy = 8;
+    map.minFilter = THREE.LinearMipmapLinearFilter;
+    map.magFilter = THREE.LinearFilter;
+    map.colorSpace = THREE.SRGBColorSpace;
+  }, [map]);
+
+  return (
+    <group position={position} rotation={rotation}>
+      {/* 内側（ギャラリー中心）を正面にするためにY軸で反転 */}
+      <group rotation={[0, Math.PI, 0]}>
+        {/* 下地（額っぽい縁取り） */}
+        <mesh>
+          <planeGeometry args={[width + 0.08, height + 0.08]} />
+          <meshStandardMaterial
+            color="#eef2f7"
+            emissive="#111111"
+            emissiveIntensity={0.06}
+            roughness={0.9}
+            metalness={0.0}
+          />
+        </mesh>
+
+        {/* 画像面 */}
+        <mesh position={[0, 0, 0.002]}>
+          <planeGeometry args={[width, height]} />
+          <meshBasicMaterial map={map} toneMapped={false} />
+        </mesh>
+
+        {/* ほんのりオーラ */}
+        <mesh position={[0, 0, -0.001]}>
+          <planeGeometry args={[width + 0.22, height + 0.22]} />
+          <meshBasicMaterial
+            color="#00ffff"
+            transparent
+            opacity={0.08}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+export default function FloatPanelArtworks({
+  avatarRef,
+  artworkRefs,
+}: Props): JSX.Element {
   const panelRadius = 16;
   const panelY = 3.5;
   const artworkGap = 4.5;
   const distanceFromPanel = 0.4;
-  const lightHeight = 2.2;
 
   const sides = [
     { deg: 45, rotationY: Math.PI / 4 + Math.PI, frontScale: -2 },
@@ -31,7 +95,10 @@ export default function FloatPanelArtworks({ avatarRef, artworkRefs }: Props): J
       Math.sin(rad) * panelRadius
     );
 
-    const xAxis = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY);
+    const xAxis = new THREE.Vector3(1, 0, 0).applyAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      rotationY
+    );
     const front = new THREE.Vector3(0, 0, 1)
       .applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY)
       .multiplyScalar(distanceFromPanel * frontScale);
@@ -48,32 +115,23 @@ export default function FloatPanelArtworks({ avatarRef, artworkRefs }: Props): J
   return (
     <>
       {artworks.map((art, i) => {
-        const id = `artwork-${i}`;
+        const id = `slot-panel-${i}`;
         return (
-          <group key={id}>
-            <ArtworkFrame
-              id={id}
-              position={art.position}
-              rotation={art.rotation}
-              scale={1.8}
-              title={`Title ${i + 1}`}
-              author={`Artist ${i + 1}`}
-              imageUrl="/images/sample.jpg"
-              avatarRef={avatarRef}
-              ref={(el) => {
-                artworkRefs.current[i] = el;
-              }}
-            />
+          <group
+            key={id}
+            ref={(el) => {
+              artworkRefs.current[i] = el;
+            }}
+          >
+            <ComingSoonPanel position={art.position} rotation={art.rotation} />
+
+            {/* プレースホルダー用の控えめライト */}
             <pointLight
-              position={[
-                art.position[0],
-                art.position[1] + lightHeight,
-                art.position[2],
-              ]}
-              intensity={1.2}
+              position={[art.position[0], art.position[1] + LIGHT_HEIGHT, art.position[2]]}
+              intensity={0.9}
               distance={8}
               decay={2}
-              color="#ffffff"
+              color="#e8f6ff"
             />
           </group>
         );
