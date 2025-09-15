@@ -144,6 +144,7 @@ export type Database = {
           sns_links: string
           sold_out_calc: boolean | null
           title: string | null
+          token_id: number | null
           type: string | null
           user_id: string | null
         }
@@ -181,6 +182,7 @@ export type Database = {
           sns_links: string
           sold_out_calc?: boolean | null
           title?: string | null
+          token_id?: number | null
           type?: string | null
           user_id?: string | null
         }
@@ -218,6 +220,7 @@ export type Database = {
           sns_links?: string
           sold_out_calc?: boolean | null
           title?: string | null
+          token_id?: number | null
           type?: string | null
           user_id?: string | null
         }
