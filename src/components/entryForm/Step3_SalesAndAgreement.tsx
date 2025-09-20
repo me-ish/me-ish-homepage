@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { getDisplayPlanStats } from '@/lib/getDisplayPlanStats';
 import type { FormValues } from '@/app/entry/FormWrapper';
+import BankBranchFields from '@/components/entryForm/BankBranchFields'; // ★ 追加
 
 const BRAND = '#00a1e9';
 const FEE_RATE = 0.15;
@@ -279,6 +280,9 @@ const Step3_SalesAndAgreement = () => {
               return m ? <p className="text-sm text-red-600 mt-1.5">{m}</p> : null;
             })()}
           </div>
+
+          {/* ★ 追加：口座入力（zengin-code の banks.json / branches.json を使うコンポーネント） */}
+          <BankBranchFields />
         </>
       )}
 

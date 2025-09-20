@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "build:banks": "node scripts/build-bank-json.mjs",
+    "prebuild": "npm run build:banks"
   },
   "dependencies": {
     "@react-spring/three": "9.7.2",
@@ -36,7 +38,8 @@
     "tailwind-merge": "^3.3.0",
     "thirdweb": "^5.105.45",
     "three": "0.152.2",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "zengin-code": "^1.0.0-p20250825"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

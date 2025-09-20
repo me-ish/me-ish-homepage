@@ -35,6 +35,14 @@ export type FormValues = {
   displayStartAt?: string;
   displayEndAt?: string;
   has_signature: 'yes' | 'no'; // ★ 追加：サイン有無
+
+  // ★ 追加（販売時のみ必須にする口座情報）
+  bank_code: string;          // 4桁
+  branch_code: string;        // 3桁
+  account_type: 'futsu' | 'toza';
+  account_number: string;     // 1〜7桁
+  account_name_kana: string;  // 全角カナ
+  agree_bank_use: boolean;    // 利用同意
 };
 
 const slideVariants = {
@@ -50,7 +58,15 @@ const FormWrapper = () => {
       twitterUrl: '', instagramUrl: '', title: '', image: undefined as unknown as FileList,
       description: '', isForSale: '', saleType: '', price: '', gallery_type: '', displayPlan: '',
       agreeTerms: false, confirmRights: false, confirmOriginal: false,
-      has_signature: undefined as unknown as 'yes' | 'no', // ★ 追加：未選択スタート（Step2必須）
+      has_signature: undefined as unknown as 'yes' | 'no',
+
+      // ★ 追加：口座系は空でOK（Step3の「販売する」選択時のみ必須化）
+      bank_code: '',
+      branch_code: '',
+      account_type: undefined as unknown as 'futsu' | 'toza',
+      account_number: '',
+      account_name_kana: '',
+      agree_bank_use: false,
     },
     shouldUnregister: false,
     mode: 'onChange',
@@ -68,11 +84,16 @@ const FormWrapper = () => {
   const getStepFields = (step: number, isForSale: string): (keyof FormValues)[] => {
     switch (step) {
       case 1: return ['artistName', 'email'];
-      case 2: return ['gallery_type', 'title', 'image', 'has_signature']; // ★ 追加：Step2で必須確認
-      case 3: return [
-        'isForSale', 'agreeTerms', 'confirmRights', 'confirmOriginal',
-        ...(isForSale === 'yes' ? (['saleType', 'price', 'displayPlan'] as (keyof FormValues)[]) : [])
-      ];
+      case 2: return ['gallery_type', 'title', 'image', 'has_signature'];
+      case 3: {
+        const base: (keyof FormValues)[] = ['isForSale', 'agreeTerms', 'confirmRights', 'confirmOriginal'];
+        if (isForSale === 'yes') {
+          base.push('saleType', 'price', 'displayPlan');
+          // ★ 追加：販売する場合のみ、口座を必須チェック
+          base.push('bank_code', 'branch_code', 'account_type', 'account_number', 'account_name_kana', 'agree_bank_use');
+        }
+        return base;
+      }
       default: return [];
     }
   };
@@ -94,7 +115,7 @@ const FormWrapper = () => {
     setStep((prev) => prev + 1);
   };
 
-  // ★ 追加：戻る処理
+  // ★ 戻る処理
   const prevStep = () => {
     setDirection('left');
     setStep((prev) => Math.max(1, prev - 1));
@@ -156,7 +177,7 @@ const FormWrapper = () => {
       const type = data.isForSale === 'yes' ? data.saleType : 'none';
       const displayPlan = data.isForSale === 'yes' ? data.displayPlan || 'free' : 'free';
 
-      // DB 登録
+      // ★ entries 登録（既存ロジックを維持）
       const { error } = await supabase.from('entries').insert([{
         artist_name: data.artistName,
         email: data.email,
@@ -167,7 +188,7 @@ const FormWrapper = () => {
         sale_type: data.saleType || '',
         type,
         display_plan: displayPlan,
-        price: data.price ? Number(data.price) : null,
+        price: data.isForSale === 'yes' && data.price ? Number(data.price) : null,
         image_url: publicUrl,
         gallery_type: data.gallery_type || '',
         display_start_at: displayStartAt,
@@ -176,9 +197,9 @@ const FormWrapper = () => {
         external_user_id: externalUserId,
         edition_total: data.editionTotal ? Number(data.editionTotal) : null,
         edition_sold: 0,
-        meish_fee_yen: data.meish_fee_yen ?? null,
-        artist_reward_yen: data.artist_reward_yen ?? null,
-        has_signature: data.has_signature === 'yes', // ★ 追加：booleanで保存
+        meish_fee_yen: (data as any).meish_fee_yen ?? null,
+        artist_reward_yen: (data as any).artist_reward_yen ?? null,
+        has_signature: data.has_signature === 'yes',
       }]);
 
       if (error) {
@@ -187,15 +208,35 @@ const FormWrapper = () => {
         return;
       }
 
-      // 完了画面へ進める
+      // ★ 販売する場合のみ、口座情報を別テーブルに保存したい場合はここで upsert（任意）
+      //   ※ 既存のスキーマに合わせてコメントアウト。テーブルがあるなら解除してください。
+      if (data.isForSale === 'yes') {
+        const { error: bankErr } = await supabase
+          .from('artists_bank_accounts')
+          .upsert([{
+            external_user_id: externalUserId,
+            bank_code: data.bank_code,
+            branch_code: data.branch_code,
+            account_type: data.account_type,
+            account_number: data.account_number,
+            account_name_kana: data.account_name_kana,
+          }], { onConflict: 'external_user_id' });
+        if (bankErr) {
+          alert(`口座情報の登録に失敗しました: ${bankErr.message}`);
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      // 完了画面へ
       setStep(5);
 
-      // ★ メール送信（サーバーアクション経由＝401回避）
+      // 完了メール（既存）
       try {
         await sendEmail('submit', {
           to: data.email,
           name: data.artistName,
-          // manageUrl: `https://www.me-ish.art/manage/${externalUserId}`, // 任意で追加可
+          // manageUrl: `https://www.me-ish.art/manage/${externalUserId}`,
         });
       } catch (e) {
         console.error('submit mail failed:', e);
