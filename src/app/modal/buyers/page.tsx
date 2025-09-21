@@ -13,12 +13,14 @@ export default function BuyersPage() {
 
       {/* 概要 */}
       <section className="mb-10">
-        <p className="text-[1.02rem]">
-          me-ishでは、どなたでも展示中の作品を自由に鑑賞できます。気に入った作品はその場で購入可能。
-          <strong>お支払いはクレジットカード（円）のみ</strong>です。
-          作品には<span className="font-semibold">「通常」</span>と<span className="font-semibold">「NFT」</span>の出展形式があり、
-          <span className="font-semibold">NFTと表示された作品のみ</span>購入後にNFTを発行して受け渡します。
-        </p>
+<p className="text-[1.02rem]">
+  me-ishでは、どなたでも展示中の作品を自由に鑑賞できます。気に入った作品はその場で購入可能。
+  <strong>お支払いはクレジットカード（円）のみ</strong>です。
+  作品には<span className="font-semibold">「通常」</span>と<span className="font-semibold">「NFT」</span>の出展形式があり、
+  <strong>NFT対応作品のみ</strong>、購入後に<strong>希望者へ</strong>NFTを付与します
+  （<strong>受け取り任意</strong>／ウォレット未所持でも<strong>メール受け取り可</strong>／<strong>著作権は移転しません</strong>）。
+</p>
+
       </section>
 
       {/* 通常販売（円） */}
@@ -78,9 +80,11 @@ export default function BuyersPage() {
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#e7f2ff] text-[#0a5ea8] font-bold">3</span>
             <div>
               <p className="font-semibold flex items-center gap-2"><Wallet className="w-4 h-4 text-[#00a1e9]" />受け取り方法を確認</p>
-              <p className="text-sm text-[#555]">
-                ウォレットをお持ちの方はアドレスを入力。お持ちでない場合は<strong>後から作成して受け取り</strong>も可能（メールで案内）。
-              </p>
+<p className="text-sm text-[#555]">
+  ウォレットをお持ちの方はアドレスを入力。お持ちでない場合は
+  <strong>メール受け取り</strong>（後からウォレット作成でも可）に対応します。
+</p>
+
             </div>
           </li>
           <li className="flex items-start gap-3">

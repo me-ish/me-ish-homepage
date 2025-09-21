@@ -44,7 +44,7 @@ export default function FAQPage() {
           answer: (
             <>
               はい。<strong>審査制</strong>です（オリジナル性、テーマ適合、安全性などを確認）。
-              応募方法は <Link href="/contact" className="underline">お問い合わせフォーム</Link> からご案内します。
+              応募は <Link href="/entry" className="underline">応募フォーム</Link> から。不明点は <Link href="/contact" className="underline">お問い合わせ</Link> へ。
             </>
           ),
         },
@@ -77,8 +77,9 @@ export default function FAQPage() {
           question: '出展料はかかりますか？',
           answer: (
             <>
-              β版期間は<strong>出展無料</strong>です。正式リリース後は販売時に手数料（例：販売価格の5%）が発生します。
-              最新の料率は <Link href="/footer/tokushoho" className="underline">特商法表記</Link> をご確認ください。
+              <strong>応募・展示は無料</strong>です。作品が<strong>売れたときだけ手数料15%</strong>を売上から控除します。
+              アーティストへのお支払いは<strong>月次で銀行振込</strong>です（口座登録必須）。
+              詳細は <Link href="/footer/terms#sec-7-2" className="underline">利用規約 第7条の2</Link> をご確認ください。
             </>
           ),
         },
@@ -86,8 +87,8 @@ export default function FAQPage() {
           question: '展示期間は？',
           answer: (
             <>
-              <strong>White：無期限</strong> / <strong>Float：約30日</strong> を目安としています（運営方針や回遊状況により前後）。
-              SOLD後も表示継続される場合があります。
+              展示可否・期間・配置は運営基準により決定します。購入後も、期間中は「SOLD」表示で掲出を継続する場合があります（
+              <Link href="/footer/terms#sec-6" className="underline">規約 第6条</Link>）。
             </>
           ),
         },
@@ -100,6 +101,27 @@ export default function FAQPage() {
             </>
           ),
         },
+        {
+          question: '表示保証オプションはありますか？',
+          answer: (
+            <>
+              はい。任意の<strong>表示保証オプション</strong>を購入すると、<strong>1作品ごと</strong>に
+              <strong>購入日から1か月</strong>の有効期間内で所定回数の掲出を保証します（一般ローテは別途実施）。
+              <br />
+              <span className="text-gray-700">
+                ※ 具体的な<strong>料金と保証回数</strong>は最新の
+              </span>{' '}
+              <Link href="/modal/pricing" className="underline">プランと料金</Link>{' '}
+              <span className="text-gray-700">をご確認ください。</span>
+              <br />
+              <span className="text-gray-700">
+                ※ 自動更新はありません／<strong>提供開始後・消化済み回数は返金不可</strong>／掲出の時間帯・枠位置は運営裁量です（
+              </span>
+              <Link href="/footer/terms#sec-6" className="underline">規約 第6条</Link>
+              <span className="text-gray-700">）。</span>
+            </>
+          ),
+        },
       ],
     },
     {
@@ -109,8 +131,8 @@ export default function FAQPage() {
           question: '購入方法は？',
           answer: (
             <>
-              作品ページの「購入する」から手続きしてください。決済は<strong>クレジットカード（Stripe）</strong>に対応しています。
-              NFT販売も<strong>Stripe決済</strong>です。
+              作品ページの「購入する」から手続きしてください。支払いは<strong>クレジットカード（Stripe／日本円）</strong>のみです。
+              暗号資産での決済には対応していません（<Link href="/footer/terms#sec-7" className="underline">規約 第7条</Link>）。
             </>
           ),
         },
@@ -118,9 +140,10 @@ export default function FAQPage() {
           question: '通常販売とNFT販売の違いは？',
           answer: (
             <>
-              <strong>通常販売</strong>はデジタルデータの納品（メールやダウンロード）。<strong>NFT販売</strong>はブロックチェーン上の
-              <strong>所有証明（NFT）</strong>が発行されます。いずれも<strong>著作権は移転しません</strong>（
-              <Link href="/footer/terms" className="underline">利用規約 第8条</Link>）。
+              <strong>通常販売</strong>はデジタルデータの納品（メールやダウンロード）。<br />
+              <strong>NFT販売</strong>は<strong>NFT対応作品のみ</strong>、購入後に当ギャラリーがNFTをミントし<strong>希望者へ付与</strong>します。
+              購入時にウォレットは<strong>不要</strong>で、<strong>メール受け取り</strong>にも対応。NFTは<strong>トークンの所有権</strong>であり、
+              <strong>著作権は移転しません</strong>（<Link href="/footer/terms#sec-8" className="underline">規約 第8条</Link>）。
             </>
           ),
         },
@@ -128,9 +151,11 @@ export default function FAQPage() {
           question: 'キャンセル・返金はできますか？',
           answer: (
             <>
-              デジタル商品の性質上、<strong>原則不可</strong>です。重複決済や重大な不具合等は
-              <Link href="/contact" className="underline">お問い合わせ</Link> ください（
-              <Link href="/footer/terms" className="underline">利用規約 第9条</Link>）。
+              デジタル商品の性質上、<strong>原則不可</strong>です。
+              ただし、(i) 重複課金、(ii) 当社に起因する引渡不能・重大な不具合で合理的期間内に回復不能、(iii) 法令上の瑕疵がある場合は
+              <strong>購入後7日以内</strong>の申出に限り返金等に応じます（
+              <Link href="/footer/terms#sec-9" className="underline">規約 第9条</Link> ／
+              <Link href="/footer/tokushoho" className="underline">特商法表記</Link>）。
             </>
           ),
         },
@@ -138,10 +163,11 @@ export default function FAQPage() {
           question: '購入後の確認方法は？',
           answer: (
             <>
-              通常販売：メール通知やダウンロードリンクで納品。<br />
-              NFT販売：Stripe決済完了後に当サービスが即時Mint（運営ウォレットで保管）し、
-              お客様がウォレットアドレスをご登録後、順次ウォレットへ送付します（
-              <Link href="/footer/disclaimer" className="underline">免責事項 第5条</Link>）。
+              通常販売：決済確認後、<strong>即時〜24時間以内</strong>にメール通知またはダウンロードリンクで納品（障害時は最長<strong>3営業日</strong>）。<br />
+              NFT販売：決済後に当ギャラリーが<strong>ミント→保管</strong>し、ウォレット登録後<strong>原則7日以内</strong>に移転。
+              受け取りは<strong>任意</strong>で、受取猶予は<strong>購入日から12か月</strong>です（
+              <Link href="/footer/terms#sec-8" className="underline">規約 第8条</Link> ／
+              <Link href="/footer/disclaimer#sec-5" className="underline">免責事項 第5条</Link>）。
             </>
           ),
         },
@@ -156,6 +182,7 @@ export default function FAQPage() {
             <>
               ブロックチェーン上で唯一性を証明するデジタル資産です（Non-Fungible Token）。
               所有証明として機能しますが、知的財産権の移転を意味しません。
+              くわしくは <Link href="/guides/nft" className="underline">NFT販売ガイド</Link> をご覧ください。
             </>
           ),
         },
@@ -164,7 +191,8 @@ export default function FAQPage() {
           answer: (
             <>
               購入時は<strong>カード決済のみで完了</strong>できます（ウォレット不要）。<br />
-              受け取り・二次流通を行う場合は<strong>後からウォレットを登録</strong>してください（登録後、順次送付）。
+              NFT対応作品の受け取りは<strong>任意</strong>で、ウォレット未所持でも<strong>メール受け取り可</strong>。
+              後からウォレットを登録して受領することもできます（受取猶予：<strong>12か月</strong>）。
             </>
           ),
         },
@@ -173,8 +201,8 @@ export default function FAQPage() {
           answer: (
             <>
               ウォレットへ移動できれば可能な場合があります。ただし、<strong>転売を推奨するものではありません</strong>。
-              二次流通時のトラブルについて当サービスは責任を負いません（
-              <Link href="/footer/disclaimer" className="underline">免責事項 第4条</Link>）。
+              二次流通時のトラブルについて当サービスは保証しません（
+              <Link href="/footer/disclaimer#sec-5" className="underline">免責事項 第5条</Link>）。
             </>
           ),
         },
@@ -196,7 +224,7 @@ export default function FAQPage() {
           answer: (
             <>
               作品の著作権はアーティストに帰属します。me-ishが著作権を取得することはありません（
-              <Link href="/footer/copyright" className="underline">ポリシー 第1条</Link>）。
+              <Link href="/footer/copyright#sec-1" className="underline">ポリシー 第1条</Link>）。
             </>
           ),
         },
@@ -204,8 +232,8 @@ export default function FAQPage() {
           question: 'AI学習防止の対策は？',
           answer: (
             <>
-              <strong>ウォーターマーク、ステガノグラフィー、微細ノイズ付加</strong>等を適宜実施します（恒久的効果を保証するものではありません／
-              <Link href="/footer/copyright" className="underline">第3条</Link>）。
+              <strong>ウォーターマーク、ステガノグラフィー、微細ノイズ付加</strong>等を適宜実施します（恒久的効果は保証しません／
+              <Link href="/footer/copyright#sec-3" className="underline">同 第3条</Link>）。
             </>
           ),
         },
@@ -223,7 +251,7 @@ export default function FAQPage() {
           answer: (
             <>
               クラウド等で適切に管理しますが、<strong>常時の可用性は保証されません</strong>（
-              <Link href="/footer/disclaimer" className="underline">免責事項 第3条</Link>）。
+              <Link href="/footer/disclaimer#sec-3" className="underline">免責事項 第3条</Link>）。
             </>
           ),
         },
@@ -288,8 +316,9 @@ export default function FAQPage() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="キーワードで検索（例：NFT、返金、出展）"
+            placeholder="キーワードで検索（例：手数料、NFT、返金、出展）"
             className="w-full rounded-lg border px-3 py-2"
+            aria-label="FAQを検索"
           />
         </div>
       </header>
@@ -300,6 +329,7 @@ export default function FAQPage() {
             <button
               onClick={() => setOpen((p) => (p === idx ? null : idx))}
               className="w-full text-left px-4 py-3 font-semibold bg-gray-50 rounded-2xl"
+              aria-expanded={open === idx}
             >
               {category.title}
             </button>
@@ -322,7 +352,7 @@ export default function FAQPage() {
         )}
       </section>
 
-      <footer className="mt-10 text-sm text-gray-600">最終更新：2025年8月18日</footer>
+      <footer className="mt-10 text-sm text-gray-600">最終更新：2025年9月21日</footer>
     </main>
   );
 }

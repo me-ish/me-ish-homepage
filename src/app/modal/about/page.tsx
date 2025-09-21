@@ -37,7 +37,7 @@ export default function AboutPage() {
     {/* クレジット（円）のみ */}
     <li className="rounded-2xl border bg-[#f6f8fb] px-4 py-3">
       <div className="text-[11px] text-[#667]">決済</div>
-      <div className="font-extrabold tracking-tight">クレジット（円）のみ</div>
+      <div className="font-extrabold tracking-tight">クレジットのみ</div>
       <div className="mt-0.5 text-xs text-[#667]">暗号資産での支払いには非対応</div>
     </li>
 
@@ -50,10 +50,12 @@ export default function AboutPage() {
   </ul>
 
   {/* フッターノート */}
-  <p className="mt-2 text-xs text-[#667]">
-    ※ 決済はクレジットカード（円）のみ。手数料の内訳・お支払い時期は
-    <a href="/footer/faq#fees" className="underline"> FAQ</a> をご確認ください。
-  </p>
+<p className="mt-2 text-xs text-[#667]">
+  ※ 決済は購入者のクレジットカード（円）のみ。アーティストへのお支払いは
+  売上から手数料（15%）を控除のうえ、月次で銀行振込します。
+  詳細は <a href="/footer/faq#fees" className="underline">FAQ</a> をご確認ください。
+</p>
+
 </section>
 
 
@@ -93,8 +95,8 @@ export default function AboutPage() {
             { t: '応募', d: '作品情報を入力して画像をアップロード。ガイドに沿って進むだけ。' },
             { t: '審査', d: '基本的な基準に沿ってクイックレビュー。結果はメール通知。' },
             { t: '展示', d: 'White / Float などギャラリーへ掲出。SOLDやエディション情報も自動表示。' },
-            { t: '販売', d: 'クレジット決済（円）。NFTは希望者に受け渡し（任意）。' }, // ← ここ更新
-            { t: '還元', d: '売上は規定に沿ってお支払い。明細はマイページから確認予定。' },
+            { t: '販売', d: 'クレジット決済（円）。販売形式は出展者設定（通常／NFT）。' }, // ← ここ更新
+            { t: '還元', d: '売上は規定に沿って月次で銀行振込。明細はマイページから確認予定。' },
           ].map((s, i) => (
             <li key={i} className="flex items-start gap-3">
               <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#e7f2ff] text-[#0a5ea8] text-xs font-bold">
