@@ -240,7 +240,7 @@ export default function BankBranchFields() {
       <div className="mt-3">
         <label className="inline-flex items-center gap-2 text-sm text-gray-800">
           <input type="checkbox" {...register('agree_bank_use', { required: '振込のための利用に同意が必要です。' })} />
-          売上の月次振込のために、上記の口座情報を me-ish が保存・利用することに同意します
+          売上の月次振込のため、上記の口座情報をme-ishが保存・利用することに同意します
         </label>
         {errors.agree_bank_use && (
           <p role="alert" className="mt-1.5 text-sm text-red-600">

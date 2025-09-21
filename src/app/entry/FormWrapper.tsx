@@ -43,6 +43,7 @@ export type FormValues = {
   account_number: string;     // 1〜7桁
   account_name_kana: string;  // 全角カナ
   agree_bank_use: boolean;    // 利用同意
+  editionMode: 'limited' | 'unlimited';
 };
 
 const slideVariants = {
@@ -59,6 +60,8 @@ const FormWrapper = () => {
       description: '', isForSale: '', saleType: '', price: '', gallery_type: '', displayPlan: '',
       agreeTerms: false, confirmRights: false, confirmOriginal: false,
       has_signature: undefined as unknown as 'yes' | 'no',
+      editionMode: 'limited',
+      editionTotal: '',
 
       // ★ 追加：口座系は空でOK（Step3の「販売する」選択時のみ必須化）
       bank_code: '',
@@ -81,26 +84,32 @@ const FormWrapper = () => {
   const [localImageFile, setLocalImageFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false); // ★ 二重送信防止
 
-  const getStepFields = (step: number, isForSale: string): (keyof FormValues)[] => {
-    switch (step) {
-      case 1: return ['artistName', 'email'];
-      case 2: return ['gallery_type', 'title', 'image', 'has_signature'];
-      case 3: {
-        const base: (keyof FormValues)[] = ['isForSale', 'agreeTerms', 'confirmRights', 'confirmOriginal'];
-        if (isForSale === 'yes') {
-          base.push('saleType', 'price', 'displayPlan');
-          // ★ 追加：販売する場合のみ、口座を必須チェック
-          base.push('bank_code', 'branch_code', 'account_type', 'account_number', 'account_name_kana', 'agree_bank_use');
-        }
-        return base;
+const getStepFields = (
+  step: number,
+  isForSale: string,
+  editionMode: FormValues['editionMode']
+): (keyof FormValues)[] => {
+  switch (step) {
+    case 1: return ['artistName', 'email'];
+    case 2: return ['gallery_type', 'title', 'image', 'has_signature'];
+    case 3: {
+      const base: (keyof FormValues)[] = ['isForSale', 'agreeTerms', 'confirmRights', 'confirmOriginal'];
+      if (isForSale === 'yes') {
+        base.push('saleType', 'price', 'displayPlan', 'editionMode'); // ★ 追加
+        if (editionMode === 'limited') base.push('editionTotal');     // ★ 条件追加
+        // 口座の必須チェックは現状どおり
+        base.push('bank_code', 'branch_code', 'account_type', 'account_number', 'account_name_kana', 'agree_bank_use');
       }
-      default: return [];
+      return base;
     }
-  };
+    default: return [];
+  }
+};
 
   const nextStep = async () => {
     const isForSale = methods.getValues('isForSale');
-    const fieldsToValidate = getStepFields(step, isForSale);
+    const editionMode = methods.getValues('editionMode');
+    const fieldsToValidate = getStepFields(step, isForSale, editionMode);
     const ok = await methods.trigger(fieldsToValidate, { shouldFocus: true });
 
     if (!ok) {
@@ -195,7 +204,11 @@ const FormWrapper = () => {
         display_end_at: displayEndAt,
         file_name: fileName,
         external_user_id: externalUserId,
-        edition_total: data.editionTotal ? Number(data.editionTotal) : null,
+           // 無制限⇄限定の切替に強い代入（限定のときだけ数値、無制限は必ず null）
+  　　　 edition_total:
+    　　 data.isForSale === 'yes'
+       ? (data.editionMode === 'limited' ? Number(data.editionTotal) : null)
+       : null,
         edition_sold: 0,
         meish_fee_yen: (data as any).meish_fee_yen ?? null,
         artist_reward_yen: (data as any).artist_reward_yen ?? null,

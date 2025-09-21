@@ -74,6 +74,10 @@ useEffect(() => {
   }, [data.price]);
   const fee = Math.floor(priceNum * FEE_RATE);
   const reward = Math.max(0, priceNum - fee);
+  const isUnlimited = data.editionMode === 'unlimited';
+　const editionLabel = isUnlimited
+  ? '無制限'
+  : (data.editionTotal ? `${data.editionTotal} 点` : '—');
 
   // （任意）到達時に重要項目の再検証だけ走らせる
   useEffect(() => {
@@ -170,34 +174,56 @@ useEffect(() => {
         )}
       </div>
 
-      {/* 販売情報（販売=はい のとき） */}
-      {data.isForSale === 'yes' && (
-        <div className="p-4 sm:p-5 bg-[#fbfbfb] border border-gray-200 rounded-xl text-gray-800 space-y-2">
-          <h3 className="text-base font-bold text-gray-900">販売情報</h3>
-          <p>
-            <span className="text-gray-500">販売形式：</span>
-            <span className="font-medium">
-              {data.saleType === 'nft' ? 'NFT販売' : data.saleType === 'normal' ? '通常販売' : '—'}
-            </span>
-          </p>
-          <p>
-            <span className="text-gray-500">販売点数：</span>
-            <span className="font-medium">{data.editionTotal || '—'} 点</span>
-          </p>
-          <p>
-            <span className="text-gray-500">販売価格：</span>
-            <span className="font-medium">¥{yen(priceNum)}</span>
-          </p>
-          <p className="text-sm text-gray-700">
-            アーティスト報酬：<span className="font-semibold">¥{yen(Math.max(0, reward))}</span> ／
-            me-ish手数料（{Math.round(FEE_RATE * 100)}%）：<span className="font-semibold">¥{yen(fee)}</span>
-          </p>
-          <p>
-            <span className="text-gray-500">表示保証プラン：</span>
-            <span className="font-medium">{displayPlanLabels[data.displayPlan] ?? '—'}</span>
-          </p>
-        </div>
+{/* 販売情報（販売=はい のとき） */}
+{data.isForSale === 'yes' && (
+  <div className="p-4 sm:p-5 bg-[#fbfbfb] border border-gray-200 rounded-xl text-gray-800 space-y-2">
+    <h3 className="text-base font-bold text-gray-900">販売情報</h3>
+
+    <p>
+      <span className="text-gray-500">販売形式：</span>
+      <span className="font-medium">
+        {data.saleType === 'nft' ? 'NFT販売' : data.saleType === 'normal' ? '通常販売' : '—'}
+      </span>
+    </p>
+
+    {/* ★ 追加：販売モードの表示 */}
+    <p>
+      <span className="text-gray-500">販売モード：</span>
+      <span className="font-medium">{isUnlimited ? '無制限販売' : 'エディション販売'}</span>
+      {data.editionMode && (
+        <span className="ml-2 text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+          {data.editionMode}
+        </span>
       )}
+    </p>
+
+    {/* ★ 変更：無制限なら「無制限」、限定なら N 点 */}
+    <p>
+      <span className="text-gray-500">販売点数：</span>
+      <span className="font-medium">{editionLabel}</span>
+      {isUnlimited && (
+        <span className="ml-2 text-xs text-gray-500">(在庫制限なし)</span>
+      )}
+    </p>
+
+    <p>
+      <span className="text-gray-500">販売価格：</span>
+      <span className="font-medium">¥{yen(priceNum)}</span>
+      <span className="ml-2 text-xs text-gray-500">（1点あたり）</span>
+    </p>
+
+    <p className="text-sm text-gray-700">
+      アーティスト報酬：<span className="font-semibold">¥{yen(Math.max(0, reward))}</span> ／
+      me-ish手数料（{Math.round(FEE_RATE * 100)}%）：<span className="font-semibold">¥{yen(fee)}</span>
+    </p>
+
+    <p>
+      <span className="text-gray-500">表示保証プラン：</span>
+      <span className="font-medium">{displayPlanLabels[data.displayPlan] ?? '—'}</span>
+    </p>
+  </div>
+)}
+
 
       {/* 注意テキスト */}
       <p className="text-xs text-gray-500">

@@ -229,31 +229,56 @@ const Step3_SalesAndAgreement = () => {
             })()}
           </div>
 
-          {/* エディション数 */}
-          <div>
-            <label htmlFor="editionTotal" className="block text-sm font-semibold text-gray-800 mb-1.5">
-              販売点数（エディション数） <span className="text-red-600">＊</span>
-            </label>
-            <input
-              id="editionTotal"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={10}
-              placeholder="例：5"
-              className="w-full px-4 py-3 mt-1.5 text-base bg-[#fafafa] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00a1e9] focus:bg-white"
-              {...register('editionTotal', {
-                required: '販売点数を入力してください。',
-                min: { value: 1, message: '1以上を入力してください。' },
-                max: { value: 10, message: '最大10点まで指定できます。' },
-              })}
-            />
-            <small className="text-[#666] mt-1 block">※販売点数は1〜10の範囲で指定</small>
-            {(() => {
-              const m = errMsg(errors.editionTotal);
-              return m ? <p className="text-sm text-red-600 mt-1.5">{m}</p> : null;
-            })()}
-          </div>
+{/* 販売点数 */}
+<div>
+  <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+    販売点数（エディション数 or 無制限） <span className="text-red-600">＊</span>
+  </label>
+
+  <div className="mt-2 flex gap-6">
+    <label className="flex items-center gap-2">
+      <input
+        type="radio"
+        value="limited"
+        {...register('editionMode', { required: '販売点数を選択してください。' })}
+      /> エディション指定
+    </label>
+    <label className="flex items-center gap-2">
+      <input
+        type="radio"
+        value="unlimited"
+        {...register('editionMode', { required: '販売点数を選択してください。' })}
+      /> 無制限
+    </label>
+  </div>
+
+  {/* editionTotal は limited のときだけ表示 */}
+  {watch('editionMode') === 'limited' && (
+    <div className="mt-2">
+      <input
+        id="editionTotal"
+        type="number"
+        inputMode="numeric"
+        min={1}
+        max={10}
+        placeholder="例：5"
+        className="w-full px-4 py-3 mt-1.5 text-base bg-[#fafafa] border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00a1e9]"
+        {...register('editionTotal', {
+          required: '販売点数を入力してください。',
+          min: { value: 1, message: '1以上を入力してください。' },
+          max: { value: 10, message: '最大10点まで指定できます。' },
+        })}
+      />
+      <small className="text-[#666] mt-1 block">※1〜10の範囲で指定</small>
+    </div>
+  )}
+
+  {(() => {
+    const m = errMsg(errors.editionTotal || errors.editionMode);
+    return m ? <p className="text-sm text-red-600 mt-1.5">{m}</p> : null;
+  })()}
+</div>
+
 
           {/* 表示保証プラン */}
           <div>
