@@ -4,7 +4,15 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import NftPurchaseButton from '@/components/purchase/NftPurchaseButton';
-import { Heart, ShoppingCart, Globe, Instagram } from 'lucide-react';
+import {
+  Heart,
+  ShoppingCart,
+  Globe,
+  Instagram,
+  Hash,
+  Ban,
+  Infinity as InfinityIcon, // グローバル Infinity と衝突回避
+} from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
 import type { Entry } from '../../types/types';
 
@@ -13,78 +21,116 @@ interface Props {
   onClose: () => void;
 }
 
+// Entry に足りない可能性のあるプロパティの受け口
+type EntryUI = Entry & {
+  image_url?: string;
+  imageUrl?: string;
+  sns_links?: string | Record<string, string>;
+  likes?: number;
+  edition_total?: number | null;
+  edition_sold?: number;
+  is_for_sale?: boolean;
+  is_sold?: boolean;
+  sale_type?: 'nft' | 'normal' | string;
+  token_id?: string | number | null;
+  editionMode?: 'limited' | 'unlimited';
+};
+
 export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
-  // --- Likes 状態 ---
-  const [likes, setLikes] = useState<number>(artwork.likes ?? 0);
+  const a = artwork as EntryUI;
+
+  const [likes, setLikes] = useState<number>(a.likes ?? 0);
   const [liked, setLiked] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // --- 版数 ---
-  const editionTotal = artwork.edition_total ?? null;
-  const editionSold = artwork.edition_sold ?? 0;
-  const editionRemaining =
-    editionTotal !== null ? editionTotal - editionSold : null;
-  const isEditionSoldOut =
-    editionTotal !== null && editionRemaining !== null && editionRemaining <= 0;
+  // 版数値
+const editionTotal: number | null = a.edition_total ?? null;
+const editionSold: number = a.edition_sold ?? 0;
 
-  // --- いいね数取得 & 既にLike済みか ---
+  // フィールド抽出（snake/camel 両対応）
+  const imageUrl = a.image_url ?? a.imageUrl ?? '';
+  const title = (a as any).title ?? '';
+  const author = (a as any).author ?? '';
+  const description = (a as any).description ?? '';
+  const price: number | null = (a as any).price ?? null;
+  const is_for_sale: boolean = a.is_for_sale ?? false;
+  const is_sold: boolean = a.is_sold ?? false;
+  const id = (a as any).id ?? null;
+  const created_at = (a as any).created_at ?? null;
+  const sale_type: 'nft' | 'normal' | string = a.sale_type ?? 'normal';
+  const token_id: string | number | null = a.token_id ?? null;
+
+// edition_mode を最優先し、文字列は trim + lowercase で正規化
+const rawEditionMode = (a as any).edition_mode ?? (a as any).editionMode ?? null;
+const editionMode: 'limited' | 'unlimited' | null =
+  typeof rawEditionMode === 'string'
+    ? (rawEditionMode as string).trim().toLowerCase() as 'limited' | 'unlimited'
+    : rawEditionMode;
+
+// total は数値のときだけ採用
+const total = (typeof editionTotal === 'number' && Number.isFinite(editionTotal))
+  ? editionTotal
+  : null;
+
+// ここからの判定はそのままでもOKですが、editionMode を優先
+const isLimited =
+  (a.is_for_sale ?? false) &&
+  (editionMode === 'limited' || (editionMode == null && total !== null && total > 0));
+
+const isUnlimited =
+  (a.is_for_sale ?? false) &&
+  (editionMode === 'unlimited' || (editionMode == null && (total === null || total <= 0)));
+
+const editionRemaining = isLimited && total !== null ? (total - editionSold) : null;
+const isEditionSoldOut = isLimited && (editionRemaining ?? 0) <= 0;
+
+  // like 取得
   useEffect(() => {
     const fetchLikes = async () => {
       try {
-        const res = await fetch(`/api/entries/${artwork.id}/like`);
+        const res = await fetch(`/api/entries/${(a as any).id}/like`);
         const data = await res.json();
         setLikes(data.likes ?? 0);
       } catch (err) {
         console.error('❌ いいね数取得失敗:', err);
       }
     };
-
-    const alreadyLiked = localStorage.getItem(`liked_${artwork.id}`);
+    const alreadyLiked = localStorage.getItem(`liked_${(a as any).id}`);
     setLiked(Boolean(alreadyLiked));
     fetchLikes();
-  }, [artwork.id]);
+  }, [(a as any).id]);
 
   const handleLike = async () => {
     if (liked) return;
     setIsAnimating(true);
-
     try {
-      const res = await fetch(`/api/entries/${artwork.id}/like`, {
-        method: 'POST',
-      });
-      const json = await res.json();
-      setLikes(json.likes);
+      const res = await fetch(`/api/entries/${(a as any).id}/like`, { method: 'POST' });
+      const data = await res.json();
+      setLikes(data.likes ?? likes + 1);
       setLiked(true);
-      localStorage.setItem(`liked_${artwork.id}`, 'true');
+      localStorage.setItem(`liked_${(a as any).id}`, '1');
     } catch (err) {
-      alert('fetchに失敗しました');
+      console.error('❌ いいね更新失敗:', err);
+    } finally {
+      setTimeout(() => setIsAnimating(false), 500);
     }
-
-    setTimeout(() => setIsAnimating(false), 250);
   };
 
-  // --- 必要フィールド取り出し ---
-  const {
-    imageUrl,
-    title = 'Untitled',
-    author = 'Unknown',
-    description = '',
-    price = null,
-    is_for_sale = false,
-    is_sold = false,
-    sns_links = '{}',
-    id = null,
-    created_at = null,
-    sale_type = 'normal',
-    token_id = null,
-  } = artwork;
+  const handlePurchase = async () => {
+    try {
+      // 既存の決済導線に合わせる
+    } catch (err) {
+      console.error('❌ 購入処理に失敗しました', err);
+    }
+  };
 
-  // --- SNSリンクのJSONを安全にパース ---
+  // SNS
   let links: Record<string, string> = {};
   try {
-    links = JSON.parse(sns_links);
+    const raw = a.sns_links ?? '{}';
+    links = typeof raw === 'string' ? JSON.parse(raw) : (raw as Record<string, string>);
   } catch (e) {
-    console.error('SNSリンクのパースに失敗:', e);
+    console.warn('SNSリンクのJSONパースに失敗:', e);
   }
 
   const formattedDate = created_at
@@ -93,72 +139,26 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
         month: '2-digit',
         day: '2-digit',
       })
-    : '登録日不明';
+    : '';
 
-  // --- Stripe 決済へ ---
-  const handlePurchase = async () => {
-    if (!id || !title || !price) {
-      alert('購入情報が不足しています');
-      return;
-    }
+  // 下部固定バーの表示条件（非売品なら出さない）
+  const showPurchaseBar = is_for_sale;
 
-    const res = await fetch('/api/purchase/stripe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ entryId: id, title, price: Number(price) }),
-    });
-    const data = await res.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      alert('Stripeへの遷移に失敗しました');
-    }
-  };
-
-  // --- Portal で body 直下に描画（親の <a> と独立させて入れ子問題を回避） ---
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return null;
-
-  const node = (
+  return createPortal(
     <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-sm"
       onClick={onClose}
-      className="fixed inset-0 z-[1000] bg-black/90 text-white flex items-center justify-center px-6 py-10 overflow-y-auto cursor-zoom-out"
-      aria-modal="true"
-      role="dialog"
     >
-      {/* 閉じるボタン */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 text-white hover:text-gray-300 text-3xl font-bold z-[1010]"
-        aria-label="Close"
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="flex items-start gap-8 p-6 rounded-2xl bg-white/5 border border-white/10 shadow-2xl max-w-[84vw] pb-24" // ← 下部バーの高さぶん余白
       >
-        &times;
-      </button>
-
-      {/* 左：作品表示 */}
-      <div onClick={(e) => e.stopPropagation()} className="flex flex-col items-center">
-        <div
-          className="relative w-fit select-none"
-          onContextMenu={(e) => e.preventDefault()} /* 右クリック抑止 */
-          onMouseDown={(e) => {
-            if (e.button === 2) e.preventDefault();
-          }} /* 右クリック押下 */
-          onDragStart={(e) => e.preventDefault()} /* ドラッグ抑止 */
-          onTouchStart={() => { /* iOS長押し抑止用 */ }}
-        >
-          {/* 透明オーバーレイ（クリックや長押しをキャッチ） */}
-          <div
-            aria-hidden
-            className="absolute inset-0 z-[5]"
-            onContextMenu={(e) => e.preventDefault()}
-            onDragStart={(e) => e.preventDefault()}
-          />
-
-          {/* 🪙 バッジ（画像の外・右上） */}
-          {(sale_type === 'nft' || sale_type === 'normal') && (
+        {/* 左：画像 */}
+        <div className="flex flex-col">
+          {/* タイプバッジ（販売時のみ） */}
+          {is_for_sale && (
             <div
-              className={`absolute -top-7 -right-0.5 text-xs px-2 py-1 rounded-full font-semibold shadow-md ${
+              className={`mb-3 inline-block rounded-full px-3 py-1 text-xs font-semibold tracking-wide ${
                 sale_type === 'nft'
                   ? 'bg-gradient-to-r from-violet-400 to-purple-600 text-white'
                   : 'bg-gradient-to-r from-gray-400 to-gray-600 text-white'
@@ -168,149 +168,291 @@ export default function ZoomArtworkDesktopDisplay({ artwork, onClose }: Props) {
             </div>
           )}
 
-          {/* 🎨 画像本体 */}
-          <div className="max-w-[35vw] max-h-[75vh]">
+          {/* 画像（サイズ控えめ） */}
+          <div className="relative max-w-[32vw] max-h-[68vh]">
+            {/* 左上バッジ（限定/無制限/非売品） */}
+            <EditionBadges
+              isForSale={is_for_sale}
+              isLimited={isLimited}
+              isUnlimited={isUnlimited}
+            />
             <img
               src={imageUrl}
               alt={title}
               className="w-full h-full object-contain rounded-xl shadow-lg pointer-events-none select-none"
-              style={{
-                userSelect: 'none',
-              }}
+              draggable={false}
             />
           </div>
-        </div>
 
-        {/* 価格/残数/購入 */}
-        <div className="mt-4 flex flex-wrap justify-center items-center gap-4">
-          {is_for_sale && !is_sold && !isEditionSoldOut ? (
-            <>
-              {/* 💰 価格表示 */}
-              <div className="text-xl font-bold text-[#00a1e9]">
-                {price ? `${Number(price).toLocaleString()}円（税込）` : '販売中'}
-              </div>
-
-              {/* 📦 残数表示 */}
-              {editionTotal !== null && (
-                <div className="text-sm text-white/80">
-                  残り {editionRemaining} / {editionTotal} 枚
-                </div>
-              )}
-
-              {/* 🛒 購入ボタン */}
-              {sale_type === 'nft' && token_id ? (
-                <NftPurchaseButton
-                  entryId={id!}
-                  title={title}
-                  price={Number(price)}
-                  tokenId={token_id}
-                />
-              ) : (
-                <button
-                  onClick={handlePurchase}
-                  className="flex items-center gap-2 bg-[#00a1e9] hover:bg-[#0090cc] text-white font-semibold py-2 px-5 rounded-xl shadow transition-all"
-                >
-                  <ShoppingCart size={20} />
-                  購入する
-                </button>
-              )}
-            </>
-          ) : (
-            <div className="text-gray-400 bg-gray-600 text-sm py-2 px-4 rounded-lg inline-block">
-              SOLD
+          {/* 非売品の説明（販売UIは下部バーに集約） */}
+          {!is_for_sale && (
+            <div className="mt-4 text-sm text-white/80">
+              この作品は<strong>非売品</strong>です。販売・ダウンロードはできません。
             </div>
           )}
         </div>
+
+        {/* 右：詳細 */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="ml-6 max-w-[26vw] relative min-h-[70vh] flex flex-col space-y-6 text-white px-2 cursor-default"
+        >
+          <h2 className="text-3xl font-bold">{title}</h2>
+          <p className="text-sm text-gray-400">by {author}</p>
+
+          <div className="text-sm text-gray-400 space-y-1">
+            {id && <div>シリアル番号: #{String(id).padStart(3, '0')}</div>}
+            <div>登録日: {formattedDate}</div>
+          </div>
+
+          {description && <p className="text-base leading-relaxed text-white/90">{description}</p>}
+
+          {/* SNSリンク（新規タブで開く） */}
+          {Object.keys(links).length > 0 && (
+            <div className="space-y-2 pt-2">
+              {links.homepage && (
+                <a
+                  href={links.homepage}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-white/80 hover:text-white transition"
+                >
+                  <Globe size={18} />
+                  ホームページ
+                </a>
+              )}
+              {links.twitter && (
+                <a
+                  href={links.twitter}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-white/80 hover:text-white transition"
+                >
+                  <FaXTwitter />
+                  X（Twitter）
+                </a>
+              )}
+              {links.instagram && (
+                <a
+                  href={links.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-white/80 hover:text-white transition"
+                >
+                  <Instagram size={18} />
+                  Instagram
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Like */}
+          <div className="absolute bottom-0 right-3 z-10 mb-2">
+            <button
+              onClick={handleLike}
+              className="relative flex items-center gap-1 px-3 py-2 bg-white/10 hover:bg-white/15 text-white backdrop-blur-sm rounded-full transition-all duration-300"
+            >
+              {isAnimating && <span className="absolute inset-0 rounded-full bg-pink-400 opacity-40 animate-ping" />}
+              <Heart
+                size={24}
+                strokeWidth={2}
+                className={`relative z-10 transition-all duration-300 ease-out ${
+                  liked ? 'text-pink-500 fill-pink-500' : 'text-white'
+                }`}
+              />
+              <span className="text-sm">{likes}</span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* 右：詳細・SNS・Like */}
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="ml-10 max-w-[24vw] relative min-h-[80vh] flex flex-col space-y-6 text-white px-4 cursor-default"
-      >
-        <h2 className="text-3xl font-bold">{title}</h2>
-        <p className="text-sm text-gray-400">by {author}</p>
+      {/* === 下部固定の購入バー（購入導線と特商法ミニ注記を集約） === */}
+      {showPurchaseBar && (
+        <DesktopPurchaseBar
+          isLimited={isLimited}
+          isSold={is_sold}
+          isEditionSoldOut={isEditionSoldOut}
+          price={price ?? null}
+          editionTotal={editionTotal}
+          editionRemaining={editionRemaining}
+          saleType={sale_type}
+          tokenId={token_id}
+          entryId={id}
+          title={title}
+          onPurchase={handlePurchase}
+        />
+      )}
+    </div>,
+    document.body
+  );
+}
 
-        <div className="text-sm text-gray-400 space-y-1">
-          {id && <div>シリアル番号: #{String(id).padStart(3, '0')}</div>}
-          <div>登録日: {formattedDate}</div>
-        </div>
+/* ===== 付加：バッジ＆固定購入バー＆特商法ミニ注記 ===== */
 
-        {description && (
-          <p className="text-base leading-relaxed text-white/90">{description}</p>
-        )}
+function EditionBadges({
+  isForSale,
+  isLimited,
+  isUnlimited,
+}: {
+  isForSale: boolean;
+  isLimited: boolean;
+  isUnlimited: boolean;
+}) {
+  return (
+    <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-wrap gap-2">
+      {!isForSale && <Badge tone="muted" title="非売品" />}
+      {isLimited   && <Badge tone="amber" title="edition" />}
+      {isUnlimited && <Badge tone="cyan"  title="unlimited" />}
+    </div>
+  );
+}
 
-        {/* SNSリンク（外部は <a> でOK。Portal化で親の <Link> と独立） */}
-        {Object.keys(links).length > 0 && (
-          <div className="space-y-2 pt-2">
-            {links.homepage && (
-              <a
-                href={links.homepage}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
-              >
-                <Globe size={18} />
-                <span>ホームページ</span>
-              </a>
-            )}
 
-            {links.twitter && (
-              <a
-                href={links.twitter}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
-              >
-                <FaXTwitter size={18} />
-                <span>X（旧Twitter）</span>
-              </a>
-            )}
+function Badge({
+  title,
+  icon,
+  tone = 'muted',
+}: {
+  title: string;
+  icon?: React.ReactNode;
+  tone?: 'muted' | 'cyan' | 'amber';
+}) {
+  const toneCls =
+    tone === 'cyan'
+      ? 'bg-cyan-50 text-cyan-700 ring-cyan-200'
+      : tone === 'amber'
+      ? 'bg-amber-50 text-amber-700 ring-amber-200'
+      : 'bg-gray-50 text-gray-700 ring-gray-200';
 
-            {links.instagram && (
-              <a
-                href={links.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"
-              >
-                <Instagram size={18} />
-                <span>Instagram</span>
-              </a>
+  return (
+    <div
+      className={[
+        'inline-flex items-center gap-1.5 rounded-full',
+        'px-2.5 py-1 text-[11px] font-medium tracking-wide',
+        'backdrop-blur-sm ring-1 shadow-sm',
+        toneCls,
+      ].join(' ')}
+      aria-label={title}
+    >
+      {icon}
+      <span>{title}</span>
+    </div>
+  );
+}
+
+type PurchaseBarProps = {
+  isLimited: boolean;
+  isSold: boolean;
+  isEditionSoldOut: boolean;
+  price: number | null;
+  editionTotal: number | null;
+  editionRemaining: number | null;
+  saleType: 'nft' | 'normal' | string;
+  tokenId?: string | number | null;
+  entryId?: number | string | null;
+  title: string;
+  onPurchase?: () => void;
+};
+
+function DesktopPurchaseBar({
+  isLimited,
+  isSold,
+  isEditionSoldOut,
+  price,
+  editionTotal,
+  editionRemaining,
+  saleType,
+  tokenId,
+  entryId,
+  title,
+  onPurchase,
+}: PurchaseBarProps) {
+  const disabled = isSold || isEditionSoldOut || price == null;
+
+  return (
+    <div className="fixed left-0 right-0 bottom-0 z-[1020] bg-black/90 backdrop-blur border-t border-white/10">
+      <div className="mx-auto max-w-[1200px] px-6 py-3 flex items-center justify-between gap-6">
+        {/* 左：価格＆在庫 */}
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="text-[22px] font-extrabold text-white tracking-wide">
+              {price != null ? `${Number(price).toLocaleString()}円` : '価格未設定'}
+            </div>
+            <span className="text-[12px] px-2 py-0.5 rounded bg-white/10 text-white/80">税込</span>
+            {(isSold || isEditionSoldOut) && (
+              <span className="text-[12px] px-2 py-0.5 rounded bg-gray-700 text-gray-200">SOLD</span>
             )}
           </div>
-        )}
 
-        {/* Like */}
-        <div className="absolute bottom-6 right-3 z-10">
-          <button
-            onClick={handleLike}
-            className="relative flex items-center gap-1 px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full transition-all duration-300"
-          >
-            {isAnimating && (
-              <span className="absolute inset-0 rounded-full bg-pink-400 opacity-40 animate-ping" />
+          {/* 限定のときだけ残数表示（無制限や完売時は非表示） */}
+          {isLimited && !isEditionSoldOut && (
+            <div className="mt-1 text-sm text-white/80">
+              残り {editionRemaining} / {editionTotal} 枚
+            </div>
+          )}
+
+          {/* 特商法ミニ注記（リンクは新規タブ） */}
+          <div className="mt-1 text-[12px] text-white/70 space-x-3">
+            {saleType === 'nft' ? (
+              <>
+                <span>支払：カード（Stripe）即時決済</span>
+                <span>引渡：決済後72h以内Mint→7日以内移転</span>
+                <span>返品：原則不可</span>
+              </>
+            ) : (
+              <>
+                <span>支払：カード（Stripe）即時決済</span>
+                <span>引渡：即時〜24h（障害時最長3営業日）</span>
+                <span>返品：原則不可</span>
+              </>
             )}
+            <a
+              href="/footer/tokushoho"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2"
+            >
+              特商法
+            </a>
+            <span>/</span>
+            <a
+              href="/footer/terms#sec-6"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2"
+            >
+              利用規約
+            </a>
+          </div>
+        </div>
 
-            <Heart
-              size={24}
-              strokeWidth={2}
-              className={`relative z-10 transition-all duration-300 ease-out ${
-                liked ? 'text-pink-500 fill-pink-500 scale-110' : 'text-gray-400 scale-100'
-              }`}
+        {/* 右：購入ボタン */}
+        <div className="flex-shrink-0">
+          {saleType === 'nft' && tokenId != null && !disabled ? (
+            <NftPurchaseButton
+              entryId={String(entryId ?? '')}
+              title={title}
+              price={Number(price)}
+              tokenId={String(tokenId)}
             />
-
-            {liked && (
-              <span className="relative z-10 text-base font-semibold text-pink-400">
-                {likes}
-              </span>
-            )}
-          </button>
+          ) : (
+            <button
+              onClick={onPurchase}
+              disabled={disabled}
+              aria-disabled={disabled}
+              className={[
+                'flex items-center gap-2 h-11 px-6 rounded-xl font-semibold shadow',
+                disabled
+                  ? 'bg-gray-700 text-gray-300 cursor-not-allowed'
+                  : 'bg-[#00a1e9] hover:bg-[#0090cc] text-white',
+              ].join(' ')}
+            >
+              <ShoppingCart size={20} />
+              {disabled ? 'SOLD' : '購入する'}
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
-
-  return createPortal(node, document.body);
 }
-
-

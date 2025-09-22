@@ -185,35 +185,49 @@ const getStepFields = (
 
       const type = data.isForSale === 'yes' ? data.saleType : 'none';
       const displayPlan = data.isForSale === 'yes' ? data.displayPlan || 'free' : 'free';
+      const isSale = data.isForSale === 'yes';
+const editionModeToSave: 'limited' | 'unlimited' | null = isSale ? data.editionMode : null;
+
+let editionTotalNum: number | null = null;
+if (isSale && editionModeToSave === 'limited') {
+  const n = Number.parseInt(data.editionTotal, 10);
+  if (!Number.isFinite(n) || n <= 0) {
+    alert('エディション総数は1以上の整数で入力してください');
+    setSubmitting(false);
+    return;
+  }
+  editionTotalNum = n;
+}
 
       // ★ entries 登録（既存ロジックを維持）
       const { error } = await supabase.from('entries').insert([{
-        artist_name: data.artistName,
-        email: data.email,
-        sns_links: snsLinksJson,
-        title: data.title,
-        description: data.description || '',
-        is_for_sale: data.isForSale === 'yes',
-        sale_type: data.saleType || '',
-        type,
-        display_plan: displayPlan,
-        price: data.isForSale === 'yes' && data.price ? Number(data.price) : null,
-        image_url: publicUrl,
-        gallery_type: data.gallery_type || '',
-        display_start_at: displayStartAt,
-        display_end_at: displayEndAt,
-        file_name: fileName,
-        external_user_id: externalUserId,
-           // 無制限⇄限定の切替に強い代入（限定のときだけ数値、無制限は必ず null）
-  　　　 edition_total:
-    　　 data.isForSale === 'yes'
-       ? (data.editionMode === 'limited' ? Number(data.editionTotal) : null)
-       : null,
-        edition_sold: 0,
-        meish_fee_yen: (data as any).meish_fee_yen ?? null,
-        artist_reward_yen: (data as any).artist_reward_yen ?? null,
-        has_signature: data.has_signature === 'yes',
-      }]);
+  artist_name: data.artistName,
+  email: data.email,
+  sns_links: snsLinksJson,
+  title: data.title,
+  description: data.description || '',
+  is_for_sale: data.isForSale === 'yes',
+  sale_type: data.saleType || '',
+  type,
+  display_plan: displayPlan,
+  price: data.isForSale === 'yes' && data.price ? Number(data.price) : null,
+  image_url: publicUrl,
+
+  // ★ edition関連（重複なし）
+  edition_mode: editionModeToSave,   // 'limited' | 'unlimited' | null
+  edition_total: editionTotalNum,    // limited のときだけ 1以上の整数、unlimited/非売品は null
+  edition_sold: 0,
+
+  gallery_type: data.gallery_type || '',
+  display_start_at: displayStartAt,
+  display_end_at: displayEndAt,
+  file_name: fileName,
+  external_user_id: externalUserId,
+  meish_fee_yen: (data as any).meish_fee_yen ?? null,
+  artist_reward_yen: (data as any).artist_reward_yen ?? null,
+  has_signature: data.has_signature === 'yes',
+}]);
+
 
       if (error) {
         alert(`登録に失敗しました: ${error.message}`);
