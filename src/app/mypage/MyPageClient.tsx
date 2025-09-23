@@ -54,7 +54,7 @@ type Entry = {
   likes?: number;
   gallery_type?: 'white' | 'float' | string;
   edition_total?: number | null;
-  edition_sold?: number;
+  edition_sold?: number | null;
   price?: number | null;
   meish_fee_yen?: number | null;
   artist_reward_yen?: number | null;
@@ -62,8 +62,7 @@ type Entry = {
   display_start_at?: string | null;
   display_end_at?: string | null;
   sale_type?: 'normal' | 'nft' | null;
-  is_nft?: boolean | null;
-  sold?: boolean | null;
+  is_sold?: boolean | null; // ← DBに合わせる
 };
 
 /* ===================== Utils ===================== */
@@ -81,7 +80,8 @@ const formatYen = (n?: number | null) => (typeof n === 'number' ? `¥${n.toLocal
 const isUnlimited = (e: Entry) => e.edition_total == null;
 const editionSummary = (e: Entry) => (isUnlimited(e) ? '∞' : `${e.edition_sold ?? 0}/${e.edition_total ?? 0}`);
 const galleryBadgeText = (g?: string) => (g === 'float' ? 'Float' : 'White');
-const saleBadgeText = (e: Entry) => (e.is_nft || e.sale_type === 'nft' ? 'NFT' : '通常');
+// NFT判定は sale_type のみ
+const saleBadgeText = (e: Entry) => (e.sale_type === 'nft' ? 'NFT' : '通常');
 
 /* ===================== Component ===================== */
 export default function MyPageClient() {
@@ -150,12 +150,12 @@ export default function MyPageClient() {
       try {
         setLoading(true);
 
-        // profiles（自分の行のみ）※ tagline は参照しない
+        // profiles（自分の行のみ）
         const { data: prof, error: profErr } = await supabase
           .from('profiles')
           .select('id, display_name, avatar_url, banner_url, bio, sns_links')
           .eq('id', uid)
-          .returns<Profile>() // 型を固定
+          .returns<Profile>()
           .maybeSingle();
 
         if (profErr) {
@@ -182,7 +182,7 @@ export default function MyPageClient() {
           setProfile(prof);
         }
 
-        // entries（自分のみ）
+        // entries（自分のみ）— 列名をDBに合わせる
         const { data: es, error: esErr } = await supabase
           .from('entries')
           .select(
@@ -199,17 +199,16 @@ export default function MyPageClient() {
               'edition_sold',
               'price',
               'sale_type',
-              'is_nft',
-              'sold',
+              'is_sold', // ← ここだけでOK
             ].join(',')
           )
           .eq('user_id', uid)
           .order('created_at', { ascending: false })
-          .returns<Entry[]>(); // 型を固定（GenericStringError対策）
+          .returns<Entry[]>();
 
         if (esErr) {
           console.error('[entries] error:', esErr);
-          setEntries([]); // UIは出せるので空で続行
+          setEntries([]);
         } else {
           setEntries(es ?? []);
         }
@@ -306,14 +305,7 @@ export default function MyPageClient() {
       <section className="relative">
         <div className="relative h-48 md:h-56 w-full overflow-hidden">
           {profile?.banner_url ? (
-            <Image
-              src={profile.banner_url}
-              alt="banner"
-              fill
-              className="object-cover"
-              priority
-              unoptimized
-            />
+            <Image src={profile.banner_url} alt="banner" fill className="object-cover" priority unoptimized />
           ) : (
             <div className="h-full w-full bg-gradient-to-r from-sky-50 to-white" />
           )}
@@ -322,13 +314,7 @@ export default function MyPageClient() {
         <div className="absolute -bottom-10 left-5 md:left-10 flex items-end gap-4">
           <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100">
             {profile?.avatar_url ? (
-              <Image
-                src={profile.avatar_url}
-                alt={profile.display_name ?? 'avatar'}
-                fill
-                className="object-cover"
-                unoptimized
-              />
+              <Image src={profile.avatar_url} alt={profile.display_name ?? 'avatar'} fill className="object-cover" unoptimized />
             ) : (
               <div className="w-full h-full grid place-items-center text-gray-400">
                 <BadgeCheck />
@@ -405,20 +391,12 @@ export default function MyPageClient() {
               <span className="truncate">{publicUrl || '/artists/...'} </span>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={handleCopy}
-                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-              >
+              <button onClick={handleCopy} className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50">
                 <LinkIcon className="w-4 h-4" />
                 <span>{copied ? 'コピーしました' : 'URLコピー'}</span>
               </button>
               {publicUrl && (
-                <a
-                  href={publicUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-                >
+                <a href={publicUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50">
                   <ExternalLink className="w-4 h-4" />
                   <span>公開ページ</span>
                 </a>
@@ -480,10 +458,7 @@ export default function MyPageClient() {
               <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
             </div>
           </div>
-          <Link
-            href="/entry"
-            className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#00a1e9] px-4 py-2 text-white text-sm font-semibold hover:brightness-[1.05]"
-          >
+          <Link href="/entry" className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#00a1e9] px-4 py-2 text-white text-sm font-semibold hover:brightness-[1.05]">
             作品を応募
           </Link>
         </div>
@@ -564,15 +539,17 @@ function MetricCard({
 }
 
 function EntryCard({ entry }: { entry: Entry }) {
+  // 完売は is_sold を優先、未設定ならエディションで推定
   const sold = useMemo(() => {
-    if (typeof entry.sold === 'boolean') return entry.sold;
+    if (typeof entry.is_sold === 'boolean') return entry.is_sold;
     if (isUnlimited(entry)) return false;
     const total = entry.edition_total ?? 0;
     const soldCount = entry.edition_sold ?? 0;
     return total > 0 && soldCount >= total;
   }, [entry]);
 
-  const nft = entry.is_nft || entry.sale_type === 'nft';
+  // NFT判定は sale_type のみ
+  const nft = entry.sale_type === 'nft';
   const thumb = entry.image_url || '/placeholder.png';
 
   return (
