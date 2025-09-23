@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
 
-/* ========== Types ========== */
+/* ===================== Types ===================== */
 type SNSLinks = { homepage?: string; twitter?: string; instagram?: string };
 
 type ProfileSavePayload = {
@@ -67,7 +67,7 @@ type Entry = {
   sold?: boolean | null;
 };
 
-/* ========== Utils ========== */
+/* ===================== Utils ===================== */
 const BRAND = '#00a1e9';
 
 const SORTS = [
@@ -78,22 +78,13 @@ const SORTS = [
 ] as const;
 type SortKey = (typeof SORTS)[number]['key'];
 
-const formatYen = (n?: number | null) =>
-  typeof n === 'number' ? `¥${n.toLocaleString()}` : '—';
-
+const formatYen = (n?: number | null) => (typeof n === 'number' ? `¥${n.toLocaleString()}` : '—');
 const isUnlimited = (e: Entry) => e.edition_total == null;
-
-const editionSummary = (e: Entry) => {
-  if (isUnlimited(e)) return '∞';
-  const sold = e.edition_sold ?? 0;
-  const total = e.edition_total ?? 0;
-  return `${sold}/${total}`;
-};
-
+const editionSummary = (e: Entry) => (isUnlimited(e) ? '∞' : `${e.edition_sold ?? 0}/${e.edition_total ?? 0}`);
 const galleryBadgeText = (g?: string) => (g === 'float' ? 'Float' : 'White');
 const saleBadgeText = (e: Entry) => (e.is_nft || e.sale_type === 'nft' ? 'NFT' : '通常');
 
-/* ========== Component ========== */
+/* ===================== Component ===================== */
 export default function MyPageClient() {
   const [loading, setLoading] = useState(true);
   const [uid, setUid] = useState<string | null>(null);
@@ -101,7 +92,7 @@ export default function MyPageClient() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
 
-  // UI
+  // UI state
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('new');
   const [copied, setCopied] = useState(false);
@@ -109,7 +100,7 @@ export default function MyPageClient() {
   const [toast, setToast] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
 
-  // SSR安全なorigin
+  // SSRで location を参照しない
   const [siteOrigin, setSiteOrigin] = useState<string>(process.env.NEXT_PUBLIC_SITE_URL ?? '');
   useEffect(() => {
     if (!siteOrigin && typeof window !== 'undefined') setSiteOrigin(window.location.origin);
@@ -120,7 +111,7 @@ export default function MyPageClient() {
     return siteOrigin ? `${siteOrigin}/artists/${encodeURIComponent(slug)}` : '';
   }, [siteOrigin, profile]);
 
-  // 画面幅監視
+  // 画面幅（モバイル判定）
   useEffect(() => {
     const check = () => typeof window !== 'undefined' && setIsMobile(window.innerWidth < 768);
     check();
@@ -128,7 +119,7 @@ export default function MyPageClient() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  /* ---- 認証復元 ---- */
+  /* -------- 認証復元 -------- */
   useEffect(() => {
     let mounted = true;
 
@@ -137,7 +128,7 @@ export default function MyPageClient() {
       if (mounted) setUid(data.user?.id ?? null);
     })();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUid(session?.user?.id ?? null);
     });
 
@@ -147,7 +138,7 @@ export default function MyPageClient() {
     };
   }, []);
 
-  /* ---- uid確定後にデータ取得 ---- */
+  /* -------- uid 決定後にプロフィール & 作品を取得 -------- */
   useEffect(() => {
     (async () => {
       if (!uid) {
@@ -160,73 +151,73 @@ export default function MyPageClient() {
       try {
         setLoading(true);
 
-// uid が決まった後のプロフィール取得部分
-const { data: prof, error: profErr } = await supabase
-  .from('profiles')
-  .select('id, display_name, avatar_url, banner_url, tagline, bio, sns_links')
-  .eq('id', uid)
-  .returns<Profile>()            // ← 型を固定
-  .maybeSingle();
+        // profiles（自分の行のみ）
+        const { data: prof, error: profErr } = await supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url, banner_url, tagline, bio, sns_links')
+          .eq('id', uid)
+          .returns<Profile>() // 型を固定
+          .maybeSingle();
 
-if (profErr) throw profErr;
+        if (profErr) {
+          console.error('[profiles] error:', profErr);
+          throw profErr;
+        }
 
-if (!prof) {
-  // 初回シード（Google から）
-  const { data: auth } = await supabase.auth.getUser();
-  const meta: any = auth.user?.user_metadata ?? {};
-  const seed: Profile = {
-    id: uid,
-    display_name:
-      meta.full_name || meta.name || auth.user?.email?.split('@')[0] || 'User',
-    bio: null,
-    avatar_url: meta.avatar_url || meta.picture || null,
-    banner_url: null,
-    tagline: null,               // ← 追加（明示）
-    sns_links: {},
-  };
-  const { error: upErr } = await supabase.from('profiles').upsert(seed);
-  if (upErr) throw upErr;
-  setProfile(seed);              // ← そのまま Profile 型でセット
-} else {
-  setProfile(prof);
-}
+        if (!prof) {
+          // 初回シード（Google メタから）
+          const { data: auth } = await supabase.auth.getUser();
+          const meta: any = auth.user?.user_metadata ?? {};
+          const seed: Profile = {
+            id: uid,
+            display_name: meta.full_name || meta.name || auth.user?.email?.split('@')[0] || 'User',
+            bio: null,
+            avatar_url: meta.avatar_url || meta.picture || null,
+            banner_url: null,
+            tagline: null, // 明示
+            sns_links: {},
+          };
+          const { error: upErr } = await supabase.from('profiles').upsert(seed);
+          if (upErr) throw upErr;
+          setProfile(seed);
+        } else {
+          setProfile(prof);
+        }
 
+        // entries（最小限のカラム / 自分のみ）
+        const { data: es, error: esErr } = await supabase
+          .from('entries')
+          .select(
+            [
+              'id',
+              'user_id',
+              'title',
+              'image_url',
+              'confirmed',
+              'created_at',
+              'likes',
+              'gallery_type',
+              'edition_total',
+              'edition_sold',
+              'price',
+              'sale_type',
+              'is_nft',
+              'sold',
+            ].join(',')
+          )
+          .eq('user_id', uid)
+          .order('created_at', { ascending: false })
+          .returns<Entry[]>(); // 型を固定（GenericStringError対策）
 
-        // 作品（自分のみ）
-const { data: es, error: esErr } = await supabase
-  .from('entries')
-  .select(
-    [
-      'id',
-      'user_id',
-      'title',
-      'image_url',
-      'confirmed',
-      'created_at',
-      'likes',
-      'gallery_type',
-      'edition_total',
-      'edition_sold',
-      'price',
-      'meish_fee_yen',
-      'artist_reward_yen',
-      'confirmed_at',
-      'display_start_at',
-      'display_end_at',
-      'sale_type',
-      'is_nft',
-      'sold',
-    ].join(',')
-  )
-  .eq('user_id', uid)
-  .order('created_at', { ascending: false })
-  .returns<Entry[]>();              // ← 型を固定
-
-setEntries(esErr ? [] : (es ?? [])); // ← エラー時は空配列だけを渡す
-
-      } catch (e) {
-        console.error(e);
-        setToast('読み込みに失敗しました');
+        if (esErr) {
+          console.error('[entries] error:', esErr);
+          setEntries([]); // UIは出せるので空で続行
+        } else {
+          setEntries(es ?? []);
+        }
+      } catch (e: any) {
+        console.error('[mypage load] fatal:', e?.message || e);
+        setToast(e?.message || '読み込みに失敗しました');
       } finally {
         setLoading(false);
       }
@@ -283,34 +274,34 @@ setEntries(esErr ? [] : (es ?? [])); // ← エラー時は空配列だけを渡
     }
   };
 
-async function handleProfileSave(payload: ProfileSavePayload) {
-  try {
-    const { data: auth } = await supabase.auth.getUser();
-    const id = profile?.id || auth.user?.id;
-    if (!id) throw new Error('ユーザーIDが取得できませんでした。');
+  // 保存（upsert / tagline を明示）
+  async function handleProfileSave(payload: ProfileSavePayload) {
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const id = profile?.id || auth.user?.id;
+      if (!id) throw new Error('ユーザーIDが取得できませんでした。');
 
-    const normalized: Profile = {
-      id,
-      display_name: payload.display_name.trim(),
-      bio: (payload.bio ?? '').trim() || null,
-      avatar_url: payload.avatar_url || null,
-      banner_url: payload.banner_url || null,
-      tagline: profile?.tagline ?? null,  // ← 明示
-      sns_links: payload.sns_links || {},
-    };
+      const normalized: Profile = {
+        id,
+        display_name: payload.display_name.trim(),
+        bio: (payload.bio ?? '').trim() || null,
+        avatar_url: payload.avatar_url || null,
+        banner_url: payload.banner_url || null,
+        tagline: profile?.tagline ?? null, // 明示
+        sns_links: payload.sns_links || {},
+      };
 
-    const { error } = await supabase.from('profiles').upsert(normalized);
-    if (error) throw error;
+      const { error } = await supabase.from('profiles').upsert(normalized);
+      if (error) throw error;
 
-    setProfile(normalized);
-    setToast('プロフィールを保存しました');
-    setEditOpen(false);
-  } catch (e: any) {
-    console.error(e);
-    setToast(e?.message || '保存に失敗しました');
+      setProfile(normalized);
+      setToast('プロフィールを保存しました');
+      setEditOpen(false);
+    } catch (e: any) {
+      console.error(e);
+      setToast(e?.message || '保存に失敗しました');
+    }
   }
-}
-
 
   return (
     <main className="font-zen">
@@ -324,7 +315,7 @@ async function handleProfileSave(payload: ProfileSavePayload) {
               fill
               className="object-cover"
               priority
-              unoptimized // next.config.mjs で remotePatterns 設定後は外してOK
+              unoptimized
             />
           ) : (
             <div className="h-full w-full bg-gradient-to-r from-sky-50 to-white" />
@@ -351,12 +342,11 @@ async function handleProfileSave(payload: ProfileSavePayload) {
             <h1 className="font-lilita text-2xl md:text-3xl tracking-wide">
               {profile?.display_name ?? 'My Portfolio'}
             </h1>
-            {profile?.tagline && (
-              <p className="text-gray-600 text-sm md:text-base mt-1">{profile.tagline}</p>
-            )}
+            {profile?.tagline && <p className="text-gray-600 text-sm md:text-base mt-1">{profile.tagline}</p>}
           </div>
         </div>
 
+        {/* 右上：編集 */}
         <div className="absolute top-4 right-4 flex items-center gap-2">
           <button
             onClick={() => setEditOpen(true)}
@@ -413,6 +403,7 @@ async function handleProfileSave(payload: ProfileSavePayload) {
             </div>
           </div>
 
+          {/* Share Public URL */}
           <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-center">
             <div className="flex-1 overflow-hidden rounded-xl border bg-gray-50 px-3 py-2 text-sm text-gray-600">
               <span className="truncate">{publicUrl || '/artists/...'} </span>
@@ -439,9 +430,7 @@ async function handleProfileSave(payload: ProfileSavePayload) {
               <button
                 onClick={() => {
                   const text = `${profile?.display_name ?? 'Artist'} | me-ish ポートフォリオ\n${publicUrl || ''}`;
-                  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                    text
-                  )}&hashtags=me_ish`;
+                  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&hashtags=me_ish`;
                   window.open(url, '_blank', 'noopener,noreferrer');
                 }}
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
@@ -539,7 +528,7 @@ async function handleProfileSave(payload: ProfileSavePayload) {
         </div>
       )}
 
-      {/* 編集モーダル */}
+      {/* プロフィール編集モーダル（profileがなくても開ける） */}
       {editOpen && (
         <ProfileEditModal
           initialProfile={{
@@ -557,7 +546,7 @@ async function handleProfileSave(payload: ProfileSavePayload) {
   );
 }
 
-/* ========== Sub Components ========== */
+/* ===================== Sub Components ===================== */
 function MetricCard({
   icon,
   label,
@@ -592,7 +581,7 @@ function EntryCard({ entry }: { entry: Entry }) {
 
   return (
     <div className="group relative rounded-2xl overflow-hidden bg-white border shadow-sm hover:shadow-md transition">
-      {/* サムネイル */}
+      {/* Thumbnail */}
       <div className="relative w-full h-52 overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={thumb} alt={entry.title} className="w-full h-full object-cover group-hover:scale-105 transition" />
@@ -613,7 +602,7 @@ function EntryCard({ entry }: { entry: Entry }) {
         </div>
       </div>
 
-      {/* 本文 */}
+      {/* Body */}
       <div className="p-3">
         <h3 className="font-semibold text-gray-800 truncate">{entry.title}</h3>
         <div className="mt-1 flex items-center justify-between text-sm text-gray-500">
@@ -640,7 +629,7 @@ function EntryCard({ entry }: { entry: Entry }) {
         </div>
       </div>
 
-      {/* ホバーアクション */}
+      {/* Hover Actions */}
       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition grid place-items-center">
         <div className="flex items-center gap-3">
           <a href={`/artworks/${entry.id}`} className="p-2 rounded-full bg-white hover:bg-gray-100 shadow" aria-label="詳細を見る">
