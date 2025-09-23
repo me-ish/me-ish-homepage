@@ -14,7 +14,7 @@ import {
   Share2,
   Link as LinkIcon,
   ExternalLink,
-  Infinity as InfinityIcon, // import名の衝突を避ける
+  Infinity as InfinityIcon,
   BadgeCheck,
   Filter,
   ChevronDown,
@@ -22,12 +22,8 @@ import {
 } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
 
-/* ===================== Types ===================== */
-type SNSLinks = {
-  homepage?: string;
-  twitter?: string;
-  instagram?: string;
-};
+/* ===================== Types（最小に統一） ===================== */
+type SNSLinks = { homepage?: string; twitter?: string; instagram?: string };
 
 type ProfileSavePayload = {
   display_name: string;
@@ -82,8 +78,7 @@ type SortKey = (typeof SORTS)[number]['key'];
 const formatYen = (n?: number | null) =>
   typeof n === 'number' ? `¥${n.toLocaleString()}` : '—';
 
-const isUnlimited = (e: Entry) =>
-  e.edition_total === null || e.edition_total === undefined;
+const isUnlimited = (e: Entry) => e.edition_total === null || e.edition_total === undefined;
 
 const editionSummary = (e: Entry) => {
   if (isUnlimited(e)) return '∞';
@@ -150,11 +145,9 @@ export default function MyPageClient() {
           .from('profiles')
           .select('id, display_name, avatar_url, banner_url, tagline, bio, sns_links')
           .returns<Profile>() // 型を確定
-          .maybeSingle();     // 0/1行想定
+          .maybeSingle(); // 0/1行想定
 
-        if (!profErr) {
-          setProfile(profData ?? null);
-        }
+        if (!profErr) setProfile(profData ?? null);
 
         // Entries
         const { data: entriesData, error: entriesErr } = await supabase
@@ -184,11 +177,7 @@ export default function MyPageClient() {
           .order('created_at', { ascending: false })
           .returns<Entry[]>(); // GenericStringError対策：結果型を固定
 
-        if (entriesErr) {
-          setEntries([]);
-        } else {
-          setEntries(entriesData ?? []);
-        }
+        setEntries(entriesErr ? [] : entriesData ?? []);
       } finally {
         setLoading(false);
       }
@@ -201,12 +190,10 @@ export default function MyPageClient() {
     const totalLikes = entries.reduce((s, e) => s + (e.likes ?? 0), 0);
     const soldCount = entries.reduce((s, e) => {
       if (isUnlimited(e)) return s + (e.edition_sold ?? 0);
-      const soldOut =
-        (e.edition_total ?? 0) > 0 && (e.edition_sold ?? 0) >= (e.edition_total ?? 0);
+      const soldOut = (e.edition_total ?? 0) > 0 && (e.edition_sold ?? 0) >= (e.edition_total ?? 0);
       return s + (soldOut ? (e.edition_total ?? 0) : (e.edition_sold ?? 0));
     }, 0);
     const rewardYen = entries.reduce((s, e) => s + (e.artist_reward_yen ?? 0), 0);
-
     return { publishedCount: published, totalLikes, soldCount, rewardYen };
   }, [entries]);
 
@@ -233,9 +220,7 @@ export default function MyPageClient() {
         return (b.price ?? -1) - (a.price ?? -1);
       }
       if (sortKey === 'priceLow') {
-        return (
-          (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER)
-        );
+        return (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER);
       }
       return 0;
     });
@@ -256,31 +241,32 @@ export default function MyPageClient() {
     }
   };
 
-async function handleProfileSave(payload: ProfileSavePayload) {
-  try {
-    let targetId = profile?.id;
-    if (!targetId) {
-      const { data: user } = await supabase.auth.getUser();
-      targetId = user.user?.id;
+  // プロフィール保存（モーダルから）
+  async function handleProfileSave(payload: ProfileSavePayload) {
+    try {
+      // id が無ければ auth から取得
+      let targetId = profile?.id;
+      if (!targetId) {
+        const { data: user } = await supabase.auth.getUser();
+        targetId = user.user?.id;
+      }
+      if (!targetId) throw new Error('ユーザーIDが取得できませんでした。');
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(payload) // bio/avatar_url/banner_url に null が来てもOK（DB側がnullable想定）
+        .eq('id', targetId);
+
+      if (error) throw error;
+
+      setProfile((prev) => ({ ...(prev || {}), ...payload, id: targetId! }));
+      setToast('プロフィールを保存しました');
+      setEditOpen(false);
+    } catch (e) {
+      console.error(e);
+      setToast('保存に失敗しました');
     }
-    if (!targetId) throw new Error('ユーザーIDが取得できませんでした。');
-
-    const { error } = await supabase
-      .from('profiles')
-      .update(payload)             // ← payload は bio に null を含んでもOK
-      .eq('id', targetId);
-
-    if (error) throw error;
-
-    setProfile(prev => ({ ...(prev || {}), ...payload, id: targetId! }));
-    setToast('プロフィールを保存しました');
-    setEditOpen(false);
-  } catch (e) {
-    console.error(e);
-    setToast('保存に失敗しました');
   }
-}
-
 
   return (
     <main className="font-zen">
@@ -290,12 +276,7 @@ async function handleProfileSave(payload: ProfileSavePayload) {
         <div className="absolute -bottom-10 left-5 md:left-10 flex items-end gap-4">
           <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100">
             {profile?.avatar_url ? (
-              <Image
-                src={profile.avatar_url}
-                alt={profile.display_name ?? 'avatar'}
-                fill
-                className="object-cover"
-              />
+              <Image src={profile.avatar_url} alt={profile.display_name ?? 'avatar'} fill className="object-cover" />
             ) : (
               <div className="w-full h-full grid place-items-center text-gray-400">
                 <BadgeCheck />
@@ -306,9 +287,7 @@ async function handleProfileSave(payload: ProfileSavePayload) {
             <h1 className="font-lilita text-2xl md:text-3xl tracking-wide">
               {profile?.display_name ?? 'My Portfolio'}
             </h1>
-            {profile?.tagline && (
-              <p className="text-gray-600 text-sm md:text-base mt-1">{profile.tagline}</p>
-            )}
+            {profile?.tagline && <p className="text-gray-600 text-sm md:text-base mt-1">{profile.tagline}</p>}
           </div>
         </div>
 
@@ -401,9 +380,7 @@ async function handleProfileSave(payload: ProfileSavePayload) {
               <button
                 onClick={() => {
                   const text = `${profile?.display_name ?? 'Artist'} | me-ish ポートフォリオ\n${publicUrl || ''}`;
-                  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                    text
-                  )}&hashtags=me_ish`;
+                  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&hashtags=me_ish`;
                   window.open(url, '_blank', 'noopener,noreferrer');
                 }}
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
@@ -501,10 +478,10 @@ async function handleProfileSave(payload: ProfileSavePayload) {
         <ProfileEditModal
           initialProfile={{
             display_name: profile.display_name,
-            bio: profile.bio || '',
-            avatar_url: profile.avatar_url || '',
-            banner_url: profile.banner_url || '',
-            sns_links: profile.sns_links || {},
+            bio: profile.bio ?? '',
+            avatar_url: profile.avatar_url ?? '',
+            banner_url: profile.banner_url ?? '',
+            sns_links: profile.sns_links ?? {},
           }}
           onSave={handleProfileSave}
           onCancel={() => setEditOpen(false)}
@@ -552,11 +529,7 @@ function EntryCard({ entry }: { entry: Entry }) {
       {/* Thumbnail */}
       <div className="relative w-full h-52 overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={thumb}
-          alt={entry.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition"
-        />
+        <img src={thumb} alt={entry.title} className="w-full h-full object-cover group-hover:scale-105 transition" />
         {sold && (
           <div className="absolute top-2 left-2 rounded-full bg-black/70 text-white text-xs px-2 py-1">
             SOLD
@@ -606,19 +579,14 @@ function EntryCard({ entry }: { entry: Entry }) {
       {/* Hover Actions */}
       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition grid place-items-center">
         <div className="flex items-center gap-3">
-          <a
-            href={`/artworks/${entry.id}`}
-            className="p-2 rounded-full bg-white hover:bg-gray-100 shadow"
-            aria-label="詳細を見る"
-          >
+          <a href={`/artworks/${entry.id}`} className="p-2 rounded-full bg-white hover:bg-gray-100 shadow" aria-label="詳細を見る">
             <ExternalLink className="w-5 h-5" />
           </a>
           <button
             className="p-2 rounded-full bg-white hover:bg-gray-100 shadow"
             aria-label="シェア"
             onClick={() => {
-              const base =
-                typeof window !== 'undefined' ? window.location.origin : '';
+              const base = typeof window !== 'undefined' ? window.location.origin : '';
               const url = base ? `${base}/artworks/${entry.id}` : `/artworks/${entry.id}`;
               const text = `${entry.title} | me-ish`;
               const share = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
@@ -630,11 +598,7 @@ function EntryCard({ entry }: { entry: Entry }) {
             <Share2 className="w-5 h-5" />
           </button>
           {entry.sale_type !== 'nft' && (
-            <a
-              href={`/downloads/${entry.id}`}
-              className="p-2 rounded-full bg-white hover:bg-gray-100 shadow"
-              aria-label="ダウンロード（購入者）"
-            >
+            <a href={`/downloads/${entry.id}`} className="p-2 rounded-full bg-white hover:bg-gray-100 shadow" aria-label="ダウンロード（購入者）">
               <Download className="w-5 h-5" />
             </a>
           )}
