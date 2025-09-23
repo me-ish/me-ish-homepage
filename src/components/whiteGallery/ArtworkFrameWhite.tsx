@@ -1,4 +1,3 @@
-// ✅ children を受け取り、作品の右下に配置する
 'use client'
 
 import React, {
@@ -8,12 +7,11 @@ import React, {
   useImperativeHandle,
   PropsWithChildren,
 } from 'react'
-import { useFrame, useLoader } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { TextureLoader } from 'three'
 import { a, useSpring } from '@react-spring/three'
 import { useZoomArtwork } from '../shared/ZoomArtworkContext'
-import { useTexture } from '@react-three/drei';
+import { useTexture } from '@react-three/drei'
 
 interface ArtworkData {
   position?: [number, number, number]
@@ -29,7 +27,9 @@ interface ArtworkData {
   sns_links?: string
   id?: number | null
   created_at?: string | null
-  sale_type?: 'normal' | 'nft';
+  sale_type?: 'normal' | 'nft'
+  // ▼ 版情報（ここが重要）
+  edition_mode?: 'limited' | 'unlimited' | null
   edition_total?: number | null
   edition_sold?: number | null
 }
@@ -58,7 +58,10 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
       id = null,
       created_at = null,
       sale_type = 'normal',
-      edition_total = 1,
+
+      // ▼ デフォルト“1”は禁止。nullのまま保持。
+      edition_mode = null,
+      edition_total = null,
       edition_sold = 0,
     } = data
 
@@ -66,11 +69,7 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
 
     useImperativeHandle(ref, () => {
       if (!groupRef.current) return null as any
-      return {
-        ...groupRef.current,
-        title,
-        author,
-      }
+      return { ...groupRef.current, title, author }
     })
 
     const width = 2.5 * scale
@@ -83,7 +82,7 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
       rotation[2],
     ]
 
-    const texture = useTexture(imageUrl || '/textures/fallback.jpg');
+    const texture = useTexture(imageUrl || '/textures/fallback.jpg')
 
     const [springs, api] = useSpring(() => ({
       emissiveIntensity: 0,
@@ -92,18 +91,13 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
 
     const [shouldGlow, setShouldGlow] = useState(false)
 
-useFrame(() => {
-  if (!avatarRef.current || !avatarRef.current.position) return
-
-  const artworkPos = new THREE.Vector3(...position)
-  const avatarPos = avatarRef.current.position
-
-  const distance = artworkPos.distanceTo(avatarPos)
-
-  api.start({
-    emissiveIntensity: distance < 7 ? 1.5 : 0,
-  })
-})
+    useFrame(() => {
+      if (!avatarRef.current || !avatarRef.current.position) return
+      const artworkPos = new THREE.Vector3(...position)
+      const avatarPos = avatarRef.current.position
+      const distance = artworkPos.distanceTo(avatarPos)
+      api.start({ emissiveIntensity: distance < 7 ? 1.5 : 0 })
+    })
 
     return (
       <group
@@ -112,34 +106,47 @@ useFrame(() => {
         rotation={adjustedRotation}
         onClick={(e) => {
           e.stopPropagation()
+
+          // ▼ Zoom に渡すpayload。版情報を“そのまま”渡し、フォールバック1は絶対入れない
+          const total =
+            typeof edition_total === 'number' && Number.isFinite(edition_total)
+              ? edition_total
+              : null
+          const sold =
+            typeof edition_sold === 'number' && Number.isFinite(edition_sold)
+              ? edition_sold
+              : 0
+
           setZoomedArtwork({
             id: String(id ?? ''),
             imageUrl,
+            // 必要なら image_url も併せて渡しておくと互換性◎
+            image_url: imageUrl as any,
+
             title,
             author,
             description,
             price: price ?? 0,
-            is_for_sale: is_for_sale ?? false,
+            is_for_sale: !!is_for_sale,
             sns_links: sns_links ?? '{}',
             created_at: created_at ?? '',
             is_sold: false,
             sale_type,
-            token_id: undefined,
-            width: undefined,
-            height: undefined,
-            likes: 0,
-            edition_total: data.edition_total ?? 1,
-            edition_sold: data.edition_sold ?? 0, 
-          })
+
+            // ▼ 版情報
+            edition_mode: edition_mode ?? null,
+            edition_total: total,
+            edition_sold: sold,
+          } as any)
         }}
       >
-        {/* ✅ 絵のパネル（影を落とす） */}
+        {/* 絵のパネル */}
         <mesh position={[0, 0, frameDepth / 2 + 0.001]} castShadow>
           <planeGeometry args={[width, height]} />
           <meshBasicMaterial map={texture} toneMapped={false} />
         </mesh>
 
-        {/* ✅ 厚みのある白フレーム（影を落とす） */}
+        {/* 厚みのある白フレーム */}
         <a.mesh position={[0, 0, -0.02]} castShadow>
           <boxGeometry args={[width + 0.2, height + 0.2, frameDepth]} />
           <a.meshStandardMaterial
@@ -151,7 +158,7 @@ useFrame(() => {
           />
         </a.mesh>
 
-        {/* ✅ ラベルを右下に配置 */}
+        {/* ラベル（右下） */}
         {children && (
           <group position={[width / 2 + 0.1, -height / 2 - 0.1, 0]}>
             {children}

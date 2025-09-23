@@ -60,29 +60,54 @@ const editionSold: number = a.edition_sold ?? 0;
   const sale_type: 'nft' | 'normal' | string = a.sale_type ?? 'normal';
   const token_id: string | number | null = a.token_id ?? null;
 
-// edition_mode を最優先し、文字列は trim + lowercase で正規化
+// --- Edition 判定（edition_mode を最優先し、文字列は正規化） ---
 const rawEditionMode = (a as any).edition_mode ?? (a as any).editionMode ?? null;
-const editionMode: 'limited' | 'unlimited' | null =
-  typeof rawEditionMode === 'string'
-    ? (rawEditionMode as string).trim().toLowerCase() as 'limited' | 'unlimited'
-    : rawEditionMode;
+const normalizedMode =
+  typeof rawEditionMode === 'string' ? rawEditionMode.trim().toLowerCase() : rawEditionMode;
+const mode: 'limited' | 'unlimited' | null =
+  normalizedMode === 'limited' || normalizedMode === 'unlimited' ? normalizedMode : null;
 
-// total は数値のときだけ採用
-const total = (typeof editionTotal === 'number' && Number.isFinite(editionTotal))
-  ? editionTotal
-  : null;
+// edition_total を数値として安全に採用（それ以外は null）
+const total =
+  typeof editionTotal === 'number' && Number.isFinite(editionTotal) ? editionTotal : null;
 
-// ここからの判定はそのままでもOKですが、editionMode を優先
+// ★ データ確認ログ（ここを追加）
+console.log('DBG edition/raw', {
+  id: (a as any).id,
+  sale_type: a.sale_type,
+  is_for_sale: a.is_for_sale,
+  edition_mode_db: (a as any).edition_mode,
+  editionMode_ui: (a as any).editionMode,
+  normalizedMode,
+  mode,
+  edition_total_raw: a.edition_total,
+  edition_total_sanitized: total,
+  edition_sold: a.edition_sold,
+});
+
+
+// limited/unlimited を一意に決定（mode を最優先、なければ total>0）
 const isLimited =
-  (a.is_for_sale ?? false) &&
-  (editionMode === 'limited' || (editionMode == null && total !== null && total > 0));
-
+  (a.is_for_sale ?? false) && (mode === 'limited' || (mode == null && total !== null && total > 0));
 const isUnlimited =
-  (a.is_for_sale ?? false) &&
-  (editionMode === 'unlimited' || (editionMode == null && (total === null || total <= 0)));
+  (a.is_for_sale ?? false) && (mode === 'unlimited' || (mode == null && (total === null || total <= 0)));
 
-const editionRemaining = isLimited && total !== null ? (total - editionSold) : null;
-const isEditionSoldOut = isLimited && (editionRemaining ?? 0) <= 0;
+// ★ 判定結果ログ（ここを追加）
+console.log('DBG edition/judge', {
+  id: (a as any).id,
+  mode,
+  total,
+  isLimited,
+  isUnlimited,
+});
+
+
+// 表示用の残数・総数（unlimited のときは必ず null に倒す）
+const editionTotalForDisplay = isLimited ? total : null;
+const editionRemainingForDisplay = isLimited && total != null ? (total - editionSold) : null;
+
+// SOLD は限定時のみ有効
+const isEditionSoldOut = isLimited && (editionRemainingForDisplay ?? 0) <= 0;
 
   // like 取得
   useEffect(() => {
@@ -116,13 +141,25 @@ const isEditionSoldOut = isLimited && (editionRemaining ?? 0) <= 0;
     }
   };
 
-  const handlePurchase = async () => {
-    try {
-      // 既存の決済導線に合わせる
-    } catch (err) {
-      console.error('❌ 購入処理に失敗しました', err);
-    }
-  };
+const handlePurchase = async () => {
+  if (!id || !title || !price) {
+    alert('購入情報が不足しています');
+    return;
+  }
+
+  const res = await fetch('/api/purchase/stripe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ entryId: id, title, price: Number(price) }),
+  });
+  const data = await res.json();
+  if (data.url) {
+    window.location.href = data.url;
+  } else {
+    alert('Stripeへの遷移に失敗しました');
+  }
+};
+
 
   // SNS
   let links: Record<string, string> = {};
@@ -273,8 +310,8 @@ const isEditionSoldOut = isLimited && (editionRemaining ?? 0) <= 0;
           isSold={is_sold}
           isEditionSoldOut={isEditionSoldOut}
           price={price ?? null}
-          editionTotal={editionTotal}
-          editionRemaining={editionRemaining}
+          editionTotal={editionTotalForDisplay}
+          editionRemaining={editionRemainingForDisplay}
           saleType={sale_type}
           tokenId={token_id}
           entryId={id}
