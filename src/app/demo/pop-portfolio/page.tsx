@@ -49,6 +49,47 @@ function cn(...c: (string | false | undefined)[]) {
   return c.filter(Boolean).join(' ');
 }
 
+/* ---- Pastel Tile (淡い色板) ---------------------------------------------- */
+const PASTEL_PALETTES: [string, string][] = [
+  ['#fff7ed', '#e0f2fe'], // orange-50 → sky-100
+  ['#fef9c3', '#e9d5ff'], // yellow-100 → purple-200
+  ['#ecfeff', '#fde68a'], // cyan-50 → amber-300
+  ['#f5f3ff', '#dcfce7'], // indigo-50 → green-100
+  ['#fdf2f8', '#e0e7ff'], // pink-50 → indigo-100
+];
+
+function PastelTile({
+  label,
+  paletteIndex = 0,
+  pattern = 'dots', // 'dots' | 'grid' | 'none'
+  className = '',
+}: {
+  label: string;
+  paletteIndex?: number;
+  pattern?: 'dots' | 'grid' | 'none';
+  className?: string;
+}) {
+  const [c1, c2] = PASTEL_PALETTES[paletteIndex % PASTEL_PALETTES.length];
+  const base = `linear-gradient(135deg, ${c1}, ${c2})`;
+  const overlay =
+    pattern === 'dots'
+      ? 'radial-gradient(circle at 2px 2px, rgba(0,0,0,.06) 2px, transparent 2px) 0 0/12px 12px'
+      : pattern === 'grid'
+      ? 'linear-gradient(rgba(0,0,0,.06) 1px, transparent 1px) 0 0/16px 16px, linear-gradient(90deg, rgba(0,0,0,.06) 1px, transparent 1px) 0 0/16px 16px'
+      : '';
+  const background = overlay ? `${overlay}, ${base}` : base;
+
+  return (
+    <div
+      role="img"
+      aria-label={label}
+      className={cn('h-full w-full', className)}
+      style={{ background }}
+    />
+  );
+}
+
+
 /* --------------------------- Data (demo) ---------------------------------- */
 const WORKS = Array.from({ length: 10 }).map((_, i) => ({
   id: i + 1,
