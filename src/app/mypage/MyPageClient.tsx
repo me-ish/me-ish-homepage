@@ -95,6 +95,7 @@ export default function MyPageClient() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [uid, setUid] = useState<string | null>(null);
 
   // UI state
   const [query, setQuery] = useState('');
@@ -134,55 +135,7 @@ export default function MyPageClient() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // 初期ロード（クライアントのみ）
-  useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-
-        // Profile
-        const { data: profData, error: profErr } = await supabase
-          .from('profiles')
-          .select('id, display_name, avatar_url, banner_url, tagline, bio, sns_links')
-          .returns<Profile>() // 型を確定
-          .maybeSingle(); // 0/1行想定
-
-        if (!profErr) setProfile(profData ?? null);
-
-        // Entries
-        const { data: entriesData, error: entriesErr } = await supabase
-          .from('entries')
-          .select(
-            [
-              'id',
-              'title',
-              'image_url',
-              'confirmed',
-              'created_at',
-              'likes',
-              'gallery_type',
-              'edition_total',
-              'edition_sold',
-              'price',
-              'meish_fee_yen',
-              'artist_reward_yen',
-              'confirmed_at',
-              'display_start_at',
-              'display_end_at',
-              'sale_type',
-              'is_nft',
-              'sold',
-            ].join(',')
-          )
-          .order('created_at', { ascending: false })
-          .returns<Entry[]>(); // GenericStringError対策
-
-        setEntries(entriesErr ? [] : entriesData ?? []);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+useEffect
 
   // 指標
   const metrics = useMemo(() => {

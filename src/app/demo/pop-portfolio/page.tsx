@@ -333,7 +333,7 @@ function About() {
             立ち絵／アイコン／カバー／ポスター／グッズ向けまで幅広く対応します。
           </p>
           <ul className="mt-3 text-sm">
-            <li>・拠点：仙台（リモート可）</li>
+            <li>・拠点：仙台</li>
             <li>・ツール：Clip Studio / Procreate / Photoshop / Illustrator</li>
             <li>・納品：PNG, PSD, Ai など用途に合わせて</li>
           </ul>

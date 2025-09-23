@@ -304,7 +304,7 @@ function About() {
             「見ているだけで楽しくなる世界観」を丁寧に仕上げます。
           </p>
           <ul className="mt-6 grid gap-2 text-sm">
-            <li>• 拠点：東京／リモート可</li>
+            <li>• 拠点：仙台</li>
             <li>• ツール：Clip Studio, Procreate, Photoshop, Illustrator</li>
             <li>• 依頼：立ち絵・アイコン・キャラクターデザイン・SNSヘッダー・同人誌表紙・グッズ用イラスト 他</li>
           </ul>
