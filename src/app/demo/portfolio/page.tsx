@@ -1,13 +1,12 @@
 'use client';
 
 /* ============================================================================
-   One-Page Portfolio (Surprise Edition)
-   - No extra deps. Tailwind only.
-   - Parallax hero / magnetic buttons / 3D-tilt cards / marquee / masonry gallery
-   - Accessible & responsive
+   One-Page Portfolio (Illustrator JP/EN Edition)
+   - Tailwind only / 動きはそのまま
+   - 文言を日本語＋英語併記に変更（WORK／作品 など）
    ============================================================================ */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 // ----------------------------- Helpers ---------------------------------------
 function useParallax(mult = 0.03) {
@@ -27,7 +26,7 @@ function useParallax(mult = 0.03) {
   return ref;
 }
 
-// 置き換え：HTMLButtonElement 固定 → ジェネリック HTMLElement
+// ジェネリック対応のマグネット
 function useMagnet<T extends HTMLElement>(strength = 0.25) {
   const ref = React.useRef<T | null>(null);
   React.useEffect(() => {
@@ -43,8 +42,6 @@ function useMagnet<T extends HTMLElement>(strength = 0.25) {
     let { cx, cy } = center();
 
     const onMove = (e: MouseEvent) => {
-      // スクロールで位置が変わるので都度追従させたい場合は次行のコメント解除
-      // ({ cx, cy } = center());
       const dx = (e.clientX - cx) * strength;
       const dy = (e.clientY - cy) * strength;
       el.style.transform = `translate(${dx}px, ${dy}px)`;
@@ -68,7 +65,6 @@ function useMagnet<T extends HTMLElement>(strength = 0.25) {
   return ref;
 }
 
-
 function cn(...c: (string | false | undefined)[]) {
   return c.filter(Boolean).join(' ');
 }
@@ -76,25 +72,22 @@ function cn(...c: (string | false | undefined)[]) {
 // --------------------------- Demo Data ---------------------------------------
 const ARTWORKS = Array.from({ length: 16 }).map((_, i) => ({
   id: i + 1,
-  title: `Project ${String(i + 1).padStart(2, '0')}`,
-  // Royalty-free placeholder from picsum:
+  title: `Artwork ${String(i + 1).padStart(2, '0')}`,
   image: `https://picsum.photos/seed/port${i + 1}/1200/900`,
-  tag: ['Illustration', 'UI/UX', 'Branding', '3D', 'Photo'][i % 5],
+  tag: ['イラスト / Illustration', 'キャラクター / Character', 'グッズ / Goods', '同人誌表紙 / Cover', 'アイコン / Icon'][i % 5],
 }));
 
-const LOGOS = [
-  'AURORA', 'POLAR', 'MOSS', 'NEBULA', 'LYNX', 'CINDER', 'ORBIT', 'NOVA',
-];
+const LOGOS = ['AURORA', 'POLAR', 'MOSS', 'NEBULA', 'LYNX', 'CINDER', 'ORBIT', 'NOVA'];
 
 // --------------------------- Sections ----------------------------------------
 function Nav() {
   const [open, setOpen] = useState(false);
   const items = [
-    { href: '#about', label: 'About' },
-    { href: '#work', label: 'Work' },
-    { href: '#skills', label: 'Skills' },
-    { href: '#timeline', label: 'Timeline' },
-    { href: '#contact', label: 'Contact' },
+    { href: '#about', label: 'PROFILE／プロフィール' },
+    { href: '#work', label: 'WORK／作品' },
+    { href: '#skills', label: 'SKILLS／得意分野' },
+    { href: '#timeline', label: 'TIMELINE／活動経歴' },
+    { href: '#contact', label: 'CONTACT／お問い合わせ' },
   ];
   return (
     <header className="fixed inset-x-0 top-0 z-50">
@@ -104,14 +97,14 @@ function Nav() {
             <a href="#top" className="font-black tracking-tight text-lg">
               <span className="sr-only">Back to top</span>
               <span className="inline-block bg-gradient-to-r from-fuchsia-600 via-rose-500 to-orange-400 bg-clip-text text-transparent">
-                YOU / PORTFOLIO
+                ILLUSTRATOR / PORTFOLIO
               </span>
             </a>
             <button
               onClick={() => setOpen((v) => !v)}
               className="md:hidden rounded-full px-3 py-1 text-sm font-medium border border-zinc-300 dark:border-zinc-700"
             >
-              Menu
+              MENU
             </button>
             <ul className="hidden md:flex gap-2 text-sm">
               {items.map((it) => (
@@ -153,7 +146,7 @@ function Hero() {
   const ctaRef = useMagnet<HTMLAnchorElement>(0.2);
   return (
     <section id="top" className="relative overflow-hidden">
-      {/* Background layers */}
+      {/* 背景レイヤ */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -167,27 +160,25 @@ function Hero() {
       <div className="relative mx-auto max-w-7xl px-4 pt-28 pb-24 md:pt-40 md:pb-36">
         <div className="grid gap-10 md:grid-cols-2 md:items-center">
           <div>
-            <p className="mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs uppercase tracking-widest">
+            <p className="mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs tracking-widest">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Available for commissions
+              COMMISSIONS OPEN／ご依頼受付中
             </p>
             <h1 className="text-4xl md:text-6xl font-black leading-[1.05] tracking-tight">
-              Design that
-              <span className="relative inline-block ml-2">
-                <span className="relative z-10 bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-600 bg-clip-text text-transparent">
-                  moves
-                </span>
+              <span className="relative inline-block">
+                心を動かす
                 <span
                   aria-hidden
                   ref={ref}
                   className="absolute -inset-x-2 -inset-y-3 rounded-xl blur-2xl bg-gradient-to-r from-emerald-500/50 via-cyan-500/50 to-blue-600/50"
                 />
               </span>
-              people.
+              イラストを描きます。<br className="hidden md:block" />
+              <span className="text-zinc-500 text-xl md:text-2xl font-semibold">Illustrations that move people.</span>
             </h1>
             <p className="mt-6 text-zinc-600 dark:text-zinc-400 text-base md:text-lg max-w-xl">
-              I craft bold, performant interfaces where every pixel has a job.
-              From identity to interactive art—let’s make something unforgettable.
+              女の子・SD（デフォルメ）キャラクター、グッズ映えするイラストが得意です。
+              アプリアイコン、立ち絵、同人誌表紙、ゲーム用素材など幅広く対応します。
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -202,25 +193,24 @@ function Hero() {
                     '0 8px 30px rgba(16,185,129,.35), 0 2px 8px rgba(6,182,212,.25)',
                 }}
               >
-                See my work
+                WORK／作品を見る
               </a>
               <a
                 href="#contact"
                 className="inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-900 hover:text-white transition"
               >
-                Contact
+                CONTACT／お問い合わせ
               </a>
             </div>
           </div>
 
-          {/* Tilt card */}
           <TiltCard />
         </div>
 
-        {/* Scrolling marquee of “clients” */}
+        {/* 共同制作・コラボのマルキー */}
         <div className="mt-16 overflow-hidden">
           <div className="flex items-center gap-8 text-zinc-500 dark:text-zinc-400">
-            <span className="text-xs uppercase tracking-widest">Selected collabs</span>
+            <span className="text-xs tracking-widest">SELECTED COLLABS／主なコラボ</span>
             <div className="relative w-full">
               <div className="animate-[marquee_18s_linear_infinite] whitespace-nowrap">
                 {LOGOS.concat(LOGOS).map((name, idx) => (
@@ -284,17 +274,13 @@ function TiltCard() {
           className="absolute left-4 bottom-4 rounded-xl bg-white/80 dark:bg-zinc-900/70 backdrop-blur px-4 py-2 text-sm font-medium"
           style={{ transform: 'translateZ(30px)' }}
         >
-          Winner — Interactive Design 2025
+          受賞：インタラクティブデザイン 2025／Winner
         </div>
         <div
           className="absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-semibold text-white"
-          style={{
-            transform: 'translateZ(50px)',
-            background:
-              'linear-gradient(135deg, #10b981, #06b6d4 50%, #2563eb)',
-          }}
+          style={{ transform: 'translateZ(50px)', background: 'linear-gradient(135deg, #10b981, #06b6d4 50%, #2563eb)' }}
         >
-          Featured
+          ピックアップ／Featured
         </div>
       </div>
     </div>
@@ -304,18 +290,23 @@ function TiltCard() {
 function About() {
   return (
     <section id="about" className="relative mx-auto max-w-6xl px-4 py-20 md:py-28">
-      <div className="grid gap-10 md:grid-cols-[1.1fr_.9fr] md:items-center">
+      <div className="flex items-center gap-3 text-xs uppercase tracking-widest text-zinc-500">
+        <span>PROFILE</span>
+        <span>／</span>
+        <span>プロフィール</span>
+      </div>
+      <div className="mt-3 grid gap-10 md:grid-cols-[1.1fr_.9fr] md:items-center">
         <div>
-          <h2 className="text-3xl md:text-4xl font-black tracking-tight">About</h2>
+          <h2 className="text-3xl md:text-4xl font-black tracking-tight">イラストレーター ○○</h2>
           <p className="mt-6 text-zinc-600 dark:text-zinc-400 leading-relaxed">
-            I’m a multidisciplinary designer bridging illustration, brand, and interactive
-            systems. My work focuses on clarity, rhythm, and tiny delightful details that
-            reward curiosity. I love fast teams, bold ideas, and shipping.
+            ポップで可愛らしい女の子や、SD（デフォルメ）キャラクターを中心に制作しています。
+            立ち絵・アイコン・同人誌表紙・ゲーム用素材・グッズに映えるイラストまで幅広く対応可能です。
+            「見ているだけで楽しくなる世界観」を丁寧に仕上げます。
           </p>
           <ul className="mt-6 grid gap-2 text-sm">
-            <li>• Based in Sendai / Remote friendly</li>
-            <li>• Tools: Figma, Procreate, Blender (basic), Next.js, Tailwind</li>
-            <li>• Services: Art direction, UI/UX, visual identity, web builds</li>
+            <li>• 拠点：仙台／リモート可</li>
+            <li>• ツール：Clip Studio, Procreate, Photoshop, Illustrator</li>
+            <li>• 依頼：立ち絵・アイコン・キャラクターデザイン・SNSヘッダー・同人誌表紙・グッズ用イラスト 他</li>
           </ul>
         </div>
         <div className="relative">
@@ -330,7 +321,6 @@ function About() {
 }
 
 function Work() {
-  // Split into two columns (masonry)
   const left = ARTWORKS.filter((_, i) => i % 2 === 0);
   const right = ARTWORKS.filter((_, i) => i % 2 === 1);
 
@@ -338,8 +328,13 @@ function Work() {
     <section id="work" className="bg-zinc-50/60 dark:bg-zinc-950/60 py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-4">
         <div className="flex items-end justify-between">
-          <h2 className="text-3xl md:text-4xl font-black tracking-tight">Selected Work</h2>
-          <a href="#contact" className="text-sm underline underline-offset-4">Let’s collaborate →</a>
+          <div>
+            <div className="flex items-center gap-3 text-xs uppercase tracking-widest text-zinc-500">
+              <span>WORK</span><span>／</span><span>作品</span>
+            </div>
+            <h2 className="mt-2 text-3xl md:text-4xl font-black tracking-tight">Selected Works</h2>
+          </div>
+          <a href="#contact" className="text-sm underline underline-offset-4">コラボ・ご依頼はこちら →</a>
         </div>
 
         <div className="mt-10 grid gap-6 md:grid-cols-2">
@@ -370,16 +365,19 @@ function Work() {
 
 function Skills() {
   const items = [
-    { label: 'UI/UX', v: 0.92 },
-    { label: 'Brand', v: 0.86 },
-    { label: 'Illustration', v: 0.9 },
-    { label: 'Motion', v: 0.7 },
-    { label: '3D', v: 0.55 },
-    { label: 'Frontend', v: 0.78 },
+    { label: 'キャラクターデザイン / Character Design', v: 0.95 },
+    { label: 'SD・デフォルメ / Super Deformed', v: 0.9 },
+    { label: 'グッズデザイン / Goods Design', v: 0.85 },
+    { label: 'ゲーム用素材 / Game Assets', v: 0.8 },
+    { label: '背景・UI / Background & UI', v: 0.7 },
+    { label: 'アニメ塗り・厚塗り / Coloring', v: 0.78 },
   ];
   return (
     <section id="skills" className="relative mx-auto max-w-6xl px-4 py-20 md:py-28">
-      <h2 className="text-3xl md:text-4xl font-black tracking-tight">Skills</h2>
+      <div className="flex items-center gap-3 text-xs uppercase tracking-widest text-zinc-500">
+        <span>SKILLS</span><span>／</span><span>得意分野</span>
+      </div>
+      <h2 className="mt-2 text-3xl md:text-4xl font-black tracking-tight">Strengths</h2>
       <div className="mt-10 grid grid-cols-2 md:grid-cols-3 gap-6">
         {items.map((it) => (
           <div
@@ -388,9 +386,7 @@ function Skills() {
           >
             <div
               className="mx-auto mb-4 aspect-square w-28 rounded-full"
-              style={{
-                background: `conic-gradient(#10b981 ${it.v * 360}deg, #e5e7eb 0deg)`,
-              }}
+              style={{ background: `conic-gradient(#10b981 ${it.v * 360}deg, #e5e7eb 0deg)` }}
               aria-hidden
             />
             <div className="text-center font-semibold">{it.label}</div>
@@ -403,24 +399,24 @@ function Skills() {
 }
 
 function Timeline() {
-  const items = [
-    ['2025', 'Launched “FLOAT” gallery and shipped COA feature'],
-    ['2024', 'Built interactive gallery with R3F, initiated artist program'],
-    ['2023', 'Started freelance design, shipped 20+ small websites'],
+  const items: Array<[string, string]> = [
+    ['2025', 'オンライン3Dギャラリー「me-ish」に出展開始／COA（購入証明）対応'],
+    ['2024', 'グッズデザイン・同人誌表紙・アイコン制作を中心に受注'],
+    ['2023', 'SNSでの作品公開を本格化、依頼受付を開始'],
   ];
   return (
     <section id="timeline" className="bg-white/60 dark:bg-zinc-900/60 py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-4">
-        <h2 className="text-3xl md:text-4xl font-black tracking-tight">Timeline</h2>
+        <div className="flex items-center gap-3 text-xs uppercase tracking-widest text-zinc-500">
+          <span>TIMELINE</span><span>／</span><span>活動経歴</span>
+        </div>
+        <h2 className="mt-2 text-3xl md:text-4xl font-black tracking-tight">History</h2>
         <div className="mt-8 relative">
           <div className="absolute left-4 md:left-1/2 -translate-x-1/2 h-full w-px bg-gradient-to-b from-transparent via-zinc-300 dark:via-zinc-700 to-transparent" />
           <ul className="space-y-8">
             {items.map(([year, text], i) => (
               <li key={i} className="relative grid md:grid-cols-2 gap-6 items-start">
-                <div className={cn(
-                  'md:text-right',
-                  i % 2 === 1 && 'md:col-start-2'
-                )}>
+                <div className={cn('md:text-right', i % 2 === 1 && 'md:col-start-2')}>
                   <div className="inline-flex items-center gap-3">
                     <span className="text-2xl font-black">{year}</span>
                     <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -444,18 +440,22 @@ function Timeline() {
 function Contact() {
   return (
     <section id="contact" className="relative mx-auto max-w-6xl px-4 py-20 md:py-28">
-      <div className="relative overflow-hidden rounded-3xl border border-white/60 dark:border-zinc-800 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-950 p-8 md:p-14">
+      <div className="flex items-center gap-3 text-xs uppercase tracking-widest text-zinc-500">
+        <span>CONTACT</span><span>／</span><span>お問い合わせ</span>
+      </div>
+
+      <div className="mt-3 relative overflow-hidden rounded-3xl border border-white/60 dark:border-zinc-800 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-950 p-8 md:p-14">
         <div className="absolute -left-10 -top-10 h-56 w-56 rounded-full bg-gradient-to-br from-emerald-400/30 to-cyan-400/30 blur-3xl" />
         <div className="absolute -right-10 -bottom-10 h-56 w-56 rounded-full bg-gradient-to-br from-blue-500/20 to-emerald-400/20 blur-3xl" />
         <div className="relative grid gap-8 md:grid-cols-[1.1fr_.9fr] md:items-center">
           <div>
-            <h2 className="text-3xl md:text-4xl font-black tracking-tight">Let’s build something vivid.</h2>
+            <h2 className="text-3xl md:text-4xl font-black tracking-tight">お仕事のご依頼・ご相談はこちら</h2>
             <p className="mt-4 text-zinc-600 dark:text-zinc-400">
-              Commissions, collabs, or just say hi. I reply within 24–48h.
+              内容・ご予算・納期の目安をお知らせください。通常24〜48時間以内にご返信いたします。
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <a
-                href="mailto:hello@example.com?subject=Portfolio%20Inquiry"
+                href="mailto:hello@example.com?subject=%E4%BC%9A%E7%A4%BE%E5%90%8D%E3%80%81%E4%BE%9D%E9%A0%BC%E5%86%85%E5%AE%B9%E3%81%AE%E3%81%94%E7%9F%A5%E3%82%89%E3%81%9B"
                 className="inline-flex items-center rounded-full px-6 py-3 text-sm font-semibold text-white"
                 style={{ background: 'linear-gradient(135deg, #10b981, #2563eb)' }}
               >
@@ -477,27 +477,30 @@ function Contact() {
               </a>
             </div>
           </div>
+
+          {/* デモフォーム（実運用時はResend/Supabase等と接続） */}
           <div className="rounded-2xl border border-white/60 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/70 backdrop-blur p-6">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                alert('Thanks! This is a demo form. Plug into Resend / Supabase as needed.');
+                alert('送信ありがとうございます！（デモ） 実運用ではResendやSupabaseに接続してください。');
               }}
               className="grid gap-4"
             >
-              <input className="rounded-lg border px-3 py-2 bg-white/90 dark:bg-zinc-950/60" placeholder="Your name" required />
-              <input className="rounded-lg border px-3 py-2 bg-white/90 dark:bg-zinc-950/60" type="email" placeholder="Email" required />
-              <textarea className="rounded-lg border px-3 py-2 bg-white/90 dark:bg-zinc-950/60" rows={4} placeholder="Project details…" />
+              <input className="rounded-lg border px-3 py-2 bg-white/90 dark:bg-zinc-950/60" placeholder="お名前 / Your name" required />
+              <input className="rounded-lg border px-3 py-2 bg-white/90 dark:bg-zinc-950/60" type="email" placeholder="メールアドレス / Email" required />
+              <textarea className="rounded-lg border px-3 py-2 bg-white/90 dark:bg-zinc-950/60" rows={4} placeholder="ご依頼内容・用途・点数・希望納期など / Project details…" />
               <button
                 className="rounded-lg px-4 py-2 text-sm font-semibold text-white"
                 style={{ background: 'linear-gradient(135deg, #06b6d4, #7c3aed)' }}
               >
-                Send inquiry
+                送信する／Send
               </button>
             </form>
           </div>
         </div>
       </div>
+
       <footer className="mt-10 text-center text-xs text-zinc-500">
         © {new Date().getFullYear()} Your Name. All rights reserved.
       </footer>
@@ -507,7 +510,6 @@ function Contact() {
 
 // ----------------------------- Page ------------------------------------------
 export default function PortfolioPage() {
-  // prefer-dark if user set
   useEffect(() => {
     const m = window.matchMedia('(prefers-color-scheme: dark)');
     if (m.matches) document.documentElement.classList.add('dark');
