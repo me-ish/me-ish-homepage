@@ -40,7 +40,6 @@ type Profile = {
   display_name: string;
   avatar_url?: string | null;
   banner_url?: string | null;
-  tagline?: string | null;
   bio?: string | null;
   sns_links?: SNSLinks | null;
 };
@@ -151,10 +150,10 @@ export default function MyPageClient() {
       try {
         setLoading(true);
 
-        // profiles（自分の行のみ）
+        // profiles（自分の行のみ）※ tagline は参照しない
         const { data: prof, error: profErr } = await supabase
           .from('profiles')
-          .select('id, display_name, avatar_url, banner_url, tagline, bio, sns_links')
+          .select('id, display_name, avatar_url, banner_url, bio, sns_links')
           .eq('id', uid)
           .returns<Profile>() // 型を固定
           .maybeSingle();
@@ -174,7 +173,6 @@ export default function MyPageClient() {
             bio: null,
             avatar_url: meta.avatar_url || meta.picture || null,
             banner_url: null,
-            tagline: null, // 明示
             sns_links: {},
           };
           const { error: upErr } = await supabase.from('profiles').upsert(seed);
@@ -184,7 +182,7 @@ export default function MyPageClient() {
           setProfile(prof);
         }
 
-        // entries（最小限のカラム / 自分のみ）
+        // entries（自分のみ）
         const { data: es, error: esErr } = await supabase
           .from('entries')
           .select(
@@ -274,7 +272,7 @@ export default function MyPageClient() {
     }
   };
 
-  // 保存（upsert / tagline を明示）
+  // 保存（upsert）
   async function handleProfileSave(payload: ProfileSavePayload) {
     try {
       const { data: auth } = await supabase.auth.getUser();
@@ -287,7 +285,6 @@ export default function MyPageClient() {
         bio: (payload.bio ?? '').trim() || null,
         avatar_url: payload.avatar_url || null,
         banner_url: payload.banner_url || null,
-        tagline: profile?.tagline ?? null, // 明示
         sns_links: payload.sns_links || {},
       };
 
@@ -342,7 +339,6 @@ export default function MyPageClient() {
             <h1 className="font-lilita text-2xl md:text-3xl tracking-wide">
               {profile?.display_name ?? 'My Portfolio'}
             </h1>
-            {profile?.tagline && <p className="text-gray-600 text-sm md:text-base mt-1">{profile.tagline}</p>}
           </div>
         </div>
 
@@ -528,7 +524,7 @@ export default function MyPageClient() {
         </div>
       )}
 
-      {/* プロフィール編集モーダル（profileがなくても開ける） */}
+      {/* プロフィール編集モーダル */}
       {editOpen && (
         <ProfileEditModal
           initialProfile={{
@@ -615,7 +611,6 @@ function EntryCard({ entry }: { entry: Entry }) {
               {isUnlimited(entry) ? (
                 <>
                   <InfinityIcon className="w-4 h-4" />
-                  <span>∞</span>
                 </>
               ) : (
                 <>
