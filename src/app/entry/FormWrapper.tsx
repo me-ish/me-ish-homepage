@@ -199,6 +199,14 @@ if (isSale && editionModeToSave === 'limited') {
   editionTotalNum = n;
 }
 
+const FEE_RATE = 0.15;
+const priceNum =
+  data.isForSale === 'yes' && data.price
+    ? Number(String(data.price).replace(/[^\d]/g, ''))
+    : 0;
+const meishFeeYen = Math.floor(priceNum * FEE_RATE);
+const artistRewardYen = Math.max(0, priceNum - meishFeeYen);
+
       // ★ entries 登録（既存ロジックを維持）
       const { error } = await supabase.from('entries').insert([{
   artist_name: data.artistName,
@@ -223,8 +231,8 @@ if (isSale && editionModeToSave === 'limited') {
   display_end_at: displayEndAt,
   file_name: fileName,
   external_user_id: externalUserId,
-  meish_fee_yen: (data as any).meish_fee_yen ?? null,
-  artist_reward_yen: (data as any).artist_reward_yen ?? null,
+  meish_fee_yen: isSale ? meishFeeYen : null,
+  artist_reward_yen: isSale ? artistRewardYen : null,
   has_signature: data.has_signature === 'yes',
 }]);
 

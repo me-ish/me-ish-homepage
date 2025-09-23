@@ -47,8 +47,8 @@ export default function Hero({ vgenUrl, twitterUrl, instaUrl, homepageUrl }: Pro
               NATORI <span className="text-[#FF7FB0]">Portfolio</span>
             </h1>
             <p className={`${zen.className} mt-5 text-lg leading-relaxed text-gray-700`}>
-              Transparent light with gentle pink tones.<br />
-              Cute and soft—seasoned with a slightly mature nuance.
+              Thank you for looking!<br />
+              I create pastel-colored illustrations with soft pink accents—bright, cute, and heartwarming.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-4">
