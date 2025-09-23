@@ -473,20 +473,21 @@ export default function MyPageClient() {
         </div>
       )}
 
-      {/* プロフィール編集モーダル */}
-      {editOpen && profile && (
-        <ProfileEditModal
-          initialProfile={{
-            display_name: profile.display_name,
-            bio: profile.bio ?? '',
-            avatar_url: profile.avatar_url ?? '',
-            banner_url: profile.banner_url ?? '',
-            sns_links: profile.sns_links ?? {},
-          }}
-          onSave={handleProfileSave}
-          onCancel={() => setEditOpen(false)}
-        />
-      )}
+{/* プロフィール編集モーダル */}
+{editOpen && (
+  <ProfileEditModal
+    initialProfile={{
+      display_name: profile?.display_name ?? '',
+      bio: profile?.bio ?? '',
+      avatar_url: profile?.avatar_url ?? null,
+      banner_url: profile?.banner_url ?? null,
+      sns_links: profile?.sns_links ?? {},
+    }}
+    onSave={handleProfileSave}
+    onCancel={() => setEditOpen(false)}
+  />
+)}
+
     </main>
   );
 }
