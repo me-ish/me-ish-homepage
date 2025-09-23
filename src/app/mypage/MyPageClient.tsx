@@ -1,7 +1,9 @@
+// src/app/mypage/MyPageClient.tsx
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import ProfileEditModal from '@/components/ProfileEditModal';
 import {
@@ -22,7 +24,7 @@ import {
 } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
 
-/* ===================== Types（最小に統一） ===================== */
+/* ========== Types ========== */
 type SNSLinks = { homepage?: string; twitter?: string; instagram?: string };
 
 type ProfileSavePayload = {
@@ -45,15 +47,16 @@ type Profile = {
 
 type Entry = {
   id: number;
+  user_id?: string | null;
   title: string;
   image_url: string;
   confirmed: boolean;
   created_at: string;
   likes?: number;
   gallery_type?: 'white' | 'float' | string;
-  edition_total?: number | null; // null/undefined => 無制限
+  edition_total?: number | null;
   edition_sold?: number;
-  price?: number | null; // 税込（円）
+  price?: number | null;
   meish_fee_yen?: number | null;
   artist_reward_yen?: number | null;
   confirmed_at?: string | null;
@@ -64,7 +67,7 @@ type Entry = {
   sold?: boolean | null;
 };
 
-/* ===================== Utils ===================== */
+/* ========== Utils ========== */
 const BRAND = '#00a1e9';
 
 const SORTS = [
@@ -78,7 +81,7 @@ type SortKey = (typeof SORTS)[number]['key'];
 const formatYen = (n?: number | null) =>
   typeof n === 'number' ? `¥${n.toLocaleString()}` : '—';
 
-const isUnlimited = (e: Entry) => e.edition_total === null || e.edition_total === undefined;
+const isUnlimited = (e: Entry) => e.edition_total == null;
 
 const editionSummary = (e: Entry) => {
   if (isUnlimited(e)) return '∞';
@@ -90,52 +93,145 @@ const editionSummary = (e: Entry) => {
 const galleryBadgeText = (g?: string) => (g === 'float' ? 'Float' : 'White');
 const saleBadgeText = (e: Entry) => (e.is_nft || e.sale_type === 'nft' ? 'NFT' : '通常');
 
-/* ===================== Component ===================== */
+/* ========== Component ========== */
 export default function MyPageClient() {
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [entries, setEntries] = useState<Entry[]>([]);
   const [uid, setUid] = useState<string | null>(null);
 
-  // UI state
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [entries, setEntries] = useState<Entry[]>([]);
+
+  // UI
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('new');
   const [copied, setCopied] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-
-  // 編集モーダル
   const [editOpen, setEditOpen] = useState(false);
 
-  // SSRで location/window を参照しない（ENV優先、無ければクライアントで補完）
-  const [siteOrigin, setSiteOrigin] = useState<string>(
-    process.env.NEXT_PUBLIC_SITE_URL ?? ''
-  );
+  // SSR安全なorigin
+  const [siteOrigin, setSiteOrigin] = useState<string>(process.env.NEXT_PUBLIC_SITE_URL ?? '');
   useEffect(() => {
-    if (!siteOrigin && typeof window !== 'undefined') {
-      setSiteOrigin(window.location.origin);
-    }
+    if (!siteOrigin && typeof window !== 'undefined') setSiteOrigin(window.location.origin);
   }, [siteOrigin]);
 
-  // 公開URL（slugは id 優先、無ければ display_name）
   const publicUrl = useMemo(() => {
     const slug = profile?.id || profile?.display_name || 'me';
     return siteOrigin ? `${siteOrigin}/artists/${encodeURIComponent(slug)}` : '';
   }, [siteOrigin, profile]);
 
-  // モバイル判定（クライアントのみ）
+  // 画面幅監視
   useEffect(() => {
-    const check = () => {
-      if (typeof window !== 'undefined') {
-        setIsMobile(window.innerWidth < 768);
-      }
-    };
+    const check = () => typeof window !== 'undefined' && setIsMobile(window.innerWidth < 768);
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
 
-useEffect
+  /* ---- 認証復元 ---- */
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (mounted) setUid(data.user?.id ?? null);
+    })();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUid(session?.user?.id ?? null);
+    });
+
+    return () => {
+      mounted = false;
+      sub?.subscription?.unsubscribe();
+    };
+  }, []);
+
+  /* ---- uid確定後にデータ取得 ---- */
+  useEffect(() => {
+    (async () => {
+      if (!uid) {
+        setProfile(null);
+        setEntries([]);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+
+// uid が決まった後のプロフィール取得部分
+const { data: prof, error: profErr } = await supabase
+  .from('profiles')
+  .select('id, display_name, avatar_url, banner_url, tagline, bio, sns_links')
+  .eq('id', uid)
+  .returns<Profile>()            // ← 型を固定
+  .maybeSingle();
+
+if (profErr) throw profErr;
+
+if (!prof) {
+  // 初回シード（Google から）
+  const { data: auth } = await supabase.auth.getUser();
+  const meta: any = auth.user?.user_metadata ?? {};
+  const seed: Profile = {
+    id: uid,
+    display_name:
+      meta.full_name || meta.name || auth.user?.email?.split('@')[0] || 'User',
+    bio: null,
+    avatar_url: meta.avatar_url || meta.picture || null,
+    banner_url: null,
+    tagline: null,               // ← 追加（明示）
+    sns_links: {},
+  };
+  const { error: upErr } = await supabase.from('profiles').upsert(seed);
+  if (upErr) throw upErr;
+  setProfile(seed);              // ← そのまま Profile 型でセット
+} else {
+  setProfile(prof);
+}
+
+
+        // 作品（自分のみ）
+const { data: es, error: esErr } = await supabase
+  .from('entries')
+  .select(
+    [
+      'id',
+      'user_id',
+      'title',
+      'image_url',
+      'confirmed',
+      'created_at',
+      'likes',
+      'gallery_type',
+      'edition_total',
+      'edition_sold',
+      'price',
+      'meish_fee_yen',
+      'artist_reward_yen',
+      'confirmed_at',
+      'display_start_at',
+      'display_end_at',
+      'sale_type',
+      'is_nft',
+      'sold',
+    ].join(',')
+  )
+  .eq('user_id', uid)
+  .order('created_at', { ascending: false })
+  .returns<Entry[]>();              // ← 型を固定
+
+setEntries(esErr ? [] : (es ?? [])); // ← エラー時は空配列だけを渡す
+
+      } catch (e) {
+        console.error(e);
+        setToast('読み込みに失敗しました');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [uid]);
 
   // 指標
   const metrics = useMemo(() => {
@@ -163,25 +259,18 @@ useEffect
     });
 
     const sorted = [...base].sort((a, b) => {
-      if (sortKey === 'new') {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      }
-      if (sortKey === 'likes') {
-        return (b.likes ?? 0) - (a.likes ?? 0);
-      }
-      if (sortKey === 'priceHigh') {
-        return (b.price ?? -1) - (a.price ?? -1);
-      }
-      if (sortKey === 'priceLow') {
+      if (sortKey === 'new') return +new Date(b.created_at) - +new Date(a.created_at);
+      if (sortKey === 'likes') return (b.likes ?? 0) - (a.likes ?? 0);
+      if (sortKey === 'priceHigh') return (b.price ?? -1) - (a.price ?? -1);
+      if (sortKey === 'priceLow')
         return (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER);
-      }
       return 0;
     });
 
     return sorted;
   }, [entries, query, sortKey]);
 
-  // クリップボード
+  // URLコピー
   const handleCopy = async () => {
     try {
       const url = publicUrl || (siteOrigin ? `${siteOrigin}/artists/me` : '');
@@ -194,42 +283,64 @@ useEffect
     }
   };
 
-  // プロフィール保存（モーダルから）
-  async function handleProfileSave(payload: ProfileSavePayload) {
-    try {
-      // id が無ければ auth から取得
-      let targetId = profile?.id;
-      if (!targetId) {
-        const { data: user } = await supabase.auth.getUser();
-        targetId = user.user?.id;
-      }
-      if (!targetId) throw new Error('ユーザーIDが取得できませんでした。');
+async function handleProfileSave(payload: ProfileSavePayload) {
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    const id = profile?.id || auth.user?.id;
+    if (!id) throw new Error('ユーザーIDが取得できませんでした。');
 
-      const { error } = await supabase
-        .from('profiles')
-        .update(payload) // bio/avatar_url/banner_url は null 許容
-        .eq('id', targetId);
+    const normalized: Profile = {
+      id,
+      display_name: payload.display_name.trim(),
+      bio: (payload.bio ?? '').trim() || null,
+      avatar_url: payload.avatar_url || null,
+      banner_url: payload.banner_url || null,
+      tagline: profile?.tagline ?? null,  // ← 明示
+      sns_links: payload.sns_links || {},
+    };
 
-      if (error) throw error;
+    const { error } = await supabase.from('profiles').upsert(normalized);
+    if (error) throw error;
 
-      setProfile((prev) => ({ ...(prev || {}), ...payload, id: targetId! }));
-      setToast('プロフィールを保存しました');
-      setEditOpen(false);
-    } catch (e) {
-      console.error(e);
-      setToast('保存に失敗しました');
-    }
+    setProfile(normalized);
+    setToast('プロフィールを保存しました');
+    setEditOpen(false);
+  } catch (e: any) {
+    console.error(e);
+    setToast(e?.message || '保存に失敗しました');
   }
+}
+
 
   return (
     <main className="font-zen">
       {/* ===== Hero / Cover ===== */}
       <section className="relative">
-        <div className="h-48 md:h-56 w-full bg-gradient-to-r from-sky-50 to-white" />
+        <div className="relative h-48 md:h-56 w-full overflow-hidden">
+          {profile?.banner_url ? (
+            <Image
+              src={profile.banner_url}
+              alt="banner"
+              fill
+              className="object-cover"
+              priority
+              unoptimized // next.config.mjs で remotePatterns 設定後は外してOK
+            />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-r from-sky-50 to-white" />
+          )}
+        </div>
+
         <div className="absolute -bottom-10 left-5 md:left-10 flex items-end gap-4">
           <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100">
             {profile?.avatar_url ? (
-              <Image src={profile.avatar_url} alt={profile.display_name ?? 'avatar'} fill className="object-cover" />
+              <Image
+                src={profile.avatar_url}
+                alt={profile.display_name ?? 'avatar'}
+                fill
+                className="object-cover"
+                unoptimized
+              />
             ) : (
               <div className="w-full h-full grid place-items-center text-gray-400">
                 <BadgeCheck />
@@ -240,11 +351,12 @@ useEffect
             <h1 className="font-lilita text-2xl md:text-3xl tracking-wide">
               {profile?.display_name ?? 'My Portfolio'}
             </h1>
-            {profile?.tagline && <p className="text-gray-600 text-sm md:text-base mt-1">{profile.tagline}</p>}
+            {profile?.tagline && (
+              <p className="text-gray-600 text-sm md:text-base mt-1">{profile.tagline}</p>
+            )}
           </div>
         </div>
 
-        {/* 右上：編集 */}
         <div className="absolute top-4 right-4 flex items-center gap-2">
           <button
             onClick={() => setEditOpen(true)}
@@ -271,7 +383,6 @@ useEffect
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm hover:bg-gray-50"
-                  aria-label="ホームページ"
                 >
                   <Globe className="w-4 h-4" />
                   <span>Website</span>
@@ -283,7 +394,6 @@ useEffect
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm hover:bg-gray-50"
-                  aria-label="X (Twitter)"
                 >
                   <FaXTwitter className="w-4 h-4" />
                   <span>X</span>
@@ -295,7 +405,6 @@ useEffect
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm hover:bg-gray-50"
-                  aria-label="Instagram"
                 >
                   <Instagram className="w-4 h-4" />
                   <span>Instagram</span>
@@ -304,7 +413,6 @@ useEffect
             </div>
           </div>
 
-          {/* Share Public URL */}
           <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-center">
             <div className="flex-1 overflow-hidden rounded-xl border bg-gray-50 px-3 py-2 text-sm text-gray-600">
               <span className="truncate">{publicUrl || '/artists/...'} </span>
@@ -313,7 +421,6 @@ useEffect
               <button
                 onClick={handleCopy}
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-                aria-label="公開URLをコピー"
               >
                 <LinkIcon className="w-4 h-4" />
                 <span>{copied ? 'コピーしました' : 'URLコピー'}</span>
@@ -324,7 +431,6 @@ useEffect
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-                  aria-label="公開ページを開く"
                 >
                   <ExternalLink className="w-4 h-4" />
                   <span>公開ページ</span>
@@ -333,11 +439,12 @@ useEffect
               <button
                 onClick={() => {
                   const text = `${profile?.display_name ?? 'Artist'} | me-ish ポートフォリオ\n${publicUrl || ''}`;
-                  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&hashtags=me_ish`;
+                  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                    text
+                  )}&hashtags=me_ish`;
                   window.open(url, '_blank', 'noopener,noreferrer');
                 }}
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-                aria-label="Xにシェア"
               >
                 <Share2 className="w-4 h-4" />
                 <span>シェア</span>
@@ -388,6 +495,12 @@ useEffect
               <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
             </div>
           </div>
+          <Link
+            href="/entry"
+            className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#00a1e9] px-4 py-2 text-white text-sm font-semibold hover:brightness-[1.05]"
+          >
+            作品を応募
+          </Link>
         </div>
       </section>
 
@@ -419,33 +532,32 @@ useEffect
         </button>
       )}
 
-      {/* トースト（簡易） */}
+      {/* トースト */}
       {toast && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 rounded-lg bg-black/80 text-white text-sm px-3 py-2 shadow">
           {toast}
         </div>
       )}
 
-{/* プロフィール編集モーダル */}
-{editOpen && (
-  <ProfileEditModal
-    initialProfile={{
-      display_name: profile?.display_name ?? '',
-      bio: profile?.bio ?? '',
-      avatar_url: profile?.avatar_url ?? null,
-      banner_url: profile?.banner_url ?? null,
-      sns_links: profile?.sns_links ?? {},
-    }}
-    onSave={handleProfileSave}
-    onCancel={() => setEditOpen(false)}
-  />
-)}
-
+      {/* 編集モーダル */}
+      {editOpen && (
+        <ProfileEditModal
+          initialProfile={{
+            display_name: profile?.display_name ?? '',
+            bio: profile?.bio ?? '',
+            avatar_url: profile?.avatar_url ?? null,
+            banner_url: profile?.banner_url ?? null,
+            sns_links: profile?.sns_links ?? {},
+          }}
+          onSave={handleProfileSave}
+          onCancel={() => setEditOpen(false)}
+        />
+      )}
     </main>
   );
 }
 
-/* ===================== Sub Components ===================== */
+/* ========== Sub Components ========== */
 function MetricCard({
   icon,
   label,
@@ -480,14 +592,12 @@ function EntryCard({ entry }: { entry: Entry }) {
 
   return (
     <div className="group relative rounded-2xl overflow-hidden bg-white border shadow-sm hover:shadow-md transition">
-      {/* Thumbnail */}
+      {/* サムネイル */}
       <div className="relative w-full h-52 overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={thumb} alt={entry.title} className="w-full h-full object-cover group-hover:scale-105 transition" />
         {sold && (
-          <div className="absolute top-2 left-2 rounded-full bg-black/70 text-white text-xs px-2 py-1">
-            SOLD
-          </div>
+          <div className="absolute top-2 left-2 rounded-full bg-black/70 text-white text-xs px-2 py-1">SOLD</div>
         )}
         <div className="absolute top-2 right-2 flex gap-1">
           <span className="rounded-full bg-white/90 backdrop-blur text-xs px-2 py-1 border">
@@ -503,7 +613,7 @@ function EntryCard({ entry }: { entry: Entry }) {
         </div>
       </div>
 
-      {/* Body */}
+      {/* 本文 */}
       <div className="p-3">
         <h3 className="font-semibold text-gray-800 truncate">{entry.title}</h3>
         <div className="mt-1 flex items-center justify-between text-sm text-gray-500">
@@ -530,7 +640,7 @@ function EntryCard({ entry }: { entry: Entry }) {
         </div>
       </div>
 
-      {/* Hover Actions */}
+      {/* ホバーアクション */}
       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition grid place-items-center">
         <div className="flex items-center gap-3">
           <a href={`/artworks/${entry.id}`} className="p-2 rounded-full bg-white hover:bg-gray-100 shadow" aria-label="詳細を見る">

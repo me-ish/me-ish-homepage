@@ -1,13 +1,12 @@
 'use client';
 
 /* =============================================================================
-   POP-ART Portfolio (JP/EN)
-   - Next.js App Router + Tailwind only
-   - Ben-Day dots / comic badges / sunburst rays / panel layout
-   - Accessible & responsive
+   POP-ART Portfolio (JP/EN • Pastel Variant)
+   - Tailwind only / 画像→パステル板
+   - Ben-Day dots / comic badges / sunburst / panels
    ========================================================================== */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 
 /* ----------------------------- Helpers ------------------------------------ */
 function useMagnet<T extends HTMLElement>(strength = 0.22) {
@@ -50,32 +49,37 @@ function cn(...c: (string | false | undefined)[]) {
 }
 
 /* ---- Pastel Tile (淡い色板) ---------------------------------------------- */
-const PASTEL_PALETTES: [string, string][] = [
-  ['#fff7ed', '#e0f2fe'], // orange-50 → sky-100
-  ['#fef9c3', '#e9d5ff'], // yellow-100 → purple-200
-  ['#ecfeff', '#fde68a'], // cyan-50 → amber-300
-  ['#f5f3ff', '#dcfce7'], // indigo-50 → green-100
-  ['#fdf2f8', '#e0e7ff'], // pink-50 → indigo-100
+const PASTEL: [string, string, string][] = [
+  ['#fff1f2', '#fde2e4', '#f8edeb'],
+  ['#ecfeff', '#cffafe', '#bae6fd'],
+  ['#fef9c3', '#fde68a', '#fef3c7'],
+  ['#eef2ff', '#e9d5ff', '#f5f3ff'],
+  ['#dcfce7', '#bbf7d0', '#f0fdf4'],
+  ['#fae8ff', '#fde68a', '#e0e7ff'],
 ];
 
 function PastelTile({
   label,
-  paletteIndex = 0,
+  index = 0,
   pattern = 'dots', // 'dots' | 'grid' | 'none'
   className = '',
+  border = true,
+  thick = true,
 }: {
   label: string;
-  paletteIndex?: number;
+  index?: number;
   pattern?: 'dots' | 'grid' | 'none';
   className?: string;
+  border?: boolean;
+  thick?: boolean;
 }) {
-  const [c1, c2] = PASTEL_PALETTES[paletteIndex % PASTEL_PALETTES.length];
-  const base = `linear-gradient(135deg, ${c1}, ${c2})`;
+  const [c1, c2, c3] = PASTEL[index % PASTEL.length];
+  const base = `linear-gradient(135deg, ${c1}, ${c2} 60%, ${c3})`;
   const overlay =
     pattern === 'dots'
-      ? 'radial-gradient(circle at 2px 2px, rgba(0,0,0,.06) 2px, transparent 2px) 0 0/12px 12px'
+      ? 'radial-gradient(circle at 3px 3px, rgba(0,0,0,.12) 2px, transparent 2px) 0 0/7px 7px'
       : pattern === 'grid'
-      ? 'linear-gradient(rgba(0,0,0,.06) 1px, transparent 1px) 0 0/16px 16px, linear-gradient(90deg, rgba(0,0,0,.06) 1px, transparent 1px) 0 0/16px 16px'
+      ? 'linear-gradient(rgba(0,0,0,.12) 2px, transparent 2px) 0 0/14px 14px, linear-gradient(90deg, rgba(0,0,0,.12) 2px, transparent 2px) 0 0/14px 14px'
       : '';
   const background = overlay ? `${overlay}, ${base}` : base;
 
@@ -83,18 +87,20 @@ function PastelTile({
     <div
       role="img"
       aria-label={label}
-      className={cn('h-full w-full', className)}
+      className={cn(
+        'h-full w-full rounded-2xl',
+        border && (thick ? 'border-4 border-black' : 'border border-black/20'),
+        className,
+      )}
       style={{ background }}
     />
   );
 }
 
-
-/* --------------------------- Data (demo) ---------------------------------- */
+/* --------------------------- Data ----------------------------------------- */
 const WORKS = Array.from({ length: 10 }).map((_, i) => ({
   id: i + 1,
   title: `Illustration ${String(i + 1).padStart(2, '0')}`,
-  image: `https://picsum.photos/seed/pop${i + 1}/1200/900`,
   tag: ['Girl', 'Chibi', 'Poster', 'Goods', 'Cover'][i % 5],
 }));
 
@@ -113,13 +119,7 @@ function DotBadge({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ComicLabel({
-  text,
-  color = '#ff006e',
-}: {
-  text: string;
-  color?: string;
-}) {
+function ComicLabel({ text, color = '#ff006e' }: { text: string; color?: string }) {
   return (
     <span
       className="inline-block rotate-[-2deg] border-4 border-black px-3 py-1 text-sm font-black shadow-[6px_6px_0_0_#000]"
@@ -129,7 +129,6 @@ function ComicLabel({
           'radial-gradient(circle at 1.5px 1.5px, rgba(255,255,255,.8) 1.5px, transparent 1.5px) 0 0/5px 5px, white',
         outline: '3px solid #000',
         outlineOffset: '-6px',
-        WebkitTextStroke: '0.6px #0000',
         transformOrigin: 'left center',
         boxShadow: '6px 6px 0 0 #000',
         borderColor: '#000',
@@ -184,10 +183,7 @@ function Nav() {
       <div className="mx-auto max-w-7xl px-4">
         <div className="mt-4 rounded-full border-4 border-black bg-white/90 px-4 py-2 shadow-[8px_8px_0_0_#000]">
           <nav className="flex items-center justify-between">
-            <a
-              href="#top"
-              className="text-lg font-black tracking-tight hover:opacity-80"
-            >
+            <a href="#top" className="text-lg font-black tracking-tight hover:opacity-80">
               POP / PORTFOLIO
             </a>
             <ul className="hidden gap-2 md:flex">
@@ -247,18 +243,8 @@ function Hero() {
 
       <div className="relative mx-auto max-w-7xl px-4 pt-32 pb-20 md:pt-40 md:pb-28">
         <div className="relative">
-          <Sticker
-            label="WOW!"
-            bg="#ff85a1"
-            rotate={-12}
-            className="left-[-6px] top-[-18px]"
-          />
-          <Sticker
-            label="BAM!"
-            bg="#7df9ff"
-            rotate={8}
-            className="right-[-10px] bottom-[-26px]"
-          />
+          <Sticker label="WOW!" bg="#ff85a1" rotate={-12} className="left-[-6px] top-[-18px]" />
+          <Sticker label="BAM!" bg="#7df9ff" rotate={8} className="right-[-10px] bottom-[-26px]" />
           <div className="rounded-[32px] border-4 border-black bg-white p-6 shadow-[16px_16px_0_0_#000] md:p-10">
             <div className="grid items-center gap-8 md:grid-cols-[1.1fr_.9fr]">
               <div>
@@ -293,11 +279,14 @@ function Hero() {
                   </a>
                 </div>
               </div>
+
+              {/* Hero visual → PastelTile */}
               <div className="relative">
-                <img
-                  src="https://picsum.photos/seed/pop-hero/1200/900"
-                  alt="Hero visual"
-                  className="w-full rounded-2xl border-4 border-black object-cover shadow-[12px_12px_0_0_#000]"
+                <PastelTile
+                  label="Hero visual"
+                  index={2}
+                  pattern="grid"
+                  className="w-full aspect-[4/3] shadow-[12px_12px_0_0_#000]"
                 />
                 {/* Caption bubble */}
                 <div
@@ -333,7 +322,7 @@ function About() {
             立ち絵／アイコン／カバー／ポスター／グッズ向けまで幅広く対応します。
           </p>
           <ul className="mt-3 text-sm">
-            <li>・拠点：仙台</li>
+            <li>・拠点：仙台（リモート可）</li>
             <li>・ツール：Clip Studio / Procreate / Photoshop / Illustrator</li>
             <li>・納品：PNG, PSD, Ai など用途に合わせて</li>
           </ul>
@@ -345,18 +334,26 @@ function About() {
             <li>✅ キャラクターデザイン（等身／SD）</li>
             <li>✅ グッズ・パッケージに映える図案</li>
             <li>✅ 広告・ポスターのインパクト作り</li>
-            <li>✅ SNS・配信まわりのアイコン／ヘッダー</li>
+            <li>✅ SNS・配信アイコン／ヘッダー</li>
           </ul>
         </div>
-        {/* Comic panel C */}
-        <div className="rounded-2xl border-4 border-black bg-cyan-200 p-5 shadow-[10px_10px_0_0_#000]">
-          <h3 className="text-xl font-black">Services</h3>
-          <ul className="mt-3 space-y-2 text-sm">
-            <li>• 立ち絵・表紙・ポスター</li>
-            <li>• SNSアイコン／ヘッダー</li>
-            <li>• 同人誌・CDジャケット</li>
-            <li>• アパレル／アクリルスタンド等のグッズ</li>
-          </ul>
+        {/* Comic panel C with pastel */}
+        <div className="rounded-2xl border-4 border-black p-0 shadow-[10px_10px_0_0_#000] overflow-hidden">
+          <PastelTile
+            label="Services visual"
+            index={4}
+            pattern="dots"
+            className="h-full min-h-[220px]"
+          />
+          <div className="p-5 bg-white border-t-4 border-black">
+            <h3 className="text-xl font-black">Services</h3>
+            <ul className="mt-3 space-y-2 text-sm">
+              <li>• 立ち絵・表紙・ポスター</li>
+              <li>• SNSアイコン／ヘッダー</li>
+              <li>• 同人誌・CDジャケット</li>
+              <li>• アパレル／アクリルスタンド等のグッズ</li>
+            </ul>
+          </div>
         </div>
       </div>
     </section>
@@ -391,10 +388,11 @@ function Work() {
                   className="group overflow-hidden rounded-2xl border-4 border-black bg-white shadow-[10px_10px_0_0_#000]"
                 >
                   <div className="relative">
-                    <img
-                      src={w.image}
-                      alt={w.title}
-                      className="w-full object-cover transition duration-300 group-hover:scale-[1.04]"
+                    <PastelTile
+                      label={w.title}
+                      index={w.id}
+                      pattern={w.id % 2 ? 'dots' : 'grid'}
+                      className="aspect-[4/3]"
                     />
                     <figcaption className="absolute inset-x-3 bottom-3 flex items-center justify-between rounded-xl border-4 border-black bg-yellow-200 px-3 py-1 text-xs font-black shadow-[6px_6px_0_0_#000]">
                       <span>{w.title}</span>
@@ -432,10 +430,7 @@ function Clients() {
       </div>
 
       <style jsx global>{`
-        @keyframes ticker {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
+        @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
       `}</style>
     </section>
   );
@@ -487,22 +482,9 @@ function Contact() {
               }}
               className="grid gap-3"
             >
-              <input
-                className="rounded-lg border-4 border-black px-3 py-2"
-                placeholder="お名前 / Your name"
-                required
-              />
-              <input
-                className="rounded-lg border-4 border-black px-3 py-2"
-                type="email"
-                placeholder="メールアドレス / Email"
-                required
-              />
-              <textarea
-                className="rounded-lg border-4 border-black px-3 py-2"
-                rows={4}
-                placeholder="ご依頼内容（用途・点数・ご予算・希望納期など）"
-              />
+              <input className="rounded-lg border-4 border-black px-3 py-2" placeholder="お名前 / Your name" required />
+              <input className="rounded-lg border-4 border-black px-3 py-2" type="email" placeholder="メールアドレス / Email" required />
+              <textarea className="rounded-lg border-4 border-black px-3 py-2" rows={4} placeholder="ご依頼内容（用途・点数・ご予算・希望納期など）" />
               <button
                 className="rounded-lg border-4 border-black px-4 py-2 text-sm font-black shadow-[6px_6px_0_0_#000]"
                 style={{

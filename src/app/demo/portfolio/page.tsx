@@ -1,14 +1,14 @@
 'use client';
 
 /* ============================================================================
-   One-Page Portfolio (Illustrator JP/EN Edition)
-   - Tailwind only / 動きはそのまま
-   - 文言を日本語＋英語併記に変更（WORK／作品 など）
+   One-Page Portfolio (Illustrator JP/EN • Pastel Variant)
+   - Tailwind only / 画像をパステル色板に差し替え
+   - Parallax / Magnet CTA / Masonry
    ============================================================================ */
 
 import React, { useEffect, useRef, useState } from 'react';
 
-// ----------------------------- Helpers ---------------------------------------
+/* ----------------------------- Helpers ------------------------------------ */
 function useParallax(mult = 0.03) {
   const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -26,7 +26,6 @@ function useParallax(mult = 0.03) {
   return ref;
 }
 
-// ジェネリック対応のマグネット
 function useMagnet<T extends HTMLElement>(strength = 0.25) {
   const ref = React.useRef<T | null>(null);
   React.useEffect(() => {
@@ -69,17 +68,66 @@ function cn(...c: (string | false | undefined)[]) {
   return c.filter(Boolean).join(' ');
 }
 
-// --------------------------- Demo Data ---------------------------------------
+/* ---- Pastel Tile (淡い色板) ---------------------------------------------- */
+const PASTEL_PALETTES: [string, string, string][] = [
+  ['#fff1f2', '#fde2e4', '#f8edeb'], // pink
+  ['#ecfeff', '#cffafe', '#bae6fd'], // cyan/sky
+  ['#fef9c3', '#fde68a', '#fef3c7'], // yellow/amber
+  ['#eef2ff', '#e9d5ff', '#f5f3ff'], // indigo/purple
+  ['#dcfce7', '#bbf7d0', '#f0fdf4'], // green/mint
+  ['#fae8ff', '#fde68a', '#e0e7ff'], // mix
+];
+
+function PastelTile({
+  label,
+  index = 0,
+  pattern = 'dots', // 'dots' | 'grid' | 'none'
+  className = '',
+  round = true,
+  border = true,
+}: {
+  label: string;
+  index?: number;
+  pattern?: 'dots' | 'grid' | 'none';
+  className?: string;
+  round?: boolean;
+  border?: boolean;
+}) {
+  const [c1, c2, c3] = PASTEL_PALETTES[index % PASTEL_PALETTES.length];
+  const base = `linear-gradient(135deg, ${c1}, ${c2} 60%, ${c3})`;
+  const overlay =
+    pattern === 'dots'
+      ? 'radial-gradient(circle at 2px 2px, rgba(0,0,0,.06) 2px, transparent 2px) 0 0/12px 12px'
+      : pattern === 'grid'
+      ? 'linear-gradient(rgba(0,0,0,.06) 1px, transparent 1px) 0 0/16px 16px, linear-gradient(90deg, rgba(0,0,0,.06) 1px, transparent 1px) 0 0/16px 16px'
+      : '';
+  const background = overlay ? `${overlay}, ${base}` : base;
+
+  return (
+    <div
+      role="img"
+      aria-label={label}
+      className={cn(
+        'h-full w-full',
+        round && 'rounded-2xl',
+        border && 'border border-white/60 dark:border-zinc-800',
+        className,
+      )}
+      style={{ background }}
+    />
+  );
+}
+
+/* --------------------------- Data ----------------------------------------- */
 const ARTWORKS = Array.from({ length: 16 }).map((_, i) => ({
   id: i + 1,
   title: `Artwork ${String(i + 1).padStart(2, '0')}`,
-  image: `https://picsum.photos/seed/port${i + 1}/1200/900`,
   tag: ['イラスト / Illustration', 'キャラクター / Character', 'グッズ / Goods', '同人誌表紙 / Cover', 'アイコン / Icon'][i % 5],
 }));
 
 const LOGOS = ['AURORA', 'POLAR', 'MOSS', 'NEBULA', 'LYNX', 'CINDER', 'ORBIT', 'NOVA'];
 
-// --------------------------- Sections ----------------------------------------
+/* --------------------------- Sections ------------------------------------- */
 function Nav() {
   const [open, setOpen] = useState(false);
   const items = [
@@ -95,7 +143,7 @@ function Nav() {
         <div className="mt-4 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 dark:bg-zinc-900/80 border border-white/60 dark:border-zinc-800 rounded-full shadow-lg">
           <nav className="flex items-center justify-between px-4 py-2">
             <a href="#top" className="font-black tracking-tight text-lg">
-              <span className="sr-only">Back to top</span>
+              <span className="sr-only">トップに戻る</span>
               <span className="inline-block bg-gradient-to-r from-fuchsia-600 via-rose-500 to-orange-400 bg-clip-text text-transparent">
                 ILLUSTRATOR / PORTFOLIO
               </span>
@@ -204,10 +252,39 @@ function Hero() {
             </div>
           </div>
 
-          <TiltCard />
+          {/* Tiltカードのビジュアル → パステル板 */}
+          <div className="relative">
+            <div
+              className="aspect-[4/3] w-full rounded-2xl shadow-2xl transition-transform duration-200 will-change-transform"
+              style={{ transformStyle: 'preserve-3d' }}
+            >
+              <PastelTile
+                label="注目のビジュアル"
+                index={1}
+                pattern="dots"
+                className="h-full w-full rounded-2xl"
+                border
+              />
+            </div>
+            <div
+              className="absolute left-4 bottom-4 rounded-xl bg-white/80 dark:bg-zinc-900/70 backdrop-blur px-4 py-2 text-sm font-medium"
+              style={{ transform: 'translateZ(30px)' }}
+            >
+              受賞：インタラクティブデザイン 2025／Winner
+            </div>
+            <div
+              className="absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-semibold text-white"
+              style={{
+                transform: 'translateZ(50px)',
+                background: 'linear-gradient(135deg, #10b981, #06b6d4 50%, #2563eb)',
+              }}
+            >
+              ピックアップ／Featured
+            </div>
+          </div>
         </div>
 
-        {/* 共同制作・コラボのマルキー */}
+        {/* Collabs */}
         <div className="mt-16 overflow-hidden">
           <div className="flex items-center gap-8 text-zinc-500 dark:text-zinc-400">
             <span className="text-xs tracking-widest">SELECTED COLLABS／主なコラボ</span>
@@ -225,65 +302,9 @@ function Hero() {
 
       </div>
       <style jsx global>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
       `}</style>
     </section>
-  );
-}
-
-function TiltCard() {
-  const ref = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const onMove = (e: MouseEvent) => {
-      const r = el.getBoundingClientRect();
-      const x = e.clientX - (r.left + r.width / 2);
-      const y = e.clientY - (r.top + r.height / 2);
-      const rx = (+y / r.height) * -15;
-      const ry = (+x / r.width) * 15;
-      el.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
-    };
-    const reset = () => (el.style.transform = 'rotateX(0) rotateY(0)');
-    window.addEventListener('mousemove', onMove);
-    el.addEventListener('mouseleave', reset);
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      el.removeEventListener('mouseleave', reset);
-    };
-  }, []);
-  return (
-    <div className="relative">
-      <div
-        ref={ref}
-        className="aspect-[4/3] w-full rounded-2xl border border-white/40 dark:border-zinc-800 bg-gradient-to-br from-white to-zinc-100 dark:from-zinc-900 dark:to-zinc-950 shadow-2xl transition-transform duration-200 will-change-transform"
-        style={{ transformStyle: 'preserve-3d' }}
-      >
-        <div className="absolute inset-0 rounded-2xl overflow-hidden">
-          <img
-            className="h-full w-full object-cover opacity-95"
-            src="https://picsum.photos/seed/hero/1400/900"
-            alt="Feature visual"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-        </div>
-        <div
-          className="absolute left-4 bottom-4 rounded-xl bg-white/80 dark:bg-zinc-900/70 backdrop-blur px-4 py-2 text-sm font-medium"
-          style={{ transform: 'translateZ(30px)' }}
-        >
-          受賞：〇〇イラストコンテスト 2025／Winner
-        </div>
-        <div
-          className="absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-semibold text-white"
-          style={{ transform: 'translateZ(50px)', background: 'linear-gradient(135deg, #10b981, #06b6d4 50%, #2563eb)' }}
-        >
-          ピックアップ／Featured
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -291,29 +312,28 @@ function About() {
   return (
     <section id="about" className="relative mx-auto max-w-6xl px-4 py-20 md:py-28">
       <div className="flex items-center gap-3 text-xs uppercase tracking-widest text-zinc-500">
-        <span>PROFILE</span>
-        <span>／</span>
-        <span>プロフィール</span>
+        <span>PROFILE</span><span>／</span><span>プロフィール</span>
       </div>
       <div className="mt-3 grid gap-10 md:grid-cols-[1.1fr_.9fr] md:items-center">
         <div>
           <h2 className="text-3xl md:text-4xl font-black tracking-tight">イラストレーター ○○</h2>
           <p className="mt-6 text-zinc-600 dark:text-zinc-400 leading-relaxed">
-            ポップで可愛らしい女の子や、SD（デフォルメ）キャラクターを中心に制作しています。
+            ポップで可愛い女の子や、SD（デフォルメ）キャラクターを中心に制作しています。
             立ち絵・アイコン・同人誌表紙・ゲーム用素材・グッズに映えるイラストまで幅広く対応可能です。
-            「見ているだけで楽しくなる世界観」を丁寧に仕上げます。
           </p>
           <ul className="mt-6 grid gap-2 text-sm">
-            <li>• 拠点：仙台</li>
-            <li>• ツール：Clip Studio, Procreate, Photoshop, Illustrator</li>
-            <li>• 依頼：立ち絵・アイコン・キャラクターデザイン・SNSヘッダー・同人誌表紙・グッズ用イラスト 他</li>
+            <li>• 拠点：仙台／リモート可</li>
+            <li>• ツール：Clip Studio / Procreate / Photoshop / Illustrator</li>
+            <li>• 依頼：立ち絵・アイコン・キャラデザ・SNSヘッダー・同人誌表紙・グッズ用イラスト 他</li>
           </ul>
         </div>
         <div className="relative">
-          <div className="absolute -inset-4 rounded-3xl bg-gradient-to-br from-emerald-400/20 via-cyan-400/20 to-blue-400/20 blur-2xl" />
-          <div className="relative rounded-3xl overflow-hidden border border-white/60 dark:border-zinc-800 shadow-xl">
-            <img src="https://picsum.photos/seed/meish-portrait/1200/900" alt="Portrait" />
-          </div>
+          <PastelTile
+            label="ポートレートの代替ビジュアル"
+            index={3}
+            pattern="grid"
+            className="h-[360px] md:h-[420px]"
+          />
         </div>
       </div>
     </section>
@@ -343,10 +363,13 @@ function Work() {
               {col.map((w) => (
                 <figure key={w.id} className="group overflow-hidden rounded-2xl border bg-white dark:bg-zinc-900 border-white/60 dark:border-zinc-800 shadow">
                   <div className="relative">
-                    <img
-                      src={w.image}
-                      alt={w.title}
-                      className="w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                    <PastelTile
+                      label={w.title}
+                      index={w.id}
+                      pattern={w.id % 3 === 0 ? 'grid' : 'dots'}
+                      className="aspect-[4/3]"
+                      round={false}
+                      border={false}
                     />
                     <figcaption className="absolute inset-x-3 bottom-3 flex items-center justify-between rounded-xl bg-white/85 dark:bg-zinc-900/75 backdrop-blur px-3 py-2 text-sm">
                       <span className="font-medium">{w.title}</span>
@@ -379,15 +402,18 @@ function Skills() {
       </div>
       <h2 className="mt-2 text-3xl md:text-4xl font-black tracking-tight">Strengths</h2>
       <div className="mt-10 grid grid-cols-2 md:grid-cols-3 gap-6">
-        {items.map((it) => (
+        {items.map((it, i) => (
           <div
             key={it.label}
             className="rounded-2xl border border-white/60 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow"
           >
-            <div
+            <PastelTile
+              label={it.label}
+              index={i}
+              pattern="none"
               className="mx-auto mb-4 aspect-square w-28 rounded-full"
-              style={{ background: `conic-gradient(#10b981 ${it.v * 360}deg, #e5e7eb 0deg)` }}
-              aria-hidden
+              round={false}
+              border={false}
             />
             <div className="text-center font-semibold">{it.label}</div>
             <div className="mt-1 text-center text-sm text-zinc-500">{Math.round(it.v * 100)}%</div>
@@ -399,7 +425,7 @@ function Skills() {
 }
 
 function Timeline() {
-  const items: Array<[string, string]> = [
+  const items: [string, string][] = [
     ['2025', 'オンライン3Dギャラリー「me-ish」に出展開始／COA（購入証明）対応'],
     ['2024', 'グッズデザイン・同人誌表紙・アイコン制作を中心に受注'],
     ['2023', 'SNSでの作品公開を本格化、依頼受付を開始'],
@@ -424,9 +450,12 @@ function Timeline() {
                   <p className="mt-2 text-zinc-600 dark:text-zinc-400">{text}</p>
                 </div>
                 <div className={cn(i % 2 === 1 ? 'md:col-start-1' : 'md:col-start-2')}>
-                  <div className="rounded-2xl overflow-hidden border border-white/60 dark:border-zinc-800">
-                    <img src={`https://picsum.photos/seed/tl${i}/1200/700`} alt="" />
-                  </div>
+                  <PastelTile
+                    label={`Timeline ${i + 1}`}
+                    index={i}
+                    pattern={i % 2 ? 'grid' : 'dots'}
+                    className="rounded-2xl aspect-[12/7]"
+                  />
                 </div>
               </li>
             ))}
@@ -478,7 +507,7 @@ function Contact() {
             </div>
           </div>
 
-          {/* デモフォーム（実運用時はResend/Supabase等と接続） */}
+          {/* デモフォーム */}
           <div className="rounded-2xl border border-white/60 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/70 backdrop-blur p-6">
             <form
               onSubmit={(e) => {
@@ -508,7 +537,7 @@ function Contact() {
   );
 }
 
-// ----------------------------- Page ------------------------------------------
+/* --------------------------------- Page ----------------------------------- */
 export default function PortfolioPage() {
   useEffect(() => {
     const m = window.matchMedia('(prefers-color-scheme: dark)');
