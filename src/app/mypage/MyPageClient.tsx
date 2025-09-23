@@ -175,7 +175,7 @@ export default function MyPageClient() {
             ].join(',')
           )
           .order('created_at', { ascending: false })
-          .returns<Entry[]>(); // GenericStringError対策：結果型を固定
+          .returns<Entry[]>(); // GenericStringError対策
 
         setEntries(entriesErr ? [] : entriesData ?? []);
       } finally {
@@ -254,7 +254,7 @@ export default function MyPageClient() {
 
       const { error } = await supabase
         .from('profiles')
-        .update(payload) // bio/avatar_url/banner_url に null が来てもOK（DB側がnullable想定）
+        .update(payload) // bio/avatar_url/banner_url は null 許容
         .eq('id', targetId);
 
       if (error) throw error;

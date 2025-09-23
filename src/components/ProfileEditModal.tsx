@@ -17,20 +17,21 @@ type SNS = { homepage?: string; twitter?: string; instagram?: string };
 type Props = {
   initialProfile: {
     display_name: string;
-    bio?: string;
-    avatar_url?: string;
-    banner_url?: string;
-    sns_links?: SNS;
+    bio?: string | null;          // ← null を許容
+    avatar_url?: string | null;   // ← ここ
+    banner_url?: string | null;   // ← ここ
+    sns_links?: SNS | null;       // ← 運用上 null の可能性も許容
   };
   onSave: (updated: {
     display_name: string;
-    bio?: string;
-    avatar_url?: string;
-    banner_url?: string;
+    bio?: string | null;          // ← ここ
+    avatar_url?: string | null;   // ← ここ
+    banner_url?: string | null;   // ← ここ
     sns_links: SNS;
-  }) => Promise<void> | void; // 呼び出し元でSupabase UPDATEする想定
+  }) => Promise<void> | void;
   onCancel: () => void;
 };
+
 
 const ACCEPTED_MIME = ['image/png', 'image/jpeg', 'image/webp'];
 const MAX_FILE_MB = 8;
