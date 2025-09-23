@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { useFrame } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import ArtworkFrame from '../shared/ArtworkFrame';
 import { supabase } from '@/lib/supabaseClient';
@@ -21,16 +22,15 @@ type Entry = {
 function ComingSoonPanel({
   position,
   rotation,
-  // 追加: ArtworkFrame と同じ指定で使えるように
-  scale =4,        // 例: 4
-  aspect = 1.2,     // 例: 1.2
-  width,            // width/height を直接渡したい場合はこれら優先
+  scale = 4,
+  aspect = 1.2,
+  width,
   height,
 }: {
   position: [number, number, number];
   rotation: [number, number, number];
-  scale?: number;        // ★ 追加
-  aspect?: number;       // ★ 追加
+  scale?: number;
+  aspect?: number;
   width?: number;
   height?: number;
 }) {
@@ -42,20 +42,16 @@ function ComingSoonPanel({
     map.colorSpace = THREE.SRGBColorSpace;
   }, [map]);
 
-  // ---- サイズ計算（width/height が来ていればそれを優先）----
-  // ArtworkFrame の基準高さを 1.8 として、枠やオーラの太さも追従
   const BASE_H = 1.8;
   const H = height ?? (scale ?? BASE_H);
   const W = width ?? H * (aspect ?? 1.2);
-  const k = H / BASE_H;           // スケール係数
-  const FRAME_PAD = 0.08 * k;     // 枠の太さ
-  const HALO_PAD  = 0.22 * k;     // オーラの広がり
+  const k = H / BASE_H;
+  const FRAME_PAD = 0.08 * k;
+  const HALO_PAD = 0.22 * k;
 
   return (
     <group position={position} rotation={rotation}>
-      {/* 内側（-Z）を正面にするために y=π で反転 */}
       <group rotation={[0, Math.PI, 0]}>
-        {/* 下地（額っぽい縁取り） */}
         <mesh>
           <planeGeometry args={[W + FRAME_PAD, H + FRAME_PAD]} />
           <meshStandardMaterial
@@ -66,14 +62,10 @@ function ComingSoonPanel({
             metalness={0.0}
           />
         </mesh>
-
-        {/* 画像面（正面=内側） */}
         <mesh position={[0, 0, 0.002]}>
           <planeGeometry args={[W, H]} />
           <meshBasicMaterial map={map} toneMapped={false} />
         </mesh>
-
-        {/* ほんのりオーラ */}
         <mesh position={[0, 0, -0.001]}>
           <planeGeometry args={[W + HALO_PAD, H + HALO_PAD]} />
           <meshBasicMaterial
@@ -89,8 +81,6 @@ function ComingSoonPanel({
   );
 }
 
-
-
 export default function FloatArtworksInGallery({
   avatarRef,
   artworkRefs,
@@ -104,13 +94,25 @@ export default function FloatArtworksInGallery({
 
   const [entries, setEntries] = useState<Entry[]>([]);
 
+  // 壁の実装と同様：カメラ距離で可視・不可視を切替
+  const VISIBLE_DISTANCE = 70;
+  const tmp = useRef(new THREE.Vector3());
+  useFrame(({ camera }) => {
+    for (const ref of artworkRefs.current) {
+      if (!ref) continue;
+      ref.getWorldPosition(tmp.current);
+      const dist = tmp.current.distanceTo(camera.position);
+      ref.visible = dist < VISIBLE_DISTANCE;
+    }
+  });
+
   useEffect(() => {
     const fetchApproved = async () => {
       const { data, error } = await supabase
         .from('entries')
         .select('*')
         .eq('confirmed', true)
-        .eq('display_ready', true) // ★ 方法Bに合わせる
+        .eq('display_ready', true) // 方法B
         .eq('gallery_type', 'float')
         .order('created_at', { ascending: false });
 
@@ -143,57 +145,51 @@ export default function FloatArtworksInGallery({
 
   const positions = [
     ...generatePositions(start).map((x) => makeArtwork(x, wallY, -wallZ, Math.PI)),
-    ...generatePositions(start).map((x) => makeArtwork(x, wallY,  wallZ, 0)),
+    ...generatePositions(start).map((x) => makeArtwork(x, wallY, wallZ, 0)),
     ...generatePositions(start).map((z) => makeArtwork(-wallX, wallY, z, -Math.PI / 2)),
-    ...generatePositions(start).map((z) => makeArtwork( wallX, wallY, z,  Math.PI / 2)),
+    ...generatePositions(start).map((z) => makeArtwork(wallX, wallY, z, Math.PI / 2)),
   ];
 
   return (
     <>
-{positions.map((pos, i) => {
-  const entry = entries[i];
-  const lightHeight = 2.2;
+      {positions.map((pos, i) => {
+        const entry = entries[i];
+        const lightHeight = 2.2;
+        return (
+          <group
+            key={`slot-${i}`} // 不変キー
+            position={pos.position}
+            rotation={pos.rotation}
+            ref={(el) => {
+              artworkRefs.current[i] = el;
+            }}
+          >
+            {entry ? (
+              <ArtworkFrame
+                id={entry.id.toString()}
+                position={[0, 0, 0]}
+                rotation={[0, 0, 0]}
+                aspectRatio={1.2}
+                scale={1.8}
+                title={entry.title}
+                author={entry.artist_name}
+                imageUrl={entry.image_url}
+                avatarRef={avatarRef}
+              />
+            ) : (
+              <ComingSoonPanel position={[0, 0, 0]} rotation={[0, 0, 0]} />
+            )}
 
-  return (
-    // ★ ここを「不変キー」にする（entry.id や soon-* は使わない）
-    <group key={`slot-${i}`} position={pos.position} rotation={pos.rotation}>
-      {/* 中身だけを条件で切替 */}
-      {entry ? (
-        <ArtworkFrame
-          id={entry.id.toString()}
-          // position/rotation は親groupに持たせたので不要なら外してOK
-          position={[0,0,0]}
-          rotation={[0,0,0]}
-          aspectRatio={1.2}
-          scale={1.8}
-          title={entry.title}
-          author={entry.artist_name}
-          imageUrl={entry.image_url}
-          avatarRef={avatarRef}
-          ref={(el: THREE.Group | null) => {
-            artworkRefs.current[i] = el;
-          }}
-        />
-      ) : (
-        <ComingSoonPanel
-          // 同じく親groupが持つので[0,0,0]でOK
-          position={[0,0,0]}
-          rotation={[0,0,0]}
-        />
-      )}
-
-      {/* ライトは常に同じ場所に置く */}
-      <pointLight
-        position={[0, lightHeight, 0]}
-        intensity={entry ? 1.2 : 0.7}
-        distance={entry ? 8 : 7}
-        decay={2}
-        color={entry ? '#ffffff' : '#e8f6ff'}
-      />
-    </group>
-  );
-})}
-
+            <pointLight
+              position={[0, lightHeight, 0]}
+              intensity={entry ? 1.2 : 0.7}
+              distance={entry ? 8 : 7}
+              decay={2}
+              color={entry ? '#ffffff' : '#e8f6ff'}
+            />
+          </group>
+        );
+      })}
     </>
   );
 }
