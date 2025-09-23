@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
+import ProfileEditModal from '@/components/ProfileEditModal';
 import {
   Edit3,
   Globe,
@@ -13,7 +14,7 @@ import {
   Share2,
   Link as LinkIcon,
   ExternalLink,
-  Infinity as InfinityIcon,
+  Infinity as InfinityIcon, // import名の衝突を避ける
   BadgeCheck,
   Filter,
   ChevronDown,
@@ -21,19 +22,26 @@ import {
 } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
 
-// -----------------------------
-// Types
-// -----------------------------
+/* ===================== Types ===================== */
 type SNSLinks = {
   homepage?: string;
   twitter?: string;
   instagram?: string;
 };
 
+type ProfileSavePayload = {
+  display_name: string;
+  bio?: string | null;
+  avatar_url?: string | null;
+  banner_url?: string | null;
+  sns_links: SNSLinks;
+};
+
 type Profile = {
   id?: string;
   display_name: string;
   avatar_url?: string | null;
+  banner_url?: string | null;
   tagline?: string | null;
   bio?: string | null;
   sns_links?: SNSLinks | null;
@@ -47,7 +55,7 @@ type Entry = {
   created_at: string;
   likes?: number;
   gallery_type?: 'white' | 'float' | string;
-  edition_total?: number | null; // null/undefined => unlimited
+  edition_total?: number | null; // null/undefined => 無制限
   edition_sold?: number;
   price?: number | null; // 税込（円）
   meish_fee_yen?: number | null;
@@ -56,13 +64,11 @@ type Entry = {
   display_start_at?: string | null;
   display_end_at?: string | null;
   sale_type?: 'normal' | 'nft' | null;
-  is_nft?: boolean | null; // どちらか入っていればバッジ出せる
-  sold?: boolean | null; // あるなら優先
+  is_nft?: boolean | null;
+  sold?: boolean | null;
 };
 
-// -----------------------------
-// Constants & Utils
-// -----------------------------
+/* ===================== Utils ===================== */
 const BRAND = '#00a1e9';
 
 const SORTS = [
@@ -76,127 +82,118 @@ type SortKey = (typeof SORTS)[number]['key'];
 const formatYen = (n?: number | null) =>
   typeof n === 'number' ? `¥${n.toLocaleString()}` : '—';
 
-const isUnlimited = (entry: Entry) =>
-  entry.edition_total === null || entry.edition_total === undefined;
+const isUnlimited = (e: Entry) =>
+  e.edition_total === null || e.edition_total === undefined;
 
-const editionSummary = (entry: Entry) => {
-  if (isUnlimited(entry)) return '∞';
-  const sold = entry.edition_sold ?? 0;
-  const total = entry.edition_total ?? 0;
+const editionSummary = (e: Entry) => {
+  if (isUnlimited(e)) return '∞';
+  const sold = e.edition_sold ?? 0;
+  const total = e.edition_total ?? 0;
   return `${sold}/${total}`;
 };
 
-const galleryBadgeText = (g?: string) =>
-  g === 'float' ? 'Float' : 'White';
-const saleBadgeText = (e: Entry) =>
-  (e.is_nft || e.sale_type === 'nft') ? 'NFT' : '通常';
+const galleryBadgeText = (g?: string) => (g === 'float' ? 'Float' : 'White');
+const saleBadgeText = (e: Entry) => (e.is_nft || e.sale_type === 'nft' ? 'NFT' : '通常');
 
-const copyToClipboard = async (text: string) => {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-// -----------------------------
-// Main Component
-// -----------------------------
+/* ===================== Component ===================== */
 export default function MyPageClient() {
-  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-
   const [profile, setProfile] = useState<Profile | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
 
-  // UI states
+  // UI state
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('new');
   const [copied, setCopied] = useState(false);
-
-  // モバイルFABの表示用
   const [isMobile, setIsMobile] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
-  // 公開用URL（自身のポートフォリオURL想定）
+  // 編集モーダル
+  const [editOpen, setEditOpen] = useState(false);
+
+  // SSRで location/window を参照しない（ENV優先、無ければクライアントで補完）
+  const [siteOrigin, setSiteOrigin] = useState<string>(
+    process.env.NEXT_PUBLIC_SITE_URL ?? ''
+  );
+  useEffect(() => {
+    if (!siteOrigin && typeof window !== 'undefined') {
+      setSiteOrigin(window.location.origin);
+    }
+  }, [siteOrigin]);
+
+  // 公開URL（slugは id 優先、無ければ display_name）
   const publicUrl = useMemo(() => {
-    // 例: /artists/{profile.id || display_name}
     const slug = profile?.id || profile?.display_name || 'me';
-    return `${location.origin}/artists/${encodeURIComponent(slug)}`;
-  }, [profile]);
+    return siteOrigin ? `${siteOrigin}/artists/${encodeURIComponent(slug)}` : '';
+  }, [siteOrigin, profile]);
 
-  // 初期ロード
+  // モバイル判定（クライアントのみ）
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-
-    const checkMobile = () => {
+    const check = () => {
       if (typeof window !== 'undefined') {
         setIsMobile(window.innerWidth < 768);
       }
     };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, [mounted]);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
+  // 初期ロード（クライアントのみ）
   useEffect(() => {
-    if (!mounted) return;
     (async () => {
       try {
         setLoading(true);
 
-// Profile
-const { data: profData, error: profErr } = await supabase
-  .from('profiles')
-  .select('id, display_name, avatar_url, tagline, bio, sns_links')
-  .returns<Profile[]>()         // ← 型を確定
-  .maybeSingle();               // ← 0/1行を想定
+        // Profile
+        const { data: profData, error: profErr } = await supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url, banner_url, tagline, bio, sns_links')
+          .returns<Profile>() // 型を確定
+          .maybeSingle();     // 0/1行想定
 
-if (!profErr) {
-  setProfile(profData ?? null);
-}
+        if (!profErr) {
+          setProfile(profData ?? null);
+        }
 
-// Entries
-const { data: entriesData, error: entriesErr } = await supabase
-  .from('entries')
-  .select([
-    'id',
-    'title',
-    'image_url',
-    'confirmed',
-    'created_at',
-    'likes',
-    'gallery_type',
-    'edition_total',
-    'edition_sold',
-    'price',
-    'meish_fee_yen',
-    'artist_reward_yen',
-    'confirmed_at',
-    'display_start_at',
-    'display_end_at',
-    'sale_type',
-    'is_nft',
-    'sold',
-  ].join(','))
-  .order('created_at', { ascending: false })
-  .returns<Entry[]>();          // ← 型を確定
+        // Entries
+        const { data: entriesData, error: entriesErr } = await supabase
+          .from('entries')
+          .select(
+            [
+              'id',
+              'title',
+              'image_url',
+              'confirmed',
+              'created_at',
+              'likes',
+              'gallery_type',
+              'edition_total',
+              'edition_sold',
+              'price',
+              'meish_fee_yen',
+              'artist_reward_yen',
+              'confirmed_at',
+              'display_start_at',
+              'display_end_at',
+              'sale_type',
+              'is_nft',
+              'sold',
+            ].join(',')
+          )
+          .order('created_at', { ascending: false })
+          .returns<Entry[]>(); // GenericStringError対策：結果型を固定
 
-if (entriesErr) {
-  setEntries([]);
-} else {
-  setEntries(entriesData ?? []);
-}
-
+        if (entriesErr) {
+          setEntries([]);
+        } else {
+          setEntries(entriesData ?? []);
+        }
       } finally {
         setLoading(false);
       }
     })();
-  }, [mounted]);
+  }, []);
 
   // 指標
   const metrics = useMemo(() => {
@@ -204,19 +201,13 @@ if (entriesErr) {
     const totalLikes = entries.reduce((s, e) => s + (e.likes ?? 0), 0);
     const soldCount = entries.reduce((s, e) => {
       if (isUnlimited(e)) return s + (e.edition_sold ?? 0);
-      // リミテッドは売切れ状態を優先カウント（なければsold数）
-      const soldOut = (e.edition_total ?? 0) > 0 &&
-                      (e.edition_sold ?? 0) >= (e.edition_total ?? 0);
+      const soldOut =
+        (e.edition_total ?? 0) > 0 && (e.edition_sold ?? 0) >= (e.edition_total ?? 0);
       return s + (soldOut ? (e.edition_total ?? 0) : (e.edition_sold ?? 0));
     }, 0);
     const rewardYen = entries.reduce((s, e) => s + (e.artist_reward_yen ?? 0), 0);
 
-    return {
-      publishedCount: published,
-      totalLikes,
-      soldCount,
-      rewardYen,
-    };
+    return { publishedCount: published, totalLikes, soldCount, rewardYen };
   }, [entries]);
 
   // 検索・並び替え
@@ -226,8 +217,8 @@ if (entriesErr) {
       const q = query.toLowerCase();
       return (
         e.title?.toLowerCase().includes(q) ||
-        (galleryBadgeText(e.gallery_type)?.toLowerCase().includes(q)) ||
-        (saleBadgeText(e)?.toLowerCase().includes(q))
+        galleryBadgeText(e.gallery_type)?.toLowerCase().includes(q) ||
+        saleBadgeText(e)?.toLowerCase().includes(q)
       );
     });
 
@@ -242,7 +233,9 @@ if (entriesErr) {
         return (b.price ?? -1) - (a.price ?? -1);
       }
       if (sortKey === 'priceLow') {
-        return (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER);
+        return (
+          (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER)
+        );
       }
       return 0;
     });
@@ -250,20 +243,48 @@ if (entriesErr) {
     return sorted;
   }, [entries, query, sortKey]);
 
-  // 公開URLコピー
+  // クリップボード
   const handleCopy = async () => {
-    const ok = await copyToClipboard(publicUrl);
-    setCopied(ok);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      const url = publicUrl || (siteOrigin ? `${siteOrigin}/artists/me` : '');
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setToast('公開URLをコピーしました');
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      setToast('コピーに失敗しました');
+    }
   };
 
-  if (!mounted) {
-    return null; // SSR/CSR不一致の回避
+async function handleProfileSave(payload: ProfileSavePayload) {
+  try {
+    let targetId = profile?.id;
+    if (!targetId) {
+      const { data: user } = await supabase.auth.getUser();
+      targetId = user.user?.id;
+    }
+    if (!targetId) throw new Error('ユーザーIDが取得できませんでした。');
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(payload)             // ← payload は bio に null を含んでもOK
+      .eq('id', targetId);
+
+    if (error) throw error;
+
+    setProfile(prev => ({ ...(prev || {}), ...payload, id: targetId! }));
+    setToast('プロフィールを保存しました');
+    setEditOpen(false);
+  } catch (e) {
+    console.error(e);
+    setToast('保存に失敗しました');
   }
+}
+
 
   return (
     <main className="font-zen">
-      {/* Hero / Cover */}
+      {/* ===== Hero / Cover ===== */}
       <section className="relative">
         <div className="h-48 md:h-56 w-full bg-gradient-to-r from-sky-50 to-white" />
         <div className="absolute -bottom-10 left-5 md:left-10 flex items-end gap-4">
@@ -286,27 +307,25 @@ if (entriesErr) {
               {profile?.display_name ?? 'My Portfolio'}
             </h1>
             {profile?.tagline && (
-              <p className="text-gray-600 text-sm md:text-base mt-1">
-                {profile.tagline}
-              </p>
+              <p className="text-gray-600 text-sm md:text-base mt-1">{profile.tagline}</p>
             )}
           </div>
         </div>
 
-        {/* 右上：編集/シェア */}
+        {/* 右上：編集 */}
         <div className="absolute top-4 right-4 flex items-center gap-2">
-          <a
-            href="/mypage/edit"
+          <button
+            onClick={() => setEditOpen(true)}
             className="inline-flex items-center gap-2 rounded-full bg-white/90 backdrop-blur px-3 py-2 text-sm shadow hover:shadow-md border"
             aria-label="プロフィール編集"
           >
             <Edit3 className="w-4 h-4" />
             <span>プロフィールを編集</span>
-          </a>
+          </button>
         </div>
       </section>
 
-      {/* Bio / Links / Share */}
+      {/* ===== Bio / Links / Share ===== */}
       <section className="mt-16 px-4 md:px-6">
         <div className="rounded-2xl border bg-white p-4 md:p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -356,7 +375,7 @@ if (entriesErr) {
           {/* Share Public URL */}
           <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-center">
             <div className="flex-1 overflow-hidden rounded-xl border bg-gray-50 px-3 py-2 text-sm text-gray-600">
-              <span className="truncate">{publicUrl}</span>
+              <span className="truncate">{publicUrl || '/artists/...'} </span>
             </div>
             <div className="flex gap-2">
               <button
@@ -367,20 +386,24 @@ if (entriesErr) {
                 <LinkIcon className="w-4 h-4" />
                 <span>{copied ? 'コピーしました' : 'URLコピー'}</span>
               </button>
-              <a
-                href={publicUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
-                aria-label="公開ページを開く"
-              >
-                <ExternalLink className="w-4 h-4" />
-                <span>公開ページ</span>
-              </a>
+              {publicUrl && (
+                <a
+                  href={publicUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
+                  aria-label="公開ページを開く"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>公開ページ</span>
+                </a>
+              )}
               <button
                 onClick={() => {
-                  const text = `${profile?.display_name ?? 'Artist'} | me-ish ポートフォリオ\n${publicUrl}`;
-                  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&hashtags=me_ish`;
+                  const text = `${profile?.display_name ?? 'Artist'} | me-ish ポートフォリオ\n${publicUrl || ''}`;
+                  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                    text
+                  )}&hashtags=me_ish`;
                   window.open(url, '_blank', 'noopener,noreferrer');
                 }}
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
@@ -394,33 +417,17 @@ if (entriesErr) {
         </div>
       </section>
 
-      {/* Metrics */}
+      {/* ===== Metrics ===== */}
       <section className="px-4 md:px-6 mt-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <MetricCard
-            icon={<BadgeCheck className="w-5 h-5" />}
-            label="公開作品"
-            value={metrics.publishedCount}
-          />
-          <MetricCard
-            icon={<Heart className="w-5 h-5 text-heart-pink" />}
-            label="いいね"
-            value={metrics.totalLikes}
-          />
-          <MetricCard
-            icon={<ShoppingCart className="w-5 h-5" />}
-            label="販売数"
-            value={metrics.soldCount}
-          />
-          <MetricCard
-            icon={<Coins className="w-5 h-5" />}
-            label="報酬額"
-            value={formatYen(metrics.rewardYen)}
-          />
+          <MetricCard icon={<BadgeCheck className="w-5 h-5" />} label="公開作品" value={metrics.publishedCount} />
+          <MetricCard icon={<Heart className="w-5 h-5 text-pink-500" />} label="いいね" value={metrics.totalLikes} />
+          <MetricCard icon={<ShoppingCart className="w-5 h-5" />} label="販売数" value={metrics.soldCount} />
+          <MetricCard icon={<Coins className="w-5 h-5" />} label="報酬額" value={formatYen(metrics.rewardYen)} />
         </div>
       </section>
 
-      {/* Controls */}
+      {/* ===== Controls ===== */}
       <section className="px-4 md:px-6 mt-6">
         <div className="rounded-2xl border bg-white p-3 md:p-4 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
           <div className="flex-1">
@@ -454,14 +461,12 @@ if (entriesErr) {
         </div>
       </section>
 
-      {/* Entries Grid */}
+      {/* ===== Entries Grid ===== */}
       <section className="px-4 md:px-6 mt-6 mb-20">
         {loading ? (
           <div className="grid place-items-center py-16 text-gray-500">読み込み中...</div>
         ) : filtered.length === 0 ? (
-          <div className="grid place-items-center py-16 text-gray-500">
-            該当作品がありません。
-          </div>
+          <div className="grid place-items-center py-16 text-gray-500">該当作品がありません。</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((e) => (
@@ -471,25 +476,45 @@ if (entriesErr) {
         )}
       </section>
 
-      {/* Mobile FAB */}
+      {/* モバイルFAB */}
       {isMobile && (
-        <a
-          href="/mypage/edit"
-          className="fixed bottom-5 right-5 inline-flex items-center gap-2 rounded-full bg-[--meish-brand,_#00a1e9] text-white px-4 py-3 shadow-lg"
+        <button
+          onClick={() => setEditOpen(true)}
+          className="fixed bottom-5 right-5 inline-flex items-center gap-2 rounded-full text-white px-4 py-3 shadow-lg"
           style={{ backgroundColor: BRAND }}
           aria-label="プロフィール編集"
         >
           <Edit3 className="w-4 h-4" />
           <span>編集</span>
-        </a>
+        </button>
+      )}
+
+      {/* トースト（簡易） */}
+      {toast && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 rounded-lg bg-black/80 text-white text-sm px-3 py-2 shadow">
+          {toast}
+        </div>
+      )}
+
+      {/* プロフィール編集モーダル */}
+      {editOpen && profile && (
+        <ProfileEditModal
+          initialProfile={{
+            display_name: profile.display_name,
+            bio: profile.bio || '',
+            avatar_url: profile.avatar_url || '',
+            banner_url: profile.banner_url || '',
+            sns_links: profile.sns_links || {},
+          }}
+          onSave={handleProfileSave}
+          onCancel={() => setEditOpen(false)}
+        />
       )}
     </main>
   );
 }
 
-// -----------------------------
-// Sub Components
-// -----------------------------
+/* ===================== Sub Components ===================== */
 function MetricCard({
   icon,
   label,
@@ -520,6 +545,7 @@ function EntryCard({ entry }: { entry: Entry }) {
   }, [entry]);
 
   const nft = entry.is_nft || entry.sale_type === 'nft';
+  const thumb = entry.image_url || '/placeholder.png';
 
   return (
     <div className="group relative rounded-2xl overflow-hidden bg-white border shadow-sm hover:shadow-md transition">
@@ -527,7 +553,7 @@ function EntryCard({ entry }: { entry: Entry }) {
       <div className="relative w-full h-52 overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={entry.image_url}
+          src={thumb}
           alt={entry.title}
           className="w-full h-full object-cover group-hover:scale-105 transition"
         />
@@ -556,7 +582,7 @@ function EntryCard({ entry }: { entry: Entry }) {
         <div className="mt-1 flex items-center justify-between text-sm text-gray-500">
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1">
-              <Heart className="w-4 h-4 text-heart-pink" />
+              <Heart className="w-4 h-4 text-pink-500" />
               <span>{entry.likes ?? 0}</span>
             </span>
             <span className="inline-flex items-center gap-1">
@@ -591,10 +617,13 @@ function EntryCard({ entry }: { entry: Entry }) {
             className="p-2 rounded-full bg-white hover:bg-gray-100 shadow"
             aria-label="シェア"
             onClick={() => {
-              const url = `${location.origin}/artworks/${entry.id}`;
+              const base =
+                typeof window !== 'undefined' ? window.location.origin : '';
+              const url = base ? `${base}/artworks/${entry.id}` : `/artworks/${entry.id}`;
               const text = `${entry.title} | me-ish`;
-              const share =
-                `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=me_ish`;
+              const share = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                text
+              )}&url=${encodeURIComponent(url)}&hashtags=me_ish`;
               window.open(share, '_blank', 'noopener,noreferrer');
             }}
           >
@@ -614,4 +643,3 @@ function EntryCard({ entry }: { entry: Entry }) {
     </div>
   );
 }
-
