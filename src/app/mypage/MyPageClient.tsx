@@ -632,3 +632,4 @@ function EntryCard({ entry }: { entry: Entry }) {
     </div>
   );
 }
+
