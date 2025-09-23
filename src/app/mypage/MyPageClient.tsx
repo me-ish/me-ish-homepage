@@ -106,8 +106,8 @@ export default function MyPageClient() {
   }, [siteOrigin]);
 
   const publicUrl = useMemo(() => {
-    const slug = profile?.id || profile?.display_name || 'me';
-    return siteOrigin ? `${siteOrigin}/artists/${encodeURIComponent(slug)}` : '';
+    const slug = profile?.id || 'me';
+    return siteOrigin ? `${siteOrigin}/artists/${slug}` : '';
   }, [siteOrigin, profile]);
 
   // 画面幅（モバイル判定）
