@@ -274,7 +274,7 @@ function TiltCard() {
           className="absolute left-4 bottom-4 rounded-xl bg-white/80 dark:bg-zinc-900/70 backdrop-blur px-4 py-2 text-sm font-medium"
           style={{ transform: 'translateZ(30px)' }}
         >
-          受賞：インタラクティブデザイン 2025／Winner
+          受賞：〇〇イラストコンテスト 2025／Winner
         </div>
         <div
           className="absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-semibold text-white"
@@ -304,7 +304,7 @@ function About() {
             「見ているだけで楽しくなる世界観」を丁寧に仕上げます。
           </p>
           <ul className="mt-6 grid gap-2 text-sm">
-            <li>• 拠点：仙台／リモート可</li>
+            <li>• 拠点：東京／リモート可</li>
             <li>• ツール：Clip Studio, Procreate, Photoshop, Illustrator</li>
             <li>• 依頼：立ち絵・アイコン・キャラクターデザイン・SNSヘッダー・同人誌表紙・グッズ用イラスト 他</li>
           </ul>
