@@ -124,7 +124,8 @@ const PurchaseArtist = z.object({
   amountYen: z.number().int().nonnegative().optional(),
   priceYen:  z.number().int().nonnegative().optional(),
   settlementAt: z.string().optional(), // ISO
-}).transform(d => ({ ...d, amountYen: d.amountYen ?? d.priceYen ?? null }));
+}).transform(d => ({ ...d, priceYen: d.priceYen ?? d.amountYen ?? null }));
+
 
 const PurchaseNft = z.object({
   to: z.string().email(),
