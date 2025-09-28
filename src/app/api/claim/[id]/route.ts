@@ -237,198 +237,180 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const desired = quantityFromClient != null ? Number(quantityFromClient) : 1;
     const quantity = Math.max(1, Math.min(desired, maxRemain));
 
-    // Thirdweb で claimTo（1155）
-    const chainEnv = process.env.CHAIN_NAME || '';
-    const chain = normalizeChainName(chainEnv);
-    const chainForSDK = chain === 'amoy' ? 'polygon-amoy' : chain;
+    // ...上の前半はそのまま...
 
-    const privateKey =
-      process.env.MEISH_WALLET_PRIVATE_KEY ||
-      process.env.THIRDWEB_PRIVATE_KEY ||
-      '';
-    const secretKey = process.env.THIRDWEB_SECRET_KEY || '';
-    const contractAddress = process.env.NFT_1155_CONTRACT_ADDRESS || '';
+// Thirdweb で claimTo（1155）
+const chainEnv = process.env.CHAIN_NAME || '';
+const chain = normalizeChainName(chainEnv);
+const chainForSDK = chain === 'amoy' ? 'polygon-amoy' : chain;
 
-    const usingPkVar = process.env.MEISH_WALLET_PRIVATE_KEY
-      ? 'MEISH_WALLET_PRIVATE_KEY'
-      : process.env.THIRDWEB_PRIVATE_KEY
-      ? 'THIRDWEB_PRIVATE_KEY'
-      : 'NONE';
+const privateKey =
+  process.env.MEISH_WALLET_PRIVATE_KEY ||
+  process.env.THIRDWEB_PRIVATE_KEY ||
+  '';
+const secretKey = process.env.THIRDWEB_SECRET_KEY || '';
+const contractAddress = process.env.NFT_1155_CONTRACT_ADDRESS || '';
 
-    if (!chain || !privateKey || !secretKey || !contractAddress) {
-      console.error('[claim] misconfig', {
-        chainEnv,
-        hasPK: !!privateKey,
-        hasSK: !!secretKey,
-        contractAddress,
-        usingPkVar,
-      });
-      return NextResponse.json({ error: 'server_misconfig' }, { status: 500 });
+const usingPkVar = process.env.MEISH_WALLET_PRIVATE_KEY
+  ? 'MEISH_WALLET_PRIVATE_KEY'
+  : process.env.THIRDWEB_PRIVATE_KEY
+  ? 'THIRDWEB_PRIVATE_KEY'
+  : 'NONE';
+
+if (!chain || !privateKey || !secretKey || !contractAddress) {
+  console.error('[claim] misconfig', {
+    chainEnv,
+    hasPK: !!privateKey,
+    hasSK: !!secretKey,
+    contractAddress,
+    usingPkVar,
+  });
+  return NextResponse.json({ error: 'server_misconfig' }, { status: 500 });
+}
+
+// 送信直前ログ（安全）
+console.info('[claim] will send', {
+  chain,
+  contractAddress,
+  usingPkVar,
+  entryId: entry.id,
+  tokenId,
+  quantity,
+  to,
+});
+
+try {
+  if (!privateKey.startsWith('0x')) {
+    return NextResponse.json({ error: 'bad_private_key' }, { status: 500 });
+  }
+
+  // Amoy 定義（公式RPC + 予備RPC）
+  const amoyChain = {
+    slug: 'polygon-amoy',
+    chainId: 80002,
+    nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+    rpc: [
+      'https://rpc-amoy.polygon.technology',
+      'https://polygon-amoy-bor-rpc.publicnode.com',
+    ],
+  };
+
+  // --- Try #1: 公式RPCを supportedChains で固定（バッチ実質オフ） ---
+  let sdk = ThirdwebSDK.fromPrivateKey(privateKey, chainForSDK as any, {
+    secretKey,
+    clientId: process.env.THIRDWEB_CLIENT_ID,
+    supportedChains: chainForSDK === 'polygon-amoy' ? [amoyChain] : undefined,
+    rpcBatchSettings: { sizeLimit: 1, timeLimit: 0 },
+  });
+
+  try {
+    const contract = await sdk.getContract(contractAddress, 'edition-drop');
+    console.info('[claim] contract ready', { type: 'edition-drop', chainForSDK, address: contractAddress });
+
+    const txRes = await contract.erc1155.claimTo(to, tokenId, quantity);
+    const txhash = txRes.receipt.transactionHash;
+
+    try {
+      if (typeof entry.edition_sold === 'number') {
+        await admin
+          .from('entries')
+          .update({ edition_sold: Number(entry.edition_sold) + quantity })
+          .eq('id', entry.id);
+      }
+    } catch (e) {
+      console.warn('[claim] post update failed (non-fatal):', e);
     }
 
-    // 送信直前ログ（安全）
-    console.info('[claim] will send', {
-      chain,
-      contractAddress,
-      usingPkVar,
+    return NextResponse.json({
+      ok: true,
+      mode: 'address',
       entryId: entry.id,
       tokenId,
       quantity,
-      to,
+      txhash,
+    });
+  } catch (primaryErr: any) {
+    // NETWORK_ERROR / noNetwork / missing response はフォールバックへ
+    const pm = String(primaryErr?.message || '').toLowerCase();
+    const isNet = primaryErr?.code === 'NETWORK_ERROR' || /no network|could not detect network|missing response|call_exception/.test(pm);
+
+    if (!isNet) throw primaryErr;
+
+    console.warn('[claim] primary rpc failed, fallback to alt rpc');
+
+    // --- Try #2: 予備RPCだけで再初期化（publicnode単独） ---
+    const amoyChainFallback = {
+      ...amoyChain,
+      rpc: ['https://polygon-amoy-bor-rpc.publicnode.com'], // 単独
+    };
+
+    sdk = ThirdwebSDK.fromPrivateKey(privateKey, chainForSDK as any, {
+      secretKey,
+      clientId: process.env.THIRDWEB_CLIENT_ID,
+      supportedChains: chainForSDK === 'polygon-amoy' ? [amoyChainFallback] : undefined,
+      rpcBatchSettings: { sizeLimit: 1, timeLimit: 0 },
     });
 
+    const contract = await sdk.getContract(contractAddress, 'edition-drop');
+    console.info('[claim] contract ready (fallback)', { type: 'edition-drop', chainForSDK, address: contractAddress });
+
+    const txRes = await contract.erc1155.claimTo(to, tokenId, quantity);
+    const txhash = txRes.receipt.transactionHash;
+
     try {
-      if (!privateKey.startsWith('0x')) {
-        return NextResponse.json({ error: 'bad_private_key' }, { status: 500 });
+      if (typeof entry.edition_sold === 'number') {
+        await admin
+          .from('entries')
+          .update({ edition_sold: Number(entry.edition_sold) + quantity })
+          .eq('id', entry.id);
       }
+    } catch (e) {
+      console.warn('[claim] post update failed (non-fatal):', e);
+    }
 
-      // ---------- SDK（標準RPC） ----------
-      const sdkPrimary = ThirdwebSDK.fromPrivateKey(privateKey, chainForSDK as any, {
-        secretKey,
-        clientId: process.env.THIRDWEB_CLIENT_ID,
-        rpcBatchSettings: { sizeLimit: 1, timeLimit: 0 }, // 実質バッチ無効
-      });
-
-      // Edition Drop として明示
-      const contractPrimary = await sdkPrimary.getContract(contractAddress, 'edition-drop');
-
-      console.info('[claim] contract ready', {
-        type: 'edition-drop',
-        chainForSDK,
-        address: contractAddress,
-      });
-
-// 事前にアクティブ条件を一回読む
-try {
-  await contractPrimary.erc1155.claimConditions.getActive(tokenId);
-} catch (pre) {
-  // ← 型安全に message を取り出す
-  const msg =
-    pre instanceof Error
-      ? pre.message
-      : String((pre as any)?.message ?? '');
-  const m = msg.toLowerCase();
-
-  if (m.includes('missing response') || m.includes('call_exception')) {
-    const err = new Error('rpc_precheck_failed');
-    (err as any).code = 'RPC_PRECHECK_FAILED';
-    (err as any).cause = pre;
-    throw err; // フォールバックへ
+    return NextResponse.json({
+      ok: true,
+      mode: 'address',
+      entryId: entry.id,
+      tokenId,
+      quantity,
+      txhash,
+    });
   }
-  // それ以外はそのまま続行（条件未設定などは後段のマッピングで拾う）
+} catch (e: any) {
+  const err = {
+    name: e?.name,
+    message: e?.message,
+    reason: e?.reason,
+    shortMessage: e?.shortMessage,
+    code: e?.code,
+  };
+  console.error('[claim] tx error', err);
+
+  const msg = `${e?.message || ''}`.toLowerCase();
+
+  if (e?.code === 'INSUFFICIENT_FUNDS' || msg.includes('insufficient funds')) {
+    return NextResponse.json({ error: 'insufficient_gas' }, { status: 402 });
+  }
+  if (msg.includes('no claim condition') || msg.includes('no active claim condition')) {
+    return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
+  }
+  if (msg.includes('not minted') || (msg.includes('token') && msg.includes('does not exist'))) {
+    return NextResponse.json({ error: 'token_not_minted' }, { status: 409 });
+  }
+  if (msg.includes('exceeds') && msg.includes('max')) {
+    return NextResponse.json({ error: 'quantity_exceeds_max' }, { status: 409 });
+  }
+  if (msg.includes('chain') && msg.includes('mismatch')) {
+    return NextResponse.json({ error: 'wrong_chain' }, { status: 409 });
+  }
+  if (msg.includes('could not connect') || msg.includes('timeout') || msg.includes('network') || msg.includes('missing response')) {
+    return NextResponse.json({ error: 'rpc_unavailable' }, { status: 502 });
+  }
+
+  return NextResponse.json({ error: 'tx_failed' }, { status: 500 });
 }
 
-
-      // そのまま送信
-      const txRes = await contractPrimary.erc1155.claimTo(to, tokenId, quantity);
-      const txhash = txRes.receipt.transactionHash;
-
-      try {
-        if (typeof entry.edition_sold === 'number') {
-          await admin
-            .from('entries')
-            .update({ edition_sold: Number(entry.edition_sold) + quantity })
-            .eq('id', entry.id);
-        }
-      } catch (e) {
-        console.warn('[claim] post update failed (non-fatal):', e);
-      }
-
-      return NextResponse.json({
-        ok: true,
-        mode: 'address',
-        entryId: entry.id,
-        tokenId,
-        quantity,
-        txhash,
-      });
-
-    } catch (e: any) {
-      // ---------- フォールバック（公式RPCを明示） ----------
-      const isPrecheck = e?.code === 'RPC_PRECHECK_FAILED' || /missing response|call_exception/i.test(String(e?.message || ''));
-      if (isPrecheck) {
-        try {
-          const amoyChain = {
-            slug: 'polygon-amoy',
-            chainId: 80002,
-            nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
-            rpc: [
-              'https://rpc-amoy.polygon.technology',
-              'https://polygon-amoy-bor-rpc.publicnode.com',
-            ],
-          };
-
-          const sdkFallback = ThirdwebSDK.fromPrivateKey(privateKey, chainForSDK as any, {
-            secretKey,
-            clientId: process.env.THIRDWEB_CLIENT_ID,
-            supportedChains: chain === 'amoy' ? [amoyChain] : undefined,
-            rpcBatchSettings: { sizeLimit: 1, timeLimit: 0 },
-          });
-
-          const contractFallback = await sdkFallback.getContract(contractAddress, 'edition-drop');
-          console.warn('[claim] fallback rpc in use');
-
-          // 再送
-          const txRes = await contractFallback.erc1155.claimTo(to, tokenId, quantity);
-          const txhash = txRes.receipt.transactionHash;
-
-          try {
-            if (typeof entry.edition_sold === 'number') {
-              await admin
-                .from('entries')
-                .update({ edition_sold: Number(entry.edition_sold) + quantity })
-                .eq('id', entry.id);
-            }
-          } catch (e2) {
-            console.warn('[claim] post update failed (non-fatal):', e2);
-          }
-
-          return NextResponse.json({
-            ok: true,
-            mode: 'address',
-            entryId: entry.id,
-            tokenId,
-            quantity,
-            txhash,
-          });
-        } catch (f: any) {
-          // フォールバックも失敗 → 以降のマッピングへ
-          e = f;
-        }
-      }
-
-      const err = {
-        name: e?.name,
-        message: e?.message,
-        reason: e?.reason,
-        shortMessage: e?.shortMessage,
-        code: e?.code,
-      };
-      console.error('[claim] tx error', err);
-
-      const msg = `${e?.message || ''}`.toLowerCase();
-
-      if (e?.code === 'INSUFFICIENT_FUNDS' || msg.includes('insufficient funds')) {
-        return NextResponse.json({ error: 'insufficient_gas' }, { status: 402 });
-      }
-      if (msg.includes('no claim condition') || msg.includes('no active claim condition')) {
-        return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
-      }
-      if (msg.includes('not minted') || (msg.includes('token') && msg.includes('does not exist'))) {
-        return NextResponse.json({ error: 'token_not_minted' }, { status: 409 });
-      }
-      if (msg.includes('exceeds') && msg.includes('max')) {
-        return NextResponse.json({ error: 'quantity_exceeds_max' }, { status: 409 });
-      }
-      if (msg.includes('chain') && msg.includes('mismatch')) {
-        return NextResponse.json({ error: 'wrong_chain' }, { status: 409 });
-      }
-      if (msg.includes('could not connect') || msg.includes('timeout') || msg.includes('network') || msg.includes('missing response')) {
-        return NextResponse.json({ error: 'rpc_unavailable' }, { status: 502 });
-      }
-
-      return NextResponse.json({ error: 'tx_failed' }, { status: 500 });
-    }
   } catch (e: any) {
     console.error('[claim] error:', e);
     return NextResponse.json({ error: 'internal' }, { status: 500 });
