@@ -241,6 +241,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const chainEnv = process.env.CHAIN_NAME || '';
     const chain = normalizeChainName(chainEnv);
     const chainForSDK = chain === 'amoy' ? 'polygon-amoy' : chain;
+
     const privateKey =
       process.env.MEISH_WALLET_PRIVATE_KEY ||
       process.env.THIRDWEB_PRIVATE_KEY ||
@@ -265,7 +266,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: 'server_misconfig' }, { status: 500 });
     }
 
-    // 送信直前の安全ログ（値のみ・秘密は出さない）
+    // 送信直前ログ（安全）
     console.info('[claim] will send', {
       chain,
       contractAddress,
@@ -280,41 +281,38 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       if (!privateKey.startsWith('0x')) {
         return NextResponse.json({ error: 'bad_private_key' }, { status: 500 });
       }
-      // thirdweb が期待するスラッグに寄せる
-const chainForSDK = chain === 'amoy' ? 'polygon-amoy' : chain;
 
-// Amoy のチェーン定義（公式RPCを明示）
-const amoyChain = {
-  slug: 'polygon-amoy',
-  chainId: 80002,
-  nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
-  rpc: [
-    'https://rpc-amoy.polygon.technology',
-    'https://polygon-amoy-bor-rpc.publicnode.com', // 予備
-  ],
-};
+      // Amoy チェーン定義（公式RPC + 予備）
+      const amoyChain = {
+        slug: 'polygon-amoy',
+        chainId: 80002,
+        nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+        rpc: [
+          'https://rpc-amoy.polygon.technology',
+          'https://polygon-amoy-bor-rpc.publicnode.com',
+        ],
+      };
 
-// 秘密鍵の0xチェックはそのまま
-if (!privateKey.startsWith('0x')) {
-  return NextResponse.json({ error: 'bad_private_key' }, { status: 500 });
-}
+      // SDK 初期化（バッチ無効化 & supportedChains 指定）
+const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chainForSDK as any, {
+  secretKey,
+  clientId: process.env.THIRDWEB_CLIENT_ID,
+  supportedChains: chain === 'amoy' ? [amoyChain] : undefined,
+  // ← ここを修正
+  rpcBatchSettings: {
+    sizeLimit: 1, // 1 リクエストごと（= 実質バッチ無効）
+    timeLimit: 0, // 待ち時間なし
+  },
+});
 
-// ❗️オプションは `supportedChains` を使う（`rpc` は存在しない）
-const sdk = ThirdwebSDK.fromPrivateKey(
-  privateKey,
-  chainForSDK as any, // 'polygon-amoy' など
-  {
-    secretKey, // THIRDWEB_SECRET_KEY（フル値）
-    // 必要に応じて clientId を追加（無ければ削除可）
-    clientId: process.env.THIRDWEB_CLIENT_ID,
-    supportedChains: chain === 'amoy' ? [amoyChain] : undefined,
-  }
-);
+      // Edition Drop として明示
+      const contract = await sdk.getContract(contractAddress, 'edition-drop');
 
-      const contract = await sdk.getContract(contractAddress);
-      if (!('erc1155' in contract)) {
-        return NextResponse.json({ error: 'bad_contract_type' }, { status: 500 });
-      }
+      console.info('[claim] contract ready', {
+        type: 'edition-drop',
+        chainForSDK,
+        address: contractAddress,
+      });
 
       const txRes = await contract.erc1155.claimTo(to, tokenId, quantity);
       const txhash = txRes.receipt.transactionHash;
