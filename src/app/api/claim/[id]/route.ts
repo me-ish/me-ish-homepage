@@ -62,9 +62,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const admin = supabaseAdmin();
     const { data: entry, error } = await admin
       .from('entries')
-      .select(
-        'id,title,image_url,sale_type,token_id,edition_total,edition_sold'
-      )
+      .select('id,title,image_url,sale_type,token_id,edition_total,edition_sold')
       .eq('id', ver.entryId)
       .maybeSingle();
 
@@ -104,15 +102,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
 /* -------------------------------------------
    POST: 受け取り処理
-   - mode === 'address' : 既存の claimTo（ウォレット直受け）※既存フロー維持
-   - mode === 'email'   : 受け取りリンクを購入者へメール送信（新規追加）
+   - mode === 'address' : 既存の claimTo（ウォレット直受け）
+   - mode === 'email'   : 受け取りリンクを購入者へメール送信
 ------------------------------------------- */
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
     const body = await req.json().catch(() => ({}));
 
     // 受け取りモード（既定は address）
-    const mode: 'address' | 'email' = (body?.mode === 'email' ? 'email' : 'address');
+    const mode: 'address' | 'email' = body?.mode === 'email' ? 'email' : 'address';
 
     const certToken: string = body?.certToken ?? body?.token ?? '';
     if (!certToken) {
@@ -164,7 +162,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
 
     // ----------------------------------
-    // A) mode === 'email'（受け取りリンクをメール送信）※新規追加
+    // A) mode === 'email'（受け取りリンクをメール送信）
     // ----------------------------------
     if (mode === 'email') {
       const toEmail: string = String(body?.email ?? '').trim();
@@ -172,13 +170,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
       }
 
-      // 受け取りリンク（COA）を作成
-      // ここでは "既存のcertTokenをそのまま再送" とし、将来ワンタイム/TTL再発行に切り替え可能
+      // 受け取りリンク（COA）を作成（まずは既存トークンを再送）
       const baseUrl = getBaseUrl(req);
       if (!baseUrl) {
         return NextResponse.json({ error: 'server_misconfig_baseurl' }, { status: 500 });
       }
-
       const claimUrl = `${baseUrl}/cert/${entry.id}?t=${encodeURIComponent(certToken)}`;
 
       // 内部メールAPIを管理トークン付きで叩く
@@ -202,7 +198,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           title: entry.title ?? 'ご購入作品',
           tokenId: entry.token_id ?? 0,
           claimUrl,
-          // 追加情報があればここに（contractAddress, image, etc.）
         }),
       });
 
@@ -220,7 +215,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
 
     // ----------------------------------
-    // B) mode === 'address'（既存の claimTo フロー）※既存維持＋sold_outガード
+    // B) mode === 'address'（既存の claimTo フロー）
     // ----------------------------------
     // ← addressでもtoでもOKにする（後方互換）
     const toRaw: string = body?.to ?? body?.address ?? '';
@@ -251,7 +246,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     // Thirdweb で claimTo（1155）
     const chainEnv = process.env.CHAIN_NAME || '';
     const chain = normalizeChainName(chainEnv);
-    const privateKey = process.env.THIRDWEB_PRIVATE_KEY || '';
+    // どちらの環境変数でも拾えるように両対応
+    const privateKey =
+      process.env.MEISH_WALLET_PRIVATE_KEY ||
+      process.env.THIRDWEB_PRIVATE_KEY ||
+      '';
     const secretKey = process.env.THIRDWEB_SECRET_KEY || '';
     const contractAddress = process.env.NFT_1155_CONTRACT_ADDRESS || '';
 
@@ -268,22 +267,64 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chain as any, { secretKey });
     const contract = await sdk.getContract(contractAddress);
 
-    const txRes = await contract.erc1155.claimTo(to, tokenId, quantity);
-    const txhash = txRes.receipt.transactionHash;
-
-    // edition_sold のカウントアップ（非致命）
+    // ====== デバッグ強化: tx 実行の詳細ログとハンドリング ======
     try {
-      if (typeof entry.edition_sold === 'number') {
-        await admin
-          .from('entries')
-          .update({ edition_sold: Number(entry.edition_sold) + quantity })
-          .eq('id', entry.id);
-      }
-    } catch (e) {
-      console.warn('[claim] post update failed (non-fatal):', e);
-    }
+      const txRes = await contract.erc1155.claimTo(to, tokenId, quantity);
+      const txhash = txRes.receipt.transactionHash;
 
-    return NextResponse.json({ ok: true, mode: 'address', entryId: entry.id, tokenId, quantity, txhash });
+      // edition_sold のカウントアップ（非致命）
+      try {
+        if (typeof entry.edition_sold === 'number') {
+          await admin
+            .from('entries')
+            .update({ edition_sold: Number(entry.edition_sold) + quantity })
+            .eq('id', entry.id);
+        }
+      } catch (e) {
+        console.warn('[claim] post update failed (non-fatal):', e);
+      }
+
+      return NextResponse.json({
+        ok: true,
+        mode: 'address',
+        entryId: entry.id,
+        tokenId,
+        quantity,
+        txhash,
+      });
+    } catch (e: any) {
+      const err = {
+        name: e?.name,
+        message: e?.message,
+        reason: e?.reason,
+        shortMessage: e?.shortMessage,
+        code: e?.code,
+      };
+      console.error('[claim] tx error', err);
+
+      const msg = `${e?.message || ''}`.toLowerCase();
+
+      if (e?.code === 'INSUFFICIENT_FUNDS' || msg.includes('insufficient funds')) {
+        return NextResponse.json({ error: 'insufficient_gas' }, { status: 402 });
+      }
+      if (msg.includes('no claim condition') || msg.includes('no active claim condition')) {
+        return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
+      }
+      if (msg.includes('not minted') || (msg.includes('token') && msg.includes('does not exist'))) {
+        return NextResponse.json({ error: 'token_not_minted' }, { status: 409 });
+      }
+      if (msg.includes('exceeds') && msg.includes('max')) {
+        return NextResponse.json({ error: 'quantity_exceeds_max' }, { status: 409 });
+      }
+      if (msg.includes('chain') && msg.includes('mismatch')) {
+        return NextResponse.json({ error: 'wrong_chain' }, { status: 409 });
+      }
+
+      // デフォルト
+      return NextResponse.json({ error: 'tx_failed' }, { status: 500 });
+    }
+    // ====== /デバッグ強化 ======
+
   } catch (e: any) {
     console.error('[claim] error:', e);
     return NextResponse.json({ error: 'internal' }, { status: 500 });
