@@ -285,15 +285,13 @@ try {
   }
 
   // Amoy 定義（公式RPC + 予備RPC）
-  const amoyChain = {
-    slug: 'polygon-amoy',
-    chainId: 80002,
-    nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
-    rpc: [
-      'https://rpc-amoy.polygon.technology',
-      'https://polygon-amoy-bor-rpc.publicnode.com',
-    ],
-  };
+const amoyChain = {
+  slug: 'polygon-amoy',
+  chainId: 80002,
+  nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+  rpc: ['https://polygon-amoy.g.alchemy.com/v2/_G5Po9_0q6Rn_NrH_Msqx'], 
+};
+
 
   // --- Try #1: 公式RPCを supportedChains で固定（バッチ実質オフ） ---
   let sdk = ThirdwebSDK.fromPrivateKey(privateKey, chainForSDK as any, {
