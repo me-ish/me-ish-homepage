@@ -282,31 +282,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         return NextResponse.json({ error: 'bad_private_key' }, { status: 500 });
       }
 
-      // Amoy チェーン定義（公式RPC + 予備）
-      const amoyChain = {
-        slug: 'polygon-amoy',
-        chainId: 80002,
-        nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
-        rpc: [
-          'https://rpc-amoy.polygon.technology',
-          'https://polygon-amoy-bor-rpc.publicnode.com',
-        ],
-      };
-
-      // SDK 初期化（バッチ無効化 & supportedChains 指定）
-const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chainForSDK as any, {
-  secretKey,
-  clientId: process.env.THIRDWEB_CLIENT_ID,
-  supportedChains: chain === 'amoy' ? [amoyChain] : undefined,
-  // ← ここを修正
-  rpcBatchSettings: {
-    sizeLimit: 1, // 1 リクエストごと（= 実質バッチ無効）
-    timeLimit: 0, // 待ち時間なし
-  },
-});
+      // ---------- SDK（標準RPC） ----------
+      const sdkPrimary = ThirdwebSDK.fromPrivateKey(privateKey, chainForSDK as any, {
+        secretKey,
+        clientId: process.env.THIRDWEB_CLIENT_ID,
+        rpcBatchSettings: { sizeLimit: 1, timeLimit: 0 }, // 実質バッチ無効
+      });
 
       // Edition Drop として明示
-      const contract = await sdk.getContract(contractAddress, 'edition-drop');
+      const contractPrimary = await sdkPrimary.getContract(contractAddress, 'edition-drop');
 
       console.info('[claim] contract ready', {
         type: 'edition-drop',
@@ -314,7 +298,29 @@ const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chainForSDK as any, {
         address: contractAddress,
       });
 
-      const txRes = await contract.erc1155.claimTo(to, tokenId, quantity);
+// 事前にアクティブ条件を一回読む
+try {
+  await contractPrimary.erc1155.claimConditions.getActive(tokenId);
+} catch (pre) {
+  // ← 型安全に message を取り出す
+  const msg =
+    pre instanceof Error
+      ? pre.message
+      : String((pre as any)?.message ?? '');
+  const m = msg.toLowerCase();
+
+  if (m.includes('missing response') || m.includes('call_exception')) {
+    const err = new Error('rpc_precheck_failed');
+    (err as any).code = 'RPC_PRECHECK_FAILED';
+    (err as any).cause = pre;
+    throw err; // フォールバックへ
+  }
+  // それ以外はそのまま続行（条件未設定などは後段のマッピングで拾う）
+}
+
+
+      // そのまま送信
+      const txRes = await contractPrimary.erc1155.claimTo(to, tokenId, quantity);
       const txhash = txRes.receipt.transactionHash;
 
       try {
@@ -336,7 +342,61 @@ const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chainForSDK as any, {
         quantity,
         txhash,
       });
+
     } catch (e: any) {
+      // ---------- フォールバック（公式RPCを明示） ----------
+      const isPrecheck = e?.code === 'RPC_PRECHECK_FAILED' || /missing response|call_exception/i.test(String(e?.message || ''));
+      if (isPrecheck) {
+        try {
+          const amoyChain = {
+            slug: 'polygon-amoy',
+            chainId: 80002,
+            nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+            rpc: [
+              'https://rpc-amoy.polygon.technology',
+              'https://polygon-amoy-bor-rpc.publicnode.com',
+            ],
+          };
+
+          const sdkFallback = ThirdwebSDK.fromPrivateKey(privateKey, chainForSDK as any, {
+            secretKey,
+            clientId: process.env.THIRDWEB_CLIENT_ID,
+            supportedChains: chain === 'amoy' ? [amoyChain] : undefined,
+            rpcBatchSettings: { sizeLimit: 1, timeLimit: 0 },
+          });
+
+          const contractFallback = await sdkFallback.getContract(contractAddress, 'edition-drop');
+          console.warn('[claim] fallback rpc in use');
+
+          // 再送
+          const txRes = await contractFallback.erc1155.claimTo(to, tokenId, quantity);
+          const txhash = txRes.receipt.transactionHash;
+
+          try {
+            if (typeof entry.edition_sold === 'number') {
+              await admin
+                .from('entries')
+                .update({ edition_sold: Number(entry.edition_sold) + quantity })
+                .eq('id', entry.id);
+            }
+          } catch (e2) {
+            console.warn('[claim] post update failed (non-fatal):', e2);
+          }
+
+          return NextResponse.json({
+            ok: true,
+            mode: 'address',
+            entryId: entry.id,
+            tokenId,
+            quantity,
+            txhash,
+          });
+        } catch (f: any) {
+          // フォールバックも失敗 → 以降のマッピングへ
+          e = f;
+        }
+      }
+
       const err = {
         name: e?.name,
         message: e?.message,
@@ -363,7 +423,7 @@ const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chainForSDK as any, {
       if (msg.includes('chain') && msg.includes('mismatch')) {
         return NextResponse.json({ error: 'wrong_chain' }, { status: 409 });
       }
-      if (msg.includes('could not connect') || msg.includes('timeout') || msg.includes('network')) {
+      if (msg.includes('could not connect') || msg.includes('timeout') || msg.includes('network') || msg.includes('missing response')) {
         return NextResponse.json({ error: 'rpc_unavailable' }, { status: 502 });
       }
 
