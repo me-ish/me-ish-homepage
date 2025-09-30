@@ -308,6 +308,35 @@ try {
   const contract = await sdk.getContract(contractAddress, 'edition-drop');
   console.info('[claim] contract ready', { type: 'edition-drop', address: contractAddress });
 
+  // === プレチェック: token が存在するか（lazy mint 済みか） ===
+try {
+  await contract.erc1155.get(tokenId as number);
+} catch {
+  return NextResponse.json({ error: 'token_not_minted' }, { status: 409 });
+}
+
+// === プレチェック: アクティブな ClaimCondition があるか ===
+const active = await contract.erc1155.claimConditions
+  .getActive(tokenId as number)
+  .catch(() => null);
+
+if (!active) {
+  return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
+}
+
+// === プレチェック: 受け取り不適格理由 ===
+const reasons = await contract.erc1155.claimConditions
+  .getClaimIneligibilityReasons(tokenId as number, quantity, to);
+
+if (reasons && reasons.length) {
+  console.warn('[claim] ineligible', { reasons });
+  return NextResponse.json(
+    { error: 'ineligible', reasons }, // 例: ["NotEnoughSupply","AddressNotAllowed","WalletLimitExceeded","InsufficientFunds","MissingMerkleProof"]
+    { status: 409 }
+  );
+}
+
+
   // 送信
   const txRes = await contract.erc1155.claimTo(to, tokenId, quantity);
   const txhash = txRes.receipt.transactionHash;
