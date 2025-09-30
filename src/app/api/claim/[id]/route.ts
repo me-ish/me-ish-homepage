@@ -35,6 +35,7 @@ function getBaseUrl(req: Request) {
   if (origin) return origin;
   return process.env.NEXT_PUBLIC_BASE_URL || '';
 }
+console.info('[claim] build', { v: 'r2-no-getActive' });
 
 /* -------------------------------------------
    追加：SDK差異吸収 用 互換ラッパー
@@ -340,32 +341,51 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         return NextResponse.json({ error: 'token_not_minted' }, { status: 409 });
       }
 
-      // === プレチェック: アクティブな ClaimCondition があるか ===
-      const active = await contract.erc1155.claimConditions
-        .getActive(tokenId as number)
-        .catch(() => null);
+// === プレチェック: アクティブな ClaimCondition があるか（getAllで自前判定） ===
+let phasesCount = 0;
+let hasActive = false;
+try {
+  const phases = await contract.erc1155.claimConditions.getAll(tokenId as number);
+  phasesCount = Array.isArray(phases) ? phases.length : 0;
 
-      if (!active) {
-        return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
-      }
+  // アクティブ判定：開始時刻到達 && 未Pause のものが1つでもあればOK
+  if (phasesCount > 0) {
+    const now = Date.now();
+    hasActive = phases.some((p: any) => {
+      const start = new Date(p?.startTime ?? p?.startTimestamp ?? 0).getTime();
+      const paused = !!p?.paused;
+      return !paused && isFinite(start) && now >= start;
+    });
+  }
+} catch (e: any) {
+  // ノードやSDKの実装差でここが落ちることがある。その場合は「条件なし」扱いに正規化。
+  console.warn('[claim] claimConditions.getAll failed, treating as no_claim_condition', {
+    code: e?.code, message: e?.message,
+  });
+  return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
+}
 
-      // === プレチェック: 受け取り不適格理由（互換ラッパーで呼ぶ） ===
-      const reasons = await getClaimIneligibilityReasonsCompat(
-        contract,
-        tokenId as number,
-        quantity,
-        to
-      );
+if (!hasActive) {
+  return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
+}
 
-      console.info('[claim] precheck', { phasesCount: active ? 1 : 0, reasons });
+// === プレチェック: 受け取り不適格理由（互換ラッパーで呼ぶ） ===
+const reasons = await getClaimIneligibilityReasonsCompat(
+  contract,
+  tokenId as number,
+  quantity,
+  to
+);
 
-      if (reasons && reasons.length) {
-        console.warn('[claim] ineligible', { reasons });
-        return NextResponse.json(
-          { error: 'ineligible', reasons }, // 例: ["NotEnoughSupply","AddressNotAllowed","WalletLimitExceeded","InsufficientFunds","MissingMerkleProof"]
-          { status: 409 }
-        );
-      }
+console.info('[claim] precheck', { phasesCount, reasons });
+if (reasons && reasons.length) {
+  console.warn('[claim] ineligible', { reasons });
+  return NextResponse.json(
+    { error: 'ineligible', reasons },
+    { status: 409 }
+  );
+}
+
 
       // 送信
       const txRes = await contract.erc1155.claimTo(to, tokenId, quantity);
