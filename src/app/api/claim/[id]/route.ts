@@ -37,6 +37,33 @@ function getBaseUrl(req: Request) {
 }
 
 /* -------------------------------------------
+   追加：SDK差異吸収 用 互換ラッパー
+   getClaimIneligibilityReasons の引数順が
+   バージョンで異なるケースを吸収します。
+------------------------------------------- */
+async function getClaimIneligibilityReasonsCompat(
+  contract: any,
+  tokenId: number,
+  quantity: number,
+  wallet: string
+): Promise<string[]> {
+  const cc = contract.erc1155.claimConditions;
+  try {
+    const r = await cc.getClaimIneligibilityReasons(tokenId, quantity, wallet);
+    if (Array.isArray(r)) return r;
+  } catch {}
+  try {
+    const r = await cc.getClaimIneligibilityReasons(wallet, tokenId, quantity);
+    if (Array.isArray(r)) return r;
+  } catch {}
+  try {
+    const r = await cc.getClaimIneligibilityReasons(wallet, quantity);
+    if (Array.isArray(r)) return r;
+  } catch {}
+  return [];
+}
+
+/* -------------------------------------------
    GET: COAページ初期表示用の情報フェッチ
    /api/claim/[id]?t=<certToken>
 ------------------------------------------- */
@@ -237,163 +264,164 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const desired = quantityFromClient != null ? Number(quantityFromClient) : 1;
     const quantity = Math.max(1, Math.min(desired, maxRemain));
 
-    // ...上の前半はそのまま...
+    // ===== Thirdweb で claimTo（1155） =====
+    const chainEnv = process.env.CHAIN_NAME || '';
+    const chain = normalizeChainName(chainEnv);
 
-// ===== Thirdweb で claimTo（1155） =====
-const chainEnv = process.env.CHAIN_NAME || '';
-const chain = normalizeChainName(chainEnv);
+    // env
+    const privateKey =
+      process.env.MEISH_WALLET_PRIVATE_KEY ||
+      process.env.THIRDWEB_PRIVATE_KEY ||
+      '';
+    const secretKey = process.env.THIRDWEB_SECRET_KEY || '';
+    const rpcUrl = process.env.AMOY_RPC_URL || '';            // ← Alchemy/Infura の Amoy 専用RPC
+    const contractAddress = process.env.NFT_1155_CONTRACT_ADDRESS || '';
 
-// env
-const privateKey =
-  process.env.MEISH_WALLET_PRIVATE_KEY ||
-  process.env.THIRDWEB_PRIVATE_KEY ||
-  '';
-const secretKey = process.env.THIRDWEB_SECRET_KEY || '';
-const rpcUrl = process.env.AMOY_RPC_URL || '';            // ← Alchemy/Infura の Amoy 専用RPC
-const contractAddress = process.env.NFT_1155_CONTRACT_ADDRESS || '';
+    const usingPkVar = process.env.MEISH_WALLET_PRIVATE_KEY
+      ? 'MEISH_WALLET_PRIVATE_KEY'
+      : process.env.THIRDWEB_PRIVATE_KEY
+      ? 'THIRDWEB_PRIVATE_KEY'
+      : 'NONE';
 
-const usingPkVar = process.env.MEISH_WALLET_PRIVATE_KEY
-  ? 'MEISH_WALLET_PRIVATE_KEY'
-  : process.env.THIRDWEB_PRIVATE_KEY
-  ? 'THIRDWEB_PRIVATE_KEY'
-  : 'NONE';
-
-if (!chain || !privateKey || !secretKey || !contractAddress) {
-  console.error('[claim] misconfig', {
-    chainEnv,
-    hasPK: !!privateKey,
-    hasSK: !!secretKey,
-    contractAddress,
-    usingPkVar,
-  });
-  return NextResponse.json({ error: 'server_misconfig' }, { status: 500 });
-}
-
-// 送信直前ログ（安全）
-console.info('[claim] will send', {
-  chain,
-  contractAddress,
-  usingPkVar,
-  entryId: entry.id,
-  tokenId,
-  quantity,
-  to,
-});
-
-// Amoy チェーン定義（RPCは env の 1 本のみ）
-const amoyChain = {
-  slug: 'polygon-amoy',
-  chainId: 80002,
-  nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
-  rpc: rpcUrl ? [rpcUrl] : ['https://rpc-amoy.polygon.technology'], // env 未設定の保険
-} as const;
-
-try {
-  if (!privateKey.startsWith('0x')) {
-    return NextResponse.json({ error: 'bad_private_key' }, { status: 500 });
-  }
-  if (chain !== 'amoy') {
-    return NextResponse.json({ error: 'wrong_chain' }, { status: 409 });
-  }
-  console.info('[claim] using rpc', { head: (rpcUrl || '').slice(0, 40) + '...' });
-
-  // SDK 初期化（チェーンオブジェクトを直接渡す）
-  const sdk = ThirdwebSDK.fromPrivateKey(privateKey, amoyChain as any, {
-    secretKey,
-    clientId: process.env.THIRDWEB_CLIENT_ID,
-    rpcBatchSettings: { sizeLimit: 1, timeLimit: 0 }, // バッチ抑止
-  });
-
-  // コントラクト取得（edition-drop）
-  const contract = await sdk.getContract(contractAddress, 'edition-drop');
-  console.info('[claim] contract ready', { type: 'edition-drop', address: contractAddress });
-
-  // === プレチェック: token が存在するか（lazy mint 済みか） ===
-try {
-  await contract.erc1155.get(tokenId as number);
-} catch {
-  return NextResponse.json({ error: 'token_not_minted' }, { status: 409 });
-}
-
-// === プレチェック: アクティブな ClaimCondition があるか ===
-const active = await contract.erc1155.claimConditions
-  .getActive(tokenId as number)
-  .catch(() => null);
-
-if (!active) {
-  return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
-}
-
-// === プレチェック: 受け取り不適格理由 ===
-const reasons = await contract.erc1155.claimConditions
-  .getClaimIneligibilityReasons(tokenId as number, quantity, to);
-
-if (reasons && reasons.length) {
-  console.warn('[claim] ineligible', { reasons });
-  return NextResponse.json(
-    { error: 'ineligible', reasons }, // 例: ["NotEnoughSupply","AddressNotAllowed","WalletLimitExceeded","InsufficientFunds","MissingMerkleProof"]
-    { status: 409 }
-  );
-}
-
-
-  // 送信
-  const txRes = await contract.erc1155.claimTo(to, tokenId, quantity);
-  const txhash = txRes.receipt.transactionHash;
-
-  // edition_sold 加算（非致命）
-  try {
-    if (typeof entry.edition_sold === 'number') {
-      await admin
-        .from('entries')
-        .update({ edition_sold: Number(entry.edition_sold) + quantity })
-        .eq('id', entry.id);
+    if (!chain || !privateKey || !secretKey || !contractAddress) {
+      console.error('[claim] misconfig', {
+        chainEnv,
+        hasPK: !!privateKey,
+        hasSK: !!secretKey,
+        contractAddress,
+        usingPkVar,
+      });
+      return NextResponse.json({ error: 'server_misconfig' }, { status: 500 });
     }
-  } catch (e) {
-    console.warn('[claim] post update failed (non-fatal):', e);
-  }
 
-  return NextResponse.json({
-    ok: true,
-    mode: 'address',
-    entryId: entry.id,
-    tokenId,
-    quantity,
-    txhash,
-  });
-} catch (e: any) {
-  const err = {
-    name: e?.name,
-    message: e?.message,
-    reason: e?.reason,
-    shortMessage: e?.shortMessage,
-    code: e?.code,
-  };
-  console.error('[claim] tx error', err);
+    // 送信直前ログ（安全）
+    console.info('[claim] will send', {
+      chain,
+      contractAddress,
+      usingPkVar,
+      entryId: entry.id,
+      tokenId,
+      quantity,
+      to,
+    });
 
-  const msg = String(e?.message || '').toLowerCase();
-  if (e?.code === 'INSUFFICIENT_FUNDS' || msg.includes('insufficient funds')) {
-    return NextResponse.json({ error: 'insufficient_gas' }, { status: 402 });
-  }
-  if (msg.includes('no claim condition') || msg.includes('no active claim condition')) {
-    return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
-  }
-  if (msg.includes('not minted') || (msg.includes('token') && msg.includes('does not exist'))) {
-    return NextResponse.json({ error: 'token_not_minted' }, { status: 409 });
-  }
-  if (msg.includes('exceeds') && msg.includes('max')) {
-    return NextResponse.json({ error: 'quantity_exceeds_max' }, { status: 409 });
-  }
-  if (msg.includes('chain') && msg.includes('mismatch')) {
-    return NextResponse.json({ error: 'wrong_chain' }, { status: 409 });
-  }
-  if (msg.includes('could not connect') || msg.includes('timeout') || msg.includes('network') || msg.includes('missing response')) {
-    return NextResponse.json({ error: 'rpc_unavailable' }, { status: 502 });
-  }
-  return NextResponse.json({ error: 'tx_failed' }, { status: 500 });
-}
+    // Amoy チェーン定義（RPCは env の 1 本のみ）
+    const amoyChain = {
+      slug: 'polygon-amoy',
+      chainId: 80002,
+      nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+      rpc: rpcUrl ? [rpcUrl] : ['https://rpc-amoy.polygon.technology'], // env 未設定の保険
+    } as const;
 
+    try {
+      if (!privateKey.startsWith('0x')) {
+        return NextResponse.json({ error: 'bad_private_key' }, { status: 500 });
+      }
+      if (chain !== 'amoy') {
+        return NextResponse.json({ error: 'wrong_chain' }, { status: 409 });
+      }
+      console.info('[claim] using rpc', { head: (rpcUrl || '').slice(0, 40) + '...' });
 
+      // SDK 初期化（チェーンオブジェクトを直接渡す）
+      const sdk = ThirdwebSDK.fromPrivateKey(privateKey, amoyChain as any, {
+        secretKey,
+        clientId: process.env.THIRDWEB_CLIENT_ID,
+        rpcBatchSettings: { sizeLimit: 1, timeLimit: 0 }, // バッチ抑止
+      });
+
+      // コントラクト取得（edition-drop）
+      const contract = await sdk.getContract(contractAddress, 'edition-drop');
+      console.info('[claim] contract ready', { type: 'edition-drop', address: contractAddress });
+
+      // === プレチェック: token が存在するか（lazy mint 済みか） ===
+      try {
+        await contract.erc1155.get(tokenId as number);
+      } catch {
+        return NextResponse.json({ error: 'token_not_minted' }, { status: 409 });
+      }
+
+      // === プレチェック: アクティブな ClaimCondition があるか ===
+      const active = await contract.erc1155.claimConditions
+        .getActive(tokenId as number)
+        .catch(() => null);
+
+      if (!active) {
+        return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
+      }
+
+      // === プレチェック: 受け取り不適格理由（互換ラッパーで呼ぶ） ===
+      const reasons = await getClaimIneligibilityReasonsCompat(
+        contract,
+        tokenId as number,
+        quantity,
+        to
+      );
+
+      console.info('[claim] precheck', { phasesCount: active ? 1 : 0, reasons });
+
+      if (reasons && reasons.length) {
+        console.warn('[claim] ineligible', { reasons });
+        return NextResponse.json(
+          { error: 'ineligible', reasons }, // 例: ["NotEnoughSupply","AddressNotAllowed","WalletLimitExceeded","InsufficientFunds","MissingMerkleProof"]
+          { status: 409 }
+        );
+      }
+
+      // 送信
+      const txRes = await contract.erc1155.claimTo(to, tokenId, quantity);
+      const txhash = txRes.receipt.transactionHash;
+
+      // edition_sold 加算（非致命）
+      try {
+        if (typeof entry.edition_sold === 'number') {
+          await admin
+            .from('entries')
+            .update({ edition_sold: Number(entry.edition_sold) + quantity })
+            .eq('id', entry.id);
+        }
+      } catch (e) {
+        console.warn('[claim] post update failed (non-fatal):', e);
+      }
+
+      return NextResponse.json({
+        ok: true,
+        mode: 'address',
+        entryId: entry.id,
+        tokenId,
+        quantity,
+        txhash,
+      });
+    } catch (e: any) {
+      const err = {
+        name: e?.name,
+        message: e?.message,
+        reason: e?.reason,
+        shortMessage: e?.shortMessage,
+        code: e?.code,
+      };
+      console.error('[claim] tx error', err);
+
+      const msg = String(e?.message || '').toLowerCase();
+      if (e?.code === 'INSUFFICIENT_FUNDS' || msg.includes('insufficient funds')) {
+        return NextResponse.json({ error: 'insufficient_gas' }, { status: 402 });
+      }
+      if (msg.includes('no claim condition') || msg.includes('no active claim condition')) {
+        return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
+      }
+      if (msg.includes('not minted') || (msg.includes('token') && msg.includes('does not exist'))) {
+        return NextResponse.json({ error: 'token_not_minted' }, { status: 409 });
+      }
+      if (msg.includes('exceeds') && msg.includes('max')) {
+        return NextResponse.json({ error: 'quantity_exceeds_max' }, { status: 409 });
+      }
+      if (msg.includes('chain') && msg.includes('mismatch')) {
+        return NextResponse.json({ error: 'wrong_chain' }, { status: 409 });
+      }
+      if (msg.includes('could not connect') || msg.includes('timeout') || msg.includes('network') || msg.includes('missing response')) {
+        return NextResponse.json({ error: 'rpc_unavailable' }, { status: 502 });
+      }
+      return NextResponse.json({ error: 'tx_failed' }, { status: 500 });
+    }
   } catch (e: any) {
     console.error('[claim] error:', e);
     return NextResponse.json({ error: 'internal' }, { status: 500 });
