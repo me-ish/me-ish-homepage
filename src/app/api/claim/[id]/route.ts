@@ -342,13 +342,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       }
 
 // === プレチェック: アクティブな ClaimCondition があるか（getAllで自前判定） ===
+// 一部ノード/SDKで getAll が CALL_EXCEPTION を返す事例があるため、失敗時は "precheckをスキップ" して続行する。
 let phasesCount = 0;
 let hasActive = false;
+let precheckSkipped = false;
+
 try {
   const phases = await contract.erc1155.claimConditions.getAll(tokenId as number);
   phasesCount = Array.isArray(phases) ? phases.length : 0;
 
-  // アクティブ判定：開始時刻到達 && 未Pause のものが1つでもあればOK
   if (phasesCount > 0) {
     const now = Date.now();
     hasActive = phases.some((p: any) => {
@@ -358,16 +360,17 @@ try {
     });
   }
 } catch (e: any) {
-  // ノードやSDKの実装差でここが落ちることがある。その場合は「条件なし」扱いに正規化。
-  console.warn('[claim] claimConditions.getAll failed, treating as no_claim_condition', {
+  precheckSkipped = true;
+  console.warn('[claim] claimConditions.getAll failed, skip precheck and proceed', {
     code: e?.code, message: e?.message,
   });
+}
+
+// getAll が成功したケースのみ「アクティブ無し」を厳密判定。失敗した場合は後段 claimTo に委ねる。
+if (!precheckSkipped && !hasActive) {
   return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
 }
 
-if (!hasActive) {
-  return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
-}
 
 // === プレチェック: 受け取り不適格理由（互換ラッパーで呼ぶ） ===
 const reasons = await getClaimIneligibilityReasonsCompat(
