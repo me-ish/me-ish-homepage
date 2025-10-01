@@ -1,6 +1,6 @@
 // src/app/api/claim/[id]/route.ts
 import { NextResponse } from 'next/server';
-import { ThirdwebSDK } from '@thirdweb-dev/sdk';
+import { ThirdwebSDK, NATIVE_TOKEN_ADDRESS } from '@thirdweb-dev/sdk';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyCertToken } from '@/lib/coa/server';
 
@@ -35,12 +35,9 @@ function getBaseUrl(req: Request) {
   if (origin) return origin;
   return process.env.NEXT_PUBLIC_BASE_URL || '';
 }
-console.info('[claim] build', { v: 'r2-no-getActive' });
 
 /* -------------------------------------------
-   追加：SDK差異吸収 用 互換ラッパー
-   getClaimIneligibilityReasons の引数順が
-   バージョンで異なるケースを吸収します。
+   互換ラッパー: getClaimIneligibilityReasons シグネチャ差吸収
 ------------------------------------------- */
 async function getClaimIneligibilityReasonsCompat(
   contract: any,
@@ -128,11 +125,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
 /* -------------------------------------------
    POST: 受け取り処理
-   - mode === 'address' : 既存の claimTo（ウォレット直受け）
+   - mode === 'address' : claimTo（ウォレット直受け）
    - mode === 'email'   : 受け取りリンクを購入者へメール送信
 ------------------------------------------- */
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
+    console.info('[claim] build', { v: 'r3-autoheal' });
+
     const body = await req.json().catch(() => ({}));
 
     // 受け取りモード（既定は address）
@@ -239,7 +238,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
 
     // ----------------------------------
-    // B) mode === 'address'（既存の claimTo フロー）
+    // B) mode === 'address'（claimTo）
     // ----------------------------------
     const toRaw: string = body?.to ?? body?.address ?? '';
     const to = sanitizeTo(toRaw);
@@ -275,7 +274,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       process.env.THIRDWEB_PRIVATE_KEY ||
       '';
     const secretKey = process.env.THIRDWEB_SECRET_KEY || '';
-    const rpcUrl = process.env.AMOY_RPC_URL || '';            // ← Alchemy/Infura の Amoy 専用RPC
+    const rpcUrl = process.env.AMOY_RPC_URL || '';
     const contractAddress = process.env.NFT_1155_CONTRACT_ADDRESS || '';
 
     const usingPkVar = process.env.MEISH_WALLET_PRIVATE_KEY
@@ -295,7 +294,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: 'server_misconfig' }, { status: 500 });
     }
 
-    // 送信直前ログ（安全）
+    // 送信直前ログ
     console.info('[claim] will send', {
       chain,
       contractAddress,
@@ -306,12 +305,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       to,
     });
 
-    // Amoy チェーン定義（RPCは env の 1 本のみ）
+    // Amoy チェーン定義
     const amoyChain = {
       slug: 'polygon-amoy',
       chainId: 80002,
       nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
-      rpc: rpcUrl ? [rpcUrl] : ['https://rpc-amoy.polygon.technology'], // env 未設定の保険
+      rpc: rpcUrl ? [rpcUrl] : ['https://rpc-amoy.polygon.technology'],
     } as const;
 
     try {
@@ -323,74 +322,96 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       }
       console.info('[claim] using rpc', { head: (rpcUrl || '').slice(0, 40) + '...' });
 
-      // SDK 初期化（チェーンオブジェクトを直接渡す）
+      // SDK
       const sdk = ThirdwebSDK.fromPrivateKey(privateKey, amoyChain as any, {
         secretKey,
         clientId: process.env.THIRDWEB_CLIENT_ID,
-        rpcBatchSettings: { sizeLimit: 1, timeLimit: 0 }, // バッチ抑止
+        rpcBatchSettings: { sizeLimit: 1, timeLimit: 0 },
       });
 
-      // コントラクト取得（edition-drop）
+      // コントラクト
       const contract = await sdk.getContract(contractAddress, 'edition-drop');
       console.info('[claim] contract ready', { type: 'edition-drop', address: contractAddress });
 
-      // === プレチェック: token が存在するか（lazy mint 済みか） ===
+      // === プレチェック: token（lazy mint 済み） ===
       try {
         await contract.erc1155.get(tokenId as number);
       } catch {
         return NextResponse.json({ error: 'token_not_minted' }, { status: 409 });
       }
 
-// === プレチェック: アクティブな ClaimCondition があるか（getAllで自前判定） ===
-// 一部ノード/SDKで getAll が CALL_EXCEPTION を返す事例があるため、失敗時は "precheckをスキップ" して続行する。
-let phasesCount = 0;
-let hasActive = false;
-let precheckSkipped = false;
+      // === プレチェック: アクティブ条件（getAll 失敗はスキップ） ===
+      let phasesCount = 0;
+      let hasActive = false;
+      let precheckSkipped = false;
+      try {
+        const phases = await contract.erc1155.claimConditions.getAll(tokenId as number);
+        phasesCount = Array.isArray(phases) ? phases.length : 0;
+        if (phasesCount > 0) {
+          const now = Date.now();
+          hasActive = phases.some((p: any) => {
+            const start = new Date(p?.startTime ?? p?.startTimestamp ?? 0).getTime();
+            const paused = !!p?.paused;
+            return !paused && isFinite(start) && now >= start;
+          });
+        }
+      } catch (e: any) {
+        precheckSkipped = true;
+        console.warn('[claim] claimConditions.getAll failed, skip precheck and proceed', {
+          code: e?.code, message: e?.message,
+        });
+      }
 
-try {
-  const phases = await contract.erc1155.claimConditions.getAll(tokenId as number);
-  phasesCount = Array.isArray(phases) ? phases.length : 0;
+      if (!precheckSkipped && !hasActive) {
+        return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
+      }
 
-  if (phasesCount > 0) {
-    const now = Date.now();
-    hasActive = phases.some((p: any) => {
-      const start = new Date(p?.startTime ?? p?.startTimestamp ?? 0).getTime();
-      const paused = !!p?.paused;
-      return !paused && isFinite(start) && now >= start;
-    });
-  }
-} catch (e: any) {
-  precheckSkipped = true;
-  console.warn('[claim] claimConditions.getAll failed, skip precheck and proceed', {
-    code: e?.code, message: e?.message,
-  });
-}
+      // === プレチェック: 不適格理由 ===
+      let reasons: string[] = [];
+      if (!precheckSkipped) {
+        reasons = await getClaimIneligibilityReasonsCompat(
+          contract,
+          tokenId as number,
+          quantity,
+          to
+        );
+      }
 
-// getAll が成功したケースのみ「アクティブ無し」を厳密判定。失敗した場合は後段 claimTo に委ねる。
-if (!precheckSkipped && !hasActive) {
-  return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
-}
+      // --- auto-heal: 「No claim conditions found.」なら即時に無料オープンのPhaseを投入 ---
+      if (Array.isArray(reasons) && reasons.length === 1 && (reasons[0] || '').toLowerCase().includes('no claim conditions')) {
+        console.warn('[claim] auto-heal: set public free claim condition for token', { tokenId });
 
+        await contract.erc1155.claimConditions.set(tokenId as number, [
+          {
+            startTime: new Date(Date.now() - 60_000),
+            price: '0',
+            currencyAddress: NATIVE_TOKEN_ADDRESS, // POL
+            maxClaimableSupply: 'unlimited',
+            maxClaimablePerWallet: 'unlimited',
+            waitInSeconds: 0,
+            snapshot: null,
+            metadata: {},
+          },
+        ]);
 
-// === プレチェック: 受け取り不適格理由（互換ラッパーで呼ぶ） ===
-const reasons = await getClaimIneligibilityReasonsCompat(
-  contract,
-  tokenId as number,
-  quantity,
-  to
-);
+        try {
+          const phasesAfter = await contract.erc1155.claimConditions.getAll(tokenId as number);
+          console.info('[claim] auto-heal set done', {
+            count: Array.isArray(phasesAfter) ? phasesAfter.length : 0,
+          });
+        } catch {}
 
-console.info('[claim] precheck', { phasesCount, reasons });
-if (reasons && reasons.length) {
-  console.warn('[claim] ineligible', { reasons });
-  return NextResponse.json(
-    { error: 'ineligible', reasons },
-    { status: 409 }
-  );
-}
+        reasons = []; // クリアして続行
+      }
 
+      console.info('[claim] precheck', { phasesCount, precheckSkipped, reasons });
 
-      // 送信
+      if (!precheckSkipped && reasons && reasons.length) {
+        console.warn('[claim] ineligible', { reasons });
+        return NextResponse.json({ error: 'ineligible', reasons }, { status: 409 });
+      }
+
+      // 実行
       const txRes = await contract.erc1155.claimTo(to, tokenId, quantity);
       const txhash = txRes.receipt.transactionHash;
 
@@ -425,6 +446,9 @@ if (reasons && reasons.length) {
       console.error('[claim] tx error', err);
 
       const msg = String(e?.message || '').toLowerCase();
+      if (e?.code === 'CALL_EXCEPTION') {
+        return NextResponse.json({ error: 'no_claim_condition' }, { status: 409 });
+      }
       if (e?.code === 'INSUFFICIENT_FUNDS' || msg.includes('insufficient funds')) {
         return NextResponse.json({ error: 'insufficient_gas' }, { status: 402 });
       }
