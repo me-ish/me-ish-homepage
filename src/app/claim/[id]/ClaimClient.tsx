@@ -2,6 +2,38 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+// ===== MINTER 権限チェック用 追加ブロック A: ここから =====
+import { ethers } from 'ethers';
+
+/** Edition Drop コントラクトのアドレス
+ *  既に変数があるなら **既存のもの**を使ってOK（この定義は消して良い）
+ */
+const EDITION_DROP_ADDRESS =
+  process.env.NEXT_PUBLIC_EDITION_DROP_ADDRESS ??
+  '0xaF4dB4A95a8CC61A4D03e8fD9183FB539B129a17';
+
+/** MINTER_ROLE = keccak256("MINTER_ROLE")
+ *  Edition Drop 固定値（thirdweb ダッシュボードと同じ）
+ */
+export const MINTER_ROLE =
+  '0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6';
+
+// hasRole だけの最小 ABI（読み取り専用）
+const ROLE_ABI = [
+  'function hasRole(bytes32 role, address account) view returns (bool)',
+] as const;
+
+/** 読み取り専用: サインナー or プロバイダで hasRole を直叩き */
+export async function isMinterRole(
+  providerOrSigner: ethers.providers.Provider | ethers.Signer,
+  contractAddress: string,
+  account: string,
+): Promise<boolean> {
+  const drop = new ethers.Contract(contractAddress, ROLE_ABI, providerOrSigner);
+  return await drop.hasRole(MINTER_ROLE, account);
+}
+// ===== MINTER 権限チェック用 追加ブロック A: ここまで =====
+
 
 type PurchaseInfo = {
   entryId: number;
@@ -36,6 +68,43 @@ const isEthAddress = (x: string) =>
 export default function ClaimClient({ entryId, token }: Props) {
   const [fetchState, setFetchState] = useState<FetchState>({ status: 'idle' });
   const [mode, setMode] = useState<'address' | 'email'>('address');
+
+  // ===== MINTER 権限チェック用 追加ブロック B: ここから =====
+  const [isMinter, setIsMinter] = useState<boolean | null>(null);
+
+  // 初回マウント時に接続中ウォレットの MINTER 判定（読み取りのみ）
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        // 既に provider/signer を持っている場合はそれを使ってOK
+        // ない場合だけ Web3Provider を作る
+        const web3Provider =
+          (window as any)?.ethereum
+            ? new ethers.providers.Web3Provider((window as any).ethereum)
+            : null;
+
+        if (!web3Provider) {
+          setIsMinter(false);
+          return;
+        }
+
+        const signer = web3Provider.getSigner();
+        const addr = await signer.getAddress();
+        const ok = await isMinterRole(signer, EDITION_DROP_ADDRESS, addr);
+        if (mounted) setIsMinter(ok);
+      } catch (e) {
+        if (mounted) setIsMinter(false);
+        console.error('[minter-check:init]', e);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+  // ===== MINTER 権限チェック用 追加ブロック B: ここまで =====
+
 
   // フォーム値
   const [address, setAddress] = useState('');
@@ -83,6 +152,26 @@ export default function ClaimClient({ entryId, token }: Props) {
     setSubmitState({ status: 'submitting' });
 
     try {
+      // ===== MINTER 権限チェック用 追加ブロック C: ここから（送信直前ガード） =====
+      // NFT 作品の受け取りをトリガーする前に、接続中アカウントが MINTER かを確認
+      // （normal の場合も安全のため同じチェックでOK。不要なら salesType を見て分岐可能）
+      const web3Provider =
+        (window as any)?.ethereum
+          ? new ethers.providers.Web3Provider((window as any).ethereum)
+          : null;
+
+      if (!web3Provider) {
+        throw new Error('ブラウザにウォレットが見つかりません（MetaMask などを有効にしてください）。');
+      }
+
+      const signer = web3Provider.getSigner();
+      const sender = await signer.getAddress();
+      const has = await isMinterRole(signer, EDITION_DROP_ADDRESS, sender);
+      if (!has) {
+        throw new Error('このアカウントには MINTER 権限がありません。thirdweb ダッシュボードで権限を付与してください。');
+      }
+      // ===== MINTER 権限チェック用 追加ブロック C: ここまで =====
+
       const payload: any = { mode };
       if (mode === 'address') payload.address = address.trim();
       if (mode === 'email') payload.email = email.trim();
