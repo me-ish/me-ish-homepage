@@ -201,7 +201,38 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chainObj as any, {
         secretKey, clientId: process.env.THIRDWEB_CLIENT_ID, rpcBatchSettings: { sizeLimit: 1, timeLimit: 0 },
       });
+      // 送信者ウォレット（このPKが指すアドレス）
+const signerAddr = await (await sdk.getSigner())?.getAddress();
+console.info('[claim] resolved context', {
+  sender: signerAddr,         // ← 実際にトランザクションを送るアドレス
+  contractAddress,            // ← 呼び出し先（ENVのNFT_1155_CONTRACT_ADDRESS）
+});
+
       const contract = await sdk.getContract(contractAddress, 'edition-drop');
+      // （参考）MINTERロールを持っているかをログ出力（失敗しても処理は続行）
+try {
+  // thirdweb SDKのバージョン差を吸収して両方トライ
+  const rolesApi: any = (contract as any).roles;
+  let hasMinter: boolean | null = null;
+
+  if (rolesApi?.getAll) {
+    const all = await rolesApi.getAll().catch(() => null);
+    const minters = all?.minter || all?.MINTER || [];
+    hasMinter = Array.isArray(minters)
+      ? minters.some((a: string) => a?.toLowerCase?.() === signerAddr?.toLowerCase?.())
+      : null;
+  } else if (rolesApi?.get) {
+    const minters = await rolesApi.get('minter').catch(() => null);
+    hasMinter = Array.isArray(minters)
+      ? minters.some((a: string) => a?.toLowerCase?.() === signerAddr?.toLowerCase?.())
+      : null;
+  }
+
+  console.info('[claim] role snapshot', { hasMinter });
+} catch (e) {
+  console.warn('[claim] role snapshot failed (non-fatal)', { message: (e as any)?.message });
+}
+
       console.info('[claim] contract ready', { type: 'edition-drop', address: contractAddress, rpc });
 
       // token存在
