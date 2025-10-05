@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ThirdwebSDK } from "@thirdweb-dev/sdk";
 import { PolygonAmoyTestnet } from "@thirdweb-dev/chains";
 
-/** ====== 環境・共通ユーティリティ ====== */
+/** ====== 環境 ====== */
 const EDITION_DROP_ADDRESS =
   process.env.NEXT_PUBLIC_EDITION_DROP_ADDRESS ??
   "0xaF4dB4A95a8CC61A4D03e8fD9183FB539B129a17";
@@ -12,6 +12,7 @@ const EDITION_DROP_ADDRESS =
 const MINTER_ROLE =
   "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
 
+/** 共通: JSON返却 */
 function json(status: number, data: any) {
   return new NextResponse(JSON.stringify(data), {
     status,
@@ -22,6 +23,7 @@ function json(status: number, data: any) {
   });
 }
 
+/** 環境チェック */
 function assertEnv() {
   const pk = process.env.MEISH_WALLET_PRIVATE_KEY;
   const secret = process.env.THIRDWEB_SECRET_KEY;
@@ -33,42 +35,62 @@ function assertEnv() {
   if (!pk!.startsWith("0x")) throw new Error("MEISH_WALLET_PRIVATE_KEY must start with 0x");
 }
 
+/** SDK 取得（サーバーウォレット＝MINTER想定） */
 function getServerSDK() {
   assertEnv();
   return ThirdwebSDK.fromPrivateKey(
-    process.env.MEISH_WALLET_PRIVATE_KEY!, // サーバーウォレット（MINTER想定）
+    process.env.MEISH_WALLET_PRIVATE_KEY!,
     PolygonAmoyTestnet,
     { secretKey: process.env.THIRDWEB_SECRET_KEY }
   );
 }
 
+/** Edition Drop 取得 */
 async function getEditionDrop() {
   const sdk = getServerSDK();
   const edition = await sdk.getContract(EDITION_DROP_ADDRESS, "edition-drop");
   return { sdk, edition };
 }
 
+/** アドレス形式 */
 const isEthAddress = (x: string | undefined): x is string =>
   !!x && /^0x[a-fA-F0-9]{40}$/.test(x.trim());
 
-/** entryId→配布パラメータ解決（用途に合わせてDBに差し替え） */
+/** entryId -> 配布パラメータ解決（必要に応じてDBへ差し替え） */
 async function resolveAirdropParams(entryId: number) {
+  // TODO: Supabase等から entryId に紐づく tokenId / quantity を取得
   const tokenId = 1;
   const quantity = "1";
   return { tokenId, quantity };
 }
 
-/** 直接 hasRole を叩いて MINTER を判定（列挙APIは使わない） */
-async function hasMinterRole(edition: any, address: string): Promise<boolean> {
+/** robust: 版差に合わせて複数シグネチャを試す hasRole 判定 */
+async function hasMinterRole(edition: any, account: string): Promise<boolean> {
+  // 1) hasRole(bytes32 role, address account)
   try {
-    const ok = await edition.call("hasRole", [MINTER_ROLE, address]);
-    return Boolean(ok);
-  } catch {
-    return false;
-  }
+    const r = await edition.call("hasRole", [MINTER_ROLE, account]);
+    if (typeof r === "boolean" && r) return true;
+  } catch {}
+
+  // 2) hasRole(address account, bytes32 role) 逆順
+  try {
+    const r = await edition.call("hasRole", [account, MINTER_ROLE]);
+    if (typeof r === "boolean" && r) return true;
+  } catch {}
+
+  // 3) hasAllRoles(address account, bytes32[] roles) thirdweb IPermissions 実装
+  try {
+    const r = await edition.call("hasAllRoles", [account, [MINTER_ROLE]]);
+    if (typeof r === "boolean" && r) return true;
+  } catch {}
+
+  return false;
 }
 
-/** ====== GET: プリフライト ====== */
+/** ====== GET: プリフライト ======
+ * - サーバーウォレットが MINTER を持つか
+ * - tokenId が Lazy Mint 済みか
+ */
 export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
   try {
     const entryId = Number(ctx.params.id);
@@ -78,11 +100,9 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     const { sdk, edition } = await getEditionDrop();
 
     const sender = await sdk.getSigner()!.getAddress();
-
-    // ★ 列挙を廃止して hasRole を直接呼ぶ
     const hasMinter = await hasMinterRole(edition, sender);
 
-    // token 存在チェック（v5: erc1155.get）
+    // v5: token存在チェックは erc1155.get
     let tokenExists = false;
     try {
       const nft = await edition.erc1155.get(tokenId);
@@ -117,15 +137,17 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     };
     const mode = body?.mode ?? "address";
 
+    // 必要であればここで body.token の検証など
+
     const { tokenId, quantity } = await resolveAirdropParams(entryId);
     const { sdk, edition } = await getEditionDrop();
 
-    // ★ サーバーウォレットの MINTER を hasRole で判定
+    // サーバーウォレットの MINTER を判定
     const sender = await sdk.getSigner()!.getAddress();
     const hasMinter = await hasMinterRole(edition, sender);
     if (!hasMinter) return json(403, { ok: false, error: "Server wallet has no MINTER_ROLE" });
 
-    // token の存在（LazyMint済み）確認
+    // token の存在確認（LazyMint 済みか）
     try {
       await edition.erc1155.get(tokenId);
     } catch {
@@ -133,17 +155,20 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     }
 
     if (mode === "email") {
-      // TODO: 受け取りリンクメール送信に接続
+      // TODO: メール受け取りワークフローへ接続（リンク生成・送信）
       return json(200, { ok: true, message: "受け取りリンクをメールで送信しました。" });
     }
 
-    // mode === "address": airdrop 実行
+    // mode === "address": 直送（airdrop）
     const to = body?.address?.trim();
     if (!isEthAddress(to)) return json(400, { ok: false, error: "Invalid recipient address" });
 
-    // v5: erc1155.airdrop(tokenId, [{ address, quantity }])
+    /** v5 正式 airdrop
+     * erc1155.airdrop(tokenId, [{ address, quantity }])
+     */
     const result = await edition.erc1155.airdrop(tokenId, [{ address: to, quantity }]);
 
+    // 単体/配列の両対応で txHash を抽出
     const txArray = Array.isArray(result) ? result : [result];
     const txHash =
       txArray[0]?.receipt?.transactionHash ??
@@ -164,4 +189,3 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     return json(500, { ok: false, error: msg });
   }
 }
-
