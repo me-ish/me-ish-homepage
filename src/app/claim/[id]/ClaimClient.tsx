@@ -118,6 +118,10 @@ useEffect(() => {
 // ===== MINTER 権限チェック用 追加ブロック B: ここまで =====
 
 
+  // ===== [ADD] Preflight 状態: EditionDrop 専用チェック用 =====
+  type PreflightState = 'idle' | 'checking' | 'ok' | 'ng';
+  const [preflight, setPreflight] = useState<PreflightState>('idle');
+  const [preflightMsg, setPreflightMsg] = useState<string>('');
 
   // フォーム値
   const [address, setAddress] = useState('');
@@ -159,6 +163,70 @@ useEffect(() => {
     })();
     return () => { alive = false; };
   }, [entryId, token]);
+
+  // ===== [ADD] Preflight: EditionDrop 専用チェック（「contract ready の直後」をこの段で再現）=====
+  // fetchState が loaded になった“直後”に、NFT作品なら MINTER_ROLE をプリチェック
+  useEffect(() => {
+    (async () => {
+      if (fetchState.status !== 'loaded') {
+        setPreflight('idle');
+        setPreflightMsg('');
+        return;
+      }
+      // NFT 作品以外はプリフライト不要（必要なら normal でもチェック可）
+      if (fetchState.data.salesType !== 'nft') {
+        setPreflight('ok');
+        setPreflightMsg('');
+        return;
+      }
+
+      try {
+        setPreflight('checking');
+        setPreflightMsg('ウォレットと権限を確認中…');
+
+        const eth = (window as any)?.ethereum;
+        if (!eth) {
+          setPreflight('ng');
+          setPreflightMsg('ウォレットが見つかりません（MetaMask 等を有効にしてください）。');
+          return;
+        }
+        const web3Provider = new ethers.providers.Web3Provider(eth);
+
+        // 既存接続のまま確認（未接続なら要求）
+        const accounts: string[] = await web3Provider.send('eth_accounts', []);
+        let addr = accounts?.[0];
+        if (!addr) {
+          try {
+            const req: string[] = await web3Provider.send('eth_requestAccounts', []);
+            addr = req?.[0];
+          } catch {
+            setPreflight('ng');
+            setPreflightMsg('ウォレット接続がキャンセルされました。接続してから再度お試しください。');
+            return;
+          }
+        }
+        if (!addr) {
+          setPreflight('ng');
+          setPreflightMsg('ウォレット接続が見つかりません。');
+          return;
+        }
+
+        const ok = await isMinterRole(web3Provider, EDITION_DROP_ADDRESS, addr);
+        if (!ok) {
+          setPreflight('ng');
+          setPreflightMsg('このアカウントには MINTER 権限がありません。thirdweb ダッシュボードで付与してください。');
+          return;
+        }
+
+        setPreflight('ok');
+        setPreflightMsg('');
+      } catch (e: any) {
+        console.error('[preflight:minter]', e);
+        setPreflight('ng');
+        setPreflightMsg(e?.message || 'プリフライトに失敗しました。');
+      }
+    })();
+  }, [fetchState]);
 
   const onSubmit = useCallback(async () => {
     if (!canSubmit || submitState.status === 'submitting') return;
@@ -267,6 +335,27 @@ useEffect(() => {
             </div>
           </div>
         )}
+
+        {/* ===== [ADD] Preflight の結果表示（contract ready 直後のフィードバック）===== */}
+        {fetchState.status === 'loaded' && fetchState.data.salesType === 'nft' && (
+          <div className="mt-3">
+            {preflight === 'checking' && (
+              <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-800">
+                {preflightMsg || '権限を確認しています…'}
+              </div>
+            )}
+            {preflight === 'ng' && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {preflightMsg || 'このアカウントには MINTER 権限がありません。'}
+              </div>
+            )}
+            {preflight === 'ok' && (
+              <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                MINTER 権限を確認しました。
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* 受け取り方法 */}
@@ -357,11 +446,15 @@ useEffect(() => {
 
         <div className="mt-4 flex items-center gap-3">
           <button
-            disabled={!canSubmit || submitState.status === 'submitting'}
+            disabled={
+              !canSubmit ||
+              submitState.status === 'submitting' ||
+              preflight === 'ng' // ← プリフライトNGなら押せない
+            }
             onClick={onSubmit}
             className={[
               'inline-flex items-center justify-center rounded-lg px-5 py-2 text-white shadow-sm transition',
-              canSubmit && submitState.status !== 'submitting'
+              canSubmit && submitState.status !== 'submitting' && preflight !== 'ng'
                 ? 'bg-sky-600 hover:bg-sky-700'
                 : 'bg-sky-300 cursor-not-allowed',
             ].join(' ')}
