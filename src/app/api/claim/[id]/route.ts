@@ -64,28 +64,34 @@ async function resolveAirdropParams(entryId: number) {
   return { tokenId, quantity };
 }
 
-/** robust: 版差に合わせて複数シグネチャを試す hasRole 判定 */
+// robust: 版差に合わせて複数シグネチャを順に試す
 async function hasMinterRole(edition: any, account: string): Promise<boolean> {
-  // 1) hasRole(bytes32 role, address account)
+  // A) thirdweb のロールAPI（列挙不要・推奨）
   try {
-    const r = await edition.call("hasRole", [MINTER_ROLE, account]);
-    if (typeof r === "boolean" && r) return true;
+    if (await edition.roles.verify(["minter"], account)) return true;
   } catch {}
 
-  // 2) hasRole(address account, bytes32 role) 逆順
-  try {
-    const r = await edition.call("hasRole", [account, MINTER_ROLE]);
-    if (typeof r === "boolean" && r) return true;
-  } catch {}
-
-  // 3) hasAllRoles(address account, bytes32[] roles) thirdweb IPermissions 実装
+  // B) IPermissions: hasAllRoles(account, [MINTER_ROLE])
   try {
     const r = await edition.call("hasAllRoles", [account, [MINTER_ROLE]]);
-    if (typeof r === "boolean" && r) return true;
+    if (r === true || r === 1 || String(r) === "true") return true;
+  } catch {}
+
+  // C) OpenZeppelin AccessControl: hasRole(bytes32,address)
+  try {
+    const r = await edition.call("hasRole", [MINTER_ROLE, account]);
+    if (r === true || r === 1 || String(r) === "true") return true;
+  } catch {}
+
+  // D) 一部実装で逆順になっているケース
+  try {
+    const r = await edition.call("hasRole", [account, MINTER_ROLE]);
+    if (r === true || r === 1 || String(r) === "true") return true;
   } catch {}
 
   return false;
 }
+
 
 /** ====== GET: プリフライト ======
  * - サーバーウォレットが MINTER を持つか
