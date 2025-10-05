@@ -69,41 +69,54 @@ export default function ClaimClient({ entryId, token }: Props) {
   const [fetchState, setFetchState] = useState<FetchState>({ status: 'idle' });
   const [mode, setMode] = useState<'address' | 'email'>('address');
 
-  // ===== MINTER 権限チェック用 追加ブロック B: ここから =====
-  const [isMinter, setIsMinter] = useState<boolean | null>(null);
+// ===== MINTER 権限チェック用 追加ブロック B: ここから（差し替え） =====
+const [isMinter, setIsMinter] = useState<boolean | null>(null);
 
-  // 初回マウント時に接続中ウォレットの MINTER 判定（読み取りのみ）
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        // 既に provider/signer を持っている場合はそれを使ってOK
-        // ない場合だけ Web3Provider を作る
-        const web3Provider =
-          (window as any)?.ethereum
-            ? new ethers.providers.Web3Provider((window as any).ethereum)
-            : null;
+useEffect(() => {
+  let mounted = true;
+  (async () => {
+    try {
+      const eth = (window as any)?.ethereum;
+      if (!eth) {
+        setIsMinter(false);
+        return;
+      }
 
-        if (!web3Provider) {
+      const web3Provider = new ethers.providers.Web3Provider(eth);
+
+      // いきなり getSigner せず、まず接続状況を確認
+      const accounts: string[] = await web3Provider.send('eth_accounts', []);
+      let addr: string | undefined = accounts?.[0];
+
+      // 未接続ならここでリクエスト（自動ポップアップが嫌ならUIボタンにしてもOK）
+      if (!addr) {
+        try {
+          const req: string[] = await web3Provider.send('eth_requestAccounts', []);
+          addr = req?.[0];
+        } catch {
+          // ユーザーが拒否した等
           setIsMinter(false);
           return;
         }
-
-        const signer = web3Provider.getSigner();
-        const addr = await signer.getAddress();
-        const ok = await isMinterRole(signer, EDITION_DROP_ADDRESS, addr);
-        if (mounted) setIsMinter(ok);
-      } catch (e) {
-        if (mounted) setIsMinter(false);
-        console.error('[minter-check:init]', e);
       }
-    })();
 
-    return () => {
-      mounted = false;
-    };
-  }, []);
-  // ===== MINTER 権限チェック用 追加ブロック B: ここまで =====
+      if (!addr) {
+        setIsMinter(false);
+        return;
+      }
+
+      // 読み取りは signer じゃなくてもOK（providerで十分）
+      const ok = await isMinterRole(web3Provider, EDITION_DROP_ADDRESS, addr);
+      if (mounted) setIsMinter(ok);
+    } catch (e) {
+      if (mounted) setIsMinter(false);
+      console.error('[minter-check:init]', e);
+    }
+  })();
+  return () => { mounted = false; };
+}, []);
+// ===== MINTER 権限チェック用 追加ブロック B: ここまで =====
+
 
 
   // フォーム値
