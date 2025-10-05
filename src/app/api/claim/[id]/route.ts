@@ -8,6 +8,10 @@ const EDITION_DROP_ADDRESS =
   process.env.NEXT_PUBLIC_EDITION_DROP_ADDRESS ??
   "0xaF4dB4A95a8CC61A4D03e8fD9183FB539B129a17";
 
+// OpenZeppelin AccessControl: keccak256("MINTER_ROLE")
+const MINTER_ROLE =
+  "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
+
 function json(status: number, data: any) {
   return new NextResponse(JSON.stringify(data), {
     status,
@@ -40,7 +44,6 @@ function getServerSDK() {
 
 async function getEditionDrop() {
   const sdk = getServerSDK();
-  // 型は "edition-drop" を明示して取得（roles/erc1155 の両方が生える）
   const edition = await sdk.getContract(EDITION_DROP_ADDRESS, "edition-drop");
   return { sdk, edition };
 }
@@ -48,20 +51,24 @@ async function getEditionDrop() {
 const isEthAddress = (x: string | undefined): x is string =>
   !!x && /^0x[a-fA-F0-9]{40}$/.test(x.trim());
 
-/** ====== （例）entryId→配布パラメータ解決 ======
- * 実運用では DB から entryId に紐づく tokenId / quantity を取得してください。
- * ここでは暫定で tokenId=1, quantity="1" を返します。
- */
+/** entryId→配布パラメータ解決（用途に合わせてDBに差し替え） */
 async function resolveAirdropParams(entryId: number) {
-  // TODO: Supabaseから取得
   const tokenId = 1;
   const quantity = "1";
   return { tokenId, quantity };
 }
 
-/** ====== GET: プリフライト ======
- * サーバーウォレットが MINTER を持つか & tokenId が Lazy Mint 済みか を返す
- */
+/** 直接 hasRole を叩いて MINTER を判定（列挙APIは使わない） */
+async function hasMinterRole(edition: any, address: string): Promise<boolean> {
+  try {
+    const ok = await edition.call("hasRole", [MINTER_ROLE, address]);
+    return Boolean(ok);
+  } catch {
+    return false;
+  }
+}
+
+/** ====== GET: プリフライト ====== */
 export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
   try {
     const entryId = Number(ctx.params.id);
@@ -72,12 +79,10 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
 
     const sender = await sdk.getSigner()!.getAddress();
 
-    // Roles（v5でOK）
-    const roles = await edition.roles.getAll(); // { admin:[], minter:[], transfer:[] }
-    const hasMinter =
-      roles.minter?.some((a: string) => a.toLowerCase() === sender.toLowerCase()) ?? false;
+    // ★ 列挙を廃止して hasRole を直接呼ぶ
+    const hasMinter = await hasMinterRole(edition, sender);
 
-    // ✅ v5 では getTokenMetadata ではなく erc1155.get(tokenId)
+    // token 存在チェック（v5: erc1155.get）
     let tokenExists = false;
     try {
       const nft = await edition.erc1155.get(tokenId);
@@ -112,20 +117,15 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     };
     const mode = body?.mode ?? "address";
 
-    // トークン認証が必要ならここでチェック
-    // if (!body.token) return json(401, { ok:false, error:"missing token" });
-
     const { tokenId, quantity } = await resolveAirdropParams(entryId);
     const { sdk, edition } = await getEditionDrop();
 
-    // サーバーウォレットの MINTER 確認
+    // ★ サーバーウォレットの MINTER を hasRole で判定
     const sender = await sdk.getSigner()!.getAddress();
-    const roles = await edition.roles.getAll();
-    const hasMinter =
-      roles.minter?.some((a: string) => a.toLowerCase() === sender.toLowerCase()) ?? false;
+    const hasMinter = await hasMinterRole(edition, sender);
     if (!hasMinter) return json(403, { ok: false, error: "Server wallet has no MINTER_ROLE" });
 
-    // token の存在チェック（LazyMint 済みか）
+    // token の存在（LazyMint済み）確認
     try {
       await edition.erc1155.get(tokenId);
     } catch {
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     }
 
     if (mode === "email") {
-      // 受け取りリンクメール送信など既存ワークフローに接続
+      // TODO: 受け取りリンクメール送信に接続
       return json(200, { ok: true, message: "受け取りリンクをメールで送信しました。" });
     }
 
@@ -141,13 +141,9 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     const to = body?.address?.trim();
     if (!isEthAddress(to)) return json(400, { ok: false, error: "Invalid recipient address" });
 
-    /** ✅ v5 正式シグネチャ
-     *  erc1155.airdrop(tokenId, [{ address, quantity }])
-     *  ※ quantity は string/number どちらでもOK
-     */
+    // v5: erc1155.airdrop(tokenId, [{ address, quantity }])
     const result = await edition.erc1155.airdrop(tokenId, [{ address: to, quantity }]);
 
-    // 返り値が単体 or 配列の両対応で txHash を抽出
     const txArray = Array.isArray(result) ? result : [result];
     const txHash =
       txArray[0]?.receipt?.transactionHash ??
