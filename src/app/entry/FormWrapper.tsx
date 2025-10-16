@@ -199,7 +199,7 @@ if (isSale && editionModeToSave === 'limited') {
   editionTotalNum = n;
 }
 
-const FEE_RATE = 0.15;
+const FEE_RATE = 0.10;
 const priceNum =
   data.isForSale === 'yes' && data.price
     ? Number(String(data.price).replace(/[^\d]/g, ''))

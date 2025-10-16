@@ -11,7 +11,7 @@ interface ConfirmPageProps {
 }
 
 const BRAND = '#00a1e9';
-const FEE_RATE = 0.15 as const;
+const FEE_RATE = 0.10 as const;
 
 const displayPlanLabels: Record<string, string> = {
   free: 'Free（¥0 / 表示保証なし・ローテーション枠）',

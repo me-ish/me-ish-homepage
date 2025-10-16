@@ -27,10 +27,10 @@ export default function AboutPage() {
       <div className="mt-0.5 text-xs text-[#667]">はじめてでも費用はかかりません</div>
     </li>
 
-    {/* 販売成立時のみ手数料 15% */}
+    {/* 販売成立時のみ手数料 10% */}
     <li className="rounded-2xl border bg-[#f6f8fb] px-4 py-3">
       <div className="text-[11px] text-[#667]">販売</div>
-      <div className="font-extrabold tracking-tight">手数料15％</div>
+      <div className="font-extrabold tracking-tight">手数料10％</div>
       <div className="mt-0.5 text-xs text-[#667]">販売成立時のみ ／ 売れなければ費用ゼロ</div>
     </li>
 
@@ -52,7 +52,7 @@ export default function AboutPage() {
   {/* フッターノート */}
 <p className="mt-2 text-xs text-[#667]">
   ※ 決済は購入者のクレジットカード（円）のみ。アーティストへのお支払いは
-  売上から手数料（15%）を控除のうえ、月次で銀行振込します。
+  売上から手数料（10%）を控除のうえ、月次で銀行振込します。
   詳細は <a href="/footer/faq#fees" className="underline">FAQ</a> をご確認ください。
 </p>
 

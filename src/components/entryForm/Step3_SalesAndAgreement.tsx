@@ -7,7 +7,7 @@ import type { FormValues } from '@/app/entry/FormWrapper';
 import BankBranchFields from '@/components/entryForm/BankBranchFields'; // ★ 追加
 
 const BRAND = '#00a1e9';
-const FEE_RATE = 0.15;
+const FEE_RATE = 0.10;
 
 /** ★ いまは Free のみ許可 */
 const FREE_ONLY = true;
