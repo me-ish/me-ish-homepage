@@ -19,7 +19,7 @@ export default function PricingPage() {
       <header className="text-center mb-10">
         <h1 className="text-4xl font-lilita text-[#00a1e9] mb-3">プランと料金</h1>
         <p className="text-[1.02rem] text-[#334]">
-          me-ishは<strong>応募・展示は無料</strong>。作品が<strong>売れたときだけ手数料15%</strong>。<br />
+          me-ishは<strong>応募・展示は無料</strong>。作品が<strong>売れたときだけ手数料10%</strong>。<br />
           確実な露出を求める方向けに<strong>表示保証オプション</strong>を用意しています。
         </p>
       </header>
@@ -50,7 +50,7 @@ export default function PricingPage() {
         <h2 id="fees" className="text-xl font-bold mb-3">手数料・決済</h2>
         <ul className="list-disc ml-6 space-y-2 text-sm">
           <li>
-            <strong>販売手数料は成功時のみ15%</strong>です。売上から<strong>手数料を控除</strong>のうえ、
+            <strong>販売手数料は成功時のみ10%</strong>です。売上から<strong>手数料を控除</strong>のうえ、
             <strong>月次まとめ払い</strong>でアーティストへ<strong>銀行振込</strong>します（応募時に振込口座の登録が必要）。
           </li>
           <li>

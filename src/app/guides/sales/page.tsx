@@ -65,7 +65,7 @@ export default function SalesGuidelinePage() {
           <li>
             出展は無料ですが、販売時には
             <span className="mx-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-sm font-semibold">
-              手数料 15%
+              手数料 10%
             </span>
             が差し引かれます。
           </li>

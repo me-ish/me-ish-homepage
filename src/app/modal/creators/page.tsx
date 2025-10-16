@@ -32,7 +32,7 @@ export default function CreatorsPage() {
           <li className="rounded-2xl border bg-[#f6f8fb] px-4 py-3">
             <div className="text-[11px] text-[#667]">販売</div>
             <div className="font-extrabold">
-              <span className="ml-1 font-semibold">手数料15%</span>
+              <span className="ml-1 font-semibold">手数料10%</span>
             </div>
             <div className="mt-0.5 text-xs text-[#667]">販売成立時のみ／売れなければ費用ゼロ</div>
           </li>
@@ -48,7 +48,7 @@ export default function CreatorsPage() {
           </li>
         </ul>
         <p className="mt-2 text-xs text-[#667]">
-          ※ アーティストへのお支払いは、売上から手数料（15%）を控除のうえ<strong>月次で銀行振込</strong>します（振込口座の登録が必要）。
+          ※ アーティストへのお支払いは、売上から手数料（10%）を控除のうえ<strong>月次で銀行振込</strong>します（振込口座の登録が必要）。
           内訳・時期は <Link href="/footer/faq#fees" className="underline">FAQ</Link> をご確認ください。
         </p>
       </section>

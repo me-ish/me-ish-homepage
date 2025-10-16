@@ -77,7 +77,7 @@ export default function FAQPage() {
           question: '出展料はかかりますか？',
           answer: (
             <>
-              <strong>応募・展示は無料</strong>です。作品が<strong>売れたときだけ手数料15%</strong>を売上から控除します。
+              <strong>応募・展示は無料</strong>です。作品が<strong>売れたときだけ手数料10%</strong>を売上から控除します。
               アーティストへのお支払いは<strong>月次で銀行振込</strong>です（口座登録必須）。
               詳細は <Link href="/footer/terms#sec-7-2" className="underline">利用規約 第7条の2</Link> をご確認ください。
             </>

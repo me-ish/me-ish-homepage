@@ -107,7 +107,7 @@ function LoginInner() {
           title="できること"
           items={[
             { icon: <Img className="w-4 h-4 text-[#00a1e9]" />, text: '出展作品の登録・編集（通常 or NFT を選択）' },
-            { icon: <CreditCard className="w-4 h-4 text-[#00a1e9]" />, text: '売上・手数料の確認（成功時のみ15%）' },
+            { icon: <CreditCard className="w-4 h-4 text-[#00a1e9]" />, text: '売上・手数料の確認（成功時のみ10%）' },
             { icon: <Bell className="w-4 h-4 text-[#00a1e9]" />, text: '展示・販売に関する通知の受け取り' },
             { icon: <User className="w-4 h-4 text-[#00a1e9]" />, text: 'プロフィール編集とSNSリンク' },
           ]}
