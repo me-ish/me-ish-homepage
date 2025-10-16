@@ -12,6 +12,9 @@ const FEE_RATE = 0.15;
 /** ★ いまは Free のみ許可 */
 const FREE_ONLY = true;
 
+/** ★ NFT販売を一時停止（= ラジオを押せない＆選べない） */
+const NFT_SALE_DISABLED = true;
+
 const planKeys = ['free', 'mini', 'light', 'standard', 'premium'] as const;
 type PlanKey = typeof planKeys[number];
 
@@ -34,13 +37,14 @@ const Step3_SalesAndAgreement = () => {
   const {
     register,
     watch,
-    setValue,               // ★ 追加
+    setValue,
     formState: { errors },
   } = useFormContext<FormValues>();
 
   const isForSale = watch('isForSale');
   const saleType = watch('saleType');
   const priceRaw = watch('price') ?? '';
+  const editionMode = watch('editionMode');
   const editionTotal = watch('editionTotal') ?? '';
 
   const [canCheck, setCanCheck] = useState(false);
@@ -57,6 +61,7 @@ const Step3_SalesAndAgreement = () => {
     }
   }, [setValue]);
 
+  // 規約ボックス全読了でチェック可能
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -70,6 +75,7 @@ const Step3_SalesAndAgreement = () => {
     return () => el.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // プラン混雑率
   useEffect(() => {
     getDisplayPlanStats().then((res) => {
       if (!res) return;
@@ -97,7 +103,28 @@ const Step3_SalesAndAgreement = () => {
     return 'standard';
   }, [stats, totalUsage]);
 
-  /** ★ グレーアウト対応（disabled を付与） */
+  /** ★ 以前「NFT販売」を選んでいた場合のガード：自動解除 */
+  useEffect(() => {
+    if (NFT_SALE_DISABLED && saleType === 'nft') {
+      setValue('saleType', undefined as unknown as FormValues['saleType'], {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [saleType, setValue]);
+
+  /** ★ 販売形式ラジオの登録（バリデでも nft を弾く） */
+  const saleTypeRegister = register('saleType', {
+    required: '販売形式を選択してください。',
+    validate: (v: string) => {
+      if (NFT_SALE_DISABLED && v === 'nft') {
+        return '現在は通常販売のみ選択できます。';
+      }
+      return true;
+    },
+  });
+
+  /** ★ 表示保証プランのUI（Free以外は押せない） */
   const renderPlanLabel = (plan: PlanKey, label: string) => {
     const applicants = stats?.[plan] ?? 0;
     const slotUsage = GUARANTEED_VIEWS[plan] * applicants;
@@ -174,19 +201,44 @@ const Step3_SalesAndAgreement = () => {
       {/* 販売詳細（販売=はい のときだけ） */}
       {isForSale === 'yes' && (
         <>
-          {/* 販売形式 */}
+          {/* 販売形式（NFTは押せない） */}
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-1.5">
               販売形式 <span className="text-red-600">＊</span>
             </label>
-            <div className="mt-2 flex gap-6">
+
+            {NFT_SALE_DISABLED && (
+              <p className="text-xs text-gray-500 mb-2">
+                ※ 現在はテスト期間のため <strong>通常販売のみ</strong> を受け付けています（NFT販売は準備中）。
+              </p>
+            )}
+
+            <div className="mt-2 flex flex-col sm:flex-row gap-4">
+              {/* 通常販売 */}
               <label className="flex items-center gap-2">
-                <input type="radio" value="normal" {...register('saleType', { required: '販売形式を選択してください。' })} /> 通常販売
+                <input type="radio" value="normal" {...saleTypeRegister} />
+                通常販売
               </label>
-              <label className="flex items-center gap-2">
-                <input type="radio" value="nft"    {...register('saleType', { required: '販売形式を選択してください。' })} /> NFT販売
+
+              {/* NFT販売（押せない・選べない） */}
+              <label
+                className={[
+                  'flex items-center gap-2 rounded px-2 py-1',
+                  NFT_SALE_DISABLED ? 'opacity-50 cursor-not-allowed ring-1 ring-gray-200' : '',
+                ].join(' ')}
+                aria-disabled={NFT_SALE_DISABLED}
+                title={NFT_SALE_DISABLED ? 'NFT販売は現在準備中のため選択できません' : undefined}
+              >
+                <input
+                  type="radio"
+                  value="nft"
+                  disabled={NFT_SALE_DISABLED}
+                  {...saleTypeRegister}
+                />
+                NFT販売（準備中）
               </label>
             </div>
+
             {(() => {
               const m = errMsg(errors.saleType);
               return m ? <p className="text-sm text-red-600 mt-1.5">{m}</p> : null;
@@ -229,56 +281,55 @@ const Step3_SalesAndAgreement = () => {
             })()}
           </div>
 
-{/* 販売点数 */}
-<div>
-  <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-    販売点数（エディション数 or 無制限） <span className="text-red-600">＊</span>
-  </label>
+          {/* 販売点数 */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+              販売点数（エディション数 or 無制限） <span className="text-red-600">＊</span>
+            </label>
 
-  <div className="mt-2 flex gap-6">
-    <label className="flex items-center gap-2">
-      <input
-        type="radio"
-        value="limited"
-        {...register('editionMode', { required: '販売点数を選択してください。' })}
-      /> エディション指定
-    </label>
-    <label className="flex items-center gap-2">
-      <input
-        type="radio"
-        value="unlimited"
-        {...register('editionMode', { required: '販売点数を選択してください。' })}
-      /> 無制限
-    </label>
-  </div>
+            <div className="mt-2 flex gap-6">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  value="limited"
+                  {...register('editionMode', { required: '販売点数を選択してください。' })}
+                /> エディション指定
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  value="unlimited"
+                  {...register('editionMode', { required: '販売点数を選択してください。' })}
+                /> 無制限
+              </label>
+            </div>
 
-  {/* editionTotal は limited のときだけ表示 */}
-  {watch('editionMode') === 'limited' && (
-    <div className="mt-2">
-      <input
-        id="editionTotal"
-        type="number"
-        inputMode="numeric"
-        min={1}
-        max={10}
-        placeholder="例：5"
-        className="w-full px-4 py-3 mt-1.5 text-base bg-[#fafafa] border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00a1e9]"
-        {...register('editionTotal', {
-          required: '販売点数を入力してください。',
-          min: { value: 1, message: '1以上を入力してください。' },
-          max: { value: 10, message: '最大10点まで指定できます。' },
-        })}
-      />
-      <small className="text-[#666] mt-1 block">※1〜10の範囲で指定</small>
-    </div>
-  )}
+            {/* editionTotal は limited のときだけ表示 */}
+            {editionMode === 'limited' && (
+              <div className="mt-2">
+                <input
+                  id="editionTotal"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={10}
+                  placeholder="例：5"
+                  className="w-full px-4 py-3 mt-1.5 text-base bg-[#fafafa] border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00a1e9]"
+                  {...register('editionTotal', {
+                    required: '販売点数を入力してください。',
+                    min: { value: 1, message: '1以上を入力してください。' },
+                    max: { value: 10, message: '最大10点まで指定できます。' },
+                  })}
+                />
+                <small className="text-[#666] mt-1 block">※1〜10の範囲で指定</small>
+              </div>
+            )}
 
-  {(() => {
-    const m = errMsg(errors.editionTotal || errors.editionMode);
-    return m ? <p className="text-sm text-red-600 mt-1.5">{m}</p> : null;
-  })()}
-</div>
-
+            {(() => {
+              const m = errMsg(errors.editionTotal || errors.editionMode);
+              return m ? <p className="text-sm text-red-600 mt-1.5">{m}</p> : null;
+            })()}
+          </div>
 
           {/* 表示保証プラン */}
           <div>
@@ -370,3 +421,4 @@ const Step3_SalesAndAgreement = () => {
 };
 
 export default Step3_SalesAndAgreement;
+
