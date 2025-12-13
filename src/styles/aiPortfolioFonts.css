@@ -1,0 +1,11 @@
+/* aiPortfolio専用フォント上書き
+   ※ 実際のフォント指定は React 側の style.fontFamily で行うので
+   ※ ここでは「body のフォントを基本にする」程度にとどめる */
+.ai-portfolio-root {
+  font-family: inherit;
+}
+
+/* 子要素は root から普通に継承させる */
+.ai-portfolio-root * {
+  font-family: inherit;
+}

@@ -1,27 +1,32 @@
 // src/app/layout.tsx
-import './globals.css';
-import type { Metadata } from 'next';
-import { Suspense } from 'react';
+import "./globals.css";
+import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import QueryProvider from '@/components/providers/QueryProvider'; // ← 追加
-import { ZoomArtworkProvider } from '@/components/shared/ZoomArtworkContext';
-import ClientWrapper from '@/components/shared/ClientWrapper';
-import ZoomArtworkDisplay from '@/components/shared/ZoomArtworkDisplay';
-import { Analytics } from '@/components/Analytics';
+import QueryProvider from "@/components/providers/QueryProvider";
+import { ZoomArtworkProvider } from "@/components/shared/ZoomArtworkContext";
+import ClientWrapper from "@/components/shared/ClientWrapper";
+import ZoomArtworkDisplay from "@/components/shared/ZoomArtworkDisplay";
+import { Analytics } from "@/components/Analytics";
+import "@/styles/aiPortfolioFonts.css";
 
 export const metadata: Metadata = {
-  title: 'me-ish',
-  description: 'アートを、もっと近くに。',
-  manifest: '/manifest.json',
+  title: "me-ish",
+  description: "アートを、もっと近くに。",
+  manifest: "/manifest.json",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="ja">
-      <body className="text-lg leading-relaxed font-zen text-[#333]">
-        {/* ここは全ページ共通。Header/Footer は置かない */}
+      {/* 全体は今までどおり font-zen ベース */}
+      <body className="text-lg leading-relaxed text-[#333]">
         <Suspense fallback={null}>
-          <QueryProvider> {/* ← ここで全体を包む */}
+          <QueryProvider>
             <ZoomArtworkProvider>
               <ClientWrapper>
                 {children}
