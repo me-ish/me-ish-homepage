@@ -27,10 +27,11 @@ export async function GET(
       );
     }
 
-    // 準備完了：design/contentが揃っていることを条件にする
-    if (rec.status === "ready" && rec.design && rec.content) {
-      return NextResponse.json({ ok: true, status: "ready" }, { status: 200 });
-    }
+// 準備完了：design/content が揃っていることを条件にする（status文字列には依存しない）
+if (rec.design && rec.content) {
+  return NextResponse.json({ ok: true, status: "ready" }, { status: 200 });
+}
+
 
     // それ以外は pending（例：pending のまま、または中途半端に更新された等）
     return NextResponse.json({ ok: true, status: "pending" }, { status: 200 });
