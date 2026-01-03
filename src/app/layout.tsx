@@ -10,7 +10,13 @@ import ZoomArtworkDisplay from "@/components/shared/ZoomArtworkDisplay";
 import { Analytics } from "@/components/Analytics";
 import "@/styles/aiPortfolioFonts.css";
 
+// ✅ OG/Twitter画像などの絶対URL解決の基準（Vercel warning 対策）
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.me-ish.art";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+
   title: "me-ish",
   description: "アートを、もっと近くに。",
   manifest: "/manifest.json",
