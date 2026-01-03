@@ -1,209 +1,99 @@
-// src/app/api/stripe/webhook/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
-import { z } from 'zod';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { createHash, randomUUID } from 'crypto';
+// src/app/api/aura/checkout/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-// CoAリンクの有効期限（分）。未設定は30日（60*24*30）
-const CERT_LINK_TTL_MINUTES = Number(process.env.CERT_LINK_TTL_MINUTES || 60 * 24 * 30);
-
-const Meta = z.object({
-  entryId: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().int().positive().default(1),
-  type: z.string().optional(), // 'nft' or 'normal'（未設定は normal 扱い）
-});
-
 function baseUrl() {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL!;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return 'http://localhost:3000';
+  return "http://localhost:3000";
 }
 
-// cert_links にトークンを保存して、表示用の生トークンを返す
-async function createCertToken(entryId: number) {
-  const token = randomUUID().replace(/-/g, '');
-  const token_hash = createHash('sha256').update(token).digest('hex');
-  const expires_at = new Date(Date.now() + CERT_LINK_TTL_MINUTES * 60 * 1000).toISOString();
-
-  const { error } = await supabaseAdmin()
-    .from('cert_links')
-    .insert({ entry_id: entryId, token_hash, expires_at, revoked: false });
-
-  if (error) throw error;
-  return token;
+function isUuidLike(v: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
 
-export async function POST(req: NextRequest) {
-  const sig = req.headers.get('stripe-signature');
-  if (!sig) return new NextResponse('Missing signature', { status: 400 });
-
-  // 生ボディで検証
-  const rawBody = Buffer.from(await req.arrayBuffer());
-
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(
-      rawBody,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
-  } catch (err: any) {
-    console.error('[webhook] signature verification failed:', err?.message || err);
-    return new NextResponse(`Webhook Error: ${err?.message || 'invalid'}`, { status: 400 });
+export async function GET(req: NextRequest) {
+  const requestId = req.nextUrl.searchParams.get("requestId");
+  if (!requestId) {
+    return NextResponse.json({ ok: false, error: "missing_requestId" }, { status: 400 });
+  }
+  if (!isUuidLike(requestId)) {
+    return NextResponse.json({ ok: false, error: "invalid_requestId" }, { status: 400 });
   }
 
-  if (
-    event.type === 'checkout.session.completed' ||
-    event.type === 'checkout.session.async_payment_succeeded'
-  ) {
-    const session = event.data.object as Stripe.Checkout.Session;
-    const paid = session.payment_status === 'paid';
-    if (!paid) return NextResponse.json({ received: true });
+  // ✅ ここが重要：型定義が追いついてないので any で回避
+  const admin = supabaseAdmin() as any;
 
-    // メタデータ取得
-    const parsed = Meta.safeParse(session.metadata || {});
-    if (!parsed.success) return NextResponse.json({ received: true });
-    const { entryId, quantity, type } = parsed.data;
+  // ⚠️ ここで選択している列がDBに存在しないと実行時エラーになります（下にSQLあり）
+  const { data: rec, error } = await admin
+    .from("aura_requests")
+    .select("id, email, payment_status, stripe_session_id")
+    .eq("id", requestId)
+    .maybeSingle();
 
-    // v5: 'nft' 明示のときのみ NFT と扱う。未設定/その他は normal 扱い
-    const typeRaw = (type || '').toLowerCase();
-    const isNFT = typeRaw === 'nft';
+  if (error || !rec) {
+    return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+  }
 
+  // すでに支払い済みなら、そのまま戻す（無駄な再決済を防ぐ）
+  if (String(rec.payment_status || "").toLowerCase() === "paid") {
+    return NextResponse.redirect(
+      `${baseUrl()}/aiPortfolio/preview/${encodeURIComponent(requestId)}`,
+      { status: 303 },
+    );
+  }
+
+  const priceId = process.env.AURA_STRIPE_PRICE_ID;
+  if (!priceId) {
+    return NextResponse.json({ ok: false, error: "missing_AURA_STRIPE_PRICE_ID" }, { status: 500 });
+  }
+
+  const successUrl = `${baseUrl()}/aiPortfolio/preview/${encodeURIComponent(requestId)}?paid=1`;
+  const cancelUrl = `${baseUrl()}/aiPortfolio/preview/${encodeURIComponent(requestId)}?canceled=1`;
+
+  // 既に作ったCheckoutがあれば再利用（stripe_session_id列がある場合のみ）
+  if (rec.stripe_session_id) {
     try {
-      const admin = supabaseAdmin();
-
-      // 在庫確定 + sales 作成（重複は UNIQUE で弾く想定）
-      const { data: result, error } = await admin.rpc('finalize_sale', {
-        p_entry_id: entryId,
-        p_quantity: quantity,
-        p_session_id: session.id,
-      });
-
-      if (error) {
-        if (error.code === '23505' || String(error.message).includes('duplicate')) {
-          console.log('[webhook] duplicate session handled:', session.id);
-          return NextResponse.json({ received: true });
-        }
-        if (String(error.message).toLowerCase().includes('sold out')) {
-          console.warn('[webhook] sold out:', entryId, 'session:', session.id);
-          return NextResponse.json({ error: 'sold out' }, { status: 409 });
-        }
-        console.error('[webhook] finalize_sale error:', error);
-        return NextResponse.json({ error: 'finalize failed' }, { status: 400 });
-      }
-
-      // 作品情報（メールに使用）
-      const { data: entryRow } = await admin
-        .from('entries')
-        .select('title, artist_name, edition_total, email')
-        .eq('id', entryId)
-        .single();
-
-      // Stripe レシートURL（任意）
-      let receiptUrl: string | undefined;
-      if (session.payment_intent) {
-        const pi = await stripe.paymentIntents.retrieve(session.payment_intent as string, {
-          expand: ['latest_charge'],
-        });
-        const ch = (pi.latest_charge as any);
-        receiptUrl = ch?.receipt_url;
-      }
-
-      // edition 割当
-      const edition_from = (result as any)?.edition_from ?? null;
-      const editionNo = edition_from ?? null;
-      const editionTotal = entryRow?.edition_total ?? null;
-
-      // 合計金額（表示用で十分）
-      const totalYen = typeof session.amount_total === 'number' ? session.amount_total : null;
-
-      // 購入者情報
-      const buyerEmail = session.customer_details?.email || session.customer_email || undefined;
-      const buyerName = session.customer_details?.name || 'お客様';
-
-      if (buyerEmail) {
-        // CoAリンクを生成
-        let certificateUrl: string | undefined;
-        try {
-          const t = await createCertToken(entryId);
-          const params = new URLSearchParams({ t });
-
-          if (isNFT) {
-            // NFT のときだけ明示的に nft を付ける（必要に応じ tokenId/qty を追加）
-            params.set('type', 'nft');
-            // 例:
-            // params.set('tokenId', '0');
-            // params.set('qty', String(quantity));
-          } else {
-            // 既定は normal。entry を付ければフロントは normal 表示になる
-            params.set('entry', String(entryId));
-            // 便宜的に表示用タイトル/作家名も付与（任意）
-            if (entryRow?.title) params.set('title', entryRow.title);
-            if (entryRow?.artist_name) params.set('artist', entryRow.artist_name);
-            // type を付けたい場合は以下でもOK（なくても normal 表示）
-            // params.set('type', 'normal');
-          }
-
-          certificateUrl = `${baseUrl()}/cert/${entryId}?${params.toString()}`;
-        } catch (e) {
-          console.error('[webhook] cert token create failed:', e);
-        }
-
-        // 送信：購入者
-        await fetch(`${baseUrl()}/api/send-email/purchaseBuyer`, {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            'x-meish-admin-token': process.env.ADMIN_API_TOKEN!,
-          },
-          body: JSON.stringify({
-            to: buyerEmail,
-            name: buyerName,
-            title: entryRow?.title,
-            artistName: entryRow?.artist_name,
-            priceYen: totalYen,
-            editionNo,
-            editionTotal,
-            orderId: session.id,
-            receiptUrl,
-            certificateUrl, // ← CoA ボタン用
-          }),
-        });
-      }
-
-      // 送信：アーティスト（メールアドレスがある場合）
-      if (entryRow?.email) {
-        await fetch(`${baseUrl()}/api/send-email/purchaseArtist`, {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            'x-meish-admin-token': process.env.ADMIN_API_TOKEN!,
-          },
-          body: JSON.stringify({
-            to: entryRow.email,
-            name: entryRow.artist_name || 'アーティスト',
-            title: entryRow.title,
-            amountYen: totalYen,
-          }),
-        });
-      }
-
-      console.log('[webhook] finalized & mailed:', { entryId, quantity, session: session.id, isNFT });
-      return NextResponse.json({ ok: true });
-    } catch (e) {
-      console.error('[webhook] fatal:', e);
-      return NextResponse.json({ error: 'internal error' }, { status: 500 });
+      const s = await stripe.checkout.sessions.retrieve(rec.stripe_session_id);
+      if (s?.url) return NextResponse.redirect(s.url, { status: 303 });
+    } catch {
+      // 無効なら作り直す
     }
   }
 
-  // 他イベントは受領のみ
-  return NextResponse.json({ received: true });
-}
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    line_items: [{ price: priceId, quantity: 1 }],
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    customer_email: rec.email || undefined,
+    metadata: {
+      kind: "aura",
+      requestId: String(rec.id),
+      email: rec.email || "",
+    },
+  });
 
+  if (!session.url) {
+    return NextResponse.json({ ok: false, error: "stripe_session_url_missing" }, { status: 500 });
+  }
+
+  // session_id保存（stripe_session_id列がある場合のみ。無くても決済は進める）
+  try {
+    await admin
+      .from("aura_requests")
+      .update({ stripe_session_id: session.id })
+      .eq("id", requestId);
+  } catch {
+    // ignore
+  }
+
+  return NextResponse.redirect(session.url, { status: 303 });
+}

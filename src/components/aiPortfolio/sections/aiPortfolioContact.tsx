@@ -1,8 +1,11 @@
-// src/components/aiPortfolio/sections/aiPortfolioContact.tsx
+//src/components/aiPortfolio/sections/aiPortfolioContact.tsx
+"use client";
+
 import React from "react";
 import type { Design, Content } from "@/lib/aiPortfolio/aiPortfolio.schema";
 import type { VariantSpec } from "@/lib/aiPortfolio/aiPortfolio.variant.base";
 import { applyVariantStyle } from "../applyVariantStyle";
+import { AiPortfolioSectionPillHeader } from "./_shared/AiPortfolioSectionPillHeader";
 
 type Props = {
   section: Content["sections"][number];
@@ -10,211 +13,231 @@ type Props = {
   variant: VariantSpec;
 };
 
-export const AiPortfolioContact: React.FC<Props> = ({
-  section,
-  theme,
-  variant,
-}) => {
-  const v = applyVariantStyle(variant, theme);
+type LinkPill = { label: string; href: string };
 
+function isProbablyUrl(s: string) {
+  return /^https?:\/\//i.test(s) || /^mailto:/i.test(s);
+}
+
+function withHttpsIfNeeded(s: string) {
+  if (!s) return s;
+  if (isProbablyUrl(s)) return s;
+  if (/^\/\//.test(s)) return `https:${s}`;
+  return `https://${s}`;
+}
+
+function cleanHandle(s: string) {
+  return s.trim().replace(/^@/, "");
+}
+
+function buildSnsUrl(kind: "x" | "instagram" | "behance", rawValue: string) {
+  const v = rawValue.trim();
+  if (!v) return null;
+  if (isProbablyUrl(v)) return v;
+  if (v.includes("/")) return withHttpsIfNeeded(v);
+
+  const handle = cleanHandle(v);
+  if (!handle) return null;
+
+  switch (kind) {
+    case "x":
+      return `https://x.com/${handle}`;
+    case "instagram":
+      return `https://www.instagram.com/${handle}`;
+    case "behance":
+      return `https://www.behance.net/${handle}`;
+  }
+}
+
+function normalizeLink(label: string, hrefRaw: string): LinkPill | null {
+  const href = hrefRaw?.trim();
+  if (!href) return null;
+
+  if (/^mailto:/i.test(href)) return { label, href };
+
+  if (label === "X") {
+    const u = buildSnsUrl("x", href);
+    return u ? { label, href: u } : null;
+  }
+  if (label === "Instagram") {
+    const u = buildSnsUrl("instagram", href);
+    return u ? { label, href: u } : null;
+  }
+  if (label === "Behance") {
+    const u = buildSnsUrl("behance", href);
+    return u ? { label, href: u } : null;
+  }
+
+  return { label, href: withHttpsIfNeeded(href) };
+}
+
+export const AiPortfolioContact: React.FC<Props> = ({ section, theme, variant }) => {
+  const v = applyVariantStyle(variant, theme);
   const raw = section as any;
 
   const [heading] = section.headings ?? [];
   const [body] = section.paragraphs ?? [];
 
   // ----------------------------------------
-  // 連絡先まわり（メール + SNS）
+  // 連絡先（メール）
   // ----------------------------------------
   const email =
     (raw.email as string | undefined) ||
-    (raw.contactEmail as string | undefined);
+    (raw.contactEmail as string | undefined) ||
+    (raw?.social?.email as string | undefined);
 
-  // すでに 'links' があれば最優先で使う
-  const linksFromSection: { label: string; href: string }[] =
-    (raw.links as any[]) ?? [];
+  // ----------------------------------------
+  // links[] があれば最優先（旧互換）
+  // ----------------------------------------
+  const linksFromSection: { label: string; href: string }[] = (raw.links as any[]) ?? [];
 
-  // フォームが「個別の SNS 項目」を持っている場合の拾い上げ
-  // （実際のキー名はかなりカバー広めにしておく）
-  const snsCandidates: { key: string; label: string }[] = [
-    { key: "xUrl", label: "X" },
-    { key: "twitterUrl", label: "X" },
-    { key: "twitter", label: "X" },
-    { key: "instagramUrl", label: "Instagram" },
-    { key: "instagram", label: "Instagram" },
-    { key: "pixivUrl", label: "pixiv" },
-    { key: "pixiv", label: "pixiv" },
-    { key: "skebUrl", label: "Skeb" },
-    { key: "skeb", label: "Skeb" },
-    { key: "boothUrl", label: "BOOTH" },
-    { key: "booth", label: "BOOTH" },
-    { key: "websiteUrl", label: "Website" },
-    { key: "siteUrl", label: "Website" },
-    { key: "portfolioUrl", label: "Portfolio" },
+  // ----------------------------------------
+  // フォーム由来のSNS（socialネスト + 直下キー）を拾う
+  // ----------------------------------------
+  const social = (raw.social ?? {}) as Record<string, unknown>;
+
+  const snsCandidates: { value?: string; label: string }[] = [
+    {
+      label: "X",
+      value:
+        (social.twitter as string | undefined) ||
+        (social.x as string | undefined) ||
+        (raw.xUrl as string | undefined) ||
+        (raw.twitterUrl as string | undefined) ||
+        (raw.twitter as string | undefined) ||
+        (raw.tw as string | undefined),
+    },
+    {
+      label: "Instagram",
+      value:
+        (social.instagram as string | undefined) ||
+        (raw.instagramUrl as string | undefined) ||
+        (raw.instagram as string | undefined) ||
+        (raw.ig as string | undefined),
+    },
+    {
+      label: "Behance",
+      value:
+        (social.behance as string | undefined) ||
+        (raw.behanceUrl as string | undefined) ||
+        (raw.behance as string | undefined) ||
+        (raw.be as string | undefined),
+    },
+    { label: "pixiv", value: (social.pixiv as string | undefined) || (raw.pixivUrl as string | undefined) || (raw.pixiv as string | undefined) },
+    { label: "Skeb", value: (social.skeb as string | undefined) || (raw.skebUrl as string | undefined) || (raw.skeb as string | undefined) },
+    { label: "BOOTH", value: (social.booth as string | undefined) || (raw.boothUrl as string | undefined) || (raw.booth as string | undefined) },
+    {
+      label: "Website",
+      value:
+        (social.website as string | undefined) ||
+        (raw.websiteUrl as string | undefined) ||
+        (raw.siteUrl as string | undefined) ||
+        (raw.portfolioUrl as string | undefined) ||
+        (raw.site as string | undefined),
+    },
   ];
 
-  const snsLinksFromFields: { label: string; href: string }[] = [];
-  for (const { key, label } of snsCandidates) {
-    const value = raw[key] as string | undefined;
-    if (!value) continue;
+  // links[] と SNS フィールドをマージ（重複除去しつつ、URLを正規化）
+  const mergedLinks: LinkPill[] = [];
 
-    // すでに links[] に同じ href があれば二重登録しない
-    const alreadyInLinks = linksFromSection.some(
-      (l) => l.href === value || l.href === `https://${value}`,
-    );
-    if (alreadyInLinks) continue;
+  for (const l of linksFromSection) {
+    if (!l?.label || !l?.href) continue;
+    const pill = normalizeLink(l.label, l.href);
+    if (!pill) continue;
 
-    snsLinksFromFields.push({ label, href: value });
+    const key = `${pill.label}__${pill.href}`;
+    const exists = mergedLinks.some((x) => `${x.label}__${x.href}` === key);
+    if (!exists) mergedLinks.push(pill);
   }
 
-  // links[] と SNS フィールドをマージ
-  const mergedLinks: { label: string; href: string }[] = [
-    ...linksFromSection,
-    ...snsLinksFromFields,
-  ];
+  for (const c of snsCandidates) {
+    if (!c.value) continue;
+    const pill = normalizeLink(c.label, c.value);
+    if (!pill) continue;
 
-  // pill 用にまとめる（メールアドレスもここに含める）
-  const pills: { label: string; href: string }[] = [];
-
-  if (email) {
-    pills.push({ label: email, href: `mailto:${email}` });
+    const exists = mergedLinks.some((x) => x.href === pill.href);
+    if (!exists) mergedLinks.push(pill);
   }
+
+  const pills: LinkPill[] = [];
+  if (email) pills.push({ label: email, href: `mailto:${email}` });
 
   for (const link of mergedLinks) {
     if (!link?.href || !link?.label) continue;
-    // mailto が links 側にも入っていた場合は重複除去
     if (email && link.href === `mailto:${email}`) continue;
-    pills.push({ label: link.label, href: link.href });
+    pills.push(link);
   }
 
-  const cta = section.cta;
-
-  const isDarkWorld =
-    variant.worldview === "dark" ||
-    variant.worldview === "cyber" ||
-    variant.worldview === "luxury";
-
-  const accent =
-    v.accentColor || theme.colorAccent || theme.colorPrimary;
+  const isDarkWorld = v.isDark;
+  const accent = v.accentColor || theme.colorAccent || theme.colorPrimary;
 
   const surfaceBG = isDarkWorld
     ? v.surfaceBG
     : "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.94))";
 
   const headingColor = isDarkWorld ? "#F9FAFB" : "#111827";
+  const bodyColor = isDarkWorld ? "rgba(226,232,240,0.9)" : "rgba(55,65,81,0.9)";
 
-  const bodyColor = isDarkWorld
-    ? "rgba(226,232,240,0.9)"
-    : "rgba(55,65,81,0.9)";
-
-  // セクション見出し用ラベル（カプセルだけで表示）
   const sectionLabel = (heading || "Contact").toUpperCase();
 
   return (
     <section className="px-3 pb-6 md:px-4 md:pb-8" aria-label="Contact">
-      {/* ======= セクション見出し（WORKSと統一） ======= */}
-      <div className="mb-3 flex items-center justify-between">
+      <div className="w-full">
+        <AiPortfolioSectionPillHeader
+          label={sectionLabel}
+          theme={theme}
+          variant={variant}
+          className="mb-3"
+        />
+
         <div
-          className={`flex flex-1 ${
-            variant.layout === "split" ? "justify-start" : "justify-center"
-          }`}
+          className="flex flex-col gap-4 border px-5 py-5 md:px-7 md:py-6"
+          style={{
+            borderRadius: v.radius,
+            borderColor: v.borderColor,
+            boxShadow: v.shadow,
+            background: surfaceBG,
+            color: headingColor,
+          }}
         >
-          <div className="inline-flex items-center gap-2">
-            <span
-              className="hidden h-px w-6 md:block"
-              style={{
-                backgroundColor: theme.colorAccent || theme.colorPrimary,
-              }}
-            />
-            <div
-              className="inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.30em] md:text-xs"
-              style={{
-                backgroundColor: isDarkWorld
-                  ? "rgba(15,23,42,0.75)"
-                  : "rgba(255,255,255,0.9)",
-                color: isDarkWorld
-                  ? "rgba(249,250,251,0.96)"
-                  : "rgba(15,23,42,0.9)",
-                borderColor: isDarkWorld
-                  ? "rgba(148,163,184,0.7)"
-                  : "rgba(148,163,184,0.5)",
-              }}
-            >
-              {sectionLabel}
-            </div>
+          <div className="space-y-2 text-left">
+            {body && (
+              <p className="text-xs leading-relaxed md:text-sm" style={{ color: bodyColor }}>
+                {body}
+              </p>
+            )}
+
+            {pills.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {pills.map((pill, i) => (
+                  <a
+                    key={i}
+                    href={pill.href}
+                    target={pill.href.startsWith("mailto:") ? undefined : "_blank"}
+                    rel={pill.href.startsWith("mailto:") ? undefined : "noreferrer"}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium md:text-xs"
+                    style={{
+                      borderRadius: 999,
+                      border: `1px solid ${v.borderColor}`,
+                      background: isDarkWorld ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.96)",
+                      color: isDarkWorld ? "#E5E7EB" : "#111827",
+                      boxShadow: "0 0 0 1px rgba(255,255,255,0.6) inset",
+                    }}
+                  >
+                    <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: accent }} />
+                    <span>{pill.label}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {pills.length === 0 && (
+              <p className="text-[11px] text-slate-500">
+                連絡先リンクが未設定です（フォームでSNS/Websiteを入力するとここに表示されます）。
+              </p>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* ======= 本体カード：説明＋pill＋CTA ======= */}
-      <div
-        className="flex flex-col gap-4 border px-5 py-5 md:flex-row md:items-center md:justify-between md:px-7 md:py-6"
-        style={{
-          borderRadius: v.radius,
-          borderColor: v.borderColor,
-          boxShadow: v.shadow,
-          background: surfaceBG,
-          color: headingColor,
-        }}
-      >
-        {/* 左側：説明＋pillリンク */}
-        <div className="space-y-2 text-left md:max-w-lg">
-          {body && (
-            <p
-              className="text-xs leading-relaxed md:text-sm"
-              style={{ color: bodyColor }}
-            >
-              {body}
-            </p>
-          )}
-
-          {pills.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {pills.map((pill, i) => (
-                <a
-                  key={i}
-                  href={pill.href}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium md:text-xs"
-                  style={{
-                    borderRadius: 999,
-                    border: `1px solid ${v.borderColor}`,
-                    background: isDarkWorld
-                      ? "rgba(15,23,42,0.9)"
-                      : "rgba(255,255,255,0.96)",
-                    color: isDarkWorld ? "#E5E7EB" : "#111827",
-                    boxShadow: "0 0 0 1px rgba(255,255,255,0.6) inset",
-                  }}
-                >
-                  <span
-                    className="inline-block h-1.5 w-1.5 rounded-full"
-                    style={{ background: accent }}
-                  />
-                  <span>{pill.label}</span>
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 右側：メイン CTA ボタン（1つだけ） */}
-        {cta && cta.label && cta.href && (
-          <div className="flex justify-start md:justify-end">
-            <a
-              href={cta.href}
-              className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold md:text-sm"
-              style={{
-                borderRadius: 999,
-                border: `1px solid ${accent}`,
-                background: isDarkWorld
-                  ? "linear-gradient(135deg, rgba(15,23,42,0.9), rgba(15,23,42,0.98))"
-                  : "linear-gradient(135deg, #ffffff, rgba(255,255,255,0.94))",
-                color: isDarkWorld ? "#E5E7EB" : accent,
-                boxShadow: v.shadow,
-              }}
-            >
-              {cta.label}
-            </a>
-          </div>
-        )}
       </div>
     </section>
   );

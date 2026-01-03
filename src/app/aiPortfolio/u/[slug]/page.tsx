@@ -1,34 +1,36 @@
-import { notFound } from "next/navigation";
-import { findRequest } from "@/lib/aiPortfolio/aiPortfolio.db";
-import AiPortfolioPortfolioRenderer from "@/components/aiPortfolio/aiPortfolioPortfolioRenderer";
-import type { Design, Content } from "@/lib/aiPortfolio/aiPortfolio.schema";
+// src/app/aiPortfolio/u/[slug]/page.tsx
+import { notFound, redirect } from "next/navigation";
+import { supabaseAdmin } from "@/lib/aiPortfolio/supabaseAdmin";
 
-type Params = { id: string };
+export const dynamic = "force-dynamic";
 
-export default async function AiPortfolioPreviewPage({
+async function getPublicIdBySlug(slug: string): Promise<string | null> {
+  const supabase = supabaseAdmin();
+
+  const { data, error } = await supabase
+    .from("aura_requests")
+    .select("public_id, visibility, published_at, status")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  // 公開ゲート（/aura/p と同条件）
+  if (data.visibility !== "public") return null;
+  if (!data.published_at) return null;
+  if (data.status !== "published") return null;
+
+  const pid = typeof data.public_id === "string" ? data.public_id.trim() : "";
+  return pid ? pid : null;
+}
+
+export default async function AiPortfolioSlugRedirectPage({
   params,
 }: {
-  params: Params;
+  params: { slug: string };
 }) {
-  const rec = await findRequest(params.id);
+  const publicId = await getPublicIdBySlug(params.slug);
+  if (!publicId) notFound();
 
-  if (!rec || !rec.design || !rec.content) {
-    notFound();
-  }
-
-  const design = rec.design as Design;
-  const content = rec.content as Content;
-
-  return (
-    <main className="mx-auto max-w-5xl px-4 py-10">
-      <h1 className="text-2xl font-semibold">ポートフォリオ プレビュー</h1>
-      <p className="mt-2 text-sm text-gray-600">
-        フォームの入力内容をもとに自動生成されたポートフォリオです。
-      </p>
-
-      <div className="mt-8">
-        <AiPortfolioPortfolioRenderer design={design} content={content} />
-      </div>
-    </main>
-  );
+  redirect(`/aura/p/${publicId}`);
 }

@@ -1,5 +1,7 @@
 // src/components/aiPortfolio/sections/aiPortfolioSkills.tsx
-// （セクション見出し：WORKS / SERVICES / CONTACT / CTA と統一）
+// （セクション見出し：WORKS / SERVICES / CONTACT と統一：中央厳密）
+
+"use client";
 
 import React from "react";
 import type { Design, Content } from "@/lib/aiPortfolio/aiPortfolio.schema";
@@ -24,11 +26,7 @@ function getDefaultHeading(languageMode?: string) {
   }
 }
 
-export const AiPortfolioSkills: React.FC<Props> = ({
-  section,
-  theme,
-  variant,
-}) => {
+export const AiPortfolioSkills: React.FC<Props> = ({ section, theme, variant }) => {
   const v = applyVariantStyle(variant, theme);
 
   const rawSection = section as any;
@@ -48,67 +46,50 @@ export const AiPortfolioSkills: React.FC<Props> = ({
 
   if (tags.length === 0) return null;
 
-  const alignClass =
-    variant.layout === "split" ? "text-left" : "text-center";
-
-  const isDarkWorld =
-    variant.worldview === "dark" ||
-    variant.worldview === "cyber" ||
-    variant.worldview === "luxury";
-
-  const headingColor = isDarkWorld
-    ? "rgba(249,250,251,0.96)"
-    : "rgba(31,41,55,0.9)";
-
-  const accent =
-    v.accentColor || theme.colorAccent || theme.colorPrimary;
+  const isDarkWorld = v.isDark;
+  const accent = v.accentColor || theme.colorAccent || theme.colorPrimary;
 
   const surfaceBG = isDarkWorld
     ? v.surfaceBG
     : "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.94))";
 
-  const tagBG = isDarkWorld
-    ? "rgba(15,23,42,0.9)"
-    : "rgba(255,255,255,0.98)";
+  const tagBG = isDarkWorld ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.98)";
   const tagTextColor = isDarkWorld ? "#E5E7EB" : "#111827";
 
+  // タグ列の寄せ（layoutに追従）
+  const tagsJustify = variant.layout === "split" ? "justify-start" : "justify-center";
+
   return (
-    <section
-      className={`px-3 pb-6 md:px-4 md:pb-8 ${alignClass}`}
-      aria-label="Skills"
-    >
-      {/* ======= セクション見出し（pill型で全セクション共通） ======= */}
-      <div className="mb-3 flex items-center justify-between">
-        <div
-          className={`flex flex-1 ${
-            variant.layout === "split" ? "justify-start" : "justify-center"
-          }`}
-        >
-          <div className="inline-flex items-center gap-2">
-            {/* 左の細線 */}
-            <span
-              className="hidden h-px w-6 md:block"
-              style={{
-                backgroundColor: accent,
-                opacity: 0.7,
-              }}
-            />
-            {/* pill（丸カプセル） */}
-            <div
-              className="inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.30em] md:text-xs"
-              style={{
-                backgroundColor: isDarkWorld
-                  ? "rgba(15,23,42,0.75)"
-                  : "rgba(255,255,255,0.9)",
-                color: headingColor,
-                borderColor: isDarkWorld
-                  ? "rgba(148,163,184,0.7)"
-                  : "rgba(148,163,184,0.5)",
-              }}
-            >
-              {heading.toUpperCase()}
+    <section className="px-3 pb-6 md:px-4 md:pb-8" aria-label="Skills">
+      {/* ======= 見出し（中央厳密） ======= */}
+      <div className="mb-3">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+          <div aria-hidden />
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-2">
+              <span
+                className="hidden h-px w-6 md:block"
+                style={{ backgroundColor: accent }}
+              />
+              <div
+                className="inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.30em] md:text-xs"
+                style={{
+                  backgroundColor: isDarkWorld
+                    ? "rgba(15,23,42,0.75)"
+                    : "rgba(255,255,255,0.9)",
+                  color: isDarkWorld
+                    ? "rgba(249,250,251,0.96)"
+                    : "rgba(15,23,42,0.9)",
+                  borderColor: isDarkWorld
+                    ? "rgba(148,163,184,0.7)"
+                    : "rgba(148,163,184,0.5)",
+                }}
+              >
+                {heading}
+              </div>
             </div>
           </div>
+          <div aria-hidden />
         </div>
       </div>
 
@@ -122,11 +103,7 @@ export const AiPortfolioSkills: React.FC<Props> = ({
           background: surfaceBG,
         }}
       >
-        <div
-          className={`flex flex-wrap gap-2 ${
-            variant.layout === "split" ? "justify-start" : "justify-center"
-          }`}
-        >
+        <div className={`flex flex-wrap gap-2 ${tagsJustify}`}>
           {tags.map((tag, i) => (
             <span
               key={i}

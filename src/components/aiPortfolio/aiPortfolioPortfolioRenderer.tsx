@@ -1,11 +1,10 @@
 // src/components/aiPortfolio/aiPortfolioPortfolioRenderer.tsx
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import type { Design, Content } from "@/lib/aiPortfolio/aiPortfolio.schema";
 import {
   VARIANTS,
-  type PatternId,
   type VariantSpec,
 } from "@/lib/aiPortfolio/aiPortfolio.variant.base";
 import { fontFamilyFromPreset } from "@/styles/aiPortfolioFonts";
@@ -15,6 +14,12 @@ import type {
   LayoutType,
 } from "@/lib/aiPortfolio/aiPortfolio.layout";
 
+/* ✅ NEW: Storage path → proxy URL */
+import { auraAssetProxyUrl } from "@/lib/aiPortfolio/storage/auraAssets";
+
+/* ✅ NEW: 共通の背景合成（プレビューと本番で一致させる） */
+import { buildBackgroundStyle } from "@/lib/aiPortfolio/aiPortfolio.background";
+
 /* NEW: HeroSwitcher (世界観ごとにHeroを切り替える) */
 import { AiPortfolioHeroSwitcher } from "./sections/AiPortfolioHeroSwitcher";
 
@@ -23,7 +28,6 @@ import { AiPortfolioAboutSimple } from "./sections/aiPortfolioAboutSimple";
 import { AiPortfolioGalleryGrid } from "./sections/aiPortfolioGalleryGrid";
 import { AiPortfolioServices } from "./sections/aiPortfolioServices";
 import { AiPortfolioSkills } from "./sections/aiPortfolioSkills";
-import { AiPortfolioContactCTA } from "./sections/aiPortfolioContactCTA";
 import { AiPortfolioContact } from "./sections/aiPortfolioContact";
 
 import { applyVariantStyle } from "./applyVariantStyle";
@@ -33,220 +37,114 @@ type ContentSection = Content["sections"][number];
 type Props = {
   design: Design;
   content: Content;
-  /** プレビューで上書きする並び順（例: ["hero","works",...]） */
+
+  /**
+   * 旧：プレビューで上書きする並び順（例: ["hero","works",...]）
+   * 既存呼び出しの互換のため残す
+   */
   sectionOrderOverride?: string[];
+
+  /**
+   * 新：Shell等から渡される並び順（こちらを優先させたいケース用）
+   * （sectionOrderOverride と併存した場合は sectionOrder を優先）
+   */
+  sectionOrder?: string[];
 };
 
-/* ---------------------------------------------------------
- * PatternId → CSS 生成
- * --------------------------------------------------------- */
-function patternStyle(
-  pattern: PatternId | "none",
-  color: string,
-): React.CSSProperties {
-  switch (pattern) {
-    case "dot-soft":
-      return {
-        backgroundImage: `radial-gradient(${color}18 2px, transparent 2px)`,
-        backgroundSize: "18px 18px",
-      };
-    case "dot-retro":
-      return {
-        backgroundImage: `radial-gradient(${color}33 6px, transparent 6px)`,
-        backgroundSize: "40px 40px",
-      };
-    case "dot-dense-noise":
-      return {
-        backgroundImage: `radial-gradient(${color}1a 1.5px, transparent 1.5px)`,
-        backgroundSize: "10px 10px",
-      };
+function uniq(arr: string[]) {
+  return Array.from(new Set(arr));
+}
 
-    case "stripe-vertical-soft":
-      return {
-        backgroundImage: `repeating-linear-gradient(
-          90deg,
-          ${color}12,
-          ${color}12 2px,
-          transparent 2px,
-          transparent 16px
-        )`,
-      };
-    case "stripe-vertical-bold":
-      return {
-        backgroundImage: `repeating-linear-gradient(
-          90deg,
-          ${color}26,
-          ${color}26 6px,
-          transparent 6px,
-          transparent 22px
-        )`,
-      };
-    case "stripe-diagonal":
-      return {
-        backgroundImage: `repeating-linear-gradient(
-          135deg,
-          ${color}18,
-          ${color}18 3px,
-          transparent 3px,
-          transparent 15px
-        )`,
-      };
+function isStoragePathLike(s: string) {
+  const v = (s ?? "").trim();
+  if (!v) return false;
 
-    case "grid-thin":
-      return {
-        backgroundImage: `
-          linear-gradient(${color}12 1px, transparent 1px),
-          linear-gradient(90deg, ${color}12 1px, transparent 1px)
-        `,
-        backgroundSize: "32px 32px",
-      };
-    case "grid-neon":
-      return {
-        backgroundImage: `
-          linear-gradient(${color}40 1px, transparent 1px),
-          linear-gradient(90deg, ${color}40 1px, transparent 1px)
-        `,
-        backgroundSize: "32px 32px",
-      };
+  // 典型：works/... / avatars/...
+  if (v.startsWith("works/") || v.startsWith("avatars/")) return true;
 
-    case "texture-paper":
-      return {
-        backgroundImage: `
-          radial-gradient(circle at 0 0, ${color}08 0, transparent 60%),
-          radial-gradient(circle at 100% 100%, ${color}08 0, transparent 60%)
-        `,
-        backgroundSize: "80px 80px",
-      };
-    case "texture-noise":
-      return {
-        backgroundImage:
-          "radial-gradient(circle at 1px 1px, rgba(0,0,0,0.05) 1px, transparent 0)",
-        backgroundSize: "6px 6px",
-      };
+  // ついでに、誤って先頭スラッシュ付きで入るケースも救う
+  if (v.startsWith("/works/") || v.startsWith("/avatars/")) return true;
 
-    case "none":
-    default:
-      return {};
-  }
+  return false;
 }
 
 /* ---------------------------------------------------------
- * グリッド系のラインカラーを worldview ごとに出し分け
+ * StoragePath → 表示URLの正規化（hero / works 共通）
  * --------------------------------------------------------- */
-function getGridLineColor(
-  variant: VariantSpec,
-  theme: Design["theme"],
+function normalizeImageUrl(
+  imageUrl?: string | null,
+  storagePath?: string | null
 ): string {
-  switch (variant.worldview) {
-    case "minimal":
-    case "business":
-      return "#e5e7eb"; // slate-200
-    case "dark":
-    case "cyber":
-    case "luxury":
-      return theme.colorAccent || theme.colorPrimary;
-    default:
-      // pop / cute / natural / retro など
-      return theme.colorPrimary;
+  const u = (imageUrl ?? "").trim();
+
+  // ✅ imageUrl が “URLっぽい” ならそのまま
+  // ただし、"works/..." のような storagePath が入ってる場合は proxy に変換する
+  if (u) {
+    if (isStoragePathLike(u)) {
+      const p = u.startsWith("/") ? u.slice(1) : u;
+      return auraAssetProxyUrl(p);
+    }
+    return u;
   }
+
+  // ✅ imageUrl が空なら storagePath を使う
+  const p0 = (storagePath ?? "").trim();
+  if (!p0) return "";
+  const p = p0.startsWith("/") ? p0.slice(1) : p0;
+
+  return auraAssetProxyUrl(p);
 }
 
-/* ---------------------------------------------------------
- * グラデーション＋柄レイヤー＋テクスチャ＋bgStyle を合成
- * --------------------------------------------------------- */
-function buildBackgroundStyle(
-  theme: Design["theme"],
-  variant: VariantSpec,
-): React.CSSProperties {
-  const anyTheme = theme as any;
-  const baseColor = theme.colorBG;
-
-  // worldviewPreset から注入された bgStyle があれば最優先
-  const presetBgStyle = anyTheme.bgStyle as
-    | React.CSSProperties
-    | undefined;
-
-  if (presetBgStyle && Object.keys(presetBgStyle).length > 0) {
-    return {
-      backgroundColor: baseColor,
-      ...presetBgStyle,
-    };
+function normalizeSection(sec: any): any {
+  // 1) セクション直下に avatarUrl / avatarStoragePath があるケース
+  if (
+    typeof sec?.avatarUrl !== "undefined" ||
+    typeof sec?.avatarStoragePath !== "undefined"
+  ) {
+    const nextAvatar = normalizeImageUrl(sec?.avatarUrl, sec?.avatarStoragePath);
+    sec = { ...sec, avatarUrl: nextAvatar };
   }
 
-  // patternLayers / backgroundPattern / variant.pattern
-  const rawPatternColor = anyTheme.patternColor || theme.colorPrimary;
-
-  const rawPatternLayers: unknown = anyTheme.patternLayers;
-  const patternLayers: (PatternId | "none")[] =
-    Array.isArray(rawPatternLayers) && rawPatternLayers.length > 0
-      ? (rawPatternLayers as (PatternId | "none")[])
-      : ([
-          ((theme.backgroundPattern as PatternId | undefined) ?? 
-            (variant.pattern as PatternId | undefined) ?? 
-            "none") as PatternId | "none",
-        ] as (PatternId | "none")[]);
-
-  const rawTextureLayers: unknown = anyTheme.textureLayers;
-  const textureLayers: string[] = Array.isArray(rawTextureLayers)
-    ? (rawTextureLayers as string[])
-    : [];
-
-  const bgGradient: string | undefined = anyTheme.bgGradient;
-
-  const images: string[] = [];
-  const sizes: string[] = [];
-
-  /* 1) 柄レイヤー */
-  for (const p of patternLayers) {
-    let colorToUse = rawPatternColor;
-
-    if (typeof p === "string" && p.startsWith("grid-")) {
-      colorToUse = getGridLineColor(variant, theme);
-    }
-
-    const pat = patternStyle(p, colorToUse);
-    if (!pat.backgroundImage) continue;
-
-    images.push(pat.backgroundImage as string);
-    sizes.push((pat.backgroundSize as string) || "auto");
+  // 2) セクション直下に imageUrl / storagePath があるケース（将来の拡張も兼ねる）
+  if (
+    typeof sec?.imageUrl !== "undefined" ||
+    typeof sec?.storagePath !== "undefined"
+  ) {
+    const nextUrl = normalizeImageUrl(sec?.imageUrl, sec?.storagePath);
+    sec = { ...sec, imageUrl: nextUrl };
   }
 
-  /* 2) テクスチャレイヤー（ノイズ / 紙） */
-  for (const layer of textureLayers) {
-    if (layer === "noise-soft") {
-      images.push(
-        "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0)",
-      );
-      sizes.push("4px 4px");
-    } else if (layer === "paper-grain") {
-      images.push(
-        "radial-gradient(circle at 0 0, rgba(255,255,255,0.30) 0, transparent 60%)",
-      );
-      sizes.push("120px 120px");
-    }
+  // 3) items 配列（works / hero / 任意のカード群）
+  if (Array.isArray(sec?.items)) {
+    const items = sec.items.map((it: any) => {
+      // imageUrl / url どっちに入ってても拾う
+      const rawUrl = (it?.imageUrl ?? it?.url ?? it?.src) as
+        | string
+        | undefined;
+
+      // storagePath の別名も拾う（path で返す実装もある）
+      const rawPath = (it?.storagePath ?? it?.path ?? it?.storage_path) as
+        | string
+        | undefined;
+
+      const nextUrl = normalizeImageUrl(rawUrl, rawPath);
+
+      // ✅ imageUrl を必ず埋める（Gallery側が url を見てても壊れないように両方入れる）
+      if (nextUrl) {
+        return {
+          ...it,
+          imageUrl: nextUrl,
+          url: it?.url ? nextUrl : it?.url, // 既にurl運用なら上書き
+          src: it?.src ? nextUrl : it?.src, // src運用も救う
+        };
+      }
+      return it;
+    });
+
+    sec = { ...sec, items };
   }
 
-  /* 3) グラデーションレイヤー */
-  if (bgGradient) {
-    const useGradient =
-      textureLayers.includes("gradient") || textureLayers.length === 0;
-
-    if (useGradient) {
-      images.push(bgGradient);
-      sizes.push("auto");
-    }
-  }
-
-  const style: React.CSSProperties = {
-    backgroundColor: baseColor,
-  };
-
-  if (images.length > 0) {
-    style.backgroundImage = images.join(",");
-    style.backgroundSize = sizes.join(",");
-  }
-
-  return style;
+  return sec;
 }
 
 /* ---------------------------------------------------------
@@ -256,25 +154,30 @@ export default function AiPortfolioPortfolioRenderer({
   design,
   content,
   sectionOrderOverride,
+  sectionOrder,
 }: Props) {
   const theme = design.theme;
 
-  // variantSpec が design に付いていれば優先、それ以外は id / 先頭
   const variant: VariantSpec =
     (design as any).variantSpec ??
-    VARIANTS.find((v) => v.id === design.variantId) ??
+    VARIANTS.find((v) => v.id === (design as any).variantId) ??
     VARIANTS[0];
 
-  const v = applyVariantStyle(variant, theme);
+  // ✅ content を描画前に “表示URLが必ず入る形” に正規化
+  const normalizedContent: Content = useMemo(() => {
+    const secs = Array.isArray(content?.sections) ? content.sections : [];
+    const nextSections = secs.map((s) => normalizeSection(s));
+    // Contentの他フィールドはそのまま（sectionsだけ置き換え）
+    return { ...content, sections: nextSections };
+  }, [content]);
 
-  // 安全なセクション配列
+  // 安全なセクション配列（Design側）
   const safeDesignSections = Array.isArray(design.sections)
     ? design.sections
     : [];
 
   // LayoutDecision（AI が決めた情報）があれば採用
-  const layoutDecision = (design as any)
-    .layoutDecision as
+  const layoutDecision = (design as any).layoutDecision as
     | {
         layoutPref?: LayoutPref;
         sectionOrder?: SectionType[];
@@ -286,67 +189,91 @@ export default function AiPortfolioPortfolioRenderer({
 
   const aiSectionOrder = layoutDecision?.sectionOrder;
 
-  // --- 並び順決定ロジック ---------------------------------------
+  // content側の type 一覧（Designのsectionsとズレた場合の救済）
+  const contentTypes = uniq(normalizedContent.sections.map((s) => s.type));
+
+  // --- 並び順決定ロジック（単一化） ------------------------------
+  // 優先順：sectionOrder（新） > sectionOrderOverride（旧） > aiSectionOrder > design.order
+  const baseOrder =
+    Array.isArray(sectionOrder) && sectionOrder.length > 0
+      ? sectionOrder
+      : Array.isArray(sectionOrderOverride) && sectionOrderOverride.length > 0
+      ? sectionOrderOverride
+      : Array.isArray(aiSectionOrder) && aiSectionOrder.length > 0
+      ? (aiSectionOrder as unknown as string[])
+      : [];
+
+  const preferredOrder = uniq(baseOrder);
+
   let orderedSections = [...safeDesignSections];
 
-  if (sectionOrderOverride && sectionOrderOverride.length > 0) {
-    // ① ユーザー操作の override が最優先
+  if (preferredOrder.length > 0) {
     const map = new Map<string, (typeof safeDesignSections)[number]>();
-    for (const sec of safeDesignSections) {
-      map.set(sec.type, sec);
-    }
+    for (const sec of safeDesignSections) map.set(sec.type, sec);
 
     const picked: typeof safeDesignSections = [];
-
-    for (const type of sectionOrderOverride) {
+    for (const type of preferredOrder) {
       const hit = map.get(type);
       if (hit) {
         picked.push(hit);
         map.delete(type);
       }
     }
-
-    // override に含まれなかったセクションは末尾に
-    for (const rest of map.values()) {
-      picked.push(rest);
-    }
-
+    for (const rest of map.values()) picked.push(rest);
     orderedSections = picked;
-  } else if (aiSectionOrder && aiSectionOrder.length > 0) {
-    // ② AI が決めた sectionOrder を使う
-    const orderMap: Record<string, number> = {};
-    aiSectionOrder.forEach((type, idx) => {
-      orderMap[type] = idx;
-    });
-
-    orderedSections.sort((a, b) => {
-      const aKey = (a.type || "") as SectionType;
-      const bKey = (b.type || "") as SectionType;
-      const ao =
-        orderMap[aKey] !== undefined ? orderMap[aKey] : a.order ?? 999;
-      const bo =
-        orderMap[bKey] !== undefined ? orderMap[bKey] : b.order ?? 999;
-      return ao - bo;
-    });
   } else {
-    // ③ どちらも無ければ従来どおり order 昇順
     orderedSections.sort((a, b) => a.order - b.order);
   }
 
-  const findSection = (type: string): ContentSection | undefined =>
-    content.sections.find((sec) => sec.type === type);
+  // --- 表示セクションの最終補正（contentにしか無いtypeを末尾に追加） ----
+  const orderedTypes = orderedSections.map((s) => s.type);
+  const restContentTypes = contentTypes.filter((t) => !orderedTypes.includes(t));
+  const finalOrderTypes = uniq([...orderedTypes, ...restContentTypes]);
 
-  // layoutBase: variant.layout ではなく layoutDecision.layoutPref を優先
+  const findSection = (type: string): ContentSection | undefined =>
+    normalizedContent.sections.find((sec) => sec.type === type);
+
+  // LayoutPref は最終決定（ここが真実）
   const layoutPref: LayoutPref =
     layoutDecision?.layoutPref ??
     (variant.layout === "split" ? "split" : "center");
+
+  // ✅ 強度（AIスライダー）を design 側から拾って variant に注入する
+  // - design.overallStrength（推奨）
+  // - design.aiDegree / design.aiStrength 等（互換）
+  // - design.designAnswers 側に入っているケースも拾う
+  const overallStrengthRaw =
+    (design as any).overallStrength ??
+    (design as any).aiStrength ??
+    (design as any).aiDegree ??
+    (design as any).strength ??
+    (design as any).designAnswers?.overallStrength ??
+    (design as any).designAnswers?.aiStrength ??
+    (design as any).designAnswers?.aiDegree ??
+    (design as any).designAnswers?.strength ??
+    0;
+
+  const overallStrength =
+    typeof overallStrengthRaw === "string"
+      ? Number(overallStrengthRaw)
+      : Number(overallStrengthRaw);
+
+  // 以降、Renderer内で使うvariantは必ずこれに統一（layout + strength）
+  // ※ VariantSpec に overallStrength が無い型定義でも壊さないため as any で注入
+  const renderVariant: VariantSpec = {
+    ...variant,
+    layout: layoutPref === "split" ? "split" : "center",
+    overallStrength: Number.isFinite(overallStrength) ? overallStrength : 0,
+  } as any;
+
+  // v / background も renderVariant で計算（分裂を防ぐ）
+  const v = applyVariantStyle(renderVariant, theme);
 
   const layoutBase =
     layoutPref === "split"
       ? "text-left md:text-left"
       : "text-center md:text-center";
 
-  // フォントプリセット → クラス名
   const presetKey: string =
     (theme as any).fontPreset ??
     (design as any).fontPreset ??
@@ -355,24 +282,43 @@ export default function AiPortfolioPortfolioRenderer({
 
   const fontClass = fontFamilyFromPreset(presetKey);
 
-  console.log("[Renderer] theme.fontPreset:", (theme as any).fontPreset);
-  console.log("[Renderer] presetKey:", presetKey);
-  console.log("[Renderer] fontClass:", fontClass);
-  console.log("[Renderer] layoutPref:", layoutPref);
-  console.log(
-    "[Renderer] layoutDecision.sectionOrder:",
-    layoutDecision?.sectionOrder,
-  );
-  console.log(
-    "[Renderer] layoutDecision.layoutType:",
-    layoutDecision?.layoutType,
-  );
-  console.log(
-    "[Renderer] sectionOrderOverride:",
-    sectionOrderOverride,
-  );
+  const DEBUG = process.env.NODE_ENV !== "production";
+  if (DEBUG) {
+    console.log("[Renderer] theme.fontPreset:", (theme as any).fontPreset);
+    console.log("[Renderer] presetKey:", presetKey);
+    console.log("[Renderer] fontClass:", fontClass);
+    console.log("[Renderer] layoutPref:", layoutPref);
+    console.log(
+      "[Renderer] layoutDecision.sectionOrder:",
+      layoutDecision?.sectionOrder
+    );
+    console.log("[Renderer] layoutDecision.layoutType:", layoutDecision?.layoutType);
+    console.log("[Renderer] sectionOrder:", sectionOrder);
+    console.log("[Renderer] sectionOrderOverride:", sectionOrderOverride);
+    console.log(
+      "[Renderer] overallStrength:",
+      (renderVariant as any).overallStrength
+    );
+  }
 
-  const backgroundStyle = buildBackgroundStyle(theme, variant);
+  // ✅ 共通関数で背景を合成（プレビューと一致させる前提）
+  const backgroundStyle = buildBackgroundStyle(theme, renderVariant);
+
+  if (process.env.NODE_ENV !== "production") {
+    console.log(
+      "[BG] inlineStyle.backgroundImage:",
+      (backgroundStyle as any).backgroundImage
+    );
+  }
+
+  if (DEBUG) {
+    console.log("[BG] theme.backgroundPattern:", (theme as any).backgroundPattern);
+    console.log("[BG] theme.patternLayers:", (theme as any).patternLayers);
+    console.log("[BG] theme.textureLayers:", (theme as any).textureLayers);
+    console.log("[BG] theme.bgGradient:", (theme as any).bgGradient);
+    console.log("[BG] theme.patternColor:", (theme as any).patternColor);
+    console.log("[BG] computed backgroundStyle:", backgroundStyle);
+  }
 
   return (
     <div
@@ -383,11 +329,9 @@ export default function AiPortfolioPortfolioRenderer({
         boxShadow: v.shadow,
         ...backgroundStyle,
       }}
-      // ★ AIレイアウト情報を data 属性で埋め込んでおく（あとからCSSやデバッグで使える）
       data-layout-pref={layoutPref}
       data-layout-type={layoutDecision?.layoutType}
     >
-      {/* 上部ラベルバー */}
       <div
         className="rounded-t-xl px-6 py-4 text-xs font-medium tracking-widest text-gray-500"
         style={{ background: theme.colorBG }}
@@ -395,83 +339,69 @@ export default function AiPortfolioPortfolioRenderer({
         PORTFOLIO
       </div>
 
-      {/* セクション本体 */}
       <div className="space-y-10 px-6 pb-10 pt-6">
-        {orderedSections.map((sec) => {
-          const data = findSection(sec.type);
+        {finalOrderTypes.map((type) => {
+          const data = findSection(type);
           if (!data) return null;
 
-          switch (sec.type) {
+          switch (type) {
             case "hero":
               return (
                 <AiPortfolioHeroSwitcher
-                  key={sec.type}
+                  key={type}
                   section={data}
                   theme={theme}
-                  variant={variant}
-                  // layoutDecision?.heroLayout / layoutDecision?.layoutType を
-                  // 渡したくなったらここで props 拡張
+                  variant={renderVariant}
                 />
               );
 
             case "about":
               return (
                 <AiPortfolioAboutSimple
-                  key={sec.type}
+                  key={type}
                   section={data}
                   theme={theme}
-                  variant={variant}
+                  variant={renderVariant}
                 />
               );
 
             case "works":
               return (
                 <AiPortfolioGalleryGrid
-                  key={sec.type}
+                  key={type}
                   section={data}
                   theme={theme}
-                  variant={variant}
-                  // layoutDecision?.worksLayout もここで将来使える
+                  variant={renderVariant}
                 />
               );
 
             case "services":
               return (
                 <AiPortfolioServices
-                  key={sec.type}
+                  key={type}
                   section={data}
                   theme={theme}
-                  variant={variant}
+                  variant={renderVariant}
                 />
               );
 
             case "skills":
               return (
                 <AiPortfolioSkills
-                  key={sec.type}
+                  key={type}
                   section={data}
                   theme={theme}
-                  variant={variant}
+                  variant={renderVariant}
                 />
               );
 
             case "contact":
               return (
                 <AiPortfolioContact
-                  key={sec.type}
+                  key={type}
                   section={data}
                   theme={theme}
-                  variant={variant}
-                />
-              );
-
-            case "cta":
-              return (
-                <AiPortfolioContactCTA
-                  key={sec.type}
-                  section={data}
-                  theme={theme}
-                  variant={variant}
+                  variant={renderVariant}
                 />
               );
 

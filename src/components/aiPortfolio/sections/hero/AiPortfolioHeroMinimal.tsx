@@ -1,5 +1,6 @@
 // ============================================
 // AiPortfolioHeroMinimal（文字色最適化＋layout対応版＋ラベルフォント世界観対応）
+// - dark判定を applyVariantStyle(v.isDark) に統一（商品版）
 // ============================================
 
 import React, { CSSProperties } from "react";
@@ -59,20 +60,6 @@ function getInitialsFromName(name: string | undefined): string {
   return trimmed.slice(0, 2);
 }
 
-// ---------------------------------------------------------
-// 背景から自動で「暗い or 明るい」判定
-// ---------------------------------------------------------
-function isDarkBackground(theme: any): boolean {
-  const bg = String(theme.colorBG || "").toLowerCase();
-
-  if (bg === "#020617" || bg === "#0f172a" || bg === "#000000") return true;
-
-  const grad = String(theme.bgGradient || "").toLowerCase();
-  if (grad.includes("#020617") || grad.includes("#0f172a")) return true;
-
-  return false;
-}
-
 export const AiPortfolioHeroMinimal: React.FC<HeroProps> = ({
   section,
   theme,
@@ -90,8 +77,7 @@ export const AiPortfolioHeroMinimal: React.FC<HeroProps> = ({
     layoutType ||
     (variant.layout === "split" ? "splitHero" : "centerBasic");
 
-  const isSplit =
-    layoutHint === "splitHero" || layoutHint === "galleryFocus";
+  const isSplit = layoutHint === "splitHero" || layoutHint === "galleryFocus";
 
   // -----------------------------
   // Content
@@ -103,16 +89,14 @@ export const AiPortfolioHeroMinimal: React.FC<HeroProps> = ({
   const subtitle = headings[1] ?? "";
   const tagline = paragraphs[0] ?? "";
 
-  const iconUrl =
-    (section as any).iconUrl || (section as any).avatarUrl;
-
+  const iconUrl = (section as any).iconUrl || (section as any).avatarUrl;
   const initials = getInitialsFromName(title);
 
   // -----------------------------
   // 背景
   // -----------------------------
   const heroBackground =
-    theme.bgGradient ||
+    (theme as any).bgGradient ||
     `linear-gradient(145deg, rgba(255,255,255,0.98) 0%, ${theme.colorBG} 100%)`;
 
   const heroStyle: CSSProperties = {
@@ -127,9 +111,9 @@ export const AiPortfolioHeroMinimal: React.FC<HeroProps> = ({
   };
 
   // -----------------------------
-  // テキスト色 最適化
+  // テキスト色 最適化（dark判定を共通化）
   // -----------------------------
-  const DARK = isDarkBackground(theme);
+  const DARK = v.isDark;
 
   const titleColor = DARK ? "#F9FAFB" : "#111827";
 
@@ -152,21 +136,19 @@ export const AiPortfolioHeroMinimal: React.FC<HeroProps> = ({
   // -----------------------------
   let fontClass = "ai-portfolio-font-cleanJa";
 
-  if (theme.fontPreset) {
-    if (theme.fontPreset.startsWith("ai-portfolio-font-")) {
-      fontClass = theme.fontPreset;
+  if ((theme as any).fontPreset) {
+    const preset = String((theme as any).fontPreset);
+    if (preset.startsWith("ai-portfolio-font-")) {
+      fontClass = preset;
     } else {
-      fontClass =
-        FONT_CLASS_BY_PRESET[theme.fontPreset] ||
-        "ai-portfolio-font-cleanJa";
+      fontClass = FONT_CLASS_BY_PRESET[preset] || "ai-portfolio-font-cleanJa";
     }
   }
 
   // -----------------------------
   // Label 専用フォント
   // -----------------------------
-  const labelFontClass =
-    LABEL_FONT_BY_WORLDVIEW[variant.worldview] ?? fontClass;
+  const labelFontClass = LABEL_FONT_BY_WORLDVIEW[variant.worldview] ?? fontClass;
 
   // -----------------------------
   // JSX
@@ -186,7 +168,7 @@ export const AiPortfolioHeroMinimal: React.FC<HeroProps> = ({
             className="pointer-events-none absolute inset-0 opacity-[0.03]"
             style={{
               backgroundImage:
-                "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")",
+                'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'3\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")',
             }}
           />
 
@@ -199,7 +181,7 @@ export const AiPortfolioHeroMinimal: React.FC<HeroProps> = ({
             }`}
           >
             {/* icon */}
-            <div className="flex-shrink-0 mb-6 md:mb-0">
+            <div className="mb-6 flex-shrink-0 md:mb-0">
               <div className="relative group">
                 <div
                   className="absolute -inset-2 rounded-full opacity-20 blur-xl transition-opacity group-hover:opacity-40"
@@ -218,6 +200,7 @@ export const AiPortfolioHeroMinimal: React.FC<HeroProps> = ({
                   }}
                 >
                   {iconUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={iconUrl}
                       alt={title}
@@ -238,23 +221,18 @@ export const AiPortfolioHeroMinimal: React.FC<HeroProps> = ({
               <div className="mb-1 flex items-center justify-center gap-2 md:justify-start">
                 <span
                   className="hidden h-px w-6 md:block"
-                  style={{
-                    backgroundColor: accentColor,
-                    opacity: 0.6,
-                  }}
+                  style={{ backgroundColor: accentColor, opacity: 0.6 }}
                 />
                 <p
                   className={`text-[10px] font-semibold uppercase tracking-[0.28em] ${labelFontClass}`}
-                  style={{
-                    color: labelColor,
-                  }}
+                  style={{ color: labelColor }}
                 >
                   PROFILE
                 </p>
               </div>
 
               <h1
-                className="text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl leading-[1.1]"
+                className="text-3xl font-bold tracking-tight leading-[1.1] md:text-4xl lg:text-5xl"
                 style={{ color: titleColor }}
               >
                 {title || "Your Name"}

@@ -1,78 +1,112 @@
 // src/app/aiPortfolio/preview/[id]/PreviewWaitClient.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-export default function PreviewWaitClient({ id }: { id: string }) {
+type Props = {
+  /** 旧 */
+  id?: string;
+  /** 新（互換用） */
+  requestId?: string;
+};
+
+type ApiResponse =
+  | { ok: boolean; status?: "pending" | "ready" | "error"; error?: string }
+  | undefined;
+
+export default function PreviewWaitClient(props: Props) {
+  const requestId = useMemo(() => props.requestId ?? props.id ?? "", [props]);
+
   const [tries, setTries] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  // interval の多重実行防止
+  const inFlightRef = useRef(false);
+
   useEffect(() => {
+    if (!requestId) {
+      setError("requestId が指定されていません。URL を確認してください。");
+      return;
+    }
+
     let cancelled = false;
+    const abort = new AbortController();
 
     const tick = async () => {
       if (cancelled) return;
+      if (inFlightRef.current) return;
+
+      inFlightRef.current = true;
 
       try {
-        const res = await fetch(`/api/aiPortfolio/request/${id}`, {
+        const res = await fetch(`/api/aiPortfolio/request/${requestId}`, {
           cache: "no-store",
+          signal: abort.signal,
         });
 
-        // ネットワーク/サーバー系の本当のエラー
         if (!res.ok) {
-          setError("サーバーとの通信に失敗しました。少し時間をおいて再読み込みしてください。");
+          setError(
+            "サーバーとの通信に失敗しました。少し時間をおいて再読み込みしてください。",
+          );
           return;
         }
 
-        const data = (await res.json()) as
-          | { ok: boolean; status?: "pending" | "ready" | "error"; error?: string }
-          | undefined;
+        const data = (await res.json()) as ApiResponse;
 
         if (!data) {
           setError("サーバーから不正な応答が返されました。");
           return;
         }
 
-        // ★ 準備完了 → プレビューを更新
+        // 準備完了 → プレビューを更新
         if (data.ok && (data.status === "ready" || !data.status)) {
-          window.location.reload();
+          window.location.replace(`/aiPortfolio/preview/${requestId}`);
           return;
         }
 
-        // ★ 明確な失敗
+        // 明確な失敗
         if (!data.ok && data.status === "error") {
           setError(
             data.error ??
-              "ポートフォリオ生成中にエラーが発生しました。再読み込みしてやり直してください。"
+              "ポートフォリオ生成中にエラーが発生しました。再読み込みしてやり直してください。",
           );
           return;
         }
 
-        // ★ pending → 次の tick へ
+        // pending → 次の tick へ
         if (!cancelled) {
           setTries((t) => t + 1);
         }
-      } catch (e) {
+      } catch (e: any) {
+        // Abort は無視
+        if (e?.name === "AbortError") return;
+
         if (!cancelled) {
           setError(
-            "ネットワークエラーが発生しました。接続状況を確認してから再読み込みしてください。"
+            "ネットワークエラーが発生しました。接続状況を確認してから再読み込みしてください。",
           );
         }
+      } finally {
+        inFlightRef.current = false;
       }
     };
 
+    // すぐ1回叩いてから interval
+    tick();
     const interval = setInterval(tick, 1000);
+
     return () => {
       cancelled = true;
+      abort.abort();
       clearInterval(interval);
     };
-  }, [id]);
+  }, [requestId]);
 
-  // 一定回数以上リトライしたらメッセージを出す
+  // 一定回数以上リトライしたらメッセージを出す（error が無い時だけ）
   useEffect(() => {
     if (tries >= 15 && !error) {
       setError(
-        "生成データの取得に時間がかかっています。数十秒待っても変化がない場合は、ページを再読み込みしてください。"
+        "生成データの取得に時間がかかっています。数十秒待っても変化がない場合は、ページを再読み込みしてください。",
       );
     }
   }, [tries, error]);
@@ -87,8 +121,9 @@ export default function PreviewWaitClient({ id }: { id: string }) {
 
       {error && (
         <div className="mt-6">
-          <p className="text-sm text-red-600 whitespace-pre-line">{error}</p>
+          <p className="whitespace-pre-line text-sm text-red-600">{error}</p>
           <button
+            type="button"
             onClick={() => window.location.reload()}
             className="mt-3 rounded bg-black px-4 py-2 text-sm text-white"
           >

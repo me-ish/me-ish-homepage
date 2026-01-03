@@ -1,10 +1,4 @@
-// ============================================
-// aiPortfolio.variant.ts
-// - FormInput.designAnswers + aiStrength(実質1本スライダー) → VariantSpec
-// - worldview / surface / showcase / layout / pattern を条件付き乱択
-// - overall スライダーを master として使い、
-//   個別の aiStrength が入っていればそれを優先する構成
-// ============================================
+// src/lib/aiPortfolio/aiPortfolio.variant.ts
 
 import type { FormInput } from "./aiPortfolio.schema";
 import {
@@ -14,6 +8,7 @@ import {
   SURFACES,
   SHOWCASES,
   LAYOUTS,
+  isKnownPatternId,
   type VariantSpec,
   type Worldview,
   type Showcase,
@@ -56,6 +51,10 @@ function mulberry32(seed: number) {
 /**
  * looseness が 0 に近いほど arr[0] を強く採用する。
  * looseness が 1 に近づくと、後ろの要素も選ばれやすくなる。
+ *
+ * NOTE:
+ * 既存仕様維持のため「重み付き」の実装は変えない。
+ * arrの並び順（base→adjacent→wild）が重要。
  */
 function pickWeighted<T>(rand: () => number, arr: T[], looseness: number) {
   if (arr.length === 0) throw new Error("empty array");
@@ -66,7 +65,7 @@ function pickWeighted<T>(rand: () => number, arr: T[], looseness: number) {
 }
 
 /* ---------------------------------------------------------
- * 近接 worldviews / surfaces / showcases / patterns の定義
+ * 近接 worldviews / wild worldviews（揺らぎ候補）
  * --------------------------------------------------------- */
 
 const ADJACENT_WORLDVIEWS: Record<Worldview, Worldview[]> = {
@@ -81,6 +80,55 @@ const ADJACENT_WORLDVIEWS: Record<Worldview, Worldview[]> = {
   luxury: ["modern", "dark"],
   retro: ["cute", "natural"],
 };
+
+const WILD_WORLDVIEWS: Record<Worldview, Worldview[]> = {
+  minimal: ["retro"],
+  modern: ["cyber"],
+  business: ["natural"],
+  cute: ["retro"],
+  pop: ["cyber"],
+  natural: ["business"],
+  luxury: ["retro"],
+  retro: ["modern"],
+  cyber: ["luxury"],
+  dark: ["retro"],
+};
+
+function worldviewLooseness(strength: number) {
+  const s = clamp01((strength ?? 0) / 100);
+
+  if (s <= 0.2) {
+    return (s / 0.2) * 0.12; // 0.00..0.12
+  }
+  if (s <= 0.7) {
+    const t = (s - 0.2) / 0.5;
+    return 0.12 + t * 0.6; // 0.12..0.72
+  }
+  {
+    const t = (s - 0.7) / 0.3;
+    return 0.72 + t * 0.28; // 0.72..1.0
+  }
+}
+
+function buildWorldviewPool(base: Worldview, strength: number): Worldview[] {
+  const s = strength ?? 0;
+  const pool: Worldview[] = [base];
+
+  if (s >= 20) {
+    const adj = ADJACENT_WORLDVIEWS[base] ?? [];
+    for (const w of adj) pool.push(w);
+  }
+  if (s >= 70) {
+    const wild = WILD_WORLDVIEWS[base] ?? [];
+    for (const w of wild) pool.push(w);
+  }
+
+  return Array.from(new Set(pool));
+}
+
+/* ---------------------------------------------------------
+ * worldviews / surfaces / showcases / patterns の定義
+ * --------------------------------------------------------- */
 
 const WORLDVIEW_SURFACES: Record<Worldview, Surface[]> = {
   minimal: ["simple", "card", "paper"],
@@ -113,20 +161,46 @@ const WORLDVIEW_SHOWCASES: Record<Worldview, Showcase[]> = {
  * basePattern（フォーム指定）と組み合わせて使う
  */
 const WORLDVIEW_PATTERNS: Record<Worldview, PatternId[]> = {
-  minimal: ["none", "stripe-vertical-soft", "grid-thin", "texture-paper"],
-  modern: ["grid-thin", "texture-noise", "texture-paper"],
-  business: ["none", "stripe-vertical-soft", "grid-thin", "texture-paper"],
-  cute: ["dot-soft", "dot-retro", "dot-dense-noise"],
-  pop: ["dot-retro", "stripe-diagonal", "stripe-vertical-bold"],
-  dark: ["texture-noise", "grid-neon"],
-  cyber: ["grid-neon", "texture-noise", "grid-thin"],
-  natural: ["texture-paper", "texture-noise", "dot-soft"],
-  luxury: ["stripe-vertical-soft", "texture-paper"],
-  retro: ["dot-retro", "stripe-diagonal", "texture-paper"],
+  minimal: [
+    "none",
+    "stripe-vertical-soft",
+    "grid-thin",
+    "texture-paper",
+    "hatch-diagonal-soft",
+  ],
+  modern: [
+    "grid-thin",
+    "texture-noise",
+    "texture-paper",
+    "tile-iso-cubes-soft",
+    "checker-fade",
+    "topo-lines",
+  ],
+  business: [
+    "none",
+    "stripe-vertical-soft",
+    "grid-thin",
+    "texture-paper",
+    "hatch-diagonal-soft",
+    "checker-fade",
+  ],
+  cute: ["dot-soft", "dot-retro", "dot-dense-noise", "rings-sparse"],
+  pop: ["dot-retro", "stripe-diagonal", "stripe-vertical-bold", "rings-sparse"],
+  dark: ["texture-noise", "grid-subtle", "checker-fade", "scanlines-soft"],
+  cyber: ["grid-cyber", "grid-neon", "texture-noise", "scanlines-soft", "topo-lines"],
+  natural: ["fiber-soft", "texture-paper", "texture-noise", "dot-soft", "topo-lines"],
+  luxury: [
+    "diamond-soft",
+    "stripe-vertical-soft",
+    "texture-paper",
+    "tile-iso-cubes-soft",
+    "checker-fade",
+  ],
+  retro: ["dot-retro", "stripe-diagonal", "texture-paper", "rings-sparse"],
 };
 
 /* ---------------------------------------------------------
- * radius / shadow / density 派生（カードの“顔”を決める）
+ * radius / shadow / density 派生
  * --------------------------------------------------------- */
 
 function deriveRadius(surface: Surface, strength: number): Radius {
@@ -140,14 +214,11 @@ function deriveRadius(surface: Surface, strength: number): Radius {
       break;
     case "card":
     case "glass":
-      base = "soft";
-      break;
     case "dark":
     case "neon":
-      base = "soft";
-      break;
     default:
       base = "soft";
+      break;
   }
 
   if (s <= 0.05) return base;
@@ -159,13 +230,7 @@ function deriveRadius(surface: Surface, strength: number): Radius {
   return base;
 }
 
-/**
- * surface ごとの「基準の影」を決める。
- */
-function deriveShadow(
-  surface: Surface,
-  strength: number
-): "none" | "soft" | "strong" {
+function deriveShadow(surface: Surface, strength: number): "none" | "soft" | "strong" {
   const s = strength01(strength);
 
   let base: "none" | "soft" | "strong";
@@ -184,6 +249,7 @@ function deriveShadow(
       break;
     default:
       base = "soft";
+      break;
   }
 
   if (s <= 0.05) return base;
@@ -205,7 +271,7 @@ function deriveDensity(showcase: Showcase, strength: number) {
 }
 
 /* ---------------------------------------------------------
- * 型安全な "asXxx"（不正値が来たときのフォールバック）
+ * 型安全な "asXxx"
  * --------------------------------------------------------- */
 function asWorldview(v: string | undefined | null): Worldview {
   if (WORLDVIEWS.includes(v as Worldview)) return v as Worldview;
@@ -229,40 +295,46 @@ function asLayout(v: string | undefined | null): Layout {
 
 /**
  * patternBase（フォームのベース指定）を PatternId にマップする
+ *
+ * ✅ TS2345 対策：
+ * - PATTERNS.includes(...) に PatternId（ブランドstring）を渡さない
+ * - isKnownPatternId(v) を使う
  */
 function asPattern(v: string | undefined | null): PatternId {
   if (!v) return "none";
 
-  if (PATTERNS.includes(v as PatternId)) return v as PatternId;
+  // まず “既知ID” をそのまま通す
+  if (isKnownPatternId(v)) return v;
 
   const normalized = v.toLowerCase();
 
+  // 旧入力互換
   if (normalized === "dot" || normalized === "dots") return "dot-soft";
   if (normalized === "stripe") return "stripe-vertical-soft";
   if (normalized === "grid") return "grid-thin";
   if (normalized === "texture" || normalized === "paper") return "texture-paper";
   if (normalized === "noise") return "texture-noise";
   if (normalized === "circuit") return "grid-neon";
-  if (normalized === "retro" || normalized === "retrolines")
-    return "stripe-diagonal";
+  if (normalized === "retro" || normalized === "retrolines") return "stripe-diagonal";
 
+  // 新追加の “ざっくり互換” を少しだけ
+  if (normalized === "diamond") return "diamond-soft";
+  if (normalized === "subtlegrid") return "grid-subtle";
+  if (normalized === "cybergrid") return "grid-cyber";
+  if (normalized === "fiber") return "fiber-soft";
+  if (normalized === "scanlines") return "scanlines-soft";
+  if (normalized === "topo") return "topo-lines";
+
+  // 不正値は安全に none
   return "none";
 }
 
 /* ---------------------------------------------------------
- * 1本スライダー（overall）を master として扱うヘルパ
+ * 1本スライダー（overall）を master として扱う
  * --------------------------------------------------------- */
-
-/**
- * aiStrength から master(overall) を取得。
- * 未設定の場合は 0 として扱う。
- */
 function getMasterStrength(input: FormInput): number {
   const s = (input as any).aiStrength as
-    | {
-        overall?: number;
-        [key: string]: number | undefined;
-      }
+    | { overall?: number; [key: string]: number | undefined }
     | undefined;
 
   if (!s) return 0;
@@ -270,26 +342,12 @@ function getMasterStrength(input: FormInput): number {
   return 0;
 }
 
-/**
- * 個別項目に値があればそれを優先し、なければ master を使う。
- * （将来スライダーを増やすときもこのまま使い回せる）
- */
-function getStrengthFor(
-  input: FormInput,
-  key: string,
-  master: number
-): number {
-  const s = (input as any).aiStrength as
-    | {
-        [k: string]: number | undefined;
-      }
-    | undefined;
-
+function getStrengthFor(input: FormInput, key: string, master: number): number {
+  const s = (input as any).aiStrength as { [k: string]: number | undefined } | undefined;
   if (!s) return master;
+
   const v = s[key];
-  if (typeof v === "number" && !Number.isNaN(v)) {
-    return v;
-  }
+  if (typeof v === "number" && !Number.isNaN(v)) return v;
   return master;
 }
 
@@ -299,10 +357,8 @@ function getStrengthFor(
 export function deriveVariantFromAnswers(input: FormInput): VariantSpec {
   const d = input.designAnswers;
 
-  // master（1本スライダー）をベースにする
   const master = getMasterStrength(input);
 
-  // seed は name / role / email / designAnswers ベースで決定
   const seedBase =
     (input.email ?? "") +
     "|" +
@@ -315,21 +371,17 @@ export function deriveVariantFromAnswers(input: FormInput): VariantSpec {
   const seed = hashString(seedBase);
   const rand = mulberry32(seed);
 
-  // worldview
-  const baseWorldview = asWorldview(d.worldviewBase);
-  const wLooseness = strength01(master); // 全体AI強度で worldview のゆらぎを制御
-
-  const worldviewPool: Worldview[] = [
-    baseWorldview,
-    ...(ADJACENT_WORLDVIEWS[baseWorldview] ?? []),
-  ];
-  const worldview = pickWeighted(rand, worldviewPool, wLooseness);
-
-  // 各強度（個別設定があればそれを優先、無ければ master）
+  const worldviewStrength = getStrengthFor(input, "worldview", master);
   const surfaceStrength = getStrengthFor(input, "surface", master);
   const showcaseStrength = getStrengthFor(input, "structure", master);
   const layoutStrength = getStrengthFor(input, "layout", master);
   const patternStrength = getStrengthFor(input, "pattern", master);
+
+  // worldview
+  const baseWorldview = asWorldview(d.worldviewBase);
+  const worldviewPool = buildWorldviewPool(baseWorldview, worldviewStrength);
+  const wLooseness = worldviewLooseness(worldviewStrength);
+  const worldview = pickWeighted(rand, worldviewPool, wLooseness);
 
   // surface
   const baseSurface = asSurface(d.surfaceStyle);
@@ -337,54 +389,36 @@ export function deriveVariantFromAnswers(input: FormInput): VariantSpec {
   const surface =
     strength01(surfaceStrength) < 0.2
       ? baseSurface
-      : pickWeighted(
-          rand,
-          [baseSurface, ...surfacePool],
-          strength01(surfaceStrength)
-        );
+      : pickWeighted(rand, [baseSurface, ...surfacePool], strength01(surfaceStrength));
 
-  // showcase（作品の見せ方）
+  // showcase
   const baseShowcase = asShowcase(d.showcaseStyle);
   const showcasePool = WORLDVIEW_SHOWCASES[worldview] ?? SHOWCASES;
   const showcase =
     strength01(showcaseStrength) < 0.2
       ? baseShowcase
-      : pickWeighted(
-          rand,
-          [baseShowcase, ...showcasePool],
-          strength01(showcaseStrength)
-        );
+      : pickWeighted(rand, [baseShowcase, ...showcasePool], strength01(showcaseStrength));
 
-  // layout（center / split）
+  // layout
   const baseLayout = asLayout(d.layoutPref);
   const layoutPool: Layout[] = ["center", "split"];
   const layout =
     strength01(layoutStrength) < 0.2
       ? baseLayout
-      : pickWeighted(
-          rand,
-          [baseLayout, ...layoutPool],
-          strength01(layoutStrength)
-        );
+      : pickWeighted(rand, [baseLayout, ...layoutPool], strength01(layoutStrength));
 
-  // pattern（背景柄）
+  // pattern
   const basePattern = asPattern(d.patternBase);
   const patternPool = WORLDVIEW_PATTERNS[worldview] ?? PATTERNS;
   const pattern =
     strength01(patternStrength) < 0.2
       ? basePattern
-      : pickWeighted(
-          rand,
-          [basePattern, ...patternPool],
-          strength01(patternStrength)
-        );
+      : pickWeighted(rand, [basePattern, ...patternPool], strength01(patternStrength));
 
-  // radius / shadow / density（ここがカードの“顔”）
   const radius = deriveRadius(surface, surfaceStrength);
   const shadow = deriveShadow(surface, surfaceStrength);
   const density = deriveDensity(showcase, showcaseStrength);
 
-  // 既存 VARIANTS から最も近いものを拾う（id 用）
   const candidate =
     VARIANTS.find(
       (v) =>
@@ -393,12 +427,10 @@ export function deriveVariantFromAnswers(input: FormInput): VariantSpec {
         v.layout === layout &&
         v.showcase === showcase
     ) ??
-    VARIANTS.find(
-      (v) => v.worldview === worldview && v.showcase === showcase
-    ) ??
+    VARIANTS.find((v) => v.worldview === worldview && v.showcase === showcase) ??
     VARIANTS[0];
 
-  const spec: VariantSpec = {
+  return {
     id: candidate.id,
     worldview,
     showcase,
@@ -409,6 +441,4 @@ export function deriveVariantFromAnswers(input: FormInput): VariantSpec {
     shadow,
     density,
   };
-
-  return spec;
 }

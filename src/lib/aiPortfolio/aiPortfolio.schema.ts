@@ -90,13 +90,21 @@ const ImageInputViaUrlSchema = z.object({
   url: z.string(),
   title: z.string().optional(),
   description: z.string().optional(),
+
+  // ✅ 追加
+  year: z.number().int().min(1900).max(2100).optional(),
 });
 
 const ImageInputViaImageUrlSchema = z.object({
   imageUrl: z.string(),
   title: z.string().optional(),
   description: z.string().optional(),
+
+  // ✅ 追加
+  year: z.number().int().min(1900).max(2100).optional(),
 });
+
+
 
 const ImageInputSchema = z.union([
   ImageInputViaUrlSchema,
@@ -369,7 +377,12 @@ const GalleryItemSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   tags: z.array(z.string()).optional(),
+
+  // ✅ 追加
+  year: z.number().int().min(1900).max(2100).optional(),
 });
+
+
 
 const GallerySectionSchema = BaseSectionSchema.extend({
   type: z.literal("gallery"),

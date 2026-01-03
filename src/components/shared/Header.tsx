@@ -66,13 +66,19 @@ export default function Header() {
       { label: 'White Gallery', href: '/white' },
       { label: 'Float Gallery', href: '/float' },
     ],
-    知る: [
-      { label: 'me-ishについて', href: '/modal/about' },
-      { label: '出展ガイド', href: '/modal/creators' },
-      { label: '購入ガイド', href: '/modal/buyers' },
-      { label: 'プランと料金', href: '/modal/pricing' },
-      { label: 'よくある質問', href: '/footer/faq' },
-    ],
+知る: [
+  { label: 'me-ishについて', href: '/modal/about' },
+
+  // ✅ AURA導線（追加）
+  { label: 'AURAとは（ポートフォリオ）', href: '/aura' },
+  { label: 'ポートフォリオを作成', href: '/aiPortfolio/form' },
+
+  { label: '出展ガイド', href: '/modal/creators' },
+  { label: '購入ガイド', href: '/modal/buyers' },
+  { label: 'プランと料金', href: '/modal/pricing' },
+  { label: 'よくある質問', href: '/footer/faq' },
+],
+
     連絡: [
       { label: 'お問い合わせ', href: '/contact' },
       { label: 'お知らせ', href: '/news' },
