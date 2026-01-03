@@ -1,59 +1,58 @@
+// src/app/api/aiPortfolio/assets/route.ts
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/aiPortfolio/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
+
+// bucket / TTL は env で上書き可。未設定なら安全なデフォルト。
 const BUCKET = process.env.AURA_ASSETS_BUCKET ?? "aura-assets";
-const TTL = Number(process.env.AURA_ASSETS_SIGNED_TTL ?? 300); // seconds
+const TTL = Number(process.env.AURA_ASSETS_SIGNED_TTL ?? 3600); // seconds（デフォルト 1h）
 
 function isAllowedPath(path: string) {
-  // 必要に応じてここを「運用で使うprefix」だけに絞る
+  // 実運用で使う prefix のみ許可（必要なら増やす）
   const allowedPrefixes = [
     "avatars/",
     "works/",
-    "ai-portfolio/", // ← これが無いと drafts 配下が弾かれる
+    "ai-portfolio/",
   ];
   return allowedPrefixes.some((p) => path.startsWith(p));
 }
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const path = (url.searchParams.get("path") ?? "").trim();
+  const raw = (url.searchParams.get("path") ?? "").trim();
 
-  if (!path) {
-    return NextResponse.json(
-      { ok: false, error: "path_required" },
-      { status: 400 }
-    );
+  if (!raw) {
+    return NextResponse.json({ ok: false, error: "path_required" }, { status: 400 });
   }
+
+  // 正規化（先頭/ を落とす）
+  const path = raw.replace(/^\/+/, "");
 
   // 最低限の安全チェック
   if (path.includes("..") || path.includes("\\") || path.startsWith("/")) {
-    return NextResponse.json(
-      { ok: false, error: "invalid_path" },
-      { status: 400 }
-    );
+    return NextResponse.json({ ok: false, error: "invalid_path" }, { status: 400 });
   }
 
   if (!isAllowedPath(path)) {
-    return NextResponse.json(
-      { ok: false, error: "invalid_path" },
-      { status: 400 }
-    );
+    return NextResponse.json({ ok: false, error: "invalid_path" }, { status: 400 });
   }
 
   const supabase = supabaseAdmin();
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(path, TTL);
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, TTL);
 
   if (error || !data?.signedUrl) {
     return NextResponse.json(
       { ok: false, error: "sign_failed", detail: error?.message ?? "unknown" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
-  // 画像用途なので 302 でOK（img が追従する）
-  return NextResponse.redirect(data.signedUrl, 302);
+  // 重要：302 の “行き先（signed URL）” をブラウザにキャッシュさせない
+  const res = NextResponse.redirect(data.signedUrl, 302);
+  res.headers.set("Cache-Control", "no-store, no-cache, max-age=0, must-revalidate");
+res.headers.set("Pragma", "no-cache");
+  return res;
 }
