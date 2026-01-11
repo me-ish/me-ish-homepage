@@ -1,5 +1,4 @@
 // src/lib/aiPortfolio/aiPortfolio.worldviewPresets.ts
-
 import type { CSSProperties } from "react";
 import type { LayoutPref } from "./aiPortfolio.layout";
 
@@ -40,7 +39,7 @@ export type WorldviewPreset = {
 
   // 三種の神器
   surfaceStyle: SurfaceStyle;
-  patternBase: string; // Pattern ID（"dot-soft" など）
+  patternBase: string; // Pattern ID（"dot-soft" など / "none" も可）
   layoutPref: LayoutPref; // "center" | "split"
 
   // その他の初期値
@@ -48,7 +47,7 @@ export type WorldviewPreset = {
   languageMode: "ja" | "en";
   fontPreset: string;
 
-  // NEW: 背景レイヤー情報（ThemeSchema.patternLayers / textureLayers 用）
+  // 背景レイヤー情報（ThemeSchema.patternLayers / textureLayers 用）
   patternLayers?: string[];
   textureLayers?: string[];
 
@@ -56,10 +55,15 @@ export type WorldviewPreset = {
   bgStyle?: CSSProperties;
 };
 
+/* =========================================================
+ * WorldviewRules（完全版）を別ファイルで管理し、ここから再export
+ * ========================================================= */
+export { WORLDVIEW_RULES, getWorldviewRule } from "./aiPortfolio.worldviewRules";
+export type { WorldviewRule } from "./aiPortfolio.worldviewRules";
+
 /* -------------------------------------------------
  *  カラーパレット（フォーム / 本番共通）
  * ------------------------------------------------- */
-
 const COLOR_PRESETS: Record<
   WorldviewBase,
   {
@@ -71,11 +75,12 @@ const COLOR_PRESETS: Record<
   }
 > = {
   minimal: {
+    // Minimal: 仕様準拠（ほぼ白・アクセント弱）
     primary: "#111827",
     accent: "#6B7280",
-    bg: "#F9FAFB",
+    bg: "#FFFFFF",
     text: "#111827",
-    gradient: "linear-gradient(145deg, #ffffff 0%, #f3f4f6 100%)",
+    gradient: "none",
   },
   modern: {
     primary: "#38BDF8",
@@ -143,87 +148,78 @@ const COLOR_PRESETS: Record<
 };
 
 /* -------------------------------------------------
- *  世界観ごとの CSS パターン（フォーム PREVIEW 用を正式採用）
+ *  世界観ごとの背景CSS（bgStyle）
+ *  - Minimalは仕様準拠：solidのみ
  * ------------------------------------------------- */
-
 const BG_STYLES: Record<WorldviewBase, CSSProperties> = {
   minimal: {
-    backgroundColor: "#f9fafb",
-    backgroundImage: "radial-gradient(#cbd5e1 1.5px, transparent 1.5px)",
-    backgroundSize: "24px 24px",
+    backgroundColor: "#FFFFFF",
+    backgroundImage: "none",
   },
   modern: {
-    backgroundColor: "#f1f5f9",
+    backgroundColor: "#020617",
     backgroundImage:
-      "linear-gradient(135deg, #e2e8f0 25%, transparent 25%)," +
-      "linear-gradient(225deg, #e2e8f0 25%, transparent 25%)," +
-      "linear-gradient(45deg, #e2e8f0 25%, transparent 25%)," +
-      "linear-gradient(315deg, #e2e8f0 25%, transparent 25%)",
-    backgroundPosition: "10px 0, 10px 0, 0 0, 0 0",
-    backgroundSize: "20px 20px",
-    backgroundRepeat: "repeat",
+      "linear-gradient(145deg, #0f172a 0%, #020617 100%)," +
+      "linear-gradient(rgba(226,232,240,0.10) 1px, transparent 1px)," +
+      "linear-gradient(90deg, rgba(226,232,240,0.10) 1px, transparent 1px)",
+    backgroundSize: "auto, 36px 36px, 36px 36px",
   },
   business: {
-    backgroundColor: "#eff6ff",
-    backgroundImage:
-      "linear-gradient(0deg, transparent 24%, #dbeafe 25%, #dbeafe 26%, transparent 27%, transparent 74%, #dbeafe 75%, #dbeafe 76%, transparent 77%, transparent)," +
-      "linear-gradient(90deg, transparent 24%, #dbeafe 25%, #dbeafe 26%, transparent 27%, transparent 74%, #dbeafe 75%, #dbeafe 76%, transparent 77%, transparent)",
-    backgroundSize: "50px 50px",
+    backgroundColor: "#EFF6FF",
+    backgroundImage: "linear-gradient(145deg, #e2e8f0 0%, #f8fafc 100%)",
   },
   cute: {
-    backgroundColor: "#fff1f2",
+    backgroundColor: "#FEF2F2",
     backgroundImage:
-      "radial-gradient(#fda4af 2px, transparent 2px), radial-gradient(#fda4af 2px, transparent 2px)",
-    backgroundSize: "32px 32px",
-    backgroundPosition: "0 0, 16px 16px",
+      "radial-gradient(rgba(251,113,133,0.22) 2px, transparent 2px)," +
+      "radial-gradient(rgba(251,113,133,0.18) 2px, transparent 2px)",
+    backgroundSize: "34px 34px",
+    backgroundPosition: "0 0, 17px 17px",
   },
   pop: {
-    backgroundColor: "#fffbeb",
+    backgroundColor: "#FFFBEB",
     backgroundImage:
-      "repeating-linear-gradient(45deg, #fde68a 0, #fde68a 2px, transparent 0, transparent 50%)",
-    backgroundSize: "20px 20px",
+      "repeating-linear-gradient(45deg, rgba(253,230,138,0.75) 0, rgba(253,230,138,0.75) 2px, transparent 0, transparent 18px)",
+    backgroundSize: "22px 22px",
   },
   dark: {
     backgroundColor: "#020617",
-    backgroundImage: "radial-gradient(#334155 1.5px, transparent 1.5px)",
+    backgroundImage:
+      "radial-gradient(rgba(51,65,85,0.35) 1.5px, transparent 1.5px)",
     backgroundSize: "20px 20px",
   },
   cyber: {
     backgroundColor: "#020617",
     backgroundImage:
+      "linear-gradient(145deg, #020617 0%, #0f172a 50%, #1e293b 100%)," +
       "linear-gradient(rgba(34,211,238,0.12) 1px, transparent 1px)," +
       "linear-gradient(90deg, rgba(34,211,238,0.12) 1px, transparent 1px)",
-    backgroundSize: "40px 40px",
+    backgroundSize: "auto, 40px 40px, 40px 40px",
   },
   natural: {
-    backgroundColor: "#f0fdf4",
+    backgroundColor: "#F0FDF4",
     backgroundImage:
-      "repeating-linear-gradient(-45deg, #dcfce7, #dcfce7 5px, transparent 5px, transparent 25px)",
+      "linear-gradient(145deg, #ecfdf5 0%, #dcfce7 100%)," +
+      "repeating-linear-gradient(-45deg, rgba(220,252,231,0.85), rgba(220,252,231,0.85) 5px, transparent 5px, transparent 24px)",
   },
   luxury: {
-    backgroundColor: "#1c1917",
+    backgroundColor: "#1C1917",
     backgroundImage:
-      "linear-gradient(30deg, #44403c 12%, transparent 12.5%, transparent 87%, #44403c 87.5%, #44403c)," +
-      "linear-gradient(150deg, #44403c 12%, transparent 12.5%, transparent 87%, #44403c 87.5%, #44403c)," +
-      "linear-gradient(30deg, #44403c 12%, transparent 12.5%, transparent 87%, #44403c 87.5%, #44403c)," +
-      "linear-gradient(150deg, #44403c 12%, transparent 12.5%, transparent 87%, #44403c 87.5%, #44403c)," +
-      "linear-gradient(60deg, #78716c 25%, transparent 25.5%, transparent 75%, #78716c 75%, #78716c)," +
-      "linear-gradient(60deg, #78716c 25%, transparent 25.5%, transparent 75%, #78716c 75%, #78716c)",
-    backgroundSize: "40px 70px",
-    backgroundPosition: "0 0, 0 0, 20px 35px, 20px 35px, 0 0, 20px 35px",
-    opacity: 0.8,
+      "linear-gradient(145deg, #0c0a09 0%, #1c1917 60%, #292524 100%)," +
+      "radial-gradient(rgba(234,179,8,0.10) 1px, transparent 1px)",
+    backgroundSize: "auto, 22px 22px",
   },
   retro: {
-    backgroundColor: "#fffbeb",
-    backgroundImage: "radial-gradient(#d97706 2px, transparent 2px)",
+    backgroundColor: "#FFFBEB",
+    backgroundImage: "radial-gradient(rgba(217,119,6,0.22) 2px, transparent 2px)",
     backgroundSize: "16px 16px",
   },
 };
 
 /* -------------------------------------------------
  *  世界観ごとの「三種の神器」定義
+ *  - Minimalは仕様準拠：pattern none / surface simple
  * ------------------------------------------------- */
-
 const WORLDVIEW_DEFINITIONS: Record<
   WorldviewBase,
   {
@@ -232,88 +228,46 @@ const WORLDVIEW_DEFINITIONS: Record<
     layout: LayoutPref;
   }
 > = {
-  minimal: {
-    surface: "paper",
-    pattern: "dot-soft",
-    layout: "center",
-  },
-  modern: {
-    surface: "glass",
-    pattern: "grid-thin",
-    layout: "split",
-  },
-  business: {
-    surface: "card",
-    pattern: "none",
-    layout: "center",
-  },
-  cute: {
-    surface: "simple",
-    pattern: "dot-cute",
-    layout: "center",
-  },
-  pop: {
-    surface: "card",
-    pattern: "stripe-diagonal",
-    layout: "center",
-  },
-  dark: {
-    surface: "dark",
-    pattern: "grid-subtle",
-    layout: "split",
-  },
-  cyber: {
-    surface: "neon",
-    pattern: "grid-cyber",
-    layout: "split",
-  },
-  natural: {
-    surface: "paper",
-    pattern: "fiber-soft",
-    layout: "center",
-  },
-  luxury: {
-    surface: "glass",
-    pattern: "diamond-soft",
-    layout: "center",
-  },
-  retro: {
-    surface: "paper",
-    pattern: "dot-retro",
-    layout: "center",
-  },
+  minimal: { surface: "simple", pattern: "none", layout: "center" },
+  modern: { surface: "glass", pattern: "grid-thin", layout: "split" },
+  business: { surface: "card", pattern: "none", layout: "center" },
+  cute: { surface: "paper", pattern: "dot-soft", layout: "center" },
+  pop: { surface: "card", pattern: "stripe-diagonal", layout: "center" },
+  dark: { surface: "dark", pattern: "grid-subtle", layout: "split" },
+  cyber: { surface: "neon", pattern: "grid-cyber", layout: "split" },
+  natural: { surface: "paper", pattern: "fiber-soft", layout: "center" },
+  luxury: { surface: "dark", pattern: "diamond-soft", layout: "center" },
+  retro: { surface: "paper", pattern: "dot-retro", layout: "center" },
 };
 
 /* -------------------------------------------------
- *  実際に使う PRESETS 本体
+ *  実際に使う PRESETS 本体（10世界観）
  * ------------------------------------------------- */
-
 const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
   minimal: {
     id: "minimal",
     label: "Minimal",
-    description:
-      "余白とタイポグラフィを主役にした、静かなミニマルデザイン。",
+    description: "余白とタイポグラフィを主役にした、静かなミニマルデザイン。",
     colorPrimary: COLOR_PRESETS.minimal.primary,
     colorAccent: COLOR_PRESETS.minimal.accent,
     colorBG: COLOR_PRESETS.minimal.bg,
     colorText: COLOR_PRESETS.minimal.text,
-    bgGradient: COLOR_PRESETS.minimal.gradient,
+    bgGradient: undefined, // minimal: gradient禁止（仕様準拠）
     surfaceStyle: WORLDVIEW_DEFINITIONS.minimal.surface,
     patternBase: WORLDVIEW_DEFINITIONS.minimal.pattern,
     layoutPref: WORLDVIEW_DEFINITIONS.minimal.layout,
     showcaseStyle: "gallery",
     languageMode: "ja",
     fontPreset: "cleanJa",
-    patternLayers: ["texture-paper"], // generate 側での fallback と合わせて軽めに定義
+    patternLayers: [],
     textureLayers: [],
     bgStyle: BG_STYLES.minimal,
   },
+
   modern: {
     id: "modern",
     label: "Modern",
-    description:
-      "コントラストとグリッドを効かせた、モダンでシャープな世界観。",
+    description: "コントラストとグリッドを効かせた、モダンでシャープな世界観。",
     colorPrimary: COLOR_PRESETS.modern.primary,
     colorAccent: COLOR_PRESETS.modern.accent,
     colorBG: COLOR_PRESETS.modern.bg,
@@ -325,10 +279,11 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "gallery",
     languageMode: "ja",
     fontPreset: "modernSans",
-    patternLayers: ["grid-thin", "texture-noise"],
+    patternLayers: ["grid-thin"],
     textureLayers: ["texture-noise"],
     bgStyle: BG_STYLES.modern,
   },
+
   business: {
     id: "business",
     label: "Business",
@@ -344,15 +299,15 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "gallery",
     languageMode: "ja",
     fontPreset: "formalMincho",
-    patternLayers: ["stripe-vertical-soft", "texture-paper"],
+    patternLayers: [], // businessは柄の常用を避ける
     textureLayers: ["texture-paper"],
     bgStyle: BG_STYLES.business,
   },
+
   cute: {
     id: "cute",
     label: "Cute",
-    description:
-      "丸みとパステルカラーでまとめた、やわらかく可愛い世界観。",
+    description: "丸みとパステルカラーでまとめた、やわらかく可愛い世界観。",
     colorPrimary: COLOR_PRESETS.cute.primary,
     colorAccent: COLOR_PRESETS.cute.accent,
     colorBG: COLOR_PRESETS.cute.bg,
@@ -368,11 +323,11 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     textureLayers: [],
     bgStyle: BG_STYLES.cute,
   },
+
   pop: {
     id: "pop",
     label: "Pop",
-    description:
-      "元気な色使いとリズムのあるパターンで見せるポップな世界観。",
+    description: "元気な色使いとリズムのあるパターンで見せるポップな世界観。",
     colorPrimary: COLOR_PRESETS.pop.primary,
     colorAccent: COLOR_PRESETS.pop.accent,
     colorBG: COLOR_PRESETS.pop.bg,
@@ -388,11 +343,11 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     textureLayers: [],
     bgStyle: BG_STYLES.pop,
   },
+
   dark: {
     id: "dark",
     label: "Dark",
-    description:
-      "ダークトーンで作品を際立たせる、落ち着いた世界観。",
+    description: "ダークトーンで作品を際立たせる、落ち着いた世界観。",
     colorPrimary: COLOR_PRESETS.dark.primary,
     colorAccent: COLOR_PRESETS.dark.accent,
     colorBG: COLOR_PRESETS.dark.bg,
@@ -404,15 +359,15 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "gallery",
     languageMode: "ja",
     fontPreset: "techMono",
-    patternLayers: ["texture-noise"],
+    patternLayers: ["grid-subtle"],
     textureLayers: ["texture-noise"],
     bgStyle: BG_STYLES.dark,
   },
+
   cyber: {
     id: "cyber",
     label: "Cyber",
-    description:
-      "ネオンとグリッドで魅せるサイバーパンク寄りの世界観。",
+    description: "ネオンとグリッドで魅せるサイバーパンク寄りの世界観。",
     colorPrimary: COLOR_PRESETS.cyber.primary,
     colorAccent: COLOR_PRESETS.cyber.accent,
     colorBG: COLOR_PRESETS.cyber.bg,
@@ -424,15 +379,15 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "masonry",
     languageMode: "ja",
     fontPreset: "techMono",
-    patternLayers: ["grid-neon", "texture-noise"],
+    patternLayers: ["grid-cyber"],
     textureLayers: ["texture-noise"],
     bgStyle: BG_STYLES.cyber,
   },
+
   natural: {
     id: "natural",
     label: "Natural",
-    description:
-      "グリーンと柔らかな質感で構成した、ナチュラルで落ち着いた世界観。",
+    description: "グリーンと柔らかな質感で構成した、ナチュラルで落ち着いた世界観。",
     colorPrimary: COLOR_PRESETS.natural.primary,
     colorAccent: COLOR_PRESETS.natural.accent,
     colorBG: COLOR_PRESETS.natural.bg,
@@ -444,15 +399,15 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "gallery",
     languageMode: "ja",
     fontPreset: "cleanJa",
-    patternLayers: ["texture-paper", "dot-soft"],
-    textureLayers: [],
+    patternLayers: ["fiber-soft"],
+    textureLayers: ["texture-paper"],
     bgStyle: BG_STYLES.natural,
   },
+
   luxury: {
     id: "luxury",
     label: "Luxury",
-    description:
-      "深いトーンと金色アクセントでまとめた、ラグジュアリーな世界観。",
+    description: "深いトーンと金色アクセントでまとめた、ラグジュアリーな世界観。",
     colorPrimary: COLOR_PRESETS.luxury.primary,
     colorAccent: COLOR_PRESETS.luxury.accent,
     colorBG: COLOR_PRESETS.luxury.bg,
@@ -464,15 +419,15 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "gallery",
     languageMode: "ja",
     fontPreset: "luxurySerif",
-    patternLayers: ["stripe-vertical-soft", "texture-paper"],
-    textureLayers: ["texture-paper"],
+    patternLayers: ["diamond-soft"],
+    textureLayers: ["texture-noise"],
     bgStyle: BG_STYLES.luxury,
   },
+
   retro: {
     id: "retro",
     label: "Retro",
-    description:
-      "少し黄味がかったトーンとドット柄で構成したレトロ調の世界観。",
+    description: "少し黄味がかったトーンとドット柄で構成したレトロ調の世界観。",
     colorPrimary: COLOR_PRESETS.retro.primary,
     colorAccent: COLOR_PRESETS.retro.accent,
     colorBG: COLOR_PRESETS.retro.bg,
@@ -485,7 +440,7 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     languageMode: "ja",
     fontPreset: "retroPixel",
     patternLayers: ["dot-retro"],
-    textureLayers: [],
+    textureLayers: ["texture-paper"],
     bgStyle: BG_STYLES.retro,
   },
 };
@@ -493,14 +448,11 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
 /* -------------------------------------------------
  *  エクスポート
  * ------------------------------------------------- */
-
 export const WORLDVIEW_PRESETS = PRESETS;
 export const WORLDVIEW_KEYS = Object.keys(PRESETS) as WorldviewBase[];
 
 /** フォームや generate 用のヘルパー */
-export function getWorldviewPreset(
-  id: WorldviewBase | string
-): WorldviewPreset {
+export function getWorldviewPreset(id: WorldviewBase | string): WorldviewPreset {
   if ((WORLDVIEW_KEYS as string[]).includes(id)) {
     return PRESETS[id as WorldviewBase];
   }

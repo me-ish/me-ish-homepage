@@ -1,5 +1,11 @@
+"use client";
+
 // src/components/aiPortfolio/sections/AiPortfolioHeroSwitcher.tsx
-// Hero 切り替えスイッチャー（worldview + heroLayout対応拡張版）
+// Hero 切り替えスイッチャー（worldview + heroLayout対応）
+//
+// いまは全 worldviews を「スクショ型 1スクリーンHero」に統一。
+// 世界観差分はHero内の装飾と theme/variant で表現する。
+// 将来 worldview ごとに差し替えたくなったら HERO_BY_WORLDVIEW を分岐。
 
 import React from "react";
 import type { Design, Content } from "@/lib/aiPortfolio/aiPortfolio.schema";
@@ -7,7 +13,6 @@ import type { VariantSpec } from "@/lib/aiPortfolio/aiPortfolio.variant.base";
 import type { HeroProps } from "./hero/HeroTypes";
 import { AiPortfolioHeroMinimal } from "./hero/AiPortfolioHeroMinimal";
 
-// 将来：worldviewごとに別Heroを登録できるようにする前提
 const HERO_BY_WORLDVIEW: Record<string, React.FC<HeroProps>> = {
   minimal: AiPortfolioHeroMinimal,
   modern: AiPortfolioHeroMinimal,
@@ -39,11 +44,8 @@ export const AiPortfolioHeroSwitcher: React.FC<Props> = ({
   heroLayout,
 }) => {
   const worldviewKey = (variant.worldview as string) || "minimal";
-
-  // worldview で Hero コンポーネントを切り替え
   const HeroComp = HERO_BY_WORLDVIEW[worldviewKey] ?? AiPortfolioHeroMinimal;
 
-  // Hero に layoutType / heroLayout をそのまま渡す
   return (
     <HeroComp
       section={section}

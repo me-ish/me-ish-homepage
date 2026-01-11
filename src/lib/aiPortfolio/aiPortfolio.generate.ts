@@ -1,3 +1,4 @@
+// src/lib/aiPortfolio/aiPortfolio.generate.ts
 // ============================================
 // aiPortfolio.generate.ts
 // （高速化・軽量プロンプト版：LayoutDecision＋preset対応＋STEP3 sections対応）
@@ -24,6 +25,36 @@ import { decideLayout } from "./aiPortfolio.layout";
 import { getAllPatternIds } from "./aiPortfolio.patternRegistry";
 import { auraAssetProxyUrl } from "./storage/auraAssets";
 
+
+function isWorldview(v: unknown): v is VariantSpec["worldview"] {
+  return (
+    v === "minimal" ||
+    v === "modern" ||
+    v === "business" ||
+    v === "cute" ||
+    v === "pop" ||
+    v === "natural" ||
+    v === "luxury" ||
+    v === "retro" ||
+    v === "cyber" ||
+    v === "dark"
+  );
+}
+
+function getLockedWorldview(payload: any): VariantSpec["worldview"] | null {
+  // ここはあなたのpayload実態に合わせて拾えるだけ拾う
+  const candidates = [
+    payload?.designAnswers?.worldviewBase,
+    payload?.designAnswers?.worldview,
+    payload?.worldviewBase,
+    payload?.worldview,
+  ];
+  for (const c of candidates) {
+    if (isWorldview(c)) return c;
+    if (typeof c === "string" && isWorldview(c.trim())) return c.trim() as any;
+  }
+  return null;
+}
 
 /* ---------------------------------------------------------
  * OpenAI Client（高速＋安定構成）
@@ -160,11 +191,7 @@ function pickStable<T>(arr: T[], seed: string): T {
   return arr[idx];
 }
 
-function applyUiProfileToVariant(
-  variant: VariantSpec,
-  payload: FormInput,
-  overallStrength: number,
-) {
+function applyUiProfileToVariant(variant: VariantSpec, payload: FormInput, overallStrength: number) {
   const baseWorldview = variant.worldview as string;
 
   // セッション固定 seed（requestIdが無いので、email/nameで近似固定）
@@ -194,7 +221,7 @@ function applyUiProfileToVariant(
 
   // 60-99: 近接参照（radius/surface/shadow の “まとまり” を1セットだけ持ってくる）
   const candidates =
-    (WORLDVIEW_ADJACENT[baseWorldview] && WORLDVIEW_ADJACENT[baseWorldview].length > 0)
+    WORLDVIEW_ADJACENT[baseWorldview] && WORLDVIEW_ADJACENT[baseWorldview].length > 0
       ? WORLDVIEW_ADJACENT[baseWorldview]
       : Object.keys(UI_PROFILE_BY_WORLDVIEW);
 
@@ -208,10 +235,277 @@ function applyUiProfileToVariant(
   if (prof?.radius) (variant as any).radius = prof.radius;
   if (prof?.shadow) (variant as any).shadow = prof.shadow;
 
-  // 参考ログ（必要なら残す）
   console.log("[UI_PROFILE] base=", baseWorldview, "picked=", pickedWorldview, "strength=", overallStrength);
 }
 
+/* ---------------------------------------------------------
+ * Section Theme（セクション別背景）
+ * --------------------------------------------------------- */
+
+type SectionType = "hero" | "about" | "works" | "services" | "skills" | "contact";
+
+type SectionTheme = {
+  bgGradient?: string;
+  patternLayers?: string[];
+  textureLayers?: string[];
+  bgStyle?: Record<string, any>;
+};
+
+type BgStrategy = "solid" | "alternate" | "grouped" | "themed";
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const h = (hex || "").trim().replace("#", "");
+  if (![3, 6].includes(h.length)) return null;
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const n = Number.parseInt(full, 16);
+  if (!Number.isFinite(n)) return null;
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function rgba(hex: string, a: number): string {
+  const c = hexToRgb(hex);
+  if (!c) return `rgba(0,0,0,${clamp(a, 0, 1)})`;
+  return `rgba(${c.r},${c.g},${c.b},${clamp(a, 0, 1)})`;
+}
+
+function mixHex(a: string, b: string, t: number): string {
+  const ca = hexToRgb(a);
+  const cb = hexToRgb(b);
+  if (!ca || !cb) return a;
+  const tt = clamp(t, 0, 1);
+  const r = Math.round(ca.r + (cb.r - ca.r) * tt);
+  const g = Math.round(ca.g + (cb.g - ca.g) * tt);
+  const b2 = Math.round(ca.b + (cb.b - ca.b) * tt);
+  return `#${[r, g, b2].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function luminance(hex: string): number {
+  const c = hexToRgb(hex);
+  if (!c) return 1;
+  const toLin = (v: number) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  const r = toLin(c.r);
+  const g = toLin(c.g);
+  const b = toLin(c.b);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function bgStrategyByWorldview(worldview: string): BgStrategy {
+  switch (worldview) {
+    case "minimal":
+    case "luxury":
+    case "dark":
+      return "solid";
+    case "modern":
+    case "cute":
+    case "pop":
+      return "alternate";
+    case "natural":
+      return "grouped";
+    case "retro":
+    case "cyber":
+      return "themed";
+    case "business":
+      return "solid";
+    default:
+      return "solid";
+  }
+}
+
+function sectionGlowPos(type: SectionType): string {
+  switch (type) {
+    case "hero":
+      return "22% 12%";
+    case "about":
+      return "82% 18%";
+    case "works":
+      return "18% 84%";
+    case "services":
+      return "86% 86%";
+    case "skills":
+      return "50% 8%";
+    case "contact":
+      return "50% 92%";
+    default:
+      return "50% 50%";
+  }
+}
+
+function buildSectionBgGradient(args: {
+  baseBgGradient?: string;
+  paletteBg: string;
+  accent: string;
+  worldview: string;
+  type: SectionType;
+  strategy: BgStrategy;
+  overallStrength: number;
+  altBand?: "A" | "B";
+}) {
+  const { baseBgGradient, paletteBg, accent, worldview, type, strategy, overallStrength, altBand } = args;
+
+  const isDark = luminance(paletteBg) < 0.35;
+
+  const bg1 = isDark ? mixHex(paletteBg, "#000000", 0.1) : mixHex(paletteBg, "#ffffff", 0.08);
+  const bg2 = isDark ? mixHex(paletteBg, "#111827", 0.22) : mixHex(paletteBg, "#e5e7eb", 0.25);
+
+  const baseA = 0.06 + (overallStrength / 100) * 0.06; // 0.06..0.12
+  const cap =
+    worldview === "minimal" || worldview === "business"
+      ? 0.1
+      : worldview === "luxury" || worldview === "dark"
+        ? 0.12
+        : 0.14;
+  const glowA = clamp(baseA, 0.05, cap);
+
+  const dir =
+    strategy === "alternate" && altBand === "B"
+      ? "135deg"
+      : strategy === "themed" && (type === "works" || type === "services")
+        ? "160deg"
+        : "180deg";
+
+  const pos = sectionGlowPos(type);
+  const glow = `radial-gradient(circle at ${pos}, ${rgba(accent, glowA)} 0%, transparent 58%)`;
+  const linear = `linear-gradient(${dir}, ${bg1} 0%, ${bg2} 100%)`;
+
+  if (typeof baseBgGradient === "string" && baseBgGradient.trim()) {
+    if (overallStrength <= 5) return baseBgGradient; // 低強度はpresets優先
+    return `${glow}, ${baseBgGradient}`;
+  }
+
+  return `${glow}, ${linear}`;
+}
+
+function buildSectionPatternOverlay(args: {
+  accent: string;
+  paletteBg: string;
+  worldview: string;
+  type: SectionType;
+  strategy: BgStrategy;
+  overallStrength: number;
+  altBand?: "A" | "B";
+}): string[] {
+  const { accent, paletteBg, worldview, type, strategy, overallStrength, altBand } = args;
+  const isDark = luminance(paletteBg) < 0.35;
+
+  if (overallStrength < 35) return [];
+
+  const aBase =
+    worldview === "minimal" || worldview === "business"
+      ? 0.02
+      : worldview === "dark" || worldview === "luxury"
+        ? 0.025
+        : 0.035;
+
+  const a = clamp(aBase + (overallStrength / 100) * 0.03, 0.02, 0.07);
+
+  const angle =
+    strategy === "alternate" && altBand === "B"
+      ? "135deg"
+      : type === "skills"
+        ? "0deg"
+        : "90deg";
+
+  if (worldview === "cyber") {
+    const line = rgba(accent, a);
+    return [
+      `linear-gradient(90deg, ${line} 1px, transparent 1px)`,
+      `linear-gradient(0deg, ${line} 1px, transparent 1px)`,
+    ];
+  }
+
+  if (worldview === "retro") {
+    const c = rgba(isDark ? "#ffffff" : accent, a);
+    return [`repeating-linear-gradient(${angle}, ${c} 0px, ${c} 1px, transparent 1px, transparent 14px)`];
+  }
+
+  const c = rgba(isDark ? "#ffffff" : accent, a);
+  return [`repeating-linear-gradient(${angle}, ${c} 0px, ${c} 1px, transparent 1px, transparent 18px)`];
+}
+
+function buildSectionThemeMap(args: {
+  worldview: string;
+  paletteBg: string;
+  accent: string;
+  baseBgGradient?: string;
+  basePatternLayers: string[];
+  baseTextureLayers: string[];
+  baseBgStyle?: any;
+  overallStrength: number;
+  orderedTypes: string[];
+}): Record<string, SectionTheme> {
+  const {
+    worldview,
+    paletteBg,
+    accent,
+    baseBgGradient,
+    basePatternLayers,
+    baseTextureLayers,
+    baseBgStyle,
+    overallStrength,
+    orderedTypes,
+  } = args;
+
+  const strategy = bgStrategyByWorldview(worldview);
+
+  const groupA = new Set<SectionType>(["hero", "about", "services", "contact"]);
+  const groupB = new Set<SectionType>(["works", "skills"]);
+
+  const map: Record<string, SectionTheme> = {};
+
+  for (let i = 0; i < orderedTypes.length; i++) {
+    const t = orderedTypes[i] as SectionType;
+    if (!t) continue;
+
+    const altBand: "A" | "B" | undefined = strategy === "alternate" ? (i % 2 === 0 ? "A" : "B") : undefined;
+
+    const groupedBand: "A" | "B" | undefined =
+      strategy === "grouped" ? (groupA.has(t) ? "A" : groupB.has(t) ? "B" : "A") : undefined;
+
+    const themedBoost = strategy === "themed" && (t === "works" || t === "services") ? 12 : 0;
+    const strengthForSection = clamp(overallStrength + themedBoost, 0, 100);
+
+    const bgGradient = buildSectionBgGradient({
+      baseBgGradient,
+      paletteBg,
+      accent,
+      worldview,
+      type: t,
+      strategy,
+      overallStrength: strengthForSection,
+      altBand: altBand ?? groupedBand,
+    });
+
+    const overlay = buildSectionPatternOverlay({
+      accent,
+      paletteBg,
+      worldview,
+      type: t,
+      strategy,
+      overallStrength: strengthForSection,
+      altBand: altBand ?? groupedBand,
+    });
+
+    // ✅ FIX: overlay は string[] なので、ネストしないように展開する
+    const patternLayers =
+      overlay.length > 0 ? [...overlay, ...(basePatternLayers ?? [])] : [...(basePatternLayers ?? [])];
+
+    map[t] = {
+      bgGradient,
+      patternLayers,
+      textureLayers: [...(baseTextureLayers ?? [])],
+      bgStyle: baseBgStyle ? { ...baseBgStyle } : undefined,
+    };
+  }
+
+  return map;
+}
 
 /* ---------------------------------------------------------
  * STEP3: Services に中身があるかどうか判定
@@ -228,6 +522,39 @@ function hasServiceContent(payload: FormInput): boolean {
     const label = (o?.label ?? o?.name ?? "").trim();
     return label.length > 0;
   });
+}
+
+/* ---------------------------------------------------------
+ * Services: アイコン推定
+ * --------------------------------------------------------- */
+type ServiceIconKey = "palette" | "bookOpen" | "users" | "megaphone" | "image" | "penTool" | "sparkles";
+
+function normalizeForIconMatch(s: string) {
+  return (s ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/[・、。.,/\\\-_\[\](){}:;'"!?@#￥$%^&*+=~`|<>]/g, "");
+}
+
+function inferServiceIconKey(title: string, description: string): ServiceIconKey {
+  const t = normalizeForIconMatch(`${title} ${description}`);
+
+  const rules: Array<{ key: ServiceIconKey; includes: string[] }> = [
+    { key: "palette", includes: ["ブランド", "vi", "identity", "ロゴ", "logo", "アイコン", "icon"] },
+    { key: "bookOpen", includes: ["出版", "編集", "書籍", "雑誌", "挿絵", "カバー", "cover", "editorial"] },
+    { key: "users", includes: ["キャラクター", "マスコット", "ip", "character"] },
+    { key: "megaphone", includes: ["広告", "プロモーション", "promotion", "sns", "バナー", "banner", "campaign"] },
+    { key: "image", includes: ["サムネ", "thumbnail", "youtube", "配信", "一枚絵", "illustration"] },
+    { key: "penTool", includes: ["デザイン", "design", "線画", "lineart", "レイアウト"] },
+    { key: "sparkles", includes: ["世界観", "雰囲気", "atmosphere"] },
+  ];
+
+  for (const r of rules) {
+    if (r.includes.some((w) => t.includes(normalizeForIconMatch(w)))) return r.key;
+  }
+
+  const pool: ServiceIconKey[] = ["palette", "bookOpen", "users", "megaphone", "image", "penTool", "sparkles"];
+  return pickStable(pool, `svcIcon__${t}`);
 }
 
 /* ---------------------------------------------------------
@@ -254,22 +581,17 @@ function isSectionEnabled(type: string, payload: FormInput): boolean {
   const flagOn = raw === true;
 
   if (!flagOn) return false;
-
   if (type === "services") return hasServiceContent(payload);
-
   return true;
 }
 
 /* ---------------------------------------------------------
  * Design.sections の自動構築
- *   - LayoutDecision.sectionOrder を優先
- *   - STEP3 sections と整合
  * --------------------------------------------------------- */
 function buildDefaultDesignSections(payload: FormInput, sectionOrder?: string[]): Design["sections"] {
   const list: Design["sections"] = [];
 
-  const orderSource =
-    sectionOrder && sectionOrder.length > 0 ? sectionOrder : SECTION_ORDER.map((s) => s.type);
+  const orderSource = sectionOrder && sectionOrder.length > 0 ? sectionOrder : SECTION_ORDER.map((s) => s.type);
 
   for (const type of orderSource) {
     const def = SECTION_ORDER.find((s) => s.type === type);
@@ -314,6 +636,74 @@ function skillsToItems(payload: FormInput): any[] {
   return [];
 }
 
+function splitCsv(v?: string | null): string[] {
+  if (!v) return [];
+  return v
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function uniqStrings(arr: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const s of arr) {
+    const key = s.trim();
+    if (!key) continue;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(key);
+  }
+  return out;
+}
+
+function getUnifiedSkillTags(payload: any): string[] {
+  const presetRaw =
+    typeof payload?.skill_presets === "string"
+      ? payload.skill_presets
+      : typeof payload?.skillPresets === "string"
+        ? payload.skillPresets
+        : null;
+
+  const manualRaw =
+    typeof payload?.skills === "string"
+      ? payload.skills
+      : Array.isArray(payload?.skills)
+        ? payload.skills.join(",")
+        : null;
+
+  return uniqStrings([...splitCsv(presetRaw), ...splitCsv(manualRaw)]);
+}
+
+function buildHeroSubcopyFromSkills(payload: FormInput): string | null {
+  const labels = getUnifiedSkillTags(payload);
+  if (labels.length === 0) return null;
+
+  const RULES: { tag: string; includes: string[] }[] = [
+    { tag: "SNSアイコン", includes: ["sns", "アイコン", "twitter", "x", "instagram"] },
+    { tag: "配信用サムネ", includes: ["サムネ", "youtube", "配信", "thumbnail"] },
+    { tag: "キャラクターデザイン", includes: ["キャラ", "キャラクター", "character"] },
+    { tag: "一枚絵・立ち絵", includes: ["一枚絵", "立ち絵", "trpg"] },
+    { tag: "Live2D用イラスト", includes: ["live2d"] },
+    { tag: "背景イラスト", includes: ["背景"] },
+    { tag: "SDキャラ", includes: ["sd", "ミニキャラ"] },
+    { tag: "イラスト制作", includes: ["イラスト", "illustration"] },
+  ];
+
+  const norm = (s: string) => s.toLowerCase();
+
+  const tags: string[] = [];
+  for (const r of RULES) {
+    const hit = labels.some((l) => r.includes.some((w) => norm(l).includes(w)));
+    if (hit) tags.push(r.tag);
+  }
+
+  if (tags.length === 0) return null;
+
+  const picked = tags.slice(0, 3);
+  return `${picked.join("・")}など。目的に合わせて丁寧にご提案します。`;
+}
+
 function normalizeUrlLoose(v: string): string {
   const s = v.trim();
   if (!s) return s;
@@ -331,7 +721,6 @@ function snsToUrl(label: string, raw: string): string | null {
   const v = raw.trim();
   if (!v) return null;
 
-  // URL っぽいならそのまま（ただしスキーム無しは補完）
   if (/^https?:\/\//i.test(v) || /^mailto:/i.test(v) || /^\/\//.test(v)) return normalizeUrlLoose(v);
   if (/[.]/.test(v) && !/^\w+$/.test(v)) return normalizeUrlLoose(v);
 
@@ -351,8 +740,9 @@ function buildDefaultContentSections(payload: FormInput, variant: VariantSpec): 
   const toggles = (payload as any).sections ?? {};
 
   const name = payload.name;
-  const role = (payload as any).role;
   const titleLegacy = (payload as any).title as string | undefined;
+  const role = ((payload as any).role as string | undefined) ?? titleLegacy;
+
   const tagline = ((payload as any).tagline as string | null | undefined) ?? "";
   const bio = payload.bio;
   const email = payload.email;
@@ -361,18 +751,20 @@ function buildDefaultContentSections(payload: FormInput, variant: VariantSpec): 
 
   /* ---------- hero ---------- */
   if (toggles.hero !== false) {
-    const heroTitle = name || titleLegacy || "Your Name";
-    const heroSubtitle = role || "";
-    const heroDesc = tagline || bio || "";
+    const heroH1 = (tagline && tagline.trim()) || (titleLegacy && titleLegacy.trim()) || "世界観のあるイラストを制作します";
+    const heroH2 = "";
+
+    const fromSkills = buildHeroSubcopyFromSkills(payload);
+    const heroDesc = fromSkills ?? "ご依頼の目的や用途に合わせて、丁寧にご提案します。";
 
     sections.push({
       type: "hero",
-      title: heroTitle,
-      subtitle: heroSubtitle || undefined,
-      description: heroDesc || undefined,
-      avatarUrl,
-      headings: [heroTitle, heroSubtitle].filter(Boolean),
+      title: heroH1,
+      subtitle: heroH2 || undefined,
+      description: heroDesc,
+      headings: [heroH1, heroH2].filter(Boolean),
       paragraphs: [heroDesc],
+      avatarUrl: undefined,
     } as any);
   }
 
@@ -380,8 +772,9 @@ function buildDefaultContentSections(payload: FormInput, variant: VariantSpec): 
   if (toggles.about !== false) {
     sections.push({
       type: "about",
-      headings: ["About"],
+      headings: ["About", name ?? "", (role as string | undefined) ?? ""].filter((s) => typeof s === "string"),
       paragraphs: [bio ?? ""],
+      avatarUrl: avatarUrl || undefined,
     } as any);
   }
 
@@ -390,10 +783,8 @@ function buildDefaultContentSections(payload: FormInput, variant: VariantSpec): 
     const items =
       ((payload as any).images ?? [])
         .map((img: any, i: number) => {
-          // 1) imageUrl/url を優先
           const rawUrl = (img?.imageUrl ?? img?.url ?? "").toString().trim();
 
-          // 2) storagePath 系も救済（Uploaderの形式 / 互換）
           const rawStoragePath = (
             img?.storagePath ??
             img?.storage_path ??
@@ -404,12 +795,10 @@ function buildDefaultContentSections(payload: FormInput, variant: VariantSpec): 
           )
             .toString()
             .trim()
-            .replace(/^\//, ""); // 念のため先頭スラッシュ除去
+            .replace(/^\//, "");
 
-          // 3) 最終的な表示URL（空ならstoragePathから生成）
           const imageUrl = rawUrl || (rawStoragePath ? auraAssetProxyUrl(rawStoragePath) : "");
 
-          // 4) year（number / string どちらでも受けて number に寄せる）
           const yearRaw = img?.year;
           const year =
             typeof yearRaw === "number"
@@ -421,21 +810,17 @@ function buildDefaultContentSections(payload: FormInput, variant: VariantSpec): 
           const safeYear = Number.isFinite(year as number) ? (year as number) : undefined;
 
           const title = (img?.title ?? img?.name ?? `作品 ${i + 1}`).toString();
-          const description =
-            typeof img?.description === "string" ? img.description : (img?.desc as string | undefined);
+          const description = typeof img?.description === "string" ? img.description : (img?.desc as string | undefined);
 
           return {
             imageUrl,
             title,
             description,
             year: safeYear,
-            // 将来のために保持（schema側が許可していれば残る）
             storagePath: rawStoragePath || undefined,
           };
         })
-        // imageUrl が空のものは ContentSchema で落ちやすいので除外
         .filter((it: any) => typeof it.imageUrl === "string" && it.imageUrl.trim().length > 0);
-
 
     sections.push({
       type: "works",
@@ -454,33 +839,22 @@ function buildDefaultContentSections(payload: FormInput, variant: VariantSpec): 
         const title = (svc.label ?? svc.name ?? "").toString().trim();
         if (!title) return null;
 
-        const rawPrice =
-          (svc.priceHint as string | number | undefined) ??
-          (svc.price as string | number | undefined) ??
-          "";
+        const rawPrice = (svc.priceHint as string | number | undefined) ?? (svc.price as string | number | undefined) ?? "";
+        const priceHint = rawPrice !== undefined && rawPrice !== null ? rawPrice.toString().trim() : "";
 
-        const priceHint =
-          rawPrice !== undefined && rawPrice !== null ? rawPrice.toString().trim() : "";
-
-        const rawDesc =
-          (svc.description as string | undefined) ?? (svc.desc as string | undefined) ?? "";
-
+        const rawDesc = (svc.description as string | undefined) ?? (svc.desc as string | undefined) ?? "";
         const description = rawDesc ? rawDesc.toString().trim() : "";
 
         return {
           title,
-          label: title, // 旧UI互換
+          label: title,
           priceHint,
-          price: priceHint || "", // 表示用
+          price: priceHint || "",
           description,
+          iconKey: inferServiceIconKey(title, description),
         };
       })
-      .filter(Boolean) as {
-      title: string;
-      label: string;
-      priceHint?: string;
-      description?: string;
-    }[];
+      .filter(Boolean) as any[];
 
     if (items.length > 0) {
       sections.push({
@@ -506,17 +880,13 @@ function buildDefaultContentSections(payload: FormInput, variant: VariantSpec): 
   if (toggles.contact !== false) {
     const mail = (email as string | undefined) || undefined;
 
-    // 1) 配列形式 links / socialLinks / sns を拾う
     const rawLinksArrays: any[][] = [
       (((payload as any).links as any[]) ?? []) as any[],
       (((payload as any).socialLinks as any[]) ?? []) as any[],
       (((payload as any).sns as any[]) ?? []) as any[],
     ];
 
-    // 2) ネスト形式 social を拾う（今回の本丸）
     const social = ((payload as any).social ?? {}) as Record<string, unknown>;
-
-    // 3) 直下フィールド（互換）も拾う
     const direct = payload as any;
 
     const contactLinks: { label: string; href: string }[] = [];
@@ -535,10 +905,8 @@ function buildDefaultContentSections(payload: FormInput, variant: VariantSpec): 
       contactLinks.push({ label: l, href: h });
     };
 
-    // 1) メールは pill 側で表示する想定だが、links にも入れておく（重複はフロントで除去可能）
     if (mail) pushLink(mail, `mailto:${mail}`);
 
-    // 2) 配列リンク
     for (const arr of rawLinksArrays) {
       for (const item of arr) {
         if (!item) continue;
@@ -548,8 +916,6 @@ function buildDefaultContentSections(payload: FormInput, variant: VariantSpec): 
       }
     }
 
-    // 3) social ネスト（フォームの実データ）
-    // ※ handleだけでもOK（X/Instagram/BehanceはURL化）
     pushLink("X", (social.twitter as string | undefined) ?? (social.x as string | undefined));
     pushLink("Instagram", social.instagram as string | undefined);
     pushLink("Behance", social.behance as string | undefined);
@@ -558,7 +924,6 @@ function buildDefaultContentSections(payload: FormInput, variant: VariantSpec): 
     pushLink("Skeb", social.skeb as string | undefined);
     pushLink("BOOTH", social.booth as string | undefined);
 
-    // 4) 直下（互換）
     const snsFieldCandidates: { key: string; label: string }[] = [
       { key: "xUrl", label: "X" },
       { key: "twitterUrl", label: "X" },
@@ -600,13 +965,11 @@ function buildDefaultContentSections(payload: FormInput, variant: VariantSpec): 
       paragraphs: ["ご依頼・ご相談は、以下からお気軽にご連絡ください。"],
       description: "ご依頼・ご相談は、以下からお気軽にご連絡ください。",
       email: mail,
-      // ✅ Renderer側で social ネストも拾えるように保持（今回の対応で表示される）
       social: Object.keys(social).length > 0 ? social : undefined,
       links: contactLinks.length > 0 ? contactLinks : undefined,
     } as any);
   }
 
-  /* ---------- フォールバック ---------- */
   if (sections.length === 0) {
     const heroTitle = name || titleLegacy || "Your Name";
     sections.push({
@@ -682,7 +1045,6 @@ function buildCompactSectionForAI(section: any) {
     }));
   }
 
-  // CTAは廃止だが、万一残っていてもlabelだけ整形する程度なら害は少ないため保持
   if (section.cta) {
     compact.cta = { label: trim(section.cta.label, 80) };
   }
@@ -704,7 +1066,6 @@ async function refineContentWithOpenAI(payload: FormInput, design: Design, draft
       ? "フレンドリー（やわらかめ・少し口語・短めの文・丁寧さは維持、語尾にバリエーション）"
       : "丁寧（ですます調・落ち着き・端的）";
 
-  // ★ 対象は hero/about/services のみ（CTA廃止のため cta は対象外）
   const TARGET_TYPES = new Set(["hero", "about", "services"]);
 
   const indexed = (draftContent.sections ?? []).map((s, idx) => ({ s, idx }));
@@ -841,7 +1202,6 @@ export async function generatePortfolioFromForm(rawPayload: unknown): Promise<{ 
   let tp = t0;
   console.log("⏱ [GEN0] start generate");
 
-  // ✅ 0) Zod parse で落ちる/消える可能性がある付加情報を先に拾う
   const rawAvatarUrl =
     rawPayload &&
     typeof rawPayload === "object" &&
@@ -850,51 +1210,50 @@ export async function generatePortfolioFromForm(rawPayload: unknown): Promise<{ 
       ? (rawPayload as any).avatarUrl.trim()
       : undefined;
 
-// ✅ 0) Zod parse 前に social を退避（FormInputSchema が unknown keys を落とすため）
-const rawSocial =
-  rawPayload &&
-  typeof rawPayload === "object" &&
-  (rawPayload as any).social &&
-  typeof (rawPayload as any).social === "object"
-    ? (rawPayload as any).social
-    : undefined;
+  const rawSkillPresets =
+    rawPayload &&
+    typeof rawPayload === "object" &&
+    typeof (rawPayload as any).skill_presets === "string"
+      ? (rawPayload as any).skill_presets
+      : undefined;
 
-// 1) Zod parse（FormInput はしっかり見る）
-const parsedResult = FormInputSchema.safeParse(rawPayload);
-if (!parsedResult.success) {
-  console.error("[GEN1] FormInputSchema error:", parsedResult.error);
-  throw new Error("invalid_form_input");
-}
+  const rawSocial =
+    rawPayload &&
+    typeof rawPayload === "object" &&
+    (rawPayload as any).social &&
+    typeof (rawPayload as any).social === "object"
+      ? (rawPayload as any).social
+      : undefined;
 
-// ✅ parse 後に avatarUrl / social を戻す
-const payload: FormInput & { avatarUrl?: string; social?: any } = {
-  ...parsedResult.data,
-  avatarUrl: rawAvatarUrl,
-  social: rawSocial,
-};
+  const parsedResult = FormInputSchema.safeParse(rawPayload);
+  if (!parsedResult.success) {
+    console.error("[GEN1] FormInputSchema error:", parsedResult.error);
+    throw new Error("invalid_form_input");
+  }
 
+  const payload: FormInput & { avatarUrl?: string; social?: any; skill_presets?: string } = {
+    ...parsedResult.data,
+    avatarUrl: rawAvatarUrl,
+    social: rawSocial,
+    skill_presets: rawSkillPresets,
+  };
 
   console.log(`⏱ [GEN1] after Zod parse: ${Date.now() - tp} ms`);
   tp = Date.now();
 
   const variant: VariantSpec = deriveVariantFromAnswers(payload as any);
+    // ✅ worldviewは「ユーザー選択があるなら」強制ロック（強度で変えない）
+  const lockedWorldview = getLockedWorldview(payload as any);
+  if (lockedWorldview) {
+    const before = variant.worldview;
+    (variant as any).worldview = lockedWorldview;
+    if (before !== lockedWorldview) {
+      console.log("[WORLDVIEW_LOCK] before=", before, "locked=", lockedWorldview);
+    }
+  }
   console.log(`⏱ [GEN2] after variant: ${Date.now() - tp} ms`);
   tp = Date.now();
-    console.log("### RAW SOCIAL (after parse restore)", (payload as any).social);
-  
-
-  console.log("### VARIANT DEBUG", {
-    id: (variant as any).id,
-    worldview: variant.worldview,
-    surface: variant.surface,
-    layout: variant.layout,
-    pattern: variant.pattern,
-    radius: (variant as any).radius,
-    shadow: (variant as any).shadow,
-  });
-  console.log("### AI STRENGTH", (payload as any).aiStrength);
-  console.log("### DESIGN ANSWERS", (payload as any).designAnswers);
-  console.log("### AVATAR URL", (payload as any).avatarUrl);
+  console.log("### RAW SOCIAL (after parse restore)", (payload as any).social);
 
   // 2.5) LayoutDecision
   const imagesCount = (payload.images?.length ?? 0) as number;
@@ -943,9 +1302,11 @@ const payload: FormInput & { avatarUrl?: string; social?: any } = {
 
   const overallStrength = calcOverallStrength((payload as any).aiStrength);
 
-    // ✅ UI Profile（質感）を AI強度レンジで適用
-  applyUiProfileToVariant(variant, payload, overallStrength);
+  // ✅ 注入：セクション側で参照できるようにする（About等の演出が安定）
+  (variant as any).overallStrength = overallStrength;
 
+  // ✅ UI Profile（質感）を AI強度レンジで適用
+  applyUiProfileToVariant(variant, payload, overallStrength);
 
   const presetPatternLayers: string[] = ((worldviewPreset as any).patternLayers as string[] | undefined) ?? [];
 
@@ -978,6 +1339,23 @@ const payload: FormInput & { avatarUrl?: string; social?: any } = {
   const presetTextureLayers: string[] = ((worldviewPreset as any).textureLayers as string[] | undefined) ?? [];
   const bgStyle = (worldviewPreset as any).bgStyle;
 
+  // ✅ Design.sections を先に確定（sectionTheme の割当順に使う）
+  const designSections = buildDefaultDesignSections(payload, layoutDecision.sectionOrder);
+  const orderedTypes = designSections.map((s) => s.type);
+
+  // ✅ セクション別背景
+  const sectionTheme = buildSectionThemeMap({
+    worldview: String(variant.worldview),
+    paletteBg: palette.bg,
+    accent,
+    baseBgGradient: (worldviewPreset as any).bgGradient,
+    basePatternLayers: patternLayers,
+    baseTextureLayers: presetTextureLayers,
+    baseBgStyle: bgStyle,
+    overallStrength,
+    orderedTypes,
+  });
+
   const designInput = {
     theme: {
       colorPrimary: palette.primary,
@@ -988,18 +1366,19 @@ const payload: FormInput & { avatarUrl?: string; social?: any } = {
       backgroundPattern: primaryPattern,
       patternColor,
 
-      languageMode:
-        (payload as any).designAnswers?.languageMode || (worldviewPreset as any).languageMode || "ja",
-      fontPreset:
-        (payload as any).designAnswers?.fontPreset || (worldviewPreset as any).fontPreset || "cleanJa",
+      languageMode: (payload as any).designAnswers?.languageMode || (worldviewPreset as any).languageMode || "ja",
+      fontPreset: (payload as any).designAnswers?.fontPreset || (worldviewPreset as any).fontPreset || "cleanJa",
 
       bgGradient: (worldviewPreset as any).bgGradient,
       patternLayers,
       textureLayers: presetTextureLayers,
       bgStyle,
+
+      // NEW
+      sectionTheme,
     },
     variantId: (variant as any).id ?? "auto",
-    sections: buildDefaultDesignSections(payload, layoutDecision.sectionOrder),
+    sections: designSections,
     layoutType: (layoutDecision as any).layoutType,
   };
 
@@ -1045,7 +1424,6 @@ const payload: FormInput & { avatarUrl?: string; social?: any } = {
   const threshold = Number(process.env.AIPORTFOLIO_COPY_THRESHOLD ?? "20");
 
   const copyStrengthBase = typeof rawCopywriting === "number" && rawCopywriting > 0 ? rawCopywriting : overallStrength;
-
   const copyStrength = wantsFriendly ? Math.max(copyStrengthBase, threshold) : copyStrengthBase;
 
   const shouldUseAI = copyStrength >= threshold && hasApiKey;

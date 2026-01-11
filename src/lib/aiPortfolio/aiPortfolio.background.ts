@@ -151,3 +151,36 @@ export function buildBackgroundStyle(
 
   return merged;
 }
+function isCssImageString(v: string) {
+  const s = (v ?? "").trim();
+  if (!s) return false;
+  return (
+    s.includes("linear-gradient(") ||
+    s.includes("radial-gradient(") ||
+    s.includes("conic-gradient(") ||
+    s.includes("repeating-linear-gradient(") ||
+    s.includes("repeating-radial-gradient(") ||
+    s.startsWith("url(")
+  );
+}
+
+/** sectionTheme を theme に合成して返す（未定義なら theme をそのまま） */
+export function pickThemeForSection(
+  theme: Design["theme"],
+  sectionType: string
+): Design["theme"] {
+  const st = (theme as any)?.sectionTheme?.[sectionType];
+  if (!st) return theme;
+  return { ...(theme as any), ...(st as any) } as any;
+}
+
+/** sectionTheme を反映した背景スタイル */
+export function buildSectionBackgroundStyle(
+  theme: Design["theme"],
+  variant: VariantSpec,
+  sectionType: string
+): CSSProperties {
+  const mergedTheme = pickThemeForSection(theme, sectionType);
+  return buildBackgroundStyle(mergedTheme, variant);
+}
+

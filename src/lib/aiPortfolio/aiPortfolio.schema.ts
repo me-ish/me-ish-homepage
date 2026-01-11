@@ -273,6 +273,14 @@ export const FormInputSchema = z.object({
 
 export type FormInput = z.infer<typeof FormInputSchema>;
 
+// ThemeSchema の前あたりに追加
+const SectionThemeSchema = z.object({
+  bgGradient: z.string().optional(),
+  patternLayers: z.array(z.string()).optional(),
+  textureLayers: z.array(z.string()).optional(),
+  bgStyle: z.any().optional(),
+});
+
 /* ---------------------------------------------------------
  * Design（AI が構成したデザイン情報）
  * --------------------------------------------------------- */
@@ -297,6 +305,7 @@ const ThemeSchema = z.object({
   // CSS 背景パターン（worldviewPreset から注入）
   // CSSProperties をそのまま通したいので any で受ける
   bgStyle: z.any().optional(),
+  sectionTheme: z.record(z.string(), SectionThemeSchema).optional(),
 });
 
 export const DesignSectionSchema = z.object({
@@ -366,8 +375,25 @@ const HeroSectionSchema = BaseSectionSchema.extend({
 
 /* ---------- About ---------- */
 
+// ✅ NEW: About のカード（世界観に合わせて generate 側で注入する前提）
+const AboutCardSchema = z.object({
+  title: z.string(),
+  body: z.string(),
+  icon: z.string().optional(), // "spark" など。Renderer側で任意対応
+  tone: z.enum(["soft", "clean", "bold"]).optional(),
+});
+
 const AboutSectionSchema = BaseSectionSchema.extend({
   type: z.literal("about"),
+
+  // ✅ About背景/レイアウト補助（将来拡張用）
+  aboutLayout: z.string().optional(),
+
+  // ✅ “スライダー強度によって付くカード群” を許可
+  cards: z.array(AboutCardSchema).optional(),
+
+  // ✅ どのパックを選んだか（デバッグ/再現性用）
+  cardPackId: z.string().optional(),
 });
 
 /* ---------- Gallery / Works ---------- */

@@ -10,6 +10,10 @@
 // - ✅ item内のどのキーに入っていても画像参照を拾う（強制救済）
 // - ✅ 見出し中央ズレ完全解消（grid 3cols）
 // - ✅ セクションコンテナ幅を統一（max-w）
+// - ✅ 追加：About/Services/Contact と同等の「世界観ごとの背景（bgGradient + pattern + texture + overlay）」を適用
+// - ✅ 追加：sectionTheme.works（または section.type）を参照し、そのセクション専用背景を反映
+// - ✅ 方針：ビネットは無し。グローは accentUser（好きな色）。
+// - ✅ 背景幅も他セクション同様に拡張（上下に余白）
 // ============================================
 
 import React, { CSSProperties, useMemo, useState } from "react";
@@ -142,14 +146,58 @@ function resolveImageSrc(item: any): string {
   return "";
 }
 
-export const AiPortfolioGalleryGrid: React.FC<Props> = ({
-  section,
-  theme,
-  variant,
-}) => {
+/** ✅ theme の bgGradient / patternLayers / textureLayers / bgStyle を合成して背景を作る（About/Services/Contactと同等） */
+function buildSectionBackgroundStyle(theme: Design["theme"]) {
+  const bgStyle = (theme as any)?.bgStyle ?? undefined;
+
+  const bgGradient =
+    typeof (theme as any)?.bgGradient === "string" ? (theme as any).bgGradient : "";
+  const patternLayers = Array.isArray((theme as any)?.patternLayers)
+    ? (theme as any).patternLayers
+    : [];
+  const textureLayers = Array.isArray((theme as any)?.textureLayers)
+    ? (theme as any).textureLayers
+    : [];
+
+  const images: string[] = [];
+  if (bgGradient) images.push(bgGradient);
+  if (patternLayers.length > 0) images.push(...patternLayers);
+  if (textureLayers.length > 0) images.push(...textureLayers);
+
+  const backgroundImage = images.length > 0 ? images.join(", ") : undefined;
+
+  return {
+    ...(bgStyle ?? {}),
+    ...(backgroundImage ? { backgroundImage } : {}),
+  } as React.CSSProperties;
+}
+
+export const AiPortfolioGalleryGrid: React.FC<Props> = ({ section, theme, variant }) => {
   const rawSection = section as any;
 
-  const v = applyVariantStyle(variant, theme);
+  // ✅ sectionTheme（セクション別背景）を拾って、そのセクション用の theme を作る
+  // - type が無い場合、WORKS セクション想定で "works" にフォールバック
+  const sectionType = (rawSection.type ?? "works") as string;
+  const st = (theme as any)?.sectionTheme?.[sectionType] as
+    | {
+        bgGradient?: string;
+        patternLayers?: string[];
+        textureLayers?: string[];
+        bgStyle?: any;
+      }
+    | undefined;
+
+  const themeForSection = st
+    ? ({
+        ...theme,
+        bgGradient: st.bgGradient ?? (theme as any).bgGradient,
+        patternLayers: st.patternLayers ?? (theme as any).patternLayers,
+        textureLayers: st.textureLayers ?? (theme as any).textureLayers,
+        bgStyle: st.bgStyle ?? (theme as any).bgStyle,
+      } as any)
+    : theme;
+
+  const v = applyVariantStyle(variant, themeForSection);
   const mode = variant.showcase ?? "gallery";
   const isDarkWorld = v.isDark;
 
@@ -170,8 +218,7 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({
   const activeItem = activeIndex != null ? items[activeIndex] : null;
   const activeSrc = activeItem ? resolveImageSrc(activeItem) : "";
 
-  let cardClass =
-    "flex flex-col overflow-hidden border transition-shadow cursor-zoom-in";
+  let cardClass = "flex flex-col overflow-hidden border transition-shadow cursor-zoom-in";
   const cardStyle: CSSProperties = {
     borderColor: v.borderColor,
     borderRadius: v.radius,
@@ -205,12 +252,8 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({
       <span
         className="rounded-full px-2 py-1 text-[10px] md:text-xs"
         style={{
-          backgroundColor: isDarkWorld
-            ? "rgba(15,23,42,0.7)"
-            : "rgba(255,255,255,0.85)",
-          color: isDarkWorld
-            ? "rgba(209,213,219,0.9)"
-            : "rgba(75,85,99,0.9)",
+          backgroundColor: isDarkWorld ? "rgba(15,23,42,0.7)" : "rgba(255,255,255,0.85)",
+          color: isDarkWorld ? "rgba(209,213,219,0.9)" : "rgba(75,85,99,0.9)",
           border: "1px solid rgba(148,163,184,0.5)",
         }}
       >
@@ -218,12 +261,10 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({
       </span>
     ) : null;
 
-  const getTitle = (item: any, i: number) =>
-    item.title ?? item.name ?? `作品 ${i + 1}`;
-
+  const getTitle = (item: any, i: number) => item.title ?? item.name ?? `作品 ${i + 1}`;
   const getDesc = (item: any) => item.description ?? item.desc ?? "";
 
-   // ✅ 追加：制作年（year）の表示用整形
+  // ✅ 追加：制作年（year）の表示用整形
   const getYearText = (item: any): string | null => {
     const raw = item?.year ?? item?.createdYear ?? item?.productionYear ?? null;
     if (raw === null || raw === undefined) return null;
@@ -264,15 +305,11 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({
         <div className={[aspectClass, "w-full bg-gray-200"].join(" ")}>
           {src ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={src}
-              alt={item.title ?? `work-${i + 1}`}
-              className="h-full w-full object-cover"
-            />
+            <img src={src} alt={item.title ?? `work-${i + 1}`} className="h-full w-full object-cover" />
           ) : null}
         </div>
 
-                <div className="flex flex-1 flex-col px-3 py-2 text-left">
+        <div className="flex flex-1 flex-col px-3 py-2 text-left">
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs font-semibold">{getTitle(item, i)}</p>
 
@@ -290,13 +327,8 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({
             ) : null}
           </div>
 
-          {getDesc(item) ? (
-            <p className="mt-1 line-clamp-3 text-[11px] opacity-80">
-              {getDesc(item)}
-            </p>
-          ) : null}
+          {getDesc(item) ? <p className="mt-1 line-clamp-3 text-[11px] opacity-80">{getDesc(item)}</p> : null}
         </div>
-
       </button>
     );
   }
@@ -306,15 +338,94 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({
    * - textRich: 文章主導なので対象外
    * - masonry: 破綻しやすいので対象外
    */
-  const enableCountLayout =
-    mode !== "textRich" && mode !== "masonry";
-
+  const enableCountLayout = mode !== "textRich" && mode !== "masonry";
   const count = items.length;
 
+  // ✅ 背景（About/Services/Contact と同一方針）
+  // - ビネット無し
+  // - グローは accentUser（好きな色）
+  // - 40〜：アクセントON / 70〜：プラスα
+  const accentUser = v.accentColor || theme.colorAccent || theme.colorPrimary;
+
+  const overallStrength = useMemo(() => {
+    const rawStrength = (variant as any)?.overallStrength;
+    const n = typeof rawStrength === "string" ? Number(rawStrength) : Number(rawStrength);
+    return Number.isFinite(n) ? n : 0;
+  }, [variant]);
+
+  const worksBg = useMemo(() => buildSectionBackgroundStyle(themeForSection as any), [themeForSection]);
+
+  const bgOverlayOpacity = useMemo(() => {
+    if (overallStrength <= 20) return isDarkWorld ? 0.55 : 0.72;
+    if (overallStrength <= 60) return isDarkWorld ? 0.5 : 0.68;
+    return isDarkWorld ? 0.46 : 0.64;
+  }, [overallStrength, isDarkWorld]);
+
+  const ACCENT_AT = 40;
+  const PLUS_AT = 70;
+
+  const useAccentBg = overallStrength >= ACCENT_AT;
+  const usePlus = overallStrength >= PLUS_AT;
+
+  const SectionBackground = (
+    <div
+      className="pointer-events-none absolute inset-0 z-0"
+      style={worksBg}
+    >
+      {/* 1) 可読性 overlay（常時） */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: isDarkWorld ? "rgba(2,6,23,0.72)" : "rgba(255,255,255,0.78)",
+          opacity: bgOverlayOpacity,
+        }}
+      />
+
+      {/* 2) 40〜：アクセントの薄いグロー（accentUser） */}
+      {useAccentBg ? (
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `radial-gradient(circle at 20% 10%, ${accentUser} 0%, transparent 48%)`,
+            opacity: isDarkWorld ? 0.14 : 0.10,
+          }}
+        />
+      ) : null}
+
+      {/* 3) 70〜：プラスα（質感だけ足す / ビネット無し） */}
+      {usePlus ? (
+        <>
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(circle at 100% 100%, ${accentUser} 0%, transparent 55%)`,
+              opacity: isDarkWorld ? 0.10 : 0.07,
+            }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: isDarkWorld
+                ? "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 30%)"
+                : "linear-gradient(180deg, rgba(15,23,42,0.06) 0%, transparent 28%)",
+              opacity: 0.55,
+            }}
+          />
+        </>
+      ) : null}
+    </div>
+  );
+
   return (
-    <section className="relative px-3 pb-6 md:px-4 md:pb-8" aria-label="Works">
+<section
+  className="relative overflow-hidden px-3 pt-6 pb-8 md:px-4 md:pt-14 md:pb-16"
+  aria-label="Works"
+>
+      {/* ✅ 背景 */}
+      {SectionBackground}
+
       {/* 中央基準を統一 */}
-      <div className="mx-auto w-full max-w-5xl">
+      <div className="relative z-10 mx-auto w-full max-w-5xl">
         {/* ======= 見出し（中央厳密） ======= */}
         <AiPortfolioSectionPillHeader
           label={headerLabel}
@@ -345,23 +456,17 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({
             }}
           >
             <p className="font-medium">作品はまだ登録されていません。</p>
-            <p className="mt-1 text-[11px] opacity-80">
-              作品をアップロードするとここに表示されます。
-            </p>
+            <p className="mt-1 text-[11px] opacity-80">作品をアップロードするとここに表示されます。</p>
           </div>
         ) : mode === "textRich" ? (
           // ===============================
-          // textRich（既存）
+          // textRich
           // ===============================
           <div className="mt-4 space-y-4">
             {items.map((item: any, i: number) => {
               const src = resolveImageSrc(item);
               return (
-                <div
-                  key={i}
-                  className="flex gap-3 rounded-xl border px-3 py-3 text-sm"
-                  style={cardStyle}
-                >
+                <div key={i} className="flex gap-3 rounded-xl border px-3 py-3 text-sm" style={cardStyle}>
                   {src ? (
                     <button
                       type="button"
@@ -370,20 +475,14 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({
                       aria-label={`Open work ${i + 1}`}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={src}
-                        alt={item.title ?? `work-${i + 1}`}
-                        className="h-full w-full object-cover"
-                      />
+                      <img src={src} alt={item.title ?? `work-${i + 1}`} className="h-full w-full object-cover" />
                     </button>
                   ) : null}
 
                   <div className="flex flex-1 flex-col">
                     <p className="text-xs font-semibold">{getTitle(item, i)}</p>
                     {getDesc(item) ? (
-                      <p className="mt-1 text-[11px] leading-relaxed opacity-80">
-                        {getDesc(item)}
-                      </p>
+                      <p className="mt-1 text-[11px] leading-relaxed opacity-80">{getDesc(item)}</p>
                     ) : null}
                   </div>
                 </div>
@@ -396,19 +495,14 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({
           // ===============================
           <>
             {/* ===============================
-             * SP（枚数に関わらず “見やすい” に寄せる）
+             * SP
              * - 1枚：横スクロールをやめて大きく表示
-             * - 2枚以上：従来通り横スクロール（スナップで気持ちよく）
+             * - 2枚以上：横スクロール（スナップ）
              * =============================== */}
             {enableCountLayout && count === 1 ? (
               <div className="mt-4 md:hidden">
                 <div className="mx-auto w-full max-w-md">
-                  <WorkCard
-                    item={items[0]}
-                    i={0}
-                    aspectClass="aspect-[16/10]"
-                    className="w-full"
-                  />
+                  <WorkCard item={items[0]} i={0} aspectClass="aspect-[16/10]" className="w-full" />
                 </div>
               </div>
             ) : (
@@ -428,35 +522,21 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({
 
             {/* ===============================
              * PC（枚数に応じてレイアウトを自動切替）
-             * - enableCountLayout=true の時のみ適用
              * =============================== */}
             <div className="mt-4 hidden w-full md:block">
               {enableCountLayout && count === 1 ? (
-                // 1枚：大きく、余白を活かして“代表作”にする
                 <div className="mx-auto w-full max-w-4xl">
-                  <WorkCard
-                    item={items[0]}
-                    i={0}
-                    aspectClass="aspect-[16/9]"
-                    className="w-full"
-                  />
+                  <WorkCard item={items[0]} i={0} aspectClass="aspect-[16/9]" className="w-full" />
                 </div>
               ) : enableCountLayout && count === 2 ? (
-                // 2枚：2カラム（対で見せる）
                 <div className="mx-auto grid w-full max-w-5xl grid-cols-2 gap-4">
                   <WorkCard item={items[0]} i={0} />
                   <WorkCard item={items[1]} i={1} />
                 </div>
               ) : enableCountLayout && count === 3 ? (
-                // 3枚：編集レイアウト（1枚目を大、2-3枚目を小で“雑誌感”）
                 <div className="mx-auto grid w-full max-w-5xl grid-cols-3 gap-4">
                   <div className="col-span-2 row-span-2">
-                    <WorkCard
-                      item={items[0]}
-                      i={0}
-                      aspectClass="aspect-[16/10]"
-                      className="h-full"
-                    />
+                    <WorkCard item={items[0]} i={0} aspectClass="aspect-[16/10]" className="h-full" />
                   </div>
                   <div className="col-span-1">
                     <WorkCard item={items[1]} i={1} />
@@ -466,7 +546,6 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({
                   </div>
                 </div>
               ) : (
-                // 4枚以上（または enableCountLayout=false）：既存の通常グリッド
                 <div className={`${gridClassDesktop} mx-auto w-full`}>
                   {items.map((item: any, i: number) => (
                     <WorkCard key={i} item={item} i={i} />
@@ -485,10 +564,7 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({
             role="dialog"
             aria-modal="true"
           >
-            <div
-              className="relative max-h-full max-w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <div className="relative max-h-full max-w-full" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
                 className="absolute -right-2 -top-2 rounded-full bg-black/80 px-3 py-1 text-xs font-semibold text-white shadow"
@@ -506,22 +582,13 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({
                 />
               </div>
 
-                            {activeItem.title || activeItem.description || getYearText(activeItem) ? (
+              {activeItem.title || activeItem.description || getYearText(activeItem) ? (
                 <div className="mt-3 text-center text-[11px] text-gray-100">
-                  {activeItem.title ? (
-                    <p className="font-semibold">{activeItem.title}</p>
-                  ) : null}
-
-                  {getYearText(activeItem) ? (
-                    <p className="mt-1 opacity-80">{getYearText(activeItem)}</p>
-                  ) : null}
-
-                  {activeItem.description ? (
-                    <p className="mt-1 opacity-80">{activeItem.description}</p>
-                  ) : null}
+                  {activeItem.title ? <p className="font-semibold">{activeItem.title}</p> : null}
+                  {getYearText(activeItem) ? <p className="mt-1 opacity-80">{getYearText(activeItem)}</p> : null}
+                  {activeItem.description ? <p className="mt-1 opacity-80">{activeItem.description}</p> : null}
                 </div>
               ) : null}
-
             </div>
           </div>
         ) : null}

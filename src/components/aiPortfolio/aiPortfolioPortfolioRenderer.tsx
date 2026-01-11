@@ -1,18 +1,11 @@
 // src/components/aiPortfolio/aiPortfolioPortfolioRenderer.tsx
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { Design, Content } from "@/lib/aiPortfolio/aiPortfolio.schema";
-import {
-  VARIANTS,
-  type VariantSpec,
-} from "@/lib/aiPortfolio/aiPortfolio.variant.base";
+import { VARIANTS, type VariantSpec } from "@/lib/aiPortfolio/aiPortfolio.variant.base";
 import { fontFamilyFromPreset } from "@/styles/aiPortfolioFonts";
-import type {
-  LayoutPref,
-  SectionType,
-  LayoutType,
-} from "@/lib/aiPortfolio/aiPortfolio.layout";
+import type { LayoutPref, SectionType, LayoutType } from "@/lib/aiPortfolio/aiPortfolio.layout";
 
 /* ✅ NEW: Storage path → proxy URL */
 import { auraAssetProxyUrl } from "@/lib/aiPortfolio/storage/auraAssets";
@@ -71,10 +64,7 @@ function isStoragePathLike(s: string) {
 /* ---------------------------------------------------------
  * StoragePath → 表示URLの正規化（hero / works 共通）
  * --------------------------------------------------------- */
-function normalizeImageUrl(
-  imageUrl?: string | null,
-  storagePath?: string | null
-): string {
+function normalizeImageUrl(imageUrl?: string | null, storagePath?: string | null): string {
   const u = (imageUrl ?? "").trim();
 
   // ✅ imageUrl が “URLっぽい” ならそのまま
@@ -97,19 +87,13 @@ function normalizeImageUrl(
 
 function normalizeSection(sec: any): any {
   // 1) セクション直下に avatarUrl / avatarStoragePath があるケース
-  if (
-    typeof sec?.avatarUrl !== "undefined" ||
-    typeof sec?.avatarStoragePath !== "undefined"
-  ) {
+  if (typeof sec?.avatarUrl !== "undefined" || typeof sec?.avatarStoragePath !== "undefined") {
     const nextAvatar = normalizeImageUrl(sec?.avatarUrl, sec?.avatarStoragePath);
     sec = { ...sec, avatarUrl: nextAvatar };
   }
 
   // 2) セクション直下に imageUrl / storagePath があるケース（将来の拡張も兼ねる）
-  if (
-    typeof sec?.imageUrl !== "undefined" ||
-    typeof sec?.storagePath !== "undefined"
-  ) {
+  if (typeof sec?.imageUrl !== "undefined" || typeof sec?.storagePath !== "undefined") {
     const nextUrl = normalizeImageUrl(sec?.imageUrl, sec?.storagePath);
     sec = { ...sec, imageUrl: nextUrl };
   }
@@ -117,25 +101,21 @@ function normalizeSection(sec: any): any {
   // 3) items 配列（works / hero / 任意のカード群）
   if (Array.isArray(sec?.items)) {
     const items = sec.items.map((it: any) => {
-      // imageUrl / url どっちに入ってても拾う
-      const rawUrl = (it?.imageUrl ?? it?.url ?? it?.src) as
-        | string
-        | undefined;
+      // imageUrl / url / src どれに入ってても拾う
+      const rawUrl = (it?.imageUrl ?? it?.url ?? it?.src) as string | undefined;
 
       // storagePath の別名も拾う（path で返す実装もある）
-      const rawPath = (it?.storagePath ?? it?.path ?? it?.storage_path) as
-        | string
-        | undefined;
+      const rawPath = (it?.storagePath ?? it?.path ?? it?.storage_path) as string | undefined;
 
       const nextUrl = normalizeImageUrl(rawUrl, rawPath);
 
-      // ✅ imageUrl を必ず埋める（Gallery側が url を見てても壊れないように両方入れる）
+      // ✅ imageUrl を必ず埋める（Gallery側が url/src を見てても壊れないように両方入れる）
       if (nextUrl) {
         return {
           ...it,
           imageUrl: nextUrl,
-          url: it?.url ? nextUrl : it?.url, // 既にurl運用なら上書き
-          src: it?.src ? nextUrl : it?.src, // src運用も救う
+          url: it?.url ? nextUrl : it?.url,
+          src: it?.src ? nextUrl : it?.src,
         };
       }
       return it;
@@ -145,6 +125,98 @@ function normalizeSection(sec: any): any {
   }
 
   return sec;
+}
+
+function sectionIdFromType(type: string) {
+  // ナビ（About/Works...）と合わせる用：必要ならここでマッピング
+  // 例: works -> works, contact -> contact
+  return type;
+}
+
+type LanguageMode = "ja" | "en" | "jaEn";
+
+function detectLanguageMode(design: any, content: any): LanguageMode {
+  const v =
+    content?.languageMode ??
+    content?.lang ??
+    design?.languageMode ??
+    design?.designAnswers?.languageMode ??
+    design?.designAnswers?.lang;
+
+  if (v === "jaEn" || v === "ja-en" || v === "ja_en") return "jaEn";
+  if (v === "ja" || v === "jp") return "ja";
+  return "en";
+}
+
+function navLabel(type: string, mode: LanguageMode) {
+  const labels: Record<LanguageMode, Record<string, string>> = {
+    ja: {
+      about: "自己紹介",
+      works: "作品",
+      services: "サービス",
+      skills: "スキル",
+      contact: "連絡",
+    },
+    jaEn: {
+      about: "ABOUT / 自己紹介",
+      works: "WORKS / 作品",
+      services: "SERVICES / サービス",
+      skills: "SKILLS / スキル",
+      contact: "CONTACT / 連絡",
+    },
+    en: {
+      about: "About",
+      works: "Works",
+      services: "Services",
+      skills: "Skills",
+      contact: "Contact",
+    },
+  };
+
+  return labels[mode]?.[type] ?? type;
+}
+
+function toRgbaMaybe(input: string, alpha: number): string {
+  const s = (input ?? "").trim();
+  if (!s) return `rgba(255,255,255,${alpha})`;
+
+  // rgba()/rgb()
+  if (s.startsWith("rgba(")) {
+    // alpha を差し替え（雑にやると壊れるので末尾だけ置換）
+    const body = s.slice(5, -1).split(",").map((x) => x.trim());
+    if (body.length === 4) {
+      return `rgba(${body[0]}, ${body[1]}, ${body[2]}, ${alpha})`;
+    }
+    return s; // 想定外はそのまま
+  }
+  if (s.startsWith("rgb(")) {
+    const body = s.slice(4, -1).split(",").map((x) => x.trim());
+    if (body.length >= 3) {
+      return `rgba(${body[0]}, ${body[1]}, ${body[2]}, ${alpha})`;
+    }
+    return s;
+  }
+
+  // hex #RGB / #RRGGBB
+  if (s.startsWith("#")) {
+    const hex = s.slice(1);
+    const full =
+      hex.length === 3
+        ? hex.split("").map((c) => c + c).join("")
+        : hex.length === 6
+        ? hex
+        : null;
+
+    if (full) {
+      const r = parseInt(full.slice(0, 2), 16);
+      const g = parseInt(full.slice(2, 4), 16);
+      const b = parseInt(full.slice(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+  }
+
+  // gradient 等はそのまま（alpha付与は不可）
+  return s;
 }
 
 /* ---------------------------------------------------------
@@ -172,9 +244,7 @@ export default function AiPortfolioPortfolioRenderer({
   }, [content]);
 
   // 安全なセクション配列（Design側）
-  const safeDesignSections = Array.isArray(design.sections)
-    ? design.sections
-    : [];
+  const safeDesignSections = Array.isArray(design.sections) ? design.sections : [];
 
   // LayoutDecision（AI が決めた情報）があれば採用
   const layoutDecision = (design as any).layoutDecision as
@@ -235,8 +305,7 @@ export default function AiPortfolioPortfolioRenderer({
 
   // LayoutPref は最終決定（ここが真実）
   const layoutPref: LayoutPref =
-    layoutDecision?.layoutPref ??
-    (variant.layout === "split" ? "split" : "center");
+    layoutDecision?.layoutPref ?? (variant.layout === "split" ? "split" : "center");
 
   // ✅ 強度（AIスライダー）を design 側から拾って variant に注入する
   // - design.overallStrength（推奨）
@@ -254,9 +323,7 @@ export default function AiPortfolioPortfolioRenderer({
     0;
 
   const overallStrength =
-    typeof overallStrengthRaw === "string"
-      ? Number(overallStrengthRaw)
-      : Number(overallStrengthRaw);
+    typeof overallStrengthRaw === "string" ? Number(overallStrengthRaw) : Number(overallStrengthRaw);
 
   // 以降、Renderer内で使うvariantは必ずこれに統一（layout + strength）
   // ※ VariantSpec に overallStrength が無い型定義でも壊さないため as any で注入
@@ -269,10 +336,7 @@ export default function AiPortfolioPortfolioRenderer({
   // v / background も renderVariant で計算（分裂を防ぐ）
   const v = applyVariantStyle(renderVariant, theme);
 
-  const layoutBase =
-    layoutPref === "split"
-      ? "text-left md:text-left"
-      : "text-center md:text-center";
+  const layoutBase = layoutPref === "split" ? "text-left md:text-left" : "text-center md:text-center";
 
   const presetKey: string =
     (theme as any).fontPreset ??
@@ -284,41 +348,96 @@ export default function AiPortfolioPortfolioRenderer({
 
   const DEBUG = process.env.NODE_ENV !== "production";
   if (DEBUG) {
+    // eslint-disable-next-line no-console
     console.log("[Renderer] theme.fontPreset:", (theme as any).fontPreset);
+    // eslint-disable-next-line no-console
     console.log("[Renderer] presetKey:", presetKey);
+    // eslint-disable-next-line no-console
     console.log("[Renderer] fontClass:", fontClass);
+    // eslint-disable-next-line no-console
     console.log("[Renderer] layoutPref:", layoutPref);
-    console.log(
-      "[Renderer] layoutDecision.sectionOrder:",
-      layoutDecision?.sectionOrder
-    );
+    // eslint-disable-next-line no-console
+    console.log("[Renderer] layoutDecision.sectionOrder:", layoutDecision?.sectionOrder);
+    // eslint-disable-next-line no-console
     console.log("[Renderer] layoutDecision.layoutType:", layoutDecision?.layoutType);
+    // eslint-disable-next-line no-console
     console.log("[Renderer] sectionOrder:", sectionOrder);
+    // eslint-disable-next-line no-console
     console.log("[Renderer] sectionOrderOverride:", sectionOrderOverride);
-    console.log(
-      "[Renderer] overallStrength:",
-      (renderVariant as any).overallStrength
-    );
+    // eslint-disable-next-line no-console
+    console.log("[Renderer] overallStrength:", (renderVariant as any).overallStrength);
   }
 
   // ✅ 共通関数で背景を合成（プレビューと一致させる前提）
   const backgroundStyle = buildBackgroundStyle(theme, renderVariant);
 
-  if (process.env.NODE_ENV !== "production") {
-    console.log(
-      "[BG] inlineStyle.backgroundImage:",
-      (backgroundStyle as any).backgroundImage
-    );
-  }
+    // ✅ V0型：スクロールでヘッダー表情を切り替え / SPは開閉メニュー
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    onScroll(); // 初期同期
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // 表示しているセクションだけナビに出す（heroは除外）
+  const languageMode = detectLanguageMode(design as any, normalizedContent as any);
+  const allowedNav = useMemo(() => new Set(["about", "works", "services", "skills", "contact"]), []);
+  const navTypes = useMemo(() => {
+    return finalOrderTypes.filter((t) => allowedNav.has(t) && !!findSection(t));
+  }, [finalOrderTypes, allowedNav]);
+
+  // ブランド表示（hero.headings[0] が短ければ採用）
+  const heroSec = findSection("hero");
+  const brandRaw = (heroSec?.headings?.[0] ?? "Portfolio").trim();
+  const brand = brandRaw.length <= 22 ? brandRaw : "Portfolio";
+
+  // ヘッダー背景：スクロール前は透明、スクロール後は半透明＋blur＋shadow
+  const headerBG = toRgbaMaybe(theme.colorBG ?? v.surfaceBG, 0.82);
+
+  const scrollToId = useCallback((id: string) => {
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    history.replaceState(null, "", `#${id}`);
+  }, []);
+
+  const handleNavClick = useCallback(
+    (id: string) => {
+      scrollToId(id);
+      setIsMobileMenuOpen(false);
+    },
+    [scrollToId]
+  );
 
   if (DEBUG) {
+    // eslint-disable-next-line no-console
     console.log("[BG] theme.backgroundPattern:", (theme as any).backgroundPattern);
+    // eslint-disable-next-line no-console
     console.log("[BG] theme.patternLayers:", (theme as any).patternLayers);
+    // eslint-disable-next-line no-console
     console.log("[BG] theme.textureLayers:", (theme as any).textureLayers);
+    // eslint-disable-next-line no-console
     console.log("[BG] theme.bgGradient:", (theme as any).bgGradient);
+    // eslint-disable-next-line no-console
     console.log("[BG] theme.patternColor:", (theme as any).patternColor);
+    // eslint-disable-next-line no-console
     console.log("[BG] computed backgroundStyle:", backgroundStyle);
   }
+
+  /**
+   * ✅ “1セクションずつ余裕をもって仕上げる” 前提のラッパー
+   * - 各 section に十分な縦padding
+   * - anchor（#about 等）でナビ可能
+   * - scroll-mt で固定ヘッダーがあっても見出しが隠れにくい
+   */
+const sectionWrapperClass =
+  "relative py-6 md:py-8 scroll-mt-24";
 
   return (
     <div
@@ -332,77 +451,159 @@ export default function AiPortfolioPortfolioRenderer({
       data-layout-pref={layoutPref}
       data-layout-type={layoutDecision?.layoutType}
     >
+      {/* ✅ Sticky Header Nav（V0式：スクロールで表情変化 / SPは開閉 / セクション可変） */}
       <div
-        className="rounded-t-xl px-6 py-4 text-xs font-medium tracking-widest text-gray-500"
-        style={{ background: theme.colorBG }}
+        className={`sticky top-0 z-40 transition-all duration-300 ${
+          isScrolled ? "shadow-sm" : ""
+        }`}
+        style={{
+          background: isScrolled ? headerBG : "transparent",
+          backdropFilter: isScrolled ? "blur(12px)" : "none",
+          WebkitBackdropFilter: isScrolled ? "blur(12px)" : "none",
+        }}
       >
-        PORTFOLIO
+        <div className="flex items-center justify-between gap-3 px-6 py-3">
+          {/* 左：ブランド（トップへ） */}
+          <button
+            type="button"
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              history.replaceState(null, "", "#");
+              setIsMobileMenuOpen(false);
+            }}
+            className="min-w-0 text-left"
+            style={{ color: v.textColor }}
+            aria-label="Back to top"
+          >
+            <div className="truncate text-[12px] font-semibold tracking-[0.24em] uppercase">
+              {brand}
+            </div>
+          </button>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-5" aria-label="Section navigation">
+            {navTypes.map((t) => {
+              const id = sectionIdFromType(t);
+              const label = navLabel(t, languageMode);
+
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  className="text-[12px] font-medium tracking-wide transition-opacity hover:opacity-80"
+                  style={{ color: v.mutedText }}
+                  onClick={() => handleNavClick(id)}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Mobile Menu Button */}
+          <button
+            type="button"
+            className="md:hidden inline-flex items-center justify-center rounded-lg px-2 py-2 text-[12px] font-semibold"
+            style={{
+              color: v.textColor,
+              border: isScrolled ? `1px solid ${v.borderColor}` : "1px solid transparent",
+              background: isScrolled ? toRgbaMaybe(theme.colorPrimary, 0.03) : "transparent",
+            }}
+            onClick={() => setIsMobileMenuOpen((v) => !v)}
+            aria-label="Toggle menu"
+            aria-expanded={isMobileMenuOpen}
+          >
+            {isMobileMenuOpen ? "✕" : "≡"}
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen ? (
+          <div
+            className="md:hidden px-6 pb-4"
+            style={{
+              background: isScrolled ? "transparent" : toRgbaMaybe(theme.colorBG ?? v.surfaceBG, 0.72),
+            }}
+          >
+            <div
+              className="rounded-xl p-3"
+              style={{
+                border: `1px solid ${v.borderColor}`,
+                background: toRgbaMaybe(theme.colorBG ?? v.surfaceBG, 0.88),
+              }}
+            >
+              <div className="flex flex-col gap-3">
+                {navTypes.map((t) => {
+                  const id = sectionIdFromType(t);
+                  const label = navLabel(t, languageMode);
+
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      className="text-left text-[13px] font-medium"
+                      style={{ color: v.mutedText }}
+                      onClick={() => handleNavClick(id)}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
-      <div className="space-y-10 px-6 pb-10 pt-6">
+      {/* ✅ 余白を “space-y” ではなく section側paddingで作る（世界観ごとの揺らぎにも強い） */}
+      <div className="px-6 pb-14 pt-0">
         {finalOrderTypes.map((type) => {
           const data = findSection(type);
           if (!data) return null;
 
+          const id = sectionIdFromType(type);
+
           switch (type) {
             case "hero":
               return (
-                <AiPortfolioHeroSwitcher
-                  key={type}
-                  section={data}
-                  theme={theme}
-                  variant={renderVariant}
-                />
+<section key={type} id={id} className={sectionWrapperClass}>
+  <AiPortfolioHeroSwitcher section={data} theme={theme} variant={renderVariant} />
+</section>
               );
 
             case "about":
               return (
-                <AiPortfolioAboutSimple
-                  key={type}
-                  section={data}
-                  theme={theme}
-                  variant={renderVariant}
-                />
+                <section key={type} id={id} className={sectionWrapperClass}>
+                  <AiPortfolioAboutSimple section={data} theme={theme} variant={renderVariant} />
+                </section>
               );
 
             case "works":
               return (
-                <AiPortfolioGalleryGrid
-                  key={type}
-                  section={data}
-                  theme={theme}
-                  variant={renderVariant}
-                />
+                <section key={type} id={id} className={sectionWrapperClass}>
+                  <AiPortfolioGalleryGrid section={data} theme={theme} variant={renderVariant} />
+                </section>
               );
 
             case "services":
               return (
-                <AiPortfolioServices
-                  key={type}
-                  section={data}
-                  theme={theme}
-                  variant={renderVariant}
-                />
+                <section key={type} id={id} className={sectionWrapperClass}>
+                  <AiPortfolioServices section={data} theme={theme} variant={renderVariant} />
+                </section>
               );
 
             case "skills":
               return (
-                <AiPortfolioSkills
-                  key={type}
-                  section={data}
-                  theme={theme}
-                  variant={renderVariant}
-                />
+                <section key={type} id={id} className={sectionWrapperClass}>
+                  <AiPortfolioSkills section={data} theme={theme} variant={renderVariant} />
+                </section>
               );
 
             case "contact":
               return (
-                <AiPortfolioContact
-                  key={type}
-                  section={data}
-                  theme={theme}
-                  variant={renderVariant}
-                />
+                <section key={type} id={id} className={sectionWrapperClass}>
+                  <AiPortfolioContact section={data} theme={theme} variant={renderVariant} />
+                </section>
               );
 
             default:

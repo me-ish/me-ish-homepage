@@ -11,7 +11,7 @@ import {
   type StyleTokens,
 } from "@/lib/aiPortfolio/aiPortfolio.styleTokens";
 
-/** ✅ NEW: Surfaceの単一正 */
+/** ✅ Surfaceの単一正（surfaceの見た目はここに集約） */
 import { buildSurfaceStyle } from "@/lib/aiPortfolio/aiPortfolio.surfaceRegistry";
 
 export type VariantStyle = {
@@ -23,7 +23,7 @@ export type VariantStyle = {
   /** ダークテーマ判定 */
   isDark: boolean;
 
-  // カード系
+  // カード系（統一値）
   radius: string;
   shadow: string;
   surfaceBG: string;
@@ -32,12 +32,18 @@ export type VariantStyle = {
   mutedText: string;
   tagBG: string;
 
+  // ✅ SectionCard（セクション囲みカード）用の統一値
+  sectionCardBG: string;
+  sectionCardBorderColor: string;
+  sectionCardShadow: string;
+
   // デバッグ/追跡（任意）
   _tokenSourceWorldview?: string;
   _tokenBorrow?: string;
 };
 
-/** 文字列から最初の hex カラー (#rgb / #rrggbb) を拾う */
+/* ---------------- helpers ---------------- */
+
 function firstHexColor(input: unknown): string | null {
   const s = String(input ?? "");
   const m = s.match(/#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})/);
@@ -60,6 +66,13 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
     return { r, g, b };
   }
   return null;
+}
+
+function rgbaFromHex(hex: string, a: number): string {
+  const rgb = hexToRgb(hex);
+  const alpha = Math.max(0, Math.min(1, a));
+  if (!rgb) return `rgba(15,23,42,${alpha})`;
+  return `rgba(${rgb.r},${rgb.g},${rgb.b},${alpha})`;
 }
 
 /** 相対輝度（ざっくり） */
@@ -147,15 +160,14 @@ function resolveStyleTokens(
   const neighborTokens = WORLDVIEW_TOKENS[pickNeighbor] ?? base;
 
   const categories: BorrowCategory[] = ["radius", "shadow", "surface"];
-  const cat =
-    categories[hashToInt(`${worldview}:cat:${strength}`) % categories.length];
+  const cat = categories[hashToInt(`${worldview}:cat:${strength}`) % categories.length];
 
   const merged: StyleTokens = { ...base };
   if (cat === "radius") merged.radiusPx = neighborTokens.radiusPx;
   if (cat === "shadow") merged.shadow = neighborTokens.shadow;
   if (cat === "surface") merged.surface = neighborTokens.surface;
 
-  // 100: global
+  // 100: global（同一light/dark内で2カテゴリまで借りる）
   if (strength >= 100) {
     const all = Object.keys(WORLDVIEW_TOKENS) as WorldviewBase[];
     const wantDark = isDarkWorldview(worldview);
@@ -166,9 +178,7 @@ function resolveStyleTokens(
         : worldview;
     const t2 = WORLDVIEW_TOKENS[w2] ?? base;
 
-    // 100 は 2カテゴリまで許容（still破綻防止）
-    const cat2 =
-      categories[hashToInt(`${worldview}:cat2:${strength}`) % categories.length];
+    const cat2 = categories[hashToInt(`${worldview}:cat2:${strength}`) % categories.length];
 
     const merged2: StyleTokens = { ...base };
     // 1カテゴリ目
@@ -196,29 +206,90 @@ function resolveStyleTokens(
   };
 }
 
-/** surface を token で強制する（統一のため） */
-function resolveSurfaceModeFromTokens(
-  tokens: StyleTokens,
-  variant: VariantSpec
-): VariantSpec["surface"] {
-  // 既存variant.surfaceを尊重したいならここで条件分岐できるが、
-  // 今回の目的は「世界観ごとの統一」なので tokens を優先
+/** surface は tokens を優先（世界観統一のため） */
+function resolveSurfaceModeFromTokens(tokens: StyleTokens): VariantSpec["surface"] {
   return tokens.surface as any;
 }
 
-export function applyVariantStyle(
-  variant: VariantSpec,
-  theme: Design["theme"]
-): VariantStyle {
+function clamp01(n: number) {
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(1, n));
+}
+
+/**
+ * ✅ SectionCard用トークン生成（重要）
+ * - v（surfaceRegistry結果）と tokens を元に「セクション枠」だけを作る
+ * - “白い箱が浮く問題” を止めつつ、世界観トーンは崩さない
+ *
+ * 方針：
+ * - BG：lightは白に寄せるが tokens.surfaceAlpha で透明度を制御
+ *       darkは theme.colorBG（or fallback）を薄く重ね、沈みすぎを回避
+ * - Border：tokens.borderAlpha を基準に、dark時は少しだけ上げて視認性確保
+ * - Shadow：tokens.shadow を採用（統一感の核）。ただし dark/neon は影が強いので軽く薄める
+ */
+function buildSectionCardTokens(args: {
+  theme: Design["theme"];
+  isDark: boolean;
+  tokens: StyleTokens;
+  surface: {
+    accentColor: string;
+  };
+}) {
+  const { theme, isDark, tokens, surface } = args;
+
+  const bgHex =
+    firstHexColor((theme as any).colorBG) ??
+    firstHexColor((theme as any).bgGradient) ??
+    (isDark ? "#0b1220" : "#ffffff");
+
+  const primaryHex =
+    firstHexColor((theme as any).colorPrimary) ??
+    firstHexColor((theme as any).colorAccent) ??
+    "#111827";
+
+  // BG alpha：surfaceAlpha を基準に “SectionCardは少し薄め” にする
+  // light: 0.90〜0.98付近 / dark: 0.45〜0.70付近
+  const baseA = clamp01(tokens.surfaceAlpha);
+  const bgA = isDark ? clamp01(0.35 + baseA * 0.35) : clamp01(0.75 + baseA * 0.25);
+
+  const bg = isDark
+    ? rgbaFromHex(bgHex, bgA) // 背景色を薄く重ねる（白箱化を防ぐ）
+    : `rgba(255,255,255,${bgA})`;
+
+  // Border alpha：tokens.borderAlpha を基準。darkは視認性のため少しだけ底上げ
+  const ba = clamp01(isDark ? Math.max(tokens.borderAlpha, 0.35) : tokens.borderAlpha);
+  const border = rgbaFromHex(primaryHex, ba);
+
+  // Shadow：tokens.shadow を基本にするが、modeによって “少しだけ軽く”
+  // （shadow文字列の解析はやりすぎなので、ここは safe に固定シャドウへ寄せる）
+  // - neon/dark は tokens.shadow が激しいので、SectionCardは一段弱い影に
+  const wantsSofter =
+    (tokens.surface as string) === "neon" || (tokens.surface as string) === "dark";
+
+  const shadow = wantsSofter
+    ? (isDark ? "0 18px 45px rgba(0,0,0,0.45)" : "0 18px 45px rgba(15,23,42,0.10)")
+    : tokens.shadow;
+
+  // cyber(neon) など border を強く見せたい場合でも、SectionCardは “主張しすぎない” を優先
+  // ただし borderAlpha が極端に小さいケースの救済として accent を僅かに混ぜる余地を残す
+  // （現状は未使用だが、将来ここで border を accent に寄せられる）
+  void surface.accentColor;
+
+  return { bg, border, shadow };
+}
+
+/* ---------------- main ---------------- */
+
+export function applyVariantStyle(variant: VariantSpec, theme: Design["theme"]): VariantStyle {
   const worldview = (variant.worldview ?? "business") as WorldviewBase;
   const strength = getOverallStrength(variant);
   const isDark = isDarkTheme(variant, theme);
 
   const { tokens, debugSource, debugBorrow } = resolveStyleTokens(worldview, strength);
 
-  const mode = resolveSurfaceModeFromTokens(tokens, variant) ?? "card";
+  const mode = resolveSurfaceModeFromTokens(tokens) ?? "card";
 
-  // ✅ surface 生成は registry に一本化（ここが統一感の根）
+  // ✅ surface の生成は registry に一本化（tokensを尊重）
   const s = buildSurfaceStyle({
     mode,
     variant,
@@ -227,16 +298,31 @@ export function applyVariantStyle(
     isDark,
   });
 
+  // ✅ SectionCard（Renderer側の囲み）用
+  const sectionCard = buildSectionCardTokens({
+    theme,
+    isDark,
+    tokens,
+    surface: { accentColor: s.accentColor },
+  });
+
   return {
     borderColor: s.borderColor,
     textColor: s.textColor,
     accentColor: s.accentColor,
     isDark,
+
     radius: s.radius,
     shadow: s.shadow,
     surfaceBG: s.surfaceBG,
+
     mutedText: s.mutedText,
     tagBG: s.tagBG,
+
+    sectionCardBG: sectionCard.bg,
+    sectionCardBorderColor: sectionCard.border,
+    sectionCardShadow: sectionCard.shadow,
+
     _tokenSourceWorldview: debugSource,
     _tokenBorrow: debugBorrow,
   };
