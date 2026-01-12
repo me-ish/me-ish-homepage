@@ -156,7 +156,7 @@ export default function AuraPage() {
                 <BadgeCheck className="w-5 h-5 text-[#00a1e9]" />
                 <h3 className="text-lg font-semibold">買い切り</h3>
               </div>
-              <div className="mt-2 text-3xl font-extrabold tracking-tight">¥700</div>
+              <div className="mt-2 text-3xl font-extrabold tracking-tight">500</div>
               <ul className="mt-3 space-y-2 text-sm">
                 <LI>
                   <strong>作成したページはあなたのもの（公開URL発行）</strong>
