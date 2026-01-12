@@ -8,7 +8,8 @@
 // - 作品が「主役」として見える視線誘導
 // - 世界観ごとのカード装飾
 
-import React, { CSSProperties, useMemo, useState } from "react";
+import React, { CSSProperties, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Design, Content } from "@/lib/aiPortfolio/aiPortfolio.schema";
 import type { VariantSpec } from "@/lib/aiPortfolio/aiPortfolio.variant.base";
 import { applyVariantStyle } from "../applyVariantStyle";
@@ -212,6 +213,11 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({ section, theme, varian
 
   const headings: string[] | undefined = rawSection.headings;
   const paragraphs: string[] | undefined = rawSection.paragraphs;
+const [mounted, setMounted] = useState(false);
+
+useEffect(() => {
+  setMounted(true);
+}, []);
 
   // Lightbox state
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -226,6 +232,23 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({ section, theme, varian
     background: v.surfaceBG,
     color: v.textColor,
   };
+
+  useEffect(() => {
+  if (!activeItem || !activeSrc) return;
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Escape") setActiveIndex(null);
+  };
+
+  const prevOverflow = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
+
+  window.addEventListener("keydown", onKeyDown);
+  return () => {
+    window.removeEventListener("keydown", onKeyDown);
+    document.body.style.overflow = prevOverflow;
+  };
+}, [activeItem, activeSrc]);
 
   /**
    * ✅ 重要：ここで surface を見て “背景色を上書きしない”
@@ -534,42 +557,45 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({ section, theme, varian
           </>
         )}
 
-        {/* Lightbox */}
-        {activeItem && activeSrc ? (
-          <div
-            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 px-4 py-10"
+{/* Lightbox (Portal: header/sectionsより常に最前面) */}
+{mounted && activeItem && activeSrc
+  ? createPortal(
+      <div
+        className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 px-4 py-10"
+        onClick={() => setActiveIndex(null)}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className="relative max-h-full max-w-full" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="absolute -right-2 -top-2 rounded-full bg-black/80 px-3 py-1 text-xs font-semibold text-white shadow"
             onClick={() => setActiveIndex(null)}
-            role="dialog"
-            aria-modal="true"
           >
-            <div className="relative max-h-full max-w-full" onClick={(e) => e.stopPropagation()}>
-              <button
-                type="button"
-                className="absolute -right-2 -top-2 rounded-full bg-black/80 px-3 py-1 text-xs font-semibold text-white shadow"
-                onClick={() => setActiveIndex(null)}
-              >
-                CLOSE
-              </button>
+            CLOSE
+          </button>
 
-              <div className="overflow-hidden rounded-xl bg-black/90">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={activeSrc}
-                  alt={activeItem.title ?? "work-full"}
-                  className="max-h-[80vh] max-w-[90vw] object-contain"
-                />
-              </div>
-
-              {activeItem.title || activeItem.description || getYearText(activeItem) ? (
-                <div className="mt-3 text-center text-[11px] text-gray-100">
-                  {activeItem.title ? <p className="font-semibold">{activeItem.title}</p> : null}
-                  {getYearText(activeItem) ? <p className="mt-1 opacity-80">{getYearText(activeItem)}</p> : null}
-                  {activeItem.description ? <p className="mt-1 opacity-80">{activeItem.description}</p> : null}
-                </div>
-              ) : null}
-            </div>
+          <div className="overflow-hidden rounded-xl bg-black/90">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={activeSrc}
+              alt={activeItem.title ?? "work-full"}
+              className="max-h-[80vh] max-w-[90vw] object-contain"
+            />
           </div>
-        ) : null}
+
+          {activeItem.title || activeItem.description || getYearText(activeItem) ? (
+            <div className="mt-3 text-center text-[11px] text-gray-100">
+              {activeItem.title ? <p className="font-semibold">{activeItem.title}</p> : null}
+              {getYearText(activeItem) ? <p className="mt-1 opacity-80">{getYearText(activeItem)}</p> : null}
+              {activeItem.description ? <p className="mt-1 opacity-80">{activeItem.description}</p> : null}
+            </div>
+          ) : null}
+        </div>
+      </div>,
+      document.body
+    )
+  : null}
       </div>
     </section>
   );

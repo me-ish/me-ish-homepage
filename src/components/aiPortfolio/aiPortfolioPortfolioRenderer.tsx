@@ -395,10 +395,8 @@ export default function AiPortfolioPortfolioRenderer({
     return finalOrderTypes.filter((t) => allowedNav.has(t) && !!findSection(t));
   }, [finalOrderTypes, allowedNav]);
 
-  // ブランド表示（hero.headings[0] が短ければ採用）
-  const heroSec = findSection("hero");
-  const brandRaw = (heroSec?.headings?.[0] ?? "Portfolio").trim();
-  const brand = brandRaw.length <= 22 ? brandRaw : "Portfolio";
+// ブランド表示：固定（Hero見出しと重複させない）
+const brand = "Portfolio";
 
   // ヘッダー背景：スクロール前は透明、スクロール後は半透明＋blur＋shadow
   const headerBG = toRgbaMaybe(theme.colorBG ?? v.surfaceBG, 0.82);

@@ -54,6 +54,13 @@ function makeLocalId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function baseNameFromFileName(name: string) {
+  const s = (name ?? "").trim();
+  if (!s) return "";
+  // 最後の拡張子だけ落とす（.tar.gz 等は最後だけ）
+  return s.replace(/\.[^/.]+$/, "");
+}
+
 /** value同期で無限ループを防ぐための “浅い比較” */
 function sameItems(a: AiPortfolioImageItem[], b: AiPortfolioImageItem[]) {
   if (a === b) return true;
@@ -282,14 +289,15 @@ export default function AiPortfolioImageUploader({
           // storagePath から proxy 生成（統一）
           const imageUrl = auraAssetProxyUrl(uploaded.path);
 
-          results.push({
-            localId,
-            item: normalizeItem({
-              imageUrl,
-              storagePath: uploaded.path,
-              title: f.name,
-            }),
-          });
+results.push({
+  localId,
+  item: normalizeItem({
+    imageUrl,
+    storagePath: uploaded.path,
+    // 「ファイル名」ではなく「表示用タイトル」に寄せる
+    title: baseNameFromFileName(f.name) || "作品",
+  }),
+});
         }
 
         if (myGen !== uploadGenRef.current) {
@@ -531,12 +539,12 @@ export default function AiPortfolioImageUploader({
                   </div>
                 ) : null}
 
-                <input
-                  className="w-full rounded border px-2 py-1 text-sm"
-                  placeholder={isSingle ? "表示名（任意）" : "作品タイトル"}
-                  value={it.title ?? ""}
-                  onChange={(e) => updateMeta(i, { title: e.target.value })}
-                />
+<input
+  className="w-full rounded border px-2 py-1 text-sm"
+  placeholder={isSingle ? "作品タイトル（表示用・任意）" : "作品タイトル（表示用）"}
+  value={it.title ?? ""}
+  onChange={(e) => updateMeta(i, { title: e.target.value })}
+/>
                 <input
   className="w-full rounded border px-2 py-1 text-sm"
   type="number"
