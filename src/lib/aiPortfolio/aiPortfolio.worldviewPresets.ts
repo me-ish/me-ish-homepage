@@ -149,7 +149,8 @@ const COLOR_PRESETS: Record<
 
 /* -------------------------------------------------
  *  世界観ごとの背景CSS（bgStyle）
- *  - Minimalは仕様準拠：solidのみ
+ *  - パターンは patternLayers に委譲（bgStyle はグラデーションのみ）
+ *  - 製品品質: 背景が主役にならない設計
  * ------------------------------------------------- */
 const BG_STYLES: Record<WorldviewBase, CSSProperties> = {
   minimal: {
@@ -158,11 +159,7 @@ const BG_STYLES: Record<WorldviewBase, CSSProperties> = {
   },
   modern: {
     backgroundColor: "#020617",
-    backgroundImage:
-      "linear-gradient(145deg, #0f172a 0%, #020617 100%)," +
-      "linear-gradient(rgba(226,232,240,0.10) 1px, transparent 1px)," +
-      "linear-gradient(90deg, rgba(226,232,240,0.10) 1px, transparent 1px)",
-    backgroundSize: "auto, 36px 36px, 36px 36px",
+    backgroundImage: "linear-gradient(145deg, #0f172a 0%, #020617 100%)",
   },
   business: {
     backgroundColor: "#EFF6FF",
@@ -170,54 +167,37 @@ const BG_STYLES: Record<WorldviewBase, CSSProperties> = {
   },
   cute: {
     backgroundColor: "#FEF2F2",
-    backgroundImage:
-      "radial-gradient(rgba(251,113,133,0.22) 2px, transparent 2px)," +
-      "radial-gradient(rgba(251,113,133,0.18) 2px, transparent 2px)",
-    backgroundSize: "34px 34px",
-    backgroundPosition: "0 0, 17px 17px",
+    backgroundImage: "linear-gradient(145deg, #fff1f2 0%, #ffe4e6 100%)",
   },
   pop: {
     backgroundColor: "#FFFBEB",
-    backgroundImage:
-      "repeating-linear-gradient(45deg, rgba(253,230,138,0.75) 0, rgba(253,230,138,0.75) 2px, transparent 0, transparent 18px)",
-    backgroundSize: "22px 22px",
+    backgroundImage: "linear-gradient(145deg, #fff7ed 0%, #ffedd5 100%)",
   },
   dark: {
     backgroundColor: "#020617",
-    backgroundImage:
-      "radial-gradient(rgba(51,65,85,0.35) 1.5px, transparent 1.5px)",
-    backgroundSize: "20px 20px",
+    backgroundImage: "linear-gradient(145deg, #020617 0%, #0f172a 100%)",
   },
   cyber: {
     backgroundColor: "#020617",
-    backgroundImage:
-      "linear-gradient(145deg, #020617 0%, #0f172a 50%, #1e293b 100%)," +
-      "linear-gradient(rgba(34,211,238,0.12) 1px, transparent 1px)," +
-      "linear-gradient(90deg, rgba(34,211,238,0.12) 1px, transparent 1px)",
-    backgroundSize: "auto, 40px 40px, 40px 40px",
+    backgroundImage: "linear-gradient(145deg, #020617 0%, #0f172a 50%, #1e293b 100%)",
   },
   natural: {
     backgroundColor: "#F0FDF4",
-    backgroundImage:
-      "linear-gradient(145deg, #ecfdf5 0%, #dcfce7 100%)," +
-      "repeating-linear-gradient(-45deg, rgba(220,252,231,0.85), rgba(220,252,231,0.85) 5px, transparent 5px, transparent 24px)",
+    backgroundImage: "linear-gradient(145deg, #ecfdf5 0%, #dcfce7 100%)",
   },
   luxury: {
     backgroundColor: "#1C1917",
-    backgroundImage:
-      "linear-gradient(145deg, #0c0a09 0%, #1c1917 60%, #292524 100%)," +
-      "radial-gradient(rgba(234,179,8,0.10) 1px, transparent 1px)",
-    backgroundSize: "auto, 22px 22px",
+    backgroundImage: "linear-gradient(145deg, #0c0a09 0%, #1c1917 60%, #292524 100%)",
   },
   retro: {
     backgroundColor: "#FFFBEB",
-    backgroundImage: "radial-gradient(rgba(217,119,6,0.22) 2px, transparent 2px)",
-    backgroundSize: "16px 16px",
+    backgroundImage: "linear-gradient(145deg, #fffbeb 0%, #fef3c7 100%)",
   },
 };
 
 /* -------------------------------------------------
  *  世界観ごとの「三種の神器」定義
+ *  - 製品品質: whisper系パターンで控えめに
  *  - Minimalは仕様準拠：pattern none / surface simple
  * ------------------------------------------------- */
 const WORLDVIEW_DEFINITIONS: Record<
@@ -229,19 +209,21 @@ const WORLDVIEW_DEFINITIONS: Record<
   }
 > = {
   minimal: { surface: "simple", pattern: "none", layout: "center" },
-  modern: { surface: "glass", pattern: "grid-thin", layout: "split" },
+  modern: { surface: "glass", pattern: "grid-whisper", layout: "split" },
   business: { surface: "card", pattern: "none", layout: "center" },
-  cute: { surface: "paper", pattern: "dot-soft", layout: "center" },
-  pop: { surface: "card", pattern: "stripe-diagonal", layout: "center" },
-  dark: { surface: "dark", pattern: "grid-subtle", layout: "split" },
-  cyber: { surface: "neon", pattern: "grid-cyber", layout: "split" },
-  natural: { surface: "paper", pattern: "fiber-soft", layout: "center" },
-  luxury: { surface: "dark", pattern: "diamond-soft", layout: "center" },
-  retro: { surface: "paper", pattern: "dot-retro", layout: "center" },
+  cute: { surface: "paper", pattern: "dot-whisper", layout: "center" },
+  pop: { surface: "card", pattern: "diagonal-whisper", layout: "center" },
+  dark: { surface: "dark", pattern: "none", layout: "split" },
+  cyber: { surface: "neon", pattern: "scanlines-whisper", layout: "split" },
+  natural: { surface: "paper", pattern: "fiber-whisper", layout: "center" },
+  luxury: { surface: "dark", pattern: "diamond-whisper", layout: "center" },
+  retro: { surface: "paper", pattern: "halftone-whisper", layout: "center" },
 };
 
 /* -------------------------------------------------
  *  実際に使う PRESETS 本体（10世界観）
+ *  - 製品品質: whisper系パターン + 軽量texture
+ *  - 背景は主張せず、作品/文字の視認性を最優先
  * ------------------------------------------------- */
 const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
   minimal: {
@@ -279,8 +261,8 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "gallery",
     languageMode: "ja",
     fontPreset: "modernSans",
-    patternLayers: ["grid-thin"],
-    textureLayers: ["texture-noise"],
+    patternLayers: ["grid-whisper"],
+    textureLayers: ["grain-light"],
     bgStyle: BG_STYLES.modern,
   },
 
@@ -299,8 +281,8 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "gallery",
     languageMode: "ja",
     fontPreset: "formalMincho",
-    patternLayers: [], // businessは柄の常用を避ける
-    textureLayers: ["texture-paper"],
+    patternLayers: [],
+    textureLayers: ["paper-fine"],
     bgStyle: BG_STYLES.business,
   },
 
@@ -319,7 +301,7 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "gallery",
     languageMode: "ja",
     fontPreset: "cuteRound",
-    patternLayers: ["dot-soft"],
+    patternLayers: ["dot-whisper"],
     textureLayers: [],
     bgStyle: BG_STYLES.cute,
   },
@@ -339,7 +321,7 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "masonry",
     languageMode: "ja",
     fontPreset: "popBold",
-    patternLayers: ["stripe-diagonal"],
+    patternLayers: ["diagonal-whisper"],
     textureLayers: [],
     bgStyle: BG_STYLES.pop,
   },
@@ -359,8 +341,8 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "gallery",
     languageMode: "ja",
     fontPreset: "techMono",
-    patternLayers: ["grid-subtle"],
-    textureLayers: ["texture-noise"],
+    patternLayers: [],
+    textureLayers: ["grain-dark"],
     bgStyle: BG_STYLES.dark,
   },
 
@@ -379,8 +361,8 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "masonry",
     languageMode: "ja",
     fontPreset: "techMono",
-    patternLayers: ["grid-cyber"],
-    textureLayers: ["texture-noise"],
+    patternLayers: ["scanlines-whisper"],
+    textureLayers: ["grain-cyber"],
     bgStyle: BG_STYLES.cyber,
   },
 
@@ -399,8 +381,8 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "gallery",
     languageMode: "ja",
     fontPreset: "cleanJa",
-    patternLayers: ["fiber-soft"],
-    textureLayers: ["texture-paper"],
+    patternLayers: ["fiber-whisper"],
+    textureLayers: ["paper-warm"],
     bgStyle: BG_STYLES.natural,
   },
 
@@ -419,8 +401,8 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "gallery",
     languageMode: "ja",
     fontPreset: "luxurySerif",
-    patternLayers: ["diamond-soft"],
-    textureLayers: ["texture-noise"],
+    patternLayers: ["diamond-whisper"],
+    textureLayers: ["grain-gold"],
     bgStyle: BG_STYLES.luxury,
   },
 
@@ -439,8 +421,8 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "gallery",
     languageMode: "ja",
     fontPreset: "retroPixel",
-    patternLayers: ["dot-retro"],
-    textureLayers: ["texture-paper"],
+    patternLayers: ["halftone-whisper"],
+    textureLayers: ["paper-aged"],
     bgStyle: BG_STYLES.retro,
   },
 };

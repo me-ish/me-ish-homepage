@@ -24,42 +24,56 @@ export const PATTERNS = [
   "dot-soft", // 小さめ・控えめドット
   "dot-retro", // 大粒レトロドット
   "dot-dense-noise", // 細かいドットでノイズ寄り
+  "dot-whisper", // ✅ 製品品質：極薄ドット
 
   // stripe family
   "stripe-vertical-soft", // うっすら縦ストライプ
   "stripe-vertical-bold", // しっかり縦ストライプ
   "stripe-diagonal", // 斜めストライプ
+  "diagonal-whisper", // ✅ 製品品質：極薄斜線
 
   // grid family
   "grid-thin", // 細線グリッド
   "grid-neon", // サイバー寄りグリッド
-
-  // ✅ 追加（grid派生）
   "grid-subtle", // dark向け低コントラスト格子
   "grid-cyber", // cyber向け回路寄り格子
+  "grid-whisper", // ✅ 製品品質：極薄グリッド
 
   // geo / tile family
   "tile-iso-cubes",
-  "tile-iso-cubes-soft", // ✅ 追加：薄い版（modern/luxury向け）
+  "tile-iso-cubes-soft", // 薄い版（modern/luxury向け）
 
   // luxury / geo
-  "diamond-soft", // ✅ 追加：luxury本命
+  "diamond-soft", // luxury本命
+  "diamond-whisper", // ✅ 製品品質：極薄ダイヤ
 
   // texture family
   "texture-paper", // 紙っぽいムラ
   "texture-noise", // ラフなノイズ
-  "fiber-soft", // ✅ 追加：紙繊維/布目ニュアンス
+  "fiber-soft", // 紙繊維/布目ニュアンス
+  "fiber-whisper", // ✅ 製品品質：極薄繊維
+
+  // ✅ 製品品質 texture（grain / paper）
+  "grain-light", // modern/business向け軽量ノイズ
+  "grain-dark", // dark/cyber向け軽量ノイズ
+  "grain-cyber", // cyber向け（青み）
+  "grain-gold", // luxury向け（金み）
+  "paper-fine", // business/minimal向け
+  "paper-warm", // natural向け
+  "paper-aged", // retro向け
 
   // line / hatch
-  "hatch-diagonal-soft", // ✅ 追加：薄い斜線ハッチ
+  "hatch-diagonal-soft", // 薄い斜線ハッチ
 
   // checker
-  "checker-fade", // ✅ 追加：市松フェード（面で出る）
+  "checker-fade", // 市松フェード（面で出る）
 
   // rings / topo / scanline
-  "rings-sparse", // ✅ 追加：疎な同心円
-  "topo-lines", // ✅ 追加：等高線
-  "scanlines-soft", // ✅ 追加：ソフト走査線
+  "rings-sparse", // 疎な同心円
+  "topo-lines", // 等高線
+  "scanlines-soft", // ソフト走査線
+  "scanlines-whisper", // ✅ 製品品質：極薄走査線
+  "halftone-whisper", // ✅ 製品品質：極薄ハーフトーン
 ] as const;
 
 /**

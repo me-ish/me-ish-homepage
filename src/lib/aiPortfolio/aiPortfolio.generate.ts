@@ -354,14 +354,15 @@ function buildSectionBgGradient(args: {
   const bg1 = isDark ? mixHex(paletteBg, "#000000", 0.1) : mixHex(paletteBg, "#ffffff", 0.08);
   const bg2 = isDark ? mixHex(paletteBg, "#111827", 0.22) : mixHex(paletteBg, "#e5e7eb", 0.25);
 
-  const baseA = 0.06 + (overallStrength / 100) * 0.06; // 0.06..0.12
+  // ✅ 製品品質: glow を大幅に抑制（0.03〜0.07）
+  const baseA = 0.03 + (overallStrength / 100) * 0.04; // 0.03..0.07
   const cap =
     worldview === "minimal" || worldview === "business"
-      ? 0.1
+      ? 0.05
       : worldview === "luxury" || worldview === "dark"
-        ? 0.12
-        : 0.14;
-  const glowA = clamp(baseA, 0.05, cap);
+        ? 0.06
+        : 0.07;
+  const glowA = clamp(baseA, 0.03, cap);
 
   const dir =
     strategy === "alternate" && altBand === "B"
@@ -371,11 +372,11 @@ function buildSectionBgGradient(args: {
         : "180deg";
 
   const pos = sectionGlowPos(type);
-  const glow = `radial-gradient(circle at ${pos}, ${rgba(accent, glowA)} 0%, transparent 58%)`;
+  const glow = `radial-gradient(circle at ${pos}, ${rgba(accent, glowA)} 0%, transparent 65%)`;
   const linear = `linear-gradient(${dir}, ${bg1} 0%, ${bg2} 100%)`;
 
   if (typeof baseBgGradient === "string" && baseBgGradient.trim()) {
-    if (overallStrength <= 5) return baseBgGradient; // 低強度はpresets優先
+    if (overallStrength <= 10) return baseBgGradient; // 低強度はpresets優先
     return `${glow}, ${baseBgGradient}`;
   }
 
@@ -394,16 +395,18 @@ function buildSectionPatternOverlay(args: {
   const { accent, paletteBg, worldview, type, strategy, overallStrength, altBand } = args;
   const isDark = luminance(paletteBg) < 0.35;
 
-  if (overallStrength < 35) return [];
+  // ✅ 製品品質: オーバーレイは控えめに（強度50未満は無効）
+  if (overallStrength < 50) return [];
 
+  // ✅ opacity を大幅に抑制（0.015〜0.035）
   const aBase =
     worldview === "minimal" || worldview === "business"
-      ? 0.02
+      ? 0.012
       : worldview === "dark" || worldview === "luxury"
-        ? 0.025
-        : 0.035;
+        ? 0.015
+        : 0.02;
 
-  const a = clamp(aBase + (overallStrength / 100) * 0.03, 0.02, 0.07);
+  const a = clamp(aBase + (overallStrength / 100) * 0.015, 0.012, 0.035);
 
   const angle =
     strategy === "alternate" && altBand === "B"
@@ -422,11 +425,11 @@ function buildSectionPatternOverlay(args: {
 
   if (worldview === "retro") {
     const c = rgba(isDark ? "#ffffff" : accent, a);
-    return [`repeating-linear-gradient(${angle}, ${c} 0px, ${c} 1px, transparent 1px, transparent 14px)`];
+    return [`repeating-linear-gradient(${angle}, ${c} 0px, ${c} 1px, transparent 1px, transparent 20px)`];
   }
 
   const c = rgba(isDark ? "#ffffff" : accent, a);
-  return [`repeating-linear-gradient(${angle}, ${c} 0px, ${c} 1px, transparent 1px, transparent 18px)`];
+  return [`repeating-linear-gradient(${angle}, ${c} 0px, ${c} 1px, transparent 1px, transparent 24px)`];
 }
 
 function buildSectionThemeMap(args: {
@@ -1310,10 +1313,17 @@ export async function generatePortfolioFromForm(rawPayload: unknown): Promise<{ 
 
   const presetPatternLayers: string[] = ((worldviewPreset as any).patternLayers as string[] | undefined) ?? [];
 
-  const allPatternPool = getAllPatternIds()
-    .map((p) => String(p))
-    .filter((p) => p && p !== "none")
-    .filter((p) => !p.startsWith("texture-"));
+  // ✅ 製品品質: AI強度100でも世界観を壊さない
+  // whisper系パターンのみを候補に（派手な旧パターンは除外）
+  const WHISPER_PATTERNS = [
+    "dot-whisper",
+    "grid-whisper",
+    "diagonal-whisper",
+    "scanlines-whisper",
+    "fiber-whisper",
+    "diamond-whisper",
+    "halftone-whisper",
+  ];
 
   const pickUnique = (arr: string[], k: number): string[] => {
     const a = [...arr];
@@ -1324,12 +1334,13 @@ export async function generatePortfolioFromForm(rawPayload: unknown): Promise<{ 
     return a.slice(0, Math.max(0, Math.min(k, a.length)));
   };
 
+  // AI強度100でも whisper 系から選択（破綻防止）
   const patternLayers: string[] = hasUserPattern
     ? primaryPattern === "none"
       ? []
       : [primaryPattern]
     : overallStrength >= 100
-      ? pickUnique(allPatternPool, 2)
+      ? pickUnique(WHISPER_PATTERNS, 1) // 1つだけ（2つは過剰）
       : presetPatternLayers.length > 0
         ? presetPatternLayers
         : primaryPattern === "none"
