@@ -1,245 +1,254 @@
-  //src/components/aiPortfolio/aiPortfolioPreviewEditorClient.tsx
-  "use client";
+// src/components/aiPortfolio/aiPortfolioPreviewEditorClient.tsx
+"use client";
 
-  import { useEffect, useMemo, useState } from "react";
-  import type { Content } from "@/lib/aiPortfolio/aiPortfolio.schema";
+import { useEffect, useMemo, useState } from "react";
+import type { Content } from "@/lib/aiPortfolio/aiPortfolio.schema";
 
-  type Section = {
-    type: string;
-    headings?: string[];
-    paragraphs?: string[];
-    items?: any[];
-    cta?: { label?: string; href?: string };
+type Section = {
+  type: string;
+  headings?: string[];
+  paragraphs?: string[];
+  items?: any[];
+  cta?: { label?: string; href?: string };
+};
+
+type Props = {
+  requestId: string;
+
+  /** ★編集中のContent（Shellが唯一保持する） */
+  draftContent: Content;
+
+  /** ★編集結果をShellへ返す（即時同期） */
+  onDraftContentChange: (next: Content) => void;
+
+  /** ★現在のセクション順（Shellが唯一保持する） */
+  sectionOrder: string[];
+};
+
+/* ---------------- helpers ---------------- */
+
+function deepClone<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+function getSection(content: Content, type: string) {
+  return content.sections.find((s) => s.type === type);
+}
+
+/**
+ * UI入力値を content に反映
+ * - CTA は廃止
+ * - Contact のみ残す
+ */
+function patchContent(params: {
+  base: Content;
+  heroTitle: string;
+  heroSubtitle: string;
+  aboutText: string;
+  contactLabel: string;
+}): Content {
+  const { base, heroTitle, heroSubtitle, aboutText, contactLabel } = params;
+
+  const next = deepClone(base);
+
+  const patch = (type: string, fn: (s: Section) => void) => {
+    const s = next.sections.find((sec) => sec.type === type);
+    if (s) fn(s);
   };
 
-  type Props = {
-    requestId: string;
+  patch("hero", (s) => {
+    s.headings = [heroTitle];
+    s.paragraphs = [heroSubtitle];
+  });
 
-    /** ★編集中のContent（Shellが唯一保持する） */
-    draftContent: Content;
+  patch("about", (s) => {
+    s.paragraphs = [aboutText];
+  });
 
-    /** ★編集結果をShellへ返す（即時同期） */
-    onDraftContentChange: (next: Content) => void;
+  patch("contact", (s) => {
+    s.cta = {
+      href: "/contact",
+      label: contactLabel || "お問い合わせ",
+    };
+  });
 
-    /** ★現在のセクション順（Shellが唯一保持する） */
-    sectionOrder: string[];
+  return next;
+}
+
+/**
+ * X 共有文（固定1パターン）
+ * - 公開者目線の「営業・実績」寄り
+ * - AI文言はデフォルトでは出さない
+ */
+// [AURA_SHARE_V1]
+const AURA_SHARE_HASHTAG = "#meishAURA";
+
+// [AURA_SHARE_V1]
+function buildShareText(opts?: { heroTitle?: string; includeAI?: boolean }) {
+  const hero = (opts?.heroTitle ?? "").trim();
+  const aiNote = opts?.includeAI ? "（一部、制作支援ツールを活用しています）" : "";
+
+  const line1 = "ポートフォリオを公開しました。";
+  const line2 = "お仕事のご相談・ご依頼はお気軽にどうぞ。";
+  const line3 = AURA_SHARE_HASHTAG;
+
+  return [line1, line2, line3, aiNote,].filter(Boolean).join("\n");
+}
+
+/* public_slug utils */
+const RESERVED_SLUGS = new Set([
+  "p",
+  "api",
+  "admin",
+  "login",
+  "logout",
+  "signup",
+  "auth",
+  "assets",
+  "static",
+  "favicon",
+  "robots",
+  "sitemap",
+]);
+
+function normalizePublicSlug(raw: string) {
+  return (raw ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-+/, "")
+    .replace(/-+$/, "")
+    .slice(0, 32);
+}
+
+function validatePublicSlug(slug: string): { ok: boolean; reason?: string } {
+  if (!slug) return { ok: false, reason: "未入力です。" };
+  if (slug.length < 3) return { ok: false, reason: "3文字以上にしてください。" };
+  if (slug.length > 32) return { ok: false, reason: "32文字以内にしてください。" };
+  if (!/^[a-z0-9-]+$/.test(slug)) {
+    return { ok: false, reason: "小文字英数字とハイフンのみ使用できます。" };
+  }
+  if (slug.startsWith("-") || slug.endsWith("-")) {
+    return { ok: false, reason: "先頭・末尾にハイフンは使えません。" };
+  }
+  if (RESERVED_SLUGS.has(slug)) {
+    return { ok: false, reason: "この文字列は予約されています。" };
+  }
+  return { ok: true };
+}
+
+/* ---------------- component ---------------- */
+
+export default function AiPortfolioPreviewEditorClient({
+  requestId,
+  draftContent,
+  onDraftContentChange,
+  sectionOrder,
+}: Props) {
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  // 公開後UI
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // 公開識別子（URL組み立て用）
+  const [publishedPublicId, setPublishedPublicId] = useState<string | null>(null);
+  const [publishedPublicSlug, setPublishedPublicSlug] = useState<string | null>(null);
+
+  // public_slug 編集UI
+  const [slugDraft, setSlugDraft] = useState("");
+  const [slugStatus, setSlugStatus] = useState<
+    null | {
+      type: "idle" | "checking" | "available" | "unavailable" | "saved" | "error";
+      msg?: string;
+    }
+  >(null);
+  const [slugSaving, setSlugSaving] = useState(false);
+
+  /* ---------- 初期値 ---------- */
+
+  const initial = useMemo(() => {
+    const hero = getSection(draftContent, "hero");
+    const about = getSection(draftContent, "about");
+    const contact = getSection(draftContent, "contact");
+
+    return {
+      heroTitle: hero?.headings?.[0] ?? "",
+      heroSubtitle: hero?.paragraphs?.[0] ?? "",
+      aboutText: about?.paragraphs?.[0] ?? "",
+      contactLabel: (contact as any)?.cta?.label ?? "お問い合わせ",
+    };
+  }, [draftContent]);
+
+  const [heroTitle, setHeroTitle] = useState(initial.heroTitle);
+  const [heroSubtitle, setHeroSubtitle] = useState(initial.heroSubtitle);
+  const [aboutText, setAboutText] = useState(initial.aboutText);
+  const [contactLabel, setContactLabel] = useState(initial.contactLabel);
+
+  /* ---------- 同期 ---------- */
+
+  useEffect(() => {
+    setHeroTitle(initial.heroTitle);
+    setHeroSubtitle(initial.heroSubtitle);
+    setAboutText(initial.aboutText);
+    setContactLabel(initial.contactLabel);
+
+    setPublishedUrl(null);
+    setPublishedPublicId(null);
+    setPublishedPublicSlug(null);
+
+    setCopied(false);
+
+    setSlugDraft("");
+    setSlugStatus(null);
+    setSlugSaving(false);
+  }, [initial]);
+
+  useEffect(() => {
+    const next = patchContent({
+      base: draftContent,
+      heroTitle,
+      heroSubtitle,
+      aboutText,
+      contactLabel,
+    });
+    onDraftContentChange(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heroTitle, heroSubtitle, aboutText, contactLabel]);
+
+  /* ---------- utils ---------- */
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      window.prompt("このURLをコピーしてください", text);
+    }
   };
 
-  /* ---------------- helpers ---------------- */
-
-  function deepClone<T>(obj: T): T {
-    return JSON.parse(JSON.stringify(obj));
-  }
-
-  function getSection(content: Content, type: string) {
-    return content.sections.find((s) => s.type === type);
-  }
-
-  /**
-   * UI入力値を content に反映
-   * - CTA は廃止
-   * - Contact のみ残す
-   */
-  function patchContent(params: {
-    base: Content;
-    heroTitle: string;
-    heroSubtitle: string;
-    aboutText: string;
-    contactLabel: string;
-  }): Content {
-    const { base, heroTitle, heroSubtitle, aboutText, contactLabel } = params;
-
-    const next = deepClone(base);
-
-    const patch = (type: string, fn: (s: Section) => void) => {
-      const s = next.sections.find((sec) => sec.type === type);
-      if (s) fn(s);
-    };
-
-    patch("hero", (s) => {
-      s.headings = [heroTitle];
-      s.paragraphs = [heroSubtitle];
+  // [AURA_SHARE_V1]
+  const openXShare = (url: string) => {
+    const text = buildShareText({
+      heroTitle,
+      includeAI: false, // デフォルトはAI文言なし
     });
 
-    patch("about", (s) => {
-      s.paragraphs = [aboutText];
-    });
+    const shareUrl =
+      "https://twitter.com/intent/tweet?" + new URLSearchParams({ text, url }).toString();
+    window.open(shareUrl, "_blank", "noopener,noreferrer");
+  };
 
-    patch("contact", (s) => {
-      s.cta = {
-        href: "/contact",
-        label: contactLabel || "お問い合わせ",
-      };
-    });
-
-    return next;
-  }
-
-  /**
-   * X 共有文
-   */
-  function buildShareText(level: "light" | "standard" | "strong") {
-    switch (level) {
-      case "light":
-        return "AIでポートフォリオを作ってみました。感想もらえると嬉しいです。";
-      case "strong":
-        return "AIでポートフォリオを自動生成しました。率直なフィードバックをお願いします。";
-      case "standard":
-      default:
-        return "AIでポートフォリオを作成しました。よければ見て感想をください。";
-    }
-  }
-
-  /* public_slug utils */
-  const RESERVED_SLUGS = new Set([
-    "p",
-    "api",
-    "admin",
-    "login",
-    "logout",
-    "signup",
-    "auth",
-    "assets",
-    "static",
-    "favicon",
-    "robots",
-    "sitemap",
-  ]);
-
-  function normalizePublicSlug(raw: string) {
-    return (raw ?? "")
-      .trim()
-      .toLowerCase()
-      .replace(/[_\s]+/g, "-")
-      .replace(/[^a-z0-9-]/g, "")
-      .replace(/-+/g, "-")
-      .replace(/^-+/, "")
-      .replace(/-+$/, "")
-      .slice(0, 32);
-  }
-
-  function validatePublicSlug(slug: string): { ok: boolean; reason?: string } {
-    if (!slug) return { ok: false, reason: "未入力です。" };
-    if (slug.length < 3) return { ok: false, reason: "3文字以上にしてください。" };
-    if (slug.length > 32) return { ok: false, reason: "32文字以内にしてください。" };
-    if (!/^[a-z0-9-]+$/.test(slug)) {
-      return { ok: false, reason: "小文字英数字とハイフンのみ使用できます。" };
-    }
-    if (slug.startsWith("-") || slug.endsWith("-")) {
-      return { ok: false, reason: "先頭・末尾にハイフンは使えません。" };
-    }
-    if (RESERVED_SLUGS.has(slug)) {
-      return { ok: false, reason: "この文字列は予約されています。" };
-    }
-    return { ok: true };
-  }
-
-  /* ---------------- component ---------------- */
-
-  export default function AiPortfolioPreviewEditorClient({
-    requestId,
-    draftContent,
-    onDraftContentChange,
-    sectionOrder,
-  }: Props) {
-    const [saving, setSaving] = useState(false);
-    const [message, setMessage] = useState<string | null>(null);
-
-    // 公開後UI
-    const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
-    const [shareTone, setShareTone] =
-      useState<"light" | "standard" | "strong">("standard");
-
-    // 公開識別子（URL組み立て用）
-    const [publishedPublicId, setPublishedPublicId] = useState<string | null>(null);
-    const [publishedPublicSlug, setPublishedPublicSlug] = useState<string | null>(null);
-
-    // public_slug 編集UI
-    const [slugDraft, setSlugDraft] = useState("");
-    const [slugStatus, setSlugStatus] = useState<
-      null | { type: "idle" | "checking" | "available" | "unavailable" | "saved" | "error"; msg?: string }
-    >(null);
-    const [slugSaving, setSlugSaving] = useState(false);
-
-    /* ---------- 初期値 ---------- */
-
-    const initial = useMemo(() => {
-      const hero = getSection(draftContent, "hero");
-      const about = getSection(draftContent, "about");
-      const contact = getSection(draftContent, "contact");
-
-      return {
-        heroTitle: hero?.headings?.[0] ?? "",
-        heroSubtitle: hero?.paragraphs?.[0] ?? "",
-        aboutText: about?.paragraphs?.[0] ?? "",
-        contactLabel: contact?.cta?.label ?? "お問い合わせ",
-      };
-    }, [draftContent]);
-
-    const [heroTitle, setHeroTitle] = useState(initial.heroTitle);
-    const [heroSubtitle, setHeroSubtitle] = useState(initial.heroSubtitle);
-    const [aboutText, setAboutText] = useState(initial.aboutText);
-    const [contactLabel, setContactLabel] = useState(initial.contactLabel);
-
-    /* ---------- 同期 ---------- */
-
-    useEffect(() => {
-      setHeroTitle(initial.heroTitle);
-      setHeroSubtitle(initial.heroSubtitle);
-      setAboutText(initial.aboutText);
-      setContactLabel(initial.contactLabel);
-
-      setPublishedUrl(null);
-      setPublishedPublicId(null);
-      setPublishedPublicSlug(null);
-
-      setCopied(false);
-      setShareTone("standard");
-
-      setSlugDraft("");
-      setSlugStatus(null);
-      setSlugSaving(false);
-    }, [initial]);
-
-    useEffect(() => {
-      const next = patchContent({
-        base: draftContent,
-        heroTitle,
-        heroSubtitle,
-        aboutText,
-        contactLabel,
-      });
-      onDraftContentChange(next);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [heroTitle, heroSubtitle, aboutText, contactLabel]);
-
-    /* ---------- utils ---------- */
-
-    const copyToClipboard = async (text: string) => {
-      try {
-        await navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
-      } catch {
-        window.prompt("このURLをコピーしてください", text);
-      }
-    };
-
-    const openXShare = (url: string) => {
-      const text = buildShareText(shareTone);
-      const shareUrl =
-        "https://twitter.com/intent/tweet?" +
-        new URLSearchParams({ text, url }).toString();
-      window.open(shareUrl, "_blank", "noopener,noreferrer");
-    };
-
-    const buildPublicUrl = (publicId: string | null, publicSlug: string | null) => {
-      const base = window.location.origin;
-      if (publicSlug && publicSlug.trim()) return `${base}/aura/p/${publicSlug.trim()}`;
-      if (publicId && publicId.trim()) return `${base}/aura/p/${publicId.trim()}`;
-      return null;
-    };
+  const buildPublicUrl = (publicId: string | null, publicSlug: string | null) => {
+    const base = window.location.origin;
+    if (publicSlug && publicSlug.trim()) return `${base}/aura/p/${publicSlug.trim()}`;
+    if (publicId && publicId.trim()) return `${base}/aura/p/${publicId.trim()}`;
+    return null;
+  };
 
   /* ---------- save ---------- */
 
@@ -271,7 +280,6 @@
         const url = (j?.checkoutUrl as string | undefined) ?? null;
 
         if (url) {
-          // 相対URLでもOK（/api/aura/checkout?...）
           window.location.href = url;
           return;
         }
@@ -318,301 +326,252 @@
     }
   };
 
-    /* ---------- public_slug actions ---------- */
+  /* ---------- public_slug actions ---------- */
 
-    const handleCheckSlug = async () => {
-      if (!publishedPublicId) {
-        setSlugStatus({ type: "error", msg: "公開後に設定できます。" });
-        return;
-      }
+  const handleCheckSlug = async () => {
+    if (!publishedPublicId) {
+      setSlugStatus({ type: "error", msg: "公開後に設定できます。" });
+      return;
+    }
 
-      const normalized = normalizePublicSlug(slugDraft);
-      setSlugDraft(normalized);
+    const normalized = normalizePublicSlug(slugDraft);
+    setSlugDraft(normalized);
 
-      const v = validatePublicSlug(normalized);
-      if (!v.ok) {
-        setSlugStatus({ type: "unavailable", msg: v.reason });
-        return;
-      }
+    const v = validatePublicSlug(normalized);
+    if (!v.ok) {
+      setSlugStatus({ type: "unavailable", msg: v.reason });
+      return;
+    }
 
-      setSlugStatus({ type: "checking", msg: "確認中..." });
+    setSlugStatus({ type: "checking", msg: "確認中..." });
 
-      try {
-        const res = await fetch(`/api/aura/public-slug`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            requestId,
-            mode: "check",
-            publicSlug: normalized,
-          }),
+    try {
+      const res = await fetch(`/api/aura/public-slug`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          requestId,
+          mode: "check",
+          publicSlug: normalized,
+        }),
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.ok) {
+        setSlugStatus({
+          type: "error",
+          msg: json?.message ?? "確認に失敗しました。",
         });
-
-        const json = await res.json().catch(() => null);
-
-        if (!res.ok || !json?.ok) {
-          setSlugStatus({
-            type: "error",
-            msg: json?.message ?? "確認に失敗しました。",
-          });
-          return;
-        }
-
-        if (json.available === true) {
-          setSlugStatus({ type: "available", msg: "使用できます。" });
-        } else {
-          setSlugStatus({ type: "unavailable", msg: "既に使用されています。" });
-        }
-      } catch {
-        setSlugStatus({ type: "error", msg: "通信エラーが発生しました。" });
-      }
-    };
-
-    const handleSaveSlug = async () => {
-      if (!publishedPublicId) {
-        setSlugStatus({ type: "error", msg: "公開後に設定できます。" });
         return;
       }
 
-      const normalized = normalizePublicSlug(slugDraft);
-      setSlugDraft(normalized);
-
-      const v = validatePublicSlug(normalized);
-      if (!v.ok) {
-        setSlugStatus({ type: "unavailable", msg: v.reason });
-        return;
+      if (json.available === true) {
+        setSlugStatus({ type: "available", msg: "使用できます。" });
+      } else {
+        setSlugStatus({ type: "unavailable", msg: "既に使用されています。" });
       }
+    } catch {
+      setSlugStatus({ type: "error", msg: "通信エラーが発生しました。" });
+    }
+  };
 
-      setSlugSaving(true);
-      setSlugStatus({ type: "checking", msg: "保存中..." });
+  const handleSaveSlug = async () => {
+    if (!publishedPublicId) {
+      setSlugStatus({ type: "error", msg: "公開後に設定できます。" });
+      return;
+    }
 
-      try {
-        const res = await fetch(`/api/aura/public-slug`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            requestId,
-            mode: "save",
-            publicSlug: normalized,
-          }),
+    const normalized = normalizePublicSlug(slugDraft);
+    setSlugDraft(normalized);
+
+    const v = validatePublicSlug(normalized);
+    if (!v.ok) {
+      setSlugStatus({ type: "unavailable", msg: v.reason });
+      return;
+    }
+
+    setSlugSaving(true);
+    setSlugStatus({ type: "checking", msg: "保存中..." });
+
+    try {
+      const res = await fetch(`/api/aura/public-slug`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          requestId,
+          mode: "save",
+          publicSlug: normalized,
+        }),
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.ok) {
+        setSlugSaving(false);
+        setSlugStatus({
+          type: "error",
+          msg: json?.message ?? "保存に失敗しました。",
         });
-
-        const json = await res.json().catch(() => null);
-
-        if (!res.ok || !json?.ok) {
-          setSlugSaving(false);
-          setSlugStatus({
-            type: "error",
-            msg: json?.message ?? "保存に失敗しました。",
-          });
-          return;
-        }
-
-        // 反映
-        const newSlug = (json.publicSlug as string | undefined) ?? normalized;
-        setPublishedPublicSlug(newSlug);
-
-        const url = buildPublicUrl(publishedPublicId, newSlug);
-        setPublishedUrl(url);
-        setSlugStatus({ type: "saved", msg: "保存しました。" });
-        setSlugSaving(false);
-      } catch {
-        setSlugSaving(false);
-        setSlugStatus({ type: "error", msg: "通信エラーが発生しました。" });
+        return;
       }
-    };
 
-    /* ---------- render ---------- */
+      // 反映
+      const newSlug = (json.publicSlug as string | undefined) ?? normalized;
+      setPublishedPublicSlug(newSlug);
 
-    return (
-      <section className="mt-8 rounded-lg border p-6">
-        <h2 className="text-lg font-medium">テキストを調整する</h2>
-        <p className="mt-1 text-sm text-gray-600">
-          入力はプレビューに即反映されます。最後に「この内容で確定して公開」を押してください。
-        </p>
+      const url = buildPublicUrl(publishedPublicId, newSlug);
+      setPublishedUrl(url);
+      setSlugStatus({ type: "saved", msg: "保存しました。" });
+      setSlugSaving(false);
+    } catch {
+      setSlugSaving(false);
+      setSlugStatus({ type: "error", msg: "通信エラーが発生しました。" });
+    }
+  };
 
-        <div className="mt-6 grid gap-4">
-          <label className="grid gap-1">
-            <span className="text-sm font-medium">ヒーロー見出し</span>
-            <input
-              className="rounded border px-3 py-2 text-sm"
-              value={heroTitle}
-              onChange={(e) => setHeroTitle(e.target.value)}
-            />
-          </label>
+  /* ---------- render ---------- */
 
-          <label className="grid gap-1">
-            <span className="text-sm font-medium">ヒーローサブテキスト</span>
-            <textarea
-              className="min-h-[72px] rounded border px-3 py-2 text-sm"
-              value={heroSubtitle}
-              onChange={(e) => setHeroSubtitle(e.target.value)}
-            />
-          </label>
+  return (
+    <section className="mt-8 rounded-lg border p-6">
+      <h2 className="text-lg font-medium">テキストを調整する</h2>
+      <p className="mt-1 text-sm text-gray-600">
+        入力はプレビューに即反映されます。最後に「この内容で確定して公開」を押してください。
+      </p>
 
-          <label className="grid gap-1">
-            <span className="text-sm font-medium">自己紹介（About）</span>
-            <textarea
-              className="min-h-[120px] rounded border px-3 py-2 text-sm"
-              value={aboutText}
-              onChange={(e) => setAboutText(e.target.value)}
-            />
-          </label>
+      <div className="mt-6 grid gap-4">
+        <label className="grid gap-1">
+          <span className="text-sm font-medium">ヒーロー見出し</span>
+          <input
+            className="rounded border px-3 py-2 text-sm"
+            value={heroTitle}
+            onChange={(e) => setHeroTitle(e.target.value)}
+          />
+        </label>
 
-          <label className="grid gap-1">
-            <span className="text-sm font-medium">お問い合わせボタンの文言</span>
-            <input
-              className="rounded border px-3 py-2 text-sm"
-              value={contactLabel}
-              onChange={(e) => setContactLabel(e.target.value)}
-            />
-          </label>
-        </div>
+        <label className="grid gap-1">
+          <span className="text-sm font-medium">ヒーローサブテキスト</span>
+          <textarea
+            className="min-h-[72px] rounded border px-3 py-2 text-sm"
+            value={heroSubtitle}
+            onChange={(e) => setHeroSubtitle(e.target.value)}
+          />
+        </label>
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-          >
-            {saving ? "保存中..." : "この内容で確定して公開"}
-          </button>
-          {message && <p className="text-sm text-red-600">{message}</p>}
-        </div>
+        <label className="grid gap-1">
+          <span className="text-sm font-medium">自己紹介（About）</span>
+          <textarea
+            className="min-h-[120px] rounded border px-3 py-2 text-sm"
+            value={aboutText}
+            onChange={(e) => setAboutText(e.target.value)}
+          />
+        </label>
+      </div>
 
-        {/* -------- 公開後 -------- */}
-        {publishedUrl && (
-          <div className="mt-6 rounded-lg border bg-white p-5">
-            <p className="text-sm font-medium">公開URL</p>
-            <p className="text-xs text-gray-600">
-              このURLがあなたのポートフォリオです。
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="rounded bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+        >
+          {saving ? "保存中..." : "この内容で確定して公開"}
+        </button>
+        {message && <p className="text-sm text-red-600">{message}</p>}
+      </div>
+
+      {/* -------- 公開後 -------- */}
+      {publishedUrl && (
+        <div className="mt-6 rounded-lg border bg-white p-5">
+          <p className="text-sm font-medium">公開URL</p>
+          <p className="text-xs text-gray-600">このURLがあなたのポートフォリオです。</p>
+
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+            <input readOnly value={publishedUrl} className="w-full rounded border px-3 py-2 text-sm" />
+            <button onClick={() => copyToClipboard(publishedUrl)} className="rounded border px-4 py-2 text-sm">
+              コピー
+            </button>
+            <button
+              onClick={() => window.open(publishedUrl, "_blank")}
+              className="rounded bg-black px-4 py-2 text-sm text-white"
+            >
+              開く
+            </button>
+          </div>
+
+          {copied && <p className="mt-2 text-xs text-gray-600">コピーしました。</p>}
+
+          {/* public_slug 編集 */}
+          <div className="mt-5 border-t pt-4">
+            <p className="text-sm font-medium">公開アドレスをカスタム</p>
+            <p className="mt-1 text-xs text-gray-600">
+              例: <span className="font-mono">my-portfolio</span> →{" "}
+              <span className="font-mono">/aura/p/my-portfolio</span>
+              （小文字英数字とハイフン、3〜32文字）
             </p>
 
-            <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-              <input
-                readOnly
-                value={publishedUrl}
-                className="w-full rounded border px-3 py-2 text-sm"
-              />
-              <button
-                onClick={() => copyToClipboard(publishedUrl)}
-                className="rounded border px-4 py-2 text-sm"
-              >
-                コピー
-              </button>
-              <button
-                onClick={() => window.open(publishedUrl, "_blank")}
-                className="rounded bg-black px-4 py-2 text-sm text-white"
-              >
-                開く
-              </button>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex w-full items-center gap-2">
+                <span className="text-xs text-gray-500 font-mono">/aura/p/</span>
+                <input
+                  value={slugDraft}
+                  onChange={(e) => {
+                    setSlugDraft(e.target.value);
+                    setSlugStatus(null);
+                  }}
+                  placeholder="my-portfolio"
+                  className="w-full rounded border px-3 py-2 text-sm font-mono"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button type="button" onClick={handleCheckSlug} className="rounded border px-4 py-2 text-sm">
+                  使えるか確認
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveSlug}
+                  disabled={slugSaving}
+                  className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-60"
+                >
+                  {slugSaving ? "保存中..." : "保存"}
+                </button>
+              </div>
             </div>
 
-            {copied && (
-              <p className="mt-2 text-xs text-gray-600">コピーしました。</p>
-            )}
-
-            {/* public_slug 編集 */}
-            <div className="mt-5 border-t pt-4">
-              <p className="text-sm font-medium">公開アドレスをカスタム</p>
-              <p className="mt-1 text-xs text-gray-600">
-                例: <span className="font-mono">my-portfolio</span> →{" "}
-                <span className="font-mono">/aura/p/my-portfolio</span>
-                （小文字英数字とハイフン、3〜32文字）
+            {slugStatus?.msg && (
+              <p
+                className={`mt-2 text-xs ${
+                  slugStatus.type === "available" || slugStatus.type === "saved"
+                    ? "text-green-700"
+                    : slugStatus.type === "checking"
+                      ? "text-gray-600"
+                      : "text-red-600"
+                }`}
+              >
+                {slugStatus.msg}
               </p>
+            )}
+          </div>
 
-              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="flex w-full items-center gap-2">
-                  <span className="text-xs text-gray-500 font-mono">/aura/p/</span>
-                  <input
-                    value={slugDraft}
-                    onChange={(e) => {
-                      setSlugDraft(e.target.value);
-                      setSlugStatus(null);
-                    }}
-                    placeholder="my-portfolio"
-                    className="w-full rounded border px-3 py-2 text-sm font-mono"
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleCheckSlug}
-                    className="rounded border px-4 py-2 text-sm"
-                  >
-                    使えるか確認
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveSlug}
-                    disabled={slugSaving}
-                    className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-60"
-                  >
-                    {slugSaving ? "保存中..." : "保存"}
-                  </button>
-                </div>
-              </div>
-
-              {slugStatus?.msg && (
-                <p
-                  className={`mt-2 text-xs ${
-                    slugStatus.type === "available" || slugStatus.type === "saved"
-                      ? "text-green-700"
-                      : slugStatus.type === "checking"
-                        ? "text-gray-600"
-                        : "text-red-600"
-                  }`}
-                >
-                  {slugStatus.msg}
-                </p>
-              )}
-            </div>
-
-            <div className="mt-5 border-t pt-4">
-              <p className="text-sm font-medium">SNSで共有</p>
-
-              <div className="mt-2 flex gap-2">
-                {(["light", "standard", "strong"] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setShareTone(t)}
-                    className={`rounded border px-3 py-1.5 text-xs ${
-                      shareTone === t ? "bg-black text-white" : ""
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={() => openXShare(publishedUrl)}
-                  className="rounded border px-4 py-2 text-sm"
-                >
-                  Xで共有
-                </button>
-                <button
-                  onClick={() =>
-                    copyToClipboard(buildShareText(shareTone) + "\n" + publishedUrl)
-                  }
-                  className="rounded border px-4 py-2 text-sm"
-                >
-                  投稿文をコピー
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-5 border-t pt-4 flex justify-between items-center">
-              <p className="text-xs text-gray-600">困ったら me-ish に相談できます。</p>
-              <a href="/contact" className="text-sm underline">
-                お問い合わせへ
-              </a>
+          {/* [AURA_SHARE_V1] */}
+          <div className="mt-5 border-t pt-4">
+            <p className="text-sm font-medium">SNSで共有</p>
+            <div className="mt-3">
+              <button onClick={() => openXShare(publishedUrl)} className="rounded border px-4 py-2 text-sm">
+                Xで共有
+              </button>
             </div>
           </div>
-        )}
-      </section>
-    );
-  }
+
+          <div className="mt-5 border-t pt-4 flex justify-between items-center">
+            <p className="text-xs text-gray-600">困ったら me-ish に相談できます。</p>
+            <a href="/contact" className="text-sm underline">
+              お問い合わせへ
+            </a>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}

@@ -422,7 +422,7 @@ export const AiPortfolioContact: React.FC<Props> = ({ section, theme, variant })
 
           {/* ✅ 連絡先：ピルではなく “カード/行” */}
           {items.length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
               {items.map((it, i) => {
                 const Icon = pickIcon(it.kind);
                 const isMail = it.href.startsWith("mailto:");

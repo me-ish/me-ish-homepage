@@ -516,7 +516,7 @@ const previewBgStyle = useMemo(
    * ========================================================= */
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-50 to-slate-100">
-      <div className="mx-auto max-w-7xl px-4 py-6 lg:py-10">
+      <div className="mx-auto max-w-7xl px-4 py-6 pb-[calc(96px+env(safe-area-inset-bottom))] lg:py-10 lg:pb-0">
         {/* ヘッダー */}
         <header className="mb-6 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm lg:mb-8 lg:rounded-3xl lg:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -601,7 +601,7 @@ const previewBgStyle = useMemo(
 
               {mobilePreviewOpen && (
                 <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
-                  <div className="relative aspect-[4/3] w-full overflow-hidden">
+                  <div className="relative w-full overflow-hidden rounded-2xl min-h-[360px] h-[52vh] max-h-[520px]">
                     <div className="absolute inset-0" style={previewBgStyle}>
                       <AiPortfolioHeroSwitcher
                         theme={mockTheme as any}
