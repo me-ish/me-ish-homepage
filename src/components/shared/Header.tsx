@@ -71,7 +71,7 @@ export default function Header() {
 
   // ✅ AURA導線（追加）
   { label: 'AURAとは（ポートフォリオ）', href: '/aura' },
-  { label: 'ポートフォリオを作成', href: '/aiPortfolio/form' },
+  { label: 'ポートフォリオを作成', href: '/aura/form' },
 
   { label: '出展ガイド', href: '/modal/creators' },
   { label: '購入ガイド', href: '/modal/buyers' },

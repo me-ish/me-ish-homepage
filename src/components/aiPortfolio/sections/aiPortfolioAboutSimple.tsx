@@ -1,4 +1,10 @@
 // src/components/aiPortfolio/sections/aiPortfolioAboutSimple.tsx
+// ============================================
+// About セクション（販売レベル改修版）
+// - デザイントークン統一
+// - Typography / Spacing 統一
+// - 共通コンポーネント使用
+// ============================================
 "use client";
 
 import React, { useMemo } from "react";
@@ -6,8 +12,14 @@ import type { Design, Content } from "@/lib/aiPortfolio/aiPortfolio.schema";
 import type { VariantSpec } from "@/lib/aiPortfolio/aiPortfolio.variant.base";
 import { applyVariantStyle } from "../applyVariantStyle";
 import { AiPortfolioSectionPillHeader } from "./_shared/AiPortfolioSectionPillHeader";
+import { SectionBackground } from "./_shared/SectionBackground";
+import { SectionDivider } from "./_shared/SectionDivider";
 import { sectionAccentColor } from "@/lib/aiPortfolio/aiPortfolio.sectionAccent";
-import { buildSectionBackgroundStyle } from "@/lib/aiPortfolio/aiPortfolio.background";
+import {
+  SPACING,
+  TYPOGRAPHY,
+  getWorldviewOverride,
+} from "@/lib/aiPortfolio/aiPortfolio.designSystem";
 
 type Props = {
   section: Content["sections"][number];
@@ -246,9 +258,9 @@ export const AiPortfolioAboutSimple: React.FC<Props> = ({
   const BodyBlock = (
     <div
       className={[
-        `space-y-3 ${bodyAlignClass} max-w-prose`,
+        `${TYPOGRAPHY.paragraphGap} ${bodyAlignClass} max-w-prose`,
         bodyInsetClass,
-        "text-[15px] leading-[1.9] md:text-[16px]",
+        TYPOGRAPHY.body.base,
       ].join(" ")}
       style={{ color: bodyColor }}
     >
@@ -258,80 +270,7 @@ export const AiPortfolioAboutSimple: React.FC<Props> = ({
     </div>
   );
 
-  // ✅ About 背景（sectionThemeがあればそれを優先して合成）
-  const aboutBg = useMemo(
-    () => buildSectionBackgroundStyle(theme, variant, sectionType),
-    [theme, variant, sectionType],
-  );
-
-  const bgOverlayOpacity = useMemo(() => {
-    if (overallStrength <= 20) return isDarkWorld ? 0.55 : 0.72;
-    if (overallStrength <= 60) return isDarkWorld ? 0.5 : 0.68;
-    return isDarkWorld ? 0.46 : 0.64;
-  }, [overallStrength, isDarkWorld]);
-
-  // ✅ 背景アクセントは「強い強度のみ」
-  // ✅ 40〜：アクセントON（グロー） / 70〜：プラスα（ただし minimal/business は抑制）
-  const ACCENT_AT = 40;
-  const PLUS_AT = 70;
-
-  const worldview = String((variant as any)?.worldview ?? "");
-  const isMinimalLike = worldview === "minimal" || worldview === "business";
-
-  const useAccentBg = overallStrength >= ACCENT_AT;
-  const usePlus = overallStrength >= PLUS_AT && !isMinimalLike;
-
-  const SectionBackground = (
-    <div
-      className="pointer-events-none absolute inset-x-0 -top-10 -bottom-14 z-0 md:-top-14 md:-bottom-20"
-      style={aboutBg}
-    >
-      {/* 1) 可読性 overlay（フラットの土台） */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: isDarkWorld ? "rgba(2,6,23,0.72)" : "rgba(255,255,255,0.78)",
-          opacity: bgOverlayOpacity,
-        }}
-      />
-
-      {/* 2) 40〜：アクセントの薄いグロー */}
-      {useAccentBg ? (
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `radial-gradient(circle at 20% 10%, ${accent} 0%, transparent 48%)`,
-            opacity: isDarkWorld ? 0.14 : 0.1,
-          }}
-        />
-      ) : null}
-
-      {/* 3) 70〜：プラスα（minimal/business は基本オフ） */}
-      {usePlus ? (
-        <>
-          {/* A: セカンドグロー（逆側に薄く） */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `radial-gradient(circle at 100% 100%, ${accent} 0%, transparent 55%)`,
-              opacity: isDarkWorld ? 0.1 : 0.07,
-            }}
-          />
-
-          {/* B: エッジハイライト（“質感”だけ足す） */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: isDarkWorld
-                ? "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 30%)"
-                : "linear-gradient(180deg, rgba(15,23,42,0.06) 0%, transparent 28%)",
-              opacity: 0.55,
-            }}
-          />
-        </>
-      ) : null}
-    </div>
-  );
+  // 背景は共通コンポーネントに委譲
 
   const CardsBlock = hasCards ? (
     <div className="pt-4">
@@ -470,17 +409,24 @@ export const AiPortfolioAboutSimple: React.FC<Props> = ({
 
   return (
     <section
-      className="relative overflow-hidden px-3 pt-10 pb-24 md:px-4 md:pt-14 md:pb-16"
+      className={`relative overflow-hidden ${SPACING.section.paddingY} ${SPACING.section.paddingX}`}
       aria-label="About"
     >
-      {SectionBackground}
+      {/* 背景レイヤー */}
+      <SectionBackground
+        theme={theme}
+        variant={variant}
+        sectionType={sectionType}
+        isDark={isDarkWorld}
+        accentColor={accent}
+        overallStrength={overallStrength}
+      />
 
-      <div className="relative z-10 mx-auto w-full max-w-5xl">
+      <div className={`relative z-10 mx-auto w-full ${SPACING.maxWidth.section}`}>
         <AiPortfolioSectionPillHeader
           label={heading}
           theme={theme}
           variant={variant}
-          className="mb-3"
         />
         {hasCards ? CardShell : NoCardShell}
       </div>

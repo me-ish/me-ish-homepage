@@ -1,20 +1,12 @@
 "use client";
 
 // ============================================
-// AiPortfolioGalleryGrid（showcase ＋ Lightbox＋SP横スクロール版）
-// - imageUrl / url 両対応
-// - description対応
-// - showcase(gallery/masonry/card/textRich)でレイアウト切替
-// - スマホは横スクロール / PCはグリッド
-// - ✅ 1〜3枚のとき “枚数に応じた見せ方” を自動適用（masonry/textRichは除外）
-// - ✅ item内のどのキーに入っていても画像参照を拾う（強制救済）
-// - ✅ 見出し中央ズレ完全解消（grid 3cols）
-// - ✅ セクションコンテナ幅を統一（max-w）
-// - ✅ 追加：About/Services/Contact と同等の「世界観ごとの背景（bgGradient + pattern + texture + overlay）」を適用
-// - ✅ 追加：sectionTheme.works（または section.type）を参照し、そのセクション専用背景を反映
-// - ✅ 方針：ビネットは無し。グローは accentUser（好きな色）。
-// - ✅ 背景幅も他セクション同様に拡張（上下に余白）
+// AiPortfolioGalleryGrid（販売レベル改修版）
 // ============================================
+// - デザイントークン統一
+// - ホバー演出強化（オーバーレイ + 拡大アイコン）
+// - 作品が「主役」として見える視線誘導
+// - 世界観ごとのカード装飾
 
 import React, { CSSProperties, useMemo, useState } from "react";
 import type { Design, Content } from "@/lib/aiPortfolio/aiPortfolio.schema";
@@ -24,6 +16,14 @@ import { applyVariantStyle } from "../applyVariantStyle";
 /* ✅ Storage path → proxy URL */
 import { auraAssetProxyUrl } from "@/lib/aiPortfolio/storage/auraAssets";
 import { AiPortfolioSectionPillHeader } from "./_shared/AiPortfolioSectionPillHeader";
+import { SectionBackground } from "./_shared/SectionBackground";
+import {
+  SPACING,
+  TYPOGRAPHY,
+  TRANSITION,
+  getWorldviewOverride,
+} from "@/lib/aiPortfolio/aiPortfolio.designSystem";
+import { ZoomIn } from "lucide-react";
 
 type Props = {
   section: Content["sections"][number];
@@ -277,9 +277,16 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({ section, theme, varian
     return s;
   };
 
+  // 世界観のオーバーライド
+  const worldview = String((variant as any)?.worldview ?? "business");
+  const override = getWorldviewOverride(worldview);
+  const isNeon = override.decorations.neonBorder;
+  const isGold = override.decorations.goldAccent;
+
   /**
    * カード描画（共通）
    * - aspect を変えたい時だけ引数で指定
+   * - ホバー演出追加（オーバーレイ + 拡大アイコン）
    */
   function WorkCard({
     item,
@@ -294,28 +301,52 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({ section, theme, varian
   }) {
     const src = resolveImageSrc(item);
 
+    // 世界観ごとのカードシャドウ
+    const cardShadowStyle = isNeon
+      ? `${v.shadow}, 0 0 12px ${accentUser}30`
+      : isGold
+        ? `${v.shadow}, 0 0 0 1px rgba(212,175,55,0.2)`
+        : v.shadow;
+
     return (
       <button
         type="button"
-        className={[cardClass, className].join(" ")}
-        style={cardStyle}
+        className={`group ${cardClass} ${className} ${TRANSITION.base}`}
+        style={{ ...cardStyle, boxShadow: cardShadowStyle }}
         onClick={() => src && setActiveIndex(i)}
         aria-label={`Open work ${i + 1}`}
       >
-        <div className={[aspectClass, "w-full bg-gray-200"].join(" ")}>
+        {/* 画像エリア */}
+        <div className={`relative overflow-hidden ${aspectClass} w-full bg-gray-200`}>
           {src ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={src} alt={item.title ?? `work-${i + 1}`} className="h-full w-full object-cover" />
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={src}
+                alt={item.title ?? `work-${i + 1}`}
+                className={`h-full w-full object-cover ${TRANSITION.slow} group-hover:scale-105`}
+              />
+              {/* ホバーオーバーレイ */}
+              <div
+                className={`absolute inset-0 flex items-center justify-center bg-black/0 ${TRANSITION.base} group-hover:bg-black/40`}
+              >
+                <ZoomIn
+                  className={`h-8 w-8 text-white opacity-0 ${TRANSITION.base} group-hover:opacity-100`}
+                  strokeWidth={1.5}
+                />
+              </div>
+            </>
           ) : null}
         </div>
 
-        <div className="flex flex-1 flex-col px-3 py-2 text-left">
+        {/* テキストエリア */}
+        <div className="flex flex-1 flex-col px-4 py-3 text-left">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-xs font-semibold">{getTitle(item, i)}</p>
+            <p className={TYPOGRAPHY.heading.cardSub}>{getTitle(item, i)}</p>
 
             {getYearText(item) ? (
               <span
-                className="mt-[1px] shrink-0 rounded-full border px-2 py-[2px] text-[10px] opacity-80"
+                className={`mt-[1px] shrink-0 rounded-full border px-2 py-[2px] ${TYPOGRAPHY.body.caption} opacity-80`}
                 style={{
                   borderColor: v.borderColor,
                   background: "transparent",
@@ -327,7 +358,11 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({ section, theme, varian
             ) : null}
           </div>
 
-          {getDesc(item) ? <p className="mt-1 line-clamp-3 text-[11px] opacity-80">{getDesc(item)}</p> : null}
+          {getDesc(item) ? (
+            <p className={`mt-2 line-clamp-3 ${TYPOGRAPHY.body.small} opacity-75`}>
+              {getDesc(item)}
+            </p>
+          ) : null}
         </div>
       </button>
     );
@@ -341,10 +376,7 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({ section, theme, varian
   const enableCountLayout = mode !== "textRich" && mode !== "masonry";
   const count = items.length;
 
-  // ✅ 背景（About/Services/Contact と同一方針）
-  // - ビネット無し
-  // - グローは accentUser（好きな色）
-  // - 40〜：アクセントON / 70〜：プラスα
+  // アクセント色
   const accentUser = v.accentColor || theme.colorAccent || theme.colorPrimary;
 
   const overallStrength = useMemo(() => {
@@ -353,79 +385,25 @@ export const AiPortfolioGalleryGrid: React.FC<Props> = ({ section, theme, varian
     return Number.isFinite(n) ? n : 0;
   }, [variant]);
 
-  const worksBg = useMemo(() => buildSectionBackgroundStyle(themeForSection as any), [themeForSection]);
-
-  const bgOverlayOpacity = useMemo(() => {
-    if (overallStrength <= 20) return isDarkWorld ? 0.55 : 0.72;
-    if (overallStrength <= 60) return isDarkWorld ? 0.5 : 0.68;
-    return isDarkWorld ? 0.46 : 0.64;
-  }, [overallStrength, isDarkWorld]);
-
-  const ACCENT_AT = 40;
-  const PLUS_AT = 70;
-
-  const useAccentBg = overallStrength >= ACCENT_AT;
-  const usePlus = overallStrength >= PLUS_AT;
-
-  const SectionBackground = (
-    <div
-      className="pointer-events-none absolute inset-0 z-0"
-      style={worksBg}
-    >
-      {/* 1) 可読性 overlay（常時） */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: isDarkWorld ? "rgba(2,6,23,0.72)" : "rgba(255,255,255,0.78)",
-          opacity: bgOverlayOpacity,
-        }}
-      />
-
-      {/* 2) 40〜：アクセントの薄いグロー（accentUser） */}
-      {useAccentBg ? (
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `radial-gradient(circle at 20% 10%, ${accentUser} 0%, transparent 48%)`,
-            opacity: isDarkWorld ? 0.14 : 0.10,
-          }}
-        />
-      ) : null}
-
-      {/* 3) 70〜：プラスα（質感だけ足す / ビネット無し） */}
-      {usePlus ? (
-        <>
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `radial-gradient(circle at 100% 100%, ${accentUser} 0%, transparent 55%)`,
-              opacity: isDarkWorld ? 0.10 : 0.07,
-            }}
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background: isDarkWorld
-                ? "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 30%)"
-                : "linear-gradient(180deg, rgba(15,23,42,0.06) 0%, transparent 28%)",
-              opacity: 0.55,
-            }}
-          />
-        </>
-      ) : null}
-    </div>
-  );
+  // 背景は共通コンポーネントに委譲
 
   return (
-<section
-  className="relative overflow-hidden px-3 pt-6 pb-8 md:px-4 md:pt-14 md:pb-16"
-  aria-label="Works"
->
-      {/* ✅ 背景 */}
-      {SectionBackground}
+    <section
+      className={`relative overflow-hidden ${SPACING.section.paddingY} ${SPACING.section.paddingX}`}
+      aria-label="Works"
+    >
+      {/* 背景レイヤー */}
+      <SectionBackground
+        theme={themeForSection}
+        variant={variant}
+        sectionType={sectionType}
+        isDark={isDarkWorld}
+        accentColor={accentUser}
+        overallStrength={overallStrength}
+      />
 
       {/* 中央基準を統一 */}
-      <div className="relative z-10 mx-auto w-full max-w-5xl">
+      <div className={`relative z-10 mx-auto w-full ${SPACING.maxWidth.section}`}>
         {/* ======= 見出し（中央厳密） ======= */}
         <AiPortfolioSectionPillHeader
           label={headerLabel}

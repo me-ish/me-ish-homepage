@@ -1,9 +1,7 @@
 // src/components/aiPortfolio/sections/aiPortfolioServices.tsx
-// （セクション見出しを中央ズレ防止で統一＋価格フォーマット対応＋カード中央寄せ）
-// ✅ B案：タイトル＆価格は中央 / 説明文だけ左寄せ（可読性と見た目の両立）
-// ✅ 追加：サービス文言（タイトル/説明/セクション文）から iconKey を推定して表示（任意で svc.iconKey が優先）
-// ✅ 追加：About と同等の「世界観ごとの背景（bgGradient + pattern + texture + overlay）」を Services にも適用
-// ✅ 追加：背景の“幅・上下”を広げる（-inset-x を使って横方向も拡張）
+// ============================================
+// Services セクション（販売レベル改修版）
+// ============================================
 
 "use client";
 
@@ -13,8 +11,14 @@ import type { VariantSpec } from "@/lib/aiPortfolio/aiPortfolio.variant.base";
 import { applyVariantStyle } from "../applyVariantStyle";
 
 import { AiPortfolioSectionPillHeader } from "./_shared/AiPortfolioSectionPillHeader";
+import { SectionBackground } from "./_shared/SectionBackground";
 import { sectionAccentColor } from "@/lib/aiPortfolio/aiPortfolio.sectionAccent";
-import { buildSectionBackgroundStyle } from "@/lib/aiPortfolio/aiPortfolio.background";
+import {
+  SPACING,
+  TYPOGRAPHY,
+  TRANSITION,
+  getWorldviewOverride,
+} from "@/lib/aiPortfolio/aiPortfolio.designSystem";
 
 import {
   BookOpen,
@@ -192,11 +196,11 @@ export const AiPortfolioServices: React.FC<Props> = ({ section, theme, variant }
   const headingText =
     headings?.[0] ?? getLabel((theme as any)?.languageMode ?? (theme as any)?.language);
 
-  // ✅ About と同等：セクション背景は共通関数に委譲（sectionTheme も内部で拾う）
-  const servicesBg = useMemo(
-    () => buildSectionBackgroundStyle(theme, variant, sectionType),
-    [theme, variant, sectionType]
-  );
+  // 世界観オーバーライド
+  const worldview = String((variant as any)?.worldview ?? "business");
+  const override = getWorldviewOverride(worldview);
+  const isNeon = override.decorations.neonBorder;
+  const isGold = override.decorations.goldAccent;
 
   const v = applyVariantStyle(variant, theme);
 
@@ -263,95 +267,25 @@ export const AiPortfolioServices: React.FC<Props> = ({ section, theme, variant }
     return Number.isFinite(n) ? n : 0;
   }, [variant]);
 
-  const bgOverlayOpacity = useMemo(() => {
-    if (overallStrength <= 20) return isDarkWorld ? 0.55 : 0.72;
-    if (overallStrength <= 60) return isDarkWorld ? 0.5 : 0.68;
-    return isDarkWorld ? 0.46 : 0.64;
-  }, [overallStrength, isDarkWorld]);
-
-  // ✅ 背景アクセントは「強い強度のみ」
-  // ✅ 40〜：アクセントON（グロー） / 70〜：プラスα（ただし minimal/business は抑制）
-  const ACCENT_AT = 40;
-  const PLUS_AT = 70;
-
-  const worldview = String((variant as any)?.worldview ?? "");
-  const isMinimalLike = worldview === "minimal" || worldview === "business";
-
-  const useAccentBg = overallStrength >= ACCENT_AT;
-  const usePlus = overallStrength >= PLUS_AT && !isMinimalLike;
-
-  // ✅ About と同等の背景レイヤ（横幅も広げる）
-  const SectionBackground = (
-    <div
-      className={[
-        "pointer-events-none absolute z-0",
-        // 横幅も拡張（背景の“幅”を広げる）
-        "-inset-x-6 md:-inset-x-10 lg:-inset-x-14",
-        // 上下も拡張（Aboutと同様の“広がり”）
-        "-top-10 -bottom-14 md:-top-14 md:-bottom-20",
-      ].join(" ")}
-      style={servicesBg}
-    >
-      {/* 1) 可読性 overlay（フラットの土台） */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: isDarkWorld ? "rgba(2,6,23,0.72)" : "rgba(255,255,255,0.78)",
-          opacity: bgOverlayOpacity,
-        }}
-      />
-
-      {/* 2) 40〜：アクセントの薄いグロー */}
-      {useAccentBg ? (
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `radial-gradient(circle at 20% 10%, ${accent} 0%, transparent 48%)`,
-            opacity: isDarkWorld ? 0.14 : 0.10,
-          }}
-        />
-      ) : null}
-
-      {/* 3) 70〜：プラスα（minimal/business は基本オフ） */}
-      {usePlus ? (
-        <>
-          {/* A: セカンドグロー（逆側に薄く） */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `radial-gradient(circle at 100% 100%, ${accent} 0%, transparent 55%)`,
-              opacity: isDarkWorld ? 0.10 : 0.07,
-            }}
-          />
-
-          {/* B: エッジハイライト（“質感”だけ足す） */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: isDarkWorld
-                ? "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 30%)"
-                : "linear-gradient(180deg, rgba(15,23,42,0.06) 0%, transparent 28%)",
-              opacity: 0.55,
-            }}
-          />
-        </>
-      ) : null}
-    </div>
-  );
+  // 背景は共通コンポーネントに委譲
 
   return (
     <section
-      className={[
-        "relative overflow-hidden px-3 pt-10 pb-20 md:px-4 md:pt-14 md:pb-16",
-        alignClass,
-      ].join(" ")}
+      className={`relative overflow-hidden ${SPACING.section.paddingY} ${SPACING.section.paddingX} ${alignClass}`}
       aria-label="Services"
     >
-      {/* ✅ 背景（背面） */}
-      {SectionBackground}
+      {/* 背景レイヤー */}
+      <SectionBackground
+        theme={theme}
+        variant={variant}
+        sectionType={sectionType}
+        isDark={isDarkWorld}
+        accentColor={accent}
+        overallStrength={overallStrength}
+      />
 
-      {/* ★ 中央基準コンテナ（前面） */}
-      <div className="relative z-10 mx-auto w-full max-w-5xl">
+      {/* 中央基準コンテナ */}
+      <div className={`relative z-10 mx-auto w-full ${SPACING.maxWidth.section}`}>
         {/* ✅ About と同じ見出し（ズレ根絶） */}
         <AiPortfolioSectionPillHeader
           label={headingText}

@@ -1,16 +1,22 @@
 "use client";
 
 // ============================================
-// AiPortfolioHeroMinimal（スクショ型 1スクリーンHERO版）
-// - Nav / 強い見出し / 2CTA / Scroll cue を内包
-// - applyVariantStyle の radius/shadow/surface を尊重
-// - 世界観差は「背景・装飾・ボタンのトーン」で出す（レイアウトは壊さない）
-// - ✅ overallStrength により「カード表示の有無」を制御（0-24: no-card / 25-69: card / 70-100: card+rich）
+// AiPortfolioHeroMinimal（販売レベル改修版）
 // ============================================
+// - 世界観ごとの装飾バリエーション強化
+// - Typography トークン適用
+// - カード/ボタンのスタイル統一
 
 import React, { CSSProperties, useMemo } from "react";
 import { applyVariantStyle } from "../../applyVariantStyle";
 import type { HeroProps } from "./HeroTypes";
+import {
+  SPACING,
+  TYPOGRAPHY,
+  TRANSITION,
+  getWorldviewOverride,
+  buildDecorationLayers,
+} from "@/lib/aiPortfolio/aiPortfolio.designSystem";
 
 // ---------------------------------------------------------
 // fontPreset → className
@@ -179,16 +185,27 @@ export const AiPortfolioHeroMinimal: React.FC<HeroProps> = ({
 
   const isDark = v.isDark;
 
-  const headlineClass =
-    "font-extrabold tracking-tight leading-[1.05] text-[clamp(2.2rem,5.4vw,3.8rem)]";
+  // 世界観オーバーライド
+  const worldview = String(variant.worldview ?? "business");
+  const override = getWorldviewOverride(worldview);
+  const isNeon = override.decorations.neonBorder;
+  const isGold = override.decorations.goldAccent;
+  const isRounded = override.decorations.roundedEmphasis;
 
-  const sublineClass = "mt-5 text-[clamp(0.95rem,1.4vw,1.1rem)] leading-relaxed";
+  // 装飾レイヤー
+  const decorations = useMemo(
+    () => buildDecorationLayers(worldview, strength, accent, isDark),
+    [worldview, strength, accent, isDark]
+  );
 
-  const primaryBtnClass =
-    "inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-semibold transition-transform duration-200 hover:-translate-y-[1px] active:translate-y-0";
+  // Typography トークン適用
+  const headlineClass = TYPOGRAPHY.heading.hero;
+  const sublineClass = `mt-5 ${TYPOGRAPHY.heading.heroSub}`;
 
-  const secondaryBtnClass =
-    "inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-semibold transition-opacity hover:opacity-85";
+  // ボタン共通クラス
+  const btnRadius = isRounded ? "rounded-full" : "rounded-xl";
+  const primaryBtnClass = `inline-flex items-center justify-center ${btnRadius} px-7 py-3.5 text-sm font-semibold ${TRANSITION.base} ${TRANSITION.hoverLiftSm} ${TRANSITION.activePress}`;
+  const secondaryBtnClass = `inline-flex items-center justify-center ${btnRadius} px-7 py-3.5 text-sm font-semibold ${TRANSITION.base} hover:opacity-85`;
 
   // CTAリンク（将来 section.cta を見てもいいが、まずは固定で良い）
   const worksHref = "#works";
@@ -210,44 +227,60 @@ export const AiPortfolioHeroMinimal: React.FC<HeroProps> = ({
       data-hero-card-mode={cardMode}
       data-hero-strength={strength}
     >
-      {/* 背景装飾（世界観差分は“薄く”） */}
+      {/* 背景装飾（世界観ごとの差を強化） */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         {/* 上部の薄い光 */}
         <div
           className="absolute -top-24 left-1/2 h-[420px] w-[820px] -translate-x-1/2 rounded-full blur-3xl"
           style={{
-            opacity: showCard ? 0.25 : 0.18,
-            background: `radial-gradient(circle, ${accent} 0%, transparent 60%)`,
+            opacity: showCard ? 0.28 : 0.2,
+            background: `radial-gradient(ellipse 100% 80%, ${accent} 0%, transparent 55%)`,
           }}
         />
         {/* 角の薄いグラデ（dark/cyberは控えめ） */}
         <div
           className="absolute -bottom-28 -right-28 h-[420px] w-[420px] rounded-full blur-3xl"
           style={{
-            opacity: isDark ? (showCard ? 0.1 : 0.07) : showCard ? 0.18 : 0.12,
-            background: `radial-gradient(circle, ${accent} 0%, transparent 62%)`,
+            opacity: isDark ? (showCard ? 0.12 : 0.08) : showCard ? 0.2 : 0.14,
+            background: `radial-gradient(circle, ${accent} 0%, transparent 60%)`,
           }}
         />
 
-        {/* ✅ cardMode=2（強度高）だけ、薄いライン/ノイズを足す（やりすぎない） */}
-        {cardMode === 2 ? (
-          <>
-            <div
-              className="absolute inset-0 opacity-[0.035]"
-              style={{
-                backgroundImage:
-                  'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'3\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")',
-              }}
-            />
-            <div
-              className="absolute inset-x-0 top-0 h-px"
-              style={{
-                background: `linear-gradient(90deg, transparent 0%, ${accent} 50%, transparent 100%)`,
-                opacity: 0.35,
-              }}
-            />
-          </>
-        ) : null}
+        {/* スキャンライン（cyber） */}
+        {decorations.scanlinesBg && (
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: decorations.scanlinesBg,
+              opacity: 0.4,
+            }}
+          />
+        )}
+
+        {/* ノイズテクスチャ */}
+        {decorations.showNoise && (
+          <div
+            className="absolute inset-0 opacity-[0.025]"
+            style={{
+              backgroundImage:
+                'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'3\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")',
+            }}
+          />
+        )}
+
+        {/* 上部アクセントライン（neon/gold対応） */}
+        {(isNeon || isGold || cardMode >= 1) && (
+          <div
+            className="absolute inset-x-0 top-0 h-px"
+            style={{
+              background: isGold
+                ? "linear-gradient(90deg, transparent 0%, #D4AF37 50%, transparent 100%)"
+                : `linear-gradient(90deg, transparent 0%, ${accent} 50%, transparent 100%)`,
+              opacity: isNeon ? 0.6 : isGold ? 0.5 : 0.35,
+              boxShadow: isNeon ? `0 0 12px ${accent}60` : undefined,
+            }}
+          />
+        )}
       </div>
 
       {/* 中央：Heroコンテンツ（ほぼ1スクリーン） */}

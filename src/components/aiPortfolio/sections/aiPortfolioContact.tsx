@@ -1,10 +1,7 @@
 // src/components/aiPortfolio/sections/aiPortfolioContact.tsx
-// ✅ リッチ化：ピル(ボタン風)を廃止し、カード/行ベースのContactに変更
-// ✅ 追加：About/Services/Skills と同等の「世界観ごとの背景（bgGradient + pattern + texture + overlay）」を適用
-// ✅ sectionTheme.contact（または section.type）を参照し、そのセクション専用背景を反映
-// ✅ 既存のURL正規化ロジックは保持（SNS/Website/links/email の救済）
-// ✅ 方針：ビネットは無し。グローは accentUser（好きな色）で統一。
-// ✅ 背景幅も About/Services/Skills と同等に拡張。
+// ============================================
+// Contact セクション（販売レベル改修版）
+// ============================================
 
 "use client";
 
@@ -13,6 +10,13 @@ import type { Design, Content } from "@/lib/aiPortfolio/aiPortfolio.schema";
 import type { VariantSpec } from "@/lib/aiPortfolio/aiPortfolio.variant.base";
 import { applyVariantStyle } from "../applyVariantStyle";
 import { AiPortfolioSectionPillHeader } from "./_shared/AiPortfolioSectionPillHeader";
+import { SectionBackground } from "./_shared/SectionBackground";
+import {
+  SPACING,
+  TYPOGRAPHY,
+  TRANSITION,
+  getWorldviewOverride,
+} from "@/lib/aiPortfolio/aiPortfolio.designSystem";
 
 import {
   Mail,
@@ -90,31 +94,7 @@ function normalizeLink(label: string, hrefRaw: string): LinkPill | null {
   return { label, href: withHttpsIfNeeded(href) };
 }
 
-/** ✅ theme の bgGradient / patternLayers / textureLayers / bgStyle を合成して背景を作る（About/Services/Skillsと同等） */
-function buildSectionBackgroundStyle(theme: Design["theme"]) {
-  const bgStyle = (theme as any)?.bgStyle ?? undefined;
-
-  const bgGradient =
-    typeof (theme as any)?.bgGradient === "string" ? (theme as any).bgGradient : "";
-  const patternLayers = Array.isArray((theme as any)?.patternLayers)
-    ? (theme as any).patternLayers
-    : [];
-  const textureLayers = Array.isArray((theme as any)?.textureLayers)
-    ? (theme as any).textureLayers
-    : [];
-
-  const images: string[] = [];
-  if (bgGradient) images.push(bgGradient);
-  if (patternLayers.length > 0) images.push(...patternLayers);
-  if (textureLayers.length > 0) images.push(...textureLayers);
-
-  const backgroundImage = images.length > 0 ? images.join(", ") : undefined;
-
-  return {
-    ...(bgStyle ?? {}),
-    ...(backgroundImage ? { backgroundImage } : {}),
-  } as React.CSSProperties;
-}
+// 背景は共通コンポーネント（SectionBackground）に委譲
 
 type ContactItem = {
   label: string;
@@ -350,94 +330,37 @@ export const AiPortfolioContact: React.FC<Props> = ({ section, theme, variant })
     ? v.surfaceBG
     : "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.94))";
 
-  // ✅ 背景（About/Services/Skills と同等）
+  // 世界観オーバーライド
+  const worldview = String((variant as any)?.worldview ?? "business");
+  const override = getWorldviewOverride(worldview);
+  const isNeon = override.decorations.neonBorder;
+  const isGold = override.decorations.goldAccent;
+
+  // overallStrength
   const overallStrength = useMemo(() => {
     const rawStrength = (variant as any)?.overallStrength;
     const n = typeof rawStrength === "string" ? Number(rawStrength) : Number(rawStrength);
     return Number.isFinite(n) ? n : 0;
   }, [variant]);
 
-  const contactBg = useMemo(
-    () => buildSectionBackgroundStyle(themeForSection as any),
-    [themeForSection]
-  );
-
-  const bgOverlayOpacity = useMemo(() => {
-    if (overallStrength <= 20) return isDarkWorld ? 0.55 : 0.72;
-    if (overallStrength <= 60) return isDarkWorld ? 0.5 : 0.68;
-    return isDarkWorld ? 0.46 : 0.64;
-  }, [overallStrength, isDarkWorld]);
-
-  // ✅ 40〜：アクセントON（グロー） / 70〜：プラスα（質感足し）
-  const ACCENT_AT = 40;
-  const PLUS_AT = 70;
-
-  const useAccentBg = overallStrength >= ACCENT_AT;
-  const usePlus = overallStrength >= PLUS_AT;
-
-  const SectionBackground = (
-    <div
-      className="pointer-events-none absolute inset-x-0 -top-10 -bottom-14 z-0 md:-top-14 md:-bottom-20"
-      style={contactBg}
-    >
-      {/* 1) 可読性 overlay（フラットの土台） */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: isDarkWorld ? "rgba(2,6,23,0.72)" : "rgba(255,255,255,0.78)",
-          opacity: bgOverlayOpacity,
-        }}
-      />
-
-      {/* 2) 40〜：アクセントの薄いグロー（accentUser） */}
-      {useAccentBg ? (
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `radial-gradient(circle at 20% 10%, ${accentUser} 0%, transparent 48%)`,
-            opacity: isDarkWorld ? 0.14 : 0.10,
-          }}
-        />
-      ) : null}
-
-      {/* 3) 70〜：プラスα（“質感”だけ足す） */}
-      {usePlus ? (
-        <>
-          {/* A: セカンドグロー（逆側に薄く） */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `radial-gradient(circle at 100% 100%, ${accentUser} 0%, transparent 55%)`,
-              opacity: isDarkWorld ? 0.10 : 0.07,
-            }}
-          />
-
-          {/* B: エッジハイライト（軽い質感） */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: isDarkWorld
-                ? "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 30%)"
-                : "linear-gradient(180deg, rgba(15,23,42,0.06) 0%, transparent 28%)",
-              opacity: 0.55,
-            }}
-          />
-        </>
-      ) : null}
-    </div>
-  );
-
   const sectionLabel = (heading || "Contact").toUpperCase();
 
   return (
     <section
-      className="relative overflow-hidden px-3 pt-10 pb-24 md:px-4 md:pt-12 md:pb-16"
+      className={`relative overflow-hidden ${SPACING.section.paddingY} ${SPACING.section.paddingX}`}
       aria-label="Contact"
     >
-      {/* ✅ 背景 */}
-      {SectionBackground}
+      {/* 背景レイヤー */}
+      <SectionBackground
+        theme={themeForSection}
+        variant={variant}
+        sectionType={sectionType}
+        isDark={isDarkWorld}
+        accentColor={accentUser}
+        overallStrength={overallStrength}
+      />
 
-      <div className="relative z-10 mx-auto mt-4 w-full max-w-5xl">
+      <div className={`relative z-10 mx-auto w-full ${SPACING.maxWidth.section}`}>
         <AiPortfolioSectionPillHeader
           label={sectionLabel}
           theme={theme}

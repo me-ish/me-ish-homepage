@@ -1,4 +1,7 @@
 // src/components/aiPortfolio/aiPortfolioPortfolioRenderer.tsx
+// ============================================
+// メインレンダラー（販売レベル改修版）
+// ============================================
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -6,6 +9,7 @@ import type { Design, Content } from "@/lib/aiPortfolio/aiPortfolio.schema";
 import { VARIANTS, type VariantSpec } from "@/lib/aiPortfolio/aiPortfolio.variant.base";
 import { fontFamilyFromPreset } from "@/styles/aiPortfolioFonts";
 import type { LayoutPref, SectionType, LayoutType } from "@/lib/aiPortfolio/aiPortfolio.layout";
+import { SPACING, TYPOGRAPHY, TRANSITION } from "@/lib/aiPortfolio/aiPortfolio.designSystem";
 
 /* ✅ NEW: Storage path → proxy URL */
 import { auraAssetProxyUrl } from "@/lib/aiPortfolio/storage/auraAssets";
@@ -431,13 +435,11 @@ export default function AiPortfolioPortfolioRenderer({
   }
 
   /**
-   * ✅ “1セクションずつ余裕をもって仕上げる” 前提のラッパー
-   * - 各 section に十分な縦padding
-   * - anchor（#about 等）でナビ可能
-   * - scroll-mt で固定ヘッダーがあっても見出しが隠れにくい
+   * セクションラッパー
+   * - セクション自体がpaddingを持つため、ここでは最小限に
+   * - scroll-mt で固定ヘッダー対応
    */
-const sectionWrapperClass =
-  "relative py-6 md:py-8 scroll-mt-24";
+  const sectionWrapperClass = `relative ${SPACING.scrollMargin}`;
 
   return (
     <div
@@ -481,7 +483,7 @@ const sectionWrapperClass =
           </button>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-5" aria-label="Section navigation">
+          <nav className="hidden md:flex items-center gap-6" aria-label="Section navigation">
             {navTypes.map((t) => {
               const id = sectionIdFromType(t);
               const label = navLabel(t, languageMode);
@@ -490,7 +492,7 @@ const sectionWrapperClass =
                 <button
                   key={t}
                   type="button"
-                  className="text-[12px] font-medium tracking-wide transition-opacity hover:opacity-80"
+                  className={`${TYPOGRAPHY.body.caption} font-medium tracking-wide ${TRANSITION.fast} hover:opacity-75`}
                   style={{ color: v.mutedText }}
                   onClick={() => handleNavClick(id)}
                 >
@@ -555,8 +557,8 @@ const sectionWrapperClass =
         ) : null}
       </div>
 
-      {/* ✅ 余白を “space-y” ではなく section側paddingで作る（世界観ごとの揺らぎにも強い） */}
-      <div className="px-6 pb-14 pt-0">
+      {/* セクション本体（余白は各セクションで管理） */}
+      <div className="pb-8 md:pb-12">
         {finalOrderTypes.map((type) => {
           const data = findSection(type);
           if (!data) return null;

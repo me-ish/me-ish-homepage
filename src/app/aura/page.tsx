@@ -67,7 +67,7 @@ export default function AuraPage() {
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
-            href="/aiPortfolio/form"
+            href="/aura/form"
             className="inline-flex items-center justify-center gap-2 bg-[#00a1e9] text-white px-6 py-3 rounded-full text-base font-semibold hover:brightness-[1.05] transition"
             aria-label="AURAでポートフォリオを作成する"
           >
@@ -166,7 +166,7 @@ export default function AuraPage() {
               </ul>
               <div className="mt-4">
                 <Link
-                  href="/aiPortfolio/form"
+                  href="/aura/form"
                   className="inline-flex items-center justify-center gap-2 bg-[#00a1e9] text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:brightness-[1.05] transition"
                 >
                   作成する <ArrowRight className="w-4 h-4" />
@@ -239,7 +239,7 @@ export default function AuraPage() {
       {/* CTA */}
       <div className="text-center">
         <Link
-          href="/aiPortfolio/form"
+          href="/aura/form"
           className="inline-flex items-center justify-center gap-2 bg-[#00a1e9] text-white px-6 py-3 rounded-full text-base font-semibold hover:brightness-[1.05] transition"
         >
           AURAでポートフォリオを作成する <ArrowRight className="w-4 h-4" />

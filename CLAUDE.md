@@ -29,3 +29,10 @@
 - Components: src/components
 - AURA logic: src/lib/aiPortfolio
 
+## AURA naming policy (2025-01)
+- Public URLs: /aura/* (user-facing, SEO, bookmarks)
+- Internal implementation: /aiPortfolio/* (legacy, being migrated)
+- /aura/form, /aura/preview/[id] are aliases redirecting to /aiPortfolio/*
+- API: /api/aura/* for new endpoints, /api/aiPortfolio/* for legacy (both work)
+- DB table: aura_requests, Storage bucket: aura-assets
+
