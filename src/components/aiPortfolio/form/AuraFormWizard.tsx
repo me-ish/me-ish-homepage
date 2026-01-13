@@ -59,6 +59,14 @@ type DraftState = {
   error?: string | null;
 };
 
+/* =========================================================
+ * Email 同期状態
+ * ========================================================= */
+type EmailSyncState = {
+  status: "idle" | "syncing" | "synced" | "error";
+  error?: string | null;
+};
+
 export function AuraFormWizard() {
   // フォームデータと永続化
   const { data, setData, currentStep, setCurrentStep, clearDraft } = useAuraFormDraft();
@@ -74,6 +82,13 @@ export function AuraFormWizard() {
     status: "idle",
     error: null,
   });
+
+  // Email 同期状態（DB への即時反映用）
+  const [emailSync, setEmailSync] = useState<EmailSyncState>({
+    status: "idle",
+    error: null,
+  });
+  const emailSyncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // コンテナref（スクロール用）
   const containerRef = useRef<HTMLDivElement>(null);
@@ -171,6 +186,74 @@ useEffect(() => {
 
     createDraftIfNeeded(email, data.name).catch(() => {});
   }, [data.email, data.name, draft.requestId, draft.status, createDraftIfNeeded]);
+
+  /* =========================================================
+   * Email を DB に同期（debounce 付き）
+   * - draft.requestId が存在する場合のみ
+   * - 400ms debounce で連打防止
+   * ========================================================= */
+  const syncEmailToDb = useCallback(async (email: string) => {
+    if (!draft.requestId) return;
+
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) return;
+
+    // メール形式チェック
+    const looksLikeEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
+    if (!looksLikeEmail) return;
+
+    if (process.env.NODE_ENV === "development") {
+      console.log("[email-sync] syncing:", { id: draft.requestId, email: normalized });
+    }
+
+    setEmailSync({ status: "syncing", error: null });
+
+    try {
+      const res = await fetch(`/api/aiPortfolio/request/${draft.requestId}/email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalized }),
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.ok) {
+        const errMsg = json?.message ?? json?.error ?? "メール更新に失敗しました";
+        console.error("[email-sync] error:", errMsg);
+        setEmailSync({ status: "error", error: errMsg });
+        return;
+      }
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("[email-sync] SUCCESS:", { id: draft.requestId, email: json.email });
+      }
+      setEmailSync({ status: "synced", error: null });
+    } catch (e) {
+      console.error("[email-sync] network error:", e);
+      setEmailSync({ status: "error", error: "通信エラーが発生しました" });
+    }
+  }, [draft.requestId]);
+
+  // Email 変更を検知して debounce 後に同期
+  useEffect(() => {
+    if (!draft.requestId) return;
+
+    // 既存のタイマーをクリア
+    if (emailSyncTimeoutRef.current) {
+      clearTimeout(emailSyncTimeoutRef.current);
+    }
+
+    // 400ms 後に同期
+    emailSyncTimeoutRef.current = setTimeout(() => {
+      syncEmailToDb(data.email);
+    }, 400);
+
+    return () => {
+      if (emailSyncTimeoutRef.current) {
+        clearTimeout(emailSyncTimeoutRef.current);
+      }
+    };
+  }, [data.email, draft.requestId, syncEmailToDb]);
 
   /* =========================================================
    * ナビゲーション
