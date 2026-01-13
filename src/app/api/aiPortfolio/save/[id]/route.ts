@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { ContentSchema } from "@/lib/aiPortfolio/aiPortfolio.schema";
 import { findRequest, publishContent } from "@/lib/aiPortfolio/aiPortfolio.db";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { claimMeishFree, claimFirst20Free } from "@/lib/aiPortfolio/auraBillingGate";
 
 type Params = { id: string };
 
@@ -55,23 +55,32 @@ export async function POST(req: Request, { params }: { params: Params }) {
       let allowed = paymentStatus === "paid";
 
       if (!allowed && email) {
-        const admin = supabaseAdmin();
+        // ログ: 無料判定開始
+        console.log("[aiPortfolio/save] free_check_start:", { id, email });
 
-// 1) me-ish採用（entries.confirmed=true）で 1回無料（消費できたら true）
-const { data: meishOk } = await (admin as any).rpc("aura_claim_meish_free", {
-  p_email: email,
-});
-allowed = meishOk === true;
+        // 1) me-ish採用（entries.confirmed=true）で 1回無料（消費できたら true）
+        const meishResult = await claimMeishFree(email);
+        console.log("[aiPortfolio/save] meish_result:", meishResult);
 
+        if (meishResult.success) {
+          allowed = true;
+          console.log("[aiPortfolio/save] allowed_by_meish:", { id, email });
+        }
 
-// 2) 先着20名無料（消費できたら true）
-if (!allowed) {
-  const { data: first20Ok } = await (admin as any).rpc("aura_claim_first20", {
-    p_email: email,
-  });
-  allowed = first20Ok === true;
-}
+        // 2) 先着20名無料（消費できたら true）
+        if (!allowed) {
+          const first20Result = await claimFirst20Free(email);
+          console.log("[aiPortfolio/save] first20_result:", first20Result);
 
+          if (first20Result.success) {
+            allowed = true;
+            console.log("[aiPortfolio/save] allowed_by_first20:", { id, email });
+          }
+        }
+
+        if (!allowed) {
+          console.log("[aiPortfolio/save] no_free_option:", { id, email });
+        }
       }
 
       if (!allowed) {

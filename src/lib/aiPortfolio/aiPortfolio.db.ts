@@ -5,6 +5,27 @@ import { supabaseAdmin } from "@/lib/aiPortfolio/supabaseAdmin";
 // aura_requests.status の実態に合わせる
 export type RequestStatus = "draft" | "generated" | "error" | "published";
 
+/* ---------------------------------------------------------
+ * Renderer Version 管理
+ * --------------------------------------------------------- */
+
+/**
+ * 現在の Renderer バージョン（SemVer）
+ * - 新規確定時にこの値が刻印される
+ * - MAJOR 変更時は v2 ディレクトリを用意してから上げる
+ */
+export const CURRENT_RENDERER_VERSION = "1.0.0" as const;
+
+/**
+ * SemVer 文字列から MAJOR バージョンを抽出
+ */
+export function getMajorVersion(version: string | null | undefined): number {
+  if (!version) return 1;
+  const [major] = version.split(".");
+  const parsed = parseInt(major, 10);
+  return Number.isFinite(parsed) ? parsed : 1;
+}
+
 // DBの実カラムに合わせて拡張（/aura/p 統合のため）
 export type RequestVisibility = "public" | "private" | string;
 
@@ -30,6 +51,9 @@ export type RequestRecord = {
   error?: string | null;
   createdAt: string;
   updatedAt: string;
+
+  // ✅ Renderer Version（買い切り固定化）
+  rendererVersion: string;
 };
 
 /* ---------------------------------------------------------
@@ -114,6 +138,9 @@ function mapDbToRecord(row: any): RequestRecord {
     error: row.error ?? null,
     createdAt: row.created_at ?? new Date().toISOString(),
     updatedAt: row.updated_at ?? new Date().toISOString(),
+
+    // ✅ Renderer Version（DB default '1.0.0' により既存も自動対応）
+    rendererVersion: row.renderer_version ?? "1.0.0",
   };
 }
 
@@ -365,6 +392,9 @@ export async function publishContent(
       design: nextDesign ?? current.design ?? null,
       error: null,
       updated_at: nowIso,
+
+      // ✅ Renderer Version 刻印（買い切り固定化）
+      renderer_version: CURRENT_RENDERER_VERSION,
     })
     .eq("id", id)
     .select("*")

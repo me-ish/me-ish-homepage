@@ -3,7 +3,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 
 import { supabaseAdmin } from "@/lib/aiPortfolio/supabaseAdmin";
-import AiPortfolioPortfolioRenderer from "@/components/aiPortfolio/aiPortfolioPortfolioRenderer";
+import { RendererRouter } from "@/components/aiPortfolio/renderer/RendererRouter";
 import { fontFamilyFromPreset } from "@/styles/aiPortfolioFonts";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +23,9 @@ type PublicAuraRow = {
 
   // ✅ public_slug方式
   public_slug: string | null;
+
+  // ✅ Renderer Version（買い切り固定化）
+  renderer_version: string | null;
 };
 
 function isUuidLike(v: string) {
@@ -41,9 +44,9 @@ function cleanStr(v: any): string | null {
 async function getPublicAuraByKey(key: string): Promise<PublicAuraRow | null> {
   const supabase = supabaseAdmin();
 
-  // public_slug を導入済み前提
+  // public_slug を導入済み前提 + renderer_version 追加
   const select =
-    "design, content, visibility, published_at, status, slug, public_id, public_slug";
+    "design, content, visibility, published_at, status, slug, public_id, public_slug, renderer_version";
 
   const isUuid = isUuidLike(key);
 
@@ -140,9 +143,13 @@ export default async function AuraPublicPage({
   const fontClass = fontFamilyFromPreset(data.design?.theme?.fontPreset ?? null);
   const sectionOrder = resolveSectionOrder(data.design, data.content);
 
+  // ✅ renderer_version を取得（DB default '1.0.0' により既存も対応）
+  const rendererVersion = data.renderer_version ?? "1.0.0";
+
   return (
     <main className={`mx-auto max-w-5xl px-4 py-10 ${fontClass}`}>
-      <AiPortfolioPortfolioRenderer
+      <RendererRouter
+        rendererVersion={rendererVersion}
         design={data.design}
         content={data.content}
         sectionOrder={sectionOrder}
