@@ -48,6 +48,16 @@ export async function POST(req: Request, { params }: { params: Params }) {
     //    - 既に published_at がある場合は「更新扱い」で再課金しない
     // =========================================================
     const alreadyPublished = Boolean((rec as any).published_at ?? (rec as any).publishedAt);
+
+    // デバッグログ: 課金ゲート状態
+    console.log("[aiPortfolio/save] billing_gate_check:", {
+      id,
+      email: (rec as any).email,
+      alreadyPublished,
+      publishedAt: (rec as any).published_at ?? (rec as any).publishedAt,
+      paymentStatus: (rec as any).payment_status,
+    });
+
     if (!alreadyPublished) {
       const email = ((rec as any).email as string | null) ?? null;
       const paymentStatus = (((rec as any).payment_status as string | null) ?? "unpaid").toLowerCase();

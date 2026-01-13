@@ -10,7 +10,7 @@
 // aura_promo_counters は上限値の参照のみに使用
 // （used_count は同期更新するが、判定の source of truth ではない）
 
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { supabaseAdmin } from "@/lib/aiPortfolio/supabaseAdmin";
 
 /**
  * email を正規化（小文字、trim）
@@ -40,6 +40,8 @@ export async function claimFirst20Free(email: string): Promise<ClaimResult> {
     return { success: false, reason: "email_missing" };
   }
 
+  console.log("[claimFirst20Free] START:", normalizedEmail);
+
   const admin = supabaseAdmin() as any;
 
   try {
@@ -52,8 +54,14 @@ export async function claimFirst20Free(email: string): Promise<ClaimResult> {
 
     if (existErr) {
       console.error("[claimFirst20Free] select error:", existErr);
-      return { success: false, reason: "db_error_select" };
+      // テーブルが存在しない場合は詳細ログ
+      if (existErr.code === "42P01" || existErr.message?.includes("does not exist")) {
+        console.error("[claimFirst20Free] TABLE aura_free_claims DOES NOT EXIST!");
+      }
+      return { success: false, reason: `db_error_select: ${existErr.message}` };
     }
+
+    console.log("[claimFirst20Free] existing claims:", existing);
 
     if (existing?.first20_used_at) {
       // 既に消費済み → 二重消費不可
@@ -171,6 +179,8 @@ export async function claimMeishFree(email: string): Promise<ClaimResult> {
     return { success: false, reason: "email_missing" };
   }
 
+  console.log("[claimMeishFree] START:", normalizedEmail);
+
   const admin = supabaseAdmin() as any;
 
   try {
@@ -183,9 +193,11 @@ export async function claimMeishFree(email: string): Promise<ClaimResult> {
       .limit(1)
       .maybeSingle();
 
+    console.log("[claimMeishFree] entry check:", { entry, entryErr });
+
     if (entryErr) {
       console.error("[claimMeishFree] entry check error:", entryErr);
-      return { success: false, reason: "db_error_entry" };
+      return { success: false, reason: `db_error_entry: ${entryErr.message}` };
     }
 
     if (!entry) {
@@ -193,6 +205,8 @@ export async function claimMeishFree(email: string): Promise<ClaimResult> {
       console.log("[claimMeishFree] not_meish_member:", normalizedEmail);
       return { success: false, reason: "not_meish_member" };
     }
+
+    console.log("[claimMeishFree] IS meish member, entry_id:", entry.id);
 
     // 2) この email の claims を確認
     const { data: existing, error: existErr } = await admin
