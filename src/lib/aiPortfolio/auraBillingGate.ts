@@ -3,12 +3,17 @@
 // AURA 課金ゲート（無料判定・消費ロジック）
 // ============================================
 //
-// source of truth: aura_free_claims テーブル
-// - first20_used_at: 先着20名無料を消費した日時
-// - meish_used_at: me-ish採用無料を消費した日時
+// ✅ 新設計（推奨）
+// - 先着20名無料: aura_first20_redemptions（converted_to_meish_at で返還管理）
+// - me-ish採用無料: aura_meish_free_claims
+// - 上限設定のみ: aura_promo_counters（limit_count）
+// - 残数・使用数: view aura_first20_stats（source of truth）
 //
-// aura_promo_counters は上限値の参照のみに使用
-// （used_count は同期更新するが、判定の source of truth ではない）
+// ✅ 原子的な消費は RPC で実行（同時実行でも 21人目が通らない）
+// - aura_claim_first20_free(p_email, p_request_id)
+// - aura_claim_meish_free(p_email, p_request_id)
+//
+// ※ 旧: aura_free_claims / rpc aura_sync_first20_count は使用しない
 
 import { supabaseAdmin } from "@/lib/aiPortfolio/supabaseAdmin";
 
@@ -20,171 +25,122 @@ function normalizeEmail(email: string | null | undefined): string | null {
   return email.trim().toLowerCase();
 }
 
-type ClaimResult = {
+export type ClaimResult = {
   success: boolean;
   reason?: string;
 };
 
-/**
- * 先着20名無料を消費する
- *
- * ロジック:
- * 1. aura_promo_counters から key='first20' の limit_count を取得
- * 2. aura_free_claims で first20_used_at が入っている行数を COUNT
- * 3. COUNT < limit_count なら、この email の claims 行を INSERT/UPDATE して消費
- * 4. 競合対策: INSERT ... ON CONFLICT + トランザクション相当で原子性担保
- */
-export async function claimFirst20Free(email: string): Promise<ClaimResult> {
-  const normalizedEmail = normalizeEmail(email);
-  if (!normalizedEmail) {
-    return { success: false, reason: "email_missing" };
-  }
+type RpcResult = {
+  ok?: boolean;
+  reason?: string;
+  message?: string;
+};
 
-  console.log("[claimFirst20Free] START:", normalizedEmail);
+/**
+ * 先着20名無料を消費する（RPC）
+ *
+ * - 採用者（entries.confirmed=true）は first20 を使えない
+ * - 枠が埋まっていたら limit_reached
+ * - 二重消費は already_used
+ */
+export async function claimFirst20Free(
+  email: string,
+  requestId?: string | null
+): Promise<ClaimResult> {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return { success: false, reason: "email_missing" };
 
   const admin = supabaseAdmin() as any;
 
-  try {
-    // 1) この email が既に first20 を消費済みかチェック
-    const { data: existing, error: existErr } = await admin
-      .from("aura_free_claims")
-      .select("first20_used_at")
-      .eq("email", normalizedEmail)
-      .maybeSingle();
+  console.log("[claimFirst20Free] RPC START:", {
+    email: normalizedEmail,
+    requestId: requestId ?? null,
+  });
 
-    if (existErr) {
-      console.error("[claimFirst20Free] select error:", existErr);
-      // テーブルが存在しない場合は詳細ログ
-      if (existErr.code === "42P01" || existErr.message?.includes("does not exist")) {
-        console.error("[claimFirst20Free] TABLE aura_free_claims DOES NOT EXIST!");
-      }
-      return { success: false, reason: `db_error_select: ${existErr.message}` };
-    }
+  const { data, error } = await admin.rpc("aura_claim_first20_free", {
+    p_email: normalizedEmail,
+    p_request_id: requestId ?? null,
+  });
 
-    console.log("[claimFirst20Free] existing claims:", existing);
+  if (error) {
+    console.warn("[claimFirst20Free] rpc error:", error);
+    return { success: false, reason: `rpc_error:${error.message}` };
+  }
 
-    if (existing?.first20_used_at) {
-      // 既に消費済み → 二重消費不可
-      console.log("[claimFirst20Free] already_used:", normalizedEmail);
-      return { success: false, reason: "already_used" };
-    }
+  const res = (data ?? {}) as RpcResult;
 
-    // 2) 上限を取得
-    const { data: counter, error: counterErr } = await admin
-      .from("aura_promo_counters")
-      .select("limit_count")
-      .eq("key", "first20")
-      .maybeSingle();
-
-    if (counterErr) {
-      console.error("[claimFirst20Free] counter error:", counterErr);
-      return { success: false, reason: "db_error_counter" };
-    }
-
-    const limitCount = counter?.limit_count ?? 20;
-
-    // 3) 現在の消費数を COUNT（first20_used_at が NOT NULL の行数）
-    const { count: usedCount, error: countErr } = await admin
-      .from("aura_free_claims")
-      .select("*", { count: "exact", head: true })
-      .not("first20_used_at", "is", null);
-
-    if (countErr) {
-      console.error("[claimFirst20Free] count error:", countErr);
-      return { success: false, reason: "db_error_count" };
-    }
-
-    const currentUsed = usedCount ?? 0;
-
-    console.log("[claimFirst20Free] limit:", limitCount, "used:", currentUsed, "email:", normalizedEmail);
-
-    if (currentUsed >= limitCount) {
-      // 枠が埋まっている
-      return { success: false, reason: "limit_reached" };
-    }
-
-    // 4) 消費を記録（原子的に INSERT or UPDATE）
-    const now = new Date().toISOString();
-
-    if (existing) {
-      // 既存行があるが first20_used_at が null → UPDATE
-      const { error: updateErr } = await admin
-        .from("aura_free_claims")
-        .update({ first20_used_at: now })
-        .eq("email", normalizedEmail)
-        .is("first20_used_at", null); // 条件: まだ消費されていない
-
-      if (updateErr) {
-        console.error("[claimFirst20Free] update error:", updateErr);
-        return { success: false, reason: "db_error_update" };
-      }
-    } else {
-      // 新規 INSERT
-      const { error: insertErr } = await admin
-        .from("aura_free_claims")
-        .insert({
-          email: normalizedEmail,
-          first20_used_at: now,
-          meish_used_at: null,
-        });
-
-      if (insertErr) {
-        // UNIQUE 違反の場合は競合（別のリクエストが先に INSERT した）
-        if (insertErr.code === "23505") {
-          console.log("[claimFirst20Free] race_condition, retrying...");
-          // リトライ: 既存行を UPDATE
-          const { error: retryErr } = await admin
-            .from("aura_free_claims")
-            .update({ first20_used_at: now })
-            .eq("email", normalizedEmail)
-            .is("first20_used_at", null);
-
-          if (retryErr) {
-            return { success: false, reason: "race_condition_failed" };
-          }
-        } else {
-          console.error("[claimFirst20Free] insert error:", insertErr);
-          return { success: false, reason: "db_error_insert" };
-        }
-      }
-    }
-
-    // 5) counters の used_count を同期更新（監査用、source of truth ではない）
-    try {
-      await admin.rpc("aura_sync_first20_count");
-    } catch {
-      // 同期失敗しても消費は成功とする
-      console.warn("[claimFirst20Free] sync_count failed, ignoring");
-    }
-
+  if (res.ok === true) {
     console.log("[claimFirst20Free] SUCCESS:", normalizedEmail);
     return { success: true };
-  } catch (e) {
-    console.error("[claimFirst20Free] unexpected error:", e);
-    return { success: false, reason: "unexpected_error" };
   }
+
+  return { success: false, reason: String(res.reason ?? "unknown") };
 }
 
 /**
- * me-ish採用無料を消費する
+ * me-ish採用無料を消費する（RPC）
  *
- * ロジック:
- * 1. entries テーブルで email が一致 & confirmed=true のレコードがあるか確認
- * 2. aura_free_claims で meish_used_at が null なら消費可能
- * 3. 消費を記録
+ * - entries.confirmed=true の email のみ利用可
+ * - 消費時に「first20 を使っていたら返還」も同RPCで実施（converted_to_meish_at）
  */
-export async function claimMeishFree(email: string): Promise<ClaimResult> {
+export async function claimMeishFree(
+  email: string,
+  requestId?: string | null
+): Promise<ClaimResult> {
   const normalizedEmail = normalizeEmail(email);
-  if (!normalizedEmail) {
-    return { success: false, reason: "email_missing" };
+  if (!normalizedEmail) return { success: false, reason: "email_missing" };
+
+  const admin = supabaseAdmin() as any;
+
+  console.log("[claimMeishFree] RPC START:", {
+    email: normalizedEmail,
+    requestId: requestId ?? null,
+  });
+
+  const { data, error } = await admin.rpc("aura_claim_meish_free", {
+    p_email: normalizedEmail,
+    p_request_id: requestId ?? null,
+  });
+
+  if (error) {
+    console.warn("[claimMeishFree] rpc error:", error);
+    return { success: false, reason: `rpc_error:${error.message}` };
   }
 
-  console.log("[claimMeishFree] START:", normalizedEmail);
+  const res = (data ?? {}) as RpcResult;
+
+  if (res.ok === true) {
+    console.log("[claimMeishFree] SUCCESS:", normalizedEmail);
+    return { success: true };
+  }
+
+  return { success: false, reason: String(res.reason ?? "unknown") };
+}
+
+/**
+ * 無料判定（消費しない、確認のみ）
+ *
+ * チェック順:
+ * 1) me-ish採用（entries.confirmed=true）かつ meish未使用 → eligible(meish)
+ * 2) 非採用者 かつ first20未使用 かつ 残数>0 → eligible(first20)
+ * 3) それ以外 → false
+ *
+ * 返す reason はログ/デバッグ用途（UI文言には直接使わないのが安全）
+ */
+export async function checkFreeEligibility(
+  email: string
+): Promise<{
+  eligible: boolean;
+  reason: string;
+  freeType?: "meish" | "first20";
+}> {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return { eligible: false, reason: "email_missing" };
 
   const admin = supabaseAdmin() as any;
 
   try {
-    // 1) me-ish採用確認: entries.confirmed=true の email 一致
+    // me-ish採用チェック
     const { data: entry, error: entryErr } = await admin
       .from("entries")
       .select("id")
@@ -193,156 +149,71 @@ export async function claimMeishFree(email: string): Promise<ClaimResult> {
       .limit(1)
       .maybeSingle();
 
-    console.log("[claimMeishFree] entry check:", { entry, entryErr });
-
     if (entryErr) {
-      console.error("[claimMeishFree] entry check error:", entryErr);
-      return { success: false, reason: `db_error_entry: ${entryErr.message}` };
+      console.warn("[checkFreeEligibility] entry check error:", entryErr);
+      return { eligible: false, reason: "db_error_entry" };
     }
 
-    if (!entry) {
-      // me-ish採用されていない
-      console.log("[claimMeishFree] not_meish_member:", normalizedEmail);
-      return { success: false, reason: "not_meish_member" };
-    }
-
-    console.log("[claimMeishFree] IS meish member, entry_id:", entry.id);
-
-    // 2) この email の claims を確認
-    const { data: existing, error: existErr } = await admin
-      .from("aura_free_claims")
-      .select("meish_used_at")
+    // meish 使用済み？
+    const { data: meishUsed, error: meishErr } = await admin
+      .from("aura_meish_free_claims")
+      .select("email")
       .eq("email", normalizedEmail)
       .maybeSingle();
 
-    if (existErr) {
-      console.error("[claimMeishFree] select error:", existErr);
-      return { success: false, reason: "db_error_select" };
+    if (meishErr) {
+      console.warn("[checkFreeEligibility] meish claims error:", meishErr);
+      return { eligible: false, reason: "db_error_meish_claims" };
     }
 
-    if (existing?.meish_used_at) {
-      // 既に消費済み
-      console.log("[claimMeishFree] already_used:", normalizedEmail);
-      return { success: false, reason: "already_used" };
-    }
-
-    // 3) 消費を記録
-    const now = new Date().toISOString();
-
-    if (existing) {
-      // 既存行があるが meish_used_at が null → UPDATE
-      const { error: updateErr } = await admin
-        .from("aura_free_claims")
-        .update({ meish_used_at: now })
-        .eq("email", normalizedEmail)
-        .is("meish_used_at", null);
-
-      if (updateErr) {
-        console.error("[claimMeishFree] update error:", updateErr);
-        return { success: false, reason: "db_error_update" };
-      }
-    } else {
-      // 新規 INSERT
-      const { error: insertErr } = await admin
-        .from("aura_free_claims")
-        .insert({
-          email: normalizedEmail,
-          first20_used_at: null,
-          meish_used_at: now,
-        });
-
-      if (insertErr) {
-        if (insertErr.code === "23505") {
-          // 競合時リトライ
-          const { error: retryErr } = await admin
-            .from("aura_free_claims")
-            .update({ meish_used_at: now })
-            .eq("email", normalizedEmail)
-            .is("meish_used_at", null);
-
-          if (retryErr) {
-            return { success: false, reason: "race_condition_failed" };
-          }
-        } else {
-          console.error("[claimMeishFree] insert error:", insertErr);
-          return { success: false, reason: "db_error_insert" };
-        }
-      }
-    }
-
-    console.log("[claimMeishFree] SUCCESS:", normalizedEmail);
-    return { success: true };
-  } catch (e) {
-    console.error("[claimMeishFree] unexpected error:", e);
-    return { success: false, reason: "unexpected_error" };
-  }
-}
-
-/**
- * 無料判定（消費しない、確認のみ）
- *
- * チェック順:
- * 1. payment_status === "paid" → true
- * 2. me-ish採用（entries.confirmed=true & meish_used_at が null）→ true
- * 3. 先着20名（枠残り & first20_used_at が null）→ true
- * 4. どれも該当しない → false
- */
-export async function checkFreeEligibility(email: string): Promise<{
-  eligible: boolean;
-  reason: string;
-  freeType?: "meish" | "first20";
-}> {
-  const normalizedEmail = normalizeEmail(email);
-  if (!normalizedEmail) {
-    return { eligible: false, reason: "email_missing" };
-  }
-
-  const admin = supabaseAdmin() as any;
-
-  try {
-    // claims を取得
-    const { data: claims } = await admin
-      .from("aura_free_claims")
-      .select("first20_used_at, meish_used_at")
-      .eq("email", normalizedEmail)
-      .maybeSingle();
-
-    // me-ish採用チェック
-    const { data: entry } = await admin
-      .from("entries")
-      .select("id")
-      .eq("email", normalizedEmail)
-      .eq("confirmed", true)
-      .limit(1)
-      .maybeSingle();
-
-    if (entry && !claims?.meish_used_at) {
+    // 1) 採用者は meish を優先（first20に含めない要件）
+    if (entry && !meishUsed) {
       return { eligible: true, reason: "meish_free_available", freeType: "meish" };
     }
 
-    // 先着20名チェック
-    if (!claims?.first20_used_at) {
-      const { data: counter } = await admin
-        .from("aura_promo_counters")
-        .select("limit_count")
-        .eq("key", "first20")
+    // 2) 非採用者のみ first20 判定
+    if (!entry) {
+      // first20 使用済み（返還されていない）？
+      const { data: first20Row, error: first20RowErr } = await admin
+        .from("aura_first20_redemptions")
+        .select("email, converted_to_meish_at")
+        .eq("email", normalizedEmail)
         .maybeSingle();
 
-      const limitCount = counter?.limit_count ?? 20;
-
-      const { count: usedCount } = await admin
-        .from("aura_free_claims")
-        .select("*", { count: "exact", head: true })
-        .not("first20_used_at", "is", null);
-
-      if ((usedCount ?? 0) < limitCount) {
-        return { eligible: true, reason: "first20_free_available", freeType: "first20" };
+      if (first20RowErr) {
+        console.warn("[checkFreeEligibility] first20 row error:", first20RowErr);
+        return { eligible: false, reason: "db_error_first20_row" };
       }
+
+      const alreadyUsed = !!(first20Row && !first20Row.converted_to_meish_at);
+      if (!alreadyUsed) {
+        // 残数（View）
+        const { data: stats, error: statsErr } = await admin
+          .from("aura_first20_stats")
+          .select("remaining")
+          .eq("key", "first20")
+          .maybeSingle();
+
+        if (statsErr) {
+          console.warn("[checkFreeEligibility] stats error:", statsErr);
+          return { eligible: false, reason: "db_error_stats" };
+        }
+
+        const remaining = Number(stats?.remaining ?? 0);
+        if (remaining > 0) {
+          return { eligible: true, reason: "first20_free_available", freeType: "first20" };
+        }
+
+        return { eligible: false, reason: "first20_limit_reached" };
+      }
+
+      return { eligible: false, reason: "first20_already_used" };
     }
 
-    return { eligible: false, reason: "no_free_option_available" };
+    // 3) 採用者だが meish 使用済み / 非対象など
+    return { eligible: false, reason: entry ? "meish_already_used" : "no_free_option_available" };
   } catch (e) {
-    console.error("[checkFreeEligibility] error:", e);
+    console.error("[checkFreeEligibility] unexpected error:", e);
     return { eligible: false, reason: "check_error" };
   }
 }
