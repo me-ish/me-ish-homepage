@@ -30,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       {/* 全体は今までどおり font-zen ベース */}
-      <body className="text-lg leading-relaxed text-[#333]">
+      <body className="font-zen text-lg leading-relaxed text-[#333]">
         <Suspense fallback={null}>
           <QueryProvider>
             <ZoomArtworkProvider>
