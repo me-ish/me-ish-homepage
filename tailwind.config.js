@@ -43,11 +43,11 @@ module.exports = {
   	extend: {
   		fontFamily: {
   			lilita: [
-  				'Lilita One"',
+  				'Lilita One',
   				'cursive'
   			],
   			zen: [
-  				'Zen Maru Gothic"',
+  				'Zen Maru Gothic',
   				'sans-serif'
   			]
   		},
