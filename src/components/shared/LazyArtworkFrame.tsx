@@ -85,6 +85,14 @@ export default function LazyArtworkFrame({
     rotation[2],
   ];
 
+    // ✅ R3F/three の Euler タプルは mutable 前提の型が来ることがあるため
+  // readonly を mutable に変換して渡す
+  const rotationMutable: [number, number, number] = [
+    rotation[0],
+    rotation[1],
+    rotation[2],
+  ];
+
   useFrame(() => {
     // すでにロード済みなら何もしない
     if (shouldLoad) return;
@@ -128,7 +136,7 @@ export default function LazyArtworkFrame({
       <ArtworkFrame
         id={id}
         position={position}
-        rotation={rotation}
+        rotation={rotationMutable}
         aspectRatio={aspectRatio}
         scale={scale}
         title={title}
