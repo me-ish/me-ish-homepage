@@ -31,7 +31,6 @@ export default async function AdminPage() {
     entriesUnreviewedRes,
     entriesRejectedRes,
     inquiriesUnreadRes,
-    salesPendingMintRes,
     salesCountRes,
     latestEntriesRes,
     latestInquiriesRes,
@@ -41,7 +40,6 @@ export default async function AdminPage() {
     admin.from('entries').select('*', { count: 'exact', head: true }).is('confirmed', null),
     admin.from('entries').select('*', { count: 'exact', head: true }).eq('confirmed', false),
     admin.from('inquiries').select('*', { count: 'exact', head: true }).eq('is_read', false),
-    admin.from('sales').select('*', { count: 'exact', head: true }).eq('type', 'nft').eq('mint_status', 'pending'),
     admin.from('sales').select('*', { count: 'exact', head: true }).in('status', ['paid', 'settled']),
     admin.from('entries')
       .select('id,title,artist_name,confirmed,created_at')
@@ -66,7 +64,6 @@ export default async function AdminPage() {
     unreviewedEntries: entriesUnreviewedRes.count ?? 0,
     rejectedEntries: entriesRejectedRes.count ?? 0,
     unreadInquiries: inquiriesUnreadRes.count ?? 0,
-    pendingMints: salesPendingMintRes.count ?? 0,
     totalSales: salesCountRes.count ?? 0,
     draftAnns: annsDraftCountRes.count ?? 0,
   };
@@ -97,7 +94,6 @@ export default async function AdminPage() {
           <MetricCard label="未審査作品" value={metrics.unreviewedEntries} href="/admin/entries" badge={metrics.unreviewedEntries > 0 ? '要対応' : undefined} />
           <MetricCard label="却下作品" value={metrics.rejectedEntries} href="/admin/entries?status=rejected" />
           <MetricCard label="未読お問い合わせ" value={metrics.unreadInquiries} href="/admin/inquiries" />
-          <MetricCard label="NFTミント待ち" value={metrics.pendingMints} href="/admin/sales" />
           <MetricCard label="売上件数 (累計)" value={metrics.totalSales} href="/admin/sales" />
           <MetricCard label="未公開お知らせ" value={metrics.draftAnns} href="/admin/announcements" badge={metrics.draftAnns > 0 ? '下書きあり' : undefined} />
         </section>

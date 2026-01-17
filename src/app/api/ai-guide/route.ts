@@ -17,7 +17,7 @@ function sb() {
 // 公開用：返す列（内部金額などは除外）
 const SELECT_COLUMNS = `
   id, title, artist_name, description, image_url,
-  price, sale_type, is_for_sale, is_sold,
+  price, is_for_sale, is_sold,
   likes, gallery_type, confirmed, display_ready,
   confirmed_at, display_start_at, display_end_at,
   edition_total, edition_sold
@@ -73,14 +73,13 @@ const tools = [
     function: {
       name: 'search_entries',
       description:
-        '簡易検索。フリーテキスト/価格/販売形式/ギャラリー種別/現在展示(onlyLive)で絞り込み（公開済みのみ）',
+        '簡易検索。フリーテキスト/価格/ギャラリー種別/現在展示(onlyLive)で絞り込み（公開済みのみ）',
       parameters: {
         type: 'object',
         properties: {
           q: { type: 'string', description: 'タイトル/説明の部分一致' },
           priceMin: { type: 'number' },
           priceMax: { type: 'number' },
-          saleType: { type: 'string', enum: ['normal', 'nft', 'any'], default: 'any' },
           galleryType: { type: 'string', enum: ['white', 'float', 'special', 'any'], default: 'any' },
           onlyLive: {
             type: 'boolean',
@@ -135,7 +134,6 @@ type SearchArgs = {
   q?: string;
   priceMin?: number;
   priceMax?: number;
-  saleType?: 'normal' | 'nft' | 'any';
   galleryType?: 'white' | 'float' | 'special' | 'any';
   onlyLive?: boolean;
   limit?: number;
@@ -157,7 +155,6 @@ async function impl_search_entries(args: SearchArgs) {
 
   if (typeof args.priceMin === 'number') q = q.gte('price', args.priceMin);
   if (typeof args.priceMax === 'number') q = q.lte('price', args.priceMax);
-  if (args.saleType && args.saleType !== 'any') q = q.eq('sale_type', args.saleType);
   if (args.galleryType && args.galleryType !== 'any') q = q.eq('gallery_type', args.galleryType);
 
   if (args.onlyLive) {
@@ -202,10 +199,10 @@ export async function POST(req: Request) {
 あなたは3Dオンラインアートギャラリー「me-ish」の公式ガイドAI。
 必ず**Supabaseから取得したデータ**を根拠に答える。想像で補わない。
 対応範囲：
-- 作品ID/タイトルでの詳細照会（価格/販売形式/展示状況/エディション残数など）
-- 簡易検索（タイトル/説明の部分一致、価格帯、販売形式、ギャラリー種別、現在展示の絞り込み）
+- 作品ID/タイトルでの詳細照会（価格/展示状況/エディション残数など）
+- 簡易検索（タイトル/説明の部分一致、価格帯、ギャラリー種別、現在展示の絞り込み）
 - ギャラリー方針（white/float/special）
-購入案内は簡潔に：通常=Stripe、NFT=Thirdweb連携（出展者はウォレット不要で me-ish がMint）。
+購入案内は簡潔に：クレジットカード（Stripe）で購入できます。
 おすすめ作品を質問されたら、いいね数が多いもの1点を回答すること。
     `.trim();
 

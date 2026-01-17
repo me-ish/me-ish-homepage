@@ -1,3 +1,4 @@
+// C:\me-ish-next\src\components\entryForm\ConfirmPage.tsx
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -6,8 +7,8 @@ import type { FormValues } from '@/app/entry/FormWrapper';
 
 interface ConfirmPageProps {
   onBack: () => void;
-  onSubmit: (data: any) => void;      // FormWrapper 側の onSubmit は form の submit で呼ばれる想定（ここでは呼ばない）
-  validateFields: string[];           // 必須チェックの再検証用（任意）
+  onSubmit: (data: any) => void; // FormWrapper 側の onSubmit は form の submit で呼ばれる想定（ここでは呼ばない）
+  validateFields: string[]; // 必須チェックの再検証用（任意）
 }
 
 const BRAND = '#00a1e9';
@@ -34,19 +35,25 @@ function errMsg(err: unknown): string | undefined {
   return typeof m === 'string' ? m : undefined;
 }
 
+function aiUsageLabel(v: FormValues['ai_usage'] | undefined) {
+  if (!v) return '—';
+  if (v === 'none') return '使用していない';
+  if (v === 'assist') return 'AI補助（非生成）';
+  if (v === 'gen_assist') return '生成AI併用';
+  return '—';
+}
+
 const ConfirmPage: React.FC<ConfirmPageProps> = ({ onBack, validateFields }) => {
-  const { getValues, trigger } = useFormContext<FormValues>();
-  const data = getValues();
+  const { watch, trigger } = useFormContext<FormValues>();
+  const data = watch();
 
-  // 追加：ページトップへスクロール（Framer Motion遷移後でも滑らかに）
-useEffect(() => {
-  // レイアウト/アニメ適用後に実行
-  const id = requestAnimationFrame(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-  return () => cancelAnimationFrame(id);
-}, []);
-
+  // ページトップへスクロール（Framer Motion遷移後でも滑らかに）
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   // 画像ファイルの抽出
   const imageFile: File | null = useMemo(() => {
@@ -72,12 +79,14 @@ useEffect(() => {
     const n = Number(String(data.price ?? '').replace(/[^\d]/g, ''));
     return Number.isFinite(n) ? n : 0;
   }, [data.price]);
+
   const fee = Math.floor(priceNum * FEE_RATE);
   const reward = Math.max(0, priceNum - fee);
+
   const isUnlimited = data.editionMode === 'unlimited';
-　const editionLabel = isUnlimited
-  ? '無制限'
-  : (data.editionTotal ? `${data.editionTotal} 点` : '—');
+  const editionLabel = isUnlimited
+    ? '無制限'
+    : (data.editionTotal ? `${data.editionTotal} 点` : '—');
 
   // （任意）到達時に重要項目の再検証だけ走らせる
   useEffect(() => {
@@ -85,8 +94,7 @@ useEffect(() => {
       // フォーカス移動はここではしない（UX上、確認ページで急にスクロールしないように）
       trigger(validateFields as any, { shouldFocus: false });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [trigger, validateFields]);
 
   return (
     <section
@@ -112,8 +120,15 @@ useEffect(() => {
       <div className="p-4 sm:p-5 bg-[#fbfbfb] border border-gray-200 rounded-xl space-y-2 text-gray-800">
         <h3 className="text-base font-bold text-gray-900">アーティスト情報</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-          <p><span className="text-gray-500">作家名：</span><span className="font-medium">{data.artistName || '—'}</span></p>
-          <p><span className="text-gray-500">メール：</span><span className="font-medium">{data.email || '—'}</span></p>
+          <p>
+            <span className="text-gray-500">作家名：</span>
+            <span className="font-medium">{data.artistName || '—'}</span>
+          </p>
+          <p>
+            <span className="text-gray-500">メール：</span>
+            <span className="font-medium">{data.email || '—'}</span>
+          </p>
+
           {data.homepageUrl && (
             <p className="sm:col-span-2">
               <span className="text-gray-500">ホームページ：</span>
@@ -156,7 +171,55 @@ useEffect(() => {
               )}
             </span>
           </p>
-          <p><span className="text-gray-500">作品タイトル：</span><span className="font-medium">{data.title || '—'}</span></p>
+
+          <p>
+            <span className="text-gray-500">作品タイトル：</span>
+            <span className="font-medium">{data.title || '—'}</span>
+          </p>
+
+          <p>
+            <span className="text-gray-500">作者サイン：</span>
+            <span className="font-medium">
+              {data.has_signature === 'yes'
+                ? 'あり'
+                : data.has_signature === 'no'
+                ? 'なし（me-ishがWM付与）'
+                : '—'}
+            </span>
+          </p>
+
+          <p>
+            <span className="text-gray-500">AI使用：</span>
+            <span className="font-medium">{aiUsageLabel(data.ai_usage)}</span>
+            <span className="ml-2 text-xs text-gray-500">
+              （選択内容は作品ページに表示されます）
+            </span>
+          </p>
+
+          {/* 生成AI併用時のみ、任意入力も表示 */}
+          {data.ai_usage === 'gen_assist' && (
+            <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+              <p className="font-semibold">生成AIの使用範囲（任意）</p>
+              <p className="text-xs text-blue-800/90 mt-1">
+                透明性のため、入力がある場合のみ表示します。
+              </p>
+              <div className="mt-1 space-y-1 text-[13px]">
+                <p>
+                  <span className="text-blue-900/70">範囲：</span>
+                  <span className="font-medium">
+                    {(data.ai_usage_scope && data.ai_usage_scope.length > 0)
+                      ? data.ai_usage_scope.join(' / ')
+                      : '—'}
+                  </span>
+                </p>
+                <p className="whitespace-pre-wrap break-words">
+                  <span className="text-blue-900/70">補足：</span>
+                  <span className="font-medium">{data.ai_usage_note?.trim() ? data.ai_usage_note.trim() : '—'}</span>
+                </p>
+              </div>
+            </div>
+          )}
+
           <p className="whitespace-pre-wrap break-words">
             <span className="text-gray-500">作品説明：</span>{data.description || '（なし）'}
           </p>
@@ -170,60 +233,53 @@ useEffect(() => {
               alt="応募画像プレビュー"
               className="max-w-full max-h-[420px] rounded-lg border border-gray-200"
             />
+            {imageFile && (
+              <p className="mt-1 text-xs text-gray-500 break-all">
+                ファイル名：{imageFile.name}
+              </p>
+            )}
           </div>
         )}
       </div>
 
-{/* 販売情報（販売=はい のとき） */}
-{data.isForSale === 'yes' && (
-  <div className="p-4 sm:p-5 bg-[#fbfbfb] border border-gray-200 rounded-xl text-gray-800 space-y-2">
-    <h3 className="text-base font-bold text-gray-900">販売情報</h3>
+      {/* 販売情報（販売=はい のとき） */}
+      {data.isForSale === 'yes' && (
+        <div className="p-4 sm:p-5 bg-[#fbfbfb] border border-gray-200 rounded-xl text-gray-800 space-y-2">
+          <h3 className="text-base font-bold text-gray-900">販売情報</h3>
 
-    <p>
-      <span className="text-gray-500">販売形式：</span>
-      <span className="font-medium">
-        {data.saleType === 'nft' ? 'NFT販売' : data.saleType === 'normal' ? '通常販売' : '—'}
-      </span>
-    </p>
+          <p>
+            <span className="text-gray-500">販売モード：</span>
+            <span className="font-medium">{isUnlimited ? '無制限販売' : 'エディション販売'}</span>
+            {data.editionMode && (
+              <span className="ml-2 text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                {data.editionMode}
+              </span>
+            )}
+          </p>
 
-    {/* ★ 追加：販売モードの表示 */}
-    <p>
-      <span className="text-gray-500">販売モード：</span>
-      <span className="font-medium">{isUnlimited ? '無制限販売' : 'エディション販売'}</span>
-      {data.editionMode && (
-        <span className="ml-2 text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200">
-          {data.editionMode}
-        </span>
+          <p>
+            <span className="text-gray-500">販売点数：</span>
+            <span className="font-medium">{editionLabel}</span>
+            {isUnlimited && <span className="ml-2 text-xs text-gray-500">(在庫制限なし)</span>}
+          </p>
+
+          <p>
+            <span className="text-gray-500">販売価格：</span>
+            <span className="font-medium">¥{yen(priceNum)}</span>
+            <span className="ml-2 text-xs text-gray-500">（1点あたり）</span>
+          </p>
+
+          <p className="text-sm text-gray-700">
+            アーティスト報酬：<span className="font-semibold">¥{yen(Math.max(0, reward))}</span> ／
+            me-ish手数料（{Math.round(FEE_RATE * 100)}%）：<span className="font-semibold">¥{yen(fee)}</span>
+          </p>
+
+          <p>
+            <span className="text-gray-500">表示保証プラン：</span>
+            <span className="font-medium">{displayPlanLabels[data.displayPlan] ?? '—'}</span>
+          </p>
+        </div>
       )}
-    </p>
-
-    {/* ★ 変更：無制限なら「無制限」、限定なら N 点 */}
-    <p>
-      <span className="text-gray-500">販売点数：</span>
-      <span className="font-medium">{editionLabel}</span>
-      {isUnlimited && (
-        <span className="ml-2 text-xs text-gray-500">(在庫制限なし)</span>
-      )}
-    </p>
-
-    <p>
-      <span className="text-gray-500">販売価格：</span>
-      <span className="font-medium">¥{yen(priceNum)}</span>
-      <span className="ml-2 text-xs text-gray-500">（1点あたり）</span>
-    </p>
-
-    <p className="text-sm text-gray-700">
-      アーティスト報酬：<span className="font-semibold">¥{yen(Math.max(0, reward))}</span> ／
-      me-ish手数料（{Math.round(FEE_RATE * 100)}%）：<span className="font-semibold">¥{yen(fee)}</span>
-    </p>
-
-    <p>
-      <span className="text-gray-500">表示保証プラン：</span>
-      <span className="font-medium">{displayPlanLabels[data.displayPlan] ?? '—'}</span>
-    </p>
-  </div>
-)}
-
 
       {/* 注意テキスト */}
       <p className="text-xs text-gray-500">

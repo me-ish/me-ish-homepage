@@ -27,8 +27,7 @@ interface ArtworkData {
   sns_links?: string
   id?: number | null
   created_at?: string | null
-  sale_type?: 'normal' | 'nft'
-  // ▼ 版情報（ここが重要）
+  // ▼ 版情報
   edition_mode?: 'limited' | 'unlimited' | null
   edition_total?: number | null
   edition_sold?: number | null
@@ -57,9 +56,8 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
       sns_links = '{}',
       id = null,
       created_at = null,
-      sale_type = 'normal',
 
-      // ▼ デフォルト“1”は禁止。nullのまま保持。
+      // ▼ デフォルトはnullのまま保持
       edition_mode = null,
       edition_total = null,
       edition_sold = 0,
@@ -131,7 +129,6 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
             sns_links: sns_links ?? '{}',
             created_at: created_at ?? '',
             is_sold: false,
-            sale_type,
 
             // ▼ 版情報
             edition_mode: edition_mode ?? null,

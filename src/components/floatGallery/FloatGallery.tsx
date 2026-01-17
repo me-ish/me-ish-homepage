@@ -5,6 +5,7 @@ import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 
 import DayLight from './DayLight';
+import GalleryLighting from './GalleryLighting';
 import FloatArtworksInGallery from './FloatArtworksInGallery';
 import FloatPanelArtworks from './FloatPanelArtworks';
 import FloatPanelsCenter from './FloatPanelsCenter';
@@ -19,7 +20,8 @@ import LightCircle from '@/components/shared/LightCircle';
 
 export default function FloatGallery(): React.JSX.Element {
   const avatarRef = useRef<THREE.Group>(null);
-  const artworkRefs = useRef<(THREE.Group | null)[]>([]); // ← ラベルなどとの連携用
+  const artworkRefs = useRef<(THREE.Group | null)[]>([]);
+  const joystickRef = useRef({ x: 0, y: 0 });
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
@@ -34,6 +36,7 @@ export default function FloatGallery(): React.JSX.Element {
 
         {/* 光・背景 */}
         <DayLight />
+        <GalleryLighting />
 
         {/* 壁・中央パネル */}
         <FloatWalls />
@@ -45,7 +48,7 @@ export default function FloatGallery(): React.JSX.Element {
 
         {/* アバター操作 */}
         <Avatar ref={avatarRef} />
-        <AvatarController avatarRef={avatarRef} joystickRef={useRef({ x: 0, y: 0 })} />
+        <AvatarController avatarRef={avatarRef} joystickRef={joystickRef} />
         <ThirdPersonCamera avatarRef={avatarRef} />
       </Canvas>
 

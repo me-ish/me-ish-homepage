@@ -22,18 +22,28 @@ export type FormValues = {
   title: string;
   image: FileList;
   description: string;
+
   isForSale: string;
+
+  /**
+   * 販売種別：通常販売のみ。
+   * 送信時に isForSale に応じて固定値をセットする（"normal" / ""）。
+   */
   saleType: string;
+
   price: string;
-  wallet: string;
+
   gallery_type: string;
   displayPlan: string;
+
   agreeTerms: boolean;
   confirmRights: boolean;
   confirmOriginal: boolean;
+
   editionTotal: string;
   displayStartAt?: string;
   displayEndAt?: string;
+
   has_signature: 'yes' | 'no'; // ★ 追加：サイン有無
 
   // ★ 追加（販売時のみ必須にする口座情報）
@@ -43,7 +53,12 @@ export type FormValues = {
   account_number: string;     // 1〜7桁
   account_name_kana: string;  // 全角カナ
   agree_bank_use: boolean;    // 利用同意
+
   editionMode: 'limited' | 'unlimited';
+
+  ai_usage: 'none' | 'assist' | 'gen_assist';
+  ai_usage_scope?: string[];
+  ai_usage_note?: string;
 };
 
 const slideVariants = {
@@ -55,11 +70,29 @@ const slideVariants = {
 const FormWrapper = () => {
   const methods = useForm<FormValues>({
     defaultValues: {
-      artistName: '', email: '', snsLinks: [''], homepageUrl: '',
-      twitterUrl: '', instagramUrl: '', title: '', image: undefined as unknown as FileList,
-      description: '', isForSale: '', saleType: '', price: '', gallery_type: '', displayPlan: '',
-      agreeTerms: false, confirmRights: false, confirmOriginal: false,
+      artistName: '',
+      email: '',
+      snsLinks: [''],
+      homepageUrl: '',
+      twitterUrl: '',
+      instagramUrl: '',
+      title: '',
+      image: undefined as unknown as FileList,
+      description: '',
+
+      isForSale: '',
+      saleType: 'normal', // 既定は normal（通常販売のみ）
+      price: '',
+
+      gallery_type: '',
+      displayPlan: '',
+
+      agreeTerms: false,
+      confirmRights: false,
+      confirmOriginal: false,
+
       has_signature: undefined as unknown as 'yes' | 'no',
+
       editionMode: 'limited',
       editionTotal: '',
 
@@ -70,6 +103,11 @@ const FormWrapper = () => {
       account_number: '',
       account_name_kana: '',
       agree_bank_use: false,
+
+      // ★ AI使用区分（Step2で必須）
+      ai_usage: undefined as unknown as 'none' | 'assist' | 'gen_assist',
+      ai_usage_scope: undefined,
+      ai_usage_note: '',
     },
     shouldUnregister: false,
     mode: 'onChange',
@@ -84,27 +122,45 @@ const FormWrapper = () => {
   const [localImageFile, setLocalImageFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false); // ★ 二重送信防止
 
-const getStepFields = (
-  step: number,
-  isForSale: string,
-  editionMode: FormValues['editionMode']
-): (keyof FormValues)[] => {
-  switch (step) {
-    case 1: return ['artistName', 'email'];
-    case 2: return ['gallery_type', 'title', 'image', 'has_signature'];
-    case 3: {
-      const base: (keyof FormValues)[] = ['isForSale', 'agreeTerms', 'confirmRights', 'confirmOriginal'];
-      if (isForSale === 'yes') {
-        base.push('saleType', 'price', 'displayPlan', 'editionMode'); // ★ 追加
-        if (editionMode === 'limited') base.push('editionTotal');     // ★ 条件追加
-        // 口座の必須チェックは現状どおり
-        base.push('bank_code', 'branch_code', 'account_type', 'account_number', 'account_name_kana', 'agree_bank_use');
+  const getStepFields = (
+    step: number,
+    isForSale: string,
+    editionMode: FormValues['editionMode']
+  ): (keyof FormValues)[] => {
+    switch (step) {
+      case 1:
+        return ['artistName', 'email'];
+
+      case 2:
+        return ['gallery_type', 'title', 'image', 'has_signature', 'ai_usage'];
+
+      case 3: {
+        const base: (keyof FormValues)[] = ['isForSale', 'agreeTerms', 'confirmRights', 'confirmOriginal'];
+
+        if (isForSale === 'yes') {
+          // ★ saleType は UI が無いので検証対象から外す（送信時に "normal" 固定）
+          base.push('price', 'displayPlan', 'editionMode');
+
+          if (editionMode === 'limited') base.push('editionTotal');
+
+          // 口座の必須チェックは現状どおり
+          base.push(
+            'bank_code',
+            'branch_code',
+            'account_type',
+            'account_number',
+            'account_name_kana',
+            'agree_bank_use'
+          );
+        }
+
+        return base;
       }
-      return base;
+
+      default:
+        return [];
     }
-    default: return [];
-  }
-};
+  };
 
   const nextStep = async () => {
     const isForSale = methods.getValues('isForSale');
@@ -152,6 +208,7 @@ const getStepFields = (
       const now = new Date();
       let displayStartAt: string | null = null;
       let displayEndAt: string | null = null;
+
       if (data.gallery_type === 'white') {
         displayStartAt = now.toISOString();
       } else if (data.gallery_type === 'float') {
@@ -183,59 +240,77 @@ const getStepFields = (
         return;
       }
 
-      const type = data.isForSale === 'yes' ? data.saleType : 'none';
-      const displayPlan = data.isForSale === 'yes' ? data.displayPlan || 'free' : 'free';
       const isSale = data.isForSale === 'yes';
-const editionModeToSave: 'limited' | 'unlimited' | null = isSale ? data.editionMode : null;
 
-let editionTotalNum: number | null = null;
-if (isSale && editionModeToSave === 'limited') {
-  const n = Number.parseInt(data.editionTotal, 10);
-  if (!Number.isFinite(n) || n <= 0) {
-    alert('エディション総数は1以上の整数で入力してください');
-    setSubmitting(false);
-    return;
-  }
-  editionTotalNum = n;
-}
+      // 販売時は常に normal 固定
+      const saleTypeFixed = isSale ? 'normal' : '';
+      const type = isSale ? 'normal' : 'none';
 
-const FEE_RATE = 0.10;
-const priceNum =
-  data.isForSale === 'yes' && data.price
-    ? Number(String(data.price).replace(/[^\d]/g, ''))
-    : 0;
-const meishFeeYen = Math.floor(priceNum * FEE_RATE);
-const artistRewardYen = Math.max(0, priceNum - meishFeeYen);
+      const displayPlan = isSale ? (data.displayPlan || 'free') : 'free';
 
-      // ★ entries 登録（既存ロジックを維持）
-      const { error } = await supabase.from('entries').insert([{
-  artist_name: data.artistName,
-  email: data.email,
-  sns_links: snsLinksJson,
-  title: data.title,
-  description: data.description || '',
-  is_for_sale: data.isForSale === 'yes',
-  sale_type: data.saleType || '',
-  type,
-  display_plan: displayPlan,
-  price: data.isForSale === 'yes' && data.price ? Number(data.price) : null,
-  image_url: publicUrl,
+      const editionModeToSave: 'limited' | 'unlimited' | null = isSale ? data.editionMode : null;
 
-  // ★ edition関連（重複なし）
-  edition_mode: editionModeToSave,   // 'limited' | 'unlimited' | null
-  edition_total: editionTotalNum,    // limited のときだけ 1以上の整数、unlimited/非売品は null
-  edition_sold: 0,
+      let editionTotalNum: number | null = null;
+      if (isSale && editionModeToSave === 'limited') {
+        const n = Number.parseInt(data.editionTotal, 10);
+        if (!Number.isFinite(n) || n <= 0) {
+          alert('エディション総数は1以上の整数で入力してください');
+          setSubmitting(false);
+          return;
+        }
+        editionTotalNum = n;
+      }
 
-  gallery_type: data.gallery_type || '',
-  display_start_at: displayStartAt,
-  display_end_at: displayEndAt,
-  file_name: fileName,
-  external_user_id: externalUserId,
-  meish_fee_yen: isSale ? meishFeeYen : null,
-  artist_reward_yen: isSale ? artistRewardYen : null,
-  has_signature: data.has_signature === 'yes',
-}]);
+      const FEE_RATE = 0.10;
+      const priceNum =
+        isSale && data.price
+          ? Number(String(data.price).replace(/[^\d]/g, ''))
+          : 0;
 
+      const meishFeeYen = Math.floor(priceNum * FEE_RATE);
+      const artistRewardYen = Math.max(0, priceNum - meishFeeYen);
+
+      // ★ entries 登録
+      const { error } = await supabase.from('entries').insert([
+        {
+          artist_name: data.artistName,
+          email: data.email,
+          sns_links: snsLinksJson,
+          title: data.title,
+          description: data.description || '',
+
+          is_for_sale: isSale,
+          sale_type: saleTypeFixed,
+          type,
+
+          display_plan: displayPlan,
+          price: isSale ? priceNum : null,
+
+          image_url: publicUrl,
+
+          // ★ edition関連（重複なし）
+          edition_mode: editionModeToSave, // 'limited' | 'unlimited' | null
+          edition_total: editionTotalNum,  // limited のときだけ 1以上の整数、unlimited/非売品は null
+          edition_sold: 0,
+
+          gallery_type: data.gallery_type || '',
+          display_start_at: displayStartAt,
+          display_end_at: displayEndAt,
+
+          file_name: fileName,
+          external_user_id: externalUserId,
+
+          meish_fee_yen: isSale ? meishFeeYen : null,
+          artist_reward_yen: isSale ? artistRewardYen : null,
+
+          has_signature: data.has_signature === 'yes',
+
+          // ★ AI使用区分
+          ai_usage: data.ai_usage,
+          ai_usage_scope: data.ai_usage === 'gen_assist' ? (data.ai_usage_scope ?? null) : null,
+          ai_usage_note: data.ai_usage === 'gen_assist' ? (data.ai_usage_note ?? null) : null,
+        },
+      ]);
 
       if (error) {
         alert(`登録に失敗しました: ${error.message}`);
@@ -243,19 +318,24 @@ const artistRewardYen = Math.max(0, priceNum - meishFeeYen);
         return;
       }
 
-      // ★ 販売する場合のみ、口座情報を別テーブルに保存したい場合はここで upsert（任意）
-      //   ※ 既存のスキーマに合わせてコメントアウト。テーブルがあるなら解除してください。
-      if (data.isForSale === 'yes') {
+      // ★ 販売する場合のみ、口座情報を別テーブルに保存
+      if (isSale) {
         const { error: bankErr } = await supabase
           .from('artists_bank_accounts')
-          .upsert([{
-            external_user_id: externalUserId,
-            bank_code: data.bank_code,
-            branch_code: data.branch_code,
-            account_type: data.account_type,
-            account_number: data.account_number,
-            account_name_kana: data.account_name_kana,
-          }], { onConflict: 'external_user_id' });
+          .upsert(
+            [
+              {
+                external_user_id: externalUserId,
+                bank_code: data.bank_code,
+                branch_code: data.branch_code,
+                account_type: data.account_type,
+                account_number: data.account_number,
+                account_name_kana: data.account_name_kana,
+              },
+            ],
+            { onConflict: 'external_user_id' }
+          );
+
         if (bankErr) {
           alert(`口座情報の登録に失敗しました: ${bankErr.message}`);
           setSubmitting(false);
@@ -271,7 +351,6 @@ const artistRewardYen = Math.max(0, priceNum - meishFeeYen);
         await sendEmail('submit', {
           to: data.email,
           name: data.artistName,
-          // manageUrl: `https://www.me-ish.art/manage/${externalUserId}`,
         });
       } catch (e) {
         console.error('submit mail failed:', e);
@@ -292,36 +371,86 @@ const artistRewardYen = Math.max(0, priceNum - meishFeeYen);
           <form onSubmit={methods.handleSubmit(onSubmit)}>
             <AnimatePresence mode="wait" custom={direction}>
               {step === 1 && (
-                <motion.div key="step1" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4 }}>
+                <motion.div
+                  key="step1"
+                  custom={direction}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.4 }}
+                >
                   <h2 className="text-2xl font-bold mb-6">STEP 1：アーティスト情報</h2>
                   <Step1_ArtistInfo />
                   <div className="flex justify-end mt-6">
-                    <button type="button" onClick={nextStep} className="button">次へ</button>
+                    <button type="button" onClick={nextStep} className="button">
+                      次へ
+                    </button>
                   </div>
                 </motion.div>
               )}
+
               {step === 2 && (
-                <motion.div key="step2" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4 }}>
+                <motion.div
+                  key="step2"
+                  custom={direction}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.4 }}
+                >
                   <h2 className="text-2xl font-bold mb-6">STEP 2：作品情報</h2>
-                  <Step2_WorkInfo preview={preview} setPreview={setPreview} localImageFile={localImageFile} setLocalImageFile={setLocalImageFile} />
+                  <Step2_WorkInfo
+                    preview={preview}
+                    setPreview={setPreview}
+                    localImageFile={localImageFile}
+                    setLocalImageFile={setLocalImageFile}
+                  />
                   <div className="flex justify-between mt-6">
-                    <button type="button" onClick={prevStep} className="button">戻る</button>
-                    <button type="button" onClick={nextStep} className="button">次へ</button>
+                    <button type="button" onClick={prevStep} className="button">
+                      戻る
+                    </button>
+                    <button type="button" onClick={nextStep} className="button">
+                      次へ
+                    </button>
                   </div>
                 </motion.div>
               )}
+
               {step === 3 && (
-                <motion.div key="step3" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4 }}>
+                <motion.div
+                  key="step3"
+                  custom={direction}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.4 }}
+                >
                   <h2 className="text-2xl font-bold mb-6">STEP 3：販売・規約</h2>
                   <Step3_SalesAndAgreement />
                   <div className="flex justify-between mt-6">
-                    <button type="button" onClick={prevStep} className="button">戻る</button>
-                    <button type="button" onClick={nextStep} className="button">次へ</button>
+                    <button type="button" onClick={prevStep} className="button">
+                      戻る
+                    </button>
+                    <button type="button" onClick={nextStep} className="button">
+                      次へ
+                    </button>
                   </div>
                 </motion.div>
               )}
+
               {step === 4 && (
-                <motion.div key="step4" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4 }}>
+                <motion.div
+                  key="step4"
+                  custom={direction}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.4 }}
+                >
                   <h2 className="text-2xl font-bold mb-6">STEP 4：入力内容の確認</h2>
                   <ConfirmPage
                     onBack={() => {
@@ -332,8 +461,14 @@ const artistRewardYen = Math.max(0, priceNum - meishFeeYen);
                     validateFields={['agreeTerms', 'confirmRights', 'confirmOriginal']}
                   />
                   <div className="flex justify-between mt-6">
-                    <button type="button" onClick={prevStep} className="button">戻る</button>
-                    <button type="submit" disabled={submitting} className="button bg-[#00a1e9] text-white hover:bg-[#008ec4] disabled:opacity-60">
+                    <button type="button" onClick={prevStep} className="button">
+                      戻る
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="button bg-[#00a1e9] text-white hover:bg-[#008ec4] disabled:opacity-60"
+                    >
                       送信
                     </button>
                   </div>

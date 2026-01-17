@@ -36,7 +36,7 @@ export async function GET(
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from('entries')
-    .select('id,title,sale_type,price,confirmed,created_at')
+    .select('id,title,price,confirmed,created_at')
     .eq('artist_name', artistName)
     .order('created_at', { ascending: false });
 

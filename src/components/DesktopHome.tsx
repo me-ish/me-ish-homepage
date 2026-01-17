@@ -1,12 +1,26 @@
+// C:\me-ish-next\src\components\DesktopHome.tsx
 'use client';
 
 import React, { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Mail, Sparkles, ShieldCheck, Images, ArrowRight, ExternalLink, Globe, Instagram, User } from 'lucide-react';
+import {
+  Mail,
+  Sparkles,
+  ShieldCheck,
+  Images,
+  ArrowRight,
+  ExternalLink,
+  Globe,
+  Instagram,
+  User,
+} from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { supabase } from '@/lib/supabaseClient';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 /* ──────────────────────────────────────────────────────────────
    スクロール時のフェードイン
@@ -157,9 +171,7 @@ function ThanksCard({ person }: { person: ThanksPerson }) {
           <div className="flex items-center gap-2">
             <p className="font-semibold text-[#023] truncate">{person.display_name}</p>
           </div>
-          {person.tagline && (
-            <p className="mt-0.5 text-xs text-[#667] line-clamp-1">{person.tagline}</p>
-          )}
+          {person.tagline && <p className="mt-0.5 text-xs text-[#667] line-clamp-1">{person.tagline}</p>}
           <div className="mt-2">
             <SocialIcons person={person} />
           </div>
@@ -172,26 +184,31 @@ function ThanksCard({ person }: { person: ThanksPerson }) {
 /* ──────────────────────────────────────────────────────────────
    ニュース：デスクトップ専用 / フルブリード / 最大3件 / 1行ピル
 ────────────────────────────────────────────────────────────── */
+type AnnouncementItem = {
+  id: string | number;
+  title: string;
+  category: 'info' | 'update' | 'maintenance';
+  pinned?: boolean;
+  published_at: string;
+};
+
 function AnnouncementsStrip({ max = 3 }: { max?: number }) {
-  // 余裕をもって多めに取得（固定ソートのズレに備える）
   const { items, loading } = useAnnouncements(max + 3);
 
-  // 例: 2025/08/31 形式
   const fmt = useMemo(
     () => new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }),
     []
   );
 
-  // 固定（pinned）を先頭 → 公開日の新しい順
   const ordered = useMemo(() => {
-    return [...items].sort((a: any, b: any) => {
+    return [...(items as any[])].sort((a: any, b: any) => {
       if (a.pinned && !b.pinned) return -1;
       if (!a.pinned && b.pinned) return 1;
       return new Date(b.published_at).getTime() - new Date(a.published_at).getTime();
     });
   }, [items]);
 
-  const list = ordered.slice(0, Math.min(max, 3));
+  const list = ordered.slice(0, Math.min(max, 3)) as AnnouncementItem[];
 
   if (loading) {
     return (
@@ -206,24 +223,20 @@ function AnnouncementsStrip({ max = 3 }: { max?: number }) {
   }
 
   if (!list.length) {
-    return (
-      <div className="rounded-2xl border bg-white p-6 text-sm text-[#667]">
-        現在お知らせはありません。
-      </div>
-    );
+    return <div className="rounded-2xl border bg-white p-6 text-sm text-[#667]">現在お知らせはありません。</div>;
   }
 
   return (
     <ul className="space-y-3" aria-live="polite">
-      {list.map((n: any) => (
+      {list.map((n) => (
         <li key={n.id} className="w-full">
           <div className="flex min-h-[40px] items-center gap-2 rounded-full border bg-white px-4 py-2 shadow-sm">
-            <BadgeInline type={n.category as 'info' | 'update' | 'maintenance'} />
+            <AnnouncementBadgeInline type={n.category} />
 
             {n.pinned && (
-<span className="shrink-0 rounded bg-rose-100 px-2 py-0.5 text-xs text-rose-700">
-     固定
-   </span>
+              <Badge variant="secondary" className="shrink-0 bg-rose-100 text-rose-700 hover:bg-rose-100">
+                固定
+              </Badge>
             )}
 
             <time
@@ -234,7 +247,9 @@ function AnnouncementsStrip({ max = 3 }: { max?: number }) {
               {fmt.format(new Date(n.published_at))}
             </time>
 
-            <span className="mx-1 text-gray-300" aria-hidden="true">·</span>
+            <span className="mx-1 text-gray-300" aria-hidden="true">
+              ·
+            </span>
 
             <span className="min-w-0 flex-1 truncate font-medium text-[#023]" title={n.title}>
               {n.title}
@@ -246,21 +261,23 @@ function AnnouncementsStrip({ max = 3 }: { max?: number }) {
   );
 }
 
-function BadgeInline({ type }: { type: 'info' | 'update' | 'maintenance' }) {
-  const styles: Record<string, string> = {
-    info: 'border-[#bcdfff]/60 bg-[#e8f4ff] text-[#005a9e]',
-    update: 'border-emerald-200 bg-[#eafbea] text-emerald-700',
-    maintenance: 'border-rose-200 bg-[#fff1f0] text-rose-700',
-  };
+function AnnouncementBadgeInline({ type }: { type: 'info' | 'update' | 'maintenance' }) {
   const label: Record<string, string> = {
     info: 'Info',
     update: 'Update',
     maintenance: 'Maintenance',
   };
+
+  const cls: Record<string, string> = {
+    info: 'border-[#bcdfff]/60 bg-[#e8f4ff] text-[#005a9e]',
+    update: 'border-emerald-200 bg-[#eafbea] text-emerald-700',
+    maintenance: 'border-rose-200 bg-[#fff1f0] text-rose-700',
+  };
+
   return (
-    <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] ${styles[type]}`}>
+    <Badge variant="outline" className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${cls[type]}`}>
       {label[type]}
-    </span>
+    </Badge>
   );
 }
 
@@ -326,14 +343,14 @@ const DesktopHome = () => {
               <h2 id="news-title" className="text-[clamp(1.2rem,2.2vw,1.6rem)] font-bold text-[#00a1e9]">
                 お知らせ
               </h2>
-              <Link
-                href="/news"
-                className="text-sm text-[#00a1e9] underline underline-offset-4 hover:opacity-80"
-                aria-label="お知らせ一覧を見る"
-              >
-                一覧を見る
-              </Link>
+
+              <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-[#00a1e9] hover:bg-[#e8f7ff]">
+                <Link href="/news" aria-label="お知らせ一覧を見る">
+                  一覧を見る
+                </Link>
+              </Button>
             </div>
+
             <AnnouncementsStrip max={3} />
           </div>
         </section>
@@ -379,66 +396,58 @@ const DesktopHome = () => {
           </div>
         </section>
 
-{/* Gallery */}
-<section
-  id="gallery"
-  className="fade-in-start py-16 px-6 bg-[#f9fbfd] text-center"
-  aria-labelledby="gallery-title"
->
-  <h2
-    id="gallery-title"
-    className="font-bold text-[clamp(1.6rem,3.4vw,2.2rem)] text-[#00a1e9] mb-8"
-  >
-    ギャラリーを見る
-  </h2>
+        {/* Gallery */}
+        <section id="gallery" className="fade-in-start py-16 px-6 bg-[#f9fbfd] text-center" aria-labelledby="gallery-title">
+          <h2
+            id="gallery-title"
+            className="font-bold text-[clamp(1.6rem,3.4vw,2.2rem)] text-[#00a1e9] mb-8"
+          >
+            ギャラリーを見る
+          </h2>
 
-  <div className="grid gap-6 sm:gap-8 grid-cols-1 sm:grid-cols-2 max-w-[1040px] mx-auto">
-    {[
-      {
-        img: '/images/white-thumb.png',
-        title: 'White Gallery',
-        desc: '「意識の空間」をイメージした真っ白なギャラリー。10作品限定の特別展示。',
-        link: '/white',
-      },
-      {
-        img: '/images/float-thumb.jpg',
-        title: 'Float Gallery',
-        desc: '“漂う”ように入れ替わる美術館風ギャラリー。日替わりで多彩な作品を展示。',
-        link: '/float',
-      },
-    ].map(({ img, title, desc, link }) => (
-      <Link
-        key={title}
-        href={link}
-        aria-label={`${title} へ`}
-        className="group block text-left rounded-2xl bg-white shadow-sm ring-1 ring-gray-100
+          <div className="grid gap-6 sm:gap-8 grid-cols-1 sm:grid-cols-2 max-w-[1040px] mx-auto">
+            {[
+              {
+                img: '/images/white-thumb.png',
+                title: 'White Gallery',
+                desc: '「意識の空間」をイメージした真っ白なギャラリー。10作品限定の特別展示。',
+                link: '/white',
+              },
+              {
+                img: '/images/float-thumb.jpg',
+                title: 'Float Gallery',
+                desc: '“漂う”ように入れ替わる美術館風ギャラリー。日替わりで多彩な作品を展示。',
+                link: '/float',
+              },
+            ].map(({ img, title, desc, link }) => (
+              <Link
+                key={title}
+                href={link}
+                aria-label={`${title} へ`}
+                className="group block text-left rounded-2xl bg-white shadow-sm ring-1 ring-gray-100
                    hover:shadow-md transition focus-visible:outline-none
                    focus-visible:ring-2 focus-visible:ring-[#00a1e9] focus-visible:ring-offset-2"
-      >
-        {/* hoverズームのため overflow-hidden だけ付与 */}
-        <div className="overflow-hidden rounded-2xl">
-          <Image
-            src={img}
-            alt={`${title} thumbnail`}
-            width={960}              // 16:9 の想定サイズ（任意で変更OK）
-            height={540}
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            className="w-full h-auto object-cover transition-transform duration-300
+              >
+                <div className="overflow-hidden rounded-2xl">
+                  <Image
+                    src={img}
+                    alt={`${title} thumbnail`}
+                    width={960}
+                    height={540}
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="w-full h-auto object-cover transition-transform duration-300
                        group-hover:scale-105 motion-reduce:transition-none motion-reduce:transform-none"
-            // priority は外す（プリロード警告の元）
-          />
-        </div>
+                  />
+                </div>
 
-        <div className="p-4 sm:p-5">
-          <h3 className="text-base sm:text-lg font-semibold">{title}</h3>
-          <p className="mt-1 text-[13px] sm:text-sm text-[#445] line-clamp-2">
-            {desc}
-          </p>
-        </div>
-      </Link>
-    ))}
-  </div>
-</section>
+                <div className="p-4 sm:p-5">
+                  <h3 className="text-base sm:text-lg font-semibold">{title}</h3>
+                  <p className="mt-1 text-[13px] sm:text-sm text-[#445] line-clamp-2">{desc}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
 
         {/* 応募導線 */}
         <section
@@ -451,7 +460,10 @@ const DesktopHome = () => {
           </Link>
 
           <div className="relative z-20 max-w-xl mx-auto pointer-events-none">
-            <h2 id="apply-title" className="text-[clamp(1.5rem,3.2vw,2.2rem)] font-bold text-[#00a1e9] leading-tight mb-3 group-hover:underline underline-offset-4">
+            <h2
+              id="apply-title"
+              className="text-[clamp(1.5rem,3.2vw,2.2rem)] font-bold text-[#00a1e9] leading-tight mb-3 group-hover:underline underline-offset-4"
+            >
               あなたのアートを<br />世界に届けよう
             </h2>
             <p className="text-gray-600 text-[clamp(0.95rem,1.6vw,1.05rem)] mb-6">
@@ -463,68 +475,70 @@ const DesktopHome = () => {
           </div>
         </section>
 
-{/* Special Thanks（見出し自体をリンク化・中央配置） */}
-<section
-  id="special-thanks-link"
-  className="fade-in-start py-10 px-6 bg-white"
-  aria-labelledby="thanks-link-title"
->
-  <div className="max-w-[1040px] mx-auto">
-    <div className="rounded-2xl border bg-white p-10 shadow-sm flex flex-col items-center justify-center text-center">
-      <h2 id="thanks-link-title" className="text-2xl font-extrabold">
-        <Link
-          href="/special-thanks"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 bg-clip-text text-transparent focus:outline-none focus:ring-2 focus:ring-[#00a1e9] focus:ring-offset-2 rounded-lg px-2 py-1"
-          aria-label="Special Thanks ページへ"
-          title="Special Thanks ページへ"
-        >
-          <span>✨ Special Thanks ✨</span>
-        </Link>
-      </h2>
+        {/* Special Thanks（見出し自体をリンク化・中央配置） */}
+        <section id="special-thanks-link" className="fade-in-start py-10 px-6 bg-white" aria-labelledby="thanks-link-title">
+          <div className="max-w-[1040px] mx-auto">
+            <div className="rounded-2xl border bg-white p-10 shadow-sm flex flex-col items-center justify-center text-center">
+              <h2 id="thanks-link-title" className="text-2xl font-extrabold">
+                <Link
+                  href="/special-thanks"
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 bg-clip-text text-transparent focus:outline-none focus:ring-2 focus:ring-[#00a1e9] focus:ring-offset-2 rounded-lg px-2 py-1"
+                  aria-label="Special Thanks ページへ"
+                  title="Special Thanks ページへ"
+                >
+                  <span>✨ Special Thanks ✨</span>
+                </Link>
+              </h2>
 
-      <p className="mt-2 text-sm text-[#445]">
-        me-ish初期ギャラリー(white)に応募してくださった皆さま
-      </p>
-    </div>
-  </div>
-</section>
-
+              <p className="mt-2 text-sm text-[#445]">me-ish初期ギャラリー(white)に応募してくださった皆さま</p>
+            </div>
+          </div>
+        </section>
 
         {/* FAQ */}
         <section id="faq" className="fade-in-start py-16 px-6 bg-[#f6f8fb]" aria-labelledby="faq-title">
-          <h2 id="faq-title" className="text-center font-bold text-[clamp(1.6rem,3.2vw,2.1rem)] text-[#00a1e9] mb-6">
+          <h2
+            id="faq-title"
+            className="text-center font-bold text-[clamp(1.6rem,3.2vw,2.1rem)] text-[#00a1e9] mb-6"
+          >
             よくある質問
           </h2>
 
           <ul className="max-w-[880px] mx-auto space-y-6 text-[0.96rem] text-[#444]">
             <li className="rounded-xl bg-white/70 border p-5">
               <p className="font-semibold text-[#333]">Q. 誰でも出展できますか？</p>
-              <p className="mt-1 leading-relaxed">A. はい、プロ・アマ問わずどなたでもご応募いただけます。</p>
+              <p className="mt-1 leading-relaxed">
+                A. はい、プロ・アマ問わずご応募いただけます。展示は<strong>審査制</strong>です。
+              </p>
             </li>
+
             <li className="rounded-xl bg-white/70 border p-5">
               <p className="font-semibold text-[#333]">Q. 出展に料金はかかりますか？</p>
               <p className="mt-1 leading-relaxed">
-                A. 基本の展示は無料です。作品が売れた場合は<strong>手数料</strong>をいただきます（詳細はFAQをご確認ください）。
-                また、有料プランでは「最低表示回数保証」が付与されます。
+                A. <strong>応募・展示は無料</strong>です。作品が売れた場合のみ、売上から<strong>手数料</strong>をいただきます。
+                詳細はFAQをご確認ください。
               </p>
             </li>
+
             <li className="rounded-xl bg-white/70 border p-5">
-              <p className="font-semibold text-[#333]">Q. NFTの販売は可能ですか？</p>
+              <p className="font-semibold text-[#333]">Q. 生成AIは使ってもいいですか？</p>
               <p className="mt-1 leading-relaxed">
-                A. はい、NFT販売にも対応しており、<strong>円での購入</strong>も可能です。
+                A. <strong>AIだけで作った“完全生成”の作品は不可</strong>です。一方で、ラフ作成や構図検討などの
+                <strong>補助的な利用</strong>はケースにより扱いが異なります。詳細はFAQをご確認ください。
               </p>
             </li>
           </ul>
 
           <div className="mt-8 text-center">
-            <Link
-              href="/footer/faq"
-              className="inline-flex items-center gap-2 rounded-full border border-[#00a1e9] px-5 py-2.5 text-[#00a1e9] font-semibold hover:bg-[#e8f7ff] transition"
-              aria-label="よくある質問をもっと見る"
+            <Button
+              asChild
+              variant="outline"
+              className="rounded-full border-[#00a1e9] text-[#00a1e9] hover:bg-[#e8f7ff]"
             >
-              よくある質問をもっと見る
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+              <Link href="/footer/faq" aria-label="よくある質問をもっと見る">
+                よくある質問をもっと見る <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
           </div>
         </section>
 
@@ -575,5 +589,3 @@ const DesktopHome = () => {
 };
 
 export default DesktopHome;
-
-

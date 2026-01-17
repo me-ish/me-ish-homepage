@@ -102,12 +102,6 @@ export default async function CertPage({
       title: entry.title ?? "(Untitled)",
     };
 
-    // sales_type / sale_type どちらでも拾う
-    const purchaseType =
-      ((normalizedEntry as any).sales_type ??
-        (normalizedEntry as any).sale_type ??
-        "normal") as "normal" | "nft";
-
     // 作品データ受け取りエンドポイント
     const artworkHref = `/api/files/download?certToken=${encodeURIComponent(token)}`;
 
@@ -147,7 +141,7 @@ export default async function CertPage({
               <div className="w-[700px]">
                 <CoAInfoPanel
                   entry={normalizedEntry}
-                  showOnchain={purchaseType === "nft"}
+                  showOnchain={false}
                   {...BRAND}
                 />
               </div>
@@ -160,18 +154,12 @@ export default async function CertPage({
 
           {/* ④ 作品データ受け取り */}
           <AssetsReceiveSection
-            salesType={purchaseType}
             labels={{
               sectionTitle: t.assetsSectionTitle,
               normalNote: t.normalNote,
               normalDownloadBtn: t.normalDownloadBtn,
-              nftNote: t.nftNote,
-              nftConnectBtn: t.nftConnectBtn,
-              nftGasNote: t.nftGasNote,
             }}
             artworkHref={artworkHref}
-            claimHref={`/claim/${ver.entryId}?t=${encodeURIComponent(token)}`}
-            showOffchainDownloadInNft={false}
           />
         </div>
       </main>

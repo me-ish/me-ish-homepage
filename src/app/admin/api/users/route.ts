@@ -62,30 +62,26 @@ export async function GET() {
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from('entries')
-    .select('artist_name, sns_links, sale_type');
+    .select('artist_name, sns_links');
 
   if (error) return NextResponse.json({ error: 'list_failed' }, { status: 500 });
 
-  type Entry = { artist_name: string | null; sns_links: unknown; sale_type: string | null };
-  const grouped = new Map<string, { artist_name: string; sns_links: string[]; entry_count: number; sale_types: string[] }>();
+  type Entry = { artist_name: string | null; sns_links: unknown };
+  const grouped = new Map<string, { artist_name: string; sns_links: string[]; entry_count: number }>();
 
   (data as Entry[]).forEach((entry) => {
     const key = (entry.artist_name ?? '未設定').trim() || '未設定';
     const links = parseLinks(entry.sns_links);
-    const sale = (entry.sale_type ?? '').trim();
-    const saleKey = sale || 'unknown';
 
     const existing = grouped.get(key);
     if (existing) {
       existing.entry_count += 1;
       for (const l of links) if (!existing.sns_links.includes(l)) existing.sns_links.push(l);
-      if (saleKey && !existing.sale_types.includes(saleKey)) existing.sale_types.push(saleKey);
     } else {
       grouped.set(key, {
         artist_name: key,
         sns_links: [...links],
         entry_count: 1,
-        sale_types: saleKey ? [saleKey] : [],
       });
     }
   });

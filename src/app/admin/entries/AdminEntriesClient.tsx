@@ -16,7 +16,6 @@ type Entry = {
 
   edition_total?: number | null;
   edition_sold?: number | null;
-  sale_type?: string | null;
   gallery_type?: string | null;
 
   // タイムスタンプ

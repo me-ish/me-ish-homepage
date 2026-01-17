@@ -54,7 +54,7 @@ export default function PricingPage() {
             <strong>月次まとめ払い</strong>でアーティストへ<strong>銀行振込</strong>します（応募時に振込口座の登録が必要）。
           </li>
           <li>
-            購入者の決済方法は<strong>クレジットカード（円）</strong>です。NFT作品も円で購入できます。
+            購入者の決済方法は<strong>クレジットカード（円）</strong>です（暗号資産での支払いには対応していません）。
           </li>
           <li>
             詳細は <Link href="/footer/faq#fees" className="underline">FAQ</Link> をご確認ください。
@@ -70,7 +70,7 @@ export default function PricingPage() {
             <TermItem
               icon={<Shield className="w-4 h-4 text-[#00a1e9]" />}
               title="作品権利・保護"
-              body="著作権はアーティストに帰属。展示・販売・広報に必要な範囲での利用許諾をいただきます。me-ish側でサイン／ウォーターマーク、AI認識阻害処理（Glaze・ステガノ等）を適用し、保護完了後のみ展示します。"
+              body="著作権はアーティストに帰属。展示・販売・広報に必要な範囲での利用許諾をいただきます。me-ish側でサイン／ウォーターマーク、AI認識阻害処理（例：Glaze・ステガノ等）を適用し、保護完了後のみ展示します。"
             />
             <TermItem
               icon={<BadgeCheck className="w-4 h-4 text-[#00a1e9]" />}
@@ -86,11 +86,6 @@ export default function PricingPage() {
               icon={<RotateCcw className="w-4 h-4 text-[#00a1e9]" />}
               title="キャンセル・返金"
               body="表示保証オプションは性質上、購入後の返金はできません（法令上の瑕疵に該当する場合を除く）。"
-            />
-            <TermItem
-              icon={<Info className="w-4 h-4 text-[#00a1e9]" />}
-              title="NFT販売（該当作品）"
-              body="me-ishが独自コントラクトでMintし、購入者へ付与します。NFTはトークンの所有権であり、著作権の移転を意味しません。詳細は「NFT販売ガイド」をご確認ください。"
             />
           </ul>
 

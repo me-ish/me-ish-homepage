@@ -15,8 +15,6 @@ export interface ZoomedArtwork {
   sns_links?: string;
   created_at?: string;
   is_sold?: boolean;
-  sale_type?: 'normal' | 'nft';
-  token_id?: string;
   width?: number;
   height?: number;
   likes?: number;

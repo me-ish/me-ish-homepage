@@ -7,8 +7,6 @@ import ArtworkLabelWhite from '../whiteGallery/ArtworkLabelWhite';
 import { useZoomArtwork } from '../shared/ZoomArtworkContext';
 import { supabase } from '@/lib/supabaseClient';
 
-type SaleType = 'normal' | 'nft';
-
 type EntryRow = {
   id: number;
   artist_name: string;
@@ -20,7 +18,6 @@ type EntryRow = {
   price: number | null;
   sns_links: string | null;
   created_at: string | null;
-  sale_type: string | null; // DBからは string の可能性があるので後で正規化
   edition_mode: 'limited' | 'unlimited' | null;
   edition_total: number | null;
   edition_sold: number | null;
@@ -41,7 +38,6 @@ interface ArtworkEntry {
   position: [number, number, number];
   rotation: [number, number, number];
   key: string;
-  sale_type?: SaleType; // ← 文字列一般型は不可。狭める
   edition_mode?: 'limited' | 'unlimited' | null;
   edition_total?: number | null;
   edition_sold?: number | null;
@@ -73,7 +69,7 @@ export default function ArtworksInGallery({ avatarRef }: ArtworksInGalleryProps)
       const { data, error } = await supabase
         .from('entries')
         .select(
-          'id, artist_name, title, file_name, image_url, description, is_for_sale, price, sns_links, created_at, sale_type, edition_mode, edition_total, edition_sold'
+          'id, artist_name, title, file_name, image_url, description, is_for_sale, price, sns_links, created_at, edition_mode, edition_total, edition_sold'
         )
         .eq('confirmed', true)
         .eq('display_ready', true)
@@ -91,9 +87,6 @@ export default function ArtworksInGallery({ avatarRef }: ArtworksInGalleryProps)
           const finalUrl = resolveImageUrl(item);
           if (!finalUrl) return null;
 
-          // sale_type を "normal" | "nft" に正規化
-          const saleType: SaleType = item.sale_type === 'nft' ? 'nft' : 'normal';
-
           return {
             title: item.title,
             author: item.artist_name,
@@ -106,7 +99,6 @@ export default function ArtworksInGallery({ avatarRef }: ArtworksInGalleryProps)
             created_at: item.created_at,
             ratio: 1,
             scale: 2,
-            sale_type: saleType, // ← 型が確定
 
             // edition系は null を尊重（勝手に 1 を入れない）
             edition_mode: item.edition_mode ?? null,

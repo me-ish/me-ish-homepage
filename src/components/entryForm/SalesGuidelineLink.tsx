@@ -39,7 +39,7 @@ export default function SalesGuidelineLink({
     }
   }, []);
 
-  const shouldShow = !!pathname && showOnPaths.some(p => pathname.startsWith(p));
+  const shouldShow = !!pathname && showOnPaths.some((p) => pathname.startsWith(p));
   if (!shouldShow) return null;
 
   if (variant === 'inline') {
@@ -48,6 +48,9 @@ export default function SalesGuidelineLink({
         応募前に
         <Link
           href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          prefetch={false}
           className="ml-1 underline text-[#00a1e9] hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00a1e9]/60 rounded-sm"
         >
           {label}
@@ -68,6 +71,9 @@ export default function SalesGuidelineLink({
     >
       <Link
         href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        prefetch={false}
         aria-label={label}
         className={[
           // レイヤー: ガラス風 + 境界線 + 影
@@ -98,11 +104,22 @@ export default function SalesGuidelineLink({
 
       <style jsx global>{`
         @keyframes ping-slow {
-          0% { transform: scale(1); opacity: 0.9; }
-          70% { transform: scale(2.2); opacity: 0; }
-          100% { transform: scale(2.2); opacity: 0; }
+          0% {
+            transform: scale(1);
+            opacity: 0.9;
+          }
+          70% {
+            transform: scale(2.2);
+            opacity: 0;
+          }
+          100% {
+            transform: scale(2.2);
+            opacity: 0;
+          }
         }
-        .animate-ping-slow { animation: ping-slow 1.6s cubic-bezier(0,0,.2,1) infinite; }
+        .animate-ping-slow {
+          animation: ping-slow 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
       `}</style>
     </div>
   );

@@ -1,44 +1,53 @@
 'use client';
 
-import React from 'react';
-import * as THREE from 'three';
+import React, { useMemo } from 'react';
+import { getPanelGeometry, getPanelMaterial } from './sharedGeometry';
 
-export default function FloatPanels(): JSX.Element {
-  const panelWidth = 18;
-  const panelHeight = 8;
-  const panelThickness = 1.0;
-  const panelY = panelHeight / 2;
-  const radius = 16;
+// 定数
+const PANEL_HEIGHT = 8;
+const PANEL_Y = PANEL_HEIGHT / 2;
+const RADIUS = 16;
 
-  const materialProps = {
-    color: '#cccccc',
-    roughness: 0.85,
-    metalness: 0.05,
-  };
+// パネル角度（45°刻み）
+const PANEL_ANGLES = [45, 135, 225, 315];
 
-  const angles = [45, 135, 225, 315];
-  const panels = angles.map((deg) => {
-    const rad = (deg * Math.PI) / 180;
-    const x = Math.cos(rad) * radius;
-    const z = Math.sin(rad) * radius;
-    return {
-      position: [x, panelY, z] as [number, number, number],
-      rotation: [0, rad, 0] as [number, number, number],
-    };
-  });
+type PanelData = {
+  position: [number, number, number];
+  rotation: [number, number, number];
+};
+
+export default function FloatPanels(): React.JSX.Element {
+  // 共有ジオメトリ・マテリアル
+  const panelGeometry = useMemo(() => getPanelGeometry(), []);
+  const panelMaterial = useMemo(() => getPanelMaterial(), []);
+
+  // パネル配置データ（メモ化）
+  const panels = useMemo<PanelData[]>(() =>
+    PANEL_ANGLES.map((deg) => {
+      const rad = (deg * Math.PI) / 180;
+      return {
+        position: [
+          Math.cos(rad) * RADIUS,
+          PANEL_Y,
+          Math.sin(rad) * RADIUS,
+        ] as [number, number, number],
+        rotation: [0, rad, 0] as [number, number, number],
+      };
+    }),
+    []
+  );
 
   return (
     <group>
       {panels.map((p, i) => (
         <mesh
-          key={i}
+          key={`panel-${i}`}
           position={p.position}
           rotation={p.rotation}
-          receiveShadow // ✅ 追加済み
-        >
-          <boxGeometry args={[panelWidth, panelHeight, panelThickness]} />
-          <meshStandardMaterial {...materialProps} />
-        </mesh>
+          geometry={panelGeometry}
+          material={panelMaterial}
+          receiveShadow
+        />
       ))}
     </group>
   );

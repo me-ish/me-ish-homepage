@@ -106,7 +106,7 @@ function LoginInner() {
         <FeatureCard
           title="できること"
           items={[
-            { icon: <Img className="w-4 h-4 text-[#00a1e9]" />, text: '出展作品の登録・編集（通常 or NFT を選択）' },
+            { icon: <Img className="w-4 h-4 text-[#00a1e9]" />, text: '出展作品の登録・編集' },
             { icon: <CreditCard className="w-4 h-4 text-[#00a1e9]" />, text: '売上・手数料の確認（成功時のみ10%）' },
             { icon: <Bell className="w-4 h-4 text-[#00a1e9]" />, text: '展示・販売に関する通知の受け取り' },
             { icon: <User className="w-4 h-4 text-[#00a1e9]" />, text: 'プロフィール編集とSNSリンク' },
@@ -117,7 +117,7 @@ function LoginInner() {
           items={[
             { icon: <ShieldCheck className="w-4 h-4 text-[#00a1e9]" />, text: 'ウォーターマーク／署名とAI学習阻害の多層保護' },
             { icon: <ShieldCheck className="w-4 h-4 text-[#00a1e9]" />, text: '支払いはクレジット（円）のみ、暗号資産は非対応' },
-            { icon: <ShieldCheck className="w-4 h-4 text-[#00a1e9]" />, text: 'NFTは出展時選択作品のみ、購入後に発行・受け渡し' },
+            { icon: <ShieldCheck className="w-4 h-4 text-[#00a1e9]" />, text: '購入後すぐにデジタル作品をダウンロード' },
           ]}
         />
       </div>

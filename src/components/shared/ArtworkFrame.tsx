@@ -3,6 +3,7 @@
 import React, {
   useRef,
   useState,
+  useMemo,
   forwardRef,
   useImperativeHandle,
 } from 'react';
@@ -11,6 +12,11 @@ import * as THREE from 'three';
 import { a, useSpring } from '@react-spring/three';
 import { useTexture } from '@react-three/drei';
 import { useZoomArtwork } from './ZoomArtworkContext';
+
+// 定数
+const GLOW_DISTANCE = 7;
+const GLOW_INTENSITY = 1.5;
+const GLOW_TIMEOUT = 1200;
 
 type ArtworkFrameProps = {
   id: string;
@@ -48,6 +54,9 @@ const ArtworkFrame = forwardRef<ArtworkFrameHandle, ArtworkFrameProps>(
     const { setZoomedArtwork } = useZoomArtwork();
     const groupRef = useRef<THREE.Group>(null);
 
+    // 再利用用ベクトル（GC回避）
+    const artworkPos = useMemo(() => new THREE.Vector3(...position), [position]);
+
     useImperativeHandle(ref, () => {
       if (!groupRef.current) {
         throw new Error('groupRef is not available');
@@ -79,17 +88,16 @@ const ArtworkFrame = forwardRef<ArtworkFrameHandle, ArtworkFrameProps>(
     useFrame(() => {
       if (!avatarRef?.current) return;
 
-      const artworkPos = new THREE.Vector3(...position);
-      const avatarPos = avatarRef.current.position;
-      const distance = artworkPos.distanceTo(avatarPos);
+      const avatarPosition = avatarRef.current.position;
+      const distance = artworkPos.distanceTo(avatarPosition);
 
       api.start({
-        emissiveIntensity: distance < 7 ? 1.5 : 0,
+        emissiveIntensity: distance < GLOW_DISTANCE ? GLOW_INTENSITY : 0,
       });
 
-      if (distance < 7 && !shouldGlow) {
+      if (distance < GLOW_DISTANCE && !shouldGlow) {
         setShouldGlow(true);
-        setTimeout(() => setShouldGlow(false), 1200);
+        setTimeout(() => setShouldGlow(false), GLOW_TIMEOUT);
       }
     });
 

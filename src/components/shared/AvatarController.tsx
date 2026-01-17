@@ -9,10 +9,20 @@ type AvatarControllerProps = {
   joystickRef: React.RefObject<{ x: number; y: number }>;
 };
 
+// 定数
+const MOVE_SPEED = 0.1;
+const LERP_FACTOR = 0.2;
+
 export default function AvatarController({ avatarRef, joystickRef }: AvatarControllerProps) {
   const velocity = useRef(new THREE.Vector3());
   const keys = useRef<Record<string, boolean>>({});
   const { camera } = useThree();
+
+  // 再利用用ベクトル（GC回避）
+  const moveVector = useRef(new THREE.Vector3());
+  const forward = useRef(new THREE.Vector3());
+  const right = useRef(new THREE.Vector3());
+  const tempVelocity = useRef(new THREE.Vector3());
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -34,9 +44,6 @@ export default function AvatarController({ avatarRef, joystickRef }: AvatarContr
     const joystick = joystickRef.current;
     if (!avatar || !joystick) return;
 
-    const moveSpeed = 0.1;
-    const moveVector = new THREE.Vector3();
-
     let inputX = joystick.x;
     let inputY = -joystick.y;
 
@@ -53,26 +60,24 @@ export default function AvatarController({ avatarRef, joystickRef }: AvatarContr
       if (keys.current['d']) inputX += 1;
     }
 
-    console.log('🎮 inputX:', inputX, 'inputY:', inputY);
-
     if (inputX !== 0 || inputY !== 0) {
-      const forward = new THREE.Vector3();
-      camera.getWorldDirection(forward);
-      forward.y = 0;
-      forward.normalize();
+      camera.getWorldDirection(forward.current);
+      forward.current.y = 0;
+      forward.current.normalize();
 
-      const right = new THREE.Vector3();
-      right.crossVectors(forward, camera.up).normalize();
+      right.current.crossVectors(forward.current, camera.up).normalize();
 
-      moveVector
-        .addScaledVector(forward, -inputY)
-        .addScaledVector(right, inputX)
+      moveVector.current
+        .set(0, 0, 0)
+        .addScaledVector(forward.current, -inputY)
+        .addScaledVector(right.current, inputX)
         .normalize();
 
-      velocity.current.lerp(moveVector, 0.2);
-      avatar.position.add(velocity.current.clone().multiplyScalar(moveSpeed));
+      velocity.current.lerp(moveVector.current, LERP_FACTOR);
 
-      console.log('🚶‍♂️ Moved to:', avatar.position.toArray());
+      // clone() の代わりに tempVelocity を使用
+      tempVelocity.current.copy(velocity.current).multiplyScalar(MOVE_SPEED);
+      avatar.position.add(tempVelocity.current);
     } else {
       velocity.current.set(0, 0, 0);
     }

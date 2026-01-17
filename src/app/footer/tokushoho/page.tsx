@@ -3,13 +3,16 @@
 
 import Link from 'next/link';
 
+const ENACTED_AT = "2025年8月18日";
+const REVISED_AT = "2026年1月17日"; // ★運用：更新時は“最終改定日”として置き換え推奨
+
 export default function TokushohoPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
       {/* ヘッダ */}
       <header className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">特定商取引法に基づく表記</h1>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-sm text-gray-600 leading-relaxed">
           本表記は、オンラインギャラリー「me-ish」における作品の販売に関し、特定商取引法第11条に基づき必要な事項を表示するものです。
         </p>
       </header>
@@ -53,9 +56,10 @@ export default function TokushohoPage() {
         <ul>
           <li>通信費（インターネット接続に係る料金等）</li>
           <li>
-            NFT移転時のネットワーク手数料（ガス代）：
-            原則<strong>当サービスが負担</strong>しますが、著しい高騰時は移転時期の調整またはご負担をお願いする場合があります
-            （詳細は <Link href="/footer/terms#sec-8" className="underline">利用規約 第8条</Link> を参照）。
+            決済手数料：<strong>当サービスが負担</strong>します。<br />
+            <span className="text-sm text-gray-600">
+              ※ただし、カード会社側の分割手数料等、購入者の契約内容により別途発生し得る費用は購入者の負担となります。
+            </span>
           </li>
         </ul>
 
@@ -67,22 +71,17 @@ export default function TokushohoPage() {
 
         <h2><strong>■ お支払い時期</strong></h2>
         <ul>
-          <li>通常販売：購入手続き完了時に即時決済</li>
-          <li>NFT販売：Stripe決済完了時に即時決済</li>
+          <li>購入手続き完了時に即時決済</li>
         </ul>
 
         <h2><strong>■ 商品の引渡時期・方法</strong></h2>
         <ul>
           <li>
-            <strong>デジタル作品（通常販売）</strong>：
-            決済確認後、<strong>即時〜24時間以内</strong>にダウンロードリンクまたはメールにて納品（システム障害等の場合は最長<strong>3営業日</strong>）。
-          </li>
-          <li>
-            <strong>NFT作品（NFT販売）</strong>：
-            決済確認後、当サービスがNFTを<strong>ミントして一旦保管</strong>します（原則<strong>72時間以内</strong>）。
-            購入者がウォレットアドレスを登録した場合、<strong>原則7日以内</strong>に当該ウォレットへ移転します。
-            NFTの受け取りは<strong>任意</strong>で、<strong>受取猶予は購入日から12か月</strong>です
-            （詳細は <Link href="/footer/terms#sec-8" className="underline">利用規約 第8条</Link>）。
+            <strong>デジタル作品</strong>：
+            決済確認後、<strong>即時〜24時間以内</strong>にダウンロードリンクまたはメールにて納品します。<br />
+            <span className="text-sm text-gray-600">
+              ※システム障害等の場合は、最長<strong>3営業日</strong>いただく場合があります。
+            </span>
           </li>
         </ul>
 
@@ -104,16 +103,23 @@ export default function TokushohoPage() {
           <li>
             任意の「表示保証オプション」は<strong>1作品ごと</strong>に提供し、<strong>有効期間内に所定回数の表示</strong>を保証します。
             自動更新はありません。提供開始後および<strong>消化済み回数分は返金不可</strong>です
-            （詳細は <Link href="/modal/pricing" className="underline">プランと料金</Link> ／
-            <Link href="/footer/terms#sec-6" className="underline">利用規約 第6条</Link>）。
+            （詳細は{" "}
+            <Link href="/modal/pricing" className="underline underline-offset-2">プランと料金</Link>
+            {" "}／{" "}
+            <Link href="/footer/terms#sec-6" className="underline underline-offset-2">利用規約 第6条</Link>
+            ）。
           </li>
           <li>通信販売にはクーリング・オフは適用されません。</li>
         </ul>
 
         <h2><strong>■ 表現および商品に関する注意書き</strong></h2>
-        <p>各作品はアーティストによる創作物です。表現内容は主観的なものであり、効能・価値・転売価格等を保証するものではありません。</p>
+        <p>
+          各作品はアーティストによる創作物です。表現内容は主観的なものであり、効能・価値・転売価格等を保証するものではありません。
+        </p>
 
-        <p>制定日：2025年8月18日／改定日：2025年9月21日</p>
+        <p className="text-sm text-gray-600">
+          制定日：{ENACTED_AT}／最終改定日：{REVISED_AT}
+        </p>
       </article>
     </main>
   );

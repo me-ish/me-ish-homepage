@@ -6,7 +6,6 @@ export type PurchaseArtistEmailArgs = {
   editionNo?: number | null;       // 何番 (例: 2)
   editionTotal?: number | null;    // 総数 (例: 10)
   orderId?: string;                // 取引ID/注文番号
-  salesType?: 'normal' | 'nft' | string;
   manageUrl?: string;              // 売上/作品の管理ページ
   faqUrl?: string;                 // 既定: /faq
   termsUrl?: string;               // 既定: /footer/terms
@@ -31,7 +30,6 @@ export function generatePurchaseArtistEmail(arg: string | PurchaseArtistEmailArg
     editionNo = null,
     editionTotal = null,
     orderId,
-    salesType = 'normal',
     manageUrl,
     faqUrl = 'https://me-ish.art/faq',
     termsUrl = 'https://me-ish.art/footer/terms',
@@ -53,7 +51,6 @@ export function generatePurchaseArtistEmail(arg: string | PurchaseArtistEmailArg
   // テーブル行（条件で出し分け）
   const rows: string[] = [];
   if (title) rows.push(row('作品名', escapeHtml(title)));
-  if (salesType) rows.push(row('販売形式', escapeHtml(salesType === 'nft' ? 'NFT販売' : '通常販売')));
   if (priceYen != null) rows.push(row('販売価格', `¥${fmtYen(priceYen)}`));
   if (editionNo != null || editionTotal != null)
     rows.push(row('エディション', `${editionNo ?? '-'} / ${editionTotal ?? '-'}`));
@@ -112,7 +109,6 @@ export function generatePurchaseArtistEmail(arg: string | PurchaseArtistEmailArg
   textLines.push(`${name} 様\n`);
   textLines.push('me-ish にご出展中の作品が購入されました。ありがとうございます。\n');
   if (title) textLines.push(`作品名：${title}`);
-  if (salesType) textLines.push(`販売形式：${salesType === 'nft' ? 'NFT販売' : '通常販売'}`);
   if (priceYen != null) textLines.push(`販売価格：¥${fmtYen(priceYen)}`);
   if (editionNo != null || editionTotal != null) textLines.push(`エディション：${editionNo ?? '-'} / ${editionTotal ?? '-'}`);
   if (orderId) textLines.push(`注文番号：${orderId}`);

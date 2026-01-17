@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 type Entry = {
   id: number;
   title: string | null;
-  sale_type: string | null;
   price: number | null;
   confirmed: boolean | null; // ← null を許容
   created_at: string; // ISO
@@ -93,11 +92,10 @@ export default function AdminUserDetailClient({ adminEmail, artistName }: Props)
   // CSV
   const exportCSV = () => {
     const rows = [
-      ['id', 'title', 'sale_type', 'price_yen', 'confirmed', 'created_at'],
+      ['id', 'title', 'price_yen', 'confirmed', 'created_at'],
       ...sorted.map((e) => [
         e.id,
         (e.title ?? '').replace(/"/g, '""'),
-        e.sale_type ?? '',
         e.price ?? '',
         e.confirmed ? 'true' : 'false',
         e.created_at,
@@ -184,7 +182,6 @@ export default function AdminUserDetailClient({ adminEmail, artistName }: Props)
           <thead className="bg-gray-100">
             <tr>
               <th className="p-3 border text-left">タイトル</th>
-              <th className="p-3 border w-32">販売形式</th>
               <th className="p-3 border w-28">価格</th>
               <th className="p-3 border w-24">承認</th>
               <th className="p-3 border w-36">応募日</th>
@@ -194,7 +191,6 @@ export default function AdminUserDetailClient({ adminEmail, artistName }: Props)
             {sorted.map((e) => (
               <tr key={e.id} className="hover:bg-gray-50">
                 <td className="p-3 border">{e.title ?? '（無題）'}</td>
-                <td className="p-3 border">{e.sale_type ?? '—'}</td>
                 <td className="p-3 border">
                   {e.price != null ? `¥${e.price.toLocaleString()}` : '—'}
                 </td>

@@ -8,7 +8,6 @@ export type EmailKind =
   | 'exhibitEnd'
   | 'purchaseBuyer'
   | 'purchaseArtist'
-  | 'purchaseNft'
   | 'contact';
 
 function baseUrl() {

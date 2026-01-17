@@ -3,7 +3,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import NftPurchaseButton from '@/components/purchase/NftPurchaseButton';
 import {
   Heart,
   ShoppingCart,
@@ -31,8 +30,6 @@ type EntryUI = Entry & {
   edition_sold?: number;
   is_for_sale?: boolean;
   is_sold?: boolean;
-  sale_type?: 'nft' | 'normal' | string;
-  token_id?: string | number | null;
   editionMode?: 'limited' | 'unlimited';
 };
 
@@ -57,8 +54,6 @@ const editionSold: number = a.edition_sold ?? 0;
   const is_sold: boolean = a.is_sold ?? false;
   const id = (a as any).id ?? null;
   const created_at = (a as any).created_at ?? null;
-  const sale_type: 'nft' | 'normal' | string = a.sale_type ?? 'normal';
-  const token_id: string | number | null = a.token_id ?? null;
 
 // --- Edition 判定（edition_mode を最優先し、文字列は正規化） ---
 const rawEditionMode = (a as any).edition_mode ?? (a as any).editionMode ?? null;
@@ -71,10 +66,9 @@ const mode: 'limited' | 'unlimited' | null =
 const total =
   typeof editionTotal === 'number' && Number.isFinite(editionTotal) ? editionTotal : null;
 
-// ★ データ確認ログ（ここを追加）
+// ★ データ確認ログ
 console.log('DBG edition/raw', {
   id: (a as any).id,
-  sale_type: a.sale_type,
   is_for_sale: a.is_for_sale,
   edition_mode_db: (a as any).edition_mode,
   editionMode_ui: (a as any).editionMode,
@@ -192,19 +186,6 @@ const handlePurchase = async () => {
       >
         {/* 左：画像 */}
         <div className="flex flex-col">
-          {/* タイプバッジ（販売時のみ） */}
-          {is_for_sale && (
-            <div
-              className={`mb-3 inline-block rounded-full px-3 py-1 text-xs font-semibold tracking-wide ${
-                sale_type === 'nft'
-                  ? 'bg-gradient-to-r from-violet-400 to-purple-600 text-white'
-                  : 'bg-gradient-to-r from-gray-400 to-gray-600 text-white'
-              }`}
-            >
-              {sale_type === 'nft' ? 'NFT' : '通常販売'}
-            </div>
-          )}
-
           {/* 画像（サイズ控えめ） */}
           <div className="relative max-w-[32vw] max-h-[68vh]">
             {/* 左上バッジ（限定/無制限/非売品） */}
@@ -312,8 +293,6 @@ const handlePurchase = async () => {
           price={price ?? null}
           editionTotal={editionTotalForDisplay}
           editionRemaining={editionRemainingForDisplay}
-          saleType={sale_type}
-          tokenId={token_id}
           entryId={id}
           title={title}
           onPurchase={handlePurchase}
@@ -384,8 +363,6 @@ type PurchaseBarProps = {
   price: number | null;
   editionTotal: number | null;
   editionRemaining: number | null;
-  saleType: 'nft' | 'normal' | string;
-  tokenId?: string | number | null;
   entryId?: number | string | null;
   title: string;
   onPurchase?: () => void;
@@ -398,8 +375,6 @@ function DesktopPurchaseBar({
   price,
   editionTotal,
   editionRemaining,
-  saleType,
-  tokenId,
   entryId,
   title,
   onPurchase,
@@ -430,19 +405,9 @@ function DesktopPurchaseBar({
 
           {/* 特商法ミニ注記（リンクは新規タブ） */}
           <div className="mt-1 text-[12px] text-white/70 space-x-3">
-            {saleType === 'nft' ? (
-              <>
-                <span>支払：カード（Stripe）即時決済</span>
-                <span>引渡：決済後72h以内Mint→7日以内移転</span>
-                <span>返品：原則不可</span>
-              </>
-            ) : (
-              <>
-                <span>支払：カード（Stripe）即時決済</span>
-                <span>引渡：即時〜24h（障害時最長3営業日）</span>
-                <span>返品：原則不可</span>
-              </>
-            )}
+            <span>支払：カード（Stripe）即時決済</span>
+            <span>引渡：即時〜24h（障害時最長3営業日）</span>
+            <span>返品：原則不可</span>
             <a
               href="/footer/tokushoho"
               target="_blank"
@@ -465,29 +430,20 @@ function DesktopPurchaseBar({
 
         {/* 右：購入ボタン */}
         <div className="flex-shrink-0">
-          {saleType === 'nft' && tokenId != null && !disabled ? (
-            <NftPurchaseButton
-              entryId={String(entryId ?? '')}
-              title={title}
-              price={Number(price)}
-              tokenId={String(tokenId)}
-            />
-          ) : (
-            <button
-              onClick={onPurchase}
-              disabled={disabled}
-              aria-disabled={disabled}
-              className={[
-                'flex items-center gap-2 h-11 px-6 rounded-xl font-semibold shadow',
-                disabled
-                  ? 'bg-gray-700 text-gray-300 cursor-not-allowed'
-                  : 'bg-[#00a1e9] hover:bg-[#0090cc] text-white',
-              ].join(' ')}
-            >
-              <ShoppingCart size={20} />
-              {disabled ? 'SOLD' : '購入する'}
-            </button>
-          )}
+          <button
+            onClick={onPurchase}
+            disabled={disabled}
+            aria-disabled={disabled}
+            className={[
+              'flex items-center gap-2 h-11 px-6 rounded-xl font-semibold shadow',
+              disabled
+                ? 'bg-gray-700 text-gray-300 cursor-not-allowed'
+                : 'bg-[#00a1e9] hover:bg-[#0090cc] text-white',
+            ].join(' ')}
+          >
+            <ShoppingCart size={20} />
+            {disabled ? 'SOLD' : '購入する'}
+          </button>
         </div>
       </div>
     </div>

@@ -4,8 +4,14 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
-import ArtworkFrame from '../shared/ArtworkFrame';
+import LazyArtworkFrame from '../shared/LazyArtworkFrame';
+import ArtworkLabel from './ArtworkLabelFloat';
 import { supabase } from '@/lib/supabaseClient';
+
+// 定数
+const ARTWORK_SCALE = 1.8;
+const ARTWORK_ASPECT = 1.2;
+const LABEL_NEAR_DISTANCE = 9; // 外壁は少し遠めで反応
 
 type Props = {
   avatarRef: React.RefObject<THREE.Group>;
@@ -150,14 +156,17 @@ export default function FloatArtworksInGallery({
     ...generatePositions(start).map((z) => makeArtwork(wallX, wallY, z, Math.PI / 2)),
   ];
 
+  // ラベル用のサイズ計算
+  const labelWidth = 2.5 * ARTWORK_SCALE * ARTWORK_ASPECT;
+  const labelHeight = 2.5 * ARTWORK_SCALE / ARTWORK_ASPECT;
+
   return (
     <>
       {positions.map((pos, i) => {
         const entry = entries[i];
-        const lightHeight = 2.2;
         return (
           <group
-            key={`slot-${i}`} // 不変キー
+            key={`slot-${i}`}
             position={pos.position}
             rotation={pos.rotation}
             ref={(el) => {
@@ -165,28 +174,32 @@ export default function FloatArtworksInGallery({
             }}
           >
             {entry ? (
-              <ArtworkFrame
-                id={entry.id.toString()}
-                position={[0, 0, 0]}
-                rotation={[0, 0, 0]}
-                aspectRatio={1.2}
-                scale={1.8}
-                title={entry.title}
-                author={entry.artist_name}
-                imageUrl={entry.image_url}
-                avatarRef={avatarRef}
-              />
+              <>
+                <LazyArtworkFrame
+                  id={entry.id.toString()}
+                  position={[0, 0, 0]}
+                  rotation={[0, 0, 0]}
+                  aspectRatio={ARTWORK_ASPECT}
+                  scale={ARTWORK_SCALE}
+                  title={entry.title}
+                  author={entry.artist_name}
+                  imageUrl={entry.image_url}
+                  avatarRef={avatarRef}
+                />
+                <ArtworkLabel
+                  position={pos.position}
+                  rotation={pos.rotation}
+                  width={labelWidth}
+                  height={labelHeight}
+                  nearDistance={LABEL_NEAR_DISTANCE}
+                  avatarRef={avatarRef}
+                  title={entry.title}
+                  author={entry.artist_name}
+                />
+              </>
             ) : (
               <ComingSoonPanel position={[0, 0, 0]} rotation={[0, 0, 0]} />
             )}
-
-            <pointLight
-              position={[0, lightHeight, 0]}
-              intensity={entry ? 1.2 : 0.7}
-              distance={entry ? 8 : 7}
-              decay={2}
-              color={entry ? '#ffffff' : '#e8f6ff'}
-            />
           </group>
         );
       })}

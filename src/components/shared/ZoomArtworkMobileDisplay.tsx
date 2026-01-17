@@ -4,7 +4,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Heart, ShoppingCart, Globe, Instagram, Infinity, Hash, Ban } from 'lucide-react';
-import NftPurchaseButton from '@/components/purchase/NftPurchaseButton';
 import { FaXTwitter } from 'react-icons/fa6';
 import type { Entry } from '../../types/types';
 
@@ -72,8 +71,6 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
   const is_for_sale: boolean = (a as any).is_for_sale ?? false;
   const is_sold: boolean = (a as any).is_sold ?? false;
   const created_at = (a as any).created_at ?? undefined;
-  const sale_type: 'nft' | 'normal' | string = (a as any).sale_type ?? 'normal';
-  const token_id = (a as any).token_id ?? null;
   const id = (a as any).id ?? undefined;
 
   // SNSリンク：文字列JSON / オブジェクト 両対応
@@ -130,19 +127,6 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
       </button>
 
       <div onClick={(e) => e.stopPropagation()} className="flex flex-col items-center space-y-6">
-        {/* タイプバッジ（既存） */}
-        {is_for_sale && (
-          <div
-            className={`self-end mb-2 px-3 py-1 rounded-full text-xs font-semibold shadow-md ${
-              sale_type === 'nft'
-                ? 'bg-gradient-to-r from-violet-400 to-purple-600 text-white'
-                : 'bg-gradient-to-r from-gray-400 to-gray-600 text-white'
-            }`}
-          >
-            {sale_type === 'nft' ? 'NFT作品' : '通常販売作品'}
-          </div>
-        )}
-
         {/* 画像枠（左上に Edition/非売品バッジを重ねる） */}
         <div className="relative w-full max-w-[90vw] bg-white rounded-xl shadow-lg p-3 select-none">
           {/* 左上バッジ */}
@@ -196,25 +180,16 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
                 )}
 
                 {/* ⚖️ 特商法注記（販売する時だけ） */}
-                <LegalNotices isNft={sale_type === 'nft'} />
+                <LegalNotices />
 
                 {/* 🛒 購入ボタン */}
-                {sale_type === 'nft' && token_id ? (
-                  <NftPurchaseButton
-                    entryId={id!}
-                    title={title}
-                    price={Number(price)}
-                    tokenId={token_id}
-                  />
-                ) : (
-                  <button
-                    onClick={handlePurchase}
-                    className="flex items-center gap-2 bg-[#00a1e9] hover:bg-[#0090cc] text-white font-semibold py-2 px-5 rounded-xl shadow transition-all"
-                  >
-                    <ShoppingCart size={20} />
-                    購入する
-                  </button>
-                )}
+                <button
+                  onClick={handlePurchase}
+                  className="flex items-center gap-2 bg-[#00a1e9] hover:bg-[#0090cc] text-white font-semibold py-2 px-5 rounded-xl shadow transition-all"
+                >
+                  <ShoppingCart size={20} />
+                  購入する
+                </button>
               </>
             ) : (
               <div className="text-gray-400 bg-gray-600 text-sm py-2 px-4 rounded-lg inline-block">SOLD</div>
@@ -355,19 +330,12 @@ function Badge({
 }
 
 /** 特商法対応の購入前注記（価格近傍に表示） */
-function LegalNotices({ isNft }: { isNft: boolean }) {
+function LegalNotices() {
   return (
     <div className="mt-1 text-[11px] text-gray-300 leading-relaxed space-y-1 text-center">
       <p>※ 価格は<strong>税込・円表示（総額表示）</strong>です。</p>
       <p>※ 支払方法：クレジットカード（Stripe／日本円）。購入確定時に<strong>即時決済</strong>されます。</p>
-      {isNft ? (
-        <>
-          <p>※ 引渡時期：決済後、概ね<strong>72時間以内</strong>にMint・一時保管、ウォレット登録後<strong>7日以内</strong>に移転（受取猶予<strong>12か月</strong>）。</p>
-          <p>※ ガス代は原則当サービス負担ですが、高騰時は移転時期の調整またはご負担をお願いする場合があります。</p>
-        </>
-      ) : (
-        <p>※ 引渡時期：決済確認後、<strong>即時〜24時間以内</strong>に納品（障害時は最長<strong>3営業日</strong>）。</p>
-      )}
+      <p>※ 引渡時期：決済確認後、<strong>即時〜24時間以内</strong>に納品（障害時は最長<strong>3営業日</strong>）。</p>
       <p>
         <a href="/footer/tokushoho" className="underline underline-offset-2">特定商取引法に基づく表記</a>
         <span className="mx-1">／</span>

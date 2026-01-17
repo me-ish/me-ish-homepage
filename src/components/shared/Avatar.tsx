@@ -44,9 +44,9 @@ const Avatar = forwardRef<THREE.Group, AvatarProps>((props, ref) => {
         scale={scale.to((x, y, z) => [x, y, z] as [number, number, number])}
         {...props}
       >
-        {/* 内核：発光球 */}
+        {/* 内核：発光球（16x16セグメントで十分） */}
         <mesh>
-          <sphereGeometry args={[0.5, 64, 64]} />
+          <sphereGeometry args={[0.5, 16, 16]} />
           {/* @ts-ignore: react-spring 互換対策 */}
           <a.meshStandardMaterial
             map={tilesMap}
@@ -59,9 +59,9 @@ const Avatar = forwardRef<THREE.Group, AvatarProps>((props, ref) => {
           />
         </mesh>
 
-        {/* 外殻：グロー */}
+        {/* 外殻：グロー（16x16セグメントで十分） */}
         <mesh>
-          <sphereGeometry args={[0.7, 64, 64]} />
+          <sphereGeometry args={[0.7, 16, 16]} />
           <meshBasicMaterial
             map={tilesMap}
             color="#00ffff"

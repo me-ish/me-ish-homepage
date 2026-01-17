@@ -61,7 +61,6 @@ type Entry = {
   confirmed_at?: string | null;
   display_start_at?: string | null;
   display_end_at?: string | null;
-  sale_type?: 'normal' | 'nft' | null;
   is_sold?: boolean | null; // ← DBに合わせる
 };
 
@@ -80,8 +79,6 @@ const formatYen = (n?: number | null) => (typeof n === 'number' ? `¥${n.toLocal
 const isUnlimited = (e: Entry) => e.edition_total == null;
 const editionSummary = (e: Entry) => (isUnlimited(e) ? '∞' : `${e.edition_sold ?? 0}/${e.edition_total ?? 0}`);
 const galleryBadgeText = (g?: string) => (g === 'float' ? 'Float' : 'White');
-// NFT判定は sale_type のみ
-const saleBadgeText = (e: Entry) => (e.sale_type === 'nft' ? 'NFT' : '通常');
 
 /* ===================== Component ===================== */
 export default function MyPageClient() {
@@ -198,8 +195,7 @@ export default function MyPageClient() {
               'edition_total',
               'edition_sold',
               'price',
-              'sale_type',
-              'is_sold', // ← ここだけでOK
+              'is_sold',
             ].join(',')
           )
           .eq('user_id', uid)
@@ -241,8 +237,7 @@ export default function MyPageClient() {
       const q = query.toLowerCase();
       return (
         e.title?.toLowerCase().includes(q) ||
-        galleryBadgeText(e.gallery_type)?.toLowerCase().includes(q) ||
-        saleBadgeText(e)?.toLowerCase().includes(q)
+        galleryBadgeText(e.gallery_type)?.toLowerCase().includes(q)
       );
     });
 
@@ -435,7 +430,7 @@ export default function MyPageClient() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="作品検索（タイトル / White / Float / 通常 / NFT）"
+                placeholder="作品検索（タイトル / White / Float）"
                 className="w-full rounded-xl border px-3 py-2 pr-9 outline-none focus:ring-2 focus:ring-[#00a1e9]/30"
               />
               <Filter className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -548,8 +543,6 @@ function EntryCard({ entry }: { entry: Entry }) {
     return total > 0 && soldCount >= total;
   }, [entry]);
 
-  // NFT判定は sale_type のみ
-  const nft = entry.sale_type === 'nft';
   const thumb = entry.image_url || '/placeholder.png';
 
   return (
@@ -564,13 +557,6 @@ function EntryCard({ entry }: { entry: Entry }) {
         <div className="absolute top-2 right-2 flex gap-1">
           <span className="rounded-full bg-white/90 backdrop-blur text-xs px-2 py-1 border">
             {galleryBadgeText(entry.gallery_type)}
-          </span>
-          <span
-            className={`rounded-full backdrop-blur text-xs px-2 py-1 border ${
-              nft ? 'bg-[#00a1e9]/10 text-[#006a9c] border-[#00a1e9]/30' : 'bg-gray-50'
-            }`}
-          >
-            {saleBadgeText(entry)}
           </span>
         </div>
       </div>
@@ -622,11 +608,9 @@ function EntryCard({ entry }: { entry: Entry }) {
           >
             <Share2 className="w-5 h-5" />
           </button>
-          {entry.sale_type !== 'nft' && (
-            <a href={`/downloads/${entry.id}`} className="p-2 rounded-full bg-white hover:bg-gray-100 shadow" aria-label="ダウンロード（購入者）">
-              <Download className="w-5 h-5" />
-            </a>
-          )}
+          <a href={`/downloads/${entry.id}`} className="p-2 rounded-full bg-white hover:bg-gray-100 shadow" aria-label="ダウンロード（購入者）">
+            <Download className="w-5 h-5" />
+          </a>
         </div>
       </div>
     </div>

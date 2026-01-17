@@ -10,7 +10,6 @@ export const revalidate = 0;
 const BUCKET = process.env.SUPABASE_BUCKET || "artworks";
 const FOLDER = process.env.FILES_FINAL_FOLDER || "final";
 const TTL = Number(process.env.CERT_SIGNED_URL_TTL_SECONDS || 300);
-const ALLOW_NFT = process.env.ALLOW_OFFCHAIN_DOWNLOAD_FOR_NFT === "1";
 
 /** FOLDER 内でファイル名(拡張子違いも含む)を探す */
 async function findObjectPath(
@@ -80,19 +79,12 @@ export async function GET(req: NextRequest) {
   // entries から最小限の情報を取得
   const { data: entry, error: e1 } = await admin
     .from("entries")
-    .select("id, sale_type, file_name")
+    .select("id, file_name")
     .eq("id", ver.entryId)
     .single();
 
   if (e1 || !entry) {
     return NextResponse.json({ error: "entry_not_found" }, { status: 404 });
-  }
-
-  // NFT ならオフチェーンDLを遮断（許可したい場合は env で）
-  const rawSaleType = (entry as any).sales_type ?? entry.sale_type ?? "normal";
-  const saleType = String(rawSaleType).toLowerCase();
-  if (saleType === "nft" && !ALLOW_NFT) {
-    return NextResponse.json({ error: "offchain_download_disabled_for_nft" }, { status: 403 });
   }
 
   // Storage 上の実ファイルを解決（拡張子ゆらぎ/下位フォルダも考慮）

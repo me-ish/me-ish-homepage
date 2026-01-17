@@ -9,7 +9,6 @@ export type PurchaseBuyerEmailArgs = {
   editionNo?: number | null;         // 何番（例: 2）
   editionTotal?: number | null;      // 総数（例: 10）
   orderId?: string;                  // 注文番号
-  salesType?: 'normal' | 'nft' | string;
 
   // 納品
   deliveryEtaDays?: number;          // 納品目安（日） 既定: 3
@@ -44,7 +43,6 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
     editionNo = null,
     editionTotal = null,
     orderId,
-    salesType = 'normal',
     deliveryEtaDays = 3,
     deliveryAtISO,
     manageUrl,
@@ -65,8 +63,6 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
     ? new Date(deliveryAtISO).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
     : `通常 ${deliveryEtaDays} 日以内`;
 
-  const isNFT = String(salesType).toLowerCase() === 'nft';
-
   const rows: string[] = [];
   if (title) rows.push(row('作品名', escapeHtml(title)));
   if (artistName) rows.push(row('作家名', escapeHtml(artistName)));
@@ -74,7 +70,7 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
   if (editionNo != null || editionTotal != null)
     rows.push(row('エディション', `${editionNo ?? '-'} / ${editionTotal ?? '-'}`));
   if (orderId) rows.push(row('注文番号', escapeHtml(orderId)));
-  rows.push(row('形式', isNFT ? 'NFT' : 'デジタル作品'));
+  rows.push(row('形式', 'デジタル作品'));
 
   const manageCta =
     manageUrl &&
@@ -126,11 +122,7 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
       <div style="margin:14px 0 0 0; padding:12px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px;">
         <div style="font-weight:700; margin-bottom:4px;">納品について</div>
         <div style="font-size:14px; color:#334155; line-height:1.7;">
-          納品予定：<b>${escapeHtml(deliveryStr)}</b> を目安にご案内いたします。${
-            isNFT
-              ? 'NFT はミント完了後、ウォレットへお届けします。'
-              : '作品データのダウンロード案内をお送りします。'
-          }
+          納品予定：<b>${escapeHtml(deliveryStr)}</b> を目安にご案内いたします。作品データのダウンロード案内をお送りします。
           ${certificateUrl ? '<br/>※ 購入証明（CoA）は下記リンクからいつでも表示・ダウンロードできます。' : ''}
         </div>
       </div>
@@ -159,8 +151,8 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
   if (price != null) textLines.push(`価格：¥${fmtYen(price)}`);
   if (editionNo != null || editionTotal != null) textLines.push(`エディション：${editionNo ?? '-'} / ${editionTotal ?? '-'}`);
   if (orderId) textLines.push(`注文番号：${orderId}`);
-  textLines.push(`形式：${isNFT ? 'NFT' : 'デジタル作品'}`);
-  textLines.push(`\n[納品について]\n納品予定：${deliveryStr}${isNFT ? '\nNFT はミント完了後にウォレットへお届けします。' : '\n作品データのダウンロード案内をお送りします。'}`);
+  textLines.push(`形式：デジタル作品`);
+  textLines.push(`\n[納品について]\n納品予定：${deliveryStr}\n作品データのダウンロード案内をお送りします。`);
   if (certificateUrl) textLines.push(`購入証明（CoA）：${certificateUrl}`);
   if (manageUrl) textLines.push(`購入内容を確認する：${manageUrl}`);
   if (downloadUrl) textLines.push(`作品データを受け取る：${downloadUrl}`);

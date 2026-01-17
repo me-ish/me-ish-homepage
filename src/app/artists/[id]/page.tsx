@@ -23,7 +23,6 @@ type Entry = {
   likes?: number | null;
   price?: number | null;
   gallery_type?: string | null;
-  sale_type?: 'normal' | 'nft' | null;
   edition_total?: number | null;
   edition_sold?: number | null;
   is_sold?: boolean | null;
@@ -65,7 +64,7 @@ export default function ArtistPublicPage() {
         const { data: es, error: esErr } = await supabase
           .from('entries')
           .select(
-            'id, title, image_url, confirmed, likes, price, gallery_type, sale_type, edition_total, edition_sold, is_sold'
+            'id, title, image_url, confirmed, likes, price, gallery_type, edition_total, edition_sold, is_sold'
           )
           .eq('user_id', id)
           .eq('confirmed', true)
@@ -155,7 +154,6 @@ export default function ArtistPublicPage() {
                 <img src={e.image_url} alt={e.title} className="w-full h-52 object-cover group-hover:scale-105 transition" />
                 <div className="p-3">
                   <h3 className="font-semibold text-gray-800 truncate">{e.title}</h3>
-                  <p className="text-sm text-gray-500">{e.sale_type === 'nft' ? 'NFT' : '通常'}</p>
                 </div>
               </Link>
             ))}

@@ -112,6 +112,9 @@ export default function FloatPanelArtworks({
     });
   });
 
+  // artworkRefs のオフセット：外壁が 0-23 を使用するため、パネルは 24 から開始
+  const PANEL_REFS_OFFSET = 24;
+
   return (
     <>
       {artworks.map((art, i) => {
@@ -120,19 +123,11 @@ export default function FloatPanelArtworks({
           <group
             key={id}
             ref={(el) => {
-              artworkRefs.current[i] = el;
+              artworkRefs.current[PANEL_REFS_OFFSET + i] = el;
             }}
           >
             <ComingSoonPanel position={art.position} rotation={art.rotation} />
-
-            {/* プレースホルダー用の控えめライト */}
-            <pointLight
-              position={[art.position[0], art.position[1] + LIGHT_HEIGHT, art.position[2]]}
-              intensity={0.9}
-              distance={8}
-              decay={2}
-              color="#e8f6ff"
-            />
+            {/* pointLight 削除: 共有 SpotLight に統合（FloatGallery.tsx） */}
           </group>
         );
       })}

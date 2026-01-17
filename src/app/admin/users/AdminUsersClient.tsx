@@ -8,7 +8,6 @@ type UserGroup = {
   artist_name: string;
   sns_links: string[];
   entry_count: number;
-  sale_types: string[];
 };
 
 type Props = { adminEmail: string };
@@ -21,7 +20,6 @@ export default function AdminUsersClient({ adminEmail }: Props) {
 
   // UI state
   const [q, setQ] = useState('');
-  const [saleFilter, setSaleFilter] = useState<string>('all');
   const [minEntries, setMinEntries] = useState<number>(0);
 
   const mountedRef = useRef(true);
@@ -55,32 +53,23 @@ export default function AdminUsersClient({ adminEmail }: Props) {
     };
   }, []);
 
-  /** 表示用：セールタイプ候補 */
-  const saleTypeOptions = useMemo(() => {
-    const s = new Set<string>();
-    users.forEach((u) => u.sale_types.forEach((t) => t && s.add(t)));
-    return ['all', ...Array.from(s).sort()];
-  }, [users]);
-
   /** 表示用：フィルタリング（クライアント側） */
   const filtered = useMemo(() => {
     const kw = q.trim().toLowerCase();
     return users.filter((u) => {
       if (kw && !u.artist_name.toLowerCase().includes(kw)) return false;
-      if (saleFilter !== 'all' && !u.sale_types.includes(saleFilter)) return false;
       if (minEntries > 0 && u.entry_count < minEntries) return false;
       return true;
     });
-  }, [users, q, saleFilter, minEntries]);
+  }, [users, q, minEntries]);
 
   /** CSV 出力 */
   const exportCSV = () => {
     const rows = [
-      ['artist_name', 'entry_count', 'sale_types', 'sns_links'],
+      ['artist_name', 'entry_count', 'sns_links'],
       ...filtered.map((u) => [
         u.artist_name,
         String(u.entry_count),
-        u.sale_types.join('|'),
         u.sns_links.join('|'),
       ]),
     ]
@@ -146,20 +135,6 @@ export default function AdminUsersClient({ adminEmail }: Props) {
           aria-label="作家名で検索"
         />
         <label className="ml-2 text-sm">
-          販売形式：
-          <select
-            className="ml-2 px-2 py-1 rounded border"
-            value={saleFilter}
-            onChange={(e) => setSaleFilter(e.target.value)}
-          >
-            {saleTypeOptions.map((t) => (
-              <option key={t} value={t}>
-                {t === 'all' ? 'すべて' : t}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="ml-2 text-sm">
           最小出展数：
           <input
             type="number"
@@ -190,7 +165,6 @@ export default function AdminUsersClient({ adminEmail }: Props) {
                 <th className="p-3 border text-left">名前</th>
                 <th className="p-3 border text-left">SNSリンク</th>
                 <th className="p-3 border w-24">出展数</th>
-                <th className="p-3 border">販売形式</th>
                 <th className="p-3 border w-32">詳細</th>
               </tr>
             </thead>
@@ -220,9 +194,6 @@ export default function AdminUsersClient({ adminEmail }: Props) {
                     )}
                   </td>
                   <td className="p-3 border text-center font-semibold">{user.entry_count}</td>
-                  <td className="p-3 border">
-                    {user.sale_types.length > 0 ? user.sale_types.join(', ') : <span className="text-gray-400">—</span>}
-                  </td>
                   <td className="p-3 border text-center">
                     <Link
                       href={`/admin/users/${encodeURIComponent(user.artist_name)}`}

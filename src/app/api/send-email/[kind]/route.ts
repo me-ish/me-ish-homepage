@@ -11,7 +11,6 @@ import { generateExhibitStartEmail } from '@/lib/emailTemplates/exhibitStart';
 import { generateExhibitEndEmail } from '@/lib/emailTemplates/exhibitEnd';
 import { generatePurchaseBuyerEmail } from '@/lib/emailTemplates/purchaseBuyer';
 import { generatePurchaseArtistEmail } from '@/lib/emailTemplates/purchaseArtist';
-import { generatePurchaseNftEmail } from '@/lib/emailTemplates/purchaseNft';
 import { generateContactEmail } from '@/lib/emailTemplates/generateContactEmail';
 
 export const runtime = 'nodejs';
@@ -127,25 +126,6 @@ const PurchaseArtist = z.object({
 }).transform(d => ({ ...d, priceYen: d.priceYen ?? d.amountYen ?? null }));
 
 
-const PurchaseNft = z.object({
-  to: z.string().email(),
-  name: z.string().min(1),
-  title: z.string().min(1),
-  tokenId: z.union([z.string().min(1), z.number()]),
-  claimUrl: z.string().url(),
-  network: z.string().optional(),
-  contractAddress: z.string().optional(),
-  explorerTokenUrl: z.string().url().optional(),
-  explorerTxUrl: z.string().url().optional(),
-  manageUrl: z.string().url().optional(),
-  receiptUrl: z.string().url().optional(),
-  certificateUrl: z.string().url().optional(),
-  coaUrl: z.string().url().optional(),
-  expiresAtISO: z.string().optional(),
-  note: z.string().max(2000).optional(),
-}).passthrough();
-
-
 // contact（運営宛固定／Reply-To は送信者）
 const Contact = z.object({
   name: z.string().min(1).max(100),
@@ -168,7 +148,6 @@ const templates = {
   exhibitEnd:    { schema: ExhibitEnd,     gen: generateExhibitEndEmail },
   purchaseBuyer: { schema: PurchaseBuyer,  gen: generatePurchaseBuyerEmail },
   purchaseArtist:{ schema: PurchaseArtist, gen: generatePurchaseArtistEmail },
-  purchaseNft:   { schema: PurchaseNft,    gen: generatePurchaseNftEmail },
   contact:       { schema: Contact,        gen: generateContactEmail },
 } as const;
 

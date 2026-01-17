@@ -1,115 +1,125 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { JSX } from 'react';
+import {
+  WALL_HEIGHT,
+  WALL_THICKNESS,
+  getWallGeometryH,
+  getWallGeometryV,
+  getFloorGeometry,
+  getBeamGeometry,
+  getWallMaterial,
+  getFloorMaterial,
+  getBeamMaterialLight,
+  getBeamMaterialDark,
+} from './sharedGeometry';
 
-export default function FloatWalls(): JSX.Element {
-  const wallHeight = 20;
-  const wallLength = 35;
-  const wallThickness = 1.0;
-  const wallY = wallHeight / 2;
-  const edge = 40 - wallThickness / 2;
+// 定数
+const WALL_Y = WALL_HEIGHT / 2;
+const EDGE = 40 - WALL_THICKNESS / 2;
+const BEAM_COUNT = 7;
+const BEAM_SPACING = 12.2;
+const BEAM_START_X = -36.5;
+const VISIBLE_DISTANCE_BEAM = 60;
+const VISIBLE_DISTANCE_WALL = 70;
 
-  const materialProps = {
-    color: '#bbbbbb',
-    roughness: 0.85,
-    metalness: 0.05,
-  };
+// 壁の位置データ
+type WallData = {
+  position: [number, number, number];
+  type: 'h' | 'v'; // horizontal or vertical
+};
 
-  const beamCount = 7;
-  const spacing = 12.2;
-  const startX = -36.5;
+const WALL_POSITIONS: WallData[] = [
+  // 北側
+  { position: [-22.5, WALL_Y, -EDGE], type: 'h' },
+  { position: [22.5, WALL_Y, -EDGE], type: 'h' },
+  // 南側
+  { position: [-22.5, WALL_Y, EDGE], type: 'h' },
+  { position: [22.5, WALL_Y, EDGE], type: 'h' },
+  // 西側
+  { position: [-EDGE, WALL_Y, -22.5], type: 'v' },
+  { position: [-EDGE, WALL_Y, 22.5], type: 'v' },
+  // 東側
+  { position: [EDGE, WALL_Y, -22.5], type: 'v' },
+  { position: [EDGE, WALL_Y, 22.5], type: 'v' },
+];
 
-  const beamRefs = useRef<(THREE.Mesh | null)[]>(
-    Array.from({ length: beamCount }, () => null)
-  );
+export default function FloatWalls(): React.JSX.Element {
+  const beamRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const wallRefs = useRef<(THREE.Mesh | null)[]>([]);
 
-  const wallRefs = useRef<(THREE.Mesh | null)[]>(
-    Array.from({ length: 8 }, () => null)
+  // 共有ジオメトリ・マテリアル取得
+  const wallGeometryH = useMemo(() => getWallGeometryH(), []);
+  const wallGeometryV = useMemo(() => getWallGeometryV(), []);
+  const floorGeometry = useMemo(() => getFloorGeometry(), []);
+  const beamGeometry = useMemo(() => getBeamGeometry(), []);
+  const wallMaterial = useMemo(() => getWallMaterial(), []);
+  const floorMaterial = useMemo(() => getFloorMaterial(), []);
+  const beamMaterialLight = useMemo(() => getBeamMaterialLight(), []);
+  const beamMaterialDark = useMemo(() => getBeamMaterialDark(), []);
+
+  // 梁の位置を事前計算
+  const beamPositions = useMemo(() =>
+    Array.from({ length: BEAM_COUNT }, (_, i) => BEAM_START_X + i * BEAM_SPACING),
+    []
   );
 
   useFrame(({ camera }) => {
+    // 梁の可視性制御
     beamRefs.current.forEach((ref) => {
       if (!ref) return;
       const dist = ref.position.distanceTo(camera.position);
-      ref.visible = dist < 60;
+      ref.visible = dist < VISIBLE_DISTANCE_BEAM;
     });
 
+    // 壁の可視性制御
     wallRefs.current.forEach((ref) => {
       if (!ref) return;
       const dist = ref.position.distanceTo(camera.position);
-      ref.visible = dist < 70;
+      ref.visible = dist < VISIBLE_DISTANCE_WALL;
     });
   });
 
   return (
     <group>
-      {/* 北側 */}
-      <mesh ref={(el) => { wallRefs.current[0] = el; }} position={[-22.5, wallY, -edge]} receiveShadow castShadow>
-        <boxGeometry args={[wallLength, wallHeight, wallThickness]} />
-        <meshStandardMaterial {...materialProps} />
-      </mesh>
-      <mesh ref={(el) => { wallRefs.current[1] = el; }} position={[22.5, wallY, -edge]} receiveShadow castShadow>
-        <boxGeometry args={[wallLength, wallHeight, wallThickness]} />
-        <meshStandardMaterial {...materialProps} />
-      </mesh>
-
-      {/* 南側 */}
-      <mesh ref={(el) => { wallRefs.current[2] = el; }} position={[-22.5, wallY, edge]} receiveShadow castShadow>
-        <boxGeometry args={[wallLength, wallHeight, wallThickness]} />
-        <meshStandardMaterial {...materialProps} />
-      </mesh>
-      <mesh ref={(el) => { wallRefs.current[3] = el; }} position={[22.5, wallY, edge]} receiveShadow castShadow>
-        <boxGeometry args={[wallLength, wallHeight, wallThickness]} />
-        <meshStandardMaterial {...materialProps} />
-      </mesh>
-
-      {/* 西側 */}
-      <mesh ref={(el) => { wallRefs.current[4] = el; }} position={[-edge, wallY, -22.5]} receiveShadow castShadow>
-        <boxGeometry args={[wallThickness, wallHeight, wallLength]} />
-        <meshStandardMaterial {...materialProps} />
-      </mesh>
-      <mesh ref={(el) => { wallRefs.current[5] = el; }} position={[-edge, wallY, 22.5]} receiveShadow castShadow>
-        <boxGeometry args={[wallThickness, wallHeight, wallLength]} />
-        <meshStandardMaterial {...materialProps} />
-      </mesh>
-
-      {/* 東側 */}
-      <mesh ref={(el) => { wallRefs.current[6] = el; }} position={[edge, wallY, -22.5]} receiveShadow castShadow>
-        <boxGeometry args={[wallThickness, wallHeight, wallLength]} />
-        <meshStandardMaterial {...materialProps} />
-      </mesh>
-      <mesh ref={(el) => { wallRefs.current[7] = el; }} position={[edge, wallY, 22.5]} receiveShadow castShadow>
-        <boxGeometry args={[wallThickness, wallHeight, wallLength]} />
-        <meshStandardMaterial {...materialProps} />
-      </mesh>
+      {/* 壁（共有ジオメトリ・マテリアル使用） */}
+      {WALL_POSITIONS.map((wall, i) => (
+        <mesh
+          key={`wall-${i}`}
+          ref={(el) => { wallRefs.current[i] = el; }}
+          position={wall.position}
+          geometry={wall.type === 'h' ? wallGeometryH : wallGeometryV}
+          material={wallMaterial}
+          receiveShadow
+          castShadow
+        />
+      ))}
 
       {/* 床 */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow castShadow>
-        <planeGeometry args={[80, 80]} />
-        <meshStandardMaterial color="#eaeaea" />
-      </mesh>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0, 0]}
+        geometry={floorGeometry}
+        material={floorMaterial}
+        receiveShadow
+        castShadow
+      />
 
       {/* 天井梁 */}
       <group>
-        {Array.from({ length: beamCount }).map((_, i) => {
-          const offset = startX + i * spacing;
-          const beamColor = i % 2 === 0 ? '#cccccc' : '#666666';
-          return (
-            <mesh
-              key={`beam-${i}`}
-              ref={(el) => { beamRefs.current[i] = el; }}
-              position={[offset, 20.5, 0]}
-              castShadow
-              receiveShadow
-            >
-              <boxGeometry args={[7, 1, 80]} />
-              <meshStandardMaterial color={beamColor} />
-            </mesh>
-          );
-        })}
+        {beamPositions.map((offset, i) => (
+          <mesh
+            key={`beam-${i}`}
+            ref={(el) => { beamRefs.current[i] = el; }}
+            position={[offset, 20.5, 0]}
+            geometry={beamGeometry}
+            material={i % 2 === 0 ? beamMaterialLight : beamMaterialDark}
+            castShadow
+            receiveShadow
+          />
+        ))}
       </group>
     </group>
   );

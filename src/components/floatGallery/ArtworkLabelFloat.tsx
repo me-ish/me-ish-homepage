@@ -8,16 +8,16 @@ import { a as aWeb, useSpring } from '@react-spring/web';
 import { a } from '@react-spring/three';
 
 type ArtworkLabelProps = {
-  // 作品の親group基準のワールド座標・回転（親側がposition/rotationを持つ想定でもOK）
+  // 作品の親group基準のワールド座標・回転
   position?: [number, number, number];
   rotation?: [number, number, number];
 
-  // 既存の幅/高さベースのオフセット計算（未指定なら下のlabelOffsetより優先度低）
-  width?: number;   // 例: scale*aspect
-  height?: number;  // 例: scale
+  // 幅/高さベースのオフセット計算用
+  width?: number;
+  height?: number;
 
-  // 推奨: スケールに応じて直接指定したい場合はこちら
-  labelOffset?: [number, number, number]; // 例: [W/2-0.35k, -H/2-0.2k, -0.7k]
+  // 直接指定したい場合
+  labelOffset?: [number, number, number];
 
   // 表示距離（内側:7 / 外壁:9.5 など）
   nearDistance?: number;
@@ -27,6 +27,9 @@ type ArtworkLabelProps = {
   author?: string;
 };
 
+// 定数
+const DEFAULT_NEAR_DISTANCE = 7;
+
 const ArtworkLabel = forwardRef<THREE.Group, ArtworkLabelProps>(
   (
     {
@@ -35,7 +38,7 @@ const ArtworkLabel = forwardRef<THREE.Group, ArtworkLabelProps>(
       width = 2.5,
       height = 2,
       labelOffset,
-      nearDistance = 7,
+      nearDistance = DEFAULT_NEAR_DISTANCE,
       avatarRef,
       title = 'Untitled',
       author = 'Unknown',
@@ -46,7 +49,7 @@ const ArtworkLabel = forwardRef<THREE.Group, ArtworkLabelProps>(
     const auraRef = useRef<THREE.Mesh>(null);
     const { gl } = useThree();
 
-    // Html の portal は null 不可の MutableRefObject<HTMLElement> が必要
+    // Html の portal
     const portalRef = useRef<HTMLElement>(null!);
     useEffect(() => {
       const parent = gl.domElement.parentNode as (HTMLElement | null);
@@ -55,10 +58,9 @@ const ArtworkLabel = forwardRef<THREE.Group, ArtworkLabelProps>(
 
     useImperativeHandle(ref, () => groupRef.current!, []);
 
-    // ラベルの“ローカル”オフセット（右下・内側）
+    // ラベルの"ローカル"オフセット（右下・内側）
     const localOffset = useMemo(() => {
       if (labelOffset) return new THREE.Vector3(...labelOffset);
-      // 既存の挙動：幅/高さベース（右下寄せ、内側はz=0のまま）
       return new THREE.Vector3(width / 3 - 3.5, -height / 3 - 0.2, 0);
     }, [labelOffset, width, height]);
 
@@ -69,11 +71,14 @@ const ArtworkLabel = forwardRef<THREE.Group, ArtworkLabelProps>(
       return v;
     }, [localOffset, rotation]);
 
-    const labelPos: [number, number, number] = [
+    const labelPos: [number, number, number] = useMemo(() => [
       position[0] + rotatedOffset.x,
       position[1] + rotatedOffset.y,
       position[2] + rotatedOffset.z,
-    ];
+    ], [position, rotatedOffset]);
+
+    // 再利用用ベクトル（GC回避）
+    const labelPosVec = useMemo(() => new THREE.Vector3(...labelPos), [labelPos]);
 
     const [{ scale, uiOpacity }, api] = useSpring(() => ({
       scale: 0.5,
@@ -86,7 +91,7 @@ const ArtworkLabel = forwardRef<THREE.Group, ArtworkLabelProps>(
       const group = groupRef.current;
       if (!avatar || !group) return;
 
-      const dist = avatar.position.distanceTo(new THREE.Vector3(...labelPos));
+      const dist = avatar.position.distanceTo(labelPosVec);
       const near = dist < nearDistance;
 
       api.start({

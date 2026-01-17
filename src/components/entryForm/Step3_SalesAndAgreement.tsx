@@ -4,16 +4,16 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { getDisplayPlanStats } from '@/lib/getDisplayPlanStats';
 import type { FormValues } from '@/app/entry/FormWrapper';
-import BankBranchFields from '@/components/entryForm/BankBranchFields'; // ★ 追加
+import BankBranchFields from '@/components/entryForm/BankBranchFields';
+
+// shadcn/ui（Step2で導入済み前提）
+import { Badge } from '@/components/ui/badge';
 
 const BRAND = '#00a1e9';
 const FEE_RATE = 0.10;
 
 /** ★ いまは Free のみ許可 */
 const FREE_ONLY = true;
-
-/** ★ NFT販売を一時停止（= ラジオを押せない＆選べない） */
-const NFT_SALE_DISABLED = true;
 
 const planKeys = ['free', 'mini', 'light', 'standard', 'premium'] as const;
 type PlanKey = typeof planKeys[number];
@@ -33,6 +33,14 @@ function errMsg(err: unknown): string | undefined {
 
 const yen = (n: number) => new Intl.NumberFormat('ja-JP').format(n);
 
+function aiUsageLabel(v: FormValues['ai_usage'] | undefined) {
+  if (!v) return null;
+  if (v === 'none') return 'AI使用：なし';
+  if (v === 'assist') return 'AI使用：補助（非生成）';
+  if (v === 'gen_assist') return 'AI使用：生成AI併用';
+  return null;
+}
+
 const Step3_SalesAndAgreement = () => {
   const {
     register,
@@ -42,17 +50,22 @@ const Step3_SalesAndAgreement = () => {
   } = useFormContext<FormValues>();
 
   const isForSale = watch('isForSale');
-  const saleType = watch('saleType');
   const priceRaw = watch('price') ?? '';
   const editionMode = watch('editionMode');
   const editionTotal = watch('editionTotal') ?? '';
+
+  // Step2のAI申告を参照（Step3の規約/同意文言と整合させる）
+  const aiUsage = watch('ai_usage');
+  const selectedAiBadge = useMemo(() => aiUsageLabel(aiUsage), [aiUsage]);
 
   const [canCheck, setCanCheck] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<Record<PlanKey, number>>();
   const [totalUsage, setTotalUsage] = useState(0);
 
-  useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, []);
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   // ★ Free固定をフォーム値に反映（初回のみ）
   useEffect(() => {
@@ -60,6 +73,22 @@ const Step3_SalesAndAgreement = () => {
       setValue('displayPlan', 'free', { shouldDirty: false, shouldValidate: true });
     }
   }, [setValue]);
+
+  // 販売=はい の場合は saleType を常に normal に固定（通常販売のみ）
+  useEffect(() => {
+    if (isForSale === 'yes') {
+      setValue('saleType', 'normal' as unknown as FormValues['saleType'], {
+        shouldDirty: false,
+        shouldValidate: false,
+      });
+    } else if (isForSale === 'no') {
+      // 販売しない場合は saleType を空にしておく（保存データの混乱回避）
+      setValue('saleType', undefined as unknown as FormValues['saleType'], {
+        shouldDirty: false,
+        shouldValidate: false,
+      });
+    }
+  }, [isForSale, setValue]);
 
   // 規約ボックス全読了でチェック可能
   useEffect(() => {
@@ -102,27 +131,6 @@ const Step3_SalesAndAgreement = () => {
     if (usageRate <= 0.7) return 'light';
     return 'standard';
   }, [stats, totalUsage]);
-
-  /** ★ 以前「NFT販売」を選んでいた場合のガード：自動解除 */
-  useEffect(() => {
-    if (NFT_SALE_DISABLED && saleType === 'nft') {
-      setValue('saleType', undefined as unknown as FormValues['saleType'], {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-    }
-  }, [saleType, setValue]);
-
-  /** ★ 販売形式ラジオの登録（バリデでも nft を弾く） */
-  const saleTypeRegister = register('saleType', {
-    required: '販売形式を選択してください。',
-    validate: (v: string) => {
-      if (NFT_SALE_DISABLED && v === 'nft') {
-        return '現在は通常販売のみ選択できます。';
-      }
-      return true;
-    },
-  });
 
   /** ★ 表示保証プランのUI（Free以外は押せない） */
   const renderPlanLabel = (plan: PlanKey, label: string) => {
@@ -172,11 +180,26 @@ const Step3_SalesAndAgreement = () => {
       className="w-full max-w-[720px] mx-auto p-6 sm:p-8 bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 space-y-6"
       aria-labelledby="sale-agree-title"
     >
-      <header>
+      <header className="space-y-2">
         <h2 id="sale-agree-title" className="text-[22px] font-bold text-gray-900 flex items-center gap-3">
           <span className="inline-block h-5 w-1.5 rounded-full" style={{ backgroundColor: BRAND }} aria-hidden />
           販売設定・規約同意
         </h2>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm text-gray-600">
+            販売・エディション・表示プラン・規約同意を設定します。
+          </p>
+          {selectedAiBadge ? (
+            <Badge variant="secondary" className="text-xs">
+              {selectedAiBadge}
+            </Badge>
+          ) : null}
+        </div>
+
+        <p className="text-xs text-gray-500">
+          ※ 「AI使用区分」は応募情報として扱われ、公開後に作品ページへ表示されます（誤認防止・透明性のため）。
+        </p>
       </header>
 
       {/* 販売するか */}
@@ -186,10 +209,20 @@ const Step3_SalesAndAgreement = () => {
         </label>
         <div className="mt-2 flex gap-6">
           <label className="flex items-center gap-2">
-            <input type="radio" value="yes" {...register('isForSale', { required: '販売有無を選択してください。' })} /> はい
+            <input
+              type="radio"
+              value="yes"
+              {...register('isForSale', { required: '販売有無を選択してください。' })}
+            />
+            はい
           </label>
           <label className="flex items-center gap-2">
-            <input type="radio" value="no"  {...register('isForSale', { required: '販売有無を選択してください。' })} /> いいえ
+            <input
+              type="radio"
+              value="no"
+              {...register('isForSale', { required: '販売有無を選択してください。' })}
+            />
+            いいえ
           </label>
         </div>
         {(() => {
@@ -201,50 +234,6 @@ const Step3_SalesAndAgreement = () => {
       {/* 販売詳細（販売=はい のときだけ） */}
       {isForSale === 'yes' && (
         <>
-          {/* 販売形式（NFTは押せない） */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-              販売形式 <span className="text-red-600">＊</span>
-            </label>
-
-            {NFT_SALE_DISABLED && (
-              <p className="text-xs text-gray-500 mb-2">
-                ※ 現在はテスト期間のため <strong>通常販売のみ</strong> を受け付けています（NFT販売は準備中）。
-              </p>
-            )}
-
-            <div className="mt-2 flex flex-col sm:flex-row gap-4">
-              {/* 通常販売 */}
-              <label className="flex items-center gap-2">
-                <input type="radio" value="normal" {...saleTypeRegister} />
-                通常販売
-              </label>
-
-              {/* NFT販売（押せない・選べない） */}
-              <label
-                className={[
-                  'flex items-center gap-2 rounded px-2 py-1',
-                  NFT_SALE_DISABLED ? 'opacity-50 cursor-not-allowed ring-1 ring-gray-200' : '',
-                ].join(' ')}
-                aria-disabled={NFT_SALE_DISABLED}
-                title={NFT_SALE_DISABLED ? 'NFT販売は現在準備中のため選択できません' : undefined}
-              >
-                <input
-                  type="radio"
-                  value="nft"
-                  disabled={NFT_SALE_DISABLED}
-                  {...saleTypeRegister}
-                />
-                NFT販売（準備中）
-              </label>
-            </div>
-
-            {(() => {
-              const m = errMsg(errors.saleType);
-              return m ? <p className="text-sm text-red-600 mt-1.5">{m}</p> : null;
-            })()}
-          </div>
-
           {/* 価格 */}
           <div>
             <label htmlFor="price" className="block text-sm font-semibold text-gray-800 mb-1.5">
@@ -293,14 +282,16 @@ const Step3_SalesAndAgreement = () => {
                   type="radio"
                   value="limited"
                   {...register('editionMode', { required: '販売点数を選択してください。' })}
-                /> エディション指定
+                />
+                エディション指定
               </label>
               <label className="flex items-center gap-2">
                 <input
                   type="radio"
                   value="unlimited"
                   {...register('editionMode', { required: '販売点数を選択してください。' })}
-                /> 無制限
+                />
+                無制限
               </label>
             </div>
 
@@ -316,9 +307,14 @@ const Step3_SalesAndAgreement = () => {
                   placeholder="例：5"
                   className="w-full px-4 py-3 mt-1.5 text-base bg-[#fafafa] border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00a1e9]"
                   {...register('editionTotal', {
-                    required: '販売点数を入力してください。',
-                    min: { value: 1, message: '1以上を入力してください。' },
-                    max: { value: 10, message: '最大10点まで指定できます。' },
+                    validate: (v: string) => {
+                      if (editionMode !== 'limited') return true;
+                      const n = Number(String(v).replace(/[^\d]/g, ''));
+                      if (!Number.isFinite(n) || n <= 0) return '販売点数を入力してください。';
+                      if (n < 1) return '1以上を入力してください。';
+                      if (n > 10) return '最大10点まで指定できます。';
+                      return true;
+                    },
                   })}
                 />
                 <small className="text-[#666] mt-1 block">※1〜10の範囲で指定</small>
@@ -326,7 +322,7 @@ const Step3_SalesAndAgreement = () => {
             )}
 
             {(() => {
-              const m = errMsg(errors.editionTotal || errors.editionMode);
+              const m = errMsg(errors.editionMode) || errMsg(errors.editionTotal);
               return m ? <p className="text-sm text-red-600 mt-1.5">{m}</p> : null;
             })()}
           </div>
@@ -342,11 +338,11 @@ const Step3_SalesAndAgreement = () => {
               </p>
             )}
             <div className="mt-3 flex flex-col gap-3">
-              {renderPlanLabel('free',     'Free（¥0 / 表示保証なし・ローテーション枠）')}
-              {renderPlanLabel('mini',     'Mini（¥400 / 月1回保証）')}
-              {renderPlanLabel('light',    'Light（¥1,000 / 月3回保証）')}
+              {renderPlanLabel('free', 'Free（¥0 / 表示保証なし・ローテーション枠）')}
+              {renderPlanLabel('mini', 'Mini（¥400 / 月1回保証）')}
+              {renderPlanLabel('light', 'Light（¥1,000 / 月3回保証）')}
               {renderPlanLabel('standard', 'Standard（¥1,400 / 月7回保証）')}
-              {renderPlanLabel('premium',  'Premium（¥2,700 / 月15回保証）')}
+              {renderPlanLabel('premium', 'Premium（¥2,800/ 月15回保証）')}
             </div>
             <small className="text-sm text-blue-600 mt-3 block">
               現在、全体使用率は {((totalUsage / 960) * 100).toFixed(1)}% です。
@@ -357,7 +353,7 @@ const Step3_SalesAndAgreement = () => {
             })()}
           </div>
 
-          {/* ★ 追加：口座入力（zengin-code の banks.json / branches.json を使うコンポーネント） */}
+          {/* ★ 追加：口座入力 */}
           <BankBranchFields />
         </>
       )}
@@ -375,20 +371,29 @@ const Step3_SalesAndAgreement = () => {
           <li>著作権はアーティストに帰属しますが、展示・告知に使用する場合があります。</li>
           <li>購入者には私的鑑賞の範囲での使用が許可されます（著作権の譲渡なし）。</li>
           <li>第三者の権利を侵害する作品は禁止です。</li>
-          <li>生成AIによる自動生成作品は禁止です。</li>
+          <li>
+            <strong>完全自動生成（生成AIの出力のみで、人の創作性がほぼ無い）作品は受け付けません。</strong>
+          </li>
+          <li>
+            AIを使用した場合は、応募フォームの<strong>AI使用区分</strong>で申告してください（申告内容は作品ページに表示されます）。
+          </li>
         </ul>
         <p className="mt-2">
           詳細は
-          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline ml-1">
+          <a href="/footer/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline ml-1">
             公式サイトの利用規約
           </a>
           をご確認ください。
         </p>
       </div>
 
-      {/* 同意チェック 3連 */}
+      {/* 同意チェック */}
       <div className="flex items-center gap-2 mt-4 text-gray-800">
-        <input type="checkbox" {...register('agreeTerms', { required: '利用規約への同意が必要です。' })} disabled={!canCheck} />
+        <input
+          type="checkbox"
+          {...register('agreeTerms', { required: '利用規約への同意が必要です。' })}
+          disabled={!canCheck}
+        />
         <span className="text-sm">上記の利用規約に同意します</span>
         <span className="text-red-600 text-xs ml-2">＊必須（全文をスクロールすると有効化）</span>
       </div>
@@ -408,8 +413,15 @@ const Step3_SalesAndAgreement = () => {
       })()}
 
       <div className="flex items-center gap-2 mt-3 text-gray-800">
-        <input type="checkbox" {...register('confirmOriginal', { required: '生成AI作品ではない旨の確認が必要です。' })} />
-        <span className="text-sm">AIによる自動生成作品ではありません</span>
+        <input
+          type="checkbox"
+          {...register('confirmOriginal', {
+            required: '申告内容（AI使用区分を含む）の確認が必要です。',
+          })}
+        />
+        <span className="text-sm">
+          AI使用区分を含め、申告内容に虚偽がありません（完全自動生成のみの作品ではありません）
+        </span>
         <span className="text-red-600 text-xs ml-2">＊必須</span>
       </div>
       {(() => {
@@ -421,4 +433,3 @@ const Step3_SalesAndAgreement = () => {
 };
 
 export default Step3_SalesAndAgreement;
-

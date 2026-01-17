@@ -39,8 +39,6 @@ interface Entry {
   edition_total?: number | null
   edition_sold?: number | null
   gallery_type?: string | null
-  is_nft?: boolean | null
-  sale_type?: string | null // 'nft' | 'normal'
 }
 
 export default function NatoriArtistPage() {
@@ -79,7 +77,7 @@ export default function NatoriArtistPage() {
         // 2) Load entries (confirmed & display_ready) for ナトリ
         let query = supabase
           .from('entries')
-          .select('id, title, image_url, likes, price, edition_total, edition_sold, gallery_type, is_nft, sale_type, confirmed, display_ready')
+          .select('id, title, image_url, likes, price, edition_total, edition_sold, gallery_type, confirmed, display_ready')
           .eq('confirmed', true)
           .eq('display_ready', true)
           .order('id', { ascending: false })
@@ -291,7 +289,6 @@ function ArtworkCard({ entry, onLike, likeBusy }: { entry: Entry; onLike: () => 
   const t = entry.edition_total ?? null
   const s = entry.edition_sold ?? 0
   const soldOut = t !== null && t > 0 && s >= t
-  const isNFT = entry.is_nft || entry.sale_type === 'nft'
 
   return (
     <motion.article
@@ -309,12 +306,6 @@ function ArtworkCard({ entry, onLike, likeBusy }: { entry: Entry; onLike: () => 
           className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
         />
-        {/* Badge corner */}
-        {isNFT && (
-          <div className="absolute left-2 top-2">
-            <span className="rounded-full bg-[#00a1e9] text-white text-[10px] font-bold px-2 py-1 shadow">NFT</span>
-          </div>
-        )}
         {soldOut && (
           <div className="absolute inset-0 grid place-items-center">
             <span className="rounded-full bg-black/60 text-white text-xs font-extrabold px-3 py-1 tracking-widest">SOLD</span>
