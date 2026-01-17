@@ -1,11 +1,82 @@
-/* aiPortfolio専用フォント上書き
-   ※ 実際のフォント指定は React 側の style.fontFamily で行うので
-   ※ ここでは「body のフォントを基本にする」程度にとどめる */
+/* src/styles/aiPortfolioFonts.css */
+
+/* ============================================
+   Fonts (Google Fonts)
+   - 本番で font-zen が効かない問題の止血として
+     "font-zen / font-lilita" をここで実体化する。
+   - aiPortfolio 側のプリセット(class)もここで定義可能。
+   ============================================ */
+
+/* ✅ Google Fonts を明示的に読み込み（Network 200 で落ちる前提） */
+@import url("https://fonts.googleapis.com/css2?family=Lilita+One&family=Zen+Maru+Gothic:wght@400;500;700&display=swap");
+
+/* ✅ CSS 変数（将来差し替えしやすいように） */
+:root {
+  --font-zen: "Zen Maru Gothic";
+  --font-lilita: "Lilita One";
+}
+
+/* ✅ homepage / site 共通の “止血クラス”
+   Tailwind の fontFamily が壊れていても、この定義がある限り確実に効く */
+.font-zen {
+  font-family: var(--font-zen), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.font-lilita {
+  font-family: var(--font-lilita), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+/* ============================================
+   aiPortfolio root
+   - 既存方針：基本は body を継承
+   - ただし、プリセットクラスが付いた場合は上書き可能にする
+   ============================================ */
 .ai-portfolio-root {
   font-family: inherit;
 }
 
-/* 子要素は root から普通に継承させる */
+/* 子要素は root から普通に継承 */
 .ai-portfolio-root * {
+  font-family: inherit;
+}
+
+/* ============================================
+   aiPortfolio presets（必要最低限の実体）
+   - src/styles/aiPortfolioFonts.ts が返す className と対応
+   - ここは今後、好みのフォントセットに拡張していける
+   ============================================ */
+
+/* Clean JP Sans（既定は継承運用） */
+.ai-portfolio-font-cleanJa {
+  font-family: inherit;
+}
+
+.ai-portfolio-font-modernSans {
+  font-family: inherit;
+}
+
+.ai-portfolio-font-formalMincho {
+  font-family: inherit;
+}
+
+.ai-portfolio-font-cuteRound {
+  font-family: inherit;
+}
+
+.ai-portfolio-font-popBold {
+  font-family: inherit;
+}
+
+.ai-portfolio-font-techMono {
+  font-family: inherit;
+}
+
+.ai-portfolio-font-luxurySerif {
+  font-family: inherit;
+}
+
+.ai-portfolio-font-retroPixel {
   font-family: inherit;
 }
