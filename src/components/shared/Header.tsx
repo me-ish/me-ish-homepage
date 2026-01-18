@@ -240,15 +240,14 @@ export default function Header() {
                     <section aria-label="アカウント" className="mb-4">
                       <div className="rounded-2xl border border-black/5 bg-[#f6f8fb] p-4">
                         <div className="mt-1 flex items-center justify-between gap-3">
-                          <Link
-                            href="/mypage"
-                            onClick={() => setOpen(false)}
-                            className="min-w-0 flex-1 truncate rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[#223] transition hover:bg-[#e7f2ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
-                            title={`ログイン中：${me.label}`}
-                          >
-                            <span className="text-[#667]">ログイン中：</span>
-                            <span className="ml-1">{me.label}</span>
-                          </Link>
+<Link
+  href="/mypage"
+  onClick={() => setOpen(false)}
+  className="min-w-0 flex-1 truncate rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[#223] transition hover:bg-[#e7f2ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
+  title={me.label}
+>
+  {me.label}
+</Link>
 
                           <button
                             type="button"
