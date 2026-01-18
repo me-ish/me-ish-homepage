@@ -180,10 +180,11 @@ export default function Header() {
                 onClick={logout}
                 disabled={logoutBusy}
                 aria-busy={logoutBusy}
-                className={cn(
-                  'inline-flex items-center justify-center whitespace-nowrap rounded-full border border-[#00a1e9] px-3 py-1.5 text-sm text-[#00a1e9] transition hover:bg-[#00a1e9] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60',
-                  logoutBusy && 'opacity-70 cursor-not-allowed'
-                )}
+className={cn(
+  'inline-flex items-center justify-center whitespace-nowrap rounded-full border border-[#e11d48] px-3 py-1.5 text-sm text-[#e11d48] transition hover:bg-[#e11d48] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#e11d48]/40',
+  logoutBusy && 'cursor-not-allowed opacity-70'
+)}
+
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 {logoutBusy ? 'ログアウト中…' : 'ログアウト'}
@@ -258,10 +259,11 @@ export default function Header() {
                             }}
                             disabled={logoutBusy}
                             aria-busy={logoutBusy}
-                            className={cn(
-                              'inline-flex items-center justify-center rounded-xl border border-[#00a1e9] px-3 py-2 text-sm font-medium text-[#00a1e9] transition hover:bg-[#00a1e9] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60',
-                              logoutBusy && 'opacity-70 cursor-not-allowed'
-                            )}
+className={cn(
+  'inline-flex items-center justify-center rounded-xl border border-[#e11d48] px-3 py-2 text-sm font-medium text-[#e11d48] transition hover:bg-[#e11d48] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#e11d48]/40',
+  logoutBusy && 'cursor-not-allowed opacity-70'
+)}
+
                           >
                             <LogOut className="mr-2 h-4 w-4" />
                             {logoutBusy ? '…' : 'ログアウト'}
