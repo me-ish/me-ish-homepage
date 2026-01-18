@@ -1,6 +1,7 @@
 // src/app/api/aura/public-slug/route.ts
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/aiPortfolio/supabaseAdmin";
+import { requireAuraRequestAccess } from "@/lib/aiPortfolio/requireAuraAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, message: "publicSlug is required" }, { status: 400 });
   }
 
+  // ✅ 所有権チェック（IDOR遮断）
+  const access = await requireAuraRequestAccess(requestId);
+  if (!access.ok) return access.response;
+
   const publicSlug = normalizePublicSlug(rawSlug);
   const v = validatePublicSlug(publicSlug);
   if (!v.ok) {
@@ -69,6 +74,7 @@ export async function POST(req: Request) {
   }
 
   // 対象レコード（本人）を取得：公開済みであることを要求
+  // ※ access.rec は select("*") なので利用もできるが、ここは現状ロジックを温存する
   const { data: self, error: selfErr } = await supabase
     .from("aura_requests")
     .select("id, status, public_id, visibility, published_at, public_slug")

@@ -1,9 +1,10 @@
 // src/app/api/aiPortfolio/save/[id]/route.ts
 import { NextResponse } from "next/server";
 import { ContentSchema } from "@/lib/aiPortfolio/aiPortfolio.schema";
-import { findRequest, publishContent } from "@/lib/aiPortfolio/aiPortfolio.db";
+import { publishContent } from "@/lib/aiPortfolio/aiPortfolio.db";
 import { claimMeishFree, claimFirst20Free } from "@/lib/aiPortfolio/auraBillingGate";
 import { supabaseAdmin } from "@/lib/aiPortfolio/supabaseAdmin";
+import { requireAuraRequestAccess } from "@/lib/aiPortfolio/requireAuraAccess";
 
 type Params = { id: string };
 
@@ -13,11 +14,11 @@ export async function POST(req: Request, { params }: { params: Params }) {
   const id = params.id;
 
   try {
-    // 1) 既存レコード確認
-    const rec = await findRequest(id);
-    if (!rec) {
-      return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
-    }
+    // ✅ 1) 所有権チェック（cookie aura_st_{id} → DB session_token 照合）
+    // - これが通らない限り、以降の publish / paid化 / 無料枠消費 を一切させない
+    const access = await requireAuraRequestAccess(id, req);
+    if (!access.ok) return access.response;
+    const rec = access.rec;
 
     // 2) JSON 読み取り
     const json = await req.json().catch(() => null);
@@ -66,39 +67,38 @@ export async function POST(req: Request, { params }: { params: Params }) {
       let allowed = paymentStatus === "paid";
 
       if (!allowed && email) {
-        // ログ: 無料判定開始
         console.log("[aiPortfolio/save] free_check_start:", { id, email });
 
-        // 1) me-ish採用（entries.confirmed=true）で 1回無料（消費できたら true）
+        // 1) me-ish採用（entries.confirmed=true）で 1回無料
         const meishResult = await claimMeishFree(email, id);
         console.log("[aiPortfolio/save] meish_result:", meishResult);
 
-if (meishResult.success) {
-  const admin = supabaseAdmin();
-  await admin
-    .from("aura_requests")
-    .update({ payment_status: "paid", updated_at: new Date().toISOString() })
-    .eq("id", id);
+        if (meishResult.success) {
+          const admin = supabaseAdmin();
+          await admin
+            .from("aura_requests")
+            .update({ payment_status: "paid", updated_at: new Date().toISOString() })
+            .eq("id", id);
 
-  allowed = true;
-  console.log("[aiPortfolio/save] allowed_by_meish:", { id, email });
-}
+          allowed = true;
+          console.log("[aiPortfolio/save] allowed_by_meish:", { id, email });
+        }
 
-        // 2) 先着20名無料（消費できたら true）
+        // 2) 先着20名無料
         if (!allowed) {
           const first20Result = await claimFirst20Free(email, id);
           console.log("[aiPortfolio/save] first20_result:", first20Result);
-if (first20Result.success) {
-  const admin = supabaseAdmin();
-  await admin
-    .from("aura_requests")
-    .update({ payment_status: "paid", updated_at: new Date().toISOString() })
-    .eq("id", id);
 
-  allowed = true;
-  console.log("[aiPortfolio/save] allowed_by_first20:", { id, email });
-}
+          if (first20Result.success) {
+            const admin = supabaseAdmin();
+            await admin
+              .from("aura_requests")
+              .update({ payment_status: "paid", updated_at: new Date().toISOString() })
+              .eq("id", id);
 
+            allowed = true;
+            console.log("[aiPortfolio/save] allowed_by_first20:", { id, email });
+          }
         }
 
         if (!allowed) {

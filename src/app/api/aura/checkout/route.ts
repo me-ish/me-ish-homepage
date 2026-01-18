@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+// ✅ 所有権チェック（Cookie aura_st_{requestId}）
+import { requireAuraRequestAccess } from "@/lib/aiPortfolio/requireAuraAccess";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -21,6 +24,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "missing_requestId" }, { status: 400 });
   }
 
+  // ✅ IDOR遮断：本人の requestId であることを Cookie で検証
+  const access = await requireAuraRequestAccess(requestId);
+  if (!access.ok) return access.response;
+
   const admin = supabaseAdmin();
 
   // ✅ 型定義に aura_requests が無い環境でも通す
@@ -31,14 +38,10 @@ export async function GET(req: NextRequest) {
     .maybeSingle();
 
   if (error || !rec) {
-    // デバッグしやすいように details を返す（本番で不要なら消してOK）
-    return NextResponse.json(
-      { ok: false, error: "not_found", details: error?.message ?? null },
-      { status: 404 },
-    );
+    // ※ details を返すと情報露出が増えるので、ここでは固定文言に寄せる
+    return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
 
-  // ✅ payment_status 列が無くても落ちない
   const paymentStatus = String((rec as any).payment_status ?? "unpaid").toLowerCase();
 
   // すでに支払い済みなら、そのまま戻す（無駄な再決済を防ぐ）
@@ -49,7 +52,6 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // 価格は Stripe ダッシュボードの Price ID を推奨（固定の one-time）
   const priceId = process.env.AURA_STRIPE_PRICE_ID;
   if (!priceId) {
     return NextResponse.json({ ok: false, error: "missing_AURA_STRIPE_PRICE_ID" }, { status: 500 });
@@ -71,12 +73,14 @@ export async function GET(req: NextRequest) {
       requestId: String((rec as any).id),
       email: (rec as any).email || "",
     },
+
+    // ✅ 任意だが推奨：Stripe側でも参照しやすい（ダッシュボード上の追跡が楽）
+    client_reference_id: String((rec as any).id),
   });
 
   if (!session.url) {
     return NextResponse.json({ ok: false, error: "stripe_session_no_url" }, { status: 500 });
   }
 
-  // Stripeへリダイレクト
   return NextResponse.redirect(session.url, { status: 303 });
 }

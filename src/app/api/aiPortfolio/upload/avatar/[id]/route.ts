@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { supabaseAdmin } from "@/lib/aiPortfolio/supabaseAdmin";
 import { updatePayloadFields } from "@/lib/aiPortfolio/aiPortfolio.db";
 import { auraAssetProxyUrl } from "@/lib/aiPortfolio/storage/auraAssets";
+import { requireAuraRequestAccess } from "@/lib/aiPortfolio/requireAuraAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,10 @@ export async function POST(
   const requestId = params.id;
 
   try {
+    // ✅ 所有権チェック（IDOR遮断）
+    const access = await requireAuraRequestAccess(requestId);
+    if (!access.ok) return access.response;
+
     const form = await req.formData();
     const file = form.get("file");
 

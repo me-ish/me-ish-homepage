@@ -150,10 +150,12 @@ function mapDbToRecord(row: any): RequestRecord {
 
 /**
  * フォーム送信直後（生成前）のレコード作成（互換用）
+ * - sessionToken を受け取った場合は aura_requests.session_token に保存
  */
 export async function insertDraft(data: {
   email: string;
   prompt: FormInput;
+  sessionToken?: string; // ✅ 追加
 }): Promise<RequestRecord> {
   const supabase = supabaseAdmin();
 
@@ -168,6 +170,10 @@ export async function insertDraft(data: {
       error: null,
       slug: null,
       public_slug: null,
+
+      // ✅ 所有確認用トークン（Cookie側と一致させる）
+      session_token: data.sessionToken ?? null,
+
       // public_id / visibility / published_at は公開時に確定でOK
     })
     .select("*")

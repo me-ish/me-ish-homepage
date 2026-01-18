@@ -1,6 +1,9 @@
+//src/app/api/aiPortfolio/upload/works/[id]/route.ts
+
 import { NextResponse } from "next/server";
 import sharp from "sharp";
 import { supabaseAdmin } from "@/lib/aiPortfolio/supabaseAdmin";
+import { requireAuraRequestAccess } from "@/lib/aiPortfolio/requireAuraAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +27,10 @@ export async function POST(
   const requestId = params.id;
 
   try {
+    // ✅ 所有権チェック（IDOR遮断）
+    const access = await requireAuraRequestAccess(requestId);
+    if (!access.ok) return access.response;
+
     const form = await req.formData();
     const file = form.get("file");
 

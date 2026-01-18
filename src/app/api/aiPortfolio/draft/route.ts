@@ -1,7 +1,9 @@
 // src/app/api/aiPortfolio/draft/route.ts
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { insertDraft } from "@/lib/aiPortfolio/aiPortfolio.db";
 import type { FormInput } from "@/lib/aiPortfolio/aiPortfolio.schema";
+import { buildAuraSessionCookie } from "@/lib/aiPortfolio/requireAuraAccess";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,39 +14,32 @@ export async function POST(req: Request) {
     const json = await req.json().catch(() => null);
 
     if (!json?.email || typeof json.email !== "string") {
-      return NextResponse.json(
-        { ok: false, error: "email_required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "email_required" }, { status: 400 });
     }
 
-    // draft: 最低限（※insertDraft側が厳格バリデーションしているとここで落ちる可能性あり）
+    // draft: 最低限
     const prompt: Partial<FormInput> = {
       email: json.email,
       name: typeof json.name === "string" ? json.name : "",
     };
 
+    // ✅ request 所有を証明する sessionToken を発行
+    const sessionToken = randomUUID();
+
+    // ✅ insertDraft 側に sessionToken を保存させる（要: insertDraftの引数対応）
     const record = await insertDraft({
       email: json.email,
-      // 型はPartialだが、insertDraftの型都合で必要なら any で渡す
       prompt: prompt as any,
-    });
+      sessionToken, // ★ insertDraft が受け取れるように aiPortfolio.db を後で修正
+    } as any);
 
-    return NextResponse.json(
-      { ok: true, requestId: record.id },
-      { status: 200 }
-    );
+    // ✅ requestIdごとのCookieを設定
+    const res = NextResponse.json({ ok: true, requestId: record.id }, { status: 200 });
+    res.headers.append("Set-Cookie", buildAuraSessionCookie(record.id, sessionToken));
+    return res;
   } catch (e: any) {
-    // ✅ これを入れないと Vercel で “何も出ない 500” になりがち
     console.error("[POST /api/aiPortfolio/draft] failed:", e);
-
-    // Zod等のバリデーション例外が見えるよう、メッセージだけ返す（本番なら必要に応じてマスク）
-    const message =
-      typeof e?.message === "string" ? e.message : "internal_error";
-
-    return NextResponse.json(
-      { ok: false, error: "internal_error", message },
-      { status: 500 }
-    );
+    const message = typeof e?.message === "string" ? e.message : "internal_error";
+    return NextResponse.json({ ok: false, error: "internal_error", message }, { status: 500 });
   }
 }

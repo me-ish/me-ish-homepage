@@ -7,6 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/aiPortfolio/supabaseAdmin";
+import { requireAuraRequestAccess } from "@/lib/aiPortfolio/requireAuraAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -39,19 +40,12 @@ export async function POST(req: Request, { params }: { params: Params }) {
       return NextResponse.json({ ok: false, error: "invalid_email" }, { status: 400 });
     }
 
+    // ✅ 所有権チェック（cookie aura_st_{id} → DB session_token 照合）
+    const access = await requireAuraRequestAccess(id, req);
+    if (!access.ok) return access.response;
+    const rec = access.rec;
+
     const admin = supabaseAdmin() as any;
-
-    // 1) 既存レコード取得
-    const { data: rec, error: selectErr } = await admin
-      .from("aura_requests")
-      .select("id, status, email, payload")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (selectErr || !rec) {
-      console.error("[email/update] select error:", selectErr);
-      return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
-    }
 
     // 2) published の場合は拒否（確定後は変更不可）
     if (rec.status === "published") {

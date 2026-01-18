@@ -1,6 +1,7 @@
 // src/app/api/aiPortfolio/form/submit/route.ts
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { randomUUID } from "crypto";
 
 import {
   FormInputSchema,
@@ -9,6 +10,10 @@ import {
 
 import { generatePortfolioFromForm } from "@/lib/aiPortfolio/aiPortfolio.generate";
 import { supabaseAdmin } from "@/lib/aiPortfolio/supabaseAdmin";
+import {
+  requireAuraRequestAccess,
+  buildAuraSessionCookie,
+} from "@/lib/aiPortfolio/requireAuraAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -47,32 +52,22 @@ function extractRequestIdAndPayload(json: any): {
 
 /* =========================================================
  * SNS/URL normalize helpers
- * - 入力が「@handle」「handle」「example.com」「https://...」など
- *   バラバラでも、最終的に href として成立する形に寄せる
  * ========================================================= */
 function normalizeMaybeUrl(raw?: string): string | undefined {
   if (!raw) return undefined;
   const v = String(raw).trim();
   if (!v) return undefined;
 
-  // すでにURL
   if (/^https?:\/\//i.test(v)) return v;
-
-  // mailto はそのまま
   if (/^mailto:/i.test(v)) return v;
 
-  // 先頭の @ を除去
   const noAt = v.replace(/^@+/, "").trim();
   if (!noAt) return undefined;
 
-  // ドメインっぽい（例: example.com/path）なら https:// を付与
-  // ただし "sample.illust" はハンドルの可能性もあるが、
-  // URL化するなら https:// を付けないと href として成立しない
   if (noAt.includes(".") && !noAt.includes(" ")) {
     return `https://${noAt}`;
   }
 
-  // それ以外は「ID」として返す（platform側でURL化する）
   return noAt;
 }
 
@@ -83,27 +78,18 @@ function buildPlatformUrl(
   const v = normalizeMaybeUrl(raw);
   if (!v) return undefined;
 
-  // すでにURLならそれを優先
   if (/^https?:\/\//i.test(v) || /^mailto:/i.test(v)) return v;
 
-  // IDの場合のみ platform URL を組む
   switch (platform) {
     case "x":
       return `https://x.com/${v}`;
     case "instagram":
       return `https://instagram.com/${v}`;
     case "pixiv":
-      // pixivはユーザーURLが複数パターンあるので最小限で対応
-      // ID/ユーザー名どちらでもとりあえず users 形式へ寄せる
       return `https://www.pixiv.net/users/${v}`;
     case "skeb":
       return `https://skeb.jp/@${v}`;
     case "booth":
-      // booth はショップURLが多様なので、IDなら検索に寄せるのもありだが、
-      // ここでは booth.pm のトップに寄せず「URLでないなら https:// を付けた形」を採用しない。
-      // したがって ID の場合は undefined にし、ユーザーにURL入力を促すのが安全。
-      // ただし現状のUXを崩したくないなら、下の行を有効化してもよい。
-      // return `https://${v}.booth.pm`;
       return undefined;
   }
 }
@@ -112,9 +98,7 @@ function buildWebsiteUrl(raw?: string): string | undefined {
   const v = normalizeMaybeUrl(raw);
   if (!v) return undefined;
 
-  // ID（URLでない）なら、ドメイン化できないので捨てる
   if (!/^https?:\/\//i.test(v) && !/^mailto:/i.test(v)) return undefined;
-
   return v;
 }
 
@@ -168,14 +152,28 @@ export async function POST(req: Request) {
   // 1) requestId/payload/avatarUrl を分離
   const { requestId, payload, avatarUrl } = extractRequestIdAndPayload(json);
 
+  // ✅ 重要：requestId 指定時は最初に所有権チェック（IDOR遮断）
+  let ownedRec: any | null = null;
+  if (requestId) {
+    const access = await requireAuraRequestAccess(requestId, req);
+    if (!access.ok) return access.response;
+    ownedRec = access.rec;
+
+    // 事故防止：公開済みは submit で draft に戻して全上書きさせない
+    if (ownedRec?.status === "published") {
+      return NextResponse.json(
+        { ok: false, error: "already_published", message: "公開済みのため再送信で上書きできません" },
+        { status: 403 }
+      );
+    }
+  }
+
   // 2) ✅ Zod parse 前に SNS を退避（schema外キーは parse で落ちるため）
   const raw = payload && typeof payload === "object" ? (payload as any) : {};
 
-  // social オブジェクト（フォームが social:{...} で送ってくる場合）
   const rawSocial =
     raw.social && typeof raw.social === "object" ? raw.social : undefined;
 
-  // トップレベル or social配下 どちらでも拾える getter
   const pick = (key: string): string | undefined => {
     const v1 = typeof raw[key] === "string" ? raw[key].trim() : "";
     const v2 =
@@ -185,7 +183,6 @@ export async function POST(req: Request) {
     return v1 ? v1 : v2 ? v2 : undefined;
   };
 
-  // --- 生値（ID/URL混在）を拾う ---
   const rawX =
     pick("xUrl") ??
     pick("twitterUrl") ??
@@ -211,20 +208,16 @@ export async function POST(req: Request) {
 
   const rawPortfolio = pick("portfolioUrl") ?? pick("portfolio");
 
-  // --- 正規化（hrefとして成立する形へ） ---
   const normalizedSocial = {
     xUrl: buildPlatformUrl("x", rawX),
     instagramUrl: buildPlatformUrl("instagram", rawIg),
     pixivUrl: buildPlatformUrl("pixiv", rawPixiv),
     skebUrl: buildPlatformUrl("skeb", rawSkeb),
-    boothUrl:
-      // boothはID推測が危険なので URLっぽい時だけ採用
-      buildWebsiteUrl(rawBooth),
+    boothUrl: buildWebsiteUrl(rawBooth),
     websiteUrl: buildWebsiteUrl(rawWebsite),
     portfolioUrl: buildWebsiteUrl(rawPortfolio),
   };
 
-  // links 配列をフォームが送っている場合も救済（schema外なら落ちるため）
   const rescuedLinksRaw = Array.isArray(raw.links) ? raw.links : undefined;
   const rescuedSocialLinksRaw = Array.isArray(raw.socialLinks)
     ? raw.socialLinks
@@ -245,12 +238,10 @@ export async function POST(req: Request) {
     );
   }
 
-  // 4) ✅ parse後に復元して formInput を作る（DB保存 & generate入力）
-  //    - socialオブジェクトも “正規化済み” を保存
+  // 4) ✅ parse後に復元して formInput を作る
   const rebuiltSocialObj = rawSocial
     ? {
         ...rawSocial,
-        // フォームが twitter/instagram/website で持っているケースを吸収
         twitter:
           (rawSocial as any)?.twitter ??
           (rawSocial as any)?.x ??
@@ -269,8 +260,6 @@ export async function POST(req: Request) {
       }
     : undefined;
 
-  // social の中身も “URLとして成立する形” を別名で保持したい場合があるので、ここで上書きもしておく
-  // （generate側が social.twitter 等を見ているなら、正規化したURLを入れる）
   const normalizedSocialObj = rebuiltSocialObj
     ? {
         ...rebuiltSocialObj,
@@ -287,7 +276,6 @@ export async function POST(req: Request) {
     links?: any[];
     socialLinks?: any[];
     sns?: any[];
-    // SNS単体キーもトップレベルに戻す（generate側の互換のため）
     xUrl?: string;
     instagramUrl?: string;
     pixivUrl?: string;
@@ -298,83 +286,66 @@ export async function POST(req: Request) {
   } = {
     ...parsed.data,
     avatarUrl,
-    social: normalizedSocialObj, // ✅ 正規化済みの social を保持
-    ...normalizedSocial, // ✅ トップレベルキーも正規化済みに統一
+    social: normalizedSocialObj,
+    ...normalizedSocial,
     ...(rescuedLinksRaw ? { links: rescuedLinksRaw } : {}),
     ...(rescuedSocialLinksRaw ? { socialLinks: rescuedSocialLinksRaw } : {}),
     ...(rescuedSnsArrayRaw ? { sns: rescuedSnsArrayRaw } : {}),
   };
 
-  // デバッグ（必要なら）
   console.log("### SUBMIT normalizedSocial", normalizedSocial);
   console.log("### SUBMIT social(normalized)", normalizedSocialObj);
 
   // ------------------------------------------------------------
   // 1) id を確定（draft 連携 or 新規）
-  //    ※ status は draft / generated / error で統一
   // ------------------------------------------------------------
   let id: string | null = null;
 
+  // ✅ requestId がある場合：所有権チェック済みなので、そのIDに上書き（IDOR不可）
   if (requestId) {
-    const { data: found, error: selErr } = await supabase
+    const { error: updDraftErr } = await supabase
       .from("aura_requests")
-      .select("id")
-      .eq("id", requestId)
-      .maybeSingle();
+      .update({
+        status: "draft",
+        error: null,
+        payload: formInput,
+        design: null,
+        content: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", requestId);
 
-    if (selErr) {
-      console.error("[aiPortfolio/form/submit] select draft failed", selErr);
+    if (updDraftErr) {
+      console.error("[aiPortfolio/form/submit] update draft failed", updDraftErr);
       return NextResponse.json(
-        { ok: false, error: "select_failed" },
+        { ok: false, error: "update_draft_failed" },
         { status: 500 }
       );
     }
 
-    if (found?.id) {
-      const { error: updDraftErr } = await supabase
-        .from("aura_requests")
-        .update({
-          status: "draft",
-          error: null,
-          payload: formInput, // avatarUrl / social 正規化含む
-          design: null,
-          content: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", requestId);
-
-      if (updDraftErr) {
-        console.error(
-          "[aiPortfolio/form/submit] update draft failed",
-          updDraftErr
-        );
-        return NextResponse.json(
-          { ok: false, error: "update_draft_failed" },
-          { status: 500 }
-        );
-      }
-
-      id = requestId;
-    } else {
-      console.warn(
-        "[aiPortfolio/form/submit] requestId not found. fallback insert.",
-        requestId
-      );
-    }
+    id = requestId;
   }
 
+  // ✅ requestId が無い場合：新規作成し session_token 発行 + Cookie付与
+  let issuedSessionToken: string | null = null;
+
   if (!id) {
+    issuedSessionToken = randomUUID();
+
     const { data: created, error: insErr } = await supabase
       .from("aura_requests")
       .insert({
         status: "draft",
         error: null,
-        payload: formInput, // avatarUrl / social 正規化含む
+        payload: formInput,
         design: null,
         content: null,
         slug: null,
-        // email カラムがあるなら入る。無いならここは消してOK（列不一致で落ちるため）
+        public_slug: null,
         email: (formInput as any)?.email ?? null,
+
+        // ✅ 所有確認用
+        session_token: issuedSessionToken,
       })
       .select("id")
       .single();
@@ -409,7 +380,14 @@ export async function POST(req: Request) {
 
     if (updErr) throw updErr;
 
-    return NextResponse.json({ ok: true, id, status: "generated" });
+    // ✅ 新規作成時のみ Cookie を返す（HttpOnly / requestId単位）
+    const res = NextResponse.json({ ok: true, id, status: "generated" });
+
+    if (issuedSessionToken) {
+      res.headers.append("Set-Cookie", buildAuraSessionCookie(id, issuedSessionToken));
+    }
+
+    return res;
   } catch (e: any) {
     const message = e?.message ?? String(e);
     console.error("[aiPortfolio/form/submit] generate error", e);
@@ -423,10 +401,16 @@ export async function POST(req: Request) {
       })
       .eq("id", id);
 
-    // 重要：失敗でも id は返す
-    return NextResponse.json(
+    // ✅ 新規作成時でも Cookie は返しておく（失敗しても同じ draft を継続利用できる）
+    const res = NextResponse.json(
       { ok: false, id, status: "error", error: "generate_failed", message },
       { status: 200 }
     );
+
+    if (issuedSessionToken) {
+      res.headers.append("Set-Cookie", buildAuraSessionCookie(id, issuedSessionToken));
+    }
+
+    return res;
   }
 }
