@@ -168,11 +168,12 @@ export default function Header() {
             <div className="hidden items-center gap-2 sm:flex">
               <Link
                 href="/mypage"
-                className="max-w-[220px] truncate rounded-full bg-[#f6f8fb] px-3 py-1.5 text-sm font-medium text-[#223] transition hover:bg-[#e7f2ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
-                title={me.label}
+                className="max-w-[320px] truncate rounded-full bg-[#f6f8fb] px-3 py-1.5 text-sm font-medium text-[#223] transition hover:bg-[#e7f2ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
+                title={`ログイン中：${me.label}`}
                 aria-label="マイページへ"
               >
-                {me.label}
+                <span className="text-[#667]">ログイン中：</span>
+                <span className="ml-1">{me.label}</span>
               </Link>
 
               <button
@@ -180,11 +181,10 @@ export default function Header() {
                 onClick={logout}
                 disabled={logoutBusy}
                 aria-busy={logoutBusy}
-className={cn(
-  'inline-flex items-center justify-center whitespace-nowrap rounded-full border border-[#e11d48] px-3 py-1.5 text-sm text-[#e11d48] transition hover:bg-[#e11d48] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#e11d48]/40',
-  logoutBusy && 'cursor-not-allowed opacity-70'
-)}
-
+                className={cn(
+                  'inline-flex items-center justify-center whitespace-nowrap rounded-full border border-[#e11d48] px-3 py-1.5 text-sm text-[#e11d48] transition hover:bg-[#e11d48] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#e11d48]/40',
+                  logoutBusy && 'cursor-not-allowed opacity-70'
+                )}
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 {logoutBusy ? 'ログアウト中…' : 'ログアウト'}
@@ -239,15 +239,15 @@ className={cn(
                   <>
                     <section aria-label="アカウント" className="mb-4">
                       <div className="rounded-2xl border border-black/5 bg-[#f6f8fb] p-4">
-                        <div className="text-xs text-[#667]">ログイン中</div>
                         <div className="mt-1 flex items-center justify-between gap-3">
                           <Link
                             href="/mypage"
                             onClick={() => setOpen(false)}
                             className="min-w-0 flex-1 truncate rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[#223] transition hover:bg-[#e7f2ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
-                            title={me.label}
+                            title={`ログイン中：${me.label}`}
                           >
-                            {me.label}
+                            <span className="text-[#667]">ログイン中：</span>
+                            <span className="ml-1">{me.label}</span>
                           </Link>
 
                           <button
@@ -259,11 +259,10 @@ className={cn(
                             }}
                             disabled={logoutBusy}
                             aria-busy={logoutBusy}
-className={cn(
-  'inline-flex items-center justify-center rounded-xl border border-[#e11d48] px-3 py-2 text-sm font-medium text-[#e11d48] transition hover:bg-[#e11d48] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#e11d48]/40',
-  logoutBusy && 'cursor-not-allowed opacity-70'
-)}
-
+                            className={cn(
+                              'inline-flex items-center justify-center rounded-xl border border-[#e11d48] px-3 py-2 text-sm font-medium text-[#e11d48] transition hover:bg-[#e11d48] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#e11d48]/40',
+                              logoutBusy && 'cursor-not-allowed opacity-70'
+                            )}
                           >
                             <LogOut className="mr-2 h-4 w-4" />
                             {logoutBusy ? '…' : 'ログアウト'}
