@@ -2,13 +2,14 @@
 -- PostgreSQL database dump
 --
 
+\restrict pBYfzeU3LziJgazxukcuY4NjzFZSBXPvCKRy5PkzFe5QtOhQJEt1pkdQzT7fV70
+
 -- Dumped from database version 15.8
--- Dumped by pg_dump version 17.4
+-- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -16,13 +17,6 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
-
---
--- Name: graphql_public; Type: SCHEMA; Schema: -; Owner: -
---
-
-CREATE SCHEMA graphql_public;
-
 
 --
 -- Name: public; Type: SCHEMA; Schema: -; Owner: -
@@ -39,20 +33,241 @@ COMMENT ON SCHEMA public IS 'standard public schema';
 
 
 --
--- Name: storage; Type: SCHEMA; Schema: -; Owner: -
+-- Name: aura_claim_first20(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE SCHEMA storage;
+CREATE FUNCTION public.aura_claim_first20(p_email text) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  v_used_at timestamptz;
+begin
+  if p_email is null or length(trim(p_email)) = 0 then
+    return false;
+  end if;
+
+  -- 既にこのemailが先着特典を使っていたら、二重消費させない
+  select first20_used_at into v_used_at
+  from public.aura_free_claims
+  where email = p_email
+  for update;
+
+  if v_used_at is not null then
+    return false;
+  end if;
+
+  -- 枠を確保（used_count < limit_count の時だけ増やす）
+  update public.aura_promo_counters
+  set used_count = used_count + 1,
+      updated_at = now()
+  where key = 'first20' and used_count < limit_count;
+
+  if not found then
+    return false;
+  end if;
+
+  insert into public.aura_free_claims(email, first20_used_at, updated_at)
+  values (p_email, now(), now())
+  on conflict (email) do update
+    set first20_used_at = coalesce(public.aura_free_claims.first20_used_at, excluded.first20_used_at),
+        updated_at = now();
+
+  return true;
+end;
+$$;
 
 
 --
--- Name: buckettype; Type: TYPE; Schema: storage; Owner: -
+-- Name: aura_claim_first20_free(text, uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE TYPE storage.buckettype AS ENUM (
-    'STANDARD',
-    'ANALYTICS'
-);
+CREATE FUNCTION public.aura_claim_first20_free(p_email text, p_request_id uuid DEFAULT NULL::uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_email text := lower(trim(p_email));
+  v_limit int;
+  v_used int;
+  v_is_meish bool;
+  v_meish_used bool;
+  v_already_used bool;
+begin
+  if v_email is null or v_email = '' then
+    return jsonb_build_object('ok', false, 'reason', 'email_missing');
+  end if;
+
+  -- 1) 採用者は first20 を使わせない（要件：採用者は先着枠に含めない）
+  select exists(
+    select 1 from public.entries
+    where lower(trim(email)) = v_email
+      and confirmed = true
+  ) into v_is_meish;
+
+  if v_is_meish then
+    return jsonb_build_object('ok', false, 'reason', 'meish_member_should_use_meish_free');
+  end if;
+
+  select exists(
+    select 1 from public.aura_meish_free_claims where email = v_email
+  ) into v_meish_used;
+
+  if v_meish_used then
+    return jsonb_build_object('ok', false, 'reason', 'meish_already_used');
+  end if;
+
+  -- 2) 既に first20 使用済み（active=返還されていない）なら不可
+  select exists(
+    select 1 from public.aura_first20_redemptions
+    where email = v_email
+      and converted_to_meish_at is null
+  ) into v_already_used;
+
+  if v_already_used then
+    return jsonb_build_object('ok', false, 'reason', 'already_used');
+  end if;
+
+  -- 3) 上限 row をロック（同時実行でも21人目が通らないように）
+  select limit_count into v_limit
+  from public.aura_promo_counters
+  where key = 'first20'
+  for update;
+
+  if v_limit is null then
+    v_limit := 20;
+  end if;
+
+  -- 4) 現在の使用数（返還されていないもののみ）
+  select count(*)::int into v_used
+  from public.aura_first20_redemptions
+  where converted_to_meish_at is null;
+
+  if v_used >= v_limit then
+    return jsonb_build_object('ok', false, 'reason', 'limit_reached');
+  end if;
+
+  -- 5) 消費（PKで一意、競合は unique_violation で弾く）
+  insert into public.aura_first20_redemptions(email, used_at, request_id)
+  values (v_email, now(), p_request_id);
+
+  return jsonb_build_object('ok', true, 'reason', 'first20_claimed');
+exception
+  when unique_violation then
+    -- 先に他処理が入っていた場合など
+    return jsonb_build_object('ok', false, 'reason', 'already_used');
+  when others then
+    return jsonb_build_object('ok', false, 'reason', 'internal_error', 'message', sqlerrm);
+end;
+$$;
+
+
+--
+-- Name: aura_claim_meish_free(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.aura_claim_meish_free(p_email text) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'auth'
+    AS $$
+declare
+  v_used_at timestamptz;
+  v_exists boolean;
+begin
+  if p_email is null or length(trim(p_email)) = 0 then
+    return false;
+  end if;
+
+  -- 既に使っていたら不可（email単位で一回）
+  select meish_used_at into v_used_at
+  from public.aura_free_claims
+  where email = p_email
+  for update;
+
+  if v_used_at is not null then
+    return false;
+  end if;
+
+  -- ✅ entries.confirmed=true かつ auth.users.email が一致するか
+  select exists (
+    select 1
+    from public.entries e
+    join auth.users u on u.id = e.user_id
+    where e.confirmed = true
+      and lower(u.email) = lower(p_email)
+    limit 1
+  ) into v_exists;
+
+  if not v_exists then
+    return false;
+  end if;
+
+  -- 消費（1回無料を確定）
+  insert into public.aura_free_claims(email, meish_used_at, updated_at)
+  values (p_email, now(), now())
+  on conflict (email) do update
+    set meish_used_at = coalesce(public.aura_free_claims.meish_used_at, excluded.meish_used_at),
+        updated_at = now();
+
+  return true;
+end;
+$$;
+
+
+--
+-- Name: aura_claim_meish_free(text, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.aura_claim_meish_free(p_email text, p_request_id uuid DEFAULT NULL::uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_email text := lower(trim(p_email));
+  v_entry record;
+  v_existing record;
+begin
+  if v_email is null or v_email = '' then
+    return jsonb_build_object('ok', false, 'reason', 'email_missing');
+  end if;
+
+  -- 採用確認（entries.confirmed=true）
+  select id into v_entry
+  from public.entries
+  where lower(trim(email)) = v_email
+    and confirmed = true
+  limit 1;
+
+  if v_entry.id is null then
+    return jsonb_build_object('ok', false, 'reason', 'not_meish_member');
+  end if;
+
+  -- 既に meish を使っていたら不可
+  select email into v_existing
+  from public.aura_meish_free_claims
+  where email = v_email;
+
+  if v_existing.email is not null then
+    return jsonb_build_object('ok', false, 'reason', 'already_used');
+  end if;
+
+  -- meish消費（原子的：PKで一意）
+  insert into public.aura_meish_free_claims(email, used_at, request_id, entry_id)
+  values (v_email, now(), p_request_id, v_entry.id);
+
+  -- first20 を以前使っていた場合は「返還」扱いにする（先着枠から除外）
+  update public.aura_first20_redemptions
+  set converted_to_meish_at = now()
+  where email = v_email
+    and converted_to_meish_at is null;
+
+  return jsonb_build_object('ok', true, 'reason', 'meish_claimed');
+exception
+  when unique_violation then
+    return jsonb_build_object('ok', false, 'reason', 'already_used');
+  when others then
+    return jsonb_build_object('ok', false, 'reason', 'internal_error', 'message', sqlerrm);
+end;
+$$;
 
 
 --
@@ -111,9 +326,32 @@ CREATE FUNCTION public.finalize_sale(p_entry_id bigint, p_quantity integer, p_se
     AS $$
 declare
   v_entry record;
+  v_inserted boolean;
 begin
   if p_quantity is null or p_quantity <= 0 then
     raise exception 'quantity must be positive';
+  end if;
+
+  if p_session_id is null or length(trim(p_session_id)) = 0 then
+    raise exception 'session_id must be provided';
+  end if;
+
+  -- ✅ 冪等ゲート：session_id を sales で確保（処理済みなら加算しない）
+  insert into public.sales (entry_id, stripe_session_id, purchased_at, metadata)
+  values (p_entry_id, p_session_id, now(), jsonb_build_object('source','finalize_sale'))
+  on conflict (stripe_session_id) do nothing;
+
+  get diagnostics v_inserted = row_count;
+
+  if not v_inserted then
+    -- 既に処理済み：現在値を返して終了
+    select e.edition_sold,
+           (e.edition_total is not null and coalesce(e.edition_sold,0) >= e.edition_total)
+      into new_edition_sold, sold_out
+    from public.entries e
+    where e.id = p_entry_id;
+
+    return;
   end if;
 
   -- 対象行をロックして取得
@@ -135,7 +373,7 @@ begin
     end if;
   end if;
 
-  -- インクリメント（sold_out_calc は計算列なので自動反映）
+  -- インクリメント
   update public.entries
      set edition_sold = coalesce(edition_sold,0) + p_quantity
    where id = p_entry_id
@@ -144,6 +382,25 @@ begin
         into new_edition_sold, sold_out;
 
   return;
+end;
+$$;
+
+
+--
+-- Name: normalize_unlimited_total(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.normalize_unlimited_total() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+  if new.edition_mode = 'unlimited' then
+    new.edition_total := null;   -- ここを 0 運用にしたいなら 0
+    if new.edition_sold is null then
+      new.edition_sold := 0;
+    end if;
+  end if;
+  return new;
 end;
 $$;
 
@@ -158,7 +415,8 @@ CREATE FUNCTION public.set_updated_at() RETURNS trigger
 begin
   new.updated_at = now();
   return new;
-end; $$;
+end;
+$$;
 
 
 --
@@ -171,635 +429,6 @@ CREATE FUNCTION public.update_updated_at_column() RETURNS trigger
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;
-END;
-$$;
-
-
---
--- Name: add_prefixes(text, text); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.add_prefixes(_bucket_id text, _name text) RETURNS void
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-DECLARE
-    prefixes text[];
-BEGIN
-    prefixes := "storage"."get_prefixes"("_name");
-
-    IF array_length(prefixes, 1) > 0 THEN
-        INSERT INTO storage.prefixes (name, bucket_id)
-        SELECT UNNEST(prefixes) as name, "_bucket_id" ON CONFLICT DO NOTHING;
-    END IF;
-END;
-$$;
-
-
---
--- Name: can_insert_object(text, text, uuid, jsonb); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.can_insert_object(bucketid text, name text, owner uuid, metadata jsonb) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  INSERT INTO "storage"."objects" ("bucket_id", "name", "owner", "metadata") VALUES (bucketid, name, owner, metadata);
-  -- hack to rollback the successful insert
-  RAISE sqlstate 'PT200' using
-  message = 'ROLLBACK',
-  detail = 'rollback successful insert';
-END
-$$;
-
-
---
--- Name: delete_prefix(text, text); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.delete_prefix(_bucket_id text, _name text) RETURNS boolean
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-BEGIN
-    -- Check if we can delete the prefix
-    IF EXISTS(
-        SELECT FROM "storage"."prefixes"
-        WHERE "prefixes"."bucket_id" = "_bucket_id"
-          AND level = "storage"."get_level"("_name") + 1
-          AND "prefixes"."name" COLLATE "C" LIKE "_name" || '/%'
-        LIMIT 1
-    )
-    OR EXISTS(
-        SELECT FROM "storage"."objects"
-        WHERE "objects"."bucket_id" = "_bucket_id"
-          AND "storage"."get_level"("objects"."name") = "storage"."get_level"("_name") + 1
-          AND "objects"."name" COLLATE "C" LIKE "_name" || '/%'
-        LIMIT 1
-    ) THEN
-    -- There are sub-objects, skip deletion
-    RETURN false;
-    ELSE
-        DELETE FROM "storage"."prefixes"
-        WHERE "prefixes"."bucket_id" = "_bucket_id"
-          AND level = "storage"."get_level"("_name")
-          AND "prefixes"."name" = "_name";
-        RETURN true;
-    END IF;
-END;
-$$;
-
-
---
--- Name: delete_prefix_hierarchy_trigger(); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.delete_prefix_hierarchy_trigger() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    prefix text;
-BEGIN
-    prefix := "storage"."get_prefix"(OLD."name");
-
-    IF coalesce(prefix, '') != '' THEN
-        PERFORM "storage"."delete_prefix"(OLD."bucket_id", prefix);
-    END IF;
-
-    RETURN OLD;
-END;
-$$;
-
-
---
--- Name: enforce_bucket_name_length(); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.enforce_bucket_name_length() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-begin
-    if length(new.name) > 100 then
-        raise exception 'bucket name "%" is too long (% characters). Max is 100.', new.name, length(new.name);
-    end if;
-    return new;
-end;
-$$;
-
-
---
--- Name: extension(text); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.extension(name text) RETURNS text
-    LANGUAGE plpgsql IMMUTABLE
-    AS $$
-DECLARE
-    _parts text[];
-    _filename text;
-BEGIN
-    SELECT string_to_array(name, '/') INTO _parts;
-    SELECT _parts[array_length(_parts,1)] INTO _filename;
-    RETURN reverse(split_part(reverse(_filename), '.', 1));
-END
-$$;
-
-
---
--- Name: filename(text); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.filename(name text) RETURNS text
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-_parts text[];
-BEGIN
-	select string_to_array(name, '/') into _parts;
-	return _parts[array_length(_parts,1)];
-END
-$$;
-
-
---
--- Name: foldername(text); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.foldername(name text) RETURNS text[]
-    LANGUAGE plpgsql IMMUTABLE
-    AS $$
-DECLARE
-    _parts text[];
-BEGIN
-    -- Split on "/" to get path segments
-    SELECT string_to_array(name, '/') INTO _parts;
-    -- Return everything except the last segment
-    RETURN _parts[1 : array_length(_parts,1) - 1];
-END
-$$;
-
-
---
--- Name: get_level(text); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.get_level(name text) RETURNS integer
-    LANGUAGE sql IMMUTABLE STRICT
-    AS $$
-SELECT array_length(string_to_array("name", '/'), 1);
-$$;
-
-
---
--- Name: get_prefix(text); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.get_prefix(name text) RETURNS text
-    LANGUAGE sql IMMUTABLE STRICT
-    AS $_$
-SELECT
-    CASE WHEN strpos("name", '/') > 0 THEN
-             regexp_replace("name", '[\/]{1}[^\/]+\/?$', '')
-         ELSE
-             ''
-        END;
-$_$;
-
-
---
--- Name: get_prefixes(text); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.get_prefixes(name text) RETURNS text[]
-    LANGUAGE plpgsql IMMUTABLE STRICT
-    AS $$
-DECLARE
-    parts text[];
-    prefixes text[];
-    prefix text;
-BEGIN
-    -- Split the name into parts by '/'
-    parts := string_to_array("name", '/');
-    prefixes := '{}';
-
-    -- Construct the prefixes, stopping one level below the last part
-    FOR i IN 1..array_length(parts, 1) - 1 LOOP
-            prefix := array_to_string(parts[1:i], '/');
-            prefixes := array_append(prefixes, prefix);
-    END LOOP;
-
-    RETURN prefixes;
-END;
-$$;
-
-
---
--- Name: get_size_by_bucket(); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.get_size_by_bucket() RETURNS TABLE(size bigint, bucket_id text)
-    LANGUAGE plpgsql STABLE
-    AS $$
-BEGIN
-    return query
-        select sum((metadata->>'size')::bigint) as size, obj.bucket_id
-        from "storage".objects as obj
-        group by obj.bucket_id;
-END
-$$;
-
-
---
--- Name: list_multipart_uploads_with_delimiter(text, text, text, integer, text, text); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.list_multipart_uploads_with_delimiter(bucket_id text, prefix_param text, delimiter_param text, max_keys integer DEFAULT 100, next_key_token text DEFAULT ''::text, next_upload_token text DEFAULT ''::text) RETURNS TABLE(key text, id text, created_at timestamp with time zone)
-    LANGUAGE plpgsql
-    AS $_$
-BEGIN
-    RETURN QUERY EXECUTE
-        'SELECT DISTINCT ON(key COLLATE "C") * from (
-            SELECT
-                CASE
-                    WHEN position($2 IN substring(key from length($1) + 1)) > 0 THEN
-                        substring(key from 1 for length($1) + position($2 IN substring(key from length($1) + 1)))
-                    ELSE
-                        key
-                END AS key, id, created_at
-            FROM
-                storage.s3_multipart_uploads
-            WHERE
-                bucket_id = $5 AND
-                key ILIKE $1 || ''%'' AND
-                CASE
-                    WHEN $4 != '''' AND $6 = '''' THEN
-                        CASE
-                            WHEN position($2 IN substring(key from length($1) + 1)) > 0 THEN
-                                substring(key from 1 for length($1) + position($2 IN substring(key from length($1) + 1))) COLLATE "C" > $4
-                            ELSE
-                                key COLLATE "C" > $4
-                            END
-                    ELSE
-                        true
-                END AND
-                CASE
-                    WHEN $6 != '''' THEN
-                        id COLLATE "C" > $6
-                    ELSE
-                        true
-                    END
-            ORDER BY
-                key COLLATE "C" ASC, created_at ASC) as e order by key COLLATE "C" LIMIT $3'
-        USING prefix_param, delimiter_param, max_keys, next_key_token, bucket_id, next_upload_token;
-END;
-$_$;
-
-
---
--- Name: list_objects_with_delimiter(text, text, text, integer, text, text); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.list_objects_with_delimiter(bucket_id text, prefix_param text, delimiter_param text, max_keys integer DEFAULT 100, start_after text DEFAULT ''::text, next_token text DEFAULT ''::text) RETURNS TABLE(name text, id uuid, metadata jsonb, updated_at timestamp with time zone)
-    LANGUAGE plpgsql
-    AS $_$
-BEGIN
-    RETURN QUERY EXECUTE
-        'SELECT DISTINCT ON(name COLLATE "C") * from (
-            SELECT
-                CASE
-                    WHEN position($2 IN substring(name from length($1) + 1)) > 0 THEN
-                        substring(name from 1 for length($1) + position($2 IN substring(name from length($1) + 1)))
-                    ELSE
-                        name
-                END AS name, id, metadata, updated_at
-            FROM
-                storage.objects
-            WHERE
-                bucket_id = $5 AND
-                name ILIKE $1 || ''%'' AND
-                CASE
-                    WHEN $6 != '''' THEN
-                    name COLLATE "C" > $6
-                ELSE true END
-                AND CASE
-                    WHEN $4 != '''' THEN
-                        CASE
-                            WHEN position($2 IN substring(name from length($1) + 1)) > 0 THEN
-                                substring(name from 1 for length($1) + position($2 IN substring(name from length($1) + 1))) COLLATE "C" > $4
-                            ELSE
-                                name COLLATE "C" > $4
-                            END
-                    ELSE
-                        true
-                END
-            ORDER BY
-                name COLLATE "C" ASC) as e order by name COLLATE "C" LIMIT $3'
-        USING prefix_param, delimiter_param, max_keys, next_token, bucket_id, start_after;
-END;
-$_$;
-
-
---
--- Name: objects_insert_prefix_trigger(); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.objects_insert_prefix_trigger() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    PERFORM "storage"."add_prefixes"(NEW."bucket_id", NEW."name");
-    NEW.level := "storage"."get_level"(NEW."name");
-
-    RETURN NEW;
-END;
-$$;
-
-
---
--- Name: objects_update_prefix_trigger(); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.objects_update_prefix_trigger() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    old_prefixes TEXT[];
-BEGIN
-    -- Ensure this is an update operation and the name has changed
-    IF TG_OP = 'UPDATE' AND (NEW."name" <> OLD."name" OR NEW."bucket_id" <> OLD."bucket_id") THEN
-        -- Retrieve old prefixes
-        old_prefixes := "storage"."get_prefixes"(OLD."name");
-
-        -- Remove old prefixes that are only used by this object
-        WITH all_prefixes as (
-            SELECT unnest(old_prefixes) as prefix
-        ),
-        can_delete_prefixes as (
-             SELECT prefix
-             FROM all_prefixes
-             WHERE NOT EXISTS (
-                 SELECT 1 FROM "storage"."objects"
-                 WHERE "bucket_id" = OLD."bucket_id"
-                   AND "name" <> OLD."name"
-                   AND "name" LIKE (prefix || '%')
-             )
-         )
-        DELETE FROM "storage"."prefixes" WHERE name IN (SELECT prefix FROM can_delete_prefixes);
-
-        -- Add new prefixes
-        PERFORM "storage"."add_prefixes"(NEW."bucket_id", NEW."name");
-    END IF;
-    -- Set the new level
-    NEW."level" := "storage"."get_level"(NEW."name");
-
-    RETURN NEW;
-END;
-$$;
-
-
---
--- Name: operation(); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.operation() RETURNS text
-    LANGUAGE plpgsql STABLE
-    AS $$
-BEGIN
-    RETURN current_setting('storage.operation', true);
-END;
-$$;
-
-
---
--- Name: prefixes_insert_trigger(); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.prefixes_insert_trigger() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    PERFORM "storage"."add_prefixes"(NEW."bucket_id", NEW."name");
-    RETURN NEW;
-END;
-$$;
-
-
---
--- Name: search(text, text, integer, integer, integer, text, text, text); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.search(prefix text, bucketname text, limits integer DEFAULT 100, levels integer DEFAULT 1, offsets integer DEFAULT 0, search text DEFAULT ''::text, sortcolumn text DEFAULT 'name'::text, sortorder text DEFAULT 'asc'::text) RETURNS TABLE(name text, id uuid, updated_at timestamp with time zone, created_at timestamp with time zone, last_accessed_at timestamp with time zone, metadata jsonb)
-    LANGUAGE plpgsql
-    AS $$
-declare
-    can_bypass_rls BOOLEAN;
-begin
-    SELECT rolbypassrls
-    INTO can_bypass_rls
-    FROM pg_roles
-    WHERE rolname = coalesce(nullif(current_setting('role', true), 'none'), current_user);
-
-    IF can_bypass_rls THEN
-        RETURN QUERY SELECT * FROM storage.search_v1_optimised(prefix, bucketname, limits, levels, offsets, search, sortcolumn, sortorder);
-    ELSE
-        RETURN QUERY SELECT * FROM storage.search_legacy_v1(prefix, bucketname, limits, levels, offsets, search, sortcolumn, sortorder);
-    END IF;
-end;
-$$;
-
-
---
--- Name: search_legacy_v1(text, text, integer, integer, integer, text, text, text); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.search_legacy_v1(prefix text, bucketname text, limits integer DEFAULT 100, levels integer DEFAULT 1, offsets integer DEFAULT 0, search text DEFAULT ''::text, sortcolumn text DEFAULT 'name'::text, sortorder text DEFAULT 'asc'::text) RETURNS TABLE(name text, id uuid, updated_at timestamp with time zone, created_at timestamp with time zone, last_accessed_at timestamp with time zone, metadata jsonb)
-    LANGUAGE plpgsql STABLE
-    AS $_$
-declare
-    v_order_by text;
-    v_sort_order text;
-begin
-    case
-        when sortcolumn = 'name' then
-            v_order_by = 'name';
-        when sortcolumn = 'updated_at' then
-            v_order_by = 'updated_at';
-        when sortcolumn = 'created_at' then
-            v_order_by = 'created_at';
-        when sortcolumn = 'last_accessed_at' then
-            v_order_by = 'last_accessed_at';
-        else
-            v_order_by = 'name';
-        end case;
-
-    case
-        when sortorder = 'asc' then
-            v_sort_order = 'asc';
-        when sortorder = 'desc' then
-            v_sort_order = 'desc';
-        else
-            v_sort_order = 'asc';
-        end case;
-
-    v_order_by = v_order_by || ' ' || v_sort_order;
-
-    return query execute
-        'with folders as (
-           select path_tokens[$1] as folder
-           from storage.objects
-             where objects.name ilike $2 || $3 || ''%''
-               and bucket_id = $4
-               and array_length(objects.path_tokens, 1) <> $1
-           group by folder
-           order by folder ' || v_sort_order || '
-     )
-     (select folder as "name",
-            null as id,
-            null as updated_at,
-            null as created_at,
-            null as last_accessed_at,
-            null as metadata from folders)
-     union all
-     (select path_tokens[$1] as "name",
-            id,
-            updated_at,
-            created_at,
-            last_accessed_at,
-            metadata
-     from storage.objects
-     where objects.name ilike $2 || $3 || ''%''
-       and bucket_id = $4
-       and array_length(objects.path_tokens, 1) = $1
-     order by ' || v_order_by || ')
-     limit $5
-     offset $6' using levels, prefix, search, bucketname, limits, offsets;
-end;
-$_$;
-
-
---
--- Name: search_v1_optimised(text, text, integer, integer, integer, text, text, text); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.search_v1_optimised(prefix text, bucketname text, limits integer DEFAULT 100, levels integer DEFAULT 1, offsets integer DEFAULT 0, search text DEFAULT ''::text, sortcolumn text DEFAULT 'name'::text, sortorder text DEFAULT 'asc'::text) RETURNS TABLE(name text, id uuid, updated_at timestamp with time zone, created_at timestamp with time zone, last_accessed_at timestamp with time zone, metadata jsonb)
-    LANGUAGE plpgsql STABLE
-    AS $_$
-declare
-    v_order_by text;
-    v_sort_order text;
-begin
-    case
-        when sortcolumn = 'name' then
-            v_order_by = 'name';
-        when sortcolumn = 'updated_at' then
-            v_order_by = 'updated_at';
-        when sortcolumn = 'created_at' then
-            v_order_by = 'created_at';
-        when sortcolumn = 'last_accessed_at' then
-            v_order_by = 'last_accessed_at';
-        else
-            v_order_by = 'name';
-        end case;
-
-    case
-        when sortorder = 'asc' then
-            v_sort_order = 'asc';
-        when sortorder = 'desc' then
-            v_sort_order = 'desc';
-        else
-            v_sort_order = 'asc';
-        end case;
-
-    v_order_by = v_order_by || ' ' || v_sort_order;
-
-    return query execute
-        'with folders as (
-           select (string_to_array(name, ''/''))[level] as name
-           from storage.prefixes
-             where lower(prefixes.name) like lower($2 || $3) || ''%''
-               and bucket_id = $4
-               and level = $1
-           order by name ' || v_sort_order || '
-     )
-     (select name,
-            null as id,
-            null as updated_at,
-            null as created_at,
-            null as last_accessed_at,
-            null as metadata from folders)
-     union all
-     (select path_tokens[level] as "name",
-            id,
-            updated_at,
-            created_at,
-            last_accessed_at,
-            metadata
-     from storage.objects
-     where lower(objects.name) like lower($2 || $3) || ''%''
-       and bucket_id = $4
-       and level = $1
-     order by ' || v_order_by || ')
-     limit $5
-     offset $6' using levels, prefix, search, bucketname, limits, offsets;
-end;
-$_$;
-
-
---
--- Name: search_v2(text, text, integer, integer, text); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.search_v2(prefix text, bucket_name text, limits integer DEFAULT 100, levels integer DEFAULT 1, start_after text DEFAULT ''::text) RETURNS TABLE(key text, name text, id uuid, updated_at timestamp with time zone, created_at timestamp with time zone, metadata jsonb)
-    LANGUAGE plpgsql STABLE
-    AS $_$
-BEGIN
-    RETURN query EXECUTE
-        $sql$
-        SELECT * FROM (
-            (
-                SELECT
-                    split_part(name, '/', $4) AS key,
-                    name || '/' AS name,
-                    NULL::uuid AS id,
-                    NULL::timestamptz AS updated_at,
-                    NULL::timestamptz AS created_at,
-                    NULL::jsonb AS metadata
-                FROM storage.prefixes
-                WHERE name COLLATE "C" LIKE $1 || '%'
-                AND bucket_id = $2
-                AND level = $4
-                AND name COLLATE "C" > $5
-                ORDER BY prefixes.name COLLATE "C" LIMIT $3
-            )
-            UNION ALL
-            (SELECT split_part(name, '/', $4) AS key,
-                name,
-                id,
-                updated_at,
-                created_at,
-                metadata
-            FROM storage.objects
-            WHERE name COLLATE "C" LIKE $1 || '%'
-                AND bucket_id = $2
-                AND level = $4
-                AND name COLLATE "C" > $5
-            ORDER BY name COLLATE "C" LIMIT $3)
-        ) obj
-        ORDER BY name COLLATE "C" LIMIT $3;
-        $sql$
-        USING prefix, bucket_name, limits, levels, start_after;
-END;
-$_$;
-
-
---
--- Name: update_updated_at_column(); Type: FUNCTION; Schema: storage; Owner: -
---
-
-CREATE FUNCTION storage.update_updated_at_column() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    NEW.updated_at = now();
-    RETURN NEW; 
 END;
 $$;
 
@@ -850,6 +479,132 @@ CREATE VIEW public.announcements_public AS
     announcements.published_at
    FROM public.announcements
   WHERE ((announcements.expires_at IS NULL) OR (announcements.expires_at > now()));
+
+
+--
+-- Name: artists_bank_accounts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.artists_bank_accounts (
+    id bigint NOT NULL,
+    external_user_id text NOT NULL,
+    bank_code text NOT NULL,
+    branch_code text NOT NULL,
+    account_type text NOT NULL,
+    account_number text NOT NULL,
+    account_name_kana text NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT artists_bank_accounts_account_number_check CHECK ((account_number ~ '^[0-9]{1,7}$'::text)),
+    CONSTRAINT artists_bank_accounts_account_type_check CHECK ((account_type = ANY (ARRAY['futsu'::text, 'toza'::text]))),
+    CONSTRAINT artists_bank_accounts_bank_code_check CHECK ((bank_code ~ '^[0-9]{4}$'::text)),
+    CONSTRAINT artists_bank_accounts_branch_code_check CHECK ((branch_code ~ '^[0-9]{3}$'::text))
+);
+
+
+--
+-- Name: artists_bank_accounts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.artists_bank_accounts_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: artists_bank_accounts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.artists_bank_accounts_id_seq OWNED BY public.artists_bank_accounts.id;
+
+
+--
+-- Name: aura_first20_redemptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.aura_first20_redemptions (
+    email text NOT NULL,
+    used_at timestamp with time zone DEFAULT now() NOT NULL,
+    request_id uuid,
+    converted_to_meish_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: aura_promo_counters; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.aura_promo_counters (
+    key text NOT NULL,
+    limit_count integer NOT NULL
+);
+
+
+--
+-- Name: aura_first20_stats; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.aura_first20_stats AS
+ SELECT pc.key,
+    pc.limit_count,
+    COALESCE(used.used_count, 0) AS used_count,
+    GREATEST((pc.limit_count - COALESCE(used.used_count, 0)), 0) AS remaining
+   FROM (public.aura_promo_counters pc
+     LEFT JOIN ( SELECT 'first20'::text AS key,
+            (count(*))::integer AS used_count
+           FROM public.aura_first20_redemptions
+          WHERE (aura_first20_redemptions.converted_to_meish_at IS NULL)) used ON ((used.key = pc.key)))
+  WHERE (pc.key = 'first20'::text);
+
+
+--
+-- Name: aura_meish_free_claims; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.aura_meish_free_claims (
+    email text NOT NULL,
+    used_at timestamp with time zone DEFAULT now() NOT NULL,
+    request_id uuid,
+    entry_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: aura_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.aura_requests (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    status text DEFAULT 'draft'::text NOT NULL,
+    error text,
+    payload jsonb,
+    design jsonb,
+    content jsonb,
+    email text,
+    slug text,
+    public_id text,
+    visibility text DEFAULT 'private'::text NOT NULL,
+    published_at timestamp with time zone,
+    public_slug text,
+    payment_status text DEFAULT 'unpaid'::text NOT NULL,
+    paid_at timestamp with time zone,
+    renderer_version text DEFAULT '1.0.0'::text NOT NULL,
+    CONSTRAINT aura_requests_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'generated'::text, 'published'::text, 'error'::text]))),
+    CONSTRAINT aura_requests_visibility_check CHECK ((visibility = ANY (ARRAY['private'::text, 'unlisted'::text, 'public'::text])))
+);
+
+
+--
+-- Name: COLUMN aura_requests.renderer_version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.aura_requests.renderer_version IS 'SemVer string (MAJOR.MINOR.PATCH). MAJOR determines renderer directory. Stamped at publish time.';
 
 
 --
@@ -912,7 +667,17 @@ END) STORED,
     rejected_at timestamp with time zone,
     reject_reason text,
     reject_email_sent_at timestamp with time zone,
+    token_id numeric,
+    has_signature boolean,
+    force_wm boolean DEFAULT false NOT NULL,
+    edition_mode text,
+    ai_usage text,
+    ai_usage_scope text[],
+    ai_usage_note text,
+    CONSTRAINT entries_ai_usage_check CHECK (((ai_usage IS NULL) OR (ai_usage = ANY (ARRAY['none'::text, 'assist'::text, 'gen_assist'::text, 'ai_primary'::text])))),
     CONSTRAINT entries_edition_le_total CHECK (((edition_total IS NULL) OR (edition_sold <= edition_total))),
+    CONSTRAINT entries_edition_mode_chk CHECK ((edition_mode = ANY (ARRAY['limited'::text, 'unlimited'::text]))),
+    CONSTRAINT entries_edition_mode_consistency CHECK ((((edition_mode = 'unlimited'::text) AND (edition_total IS NULL)) OR ((edition_mode = 'limited'::text) AND (edition_total IS NOT NULL) AND (edition_total > 0)))),
     CONSTRAINT entries_edition_sold_nonneg CHECK ((edition_sold >= 0)),
     CONSTRAINT entries_edition_total_pos CHECK (((edition_total IS NULL) OR (edition_total >= 1)))
 );
@@ -951,6 +716,41 @@ COMMENT ON COLUMN public.entries.edition_remaining IS 'Remaining editions (null 
 --
 
 COMMENT ON COLUMN public.entries.sold_out_calc IS 'Computed SOLD (true when edition_total is not null and edition_sold >= edition_total)';
+
+
+--
+-- Name: COLUMN entries.has_signature; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.entries.has_signature IS '作者サインの有無。true: サインあり → WM付与なし / false: サインなし → me-ishのWM付与 / null: 未回答（過去データ）';
+
+
+--
+-- Name: COLUMN entries.force_wm; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.entries.force_wm IS '管理画面からWM付与を強制するフラグ（trueで必ずWM付与）';
+
+
+--
+-- Name: COLUMN entries.ai_usage; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.entries.ai_usage IS 'AI usage category: none / assist (non-generative) / gen_assist (generative hybrid) / ai_primary';
+
+
+--
+-- Name: COLUMN entries.ai_usage_scope; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.entries.ai_usage_scope IS 'Scope tags when ai_usage=gen_assist. e.g. {background,props,inpaint,other}';
+
+
+--
+-- Name: COLUMN entries.ai_usage_note; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.entries.ai_usage_note IS 'Free-form note about AI usage scope/details (optional).';
 
 
 --
@@ -1003,10 +803,10 @@ CREATE TABLE public.profiles (
 
 CREATE TABLE public.sales (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    entry_id integer NOT NULL,
+    entry_id bigint NOT NULL,
     price integer,
     buyer_email text,
-    stripe_session_id text,
+    stripe_session_id text NOT NULL,
     purchased_at timestamp with time zone DEFAULT now(),
     metadata jsonb
 );
@@ -1047,130 +847,10 @@ CREATE VIEW public.v_cert_links_active AS
 
 
 --
--- Name: buckets; Type: TABLE; Schema: storage; Owner: -
+-- Name: artists_bank_accounts id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-CREATE TABLE storage.buckets (
-    id text NOT NULL,
-    name text NOT NULL,
-    owner uuid,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now(),
-    public boolean DEFAULT false,
-    avif_autodetection boolean DEFAULT false,
-    file_size_limit bigint,
-    allowed_mime_types text[],
-    owner_id text,
-    type storage.buckettype DEFAULT 'STANDARD'::storage.buckettype NOT NULL
-);
-
-
---
--- Name: COLUMN buckets.owner; Type: COMMENT; Schema: storage; Owner: -
---
-
-COMMENT ON COLUMN storage.buckets.owner IS 'Field is deprecated, use owner_id instead';
-
-
---
--- Name: buckets_analytics; Type: TABLE; Schema: storage; Owner: -
---
-
-CREATE TABLE storage.buckets_analytics (
-    id text NOT NULL,
-    type storage.buckettype DEFAULT 'ANALYTICS'::storage.buckettype NOT NULL,
-    format text DEFAULT 'ICEBERG'::text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: migrations; Type: TABLE; Schema: storage; Owner: -
---
-
-CREATE TABLE storage.migrations (
-    id integer NOT NULL,
-    name character varying(100) NOT NULL,
-    hash character varying(40) NOT NULL,
-    executed_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
---
--- Name: objects; Type: TABLE; Schema: storage; Owner: -
---
-
-CREATE TABLE storage.objects (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    bucket_id text,
-    name text,
-    owner uuid,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now(),
-    last_accessed_at timestamp with time zone DEFAULT now(),
-    metadata jsonb,
-    path_tokens text[] GENERATED ALWAYS AS (string_to_array(name, '/'::text)) STORED,
-    version text,
-    owner_id text,
-    user_metadata jsonb,
-    level integer
-);
-
-
---
--- Name: COLUMN objects.owner; Type: COMMENT; Schema: storage; Owner: -
---
-
-COMMENT ON COLUMN storage.objects.owner IS 'Field is deprecated, use owner_id instead';
-
-
---
--- Name: prefixes; Type: TABLE; Schema: storage; Owner: -
---
-
-CREATE TABLE storage.prefixes (
-    bucket_id text NOT NULL,
-    name text NOT NULL COLLATE pg_catalog."C",
-    level integer GENERATED ALWAYS AS (storage.get_level(name)) STORED NOT NULL,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
-);
-
-
---
--- Name: s3_multipart_uploads; Type: TABLE; Schema: storage; Owner: -
---
-
-CREATE TABLE storage.s3_multipart_uploads (
-    id text NOT NULL,
-    in_progress_size bigint DEFAULT 0 NOT NULL,
-    upload_signature text NOT NULL,
-    bucket_id text NOT NULL,
-    key text NOT NULL COLLATE pg_catalog."C",
-    version text NOT NULL,
-    owner_id text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    user_metadata jsonb
-);
-
-
---
--- Name: s3_multipart_uploads_parts; Type: TABLE; Schema: storage; Owner: -
---
-
-CREATE TABLE storage.s3_multipart_uploads_parts (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    upload_id text NOT NULL,
-    size bigint DEFAULT 0 NOT NULL,
-    part_number integer NOT NULL,
-    bucket_id text NOT NULL,
-    key text NOT NULL COLLATE pg_catalog."C",
-    etag text NOT NULL,
-    owner_id text,
-    version text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
+ALTER TABLE ONLY public.artists_bank_accounts ALTER COLUMN id SET DEFAULT nextval('public.artists_bank_accounts_id_seq'::regclass);
 
 
 --
@@ -1187,6 +867,54 @@ ALTER TABLE ONLY public.admin_emails
 
 ALTER TABLE ONLY public.announcements
     ADD CONSTRAINT announcements_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: artists_bank_accounts artists_bank_accounts_external_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.artists_bank_accounts
+    ADD CONSTRAINT artists_bank_accounts_external_user_id_key UNIQUE (external_user_id);
+
+
+--
+-- Name: artists_bank_accounts artists_bank_accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.artists_bank_accounts
+    ADD CONSTRAINT artists_bank_accounts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: aura_first20_redemptions aura_first20_redemptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aura_first20_redemptions
+    ADD CONSTRAINT aura_first20_redemptions_pkey PRIMARY KEY (email);
+
+
+--
+-- Name: aura_meish_free_claims aura_meish_free_claims_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aura_meish_free_claims
+    ADD CONSTRAINT aura_meish_free_claims_pkey PRIMARY KEY (email);
+
+
+--
+-- Name: aura_promo_counters aura_promo_counters_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aura_promo_counters
+    ADD CONSTRAINT aura_promo_counters_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: aura_requests aura_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aura_requests
+    ADD CONSTRAINT aura_requests_pkey PRIMARY KEY (id);
 
 
 --
@@ -1226,7 +954,15 @@ ALTER TABLE ONLY public.profiles
 --
 
 ALTER TABLE ONLY public.sales
-    ADD CONSTRAINT sales_pkey PRIMARY KEY (id, entry_id);
+    ADD CONSTRAINT sales_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: sales sales_stripe_session_id_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sales
+    ADD CONSTRAINT sales_stripe_session_id_unique UNIQUE (stripe_session_id);
 
 
 --
@@ -1238,67 +974,59 @@ ALTER TABLE ONLY public.special_thanks
 
 
 --
--- Name: buckets_analytics buckets_analytics_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
+-- Name: aura_first20_redemptions_active_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY storage.buckets_analytics
-    ADD CONSTRAINT buckets_analytics_pkey PRIMARY KEY (id);
-
-
---
--- Name: buckets buckets_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
---
-
-ALTER TABLE ONLY storage.buckets
-    ADD CONSTRAINT buckets_pkey PRIMARY KEY (id);
+CREATE INDEX aura_first20_redemptions_active_idx ON public.aura_first20_redemptions USING btree (converted_to_meish_at) WHERE (converted_to_meish_at IS NULL);
 
 
 --
--- Name: migrations migrations_name_key; Type: CONSTRAINT; Schema: storage; Owner: -
+-- Name: aura_requests_created_at_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY storage.migrations
-    ADD CONSTRAINT migrations_name_key UNIQUE (name);
-
-
---
--- Name: migrations migrations_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
---
-
-ALTER TABLE ONLY storage.migrations
-    ADD CONSTRAINT migrations_pkey PRIMARY KEY (id);
+CREATE INDEX aura_requests_created_at_idx ON public.aura_requests USING btree (created_at DESC);
 
 
 --
--- Name: objects objects_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
+-- Name: aura_requests_email_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY storage.objects
-    ADD CONSTRAINT objects_pkey PRIMARY KEY (id);
-
-
---
--- Name: prefixes prefixes_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
---
-
-ALTER TABLE ONLY storage.prefixes
-    ADD CONSTRAINT prefixes_pkey PRIMARY KEY (bucket_id, level, name);
+CREATE INDEX aura_requests_email_idx ON public.aura_requests USING btree (email);
 
 
 --
--- Name: s3_multipart_uploads_parts s3_multipart_uploads_parts_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
+-- Name: aura_requests_public_id_key; Type: INDEX; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY storage.s3_multipart_uploads_parts
-    ADD CONSTRAINT s3_multipart_uploads_parts_pkey PRIMARY KEY (id);
+CREATE UNIQUE INDEX aura_requests_public_id_key ON public.aura_requests USING btree (public_id) WHERE (public_id IS NOT NULL);
 
 
 --
--- Name: s3_multipart_uploads s3_multipart_uploads_pkey; Type: CONSTRAINT; Schema: storage; Owner: -
+-- Name: aura_requests_public_slug_unique; Type: INDEX; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY storage.s3_multipart_uploads
-    ADD CONSTRAINT s3_multipart_uploads_pkey PRIMARY KEY (id);
+CREATE UNIQUE INDEX aura_requests_public_slug_unique ON public.aura_requests USING btree (public_slug) WHERE (public_slug IS NOT NULL);
+
+
+--
+-- Name: aura_requests_published_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX aura_requests_published_at_idx ON public.aura_requests USING btree (published_at);
+
+
+--
+-- Name: aura_requests_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX aura_requests_status_idx ON public.aura_requests USING btree (status);
+
+
+--
+-- Name: aura_requests_visibility_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX aura_requests_visibility_idx ON public.aura_requests USING btree (visibility);
 
 
 --
@@ -1316,73 +1044,17 @@ CREATE UNIQUE INDEX cert_links_entry_token_ux ON public.cert_links USING btree (
 
 
 --
+-- Name: idx_aura_requests_renderer_version; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_aura_requests_renderer_version ON public.aura_requests USING btree (renderer_version);
+
+
+--
 -- Name: special_thanks_sort_idx; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX special_thanks_sort_idx ON public.special_thanks USING btree (sort_order, display_name);
-
-
---
--- Name: bname; Type: INDEX; Schema: storage; Owner: -
---
-
-CREATE UNIQUE INDEX bname ON storage.buckets USING btree (name);
-
-
---
--- Name: bucketid_objname; Type: INDEX; Schema: storage; Owner: -
---
-
-CREATE UNIQUE INDEX bucketid_objname ON storage.objects USING btree (bucket_id, name);
-
-
---
--- Name: idx_multipart_uploads_list; Type: INDEX; Schema: storage; Owner: -
---
-
-CREATE INDEX idx_multipart_uploads_list ON storage.s3_multipart_uploads USING btree (bucket_id, key, created_at);
-
-
---
--- Name: idx_name_bucket_level_unique; Type: INDEX; Schema: storage; Owner: -
---
-
-CREATE UNIQUE INDEX idx_name_bucket_level_unique ON storage.objects USING btree (name COLLATE "C", bucket_id, level);
-
-
---
--- Name: idx_objects_bucket_id_name; Type: INDEX; Schema: storage; Owner: -
---
-
-CREATE INDEX idx_objects_bucket_id_name ON storage.objects USING btree (bucket_id, name COLLATE "C");
-
-
---
--- Name: idx_objects_lower_name; Type: INDEX; Schema: storage; Owner: -
---
-
-CREATE INDEX idx_objects_lower_name ON storage.objects USING btree ((path_tokens[level]), lower(name) text_pattern_ops, bucket_id, level);
-
-
---
--- Name: idx_prefixes_lower_name; Type: INDEX; Schema: storage; Owner: -
---
-
-CREATE INDEX idx_prefixes_lower_name ON storage.prefixes USING btree (bucket_id, level, ((string_to_array(name, '/'::text))[level]), lower(name) text_pattern_ops);
-
-
---
--- Name: name_prefix_search; Type: INDEX; Schema: storage; Owner: -
---
-
-CREATE INDEX name_prefix_search ON storage.objects USING btree (name text_pattern_ops);
-
-
---
--- Name: objects_bucket_id_level_idx; Type: INDEX; Schema: storage; Owner: -
---
-
-CREATE UNIQUE INDEX objects_bucket_id_level_idx ON storage.objects USING btree (bucket_id, level, name COLLATE "C");
 
 
 --
@@ -1393,6 +1065,13 @@ CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXEC
 
 
 --
+-- Name: aura_requests trg_aura_requests_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_aura_requests_updated_at BEFORE UPDATE ON public.aura_requests FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+
+--
 -- Name: cert_links trg_cert_links_set_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1400,52 +1079,10 @@ CREATE TRIGGER trg_cert_links_set_updated_at BEFORE UPDATE ON public.cert_links 
 
 
 --
--- Name: buckets enforce_bucket_name_length_trigger; Type: TRIGGER; Schema: storage; Owner: -
+-- Name: entries trg_entries_normalize_unlimited; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER enforce_bucket_name_length_trigger BEFORE INSERT OR UPDATE OF name ON storage.buckets FOR EACH ROW EXECUTE FUNCTION storage.enforce_bucket_name_length();
-
-
---
--- Name: objects objects_delete_delete_prefix; Type: TRIGGER; Schema: storage; Owner: -
---
-
-CREATE TRIGGER objects_delete_delete_prefix AFTER DELETE ON storage.objects FOR EACH ROW EXECUTE FUNCTION storage.delete_prefix_hierarchy_trigger();
-
-
---
--- Name: objects objects_insert_create_prefix; Type: TRIGGER; Schema: storage; Owner: -
---
-
-CREATE TRIGGER objects_insert_create_prefix BEFORE INSERT ON storage.objects FOR EACH ROW EXECUTE FUNCTION storage.objects_insert_prefix_trigger();
-
-
---
--- Name: objects objects_update_create_prefix; Type: TRIGGER; Schema: storage; Owner: -
---
-
-CREATE TRIGGER objects_update_create_prefix BEFORE UPDATE ON storage.objects FOR EACH ROW WHEN (((new.name <> old.name) OR (new.bucket_id <> old.bucket_id))) EXECUTE FUNCTION storage.objects_update_prefix_trigger();
-
-
---
--- Name: prefixes prefixes_create_hierarchy; Type: TRIGGER; Schema: storage; Owner: -
---
-
-CREATE TRIGGER prefixes_create_hierarchy BEFORE INSERT ON storage.prefixes FOR EACH ROW WHEN ((pg_trigger_depth() < 1)) EXECUTE FUNCTION storage.prefixes_insert_trigger();
-
-
---
--- Name: prefixes prefixes_delete_hierarchy; Type: TRIGGER; Schema: storage; Owner: -
---
-
-CREATE TRIGGER prefixes_delete_hierarchy AFTER DELETE ON storage.prefixes FOR EACH ROW EXECUTE FUNCTION storage.delete_prefix_hierarchy_trigger();
-
-
---
--- Name: objects update_objects_updated_at; Type: TRIGGER; Schema: storage; Owner: -
---
-
-CREATE TRIGGER update_objects_updated_at BEFORE UPDATE ON storage.objects FOR EACH ROW EXECUTE FUNCTION storage.update_updated_at_column();
+CREATE TRIGGER trg_entries_normalize_unlimited BEFORE INSERT OR UPDATE ON public.entries FOR EACH ROW EXECUTE FUNCTION public.normalize_unlimited_total();
 
 
 --
@@ -1462,46 +1099,6 @@ ALTER TABLE ONLY public.announcements
 
 ALTER TABLE ONLY public.cert_links
     ADD CONSTRAINT cert_links_entry_id_fkey FOREIGN KEY (entry_id) REFERENCES public.entries(id) ON DELETE CASCADE;
-
-
---
--- Name: objects objects_bucketId_fkey; Type: FK CONSTRAINT; Schema: storage; Owner: -
---
-
-ALTER TABLE ONLY storage.objects
-    ADD CONSTRAINT "objects_bucketId_fkey" FOREIGN KEY (bucket_id) REFERENCES storage.buckets(id);
-
-
---
--- Name: prefixes prefixes_bucketId_fkey; Type: FK CONSTRAINT; Schema: storage; Owner: -
---
-
-ALTER TABLE ONLY storage.prefixes
-    ADD CONSTRAINT "prefixes_bucketId_fkey" FOREIGN KEY (bucket_id) REFERENCES storage.buckets(id);
-
-
---
--- Name: s3_multipart_uploads s3_multipart_uploads_bucket_id_fkey; Type: FK CONSTRAINT; Schema: storage; Owner: -
---
-
-ALTER TABLE ONLY storage.s3_multipart_uploads
-    ADD CONSTRAINT s3_multipart_uploads_bucket_id_fkey FOREIGN KEY (bucket_id) REFERENCES storage.buckets(id);
-
-
---
--- Name: s3_multipart_uploads_parts s3_multipart_uploads_parts_bucket_id_fkey; Type: FK CONSTRAINT; Schema: storage; Owner: -
---
-
-ALTER TABLE ONLY storage.s3_multipart_uploads_parts
-    ADD CONSTRAINT s3_multipart_uploads_parts_bucket_id_fkey FOREIGN KEY (bucket_id) REFERENCES storage.buckets(id);
-
-
---
--- Name: s3_multipart_uploads_parts s3_multipart_uploads_parts_upload_id_fkey; Type: FK CONSTRAINT; Schema: storage; Owner: -
---
-
-ALTER TABLE ONLY storage.s3_multipart_uploads_parts
-    ADD CONSTRAINT s3_multipart_uploads_parts_upload_id_fkey FOREIGN KEY (upload_id) REFERENCES storage.s3_multipart_uploads(id) ON DELETE CASCADE;
 
 
 --
@@ -1610,6 +1207,12 @@ CREATE POLICY "admin can update announcements" ON public.announcements FOR UPDAT
 ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: aura_requests; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.aura_requests ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: cert_links; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1622,10 +1225,38 @@ ALTER TABLE public.cert_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.entries ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: entries entries_insert_own; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY entries_insert_own ON public.entries FOR INSERT TO authenticated WITH CHECK ((user_id = auth.uid()));
+
+
+--
+-- Name: entries entries_select_own; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY entries_select_own ON public.entries FOR SELECT TO authenticated USING ((user_id = auth.uid()));
+
+
+--
+-- Name: entries entries_update_own; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY entries_update_own ON public.entries FOR UPDATE TO authenticated USING ((user_id = auth.uid())) WITH CHECK ((user_id = auth.uid()));
+
+
+--
 -- Name: inquiries; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.inquiries ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: aura_requests no_client_write; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY no_client_write ON public.aura_requests TO authenticated, anon USING (false) WITH CHECK (false);
+
 
 --
 -- Name: profiles; Type: ROW SECURITY; Schema: public; Owner: -
@@ -1634,10 +1265,38 @@ ALTER TABLE public.inquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: profiles profiles_insert_own; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY profiles_insert_own ON public.profiles FOR INSERT TO authenticated WITH CHECK ((auth.uid() = id));
+
+
+--
+-- Name: profiles profiles_select_own; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY profiles_select_own ON public.profiles FOR SELECT TO authenticated USING ((auth.uid() = id));
+
+
+--
+-- Name: profiles profiles_update_own; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY profiles_update_own ON public.profiles FOR UPDATE TO authenticated USING ((auth.uid() = id)) WITH CHECK ((auth.uid() = id));
+
+
+--
 -- Name: special_thanks public read thanks; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY "public read thanks" ON public.special_thanks FOR SELECT TO authenticated, anon USING ((is_public = true));
+
+
+--
+-- Name: aura_requests public_read_published; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY public_read_published ON public.aura_requests FOR SELECT TO authenticated, anon USING (((visibility = 'public'::text) AND (public_id IS NOT NULL)));
 
 
 --
@@ -1660,132 +1319,8 @@ ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.special_thanks ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: objects Allow Insert 1exduyn_0; Type: POLICY; Schema: storage; Owner: -
---
-
-CREATE POLICY "Allow Insert 1exduyn_0" ON storage.objects FOR INSERT WITH CHECK (true);
-
-
---
--- Name: objects Allow public access 1exduyn_0; Type: POLICY; Schema: storage; Owner: -
---
-
-CREATE POLICY "Allow public access 1exduyn_0" ON storage.objects FOR SELECT USING ((bucket_id = 'artworks'::text));
-
-
---
--- Name: objects Allow public access 1exduyn_1; Type: POLICY; Schema: storage; Owner: -
---
-
-CREATE POLICY "Allow public access 1exduyn_1" ON storage.objects FOR UPDATE USING ((bucket_id = 'artworks'::text));
-
-
---
--- Name: objects Allow public access 1exduyn_2; Type: POLICY; Schema: storage; Owner: -
---
-
-CREATE POLICY "Allow public access 1exduyn_2" ON storage.objects FOR INSERT WITH CHECK ((bucket_id = 'artworks'::text));
-
-
---
--- Name: objects Allow public access 1exduyn_3; Type: POLICY; Schema: storage; Owner: -
---
-
-CREATE POLICY "Allow public access 1exduyn_3" ON storage.objects FOR DELETE USING ((bucket_id = 'artworks'::text));
-
-
---
--- Name: objects Allow public read access sudlkv_0; Type: POLICY; Schema: storage; Owner: -
---
-
-CREATE POLICY "Allow public read access sudlkv_0" ON storage.objects FOR SELECT USING ((bucket_id = 'processing-meta'::text));
-
-
---
--- Name: buckets; Type: ROW SECURITY; Schema: storage; Owner: -
---
-
-ALTER TABLE storage.buckets ENABLE ROW LEVEL SECURITY;
-
---
--- Name: buckets_analytics; Type: ROW SECURITY; Schema: storage; Owner: -
---
-
-ALTER TABLE storage.buckets_analytics ENABLE ROW LEVEL SECURITY;
-
---
--- Name: objects delete own avatar; Type: POLICY; Schema: storage; Owner: -
---
-
-CREATE POLICY "delete own avatar" ON storage.objects FOR DELETE TO authenticated USING (((bucket_id = 'avatars'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text)));
-
-
---
--- Name: objects delete own banner; Type: POLICY; Schema: storage; Owner: -
---
-
-CREATE POLICY "delete own banner" ON storage.objects FOR DELETE TO authenticated USING (((bucket_id = 'banners'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text)));
-
-
---
--- Name: migrations; Type: ROW SECURITY; Schema: storage; Owner: -
---
-
-ALTER TABLE storage.migrations ENABLE ROW LEVEL SECURITY;
-
---
--- Name: objects; Type: ROW SECURITY; Schema: storage; Owner: -
---
-
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
---
--- Name: prefixes; Type: ROW SECURITY; Schema: storage; Owner: -
---
-
-ALTER TABLE storage.prefixes ENABLE ROW LEVEL SECURITY;
-
---
--- Name: s3_multipart_uploads; Type: ROW SECURITY; Schema: storage; Owner: -
---
-
-ALTER TABLE storage.s3_multipart_uploads ENABLE ROW LEVEL SECURITY;
-
---
--- Name: s3_multipart_uploads_parts; Type: ROW SECURITY; Schema: storage; Owner: -
---
-
-ALTER TABLE storage.s3_multipart_uploads_parts ENABLE ROW LEVEL SECURITY;
-
---
--- Name: objects update own avatar; Type: POLICY; Schema: storage; Owner: -
---
-
-CREATE POLICY "update own avatar" ON storage.objects FOR UPDATE TO authenticated USING (((bucket_id = 'avatars'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))) WITH CHECK (((bucket_id = 'avatars'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text)));
-
-
---
--- Name: objects update own banner; Type: POLICY; Schema: storage; Owner: -
---
-
-CREATE POLICY "update own banner" ON storage.objects FOR UPDATE TO authenticated USING (((bucket_id = 'banners'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))) WITH CHECK (((bucket_id = 'banners'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text)));
-
-
---
--- Name: objects upload own avatar; Type: POLICY; Schema: storage; Owner: -
---
-
-CREATE POLICY "upload own avatar" ON storage.objects FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'avatars'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text)));
-
-
---
--- Name: objects upload own banner; Type: POLICY; Schema: storage; Owner: -
---
-
-CREATE POLICY "upload own banner" ON storage.objects FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'banners'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text)));
-
-
---
 -- PostgreSQL database dump complete
 --
+
+\unrestrict pBYfzeU3LziJgazxukcuY4NjzFZSBXPvCKRy5PkzFe5QtOhQJEt1pkdQzT7fV70
 

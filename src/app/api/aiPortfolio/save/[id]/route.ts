@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { ContentSchema } from "@/lib/aiPortfolio/aiPortfolio.schema";
 import { findRequest, publishContent } from "@/lib/aiPortfolio/aiPortfolio.db";
 import { claimMeishFree, claimFirst20Free } from "@/lib/aiPortfolio/auraBillingGate";
+import { supabaseAdmin } from "@/lib/aiPortfolio/supabaseAdmin";
 
 type Params = { id: string };
 
@@ -69,23 +70,35 @@ export async function POST(req: Request, { params }: { params: Params }) {
         console.log("[aiPortfolio/save] free_check_start:", { id, email });
 
         // 1) me-ish採用（entries.confirmed=true）で 1回無料（消費できたら true）
-        const meishResult = await claimMeishFree(email);
+        const meishResult = await claimMeishFree(email, id);
         console.log("[aiPortfolio/save] meish_result:", meishResult);
 
-        if (meishResult.success) {
-          allowed = true;
-          console.log("[aiPortfolio/save] allowed_by_meish:", { id, email });
-        }
+if (meishResult.success) {
+  const admin = supabaseAdmin();
+  await admin
+    .from("aura_requests")
+    .update({ payment_status: "paid", updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  allowed = true;
+  console.log("[aiPortfolio/save] allowed_by_meish:", { id, email });
+}
 
         // 2) 先着20名無料（消費できたら true）
         if (!allowed) {
-          const first20Result = await claimFirst20Free(email);
+          const first20Result = await claimFirst20Free(email, id);
           console.log("[aiPortfolio/save] first20_result:", first20Result);
+if (first20Result.success) {
+  const admin = supabaseAdmin();
+  await admin
+    .from("aura_requests")
+    .update({ payment_status: "paid", updated_at: new Date().toISOString() })
+    .eq("id", id);
 
-          if (first20Result.success) {
-            allowed = true;
-            console.log("[aiPortfolio/save] allowed_by_first20:", { id, email });
-          }
+  allowed = true;
+  console.log("[aiPortfolio/save] allowed_by_first20:", { id, email });
+}
+
         }
 
         if (!allowed) {

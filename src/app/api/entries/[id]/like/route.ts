@@ -53,40 +53,13 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
 
   const supabase = createClient();
 
-  // --- 推奨: DBのRPCで原子的に +1（下のSQLを作成してください）
-  const { data: rpc, error: rpcErr } = await supabase.rpc('inc_likes', { p_entry_id: id });
+  // ✅ DBのRPCで原子的に +1（entriesを直接UPDATEしない）
+  const { data: rpc, error: rpcErr } = await supabase.rpc('increment_entry_likes', { p_entry_id: id });
 
-  if (!rpcErr && typeof rpc === 'number') {
-    return NextResponse.json({ likes: rpc });
+  if (rpcErr) {
+    console.error('[likes][POST] RPC increment_entry_likes failed:', rpcErr.message);
+    return NextResponse.json({ error: 'rpc error' }, { status: 500 });
   }
 
-  // --- フォールバック（非原子的：高負荷下でカウント落ちの可能性あり）
-  console.warn('[likes][POST] RPC inc_likes not available, falling back. err =', rpcErr?.message);
-
-  const { data: cur, error: getErr } = await supabase
-    .from('entries')
-    .select('likes')
-    .eq('id', id)
-    .single();
-
-  if (getErr) {
-    console.error('[likes][POST] get error:', getErr.message);
-    return NextResponse.json({ error: 'db error' }, { status: 500 });
-  }
-
-  const nextLikes = (cur?.likes ?? 0) + 1;
-
-  const { data: upd, error: updErr } = await supabase
-    .from('entries')
-    .update({ likes: nextLikes })
-    .eq('id', id)
-    .select('likes')
-    .single();
-
-  if (updErr) {
-    console.error('[likes][POST] update error:', updErr.message);
-    return NextResponse.json({ error: 'db error' }, { status: 500 });
-  }
-
-  return NextResponse.json({ likes: upd?.likes ?? nextLikes });
+  return NextResponse.json({ likes: typeof rpc === 'number' ? rpc : null });
 }
