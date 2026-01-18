@@ -10,6 +10,7 @@ import FloatArtworksInGallery from './FloatArtworksInGallery';
 import FloatPanelArtworks from './FloatPanelArtworks';
 import FloatPanelsCenter from './FloatPanelsCenter';
 import FloatWalls from './FloatWalls';
+import FloatOutsideWorld from './FloatOutsideWorld';
 
 import Avatar from '@/components/shared/Avatar';
 import AvatarController from '@/components/shared/AvatarController';
@@ -26,10 +27,13 @@ export default function FloatGallery(): React.JSX.Element {
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
       <Canvas
-        style={{ width: '100%', height: '100%', background: '#1a1a1e' }}
+        style={{ width: '100%', height: '100%' }}
         camera={{ position: [0, 5, 15], fov: 60 }}
         shadows
       >
+        {/* 外の世界（雲海・遠景光） */}
+        <FloatOutsideWorld />
+
         {/* コア */}
         <CoreSphere avatarRef={avatarRef} />
         <LightCircle />
