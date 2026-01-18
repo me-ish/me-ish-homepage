@@ -13,7 +13,7 @@ import FloatWalls from './FloatWalls';
 import FloatOutsideWorld from './FloatOutsideWorld';
 
 import Avatar from '@/components/shared/Avatar';
-import AvatarController from '@/components/shared/AvatarController';
+import FloatAvatarController from '@/components/floatGallery/FloatAvatarController';
 import ThirdPersonCamera from '@/components/shared/ThirdPersonCamera';
 import ZoomArtworkDisplay from '@/components/shared/ZoomArtworkDisplay';
 import CoreSphere from '@/components/shared/CoreSphere';
@@ -52,7 +52,7 @@ export default function FloatGallery(): React.JSX.Element {
 
         {/* アバター操作 */}
         <Avatar ref={avatarRef} />
-        <AvatarController avatarRef={avatarRef} joystickRef={joystickRef} />
+        <FloatAvatarController avatarRef={avatarRef} joystickRef={joystickRef} />
         <ThirdPersonCamera avatarRef={avatarRef} />
       </Canvas>
 
