@@ -343,18 +343,7 @@ export default function FloatWalls(): React.JSX.Element {
         </group>
       ))}
 
-      {/* ============================================================ */}
-      {/* ガラスパネル（開口部を塞ぐフロストガラス） */}
-      {/* ============================================================ */}
-      {GLASS_POSITIONS.map((glass, i) => (
-        <mesh
-          key={`glass-${i}`}
-          position={glass.position}
-          rotation={glass.rotation}
-          geometry={glassPanelGeometry}
-          material={glassMaterial}
-        />
-      ))}
+      {/* ガラスパネルは一時的に非表示（衝突判定はAvatarControllerで処理） */}
     </group>
   );
 }

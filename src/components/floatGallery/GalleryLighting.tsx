@@ -33,7 +33,7 @@ const ARTWORK_Y = 3.5;
 const WALL_SPOTLIGHT_CONFIG = {
   angle: Math.PI / 5,        // 36度 - やや広め
   penumbra: 0.5,             // ソフトなエッジ
-  intensity: 4.5,            // より明るく
+  intensity: 6.0,            // 明るく
   distance: 30,              // 壁まで届く距離
   decay: 1.2,
   color: '#fff8f0',          // 暖かみのある白（3200K風）
@@ -63,7 +63,7 @@ const WALL_LIGHTS: WallLight[] = [
 const CENTER_SPOTLIGHT_CONFIG = {
   angle: Math.PI / 4,        // 45度 - 広め
   penumbra: 0.5,
-  intensity: 3.5,            // より明るく
+  intensity: 5.0,            // 明るく
   distance: 25,
   decay: 1.2,
   color: '#fff8f0',
@@ -143,7 +143,7 @@ export default function GalleryLighting(): React.JSX.Element {
       {/* ============================================================ */}
       <pointLight
         position={[0, TRACK_Y - 2, 0]}
-        intensity={1.0}
+        intensity={1.5}
         distance={60}
         decay={1.5}
         color="#f5f5ff"

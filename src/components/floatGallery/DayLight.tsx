@@ -43,20 +43,20 @@ export default function DayLight(): React.JSX.Element {
   return (
     <>
       {/* 基調アンビエント - 美術館らしい明るさ */}
-      <ambientLight intensity={0.35} color="#f0f0f5" />
+      <ambientLight intensity={0.45} color="#f0f0f5" />
 
       {/* ヘミスフィアライト - 天井と床の色差で空間感 */}
       <hemisphereLight
         color="#ffffff"       // 天井側（明るい）
         groundColor="#3a3a3a" // 床側（やや暗い）
-        intensity={0.4}
+        intensity={0.5}
       />
 
       {/* 全体を照らすフィルライト */}
       <directionalLight
         ref={lightRef}
         position={[15, 30, 15]}
-        intensity={0.5}
+        intensity={0.6}
         color="#fff8f5"
         castShadow
         shadow-bias={-0.0002}

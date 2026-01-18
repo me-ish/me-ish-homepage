@@ -304,14 +304,14 @@ let _glassMaterial: THREE.MeshPhysicalMaterial | null = null;
 export function getGlassMaterial(): THREE.MeshPhysicalMaterial {
   if (!_glassMaterial) {
     _glassMaterial = new THREE.MeshPhysicalMaterial({
-      color: '#e8eef5',
+      color: '#ffffff',
       transparent: true,
-      opacity: 0.4,
-      roughness: 0.15,
+      opacity: 0.03,           // ほぼ透明（枠だけ微かに見える程度）
+      roughness: 0.0,
       metalness: 0.0,
-      transmission: 0.6,       // 光の透過
-      thickness: 0.5,          // ガラスの厚み感
-      envMapIntensity: 0.5,
+      transmission: 0.98,      // ほぼ完全透過
+      thickness: 0.1,
+      envMapIntensity: 0.1,
     });
   }
   return _glassMaterial;

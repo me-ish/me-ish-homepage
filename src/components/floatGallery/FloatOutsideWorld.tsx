@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { FLOAT_OUTSIDE } from './floatOutside.constants';
@@ -133,28 +133,36 @@ function CloudLayer({
 }
 
 // ============================================================
-// 遠景の光（Points）
+// 遠景ライト（レイヤー別）
 // ============================================================
 
-function DistantLights() {
-  const { count, radiusMin, radiusMax, yMin, yMax, size, opacity, color } =
-    FLOAT_OUTSIDE.distantLights;
+type LightLayerConfig = {
+  count: number;
+  radiusMin: number;
+  radiusMax: number;
+  yMin: number;
+  yMax: number;
+  size: number;
+  opacity: number;
+  color: string;
+};
+
+function LightLayer({ config }: { config: LightLayerConfig }) {
+  const { count, radiusMin, radiusMax, yMin, yMax, size, opacity, color } = config;
 
   const geometry = useMemo(() => {
     const positions = new Float32Array(count * 3);
     const opacities = new Float32Array(count);
 
     for (let i = 0; i < count; i++) {
-      // 円環状にランダム配置
       const angle = Math.random() * Math.PI * 2;
-      const radius = radiusMin + Math.random() * (radiusMax - radiusMin);
+      const r = radiusMin + Math.random() * (radiusMax - radiusMin);
 
-      positions[i * 3] = Math.cos(angle) * radius;
+      positions[i * 3] = Math.cos(angle) * r;
       positions[i * 3 + 1] = yMin + Math.random() * (yMax - yMin);
-      positions[i * 3 + 2] = Math.sin(angle) * radius;
+      positions[i * 3 + 2] = Math.sin(angle) * r;
 
-      // 個別の明るさバリエーション
-      opacities[i] = 0.3 + Math.random() * 0.7;
+      opacities[i] = 0.4 + Math.random() * 0.6;
     }
 
     const geo = new THREE.BufferGeometry();
@@ -189,7 +197,6 @@ function DistantLights() {
         varying float vOpacity;
 
         void main() {
-          // 円形にフェード
           vec2 center = gl_PointCoord - 0.5;
           float dist = length(center) * 2.0;
           float alpha = 1.0 - smoothstep(0.0, 1.0, dist);
@@ -206,17 +213,32 @@ function DistantLights() {
   return <points geometry={geometry} material={material} />;
 }
 
+function DistantLights() {
+  const { main, upper, beacons } = FLOAT_OUTSIDE.distantLights;
+
+  return (
+    <group name="distant-lights">
+      {/* メインライト（水平線付近） */}
+      <LightLayer config={main} />
+      {/* 上空の光（極少） */}
+      <LightLayer config={upper} />
+      {/* ビーコン（大きめ、数個） */}
+      <LightLayer config={beacons} />
+    </group>
+  );
+}
+
 // ============================================================
 // 水平線のグロウ
 // ============================================================
 
 function HorizonGlow() {
-  const { y, radius, width, height, opacity, color } = FLOAT_OUTSIDE.horizonGlow;
+  const { y, radius, width, opacity, color } = FLOAT_OUTSIDE.horizonGlow;
 
   if (!FLOAT_OUTSIDE.horizonGlow.enabled) return null;
 
   return (
-    <mesh position={[0, y, 0]} rotation={[0, 0, 0]}>
+    <mesh position={[0, y, 0]} rotation={[-Math.PI / 2, 0, 0]}>
       <ringGeometry args={[radius - width / 2, radius + width / 2, 64]} />
       <meshBasicMaterial
         color={color}
@@ -237,7 +259,7 @@ export default function FloatOutsideWorld(): React.JSX.Element {
   const { scene } = useThree();
 
   // シーン設定（背景色・フォグ）
-  useMemo(() => {
+  useEffect(() => {
     scene.background = new THREE.Color(FLOAT_OUTSIDE.background.color);
     scene.fog = new THREE.Fog(
       FLOAT_OUTSIDE.fog.color,
