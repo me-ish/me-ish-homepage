@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Menu, X, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabaseClient';
 
 // shadcn/ui
 import {
@@ -17,9 +18,20 @@ import {
 
 type NavItem = { label: string; href: string };
 
+type HeaderUser = {
+  id: string;
+  email: string | null;
+  label: string; // 表示名（表示用）
+};
+
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  const [authLoading, setAuthLoading] = useState(true);
+  const [me, setMe] = useState<HeaderUser | null>(null);
+  const [logoutBusy, setLogoutBusy] = useState(false);
 
   // ルート遷移したら閉じる（LinkクリックでもOK、ブラウザ戻るでもOK）
   useEffect(() => {
@@ -57,6 +69,76 @@ export default function Header() {
     return pathOnly === pathname;
   };
 
+  const loadMe = useCallback(async () => {
+    try {
+      setAuthLoading(true);
+
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data?.user) {
+        setMe(null);
+        return;
+      }
+
+      const user = data.user;
+      let label: string | null = null;
+
+      // profiles.display_name を優先
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      label =
+        (prof as any)?.display_name?.trim?.() ||
+        (user.user_metadata as any)?.full_name?.trim?.() ||
+        (user.user_metadata as any)?.name?.trim?.() ||
+        user.email ||
+        null;
+
+      setMe({
+        id: user.id,
+        email: user.email ?? null,
+        label: label ?? 'Account',
+      });
+    } finally {
+      setAuthLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // 初期ロード
+    loadMe();
+
+    // ログイン/ログアウトに即追従
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+      loadMe();
+    });
+
+    return () => {
+      sub?.subscription?.unsubscribe();
+    };
+  }, [loadMe]);
+
+  const logout = useCallback(async () => {
+    if (logoutBusy) return;
+    setLogoutBusy(true);
+    try {
+      await supabase.auth.signOut();
+      setMe(null);
+
+      // 画面上の状態を更新（サーバーコンポーネント混在でも整合が取りやすい）
+      router.refresh();
+
+      // ログイン必須ページに居る場合に備えて / へ戻す（任意だが事故が減る）
+      if (pathname?.startsWith('/mypage') || pathname?.startsWith('/admin')) {
+        router.replace('/');
+      }
+    } finally {
+      setLogoutBusy(false);
+    }
+  }, [logoutBusy, pathname, router]);
+
   return (
     <header className="fixed top-0 left-0 z-[100] h-[70px] w-full bg-white/95 px-4 shadow backdrop-blur supports-[backdrop-filter]:bg-white/80">
       <nav className="mx-auto flex h-full max-w-[1200px] items-center justify-between">
@@ -79,14 +161,42 @@ export default function Header() {
           </Link>
         </div>
 
-        {/* 右側：ログイン（PCもSPも出すならこのまま）＋メニュー */}
+        {/* 右側：アカウント表示 + ログアウト or ログイン + メニュー */}
         <div className="flex items-center gap-3">
-          <Link
-            href="/login"
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-[#00a1e9] px-3 py-1.5 text-sm text-[#00a1e9] transition hover:bg-[#00a1e9] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60 sm:text-base"
-          >
-            ログイン
-          </Link>
+          {/* Auth UI */}
+          {!authLoading && me ? (
+            <div className="hidden items-center gap-2 sm:flex">
+              <Link
+                href="/mypage"
+                className="max-w-[220px] truncate rounded-full bg-[#f6f8fb] px-3 py-1.5 text-sm font-medium text-[#223] transition hover:bg-[#e7f2ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
+                title={me.label}
+                aria-label="マイページへ"
+              >
+                {me.label}
+              </Link>
+
+              <button
+                type="button"
+                onClick={logout}
+                disabled={logoutBusy}
+                aria-busy={logoutBusy}
+                className={cn(
+                  'inline-flex items-center justify-center whitespace-nowrap rounded-full border border-[#00a1e9] px-3 py-1.5 text-sm text-[#00a1e9] transition hover:bg-[#00a1e9] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60',
+                  logoutBusy && 'opacity-70 cursor-not-allowed'
+                )}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                {logoutBusy ? 'ログアウト中…' : 'ログアウト'}
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-[#00a1e9] px-3 py-1.5 text-sm text-[#00a1e9] transition hover:bg-[#00a1e9] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60 sm:text-base"
+            >
+              ログイン
+            </Link>
+          )}
 
           <Dialog open={open} onOpenChange={setOpen}>
             <button
@@ -99,7 +209,8 @@ export default function Header() {
               <Menu className="h-6 w-6" />
             </button>
 
-            <DialogContent hideCloseButton
+            <DialogContent
+              hideCloseButton
               className={cn(
                 'w-[92vw] max-w-[460px] overflow-hidden rounded-2xl border border-black/5 bg-white p-0 shadow-2xl'
               )}
@@ -122,6 +233,47 @@ export default function Header() {
 
               {/* 内容 */}
               <div className="max-h-[78vh] overflow-y-auto px-5 py-5">
+                {/* SP内：アカウント欄（ログイン時のみ） */}
+                {!authLoading && me && (
+                  <>
+                    <section aria-label="アカウント" className="mb-4">
+                      <div className="rounded-2xl border border-black/5 bg-[#f6f8fb] p-4">
+                        <div className="text-xs text-[#667]">ログイン中</div>
+                        <div className="mt-1 flex items-center justify-between gap-3">
+                          <Link
+                            href="/mypage"
+                            onClick={() => setOpen(false)}
+                            className="min-w-0 flex-1 truncate rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[#223] transition hover:bg-[#e7f2ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
+                            title={me.label}
+                          >
+                            {me.label}
+                          </Link>
+
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              // メニューを閉じてからログアウト
+                              setOpen(false);
+                              await logout();
+                            }}
+                            disabled={logoutBusy}
+                            aria-busy={logoutBusy}
+                            className={cn(
+                              'inline-flex items-center justify-center rounded-xl border border-[#00a1e9] px-3 py-2 text-sm font-medium text-[#00a1e9] transition hover:bg-[#00a1e9] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60',
+                              logoutBusy && 'opacity-70 cursor-not-allowed'
+                            )}
+                          >
+                            <LogOut className="mr-2 h-4 w-4" />
+                            {logoutBusy ? '…' : 'ログアウト'}
+                          </button>
+                        </div>
+                      </div>
+                    </section>
+
+                    <Divider />
+                  </>
+                )}
+
                 <MenuSection
                   title="見る"
                   items={nav.見る}

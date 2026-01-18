@@ -26,7 +26,7 @@ export default function FloatGallery(): React.JSX.Element {
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
       <Canvas
-        style={{ width: '100%', height: '100%', background: '#e6f0ff' }}
+        style={{ width: '100%', height: '100%', background: '#1a1a1e' }}
         camera={{ position: [0, 5, 15], fov: 60 }}
         shadows
       >
