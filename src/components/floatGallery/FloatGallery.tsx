@@ -19,7 +19,12 @@ import ZoomArtworkDisplay from '@/components/shared/ZoomArtworkDisplay';
 import CoreSphere from '@/components/shared/CoreSphere';
 import LightCircle from '@/components/shared/LightCircle';
 
-export default function FloatGallery(): React.JSX.Element {
+type Props = {
+  /** /float?date=YYYY-MM-DD（未指定なら下流で今日扱いにフォールバック） */
+  dateStr?: string;
+};
+
+export default function FloatGallery({ dateStr }: Props): React.JSX.Element {
   const avatarRef = useRef<THREE.Group>(null);
   const artworkRefs = useRef<(THREE.Group | null)[]>([]);
   const joystickRef = useRef({ x: 0, y: 0 });
@@ -31,32 +36,32 @@ export default function FloatGallery(): React.JSX.Element {
         camera={{ position: [0, 5, 15], fov: 60 }}
         shadows
       >
-        {/* 外の世界（雲海・遠景光） */}
         <FloatOutsideWorld />
 
-        {/* コア */}
         <CoreSphere avatarRef={avatarRef} />
         <LightCircle />
 
-        {/* 光・背景 */}
         <DayLight />
         <GalleryLighting />
 
-        {/* 壁・中央パネル */}
         <FloatWalls />
         <FloatPanelsCenter />
 
-        {/* アートワーク配置 */}
-        <FloatArtworksInGallery avatarRef={avatarRef} artworkRefs={artworkRefs} />
+        {/* 壁面（外壁24枚） */}
+        <FloatArtworksInGallery
+          avatarRef={avatarRef}
+          artworkRefs={artworkRefs}
+          dateStr={dateStr}
+        />
+
+        {/* 中央パネル（別ロジックならそのまま） */}
         <FloatPanelArtworks avatarRef={avatarRef} artworkRefs={artworkRefs} />
 
-        {/* アバター操作 */}
         <Avatar ref={avatarRef} />
         <FloatAvatarController avatarRef={avatarRef} joystickRef={joystickRef} />
         <ThirdPersonCamera avatarRef={avatarRef} />
       </Canvas>
 
-      {/* 拡大表示 */}
       <ZoomArtworkDisplay />
     </div>
   );

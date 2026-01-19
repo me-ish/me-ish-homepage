@@ -8,6 +8,13 @@ import LazyArtworkFrame from '../shared/LazyArtworkFrame';
 import ArtworkLabel from './ArtworkLabelFloat';
 import { supabase } from '@/lib/supabaseClient';
 
+import {
+  pickDailyExhibits,
+  getTodayDateString,
+  isValidDateString,
+  FLOAT_DAILY_SLOT_COUNT,
+} from '@/lib/gallery';
+
 // 定数
 const ARTWORK_SCALE = 1.8;
 const ARTWORK_ASPECT = 1.2;
@@ -16,6 +23,8 @@ const LABEL_NEAR_DISTANCE = 9; // 外壁は少し遠めで反応
 type Props = {
   avatarRef: React.RefObject<THREE.Group>;
   artworkRefs: React.MutableRefObject<(THREE.Group | null)[]>;
+  /** /float?date=YYYY-MM-DD 用（未指定なら今日） */
+  dateStr?: string;
 };
 
 type Entry = {
@@ -90,6 +99,7 @@ function ComingSoonPanel({
 export default function FloatArtworksInGallery({
   avatarRef,
   artworkRefs,
+  dateStr,
 }: Props): React.JSX.Element {
   const wallY = 3.5;
   const wallZ = 39;
@@ -98,7 +108,12 @@ export default function FloatArtworksInGallery({
   const centerGap = 30;
   const start = -30;
 
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [allEntries, setAllEntries] = useState<Entry[]>([]);
+
+  const resolvedDate = useMemo(() => {
+    const raw = String(dateStr ?? '');
+    return isValidDateString(raw) ? raw : getTodayDateString();
+  }, [dateStr]);
 
   // 壁の実装と同様：カメラ距離で可視・不可視を切替
   const VISIBLE_DISTANCE = 70;
@@ -118,18 +133,23 @@ export default function FloatArtworksInGallery({
         .from('entries')
         .select('*')
         .eq('confirmed', true)
-        .eq('display_ready', true) // 方法B
+        .eq('display_ready', true)
         .eq('gallery_type', 'float')
         .order('created_at', { ascending: false });
 
-      if (!error && data) setEntries(data as Entry[]);
+      if (!error && data) setAllEntries(data as Entry[]);
     };
     fetchApproved();
   }, []);
 
-  const generatePositions = (start: number): number[] => {
-    const left = Array.from({ length: 3 }, (_, i) => start + i * offset);
-    const right = Array.from({ length: 3 }, (_, i) => start + offset + centerGap + i * offset);
+  const entries = useMemo(() => {
+    const stable = [...allEntries].sort((a, b) => a.id - b.id);
+    return pickDailyExhibits(stable, resolvedDate, FLOAT_DAILY_SLOT_COUNT) as Entry[];
+  }, [allEntries, resolvedDate]);
+
+  const generatePositions = (startPos: number): number[] => {
+    const left = Array.from({ length: 3 }, (_, i) => startPos + i * offset);
+    const right = Array.from({ length: 3 }, (_, i) => startPos + offset + centerGap + i * offset);
     return [...left, ...right];
   };
 
@@ -156,7 +176,6 @@ export default function FloatArtworksInGallery({
     ...generatePositions(start).map((z) => makeArtwork(wallX, wallY, z, Math.PI / 2)),
   ];
 
-  // ラベル用のサイズ計算
   const labelWidth = 2.5 * ARTWORK_SCALE * ARTWORK_ASPECT;
   const labelHeight = 2.5 * ARTWORK_SCALE / ARTWORK_ASPECT;
 
