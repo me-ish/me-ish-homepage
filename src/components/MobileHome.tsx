@@ -180,39 +180,60 @@ const MobileHome = () => {
                 title: 'White Gallery',
                 desc: '「意識の空間」をイメージした真っ白なギャラリー。10作品限定の特別展示。',
                 link: '/white',
+                link2d: '/white/2d',
               },
               {
                 img: '/images/float-thumb.jpg',
                 title: 'Float Gallery',
-                desc: '“漂う”ように入れ替わる美術館風ギャラリー。日替わりで多彩な作品を展示。',
+                desc: '"漂う"ように入れ替わる美術館風ギャラリー。日替わりで多彩な作品を展示。',
                 link: '/float',
+                link2d: '/float/2d',
               },
-            ].map(({ img, title, desc, link }) => (
-              <Link
+            ].map(({ img, title, desc, link, link2d }) => (
+              <div
                 key={title}
-                href={link}
-                aria-label={`${title} へ`}
                 className="group block text-left rounded-2xl bg-white shadow-sm ring-1 ring-gray-100
-                   hover:shadow-md transition focus-visible:outline-none
-                   focus-visible:ring-2 focus-visible:ring-[#00a1e9] focus-visible:ring-offset-2"
+                   hover:shadow-md transition"
               >
-                <div className="overflow-hidden rounded-2xl">
-                  <Image
-                    src={img}
-                    alt={`${title} thumbnail`}
-                    width={960}
-                    height={540}
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="w-full h-auto object-cover transition-transform duration-300
-                       group-hover:scale-105 motion-reduce:transition-none motion-reduce:transform-none"
-                  />
-                </div>
+                <Link
+                  href={link}
+                  aria-label={`${title} へ`}
+                  className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00a1e9] focus-visible:ring-offset-2 rounded-t-2xl"
+                >
+                  <div className="overflow-hidden rounded-t-2xl">
+                    <Image
+                      src={img}
+                      alt={`${title} thumbnail`}
+                      width={960}
+                      height={540}
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="w-full h-auto object-cover transition-transform duration-300
+                         group-hover:scale-105 motion-reduce:transition-none motion-reduce:transform-none"
+                    />
+                  </div>
 
-                <div className="p-4 sm:p-5">
-                  <h3 className="text-base sm:text-lg font-semibold">{title}</h3>
-                  <p className="mt-1 text-[13px] sm:text-sm text-[#445] line-clamp-2">{desc}</p>
+                  <div className="p-4 sm:p-5 pb-2">
+                    <h3 className="text-base sm:text-lg font-semibold">{title}</h3>
+                    <p className="mt-1 text-[13px] sm:text-sm text-[#445] line-clamp-2">{desc}</p>
+                  </div>
+                </Link>
+
+                <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center gap-3">
+                  <Link
+                    href={link}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-[#00a1e9] hover:underline"
+                  >
+                    3Dで見る <ArrowRight className="h-3 w-3" />
+                  </Link>
+                  <span className="text-gray-300">|</span>
+                  <Link
+                    href={link2d}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-[#667] hover:text-[#00a1e9] hover:underline"
+                  >
+                    2Dで見る <ArrowRight className="h-3 w-3" />
+                  </Link>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </section>

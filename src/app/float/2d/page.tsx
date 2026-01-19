@@ -1,0 +1,159 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
+import { Gallery2DGrid } from '@/components/gallery2d/Gallery2DGrid';
+import { Button } from '@/components/ui/button';
+import {
+  pickDailyExhibits,
+  getTodayDateString,
+  isValidDateString,
+  FLOAT_DAILY_SLOT_COUNT,
+} from '@/lib/gallery/floatDailyPicker';
+import { filterFloatEntries, type EntryRow } from '@/lib/gallery/galleryUtils';
+import { fillWithPlaceholders } from '@/lib/gallery/placeholder';
+
+/** 2Dギャラリーの表示枠数 */
+const DISPLAY_SLOTS = 12;
+
+export default function Float2DPage() {
+  const searchParams = useSearchParams();
+  const [entries, setEntries] = useState<EntryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actualCount, setActualCount] = useState(0);
+
+  // 日付パラメータの取得（無効な場合は今日の日付）
+  const dateParam = searchParams.get('date');
+  const displayDate =
+    dateParam && isValidDateString(dateParam) ? dateParam : getTodayDateString();
+  const isToday = displayDate === getTodayDateString();
+
+  useEffect(() => {
+    const fetchEntries = async () => {
+      setLoading(true);
+      setError(null);
+
+      const { data, error: fetchError } = await supabase
+        .from('entries')
+        .select('*')
+        .eq('confirmed', true)
+        .eq('display_ready', true)
+        .eq('gallery_type', 'float')
+        .order('confirmed_at', { ascending: false });
+
+      if (fetchError) {
+        console.error('Float entries fetch error:', fetchError);
+        setError(fetchError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (data) {
+        // フィルタリングして日替わり選定
+        const displayable = filterFloatEntries(data as EntryRow[]);
+        const dailyPicks = pickDailyExhibits(displayable, displayDate, FLOAT_DAILY_SLOT_COUNT);
+
+        // 実際の作品数を記録
+        setActualCount(dailyPicks.length);
+
+        // プレースホルダーで埋める
+        const filled = fillWithPlaceholders(dailyPicks, DISPLAY_SLOTS);
+        setEntries(filled);
+      }
+
+      setLoading(false);
+    };
+
+    fetchEntries();
+  }, [displayDate]);
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">
+                Float Gallery
+                <span className="text-sm font-normal text-gray-500 ml-2">
+                  2D View
+                </span>
+              </h1>
+              <p className="text-sm text-gray-500 mt-1">
+                {isToday ? "Today's Exhibition" : `Exhibition on ${displayDate}`}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Link href="/float">
+                <Button variant="outline" size="sm">
+                  3D View
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Date Info */}
+        {!isToday && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm text-amber-800">
+              {displayDate} の展示を表示中です。
+              <Link
+                href="/float/2d"
+                className="ml-2 underline hover:no-underline"
+              >
+                今日の展示を見る
+              </Link>
+            </p>
+          </div>
+        )}
+
+        {/* Exhibition Info */}
+        <div className="mb-6 text-sm text-gray-600">
+          <p>
+            Floatギャラリーでは毎日展示作品が入れ替わります。
+            {actualCount > 0 ? (
+              <span className="ml-1">
+                本日は <strong>{actualCount}点</strong> の作品を展示中。
+              </span>
+            ) : (
+              <span className="ml-1">
+                現在作品を募集中です。
+              </span>
+            )}
+          </p>
+        </div>
+
+        {/* Gallery Grid */}
+        <Gallery2DGrid
+          entries={entries}
+          loading={loading}
+          error={error}
+          emptyMessage="本日の展示作品はありません"
+        />
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t mt-12">
+        <div className="max-w-7xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
+          <p>
+            <Link href="/float" className="text-[#00a1e9] hover:underline">
+              3Dで見る
+            </Link>
+            {' | '}
+            <Link href="/white/2d" className="text-[#00a1e9] hover:underline">
+              White Gallery (2D)
+            </Link>
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
