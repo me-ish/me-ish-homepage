@@ -10,7 +10,9 @@ export const revalidate = 0;
 
 async function requireAdmin() {
   const supabase = createRouteHandlerClient({ cookies });
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user || !isAdminEmail(user.email)) return null;
   return user;
 }
@@ -26,7 +28,14 @@ export async function GET(req: Request) {
   const { gallery, status, sortKey, sortOrder, keyword } = parsed.data;
 
   const admin = supabaseAdmin();
-  let q = admin.from('entries').select('*').order(sortKey, { ascending: sortOrder === 'asc' });
+
+  // ✅ entries に紐づくジョブ（entry_processing_jobs）を同時取得
+  // - PostgREST のリレーション埋め込み（FK: entry_processing_jobs.entry_id -> entries.id が前提）
+  // - entry_id UNIQUE なので配列は 0 or 1 件想定
+  let q = admin
+    .from('entries')
+    .select('*, entry_processing_jobs(*)')
+    .order(sortKey, { ascending: sortOrder === 'asc' });
 
   if (gallery !== 'all') q = q.eq('gallery_type', gallery);
   if (status === 'unreviewed') q = q.is('confirmed', null);
@@ -41,11 +50,25 @@ export async function GET(req: Request) {
   const { data, error } = await q;
   if (error) return NextResponse.json({ error: 'list_failed' }, { status: 500 });
 
-  // processed 判定（/final 配下にファイルがあるか）※大きい場合は要ページング
-  const { data: finalList, error: listErr } = await admin.storage.from('artworks').list('final', { limit: 1000 });
-  if (listErr) return NextResponse.json({ error: 'storage_list_failed' }, { status: 500 });
-  const finalNames = new Set((finalList ?? []).map((f) => f.name));
+  const rows = (data ?? []).map((e: any) => {
+    const embedded = e.entry_processing_jobs;
+    const processing_job =
+      Array.isArray(embedded) ? (embedded[0] ?? null) : embedded ?? null;
 
-  const rows = (data ?? []).map((e: any) => ({ ...e, processed: finalNames.has(e.file_name) }));
+    // ✅ processed は legacy 互換の補助値として残す（UIは display_ready + job.status を正とする）
+    // - storage final/ のlistは重い＆上限ありなので廃止
+    const processed =
+      Boolean(e.display_ready) || (processing_job?.status === 'succeeded');
+
+    // 余計な埋め込み配列は返さない（フロントのEntry型と揃える）
+    const { entry_processing_jobs, ...rest } = e;
+
+    return {
+      ...rest,
+      processed,
+      processing_job,
+    };
+  });
+
   return NextResponse.json(rows);
 }

@@ -226,6 +226,50 @@ export type Database = {
         }
         Relationships: []
       }
+      entry_processing_jobs: {
+        Row: {
+          id: string
+          entry_id: number
+          status: string
+          attempts: number
+          locked_at: string | null
+          locked_by: string | null
+          last_error: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          entry_id: number
+          status?: string
+          attempts?: number
+          locked_at?: string | null
+          locked_by?: string | null
+          last_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          entry_id?: number
+          status?: string
+          attempts?: number
+          locked_at?: string | null
+          locked_by?: string | null
+          last_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entry_processing_jobs_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inquiries: {
         Row: {
           created_at: string | null

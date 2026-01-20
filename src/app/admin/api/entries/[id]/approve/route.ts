@@ -1,14 +1,14 @@
 // src/app/admin/api/entries/[id]/approve/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import crypto from "crypto";
+import crypto from 'crypto';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function baseUrl() {
-  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL!;
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL;
   }
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return 'http://localhost:3000';
@@ -17,32 +17,46 @@ function baseUrl() {
 /** ADMIN_API_TOKEN の検証（fail closed） */
 function requireAdmin(req: NextRequest) {
   const expected = process.env.ADMIN_API_TOKEN;
-  if (!expected) return { ok: false as const, status: 500, error: "missing_ADMIN_API_TOKEN" };
+  if (!expected) return { ok: false as const, status: 500, error: 'missing_ADMIN_API_TOKEN' };
 
-  // 互換: 以前提案した Authorization: Bearer も受けるならここで拾う
+  // 互換: Authorization: Bearer も受ける
   const header =
-    req.headers.get("x-meish-admin-token") ??
-    (req.headers.get("authorization")?.startsWith("Bearer ")
-      ? req.headers.get("authorization")!.slice("Bearer ".length)
+    req.headers.get('x-meish-admin-token') ??
+    (req.headers.get('authorization')?.startsWith('Bearer ')
+      ? req.headers.get('authorization')!.slice('Bearer '.length)
       : null);
 
-  if (!header) return { ok: false as const, status: 401, error: "missing_admin_token" };
+  if (!header) return { ok: false as const, status: 401, error: 'missing_admin_token' };
 
   // timing-safe compare
   const a = Buffer.from(String(header));
   const b = Buffer.from(String(expected));
-  if (a.length !== b.length) return { ok: false as const, status: 403, error: "invalid_admin_token" };
+  if (a.length !== b.length) return { ok: false as const, status: 403, error: 'invalid_admin_token' };
   const ok = crypto.timingSafeEqual(a, b);
-  if (!ok) return { ok: false as const, status: 403, error: "invalid_admin_token" };
+  if (!ok) return { ok: false as const, status: 403, error: 'invalid_admin_token' };
 
   return { ok: true as const };
 }
+
+type ProcessingJobStatus = 'queued' | 'running' | 'succeeded' | 'failed';
+
+type ProcessingJob = {
+  id: string;
+  entry_id: number;
+  status: ProcessingJobStatus;
+  attempts: number;
+  locked_at: string | null;
+  locked_by: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // ✅ まず認証
+  // まず認証
   const adminAuth = requireAdmin(req);
   if (!adminAuth.ok) {
     return NextResponse.json({ error: adminAuth.error }, { status: adminAuth.status });
@@ -75,8 +89,7 @@ export async function POST(
 
   // 1) 画像を加工待ち領域へ copy
   {
-    const { error: copyErr } = await admin
-      .storage
+    const { error: copyErr } = await admin.storage
       .from('artworks')
       .copy(fileName, `pending-processing/${fileName}`);
     if (copyErr && !String(copyErr.message || '').includes('already exists')) {
@@ -88,8 +101,7 @@ export async function POST(
   {
     const meta = { artistName: entry.artist_name, filename: fileName };
     const body = Buffer.from(JSON.stringify(meta), 'utf-8');
-    const { error: upErr } = await admin
-      .storage
+    const { error: upErr } = await admin.storage
       .from('processing-meta')
       .upload(`pending/${entry.id}.json`, body, {
         contentType: 'application/json',
@@ -101,6 +113,7 @@ export async function POST(
   }
 
   // 3) DB 承認フラグ
+  let updatedEntry;
   {
     const patch = {
       confirmed: true,
@@ -117,6 +130,7 @@ export async function POST(
     if (updErr || !updated) {
       return NextResponse.json({ error: updErr?.message || 'update_failed' }, { status: 500 });
     }
+    updatedEntry = updated;
   }
 
   // 4) 承認メール（失敗しても承認は維持）
@@ -126,7 +140,7 @@ export async function POST(
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          'x-meish-admin-token': process.env.ADMIN_API_TOKEN!, // 内部API認証
+          'x-meish-admin-token': process.env.ADMIN_API_TOKEN!,
         },
         body: JSON.stringify({
           to: entry.email,
@@ -140,5 +154,59 @@ export async function POST(
     console.warn('[approve] pass mail failed:', e);
   }
 
-  return NextResponse.json({ ok: true }, { status: 200 });
+  // 5) 加工ジョブを upsert
+  // - succeeded/running のジョブは上書きしない（事故防止）
+  // - failed/queued のジョブは queued にリセット（再試行）
+  let job: ProcessingJob;
+  {
+    // まず既存ジョブを確認
+    const { data: existingJob } = await admin
+      .from('entry_processing_jobs')
+      .select('*')
+      .eq('entry_id', id)
+      .single();
+
+    if (existingJob && (existingJob.status === 'succeeded' || existingJob.status === 'running')) {
+      // 既に成功済み or 処理中の場合はそのまま返す（上書きしない）
+      job = existingJob as ProcessingJob;
+    } else {
+      // 新規作成 or failed/queued をリセット
+      const { data: upsertedJob, error: jobErr } = await admin
+        .from('entry_processing_jobs')
+        .upsert(
+          {
+            entry_id: id,
+            status: 'queued',
+            attempts: 0,
+            locked_at: null,
+            locked_by: null,
+            last_error: null,
+          },
+          { onConflict: 'entry_id' }
+        )
+        .select()
+        .single();
+
+      if (jobErr || !upsertedJob) {
+        // ジョブ作成失敗はログに残すが、承認自体は成功扱い
+        console.error('[approve] job upsert failed:', jobErr);
+        // ダミーのジョブ情報を返す
+        job = {
+          id: '',
+          entry_id: id,
+          status: 'queued',
+          attempts: 0,
+          locked_at: null,
+          locked_by: null,
+          last_error: jobErr?.message || 'upsert_failed',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      } else {
+        job = upsertedJob as ProcessingJob;
+      }
+    }
+  }
+
+  return NextResponse.json({ ok: true, entry: updatedEntry, job }, { status: 200 });
 }
