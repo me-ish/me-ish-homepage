@@ -6,6 +6,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import ProfileEditModal from '@/components/ProfileEditModal';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LikedWorksTab } from './_components/LikedWorksTab';
+import { MyWorksTab } from './_components/MyWorksTab';
+import { PortfolioPromotionCard } from './_components/PortfolioPromotionCard';
 import {
   Edit3,
   Globe,
@@ -16,11 +20,8 @@ import {
   Share2,
   Link as LinkIcon,
   ExternalLink,
-  Infinity as InfinityIcon,
   BadgeCheck,
-  Filter,
-  ChevronDown,
-  Download,
+  ImageIcon,
 } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
 
@@ -46,39 +47,18 @@ type Profile = {
 
 type Entry = {
   id: number;
-  user_id?: string | null;
-  title: string;
-  image_url: string;
   confirmed: boolean;
-  created_at: string;
   likes?: number;
-  gallery_type?: 'white' | 'float' | string;
   edition_total?: number | null;
   edition_sold?: number | null;
-  price?: number | null;
-  meish_fee_yen?: number | null;
   artist_reward_yen?: number | null;
-  confirmed_at?: string | null;
-  display_start_at?: string | null;
-  display_end_at?: string | null;
-  is_sold?: boolean | null; // ← DBに合わせる
 };
 
 /* ===================== Utils ===================== */
 const BRAND = '#00a1e9';
-
-const SORTS = [
-  { key: 'new', label: '新着順' },
-  { key: 'likes', label: '人気順（いいね）' },
-  { key: 'priceHigh', label: '価格が高い順' },
-  { key: 'priceLow', label: '価格が安い順' },
-] as const;
-type SortKey = (typeof SORTS)[number]['key'];
-
-const formatYen = (n?: number | null) => (typeof n === 'number' ? `¥${n.toLocaleString()}` : '—');
+const formatYen = (n?: number | null) =>
+  typeof n === 'number' ? `¥${n.toLocaleString()}` : '—';
 const isUnlimited = (e: Entry) => e.edition_total == null;
-const editionSummary = (e: Entry) => (isUnlimited(e) ? '∞' : `${e.edition_sold ?? 0}/${e.edition_total ?? 0}`);
-const galleryBadgeText = (g?: string) => (g === 'float' ? 'Float' : 'White');
 
 /* ===================== Component ===================== */
 export default function MyPageClient() {
@@ -87,19 +67,22 @@ export default function MyPageClient() {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [isExhibitor, setIsExhibitor] = useState(false);
 
   // UI state
-  const [query, setQuery] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('new');
   const [copied, setCopied] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('likes');
 
   // SSRで location を参照しない
-  const [siteOrigin, setSiteOrigin] = useState<string>(process.env.NEXT_PUBLIC_SITE_URL ?? '');
+  const [siteOrigin, setSiteOrigin] = useState<string>(
+    process.env.NEXT_PUBLIC_SITE_URL ?? ''
+  );
   useEffect(() => {
-    if (!siteOrigin && typeof window !== 'undefined') setSiteOrigin(window.location.origin);
+    if (!siteOrigin && typeof window !== 'undefined')
+      setSiteOrigin(window.location.origin);
   }, [siteOrigin]);
 
   const publicUrl = useMemo(() => {
@@ -109,11 +92,20 @@ export default function MyPageClient() {
 
   // 画面幅（モバイル判定）
   useEffect(() => {
-    const check = () => typeof window !== 'undefined' && setIsMobile(window.innerWidth < 768);
+    const check = () =>
+      typeof window !== 'undefined' && setIsMobile(window.innerWidth < 768);
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  // トースト自動消去
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   /* -------- 認証復元 -------- */
   useEffect(() => {
@@ -140,6 +132,7 @@ export default function MyPageClient() {
       if (!uid) {
         setProfile(null);
         setEntries([]);
+        setIsExhibitor(false);
         setLoading(false);
         return;
       }
@@ -166,7 +159,11 @@ export default function MyPageClient() {
           const meta: any = auth.user?.user_metadata ?? {};
           const seed: Profile = {
             id: uid,
-            display_name: meta.full_name || meta.name || auth.user?.email?.split('@')[0] || 'User',
+            display_name:
+              meta.full_name ||
+              meta.name ||
+              auth.user?.email?.split('@')[0] ||
+              'User',
             bio: null,
             avatar_url: meta.avatar_url || meta.picture || null,
             banner_url: null,
@@ -179,35 +176,24 @@ export default function MyPageClient() {
           setProfile(prof);
         }
 
-        // entries（自分のみ）— 列名をDBに合わせる
-        const { data: es, error: esErr } = await supabase
+        // 出展者判定のための簡易チェック
+        const { count } = await supabase
+          .from('entries')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', uid);
+
+        setIsExhibitor((count ?? 0) > 0);
+
+        // 指標用に簡易取得（confirmed作品のみ）
+        const { data: es } = await supabase
           .from('entries')
           .select(
-            [
-              'id',
-              'user_id',
-              'title',
-              'image_url',
-              'confirmed',
-              'created_at',
-              'likes',
-              'gallery_type',
-              'edition_total',
-              'edition_sold',
-              'price',
-              'is_sold',
-            ].join(',')
+            'id, confirmed, likes, edition_total, edition_sold, artist_reward_yen'
           )
           .eq('user_id', uid)
-          .order('created_at', { ascending: false })
-          .returns<Entry[]>();
+          .eq('confirmed', true);
 
-        if (esErr) {
-          console.error('[entries] error:', esErr);
-          setEntries([]);
-        } else {
-          setEntries(es ?? []);
-        }
+        setEntries((es as Entry[]) ?? []);
       } catch (e: any) {
         console.error('[mypage load] fatal:', e?.message || e);
         setToast(e?.message || '読み込みに失敗しました');
@@ -223,35 +209,17 @@ export default function MyPageClient() {
     const totalLikes = entries.reduce((s, e) => s + (e.likes ?? 0), 0);
     const soldCount = entries.reduce((s, e) => {
       if (isUnlimited(e)) return s + (e.edition_sold ?? 0);
-      const soldOut = (e.edition_total ?? 0) > 0 && (e.edition_sold ?? 0) >= (e.edition_total ?? 0);
+      const soldOut =
+        (e.edition_total ?? 0) > 0 &&
+        (e.edition_sold ?? 0) >= (e.edition_total ?? 0);
       return s + (soldOut ? (e.edition_total ?? 0) : (e.edition_sold ?? 0));
     }, 0);
-    const rewardYen = entries.reduce((s, e) => s + (e.artist_reward_yen ?? 0), 0);
+    const rewardYen = entries.reduce(
+      (s, e) => s + (e.artist_reward_yen ?? 0),
+      0
+    );
     return { publishedCount: published, totalLikes, soldCount, rewardYen };
   }, [entries]);
-
-  // 検索・並び替え
-  const filtered = useMemo(() => {
-    const base = entries.filter((e) => {
-      if (!query.trim()) return true;
-      const q = query.toLowerCase();
-      return (
-        e.title?.toLowerCase().includes(q) ||
-        galleryBadgeText(e.gallery_type)?.toLowerCase().includes(q)
-      );
-    });
-
-    const sorted = [...base].sort((a, b) => {
-      if (sortKey === 'new') return +new Date(b.created_at) - +new Date(a.created_at);
-      if (sortKey === 'likes') return (b.likes ?? 0) - (a.likes ?? 0);
-      if (sortKey === 'priceHigh') return (b.price ?? -1) - (a.price ?? -1);
-      if (sortKey === 'priceLow')
-        return (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER);
-      return 0;
-    });
-
-    return sorted;
-  }, [entries, query, sortKey]);
 
   // URLコピー
   const handleCopy = async () => {
@@ -295,12 +263,19 @@ export default function MyPageClient() {
   }
 
   return (
-    <main className="font-zen">
+    <main className="font-zen min-h-screen bg-gray-50/50">
       {/* ===== Hero / Cover ===== */}
-      <section className="relative">
+      <section className="relative bg-white">
         <div className="relative h-48 md:h-56 w-full overflow-hidden">
           {profile?.banner_url ? (
-            <Image src={profile.banner_url} alt="banner" fill className="object-cover" priority unoptimized />
+            <Image
+              src={profile.banner_url}
+              alt="banner"
+              fill
+              className="object-cover"
+              priority
+              unoptimized
+            />
           ) : (
             <div className="h-full w-full bg-gradient-to-r from-sky-50 to-white" />
           )}
@@ -309,7 +284,13 @@ export default function MyPageClient() {
         <div className="absolute -bottom-10 left-5 md:left-10 flex items-end gap-4">
           <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100">
             {profile?.avatar_url ? (
-              <Image src={profile.avatar_url} alt={profile.display_name ?? 'avatar'} fill className="object-cover" unoptimized />
+              <Image
+                src={profile.avatar_url}
+                alt={profile.display_name ?? 'avatar'}
+                fill
+                className="object-cover"
+                unoptimized
+              />
             ) : (
               <div className="w-full h-full grid place-items-center text-gray-400">
                 <BadgeCheck />
@@ -331,7 +312,7 @@ export default function MyPageClient() {
             aria-label="プロフィール編集"
           >
             <Edit3 className="w-4 h-4" />
-            <span>プロフィールを編集</span>
+            <span className="hidden sm:inline">プロフィールを編集</span>
           </button>
         </div>
       </section>
@@ -341,7 +322,8 @@ export default function MyPageClient() {
         <div className="rounded-2xl border bg-white p-4 md:p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <p className="text-gray-700 leading-relaxed md:max-w-3xl">
-              {profile?.bio ?? '自己紹介文を追加すると、あなたの世界観が伝わりやすくなります。'}
+              {profile?.bio ??
+                '自己紹介文を追加すると、あなたの世界観が伝わりやすくなります。'}
             </p>
             <div className="flex items-center gap-2">
               {profile?.sns_links?.homepage && (
@@ -386,12 +368,20 @@ export default function MyPageClient() {
               <span className="truncate">{publicUrl || '/artists/...'} </span>
             </div>
             <div className="flex gap-2">
-              <button onClick={handleCopy} className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50">
+              <button
+                onClick={handleCopy}
+                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
+              >
                 <LinkIcon className="w-4 h-4" />
                 <span>{copied ? 'コピーしました' : 'URLコピー'}</span>
               </button>
               {publicUrl && (
-                <a href={publicUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50">
+                <a
+                  href={publicUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
+                >
                   <ExternalLink className="w-4 h-4" />
                   <span>公開ページ</span>
                 </a>
@@ -412,66 +402,79 @@ export default function MyPageClient() {
         </div>
       </section>
 
-      {/* ===== Metrics ===== */}
+      {/* ===== Metrics (出展者のみ) ===== */}
+      {isExhibitor && (
+        <section className="px-4 md:px-6 mt-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <MetricCard
+              icon={<BadgeCheck className="w-5 h-5" />}
+              label="公開作品"
+              value={metrics.publishedCount}
+            />
+            <MetricCard
+              icon={<Heart className="w-5 h-5 text-pink-500" />}
+              label="いいね"
+              value={metrics.totalLikes}
+            />
+            <MetricCard
+              icon={<ShoppingCart className="w-5 h-5" />}
+              label="販売数"
+              value={metrics.soldCount}
+            />
+            <MetricCard
+              icon={<Coins className="w-5 h-5" />}
+              label="報酬額"
+              value={formatYen(metrics.rewardYen)}
+            />
+          </div>
+        </section>
+      )}
+
+      {/* ===== Tabs ===== */}
       <section className="px-4 md:px-6 mt-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <MetricCard icon={<BadgeCheck className="w-5 h-5" />} label="公開作品" value={metrics.publishedCount} />
-          <MetricCard icon={<Heart className="w-5 h-5 text-pink-500" />} label="いいね" value={metrics.totalLikes} />
-          <MetricCard icon={<ShoppingCart className="w-5 h-5" />} label="販売数" value={metrics.soldCount} />
-          <MetricCard icon={<Coins className="w-5 h-5" />} label="報酬額" value={formatYen(metrics.rewardYen)} />
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
+            <TabsTrigger value="likes" className="gap-2">
+              <Heart className="w-4 h-4" />
+              いいねした作品
+            </TabsTrigger>
+            <TabsTrigger
+              value="works"
+              className="gap-2"
+              disabled={!isExhibitor}
+            >
+              <ImageIcon className="w-4 h-4" />
+              出展作品
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="rounded-2xl border bg-white p-4 md:p-6">
+            <TabsContent value="likes" className="mt-0">
+              {uid ? (
+                <LikedWorksTab userId={uid} />
+              ) : (
+                <div className="py-10 text-center text-gray-500">
+                  読み込み中...
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="works" className="mt-0">
+              {uid ? (
+                <MyWorksTab userId={uid} />
+              ) : (
+                <div className="py-10 text-center text-gray-500">
+                  読み込み中...
+                </div>
+              )}
+            </TabsContent>
+          </div>
+        </Tabs>
       </section>
 
-      {/* ===== Controls ===== */}
-      <section className="px-4 md:px-6 mt-6">
-        <div className="rounded-2xl border bg-white p-3 md:p-4 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-          <div className="flex-1">
-            <div className="relative">
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="作品検索（タイトル / White / Float）"
-                className="w-full rounded-xl border px-3 py-2 pr-9 outline-none focus:ring-2 focus:ring-[#00a1e9]/30"
-              />
-              <Filter className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-500">並び替え</label>
-            <div className="relative">
-              <select
-                value={sortKey}
-                onChange={(e) => setSortKey(e.target.value as SortKey)}
-                className="appearance-none rounded-xl border px-3 py-2 pr-8 text-sm outline-none hover:bg-gray-50"
-              >
-                {SORTS.map((s) => (
-                  <option key={s.key} value={s.key}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
-            </div>
-          </div>
-          <Link href="/entry" className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#00a1e9] px-4 py-2 text-white text-sm font-semibold hover:brightness-[1.05]">
-            作品を応募
-          </Link>
-        </div>
-      </section>
-
-      {/* ===== Entries Grid ===== */}
+      {/* ===== ポートフォリオ誘導カード ===== */}
       <section className="px-4 md:px-6 mt-6 mb-20">
-        {loading ? (
-          <div className="grid place-items-center py-16 text-gray-500">読み込み中...</div>
-        ) : filtered.length === 0 ? (
-          <div className="grid place-items-center py-16 text-gray-500">該当作品がありません。</div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((e) => (
-              <EntryCard key={e.id} entry={e} />
-            ))}
-          </div>
-        )}
+        <PortfolioPromotionCard />
       </section>
 
       {/* モバイルFAB */}
@@ -489,7 +492,7 @@ export default function MyPageClient() {
 
       {/* トースト */}
       {toast && (
-        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 rounded-lg bg-black/80 text-white text-sm px-3 py-2 shadow">
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 rounded-lg bg-black/80 text-white text-sm px-4 py-2 shadow z-50">
           {toast}
         </div>
       )}
@@ -523,7 +526,7 @@ function MetricCard({
   value: string | number;
 }) {
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm hover:shadow transition">
+    <div className="rounded-2xl bg-white border p-4 shadow-sm hover:shadow transition">
       <div className="flex items-center gap-2 text-gray-700">
         {icon}
         <span className="text-xl font-bold">{value}</span>
@@ -532,88 +535,3 @@ function MetricCard({
     </div>
   );
 }
-
-function EntryCard({ entry }: { entry: Entry }) {
-  // 完売は is_sold を優先、未設定ならエディションで推定
-  const sold = useMemo(() => {
-    if (typeof entry.is_sold === 'boolean') return entry.is_sold;
-    if (isUnlimited(entry)) return false;
-    const total = entry.edition_total ?? 0;
-    const soldCount = entry.edition_sold ?? 0;
-    return total > 0 && soldCount >= total;
-  }, [entry]);
-
-  const thumb = entry.image_url || '/placeholder.png';
-
-  return (
-    <div className="group relative rounded-2xl overflow-hidden bg-white border shadow-sm hover:shadow-md transition">
-      {/* Thumbnail */}
-      <div className="relative w-full h-52 overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={thumb} alt={entry.title} className="w-full h-full object-cover group-hover:scale-105 transition" />
-        {sold && (
-          <div className="absolute top-2 left-2 rounded-full bg-black/70 text-white text-xs px-2 py-1">SOLD</div>
-        )}
-        <div className="absolute top-2 right-2 flex gap-1">
-          <span className="rounded-full bg-white/90 backdrop-blur text-xs px-2 py-1 border">
-            {galleryBadgeText(entry.gallery_type)}
-          </span>
-        </div>
-      </div>
-
-      {/* Body */}
-      <div className="p-3">
-        <h3 className="font-semibold text-gray-800 truncate">{entry.title}</h3>
-        <div className="mt-1 flex items-center justify-between text-sm text-gray-500">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1">
-              <Heart className="w-4 h-4 text-pink-500" />
-              <span>{entry.likes ?? 0}</span>
-            </span>
-            <span className="inline-flex items-center gap-1">
-              {isUnlimited(entry) ? (
-                <>
-                  <InfinityIcon className="w-4 h-4" />
-                </>
-              ) : (
-                <>
-                  <ShoppingCart className="w-4 h-4" />
-                  <span>{editionSummary(entry)}</span>
-                </>
-              )}
-            </span>
-          </div>
-          <div className="font-medium text-gray-700">{formatYen(entry.price)}</div>
-        </div>
-      </div>
-
-      {/* Hover Actions */}
-      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition grid place-items-center">
-        <div className="flex items-center gap-3">
-          <a href={`/artworks/${entry.id}`} className="p-2 rounded-full bg-white hover:bg-gray-100 shadow" aria-label="詳細を見る">
-            <ExternalLink className="w-5 h-5" />
-          </a>
-          <button
-            className="p-2 rounded-full bg-white hover:bg-gray-100 shadow"
-            aria-label="シェア"
-            onClick={() => {
-              const base = typeof window !== 'undefined' ? window.location.origin : '';
-              const url = base ? `${base}/artworks/${entry.id}` : `/artworks/${entry.id}`;
-              const text = `${entry.title} | me-ish`;
-              const share = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                text
-              )}&url=${encodeURIComponent(url)}&hashtags=me_ish`;
-              window.open(share, '_blank', 'noopener,noreferrer');
-            }}
-          >
-            <Share2 className="w-5 h-5" />
-          </button>
-          <a href={`/downloads/${entry.id}`} className="p-2 rounded-full bg-white hover:bg-gray-100 shadow" aria-label="ダウンロード（購入者）">
-            <Download className="w-5 h-5" />
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
