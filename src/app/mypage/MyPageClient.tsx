@@ -472,10 +472,15 @@ export default function MyPageClient() {
         </Tabs>
       </section>
 
-      {/* ===== ポートフォリオ誘導カード ===== */}
-      <section className="px-4 md:px-6 mt-6 mb-20">
-        <PortfolioPromotionCard />
-      </section>
+      {/* ===== ポートフォリオ誘導カード（出展作品タブの時のみ） ===== */}
+      {activeTab === 'works' && isExhibitor && (
+        <section className="px-4 md:px-6 mt-6 mb-20">
+          <PortfolioPromotionCard />
+        </section>
+      )}
+
+      {/* 下部余白（いいねタブの時） */}
+      {activeTab !== 'works' && <div className="mb-20" />}
 
       {/* モバイルFAB */}
       {isMobile && (
