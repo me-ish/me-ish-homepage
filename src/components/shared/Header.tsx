@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, LogOut } from 'lucide-react';
+import { Menu, X, LogOut, UserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -164,33 +164,44 @@ export default function Header() {
         {/* 右側：アカウント表示 + ログアウト or ログイン + メニュー */}
         <div className="flex items-center gap-3">
           {/* Auth UI */}
-          {!authLoading && me ? (
-            <div className="hidden items-center gap-2 sm:flex">
-              <Link
-                href="/mypage"
-                className="max-w-[320px] truncate rounded-full bg-[#f6f8fb] px-3 py-1.5 text-sm font-medium text-[#223] transition hover:bg-[#e7f2ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
-                title={`ログイン中：${me.label}`}
-                aria-label="マイページへ"
-              >
-                <span className="text-[#667]">ログイン中：</span>
-                <span className="ml-1">{me.label}</span>
-              </Link>
+{!authLoading && me ? (
+  <div className="hidden items-center gap-2 sm:flex">
+    {/* ✅ 明示導線：マイページへ */}
+    <Link
+      href="/mypage"
+      className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-[#00a1e9] px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-[#008ed0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
+      aria-label="マイページへ"
+      title="マイページへ"
+    >
+      <UserRound className="mr-2 h-4 w-4" />
+      マイページへ
+    </Link>
 
-              <button
-                type="button"
-                onClick={logout}
-                disabled={logoutBusy}
-                aria-busy={logoutBusy}
-                className={cn(
-                  'inline-flex items-center justify-center whitespace-nowrap rounded-full border border-[#e11d48] px-3 py-1.5 text-sm text-[#e11d48] transition hover:bg-[#e11d48] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#e11d48]/40',
-                  logoutBusy && 'cursor-not-allowed opacity-70'
-                )}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                {logoutBusy ? 'ログアウト中…' : 'ログアウト'}
-              </button>
-            </div>
-          ) : (
+    {/* ✅ ログイン中の表示名は“情報”として表示（リンクにしない） */}
+    <span
+      className="max-w-[220px] truncate rounded-full bg-[#f6f8fb] px-3 py-1.5 text-sm font-medium text-[#223]"
+      title={`ログイン中：${me.label}`}
+      aria-label={`ログイン中：${me.label}`}
+    >
+      <span className="text-[#667]">ログイン中：</span>
+      <span className="ml-1">{me.label}</span>
+    </span>
+
+    <button
+      type="button"
+      onClick={logout}
+      disabled={logoutBusy}
+      aria-busy={logoutBusy}
+      className={cn(
+        'inline-flex items-center justify-center whitespace-nowrap rounded-full border border-[#e11d48] px-3 py-1.5 text-sm text-[#e11d48] transition hover:bg-[#e11d48] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#e11d48]/40',
+        logoutBusy && 'cursor-not-allowed opacity-70'
+      )}
+    >
+      <LogOut className="mr-2 h-4 w-4" />
+      {logoutBusy ? 'ログアウト中…' : 'ログアウト'}
+    </button>
+  </div>
+) : (
             <Link
               href="/login"
               className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-[#00a1e9] px-3 py-1.5 text-sm text-[#00a1e9] transition hover:bg-[#00a1e9] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60 sm:text-base"
@@ -243,10 +254,17 @@ export default function Header() {
 <Link
   href="/mypage"
   onClick={() => setOpen(false)}
-  className="min-w-0 flex-1 truncate rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[#223] transition hover:bg-[#e7f2ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
-  title={me.label}
+  className="min-w-0 flex-1 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[#223] transition hover:bg-[#e7f2ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
+  aria-label="マイページへ"
+  title="マイページへ"
 >
-  {me.label}
+  <div className="flex items-center gap-2">
+    <UserRound className="h-4 w-4 text-[#00a1e9]" />
+    <span>マイページへ</span>
+  </div>
+  <div className="mt-1 truncate text-xs font-medium text-[#667]" title={`ログイン中：${me.label}`}>
+    ログイン中：{me.label}
+  </div>
 </Link>
 
                           <button
