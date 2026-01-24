@@ -84,7 +84,7 @@ export function getEntryStatus(entry: EntryWithStatus): StatusInfo {
   if (entry.display_ready) {
     return {
       status: 'displaying',
-      label: '展示中',
+      label: '公開中',
       description: 'ギャラリーで公開中です。',
       variant: 'default',
       className: 'bg-emerald-500 hover:bg-emerald-500 text-white border-emerald-500',

@@ -199,7 +199,7 @@ export function MyWorksTab({ userId }: { userId: string }) {
           {statusCounts.displaying > 0 && (
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-sm">
               <Eye className="h-3.5 w-3.5" />
-              <span>展示中 {statusCounts.displaying}</span>
+              <span>公開中 {statusCounts.displaying}</span>
             </div>
           )}
           {statusCounts.ready > 0 && (
@@ -356,7 +356,12 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
         <div className="flex items-center gap-4 p-4">
           {/* サムネイル */}
           <Link href={`/works/${entry.id}`} className="flex-shrink-0 relative">
-            <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-100 ring-1 ring-gray-200">
+            <div
+  className={[
+    "relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-100 ring-1",
+    isDisplaying ? "ring-emerald-300" : isProcessing ? "ring-amber-300" : hasError ? "ring-red-300" : "ring-gray-200",
+  ].join(" ")}
+>
               <Image
                 src={imageUrl}
                 alt={entry.title || 'Artwork'}
@@ -364,15 +369,7 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
                 className="object-cover"
                 sizes="80px"
               />
-              {/* ステータスオーバーレイ（展示中） */}
-              {isDisplaying && (
-                <div className="absolute inset-0 bg-emerald-500/10 flex items-center justify-center">
-                  <div className="absolute bottom-0 left-0 right-0 bg-emerald-500 text-white text-[10px] text-center py-0.5 font-medium">
-                    展示中
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
           </Link>
 
           {/* 作品情報 */}
