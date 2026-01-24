@@ -1,6 +1,7 @@
 // src/app/mypage/_components/EntryStatusBadge.tsx
 'use client';
 
+import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
   CheckCircle2,
@@ -28,7 +29,7 @@ export type StatusInfo = {
   description: string;
   variant: 'default' | 'secondary' | 'destructive' | 'outline';
   className: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   animate?: boolean;
 };
 
@@ -44,7 +45,6 @@ export type StatusInfo = {
  * 7. else => 審査中
  */
 export function getEntryStatus(entry: EntryWithStatus): StatusInfo {
-  // 1. エラー（処理失敗）
   if (entry.job_status === 'failed') {
     return {
       status: 'failed',
@@ -58,7 +58,6 @@ export function getEntryStatus(entry: EntryWithStatus): StatusInfo {
     };
   }
 
-  // 2. 処理中
   if (entry.job_status === 'running') {
     return {
       status: 'running',
@@ -71,7 +70,6 @@ export function getEntryStatus(entry: EntryWithStatus): StatusInfo {
     };
   }
 
-  // 3. 待機中（キュー）
   if (entry.job_status === 'queued') {
     return {
       status: 'queued',
@@ -83,7 +81,6 @@ export function getEntryStatus(entry: EntryWithStatus): StatusInfo {
     };
   }
 
-  // 4. 展示中
   if (entry.display_ready) {
     return {
       status: 'displaying',
@@ -95,7 +92,6 @@ export function getEntryStatus(entry: EntryWithStatus): StatusInfo {
     };
   }
 
-  // 5. 展示準備完了（処理成功、表示待ち）
   if (entry.job_status === 'succeeded') {
     return {
       status: 'ready',
@@ -107,7 +103,6 @@ export function getEntryStatus(entry: EntryWithStatus): StatusInfo {
     };
   }
 
-  // 6. 承認済み（処理待ち）
   if (entry.confirmed) {
     return {
       status: 'approved',
@@ -119,7 +114,6 @@ export function getEntryStatus(entry: EntryWithStatus): StatusInfo {
     };
   }
 
-  // 7. 審査中
   return {
     status: 'reviewing',
     label: '審査中',
@@ -136,13 +130,8 @@ interface EntryStatusBadgeProps {
   size?: 'sm' | 'md';
 }
 
-export function EntryStatusBadge({
-  entry,
-  showIcon = true,
-  size = 'sm',
-}: EntryStatusBadgeProps) {
+export function EntryStatusBadge({ entry, showIcon = true, size = 'sm' }: EntryStatusBadgeProps) {
   const statusInfo = getEntryStatus(entry);
-
   const sizeClasses = size === 'sm' ? 'text-xs px-2 py-0.5' : 'text-sm px-3 py-1';
 
   return (
@@ -156,10 +145,6 @@ export function EntryStatusBadge({
   );
 }
 
-/**
- * ステータス説明テキストを取得（詳細表示用）
- */
 export function getStatusDescription(entry: EntryWithStatus): string {
-  const statusInfo = getEntryStatus(entry);
-  return statusInfo.description;
+  return getEntryStatus(entry).description;
 }

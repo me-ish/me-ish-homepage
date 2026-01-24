@@ -132,7 +132,12 @@ export async function getEntriesWithStatus(
       )
     `)
     .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+    // entries自体は新着順
+    .order('created_at', { ascending: false })
+    // jobsは「最新が先頭」になるように（重要）
+    .order('updated_at', { referencedTable: 'entry_processing_jobs', ascending: false })
+    // jobsは1件だけで十分（重要）
+    .limit(1, { referencedTable: 'entry_processing_jobs' });
 
   if (entriesErr) {
     console.error('[getEntriesWithStatus] entries error:', entriesErr);
