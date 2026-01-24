@@ -360,74 +360,191 @@ const Step3_SalesAndAgreement = () => {
 
       <hr className="my-6 border-t border-gray-200" />
 
-      {/* 規約ボックス */}
+      {/* 規約ボックス（要点） */}
       <div
         ref={scrollRef}
-        className="max-h-[150px] overflow-y-auto border border-gray-300 bg-[#fafafa] p-4 rounded-lg text-sm leading-relaxed text-gray-700"
+        className="max-h-[190px] overflow-y-auto border border-gray-300 bg-[#fafafa] p-4 rounded-lg text-sm leading-relaxed text-gray-700"
+        aria-label="利用規約の要点（スクロールして全文確認）"
       >
-        <p className="font-bold">【利用規約の要点】</p>
-        <ul className="list-disc list-inside mt-2 space-y-1">
-          <li>投稿作品は審査の上、me-ishで展示・販売される場合があります。</li>
-          <li>著作権はアーティストに帰属しますが、展示・告知に使用する場合があります。</li>
-          <li>購入者には私的鑑賞の範囲での使用が許可されます（著作権の譲渡なし）。</li>
-          <li>第三者の権利を侵害する作品は禁止です。</li>
-          <li>
-            <strong>完全自動生成（生成AIの出力のみで、人の創作性がほぼ無い）作品は受け付けません。</strong>
-          </li>
-          <li>
-            AIを使用した場合は、応募フォームの<strong>AI使用区分</strong>で申告してください（申告内容は作品ページに表示されます）。
-          </li>
-        </ul>
-        <p className="mt-2">
+        <p className="font-bold text-gray-900">【利用規約の要点（重要）】</p>
+
+        <p className="mt-2 text-xs text-gray-500">
+          ※ ここは要点です。応募前に必ず最後までスクロールし、詳細（利用規約・プライバシーポリシー）もご確認ください。
+        </p>
+
+        <div className="mt-3 space-y-3">
+          {/* 1) 展示・審査 */}
+          <div>
+            <p className="font-semibold text-gray-900">1. 展示・審査</p>
+            <ul className="list-disc list-inside mt-1 space-y-1">
+              <li>投稿作品は審査の上、me-ishで展示される場合があります（展示は確約ではありません）。</li>
+              <li>展示・販売の可否や掲載タイミングは運営判断となります。</li>
+            </ul>
+          </div>
+
+          {/* 2) 著作権・利用許諾 */}
+          <div>
+            <p className="font-semibold text-gray-900">2. 著作権と利用許諾（必須）</p>
+            <ul className="list-disc list-inside mt-1 space-y-1">
+              <li>著作権はアーティストに帰属します（権利の譲渡は発生しません）。</li>
+              <li>
+                me-ishは、サービス提供（展示表示・販売・審査・運営/不正防止・問い合わせ対応）のために、作品画像・作品名・作家名等を利用します。
+              </li>
+              <li>購入者には私的鑑賞の範囲での使用が許可されます（著作権の譲渡なし）。</li>
+            </ul>
+          </div>
+
+          {/* 3) 禁止事項・権利侵害 */}
+          <div>
+            <p className="font-semibold text-gray-900">3. 禁止事項（必須）</p>
+            <ul className="list-disc list-inside mt-1 space-y-1">
+              <li>第三者の権利（著作権・商標権・肖像権等）を侵害する作品は禁止です。</li>
+              <li>公序良俗に反する内容、誹謗中傷、違法な内容を含む作品は禁止です。</li>
+            </ul>
+          </div>
+
+          {/* 4) AI利用ポリシー */}
+          <div>
+            <p className="font-semibold text-gray-900">4. 生成AIに関するルール（必須）</p>
+            <ul className="list-disc list-inside mt-1 space-y-1">
+              <li>
+                <strong>完全自動生成（生成AIの出力のみで、人の創作性がほぼ無い）作品は受け付けません。</strong>
+              </li>
+              <li>
+                AIを使用した場合は、応募フォームの<strong>AI使用区分</strong>で申告してください（申告内容は作品ページに表示されます）。
+              </li>
+            </ul>
+          </div>
+
+          {/* 5) 公式広報（任意） */}
+          <div>
+            <p className="font-semibold text-gray-900">5. 公式広報での紹介（任意）</p>
+            <ul className="list-disc list-inside mt-1 space-y-1">
+              <li>
+                同意いただいた場合、me-ish公式の広報（サイト・SNS・告知記事等）で、
+                作品画像（サムネ/一部トリミングを含む）・作品名・作家名・展示情報を紹介することがあります。
+              </li>
+              <li>
+                広報は閲覧用途の形式で行い、原寸データの配布や二次利用許諾を意味しません。
+              </li>
+            </ul>
+          </div>
+
+          {/* 6) 保管（任意） */}
+          <div>
+            <p className="font-semibold text-gray-900">6. 作品データの保管（任意）</p>
+            <ul className="list-disc list-inside mt-1 space-y-1">
+              <li>
+                同意いただいた場合、マイページのポートフォリオ機能のために、展示終了後も作品データ（画像・メタデータ）をme-ishが保持します。
+              </li>
+              <li>
+                同意しない場合、展示期間終了後に削除対象となります（ただし、決済・返金・紛争対応等のため、運営上必要な最小限の情報を一定期間保持する場合があります）。
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <p className="mt-3 text-xs text-gray-600">
           詳細は
-          <a href="/footer/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline ml-1">
-            公式サイトの利用規約
+          <a
+            href="/footer/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 underline ml-1"
+          >
+            利用規約
+          </a>
+          と
+          <a
+            href="/footer/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 underline ml-1"
+          >
+            プライバシーポリシー
           </a>
           をご確認ください。
         </p>
       </div>
 
-      {/* 同意チェック */}
-      <div className="flex items-center gap-2 mt-4 text-gray-800">
-        <input
-          type="checkbox"
-          {...register('agreeTerms', { required: '利用規約への同意が必要です。' })}
-          disabled={!canCheck}
-        />
-        <span className="text-sm">上記の利用規約に同意します</span>
-        <span className="text-red-600 text-xs ml-2">＊必須（全文をスクロールすると有効化）</span>
-      </div>
-      {(() => {
-        const m = errMsg(errors.agreeTerms);
-        return m ? <p className="text-sm text-red-600 -mt-1.5">{m}</p> : null;
-      })()}
+      {/* 同意チェック（必須） */}
+      <div className="mt-4 space-y-3 text-gray-800">
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            {...register("agreeTerms", { required: "利用規約への同意が必要です。" })}
+            disabled={!canCheck}
+          />
+          <span className="text-sm">
+            上記の要点を確認し、利用規約・プライバシーポリシーに同意します
+          </span>
+          <span className="text-red-600 text-xs ml-2">＊必須（全文をスクロールすると有効化）</span>
+        </div>
+        {(() => {
+          const m = errMsg(errors.agreeTerms);
+          return m ? <p className="text-sm text-red-600 -mt-1.5">{m}</p> : null;
+        })()}
 
-      <div className="flex items-center gap-2 mt-3 text-gray-800">
-        <input type="checkbox" {...register('confirmRights', { required: '権利確認が必要です。' })} />
-        <span className="text-sm">自作作品であり、第三者の権利を侵害していません</span>
-        <span className="text-red-600 text-xs ml-2">＊必須</span>
-      </div>
-      {(() => {
-        const m = errMsg(errors.confirmRights);
-        return m ? <p className="text-sm text-red-600 -mt-1.5">{m}</p> : null;
-      })()}
+        <div className="flex items-center gap-2">
+          <input type="checkbox" {...register("confirmRights", { required: "権利確認が必要です。" })} />
+          <span className="text-sm">自作作品であり、第三者の権利を侵害していません</span>
+          <span className="text-red-600 text-xs ml-2">＊必須</span>
+        </div>
+        {(() => {
+          const m = errMsg(errors.confirmRights);
+          return m ? <p className="text-sm text-red-600 -mt-1.5">{m}</p> : null;
+        })()}
 
-      <div className="flex items-center gap-2 mt-3 text-gray-800">
-        <input
-          type="checkbox"
-          {...register('confirmOriginal', {
-            required: '申告内容（AI使用区分を含む）の確認が必要です。',
-          })}
-        />
-        <span className="text-sm">
-          AI使用区分を含め、申告内容に虚偽がありません（完全自動生成のみの作品ではありません）
-        </span>
-        <span className="text-red-600 text-xs ml-2">＊必須</span>
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            {...register("confirmOriginal", {
+              required: "申告内容（AI使用区分を含む）の確認が必要です。",
+            })}
+          />
+          <span className="text-sm">
+            AI使用区分を含め、申告内容に虚偽がありません（完全自動生成のみの作品ではありません）
+          </span>
+          <span className="text-red-600 text-xs ml-2">＊必須</span>
+        </div>
+        {(() => {
+          const m = errMsg(errors.confirmOriginal);
+          return m ? <p className="text-sm text-red-600 -mt-1.5">{m}</p> : null;
+        })()}
       </div>
-      {(() => {
-        const m = errMsg(errors.confirmOriginal);
-        return m ? <p className="text-sm text-red-600 -mt-1.5">{m}</p> : null;
-      })()}
+
+      {/* 追加の同意（任意） */}
+      <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4 text-gray-800">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold">追加の同意（任意）</span>
+          <Badge variant="secondary" className="text-xs">おすすめ</Badge>
+        </div>
+
+        <p className="mt-2 text-xs text-gray-500">
+          ※ ここは任意です。チェックしなくても応募・展示の審査には影響しません。
+        </p>
+
+        <div className="mt-4 space-y-3">
+          <label className="flex items-start gap-2">
+            <input type="checkbox" {...register("agreePromotion")} />
+            <span className="text-sm leading-relaxed">
+              me-ish公式の広報（サイト・SNS・告知記事等）で、作品画像（サムネ/一部トリミングを含む）・作品名・作家名・展示情報を紹介することに同意します
+            </span>
+          </label>
+
+          <label className="flex items-start gap-2">
+            <input type="checkbox" {...register("agreeStorage")} />
+            <span className="text-sm leading-relaxed">
+              マイページでポートフォリオ機能を利用するため、展示終了後も作品データ（画像・メタデータ）をme-ishが保持することに同意します
+            </span>
+          </label>
+
+          <p className="text-xs text-gray-500">
+            ※ 同意の変更（保管のON/OFF等）は、将来的にマイページから行える設計にすることを推奨します。
+          </p>
+        </div>
+      </div>
+
     </section>
   );
 };
