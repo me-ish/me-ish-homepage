@@ -81,7 +81,7 @@ function JobStatusBadge({ entry }: { entry: Entry }) {
     case 'running':
       return <span className="text-yellow-600">🛠 処理中</span>;
     case 'succeeded':
-      return <span className="text-green-600">✅ 処理完了</span>;
+      return <span className="text-green-700">✅ 処理完了（未反映）</span>;
     case 'failed':
       return (
         <span className="text-red-600" title={job.last_error || undefined}>
@@ -99,13 +99,8 @@ function JobStatusBadge({ entry }: { entry: Entry }) {
 function getApproveButtonLabel(entry: Entry): string {
   const job = entry.processing_job;
 
-  if (!entry.confirmed) {
-    return '承認して加工に進む';
-  }
-
-  if (!job) {
-    return '再承認（キューへ）';
-  }
+  if (!entry.confirmed) return '承認して加工に進む';
+  if (!job) return '再承認（キューへ）';
 
   switch (job.status) {
     case 'queued':
@@ -130,7 +125,7 @@ function isApproveDisabled(entry: Entry): boolean {
 
   // running 中は二重実行防止
   if (job.status === 'running') return true;
-  // succeeded は再処理不要（display_ready が false なら手動確認を促す）
+  // succeeded は再処理不要（display_ready が false なら手動反映を促す）
   if (job.status === 'succeeded') return true;
 
   return false;
@@ -231,6 +226,22 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
     return `inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${map[status]}`;
   };
 
+  /**
+   * ✅ “展示OKにできる候補” 判定
+   * - 承認済み
+   * - display_ready=false
+   * - final が入ってそう（image_urlがfinal/を指す or job succeeded）
+   */
+  const canMarkDisplayReady = (e: Entry) => {
+    if (e.confirmed !== true) return false;
+    if (e.display_ready) return false;
+
+    const hasFinalUrl = typeof e.image_url === 'string' && e.image_url.includes('/final/');
+    const jobOk = e.processing_job?.status === 'succeeded';
+
+    return hasFinalUrl || jobOk;
+  };
+
   // =========================
   // 更新（1フィールド）
   // =========================
@@ -251,6 +262,86 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
   };
 
   // =========================
+  // ✅ display_ready を “安全に” true にする
+  // =========================
+  const markDisplayReady = async (entry: Entry) => {
+    if (processingIds.has(entry.id)) return;
+
+    // safety guard（finalっぽくないのにONにする事故を防ぐ）
+    if (!canMarkDisplayReady(entry)) {
+      const ok = window.confirm(
+        'まだ final が確認できません（image_urlがfinal/でない & jobもsucceededでない）。それでも display_ready=true にしますか？'
+      );
+      if (!ok) return;
+    }
+
+    setProcessingIds((prev) => new Set(prev).add(entry.id));
+    const before = entry;
+
+    // optimistic
+    setEntries((prev) =>
+      prev.map((e) => (e.id === entry.id ? { ...e, display_ready: true } : e))
+    );
+
+    try {
+      const saved = await api.patch(entry.id, { display_ready: true });
+      setEntries((prev) => prev.map((e) => (e.id === entry.id ? { ...e, ...saved } : e)));
+      showToast('✅ display_ready を反映しました');
+    } catch (e: unknown) {
+      console.error('[entries] markDisplayReady error:', e);
+      setEntries((prev) => prev.map((e) => (e.id === entry.id ? before : e)));
+      showToast('display_ready 更新に失敗しました');
+    } finally {
+      setProcessingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(entry.id);
+        return next;
+      });
+    }
+  };
+
+  /**
+   * ✅ 一括反映（候補だけ）
+   * - UI上で “候補” を見える化し、押すだけでまとめてON
+   */
+  const bulkMarkDisplayReady = async () => {
+    const targets = entries.filter(canMarkDisplayReady);
+    if (targets.length === 0) {
+      showToast('候補がありません');
+      return;
+    }
+    const ok = window.confirm(`display_ready を一括反映します（${targets.length}件）。続行しますか？`);
+    if (!ok) return;
+
+    // 連打防止：対象id全部を processingIds に追加
+    setProcessingIds((prev) => {
+      const next = new Set(prev);
+      for (const t of targets) next.add(t.id);
+      return next;
+    });
+
+    try {
+      // sequential（API負荷を抑える）
+      for (const t of targets) {
+        // eslint-disable-next-line no-await-in-loop
+        await api.patch(t.id, { display_ready: true });
+      }
+      showToast(`✅ 一括反映しました（${targets.length}件）`);
+      await fetchEntries(); // まとめて再取得
+    } catch (e) {
+      console.error('[entries] bulkMarkDisplayReady error:', e);
+      showToast('一括反映で失敗しました（ログを確認）');
+      await fetchEntries();
+    } finally {
+      setProcessingIds((prev) => {
+        const next = new Set(prev);
+        for (const t of targets) next.delete(t.id);
+        return next;
+      });
+    }
+  };
+
+  // =========================
   // アクション：承認/却下/未審査へ（Server Actions 使用）
   // =========================
   const approveEntry = async (entry: Entry) => {
@@ -259,7 +350,6 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
 
     try {
       const result = await approveEntryAction(entry.id);
-      // entry と job を更新
       setEntries((prev) =>
         prev.map((e) =>
           e.id === entry.id
@@ -336,6 +426,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
       unreviewed: entries.filter((e) => e.confirmed === null).length,
       approved: entries.filter((e) => e.confirmed === true).length,
       rejected: entries.filter((e) => e.confirmed === false).length,
+      readyCandidates: entries.filter(canMarkDisplayReady).length,
     }),
     [entries]
   );
@@ -359,6 +450,21 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
         <span className={badge('unreviewed')}>未審査 {count.unreviewed}</span>
         <span className={badge('approved')}>承認 {count.approved}</span>
         <span className={badge('rejected')}>却下 {count.rejected}</span>
+
+        {/* ✅ display_ready 一括反映 */}
+        <button
+          onClick={bulkMarkDisplayReady}
+          disabled={count.readyCandidates === 0 || loading}
+          className={`inline-flex items-center gap-2 rounded px-3 py-1.5 text-sm border ${
+            count.readyCandidates === 0 || loading
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-white hover:bg-gray-50'
+          }`}
+          title="final が入っていそうなものだけ display_ready=true にします"
+        >
+          展示OK候補を一括反映（{count.readyCandidates}）
+        </button>
+
         <button
           onClick={fetchEntries}
           className="ml-auto inline-flex items-center gap-2 rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
@@ -457,23 +563,17 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
         <div className="space-y-6">
           {entries.map((entry) => {
             const status =
-              entry.confirmed === true
-                ? 'approved'
-                : entry.confirmed === false
-                  ? 'rejected'
-                  : 'unreviewed';
+              entry.confirmed === true ? 'approved' : entry.confirmed === false ? 'rejected' : 'unreviewed';
             const isProcessing = processingIds.has(entry.id);
             const approveDisabled = isProcessing || isApproveDisabled(entry);
+
+            const readyCandidate = canMarkDisplayReady(entry);
 
             return (
               <div
                 key={entry.id}
                 className={`border rounded-lg p-4 ${
-                  status === 'approved'
-                    ? 'bg-green-50'
-                    : status === 'rejected'
-                      ? 'bg-red-50/40'
-                      : 'bg-white'
+                  status === 'approved' ? 'bg-green-50' : status === 'rejected' ? 'bg-red-50/40' : 'bg-white'
                 }`}
               >
                 <div className="flex flex-col md:flex-row gap-4">
@@ -492,11 +592,17 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                       <strong>ID：</strong>
                       {entry.id}
                     </div>
+
                     <div className="flex items-center gap-2">
                       <span className="font-semibold">状態：</span>
                       <span className={badge(status as 'unreviewed' | 'approved' | 'rejected')}>
                         {status === 'approved' ? '承認' : status === 'rejected' ? '却下' : '未審査'}
                       </span>
+                      {readyCandidate && (
+                        <span className="ml-1 inline-flex items-center rounded-full bg-sky-100 text-sky-800 px-2 py-0.5 text-[11px] border border-sky-200">
+                          展示OK候補
+                        </span>
+                      )}
                     </div>
 
                     <div>
@@ -550,14 +656,33 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                       />
                     </label>
 
-                    <label className="flex items-center gap-2">
+                    {/* ✅ display_ready は “ボタン運用” に寄せる */}
+                    <div className="flex items-center gap-3">
                       <strong className="whitespace-nowrap">ギャラリー表示：</strong>
-                      <input
-                        type="checkbox"
-                        checked={!!entry.display_ready}
-                        onChange={(e) => updateValue(entry.id, 'display_ready', e.target.checked)}
-                      />
-                    </label>
+                      <span className={entry.display_ready ? 'text-green-700' : 'text-gray-600'}>
+                        {entry.display_ready ? 'ON' : 'OFF'}
+                      </span>
+                      {!entry.display_ready && entry.confirmed === true && (
+                        <button
+                          onClick={() => markDisplayReady(entry)}
+                          disabled={isProcessing}
+                          className={`rounded px-3 py-1 text-xs border ${
+                            isProcessing
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : readyCandidate
+                              ? 'bg-white hover:bg-gray-50'
+                              : 'bg-white hover:bg-gray-50'
+                          }`}
+                          title={
+                            readyCandidate
+                              ? 'finalが確認できそうなため display_ready を反映します'
+                              : 'final未確認のため確認ダイアログが出ます'
+                          }
+                        >
+                          ✅ 展示OKにする
+                        </button>
+                      )}
+                    </div>
 
                     <label className="flex items-center gap-2">
                       <strong className="whitespace-nowrap">完売：</strong>
@@ -574,18 +699,14 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                         className="border p-1 w-16 text-right"
                         type="number"
                         value={entry.edition_total ?? 0}
-                        onChange={(e) =>
-                          updateValue(entry.id, 'edition_total', Number(e.target.value))
-                        }
+                        onChange={(e) => updateValue(entry.id, 'edition_total', Number(e.target.value))}
                       />
                       <span>/</span>
                       <input
                         className="border p-1 w-16 text-right"
                         type="number"
                         value={entry.edition_sold ?? 0}
-                        onChange={(e) =>
-                          updateValue(entry.id, 'edition_sold', Number(e.target.value))
-                        }
+                        onChange={(e) => updateValue(entry.id, 'edition_sold', Number(e.target.value))}
                       />
                     </div>
 
@@ -595,9 +716,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                         className="border p-1 w-24 text-right"
                         type="number"
                         value={entry.meish_fee_yen ?? 0}
-                        onChange={(e) =>
-                          updateValue(entry.id, 'meish_fee_yen', Number(e.target.value))
-                        }
+                        onChange={(e) => updateValue(entry.id, 'meish_fee_yen', Number(e.target.value))}
                       />
                     </label>
 
@@ -607,9 +726,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                         className="border p-1 w-24 text-right"
                         type="number"
                         value={entry.artist_reward_yen ?? 0}
-                        onChange={(e) =>
-                          updateValue(entry.id, 'artist_reward_yen', Number(e.target.value))
-                        }
+                        onChange={(e) => updateValue(entry.id, 'artist_reward_yen', Number(e.target.value))}
                       />
                     </label>
 
@@ -632,6 +749,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                       >
                         {isProcessing ? '処理中...' : getApproveButtonLabel(entry)}
                       </button>
+
                       <button
                         onClick={() => rejectEntry(entry)}
                         disabled={isProcessing}
@@ -639,6 +757,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                       >
                         却下
                       </button>
+
                       {entry.confirmed !== null && (
                         <button
                           onClick={() => resetReview(entry)}
@@ -649,14 +768,13 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                           取り消し（未審査へ）
                         </button>
                       )}
+
                       {entry.email && (
-                        <a
-                          className="px-3 py-1 border rounded hover:bg-gray-50"
-                          href={`mailto:${entry.email}`}
-                        >
+                        <a className="px-3 py-1 border rounded hover:bg-gray-50" href={`mailto:${entry.email}`}>
                           作家にメール
                         </a>
                       )}
+
                       <button
                         onClick={fetchEntries}
                         className="ml-auto inline-flex items-center gap-2 rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
