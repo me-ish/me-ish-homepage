@@ -7,6 +7,14 @@ import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { getEntriesWithStatus } from '@/lib/portfolio/queries';
 import { EntryStatusBadge } from './EntryStatusBadge';
+import { PortfolioPromotionCard } from './PortfolioPromotionCard';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -23,7 +31,6 @@ import {
   Loader2,
   Plus,
   ImageIcon,
-  ChevronDown,
 } from 'lucide-react';
 import type { EntryWithStatus } from '@/lib/portfolio/types';
 
@@ -81,49 +88,55 @@ export function MyWorksTab({ userId }: { userId: string }) {
     );
   }
 
+  // 出展作品がない場合
   if (sortedEntries.length === 0) {
     return (
-      <div className="py-20 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-          <ImageIcon className="h-8 w-8 text-gray-400" />
+      <div className="space-y-8">
+        <div className="py-16 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+            <ImageIcon className="h-8 w-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            出展作品がありません
+          </h3>
+          <p className="text-gray-500 mb-6">
+            作品を応募してギャラリーに展示しましょう
+            <br />
+            展示された作品をまとめてポートフォリオを公開できます
+          </p>
+          <Link
+            href="/entry"
+            className="inline-flex items-center gap-2 rounded-full bg-[#00a1e9] px-5 py-2.5 text-white font-medium hover:brightness-105 transition"
+          >
+            <Plus className="h-4 w-4" />
+            作品を応募する
+          </Link>
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
-          出展作品がありません
-        </h3>
-        <p className="text-gray-500 mb-6">
-          作品を応募してギャラリーに展示しましょう
-        </p>
-        <Link
-          href="/entry"
-          className="inline-flex items-center gap-2 rounded-full bg-[#00a1e9] px-5 py-2.5 text-white font-medium hover:brightness-105 transition"
-        >
-          <Plus className="h-4 w-4" />
-          作品を応募
-        </Link>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* コントロール */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">{sortedEntries.length}件の作品</p>
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <select
-              value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as SortKey)}
-              className="appearance-none rounded-lg border px-3 py-2 pr-8 text-sm outline-none hover:bg-gray-50 focus:ring-2 focus:ring-[#00a1e9]/30"
-            >
+          <Select
+            value={sortKey}
+            onValueChange={(v: string) => setSortKey(v as SortKey)}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="並び替え" />
+            </SelectTrigger>
+            <SelectContent>
               {SORT_OPTIONS.map((opt) => (
-                <option key={opt.key} value={opt.key}>
+                <SelectItem key={opt.key} value={opt.key}>
                   {opt.label}
-                </option>
+                </SelectItem>
               ))}
-            </select>
-            <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
-          </div>
+            </SelectContent>
+          </Select>
           <Link
             href="/entry"
             className="inline-flex items-center gap-2 rounded-full bg-[#00a1e9] px-4 py-2 text-white text-sm font-medium hover:brightness-105 transition"
@@ -138,7 +151,7 @@ export function MyWorksTab({ userId }: { userId: string }) {
       <div className="rounded-lg border bg-white overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-gray-50">
+            <TableRow className="bg-gray-50/80">
               <TableHead className="w-[80px]">サムネ</TableHead>
               <TableHead>タイトル</TableHead>
               <TableHead className="w-[100px] text-center">
@@ -166,6 +179,9 @@ export function MyWorksTab({ userId }: { userId: string }) {
           </TableBody>
         </Table>
       </div>
+
+      {/* ポートフォリオ誘導カード */}
+      <PortfolioPromotionCard />
     </div>
   );
 }
@@ -186,10 +202,10 @@ function EntryRow({ entry }: { entry: EntryWithStatus }) {
     : '—';
 
   return (
-    <TableRow className="hover:bg-gray-50">
+    <TableRow className="hover:bg-gray-50/50 transition-colors">
       <TableCell className="p-2">
         <Link href={`/works/${entry.id}`} className="block">
-          <div className="relative w-14 h-14 rounded-md overflow-hidden bg-gray-100">
+          <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-gray-100 ring-1 ring-gray-200">
             <Image
               src={imageUrl}
               alt={entry.title || 'Artwork'}
@@ -203,7 +219,7 @@ function EntryRow({ entry }: { entry: EntryWithStatus }) {
       <TableCell>
         <Link
           href={`/works/${entry.id}`}
-          className="font-medium text-gray-900 hover:text-[#00a1e9] line-clamp-1"
+          className="font-medium text-gray-900 hover:text-[#00a1e9] transition-colors line-clamp-1"
         >
           {entry.title || 'Untitled'}
         </Link>

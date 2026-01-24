@@ -6,7 +6,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { Card, CardContent } from '@/components/ui/card';
-import { Heart, Loader2, ChevronDown } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Heart, Loader2 } from 'lucide-react';
 import type { LikedEntry } from '@/lib/portfolio/types';
 
 const SORT_OPTIONS = [
@@ -101,8 +108,8 @@ export function LikedWorksTab({ userId }: { userId: string }) {
   if (sortedEntries.length === 0) {
     return (
       <div className="py-20 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-          <Heart className="h-8 w-8 text-gray-400" />
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-50 mb-4">
+          <Heart className="h-8 w-8 text-pink-300" />
         </div>
         <h3 className="text-lg font-medium text-gray-900 mb-2">
           いいねした作品がありません
@@ -129,20 +136,18 @@ export function LikedWorksTab({ userId }: { userId: string }) {
         <p className="text-sm text-gray-500">
           {sortedEntries.length}件の作品にいいねしています
         </p>
-        <div className="relative">
-          <select
-            value={sortKey}
-            onChange={(e) => setSortKey(e.target.value as SortKey)}
-            className="appearance-none rounded-lg border px-3 py-2 pr-8 text-sm outline-none hover:bg-gray-50 focus:ring-2 focus:ring-[#00a1e9]/30"
-          >
+        <Select value={sortKey} onValueChange={(v: string) => setSortKey(v as SortKey)}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="並び替え" />
+          </SelectTrigger>
+          <SelectContent>
             {SORT_OPTIONS.map((opt) => (
-              <option key={opt.key} value={opt.key}>
+              <SelectItem key={opt.key} value={opt.key}>
                 {opt.label}
-              </option>
+              </SelectItem>
             ))}
-          </select>
-          <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
-        </div>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* グリッド表示 */}
@@ -160,7 +165,7 @@ function LikedEntryCard({ entry }: { entry: LikedEntry }) {
 
   return (
     <Link href={`/works/${entry.id}`} className="block group">
-      <Card className="overflow-hidden transition-shadow hover:shadow-md">
+      <Card className="overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5">
         <div className="relative aspect-square bg-gray-100">
           <Image
             src={imageUrl}
@@ -170,7 +175,7 @@ function LikedEntryCard({ entry }: { entry: LikedEntry }) {
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
           {/* いいね数バッジ */}
-          <div className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-xs text-white">
+          <div className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/60 backdrop-blur-sm px-2 py-1 text-xs text-white">
             <Heart className="h-3 w-3 fill-current text-pink-400" />
             <span>{entry.likes}</span>
           </div>

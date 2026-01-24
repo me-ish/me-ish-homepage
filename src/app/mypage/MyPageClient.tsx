@@ -9,7 +9,6 @@ import ProfileEditModal from '@/components/ProfileEditModal';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LikedWorksTab } from './_components/LikedWorksTab';
 import { MyWorksTab } from './_components/MyWorksTab';
-import { PortfolioPromotionCard } from './_components/PortfolioPromotionCard';
 import {
   Edit3,
   Globe,
@@ -438,11 +437,7 @@ export default function MyPageClient() {
               <Heart className="w-4 h-4" />
               いいねした作品
             </TabsTrigger>
-            <TabsTrigger
-              value="works"
-              className="gap-2"
-              disabled={!isExhibitor}
-            >
+            <TabsTrigger value="works" className="gap-2">
               <ImageIcon className="w-4 h-4" />
               出展作品
             </TabsTrigger>
@@ -472,15 +467,8 @@ export default function MyPageClient() {
         </Tabs>
       </section>
 
-      {/* ===== ポートフォリオ誘導カード（出展作品タブの時のみ） ===== */}
-      {activeTab === 'works' && isExhibitor && (
-        <section className="px-4 md:px-6 mt-6 mb-20">
-          <PortfolioPromotionCard />
-        </section>
-      )}
-
-      {/* 下部余白（いいねタブの時） */}
-      {activeTab !== 'works' && <div className="mb-20" />}
+      {/* 下部余白 */}
+      <div className="mb-20" />
 
       {/* モバイルFAB */}
       {isMobile && (

@@ -7,7 +7,9 @@
       "Bash(npx eslint:*)",
       "Bash(npx next build)",
       "Bash(npx supabase:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
