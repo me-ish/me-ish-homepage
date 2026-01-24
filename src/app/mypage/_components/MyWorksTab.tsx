@@ -42,7 +42,16 @@ const SORT_OPTIONS = [
   { key: 'views', label: '閲覧数順' },
   { key: 'status', label: 'ステータス順' },
 ] as const;
+
 type SortKey = (typeof SORT_OPTIONS)[number]['key'];
+
+type StatusTab =
+  | 'all'
+  | 'displaying'
+  | 'processing'
+  | 'reviewing'
+  | 'ready'
+  | 'failed';
 
 // ステータスのソート順（数値が小さいほど上位）
 const STATUS_PRIORITY: Record<string, number> = {
@@ -60,6 +69,7 @@ export function MyWorksTab({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>('new');
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [statusTab, setStatusTab] = useState<StatusTab>('all');
 
   useEffect(() => {
     if (!userId) return;
@@ -78,34 +88,16 @@ export function MyWorksTab({ userId }: { userId: string }) {
     })();
   }, [userId]);
 
-  // ソート処理
-  const sortedEntries = useMemo(() => {
-    return [...entries].sort((a, b) => {
-      if (sortKey === 'new') {
-        return (
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-      }
-      if (sortKey === 'likes') {
-        return b.likes - a.likes;
-      }
-      if (sortKey === 'views') {
-        return (b.view_count ?? 0) - (a.view_count ?? 0);
-      }
-      // status
-      const aStatus = getEntryStatus(a).status;
-      const bStatus = getEntryStatus(b).status;
-      return (
-        (STATUS_PRIORITY[aStatus] ?? 99) - (STATUS_PRIORITY[bStatus] ?? 99)
-      );
-    });
-  }, [entries, sortKey]);
+  const setTab = (next: StatusTab) => {
+    setStatusTab(next);
+    setExpandedId(null); // タブ切替で開閉状態をリセット（UX安定）
+  };
 
   const toggleExpand = (id: number) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
-  // Phase2: ステータス別の件数を集計
+  // ステータス別の件数を集計（タブ用）
   const statusCounts = useMemo(() => {
     const counts = {
       displaying: 0,
@@ -114,6 +106,7 @@ export function MyWorksTab({ userId }: { userId: string }) {
       reviewing: 0, // reviewing + approved
       failed: 0,
     };
+
     entries.forEach((e) => {
       const status = getEntryStatus(e).status;
       if (status === 'displaying') counts.displaying++;
@@ -122,8 +115,41 @@ export function MyWorksTab({ userId }: { userId: string }) {
       else if (status === 'reviewing' || status === 'approved') counts.reviewing++;
       else if (status === 'failed') counts.failed++;
     });
+
     return counts;
   }, [entries]);
+
+  // タブで絞り込み
+  const filteredEntries = useMemo(() => {
+    if (statusTab === 'all') return entries;
+
+    return entries.filter((e) => {
+      const s = getEntryStatus(e).status;
+
+      if (statusTab === 'displaying') return s === 'displaying';
+      if (statusTab === 'processing') return s === 'running' || s === 'queued';
+      if (statusTab === 'reviewing') return s === 'reviewing' || s === 'approved';
+      if (statusTab === 'ready') return s === 'ready';
+      if (statusTab === 'failed') return s === 'failed';
+
+      return true;
+    });
+  }, [entries, statusTab]);
+
+  // ソート
+  const sortedEntries = useMemo(() => {
+    return [...filteredEntries].sort((a, b) => {
+      if (sortKey === 'new') {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      if (sortKey === 'likes') return b.likes - a.likes;
+      if (sortKey === 'views') return (b.view_count ?? 0) - (a.view_count ?? 0);
+
+      const aStatus = getEntryStatus(a).status;
+      const bStatus = getEntryStatus(b).status;
+      return (STATUS_PRIORITY[aStatus] ?? 99) - (STATUS_PRIORITY[bStatus] ?? 99);
+    });
+  }, [filteredEntries, sortKey]);
 
   if (loading) {
     return (
@@ -134,8 +160,8 @@ export function MyWorksTab({ userId }: { userId: string }) {
     );
   }
 
-  // 出展作品がない場合
-  if (sortedEntries.length === 0) {
+  // 本当に0件（= 出展がない）
+  if (entries.length === 0) {
     return (
       <div className="space-y-8">
         <div className="py-16 text-center">
@@ -166,12 +192,12 @@ export function MyWorksTab({ userId }: { userId: string }) {
     <div className="space-y-6">
       {/* コントロール */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">{sortedEntries.length}件の作品</p>
+        <p className="text-sm text-gray-500">
+          {sortedEntries.length}件 / 全{entries.length}件
+        </p>
+
         <div className="flex items-center gap-3">
-          <Select
-            value={sortKey}
-            onValueChange={(v: string) => setSortKey(v as SortKey)}
-          >
+          <Select value={sortKey} onValueChange={(v: string) => setSortKey(v as SortKey)}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="並び替え" />
             </SelectTrigger>
@@ -183,6 +209,7 @@ export function MyWorksTab({ userId }: { userId: string }) {
               ))}
             </SelectContent>
           </Select>
+
           <Link
             href="/entry"
             className="inline-flex items-center gap-2 rounded-full bg-[#00a1e9] px-4 py-2 text-white text-sm font-medium hover:brightness-105 transition"
@@ -193,51 +220,66 @@ export function MyWorksTab({ userId }: { userId: string }) {
         </div>
       </div>
 
-      {/* Phase2: ステータスサマリー（作品がある場合のみ） */}
-      {sortedEntries.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {statusCounts.displaying > 0 && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-sm">
-              <Eye className="h-3.5 w-3.5" />
-              <span>公開中 {statusCounts.displaying}</span>
-            </div>
-          )}
-          {statusCounts.ready > 0 && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm">
-              <span>準備完了 {statusCounts.ready}</span>
-            </div>
-          )}
-          {statusCounts.processing > 0 && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              <span>処理中 {statusCounts.processing}</span>
-            </div>
-          )}
-          {statusCounts.reviewing > 0 && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-sm">
-              <span>審査中 {statusCounts.reviewing}</span>
-            </div>
-          )}
-          {statusCounts.failed > 0 && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-100 text-red-700 text-sm">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              <span>エラー {statusCounts.failed}</span>
-            </div>
-          )}
+      {/* ステータスタブ（絞り込み） */}
+      {entries.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <StatusTabButton
+            active={statusTab === 'all'}
+            onClick={() => setTab('all')}
+            label="すべて"
+            count={entries.length}
+          />
+          <StatusTabButton
+            active={statusTab === 'displaying'}
+            onClick={() => setTab('displaying')}
+            label="公開中"
+            count={statusCounts.displaying}
+          />
+          <StatusTabButton
+            active={statusTab === 'processing'}
+            onClick={() => setTab('processing')}
+            label="処理中"
+            count={statusCounts.processing}
+          />
+          <StatusTabButton
+            active={statusTab === 'reviewing'}
+            onClick={() => setTab('reviewing')}
+            label="審査中"
+            count={statusCounts.reviewing}
+          />
+          <StatusTabButton
+            active={statusTab === 'ready'}
+            onClick={() => setTab('ready')}
+            label="準備完了"
+            count={statusCounts.ready}
+          />
+          <StatusTabButton
+            active={statusTab === 'failed'}
+            onClick={() => setTab('failed')}
+            label="エラー"
+            count={statusCounts.failed}
+            danger
+          />
         </div>
       )}
 
-      {/* カード形式の作品一覧 */}
-      <div className="space-y-3">
-        {sortedEntries.map((entry) => (
-          <EntryCard
-            key={entry.id}
-            entry={entry}
-            isExpanded={expandedId === entry.id}
-            onToggle={() => toggleExpand(entry.id)}
-          />
-        ))}
-      </div>
+      {/* フィルタ結果が0件 */}
+      {sortedEntries.length === 0 ? (
+        <div className="py-10 text-center text-sm text-gray-500">
+          この条件に該当する作品はありません。
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {sortedEntries.map((entry) => (
+            <EntryCard
+              key={entry.id}
+              entry={entry}
+              isExpanded={expandedId === entry.id}
+              onToggle={() => toggleExpand(entry.id)}
+            />
+          ))}
+        </div>
+      )}
 
       {/* ポートフォリオ誘導カード */}
       <PortfolioPromotionCard />
@@ -249,6 +291,52 @@ interface EntryCardProps {
   entry: EntryWithStatus;
   isExpanded: boolean;
   onToggle: () => void;
+}
+
+function StatusTabButton({
+  active,
+  onClick,
+  label,
+  count,
+  danger,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count: number;
+  danger?: boolean;
+}) {
+  // 0件は押せない（UIノイズ減）※ただし「すべて」は例外
+  const disabled = label !== 'すべて' && count === 0;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={[
+        'inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm border transition',
+        disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-50',
+        active
+          ? danger
+            ? 'bg-red-50 text-red-700 border-red-200'
+            : 'bg-[#00a1e9]/10 text-[#007bb3] border-[#00a1e9]/25'
+          : danger
+            ? 'bg-white text-red-700 border-red-200'
+            : 'bg-white text-gray-700 border-gray-200',
+      ].join(' ')}
+    >
+      <span className="font-medium">{label}</span>
+      <span
+        className={[
+          'min-w-[2ch] text-xs px-2 py-0.5 rounded-full',
+          active ? (danger ? 'bg-red-100' : 'bg-[#00a1e9]/15') : 'bg-gray-100',
+        ].join(' ')}
+      >
+        {count}
+      </span>
+    </button>
+  );
 }
 
 function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
@@ -283,25 +371,34 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
 
   // 展示期間
   const displayPeriod = entry.display_start_at
-    ? `${formatShortDate(entry.display_start_at)} 〜 ${entry.display_end_at ? formatShortDate(entry.display_end_at) : '無期限'}`
+    ? `${formatShortDate(entry.display_start_at)} 〜 ${
+        entry.display_end_at ? formatShortDate(entry.display_end_at) : '無期限'
+      }`
     : '—';
 
-  // ステータス判定
   const hasError = statusInfo.status === 'failed';
   const isProcessing = statusInfo.status === 'running' || statusInfo.status === 'queued';
   const isDisplaying = statusInfo.status === 'displaying';
 
-  // プログレスステップ計算（展示中までの進捗）
+  // 進捗（展示中まで）
   const getProgressStep = () => {
     switch (statusInfo.status) {
-      case 'reviewing': return 1;
-      case 'approved': return 2;
-      case 'queued': return 3;
-      case 'running': return 4;
-      case 'ready': return 5;
-      case 'displaying': return 6;
-      case 'failed': return -1;
-      default: return 0;
+      case 'reviewing':
+        return 1;
+      case 'approved':
+        return 2;
+      case 'queued':
+        return 3;
+      case 'running':
+        return 4;
+      case 'ready':
+        return 5;
+      case 'displaying':
+        return 6;
+      case 'failed':
+        return -1;
+      default:
+        return 0;
     }
   };
   const progressStep = getProgressStep();
@@ -309,38 +406,46 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
   return (
     <Card
       className={`overflow-hidden transition-all ${
-        hasError ? 'border-red-200 bg-red-50/30' :
-        isProcessing ? 'border-amber-200 bg-amber-50/30' :
-        isDisplaying ? 'border-emerald-200' : ''
+        hasError
+          ? 'border-red-200 bg-red-50/30'
+          : isProcessing
+            ? 'border-amber-200 bg-amber-50/30'
+            : isDisplaying
+              ? 'border-emerald-200'
+              : ''
       }`}
     >
       <CardContent className="p-0">
-        {/* Phase2: ステータスプログレスバー（処理中の作品のみ） */}
-        {(isProcessing || statusInfo.status === 'approved' || statusInfo.status === 'reviewing' || statusInfo.status === 'ready') && progressStep > 0 && (
-          <div className="px-4 pt-3 pb-0">
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5, 6].map((step) => (
-                <div
-                  key={step}
-                  className={`h-1 flex-1 rounded-full transition-all ${
-                    step <= progressStep
-                      ? step === progressStep && isProcessing
-                        ? 'bg-amber-400 animate-pulse'
-                        : 'bg-emerald-400'
-                      : 'bg-gray-200'
-                  }`}
-                />
-              ))}
+        {/* 進捗バー（処理系のみ） */}
+        {(isProcessing ||
+          statusInfo.status === 'approved' ||
+          statusInfo.status === 'reviewing' ||
+          statusInfo.status === 'ready') &&
+          progressStep > 0 && (
+            <div className="px-4 pt-3 pb-0">
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5, 6].map((step) => (
+                  <div
+                    key={step}
+                    className={`h-1 flex-1 rounded-full transition-all ${
+                      step <= progressStep
+                        ? step === progressStep && isProcessing
+                          ? 'bg-amber-400 animate-pulse'
+                          : 'bg-emerald-400'
+                        : 'bg-gray-200'
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {statusInfo.status === 'reviewing' && '審査中...'}
+                {statusInfo.status === 'approved' && '承認済み - 処理待ち'}
+                {statusInfo.status === 'queued' && '待機中 - 順番を待っています'}
+                {statusInfo.status === 'running' && '処理中...'}
+                {statusInfo.status === 'ready' && '展示準備完了 - まもなく公開'}
+              </p>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {statusInfo.status === 'reviewing' && '審査中...'}
-              {statusInfo.status === 'approved' && '承認済み - 処理待ち'}
-              {statusInfo.status === 'queued' && '待機中 - 順番を待っています'}
-              {statusInfo.status === 'running' && '処理中...'}
-              {statusInfo.status === 'ready' && '展示準備完了 - まもなく公開'}
-            </p>
-          </div>
-        )}
+          )}
 
         {/* エラー時のバナー */}
         {hasError && (
@@ -354,14 +459,20 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
 
         {/* メイン行 */}
         <div className="flex items-center gap-4 p-4">
-          {/* サムネイル */}
+          {/* サムネ */}
           <Link href={`/works/${entry.id}`} className="flex-shrink-0 relative">
             <div
-  className={[
-    "relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-100 ring-1",
-    isDisplaying ? "ring-emerald-300" : isProcessing ? "ring-amber-300" : hasError ? "ring-red-300" : "ring-gray-200",
-  ].join(" ")}
->
+              className={[
+                'relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-100 ring-1',
+                isDisplaying
+                  ? 'ring-emerald-300'
+                  : isProcessing
+                    ? 'ring-amber-300'
+                    : hasError
+                      ? 'ring-red-300'
+                      : 'ring-gray-200',
+              ].join(' ')}
+            >
               <Image
                 src={imageUrl}
                 alt={entry.title || 'Artwork'}
@@ -369,7 +480,7 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
                 className="object-cover"
                 sizes="80px"
               />
-              </div>
+            </div>
           </Link>
 
           {/* 作品情報 */}
@@ -382,6 +493,7 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
                 >
                   {entry.title || 'Untitled'}
                 </Link>
+
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <EntryStatusBadge entry={entry} />
                   {entry.gallery_type && (
@@ -392,7 +504,7 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
                 </div>
               </div>
 
-              {/* 統計 */}
+              {/* 統計（PC） */}
               <div className="hidden sm:flex items-center gap-4 text-sm text-gray-500">
                 <span className="inline-flex items-center gap-1">
                   <Heart className="h-4 w-4 text-pink-500" />
@@ -405,7 +517,7 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
               </div>
             </div>
 
-            {/* サブ情報（モバイルで統計表示） */}
+            {/* 統計（SP） */}
             <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 sm:hidden">
               <span className="inline-flex items-center gap-1">
                 <Heart className="h-3 w-3 text-pink-500" />
@@ -418,7 +530,7 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
             </div>
           </div>
 
-          {/* 展開ボタン */}
+          {/* 展開 */}
           <button
             onClick={onToggle}
             className="flex-shrink-0 p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -438,9 +550,7 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
             {/* ステータス説明 */}
             <div
               className={`p-3 rounded-lg text-sm ${
-                hasError
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-white border text-gray-700'
+                hasError ? 'bg-red-100 text-red-800' : 'bg-white border text-gray-700'
               }`}
             >
               <div className="flex items-start gap-2">
@@ -465,9 +575,7 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
                   <Calendar className="h-3 w-3" />
                   展示期間
                 </p>
-                <p className="text-sm font-medium text-gray-900">
-                  {displayPeriod}
-                </p>
+                <p className="text-sm font-medium text-gray-900">{displayPeriod}</p>
               </div>
 
               {/* 応募日 */}
@@ -495,15 +603,11 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
                     </p>
                     <p className="text-sm font-medium text-gray-900">
                       {isUnlimited ? (
-                        <span>
-                          無制限（{editionSold}枚販売済）
-                        </span>
+                        <span>無制限（{editionSold}枚販売済）</span>
                       ) : editionTotal != null ? (
                         <span>
                           {editionSold}/{editionTotal}
-                          <span className="text-gray-500 ml-1">
-                            （残{editionRemaining}枚）
-                          </span>
+                          <span className="text-gray-500 ml-1">（残{editionRemaining}枚）</span>
                         </span>
                       ) : (
                         '—'
@@ -530,3 +634,4 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
     </Card>
   );
 }
+
