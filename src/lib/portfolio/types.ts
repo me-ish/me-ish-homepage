@@ -38,7 +38,11 @@ export type EntryWithStatus = {
   edition_sold?: number | null;
   price?: number | null;
   is_sold?: boolean | null;
+  is_for_sale?: boolean | null;
   job_status?: 'queued' | 'running' | 'succeeded' | 'failed' | null;
+  job_error?: string | null;
+  job_attempts?: number | null;
+  job_updated_at?: string | null;
   view_count?: number;
 };
 

@@ -104,7 +104,7 @@ export async function getEntriesWithStatus(
   supabase: SupabaseClient,
   userId: string
 ): Promise<EntryWithStatus[]> {
-  // entries + job status
+  // entries + job status（エラー情報も含む）
   const { data: entries, error: entriesErr } = await supabase
     .from('entries')
     .select(`
@@ -123,8 +123,12 @@ export async function getEntriesWithStatus(
       edition_sold,
       price,
       is_sold,
+      is_for_sale,
       entry_processing_jobs (
-        status
+        status,
+        last_error,
+        attempts,
+        updated_at
       )
     `)
     .eq('user_id', userId)
@@ -150,25 +154,32 @@ export async function getEntriesWithStatus(
     );
   }
 
-  return (entries ?? []).map((e: any) => ({
-    id: e.id,
-    title: e.title,
-    image_url: e.image_url,
-    confirmed: e.confirmed,
-    display_ready: e.display_ready,
-    display_start_at: e.display_start_at,
-    display_end_at: e.display_end_at,
-    confirmed_at: e.confirmed_at,
-    likes: e.likes ?? 0,
-    created_at: e.created_at,
-    gallery_type: e.gallery_type,
-    edition_total: e.edition_total,
-    edition_sold: e.edition_sold,
-    price: e.price,
-    is_sold: e.is_sold,
-    job_status: e.entry_processing_jobs?.[0]?.status ?? null,
-    view_count: statsMap.get(e.id) ?? 0,
-  }));
+  return (entries ?? []).map((e: any) => {
+    const job = e.entry_processing_jobs?.[0];
+    return {
+      id: e.id,
+      title: e.title,
+      image_url: e.image_url,
+      confirmed: e.confirmed,
+      display_ready: e.display_ready,
+      display_start_at: e.display_start_at,
+      display_end_at: e.display_end_at,
+      confirmed_at: e.confirmed_at,
+      likes: e.likes ?? 0,
+      created_at: e.created_at,
+      gallery_type: e.gallery_type,
+      edition_total: e.edition_total,
+      edition_sold: e.edition_sold,
+      price: e.price,
+      is_sold: e.is_sold,
+      is_for_sale: e.is_for_sale,
+      job_status: job?.status ?? null,
+      job_error: job?.last_error ?? null,
+      job_attempts: job?.attempts ?? null,
+      job_updated_at: job?.updated_at ?? null,
+      view_count: statsMap.get(e.id) ?? 0,
+    };
+  });
 }
 
 /**
