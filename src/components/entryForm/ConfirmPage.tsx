@@ -7,8 +7,6 @@ import type { FormValues } from '@/app/entry/FormWrapper';
 
 interface ConfirmPageProps {
   onBack: () => void;
-  onSubmit: (data: any) => void; // FormWrapper 側の onSubmit は form の submit で呼ばれる想定（ここでは呼ばない）
-  validateFields: string[]; // 必須チェックの再検証用（任意）
 }
 
 const BRAND = '#00a1e9';
@@ -43,8 +41,8 @@ function aiUsageLabel(v: FormValues['ai_usage'] | undefined) {
   return '—';
 }
 
-const ConfirmPage: React.FC<ConfirmPageProps> = ({ onBack, validateFields }) => {
-  const { watch, trigger } = useFormContext<FormValues>();
+const ConfirmPage: React.FC<ConfirmPageProps> = ({ onBack }) => {
+  const { watch } = useFormContext<FormValues>();
   const data = watch();
 
   // ページトップへスクロール（Framer Motion遷移後でも滑らかに）
@@ -87,14 +85,6 @@ const ConfirmPage: React.FC<ConfirmPageProps> = ({ onBack, validateFields }) => 
   const editionLabel = isUnlimited
     ? '無制限'
     : (data.editionTotal ? `${data.editionTotal} 点` : '—');
-
-  // （任意）到達時に重要項目の再検証だけ走らせる
-  useEffect(() => {
-    if (validateFields?.length) {
-      // フォーカス移動はここではしない（UX上、確認ページで急にスクロールしないように）
-      trigger(validateFields as any, { shouldFocus: false });
-    }
-  }, [trigger, validateFields]);
 
   return (
     <section

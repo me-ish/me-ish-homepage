@@ -59,6 +59,9 @@ export type FormValues = {
   ai_usage: 'none' | 'assist' | 'gen_assist';
   ai_usage_scope?: string[];
   ai_usage_note?: string;
+  agreePromotion?: boolean; // 公式広報での紹介に同意
+  agreeStorage?: boolean;   // 展示終了後も作品データを保持（ポートフォリオ用途）
+
 };
 
 const slideVariants = {
@@ -90,6 +93,11 @@ const FormWrapper = () => {
       agreeTerms: false,
       confirmRights: false,
       confirmOriginal: false,
+
+            // ★ 任意同意（Step3）
+      agreePromotion: false,
+      agreeStorage: false,
+
 
       has_signature: undefined as unknown as 'yes' | 'no',
 
@@ -309,6 +317,10 @@ const FormWrapper = () => {
           ai_usage: data.ai_usage,
           ai_usage_scope: data.ai_usage === 'gen_assist' ? (data.ai_usage_scope ?? null) : null,
           ai_usage_note: data.ai_usage === 'gen_assist' ? (data.ai_usage_note ?? null) : null,
+                    // ★ 任意同意（Step3）
+          agree_promotion: !!data.agreePromotion,
+          agree_storage: !!data.agreeStorage,
+
         },
       ]);
 
@@ -457,8 +469,6 @@ const FormWrapper = () => {
                       setDirection('left');
                       setStep(3);
                     }}
-                    onSubmit={onSubmit}
-                    validateFields={['agreeTerms', 'confirmRights', 'confirmOriginal']}
                   />
                   <div className="flex justify-between mt-6">
                     <button type="button" onClick={prevStep} className="button">
