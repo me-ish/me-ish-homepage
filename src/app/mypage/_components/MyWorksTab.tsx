@@ -76,19 +76,20 @@ export function MyWorksTab({ userId }: { userId: string }) {
 
   // 公開URL生成用（SSRで window を触らない）
   const [siteOrigin, setSiteOrigin] = useState<string>(
-    process.env.NEXT_PUBLIC_SITE_URL ?? ''
-  );
+  process.env.NEXT_PUBLIC_SITE_URL ?? ''
+);
 
-  useEffect(() => {
-    if (!siteOrigin && typeof window !== 'undefined') {
-      setSiteOrigin(window.location.origin);
-    }
-  }, [siteOrigin]);
+useEffect(() => {
+  if (!siteOrigin && typeof window !== 'undefined') {
+    setSiteOrigin(window.location.origin);
+  }
+}, [siteOrigin]);
 
-  const publicUrl = useMemo(() => {
-    if (!siteOrigin || !userId) return '';
-    return `${siteOrigin}/artists/${userId}`;
-  }, [siteOrigin, userId]);
+const publicUrl = useMemo(() => {
+  if (!siteOrigin || !userId) return '';
+  return `${siteOrigin}/artists/${userId}`;
+}, [siteOrigin, userId]);
+
 
   useEffect(() => {
     if (!userId) return;
@@ -209,8 +210,6 @@ export function MyWorksTab({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-6">
-      {/* ✅ 公開ポートフォリオ（テンプレ）パネル：出展者のみ表示 */}
-      <PublicPortfolioPanel publicUrl={publicUrl} />
 
       {/* コントロール */}
       <div className="flex items-center justify-between">
@@ -304,122 +303,8 @@ export function MyWorksTab({ userId }: { userId: string }) {
       )}
 
       {/* 既存のAURA誘導（残す：ここは“カスタム”訴求に寄せる想定） */}
-      <PortfolioPromotionCard />
-    </div>
-  );
-}
+      <PortfolioPromotionCard publicUrl={publicUrl} />
 
-function PublicPortfolioPanel({ publicUrl }: { publicUrl: string }) {
-  const [copied, setCopied] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2500);
-    return () => clearTimeout(t);
-  }, [toast]);
-
-  const handleCopy = async () => {
-    try {
-      if (!publicUrl) return;
-      await navigator.clipboard.writeText(publicUrl);
-      setCopied(true);
-      setToast('公開URLをコピーしました');
-      setTimeout(() => setCopied(false), 1200);
-    } catch {
-      setToast('コピーに失敗しました');
-    }
-  };
-
-  const handleShareX = () => {
-    if (!publicUrl) return;
-    const text = `me-ish ポートフォリオ\n${publicUrl}`;
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&hashtags=me_ish`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  const openHref = publicUrl || '/artists/me';
-
-  return (
-    <div className="relative">
-      <Card className="overflow-hidden border-[#00a1e9]/20 bg-[#00a1e9]/[0.03]">
-        <CardContent className="p-4 sm:p-5">
-          <div className="flex flex-col gap-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-900">
-                    公開ポートフォリオ
-                  </span>
-                  <Badge variant="outline" className="text-xs">
-                    テンプレ
-                  </Badge>
-                </div>
-                <p className="mt-1 text-xs text-gray-600">
-                  あなたの作家ページURLです。応募作品が自動で反映されます。
-                </p>
-              </div>
-
-              <Link
-                href="/aiPortfolio"
-                className="hidden sm:inline-flex items-center gap-2 rounded-full border bg-white px-3 py-2 text-xs font-medium hover:bg-gray-50"
-                title="AURAでカスタムする"
-              >
-                <Sparkles className="h-4 w-4 text-[#00a1e9]" />
-                AURAでカスタム
-              </Link>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-              <div className="flex-1 overflow-hidden rounded-xl border bg-white/70 px-3 py-2 text-sm text-gray-700">
-                <span className="truncate">{publicUrl || '/artists/...'} </span>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={handleCopy}
-                  disabled={!publicUrl}
-                  className="inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
-                >
-                  <LinkIcon className="w-4 h-4" />
-                  <span>{copied ? 'コピー済み' : 'URLコピー'}</span>
-                </button>
-
-                <a
-                  href={openHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm hover:bg-gray-50"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span>公開ページ</span>
-                </a>
-
-                <button
-                  onClick={handleShareX}
-                  disabled={!publicUrl}
-                  className="inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
-                >
-                  <Share2 className="w-4 h-4" />
-                  <span>シェア</span>
-                </button>
-              </div>
-            </div>
-
-            <Link
-              href="/aiPortfolio"
-              className="sm:hidden inline-flex items-center justify-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm font-medium hover:bg-gray-50"
-            >
-              <Sparkles className="h-4 w-4 text-[#00a1e9]" />
-              AURAでカスタムする
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-
-      {toast && (
-        <div className="mt-2 text-xs text-gray-600">{toast}</div>
-      )}
     </div>
   );
 }
