@@ -105,6 +105,26 @@ export function MyWorksTab({ userId }: { userId: string }) {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
+  // Phase2: ステータス別の件数を集計
+  const statusCounts = useMemo(() => {
+    const counts = {
+      displaying: 0,
+      ready: 0,
+      processing: 0, // running + queued
+      reviewing: 0, // reviewing + approved
+      failed: 0,
+    };
+    entries.forEach((e) => {
+      const status = getEntryStatus(e).status;
+      if (status === 'displaying') counts.displaying++;
+      else if (status === 'ready') counts.ready++;
+      else if (status === 'running' || status === 'queued') counts.processing++;
+      else if (status === 'reviewing' || status === 'approved') counts.reviewing++;
+      else if (status === 'failed') counts.failed++;
+    });
+    return counts;
+  }, [entries]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -173,6 +193,40 @@ export function MyWorksTab({ userId }: { userId: string }) {
         </div>
       </div>
 
+      {/* Phase2: ステータスサマリー（作品がある場合のみ） */}
+      {sortedEntries.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {statusCounts.displaying > 0 && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-sm">
+              <Eye className="h-3.5 w-3.5" />
+              <span>展示中 {statusCounts.displaying}</span>
+            </div>
+          )}
+          {statusCounts.ready > 0 && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm">
+              <span>準備完了 {statusCounts.ready}</span>
+            </div>
+          )}
+          {statusCounts.processing > 0 && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <span>処理中 {statusCounts.processing}</span>
+            </div>
+          )}
+          {statusCounts.reviewing > 0 && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-sm">
+              <span>審査中 {statusCounts.reviewing}</span>
+            </div>
+          )}
+          {statusCounts.failed > 0 && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-100 text-red-700 text-sm">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span>エラー {statusCounts.failed}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* カード形式の作品一覧 */}
       <div className="space-y-3">
         {sortedEntries.map((entry) => (
@@ -232,20 +286,76 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
     ? `${formatShortDate(entry.display_start_at)} 〜 ${entry.display_end_at ? formatShortDate(entry.display_end_at) : '無期限'}`
     : '—';
 
-  // エラー時
+  // ステータス判定
   const hasError = statusInfo.status === 'failed';
+  const isProcessing = statusInfo.status === 'running' || statusInfo.status === 'queued';
+  const isDisplaying = statusInfo.status === 'displaying';
+
+  // プログレスステップ計算（展示中までの進捗）
+  const getProgressStep = () => {
+    switch (statusInfo.status) {
+      case 'reviewing': return 1;
+      case 'approved': return 2;
+      case 'queued': return 3;
+      case 'running': return 4;
+      case 'ready': return 5;
+      case 'displaying': return 6;
+      case 'failed': return -1;
+      default: return 0;
+    }
+  };
+  const progressStep = getProgressStep();
 
   return (
     <Card
       className={`overflow-hidden transition-all ${
-        hasError ? 'border-red-200 bg-red-50/30' : ''
+        hasError ? 'border-red-200 bg-red-50/30' :
+        isProcessing ? 'border-amber-200 bg-amber-50/30' :
+        isDisplaying ? 'border-emerald-200' : ''
       }`}
     >
       <CardContent className="p-0">
+        {/* Phase2: ステータスプログレスバー（処理中の作品のみ） */}
+        {(isProcessing || statusInfo.status === 'approved' || statusInfo.status === 'reviewing' || statusInfo.status === 'ready') && progressStep > 0 && (
+          <div className="px-4 pt-3 pb-0">
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5, 6].map((step) => (
+                <div
+                  key={step}
+                  className={`h-1 flex-1 rounded-full transition-all ${
+                    step <= progressStep
+                      ? step === progressStep && isProcessing
+                        ? 'bg-amber-400 animate-pulse'
+                        : 'bg-emerald-400'
+                      : 'bg-gray-200'
+                  }`}
+                />
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {statusInfo.status === 'reviewing' && '審査中...'}
+              {statusInfo.status === 'approved' && '承認済み - 処理待ち'}
+              {statusInfo.status === 'queued' && '待機中 - 順番を待っています'}
+              {statusInfo.status === 'running' && '処理中...'}
+              {statusInfo.status === 'ready' && '展示準備完了 - まもなく公開'}
+            </p>
+          </div>
+        )}
+
+        {/* エラー時のバナー */}
+        {hasError && (
+          <div className="px-4 pt-3 pb-0">
+            <div className="flex items-center gap-2 text-red-600 text-sm">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="font-medium">処理エラーが発生しました</span>
+            </div>
+          </div>
+        )}
+
         {/* メイン行 */}
         <div className="flex items-center gap-4 p-4">
           {/* サムネイル */}
-          <Link href={`/works/${entry.id}`} className="flex-shrink-0">
+          <Link href={`/works/${entry.id}`} className="flex-shrink-0 relative">
             <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-gray-100 ring-1 ring-gray-200">
               <Image
                 src={imageUrl}
@@ -254,6 +364,14 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
                 className="object-cover"
                 sizes="80px"
               />
+              {/* ステータスオーバーレイ（展示中） */}
+              {isDisplaying && (
+                <div className="absolute inset-0 bg-emerald-500/10 flex items-center justify-center">
+                  <div className="absolute bottom-0 left-0 right-0 bg-emerald-500 text-white text-[10px] text-center py-0.5 font-medium">
+                    展示中
+                  </div>
+                </div>
+              )}
             </div>
           </Link>
 

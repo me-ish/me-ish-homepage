@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import ProfileEditModal from '@/components/ProfileEditModal';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,6 +21,11 @@ import {
   ExternalLink,
   BadgeCheck,
   ImageIcon,
+  Wallet,
+  AlertTriangle,
+  Clock,
+  CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
 
@@ -47,18 +53,19 @@ type Entry = {
   id: number;
   confirmed: boolean;
   display_ready?: boolean | null;
-
-  // ✅ 展示中（期間内）判定用
   display_start_at?: string | null;
   display_end_at?: string | null;
-
   likes?: number;
   edition_total?: number | null;
   edition_sold?: number | null;
-
-  // ※ entries側の artist_reward_yen は「支払予定/済み」と一致しない可能性があるため、
-  // MyPageの“金額”カードでは使わない（誤認防止）
   artist_reward_yen?: number | null;
+};
+
+// v_my_sales_summary ビューから取得するデータ型
+type SalesSummary = {
+  gross_sales_yen: number;
+  pending_payout_yen: number;
+  paid_out_yen: number;
 };
 
 /* ===================== Utils ===================== */
@@ -76,7 +83,10 @@ export default function MyPageClient() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [isExhibitor, setIsExhibitor] = useState(false);
 
-  const [grossSalesYen, setGrossSalesYen] = useState<number>(0); // ✅ 売上（購入確定）
+  // Phase2: 売上サマリー
+  const [salesSummary, setSalesSummary] = useState<SalesSummary | null>(null);
+  // Phase2: 銀行口座登録チェック
+  const [hasBankAccount, setHasBankAccount] = useState<boolean | null>(null);
 
   // UI state
   const [copied, setCopied] = useState(false);
@@ -144,7 +154,8 @@ export default function MyPageClient() {
         setProfile(null);
         setEntries([]);
         setIsExhibitor(false);
-        setGrossSalesYen(0);
+        setSalesSummary(null);
+        setHasBankAccount(null);
         setLoading(false);
         return;
       }
@@ -194,7 +205,8 @@ export default function MyPageClient() {
           .select('id', { count: 'exact', head: true })
           .eq('user_id', uid);
 
-        setIsExhibitor((count ?? 0) > 0);
+        const hasEntries = (count ?? 0) > 0;
+        setIsExhibitor(hasEntries);
 
         // 指標用に簡易取得（confirmed作品のみ）
         const { data: es, error: entriesErr } = await supabase
@@ -211,23 +223,44 @@ export default function MyPageClient() {
         }
         setEntries((es as Entry[]) ?? []);
 
-        // ✅ 売上（購入確定）: sales.price の合計（purchased_at が入っているものだけ）
-        // sales.entry_id -> entries.id のFKが張られている前提（entries!inner）
-        const { data: salesRows, error: salesErr } = await supabase
-          .from('sales')
-          .select('price, purchased_at, entries!inner(user_id)')
-          .eq('entries.user_id', uid)
-          .not('purchased_at', 'is', null);
+        // Phase2: 売上サマリーを v_my_sales_summary から取得
+        if (hasEntries) {
+          const { data: summary, error: summaryErr } = await supabase
+            .from('v_my_sales_summary')
+            .select('gross_sales_yen, pending_payout_yen, paid_out_yen')
+            .eq('user_id', uid)
+            .maybeSingle();
 
-        if (salesErr) {
-          console.error('[sales] error:', salesErr);
-          setGrossSalesYen(0);
-        } else {
-          const sum = (salesRows ?? []).reduce((acc: number, r: any) => {
-            const v = typeof r.price === 'number' ? r.price : Number(r.price ?? 0);
-            return acc + (Number.isFinite(v) ? v : 0);
-          }, 0);
-          setGrossSalesYen(sum);
+          if (summaryErr) {
+            console.error('[v_my_sales_summary] error:', summaryErr);
+            setSalesSummary(null);
+          } else if (summary) {
+            setSalesSummary({
+              gross_sales_yen: summary.gross_sales_yen ?? 0,
+              pending_payout_yen: summary.pending_payout_yen ?? 0,
+              paid_out_yen: summary.paid_out_yen ?? 0,
+            });
+          } else {
+            // 売上がない場合
+            setSalesSummary({
+              gross_sales_yen: 0,
+              pending_payout_yen: 0,
+              paid_out_yen: 0,
+            });
+          }
+
+          // Phase2: 銀行口座登録チェック
+          const { count: bankCount, error: bankErr } = await supabase
+            .from('artists_bank_accounts')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', uid);
+
+          if (bankErr) {
+            console.error('[artists_bank_accounts] error:', bankErr);
+            setHasBankAccount(null);
+          } else {
+            setHasBankAccount((bankCount ?? 0) > 0);
+          }
         }
       } catch (e: any) {
         console.error('[mypage load] fatal:', e?.message || e);
@@ -256,7 +289,7 @@ export default function MyPageClient() {
       return startOk && endOk;
     };
 
-    const displayingNow = entries.filter(isInDisplayWindow).length; // ✅ 現在展示中（期間内）
+    const displayingNow = entries.filter(isInDisplayWindow).length;
     const totalLikes = entries.reduce((s, e) => s + (e.likes ?? 0), 0);
 
     const soldCount = entries.reduce((s, e) => {
@@ -455,14 +488,39 @@ export default function MyPageClient() {
         </div>
       </section>
 
-      {/* ===== Metrics (出展者のみ) ===== */}
+      {/* ===== Phase2: 銀行口座未登録の警告 ===== */}
+      {isExhibitor && hasBankAccount === false && (
+        <section className="px-4 md:px-6 mt-6">
+          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-800">
+                振込先口座が未登録です
+              </p>
+              <p className="text-sm text-amber-700 mt-1">
+                作品が売れた際の報酬を受け取るには、銀行口座の登録が必要です。
+              </p>
+              <Link
+                href="/settings/bank"
+                className="inline-flex items-center gap-1 text-sm font-medium text-amber-800 hover:text-amber-900 mt-2 underline underline-offset-2"
+              >
+                <Wallet className="w-4 h-4" />
+                口座を登録する
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ===== Metrics (出展者のみ) - Phase2: 6カード ===== */}
       {isExhibitor && (
         <section className="px-4 md:px-6 mt-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <MetricCard
-              icon={<BadgeCheck className="w-5 h-5" />}
+              icon={<BadgeCheck className="w-5 h-5 text-emerald-500" />}
               label="展示中"
               value={metrics.displayingNow}
+              highlight={metrics.displayingNow > 0}
             />
             <MetricCard
               icon={<Heart className="w-5 h-5 text-pink-500" />}
@@ -470,14 +528,27 @@ export default function MyPageClient() {
               value={metrics.totalLikes}
             />
             <MetricCard
-              icon={<ShoppingCart className="w-5 h-5" />}
+              icon={<ShoppingCart className="w-5 h-5 text-blue-500" />}
               label="販売数"
               value={metrics.soldCount}
             />
             <MetricCard
-              icon={<Coins className="w-5 h-5" />}
-              label="売上（購入確定）"
-              value={formatYen(grossSalesYen)}
+              icon={<Coins className="w-5 h-5 text-yellow-500" />}
+              label="売上"
+              value={formatYen(salesSummary?.gross_sales_yen ?? 0)}
+              subLabel="購入確定"
+            />
+            <MetricCard
+              icon={<Clock className="w-5 h-5 text-orange-500" />}
+              label="入金予定"
+              value={formatYen(salesSummary?.pending_payout_yen ?? 0)}
+              subLabel="振込待ち"
+            />
+            <MetricCard
+              icon={<CheckCircle2 className="w-5 h-5 text-green-500" />}
+              label="入金済み"
+              value={formatYen(salesSummary?.paid_out_yen ?? 0)}
+              subLabel="振込完了"
             />
           </div>
         </section>
@@ -563,18 +634,31 @@ function MetricCard({
   icon,
   label,
   value,
+  subLabel,
+  highlight,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string | number;
+  subLabel?: string;
+  highlight?: boolean;
 }) {
   return (
-    <div className="rounded-2xl bg-white border p-4 shadow-sm hover:shadow transition">
+    <div
+      className={`rounded-2xl border p-4 shadow-sm hover:shadow transition ${
+        highlight
+          ? 'bg-emerald-50 border-emerald-200'
+          : 'bg-white'
+      }`}
+    >
       <div className="flex items-center gap-2 text-gray-700">
         {icon}
         <span className="text-xl font-bold">{value}</span>
       </div>
       <p className="text-sm text-gray-500 mt-1">{label}</p>
+      {subLabel && (
+        <p className="text-xs text-gray-400 mt-0.5">{subLabel}</p>
+      )}
     </div>
   );
 }
