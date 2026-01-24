@@ -317,20 +317,18 @@ function AnnouncementBadgeInline({ type }: { type: 'info' | 'update' | 'maintena
 ────────────────────────────────────────────────────────────── */
 function HeroBackground() {
   return (
-    <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-      {/* Radial glow（上部・下部） */}
+    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,_rgba(0,161,233,0.12),_transparent_55%),radial-gradient(ellipse_60%_40%_at_50%_110%,_rgba(0,161,233,0.08),_transparent_50%)]" />
 
-      {/* 微細グリッド */}
       <div
         className="absolute inset-0 opacity-[0.03]"
         style={{
-          backgroundImage: `linear-gradient(rgba(0,161,233,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,161,233,0.5) 1px, transparent 1px)`,
-          backgroundSize: '40px 40px',
+          backgroundImage:
+            'linear-gradient(rgba(0,161,233,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,161,233,0.5) 1px, transparent 1px)',
+          backgroundSize: "40px 40px",
         }}
       />
 
-      {/* 右下ビネット（控えめ） */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_100%_100%,_rgba(0,0,0,0.02),_transparent_50%)]" />
     </div>
   );
@@ -342,16 +340,16 @@ function HeroBackground() {
 const DesktopHome = () => {
   useFadeInOnScroll();
 
-  return (
-    <div className="font-zen text-[#222] bg-white">
-      <main className="pt-[70px]">
+ return (
+  <div className="font-zen text-[#222] bg-white">
+    <HeroBackground />
+    <main className="pt-[70px] relative z-10">
+
         {/* Hero */}
         <section
           className="relative flex flex-col items-center justify-center min-h-[82vh] text-center px-6 fade-in-start"
           aria-labelledby="hero-title"
         >
-          <HeroBackground />
-
           <h1
             id="hero-title"
             className="font-lilita font-bold leading-none text-[#00a1e9] text-[clamp(2.8rem,8vw,5rem)] tracking-tight"

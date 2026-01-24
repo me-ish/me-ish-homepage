@@ -71,11 +71,11 @@ function useFadeInOnScroll() {
 }
 
 /* ──────────────────────────────────────────────────────────────
-   背景レイヤー: Hero用（モバイル最適化）
+   背景レイヤー: Hero用（Desktopと統一 / fixed）
 ────────────────────────────────────────────────────────────── */
 function HeroBackground() {
   return (
-    <div className="pointer-events-none absolute inset-x-0 -z-10 top-[-64px] h-[calc(100%+64px)] overflow-hidden">
+    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
       {/* Radial glow（上部・下部） */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_-5%,_rgba(0,161,233,0.14),_transparent_55%),radial-gradient(ellipse_70%_40%_at_50%_110%,_rgba(0,161,233,0.08),_transparent_50%)]" />
 
@@ -83,7 +83,8 @@ function HeroBackground() {
       <div
         className="absolute inset-0 opacity-[0.025]"
         style={{
-          backgroundImage: `linear-gradient(rgba(0,161,233,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,161,233,0.5) 1px, transparent 1px)`,
+          backgroundImage:
+            'linear-gradient(rgba(0,161,233,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,161,233,0.5) 1px, transparent 1px)',
           backgroundSize: '32px 32px',
         }}
       />
@@ -94,55 +95,65 @@ function HeroBackground() {
 const MobileHome = () => {
   useFadeInOnScroll();
 
-  return (
-    <div className="font-zen text-[#222] bg-white">
-      {/* Header は layout.tsx 側に任せる */}
+return (
+  <div className="font-zen text-[#222] bg-white">
+    <HeroBackground />
 
-      {/* ヘッダー分の余白（モバイルはやや低め） */}
-      <main className="pt-[64px]">
-        {/* Hero：1アクション集中（応募） */}
-        <section
-          className={`relative fade-in-start ${LAYOUT.sectionX} py-14 text-center`}
-          aria-labelledby="hero-title"
-        >
-          <HeroBackground />
+    {/* ヘッダー分の余白（モバイルはやや低め） */}
+    <main className="pt-[64px] relative z-10">
+{/* Hero：Desktopと同じ導線（ギャラリー / 応募） */}
+<section
+  className={`relative ${LAYOUT.sectionX} py-14 text-center`}
+  aria-labelledby="hero-title"
+>
+  <div className="fade-in-start">
+    <h1
+      id="hero-title"
+      className="font-lilita font-bold leading-none text-[#00a1e9] tracking-tight text-[clamp(2.4rem,12vw,3.4rem)]"
+    >
+      me-ish
+    </h1>
 
-          <h1
-            id="hero-title"
-            className="font-lilita font-bold leading-none text-[#00a1e9] tracking-tight text-[clamp(2.4rem,12vw,3.4rem)]"
-          >
-            me-ish
-          </h1>
-          <p className="text-[#00a1e9]/80 uppercase tracking-[0.22em] mt-1 text-[clamp(0.8rem,3.2vw,1rem)]">
-            — online gallery —
-          </p>
+    <p className="text-[#00a1e9]/80 uppercase tracking-[0.22em] mt-1 text-[clamp(0.8rem,3.2vw,1rem)]">
+      — online gallery —
+    </p>
 
-          <p className="mt-6 text-[clamp(1.05rem,5vw,1.4rem)] text-[#333]">アートを、もっと近くに</p>
+    <p className="mt-6 text-[clamp(1.05rem,5vw,1.4rem)] text-[#333]">
+      アートを、もっと近くに
+    </p>
 
-          {/* 主CTAのみを強調 - shadcn Button使用 */}
-          <div className="mt-7">
-            <Button
-              asChild
-              size="lg"
-              className="rounded-full px-6 py-3 h-auto text-base font-semibold shadow-md active:scale-[0.98] transition-all duration-200"
-            >
-              <Link href="/entry" aria-label="応募する">
-                応募する <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
+    {/* CTA Buttons（Desktopと統一） */}
+    <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+      <Button
+        asChild
+        size="lg"
+        className="rounded-full px-6 py-3 h-auto text-base font-semibold shadow-md active:scale-[0.98] transition-all duration-200"
+      >
+        <Link href="/white" aria-label="ギャラリーを見る">
+          ギャラリーを見る <ArrowRight className="h-4 w-4" />
+        </Link>
+      </Button>
 
-          {/* サブ導線 */}
-          <div className="mt-4">
-            <Link
-              href="#gallery"
-              className="text-[#00a1e9] underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00a1e9]/20 rounded transition-colors"
-            >
-              まずはギャラリーを見る
-            </Link>
-          </div>
-        </section>
+      <Button
+        asChild
+        variant="outline"
+        size="lg"
+        className="rounded-full px-6 py-3 h-auto text-base font-semibold border-[#00a1e9] text-[#00a1e9] active:scale-[0.98] hover:bg-[#e8f7ff] hover:text-[#00a1e9] transition-all duration-200"
+      >
+        <Link href="/entry" aria-label="応募する">
+          応募する <ArrowRight className="h-4 w-4" />
+        </Link>
+      </Button>
+    </div>
 
+    <Link
+      href="/modal/about"
+      className="mt-8 inline-block text-sm text-[#00a1e9]/70 hover:text-[#00a1e9] transition-colors"
+    >
+      もっと見る
+    </Link>
+  </div>
+</section>
         {/* お知らせ */}
         <section
           id="news"
