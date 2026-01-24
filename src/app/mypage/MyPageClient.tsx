@@ -3,7 +3,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import ProfileEditModal from '@/components/ProfileEditModal';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -47,9 +46,18 @@ type Profile = {
 type Entry = {
   id: number;
   confirmed: boolean;
+  display_ready?: boolean | null;
+
+  // ✅ 展示中（期間内）判定用
+  display_start_at?: string | null;
+  display_end_at?: string | null;
+
   likes?: number;
   edition_total?: number | null;
   edition_sold?: number | null;
+
+  // ※ entries側の artist_reward_yen は「支払予定/済み」と一致しない可能性があるため、
+  // MyPageの“金額”カードでは使わない（誤認防止）
   artist_reward_yen?: number | null;
 };
 
@@ -68,6 +76,8 @@ export default function MyPageClient() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [isExhibitor, setIsExhibitor] = useState(false);
 
+  const [grossSalesYen, setGrossSalesYen] = useState<number>(0); // ✅ 売上（購入確定）
+
   // UI state
   const [copied, setCopied] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -80,8 +90,9 @@ export default function MyPageClient() {
     process.env.NEXT_PUBLIC_SITE_URL ?? ''
   );
   useEffect(() => {
-    if (!siteOrigin && typeof window !== 'undefined')
+    if (!siteOrigin && typeof window !== 'undefined') {
       setSiteOrigin(window.location.origin);
+    }
   }, [siteOrigin]);
 
   const publicUrl = useMemo(() => {
@@ -91,8 +102,9 @@ export default function MyPageClient() {
 
   // 画面幅（モバイル判定）
   useEffect(() => {
-    const check = () =>
-      typeof window !== 'undefined' && setIsMobile(window.innerWidth < 768);
+    const check = () => {
+      if (typeof window !== 'undefined') setIsMobile(window.innerWidth < 768);
+    };
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
@@ -132,6 +144,7 @@ export default function MyPageClient() {
         setProfile(null);
         setEntries([]);
         setIsExhibitor(false);
+        setGrossSalesYen(0);
         setLoading(false);
         return;
       }
@@ -184,15 +197,38 @@ export default function MyPageClient() {
         setIsExhibitor((count ?? 0) > 0);
 
         // 指標用に簡易取得（confirmed作品のみ）
-        const { data: es } = await supabase
+        const { data: es, error: entriesErr } = await supabase
           .from('entries')
           .select(
-            'id, confirmed, likes, edition_total, edition_sold, artist_reward_yen'
+            'id, confirmed, display_ready, display_start_at, display_end_at, likes, edition_total, edition_sold'
           )
           .eq('user_id', uid)
           .eq('confirmed', true);
 
+        if (entriesErr) {
+          console.error('[entries] error:', entriesErr);
+          throw entriesErr;
+        }
         setEntries((es as Entry[]) ?? []);
+
+        // ✅ 売上（購入確定）: sales.price の合計（purchased_at が入っているものだけ）
+        // sales.entry_id -> entries.id のFKが張られている前提（entries!inner）
+        const { data: salesRows, error: salesErr } = await supabase
+          .from('sales')
+          .select('price, purchased_at, entries!inner(user_id)')
+          .eq('entries.user_id', uid)
+          .not('purchased_at', 'is', null);
+
+        if (salesErr) {
+          console.error('[sales] error:', salesErr);
+          setGrossSalesYen(0);
+        } else {
+          const sum = (salesRows ?? []).reduce((acc: number, r: any) => {
+            const v = typeof r.price === 'number' ? r.price : Number(r.price ?? 0);
+            return acc + (Number.isFinite(v) ? v : 0);
+          }, 0);
+          setGrossSalesYen(sum);
+        }
       } catch (e: any) {
         console.error('[mypage load] fatal:', e?.message || e);
         setToast(e?.message || '読み込みに失敗しました');
@@ -204,8 +240,25 @@ export default function MyPageClient() {
 
   // 指標
   const metrics = useMemo(() => {
-    const published = entries.filter((e) => e.confirmed).length;
+    const now = Date.now();
+
+    const isInDisplayWindow = (e: Entry) => {
+      if (!e.display_ready) return false;
+
+      const startOk = e.display_start_at
+        ? new Date(e.display_start_at).getTime() <= now
+        : true;
+
+      const endOk = e.display_end_at
+        ? now < new Date(e.display_end_at).getTime()
+        : true;
+
+      return startOk && endOk;
+    };
+
+    const displayingNow = entries.filter(isInDisplayWindow).length; // ✅ 現在展示中（期間内）
     const totalLikes = entries.reduce((s, e) => s + (e.likes ?? 0), 0);
+
     const soldCount = entries.reduce((s, e) => {
       if (isUnlimited(e)) return s + (e.edition_sold ?? 0);
       const soldOut =
@@ -213,11 +266,8 @@ export default function MyPageClient() {
         (e.edition_sold ?? 0) >= (e.edition_total ?? 0);
       return s + (soldOut ? (e.edition_total ?? 0) : (e.edition_sold ?? 0));
     }, 0);
-    const rewardYen = entries.reduce(
-      (s, e) => s + (e.artist_reward_yen ?? 0),
-      0
-    );
-    return { publishedCount: published, totalLikes, soldCount, rewardYen };
+
+    return { displayingNow, totalLikes, soldCount };
   }, [entries]);
 
   // URLコピー
@@ -387,8 +437,12 @@ export default function MyPageClient() {
               )}
               <button
                 onClick={() => {
-                  const text = `${profile?.display_name ?? 'Artist'} | me-ish ポートフォリオ\n${publicUrl || ''}`;
-                  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&hashtags=me_ish`;
+                  const text = `${
+                    profile?.display_name ?? 'Artist'
+                  } | me-ish ポートフォリオ\n${publicUrl || ''}`;
+                  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                    text
+                  )}&hashtags=me_ish`;
                   window.open(url, '_blank', 'noopener,noreferrer');
                 }}
                 className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
@@ -407,8 +461,8 @@ export default function MyPageClient() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <MetricCard
               icon={<BadgeCheck className="w-5 h-5" />}
-              label="公開作品"
-              value={metrics.publishedCount}
+              label="展示中"
+              value={metrics.displayingNow}
             />
             <MetricCard
               icon={<Heart className="w-5 h-5 text-pink-500" />}
@@ -422,8 +476,8 @@ export default function MyPageClient() {
             />
             <MetricCard
               icon={<Coins className="w-5 h-5" />}
-              label="報酬額"
-              value={formatYen(metrics.rewardYen)}
+              label="売上（購入確定）"
+              value={formatYen(grossSalesYen)}
             />
           </div>
         </section>
@@ -448,9 +502,7 @@ export default function MyPageClient() {
               {uid ? (
                 <LikedWorksTab userId={uid} />
               ) : (
-                <div className="py-10 text-center text-gray-500">
-                  読み込み中...
-                </div>
+                <div className="py-10 text-center text-gray-500">読み込み中...</div>
               )}
             </TabsContent>
 
@@ -458,9 +510,7 @@ export default function MyPageClient() {
               {uid ? (
                 <MyWorksTab userId={uid} />
               ) : (
-                <div className="py-10 text-center text-gray-500">
-                  読み込み中...
-                </div>
+                <div className="py-10 text-center text-gray-500">読み込み中...</div>
               )}
             </TabsContent>
           </div>
