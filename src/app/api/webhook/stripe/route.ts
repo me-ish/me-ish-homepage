@@ -272,11 +272,19 @@ async function handleGalleryPurchase(
       return NextResponse.json({ ok: true, received: true }, { status: 200 });
     }
 
-    // finalize_sale RPC
+    const buyerEmail = session.customer_details?.email ?? session.customer_email ?? null;
+    const price = session.amount_total ?? null;
+
+    // 手数料・報酬を計算（JPY = zero-decimal）
+    const meishFeeYen = price != null ? Math.floor(price * 0.1) : null;
+    const artistRewardYen = price != null ? Math.floor(price * 0.9) : null;
+
+    // finalize_sale RPC（p_price を渡して fee/reward も DB 側で設定）
     const { data: rpcResult, error: rpcErr } = await admin.rpc("finalize_sale", {
       p_entry_id: entryId, // stringでもbigintに解釈される（DB側がbigint）
       p_quantity: quantity,
       p_session_id: session.id,
+      p_price: price,
     });
 
     if (rpcErr) {
@@ -291,9 +299,6 @@ async function handleGalleryPurchase(
       return NextResponse.json({ ok: true, received: true }, { status: 200 });
     }
 
-    const buyerEmail = session.customer_details?.email ?? session.customer_email ?? null;
-    const price = session.amount_total ?? null;
-
     // ✅ 推奨：DB関数内で sales を確保する設計の場合は update が基本
     // ただし現時点の移行中でも壊れないように、
     // updateが0件になり得るケースを upsert で救済する。
@@ -302,6 +307,9 @@ async function handleGalleryPurchase(
       .update({
         buyer_email: buyerEmail,
         price,
+        meish_fee_yen: meishFeeYen,
+        artist_reward_yen: artistRewardYen,
+        payout_status: "pending",
         purchased_at: new Date().toISOString(),
         metadata: {
           event_id: eventId,
@@ -334,6 +342,9 @@ async function handleGalleryPurchase(
             stripe_session_id: session.id,
             buyer_email: buyerEmail,
             price,
+            meish_fee_yen: meishFeeYen,
+            artist_reward_yen: artistRewardYen,
+            payout_status: "pending",
             purchased_at: new Date().toISOString(),
             metadata: {
               event_id: eventId,

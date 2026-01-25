@@ -35,6 +35,7 @@ export default async function AdminPage() {
     entriesRejectedRes,
     inquiriesUnreadRes,
     salesCountRes,
+    pendingPayoutsRes,
     processingPendingRes,
     latestEntriesRes,
     latestInquiriesRes,
@@ -44,7 +45,9 @@ export default async function AdminPage() {
     admin.from("entries").select("*", { count: "exact", head: true }).is("confirmed", null),
     admin.from("entries").select("*", { count: "exact", head: true }).eq("confirmed", false),
     admin.from("inquiries").select("*", { count: "exact", head: true }).eq("is_read", false),
-    admin.from("sales").select("*", { count: "exact", head: true }).in("status", ["paid", "settled"]),
+    admin.from("sales").select("*", { count: "exact", head: true }).not("purchased_at", "is", null),
+    // 振込待ち件数
+    admin.from("sales").select("*", { count: "exact", head: true }).eq("payout_status", "pending").not("purchased_at", "is", null),
     // ✅ 承認済みなのに display_ready=false（Colab処理/反映待ち）
     admin
       .from("entries")
@@ -80,6 +83,7 @@ export default async function AdminPage() {
     rejectedEntries: entriesRejectedRes.count ?? 0,
     unreadInquiries: inquiriesUnreadRes.count ?? 0,
     totalSales: salesCountRes.count ?? 0,
+    pendingPayouts: pendingPayoutsRes.count ?? 0,
     draftAnns: annsDraftCountRes.count ?? 0,
     processingPending: processingPendingRes.count ?? 0,
   };
@@ -108,7 +112,7 @@ export default async function AdminPage() {
         </div>
 
         {/* メトリクス */}
-        <section className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-6">
+        <section className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
           <MetricCard
             label="未審査作品"
             value={metrics.unreviewedEntries}
@@ -118,7 +122,8 @@ export default async function AdminPage() {
           <MetricCard label="却下作品" value={metrics.rejectedEntries} href="/admin/entries?status=rejected" />
           <MetricCard label="処理待ち" value={metrics.processingPending} href="/admin/entries?status=approved" badge={metrics.processingPending > 0 ? "同期推奨" : undefined} />
           <MetricCard label="未読お問い合わせ" value={metrics.unreadInquiries} href="/admin/inquiries" />
-          <MetricCard label="売上件数 (累計)" value={metrics.totalSales} href="/admin/sales" />
+          <MetricCard label="売上件数 (累計)" value={metrics.totalSales} href="/admin/payouts" />
+          <MetricCard label="振込待ち" value={metrics.pendingPayouts} href="/admin/payouts" badge={metrics.pendingPayouts > 0 ? "要振込" : undefined} />
           <MetricCard label="未公開お知らせ" value={metrics.draftAnns} href="/admin/announcements" badge={metrics.draftAnns > 0 ? "下書きあり" : undefined} />
         </section>
 
@@ -144,6 +149,9 @@ export default async function AdminPage() {
               </Link>
               <Link href="/admin/users" className={btnOutlineCls}>
                 出展者一覧
+              </Link>
+              <Link href="/admin/payouts" className={btnOutlineCls}>
+                振込管理
               </Link>
               <Link href="/admin/settings" className={btnOutlineCls}>
                 ギャラリー設定
