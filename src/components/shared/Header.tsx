@@ -140,8 +140,8 @@ export default function Header() {
   }, [logoutBusy, pathname, router]);
 
   return (
-    <header className="fixed top-0 left-0 z-[100] h-[70px] w-full bg-white/95 px-4 shadow backdrop-blur supports-[backdrop-filter]:bg-white/80">
-      <nav className="mx-auto flex h-full max-w-[1200px] items-center justify-between">
+ <header className="fixed top-0 left-0 z-40 h-[70px] w-full bg-white/95 px-2 sm:px-4 shadow backdrop-blur supports-[backdrop-filter]:bg-white/80">
+  <nav className="mx-auto flex h-full w-full items-center justify-between md:max-w-[1440px]">
         {/* ロゴ / バッジ */}
         <div className="flex items-center">
           <Link
@@ -221,12 +221,15 @@ export default function Header() {
               <Menu className="h-6 w-6" />
             </button>
 
-            <DialogContent
-              hideCloseButton
-              className={cn(
-                'w-[92vw] max-w-[460px] overflow-hidden rounded-2xl border border-black/5 bg-white p-0 shadow-2xl'
-              )}
-            >
+<DialogContent
+  hideCloseButton
+  className={cn(
+    'w-[92vw] max-w-[460px] overflow-hidden rounded-2xl border border-black/5 bg-white p-0 shadow-2xl',
+    'sm:top-1/2 sm:-translate-y-1/2',
+    'max-sm:top-[calc(env(safe-area-inset-top)+12px)] max-sm:-translate-y-0'
+  )}
+>
+
               <DialogHeader className="flex flex-row items-center justify-between border-b bg-white/90 px-5 py-4 backdrop-blur">
                 <DialogTitle className="text-[1.05rem] font-semibold text-[#222]">
                   メニュー
