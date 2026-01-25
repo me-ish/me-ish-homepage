@@ -11,14 +11,9 @@ import { LikedWorksTab } from './_components/LikedWorksTab';
 import { MyWorksTab } from './_components/MyWorksTab';
 import {
   Edit3,
-  Globe,
-  Instagram,
   Heart,
   ShoppingCart,
   Coins,
-  Share2,
-  Link as LinkIcon,
-  ExternalLink,
   BadgeCheck,
   ImageIcon,
   Wallet,
@@ -27,7 +22,6 @@ import {
   CheckCircle2,
   Loader2,
 } from 'lucide-react';
-import { FaXTwitter } from 'react-icons/fa6';
 
 /* ===================== Types ===================== */
 type SNSLinks = { homepage?: string; twitter?: string; instagram?: string };
@@ -89,7 +83,6 @@ export default function MyPageClient() {
   const [hasBankAccount, setHasBankAccount] = useState<boolean | null>(null);
 
   // UI state
-  const [copied, setCopied] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -241,7 +234,6 @@ export default function MyPageClient() {
               paid_out_yen: summary.paid_out_yen ?? 0,
             });
           } else {
-            // 売上がない場合
             setSalesSummary({
               gross_sales_yen: 0,
               pending_payout_yen: 0,
@@ -303,19 +295,6 @@ export default function MyPageClient() {
     return { displayingNow, totalLikes, soldCount };
   }, [entries]);
 
-  // URLコピー
-  const handleCopy = async () => {
-    try {
-      const url = publicUrl || (siteOrigin ? `${siteOrigin}/artists/me` : '');
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setToast('公開URLをコピーしました');
-      setTimeout(() => setCopied(false), 1200);
-    } catch {
-      setToast('コピーに失敗しました');
-    }
-  };
-
   // 保存（upsert）
   async function handleProfileSave(payload: ProfileSavePayload) {
     try {
@@ -346,166 +325,184 @@ export default function MyPageClient() {
 
   return (
     <main className="font-zen min-h-screen bg-gray-50/50 pt-14 md:pt-16">
-{/* ===== Hero / Cover ===== */}
-<section className="relative bg-white">
-  {/* Banner */}
-  <div className="relative h-48 md:h-56 w-full overflow-hidden">
-    {profile?.banner_url ? (
-      <Image
-        src={profile.banner_url}
-        alt="banner"
-        fill
-        className="object-cover"
-        priority
-        unoptimized
-      />
-    ) : (
-      <div className="h-full w-full bg-gradient-to-r from-sky-50 to-white" />
-    )}
+      {/* ===== Hero / Cover ===== */}
+      <section className="relative bg-white">
+        {/* Banner */}
+        <div className="relative h-48 md:h-56 w-full overflow-hidden">
+          {profile?.banner_url ? (
+            <Image
+              src={profile.banner_url}
+              alt="banner"
+              fill
+              className="object-cover"
+              priority
+              unoptimized
+            />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-r from-sky-50 to-white" />
+          )}
 
-    {/* 右上：編集（バナー上に固定） */}
-    <div className="absolute top-4 right-4 flex items-center gap-2">
-      <button
-        onClick={() => setEditOpen(true)}
-        className="inline-flex items-center gap-2 rounded-full bg-white/90 backdrop-blur px-3 py-2 text-sm shadow hover:shadow-md border"
-        aria-label="プロフィール編集"
-      >
-        <Edit3 className="w-4 h-4" />
-        <span className="hidden sm:inline">プロフィールを編集</span>
-      </button>
-    </div>
-  </div>
-
-  {/* Profile row（通常フロー。見た目だけ被せる） */}
-  <div className="mx-auto max-w-6xl px-4 md:px-6">
-    <div className="relative -mt-8 md:-mt-10 flex items-end gap-4 pb-4">
-      <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100 shadow-sm">
-        {profile?.avatar_url ? (
-          <Image
-            src={profile.avatar_url}
-            alt={profile.display_name ?? 'avatar'}
-            fill
-            className="object-cover"
-            unoptimized
-          />
-        ) : (
-          <div className="w-full h-full grid place-items-center text-gray-400">
-            <BadgeCheck />
+          {/* 右上：編集（バナー上に固定） */}
+          <div className="absolute top-4 right-4 flex items-center gap-2">
+            <button
+              onClick={() => setEditOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-white/90 backdrop-blur px-3 py-2 text-sm shadow hover:shadow-md border"
+              aria-label="プロフィール編集"
+            >
+              <Edit3 className="w-4 h-4" />
+              <span className="hidden sm:inline">プロフィールを編集</span>
+            </button>
           </div>
-        )}
-      </div>
+        </div>
 
-      <div className="pb-2 min-w-0">
-        <h1 className="font-lilita text-2xl md:text-3xl tracking-wide truncate">
-          {profile?.display_name ?? 'My Portfolio'}
-        </h1>
-      </div>
-    </div>
-  </div>
-</section>
+        {/* Profile row（通常フロー。見た目だけ被せる） */}
+        <div className="px-4 md:px-6">
+          <div className="relative -mt-8 md:-mt-10 flex items-end gap-4 pb-4">
+            <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100 shadow-sm">
+              {profile?.avatar_url ? (
+                <Image
+                  src={profile.avatar_url}
+                  alt={profile.display_name ?? 'avatar'}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              ) : (
+                <div className="w-full h-full grid place-items-center text-gray-400">
+                  <BadgeCheck />
+                </div>
+              )}
+            </div>
 
-      {/* ===== Phase2: 銀行口座未登録の警告 ===== */}
-      {isExhibitor && hasBankAccount === false && (
-        <section className="mt-6">
-          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-amber-800">
-                振込先口座が未登録です
-              </p>
-              <p className="text-sm text-amber-700 mt-1">
-                作品が売れた際の報酬を受け取るには、銀行口座の登録が必要です。
-              </p>
-              <Link
-                href="/settings/bank"
-                className="inline-flex items-center gap-1 text-sm font-medium text-amber-800 hover:text-amber-900 mt-2 underline underline-offset-2"
-              >
-                <Wallet className="w-4 h-4" />
-                口座を登録する
-              </Link>
+            <div className="pb-2 min-w-0">
+              <h1 className="font-lilita text-2xl md:text-3xl tracking-wide truncate">
+                {profile?.display_name ?? 'My Portfolio'}
+              </h1>
             </div>
           </div>
-        </section>
-      )}
-
-      {/* ===== Metrics (出展者のみ) - Phase2: 6カード ===== */}
-      {isExhibitor && (
-        <section className="mt-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <MetricCard
-              icon={<BadgeCheck className="w-5 h-5 text-emerald-500" />}
-              label="展示中"
-              value={metrics.displayingNow}
-              highlight={metrics.displayingNow > 0}
-            />
-            <MetricCard
-              icon={<Heart className="w-5 h-5 text-pink-500" />}
-              label="いいね"
-              value={metrics.totalLikes}
-            />
-            <MetricCard
-              icon={<ShoppingCart className="w-5 h-5 text-blue-500" />}
-              label="販売数"
-              value={metrics.soldCount}
-            />
-            <MetricCard
-              icon={<Coins className="w-5 h-5 text-yellow-500" />}
-              label="売上"
-              value={formatYen(salesSummary?.gross_sales_yen ?? 0)}
-              subLabel="購入確定"
-            />
-            <MetricCard
-              icon={<Clock className="w-5 h-5 text-orange-500" />}
-              label="入金予定"
-              value={formatYen(salesSummary?.pending_payout_yen ?? 0)}
-              subLabel="振込待ち"
-            />
-            <MetricCard
-              icon={<CheckCircle2 className="w-5 h-5 text-green-500" />}
-              label="入金済み"
-              value={formatYen(salesSummary?.paid_out_yen ?? 0)}
-              subLabel="振込完了"
-            />
-          </div>
-        </section>
-      )}
-
-      {/* ===== Tabs ===== */}
-      <section className="mt-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
-            <TabsTrigger value="likes" className="gap-2">
-              <Heart className="w-4 h-4" />
-              いいねした作品
-            </TabsTrigger>
-            <TabsTrigger value="works" className="gap-2">
-              <ImageIcon className="w-4 h-4" />
-              出展作品
-            </TabsTrigger>
-          </TabsList>
-
-          <div className="rounded-2xl border bg-white p-4 md:p-6">
-            <TabsContent value="likes" className="mt-0">
-              {uid ? (
-                <LikedWorksTab userId={uid} />
-              ) : (
-                <div className="py-10 text-center text-gray-500">読み込み中...</div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="works" className="mt-0">
-              {uid ? (
-                <MyWorksTab userId={uid} />
-              ) : (
-                <div className="py-10 text-center text-gray-500">読み込み中...</div>
-              )}
-            </TabsContent>
-          </div>
-        </Tabs>
+        </div>
       </section>
 
-      {/* 下部余白 */}
-      <div className="mb-20" />
+      {/* ===== loading ===== */}
+      {loading && (
+        <section className="px-4 md:px-6 mt-8">
+          <div className="flex items-center justify-center py-14 text-gray-500">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="ml-2">読み込み中...</span>
+          </div>
+        </section>
+      )}
+
+      {!loading && (
+        <>
+          {/* ===== Phase2: 銀行口座未登録の警告 ===== */}
+          {isExhibitor && hasBankAccount === false && (
+            <section className="px-4 md:px-6 mt-6">
+              <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-800">
+                    振込先口座が未登録です
+                  </p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    作品が売れた際の報酬を受け取るには、銀行口座の登録が必要です。
+                  </p>
+                  <Link
+                    href="/settings/bank"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-amber-800 hover:text-amber-900 mt-2 underline underline-offset-2"
+                  >
+                    <Wallet className="w-4 h-4" />
+                    口座を登録する
+                  </Link>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* ===== Metrics (出展者のみ) ===== */}
+          {isExhibitor && (
+            <section className="px-4 md:px-6 mt-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <MetricCard
+                  icon={<BadgeCheck className="w-5 h-5 text-emerald-500" />}
+                  label="展示中"
+                  value={metrics.displayingNow}
+                  highlight={metrics.displayingNow > 0}
+                />
+                <MetricCard
+                  icon={<Heart className="w-5 h-5 text-pink-500" />}
+                  label="いいね"
+                  value={metrics.totalLikes}
+                />
+                <MetricCard
+                  icon={<ShoppingCart className="w-5 h-5 text-blue-500" />}
+                  label="販売数"
+                  value={metrics.soldCount}
+                />
+                <MetricCard
+                  icon={<Coins className="w-5 h-5 text-yellow-500" />}
+                  label="売上"
+                  value={formatYen(salesSummary?.gross_sales_yen ?? 0)}
+                  subLabel="購入確定"
+                />
+                <MetricCard
+                  icon={<Clock className="w-5 h-5 text-orange-500" />}
+                  label="入金予定"
+                  value={formatYen(salesSummary?.pending_payout_yen ?? 0)}
+                  subLabel="振込待ち"
+                />
+                <MetricCard
+                  icon={<CheckCircle2 className="w-5 h-5 text-green-500" />}
+                  label="入金済み"
+                  value={formatYen(salesSummary?.paid_out_yen ?? 0)}
+                  subLabel="振込完了"
+                />
+              </div>
+            </section>
+          )}
+
+          {/* ===== Tabs ===== */}
+          <section className="px-4 md:px-6 mt-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
+                <TabsTrigger value="likes" className="gap-2">
+                  <Heart className="w-4 h-4" />
+                  いいねした作品
+                </TabsTrigger>
+                <TabsTrigger value="works" className="gap-2">
+                  <ImageIcon className="w-4 h-4" />
+                  出展作品
+                </TabsTrigger>
+              </TabsList>
+
+              <div className="rounded-2xl border bg-white p-4 md:p-6">
+                <TabsContent value="likes" className="mt-0">
+                  {uid ? (
+                    <LikedWorksTab userId={uid} />
+                  ) : (
+                    <div className="py-10 text-center text-gray-500">
+                      読み込み中...
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="works" className="mt-0">
+                  {uid ? (
+                    <MyWorksTab userId={uid} />
+                  ) : (
+                    <div className="py-10 text-center text-gray-500">
+                      読み込み中...
+                    </div>
+                  )}
+                </TabsContent>
+              </div>
+            </Tabs>
+          </section>
+
+          {/* 下部余白 */}
+          <div className="mb-20" />
+        </>
+      )}
 
       {/* モバイルFAB */}
       {isMobile && (
@@ -562,9 +559,7 @@ function MetricCard({
   return (
     <div
       className={`rounded-2xl border p-4 shadow-sm hover:shadow transition ${
-        highlight
-          ? 'bg-emerald-50 border-emerald-200'
-          : 'bg-white'
+        highlight ? 'bg-emerald-50 border-emerald-200' : 'bg-white'
       }`}
     >
       <div className="flex items-center gap-2 text-gray-700">
@@ -572,9 +567,7 @@ function MetricCard({
         <span className="text-xl font-bold">{value}</span>
       </div>
       <p className="text-sm text-gray-500 mt-1">{label}</p>
-      {subLabel && (
-        <p className="text-xs text-gray-400 mt-0.5">{subLabel}</p>
-      )}
+      {subLabel && <p className="text-xs text-gray-400 mt-0.5">{subLabel}</p>}
     </div>
   );
 }
