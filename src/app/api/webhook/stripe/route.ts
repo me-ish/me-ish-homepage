@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { issueReissueLink } from "@/lib/coa/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -403,6 +404,18 @@ async function handleGalleryPurchase(
 
         // 購入者へメール送信
         if (buyerEmail) {
+          // COAリンク発行（証明書 + ダウンロードリンク付き）
+          let certificateUrl: string | undefined;
+          try {
+            certificateUrl = await issueReissueLink(Number(entryId));
+            console.log("[webhook/stripe/gallery] COA link issued:", {
+              entryId,
+              certificateUrl,
+            });
+          } catch (coaErr) {
+            console.error("[webhook/stripe/gallery] COA link issue failed:", coaErr);
+          }
+
           await sendEmailInternal("purchaseBuyer", buyerEmail, {
             name: buyerName,
             title: entry.title,
@@ -411,6 +424,7 @@ async function handleGalleryPurchase(
             editionNo: typeof newSold === "number" ? newSold : undefined,
             editionTotal: entry.edition_total,
             orderId: session.id,
+            certificateUrl,
           });
           console.log("[webhook/stripe/gallery] purchaseBuyer email sent:", {
             to: buyerEmail,
