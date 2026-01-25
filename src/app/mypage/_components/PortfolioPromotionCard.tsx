@@ -11,6 +11,7 @@ import {
   Link as LinkIcon,
   ExternalLink,
   Share2,
+  Info,
 } from 'lucide-react';
 
 type Props = {
@@ -65,17 +66,27 @@ export function PortfolioPromotionCard({ publicUrl }: Props) {
                 <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
                   <Sparkles className="h-6 w-6 text-white" />
                 </div>
+
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-bold text-gray-900 text-lg">
-                      ポートフォリオを公開しよう
-                    </h3>
-                  </div>
+                  <h3 className="font-bold text-gray-900 text-lg">
+                    ポートフォリオを公開しよう
+                  </h3>
+
                   <p className="text-gray-600 text-sm mt-1">
                     あなたの応募作品が自動で反映される公開URLです。
                     <br className="hidden sm:block" />
                     SNSでシェアして、より多くの人にあなたの世界観を届けましょう。
                   </p>
+
+                  {/* ✅ 追加：このボタンの意味を明確化 */}
+                  <div className="mt-3 flex items-start gap-2 text-xs text-gray-600">
+                    <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">
+                      「公開内容を編集」では、下の公開ページに表示する
+                      <span className="font-medium">作品の表示/非表示・並び順・公開/非公開</span>
+                      を設定できます。
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -96,7 +107,7 @@ export function PortfolioPromotionCard({ publicUrl }: Props) {
                     variant="default"
                     className="w-full sm:w-auto bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-full px-6"
                   >
-                    ポートフォリオ設定
+                    公開内容を編集
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
@@ -106,12 +117,10 @@ export function PortfolioPromotionCard({ publicUrl }: Props) {
             {/* 中段：公開URL + 操作 */}
             <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
               <div className="flex-1 overflow-hidden rounded-xl border bg-white/70 px-3 py-2 text-sm text-gray-700">
-                <span className="truncate">
-                  {publicUrl || '/artists/...'}
-                </span>
+                <span className="truncate">{publicUrl || '/artists/...'}</span>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button
                   type="button"
                   variant="outline"
