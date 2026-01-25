@@ -1,3 +1,4 @@
+// src/app/artists/[id]/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -5,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import { EyeOff, Lock } from 'lucide-react';
 
 type Profile = {
   id: string;
@@ -15,68 +17,82 @@ type Profile = {
   sns_links?: { homepage?: string; twitter?: string; instagram?: string } | null;
 };
 
-type Entry = {
+type PublicEntry = {
   id: number;
   title: string;
   image_url: string;
-  confirmed: boolean;
-  likes?: number | null;
-  price?: number | null;
-  gallery_type?: string | null;
-  edition_total?: number | null;
-  edition_sold?: number | null;
-  is_sold?: boolean | null;
+  likes: number;
+};
+
+type PublicPortfolioData = {
+  settings: {
+    is_public: boolean;
+    works_filter: 'displaying' | 'for_sale' | 'all';
+    sort_key: 'new' | 'likes';
+  };
+  profile: Profile;
+  entries: PublicEntry[];
 };
 
 export default function ArtistPublicPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [data, setData] = useState<PublicPortfolioData | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
+        setIsPrivate(false);
+        setNotFound(false);
 
         // 特例: /artists/me は自分のidにリダイレクト
         if (id === 'me') {
-          const { data } = await supabase.auth.getUser();
-          if (data.user?.id) {
-            router.replace(`/artists/${data.user.id}`);
+          const { data: authData } = await supabase.auth.getUser();
+          if (authData.user?.id) {
+            router.replace(`/artists/${authData.user.id}`);
             return;
           }
         }
 
-        // プロフィール（idで取得）
-        const { data: prof, error: profErr } = await supabase
-          .from('profiles')
-          .select('id, display_name, avatar_url, banner_url, bio, sns_links')
-          .eq('id', id)
-          .maybeSingle<Profile>();
+        // 公開関数を呼び出し
+        const { data: result, error } = await supabase.rpc('get_public_portfolio', {
+          p_user_id: id,
+        });
 
-        if (profErr) throw profErr;
+        if (error) {
+          console.error('[ArtistPublicPage] rpc error:', error);
+          setNotFound(true);
+          return;
+        }
 
-        setProfile(prof ?? null);
+        // null = 非公開 or 存在しない
+        if (!result) {
+          // プロフィールだけ取得して存在確認
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', id)
+            .maybeSingle();
 
-        // 作品（公開済みのみ）
-        const { data: es, error: esErr } = await supabase
-          .from('entries')
-          .select(
-            'id, title, image_url, confirmed, likes, price, gallery_type, edition_total, edition_sold, is_sold'
-          )
-          .eq('user_id', id)
-          .eq('confirmed', true)
-          .order('created_at', { ascending: false })
-          .returns<Entry[]>();
+          if (prof) {
+            // ユーザーは存在するが非公開
+            setIsPrivate(true);
+          } else {
+            // ユーザーが存在しない
+            setNotFound(true);
+          }
+          return;
+        }
 
-        if (esErr) throw esErr;
-        setEntries(es ?? []);
+        // 公開データをセット
+        setData(result as PublicPortfolioData);
       } catch (e) {
-        console.error(e);
-        setProfile(null);
-        setEntries([]);
+        console.error('[ArtistPublicPage] error:', e);
+        setNotFound(true);
       } finally {
         setLoading(false);
       }
@@ -84,12 +100,66 @@ export default function ArtistPublicPage() {
   }, [id, router]);
 
   if (loading) {
-    return <main className="px-4 py-16 text-gray-500">読み込み中...</main>;
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-500">読み込み中...</div>
+      </main>
+    );
   }
 
-  if (!profile) {
-    return <main className="px-4 py-16 text-gray-500">このアーティストは見つかりませんでした。</main>;
+  if (notFound) {
+    return (
+      <main className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+            <EyeOff className="h-8 w-8 text-gray-400" />
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">
+            このアーティストは見つかりませんでした
+          </h1>
+          <p className="text-gray-500 mb-6">
+            URLが間違っているか、ページが削除された可能性があります。
+          </p>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 rounded-full bg-[#00a1e9] px-5 py-2.5 text-white font-medium hover:brightness-105 transition"
+          >
+            トップページへ
+          </Link>
+        </div>
+      </main>
+    );
   }
+
+  if (isPrivate) {
+    return (
+      <main className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+            <Lock className="h-8 w-8 text-gray-400" />
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">
+            このポートフォリオは非公開です
+          </h1>
+          <p className="text-gray-500 mb-6">
+            アーティストがポートフォリオを公開設定にすると閲覧できます。
+          </p>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 rounded-full bg-[#00a1e9] px-5 py-2.5 text-white font-medium hover:brightness-105 transition"
+          >
+            トップページへ
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const { profile, entries } = data;
 
   return (
     <main className="font-zen">
@@ -97,7 +167,13 @@ export default function ArtistPublicPage() {
       <section className="relative">
         <div className="relative h-48 md:h-56 w-full overflow-hidden">
           {profile.banner_url ? (
-            <Image src={profile.banner_url} alt="banner" fill className="object-cover" unoptimized />
+            <Image
+              src={profile.banner_url}
+              alt="banner"
+              fill
+              className="object-cover"
+              unoptimized
+            />
           ) : (
             <div className="h-full w-full bg-gradient-to-r from-sky-50 to-white" />
           )}
@@ -105,13 +181,21 @@ export default function ArtistPublicPage() {
         <div className="absolute -bottom-10 left-5 md:left-10 flex items-end gap-4">
           <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100">
             {profile.avatar_url ? (
-              <Image src={profile.avatar_url} alt={profile.display_name} fill className="object-cover" unoptimized />
+              <Image
+                src={profile.avatar_url}
+                alt={profile.display_name}
+                fill
+                className="object-cover"
+                unoptimized
+              />
             ) : (
               <div className="w-full h-full grid place-items-center text-gray-400">👤</div>
             )}
           </div>
           <div className="pb-2">
-            <h1 className="font-lilita text-2xl md:text-3xl tracking-wide">{profile.display_name}</h1>
+            <h1 className="font-lilita text-2xl md:text-3xl tracking-wide">
+              {profile.display_name}
+            </h1>
           </div>
         </div>
       </section>
@@ -124,17 +208,32 @@ export default function ArtistPublicPage() {
           </p>
           <div className="mt-4 flex items-center gap-2">
             {profile.sns_links?.homepage && (
-              <a className="rounded-full border px-3 py-2 text-sm hover:bg-gray-50" href={profile.sns_links.homepage} target="_blank" rel="noreferrer">
+              <a
+                className="rounded-full border px-3 py-2 text-sm hover:bg-gray-50"
+                href={profile.sns_links.homepage}
+                target="_blank"
+                rel="noreferrer"
+              >
                 Website
               </a>
             )}
             {profile.sns_links?.twitter && (
-              <a className="rounded-full border px-3 py-2 text-sm hover:bg-gray-50" href={profile.sns_links.twitter} target="_blank" rel="noreferrer">
+              <a
+                className="rounded-full border px-3 py-2 text-sm hover:bg-gray-50"
+                href={profile.sns_links.twitter}
+                target="_blank"
+                rel="noreferrer"
+              >
                 X
               </a>
             )}
             {profile.sns_links?.instagram && (
-              <a className="rounded-full border px-3 py-2 text-sm hover:bg-gray-50" href={profile.sns_links.instagram} target="_blank" rel="noreferrer">
+              <a
+                className="rounded-full border px-3 py-2 text-sm hover:bg-gray-50"
+                href={profile.sns_links.instagram}
+                target="_blank"
+                rel="noreferrer"
+              >
                 Instagram
               </a>
             )}
@@ -145,13 +244,23 @@ export default function ArtistPublicPage() {
       {/* 作品一覧 */}
       <section className="px-4 md:px-6 mt-6 mb-20">
         {entries.length === 0 ? (
-          <div className="grid place-items-center py-16 text-gray-500">公開中の作品はまだありません。</div>
+          <div className="grid place-items-center py-16 text-gray-500">
+            公開中の作品はまだありません。
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {entries.map((e) => (
-              <Link key={e.id} href={`/artworks/${e.id}`} className="group relative rounded-2xl overflow-hidden bg-white border shadow-sm hover:shadow-md transition">
+              <Link
+                key={e.id}
+                href={`/works/${e.id}`}
+                className="group relative rounded-2xl overflow-hidden bg-white border shadow-sm hover:shadow-md transition"
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={e.image_url} alt={e.title} className="w-full h-52 object-cover group-hover:scale-105 transition" />
+                <img
+                  src={e.image_url}
+                  alt={e.title}
+                  className="w-full h-52 object-cover group-hover:scale-105 transition"
+                />
                 <div className="p-3">
                   <h3 className="font-semibold text-gray-800 truncate">{e.title}</h3>
                 </div>

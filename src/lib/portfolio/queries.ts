@@ -343,3 +343,32 @@ export async function updateEntryPortfolioHidden(
   }
   return { success: true };
 }
+
+/**
+ * ユーザープロフィールを取得（プレビュー用）
+ */
+export type UserProfile = {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  banner_url: string | null;
+  bio: string | null;
+  sns_links: { homepage?: string; twitter?: string; instagram?: string } | null;
+};
+
+export async function getUserProfile(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<UserProfile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, display_name, avatar_url, banner_url, bio, sns_links')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[getUserProfile] error:', error);
+    return null;
+  }
+  return data as UserProfile | null;
+}
