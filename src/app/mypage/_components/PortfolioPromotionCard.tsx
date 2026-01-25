@@ -70,9 +70,6 @@ export function PortfolioPromotionCard({ publicUrl }: Props) {
                     <h3 className="font-bold text-gray-900 text-lg">
                       ポートフォリオを公開しよう
                     </h3>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-white/70 border">
-                      テンプレ
-                    </span>
                   </div>
                   <p className="text-gray-600 text-sm mt-1">
                     あなたの応募作品が自動で反映される公開URLです。

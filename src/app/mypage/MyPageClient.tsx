@@ -347,7 +347,7 @@ export default function MyPageClient() {
   return (
     <main className="font-zen min-h-screen bg-gray-50/50">
       {/* ===== Hero / Cover ===== */}
-      <section className="relative bg-white">
+      <section className="relative bg-white pb-16 md:pb-20">
         <div className="relative h-48 md:h-56 w-full overflow-hidden">
           {profile?.banner_url ? (
             <Image
