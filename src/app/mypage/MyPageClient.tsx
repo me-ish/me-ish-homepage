@@ -345,63 +345,69 @@ export default function MyPageClient() {
   }
 
   return (
-    <main className="font-zen min-h-screen bg-gray-50/50">
-      {/* ===== Hero / Cover ===== */}
-      <section className="relative bg-white pb-16 md:pb-20">
-        <div className="relative h-48 md:h-56 w-full overflow-hidden">
-          {profile?.banner_url ? (
-            <Image
-              src={profile.banner_url}
-              alt="banner"
-              fill
-              className="object-cover"
-              priority
-              unoptimized
-            />
-          ) : (
-            <div className="h-full w-full bg-gradient-to-r from-sky-50 to-white" />
-          )}
-        </div>
+    <main className="font-zen min-h-screen bg-gray-50/50 pt-14 md:pt-16">
+{/* ===== Hero / Cover ===== */}
+<section className="relative bg-white">
+  {/* Banner */}
+  <div className="relative h-48 md:h-56 w-full overflow-hidden">
+    {profile?.banner_url ? (
+      <Image
+        src={profile.banner_url}
+        alt="banner"
+        fill
+        className="object-cover"
+        priority
+        unoptimized
+      />
+    ) : (
+      <div className="h-full w-full bg-gradient-to-r from-sky-50 to-white" />
+    )}
 
-        <div className="absolute -bottom-10 left-5 md:left-10 flex items-end gap-4">
-          <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100">
-            {profile?.avatar_url ? (
-              <Image
-                src={profile.avatar_url}
-                alt={profile.display_name ?? 'avatar'}
-                fill
-                className="object-cover"
-                unoptimized
-              />
-            ) : (
-              <div className="w-full h-full grid place-items-center text-gray-400">
-                <BadgeCheck />
-              </div>
-            )}
-          </div>
-          <div className="pb-2">
-            <h1 className="font-lilita text-2xl md:text-3xl tracking-wide">
-              {profile?.display_name ?? 'My Portfolio'}
-            </h1>
-          </div>
-        </div>
+    {/* 右上：編集（バナー上に固定） */}
+    <div className="absolute top-4 right-4 flex items-center gap-2">
+      <button
+        onClick={() => setEditOpen(true)}
+        className="inline-flex items-center gap-2 rounded-full bg-white/90 backdrop-blur px-3 py-2 text-sm shadow hover:shadow-md border"
+        aria-label="プロフィール編集"
+      >
+        <Edit3 className="w-4 h-4" />
+        <span className="hidden sm:inline">プロフィールを編集</span>
+      </button>
+    </div>
+  </div>
 
-        {/* 右上：編集 */}
-        <div className="absolute top-4 right-4 flex items-center gap-2">
-          <button
-            onClick={() => setEditOpen(true)}
-            className="inline-flex items-center gap-2 rounded-full bg-white/90 backdrop-blur px-3 py-2 text-sm shadow hover:shadow-md border"
-            aria-label="プロフィール編集"
-          >
-            <Edit3 className="w-4 h-4" />
-            <span className="hidden sm:inline">プロフィールを編集</span>
-          </button>
-        </div>
-      </section>
+  {/* Profile row（通常フロー。見た目だけ被せる） */}
+  <div className="mx-auto max-w-6xl px-4 md:px-6">
+    <div className="relative -mt-8 md:-mt-10 flex items-end gap-4 pb-4">
+      <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100 shadow-sm">
+        {profile?.avatar_url ? (
+          <Image
+            src={profile.avatar_url}
+            alt={profile.display_name ?? 'avatar'}
+            fill
+            className="object-cover"
+            unoptimized
+          />
+        ) : (
+          <div className="w-full h-full grid place-items-center text-gray-400">
+            <BadgeCheck />
+          </div>
+        )}
+      </div>
+
+      <div className="pb-2 min-w-0">
+        <h1 className="font-lilita text-2xl md:text-3xl tracking-wide truncate">
+          {profile?.display_name ?? 'My Portfolio'}
+        </h1>
+      </div>
+    </div>
+  </div>
+</section>
 
       {/* ===== Phase2: 銀行口座未登録の警告 ===== */}
       {isExhibitor && hasBankAccount === false && (
-        <section className="px-4 md:px-6 mt-6">
+        <section className="mt-6">
+  　　　　<div className="mx-auto max-w-6xl px-4 md:px-6">
           <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -420,12 +426,14 @@ export default function MyPageClient() {
               </Link>
             </div>
           </div>
+          </div>
         </section>
       )}
 
       {/* ===== Metrics (出展者のみ) - Phase2: 6カード ===== */}
       {isExhibitor && (
-        <section className="px-4 md:px-6 mt-6">
+        <section className="mt-6">
+  <div className="mx-auto max-w-6xl px-4 md:px-6">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <MetricCard
               icon={<BadgeCheck className="w-5 h-5 text-emerald-500" />}
@@ -462,11 +470,13 @@ export default function MyPageClient() {
               subLabel="振込完了"
             />
           </div>
+          </div>
         </section>
       )}
 
       {/* ===== Tabs ===== */}
-      <section className="px-4 md:px-6 mt-6">
+      <section className="mt-6">
+  <div className="mx-auto max-w-6xl px-4 md:px-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
             <TabsTrigger value="likes" className="gap-2">
@@ -497,6 +507,7 @@ export default function MyPageClient() {
             </TabsContent>
           </div>
         </Tabs>
+          </div>
       </section>
 
       {/* 下部余白 */}
