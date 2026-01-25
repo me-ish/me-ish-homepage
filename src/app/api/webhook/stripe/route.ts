@@ -22,6 +22,41 @@ function supabaseAdmin() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
+function siteUrl() {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:3000";
+}
+
+/**
+ * 内部メール送信API呼び出し
+ */
+async function sendEmailInternal(
+  kind: "purchaseBuyer" | "purchaseArtist",
+  to: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  const token = process.env.ADMIN_API_TOKEN;
+  if (!token) {
+    console.warn("[webhook/stripe] ADMIN_API_TOKEN not set, skipping email");
+    return;
+  }
+  const url = `${siteUrl()}/api/send-email/${kind}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-meish-admin-token": token,
+    },
+    body: JSON.stringify({ to, ...payload }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`sendEmail(${kind}) failed: ${res.status} ${text}`);
+  }
+}
+
 function isUuidLike(v: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
@@ -334,6 +369,79 @@ async function handleGalleryPurchase(
       newEditionSold: newSold,
       soldOut,
     });
+
+    // ========================================
+    // 購入通知メール送信
+    // ========================================
+    try {
+      // 作品情報を取得
+      const { data: entry } = await admin
+        .from("entries")
+        .select("title, user_id, edition_total")
+        .eq("id", entryId)
+        .single();
+
+      if (entry) {
+        const buyerEmail = session.customer_details?.email ?? session.customer_email;
+        const buyerName =
+          session.customer_details?.name ?? buyerEmail?.split("@")[0] ?? "お客様";
+        const priceYen = price != null ? Math.round(price) : undefined; // JPY = zero-decimal
+
+        // アーティスト情報を取得
+        const { data: artistProfile } = await admin
+          .from("profiles")
+          .select("display_name")
+          .eq("id", entry.user_id)
+          .single();
+
+        // アーティストのメールアドレスを取得（auth.users）
+        const { data: artistAuthData } = await admin.auth.admin.getUserById(
+          entry.user_id
+        );
+        const artistEmail = artistAuthData?.user?.email ?? null;
+        const artistName = artistProfile?.display_name ?? "アーティスト";
+
+        // 購入者へメール送信
+        if (buyerEmail) {
+          await sendEmailInternal("purchaseBuyer", buyerEmail, {
+            name: buyerName,
+            title: entry.title,
+            artistName,
+            priceYen,
+            editionNo: typeof newSold === "number" ? newSold : undefined,
+            editionTotal: entry.edition_total,
+            orderId: session.id,
+          });
+          console.log("[webhook/stripe/gallery] purchaseBuyer email sent:", {
+            to: buyerEmail,
+          });
+        }
+
+        // アーティストへメール送信
+        if (artistEmail) {
+          await sendEmailInternal("purchaseArtist", artistEmail, {
+            name: artistName,
+            title: entry.title,
+            priceYen,
+            editionNo: typeof newSold === "number" ? newSold : undefined,
+            editionTotal: entry.edition_total,
+            orderId: session.id,
+            manageUrl: `${siteUrl()}/mypage`,
+          });
+          console.log("[webhook/stripe/gallery] purchaseArtist email sent:", {
+            to: artistEmail,
+          });
+        }
+      }
+    } catch (emailErr: unknown) {
+      // メール送信失敗でもWebhookは成功扱い（DB処理は完了済み）
+      const emailErrMsg = emailErr instanceof Error ? emailErr.message : String(emailErr);
+      console.error("[webhook/stripe/gallery] email sending failed:", {
+        eventId,
+        sessionId: session.id,
+        error: emailErrMsg,
+      });
+    }
 
     return NextResponse.json({ ok: true, received: true }, { status: 200 });
   } catch (e: unknown) {
