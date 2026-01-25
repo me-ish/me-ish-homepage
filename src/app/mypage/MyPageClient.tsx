@@ -407,7 +407,6 @@ export default function MyPageClient() {
       {/* ===== Phase2: 銀行口座未登録の警告 ===== */}
       {isExhibitor && hasBankAccount === false && (
         <section className="mt-6">
-  　　　　<div className="mx-auto max-w-6xl px-4 md:px-6">
           <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -426,14 +425,12 @@ export default function MyPageClient() {
               </Link>
             </div>
           </div>
-          </div>
         </section>
       )}
 
       {/* ===== Metrics (出展者のみ) - Phase2: 6カード ===== */}
       {isExhibitor && (
         <section className="mt-6">
-  <div className="mx-auto max-w-6xl px-4 md:px-6">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <MetricCard
               icon={<BadgeCheck className="w-5 h-5 text-emerald-500" />}
@@ -470,13 +467,11 @@ export default function MyPageClient() {
               subLabel="振込完了"
             />
           </div>
-          </div>
         </section>
       )}
 
       {/* ===== Tabs ===== */}
       <section className="mt-6">
-  <div className="mx-auto max-w-6xl px-4 md:px-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
             <TabsTrigger value="likes" className="gap-2">
@@ -507,7 +502,6 @@ export default function MyPageClient() {
             </TabsContent>
           </div>
         </Tabs>
-          </div>
       </section>
 
       {/* 下部余白 */}
