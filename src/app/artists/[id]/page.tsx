@@ -277,13 +277,39 @@ export default function ArtistPublicPage() {
       </section>
 
       {/* 作品一覧 */}
-      <section className="px-4 md:px-6 mt-6 mb-20">
+      <section className="px-3 sm:px-6 lg:px-10 mt-8 mb-24">
         {entries.length === 0 ? (
           <div className="grid place-items-center py-16 text-gray-500">
             公開中の作品はまだありません。
           </div>
+        ) : entries.length === 1 ? (
+          // ✅ 1枚のときは “横に広く” 見せる
+          <div className="max-w-6xl mx-auto">
+            {entries.map((e) => (
+              <Link
+                key={e.id}
+                href={`/artworks/${e.id}`}
+                className="group relative block overflow-hidden rounded-3xl bg-white border shadow-sm hover:shadow-md transition"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={e.image_url}
+                  alt={e.title ?? "artwork"}
+                  className="w-full h-[280px] sm:h-[360px] md:h-[460px] lg:h-[520px] object-cover group-hover:scale-[1.02] transition"
+                />
+
+                {/* タイトルは画像下に大きめ */}
+                <div className="p-4 sm:p-5">
+                  <h3 className="font-semibold text-gray-900 text-base sm:text-lg truncate">
+                    {e.title ?? "Untitled"}
+                  </h3>
+                </div>
+              </Link>
+            ))}
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          // ✅ 複数枚はグリッド（1枚あたりも少し大きめ）
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
             {entries.map((e) => (
               <Link
                 key={e.id}
@@ -293,12 +319,12 @@ export default function ArtistPublicPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={e.image_url}
-                  alt={e.title ?? 'artwork'}
-                  className="w-full h-52 object-cover group-hover:scale-105 transition"
+                  alt={e.title ?? "artwork"}
+                  className="w-full h-64 sm:h-72 object-cover group-hover:scale-105 transition"
                 />
-                <div className="p-3">
+                <div className="p-3.5">
                   <h3 className="font-semibold text-gray-800 truncate">
-                    {e.title ?? 'Untitled'}
+                    {e.title ?? "Untitled"}
                   </h3>
                 </div>
               </Link>
