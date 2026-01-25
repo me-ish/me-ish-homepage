@@ -5,6 +5,15 @@ export type PortfolioMode = 'template' | 'aura';
 export type WorksFilter = 'displaying' | 'for_sale' | 'all';
 export type SortKey = 'new' | 'likes';
 
+export type PortfolioSettings = {
+  user_id: string;
+  is_public: boolean;
+  works_filter: WorksFilter;
+  sort_key: SortKey;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type PortfolioProfile = {
   id: string;
   user_id: string;

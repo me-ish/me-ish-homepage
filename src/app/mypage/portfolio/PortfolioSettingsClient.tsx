@@ -128,7 +128,7 @@ export default function PortfolioSettingsClient() {
                   id: '',
                   user_id: userId,
                   public_slug: null,
-                  is_public: false,
+                  is_public: true,
                   mode: 'template',
                   aura_request_id: null,
                   works_filter: 'displaying',
@@ -235,7 +235,7 @@ export default function PortfolioSettingsClient() {
     );
   }
 
-  const isPublic = portfolioProfile?.is_public ?? false;
+  const isPublic = portfolioProfile?.is_public ?? true;
   const worksFilter = portfolioProfile?.works_filter ?? 'displaying';
   const sortKey = portfolioProfile?.sort_key ?? 'new';
 
