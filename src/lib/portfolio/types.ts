@@ -2,6 +2,9 @@
 
 export type PortfolioMode = 'template' | 'aura';
 
+export type WorksFilter = 'displaying' | 'for_sale' | 'all';
+export type SortKey = 'new' | 'likes';
+
 export type PortfolioProfile = {
   id: string;
   user_id: string;
@@ -9,6 +12,8 @@ export type PortfolioProfile = {
   is_public: boolean;
   mode: PortfolioMode;
   aura_request_id: string | null;
+  works_filter: WorksFilter;
+  sort_key: SortKey;
   created_at: string;
   updated_at: string;
 };
@@ -39,6 +44,7 @@ export type EntryWithStatus = {
   price?: number | null;
   is_sold?: boolean | null;
   is_for_sale?: boolean | null;
+  portfolio_hidden?: boolean;
   job_status?: 'queued' | 'running' | 'succeeded' | 'failed' | null;
   job_error?: string | null;
   job_attempts?: number | null;

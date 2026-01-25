@@ -6,7 +6,9 @@ import type {
   LikedEntry,
   EntryWithStatus,
   TemplateContent,
-  PublicPortfolioData
+  PublicPortfolioData,
+  WorksFilter,
+  SortKey,
 } from './types';
 
 /**
@@ -244,4 +246,100 @@ export async function isSlugAvailable(
 
   const { data } = await query.maybeSingle();
   return !data;
+}
+
+/**
+ * ポートフォリオ設定用の作品一覧取得（confirmed=true のみ）
+ */
+export async function getPortfolioEntries(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<EntryWithStatus[]> {
+  const { data: entries, error } = await supabase
+    .from('entries')
+    .select(`
+      id,
+      title,
+      image_url,
+      confirmed,
+      display_ready,
+      display_start_at,
+      display_end_at,
+      confirmed_at,
+      likes,
+      created_at,
+      gallery_type,
+      is_for_sale,
+      portfolio_hidden
+    `)
+    .eq('user_id', userId)
+    .eq('confirmed', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[getPortfolioEntries] error:', error);
+    return [];
+  }
+
+  return (entries ?? []).map((e: any) => ({
+    id: e.id,
+    title: e.title,
+    image_url: e.image_url,
+    confirmed: e.confirmed,
+    display_ready: e.display_ready,
+    display_start_at: e.display_start_at,
+    display_end_at: e.display_end_at,
+    confirmed_at: e.confirmed_at,
+    likes: e.likes ?? 0,
+    created_at: e.created_at,
+    gallery_type: e.gallery_type,
+    is_for_sale: e.is_for_sale,
+    portfolio_hidden: e.portfolio_hidden ?? false,
+  }));
+}
+
+/**
+ * ポートフォリオプロフィールを upsert
+ */
+export async function upsertPortfolioProfile(
+  supabase: SupabaseClient,
+  userId: string,
+  updates: Partial<Pick<PortfolioProfile, 'is_public' | 'works_filter' | 'sort_key'>>
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase
+    .from('portfolio_profiles')
+    .upsert(
+      {
+        user_id: userId,
+        ...updates,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' }
+    );
+
+  if (error) {
+    console.error('[upsertPortfolioProfile] error:', error);
+    return { success: false, error: error.message };
+  }
+  return { success: true };
+}
+
+/**
+ * 作品のポートフォリオ表示/非表示を更新
+ */
+export async function updateEntryPortfolioHidden(
+  supabase: SupabaseClient,
+  entryId: number,
+  hidden: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase
+    .from('entries')
+    .update({ portfolio_hidden: hidden })
+    .eq('id', entryId);
+
+  if (error) {
+    console.error('[updateEntryPortfolioHidden] error:', error);
+    return { success: false, error: error.message };
+  }
+  return { success: true };
 }
