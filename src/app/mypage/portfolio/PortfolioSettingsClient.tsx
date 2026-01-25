@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import {
   getPortfolioProfile,
   getPortfolioEntries,
-  upsertPortfolioProfile,
+  upsertPortfolioSettings,
   updateEntryPortfolioHidden,
   getUserProfile,
   type UserProfile,
@@ -119,7 +119,7 @@ export default function PortfolioSettingsClient() {
       if (!userId) return;
       setSaving(true);
       try {
-        const result = await upsertPortfolioProfile(supabase, userId, updates);
+        const result = await upsertPortfolioSettings(supabase, userId, updates);
         if (result.success) {
           setPortfolioProfile((prev) =>
             prev

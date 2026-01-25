@@ -9,8 +9,6 @@ import type {
   PublicPortfolioData,
   WorksFilter,
   SortKey,
-  // ✅ 追加（types.ts に PortfolioSettings を定義してある前提）
-  //    まだ無い場合は types.ts に追加してください（user_id / is_public / works_filter / sort_key など）
   PortfolioSettings,
 } from "./types";
 
@@ -46,9 +44,7 @@ export async function getPortfolioSettings(
 export async function upsertPortfolioSettings(
   supabase: SupabaseClient,
   userId: string,
-  updates: Partial<
-    Pick<PortfolioSettings, "is_public" | "works_filter" | "sort_key">
-  >
+  updates: Partial<Pick<PortfolioSettings, "is_public" | "works_filter" | "sort_key">>
 ): Promise<{ success: boolean; error?: string }> {
   const { error } = await supabase
     .from("portfolio_settings")
@@ -70,13 +66,12 @@ export async function upsertPortfolioSettings(
 
 /* =========================================================
  * B) スラッグ / プロファイル（将来用: portfolio_profiles）
- *   ※ slug運用がまだなら、ここは後で整理してOK
+ *   ※ テーブルが未作成なら、このセクションは未使用のまま置く or 削除
  * ========================================================= */
 
 /**
  * ポートフォリオプロフィールを取得（本人用）
- * NOTE: これは portfolio_profiles を読む。公開ON/OFFの source of truth ではない。
- * （slug / mode など将来用途がある場合のみ使用）
+ * NOTE: 公開ON/OFFの source of truth ではない（slug / mode 等の用途）
  */
 export async function getPortfolioProfile(
   supabase: SupabaseClient,
@@ -96,9 +91,8 @@ export async function getPortfolioProfile(
 }
 
 /**
- * スラッグで公開ポートフォリオを取得
- * NOTE: slug公開をやる場合の参照。is_public は portfolio_profiles 側の列を前提。
- * （現状は get_public_portfolio RPC を使っているので、ここは未使用でもOK）
+ * スラッグで公開ポートフォリオを取得（slug公開をやる場合用）
+ * NOTE: 現状は get_public_portfolio RPC を使っているなら未使用でもOK
  */
 export async function getPublicPortfolioBySlug(
   supabase: SupabaseClient,
@@ -129,31 +123,39 @@ export async function getPublicPortfolioBySlug(
 }
 
 /**
- * スラッグの利用可能チェック
+ * スラッグの利用可能チェック（slug公開をやる場合用）
  */
 export async function isSlugAvailable(
   supabase: SupabaseClient,
   slug: string,
   excludeUserId?: string
 ): Promise<boolean> {
-  let query = supabase.from("portfolio_profiles").select("id").eq("public_slug", slug);
+  let query = supabase
+    .from("portfolio_profiles")
+    .select("id")
+    .eq("public_slug", slug);
 
   if (excludeUserId) {
     query = query.neq("user_id", excludeUserId);
   }
 
-  const { data } = await query.maybeSingle();
+  const { data, error } = await query.maybeSingle();
+  if (error) {
+    console.error("[isSlugAvailable] error:", error);
+    // エラー時は「利用不可」扱いに倒す（安全側）
+    return false;
+  }
   return !data;
 }
 
 /**
- * ポートフォリオプロフィールを upsert（slug等の管理用）
- * NOTE: 公開ON/OFFの source of truth ではない。必要なときだけ使う。
+ * （将来用）portfolio_profiles を upsert（slug/mode 等を管理したい場合）
+ * NOTE: 公開ON/OFFは portfolio_settings が正。ここで is_public を持つなら二重管理になるので注意。
  */
 export async function upsertPortfolioProfile(
   supabase: SupabaseClient,
   userId: string,
-  updates: Partial<Pick<PortfolioProfile, "is_public" | "works_filter" | "sort_key">>
+  updates: Partial<Pick<PortfolioProfile, "public_slug" | "mode" | "aura_request_id">>
 ): Promise<{ success: boolean; error?: string }> {
   const { error } = await supabase
     .from("portfolio_profiles")
@@ -225,7 +227,6 @@ export async function getEntriesWithStatus(
   supabase: SupabaseClient,
   userId: string
 ): Promise<EntryWithStatus[]> {
-  // entries + job status（エラー情報も含む）
   const { data: entries, error: entriesErr } = await supabase
     .from("entries")
     .select(
@@ -256,14 +257,11 @@ export async function getEntriesWithStatus(
     `
     )
     .eq("user_id", userId)
-    // entries自体は新着順
     .order("created_at", { ascending: false })
-    // jobsは「最新が先頭」になるように（重要）
     .order("updated_at", {
       referencedTable: "entry_processing_jobs",
       ascending: false,
     })
-    // jobsは1件だけで十分（重要）
     .limit(1, { referencedTable: "entry_processing_jobs" });
 
   if (entriesErr) {
@@ -271,17 +269,22 @@ export async function getEntriesWithStatus(
     return [];
   }
 
-  // 閲覧数を取得（ビュー経由）
   const entryIds = (entries ?? []).map((e: any) => e.id);
 
   let statsMap = new Map<number, number>();
   if (entryIds.length > 0) {
-    const { data: stats } = await supabase
+    const { data: stats, error: statsErr } = await supabase
       .from("entry_view_stats")
       .select("entry_id, view_count")
       .in("entry_id", entryIds);
 
-    statsMap = new Map((stats ?? []).map((s: any) => [s.entry_id, s.view_count]));
+    if (statsErr) {
+      console.error("[getEntriesWithStatus] stats error:", statsErr);
+    } else {
+      statsMap = new Map(
+        (stats ?? []).map((s: any) => [s.entry_id, s.view_count])
+      );
+    }
   }
 
   return (entries ?? []).map((e: any) => {
@@ -320,15 +323,13 @@ export async function getTemplateContent(
   supabase: SupabaseClient,
   userId: string
 ): Promise<TemplateContent> {
-  // プロフィール
   const { data: profile } = await supabase
     .from("profiles")
     .select("display_name, avatar_url, bio, sns_links")
     .eq("id", userId)
     .maybeSingle();
 
-  // 展示中の作品のみ
-  const { data: entries } = await supabase
+  const { data: entries, error } = await supabase
     .from("entries")
     .select("id, title, image_url")
     .eq("user_id", userId)
@@ -337,6 +338,10 @@ export async function getTemplateContent(
     .eq("portfolio_hidden", false)
     .order("created_at", { ascending: false })
     .limit(20);
+
+  if (error) {
+    console.error("[getTemplateContent] entries error:", error);
+  }
 
   return {
     profile: {
@@ -409,8 +414,6 @@ export async function getPortfolioEntries(
 /**
  * 作品のポートフォリオ表示/非表示を更新
  * ✅ userId を渡せる場合は必ず渡す（IDOR防止）
- *
- * 互換のため userId は optional（既存呼び出しを壊さない）
  */
 export async function updateEntryPortfolioHidden(
   supabase: SupabaseClient,
@@ -418,11 +421,14 @@ export async function updateEntryPortfolioHidden(
   hidden: boolean,
   userId?: string
 ): Promise<{ success: boolean; error?: string }> {
-  let q = supabase.from("entries").update({ portfolio_hidden: hidden }).eq("id", entryId);
+  let q = supabase
+    .from("entries")
+    .update({ portfolio_hidden: hidden })
+    .eq("id", entryId);
+
   if (userId) q = q.eq("user_id", userId);
 
   const { error } = await q;
-
   if (error) {
     console.error("[updateEntryPortfolioHidden] error:", error);
     return { success: false, error: error.message };
@@ -434,9 +440,6 @@ export async function updateEntryPortfolioHidden(
  * D) プレビュー用プロフィール
  * ========================================================= */
 
-/**
- * ユーザープロフィールを取得（プレビュー用）
- */
 export type UserProfile = {
   id: string;
   display_name: string;
