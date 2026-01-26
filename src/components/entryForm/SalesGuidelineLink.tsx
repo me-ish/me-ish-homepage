@@ -39,6 +39,18 @@ export default function SalesGuidelineLink({
     }
   }, []);
 
+    // 画面幅（スマホだけ位置を逃がす）
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(max-width: 640px)'); // Tailwindのsm未満
+    const apply = () => setIsNarrow(mq.matches);
+    apply();
+    mq.addEventListener?.('change', apply);
+    return () => mq.removeEventListener?.('change', apply);
+  }, []);
+
+   const [isNarrow, setIsNarrow] = useState(false);
+
   const shouldShow = !!pathname && showOnPaths.some((p) => pathname.startsWith(p));
   if (!shouldShow) return null;
 
@@ -64,10 +76,20 @@ export default function SalesGuidelineLink({
   return (
     <div
       className="fixed z-[60]"
-      style={{
-        right: 'max(1rem, env(safe-area-inset-right))',
-        bottom: 'max(1rem, env(safe-area-inset-bottom))',
-      }}
+      style={
+        isNarrow
+          ? {
+              left: 'max(1rem, env(safe-area-inset-left))',
+              right: 'auto',
+              // 「次へ」固定ボタンの高さぶん上に逃がす（約72px）
+              bottom: 'calc(max(1rem, env(safe-area-inset-bottom)) + 72px)',
+            }
+          : {
+              left: 'auto',
+              right: 'max(1rem, env(safe-area-inset-right))',
+              bottom: 'max(1rem, env(safe-area-inset-bottom))',
+            }
+      }
     >
       <Link
         href={href}
