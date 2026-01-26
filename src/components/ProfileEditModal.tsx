@@ -220,32 +220,41 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
     onCancel();
   };
 
-  return (
-    <div
-      ref={overlayRef}
-      onClick={onOverlayClick}
-      className="fixed inset-0 z-[999] bg-black/40 backdrop-blur-[1px] grid place-items-center px-4"
-      aria-modal="true"
-      role="dialog"
-    >
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b">
+  // === return() 以降の JSX を丸ごと置き換え ===
+return (
+  <div
+    ref={overlayRef}
+    onClick={onOverlayClick}
+    className="fixed inset-0 z-[999] bg-black/40 backdrop-blur-[1px] overflow-y-auto"
+    aria-modal="true"
+    role="dialog"
+  >
+    {/* iOS/Android で上下に逃がす（100svh対応） */}
+    <div className="min-h-[100svh] flex items-start justify-center px-4 py-4 sm:py-8">
+      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl overflow-hidden flex flex-col max-h-[calc(100svh-2rem)] sm:max-h-[calc(100vh-4rem)]">
+        {/* Header（常に見える） */}
+        <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b bg-white">
           <h2 className="text-lg font-semibold">プロフィールを編集</h2>
-          <button onClick={tryClose} className="p-1 rounded hover:bg-[#f6f8fb]" aria-label="閉じる">
+          <button
+            onClick={tryClose}
+            className="p-1 rounded hover:bg-[#f6f8fb]"
+            aria-label="閉じる"
+            type="button"
+          >
             <X className="w-5 h-5 text-[#667]" />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="px-5 py-5 space-y-6">
-
+        {/* Body（ここだけスクロール） */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-5 sm:space-y-6 pb-[calc(env(safe-area-inset-bottom)+16px)]">
           {/* エラー */}
           {errors.length > 0 && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 flex gap-2">
               <AlertTriangle className="w-4 h-4 mt-0.5" />
               <div>
-                {errors.map((e, i) => <div key={i}>• {e}</div>)}
+                {errors.map((e, i) => (
+                  <div key={i}>• {e}</div>
+                ))}
               </div>
             </div>
           )}
@@ -257,12 +266,12 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
             </label>
             <div
               className={[
-                'relative h-28 w-full rounded-xl border overflow-hidden',
-                draggingBanner ? 'ring-2 ring-[#00a1e9] border-[#00a1e9]' : 'bg-[#f6f8fb]',
-              ].join(' ')}
-              onDrop={(e) => handleDrop(e, 'banner')}
-              onDragOver={(e) => handleDragOver(e, 'banner')}
-              onDragLeave={() => handleDragLeave('banner')}
+                "relative h-28 w-full rounded-xl border overflow-hidden",
+                draggingBanner ? "ring-2 ring-[#00a1e9] border-[#00a1e9]" : "bg-[#f6f8fb]",
+              ].join(" ")}
+              onDrop={(e) => handleDrop(e, "banner")}
+              onDragOver={(e) => handleDragOver(e, "banner")}
+              onDragLeave={() => handleDragLeave("banner")}
             >
               {bannerPreview ? (
                 <img src={bannerPreview} alt="banner" className="h-full w-full object-cover" />
@@ -273,28 +282,28 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
                 </div>
               )}
 
+              {/* ✅ ボタン順序を「選択 → 削除」に統一 */}
               <div className="absolute bottom-2 right-2 flex gap-2">
+                <label className="inline-flex items-center gap-1 rounded-full bg-white border px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-[#f7fbff]">
+                  <Upload className="w-3.5 h-3.5 text-[#00a1e9]" /> 画像を選択
+                  <input
+                    ref={bannerInputRef}
+                    type="file"
+                    accept={ACCEPTED_MIME.join(",")}
+                    className="hidden"
+                    onChange={(e) => handleSelectFile(e, "banner")}
+                  />
+                </label>
+
                 {!!bannerPreview && (
                   <button
-                    onClick={() => handleRemoveImage('banner')}
+                    onClick={() => handleRemoveImage("banner")}
                     className="inline-flex items-center gap-1 rounded-full bg-white border px-3 py-1.5 text-xs font-semibold hover:bg-red-50"
                     type="button"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-red-600" /> 画像を削除
                   </button>
                 )}
-                <label
-                  className="inline-flex items-center gap-1 rounded-full bg-white border px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-[#f7fbff]"
-                >
-                  <Upload className="w-3.5 h-3.5 text-[#00a1e9]" /> 画像を選択
-                  <input
-                    ref={bannerInputRef}
-                    type="file"
-                    accept={ACCEPTED_MIME.join(',')}
-                    className="hidden"
-                    onChange={(e) => handleSelectFile(e, 'banner')}
-                  />
-                </label>
               </div>
             </div>
           </div>
@@ -307,12 +316,12 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
             <div className="flex items-center gap-4">
               <div
                 className={[
-                  'h-16 w-16 rounded-full bg-[#f1f5f9] overflow-hidden border',
-                  draggingAvatar ? 'ring-2 ring-[#00a1e9] border-[#00a1e9]' : '',
-                ].join(' ')}
-                onDrop={(e) => handleDrop(e, 'avatar')}
-                onDragOver={(e) => handleDragOver(e, 'avatar')}
-                onDragLeave={() => handleDragLeave('avatar')}
+                  "h-16 w-16 rounded-full bg-[#f1f5f9] overflow-hidden border",
+                  draggingAvatar ? "ring-2 ring-[#00a1e9] border-[#00a1e9]" : "",
+                ].join(" ")}
+                onDrop={(e) => handleDrop(e, "avatar")}
+                onDragOver={(e) => handleDragOver(e, "avatar")}
+                onDragLeave={() => handleDragLeave("avatar")}
               >
                 {avatarPreview ? (
                   <img src={avatarPreview} alt="avatar" className="h-full w-full object-cover" />
@@ -323,20 +332,22 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
                 )}
               </div>
 
+              {/* ✅ こちらも「選択 → 削除」 */}
               <div className="flex gap-2">
                 <label className="inline-flex items-center gap-1 rounded-full bg-white border px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-[#f7fbff]">
                   <Upload className="w-3.5 h-3.5 text-[#00a1e9]" /> 画像を選択
                   <input
                     ref={avatarInputRef}
                     type="file"
-                    accept={ACCEPTED_MIME.join(',')}
+                    accept={ACCEPTED_MIME.join(",")}
                     className="hidden"
-                    onChange={(e) => handleSelectFile(e, 'avatar')}
+                    onChange={(e) => handleSelectFile(e, "avatar")}
                   />
                 </label>
+
                 {!!avatarPreview && (
                   <button
-                    onClick={() => handleRemoveImage('avatar')}
+                    onClick={() => handleRemoveImage("avatar")}
                     className="inline-flex items-center gap-1 rounded-full bg-white border px-3 py-1.5 text-xs font-semibold hover:bg-red-50"
                     type="button"
                   >
@@ -401,14 +412,14 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
                 value={instagram}
                 onChange={(e) => setInstagram(e.target.value)}
                 className="w-full border rounded-xl px-3 py-2"
-                placeholder="https://instagram.com/yourname or @yourname"
+                placeholder="https://instagram.com/yourname or @"
               />
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-2 px-5 py-4 border-t">
+        {/* Footer（常に見える + safe-area） */}
+        <div className="sticky bottom-0 z-10 flex justify-end gap-2 px-5 py-4 border-t bg-white pb-[calc(env(safe-area-inset-bottom)+16px)]">
           <button
             onClick={tryClose}
             className="px-4 py-2 rounded-full border bg-white hover:bg-[#f7fbff]"
@@ -423,12 +434,13 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
             type="button"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {saving ? '保存中…' : '保存（⌘/Ctrl+S）'}
+            {saving ? "保存中…" : "保存（⌘/Ctrl+S）"}
           </button>
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }
 
 /* ---------------- helpers ---------------- */
