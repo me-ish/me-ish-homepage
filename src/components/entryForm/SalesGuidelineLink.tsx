@@ -76,20 +76,22 @@ export default function SalesGuidelineLink({
   return (
     <div
       className="fixed z-[60]"
-      style={
-        isNarrow
-          ? {
-              left: 'max(1rem, env(safe-area-inset-left))',
-              right: 'auto',
-              // 「次へ」固定ボタンの高さぶん上に逃がす（約72px）
-              bottom: 'calc(max(1rem, env(safe-area-inset-bottom)) + 72px)',
-            }
-          : {
-              left: 'auto',
-              right: 'max(1rem, env(safe-area-inset-right))',
-              bottom: 'max(1rem, env(safe-area-inset-bottom))',
-            }
+style={
+  isNarrow
+    ? {
+        left: 'auto',
+        right: 'max(1rem, env(safe-area-inset-right))',
+        top: 'max(1rem, env(safe-area-inset-top))',
+        bottom: 'auto',
       }
+    : {
+        left: 'auto',
+        right: 'max(1rem, env(safe-area-inset-right))',
+        bottom: 'max(1rem, env(safe-area-inset-bottom))',
+        top: 'auto',
+      }
+}
+
     >
       <Link
         href={href}
