@@ -504,19 +504,6 @@ export default function MyPageClient() {
         </>
       )}
 
-      {/* モバイルFAB */}
-      {isMobile && (
-        <button
-          onClick={() => setEditOpen(true)}
-          className="fixed bottom-5 right-5 inline-flex items-center gap-2 rounded-full text-white px-4 py-3 shadow-lg"
-          style={{ backgroundColor: BRAND }}
-          aria-label="プロフィール編集"
-        >
-          <Edit3 className="w-4 h-4" />
-          <span>編集</span>
-        </button>
-      )}
-
       {/* トースト */}
       {toast && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 rounded-lg bg-black/80 text-white text-sm px-4 py-2 shadow z-50">
