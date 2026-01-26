@@ -503,7 +503,20 @@ export default function MyPageClient() {
           <div className="mb-20" />
         </>
       )}
-
+            {/* プロフィール編集モーダル */}
+      {editOpen && profile && (
+        <ProfileEditModal
+          initialProfile={{
+            display_name: profile.display_name ?? '',
+            bio: profile.bio ?? null,
+            avatar_url: profile.avatar_url ?? null,
+            banner_url: profile.banner_url ?? null,
+            sns_links: profile.sns_links ?? {},
+          }}
+          onSave={handleProfileSave}
+          onCancel={() => setEditOpen(false)}
+        />
+      )}
       {/* トースト */}
       {toast && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 rounded-lg bg-black/80 text-white text-sm px-4 py-2 shadow z-50">
