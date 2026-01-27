@@ -10,10 +10,12 @@ import {
   ShieldCheck,
   Images,
   ArrowRight,
+  ArrowUpRight,
   ExternalLink,
   Globe,
   Instagram,
   User,
+  ChevronDown,
 } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
@@ -22,6 +24,13 @@ import { supabase } from '@/lib/supabaseClient';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionHeader } from '@/components/shared/SectionHeader';
+import { BackToTop } from '@/components/shared/BackToTop';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 /* ──────────────────────────────────────────────────────────────
    Layout Tokens
@@ -261,7 +270,10 @@ function AnnouncementsStrip({ max = 3 }: { max?: number }) {
     <ul className="space-y-3" aria-live="polite">
       {list.map((n) => (
         <li key={n.id} className="w-full">
-          <div className={`flex min-h-[40px] items-center gap-2 rounded-full px-4 py-2 ${CARD.base}`}>
+          <Link
+            href="/news"
+            className={`flex min-h-[40px] items-center gap-2 rounded-full px-4 py-2 ${CARD.base} hover:bg-[#f0f9ff] transition-colors group`}
+          >
             <AnnouncementBadgeInline type={n.category} />
 
             {n.pinned && (
@@ -282,10 +294,10 @@ function AnnouncementsStrip({ max = 3 }: { max?: number }) {
               ·
             </span>
 
-            <span className="min-w-0 flex-1 truncate font-medium text-[#023]" title={n.title}>
+            <span className="min-w-0 flex-1 truncate font-medium text-[#023] group-hover:text-[#00a1e9] transition-colors" title={n.title}>
               {n.title}
             </span>
-          </div>
+          </Link>
         </li>
       ))}
     </ul>
@@ -335,6 +347,18 @@ function HeroBackground() {
 }
 
 /* ──────────────────────────────────────────────────────────────
+   スクロールヒントアニメーション
+────────────────────────────────────────────────────────────── */
+function ScrollHint() {
+  return (
+    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[#00a1e9]/60">
+      <span className="text-xs tracking-wider uppercase">Scroll</span>
+      <ChevronDown className="h-5 w-5 animate-bounce" />
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────
    ページ本体（ニュースは md 以上のみ表示）
 ────────────────────────────────────────────────────────────── */
 const DesktopHome = () => {
@@ -347,7 +371,7 @@ const DesktopHome = () => {
 
         {/* Hero */}
         <section
-          className="relative flex flex-col items-center justify-center min-h-[82vh] text-center px-6 fade-in-start"
+          className="relative flex flex-col items-center justify-center min-h-[100svh] text-center px-6 fade-in-start"
           aria-labelledby="hero-title"
         >
           <h1
@@ -359,17 +383,19 @@ const DesktopHome = () => {
           <p className="text-[#00a1e9]/80 uppercase tracking-[0.22em] mt-2 text-[clamp(0.85rem,1.6vw,1.1rem)]">
             — online gallery —
           </p>
-          <p className="mt-8 text-[clamp(1.1rem,2.6vw,1.8rem)] tracking-wide text-[#333]">アートを、もっと近くに</p>
+          <p className="mt-8 text-[clamp(1.1rem,2.6vw,1.8rem)] tracking-wide text-[#333] font-medium">
+            アートを、もっと近くに
+          </p>
 
-          {/* CTA Buttons - shadcn Button使用 */}
+          {/* CTA Buttons - サイズ差をつけて優先度を明確に */}
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Button
               asChild
               size="lg"
-              className="rounded-full px-6 py-3 h-auto text-base font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+              className="rounded-full px-8 py-4 h-auto text-lg font-semibold shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
             >
               <Link href="/white" aria-label="ギャラリーを見る">
-                ギャラリーを見る <ArrowRight className="h-4 w-4" />
+                ギャラリーを見る <ArrowRight className="h-5 w-5" />
               </Link>
             </Button>
             <Button
@@ -390,6 +416,9 @@ const DesktopHome = () => {
           >
             もっと見る
           </Link>
+
+          {/* スクロールヒント */}
+          <ScrollHint />
         </section>
 
         {/* News（デスクトップ専用・フルブリード） */}
@@ -444,9 +473,9 @@ const DesktopHome = () => {
                   desc: 'ウォーターマークやAI認識阻害処理など、作品保護にも配慮（詳細はポリシーをご確認ください）。',
                 },
               ].map(({ icon: Icon, title, desc }) => (
-                <div key={title} className={`p-6 ${CARD.base} ${CARD.hover}`}>
-                  <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-[#e8f7ff] to-[#d0efff] ring-1 ring-[#00a1e9]/10">
-                    <Icon className="h-5 w-5 text-[#00a1e9]" />
+                <div key={title} className={`p-6 border-t-2 border-[#00a1e9] ${CARD.base} ${CARD.hover}`}>
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-[#e8f7ff] to-[#d0efff] ring-1 ring-[#00a1e9]/10">
+                    <Icon className="h-6 w-6 text-[#00a1e9]" />
                   </div>
                   <h3 className="mt-4 font-semibold text-[#023]">{title}</h3>
                   <p className="mt-2 text-sm text-[#556] leading-relaxed">{desc}</p>
@@ -463,7 +492,7 @@ const DesktopHome = () => {
           aria-labelledby="gallery-title"
         >
           <div className={LAYOUT.container}>
-            <SectionHeader title="ギャラリーを見る" id="gallery-title" />
+            <SectionHeader title="ギャラリーを見る" id="gallery-title" underline />
 
             <div className="grid gap-6 sm:gap-8 grid-cols-1 sm:grid-cols-2">
               {[
@@ -471,6 +500,8 @@ const DesktopHome = () => {
                   img: '/images/white-thumb.png',
                   title: 'White Gallery',
                   desc: '「意識の空間」をイメージした真っ白なギャラリー。10作品限定の特別展示。',
+                  badge: '10作品限定',
+                  badgeColor: 'bg-[#00a1e9] text-white',
                   link: '/white',
                   link2d: '/white/2d',
                 },
@@ -478,20 +509,28 @@ const DesktopHome = () => {
                   img: '/images/float-thumb.jpg',
                   title: 'Float Gallery',
                   desc: '"漂う"ように入れ替わる美術館風ギャラリー。日替わりで多彩な作品を展示。',
+                  badge: '日替わり',
+                  badgeColor: 'bg-amber-500 text-white',
                   link: '/float',
                   link2d: '/float/2d',
                 },
-              ].map(({ img, title, desc, link, link2d }) => (
+              ].map(({ img, title, desc, badge, badgeColor, link, link2d }) => (
                 <div
                   key={title}
-                  className={`group block text-left ${CARD.solid} hover:shadow-lg transition-all duration-300`}
+                  className={`group block text-left ${CARD.solid} hover:shadow-xl transition-all duration-300 overflow-hidden`}
                 >
                   <Link
                     href={link}
                     aria-label={`${title} へ`}
-                    className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00a1e9] focus-visible:ring-offset-2 rounded-t-2xl"
+                    className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00a1e9] focus-visible:ring-offset-2 rounded-t-2xl relative"
                   >
-                    <div className="overflow-hidden rounded-t-2xl">
+                    {/* Badge */}
+                    <div className="absolute top-3 left-3 z-10">
+                      <Badge className={`${badgeColor} shadow-md`}>{badge}</Badge>
+                    </div>
+
+                    {/* サムネイル + ホバーオーバーレイ */}
+                    <div className="overflow-hidden rounded-t-2xl relative">
                       <Image
                         src={img}
                         alt={`${title} thumbnail`}
@@ -501,28 +540,37 @@ const DesktopHome = () => {
                         className="w-full h-auto object-cover transition-transform duration-500
                            group-hover:scale-105 motion-reduce:transition-none motion-reduce:transform-none"
                       />
+                      {/* ホバー時オーバーレイ */}
+                      <div className="absolute inset-0 bg-[#00a1e9]/0 group-hover:bg-[#00a1e9]/10 transition-colors duration-300" />
                     </div>
 
                     <div className="p-4 sm:p-5 pb-2">
-                      <h3 className="text-base sm:text-lg font-semibold text-[#023]">{title}</h3>
+                      <h3 className="text-base sm:text-lg font-semibold text-[#023] group-hover:text-[#00a1e9] transition-colors">{title}</h3>
                       <p className="mt-1 text-[13px] sm:text-sm text-[#556] line-clamp-2">{desc}</p>
                     </div>
                   </Link>
 
+                  {/* ボタンエリア */}
                   <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center gap-3">
-                    <Link
-                      href={link}
-                      className="inline-flex items-center gap-1 text-sm font-medium text-[#00a1e9] hover:underline"
+                    <Button
+                      asChild
+                      size="sm"
+                      className="rounded-full text-sm shadow-sm"
                     >
-                      3Dで見る <ArrowRight className="h-3 w-3" />
-                    </Link>
-                    <span className="text-gray-300">|</span>
-                    <Link
-                      href={link2d}
-                      className="inline-flex items-center gap-1 text-sm font-medium text-[#667] hover:text-[#00a1e9] hover:underline"
+                      <Link href={link}>
+                        3Dで見る <ArrowRight className="h-3 w-3" />
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full text-sm border-[#00a1e9] text-[#00a1e9] hover:bg-[#e8f7ff]"
                     >
-                      2Dで見る <ArrowRight className="h-3 w-3" />
-                    </Link>
+                      <Link href={link2d}>
+                        2Dで見る <ArrowRight className="h-3 w-3" />
+                      </Link>
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -537,13 +585,20 @@ const DesktopHome = () => {
             bg-gradient-to-br from-[#dff6ff] via-white to-[#f0f9ff]
             px-6 ${LAYOUT.sectionY} text-center
             ring-1 ring-[#00a1e9]/10 shadow-md
-            transition-all duration-300 hover:shadow-xl hover:scale-[1.01] group
+            transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group
             mx-6 md:mx-auto md:max-w-[1040px]`}
           aria-labelledby="apply-title"
         >
           <Link href="/entry" className="absolute inset-0 z-10" aria-label="応募ページへ">
             <span className="sr-only">応募ページへ</span>
           </Link>
+
+          {/* 右上の矢印アイコン */}
+          <div className="absolute top-4 right-4 z-20 pointer-events-none">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00a1e9]/10 group-hover:bg-[#00a1e9]/20 transition-colors">
+              <ArrowUpRight className="h-5 w-5 text-[#00a1e9]" />
+            </div>
+          </div>
 
           <div className="relative z-20 max-w-xl mx-auto pointer-events-none">
             <h2
@@ -572,63 +627,69 @@ const DesktopHome = () => {
               <h2 id="thanks-link-title" className="text-2xl font-extrabold">
                 <Link
                   href="/special-thanks"
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 bg-clip-text text-transparent focus:outline-none focus:ring-2 focus:ring-[#00a1e9] focus:ring-offset-2 rounded-lg px-2 py-1 hover:opacity-80 transition-opacity"
+                  className="inline-flex items-center gap-3 focus:outline-none focus:ring-2 focus:ring-[#00a1e9] focus:ring-offset-2 rounded-lg px-2 py-1 hover:opacity-80 transition-opacity group"
                   aria-label="Special Thanks ページへ"
                   title="Special Thanks ページへ"
                 >
-                  <span>Special Thanks</span>
+                  <Sparkles className="h-5 w-5 text-amber-500 group-hover:animate-pulse" />
+                  <span className="bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 bg-clip-text text-transparent">
+                    Special Thanks
+                  </span>
+                  <Sparkles className="h-5 w-5 text-amber-500 group-hover:animate-pulse" />
                 </Link>
               </h2>
 
-              <p className="mt-2 text-sm text-[#556]">me-ish初期ギャラリー(white)に応募してくださった皆さま</p>
+              <p className="mt-3 text-sm text-[#556] flex items-center gap-2">
+                me-ish初期ギャラリー(white)に応募してくださった皆さま
+              </p>
             </div>
           </div>
         </section>
 
-        {/* FAQ */}
+        {/* FAQ - Accordion */}
         <section
           id="faq"
           className={`fade-in-start ${LAYOUT.sectionY} px-6 bg-gradient-to-b from-[#f6f8fb] to-[#f0f4f8]`}
           aria-labelledby="faq-title"
         >
           <div className={LAYOUT.container}>
-            <SectionHeader title="よくある質問" id="faq-title" />
+            <SectionHeader title="よくある質問" id="faq-title" underline />
 
-            <ul className="max-w-[880px] mx-auto space-y-4 text-[0.96rem] text-[#444]">
-              {[
-                {
-                  q: 'Q. 誰でも出展できますか？',
-                  a: (
-                    <>
-                      A. はい、プロ・アマ問わずご応募いただけます。展示は<strong>審査制</strong>です。
-                    </>
-                  ),
-                },
-                {
-                  q: 'Q. 出展に料金はかかりますか？',
-                  a: (
-                    <>
-                      A. <strong>応募・展示は無料</strong>です。作品が売れた場合のみ、売上から<strong>手数料</strong>
-                      をいただきます。詳細はFAQをご確認ください。
-                    </>
-                  ),
-                },
-                {
-                  q: 'Q. 生成AIは使ってもいいですか？',
-                  a: (
-                    <>
-                      A. <strong>AIだけで作った"完全生成"の作品は不可</strong>です。一方で、ラフ作成や構図検討などの
-                      <strong>補助的な利用</strong>はケースにより扱いが異なります。詳細はFAQをご確認ください。
-                    </>
-                  ),
-                },
-              ].map(({ q, a }) => (
-                <li key={q} className={`p-5 ${CARD.base}`}>
-                  <p className="font-semibold text-[#023]">{q}</p>
-                  <p className="mt-2 leading-relaxed text-[#445]">{a}</p>
-                </li>
-              ))}
-            </ul>
+            <div className="max-w-[880px] mx-auto">
+              <Accordion type="single" collapsible defaultValue="item-0" className="space-y-3">
+                {[
+                  {
+                    q: '誰でも出展できますか？',
+                    a: 'はい、プロ・アマ問わずご応募いただけます。展示は審査制です。',
+                  },
+                  {
+                    q: '出展に料金はかかりますか？',
+                    a: '応募・展示は無料です。作品が売れた場合のみ、売上から手数料をいただきます。詳細はFAQをご確認ください。',
+                  },
+                  {
+                    q: '生成AIは使ってもいいですか？',
+                    a: 'AIだけで作った"完全生成"の作品は不可です。一方で、ラフ作成や構図検討などの補助的な利用はケースにより扱いが異なります。詳細はFAQをご確認ください。',
+                  },
+                ].map(({ q, a }, idx) => (
+                  <AccordionItem
+                    key={idx}
+                    value={`item-${idx}`}
+                    className={`${CARD.base} border-l-4 border-l-[#00a1e9] overflow-hidden`}
+                  >
+                    <AccordionTrigger className="px-5 py-4 text-left font-semibold text-[#023] hover:no-underline hover:bg-[#f8fbff] transition-colors">
+                      <span className="flex items-center gap-2">
+                        <span className="text-[#00a1e9] font-bold">Q.</span>
+                        {q}
+                      </span>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-5 pb-4 text-[#445] leading-relaxed">
+                      <span className="text-[#00a1e9] font-bold mr-1">A.</span>
+                      {a}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </div>
 
             <div className="mt-10 text-center">
               <Button
@@ -647,7 +708,7 @@ const DesktopHome = () => {
         {/* Contact */}
         <section
           id="contact"
-          className={`fade-in-start ${LAYOUT.sectionY} px-6 bg-white text-center`}
+          className={`fade-in-start ${LAYOUT.sectionY} px-6 bg-gradient-to-b from-white to-[#f0f7fc] text-center`}
           aria-labelledby="contact-title"
         >
           <div className={LAYOUT.container}>
@@ -655,31 +716,38 @@ const DesktopHome = () => {
               title="お問い合わせ"
               id="contact-title"
               subtitle="ご質問・ご相談などございましたら、以下よりご連絡ください。"
+              underline
             />
 
-            <ul className="mt-2 text-[#00a1e9] text-sm space-y-3 max-w-xs mx-auto">
-              <li className="flex items-center justify-center gap-2">
-                <Mail className="w-4 h-4" />
-                <Link href="/contact" className="hover:underline" aria-label="お問い合わせフォームへ">
-                  お問い合わせフォームへ
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Button
+                asChild
+                className="rounded-full px-6 py-3 h-auto text-base shadow-md"
+              >
+                <Link href="/contact" aria-label="お問い合わせフォームへ">
+                  <Mail className="h-4 w-4 mr-2" />
+                  お問い合わせフォーム
                 </Link>
-              </li>
-              <li className="flex items-center justify-center gap-2">
-                <FaXTwitter className="w-4 h-4" />
+              </Button>
+
+              <div className="flex items-center gap-3">
                 <a
                   href="https://x.com/meishart0716"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:underline"
                   aria-label="me-ish公式X（旧Twitter）を開く"
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-[#00a1e9]/10 text-[#00a1e9] hover:bg-[#00a1e9] hover:text-white transition-colors"
                 >
-                  X（旧Twitter）
+                  <FaXTwitter className="h-5 w-5" />
                 </a>
-              </li>
-            </ul>
+              </div>
+            </div>
           </div>
         </section>
       </main>
+
+      {/* Back to Top ボタン */}
+      <BackToTop />
 
       {/* フェードアニメーション（reduced-motion対応） */}
       <style jsx>{`

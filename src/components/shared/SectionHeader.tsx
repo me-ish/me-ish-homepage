@@ -13,6 +13,8 @@ export interface SectionHeaderProps {
   align?: 'center' | 'left';
   /** アクセントカラーを適用するか（デフォルト: true） */
   accent?: boolean;
+  /** タイトル下にアクセントラインを表示するか（デフォルト: false） */
+  underline?: boolean;
   /** HTML id属性（アンカーリンク用） */
   id?: string;
   /** タイトルに適用する追加クラス */
@@ -36,6 +38,7 @@ export function SectionHeader({
   subtitle,
   align = 'center',
   accent = true,
+  underline = false,
   id,
   titleClassName,
   subtitleClassName,
@@ -73,6 +76,17 @@ export function SectionHeader({
         {children}
       </div>
 
+      {/* アクセントライン */}
+      {underline && (
+        <div
+          className={cn(
+            'mt-3 h-[3px] w-10 rounded-full bg-[#00a1e9]',
+            align === 'center' && 'mx-auto'
+          )}
+          aria-hidden="true"
+        />
+      )}
+
       {/* サブタイトル */}
       {subtitle && (
         <p
@@ -80,6 +94,7 @@ export function SectionHeader({
             'mt-2 text-[clamp(0.9rem,1.4vw,1rem)] leading-relaxed',
             'text-[#556] max-w-2xl',
             align === 'center' && 'mx-auto',
+            underline && 'mt-3',
             subtitleClassName
           )}
         >
