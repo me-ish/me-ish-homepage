@@ -103,6 +103,45 @@ function useGalleryArtworks(limit = 8) {
   return artworks;
 }
 
+// ギャラリー統計を取得するフック
+function useGalleryStats() {
+  const [stats, setStats] = useState<{ worksCount: number; artistsCount: number } | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        // 展示中の作品を取得（user_idも含める）
+        const { data, error } = await supabase
+          .from('entries')
+          .select('user_id')
+          .eq('confirmed', true)
+          .eq('display_ready', true);
+
+        if (error) throw error;
+
+        if (mounted && data) {
+          const worksCount = data.length;
+          const uniqueArtists = new Set(data.map((entry) => entry.user_id));
+          setStats({
+            worksCount,
+            artistsCount: uniqueArtists.size,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch gallery stats:', err);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return stats;
+}
+
 function FloatingArtwork({
   src, x, y, size, delay, mouseX, mouseY
 }: {
@@ -597,6 +636,7 @@ const DesktopHome = () => {
   useStaggerFadeIn();
   const mousePosition = useMousePosition();
   const galleryArtworks = useGalleryArtworks(8);
+  const galleryStats = useGalleryStats();
 
   // 展示作品と配置パターンを組み合わせる
   const floatingArts = useMemo(() => {
@@ -683,9 +723,17 @@ const DesktopHome = () => {
 
             {/* Stats */}
             <div className="fade-in-up mt-16 flex flex-wrap items-center justify-center gap-4" style={{ animationDelay: '0.6s' }}>
-              <StatCard icon={Palette} value="10+" label="展示作品" />
-              <StatCard icon={Users} value="Coming" label="アーティスト" />
-              <StatCard icon={Eye} value="Soon" label="ユニーク閲覧" />
+              <StatCard
+                icon={Palette}
+                value={galleryStats ? `${galleryStats.worksCount}` : '–'}
+                label="展示作品"
+              />
+              <StatCard
+                icon={Users}
+                value={galleryStats ? `${galleryStats.artistsCount}` : '–'}
+                label="アーティスト"
+              />
+              <StatCard icon={Eye} value="Coming Soon" label="ユニーク閲覧" />
             </div>
           </div>
 
