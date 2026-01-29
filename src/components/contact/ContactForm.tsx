@@ -2,10 +2,21 @@
 
 import { useEffect, useId, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { sendEmail } from '@/app/_actions/sendEmail'; // 共通サーバーアクション
+import { Send, AlertCircle, CheckCircle2, Bug, HelpCircle, Palette, ShoppingCart, MessageSquare } from 'lucide-react';
+import { sendEmail } from '@/app/_actions/sendEmail';
+import { cn } from '@/lib/utils';
 
 type Status = 'idle' | 'loading' | 'error';
 type Category = 'general' | 'bug' | 'howto' | 'entry' | 'purchase' | 'other';
+
+const CATEGORY_OPTIONS: { value: Category; label: string; icon: React.ElementType }[] = [
+  { value: 'general', label: '一般のお問い合わせ', icon: MessageSquare },
+  { value: 'bug', label: '不具合の報告', icon: Bug },
+  { value: 'howto', label: '使い方について', icon: HelpCircle },
+  { value: 'entry', label: '出展について', icon: Palette },
+  { value: 'purchase', label: '購入について', icon: ShoppingCart },
+  { value: 'other', label: 'その他', icon: MessageSquare },
+];
 
 const CATEGORY_LABEL: Record<Category, string> = {
   general: '一般のお問い合わせ',
@@ -16,6 +27,18 @@ const CATEGORY_LABEL: Record<Category, string> = {
   other: 'その他',
 };
 
+// 共通の入力フィールドスタイル
+const INPUT_BASE = cn(
+  'w-full border px-4 py-3 rounded-xl outline-none',
+  'bg-white/80 backdrop-blur-sm',
+  'transition-all duration-300',
+  'focus:ring-2 focus:ring-[#00a1e9]/30 focus:border-[#00a1e9]',
+  'placeholder:text-gray-400'
+);
+
+const INPUT_ERROR = 'border-red-400 focus:ring-red-200 focus:border-red-400';
+const INPUT_NORMAL = 'border-gray-200 hover:border-gray-300';
+
 export default function ContactForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -24,7 +47,7 @@ export default function ContactForm() {
   const [category, setCategory] = useState<Category>('general');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [subject, setSubject] = useState(''); // 任意
+  const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
 
   // bug 用 追加項目（任意）
@@ -34,10 +57,10 @@ export default function ContactForm() {
   const [steps, setSteps] = useState('');
 
   // 軽いスパム対策
-  const [hp, setHp] = useState(''); // honeypot
+  const [hp, setHp] = useState('');
   const [readyAt, setReadyAt] = useState<number>(0);
   useEffect(() => {
-    setReadyAt(Date.now() + 1500); // 1.5秒未満の送信はbot扱い
+    setReadyAt(Date.now() + 1500);
   }, []);
 
   // ?type=bug などでカテゴリ初期値を上書き
@@ -106,10 +129,9 @@ export default function ContactForm() {
       const safeSubject = subject.trim() || `【${CATEGORY_LABEL[category]}】お問い合わせ`;
       const composed = buildComposedMessage();
 
-      // 統合API: /api/send-email/contact（宛先はサーバー側で SUPPORT_EMAIL 固定）
       await sendEmail('contact', {
         name: name.trim(),
-        email: email.trim(),        // Reply-To に使う
+        email: email.trim(),
         subject: safeSubject,
         message: composed,
         category,
@@ -134,191 +156,234 @@ export default function ContactForm() {
     other: 'その他のご用件をご自由にお書きください。',
   };
 
-  // 触れたかどうかの管理（エラーメッセージ表示制御）
   const [touched, setTouched] = useState({ category: false, name: false, email: false, message: false });
 
   return (
-    <form onSubmit={onSubmit} noValidate className="max-w-md mx-auto text-left space-y-5">
+    <form
+      onSubmit={onSubmit}
+      noValidate
+      className="max-w-lg mx-auto text-left space-y-6"
+    >
       {/* a11y: ステータス */}
       <div aria-live="polite" className="sr-only">
         {status === 'loading' ? '送信中です' : status === 'error' ? '送信に失敗しました' : ''}
       </div>
 
-      {/* カテゴリ */}
-      <div>
-        <label htmlFor={catId} className="block mb-1 font-semibold">
-          お問い合わせの種類 <span className="text-red-600">*</span>
-        </label>
-        <select
-          id={catId}
-          value={category}
-          onChange={(e) => setCategory(e.target.value as Category)}
-          onBlur={() => setTouched((t) => ({ ...t, category: true }))}
-          aria-invalid={touched.category && !!errors.category}
-          aria-describedby={touched.category && errors.category ? `${catId}-error` : undefined}
-          className={`w-full border px-3 py-2 rounded outline-none focus:ring-2 focus:ring-[#00a1e9]/30 ${
-            touched.category && errors.category ? 'border-red-500' : 'border-gray-300'
-          }`}
-        >
-          <option value="general">{CATEGORY_LABEL.general}</option>
-          <option value="bug">{CATEGORY_LABEL.bug}</option>
-          <option value="howto">{CATEGORY_LABEL.howto}</option>
-          <option value="entry">{CATEGORY_LABEL.entry}</option>
-          <option value="purchase">{CATEGORY_LABEL.purchase}</option>
-          <option value="other">{CATEGORY_LABEL.other}</option>
-        </select>
-        {touched.category && errors.category && (
-          <p id={`${catId}-error`} className="mt-1 text-sm text-red-600">{errors.category}</p>
-        )}
-      </div>
-
-      {/* 件名（任意） */}
-      <div>
-        <label htmlFor={subjId} className="block mb-1 font-semibold">件名（任意）</label>
-        <input
-          id={subjId}
-          type="text"
-          inputMode="text"
-          placeholder={`例: ${CATEGORY_LABEL[category]}について`}
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-          className="w-full border px-3 py-2 rounded outline-none focus:ring-2 focus:ring-[#00a1e9]/30 border-gray-300"
-        />
-      </div>
-
-      {/* お名前 */}
-      <div>
-        <label htmlFor={nameId} className="block mb-1 font-semibold">
-          お名前 <span className="text-red-600">*</span>
-        </label>
-        <input
-          id={nameId}
-          name="name"
-          type="text"
-          inputMode="text"
-          autoComplete="name"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={() => setTouched((t) => ({ ...t, name: true }))}
-          aria-invalid={touched.name && !!errors.name}
-          aria-describedby={touched.name && errors.name ? `${nameId}-error` : undefined}
-          className={`w-full border px-3 py-2 rounded outline-none focus:ring-2 focus:ring-[#00a1e9]/30 ${
-            touched.name && errors.name ? 'border-red-500' : 'border-gray-300'
-          }`}
-        />
-        {touched.name && errors.name && (
-          <p id={`${nameId}-error`} className="mt-1 text-sm text-red-600">{errors.name}</p>
-        )}
-      </div>
-
-      {/* メール */}
-      <div>
-        <label htmlFor={emailId} className="block mb-1 font-semibold">
-          メールアドレス <span className="text-red-600">*</span>
-        </label>
-        <input
-          id={emailId}
-          name="email"
-          type="email"
-          inputMode="email"
-          autoComplete="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          onBlur={() => setTouched((t) => ({ ...t, email: true }))}
-          aria-invalid={touched.email && !!errors.email}
-          aria-describedby={touched.email && errors.email ? `${emailId}-error` : undefined}
-          className={`w-full border px-3 py-2 rounded outline-none focus:ring-2 focus:ring-[#00a1e9]/30 ${
-            touched.email && errors.email ? 'border-red-500' : 'border-gray-300'
-          }`}
-        />
-        {touched.email && errors.email && (
-          <p id={`${emailId}-error`} className="mt-1 text-sm text-red-600">{errors.email}</p>
-        )}
-      </div>
-
-      {/* bug の補助項目（任意） */}
-      {category === 'bug' && (
-        <div className="space-y-3 rounded-lg border p-3 bg-[#f8fbff]">
-          <div>
-            <label htmlFor={urlId} className="block mb-1 text-sm font-semibold">ページURL（任意）</label>
-            <input
-              id={urlId}
-              type="url"
-              inputMode="url"
-              placeholder="例: https://www.me-ish.art/white"
-              value={pageUrl}
-              onChange={(e) => setPageUrl(e.target.value)}
-              className="w-full border px-3 py-2 rounded outline-none focus:ring-2 focus:ring-[#00a1e9]/30 border-gray-300"
-            />
+      {/* フォームカード */}
+      <div className="rounded-2xl bg-white/80 backdrop-blur-sm ring-1 ring-[#00a1e9]/10 border border-white/60 shadow-sm p-6 md:p-8 space-y-6">
+        {/* カテゴリ選択（カード型） */}
+        <div>
+          <label htmlFor={catId} className="block mb-3 font-semibold text-[#023]">
+            お問い合わせの種類 <span className="text-red-500">*</span>
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {CATEGORY_OPTIONS.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setCategory(value)}
+                className={cn(
+                  'flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-300',
+                  'text-sm font-medium',
+                  category === value
+                    ? 'bg-[#00a1e9]/10 border-[#00a1e9] text-[#00a1e9] ring-2 ring-[#00a1e9]/20'
+                    : 'bg-white border-gray-200 text-gray-600 hover:border-[#00a1e9]/50 hover:bg-[#f0f9ff]'
+                )}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-xs leading-tight text-center">{label}</span>
+              </button>
+            ))}
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label htmlFor={devId} className="block mb-1 text-sm font-semibold">端末/OS（任意）</label>
-              <input
-                id={devId}
-                type="text"
-                placeholder="例: iPhone 15 / iOS 17"
-                value={device}
-                onChange={(e) => setDevice(e.target.value)}
-                className="w-full border px-3 py-2 rounded outline-none focus:ring-2 focus:ring-[#00a1e9]/30 border-gray-300"
-              />
+          {/* 隠しselect（a11y用） */}
+          <select
+            id={catId}
+            value={category}
+            onChange={(e) => setCategory(e.target.value as Category)}
+            className="sr-only"
+            aria-label="お問い合わせの種類"
+          >
+            {CATEGORY_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* 件名（任意） */}
+        <div>
+          <label htmlFor={subjId} className="block mb-2 font-semibold text-[#023]">
+            件名<span className="text-gray-400 font-normal ml-1">（任意）</span>
+          </label>
+          <input
+            id={subjId}
+            type="text"
+            inputMode="text"
+            placeholder={`例: ${CATEGORY_LABEL[category]}について`}
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            className={cn(INPUT_BASE, INPUT_NORMAL)}
+          />
+        </div>
+
+        {/* お名前 */}
+        <div>
+          <label htmlFor={nameId} className="block mb-2 font-semibold text-[#023]">
+            お名前 <span className="text-red-500">*</span>
+          </label>
+          <input
+            id={nameId}
+            name="name"
+            type="text"
+            inputMode="text"
+            autoComplete="name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, name: true }))}
+            aria-invalid={touched.name && !!errors.name}
+            aria-describedby={touched.name && errors.name ? `${nameId}-error` : undefined}
+            className={cn(INPUT_BASE, touched.name && errors.name ? INPUT_ERROR : INPUT_NORMAL)}
+          />
+          {touched.name && errors.name && (
+            <p id={`${nameId}-error`} className="mt-2 text-sm text-red-500 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+              <AlertCircle className="w-4 h-4" />
+              {errors.name}
+            </p>
+          )}
+        </div>
+
+        {/* メール */}
+        <div>
+          <label htmlFor={emailId} className="block mb-2 font-semibold text-[#023]">
+            メールアドレス <span className="text-red-500">*</span>
+          </label>
+          <input
+            id={emailId}
+            name="email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+            aria-invalid={touched.email && !!errors.email}
+            aria-describedby={touched.email && errors.email ? `${emailId}-error` : undefined}
+            className={cn(INPUT_BASE, touched.email && errors.email ? INPUT_ERROR : INPUT_NORMAL)}
+          />
+          {touched.email && errors.email && (
+            <p id={`${emailId}-error`} className="mt-2 text-sm text-red-500 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+              <AlertCircle className="w-4 h-4" />
+              {errors.email}
+            </p>
+          )}
+        </div>
+
+        {/* bug の補助項目（任意） */}
+        {category === 'bug' && (
+          <div className="space-y-4 rounded-xl p-4 bg-gradient-to-br from-[#f8fbff] to-white ring-1 ring-[#00a1e9]/10 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-2 text-[#00a1e9] font-medium text-sm">
+              <Bug className="w-4 h-4" />
+              不具合の詳細（任意）
             </div>
             <div>
-              <label htmlFor={brId} className="block mb-1 text-sm font-semibold">ブラウザ（任意）</label>
+              <label htmlFor={urlId} className="block mb-2 text-sm font-medium text-[#445]">
+                ページURL
+              </label>
               <input
-                id={brId}
-                type="text"
-                placeholder="例: Safari / Chrome 126"
-                value={browser}
-                onChange={(e) => setBrowser(e.target.value)}
-                className="w-full border px-3 py-2 rounded outline-none focus:ring-2 focus:ring-[#00a1e9]/30 border-gray-300"
+                id={urlId}
+                type="url"
+                inputMode="url"
+                placeholder="例: https://www.me-ish.art/white"
+                value={pageUrl}
+                onChange={(e) => setPageUrl(e.target.value)}
+                className={cn(INPUT_BASE, INPUT_NORMAL, 'text-sm')}
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor={devId} className="block mb-2 text-sm font-medium text-[#445]">
+                  端末/OS
+                </label>
+                <input
+                  id={devId}
+                  type="text"
+                  placeholder="例: iPhone 15 / iOS 17"
+                  value={device}
+                  onChange={(e) => setDevice(e.target.value)}
+                  className={cn(INPUT_BASE, INPUT_NORMAL, 'text-sm')}
+                />
+              </div>
+              <div>
+                <label htmlFor={brId} className="block mb-2 text-sm font-medium text-[#445]">
+                  ブラウザ
+                </label>
+                <input
+                  id={brId}
+                  type="text"
+                  placeholder="例: Safari / Chrome 126"
+                  value={browser}
+                  onChange={(e) => setBrowser(e.target.value)}
+                  className={cn(INPUT_BASE, INPUT_NORMAL, 'text-sm')}
+                />
+              </div>
+            </div>
+            <div>
+              <label htmlFor={stepsId} className="block mb-2 text-sm font-medium text-[#445]">
+                再現手順
+              </label>
+              <textarea
+                id={stepsId}
+                rows={3}
+                placeholder={`例:\n1) White ギャラリーを開く\n2) 作品をタップ\n3) 画面が白くなる`}
+                value={steps}
+                onChange={(e) => setSteps(e.target.value)}
+                className={cn(INPUT_BASE, INPUT_NORMAL, 'text-sm resize-none')}
               />
             </div>
           </div>
-          <div>
-            <label htmlFor={stepsId} className="block mb-1 text-sm font-semibold">再現手順（任意）</label>
-            <textarea
-              id={stepsId}
-              rows={3}
-              placeholder={`例:\n1) White ギャラリーを開く\n2) 作品をタップ\n3) 画面が白くなる`}
-              value={steps}
-              onChange={(e) => setSteps(e.target.value)}
-              className="w-full border px-3 py-2 rounded outline-none focus:ring-2 focus:ring-[#00a1e9]/30 border-gray-300"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* 本文 */}
-      <div>
-        <label htmlFor={msgId} className="block mb-1 font-semibold">
-          お問い合わせ内容 <span className="text-red-600">*</span>
-        </label>
-        <textarea
-          id={msgId}
-          name="message"
-          required
-          rows={6}
-          maxLength={2000}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onBlur={() => setTouched((t) => ({ ...t, message: true }))}
-          aria-invalid={touched.message && !!errors.message}
-          aria-describedby={`${msgId}-help${touched.message && errors.message ? ` ${msgId}-error` : ''}`}
-          placeholder={placeholderByCat[category]}
-          className={`w-full border px-3 py-2 rounded outline-none focus:ring-2 focus:ring-[#00a1e9]/30 ${
-            touched.message && errors.message ? 'border-red-500' : 'border-gray-300'
-          }`}
-        />
-        <div className="mt-1 flex items-center justify-between text-xs text-gray-500" id={`${msgId}-help`}>
-          <span>できるだけ詳しくご記入ください。</span>
-          <span>{message.length}/2000</span>
-        </div>
-        {touched.message && errors.message && (
-          <p id={`${msgId}-error`} className="mt-1 text-sm text-red-600">{errors.message}</p>
         )}
+
+        {/* 本文 */}
+        <div>
+          <label htmlFor={msgId} className="block mb-2 font-semibold text-[#023]">
+            お問い合わせ内容 <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            id={msgId}
+            name="message"
+            required
+            rows={6}
+            maxLength={2000}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, message: true }))}
+            aria-invalid={touched.message && !!errors.message}
+            aria-describedby={`${msgId}-help${touched.message && errors.message ? ` ${msgId}-error` : ''}`}
+            placeholder={placeholderByCat[category]}
+            className={cn(
+              INPUT_BASE,
+              'resize-none',
+              touched.message && errors.message ? INPUT_ERROR : INPUT_NORMAL
+            )}
+          />
+          <div className="mt-2 flex items-center justify-between text-xs text-gray-500" id={`${msgId}-help`}>
+            <span>できるだけ詳しくご記入ください。</span>
+            <span className={cn(
+              'tabular-nums transition-colors duration-200',
+              message.length > 1800 && 'text-amber-500',
+              message.length > 1950 && 'text-red-500 font-medium'
+            )}>
+              {message.length}/2000
+            </span>
+          </div>
+          {touched.message && errors.message && (
+            <p id={`${msgId}-error`} className="mt-2 text-sm text-red-500 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+              <AlertCircle className="w-4 h-4" />
+              {errors.message}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* honeypot */}
@@ -334,23 +399,50 @@ export default function ContactForm() {
         />
       </div>
 
+      {/* 送信ボタン */}
       <button
         type="submit"
         disabled={status === 'loading' || Date.now() < readyAt}
-        className="inline-flex items-center gap-2 bg-[#00a1e9] text-white px-4 py-2 rounded hover:bg-[#008fcc] disabled:opacity-60"
+        className={cn(
+          'w-full inline-flex items-center justify-center gap-2',
+          'px-6 py-4 rounded-xl font-semibold text-white',
+          'bg-gradient-to-r from-[#00a1e9] to-[#0080c0]',
+          'shadow-lg transition-all duration-300',
+          'hover:from-[#0090d4] hover:to-[#0070a8] hover:shadow-xl hover:-translate-y-0.5',
+          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00a1e9]',
+          'disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg'
+        )}
       >
         {status === 'loading' ? (
           <>
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/70 border-t-transparent" />
-            送信中…
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            送信中...
           </>
         ) : (
-          '送信'
+          <>
+            <Send className="w-5 h-5" />
+            送信する
+          </>
         )}
       </button>
 
+      {/* エラーメッセージ */}
       {status === 'error' && (
-        <p className="text-red-600 mt-2">送信に失敗しました。時間をおいて再度お試しください。</p>
+        <div className="rounded-xl bg-red-50 border border-red-200 p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-red-700">送信に失敗しました</p>
+            <p className="text-sm text-red-600 mt-1">時間をおいて再度お試しください。問題が続く場合は、メールで直接ご連絡ください。</p>
+          </div>
+        </div>
+      )}
+
+      {/* 送信前の確認メッセージ */}
+      {isValid && !touched.message && message.length >= 10 && (
+        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-emerald-700">入力内容を確認して「送信する」ボタンを押してください。</p>
+        </div>
       )}
     </form>
   );

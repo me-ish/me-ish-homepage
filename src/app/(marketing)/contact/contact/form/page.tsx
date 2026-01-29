@@ -1,5 +1,5 @@
 // src/app/(marketing)/contact/page.tsx
-import ContactForm from '@/components/ContactForm';
+import ContactForm from '@/components/contact/ContactForm';
 
 export const metadata = {
   title: 'お問い合わせフォーム | me-ish',
