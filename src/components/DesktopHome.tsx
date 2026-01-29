@@ -638,7 +638,7 @@ const DesktopHome = () => {
           </div>
 
           {/* メインコンテンツ */}
-          <div className="relative z-10 text-center px-6">
+          <div className="relative z-10 text-center px-6 md:translate-y-4">
             <div className="fade-in-up">
               <h1
                 id="hero-title"
