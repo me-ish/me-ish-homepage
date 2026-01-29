@@ -28,10 +28,21 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const [authLoading, setAuthLoading] = useState(true);
   const [me, setMe] = useState<HeaderUser | null>(null);
   const [logoutBusy, setLogoutBusy] = useState(false);
+
+  // スクロール検知
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // ルート遷移したら閉じる（LinkクリックでもOK、ブラウザ戻るでもOK）
   useEffect(() => {
@@ -140,8 +151,15 @@ export default function Header() {
   }, [logoutBusy, pathname, router]);
 
   return (
- <header className="fixed top-0 left-0 z-40 h-[70px] w-full bg-white/95 px-2 sm:px-4 shadow backdrop-blur supports-[backdrop-filter]:bg-white/80">
-  <nav className="mx-auto flex h-full w-full items-center justify-between md:max-w-[1440px]">
+    <header
+      className={cn(
+        'fixed top-0 left-0 z-40 h-[70px] w-full px-2 sm:px-4 transition-all duration-300',
+        scrolled
+          ? 'bg-white/95 shadow-md backdrop-blur-md ring-1 ring-black/5'
+          : 'bg-white/70 shadow-sm backdrop-blur-md ring-1 ring-black/[0.03]'
+      )}
+    >
+      <nav className="mx-auto flex h-full w-full items-center justify-between md:max-w-[1440px]">
         {/* ロゴ / バッジ */}
         <div className="flex items-center">
           <Link
@@ -154,7 +172,7 @@ export default function Header() {
 
           <Link
             href="/news"
-            className="ml-2 rounded-full bg-[#e60039] px-2 py-1 text-[11px] leading-none text-white transition hover:brightness-110"
+            className="ml-2 rounded-full bg-[#e60039] px-2 py-1 text-[11px] leading-none text-white transition-all duration-300 hover:brightness-125 hover:shadow-[0_0_12px_rgba(230,0,57,0.4)]"
             aria-label="β公開中のお知らせを開く"
           >
             β公開中
@@ -169,7 +187,7 @@ export default function Header() {
     {/* ✅ 明示導線：マイページへ */}
     <Link
       href="/mypage"
-      className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-[#00a1e9] px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-[#008ed0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
+      className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-gradient-to-r from-[#00a1e9] to-[#0080c0] px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-all duration-300 hover:from-[#0090d4] hover:to-[#0070a8] hover:shadow-lg hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
       aria-label="マイページへ"
       title="マイページへ"
     >
@@ -177,9 +195,9 @@ export default function Header() {
       マイページへ
     </Link>
 
-    {/* ✅ ログイン中の表示名は“情報”として表示（リンクにしない） */}
+    {/* ✅ ログイン中の表示名は"情報"として表示（リンクにしない） */}
     <span
-      className="max-w-[220px] truncate rounded-full bg-[#f6f8fb] px-3 py-1.5 text-sm font-medium text-[#223]"
+      className="max-w-[220px] truncate rounded-full bg-gradient-to-r from-[#f6f8fb] to-[#f0f4f8] px-3 py-1.5 text-sm font-medium text-[#223] ring-1 ring-black/5"
       title={`ログイン中：${me.label}`}
       aria-label={`ログイン中：${me.label}`}
     >
@@ -193,7 +211,7 @@ export default function Header() {
       disabled={logoutBusy}
       aria-busy={logoutBusy}
       className={cn(
-        'inline-flex items-center justify-center whitespace-nowrap rounded-full border border-[#e11d48] px-3 py-1.5 text-sm text-[#e11d48] transition hover:bg-[#e11d48] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#e11d48]/40',
+        'inline-flex items-center justify-center whitespace-nowrap rounded-full border border-[#e11d48] px-3 py-1.5 text-sm text-[#e11d48] transition-all duration-300 hover:bg-[#e11d48] hover:text-white hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#e11d48]/40',
         logoutBusy && 'cursor-not-allowed opacity-70'
       )}
     >
@@ -204,7 +222,7 @@ export default function Header() {
 ) : (
             <Link
               href="/login"
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-[#00a1e9] px-3 py-1.5 text-sm text-[#00a1e9] transition hover:bg-[#00a1e9] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60 sm:text-base"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-[#00a1e9] px-3 py-1.5 text-sm text-[#00a1e9] transition-all duration-300 hover:bg-[#00a1e9] hover:text-white hover:shadow-lg hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60 sm:text-base"
             >
               ログイン
             </Link>
@@ -216,7 +234,7 @@ export default function Header() {
               onClick={() => setOpen(true)}
               aria-label="メニューを開く"
               aria-haspopup="dialog"
-              className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full text-[#00a1e9] transition hover:bg-[#e8f7ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
+              className="inline-flex h-[44px] w-[44px] items-center justify-center rounded-full text-[#00a1e9] transition-all duration-300 hover:bg-[#e8f7ff] hover:shadow-md hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
             >
               <Menu className="h-6 w-6" />
             </button>
@@ -224,13 +242,13 @@ export default function Header() {
 <DialogContent
   hideCloseButton
   className={cn(
-    'w-[92vw] max-w-[460px] overflow-hidden rounded-2xl border border-black/5 bg-white p-0 shadow-2xl',
+    'w-[92vw] max-w-[460px] overflow-hidden rounded-2xl bg-white/95 backdrop-blur-lg ring-1 ring-white/40 border border-white/30 p-0 shadow-2xl',
     'sm:top-1/2 sm:-translate-y-1/2',
     'max-sm:top-[calc(env(safe-area-inset-top)+12px)] max-sm:-translate-y-0'
   )}
 >
 
-              <DialogHeader className="flex flex-row items-center justify-between border-b bg-white/90 px-5 py-4 backdrop-blur">
+              <DialogHeader className="flex flex-row items-center justify-between border-b border-black/5 bg-white/80 px-5 py-4 backdrop-blur-sm">
                 <DialogTitle className="text-[1.05rem] font-semibold text-[#222]">
                   メニュー
                 </DialogTitle>
@@ -238,7 +256,7 @@ export default function Header() {
                 <DialogClose asChild>
                   <button
                     type="button"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[#f2f6fb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full transition-all duration-300 hover:bg-[#e8f7ff] hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
                     aria-label="メニューを閉じる"
                   >
                     <X className="h-5 w-5 text-[#556]" />
@@ -252,12 +270,12 @@ export default function Header() {
                 {!authLoading && me && (
                   <>
                     <section aria-label="アカウント" className="mb-4">
-                      <div className="rounded-2xl border border-black/5 bg-[#f6f8fb] p-4">
+                      <div className="rounded-2xl bg-gradient-to-br from-[#f6f8fb] to-white ring-1 ring-black/5 p-4">
                         <div className="mt-1 flex items-center justify-between gap-3">
 <Link
   href="/mypage"
   onClick={() => setOpen(false)}
-  className="min-w-0 flex-1 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[#223] transition hover:bg-[#e7f2ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
+  className="min-w-0 flex-1 rounded-xl bg-gradient-to-r from-[#00a1e9]/10 to-[#0080c0]/10 px-3 py-2 text-sm font-semibold text-[#223] ring-1 ring-[#00a1e9]/20 transition-all duration-300 hover:from-[#00a1e9]/20 hover:to-[#0080c0]/20 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
   aria-label="マイページへ"
   title="マイページへ"
 >
@@ -280,7 +298,7 @@ export default function Header() {
                             disabled={logoutBusy}
                             aria-busy={logoutBusy}
                             className={cn(
-                              'inline-flex items-center justify-center rounded-xl border border-[#e11d48] px-3 py-2 text-sm font-medium text-[#e11d48] transition hover:bg-[#e11d48] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#e11d48]/40',
+                              'inline-flex items-center justify-center rounded-xl border border-[#e11d48] px-3 py-2 text-sm font-medium text-[#e11d48] transition-all duration-300 hover:bg-[#e11d48] hover:text-white hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#e11d48]/40',
                               logoutBusy && 'cursor-not-allowed opacity-70'
                             )}
                           >
@@ -321,7 +339,7 @@ export default function Header() {
                   onSelect={() => setOpen(false)}
                 />
 
-                <div className="mt-6 border-t pt-4 text-center text-xs text-[#667]">
+                <div className="mt-6 border-t border-black/5 pt-4 text-center text-xs text-[#667]">
                   © {new Date().getFullYear()} me-ish
                 </div>
               </div>
@@ -363,10 +381,10 @@ function MenuSection({
                 onClick={onSelect}
                 autoFocus={firstFocus && i === 0}
                 className={cn(
-                  'block w-full rounded-xl px-4 py-3 font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60',
+                  'block w-full rounded-xl px-4 py-3 font-medium transition-all duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60',
                   active
                     ? 'bg-[#e7f2ff] text-[#0a5ea8]'
-                    : 'bg-[#f6f8fb] text-[#222] hover:bg-[#e7f2ff]'
+                    : 'bg-[#f6f8fb] text-[#222] hover:bg-[#e7f2ff] hover:translate-x-1'
                 )}
                 aria-current={active ? 'page' : undefined}
               >
