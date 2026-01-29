@@ -618,7 +618,7 @@ const DesktopHome = () => {
         {/* Hero Section */}
         <section
           id="hero"
-          className="relative min-h-[calc(100svh-70px)] flex flex-col items-center justify-center overflow-hidden pb-16"
+          className="relative min-h-[calc(92svh-70px)] md:min-h-[calc(96svh-70px)] flex flex-col items-center justify-center overflow-hidden pt-10 md:pt-14 pb-10"
           aria-labelledby="hero-title"
         >
           {/* 浮遊するアート作品（展示中の作品） */}
@@ -638,7 +638,7 @@ const DesktopHome = () => {
           </div>
 
           {/* メインコンテンツ */}
-          <div className="relative z-10 text-center px-6 translate-y-6 md:translate-y-14">
+          <div className="relative z-10 text-center px-6">
             <div className="fade-in-up">
               <h1
                 id="hero-title"

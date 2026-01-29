@@ -408,10 +408,10 @@ const MobileHome = () => {
 
       <main className="pt-[64px] relative z-10">
         {/* Hero Section */}
-        <section
-          className="relative min-h-[calc(100svh-64px)] flex flex-col items-center justify-center overflow-hidden px-5 pb-12"
-          aria-labelledby="hero-title"
-        >
+<section
+  className="relative min-h-[calc(92svh-64px)] flex flex-col items-center overflow-hidden px-5 pt-10 pb-20"
+  aria-labelledby="hero-title"
+>
           {/* Floating artworks（展示中の作品） */}
           <div className="absolute inset-0 pointer-events-none">
             {floatingArts.map((art) => (
@@ -427,7 +427,7 @@ const MobileHome = () => {
           </div>
 
           {/* Main content */}
-          <div className="relative z-10 text-center">
+          <div className="relative z-10 text-center translate-y-10">
             <div className="fade-in-up">
               <h1
                 id="hero-title"
