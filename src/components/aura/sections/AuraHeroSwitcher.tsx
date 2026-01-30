@@ -1,6 +1,6 @@
 "use client";
 
-// src/components/aiPortfolio/sections/AuraHeroSwitcher.tsx
+// src/components/aura/sections/AuraHeroSwitcher.tsx
 // Hero 切り替えスイッチャー（worldview + heroLayout対応）
 //
 // いまは全 worldviews を「スクショ型 1スクリーンHero」に統一。

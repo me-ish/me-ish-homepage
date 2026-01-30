@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/sections/AuraSkills.tsx
+// src/components/aura/sections/AuraSkills.tsx
 // ============================================
 // Skills セクション（販売レベル改修版）
 // ============================================

@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/applyVariantStyle.ts
+// src/components/aura/applyVariantStyle.ts
 import type { VariantSpec } from "@/lib/aura/aura.variant.base";
 import type { Design } from "@/lib/aura/aura.schema";
 

@@ -1,6 +1,6 @@
-// src/lib/aiPortfolio/aura.generate.ts
+// src/lib/aura/aura.generate.ts
 // ============================================
-// aiPortfolio.generate.ts
+// aura.generate.ts
 // （高速化・軽量プロンプト版：LayoutDecision＋preset対応＋STEP3 sections対応）
 //
 // ・AI強度0% → designAnswers を忠実に採用（揺らぎゼロ）
@@ -1057,7 +1057,7 @@ function buildCompactSectionForAI(section: any) {
 
 async function refineContentWithOpenAI(payload: FormInput, design: Design, draftContent: Content): Promise<Content> {
   const openai = getClient();
-  const model = process.env.AIPORTFOLIO_MODEL ?? "gpt-4o-mini";
+  const model = process.env.AURA_MODEL ?? "gpt-4o-mini";
 
   const strengthOverall = ((payload as any).aiStrength?.overall ?? 0) / 100;
   const rewriteLevel = Math.min(1, 0.3 + 0.7 * strengthOverall);
@@ -1432,7 +1432,7 @@ export async function generatePortfolioFromForm(rawPayload: unknown): Promise<{ 
   const tone = (payload as any).tone as string | undefined;
   const wantsFriendly = tone === "フレンドリー";
 
-  const threshold = Number(process.env.AIPORTFOLIO_COPY_THRESHOLD ?? "20");
+  const threshold = Number(process.env.AURA_COPY_THRESHOLD ?? "20");
 
   const copyStrengthBase = typeof rawCopywriting === "number" && rawCopywriting > 0 ? rawCopywriting : overallStrength;
   const copyStrength = wantsFriendly ? Math.max(copyStrengthBase, threshold) : copyStrengthBase;

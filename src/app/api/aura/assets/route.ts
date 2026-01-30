@@ -1,4 +1,4 @@
-// src/app/api/aiPortfolio/assets/route.ts
+// src/app/api/aura/assets/route.ts
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";
 

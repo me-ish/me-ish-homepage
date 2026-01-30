@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/renderer/v1/index.tsx
+// src/components/aura/renderer/v1/index.tsx
 // ============================================
 // Renderer V1（凍結版）
 // - 買い切り購入者のポートフォリオ固定化のため、このバージョンは原則変更禁止

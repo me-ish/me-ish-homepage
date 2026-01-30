@@ -1,4 +1,4 @@
-//src/app/api/aiPortfolio/upload/works/[id]/route.ts
+//src/app/api/aura/upload/works/[id]/route.ts
 
 import { NextResponse } from "next/server";
 import sharp from "sharp";

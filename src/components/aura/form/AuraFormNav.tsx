@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/form/AuraFormNav.tsx
+// src/components/aura/form/AuraFormNav.tsx
 "use client";
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";

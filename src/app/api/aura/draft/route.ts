@@ -1,4 +1,4 @@
-// src/app/api/aiPortfolio/draft/route.ts
+// src/app/api/aura/draft/route.ts
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { insertDraft } from "@/lib/aura/aura.db";
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     const record = await insertDraft({
       email: json.email,
       prompt: prompt as any,
-      sessionToken, // ★ insertDraft が受け取れるように aiPortfolio.db を後で修正
+      sessionToken, // ★ insertDraft が受け取れるように aura.db を後で修正
     } as any);
 
     // ✅ requestIdごとのCookieを設定
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     res.headers.append("Set-Cookie", buildAuraSessionCookie(record.id, sessionToken));
     return res;
   } catch (e: any) {
-    console.error("[POST /api/aiPortfolio/draft] failed:", e);
+    console.error("[POST /api/aura/draft] failed:", e);
     const message = typeof e?.message === "string" ? e.message : "internal_error";
     return NextResponse.json({ ok: false, error: "internal_error", message }, { status: 500 });
   }

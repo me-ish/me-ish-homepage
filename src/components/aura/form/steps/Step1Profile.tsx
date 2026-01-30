@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/form/steps/Step1Profile.tsx
+// src/components/aura/form/steps/Step1Profile.tsx
 "use client";
 
 import { useRef, useState, useCallback } from "react";
@@ -43,7 +43,7 @@ export function Step1Profile({ data, onChange, requestId, onRequireDraft }: Prop
         return;
       }
 
-      const res = await fetch(`/api/aiPortfolio/upload/avatar/${currentRequestId}`, {
+      const res = await fetch(`/api/aura/upload/avatar/${currentRequestId}`, {
         method: "POST",
         body: fd,
       });

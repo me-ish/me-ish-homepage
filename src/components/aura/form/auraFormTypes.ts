@@ -1,6 +1,6 @@
-// src/components/aiPortfolio/form/auraFormTypes.ts
+// src/components/aura/form/auraFormTypes.ts
 import type { WorldviewBase } from "@/lib/aura/aura.worldviewPresets";
-import type { AiPortfolioImageItem } from "@/components/aura/AuraImageUploader";
+import type { AuraImageItem } from "@/components/aura/AuraImageUploader";
 
 /* =========================================================
  * ステップ定義
@@ -42,7 +42,7 @@ export type AuraFormData = {
   fontPreset: string;
 
   // Step 3: Works
-  images: AiPortfolioImageItem[];
+  images: AuraImageItem[];
 
   // Step 4: About
   bio: string;

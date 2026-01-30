@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/sections/AuraContact.tsx
+// src/components/aura/sections/AuraContact.tsx
 // ============================================
 // Contact セクション（販売レベル改修版）
 // ============================================

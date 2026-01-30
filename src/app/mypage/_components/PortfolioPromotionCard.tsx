@@ -92,7 +92,7 @@ export function PortfolioPromotionCard({ publicUrl }: Props) {
 
               {/* 右：設定ボタン（主導線） */}
               <div className="flex-shrink-0 flex flex-col sm:flex-row gap-2">
-                <Link href="/aiPortfolio/form" className="w-full sm:w-auto">
+                <Link href="/aura/form" className="w-full sm:w-auto">
                   <Button
                     variant="outline"
                     className="w-full sm:w-auto rounded-full"

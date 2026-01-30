@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/form/steps/Step5ServicesSkills.tsx
+// src/components/aura/form/steps/Step5ServicesSkills.tsx
 "use client";
 
 import { useState } from "react";

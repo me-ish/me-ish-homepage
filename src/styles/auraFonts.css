@@ -1,10 +1,10 @@
-/* src/styles/aiPortfolioFonts.css */
+/* src/styles/auraFonts.css */
 
 /* ============================================
    Fonts (Google Fonts)
    - 本番で font-zen が効かない問題の止血として
      "font-zen / font-lilita" をここで実体化する。
-   - aiPortfolio 側のプリセット(class)もここで定義可能。
+   - aura 側のプリセット(class)もここで定義可能。
    ============================================ */
 
 /* ✅ Google Fonts を明示的に読み込み（Network 200 で落ちる前提） */
@@ -29,7 +29,7 @@
 }
 
 /* ============================================
-   aiPortfolio root
+   aura root
    - 既存方針：基本は body を継承
    - ただし、プリセットクラスが付いた場合は上書き可能にする
    ============================================ */
@@ -43,8 +43,8 @@
 }
 
 /* ============================================
-   aiPortfolio presets（必要最低限の実体）
-   - src/styles/aiPortfolioFonts.ts が返す className と対応
+   aura presets（必要最低限の実体）
+   - src/styles/auraFonts.ts が返す className と対応
    - ここは今後、好みのフォントセットに拡張していける
    ============================================ */
 

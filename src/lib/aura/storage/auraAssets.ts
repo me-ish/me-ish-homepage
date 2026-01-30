@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/storage/auraAssets.ts
+// src/lib/aura/storage/auraAssets.ts
 // クライアントから import されても安全な util のみ置く
 
 export function auraAssetProxyUrl(path: string) {
@@ -6,5 +6,5 @@ export function auraAssetProxyUrl(path: string) {
     .trim()
     .replace(/^\/+/, ""); // 先頭の / は落とす
 
-  return `/api/aiPortfolio/assets?path=${encodeURIComponent(p)}`;
+  return `/api/aura/assets?path=${encodeURIComponent(p)}`;
 }

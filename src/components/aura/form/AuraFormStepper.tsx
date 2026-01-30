@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/form/AuraFormStepper.tsx
+// src/components/aura/form/AuraFormStepper.tsx
 "use client";
 
 import { useMemo } from "react";

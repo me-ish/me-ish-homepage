@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/aura.styleTokens.ts
+// src/lib/aura/aura.styleTokens.ts
 import type { WorldviewBase, SurfaceStyle } from "@/lib/aura/aura.worldviewPresets";
 
 export type StyleTokens = {

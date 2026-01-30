@@ -1,5 +1,5 @@
 // ============================================
-// aiPortfolio.schema.ts（最終統合版＋STEP3 sections対応＋layoutType追加）
+// aura.schema.ts（最終統合版＋STEP3 sections対応＋layoutType追加）
 // - 既存機能はすべて維持
 // - FormInput → Design → Content の互換性確保
 // - ThemeSchema に bgGradient / patternLayers / textureLayers / bgStyle を追加
@@ -349,7 +349,7 @@ const BaseSectionSchema = z.object({
 
 /* ---------- Hero ---------- */
 
-// aiPortfolio.schema.ts の HeroSectionSchema 付近
+// aura.schema.ts の HeroSectionSchema 付近
 
 const HeroSectionSchema = BaseSectionSchema.extend({
   type: z.literal("hero"),

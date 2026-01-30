@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/aura.variant.ts
+// src/lib/aura/aura.variant.ts
 
 import type { FormInput } from "./aura.schema";
 import {

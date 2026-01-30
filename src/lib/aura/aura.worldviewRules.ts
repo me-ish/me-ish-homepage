@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/aura.worldviewRules.ts
+// src/lib/aura/aura.worldviewRules.ts
 import type { CSSProperties } from "react";
 import type { LayoutPref } from "./aura.layout";
 import type { SurfaceStyle, WorldviewBase } from "./aura.worldviewPresets";

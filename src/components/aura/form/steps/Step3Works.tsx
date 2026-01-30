@@ -1,8 +1,8 @@
-// src/components/aiPortfolio/form/steps/Step3Works.tsx
+// src/components/aura/form/steps/Step3Works.tsx
 "use client";
 
 import AuraImageUploader from "@/components/aura/AuraImageUploader";
-import type { AiPortfolioImageItem } from "@/components/aura/AuraImageUploader";
+import type { AuraImageItem } from "@/components/aura/AuraImageUploader";
 import type { AuraFormData } from "../auraFormTypes";
 
 type Props = {
@@ -13,7 +13,7 @@ type Props = {
 };
 
 export function Step3Works({ data, onChange, requestId, onRequireDraft }: Props) {
-  const handleImagesChange = (images: AiPortfolioImageItem[]) => {
+  const handleImagesChange = (images: AuraImageItem[]) => {
     onChange({ images });
   };
 

@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/sections/AuraServices.tsx
+// src/components/aura/sections/AuraServices.tsx
 // ============================================
 // Services セクション（販売レベル改修版）
 // ============================================

@@ -29,12 +29,5 @@
     ".next/types/**/*.ts",
     "thirdweb-shims.d.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "src/lib/aiPortfolio",
-    "src/components/aiPortfolio",
-    "src/app/aiPortfolio",
-    "src/app/api/aiPortfolio"
-  ]
 }
 

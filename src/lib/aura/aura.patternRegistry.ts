@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/aura.patternRegistry.ts
+// src/lib/aura/aura.patternRegistry.ts
 import type { CSSProperties } from "react";
 import {
   PATTERNS,

@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/renderer/RendererRouter.tsx
+// src/components/aura/renderer/RendererRouter.tsx
 // ============================================
 // Renderer バージョンルーター（Server Component）
 // - renderer_version の MAJOR を見て適切な Renderer を選択

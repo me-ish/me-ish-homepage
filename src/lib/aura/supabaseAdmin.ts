@@ -1,4 +1,4 @@
-//lib/aiPortfolio/supabaseAdmin.ts
+//lib/aura/supabaseAdmin.ts
 import { createClient } from "@supabase/supabase-js";
 
 export function supabaseAdmin() {

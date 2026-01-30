@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/aura.variant.base.ts
+// src/lib/aura/aura.variant.base.ts
 
 /** 世界観（10種） */
 export const WORLDVIEWS = [

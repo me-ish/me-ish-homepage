@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/AuraWorldviewSelector.tsx
+// src/components/aura/AuraWorldviewSelector.tsx
 "use client";
 
 import React, { CSSProperties, useState } from "react";
@@ -15,7 +15,7 @@ type Props = {
 
 /**
  * 世界観ごとのカード表示用情報
- * （プリセット本体は aiPortfolio.worldviewPresets.ts 側で管理）
+ * （プリセット本体は aura.worldviewPresets.ts 側で管理）
  */
 const WORLDVIEW_CARD_META: {
   id: WorldviewBase;

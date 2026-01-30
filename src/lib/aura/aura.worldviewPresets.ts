@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/aura.worldviewPresets.ts
+// src/lib/aura/aura.worldviewPresets.ts
 import type { CSSProperties } from "react";
 import type { LayoutPref } from "./aura.layout";
 

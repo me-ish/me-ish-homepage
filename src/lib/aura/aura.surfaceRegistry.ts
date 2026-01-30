@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/aura.surfaceRegistry.ts
+// src/lib/aura/aura.surfaceRegistry.ts
 import type { VariantSpec } from "@/lib/aura/aura.variant.base";
 import type { Design } from "@/lib/aura/aura.schema";
 import type { StyleTokens } from "@/lib/aura/aura.styleTokens";

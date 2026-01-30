@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/AuraDegreeSlider.tsx
+// src/components/aura/AuraDegreeSlider.tsx
 "use client";
 
 import { motion } from "framer-motion";

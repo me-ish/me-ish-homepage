@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/sections/AuraAboutSimple.tsx
+// src/components/aura/sections/AuraAboutSimple.tsx
 // ============================================
 // About セクション（販売レベル改修版）
 // - デザイントークン統一

@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/storage/auraAssets.server.ts
+// src/lib/aura/storage/auraAssets.server.ts
 import "server-only";
 
 import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";

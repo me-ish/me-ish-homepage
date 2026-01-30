@@ -1,4 +1,4 @@
-// src/app/api/aiPortfolio/upload/avatar/[id]/route.ts
+// src/app/api/aura/upload/avatar/[id]/route.ts
 import { NextResponse } from "next/server";
 import sharp from "sharp";
 import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";
@@ -63,7 +63,7 @@ export async function POST(
      * - proxy は "/api/..." の相対URLを返すので、そのままだと invalid_format(url) になる
      * - ここで req.url の origin を使って絶対URLに変換して保存する
      */
-    const proxyPath = auraAssetProxyUrl(path); // "/api/aiPortfolio/assets?path=..."
+    const proxyPath = auraAssetProxyUrl(path); // "/api/aura/assets?path=..."
     const origin = new URL(req.url).origin; // "http://localhost:3000" 等
     const proxyUrl = new URL(proxyPath, origin).toString(); // 絶対URL化
 

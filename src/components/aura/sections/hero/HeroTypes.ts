@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/sections/hero/HeroTypes.ts
+// src/components/aura/sections/hero/HeroTypes.ts
 import type { Design, Content } from "@/lib/aura/aura.schema";
 import type { VariantSpec } from "@/lib/aura/aura.variant.base";
 import type { HeroLayoutHint } from "@/lib/aura/aura.layout";

@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/aura.designSystem.ts
+// src/lib/aura/aura.designSystem.ts
 // ============================================
 // AURA Design System - 全世界観共通のデザイントークン
 // ============================================

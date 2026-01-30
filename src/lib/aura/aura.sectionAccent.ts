@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/aura.sectionAccent.ts
+// src/lib/aura/aura.sectionAccent.ts
 
 type Rgb = { r: number; g: number; b: number };
 

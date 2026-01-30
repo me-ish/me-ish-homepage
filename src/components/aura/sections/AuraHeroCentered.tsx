@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/sections/AuraHeroCentered.tsx
+// src/components/aura/sections/AuraHeroCentered.tsx
 // layout = "center" / "split" の両方に対応したリッチ版
 
 import React from "react";

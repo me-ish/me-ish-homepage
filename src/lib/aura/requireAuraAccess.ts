@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/requireAuraAccess.ts
+// src/lib/aura/requireAuraAccess.ts
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";

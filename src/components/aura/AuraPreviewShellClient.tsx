@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/AuraPreviewShellClient.tsx
+// src/components/aura/AuraPreviewShellClient.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";

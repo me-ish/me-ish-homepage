@@ -18,7 +18,7 @@ module.exports = {
     "font-lilita",
 
     // =============================
-    // aiPortfolio フォントプリセット（新）
+    // aura フォントプリセット（新）
     // =============================
     "ai-portfolio-font-cleanJa",
     "ai-portfolio-font-modernSans",

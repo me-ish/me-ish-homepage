@@ -1,4 +1,4 @@
-// src/app/api/aiPortfolio/request/[id]/email/route.ts
+// src/app/api/aura/request/[id]/email/route.ts
 // ============================================
 // 確定前メールアドレス更新 API
 // - published 以外のステータスでのみ変更可能

@@ -1,4 +1,4 @@
-// src/app/api/aiPortfolio/save/[id]/route.ts
+// src/app/api/aura/save/[id]/route.ts
 import { NextResponse } from "next/server";
 import { ContentSchema } from "@/lib/aura/aura.schema";
 import { publishContent } from "@/lib/aura/aura.db";
@@ -52,7 +52,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
     const alreadyPublished = Boolean((rec as any).published_at ?? (rec as any).publishedAt);
 
     // デバッグログ: 課金ゲート状態
-    console.log("[aiPortfolio/save] billing_gate_check:", {
+    console.log("[aura/save] billing_gate_check:", {
       id,
       email: (rec as any).email,
       alreadyPublished,
@@ -67,11 +67,11 @@ export async function POST(req: Request, { params }: { params: Params }) {
       let allowed = paymentStatus === "paid";
 
       if (!allowed && email) {
-        console.log("[aiPortfolio/save] free_check_start:", { id, email });
+        console.log("[aura/save] free_check_start:", { id, email });
 
         // 1) me-ish採用（entries.confirmed=true）で 1回無料
         const meishResult = await claimMeishFree(email, id);
-        console.log("[aiPortfolio/save] meish_result:", meishResult);
+        console.log("[aura/save] meish_result:", meishResult);
 
         if (meishResult.success) {
           const admin = supabaseAdmin();
@@ -81,13 +81,13 @@ export async function POST(req: Request, { params }: { params: Params }) {
             .eq("id", id);
 
           allowed = true;
-          console.log("[aiPortfolio/save] allowed_by_meish:", { id, email });
+          console.log("[aura/save] allowed_by_meish:", { id, email });
         }
 
         // 2) 先着20名無料
         if (!allowed) {
           const first20Result = await claimFirst20Free(email, id);
-          console.log("[aiPortfolio/save] first20_result:", first20Result);
+          console.log("[aura/save] first20_result:", first20Result);
 
           if (first20Result.success) {
             const admin = supabaseAdmin();
@@ -97,12 +97,12 @@ export async function POST(req: Request, { params }: { params: Params }) {
               .eq("id", id);
 
             allowed = true;
-            console.log("[aiPortfolio/save] allowed_by_first20:", { id, email });
+            console.log("[aura/save] allowed_by_first20:", { id, email });
           }
         }
 
         if (!allowed) {
-          console.log("[aiPortfolio/save] no_free_option:", { id, email });
+          console.log("[aura/save] no_free_option:", { id, email });
         }
       }
 
@@ -123,7 +123,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
     );
 
     if (!record) {
-      console.error("[aiPortfolio/save] publish_failed:no_record", {
+      console.error("[aura/save] publish_failed:no_record", {
         id,
         slug,
         publicId,
@@ -134,7 +134,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
 
     // ✅ public_slug方式：公開URLは publicSlug を必須にする
     if (!publicSlug) {
-      console.error("[aiPortfolio/save] publish_failed:no_public_slug", {
+      console.error("[aura/save] publish_failed:no_public_slug", {
         id,
         status: record.status,
         slug,
@@ -160,7 +160,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
       { status: 200 },
     );
   } catch (e: any) {
-    console.error("[aiPortfolio/save] unexpected_error", { id, error: e });
+    console.error("[aura/save] unexpected_error", { id, error: e });
     return NextResponse.json(
       { ok: false, error: "internal_error", message: e?.message ?? String(e) },
       { status: 500 },

@@ -1,4 +1,4 @@
-// src/styles/aiPortfolioFonts.ts
+// src/styles/auraFonts.ts
 
 export type FontPreset =
   | "cleanJa"
@@ -24,10 +24,10 @@ export type FontPreset =
  * - ai-portfolio 側は既存どおり ai-portfolio-font-xxx を使用
  * - zen / lilita は "font-zen" / "font-lilita" を返す（CSS 側で実体化する前提）
  *
- * （Tailwind の safelist と globals.css / aiPortfolioFonts.css 側で定義）
+ * （Tailwind の safelist と globals.css / auraFonts.css 側で定義）
  */
 const PRESET_TO_CLASS: Record<FontPreset, string> = {
-  // 新プリセット（aiPortfolio）
+  // 新プリセット（aura）
   cleanJa: "ai-portfolio-font-cleanJa",
   modernSans: "ai-portfolio-font-modernSans",
   formalMincho: "ai-portfolio-font-formalMincho",

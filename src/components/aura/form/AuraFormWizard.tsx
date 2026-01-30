@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/form/AuraFormWizard.tsx
+// src/components/aura/form/AuraFormWizard.tsx
 "use client";
 
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
@@ -146,7 +146,7 @@ useEffect(() => {
 
     setDraft((p) => ({ ...p, status: "creating", error: null }));
     try {
-      const res = await fetch("/api/aiPortfolio/draft", {
+      const res = await fetch("/api/aura/draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, name }),
@@ -209,7 +209,7 @@ useEffect(() => {
     setEmailSync({ status: "syncing", error: null });
 
     try {
-      const res = await fetch(`/api/aiPortfolio/request/${draft.requestId}/email`, {
+      const res = await fetch(`/api/aura/request/${draft.requestId}/email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: normalized }),
@@ -457,7 +457,7 @@ useEffect(() => {
         },
       };
 
-      const res = await fetch("/api/aiPortfolio/form/submit", {
+      const res = await fetch("/api/aura/form/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

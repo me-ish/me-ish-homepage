@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/form/steps/Step7Review.tsx
+// src/components/aura/form/steps/Step7Review.tsx
 "use client";
 
 import { Check, Edit2 } from "lucide-react";

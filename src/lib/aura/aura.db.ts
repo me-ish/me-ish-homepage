@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/aura.db.ts
+// src/lib/aura/aura.db.ts
 import type { FormInput, Design, Content } from "./aura.schema";
 import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";
 

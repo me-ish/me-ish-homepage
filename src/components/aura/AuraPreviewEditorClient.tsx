@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/AuraPreviewEditorClient.tsx
+// src/components/aura/AuraPreviewEditorClient.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -265,7 +265,7 @@ export default function AuraPreviewEditorClient({
     });
 
     try {
-      const res = await fetch(`/api/aiPortfolio/save/${requestId}`, {
+      const res = await fetch(`/api/aura/save/${requestId}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

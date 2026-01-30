@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/AuraPortfolioRenderer.tsx
+// src/components/aura/AuraPortfolioRenderer.tsx
 // ============================================
 // メインレンダラー（販売レベル改修版）
 // ============================================

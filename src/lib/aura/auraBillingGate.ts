@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/auraBillingGate.ts
+// src/lib/aura/auraBillingGate.ts
 // ============================================
 // AURA 課金ゲート（無料判定・消費ロジック）
 // ============================================

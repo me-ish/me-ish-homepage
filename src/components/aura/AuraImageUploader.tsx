@@ -1,10 +1,10 @@
-// src/components/aiPortfolio/AuraImageUploader.tsx
+// src/components/aura/AuraImageUploader.tsx
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { auraAssetProxyUrl } from "@/lib/aura/storage/auraAssets";
 
-export type AiPortfolioImageItem = {
+export type AuraImageItem = {
   title?: string;
   description?: string;
 
@@ -20,8 +20,8 @@ export type AiPortfolioImageItem = {
 };
 
 type Props = {
-  value: AiPortfolioImageItem[];
-  onChange: (next: AiPortfolioImageItem[]) => void;
+  value: AuraImageItem[];
+  onChange: (next: AuraImageItem[]) => void;
   max?: number;
 
   // draft単位アップロードに必須
@@ -32,9 +32,9 @@ type Props = {
 
   /**
    * APIパス
-   * 例：/api/aiPortfolio/upload/works/[id]
+   * 例：/api/aura/upload/works/[id]
    */
-  uploadEndpointBase?: string; // default: "/api/aiPortfolio/upload/works"
+  uploadEndpointBase?: string; // default: "/api/aura/upload/works"
 };
 
 type PendingItem = {
@@ -62,7 +62,7 @@ function baseNameFromFileName(name: string) {
 }
 
 /** value同期で無限ループを防ぐための “浅い比較” */
-function sameItems(a: AiPortfolioImageItem[], b: AiPortfolioImageItem[]) {
+function sameItems(a: AuraImageItem[], b: AuraImageItem[]) {
   if (a === b) return true;
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
@@ -83,7 +83,7 @@ function sameItems(a: AiPortfolioImageItem[], b: AiPortfolioImageItem[]) {
   return true;
 }
 
-function normalizeItem(it: AiPortfolioImageItem): AiPortfolioImageItem {
+function normalizeItem(it: AuraImageItem): AuraImageItem {
   // imageUrl が空でも、storagePath があれば proxy で表示可能にする
   if ((!it.imageUrl || it.imageUrl.trim() === "") && it.storagePath) {
     return { ...it, imageUrl: auraAssetProxyUrl(it.storagePath) };
@@ -97,9 +97,9 @@ export default function AuraImageUploader({
   max = 5,
   requestId,
   onRequireDraft,
-  uploadEndpointBase = "/api/aiPortfolio/upload/works",
+  uploadEndpointBase = "/api/aura/upload/works",
 }: Props) {
-  const [items, setItems] = useState<AiPortfolioImageItem[]>(
+  const [items, setItems] = useState<AuraImageItem[]>(
     () => (value ?? []).map(normalizeItem)
   );
   const [pending, setPending] = useState<PendingItem[]>([]);
@@ -135,7 +135,7 @@ export default function AuraImageUploader({
 
   /** items を更新する時は必ず親にも同期（controlled成立） */
   const commitItems = useCallback(
-    (next: AiPortfolioImageItem[]) => {
+    (next: AuraImageItem[]) => {
       setItems(next);
       onChange(next);
     },
@@ -272,7 +272,7 @@ export default function AuraImageUploader({
       setPending((prev) => [...prev, ...pendings]);
 
       try {
-        const results: { localId: string; item: AiPortfolioImageItem }[] = [];
+        const results: { localId: string; item: AuraImageItem }[] = [];
 
         for (let idx = 0; idx < sliced.length; idx++) {
           const f = sliced[idx];
@@ -352,7 +352,7 @@ results.push({
     inputRef.current?.click();
   };
 
-  const updateMeta = (idx: number, patch: Partial<AiPortfolioImageItem>) => {
+  const updateMeta = (idx: number, patch: Partial<AuraImageItem>) => {
     const next = items.map((it, i) =>
       i === idx ? normalizeItem({ ...it, ...patch }) : it
     );

@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/form/steps/Step2Design.tsx
+// src/components/aura/form/steps/Step2Design.tsx
 "use client";
 
 import { useMemo } from "react";

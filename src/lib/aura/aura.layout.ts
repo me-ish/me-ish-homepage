@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/aura.layout.ts
+// src/lib/aura/aura.layout.ts
 
 // layoutPref は既存どおり "center" | "split"
 export type LayoutPref = "center" | "split";

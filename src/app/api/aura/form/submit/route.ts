@@ -1,4 +1,4 @@
-// src/app/api/aiPortfolio/form/submit/route.ts
+// src/app/api/aura/form/submit/route.ts
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { randomUUID } from "crypto";
@@ -134,7 +134,7 @@ export async function GET(req: Request) {
       { status: 200 }
     );
   } catch (e: any) {
-    console.error("[aiPortfolio/form/submit][GET test_openai] error", e);
+    console.error("[aura/form/submit][GET test_openai] error", e);
     return NextResponse.json(
       { ok: false, error: e?.message ?? String(e) },
       { status: 500 }
@@ -228,7 +228,7 @@ export async function POST(req: Request) {
   const parsed = FormInputSchema.safeParse(payload);
   if (!parsed.success) {
     console.error(
-      "aiPortfolio: invalid form payload",
+      "aura: invalid form payload",
       parsed.error.issues,
       payload
     );
@@ -316,7 +316,7 @@ export async function POST(req: Request) {
       .eq("id", requestId);
 
     if (updDraftErr) {
-      console.error("[aiPortfolio/form/submit] update draft failed", updDraftErr);
+      console.error("[aura/form/submit] update draft failed", updDraftErr);
       return NextResponse.json(
         { ok: false, error: "update_draft_failed" },
         { status: 500 }
@@ -351,7 +351,7 @@ export async function POST(req: Request) {
       .single();
 
     if (insErr || !created?.id) {
-      console.error("[aiPortfolio/form/submit] insert failed", insErr);
+      console.error("[aura/form/submit] insert failed", insErr);
       return NextResponse.json(
         { ok: false, error: "insert_failed" },
         { status: 500 }
@@ -390,7 +390,7 @@ export async function POST(req: Request) {
     return res;
   } catch (e: any) {
     const message = e?.message ?? String(e);
-    console.error("[aiPortfolio/form/submit] generate error", e);
+    console.error("[aura/form/submit] generate error", e);
 
     await supabase
       .from("aura_requests")

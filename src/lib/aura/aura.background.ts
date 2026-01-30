@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/aura.background.ts
+// src/lib/aura/aura.background.ts
 import type { CSSProperties } from "react";
 import type { Design } from "@/lib/aura/aura.schema";
 import type {

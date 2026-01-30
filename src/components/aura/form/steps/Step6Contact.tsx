@@ -1,4 +1,4 @@
-// src/components/aiPortfolio/form/steps/Step6Contact.tsx
+// src/components/aura/form/steps/Step6Contact.tsx
 "use client";
 
 import type { AuraFormData } from "../auraFormTypes";

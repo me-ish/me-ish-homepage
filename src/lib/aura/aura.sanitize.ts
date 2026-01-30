@@ -1,4 +1,4 @@
-// src/lib/aiPortfolio/aura.sanitize.ts
+// src/lib/aura/aura.sanitize.ts
 import DOMPurify from "isomorphic-dompurify";
 
 /**
