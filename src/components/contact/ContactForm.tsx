@@ -218,7 +218,7 @@ export default function ContactForm() {
             id={subjId}
             type="text"
             inputMode="text"
-            placeholder={`例: ${CATEGORY_LABEL[category]}について`}
+            placeholder={`例: ${CATEGORY_LABEL[category]}`}
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             className={cn(INPUT_BASE, INPUT_NORMAL)}
