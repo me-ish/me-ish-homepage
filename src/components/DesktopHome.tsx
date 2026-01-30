@@ -361,7 +361,7 @@ function StatCard({ icon: Icon, value, label }: { icon: any; value: string; labe
         <Icon className="w-5 h-5 text-[#00a1e9]" />
       </div>
       <div>
-        <p className="text-xl font-bold text-[#023]">{value}</p>
+        <p className="text-xl font-bold text-gray-900">{value}</p>
         <p className="text-xs text-gray-500">{label}</p>
       </div>
     </div>
@@ -465,7 +465,7 @@ function AnnouncementsStrip({ max = 3 }: { max?: number }) {
           <time className="text-xs text-gray-400 tabular-nums">
             {fmt.format(new Date(n.published_at))}
           </time>
-          <span className="text-sm font-medium text-[#023] group-hover:text-[#00a1e9] transition-colors truncate max-w-[200px]">
+          <span className="text-sm font-medium text-gray-900 group-hover:text-[#00a1e9] transition-colors truncate max-w-[200px]">
             {n.title}
           </span>
         </Link>
@@ -549,7 +549,7 @@ function FAQSection() {
                 value={`item-${idx}`}
                 className="rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 overflow-hidden"
               >
-                <AccordionTrigger className="px-6 py-5 text-left font-semibold text-[#023] hover:no-underline hover:bg-gray-50 transition-colors">
+                <AccordionTrigger className="px-6 py-5 text-left font-semibold text-gray-900 hover:no-underline hover:bg-gray-50 transition-colors">
                   <span className="flex items-center gap-3">
                     <span className="flex-shrink-0 w-8 h-8 rounded-full bg-[#00a1e9]/10 flex items-center justify-center text-[#00a1e9] font-bold text-sm">
                       Q
@@ -557,7 +557,7 @@ function FAQSection() {
                     {q}
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="px-6 pb-5 text-[#445] leading-relaxed">
+                <AccordionContent className="px-6 pb-5 text-gray-600 leading-relaxed">
                   <div className="pl-11">{a}</div>
                 </AccordionContent>
               </AccordionItem>
@@ -649,7 +649,7 @@ const DesktopHome = () => {
   }, [galleryArtworks]);
 
   return (
-    <div className="font-zen text-[#222] bg-white">
+    <div className="font-zen text-gray-800 bg-white">
       <HeroBackground />
       <ProgressIndicator />
       <FloatingCTA />
@@ -694,7 +694,7 @@ const DesktopHome = () => {
               </p>
             </div>
 
-            <p className="fade-in-up mt-8 text-[clamp(1.2rem,3vw,2rem)] font-medium text-[#333]" style={{ animationDelay: '0.2s' }}>
+            <p className="fade-in-up mt-8 text-[clamp(1.2rem,3vw,2rem)] font-medium text-gray-700" style={{ animationDelay: '0.2s' }}>
               アートを、もっと近くに
             </p>
 
@@ -839,7 +839,7 @@ const DesktopHome = () => {
                   <div className="p-3 rounded-xl bg-[#00a1e9]/10 w-fit">
                     <Sparkles className="w-6 h-6 text-[#00a1e9]" />
                   </div>
-                  <h3 className="mt-4 font-bold text-[#023]">3D空間体験</h3>
+                  <h3 className="mt-4 font-bold text-gray-900">3D空間体験</h3>
                   <p className="mt-2 text-sm text-gray-600 flex-grow">Three.jsによる没入感のある鑑賞体験</p>
                 </div>
               </BentoCard>
@@ -849,7 +849,7 @@ const DesktopHome = () => {
                   <div className="p-3 rounded-xl bg-amber-500/10 w-fit">
                     <Images className="w-6 h-6 text-amber-500" />
                   </div>
-                  <h3 className="mt-4 font-bold text-[#023]">簡単応募</h3>
+                  <h3 className="mt-4 font-bold text-gray-900">簡単応募</h3>
                   <p className="mt-2 text-sm text-gray-600 flex-grow">ガイド付きフローで迷わず出展</p>
                 </div>
               </BentoCard>
@@ -859,7 +859,7 @@ const DesktopHome = () => {
                   <div className="p-3 rounded-xl bg-emerald-500/10 w-fit">
                     <ShieldCheck className="w-6 h-6 text-emerald-500" />
                   </div>
-                  <h3 className="mt-4 font-bold text-[#023]">画像保護</h3>
+                  <h3 className="mt-4 font-bold text-gray-900">画像保護</h3>
                   <p className="mt-2 text-sm text-gray-600 flex-grow">ウォーターマーク・AI認識阻害処理</p>
                 </div>
               </BentoCard>
@@ -868,7 +868,7 @@ const DesktopHome = () => {
               <BentoCard className="stagger-item md:col-span-2 p-6 bg-gray-50">
                 <div className="flex items-center justify-between h-full">
                   <div>
-                    <h3 className="font-bold text-[#023]">2Dモードで見る</h3>
+                    <h3 className="font-bold text-gray-900">2Dモードで見る</h3>
                     <p className="text-sm text-gray-500 mt-1">軽量な2Dギャラリーもあります</p>
                   </div>
                   <div className="flex gap-3">
@@ -901,7 +901,7 @@ const DesktopHome = () => {
             <div className="max-w-3xl mx-auto text-center">
               <h2 id="about-title" className="fade-in-up text-[clamp(2rem,5vw,3rem)] font-bold leading-tight">
                 <span className="text-[#00a1e9] font-lilita">me-ish</span>
-                <span className="text-[#023]">とは</span>
+                <span className="text-gray-900">とは</span>
               </h2>
 
               <p className="fade-in-up mt-8 text-lg md:text-xl leading-relaxed text-gray-600" style={{ animationDelay: '0.1s' }}>

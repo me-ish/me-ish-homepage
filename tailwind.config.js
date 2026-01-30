@@ -93,6 +93,28 @@ module.exports = {
   			'heart-glow': '0 0 6px rgba(255, 105, 180, 0.6)'
   		},
   		colors: {
+  			// me-ish Brand Colors
+  			'meish': {
+  				DEFAULT: '#00a1e9',
+  				50: '#f0f9ff',
+  				100: '#e0f4fe',
+  				200: '#bae8fd',
+  				300: '#7dd5fc',
+  				400: '#38bdf8',
+  				500: '#00a1e9',
+  				600: '#0080c0',
+  				700: '#0070a8',
+  				800: '#005d8a',
+  				900: '#004d72',
+  			},
+  			// Text colors
+  			'meish-text': {
+  				DEFAULT: '#1a1a2e',
+  				heading: '#002233',
+  				body: '#374151',
+  				muted: '#6b7280',
+  				subtle: '#9ca3af',
+  			},
   			'heart-pink': '#f472b6',
   			'heart-pink-light': '#fbcfe8',
   			background: 'hsl(var(--background))',

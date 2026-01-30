@@ -237,11 +237,11 @@ return (
           <h2 className="text-lg font-semibold">プロフィールを編集</h2>
           <button
             onClick={tryClose}
-            className="p-1 rounded hover:bg-[#f6f8fb]"
+            className="p-1 rounded hover:bg-gray-50"
             aria-label="閉じる"
             type="button"
           >
-            <X className="w-5 h-5 text-[#667]" />
+            <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
@@ -267,7 +267,7 @@ return (
             <div
               className={[
                 "relative h-28 w-full rounded-xl border overflow-hidden",
-                draggingBanner ? "ring-2 ring-[#00a1e9] border-[#00a1e9]" : "bg-[#f6f8fb]",
+                draggingBanner ? "ring-2 ring-[#00a1e9] border-[#00a1e9]" : "bg-gray-50",
               ].join(" ")}
               onDrop={(e) => handleDrop(e, "banner")}
               onDragOver={(e) => handleDragOver(e, "banner")}
@@ -276,7 +276,7 @@ return (
               {bannerPreview ? (
                 <img src={bannerPreview} alt="banner" className="h-full w-full object-cover" />
               ) : (
-                <div className="h-full w-full grid place-items-center text-[#99a]">
+                <div className="h-full w-full grid place-items-center text-gray-400">
                   <Img className="w-5 h-5" />
                   <span className="text-xs mt-1">ここにドラッグ＆ドロップ</span>
                 </div>
@@ -284,7 +284,7 @@ return (
 
               {/* ✅ ボタン順序を「選択 → 削除」に統一 */}
               <div className="absolute bottom-2 right-2 flex gap-2">
-                <label className="inline-flex items-center gap-1 rounded-full bg-white border px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-[#f7fbff]">
+                <label className="inline-flex items-center gap-1 rounded-full bg-white border px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-blue-50">
                   <Upload className="w-3.5 h-3.5 text-[#00a1e9]" /> 画像を選択
                   <input
                     ref={bannerInputRef}
@@ -326,7 +326,7 @@ return (
                 {avatarPreview ? (
                   <img src={avatarPreview} alt="avatar" className="h-full w-full object-cover" />
                 ) : (
-                  <div className="h-full w-full grid place-items-center text-[#99a]">
+                  <div className="h-full w-full grid place-items-center text-gray-400">
                     <Img className="w-5 h-5" />
                   </div>
                 )}
@@ -334,7 +334,7 @@ return (
 
               {/* ✅ こちらも「選択 → 削除」 */}
               <div className="flex gap-2">
-                <label className="inline-flex items-center gap-1 rounded-full bg-white border px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-[#f7fbff]">
+                <label className="inline-flex items-center gap-1 rounded-full bg-white border px-3 py-1.5 text-xs font-semibold cursor-pointer hover:bg-blue-50">
                   <Upload className="w-3.5 h-3.5 text-[#00a1e9]" /> 画像を選択
                   <input
                     ref={avatarInputRef}
@@ -370,7 +370,7 @@ return (
               maxLength={64}
               required
             />
-            <div className="text-right text-xs text-[#667] mt-1">{displayName.length}/64</div>
+            <div className="text-right text-xs text-gray-500 mt-1">{displayName.length}/64</div>
           </div>
 
           {/* 自己紹介 */}
@@ -383,7 +383,7 @@ return (
               maxLength={280}
               placeholder="作品のテーマや制作環境、受注の可否などを書いておくと見られやすくなります。"
             />
-            <div className="text-right text-xs text-[#667] mt-1">{bio.length}/280</div>
+            <div className="text-right text-xs text-gray-500 mt-1">{bio.length}/280</div>
           </div>
 
           {/* SNS */}
@@ -422,7 +422,7 @@ return (
         <div className="sticky bottom-0 z-10 flex justify-end gap-2 px-5 py-4 border-t bg-white pb-[calc(env(safe-area-inset-bottom)+16px)]">
           <button
             onClick={tryClose}
-            className="px-4 py-2 rounded-full border bg-white hover:bg-[#f7fbff]"
+            className="px-4 py-2 rounded-full border bg-white hover:bg-blue-50"
             type="button"
           >
             キャンセル

@@ -13,6 +13,40 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =========================================
+ * me-ish Design System CSS Variables
+ * ========================================= */
+@layer base {
+  :root {
+    /* Primary Brand Colors */
+    --meish-primary: 199 100% 46%;        /* #00a1e9 */
+    --meish-primary-dark: 199 100% 38%;   /* #0080c0 */
+    --meish-primary-light: 199 100% 97%;  /* #f0f9ff */
+
+    /* Text Colors */
+    --meish-text-heading: 200 100% 7%;    /* #002233 */
+    --meish-text-body: 220 9% 46%;        /* gray-600 */
+    --meish-text-muted: 220 9% 46%;       /* gray-500 */
+
+    /* Spacing Scale */
+    --spacing-section: 3rem;              /* 48px */
+    --spacing-section-md: 5rem;           /* 80px */
+
+    /* Border Radius Scale */
+    --radius-sm: 0.5rem;                  /* 8px */
+    --radius-md: 0.75rem;                 /* 12px */
+    --radius-lg: 1rem;                    /* 16px */
+    --radius-xl: 1.5rem;                  /* 24px */
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --spacing-section: 5rem;            /* 80px on desktop */
+      --spacing-section-md: 7rem;         /* 112px on desktop */
+    }
+  }
+}
+
 /* ✅ モバイルだけ少し小さく（例: 14px） */
 @media (max-width: 639px) {
   html {
@@ -50,21 +84,6 @@ img {
   font-family: "Zen Maru Gothic", system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", "ヒラギノ角ゴ ProN", "Hiragino Kaku Gothic ProN",
     "Yu Gothic", "游ゴシック体", sans-serif;
-}
-
-/* 共通ボタン */
-.button {
-  padding: 0.7rem 1.4rem;
-  font-size: 1rem;
-  font-weight: 600;
-  background-color: #00a1e9;
-  color: white;
-  border-radius: 8px;
-  transition: background-color 0.3s ease;
-}
-
-.button:hover {
-  background-color: #008ec4;
 }
 
 .fade-in-start {

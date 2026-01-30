@@ -1,25 +1,32 @@
-'use client';
-
-import React from 'react';
 import Link from 'next/link';
 
-const Footer: React.FC = () => {
+const FOOTER_LINKS = [
+  { href: '/footer/terms', label: '利用規約' },
+  { href: '/footer/privacy', label: 'プライバシーポリシー' },
+  { href: '/footer/tokushoho', label: '特定商取引法に基づく表記' },
+  { href: '/footer/copyright', label: '著作権・AI学習防止ポリシー' },
+  { href: '/footer/disclaimer', label: '免責事項' },
+  { href: '/footer/faq', label: 'よくある質問（FAQ）' },
+  { href: '/admin-login', label: '管理者ログイン' },
+] as const;
+
+export default function Footer() {
   return (
-    <footer className="footer fade-in" style={{ backgroundColor: '#f3f3f3', padding: '2rem 0', marginTop: '4rem' }}>
-      <div className="footer-inner" style={{ textAlign: 'center', fontSize: '0.9rem', color: '#333' }}>
-        <p>© 2025 me-ish</p>
-        <div style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1.5rem' }}>
-          <Link href="/footer/terms">利用規約</Link>
-          <Link href="/footer/privacy">プライバシーポリシー</Link>
-          <Link href="/footer/tokushoho">特定商取引法に基づく表記</Link>
-          <Link href="/footer/copyright">著作権・AI学習防止ポリシー</Link>
-          <Link href="/footer/disclaimer">免責事項</Link>
-          <Link href="/footer/faq">よくある質問（FAQ）</Link>
-          <Link href="/admin-login">管理者ログイン</Link>
-        </div>
+    <footer className="mt-16 bg-gray-100 py-8">
+      <div className="text-center text-sm text-gray-700">
+        <p>© {new Date().getFullYear()} me-ish</p>
+        <nav className="mt-2 flex flex-wrap justify-center gap-x-6 gap-y-2 px-4">
+          {FOOTER_LINKS.map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className="text-gray-600 hover:text-[#00a1e9] transition-colors"
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
       </div>
     </footer>
   );
-};
-
-export default Footer;
+}

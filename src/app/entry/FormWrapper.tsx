@@ -3,11 +3,13 @@
 import React, { useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, ArrowRight, Send, Loader2 } from 'lucide-react';
 import Step1_ArtistInfo from '@/components/entryForm/Step1_ArtistInfo';
 import Step2_WorkInfo from '@/components/entryForm/Step2_WorkInfo';
 import Step3_SalesAndAgreement from '@/components/entryForm/Step3_SalesAndAgreement';
 import ConfirmPage from '@/components/entryForm/ConfirmPage';
 import CompletePage from '@/components/entryForm/CompletePage';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEmail } from '@/app/_actions/sendEmail'; // ★ 追加：サーバーアクション経由で送信
@@ -69,6 +71,45 @@ const slideVariants = {
   center: { x: 0, opacity: 1 },
   exit: (dir: 'left' | 'right') => ({ x: dir === 'left' ? 300 : -300, opacity: 0 }),
 };
+
+const STEPS = [
+  { num: 1, label: 'アーティスト情報' },
+  { num: 2, label: '作品情報' },
+  { num: 3, label: '販売・規約' },
+  { num: 4, label: '確認' },
+];
+
+function StepIndicator({ currentStep }: { currentStep: number }) {
+  return (
+    <div className="flex items-center justify-center gap-2 mb-8">
+      {STEPS.map((s, idx) => (
+        <div key={s.num} className="flex items-center">
+          <div
+            className={`
+              flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-all
+              ${currentStep === s.num
+                ? 'bg-[#00a1e9] text-white shadow-md'
+                : currentStep > s.num
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-gray-200 text-gray-500'
+              }
+            `}
+            aria-current={currentStep === s.num ? 'step' : undefined}
+          >
+            {currentStep > s.num ? '✓' : s.num}
+          </div>
+          {idx < STEPS.length - 1 && (
+            <div
+              className={`w-8 h-0.5 mx-1 transition-colors ${
+                currentStep > s.num ? 'bg-emerald-500' : 'bg-gray-200'
+              }`}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const FormWrapper = () => {
   const methods = useForm<FormValues>({
@@ -376,11 +417,12 @@ const FormWrapper = () => {
 
   return (
     <FormProvider {...methods}>
-      <div className="max-w-[700px] w-full mx-auto px-4 py-10">
+      <div className="max-w-[700px] w-full mx-auto px-4 py-8">
         {step === 5 ? (
           <CompletePage />
         ) : (
           <form onSubmit={methods.handleSubmit(onSubmit)}>
+            <StepIndicator currentStep={step} />
             <AnimatePresence mode="wait" custom={direction}>
               {step === 1 && (
                 <motion.div
@@ -392,12 +434,20 @@ const FormWrapper = () => {
                   exit="exit"
                   transition={{ duration: 0.4 }}
                 >
-                  <h2 className="text-2xl font-bold mb-6">STEP 1：アーティスト情報</h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-[#023] mb-6 flex items-center gap-2">
+                    <span className="text-[#00a1e9]">STEP 1</span>
+                    <span className="text-gray-300">|</span>
+                    アーティスト情報
+                  </h2>
                   <Step1_ArtistInfo />
-                  <div className="flex justify-end mt-6">
-                    <button type="button" onClick={nextStep} className="button">
-                      次へ
-                    </button>
+                  <div className="flex justify-end mt-8">
+                    <Button
+                      type="button"
+                      onClick={nextStep}
+                      className="rounded-full px-6 py-2.5 h-auto font-semibold shadow-md hover:shadow-lg transition-all"
+                    >
+                      次へ <ArrowRight className="w-4 h-4 ml-1" />
+                    </Button>
                   </div>
                 </motion.div>
               )}
@@ -412,20 +462,33 @@ const FormWrapper = () => {
                   exit="exit"
                   transition={{ duration: 0.4 }}
                 >
-                  <h2 className="text-2xl font-bold mb-6">STEP 2：作品情報</h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-[#023] mb-6 flex items-center gap-2">
+                    <span className="text-[#00a1e9]">STEP 2</span>
+                    <span className="text-gray-300">|</span>
+                    作品情報
+                  </h2>
                   <Step2_WorkInfo
                     preview={preview}
                     setPreview={setPreview}
                     localImageFile={localImageFile}
                     setLocalImageFile={setLocalImageFile}
                   />
-                  <div className="flex justify-between mt-6">
-                    <button type="button" onClick={prevStep} className="button">
-                      戻る
-                    </button>
-                    <button type="button" onClick={nextStep} className="button">
-                      次へ
-                    </button>
+                  <div className="flex justify-between mt-8">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={prevStep}
+                      className="rounded-full px-5 py-2.5 h-auto font-medium border-gray-300 hover:bg-gray-50"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-1" /> 戻る
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={nextStep}
+                      className="rounded-full px-6 py-2.5 h-auto font-semibold shadow-md hover:shadow-lg transition-all"
+                    >
+                      次へ <ArrowRight className="w-4 h-4 ml-1" />
+                    </Button>
                   </div>
                 </motion.div>
               )}
@@ -440,15 +503,28 @@ const FormWrapper = () => {
                   exit="exit"
                   transition={{ duration: 0.4 }}
                 >
-                  <h2 className="text-2xl font-bold mb-6">STEP 3：販売・規約</h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-[#023] mb-6 flex items-center gap-2">
+                    <span className="text-[#00a1e9]">STEP 3</span>
+                    <span className="text-gray-300">|</span>
+                    販売・規約
+                  </h2>
                   <Step3_SalesAndAgreement />
-                  <div className="flex justify-between mt-6">
-                    <button type="button" onClick={prevStep} className="button">
-                      戻る
-                    </button>
-                    <button type="button" onClick={nextStep} className="button">
-                      次へ
-                    </button>
+                  <div className="flex justify-between mt-8">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={prevStep}
+                      className="rounded-full px-5 py-2.5 h-auto font-medium border-gray-300 hover:bg-gray-50"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-1" /> 戻る
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={nextStep}
+                      className="rounded-full px-6 py-2.5 h-auto font-semibold shadow-md hover:shadow-lg transition-all"
+                    >
+                      次へ <ArrowRight className="w-4 h-4 ml-1" />
+                    </Button>
                   </div>
                 </motion.div>
               )}
@@ -463,24 +539,43 @@ const FormWrapper = () => {
                   exit="exit"
                   transition={{ duration: 0.4 }}
                 >
-                  <h2 className="text-2xl font-bold mb-6">STEP 4：入力内容の確認</h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-[#023] mb-6 flex items-center gap-2">
+                    <span className="text-[#00a1e9]">STEP 4</span>
+                    <span className="text-gray-300">|</span>
+                    入力内容の確認
+                  </h2>
                   <ConfirmPage
                     onBack={() => {
                       setDirection('left');
                       setStep(3);
                     }}
                   />
-                  <div className="flex justify-between mt-6">
-                    <button type="button" onClick={prevStep} className="button">
-                      戻る
-                    </button>
-                    <button
+                  <div className="flex justify-between mt-8">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={prevStep}
+                      className="rounded-full px-5 py-2.5 h-auto font-medium border-gray-300 hover:bg-gray-50"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-1" /> 戻る
+                    </Button>
+                    <Button
                       type="submit"
                       disabled={submitting}
-                      className="button bg-[#00a1e9] text-white hover:bg-[#008ec4] disabled:opacity-60"
+                      className="rounded-full px-8 py-3 h-auto font-semibold shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-[#00a1e9] to-[#0080c0] hover:from-[#0090d4] hover:to-[#0070a8] disabled:opacity-60"
                     >
-                      送信
-                    </button>
+                      {submitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          送信中...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          送信する
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </motion.div>
               )}

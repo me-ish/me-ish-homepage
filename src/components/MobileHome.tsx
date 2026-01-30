@@ -46,6 +46,44 @@ const FLOATING_POSITIONS_MOBILE = [
   { x: 80, y: 72, size: 58, delay: 1.2 },
 ];
 
+// ギャラリー統計を取得するフック
+function useGalleryStats() {
+  const [stats, setStats] = useState<{ worksCount: number; artistsCount: number } | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('entries')
+          .select('user_id')
+          .eq('confirmed', true)
+          .eq('display_ready', true);
+
+        if (error) throw error;
+
+        if (mounted && data) {
+          const worksCount = data.length;
+          const uniqueArtists = new Set(data.map((entry) => entry.user_id));
+          setStats({
+            worksCount,
+            artistsCount: uniqueArtists.size,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch gallery stats:', err);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return stats;
+}
+
 // 展示作品を取得するフック
 function useGalleryArtworks(limit = 4) {
   const [artworks, setArtworks] = useState<{ src: string; id: number }[]>([]);
@@ -177,7 +215,7 @@ function StatPill({ icon: Icon, value, label }: { icon: React.ElementType; value
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/80 backdrop-blur-sm ring-1 ring-[#00a1e9]/10 text-sm">
       <Icon className="w-4 h-4 text-[#00a1e9]" />
-      <span className="font-bold text-[#023]">{value}</span>
+      <span className="font-bold text-gray-900">{value}</span>
       <span className="text-gray-500 text-xs">{label}</span>
     </div>
   );
@@ -280,7 +318,7 @@ function AnnouncementsStripMobile() {
           <time className="text-[11px] text-gray-400 tabular-nums shrink-0">
             {fmt.format(new Date(n.published_at))}
           </time>
-          <span className="text-sm font-medium text-[#023] truncate flex-1">
+          <span className="text-sm font-medium text-gray-900 truncate flex-1">
             {n.title}
           </span>
           <ArrowRight className="w-3 h-3 text-gray-400 shrink-0" />
@@ -379,7 +417,7 @@ function FeatureCard({
         <Icon className={`w-5 h-5 ${colors[color].text}`} />
       </div>
       <div>
-        <h3 className="font-semibold text-[#023]">{title}</h3>
+        <h3 className="font-semibold text-gray-900">{title}</h3>
         <p className="text-sm text-gray-500 mt-0.5 leading-relaxed">{desc}</p>
       </div>
     </div>
@@ -390,6 +428,7 @@ function FeatureCard({
 const MobileHome = () => {
   useFadeInOnScroll();
   const galleryArtworks = useGalleryArtworks(4);
+  const galleryStats = useGalleryStats();
 
   // 展示作品と配置パターンを組み合わせる
   const floatingArts = useMemo(() => {
@@ -402,7 +441,7 @@ const MobileHome = () => {
   }, [galleryArtworks]);
 
   return (
-    <div className="font-zen text-[#222] bg-white pb-24">
+    <div className="font-zen text-gray-800 bg-white pb-24">
       <HeroBackground />
       <BottomFixedBar />
 
@@ -443,7 +482,7 @@ const MobileHome = () => {
               </p>
             </div>
 
-            <p className="fade-in-up mt-6 text-[clamp(1.1rem,5vw,1.4rem)] font-medium text-[#333]" style={{ animationDelay: '0.15s' }}>
+            <p className="fade-in-up mt-6 text-[clamp(1.1rem,5vw,1.4rem)] font-medium text-gray-700" style={{ animationDelay: '0.15s' }}>
               アートを、もっと近くに
             </p>
 
@@ -472,8 +511,16 @@ const MobileHome = () => {
 
             {/* Stats */}
             <div className="fade-in-up mt-8 flex flex-wrap justify-center gap-2" style={{ animationDelay: '0.45s' }}>
-              <StatPill icon={Palette} value="10+" label="展示" />
-              <StatPill icon={Users} value="Soon" label="アーティスト" />
+              <StatPill
+                icon={Palette}
+                value={galleryStats ? `${galleryStats.worksCount}` : '–'}
+                label="展示作品"
+              />
+              <StatPill
+                icon={Users}
+                value={galleryStats ? `${galleryStats.artistsCount}` : '–'}
+                label="アーティスト"
+              />
             </div>
           </div>
 
@@ -492,7 +539,7 @@ const MobileHome = () => {
         <section className={`fade-in-up ${LAYOUT.sectionX} ${LAYOUT.sectionYCompact} bg-gradient-to-b from-[#f8fbff] to-white`}>
           <div className={LAYOUT.container}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-[#023]">お知らせ</h2>
+              <h2 className="text-sm font-bold text-gray-900">お知らせ</h2>
               <Link href="/news" className="text-xs text-[#00a1e9] font-medium">
                 すべて見る →
               </Link>
@@ -550,7 +597,7 @@ const MobileHome = () => {
               className="text-center text-[clamp(1.5rem,7vw,2rem)] font-bold leading-tight mb-4"
             >
               <span className="text-[#00a1e9] font-lilita">me-ish</span>
-              <span className="text-[#023]">とは</span>
+              <span className="text-gray-900">とは</span>
             </h2>
 
             <p className="text-center text-[15px] leading-relaxed text-gray-600 mb-8">
@@ -666,7 +713,7 @@ const MobileHome = () => {
                   value={value}
                   className="rounded-xl bg-white ring-1 ring-gray-100 overflow-hidden"
                 >
-                  <AccordionTrigger className="px-4 py-4 text-left text-sm font-semibold text-[#023] hover:no-underline">
+                  <AccordionTrigger className="px-4 py-4 text-left text-sm font-semibold text-gray-900 hover:no-underline">
                     <span className="flex items-center gap-2">
                       <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#00a1e9]/10 flex items-center justify-center text-[#00a1e9] font-bold text-xs">
                         Q

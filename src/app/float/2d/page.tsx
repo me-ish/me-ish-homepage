@@ -53,8 +53,10 @@ export default function Float2DPage() {
 
       if (data) {
         // フィルタリングして日替わり選定
+        // 3D版と同じ結果になるよう、IDでソートしてからシャッフル
         const displayable = filterFloatEntries(data as EntryRow[]);
-        const dailyPicks = pickDailyExhibits(displayable, displayDate, FLOAT_DAILY_SLOT_COUNT);
+        const sorted = [...displayable].sort((a, b) => a.id - b.id);
+        const dailyPicks = pickDailyExhibits(sorted, displayDate, FLOAT_DAILY_SLOT_COUNT);
 
         // 実際の作品数を記録
         setActualCount(dailyPicks.length);
