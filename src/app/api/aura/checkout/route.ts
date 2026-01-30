@@ -4,7 +4,7 @@ import Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 // ✅ 所有権チェック（Cookie aura_st_{requestId}）
-import { requireAuraRequestAccess } from "@/lib/aiPortfolio/requireAuraAccess";
+import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

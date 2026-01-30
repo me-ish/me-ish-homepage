@@ -8,7 +8,7 @@ import { ZoomArtworkProvider } from "@/components/shared/ZoomArtworkContext";
 import ClientWrapper from "@/components/shared/ClientWrapper";
 import ZoomArtworkDisplay from "@/components/shared/ZoomArtworkDisplay";
 import { Analytics } from "@/components/Analytics";
-import "@/styles/aiPortfolioFonts.css";
+import "@/styles/auraFonts.css";
 
 // ✅ OG/Twitter画像などの絶対URL解決の基準（Vercel warning 対策）
 const SITE_URL =

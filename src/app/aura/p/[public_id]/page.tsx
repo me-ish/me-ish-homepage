@@ -2,9 +2,9 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 
-import { supabaseAdmin } from "@/lib/aiPortfolio/supabaseAdmin";
-import { RendererRouter } from "@/components/aiPortfolio/renderer/RendererRouter";
-import { fontFamilyFromPreset } from "@/styles/aiPortfolioFonts";
+import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";
+import { RendererRouter } from "@/components/aura/renderer/RendererRouter";
+import { fontFamilyFromPreset } from "@/styles/auraFonts";
 
 export const dynamic = "force-dynamic";
 

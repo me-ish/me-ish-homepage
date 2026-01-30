@@ -4,7 +4,7 @@
 - Repo: me-ish-next (Next.js App Router, TypeScript, Tailwind, shadcn/ui, Supabase, Stripe, thirdweb).
 - Products:
   - me-ish gallery
-  - me-ish AURA (aiPortfolio)
+  - me-ish AURA
 
 ## Non-negotiables
 1) Never read secrets:
@@ -27,12 +27,18 @@
 ## Repo conventions
 - App Router: src/app
 - Components: src/components
-- AURA logic: src/lib/aiPortfolio
+- AURA logic: src/lib/aura
+- AURA components: src/components/aura
 
-## AURA naming policy (2025-01)
-- Public URLs: /aura/* (user-facing, SEO, bookmarks)
-- Internal implementation: /aiPortfolio/* (legacy, being migrated)
-- /aura/form, /aura/preview/[id] are aliases redirecting to /aiPortfolio/*
-- API: /api/aura/* for new endpoints, /api/aiPortfolio/* for legacy (both work)
-- DB table: aura_requests, Storage bucket: aura-assets
+## AURA naming (unified as of 2025-01)
+- All paths now use "aura" naming (migration from "aiPortfolio" complete)
+- Public URLs: /aura/*
+- API: /api/aura/*
+- Library: src/lib/aura/
+- Components: src/components/aura/
+- Component prefix: Aura* (e.g., AuraHero, AuraContact)
+- DB table: aura_requests
+- Storage bucket: aura-assets
+- Style files: src/styles/auraFonts.*
+- Note: Old aiPortfolio directories are excluded from tsconfig and pending deletion
 

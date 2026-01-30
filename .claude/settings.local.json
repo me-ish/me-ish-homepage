@@ -11,7 +11,9 @@
       "Bash(npm ls:*)",
       "Bash(npm install:*)",
       "Bash(xargs:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(find:*)",
+      "Bash(git show:*)"
     ]
   }
 }

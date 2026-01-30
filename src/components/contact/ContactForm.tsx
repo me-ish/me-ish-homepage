@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useMemo, useState } from 'react';
+import {useEffect,useId,useMemo,useState,type ElementType,type FormEvent,} from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Send, AlertCircle, CheckCircle2, Bug, HelpCircle, Palette, ShoppingCart, MessageSquare } from 'lucide-react';
 import { sendEmail } from '@/app/_actions/sendEmail';
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 type Status = 'idle' | 'loading' | 'error';
 type Category = 'general' | 'bug' | 'howto' | 'entry' | 'purchase' | 'other';
 
-const CATEGORY_OPTIONS: { value: Category; label: string; icon: React.ElementType }[] = [
+const CATEGORY_OPTIONS: { value: Category; label: string; icon: ElementType }[] = [
   { value: 'general', label: '一般のお問い合わせ', icon: MessageSquare },
   { value: 'bug', label: '不具合の報告', icon: Bug },
   { value: 'howto', label: '使い方について', icon: HelpCircle },
@@ -116,7 +116,7 @@ export default function ContactForm() {
     return `${headerLines}\n\n【本文】\n${message.trim()}`;
   };
 
-  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     // bot フィルタ

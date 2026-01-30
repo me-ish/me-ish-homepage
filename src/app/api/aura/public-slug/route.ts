@@ -1,7 +1,7 @@
 // src/app/api/aura/public-slug/route.ts
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/aiPortfolio/supabaseAdmin";
-import { requireAuraRequestAccess } from "@/lib/aiPortfolio/requireAuraAccess";
+import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";
+import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";
 
 export const dynamic = "force-dynamic";
 
