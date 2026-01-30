@@ -1,6 +1,7 @@
 // /src/app/cert/[id]/page.tsx
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AlertCircle, ArrowLeft, RefreshCw, FileX } from "lucide-react";
 import CoAInfoPanel from "@/components/cert/CoAInfoPanel";
 import CoAPdfActions from "@/components/cert/CoAPdfActions";
 import AssetsReceiveSection from "@/components/cert/AssetsReceiveSection";
@@ -12,7 +13,6 @@ import {
   issueReissueLink,
 } from "@/lib/coa/server";
 
-// Node ランタイム（Supabase/crypto を使うため）
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -22,6 +22,49 @@ export const metadata: Metadata = {
   description: "Certificate of Authenticity (CoA)",
 };
 
+// Brand constants
+const BRAND = {
+  logoUrl: "/brand/me-ish.png",
+  sealUrl: "/brand/seal.png",
+  accent: "#00a1e9",
+  issuerName: "me-ish",
+} as const;
+
+// Error card component
+function ErrorCard({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          {/* Header */}
+          <div className="p-6 text-center">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-red-50 mb-4">
+              <AlertCircle className="w-7 h-7 text-red-500" />
+            </div>
+            <h1 className="text-xl font-bold text-gray-900">{title}</h1>
+            <p className="mt-2 text-sm text-gray-600 leading-relaxed">{description}</p>
+          </div>
+
+          {/* Actions */}
+          {children && (
+            <div className="px-6 pb-6 flex flex-col gap-3">
+              {children}
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
+
 export default async function CertPage({
   params,
   searchParams,
@@ -29,23 +72,27 @@ export default async function CertPage({
   params: { id: string };
   searchParams: Record<string, string | string[] | undefined>;
 }) {
-  // /cert/?t=... のような誤URLで落ちないように防御
   const idNum = Number(params.id);
+
+  // Invalid URL check
   if (!Number.isInteger(idNum) || idNum <= 0) {
     return (
-      <main className="min-h-[60vh] flex items-center justify-center px-4">
-        <div className="w-full max-w-[720px] bg-white p-8 rounded-2xl shadow-lg space-y-5 text-center">
-          <h1 className="text-2xl font-bold">Invalid URL</h1>
-          <p className="text-gray-700">Certificate ID is missing.</p>
-          <Link className="px-4 py-2 rounded-xl bg-black text-white" href="/">
-            Back to gallery
-          </Link>
-        </div>
-      </main>
+      <ErrorCard
+        title="Invalid URL"
+        description="Certificate ID is missing or invalid."
+      >
+        <Link
+          href="/"
+          className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-900 text-white text-sm font-medium transition-all hover:bg-gray-800"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to gallery
+        </Link>
+      </ErrorCard>
     );
   }
 
-  // URLSearchParams 正規化
+  // Parse search params
   const search = new URLSearchParams(
     Object.entries(searchParams).flatMap(([k, v]) =>
       Array.isArray(v) ? v.map((vv) => [k, vv]) : [[k, v ?? ""]]
@@ -58,125 +105,136 @@ export default async function CertPage({
 
   try {
     const ver = await verifyCertToken(token);
+
+    // Token verification failed
     if (!ver.ok) {
       return (
-        <main className="min-h-[60vh] flex items-center justify-center px-4">
-          <div className="w-full max-w-[720px] bg-white p-8 rounded-2xl shadow-lg space-y-5 text-center">
-            <h1 className="text-2xl font-bold">CoA Link Error</h1>
-            <p className="text-gray-700">{t.expiredNote}</p>
-            <div className="flex gap-3 justify-center mt-4">
-              <Link className="px-4 py-2 rounded-xl bg-black text-white" href="/">
-                {t.backToGallery}
-              </Link>
-              {/* 再発行リンク（表示時に一度だけ評価） */}
-              <a
-                className="px-4 py-2 rounded-xl bg-gray-200"
-                href={await issueReissueLink(idNum, undefined)}
-              >
-                {t.reissueBtn}
-              </a>
-            </div>
-          </div>
-        </main>
+        <ErrorCard
+          title="Link Expired"
+          description={t.expiredNote}
+        >
+          <a
+            href={await issueReissueLink(idNum, undefined)}
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#00a1e9] text-white text-sm font-medium transition-all hover:bg-[#0090d4]"
+          >
+            <RefreshCw className="w-4 h-4" />
+            {t.reissueBtn}
+          </a>
+          <Link
+            href="/"
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium transition-all hover:bg-gray-200"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            {t.backToGallery}
+          </Link>
+        </ErrorCard>
       );
     }
 
     const entry = await getEntryForCoA(ver.entryId);
+
+    // Entry not found
     if (!entry) {
       return (
-        <main className="min-h-[60vh] flex items-center justify-center px-4">
-          <div className="w-full max-w-[720px] bg-white p-8 rounded-2xl shadow-lg space-y-5 text-center">
-            <h1 className="text-2xl font-bold">Not Found</h1>
-            <p className="text-gray-700">The certificate record was not found.</p>
-            <Link className="inline-block px-4 py-2 rounded-xl bg-black text-white" href="/">
-              {t.backToGallery}
-            </Link>
-          </div>
-        </main>
+        <ErrorCard
+          title="Not Found"
+          description="The certificate record was not found."
+        >
+          <Link
+            href="/"
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-900 text-white text-sm font-medium transition-all hover:bg-gray-800"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            {t.backToGallery}
+          </Link>
+        </ErrorCard>
       );
     }
 
-    // title を必ず string に
     const normalizedEntry = {
       ...entry,
       title: entry.title ?? "(Untitled)",
     };
 
-    // 作品データ受け取りエンドポイント
     const artworkHref = `/api/files/download?certToken=${encodeURIComponent(token)}`;
-
-    // PDF化ターゲット
     const pdfTargetId = "coa-printable";
     const pdfFilename = "CoA_me-ish";
 
-    // ★ /public/brand の画像をそのまま使う
-    const BRAND = {
-      logoUrl: "/brand/me-ish.png",
-      sealUrl: "/brand/seal.png",
-      accent: "#00a1e9",
-      issuerName: "me-ish",
-      // 必要なら watermarkOpacity: 0.06 なども
-    } as const;
-
     return (
-      <main className="min-h-[80vh] px-4 py-10">
-        <div className="mx-auto w-full max-w-[920px] space-y-8">
-          {/* ① 案内（日本語/英語） */}
-          <section className="rounded-2xl border border-gray-200 p-6 bg-white">
-            <p className="text-gray-800 text-sm">{t.heroNote}</p>
-          </section>
+      <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        {/* Hero notice */}
+        <div className="bg-white border-b border-gray-100">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            <p className="text-sm text-gray-600 text-center leading-relaxed">
+              {t.heroNote}
+            </p>
+          </div>
+        </div>
 
-          {/* ② 証明書本体（A4台紙に載せてPDF化しやすく） */}
+        {/* Main content */}
+        <div className="max-w-4xl mx-auto px-4 py-8 md:py-12 space-y-6">
+          {/* Certificate card (printable area) */}
           <div
             id={pdfTargetId}
-            className="relative mx-auto bg-white"
-            style={{
-              // A4 (約 794x1123px @96dpi)
-              width: 794,
-              height: 1123,
-              padding: 32,
-            }}
+            className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden"
+            style={{ maxWidth: 800, margin: '0 auto' }}
           >
-            <div className="w-full h-full grid place-items-center">
-              <div className="w-[700px]">
-                <CoAInfoPanel
-                  entry={normalizedEntry}
-                  showOnchain={false}
-                  {...BRAND}
-                />
-              </div>
+            <div className="p-4 md:p-8">
+              <CoAInfoPanel
+                entry={normalizedEntry}
+                showOnchain={false}
+                {...BRAND}
+              />
             </div>
           </div>
 
-          {/* ③ 証明書PDF（DOM→PDF） */}
-          <CoAPdfActions filename={pdfFilename} targetId={pdfTargetId} />
-          <p className="mt-2 text-xs text-gray-500">{t.expiredNote}</p>
+          {/* Action sections */}
+          <div className="max-w-2xl mx-auto space-y-4">
+            {/* PDF Download */}
+            <CoAPdfActions filename={pdfFilename} targetId={pdfTargetId} />
+            <p className="text-xs text-gray-400 text-center">{t.expiredNote}</p>
 
-          {/* ④ 作品データ受け取り */}
-          <AssetsReceiveSection
-            labels={{
-              sectionTitle: t.assetsSectionTitle,
-              normalNote: t.normalNote,
-              normalDownloadBtn: t.normalDownloadBtn,
-            }}
-            artworkHref={artworkHref}
-          />
+            {/* Artwork Download */}
+            <AssetsReceiveSection
+              labels={{
+                sectionTitle: t.assetsSectionTitle,
+                normalNote: t.normalNote,
+                normalDownloadBtn: t.normalDownloadBtn,
+              }}
+              artworkHref={artworkHref}
+            />
+          </div>
+
+          {/* Back link */}
+          <div className="text-center pt-4">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              {t.backToGallery}
+            </Link>
+          </div>
         </div>
       </main>
     );
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : String(e);
     console.error("[CoA] server error:", e);
+
     return (
-      <main className="min-h-[60vh] flex items-center justify-center px-4">
-        <div className="w-full max-w-[760px] bg-white p-6 rounded-xl space-y-3 text-center">
-          <h1 className="text-xl font-bold">Server Error</h1>
-          <p className="text-gray-700 text-sm break-all">{String(e?.message || e)}</p>
-          <Link className="inline-block px-4 py-2 rounded-xl bg-black text-white" href="/">
-            {t.backToGallery}
-          </Link>
-        </div>
-      </main>
+      <ErrorCard
+        title="Server Error"
+        description={errorMessage}
+      >
+        <Link
+          href="/"
+          className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-900 text-white text-sm font-medium transition-all hover:bg-gray-800"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {t.backToGallery}
+        </Link>
+      </ErrorCard>
     );
   }
 }
-

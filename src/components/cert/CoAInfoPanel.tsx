@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Shield, CheckCircle2 } from "lucide-react";
 
 type EntryLike = {
   title?: string | null;
@@ -22,16 +23,11 @@ type Props = {
   entry: EntryLike;
   showOnchain?: boolean;
   verifyUrl?: string;
-  /** 左上ロゴ（SVG/PNG）。例: "/brand/me-ish.svg" */
   logoUrl?: string;
-  /** 右下シールに使う画像（透過PNG推奨・任意） */
   sealUrl?: string;
-  /** アクセントカラー（ブランド色） */
-  accent?: string; // default "#00a1e9"
-  /** 発行者表記 */
-  issuerName?: string; // default "me-ish"
-  /** 透かしロゴの不透明度（0.0-1.0） */
-  watermarkOpacity?: number; // default 0.06
+  accent?: string;
+  issuerName?: string;
+  watermarkOpacity?: number;
 };
 
 function fmtDate(d?: string | null) {
@@ -61,7 +57,7 @@ export default function CoAInfoPanel({
   sealUrl,
   accent = "#00a1e9",
   issuerName = "me-ish",
-  watermarkOpacity = 0.06,
+  watermarkOpacity = 0.04,
 }: Props) {
   const title = entry.title ?? "(Untitled)";
   const artist = entry.artist_name ?? "Unknown Artist";
@@ -89,223 +85,256 @@ export default function CoAInfoPanel({
   const tx = entry.txhash ?? undefined;
 
   return (
-    <div
-      className="text-[#111] bg-white rounded-[18px] shadow-sm print:shadow-none"
-      style={{ borderTop: `6px solid ${accent}` }}
-    >
-      {/* 二重枠 */}
-      <div className="relative rounded-[16px] border border-[#e5e7eb]">
-        <div className="pointer-events-none absolute inset-3 rounded-[12px] border border-[#e5e7eb]" />
+    <div className="relative bg-white rounded-3xl overflow-hidden">
+      {/* Top accent bar */}
+      <div
+        className="h-1.5 w-full"
+        style={{ background: `linear-gradient(90deg, ${accent} 0%, ${accent}88 100%)` }}
+      />
 
-        {/* 透かし（ロゴがあればロゴ、なければ文字） */}
-        <div className="pointer-events-none absolute inset-0 grid place-items-center">
+      {/* Main content */}
+      <div className="relative p-8 md:p-12">
+        {/* Watermark */}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
           {logoUrl ? (
             <img
               src={logoUrl}
-              alt="me-ish watermark"
-              className="select-none -rotate-12"
-              style={{ width: 420, opacity: watermarkOpacity }}
+              alt=""
+              className="select-none -rotate-12 scale-150"
+              style={{ width: 380, opacity: watermarkOpacity }}
             />
           ) : (
             <div
-              className="select-none -rotate-12 font-semibold tracking-[0.08em] text-black/5 print:text-black/10"
-              style={{ fontSize: 72 }}
+              className="select-none -rotate-12 font-bold tracking-[0.1em]"
+              style={{ fontSize: 96, color: `${accent}08` }}
             >
               me-ish
             </div>
           )}
         </div>
 
-        <div className="relative p-8 md:p-10">
-          {/* ブランドヘッダ */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt="me-ish"
-                  className="h-8 w-auto print:opacity-90"
-                />
-              ) : (
-                <div
-                  className="font-bold leading-none"
-                  style={{ color: accent }}
-                >
-                  me-ish
-                </div>
-              )}
-              <span
-                className="rounded-full px-2 py-1 text-[10px] font-semibold tracking-wide"
-                style={{ backgroundColor: accent, color: "#fff" }}
-              >
-                Official
+        {/* Header */}
+        <header className="relative flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            {logoUrl ? (
+              <img src={logoUrl} alt={issuerName} className="h-7 w-auto" />
+            ) : (
+              <span className="font-bold text-xl" style={{ color: accent }}>
+                {issuerName}
               </span>
-            </div>
-            <div className="text-right">
-              <div className="text-[13px] tracking-[0.38em] uppercase text-[#6b7280]">
-                Certificate of
-              </div>
-              <h1 className="font-serif text-3xl md:text-[34px] font-semibold tracking-wide">
-                Authenticity
-              </h1>
-            </div>
+            )}
+            <span
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide text-white"
+              style={{ backgroundColor: accent }}
+            >
+              <Shield className="w-3 h-3" />
+              Verified
+            </span>
           </div>
 
-          {/* 細いアクセントライン */}
+          <div className="text-right">
+            <p className="text-[11px] font-medium tracking-[0.25em] uppercase text-gray-400">
+              Certificate of
+            </p>
+            <h1 className="font-serif text-2xl md:text-3xl font-semibold tracking-wide text-gray-900 -mt-0.5">
+              Authenticity
+            </h1>
+          </div>
+        </header>
+
+        {/* Divider */}
+        <div className="relative mt-8 mb-10">
+          <div className="h-px bg-gray-100" />
           <div
-            className="mt-6 h-[2px] w-full rounded-full"
+            className="absolute left-0 top-0 h-px w-24"
             style={{ backgroundColor: accent }}
           />
+        </div>
 
-          {/* 作品情報 */}
-          <section className="mt-8 rounded-xl border border-[#eef2f5]">
-            <Row label="Title" right={title} />
-            <Divider />
-            <Row label="Artist" right={artist} />
-            <Divider />
-            <Row label="Edition" right={editionText} />
-          </section>
+        {/* Artwork Info */}
+        <section className="relative space-y-6">
+          <InfoRow label="Title" value={title} large />
+          <InfoRow label="Artist" value={artist} />
+          <InfoRow label="Edition" value={editionText} mono />
+        </section>
 
-          {/* 署名 / 発行情報 */}
-          <section className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="rounded-xl border border-[#eef2f5] p-4">
-              <div className="text-[11px] tracking-wide text-[#6b7280]">
-                Authorized Signature
-              </div>
-              <div className="mt-6 h-[42px] border-b border-dashed border-[#cbd5e1]" />
-              <div className="mt-1 text-[11px] text-[#6b7280]">{issuerName}</div>
-            </div>
+        {/* Grid: Signature + Details */}
+        <div className="relative mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Signature */}
+          <div className="rounded-2xl border border-gray-100 bg-gray-50/50 p-5">
+            <p className="text-[10px] font-medium tracking-[0.2em] uppercase text-gray-400">
+              Authorized Signature
+            </p>
+            <div className="mt-8 border-b border-dashed border-gray-300" />
+            <p className="mt-2 text-xs text-gray-500">{issuerName}</p>
+          </div>
 
-            <div className="rounded-xl border border-[#eef2f5] p-4">
-              <InfoItem k="Certificate #" v={String(certNo || "—")} />
-              <InfoItem k="Issued On" v={fmtDate(issuedAt) || "—"} />
-              {verifyUrl ? <InfoItem k="Verify" v={verifyUrl} mono /> : null}
-            </div>
-          </section>
+          {/* Certificate Details */}
+          <div className="rounded-2xl border border-gray-100 bg-gray-50/50 p-5 space-y-4">
+            <DetailItem label="Certificate #" value={String(certNo || "—")} mono />
+            <DetailItem label="Issued On" value={fmtDate(issuedAt) || "—"} />
+            {verifyUrl && <DetailItem label="Verify URL" value={verifyUrl} mono small />}
+          </div>
+        </div>
 
-          {/* オンチェーン情報 */}
-          {showOnchain ? (
-            <section
-              className="mt-6 rounded-xl p-4"
-              style={{ backgroundColor: "#f0fbff", border: `1px solid ${accent}33` }}
-            >
+        {/* On-chain Record */}
+        {showOnchain && (
+          <section
+            className="relative mt-8 rounded-2xl p-5"
+            style={{ backgroundColor: `${accent}08`, border: `1px solid ${accent}20` }}
+          >
+            <div className="flex items-center gap-2 mb-4">
               <div
-                className="text-[11px] font-semibold tracking-wide"
+                className="w-6 h-6 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: `${accent}15` }}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" style={{ color: accent }} />
+              </div>
+              <span
+                className="text-[11px] font-semibold tracking-wide uppercase"
                 style={{ color: accent }}
               >
                 On-chain Record
-              </div>
-              <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
-                <SmallKV k="Network" v={chain || "—"} />
-                <SmallKV k="Token ID" v={tokenId || "—"} mono />
-                <SmallKV k="Tx" v={shortHash(tx, 12) || "—"} mono />
-              </div>
-              <p className="mt-2 text-[11px] text-[#0b5d7a]">
-                The information above indicates the minted token recorded on the
-                blockchain.
-              </p>
-            </section>
-          ) : null}
+              </span>
+            </div>
 
-          {/* 認証シール */}
-          <div className="mt-8 flex items-center justify-end">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <OnchainItem label="Network" value={chain || "—"} accent={accent} />
+              <OnchainItem label="Token ID" value={tokenId || "—"} accent={accent} mono />
+              <OnchainItem label="Transaction" value={shortHash(tx, 12) || "—"} accent={accent} mono />
+            </div>
+          </section>
+        )}
+
+        {/* Seal */}
+        <div className="relative mt-10 flex items-center justify-end">
+          <div className="relative">
+            {/* Outer ring */}
             <div
-              className="relative h-16 w-16 rounded-full shadow-sm"
+              className="w-20 h-20 rounded-full p-[3px]"
               style={{
-                background:
-                  `conic-gradient(from 180deg at 50% 50%, ${accent} 0deg, #0a4254 320deg)`,
+                background: `conic-gradient(from 180deg, ${accent}, ${accent}40, ${accent})`,
               }}
             >
-              <div className="absolute inset-[2px] rounded-full bg-white" />
-              <div className="relative grid h-full w-full place-items-center">
+              {/* Inner white circle */}
+              <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
                 {sealUrl ? (
-                  <img
-                    src={sealUrl}
-                    alt="seal"
-                    className="h-8 w-8 opacity-90"
-                  />
+                  <img src={sealUrl} alt="seal" className="w-10 h-10 opacity-90" />
                 ) : (
-                  <span
-                    className="text-[10px] font-bold tracking-wider"
-                    style={{ color: accent }}
-                  >
-                    CERT
-                  </span>
+                  <div className="text-center">
+                    <div
+                      className="text-[9px] font-bold tracking-[0.15em] uppercase"
+                      style={{ color: accent }}
+                    >
+                      Certified
+                    </div>
+                    <div className="text-[7px] font-medium text-gray-400 mt-0.5">
+                      {issuerName}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
           </div>
         </div>
+
+        {/* Footer note */}
+        <p className="relative mt-8 text-[10px] text-gray-400 text-center leading-relaxed">
+          This certificate verifies the authenticity of the artwork described above.
+          <br />
+          Issued by {issuerName} — Digital Art Gallery
+        </p>
       </div>
     </div>
   );
 }
 
-/* ---------- sub components ---------- */
+/* ---------- Sub Components ---------- */
 
-function Divider() {
-  return <div className="h-px w-full bg-[#f1f5f9]" />;
-}
-
-function Row({ label, right }: { label: string; right: React.ReactNode }) {
-  return (
-    <div className="grid grid-cols-[140px_1fr] items-center gap-3 px-5 py-4 text-sm md:text-[15px]">
-      <div className="text-[11px] tracking-wide text-[#6b7280]">{label}</div>
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="font-medium">{right}</div>
-      </div>
-    </div>
-  );
-}
-
-function InfoItem({
-  k,
-  v,
+function InfoRow({
+  label,
+  value,
+  large = false,
   mono = false,
 }: {
-  k: string;
-  v: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+  large?: boolean;
   mono?: boolean;
 }) {
   return (
-    <div className="mt-2 first:mt-0">
-      <div className="text-[10px] uppercase tracking-[0.18em] text-[#6b7280]">
-        {k}
-      </div>
-      <div
+    <div className="flex flex-col gap-1">
+      <span className="text-[10px] font-medium tracking-[0.2em] uppercase text-gray-400">
+        {label}
+      </span>
+      <span
         className={[
-          "mt-1 text-[13px]",
-          mono ? "font-mono tabular-nums tracking-wide" : "font-medium",
+          large ? "text-xl md:text-2xl font-semibold" : "text-base md:text-lg font-medium",
+          mono ? "font-mono tabular-nums" : "",
+          "text-gray-900",
         ].join(" ")}
       >
-        {v}
-      </div>
+        {value}
+      </span>
     </div>
   );
 }
 
-function SmallKV({
-  k,
-  v,
+function DetailItem({
+  label,
+  value,
+  mono = false,
+  small = false,
+}: {
+  label: string;
+  value: React.ReactNode;
+  mono?: boolean;
+  small?: boolean;
+}) {
+  return (
+    <div>
+      <p className="text-[9px] font-medium tracking-[0.2em] uppercase text-gray-400">
+        {label}
+      </p>
+      <p
+        className={[
+          "mt-0.5",
+          small ? "text-[11px]" : "text-sm",
+          mono ? "font-mono tabular-nums tracking-wide" : "font-medium",
+          "text-gray-700",
+        ].join(" ")}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function OnchainItem({
+  label,
+  value,
+  accent,
   mono = false,
 }: {
-  k: string;
-  v: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+  accent: string;
   mono?: boolean;
 }) {
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-[0.18em] text-[#0b5d7a]">
-        {k}
-      </div>
-      <div
+      <p className="text-[9px] font-medium tracking-[0.18em] uppercase" style={{ color: `${accent}99` }}>
+        {label}
+      </p>
+      <p
         className={[
-          "mt-1 text-[12px]",
+          "mt-0.5 text-[12px]",
           mono ? "font-mono tabular-nums tracking-wide" : "font-medium",
         ].join(" ")}
+        style={{ color: accent }}
       >
-        {v}
-      </div>
+        {value}
+      </p>
     </div>
   );
 }
