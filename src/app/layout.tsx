@@ -20,7 +20,18 @@ export const metadata: Metadata = {
   title: "me-ish",
   description: "アートを、もっと近くに。",
   manifest: "/manifest.json",
+
+  // ✅ 追加：タブ / ブックマーク / iOS用アイコン
+  icons: {
+    icon: [
+      { url: "/favicon2.png" }, // これがタブの基本
+      // PNGも置くなら追加（任意）
+      // { url: "/icon.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
 };
+
 
 export default function RootLayout({
   children,
