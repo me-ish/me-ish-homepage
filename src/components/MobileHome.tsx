@@ -29,6 +29,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { SectionHeader } from '@/components/shared/SectionHeader';
+import { FloatingBubbles } from '@/components/shared/FloatingBubbles';
 
 // Layout Tokens
 const LAYOUT = {
@@ -84,7 +85,7 @@ function useGalleryStats() {
   return stats;
 }
 
-// 展示作品を取得するフック
+// 展示作品を取得するフック（Hero表示用：agree_promotion=true のみ）
 function useGalleryArtworks(limit = 4) {
   const [artworks, setArtworks] = useState<{ src: string; id: number }[]>([]);
 
@@ -93,11 +94,13 @@ function useGalleryArtworks(limit = 4) {
 
     (async () => {
       try {
+        // Hero表示は公式広報への同意（agree_promotion）がある作品のみ
         const { data, error } = await supabase
           .from('entries')
           .select('id, image_url, file_name')
           .eq('confirmed', true)
           .eq('display_ready', true)
+          .eq('agree_promotion', true)
           .order('confirmed_at', { ascending: false })
           .limit(limit);
 
@@ -451,18 +454,22 @@ const MobileHome = () => {
   className="relative min-h-[calc(92svh-64px)] flex flex-col items-center overflow-hidden px-5 pt-10 pb-20"
   aria-labelledby="hero-title"
 >
-          {/* Floating artworks（展示中の作品） */}
+          {/* Floating artworks（展示中の作品）またはシャボン玉 */}
           <div className="absolute inset-0 pointer-events-none">
-            {floatingArts.map((art) => (
-              <FloatingArtworkMobile
-                key={art.id}
-                src={art.src}
-                x={art.x}
-                y={art.y}
-                size={art.size}
-                delay={art.delay}
-              />
-            ))}
+            {floatingArts.length > 0 ? (
+              floatingArts.map((art) => (
+                <FloatingArtworkMobile
+                  key={art.id}
+                  src={art.src}
+                  x={art.x}
+                  y={art.y}
+                  size={art.size}
+                  delay={art.delay}
+                />
+              ))
+            ) : (
+              <FloatingBubbles variant="mobile" />
+            )}
           </div>
 
           {/* Main content */}

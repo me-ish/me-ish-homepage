@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionHeader } from '@/components/shared/SectionHeader';
 import { BackToTop } from '@/components/shared/BackToTop';
+import { FloatingBubbles } from '@/components/shared/FloatingBubbles';
 import {
   Accordion,
   AccordionContent,
@@ -61,7 +62,7 @@ const FLOATING_POSITIONS = [
   { x: 18, y: 32, size: 70, delay: 2.8 },
 ];
 
-// 展示作品を取得するフック
+// 展示作品を取得するフック（Hero表示用：agree_promotion=true のみ）
 function useGalleryArtworks(limit = 8) {
   const [artworks, setArtworks] = useState<{ src: string; id: number }[]>([]);
 
@@ -70,12 +71,13 @@ function useGalleryArtworks(limit = 8) {
 
     (async () => {
       try {
-        // White と Float の展示作品を取得
+        // Hero表示は公式広報への同意（agree_promotion）がある作品のみ
         const { data, error } = await supabase
           .from('entries')
           .select('id, image_url, file_name')
           .eq('confirmed', true)
           .eq('display_ready', true)
+          .eq('agree_promotion', true)
           .order('confirmed_at', { ascending: false })
           .limit(limit);
 
@@ -661,20 +663,24 @@ const DesktopHome = () => {
           className="relative min-h-[calc(92svh-70px)] md:min-h-[calc(96svh-70px)] flex flex-col items-center justify-center overflow-hidden pt-10 md:pt-14 pb-10"
           aria-labelledby="hero-title"
         >
-          {/* 浮遊するアート作品（展示中の作品） */}
+          {/* 浮遊するアート作品（展示中の作品）またはシャボン玉 */}
           <div className="absolute inset-0 pointer-events-none">
-            {floatingArts.map((art) => (
-              <FloatingArtwork
-                key={art.id}
-                src={art.src}
-                x={art.x}
-                y={art.y}
-                size={art.size}
-                delay={art.delay}
-                mouseX={mousePosition.x}
-                mouseY={mousePosition.y}
-              />
-            ))}
+            {floatingArts.length > 0 ? (
+              floatingArts.map((art) => (
+                <FloatingArtwork
+                  key={art.id}
+                  src={art.src}
+                  x={art.x}
+                  y={art.y}
+                  size={art.size}
+                  delay={art.delay}
+                  mouseX={mousePosition.x}
+                  mouseY={mousePosition.y}
+                />
+              ))
+            ) : (
+              <FloatingBubbles variant="desktop" mouseX={mousePosition.x} mouseY={mousePosition.y} />
+            )}
           </div>
 
           {/* メインコンテンツ */}
