@@ -70,4 +70,4 @@ Disallow: /admin/
 Disallow: /admin-login/
 
 # サイトマップ
-Sitemap: https://me-ish.art/sitemap.xml
+Sitemap: https://www.me-ish.art/sitemap.xml

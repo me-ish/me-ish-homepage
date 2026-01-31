@@ -427,6 +427,9 @@ async function handleGalleryPurchase(
             console.error("[webhook/stripe/gallery] COA link issue failed:", coaErr);
           }
 
+          // 領収書URL
+          const receiptUrl = `${siteUrl()}/receipt/${session.id}`;
+
           await sendEmailInternal("purchaseBuyer", buyerEmail, {
             name: buyerName,
             title: entry.title,
@@ -436,6 +439,7 @@ async function handleGalleryPurchase(
             editionTotal: entry.edition_total,
             orderId: session.id,
             certificateUrl,
+            receiptUrl,
           });
           console.log("[webhook/stripe/gallery] purchaseBuyer email sent:", {
             to: buyerEmail,
