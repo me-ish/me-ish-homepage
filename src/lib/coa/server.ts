@@ -50,7 +50,7 @@ export async function verifyCertToken(token?: string | null): Promise<VerifyResu
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) return { ok: false, reason: 'notfound' };
+  if (!data || !data.entry_id) return { ok: false, reason: 'notfound' };
   // ビューで既に revoked=false, expires_at > now() のフィルタ済み
 
   if (ONE_TIME && !data.used_at && data.id) {
