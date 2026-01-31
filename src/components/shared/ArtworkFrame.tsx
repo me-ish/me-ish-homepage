@@ -28,6 +28,16 @@ type ArtworkFrameProps = {
   avatarRef: React.RefObject<THREE.Group>;
   position?: readonly [number, number, number];
   rotation?: readonly [number, number, number];
+  // 購入関連データ
+  description?: string;
+  is_for_sale?: boolean;
+  price?: number | null;
+  sns_links?: string;
+  created_at?: string | null;
+  is_sold?: boolean;
+  edition_mode?: 'limited' | 'unlimited' | null;
+  edition_total?: number | null;
+  edition_sold?: number | null;
 } & Omit<ThreeElements['group'], 'id'>;
 
 type ArtworkFrameHandle = THREE.Group & {
@@ -47,6 +57,16 @@ const ArtworkFrame = forwardRef<ArtworkFrameHandle, ArtworkFrameProps>(
       author = 'Unknown',
       imageUrl = '',
       avatarRef,
+      // 購入関連データ
+      description = '',
+      is_for_sale = false,
+      price = null,
+      sns_links = '{}',
+      created_at = null,
+      is_sold = false,
+      edition_mode = null,
+      edition_total = null,
+      edition_sold = 0,
       ...rest
     },
     ref
@@ -108,7 +128,34 @@ const ArtworkFrame = forwardRef<ArtworkFrameHandle, ArtworkFrameProps>(
         rotation={adjustedRotation}
         onClick={(e) => {
           e.stopPropagation();
-          setZoomedArtwork({ id, imageUrl, title, author, width, height });
+
+          // 版情報をそのまま渡す
+          const total =
+            typeof edition_total === 'number' && Number.isFinite(edition_total)
+              ? edition_total
+              : null;
+          const sold =
+            typeof edition_sold === 'number' && Number.isFinite(edition_sold)
+              ? edition_sold
+              : 0;
+
+          setZoomedArtwork({
+            id,
+            imageUrl,
+            title,
+            author,
+            width,
+            height,
+            description,
+            price: price ?? 0,
+            is_for_sale: !!is_for_sale,
+            sns_links: sns_links ?? '{}',
+            created_at: created_at ?? '',
+            is_sold: !!is_sold,
+            edition_mode: edition_mode ?? null,
+            edition_total: total,
+            edition_sold: sold,
+          } as any);
         }}
         {...rest}
       >

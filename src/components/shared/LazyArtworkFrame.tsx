@@ -19,6 +19,16 @@ type LazyArtworkFrameProps = {
   avatarRef: React.RefObject<THREE.Group>;
   position?: readonly [number, number, number];
   rotation?: readonly [number, number, number];
+  // 購入関連データ
+  description?: string;
+  is_for_sale?: boolean;
+  price?: number | null;
+  sns_links?: string;
+  created_at?: string | null;
+  is_sold?: boolean;
+  edition_mode?: 'limited' | 'unlimited' | null;
+  edition_total?: number | null;
+  edition_sold?: number | null;
 };
 
 /**
@@ -67,6 +77,16 @@ export default function LazyArtworkFrame({
   author = 'Unknown',
   imageUrl = '',
   avatarRef,
+  // 購入関連データ
+  description = '',
+  is_for_sale = false,
+  price = null,
+  sns_links = '{}',
+  created_at = null,
+  is_sold = false,
+  edition_mode = null,
+  edition_total = null,
+  edition_sold = 0,
 }: LazyArtworkFrameProps): React.JSX.Element {
   const [shouldLoad, setShouldLoad] = useState(false);
 
@@ -143,6 +163,16 @@ export default function LazyArtworkFrame({
         author={author}
         imageUrl={imageUrl}
         avatarRef={avatarRef}
+        // 購入関連データ
+        description={description}
+        is_for_sale={is_for_sale}
+        price={price}
+        sns_links={sns_links}
+        created_at={created_at}
+        is_sold={is_sold}
+        edition_mode={edition_mode}
+        edition_total={edition_total}
+        edition_sold={edition_sold}
       />
     </Suspense>
   );

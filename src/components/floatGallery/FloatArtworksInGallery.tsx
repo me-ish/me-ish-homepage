@@ -32,6 +32,15 @@ type Entry = {
   title: string;
   artist_name: string;
   image_url: string;
+  description: string | null;
+  is_for_sale: boolean;
+  price: number | null;
+  sns_links: string | null;
+  created_at: string | null;
+  is_sold: boolean;
+  edition_mode: 'limited' | 'unlimited' | null;
+  edition_total: number | null;
+  edition_sold: number | null;
 };
 
 function ComingSoonPanel({
@@ -204,6 +213,16 @@ export default function FloatArtworksInGallery({
                   author={entry.artist_name}
                   imageUrl={entry.image_url}
                   avatarRef={avatarRef}
+                  // 購入関連データ
+                  description={entry.description ?? ''}
+                  is_for_sale={entry.is_for_sale}
+                  price={entry.price}
+                  sns_links={entry.sns_links ?? '{}'}
+                  created_at={entry.created_at}
+                  is_sold={entry.is_sold}
+                  edition_mode={entry.edition_mode}
+                  edition_total={entry.edition_total}
+                  edition_sold={entry.edition_sold ?? 0}
                 />
                 <ArtworkLabel
                   position={pos.position}
