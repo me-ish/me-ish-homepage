@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { MessageCircle, Send, X, Mic, MicOff } from 'lucide-react';
+import { Send, X, Mic, MicOff, Sparkles, Loader2, ExternalLink } from 'lucide-react';
 import { useZoomArtworkOptional } from './ZoomArtworkContext';
 
 /* ===== 最小の SpeechRecognition 型定義 ===== */
@@ -61,22 +61,42 @@ export default function AIGuideChat({
   const hasNewControl =
     typeof controlledOpen === 'boolean' && typeof onOpenChange === 'function';
   const hasOldControl =
-    typeof open === 'boolean' && typeof onOpenChange === 'function'; // onClose だけでは制御にしない
+    typeof open === 'boolean' && typeof onOpenChange === 'function';
 
   const isControlled = hasNewControl || hasOldControl;
   const controlled = hasNewControl ? controlledOpen : hasOldControl ? open : undefined;
 
   const [uncontrolledOpen, setUncontrolledOpen] = useState<boolean>(defaultOpen);
+  const [animateIn, setAnimateIn] = useState(false);
   const isOpen = isControlled ? Boolean(controlled) : uncontrolledOpen;
 
   const setOpen = (next: boolean) => {
-    if (isControlled) {
-      onOpenChange?.(next);   // 親に通知
-      if (!next) onClose?.(); // 旧API互換のクローズ通知
+    if (next) {
+      if (isControlled) {
+        onOpenChange?.(true);
+      } else {
+        setUncontrolledOpen(true);
+      }
+      requestAnimationFrame(() => setAnimateIn(true));
     } else {
-      setUncontrolledOpen(next);
+      setAnimateIn(false);
+      setTimeout(() => {
+        if (isControlled) {
+          onOpenChange?.(false);
+          onClose?.();
+        } else {
+          setUncontrolledOpen(false);
+        }
+      }, 200);
     }
   };
+
+  // 初回オープン時のアニメーション
+  useEffect(() => {
+    if (isOpen && !animateIn) {
+      requestAnimationFrame(() => setAnimateIn(true));
+    }
+  }, [isOpen]);
 
   /* -------------------------------
    * 会話の状態
@@ -85,6 +105,7 @@ export default function AIGuideChat({
   const [reply, setReply] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasSentInitial, setHasSentInitial] = useState(false);
+  const replyRef = useRef<HTMLDivElement>(null);
 
   /* -------------------------------
    * 音声認識（マウント後にだけセット）
@@ -95,7 +116,6 @@ export default function AIGuideChat({
   const [srSupported, setSrSupported] = useState(false);
 
   useEffect(() => {
-    // Mic対応可否はマウント後に判定（SSR差分防止）
     const supported =
       typeof window !== 'undefined' &&
       (!!window.webkitSpeechRecognition || !!window.SpeechRecognition);
@@ -135,7 +155,6 @@ export default function AIGuideChat({
    * ----------------------------- */
   useEffect(() => {
     if (!initialMessage || hasSentInitial) return;
-    // 自動送信 & パネルを開く
     void handleSubmit(initialMessage);
     setHasSentInitial(true);
     setOpen(true);
@@ -150,6 +169,7 @@ export default function AIGuideChat({
     if (!q) return;
 
     setLoading(true);
+    setReply('');
     try {
       const res = await fetch('/api/ai-guide', {
         method: 'POST',
@@ -161,6 +181,11 @@ export default function AIGuideChat({
 
       setReply(answer);
       setInput('');
+
+      // スクロール
+      setTimeout(() => {
+        replyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
 
       // TTS（対応ブラウザのみ）
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -195,94 +220,217 @@ export default function AIGuideChat({
     } catch {}
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(input);
+    }
+  };
+
   /* -------------------------------
    * Render
    * ----------------------------- */
-  // 作品ズーム中は完全に非表示
   if (isArtworkZoomed) return null;
 
   return (
-    <div className={`fixed bottom-2 right-2 z-[9999] ${isOpen ? 'w-[320px]' : ''}`}>
+    <div className="fixed bottom-4 right-4 z-[9999]">
+      {/* 閉じた状態: フローティングボタン */}
       {!isOpen && (
         <button
           onClick={() => setOpen(true)}
-          className="flex items-center gap-2 bg-white border border-cyan-400 text-cyan-600 px-4 py-2 rounded-full shadow hover:bg-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-2"
+          className="
+            group flex items-center gap-2.5
+            px-4 py-2.5 rounded-full
+            bg-black/60 backdrop-blur-xl
+            border border-white/20
+            text-white
+            shadow-lg shadow-black/20
+            hover:bg-black/70 hover:border-cyan-400/50 hover:shadow-cyan-500/20
+            transition-all duration-300
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black
+          "
           aria-label="ガイドAIを開く"
           type="button"
         >
-          <img src="/icons/logo-mini.png" alt="" className="w-7 h-7" />
-          <span className="text-sm font-semibold">ガイドAI</span>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-inner">
+            <Sparkles size={16} className="text-white" />
+          </div>
+          <span className="text-sm font-medium">ガイドAI</span>
         </button>
       )}
 
+      {/* 開いた状態: チャットパネル */}
       {isOpen && (
         <div
-          className="bg-white rounded-xl p-4 shadow-lg border border-cyan-300 relative w-[320px]"
+          className={`
+            w-[340px] max-h-[70vh] flex flex-col
+            rounded-2xl overflow-hidden
+            bg-gray-900/95 backdrop-blur-xl
+            border border-white/10
+            shadow-2xl shadow-black/40
+            transition-all duration-200 ease-out origin-bottom-right
+            ${animateIn ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}
+          `}
           role="dialog"
           aria-modal="true"
           aria-label="me-ish ガイドAI"
         >
-          <button
-            onClick={() => setOpen(false)}
-            className="absolute top-1 right-2 text-sm text-cyan-600 hover:underline inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-2 rounded"
-            aria-label="ガイドAIを閉じる"
-            type="button"
-          >
-            <X size={14} /> 閉じる
-          </button>
-
-          <h2 className="font-bold mb-2 text-cyan-600 flex items-center gap-2 text-sm">
-            <MessageCircle size={18} /> me-ish ガイドAI
-          </h2>
-
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            rows={2}
-            className="w-full p-2 border rounded text-sm"
-            placeholder="me-ishについて質問してみよう"
-          />
-
-          <div className="flex items-center gap-2 mt-2">
-            {/* Micはマウント後に対応判定して描画（SSR差分を防ぐ） */}
-            {srSupported && (
-              <button
-                onClick={isRecording ? stopListening : startListening}
-                className="text-cyan-600 hover:text-cyan-800"
-                aria-label={isRecording ? '音声入力を停止' : '音声入力を開始'}
-                type="button"
-              >
-                {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
-              </button>
-            )}
-
+          {/* ヘッダー */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/5">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                <Sparkles size={18} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-white font-semibold text-sm">me-ish ガイドAI</h2>
+                <p className="text-white/50 text-xs">作品や展示について質問できます</p>
+              </div>
+            </div>
             <button
-              onClick={() => handleSubmit(input)}
-              className="flex-1 bg-cyan-500 text-white py-1 rounded hover:bg-cyan-600 inline-flex items-center justify-center gap-1 disabled:opacity-60"
-              disabled={loading}
+              onClick={() => setOpen(false)}
+              className="
+                w-8 h-8 rounded-lg flex items-center justify-center
+                text-white/60 hover:text-white hover:bg-white/10
+                transition-colors
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400
+              "
+              aria-label="閉じる"
               type="button"
             >
-              <Send size={16} />
-              {loading ? '送信中...' : '送信'}
+              <X size={18} />
             </button>
           </div>
 
-          {!!reply && (
-            <div className="mt-3 p-2 bg-gray-100 rounded text-sm whitespace-pre-line" aria-live="polite">
-              {reply}
-            </div>
-          )}
+          {/* メインコンテンツ（スクロール可能） */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[120px]">
+            {/* 初期メッセージ */}
+            {!reply && !loading && (
+              <div className="text-center py-4">
+                <p className="text-white/60 text-sm mb-3">
+                  何でも聞いてください
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {['おすすめの作品は？', '展示中の作品を見たい', '購入方法を教えて'].map((q) => (
+                    <button
+                      key={q}
+                      onClick={() => handleSubmit(q)}
+                      className="
+                        px-3 py-1.5 rounded-full
+                        bg-white/10 hover:bg-white/20
+                        text-white/80 text-xs
+                        transition-colors
+                      "
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-          <div className="mt-4 text-xs text-gray-500 text-center">
-            不具合などがありましたか？{' '}
-            <a
-              href="/contact"
-              className="text-cyan-600 underline hover:text-cyan-800"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              お問い合わせはこちら
-            </a>
+            {/* ローディング */}
+            {loading && (
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
+                <Loader2 size={18} className="text-cyan-400 animate-spin" />
+                <span className="text-white/70 text-sm">考え中...</span>
+              </div>
+            )}
+
+            {/* 回答 */}
+            {reply && !loading && (
+              <div
+                ref={replyRef}
+                className="p-4 rounded-2xl bg-white/5 border border-white/10"
+              >
+                <p className="text-white/90 text-sm leading-relaxed whitespace-pre-line">
+                  {reply}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* 入力エリア */}
+          <div className="p-3 border-t border-white/10 bg-white/5">
+            <div className="flex items-end gap-2">
+              <div className="flex-1 relative">
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  rows={1}
+                  className="
+                    w-full px-4 py-2.5 pr-10
+                    bg-white/10 hover:bg-white/15 focus:bg-white/15
+                    border border-white/10 focus:border-cyan-400/50
+                    rounded-xl
+                    text-white text-sm placeholder-white/40
+                    resize-none
+                    transition-colors
+                    focus:outline-none focus:ring-1 focus:ring-cyan-400/50
+                  "
+                  placeholder="メッセージを入力..."
+                  style={{ minHeight: '44px', maxHeight: '100px' }}
+                />
+                {/* マイクボタン（入力欄内） */}
+                {srSupported && (
+                  <button
+                    onClick={isRecording ? stopListening : startListening}
+                    className={`
+                      absolute right-2 top-1/2 -translate-y-1/2
+                      w-7 h-7 rounded-lg flex items-center justify-center
+                      transition-all
+                      ${isRecording
+                        ? 'bg-red-500/20 text-red-400'
+                        : 'text-white/40 hover:text-white/70 hover:bg-white/10'
+                      }
+                    `}
+                    aria-label={isRecording ? '音声入力を停止' : '音声入力を開始'}
+                    type="button"
+                  >
+                    {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
+                  </button>
+                )}
+              </div>
+
+              {/* 送信ボタン */}
+              <button
+                onClick={() => handleSubmit(input)}
+                disabled={loading || !input.trim()}
+                className="
+                  w-11 h-11 rounded-xl flex items-center justify-center
+                  bg-gradient-to-r from-cyan-500 to-blue-500
+                  hover:from-cyan-400 hover:to-blue-400
+                  disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed
+                  text-white
+                  shadow-lg shadow-cyan-500/30 disabled:shadow-none
+                  transition-all
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400
+                "
+                type="button"
+              >
+                {loading ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Send size={18} />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* フッター */}
+          <div className="px-4 py-2 border-t border-white/5 bg-black/20">
+            <p className="text-white/40 text-[11px] text-center">
+              不具合がありましたら{' '}
+              <a
+                href="/contact"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyan-400/70 hover:text-cyan-400 inline-flex items-center gap-0.5"
+              >
+                お問い合わせ
+                <ExternalLink size={10} />
+              </a>
+            </p>
           </div>
         </div>
       )}

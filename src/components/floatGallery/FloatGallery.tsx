@@ -22,6 +22,7 @@ import JoystickInput from '@/components/shared/JoystickInput';
 import { useIsMobile } from '@/lib/useIsMobile';
 import { GalleryIntroModal } from '@/components/shared/GalleryIntroModal';
 import { OperationHintButton } from '@/components/shared/OperationHintButton';
+import AIGuideChat from '@/components/shared/AIGuideChat';
 
 type Props = {
   /** /float?date=YYYY-MM-DD（未指定なら下流で今日扱いにフォールバック） */
@@ -89,6 +90,7 @@ export default function FloatGallery({ dateStr }: Props): React.JSX.Element {
       </Canvas>
 
       <ZoomArtworkDisplay />
+      <AIGuideChat />
     </div>
   );
 }
