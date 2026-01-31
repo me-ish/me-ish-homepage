@@ -4,6 +4,12 @@ alter table public.profiles
   add column if not exists banner_focus_y real,
   add column if not exists banner_zoom real;
 
+-- If existing columns were created with integer types, widen them.
+alter table public.profiles
+  alter column banner_focus_x type real using banner_focus_x::real,
+  alter column banner_focus_y type real using banner_focus_y::real,
+  alter column banner_zoom type real using banner_zoom::real;
+
 -- Backfill defaults for existing rows.
 update public.profiles
 set

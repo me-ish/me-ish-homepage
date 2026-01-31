@@ -308,7 +308,7 @@ return (
             </label>
             <div
               className={[
-                "relative h-28 w-full rounded-xl border overflow-hidden",
+                "relative h-48 md:h-56 w-full rounded-xl border overflow-hidden",
                 draggingBanner ? "ring-2 ring-[#00a1e9] border-[#00a1e9]" : "bg-gray-50",
               ].join(" ")}
               onDrop={(e) => handleDrop(e, "banner")}
