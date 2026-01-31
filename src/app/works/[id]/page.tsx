@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -17,6 +17,18 @@ import {
   type EntryRow,
 } from '@/lib/gallery/galleryUtils';
 
+// セッションIDを取得または生成
+function getOrCreateSessionId(): string {
+  const key = 'meish_session_id';
+  if (typeof window === 'undefined') return '';
+  let sessionId = sessionStorage.getItem(key);
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    sessionStorage.setItem(key, sessionId);
+  }
+  return sessionId;
+}
+
 export default function WorkDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -24,6 +36,34 @@ export default function WorkDetailPage() {
   const [entry, setEntry] = useState<EntryRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const viewRecorded = useRef(false);
+
+  // 閲覧イベントを記録
+  useEffect(() => {
+    if (!id || isNaN(Number(id)) || viewRecorded.current) return;
+
+    const recordView = async () => {
+      viewRecorded.current = true;
+      try {
+        const sessionId = getOrCreateSessionId();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        await fetch(`/api/entries/${id}/view`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            userId: user?.id || null,
+          }),
+        });
+      } catch (e) {
+        // 閲覧記録の失敗はサイレントに無視
+        console.debug('[view] record failed:', e);
+      }
+    };
+
+    recordView();
+  }, [id]);
 
   useEffect(() => {
     const fetchEntry = async () => {

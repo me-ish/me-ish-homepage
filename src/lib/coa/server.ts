@@ -40,9 +40,10 @@ export async function verifyCertToken(token?: string | null): Promise<VerifyResu
   const hex = sha256hex(token);
   const b64 = sha256b64(token);
 
+  // v_cert_links_active ビューを使用（有効なリンクのみ返す）
   const { data, error } = await sb
-    .from('cert_links')
-    .select('id, entry_id, expires_at, revoked, used_at, created_at')
+    .from('v_cert_links_active')
+    .select('id, entry_id, used_at, created_at')
     .in('token_hash', [hex, b64])
     .order('created_at', { ascending: false })
     .limit(1)
@@ -50,12 +51,10 @@ export async function verifyCertToken(token?: string | null): Promise<VerifyResu
 
   if (error) throw error;
   if (!data) return { ok: false, reason: 'notfound' };
-  if (data.revoked) return { ok: false, reason: 'revoked' };
-  if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) {
-    return { ok: false, reason: 'expired' };
-  }
+  // ビューで既に revoked=false, expires_at > now() のフィルタ済み
 
   if (ONE_TIME && !data.used_at) {
+    // used_at の更新は cert_links テーブルに対して行う
     await sb.from('cert_links').update({ used_at: new Date().toISOString() }).eq('id', data.id);
   }
   return { ok: true, entryId: data.entry_id };

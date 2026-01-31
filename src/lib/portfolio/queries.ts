@@ -465,3 +465,87 @@ export async function getUserProfile(
   }
   return data as UserProfile | null;
 }
+
+/* =========================================================
+ * E) 公開ポートフォリオ用ビュー（v_public_portfolio_entries）
+ * ========================================================= */
+
+export type PublicPortfolioEntry = {
+  id: number;
+  user_id: string;
+  created_at: string;
+  title: string | null;
+  description: string | null;
+  image_url: string;
+  gallery_type: string | null;
+  likes: number;
+  is_for_sale: boolean;
+  sale_type: string | null;
+  price: number | null;
+  is_sold: boolean | null;
+  edition_total: number | null;
+  edition_sold: number | null;
+  edition_remaining: number | null;
+  sold_out_calc: boolean | null;
+  display_ready: boolean;
+  display_start_at: string | null;
+  display_end_at: string | null;
+};
+
+/**
+ * 公開ポートフォリオ作品を取得（v_public_portfolio_entries ビュー使用）
+ * ビューで既に公開条件（display_ready, portfolio_hidden等）がフィルタ済み
+ */
+export async function getPublicPortfolioEntries(
+  supabase: SupabaseClient,
+  userId: string,
+  options?: {
+    sortKey?: "new" | "likes";
+    limit?: number;
+  }
+): Promise<PublicPortfolioEntry[]> {
+  const sortKey = options?.sortKey ?? "new";
+  const limit = options?.limit ?? 50;
+
+  let query = supabase
+    .from("v_public_portfolio_entries")
+    .select("*")
+    .eq("user_id", userId);
+
+  if (sortKey === "likes") {
+    query = query.order("likes", { ascending: false });
+  } else {
+    query = query.order("created_at", { ascending: false });
+  }
+
+  query = query.limit(limit);
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("[getPublicPortfolioEntries] error:", error);
+    return [];
+  }
+
+  return (data ?? []).map((e: any) => ({
+    id: e.id,
+    user_id: e.user_id,
+    created_at: e.created_at,
+    title: e.title,
+    description: e.description,
+    image_url: e.image_url,
+    gallery_type: e.gallery_type,
+    likes: e.likes ?? 0,
+    is_for_sale: e.is_for_sale ?? false,
+    sale_type: e.sale_type,
+    price: e.price,
+    is_sold: e.is_sold,
+    edition_total: e.edition_total,
+    edition_sold: e.edition_sold,
+    edition_remaining: e.edition_remaining,
+    sold_out_calc: e.sold_out_calc,
+    display_ready: e.display_ready ?? false,
+    display_start_at: e.display_start_at,
+    display_end_at: e.display_end_at,
+  }));
+}
