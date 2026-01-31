@@ -102,6 +102,9 @@ export default function MyPageClient() {
     const slug = profile?.id || 'me';
     return siteOrigin ? `${siteOrigin}/artists/${slug}` : '';
   }, [siteOrigin, profile]);
+  const bannerFocusX = profile?.banner_focus_x ?? 0.5;
+  const bannerFocusY = profile?.banner_focus_y ?? 0.5;
+  const bannerZoom = profile?.banner_zoom ?? 1;
 
   // 画面幅（モバイル判定）
   useEffect(() => {
@@ -308,6 +311,9 @@ export default function MyPageClient() {
         bio: (payload.bio ?? '').trim() || null,
         avatar_url: payload.avatar_url || null,
         banner_url: payload.banner_url || null,
+        banner_focus_x: payload.banner_focus_x ?? 0.5,
+        banner_focus_y: payload.banner_focus_y ?? 0.5,
+        banner_zoom: payload.banner_zoom ?? 1,
         sns_links: payload.sns_links || {},
       };
 
@@ -335,6 +341,11 @@ export default function MyPageClient() {
               alt="banner"
               fill
               className="object-cover"
+              style={{
+                objectPosition: `${bannerFocusX * 100}% ${bannerFocusY * 100}%`,
+                transform: `scale(${bannerZoom})`,
+                transformOrigin: `${bannerFocusX * 100}% ${bannerFocusY * 100}%`,
+              }}
               priority
               unoptimized
             />
@@ -511,6 +522,9 @@ export default function MyPageClient() {
             bio: profile.bio ?? null,
             avatar_url: profile.avatar_url ?? null,
             banner_url: profile.banner_url ?? null,
+            banner_focus_x: profile.banner_focus_x ?? 0.5,
+            banner_focus_y: profile.banner_focus_y ?? 0.5,
+            banner_zoom: profile.banner_zoom ?? 1,
             sns_links: profile.sns_links ?? {},
           }}
           onSave={handleProfileSave}

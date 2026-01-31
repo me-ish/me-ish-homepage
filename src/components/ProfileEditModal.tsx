@@ -17,6 +17,9 @@ type SNS = { homepage?: string; twitter?: string; instagram?: string };
 type Props = {
   initialProfile: {
     display_name: string;
+    banner_focus_x?: number | null;
+    banner_focus_y?: number | null;
+    banner_zoom?: number | null;
     bio?: string | null;          // ← null を許容
     avatar_url?: string | null;   // ← ここ
     banner_url?: string | null;   // ← ここ
@@ -24,6 +27,9 @@ type Props = {
   };
   onSave: (updated: {
     display_name: string;
+    banner_focus_x?: number | null;
+    banner_focus_y?: number | null;
+    banner_zoom?: number | null;
     bio?: string | null;          // ← ここ
     avatar_url?: string | null;   // ← ここ
     banner_url?: string | null;   // ← ここ
@@ -35,6 +41,8 @@ type Props = {
 
 const ACCEPTED_MIME = ['image/png', 'image/jpeg', 'image/webp'];
 const MAX_FILE_MB = 8;
+const BANNER_ZOOM_MIN = 1;
+const BANNER_ZOOM_MAX = 2.5;
 
 export default function ProfileEditModal({ initialProfile, onSave, onCancel }: Props) {
   // form states
@@ -45,6 +53,15 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
   const [instagram, setInstagram] = useState(initialProfile.sns_links?.instagram || '');
   const [avatarUrl, setAvatarUrl] = useState(initialProfile.avatar_url || '');
   const [bannerUrl, setBannerUrl] = useState(initialProfile.banner_url || '');
+  const [bannerFocusX, setBannerFocusX] = useState<number>(
+    initialProfile.banner_focus_x ?? 0.5
+  );
+  const [bannerFocusY, setBannerFocusY] = useState<number>(
+    initialProfile.banner_focus_y ?? 0.5
+  );
+  const [bannerZoom, setBannerZoom] = useState<number>(
+    initialProfile.banner_zoom ?? 1
+  );
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
@@ -83,7 +100,20 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayName, bio, homepage, twitter, instagram, avatarFile, bannerFile, avatarUrl, bannerUrl]);
+  }, [
+    displayName,
+    bio,
+    homepage,
+    twitter,
+    instagram,
+    avatarFile,
+    bannerFile,
+    avatarUrl,
+    bannerUrl,
+    bannerFocusX,
+    bannerFocusY,
+    bannerZoom,
+  ]);
 
   // 外側クリックで閉じる（未保存ガード付き）
   const onOverlayClick = (e: React.MouseEvent) => {
@@ -100,6 +130,9 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
       (initialProfile.sns_links?.instagram || '') !== instagram ||
       (initialProfile.avatar_url || '') !== avatarUrl ||
       (initialProfile.banner_url || '') !== bannerUrl ||
+      (initialProfile.banner_focus_x ?? 0.5) !== bannerFocusX ||
+      (initialProfile.banner_focus_y ?? 0.5) !== bannerFocusY ||
+      (initialProfile.banner_zoom ?? 1) !== bannerZoom ||
       !!avatarFile || !!bannerFile;
     setDirty(changed);
   }, [
@@ -110,6 +143,9 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
     instagram,
     avatarUrl,
     bannerUrl,
+    bannerFocusX,
+    bannerFocusY,
+    bannerZoom,
     avatarFile,
     bannerFile,
     initialProfile,
@@ -156,6 +192,9 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
     } else {
       setBannerFile(null);
       setBannerUrl('');
+      setBannerFocusX(0.5);
+      setBannerFocusY(0.5);
+      setBannerZoom(1);
     }
     setDirty(true);
   };
@@ -195,6 +234,9 @@ export default function ProfileEditModal({ initialProfile, onSave, onCancel }: P
         bio: bio.trim(),
         avatar_url: uploadedAvatar || null,
         banner_url: uploadedBanner || null,
+        banner_focus_x: bannerFocusX,
+        banner_focus_y: bannerFocusY,
+        banner_zoom: bannerZoom,
         sns_links: {
           homepage: normalizeUrl(homepage),
           twitter: normalizeTwitter(twitter),
@@ -274,7 +316,16 @@ return (
               onDragLeave={() => handleDragLeave("banner")}
             >
               {bannerPreview ? (
-                <img src={bannerPreview} alt="banner" className="h-full w-full object-cover" />
+                <img
+                  src={bannerPreview}
+                  alt="banner"
+                  className="h-full w-full object-cover"
+                  style={{
+                    transform: `scale(${bannerZoom})`,
+                    transformOrigin: `${bannerFocusX * 100}% ${bannerFocusY * 100}%`,
+                    objectPosition: `${bannerFocusX * 100}% ${bannerFocusY * 100}%`,
+                  }}
+                />
               ) : (
                 <div className="h-full w-full grid place-items-center text-gray-400">
                   <Img className="w-5 h-5" />
@@ -306,6 +357,55 @@ return (
                 )}
               </div>
             </div>
+            {bannerPreview && (
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-medium text-gray-600 w-20">Zoom</label>
+                  <input
+                    type="range"
+                    min={BANNER_ZOOM_MIN}
+                    max={BANNER_ZOOM_MAX}
+                    step={0.05}
+                    value={bannerZoom}
+                    onChange={(e) => setBannerZoom(parseFloat(e.target.value))}
+                    className="flex-1"
+                  />
+                  <span className="text-xs text-gray-500 w-10 text-right">
+                    {bannerZoom.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-medium text-gray-600 w-20">Pos X</label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={bannerFocusX}
+                    onChange={(e) => setBannerFocusX(parseFloat(e.target.value))}
+                    className="flex-1"
+                  />
+                  <span className="text-xs text-gray-500 w-10 text-right">
+                    {Math.round(bannerFocusX * 100)}%
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-medium text-gray-600 w-20">Pos Y</label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={bannerFocusY}
+                    onChange={(e) => setBannerFocusY(parseFloat(e.target.value))}
+                    className="flex-1"
+                  />
+                  <span className="text-xs text-gray-500 w-10 text-right">
+                    {Math.round(bannerFocusY * 100)}%
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* アバター */}
