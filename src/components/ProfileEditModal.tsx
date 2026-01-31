@@ -41,7 +41,7 @@ type Props = {
 
 const ACCEPTED_MIME = ['image/png', 'image/jpeg', 'image/webp'];
 const MAX_FILE_MB = 8;
-const BANNER_ZOOM_MIN = 1;
+const BANNER_ZOOM_MIN = 0.5;
 const BANNER_ZOOM_MAX = 2.5;
 
 export default function ProfileEditModal({ initialProfile, onSave, onCancel }: Props) {
