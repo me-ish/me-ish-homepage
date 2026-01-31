@@ -12,6 +12,9 @@ type Profile = {
   display_name: string;
   avatar_url?: string | null;
   banner_url?: string | null;
+  banner_focus_x?: number | null;
+  banner_focus_y?: number | null;
+  banner_zoom?: number | null;
   bio?: string | null;
   sns_links?: { homepage?: string; twitter?: string; instagram?: string } | null;
 };
@@ -26,7 +29,7 @@ type PublicEntry = {
   edition_total?: number | null;
   edition_sold?: number | null;
   is_sold?: boolean | null;
-  // 返却に含まれても UI では使わない想定だが、型崩れ防止で optional
+  // 返却に含まれてめEUI では使わなぁE��定だが、型崩れ防止で optional
 };
 
 type PublicPortfolioResult = {
@@ -57,7 +60,7 @@ export default function ArtistPublicPage() {
         setNotFound(false);
         setIsPrivate(false);
 
-        // 特例: /artists/me は自分のidにリダイレクト
+        // 特侁E /artists/me は自刁E�EidにリダイレクチE
         if (id === 'me') {
           const { data } = await supabase.auth.getUser();
           if (data.user?.id) {
@@ -66,10 +69,12 @@ export default function ArtistPublicPage() {
           }
         }
 
-        // プロフィール（公開ページは profiles の公開項目のみ表示）
+        // プロフィール�E��E開�Eージは profiles の公開頁E��のみ表示�E�E
         const { data: prof, error: profErr } = await supabase
           .from('profiles')
-          .select('id, display_name, avatar_url, banner_url, bio, sns_links')
+          .select(
+            'id, display_name, avatar_url, banner_url, banner_focus_x, banner_focus_y, banner_zoom, bio, sns_links'
+          )
           .eq('id', id)
           .maybeSingle<Profile>();
 
@@ -82,14 +87,14 @@ export default function ArtistPublicPage() {
         }
         setProfile(prof ?? null);
 
-        // ✅ 公開ポートフォリオ（settings + entries）を RPC から取得
+        // ✁E公開�Eートフォリオ�E�Eettings + entries�E�を RPC から取征E
         const { data: pub, error: pubErr } = await supabase.rpc(
           'get_public_portfolio',
           { p_user_id: id }
         );
 
         if (pubErr) {
-          // 実装途中/権限周りで落ちる可能性があるのでログだけ出して「非公開扱い」に倒す
+          // 実裁E��中/権限周りで落ちる可能性がある�Eでログだけ�Eして「非公開扱ぁE��に倒す
           console.error('[get_public_portfolio] error:', pubErr);
           setIsPrivate(true);
           setEntries([]);
@@ -99,7 +104,7 @@ export default function ArtistPublicPage() {
         const result = (pub as PublicPortfolioResult) ?? null;
 
         if (!result) {
-          // is_public=false 等で null が返る想定
+          // is_public=false 等で null が返る想宁E
           setIsPrivate(true);
           setEntries([]);
           return;
@@ -124,66 +129,79 @@ export default function ArtistPublicPage() {
   if (notFound || !profile) {
     return (
       <main className="px-4 py-16 text-gray-500">
-        このアーティストは見つかりませんでした。
+        こ�EアーチE��スト�E見つかりませんでした、E
       </main>
     );
   }
 
+  const bannerFocusX = profile.banner_focus_x ?? 0.5;
+  const bannerFocusY = profile.banner_focus_y ?? 0.5;
+  const bannerZoom = profile.banner_zoom ?? 1;
+
   if (isPrivate) {
     return (
       <main className="font-zen">
-        {/* ヘッダー（テンプレの雰囲気は残す） */}
-        <section className="relative">
-          <div className="relative h-48 md:h-56 w-full overflow-hidden">
-            {profile.banner_url ? (
-              <Image
-                src={profile.banner_url}
-                alt="banner"
-                fill
-                className="object-cover"
-                unoptimized
-              />
-            ) : (
-              <div className="h-full w-full bg-gradient-to-r from-sky-50 to-white" />
-            )}
-          </div>
+        {/* ヘッダー�E�テンプレの雰囲気�E残す�E�E*/}
+                        <section className="relative">
+          <div className="px-4 md:px-6">
+            <div className="mx-auto w-full max-w-6xl">
+              <div className="relative w-full aspect-[16/5] overflow-hidden rounded-2xl">
+                {profile.banner_url ? (
+                  <Image
+                    src={profile.banner_url}
+                    alt="banner"
+                    fill
+                    className="object-cover"
+                    style={{
+                      objectPosition: `${bannerFocusX * 100}% ${bannerFocusY * 100}%`,
+                      transform: `scale(${bannerZoom})`,
+                      transformOrigin: `${bannerFocusX * 100}% ${bannerFocusY * 100}%`,
+                    }}
+                    unoptimized
+                  />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-r from-sky-50 to-white" />
+                )}
+              </div>
 
-          <div className="absolute -bottom-10 left-5 md:left-10 flex items-end gap-4">
-            <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100">
-              {profile.avatar_url ? (
-                <Image
-                  src={profile.avatar_url}
-                  alt={profile.display_name}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              ) : (
-                <div className="w-full h-full grid place-items-center text-gray-400">
-                  👤
+              <div className="relative -mt-8 md:-mt-10 flex items-end gap-4">
+                <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100">
+                  {profile.avatar_url ? (
+                    <Image
+                      src={profile.avatar_url}
+                      alt={profile.display_name}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-full h-full grid place-items-center text-gray-400">
+                      👤
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <div className="pb-2">
-              <h1 className="font-lilita text-2xl md:text-3xl tracking-wide">
-                {profile.display_name}
-              </h1>
+                <div className="pb-2">
+                  <h1 className="font-lilita text-2xl md:text-3xl tracking-wide">
+                    {profile.display_name}
+                  </h1>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
         <section className="mt-16 px-4 md:px-6 mb-20">
           <div className="rounded-2xl border bg-white p-6 text-gray-700">
-            <p className="font-medium">このポートフォリオは非公開です。</p>
+            <p className="font-medium">こ�Eポ�Eトフォリオは非�E開です、E/p>
             <p className="text-sm text-gray-500 mt-2">
-              公開設定はマイページの「ポートフォリオ設定」から変更できます。
+              公開設定�Eマイペ�Eジの「�Eートフォリオ設定」から変更できます、E
             </p>
             <div className="mt-4">
               <Link
                 href="/mypage"
                 className="inline-flex items-center rounded-full border px-4 py-2 text-sm hover:bg-gray-50"
               >
-                マイページへ戻る
+                マイペ�Eジへ戻めE
               </Link>
             </div>
           </div>
@@ -195,50 +213,59 @@ export default function ArtistPublicPage() {
   return (
     <main className="font-zen">
       {/* ヘッダー */}
-      <section className="relative">
-        <div className="relative h-48 md:h-56 w-full overflow-hidden">
-          {profile.banner_url ? (
-            <Image
-              src={profile.banner_url}
-              alt="banner"
-              fill
-              className="object-cover"
-              unoptimized
-            />
-          ) : (
-            <div className="h-full w-full bg-gradient-to-r from-sky-50 to-white" />
-          )}
-        </div>
-
-        <div className="absolute -bottom-10 left-5 md:left-10 flex items-end gap-4">
-          <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100">
-            {profile.avatar_url ? (
-              <Image
-                src={profile.avatar_url}
-                alt={profile.display_name}
-                fill
-                className="object-cover"
-                unoptimized
-              />
-            ) : (
-              <div className="w-full h-full grid place-items-center text-gray-400">
-                👤
+                      <section className="relative">
+          <div className="px-4 md:px-6">
+            <div className="mx-auto w-full max-w-6xl">
+              <div className="relative w-full aspect-[16/5] overflow-hidden rounded-2xl">
+                {profile.banner_url ? (
+                  <Image
+                    src={profile.banner_url}
+                    alt="banner"
+                    fill
+                    className="object-cover"
+                    style={{
+                      objectPosition: `${bannerFocusX * 100}% ${bannerFocusY * 100}%`,
+                      transform: `scale(${bannerZoom})`,
+                      transformOrigin: `${bannerFocusX * 100}% ${bannerFocusY * 100}%`,
+                    }}
+                    unoptimized
+                  />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-r from-sky-50 to-white" />
+                )}
               </div>
-            )}
+
+              <div className="relative -mt-8 md:-mt-10 flex items-end gap-4">
+                <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100">
+                  {profile.avatar_url ? (
+                    <Image
+                      src={profile.avatar_url}
+                      alt={profile.display_name}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-full h-full grid place-items-center text-gray-400">
+                      👤
+                    </div>
+                  )}
+                </div>
+                <div className="pb-2">
+                  <h1 className="font-lilita text-2xl md:text-3xl tracking-wide">
+                    {profile.display_name}
+                  </h1>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="pb-2">
-            <h1 className="font-lilita text-2xl md:text-3xl tracking-wide">
-              {profile.display_name}
-            </h1>
-          </div>
-        </div>
-      </section>
+        </section>
 
       {/* プロフィール */}
       <section className="mt-16 px-4 md:px-6">
         <div className="rounded-2xl border bg-white p-4 md:p-6">
           <p className="text-gray-700 leading-relaxed md:max-w-3xl">
-            {profile.bio || 'プロフィールはまだ書かれていません。'}
+            {profile.bio || 'プロフィールはまだ書かれてぁE��せん、E}
           </p>
 
           <div className="mt-4 flex items-center gap-2 flex-wrap">
@@ -280,10 +307,10 @@ export default function ArtistPublicPage() {
       <section className="px-3 sm:px-6 lg:px-10 mt-8 mb-24">
         {entries.length === 0 ? (
           <div className="grid place-items-center py-16 text-gray-500">
-            公開中の作品はまだありません。
+            公開中の作品はまだありません、E
           </div>
         ) : entries.length === 1 ? (
-          // ✅ 1枚のときは “横に広く” 見せる
+          // ✁E1枚�Eとき�E “横に庁E�� E見せめE
           <div className="max-w-6xl mx-auto">
             {entries.map((e) => (
               <Link
@@ -308,7 +335,7 @@ export default function ArtistPublicPage() {
             ))}
           </div>
         ) : (
-          // ✅ 複数枚はグリッド（1枚あたりも少し大きめ）
+          // ✁E褁E��枚�EグリチE���E�E枚あたりも少し大きめ�E�E
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
             {entries.map((e) => (
               <Link
@@ -335,3 +362,7 @@ export default function ArtistPublicPage() {
     </main>
   );
 }
+
+
+
+
