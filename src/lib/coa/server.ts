@@ -53,7 +53,7 @@ export async function verifyCertToken(token?: string | null): Promise<VerifyResu
   if (!data) return { ok: false, reason: 'notfound' };
   // ビューで既に revoked=false, expires_at > now() のフィルタ済み
 
-  if (ONE_TIME && !data.used_at) {
+  if (ONE_TIME && !data.used_at && data.id) {
     // used_at の更新は cert_links テーブルに対して行う
     await sb.from('cert_links').update({ used_at: new Date().toISOString() }).eq('id', data.id);
   }
