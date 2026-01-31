@@ -13,6 +13,7 @@ Source: Supabase SQL metadata export provided in this thread (tables/columns/con
 - cert_links
 - entries
 - entry_processing_jobs
+- entry_view_events
 - inquiries
 - likes
 - payout_items
@@ -25,6 +26,7 @@ Source: Supabase SQL metadata export provided in this thread (tables/columns/con
 ## Views (seen in column list)
 - announcements_public
 - aura_first20_stats
+- entry_view_stats
 - v_cert_links_active
 - v_my_sales_summary
 - v_pending_payouts
@@ -180,6 +182,19 @@ Source: Supabase SQL metadata export provided in this thread (tables/columns/con
 - last_error | text | nullable: YES | default: null
 - created_at | timestamp with time zone | nullable: NO | default: now()
 - updated_at | timestamp with time zone | nullable: NO | default: now()
+
+## entry_view_events
+- id | uuid | nullable: NO | default: gen_random_uuid()
+- entry_id | bigint | nullable: NO | default: null
+- viewer_user_id | uuid | nullable: YES | default: null
+- session_id | text | nullable: YES | default: null
+- occurred_at | timestamp with time zone | nullable: NO | default: now()
+
+## entry_view_stats (view)
+- entry_id | bigint | nullable: YES | default: null
+- view_count | bigint | nullable: YES | default: null
+- unique_views | bigint | nullable: YES | default: null
+- last_viewed_at | timestamp with time zone | nullable: YES | default: null
 
 ## inquiries
 - id | uuid | nullable: NO | default: uuid_generate_v4()
