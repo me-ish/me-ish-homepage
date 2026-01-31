@@ -109,6 +109,7 @@ const Step2_WorkInfo = ({
   } = useFormContext<FormValues>();
 
   const imageField = watch('image');
+  const galleryType = watch('gallery_type');
   const titleValue: string = watch('title') || '';
   const descValue: string = watch('description') || '';
   const hasSignature = watch('has_signature');
@@ -125,10 +126,12 @@ const Step2_WorkInfo = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // 念のためマウント時に white を強制セット（hiddenのdefaultValueと二重の安全網）
+  // 初期値が未設定なら White を既定にする（選択済みの場合は上書きしない）
   useEffect(() => {
-    setValue('gallery_type', 'white', { shouldDirty: false, shouldValidate: true });
-  }, [setValue]);
+    if (!galleryType) {
+      setValue('gallery_type', 'white', { shouldDirty: false, shouldValidate: true });
+    }
+  }, [galleryType, setValue]);
 
   // プレビュー／メタ取得／タイトル補完（バリデーションは register 側に集約）
   useEffect(() => {
@@ -183,24 +186,50 @@ const Step2_WorkInfo = ({
         </p>
       </header>
 
-      {/* 1) 応募先ギャラリー（White固定） */}
+      {/* 1) 応募先ギャラリー */}
       <div>
         <label className="block text-sm font-semibold text-gray-800 mb-1.5">
           応募先ギャラリー <span className="text-red-600">＊</span>
         </label>
 
-        <div className="inline-flex items-center gap-2 rounded-lg border border-[#d9eef8] bg-[#f3fbff] px-3 py-2">
-          <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: BRAND }} aria-hidden />
-          <span className="text-sm font-semibold text-gray-800">ホワイトギャラリー</span>
-          <span className="text-xs text-gray-500">（β中はWhiteのみ募集）</span>
+        <div role="radiogroup" className="grid gap-3">
+          <label className="inline-flex items-start gap-2 rounded-lg border border-gray-300 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+            <input
+              type="radio"
+              value="white"
+              {...register('gallery_type', {
+                required: '応募先ギャラリーを選択してください。',
+              })}
+            />
+            <span className="text-sm text-gray-800">
+              <span className="font-semibold">White Gallery</span>
+              <span className="block text-xs text-gray-500 mt-0.5">
+                常設展示（審査後に公開）
+              </span>
+            </span>
+          </label>
+
+          <label className="inline-flex items-start gap-2 rounded-lg border border-gray-300 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+            <input
+              type="radio"
+              value="float"
+              {...register('gallery_type', {
+                required: '応募先ギャラリーを選択してください。',
+              })}
+            />
+            <span className="text-sm text-gray-800">
+              <span className="font-semibold">Float Gallery</span>
+              <span className="block text-xs text-gray-500 mt-0.5">
+                期間限定展示（公開期間は約1か月）
+              </span>
+            </span>
+          </label>
         </div>
 
-        {/* 送信用：white固定（RHFに値を載せる） */}
-        <input type="hidden" defaultValue="white" {...register('gallery_type')} />
-
-        <p className="mt-1 text-xs text-gray-500">
-          🧭 無期限の常設展示（⽇替わりなし）。フロートギャラリーはβ終了後に募集予定です。
-        </p>
+        {(() => {
+          const m = errMsg(errors.gallery_type);
+          return m ? <p role="alert" className="mt-1.5 text-sm text-red-600">{m}</p> : null;
+        })()}
       </div>
 
       {/* 2) 作品タイトル */}
