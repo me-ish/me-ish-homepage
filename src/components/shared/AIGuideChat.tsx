@@ -3,6 +3,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { MessageCircle, Send, X, Mic, MicOff } from 'lucide-react';
+import { useZoomArtworkOptional } from './ZoomArtworkContext';
 
 /* ===== 最小の SpeechRecognition 型定義 ===== */
 type ISpeechRecognition = {
@@ -48,6 +49,12 @@ export default function AIGuideChat({
   onClose,
   defaultOpen = false,
 }: AIGuideChatProps) {
+  /* -------------------------------
+   * 作品ズーム中は非表示
+   * ----------------------------- */
+  const zoomContext = useZoomArtworkOptional();
+  const isArtworkZoomed = !!zoomContext?.zoomedArtwork;
+
   /* -------------------------------
    * 開閉（ハンドラ同梱時のみ制御扱い）
    * ----------------------------- */
@@ -191,6 +198,9 @@ export default function AIGuideChat({
   /* -------------------------------
    * Render
    * ----------------------------- */
+  // 作品ズーム中は完全に非表示
+  if (isArtworkZoomed) return null;
+
   return (
     <div className={`fixed bottom-2 right-2 z-[9999] ${isOpen ? 'w-[320px]' : ''}`}>
       {!isOpen && (

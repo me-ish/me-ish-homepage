@@ -9,6 +9,7 @@ import { a as a3, useSpring } from '@react-spring/three';
 import { animated } from '@react-spring/web';
 import { Html, useTexture } from '@react-three/drei';
 import React from 'react';
+import { useZoomArtwork } from './ZoomArtworkContext';
 
 interface CoreSphereProps {
   avatarRef: React.RefObject<THREE.Object3D>;
@@ -23,6 +24,10 @@ const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
 
   const [selected, setSelected] = useState<'white' | 'float' | null>(null);
   const [showUI, setShowUI] = useState(false);
+
+  // 作品ズーム中はUIを非表示
+  const { zoomedArtwork } = useZoomArtwork();
+  const isArtworkZoomed = !!zoomedArtwork;
 
   const { opacity, emissiveIntensity, uiOpacity } = useSpring({
     opacity: selected ? 0 : 0.7,
@@ -76,7 +81,7 @@ const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
 
   return (
     <group position={[0, 5, 0]}>
-      {showUI && !selected && (
+      {showUI && !selected && !isArtworkZoomed && (
         <Html position={[1.2, 0, 0]} distanceFactor={10}>
           <animated.div
             style={{

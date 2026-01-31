@@ -114,16 +114,30 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
   const node = (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-[1000] bg-black/90 text-white overflow-y-auto px-4 py-6 cursor-zoom-out"
+      className="fixed inset-0 z-[10000] bg-black/90 text-white overflow-y-auto px-4 py-6 cursor-zoom-out"
       aria-modal="true"
       role="dialog"
     >
+      {/* 閉じるボタン - 視認性向上 */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 text-white hover:text-gray-300 text-4xl font-bold z-[1010]"
+        className="fixed top-4 right-4 z-[10010] w-12 h-12 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-sm border border-white/30 text-white hover:bg-black/80 hover:border-white/50 transition-all shadow-lg"
         aria-label="閉じる"
       >
-        &times;
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
       </button>
 
       <div onClick={(e) => e.stopPropagation()} className="flex flex-col items-center space-y-6">

@@ -49,3 +49,8 @@ export const useZoomArtwork = (): ZoomArtworkContextType => {
   }
   return context;
 };
+
+// 🔒 Provider外でも安全に使えるオプショナルフック
+export const useZoomArtworkOptional = (): ZoomArtworkContextType | null => {
+  return useContext(ZoomArtworkContext) ?? null;
+};

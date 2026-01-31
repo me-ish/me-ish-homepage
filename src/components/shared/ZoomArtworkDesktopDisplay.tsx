@@ -177,7 +177,7 @@ const handlePurchase = async () => {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
@@ -382,7 +382,7 @@ function DesktopPurchaseBar({
   const disabled = isSold || isEditionSoldOut || price == null;
 
   return (
-    <div className="fixed left-0 right-0 bottom-0 z-[1020] bg-black/90 backdrop-blur border-t border-white/10">
+    <div className="fixed left-0 right-0 bottom-0 z-[10020] bg-black/90 backdrop-blur border-t border-white/10">
       <div className="mx-auto max-w-[1200px] px-6 py-3 flex items-center justify-between gap-6">
         {/* 左：価格＆在庫 */}
         <div className="min-w-0">
