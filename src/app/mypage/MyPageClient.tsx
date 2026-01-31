@@ -21,7 +21,17 @@ import {
   Clock,
   CheckCircle2,
   Loader2,
+  UserX,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 /* ===================== Types ===================== */
 type SNSLinks = { homepage?: string; twitter?: string; instagram?: string };
@@ -93,6 +103,11 @@ export default function MyPageClient() {
   const [toast, setToast] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('likes');
+
+  // 退会ダイアログ
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   // SSRで location を参照しない
   const [siteOrigin, setSiteOrigin] = useState<string>(
@@ -335,6 +350,29 @@ export default function MyPageClient() {
     }
   }
 
+  // 退会処理
+  async function handleAccountDelete() {
+    if (deleteConfirmText !== '退会する') return;
+
+    try {
+      setDeleteLoading(true);
+      const res = await fetch('/api/account/delete', { method: 'POST' });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || '退会処理に失敗しました');
+      }
+
+      // ログアウト & トップにリダイレクト
+      await supabase.auth.signOut();
+      window.location.href = '/';
+    } catch (e: any) {
+      console.error('[handleAccountDelete]', e);
+      setToast(e?.message || '退会処理に失敗しました');
+      setDeleteLoading(false);
+    }
+  }
+
   return (
     <main className="font-zen min-h-screen bg-gray-50/50 pt-14 md:pt-16">
       {/* ===== Hero / Cover ===== */}
@@ -526,10 +564,98 @@ export default function MyPageClient() {
             </div>
           </section>
 
+          {/* ===== アカウント設定 ===== */}
+          <section className="px-4 md:px-6 mt-10">
+            <div className="mx-auto w-full max-w-6xl">
+              <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-4">アカウント設定</h2>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">
+                      退会すると、アカウント情報やいいねした作品の履歴が削除されます。
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      ※ 出展作品や取引履歴は法令に基づき一定期間保持されます。
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setDeleteDialogOpen(true)}
+                    className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700 hover:underline underline-offset-2"
+                  >
+                    <UserX className="w-4 h-4" />
+                    退会する
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* 下部余白 */}
           <div className="mb-20" />
         </>
       )}
+
+      {/* 退会確認ダイアログ */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center gap-2">
+              <UserX className="w-5 h-5" />
+              本当に退会しますか？
+            </DialogTitle>
+            <DialogDescription className="text-left pt-2 space-y-2">
+              <p>退会すると以下のデータが削除されます：</p>
+              <ul className="list-disc list-inside text-sm space-y-1 ml-2">
+                <li>プロフィール情報</li>
+                <li>いいねした作品の履歴</li>
+                <li>ログイン情報</li>
+              </ul>
+              <p className="text-sm text-gray-500 mt-3">
+                ※ 出展作品・取引履歴は法令に基づき保持されます。
+              </p>
+              <p className="font-medium mt-4">
+                退会を確定するには「退会する」と入力してください。
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+
+          <input
+            type="text"
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            placeholder="退会する"
+            className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+            disabled={deleteLoading}
+          />
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setDeleteConfirmText('');
+              }}
+              disabled={deleteLoading}
+            >
+              キャンセル
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleAccountDelete}
+              disabled={deleteConfirmText !== '退会する' || deleteLoading}
+            >
+              {deleteLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  処理中...
+                </>
+              ) : (
+                '退会を確定'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
             {/* プロフィール編集モーダル */}
       {editOpen && profile && (
         <ProfileEditModal
