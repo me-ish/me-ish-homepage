@@ -340,7 +340,7 @@ export default function MyPageClient() {
       {/* ===== Hero / Cover ===== */}
       <section className="relative bg-white">
         {/* Banner */}
-        <div className="relative h-48 md:h-56 w-full overflow-hidden">
+        <div className="relative w-full aspect-[16/5] overflow-hidden">
           {profile?.banner_url ? (
             <Image
               src={profile.banner_url}
