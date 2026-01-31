@@ -31,6 +31,9 @@ type ProfileSavePayload = {
   bio?: string | null;
   avatar_url?: string | null;
   banner_url?: string | null;
+  banner_focus_x?: number | null;
+  banner_focus_y?: number | null;
+  banner_zoom?: number | null;
   sns_links: SNSLinks;
 };
 
@@ -39,6 +42,9 @@ type Profile = {
   display_name: string;
   avatar_url?: string | null;
   banner_url?: string | null;
+  banner_focus_x?: number | null;
+  banner_focus_y?: number | null;
+  banner_zoom?: number | null;
   bio?: string | null;
   sns_links?: SNSLinks | null;
 };
