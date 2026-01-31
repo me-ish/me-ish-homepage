@@ -1,1 +1,354 @@
-﻿⼯猠捲愯灰愯瑲獩獴嬯摩⽝慰敧琮硳਍甧敳挠楬湥❴഻ഊ椊灭牯⁴⁻獵䕥晦捥ⱴ甠敳瑓瑡⁥⁽牦浯✠敲捡❴഻椊灭牯⁴⁻獵健牡浡ⱳ甠敳潒瑵牥素映潲⁭渧硥⽴慮楶慧楴湯㬧਍浩潰瑲䤠慭敧映潲⁭渧硥⽴浩条❥഻椊灭牯⁴楌歮映潲⁭渧硥⽴楬歮㬧਍浩潰瑲笠猠灵扡獡⁥⁽牦浯✠⽀楬⽢畳慰慢敳汃敩瑮㬧਍਍祴数倠潲楦敬㴠笠 椠㩤猠牴湩㭧 搠獩汰祡湟浡㩥猠牴湩㭧 愠慶慴彲牵㽬›瑳楲杮簠渠汵㭬 戠湡敮彲牵㽬›瑳楲杮簠渠汵㭬 戠湡敮彲潦畣彳㽸›畮扭牥簠渠汵㭬 戠湡敮彲潦畣彳㽹›畮扭牥簠渠汵㭬 戠湡敮彲潺浯㨿渠浵敢⁲⁼畮汬਻†楢㽯›瑳楲杮簠渠汵㭬 猠獮江湩獫㨿笠栠浯灥条㽥›瑳楲杮※睴瑩整㽲›瑳楲杮※湩瑳条慲㽭›瑳楲杮素簠渠汵㭬紊਻਍祴数倠扵楬䕣瑮祲㴠笠਍†摩›畮扭牥഻ 琠瑩敬›瑳楲杮簠渠汵㭬਍†浩条彥牵㩬猠牴湩㭧਍†楬敫㽳›畮扭牥簠渠汵㭬਍†牰捩㽥›畮扭牥簠渠汵㭬਍†慧汬牥役祴数㨿猠牴湩⁧⁼畮汬഻ 攠楤楴湯瑟瑯污㨿渠浵敢⁲⁼畮汬഻ 攠楤楴湯獟汯㽤›畮扭牥簠渠汵㭬਍†獩獟汯㽤›潢汯慥⁮⁼畮汬഻ ⼠ 뿨뒍臣ꮐ臣貂臣膂啅⁉臣꾁뷤辂臣膁荅骮臣貁胣讞듥貂飩ꊭ臣₧灯楴湯污਍㭽਍਍祴数倠扵楬偣牯晴汯潩敒畳瑬㴠笠਍†敳瑴湩獧›ൻ †甠敳彲摩›瑳楲杮഻ †椠彳異汢捩›潢汯慥㭮਍††潷歲彳楦瑬牥㨿✠楤灳慬楹杮‧⁼昧牯獟污❥簠✠污❬഻ †猠牯彴敫㽹›渧睥‧⁼氧歩獥㬧਍†㭽਍†湥牴敩㩳倠扵楬䕣瑮祲嵛഻紊簠渠汵㭬਍਍硥潰瑲搠晥畡瑬映湵瑣潩⁮牁楴瑳畐汢捩慐敧⤨笠਍†潣獮⁴⁻摩素㴠甠敳慐慲獭笼椠㩤猠牴湩⁧㹽⤨഻ 挠湯瑳爠畯整⁲‽獵剥畯整⡲㬩਍਍†潣獮⁴汛慯楤杮‬敳䱴慯楤杮⁝‽獵卥慴整琨畲⥥഻ 挠湯瑳嬠潮䙴畯摮‬敳乴瑯潆湵嵤㴠甠敳瑓瑡⡥慦獬⥥഻ 挠湯瑳嬠獩牐癩瑡ⱥ猠瑥獉牐癩瑡嵥㴠甠敳瑓瑡⡥慦獬⥥഻ഊ 挠湯瑳嬠牰景汩ⱥ猠瑥牐景汩嵥㴠甠敳瑓瑡㱥牐景汩⁥⁼畮汬⠾畮汬㬩਍†潣獮⁴敛瑮楲獥‬敳䕴瑮楲獥⁝‽獵卥慴整值扵楬䕣瑮祲嵛⠾嵛㬩਍਍†獵䕥晦捥⡴⤨㴠‾ൻ †⠠獡湹⁣⤨㴠‾ൻ ††琠祲笠਍††††敳䱴慯楤杮琨畲⥥഻ †††猠瑥潎䙴畯摮昨污敳㬩਍††††敳䥴偳楲慶整昨污敳㬩਍਍††††⼯릉뻤䖁⼠牡楴瑳⽳敭꾁蟨膈腅楅ꮁ菣肃苣것苣膃੅††††晩⠠摩㴠㴽✠敭⤧笠਍†††††潣獮⁴⁻慤慴素㴠愠慷瑩猠灵扡獡⹥畡桴朮瑥獕牥⤨഻ ††††椠⁦搨瑡⹡獵牥⸿摩 ൻ †††††爠畯整⹲敲汰捡⡥⽠牡楴瑳⽳笤慤慴甮敳⹲摩恽㬩਍††††††敲畴湲഻ ††††素਍††††ൽഊ †††⼠ 菣궃菣ꎂ菣ꮃ䖁䖁雩䖁菣뢂臣₯牰景汩獥꺁藥讖ꃩ䖁꺛臣뾁ꇨ몤䖁䖁 †††挠湯瑳笠搠瑡㩡瀠潲ⱦ攠牲牯›牰景牅⁲⁽‽睡楡⁴畳慰慢敳 ††††⸠牦浯✨牰景汩獥⤧ ††††⸠敳敬瑣ਨ††††††椧Ɽ搠獩汰祡湟浡ⱥ愠慶慴彲牵ⱬ戠湡敮彲牵ⱬ戠湡敮彲潦畣彳ⱸ戠湡敮彲潦畣彳ⱹ戠湡敮彲潺浯‬楢Ɐ猠獮江湩獫ਧ†††††਩†††††攮⡱椧❤‬摩਩†††††洮祡敢楓杮敬值潲楦敬⠾㬩ഊ †††椠⁦瀨潲䕦牲 桴潲⁷牰景牅㭲਍††††晩⠠瀡潲⥦笠਍†††††敳乴瑯潆湵⡤牴敵㬩਍†††††敳側潲楦敬渨汵⥬഻ ††††猠瑥湅牴敩⡳嵛㬩਍†††††敲畴湲഻ †††素਍††††敳側潲楦敬瀨潲⁦㼿渠汵⥬഻ഊ †††⼠ 鳢䖁藥讖臣벃菣閃苣ꪃ苣膪腅故瑴湩獧⬠攠瑮楲獥䖁銂删䍐讁苣随뻥䖁 †††挠湯瑳笠搠瑡㩡瀠扵‬牥潲㩲瀠扵牅⁲⁽‽睡楡⁴畳慰慢敳爮捰ന ††††✠敧彴異汢捩灟牯晴汯潩Ⱗ਍†††††⁻彰獵牥楟㩤椠⁤ൽ †††⤠഻ഊ †††椠⁦瀨扵牅⥲笠਍†††††⼯龮ꏨ䖁钀룤⾭꣦邙釥誂臣붐臣讂迥붃胦貁臣讂臣ꞁ菣낂臣醁臥鞁臣貀鷩겅雩놉臣䖁趀臣銀臣඙ ††††挠湯潳敬攮牲牯✨杛瑥灟扵楬彣潰瑲潦楬嵯攠牲牯✺‬異䕢牲㬩਍†††††敳䥴偳楲慶整琨畲⥥഻ ††††猠瑥湅牴敩⡳嵛㬩਍†††††敲畴湲഻ †††素਍਍††††潣獮⁴敲畳瑬㴠⠠異⁢獡倠扵楬偣牯晴汯潩敒畳瑬 㼿渠汵㭬਍਍††††晩⠠爡獥汵⥴笠਍†††††⼯椠彳異汢捩昽污敳覭臣₧畮汬貁뿨讂菦膮੅†††††敳䥴偳楲慶整琨畲⥥഻ ††††猠瑥湅牴敩⡳嵛㬩਍†††††敲畴湲഻ †††素਍਍††††敳䕴瑮楲獥䄨牲祡椮䅳牲祡爨獥汵⹴湥牴敩⥳㼠爠獥汵⹴湥牴敩⁳›嵛㬩਍†††⁽慣捴⁨攨 ൻ †††挠湯潳敬攮牲牯攨㬩਍††††敳側潲楦敬渨汵⥬഻ †††猠瑥湅牴敩⡳嵛㬩਍††††敳乴瑯潆湵⡤牴敵㬩਍†††⁽楦慮汬⁹ൻ †††猠瑥潌摡湩⡧慦獬⥥഻ ††素਍††⥽⤨഻ 素‬楛Ɽ爠畯整嵲㬩਍਍†晩⠠潬摡湩⥧笠਍††敲畴湲㰠慭湩挠慬獳慎敭∽硰㐭瀠⵹㘱琠硥⵴牧祡㔭〰㸢ꫨ뾁뻨뾁룤⺭⸮⼼慭湩㬾਍†ൽഊ 椠⁦渨瑯潆湵⁤籼℠牰景汩⥥笠਍††敲畴湲⠠਍†††洼楡⁮汣獡乳浡㵥瀢⵸‴祰ㄭ‶整瑸札慲⵹〵∰ാ †††鎁臣ꊂ菣膃艅릂菣䖁ꛨꒁ臣誂臣鮁苣ꞁ臣龁胣䖁 ††㰠洯楡㹮਍††㬩਍†ൽഊ 挠湯瑳戠湡敮䙲捯獵⁘‽牰景汩⹥慢湮牥晟捯獵硟㼠‿⸰㬵਍†潣獮⁴慢湮牥潆畣女㴠瀠潲楦敬戮湡敮彲潦畣彳⁹㼿〠㔮഻ 挠湯瑳戠湡敮婲潯⁭‽牰景汩⹥慢湮牥穟潯⁭㼿ㄠ഻ഊ 椠⁦椨偳楲慶整 ൻ †爠瑥牵⁮ന ††㰠慭湩挠慬獳慎敭∽潦瑮稭湥㸢਍††††⽻‪菣莃菣벃䖁蚃菣鞃菣꺁鯩늛냦䖁껦馁䖁䖁⼪ൽ †††††††††††㰠敳瑣潩⁮汣獡乳浡㵥爢汥瑡癩≥ਾ†††††搼癩挠慬獳慎敭∽硰㐭洠㩤硰㘭㸢 †††††㰠楤⁶汣獡乳浡㵥洢⵸畡潴眠昭汵⁬慭⵸⵷砶≬ਾ†††††††搼癩挠慬獳慎敭∽敲慬楴敶眠昭汵⁬獡数瑣嬭㘱㔯⁝癯牥汦睯栭摩敤⁮潲湵敤ⵤ砲≬ਾ††††††††灻潲楦敬戮湡敮彲牵⁬‿ਨ†††††††††䤼慭敧 †††††††††猠捲笽牰景汩⹥慢湮牥畟汲੽††††††††††污㵴戢湡敮≲ †††††††††映汩੬††††††††††汣獡乳浡㵥漢橢捥⵴潣敶≲ †††††††††猠祴敬笽੻†††††††††††扯敪瑣潐楳楴湯›①扻湡敮䙲捯獵⁘‪〱細‥笤慢湮牥潆畣女⨠ㄠ〰╽Ⱡ ††††††††††琠慲獮潦浲›獠慣敬␨扻湡敮婲潯絭怩ਬ†††††††††††牴湡晳牯佭楲楧㩮怠笤慢湮牥潆畣塳⨠ㄠ〰╽␠扻湡敮䙲捯獵⁙‪〱細急ਬ††††††††††絽 †††††††††甠潮瑰浩穩摥 ††††††††⼠ਾ†††††††† ›ਨ†††††††††搼癩挠慬獳慎敭∽⵨畦汬眠昭汵⁬杢札慲楤湥⵴潴爭映潲⵭歳⵹〵琠ⵯ桷瑩≥⼠ਾ††††††††紩 ††††††㰠搯癩ਾ ††††††㰠楤⁶汣獡乳浡㵥爢汥瑡癩⁥洭⵴‸摭ⴺ瑭ㄭ‰汦硥椠整獭攭摮朠灡㐭㸢 †††††††㰠楤⁶汣獡乳浡㵥爢汥瑡癩⁥⵷〲栠㈭‰摭眺㈭‸摭栺㈭‸潲湵敤ⵤ畦汬爠湩ⵧ‴楲杮眭楨整漠敶晲潬⵷楨摤湥戠ⵧ牧祡ㄭ〰㸢 ††††††††笠牰景汩⹥癡瑡牡畟汲㼠⠠ †††††††††㰠浉条੥†††††††††††牳㵣灻潲楦敬愮慶慴彲牵絬 ††††††††††愠瑬笽牰景汩⹥楤灳慬役慮敭੽†††††††††††楦汬 ††††††††††挠慬獳慎敭∽扯敪瑣挭癯牥ਢ†††††††††††湵灯楴業敺੤††††††††††㸯 ††††††††⤠㨠⠠ †††††††††㰠楤⁶汣獡乳浡㵥眢昭汵⁬⵨畦汬朠楲⁤汰捡ⵥ瑩浥⵳散瑮牥琠硥⵴牧祡㐭〰㸢 ††††††††††醟ત††††††††††⼼楤㹶 ††††††††⤠੽††††††††⼼楤㹶 †††††††㰠楤⁶汣獡乳浡㵥瀢ⵢ∲ਾ†††††††††格‱汣獡乳浡㵥昢湯⵴楬楬慴琠硥⵴砲⁬摭琺硥⵴砳⁬牴捡楫杮眭摩≥ਾ††††††††††灻潲楦敬搮獩汰祡湟浡絥 ††††††††㰠栯㸱 †††††††㰠搯癩ਾ†††††††⼼楤㹶 †††††㰠搯癩ਾ†††††⼼楤㹶 †††㰠猯捥楴湯ാഊ †††㰠敳瑣潩⁮汣獡乳浡㵥洢⵴㘱瀠⵸‴摭瀺⵸‶扭㈭∰ാ ††††㰠楤⁶汣獡乳浡㵥爢畯摮摥㈭汸戠牯敤⁲杢眭楨整瀠㘭琠硥⵴牧祡㜭〰㸢਍††††††瀼挠慬獳慎敭∽潦瑮洭摥畩≭鎁臣鶃臣袃菣ꦂ菣ꪂ臣麝臥讖臣馁胣䖁瀯ാ †††††㰠⁰汣獡乳浡㵥琢硥⵴浳琠硥⵴牧祡㔭〰洠⵴∲ാ ††††††겅雩궨껥䖁菣ꒂ菣䖁苣꺁胣䖁菣袃菣ꦂ菣ꪂ꣨骮胣讁苣覤鯦ꞁ臣뺁臣膀੅††††††⼼㹰਍††††††搼癩挠慬獳慎敭∽瑭㐭㸢਍†††††††䰼湩൫ †††††††栠敲㵦⼢祭慰敧ഢ †††††††挠慬獳慎敭∽湩楬敮昭敬⁸瑩浥⵳散瑮牥爠畯摮摥昭汵⁬潢摲牥瀠⵸‴祰㈭琠硥⵴浳栠癯牥戺ⵧ牧祡㔭∰਍†††††††ാ †††††††麃苣骃臣뢂臣뮈苣䖁 ††††††㰠䰯湩㹫਍††††††⼼楤㹶਍†††††⼼楤㹶਍††††⼼敳瑣潩㹮਍†††⼼慭湩ാ †⤠഻ 素਍਍†敲畴湲⠠਍††洼楡⁮汣獡乳浡㵥昢湯⵴敺≮ാ ††笠⨯颃菣肃菣₼⼪ൽ ††††††††††㰠敳瑣潩⁮汣獡乳浡㵥爢汥瑡癩≥ਾ†††††搼癩挠慬獳慎敭∽硰㐭洠㩤硰㘭㸢 †††††㰠楤⁶汣獡乳浡㵥洢⵸畡潴眠昭汵⁬慭⵸⵷砶≬ਾ†††††††搼癩挠慬獳慎敭∽敲慬楴敶眠昭汵⁬獡数瑣嬭㘱㔯⁝癯牥汦睯栭摩敤⁮潲湵敤ⵤ砲≬ਾ††††††††灻潲楦敬戮湡敮彲牵⁬‿ਨ†††††††††䤼慭敧 †††††††††猠捲笽牰景汩⹥慢湮牥畟汲੽††††††††††污㵴戢湡敮≲ †††††††††映汩੬††††††††††汣獡乳浡㵥漢橢捥⵴潣敶≲ †††††††††猠祴敬笽੻†††††††††††扯敪瑣潐楳楴湯›①扻湡敮䙲捯獵⁘‪〱細‥笤慢湮牥潆畣女⨠ㄠ〰╽Ⱡ ††††††††††琠慲獮潦浲›獠慣敬␨扻湡敮婲潯絭怩ਬ†††††††††††牴湡晳牯佭楲楧㩮怠笤慢湮牥潆畣塳⨠ㄠ〰╽␠扻湡敮䙲捯獵⁙‪〱細急ਬ††††††††††絽 †††††††††甠潮瑰浩穩摥 ††††††††⼠ਾ†††††††† ›ਨ†††††††††搼癩挠慬獳慎敭∽⵨畦汬眠昭汵⁬杢札慲楤湥⵴潴爭映潲⵭歳⵹〵琠ⵯ桷瑩≥⼠ਾ††††††††紩 ††††††㰠搯癩ਾ ††††††㰠楤⁶汣獡乳浡㵥爢汥瑡癩⁥洭⵴‸摭ⴺ瑭ㄭ‰汦硥椠整獭攭摮朠灡㐭㸢 †††††††㰠楤⁶汣獡乳浡㵥爢汥瑡癩⁥⵷〲栠㈭‰摭眺㈭‸摭栺㈭‸潲湵敤ⵤ畦汬爠湩ⵧ‴楲杮眭楨整漠敶晲潬⵷楨摤湥戠ⵧ牧祡ㄭ〰㸢 ††††††††笠牰景汩⹥癡瑡牡畟汲㼠⠠ †††††††††㰠浉条੥†††††††††††牳㵣灻潲楦敬愮慶慴彲牵絬 ††††††††††愠瑬笽牰景汩⹥楤灳慬役慮敭੽†††††††††††楦汬 ††††††††††挠慬獳慎敭∽扯敪瑣挭癯牥ਢ†††††††††††湵灯楴業敺੤††††††††††㸯 ††††††††⤠㨠⠠ †††††††††㰠楤⁶汣獡乳浡㵥眢昭汵⁬⵨畦汬朠楲⁤汰捡ⵥ瑩浥⵳散瑮牥琠硥⵴牧祡㐭〰㸢 ††††††††††醟ત††††††††††⼼楤㹶 ††††††††⤠੽††††††††⼼楤㹶 †††††††㰠楤⁶汣獡乳浡㵥瀢ⵢ∲ਾ†††††††††格‱汣獡乳浡㵥昢湯⵴楬楬慴琠硥⵴砲⁬摭琺硥⵴砳⁬牴捡楫杮眭摩≥ਾ††††††††††灻潲楦敬搮獩汰祡湟浡絥 ††††††††㰠栯㸱 †††††††㰠搯癩ਾ†††††††⼼楤㹶 †††††㰠搯癩ਾ†††††⼼楤㹶 †††㰠猯捥楴湯ാഊ ††笠⨯鞃菣閃苣벃菣₫⼪ൽ ††㰠敳瑣潩⁮汣獡乳浡㵥洢⵴㘱瀠⵸‴摭瀺⵸∶ാ †††㰠楤⁶汣獡乳浡㵥爢畯摮摥㈭汸戠牯敤⁲杢眭楨整瀠㐭洠㩤⵰∶ാ ††††㰠⁰汣獡乳浡㵥琢硥⵴牧祡㜭〰氠慥楤杮爭汥硡摥洠㩤慭⵸⵷砳≬ാ †††††笠牰景汩⹥楢⁯籼✠菣궃菣ꎂ菣ꮃ臣뺁臣뢛臣貂臣膁腅鮁苣膀絅਍†††††⼼㹰਍਍†††††搼癩挠慬獳慎敭∽瑭㐭映敬⁸瑩浥⵳散瑮牥朠灡㈭映敬⵸牷灡㸢਍††††††灻潲楦敬献獮江湩獫⸿潨敭慰敧☠…ന ††††††㰠ൡ †††††††挠慬獳慎敭∽潲湵敤ⵤ畦汬戠牯敤⁲硰㌭瀠⵹′整瑸猭⁭潨敶㩲杢札慲⵹〵ഢ †††††††栠敲㵦灻潲楦敬献獮江湩獫栮浯灥条絥਍††††††††慴杲瑥∽扟慬歮ഢ †††††††爠汥∽潮敲敦牲牥ഢ ††††††㸠਍††††††††敗獢瑩൥ ††††††㰠愯ാ †††††⤠ൽ †††††笠牰景汩⹥湳彳楬歮㽳琮楷瑴牥☠…ന ††††††㰠ൡ †††††††挠慬獳慎敭∽潲湵敤ⵤ畦汬戠牯敤⁲硰㌭瀠⵹′整瑸猭⁭潨敶㩲杢札慲⵹〵ഢ †††††††栠敲㵦灻潲楦敬献獮江湩獫琮楷瑴牥ൽ †††††††琠牡敧㵴弢汢湡≫਍††††††††敲㵬渢牯晥牥敲≲਍†††††††ാ †††††††堠਍†††††††⼼㹡਍††††††紩਍††††††灻潲楦敬献獮江湩獫⸿湩瑳条慲⁭☦⠠਍†††††††愼਍††††††††汣獡乳浡㵥爢畯摮摥昭汵⁬潢摲牥瀠⵸″祰㈭琠硥⵴浳栠癯牥戺ⵧ牧祡㔭∰਍††††††††牨晥笽牰景汩⹥湳彳楬歮⹳湩瑳条慲絭਍††††††††慴杲瑥∽扟慬歮ഢ †††††††爠汥∽潮敲敦牲牥ഢ ††††††㸠਍††††††††湉瑳条慲൭ ††††††㰠愯ാ †††††⤠ൽ ††††㰠搯癩ാ †††㰠搯癩ാ ††㰠猯捥楴湯ാഊ ††笠⨯鲽鏥肸ꛨ₧⼪ൽ ††㰠敳瑣潩⁮汣獡乳浡㵥瀢⵸″浳瀺⵸‶杬瀺⵸〱洠⵴‸扭㈭∴ാ †††笠湥牴敩⹳敬杮桴㴠㴽〠㼠⠠਍†††††搼癩挠慬獳慎敭∽牧摩瀠慬散椭整獭挭湥整⁲祰ㄭ‶整瑸札慲⵹〵∰ാ †††††겅雩궸臣鲽鏥꾁臣ꂁ臣誂臣鮁苣膀੅†††††⼼楤㹶਍†††† ›湥牴敩⹳敬杮桴㴠㴽ㄠ㼠⠠਍†††††⼯膜ㅅ黦䖁臣趁臣⁅胢ꪨ臣膺腅膀讦臣膂੅†††††搼癩挠慬獳慎敭∽慭⵸⵷砶⁬硭愭瑵≯ാ †††††笠湥牴敩⹳慭⡰攨 㸽⠠਍†††††††䰼湩൫ †††††††欠祥笽⹥摩ൽ †††††††栠敲㵦恻愯瑲潷歲⽳笤⹥摩恽ൽ †††††††挠慬獳慎敭∽牧畯⁰敲慬楴敶戠潬正漠敶晲潬⵷楨摤湥爠畯摮摥㌭汸戠ⵧ桷瑩⁥潢摲牥猠慨潤⵷浳栠癯牥猺慨潤⵷摭琠慲獮瑩潩≮਍†††††††ാ †††††††笠⨯攠汳湩⵴楤慳汢ⵥ敮瑸氭湩⁥湀硥⽴敮瑸港ⵯ浩ⵧ汥浥湥⁴⼪ൽ †††††††㰠浩൧ ††††††††猠捲笽⹥浩条彥牵絬਍†††††††††污㵴敻琮瑩敬㼠‿愢瑲潷歲索਍†††††††††汣獡乳浡㵥眢昭汵⁬⵨㉛〸硰⁝浳栺嬭㘳瀰嵸洠㩤⵨㑛〶硰⁝杬栺嬭㈵瀰嵸漠橢捥⵴潣敶⁲牧畯⵰潨敶㩲捳污ⵥㅛ〮崲琠慲獮瑩潩≮਍††††††††㸯਍਍††††††††⽻‪苣ꒂ菣ꮃ臣뮔菥许臣Ꞥ臣膂⨠累਍††††††††搼癩挠慬獳慎敭∽⵰‴浳瀺㔭㸢਍†††††††††格″汣獡乳浡㵥昢湯⵴敳業潢摬琠硥⵴牧祡㤭〰琠硥⵴慢敳猠㩭整瑸氭⁧牴湵慣整㸢਍††††††††††敻琮瑩敬㼠‿唢瑮瑩敬≤ൽ ††††††††㰠栯㸳਍††††††††⼼楤㹶਍†††††††⼼楌歮ാ †††††⤠紩਍†††††⼼楤㹶਍†††† ›ന ††††⼠ 鳢䖁ꓨ䖁낕黦䖁苣ꪃ菣䖁覃䖁䖁黦芁臣誂苣醰臣Ꞥ臣膂䖁䖁 ††††㰠楤⁶汣獡乳浡㵥朢楲⁤牧摩挭汯⵳‱浳机楲ⵤ潣獬㈭砠㩬牧摩挭汯⵳″慧⵰∸ാ †††††笠湥牴敩⹳慭⡰攨 㸽⠠਍†††††††䰼湩൫ †††††††欠祥笽⹥摩ൽ †††††††栠敲㵦恻愯瑲潷歲⽳笤⹥摩恽ൽ †††††††挠慬獳慎敭∽牧畯⁰敲慬楴敶爠畯摮摥㈭汸漠敶晲潬⵷楨摤湥戠ⵧ桷瑩⁥潢摲牥猠慨潤⵷浳栠癯牥猺慨潤⵷摭琠慲獮瑩潩≮਍†††††††ാ †††††††笠⨯攠汳湩⵴楤慳汢ⵥ敮瑸氭湩⁥湀硥⽴敮瑸港ⵯ浩ⵧ汥浥湥⁴⼪ൽ †††††††㰠浩൧ ††††††††猠捲笽⹥浩条彥牵絬਍†††††††††污㵴敻琮瑩敬㼠‿愢瑲潷歲索਍†††††††††汣獡乳浡㵥眢昭汵⁬⵨㐶猠㩭⵨㈷漠橢捥⵴潣敶⁲牧畯⵰潨敶㩲捳污ⵥ〱‵牴湡楳楴湯ഢ †††††††⼠ാ †††††††㰠楤⁶汣獡乳浡㵥瀢㌭㔮㸢਍†††††††††格″汣獡乳浡㵥昢湯⵴敳業潢摬琠硥⵴牧祡㠭〰琠畲据瑡≥ാ †††††††††笠⹥楴汴⁥㼿∠湕楴汴摥索਍†††††††††⼼㍨ാ †††††††㰠搯癩ാ ††††††㰠䰯湩㹫਍††††††⤩ൽ ††††㰠搯癩ാ †††⤠ൽ ††㰠猯捥楴湯ാ †㰠洯楡㹮਍†㬩਍ൽഊഊഊഊ
+﻿// src/app/artists/[id]/page.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
+
+type Profile = {
+  id: string;
+  display_name: string;
+  avatar_url?: string | null;
+  banner_url?: string | null;
+  banner_focus_x?: number | null;
+  banner_focus_y?: number | null;
+  banner_zoom?: number | null;
+  bio?: string | null;
+  sns_links?: { homepage?: string; twitter?: string; instagram?: string } | null;
+};
+
+type PublicEntry = {
+  id: number;
+  title: string | null;
+  image_url: string;
+  likes?: number | null;
+  price?: number | null;
+  gallery_type?: string | null;
+  edition_total?: number | null;
+  edition_sold?: number | null;
+  is_sold?: boolean | null;
+};
+
+type PublicPortfolioResult = {
+  settings: {
+    user_id: string;
+    is_public: boolean;
+    works_filter?: 'displaying' | 'for_sale' | 'all';
+    sort_key?: 'new' | 'likes';
+  };
+  entries: PublicEntry[];
+} | null;
+
+export default function ArtistPublicPage() {
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
+
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [entries, setEntries] = useState<PublicEntry[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        setNotFound(false);
+        setIsPrivate(false);
+
+        // 特例: /artists/me は自分のidにリダイレクト
+        if (id === 'me') {
+          const { data } = await supabase.auth.getUser();
+          if (data.user?.id) {
+            router.replace(`/artists/${data.user.id}`);
+            return;
+          }
+        }
+
+        // プロフィール取得
+        const { data: prof, error: profErr } = await supabase
+          .from('profiles')
+          .select(
+            'id, display_name, avatar_url, banner_url, banner_focus_x, banner_focus_y, banner_zoom, bio, sns_links'
+          )
+          .eq('id', id)
+          .maybeSingle<Profile>();
+
+        if (profErr) throw profErr;
+        if (!prof) {
+          setNotFound(true);
+          setProfile(null);
+          setEntries([]);
+          return;
+        }
+        setProfile(prof ?? null);
+
+        // 公開ポートフォリオ取得
+        const { data: pub, error: pubErr } = await supabase.rpc(
+          'get_public_portfolio',
+          { p_user_id: id }
+        );
+
+        if (pubErr) {
+          console.error('[get_public_portfolio] error:', pubErr);
+          setIsPrivate(true);
+          setEntries([]);
+          return;
+        }
+
+        const result = (pub as PublicPortfolioResult) ?? null;
+
+        if (!result) {
+          setIsPrivate(true);
+          setEntries([]);
+          return;
+        }
+
+        setEntries(Array.isArray(result.entries) ? result.entries : []);
+      } catch (e) {
+        console.error(e);
+        setProfile(null);
+        setEntries([]);
+        setNotFound(true);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [id, router]);
+
+  if (loading) {
+    return <main className="px-4 py-16 text-gray-500">読み込み中...</main>;
+  }
+
+  if (notFound || !profile) {
+    return (
+      <main className="px-4 py-16 text-gray-500">
+        このアーティストは見つかりませんでした。
+      </main>
+    );
+  }
+
+  const bannerFocusX = profile.banner_focus_x ?? 0.5;
+  const bannerFocusY = profile.banner_focus_y ?? 0.5;
+  const bannerZoom = profile.banner_zoom ?? 1;
+
+  if (isPrivate) {
+    return (
+      <main className="font-zen">
+        <section className="relative">
+          <div className="px-4 md:px-6">
+            <div className="mx-auto w-full max-w-6xl">
+              <div className="relative w-full aspect-[16/5] overflow-hidden rounded-2xl">
+                {profile.banner_url ? (
+                  <Image
+                    src={profile.banner_url}
+                    alt="banner"
+                    fill
+                    className="object-cover"
+                    style={{
+                      objectPosition: `${bannerFocusX * 100}% ${bannerFocusY * 100}%`,
+                      transform: `scale(${bannerZoom})`,
+                      transformOrigin: `${bannerFocusX * 100}% ${bannerFocusY * 100}%`,
+                    }}
+                    unoptimized
+                  />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-r from-sky-50 to-white" />
+                )}
+              </div>
+
+              <div className="relative -mt-8 md:-mt-10 flex items-end gap-4">
+                <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100">
+                  {profile.avatar_url ? (
+                    <Image
+                      src={profile.avatar_url}
+                      alt={profile.display_name}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-full h-full grid place-items-center text-gray-400">
+                      ?
+                    </div>
+                  )}
+                </div>
+                <div className="pb-2">
+                  <h1 className="font-lilita text-2xl md:text-3xl tracking-wide">
+                    {profile.display_name}
+                  </h1>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-16 px-4 md:px-6 mb-20">
+          <div className="rounded-2xl border bg-white p-6 text-gray-700">
+            <p className="font-medium">このポートフォリオは非公開です。</p>
+            <p className="text-sm text-gray-500 mt-2">
+              公開設定はマイページの「ポートフォリオ設定」から変更できます。
+            </p>
+            <div className="mt-4">
+              <Link
+                href="/mypage"
+                className="inline-flex items-center rounded-full border px-4 py-2 text-sm hover:bg-gray-50"
+              >
+                マイページへ戻る
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="font-zen">
+      <section className="relative">
+        <div className="px-4 md:px-6">
+          <div className="mx-auto w-full max-w-6xl">
+            <div className="relative w-full aspect-[16/5] overflow-hidden rounded-2xl">
+              {profile.banner_url ? (
+                <Image
+                  src={profile.banner_url}
+                  alt="banner"
+                  fill
+                  className="object-cover"
+                  style={{
+                    objectPosition: `${bannerFocusX * 100}% ${bannerFocusY * 100}%`,
+                    transform: `scale(${bannerZoom})`,
+                    transformOrigin: `${bannerFocusX * 100}% ${bannerFocusY * 100}%`,
+                  }}
+                  unoptimized
+                />
+              ) : (
+                <div className="h-full w-full bg-gradient-to-r from-sky-50 to-white" />
+              )}
+            </div>
+
+            <div className="relative -mt-8 md:-mt-10 flex items-end gap-4">
+              <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100">
+                {profile.avatar_url ? (
+                  <Image
+                    src={profile.avatar_url}
+                    alt={profile.display_name}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="w-full h-full grid place-items-center text-gray-400">
+                    ?
+                  </div>
+                )}
+              </div>
+              <div className="pb-2">
+                <h1 className="font-lilita text-2xl md:text-3xl tracking-wide">
+                  {profile.display_name}
+                </h1>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-16 px-4 md:px-6">
+        <div className="rounded-2xl border bg-white p-4 md:p-6">
+          <p className="text-gray-700 leading-relaxed md:max-w-3xl">
+            {profile.bio || 'プロフィールはまだ記載されていません。'}
+          </p>
+
+          <div className="mt-4 flex items-center gap-2 flex-wrap">
+            {profile.sns_links?.homepage && (
+              <a
+                className="rounded-full border px-3 py-2 text-sm hover:bg-gray-50"
+                href={profile.sns_links.homepage}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Website
+              </a>
+            )}
+            {profile.sns_links?.twitter && (
+              <a
+                className="rounded-full border px-3 py-2 text-sm hover:bg-gray-50"
+                href={profile.sns_links.twitter}
+                target="_blank"
+                rel="noreferrer"
+              >
+                X
+              </a>
+            )}
+            {profile.sns_links?.instagram && (
+              <a
+                className="rounded-full border px-3 py-2 text-sm hover:bg-gray-50"
+                href={profile.sns_links.instagram}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Instagram
+              </a>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-3 sm:px-6 lg:px-10 mt-8 mb-24">
+        {entries.length === 0 ? (
+          <div className="grid place-items-center py-16 text-gray-500">
+            公開中の作品はありません。
+          </div>
+        ) : entries.length === 1 ? (
+          <div className="max-w-6xl mx-auto">
+            {entries.map((e) => (
+              <Link
+                key={e.id}
+                href={`/artworks/${e.id}`}
+                className="group relative block overflow-hidden rounded-3xl bg-white border shadow-sm hover:shadow-md transition"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={e.image_url}
+                  alt={e.title ?? 'artwork'}
+                  className="w-full h-[280px] sm:h-[360px] md:h-[460px] lg:h-[520px] object-cover group-hover:scale-[1.02] transition"
+                />
+
+                <div className="p-4 sm:p-5">
+                  <h3 className="font-semibold text-gray-900 text-base sm:text-lg truncate">
+                    {e.title ?? 'Untitled'}
+                  </h3>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
+            {entries.map((e) => (
+              <Link
+                key={e.id}
+                href={`/artworks/${e.id}`}
+                className="group relative rounded-2xl overflow-hidden bg-white border shadow-sm hover:shadow-md transition"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={e.image_url}
+                  alt={e.title ?? 'artwork'}
+                  className="w-full h-64 sm:h-72 object-cover group-hover:scale-105 transition"
+                />
+                <div className="p-3.5">
+                  <h3 className="font-semibold text-gray-800 truncate">
+                    {e.title ?? 'Untitled'}
+                  </h3>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+    </main>
+  );
+}
