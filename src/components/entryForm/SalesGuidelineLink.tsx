@@ -101,10 +101,10 @@ style={
         aria-label={label}
         className={[
           // レイヤー: ガラス風 + 境界線 + 影
-          'group flex items-center gap-2 rounded-full border bg-white/85 backdrop-blur-md',
+          'group flex items-center rounded-full border bg-white/85 backdrop-blur-md',
           'border-[#00a1e9]/40 shadow-[0_6px_24px_-8px_rgba(0,0,0,.35)]',
-          // サイズ/文字
-          'px-4 py-2 text-[13px] sm:text-sm font-zen',
+          // サイズ: スマホはコンパクト、PCは通常
+          isNarrow ? 'gap-1.5 px-3 py-2' : 'gap-2 px-4 py-2 text-[13px] sm:text-sm font-zen',
           // ホバー/フォーカス
           'hover:bg-white focus:outline-none focus-visible:ring-4 focus-visible:ring-[#00a1e9]/25',
           // 動き
@@ -121,8 +121,9 @@ style={
           ].join(' ')}
           aria-hidden
         />
-        <FileText className="w-4 h-4 opacity-80" />
-        <span className="font-medium tracking-wide">販売ガイドライン</span>
+        <FileText className={isNarrow ? 'w-5 h-5' : 'w-4 h-4 opacity-80'} />
+        {/* スマホ版はテキスト非表示 */}
+        {!isNarrow && <span className="font-medium tracking-wide">販売ガイドライン</span>}
         <span className="sr-only">{label}</span>
       </Link>
 
