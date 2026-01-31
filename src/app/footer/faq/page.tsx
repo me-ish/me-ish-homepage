@@ -104,7 +104,8 @@ const FAQ_CATEGORIES: Category[] = [
         answer: (
           <>
             <strong>応募・展示は無料</strong>です。作品が<strong>売れたときだけ手数料10%</strong>を売上から控除します。
-            アーティストへのお支払いは<strong>月次で銀行振込</strong>です（口座登録必須）。
+            アーティストへのお支払いは<strong>月末締め・翌月25日払い</strong>の銀行振込です（口座登録必須）。
+            <strong>最低振込金額の制限なし・振込手数料はme-ish負担</strong>です。
             詳細は{" "}
             <Link href="/footer/terms#sec-7-2" className="underline underline-offset-2">
               利用規約 第7条の2

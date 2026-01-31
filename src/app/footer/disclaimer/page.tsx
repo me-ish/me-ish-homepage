@@ -78,8 +78,8 @@ export default function DisclaimerPage() {
           参照）。
         </p>
 
-        <h2 id="sec-6" className="scroll-mt-28">
-          <strong>第6条（責任の範囲）</strong>
+        <h2 id="sec-5" className="scroll-mt-28">
+          <strong>第5条（責任の範囲）</strong>
         </h2>
         <p>
           当サービスは、<strong>故意または重過失</strong>がある場合を除き、当サービスの債務不履行または不法行為により
@@ -91,8 +91,8 @@ export default function DisclaimerPage() {
           参照）。
         </p>
 
-        <h2 id="sec-7" className="scroll-mt-28">
-          <strong>第7条（規約との関係）</strong>
+        <h2 id="sec-6" className="scroll-mt-28">
+          <strong>第6条（規約との関係）</strong>
         </h2>
         <p>
           本免責事項は{" "}
@@ -102,8 +102,8 @@ export default function DisclaimerPage() {
           の一部を構成します。本免責事項と利用規約の内容が矛盾または抵触する場合は、利用規約の定めが優先して適用されます。
         </p>
 
-        <h2 id="sec-8" className="scroll-mt-28">
-          <strong>第8条（お問い合わせ）</strong>
+        <h2 id="sec-7" className="scroll-mt-28">
+          <strong>第7条（お問い合わせ）</strong>
         </h2>
         <p>
           本免責事項に関するお問い合わせは、{" "}

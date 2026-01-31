@@ -30,6 +30,22 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
+
+  // AI学習クローラーの拒否
+  robots: {
+    index: true,
+    follow: true,
+    nocache: false,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
+
+  // その他のメタタグ（AI学習拒否）
+  other: {
+    "robots": "noai, noimageai",
+  },
 };
 
 
