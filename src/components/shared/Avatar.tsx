@@ -1,16 +1,17 @@
 'use client';
 
 import { forwardRef, useRef, useImperativeHandle } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, type ThreeElements } from '@react-three/fiber';
 import { AdditiveBlending } from 'three';
 import { Trail, useTexture } from '@react-three/drei';
-import { a, useSpring } from '@react-spring/three';
+import { useSpring } from '@react-spring/three';
 import * as THREE from 'three';
 
-type AvatarProps = JSX.IntrinsicElements['group'];
+type AvatarProps = ThreeElements['group'];
 
 const Avatar = forwardRef<THREE.Group, AvatarProps>((props, ref) => {
   const groupRef = useRef<THREE.Group>(null);
+  const glowMatRef = useRef<THREE.MeshStandardMaterial>(null);
 
   // 外部refを内部refに接続（forwardRefで親のrefに接続可能にする）
   useImperativeHandle(ref, () => groupRef.current!, []);
@@ -26,9 +27,14 @@ const Avatar = forwardRef<THREE.Group, AvatarProps>((props, ref) => {
   });
 
   useFrame((state) => {
-    if (groupRef.current) {
-      groupRef.current.position.y += Math.sin(state.clock.elapsedTime * 2) * 0.002;
-    }
+    const group = groupRef.current;
+    if (!group) return;
+    const [x, y, z] = position.get();
+    group.position.set(x, y + Math.sin(state.clock.elapsedTime * 2) * 0.002, z);
+    const [sx, sy, sz] = scale.get();
+    group.scale.set(sx, sy, sz);
+    const mat = glowMatRef.current;
+    if (mat) mat.emissiveIntensity = emissiveIntensity.get();
   });
 
   return (
@@ -38,21 +44,19 @@ const Avatar = forwardRef<THREE.Group, AvatarProps>((props, ref) => {
       length={4}
       attenuation={(t) => t ** 2.2}
     >
-      <a.group
+      <group
         ref={groupRef}
-        position={position.to((x, y, z) => [x, y, z] as [number, number, number])}
-        scale={scale.to((x, y, z) => [x, y, z] as [number, number, number])}
         {...props}
       >
         {/* 内核：発光球（16x16セグメントで十分） */}
         <mesh>
           <sphereGeometry args={[0.5, 16, 16]} />
           {/* @ts-ignore: react-spring 互換対策 */}
-          <a.meshStandardMaterial
+          <meshStandardMaterial
+            ref={glowMatRef}
             map={tilesMap}
             color="#ffffff"
             emissive="#00ffff"
-            emissiveIntensity={emissiveIntensity}
             toneMapped={false}
             transparent
             attach="material"
@@ -72,7 +76,7 @@ const Avatar = forwardRef<THREE.Group, AvatarProps>((props, ref) => {
             toneMapped={false}
           />
         </mesh>
-      </a.group>
+      </group>
     </Trail>
   );
 });
