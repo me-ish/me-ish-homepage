@@ -5,7 +5,6 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 import { a as aWeb, useSpring } from '@react-spring/web';
-import { a } from '@react-spring/three';
 
 type ArtworkLabelProps = {
   // 作品の親group基準のワールド座標・回転
@@ -99,6 +98,8 @@ const ArtworkLabel = forwardRef<THREE.Group, ArtworkLabelProps>(
         uiOpacity: near ? 1 : 0,
       });
 
+      const s = scale.get();
+      group.scale.set(s, s, s);
       group.lookAt(camera.position);
 
       if (auraRef.current) {
@@ -111,11 +112,7 @@ const ArtworkLabel = forwardRef<THREE.Group, ArtworkLabelProps>(
     });
 
     return (
-      <a.group
-        ref={groupRef}
-        position={labelPos}
-        scale={scale.to((s) => [s, s, s])}
-      >
+      <group ref={groupRef} position={labelPos}>
         <mesh ref={auraRef}>
           <circleGeometry args={[1.2, 32]} />
           <meshBasicMaterial
@@ -161,7 +158,7 @@ const ArtworkLabel = forwardRef<THREE.Group, ArtworkLabelProps>(
             )}
           </aWeb.div>
         </Html>
-      </a.group>
+      </group>
     );
   }
 );
