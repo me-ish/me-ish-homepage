@@ -269,7 +269,7 @@ export default function MyPageClient() {
           const { count: bankCount, error: bankErr } = await supabase
             .from('artists_bank_accounts')
             .select('id', { count: 'exact', head: true })
-            .eq('user_id', uid);
+            .eq('external_user_id', uid);
 
           if (bankErr) {
             console.error('[artists_bank_accounts] error:', bankErr);
