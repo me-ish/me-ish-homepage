@@ -820,7 +820,7 @@ const DesktopHome = () => {
               <BentoCard href="/float" className="stagger-item md:col-span-2">
                 <div className="relative h-full min-h-[200px] md:min-h-[200px]">
                   <Image
-                    src="/images/float-thumb.jpg"
+                    src="/images/float-thumb.png"
                     alt="Float Gallery"
                     fill
                     className="object-cover transition-transform duration-700 group-hover:scale-105"

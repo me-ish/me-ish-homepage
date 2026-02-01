@@ -580,7 +580,7 @@ const MobileHome = () => {
               />
 
               <GalleryCard
-                img="/images/float-thumb.jpg"
+                img="/images/float-thumb.png"
                 title="Float Gallery"
                 desc="漂うように入れ替わる美術館風ギャラリー"
                 badge="日替わり"
