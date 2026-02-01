@@ -5,7 +5,7 @@ import { AdditiveBlending } from 'three';
 import * as THREE from 'three';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { a as a3, useSpring } from '@react-spring/three';
+import { useSpring } from '@react-spring/three';
 import { animated } from '@react-spring/web';
 import { Html, useTexture } from '@react-three/drei';
 import React from 'react';
@@ -20,6 +20,8 @@ const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
   const tilesMap = useTexture('/textures/Tiles044_BaseColor.jpg');
 
   const outerRef = useRef<THREE.Mesh>(null);
+  const innerMatRef = useRef<THREE.MeshStandardMaterial>(null);
+  const outerMatRef = useRef<THREE.MeshBasicMaterial>(null);
   const router = useRouter();
 
   const [selected, setSelected] = useState<'white' | 'float' | null>(null);
@@ -47,6 +49,12 @@ const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
   useFrame(() => {
     if (outerRef.current) {
       outerRef.current.rotation.y += 0.005;
+    }
+    if (innerMatRef.current) {
+      innerMatRef.current.emissiveIntensity = emissiveIntensity.get();
+    }
+    if (outerMatRef.current) {
+      outerMatRef.current.opacity = opacity.get();
     }
 
     const avatarPos = avatarRef?.current?.position;
@@ -123,35 +131,34 @@ const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
       )}
 
       {/* 内側の発光コア */}
-      <a3.mesh>
+      <mesh>
         <sphereGeometry args={[0.4, 64, 64]} />
-        {/* @ts-ignore */}
-        <a3.meshStandardMaterial
+        <meshStandardMaterial
+          ref={innerMatRef}
           map={plasticMap}
           color="#88ccff"
           metalness={0.2}
           roughness={0.4}
           emissive="#88ccff"
-          emissiveIntensity={emissiveIntensity}
           toneMapped={false}
           transparent
           attach="material"
         />
-      </a3.mesh>
+      </mesh>
 
       {/* 外側リング（回転＋光エフェクト） */}
-      <a3.mesh ref={outerRef}>
+      <mesh ref={outerRef}>
         <sphereGeometry args={[0.75, 64, 64]} />
-        <a3.meshBasicMaterial
+        <meshBasicMaterial
+          ref={outerMatRef}
           map={tilesMap}
           color="#00ffff"
           transparent
-          opacity={opacity}
           blending={AdditiveBlending}
           depthWrite={false}
           toneMapped={false}
         />
-      </a3.mesh>
+      </mesh>
     </group>
   );
 };
