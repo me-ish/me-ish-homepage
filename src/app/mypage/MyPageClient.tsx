@@ -274,49 +274,7 @@ export default function MyPageClient() {
             });
           }
 
-          // Phase2: 銀行口座登録チェック
-          // entries経由でexternal_user_idを取得してから確認（user_id または email）
-          let entryWithExtId: { external_user_id: string } | null = null;
-
-          // まずuser_idで検索
-          const { data: entryByUid } = await supabase
-            .from('entries')
-            .select('external_user_id')
-            .eq('user_id', uid)
-            .not('external_user_id', 'is', null)
-            .limit(1)
-            .maybeSingle();
-
-          if (entryByUid) {
-            entryWithExtId = entryByUid;
-          } else if (userEmail) {
-            // user_idがなければemailで検索
-            const { data: entryByEmail } = await supabase
-              .from('entries')
-              .select('external_user_id')
-              .eq('email', userEmail)
-              .not('external_user_id', 'is', null)
-              .limit(1)
-              .maybeSingle();
-            entryWithExtId = entryByEmail;
-          }
-
-          if (entryWithExtId?.external_user_id) {
-            const { count: bankCount, error: bankErr } = await supabase
-              .from('artists_bank_accounts')
-              .select('id', { count: 'exact', head: true })
-              .eq('external_user_id', entryWithExtId.external_user_id);
-
-            if (bankErr) {
-              console.error('[artists_bank_accounts] error:', bankErr);
-              setHasBankAccount(null);
-            } else {
-              setHasBankAccount((bankCount ?? 0) > 0);
-            }
-          } else {
-            // entriesがない、またはexternal_user_idがない場合
-            setHasBankAccount(null);
-          }
+ userEmail
         }
       } catch (e: any) {
         console.error('[mypage load] fatal:', e?.message || e);
