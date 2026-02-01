@@ -214,7 +214,15 @@ function HeroBackground() {
 }
 
 // Stats Pill
-function StatPill({ icon: Icon, value, label }: { icon: React.ElementType; value: string; label: string }) {
+function StatPill({
+  icon: Icon,
+  value,
+  label,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  value: string;
+  label: string;
+}) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/80 backdrop-blur-sm ring-1 ring-[#00a1e9]/10 text-sm">
       <Icon className="w-4 h-4 text-[#00a1e9]" />
@@ -403,7 +411,7 @@ function GalleryCard({
 function FeatureCard({
   icon: Icon, title, desc, color
 }: {
-  icon: React.ElementType;
+  icon: React.ComponentType<{ className?: string }>;
   title: string;
   desc: string;
   color: 'blue' | 'amber' | 'emerald';
