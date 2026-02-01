@@ -88,6 +88,7 @@ const isUnlimited = (e: Entry) => e.edition_total == null;
 export default function MyPageClient() {
   const [loading, setLoading] = useState(true);
   const [uid, setUid] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -151,11 +152,15 @@ export default function MyPageClient() {
 
     (async () => {
       const { data } = await supabase.auth.getUser();
-      if (mounted) setUid(data.user?.id ?? null);
+      if (mounted) {
+        setUid(data.user?.id ?? null);
+        setUserEmail(data.user?.email ?? null);
+      }
     })();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUid(session?.user?.id ?? null);
+      setUserEmail(session?.user?.email ?? null);
     });
 
     return () => {
@@ -266,14 +271,31 @@ export default function MyPageClient() {
           }
 
           // Phase2: 銀行口座登録チェック
-          // entries経由でexternal_user_idを取得してから確認
-          const { data: entryWithExtId } = await supabase
+          // entries経由でexternal_user_idを取得してから確認（user_id または email）
+          let entryWithExtId: { external_user_id: string } | null = null;
+
+          // まずuser_idで検索
+          const { data: entryByUid } = await supabase
             .from('entries')
             .select('external_user_id')
             .eq('user_id', uid)
             .not('external_user_id', 'is', null)
             .limit(1)
             .maybeSingle();
+
+          if (entryByUid) {
+            entryWithExtId = entryByUid;
+          } else if (userEmail) {
+            // user_idがなければemailで検索
+            const { data: entryByEmail } = await supabase
+              .from('entries')
+              .select('external_user_id')
+              .eq('email', userEmail)
+              .not('external_user_id', 'is', null)
+              .limit(1)
+              .maybeSingle();
+            entryWithExtId = entryByEmail;
+          }
 
           if (entryWithExtId?.external_user_id) {
             const { count: bankCount, error: bankErr } = await supabase

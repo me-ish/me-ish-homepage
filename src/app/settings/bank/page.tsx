@@ -47,6 +47,7 @@ export default function BankSettingsPage() {
 
   // 認証状態
   const [uid, setUid] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [externalUserId, setExternalUserId] = useState<string | null>(null);
 
   // マスタデータ
@@ -71,6 +72,7 @@ export default function BankSettingsPage() {
         return;
       }
       setUid(data.user.id);
+      setUserEmail(data.user.email ?? null);
     })();
   }, [router]);
 
@@ -93,14 +95,31 @@ export default function BankSettingsPage() {
 
     (async () => {
       try {
-        // entriesからexternal_user_idを取得
-        const { data: entry } = await supabase
+        // entriesからexternal_user_idを取得（user_id または email でマッチ）
+        let entry: { external_user_id: string } | null = null;
+
+        // まずuser_idで検索
+        const { data: entryByUid } = await supabase
           .from('entries')
           .select('external_user_id')
           .eq('user_id', uid)
           .not('external_user_id', 'is', null)
           .limit(1)
           .maybeSingle();
+
+        if (entryByUid) {
+          entry = entryByUid;
+        } else if (userEmail) {
+          // user_idがなければemailで検索
+          const { data: entryByEmail } = await supabase
+            .from('entries')
+            .select('external_user_id')
+            .eq('email', userEmail)
+            .not('external_user_id', 'is', null)
+            .limit(1)
+            .maybeSingle();
+          entry = entryByEmail;
+        }
 
         if (!entry?.external_user_id) {
           setLoading(false);
@@ -138,7 +157,7 @@ export default function BankSettingsPage() {
         setLoading(false);
       }
     })();
-  }, [uid, banks, branches]);
+  }, [uid, userEmail, banks, branches]);
 
   // 銀行候補
   const bankCandidates = useMemo(() => {
