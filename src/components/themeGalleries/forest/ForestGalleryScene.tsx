@@ -83,7 +83,7 @@ export default function ForestGalleryScene({
           alpha: false,
           powerPreference: 'high-performance',
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.2,
+          toneMappingExposure: 2.0,
         }}
         dpr={[1, 2]}
       >
