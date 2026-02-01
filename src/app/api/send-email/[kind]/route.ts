@@ -11,6 +11,8 @@ import { generateExhibitStartEmail } from '@/lib/emailTemplates/exhibitStart';
 import { generateExhibitEndEmail } from '@/lib/emailTemplates/exhibitEnd';
 import { generatePurchaseBuyerEmail } from '@/lib/emailTemplates/purchaseBuyer';
 import { generatePurchaseArtistEmail } from '@/lib/emailTemplates/purchaseArtist';
+import { generatePayoutCompleteEmail } from '@/lib/emailTemplates/payoutComplete';
+import { generateExhibitEndingSoonEmail } from '@/lib/emailTemplates/exhibitEndingSoon';
 import { generateContactEmail } from '@/lib/emailTemplates/generateContactEmail';
 
 export const runtime = 'nodejs';
@@ -126,6 +128,31 @@ const PurchaseArtist = z.object({
 }).transform(d => ({ ...d, priceYen: d.priceYen ?? d.amountYen ?? null }));
 
 
+// exhibitEndingSoon（展示終了5日前通知）
+const ExhibitEndingSoon = z.object({
+  to: z.string().email(),
+  name: z.string().min(1),
+  title: z.string().min(1),
+  entryId: z.union([z.number(), z.string()]),
+  displayEndAt: z.string(),
+  workUrl: z.string().url().optional(),
+  renewUrl: z.string().url().optional(),
+  manageUrl: z.string().url().optional(),
+});
+
+// payoutComplete（振込完了通知）
+const PayoutComplete = z.object({
+  to: z.string().email(),
+  name: z.string().min(1),
+  amountYen: z.number().int().nonnegative(),
+  periodYm: z.string().optional(),
+  itemCount: z.number().int().nonnegative().optional(),
+  paidAt: z.string().optional(),
+  bankAccountLast4: z.string().max(4).optional(),
+  manageUrl: z.string().url().optional(),
+  note: z.string().max(500).optional(),
+});
+
 // contact（運営宛固定／Reply-To は送信者）
 const Contact = z.object({
   name: z.string().min(1).max(100),
@@ -146,8 +173,10 @@ const templates = {
   reject:        { schema: Reject,         gen: generateRejectEmail },
   exhibitStart:  { schema: ExhibitStart,   gen: generateExhibitStartEmail },
   exhibitEnd:    { schema: ExhibitEnd,     gen: generateExhibitEndEmail },
+  exhibitEndingSoon: { schema: ExhibitEndingSoon, gen: generateExhibitEndingSoonEmail },
   purchaseBuyer: { schema: PurchaseBuyer,  gen: generatePurchaseBuyerEmail },
   purchaseArtist:{ schema: PurchaseArtist, gen: generatePurchaseArtistEmail },
+  payoutComplete:{ schema: PayoutComplete, gen: generatePayoutCompleteEmail },
   contact:       { schema: Contact,        gen: generateContactEmail },
 } as const;
 

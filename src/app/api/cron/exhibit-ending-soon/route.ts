@@ -1,0 +1,172 @@
+// src/app/api/cron/exhibit-ending-soon/route.ts
+// 展示終了5日前の通知を送信するCron API
+// Vercel Cron や外部スケジューラから毎日1回呼び出す想定
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // 最大60秒
+
+function supabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Supabase env missing');
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
+function siteUrl() {
+  return process.env.NEXT_PUBLIC_SITE_URL || 'https://me-ish.art';
+}
+
+// 認証チェック（Cron secretまたはADMIN_API_TOKEN）
+function isAuthorized(req: NextRequest): boolean {
+  // Vercel Cron の場合
+  const cronSecret = process.env.CRON_SECRET;
+  const authHeader = req.headers.get('authorization');
+  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+    return true;
+  }
+
+  // ADMIN_API_TOKEN の場合
+  const token = req.headers.get('x-meish-admin-token');
+  const adminToken = process.env.ADMIN_API_TOKEN;
+  if (adminToken && token === adminToken) {
+    return true;
+  }
+
+  return false;
+}
+
+export async function GET(req: NextRequest) {
+  // POST でも呼べるようにする（Vercel Cronは GET）
+  return handleCron(req);
+}
+
+export async function POST(req: NextRequest) {
+  return handleCron(req);
+}
+
+async function handleCron(req: NextRequest) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const admin = supabaseAdmin();
+  const now = new Date();
+
+  // 5日後の日付範囲を計算（その日の0:00〜23:59:59）
+  const targetDate = new Date(now);
+  targetDate.setDate(targetDate.getDate() + 5);
+  const dayStart = new Date(targetDate);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(targetDate);
+  dayEnd.setHours(23, 59, 59, 999);
+
+  console.log('[exhibit-ending-soon] Checking for entries ending between:', {
+    dayStart: dayStart.toISOString(),
+    dayEnd: dayEnd.toISOString(),
+  });
+
+  // 5日後に終了する作品を取得
+  // - display_ready = true（展示中）
+  // - display_end_at が5日後
+  // - ending_soon_notified_at が null（未通知）
+  const { data: entries, error: fetchError } = await admin
+    .from('entries')
+    .select('id, title, user_id, display_end_at')
+    .eq('display_ready', true)
+    .gte('display_end_at', dayStart.toISOString())
+    .lte('display_end_at', dayEnd.toISOString())
+    .is('ending_soon_notified_at', null);
+
+  if (fetchError) {
+    console.error('[exhibit-ending-soon] fetch error:', fetchError);
+    return NextResponse.json({ error: 'Failed to fetch entries' }, { status: 500 });
+  }
+
+  if (!entries || entries.length === 0) {
+    console.log('[exhibit-ending-soon] No entries to notify');
+    return NextResponse.json({ ok: true, sent: 0, message: 'No entries to notify' });
+  }
+
+  console.log('[exhibit-ending-soon] Found entries:', entries.length);
+
+  const results: { entryId: number; success: boolean; error?: string }[] = [];
+
+  for (const entry of entries) {
+    try {
+      // ユーザー情報を取得
+      const { data: profile } = await admin
+        .from('profiles')
+        .select('display_name')
+        .eq('id', entry.user_id)
+        .single();
+
+      // メールアドレスを取得
+      const { data: authData } = await admin.auth.admin.getUserById(entry.user_id);
+      const artistEmail = authData?.user?.email;
+
+      if (!artistEmail) {
+        console.warn('[exhibit-ending-soon] No email for user:', entry.user_id);
+        results.push({ entryId: entry.id, success: false, error: 'No email' });
+        continue;
+      }
+
+      // メール送信
+      const emailPayload = {
+        to: artistEmail,
+        name: profile?.display_name || 'アーティスト',
+        title: entry.title || '作品',
+        entryId: entry.id,
+        displayEndAt: entry.display_end_at,
+        workUrl: `${siteUrl()}/works/${entry.id}`,
+        manageUrl: `${siteUrl()}/mypage`,
+      };
+
+      const emailRes = await fetch(`${siteUrl()}/api/send-email/exhibitEndingSoon`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-meish-admin-token': process.env.ADMIN_API_TOKEN || '',
+        },
+        body: JSON.stringify(emailPayload),
+      });
+
+      if (!emailRes.ok) {
+        const errText = await emailRes.text().catch(() => '');
+        console.error('[exhibit-ending-soon] email failed:', entry.id, errText);
+        results.push({ entryId: entry.id, success: false, error: errText });
+        continue;
+      }
+
+      // 通知済みフラグを更新
+      const { error: updateError } = await admin
+        .from('entries')
+        .update({ ending_soon_notified_at: new Date().toISOString() })
+        .eq('id', entry.id);
+
+      if (updateError) {
+        console.warn('[exhibit-ending-soon] flag update failed:', entry.id, updateError);
+        // メールは送信済みなので成功扱い
+      }
+
+      console.log('[exhibit-ending-soon] sent to:', artistEmail, 'entry:', entry.id);
+      results.push({ entryId: entry.id, success: true });
+    } catch (err: any) {
+      console.error('[exhibit-ending-soon] error for entry:', entry.id, err);
+      results.push({ entryId: entry.id, success: false, error: err.message });
+    }
+  }
+
+  const successCount = results.filter(r => r.success).length;
+  console.log('[exhibit-ending-soon] Complete:', { total: entries.length, sent: successCount });
+
+  return NextResponse.json({
+    ok: true,
+    total: entries.length,
+    sent: successCount,
+    results,
+  });
+}

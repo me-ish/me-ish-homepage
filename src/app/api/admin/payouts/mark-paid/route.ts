@@ -219,6 +219,67 @@ export async function POST(req: NextRequest) {
       payoutId,
     });
 
+    // 6. 振込完了メールを送信
+    try {
+      // ユーザー情報を取得
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("display_name")
+        .eq("id", userId)
+        .single();
+
+      // ユーザーのメールアドレスを取得
+      const { data: authData } = await admin.auth.admin.getUserById(userId);
+      const artistEmail = authData?.user?.email;
+
+      // 銀行口座の下4桁を取得（external_user_id = userId）
+      const { data: bankAccount } = await admin
+        .from("artists_bank_accounts")
+        .select("account_number")
+        .eq("external_user_id", userId)
+        .maybeSingle();
+
+      const bankAccountLast4 = bankAccount?.account_number
+        ? bankAccount.account_number.slice(-4)
+        : undefined;
+
+      if (artistEmail) {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://me-ish.art";
+        const emailPayload = {
+          to: artistEmail,
+          name: profile?.display_name || "アーティスト",
+          amountYen: Math.round(totalAmount),
+          periodYm,
+          itemCount: saleIds.length,
+          paidAt: new Date().toISOString(),
+          bankAccountLast4,
+          manageUrl: `${siteUrl}/mypage`,
+        };
+
+        // 内部メールAPI呼び出し
+        const emailRes = await fetch(`${siteUrl}/api/send-email/payoutComplete`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-meish-admin-token": process.env.ADMIN_API_TOKEN || "",
+          },
+          body: JSON.stringify(emailPayload),
+        });
+
+        if (!emailRes.ok) {
+          const errText = await emailRes.text().catch(() => "");
+          console.error("[admin/payouts/mark-paid] email send failed:", errText);
+        } else {
+          console.log("[admin/payouts/mark-paid] email sent to:", artistEmail);
+        }
+      } else {
+        console.warn("[admin/payouts/mark-paid] no email for user:", userId);
+      }
+    } catch (emailErr) {
+      // メール送信失敗でも振込処理は成功扱い
+      console.error("[admin/payouts/mark-paid] email error:", emailErr);
+    }
+
     return NextResponse.json({
       ok: true,
       updatedCount: saleIds.length,

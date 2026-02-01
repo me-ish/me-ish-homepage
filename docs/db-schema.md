@@ -171,6 +171,7 @@ Source: Supabase SQL metadata export provided in this thread (tables/columns/con
 - agree_promotion | boolean | nullable: NO | default: false
 - agree_storage | boolean | nullable: NO | default: false
 - portfolio_hidden | boolean | nullable: NO | default: false
+- ending_soon_notified_at | timestamp with time zone | nullable: YES | default: null
 
 ## entry_processing_jobs
 - id | uuid | nullable: NO | default: gen_random_uuid()

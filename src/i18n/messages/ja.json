@@ -1,0 +1,76 @@
+{
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラーが発生しました",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "delete": "削除",
+    "edit": "編集",
+    "close": "閉じる",
+    "back": "戻る",
+    "next": "次へ",
+    "submit": "送信",
+    "search": "検索"
+  },
+  "nav": {
+    "home": "ホーム",
+    "gallery": "ギャラリー",
+    "works": "作品",
+    "artists": "アーティスト",
+    "about": "me-ishとは",
+    "contact": "お問い合わせ",
+    "mypage": "マイページ",
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "entry": "作品を出展する"
+  },
+  "footer": {
+    "terms": "利用規約",
+    "privacy": "プライバシーポリシー",
+    "tokushoho": "特定商取引法に基づく表記",
+    "faq": "よくある質問",
+    "copyright": "著作権・AI学習防止",
+    "disclaimer": "免責事項"
+  },
+  "cookie": {
+    "message": "当サイトでは、サービス向上のためCookieを使用しています。",
+    "learnMore": "詳しくはプライバシーポリシーをご確認ください。",
+    "accept": "同意する",
+    "decline": "拒否"
+  },
+  "auth": {
+    "loginWithGoogle": "Googleでログイン",
+    "loginRequired": "ログインが必要です",
+    "logoutSuccess": "ログアウトしました"
+  },
+  "works": {
+    "title": "作品タイトル",
+    "artist": "作家",
+    "price": "価格",
+    "soldOut": "SOLD OUT",
+    "limited": "限定",
+    "edition": "エディション",
+    "likes": "いいね",
+    "buy": "購入する",
+    "addToCart": "カートに追加"
+  },
+  "mypage": {
+    "title": "マイページ",
+    "profile": "プロフィール",
+    "editProfile": "プロフィールを編集",
+    "likedWorks": "いいねした作品",
+    "myWorks": "出展作品",
+    "sales": "売上",
+    "settings": "設定",
+    "accountSettings": "アカウント設定",
+    "withdraw": "退会する",
+    "withdrawConfirm": "本当に退会しますか？"
+  },
+  "purchase": {
+    "success": "ご購入ありがとうございます",
+    "receipt": "領収書",
+    "downloadPdf": "PDFダウンロード",
+    "print": "印刷"
+  }
+}
