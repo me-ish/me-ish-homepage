@@ -50,6 +50,9 @@ export default function WhiteGallery(): JSX.Element {
         shadows
         style={{ width: '100%', height: '100%' }}
         camera={{ position: [0, 5, 15], fov: 60 }}
+        gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
+        tabIndex={0}
+        onPointerDown={(e) => e.currentTarget.focus()}
       >
         <Lightning />
         <LightCircle />

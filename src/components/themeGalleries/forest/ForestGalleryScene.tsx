@@ -1,6 +1,7 @@
 'use client';
 
 import React, { Suspense } from 'react';
+import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 
@@ -81,6 +82,8 @@ export default function ForestGalleryScene({
           antialias: true,
           alpha: false,
           powerPreference: 'high-performance',
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.2,
         }}
         dpr={[1, 2]}
       >
