@@ -9,7 +9,11 @@ import { cn } from '@/lib/utils';
 type Status = 'idle' | 'loading' | 'error';
 type Category = 'general' | 'bug' | 'howto' | 'entry' | 'purchase' | 'other';
 
-const CATEGORY_OPTIONS: { value: Category; label: string; icon: ElementType }[] = [
+const CATEGORY_OPTIONS: {
+  value: Category;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
   { value: 'general', label: '一般のお問い合わせ', icon: MessageSquare },
   { value: 'bug', label: '不具合の報告', icon: Bug },
   { value: 'howto', label: '使い方について', icon: HelpCircle },
