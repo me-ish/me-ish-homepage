@@ -222,15 +222,14 @@ export async function getLikedEntries(
 
 /**
  * 出展作品（ステータス付き）を取得
+ * user_id または email でマッチ
  */
 export async function getEntriesWithStatus(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  userEmail?: string | null
 ): Promise<EntryWithStatus[]> {
-  const { data: entries, error: entriesErr } = await supabase
-    .from("entries")
-    .select(
-      `
+  const selectFields = `
       id,
       title,
       image_url,
@@ -254,8 +253,12 @@ export async function getEntriesWithStatus(
         attempts,
         updated_at
       )
-    `
-    )
+    `;
+
+  // まずuser_idで検索
+  let { data: entries, error: entriesErr } = await supabase
+    .from("entries")
+    .select(selectFields)
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .order("updated_at", {
@@ -263,6 +266,22 @@ export async function getEntriesWithStatus(
       ascending: false,
     })
     .limit(1, { referencedTable: "entry_processing_jobs" });
+
+  // user_idで見つからなければemailで検索
+  if ((!entries || entries.length === 0) && userEmail) {
+    const result = await supabase
+      .from("entries")
+      .select(selectFields)
+      .eq("email", userEmail)
+      .order("created_at", { ascending: false })
+      .order("updated_at", {
+        referencedTable: "entry_processing_jobs",
+        ascending: false,
+      })
+      .limit(1, { referencedTable: "entry_processing_jobs" });
+    entries = result.data;
+    entriesErr = result.error;
+  }
 
   if (entriesErr) {
     console.error("[getEntriesWithStatus] entries error:", entriesErr);

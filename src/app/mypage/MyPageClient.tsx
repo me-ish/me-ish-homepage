@@ -22,6 +22,10 @@ import {
   CheckCircle2,
   Loader2,
   UserX,
+  Settings,
+  ChevronRight,
+  Sparkles,
+  Layers,
 } from 'lucide-react';
 import {
   Dialog,
@@ -588,7 +592,7 @@ export default function MyPageClient() {
 
                   <TabsContent value="works" className="mt-0">
                     {uid ? (
-                      <MyWorksTab userId={uid} />
+                      <MyWorksTab userId={uid} userEmail={userEmail} />
                     ) : (
                       <div className="py-10 text-center text-gray-500">
                         読み込み中...
@@ -600,26 +604,86 @@ export default function MyPageClient() {
             </div>
           </section>
 
-          {/* ===== アカウント設定 ===== */}
+          {/* ===== ギャラリーを見る ===== */}
           <section className="px-4 md:px-6 mt-10">
             <div className="mx-auto w-full max-w-6xl">
               <div className="rounded-2xl border border-gray-200 bg-white p-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">アカウント設定</h2>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">
-                      退会すると、アカウント情報やいいねした作品の履歴が削除されます。
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      ※ 出展作品や取引履歴は法令に基づき一定期間保持されます。
-                    </p>
-                  </div>
+                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-sky-500" />
+                  ギャラリーを見る
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Link
+                    href="/float"
+                    className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-sky-300 hover:bg-sky-50/50 transition group"
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                      <Layers className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 group-hover:text-sky-700">Float Gallery</p>
+                      <p className="text-sm text-gray-500">雲の上の美術館</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-sky-500" />
+                  </Link>
+                  <Link
+                    href="/white"
+                    className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-sky-300 hover:bg-sky-50/50 transition group"
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-300 flex items-center justify-center border">
+                      <Layers className="w-6 h-6 text-gray-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 group-hover:text-sky-700">White Gallery</p>
+                      <p className="text-sm text-gray-500">白い空間の美術館</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-sky-500" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ===== 設定 ===== */}
+          <section className="px-4 md:px-6 mt-6">
+            <div className="mx-auto w-full max-w-6xl">
+              <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-gray-500" />
+                  設定
+                </h2>
+                <div className="space-y-2">
+                  {/* 振込先口座 */}
+                  <Link
+                    href="/settings/bank"
+                    className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Wallet className="w-5 h-5 text-gray-500" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">振込先口座</p>
+                        <p className="text-xs text-gray-500">売上の振込に使用する口座</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  </Link>
+
+                  {/* 区切り線 */}
+                  <div className="border-t border-gray-100 my-2" />
+
+                  {/* 退会 */}
                   <button
                     onClick={() => setDeleteDialogOpen(true)}
-                    className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700 hover:underline underline-offset-2"
+                    className="flex items-center justify-between p-3 rounded-lg hover:bg-red-50 transition w-full text-left"
                   >
-                    <UserX className="w-4 h-4" />
-                    退会する
+                    <div className="flex items-center gap-3">
+                      <UserX className="w-5 h-5 text-red-500" />
+                      <div>
+                        <p className="text-sm font-medium text-red-600">退会する</p>
+                        <p className="text-xs text-gray-500">アカウントを削除します</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
                   </button>
                 </div>
               </div>

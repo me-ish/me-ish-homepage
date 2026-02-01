@@ -67,7 +67,7 @@ const STATUS_PRIORITY: Record<string, number> = {
   reviewing: 7,
 };
 
-export function MyWorksTab({ userId }: { userId: string }) {
+export function MyWorksTab({ userId, userEmail }: { userId: string; userEmail?: string | null }) {
   const [entries, setEntries] = useState<EntryWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>('new');
@@ -97,7 +97,7 @@ const publicUrl = useMemo(() => {
     (async () => {
       setLoading(true);
       try {
-        const data = await getEntriesWithStatus(supabase, userId);
+        const data = await getEntriesWithStatus(supabase, userId, userEmail);
         setEntries(data);
       } catch (err) {
         console.error('[MyWorksTab] error:', err);
@@ -106,7 +106,7 @@ const publicUrl = useMemo(() => {
         setLoading(false);
       }
     })();
-  }, [userId]);
+  }, [userId, userEmail]);
 
   const setTab = (next: StatusTab) => {
     setStatusTab(next);
