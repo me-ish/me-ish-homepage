@@ -3,11 +3,19 @@
 import { useRef, forwardRef, useImperativeHandle } from 'react'
 import { useFrame, extend } from '@react-three/fiber'
 import * as THREE from 'three'
-import { a, useSpring } from '@react-spring/three'
+import { animated, useSpring } from '@react-spring/three'
 import { Text } from '@react-three/drei'
 import { HologramMaterial } from './HologramMaterial'
 
 extend({ HologramMaterial })
+
+// animated.group の型定義（@react-spring/three の型が不完全なため）
+const AnimatedGroup = animated('group') as unknown as React.FC<{
+  ref?: React.Ref<THREE.Group>
+  position?: any
+  scale?: any
+  children?: React.ReactNode
+}>
 
 interface ArtworkLabelWhiteProps {
   avatarRef: React.RefObject<THREE.Object3D>
@@ -48,7 +56,7 @@ const ArtworkLabelWhite = forwardRef<THREE.Group, ArtworkLabelWhiteProps>(
     })
 
     return (
-      <a.group
+      <AnimatedGroup
         ref={groupRef}
         position={scale.to((s) => [
           labelOffset[0],
@@ -71,22 +79,21 @@ const ArtworkLabelWhite = forwardRef<THREE.Group, ArtworkLabelWhiteProps>(
         </mesh>
 
         {/* テキスト */}
-<Text
-  font="/fonts/ZenMaruGothic-Regular.woff"
-  fontSize={0.22}
-  color="#000000"
-  anchorX="center"
-  anchorY="middle"
-  outlineWidth={0.015}
-  outlineColor="#ffffff"
-  position={[0, 0, 0.01]}
-  maxWidth={2.0}
-  textAlign="center"
->
-  {title + '\nby ' + author}
-</Text>
-
-      </a.group>
+        <Text
+          font="/fonts/ZenMaruGothic-Regular.woff"
+          fontSize={0.22}
+          color="#000000"
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.015}
+          outlineColor="#ffffff"
+          position={[0, 0, 0.01]}
+          maxWidth={2.0}
+          textAlign="center"
+        >
+          {title + '\nby ' + author}
+        </Text>
+      </AnimatedGroup>
     )
   }
 )
