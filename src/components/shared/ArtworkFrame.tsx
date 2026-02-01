@@ -9,7 +9,7 @@ import React, {
 } from 'react';
 import { useFrame, ThreeElements } from '@react-three/fiber';
 import * as THREE from 'three';
-import { a, useSpring } from '@react-spring/three';
+import { useSpring } from '@react-spring/three';
 import { useTexture } from '@react-three/drei';
 import { useZoomArtwork } from './ZoomArtworkContext';
 
@@ -73,6 +73,7 @@ const ArtworkFrame = forwardRef<ArtworkFrameHandle, ArtworkFrameProps>(
   ) => {
     const { setZoomedArtwork } = useZoomArtwork();
     const groupRef = useRef<THREE.Group>(null);
+    const glowMatRef = useRef<THREE.MeshStandardMaterial>(null);
 
     // 再利用用ベクトル（GC回避）
     const artworkPos = useMemo(() => new THREE.Vector3(...position), [position]);
@@ -114,6 +115,8 @@ const ArtworkFrame = forwardRef<ArtworkFrameHandle, ArtworkFrameProps>(
       api.start({
         emissiveIntensity: distance < GLOW_DISTANCE ? GLOW_INTENSITY : 0,
       });
+      const mat = glowMatRef.current;
+      if (mat) mat.emissiveIntensity = springs.emissiveIntensity.get();
 
       if (distance < GLOW_DISTANCE && !shouldGlow) {
         setShouldGlow(true);
@@ -164,16 +167,15 @@ const ArtworkFrame = forwardRef<ArtworkFrameHandle, ArtworkFrameProps>(
           <meshBasicMaterial map={texture} toneMapped={false} />
         </mesh>
 
-        <a.mesh position={[0, 0, -0.01]}>
+        <mesh position={[0, 0, -0.01]}>
           <planeGeometry args={[width + 0.1, height + 0.1]} />
-<a.meshStandardMaterial
-  color="#000000"
-  emissive="#ffeeaa"
-  // @ts-ignore
-  emissiveIntensity={springs.emissiveIntensity}
-  side={THREE.DoubleSide}
-/>
-        </a.mesh>
+          <meshStandardMaterial
+            ref={glowMatRef}
+            color="#000000"
+            emissive="#ffeeaa"
+            side={THREE.DoubleSide}
+          />
+        </mesh>
       </group>
     );
   }
