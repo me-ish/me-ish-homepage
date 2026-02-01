@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, useRef, useImperativeHandle } from 'react';
+import { forwardRef, useRef, useImperativeHandle, useEffect } from 'react';
 import { useFrame, type ThreeElements } from '@react-three/fiber';
 import { AdditiveBlending } from 'three';
 import { Trail, useTexture } from '@react-three/drei';
@@ -18,19 +18,23 @@ const Avatar = forwardRef<THREE.Group, AvatarProps>((props, ref) => {
 
   const tilesMap = useTexture('/textures/Tiles044_BaseColor.jpg');
 
-  const { scale, opacity, position, emissiveIntensity } = useSpring({
+  const { scale, opacity, emissiveIntensity } = useSpring({
     scale: [0.1, 0.1, 0.1],
     opacity: 1,
     emissiveIntensity: 1,
-    position: [0, 2.5, 0],
     config: { tension: 0, friction: 0 },
   });
+
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.position.set(0, 2.5, 0);
+    }
+  }, []);
 
   useFrame((state) => {
     const group = groupRef.current;
     if (!group) return;
-    const [x, y, z] = position.get();
-    group.position.set(x, y + Math.sin(state.clock.elapsedTime * 2) * 0.002, z);
+    group.position.y += Math.sin(state.clock.elapsedTime * 2) * 0.002;
     const [sx, sy, sz] = scale.get();
     group.scale.set(sx, sy, sz);
     const mat = glowMatRef.current;
