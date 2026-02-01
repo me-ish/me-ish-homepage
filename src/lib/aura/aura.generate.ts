@@ -235,7 +235,6 @@ function applyUiProfileToVariant(variant: VariantSpec, payload: FormInput, overa
   if (prof?.radius) (variant as any).radius = prof.radius;
   if (prof?.shadow) (variant as any).shadow = prof.shadow;
 
-  console.log("[UI_PROFILE] base=", baseWorldview, "picked=", pickedWorldview, "strength=", overallStrength);
 }
 
 /* ---------------------------------------------------------
@@ -1203,7 +1202,6 @@ function mergeTextFieldsIntoSection(original: any, refined: any) {
 export async function generatePortfolioFromForm(rawPayload: unknown): Promise<{ design: Design; content: Content }> {
   const t0 = Date.now();
   let tp = t0;
-  console.log("⏱ [GEN0] start generate");
 
   const rawAvatarUrl =
     rawPayload &&
@@ -1241,7 +1239,6 @@ export async function generatePortfolioFromForm(rawPayload: unknown): Promise<{ 
     skill_presets: rawSkillPresets,
   };
 
-  console.log(`⏱ [GEN1] after Zod parse: ${Date.now() - tp} ms`);
   tp = Date.now();
 
   const variant: VariantSpec = deriveVariantFromAnswers(payload as any);
@@ -1251,12 +1248,9 @@ export async function generatePortfolioFromForm(rawPayload: unknown): Promise<{ 
     const before = variant.worldview;
     (variant as any).worldview = lockedWorldview;
     if (before !== lockedWorldview) {
-      console.log("[WORLDVIEW_LOCK] before=", before, "locked=", lockedWorldview);
     }
   }
-  console.log(`⏱ [GEN2] after variant: ${Date.now() - tp} ms`);
   tp = Date.now();
-  console.log("### RAW SOCIAL (after parse restore)", (payload as any).social);
 
   // 2.5) LayoutDecision
   const imagesCount = (payload.images?.length ?? 0) as number;
@@ -1280,7 +1274,6 @@ export async function generatePortfolioFromForm(rawPayload: unknown): Promise<{ 
     hasFeatured: false,
   } as any);
 
-  console.log("### LAYOUT DECISION", layoutDecision);
 
   // 3) テーマ色 ＋ worldviewPreset
   const palette = getPalette(variant.worldview);
@@ -1404,7 +1397,6 @@ export async function generatePortfolioFromForm(rawPayload: unknown): Promise<{ 
     layoutDecision,
   };
 
-  console.log(`⏱ [GEN3] design built: ${Date.now() - tp} ms`);
   tp = Date.now();
 
   // 4) draft content
@@ -1420,8 +1412,6 @@ export async function generatePortfolioFromForm(rawPayload: unknown): Promise<{ 
 
   const draftContent: Content = contentParsed.success ? contentParsed.data : contentInput;
 
-  console.log("[DEBUG] content.sections", JSON.stringify(draftContent.sections, null, 2));
-  console.log(`⏱ [GEN4] draft content built: ${Date.now() - tp} ms`);
   tp = Date.now();
 
   // 5) OpenAI で文章だけ軽く整える（条件付き）
@@ -1441,29 +1431,17 @@ export async function generatePortfolioFromForm(rawPayload: unknown): Promise<{ 
 
   let finalContent = draftContent;
 
-  console.log("[GEN5] strengths:", {
-    overallStrength,
-    rawCopywriting,
-    copyStrength,
-    threshold,
-    hasApiKey,
-    shouldUseAI,
-  });
 
   if (shouldUseAI) {
-    console.log(`⏱ [GEN5] refineContent start (copy=${copyStrength})`);
     try {
       finalContent = await refineContentWithOpenAI(payload, design, draftContent);
-      console.log(`⏱ [GEN5] refineContent finished in ${Date.now() - tp} ms`);
     } catch (e) {
       console.error("[GEN5] refineContent error:", e);
       finalContent = draftContent;
     }
   } else {
-    console.log(`⏱ [GEN5] skip refineContent (copy=${copyStrength}, hasApiKey=${hasApiKey})`);
   }
 
-  console.log(`⏱ [GEN6] total: ${Date.now() - t0} ms`);
 
   return { design, content: finalContent };
 }

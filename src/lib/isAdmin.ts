@@ -41,7 +41,6 @@ async function fetchAdminEmailsFromDB(): Promise<Set<string> | null> {
     const { data, error } = await admin.from("admin_emails").select("email");
 
     if (error) {
-      console.warn("[isAdmin] DB fetch error:", error.message);
       return null;
     }
 
@@ -49,7 +48,6 @@ async function fetchAdminEmailsFromDB(): Promise<Set<string> | null> {
       (data ?? []).map((row: { email: string }) => row.email.toLowerCase())
     );
   } catch (e) {
-    console.warn("[isAdmin] DB fetch exception:", e);
     return null;
   }
 }

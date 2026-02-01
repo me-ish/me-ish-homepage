@@ -209,7 +209,6 @@ export async function updateGenerated(
     .single();
 
   if (error || !data) {
-    console.warn("[AI_DB] updateGenerated failed", id, error);
     return undefined;
   }
 
@@ -283,7 +282,6 @@ async function pickUniqueLegacySlug(
       .maybeSingle();
 
     if (error) {
-      console.warn("[AI_DB] legacy slug check failed", candidate, error);
       continue;
     }
     if (!hit) return candidate;
@@ -311,7 +309,6 @@ async function pickUniquePublicSlug(
       .maybeSingle();
 
     if (error) {
-      console.warn("[AI_DB] public_slug check failed", candidate, error);
       continue;
     }
 
@@ -407,7 +404,6 @@ export async function publishContent(
     .single();
 
   if (error || !data) {
-    console.warn("[AI_DB] publishContent failed", id, error);
     return {};
   }
 

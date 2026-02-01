@@ -44,11 +44,9 @@ export function useAuraFormDraft() {
           };
           setDataState(restoredData);
           setCurrentStepState(parsed.currentStep);
-          console.log("[AuraDraft] Restored from localStorage");
         }
       }
     } catch (e) {
-      console.warn("[AuraDraft] Failed to restore:", e);
     }
 
     setIsLoaded(true);
@@ -71,7 +69,6 @@ export function useAuraFormDraft() {
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       } catch (e) {
-        console.warn("[AuraDraft] Failed to save:", e);
       }
     }, DEBOUNCE_MS);
 
@@ -105,7 +102,6 @@ export function useAuraFormDraft() {
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch (e) {
-      console.warn("[AuraDraft] Failed to clear:", e);
     }
   }, []);
 

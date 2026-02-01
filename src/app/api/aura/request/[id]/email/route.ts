@@ -49,7 +49,6 @@ export async function POST(req: Request, { params }: { params: Params }) {
 
     // 2) published の場合は拒否（確定後は変更不可）
     if (rec.status === "published") {
-      console.log("[email/update] rejected: already published", { id, status: rec.status });
       return NextResponse.json(
         { ok: false, error: "already_published", message: "確定後はメールアドレスを変更できません" },
         { status: 403 }
@@ -80,7 +79,6 @@ export async function POST(req: Request, { params }: { params: Params }) {
       return NextResponse.json({ ok: false, error: "update_failed" }, { status: 500 });
     }
 
-    console.log("[email/update] SUCCESS:", { id, email: normalizedEmail });
 
     return NextResponse.json({
       ok: true,

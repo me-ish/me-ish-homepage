@@ -293,8 +293,6 @@ export async function POST(req: Request) {
     ...(rescuedSnsArrayRaw ? { sns: rescuedSnsArrayRaw } : {}),
   };
 
-  console.log("### SUBMIT normalizedSocial", normalizedSocial);
-  console.log("### SUBMIT social(normalized)", normalizedSocialObj);
 
   // ------------------------------------------------------------
   // 1) id を確定（draft 連携 or 新規）

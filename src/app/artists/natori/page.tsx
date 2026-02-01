@@ -71,7 +71,6 @@ export default function NatoriArtistPage() {
           .eq('display_name', 'ナトリ')
           .maybeSingle()
 
-        if (pErr) console.warn('[profiles] warn:', pErr.message)
         if (prof) setProfile(prof as Profile)
 
         // 2) Load entries (confirmed & display_ready) for ナトリ
@@ -90,7 +89,6 @@ export default function NatoriArtistPage() {
         }
 
         const { data: works, error: wErr } = await query
-        if (wErr) console.warn('[entries] warn:', wErr.message)
         setEntries((works ?? []) as Entry[])
       } finally {
         setLoading(false)

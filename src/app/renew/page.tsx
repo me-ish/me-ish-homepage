@@ -42,7 +42,6 @@ export default function RenewPage() {
         .limit(50);
 
       if (error) {
-        console.warn('[renew] fetch entries error:', error);
         setEntries([]);
       } else {
         setEntries((data ?? []) as EntryLite[]);

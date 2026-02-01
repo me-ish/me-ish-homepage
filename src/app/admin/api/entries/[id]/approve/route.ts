@@ -151,7 +151,6 @@ export async function POST(
       });
     }
   } catch (e) {
-    console.warn('[approve] pass mail failed:', e);
   }
 
   // 5) 加工ジョブを upsert

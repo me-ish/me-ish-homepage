@@ -203,7 +203,6 @@ useEffect(() => {
     if (!looksLikeEmail) return;
 
     if (process.env.NODE_ENV === "development") {
-      console.log("[email-sync] syncing:", { id: draft.requestId, email: normalized });
     }
 
     setEmailSync({ status: "syncing", error: null });
@@ -225,7 +224,6 @@ useEffect(() => {
       }
 
       if (process.env.NODE_ENV === "development") {
-        console.log("[email-sync] SUCCESS:", { id: draft.requestId, email: json.email });
       }
       setEmailSync({ status: "synced", error: null });
     } catch (e) {

@@ -52,13 +52,6 @@ export async function POST(req: Request, { params }: { params: Params }) {
     const alreadyPublished = Boolean((rec as any).published_at ?? (rec as any).publishedAt);
 
     // デバッグログ: 課金ゲート状態
-    console.log("[aura/save] billing_gate_check:", {
-      id,
-      email: (rec as any).email,
-      alreadyPublished,
-      publishedAt: (rec as any).published_at ?? (rec as any).publishedAt,
-      paymentStatus: (rec as any).payment_status,
-    });
 
     if (!alreadyPublished) {
       const email = ((rec as any).email as string | null) ?? null;
@@ -67,11 +60,9 @@ export async function POST(req: Request, { params }: { params: Params }) {
       let allowed = paymentStatus === "paid";
 
       if (!allowed && email) {
-        console.log("[aura/save] free_check_start:", { id, email });
 
         // 1) me-ish採用（entries.confirmed=true）で 1回無料
         const meishResult = await claimMeishFree(email, id);
-        console.log("[aura/save] meish_result:", meishResult);
 
         if (meishResult.success) {
           const admin = supabaseAdmin();
@@ -81,13 +72,11 @@ export async function POST(req: Request, { params }: { params: Params }) {
             .eq("id", id);
 
           allowed = true;
-          console.log("[aura/save] allowed_by_meish:", { id, email });
         }
 
         // 2) 先着20名無料
         if (!allowed) {
           const first20Result = await claimFirst20Free(email, id);
-          console.log("[aura/save] first20_result:", first20Result);
 
           if (first20Result.success) {
             const admin = supabaseAdmin();
@@ -97,12 +86,10 @@ export async function POST(req: Request, { params }: { params: Params }) {
               .eq("id", id);
 
             allowed = true;
-            console.log("[aura/save] allowed_by_first20:", { id, email });
           }
         }
 
         if (!allowed) {
-          console.log("[aura/save] no_free_option:", { id, email });
         }
       }
 

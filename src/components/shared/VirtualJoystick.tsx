@@ -47,11 +47,9 @@ export default function VirtualJoystick({ onMove }: Props) {
         onMove={((_, data) => {
           const x = data?.vector?.x ?? 0;
           const y = data?.vector?.y ?? 0;
-          console.log('🕹️ Joystick onMove:', x, y);
           onMove(x, y);
         }) as JoystickEvent}
         onEnd={() => {
-          console.log('🛑 Joystick end');
           onMove(0, 0);
         }}
       />

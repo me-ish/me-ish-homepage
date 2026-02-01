@@ -353,23 +353,14 @@ export default function AuraPortfolioRenderer({
   const DEBUG = process.env.NODE_ENV !== "production";
   if (DEBUG) {
     // eslint-disable-next-line no-console
-    console.log("[Renderer] theme.fontPreset:", (theme as any).fontPreset);
     // eslint-disable-next-line no-console
-    console.log("[Renderer] presetKey:", presetKey);
     // eslint-disable-next-line no-console
-    console.log("[Renderer] fontClass:", fontClass);
     // eslint-disable-next-line no-console
-    console.log("[Renderer] layoutPref:", layoutPref);
     // eslint-disable-next-line no-console
-    console.log("[Renderer] layoutDecision.sectionOrder:", layoutDecision?.sectionOrder);
     // eslint-disable-next-line no-console
-    console.log("[Renderer] layoutDecision.layoutType:", layoutDecision?.layoutType);
     // eslint-disable-next-line no-console
-    console.log("[Renderer] sectionOrder:", sectionOrder);
     // eslint-disable-next-line no-console
-    console.log("[Renderer] sectionOrderOverride:", sectionOrderOverride);
     // eslint-disable-next-line no-console
-    console.log("[Renderer] overallStrength:", (renderVariant as any).overallStrength);
   }
 
   // ✅ 共通関数で背景を合成（プレビューと一致させる前提）
@@ -419,17 +410,11 @@ const brand = "Portfolio";
 
   if (DEBUG) {
     // eslint-disable-next-line no-console
-    console.log("[BG] theme.backgroundPattern:", (theme as any).backgroundPattern);
     // eslint-disable-next-line no-console
-    console.log("[BG] theme.patternLayers:", (theme as any).patternLayers);
     // eslint-disable-next-line no-console
-    console.log("[BG] theme.textureLayers:", (theme as any).textureLayers);
     // eslint-disable-next-line no-console
-    console.log("[BG] theme.bgGradient:", (theme as any).bgGradient);
     // eslint-disable-next-line no-console
-    console.log("[BG] theme.patternColor:", (theme as any).patternColor);
     // eslint-disable-next-line no-console
-    console.log("[BG] computed backgroundStyle:", backgroundStyle);
   }
 
   /**

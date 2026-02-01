@@ -10,7 +10,6 @@ export default function SuccessClient() {
   const entryId = searchParams.get('entryId');
 
   useEffect(() => {
-    console.log('entryId:', entryId);
   }, [entryId]);
 
   return (

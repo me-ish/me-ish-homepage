@@ -9,7 +9,7 @@ import React, {
 } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { useSpring } from '@react-spring/three'
+import { a, useSpring } from '@react-spring/three'
 import { useZoomArtwork } from '../shared/ZoomArtworkContext'
 import { useTexture } from '@react-three/drei'
 
@@ -81,7 +81,6 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
     ]
 
     const texture = useTexture(imageUrl || '/textures/fallback.jpg')
-    const frameMatRef = useRef<THREE.MeshStandardMaterial>(null)
 
     const [springs, api] = useSpring(() => ({
       emissiveIntensity: 0,
@@ -96,9 +95,6 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
       const avatarPos = avatarRef.current.position
       const distance = artworkPos.distanceTo(avatarPos)
       api.start({ emissiveIntensity: distance < 7 ? 1.5 : 0 })
-      if (frameMatRef.current) {
-        frameMatRef.current.emissiveIntensity = springs.emissiveIntensity.get()
-      }
     })
 
     return (
@@ -148,16 +144,16 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
         </mesh>
 
         {/* 厚みのある白フレーム */}
-        <mesh position={[0, 0, -0.02]} castShadow>
+        <a.mesh position={[0, 0, -0.02]} castShadow>
           <boxGeometry args={[width + 0.2, height + 0.2, frameDepth]} />
-          <meshStandardMaterial
-            ref={frameMatRef}
+          <a.meshStandardMaterial
             color="#888888"
             metalness={0.8}
             roughness={0.15}
             emissive="#FFEE88"
+            emissiveIntensity={springs.emissiveIntensity}
           />
-        </mesh>
+        </a.mesh>
 
         {/* ラベル（右下） */}
         {children && (

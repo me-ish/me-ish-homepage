@@ -140,7 +140,6 @@ export async function POST(req: Request) {
       if (mailErr) throw mailErr;
       mailed = true;
     } catch (e) {
-      console.warn('[contact] mail send failed:', e);
       // mailed=false のまま継続
     }
 

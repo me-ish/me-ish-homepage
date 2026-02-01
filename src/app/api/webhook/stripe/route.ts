@@ -39,7 +39,6 @@ async function sendEmailInternal(
 ): Promise<void> {
   const token = process.env.ADMIN_API_TOKEN;
   if (!token) {
-    console.warn("[webhook/stripe] ADMIN_API_TOKEN not set, skipping email");
     return;
   }
   const url = `${siteUrl()}/api/send-email/${kind}`;
@@ -102,17 +101,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "invalid_signature" }, { status: 400 });
   }
 
-  console.log("[webhook/stripe] event received:", {
-    eventId: event.id,
-    eventType: event.type,
-  });
 
   const isTarget =
     event.type === "checkout.session.completed" ||
     event.type === "checkout.session.async_payment_succeeded";
 
   if (!isTarget) {
-    console.log("[webhook/stripe] non-target event, ignored:", event.type);
     return NextResponse.json({ ok: true, received: true }, { status: 200 });
   }
 
@@ -123,12 +117,6 @@ export async function POST(req: NextRequest) {
     (session.status === "complete" && session.payment_status !== "unpaid");
 
   if (!isPaid) {
-    console.warn("[webhook/stripe] session not paid, skipped:", {
-      eventId: event.id,
-      sessionId: session.id,
-      payment_status: session.payment_status,
-      status: session.status,
-    });
     return NextResponse.json({ ok: true, received: true }, { status: 200 });
   }
 
@@ -148,13 +136,6 @@ export async function POST(req: NextRequest) {
     return handleGalleryPurchase(event.id, session, entryId, quantity);
   }
 
-  console.warn("[webhook/stripe] unrecognized metadata, ignored:", {
-    eventId: event.id,
-    sessionId: session.id,
-    kind,
-    entryId,
-    requestId,
-  });
   return NextResponse.json({ ok: true, received: true }, { status: 200 });
 }
 
@@ -190,11 +171,6 @@ async function handleAuraPurchase(
 
     const alreadyPaid = String(rec.payment_status ?? "").toLowerCase() === "paid";
     if (alreadyPaid) {
-      console.log("[webhook/stripe/aura] already paid, skipped:", {
-        eventId,
-        sessionId: session.id,
-        requestId,
-      });
       return NextResponse.json({ ok: true, received: true }, { status: 200 });
     }
 
@@ -218,11 +194,6 @@ async function handleAuraPurchase(
       return NextResponse.json({ ok: true, received: true }, { status: 200 });
     }
 
-    console.log("[webhook/stripe/aura] SUCCESS - marked as paid:", {
-      eventId,
-      sessionId: session.id,
-      requestId,
-    });
     return NextResponse.json({ ok: true, received: true }, { status: 200 });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
@@ -264,11 +235,6 @@ async function handleGalleryPurchase(
         error: checkErr,
       });
     } else if (existing) {
-      console.log("[webhook/stripe/gallery] already processed, skipped:", {
-        eventId,
-        sessionId: session.id,
-        entryId: entryId.toString(),
-      });
       return NextResponse.json({ ok: true, received: true }, { status: 200 });
     }
 
@@ -373,14 +339,6 @@ async function handleGalleryPurchase(
     const soldOut =
       Array.isArray(rpcResult) && rpcResult[0] ? rpcResult[0].sold_out : false;
 
-    console.log("[webhook/stripe/gallery] SUCCESS - purchase recorded:", {
-      eventId,
-      sessionId: session.id,
-      entryId: entryId.toString(),
-      quantity,
-      newEditionSold: newSold,
-      soldOut,
-    });
 
     // ========================================
     // 購入通知メール送信
@@ -419,10 +377,6 @@ async function handleGalleryPurchase(
           let certificateUrl: string | undefined;
           try {
             certificateUrl = await issueReissueLink(Number(entryId));
-            console.log("[webhook/stripe/gallery] COA link issued:", {
-              entryId,
-              certificateUrl,
-            });
           } catch (coaErr) {
             console.error("[webhook/stripe/gallery] COA link issue failed:", coaErr);
           }
@@ -441,9 +395,6 @@ async function handleGalleryPurchase(
             certificateUrl,
             receiptUrl,
           });
-          console.log("[webhook/stripe/gallery] purchaseBuyer email sent:", {
-            to: buyerEmail,
-          });
         }
 
         // アーティストへメール送信
@@ -456,9 +407,6 @@ async function handleGalleryPurchase(
             editionTotal: entry.edition_total,
             orderId: session.id,
             manageUrl: `${siteUrl()}/mypage`,
-          });
-          console.log("[webhook/stripe/gallery] purchaseArtist email sent:", {
-            to: artistEmail,
           });
         }
       }

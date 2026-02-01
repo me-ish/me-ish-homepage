@@ -105,7 +105,6 @@ export async function POST(_req: NextRequest) {
       await admin.rpc('delete_user_likes', { target_user_id: userId });
     } catch (likesErr) {
       // likesテーブルの削除に失敗しても続行（RPC未定義の場合もある）
-      console.warn('[account/delete] likes deletion skipped:', likesErr);
     }
 
     // 5. Supabase Auth からユーザーを削除
@@ -119,7 +118,6 @@ export async function POST(_req: NextRequest) {
       );
     }
 
-    console.log(`[account/delete] User ${userId} deleted successfully`);
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

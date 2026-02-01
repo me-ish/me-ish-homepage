@@ -52,10 +52,6 @@ export async function claimFirst20Free(
 
   const admin = supabaseAdmin() as any;
 
-  console.log("[claimFirst20Free] RPC START:", {
-    email: normalizedEmail,
-    requestId: requestId ?? null,
-  });
 
   const { data, error } = await admin.rpc("aura_claim_first20_free", {
     p_email: normalizedEmail,
@@ -63,14 +59,12 @@ export async function claimFirst20Free(
   });
 
   if (error) {
-    console.warn("[claimFirst20Free] rpc error:", error);
     return { success: false, reason: `rpc_error:${error.message}` };
   }
 
   const res = (data ?? {}) as RpcResult;
 
   if (res.ok === true) {
-    console.log("[claimFirst20Free] SUCCESS:", normalizedEmail);
     return { success: true };
   }
 
@@ -92,10 +86,6 @@ export async function claimMeishFree(
 
   const admin = supabaseAdmin() as any;
 
-  console.log("[claimMeishFree] RPC START:", {
-    email: normalizedEmail,
-    requestId: requestId ?? null,
-  });
 
   const { data, error } = await admin.rpc("aura_claim_meish_free", {
     p_email: normalizedEmail,
@@ -103,14 +93,12 @@ export async function claimMeishFree(
   });
 
   if (error) {
-    console.warn("[claimMeishFree] rpc error:", error);
     return { success: false, reason: `rpc_error:${error.message}` };
   }
 
   const res = (data ?? {}) as RpcResult;
 
   if (res.ok === true) {
-    console.log("[claimMeishFree] SUCCESS:", normalizedEmail);
     return { success: true };
   }
 
@@ -150,7 +138,6 @@ export async function checkFreeEligibility(
       .maybeSingle();
 
     if (entryErr) {
-      console.warn("[checkFreeEligibility] entry check error:", entryErr);
       return { eligible: false, reason: "db_error_entry" };
     }
 
@@ -162,7 +149,6 @@ export async function checkFreeEligibility(
       .maybeSingle();
 
     if (meishErr) {
-      console.warn("[checkFreeEligibility] meish claims error:", meishErr);
       return { eligible: false, reason: "db_error_meish_claims" };
     }
 
@@ -181,7 +167,6 @@ export async function checkFreeEligibility(
         .maybeSingle();
 
       if (first20RowErr) {
-        console.warn("[checkFreeEligibility] first20 row error:", first20RowErr);
         return { eligible: false, reason: "db_error_first20_row" };
       }
 
@@ -195,7 +180,6 @@ export async function checkFreeEligibility(
           .maybeSingle();
 
         if (statsErr) {
-          console.warn("[checkFreeEligibility] stats error:", statsErr);
           return { eligible: false, reason: "db_error_stats" };
         }
 

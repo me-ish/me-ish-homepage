@@ -58,7 +58,6 @@ export default function WorkDetailPage() {
         });
       } catch (e) {
         // 閲覧記録の失敗はサイレントに無視
-        console.debug('[view] record failed:', e);
       }
     };
 

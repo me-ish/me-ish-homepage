@@ -13,8 +13,6 @@ export default function InstallPwaNotice() {
       /iphone|ipad|ipod|android/.test(ua) &&
       !/windows|macintosh|linux/.test(ua); // PCとの判別も強化
 
-    console.log('[InstallPwaNotice] ua:', ua);
-    console.log('[InstallPwaNotice] isMobile:', isMobile);
 
     if (isMobile) setShouldShow(true);
   }, []);

@@ -212,12 +212,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("[admin/payouts/mark-paid] SUCCESS:", {
-      userId,
-      updatedCount: saleIds.length,
-      totalAmount,
-      payoutId,
-    });
 
     // 6. 振込完了メールを送信
     try {
@@ -270,10 +264,8 @@ export async function POST(req: NextRequest) {
           const errText = await emailRes.text().catch(() => "");
           console.error("[admin/payouts/mark-paid] email send failed:", errText);
         } else {
-          console.log("[admin/payouts/mark-paid] email sent to:", artistEmail);
         }
       } else {
-        console.warn("[admin/payouts/mark-paid] no email for user:", userId);
       }
     } catch (emailErr) {
       // メール送信失敗でも振込処理は成功扱い

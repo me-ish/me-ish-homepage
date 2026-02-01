@@ -67,17 +67,6 @@ const total =
   typeof editionTotal === 'number' && Number.isFinite(editionTotal) ? editionTotal : null;
 
 // ★ データ確認ログ
-console.log('DBG edition/raw', {
-  id: (a as any).id,
-  is_for_sale: a.is_for_sale,
-  edition_mode_db: (a as any).edition_mode,
-  editionMode_ui: (a as any).editionMode,
-  normalizedMode,
-  mode,
-  edition_total_raw: a.edition_total,
-  edition_total_sanitized: total,
-  edition_sold: a.edition_sold,
-});
 
 
 // limited/unlimited を一意に決定（mode を最優先、なければ total>0）
@@ -87,13 +76,6 @@ const isUnlimited =
   (a.is_for_sale ?? false) && (mode === 'unlimited' || (mode == null && (total === null || total <= 0)));
 
 // ★ 判定結果ログ（ここを追加）
-console.log('DBG edition/judge', {
-  id: (a as any).id,
-  mode,
-  total,
-  isLimited,
-  isUnlimited,
-});
 
 
 // 表示用の残数・総数（unlimited のときは必ず null に倒す）
@@ -161,7 +143,6 @@ const handlePurchase = async () => {
     const raw = a.sns_links ?? '{}';
     links = typeof raw === 'string' ? JSON.parse(raw) : (raw as Record<string, string>);
   } catch (e) {
-    console.warn('SNSリンクのJSONパースに失敗:', e);
   }
 
   const formattedDate = created_at

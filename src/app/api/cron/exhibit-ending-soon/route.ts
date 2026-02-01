@@ -64,10 +64,6 @@ async function handleCron(req: NextRequest) {
   const dayEnd = new Date(targetDate);
   dayEnd.setHours(23, 59, 59, 999);
 
-  console.log('[exhibit-ending-soon] Checking for entries ending between:', {
-    dayStart: dayStart.toISOString(),
-    dayEnd: dayEnd.toISOString(),
-  });
 
   // 5日後に終了する作品を取得
   // - display_ready = true（展示中）
@@ -87,11 +83,9 @@ async function handleCron(req: NextRequest) {
   }
 
   if (!entries || entries.length === 0) {
-    console.log('[exhibit-ending-soon] No entries to notify');
     return NextResponse.json({ ok: true, sent: 0, message: 'No entries to notify' });
   }
 
-  console.log('[exhibit-ending-soon] Found entries:', entries.length);
 
   const results: { entryId: number; success: boolean; error?: string }[] = [];
 
@@ -109,7 +103,6 @@ async function handleCron(req: NextRequest) {
       const artistEmail = authData?.user?.email;
 
       if (!artistEmail) {
-        console.warn('[exhibit-ending-soon] No email for user:', entry.user_id);
         results.push({ entryId: entry.id, success: false, error: 'No email' });
         continue;
       }
@@ -148,11 +141,9 @@ async function handleCron(req: NextRequest) {
         .eq('id', entry.id);
 
       if (updateError) {
-        console.warn('[exhibit-ending-soon] flag update failed:', entry.id, updateError);
         // メールは送信済みなので成功扱い
       }
 
-      console.log('[exhibit-ending-soon] sent to:', artistEmail, 'entry:', entry.id);
       results.push({ entryId: entry.id, success: true });
     } catch (err: any) {
       console.error('[exhibit-ending-soon] error for entry:', entry.id, err);
@@ -161,7 +152,6 @@ async function handleCron(req: NextRequest) {
   }
 
   const successCount = results.filter(r => r.success).length;
-  console.log('[exhibit-ending-soon] Complete:', { total: entries.length, sent: successCount });
 
   return NextResponse.json({
     ok: true,
