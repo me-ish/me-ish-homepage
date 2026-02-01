@@ -5,11 +5,14 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { Gallery2DGrid } from '@/components/gallery2d/Gallery2DGrid';
 import { Button } from '@/components/ui/button';
-import { filterWhiteEntries, type EntryRow } from '@/lib/gallery/galleryUtils';
+import { filterWhiteEntries, type EntryRow, GALLERY_SELECT_COLUMNS } from '@/lib/gallery/galleryUtils';
 import { fillWithPlaceholders } from '@/lib/gallery/placeholder';
 
 /** 2Dギャラリーの表示枠数 */
 const DISPLAY_SLOTS = 10;
+
+/** クエリ上限 */
+const QUERY_LIMIT = 50;
 
 export default function White2DPage() {
   const [entries, setEntries] = useState<EntryRow[]>([]);
@@ -24,12 +27,13 @@ export default function White2DPage() {
 
       const { data, error: fetchError } = await supabase
         .from('entries')
-        .select('*')
+        .select(GALLERY_SELECT_COLUMNS)
         .eq('confirmed', true)
         .eq('display_ready', true)
         .eq('gallery_type', 'white')
         .is('display_end_at', null) // 無期限展示のみ
-        .order('confirmed_at', { ascending: false });
+        .order('confirmed_at', { ascending: false })
+        .limit(QUERY_LIMIT);
 
       if (fetchError) {
         console.error('White entries fetch error:', fetchError);
@@ -40,7 +44,7 @@ export default function White2DPage() {
 
       if (data) {
         // 追加のフィルタリング（念のため）
-        const displayable = filterWhiteEntries(data as EntryRow[]);
+        const displayable = filterWhiteEntries(data as unknown as EntryRow[]);
 
         // 実際の作品数を記録
         setActualCount(displayable.length);

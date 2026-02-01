@@ -62,7 +62,13 @@ export default function FloatGallery({ dateStr }: Props): React.JSX.Element {
         style={{ width: '100%', height: '100%' }}
         camera={{ position: [0, 5, 15], fov: 60 }}
         shadows
-        gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 2.0 }}
+        gl={{
+          antialias: !isMobile,
+          powerPreference: 'high-performance',
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 2.0,
+        }}
+        dpr={isMobile ? 1 : [1, 2]}
         tabIndex={0}
         onPointerDown={(e) => e.currentTarget.focus()}
       >

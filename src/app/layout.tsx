@@ -2,6 +2,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { Zen_Maru_Gothic, Lilita_One } from "next/font/google";
 
 import QueryProvider from "@/components/providers/QueryProvider";
 import { ZoomArtworkProvider } from "@/components/shared/ZoomArtworkContext";
@@ -10,6 +11,21 @@ import ZoomArtworkDisplay from "@/components/shared/ZoomArtworkDisplay";
 import { Analytics } from "@/components/Analytics";
 import CookieConsent from "@/components/shared/CookieConsent";
 import "@/styles/auraFonts.css";
+
+// フォントを事前読み込み（レンダリングブロッキングを回避）
+const zenMaruGothic = Zen_Maru_Gothic({
+  weight: ["400", "500", "700"],
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-zen",
+});
+
+const lilitaOne = Lilita_One({
+  weight: "400",
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-lilita",
+});
 
 // ✅ OG/Twitter画像などの絶対URL解決の基準（Vercel warning 対策）
 const SITE_URL =
@@ -56,7 +72,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja">
+    <html lang="ja" className={`${zenMaruGothic.variable} ${lilitaOne.variable}`}>
       {/* 全体は今までどおり font-zen ベース */}
       <body className="font-zen text-lg leading-relaxed text-[#333]">
         <Suspense fallback={null}>

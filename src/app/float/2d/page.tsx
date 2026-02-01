@@ -12,11 +12,14 @@ import {
   isValidDateString,
   FLOAT_DAILY_SLOT_COUNT,
 } from '@/lib/gallery/floatDailyPicker';
-import { filterFloatEntries, type EntryRow } from '@/lib/gallery/galleryUtils';
+import { filterFloatEntries, type EntryRow, GALLERY_SELECT_COLUMNS } from '@/lib/gallery/galleryUtils';
 import { fillWithPlaceholders } from '@/lib/gallery/placeholder';
 
 /** 2Dギャラリーの表示枠数 */
 const DISPLAY_SLOTS = 12;
+
+/** クエリ上限（日替わりシャッフルの候補数） */
+const QUERY_LIMIT = 200;
 
 export default function Float2DPage() {
   const searchParams = useSearchParams();
@@ -38,11 +41,12 @@ export default function Float2DPage() {
 
       const { data, error: fetchError } = await supabase
         .from('entries')
-        .select('*')
+        .select(GALLERY_SELECT_COLUMNS)
         .eq('confirmed', true)
         .eq('display_ready', true)
         .eq('gallery_type', 'float')
-        .order('confirmed_at', { ascending: false });
+        .order('confirmed_at', { ascending: false })
+        .limit(QUERY_LIMIT);
 
       if (fetchError) {
         console.error('Float entries fetch error:', fetchError);
@@ -54,7 +58,7 @@ export default function Float2DPage() {
       if (data) {
         // フィルタリングして日替わり選定
         // 3D版と同じ結果になるよう、IDでソートしてからシャッフル
-        const displayable = filterFloatEntries(data as EntryRow[]);
+        const displayable = filterFloatEntries(data as unknown as EntryRow[]);
         const sorted = [...displayable].sort((a, b) => a.id - b.id);
         const dailyPicks = pickDailyExhibits(sorted, displayDate, FLOAT_DAILY_SLOT_COUNT);
 

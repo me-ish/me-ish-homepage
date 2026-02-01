@@ -9,6 +9,27 @@ import type { Database } from '@/types/supabase';
 export type EntryRow = Database['public']['Tables']['entries']['Row'];
 
 /**
+ * ギャラリー表示に必要なカラムのみ選択
+ * パフォーマンス最適化のため、select('*') の代わりに使用
+ */
+export const GALLERY_SELECT_COLUMNS = `
+  id,
+  title,
+  artist_name,
+  image_url,
+  file_name,
+  price,
+  edition_total,
+  edition_sold,
+  is_sold,
+  is_for_sale,
+  confirmed,
+  display_ready,
+  display_end_at,
+  confirmed_at
+`.replace(/\s+/g, '');
+
+/**
  * 画像URLを解決する
  * 1. image_url が存在すればそれを使用
  * 2. なければ file_name から Storage の公開URLを生成

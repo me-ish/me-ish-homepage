@@ -17,6 +17,13 @@ import {
   type EntryRow,
 } from '@/lib/gallery/galleryUtils';
 
+/** 作品詳細に必要なカラム */
+const WORK_DETAIL_COLUMNS = `
+  id, title, artist_name, description, image_url, file_name,
+  is_for_sale, price, sale_type, sns_links, gallery_type, likes,
+  is_sold, edition_total, edition_sold, confirmed, display_ready
+`.replace(/\s+/g, '');
+
 // セッションIDを取得または生成
 function getOrCreateSessionId(): string {
   const key = 'meish_session_id';
@@ -77,7 +84,7 @@ export default function WorkDetailPage() {
 
       const { data, error: fetchError } = await supabase
         .from('entries')
-        .select('*')
+        .select(WORK_DETAIL_COLUMNS)
         .eq('id', Number(id))
         .eq('confirmed', true)
         .eq('display_ready', true)
@@ -94,7 +101,7 @@ export default function WorkDetailPage() {
         return;
       }
 
-      setEntry(data as EntryRow);
+      setEntry(data as unknown as EntryRow);
       setLoading(false);
     };
 

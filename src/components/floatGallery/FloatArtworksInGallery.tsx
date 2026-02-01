@@ -17,6 +17,17 @@ import {
 
 // 定数
 const ARTWORK_SCALE = 1.8;
+
+/** 3Dギャラリー用クエリカラム */
+const SELECT_COLUMNS = `
+  id, title, artist_name, image_url, description,
+  is_for_sale, price, sns_links, created_at,
+  is_sold, edition_mode, edition_total, edition_sold,
+  confirmed, display_ready
+`.replace(/\s+/g, '');
+
+/** クエリ上限 */
+const QUERY_LIMIT = 200;
 const ARTWORK_ASPECT = 1.2;
 const LABEL_NEAR_DISTANCE = 9; // 外壁は少し遠めで反応
 
@@ -140,13 +151,14 @@ export default function FloatArtworksInGallery({
     const fetchApproved = async () => {
       const { data, error } = await supabase
         .from('entries')
-        .select('*')
+        .select(SELECT_COLUMNS)
         .eq('confirmed', true)
         .eq('display_ready', true)
         .eq('gallery_type', 'float')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(QUERY_LIMIT);
 
-      if (!error && data) setAllEntries(data as Entry[]);
+      if (!error && data) setAllEntries(data as unknown as Entry[]);
     };
     fetchApproved();
   }, []);
