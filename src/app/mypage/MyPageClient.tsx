@@ -325,7 +325,7 @@ export default function MyPageClient() {
         setLoading(false);
       }
     })();
-  }, [uid]);
+    }, [uid, userEmail]);
 
   // 指標
   const metrics = useMemo(() => {
