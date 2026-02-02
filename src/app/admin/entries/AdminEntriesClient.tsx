@@ -50,7 +50,7 @@ type Entry = {
 
 type SortKey = 'created_at' | 'confirmed_at' | 'display_start_at';
 type SortOrder = 'asc' | 'desc';
-type StatusFilter = 'all' | 'unreviewed' | 'approved' | 'rejected';
+type StatusFilter = 'all' | 'unreviewed' | 'approved' | 'rejected' | 'processing';
 
 type Props = { adminEmail: string };
 
@@ -507,6 +507,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
             <option value="unreviewed">未審査</option>
             <option value="approved">承認</option>
             <option value="rejected">却下</option>
+            <option value="processing">処理待ち</option>
           </select>
         </div>
 

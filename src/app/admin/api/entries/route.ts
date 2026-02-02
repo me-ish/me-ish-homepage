@@ -41,6 +41,7 @@ export async function GET(req: Request) {
   if (status === "unreviewed") q = q.is("confirmed", null);
   else if (status === "approved") q = q.eq("confirmed", true);
   else if (status === "rejected") q = q.eq("confirmed", false);
+  else if (status === "processing") q = q.eq("confirmed", true).eq("display_ready", false);
 
   if (keyword && keyword.trim()) {
     const kw = keyword.trim();

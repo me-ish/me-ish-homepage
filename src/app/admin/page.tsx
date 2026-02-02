@@ -120,7 +120,7 @@ export default async function AdminPage() {
             badge={metrics.unreviewedEntries > 0 ? "要対応" : undefined}
           />
           <MetricCard label="却下作品" value={metrics.rejectedEntries} href="/admin/entries?status=rejected" />
-          <MetricCard label="処理待ち" value={metrics.processingPending} href="/admin/entries?status=approved" badge={metrics.processingPending > 0 ? "同期推奨" : undefined} />
+          <MetricCard label="処理待ち" value={metrics.processingPending} href="/admin/entries?status=processing" badge={metrics.processingPending > 0 ? "同期推奨" : undefined} />
           <MetricCard label="未読お問い合わせ" value={metrics.unreadInquiries} href="/admin/inquiries" />
           <MetricCard label="売上件数 (累計)" value={metrics.totalSales} href="/admin/payouts" />
           <MetricCard label="振込待ち" value={metrics.pendingPayouts} href="/admin/payouts" badge={metrics.pendingPayouts > 0 ? "要振込" : undefined} />
