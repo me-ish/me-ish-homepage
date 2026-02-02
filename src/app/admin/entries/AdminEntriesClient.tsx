@@ -14,14 +14,12 @@ import {
   XCircle,
   Clock,
   Eye,
-  EyeOff,
   ChevronDown,
   ChevronRight,
   Search,
   RefreshCw,
   ExternalLink,
   Mail,
-  MoreHorizontal,
   Loader2,
   AlertCircle,
 } from 'lucide-react';
@@ -207,6 +205,37 @@ function canEnableDisplay(e: Entry): boolean {
   return hasFinalUrl || jobOk;
 }
 
+function toTime(d?: string | null): number | null {
+  if (!d) return null;
+  const t = new Date(d).getTime();
+  return Number.isFinite(t) ? t : null;
+}
+
+function getEntryPhase(entry: Entry): WorkflowPhase {
+  if (entry.confirmed === false) return 'rejected';
+  if (entry.display_ready) {
+    const endAt = toTime(entry.display_end_at);
+    if (endAt && endAt <= Date.now()) return 'ended';
+    return 'displaying';
+  }
+  if (entry.confirmed === null) return 'unreviewed';
+  if (entry.confirmed === true && canEnableDisplay(entry)) return 'ready_to_enable';
+  if (entry.processing_job?.status === 'failed') return 'processing_failed';
+  if (entry.processing_job?.status === 'running') return 'processing';
+  return 'approved_queued';
+}
+
+function getRowAccent(phase: WorkflowPhase): string {
+  if (phase === 'processing_failed') return 'bg-red-500';
+  if (phase === 'unreviewed') return 'bg-amber-500';
+  if (phase === 'ready_to_enable') return 'bg-sky-500';
+  if (phase === 'displaying') return 'bg-emerald-500';
+  if (phase === 'processing') return 'bg-indigo-500';
+  if (phase === 'approved_queued') return 'bg-blue-500';
+  if (phase === 'rejected') return 'bg-rose-500';
+  return 'bg-gray-400';
+}
+
 export default function AdminEntriesClient({ adminEmail }: Props) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -308,6 +337,28 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
     processing: entries.filter((e) => e.confirmed === true && !e.display_ready).length,
     enableCandidates: entries.filter(canEnableDisplay).length,
   }), [entries]);
+
+  const sortedEntries = useMemo(() => {
+    const rank: Record<WorkflowPhase, number> = {
+      unreviewed: 0,
+      processing_failed: 1,
+      ready_to_enable: 2,
+      processing: 3,
+      approved_queued: 4,
+      rejected: 5,
+      displaying: 6,
+      ended: 7,
+    };
+
+    return [...entries].sort((a, b) => {
+      const pa = getEntryPhase(a);
+      const pb = getEntryPhase(b);
+      if (rank[pa] !== rank[pb]) return rank[pa] - rank[pb];
+      const ta = toTime(a.created_at) ?? 0;
+      const tb = toTime(b.created_at) ?? 0;
+      return tb - ta;
+    });
+  }, [entries]);
 
   // アクション
   const approveEntry = async (entry: Entry) => {
@@ -464,6 +515,32 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">作品管理</h1>
           <p className="text-sm text-gray-500 mt-1">ログイン中: {adminEmail}</p>
+        </div>
+
+        <div className="mb-5 grid gap-3 md:grid-cols-3">
+          <button
+            onClick={() => setStatusFilter('unreviewed')}
+            className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-left hover:bg-amber-100"
+          >
+            <div className="text-xs font-medium text-amber-700">今やる: 未審査を処理</div>
+            <div className="mt-1 text-2xl font-bold text-amber-900">{overview?.actionRequired.needsReview ?? counts.unreviewed}件</div>
+          </button>
+          <button
+            onClick={() => setStatusFilter('processing')}
+            className="rounded-xl border border-red-200 bg-red-50 p-4 text-left hover:bg-red-100"
+          >
+            <div className="text-xs font-medium text-red-700">今やる: 失敗/停滞を解消</div>
+            <div className="mt-1 text-2xl font-bold text-red-900">
+              {(overview?.actionRequired.processingFailed ?? 0) + (overview?.actionRequired.stalled ?? 0)}件
+            </div>
+          </button>
+          <button
+            onClick={() => setStatusFilter('processing')}
+            className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-left hover:bg-sky-100"
+          >
+            <div className="text-xs font-medium text-sky-700">今やる: 展示を有効化</div>
+            <div className="mt-1 text-2xl font-bold text-sky-900">{overview?.actionRequired.readyToEnable ?? counts.enableCandidates}件</div>
+          </button>
         </div>
 
         <div className="mb-5 rounded-2xl border bg-white p-4 shadow-sm">
@@ -631,21 +708,24 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
+                  <th className="w-2"></th>
                   <th className="w-10 px-4 py-3"></th>
                   <th className="w-16 px-4 py-3"></th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">作品</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">作家</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ステータス</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">処理</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">次アクション</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">応募日</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {entries.map((entry) => {
+                {sortedEntries.map((entry) => {
                   const isExpanded = expandedId === entry.id;
                   const isProcessing = processingIds.has(entry.id);
                   const canEnable = canEnableDisplay(entry);
+                  const phase = getEntryPhase(entry);
 
                   return (
                     <>
@@ -655,6 +735,9 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                         className={`hover:bg-gray-50 cursor-pointer ${isExpanded ? 'bg-sky-50' : ''}`}
                         onClick={() => toggleExpand(entry.id)}
                       >
+                        <td className="p-0">
+                          <div className={`h-full min-h-[72px] w-1.5 ${getRowAccent(phase)}`} />
+                        </td>
                         <td className="px-4 py-3">
                           {isExpanded ? (
                             <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -694,6 +777,39 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                         <td className="px-4 py-3">
                           <ProcessingBadge entry={entry} />
                         </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          {entry.confirmed === null ? (
+                            <button
+                              onClick={() => approveEntry(entry)}
+                              disabled={isProcessing}
+                              className="px-3 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                              まず承認
+                            </button>
+                          ) : entry.confirmed === true && !entry.display_ready ? (
+                            <button
+                              onClick={() => enableDisplay(entry)}
+                              disabled={isProcessing}
+                              className={`px-3 py-1 text-xs rounded disabled:opacity-50 ${
+                                canEnable
+                                  ? 'bg-sky-600 text-white hover:bg-sky-700'
+                                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                              }`}
+                            >
+                              {canEnable ? '展示を開始' : '強制で展示開始'}
+                            </button>
+                          ) : entry.confirmed === false ? (
+                            <button
+                              onClick={() => resetReview(entry)}
+                              disabled={isProcessing}
+                              className="px-3 py-1 border rounded text-xs hover:bg-gray-100 disabled:opacity-50"
+                            >
+                              未審査に戻す
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-500">対応不要</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-sm text-gray-500">
                           {formatDate(entry.created_at)}
                         </td>
@@ -729,9 +845,9 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                     ? 'bg-sky-600 text-white hover:bg-sky-700'
                                     : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                                 }`}
-                              >
-                                展示有効化
-                              </button>
+                                >
+                                  展示有効化
+                                </button>
                             )}
 
                             {/* 展示中 */}
@@ -745,7 +861,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                       {/* 展開行 */}
                       {isExpanded && (
                         <tr key={`${entry.id}-detail`} className="bg-gray-50">
-                          <td colSpan={8} className="px-4 py-4">
+                          <td colSpan={10} className="px-4 py-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                               {/* 画像・基本情報 */}
                               <div className="flex gap-4">
