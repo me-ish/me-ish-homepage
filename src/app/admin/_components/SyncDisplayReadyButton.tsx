@@ -2,14 +2,17 @@
 "use client";
 
 import { useState } from "react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 
 export function SyncDisplayReadyButton() {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const [result, setResult] = useState<{ updated: number; skipped: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const run = async () => {
     setLoading(true);
     setResult(null);
+    setError(null);
     try {
       const res = await fetch("/admin/api/entries/sync-display-ready", {
         method: "POST",
@@ -17,9 +20,12 @@ export function SyncDisplayReadyButton() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "failed");
-      setResult(`updated: ${json.updated}, skipped: ${json.skipped}`);
+      setResult({ updated: json.updated, skipped: json.skipped });
+      // 3秒後にリセット
+      setTimeout(() => setResult(null), 3000);
     } catch (e: any) {
-      setResult(`error: ${e?.message ?? "unknown"}`);
+      setError(e?.message ?? "エラーが発生しました");
+      setTimeout(() => setError(null), 5000);
     } finally {
       setLoading(false);
     }
@@ -30,11 +36,26 @@ export function SyncDisplayReadyButton() {
       <button
         onClick={run}
         disabled={loading}
-        className="inline-flex items-center rounded-full border border-[#d9e6f2] bg-white px-3 py-1.5 text-sm font-semibold hover:bg-[#f7fbff] disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60 transition"
       >
-        {loading ? "同期中…" : "display_ready を同期"}
+        {loading ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            処理中…
+          </>
+        ) : (
+          <>
+            <CheckCircle2 className="h-4 w-4" />
+            展示を有効化
+          </>
+        )}
       </button>
-      {result ? <span className="text-xs text-[#667]">{result}</span> : null}
+      {result && (
+        <span className="text-sm text-emerald-600">
+          {result.updated > 0 ? `${result.updated}件を有効化しました` : "有効化対象がありません"}
+        </span>
+      )}
+      {error && <span className="text-sm text-red-600">{error}</span>}
     </div>
   );
 }
