@@ -277,15 +277,26 @@ export async function POST(req: NextRequest) {
           const { data: authData } = await admin.auth.admin.getUserById(payout.user_id);
           const artistEmail = authData?.user?.email;
 
-          const { data: bankAccount } = await admin
-            .from("artists_bank_accounts")
-            .select("account_number")
-            .eq("external_user_id", payout.user_id)
+          // entries経由でexternal_user_idを取得
+          const { data: entryForBank } = await admin
+            .from("entries")
+            .select("external_user_id")
+            .eq("user_id", payout.user_id)
+            .not("external_user_id", "is", null)
+            .limit(1)
             .maybeSingle();
 
-          const bankAccountLast4 = bankAccount?.account_number
-            ? bankAccount.account_number.slice(-4)
-            : undefined;
+          let bankAccountLast4: string | undefined;
+          if (entryForBank?.external_user_id) {
+            const { data: bankAccount } = await admin
+              .from("artists_bank_accounts")
+              .select("account_number")
+              .eq("external_user_id", entryForBank.external_user_id)
+              .maybeSingle();
+            bankAccountLast4 = bankAccount?.account_number
+              ? bankAccount.account_number.slice(-4)
+              : undefined;
+          }
 
           if (artistEmail) {
             const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://me-ish.art";

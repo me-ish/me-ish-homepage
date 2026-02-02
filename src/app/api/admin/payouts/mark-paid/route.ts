@@ -226,16 +226,26 @@ export async function POST(req: NextRequest) {
       const { data: authData } = await admin.auth.admin.getUserById(userId);
       const artistEmail = authData?.user?.email;
 
-      // 銀行口座の下4桁を取得（external_user_id = userId）
-      const { data: bankAccount } = await admin
-        .from("artists_bank_accounts")
-        .select("account_number")
-        .eq("external_user_id", userId)
+      // 銀行口座の下4桁を取得（entries経由でexternal_user_idを取得）
+      const { data: entryForBank } = await admin
+        .from("entries")
+        .select("external_user_id")
+        .eq("user_id", userId)
+        .not("external_user_id", "is", null)
+        .limit(1)
         .maybeSingle();
 
-      const bankAccountLast4 = bankAccount?.account_number
-        ? bankAccount.account_number.slice(-4)
-        : undefined;
+      let bankAccountLast4: string | undefined;
+      if (entryForBank?.external_user_id) {
+        const { data: bankAccount } = await admin
+          .from("artists_bank_accounts")
+          .select("account_number")
+          .eq("external_user_id", entryForBank.external_user_id)
+          .maybeSingle();
+        bankAccountLast4 = bankAccount?.account_number
+          ? bankAccount.account_number.slice(-4)
+          : undefined;
+      }
 
       if (artistEmail) {
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://me-ish.art";
