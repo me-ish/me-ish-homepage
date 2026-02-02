@@ -57,8 +57,40 @@ type Entry = {
 type SortKey = 'created_at' | 'confirmed_at' | 'display_start_at';
 type SortOrder = 'asc' | 'desc';
 type StatusFilter = 'all' | 'unreviewed' | 'approved' | 'rejected' | 'processing';
+type WorkflowPhase =
+  | 'unreviewed'
+  | 'approved_queued'
+  | 'processing'
+  | 'processing_failed'
+  | 'ready_to_enable'
+  | 'displaying'
+  | 'ended'
+  | 'rejected';
+
+type WorkflowOverview = {
+  total: number;
+  phases: Record<WorkflowPhase, number>;
+  actionRequired: {
+    needsReview: number;
+    processingFailed: number;
+    stalled: number;
+    readyToEnable: number;
+    total: number;
+  };
+};
 
 type Props = { adminEmail: string };
+
+const WORKFLOW_FLOW: { key: WorkflowPhase; label: string; className: string }[] = [
+  { key: 'unreviewed', label: '未審査', className: 'bg-amber-50 text-amber-700 border-amber-200' },
+  { key: 'approved_queued', label: '承認済(待機)', className: 'bg-blue-50 text-blue-700 border-blue-200' },
+  { key: 'processing', label: '処理中', className: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  { key: 'processing_failed', label: '処理失敗', className: 'bg-red-50 text-red-700 border-red-200' },
+  { key: 'ready_to_enable', label: '展示準備OK', className: 'bg-sky-50 text-sky-700 border-sky-200' },
+  { key: 'displaying', label: '展示中', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  { key: 'ended', label: '展示終了', className: 'bg-gray-100 text-gray-700 border-gray-200' },
+  { key: 'rejected', label: '却下', className: 'bg-rose-50 text-rose-700 border-rose-200' },
+];
 
 // ステータスタブの定義
 const STATUS_TABS: { value: StatusFilter; label: string; color: string }[] = [
@@ -180,6 +212,8 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [overview, setOverview] = useState<WorkflowOverview | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
 
   // フィルタ・並び
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -239,11 +273,31 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
     }
   }, [api]);
 
+  const fetchOverview = useCallback(async () => {
+    setOverviewLoading(true);
+    try {
+      const sp = new URLSearchParams();
+      if (galleryFilter !== 'all') {
+        sp.set('gallery', galleryFilter);
+      }
+      const suffix = sp.toString() ? `?${sp.toString()}` : '';
+      const res = await fetch(`/admin/api/entries/overview${suffix}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('overview_fetch_failed');
+      const json = (await res.json()) as WorkflowOverview;
+      if (mountedRef.current) setOverview(json);
+    } catch {
+      if (mountedRef.current) setOverview(null);
+    } finally {
+      if (mountedRef.current) setOverviewLoading(false);
+    }
+  }, [galleryFilter]);
+
   useEffect(() => {
     mountedRef.current = true;
     fetchEntries();
+    fetchOverview();
     return () => { mountedRef.current = false; };
-  }, [fetchEntries]);
+  }, [fetchEntries, fetchOverview]);
 
   // 集計
   const counts = useMemo(() => ({
@@ -266,6 +320,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
           e.id === entry.id ? { ...e, ...result.entry, processing_job: result.job } : e
         )
       );
+      fetchOverview();
       showToast('承認しました');
     } catch (e: unknown) {
       showToast(`承認に失敗: ${e instanceof Error ? e.message : 'エラー'}`);
@@ -285,6 +340,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
     try {
       const result = await rejectEntryAction(entry.id, reason);
       setEntries((prev) => prev.map((e) => (e.id === entry.id ? { ...e, ...result.entry } : e)));
+      fetchOverview();
       showToast('却下しました');
     } catch (e: unknown) {
       showToast(`却下に失敗: ${e instanceof Error ? e.message : 'エラー'}`);
@@ -305,6 +361,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
       setEntries((prev) =>
         prev.map((e) => (e.id === entry.id ? { ...e, ...result.entry, processing_job: null } : e))
       );
+      fetchOverview();
       showToast('未審査に戻しました');
     } catch (e: unknown) {
       showToast(`リセットに失敗: ${e instanceof Error ? e.message : 'エラー'}`);
@@ -327,6 +384,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
     try {
       const saved = await api.patch(entry.id, { display_ready: true });
       setEntries((prev) => prev.map((e) => (e.id === entry.id ? { ...e, ...saved } : e)));
+      fetchOverview();
       showToast('展示を有効化しました');
     } catch (e: unknown) {
       showToast(`有効化に失敗: ${e instanceof Error ? e.message : 'エラー'}`);
@@ -360,9 +418,11 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
       }
       showToast(`${targets.length}件を有効化しました`);
       await fetchEntries();
+      fetchOverview();
     } catch {
       showToast('一括有効化で失敗しました');
       await fetchEntries();
+      fetchOverview();
     } finally {
       setProcessingIds((prev) => {
         const next = new Set(prev);
@@ -404,6 +464,48 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">作品管理</h1>
           <p className="text-sm text-gray-500 mt-1">ログイン中: {adminEmail}</p>
+        </div>
+
+        <div className="mb-5 rounded-2xl border bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-800">現在の運用フロー</h2>
+            <span className="text-xs text-gray-500">
+              {overviewLoading ? '集計中...' : `対象: ${overview?.total ?? 0}件`}
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-8">
+            {WORKFLOW_FLOW.map((phase) => (
+              <div
+                key={phase.key}
+                className={`rounded-lg border px-3 py-2 ${phase.className}`}
+              >
+                <div className="text-[11px] font-medium">{phase.label}</div>
+                <div className="mt-1 text-lg font-semibold">{overview?.phases[phase.key] ?? 0}</div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-5">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+              <div className="text-[11px] text-amber-700">要審査</div>
+              <div className="text-sm font-semibold text-amber-900">{overview?.actionRequired.needsReview ?? 0}</div>
+            </div>
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+              <div className="text-[11px] text-red-700">処理失敗</div>
+              <div className="text-sm font-semibold text-red-900">{overview?.actionRequired.processingFailed ?? 0}</div>
+            </div>
+            <div className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2">
+              <div className="text-[11px] text-orange-700">停滞中</div>
+              <div className="text-sm font-semibold text-orange-900">{overview?.actionRequired.stalled ?? 0}</div>
+            </div>
+            <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2">
+              <div className="text-[11px] text-sky-700">展示可</div>
+              <div className="text-sm font-semibold text-sky-900">{overview?.actionRequired.readyToEnable ?? 0}</div>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+              <div className="text-[11px] text-gray-600">要対応合計</div>
+              <div className="text-sm font-semibold text-gray-900">{overview?.actionRequired.total ?? 0}</div>
+            </div>
+          </div>
         </div>
 
         {/* タブフィルター */}
