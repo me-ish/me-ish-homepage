@@ -21,7 +21,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Check, Loader2, AlertCircle, Banknote } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Loader2,
+  AlertCircle,
+  Banknote,
+  Download,
+  CheckCheck,
+  Calendar,
+  AlertTriangle,
+} from "lucide-react";
 import type { PendingPayoutRow } from "./page";
 
 type Props = {
@@ -55,6 +65,24 @@ export default function AdminPayoutsClient({ initialData, stats }: Props) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // 一括処理用
+  const [showBatchConfirm, setShowBatchConfirm] = useState(false);
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+  const [batchResult, setBatchResult] = useState<{
+    processedCount: number;
+    totalAmount: number;
+    failedCount: number;
+  } | null>(null);
+  const [csvWarnings, setCsvWarnings] = useState<string[] | null>(null);
+
+  // 締め日情報の計算
+  const now = new Date();
+  const currentMonth = now.toLocaleDateString("ja-JP", { year: "numeric", month: "long" });
+  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const daysUntilClose = Math.ceil((lastDayOfMonth.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const payoutDate = 25;
+  const isPayoutMonth = now.getDate() >= 1 && now.getDate() <= payoutDate;
 
   const handleMarkPaid = useCallback(async () => {
     if (!selectedUser) return;
@@ -97,6 +125,88 @@ export default function AdminPayoutsClient({ initialData, stats }: Props) {
     }
   }, [selectedUser]);
 
+  // CSVダウンロード
+  const handleDownloadCsv = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/payouts/export-csv");
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "CSVのダウンロードに失敗しました");
+      }
+
+      // 警告チェック
+      const warningsHeader = res.headers.get("X-Payout-Warnings");
+      if (warningsHeader) {
+        const warnings = decodeURIComponent(warningsHeader).split("; ");
+        setCsvWarnings(warnings);
+        setTimeout(() => setCsvWarnings(null), 10000);
+      }
+
+      // ダウンロード
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const disposition = res.headers.get("Content-Disposition");
+      const filenameMatch = disposition?.match(/filename="(.+)"/);
+      a.download = filenameMatch?.[1] || "payout.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setError(e.message || "CSVダウンロードエラー");
+    }
+  }, []);
+
+  // 一括振込完了
+  const handleBatchMarkPaid = useCallback(async () => {
+    setIsBatchProcessing(true);
+    setError(null);
+    setBatchResult(null);
+
+    try {
+      const res = await fetch("/api/admin/payouts/mark-batch-paid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(json.error || "一括処理に失敗しました");
+      }
+
+      setBatchResult({
+        processedCount: json.processedCount,
+        totalAmount: json.totalAmount,
+        failedCount: json.failedCount,
+      });
+
+      // 成功した場合はリストをクリア
+      if (json.processedCount > 0) {
+        setData([]);
+        setCurrentStats({
+          totalPendingAmount: 0,
+          totalPendingCount: 0,
+          artistCount: 0,
+        });
+      }
+
+      setShowBatchConfirm(false);
+      setSuccessMessage(
+        `${json.processedCount}名への振込を完了としてマークしました（${formatYen(json.totalAmount)}）`
+      );
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (e: any) {
+      setError(e.message || "エラーが発生しました");
+    } finally {
+      setIsBatchProcessing(false);
+    }
+  }, []);
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-white to-[#f6fbff] pt-[70px]">
       <div className="mx-auto max-w-6xl px-6 py-8">
@@ -127,6 +237,57 @@ export default function AdminPayoutsClient({ initialData, stats }: Props) {
             <span className="text-emerald-800">{successMessage}</span>
           </div>
         )}
+
+        {/* CSV警告 */}
+        {csvWarnings && csvWarnings.length > 0 && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div className="flex items-center gap-2 text-amber-800 font-medium mb-2">
+              <AlertTriangle className="h-5 w-5" />
+              口座未登録のアーティストがいます
+            </div>
+            <ul className="text-sm text-amber-700 list-disc list-inside">
+              {csvWarnings.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* 締め日情報カード */}
+        <div className="mb-6 rounded-2xl border bg-gradient-to-r from-sky-50 to-indigo-50 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Calendar className="h-5 w-5 text-sky-600" />
+              <div>
+                <div className="text-sm font-medium text-gray-900">{currentMonth}分</div>
+                <div className="text-xs text-gray-500">
+                  締め日まであと{daysUntilClose}日 ・ 振込予定日: 25日
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadCsv}
+                disabled={data.length === 0}
+                className="rounded-full"
+              >
+                <Download className="h-4 w-4 mr-1" />
+                CSV出力
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setShowBatchConfirm(true)}
+                disabled={data.length === 0}
+                className="rounded-full bg-emerald-600 hover:bg-emerald-700"
+              >
+                <CheckCheck className="h-4 w-4 mr-1" />
+                一括振込完了
+              </Button>
+            </div>
+          </div>
+        </div>
 
         {/* 統計カード */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -306,6 +467,76 @@ export default function AdminPayoutsClient({ initialData, stats }: Props) {
                   <>
                     <Check className="h-4 w-4 mr-2" />
                     振込完了としてマーク
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* 一括振込完了の確認ダイアログ */}
+        <Dialog open={showBatchConfirm} onOpenChange={() => !isBatchProcessing && setShowBatchConfirm(false)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>一括振込完了の確認</DialogTitle>
+              <DialogDescription>
+                全アーティストへの振込を一括で完了としてマークしますか？
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-4 space-y-3">
+              <div className="p-4 bg-gray-50 rounded-xl space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">対象アーティスト数</span>
+                  <span className="font-bold">{currentStats.artistCount}名</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">振込対象件数</span>
+                  <span className="font-bold">{currentStats.totalPendingCount}件</span>
+                </div>
+                <div className="flex justify-between text-sm border-t pt-2 mt-2">
+                  <span className="text-gray-600">振込総額</span>
+                  <span className="font-bold text-emerald-600 text-lg">
+                    {formatYen(currentStats.totalPendingAmount)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-sm text-gray-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <strong>注意:</strong> この操作を実行すると、全アーティストの「入金待ち」売上が「入金済み」に更新されます。
+                実際の銀行振込が完了してから実行してください。
+              </div>
+
+              {error && (
+                <div className="flex items-center gap-2 text-red-600 text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  {error}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowBatchConfirm(false)}
+                disabled={isBatchProcessing}
+              >
+                キャンセル
+              </Button>
+              <Button
+                onClick={handleBatchMarkPaid}
+                disabled={isBatchProcessing}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                {isBatchProcessing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    処理中...
+                  </>
+                ) : (
+                  <>
+                    <CheckCheck className="h-4 w-4 mr-2" />
+                    一括振込完了
                   </>
                 )}
               </Button>
