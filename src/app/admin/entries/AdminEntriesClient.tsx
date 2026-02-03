@@ -22,6 +22,11 @@ import {
   Mail,
   Loader2,
   AlertCircle,
+  LayoutGrid,
+  List,
+  Square,
+  CheckSquare,
+  Minus,
 } from 'lucide-react';
 
 type Entry = {
@@ -55,6 +60,7 @@ type Entry = {
 type SortKey = 'created_at' | 'confirmed_at' | 'display_start_at';
 type SortOrder = 'asc' | 'desc';
 type StatusFilter = 'all' | 'unreviewed' | 'approved' | 'rejected' | 'processing';
+type ViewMode = 'table' | 'kanban';
 type WorkflowPhase =
   | 'unreviewed'
   | 'approved_queued'
@@ -275,6 +281,12 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
   // 処理中フラグ
   const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
 
+  // 選択状態
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  // 表示モード
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
+
   const mountedRef = useRef(true);
 
   const showToast = (m: string) => {
@@ -339,12 +351,34 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
     }
   }, [galleryFilter]);
 
+  // 自動同期: 処理完了したエントリのdisplay_readyを自動更新
+  const syncDisplayReady = useCallback(async () => {
+    try {
+      const res = await fetch('/admin/api/entries/sync-display-ready', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.updated > 0) {
+          showToast(`${data.updated}件を自動同期しました`);
+        }
+      }
+    } catch {
+      // 自動同期の失敗は静かに無視
+    } finally {
+      // 同期成否に関わらずデータを取得
+      fetchEntries();
+      fetchOverview();
+    }
+  }, [fetchEntries, fetchOverview]);
+
   useEffect(() => {
     mountedRef.current = true;
-    fetchEntries();
-    fetchOverview();
+    // 初回ロード時に自動同期を実行してからデータ取得
+    syncDisplayReady();
     return () => { mountedRef.current = false; };
-  }, [fetchEntries, fetchOverview]);
+  }, [syncDisplayReady]);
 
   // 集計
   const counts = useMemo(() => ({
@@ -811,9 +845,8 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">作家</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ステータス</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">処理</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">次アクション</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">応募日</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">操作</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">アクション</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -873,82 +906,60 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                         <td className="px-4 py-3">
                           <ProcessingBadge entry={entry} />
                         </td>
-                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                          {entry.confirmed === null ? (
-                            <button
-                              onClick={() => approveEntry(entry)}
-                              disabled={isProcessing}
-                              className="px-3 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700 disabled:opacity-50"
-                            >
-                              まず承認
-                            </button>
-                          ) : entry.confirmed === true && !entry.display_ready ? (
-                            <button
-                              onClick={() => enableDisplay(entry)}
-                              disabled={isProcessing}
-                              className={`px-3 py-1 text-xs rounded disabled:opacity-50 ${
-                                canEnable
-                                  ? 'bg-sky-600 text-white hover:bg-sky-700'
-                                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                              }`}
-                            >
-                              {canEnable ? '展示を開始' : '強制で展示開始'}
-                            </button>
-                          ) : entry.confirmed === false ? (
-                            <button
-                              onClick={() => resetReview(entry)}
-                              disabled={isProcessing}
-                              className="px-3 py-1 border rounded text-xs hover:bg-gray-100 disabled:opacity-50"
-                            >
-                              未審査に戻す
-                            </button>
-                          ) : (
-                            <span className="text-xs text-gray-500">対応不要</span>
-                          )}
-                        </td>
                         <td className="px-4 py-3 text-sm text-gray-500">
                           {formatDate(entry.created_at)}
                         </td>
                         <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-2">
-                            {/* 未審査の場合 */}
+                            {/* 未審査: 承認・却下ボタン */}
                             {entry.confirmed === null && (
                               <>
                                 <button
                                   onClick={() => approveEntry(entry)}
                                   disabled={isProcessing}
-                                  className="px-3 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700 disabled:opacity-50"
+                                  className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded hover:bg-emerald-700 disabled:opacity-50"
                                 >
                                   承認
                                 </button>
                                 <button
                                   onClick={() => rejectEntry(entry)}
                                   disabled={isProcessing}
-                                  className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 disabled:opacity-50"
+                                  className="px-3 py-1.5 border border-red-300 text-red-600 text-xs font-medium rounded hover:bg-red-50 disabled:opacity-50"
                                 >
                                   却下
                                 </button>
                               </>
                             )}
 
-                            {/* 承認済み・展示待ち */}
+                            {/* 承認済み・展示待ち: 展示有効化 */}
                             {entry.confirmed === true && !entry.display_ready && (
                               <button
                                 onClick={() => enableDisplay(entry)}
                                 disabled={isProcessing}
-                                className={`px-3 py-1 text-xs rounded disabled:opacity-50 ${
+                                className={`px-3 py-1.5 text-xs font-medium rounded disabled:opacity-50 ${
                                   canEnable
                                     ? 'bg-sky-600 text-white hover:bg-sky-700'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                    : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
                                 }`}
-                                >
-                                  展示有効化
-                                </button>
+                              >
+                                {canEnable ? '展示を有効化' : '強制有効化'}
+                              </button>
                             )}
 
                             {/* 展示中 */}
                             {entry.display_ready && (
-                              <span className="text-xs text-emerald-600 font-medium">展示中</span>
+                              <span className="text-xs text-emerald-600 font-medium px-2 py-1 bg-emerald-50 rounded">展示中</span>
+                            )}
+
+                            {/* 却下済み */}
+                            {entry.confirmed === false && (
+                              <button
+                                onClick={() => resetReview(entry)}
+                                disabled={isProcessing}
+                                className="px-3 py-1.5 border border-gray-300 text-gray-600 text-xs font-medium rounded hover:bg-gray-50 disabled:opacity-50"
+                              >
+                                再審査
+                              </button>
                             )}
                           </div>
                         </td>
@@ -957,7 +968,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                       {/* 展開行 */}
                       {isExpanded && (
                         <tr key={`${entry.id}-detail`} className="bg-gray-50">
-                          <td colSpan={10} className="px-4 py-4">
+                          <td colSpan={9} className="px-4 py-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                               {/* 画像・基本情報 */}
                               <div className="flex gap-4">
@@ -1045,14 +1056,69 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                               </div>
 
                               {/* アクション */}
-                              <div className="space-y-3">
+                              <div className="space-y-4">
                                 <h4 className="font-medium text-gray-900">アクション</h4>
+
+                                {/* 主要アクション */}
                                 <div className="flex flex-wrap gap-2">
-                                  {entry.confirmed !== null && (
+                                  {/* 未審査: 承認/却下 */}
+                                  {entry.confirmed === null && (
+                                    <>
+                                      <button
+                                        onClick={() => approveEntry(entry)}
+                                        disabled={isProcessing}
+                                        className="inline-flex items-center gap-1 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                                      >
+                                        <CheckCircle2 className="h-4 w-4" />
+                                        承認する
+                                      </button>
+                                      <button
+                                        onClick={() => rejectEntry(entry)}
+                                        disabled={isProcessing}
+                                        className="inline-flex items-center gap-1 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:opacity-50"
+                                      >
+                                        <XCircle className="h-4 w-4" />
+                                        却下する
+                                      </button>
+                                    </>
+                                  )}
+
+                                  {/* 承認済み・展示待ち: 展示有効化 */}
+                                  {entry.confirmed === true && !entry.display_ready && (
+                                    <button
+                                      onClick={() => enableDisplay(entry)}
+                                      disabled={isProcessing}
+                                      className={`inline-flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-50 ${
+                                        canEnable
+                                          ? 'bg-sky-600 text-white hover:bg-sky-700'
+                                          : 'border-2 border-dashed border-gray-300 text-gray-600 hover:bg-gray-50'
+                                      }`}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                      {canEnable ? '展示を有効化' : '処理未完了だが強制有効化'}
+                                    </button>
+                                  )}
+
+                                  {/* 却下済み: 再審査 */}
+                                  {entry.confirmed === false && (
                                     <button
                                       onClick={() => resetReview(entry)}
                                       disabled={isProcessing}
-                                      className="px-3 py-1.5 border rounded text-sm hover:bg-gray-100 disabled:opacity-50"
+                                      className="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                                    >
+                                      <RefreshCw className="h-4 w-4" />
+                                      再審査に戻す
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* セカンダリアクション */}
+                                <div className="flex flex-wrap gap-2 pt-2 border-t">
+                                  {entry.confirmed !== null && entry.confirmed !== false && (
+                                    <button
+                                      onClick={() => resetReview(entry)}
+                                      disabled={isProcessing}
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 border rounded text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50"
                                     >
                                       未審査に戻す
                                     </button>
@@ -1062,7 +1128,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                       href={entry.image_url}
                                       target="_blank"
                                       rel="noreferrer"
-                                      className="inline-flex items-center gap-1 px-3 py-1.5 border rounded text-sm hover:bg-gray-100"
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 border rounded text-sm text-gray-600 hover:bg-gray-100"
                                     >
                                       <ExternalLink className="h-3 w-3" />
                                       画像を開く
@@ -1071,17 +1137,17 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                   {entry.email && (
                                     <a
                                       href={`mailto:${entry.email}`}
-                                      className="inline-flex items-center gap-1 px-3 py-1.5 border rounded text-sm hover:bg-gray-100"
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 border rounded text-sm text-gray-600 hover:bg-gray-100"
                                     >
                                       <Mail className="h-3 w-3" />
-                                      メール
+                                      メール送信
                                     </a>
                                   )}
                                 </div>
 
                                 {/* 却下理由（却下済みの場合） */}
                                 {entry.confirmed === false && entry.reject_reason && (
-                                  <div className="mt-3 p-2 bg-red-50 rounded text-sm">
+                                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm">
                                     <span className="text-red-600 font-medium">却下理由:</span>{' '}
                                     <span className="text-red-700">{entry.reject_reason}</span>
                                   </div>
