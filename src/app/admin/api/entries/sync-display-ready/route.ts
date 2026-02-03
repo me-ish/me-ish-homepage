@@ -31,7 +31,7 @@ export async function POST() {
   // （必要なら confirmed 条件を外してもOKだが、運用上はこれが安全）
   const { data: targets, error: qErr } = await admin
     .from("entries")
-    .select("id,file_name")
+    .select("id,file_name,is_for_sale,display_plan,plan_payment_status")
     .eq("confirmed", true)
     .eq("display_ready", false)
     .limit(200);
@@ -62,6 +62,15 @@ export async function POST() {
   const DO_EXISTENCE_CHECK = false;
 
   for (const e of rows) {
+    const paidPlan =
+      (e as any).is_for_sale === true &&
+      String((e as any).display_plan ?? "free") !== "free";
+    const planPaid = String((e as any).plan_payment_status ?? "").toLowerCase() === "paid";
+    if (paidPlan && !planPaid) {
+      skipped++;
+      continue;
+    }
+
     const fileName = (e as any).file_name as string | null;
     if (!fileName) {
       skipped++;

@@ -2,9 +2,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import crypto from 'crypto';
+import Stripe from 'stripe';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+const PLAN_PRICES: Record<string, number> = {
+  mini: 400,
+  light: 1000,
+  standard: 1400,
+  premium: 2800,
+};
+
+const PLAN_LABELS: Record<string, string> = {
+  mini: 'Mini',
+  light: 'Light',
+  standard: 'Standard',
+  premium: 'Premium',
+};
 
 function baseUrl() {
   if (process.env.NEXT_PUBLIC_SITE_URL) {
@@ -73,7 +89,7 @@ export async function POST(
   const { data: entry, error: selErr } = await admin
     .from('entries')
     .select(
-      'id, artist_name, email, external_user_id, title, gallery_type, file_name, image_url'
+      'id, artist_name, email, external_user_id, title, gallery_type, file_name, image_url, is_for_sale, display_plan, plan_payment_status, plan_payment_amount_yen'
     )
     .eq('id', id)
     .single();
@@ -151,11 +167,83 @@ export async function POST(
       });
     }
   } catch (e) {
-  }
-
-  // 5) 加工ジョブを upsert
+  }  // 5) Auto-create checkout URL and email it for paid plans.
   // - succeeded/running のジョブは上書きしない（事故防止）
   // - failed/queued のジョブは queued にリセット（再試行）
+  // 5) paid plan??????URL????????????
+  try {
+    const plan = String(entry.display_plan ?? 'free');
+    const needsPlanPayment =
+      entry.is_for_sale === true &&
+      plan !== 'free' &&
+      String(entry.plan_payment_status ?? 'pending').toLowerCase() !== 'paid';
+
+    if (needsPlanPayment && entry.email) {
+      const amountYen = Number(entry.plan_payment_amount_yen ?? PLAN_PRICES[plan] ?? 0);
+      if (Number.isFinite(amountYen) && amountYen > 0) {
+        const session = await stripe.checkout.sessions.create({
+          mode: 'payment',
+          line_items: [
+            {
+              price_data: {
+                currency: 'jpy',
+                product_data: {
+                  name: `me-ish Display Plan (${PLAN_LABELS[plan] ?? plan})`,
+                  description: entry.title ?? undefined,
+                },
+                unit_amount: amountYen,
+              },
+              quantity: 1,
+            },
+          ],
+          customer_email: entry.email,
+          success_url: `${baseUrl()}/mypage?planPaid=1`,
+          cancel_url: `${baseUrl()}/mypage?planCanceled=1`,
+          client_reference_id: String(entry.id),
+          metadata: {
+            kind: 'entry_plan',
+            entryId: String(entry.id),
+            displayPlan: plan,
+            planAmountYen: String(amountYen),
+          },
+        });
+
+        if (session.url) {
+          await admin
+            .from('entries')
+            .update({
+              plan_payment_status: 'pending',
+              plan_payment_amount_yen: amountYen,
+              plan_payment_session_id: session.id,
+              plan_payment_checkout_created_at: new Date().toISOString(),
+            })
+            .eq('id', entry.id);
+
+          await fetch(`${baseUrl()}/api/send-email/planPaymentRequest`, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              'x-meish-admin-token': process.env.ADMIN_API_TOKEN!,
+            },
+            body: JSON.stringify({
+              to: entry.email,
+              name: entry.artist_name || 'applicant',
+              title: entry.title || 'artwork',
+              displayPlan: PLAN_LABELS[plan] ?? plan,
+              amountYen,
+              paymentUrl: session.url,
+              manageUrl: `${baseUrl()}/mypage`,
+            }),
+            cache: 'no-store',
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[approve] plan checkout/email failed:', e);
+  }
+
+  // 6) processing job upsert
   let job: ProcessingJob;
   {
     // まず既存ジョブを確認

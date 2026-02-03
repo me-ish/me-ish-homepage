@@ -11,6 +11,7 @@ import { generateExhibitStartEmail } from '@/lib/emailTemplates/exhibitStart';
 import { generateExhibitEndEmail } from '@/lib/emailTemplates/exhibitEnd';
 import { generatePurchaseBuyerEmail } from '@/lib/emailTemplates/purchaseBuyer';
 import { generatePurchaseArtistEmail } from '@/lib/emailTemplates/purchaseArtist';
+import { generatePlanPaymentRequestEmail } from '@/lib/emailTemplates/planPaymentRequest';
 import { generatePayoutCompleteEmail } from '@/lib/emailTemplates/payoutComplete';
 import { generateExhibitEndingSoonEmail } from '@/lib/emailTemplates/exhibitEndingSoon';
 import { generateContactEmail } from '@/lib/emailTemplates/generateContactEmail';
@@ -127,6 +128,16 @@ const PurchaseArtist = z.object({
   settlementAt: z.string().optional(), // ISO
 }).transform(d => ({ ...d, priceYen: d.priceYen ?? d.amountYen ?? null }));
 
+const PlanPaymentRequest = z.object({
+  to: z.string().email(),
+  name: z.string().min(1),
+  title: z.string().optional(),
+  displayPlan: z.string().min(1),
+  amountYen: z.number().int().nonnegative(),
+  paymentUrl: z.string().url(),
+  manageUrl: z.string().url().optional(),
+});
+
 
 // exhibitEndingSoon（展示終了5日前通知）
 const ExhibitEndingSoon = z.object({
@@ -176,6 +187,7 @@ const templates = {
   exhibitEndingSoon: { schema: ExhibitEndingSoon, gen: generateExhibitEndingSoonEmail },
   purchaseBuyer: { schema: PurchaseBuyer,  gen: generatePurchaseBuyerEmail },
   purchaseArtist:{ schema: PurchaseArtist, gen: generatePurchaseArtistEmail },
+  planPaymentRequest: { schema: PlanPaymentRequest, gen: generatePlanPaymentRequestEmail },
   payoutComplete:{ schema: PayoutComplete, gen: generatePayoutCompleteEmail },
   contact:       { schema: Contact,        gen: generateContactEmail },
 } as const;

@@ -40,7 +40,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
   const admin = supabaseAdmin();
 
-  // ??????????????? display_ready ????????
+  // Do not allow display_ready=true for paid plans until payment is completed.
   if (values.display_ready === true) {
     const { data: row, error: selErr } = await admin
       .from('entries')

@@ -124,12 +124,12 @@ export async function POST(req: NextRequest) {
   const entryId = String(session.metadata?.entryId ?? "");
   const requestId = String(session.metadata?.requestId ?? "");
 
-  // AURA??
+  // AURA purchase
   if (kind === "aura" && requestId && isUuidLike(requestId)) {
     return handleAuraPurchase(event.id, session, requestId);
   }
 
-  // ???????
+  // Entry plan purchase
   if (kind === "entry_plan" && entryId && isEntryIdLike(entryId)) {
     return handleEntryPlanPurchase(event.id, session, entryId);
   }
