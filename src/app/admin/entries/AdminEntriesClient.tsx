@@ -83,12 +83,23 @@ const WORKFLOW_FLOW: { key: WorkflowPhase; label: string; className: string }[] 
   { key: 'unreviewed', label: '未審査', className: 'bg-amber-50 text-amber-700 border-amber-200' },
   { key: 'approved_queued', label: '承認済(待機)', className: 'bg-blue-50 text-blue-700 border-blue-200' },
   { key: 'processing', label: '処理中', className: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  { key: 'processing_failed', label: '処理失敗', className: 'bg-red-50 text-red-700 border-red-200' },
-  { key: 'ready_to_enable', label: '展示準備OK', className: 'bg-sky-50 text-sky-700 border-sky-200' },
+  { key: 'ready_to_enable', label: '展示可', className: 'bg-sky-50 text-sky-700 border-sky-200' },
   { key: 'displaying', label: '展示中', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   { key: 'ended', label: '展示終了', className: 'bg-gray-100 text-gray-700 border-gray-200' },
-  { key: 'rejected', label: '却下', className: 'bg-rose-50 text-rose-700 border-rose-200' },
 ];
+
+const WORKFLOW_BRANCHES: { key: WorkflowPhase; label: string; className: string }[] = [
+  { key: 'rejected', label: '却下', className: 'bg-rose-50 text-rose-700 border-rose-200' },
+  { key: 'processing_failed', label: '処理失敗', className: 'bg-red-50 text-red-700 border-red-200' },
+];
+
+const FLOW_NODE_WIDTH = 132;
+const FLOW_ARROW_GAP = 20;
+const FLOW_NODE_LEFTS = [0, 152, 304, 456, 608, 760] as const;
+const FLOW_CANVAS_WIDTH = 892;
+const FLOW_MAIN_Y = 0;
+const FLOW_NODE_HEIGHT = 58;
+const FLOW_BRANCH_Y = 102;
 
 // ステータスタブの定義
 const STATUS_TABS: { value: StatusFilter; label: string; color: string }[] = [
@@ -234,6 +245,13 @@ function getRowAccent(phase: WorkflowPhase): string {
   if (phase === 'approved_queued') return 'bg-blue-500';
   if (phase === 'rejected') return 'bg-rose-500';
   return 'bg-gray-400';
+}
+
+function phaseToStatusFilter(phase: WorkflowPhase): StatusFilter {
+  if (phase === 'unreviewed') return 'unreviewed';
+  if (phase === 'rejected') return 'rejected';
+  if (phase === 'displaying' || phase === 'ended') return 'approved';
+  return 'processing';
 }
 
 export default function AdminEntriesClient({ adminEmail }: Props) {
@@ -550,35 +568,113 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
               {overviewLoading ? '集計中...' : `対象: ${overview?.total ?? 0}件`}
             </span>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-8">
-            {WORKFLOW_FLOW.map((phase) => (
-              <div
-                key={phase.key}
-                className={`rounded-lg border px-3 py-2 ${phase.className}`}
+          <div className="mt-1 text-xs text-gray-500">クリックでその工程に絞り込み</div>
+          <div className="mt-3 overflow-x-auto pb-2">
+            <div className="relative h-[158px]" style={{ width: FLOW_CANVAS_WIDTH }}>
+              <svg
+                className="pointer-events-none absolute inset-0"
+                width={FLOW_CANVAS_WIDTH}
+                height={158}
+                viewBox={`0 0 ${FLOW_CANVAS_WIDTH} 158`}
+                aria-hidden
               >
-                <div className="text-[11px] font-medium">{phase.label}</div>
-                <div className="mt-1 text-lg font-semibold">{overview?.phases[phase.key] ?? 0}</div>
-              </div>
-            ))}
+                <defs>
+                  <marker
+                    id="workflow-arrow"
+                    viewBox="0 0 8 8"
+                    refX="7"
+                    refY="4"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M0,0 L8,4 L0,8 z" fill="#cbd5e1" />
+                  </marker>
+                </defs>
+                {FLOW_NODE_LEFTS.slice(0, -1).map((left, i) => {
+                  const mainLineColor =
+                    i === 0 ? '#93c5fd' :
+                    i === 1 ? '#a5b4fc' :
+                    i === 2 ? '#7dd3fc' :
+                    i === 3 ? '#86efac' : '#d1d5db';
+                  return (
+                  <line
+                    key={`main-${i}`}
+                    x1={left + FLOW_NODE_WIDTH}
+                    y1={FLOW_MAIN_Y + FLOW_NODE_HEIGHT / 2}
+                    x2={FLOW_NODE_LEFTS[i + 1]}
+                    y2={FLOW_MAIN_Y + FLOW_NODE_HEIGHT / 2}
+                    stroke={mainLineColor}
+                    strokeWidth="1.5"
+                    markerEnd="url(#workflow-arrow)"
+                  />
+                  );
+                })}
+                <line
+                  x1={FLOW_NODE_LEFTS[0] + FLOW_NODE_WIDTH / 2}
+                  y1={FLOW_MAIN_Y + FLOW_NODE_HEIGHT}
+                  x2={FLOW_NODE_LEFTS[0] + FLOW_NODE_WIDTH / 2}
+                  y2={FLOW_BRANCH_Y - 6}
+                  stroke="#f9a8d4"
+                  strokeWidth="1.5"
+                  markerEnd="url(#workflow-arrow)"
+                />
+                <line
+                  x1={FLOW_NODE_LEFTS[2] + FLOW_NODE_WIDTH / 2}
+                  y1={FLOW_MAIN_Y + FLOW_NODE_HEIGHT}
+                  x2={FLOW_NODE_LEFTS[2] + FLOW_NODE_WIDTH / 2}
+                  y2={FLOW_BRANCH_Y - 6}
+                  stroke="#fca5a5"
+                  strokeWidth="1.5"
+                  markerEnd="url(#workflow-arrow)"
+                />
+              </svg>
+
+              {WORKFLOW_FLOW.map((phase, idx) => {
+                const count = overview?.phases[phase.key] ?? 0;
+                const isActionable = (phase.key === 'unreviewed' || phase.key === 'ready_to_enable') && count > 0;
+                return (
+                  <button
+                    key={phase.key}
+                    onClick={() => setStatusFilter(phaseToStatusFilter(phase.key))}
+                    className={`absolute w-[132px] rounded-lg border px-3 py-2 text-left transition hover:opacity-90 ${phase.className} ${
+                      isActionable ? 'ring-2 ring-offset-1 ring-amber-300' : ''
+                    }`}
+                    style={{ left: FLOW_NODE_LEFTS[idx], top: FLOW_MAIN_Y }}
+                  >
+                    <div className="text-[11px] font-medium">{phase.label}</div>
+                    <div className="mt-1 text-lg font-semibold leading-none">{count}</div>
+                  </button>
+                );
+              })}
+
+              {WORKFLOW_BRANCHES.map((phase) => {
+                const count = overview?.phases[phase.key] ?? 0;
+                const left = phase.key === 'rejected' ? FLOW_NODE_LEFTS[0] : FLOW_NODE_LEFTS[2];
+                return (
+                  <button
+                    key={phase.key}
+                    onClick={() => setStatusFilter(phaseToStatusFilter(phase.key))}
+                    className={`absolute w-[132px] rounded-lg border px-3 py-2 text-left ${phase.className}`}
+                    style={{ left, top: FLOW_BRANCH_Y }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold">{phase.label}</span>
+                      <span className="text-lg font-semibold">{count}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-5">
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-              <div className="text-[11px] text-amber-700">要審査</div>
-              <div className="text-sm font-semibold text-amber-900">{overview?.actionRequired.needsReview ?? 0}</div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 w-[180px]">
+              <div className="text-[11px] text-red-700">要復旧（失敗+停滞）</div>
+              <div className="text-sm font-semibold text-red-900">
+                {(overview?.actionRequired.processingFailed ?? 0) + (overview?.actionRequired.stalled ?? 0)}
+              </div>
             </div>
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2">
-              <div className="text-[11px] text-red-700">処理失敗</div>
-              <div className="text-sm font-semibold text-red-900">{overview?.actionRequired.processingFailed ?? 0}</div>
-            </div>
-            <div className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2">
-              <div className="text-[11px] text-orange-700">停滞中</div>
-              <div className="text-sm font-semibold text-orange-900">{overview?.actionRequired.stalled ?? 0}</div>
-            </div>
-            <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2">
-              <div className="text-[11px] text-sky-700">展示可</div>
-              <div className="text-sm font-semibold text-sky-900">{overview?.actionRequired.readyToEnable ?? 0}</div>
-            </div>
-            <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 w-[150px]">
               <div className="text-[11px] text-gray-600">要対応合計</div>
               <div className="text-sm font-semibold text-gray-900">{overview?.actionRequired.total ?? 0}</div>
             </div>

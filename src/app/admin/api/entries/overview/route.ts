@@ -72,7 +72,7 @@ export async function GET(req: Request) {
 
   for (const row of rows) {
     phases[row.phase] += 1;
-    if (row.is_stalled) stalled += 1;
+    if (row.is_stalled && row.phase !== 'processing_failed') stalled += 1;
     if (row.is_ready_candidate) readyToEnable += 1;
   }
 
