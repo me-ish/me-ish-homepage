@@ -16,6 +16,9 @@ import {
   Eye,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
   Search,
   RefreshCw,
   ExternalLink,
@@ -28,6 +31,9 @@ import {
   CheckSquare,
   Minus,
 } from 'lucide-react';
+
+const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
+type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 
 type Entry = {
   id: number;
@@ -287,6 +293,10 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
   // 表示モード
   const [viewMode, setViewMode] = useState<ViewMode>('table');
 
+  // ページネーション
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(20);
+
   const mountedRef = useRef(true);
 
   const showToast = (m: string) => {
@@ -411,6 +421,18 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
       return tb - ta;
     });
   }, [entries]);
+
+  // ページネーション計算
+  const totalPages = Math.max(1, Math.ceil(sortedEntries.length / pageSize));
+  const paginatedEntries = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedEntries.slice(start, start + pageSize);
+  }, [sortedEntries, currentPage, pageSize]);
+
+  // フィルタ変更時にページをリセット
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, galleryFilter, keyword, pageSize]);
 
   // アクション
   const approveEntry = async (entry: Entry) => {
@@ -1017,6 +1039,14 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
           <div className="mb-4 flex items-center gap-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3">
             <span className="text-sm font-medium text-sky-900">
               {selectedIds.size}件選択中
+              {selectedIds.size < sortedEntries.length && (
+                <button
+                  onClick={selectAll}
+                  className="ml-2 text-sky-600 hover:text-sky-800 underline"
+                >
+                  全{sortedEntries.length}件を選択
+                </button>
+              )}
             </span>
             <div className="h-4 w-px bg-sky-200" />
             <button
@@ -1076,21 +1106,38 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (selectedIds.size === sortedEntries.length) {
-                              clearSelection();
+                            const pageIds = paginatedEntries.map((e) => e.id);
+                            const allPageSelected = pageIds.every((id) => selectedIds.has(id));
+                            if (allPageSelected) {
+                              // このページの選択を解除
+                              setSelectedIds((prev) => {
+                                const next = new Set(prev);
+                                pageIds.forEach((id) => next.delete(id));
+                                return next;
+                              });
                             } else {
-                              selectAll();
+                              // このページを全選択
+                              setSelectedIds((prev) => {
+                                const next = new Set(prev);
+                                pageIds.forEach((id) => next.add(id));
+                                return next;
+                              });
                             }
                           }}
                           className="p-1 rounded hover:bg-gray-200"
+                          title="このページを選択"
                         >
-                          {selectedIds.size === 0 ? (
-                            <Square className="h-4 w-4 text-gray-400" />
-                          ) : selectedIds.size === sortedEntries.length ? (
-                            <CheckSquare className="h-4 w-4 text-sky-600" />
-                          ) : (
-                            <Minus className="h-4 w-4 text-sky-600" />
-                          )}
+                          {(() => {
+                            const pageIds = paginatedEntries.map((e) => e.id);
+                            const selectedOnPage = pageIds.filter((id) => selectedIds.has(id)).length;
+                            if (selectedOnPage === 0) {
+                              return <Square className="h-4 w-4 text-gray-400" />;
+                            } else if (selectedOnPage === pageIds.length) {
+                              return <CheckSquare className="h-4 w-4 text-sky-600" />;
+                            } else {
+                              return <Minus className="h-4 w-4 text-sky-600" />;
+                            }
+                          })()}
                         </button>
                       </th>
                       <th className="w-10 px-4 py-3"></th>
@@ -1104,7 +1151,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {sortedEntries.map((entry) => {
+                    {paginatedEntries.map((entry) => {
                       const isExpanded = expandedId === entry.id;
                       const isProcessing = processingIds.has(entry.id);
                       const canEnable = canEnableDisplay(entry);
@@ -1430,6 +1477,115 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                     })}
                   </tbody>
                 </table>
+
+                {/* ページネーション */}
+                {sortedEntries.length > 0 && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm text-gray-600">
+                        {sortedEntries.length}件中 {(currentPage - 1) * pageSize + 1}-
+                        {Math.min(currentPage * pageSize, sortedEntries.length)}件を表示
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-600">表示件数:</label>
+                        <select
+                          value={pageSize}
+                          onChange={(e) => setPageSize(Number(e.target.value) as PageSize)}
+                          className="px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        >
+                          {PAGE_SIZE_OPTIONS.map((size) => (
+                            <option key={size} value={size}>
+                              {size}件
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {/* 最初へ */}
+                      <button
+                        onClick={() => setCurrentPage(1)}
+                        disabled={currentPage === 1}
+                        className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="最初のページ"
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                      </button>
+                      {/* 前へ */}
+                      <button
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="前のページ"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+
+                      {/* ページ番号 */}
+                      <div className="flex items-center gap-1 mx-2">
+                        {(() => {
+                          const pages: (number | 'ellipsis')[] = [];
+                          const showPages = 5;
+                          let start = Math.max(1, currentPage - Math.floor(showPages / 2));
+                          const end = Math.min(totalPages, start + showPages - 1);
+                          start = Math.max(1, end - showPages + 1);
+
+                          if (start > 1) {
+                            pages.push(1);
+                            if (start > 2) pages.push('ellipsis');
+                          }
+                          for (let i = start; i <= end; i++) {
+                            pages.push(i);
+                          }
+                          if (end < totalPages) {
+                            if (end < totalPages - 1) pages.push('ellipsis');
+                            pages.push(totalPages);
+                          }
+
+                          return pages.map((p, i) =>
+                            p === 'ellipsis' ? (
+                              <span key={`ellipsis-${i}`} className="px-1 text-gray-400">
+                                ...
+                              </span>
+                            ) : (
+                              <button
+                                key={p}
+                                onClick={() => setCurrentPage(p)}
+                                className={`min-w-[32px] h-8 px-2 rounded text-sm font-medium transition ${
+                                  currentPage === p
+                                    ? 'bg-sky-600 text-white'
+                                    : 'hover:bg-gray-200 text-gray-700'
+                                }`}
+                              >
+                                {p}
+                              </button>
+                            )
+                          );
+                        })()}
+                      </div>
+
+                      {/* 次へ */}
+                      <button
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="次のページ"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                      {/* 最後へ */}
+                      <button
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                        className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="最後のページ"
+                      >
+                        <ChevronsRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </>
