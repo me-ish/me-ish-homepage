@@ -553,6 +553,172 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
+  // 選択ヘルパー
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(sortedEntries.map((e) => e.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const selectedEntries = useMemo(
+    () => entries.filter((e) => selectedIds.has(e.id)),
+    [entries, selectedIds]
+  );
+
+  // 一括承認
+  const bulkApprove = async () => {
+    const targets = selectedEntries.filter((e) => e.confirmed === null);
+    if (targets.length === 0) {
+      showToast('承認可能な作品がありません');
+      return;
+    }
+    const ok = window.confirm(`${targets.length}件を一括承認します。続行しますか？`);
+    if (!ok) return;
+
+    setProcessingIds((prev) => {
+      const next = new Set(prev);
+      targets.forEach((t) => next.add(t.id));
+      return next;
+    });
+
+    let successCount = 0;
+    try {
+      for (const t of targets) {
+        try {
+          const result = await approveEntryAction(t.id);
+          setEntries((prev) =>
+            prev.map((e) =>
+              e.id === t.id ? { ...e, ...result.entry, processing_job: result.job } : e
+            )
+          );
+          successCount++;
+        } catch {
+          // 個別エラーは無視して続行
+        }
+      }
+      showToast(`${successCount}件を承認しました`);
+      fetchOverview();
+      clearSelection();
+    } finally {
+      setProcessingIds((prev) => {
+        const next = new Set(prev);
+        targets.forEach((t) => next.delete(t.id));
+        return next;
+      });
+    }
+  };
+
+  // 一括却下
+  const bulkReject = async () => {
+    const targets = selectedEntries.filter((e) => e.confirmed === null);
+    if (targets.length === 0) {
+      showToast('却下可能な作品がありません');
+      return;
+    }
+    const reason = window.prompt(`${targets.length}件を一括却下します。却下理由（任意）:`);
+    if (reason === null) return; // キャンセル
+
+    setProcessingIds((prev) => {
+      const next = new Set(prev);
+      targets.forEach((t) => next.add(t.id));
+      return next;
+    });
+
+    let successCount = 0;
+    try {
+      for (const t of targets) {
+        try {
+          const result = await rejectEntryAction(t.id, reason || null);
+          setEntries((prev) => prev.map((e) => (e.id === t.id ? { ...e, ...result.entry } : e)));
+          successCount++;
+        } catch {
+          // 個別エラーは無視して続行
+        }
+      }
+      showToast(`${successCount}件を却下しました`);
+      fetchOverview();
+      clearSelection();
+    } finally {
+      setProcessingIds((prev) => {
+        const next = new Set(prev);
+        targets.forEach((t) => next.delete(t.id));
+        return next;
+      });
+    }
+  };
+
+  // 一括展示有効化（選択ベース）
+  const bulkEnableSelected = async () => {
+    const targets = selectedEntries.filter(canEnableDisplay);
+    if (targets.length === 0) {
+      showToast('有効化可能な作品がありません');
+      return;
+    }
+    const ok = window.confirm(`${targets.length}件の展示を有効化します。続行しますか？`);
+    if (!ok) return;
+
+    setProcessingIds((prev) => {
+      const next = new Set(prev);
+      targets.forEach((t) => next.add(t.id));
+      return next;
+    });
+
+    let successCount = 0;
+    try {
+      for (const t of targets) {
+        try {
+          const saved = await api.patch(t.id, { display_ready: true });
+          setEntries((prev) => prev.map((e) => (e.id === t.id ? { ...e, ...saved } : e)));
+          successCount++;
+        } catch {
+          // 個別エラーは無視して続行
+        }
+      }
+      showToast(`${successCount}件を有効化しました`);
+      fetchOverview();
+      clearSelection();
+    } finally {
+      setProcessingIds((prev) => {
+        const next = new Set(prev);
+        targets.forEach((t) => next.delete(t.id));
+        return next;
+      });
+    }
+  };
+
+  // カンバン用: フェーズごとにエントリをグループ化
+  const entriesByPhase = useMemo(() => {
+    const grouped: Record<WorkflowPhase, Entry[]> = {
+      unreviewed: [],
+      approved_queued: [],
+      processing: [],
+      processing_failed: [],
+      ready_to_enable: [],
+      displaying: [],
+      ended: [],
+      rejected: [],
+    };
+    for (const entry of sortedEntries) {
+      const phase = getEntryPhase(entry);
+      grouped[phase].push(entry);
+    }
+    return grouped;
+  }, [sortedEntries]);
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-white to-gray-50 pt-[70px]">
       <div className="mx-auto max-w-7xl px-4 py-6">
@@ -798,8 +964,34 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
 
           <div className="flex-1" />
 
+          {/* 表示切替 */}
+          <div className="inline-flex rounded-lg border overflow-hidden">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-2 text-sm flex items-center gap-1.5 transition ${
+                viewMode === 'table'
+                  ? 'bg-gray-100 text-gray-900'
+                  : 'bg-white text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              <List className="h-4 w-4" />
+              テーブル
+            </button>
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`px-3 py-2 text-sm flex items-center gap-1.5 transition ${
+                viewMode === 'kanban'
+                  ? 'bg-gray-100 text-gray-900'
+                  : 'bg-white text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              カンバン
+            </button>
+          </div>
+
           {/* 一括有効化 */}
-          {counts.enableCandidates > 0 && (
+          {counts.enableCandidates > 0 && viewMode === 'table' && (
             <button
               onClick={bulkEnableDisplay}
               className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition"
@@ -820,53 +1012,129 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
           </button>
         </div>
 
-        {/* テーブル */}
-        {error ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
-            {error}
+        {/* 選択時の一括操作バー */}
+        {selectedIds.size > 0 && viewMode === 'table' && (
+          <div className="mb-4 flex items-center gap-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3">
+            <span className="text-sm font-medium text-sky-900">
+              {selectedIds.size}件選択中
+            </span>
+            <div className="h-4 w-px bg-sky-200" />
+            <button
+              onClick={bulkApprove}
+              disabled={selectedEntries.filter((e) => e.confirmed === null).length === 0}
+              className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              一括承認
+            </button>
+            <button
+              onClick={bulkReject}
+              disabled={selectedEntries.filter((e) => e.confirmed === null).length === 0}
+              className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              一括却下
+            </button>
+            <button
+              onClick={bulkEnableSelected}
+              disabled={selectedEntries.filter(canEnableDisplay).length === 0}
+              className="px-3 py-1.5 bg-sky-600 text-white text-xs font-medium rounded hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              一括有効化
+            </button>
+            <div className="flex-1" />
+            <button
+              onClick={clearSelection}
+              className="px-3 py-1.5 border border-sky-300 text-sky-700 text-xs font-medium rounded hover:bg-sky-100"
+            >
+              選択解除
+            </button>
           </div>
-        ) : loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-          </div>
-        ) : entries.length === 0 ? (
-          <div className="text-center py-20 text-gray-500">
-            該当する作品がありません
-          </div>
-        ) : (
-          <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="w-2"></th>
-                  <th className="w-10 px-4 py-3"></th>
-                  <th className="w-16 px-4 py-3"></th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">作品</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">作家</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ステータス</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">処理</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">応募日</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">アクション</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {sortedEntries.map((entry) => {
-                  const isExpanded = expandedId === entry.id;
-                  const isProcessing = processingIds.has(entry.id);
-                  const canEnable = canEnableDisplay(entry);
-                  const phase = getEntryPhase(entry);
+        )}
 
-                  return (
-                    <>
-                      {/* メイン行 */}
-                      <tr
-                        key={entry.id}
-                        className={`hover:bg-gray-50 cursor-pointer ${isExpanded ? 'bg-sky-50' : ''}`}
-                        onClick={() => toggleExpand(entry.id)}
-                      >
-                        <td className="p-0">
-                          <div className={`h-full min-h-[72px] w-1.5 ${getRowAccent(phase)}`} />
-                        </td>
+        {/* テーブル表示 */}
+        {viewMode === 'table' && (
+          <>
+            {error ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+                {error}
+              </div>
+            ) : loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            ) : entries.length === 0 ? (
+              <div className="text-center py-20 text-gray-500">
+                該当する作品がありません
+              </div>
+            ) : (
+              <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="w-2"></th>
+                      {/* チェックボックス */}
+                      <th className="w-10 px-2 py-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (selectedIds.size === sortedEntries.length) {
+                              clearSelection();
+                            } else {
+                              selectAll();
+                            }
+                          }}
+                          className="p-1 rounded hover:bg-gray-200"
+                        >
+                          {selectedIds.size === 0 ? (
+                            <Square className="h-4 w-4 text-gray-400" />
+                          ) : selectedIds.size === sortedEntries.length ? (
+                            <CheckSquare className="h-4 w-4 text-sky-600" />
+                          ) : (
+                            <Minus className="h-4 w-4 text-sky-600" />
+                          )}
+                        </button>
+                      </th>
+                      <th className="w-10 px-4 py-3"></th>
+                      <th className="w-16 px-4 py-3"></th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">作品</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">作家</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ステータス</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">処理</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">応募日</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">アクション</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {sortedEntries.map((entry) => {
+                      const isExpanded = expandedId === entry.id;
+                      const isProcessing = processingIds.has(entry.id);
+                      const canEnable = canEnableDisplay(entry);
+                      const phase = getEntryPhase(entry);
+                      const isSelected = selectedIds.has(entry.id);
+
+                      return (
+                        <>
+                          {/* メイン行 */}
+                          <tr
+                            key={entry.id}
+                            className={`hover:bg-gray-50 cursor-pointer ${isExpanded ? 'bg-sky-50' : ''} ${isSelected ? 'bg-sky-50/50' : ''}`}
+                            onClick={() => toggleExpand(entry.id)}
+                          >
+                            <td className="p-0">
+                              <div className={`h-full min-h-[72px] w-1.5 ${getRowAccent(phase)}`} />
+                            </td>
+                            {/* チェックボックス */}
+                            <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => toggleSelect(entry.id)}
+                                className="p-1 rounded hover:bg-gray-200"
+                              >
+                                {isSelected ? (
+                                  <CheckSquare className="h-4 w-4 text-sky-600" />
+                                ) : (
+                                  <Square className="h-4 w-4 text-gray-400" />
+                                )}
+                              </button>
+                            </td>
                         <td className="px-4 py-3">
                           {isExpanded ? (
                             <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -968,7 +1236,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                       {/* 展開行 */}
                       {isExpanded && (
                         <tr key={`${entry.id}-detail`} className="bg-gray-50">
-                          <td colSpan={9} className="px-4 py-4">
+                          <td colSpan={10} className="px-4 py-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                               {/* 画像・基本情報 */}
                               <div className="flex gap-4">
@@ -1159,12 +1427,241 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                       )}
                     </>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* カンバン表示 */}
+        {viewMode === 'kanban' && (
+          <>
+            {error ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+                {error}
+              </div>
+            ) : loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {/* 未審査 */}
+                <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-amber-800">未審査</h3>
+                    <span className="text-xs font-medium text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+                      {entriesByPhase.unreviewed.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                    {entriesByPhase.unreviewed.map((entry) => (
+                      <KanbanCard
+                        key={entry.id}
+                        entry={entry}
+                        onApprove={() => approveEntry(entry)}
+                        onReject={() => rejectEntry(entry)}
+                        isProcessing={processingIds.has(entry.id)}
+                      />
+                    ))}
+                    {entriesByPhase.unreviewed.length === 0 && (
+                      <div className="text-xs text-amber-600/60 text-center py-4">なし</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 処理待ち/処理中 */}
+                <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-indigo-800">処理中</h3>
+                    <span className="text-xs font-medium text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">
+                      {entriesByPhase.approved_queued.length + entriesByPhase.processing.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                    {[...entriesByPhase.approved_queued, ...entriesByPhase.processing].map((entry) => (
+                      <KanbanCard key={entry.id} entry={entry} isProcessing={processingIds.has(entry.id)} />
+                    ))}
+                    {entriesByPhase.approved_queued.length + entriesByPhase.processing.length === 0 && (
+                      <div className="text-xs text-indigo-600/60 text-center py-4">なし</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 展示可 */}
+                <div className="rounded-xl border border-sky-200 bg-sky-50/50 p-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-sky-800">展示可</h3>
+                    <span className="text-xs font-medium text-sky-600 bg-sky-100 px-2 py-0.5 rounded-full">
+                      {entriesByPhase.ready_to_enable.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                    {entriesByPhase.ready_to_enable.map((entry) => (
+                      <KanbanCard
+                        key={entry.id}
+                        entry={entry}
+                        onEnable={() => enableDisplay(entry)}
+                        isProcessing={processingIds.has(entry.id)}
+                      />
+                    ))}
+                    {entriesByPhase.ready_to_enable.length === 0 && (
+                      <div className="text-xs text-sky-600/60 text-center py-4">なし</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 展示中 */}
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-emerald-800">展示中</h3>
+                    <span className="text-xs font-medium text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      {entriesByPhase.displaying.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                    {entriesByPhase.displaying.map((entry) => (
+                      <KanbanCard key={entry.id} entry={entry} isProcessing={processingIds.has(entry.id)} />
+                    ))}
+                    {entriesByPhase.displaying.length === 0 && (
+                      <div className="text-xs text-emerald-600/60 text-center py-4">なし</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 展示終了 */}
+                <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-gray-700">終了</h3>
+                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                      {entriesByPhase.ended.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                    {entriesByPhase.ended.map((entry) => (
+                      <KanbanCard key={entry.id} entry={entry} isProcessing={processingIds.has(entry.id)} />
+                    ))}
+                    {entriesByPhase.ended.length === 0 && (
+                      <div className="text-xs text-gray-500/60 text-center py-4">なし</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 却下/失敗 */}
+                <div className="rounded-xl border border-red-200 bg-red-50/50 p-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-red-800">却下/失敗</h3>
+                    <span className="text-xs font-medium text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
+                      {entriesByPhase.rejected.length + entriesByPhase.processing_failed.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                    {[...entriesByPhase.rejected, ...entriesByPhase.processing_failed].map((entry) => (
+                      <KanbanCard
+                        key={entry.id}
+                        entry={entry}
+                        onReset={() => resetReview(entry)}
+                        isProcessing={processingIds.has(entry.id)}
+                      />
+                    ))}
+                    {entriesByPhase.rejected.length + entriesByPhase.processing_failed.length === 0 && (
+                      <div className="text-xs text-red-600/60 text-center py-4">なし</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>
+  );
+}
+
+// カンバンカードコンポーネント
+function KanbanCard({
+  entry,
+  onApprove,
+  onReject,
+  onEnable,
+  onReset,
+  isProcessing,
+}: {
+  entry: Entry;
+  onApprove?: () => void;
+  onReject?: () => void;
+  onEnable?: () => void;
+  onReset?: () => void;
+  isProcessing: boolean;
+}) {
+  return (
+    <div className="bg-white rounded-lg border shadow-sm p-2.5 hover:shadow-md transition">
+      {/* サムネイル */}
+      <div className="relative aspect-square rounded overflow-hidden bg-gray-100 mb-2">
+        {entry.image_url ? (
+          <img
+            src={entry.image_url}
+            alt=""
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+            No img
+          </div>
+        )}
+      </div>
+
+      {/* 情報 */}
+      <div className="mb-2">
+        <div className="text-xs font-medium text-gray-900 truncate" title={entry.title || undefined}>
+          {entry.title || `(無題 #${entry.id})`}
+        </div>
+        <div className="text-[10px] text-gray-500 truncate">
+          {entry.artist_name || '-'}
+        </div>
+      </div>
+
+      {/* アクションボタン */}
+      <div className="flex gap-1">
+        {onApprove && (
+          <button
+            onClick={onApprove}
+            disabled={isProcessing}
+            className="flex-1 px-2 py-1 bg-emerald-600 text-white text-[10px] font-medium rounded hover:bg-emerald-700 disabled:opacity-50"
+          >
+            承認
+          </button>
+        )}
+        {onReject && (
+          <button
+            onClick={onReject}
+            disabled={isProcessing}
+            className="flex-1 px-2 py-1 bg-red-600 text-white text-[10px] font-medium rounded hover:bg-red-700 disabled:opacity-50"
+          >
+            却下
+          </button>
+        )}
+        {onEnable && (
+          <button
+            onClick={onEnable}
+            disabled={isProcessing}
+            className="flex-1 px-2 py-1 bg-sky-600 text-white text-[10px] font-medium rounded hover:bg-sky-700 disabled:opacity-50"
+          >
+            有効化
+          </button>
+        )}
+        {onReset && (
+          <button
+            onClick={onReset}
+            disabled={isProcessing}
+            className="flex-1 px-2 py-1 border border-gray-300 text-gray-600 text-[10px] font-medium rounded hover:bg-gray-50 disabled:opacity-50"
+          >
+            再審査
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
