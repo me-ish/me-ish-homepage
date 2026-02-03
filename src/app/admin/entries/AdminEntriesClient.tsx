@@ -92,17 +92,17 @@ type WorkflowOverview = {
 type Props = { adminEmail: string };
 
 const WORKFLOW_FLOW: { key: WorkflowPhase; label: string; className: string }[] = [
-  { key: 'unreviewed', label: '未審査', className: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
-  { key: 'approved_queued', label: '承認済(待機)', className: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-  { key: 'processing', label: '処理中', className: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
-  { key: 'ready_to_enable', label: '展示可', className: 'bg-sky-500/20 text-sky-300 border-sky-500/30' },
-  { key: 'displaying', label: '展示中', className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+  { key: 'unreviewed', label: '未審査', className: 'bg-amber-100 text-amber-800 border-amber-300' },
+  { key: 'approved_queued', label: '承認済(待機)', className: 'bg-blue-100 text-blue-800 border-blue-300' },
+  { key: 'processing', label: '処理中', className: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
+  { key: 'ready_to_enable', label: '展示可', className: 'bg-sky-100 text-sky-800 border-sky-300' },
+  { key: 'displaying', label: '展示中', className: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
   { key: 'ended', label: '展示終了', className: 'bg-neutral-100 text-neutral-700 border-neutral-300' },
 ];
 
 const WORKFLOW_BRANCHES: { key: WorkflowPhase; label: string; className: string }[] = [
-  { key: 'rejected', label: '却下', className: 'bg-rose-500/20 text-rose-300 border-rose-500/30' },
-  { key: 'processing_failed', label: '処理失敗', className: 'bg-red-500/20 text-red-300 border-red-500/30' },
+  { key: 'rejected', label: '却下', className: 'bg-rose-100 text-rose-800 border-rose-300' },
+  { key: 'processing_failed', label: '処理失敗', className: 'bg-red-100 text-red-800 border-red-300' },
 ];
 
 const FLOW_NODE_WIDTH = 132;

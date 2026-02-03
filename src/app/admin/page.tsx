@@ -95,17 +95,17 @@ export default async function AdminPage() {
   const actionRequired = metrics.unreviewedEntries + metrics.unreadInquiries + metrics.pendingPayouts;
 
   return (
-    <main className="min-h-screen bg-[#0a0a0a] pt-[70px]">
+    <main className="min-h-screen bg-[#f7fbff] pt-[70px]">
       <div className="mx-auto max-w-6xl px-6 py-8">
         {/* ヘッダ */}
         <div className="flex items-end justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-semibold text-white tracking-tight">Dashboard</h1>
+            <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight">Dashboard</h1>
             <p className="text-sm text-neutral-500 mt-1">{email}</p>
           </div>
           <Link
             href="/"
-            className="text-sm text-neutral-400 hover:text-white transition-colors"
+            className="text-sm text-neutral-500 transition-colors hover:text-neutral-700"
           >
             サイトを開く →
           </Link>
@@ -116,7 +116,7 @@ export default async function AdminPage() {
           <div className="mb-8 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-amber-200 text-sm font-medium">
+              <span className="text-sm font-medium text-amber-800">
                 {actionRequired}件の対応が必要です
               </span>
             </div>
@@ -181,7 +181,7 @@ export default async function AdminPage() {
                   return (
                     <li key={e.id} className="flex items-center justify-between gap-3 py-2">
                       <div className="min-w-0">
-                        <p className="truncate text-sm text-neutral-200">
+                        <p className="truncate text-sm text-neutral-800">
                           {e.title || `Untitled (#${e.id})`}
                         </p>
                         <p className="truncate text-xs text-neutral-500">
@@ -205,7 +205,7 @@ export default async function AdminPage() {
                 {latestInquiries.map((q) => (
                   <li key={q.id} className="flex items-center justify-between gap-3 py-2">
                     <div className="min-w-0">
-                      <p className="truncate text-sm text-neutral-200">
+                      <p className="truncate text-sm text-neutral-800">
                         {displaySubject(q.message)}
                       </p>
                       <p className="truncate text-xs text-neutral-500">
@@ -228,7 +228,7 @@ export default async function AdminPage() {
                 {latestAnns.map((n) => (
                   <li key={n.id} className="flex items-center justify-between gap-3 py-2">
                     <div className="min-w-0">
-                      <p className="truncate text-sm text-neutral-200">{n.title}</p>
+                      <p className="truncate text-sm text-neutral-800">{n.title}</p>
                       <p className="truncate text-xs text-neutral-500">
                         {n.published_at ? toJP(n.published_at as any) : "下書き"}
                       </p>
@@ -277,24 +277,24 @@ function NavCard({
   badgeType?: "warning" | "info" | "neutral";
 }) {
   const badgeColors = {
-    warning: "bg-amber-500/20 text-amber-300 border-amber-500/30",
-    info: "bg-sky-500/20 text-sky-300 border-sky-500/30",
-    neutral: "bg-neutral-700 text-neutral-400 border-neutral-600",
+    warning: "border-amber-300 bg-amber-100 text-amber-800",
+    info: "border-sky-300 bg-sky-100 text-sky-800",
+    neutral: "border-neutral-300 bg-neutral-100 text-neutral-700",
   };
 
   return (
     <Link
       href={href}
-      className="group relative rounded-xl border border-neutral-800 bg-neutral-900/50 p-5 hover:border-neutral-700 hover:bg-neutral-900 transition-all"
+      className="group relative rounded-xl border border-neutral-200 bg-white p-5 transition-all hover:border-neutral-300 hover:bg-neutral-50"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-medium text-white group-hover:text-sky-400 transition-colors">
+          <h3 className="text-base font-medium text-neutral-900 transition-colors group-hover:text-sky-700">
             {title}
           </h3>
           <p className="mt-1 text-sm text-neutral-500">{description}</p>
         </div>
-        <span className="text-neutral-600 group-hover:text-neutral-400 transition-colors">→</span>
+        <span className="text-neutral-400 transition-colors group-hover:text-neutral-600">→</span>
       </div>
       {badge && (
         <div className="mt-3">
@@ -317,10 +317,10 @@ function ActivityCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
-        <h3 className="text-sm font-medium text-neutral-400">{title}</h3>
-        <Link href={href} className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors">
+    <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+      <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
+        <h3 className="text-sm font-medium text-neutral-700">{title}</h3>
+        <Link href={href} className="text-xs text-neutral-500 transition-colors hover:text-neutral-700">
           すべて見る →
         </Link>
       </div>
