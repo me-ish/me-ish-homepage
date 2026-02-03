@@ -92,17 +92,17 @@ type WorkflowOverview = {
 type Props = { adminEmail: string };
 
 const WORKFLOW_FLOW: { key: WorkflowPhase; label: string; className: string }[] = [
-  { key: 'unreviewed', label: '未審査', className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  { key: 'approved_queued', label: '承認済(待機)', className: 'bg-blue-50 text-blue-700 border-blue-200' },
-  { key: 'processing', label: '処理中', className: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  { key: 'ready_to_enable', label: '展示可', className: 'bg-sky-50 text-sky-700 border-sky-200' },
-  { key: 'displaying', label: '展示中', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  { key: 'ended', label: '展示終了', className: 'bg-gray-100 text-gray-700 border-gray-200' },
+  { key: 'unreviewed', label: '未審査', className: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+  { key: 'approved_queued', label: '承認済(待機)', className: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
+  { key: 'processing', label: '処理中', className: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
+  { key: 'ready_to_enable', label: '展示可', className: 'bg-sky-500/20 text-sky-300 border-sky-500/30' },
+  { key: 'displaying', label: '展示中', className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+  { key: 'ended', label: '展示終了', className: 'bg-neutral-700/50 text-neutral-400 border-neutral-600' },
 ];
 
 const WORKFLOW_BRANCHES: { key: WorkflowPhase; label: string; className: string }[] = [
-  { key: 'rejected', label: '却下', className: 'bg-rose-50 text-rose-700 border-rose-200' },
-  { key: 'processing_failed', label: '処理失敗', className: 'bg-red-50 text-red-700 border-red-200' },
+  { key: 'rejected', label: '却下', className: 'bg-rose-500/20 text-rose-300 border-rose-500/30' },
+  { key: 'processing_failed', label: '処理失敗', className: 'bg-red-500/20 text-red-300 border-red-500/30' },
 ];
 
 const FLOW_NODE_WIDTH = 132;
@@ -196,7 +196,7 @@ function ProcessingBadge({ entry }: { entry: Entry }) {
 
   if (!job) {
     if (entry.confirmed === true) {
-      return <span className="text-xs text-gray-400">-</span>;
+      return <span className="text-xs text-neutral-500">-</span>;
     }
     return null;
   }
@@ -256,7 +256,7 @@ function getRowAccent(phase: WorkflowPhase): string {
   if (phase === 'processing') return 'bg-indigo-500';
   if (phase === 'approved_queued') return 'bg-blue-500';
   if (phase === 'rejected') return 'bg-rose-500';
-  return 'bg-gray-400';
+  return 'bg-neutral-600';
 }
 
 function phaseToStatusFilter(phase: WorkflowPhase): StatusFilter {
@@ -742,55 +742,31 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
   }, [sortedEntries]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white to-gray-50 pt-[70px]">
+    <main className="min-h-screen bg-[#0a0a0a] pt-[70px]">
       <div className="mx-auto max-w-7xl px-4 py-6">
         {/* Toast */}
         {toast && (
-          <div className="fixed top-20 right-4 z-50 rounded-lg bg-gray-900 text-white px-4 py-2 shadow-lg">
+          <div className="fixed top-20 right-4 z-50 rounded-lg bg-white text-neutral-200 px-4 py-2 shadow-lg border">
             {toast}
           </div>
         )}
 
         {/* ヘッダー */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">作品管理</h1>
-          <p className="text-sm text-gray-500 mt-1">ログイン中: {adminEmail}</p>
-        </div>
-
-        <div className="mb-5 grid gap-3 md:grid-cols-3">
-          <button
-            onClick={() => setStatusFilter('unreviewed')}
-            className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-left hover:bg-amber-100"
-          >
-            <div className="text-xs font-medium text-amber-700">今やる: 未審査を処理</div>
-            <div className="mt-1 text-2xl font-bold text-amber-900">{overview?.actionRequired.needsReview ?? counts.unreviewed}件</div>
-          </button>
-          <button
-            onClick={() => setStatusFilter('processing')}
-            className="rounded-xl border border-red-200 bg-red-50 p-4 text-left hover:bg-red-100"
-          >
-            <div className="text-xs font-medium text-red-700">今やる: 失敗/停滞を解消</div>
-            <div className="mt-1 text-2xl font-bold text-red-900">
-              {(overview?.actionRequired.processingFailed ?? 0) + (overview?.actionRequired.stalled ?? 0)}件
-            </div>
-          </button>
-          <button
-            onClick={() => setStatusFilter('processing')}
-            className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-left hover:bg-sky-100"
-          >
-            <div className="text-xs font-medium text-sky-700">今やる: 展示を有効化</div>
-            <div className="mt-1 text-2xl font-bold text-sky-900">{overview?.actionRequired.readyToEnable ?? counts.enableCandidates}件</div>
-          </button>
-        </div>
-
-        <div className="mb-5 rounded-2xl border bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-800">現在の運用フロー</h2>
-            <span className="text-xs text-gray-500">
-              {overviewLoading ? '集計中...' : `対象: ${overview?.total ?? 0}件`}
-            </span>
+        <div className="mb-6 flex items-end justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-white tracking-tight">作品管理</h1>
+            <p className="text-sm text-neutral-500 mt-1">{adminEmail}</p>
           </div>
-          <div className="mt-1 text-xs text-gray-500">クリックでその工程に絞り込み</div>
+          <div className="text-sm text-neutral-400">
+            {overviewLoading ? '集計中...' : `${overview?.total ?? entries.length}件`}
+          </div>
+        </div>
+
+        <div className="mb-5 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-neutral-300">ワークフロー</h2>
+            <span className="text-xs text-neutral-500">クリックで絞り込み</span>
+          </div>
           <div className="mt-3 overflow-x-auto pb-2">
             <div className="relative h-[158px]" style={{ width: FLOW_CANVAS_WIDTH }}>
               <svg
@@ -860,7 +836,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                     key={phase.key}
                     onClick={() => setStatusFilter(phaseToStatusFilter(phase.key))}
                     className={`absolute w-[132px] rounded-lg border px-3 py-2 text-left transition hover:opacity-90 ${phase.className} ${
-                      isActionable ? 'ring-2 ring-offset-1 ring-amber-300' : ''
+                      isActionable ? 'ring-1 ring-amber-400/50' : ''
                     }`}
                     style={{ left: FLOW_NODE_LEFTS[idx], top: FLOW_MAIN_Y }}
                   >
@@ -889,22 +865,10 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
               })}
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 w-[180px]">
-              <div className="text-[11px] text-red-700">要復旧（失敗+停滞）</div>
-              <div className="text-sm font-semibold text-red-900">
-                {(overview?.actionRequired.processingFailed ?? 0) + (overview?.actionRequired.stalled ?? 0)}
-              </div>
-            </div>
-            <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 w-[150px]">
-              <div className="text-[11px] text-gray-600">要対応合計</div>
-              <div className="text-sm font-semibold text-gray-900">{overview?.actionRequired.total ?? 0}</div>
-            </div>
-          </div>
         </div>
 
         {/* タブフィルター */}
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b">
+        <div className="flex flex-wrap items-center gap-1 mb-4 border-b border-neutral-800">
           {STATUS_TABS.map((tab) => {
             const count = tab.value === 'all' ? counts.all :
               tab.value === 'unreviewed' ? counts.unreviewed :
@@ -913,28 +877,27 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
               counts.processing;
 
             const isActive = statusFilter === tab.value;
+            const activeColors: Record<string, string> = {
+              gray: 'border-neutral-400 text-neutral-200',
+              amber: 'border-amber-400 text-amber-300',
+              emerald: 'border-emerald-400 text-emerald-300',
+              sky: 'border-sky-400 text-sky-300',
+              red: 'border-red-400 text-red-300',
+            };
             return (
               <button
                 key={tab.value}
                 onClick={() => setStatusFilter(tab.value)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition ${
                   isActive
-                    ? `border-${tab.color}-500 text-${tab.color}-700`
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? activeColors[tab.color]
+                    : 'border-transparent text-neutral-500 hover:text-neutral-300'
                 }`}
-                style={isActive ? {
-                  borderColor: tab.color === 'gray' ? '#6b7280' :
-                    tab.color === 'amber' ? '#f59e0b' :
-                    tab.color === 'emerald' ? '#10b981' :
-                    tab.color === 'sky' ? '#0ea5e9' : '#ef4444',
-                  color: tab.color === 'gray' ? '#374151' :
-                    tab.color === 'amber' ? '#b45309' :
-                    tab.color === 'emerald' ? '#047857' :
-                    tab.color === 'sky' ? '#0369a1' : '#b91c1c',
-                } : {}}
               >
                 {tab.label}
-                <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs">
+                <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+                  isActive ? 'bg-neutral-800 text-neutral-300' : 'bg-neutral-800/50 text-neutral-500'
+                }`}>
                   {count}
                 </span>
               </button>
@@ -946,13 +909,13 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
         <div className="flex flex-wrap items-center gap-3 mb-4">
           {/* 検索 */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
             <input
               type="text"
               placeholder="タイトル / 作家名"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              className="pl-9 pr-4 py-2 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="pl-9 pr-4 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-sm text-neutral-200 w-64 placeholder:text-neutral-500 focus:outline-none focus:border-neutral-600"
             />
           </div>
 
@@ -960,7 +923,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
           <select
             value={galleryFilter}
             onChange={(e) => setGalleryFilter(e.target.value)}
-            className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-sm text-neutral-200 focus:outline-none focus:border-neutral-600"
           >
             <option value="all">全ギャラリー</option>
             <option value="white">White</option>
@@ -976,7 +939,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
               setSortKey(k);
               setSortOrder(o);
             }}
-            className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-sm text-neutral-200 focus:outline-none focus:border-neutral-600"
           >
             <option value="created_at-desc">応募日時（新しい順）</option>
             <option value="created_at-asc">応募日時（古い順）</option>
@@ -987,13 +950,13 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
           <div className="flex-1" />
 
           {/* 表示切替 */}
-          <div className="inline-flex rounded-lg border overflow-hidden">
+          <div className="inline-flex rounded-lg border border-neutral-700 overflow-hidden">
             <button
               onClick={() => setViewMode('table')}
               className={`px-3 py-2 text-sm flex items-center gap-1.5 transition ${
                 viewMode === 'table'
-                  ? 'bg-gray-100 text-gray-900'
-                  : 'bg-white text-gray-500 hover:bg-gray-50'
+                  ? 'bg-neutral-800 text-neutral-200'
+                  : 'bg-neutral-900 text-neutral-500 hover:text-neutral-300'
               }`}
             >
               <List className="h-4 w-4" />
@@ -1003,8 +966,8 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
               onClick={() => setViewMode('kanban')}
               className={`px-3 py-2 text-sm flex items-center gap-1.5 transition ${
                 viewMode === 'kanban'
-                  ? 'bg-gray-100 text-gray-900'
-                  : 'bg-white text-gray-500 hover:bg-gray-50'
+                  ? 'bg-neutral-800 text-neutral-200'
+                  : 'bg-neutral-900 text-neutral-500 hover:text-neutral-300'
               }`}
             >
               <LayoutGrid className="h-4 w-4" />
@@ -1027,7 +990,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
           <button
             onClick={fetchEntries}
             disabled={loading}
-            className="inline-flex items-center gap-2 px-3 py-2 border rounded-lg text-sm hover:bg-gray-50 transition disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-3 py-2 border border-neutral-700 rounded-lg text-sm text-neutral-300 hover:bg-neutral-800 transition disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             更新
@@ -1036,19 +999,19 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
 
         {/* 選択時の一括操作バー */}
         {selectedIds.size > 0 && viewMode === 'table' && (
-          <div className="mb-4 flex items-center gap-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3">
-            <span className="text-sm font-medium text-sky-900">
+          <div className="mb-4 flex items-center gap-3 rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3">
+            <span className="text-sm font-medium text-sky-300">
               {selectedIds.size}件選択中
               {selectedIds.size < sortedEntries.length && (
                 <button
                   onClick={selectAll}
-                  className="ml-2 text-sky-600 hover:text-sky-800 underline"
+                  className="ml-2 text-sky-400 hover:text-sky-200 underline"
                 >
                   全{sortedEntries.length}件を選択
                 </button>
               )}
             </span>
-            <div className="h-4 w-px bg-sky-200" />
+            <div className="h-4 w-px bg-sky-500/30" />
             <button
               onClick={bulkApprove}
               disabled={selectedEntries.filter((e) => e.confirmed === null).length === 0}
@@ -1073,7 +1036,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
             <div className="flex-1" />
             <button
               onClick={clearSelection}
-              className="px-3 py-1.5 border border-sky-300 text-sky-700 text-xs font-medium rounded hover:bg-sky-100"
+              className="px-3 py-1.5 border border-sky-500/30 text-sky-300 text-xs font-medium rounded hover:bg-sky-500/20"
             >
               選択解除
             </button>
@@ -1084,21 +1047,21 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
         {viewMode === 'table' && (
           <>
             {error ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-300">
                 {error}
               </div>
             ) : loading ? (
               <div className="flex items-center justify-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                <Loader2 className="h-8 w-8 animate-spin text-neutral-500" />
               </div>
             ) : entries.length === 0 ? (
-              <div className="text-center py-20 text-gray-500">
+              <div className="text-center py-20 text-neutral-500">
                 該当する作品がありません
               </div>
             ) : (
-              <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
+              <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 overflow-hidden">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
+                  <thead className="bg-neutral-800/50 border-b border-neutral-700">
                     <tr>
                       <th className="w-2"></th>
                       {/* チェックボックス */}
@@ -1124,33 +1087,33 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                               });
                             }
                           }}
-                          className="p-1 rounded hover:bg-gray-200"
+                          className="p-1 rounded hover:bg-neutral-700"
                           title="このページを選択"
                         >
                           {(() => {
                             const pageIds = paginatedEntries.map((e) => e.id);
                             const selectedOnPage = pageIds.filter((id) => selectedIds.has(id)).length;
                             if (selectedOnPage === 0) {
-                              return <Square className="h-4 w-4 text-gray-400" />;
+                              return <Square className="h-4 w-4 text-neutral-500" />;
                             } else if (selectedOnPage === pageIds.length) {
-                              return <CheckSquare className="h-4 w-4 text-sky-600" />;
+                              return <CheckSquare className="h-4 w-4 text-sky-400" />;
                             } else {
-                              return <Minus className="h-4 w-4 text-sky-600" />;
+                              return <Minus className="h-4 w-4 text-sky-400" />;
                             }
                           })()}
                         </button>
                       </th>
                       <th className="w-10 px-4 py-3"></th>
                       <th className="w-16 px-4 py-3"></th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">作品</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">作家</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ステータス</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">処理</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">応募日</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">アクション</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">作品</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">作家</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">ステータス</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">処理</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">応募日</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 uppercase tracking-wider">アクション</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y">
+                  <tbody className="divide-y divide-neutral-800">
                     {paginatedEntries.map((entry) => {
                       const isExpanded = expandedId === entry.id;
                       const isProcessing = processingIds.has(entry.id);
@@ -1163,7 +1126,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                           {/* メイン行 */}
                           <tr
                             key={entry.id}
-                            className={`hover:bg-gray-50 cursor-pointer ${isExpanded ? 'bg-sky-50' : ''} ${isSelected ? 'bg-sky-50/50' : ''}`}
+                            className={`hover:bg-neutral-800/50 cursor-pointer ${isExpanded ? 'bg-neutral-800' : ''} ${isSelected ? 'bg-sky-500/10' : ''}`}
                             onClick={() => toggleExpand(entry.id)}
                           >
                             <td className="p-0">
@@ -1173,24 +1136,24 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                             <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
                               <button
                                 onClick={() => toggleSelect(entry.id)}
-                                className="p-1 rounded hover:bg-gray-200"
+                                className="p-1 rounded hover:bg-neutral-700"
                               >
                                 {isSelected ? (
-                                  <CheckSquare className="h-4 w-4 text-sky-600" />
+                                  <CheckSquare className="h-4 w-4 text-sky-400" />
                                 ) : (
-                                  <Square className="h-4 w-4 text-gray-400" />
+                                  <Square className="h-4 w-4 text-neutral-500" />
                                 )}
                               </button>
                             </td>
                         <td className="px-4 py-3">
                           {isExpanded ? (
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                            <ChevronDown className="h-4 w-4 text-neutral-500" />
                           ) : (
-                            <ChevronRight className="h-4 w-4 text-gray-400" />
+                            <ChevronRight className="h-4 w-4 text-neutral-500" />
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="w-12 h-12 rounded overflow-hidden bg-gray-100">
+                          <div className="w-12 h-12 rounded overflow-hidden bg-neutral-800">
                             {entry.image_url ? (
                               <img
                                 src={entry.image_url}
@@ -1198,20 +1161,20 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                 className="w-full h-full object-cover"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                              <div className="w-full h-full flex items-center justify-center text-neutral-500 text-xs">
                                 No img
                               </div>
                             )}
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="font-medium text-gray-900 truncate max-w-[200px]">
+                          <div className="font-medium text-neutral-200 truncate max-w-[200px]">
                             {entry.title || `(無題 #${entry.id})`}
                           </div>
-                          <div className="text-xs text-gray-500">{entry.gallery_type || '-'}</div>
+                          <div className="text-xs text-neutral-400">{entry.gallery_type || '-'}</div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="text-sm text-gray-900 truncate max-w-[150px]">
+                          <div className="text-sm text-neutral-200 truncate max-w-[150px]">
                             {entry.artist_name || '-'}
                           </div>
                         </td>
@@ -1221,7 +1184,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                         <td className="px-4 py-3">
                           <ProcessingBadge entry={entry} />
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
+                        <td className="px-4 py-3 text-sm text-neutral-400">
                           {formatDate(entry.created_at)}
                         </td>
                         <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
@@ -1254,7 +1217,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                 className={`px-3 py-1.5 text-xs font-medium rounded disabled:opacity-50 ${
                                   canEnable
                                     ? 'bg-sky-600 text-white hover:bg-sky-700'
-                                    : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                                    : 'border border-neutral-600 text-neutral-400 hover:bg-neutral-900'
                                 }`}
                               >
                                 {canEnable ? '展示を有効化' : '強制有効化'}
@@ -1271,7 +1234,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                               <button
                                 onClick={() => resetReview(entry)}
                                 disabled={isProcessing}
-                                className="px-3 py-1.5 border border-gray-300 text-gray-600 text-xs font-medium rounded hover:bg-gray-50 disabled:opacity-50"
+                                className="px-3 py-1.5 border border-neutral-600 text-neutral-400 text-xs font-medium rounded hover:bg-neutral-900 disabled:opacity-50"
                               >
                                 再審査
                               </button>
@@ -1282,7 +1245,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
 
                       {/* 展開行 */}
                       {isExpanded && (
-                        <tr key={`${entry.id}-detail`} className="bg-gray-50">
+                        <tr key={`${entry.id}-detail`} className="bg-neutral-900">
                           <td colSpan={10} className="px-4 py-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                               {/* 画像・基本情報 */}
@@ -1301,29 +1264,29 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                 </a>
                                 <div className="space-y-2 text-sm">
                                   <div>
-                                    <span className="text-gray-500">ID:</span> {entry.id}
+                                    <span className="text-neutral-400">ID:</span> {entry.id}
                                   </div>
                                   <div>
-                                    <span className="text-gray-500">Email:</span>{' '}
+                                    <span className="text-neutral-400">Email:</span>{' '}
                                     <a href={`mailto:${entry.email}`} className="text-sky-600 hover:underline">
                                       {entry.email}
                                     </a>
                                   </div>
                                   <div>
-                                    <span className="text-gray-500">応募日:</span> {formatDateFull(entry.created_at)}
+                                    <span className="text-neutral-400">応募日:</span> {formatDateFull(entry.created_at)}
                                   </div>
                                   <div>
-                                    <span className="text-gray-500">承認日:</span> {formatDateFull(entry.confirmed_at)}
+                                    <span className="text-neutral-400">承認日:</span> {formatDateFull(entry.confirmed_at)}
                                   </div>
                                 </div>
                               </div>
 
                               {/* 展示設定 */}
                               <div className="space-y-3">
-                                <h4 className="font-medium text-gray-900">展示設定</h4>
+                                <h4 className="font-medium text-neutral-200">展示設定</h4>
                                 <div className="grid grid-cols-2 gap-2 text-sm">
                                   <label className="flex flex-col gap-1">
-                                    <span className="text-gray-500 text-xs">開始日時</span>
+                                    <span className="text-neutral-400 text-xs">開始日時</span>
                                     <input
                                       type="datetime-local"
                                       className="px-2 py-1 border rounded text-sm"
@@ -1332,7 +1295,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                     />
                                   </label>
                                   <label className="flex flex-col gap-1">
-                                    <span className="text-gray-500 text-xs">終了日時</span>
+                                    <span className="text-neutral-400 text-xs">終了日時</span>
                                     <input
                                       type="datetime-local"
                                       className="px-2 py-1 border rounded text-sm"
@@ -1341,7 +1304,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                     />
                                   </label>
                                   <label className="flex flex-col gap-1">
-                                    <span className="text-gray-500 text-xs">プラン</span>
+                                    <span className="text-neutral-400 text-xs">プラン</span>
                                     <input
                                       type="text"
                                       className="px-2 py-1 border rounded text-sm"
@@ -1350,7 +1313,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                     />
                                   </label>
                                   <label className="flex flex-col gap-1">
-                                    <span className="text-gray-500 text-xs">エディション</span>
+                                    <span className="text-neutral-400 text-xs">エディション</span>
                                     <div className="flex items-center gap-1">
                                       <input
                                         type="number"
@@ -1372,7 +1335,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
 
                               {/* アクション */}
                               <div className="space-y-4">
-                                <h4 className="font-medium text-gray-900">アクション</h4>
+                                <h4 className="font-medium text-neutral-200">アクション</h4>
 
                                 {/* 主要アクション */}
                                 <div className="flex flex-wrap gap-2">
@@ -1406,7 +1369,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                       className={`inline-flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-50 ${
                                         canEnable
                                           ? 'bg-sky-600 text-white hover:bg-sky-700'
-                                          : 'border-2 border-dashed border-gray-300 text-gray-600 hover:bg-gray-50'
+                                          : 'border-2 border-dashed border-neutral-600 text-neutral-400 hover:bg-neutral-900'
                                       }`}
                                     >
                                       <Eye className="h-4 w-4" />
@@ -1419,7 +1382,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                     <button
                                       onClick={() => resetReview(entry)}
                                       disabled={isProcessing}
-                                      className="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                                      className="inline-flex items-center gap-1 px-4 py-2 border border-neutral-600 text-neutral-300 text-sm font-medium rounded-lg hover:bg-neutral-900 disabled:opacity-50"
                                     >
                                       <RefreshCw className="h-4 w-4" />
                                       再審査に戻す
@@ -1433,7 +1396,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                     <button
                                       onClick={() => resetReview(entry)}
                                       disabled={isProcessing}
-                                      className="inline-flex items-center gap-1 px-3 py-1.5 border rounded text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 border rounded text-sm text-neutral-400 hover:bg-neutral-800 disabled:opacity-50"
                                     >
                                       未審査に戻す
                                     </button>
@@ -1443,7 +1406,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                       href={entry.image_url}
                                       target="_blank"
                                       rel="noreferrer"
-                                      className="inline-flex items-center gap-1 px-3 py-1.5 border rounded text-sm text-gray-600 hover:bg-gray-100"
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 border rounded text-sm text-neutral-400 hover:bg-neutral-800"
                                     >
                                       <ExternalLink className="h-3 w-3" />
                                       画像を開く
@@ -1452,7 +1415,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                   {entry.email && (
                                     <a
                                       href={`mailto:${entry.email}`}
-                                      className="inline-flex items-center gap-1 px-3 py-1.5 border rounded text-sm text-gray-600 hover:bg-gray-100"
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 border rounded text-sm text-neutral-400 hover:bg-neutral-800"
                                     >
                                       <Mail className="h-3 w-3" />
                                       メール送信
@@ -1480,14 +1443,14 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
 
                 {/* ページネーション */}
                 {sortedEntries.length > 0 && (
-                  <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+                  <div className="flex items-center justify-between px-4 py-3 border-t bg-neutral-900">
                     <div className="flex items-center gap-4">
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-neutral-400">
                         {sortedEntries.length}件中 {(currentPage - 1) * pageSize + 1}-
                         {Math.min(currentPage * pageSize, sortedEntries.length)}件を表示
                       </span>
                       <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-600">表示件数:</label>
+                        <label className="text-sm text-neutral-400">表示件数:</label>
                         <select
                           value={pageSize}
                           onChange={(e) => setPageSize(Number(e.target.value) as PageSize)}
@@ -1507,7 +1470,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                       <button
                         onClick={() => setCurrentPage(1)}
                         disabled={currentPage === 1}
-                        className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="p-1.5 rounded hover:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed"
                         title="最初のページ"
                       >
                         <ChevronsLeft className="h-4 w-4" />
@@ -1516,7 +1479,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                       <button
                         onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                         disabled={currentPage === 1}
-                        className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="p-1.5 rounded hover:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed"
                         title="前のページ"
                       >
                         <ChevronLeft className="h-4 w-4" />
@@ -1545,7 +1508,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
 
                           return pages.map((p, i) =>
                             p === 'ellipsis' ? (
-                              <span key={`ellipsis-${i}`} className="px-1 text-gray-400">
+                              <span key={`ellipsis-${i}`} className="px-1 text-neutral-500">
                                 ...
                               </span>
                             ) : (
@@ -1555,7 +1518,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                 className={`min-w-[32px] h-8 px-2 rounded text-sm font-medium transition ${
                                   currentPage === p
                                     ? 'bg-sky-600 text-white'
-                                    : 'hover:bg-gray-200 text-gray-700'
+                                    : 'hover:bg-neutral-700 text-neutral-300'
                                 }`}
                               >
                                 {p}
@@ -1569,7 +1532,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                       <button
                         onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                         disabled={currentPage === totalPages}
-                        className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="p-1.5 rounded hover:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed"
                         title="次のページ"
                       >
                         <ChevronRight className="h-4 w-4" />
@@ -1578,7 +1541,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                       <button
                         onClick={() => setCurrentPage(totalPages)}
                         disabled={currentPage === totalPages}
-                        className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="p-1.5 rounded hover:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed"
                         title="最後のページ"
                       >
                         <ChevronsRight className="h-4 w-4" />
@@ -1600,7 +1563,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
               </div>
             ) : loading ? (
               <div className="flex items-center justify-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                <Loader2 className="h-8 w-8 animate-spin text-neutral-500" />
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -1688,10 +1651,10 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                 </div>
 
                 {/* 展示終了 */}
-                <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-3">
+                <div className="rounded-xl border border-neutral-700 bg-neutral-900/50 p-3">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-gray-700">終了</h3>
-                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                    <h3 className="text-sm font-semibold text-neutral-300">終了</h3>
+                    <span className="text-xs font-medium text-neutral-400 bg-neutral-800 px-2 py-0.5 rounded-full">
                       {entriesByPhase.ended.length}
                     </span>
                   </div>
@@ -1700,7 +1663,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                       <KanbanCard key={entry.id} entry={entry} isProcessing={processingIds.has(entry.id)} />
                     ))}
                     {entriesByPhase.ended.length === 0 && (
-                      <div className="text-xs text-gray-500/60 text-center py-4">なし</div>
+                      <div className="text-xs text-neutral-400/60 text-center py-4">なし</div>
                     )}
                   </div>
                 </div>
@@ -1755,7 +1718,7 @@ function KanbanCard({
   return (
     <div className="bg-white rounded-lg border shadow-sm p-2.5 hover:shadow-md transition">
       {/* サムネイル */}
-      <div className="relative aspect-square rounded overflow-hidden bg-gray-100 mb-2">
+      <div className="relative aspect-square rounded overflow-hidden bg-neutral-800 mb-2">
         {entry.image_url ? (
           <img
             src={entry.image_url}
@@ -1763,7 +1726,7 @@ function KanbanCard({
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+          <div className="w-full h-full flex items-center justify-center text-neutral-500 text-xs">
             No img
           </div>
         )}
@@ -1771,10 +1734,10 @@ function KanbanCard({
 
       {/* 情報 */}
       <div className="mb-2">
-        <div className="text-xs font-medium text-gray-900 truncate" title={entry.title || undefined}>
+        <div className="text-xs font-medium text-neutral-200 truncate" title={entry.title || undefined}>
           {entry.title || `(無題 #${entry.id})`}
         </div>
-        <div className="text-[10px] text-gray-500 truncate">
+        <div className="text-[10px] text-neutral-400 truncate">
           {entry.artist_name || '-'}
         </div>
       </div>
@@ -1812,7 +1775,7 @@ function KanbanCard({
           <button
             onClick={onReset}
             disabled={isProcessing}
-            className="flex-1 px-2 py-1 border border-gray-300 text-gray-600 text-[10px] font-medium rounded hover:bg-gray-50 disabled:opacity-50"
+            className="flex-1 px-2 py-1 border border-neutral-600 text-neutral-400 text-[10px] font-medium rounded hover:bg-neutral-900 disabled:opacity-50"
           >
             再審査
           </button>

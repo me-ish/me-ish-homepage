@@ -5,7 +5,6 @@ import { supabaseServer } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/isAdmin";
 import type { Database } from "@/types/supabase";
-import { SyncDisplayReadyButton } from "./_components/SyncDisplayReadyButton";
 
 export const dynamic = "force-dynamic";
 
@@ -92,193 +91,157 @@ export default async function AdminPage() {
   const latestInquiries = (latestInquiriesRes.data ?? []) as InquiryRow[];
   const latestAnns = (latestAnnsRes.data ?? []) as AnnRow[];
 
-  const btnOutlineCls =
-    "inline-flex items-center rounded-full border border-[#d9e6f2] bg-white px-3 py-1.5 text-sm font-semibold hover:bg-[#f7fbff]";
+  // 要対応の合計
+  const actionRequired = metrics.unreviewedEntries + metrics.unreadInquiries + metrics.pendingPayouts;
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white to-[#f6fbff] pt-[70px]">
+    <main className="min-h-screen bg-[#0a0a0a] pt-[70px]">
       <div className="mx-auto max-w-6xl px-6 py-8">
         {/* ヘッダ */}
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex items-end justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-[#222]">管理ダッシュボード</h1>
-            <p className="text-sm text-[#667]">ログイン中: {email}</p>
+            <h1 className="text-2xl font-semibold text-white tracking-tight">Dashboard</h1>
+            <p className="text-sm text-neutral-500 mt-1">{email}</p>
           </div>
-          <div className="flex gap-2">
-            <Link href="/" className={btnOutlineCls}>
-              サイトを開く
-            </Link>
-          </div>
+          <Link
+            href="/"
+            className="text-sm text-neutral-400 hover:text-white transition-colors"
+          >
+            サイトを開く →
+          </Link>
         </div>
 
-        {/* メトリクス */}
-        <section className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
-          <MetricCard
-            label="未審査作品"
-            value={metrics.unreviewedEntries}
-            href="/admin/entries"
-            badge={metrics.unreviewedEntries > 0 ? "要対応" : undefined}
-          />
-          <MetricCard label="却下作品" value={metrics.rejectedEntries} href="/admin/entries?status=rejected" />
-          <MetricCard label="展示待ち" value={metrics.processingPending} href="/admin/entries?status=processing" badge={metrics.processingPending > 0 ? "要有効化" : undefined} />
-          <MetricCard label="未読お問い合わせ" value={metrics.unreadInquiries} href="/admin/inquiries" />
-          <MetricCard label="売上件数 (累計)" value={metrics.totalSales} href="/admin/payouts" />
-          <MetricCard label="振込待ち" value={metrics.pendingPayouts} href="/admin/payouts" badge={metrics.pendingPayouts > 0 ? "要振込" : undefined} />
-          <MetricCard label="未公開お知らせ" value={metrics.draftAnns} href="/admin/announcements" badge={metrics.draftAnns > 0 ? "下書きあり" : undefined} />
-        </section>
-
-        {/* クイックアクション */}
-        <section className="mt-6">
-          <div className="rounded-2xl border bg-white p-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-[#667]">クイック操作</h2>
-                <p className="text-xs text-[#889]">
-                  画像処理が完了した作品をギャラリーに公開します
-                </p>
-              </div>
-              <SyncDisplayReadyButton />
-            </div>
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Link href="/admin/entries" className={btnOutlineCls}>
-                応募作品の管理
-              </Link>
-              <Link href="/admin/inquiries" className={btnOutlineCls}>
-                お問い合わせ一覧
-              </Link>
-              <Link href="/admin/users" className={btnOutlineCls}>
-                出展者一覧
-              </Link>
-              <Link href="/admin/payouts" className={btnOutlineCls}>
-                振込管理
-              </Link>
-              <Link href="/admin/settings" className={btnOutlineCls}>
-                ギャラリー設定
-              </Link>
-              <Link href="/admin/announcements" className={btnOutlineCls}>
-                お知らせ管理
-              </Link>
+        {/* 要対応サマリー */}
+        {actionRequired > 0 && (
+          <div className="mb-8 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span className="text-amber-200 text-sm font-medium">
+                {actionRequired}件の対応が必要です
+              </span>
             </div>
           </div>
-        </section>
+        )}
+
+        {/* ナビゲーションカード */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+          <NavCard
+            href="/admin/entries"
+            title="作品管理"
+            description="応募作品の審査・展示管理"
+            badge={metrics.unreviewedEntries > 0 ? `${metrics.unreviewedEntries}件 未審査` : undefined}
+            badgeType="warning"
+          />
+          <NavCard
+            href="/admin/inquiries"
+            title="お問い合わせ"
+            description="ユーザーからの問い合わせ対応"
+            badge={metrics.unreadInquiries > 0 ? `${metrics.unreadInquiries}件 未読` : undefined}
+            badgeType="warning"
+          />
+          <NavCard
+            href="/admin/payouts"
+            title="売上・振込"
+            description="売上管理と振込処理"
+            badge={metrics.pendingPayouts > 0 ? `${metrics.pendingPayouts}件 振込待ち` : undefined}
+            badgeType="info"
+          />
+          <NavCard
+            href="/admin/users"
+            title="出展者"
+            description="出展者の一覧・管理"
+          />
+          <NavCard
+            href="/admin/announcements"
+            title="お知らせ"
+            description="サイト内お知らせの管理"
+            badge={metrics.draftAnns > 0 ? `${metrics.draftAnns}件 下書き` : undefined}
+            badgeType="neutral"
+          />
+          <NavCard
+            href="/admin/settings"
+            title="設定"
+            description="ギャラリー設定"
+          />
+        </div>
 
         {/* 最近のアクティビティ */}
-        <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <h2 className="text-sm font-medium text-neutral-500 uppercase tracking-wider mb-4">
+          Recent Activity
+        </h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {/* 最近の応募 */}
-          <div className="rounded-2xl border bg-white">
-            <HeaderWithLink title="最近の応募" href="/admin/entries" />
-            <ul className="divide-y">
-              {latestEntries.length === 0 ? (
-                <EmptyList message="最近の応募はありません。" />
-              ) : (
-                latestEntries.map((e) => {
+          <ActivityCard title="応募" href="/admin/entries">
+            {latestEntries.length === 0 ? (
+              <p className="text-neutral-600 text-sm py-4">最近の応募はありません</p>
+            ) : (
+              <ul className="space-y-1">
+                {latestEntries.map((e) => {
                   const status = e.confirmed === true ? "approved" : e.confirmed === false ? "rejected" : "unreviewed";
-                  const statusCls =
-                    status === "approved"
-                      ? "bg-[#e8fff1] text-[#0d7a3e] border-[#b9f0cf]"
-                      : status === "rejected"
-                      ? "bg-[#ffe9e9] text-[#a11] border-[#ffd0d0]"
-                      : "bg-[#fff8e8] text-[#8a5b00] border-[#ffe2a9]";
-                  const statusLabel = status === "approved" ? "承認" : status === "rejected" ? "却下" : "未審査";
-
-                  const ready = Boolean((e as any).display_ready);
-                  const readyCls = ready
-                    ? "bg-sky-100 text-sky-800 border-sky-200"
-                    : "bg-gray-100 text-gray-700 border-gray-200";
-                  const readyLabel = ready ? "展示OK" : "処理中";
-
                   return (
-                    <li key={e.id} className="px-4 py-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate font-medium">{e.title || `Untitled (#${e.id})`}</p>
-                          <p className="truncate text-xs text-[#667]">
-                            {e.artist_name || "アーティスト未設定"} ・ {toJP(e.created_at as any)}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-2">
-                          <span className={`rounded-full px-2 py-0.5 text-[11px] border ${readyCls}`}>{readyLabel}</span>
-                          <span className={`rounded-full px-2 py-0.5 text-[11px] border ${statusCls}`}>{statusLabel}</span>
-                        </div>
+                    <li key={e.id} className="flex items-center justify-between gap-3 py-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-neutral-200">
+                          {e.title || `Untitled (#${e.id})`}
+                        </p>
+                        <p className="truncate text-xs text-neutral-500">
+                          {e.artist_name || "アーティスト未設定"}
+                        </p>
                       </div>
+                      <StatusDot status={status} />
                     </li>
                   );
-                })
-              )}
-            </ul>
-          </div>
+                })}
+              </ul>
+            )}
+          </ActivityCard>
 
           {/* 最近のお問い合わせ */}
-          <div className="rounded-2xl border bg-white">
-            <HeaderWithLink title="最近のお問い合わせ" href="/admin/inquiries" />
-            <ul className="divide-y">
-              {latestInquiries.length === 0 ? (
-                <EmptyList message="最近のお問い合わせはありません。" />
-              ) : (
-                latestInquiries.map((q) => (
-                  <li key={q.id} className="px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{displaySubject(q.message)}</p>
-                        <p className="truncate text-xs text-[#667]">
-                          {q.name || q.email || "匿名"} ・ {toJP(q.created_at as any)}
-                        </p>
-                      </div>
-                      {!q.is_read && (
-                        <span className="shrink-0 rounded-full bg-[#ffe9e9] text-[#a11] border border-[#ffd0d0] px-2 py-0.5 text-[11px]">
-                          未読
-                        </span>
-                      )}
+          <ActivityCard title="お問い合わせ" href="/admin/inquiries">
+            {latestInquiries.length === 0 ? (
+              <p className="text-neutral-600 text-sm py-4">最近のお問い合わせはありません</p>
+            ) : (
+              <ul className="space-y-1">
+                {latestInquiries.map((q) => (
+                  <li key={q.id} className="flex items-center justify-between gap-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-neutral-200">
+                        {displaySubject(q.message)}
+                      </p>
+                      <p className="truncate text-xs text-neutral-500">
+                        {q.name || q.email || "匿名"}
+                      </p>
                     </div>
+                    {!q.is_read && <StatusDot status="unreviewed" />}
                   </li>
-                ))
-              )}
-            </ul>
-          </div>
+                ))}
+              </ul>
+            )}
+          </ActivityCard>
 
           {/* 最近のお知らせ */}
-          <div className="rounded-2xl border bg-white">
-            <HeaderWithLink title="最近のお知らせ" href="/admin/announcements" />
-            <ul className="divide-y">
-              {latestAnns.length === 0 ? (
-                <EmptyList message="最近のお知らせはありません。" />
-              ) : (
-                latestAnns.map((n) => (
-                  <li key={n.id} className="px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{n.title}</p>
-                        <p className="truncate text-xs text-[#667]">
-                          {n.published_at ? `公開: ${toJP(n.published_at as any)}` : `下書き: ${toJP(n.created_at as any)}`}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {n.pinned ? (
-                          <span className="shrink-0 rounded-full bg-rose-100 text-rose-700 border border-rose-200 px-2 py-0.5 text-[11px]">
-                            固定
-                          </span>
-                        ) : null}
-                        <span
-                          className={
-                            "shrink-0 rounded-full px-2 py-0.5 text-[11px] border " +
-                            (n.category === "maintenance"
-                              ? "bg-amber-100 text-amber-800 border-amber-200"
-                              : n.category === "update"
-                              ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                              : "bg-sky-100 text-sky-800 border-sky-200")
-                          }
-                        >
-                          {n.category as any}
-                        </span>
-                      </div>
+          <ActivityCard title="お知らせ" href="/admin/announcements">
+            {latestAnns.length === 0 ? (
+              <p className="text-neutral-600 text-sm py-4">最近のお知らせはありません</p>
+            ) : (
+              <ul className="space-y-1">
+                {latestAnns.map((n) => (
+                  <li key={n.id} className="flex items-center justify-between gap-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-neutral-200">{n.title}</p>
+                      <p className="truncate text-xs text-neutral-500">
+                        {n.published_at ? toJP(n.published_at as any) : "下書き"}
+                      </p>
                     </div>
+                    {n.pinned && (
+                      <span className="text-[10px] text-rose-400">PIN</span>
+                    )}
                   </li>
-                ))
-              )}
-            </ul>
-          </div>
-        </section>
+                ))}
+              </ul>
+            )}
+          </ActivityCard>
+        </div>
       </div>
     </main>
   );
@@ -300,43 +263,88 @@ function toJP(d: string) {
 
 const displaySubject = (msg: string | null) => (msg?.split("\n")[0] ?? "").slice(0, 100) || "(件名なし)";
 
-function MetricCard({
-  label,
-  value,
+function NavCard({
   href,
+  title,
+  description,
   badge,
+  badgeType = "neutral",
 }: {
-  label: string;
-  value: number | string;
   href: string;
+  title: string;
+  description: string;
   badge?: string;
+  badgeType?: "warning" | "info" | "neutral";
 }) {
+  const badgeColors = {
+    warning: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+    info: "bg-sky-500/20 text-sky-300 border-sky-500/30",
+    neutral: "bg-neutral-700 text-neutral-400 border-neutral-600",
+  };
+
   return (
-    <Link href={href} className="rounded-2xl border bg-white p-4 hover:shadow transition block">
-      <div className="text-xs text-[#667]">{label}</div>
-      <div className="mt-1 flex items-baseline gap-2">
-        <div className="text-xl font-semibold">{value}</div>
-        {badge && (
-          <span className="text-[10px] rounded bg-[#fff6d8] text-[#8a5b00] px-2 py-0.5 border border-[#ffe3a6]">
+    <Link
+      href={href}
+      className="group relative rounded-xl border border-neutral-800 bg-neutral-900/50 p-5 hover:border-neutral-700 hover:bg-neutral-900 transition-all"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-base font-medium text-white group-hover:text-sky-400 transition-colors">
+            {title}
+          </h3>
+          <p className="mt-1 text-sm text-neutral-500">{description}</p>
+        </div>
+        <span className="text-neutral-600 group-hover:text-neutral-400 transition-colors">→</span>
+      </div>
+      {badge && (
+        <div className="mt-3">
+          <span className={`inline-block text-xs px-2 py-1 rounded border ${badgeColors[badgeType]}`}>
             {badge}
           </span>
-        )}
-      </div>
+        </div>
+      )}
     </Link>
   );
 }
 
-function HeaderWithLink({ title, href }: { title: string; href: string }) {
+function ActivityCard({
+  title,
+  href,
+  children,
+}: {
+  title: string;
+  href: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex items-center justify-between border-b px-4 py-3">
-      <h3 className="text-sm font-semibold text-[#667]">{title}</h3>
-      <Link href={href} className="text-xs text-[#00a1e9] underline underline-offset-4">
-        一覧へ
-      </Link>
+    <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+        <h3 className="text-sm font-medium text-neutral-400">{title}</h3>
+        <Link href={href} className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors">
+          すべて見る →
+        </Link>
+      </div>
+      <div className="px-4 py-2">{children}</div>
     </div>
   );
 }
 
-function EmptyList({ message }: { message: string }) {
-  return <li className="px-4 py-6 text-sm text-[#667]">{message}</li>;
+function StatusDot({ status }: { status: "approved" | "rejected" | "unreviewed" }) {
+  const colors = {
+    approved: "bg-emerald-500",
+    rejected: "bg-red-500",
+    unreviewed: "bg-amber-500",
+  };
+  const labels = {
+    approved: "承認",
+    rejected: "却下",
+    unreviewed: "未審査",
+  };
+
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      <div className={`w-1.5 h-1.5 rounded-full ${colors[status]}`} />
+      <span className="text-[10px] text-neutral-500">{labels[status]}</span>
+    </div>
+  );
 }
