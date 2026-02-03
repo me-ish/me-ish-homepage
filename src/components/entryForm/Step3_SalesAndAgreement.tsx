@@ -12,8 +12,8 @@ import { Badge } from '@/components/ui/badge';
 const BRAND = '#00a1e9';
 const FEE_RATE = 0.10;
 
-/** ★ いまは Free のみ許可 */
-const FREE_ONLY = true;
+/** 通常運用: すべてのプランを選択可能 */
+const FREE_ONLY = false;
 
 const planKeys = ['free', 'mini', 'light', 'standard', 'premium'] as const;
 type PlanKey = typeof planKeys[number];

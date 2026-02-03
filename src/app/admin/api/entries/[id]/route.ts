@@ -33,11 +33,36 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     ...(edition_sold != null ? { edition_sold } : {}), // null/undefined のときは渡さない
   };
 
+  const id = Number(params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    return NextResponse.json({ error: 'invalid_id' }, { status: 400 });
+  }
+
   const admin = supabaseAdmin();
+
+  // ??????????????? display_ready ????????
+  if (values.display_ready === true) {
+    const { data: row, error: selErr } = await admin
+      .from('entries')
+      .select('id,is_for_sale,display_plan,plan_payment_status')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (selErr || !row) {
+      return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    }
+
+    const paidPlan = row.is_for_sale === true && (row.display_plan ?? 'free') !== 'free';
+    const paid = String(row.plan_payment_status ?? '').toLowerCase() === 'paid';
+    if (paidPlan && !paid) {
+      return NextResponse.json({ error: 'plan_payment_required' }, { status: 409 });
+    }
+  }
+
   const { data, error } = await admin
     .from('entries')
     .update(values)
-    .eq('id', Number(params.id)) // entries.id は bigint
+    .eq('id', id)
     .select('*')
     .single();
 

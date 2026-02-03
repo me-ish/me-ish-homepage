@@ -136,6 +136,11 @@ export type Database = {
           likes: number
           meish_fee_yen: number | null
           paid_at: string | null
+          plan_payment_amount_yen: number | null
+          plan_payment_checkout_created_at: string | null
+          plan_payment_paid_at: string | null
+          plan_payment_session_id: string | null
+          plan_payment_status: string
           price: number | null
           reject_email_sent_at: string | null
           reject_reason: string | null
@@ -174,6 +179,11 @@ export type Database = {
           likes?: number
           meish_fee_yen?: number | null
           paid_at?: string | null
+          plan_payment_amount_yen?: number | null
+          plan_payment_checkout_created_at?: string | null
+          plan_payment_paid_at?: string | null
+          plan_payment_session_id?: string | null
+          plan_payment_status?: string
           price?: number | null
           reject_email_sent_at?: string | null
           reject_reason?: string | null
@@ -212,6 +222,11 @@ export type Database = {
           likes?: number
           meish_fee_yen?: number | null
           paid_at?: string | null
+          plan_payment_amount_yen?: number | null
+          plan_payment_checkout_created_at?: string | null
+          plan_payment_paid_at?: string | null
+          plan_payment_session_id?: string | null
+          plan_payment_status?: string
           price?: number | null
           reject_email_sent_at?: string | null
           reject_reason?: string | null

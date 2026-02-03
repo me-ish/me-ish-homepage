@@ -296,6 +296,16 @@ const FormWrapper = () => {
       const type = isSale ? 'normal' : 'none';
 
       const displayPlan = isSale ? (data.displayPlan || 'free') : 'free';
+      const planAmountMap: Record<string, number> = {
+        free: 0,
+        mini: 400,
+        light: 1000,
+        standard: 1400,
+        premium: 2800,
+      };
+      const planAmountYen = planAmountMap[displayPlan] ?? 0;
+      const planPaymentRequired = isSale && displayPlan !== 'free';
+      const planPaymentStatus = planPaymentRequired ? 'pending' : 'unneeded';
 
       const editionModeToSave: 'limited' | 'unlimited' | null = isSale ? data.editionMode : null;
 
@@ -333,6 +343,8 @@ const FormWrapper = () => {
           type,
 
           display_plan: displayPlan,
+          plan_payment_status: planPaymentStatus,
+          plan_payment_amount_yen: planPaymentRequired ? planAmountYen : null,
           price: isSale ? priceNum : null,
 
           image_url: publicUrl,

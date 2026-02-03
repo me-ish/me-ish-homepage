@@ -124,9 +124,14 @@ export async function POST(req: NextRequest) {
   const entryId = String(session.metadata?.entryId ?? "");
   const requestId = String(session.metadata?.requestId ?? "");
 
-  // AURA購入
+  // AURA??
   if (kind === "aura" && requestId && isUuidLike(requestId)) {
     return handleAuraPurchase(event.id, session, requestId);
+  }
+
+  // ???????
+  if (kind === "entry_plan" && entryId && isEntryIdLike(entryId)) {
+    return handleEntryPlanPurchase(event.id, session, entryId);
   }
 
   // ギャラリー購入
@@ -144,6 +149,68 @@ export async function POST(req: NextRequest) {
  * - aura_requests.payment_status を paid に更新
  * - 冪等性: 既に paid なら何もしない
  */
+
+async function handleEntryPlanPurchase(
+  eventId: string,
+  session: Stripe.Checkout.Session,
+  entryId: string
+): Promise<NextResponse> {
+  const admin = supabaseAdmin();
+
+  try {
+    const id = Number(entryId);
+    const { data: rec, error: selErr } = await admin
+      .from("entries")
+      .select("id, plan_payment_status")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (selErr || !rec) {
+      console.error("[webhook/stripe/entry-plan] entry not found:", {
+        eventId,
+        sessionId: session.id,
+        entryId,
+        error: selErr,
+      });
+      return NextResponse.json({ ok: true, received: true }, { status: 200 });
+    }
+
+    const alreadyPaid = String(rec.plan_payment_status ?? "").toLowerCase() === "paid";
+    if (alreadyPaid) {
+      return NextResponse.json({ ok: true, received: true }, { status: 200 });
+    }
+
+    const { error: updErr } = await admin
+      .from("entries")
+      .update({
+        plan_payment_status: "paid",
+        plan_payment_paid_at: new Date().toISOString(),
+        plan_payment_session_id: session.id,
+      })
+      .eq("id", id);
+
+    if (updErr) {
+      console.error("[webhook/stripe/entry-plan] update failed:", {
+        eventId,
+        sessionId: session.id,
+        entryId,
+        error: updErr,
+      });
+    }
+
+    return NextResponse.json({ ok: true, received: true }, { status: 200 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("[webhook/stripe/entry-plan] exception:", {
+      eventId,
+      sessionId: session.id,
+      entryId,
+      error: message,
+    });
+    return NextResponse.json({ ok: true, received: true }, { status: 200 });
+  }
+}
+
 async function handleAuraPurchase(
   eventId: string,
   session: Stripe.Checkout.Session,

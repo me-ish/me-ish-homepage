@@ -44,6 +44,7 @@ type Entry = {
   file_name: string;
   processed?: boolean;
   email: string;
+  is_for_sale?: boolean;
   external_user_id: string;
   edition_total?: number | null;
   edition_sold?: number | null;
@@ -54,6 +55,10 @@ type Entry = {
   display_end_at?: string | null;
   display_plan?: string | null;
   display_ready?: boolean | null;
+  plan_payment_status?: 'unneeded' | 'pending' | 'paid' | null;
+  plan_payment_amount_yen?: number | null;
+  plan_payment_session_id?: string | null;
+  plan_payment_paid_at?: string | null;
   is_sold?: boolean | null;
   meish_fee_yen?: number | null;
   artist_reward_yen?: number | null;
@@ -223,6 +228,9 @@ function ProcessingBadge({ entry }: { entry: Entry }) {
 function canEnableDisplay(e: Entry): boolean {
   if (e.confirmed !== true) return false;
   if (e.display_ready) return false;
+  const paidPlan = e.is_for_sale === true && (e.display_plan ?? 'free') !== 'free';
+  const planPaid = (e.plan_payment_status ?? 'unneeded') === 'paid';
+  if (paidPlan && !planPaid) return false;
   const hasFinalUrl = typeof e.image_url === 'string' && e.image_url.includes('/final/');
   const jobOk = e.processing_job?.status === 'succeeded';
   return hasFinalUrl || jobOk;
@@ -513,6 +521,44 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
       showToast('展示を有効化しました');
     } catch (e: unknown) {
       showToast(`有効化に失敗: ${e instanceof Error ? e.message : 'エラー'}`);
+    } finally {
+      setProcessingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(entry.id);
+        return next;
+      });
+    }
+  };
+
+  const createPlanCheckoutLink = async (entry: Entry) => {
+    if (processingIds.has(entry.id)) return;
+    setProcessingIds((prev) => new Set(prev).add(entry.id));
+    try {
+      const res = await fetch(`/admin/api/entries/${entry.id}/plan-checkout`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+      });
+      const json = await res.json().catch(() => ({} as { url?: string; error?: string; alreadyPaid?: boolean }));
+      if (!res.ok) {
+        throw new Error(json?.error || 'checkout_create_failed');
+      }
+      if (json.alreadyPaid) {
+        showToast('この作品のプラン料金はすでに決済済みです');
+        return;
+      }
+      if (!json.url) {
+        throw new Error('checkout_url_missing');
+      }
+      try {
+        await navigator.clipboard.writeText(json.url);
+        showToast('決済URLをクリップボードにコピーしました');
+      } catch {
+        showToast('決済URLを作成しました（コピーに失敗）');
+      }
+      fetchEntries();
+      fetchOverview();
+    } catch (e: unknown) {
+      showToast(`決済URL作成に失敗: ${e instanceof Error ? e.message : 'エラー'}`);
     } finally {
       setProcessingIds((prev) => {
         const next = new Set(prev);
@@ -1118,6 +1164,8 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                       const isExpanded = expandedId === entry.id;
                       const isProcessing = processingIds.has(entry.id);
                       const canEnable = canEnableDisplay(entry);
+                      const paidPlan = entry.is_for_sale === true && (entry.display_plan ?? 'free') !== 'free';
+                      const planPaid = (entry.plan_payment_status ?? 'unneeded') === 'paid';
                       const phase = getEntryPhase(entry);
                       const isSelected = selectedIds.has(entry.id);
 
@@ -1211,17 +1259,28 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
 
                             {/* 承認済み・展示待ち: 展示有効化 */}
                             {entry.confirmed === true && !entry.display_ready && (
-                              <button
-                                onClick={() => enableDisplay(entry)}
-                                disabled={isProcessing}
-                                className={`px-3 py-1.5 text-xs font-medium rounded disabled:opacity-50 ${
-                                  canEnable
-                                    ? 'bg-sky-600 text-white hover:bg-sky-700'
-                                    : 'border border-neutral-300 text-neutral-500 hover:bg-neutral-100'
-                                }`}
-                              >
-                                {canEnable ? '展示を有効化' : '強制有効化'}
-                              </button>
+                              <>
+                                {paidPlan && !planPaid && (
+                                  <button
+                                    onClick={() => createPlanCheckoutLink(entry)}
+                                    disabled={isProcessing}
+                                    className="rounded border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+                                  >
+                                    Payment URL
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => enableDisplay(entry)}
+                                  disabled={isProcessing}
+                                  className={`px-3 py-1.5 text-xs font-medium rounded disabled:opacity-50 ${
+                                    canEnable
+                                      ? 'bg-sky-600 text-white hover:bg-sky-700'
+                                      : 'border border-neutral-300 text-neutral-500 hover:bg-neutral-100'
+                                  }`}
+                                >
+                                  {canEnable ? 'Enable display' : 'Payment/processing required'}
+                                </button>
+                              </>
                             )}
 
                             {/* 展示中 */}
@@ -1363,18 +1422,29 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
 
                                   {/* 承認済み・展示待ち: 展示有効化 */}
                                   {entry.confirmed === true && !entry.display_ready && (
-                                    <button
-                                      onClick={() => enableDisplay(entry)}
-                                      disabled={isProcessing}
-                                      className={`inline-flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-50 ${
-                                        canEnable
-                                          ? 'bg-sky-600 text-white hover:bg-sky-700'
-                                          : 'border-2 border-dashed border-neutral-300 text-neutral-500 hover:bg-neutral-100'
-                                      }`}
-                                    >
-                                      <Eye className="h-4 w-4" />
-                                      {canEnable ? '展示を有効化' : '処理未完了だが強制有効化'}
-                                    </button>
+                                    <>
+                                      {paidPlan && !planPaid && (
+                                        <button
+                                          onClick={() => createPlanCheckoutLink(entry)}
+                                          disabled={isProcessing}
+                                          className="inline-flex items-center gap-1 rounded-lg border border-amber-300 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+                                        >
+                                          Payment URL
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => enableDisplay(entry)}
+                                        disabled={isProcessing}
+                                        className={`inline-flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-50 ${
+                                          canEnable
+                                            ? 'bg-sky-600 text-white hover:bg-sky-700'
+                                            : 'border-2 border-dashed border-neutral-300 text-neutral-500 hover:bg-neutral-100'
+                                        }`}
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                        {canEnable ? 'Enable display' : 'Payment/processing required'}
+                                      </button>
+                                    </>
                                   )}
 
                                   {/* 却下済み: 再審査 */}
