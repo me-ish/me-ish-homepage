@@ -31,7 +31,7 @@ export async function POST() {
   // （必要なら confirmed 条件を外してもOKだが、運用上はこれが安全）
   const { data: targets, error: qErr } = await admin
     .from("entries")
-    .select("id,file_name,is_for_sale,display_plan,plan_payment_status")
+    .select("id,file_name,is_for_sale,display_plan,plan_payment_status,gallery_type")
     .eq("confirmed", true)
     .eq("display_ready", false)
     .limit(200);
@@ -93,9 +93,27 @@ export async function POST() {
       }
     }
 
+    // 展示期間を設定: display_ready=true のタイミングで開始
+    const now = new Date();
+    const galleryType = String((e as any).gallery_type ?? "").toLowerCase();
+    const isWhiteGallery = galleryType === "white";
+
+    // White Gallery は無期限、それ以外は1ヶ月後に終了
+    let displayEndAt: string | null = null;
+    if (!isWhiteGallery) {
+      const endDate = new Date(now);
+      endDate.setMonth(endDate.getMonth() + 1);
+      displayEndAt = endDate.toISOString();
+    }
+
     const { error: uErr } = await admin
       .from("entries")
-      .update({ image_url: publicUrl, display_ready: true })
+      .update({
+        image_url: publicUrl,
+        display_ready: true,
+        display_start_at: now.toISOString(),
+        display_end_at: displayEndAt,
+      })
       .eq("id", (e as any).id);
 
     if (uErr) {
