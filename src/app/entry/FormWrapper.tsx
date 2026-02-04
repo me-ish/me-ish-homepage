@@ -299,9 +299,9 @@ const FormWrapper = () => {
       const planAmountMap: Record<string, number> = {
         free: 0,
         mini: 400,
-        light: 1000,
-        standard: 1400,
-        premium: 2800,
+        light: 800,
+        standard: 1200,
+        premium: 2400,
       };
       const planAmountYen = planAmountMap[displayPlan] ?? 0;
       const planPaymentRequired = isSale && displayPlan !== 'free';

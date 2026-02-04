@@ -89,7 +89,7 @@ export async function POST(
   const { data: entry, error: selErr } = await admin
     .from('entries')
     .select(
-      'id, artist_name, email, external_user_id, title, gallery_type, file_name, image_url, is_for_sale, display_plan, plan_payment_status, plan_payment_amount_yen'
+      'id, artist_name, email, external_user_id, title, gallery_type, file_name, image_url, is_for_sale, display_plan, plan_payment_status, plan_payment_amount_yen, has_signature'
     )
     .eq('id', id)
     .single();
@@ -115,7 +115,12 @@ export async function POST(
 
   // 2) メタJSONを processing-meta/pending にアップロード
   {
-    const meta = { artistName: entry.artist_name, filename: fileName };
+    // hasSignature: true → WM不要、false → WM付与
+    const meta = {
+      artistName: entry.artist_name,
+      filename: fileName,
+      hasSignature: (entry as any).has_signature === true,
+    };
     const body = Buffer.from(JSON.stringify(meta), 'utf-8');
     const { error: upErr } = await admin.storage
       .from('processing-meta')
