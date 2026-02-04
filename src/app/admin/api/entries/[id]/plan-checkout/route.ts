@@ -14,9 +14,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 const PLAN_PRICES: Record<string, number> = {
   mini: 400,
-  light: 1000,
-  standard: 1400,
-  premium: 2800,
+  light: 800,
+  standard: 1200,
+  premium: 2400,
 };
 
 const PLAN_LABELS: Record<string, string> = {
