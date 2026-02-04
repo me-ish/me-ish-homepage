@@ -66,7 +66,7 @@ export function generatePlaceholders(count: number): EntryRow[] {
       rejected_at: null,
       reject_email_sent_at: null,
       sold_out_calc: null,
-    });
+    } as EntryRow);
   }
 
   return placeholders;
