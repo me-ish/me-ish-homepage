@@ -1,0 +1,201 @@
+table,column,ts_type,nullable,table_role,column_description
+admin_emails,email,string,NO,管理者メールの許可リスト,メールアドレス
+announcements,body_md,string,NO,サイトのお知らせ管理,本文（Markdown）
+announcements,category,string,NO,サイトのお知らせ管理,カテゴリ
+announcements,created_at,string,NO,サイトのお知らせ管理,作成日時
+announcements,created_by,string | null,YES,サイトのお知らせ管理,created_by（announcements）
+announcements,expires_at,string | null,YES,サイトのお知らせ管理,有効期限
+announcements,id,string,NO,サイトのお知らせ管理,主キーID
+announcements,link_url,string | null,YES,サイトのお知らせ管理,リンクURL
+announcements,pinned,boolean,NO,サイトのお知らせ管理,固定表示フラグ
+announcements,published_at,string,NO,サイトのお知らせ管理,公開日時
+announcements,title,string,NO,サイトのお知らせ管理,タイトル
+announcements,updated_at,string,NO,サイトのお知らせ管理,更新日時
+artists_bank_accounts,account_name_kana,string,NO,作家の振込先口座情報,口座名義（カナ）
+artists_bank_accounts,account_number,string,NO,作家の振込先口座情報,口座番号
+artists_bank_accounts,account_type,string,NO,作家の振込先口座情報,口座種別
+artists_bank_accounts,bank_code,string,NO,作家の振込先口座情報,銀行コード
+artists_bank_accounts,branch_code,string,NO,作家の振込先口座情報,支店コード
+artists_bank_accounts,external_user_id,string,NO,作家の振込先口座情報,外部ユーザーID
+artists_bank_accounts,id,number,NO,作家の振込先口座情報,主キーID
+artists_bank_accounts,updated_at,string,NO,作家の振込先口座情報,更新日時
+aura_first20_redemptions,converted_to_meish_at,string | null,YES,AURAの初期特典利用履歴,converted_to_meish_at（aura_first20_redemptions）
+aura_first20_redemptions,created_at,string,NO,AURAの初期特典利用履歴,作成日時
+aura_first20_redemptions,email,string,NO,AURAの初期特典利用履歴,メールアドレス
+aura_first20_redemptions,request_id,string | null,YES,AURAの初期特典利用履歴,リクエストID
+aura_first20_redemptions,used_at,string,NO,AURAの初期特典利用履歴,使用日時
+aura_meish_free_claims,created_at,string,NO,AURA→ME-ISH無料付与の利用記録,作成日時
+aura_meish_free_claims,email,string,NO,AURA→ME-ISH無料付与の利用記録,メールアドレス
+aura_meish_free_claims,entry_id,number | null,YES,AURA→ME-ISH無料付与の利用記録,作品エントリーID
+aura_meish_free_claims,request_id,string | null,YES,AURA→ME-ISH無料付与の利用記録,リクエストID
+aura_meish_free_claims,used_at,string,NO,AURA→ME-ISH無料付与の利用記録,使用日時
+aura_promo_counters,key,string,NO,プロモーション上限のカウンタ管理,管理キー
+aura_promo_counters,limit_count,number,NO,プロモーション上限のカウンタ管理,上限数
+aura_requests,content,Json | null,YES,AURA生成リクエスト本体,内容（JSON）
+aura_requests,created_at,string,NO,AURA生成リクエスト本体,作成日時
+aura_requests,design,Json | null,YES,AURA生成リクエスト本体,デザイン設定（JSON）
+aura_requests,email,string | null,YES,AURA生成リクエスト本体,メールアドレス
+aura_requests,error,string | null,YES,AURA生成リクエスト本体,エラー内容
+aura_requests,id,string,NO,AURA生成リクエスト本体,主キーID
+aura_requests,paid_at,string | null,YES,AURA生成リクエスト本体,支払完了日時
+aura_requests,payload,Json | null,YES,AURA生成リクエスト本体,入力データ（JSON）
+aura_requests,payment_status,string,NO,AURA生成リクエスト本体,決済ステータス
+aura_requests,public_id,string | null,YES,AURA生成リクエスト本体,公開用ID
+aura_requests,public_slug,string | null,YES,AURA生成リクエスト本体,公開用スラッグ
+aura_requests,published_at,string | null,YES,AURA生成リクエスト本体,公開日時
+aura_requests,renderer_version,string,NO,AURA生成リクエスト本体,レンダラー版本
+aura_requests,session_token,string | null,YES,AURA生成リクエスト本体,セッショントークン
+aura_requests,slug,string | null,YES,AURA生成リクエスト本体,スラッグ
+aura_requests,status,string,NO,AURA生成リクエスト本体,ステータス
+aura_requests,updated_at,string,NO,AURA生成リクエスト本体,更新日時
+aura_requests,visibility,string,NO,AURA生成リクエスト本体,公開範囲
+cert_links,created_at,string,NO,証明書ダウンロードリンク管理,作成日時
+cert_links,entry_id,number,NO,証明書ダウンロードリンク管理,作品エントリーID
+cert_links,expires_at,string | null,YES,証明書ダウンロードリンク管理,有効期限
+cert_links,id,string,NO,証明書ダウンロードリンク管理,主キーID
+cert_links,revoked,boolean,NO,証明書ダウンロードリンク管理,無効化フラグ
+cert_links,token_hash,string,NO,証明書ダウンロードリンク管理,トークンハッシュ
+cert_links,updated_at,string,NO,証明書ダウンロードリンク管理,更新日時
+cert_links,used_at,string | null,YES,証明書ダウンロードリンク管理,使用日時
+entries,agree_promotion,boolean,NO,作品エントリー本体（審査・展示・販売・精算）,agree_promotion（entries）
+entries,agree_storage,boolean,NO,作品エントリー本体（審査・展示・販売・精算）,agree_storage（entries）
+entries,ai_usage,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,AI利用状況
+entries,ai_usage_note,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,AI利用状況の補足
+entries,ai_usage_scope,string[] | null,YES,作品エントリー本体（審査・展示・販売・精算）,AI利用範囲
+entries,artist_name,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,artist_name（entries）
+entries,artist_reward_yen,number | null,YES,作品エントリー本体（審査・展示・販売・精算）,作家取り分（円）
+entries,confirmed,boolean | null,YES,作品エントリー本体（審査・展示・販売・精算）,審査承認フラグ
+entries,confirmed_at,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,承認日時
+entries,created_at,string,NO,作品エントリー本体（審査・展示・販売・精算）,作成日時
+entries,description,string,NO,作品エントリー本体（審査・展示・販売・精算）,説明
+entries,display_end_at,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,展示終了日時
+entries,display_plan,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,展示プラン
+entries,display_ready,boolean | null,YES,作品エントリー本体（審査・展示・販売・精算）,展示可能フラグ
+entries,display_start_at,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,展示開始日時
+entries,edition_mode,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,エディション販売モード
+entries,edition_remaining,number | null,YES,作品エントリー本体（審査・展示・販売・精算）,残エディション数
+entries,edition_sold,number,NO,作品エントリー本体（審査・展示・販売・精算）,販売済みエディション数
+entries,edition_total,number | null,YES,作品エントリー本体（審査・展示・販売・精算）,総エディション数
+entries,email,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,メールアドレス
+entries,ending_soon_notified_at,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,終了間近通知送信日時
+entries,external_user_id,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,外部ユーザーID
+entries,file_name,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,ファイル名
+entries,force_wm,boolean,NO,作品エントリー本体（審査・展示・販売・精算）,強制ウォーターマーク適用フラグ
+entries,gallery_type,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,gallery_type（entries）
+entries,has_signature,boolean | null,YES,作品エントリー本体（審査・展示・販売・精算）,署名有無フラグ
+entries,id,number,NO,作品エントリー本体（審査・展示・販売・精算）,主キーID
+entries,image_url,string,NO,作品エントリー本体（審査・展示・販売・精算）,画像URL
+entries,is_for_sale,boolean,NO,作品エントリー本体（審査・展示・販売・精算）,販売対象フラグ
+entries,is_paid_to_artist,boolean | null,YES,作品エントリー本体（審査・展示・販売・精算）,作家支払済みフラグ
+entries,is_sold,boolean | null,YES,作品エントリー本体（審査・展示・販売・精算）,売約済みフラグ
+entries,likes,number,NO,作品エントリー本体（審査・展示・販売・精算）,いいね数
+entries,meish_fee_yen,number | null,YES,作品エントリー本体（審査・展示・販売・精算）,プラットフォーム手数料（円）
+entries,paid_at,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,支払完了日時
+entries,plan_payment_amount_yen,number | null,YES,作品エントリー本体（審査・展示・販売・精算）,展示プラン決済額（円）
+entries,plan_payment_checkout_created_at,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,展示プランCheckout作成日時
+entries,plan_payment_paid_at,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,展示プラン決済完了日時
+entries,plan_payment_session_id,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,展示プラン決済セッションID
+entries,plan_payment_status,string,NO,作品エントリー本体（審査・展示・販売・精算）,展示プラン決済状態
+entries,portfolio_hidden,boolean,NO,作品エントリー本体（審査・展示・販売・精算）,ポートフォリオ非表示フラグ
+entries,price,number | null,YES,作品エントリー本体（審査・展示・販売・精算）,価格
+entries,reject_email_sent_at,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,却下通知送信日時
+entries,reject_reason,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,審査却下理由
+entries,rejected_at,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,却下日時
+entries,sale_type,string,NO,作品エントリー本体（審査・展示・販売・精算）,販売方式
+entries,sns_links,string,NO,作品エントリー本体（審査・展示・販売・精算）,SNSリンク（JSON文字列）
+entries,sold_out_calc,boolean | null,YES,作品エントリー本体（審査・展示・販売・精算）,売切れ判定の計算結果
+entries,title,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,タイトル
+entries,token_id,number | null,YES,作品エントリー本体（審査・展示・販売・精算）,トークンID
+entries,type,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,種別
+entries,user_id,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,ユーザーID
+entry_processing_jobs,attempts,number,NO,作品処理の非同期ジョブ管理,attempts（entry_processing_jobs）
+entry_processing_jobs,created_at,string,NO,作品処理の非同期ジョブ管理,作成日時
+entry_processing_jobs,entry_id,number,NO,作品処理の非同期ジョブ管理,作品エントリーID
+entry_processing_jobs,id,string,NO,作品処理の非同期ジョブ管理,主キーID
+entry_processing_jobs,last_error,string | null,YES,作品処理の非同期ジョブ管理,last_error（entry_processing_jobs）
+entry_processing_jobs,locked_at,string | null,YES,作品処理の非同期ジョブ管理,locked_at（entry_processing_jobs）
+entry_processing_jobs,locked_by,string | null,YES,作品処理の非同期ジョブ管理,locked_by（entry_processing_jobs）
+entry_processing_jobs,status,string,NO,作品処理の非同期ジョブ管理,ステータス
+entry_processing_jobs,updated_at,string,NO,作品処理の非同期ジョブ管理,更新日時
+entry_view_events,entry_id,number,NO,作品閲覧イベントログ,作品エントリーID
+entry_view_events,id,string,NO,作品閲覧イベントログ,主キーID
+entry_view_events,occurred_at,string,NO,作品閲覧イベントログ,occurred_at（entry_view_events）
+entry_view_events,session_id,string | null,YES,作品閲覧イベントログ,セッションID
+entry_view_events,viewer_user_id,string | null,YES,作品閲覧イベントログ,viewer_user_id（entry_view_events）
+inquiries,created_at,string | null,YES,問い合わせ管理,作成日時
+inquiries,email,string,NO,問い合わせ管理,メールアドレス
+inquiries,id,string,NO,問い合わせ管理,主キーID
+inquiries,is_read,boolean | null,YES,問い合わせ管理,既読フラグ
+inquiries,message,string,NO,問い合わせ管理,本文メッセージ
+inquiries,name,string,NO,問い合わせ管理,氏名
+likes,created_at,string,NO,いいね履歴,作成日時
+likes,entry_id,number,NO,いいね履歴,作品エントリーID
+likes,id,string,NO,いいね履歴,主キーID
+likes,user_id,string,NO,いいね履歴,ユーザーID
+payout_batches,artist_count,number | null,YES,支払バッチ（月次締め）,作家数
+payout_batches,closed_at,string | null,YES,支払バッチ（月次締め）,締め日時
+payout_batches,created_at,string | null,YES,支払バッチ（月次締め）,作成日時
+payout_batches,id,string,NO,支払バッチ（月次締め）,主キーID
+payout_batches,paid_at,string | null,YES,支払バッチ（月次締め）,支払完了日時
+payout_batches,period_ym,string,NO,支払バッチ（月次締め）,対象年月（YYYY-MM）
+payout_batches,sale_count,number | null,YES,支払バッチ（月次締め）,売上件数
+payout_batches,status,string,NO,支払バッチ（月次締め）,ステータス
+payout_batches,total_amount_yen,number | null,YES,支払バッチ（月次締め）,合計金額（円）
+payout_items,created_at,string,NO,支払バッチ内の明細紐付け,作成日時
+payout_items,id,string,NO,支払バッチ内の明細紐付け,主キーID
+payout_items,payout_id,string,NO,支払バッチ内の明細紐付け,payout_id（payout_items）
+payout_items,sale_id,string,NO,支払バッチ内の明細紐付け,sale_id（payout_items）
+payouts,amount_yen,number,NO,作家ごとの支払管理,金額（円）
+payouts,created_at,string,NO,作家ごとの支払管理,作成日時
+payouts,id,string,NO,作家ごとの支払管理,主キーID
+payouts,note,string | null,YES,作家ごとの支払管理,備考
+payouts,paid_at,string | null,YES,作家ごとの支払管理,支払完了日時
+payouts,period_ym,string,NO,作家ごとの支払管理,対象年月（YYYY-MM）
+payouts,scheduled_at,string | null,YES,作家ごとの支払管理,予定日時
+payouts,status,"Database[""public""][""Enums""][""payout_status""]",NO,作家ごとの支払管理,ステータス
+payouts,updated_at,string,NO,作家ごとの支払管理,更新日時
+payouts,user_id,string,NO,作家ごとの支払管理,ユーザーID
+portfolio_settings,bio_short,string | null,YES,ポートフォリオ公開設定,短い自己紹介
+portfolio_settings,contact_email,string | null,YES,ポートフォリオ公開設定,contact_email（portfolio_settings）
+portfolio_settings,contact_url,string | null,YES,ポートフォリオ公開設定,contact_url（portfolio_settings）
+portfolio_settings,created_at,string,NO,ポートフォリオ公開設定,作成日時
+portfolio_settings,headline,string | null,YES,ポートフォリオ公開設定,見出し
+portfolio_settings,is_public,boolean,NO,ポートフォリオ公開設定,公開フラグ
+portfolio_settings,public_display_name,string | null,YES,ポートフォリオ公開設定,公開表示名
+portfolio_settings,sort_key,string,NO,ポートフォリオ公開設定,並び順キー
+portfolio_settings,updated_at,string,NO,ポートフォリオ公開設定,更新日時
+portfolio_settings,user_id,string,NO,ポートフォリオ公開設定,ユーザーID
+portfolio_settings,works_filter,string,NO,ポートフォリオ公開設定,作品フィルタ条件
+profiles,avatar_url,string | null,YES,ユーザープロフィール,アバター画像URL
+profiles,banner_focus_x,number,NO,ユーザープロフィール,バナー焦点X
+profiles,banner_focus_y,number,NO,ユーザープロフィール,バナー焦点Y
+profiles,banner_url,string | null,YES,ユーザープロフィール,バナー画像URL
+profiles,banner_zoom,number,NO,ユーザープロフィール,バナー拡大率
+profiles,bio,string | null,YES,ユーザープロフィール,自己紹介
+profiles,created_at,string | null,YES,ユーザープロフィール,作成日時
+profiles,display_name,string,NO,ユーザープロフィール,表示名
+profiles,id,string,NO,ユーザープロフィール,主キーID
+profiles,sns_links,Json | null,YES,ユーザープロフィール,sns_links（profiles）
+profiles,updated_at,string | null,YES,ユーザープロフィール,更新日時
+sales,artist_reward_yen,number | null,YES,購入・売上トランザクション,作家取り分（円）
+sales,buyer_email,string | null,YES,購入・売上トランザクション,購入者メール
+sales,close_batch_id,string | null,YES,購入・売上トランザクション,締めバッチID
+sales,entry_id,number,NO,購入・売上トランザクション,作品エントリーID
+sales,id,string,NO,購入・売上トランザクション,主キーID
+sales,meish_fee_yen,number | null,YES,購入・売上トランザクション,手数料（円）
+sales,metadata,Json | null,YES,購入・売上トランザクション,メタデータ（JSON）
+sales,paid_at,string | null,YES,購入・売上トランザクション,決済完了日時
+sales,payout_batch_id,string | null,YES,購入・売上トランザクション,支払バッチID
+sales,payout_status,"Database[""public""][""Enums""][""payout_status""]",NO,購入・売上トランザクション,支払処理ステータス
+sales,price,number | null,YES,購入・売上トランザクション,価格
+sales,purchased_at,string | null,YES,購入・売上トランザクション,購入日時
+sales,stripe_session_id,string,NO,購入・売上トランザクション,Stripe CheckoutセッションID
+special_thanks,avatar_url,string | null,YES,Special Thanks表示管理,アバター画像URL
+special_thanks,display_name,string,NO,Special Thanks表示管理,表示名
+special_thanks,homepage_url,string | null,YES,Special Thanks表示管理,ホームページURL
+special_thanks,id,string,NO,Special Thanks表示管理,主キーID
+special_thanks,instagram_url,string | null,YES,Special Thanks表示管理,Instagram URL
+special_thanks,is_public,boolean,NO,Special Thanks表示管理,公開フラグ
+special_thanks,sort_order,number | null,YES,Special Thanks表示管理,表示順
+special_thanks,tagline,string | null,YES,Special Thanks表示管理,キャッチコピー
+special_thanks,twitter_url,string | null,YES,Special Thanks表示管理,X(Twitter) URL
