@@ -254,18 +254,8 @@ const FormWrapper = () => {
         return;
       }
 
-      const now = new Date();
-      let displayStartAt: string | null = null;
-      let displayEndAt: string | null = null;
-
-      if (data.gallery_type === 'white') {
-        displayStartAt = now.toISOString();
-      } else if (data.gallery_type === 'float') {
-        const end = new Date(now);
-        end.setMonth(end.getMonth() + 1);
-        displayStartAt = now.toISOString();
-        displayEndAt = end.toISOString();
-      }
+      // 展示開始/終了日は display_ready=true 時（sync-display-ready）に設定
+      // 応募時点では null のまま
 
       // ファイル名サニタイズ
       const originalName = imageFile.name;
@@ -355,8 +345,8 @@ const FormWrapper = () => {
           edition_sold: 0,
 
           gallery_type: data.gallery_type || '',
-          display_start_at: displayStartAt,
-          display_end_at: displayEndAt,
+          display_start_at: null,  // sync-display-ready で設定
+          display_end_at: null,    // sync-display-ready で設定
 
           file_name: fileName,
           external_user_id: externalUserId,
