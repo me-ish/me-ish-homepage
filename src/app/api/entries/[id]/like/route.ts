@@ -30,7 +30,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     .from('entries')
     .select('likes')
     .eq('id', id)
-    .single();
+    .single<{ likes: number }>();
 
   if (error) {
     console.error('[likes][GET] supabase error:', error.message);
@@ -54,7 +54,8 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
   const supabase = createClient();
 
   // ✅ DBのRPCで原子的に +1（entriesを直接UPDATEしない）
-  const { data: rpc, error: rpcErr } = await supabase.rpc('increment_entry_likes', { p_entry_id: id });
+  // NOTE: @supabase/auth-helpers-nextjs の型推論の制限により型アサーションを使用
+  const { data: rpc, error: rpcErr } = await (supabase.rpc as any)('increment_entry_likes', { p_entry_id: id }) as { data: number | null; error: { message: string } | null };
 
   if (rpcErr) {
     console.error('[likes][POST] RPC increment_entry_likes failed:', rpcErr.message);

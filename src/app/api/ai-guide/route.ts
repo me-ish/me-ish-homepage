@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 import type { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 import { createClient } from '@/lib/supabase/server'; // サーバー用 Supabase クライアント
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const MODEL = process.env.GPT_ANSWER_MODEL ?? 'gpt-4o-mini';
 const SAFE_DEBUG = process.env.NODE_ENV !== 'production';
 
@@ -192,6 +192,13 @@ async function impl_get_gallery_status({ galleryType }: { galleryType: 'white' |
    ルート本体
    =========================== */
 export async function POST(req: Request) {
+  if (!OPENAI_API_KEY) {
+    return NextResponse.json(
+      { reply: 'AIガイド機能は現在利用できません。' },
+      { status: 503 }
+    );
+  }
+
   try {
     const { message } = await req.json();
 

@@ -1,40 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# me-ish / AURA
 
-## Getting Started
+Next.js App Router + TypeScript + Tailwind + shadcn/ui + Supabase + Stripe
 
-First, run the development server:
+## 開発環境
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+## ディレクトリ構成
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+```
+src/
+├── app/                    # App Router ページ・API
+│   ├── [locale]/           # i18n対応ページ
+│   ├── admin/              # 管理画面
+│   ├── api/                # APIルート
+│   ├── aura/               # AURA機能ページ
+│   ├── mypage/             # マイページ
+│   └── works/              # 作品詳細
+├── components/
+│   ├── aura/               # AURAコンポーネント
+│   ├── floatGallery/       # Float Gallery
+│   ├── gallery2d/          # 2Dギャラリー
+│   ├── shared/             # 共通UI
+│   ├── themeGalleries/     # テーマギャラリー
+│   └── ui/                 # shadcn/ui
+├── lib/
+│   ├── aura/               # AURA生成ロジック
+│   ├── gallery/            # ギャラリーユーティリティ
+│   ├── portfolio/          # ポートフォリオ機能
+│   └── supabase/           # Supabaseクライアント
+├── i18n/                   # 多言語対応 (next-intl)
+└── styles/                 # グローバルスタイル
+```
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+## 主要な公開URL
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `/` — トップページ
+- `/white/2d` — White Gallery (2D)
+- `/float/2d` — Float Gallery (2D)
+- `/aura/*` — AURAポートフォリオ機能
+- `/mypage` — マイページ
 
-## Learn More
+## 環境変数
 
-To learn more about Next.js, take a look at the following resources:
+`.env.local` に必要な環境変数を設定（詳細はチームに確認）
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+## デプロイ
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+Vercelでデプロイ。`main`ブランチへのpushで自動デプロイ。
