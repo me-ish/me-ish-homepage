@@ -11,6 +11,7 @@ import { LikedWorksTab } from './_components/LikedWorksTab';
 import { MyWorksTab } from './_components/MyWorksTab';
 import {
   Edit3,
+  Eye,
   Heart,
   ShoppingCart,
   Coins,
@@ -82,6 +83,18 @@ type SalesSummary = {
   paid_out_yen: number;
 };
 
+// 閲覧数統計（アーティスト向け）
+type ViewStats = {
+  totalViews: number;
+  uniqueViews: number;
+};
+
+// 閲覧者統計（自分が見た作品数）
+type MyViewerStats = {
+  totalViews: number;
+  uniqueWorksViewed: number;
+};
+
 /* ===================== Utils ===================== */
 const BRAND = '#00a1e9';
 const formatYen = (n?: number | null) =>
@@ -102,6 +115,10 @@ export default function MyPageClient() {
   const [salesSummary, setSalesSummary] = useState<SalesSummary | null>(null);
   // Phase2: 銀行口座登録チェック
   const [hasBankAccount, setHasBankAccount] = useState<boolean | null>(null);
+  // 閲覧数統計（アーティスト向け）
+  const [viewStats, setViewStats] = useState<ViewStats | null>(null);
+  // 閲覧者統計（自分が見た作品数）
+  const [myViewerStats, setMyViewerStats] = useState<MyViewerStats | null>(null);
 
   // UI state
   const [isMobile, setIsMobile] = useState(false);
@@ -275,7 +292,41 @@ export default function MyPageClient() {
             });
           }
 
- userEmail
+          // 閲覧数統計を entry_view_stats から取得
+          const { data: viewData, error: viewErr } = await supabase
+            .from('entry_view_stats')
+            .select('view_count, unique_views')
+            .in('entry_id', (es as Entry[]).map(e => e.id));
+
+          if (viewErr) {
+            console.error('[entry_view_stats] error:', viewErr);
+            setViewStats(null);
+          } else if (viewData && viewData.length > 0) {
+            const totalViews = viewData.reduce((sum, v) => sum + (v.view_count ?? 0), 0);
+            const uniqueViews = viewData.reduce((sum, v) => sum + (v.unique_views ?? 0), 0);
+            setViewStats({ totalViews, uniqueViews });
+          } else {
+            setViewStats({ totalViews: 0, uniqueViews: 0 });
+          }
+        }
+
+        // 閲覧者統計（自分が見た作品数）を取得
+        const { data: myViewData, error: myViewErr } = await supabase
+          .from('entry_view_events')
+          .select('id, entry_id')
+          .eq('viewer_user_id', uid);
+
+        if (myViewErr) {
+          console.error('[entry_view_events] error:', myViewErr);
+          setMyViewerStats(null);
+        } else if (myViewData && myViewData.length > 0) {
+          const uniqueEntryIds = new Set(myViewData.map(v => v.entry_id));
+          setMyViewerStats({
+            totalViews: myViewData.length,
+            uniqueWorksViewed: uniqueEntryIds.size,
+          });
+        } else {
+          setMyViewerStats({ totalViews: 0, uniqueWorksViewed: 0 });
         }
       } catch (e: any) {
         console.error('[mypage load] fatal:', e?.message || e);
@@ -483,12 +534,18 @@ export default function MyPageClient() {
           {isExhibitor && (
             <section className="px-4 md:px-6 mt-6">
               <div className="mx-auto w-full max-w-6xl">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
                   <MetricCard
                     icon={<BadgeCheck className="w-5 h-5 text-emerald-500" />}
                     label="展示中"
                     value={metrics.displayingNow}
                     highlight={metrics.displayingNow > 0}
+                  />
+                  <MetricCard
+                    icon={<Eye className="w-5 h-5 text-purple-500" />}
+                    label="閲覧数"
+                    value={viewStats?.totalViews ?? 0}
+                    subLabel={`ユニーク ${viewStats?.uniqueViews ?? 0}`}
                   />
                   <MetricCard
                     icon={<Heart className="w-5 h-5 text-pink-500" />}
@@ -518,6 +575,20 @@ export default function MyPageClient() {
                     value={formatYen(salesSummary?.paid_out_yen ?? 0)}
                     subLabel="振込完了"
                   />
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* ===== 閲覧統計（全ユーザー向け） ===== */}
+          {myViewerStats && myViewerStats.uniqueWorksViewed > 0 && (
+            <section className="px-4 md:px-6 mt-6">
+              <div className="mx-auto w-full max-w-6xl">
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100">
+                  <Eye className="w-5 h-5 text-purple-500" />
+                  <span className="text-sm text-gray-700">
+                    これまでに <span className="font-semibold text-purple-600">{myViewerStats.uniqueWorksViewed}</span> 作品を閲覧しました
+                  </span>
                 </div>
               </div>
             </section>

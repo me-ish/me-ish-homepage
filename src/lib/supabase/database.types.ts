@@ -1033,6 +1033,16 @@ export type Database = {
         }
         Relationships: []
       }
+      v_artist_view_stats: {
+        Row: {
+          last_viewed_at: string | null
+          total_views: number | null
+          unique_views: number | null
+          user_id: string | null
+          viewed_works_count: number | null
+        }
+        Relationships: []
+      }
       v_cert_links_active: {
         Row: {
           created_at: string | null
@@ -1181,6 +1191,15 @@ export type Database = {
         }
         Relationships: []
       }
+      v_viewer_stats: {
+        Row: {
+          last_viewed_at: string | null
+          total_views: number | null
+          unique_works_viewed: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_mark_sales_paid: {
@@ -1226,6 +1245,33 @@ export type Database = {
               sold_out: boolean
             }[]
           }
+      get_my_artist_view_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          last_viewed_at: string
+          total_views: number
+          unique_views: number
+          viewed_works_count: number
+        }[]
+      }
+      get_my_viewer_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          last_viewed_at: string
+          total_views: number
+          unique_works_viewed: number
+        }[]
+      }
+      get_my_works_view_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          entry_id: number
+          last_viewed_at: string
+          title: string
+          unique_views: number
+          view_count: number
+        }[]
+      }
       get_public_portfolio: { Args: { p_user_id: string }; Returns: Json }
       increment_entry_likes: { Args: { p_entry_id: number }; Returns: number }
       set_entry_portfolio_hidden: {
