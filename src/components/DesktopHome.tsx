@@ -107,7 +107,11 @@ function useGalleryArtworks(limit = 8) {
 
 // ギャラリー統計を取得するフック
 function useGalleryStats() {
-  const [stats, setStats] = useState<{ worksCount: number; artistsCount: number } | null>(null);
+  const [stats, setStats] = useState<{
+    worksCount: number;
+    artistsCount: number;
+    uniqueViews: number;
+  } | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -117,7 +121,7 @@ function useGalleryStats() {
         // 展示中の作品を取得（user_idも含める）
         const { data, error } = await supabase
           .from('entries')
-          .select('user_id')
+          .select('id, user_id')
           .eq('confirmed', true)
           .eq('display_ready', true);
 
@@ -126,9 +130,25 @@ function useGalleryStats() {
         if (mounted && data) {
           const worksCount = data.length;
           const uniqueArtists = new Set(data.map((entry) => entry.user_id));
+
+          // ユニーク閲覧数を取得（entry_view_stats から）
+          let uniqueViews = 0;
+          if (data.length > 0) {
+            const entryIds = data.map((entry) => entry.id);
+            const { data: viewData, error: viewError } = await supabase
+              .from('entry_view_stats')
+              .select('unique_views')
+              .in('entry_id', entryIds);
+
+            if (!viewError && viewData) {
+              uniqueViews = viewData.reduce((sum, v) => sum + (v.unique_views ?? 0), 0);
+            }
+          }
+
           setStats({
             worksCount,
             artistsCount: uniqueArtists.size,
+            uniqueViews,
           });
         }
       } catch (err) {
@@ -739,7 +759,11 @@ const DesktopHome = () => {
                 value={galleryStats ? `${galleryStats.artistsCount}` : '–'}
                 label="アーティスト"
               />
-              <StatCard icon={Eye} value="Coming Soon" label="ユニーク閲覧" />
+              <StatCard
+                icon={Eye}
+                value={galleryStats ? `${galleryStats.uniqueViews.toLocaleString()}` : '–'}
+                label="ユニーク閲覧"
+              />
             </div>
           </div>
 
