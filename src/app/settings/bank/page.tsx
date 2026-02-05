@@ -99,7 +99,7 @@ export default function BankSettingsPage() {
         console.log('[bank settings] searching with uid:', uid, 'email:', userEmail);
 
         // entriesからexternal_user_idを取得（user_id または email でマッチ）
-        let entry: { external_user_id: string } | null = null;
+        let entry: { external_user_id: string | null } | null = null;
 
         // まずuser_idで検索
         const { data: entryByUid, error: uidErr } = await supabase

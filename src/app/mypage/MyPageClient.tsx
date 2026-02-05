@@ -218,7 +218,8 @@ export default function MyPageClient() {
             banner_url: null,
             sns_links: {},
           };
-          const { error: upErr } = await supabase.from('profiles').upsert(seed);
+          // seed は Profile 型だが、DB の Insert 型と null/undefined の扱いが異なるため型アサーション
+          const { error: upErr } = await supabase.from('profiles').upsert(seed as any);
           if (upErr) throw upErr;
           setProfile(seed);
         } else {
@@ -336,7 +337,7 @@ export default function MyPageClient() {
         sns_links: payload.sns_links || {},
       };
 
-      const { error } = await supabase.from('profiles').upsert(normalized);
+      const { error } = await supabase.from('profiles').upsert(normalized as any);
       if (error) throw error;
 
       setProfile(normalized);
