@@ -292,19 +292,21 @@ export default function MyPageClient() {
             });
           }
 
-          // 閲覧数統計を entry_view_stats から取得
+          // 閲覧数統計を v_artist_view_stats ビューから取得
           const { data: viewData, error: viewErr } = await supabase
-            .from('entry_view_stats')
-            .select('view_count, unique_views')
-            .in('entry_id', (es as Entry[]).map(e => e.id));
+            .from('v_artist_view_stats')
+            .select('total_views, unique_views')
+            .eq('user_id', uid)
+            .maybeSingle();
 
           if (viewErr) {
-            console.error('[entry_view_stats] error:', viewErr);
+            console.error('[v_artist_view_stats] error:', viewErr);
             setViewStats(null);
-          } else if (viewData && viewData.length > 0) {
-            const totalViews = viewData.reduce((sum, v) => sum + (v.view_count ?? 0), 0);
-            const uniqueViews = viewData.reduce((sum, v) => sum + (v.unique_views ?? 0), 0);
-            setViewStats({ totalViews, uniqueViews });
+          } else if (viewData) {
+            setViewStats({
+              totalViews: viewData.total_views ?? 0,
+              uniqueViews: viewData.unique_views ?? 0,
+            });
           } else {
             setViewStats({ totalViews: 0, uniqueViews: 0 });
           }

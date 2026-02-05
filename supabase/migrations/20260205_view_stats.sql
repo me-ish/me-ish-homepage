@@ -2,8 +2,15 @@
 -- アーティスト向け: 自分の作品の閲覧数合計
 -- 閲覧者向け: 自分が見た作品数
 
+-- 既存のビューと関数を削除（冪等性のため）
+DROP VIEW IF EXISTS v_artist_view_stats;
+DROP VIEW IF EXISTS v_viewer_stats;
+DROP FUNCTION IF EXISTS get_my_artist_view_stats(uuid);
+DROP FUNCTION IF EXISTS get_my_viewer_stats(uuid);
+DROP FUNCTION IF EXISTS get_my_works_view_stats(uuid);
+
 -- アーティスト向け閲覧統計ビュー
-CREATE OR REPLACE VIEW v_artist_view_stats AS
+CREATE VIEW v_artist_view_stats AS
 SELECT
   e.user_id,
   COALESCE(COUNT(ev.id), 0)::bigint AS total_views,
@@ -17,7 +24,7 @@ WHERE e.user_id IS NOT NULL
 GROUP BY e.user_id;
 
 -- 閲覧者向け統計ビュー
-CREATE OR REPLACE VIEW v_viewer_stats AS
+CREATE VIEW v_viewer_stats AS
 SELECT
   viewer_user_id AS user_id,
   COUNT(*)::bigint AS total_views,
@@ -27,12 +34,8 @@ FROM entry_view_events
 WHERE viewer_user_id IS NOT NULL
 GROUP BY viewer_user_id;
 
--- RLSポリシー: 自分の統計のみ閲覧可能
--- ビューに直接RLSは適用できないため、関数でラップするか
--- クライアント側でuser_idフィルタをかける
-
 -- アーティスト統計取得用の関数
-CREATE OR REPLACE FUNCTION get_my_artist_view_stats(p_user_id uuid)
+CREATE FUNCTION get_my_artist_view_stats(p_user_id uuid)
 RETURNS TABLE (
   total_views bigint,
   unique_views bigint,
@@ -53,7 +56,7 @@ AS $$
 $$;
 
 -- 閲覧者統計取得用の関数
-CREATE OR REPLACE FUNCTION get_my_viewer_stats(p_user_id uuid)
+CREATE FUNCTION get_my_viewer_stats(p_user_id uuid)
 RETURNS TABLE (
   total_views bigint,
   unique_works_viewed bigint,
@@ -72,7 +75,7 @@ AS $$
 $$;
 
 -- 作品別の閲覧数（アーティスト用）
-CREATE OR REPLACE FUNCTION get_my_works_view_stats(p_user_id uuid)
+CREATE FUNCTION get_my_works_view_stats(p_user_id uuid)
 RETURNS TABLE (
   entry_id bigint,
   title text,
