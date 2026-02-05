@@ -1,15 +1,14 @@
 // app/admin/api/counts/route.ts
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { isAdminEmail } from '@/lib/isAdmin';       // ← ここをあなたの実装に合わせる
+import { createClient } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/isAdmin';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const revalidate = 0;
 
 export async function GET() {
   // 1) ルートハンドラ向けの Supabase（ユーザー特定用）
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = createClient();
 
   const {
     data: { user },

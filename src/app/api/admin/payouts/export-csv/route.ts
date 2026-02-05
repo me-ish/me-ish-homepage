@@ -1,8 +1,7 @@
 // src/app/api/admin/payouts/export-csv/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { isAdminEmail } from "@/lib/isAdmin";
 
 export const runtime = "nodejs";
@@ -12,7 +11,7 @@ function supabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error("Supabase env missing");
-  return createClient(url, key, { auth: { persistSession: false } });
+  return createSupabaseClient(url, key, { auth: { persistSession: false } });
 }
 
 type BankAccount = {
@@ -58,7 +57,7 @@ export async function GET(req: NextRequest) {
 
     // 方法2: Cookie-based session
     if (!isAuthorized) {
-      const sb = createRouteHandlerClient({ cookies });
+      const sb = createClient();
       const {
         data: { user },
       } = await sb.auth.getUser();

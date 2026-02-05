@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { isAdminEmail } from '@/lib/isAdmin';
 import { AnnouncementInsert } from '@/lib/schemas/announcement';
-import type { Database } from '@/types/supabase';
+import type { Database } from '@/lib/supabase/database.types';
 
 export const revalidate = 0;
 
@@ -25,7 +24,7 @@ function normalizeHttpUrl(u?: string | null): string | null {
 }
 
 async function requireAdmin() {
-  const supabase = createRouteHandlerClient<Database>({ cookies });
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || !isAdminEmail(user.email ?? '')) return null;
   return user;

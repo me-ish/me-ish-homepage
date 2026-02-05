@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,7 @@ const plans = [
 ];
 
 export default function RenewPage() {
-  // Database 型が renewals をまだ含まない想定なので、まずはジェネリクス無しで型エラー回避
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [entries, setEntries] = useState<EntryLite[]>([]);

@@ -1,7 +1,3 @@
-import { cookies } from 'next/headers';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-
-export function supabaseServer() {
-  return createServerComponentClient({ cookies });
-}
-export const createClient = supabaseServer; // 互換エイリアス
+// src/lib/supabaseServer.ts
+// 互換性のためのラッパー - 新規コードは @/lib/supabase/server を使用してください
+export { createClient, createClient as supabaseServer } from './supabase/server';

@@ -1,7 +1,6 @@
 // src/app/auth/callback/route.ts
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -43,7 +42,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient();
     await supabase.auth.exchangeCodeForSession(code);
   } catch (e) {
     console.error('[auth/callback] exchangeCodeForSession failed:', e);

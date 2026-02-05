@@ -1,8 +1,6 @@
+// src/lib/supabaseBrowser.ts
 'use client';
+// 互換性のためのラッパー - 新規コードは @/lib/supabase/client を使用してください
+import { createClient } from './supabase/client';
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-
-// NEXT_PUBLIC_SUPABASE_URL / ANON_KEY を自動で読むので引数不要
-export function supabaseBrowser() {
-  return createClientComponentClient();
-}
+export const supabaseBrowser = createClient;

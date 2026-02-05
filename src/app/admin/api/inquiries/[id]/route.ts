@@ -1,15 +1,14 @@
 // app/admin/api/inquiries/[id]/route.ts
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { isAdminEmail } from '@/lib/isAdmin';
 
 const Body = z.object({ is_read: z.boolean() });
 
 async function requireAdmin() {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || !isAdminEmail(user.email)) return null;
   return user;

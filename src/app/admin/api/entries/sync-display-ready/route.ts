@@ -1,7 +1,6 @@
 // src/app/admin/api/entries/sync-display-ready/route.ts
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/isAdmin";
 import path from "node:path";
@@ -9,7 +8,7 @@ import path from "node:path";
 export const revalidate = 0;
 
 async function requireAdmin() {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
