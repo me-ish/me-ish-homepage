@@ -27,5 +27,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     .select('*')
     .single();
   if (error) return NextResponse.json({ error: 'reset_failed' }, { status: 500 });
-  return NextResponse.json(data);
+  return NextResponse.json({
+    ok: true,
+    entry: {
+      id: data.id,
+      confirmed: data.confirmed,
+      confirmed_at: data.confirmed_at,
+      rejected_at: data.rejected_at,
+      reject_reason: data.reject_reason,
+    },
+  });
 }

@@ -97,5 +97,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     mailed = true;
   }
 
-  return NextResponse.json({ ok: true, mailed });
+  return NextResponse.json({
+    ok: true,
+    mailed,
+    entry: {
+      id,
+      confirmed: false,
+      rejected_at: nowISO,
+      reject_reason: reason ?? null,
+      display_ready: false,
+    },
+  });
 }
