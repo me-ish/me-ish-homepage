@@ -30,6 +30,7 @@ import {
   Square,
   CheckSquare,
   Minus,
+  CreditCard,
 } from 'lucide-react';
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
@@ -231,9 +232,40 @@ function canEnableDisplay(e: Entry): boolean {
   const paidPlan = e.is_for_sale === true && (e.display_plan ?? 'free') !== 'free';
   const planPaid = (e.plan_payment_status ?? 'unneeded') === 'paid';
   if (paidPlan && !planPaid) return false;
-  const hasFinalUrl = typeof e.image_url === 'string' && e.image_url.includes('/final/');
   const jobOk = e.processing_job?.status === 'succeeded';
-  return hasFinalUrl || jobOk;
+  return jobOk;
+}
+
+// 有効化できない理由を返す
+type BlockReason = 'payment_pending' | 'processing_pending' | 'processing_running' | 'processing_failed' | null;
+
+function getEnableBlockReason(e: Entry): BlockReason {
+  if (e.confirmed !== true || e.display_ready) return null;
+
+  const paidPlan = e.is_for_sale === true && (e.display_plan ?? 'free') !== 'free';
+  const planPaid = (e.plan_payment_status ?? 'unneeded') === 'paid';
+
+  // 有料プランで未払い
+  if (paidPlan && !planPaid) return 'payment_pending';
+
+  // 画像処理の状態
+  const jobStatus = e.processing_job?.status;
+  if (jobStatus === 'failed') return 'processing_failed';
+  if (jobStatus === 'running') return 'processing_running';
+  if (jobStatus !== 'succeeded') return 'processing_pending';
+
+  return null;
+}
+
+// ブロック理由のラベル
+function getBlockReasonLabel(reason: BlockReason): string {
+  switch (reason) {
+    case 'payment_pending': return '支払い待ち';
+    case 'processing_pending': return '画像処理待ち';
+    case 'processing_running': return '画像処理中';
+    case 'processing_failed': return '処理エラー';
+    default: return '';
+  }
 }
 
 function toTime(d?: string | null): number | null {
@@ -1172,6 +1204,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                       const isExpanded = expandedId === entry.id;
                       const isProcessing = processingIds.has(entry.id);
                       const canEnable = canEnableDisplay(entry);
+                      const blockReason = getEnableBlockReason(entry);
                       const paidPlan = entry.is_for_sale === true && (entry.display_plan ?? 'free') !== 'free';
                       const planPaid = (entry.plan_payment_status ?? 'unneeded') === 'paid';
                       const phase = getEntryPhase(entry);
@@ -1268,26 +1301,32 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                             {/* 承認済み・展示待ち: 展示有効化 */}
                             {entry.confirmed === true && !entry.display_ready && (
                               <>
-                                {paidPlan && !planPaid && (
+                                {blockReason === 'payment_pending' && (
                                   <button
                                     onClick={() => createPlanCheckoutLink(entry)}
                                     disabled={isProcessing}
-                                    className="rounded border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+                                    className="rounded bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600 disabled:opacity-50"
                                   >
-                                    Payment URL
+                                    決済URL作成
                                   </button>
                                 )}
-                                <button
-                                  onClick={() => enableDisplay(entry)}
-                                  disabled={isProcessing}
-                                  className={`px-3 py-1.5 text-xs font-medium rounded disabled:opacity-50 ${
-                                    canEnable
-                                      ? 'bg-sky-600 text-white hover:bg-sky-700'
-                                      : 'border border-neutral-300 text-neutral-500 hover:bg-neutral-100'
-                                  }`}
-                                >
-                                  {canEnable ? 'Enable display' : 'Payment/processing required'}
-                                </button>
+                                {canEnable ? (
+                                  <button
+                                    onClick={() => enableDisplay(entry)}
+                                    disabled={isProcessing}
+                                    className="px-3 py-1.5 text-xs font-medium rounded bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50"
+                                  >
+                                    展示開始
+                                  </button>
+                                ) : blockReason && blockReason !== 'payment_pending' ? (
+                                  <span className={`px-2 py-1 text-xs rounded ${
+                                    blockReason === 'processing_failed'
+                                      ? 'bg-red-100 text-red-600'
+                                      : 'bg-neutral-100 text-neutral-500'
+                                  }`}>
+                                    {getBlockReasonLabel(blockReason)}
+                                  </span>
+                                ) : null}
                               </>
                             )}
 
@@ -1431,27 +1470,39 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                   {/* 承認済み・展示待ち: 展示有効化 */}
                                   {entry.confirmed === true && !entry.display_ready && (
                                     <>
-                                      {paidPlan && !planPaid && (
+                                      {blockReason === 'payment_pending' && (
                                         <button
                                           onClick={() => createPlanCheckoutLink(entry)}
                                           disabled={isProcessing}
-                                          className="inline-flex items-center gap-1 rounded-lg border border-amber-300 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+                                          className="inline-flex items-center gap-1 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50"
                                         >
-                                          Payment URL
+                                          <CreditCard className="h-4 w-4" />
+                                          決済URLを作成
                                         </button>
                                       )}
-                                      <button
-                                        onClick={() => enableDisplay(entry)}
-                                        disabled={isProcessing}
-                                        className={`inline-flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-50 ${
-                                          canEnable
-                                            ? 'bg-sky-600 text-white hover:bg-sky-700'
-                                            : 'border-2 border-dashed border-neutral-300 text-neutral-500 hover:bg-neutral-100'
-                                        }`}
-                                      >
-                                        <Eye className="h-4 w-4" />
-                                        {canEnable ? 'Enable display' : 'Payment/processing required'}
-                                      </button>
+                                      {canEnable ? (
+                                        <button
+                                          onClick={() => enableDisplay(entry)}
+                                          disabled={isProcessing}
+                                          className="inline-flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50"
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                          展示を開始
+                                        </button>
+                                      ) : blockReason && blockReason !== 'payment_pending' ? (
+                                        <div className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg ${
+                                          blockReason === 'processing_failed'
+                                            ? 'bg-red-100 text-red-700'
+                                            : blockReason === 'processing_running'
+                                              ? 'bg-indigo-100 text-indigo-700'
+                                              : 'bg-neutral-100 text-neutral-600'
+                                        }`}>
+                                          {blockReason === 'processing_running' && <Loader2 className="h-4 w-4 animate-spin" />}
+                                          {blockReason === 'processing_failed' && <AlertCircle className="h-4 w-4" />}
+                                          {blockReason === 'processing_pending' && <Clock className="h-4 w-4" />}
+                                          {getBlockReasonLabel(blockReason)}
+                                        </div>
+                                      ) : null}
                                     </>
                                   )}
 
