@@ -247,6 +247,8 @@ export async function getEntriesWithStatus(
       is_sold,
       is_for_sale,
       portfolio_hidden,
+      display_plan,
+      plan_payment_status,
       entry_processing_jobs (
         status,
         last_error,
@@ -326,6 +328,8 @@ export async function getEntriesWithStatus(
       is_sold: e.is_sold,
       is_for_sale: e.is_for_sale,
       portfolio_hidden: e.portfolio_hidden ?? false,
+      display_plan: e.display_plan,
+      plan_payment_status: e.plan_payment_status,
       job_status: job?.status ?? null,
       job_error: job?.last_error ?? null,
       job_attempts: job?.attempts ?? null,

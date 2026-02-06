@@ -11,6 +11,7 @@ import {
   Eye,
   FileCheck,
   HelpCircle,
+  CreditCard,
 } from 'lucide-react';
 import type { EntryWithStatus } from '@/lib/portfolio/types';
 
@@ -20,6 +21,8 @@ export type EntryStatus =
   | 'queued'
   | 'displaying'
   | 'ready'
+  | 'payment_pending'
+  | 'payment_completed'
   | 'approved'
   | 'reviewing';
 
@@ -34,15 +37,31 @@ export type StatusInfo = {
 };
 
 /**
+ * 有料プランかどうかを判定
+ */
+function isPaidPlan(entry: EntryWithStatus): boolean {
+  return entry.is_for_sale === true && (entry.display_plan ?? 'free') !== 'free';
+}
+
+/**
+ * 支払い完了かどうかを判定
+ */
+function isPaid(entry: EntryWithStatus): boolean {
+  return String(entry.plan_payment_status ?? '').toLowerCase() === 'paid';
+}
+
+/**
  * エントリのステータスを判定
  * 優先順位:
  * 1. job_status='failed' => エラー
  * 2. job_status='running' => 処理中
  * 3. job_status='queued' => 待機中
  * 4. display_ready=true => 展示中
- * 5. job_status='succeeded' && !display_ready => 展示準備完了
- * 6. confirmed=true => 承認済み
- * 7. else => 審査中
+ * 5. job_status='succeeded' && 有料プラン && !paid => 支払い待ち
+ * 6. job_status='succeeded' && !display_ready => 展示準備完了
+ * 7. 有料プラン && paid && !display_ready => 支払い完了（処理待ち）
+ * 8. confirmed=true => 承認済み
+ * 9. else => 審査中
  */
 export function getEntryStatus(entry: EntryWithStatus): StatusInfo {
   if (entry.job_status === 'failed') {
@@ -92,6 +111,19 @@ export function getEntryStatus(entry: EntryWithStatus): StatusInfo {
     };
   }
 
+  // 画像処理完了 + 有料プラン + 未支払い => 支払い待ち
+  if (entry.job_status === 'succeeded' && isPaidPlan(entry) && !isPaid(entry)) {
+    return {
+      status: 'payment_pending',
+      label: '支払い待ち',
+      description: '画像処理が完了しました。プラン料金のお支払いをお待ちしています。',
+      variant: 'secondary',
+      className: 'bg-orange-100 text-orange-700 border-orange-300',
+      icon: <CreditCard className="h-3 w-3" />,
+    };
+  }
+
+  // 画像処理完了（支払い不要 or 支払い済み）
   if (entry.job_status === 'succeeded') {
     return {
       status: 'ready',
@@ -100,6 +132,18 @@ export function getEntryStatus(entry: EntryWithStatus): StatusInfo {
       variant: 'secondary',
       className: 'bg-blue-100 text-blue-700 border-blue-300',
       icon: <FileCheck className="h-3 w-3" />,
+    };
+  }
+
+  // 有料プランで支払い完了だが処理待ち
+  if (isPaidPlan(entry) && isPaid(entry)) {
+    return {
+      status: 'payment_completed',
+      label: '支払い完了',
+      description: 'お支払いありがとうございます。画像処理を待っています。',
+      variant: 'secondary',
+      className: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+      icon: <CheckCircle2 className="h-3 w-3" />,
     };
   }
 

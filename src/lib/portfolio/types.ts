@@ -59,6 +59,9 @@ export type EntryWithStatus = {
   job_attempts?: number | null;
   job_updated_at?: string | null;
   view_count?: number;
+  // 有料プラン関連
+  display_plan?: string | null;
+  plan_payment_status?: string | null;
 };
 
 export type TemplateContent = {
