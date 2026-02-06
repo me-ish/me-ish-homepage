@@ -12,10 +12,12 @@ import {
   FileCheck,
   HelpCircle,
   CreditCard,
+  XCircle,
 } from 'lucide-react';
 import type { EntryWithStatus } from '@/lib/portfolio/types';
 
 export type EntryStatus =
+  | 'rejected'
   | 'failed'
   | 'running'
   | 'queued'
@@ -64,6 +66,18 @@ function isPaid(entry: EntryWithStatus): boolean {
  * 9. else => 審査中
  */
 export function getEntryStatus(entry: EntryWithStatus): StatusInfo {
+  if (entry.confirmed === false) {
+    const reason = entry.reject_reason ? `理由: ${entry.reject_reason}` : '';
+    return {
+      status: 'rejected',
+      label: '却下',
+      description: reason ? `作品が却下されました。${reason}` : '作品が却下されました。',
+      variant: 'destructive',
+      className: 'bg-rose-500 hover:bg-rose-500 text-white border-rose-500',
+      icon: <XCircle className="h-3 w-3" />,
+    };
+  }
+
   if (entry.job_status === 'failed') {
     return {
       status: 'failed',

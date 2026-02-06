@@ -54,10 +54,12 @@ type StatusTab =
   | 'processing'
   | 'reviewing'
   | 'ready'
-  | 'failed';
+  | 'failed'
+  | 'rejected';
 
 // ステータスのソート順（数値が小さいほど上位）
 const STATUS_PRIORITY: Record<string, number> = {
+  rejected: 0,
   failed: 1,
   running: 2,
   queued: 3,
@@ -125,6 +127,7 @@ const publicUrl = useMemo(() => {
       processing: 0, // running + queued
       reviewing: 0, // reviewing + approved
       failed: 0,
+      rejected: 0,
     };
 
     entries.forEach((e) => {
@@ -134,6 +137,7 @@ const publicUrl = useMemo(() => {
       else if (status === 'running' || status === 'queued') counts.processing++;
       else if (status === 'reviewing' || status === 'approved') counts.reviewing++;
       else if (status === 'failed') counts.failed++;
+      else if (status === 'rejected') counts.rejected++;
     });
 
     return counts;
@@ -151,6 +155,7 @@ const publicUrl = useMemo(() => {
       if (statusTab === 'reviewing') return s === 'reviewing' || s === 'approved';
       if (statusTab === 'ready') return s === 'ready';
       if (statusTab === 'failed') return s === 'failed';
+      if (statusTab === 'rejected') return s === 'rejected';
 
       return true;
     });
@@ -281,6 +286,13 @@ const publicUrl = useMemo(() => {
             count={statusCounts.failed}
             danger
           />
+          <StatusTabButton
+            active={statusTab === 'rejected'}
+            onClick={() => setTab('rejected')}
+            label="却下"
+            count={statusCounts.rejected}
+            danger
+          />
         </div>
       )}
 
@@ -399,6 +411,7 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
     : '—';
 
   const hasError = statusInfo.status === 'failed';
+  const isRejected = statusInfo.status === 'rejected';
   const isProcessing = statusInfo.status === 'running' || statusInfo.status === 'queued';
   const isDisplaying = statusInfo.status === 'displaying';
 
@@ -428,7 +441,7 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
   return (
     <Card
       className={`overflow-hidden transition-all ${
-        hasError
+        hasError || isRejected
           ? 'border-red-200 bg-red-50/30'
           : isProcessing
             ? 'border-amber-200 bg-amber-50/30'
@@ -470,11 +483,13 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
           )}
 
         {/* エラー時のバナー */}
-        {hasError && (
+        {(hasError || isRejected) && (
           <div className="px-4 pt-3 pb-0">
             <div className="flex items-center gap-2 text-red-600 text-sm">
               <AlertTriangle className="h-4 w-4" />
-              <span className="font-medium">処理エラーが発生しました</span>
+              <span className="font-medium">
+                {isRejected ? '作品が却下されました' : '処理エラーが発生しました'}
+              </span>
             </div>
           </div>
         )}
@@ -490,7 +505,7 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
                   ? 'ring-emerald-300'
                   : isProcessing
                     ? 'ring-amber-300'
-                    : hasError
+                    : hasError || isRejected
                       ? 'ring-red-300'
                       : 'ring-gray-200',
               ].join(' ')}
