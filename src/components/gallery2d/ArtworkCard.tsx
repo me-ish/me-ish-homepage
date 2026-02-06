@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -36,11 +37,30 @@ export function ArtworkCard({
   const priceText = formatPrice(entry.price);
   const editionText = formatEdition(entry.edition_total, entry.edition_sold);
   const linkHref = href ?? `/works/${entry.id}`;
+  const [aspect, setAspect] = useState<'square' | 'portrait' | 'landscape' | null>(null);
 
   const sizeClasses = {
     sm: 'aspect-square',
     md: 'aspect-[4/5]',
     lg: 'aspect-[3/4]',
+  };
+  const aspectClass =
+    aspect === 'square'
+      ? 'aspect-square'
+      : aspect === 'landscape'
+        ? 'aspect-[5/4]'
+        : aspect === 'portrait'
+          ? 'aspect-[4/5]'
+          : sizeClasses[size];
+
+  const handleImageLoad = (img: HTMLImageElement) => {
+    if (!img?.naturalWidth || !img?.naturalHeight) return;
+    const ratio = img.naturalWidth / img.naturalHeight;
+    let next: 'square' | 'portrait' | 'landscape';
+    if (ratio >= 1.15) next = 'landscape';
+    else if (ratio <= 0.87) next = 'portrait';
+    else next = 'square';
+    setAspect((prev) => (prev === next ? prev : next));
   };
 
   // プレースホルダーの場合は Coming Soon 表示
@@ -82,7 +102,7 @@ export function ArtworkCard({
     <Link href={linkHref} className={cn('block group', className)}>
       <Card className="overflow-hidden transition-shadow hover:shadow-md">
         {/* Image Container */}
-        <div className={cn('relative bg-gray-100', sizeClasses[size])}>
+        <div className={cn('relative bg-gray-100', aspectClass)}>
           {imageUrl ? (
             <Image
               src={imageUrl}
@@ -92,6 +112,7 @@ export function ArtworkCard({
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               quality={75}
               loading="lazy"
+              onLoadingComplete={handleImageLoad}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400">
