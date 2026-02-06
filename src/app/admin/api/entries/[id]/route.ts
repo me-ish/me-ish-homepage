@@ -39,7 +39,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
   const admin = supabaseAdmin();
 
-  // Do not allow display_ready=true for paid plans until payment is completed.
+  // Do not allow display_ready=true unless image processing is completed.
   if (values.display_ready === true) {
     const { data: row, error: selErr } = await admin
       .from('entries')
@@ -51,10 +51,25 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       return NextResponse.json({ error: 'not_found' }, { status: 404 });
     }
 
+    // Check paid plan payment status
     const paidPlan = row.is_for_sale === true && (row.display_plan ?? 'free') !== 'free';
     const paid = String(row.plan_payment_status ?? '').toLowerCase() === 'paid';
     if (paidPlan && !paid) {
       return NextResponse.json({ error: 'plan_payment_required' }, { status: 409 });
+    }
+
+    // Check image processing job status
+    const { data: job } = await admin
+      .from('entry_processing_jobs')
+      .select('status')
+      .eq('entry_id', id)
+      .maybeSingle();
+
+    if (!job || job.status !== 'succeeded') {
+      return NextResponse.json(
+        { error: 'image_processing_not_completed', job_status: job?.status ?? 'not_found' },
+        { status: 409 }
+      );
     }
   }
 

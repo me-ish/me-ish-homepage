@@ -510,8 +510,9 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
   const enableDisplay = async (entry: Entry) => {
     if (processingIds.has(entry.id)) return;
     if (!canEnableDisplay(entry)) {
-      const ok = window.confirm('画像処理が完了していない可能性があります。それでも展示を有効化しますか？');
-      if (!ok) return;
+      // 画像処理が完了していない場合は有効化できない（APIでもブロックされる）
+      showToast('画像処理が完了していないため有効化できません');
+      return;
     }
     setProcessingIds((prev) => new Set(prev).add(entry.id));
     try {
@@ -520,7 +521,14 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
       fetchOverview();
       showToast('展示を有効化しました');
     } catch (e: unknown) {
-      showToast(`有効化に失敗: ${e instanceof Error ? e.message : 'エラー'}`);
+      const msg = e instanceof Error ? e.message : 'エラー';
+      if (msg.includes('image_processing')) {
+        showToast('画像処理が完了していないため有効化できません');
+      } else if (msg.includes('plan_payment')) {
+        showToast('プラン料金の支払いが完了していません');
+      } else {
+        showToast(`有効化に失敗: ${msg}`);
+      }
     } finally {
       setProcessingIds((prev) => {
         const next = new Set(prev);

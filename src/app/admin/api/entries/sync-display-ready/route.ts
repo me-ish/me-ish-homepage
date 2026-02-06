@@ -39,7 +39,19 @@ export async function POST() {
 
   const rows = targets ?? [];
   if (rows.length === 0) {
-    return NextResponse.json({ ok: true, updated: 0, skipped: 0 });
+    return NextResponse.json({ ok: true, updated: 0, skipped: 0, skippedReasons: {} });
+  }
+
+  // 画像処理ジョブのステータスを一括取得
+  const entryIds = rows.map((r) => (r as any).id as number);
+  const { data: jobs } = await admin
+    .from("entry_processing_jobs")
+    .select("entry_id, status")
+    .in("entry_id", entryIds);
+
+  const jobStatusMap = new Map<number, string>();
+  for (const j of jobs ?? []) {
+    jobStatusMap.set(j.entry_id, j.status);
   }
 
   // public URL を deterministic に組む（list を毎回叩かない＝高速）
@@ -55,24 +67,35 @@ export async function POST() {
 
   let updated = 0;
   let skipped = 0;
+  const skippedReasons: Record<string, number> = {};
 
-  // ✅ “実在チェック”をしたいなら list(search) を使う
-  // ただし負荷が上がるので、まずは deterministic URL で更新で良い（運用上はColabが正）
-  const DO_EXISTENCE_CHECK = false;
+  const countSkip = (reason: string) => {
+    skipped++;
+    skippedReasons[reason] = (skippedReasons[reason] ?? 0) + 1;
+  };
 
   for (const e of rows) {
+    const entryId = (e as any).id as number;
+
+    // ✅ 画像処理ジョブが succeeded でなければスキップ
+    const jobStatus = jobStatusMap.get(entryId);
+    if (jobStatus !== "succeeded") {
+      countSkip(`job_${jobStatus ?? "not_found"}`);
+      continue;
+    }
+
     const paidPlan =
       (e as any).is_for_sale === true &&
       String((e as any).display_plan ?? "free") !== "free";
     const planPaid = String((e as any).plan_payment_status ?? "").toLowerCase() === "paid";
     if (paidPlan && !planPaid) {
-      skipped++;
+      countSkip("payment_pending");
       continue;
     }
 
     const fileName = (e as any).file_name as string | null;
     if (!fileName) {
-      skipped++;
+      countSkip("no_file_name");
       continue;
     }
 
@@ -81,16 +104,7 @@ export async function POST() {
     const objectPath = `artworks/final/${finalName}`;
     const publicUrl = `${SUPABASE_URL}storage/v1/object/public/${objectPath}`;
 
-    if (DO_EXISTENCE_CHECK) {
-      const { data: listed, error: lErr } = await admin.storage
-        .from("artworks")
-        .list("final", { limit: 10, search: finalName });
-
-      if (lErr || !(listed ?? []).some((x) => x.name === finalName)) {
-        skipped++;
-        continue;
-      }
-    }
+    // Note: DO_EXISTENCE_CHECK は廃止。processing_job.status で判断する。
 
     // 展示期間を設定: display_ready=true のタイミングで開始
     const now = new Date();
@@ -116,11 +130,11 @@ export async function POST() {
       .eq("id", (e as any).id);
 
     if (uErr) {
-      skipped++;
+      countSkip("update_failed");
       continue;
     }
     updated++;
   }
 
-  return NextResponse.json({ ok: true, updated, skipped });
+  return NextResponse.json({ ok: true, updated, skipped, skippedReasons });
 }
