@@ -16,12 +16,13 @@ import {
   parseSnsLinks,
   type EntryRow,
 } from '@/lib/gallery/galleryUtils';
+import { CommentSection } from '@/components/comments';
 
 /** 作品詳細に必要なカラム */
 const WORK_DETAIL_COLUMNS = `
   id, title, artist_name, description, image_url, file_name,
   is_for_sale, price, sale_type, sns_links, gallery_type, likes,
-  is_sold, edition_total, edition_sold, confirmed, display_ready
+  is_sold, edition_total, edition_sold, confirmed, display_ready, user_id
 `.replace(/\s+/g, '');
 
 // セッションIDを取得または生成
@@ -285,6 +286,14 @@ export default function WorkDetailPage() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Comment Section */}
+        <div className="mt-8">
+          <CommentSection
+            entryId={Number(id)}
+            entryOwnerId={entry.user_id ?? undefined}
+          />
         </div>
       </main>
 
