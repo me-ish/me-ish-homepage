@@ -3,6 +3,7 @@
 import React, {
   useRef,
   useState,
+  useEffect,
   forwardRef,
   useImperativeHandle,
   PropsWithChildren,
@@ -70,8 +71,10 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
       return { ...groupRef.current, title, author }
     })
 
+    const [computedAspect, setComputedAspect] = useState<number | null>(null)
+    const aspect = computedAspect ?? aspectRatio
     const width = 2.5 * scale
-    const height = width / aspectRatio
+    const height = width / aspect
     const frameDepth = 0.12
 
     const adjustedRotation: [number, number, number] = [
@@ -81,6 +84,14 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
     ]
 
     const texture = useTexture(imageUrl || '/textures/fallback.jpg')
+
+    useEffect(() => {
+      const img: any = texture.image as any
+      if (!img || !img.width || !img.height) return
+      const ratio = img.width / img.height
+      const clamped = Math.min(1.6, Math.max(0.7, ratio))
+      setComputedAspect((prev) => (prev === clamped ? prev : clamped))
+    }, [texture])
 
     const [springs, api] = useSpring(() => ({
       emissiveIntensity: 0,

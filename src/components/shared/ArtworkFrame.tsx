@@ -4,6 +4,7 @@ import React, {
   useRef,
   useState,
   useMemo,
+  useEffect,
   forwardRef,
   useImperativeHandle,
 } from 'react';
@@ -88,8 +89,10 @@ const ArtworkFrame = forwardRef<ArtworkFrameHandle, ArtworkFrameProps>(
       return group;
     }, [title, author]);
 
+    const [computedAspect, setComputedAspect] = useState<number | null>(null);
+    const aspect = computedAspect ?? aspectRatio;
     const width = 2.5 * scale;
-    const height = width / aspectRatio;
+    const height = width / aspect;
     const adjustedRotation: [number, number, number] = [
       rotation[0],
       rotation[1] + Math.PI,
@@ -98,6 +101,14 @@ const ArtworkFrame = forwardRef<ArtworkFrameHandle, ArtworkFrameProps>(
 
     // フォールバック画像対応（public/textures/fallback.jpg を用意推奨）
     const texture = useTexture(imageUrl || '/textures/fallback.jpg');
+
+    useEffect(() => {
+      const img: any = texture.image as any;
+      if (!img || !img.width || !img.height) return;
+      const ratio = img.width / img.height;
+      const clamped = Math.min(1.6, Math.max(0.7, ratio));
+      setComputedAspect((prev) => (prev === clamped ? prev : clamped));
+    }, [texture]);
 
     const [springs, api] = useSpring(() => ({
       emissiveIntensity: 0,
