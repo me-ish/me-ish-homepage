@@ -1,9 +1,8 @@
 // app\admin\api\entries\[id]\reject\route.ts
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { isAdminEmail } from '@/lib/isAdmin';
 import { EntryReject } from '@/lib/schemas/entry';
+import crypto from 'crypto';
 
 function baseUrl() {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL!;
@@ -11,11 +10,25 @@ function baseUrl() {
   return 'http://localhost:3000';
 }
 
-async function requireAdmin() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email)) return null;
-  return user;
+function requireAdmin(req: Request) {
+  const expected = process.env.ADMIN_API_TOKEN;
+  if (!expected) return { ok: false as const, status: 500, error: 'missing_ADMIN_API_TOKEN' };
+
+  const header =
+    req.headers.get('x-meish-admin-token') ??
+    (req.headers.get('authorization')?.startsWith('Bearer ')
+      ? req.headers.get('authorization')!.slice('Bearer '.length)
+      : null);
+
+  if (!header) return { ok: false as const, status: 401, error: 'missing_admin_token' };
+
+  const a = Buffer.from(String(header));
+  const b = Buffer.from(String(expected));
+  if (a.length !== b.length) return { ok: false as const, status: 403, error: 'invalid_admin_token' };
+  const ok = crypto.timingSafeEqual(a, b);
+  if (!ok) return { ok: false as const, status: 403, error: 'invalid_admin_token' };
+
+  return { ok: true as const };
 }
 
 export const runtime = 'nodejs';
@@ -23,8 +36,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const user = await requireAdmin();
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  const adminAuth = requireAdmin(req);
+  if (!adminAuth.ok) return NextResponse.json({ error: adminAuth.error }, { status: adminAuth.status });
 
   const body = await req.json().catch(() => ({}));
   const parsed = EntryReject.safeParse(body);
