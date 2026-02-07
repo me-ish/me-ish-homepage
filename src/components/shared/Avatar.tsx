@@ -1,44 +1,28 @@
 'use client';
 
-import { forwardRef, useRef, useImperativeHandle, useEffect } from 'react';
+import { forwardRef, useRef, useImperativeHandle } from 'react';
 import { useFrame, type ThreeElements } from '@react-three/fiber';
 import { AdditiveBlending } from 'three';
 import { Trail, useTexture } from '@react-three/drei';
-import { useSpring } from '@react-spring/three';
 import * as THREE from 'three';
+
+const BASE_Y = 2.5;
 
 type AvatarProps = ThreeElements['group'];
 
 const Avatar = forwardRef<THREE.Group, AvatarProps>((props, ref) => {
   const groupRef = useRef<THREE.Group>(null);
-  const glowMatRef = useRef<THREE.MeshStandardMaterial>(null);
 
   // 外部refを内部refに接続（forwardRefで親のrefに接続可能にする）
   useImperativeHandle(ref, () => groupRef.current!, []);
 
   const tilesMap = useTexture('/textures/Tiles044_BaseColor.jpg');
 
-  const { scale, opacity, emissiveIntensity } = useSpring({
-    scale: [0.1, 0.1, 0.1],
-    opacity: 1,
-    emissiveIntensity: 1,
-    config: { tension: 0, friction: 0 },
-  });
-
-  useEffect(() => {
-    if (groupRef.current) {
-      groupRef.current.position.set(0, 2.5, 0);
-    }
-  }, []);
-
   useFrame((state) => {
     const group = groupRef.current;
     if (!group) return;
-    group.position.y += Math.sin(state.clock.elapsedTime * 2) * 0.002;
-    const [sx, sy, sz] = scale.get();
-    group.scale.set(sx, sy, sz);
-    const mat = glowMatRef.current;
-    if (mat) mat.emissiveIntensity = emissiveIntensity.get();
+    // ドリフトしないよう、ベース位置 + sin オフセットで絶対指定
+    group.position.y = BASE_Y + Math.sin(state.clock.elapsedTime * 2) * 0.002;
   });
 
   return (
@@ -50,17 +34,18 @@ const Avatar = forwardRef<THREE.Group, AvatarProps>((props, ref) => {
     >
       <group
         ref={groupRef}
+        position={[0, BASE_Y, 0]}
+        scale={[0.1, 0.1, 0.1]}
         {...props}
       >
         {/* 内核：発光球（16x16セグメントで十分） */}
         <mesh>
           <sphereGeometry args={[0.5, 16, 16]} />
-          {/* @ts-ignore: react-spring 互換対策 */}
           <meshStandardMaterial
-            ref={glowMatRef}
             map={tilesMap}
             color="#ffffff"
             emissive="#00ffff"
+            emissiveIntensity={1}
             toneMapped={false}
             transparent
             attach="material"
