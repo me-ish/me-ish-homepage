@@ -14,10 +14,10 @@ const FEE_RATE = 0.10 as const;
 
 const displayPlanLabels: Record<string, string> = {
   free: 'Free（¥0 / 表示保証なし・ローテーション枠）',
-  mini: 'Mini（¥400 / 月1回保証）',
-  light: 'Light（¥1,000 / 月3回保証）',
-  standard: 'Standard（¥1,400 / 月7回保証）',
-  premium: 'Premium（¥2,800 / 月15回保証）',
+  mini: 'Mini（¥400 / 月4回保証）',
+  light: 'Light（¥800 / 月9回保証）',
+  standard: 'Standard（¥1,200 / 月14回保証）',
+  premium: 'Premium（¥2,400 / 月30回保証）',
 };
 
 const galleryTypeLabel: Record<string, string> = {

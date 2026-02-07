@@ -339,10 +339,10 @@ const Step3_SalesAndAgreement = () => {
             )}
             <div className="mt-3 flex flex-col gap-3">
               {renderPlanLabel('free', 'Free（¥0 / 表示保証なし・ローテーション枠）')}
-              {renderPlanLabel('mini', 'Mini（¥400 / 月1回保証）')}
-              {renderPlanLabel('light', 'Light（¥1,000 / 月3回保証）')}
-              {renderPlanLabel('standard', 'Standard（¥1,400 / 月7回保証）')}
-              {renderPlanLabel('premium', 'Premium（¥2,800/ 月15回保証）')}
+              {renderPlanLabel('mini', 'Mini（¥400 / 月4回保証）')}
+              {renderPlanLabel('light', 'Light（¥800 / 月9回保証）')}
+              {renderPlanLabel('standard', 'Standard（¥1,200 / 月14回保証）')}
+              {renderPlanLabel('premium', 'Premium（¥2,400 / 月30回保証）')}
             </div>
             <small className="text-sm text-blue-600 mt-3 block">
               現在、全体使用率は {((totalUsage / 960) * 100).toFixed(1)}% です。

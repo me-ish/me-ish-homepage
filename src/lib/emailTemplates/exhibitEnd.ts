@@ -14,10 +14,10 @@ export function generateExhibitEndEmail(name: string) {
 
         <ul>
           <li>Free（¥0 / 表示保証なし・ローテーション枠）</li>
-          <li>Mini（¥400 / 月1回保証）</li>
-          <li>Light（¥1,000 / 月3回保証）</li>
-          <li>Standard（¥2,000 / 月7回保証）</li>
-          <li>Premium（¥4,000 / 月15回保証）</li>
+          <li>Mini（¥400 / 月4回保証）</li>
+          <li>Light（¥800 / 月9回保証）</li>
+          <li>Standard（¥1,200 / 月14回保証）</li>
+          <li>Premium（¥2,400 / 月30回保証）</li>
         </ul>
 
         <p>以下のページよりお手続きください：</p>
@@ -26,6 +26,6 @@ export function generateExhibitEndEmail(name: string) {
         <p style="margin-top: 2em;">---<br/>me-ish運営事務局</p>
       </div>
     `,
-    text: `${name} 様\n\nご出展いただいた作品の展示期間が終了いたしました。\nこの度はme-ishへのご参加、誠にありがとうございました。\n\n----------------------------\n🎨 再展示・プラン延長のご案内\n\n再展示をご希望の方は、以下のプランからお選びいただけます：\n\n・Free（¥0 / 表示保証なし・ローテーション枠）\n・Mini（¥400 / 月1回保証）\n・Light（¥1,000 / 月3回保証）\n・Standard（¥2,000 / 月7回保証）\n・Premium（¥4,000 / 月15回保証）\n\n▶ 再出展・プラン延長はこちら:\nhttps://me-ish.art/renew\n\n---\nme-ish運営事務局`,
+    text: `${name} 様\n\nご出展いただいた作品の展示期間が終了いたしました。\nこの度はme-ishへのご参加、誠にありがとうございました。\n\n----------------------------\n🎨 再展示・プラン延長のご案内\n\n再展示をご希望の方は、以下のプランからお選びいただけます：\n\n・Free（¥0 / 表示保証なし・ローテーション枠）\n・Mini（¥400 / 月4回保証）\n・Light（¥800 / 月9回保証）\n・Standard（¥1,200 / 月14回保証）\n・Premium（¥2,400 / 月30回保証）\n\n▶ 再出展・プラン延長はこちら:\nhttps://me-ish.art/renew\n\n---\nme-ish運営事務局`,
   };
 }

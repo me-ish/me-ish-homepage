@@ -10,10 +10,10 @@ type EntryLite = { id: number; title: string | null };
 
 const plans = [
   { id: 'free',     name: 'Free',     price: 0,    desc: '表示保証なし・ローテーション枠' },
-  { id: 'mini',     name: 'Mini',     price: 400,  desc: '月1回保証' },
-  { id: 'light',    name: 'Light',    price: 1000, desc: '月3回保証' },
-  { id: 'standard', name: 'Standard', price: 1400, desc: '月7回保証' },
-  { id: 'premium',  name: 'Premium',  price: 2800, desc: '月15回保証' },
+  { id: 'mini',     name: 'Mini',     price: 400,  desc: '月4回保証' },
+  { id: 'light',    name: 'Light',    price: 800,  desc: '月9回保証' },
+  { id: 'standard', name: 'Standard', price: 1200, desc: '月14回保証' },
+  { id: 'premium',  name: 'Premium',  price: 2400, desc: '月30回保証' },
 ];
 
 export default function RenewPage() {
