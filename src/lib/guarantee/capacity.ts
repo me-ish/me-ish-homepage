@@ -63,6 +63,7 @@ export async function checkFloatGuaranteeCapacity(
         'display_start_at',
       ].join(',')
     )
+    .returns<CapacityRow[]>()
     .eq('display_ready', true)
     .eq('gallery_type', 'float');
 
@@ -71,7 +72,7 @@ export async function checkFloatGuaranteeCapacity(
   }
 
   let used = 0;
-  const rows = (data ?? []) as CapacityRow[];
+  const rows = data ?? [];
   for (const row of rows) {
     const end = row.guarantee_period_end ? new Date(row.guarantee_period_end) : null;
     if (!end || end.getTime() <= windowStart.getTime()) continue;
