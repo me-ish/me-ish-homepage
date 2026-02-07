@@ -61,5 +61,21 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     return NextResponse.json({ error: 'rpc error' }, { status: 500 });
   }
 
+  // いいね履歴はログインユーザーのみ保存（未ログインでもlikes数は更新する）
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    const userId = auth?.user?.id;
+    if (userId) {
+      const { error: likeErr } = await supabase
+        .from('likes')
+        .upsert({ user_id: userId, entry_id: id }, { onConflict: 'user_id,entry_id' });
+      if (likeErr) {
+        console.error('[likes][POST] upsert likes failed:', likeErr.message);
+      }
+    }
+  } catch (e: any) {
+    console.error('[likes][POST] getUser failed:', e?.message || e);
+  }
+
   return NextResponse.json({ likes: typeof rpc === 'number' ? rpc : null });
 }
