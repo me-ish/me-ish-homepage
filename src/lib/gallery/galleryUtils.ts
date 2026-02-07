@@ -18,6 +18,7 @@ export const GALLERY_SELECT_COLUMNS = `
   artist_name,
   image_url,
   file_name,
+  likes,
   price,
   edition_total,
   edition_sold,
