@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { isAdminEmail } from '@/lib/isAdmin';
+import { checkFloatGuaranteeCapacity, getGuaranteeTotalForPlan } from '@/lib/guarantee/capacity';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -51,7 +52,7 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
   const admin = supabaseAdmin();
   const { data: entry, error } = await admin
     .from('entries')
-    .select('id,title,email,is_for_sale,display_plan,plan_payment_status,plan_payment_amount_yen')
+    .select('id,title,email,is_for_sale,display_plan,plan_payment_status,plan_payment_amount_yen,gallery_type')
     .eq('id', id)
     .maybeSingle();
 
@@ -67,6 +68,27 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
 
   if (String(entry.plan_payment_status ?? '').toLowerCase() === 'paid') {
     return NextResponse.json({ ok: true, alreadyPaid: true }, { status: 200 });
+  }
+
+  const galleryType = String(entry.gallery_type ?? '').toLowerCase();
+  if (galleryType === 'float') {
+    const additional = getGuaranteeTotalForPlan(plan);
+    if (additional > 0) {
+      const capacity = await checkFloatGuaranteeCapacity(additional);
+      if (!capacity.ok) {
+        return NextResponse.json(
+          {
+            error: 'capacity_full',
+            capacity: capacity.capacity,
+            used: capacity.used,
+            remaining: capacity.remaining,
+            windowStart: capacity.windowStart,
+            windowEnd: capacity.windowEnd,
+          },
+          { status: 409 }
+        );
+      }
+    }
   }
 
   const amountYen = Number(entry.plan_payment_amount_yen ?? PLAN_PRICES[plan] ?? 0);

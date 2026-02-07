@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/isAdmin";
 import path from "node:path";
+import { checkFloatGuaranteeCapacity, getGuaranteeTotalForPlan } from "@/lib/guarantee/capacity";
 
 export const revalidate = 0;
 
@@ -41,6 +42,10 @@ export async function POST() {
   if (rows.length === 0) {
     return NextResponse.json({ ok: true, updated: 0, skipped: 0, skippedReasons: {} });
   }
+
+  const now = new Date();
+  const capacityBase = await checkFloatGuaranteeCapacity(0, now);
+  let capacityReserved = 0;
 
   // 画像処理ジョブのステータスを一括取得
   const entryIds = rows.map((r) => (r as any).id as number);
@@ -107,7 +112,6 @@ export async function POST() {
     // Note: DO_EXISTENCE_CHECK は廃止。processing_job.status で判断する。
 
     // 展示期間を設定: display_ready=true のタイミングで開始
-    const now = new Date();
     const galleryType = String((e as any).gallery_type ?? "").toLowerCase();
     const isWhiteGallery = galleryType === "white";
 
@@ -120,17 +124,18 @@ export async function POST() {
     }
 
     const plan = String((e as any).display_plan ?? "free").toLowerCase();
-    const guaranteeMap: Record<string, number> = {
-      mini: 4,
-      light: 9,
-      standard: 14,
-      premium: 30,
-      free: 0,
-    };
-    const guaranteeTotal = guaranteeMap[plan] ?? 0;
+    const guaranteeTotal = getGuaranteeTotalForPlan(plan);
     const guaranteeRemaining = guaranteeTotal > 0 ? guaranteeTotal : 0;
     const guaranteePeriodStart = guaranteeTotal > 0 ? now.toISOString() : null;
     const guaranteePeriodEnd = guaranteeTotal > 0 ? displayEndAt : null;
+
+    if (!isWhiteGallery && guaranteeTotal > 0) {
+      if (capacityBase.remaining - capacityReserved < guaranteeTotal) {
+        countSkip("capacity_full");
+        continue;
+      }
+      capacityReserved += guaranteeTotal;
+    }
 
     const { error: uErr } = await admin
       .from("entries")
