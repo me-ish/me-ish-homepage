@@ -165,9 +165,11 @@ export default function WorkDetailPage() {
                     src={imageUrl}
                     alt={entry.title || 'Artwork'}
                     fill
-                    className="object-contain"
+                    className="object-contain pointer-events-none select-none"
                     sizes="(max-width: 768px) 100vw, 50vw"
                     priority
+                    draggable={false}
+                    onContextMenu={(e) => e.preventDefault()}
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full text-gray-400">

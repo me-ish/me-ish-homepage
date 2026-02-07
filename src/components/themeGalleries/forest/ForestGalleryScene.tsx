@@ -70,7 +70,7 @@ export default function ForestGalleryScene({
   className,
 }: ForestGallerySceneProps): React.JSX.Element {
   return (
-    <div className={className} style={{ width: '100%', height: '100%' }}>
+    <div className={className} style={{ width: '100%', height: '100%' }} onContextMenu={(e) => e.preventDefault()}>
       <Canvas
         camera={{
           position: CAMERA_INITIAL_POSITION,

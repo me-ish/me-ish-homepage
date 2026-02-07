@@ -108,11 +108,13 @@ export function ArtworkCard({
               src={imageUrl}
               alt={entry.title || 'Artwork'}
               fill
-              className="object-cover transition-transform group-hover:scale-105"
+              className="object-cover transition-transform group-hover:scale-105 pointer-events-none select-none"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               quality={75}
               loading="lazy"
+              draggable={false}
               onLoadingComplete={handleImageLoad}
+              onContextMenu={(e) => e.preventDefault()}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400">

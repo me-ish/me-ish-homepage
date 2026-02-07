@@ -175,6 +175,13 @@ const handlePurchase = async () => {
                 isLimited={isLimited}
                 isUnlimited={isUnlimited}
               />
+              <div
+                aria-hidden
+                className="absolute inset-0 z-[5] rounded-xl"
+                onContextMenu={(e) => e.preventDefault()}
+                onDragStart={(e) => e.preventDefault()}
+                style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}
+              />
               <img
                 src={imageUrl}
                 alt={title}
