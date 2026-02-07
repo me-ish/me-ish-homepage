@@ -731,7 +731,7 @@ const DesktopHome = () => {
                 size="lg"
                 className="rounded-full px-10 py-6 h-auto text-lg font-semibold shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 bg-gradient-to-r from-[#00a1e9] to-[#0080c0] hover:from-[#0090d4] hover:to-[#0070a8]"
               >
-                <Link href="/white">
+                <Link href="/float">
                   ギャラリーを見る <ArrowRight className="h-5 w-5 ml-1" />
                 </Link>
               </Button>

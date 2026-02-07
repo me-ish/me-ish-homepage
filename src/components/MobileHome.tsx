@@ -508,7 +508,7 @@ const MobileHome = () => {
                 size="lg"
                 className="w-full rounded-full py-6 h-auto text-base font-semibold shadow-lg active:scale-[0.98] transition-transform bg-gradient-to-r from-[#00a1e9] to-[#0080c0]"
               >
-                <Link href="/white">
+                <Link href="/float">
                   ギャラリーを見る <ArrowRight className="h-4 w-4 ml-1" />
                 </Link>
               </Button>

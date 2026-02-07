@@ -8,6 +8,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Globe, Instagram } from 'lucide-react';
+import { FaXTwitter } from 'react-icons/fa6';
 import {
   resolveImageUrl,
   formatPrice,
@@ -264,18 +266,40 @@ export default function WorkDetailPage() {
                 <h2 className="text-sm font-medium text-gray-500 mb-2">
                   アーティストリンク
                 </h2>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(snsLinks).map(([platform, url]) => (
+                <div className="flex flex-wrap gap-4">
+                  {snsLinks.homepage && (
                     <a
-                      key={platform}
-                      href={url}
+                      href={snsLinks.homepage}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-[#00a1e9] hover:underline"
+                      className="inline-flex items-center gap-2 text-sm text-[#00a1e9] hover:underline"
                     >
-                      {platform}
+                      <Globe size={16} />
+                      ホームページ
                     </a>
-                  ))}
+                  )}
+                  {snsLinks.twitter && (
+                    <a
+                      href={snsLinks.twitter}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm text-[#00a1e9] hover:underline"
+                    >
+                      <FaXTwitter />
+                      X (Twitter)
+                    </a>
+                  )}
+                  {snsLinks.instagram && (
+                    <a
+                      href={snsLinks.instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm text-[#00a1e9] hover:underline"
+                    >
+                      <Instagram size={16} />
+                      Instagram
+                    </a>
+                  )}
                 </div>
               </div>
             )}
