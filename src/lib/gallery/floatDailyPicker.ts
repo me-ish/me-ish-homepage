@@ -6,7 +6,7 @@
  */
 
 /** 展示枠数（必要に応じて変更可） */
-export const FLOAT_DAILY_SLOT_COUNT = 24;
+export const FLOAT_DAILY_SLOT_COUNT = 32;
 
 /**
  * 日付文字列からシード値を生成

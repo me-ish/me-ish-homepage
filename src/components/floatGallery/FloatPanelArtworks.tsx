@@ -1,18 +1,54 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import { useTexture } from '@react-three/drei';
+import { supabase } from '@/lib/supabaseClient';
+import LazyArtworkFrame from '../shared/LazyArtworkFrame';
+import {
+  pickDailyExhibits,
+  getTodayDateString,
+  isValidDateString,
+  FLOAT_DAILY_SLOT_COUNT,
+} from '@/lib/gallery';
 
 type Props = {
   avatarRef: React.RefObject<THREE.Group>;
   artworkRefs: React.MutableRefObject<(THREE.Group | null)[]>;
+  /** /float?date=YYYY-MM-DD 用（未指定なら今日） */
+  dateStr?: string;
 };
 
 /* ArtworkFrame(scale=1.8, aspect=1.2) と同じ見た目サイズ */
 const SCALE = 4;
 const ASPECT = 1.2;
 const LIGHT_HEIGHT = 2.2;
+
+const SELECT_COLUMNS = `
+  id, title, artist_name, image_url, description,
+  is_for_sale, price, sns_links, created_at,
+  is_sold, edition_mode, edition_total, edition_sold,
+  confirmed, display_ready, display_end_at
+`.replace(/\s+/g, '');
+
+const QUERY_LIMIT = 200;
+
+type Entry = {
+  id: number;
+  title: string;
+  artist_name: string;
+  image_url: string;
+  description: string | null;
+  is_for_sale: boolean;
+  price: number | null;
+  sns_links: string | null;
+  created_at: string | null;
+  is_sold: boolean;
+  edition_mode: 'limited' | 'unlimited' | null;
+  edition_total: number | null;
+  edition_sold: number | null;
+  display_end_at: string | null;
+};
 
 function ComingSoonPanel({
   position,
@@ -74,11 +110,45 @@ function ComingSoonPanel({
 export default function FloatPanelArtworks({
   avatarRef,
   artworkRefs,
+  dateStr,
 }: Props): JSX.Element {
   const panelRadius = 16;
   const panelY = 3.5;
   const artworkGap = 4.5;
   const distanceFromPanel = 0.4;
+
+  const [allEntries, setAllEntries] = useState<Entry[]>([]);
+
+  const resolvedDate = useMemo(() => {
+    const raw = String(dateStr ?? '');
+    return isValidDateString(raw) ? raw : getTodayDateString();
+  }, [dateStr]);
+
+  useEffect(() => {
+    const fetchApproved = async () => {
+      const { data, error } = await supabase
+        .from('entries')
+        .select(SELECT_COLUMNS)
+        .eq('confirmed', true)
+        .eq('display_ready', true)
+        .eq('gallery_type', 'float')
+        .order('created_at', { ascending: false })
+        .limit(QUERY_LIMIT);
+
+      if (!error && data) setAllEntries(data as unknown as Entry[]);
+    };
+    fetchApproved();
+  }, []);
+
+  const entries = useMemo(() => {
+    const now = Date.now();
+    const displayable = allEntries.filter((e) => {
+      if (!e.display_end_at) return true;
+      return new Date(e.display_end_at).getTime() > now;
+    });
+    const stable = [...displayable].sort((a, b) => a.id - b.id);
+    return pickDailyExhibits(stable, resolvedDate, FLOAT_DAILY_SLOT_COUNT) as Entry[];
+  }, [allEntries, resolvedDate]);
 
   const sides = [
     { deg: 45, rotationY: Math.PI / 4 + Math.PI, frontScale: -2 },
@@ -114,11 +184,13 @@ export default function FloatPanelArtworks({
 
   // artworkRefs のオフセット：外壁が 0-23 を使用するため、パネルは 24 から開始
   const PANEL_REFS_OFFSET = 24;
+  const panelEntries = entries.slice(PANEL_REFS_OFFSET, PANEL_REFS_OFFSET + artworks.length);
 
   return (
     <>
       {artworks.map((art, i) => {
         const id = `slot-panel-${i}`;
+        const entry = panelEntries[i];
         return (
           <group
             key={id}
@@ -126,7 +198,30 @@ export default function FloatPanelArtworks({
               artworkRefs.current[PANEL_REFS_OFFSET + i] = el;
             }}
           >
-            <ComingSoonPanel position={art.position} rotation={art.rotation} />
+            {entry ? (
+              <LazyArtworkFrame
+                id={entry.id.toString()}
+                position={art.position}
+                rotation={art.rotation}
+                aspectRatio={ASPECT}
+                scale={1.8}
+                title={entry.title}
+                author={entry.artist_name}
+                imageUrl={entry.image_url}
+                avatarRef={avatarRef}
+                description={entry.description ?? ''}
+                is_for_sale={entry.is_for_sale}
+                price={entry.price}
+                sns_links={entry.sns_links ?? '{}'}
+                created_at={entry.created_at}
+                is_sold={entry.is_sold}
+                edition_mode={entry.edition_mode}
+                edition_total={entry.edition_total}
+                edition_sold={entry.edition_sold ?? 0}
+              />
+            ) : (
+              <ComingSoonPanel position={art.position} rotation={art.rotation} />
+            )}
             {/* pointLight 削除: 共有 SpotLight に統合（FloatGallery.tsx） */}
           </group>
         );

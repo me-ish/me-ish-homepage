@@ -93,7 +93,7 @@ export default function FloatGallery({ dateStr }: Props): React.JSX.Element {
         />
 
         {/* 中央パネル（別ロジックならそのまま） */}
-        <FloatPanelArtworks avatarRef={avatarRef} artworkRefs={artworkRefs} />
+        <FloatPanelArtworks avatarRef={avatarRef} artworkRefs={artworkRefs} dateStr={dateStr} />
 
         <Avatar ref={avatarRef} />
         <FloatAvatarController avatarRef={avatarRef} joystickRef={joystickRef} />

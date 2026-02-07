@@ -16,7 +16,7 @@ import { filterFloatEntries, type EntryRow, GALLERY_SELECT_COLUMNS } from '@/lib
 import { fillWithPlaceholders } from '@/lib/gallery/placeholder';
 
 /** 2Dギャラリーの表示枠数 */
-const DISPLAY_SLOTS = 12;
+const DISPLAY_SLOTS = 32;
 
 /** クエリ上限（日替わりシャッフルの候補数） */
 const QUERY_LIMIT = 200;
