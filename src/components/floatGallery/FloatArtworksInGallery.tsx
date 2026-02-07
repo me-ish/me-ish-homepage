@@ -23,7 +23,7 @@ const SELECT_COLUMNS = `
   id, title, artist_name, image_url, description,
   is_for_sale, price, sns_links, created_at,
   is_sold, edition_mode, edition_total, edition_sold,
-  confirmed, display_ready
+  confirmed, display_ready, display_end_at
 `.replace(/\s+/g, '');
 
 /** クエリ上限 */
@@ -52,6 +52,7 @@ type Entry = {
   edition_mode: 'limited' | 'unlimited' | null;
   edition_total: number | null;
   edition_sold: number | null;
+  display_end_at: string | null;
 };
 
 function ComingSoonPanel({
@@ -164,7 +165,12 @@ export default function FloatArtworksInGallery({
   }, []);
 
   const entries = useMemo(() => {
-    const stable = [...allEntries].sort((a, b) => a.id - b.id);
+    const now = Date.now();
+    const displayable = allEntries.filter((e) => {
+      if (!e.display_end_at) return true;
+      return new Date(e.display_end_at).getTime() > now;
+    });
+    const stable = [...displayable].sort((a, b) => a.id - b.id);
     return pickDailyExhibits(stable, resolvedDate, FLOAT_DAILY_SLOT_COUNT) as Entry[];
   }, [allEntries, resolvedDate]);
 

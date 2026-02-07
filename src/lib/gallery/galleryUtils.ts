@@ -117,5 +117,10 @@ export function filterWhiteEntries(entries: EntryRow[]): EntryRow[] {
  * Float Gallery 用: display可能なエントリをフィルタ
  */
 export function filterFloatEntries(entries: EntryRow[]): EntryRow[] {
-  return entries.filter((e) => isDisplayable(e));
+  const now = Date.now();
+  return entries.filter((e) => {
+    if (!isDisplayable(e)) return false;
+    if (!e.display_end_at) return true;
+    return new Date(e.display_end_at).getTime() > now;
+  });
 }
