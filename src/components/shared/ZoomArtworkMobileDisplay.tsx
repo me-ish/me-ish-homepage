@@ -140,13 +140,13 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
         </svg>
       </button>
 
-      <div onClick={(e) => e.stopPropagation()} className="flex flex-col items-center space-y-6">
-        {/* 画像枠（左上に Edition/非売品バッジを重ねる） */}
-        <div className="relative w-full max-w-[90vw] bg-white rounded-xl shadow-lg p-3 select-none">
-          {/* 左上バッジ */}
-          <div className="absolute left-3 top-3 z-10">
-            <EditionBadges isForSale={is_for_sale} editionTotal={editionTotal} />
-          </div>
+        <div onClick={(e) => e.stopPropagation()} className="flex flex-col items-center space-y-6">
+          {/* 画像枠（左上に Edition/非売品バッジを重ねる） */}
+          <div className="relative inline-block max-w-[90vw] max-h-[70vh] bg-white rounded-xl shadow-lg p-3 select-none">
+            {/* 左上バッジ */}
+            <div className="absolute left-3 top-3 z-10">
+              <EditionBadges isForSale={is_for_sale} editionTotal={editionTotal} />
+            </div>
 
           <div
             aria-hidden
@@ -160,7 +160,7 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
             src={imageUrl}
             alt={title}
             draggable={false}
-            className="w-full h-auto object-contain rounded-xl pointer-events-none select-none"
+            className="max-w-[90vw] max-h-[70vh] w-auto h-auto object-contain rounded-xl pointer-events-none select-none"
             style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}
           />
         </div>

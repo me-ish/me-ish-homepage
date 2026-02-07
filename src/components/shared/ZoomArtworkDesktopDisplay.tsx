@@ -166,22 +166,22 @@ const handlePurchase = async () => {
         className="flex items-start gap-8 p-6 rounded-2xl bg-white/5 border border-white/10 shadow-2xl max-w-[84vw] pb-24" // ← 下部バーの高さぶん余白
       >
         {/* 左：画像 */}
-        <div className="flex flex-col">
-          {/* 画像（サイズ控えめ） */}
-          <div className="relative max-w-[32vw] max-h-[68vh]">
-            {/* 左上バッジ（限定/無制限/非売品） */}
-            <EditionBadges
-              isForSale={is_for_sale}
-              isLimited={isLimited}
-              isUnlimited={isUnlimited}
-            />
-            <img
-              src={imageUrl}
-              alt={title}
-              className="w-full h-full object-contain rounded-xl shadow-lg pointer-events-none select-none"
-              draggable={false}
-            />
-          </div>
+          <div className="flex flex-col">
+            {/* 画像（サイズ控えめ） */}
+            <div className="relative inline-block max-w-[32vw] max-h-[68vh]">
+              {/* 左上バッジ（限定/無制限/非売品） */}
+              <EditionBadges
+                isForSale={is_for_sale}
+                isLimited={isLimited}
+                isUnlimited={isUnlimited}
+              />
+              <img
+                src={imageUrl}
+                alt={title}
+                className="max-w-[32vw] max-h-[68vh] w-auto h-auto object-contain rounded-xl shadow-lg pointer-events-none select-none"
+                draggable={false}
+              />
+            </div>
 
           {/* 非売品の説明（販売UIは下部バーに集約） */}
           {!is_for_sale && (
