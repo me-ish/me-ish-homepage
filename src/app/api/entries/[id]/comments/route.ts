@@ -12,6 +12,47 @@ const MODERATION_MODEL = "omni-moderation-latest";
 
 let openaiClient: OpenAI | null = null;
 
+const CATEGORY_SCORE_THRESHOLDS: Record<string, number> = {
+  harassment: 0.25,
+  "harassment/threatening": 0.1,
+  hate: 0.2,
+  "hate/threatening": 0.1,
+  violence: 0.2,
+  "violence/graphic": 0.1,
+};
+
+const NG_WORDS = [
+  "下手",
+  "きもい",
+  "キモい",
+  "キモ",
+  "くそ",
+  "クソ",
+  "くず",
+  "クズ",
+  "ゴミ",
+  "ばか",
+  "バカ",
+  "あほ",
+  "アホ",
+  "死ね",
+  "しね",
+  "消えろ",
+  "消えて",
+] as const;
+
+function normalizeBody(raw: string) {
+  return raw
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .trim();
+}
+
+function containsNgWord(body: string) {
+  const v = normalizeBody(body);
+  return NG_WORDS.some((word) => v.includes(word.toLowerCase()));
+}
+
 function getOpenAIClient() {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
@@ -22,6 +63,8 @@ function getOpenAIClient() {
 }
 
 async function isCommentAllowed(body: string): Promise<boolean> {
+  if (containsNgWord(body)) return false;
+
   const client = getOpenAIClient();
   const res = await client.moderations.create({
     model: MODERATION_MODEL,
@@ -31,7 +74,15 @@ async function isCommentAllowed(body: string): Promise<boolean> {
   if (!first) {
     throw new Error("Empty moderation result");
   }
-  return !first.flagged;
+
+  if (first.flagged) return false;
+
+  const scores = (first as any).category_scores || {};
+  const exceeded = Object.entries(CATEGORY_SCORE_THRESHOLDS).some(
+    ([key, threshold]) => typeof scores[key] === "number" && scores[key] >= threshold
+  );
+
+  return !exceeded;
 }
 
 // entry_commentsテーブルの型（マイグレーション適用後に自動生成される型に置き換え可能）
