@@ -670,13 +670,20 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
             </div>
 
             {/* アクション */}
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex items-center gap-3 pt-2">
               <Link
                 href={`/works/${entry.id}`}
                 className="inline-flex items-center gap-1 text-sm text-[#00a1e9] hover:underline"
               >
                 <ExternalLink className="h-4 w-4" />
                 作品ページを見る
+              </Link>
+              <Link
+                href={`/works/${entry.id}#comments`}
+                className="inline-flex items-center gap-1 text-sm text-[#00a1e9] hover:underline"
+              >
+                <LinkIcon className="h-4 w-4" />
+                コメントを見る
               </Link>
             </div>
           </div>

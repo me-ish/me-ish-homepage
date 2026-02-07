@@ -315,7 +315,7 @@ export default function WorkDetailPage() {
         </div>
 
         {/* Comment Section */}
-        <div className="mt-8">
+        <div id="comments" className="mt-8 scroll-mt-24">
           <CommentSection
             entryId={Number(id)}
             entryOwnerId={entry.user_id ?? undefined}
