@@ -119,6 +119,19 @@ export async function POST() {
       displayEndAt = endDate.toISOString();
     }
 
+    const plan = String((e as any).display_plan ?? "free").toLowerCase();
+    const guaranteeMap: Record<string, number> = {
+      mini: 4,
+      light: 9,
+      standard: 14,
+      premium: 30,
+      free: 0,
+    };
+    const guaranteeTotal = guaranteeMap[plan] ?? 0;
+    const guaranteeRemaining = guaranteeTotal > 0 ? guaranteeTotal : 0;
+    const guaranteePeriodStart = guaranteeTotal > 0 ? now.toISOString() : null;
+    const guaranteePeriodEnd = guaranteeTotal > 0 ? displayEndAt : null;
+
     const { error: uErr } = await admin
       .from("entries")
       .update({
@@ -126,6 +139,10 @@ export async function POST() {
         display_ready: true,
         display_start_at: now.toISOString(),
         display_end_at: displayEndAt,
+        guarantee_total: guaranteeTotal,
+        guarantee_remaining: guaranteeRemaining,
+        guarantee_period_start: guaranteePeriodStart,
+        guarantee_period_end: guaranteePeriodEnd,
       })
       .eq("id", (e as any).id);
 

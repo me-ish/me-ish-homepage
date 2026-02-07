@@ -409,6 +409,11 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
         entry.display_end_at ? formatShortDate(entry.display_end_at) : '無期限'
       }`
     : '—';
+  const guaranteeTotal = entry.guarantee_total ?? 0;
+  const guaranteeRemaining = entry.guarantee_remaining ?? 0;
+  const guaranteeEndLabel = entry.guarantee_period_end
+    ? formatShortDate(entry.guarantee_period_end)
+    : '—';
 
   const hasError = statusInfo.status === 'failed';
   const isRejected = statusInfo.status === 'rejected';
@@ -615,6 +620,15 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
                 <p className="text-sm font-medium text-gray-900">{displayPeriod}</p>
               </div>
 
+              {guaranteeTotal > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-500">表示保証</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {guaranteeRemaining}/{guaranteeTotal}
+                    <span className="text-gray-500 ml-1">（期限: {guaranteeEndLabel}）</span>
+                  </p>
+                </div>
+              )}
               {/* 応募日 */}
               <div className="space-y-1">
                 <p className="text-xs text-gray-500">応募日</p>

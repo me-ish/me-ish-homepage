@@ -70,6 +70,9 @@ type Entry = {
   display_ready?: boolean | null;
   display_start_at?: string | null;
   display_end_at?: string | null;
+  guarantee_total?: number | null;
+  guarantee_remaining?: number | null;
+  guarantee_period_end?: string | null;
   likes?: number;
   edition_total?: number | null;
   edition_sold?: number | null;
@@ -256,7 +259,7 @@ export default function MyPageClient() {
         const { data: es, error: entriesErr } = await supabase
           .from('entries')
           .select(
-            'id, confirmed, display_ready, display_start_at, display_end_at, likes, edition_total, edition_sold'
+            'id, confirmed, display_ready, display_start_at, display_end_at, guarantee_total, guarantee_remaining, guarantee_period_end, likes, edition_total, edition_sold'
           )
           .eq('user_id', uid)
           .eq('confirmed', true);

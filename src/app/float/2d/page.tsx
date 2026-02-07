@@ -39,6 +39,21 @@ export default function Float2DPage() {
       setLoading(true);
       setError(null);
 
+      const { data: slotData, error: slotErr } = await supabase
+        .from('entry_daily_slots')
+        .select(`slot_index, entry:entries (${GALLERY_SELECT_COLUMNS})`)
+        .eq('display_date', displayDate)
+        .order('slot_index', { ascending: true });
+
+      if (!slotErr && slotData && slotData.length > 0) {
+        const daily = slotData.map((d: any) => d.entry).filter(Boolean) as EntryRow[];
+        setActualCount(daily.length);
+        const filled = fillWithPlaceholders(daily, DISPLAY_SLOTS);
+        setEntries(filled);
+        setLoading(false);
+        return;
+      }
+
       const { data, error: fetchError } = await supabase
         .from('entries')
         .select(GALLERY_SELECT_COLUMNS)

@@ -318,6 +318,11 @@ export type Database = {
           created_at: string
           description: string
           display_end_at: string | null
+          guarantee_total: number | null
+          guarantee_remaining: number | null
+          guarantee_period_start: string | null
+          guarantee_period_end: string | null
+          guarantee_extended_count: number | null
           display_plan: string | null
           display_ready: boolean | null
           display_start_at: string | null
@@ -371,6 +376,11 @@ export type Database = {
           created_at?: string
           description: string
           display_end_at?: string | null
+          guarantee_total?: number | null
+          guarantee_remaining?: number | null
+          guarantee_period_start?: string | null
+          guarantee_period_end?: string | null
+          guarantee_extended_count?: number | null
           display_plan?: string | null
           display_ready?: boolean | null
           display_start_at?: string | null
@@ -424,6 +434,11 @@ export type Database = {
           created_at?: string
           description?: string
           display_end_at?: string | null
+          guarantee_total?: number | null
+          guarantee_remaining?: number | null
+          guarantee_period_start?: string | null
+          guarantee_period_end?: string | null
+          guarantee_extended_count?: number | null
           display_plan?: string | null
           display_ready?: boolean | null
           display_start_at?: string | null
@@ -465,6 +480,38 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      entry_daily_slots: {
+        Row: {
+          id: string
+          entry_id: number
+          display_date: string
+          slot_index: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          entry_id: number
+          display_date: string
+          slot_index: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          entry_id?: number
+          display_date?: string
+          slot_index?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entry_daily_slots_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "entries"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       entry_processing_jobs: {
         Row: {
@@ -1013,6 +1060,11 @@ export type Database = {
           confirmed_at: string | null
           created_at: string | null
           display_end_at: string | null
+          guarantee_total: number | null
+          guarantee_remaining: number | null
+          guarantee_period_start: string | null
+          guarantee_period_end: string | null
+          guarantee_extended_count: number | null
           display_ready: boolean | null
           display_start_at: string | null
           entry_id: number | null
@@ -1130,6 +1182,11 @@ export type Database = {
           created_at: string | null
           description: string | null
           display_end_at: string | null
+          guarantee_total: number | null
+          guarantee_remaining: number | null
+          guarantee_period_start: string | null
+          guarantee_period_end: string | null
+          guarantee_extended_count: number | null
           display_ready: boolean | null
           display_start_at: string | null
           edition_remaining: number | null
@@ -1151,6 +1208,11 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           display_end_at?: string | null
+          guarantee_total?: number | null
+          guarantee_remaining?: number | null
+          guarantee_period_start?: string | null
+          guarantee_period_end?: string | null
+          guarantee_extended_count?: number | null
           display_ready?: boolean | null
           display_start_at?: string | null
           edition_remaining?: number | null
@@ -1172,6 +1234,11 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           display_end_at?: string | null
+          guarantee_total?: number | null
+          guarantee_remaining?: number | null
+          guarantee_period_start?: string | null
+          guarantee_period_end?: string | null
+          guarantee_extended_count?: number | null
           display_ready?: boolean | null
           display_start_at?: string | null
           edition_remaining?: number | null

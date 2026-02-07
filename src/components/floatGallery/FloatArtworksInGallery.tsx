@@ -130,6 +130,7 @@ export default function FloatArtworksInGallery({
   const start = -30;
 
   const [allEntries, setAllEntries] = useState<Entry[]>([]);
+  const [dailyEntries, setDailyEntries] = useState<Entry[]>([]);
 
   const resolvedDate = useMemo(() => {
     const raw = String(dateStr ?? '');
@@ -149,6 +150,36 @@ export default function FloatArtworksInGallery({
   });
 
   useEffect(() => {
+    const fetchDaily = async () => {
+      const { data, error } = await supabase
+        .from('entry_daily_slots')
+        .select(
+          `
+          slot_index,
+          entry:entries (
+            id, title, artist_name, image_url, description,
+            is_for_sale, price, sns_links, created_at,
+            is_sold, edition_mode, edition_total, edition_sold,
+            confirmed, display_ready, display_end_at
+          )
+        `
+        )
+        .eq('display_date', resolvedDate)
+        .order('slot_index', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        const entries = data.map((d: any) => d.entry).filter(Boolean) as Entry[];
+        setDailyEntries(entries);
+      } else {
+        setDailyEntries([]);
+      }
+    };
+    fetchDaily();
+  }, [resolvedDate]);
+
+  useEffect(() => {
+    if (dailyEntries.length > 0) return;
+
     const fetchApproved = async () => {
       const { data, error } = await supabase
         .from('entries')
@@ -162,9 +193,11 @@ export default function FloatArtworksInGallery({
       if (!error && data) setAllEntries(data as unknown as Entry[]);
     };
     fetchApproved();
-  }, []);
+  }, [dailyEntries.length]);
 
   const entries = useMemo(() => {
+    if (dailyEntries.length > 0) return dailyEntries;
+
     const now = Date.now();
     const displayable = allEntries.filter((e) => {
       if (!e.display_end_at) return true;
@@ -172,7 +205,7 @@ export default function FloatArtworksInGallery({
     });
     const stable = [...displayable].sort((a, b) => a.id - b.id);
     return pickDailyExhibits(stable, resolvedDate, FLOAT_DAILY_SLOT_COUNT) as Entry[];
-  }, [allEntries, resolvedDate]);
+  }, [dailyEntries, allEntries, resolvedDate]);
 
   const generatePositions = (startPos: number): number[] => {
     const left = Array.from({ length: 3 }, (_, i) => startPos + i * offset);

@@ -64,6 +64,9 @@ export type EntryWithStatus = {
   // 有料プラン関連
   display_plan?: string | null;
   plan_payment_status?: string | null;
+  guarantee_total?: number | null;
+  guarantee_remaining?: number | null;
+  guarantee_period_end?: string | null;
 };
 
 export type TemplateContent = {
