@@ -34,6 +34,8 @@ export default function FloatGallery({ dateStr }: Props): React.JSX.Element {
   const artworkRefs = useRef<(THREE.Group | null)[]>([]);
   const joystickRef = useRef({ x: 0, y: 0 });
   const isMobile = useIsMobile();
+  const coreSpherePos: [number, number, number] = [0, 5, 0];
+  const lightBasePos: [number, number, number] = [coreSpherePos[0], 0, coreSpherePos[2]];
 
   // モバイルでのスクロール・タッチ挙動を制御
   useEffect(() => {
@@ -74,8 +76,8 @@ export default function FloatGallery({ dateStr }: Props): React.JSX.Element {
       >
         <FloatOutsideWorld />
 
-        <CoreSphere avatarRef={avatarRef} />
-        <LightCircle />
+        <CoreSphere avatarRef={avatarRef} position={coreSpherePos} />
+        <LightCircle position={lightBasePos} />
 
         <DayLight />
         <GalleryLighting />

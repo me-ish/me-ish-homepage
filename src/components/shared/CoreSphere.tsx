@@ -13,9 +13,10 @@ import { useZoomArtwork } from './ZoomArtworkContext';
 
 interface CoreSphereProps {
   avatarRef: React.RefObject<THREE.Object3D>;
+  position?: [number, number, number];
 }
 
-const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
+const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef, position = [0, 5, 0] }) => {
   const plasticMap = useTexture('/textures/Plastic008_BaseColor.jpg');
   const tilesMap = useTexture('/textures/Tiles044_BaseColor.jpg');
 
@@ -59,7 +60,7 @@ const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
 
     const avatarPos = avatarRef?.current?.position;
     if (avatarPos && 'distanceTo' in avatarPos) {
-      const dist = avatarPos.distanceTo(new THREE.Vector3(0, 5, 0));
+      const dist = avatarPos.distanceTo(new THREE.Vector3(...position));
       setShowUI(dist < 6);
     }
   });
@@ -88,7 +89,7 @@ const CoreSphere: React.FC<CoreSphereProps> = ({ avatarRef }) => {
   };
 
   return (
-    <group position={[0, 5, 0]}>
+    <group position={position}>
       {showUI && !selected && !isArtworkZoomed && (
         <Html position={[1.2, 0, 0]} distanceFactor={10}>
           <animated.div

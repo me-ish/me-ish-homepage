@@ -9,12 +9,14 @@ type LightCircleProps = {
   radius?: number;
   height?: number;
   color?: string;
+  position?: [number, number, number];
 };
 
 export default function LightCircle({
   radius = 1.8,
   height = 0.8,
   color = '#aefaff',
+  position = [0, 0, 0],
 }: LightCircleProps) {
   const pillarRef = useRef<Mesh>(null);
   const blurRef = useRef<Mesh>(null);
@@ -33,10 +35,12 @@ export default function LightCircle({
     }
   });
 
+  const [x, y, z] = position;
+
   return (
     <>
       {/* 円柱本体 */}
-      <mesh ref={pillarRef} position={[0, height / 2, 0]}>
+      <mesh ref={pillarRef} position={[x, y + height / 2, z]}>
         <cylinderGeometry args={[radius, radius, height, 32, 1, true]} />
         <meshBasicMaterial
           color={color}

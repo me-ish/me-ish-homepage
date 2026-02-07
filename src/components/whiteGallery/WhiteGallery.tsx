@@ -22,6 +22,8 @@ export default function WhiteGallery(): JSX.Element {
   const isMobile = useIsMobile();
   const joystickRef = useRef({ x: 0, y: 0 });
   const [chatOpen, setChatOpen] = useState(false);
+  const coreSpherePos: [number, number, number] = [0, 5, 0];
+  const lightBasePos: [number, number, number] = [coreSpherePos[0], 0, coreSpherePos[2]];
 
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
@@ -61,8 +63,8 @@ export default function WhiteGallery(): JSX.Element {
         onPointerDown={(e) => e.currentTarget.focus()}
       >
         <Lightning />
-        <LightCircle />
-        <CoreSphere avatarRef={avatarRef} />
+        <LightCircle position={lightBasePos} />
+        <CoreSphere avatarRef={avatarRef} position={coreSpherePos} />
         <ArtworksInGallery avatarRef={avatarRef} />
         <Avatar ref={avatarRef} />
         <AvatarController avatarRef={avatarRef} joystickRef={joystickRef} />
