@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
     // user_id -> external_user_id のマップを作成（重複排除）
     const userToExternal = new Map<string, string>();
     for (const entry of entries ?? []) {
-      if (entry.external_user_id && !userToExternal.has(entry.user_id)) {
+      if (entry.user_id && entry.external_user_id && !userToExternal.has(entry.user_id)) {
         userToExternal.set(entry.user_id, entry.external_user_id);
       }
     }
