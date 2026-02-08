@@ -97,6 +97,10 @@ async function handleCron(req: NextRequest) {
 
   for (const entry of entries) {
     try {
+      if (!entry.user_id) {
+        results.push({ entryId: entry.id, success: false, error: 'No user_id' });
+        continue;
+      }
       const profile = profileMap.get(entry.user_id);
       const artistEmail = emailMap.get(entry.user_id);
 

@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   const { data: entry, error } = await supabaseAdmin()
     .from('entries')
     .select('id, title, price, edition_total, edition_sold')
-    .eq('id', entryId)
+    .eq('id', Number(entryId))
     .single();
 
   if (error || !entry) {

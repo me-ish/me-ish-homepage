@@ -207,7 +207,8 @@ async function handleAuraPurchase(
   const admin = supabaseAdmin();
 
   try {
-    const { data: rec, error: selErr } = await admin
+    // stripe_session_id はDBに存在するが generated types に未反映のため as any
+    const { data: rec, error: selErr } = await (admin as any)
       .from("aura_requests")
       .select("id, payment_status, stripe_session_id")
       .eq("id", requestId)
@@ -229,7 +230,7 @@ async function handleAuraPurchase(
       return NextResponse.json({ ok: true, received: true }, { status: 200 });
     }
 
-    const { error: updErr } = await admin
+    const { error: updErr } = await (admin as any)
       .from("aura_requests")
       .update({
         payment_status: "paid",
@@ -302,10 +303,10 @@ async function handleGalleryPurchase(
 
     // finalize_sale RPC（p_price を渡して fee/reward も DB 側で設定）
     const { data: rpcResult, error: rpcErr } = await admin.rpc("finalize_sale", {
-      p_entry_id: entryId, // stringでもbigintに解釈される（DB側がbigint）
+      p_entry_id: Number(entryId),
       p_quantity: quantity,
       p_session_id: session.id,
-      p_price: price,
+      p_price: price ?? 0,
     });
 
     if (rpcErr) {
@@ -359,7 +360,7 @@ async function handleGalleryPurchase(
         .from("sales")
         .upsert(
           {
-            entry_id: entryId,
+            entry_id: Number(entryId),
             stripe_session_id: session.id,
             buyer_email: buyerEmail,
             price,
@@ -403,10 +404,10 @@ async function handleGalleryPurchase(
       const { data: entry } = await admin
         .from("entries")
         .select("title, user_id, edition_total")
-        .eq("id", entryId)
+        .eq("id", Number(entryId))
         .single();
 
-      if (entry) {
+      if (entry && entry.user_id) {
         const buyerEmail = session.customer_details?.email ?? session.customer_email;
         const buyerName =
           session.customer_details?.name ?? buyerEmail?.split("@")[0] ?? "お客様";
