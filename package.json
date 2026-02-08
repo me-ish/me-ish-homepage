@@ -9,7 +9,9 @@
     "lint": "next lint",
     "docs:supabase": "node scripts/generate-supabase-docs.mjs",
     "build:banks": "node scripts/build-bank-json.mjs",
-    "prebuild": "npm run build:banks"
+    "prebuild": "npm run build:banks",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
@@ -70,6 +72,7 @@
     "postinstall-postinstall": "^2.1.0",
     "supabase": "^2.72.8",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.18"
   }
 }
