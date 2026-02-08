@@ -187,7 +187,8 @@ export async function POST(req: NextRequest) {
 
     if (itemsError) {
       console.error("[admin/payouts/mark-paid] items insert error:", itemsError);
-      // payoutは作成済みなのでロールバックが必要だが、簡易的にエラーを返す
+      // ロールバック: payoutsレコードを削除
+      await admin.from("payouts").delete().eq("id", payoutId);
       return NextResponse.json(
         { error: "Failed to create payout items" },
         { status: 500 }
@@ -206,6 +207,9 @@ export async function POST(req: NextRequest) {
 
     if (updateError) {
       console.error("[admin/payouts/mark-paid] sales update error:", updateError);
+      // ロールバック: payout_itemsとpayoutsを削除
+      await admin.from("payout_items").delete().eq("payout_id", payoutId);
+      await admin.from("payouts").delete().eq("id", payoutId);
       return NextResponse.json(
         { error: "Failed to update sales status" },
         { status: 500 }

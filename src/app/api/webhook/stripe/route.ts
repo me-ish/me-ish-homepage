@@ -310,7 +310,7 @@ async function handleGalleryPurchase(
 
     // 手数料・報酬を計算（JPY = zero-decimal）
     const meishFeeYen = price != null ? Math.floor(price * 0.1) : null;
-    const artistRewardYen = price != null ? Math.floor(price * 0.9) : null;
+    const artistRewardYen = price != null && meishFeeYen != null ? price - meishFeeYen : null;
 
     // finalize_sale RPC（p_price を渡して fee/reward も DB 側で設定）
     const { data: rpcResult, error: rpcErr } = await admin.rpc("finalize_sale", {

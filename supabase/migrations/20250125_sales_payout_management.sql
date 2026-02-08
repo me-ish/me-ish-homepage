@@ -38,10 +38,17 @@ WHERE payout_status IS NULL;
 ALTER TABLE public.sales
   ALTER COLUMN payout_status SET NOT NULL;
 
--- CHECK 制約でステータス値を限定
-ALTER TABLE public.sales
-  ADD CONSTRAINT sales_payout_status_check
-  CHECK (payout_status IN ('pending', 'paid'));
+-- CHECK 制約でステータス値を限定（冪等）
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'sales_payout_status_check'
+  ) THEN
+    ALTER TABLE public.sales
+      ADD CONSTRAINT sales_payout_status_check
+      CHECK (payout_status IN ('pending', 'paid'));
+  END IF;
+END $$;
 
 -- =========================================================
 -- 3. 既存 sales の fee/reward を埋め戻し（purchased_at があるもの）
@@ -125,6 +132,7 @@ begin
   end if;
 
   -- 手数料と報酬を計算（priceがある場合）
+  -- NOTE: v_reward is now computed as p_price - v_fee (see 20260208_fix_fee_rounding.sql)
   if p_price is not null and p_price > 0 then
     v_fee := floor(p_price * 0.1);
     v_reward := floor(p_price * 0.9);

@@ -49,6 +49,22 @@ export async function POST(
 
     const admin = supabaseAdmin();
 
+    // エントリの公開状態を確認（非公開作品へのビュー記録を防止）
+    const { data: entry } = await admin
+      .from("entries")
+      .select("id")
+      .eq("id", entryId)
+      .eq("confirmed", true)
+      .eq("display_ready", true)
+      .maybeSingle();
+
+    if (!entry) {
+      return NextResponse.json(
+        { error: "Entry not found" },
+        { status: 404 }
+      );
+    }
+
     // entry_view_eventsにINSERT（重複はUNIQUEインデックスで防止）
     const { error } = await admin
       .from("entry_view_events")

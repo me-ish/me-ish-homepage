@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { safeCompare } from '@/lib/auth/timingSafe';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,11 +15,11 @@ const RETENTION_DAYS = 30;
 function isAuthorized(req: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = req.headers.get('authorization');
-  if (cronSecret && authHeader === `Bearer ${cronSecret}`) return true;
+  if (cronSecret && authHeader && safeCompare(authHeader, `Bearer ${cronSecret}`)) return true;
 
   const token = req.headers.get('x-meish-admin-token');
   const adminToken = process.env.ADMIN_API_TOKEN;
-  if (adminToken && token === adminToken) return true;
+  if (adminToken && token && safeCompare(token, adminToken)) return true;
 
   return false;
 }
@@ -83,6 +84,9 @@ async function handleCron(req: NextRequest) {
         const { error: rmErr } = await admin.storage.from(BUCKET).remove(paths);
         if (rmErr) {
           console.error('[exhibit-delete] storage remove failed:', entryId, rmErr.message);
+          // ストレージ削除失敗時はDB削除をスキップ（次回cronで再試行）
+          results.push({ entryId, success: false, error: `Storage: ${rmErr.message}` });
+          continue;
         }
       }
 

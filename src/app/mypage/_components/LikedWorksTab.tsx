@@ -47,7 +47,9 @@ export function LikedWorksTab({ userId }: { userId: string }) {
               image_url,
               artist_name,
               likes,
-              created_at
+              created_at,
+              confirmed,
+              display_ready
             )
           `
           )
@@ -62,7 +64,7 @@ export function LikedWorksTab({ userId }: { userId: string }) {
         }
 
         const entries: LikedEntryWithDate[] = (data ?? [])
-          .filter((d: any) => d.entry)
+          .filter((d: any) => d.entry?.confirmed === true && d.entry?.display_ready === true)
           .map((d: any) => ({
             id: d.entry.id,
             title: d.entry.title,

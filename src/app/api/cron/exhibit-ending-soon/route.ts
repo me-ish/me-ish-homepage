@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { safeCompare } from '@/lib/auth/timingSafe';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,14 +26,14 @@ function isAuthorized(req: NextRequest): boolean {
   // Vercel Cron の場合
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = req.headers.get('authorization');
-  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+  if (cronSecret && authHeader && safeCompare(authHeader, `Bearer ${cronSecret}`)) {
     return true;
   }
 
   // ADMIN_API_TOKEN の場合
   const token = req.headers.get('x-meish-admin-token');
   const adminToken = process.env.ADMIN_API_TOKEN;
-  if (adminToken && token === adminToken) {
+  if (adminToken && token && safeCompare(token, adminToken)) {
     return true;
   }
 

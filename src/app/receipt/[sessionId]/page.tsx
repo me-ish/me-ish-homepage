@@ -17,6 +17,12 @@ function supabaseAdmin() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
+function maskEmail(email: string): string {
+  const at = email.indexOf('@');
+  if (at <= 0) return '***';
+  return email[0] + '***' + email.substring(at);
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: '領収書 | me-ish',
@@ -56,7 +62,7 @@ export default async function ReceiptPage({ params }: Props) {
   const receiptData = {
     receiptNo: sale.id.slice(0, 8).toUpperCase(),
     purchasedAt: sale.purchased_at,
-    buyerEmail: sale.buyer_email || '—',
+    buyerEmail: sale.buyer_email ? maskEmail(sale.buyer_email) : '—',
     itemTitle: entry?.title || '作品',
     artistName: entry?.artist_name || '—',
     price: sale.price || 0,

@@ -411,7 +411,10 @@ export default function MyPageClient() {
 
     try {
       setDeleteLoading(true);
-      const res = await fetch('/api/account/delete', { method: 'POST' });
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'x-requested-with': 'me-ish' },
+      });
       const data = await res.json();
 
       if (!res.ok) {

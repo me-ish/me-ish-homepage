@@ -37,8 +37,16 @@ function supabaseWithCookies() {
  * - 取引記録は法令上の保存義務に基づき7年間保持
  * - Supabase Auth からユーザーを削除
  */
-export async function POST(_req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
+    // 0. CSRF保護: x-requested-with ヘッダー必須
+    if (req.headers.get('x-requested-with') !== 'me-ish') {
+      return NextResponse.json(
+        { error: 'Invalid request' },
+        { status: 403 }
+      );
+    }
+
     // 1. 認証確認（Cookie-based session）
     const sb = supabaseWithCookies();
     const {
@@ -82,7 +90,30 @@ export async function POST(_req: NextRequest) {
       );
     }
 
-    // 3. プロフィールを匿名化
+    // 3. 作品を非表示化
+    const { error: entriesError } = await admin
+      .from('entries')
+      .update({ display_ready: false })
+      .eq('user_id', userId);
+
+    if (entriesError) {
+      console.error('[account/delete] entries hide error:', entriesError);
+    }
+
+    // 4. AURA非公開化
+    const userEmail = user.email;
+    if (userEmail) {
+      const { error: auraError } = await admin
+        .from('aura_requests')
+        .update({ visibility: 'private' })
+        .eq('email', userEmail);
+
+      if (auraError) {
+        console.error('[account/delete] aura privacy error:', auraError);
+      }
+    }
+
+    // 5. プロフィールを匿名化
     const anonymizedName = '退会済みユーザー';
     const { error: profileError } = await admin
       .from('profiles')
@@ -97,17 +128,10 @@ export async function POST(_req: NextRequest) {
 
     if (profileError) {
       console.error('[account/delete] profile anonymization error:', profileError);
-      // プロフィール更新失敗してもユーザー削除は続行
     }
 
-    // 4. いいねを削除（RLSがあるため直接SQLで実行）
-    try {
-      await admin.rpc('delete_user_likes', { target_user_id: userId });
-    } catch (likesErr) {
-      // likesテーブルの削除に失敗しても続行（RPC未定義の場合もある）
-    }
-
-    // 5. Supabase Auth からユーザーを削除
+    // 6. Supabase Auth からユーザーを削除
+    // (likes, comments, portfolio_profiles are CASCADE-deleted)
     const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
 
     if (deleteError) {

@@ -46,7 +46,9 @@ export default function Float2DPage() {
         .order('slot_index', { ascending: true });
 
       if (!slotErr && slotData && slotData.length > 0) {
-        const daily = slotData.map((d: any) => d.entry).filter(Boolean) as EntryRow[];
+        const daily = filterFloatEntries(
+          slotData.map((d: any) => d.entry).filter(Boolean) as EntryRow[]
+        );
         setActualCount(daily.length);
         const filled = fillWithPlaceholders(daily, DISPLAY_SLOTS);
         setEntries(filled);

@@ -240,7 +240,18 @@ export async function POST(req: NextRequest) {
 
         if (itemsError) {
           console.error(`[mark-batch-paid] payout_items error for ${payout.user_id}:`, itemsError);
-          // 継続（payoutは作成済み）
+          // ロールバック: payoutsレコードを削除
+          await admin.from("payouts").delete().eq("id", payoutId);
+          results.push({
+            userId: payout.user_id,
+            displayName: payout.display_name,
+            amount: userTotalAmount,
+            saleCount: saleIds.length,
+            payoutId: null,
+            success: false,
+            error: "Failed to create payout items",
+          });
+          continue;
         }
 
         // 2e. salesのpayout_statusを更新
@@ -254,12 +265,15 @@ export async function POST(req: NextRequest) {
           .in("id", saleIds);
 
         if (updateError) {
+          // ロールバック: payout_itemsとpayoutsを削除
+          await admin.from("payout_items").delete().eq("payout_id", payoutId);
+          await admin.from("payouts").delete().eq("id", payoutId);
           results.push({
             userId: payout.user_id,
             displayName: payout.display_name,
             amount: userTotalAmount,
             saleCount: saleIds.length,
-            payoutId,
+            payoutId: null,
             success: false,
             error: "Failed to update sales",
           });
