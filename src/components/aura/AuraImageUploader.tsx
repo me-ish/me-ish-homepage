@@ -588,7 +588,7 @@ results.push({
                     className="text-[10px] text-gray-400 underline"
                     href={it.imageUrl}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                   >
                     open imageUrl
                   </a>

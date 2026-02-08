@@ -137,7 +137,7 @@ export default function NatoriArtistPage() {
               <CuteButton href="/contact" icon={<Mail className="w-4 h-4" />}>お問い合わせ</CuteButton>
               <CuteButton href="/gallery" variant="ghost" icon={<Images className="w-4 h-4" />}>ギャラリーを見る</CuteButton>
               {profile?.sns_links?.twitter && (
-                <CuteButton href={profile.sns_links.twitter} target="_blank" rel="noopener" variant="ghost" icon={<Twitter className="w-4 h-4" />}>X (Twitter)</CuteButton>
+                <CuteButton href={profile.sns_links.twitter} target="_blank" rel="noopener noreferrer" variant="ghost" icon={<Twitter className="w-4 h-4" />}>X (Twitter)</CuteButton>
               )}
             </div>
 

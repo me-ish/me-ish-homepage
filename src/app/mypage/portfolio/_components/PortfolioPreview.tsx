@@ -195,7 +195,7 @@ export function PortfolioPreview({
           <a
             href={publicUrl}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className={!isPublic ? 'pointer-events-none' : ''}
           >
             <Button

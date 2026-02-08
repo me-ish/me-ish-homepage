@@ -268,7 +268,7 @@ export default function ArtistPublicPage() {
                 className="rounded-full border px-3 py-2 text-sm hover:bg-gray-50"
                 href={profile.sns_links.homepage}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
               >
                 Website
               </a>
@@ -278,7 +278,7 @@ export default function ArtistPublicPage() {
                 className="rounded-full border px-3 py-2 text-sm hover:bg-gray-50"
                 href={profile.sns_links.twitter}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
               >
                 X
               </a>
@@ -288,7 +288,7 @@ export default function ArtistPublicPage() {
                 className="rounded-full border px-3 py-2 text-sm hover:bg-gray-50"
                 href={profile.sns_links.instagram}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
               >
                 Instagram
               </a>

@@ -132,7 +132,7 @@ export function PortfolioPromotionCard({ publicUrl }: Props) {
                   {copied ? 'コピー済み' : 'URLコピー'}
                 </Button>
 
-                <a href={openHref} target="_blank" rel="noreferrer">
+                <a href={openHref} target="_blank" rel="noopener noreferrer">
                   <Button type="button" variant="outline" className="rounded-xl">
                     <ExternalLink className="mr-2 h-4 w-4" />
                     公開ページ

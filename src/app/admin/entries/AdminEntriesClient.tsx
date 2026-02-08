@@ -1359,7 +1359,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                 <a
                                   href={entry.image_url || '#'}
                                   target="_blank"
-                                  rel="noreferrer"
+                                  rel="noopener noreferrer"
                                   className="shrink-0"
                                 >
                                   <img
@@ -1534,7 +1534,7 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                     <a
                                       href={entry.image_url}
                                       target="_blank"
-                                      rel="noreferrer"
+                                      rel="noopener noreferrer"
                                       className="inline-flex items-center gap-1 rounded border px-3 py-1.5 text-sm text-neutral-500 hover:bg-neutral-100"
                                     >
                                       <ExternalLink className="h-3 w-3" />

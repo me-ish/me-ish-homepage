@@ -338,7 +338,7 @@ export default function PortfolioSettingsClient() {
                     <a
                       href={publicUrl}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className={`flex-1 ${!isPublic ? 'pointer-events-none opacity-50' : ''}`}
                     >
                       <Button

@@ -122,7 +122,7 @@ const ConfirmPage: React.FC<ConfirmPageProps> = ({ onBack }) => {
           {data.homepageUrl && (
             <p className="sm:col-span-2">
               <span className="text-gray-500">ホームページ：</span>
-              <a href={data.homepageUrl} className="text-blue-600 underline break-all" target="_blank" rel="noreferrer">
+              <a href={data.homepageUrl} className="text-blue-600 underline break-all" target="_blank" rel="noopener noreferrer">
                 {data.homepageUrl}
               </a>
             </p>
@@ -130,7 +130,7 @@ const ConfirmPage: React.FC<ConfirmPageProps> = ({ onBack }) => {
           {data.twitterUrl && (
             <p className="sm:col-span-2">
               <span className="text-gray-500">X：</span>
-              <a href={data.twitterUrl} className="text-blue-600 underline break-all" target="_blank" rel="noreferrer">
+              <a href={data.twitterUrl} className="text-blue-600 underline break-all" target="_blank" rel="noopener noreferrer">
                 {data.twitterUrl}
               </a>
             </p>
@@ -138,7 +138,7 @@ const ConfirmPage: React.FC<ConfirmPageProps> = ({ onBack }) => {
           {data.instagramUrl && (
             <p className="sm:col-span-2">
               <span className="text-gray-500">Instagram：</span>
-              <a href={data.instagramUrl} className="text-blue-600 underline break-all" target="_blank" rel="noreferrer">
+              <a href={data.instagramUrl} className="text-blue-600 underline break-all" target="_blank" rel="noopener noreferrer">
                 {data.instagramUrl}
               </a>
             </p>

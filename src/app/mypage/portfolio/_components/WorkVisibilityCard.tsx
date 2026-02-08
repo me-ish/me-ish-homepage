@@ -51,7 +51,7 @@ export function WorkVisibilityCard({ entry, onToggle }: Props) {
           <a
             href={`/works/${entry.id}`}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="text-gray-400 hover:text-gray-600"
           >
             <ExternalLink className="h-3.5 w-3.5" />

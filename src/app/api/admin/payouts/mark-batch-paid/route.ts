@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
 import { isAdminEmail } from "@/lib/isAdmin";
+import { safeCompare } from "@/lib/auth/timingSafe";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,15 +50,8 @@ export async function POST(req: NextRequest) {
 
     // 方法1: ADMIN_API_TOKEN ヘッダー
     const token = req.headers.get("x-meish-admin-token");
-    if (token && process.env.ADMIN_API_TOKEN) {
-      const expected = process.env.ADMIN_API_TOKEN;
-      if (token.length === expected.length) {
-        let diff = 0;
-        for (let i = 0; i < token.length; i++) {
-          diff |= token.charCodeAt(i) ^ expected.charCodeAt(i);
-        }
-        if (diff === 0) isAuthorized = true;
-      }
+    if (token && process.env.ADMIN_API_TOKEN && safeCompare(token, process.env.ADMIN_API_TOKEN)) {
+      isAuthorized = true;
     }
 
     // 方法2: Cookie-based session
