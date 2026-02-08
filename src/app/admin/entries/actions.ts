@@ -8,13 +8,7 @@
  * サーバーサイドで安全にトークンを付与して内部APIを呼び出す。
  */
 
-function getBaseUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL;
-  }
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return 'http://localhost:3000';
-}
+import { getSiteUrl } from '@/lib/constants';
 
 export type ProcessingJob = {
   id: string;
@@ -51,7 +45,7 @@ export async function approveEntryAction(entryId: number): Promise<ApproveResult
     throw new Error('Server configuration error: missing ADMIN_API_TOKEN');
   }
 
-  const response = await fetch(`${getBaseUrl()}/admin/api/entries/${entryId}/approve`, {
+  const response = await fetch(`${getSiteUrl()}/admin/api/entries/${entryId}/approve`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -85,7 +79,7 @@ export async function rejectEntryAction(entryId: number, reason: string | null):
     throw new Error('Server configuration error: missing ADMIN_API_TOKEN');
   }
 
-  const response = await fetch(`${getBaseUrl()}/admin/api/entries/${entryId}/reject`, {
+  const response = await fetch(`${getSiteUrl()}/admin/api/entries/${entryId}/reject`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -117,7 +111,7 @@ export async function resetEntryAction(entryId: number): Promise<ResetResult> {
     throw new Error('Server configuration error: missing ADMIN_API_TOKEN');
   }
 
-  const response = await fetch(`${getBaseUrl()}/admin/api/entries/${entryId}/reset`, {
+  const response = await fetch(`${getSiteUrl()}/admin/api/entries/${entryId}/reset`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

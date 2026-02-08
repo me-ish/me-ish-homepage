@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { updatePayloadFields } from "@/lib/aura/aura.db";
 import { auraAssetProxyUrl } from "@/lib/aura/storage/auraAssets";
 import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";
+import { checkCsrf } from "@/lib/auth/csrf";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,9 @@ export async function POST(
   req: Request,
   { params }: { params: { id: string } }
 ) {
+  const csrfErr = checkCsrf(req);
+  if (csrfErr) return csrfErr;
+
   const requestId = params.id;
 
   try {
@@ -76,6 +80,6 @@ export async function POST(
     return NextResponse.json({ ok: true, url: proxyUrl, path }, { status: 200 });
   } catch (e: any) {
     console.error("[upload/avatar] error", e);
-    return err(500, "internal_error", e?.message ?? String(e));
+    return err(500, "internal_error");
   }
 }

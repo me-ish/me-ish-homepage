@@ -1,4 +1,5 @@
 // --- /lib/emailTemplates/purchaseArtist.ts ---
+import { getSiteUrl, getEmailLinks } from '@/lib/constants';
 export type PurchaseArtistEmailArgs = {
   name: string;                    // 宛名（必須）
   title?: string;                  // 作品名
@@ -31,12 +32,12 @@ export function generatePurchaseArtistEmail(arg: string | PurchaseArtistEmailArg
     editionTotal = null,
     orderId,
     manageUrl,
-    faqUrl = 'https://me-ish.art/faq',
-    termsUrl = 'https://me-ish.art/footer/terms',
+    faqUrl = getEmailLinks().faqUrl,
+    termsUrl = getEmailLinks().termsUrl,
     supportEmail = 'support@me-ish.art',
     payoutEtaDays = 7,
     payoutAtISO,
-    siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://me-ish.art',
+    siteUrl = getSiteUrl(),
     note,
   } = a;
 

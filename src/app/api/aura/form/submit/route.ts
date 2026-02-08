@@ -15,6 +15,7 @@ import {
   requireAuraRequestAccess,
   buildAuraSessionCookie,
 } from "@/lib/aura/requireAuraAccess";
+import { checkCsrf } from "@/lib/auth/csrf";
 
 export const dynamic = "force-dynamic";
 
@@ -137,7 +138,7 @@ export async function GET(req: Request) {
   } catch (e: any) {
     console.error("[aura/form/submit][GET test_openai] error", e);
     return NextResponse.json(
-      { ok: false, error: e?.message ?? String(e) },
+      { ok: false, error: "openai_test_failed" },
       { status: 500 }
     );
   }
@@ -147,6 +148,9 @@ export async function GET(req: Request) {
 // POST
 // ------------------------------------------------------------
 export async function POST(req: Request) {
+  const csrfErr = checkCsrf(req);
+  if (csrfErr) return csrfErr;
+
   const supabase = supabaseAdmin();
   const json = await req.json().catch(() => null);
 
@@ -402,7 +406,7 @@ export async function POST(req: Request) {
 
     // ✅ 新規作成時でも Cookie は返しておく（失敗しても同じ draft を継続利用できる）
     const res = NextResponse.json(
-      { ok: false, id, status: "error", error: "generate_failed", message },
+      { ok: false, id, status: "error", error: "generate_failed" },
       { status: 200 }
     );
 

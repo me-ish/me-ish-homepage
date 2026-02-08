@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";
+import { checkCsrf } from "@/lib/auth/csrf";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,9 @@ function validatePublicSlug(slug: string): { ok: true } | { ok: false; message: 
 }
 
 export async function POST(req: Request) {
+  const csrfErr = checkCsrf(req);
+  if (csrfErr) return csrfErr;
+
   const supabase = supabaseAdmin();
 
   const body = (await req.json().catch(() => null)) as Body | null;

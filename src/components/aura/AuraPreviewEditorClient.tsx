@@ -267,7 +267,7 @@ export default function AuraPreviewEditorClient({
     try {
       const res = await fetch(`/api/aura/save/${requestId}`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "x-requested-with": "me-ish" },
         body: JSON.stringify({
           content: next,
           sectionOrder,
@@ -348,7 +348,7 @@ export default function AuraPreviewEditorClient({
     try {
       const res = await fetch(`/api/aura/public-slug`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "x-requested-with": "me-ish" },
         body: JSON.stringify({
           requestId,
           mode: "check",
@@ -397,7 +397,7 @@ export default function AuraPreviewEditorClient({
     try {
       const res = await fetch(`/api/aura/public-slug`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "x-requested-with": "me-ish" },
         body: JSON.stringify({
           requestId,
           mode: "save",

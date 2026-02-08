@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { safeCompare } from '@/lib/auth/timingSafe';
+import { getSiteUrl } from '@/lib/constants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,10 +16,6 @@ function supabaseAdmin() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error('Supabase env missing');
   return createClient(url, key, { auth: { persistSession: false } });
-}
-
-function siteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL || 'https://me-ish.art';
 }
 
 // 認証チェック（Cron secretまたはADMIN_API_TOKEN）
@@ -115,11 +112,11 @@ async function handleCron(req: NextRequest) {
         title: entry.title || '作品',
         entryId: entry.id,
         displayEndAt: entry.display_end_at,
-        workUrl: `${siteUrl()}/works/${entry.id}`,
-        manageUrl: `${siteUrl()}/mypage`,
+        workUrl: `${getSiteUrl()}/works/${entry.id}`,
+        manageUrl: `${getSiteUrl()}/mypage`,
       };
 
-      const emailRes = await fetch(`${siteUrl()}/api/send-email/exhibitEndingSoon`, {
+      const emailRes = await fetch(`${getSiteUrl()}/api/send-email/exhibitEndingSoon`, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',

@@ -52,7 +52,7 @@ export function CommentItem({ comment, entryId, canDelete, onDelete }: Props) {
     try {
       const res = await fetch(
         `/api/entries/${entryId}/comments/${comment.id}`,
-        { method: 'DELETE' }
+        { method: 'DELETE', headers: { 'x-requested-with': 'me-ish' } }
       );
 
       if (res.ok) {

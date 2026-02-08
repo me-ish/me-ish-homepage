@@ -4,12 +4,16 @@ import { randomUUID } from "crypto";
 import { insertDraft } from "@/lib/aura/aura.db";
 import type { FormInput } from "@/lib/aura/aura.schema";
 import { buildAuraSessionCookie } from "@/lib/aura/requireAuraAccess";
+import { checkCsrf } from "@/lib/auth/csrf";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function POST(req: Request) {
+  const csrfErr = checkCsrf(req);
+  if (csrfErr) return csrfErr;
+
   try {
     const json = await req.json().catch(() => null);
 

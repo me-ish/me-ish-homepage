@@ -84,7 +84,7 @@ export function ArtworkCard({
     setLikes((prev) => prev + 1);
 
     try {
-      const res = await fetch(`/api/entries/${entry.id}/like`, { method: 'POST' });
+      const res = await fetch(`/api/entries/${entry.id}/like`, { method: 'POST', headers: { 'x-requested-with': 'me-ish' } });
       const data = await res.json();
       if (typeof data.likes === 'number') {
         setLikes(data.likes);
@@ -109,7 +109,7 @@ export function ArtworkCard({
     try {
       const res = await fetch('/api/purchase/stripe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-requested-with': 'me-ish' },
         body: JSON.stringify({ entryId: String(entry.id) }),
       });
       const data = await res.json();

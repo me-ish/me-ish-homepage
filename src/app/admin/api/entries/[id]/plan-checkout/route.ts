@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { isAdminEmail } from '@/lib/isAdmin';
 import { checkFloatGuaranteeCapacity, getGuaranteeTotalForPlan } from '@/lib/guarantee/capacity';
+import { getSiteUrl } from '@/lib/constants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -24,12 +25,6 @@ const PLAN_LABELS: Record<string, string> = {
   standard: 'Standard',
   premium: 'Premium',
 };
-
-function baseUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return 'http://localhost:3000';
-}
 
 async function requireAdmin() {
   const supabase = createClient();
@@ -113,8 +108,8 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
       },
     ],
     customer_email: entry.email ?? undefined,
-    success_url: `${baseUrl()}/mypage?planPaid=1`,
-    cancel_url: `${baseUrl()}/mypage?planCanceled=1`,
+    success_url: `${getSiteUrl()}/mypage?planPaid=1`,
+    cancel_url: `${getSiteUrl()}/mypage?planCanceled=1`,
     client_reference_id: String(entry.id),
     metadata: {
       kind: 'entry_plan',

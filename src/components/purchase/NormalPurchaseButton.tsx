@@ -13,7 +13,7 @@ const NormalPurchaseButton: React.FC<NormalPurchaseButtonProps> = ({ entryId, ti
     try {
       const res = await fetch('/api/purchase/stripe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-requested-with': 'me-ish' },
         body: JSON.stringify({
           entryId,
           title,

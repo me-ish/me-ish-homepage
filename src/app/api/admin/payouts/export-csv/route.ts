@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { isAdminEmail } from "@/lib/isAdmin";
 import { safeCompare } from "@/lib/auth/timingSafe";
+import { getSiteUrl } from "@/lib/constants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -143,7 +144,7 @@ export async function GET(req: NextRequest) {
     let branchNames: Record<string, Record<string, string>> = {};
 
     try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://me-ish.art";
+      const siteUrl = getSiteUrl();
       const [banksRes, branchesRes] = await Promise.all([
         fetch(`${siteUrl}/data/banks.json`),
         fetch(`${siteUrl}/data/branches.json`),

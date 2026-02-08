@@ -39,7 +39,7 @@ export function CommentForm({ entryId, onSubmit, isAuthenticated }: Props) {
     try {
       const res = await fetch(`/api/entries/${entryId}/comments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-requested-with': 'me-ish' },
         body: JSON.stringify({ body: trimmedBody }),
       });
 

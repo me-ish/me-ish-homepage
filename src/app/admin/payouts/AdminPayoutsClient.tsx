@@ -93,7 +93,7 @@ export default function AdminPayoutsClient({ initialData, stats }: Props) {
     try {
       const res = await fetch("/api/admin/payouts/mark-paid", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-requested-with": "me-ish" },
         body: JSON.stringify({ userId: selectedUser.user_id }),
       });
 
@@ -169,7 +169,7 @@ export default function AdminPayoutsClient({ initialData, stats }: Props) {
     try {
       const res = await fetch("/api/admin/payouts/mark-batch-paid", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-requested-with": "me-ish" },
         body: JSON.stringify({}),
       });
 

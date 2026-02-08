@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSiteUrl } from "@/lib/constants";
 
 // ✅ 所有権チェック（Cookie aura_st_{requestId}）
 import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";
@@ -11,12 +12,6 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-function baseUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL!;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "http://localhost:3000";
-}
 
 export async function GET(req: NextRequest) {
   const requestId = req.nextUrl.searchParams.get("requestId");
@@ -47,7 +42,7 @@ export async function GET(req: NextRequest) {
   // すでに支払い済みなら、そのまま戻す（無駄な再決済を防ぐ）
   if (paymentStatus === "paid") {
     return NextResponse.redirect(
-      `${baseUrl()}/aura/preview/${encodeURIComponent(requestId)}`,
+      `${getSiteUrl()}/aura/preview/${encodeURIComponent(requestId)}`,
       { status: 303 },
     );
   }
@@ -57,8 +52,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "missing_AURA_STRIPE_PRICE_ID" }, { status: 500 });
   }
 
-  const successUrl = `${baseUrl()}/aura/preview/${encodeURIComponent(requestId)}?paid=1`;
-  const cancelUrl = `${baseUrl()}/aura/preview/${encodeURIComponent(requestId)}?canceled=1`;
+  const successUrl = `${getSiteUrl()}/aura/preview/${encodeURIComponent(requestId)}?paid=1`;
+  const cancelUrl = `${getSiteUrl()}/aura/preview/${encodeURIComponent(requestId)}?canceled=1`;
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",

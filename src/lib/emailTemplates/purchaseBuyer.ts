@@ -1,4 +1,5 @@
 // --- /lib/emailTemplates/purchaseBuyer.ts ---
+import { getEmailLinks } from '@/lib/constants';
 export type PurchaseBuyerEmailArgs = {
   name: string;                      // 宛名（必須）
   title?: string;                    // 作品名
@@ -48,8 +49,8 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
     manageUrl,
     downloadUrl,
     receiptUrl,
-    faqUrl = 'https://me-ish.art/faq',
-    termsUrl = 'https://me-ish.art/footer/terms',
+    faqUrl = getEmailLinks().faqUrl,
+    termsUrl = getEmailLinks().termsUrl,
     supportEmail = 'support@me-ish.art',
   } = a0;
 

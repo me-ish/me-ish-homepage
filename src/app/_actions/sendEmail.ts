@@ -10,14 +10,10 @@ export type EmailKind =
   | 'purchaseArtist'
   | 'contact';
 
-function baseUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL!;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return 'http://localhost:3000';
-}
+import { getSiteUrl } from '@/lib/constants';
 
 export async function sendEmail(kind: EmailKind, payload: any) {
-  const res = await fetch(`${baseUrl()}/api/send-email/${kind}`, {
+  const res = await fetch(`${getSiteUrl()}/api/send-email/${kind}`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',

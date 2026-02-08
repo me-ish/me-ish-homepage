@@ -51,7 +51,7 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
     if (liked) return;
     setIsAnimating(true);
     try {
-      const res = await fetch(`/api/entries/${(a as any).id}/like`, { method: 'POST' });
+      const res = await fetch(`/api/entries/${(a as any).id}/like`, { method: 'POST', headers: { 'x-requested-with': 'me-ish' } });
       const json = await res.json();
       setLikes(json.likes ?? likes + 1);
       setLiked(true);
@@ -98,7 +98,7 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
     }
     const res = await fetch('/api/purchase/stripe', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-requested-with': 'me-ish' },
       body: JSON.stringify({ entryId: id, title, price: Number(price) }),
     });
     const data = await res.json();

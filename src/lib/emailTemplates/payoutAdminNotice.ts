@@ -1,5 +1,6 @@
 // --- /lib/emailTemplates/payoutAdminNotice.ts ---
 // 管理者向け振込関連通知メール
+import { getEmailLinks } from '@/lib/constants';
 
 export type PayoutCloseNoticeArgs = {
   periodYm: string;           // 締め対象期間 "2025-01"
@@ -31,7 +32,7 @@ export function generatePayoutCloseNoticeEmail(arg: PayoutCloseNoticeArgs) {
     artistCount,
     saleCount,
     closedAt,
-    dashboardUrl = 'https://me-ish.art/admin/payouts',
+    dashboardUrl = getEmailLinks().adminPayoutsUrl,
   } = arg;
 
   const periodStr = `${periodYm.slice(0, 4)}年${parseInt(periodYm.slice(5, 7), 10)}月`;
@@ -122,7 +123,7 @@ export function generatePayoutReminderEmail(arg: PayoutReminderArgs) {
     artistCount,
     daysUntilClose,
     daysUntilPayout,
-    dashboardUrl = 'https://me-ish.art/admin/payouts',
+    dashboardUrl = getEmailLinks().adminPayoutsUrl,
   } = arg;
 
   const periodStr = `${periodYm.slice(0, 4)}年${parseInt(periodYm.slice(5, 7), 10)}月`;

@@ -122,6 +122,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.redirect(signed.signedUrl, { status: 302 });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? "download failed" }, { status: 500 });
+    console.error("[cert/download] error", e);
+    return NextResponse.json({ ok: false, error: "download_failed" }, { status: 500 });
   }
 }

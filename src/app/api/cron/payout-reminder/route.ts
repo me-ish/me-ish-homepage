@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { generatePayoutReminderEmail } from '@/lib/emailTemplates/payoutAdminNotice';
 import { safeCompare } from '@/lib/auth/timingSafe';
+import { getSiteUrl } from '@/lib/constants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,10 +17,6 @@ function supabaseAdmin() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error('Supabase env missing');
   return createClient(url, key, { auth: { persistSession: false } });
-}
-
-function siteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL || 'https://me-ish.art';
 }
 
 // 認証チェック
@@ -158,7 +155,7 @@ async function handleCron(req: NextRequest) {
     artistCount,
     daysUntilClose,
     daysUntilPayout,
-    dashboardUrl: `${siteUrl()}/admin/payouts`,
+    dashboardUrl: `${getSiteUrl()}/admin/payouts`,
   });
 
   try {

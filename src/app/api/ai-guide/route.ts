@@ -202,6 +202,14 @@ export async function POST(req: Request) {
   try {
     const { message } = await req.json();
 
+    // 入力バリデーション
+    if (typeof message !== "string" || !message.trim()) {
+      return NextResponse.json({ reply: "メッセージを入力してください。" }, { status: 400 });
+    }
+    if (message.length > 500) {
+      return NextResponse.json({ reply: "メッセージは500文字以内でお願いします。" }, { status: 400 });
+    }
+
     const system = `
 あなたは3Dオンラインアートギャラリー「me-ish」の公式ガイドAI「ミーシュ」です。
 

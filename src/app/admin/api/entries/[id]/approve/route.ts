@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import crypto from 'crypto';
 import Stripe from 'stripe';
+import { getSiteUrl } from '@/lib/constants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,14 +22,6 @@ const PLAN_LABELS: Record<string, string> = {
   standard: 'Standard',
   premium: 'Premium',
 };
-
-function baseUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL;
-  }
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return 'http://localhost:3000';
-}
 
 /** ADMIN_API_TOKEN の検証（fail closed） */
 function requireAdmin(req: NextRequest) {
@@ -157,7 +150,7 @@ export async function POST(
   // 4) 承認メール（失敗しても承認は維持）
   try {
     if (entry.email && entry.external_user_id) {
-      await fetch(`${baseUrl()}/api/send-email/pass`, {
+      await fetch(`${getSiteUrl()}/api/send-email/pass`, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -202,8 +195,8 @@ export async function POST(
             },
           ],
           customer_email: entry.email,
-          success_url: `${baseUrl()}/mypage?planPaid=1`,
-          cancel_url: `${baseUrl()}/mypage?planCanceled=1`,
+          success_url: `${getSiteUrl()}/mypage?planPaid=1`,
+          cancel_url: `${getSiteUrl()}/mypage?planCanceled=1`,
           client_reference_id: String(entry.id),
           metadata: {
             kind: 'entry_plan',
@@ -224,7 +217,7 @@ export async function POST(
             })
             .eq('id', entry.id);
 
-          await fetch(`${baseUrl()}/api/send-email/planPaymentRequest`, {
+          await fetch(`${getSiteUrl()}/api/send-email/planPaymentRequest`, {
             method: 'POST',
             headers: {
               'content-type': 'application/json',
@@ -237,7 +230,7 @@ export async function POST(
               displayPlan: PLAN_LABELS[plan] ?? plan,
               amountYen,
               paymentUrl: session.url,
-              manageUrl: `${baseUrl()}/mypage`,
+              manageUrl: `${getSiteUrl()}/mypage`,
             }),
             cache: 'no-store',
           });

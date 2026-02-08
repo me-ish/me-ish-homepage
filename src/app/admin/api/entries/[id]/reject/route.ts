@@ -3,12 +3,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { EntryReject } from '@/lib/schemas/entry';
 import crypto from 'crypto';
-
-function baseUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL!;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return 'http://localhost:3000';
-}
+import { getSiteUrl } from '@/lib/constants';
 
 function requireAdmin(req: Request) {
   const expected = process.env.ADMIN_API_TOKEN;
@@ -81,7 +76,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (!process.env.ADMIN_API_TOKEN) {
       return NextResponse.json({ error: 'server_misconfig: ADMIN_API_TOKEN' }, { status: 500 });
     }
-    const res = await fetch(`${baseUrl()}/api/send-email/reject`, {
+    const res = await fetch(`${getSiteUrl()}/api/send-email/reject`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',

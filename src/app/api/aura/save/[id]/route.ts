@@ -5,12 +5,16 @@ import { publishContent } from "@/lib/aura/aura.db";
 import { claimMeishFree, claimFirst20Free } from "@/lib/aura/auraBillingGate";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";
+import { checkCsrf } from "@/lib/auth/csrf";
 
 type Params = { id: string };
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request, { params }: { params: Params }) {
+  const csrfErr = checkCsrf(req);
+  if (csrfErr) return csrfErr;
+
   const id = params.id;
 
   try {
@@ -40,9 +44,12 @@ export async function POST(req: Request, { params }: { params: Params }) {
     }
     const content = parsed.data;
 
-    // sectionOrder は任意
-    const sectionOrder = Array.isArray((json as any).sectionOrder)
-      ? ((json as any).sectionOrder as string[])
+    // sectionOrder は任意（最大20セクション、各64文字以内）
+    const rawOrder = (json as any).sectionOrder;
+    const sectionOrder = Array.isArray(rawOrder)
+      && rawOrder.length <= 20
+      && rawOrder.every((s: unknown) => typeof s === "string" && s.length <= 64)
+      ? (rawOrder as string[])
       : undefined;
 
     // =========================================================
@@ -149,7 +156,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
   } catch (e: any) {
     console.error("[aura/save] unexpected_error", { id, error: e });
     return NextResponse.json(
-      { ok: false, error: "internal_error", message: e?.message ?? String(e) },
+      { ok: false, error: "internal_error" },
       { status: 500 },
     );
   }

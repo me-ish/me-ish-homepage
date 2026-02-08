@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";
+import { checkCsrf } from "@/lib/auth/csrf";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,9 @@ function normalizeEmail(email: string | null | undefined): string | null {
 }
 
 export async function POST(req: Request, { params }: { params: Params }) {
+  const csrfErr = checkCsrf(req);
+  if (csrfErr) return csrfErr;
+
   const id = params.id;
 
   try {
@@ -87,7 +91,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
   } catch (e: any) {
     console.error("[email/update] unexpected error:", e);
     return NextResponse.json(
-      { ok: false, error: "internal_error", message: e?.message ?? String(e) },
+      { ok: false, error: "internal_error" },
       { status: 500 }
     );
   }

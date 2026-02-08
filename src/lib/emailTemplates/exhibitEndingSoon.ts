@@ -1,5 +1,6 @@
 // --- /lib/emailTemplates/exhibitEndingSoon.ts ---
 // 展示終了5日前の予告メール
+import { getEmailLinks } from '@/lib/constants';
 
 export type ExhibitEndingSoonEmailArgs = {
   name: string;                  // 宛名（必須）
@@ -22,9 +23,9 @@ export function generateExhibitEndingSoonEmail(arg: ExhibitEndingSoonEmailArgs) 
     entryId,
     displayEndAt,
     workUrl,
-    renewUrl = 'https://me-ish.art/renew',
-    manageUrl = 'https://me-ish.art/mypage',
-    faqUrl = 'https://me-ish.art/faq',
+    renewUrl = getEmailLinks().renewUrl,
+    manageUrl = getEmailLinks().mypageUrl,
+    faqUrl = getEmailLinks().faqUrl,
     supportEmail = 'support@me-ish.art',
   } = arg;
 

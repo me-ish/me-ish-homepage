@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import sharp from "sharp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";
+import { checkCsrf } from "@/lib/auth/csrf";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,9 @@ export async function POST(
   req: Request,
   { params }: { params: { id: string } },
 ) {
+  const csrfErr = checkCsrf(req);
+  if (csrfErr) return csrfErr;
+
   const requestId = params.id;
 
   try {
@@ -81,6 +85,6 @@ export async function POST(
     );
   } catch (e: any) {
     console.error("[upload/works] error", e);
-    return err(500, "internal_error", e?.message ?? String(e));
+    return err(500, "internal_error");
   }
 }

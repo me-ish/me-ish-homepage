@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { checkCsrf } from '@/lib/auth/csrf';
 
 export const runtime = 'nodejs';
 
@@ -14,9 +15,17 @@ const supabaseAdmin = createClient(
 );
 
 export async function POST(req: NextRequest) {
-  const { entryId, quantity = 1 } = await req.json();
+  const csrfErr = checkCsrf(req);
+  if (csrfErr) return csrfErr;
 
-  if (!entryId) {
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== 'object') {
+    return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
+  }
+
+  const { entryId, quantity = 1 } = body;
+
+  if (!entryId || (typeof entryId !== 'string' && typeof entryId !== 'number')) {
     return NextResponse.json({ error: 'entryId is required' }, { status: 400 });
   }
 

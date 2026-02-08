@@ -1,4 +1,5 @@
 // --- /lib/emailTemplates/pass.ts ---
+import { getSiteUrl, getEmailLinks } from '@/lib/constants';
 export type PassEmailArgs = {
   name: string;
   externalUserId: string;
@@ -23,10 +24,10 @@ export function generatePassEmail(
   const {
     name,
     externalUserId,
-    siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://me-ish.art',
+    siteUrl = getSiteUrl(),
     supportEmail = 'support@me-ish.art',
-    faqUrl = 'https://me-ish.art/faq',
-    termsUrl = 'https://me-ish.art/footer/terms',
+    faqUrl = getEmailLinks().faqUrl,
+    termsUrl = getEmailLinks().termsUrl,
   } = args;
 
   const base = siteUrl.replace(/\/+$/, '');

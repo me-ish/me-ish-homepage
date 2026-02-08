@@ -1,4 +1,6 @@
 // --- /lib/emailTemplates/payoutComplete.ts ---
+import { getEmailLinks } from '@/lib/constants';
+
 export type PayoutCompleteEmailArgs = {
   name: string;                    // 宛名（必須）
   amountYen: number;               // 振込金額
@@ -23,9 +25,9 @@ export function generatePayoutCompleteEmail(arg: PayoutCompleteEmailArgs) {
     itemCount,
     paidAt,
     bankAccountLast4,
-    manageUrl = 'https://me-ish.art/mypage',
-    faqUrl = 'https://me-ish.art/faq',
-    termsUrl = 'https://me-ish.art/footer/terms',
+    manageUrl = getEmailLinks().mypageUrl,
+    faqUrl = getEmailLinks().faqUrl,
+    termsUrl = getEmailLinks().termsUrl,
     supportEmail = 'support@me-ish.art',
     note,
   } = arg;

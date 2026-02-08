@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
 import { isAdminEmail } from "@/lib/isAdmin";
 import { safeCompare } from "@/lib/auth/timingSafe";
+import { getSiteUrl } from "@/lib/constants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -307,7 +308,7 @@ export async function POST(req: NextRequest) {
           }
 
           if (artistEmail) {
-            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://me-ish.art";
+            const siteUrl = getSiteUrl();
             const emailPayload = {
               to: artistEmail,
               name: profile?.display_name || "アーティスト",

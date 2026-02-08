@@ -45,6 +45,7 @@ export function Step1Profile({ data, onChange, requestId, onRequireDraft }: Prop
 
       const res = await fetch(`/api/aura/upload/avatar/${currentRequestId}`, {
         method: "POST",
+        headers: { "x-requested-with": "me-ish" },
         body: fd,
       });
 

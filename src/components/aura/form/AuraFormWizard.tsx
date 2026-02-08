@@ -148,7 +148,7 @@ useEffect(() => {
     try {
       const res = await fetch("/api/aura/draft", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-requested-with": "me-ish" },
         body: JSON.stringify({ email, name }),
       });
 
@@ -210,7 +210,7 @@ useEffect(() => {
     try {
       const res = await fetch(`/api/aura/request/${draft.requestId}/email`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-requested-with": "me-ish" },
         body: JSON.stringify({ email: normalized }),
       });
 
@@ -457,7 +457,7 @@ useEffect(() => {
 
       const res = await fetch("/api/aura/form/submit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-requested-with": "me-ish" },
         body: JSON.stringify(payload),
       });
 

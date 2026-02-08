@@ -1,4 +1,7 @@
+import { getEmailLinks } from '@/lib/constants';
+
 export function generateExhibitEndEmail(name: string) {
+  const { renewUrl } = getEmailLinks();
   return {
     subject: '【me-ish】展示期間が終了しました',
     html: `
@@ -21,11 +24,11 @@ export function generateExhibitEndEmail(name: string) {
         </ul>
 
         <p>以下のページよりお手続きください：</p>
-        <p><a href="https://me-ish.art/renew" style="color: #00a1e9;">▶ 再出展・プラン延長はこちら</a></p>
+        <p><a href="${renewUrl}" style="color: #00a1e9;">▶ 再出展・プラン延長はこちら</a></p>
 
         <p style="margin-top: 2em;">---<br/>me-ish運営事務局</p>
       </div>
     `,
-    text: `${name} 様\n\nご出展いただいた作品の展示期間が終了いたしました。\nこの度はme-ishへのご参加、誠にありがとうございました。\n\n----------------------------\n🎨 再展示・プラン延長のご案内\n\n再展示をご希望の方は、以下のプランからお選びいただけます：\n\n・Free（¥0 / 表示保証なし・ローテーション枠）\n・Mini（¥400 / 月4回保証）\n・Light（¥800 / 月9回保証）\n・Standard（¥1,200 / 月14回保証）\n・Premium（¥2,400 / 月30回保証）\n\n▶ 再出展・プラン延長はこちら:\nhttps://me-ish.art/renew\n\n---\nme-ish運営事務局`,
+    text: `${name} 様\n\nご出展いただいた作品の展示期間が終了いたしました。\nこの度はme-ishへのご参加、誠にありがとうございました。\n\n----------------------------\n🎨 再展示・プラン延長のご案内\n\n再展示をご希望の方は、以下のプランからお選びいただけます：\n\n・Free（¥0 / 表示保証なし・ローテーション枠）\n・Mini（¥400 / 月4回保証）\n・Light（¥800 / 月9回保証）\n・Standard（¥1,200 / 月14回保証）\n・Premium（¥2,400 / 月30回保証）\n\n▶ 再出展・プラン延長はこちら:\n${renewUrl}\n\n---\nme-ish運営事務局`,
   };
 }

@@ -1,5 +1,6 @@
 // --- /lib/emailTemplates/submit.ts ---
 // 応募受付メール（定型版）: 名前と（任意）管理URLだけで送れる簡潔テンプレ
+import { getEmailLinks } from '@/lib/constants';
 
 export type SubmitSimpleArgs = {
   name: string;                  // 宛名（必須）
@@ -20,8 +21,8 @@ export function generateSubmitEmail(arg: SubmitSimpleArgs | string) {
   const {
     name,
     manageUrl,
-    faqUrl = 'https://me-ish.art/faq',
-    termsUrl = 'https://me-ish.art/footer/terms',
+    faqUrl = getEmailLinks().faqUrl,
+    termsUrl = getEmailLinks().termsUrl,
     supportEmail = 'support@me-ish.art',
     slaHours = 72,
   } = a;

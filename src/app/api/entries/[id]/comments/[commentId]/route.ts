@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { checkCsrf } from "@/lib/auth/csrf";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,6 +29,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<Params> }
 ) {
+  const csrfErr = checkCsrf(_req);
+  if (csrfErr) return csrfErr;
+
   try {
     const { id, commentId } = await params;
     const entryId = Number(id);

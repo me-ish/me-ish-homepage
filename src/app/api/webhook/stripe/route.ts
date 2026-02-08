@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { issueReissueLink } from "@/lib/coa/server";
+import { getSiteUrl } from "@/lib/constants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,12 +24,6 @@ function supabaseAdmin() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-function siteUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "http://localhost:3000";
-}
-
 /**
  * 内部メール送信API呼び出し
  */
@@ -41,7 +36,7 @@ async function sendEmailInternal(
   if (!token) {
     return;
   }
-  const url = `${siteUrl()}/api/send-email/${kind}`;
+  const url = `${getSiteUrl()}/api/send-email/${kind}`;
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -449,7 +444,7 @@ async function handleGalleryPurchase(
           }
 
           // 領収書URL
-          const receiptUrl = `${siteUrl()}/receipt/${session.id}`;
+          const receiptUrl = `${getSiteUrl()}/receipt/${session.id}`;
 
           await sendEmailInternal("purchaseBuyer", buyerEmail, {
             name: buyerName,
@@ -473,7 +468,7 @@ async function handleGalleryPurchase(
             editionNo: typeof newSold === "number" ? newSold : undefined,
             editionTotal: entry.edition_total,
             orderId: session.id,
-            manageUrl: `${siteUrl()}/mypage`,
+            manageUrl: `${getSiteUrl()}/mypage`,
           });
         }
       }

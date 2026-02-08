@@ -105,7 +105,7 @@ const isEditionSoldOut = isLimited && (editionRemainingForDisplay ?? 0) <= 0;
     if (liked) return;
     setIsAnimating(true);
     try {
-      const res = await fetch(`/api/entries/${(a as any).id}/like`, { method: 'POST' });
+      const res = await fetch(`/api/entries/${(a as any).id}/like`, { method: 'POST', headers: { 'x-requested-with': 'me-ish' } });
       const data = await res.json();
       setLikes(data.likes ?? likes + 1);
       setLiked(true);
@@ -125,7 +125,7 @@ const handlePurchase = async () => {
 
   const res = await fetch('/api/purchase/stripe', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-requested-with': 'me-ish' },
     body: JSON.stringify({ entryId: id, title, price: Number(price) }),
   });
   const data = await res.json();
