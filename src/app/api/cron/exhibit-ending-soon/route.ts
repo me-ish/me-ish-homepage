@@ -85,20 +85,27 @@ async function handleCron(req: NextRequest) {
   }
 
 
+  // ✅ プロフィールをバッチ取得（N+1 防止）
+  const userIds = [...new Set(entries.map((e: any) => e.user_id).filter(Boolean))] as string[];
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('id, display_name')
+    .in('id', userIds);
+  const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
+
+  // Auth ユーザーのメールもバッチ取得（listUsers で一括、max 1000）
+  const emailMap = new Map<string, string>();
+  for (const uid of userIds) {
+    const { data: authData } = await admin.auth.admin.getUserById(uid);
+    if (authData?.user?.email) emailMap.set(uid, authData.user.email);
+  }
+
   const results: { entryId: number; success: boolean; error?: string }[] = [];
 
   for (const entry of entries) {
     try {
-      // ユーザー情報を取得
-      const { data: profile } = await admin
-        .from('profiles')
-        .select('display_name')
-        .eq('id', entry.user_id)
-        .single();
-
-      // メールアドレスを取得
-      const { data: authData } = await admin.auth.admin.getUserById(entry.user_id);
-      const artistEmail = authData?.user?.email;
+      const profile = profileMap.get(entry.user_id);
+      const artistEmail = emailMap.get(entry.user_id);
 
       if (!artistEmail) {
         results.push({ entryId: entry.id, success: false, error: 'No email' });

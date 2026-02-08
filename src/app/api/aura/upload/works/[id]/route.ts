@@ -5,14 +5,11 @@ import sharp from "sharp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";
 import { checkCsrf } from "@/lib/auth/csrf";
+import { WORKS_IMAGE_MAX_BYTES, ALLOWED_IMAGE_MIMES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
 const BUCKET = process.env.AURA_ASSETS_BUCKET ?? "aura-assets";
-
-// 作品画像なので少し余裕（必要なら調整）
-const MAX_BYTES = 8 * 1024 * 1024; // 8MB
-const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 function err(status: number, error: string, message?: string) {
   return NextResponse.json(
@@ -39,8 +36,8 @@ export async function POST(
     const file = form.get("file");
 
     if (!(file instanceof File)) return err(400, "file_missing");
-    if (!ALLOWED.has(file.type)) return err(400, "invalid_mime");
-    if (file.size > MAX_BYTES) return err(400, "file_too_large");
+    if (!ALLOWED_IMAGE_MIMES.has(file.type)) return err(400, "invalid_mime");
+    if (file.size > WORKS_IMAGE_MAX_BYTES) return err(400, "file_too_large");
 
     const input = Buffer.from(await file.arrayBuffer());
 

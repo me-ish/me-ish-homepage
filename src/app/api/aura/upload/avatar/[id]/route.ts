@@ -6,12 +6,11 @@ import { updatePayloadFields } from "@/lib/aura/aura.db";
 import { auraAssetProxyUrl } from "@/lib/aura/storage/auraAssets";
 import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";
 import { checkCsrf } from "@/lib/auth/csrf";
+import { AVATAR_MAX_BYTES, ALLOWED_IMAGE_MIMES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
 const BUCKET = process.env.AURA_ASSETS_BUCKET ?? "aura-assets";
-const MAX_BYTES = 2 * 1024 * 1024; // 2MB（UIの文言に合わせる）
-const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 function err(status: number, error: string, message?: string) {
   return NextResponse.json(
@@ -38,8 +37,8 @@ export async function POST(
     const file = form.get("file");
 
     if (!(file instanceof File)) return err(400, "file_missing");
-    if (!ALLOWED.has(file.type)) return err(400, "invalid_mime");
-    if (file.size > MAX_BYTES) return err(400, "file_too_large");
+    if (!ALLOWED_IMAGE_MIMES.has(file.type)) return err(400, "invalid_mime");
+    if (file.size > AVATAR_MAX_BYTES) return err(400, "file_too_large");
 
     const input = Buffer.from(await file.arrayBuffer());
 

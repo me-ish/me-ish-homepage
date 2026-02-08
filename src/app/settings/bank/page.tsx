@@ -96,8 +96,6 @@ export default function BankSettingsPage() {
 
     (async () => {
       try {
-        console.log('[bank settings] searching with uid:', uid, 'email:', userEmail);
-
         // entriesからexternal_user_idを取得（user_id または email でマッチ）
         let entry: { external_user_id: string | null } | null = null;
 
@@ -110,8 +108,6 @@ export default function BankSettingsPage() {
           .limit(1)
           .maybeSingle();
 
-        console.log('[bank settings] by user_id:', entryByUid, 'error:', uidErr);
-
         if (entryByUid) {
           entry = entryByUid;
         } else if (userEmail) {
@@ -123,14 +119,10 @@ export default function BankSettingsPage() {
             .not('external_user_id', 'is', null)
             .limit(1)
             .maybeSingle();
-          console.log('[bank settings] by email:', entryByEmail, 'error:', emailErr);
           entry = entryByEmail;
         }
 
-        console.log('[bank settings] final entry:', entry);
-
         if (!entry?.external_user_id) {
-          console.log('[bank settings] no entry found, stopping');
           setLoading(false);
           return;
         }
