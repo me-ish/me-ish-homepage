@@ -1,18 +1,12 @@
 // src/app/api/purchase/stripe/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
 import { checkCsrf } from '@/lib/auth/csrf';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-// 読み取り用。RLS次第では anon でも可だが、確実に行くなら service role を使用
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function POST(req: NextRequest) {
   const csrfErr = checkCsrf(req);
@@ -30,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 価格・在庫をサーバー側で確定（改ざん防止）
-  const { data: entry, error } = await supabaseAdmin
+  const { data: entry, error } = await supabaseAdmin()
     .from('entries')
     .select('id, title, price, edition_total, edition_sold')
     .eq('id', entryId)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,17 +10,6 @@ export const revalidate = 0;
 // 固定：保護済みデータは artworks/final/ 以下
 const BUCKET = "artworks";
 const FINAL_PREFIX = "final";
-
-// 実行時にだけ Supabase クライアントを作る
-function admin(): SupabaseClient {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    // ここは実行時にだけ到達する。build フェーズでは評価されない。
-    throw new Error("Server misconfig: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY");
-  }
-  return createClient(url, key);
-}
 
 // t= の生トークンを cert_links.token_hash と照合
 async function verifyToken(
@@ -77,7 +67,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "missing entry id" }, { status: 400 });
     }
 
-    const supa = admin(); // ← 実行時にだけ生成
+    const supa = supabaseAdmin();
 
     // トークン検証（不要なら外してください）
     const v = await verifyToken(supa, entryId, token);

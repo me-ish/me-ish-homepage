@@ -1,17 +1,8 @@
 // src/app/sitemap.ts
 import { MetadataRoute } from 'next';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.me-ish.art';
-
-function supabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    return null;
-  }
-  return createClient(url, key, { auth: { persistSession: false } });
-}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date().toISOString();
@@ -48,7 +39,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 動的ページ
   const dynamicPages: MetadataRoute.Sitemap = [];
 
-  const admin = supabaseAdmin();
+  let admin;
+  try {
+    admin = supabaseAdmin();
+  } catch {
+    // env未設定（ビルド時など）
+  }
+
   if (admin) {
     try {
       // 公開中の作品（confirmed かつ display_ready）

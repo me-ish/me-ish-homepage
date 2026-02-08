@@ -4,22 +4,15 @@
 // - 管理者にメール通知
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { generatePayoutCloseNoticeEmail } from '@/lib/emailTemplates/payoutAdminNotice';
 import { safeCompare } from '@/lib/auth/timingSafe';
 import { getSiteUrl } from '@/lib/constants';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
-
-function supabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error('Supabase env missing');
-  return createClient(url, key, { auth: { persistSession: false } });
-}
 
 // 認証チェック
 function isAuthorized(req: NextRequest): boolean {

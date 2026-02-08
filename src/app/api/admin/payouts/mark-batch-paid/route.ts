@@ -5,16 +5,10 @@ import { createClient } from "@supabase/supabase-js";
 import { isAdminEmail } from "@/lib/isAdmin";
 import { safeCompare } from "@/lib/auth/timingSafe";
 import { getSiteUrl } from "@/lib/constants";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function supabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Supabase env missing");
-  return createClient(url, key, { auth: { persistSession: false } });
-}
 
 function supabaseWithCookies() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

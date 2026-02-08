@@ -6,9 +6,9 @@
 // =============================================================================
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
 import { issueReissueLink } from "@/lib/coa/server";
 import { getSiteUrl } from "@/lib/constants";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,13 +16,6 @@ export const revalidate = 0;
 
 // 署名検証だけなので apiVersion 指定は必須ではないが、警告回避したい場合は指定しても良い
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-function supabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Supabase env missing");
-  return createClient(url, key, { auth: { persistSession: false } });
-}
 
 /**
  * 内部メール送信API呼び出し

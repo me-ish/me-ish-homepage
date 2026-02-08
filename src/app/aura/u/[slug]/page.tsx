@@ -1,6 +1,6 @@
 // src/app/aura/u/[slug]/page.tsx
 import { notFound, redirect } from "next/navigation";
-import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 

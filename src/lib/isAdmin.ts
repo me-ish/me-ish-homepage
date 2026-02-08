@@ -3,19 +3,12 @@
 // - DBのadmin_emailsテーブルを優先
 // - フォールバック: 環境変数ADMIN_EMAILS
 
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 // キャッシュ（TTL: 5分）
 let cachedAdminEmails: Set<string> | null = null;
 let cacheExpiry = 0;
 const CACHE_TTL_MS = 5 * 60 * 1000;
-
-function supabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
-}
 
 /**
  * 環境変数から管理者メールを取得（フォールバック用）
@@ -34,8 +27,12 @@ function getEnvAdminEmails(): Set<string> {
  * DBから管理者メールを取得（キャッシュ付き）
  */
 async function fetchAdminEmailsFromDB(): Promise<Set<string> | null> {
-  const admin = supabaseAdmin();
-  if (!admin) return null;
+  let admin;
+  try {
+    admin = supabaseAdmin();
+  } catch {
+    return null; // env未設定
+  }
 
   try {
     const { data, error } = await admin.from("admin_emails").select("email");

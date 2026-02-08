@@ -1,20 +1,13 @@
 // src/app/api/admin/payouts/export-csv/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { isAdminEmail } from "@/lib/isAdmin";
 import { safeCompare } from "@/lib/auth/timingSafe";
 import { getSiteUrl } from "@/lib/constants";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function supabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Supabase env missing");
-  return createSupabaseClient(url, key, { auth: { persistSession: false } });
-}
 
 type BankAccount = {
   external_user_id: string;

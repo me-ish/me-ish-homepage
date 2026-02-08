@@ -2,7 +2,7 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 
-import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { RendererRouter } from "@/components/aura/renderer/RendererRouter";
 import { fontFamilyFromPreset } from "@/styles/auraFonts";
 
