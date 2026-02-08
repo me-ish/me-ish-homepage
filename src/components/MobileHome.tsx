@@ -4,7 +4,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
-  Mail,
   ArrowRight,
   ShieldCheck,
   Images,
@@ -14,20 +13,14 @@ import {
   Users,
   ChevronUp,
 } from 'lucide-react';
-import { FaXTwitter } from 'react-icons/fa6';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
-import { supabase } from '@/lib/supabaseClient';
-import { resolveImageUrl, type EntryRow } from '@/lib/gallery/galleryUtils';
+import { useGalleryArtworks, useGalleryStats } from '@/hooks/useHomePageData';
+import { AnnouncementBadge } from '@/components/home/AnnouncementBadge';
+import { FAQSection } from '@/components/home/FAQSection';
+import { ContactSection } from '@/components/home/ContactSection';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 import { SectionHeader } from '@/components/shared/SectionHeader';
 import { FloatingBubbles } from '@/components/shared/FloatingBubbles';
 
@@ -46,87 +39,6 @@ const FLOATING_POSITIONS_MOBILE = [
   { x: 6, y: 68, size: 50, delay: 0.8 },
   { x: 80, y: 72, size: 58, delay: 1.2 },
 ];
-
-// ギャラリー統計を取得するフック
-function useGalleryStats() {
-  const [stats, setStats] = useState<{ worksCount: number; artistsCount: number } | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    (async () => {
-      try {
-        const { data, error } = await supabase
-          .from('entries')
-          .select('user_id')
-          .eq('confirmed', true)
-          .eq('display_ready', true);
-
-        if (error) throw error;
-
-        if (mounted && data) {
-          const worksCount = data.length;
-          const uniqueArtists = new Set(data.map((entry) => entry.user_id));
-          setStats({
-            worksCount,
-            artistsCount: uniqueArtists.size,
-          });
-        }
-      } catch (err) {
-        console.error('Failed to fetch gallery stats:', err);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  return stats;
-}
-
-// 展示作品を取得するフック（Hero表示用：agree_promotion=true のみ）
-function useGalleryArtworks(limit = 4) {
-  const [artworks, setArtworks] = useState<{ src: string; id: number }[]>([]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    (async () => {
-      try {
-        // Hero表示は公式広報への同意（agree_promotion）がある作品のみ
-        const { data, error } = await supabase
-          .from('entries')
-          .select('id, image_url, file_name')
-          .eq('confirmed', true)
-          .eq('display_ready', true)
-          .eq('agree_promotion', true)
-          .order('confirmed_at', { ascending: false })
-          .limit(limit);
-
-        if (error) throw error;
-
-        if (mounted && data && data.length > 0) {
-          const resolved = data
-            .map((entry) => ({
-              id: entry.id,
-              src: resolveImageUrl(entry as Pick<EntryRow, 'image_url' | 'file_name'>),
-            }))
-            .filter((item) => item.src);
-          setArtworks(resolved);
-        }
-      } catch (err) {
-        console.error('Failed to fetch gallery artworks:', err);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, [limit]);
-
-  return artworks;
-}
 
 function FloatingArtworkMobile({
   src, x, y, size, delay
@@ -325,7 +237,7 @@ function AnnouncementsStripMobile() {
           href="/news"
           className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/80 backdrop-blur-sm ring-1 ring-[#00a1e9]/10 active:bg-[#f0f9ff] transition-colors"
         >
-          <AnnouncementBadge type={n.category as 'info' | 'update' | 'maintenance'} />
+          <AnnouncementBadge type={n.category as 'info' | 'update' | 'maintenance'} className="shrink-0" />
           <time className="text-[11px] text-gray-400 tabular-nums shrink-0">
             {fmt.format(new Date(n.published_at))}
           </time>
@@ -336,20 +248,6 @@ function AnnouncementsStripMobile() {
         </Link>
       ))}
     </div>
-  );
-}
-
-function AnnouncementBadge({ type }: { type: 'info' | 'update' | 'maintenance' }) {
-  const styles: Record<string, string> = {
-    info: 'bg-blue-50 text-blue-600',
-    update: 'bg-emerald-50 text-emerald-600',
-    maintenance: 'bg-rose-50 text-rose-600',
-  };
-
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${styles[type]}`}>
-      {type === 'info' ? 'Info' : type === 'update' ? 'Update' : 'Maint'}
-    </span>
   );
 }
 
@@ -696,103 +594,9 @@ const MobileHome = () => {
           </div>
         </section>
 
-        {/* FAQ */}
-        <section
-          id="faq"
-          className={`fade-in-up ${LAYOUT.sectionX} ${LAYOUT.sectionY} bg-gray-50`}
-          aria-labelledby="faq-title"
-        >
-          <div className={LAYOUT.container}>
-            <SectionHeader title="よくある質問" id="faq-title" />
-
-            <Accordion type="single" collapsible className="space-y-2">
-              {[
-                {
-                  value: 'q1',
-                  q: '誰でも出展できますか？',
-                  a: 'はい、プロ・アマ問わずご応募いただけます。展示は審査制です。',
-                },
-                {
-                  value: 'q2',
-                  q: '出展に料金はかかりますか？',
-                  a: '応募・展示は無料です。作品が売れた場合のみ、売上から手数料をいただきます。',
-                },
-                {
-                  value: 'q3',
-                  q: '生成AIは使ってもいいですか？',
-                  a: 'AIだけで作った完全生成作品は不可です。補助的な利用はケースにより異なります。',
-                },
-              ].map(({ value, q, a }) => (
-                <AccordionItem
-                  key={value}
-                  value={value}
-                  className="rounded-xl bg-white ring-1 ring-gray-100 overflow-hidden"
-                >
-                  <AccordionTrigger className="px-4 py-4 text-left text-sm font-semibold text-gray-900 hover:no-underline">
-                    <span className="flex items-center gap-2">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#00a1e9]/10 flex items-center justify-center text-[#00a1e9] font-bold text-xs">
-                        Q
-                      </span>
-                      {q}
-                    </span>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4 text-sm text-gray-600 leading-relaxed">
-                    <div className="pl-8">{a}</div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-
-            <div className="mt-6 text-center">
-              <Button
-                asChild
-                variant="outline"
-                className="rounded-full border-[#00a1e9] text-[#00a1e9]"
-              >
-                <Link href="/footer/faq">
-                  もっと見る <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* Contact */}
-        <section
-          id="contact"
-          className={`fade-in-up ${LAYOUT.sectionX} ${LAYOUT.sectionY}`}
-          aria-labelledby="contact-title"
-        >
-          <div className={LAYOUT.container}>
-            <SectionHeader
-              title="お問い合わせ"
-              id="contact-title"
-              subtitle="ご質問などございましたらお気軽に"
-            />
-
-            <div className="flex flex-col gap-3">
-              <Button
-                asChild
-                className="w-full rounded-full py-5 h-auto shadow-md"
-              >
-                <Link href="/contact">
-                  <Mail className="h-4 w-4 mr-2" />
-                  お問い合わせフォーム
-                </Link>
-              </Button>
-
-              <a
-                href="https://x.com/meishart0716"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 py-4 rounded-full bg-gray-100 text-gray-700 font-medium active:bg-gray-200 transition-colors"
-              >
-                <FaXTwitter className="h-4 w-4" />
-                X（旧Twitter）
-              </a>
-            </div>
-          </div>
-        </section>
+        {/* FAQ & Contact */}
+        <FAQSection variant="mobile" />
+        <ContactSection variant="mobile" />
       </main>
 
       {/* Animations */}

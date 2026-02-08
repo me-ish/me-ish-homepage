@@ -35,7 +35,7 @@ if (rec.design && rec.content) {
 
     // それ以外は pending（例：pending のまま、または中途半端に更新された等）
     return NextResponse.json({ ok: true, status: "pending" }, { status: 200 });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[AI_PORTFOLIO_REQUEST_GET_ERROR]", e);
     return NextResponse.json(
       { ok: false, status: "error", error: "internal_error" },

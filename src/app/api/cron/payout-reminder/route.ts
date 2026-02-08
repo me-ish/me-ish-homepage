@@ -173,10 +173,11 @@ async function handleCron(req: NextRequest) {
       notifiedAdmins: adminEmails.length,
       reminderType: shouldSendCloseReminder ? 'close' : 'payout',
     });
-  } catch (emailErr: any) {
+  } catch (emailErr: unknown) {
     console.error('[payout-reminder] Email send error:', emailErr);
+    const message = emailErr instanceof Error ? emailErr.message : String(emailErr);
     return NextResponse.json({
-      error: emailErr.message || 'Failed to send email',
+      error: message || 'Failed to send email',
     }, { status: 500 });
   }
 }

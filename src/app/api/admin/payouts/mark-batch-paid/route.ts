@@ -6,6 +6,7 @@ import { isAdminEmail } from "@/lib/isAdmin";
 import { safeCompare } from "@/lib/auth/timingSafe";
 import { getSiteUrl } from "@/lib/constants";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { logAdminAction } from "@/lib/adminAudit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
   try {
     // 認証チェック
     let isAuthorized = false;
+    let adminEmail = "api-token";
 
     // 方法1: ADMIN_API_TOKEN ヘッダー
     const token = req.headers.get("x-meish-admin-token");
@@ -58,6 +60,7 @@ export async function POST(req: NextRequest) {
       const email = user?.email ?? null;
       if (email && isAdminEmail(email)) {
         isAuthorized = true;
+        adminEmail = email;
       }
     }
 
@@ -338,8 +341,9 @@ export async function POST(req: NextRequest) {
 
         totalProcessed++;
         totalAmount += userTotalAmount;
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error(`[mark-batch-paid] exception for ${payout.user_id}:`, e);
+        const message = e instanceof Error ? e.message : String(e);
         results.push({
           userId: payout.user_id,
           displayName: payout.display_name,
@@ -347,10 +351,12 @@ export async function POST(req: NextRequest) {
           saleCount: 0,
           payoutId: null,
           success: false,
-          error: e.message || "Unknown error",
+          error: message || "Unknown error",
         });
       }
     }
+
+    logAdminAction({ adminEmail, action: "mark_batch_paid", resourceType: "batch", detail: { processedCount: totalProcessed, totalAmount, failedCount: results.filter((r) => !r.success).length } });
 
     return NextResponse.json({
       ok: true,
@@ -359,10 +365,11 @@ export async function POST(req: NextRequest) {
       failedCount: results.filter((r) => !r.success).length,
       results,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[mark-batch-paid] exception:", e);
+    const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json(
-      { error: e.message || "Internal server error" },
+      { error: message || "Internal server error" },
       { status: 500 }
     );
   }

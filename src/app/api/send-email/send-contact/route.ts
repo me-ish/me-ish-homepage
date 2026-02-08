@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { checkRateLimit, getIpFromRequest, rateLimitExceeded } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -64,16 +65,16 @@ const resend = new Resend(RESEND_API_KEY);
 
 /* ---------- Handler ---------- */
 export async function POST(req: Request) {
+  const ip = getIpFromRequest(req);
+  const rl = checkRateLimit(`contact:${ip}`, { limit: 3, windowMs: 600_000 });
+  if (!rl.allowed) return rateLimitExceeded(rl.retryAfterMs);
+
   if (!RESEND_API_KEY) {
     return NextResponse.json(
       { error: 'server misconfig: RESEND_API_KEY' },
       { status: 500 }
     );
   }
-
-  const ip =
-    (req.headers.get('x-forwarded-for') as string | null)?.split(',')[0]?.trim() ||
-    undefined;
 
   try {
     const body = await req.json().catch(() => ({}));

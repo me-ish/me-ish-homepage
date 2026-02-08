@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import crypto from 'crypto';
 import Stripe from 'stripe';
 import { getSiteUrl } from '@/lib/constants';
+import { logAdminAction } from '@/lib/adminAudit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -292,6 +293,8 @@ export async function POST(
       }
     }
   }
+
+  logAdminAction({ adminEmail: "api-token", action: "approve_entry", resourceType: "entry", resourceId: String(id) });
 
   return NextResponse.json({ ok: true, entry: updatedEntry, job }, { status: 200 });
 }

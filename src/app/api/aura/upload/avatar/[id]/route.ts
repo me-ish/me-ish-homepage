@@ -77,7 +77,7 @@ export async function POST(
     });
 
     return NextResponse.json({ ok: true, url: proxyUrl, path }, { status: 200 });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[upload/avatar] error", e);
     return err(500, "internal_error");
   }

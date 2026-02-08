@@ -8,7 +8,7 @@ type Section = {
   type: string;
   headings?: string[];
   paragraphs?: string[];
-  items?: any[];
+  items?: Record<string, unknown>[];
   cta?: { label?: string; href?: string };
 };
 

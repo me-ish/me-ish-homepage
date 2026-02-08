@@ -71,8 +71,8 @@ export default function PreviewWaitClient(props: Props) {
         if (!cancelled) {
           setTries((t) => t + 1);
         }
-      } catch (e: any) {
-        if (e?.name === "AbortError") return;
+      } catch (e: unknown) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
 
         if (!cancelled) {
           setError(

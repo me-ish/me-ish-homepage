@@ -41,9 +41,10 @@ export default function AdminUserDetailClient({ adminEmail, artistName }: Props)
       if (!res.ok) throw new Error('fetch_failed');
       const json = (await res.json()) as { items: Entry[] };
       if (mountedRef.current) setEntries(json.items ?? []);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('[admin/user-detail] fetch error:', e);
-      if (mountedRef.current) setErr(e?.message ?? '取得に失敗しました');
+      const message = e instanceof Error ? e.message : String(e);
+      if (mountedRef.current) setErr(message || '取得に失敗しました');
     } finally {
       if (mountedRef.current) setLoading(false);
     }

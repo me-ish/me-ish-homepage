@@ -5,6 +5,7 @@ import { isAdminEmail } from "@/lib/isAdmin";
 import { safeCompare } from "@/lib/auth/timingSafe";
 import { getSiteUrl } from "@/lib/constants";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { logAdminAction } from "@/lib/adminAudit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +37,7 @@ export async function GET(req: NextRequest) {
   try {
     // 認証チェック
     let isAuthorized = false;
+    let adminEmail = "api-token";
 
     // 方法1: ADMIN_API_TOKEN ヘッダー
     const token = req.headers.get("x-meish-admin-token");
@@ -52,6 +54,7 @@ export async function GET(req: NextRequest) {
       const email = user?.email ?? null;
       if (email && isAdminEmail(email)) {
         isAuthorized = true;
+        adminEmail = email;
       }
     }
 
@@ -270,11 +273,14 @@ export async function GET(req: NextRequest) {
       headers["X-Payout-Warnings"] = encodeURIComponent(warnings.join("; "));
     }
 
+    logAdminAction({ adminEmail, action: "export_csv", resourceType: "batch", detail: { format, rowCount: rows.length - 1, warnings } });
+
     return new NextResponse(csvWithBom, { headers });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[export-csv] exception:", e);
+    const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json(
-      { error: e.message || "Internal server error" },
+      { error: message || "Internal server error" },
       { status: 500 }
     );
   }

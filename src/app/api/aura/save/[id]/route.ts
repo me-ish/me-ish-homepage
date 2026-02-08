@@ -153,7 +153,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
       },
       { status: 200 },
     );
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[aura/save] unexpected_error", { id, error: e });
     return NextResponse.json(
       { ok: false, error: "internal_error" },

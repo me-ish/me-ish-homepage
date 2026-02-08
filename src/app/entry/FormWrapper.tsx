@@ -410,8 +410,9 @@ const FormWrapper = () => {
       } catch (e) {
         console.error('submit mail failed:', e);
       }
-    } catch (e: any) {
-      alert(`送信中にエラーが発生しました：${e.message}`);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      alert(`送信中にエラーが発生しました：${message}`);
     } finally {
       setSubmitting(false);
     }

@@ -25,8 +25,9 @@ export async function POST(req: Request) {
 
     const json = await res.json().catch(() => ({}));
     return NextResponse.json(json, { status: res.status });
-  } catch (e: any) {
-    console.error('[proxy] submit email failed:', e?.message ?? e);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error('[proxy] submit email failed:', message);
     return NextResponse.json({ error: 'proxy error' }, { status: 500 });
   }
 }

@@ -4,7 +4,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
-  Mail,
   Sparkles,
   ShieldCheck,
   Images,
@@ -14,22 +13,17 @@ import {
   Eye,
   Users,
 } from 'lucide-react';
-import { FaXTwitter } from 'react-icons/fa6';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
-import { supabase } from '@/lib/supabaseClient';
-import { resolveImageUrl, type EntryRow } from '@/lib/gallery/galleryUtils';
+import { useGalleryArtworks, useGalleryStats } from '@/hooks/useHomePageData';
+import { AnnouncementBadge } from '@/components/home/AnnouncementBadge';
+import { FAQSection } from '@/components/home/FAQSection';
+import { ContactSection } from '@/components/home/ContactSection';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionHeader } from '@/components/shared/SectionHeader';
 import { BackToTop } from '@/components/shared/BackToTop';
 import { FloatingBubbles } from '@/components/shared/FloatingBubbles';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 
 /*
    Layout Tokens
@@ -61,108 +55,6 @@ const FLOATING_POSITIONS = [
   { x: 78, y: 25, size: 75, delay: 2.4 },
   { x: 18, y: 32, size: 70, delay: 2.8 },
 ];
-
-// 展示作品を取得するフック（Hero表示用：agree_promotion=true のみ）
-function useGalleryArtworks(limit = 8) {
-  const [artworks, setArtworks] = useState<{ src: string; id: number }[]>([]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    (async () => {
-      try {
-        // Hero表示は公式広報への同意（agree_promotion）がある作品のみ
-        const { data, error } = await supabase
-          .from('entries')
-          .select('id, image_url, file_name')
-          .eq('confirmed', true)
-          .eq('display_ready', true)
-          .eq('agree_promotion', true)
-          .order('confirmed_at', { ascending: false })
-          .limit(limit);
-
-        if (error) throw error;
-
-        if (mounted && data && data.length > 0) {
-          const resolved = data
-            .map((entry) => ({
-              id: entry.id,
-              src: resolveImageUrl(entry as Pick<EntryRow, 'image_url' | 'file_name'>),
-            }))
-            .filter((item) => item.src);
-          setArtworks(resolved);
-        }
-      } catch (err) {
-        console.error('Failed to fetch gallery artworks:', err);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, [limit]);
-
-  return artworks;
-}
-
-// ギャラリー統計を取得するフック
-function useGalleryStats() {
-  const [stats, setStats] = useState<{
-    worksCount: number;
-    artistsCount: number;
-    uniqueViews: number;
-  } | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    (async () => {
-      try {
-        // 展示中の作品を取得（user_idも含める）
-        const { data, error } = await supabase
-          .from('entries')
-          .select('id, user_id')
-          .eq('confirmed', true)
-          .eq('display_ready', true);
-
-        if (error) throw error;
-
-        if (mounted && data) {
-          const worksCount = data.length;
-          const uniqueArtists = new Set(data.map((entry) => entry.user_id));
-
-          // ユニーク閲覧数を取得（entry_view_stats から）
-          let uniqueViews = 0;
-          if (data.length > 0) {
-            const entryIds = data.map((entry) => entry.id);
-            const { data: viewData, error: viewError } = await supabase
-              .from('entry_view_stats')
-              .select('unique_views')
-              .in('entry_id', entryIds);
-
-            if (!viewError && viewData) {
-              uniqueViews = viewData.reduce((sum, v) => sum + (v.unique_views ?? 0), 0);
-            }
-          }
-
-          setStats({
-            worksCount,
-            artistsCount: uniqueArtists.size,
-            uniqueViews,
-          });
-        }
-      } catch (err) {
-        console.error('Failed to fetch gallery stats:', err);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  return stats;
-}
 
 function FloatingArtwork({
   src, x, y, size, delay, mouseX, mouseY
@@ -496,21 +388,6 @@ function AnnouncementsStrip({ max = 3 }: { max?: number }) {
   );
 }
 
-function AnnouncementBadge({ type }: { type: 'info' | 'update' | 'maintenance' }) {
-  const styles: Record<string, string> = {
-    info: 'bg-blue-50 text-blue-600',
-    update: 'bg-emerald-50 text-emerald-600',
-    maintenance: 'bg-rose-50 text-rose-600',
-  };
-  const labels: Record<string, string> = { info: 'Info', update: 'Update', maintenance: 'Maint' };
-
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${styles[type]}`}>
-      {labels[type]}
-    </span>
-  );
-}
-
 /*
    背景レイヤー
 ────────────────────────────────────────────────────────────── */
@@ -534,120 +411,6 @@ function HeroBackground() {
         backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
       }} />
     </div>
-  );
-}
-
-/*
-   FAQ Section
-────────────────────────────────────────────────────────────── */
-function FAQSection() {
-  return (
-    <section
-      id="faq"
-      className={`fade-in-up ${LAYOUT.sectionY} px-6 bg-gradient-to-b from-gray-50 to-white`}
-      aria-labelledby="faq-title"
-    >
-      <div className={LAYOUT.container}>
-        <SectionHeader title="よくある質問" id="faq-title" underline />
-
-        <div className="max-w-[880px] mx-auto">
-          <Accordion type="single" collapsible defaultValue="item-0" className="space-y-4">
-            {[
-              {
-                q: '誰でも出展できますか？',
-                a: 'はい、プロ・アマ問わずご応募いただけます。展示は審査制です。',
-              },
-              {
-                q: '出展に料金はかかりますか？',
-                a: '応募・展示は無料です。作品が売れた場合のみ、売上から手数料をいただきます。',
-              },
-              {
-                q: '生成AIは使ってもいいですか？',
-                a: 'AIだけで作った"完全生成"作品は不可です。補助的な利用はケースにより異なります。詳細はFAQをご確認ください。',
-              },
-            ].map(({ q, a }, idx) => (
-              <AccordionItem
-                key={idx}
-                value={`item-${idx}`}
-                className="rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 overflow-hidden"
-              >
-                <AccordionTrigger className="px-6 py-5 text-left font-semibold text-gray-900 hover:no-underline hover:bg-gray-50 transition-colors">
-                  <span className="flex items-center gap-3">
-                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-[#00a1e9]/10 flex items-center justify-center text-[#00a1e9] font-bold text-sm">
-                      Q
-                    </span>
-                    {q}
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-5 text-gray-600 leading-relaxed">
-                  <div className="pl-11">{a}</div>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
-
-        <div className="mt-10 text-center">
-          <Button
-            asChild
-            variant="outline"
-            size="lg"
-            className="rounded-full border-[#00a1e9] text-[#00a1e9] hover:bg-[#00a1e9] hover:text-white transition-all duration-300"
-          >
-            <Link href="/footer/faq">
-              すべてのFAQを見る <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/*
-   Contact Section
-────────────────────────────────────────────────────────────── */
-function ContactSection() {
-  return (
-    <section
-      id="contact"
-      className={`fade-in-up ${LAYOUT.sectionY} px-6 bg-white`}
-      aria-labelledby="contact-title"
-    >
-      <div className={LAYOUT.container}>
-        <div className="max-w-2xl mx-auto text-center">
-          <SectionHeader
-            title="お問い合わせ"
-            id="contact-title"
-            subtitle="ご質問・ご相談などございましたら、お気軽にご連絡ください。"
-            underline
-          />
-
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button
-              asChild
-              size="lg"
-              className="rounded-full px-8 py-4 h-auto text-base shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <Link href="/contact">
-                <Mail className="h-5 w-5 mr-2" />
-                お問い合わせフォーム
-              </Link>
-            </Button>
-
-            <a
-              href="https://x.com/meishart0716"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-[#00a1e9] hover:text-white transition-all duration-300"
-              aria-label="X（旧Twitter）"
-            >
-              <FaXTwitter className="h-6 w-6" />
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -1011,8 +774,8 @@ const DesktopHome = () => {
         </section>
 
         {/* FAQ & Contact */}
-        <FAQSection />
-        <ContactSection />
+        <FAQSection variant="desktop" />
+        <ContactSection variant="desktop" />
       </main>
 
       <BackToTop />

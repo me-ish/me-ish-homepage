@@ -285,8 +285,9 @@ me-ishは、アーティストの作品をWebブラウザ上で楽しめる3Dバ
       else if (name === 'search_entries') toolResult = await impl_search_entries(args);
       else if (name === 'get_gallery_status') toolResult = await impl_get_gallery_status(args);
       else toolResult = { error: `unknown tool: ${name}` };
-    } catch (e: any) {
-      const msg = SAFE_DEBUG ? e.message : 'データ取得時にエラーが発生しました。';
+    } catch (e: unknown) {
+      const errMessage = e instanceof Error ? e.message : String(e);
+      const msg = SAFE_DEBUG ? errMessage : 'データ取得時にエラーが発生しました。';
       return NextResponse.json({ reply: msg }, { status: 500 });
     }
 
@@ -310,10 +311,11 @@ me-ishは、アーティストの作品をWebブラウザ上で楽しめる3Dバ
       '情報の取得に失敗しました。作品名やIDをもう一度教えてください。';
 
     return NextResponse.json({ reply: text });
-  } catch (e: any) {
+  } catch (e: unknown) {
     if (SAFE_DEBUG) console.error('Route fatal error:', e);
+    const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json(
-      { reply: SAFE_DEBUG ? `Fatal: ${e.message}` : '内部エラーが発生しました。' },
+      { reply: SAFE_DEBUG ? `Fatal: ${message}` : '内部エラーが発生しました。' },
       { status: 500 }
     );
   }

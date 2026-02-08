@@ -16,6 +16,7 @@ import {
   buildAuraSessionCookie,
 } from "@/lib/aura/requireAuraAccess";
 import { checkCsrf } from "@/lib/auth/csrf";
+import { checkRateLimit, getIpFromRequest, rateLimitExceeded } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -135,7 +136,7 @@ export async function GET(req: Request) {
       { ok: true, result: res.choices[0]?.message?.content ?? "" },
       { status: 200 }
     );
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[aura/form/submit][GET test_openai] error", e);
     return NextResponse.json(
       { ok: false, error: "openai_test_failed" },
@@ -150,6 +151,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const csrfErr = checkCsrf(req);
   if (csrfErr) return csrfErr;
+
+  const ip = getIpFromRequest(req);
+  const rl = checkRateLimit(`aura-submit:${ip}`, { limit: 3, windowMs: 600_000 });
+  if (!rl.allowed) return rateLimitExceeded(rl.retryAfterMs);
 
   const supabase = supabaseAdmin();
   const json = await req.json().catch(() => null);
@@ -391,8 +396,8 @@ export async function POST(req: Request) {
     }
 
     return res;
-  } catch (e: any) {
-    const message = e?.message ?? String(e);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
     console.error("[aura/form/submit] generate error", e);
 
     await supabase

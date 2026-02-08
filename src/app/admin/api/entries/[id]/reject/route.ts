@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { EntryReject } from '@/lib/schemas/entry';
 import crypto from 'crypto';
 import { getSiteUrl } from '@/lib/constants';
+import { logAdminAction } from '@/lib/adminAudit';
 
 function requireAdmin(req: Request) {
   const expected = process.env.ADMIN_API_TOKEN;
@@ -104,6 +105,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     mailed = true;
   }
+
+  logAdminAction({ adminEmail: "api-token", action: "reject_entry", resourceType: "entry", resourceId: String(id), detail: { reason: reason ?? null } });
 
   return NextResponse.json({
     ok: true,

@@ -1,6 +1,7 @@
 // src/app/api/entries/[id]/like/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { checkRateLimit, getIpFromRequest, rateLimitExceeded } from '@/lib/rateLimit';
 
 const SITE_ORIGIN = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '');
 
@@ -44,9 +45,14 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
 export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
   try {
     assertOrigin(req); // 任意（簡易CSRF/埋め込み対策）
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'forbidden' }, { status: e.status ?? 403 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: message || 'forbidden' }, { status: 403 });
   }
+
+  const ip = getIpFromRequest(req);
+  const rl = checkRateLimit(`like:${ip}`, { limit: 30, windowMs: 60_000 });
+  if (!rl.allowed) return rateLimitExceeded(rl.retryAfterMs);
 
   const id = parseId(ctx.params);
   if (!id) return NextResponse.json({ error: 'invalid id' }, { status: 400 });
@@ -73,8 +79,9 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
         console.error('[likes][POST] upsert likes failed:', likeErr.message);
       }
     }
-  } catch (e: any) {
-    console.error('[likes][POST] getUser failed:', e?.message || e);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error('[likes][POST] getUser failed:', message);
   }
 
   return NextResponse.json({ likes: typeof rpc === 'number' ? rpc : null });

@@ -244,9 +244,10 @@ export default function BankSettingsPage() {
 
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('[bank settings] save error:', e);
-      setError(e?.message || '保存に失敗しました。');
+      const message = e instanceof Error ? e.message : String(e);
+      setError(message || '保存に失敗しました。');
     } finally {
       setSaving(false);
     }

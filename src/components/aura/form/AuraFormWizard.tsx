@@ -167,8 +167,8 @@ useEffect(() => {
         error: null,
       });
       return String(json.requestId);
-    } catch (e: any) {
-      const message = e?.message ?? String(e);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
       setDraft({ requestId: null, status: "error", error: message });
       throw e;
     }

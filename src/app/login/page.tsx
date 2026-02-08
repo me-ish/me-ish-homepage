@@ -49,8 +49,9 @@ function LoginInner() {
         options: { redirectTo },
       });
       if (error) throw error;
-    } catch (e: any) {
-      setErr(e?.message ?? 'ログインに失敗しました。時間をおいて再度お試しください。');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      setErr(message || 'ログインに失敗しました。時間をおいて再度お試しください。');
       setLoading(false);
     }
   };

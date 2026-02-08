@@ -171,7 +171,7 @@ export const AuraContact: React.FC<Props> = ({ section, theme, variant }) => {
         bgGradient?: string;
         patternLayers?: string[];
         textureLayers?: string[];
-        bgStyle?: any;
+        bgStyle?: React.CSSProperties;
       }
     | undefined;
 

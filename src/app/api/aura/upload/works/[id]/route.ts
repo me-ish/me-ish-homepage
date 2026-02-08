@@ -80,7 +80,7 @@ export async function POST(
       { ok: true, url: publicUrl, path },
       { status: 200 },
     );
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[upload/works] error", e);
     return err(500, "internal_error");
   }

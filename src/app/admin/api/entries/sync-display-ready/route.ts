@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/isAdmin";
 import path from "node:path";
 import { checkFloatGuaranteeCapacity, getGuaranteeTotalForPlan } from "@/lib/guarantee/capacity";
+import { logAdminAction } from "@/lib/adminAudit";
 
 export const revalidate = 0;
 
@@ -157,6 +158,8 @@ export async function POST() {
     }
     updated++;
   }
+
+  logAdminAction({ adminEmail: user.email ?? "unknown", action: "sync_display_ready", resourceType: "entry", detail: { updated, skipped, skippedReasons } });
 
   return NextResponse.json({ ok: true, updated, skipped, skippedReasons });
 }

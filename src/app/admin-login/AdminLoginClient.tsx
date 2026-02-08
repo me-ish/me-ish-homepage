@@ -43,9 +43,10 @@ export default function AdminLoginClient({ currentEmail }: { currentEmail: strin
         } as any
       );
       // 以降はリダイレクト制御に移る（通常ここまでにブラウザ遷移）
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('[admin-login] signIn error:', e);
-      setErr(e?.message ?? 'ログインに失敗しました');
+      const message = e instanceof Error ? e.message : String(e);
+      setErr(message || 'ログインに失敗しました');
       setBusy(null);
     }
   };
@@ -57,9 +58,10 @@ export default function AdminLoginClient({ currentEmail }: { currentEmail: strin
       await supabase.auth.signOut();
       // 戻るボタンでセッションページに戻れないように replace
       window.location.replace('/admin-login');
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('[admin-login] signOut error:', e);
-      setErr(e?.message ?? 'ログアウトに失敗しました');
+      const message = e instanceof Error ? e.message : String(e);
+      setErr(message || 'ログアウトに失敗しました');
       setBusy(null);
     }
   };

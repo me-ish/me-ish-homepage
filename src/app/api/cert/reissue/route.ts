@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 
     const url = await issueReissueLink(entryId);
     return NextResponse.redirect(url, { status: 302 });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('reissue error:', e);
     return NextResponse.json({ error: 'unexpected error' }, { status: 500 });
   }

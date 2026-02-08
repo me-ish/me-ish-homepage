@@ -6,6 +6,7 @@ import { isAdminEmail } from "@/lib/isAdmin";
 import { safeCompare } from "@/lib/auth/timingSafe";
 import { getSiteUrl } from "@/lib/constants";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { logAdminAction } from "@/lib/adminAudit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
   try {
     // 認証チェック
     let isAuthorized = false;
+    let adminEmail = "api-token";
 
     // 方法1: ADMIN_API_TOKEN ヘッダー
     const token = req.headers.get("x-meish-admin-token");
@@ -53,6 +55,7 @@ export async function POST(req: NextRequest) {
       const email = user?.email ?? null;
       if (email && isAdminEmail(email)) {
         isAuthorized = true;
+        adminEmail = email;
       }
     }
 
@@ -274,16 +277,19 @@ export async function POST(req: NextRequest) {
       console.error("[admin/payouts/mark-paid] email error:", emailErr);
     }
 
+    logAdminAction({ adminEmail, action: "mark_paid", resourceType: "payout", resourceId: payoutId, detail: { userId, updatedCount: saleIds.length, totalAmount } });
+
     return NextResponse.json({
       ok: true,
       updatedCount: saleIds.length,
       totalAmount,
       payoutId,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[admin/payouts/mark-paid] exception:", e);
+    const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json(
-      { error: e.message || "Internal server error" },
+      { error: message || "Internal server error" },
       { status: 500 }
     );
   }

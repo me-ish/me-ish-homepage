@@ -66,7 +66,7 @@ export default function AuraIntroOverlay({
   useEffect(() => {
     if (!open) return;
 
-    let t1: any, t2: any, t3: any, t4: any;
+    let t1: ReturnType<typeof setTimeout>, t2: ReturnType<typeof setTimeout>, t3: ReturnType<typeof setTimeout>, t4: ReturnType<typeof setTimeout>;
 
     setPhase("meish");
     t1 = setTimeout(() => setPhase("shift"), D_MEISH);

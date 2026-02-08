@@ -101,9 +101,10 @@ async function handleCron(req: NextRequest) {
       }
 
       results.push({ entryId, success: true });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[exhibit-delete] error for entry:', entryId, err);
-      results.push({ entryId, success: false, error: err?.message || String(err) });
+      const message = err instanceof Error ? err.message : String(err);
+      results.push({ entryId, success: false, error: message });
     }
   }
 

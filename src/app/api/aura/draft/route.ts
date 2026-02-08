@@ -41,9 +41,9 @@ export async function POST(req: Request) {
     const res = NextResponse.json({ ok: true, requestId: record.id }, { status: 200 });
     res.headers.append("Set-Cookie", buildAuraSessionCookie(record.id, sessionToken));
     return res;
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[POST /api/aura/draft] failed:", e);
-    const message = typeof e?.message === "string" ? e.message : "internal_error";
+    const message = e instanceof Error ? e.message : "internal_error";
     return NextResponse.json({ ok: false, error: "internal_error", message }, { status: 500 });
   }
 }

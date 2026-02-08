@@ -66,7 +66,7 @@ function clamp01to100(n: number) {
   return Math.max(0, Math.min(100, n));
 }
 
-function getLanguageMode(section: any, theme: any): "ja" | "en" | "jaEn" {
+function getLanguageMode(section: Record<string, unknown>, theme: Record<string, unknown>): "ja" | "en" | "jaEn" {
   const m = safeStr(section?.languageMode) || safeStr(theme?.languageMode);
   if (m === "en" || m === "jaEn") return m;
   return "ja";
@@ -86,7 +86,7 @@ function t(lang: "ja" | "en" | "jaEn", key: string) {
     contact: { ja: "Contact", en: "Contact", jaEn: "Contact" },
   } as const;
 
-  const row = (dict as any)[key];
+  const row = dict[key as keyof typeof dict];
   if (!row) return key;
   return row[lang] ?? row.ja;
 }

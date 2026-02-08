@@ -50,12 +50,12 @@ function isHttpUrl(v: string): boolean {
  * - 直下の string 値
  * - 1階層ネスト（object の中の string 値）
  */
-function collectStringValuesShallow(obj: any): string[] {
+function collectStringValuesShallow(obj: Record<string, unknown>): string[] {
   const out: string[] = [];
   if (!obj || typeof obj !== "object") return out;
 
   for (const k of Object.keys(obj)) {
-    const v = (obj as any)[k];
+    const v = obj[k];
 
     if (typeof v === "string") {
       const s = v.trim();
@@ -66,7 +66,7 @@ function collectStringValuesShallow(obj: any): string[] {
     // 1階層ネストだけ拾う（image:{...} / file:{...} などの救済）
     if (v && typeof v === "object" && !Array.isArray(v)) {
       for (const kk of Object.keys(v)) {
-        const vv = (v as any)[kk];
+        const vv = (v as Record<string, unknown>)[kk];
         if (typeof vv === "string") {
           const ss = vv.trim();
           if (ss) out.push(ss);
@@ -85,18 +85,18 @@ function collectStringValuesShallow(obj: any): string[] {
  * 2) パス系キー（storagePath/path/...）
  * 3) それでも無ければ item内の文字列を総当たりして「works/...」「http(s)」を探す
  */
-function resolveImageSrc(item: any): string {
+function resolveImageSrc(item: Record<string, unknown>): string {
   if (!item) return "";
 
   // 1) 明示キー（最優先）
-  const explicitCandidates: Array<string | undefined | null> = [
+  const explicitCandidates = [
     item.imageUrl,
     item.url,
     item.src,
     item.image,
     item.thumbnailUrl,
     item.thumbnail,
-  ];
+  ] as Array<string | undefined | null>;
 
   for (const c of explicitCandidates) {
     const s = (c ?? "").toString().trim();
@@ -113,13 +113,13 @@ function resolveImageSrc(item: any): string {
   }
 
   // 2) パス系キー
-  const pathCandidates: Array<string | undefined | null> = [
+  const pathCandidates = [
     item.storagePath,
     item.storage_path,
     item.path,
     item.filePath,
     item.file_path,
-  ];
+  ] as Array<string | undefined | null>;
 
   for (const c of pathCandidates) {
     const p0 = (c ?? "").toString().trim();
@@ -184,7 +184,7 @@ export const AuraGalleryGrid: React.FC<Props> = ({ section, theme, variant }) =>
         bgGradient?: string;
         patternLayers?: string[];
         textureLayers?: string[];
-        bgStyle?: any;
+        bgStyle?: React.CSSProperties;
       }
     | undefined;
 

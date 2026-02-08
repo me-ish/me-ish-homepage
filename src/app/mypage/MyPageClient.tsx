@@ -333,9 +333,10 @@ export default function MyPageClient() {
         } else {
           setMyViewerStats({ totalViews: 0, uniqueWorksViewed: 0 });
         }
-      } catch (e: any) {
-        console.error('[mypage load] fatal:', e?.message || e);
-        setToast(e?.message || '読み込みに失敗しました');
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        console.error('[mypage load] fatal:', message);
+        setToast(message || '読み込みに失敗しました');
       } finally {
         setLoading(false);
       }
@@ -399,9 +400,10 @@ export default function MyPageClient() {
       setProfile(normalized);
       setToast('プロフィールを保存しました');
       setEditOpen(false);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      setToast(e?.message || '保存に失敗しました');
+      const message = e instanceof Error ? e.message : String(e);
+      setToast(message || '保存に失敗しました');
     }
   }
 
@@ -424,9 +426,10 @@ export default function MyPageClient() {
       // ログアウト & トップにリダイレクト
       await supabase.auth.signOut();
       window.location.href = '/';
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('[handleAccountDelete]', e);
-      setToast(e?.message || '退会処理に失敗しました');
+      const message = e instanceof Error ? e.message : String(e);
+      setToast(message || '退会処理に失敗しました');
       setDeleteLoading(false);
     }
   }

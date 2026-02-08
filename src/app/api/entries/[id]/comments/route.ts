@@ -5,6 +5,7 @@ import OpenAI from "openai";
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { checkCsrf } from "@/lib/auth/csrf";
+import { checkRateLimit, rateLimitExceeded } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -202,6 +203,9 @@ export async function POST(
         { status: 401 }
       );
     }
+
+    const rl = checkRateLimit(`comments:${user.id}`, { limit: 10, windowMs: 60_000 });
+    if (!rl.allowed) return rateLimitExceeded(rl.retryAfterMs);
 
     let body: string;
     try {

@@ -118,8 +118,9 @@ export default function AdminPayoutsClient({ initialData, stats }: Props) {
 
       // 3秒後にメッセージをクリア
       setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (e: any) {
-      setError(e.message || "エラーが発生しました");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      setError(message || "エラーが発生しました");
     } finally {
       setIsProcessing(false);
     }
@@ -155,8 +156,9 @@ export default function AdminPayoutsClient({ initialData, stats }: Props) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (e: any) {
-      setError(e.message || "CSVダウンロードエラー");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      setError(message || "CSVダウンロードエラー");
     }
   }, []);
 
@@ -200,8 +202,9 @@ export default function AdminPayoutsClient({ initialData, stats }: Props) {
         `${json.processedCount}名への振込を完了としてマークしました（${formatYen(json.totalAmount)}）`
       );
       setTimeout(() => setSuccessMessage(null), 5000);
-    } catch (e: any) {
-      setError(e.message || "エラーが発生しました");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      setError(message || "エラーが発生しました");
     } finally {
       setIsBatchProcessing(false);
     }

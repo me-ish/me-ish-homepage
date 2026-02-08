@@ -37,9 +37,10 @@ export default function AdminUsersClient({ adminEmail }: Props) {
       if (!res.ok) throw new Error('fetch_failed');
       const json = (await res.json()) as { items: UserGroup[]; total: number };
       if (mountedRef.current) setUsers(json.items ?? []);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('[admin/users] fetch error:', e);
-      if (mountedRef.current) setErr(e?.message ?? '取得に失敗しました');
+      const message = e instanceof Error ? e.message : String(e);
+      if (mountedRef.current) setErr(message || '取得に失敗しました');
     } finally {
       if (mountedRef.current) setLoading(false);
     }

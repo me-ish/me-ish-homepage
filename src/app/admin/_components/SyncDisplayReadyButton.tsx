@@ -23,8 +23,9 @@ export function SyncDisplayReadyButton() {
       setResult({ updated: json.updated, skipped: json.skipped });
       // 3秒後にリセット
       setTimeout(() => setResult(null), 3000);
-    } catch (e: any) {
-      setError(e?.message ?? "エラーが発生しました");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      setError(message || "エラーが発生しました");
       setTimeout(() => setError(null), 5000);
     } finally {
       setLoading(false);

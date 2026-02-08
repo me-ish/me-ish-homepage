@@ -111,7 +111,7 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.redirect(signed.signedUrl, { status: 302 });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[cert/download] error", e);
     return NextResponse.json({ ok: false, error: "download_failed" }, { status: 500 });
   }

@@ -147,9 +147,10 @@ async function handleCron(req: NextRequest) {
       }
 
       results.push({ entryId: entry.id, success: true });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[exhibit-ending-soon] error for entry:', entry.id, err);
-      results.push({ entryId: entry.id, success: false, error: err.message });
+      const message = err instanceof Error ? err.message : String(err);
+      results.push({ entryId: entry.id, success: false, error: message });
     }
   }
 

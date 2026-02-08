@@ -88,7 +88,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
       ok: true,
       email: normalizedEmail,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[email/update] unexpected error:", e);
     return NextResponse.json(
       { ok: false, error: "internal_error" },

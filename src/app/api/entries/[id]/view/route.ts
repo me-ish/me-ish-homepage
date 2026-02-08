@@ -87,10 +87,11 @@ export async function POST(
     }
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[entries/view] exception:", e);
+    const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json(
-      { error: e.message || "Internal server error" },
+      { error: message || "Internal server error" },
       { status: 500 }
     );
   }

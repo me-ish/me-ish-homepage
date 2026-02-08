@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { issueReissueLink } from "@/lib/coa/server";
-import { getSiteUrl } from "@/lib/constants";
+import { getSiteUrl, calcFee, calcReward } from "@/lib/constants";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
@@ -298,8 +298,8 @@ async function handleGalleryPurchase(
     const price = session.amount_total ?? null;
 
     // 手数料・報酬を計算（JPY = zero-decimal）
-    const meishFeeYen = price != null ? Math.floor(price * 0.1) : null;
-    const artistRewardYen = price != null && meishFeeYen != null ? price - meishFeeYen : null;
+    const meishFeeYen = price != null ? calcFee(price) : null;
+    const artistRewardYen = price != null ? calcReward(price) : null;
 
     // finalize_sale RPC（p_price を渡して fee/reward も DB 側で設定）
     const { data: rpcResult, error: rpcErr } = await admin.rpc("finalize_sale", {
