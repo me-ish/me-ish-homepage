@@ -10,6 +10,7 @@ import {
 
 import { generatePortfolioFromForm } from "@/lib/aura/aura.generate";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import type { Json } from "@/types/supabase";
 import {
   requireAuraRequestAccess,
   buildAuraSessionCookie,
@@ -306,7 +307,7 @@ export async function POST(req: Request) {
       .update({
         status: "draft",
         error: null,
-        payload: formInput,
+        payload: formInput as unknown as Json,
         design: null,
         content: null,
         updated_at: new Date().toISOString(),
@@ -335,7 +336,7 @@ export async function POST(req: Request) {
       .insert({
         status: "draft",
         error: null,
-        payload: formInput,
+        payload: formInput as unknown as Json,
         design: null,
         content: null,
         slug: null,
