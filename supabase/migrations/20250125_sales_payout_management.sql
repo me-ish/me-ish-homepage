@@ -39,7 +39,7 @@ ALTER TABLE public.sales
   ALTER COLUMN payout_status SET NOT NULL;
 
 -- CHECK 制約でステータス値を限定（冪等）
-DO $$
+DO $do$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint WHERE conname = 'sales_payout_status_check'
@@ -48,7 +48,7 @@ BEGIN
       ADD CONSTRAINT sales_payout_status_check
       CHECK (payout_status IN ('pending', 'paid'));
   END IF;
-END $$;
+END $do$;
 
 -- =========================================================
 -- 3. 既存 sales の fee/reward を埋め戻し（purchased_at があるもの）
@@ -292,6 +292,7 @@ ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
 
 -- 既存ポリシーを削除（あれば）
 DROP POLICY IF EXISTS sales_select_own ON public.sales;
+DROP POLICY IF EXISTS sales_select_buyer ON public.sales;
 DROP POLICY IF EXISTS sales_insert_service ON public.sales;
 DROP POLICY IF EXISTS sales_update_service ON public.sales;
 
