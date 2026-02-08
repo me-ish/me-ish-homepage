@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { ContentSchema } from "@/lib/aura/aura.schema";
 import { publishContent } from "@/lib/aura/aura.db";
 import { claimMeishFree, claimFirst20Free } from "@/lib/aura/auraBillingGate";
-import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";
 
 type Params = { id: string };

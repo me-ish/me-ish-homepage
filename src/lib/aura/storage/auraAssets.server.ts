@@ -1,7 +1,7 @@
 // src/lib/aura/storage/auraAssets.server.ts
 import "server-only";
 
-import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const BUCKET = process.env.AURA_ASSETS_BUCKET ?? "aura-assets";
 

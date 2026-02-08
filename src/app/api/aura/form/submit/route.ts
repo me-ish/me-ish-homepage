@@ -9,7 +9,7 @@ import {
 } from "@/lib/aura/aura.schema";
 
 import { generatePortfolioFromForm } from "@/lib/aura/aura.generate";
-import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
   requireAuraRequestAccess,
   buildAuraSessionCookie,

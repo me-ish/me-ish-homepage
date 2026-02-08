@@ -1,6 +1,6 @@
 // src/app/api/aura/assets/route.ts
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

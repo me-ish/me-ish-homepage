@@ -15,7 +15,7 @@
 //
 // ※ 旧: aura_free_claims / rpc aura_sync_first20_count は使用しない
 
-import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 /**
  * email を正規化（小文字、trim）

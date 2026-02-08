@@ -2,7 +2,7 @@
 
 import { NextResponse } from "next/server";
 import sharp from "sharp";
-import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";
 
 export const dynamic = "force-dynamic";

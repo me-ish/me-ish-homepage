@@ -1,7 +1,7 @@
 // src/app/api/aura/upload/avatar/[id]/route.ts
 import { NextResponse } from "next/server";
 import sharp from "sharp";
-import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { updatePayloadFields } from "@/lib/aura/aura.db";
 import { auraAssetProxyUrl } from "@/lib/aura/storage/auraAssets";
 import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";

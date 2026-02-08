@@ -1,10 +1,3 @@
-//lib/aura/supabaseAdmin.ts
-import { createClient } from "@supabase/supabase-js";
-
-export function supabaseAdmin() {
-  return createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
-}
+// DEPRECATED: Use @/lib/supabaseAdmin instead.
+// This re-export exists only as a safety net during migration.
+export { supabaseAdmin } from "@/lib/supabaseAdmin";

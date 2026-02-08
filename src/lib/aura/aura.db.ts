@@ -1,6 +1,6 @@
 // src/lib/aura/aura.db.ts
 import type { FormInput, Design, Content } from "./aura.schema";
-import { supabaseAdmin } from "@/lib/aura/supabaseAdmin";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 // aura_requests.status の実態に合わせる
 export type RequestStatus = "draft" | "generated" | "error" | "published";
