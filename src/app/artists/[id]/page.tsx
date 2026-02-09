@@ -120,13 +120,21 @@ export default function ArtistPublicPage() {
   }, [id, router]);
 
   if (loading) {
-    return <main className="px-4 py-16 text-gray-500">読み込み中...</main>;
+    return (
+      <main className="font-zen">
+        <div className="mx-auto w-full max-w-6xl px-4 md:px-6 py-16 text-gray-500">
+          読み込み中...
+        </div>
+      </main>
+    );
   }
 
   if (notFound || !profile) {
     return (
-      <main className="px-4 py-16 text-gray-500">
-        このアーティストは見つかりませんでした。
+      <main className="font-zen">
+        <div className="mx-auto w-full max-w-6xl px-4 md:px-6 py-16 text-gray-500">
+          このアーティストは見つかりませんでした。
+        </div>
       </main>
     );
   }
@@ -139,12 +147,11 @@ export default function ArtistPublicPage() {
     return (
       <main className="font-zen">
         <section className="relative">
-          <div className="px-4 md:px-6">
-            <div className="mx-auto w-full max-w-6xl">
-              <div className="relative w-full aspect-[16/5] overflow-hidden rounded-2xl">
-                {profile.banner_url ? (
-                  <Image
-                    src={profile.banner_url}
+          <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
+            <div className="relative w-full aspect-[16/5] overflow-hidden rounded-3xl border bg-white shadow-sm">
+              {profile.banner_url ? (
+                <Image
+                  src={profile.banner_url}
                     alt="banner"
                     fill
                     className="object-cover"
@@ -160,10 +167,10 @@ export default function ArtistPublicPage() {
                 )}
               </div>
 
-              <div className="relative -mt-8 md:-mt-10 flex items-end gap-4">
-                <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100">
-                  {profile.avatar_url ? (
-                    <Image
+            <div className="relative -mt-8 md:-mt-10 flex items-end gap-4">
+              <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100 shadow-sm">
+                {profile.avatar_url ? (
+                  <Image
                       src={profile.avatar_url}
                       alt={profile.display_name}
                       fill
@@ -176,18 +183,18 @@ export default function ArtistPublicPage() {
                     </div>
                   )}
                 </div>
-                <div className="pb-2">
-                  <h1 className="font-lilita text-2xl md:text-3xl tracking-wide">
-                    {profile.display_name}
-                  </h1>
-                </div>
+              <div className="pb-2">
+                <h1 className="font-lilita text-2xl md:text-3xl tracking-wide text-gray-900">
+                  {profile.display_name}
+                </h1>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="mt-16 px-4 md:px-6 mb-20">
-          <div className="rounded-2xl border bg-white p-6 text-gray-700">
+        <section className="mt-12 md:mt-14 mb-20">
+          <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
+            <div className="rounded-3xl border bg-white p-6 md:p-8 text-gray-700 shadow-sm">
             <p className="font-medium">このポートフォリオは非公開です。</p>
             <p className="text-sm text-gray-500 mt-2">
               公開設定はマイページの「ポートフォリオ設定」から変更できます。
@@ -195,11 +202,12 @@ export default function ArtistPublicPage() {
             <div className="mt-4">
               <Link
                 href="/mypage"
-                className="inline-flex items-center rounded-full border px-4 py-2 text-sm hover:bg-gray-50"
+                className="inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium hover:bg-gray-50"
               >
                 マイページへ戻る
               </Link>
             </div>
+          </div>
           </div>
         </section>
       </main>
@@ -209,9 +217,8 @@ export default function ArtistPublicPage() {
   return (
     <main className="font-zen">
       <section className="relative">
-        <div className="px-4 md:px-6">
-          <div className="mx-auto w-full max-w-6xl">
-            <div className="relative w-full aspect-[16/5] overflow-hidden rounded-2xl">
+        <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
+          <div className="relative w-full aspect-[16/5] overflow-hidden rounded-3xl border bg-white shadow-sm">
               {profile.banner_url ? (
                 <Image
                   src={profile.banner_url}
@@ -230,8 +237,8 @@ export default function ArtistPublicPage() {
               )}
             </div>
 
-            <div className="relative -mt-8 md:-mt-10 flex items-end gap-4">
-              <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100">
+          <div className="relative -mt-8 md:-mt-10 flex items-end gap-4">
+            <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full ring-4 ring-white overflow-hidden bg-gray-100 shadow-sm">
                 {profile.avatar_url ? (
                   <Image
                     src={profile.avatar_url}
@@ -246,58 +253,59 @@ export default function ArtistPublicPage() {
                   </div>
                 )}
               </div>
-              <div className="pb-2">
-                <h1 className="font-lilita text-2xl md:text-3xl tracking-wide">
-                  {profile.display_name}
-                </h1>
-              </div>
+            <div className="pb-2">
+              <h1 className="font-lilita text-2xl md:text-3xl tracking-wide text-gray-900">
+                {profile.display_name}
+              </h1>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="mt-16 px-4 md:px-6">
-        <div className="rounded-2xl border bg-white p-4 md:p-6">
-          <p className="text-gray-700 leading-relaxed md:max-w-3xl">
+      <section className="mt-12 md:mt-14">
+        <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
+          <div className="rounded-3xl border bg-white p-5 md:p-7 shadow-sm">
+            <p className="text-gray-700 leading-relaxed md:max-w-3xl">
             {profile.bio || 'プロフィールはまだ記載されていません。'}
           </p>
 
-          <div className="mt-4 flex items-center gap-2 flex-wrap">
-            {profile.sns_links?.homepage && (
-              <a
-                className="rounded-full border px-3 py-2 text-sm hover:bg-gray-50"
-                href={profile.sns_links.homepage}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Website
-              </a>
-            )}
-            {profile.sns_links?.twitter && (
-              <a
-                className="rounded-full border px-3 py-2 text-sm hover:bg-gray-50"
-                href={profile.sns_links.twitter}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                X
-              </a>
-            )}
-            {profile.sns_links?.instagram && (
-              <a
-                className="rounded-full border px-3 py-2 text-sm hover:bg-gray-50"
-                href={profile.sns_links.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Instagram
-              </a>
-            )}
+            <div className="mt-5 flex items-center gap-2 flex-wrap">
+              {profile.sns_links?.homepage && (
+                <a
+                  className="rounded-full border px-3 py-2 text-sm font-medium hover:bg-gray-50"
+                  href={profile.sns_links.homepage}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Website
+                </a>
+              )}
+              {profile.sns_links?.twitter && (
+                <a
+                  className="rounded-full border px-3 py-2 text-sm font-medium hover:bg-gray-50"
+                  href={profile.sns_links.twitter}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  X
+                </a>
+              )}
+              {profile.sns_links?.instagram && (
+                <a
+                  className="rounded-full border px-3 py-2 text-sm font-medium hover:bg-gray-50"
+                  href={profile.sns_links.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Instagram
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="px-3 sm:px-6 lg:px-10 mt-8 mb-24">
+      <section className="px-3 sm:px-6 lg:px-10 mt-10 mb-24">
         {entries.length === 0 ? (
           <div className="grid place-items-center py-16 text-gray-500">
             公開中の作品はありません。
@@ -321,7 +329,7 @@ export default function ArtistPublicPage() {
                   />
                 </div>
 
-                <div className="p-4 sm:p-5">
+                <div className="p-5 sm:p-6">
                   <h3 className="font-semibold text-gray-900 text-base sm:text-lg truncate">
                     {e.title ?? 'Untitled'}
                   </h3>
@@ -330,25 +338,25 @@ export default function ArtistPublicPage() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-7">
             {entries.map((e) => (
               <Link
                 key={e.id}
                 href={`/artworks/${e.id}`}
-                className="group relative rounded-2xl overflow-hidden bg-white border shadow-sm hover:shadow-md transition"
+                className="group relative rounded-3xl overflow-hidden bg-white border shadow-sm hover:shadow-md transition"
               >
                 <div className="relative w-full h-64 sm:h-72">
                   <Image
                     src={e.image_url}
                     alt={e.title ?? 'artwork'}
                     fill
-                    className="object-cover group-hover:scale-105 transition"
+                    className="object-cover group-hover:scale-[1.03] transition"
                     sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
                     unoptimized
                   />
                 </div>
-                <div className="p-3.5">
-                  <h3 className="font-semibold text-gray-800 truncate">
+                <div className="p-4">
+                  <h3 className="font-semibold text-gray-900 truncate">
                     {e.title ?? 'Untitled'}
                   </h3>
                 </div>
