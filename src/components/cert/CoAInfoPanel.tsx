@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { Shield, CheckCircle2 } from "lucide-react";
 
 type EntryLike = {
@@ -97,11 +98,13 @@ export default function CoAInfoPanel({
         {/* Watermark */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
           {logoUrl ? (
-            <img
+            <Image
               src={logoUrl}
               alt=""
+              width={380}
+              height={380}
               className="select-none -rotate-12 scale-150"
-              style={{ width: 380, opacity: watermarkOpacity }}
+              style={{ opacity: watermarkOpacity }}
             />
           ) : (
             <div
@@ -117,7 +120,7 @@ export default function CoAInfoPanel({
         <header className="relative flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             {logoUrl ? (
-              <img src={logoUrl} alt={issuerName} className="h-7 w-auto" />
+              <Image src={logoUrl} alt={issuerName} width={100} height={28} className="h-7 w-auto" />
             ) : (
               <span className="font-bold text-xl" style={{ color: accent }}>
                 {issuerName}
@@ -219,7 +222,7 @@ export default function CoAInfoPanel({
               {/* Inner white circle */}
               <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
                 {sealUrl ? (
-                  <img src={sealUrl} alt="seal" className="w-10 h-10 opacity-90" />
+                  <Image src={sealUrl} alt="seal" width={40} height={40} className="opacity-90" />
                 ) : (
                   <div className="text-center">
                     <div

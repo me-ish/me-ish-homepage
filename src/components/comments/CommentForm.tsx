@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -24,6 +24,8 @@ export function CommentForm({ entryId, onSubmit, isAuthenticated }: Props) {
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const trimmedBody = body.trim();
   const charCount = trimmedBody.length;
@@ -35,6 +37,7 @@ export function CommentForm({ entryId, onSubmit, isAuthenticated }: Props) {
 
     setSubmitting(true);
     setError(null);
+    setSuccessMsg(null);
 
     try {
       const res = await fetch(`/api/entries/${entryId}/comments`, {
@@ -52,6 +55,8 @@ export function CommentForm({ entryId, onSubmit, isAuthenticated }: Props) {
 
       onSubmit(data.comment);
       setBody('');
+      setSuccessMsg('コメントを投稿しました');
+      textareaRef.current?.focus();
     } catch {
       setError('コメントの投稿に失敗しました');
     } finally {
@@ -71,19 +76,24 @@ export function CommentForm({ entryId, onSubmit, isAuthenticated }: Props) {
     <form onSubmit={handleSubmit} className="space-y-3">
       <div className="relative">
         <Textarea
+          ref={textareaRef}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="コメントを入力..."
           className="min-h-[100px] resize-none"
           maxLength={MAX_LENGTH + 100}
           disabled={submitting}
+          aria-describedby="comment-char-count"
         />
-        <div className="absolute bottom-2 right-2 text-xs text-gray-400">
+        <div id="comment-char-count" className="absolute bottom-2 right-2 text-xs text-gray-400" aria-live="polite">
           {charCount}/{MAX_LENGTH}
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      <div aria-live="polite" className="sr-only">
+        {successMsg}
+      </div>
+      {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
 
       <div className="flex justify-end">
         <Button type="submit" disabled={!isValid || submitting} size="sm">

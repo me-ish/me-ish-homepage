@@ -1,6 +1,7 @@
 // components/natori/Gallery.tsx
 "use client";
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import type { Work } from "@/lib/natori/works";
 
@@ -53,14 +54,13 @@ export default function Gallery({ works, tags }: Props) {
               {/* 画像フレーム：全体が見える object-contain。縦長/横長でも余白で整える */}
               <div className="w-full bg-[#FFF5F9]">
                 <div className="aspect-[4/3] w-full p-3 sm:p-4">
-                  <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-xl border bg-white"
+                  <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl border bg-white"
                        style={{ borderColor: "#F5D0DC" }}>
-                    <img
+                    <Image
                       src={w.image}
                       alt={w.title}
-                      className="max-h-full max-w-full object-contain"
-                      loading="lazy"
-                      decoding="async"
+                      fill
+                      className="object-contain"
                       sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                     />
                   </div>

@@ -2,6 +2,7 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
+import Image from "next/image";
 import type { AuraFormData } from "../auraFormTypes";
 
 type Props = {
@@ -212,10 +213,12 @@ export function Step1Profile({ data, onChange, requestId, onRequireDraft }: Prop
               <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-sky-300/40 to-cyan-400/40 blur-md" />
               <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-sm">
                 {data.avatarPreviewUrl ? (
-                  <img
+                  <Image
                     src={data.avatarPreviewUrl}
                     alt="プロフィール"
-                    className="h-full w-full object-cover"
+                    fill
+                    className="object-cover"
+                    unoptimized
                   />
                 ) : (
                   <span className="text-xs text-slate-400">No Image</span>

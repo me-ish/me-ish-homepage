@@ -1242,12 +1242,15 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="h-12 w-12 overflow-hidden rounded bg-neutral-100">
+                          <div className="relative h-12 w-12 overflow-hidden rounded bg-neutral-100">
                             {entry.image_url ? (
-                              <img
+                              <Image
                                 src={entry.image_url}
                                 alt=""
-                                className="w-full h-full object-cover"
+                                fill
+                                className="object-cover"
+                                sizes="48px"
+                                unoptimized
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-neutral-500 text-xs">
@@ -1362,10 +1365,13 @@ export default function AdminEntriesClient({ adminEmail }: Props) {
                                   rel="noopener noreferrer"
                                   className="shrink-0"
                                 >
-                                  <img
+                                  <Image
                                     src={entry.image_url || '/images/placeholder.png'}
                                     alt=""
-                                    className="w-32 h-32 object-cover rounded-lg shadow"
+                                    width={128}
+                                    height={128}
+                                    className="object-cover rounded-lg shadow"
+                                    unoptimized
                                   />
                                 </a>
                                 <div className="space-y-2 text-sm">
@@ -1849,10 +1855,13 @@ function KanbanCard({
       {/* サムネイル */}
       <div className="relative mb-2 aspect-square overflow-hidden rounded bg-neutral-100">
         {entry.image_url ? (
-          <img
+          <Image
             src={entry.image_url}
             alt=""
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 50vw, 200px"
+            unoptimized
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-neutral-500 text-xs">

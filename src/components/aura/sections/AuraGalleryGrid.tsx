@@ -9,6 +9,7 @@
 // - 世界観ごとのカード装飾
 
 import React, { CSSProperties, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { createPortal } from "react-dom";
 import type { Design, Content } from "@/lib/aura/aura.schema";
 import type { VariantSpec } from "@/lib/aura/aura.variant.base";
@@ -343,11 +344,13 @@ useEffect(() => {
         <div className={`relative overflow-hidden ${aspectClass} w-full bg-gray-200`}>
           {src ? (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={src}
                 alt={item.title ?? `work-${i + 1}`}
-                className={`h-full w-full object-cover ${TRANSITION.slow} group-hover:scale-105`}
+                fill
+                className={`object-cover ${TRANSITION.slow} group-hover:scale-105`}
+                sizes="(max-width: 640px) 50vw, 33vw"
+                unoptimized
               />
               {/* ホバーオーバーレイ */}
               <div
@@ -471,12 +474,11 @@ useEffect(() => {
                   {src ? (
                     <button
                       type="button"
-                      className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-200 cursor-zoom-in"
+                      className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-200 cursor-zoom-in"
                       onClick={() => setActiveIndex(i)}
                       aria-label={`Open work ${i + 1}`}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt={item.title ?? `work-${i + 1}`} className="h-full w-full object-cover" />
+                      <Image src={src} alt={item.title ?? `work-${i + 1}`} fill className="object-cover" sizes="80px" unoptimized />
                     </button>
                   ) : null}
 
@@ -576,11 +578,13 @@ useEffect(() => {
           </button>
 
           <div className="overflow-hidden rounded-xl bg-black/90">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={activeSrc}
               alt={activeItem.title ?? "work-full"}
+              width={1200}
+              height={900}
               className="max-h-[80vh] max-w-[90vw] object-contain"
+              unoptimized
             />
           </div>
 

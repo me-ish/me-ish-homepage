@@ -310,12 +310,16 @@ export default function ArtistPublicPage() {
                 href={`/artworks/${e.id}`}
                 className="group relative block overflow-hidden rounded-3xl bg-white border shadow-sm hover:shadow-md transition"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={e.image_url}
-                  alt={e.title ?? 'artwork'}
-                  className="w-full h-[280px] sm:h-[360px] md:h-[460px] lg:h-[520px] object-cover group-hover:scale-[1.02] transition"
-                />
+                <div className="relative w-full h-[280px] sm:h-[360px] md:h-[460px] lg:h-[520px]">
+                  <Image
+                    src={e.image_url}
+                    alt={e.title ?? 'artwork'}
+                    fill
+                    className="object-cover group-hover:scale-[1.02] transition"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1280px) 80vw, 1200px"
+                    unoptimized
+                  />
+                </div>
 
                 <div className="p-4 sm:p-5">
                   <h3 className="font-semibold text-gray-900 text-base sm:text-lg truncate">
@@ -333,12 +337,16 @@ export default function ArtistPublicPage() {
                 href={`/artworks/${e.id}`}
                 className="group relative rounded-2xl overflow-hidden bg-white border shadow-sm hover:shadow-md transition"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={e.image_url}
-                  alt={e.title ?? 'artwork'}
-                  className="w-full h-64 sm:h-72 object-cover group-hover:scale-105 transition"
-                />
+                <div className="relative w-full h-64 sm:h-72">
+                  <Image
+                    src={e.image_url}
+                    alt={e.title ?? 'artwork'}
+                    fill
+                    className="object-cover group-hover:scale-105 transition"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                    unoptimized
+                  />
+                </div>
                 <div className="p-3.5">
                   <h3 className="font-semibold text-gray-800 truncate">
                     {e.title ?? 'Untitled'}

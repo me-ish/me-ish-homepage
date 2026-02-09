@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { createPortal } from 'react-dom';
 import {
   Heart,
@@ -182,11 +183,14 @@ const handlePurchase = async () => {
                 onDragStart={(e) => e.preventDefault()}
                 style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}
               />
-              <img
+              <Image
                 src={imageUrl}
                 alt={title}
+                width={800}
+                height={800}
                 className="max-w-[32vw] max-h-[68vh] w-auto h-auto object-contain rounded-xl shadow-lg pointer-events-none select-none"
                 draggable={false}
+                unoptimized
               />
             </div>
 

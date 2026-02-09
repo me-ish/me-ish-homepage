@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { createPortal } from 'react-dom';
 import { Heart, ShoppingCart, Globe, Instagram, Infinity, Hash, Ban } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
@@ -156,12 +157,15 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
             onTouchStart={() => {}}
             style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}
           />
-          <img
+          <Image
             src={imageUrl}
             alt={title}
+            width={800}
+            height={800}
             draggable={false}
             className="max-w-[90vw] max-h-[70vh] w-auto h-auto object-contain rounded-xl pointer-events-none select-none"
             style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}
+            unoptimized
           />
         </div>
 

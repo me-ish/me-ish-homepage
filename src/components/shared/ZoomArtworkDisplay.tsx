@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useZoomArtwork } from './ZoomArtworkContext';
-import ZoomArtworkMobileDisplay from './ZoomArtworkMobileDisplay';
-import ZoomArtworkDesktopDisplay from './ZoomArtworkDesktopDisplay';
+
+const ZoomArtworkMobileDisplay = dynamic(() => import('./ZoomArtworkMobileDisplay'), { ssr: false });
+const ZoomArtworkDesktopDisplay = dynamic(() => import('./ZoomArtworkDesktopDisplay'), { ssr: false });
 
 export default function ZoomArtworkDisplay() {
   const { zoomedArtwork, setZoomedArtwork } = useZoomArtwork();
@@ -32,4 +34,3 @@ export default function ZoomArtworkDisplay() {
     <ZoomArtworkDesktopDisplay artwork={zoomedArtwork} onClose={() => setZoomedArtwork(null)} />
   );
 }
-

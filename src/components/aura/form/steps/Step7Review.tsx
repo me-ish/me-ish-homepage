@@ -2,6 +2,7 @@
 "use client";
 
 import { Check, Edit2 } from "lucide-react";
+import Image from "next/image";
 import type { AuraFormData, StepId } from "../auraFormTypes";
 
 type Props = {
@@ -37,10 +38,13 @@ export function Step7Review({ data, onEditStep }: Props) {
             {data.avatarPreviewUrl && (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500">画像:</span>
-                <img
+                <Image
                   src={data.avatarPreviewUrl}
                   alt="Avatar"
-                  className="h-8 w-8 rounded-full object-cover"
+                  width={32}
+                  height={32}
+                  className="rounded-full object-cover"
+                  unoptimized
                 />
               </div>
             )}
@@ -71,11 +75,14 @@ export function Step7Review({ data, onEditStep }: Props) {
           {data.images.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {data.images.map((img, i) => (
-                <img
+                <Image
                   key={i}
                   src={img.imageUrl}
                   alt={`Work ${i + 1}`}
-                  className="h-12 w-12 rounded-lg object-cover"
+                  width={48}
+                  height={48}
+                  className="rounded-lg object-cover"
+                  unoptimized
                 />
               ))}
               <span className="self-center text-xs text-slate-500">

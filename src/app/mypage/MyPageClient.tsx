@@ -2,10 +2,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
-import ProfileEditModal from '@/components/ProfileEditModal';
+
+const ProfileEditModal = dynamic(() => import('@/components/ProfileEditModal'), { ssr: false });
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LikedWorksTab } from './_components/LikedWorksTab';
 import { MyWorksTab } from './_components/MyWorksTab';

@@ -7,6 +7,7 @@
 ============================================================================= */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
 
 /* ----------------------------- helpers ------------------------------------ */
 function cn(...c: (string | false | null | undefined)[]) {
@@ -116,7 +117,7 @@ function SlideShow({
           >
             {s.src ? (
               // 実画像：/public/natori/works/... を想定
-              <img src={s.src} alt={s.alt} className="h-full w-full object-cover" />
+              <Image src={s.src} alt={s.alt} fill className="object-cover" />
             ) : (
               // 画像未設定時のダミー（パステル板）
               <PastelTile label={s.alt} index={i} className="h-full w-full rounded-none" />

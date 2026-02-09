@@ -56,6 +56,7 @@ export type GalleryStats = {
 
 /**
  * Fetch gallery stats: works count, artist count, unique views.
+ * Uses a single RPC call instead of N+1 queries.
  */
 export function useGalleryStats() {
   const [stats, setStats] = useState<GalleryStats | null>(null);
@@ -65,35 +66,20 @@ export function useGalleryStats() {
 
     (async () => {
       try {
-        const { data, error } = await supabase
-          .from('entries')
-          .select('id, user_id')
-          .eq('confirmed', true)
-          .eq('display_ready', true);
+        // RPC defined in 20260209_gallery_stats_rpc.sql — not yet in generated types
+        const { data, error } = await (supabase.rpc as Function)('get_gallery_stats') as {
+          data: { works_count: number; artists_count: number; unique_views: number }[] | null;
+          error: { message: string } | null;
+        };
 
         if (error) throw error;
 
-        if (mounted && data) {
-          const worksCount = data.length;
-          const uniqueArtists = new Set(data.map((entry) => entry.user_id));
-
-          let uniqueViews = 0;
-          if (data.length > 0) {
-            const entryIds = data.map((entry) => entry.id);
-            const { data: viewData, error: viewError } = await supabase
-              .from('entry_view_stats')
-              .select('unique_views')
-              .in('entry_id', entryIds);
-
-            if (!viewError && viewData) {
-              uniqueViews = viewData.reduce((sum, v) => sum + (v.unique_views ?? 0), 0);
-            }
-          }
-
+        if (mounted && data && data.length > 0) {
+          const row = data[0];
           setStats({
-            worksCount,
-            artistsCount: uniqueArtists.size,
-            uniqueViews,
+            worksCount: Number(row.works_count) || 0,
+            artistsCount: Number(row.artists_count) || 0,
+            uniqueViews: Number(row.unique_views) || 0,
           });
         }
       } catch (err) {

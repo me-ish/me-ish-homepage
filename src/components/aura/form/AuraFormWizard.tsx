@@ -93,6 +93,9 @@ export function AuraFormWizard() {
   // コンテナref（スクロール用）
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // ステップ遷移アナウンス
+  const [stepAnnouncement, setStepAnnouncement] = useState("");
+
   // 高さ同期用ref
   const formCardRef = useRef<HTMLDivElement>(null);
   const previewCardRef = useRef<HTMLDivElement>(null);
@@ -132,6 +135,24 @@ useEffect(() => {
     window.removeEventListener("resize", measure);
   };
 }, [currentStep]);
+
+  // ステップ遷移時にアナウンス + フォーカス移動
+  useEffect(() => {
+    const stepInfo = STEPS.find((s) => s.id === currentStep);
+    if (stepInfo) {
+      setStepAnnouncement(`ステップ${currentStep}: ${stepInfo.label}`);
+    }
+    // 最初の入力要素にフォーカス
+    const timer = setTimeout(() => {
+      const formCard = formCardRef.current;
+      if (!formCard) return;
+      const firstInput = formCard.querySelector<HTMLElement>(
+        'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])'
+      );
+      firstInput?.focus();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [currentStep]);
 
   /* =========================================================
    * Draft 作成
@@ -597,6 +618,9 @@ const previewBgStyle = useMemo(
    * ========================================================= */
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-50 to-slate-100">
+      {/* ステップ遷移のスクリーンリーダー向けアナウンス */}
+      <div aria-live="polite" className="sr-only">{stepAnnouncement}</div>
+
       <div className="mx-auto max-w-7xl px-4 py-6 pb-[calc(96px+env(safe-area-inset-bottom))] lg:py-10 lg:pb-0">
         {/* ヘッダー */}
         <header className="mb-6 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm lg:mb-8 lg:rounded-3xl lg:p-6">

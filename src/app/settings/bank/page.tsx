@@ -419,10 +419,15 @@ export default function BankSettingsPage() {
 
             {/* エラー */}
             {error && (
-              <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+              <div role="alert" aria-live="assertive" className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
                 {error}
               </div>
             )}
+
+            {/* 保存成功のスクリーンリーダー通知 */}
+            <div aria-live="polite" className="sr-only">
+              {saved ? '口座情報を保存しました' : ''}
+            </div>
 
             {/* 保存ボタン */}
             <Button

@@ -1,6 +1,7 @@
 // app/natori/works/[slug]/page.tsx
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import Footer from "@/components/natori/Footer";
 import { works } from "@/lib/natori/works";
@@ -34,8 +35,8 @@ export default function WorkDetail({ params }: Props) {
         <Link href="/natori" className="text-sm text-[#00a1e9] hover:underline">← Back to Portfolio</Link>
         <h1 className="mt-4 text-3xl font-semibold">{work.title}</h1>
         <p className="mt-2 text-gray-600">{work.description}</p>
-        <div className="mt-6 overflow-hidden rounded-2xl border bg-white shadow">
-          <img src={work.image} alt={work.title} className="w-full object-cover" />
+        <div className="relative mt-6 aspect-[4/3] overflow-hidden rounded-2xl border bg-white shadow">
+          <Image src={work.image} alt={work.title} fill className="object-cover" sizes="(max-width: 1280px) 100vw, 1200px" />
         </div>
         <dl className="mt-6 grid gap-4 sm:grid-cols-2">
           {work.year && (<div><dt className="text-sm text-gray-500">Year</dt><dd className="font-medium">{work.year}</dd></div>)}

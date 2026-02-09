@@ -1,5 +1,6 @@
 // components/natori/Hero.tsx
 import { Lilita_One, Zen_Maru_Gothic } from "next/font/google";
+import Image from "next/image";
 import Link from "next/link";
 
 const lilita = Lilita_One({ subsets: ["latin"], weight: "400" });
@@ -78,11 +79,12 @@ export default function Hero({ vgenUrl, twitterUrl, instaUrl, homepageUrl }: Pro
 
           <div className="relative">
             <div className="aspect-[3/4] w-full overflow-hidden rounded-2xl border bg-white shadow-xl">
-              <img
+              <Image
                 src="/natori/イラスト9リサイズ.jpg"
                 alt="Natori main visual"
-                className="h-full w-full object-cover"
-                loading="eager"
+                fill
+                className="object-cover"
+                priority
               />
             </div>
             {/* soft glow */}

@@ -1,4 +1,5 @@
 // components/natori/About.tsx
+import Image from "next/image";
 const PINK_BG = "#FFF5F9";
 const PINK_BORDER = "#F5D0DC";
 
@@ -20,11 +21,12 @@ export default function About() {
               className="aspect-square h-full w-full overflow-hidden rounded-full border bg-white shadow"
               style={{ borderColor: PINK_BORDER }}
             >
-              <img
+              <Image
                 src="/natori/IMG_3825.jpeg"
                 alt="Natori portrait"
+                width={256}
+                height={256}
                 className="h-full w-full object-cover"
-                loading="lazy"
               />
             </div>
           </div>
