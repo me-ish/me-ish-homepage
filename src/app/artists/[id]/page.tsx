@@ -318,12 +318,12 @@ export default function ArtistPublicPage() {
                 href={`/artworks/${e.id}`}
                 className="group relative block rounded-3xl bg-white border shadow-sm hover:shadow-md transition"
               >
-                <div className="relative w-full h-[280px] sm:h-[360px] md:h-[460px] lg:h-[520px] overflow-hidden rounded-3xl">
+                <div className="relative w-full h-[280px] sm:h-[360px] md:h-[460px] lg:h-[520px] overflow-hidden rounded-3xl bg-gray-50">
                   <Image
                     src={e.image_url}
                     alt={e.title ?? 'artwork'}
                     fill
-                    className="object-cover group-hover:scale-[1.02] transition"
+                    className="object-contain group-hover:scale-[1.02] transition"
                     sizes="(max-width: 640px) 100vw, (max-width: 1280px) 80vw, 1200px"
                     unoptimized
                   />
@@ -345,12 +345,12 @@ export default function ArtistPublicPage() {
                 href={`/artworks/${e.id}`}
                 className="group relative rounded-3xl bg-white border shadow-sm hover:shadow-md transition"
               >
-                <div className="relative w-full h-64 sm:h-72 overflow-hidden rounded-3xl">
+                <div className="relative w-full h-64 sm:h-72 overflow-hidden rounded-3xl bg-gray-50">
                   <Image
                     src={e.image_url}
                     alt={e.title ?? 'artwork'}
                     fill
-                    className="object-cover group-hover:scale-[1.03] transition"
+                    className="object-contain group-hover:scale-[1.03] transition"
                     sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
                     unoptimized
                   />
