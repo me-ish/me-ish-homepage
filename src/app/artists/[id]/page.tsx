@@ -316,9 +316,9 @@ export default function ArtistPublicPage() {
               <Link
                 key={e.id}
                 href={`/artworks/${e.id}`}
-                className="group relative block overflow-hidden rounded-3xl bg-white border shadow-sm hover:shadow-md transition"
+                className="group relative block rounded-3xl bg-white border shadow-sm hover:shadow-md transition"
               >
-                <div className="relative w-full h-[280px] sm:h-[360px] md:h-[460px] lg:h-[520px]">
+                <div className="relative w-full h-[280px] sm:h-[360px] md:h-[460px] lg:h-[520px] overflow-hidden rounded-3xl">
                   <Image
                     src={e.image_url}
                     alt={e.title ?? 'artwork'}
@@ -343,9 +343,9 @@ export default function ArtistPublicPage() {
               <Link
                 key={e.id}
                 href={`/artworks/${e.id}`}
-                className="group relative rounded-3xl overflow-hidden bg-white border shadow-sm hover:shadow-md transition"
+                className="group relative rounded-3xl bg-white border shadow-sm hover:shadow-md transition"
               >
-                <div className="relative w-full h-64 sm:h-72">
+                <div className="relative w-full h-64 sm:h-72 overflow-hidden rounded-3xl">
                   <Image
                     src={e.image_url}
                     alt={e.title ?? 'artwork'}
