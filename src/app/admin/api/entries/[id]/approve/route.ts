@@ -1,7 +1,7 @@
 // src/app/admin/api/entries/[id]/approve/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import crypto from 'crypto';
+import { requireAdminAuth } from '@/lib/auth/requireAdminAuth';
 import Stripe from 'stripe';
 import { getSiteUrl } from '@/lib/constants';
 import { logAdminAction } from '@/lib/adminAudit';
@@ -24,30 +24,6 @@ const PLAN_LABELS: Record<string, string> = {
   premium: 'Premium',
 };
 
-/** ADMIN_API_TOKEN の検証（fail closed） */
-function requireAdmin(req: NextRequest) {
-  const expected = process.env.ADMIN_API_TOKEN;
-  if (!expected) return { ok: false as const, status: 500, error: 'missing_ADMIN_API_TOKEN' };
-
-  // 互換: Authorization: Bearer も受ける
-  const header =
-    req.headers.get('x-meish-admin-token') ??
-    (req.headers.get('authorization')?.startsWith('Bearer ')
-      ? req.headers.get('authorization')!.slice('Bearer '.length)
-      : null);
-
-  if (!header) return { ok: false as const, status: 401, error: 'missing_admin_token' };
-
-  // timing-safe compare
-  const a = Buffer.from(String(header));
-  const b = Buffer.from(String(expected));
-  if (a.length !== b.length) return { ok: false as const, status: 403, error: 'invalid_admin_token' };
-  const ok = crypto.timingSafeEqual(a, b);
-  if (!ok) return { ok: false as const, status: 403, error: 'invalid_admin_token' };
-
-  return { ok: true as const };
-}
-
 type ProcessingJobStatus = 'queued' | 'running' | 'succeeded' | 'failed';
 
 type ProcessingJob = {
@@ -67,10 +43,8 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   // まず認証
-  const adminAuth = requireAdmin(req);
-  if (!adminAuth.ok) {
-    return NextResponse.json({ error: adminAuth.error }, { status: adminAuth.status });
-  }
+  const auth = await requireAdminAuth(req);
+  if (!auth.ok) return auth.response;
 
   const id = Number(params.id);
   if (!Number.isFinite(id)) {
@@ -294,7 +268,7 @@ export async function POST(
     }
   }
 
-  logAdminAction({ adminEmail: "api-token", action: "approve_entry", resourceType: "entry", resourceId: String(id) });
+  logAdminAction({ adminEmail: auth.adminEmail, action: "approve_entry", resourceType: "entry", resourceId: String(id) });
 
   return NextResponse.json({ ok: true, entry: updatedEntry, job }, { status: 200 });
 }

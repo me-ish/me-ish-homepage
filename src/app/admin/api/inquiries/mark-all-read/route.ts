@@ -1,19 +1,11 @@
 // app/admin/api/inquiries/mark-all-read/route.ts
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { isAdminEmail } from '@/lib/isAdmin';
+import { requireAdminAuth } from '@/lib/auth/requireAdminAuth';
 
-async function requireAdmin() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email)) return null;
-  return user;
-}
-
-export async function POST() {
-  const user = await requireAdmin();
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+export async function POST(req: NextRequest) {
+  const auth = await requireAdminAuth(req);
+  if (!auth.ok) return auth.response;
 
   const admin = supabaseAdmin();
   const { error } = await admin.from('inquiries').update({ is_read: true }).eq('is_read', false);

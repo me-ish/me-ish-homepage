@@ -1,21 +1,13 @@
 // app/admin/api/inquiries/route.ts
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { isAdminEmail } from '@/lib/isAdmin';
+import { requireAdminAuth } from '@/lib/auth/requireAdminAuth';
 
 export const revalidate = 0;
 
-async function requireAdmin() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email)) return null;
-  return user;
-}
-
-export async function GET(req: Request) {
-  const user = await requireAdmin();
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+export async function GET(req: NextRequest) {
+  const auth = await requireAdminAuth(req);
+  if (!auth.ok) return auth.response;
 
   const url = new URL(req.url);
   const q = (url.searchParams.get('q') || '').trim();

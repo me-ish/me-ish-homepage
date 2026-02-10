@@ -1,9 +1,6 @@
 // src/app/api/admin/payouts/mark-paid/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
-import { isAdminEmail } from "@/lib/isAdmin";
-import { safeCompare } from "@/lib/auth/timingSafe";
+import { requireAdminAuth } from "@/lib/auth/requireAdminAuth";
 import { getSiteUrl } from "@/lib/constants";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { logAdminAction } from "@/lib/adminAudit";
@@ -11,57 +8,15 @@ import { logAdminAction } from "@/lib/adminAudit";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function supabaseWithCookies() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) throw new Error("Supabase env missing");
-
-  const cookieStore = cookies();
-  return createClient(url, anonKey, {
-    global: {
-      headers: {
-        cookie: cookieStore.toString(),
-      },
-    },
-  });
-}
-
 /**
  * POST /api/admin/payouts/mark-paid
  * Body: { userId: string }
- *
- * 認証方法:
- * 1. Cookie-based session (管理者メールチェック)
- * 2. ADMIN_API_TOKEN ヘッダー
  */
 export async function POST(req: NextRequest) {
   try {
-    // 認証チェック
-    let isAuthorized = false;
-    let adminEmail = "api-token";
-
-    // 方法1: ADMIN_API_TOKEN ヘッダー
-    const token = req.headers.get("x-meish-admin-token");
-    if (token && process.env.ADMIN_API_TOKEN && safeCompare(token, process.env.ADMIN_API_TOKEN)) {
-      isAuthorized = true;
-    }
-
-    // 方法2: Cookie-based session
-    if (!isAuthorized) {
-      const sb = supabaseWithCookies();
-      const {
-        data: { user },
-      } = await sb.auth.getUser();
-      const email = user?.email ?? null;
-      if (email && isAdminEmail(email)) {
-        isAuthorized = true;
-        adminEmail = email;
-      }
-    }
-
-    if (!isAuthorized) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireAdminAuth(req);
+    if (!auth.ok) return auth.response;
+    const adminEmail = auth.adminEmail;
 
     // リクエストボディを解析
     const body = await req.json();

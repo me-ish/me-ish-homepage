@@ -1,9 +1,7 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { isAdminEmail } from '@/lib/isAdmin';
+import { requireAdminAuth } from '@/lib/auth/requireAdminAuth';
 import { AnnouncementInsert } from '@/lib/schemas/announcement';
 import type { Database } from '@/lib/supabase/database.types';
 
@@ -23,16 +21,9 @@ function normalizeHttpUrl(u?: string | null): string | null {
   }
 }
 
-async function requireAdmin() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) return null;
-  return user;
-}
-
-export async function GET() {
-  const user = await requireAdmin();
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+export async function GET(req: NextRequest) {
+  const auth = await requireAdminAuth(req);
+  if (!auth.ok) return auth.response;
 
   const admin = supabaseAdmin();
   const { data, error } = await admin
@@ -46,9 +37,9 @@ export async function GET() {
   return NextResponse.json(data ?? []);
 }
 
-export async function POST(req: Request) {
-  const user = await requireAdmin();
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+export async function POST(req: NextRequest) {
+  const auth = await requireAdminAuth(req);
+  if (!auth.ok) return auth.response;
 
   const json = await req.json();
   const parsed = AnnouncementInsert.safeParse(json);

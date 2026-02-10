@@ -1,8 +1,7 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { isAdminEmail } from '@/lib/isAdmin';
+import { requireAdminAuth } from '@/lib/auth/requireAdminAuth';
 import { AnnouncementUpdate } from '@/lib/schemas/announcement';
 import type { Database } from '@/lib/supabase/database.types';
 
@@ -41,16 +40,9 @@ function normalizePatch(v: unknown): Partial<AnnUpdate> {
   return out as Partial<AnnUpdate>;
 }
 
-async function requireAdmin() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) return null;
-  return user;
-}
-
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  const me = await requireAdmin();
-  if (!me) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requireAdminAuth(req);
+  if (!auth.ok) return auth.response;
 
   const body = await req.json();
   const parsed = AnnouncementUpdate.safeParse(body);
@@ -75,9 +67,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   return NextResponse.json(data);
 }
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
-  const me = await requireAdmin();
-  if (!me) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requireAdminAuth(req);
+  if (!auth.ok) return auth.response;
 
   const admin = supabaseAdmin();
   const { error } = await admin

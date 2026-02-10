@@ -1,22 +1,14 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { isAdminEmail } from '@/lib/isAdmin';
+import { requireAdminAuth } from '@/lib/auth/requireAdminAuth';
 import { EntryPatch } from '@/lib/schemas/entry';
 import type { Database } from '@/lib/supabase/database.types';
 
 type EntriesUpdate = Database['public']['Tables']['entries']['Update'];
 
-async function requireAdmin() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) return null;
-  return user;
-}
-
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  const me = await requireAdmin();
-  if (!me) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requireAdminAuth(req);
+  if (!auth.ok) return auth.response;
 
   const body = await req.json();
   const parsed = EntryPatch.safeParse(body);

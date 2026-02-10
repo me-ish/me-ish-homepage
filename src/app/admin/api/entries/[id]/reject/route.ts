@@ -1,39 +1,18 @@
 // app\admin\api\entries\[id]\reject\route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { EntryReject } from '@/lib/schemas/entry';
-import crypto from 'crypto';
+import { requireAdminAuth } from '@/lib/auth/requireAdminAuth';
 import { getSiteUrl } from '@/lib/constants';
 import { logAdminAction } from '@/lib/adminAudit';
-
-function requireAdmin(req: Request) {
-  const expected = process.env.ADMIN_API_TOKEN;
-  if (!expected) return { ok: false as const, status: 500, error: 'missing_ADMIN_API_TOKEN' };
-
-  const header =
-    req.headers.get('x-meish-admin-token') ??
-    (req.headers.get('authorization')?.startsWith('Bearer ')
-      ? req.headers.get('authorization')!.slice('Bearer '.length)
-      : null);
-
-  if (!header) return { ok: false as const, status: 401, error: 'missing_admin_token' };
-
-  const a = Buffer.from(String(header));
-  const b = Buffer.from(String(expected));
-  if (a.length !== b.length) return { ok: false as const, status: 403, error: 'invalid_admin_token' };
-  const ok = crypto.timingSafeEqual(a, b);
-  if (!ok) return { ok: false as const, status: 403, error: 'invalid_admin_token' };
-
-  return { ok: true as const };
-}
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const adminAuth = requireAdmin(req);
-  if (!adminAuth.ok) return NextResponse.json({ error: adminAuth.error }, { status: adminAuth.status });
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requireAdminAuth(req);
+  if (!auth.ok) return auth.response;
 
   const body = await req.json().catch(() => ({}));
   const parsed = EntryReject.safeParse(body);
@@ -106,7 +85,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     mailed = true;
   }
 
-  logAdminAction({ adminEmail: "api-token", action: "reject_entry", resourceType: "entry", resourceId: String(id), detail: { reason: reason ?? null } });
+  logAdminAction({ adminEmail: auth.adminEmail, action: "reject_entry", resourceType: "entry", resourceId: String(id), detail: { reason: reason ?? null } });
 
   return NextResponse.json({
     ok: true,

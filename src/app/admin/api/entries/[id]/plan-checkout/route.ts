@@ -1,8 +1,7 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { isAdminEmail } from '@/lib/isAdmin';
+import { requireAdminAuth } from '@/lib/auth/requireAdminAuth';
 import { checkFloatGuaranteeCapacity, getGuaranteeTotalForPlan } from '@/lib/guarantee/capacity';
 import { getSiteUrl } from '@/lib/constants';
 
@@ -26,18 +25,9 @@ const PLAN_LABELS: Record<string, string> = {
   premium: 'Premium',
 };
 
-async function requireAdmin() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) return null;
-  return user;
-}
-
-export async function POST(_: Request, { params }: { params: { id: string } }) {
-  const adminUser = await requireAdmin();
-  if (!adminUser) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requireAdminAuth(req);
+  if (!auth.ok) return auth.response;
 
   const id = Number(params.id);
   if (!Number.isFinite(id) || id <= 0) {
