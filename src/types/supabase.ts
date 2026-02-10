@@ -332,6 +332,7 @@ export type Database = {
           edition_total: number | null
           email: string | null
           ending_soon_notified_at: string | null
+          end_notified_at: string | null
           external_user_id: string | null
           file_name: string | null
           force_wm: boolean
@@ -390,6 +391,7 @@ export type Database = {
           edition_total?: number | null
           email?: string | null
           ending_soon_notified_at?: string | null
+          end_notified_at?: string | null
           external_user_id?: string | null
           file_name?: string | null
           force_wm?: boolean
@@ -448,6 +450,7 @@ export type Database = {
           edition_total?: number | null
           email?: string | null
           ending_soon_notified_at?: string | null
+          end_notified_at?: string | null
           external_user_id?: string | null
           file_name?: string | null
           force_wm?: boolean
