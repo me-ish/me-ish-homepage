@@ -12,6 +12,10 @@
     {
       "path": "/api/cron/close-monthly-payout",
       "schedule": "59 14 28-31 * *"
+    },
+    {
+      "path": "/api/cron/exhibit-end",
+      "schedule": "* * * * *"
     }
   ]
 }

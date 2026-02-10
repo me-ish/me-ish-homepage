@@ -22,18 +22,8 @@ export function generateExhibitEndEmail(name: string) {
 
       <p style="margin:0 0 12px 0;">${escapeHtml(name)} 様</p>
       <p style="margin:0 0 12px 0;">ご出展いただいた作品の展示期間が終了いたしました。</p>
-      <p style="margin:0 0 16px 0;">この度は me-ish へのご参加、誠にありがとうございました。</p>
-
-      <div style="background:#f8fafc;border-radius:8px;padding:16px;margin:16px 0;">
-        <div style="font-weight:700;margin-bottom:8px;color:#334155;">再展示プラン</div>
-        <table style="width:100%;font-size:14px;color:#64748b;">
-          <tr><td style="padding:4px 0;">Free</td><td style="text-align:right;">¥0（ローテーション枠）</td></tr>
-          <tr><td style="padding:4px 0;">Mini</td><td style="text-align:right;">¥400/月</td></tr>
-          <tr><td style="padding:4px 0;">Light</td><td style="text-align:right;">¥800/月</td></tr>
-          <tr><td style="padding:4px 0;">Standard</td><td style="text-align:right;">¥1,200/月</td></tr>
-          <tr><td style="padding:4px 0;">Premium</td><td style="text-align:right;">¥2,400/月</td></tr>
-        </table>
-      </div>
+      <p style="margin:0 0 8px 0;">この作品はギャラリーから非表示となっています。</p>
+      <p style="margin:0 0 16px 0;">再展示をご希望の場合は、下記よりお手続きください。</p>
 
       <div style="text-align:center;margin:24px 0;">
         <a href="${sanitizeUrl(renewUrl)}"
@@ -58,14 +48,8 @@ export function generateExhibitEndEmail(name: string) {
     text: `${name} 様
 
 ご出展いただいた作品の展示期間が終了いたしました。
-この度は me-ish へのご参加、誠にありがとうございました。
-
-【再展示プラン】
-・Free ¥0（ローテーション枠）
-・Mini ¥400/月
-・Light ¥800/月
-・Standard ¥1,200/月
-・Premium ¥2,400/月
+この作品はギャラリーから非表示となっています。
+再展示をご希望の場合は、下記よりお手続きください。
 
 再展示・プラン延長はこちら:
 ${renewUrl}
