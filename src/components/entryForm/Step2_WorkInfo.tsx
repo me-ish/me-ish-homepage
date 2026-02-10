@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { HelpCircle } from 'lucide-react';
-import type { FormValues } from '@/app/entry/FormWrapper';
+import type { FormValues } from '@/app/[locale]/entry/FormWrapper';
 
 // shadcn/ui
 import {

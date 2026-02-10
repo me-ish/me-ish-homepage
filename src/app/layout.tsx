@@ -3,6 +3,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Zen_Maru_Gothic, Lilita_One } from "next/font/google";
+import { getLocale } from "next-intl/server";
 
 import QueryProvider from "@/components/providers/QueryProvider";
 import { ZoomArtworkProvider } from "@/components/shared/ZoomArtworkContext";
@@ -66,13 +67,14 @@ export const metadata: Metadata = {
 };
 
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = await getLocale();
   return (
-    <html lang="ja" className={`${zenMaruGothic.variable} ${lilitaOne.variable}`}>
+    <html lang={locale} className={`${zenMaruGothic.variable} ${lilitaOne.variable}`}>
       {/* 全体は今までどおり font-zen ベース */}
       <body className="font-zen text-lg leading-relaxed text-[#333]">
         <Suspense fallback={null}>

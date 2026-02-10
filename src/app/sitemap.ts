@@ -4,36 +4,50 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.me-ish.art';
 
+/** hreflang alternates for a given path */
+function withAlternates(path: string) {
+  const url = path ? `${SITE_URL}/${path}` : SITE_URL;
+  return {
+    url,
+    alternates: {
+      languages: {
+        ja: url,
+        en: path ? `${SITE_URL}/en/${path}` : `${SITE_URL}/en`,
+      },
+    },
+  };
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date().toISOString();
 
   // 静的ページ
   const staticPages: MetadataRoute.Sitemap = [
     // トップ・メイン
-    { url: SITE_URL, lastModified: now, changeFrequency: 'daily', priority: 1.0 },
-    { url: `${SITE_URL}/float`, lastModified: now, changeFrequency: 'daily', priority: 0.9 },
-    { url: `${SITE_URL}/float/2d`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
-    { url: `${SITE_URL}/white`, lastModified: now, changeFrequency: 'daily', priority: 0.9 },
-    { url: `${SITE_URL}/white/2d`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
+    { ...withAlternates(''), lastModified: now, changeFrequency: 'daily', priority: 1.0 },
+    { ...withAlternates('float'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
+    { ...withAlternates('float/2d'), lastModified: now, changeFrequency: 'daily', priority: 0.8 },
+    { ...withAlternates('white'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
+    { ...withAlternates('white/2d'), lastModified: now, changeFrequency: 'daily', priority: 0.8 },
 
     // AURA
-    { url: `${SITE_URL}/aura`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    { ...withAlternates('aura'), lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
 
     // 情報ページ
-    { url: `${SITE_URL}/contact`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
-    { url: `${SITE_URL}/entry`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${SITE_URL}/news`, lastModified: now, changeFrequency: 'weekly', priority: 0.6 },
+    { ...withAlternates('contact'), lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
+    { ...withAlternates('entry'), lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { ...withAlternates('news'), lastModified: now, changeFrequency: 'weekly', priority: 0.6 },
 
     // フッター（法的文書）
-    { url: `${SITE_URL}/footer/terms`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${SITE_URL}/footer/privacy`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${SITE_URL}/footer/tokushoho`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${SITE_URL}/footer/faq`, lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
-    { url: `${SITE_URL}/footer/copyright`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${SITE_URL}/footer/disclaimer`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
+    { ...withAlternates('footer/terms'), lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
+    { ...withAlternates('footer/privacy'), lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
+    { ...withAlternates('footer/tokushoho'), lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
+    { ...withAlternates('footer/faq'), lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
+    { ...withAlternates('footer/copyright'), lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
+    { ...withAlternates('footer/disclaimer'), lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
 
     // その他
-    { url: `${SITE_URL}/special-thanks`, lastModified: now, changeFrequency: 'monthly', priority: 0.2 },
+    { ...withAlternates('special-thanks'), lastModified: now, changeFrequency: 'monthly', priority: 0.2 },
   ];
 
   // 動的ページ
@@ -60,7 +74,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       if (entries) {
         for (const entry of entries) {
           dynamicPages.push({
-            url: `${SITE_URL}/works/${entry.id}`,
+            ...withAlternates(`works/${entry.id}`),
             lastModified: entry.created_at || now,
             changeFrequency: 'weekly',
             priority: 0.7,
@@ -82,7 +96,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         for (const aura of auraRequests) {
           if (aura.public_slug) {
             dynamicPages.push({
-              url: `${SITE_URL}/aura/u/${aura.public_slug}`,
+              ...withAlternates(`aura/u/${aura.public_slug}`),
               lastModified: aura.published_at || now,
               changeFrequency: 'weekly',
               priority: 0.6,
@@ -101,7 +115,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       if (portfolios) {
         for (const portfolio of portfolios) {
           dynamicPages.push({
-            url: `${SITE_URL}/artists/${portfolio.user_id}`,
+            ...withAlternates(`artists/${portfolio.user_id}`),
             lastModified: portfolio.updated_at || now,
             changeFrequency: 'weekly',
             priority: 0.6,

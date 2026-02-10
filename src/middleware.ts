@@ -1,19 +1,9 @@
 // src/middleware.ts
-// TODO: next-intl middleware - 一時的に無効化
-// import createMiddleware from 'next-intl/middleware';
-// import { locales, defaultLocale } from './i18n/config';
+import createMiddleware from 'next-intl/middleware';
+import { routing } from './i18n/routing';
 
-// export default createMiddleware({
-//   locales,
-//   defaultLocale,
-//   localePrefix: 'as-needed',
-// });
-
-// 空のmiddleware（何もしない）
-export default function middleware() {
-  // pass through
-}
+export default createMiddleware(routing);
 
 export const config = {
-  matcher: [],
+  matcher: ['/((?!api|admin|admin-login|auth|counts|_next|_vercel|.*\\..*).*)'],
 };

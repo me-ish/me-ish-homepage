@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
-import type { FormValues } from '@/app/entry/FormWrapper';
+import type { FormValues } from '@/app/[locale]/entry/FormWrapper';
 
 type Bank = { code: string; name: string; kana: string; aliases?: string[] };
 type Branch = { code: string; name: string; kana: string };
