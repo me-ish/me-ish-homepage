@@ -44,8 +44,6 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
     editionNo = null,
     editionTotal = null,
     orderId,
-    deliveryEtaDays = 3,
-    deliveryAtISO,
     manageUrl,
     downloadUrl,
     receiptUrl,
@@ -57,13 +55,9 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
   // COAリンク（certificateUrl優先、なければcoaUrl）
   const certificateUrl = a0.certificateUrl ?? a0.coaUrl ?? undefined;
 
-  const preheader = 'ご購入ありがとうございます。購入内容／納品のご案内と、購入証明（CoA）へのリンクをお送りします。';
+  const preheader = 'ご購入ありがとうございます。購入内容と作品ダウンロード（COA）へのリンクをご案内します。';
 
   const fmtYen = (n: number) => new Intl.NumberFormat('ja-JP').format(n);
-  const deliveryStr = deliveryAtISO
-    ? new Date(deliveryAtISO).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
-    : `通常 ${deliveryEtaDays} 日以内`;
-
   const rows: string[] = [];
   if (title) rows.push(row('作品名', escapeHtml(title)));
   if (artistName) rows.push(row('作家名', escapeHtml(artistName)));
@@ -116,14 +110,14 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
       </div>
 
       <p style="margin:0 0 12px 0;">${escapeHtml(name)} 様</p>
-      <p style="margin:0 0 12px 0;">この度は <strong>me-ish</strong> での作品ご購入、誠にありがとうございます。お支払いを確認し、納品準備を進めております。</p>
+      <p style="margin:0 0 12px 0;">この度は <strong>me-ish</strong> での作品ご購入、誠にありがとうございます。</p>
 
       ${rows.length ? `<table style="width:100%;border-collapse:collapse;margin:16px 0 8px 0;"><tbody>${rows.join('')}</tbody></table>` : ''}
 
       <div style="margin:14px 0 0 0; padding:12px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px;">
-        <div style="font-weight:700; margin-bottom:4px;">納品について</div>
+        <div style="font-weight:700; margin-bottom:4px;">ダウンロードについて</div>
         <div style="font-size:14px; color:#334155; line-height:1.7;">
-          納品予定：<b>${escapeHtml(deliveryStr)}</b> を目安にご案内いたします。作品データのダウンロード案内をお送りします。
+          購入完了時点で、COAページから作品データをダウンロードできます。
           ${certificateUrl ? '<br/>※ 購入証明（CoA）は下記リンクからいつでも表示・ダウンロードできます。' : ''}
         </div>
       </div>
@@ -146,14 +140,14 @@ export function generatePurchaseBuyerEmail(arg: string | PurchaseBuyerEmailArgs)
 
   const textLines: string[] = [];
   textLines.push(`${name} 様\n`);
-  textLines.push('この度は me-ish での作品ご購入、誠にありがとうございます。お支払いを確認し、納品準備を進めております。\n');
+  textLines.push('この度は me-ish での作品ご購入、誠にありがとうございます。\n');
   if (title) textLines.push(`作品名：${title}`);
   if (artistName) textLines.push(`作家名：${artistName}`);
   if (price != null) textLines.push(`価格：¥${fmtYen(price)}`);
   if (editionNo != null || editionTotal != null) textLines.push(`エディション：${editionNo ?? '-'} / ${editionTotal ?? '-'}`);
   if (orderId) textLines.push(`注文番号：${orderId}`);
   textLines.push(`形式：デジタル作品`);
-  textLines.push(`\n[納品について]\n納品予定：${deliveryStr}\n作品データのダウンロード案内をお送りします。`);
+  textLines.push(`\n[ダウンロードについて]\n購入完了時点で、COAページから作品データをダウンロードできます。`);
   if (certificateUrl) textLines.push(`購入証明（CoA）：${certificateUrl}`);
   if (manageUrl) textLines.push(`購入内容を確認する：${manageUrl}`);
   if (downloadUrl) textLines.push(`作品データを受け取る：${downloadUrl}`);

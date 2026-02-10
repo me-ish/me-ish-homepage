@@ -98,9 +98,9 @@ export function generateExhibitEndingSoonEmail(arg: ExhibitEndingSoonEmailArgs) 
         <table style="width:100%;font-size:14px;color:#64748b;">
           <tr><td style="padding:4px 0;">Free</td><td style="text-align:right;">¥0（ローテーション枠）</td></tr>
           <tr><td style="padding:4px 0;">Mini</td><td style="text-align:right;">¥400/月</td></tr>
-          <tr><td style="padding:4px 0;">Light</td><td style="text-align:right;">¥1,000/月</td></tr>
-          <tr><td style="padding:4px 0;">Standard</td><td style="text-align:right;">¥2,000/月</td></tr>
-          <tr><td style="padding:4px 0;">Premium</td><td style="text-align:right;">¥4,000/月</td></tr>
+          <tr><td style="padding:4px 0;">Light</td><td style="text-align:right;">¥800/月</td></tr>
+          <tr><td style="padding:4px 0;">Standard</td><td style="text-align:right;">¥1,200/月</td></tr>
+          <tr><td style="padding:4px 0;">Premium</td><td style="text-align:right;">¥2,400/月</td></tr>
         </table>
       </div>
 
@@ -139,9 +139,9 @@ ${reExhibitUrl}
 【再展示プラン】
 ・Free ¥0（ローテーション枠）
 ・Mini ¥400/月
-・Light ¥1,000/月
-・Standard ¥2,000/月
-・Premium ¥4,000/月
+・Light ¥800/月
+・Standard ¥1,200/月
+・Premium ¥2,400/月
 
 ${workUrl ? `作品ページ：${workUrl}\n` : ''}
 マイページ：${manageUrl}
