@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { requireAdminAuth } from '@/lib/auth/requireAdminAuth';
+import { escapeIlikePattern } from '@/lib/sanitize';
 
 export const revalidate = 0;
 
@@ -23,7 +24,8 @@ export async function GET(req: NextRequest) {
   if (onlyUnread) query = query.eq('is_read', false);
   if (q) {
     // name/email/message の部分一致
-    query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%,message.ilike.%${q}%`);
+    const escaped = escapeIlikePattern(q);
+    query = query.or(`name.ilike.%${escaped}%,email.ilike.%${escaped}%,message.ilike.%${escaped}%`);
   }
 
   const { data, error, count } = await query.range(from, to);

@@ -11,6 +11,7 @@
     "build:banks": "node scripts/build-bank-json.mjs",
     "prebuild": "npm run build:banks",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
@@ -67,6 +68,7 @@
     "@types/node": "^20",
     "@types/sharp": "^0.31.1",
     "@types/three": "^0.177.0",
+    "@vitest/coverage-v8": "^4.0.18",
     "autoprefixer": "^10.4.21",
     "eslint": "^9",
     "eslint-config-next": "14.2.3",

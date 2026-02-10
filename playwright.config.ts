@@ -12,9 +12,36 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [
+    // Public pages (no auth required)
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      testIgnore: ["**/mypage.spec.ts", "**/admin.spec.ts"],
+    },
+    // Auth setup (runs before authenticated tests)
+    {
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
+    },
+    // Authenticated user tests
+    {
+      name: "authenticated",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/user.json",
+      },
+      testMatch: ["**/mypage.spec.ts"],
+      dependencies: ["setup"],
+    },
+    // Admin tests
+    {
+      name: "admin",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/admin.json",
+      },
+      testMatch: ["**/admin.spec.ts"],
+      dependencies: ["setup"],
     },
   ],
   webServer: {

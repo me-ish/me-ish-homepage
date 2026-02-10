@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import type { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 import { createClient } from '@/lib/supabase/server'; // サーバー用 Supabase クライアント
+import { escapeIlikePattern } from '@/lib/sanitize';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const MODEL = process.env.GPT_ANSWER_MODEL ?? 'gpt-4o-mini';
@@ -121,7 +122,7 @@ async function impl_get_entry_by_title({ title_query, limit = 5 }: { title_query
   let q = sb()
     .from('entries')
     .select(SELECT_COLUMNS)
-    .ilike('title', `%${title_query}%`)
+    .ilike('title', `%${escapeIlikePattern(title_query)}%`)
     .order('confirmed_at', { ascending: false })
     .limit(limit) as unknown as PB;
 
@@ -145,10 +146,11 @@ async function impl_search_entries(args: SearchArgs) {
   q = applyPublicFilters(q);
 
   if (args.q?.trim()) {
+    const escaped = escapeIlikePattern(args.q);
     q = q.or(
       [
-        `title.ilike.%${args.q}%`,
-        `description.ilike.%${args.q}%`,
+        `title.ilike.%${escaped}%`,
+        `description.ilike.%${escaped}%`,
       ].join(',')
     );
   }

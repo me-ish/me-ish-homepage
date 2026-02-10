@@ -1,4 +1,5 @@
 import { supabaseServer } from '@/lib/supabaseServer';
+import { escapeIlikePattern } from '@/lib/sanitize';
 import dynamic from 'next/dynamic';
 
 const AnnouncementCard = dynamic(() => import('./AnnouncementCard'), { ssr: false });
@@ -25,7 +26,7 @@ export default async function NewsList({ q = '' }: { q?: string }) {
     .limit(50);
 
   if (q.trim()) {
-    const kw = q.trim();
+    const kw = escapeIlikePattern(q.trim());
     query = query.or(`title.ilike.%${kw}%,body_md.ilike.%${kw}%,link_url.ilike.%${kw}%`);
   }
 

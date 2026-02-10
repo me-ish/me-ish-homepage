@@ -1,5 +1,4 @@
 // src/components/shared/SectionHeader.tsx
-'use client';
 
 import React from 'react';
 import { cn } from '@/lib/utils';

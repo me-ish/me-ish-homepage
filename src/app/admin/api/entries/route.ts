@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAdminAuth } from "@/lib/auth/requireAdminAuth";
 import { EntryListQuery } from "@/lib/schemas/entry";
+import { escapeIlikePattern } from "@/lib/sanitize";
 
 export const revalidate = 0;
 
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
   else if (status === "processing") q = q.eq("confirmed", true).eq("display_ready", false);
 
   if (keyword && keyword.trim()) {
-    const kw = keyword.trim();
+    const kw = escapeIlikePattern(keyword.trim());
     q = q.or(`title.ilike.%${kw}%,artist_name.ilike.%${kw}%`);
   }
 
