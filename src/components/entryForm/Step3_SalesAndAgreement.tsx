@@ -540,7 +540,7 @@ const Step3_SalesAndAgreement = () => {
           </label>
 
           <p className="text-xs text-gray-500">
-            ※ 同意の変更（保管のON/OFF等）は、将来的にマイページから行える設計にすることを推奨します。
+            ※ 同意はマイページからいつでも変更できます。
           </p>
         </div>
       </div>

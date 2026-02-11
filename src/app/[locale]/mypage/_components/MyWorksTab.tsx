@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
-import { getEntriesWithStatus } from '@/lib/portfolio/queries';
+import { getEntriesWithStatus, updateEntryConsent } from '@/lib/portfolio/queries';
 import {
   EntryStatusBadge,
   getEntryStatus,
@@ -117,6 +117,25 @@ const publicUrl = useMemo(() => {
 
   const toggleExpand = (id: number) => {
     setExpandedId((prev) => (prev === id ? null : id));
+  };
+
+  const handleConsentChange = async (
+    entryId: number,
+    field: 'agree_promotion' | 'agree_storage',
+    value: boolean
+  ) => {
+    // Optimistic update
+    setEntries((prev) =>
+      prev.map((e) => (e.id === entryId ? { ...e, [field]: value } : e))
+    );
+    const result = await updateEntryConsent(supabase, entryId, { [field]: value }, userId);
+    if (!result.success) {
+      // Revert on failure
+      setEntries((prev) =>
+        prev.map((e) => (e.id === entryId ? { ...e, [field]: !value } : e))
+      );
+      console.error('[MyWorksTab] consent update failed:', result.error);
+    }
   };
 
   // ステータス別の件数を集計（タブ用）
@@ -309,6 +328,7 @@ const publicUrl = useMemo(() => {
               entry={entry}
               isExpanded={expandedId === entry.id}
               onToggle={() => toggleExpand(entry.id)}
+              onConsentChange={handleConsentChange}
             />
           ))}
         </div>
@@ -325,6 +345,7 @@ interface EntryCardProps {
   entry: EntryWithStatus;
   isExpanded: boolean;
   onToggle: () => void;
+  onConsentChange: (entryId: number, field: 'agree_promotion' | 'agree_storage', value: boolean) => void;
 }
 
 function StatusTabButton({
@@ -373,7 +394,7 @@ function StatusTabButton({
   );
 }
 
-function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
+function EntryCard({ entry, isExpanded, onToggle, onConsentChange }: EntryCardProps) {
   const imageUrl = entry.image_url || '/placeholder.png';
   const statusInfo = getEntryStatus(entry);
   const statusDescription = getStatusDescription(entry);
@@ -667,6 +688,29 @@ function EntryCard({ entry, isExpanded, onToggle }: EntryCardProps) {
                   </div>
                 </>
               )}
+            </div>
+
+            {/* 同意設定 */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-500">同意設定</p>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={entry.agree_promotion ?? false}
+                  onChange={(e) => onConsentChange(entry.id, 'agree_promotion', e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                <span className="text-sm text-gray-700">広報での紹介を許可</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={entry.agree_storage ?? false}
+                  onChange={(e) => onConsentChange(entry.id, 'agree_storage', e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                <span className="text-sm text-gray-700">展示終了後のデータ保管を許可</span>
+              </label>
             </div>
 
             {/* アクション */}

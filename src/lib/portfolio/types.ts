@@ -61,6 +61,9 @@ export type EntryWithStatus = {
   view_count?: number;
   rejected_at?: string | null;
   reject_reason?: string | null;
+  // 同意設定
+  agree_promotion?: boolean;
+  agree_storage?: boolean;
   // 有料プラン関連
   display_plan?: string | null;
   plan_payment_status?: string | null;

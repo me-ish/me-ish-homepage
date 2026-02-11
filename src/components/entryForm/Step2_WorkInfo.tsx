@@ -34,7 +34,7 @@ const BRAND = '#00a1e9';
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
 const ACCEPTED = ['image/jpeg', 'image/png']; // 必要なら 'image/webp' も追加可
 const MAX_EDGE = 3000; // 一辺3000px以内
-const MIN_SHORT_EDGE = 1200; // 短辺1200px以上（画質担保）
+const MIN_SHORT_EDGE = 960; // 短辺960px以上（画質担保）
 
 function pickFileFromValue(v: File | FileList | null | undefined) {
   if (!v) return null;

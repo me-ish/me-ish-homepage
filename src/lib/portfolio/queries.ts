@@ -249,6 +249,8 @@ export async function getEntriesWithStatus(
       is_sold,
       is_for_sale,
       portfolio_hidden,
+      agree_promotion,
+      agree_storage,
       display_plan,
       plan_payment_status,
       guarantee_total,
@@ -335,6 +337,8 @@ export async function getEntriesWithStatus(
       is_sold: e.is_sold,
       is_for_sale: e.is_for_sale,
       portfolio_hidden: e.portfolio_hidden ?? false,
+      agree_promotion: e.agree_promotion ?? false,
+      agree_storage: e.agree_storage ?? false,
       display_plan: e.display_plan,
       plan_payment_status: e.plan_payment_status,
       guarantee_total: e.guarantee_total ?? null,
@@ -464,6 +468,30 @@ export async function updateEntryPortfolioHidden(
   const { error } = await q;
   if (error) {
     console.error("[updateEntryPortfolioHidden] error:", error);
+    return { success: false, error: error.message };
+  }
+  return { success: true };
+}
+
+/**
+ * 作品の同意設定を更新（agree_promotion / agree_storage）
+ */
+export async function updateEntryConsent(
+  supabase: SupabaseClient,
+  entryId: number,
+  fields: { agree_promotion?: boolean; agree_storage?: boolean },
+  userId?: string
+): Promise<{ success: boolean; error?: string }> {
+  let q = supabase
+    .from("entries")
+    .update(fields)
+    .eq("id", entryId);
+
+  if (userId) q = q.eq("user_id", userId);
+
+  const { error } = await q;
+  if (error) {
+    console.error("[updateEntryConsent] error:", error);
     return { success: false, error: error.message };
   }
   return { success: true };
