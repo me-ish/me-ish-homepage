@@ -184,6 +184,7 @@ export default function AuraImageUploader({
 
     const res = await fetch(`${uploadEndpointBase}/${reqId}`, {
       method: "POST",
+      headers: { "x-requested-with": "me-ish" },
       body: fd,
     });
 
