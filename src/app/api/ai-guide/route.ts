@@ -1,21 +1,22 @@
 // --- /app/api/ai-guide/route.ts ---
-// 汎用QA：作品名/ID/検索/展示状況/ギャラリー方針（公開済みのみ返す）
+// 汎用QA：作品名/作家名/ID/検索/展示状況/ギャラリー方針（公開済みのみ返す）
 
 import { NextResponse } from 'next/server';
 import type { PostgrestFilterBuilder } from '@supabase/postgrest-js';
-import { createClient } from '@/lib/supabase/server'; // サーバー用 Supabase クライアント
+import { createClient } from '@/lib/supabase/server';
 import { escapeIlikePattern } from '@/lib/sanitize';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const MODEL = process.env.GPT_ANSWER_MODEL ?? 'gpt-4o-mini';
 const SAFE_DEBUG = process.env.NODE_ENV !== 'production';
 
-// Supabaseクライアント（service_role 不要の読み取りだけ想定）
+// 会話履歴の最大ターン数（system除く）
+const MAX_HISTORY_TURNS = 10;
+
 function sb() {
   return createClient();
 }
 
-// 公開用：返す列（内部金額などは除外）
 const SELECT_COLUMNS = `
   id, title, artist_name, description, image_url,
   price, is_for_sale, is_sold,
@@ -24,10 +25,8 @@ const SELECT_COLUMNS = `
   edition_total, edition_sold
 ` as const;
 
-// Postgrest のフィルタビルダー型（ゆるい型）
 type PB = PostgrestFilterBuilder<any, any, any, any>;
 
-// 公開可のレコード条件（未公開は返さない）
 function applyPublicFilters(q: PB): PB {
   const nowIso = new Date().toISOString();
   return q
@@ -74,21 +73,20 @@ const tools = [
     function: {
       name: 'search_entries',
       description:
-        '簡易検索。フリーテキスト/価格/ギャラリー種別/現在展示(onlyLive)で絞り込み（公開済みのみ）',
+        '作品検索。テキスト(タイトル・作家名・説明文を横断検索)/価格帯/ギャラリー種別/展示中フィルタで絞り込み（公開済みのみ）。作家名で探す場合もこのツールを使う。',
       parameters: {
         type: 'object',
         properties: {
-          q: { type: 'string', description: 'タイトル/説明の部分一致' },
+          q: { type: 'string', description: 'タイトル・作家名・説明文の部分一致キーワード' },
           priceMin: { type: 'number' },
           priceMax: { type: 'number' },
           galleryType: { type: 'string', enum: ['white', 'float', 'special', 'any'], default: 'any' },
           onlyLive: {
             type: 'boolean',
             default: false,
-            description:
-              'true なら現在展示中（!is_sold && display_end_at が null または 未来）のみ',
+            description: 'true なら現在展示中（未売却 & display_end_at が null または未来）のみ',
           },
-          limit: { type: 'number', default: 20 },
+          limit: { type: 'number', default: 10 },
         },
         additionalProperties: false,
       },
@@ -109,7 +107,7 @@ const tools = [
 ];
 
 /* ===========================
-   Supabase 実装（PB はすべて any ベース）
+   Supabase 実装
    =========================== */
 async function impl_get_entry_by_id({ id }: { id: number }) {
   let q = sb().from('entries').select(SELECT_COLUMNS).eq('id', id) as unknown as PB;
@@ -150,6 +148,7 @@ async function impl_search_entries(args: SearchArgs) {
     q = q.or(
       [
         `title.ilike.%${escaped}%`,
+        `artist_name.ilike.%${escaped}%`,
         `description.ilike.%${escaped}%`,
       ].join(',')
     );
@@ -165,7 +164,7 @@ async function impl_search_entries(args: SearchArgs) {
       .or('display_end_at.is.null,display_end_at.gt.now()');
   }
 
-  const { data, error } = await q.order('likes', { ascending: false }).limit(args.limit ?? 20);
+  const { data, error } = await q.order('likes', { ascending: false }).limit(args.limit ?? 10);
   if (error) throw new Error(`Supabase(search_entries): ${error.message}`);
   return (data as any[]) ?? [];
 }
@@ -173,22 +172,102 @@ async function impl_search_entries(args: SearchArgs) {
 async function impl_get_gallery_status({ galleryType }: { galleryType: 'white' | 'float' | 'special' | 'all' }) {
   const policy = {
     white: {
-      rotation: '日替わりしない',
-      date_policy: '承認時に confirmed_at/display_start_at=now(), display_end_at=null（無期限）',
+      name: 'White Gallery',
+      description: '厳選された作品を常設展示するメインギャラリー',
+      rotation: '常設（日替わりしない）',
+      display_end: '無期限',
     },
     float: {
-      rotation: '日替わり展示を行う',
-      date_policy: 'display_start_at を起点に display_end_at は自動で1か月後（予定）',
+      name: 'Float Gallery',
+      description: '日替わりで様々な作品が浮かぶ空中ギャラリー',
+      rotation: '日替わりで展示作品が変わる',
+      display_end: '展示開始から約1か月',
     },
     special: {
-      rotation: 'テーマに応じて随時（個別設定）',
-      date_policy: '個別設定（未設定はnull）',
+      name: 'Special Gallery',
+      description: 'テーマ企画展',
+      rotation: 'テーマに応じて随時',
+      display_end: '個別設定',
     },
   } as const;
 
   if (galleryType === 'all') return policy;
   return policy[galleryType];
 }
+
+/* ===========================
+   ツール実行ヘルパー
+   =========================== */
+const TOOL_IMPLS: Record<string, (args: any) => Promise<any>> = {
+  get_entry_by_id: impl_get_entry_by_id,
+  get_entry_by_title: impl_get_entry_by_title,
+  search_entries: impl_search_entries,
+  get_gallery_status: impl_get_gallery_status,
+};
+
+async function executeToolCall(tc: { id: string; function: { name: string; arguments: string } }) {
+  const { name, arguments: rawArgs } = tc.function;
+
+  let args: any = {};
+  try {
+    args = rawArgs && typeof rawArgs === 'string' ? JSON.parse(rawArgs) : (rawArgs ?? {});
+  } catch {
+    return { tool_call_id: tc.id, content: JSON.stringify({ error: 'tool args parse error' }) };
+  }
+
+  const impl = TOOL_IMPLS[name];
+  if (!impl) {
+    return { tool_call_id: tc.id, content: JSON.stringify({ error: `unknown tool: ${name}` }) };
+  }
+
+  try {
+    const result = await impl(args);
+    return { tool_call_id: tc.id, content: JSON.stringify(result) };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { tool_call_id: tc.id, content: JSON.stringify({ error: msg }) };
+  }
+}
+
+/* ===========================
+   システムプロンプト
+   =========================== */
+const SYSTEM_PROMPT = `
+あなたは3Dオンラインアートギャラリー「me-ish」の公式ガイドAI「ミーシュ」です。
+
+## me-ishについて
+me-ishは、アーティストの作品をWebブラウザ上で楽しめる3Dバーチャルギャラリーです。
+- **White Gallery**: 厳選された作品を常設展示するメインギャラリー
+- **Float Gallery**: 日替わりで様々な作品が浮かぶ空中ギャラリー
+ユーザーはアバターを操作して自由に歩き回り、作品を鑑賞できます。
+
+## あなたの役割
+- ギャラリーの案内役として、フレンドリーかつ丁寧に対応する
+- ツール（関数）で取得した**データベースの事実のみ**を伝える
+- **データにない情報は絶対に作らない。推測・想像で補完しない**
+- 回答は簡潔に、2〜3文程度でまとめる
+
+## 使えるツール
+1. **search_entries**: テキストで作品を検索（タイトル・作家名・説明文を横断検索）。作家名で探す時もこれを使う
+2. **get_entry_by_id**: 作品IDで詳細を取得
+3. **get_entry_by_title**: タイトルの部分一致検索
+4. **get_gallery_status**: ギャラリーの方針・特徴を取得
+
+## 回答ルール
+- 敬語を使い、親しみやすいトーンで
+- 長文は避け、要点を絞って回答
+- 作品情報を伝える際は「タイトル」「作家」「価格」を明記
+- おすすめを聞かれたら search_entries を呼んで、いいね数の多い作品を紹介
+- 検索結果が0件の場合は「該当する作品が見つかりませんでした」と正直に伝える
+- ツールがエラーを返した場合は「うまく情報を取得できませんでした」と伝える
+- **購入方法**: 作品をクリック→購入ボタン→クレジットカード（Stripe）決済
+- 対応範囲外の質問には「申し訳ありませんが、作品や展示に関するご質問にお答えしています」と案内
+
+## 絶対に守ること
+- ツール結果にない作品名・価格・作家名を**絶対に言わない**
+- 「〜だと思います」「おそらく」などの曖昧表現を使わない
+- 検索結果が空なら空と伝える。架空の作品を提示しない
+`.trim();
 
 /* ===========================
    ルート本体
@@ -202,7 +281,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { message } = await req.json();
+    const body = await req.json();
+    const { message, history } = body as {
+      message: string;
+      history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+    };
 
     // 入力バリデーション
     if (typeof message !== "string" || !message.trim()) {
@@ -212,45 +295,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ reply: "メッセージは500文字以内でお願いします。" }, { status: 400 });
     }
 
-    const system = `
-あなたは3Dオンラインアートギャラリー「me-ish」の公式ガイドAI「ミーシュ」です。
+    // メッセージ構築（system + 会話履歴 + 今回のユーザーメッセージ）
+    const messages: any[] = [{ role: 'system', content: SYSTEM_PROMPT }];
 
-## me-ishについて
-me-ishは、アーティストの作品をWebブラウザ上で楽しめる3Dバーチャルギャラリーです。
-- **White Gallery**: 厳選された作品を常設展示
-- **Float Gallery**: 日替わりで様々な作品が展示される空中ギャラリー
-ユーザーはアバターを操作して自由に歩き回り、作品を鑑賞できます。
+    // 会話履歴を追加（最大ターン数で制限、role を user/assistant に限定）
+    if (Array.isArray(history)) {
+      const safe = history
+        .filter((m) => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+        .slice(-MAX_HISTORY_TURNS);
+      for (const m of safe) {
+        messages.push({ role: m.role, content: m.content.slice(0, 1000) });
+      }
+    }
 
-## あなたの役割
-- ギャラリーの案内役として、フレンドリーかつ丁寧に対応する
-- データベースから取得した**事実のみ**を伝える（想像や推測で補わない）
-- 回答は簡潔に、2〜3文程度でまとめる
+    messages.push({ role: 'user', content: message });
 
-## 対応できること
-1. **作品検索**: タイトル、作家名、価格帯での検索
-2. **作品詳細**: ID指定で価格、展示状況、エディション残数などを案内
-3. **購入案内**: クレジットカード（Stripe）で購入可能。作品をクリック→購入ボタン
-4. **ギャラリー説明**: 各ギャラリーの特徴や楽しみ方
-
-## 回答スタイル
-- 敬語を使い、親しみやすいトーンで
-- 長文は避け、要点を絞って回答
-- 作品情報を伝える際は「タイトル」「作家」「価格」を明記
-- おすすめを聞かれたら、いいね数の多い作品を1点紹介
-- 対応範囲外の質問には「申し訳ありませんが、作品や展示に関するご質問にお答えしています」と案内
-
-## 注意事項
-- 存在しない作品や架空の情報を作らない
-- 検索結果が0件の場合は「該当する作品が見つかりませんでした」と正直に伝える
-- エラー時は「うまく情報を取得できませんでした。もう一度お試しください」と案内
-    `.trim();
-
-    let messages: any[] = [
-      { role: 'system', content: system },
-      { role: 'user', content: message },
-    ];
-
-    // 1回ツール実行 → 最終回答（安定重視）
+    // 1st call: ツール判定
     const first = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
@@ -263,40 +323,23 @@ me-ishは、アーティストの作品をWebブラウザ上で楽しめる3Dバ
     }
 
     const choice = first?.choices?.[0];
-    const toolCall = choice?.message?.tool_calls?.[0];
+    const toolCalls = choice?.message?.tool_calls;
 
-    if (!toolCall) {
+    // ツール呼び出しなし → そのまま返す
+    if (!toolCalls || toolCalls.length === 0) {
       const text = choice?.message?.content ?? 'うまく解釈できませんでした。作品名やIDを教えてください。';
       return NextResponse.json({ reply: text });
     }
 
-    // ツール実行（引数パースをガード）
-    const { name, arguments: rawArgs } = toolCall.function;
-    let args: any = {};
-    try {
-      args = rawArgs && typeof rawArgs === 'string' ? JSON.parse(rawArgs) : (rawArgs ?? {});
-    } catch (e) {
-      if (SAFE_DEBUG) console.error('Tool args parse error:', e, rawArgs);
-      return NextResponse.json({ reply: '内部エラー（tool args parse）。' }, { status: 500 });
-    }
-
-    let toolResult: any = null;
-    try {
-      if (name === 'get_entry_by_id') toolResult = await impl_get_entry_by_id(args);
-      else if (name === 'get_entry_by_title') toolResult = await impl_get_entry_by_title(args);
-      else if (name === 'search_entries') toolResult = await impl_search_entries(args);
-      else if (name === 'get_gallery_status') toolResult = await impl_get_gallery_status(args);
-      else toolResult = { error: `unknown tool: ${name}` };
-    } catch (e: unknown) {
-      const errMessage = e instanceof Error ? e.message : String(e);
-      const msg = SAFE_DEBUG ? errMessage : 'データ取得時にエラーが発生しました。';
-      return NextResponse.json({ reply: msg }, { status: 500 });
-    }
-
-    // ツール結果を注入して最終回答
+    // 全ツール実行（複数対応）
     messages.push(choice.message);
-    messages.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify(toolResult) });
 
+    const toolResults = await Promise.all(toolCalls.map(executeToolCall));
+    for (const tr of toolResults) {
+      messages.push({ role: 'tool', tool_call_id: tr.tool_call_id, content: tr.content });
+    }
+
+    // 2nd call: ツール結果を踏まえた最終回答
     const final = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },

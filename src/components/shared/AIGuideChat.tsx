@@ -1,8 +1,8 @@
 // src/components/shared/AIGuideChat.tsx
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Send, X, Mic, MicOff, Sparkles, Loader2, ExternalLink } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Send, X, Mic, MicOff, Sparkles, Loader2, ExternalLink, RotateCcw } from 'lucide-react';
 import { useZoomArtworkOptional } from './ZoomArtworkContext';
 
 /* ===== 最小の SpeechRecognition 型定義 ===== */
@@ -23,6 +23,12 @@ declare global {
     webkitSpeechRecognition?: new () => ISpeechRecognition;
   }
 }
+
+/* ===== 会話メッセージ型 ===== */
+type ChatMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+};
 
 /* ===== Props ===== */
 export type AIGuideChatProps = {
@@ -102,10 +108,17 @@ export default function AIGuideChat({
    * 会話の状態
    * ----------------------------- */
   const [input, setInput] = useState('');
-  const [reply, setReply] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSentInitial, setHasSentInitial] = useState(false);
-  const replyRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // スクロールを末尾に
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    }, 100);
+  }, []);
 
   /* -------------------------------
    * 音声認識（マウント後にだけセット）
@@ -168,24 +181,27 @@ export default function AIGuideChat({
     const q = text?.trim();
     if (!q) return;
 
+    const userMsg: ChatMessage = { role: 'user', content: q };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput('');
     setLoading(true);
-    setReply('');
+    scrollToBottom();
+
     try {
+      // 送信する履歴を構築（今回のメッセージは含めず、過去分のみ）
+      const history = messages.map((m) => ({ role: m.role, content: m.content }));
+
       const res = await fetch('/api/ai-guide', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: q }),
+        body: JSON.stringify({ message: q, history }),
       });
       const data = await res.json().catch(() => ({}));
       const answer: string = data?.reply ?? '（応答を取得できませんでした）';
 
-      setReply(answer);
-      setInput('');
-
-      // スクロール
-      setTimeout(() => {
-        replyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }, 100);
+      const assistantMsg: ChatMessage = { role: 'assistant', content: answer };
+      setMessages((prev) => [...prev, assistantMsg]);
+      scrollToBottom();
 
       // TTS（対応ブラウザのみ）
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -197,10 +213,17 @@ export default function AIGuideChat({
         } catch {}
       }
     } catch {
-      setReply('エラーが発生しました。少し時間をおいてお試しください。');
+      const errorMsg: ChatMessage = { role: 'assistant', content: 'エラーが発生しました。少し時間をおいてお試しください。' };
+      setMessages((prev) => [...prev, errorMsg]);
+      scrollToBottom();
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleReset = () => {
+    setMessages([]);
+    setInput('');
   };
 
   const startListening = () => {
@@ -286,25 +309,43 @@ export default function AIGuideChat({
                 <p className="text-white/50 text-xs">作品や展示について質問できます</p>
               </div>
             </div>
-            <button
-              onClick={() => setOpen(false)}
-              className="
-                w-8 h-8 rounded-lg flex items-center justify-center
-                text-white/60 hover:text-white hover:bg-white/10
-                transition-colors
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400
-              "
-              aria-label="閉じる"
-              type="button"
-            >
-              <X size={18} />
-            </button>
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <button
+                  onClick={handleReset}
+                  className="
+                    w-8 h-8 rounded-lg flex items-center justify-center
+                    text-white/60 hover:text-white hover:bg-white/10
+                    transition-colors
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400
+                  "
+                  aria-label="会話をリセット"
+                  type="button"
+                  title="会話をリセット"
+                >
+                  <RotateCcw size={16} />
+                </button>
+              )}
+              <button
+                onClick={() => setOpen(false)}
+                className="
+                  w-8 h-8 rounded-lg flex items-center justify-center
+                  text-white/60 hover:text-white hover:bg-white/10
+                  transition-colors
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400
+                "
+                aria-label="閉じる"
+                type="button"
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
 
           {/* メインコンテンツ（スクロール可能） */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[120px]">
-            {/* 初期メッセージ */}
-            {!reply && !loading && (
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[120px]">
+            {/* 初期メッセージ（会話がまだない場合） */}
+            {messages.length === 0 && !loading && (
               <div className="text-center py-4">
                 <p className="text-white/60 text-sm mb-3">
                   何でも聞いてください
@@ -328,23 +369,33 @@ export default function AIGuideChat({
               </div>
             )}
 
+            {/* 会話履歴 */}
+            {messages.map((msg, i) => (
+              <div
+                key={i}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`
+                    max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed
+                    ${msg.role === 'user'
+                      ? 'bg-cyan-500/20 text-white/90 rounded-br-md'
+                      : 'bg-white/5 border border-white/10 text-white/90 rounded-bl-md'
+                    }
+                  `}
+                >
+                  <p className="whitespace-pre-line">{msg.content}</p>
+                </div>
+              </div>
+            ))}
+
             {/* ローディング */}
             {loading && (
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
-                <Loader2 size={18} className="text-cyan-400 animate-spin" />
-                <span className="text-white/70 text-sm">考え中...</span>
-              </div>
-            )}
-
-            {/* 回答 */}
-            {reply && !loading && (
-              <div
-                ref={replyRef}
-                className="p-4 rounded-2xl bg-white/5 border border-white/10"
-              >
-                <p className="text-white/90 text-sm leading-relaxed whitespace-pre-line">
-                  {reply}
-                </p>
+              <div className="flex justify-start">
+                <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl rounded-bl-md bg-white/5 border border-white/10">
+                  <Loader2 size={16} className="text-cyan-400 animate-spin" />
+                  <span className="text-white/60 text-sm">考え中...</span>
+                </div>
               </div>
             )}
           </div>
@@ -437,4 +488,3 @@ export default function AIGuideChat({
     </div>
   );
 }
-  
