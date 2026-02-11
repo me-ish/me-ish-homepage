@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "docs:supabase": "node scripts/generate-supabase-docs.mjs",
     "build:banks": "node scripts/build-bank-json.mjs",
     "prebuild": "npm run build:banks",
