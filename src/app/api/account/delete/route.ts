@@ -58,13 +58,22 @@ export async function POST(req: NextRequest) {
     const userId = user.id;
     const admin = supabaseAdmin();
 
-    // 2. 未精算の売上がないかチェック
-    const { data: pendingSales, error: salesError } = await admin
-      .from('sales')
+    // 2. 未精算の売上がないかチェック（sales に user_id はないため entries 経由で絞る）
+    const { data: userEntries } = await admin
+      .from('entries')
       .select('id')
-      .eq('user_id', userId)
-      .eq('payout_status', 'pending')
-      .limit(1);
+      .eq('user_id', userId);
+
+    const entryIds = (userEntries ?? []).map((e) => e.id);
+
+    const { data: pendingSales, error: salesError } = entryIds.length > 0
+      ? await admin
+          .from('sales')
+          .select('id')
+          .in('entry_id', entryIds)
+          .eq('payout_status', 'pending')
+          .limit(1)
+      : { data: [] as { id: string }[], error: null };
 
     if (salesError) {
       console.error('[account/delete] sales check error:', salesError);
