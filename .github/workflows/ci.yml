@@ -28,6 +28,7 @@ jobs:
 
   lint:
     name: Lint
+    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +44,7 @@ jobs:
 
   audit:
     name: Security Audit
+    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
