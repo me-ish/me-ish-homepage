@@ -15,7 +15,7 @@
     },
     {
       "path": "/api/cron/exhibit-end",
-      "schedule": "* * * * *"
+      "schedule": "10 0 * * *"
     }
   ]
 }

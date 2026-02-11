@@ -1,5 +1,5 @@
 // src/app/api/cron/exhibit-end/route.ts
-// 展示終了時刻に送信するCron API
+// Send exhibit-end emails once per day for ended, not-yet-notified entries.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { safeCompare } from '@/lib/auth/timingSafe';
@@ -40,16 +40,16 @@ async function handleCron(req: NextRequest) {
   }
 
   const admin = supabaseAdmin();
-  const now = new Date();
-  const windowStart = new Date(now.getTime() - 60 * 1000);
-  const windowEnd = new Date(now.getTime() + 60 * 1000);
+  const nowIso = new Date().toISOString();
 
+  // Daily mode:
+  // Send once for all entries that already ended and were never notified.
   const { data: entries, error: fetchError } = await admin
     .from('entries')
     .select('id, title, user_id, display_end_at')
     .eq('display_ready', true)
-    .gte('display_end_at', windowStart.toISOString())
-    .lte('display_end_at', windowEnd.toISOString())
+    .not('display_end_at', 'is', null)
+    .lte('display_end_at', nowIso)
     .is('end_notified_at', null);
 
   if (fetchError) {
@@ -82,6 +82,7 @@ async function handleCron(req: NextRequest) {
         results.push({ entryId: entry.id, success: false, error: 'No user_id' });
         continue;
       }
+
       const profile = profileMap.get(entry.user_id);
       const artistEmail = emailMap.get(entry.user_id);
 
@@ -92,8 +93,8 @@ async function handleCron(req: NextRequest) {
 
       const emailPayload = {
         to: artistEmail,
-        name: profile?.display_name || 'アーティスト',
-        title: entry.title || '作品',
+        name: profile?.display_name || 'Artist',
+        title: entry.title || 'Artwork',
         displayStartAt: '',
         displayEndAt: entry.display_end_at,
       };
