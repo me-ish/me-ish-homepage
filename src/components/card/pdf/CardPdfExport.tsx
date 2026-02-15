@@ -299,7 +299,9 @@ function splitRows(count: number): number[] {
 
 function PdfWorksGrid({ works }: { works: WorkItem[] }) {
   const rows = splitRows(works.length);
-  const size = works.length <= 3 ? 36 : 30;
+  const maxCols = Math.max(...rows);
+  // 2列まで→50px、3列→42px（右エリア約140px幅に収まる最大）
+  const size = maxCols <= 2 ? 50 : 42;
 
   let idx = 0;
   return (
