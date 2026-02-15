@@ -103,108 +103,137 @@ export default function CardPdfExport({
             width: CARD_W_PX,
             height: CARD_H_PX,
             backgroundColor: design.colorBG,
+            backgroundImage:
+              design.bgGradient && design.bgGradient !== "none"
+                ? design.bgGradient
+                : undefined,
             color: design.colorText,
             display: "flex",
-            padding: "16px 20px",
+            flexDirection: "column",
             fontFamily: "sans-serif",
             overflow: "hidden",
             position: "relative",
           }}
         >
-          {/* Left: avatar + name */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              flex: "0 0 40%",
-              gap: 6,
-            }}
-          >
-            {content.profile.avatarUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={content.profile.avatarUrl}
-                alt=""
-                style={{
-                  width: 50,
-                  height: 50,
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                }}
-              />
-            )}
+          {/* Accent bar for high AI strength */}
+          {design.aiStrengthLevel === "high" && (
             <div
               style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: design.colorText,
+                height: 3,
+                width: "100%",
+                flexShrink: 0,
+                background: `linear-gradient(90deg, ${design.colorPrimary}, ${design.colorAccent}, ${design.colorPrimary})`,
               }}
-            >
-              {content.profile.name}
-            </div>
-            <div
-              style={{
-                fontSize: 9,
-                opacity: 0.7,
-                color: design.colorText,
-              }}
-            >
-              {content.profile.title}
-            </div>
-            <div
-              style={{
-                fontSize: 8,
-                opacity: 0.5,
-                color: design.colorText,
-              }}
-            >
-              {content.profile.email}
-            </div>
-          </div>
+            />
+          )}
 
-          {/* Right: works thumbnails */}
           <div
             style={{
               flex: 1,
               display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              gap: content.works && content.works.length === 1 ? 0 : 4,
-              flexWrap: "wrap",
+              padding: "16px 20px",
+              overflow: "hidden",
             }}
           >
-            {content.works && content.works.length === 1 ? (
-              // Single work: larger thumbnail
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={content.works[0].imageUrl}
-                alt=""
-                style={{
-                  width: 100,
-                  height: 70,
-                  borderRadius: 6,
-                  objectFit: "cover",
-                  objectPosition: `${content.works[0].focusX ?? 50}% ${content.works[0].focusY ?? 50}%`,
-                }}
-              />
-            ) : (
-              content.works?.slice(0, 6).map((w, i) => (
+            {/* Left: avatar + name */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                flex: "0 0 40%",
+                gap: 6,
+              }}
+            >
+              {content.profile.avatarUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  key={i}
-                  src={w.imageUrl}
+                  src={content.profile.avatarUrl}
                   alt=""
                   style={{
-                    width: content.works!.length <= 3 ? 38 : 30,
-                    height: content.works!.length <= 3 ? 38 : 30,
-                    borderRadius: 3,
+                    width: 50,
+                    height: 50,
+                    borderRadius: "50%",
                     objectFit: "cover",
-                    objectPosition: `${w.focusX ?? 50}% ${w.focusY ?? 50}%`,
+                    ...(design.aiStrengthLevel === "high"
+                      ? { boxShadow: `0 0 8px ${design.colorPrimary}60` }
+                      : {}),
                   }}
                 />
-              ))
-            )}
+              )}
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: design.colorText,
+                }}
+              >
+                {content.profile.name}
+              </div>
+              <div
+                style={{
+                  fontSize: 9,
+                  opacity: 0.7,
+                  color: design.colorText,
+                }}
+              >
+                {content.profile.title}
+              </div>
+              <div
+                style={{
+                  fontSize: 8,
+                  opacity: 0.5,
+                  color: design.colorText,
+                }}
+              >
+                {content.profile.email}
+              </div>
+            </div>
+
+            {/* Right: works thumbnails */}
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: content.works?.length === 1 ? "center" : "flex-end",
+                gap: content.works?.length === 1 ? 0 : 4,
+                flexWrap: "wrap",
+                alignContent: "center",
+              }}
+            >
+              {content.works && content.works.length === 1 ? (
+                // Single work: fill the right area
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={content.works[0].imageUrl}
+                  alt=""
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: CARD_H_PX - 32,
+                    borderRadius: 6,
+                    objectFit: "contain",
+                    objectPosition: `${content.works[0].focusX ?? 50}% ${content.works[0].focusY ?? 50}%`,
+                  }}
+                />
+              ) : (
+                content.works?.slice(0, 6).map((w, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={i}
+                    src={w.imageUrl}
+                    alt=""
+                    style={{
+                      width: content.works!.length <= 3 ? 38 : 30,
+                      height: content.works!.length <= 3 ? 38 : 30,
+                      borderRadius: 3,
+                      objectFit: "cover",
+                      objectPosition: `${w.focusX ?? 50}% ${w.focusY ?? 50}%`,
+                    }}
+                  />
+                ))
+              )}
+            </div>
           </div>
         </div>
 
@@ -215,6 +244,10 @@ export default function CardPdfExport({
             width: CARD_W_PX,
             height: CARD_H_PX,
             backgroundColor: design.colorBG,
+            backgroundImage:
+              design.bgGradient && design.bgGradient !== "none"
+                ? design.bgGradient
+                : undefined,
             color: design.colorText,
             display: "flex",
             flexDirection: "column",
