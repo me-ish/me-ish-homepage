@@ -61,6 +61,8 @@ export default function Header() {
           { label: 'me-ishについて', href: '/modal/about' },
           { label: 'AURAとは（ポートフォリオ）', href: '/aura' },
           { label: 'ポートフォリオを作成', href: '/aura/form' },
+          { label: 'CARDとは（デジタル名刺）', href: '/card' },
+          { label: 'デジタル名刺を作成', href: '/card/form' },
           { label: '出展ガイド', href: '/modal/creators' },
           { label: '購入ガイド', href: '/modal/buyers' },
           { label: 'プランと料金', href: '/modal/pricing' },

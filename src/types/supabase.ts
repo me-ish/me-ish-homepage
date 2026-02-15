@@ -10,10 +10,40 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          admin_email: string
+          created_at: string
+          detail: Json | null
+          id: string
+          resource_id: string | null
+          resource_type: string
+        }
+        Insert: {
+          action: string
+          admin_email: string
+          created_at?: string
+          detail?: Json | null
+          id?: string
+          resource_id?: string | null
+          resource_type: string
+        }
+        Update: {
+          action?: string
+          admin_email?: string
+          created_at?: string
+          detail?: Json | null
+          id?: string
+          resource_id?: string | null
+          resource_type?: string
+        }
+        Relationships: []
+      }
       admin_emails: {
         Row: {
           email: string
@@ -249,6 +279,72 @@ export type Database = {
         }
         Relationships: []
       }
+      card_requests: {
+        Row: {
+          content: Json | null
+          created_at: string | null
+          design: Json | null
+          email: string
+          error: string | null
+          id: string
+          paid_at: string | null
+          payload: Json | null
+          payment_status: string | null
+          public_id: string | null
+          public_slug: string | null
+          published_at: string | null
+          renderer_version: string | null
+          session_token: string
+          status: string
+          stripe_session_id: string | null
+          tier: string | null
+          updated_at: string | null
+          visibility: string | null
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string | null
+          design?: Json | null
+          email: string
+          error?: string | null
+          id?: string
+          paid_at?: string | null
+          payload?: Json | null
+          payment_status?: string | null
+          public_id?: string | null
+          public_slug?: string | null
+          published_at?: string | null
+          renderer_version?: string | null
+          session_token: string
+          status?: string
+          stripe_session_id?: string | null
+          tier?: string | null
+          updated_at?: string | null
+          visibility?: string | null
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string | null
+          design?: Json | null
+          email?: string
+          error?: string | null
+          id?: string
+          paid_at?: string | null
+          payload?: Json | null
+          payment_status?: string | null
+          public_id?: string | null
+          public_slug?: string | null
+          published_at?: string | null
+          renderer_version?: string | null
+          session_token?: string
+          status?: string
+          stripe_session_id?: string | null
+          tier?: string | null
+          updated_at?: string | null
+          visibility?: string | null
+        }
+        Relationships: []
+      }
       cert_links: {
         Row: {
           created_at: string
@@ -318,11 +414,6 @@ export type Database = {
           created_at: string
           description: string
           display_end_at: string | null
-          guarantee_total: number | null
-          guarantee_remaining: number | null
-          guarantee_period_start: string | null
-          guarantee_period_end: string | null
-          guarantee_extended_count: number | null
           display_plan: string | null
           display_ready: boolean | null
           display_start_at: string | null
@@ -331,12 +422,17 @@ export type Database = {
           edition_sold: number
           edition_total: number | null
           email: string | null
-          ending_soon_notified_at: string | null
           end_notified_at: string | null
+          ending_soon_notified_at: string | null
           external_user_id: string | null
           file_name: string | null
           force_wm: boolean
           gallery_type: string | null
+          guarantee_extended_count: number | null
+          guarantee_period_end: string | null
+          guarantee_period_start: string | null
+          guarantee_remaining: number | null
+          guarantee_total: number | null
           has_signature: boolean | null
           id: number
           image_url: string
@@ -377,11 +473,6 @@ export type Database = {
           created_at?: string
           description: string
           display_end_at?: string | null
-          guarantee_total?: number | null
-          guarantee_remaining?: number | null
-          guarantee_period_start?: string | null
-          guarantee_period_end?: string | null
-          guarantee_extended_count?: number | null
           display_plan?: string | null
           display_ready?: boolean | null
           display_start_at?: string | null
@@ -390,12 +481,17 @@ export type Database = {
           edition_sold?: number
           edition_total?: number | null
           email?: string | null
-          ending_soon_notified_at?: string | null
           end_notified_at?: string | null
+          ending_soon_notified_at?: string | null
           external_user_id?: string | null
           file_name?: string | null
           force_wm?: boolean
           gallery_type?: string | null
+          guarantee_extended_count?: number | null
+          guarantee_period_end?: string | null
+          guarantee_period_start?: string | null
+          guarantee_remaining?: number | null
+          guarantee_total?: number | null
           has_signature?: boolean | null
           id?: number
           image_url: string
@@ -436,11 +532,6 @@ export type Database = {
           created_at?: string
           description?: string
           display_end_at?: string | null
-          guarantee_total?: number | null
-          guarantee_remaining?: number | null
-          guarantee_period_start?: string | null
-          guarantee_period_end?: string | null
-          guarantee_extended_count?: number | null
           display_plan?: string | null
           display_ready?: boolean | null
           display_start_at?: string | null
@@ -449,12 +540,17 @@ export type Database = {
           edition_sold?: number
           edition_total?: number | null
           email?: string | null
-          ending_soon_notified_at?: string | null
           end_notified_at?: string | null
+          ending_soon_notified_at?: string | null
           external_user_id?: string | null
           file_name?: string | null
           force_wm?: boolean
           gallery_type?: string | null
+          guarantee_extended_count?: number | null
+          guarantee_period_end?: string | null
+          guarantee_period_start?: string | null
+          guarantee_remaining?: number | null
+          guarantee_total?: number | null
           has_signature?: boolean | null
           id?: number
           image_url?: string
@@ -484,27 +580,82 @@ export type Database = {
         }
         Relationships: []
       }
-      entry_daily_slots: {
+      entry_comments: {
         Row: {
-          id: string
-          entry_id: number
-          display_date: string
-          slot_index: number
+          author_name: string
+          body: string
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          entry_id: number
+          id: string
+          user_id: string
         }
         Insert: {
-          id?: string
-          entry_id: number
-          display_date: string
-          slot_index: number
+          author_name?: string
+          body: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          entry_id: number
+          id?: string
+          user_id: string
         }
         Update: {
-          id?: string
-          entry_id?: number
-          display_date?: string
-          slot_index?: number
+          author_name?: string
+          body?: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          entry_id?: number
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entry_comments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entry_comments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_entry_workflow"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "entry_comments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_public_portfolio_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entry_daily_slots: {
+        Row: {
+          created_at: string
+          display_date: string
+          entry_id: number
+          id: string
+          slot_index: number
+        }
+        Insert: {
+          created_at?: string
+          display_date: string
+          entry_id: number
+          id?: string
+          slot_index: number
+        }
+        Update: {
+          created_at?: string
+          display_date?: string
+          entry_id?: number
+          id?: string
+          slot_index?: number
         }
         Relationships: [
           {
@@ -513,7 +664,21 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "entries"
             referencedColumns: ["id"]
-          }
+          },
+          {
+            foreignKeyName: "entry_daily_slots_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_entry_workflow"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "entry_daily_slots_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_public_portfolio_entries"
+            referencedColumns: ["id"]
+          },
         ]
       }
       entry_processing_jobs: {
@@ -1025,6 +1190,35 @@ export type Database = {
         }
         Relationships: []
       }
+      entry_comment_counts: {
+        Row: {
+          comment_count: number | null
+          entry_id: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entry_comments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entry_comments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_entry_workflow"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "entry_comments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_public_portfolio_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entry_view_stats: {
         Row: {
           entry_id: number | null
@@ -1063,11 +1257,6 @@ export type Database = {
           confirmed_at: string | null
           created_at: string | null
           display_end_at: string | null
-          guarantee_total: number | null
-          guarantee_remaining: number | null
-          guarantee_period_start: string | null
-          guarantee_period_end: string | null
-          guarantee_extended_count: number | null
           display_ready: boolean | null
           display_start_at: string | null
           entry_id: number | null
@@ -1185,11 +1374,6 @@ export type Database = {
           created_at: string | null
           description: string | null
           display_end_at: string | null
-          guarantee_total: number | null
-          guarantee_remaining: number | null
-          guarantee_period_start: string | null
-          guarantee_period_end: string | null
-          guarantee_extended_count: number | null
           display_ready: boolean | null
           display_start_at: string | null
           edition_remaining: number | null
@@ -1211,11 +1395,6 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           display_end_at?: string | null
-          guarantee_total?: number | null
-          guarantee_remaining?: number | null
-          guarantee_period_start?: string | null
-          guarantee_period_end?: string | null
-          guarantee_extended_count?: number | null
           display_ready?: boolean | null
           display_start_at?: string | null
           edition_remaining?: number | null
@@ -1237,11 +1416,6 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           display_end_at?: string | null
-          guarantee_total?: number | null
-          guarantee_remaining?: number | null
-          guarantee_period_start?: string | null
-          guarantee_period_end?: string | null
-          guarantee_extended_count?: number | null
           display_ready?: boolean | null
           display_start_at?: string | null
           edition_remaining?: number | null
@@ -1315,6 +1489,14 @@ export type Database = {
               sold_out: boolean
             }[]
           }
+      get_gallery_stats: {
+        Args: never
+        Returns: {
+          artists_count: number
+          unique_views: number
+          works_count: number
+        }[]
+      }
       get_my_artist_view_stats: {
         Args: { p_user_id: string }
         Returns: {

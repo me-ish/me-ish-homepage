@@ -117,6 +117,11 @@ export async function POST(req: NextRequest) {
     return handleAuraPurchase(event.id, session, requestId);
   }
 
+  // CARD purchase
+  if (kind === "card" && requestId && isUuidLike(requestId)) {
+    return handleCardPurchase(event.id, session, requestId);
+  }
+
   // Entry plan purchase
   if (kind === "entry_plan" && entryId && isEntryIdLike(entryId)) {
     return handleEntryPlanPurchase(event.id, session, entryId);
@@ -254,6 +259,73 @@ async function handleAuraPurchase(
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("[webhook/stripe/aura] exception:", {
+      eventId,
+      sessionId: session.id,
+      requestId,
+      error: message,
+    });
+    return NextResponse.json({ ok: true, received: true }, { status: 200 });
+  }
+}
+
+/**
+ * CARD購入処理
+ * - card_requests.payment_status を paid に更新
+ * - 冪等性: 既に paid なら何もしない
+ */
+async function handleCardPurchase(
+  eventId: string,
+  session: Stripe.Checkout.Session,
+  requestId: string
+): Promise<NextResponse> {
+  const admin = supabaseAdmin();
+
+  try {
+    const { data: rec, error: selErr } = await admin
+      .from("card_requests")
+      .select("id, payment_status, stripe_session_id")
+      .eq("id", requestId)
+      .maybeSingle();
+
+    if (selErr || !rec) {
+      console.error("[webhook/stripe/card] request not found:", {
+        eventId,
+        sessionId: session.id,
+        requestId,
+        error: selErr,
+      });
+      return NextResponse.json({ ok: true, received: true }, { status: 200 });
+    }
+
+    const alreadyPaid = String((rec as any).payment_status ?? "").toLowerCase() === "paid";
+    if (alreadyPaid) {
+      return NextResponse.json({ ok: true, received: true }, { status: 200 });
+    }
+
+    const { error: updErr } = await admin
+      .from("card_requests")
+      .update({
+        payment_status: "paid",
+        stripe_session_id: session.id,
+        paid_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", requestId);
+
+    if (updErr) {
+      console.error("[webhook/stripe/card] update failed:", {
+        eventId,
+        sessionId: session.id,
+        requestId,
+        error: updErr,
+      });
+      return NextResponse.json({ ok: true, received: true }, { status: 200 });
+    }
+
+    return NextResponse.json({ ok: true, received: true }, { status: 200 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("[webhook/stripe/card] exception:", {
       eventId,
       sessionId: session.id,
       requestId,

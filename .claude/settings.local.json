@@ -14,7 +14,10 @@
       "Bash(npx tsx:*)",
       "Bash(find:*)",
       "Bash(git show:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(dir:*)",
+      "mcp__supabase__list_projects",
+      "mcp__supabase__generate_typescript_types"
     ]
   }
 }
