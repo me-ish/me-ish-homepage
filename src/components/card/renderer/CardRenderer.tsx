@@ -21,6 +21,7 @@ const SNS_ICONS: Record<string, React.ElementType> = {
 
 export default function CardRenderer({ design, content, publicUrl }: Props) {
   const isPremium = design.animation;
+  const isHigh = design.aiStrengthLevel === "high";
   const { ref: parallaxRef, offset } = useParallax(isPremium, 0.25);
 
   return (
@@ -31,6 +32,16 @@ export default function CardRenderer({ design, content, publicUrl }: Props) {
         color: design.colorText,
       }}
     >
+      {/* Accent bar for high AI strength */}
+      {isHigh && (
+        <div
+          className="h-1 w-full"
+          style={{
+            background: `linear-gradient(90deg, ${design.colorPrimary}, ${design.colorAccent}, ${design.colorPrimary})`,
+          }}
+        />
+      )}
+
       {/* ============ HERO SECTION ============ */}
       <section
         ref={parallaxRef}
@@ -65,7 +76,12 @@ export default function CardRenderer({ design, content, publicUrl }: Props) {
           {content.profile.avatarUrl && (
             <div
               className="w-28 h-28 rounded-full overflow-hidden border-4 shadow-lg mb-6"
-              style={{ borderColor: design.colorPrimary + "33" }}
+              style={{
+                borderColor: design.colorPrimary + "33",
+                ...(isHigh
+                  ? { boxShadow: `0 0 24px ${design.colorPrimary}40, 0 0 48px ${design.colorAccent}20` }
+                  : {}),
+              }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -146,25 +162,57 @@ export default function CardRenderer({ design, content, publicUrl }: Props) {
             >
               Works
             </h2>
-            <div
-              className={`grid gap-5 ${
-                content.works.length === 1
-                  ? "grid-cols-1 max-w-sm mx-auto"
-                  : content.works.length === 2
-                    ? "grid-cols-1 sm:grid-cols-2"
-                    : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-              }`}
-            >
-              {content.works.map((work, i) => (
+            {content.works.length === 1 ? (
+              /* Single work: hero 16/9 full width */
+              <div className="max-w-2xl mx-auto">
                 <WorkCard
-                  key={`work-${i}`}
-                  work={work}
+                  key="work-0"
+                  work={content.works[0]}
                   design={design}
-                  index={i}
+                  index={0}
                   isPremium={isPremium}
+                  variant="hero"
                 />
-              ))}
-            </div>
+              </div>
+            ) : content.works.length === 2 ? (
+              /* Two works: side by side 4/3 */
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl mx-auto">
+                {content.works.map((work, i) => (
+                  <WorkCard
+                    key={`work-${i}`}
+                    work={work}
+                    design={design}
+                    index={i}
+                    isPremium={isPremium}
+                    variant="default"
+                  />
+                ))}
+              </div>
+            ) : (
+              /* 3+: first featured 2/1, rest grid 4/3 */
+              <div className="space-y-5">
+                <WorkCard
+                  key="work-0"
+                  work={content.works[0]}
+                  design={design}
+                  index={0}
+                  isPremium={isPremium}
+                  variant="featured"
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {content.works.slice(1).map((work, i) => (
+                    <WorkCard
+                      key={`work-${i + 1}`}
+                      work={work}
+                      design={design}
+                      index={i + 1}
+                      isPremium={isPremium}
+                      variant="default"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -229,18 +277,29 @@ export default function CardRenderer({ design, content, publicUrl }: Props) {
 
 /* ---------- Work Card Sub-component ---------- */
 
+type WorkVariant = "hero" | "featured" | "default";
+
+const VARIANT_ASPECT: Record<WorkVariant, string> = {
+  hero: "aspect-[16/9]",
+  featured: "aspect-[2/1]",
+  default: "aspect-[4/3]",
+};
+
 function WorkCard({
   work,
   design,
   index,
   isPremium,
+  variant = "default",
 }: {
-  work: { imageUrl: string; title?: string };
+  work: { imageUrl: string; title?: string; focusX?: number; focusY?: number };
   design: CardDesign;
   index: number;
   isPremium: boolean;
+  variant?: WorkVariant;
 }) {
   const { ref, visible } = useScrollReveal(isPremium);
+  const isHigh = design.aiStrengthLevel === "high";
 
   return (
     <div
@@ -250,15 +309,20 @@ function WorkCard({
         opacity: visible ? 1 : 0,
         transform: visible ? "translateY(0)" : "translateY(24px)",
         transitionDelay: `${index * 100}ms`,
-        boxShadow: `0 4px 20px ${design.colorPrimary}15`,
+        boxShadow: isHigh
+          ? `0 4px 24px ${design.colorPrimary}30, 0 0 12px ${design.colorAccent}15`
+          : `0 4px 20px ${design.colorPrimary}15`,
       }}
     >
-      <div className="aspect-[4/3] overflow-hidden bg-black/5">
+      <div className={`${VARIANT_ASPECT[variant]} overflow-hidden bg-black/5`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={work.imageUrl}
           alt={work.title || `Work ${index + 1}`}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          style={{
+            objectPosition: `${work.focusX ?? 50}% ${work.focusY ?? 50}%`,
+          }}
         />
       </div>
       {work.title && (

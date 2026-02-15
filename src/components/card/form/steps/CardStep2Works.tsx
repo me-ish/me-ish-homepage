@@ -1,8 +1,8 @@
 // src/components/card/form/steps/CardStep2Works.tsx
 "use client";
 
-import { useRef, useState } from "react";
-import { Plus, X, ImagePlus, GripVertical } from "lucide-react";
+import { useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { Plus, X, ImagePlus, GripVertical, Crosshair } from "lucide-react";
 import type { CardFormData } from "../cardFormTypes";
 import { MAX_WORKS_FREE, MAX_WORKS_PREMIUM } from "../cardFormTypes";
 import type { CardWorkItem } from "@/lib/card/card.schema";
@@ -82,6 +82,15 @@ export default function CardStep2Works({
     updateField("works", next);
   };
 
+  const updateWorkFocus = (index: number, e: ReactMouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const focusX = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+    const focusY = Math.round(((e.clientY - rect.top) / rect.height) * 100);
+    const next = [...form.works];
+    next[index] = { ...next[index], focusX, focusY };
+    updateField("works", next);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -100,14 +109,33 @@ export default function CardStep2Works({
             key={`${work.path ?? work.imageUrl}-${i}`}
             className="relative group rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm"
           >
-            {/* Image */}
-            <div className="aspect-[4/3] bg-slate-50 overflow-hidden">
+            {/* Image with focal point */}
+            <div
+              className="aspect-[4/3] bg-slate-50 overflow-hidden relative cursor-crosshair"
+              onClick={(e) => updateWorkFocus(i, e)}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={work.imageUrl}
                 alt={work.title || `作品 ${i + 1}`}
                 className="w-full h-full object-cover"
+                style={{
+                  objectPosition: `${work.focusX ?? 50}% ${work.focusY ?? 50}%`,
+                }}
               />
+              {/* Crosshair indicator */}
+              {(work.focusX !== undefined && work.focusX !== 50) ||
+              (work.focusY !== undefined && work.focusY !== 50) ? (
+                <div
+                  className="absolute w-5 h-5 pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                  style={{
+                    left: `${work.focusX ?? 50}%`,
+                    top: `${work.focusY ?? 50}%`,
+                  }}
+                >
+                  <Crosshair className="w-5 h-5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" />
+                </div>
+              ) : null}
             </div>
 
             {/* Controls overlay */}
@@ -184,10 +212,15 @@ export default function CardStep2Works({
         }}
       />
 
-      {/* Counter */}
+      {/* Counter + hint */}
       <p className="text-xs text-slate-400 text-center">
         {form.works.length} / {maxWorks} 作品
       </p>
+      {form.works.length > 0 && (
+        <p className="text-xs text-slate-400 text-center">
+          画像をクリックして表示の中心位置を調整できます
+        </p>
+      )}
     </div>
   );
 }

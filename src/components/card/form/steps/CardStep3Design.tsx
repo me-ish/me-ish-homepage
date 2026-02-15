@@ -1,17 +1,54 @@
 // src/components/card/form/steps/CardStep3Design.tsx
 "use client";
 
+import { useMemo } from "react";
 import { Check } from "lucide-react";
 import type { CardFormData } from "../cardFormTypes";
 import { CARD_WORLDVIEWS } from "../cardFormTypes";
 import { getWorldviewPreset } from "@/lib/aura/aura.worldviewPresets";
+import {
+  blendColor,
+  saturateColor,
+  desaturateColor,
+} from "@/lib/card/card.colorUtils";
 
 type Props = {
   form: CardFormData;
   updateField: <K extends keyof CardFormData>(key: K, val: CardFormData[K]) => void;
 };
 
+function getAiLabel(v: number): string {
+  if (v <= 29) return "シンプル";
+  if (v >= 71) return "ダイナミック";
+  return "バランス";
+}
+
 export default function CardStep3Design({ form, updateField }: Props) {
+  // Compute mini preview colors based on worldview x aiStrength
+  const preview = useMemo(() => {
+    const preset = getWorldviewPreset(form.worldview);
+    const v = form.aiStrength;
+    let primary = preset.colorPrimary;
+    let accent = preset.colorAccent;
+    let bg = preset.colorBG;
+    let gradient = preset.bgGradient;
+
+    if (v <= 29) {
+      primary = desaturateColor(primary, 0.4);
+      accent = desaturateColor(accent, 0.4);
+      gradient = undefined;
+    } else if (v >= 71) {
+      primary = saturateColor(primary, 0.3);
+      accent = saturateColor(accent, 0.3);
+      accent = blendColor(accent, primary, ((v - 70) / 30) * 0.3);
+      if (!gradient || gradient === "none") {
+        gradient = `linear-gradient(135deg, ${bg}, ${blendColor(bg, primary, 0.08)})`;
+      }
+    }
+
+    return { primary, accent, bg, text: preset.colorText, gradient };
+  }, [form.worldview, form.aiStrength]);
+
   return (
     <div className="space-y-8">
       <h2 className="text-lg font-bold text-slate-800">
@@ -70,7 +107,10 @@ export default function CardStep3Design({ form, updateField }: Props) {
       {/* AI Strength slider */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-2">
-          AI強度: {form.aiStrength}%
+          デザイン強度: {form.aiStrength}%
+          <span className="ml-2 text-xs font-normal text-slate-400">
+            — {getAiLabel(form.aiStrength)}
+          </span>
         </label>
         <input
           type="range"
@@ -81,8 +121,42 @@ export default function CardStep3Design({ form, updateField }: Props) {
           className="w-full accent-sky-500"
         />
         <div className="flex justify-between text-xs text-slate-400 mt-1">
-          <span>プリセットそのまま</span>
-          <span>カスタム強め</span>
+          <span>シンプル</span>
+          <span>バランス</span>
+          <span>ダイナミック</span>
+        </div>
+
+        {/* Mini preview swatch */}
+        <div
+          className="mt-3 rounded-lg p-3 flex items-center gap-3 transition-all duration-300"
+          style={{
+            backgroundColor: preview.bg,
+            backgroundImage: preview.gradient && preview.gradient !== "none" ? preview.gradient : undefined,
+            color: preview.text,
+          }}
+        >
+          <div
+            className="w-8 h-8 rounded-full shrink-0 border border-black/10"
+            style={{ backgroundColor: preview.primary }}
+          />
+          <div className="flex-1 min-w-0">
+            <div
+              className="text-xs font-bold truncate"
+              style={{ color: preview.text }}
+            >
+              {form.name || "サンプル名前"}
+            </div>
+            <div
+              className="text-[10px] opacity-60 truncate"
+              style={{ color: preview.text }}
+            >
+              {form.title || "肩書き"}
+            </div>
+          </div>
+          <div
+            className="w-6 h-6 rounded shrink-0 border border-black/10"
+            style={{ backgroundColor: preview.accent }}
+          />
         </div>
       </div>
 

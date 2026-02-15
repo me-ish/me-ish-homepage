@@ -130,6 +130,17 @@ export default function CardStep1Profile({
           placeholder="山田 太郎"
           className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
         />
+        {/* Name line-break mini preview */}
+        {form.name && (
+          <div className="mt-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 overflow-hidden">
+            <p className="text-[10px] text-slate-400 mb-1">カード表示プレビュー</p>
+            <div className="origin-left" style={{ transform: "scale(0.45)", width: "222%" }}>
+              <p className="text-3xl font-bold tracking-tight text-slate-800 max-w-md">
+                {form.name}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Title */}

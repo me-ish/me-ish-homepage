@@ -6,6 +6,16 @@ import {
   getWorldviewPreset,
   WORLDVIEW_KEYS,
 } from "@/lib/aura/aura.worldviewPresets";
+import { blendColor, saturateColor, desaturateColor } from "./card.colorUtils";
+
+/**
+ * Determine AI strength level from numeric value
+ */
+function getAiStrengthLevel(v: number): "low" | "mid" | "high" {
+  if (v <= 29) return "low";
+  if (v >= 71) return "high";
+  return "mid";
+}
 
 /**
  * Generate card design and content from form input.
@@ -20,6 +30,8 @@ export function generateCardFromForm(input: CardFormInput): {
     : "minimal";
 
   const preset = getWorldviewPreset(worldview);
+  const level = getAiStrengthLevel(input.aiStrength);
+
   const design: CardDesign = {
     worldview,
     colorPrimary: preset.colorPrimary,
@@ -29,17 +41,34 @@ export function generateCardFromForm(input: CardFormInput): {
     bgGradient: preset.bgGradient,
     fontPreset: preset.fontPreset,
     animation: true,
+    aiStrengthLevel: level,
   };
 
-  // Apply AI strength variation (subtle color shifts for higher values)
-  if (input.aiStrength > 50) {
-    const shift = (input.aiStrength - 50) / 100;
+  // Apply AI strength variation based on level
+  if (level === "low") {
+    // Desaturate colors, remove gradient
+    design.colorPrimary = desaturateColor(preset.colorPrimary, 0.4);
+    design.colorAccent = desaturateColor(preset.colorAccent, 0.4);
+    design.bgGradient = "none";
+  } else if (level === "high") {
+    // Saturate colors, enhance gradient
+    design.colorPrimary = saturateColor(preset.colorPrimary, 0.3);
+    design.colorAccent = saturateColor(preset.colorAccent, 0.3);
+    const shift = (input.aiStrength - 70) / 30;
     design.colorAccent = blendColor(
-      preset.colorAccent,
-      preset.colorPrimary,
+      design.colorAccent,
+      design.colorPrimary,
       shift * 0.3,
     );
+    if (preset.bgGradient && preset.bgGradient !== "none") {
+      // Keep and enhance existing gradient
+      design.bgGradient = preset.bgGradient;
+    } else {
+      // Add a subtle gradient when preset has none
+      design.bgGradient = `linear-gradient(135deg, ${design.colorBG}, ${blendColor(design.colorBG, design.colorPrimary, 0.08)})`;
+    }
   }
+  // "mid" keeps preset as-is
 
   const content: CardContent = {
     profile: {
@@ -55,32 +84,11 @@ export function generateCardFromForm(input: CardFormInput): {
       .map((w) => ({
         imageUrl: w.imageUrl,
         title: w.title || undefined,
+        focusX: w.focusX,
+        focusY: w.focusY,
       })),
     branding: false,
   };
 
   return { design, content };
-}
-
-/**
- * Simple color blending helper
- */
-function blendColor(c1: string, c2: string, ratio: number): string {
-  const hex = (s: string) => parseInt(s, 16);
-  const parse = (c: string) => {
-    const h = c.replace("#", "");
-    return [hex(h.slice(0, 2)), hex(h.slice(2, 4)), hex(h.slice(4, 6))];
-  };
-
-  try {
-    const [r1, g1, b1] = parse(c1);
-    const [r2, g2, b2] = parse(c2);
-    const blend = (a: number, b: number) =>
-      Math.round(a + (b - a) * ratio)
-        .toString(16)
-        .padStart(2, "0");
-    return `#${blend(r1, r2)}${blend(g1, g2)}${blend(b1, b2)}`;
-  } catch {
-    return c1;
-  }
 }

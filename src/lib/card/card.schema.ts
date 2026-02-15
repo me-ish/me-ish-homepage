@@ -26,6 +26,8 @@ export const CardWorkItemSchema = z.object({
   imageUrl: z.string(),
   path: z.string().optional(),
   title: z.string().optional(),
+  focusX: z.number().min(0).max(100).default(50).optional(),
+  focusY: z.number().min(0).max(100).default(50).optional(),
 });
 
 export type CardWorkItem = z.infer<typeof CardWorkItemSchema>;
@@ -71,6 +73,7 @@ export const CardDesignSchema = z.object({
   bgGradient: z.string().optional(),
   fontPreset: z.string().optional(),
   animation: z.boolean().default(false),
+  aiStrengthLevel: z.enum(["low", "mid", "high"]).optional(),
 });
 
 export type CardDesign = z.infer<typeof CardDesignSchema>;
@@ -92,6 +95,8 @@ export const CardContentSchema = z.object({
       z.object({
         imageUrl: z.string(),
         title: z.string().optional(),
+        focusX: z.number().optional(),
+        focusY: z.number().optional(),
       }),
     )
     .optional(),

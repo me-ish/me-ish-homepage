@@ -184,6 +184,7 @@ export default function CardPdfExport({
                   height: 42,
                   borderRadius: 4,
                   objectFit: "cover",
+                  objectPosition: `${w.focusX ?? 50}% ${w.focusY ?? 50}%`,
                 }}
               />
             ))}
