@@ -196,10 +196,7 @@ export default function CardPdfExport({
                 flex: 1,
                 display: "flex",
                 alignItems: "center",
-                justifyContent: content.works?.length === 1 ? "center" : "flex-end",
-                gap: content.works?.length === 1 ? 0 : 4,
-                flexWrap: "wrap",
-                alignContent: "center",
+                justifyContent: "center",
               }}
             >
               {content.works && content.works.length === 1 ? (
@@ -216,23 +213,9 @@ export default function CardPdfExport({
                     objectPosition: `${content.works[0].focusX ?? 50}% ${content.works[0].focusY ?? 50}%`,
                   }}
                 />
-              ) : (
-                content.works?.slice(0, 6).map((w, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={i}
-                    src={w.imageUrl}
-                    alt=""
-                    style={{
-                      width: content.works!.length <= 3 ? 38 : 30,
-                      height: content.works!.length <= 3 ? 38 : 30,
-                      borderRadius: 3,
-                      objectFit: "cover",
-                      objectPosition: `${w.focusX ?? 50}% ${w.focusY ?? 50}%`,
-                    }}
-                  />
-                ))
-              )}
+              ) : content.works && content.works.length >= 2 ? (
+                <PdfWorksGrid works={content.works} />
+              ) : null}
             </div>
           </div>
         </div>
@@ -290,6 +273,75 @@ export default function CardPdfExport({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ---------- PDF Works Grid ---------- */
+
+type WorkItem = { imageUrl: string; focusX?: number; focusY?: number };
+
+/**
+ * 枚数に応じた行レイアウト:
+ *   6枚 → [3, 3]  5枚 → [3, 2]  4枚 → [2, 2]
+ *   3枚 → [3]     2枚 → [2]
+ */
+function splitRows(count: number): number[] {
+  switch (count) {
+    case 6: return [3, 3];
+    case 5: return [3, 2];
+    case 4: return [2, 2];
+    case 3: return [3];
+    case 2: return [2];
+    default: return [count];
+  }
+}
+
+function PdfWorksGrid({ works }: { works: WorkItem[] }) {
+  const rows = splitRows(works.length);
+  const size = works.length <= 3 ? 36 : 30;
+
+  let idx = 0;
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 4,
+      }}
+    >
+      {rows.map((cols, rowIdx) => {
+        const rowItems = works.slice(idx, idx + cols);
+        idx += cols;
+        return (
+          <div
+            key={rowIdx}
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 4,
+            }}
+          >
+            {rowItems.map((w, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={i}
+                src={w.imageUrl}
+                alt=""
+                style={{
+                  width: size,
+                  height: size,
+                  borderRadius: 3,
+                  objectFit: "cover",
+                  objectPosition: `${w.focusX ?? 50}% ${w.focusY ?? 50}%`,
+                }}
+              />
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
