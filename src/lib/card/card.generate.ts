@@ -9,7 +9,7 @@ import {
 import { blendColor, saturateColor, desaturateColor } from "./card.colorUtils";
 
 /**
- * Determine AI strength level from numeric value
+ * Determine design strength level from numeric value
  */
 function getAiStrengthLevel(v: number): "low" | "mid" | "high" {
   if (v <= 29) return "low";
@@ -44,7 +44,7 @@ export function generateCardFromForm(input: CardFormInput): {
     aiStrengthLevel: level,
   };
 
-  // Apply AI strength variation based on level
+  // Apply design strength variation based on level
   if (level === "low") {
     // Desaturate colors, remove gradient
     design.colorPrimary = desaturateColor(preset.colorPrimary, 0.4);

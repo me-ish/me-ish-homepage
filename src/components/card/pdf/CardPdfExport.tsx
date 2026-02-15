@@ -115,7 +115,7 @@ export default function CardPdfExport({
             position: "relative",
           }}
         >
-          {/* Accent bar for high AI strength */}
+          {/* Accent bar for high design strength */}
           {design.aiStrengthLevel === "high" && (
             <div
               style={{

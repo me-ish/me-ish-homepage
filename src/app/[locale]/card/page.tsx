@@ -34,7 +34,7 @@ export default function CardLandingPage() {
           </span>
           <span className="mt-1 block text-[clamp(1.9rem,4.2vw,3rem)] font-extrabold text-[#00a1e9]">
             <span className="inline-flex items-baseline">
-              AIデザイン
+              デザイン
               <span className="sm:hidden">
                 <br />
               </span>
@@ -124,7 +124,7 @@ export default function CardLandingPage() {
           <StepItem
             num="3"
             title="世界観を選んで完成"
-            body="10種類のデザインテーマから選択。AI強度で微調整して、すぐに公開URLが発行されます。"
+            body="10種類のデザインテーマから選択。スライダーで微調整して、すぐに公開URLが発行されます。"
           />
         </ol>
       </section>

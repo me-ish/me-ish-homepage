@@ -32,7 +32,7 @@ export default function CardRenderer({ design, content, publicUrl }: Props) {
         color: design.colorText,
       }}
     >
-      {/* Accent bar for high AI strength */}
+      {/* Accent bar for high design strength */}
       {isHigh && (
         <div
           className="h-1 w-full"
