@@ -167,8 +167,8 @@ export default function CardLandingPage() {
         <h2 className="text-xl font-bold mb-3">よくある質問</h2>
         <div className="space-y-3">
           <FaqItem
-            q="Freeプランでもずっと使えますか？"
-            a="はい。Freeプランのカードは無期限で公開されます。Premiumへのアップグレードはいつでも可能です。"
+            q="ずっと無料で使えますか？"
+            a="はい。作成したカードは無期限で公開されます。"
           />
           <FaqItem
             q="作成後に編集できますか？"
