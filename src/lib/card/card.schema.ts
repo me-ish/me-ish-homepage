@@ -51,7 +51,7 @@ export const CardFormInputSchema = z.object({
   sns: z.array(CardSnsLinkSchema).max(5).optional(),
 
   // Step 2: Works
-  works: z.array(CardWorkItemSchema).max(5).optional(),
+  works: z.array(CardWorkItemSchema).max(6).optional(),
 
   // Step 3: Design
   worldview: z.string().default("minimal"),

@@ -22,8 +22,8 @@ export const CARD_WORLDVIEWS = [
   { id: "retro", label: "Retro", emoji: "📻" },
 ] as const;
 
-export const MAX_WORKS_FREE = 5;
-export const MAX_WORKS_PREMIUM = 5;
+export const MAX_WORKS_FREE = 6;
+export const MAX_WORKS_PREMIUM = 6;
 
 export type CardFormData = {
   // Step 1

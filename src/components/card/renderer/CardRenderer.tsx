@@ -163,7 +163,7 @@ export default function CardRenderer({ design, content, publicUrl }: Props) {
               Works
             </h2>
             {content.works.length === 1 ? (
-              /* Single work: hero 16/9 full width */
+              /* Single work: full width, image as-is */
               <div className="max-w-2xl mx-auto">
                 <WorkCard
                   key="work-0"
@@ -171,11 +171,10 @@ export default function CardRenderer({ design, content, publicUrl }: Props) {
                   design={design}
                   index={0}
                   isPremium={isPremium}
-                  variant="hero"
                 />
               </div>
             ) : content.works.length === 2 ? (
-              /* Two works: side by side 4/3 */
+              /* Two works: side by side */
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl mx-auto">
                 {content.works.map((work, i) => (
                   <WorkCard
@@ -184,33 +183,25 @@ export default function CardRenderer({ design, content, publicUrl }: Props) {
                     design={design}
                     index={i}
                     isPremium={isPremium}
-                    variant="default"
                   />
                 ))}
               </div>
             ) : (
-              /* 3+: first featured 2/1, rest grid 4/3 */
-              <div className="space-y-5">
-                <WorkCard
-                  key="work-0"
-                  work={content.works[0]}
-                  design={design}
-                  index={0}
-                  isPremium={isPremium}
-                  variant="featured"
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {content.works.slice(1).map((work, i) => (
-                    <WorkCard
-                      key={`work-${i + 1}`}
-                      work={work}
-                      design={design}
-                      index={i + 1}
-                      isPremium={isPremium}
-                      variant="default"
-                    />
-                  ))}
-                </div>
+              /* 3-6: 2-col or 3-col grid, images as-is */
+              <div className={`grid gap-5 ${
+                content.works.length <= 4
+                  ? "grid-cols-1 sm:grid-cols-2"
+                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+              }`}>
+                {content.works.map((work, i) => (
+                  <WorkCard
+                    key={`work-${i}`}
+                    work={work}
+                    design={design}
+                    index={i}
+                    isPremium={isPremium}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -277,26 +268,16 @@ export default function CardRenderer({ design, content, publicUrl }: Props) {
 
 /* ---------- Work Card Sub-component ---------- */
 
-type WorkVariant = "hero" | "featured" | "default";
-
-const VARIANT_ASPECT: Record<WorkVariant, string> = {
-  hero: "aspect-[16/9]",
-  featured: "aspect-[2/1]",
-  default: "aspect-[4/3]",
-};
-
 function WorkCard({
   work,
   design,
   index,
   isPremium,
-  variant = "default",
 }: {
   work: { imageUrl: string; title?: string; focusX?: number; focusY?: number };
   design: CardDesign;
   index: number;
   isPremium: boolean;
-  variant?: WorkVariant;
 }) {
   const { ref, visible } = useScrollReveal(isPremium);
   const isHigh = design.aiStrengthLevel === "high";
@@ -314,15 +295,12 @@ function WorkCard({
           : `0 4px 20px ${design.colorPrimary}15`,
       }}
     >
-      <div className={`${VARIANT_ASPECT[variant]} overflow-hidden bg-black/5`}>
+      <div className="overflow-hidden bg-black/5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={work.imageUrl}
           alt={work.title || `Work ${index + 1}`}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-          style={{
-            objectPosition: `${work.focusX ?? 50}% ${work.focusY ?? 50}%`,
-          }}
+          className="w-full h-auto block transition-transform duration-300 group-hover:scale-[1.03]"
         />
       </div>
       {work.title && (

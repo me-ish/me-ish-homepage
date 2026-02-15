@@ -170,24 +170,41 @@ export default function CardPdfExport({
               display: "flex",
               alignItems: "center",
               justifyContent: "flex-end",
-              gap: 6,
+              gap: content.works && content.works.length === 1 ? 0 : 4,
+              flexWrap: "wrap",
             }}
           >
-            {content.works?.slice(0, 3).map((w, i) => (
+            {content.works && content.works.length === 1 ? (
+              // Single work: larger thumbnail
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                key={i}
-                src={w.imageUrl}
+                src={content.works[0].imageUrl}
                 alt=""
                 style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 4,
+                  width: 100,
+                  height: 70,
+                  borderRadius: 6,
                   objectFit: "cover",
-                  objectPosition: `${w.focusX ?? 50}% ${w.focusY ?? 50}%`,
+                  objectPosition: `${content.works[0].focusX ?? 50}% ${content.works[0].focusY ?? 50}%`,
                 }}
               />
-            ))}
+            ) : (
+              content.works?.slice(0, 6).map((w, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={i}
+                  src={w.imageUrl}
+                  alt=""
+                  style={{
+                    width: content.works!.length <= 3 ? 38 : 30,
+                    height: content.works!.length <= 3 ? 38 : 30,
+                    borderRadius: 3,
+                    objectFit: "cover",
+                    objectPosition: `${w.focusX ?? 50}% ${w.focusY ?? 50}%`,
+                  }}
+                />
+              ))
+            )}
           </div>
         </div>
 

@@ -98,7 +98,7 @@ export default function CardStep2Works({
           作品アップロード
         </h2>
         <p className="text-sm text-slate-500 mt-1">
-          名刺に表示する作品を最大5点アップロードできます
+          名刺に表示する作品を最大6点アップロードできます
         </p>
       </div>
 

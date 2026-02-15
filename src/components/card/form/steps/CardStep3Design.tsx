@@ -162,7 +162,7 @@ export default function CardStep3Design({ form, updateField }: Props) {
 
       {/* All features included notice */}
       <div className="rounded-xl bg-sky-50 border border-sky-200 p-4 text-sm text-sky-700">
-        すべての機能が無料でご利用いただけます（作品5点、アニメーション、PDF出力、カスタムURL）
+        すべての機能が無料でご利用いただけます（作品6点、アニメーション、PDF出力、カスタムURL）
       </div>
     </div>
   );

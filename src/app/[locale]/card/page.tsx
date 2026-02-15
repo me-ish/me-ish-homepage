@@ -119,7 +119,7 @@ export default function CardLandingPage() {
           <StepItem
             num="2"
             title="作品をアップロード"
-            body="あなたの代表作を最大5点までアップロード（Freeは3点）。"
+            body="あなたの代表作を最大6点までアップロード。"
           />
           <StepItem
             num="3"
@@ -142,7 +142,7 @@ export default function CardLandingPage() {
               ¥0
             </div>
             <ul className="mt-3 space-y-2 text-sm">
-              <LI>作品 最大5点</LI>
+              <LI>作品 最大6点</LI>
               <LI>10種類のデザインテーマ</LI>
               <LI>パララックス + フェードインアニメーション</LI>
               <LI>QRコード生成</LI>
