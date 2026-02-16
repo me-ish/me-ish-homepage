@@ -139,6 +139,21 @@ const FAQ_CATEGORIES: Category[] = [
         ),
       },
       {
+        question: "振込額に消費税は含まれていますか？インボイスは発行されますか？",
+        answer: (
+          <>
+            アーティストへの振込額は、<strong>税込販売価格から手数料10%を控除した金額</strong>です。
+            消費税の取扱い（課税・免税の判断や申告）は各アーティストの税務ご判断に委ねます。
+            なお、me-ishは<strong>適格請求書発行事業者（インボイス登録事業者）ではない</strong>ため、
+            適格請求書（インボイス）の発行には対応しておりません（{" "}
+            <Link href="/footer/terms#sec-7-2" className="underline underline-offset-2">
+              利用規約 第7条の2
+            </Link>{" "}
+            ）。
+          </>
+        ),
+      },
+      {
         question: "表示保証オプションはありますか？",
         answer: (
           <>
@@ -413,7 +428,7 @@ export default function FAQPage() {
         )}
       </section>
 
-      <footer className="mt-10 text-xs text-gray-500">最終更新：2026年1月17日</footer>
+      <footer className="mt-10 text-xs text-gray-500">最終更新：2026年2月16日</footer>
     </main>
   );
 }

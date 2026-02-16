@@ -4,7 +4,7 @@
 import Link from 'next/link';
 
 const ENACTED_AT = "2025年8月18日";
-const REVISED_AT = "2026年1月17日"; // ★運用：更新時は“最終改定日”として置き換え推奨
+const REVISED_AT = "2026年2月16日"; // ★運用：更新時は"最終改定日"として置き換え推奨
 
 export default function TokushohoPage() {
   return (
@@ -19,13 +19,13 @@ export default function TokushohoPage() {
 
       <article className="prose prose-neutral max-w-none leading-relaxed space-y-6">
         <h2><strong>■ 販売事業者名</strong></h2>
-        <p>me-ish（ミーイッシュ）</p>
+        <p>大下　唯（屋号：me-ish／ミーイッシュ）</p>
 
         <h2><strong>■ 販売責任者</strong></h2>
         <p>大下　唯</p>
 
         <h2><strong>■ 所在地</strong></h2>
-        <p>宮城県仙台市青葉区（詳細住所はご請求があった場合に遅滞なく開示します）</p>
+        <p>群馬県高崎市（詳細住所はご請求があった場合に遅滞なく開示します）</p>
 
         <h2><strong>■ 電話番号</strong></h2>
         <p>

@@ -63,6 +63,7 @@ export type FormValues = {
   ai_usage_note?: string;
   agreePromotion?: boolean; // 公式広報での紹介に同意
   agreeStorage?: boolean;   // 展示終了後も作品データを保持（ポートフォリオ用途）
+  confirmAge: boolean;      // 18歳以上または保護者同意の確認
 
 };
 
@@ -138,6 +139,7 @@ const FormWrapper = () => {
             // ★ 任意同意（Step3）
       agreePromotion: false,
       agreeStorage: false,
+      confirmAge: false,
 
 
       has_signature: undefined as unknown as 'yes' | 'no',
@@ -184,7 +186,7 @@ const FormWrapper = () => {
         return ['gallery_type', 'title', 'image', 'has_signature', 'ai_usage'];
 
       case 3: {
-        const base: (keyof FormValues)[] = ['isForSale', 'agreeTerms', 'confirmRights', 'confirmOriginal'];
+        const base: (keyof FormValues)[] = ['isForSale', 'agreeTerms', 'confirmRights', 'confirmOriginal', 'confirmAge'];
 
         if (isForSale === 'yes') {
           // ★ saleType は UI が無いので検証対象から外す（送信時に "normal" 固定）

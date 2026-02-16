@@ -511,6 +511,23 @@ const Step3_SalesAndAgreement = () => {
           const m = errMsg(errors.confirmOriginal);
           return m ? <p className="text-sm text-red-600 -mt-1.5">{m}</p> : null;
         })()}
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            {...register("confirmAge", {
+              required: "年齢確認が必要です。",
+            })}
+          />
+          <span className="text-sm">
+            18歳以上です、または保護者の同意を得ています
+          </span>
+          <span className="text-red-600 text-xs ml-2">＊必須</span>
+        </div>
+        {(() => {
+          const m = errMsg(errors.confirmAge);
+          return m ? <p className="text-sm text-red-600 -mt-1.5">{m}</p> : null;
+        })()}
       </div>
 
       {/* 追加の同意（任意） */}
