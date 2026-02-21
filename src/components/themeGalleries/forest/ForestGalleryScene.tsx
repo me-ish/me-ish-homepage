@@ -16,10 +16,9 @@ import JoystickInput from '@/components/shared/JoystickInput';
 import { useIsMobile } from '@/lib/useIsMobile';
 
 /**
- * ConcreteGalleryScene - 安藤忠雄スタイルのコンクリートギャラリー
+ * ConcreteGalleryScene v2 — Dia:Beacon スケール
  *
- * 30m × 20m の建物に36点のアートワークを展示。
- * WASD / ジョイスティックで移動、マウスドラッグ / 矢印キーでカメラ回転。
+ * 60m × 40m、天井高8m、中庭水盤付き。作品40点。
  */
 
 type Props = {
@@ -52,7 +51,6 @@ export default function ForestGalleryScene({ className }: Props): React.JSX.Elem
   const joystickRef = useRef({ x: 0, y: 0 });
   const isMobile = useIsMobile();
 
-  // モバイルでのスクロール・タッチ挙動を制御
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     const originalTouchAction = document.body.style.touchAction;
@@ -75,10 +73,10 @@ export default function ForestGalleryScene({ className }: Props): React.JSX.Elem
       )}
       <Canvas
         camera={{
-          position: [0, 5, 15],
+          position: [0, 5, 20],
           fov: 60,
           near: 0.1,
-          far: 200,
+          far: 300,
         }}
         gl={{
           antialias: !isMobile,

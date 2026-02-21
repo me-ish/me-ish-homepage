@@ -4,85 +4,133 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 
 /**
- * ConcreteBuilding - 建物構造（床・天井・外壁・パーティション）
+ * ConcreteBuilding v2 — 建物構造
  *
- * JSON gallery_structure.json の座標をBlender→Three.jsに変換済み。
- * Blender [x, y, z] → Three.js [x, z, -y]
- * サイズ [sx, sy, sz] → Three.js [sx, sz, sy]
+ * 60m×40m、天井高8m。中庭（ガラス壁+水盤）、ベンチ4台。
+ * 天井は中庭上部に8m×8mの開口。
+ * 座標: Blender [x,y,z] → R3F [x, z, -y]
+ * サイズ: Blender [sx,sy,sz] → R3F boxGeometry args [sx, sz, sy]
  */
 
-// マテリアル定義（JSON materials より）
-const MATERIALS = {
-  wall: { color: '#9E9A91', roughness: 0.85, metalness: 0 },
-  floor: { color: '#736E66', roughness: 0.35, metalness: 0 },
-  ceiling: { color: '#ACA8A0', roughness: 0.9, metalness: 0 },
+// --- マテリアル定義 ---
+const MAT = {
+  wall:    { color: '#9E9A91', roughness: 0.82, metalness: 0 },
+  floor:   { color: '#6B6660', roughness: 0.3, metalness: 0 },
+  ceiling: { color: '#ADA8A1', roughness: 0.9, metalness: 0 },
+  water:   { color: '#263841', roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.6 },
+  glass:   { color: '#E5F0FF', roughness: 0, metalness: 0.1, transparent: true, opacity: 0.15 },
+  bench:   { color: '#8A8580', roughness: 0.7, metalness: 0 },
 } as const;
 
-// 外壁データ（Three.js座標に変換済み）
-const EXTERIOR_WALLS: { position: [number, number, number]; size: [number, number, number] }[] = [
-  // Wall_Back: [0, -9.85, 2.25] → [0, 2.25, 9.85]
-  { position: [0, 2.25, 9.85], size: [30, 4.5, 0.3] },
-  // Wall_Front: [0, 9.85, 2.25] → [0, 2.25, -9.85]
-  { position: [0, 2.25, -9.85], size: [30, 4.5, 0.3] },
-  // Wall_Left: [-14.85, 0, 2.25] → [-14.85, 2.25, 0]
-  { position: [-14.85, 2.25, 0], size: [0.3, 4.5, 20] },
-  // Wall_Right: [14.85, 0, 2.25] → [14.85, 2.25, 0]
-  { position: [14.85, 2.25, 0], size: [0.3, 4.5, 20] },
+type BoxDef = { position: [number, number, number]; size: [number, number, number] };
+
+// --- 外壁 (R3F座標) ---
+const EXTERIOR_WALLS: BoxDef[] = [
+  { position: [0, 4, 19.8],     size: [60, 8, 0.4] },   // Back
+  { position: [0, 4, -19.8],    size: [60, 8, 0.4] },   // Front
+  { position: [-29.8, 4, 0],    size: [0.4, 8, 40] },   // Left
+  { position: [29.8, 4, 0],     size: [0.4, 8, 40] },   // Right
 ];
 
-// パーティションデータ（Three.js座標に変換済み）
-const PARTITIONS: { position: [number, number, number]; size: [number, number, number] }[] = [
-  // U_L_Spine: [-5, 0.25, 2] → [-5, 2, -0.25]
-  { position: [-5, 2, -0.25], size: [0.25, 4, 10.5] },
-  // U_L_Top: [-8, 5.5, 2] → [-8, 2, -5.5]
-  { position: [-8, 2, -5.5], size: [6, 4, 0.25] },
-  // U_L_Bottom: [-8, -5, 2] → [-8, 2, 5]
-  { position: [-8, 2, 5], size: [6, 4, 0.25] },
-  // U_R_Spine: [5, 0.25, 2] → [5, 2, -0.25]
-  { position: [5, 2, -0.25], size: [0.25, 4, 10.5] },
-  // U_R_Top: [8, 5.5, 2] → [8, 2, -5.5]
-  { position: [8, 2, -5.5], size: [6, 4, 0.25] },
-  // U_R_Bottom: [8, -5, 2] → [8, 2, 5]
-  { position: [8, 2, 5], size: [6, 4, 0.25] },
+// --- パーティション (R3F座標) ---
+const PARTITIONS: BoxDef[] = [
+  // Left U
+  { position: [-10, 3.25, -1.5],  size: [0.35, 6.5, 21] },   // Spine
+  { position: [-16, 3.25, -12],   size: [12, 6.5, 0.35] },   // Top arm
+  { position: [-16, 3.25, 9],     size: [12, 6.5, 0.35] },   // Bottom arm
+  // Right U
+  { position: [10, 3.25, -1.5],   size: [0.35, 6.5, 21] },   // Spine
+  { position: [16, 3.25, -12],    size: [12, 6.5, 0.35] },   // Top arm
+  { position: [16, 3.25, 9],      size: [12, 6.5, 0.35] },   // Bottom arm
+];
+
+// --- 中庭要素 (R3F座標) ---
+const COURTYARD: { name: string; position: [number, number, number]; size: [number, number, number]; mat: keyof typeof MAT }[] = [
+  // ガラス壁4面
+  { name: 'Glass_N', position: [0, 4, -7],    size: [8, 8, 0.05],   mat: 'glass' },
+  { name: 'Glass_S', position: [0, 4, 1],     size: [8, 8, 0.05],   mat: 'glass' },
+  { name: 'Glass_E', position: [4, 4, -3],    size: [0.05, 8, 8],   mat: 'glass' },
+  { name: 'Glass_W', position: [-4, 4, -3],   size: [0.05, 8, 8],   mat: 'glass' },
+  // 水盤
+  { name: 'Water',   position: [0, 0.05, -3], size: [7.8, 0.1, 7.8], mat: 'water' },
+  // 中庭床
+  { name: 'Floor',   position: [0, -0.05, -3], size: [8, 0.1, 8],    mat: 'floor' },
+];
+
+// --- ベンチ (R3F座標) ---
+const BENCHES: BoxDef[] = [
+  { position: [0, 0.22, 4],     size: [1.5, 0.22, 0.3] },
+  { position: [0, 0.22, -2],    size: [1.5, 0.22, 0.3] },
+  { position: [-18, 0.25, 0],   size: [3, 0.5, 0.5] },
+  { position: [18, 0.25, 0],    size: [3, 0.5, 0.5] },
+];
+
+// --- 天井パネル（中庭部分に開口） ---
+// 中庭開口: R3F x [-4, 4], z [-7, 1]
+// 天井全体: x [-30, 30], z [-20, 20], y = 8
+const CEILING_PANELS: { position: [number, number, number]; size: [number, number] }[] = [
+  // z: 1 → 20 (back section, full width)
+  { position: [0, 8, 10.5],    size: [60, 19] },
+  // z: -20 → -7 (front section, full width)
+  { position: [0, 8, -13.5],   size: [60, 13] },
+  // z: -7 → 1, x: -30 → -4 (left fill)
+  { position: [-17, 8, -3],    size: [26, 8] },
+  // z: -7 → 1, x: 4 → 30 (right fill)
+  { position: [17, 8, -3],     size: [26, 8] },
 ];
 
 export default function ConcreteBuilding(): React.JSX.Element {
-  const wallMaterial = useMemo(
-    () => new THREE.MeshStandardMaterial(MATERIALS.wall),
-    []
-  );
-  const floorMaterial = useMemo(
-    () => new THREE.MeshStandardMaterial(MATERIALS.floor),
-    []
-  );
-  const ceilingMaterial = useMemo(
-    () => new THREE.MeshStandardMaterial(MATERIALS.ceiling),
-    []
-  );
+  const wallMat = useMemo(() => new THREE.MeshStandardMaterial(MAT.wall), []);
+  const floorMat = useMemo(() => new THREE.MeshStandardMaterial(MAT.floor), []);
+  const ceilingMat = useMemo(() => new THREE.MeshStandardMaterial({ ...MAT.ceiling, side: THREE.DoubleSide }), []);
+  const waterMat = useMemo(() => new THREE.MeshStandardMaterial(MAT.water), []);
+  const glassMat = useMemo(() => new THREE.MeshStandardMaterial({ ...MAT.glass, side: THREE.DoubleSide }), []);
+  const benchMat = useMemo(() => new THREE.MeshStandardMaterial(MAT.bench), []);
+
+  const matMap: Record<string, THREE.MeshStandardMaterial> = {
+    wall: wallMat, floor: floorMat, ceiling: ceilingMat,
+    water: waterMat, glass: glassMat, bench: benchMat,
+  };
 
   return (
     <group name="concrete-building">
-      {/* 床: y=0, 30m x 20m */}
-      <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} material={floorMaterial}>
-        <planeGeometry args={[30, 20]} />
+      {/* 床 (60m × 40m) */}
+      <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} material={floorMat}>
+        <planeGeometry args={[60, 40]} />
       </mesh>
 
-      {/* 天井: y=4.5, 30m x 20m */}
-      <mesh position={[0, 4.5, 0]} rotation={[Math.PI / 2, 0, 0]} material={ceilingMaterial}>
-        <planeGeometry args={[30, 20]} />
-      </mesh>
-
-      {/* 外壁 */}
-      {EXTERIOR_WALLS.map((wall, i) => (
-        <mesh key={`wall-${i}`} position={wall.position} material={wallMaterial}>
-          <boxGeometry args={wall.size} />
+      {/* 天井（中庭開口あり、4分割パネル） */}
+      {CEILING_PANELS.map((panel, i) => (
+        <mesh key={`ceil-${i}`} position={panel.position} rotation={[Math.PI / 2, 0, 0]} material={ceilingMat}>
+          <planeGeometry args={panel.size} />
         </mesh>
       ))}
 
-      {/* パーティション（U字型 x2） */}
-      {PARTITIONS.map((part, i) => (
-        <mesh key={`partition-${i}`} position={part.position} material={wallMaterial}>
-          <boxGeometry args={part.size} />
+      {/* 外壁 */}
+      {EXTERIOR_WALLS.map((w, i) => (
+        <mesh key={`wall-${i}`} position={w.position} material={wallMat}>
+          <boxGeometry args={w.size} />
+        </mesh>
+      ))}
+
+      {/* パーティション */}
+      {PARTITIONS.map((p, i) => (
+        <mesh key={`part-${i}`} position={p.position} material={wallMat}>
+          <boxGeometry args={p.size} />
+        </mesh>
+      ))}
+
+      {/* 中庭要素 */}
+      {COURTYARD.map((c) => (
+        <mesh key={c.name} position={c.position} material={matMap[c.mat]}>
+          <boxGeometry args={c.size} />
+        </mesh>
+      ))}
+
+      {/* ベンチ */}
+      {BENCHES.map((b, i) => (
+        <mesh key={`bench-${i}`} position={b.position} material={benchMat}>
+          <boxGeometry args={b.size} />
         </mesh>
       ))}
     </group>

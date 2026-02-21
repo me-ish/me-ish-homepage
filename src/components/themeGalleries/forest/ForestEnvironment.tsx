@@ -5,29 +5,27 @@ import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 /**
- * ConcreteEnvironment - コンクリートギャラリーのライティング
+ * ConcreteEnvironment v2 — ライティング
  *
- * - 暖色系アンビエントライト（自然光イメージ）
- * - メインの太陽光
- * - 天井付近の2つのポイントライト（エリアライト代替）
+ * Sun + PointLight×3（天井エリアライト代替）+ ヘミスフィア
+ * 中庭開口から差し込む自然光をイメージ。
  */
 
-const BACKGROUND_COLOR = '#3a3632';
+// 背景（中庭から見える空の色）
+const BACKGROUND_COLOR = '#87ACBF';
 
-// JSON: ambient sun intensity 2.0, color #FFF9F0
-const AMBIENT_COLOR = '#FFF9F0';
-const AMBIENT_INTENSITY = 0.6;
-
+// JSON: sun intensity 3.0, color #FFF9F0
 const SUN_COLOR = '#FFF9F0';
-const SUN_INTENSITY = 1.5;
-const SUN_POSITION: [number, number, number] = [10, 20, -5];
 
-// JSON area_lights → PointLight近似
-// position [-7, 0, 4.4] → Three.js [-7, 4.4, 0]
-// position [7, 0, 4.4] → Three.js [7, 4.4, 0]
-const AREA_LIGHTS: { position: [number, number, number]; intensity: number }[] = [
-  { position: [-7, 4.4, 0], intensity: 80 },
-  { position: [7, 4.4, 0], intensity: 80 },
+// Area lights → PointLight近似（3灯）
+// Blender [x, y, z] → R3F [x, z, -y]
+// [-20, 0, 7.8] → [-20, 7.8, 0]
+// [0, 0, 7.8] → [0, 7.8, 0]
+// [20, 0, 7.8] → [20, 7.8, 0]
+const AREA_LIGHTS: [number, number, number][] = [
+  [-20, 7.8, 0],
+  [0, 7.8, 0],
+  [20, 7.8, 0],
 ];
 
 export default function ConcreteEnvironment(): React.JSX.Element {
@@ -43,28 +41,37 @@ export default function ConcreteEnvironment(): React.JSX.Element {
 
   return (
     <group name="concrete-environment">
-      <ambientLight color={AMBIENT_COLOR} intensity={AMBIENT_INTENSITY} />
+      <ambientLight color={SUN_COLOR} intensity={0.5} />
 
       <directionalLight
         color={SUN_COLOR}
-        intensity={SUN_INTENSITY}
-        position={SUN_POSITION}
+        intensity={2.0}
+        position={[15, 30, -10]}
         castShadow={false}
       />
 
       <hemisphereLight
-        color="#FFF9F0"
-        groundColor="#736E66"
-        intensity={0.4}
+        color="#B0C4DE"
+        groundColor="#6B6660"
+        intensity={0.5}
       />
 
-      {AREA_LIGHTS.map((light, i) => (
+      {/* 中庭直上からの光 */}
+      <directionalLight
+        color="#FFFFFF"
+        intensity={1.5}
+        position={[0, 20, -3]}
+        castShadow={false}
+      />
+
+      {/* 天井エリアライト代替 */}
+      {AREA_LIGHTS.map((pos, i) => (
         <pointLight
           key={i}
-          color="#FFF9F0"
-          intensity={light.intensity}
-          position={light.position}
-          distance={15}
+          color={SUN_COLOR}
+          intensity={120}
+          position={pos}
+          distance={25}
           decay={2}
         />
       ))}
