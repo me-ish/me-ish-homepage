@@ -1,79 +1,98 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
 
 import ConcreteEnvironment from './ForestEnvironment';
 import ConcreteBuilding from './ForestGround';
 import ConcreteLightSlits from './ForestParticles';
 import ConcreteArtworks from './ForestExhibitPanels';
+import ConcreteAvatarController from './ConcreteAvatarController';
+
+import Avatar from '@/components/shared/Avatar';
+import ThirdPersonCamera from '@/components/shared/ThirdPersonCamera';
+import JoystickInput from '@/components/shared/JoystickInput';
+import { useIsMobile } from '@/lib/useIsMobile';
 
 /**
  * ConcreteGalleryScene - 安藤忠雄スタイルのコンクリートギャラリー
  *
  * 30m × 20m の建物に36点のアートワークを展示。
- * U字型パーティションと天井スリット光が特徴。
+ * WASD / ジョイスティックで移動、マウスドラッグ / 矢印キーでカメラ回転。
  */
-
-const CAMERA_INITIAL_POSITION: [number, number, number] = [0, 1.6, -8];
-const CAMERA_FOV = 60;
-
-const CONTROLS_CONFIG = {
-  enableDamping: true,
-  dampingFactor: 0.08,
-  minDistance: 1,
-  maxDistance: 25,
-  maxPolarAngle: Math.PI * 0.85,
-  minPolarAngle: Math.PI * 0.15,
-};
 
 type Props = {
   className?: string;
 };
 
-function SceneContent(): React.JSX.Element {
+function SceneContent({
+  avatarRef,
+  joystickRef,
+}: {
+  avatarRef: React.RefObject<THREE.Group>;
+  joystickRef: React.RefObject<{ x: number; y: number }>;
+}): React.JSX.Element {
   return (
     <>
       <ConcreteEnvironment />
       <ConcreteBuilding />
       <ConcreteLightSlits />
       <ConcreteArtworks />
-      <OrbitControls
-        enableDamping={CONTROLS_CONFIG.enableDamping}
-        dampingFactor={CONTROLS_CONFIG.dampingFactor}
-        minDistance={CONTROLS_CONFIG.minDistance}
-        maxDistance={CONTROLS_CONFIG.maxDistance}
-        maxPolarAngle={CONTROLS_CONFIG.maxPolarAngle}
-        minPolarAngle={CONTROLS_CONFIG.minPolarAngle}
-        target={[0, 1.5, 0]}
-      />
+
+      <Avatar ref={avatarRef} />
+      <ConcreteAvatarController avatarRef={avatarRef} joystickRef={joystickRef} />
+      <ThirdPersonCamera avatarRef={avatarRef} />
     </>
   );
 }
 
 export default function ForestGalleryScene({ className }: Props): React.JSX.Element {
+  const avatarRef = useRef<THREE.Group>(null);
+  const joystickRef = useRef({ x: 0, y: 0 });
+  const isMobile = useIsMobile();
+
+  // モバイルでのスクロール・タッチ挙動を制御
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    const originalTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.touchAction = originalTouchAction;
+    };
+  }, []);
+
   return (
     <div className={className} style={{ width: '100%', height: '100%' }} onContextMenu={(e) => e.preventDefault()}>
+      {isMobile && (
+        <JoystickInput
+          onMove={({ x, y }) => {
+            joystickRef.current = { x, y };
+          }}
+        />
+      )}
       <Canvas
         camera={{
-          position: CAMERA_INITIAL_POSITION,
-          fov: CAMERA_FOV,
+          position: [0, 5, 15],
+          fov: 60,
           near: 0.1,
           far: 200,
         }}
         gl={{
-          antialias: true,
+          antialias: !isMobile,
           alpha: false,
           powerPreference: 'high-performance',
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 1.0,
         }}
-        dpr={[1, 2]}
+        dpr={isMobile ? 1 : [1, 2]}
+        tabIndex={0}
+        onPointerDown={(e) => e.currentTarget.focus()}
       >
         <Suspense fallback={null}>
-          <SceneContent />
+          <SceneContent avatarRef={avatarRef} joystickRef={joystickRef} />
         </Suspense>
       </Canvas>
     </div>
