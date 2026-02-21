@@ -52,9 +52,12 @@ export default function ConcreteLightSlits(): React.JSX.Element {
 
         return (
           <group key={slit.name}>
-            <mesh position={slit.position} material={slitMaterial}>
-              <boxGeometry args={slit.size} />
-            </mesh>
+            {/* パーティションSpineスリットは板メッシュを非表示（天井穴と重なるため） */}
+            {!slit.name.includes('Spine') && (
+              <mesh position={slit.position} material={slitMaterial}>
+                <boxGeometry args={slit.size} />
+              </mesh>
+            )}
             <pointLight
               position={[slit.position[0], slit.position[1] - 0.5, slit.position[2]]}
               color={SLIT_COLOR}
