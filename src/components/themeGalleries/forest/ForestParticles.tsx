@@ -19,13 +19,9 @@ const SLIT_EMISSIVE_INTENSITY = 5.0;
 type SlitDef = { name: string; position: [number, number, number]; size: [number, number, number] };
 
 const LIGHT_SLITS: SlitDef[] = [
-  // パーティション上部スリット（高さ1.3m）
-  { name: 'Slit_UL_Bot',   position: [-16, 7.25, 9],     size: [12, 1.3, 0.05] },
-  { name: 'Slit_UL_Spine', position: [-10, 7.25, -1.5],  size: [0.05, 1.3, 21] },
-  { name: 'Slit_UL_Top',   position: [-16, 7.25, -12],   size: [12, 1.3, 0.05] },
-  { name: 'Slit_UR_Bot',   position: [16, 7.25, 9],      size: [12, 1.3, 0.05] },
-  { name: 'Slit_UR_Spine', position: [10, 7.25, -1.5],   size: [0.05, 1.3, 21] },
-  { name: 'Slit_UR_Top',   position: [16, 7.25, -12],    size: [12, 1.3, 0.05] },
+  // パーティション上部スリット（Spineのみ）
+  { name: 'Slit_L_Spine', position: [-10, 7.25, -1.5],  size: [0.05, 1.3, 21] },
+  { name: 'Slit_R_Spine', position: [10, 7.25, -1.5],   size: [0.05, 1.3, 21] },
   // 外壁上部スリット（薄い光帯）
   { name: 'Slit_Wall_Back',  position: [0, 7.7, 19.6],   size: [59, 0.15, 0.05] },
   { name: 'Slit_Wall_Front', position: [0, 7.7, -19.6],  size: [59, 0.15, 0.05] },

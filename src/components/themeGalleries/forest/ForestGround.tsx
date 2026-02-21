@@ -2,135 +2,187 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import { useTexture } from '@react-three/drei';
 
 /**
- * ConcreteBuilding v2 — 建物構造
+ * ConcreteBuilding v2 — 打ちっぱなしコンクリート
  *
- * 60m×40m、天井高8m。中庭（ガラス壁+水盤）、ベンチ4台。
- * 天井は中庭上部に8m×8mの開口。
- * 座標: Blender [x,y,z] → R3F [x, z, -y]
- * サイズ: Blender [sx,sy,sz] → R3F boxGeometry args [sx, sz, sy]
+ * 天井は ExtrudeGeometry（Shape + 7穴）で構築:
+ *   - 中庭開口 (8×8m)
+ *   - Spine上スリット ×2 (1×21m)
+ *   - 外壁回廊スカイライト ×4 (3×4m)
  */
 
-// --- マテリアル定義 ---
-const MAT = {
-  wall:    { color: '#9E9A91', roughness: 0.82, metalness: 0 },
-  floor:   { color: '#6B6660', roughness: 0.3, metalness: 0 },
-  ceiling: { color: '#ADA8A1', roughness: 0.9, metalness: 0 },
-  water:   { color: '#263841', roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.6 },
-  glass:   { color: '#E5F0FF', roughness: 0, metalness: 0.1, transparent: true, opacity: 0.15 },
-  bench:   { color: '#8A8580', roughness: 0.7, metalness: 0 },
-} as const;
+const TILE_SCALE = 3;
+const CEILING_THICKNESS = 0.3;
 
 type BoxDef = { position: [number, number, number]; size: [number, number, number] };
 
-// --- 外壁 (R3F座標) ---
+// --- 外壁 ---
 const EXTERIOR_WALLS: BoxDef[] = [
-  { position: [0, 4, 19.8],     size: [60, 8, 0.4] },   // Back
-  { position: [0, 4, -19.8],    size: [60, 8, 0.4] },   // Front
-  { position: [-29.8, 4, 0],    size: [0.4, 8, 40] },   // Left
-  { position: [29.8, 4, 0],     size: [0.4, 8, 40] },   // Right
+  { position: [0, 4, 19.8],   size: [60, 8, 0.4] },
+  { position: [0, 4, -19.8],  size: [60, 8, 0.4] },
+  { position: [-29.8, 4, 0],  size: [0.4, 8, 40] },
+  { position: [29.8, 4, 0],   size: [0.4, 8, 40] },
 ];
 
-// --- パーティション (R3F座標) ---
+// --- パーティション（Spineのみ） ---
 const PARTITIONS: BoxDef[] = [
-  // Left U
-  { position: [-10, 3.25, -1.5],  size: [0.35, 6.5, 21] },   // Spine
-  { position: [-16, 3.25, -12],   size: [12, 6.5, 0.35] },   // Top arm
-  { position: [-16, 3.25, 9],     size: [12, 6.5, 0.35] },   // Bottom arm
-  // Right U
-  { position: [10, 3.25, -1.5],   size: [0.35, 6.5, 21] },   // Spine
-  { position: [16, 3.25, -12],    size: [12, 6.5, 0.35] },   // Top arm
-  { position: [16, 3.25, 9],      size: [12, 6.5, 0.35] },   // Bottom arm
+  { position: [-10, 3.25, -1.5], size: [0.35, 6.5, 21] },
+  { position: [10, 3.25, -1.5],  size: [0.35, 6.5, 21] },
 ];
 
-// --- 中庭要素 (R3F座標) ---
-const COURTYARD: { name: string; position: [number, number, number]; size: [number, number, number]; mat: keyof typeof MAT }[] = [
-  // ガラス壁4面
-  { name: 'Glass_N', position: [0, 4, -7],    size: [8, 8, 0.05],   mat: 'glass' },
-  { name: 'Glass_S', position: [0, 4, 1],     size: [8, 8, 0.05],   mat: 'glass' },
-  { name: 'Glass_E', position: [4, 4, -3],    size: [0.05, 8, 8],   mat: 'glass' },
-  { name: 'Glass_W', position: [-4, 4, -3],   size: [0.05, 8, 8],   mat: 'glass' },
-  // 水盤
-  { name: 'Water',   position: [0, 0.05, -3], size: [7.8, 0.1, 7.8], mat: 'water' },
-  // 中庭床
-  { name: 'Floor',   position: [0, -0.05, -3], size: [8, 0.1, 8],    mat: 'floor' },
+// --- 天井開口定義 ---
+// Shape座標系: shape_x = world_x, shape_y = -world_z
+// [x1, y1, x2, y2] で矩形の左下→右上
+const CEILING_HOLES: [number, number, number, number][] = [
+  // 中庭: world x [-4, 4], z [-7, 1] → shape y [-1, 7]
+  [-4, -1, 4, 7],
+  // 左Spineスリット: world x [-10.5, -9.5], z [-12, 9] → shape y [-9, 12]
+  [-10.5, -9, -9.5, 12],
+  // 右Spineスリット: world x [9.5, 10.5], z [-12, 9]
+  [9.5, -9, 10.5, 12],
+  // 左回廊スカイライト A: world x [-21.5, -18.5], z [6, 10] → shape y [-10, -6]
+  [-21.5, -10, -18.5, -6],
+  // 左回廊スカイライト B: world x [-21.5, -18.5], z [-10, -6] → shape y [6, 10]
+  [-21.5, 6, -18.5, 10],
+  // 右回廊スカイライト A: world x [18.5, 21.5], z [6, 10]
+  [18.5, -10, 21.5, -6],
+  // 右回廊スカイライト B: world x [18.5, 21.5], z [-10, -6]
+  [18.5, 6, 21.5, 10],
 ];
 
-// --- ベンチ (R3F座標) ---
-const BENCHES: BoxDef[] = [
-  { position: [0, 0.22, 4],     size: [1.5, 0.22, 0.3] },
-  { position: [0, 0.22, -2],    size: [1.5, 0.22, 0.3] },
-  { position: [-18, 0.25, 0],   size: [3, 0.5, 0.5] },
-  { position: [18, 0.25, 0],    size: [3, 0.5, 0.5] },
-];
+// --- テクスチャユーティリティ ---
 
-// --- 天井パネル（中庭部分に開口） ---
-// 中庭開口: R3F x [-4, 4], z [-7, 1]
-// 天井全体: x [-30, 30], z [-20, 20], y = 8
-const CEILING_PANELS: { position: [number, number, number]; size: [number, number] }[] = [
-  // z: 1 → 20 (back section, full width)
-  { position: [0, 8, 10.5],    size: [60, 19] },
-  // z: -20 → -7 (front section, full width)
-  { position: [0, 8, -13.5],   size: [60, 13] },
-  // z: -7 → 1, x: -30 → -4 (left fill)
-  { position: [-17, 8, -3],    size: [26, 8] },
-  // z: -7 → 1, x: 4 → 30 (right fill)
-  { position: [17, 8, -3],     size: [26, 8] },
-];
+function makeTiledTextures(
+  src: { map: THREE.Texture; normalMap: THREE.Texture; roughnessMap: THREE.Texture },
+  rx: number,
+  ry: number,
+) {
+  const cloneAndTile = (t: THREE.Texture) => {
+    const c = t.clone();
+    c.wrapS = c.wrapT = THREE.RepeatWrapping;
+    c.repeat.set(rx, ry);
+    c.needsUpdate = true;
+    return c;
+  };
+  return {
+    map: cloneAndTile(src.map),
+    normalMap: cloneAndTile(src.normalMap),
+    roughnessMap: cloneAndTile(src.roughnessMap),
+  };
+}
+
+function calcRepeat(size: [number, number, number]): [number, number] {
+  const sorted = [...size].sort((a, b) => b - a);
+  return [
+    Math.max(1, Math.round(sorted[0] / TILE_SCALE)),
+    Math.max(1, Math.round(sorted[1] / TILE_SCALE)),
+  ];
+}
 
 export default function ConcreteBuilding(): React.JSX.Element {
-  const wallMat = useMemo(() => new THREE.MeshStandardMaterial(MAT.wall), []);
-  const floorMat = useMemo(() => new THREE.MeshStandardMaterial(MAT.floor), []);
-  const ceilingMat = useMemo(() => new THREE.MeshStandardMaterial({ ...MAT.ceiling, side: THREE.DoubleSide }), []);
-  const waterMat = useMemo(() => new THREE.MeshStandardMaterial(MAT.water), []);
-  const glassMat = useMemo(() => new THREE.MeshStandardMaterial({ ...MAT.glass, side: THREE.DoubleSide }), []);
-  const benchMat = useMemo(() => new THREE.MeshStandardMaterial(MAT.bench), []);
+  const concreteTex = useTexture({
+    map: '/textures/Plaster004_1K-JPG_Color.jpg',
+    normalMap: '/textures/Plaster004_1K-JPG_NormalGL.jpg',
+    roughnessMap: '/textures/Plaster004_1K-JPG_Roughness.jpg',
+  });
 
-  const matMap: Record<string, THREE.MeshStandardMaterial> = {
-    wall: wallMat, floor: floorMat, ceiling: ceilingMat,
-    water: waterMat, glass: glassMat, bench: benchMat,
-  };
+  const floorTex = useTexture({
+    map: '/textures/floor/color.jpg',
+    normalMap: '/textures/floor/normal.jpg',
+    roughnessMap: '/textures/floor/roughness.jpg',
+  });
+
+  // --- 天井ジオメトリ（ExtrudeGeometry + 7穴） ---
+  const ceilingGeo = useMemo(() => {
+    // 外枠（CCW）
+    const shape = new THREE.Shape();
+    shape.moveTo(-30, -20);
+    shape.lineTo(30, -20);
+    shape.lineTo(30, 20);
+    shape.lineTo(-30, 20);
+    shape.closePath();
+
+    // 開口（CW）
+    CEILING_HOLES.forEach(([x1, y1, x2, y2]) => {
+      const hole = new THREE.Path();
+      hole.moveTo(x1, y1);
+      hole.lineTo(x1, y2);
+      hole.lineTo(x2, y2);
+      hole.lineTo(x2, y1);
+      hole.closePath();
+      shape.holes.push(hole);
+    });
+
+    return new THREE.ExtrudeGeometry(shape, {
+      depth: CEILING_THICKNESS,
+      bevelEnabled: false,
+    });
+  }, []);
+
+  // --- マテリアル ---
+
+  const wallMaterials = useMemo(() => {
+    const all = [...EXTERIOR_WALLS, ...PARTITIONS];
+    return all.map((box) => {
+      const [rx, ry] = calcRepeat(box.size);
+      const tex = makeTiledTextures(concreteTex, rx, ry);
+      return new THREE.MeshStandardMaterial({
+        ...tex,
+        color: '#9E9A91',
+        roughness: 0.82,
+        metalness: 0,
+        normalScale: new THREE.Vector2(0.6, 0.6),
+      });
+    });
+  }, [concreteTex]);
+
+  const floorMat = useMemo(() => {
+    const tex = makeTiledTextures(floorTex, 20, 14);
+    return new THREE.MeshStandardMaterial({
+      ...tex,
+      color: '#6B6660',
+      roughness: 0.3,
+      metalness: 0,
+      normalScale: new THREE.Vector2(0.4, 0.4),
+    });
+  }, [floorTex]);
+
+  // 天井マテリアル（ExtrudeGeometry のUVはワールド座標なので repeat = 1/TILE_SCALE）
+  const ceilingMat = useMemo(() => {
+    const tex = makeTiledTextures(concreteTex, 1 / TILE_SCALE, 1 / TILE_SCALE);
+    return new THREE.MeshStandardMaterial({
+      ...tex,
+      color: '#ADA8A1',
+      roughness: 0.9,
+      metalness: 0,
+      normalScale: new THREE.Vector2(0.5, 0.5),
+      side: THREE.DoubleSide,
+    });
+  }, [concreteTex]);
+
+  const allWalls = [...EXTERIOR_WALLS, ...PARTITIONS];
 
   return (
     <group name="concrete-building">
-      {/* 床 (60m × 40m) */}
+      {/* 床 */}
       <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} material={floorMat}>
         <planeGeometry args={[60, 40]} />
       </mesh>
 
-      {/* 天井（中庭開口あり、4分割パネル） */}
-      {CEILING_PANELS.map((panel, i) => (
-        <mesh key={`ceil-${i}`} position={panel.position} rotation={[Math.PI / 2, 0, 0]} material={ceilingMat}>
-          <planeGeometry args={panel.size} />
-        </mesh>
-      ))}
+      {/* 天井（ExtrudeGeometry、開口付き） */}
+      <mesh
+        geometry={ceilingGeo}
+        material={ceilingMat}
+        position={[0, 8, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+      />
 
-      {/* 外壁 */}
-      {EXTERIOR_WALLS.map((w, i) => (
-        <mesh key={`wall-${i}`} position={w.position} material={wallMat}>
+      {/* 外壁 + パーティション */}
+      {allWalls.map((w, i) => (
+        <mesh key={`wall-${i}`} position={w.position} material={wallMaterials[i]}>
           <boxGeometry args={w.size} />
-        </mesh>
-      ))}
-
-      {/* パーティション */}
-      {PARTITIONS.map((p, i) => (
-        <mesh key={`part-${i}`} position={p.position} material={wallMat}>
-          <boxGeometry args={p.size} />
-        </mesh>
-      ))}
-
-      {/* 中庭要素 */}
-      {COURTYARD.map((c) => (
-        <mesh key={c.name} position={c.position} material={matMap[c.mat]}>
-          <boxGeometry args={c.size} />
-        </mesh>
-      ))}
-
-      {/* ベンチ */}
-      {BENCHES.map((b, i) => (
-        <mesh key={`bench-${i}`} position={b.position} material={benchMat}>
-          <boxGeometry args={b.size} />
         </mesh>
       ))}
     </group>

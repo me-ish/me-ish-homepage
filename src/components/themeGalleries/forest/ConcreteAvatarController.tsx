@@ -34,39 +34,12 @@ const BOUNDARY = {
 type BoxAABB = { minX: number; maxX: number; minZ: number; maxZ: number };
 
 const COLLISION_BOXES: BoxAABB[] = [
-  // --- パーティション ---
-  // U_L_Spine: R3F pos [-10, 3.25, -1.5], size [0.35, 6.5, 21]
+  // --- パーティション（Spineのみ） ---
+  // L_Spine: R3F pos [-10, 3.25, -1.5], size [0.35, 6.5, 21]
   { minX: -10.175, maxX: -9.825, minZ: -12, maxZ: 9 },
-  // U_L_Top: R3F pos [-16, 3.25, -12], size [12, 6.5, 0.35]
-  { minX: -22, maxX: -10, minZ: -12.175, maxZ: -11.825 },
-  // U_L_Bottom: R3F pos [-16, 3.25, 9], size [12, 6.5, 0.35]
-  { minX: -22, maxX: -10, minZ: 8.825, maxZ: 9.175 },
-  // U_R_Spine: R3F pos [10, 3.25, -1.5], size [0.35, 6.5, 21]
+  // R_Spine: R3F pos [10, 3.25, -1.5], size [0.35, 6.5, 21]
   { minX: 9.825, maxX: 10.175, minZ: -12, maxZ: 9 },
-  // U_R_Top: R3F pos [16, 3.25, -12], size [12, 6.5, 0.35]
-  { minX: 10, maxX: 22, minZ: -12.175, maxZ: -11.825 },
-  // U_R_Bottom: R3F pos [16, 3.25, 9], size [12, 6.5, 0.35]
-  { minX: 10, maxX: 22, minZ: 8.825, maxZ: 9.175 },
 
-  // --- 中庭ガラス壁 ---
-  // Glass_N: R3F pos [0, 4, -7], size [8, 8, 0.05]
-  { minX: -4, maxX: 4, minZ: -7.025, maxZ: -6.975 },
-  // Glass_S: R3F pos [0, 4, 1], size [8, 8, 0.05]
-  { minX: -4, maxX: 4, minZ: 0.975, maxZ: 1.025 },
-  // Glass_E: R3F pos [4, 4, -3], size [0.05, 8, 8]
-  { minX: 3.975, maxX: 4.025, minZ: -7, maxZ: 1 },
-  // Glass_W: R3F pos [-4, 4, -3], size [0.05, 8, 8]
-  { minX: -4.025, maxX: -3.975, minZ: -7, maxZ: 1 },
-
-  // --- ベンチ ---
-  // Bench_0: R3F pos [0, 0.22, 4], size [1.5, 0.22, 0.3]
-  { minX: -0.75, maxX: 0.75, minZ: 3.85, maxZ: 4.15 },
-  // Bench_1: R3F pos [0, 0.22, -2], size [1.5, 0.22, 0.3]
-  { minX: -0.75, maxX: 0.75, minZ: -2.15, maxZ: -1.85 },
-  // Bench_2: R3F pos [-18, 0.25, 0], size [3, 0.5, 0.5]
-  { minX: -19.5, maxX: -16.5, minZ: -0.25, maxZ: 0.25 },
-  // Bench_3: R3F pos [18, 0.25, 0], size [3, 0.5, 0.5]
-  { minX: 16.5, maxX: 19.5, minZ: -0.25, maxZ: 0.25 },
 ];
 
 function resolveCollisions(px: number, pz: number): { x: number; z: number } {

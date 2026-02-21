@@ -39,7 +39,7 @@ function SceneContent({
       <ConcreteLightSlits />
       <ConcreteArtworks />
 
-      <Avatar ref={avatarRef} />
+      <Avatar ref={avatarRef} position={[0, 2.5, 5]} />
       <ConcreteAvatarController avatarRef={avatarRef} joystickRef={joystickRef} />
       <ThirdPersonCamera avatarRef={avatarRef} />
     </>
