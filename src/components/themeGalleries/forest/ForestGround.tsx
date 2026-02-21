@@ -4,48 +4,87 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 
 /**
- * ForestGround - 森の地面
+ * ConcreteBuilding - 建物構造（床・天井・外壁・パーティション）
  *
- * シンプルな円形の地面。質感は後で調整可能。
- * 中心から外側に向かって少しフェードアウトする。
+ * JSON gallery_structure.json の座標をBlender→Three.jsに変換済み。
+ * Blender [x, y, z] → Three.js [x, z, -y]
+ * サイズ [sx, sy, sz] → Three.js [sx, sz, sy]
  */
 
-// 定数
-const GROUND_RADIUS = 100;
-const GROUND_SEGMENTS = 64;
-const GROUND_COLOR = '#1a2a1a';
+// マテリアル定義（JSON materials より）
+const MATERIALS = {
+  wall: { color: '#9E9A91', roughness: 0.85, metalness: 0 },
+  floor: { color: '#736E66', roughness: 0.35, metalness: 0 },
+  ceiling: { color: '#ACA8A0', roughness: 0.9, metalness: 0 },
+} as const;
 
-export default function ForestGround(): React.JSX.Element {
-  const material = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
-      color: GROUND_COLOR,
-      roughness: 0.9,
-      metalness: 0.0,
-      transparent: true,
-      opacity: 0.95,
-    });
-  }, []);
+// 外壁データ（Three.js座標に変換済み）
+const EXTERIOR_WALLS: { position: [number, number, number]; size: [number, number, number] }[] = [
+  // Wall_Back: [0, -9.85, 2.25] → [0, 2.25, 9.85]
+  { position: [0, 2.25, 9.85], size: [30, 4.5, 0.3] },
+  // Wall_Front: [0, 9.85, 2.25] → [0, 2.25, -9.85]
+  { position: [0, 2.25, -9.85], size: [30, 4.5, 0.3] },
+  // Wall_Left: [-14.85, 0, 2.25] → [-14.85, 2.25, 0]
+  { position: [-14.85, 2.25, 0], size: [0.3, 4.5, 20] },
+  // Wall_Right: [14.85, 0, 2.25] → [14.85, 2.25, 0]
+  { position: [14.85, 2.25, 0], size: [0.3, 4.5, 20] },
+];
+
+// パーティションデータ（Three.js座標に変換済み）
+const PARTITIONS: { position: [number, number, number]; size: [number, number, number] }[] = [
+  // U_L_Spine: [-5, 0.25, 2] → [-5, 2, -0.25]
+  { position: [-5, 2, -0.25], size: [0.25, 4, 10.5] },
+  // U_L_Top: [-8, 5.5, 2] → [-8, 2, -5.5]
+  { position: [-8, 2, -5.5], size: [6, 4, 0.25] },
+  // U_L_Bottom: [-8, -5, 2] → [-8, 2, 5]
+  { position: [-8, 2, 5], size: [6, 4, 0.25] },
+  // U_R_Spine: [5, 0.25, 2] → [5, 2, -0.25]
+  { position: [5, 2, -0.25], size: [0.25, 4, 10.5] },
+  // U_R_Top: [8, 5.5, 2] → [8, 2, -5.5]
+  { position: [8, 2, -5.5], size: [6, 4, 0.25] },
+  // U_R_Bottom: [8, -5, 2] → [8, 2, 5]
+  { position: [8, 2, 5], size: [6, 4, 0.25] },
+];
+
+export default function ConcreteBuilding(): React.JSX.Element {
+  const wallMaterial = useMemo(
+    () => new THREE.MeshStandardMaterial(MATERIALS.wall),
+    []
+  );
+  const floorMaterial = useMemo(
+    () => new THREE.MeshStandardMaterial(MATERIALS.floor),
+    []
+  );
+  const ceilingMaterial = useMemo(
+    () => new THREE.MeshStandardMaterial(MATERIALS.ceiling),
+    []
+  );
 
   return (
-    <group name="forest-ground">
-      {/* メイン地面 */}
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0, 0]}
-        receiveShadow={false}
-        material={material}
-      >
-        <circleGeometry args={[GROUND_RADIUS, GROUND_SEGMENTS]} />
+    <group name="concrete-building">
+      {/* 床: y=0, 30m x 20m */}
+      <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} material={floorMaterial}>
+        <planeGeometry args={[30, 20]} />
       </mesh>
 
-      {/* 地面の下のダークレイヤー（端の切れ目を隠す） */}
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.5, 0]}
-      >
-        <circleGeometry args={[GROUND_RADIUS * 1.5, 32]} />
-        <meshBasicMaterial color="#0a0f0a" />
+      {/* 天井: y=4.5, 30m x 20m */}
+      <mesh position={[0, 4.5, 0]} rotation={[Math.PI / 2, 0, 0]} material={ceilingMaterial}>
+        <planeGeometry args={[30, 20]} />
       </mesh>
+
+      {/* 外壁 */}
+      {EXTERIOR_WALLS.map((wall, i) => (
+        <mesh key={`wall-${i}`} position={wall.position} material={wallMaterial}>
+          <boxGeometry args={wall.size} />
+        </mesh>
+      ))}
+
+      {/* パーティション（U字型 x2） */}
+      {PARTITIONS.map((part, i) => (
+        <mesh key={`partition-${i}`} position={part.position} material={wallMaterial}>
+          <boxGeometry args={part.size} />
+        </mesh>
+      ))}
     </group>
   );
 }

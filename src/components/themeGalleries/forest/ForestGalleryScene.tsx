@@ -5,54 +5,41 @@ import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 
-import ForestEnvironment from './ForestEnvironment';
-import ForestGround from './ForestGround';
-import ForestParticles from './ForestParticles';
-import ForestExhibitPanels from './ForestExhibitPanels';
+import ConcreteEnvironment from './ForestEnvironment';
+import ConcreteBuilding from './ForestGround';
+import ConcreteLightSlits from './ForestParticles';
+import ConcreteArtworks from './ForestExhibitPanels';
 
 /**
- * ForestGalleryScene - 森テーマギャラリーのメインシーン
+ * ConcreteGalleryScene - 安藤忠雄スタイルのコンクリートギャラリー
  *
- * Canvas内のシーン構築を担当。
- * コントローラーは分離されており、将来的にアバター制御に差し替え可能。
+ * 30m × 20m の建物に36点のアートワークを展示。
+ * U字型パーティションと天井スリット光が特徴。
  */
 
-// カメラ設定
-const CAMERA_INITIAL_POSITION: [number, number, number] = [0, 3, 12];
+const CAMERA_INITIAL_POSITION: [number, number, number] = [0, 1.6, -8];
 const CAMERA_FOV = 60;
 
-// OrbitControls設定
 const CONTROLS_CONFIG = {
   enableDamping: true,
-  dampingFactor: 0.05,
-  minDistance: 3,
-  maxDistance: 60,
-  maxPolarAngle: Math.PI * 0.85, // 地面より下を見ないように
-  minPolarAngle: Math.PI * 0.1,  // 真上を見ないように
+  dampingFactor: 0.08,
+  minDistance: 1,
+  maxDistance: 25,
+  maxPolarAngle: Math.PI * 0.85,
+  minPolarAngle: Math.PI * 0.15,
 };
 
-type ForestGallerySceneProps = {
+type Props = {
   className?: string;
 };
 
-// シーン内部コンポーネント（Canvas内で使用）
-function ForestSceneContent(): React.JSX.Element {
+function SceneContent(): React.JSX.Element {
   return (
     <>
-      {/* 環境（フォグ・ライティング） */}
-      <ForestEnvironment />
-
-      {/* 地面 */}
-      <ForestGround />
-
-      {/* 浮遊パーティクル */}
-      <ForestParticles />
-
-      {/* 展示パネル */}
-      <ForestExhibitPanels />
-
-      {/* カメラコントロール（暫定：OrbitControls） */}
-      {/* 将来的にアバター制御に差し替える場合はここを変更 */}
+      <ConcreteEnvironment />
+      <ConcreteBuilding />
+      <ConcreteLightSlits />
+      <ConcreteArtworks />
       <OrbitControls
         enableDamping={CONTROLS_CONFIG.enableDamping}
         dampingFactor={CONTROLS_CONFIG.dampingFactor}
@@ -66,9 +53,7 @@ function ForestSceneContent(): React.JSX.Element {
   );
 }
 
-export default function ForestGalleryScene({
-  className,
-}: ForestGallerySceneProps): React.JSX.Element {
+export default function ForestGalleryScene({ className }: Props): React.JSX.Element {
   return (
     <div className={className} style={{ width: '100%', height: '100%' }} onContextMenu={(e) => e.preventDefault()}>
       <Canvas
@@ -76,19 +61,19 @@ export default function ForestGalleryScene({
           position: CAMERA_INITIAL_POSITION,
           fov: CAMERA_FOV,
           near: 0.1,
-          far: 500,
+          far: 200,
         }}
         gl={{
           antialias: true,
           alpha: false,
           powerPreference: 'high-performance',
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 2.0,
+          toneMappingExposure: 1.0,
         }}
         dpr={[1, 2]}
       >
         <Suspense fallback={null}>
-          <ForestSceneContent />
+          <SceneContent />
         </Suspense>
       </Canvas>
     </div>

@@ -1,117 +1,71 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 
 /**
- * ForestParticles - 森の浮遊粒子（ホタル・花粉・木漏れ日の塵）
+ * ConcreteLightSlits - 天井・壁のスリット光
  *
- * Points を使った軽量パーティクル。
- * ゆっくり上下に浮遊し、森の空気感を演出。
+ * 安藤忠雄建築の特徴的な光のスリットを再現。
+ * Emissiveメッシュ + 近傍PointLightで光の演出。
  */
 
-// 定数
-const PARTICLE_COUNT = 200;
-const SPREAD_RADIUS = 80;
-const HEIGHT_MIN = 0.5;
-const HEIGHT_MAX = 15;
-const PARTICLE_SIZE = 0.15;
-const PARTICLE_COLOR = '#ffffaa';
-const FLOAT_SPEED = 0.3;
-const FLOAT_AMPLITUDE = 0.5;
+const SLIT_COLOR = '#F2F7FF';
+const SLIT_EMISSIVE_INTENSITY = 3.0;
 
-export default function ForestParticles(): React.JSX.Element {
-  const pointsRef = useRef<THREE.Points>(null);
-  const timeRef = useRef(0);
+// JSON light_slits → Three.js座標に変換済み
+// Blender [x, y, z] → Three.js [x, z, -y]
+// サイズ [sx, sy, sz] → Three.js [sx, sz, sy]
+const LIGHT_SLITS: { name: string; position: [number, number, number]; size: [number, number, number] }[] = [
+  // Ceiling_CrossSlit_X: [0, 0, 4.45] → [0, 4.45, 0], size [14.5, 0.15, 0.05] → [14.5, 0.05, 0.15]
+  { name: 'CrossSlit_X', position: [0, 4.45, 0], size: [14.5, 0.05, 0.15] },
+  // Ceiling_CrossSlit_Y: [0, 0, 4.45] → [0, 4.45, 0], size [0.15, 9.5, 0.05] → [0.15, 0.05, 9.5]
+  { name: 'CrossSlit_Y', position: [0, 4.45, 0], size: [0.15, 0.05, 9.5] },
+  // Ceiling_LightSlit_0: [-7, 0, 4.45] → [-7, 4.45, 0], size [0.3, 9, 0.05] → [0.3, 0.05, 9]
+  { name: 'LightSlit_L', position: [-7, 4.45, 0], size: [0.3, 0.05, 9] },
+  // Ceiling_LightSlit_1: [7, 0, 4.45] → [7, 4.45, 0], size [0.3, 9, 0.05] → [0.3, 0.05, 9]
+  { name: 'LightSlit_R', position: [7, 4.45, 0], size: [0.3, 0.05, 9] },
+  // Wall_Slit_0: [0, -9.7, 4.35] → [0, 4.35, 9.7], size [14.7, 0.05, 0.08] → [14.7, 0.08, 0.05]
+  { name: 'WallSlit_Back', position: [0, 4.35, 9.7], size: [14.7, 0.08, 0.05] },
+  // Wall_Slit_1: [0, 9.7, 4.35] → [0, 4.35, -9.7], size [14.7, 0.05, 0.08] → [14.7, 0.08, 0.05]
+  { name: 'WallSlit_Front', position: [0, 4.35, -9.7], size: [14.7, 0.08, 0.05] },
+  // Wall_Slit_2: [-14.7, 0, 4.35] → [-14.7, 4.35, 0], size [0.05, 9.7, 0.08] → [0.05, 0.08, 9.7]
+  { name: 'WallSlit_Left', position: [-14.7, 4.35, 0], size: [0.05, 0.08, 9.7] },
+  // Wall_Slit_3: [14.7, 0, 4.35] → [14.7, 4.35, 0], size [0.05, 9.7, 0.08] → [0.05, 0.08, 9.7]
+  { name: 'WallSlit_Right', position: [14.7, 4.35, 0], size: [0.05, 0.08, 9.7] },
+];
 
-  // パーティクル位置の初期化
-  const { geometry, basePositions } = useMemo(() => {
-    const positions = new Float32Array(PARTICLE_COUNT * 3);
-    const sizes = new Float32Array(PARTICLE_COUNT);
-    const phases = new Float32Array(PARTICLE_COUNT);
-
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      // XZ平面でランダム配置（円形分布）
-      const angle = Math.random() * Math.PI * 2;
-      const radius = Math.random() * SPREAD_RADIUS;
-
-      positions[i * 3] = Math.cos(angle) * radius;
-      positions[i * 3 + 1] = HEIGHT_MIN + Math.random() * (HEIGHT_MAX - HEIGHT_MIN);
-      positions[i * 3 + 2] = Math.sin(angle) * radius;
-
-      // サイズにバリエーション
-      sizes[i] = PARTICLE_SIZE * (0.5 + Math.random() * 1.0);
-
-      // 浮遊の位相をランダムに
-      phases[i] = Math.random() * Math.PI * 2;
-    }
-
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-    geo.setAttribute('phase', new THREE.BufferAttribute(phases, 1));
-
-    return { geometry: geo, basePositions: positions.slice() };
-  }, []);
-
-  // シェーダーマテリアル
-  const material = useMemo(() => {
-    return new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-        uColor: { value: new THREE.Color(PARTICLE_COLOR) },
-        uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
-      },
-      vertexShader: `
-        attribute float size;
-        attribute float phase;
-        uniform float uTime;
-        uniform float uPixelRatio;
-        varying float vAlpha;
-
-        void main() {
-          vec3 pos = position;
-
-          // ゆっくり上下に浮遊
-          pos.y += sin(uTime * ${FLOAT_SPEED} + phase) * ${FLOAT_AMPLITUDE};
-
-          vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-          gl_PointSize = size * uPixelRatio * (200.0 / -mvPosition.z);
-          gl_Position = projectionMatrix * mvPosition;
-
-          // 距離に応じてフェード
-          vAlpha = smoothstep(100.0, 20.0, -mvPosition.z);
-        }
-      `,
-      fragmentShader: `
-        uniform vec3 uColor;
-        varying float vAlpha;
-
-        void main() {
-          // 円形のソフトパーティクル
-          vec2 center = gl_PointCoord - 0.5;
-          float dist = length(center) * 2.0;
-          float alpha = 1.0 - smoothstep(0.0, 1.0, dist);
-
-          gl_FragColor = vec4(uColor, alpha * vAlpha * 0.6);
-        }
-      `,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-  }, []);
-
-  // アニメーション（1箇所に集約）
-  useFrame((_, delta) => {
-    timeRef.current += delta;
-    if (material.uniforms) {
-      material.uniforms.uTime.value = timeRef.current;
-    }
-  });
+export default function ConcreteLightSlits(): React.JSX.Element {
+  const slitMaterial = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: SLIT_COLOR,
+        emissive: SLIT_COLOR,
+        emissiveIntensity: SLIT_EMISSIVE_INTENSITY,
+        roughness: 0.1,
+        metalness: 0,
+      }),
+    []
+  );
 
   return (
-    <points ref={pointsRef} geometry={geometry} material={material} />
+    <group name="concrete-light-slits">
+      {LIGHT_SLITS.map((slit) => (
+        <group key={slit.name}>
+          {/* スリット本体（発光メッシュ） */}
+          <mesh position={slit.position} material={slitMaterial}>
+            <boxGeometry args={slit.size} />
+          </mesh>
+          {/* スリット近傍のポイントライト（実際に周囲を照らす） */}
+          <pointLight
+            position={[slit.position[0], slit.position[1] - 0.3, slit.position[2]]}
+            color={SLIT_COLOR}
+            intensity={8}
+            distance={6}
+            decay={2}
+          />
+        </group>
+      ))}
+    </group>
   );
 }

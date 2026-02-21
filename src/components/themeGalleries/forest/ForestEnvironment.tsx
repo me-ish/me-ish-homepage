@@ -5,70 +5,69 @@ import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 /**
- * ForestEnvironment - 森の雰囲気を演出するフォグ・ライティング
+ * ConcreteEnvironment - コンクリートギャラリーのライティング
  *
- * - FogExp2で奥行き感のある霧
- * - 木漏れ日を意識した暖色系directional light
- * - 柔らかいambient lightで全体を包む
+ * - 暖色系アンビエントライト（自然光イメージ）
+ * - メインの太陽光
+ * - 天井付近の2つのポイントライト（エリアライト代替）
  */
 
-// 定数
-const FOG_COLOR = '#1a2f1a';
-const FOG_DENSITY = 0.015;
-const BACKGROUND_COLOR = '#0d1a0d';
+const BACKGROUND_COLOR = '#3a3632';
 
-// ライト設定
-const AMBIENT_COLOR = '#4a6b4a';
-const AMBIENT_INTENSITY = 0.4;
+// JSON: ambient sun intensity 2.0, color #FFF9F0
+const AMBIENT_COLOR = '#FFF9F0';
+const AMBIENT_INTENSITY = 0.6;
 
-const SUNLIGHT_COLOR = '#fff5e0';
-const SUNLIGHT_INTENSITY = 1.2;
-const SUNLIGHT_POSITION: [number, number, number] = [30, 50, 20];
+const SUN_COLOR = '#FFF9F0';
+const SUN_INTENSITY = 1.5;
+const SUN_POSITION: [number, number, number] = [10, 20, -5];
 
-const FILL_COLOR = '#a0c0a0';
-const FILL_INTENSITY = 0.3;
-const FILL_POSITION: [number, number, number] = [-20, 30, -10];
+// JSON area_lights → PointLight近似
+// position [-7, 0, 4.4] → Three.js [-7, 4.4, 0]
+// position [7, 0, 4.4] → Three.js [7, 4.4, 0]
+const AREA_LIGHTS: { position: [number, number, number]; intensity: number }[] = [
+  { position: [-7, 4.4, 0], intensity: 80 },
+  { position: [7, 4.4, 0], intensity: 80 },
+];
 
-export default function ForestEnvironment(): React.JSX.Element {
+export default function ConcreteEnvironment(): React.JSX.Element {
   const { scene } = useThree();
 
-  // シーン設定（背景色・フォグ）
   useEffect(() => {
     scene.background = new THREE.Color(BACKGROUND_COLOR);
-    scene.fog = new THREE.FogExp2(FOG_COLOR, FOG_DENSITY);
-
+    scene.fog = null;
     return () => {
-      scene.fog = null;
+      scene.background = null;
     };
   }, [scene]);
 
   return (
-    <group name="forest-environment">
-      {/* アンビエントライト - 森全体の基調 */}
+    <group name="concrete-environment">
       <ambientLight color={AMBIENT_COLOR} intensity={AMBIENT_INTENSITY} />
 
-      {/* メイン太陽光 - 木漏れ日のイメージ */}
       <directionalLight
-        color={SUNLIGHT_COLOR}
-        intensity={SUNLIGHT_INTENSITY}
-        position={SUNLIGHT_POSITION}
+        color={SUN_COLOR}
+        intensity={SUN_INTENSITY}
+        position={SUN_POSITION}
         castShadow={false}
       />
 
-      {/* フィルライト - 影を柔らかくする補助光 */}
-      <directionalLight
-        color={FILL_COLOR}
-        intensity={FILL_INTENSITY}
-        position={FILL_POSITION}
-        castShadow={false}
-      />
-
-      {/* ヘミスフィアライト - 空と地面の色差 */}
       <hemisphereLight
-        color="#87ceeb"
-        groundColor="#2d4a2d"
-        intensity={0.3}
+        color="#FFF9F0"
+        groundColor="#736E66"
+        intensity={0.4}
       />
+
+      {AREA_LIGHTS.map((light, i) => (
+        <pointLight
+          key={i}
+          color="#FFF9F0"
+          intensity={light.intensity}
+          position={light.position}
+          distance={15}
+          decay={2}
+        />
+      ))}
     </group>
   );
 }

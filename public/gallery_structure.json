@@ -1,0 +1,102 @@
+{
+  "meta": {
+    "name": "Concrete Gallery - Ando Style",
+    "units": "meters",
+    "blender_coords": "Y-forward, Z-up",
+    "r3f_transform": "Three.js uses Y-up. Convert: [blender_x, blender_z, -blender_y]",
+    "total_artworks": 36,
+    "footprint": "30m x 20m"
+  },
+  "building": {
+    "width": 30,
+    "depth": 20,
+    "height": 4.5,
+    "wall_thickness": 0.3,
+    "floor": { "z": 0, "thickness": 0.3, "material": "concrete_floor" },
+    "ceiling": { "z": 4.5, "thickness": 0.3, "material": "concrete_ceiling" }
+  },
+  "materials": {
+    "concrete_wall": { "color": "#9E9A91", "roughness": 0.85, "metalness": 0, "bumpScale": 0.15 },
+    "concrete_floor": { "color": "#736E66", "roughness": 0.35, "metalness": 0 },
+    "concrete_ceiling": { "color": "#ACA8A0", "roughness": 0.9, "metalness": 0 },
+    "frame": { "color": "#262626", "roughness": 0.3, "metalness": 0.8 },
+    "canvas": { "color": "#DAD1C7", "roughness": 0.7, "metalness": 0 },
+    "light_slit": { "color": "#F2F7FF", "emissiveIntensity": 3.0 }
+  },
+  "exterior_walls": [
+    { "name": "Wall_Back", "position": [0.0, -9.85, 2.25], "size": [30.0, 0.3, 4.5] },
+    { "name": "Wall_Front", "position": [0.0, 9.85, 2.25], "size": [30.0, 0.3, 4.5] },
+    { "name": "Wall_Left", "position": [-14.85, 0.0, 2.25], "size": [0.3, 20.0, 4.5] },
+    { "name": "Wall_Right", "position": [14.85, 0.0, 2.25], "size": [0.3, 20.0, 4.5] }
+  ],
+  "partitions": [
+    { "name": "U_L_Spine", "group": "left_u", "role": "spine", "position": [-5.0, 0.25, 2.0], "size": [0.25, 10.5, 4.0] },
+    { "name": "U_L_Top", "group": "left_u", "role": "top_arm", "position": [-8.0, 5.5, 2.0], "size": [6.0, 0.25, 4.0] },
+    { "name": "U_L_Bottom", "group": "left_u", "role": "bottom_arm", "position": [-8.0, -5.0, 2.0], "size": [6.0, 0.25, 4.0] },
+    { "name": "U_R_Spine", "group": "right_u", "role": "spine", "position": [5.0, 0.25, 2.0], "size": [0.25, 10.5, 4.0] },
+    { "name": "U_R_Top", "group": "right_u", "role": "top_arm", "position": [8.0, 5.5, 2.0], "size": [6.0, 0.25, 4.0] },
+    { "name": "U_R_Bottom", "group": "right_u", "role": "bottom_arm", "position": [8.0, -5.0, 2.0], "size": [6.0, 0.25, 4.0] }
+  ],
+  "artworks": [
+    { "id": "Art_01", "position": [-11.0, -9.55, 1.5], "facing": "+y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_02", "position": [-5.5, -9.55, 1.5], "facing": "+y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_03", "position": [0.0, -9.55, 1.5], "facing": "+y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_04", "position": [5.5, -9.55, 1.5], "facing": "+y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_05", "position": [11.0, -9.55, 1.5], "facing": "+y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_06", "position": [-11.0, 9.55, 1.5], "facing": "-y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_07", "position": [-5.5, 9.55, 1.5], "facing": "-y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_08", "position": [0.0, 9.55, 1.5], "facing": "-y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_09", "position": [5.5, 9.55, 1.5], "facing": "-y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_10", "position": [11.0, 9.55, 1.5], "facing": "-y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_11", "position": [-14.55, -5.0, 1.5], "facing": "+x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_12", "position": [-14.55, 0.0, 1.5], "facing": "+x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_13", "position": [-14.55, 5.0, 1.5], "facing": "+x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_14", "position": [14.55, -5.0, 1.5], "facing": "-x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_15", "position": [14.55, 0.0, 1.5], "facing": "-x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_16", "position": [14.55, 5.0, 1.5], "facing": "-x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_17", "position": [-4.75, -3.0, 1.5], "facing": "+x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_18", "position": [-4.75, 0.5, 1.5], "facing": "+x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_19", "position": [-4.75, 4.0, 1.5], "facing": "+x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_20", "position": [-8.0, 5.25, 1.5], "facing": "-y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_21", "position": [-8.0, -4.75, 1.5], "facing": "+y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_22", "position": [-5.25, -3.0, 1.5], "facing": "-x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_23", "position": [-5.25, 0.5, 1.5], "facing": "-x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_24", "position": [-5.25, 4.0, 1.5], "facing": "-x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_25", "position": [-8.0, 5.75, 1.5], "facing": "+y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_26", "position": [-8.0, -5.25, 1.5], "facing": "-y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_27", "position": [4.75, -3.0, 1.5], "facing": "-x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_28", "position": [4.75, 0.5, 1.5], "facing": "-x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_29", "position": [4.75, 4.0, 1.5], "facing": "-x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_30", "position": [8.0, 5.25, 1.5], "facing": "-y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_31", "position": [8.0, -4.75, 1.5], "facing": "+y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_32", "position": [5.25, -3.0, 1.5], "facing": "+x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_33", "position": [5.25, 0.5, 1.5], "facing": "+x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_34", "position": [5.25, 4.0, 1.5], "facing": "+x", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_35", "position": [8.0, 5.75, 1.5], "facing": "+y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } },
+    { "id": "Art_36", "position": [8.0, -5.25, 1.5], "facing": "-y", "size": { "width": 1.2, "height": 0.9 }, "frame": { "depth": 0.05, "border": 0.04 } }
+  ],
+  "lighting": {
+    "ambient": { "type": "sun", "intensity": 2.0, "color": "#FFF9F0" },
+    "area_lights": [
+      { "position": [-7, 0, 4.4], "size": [1.0, 18.0], "intensity": 500 },
+      { "position": [7, 0, 4.4], "size": [1.0, 18.0], "intensity": 500 }
+    ],
+    "spot_per_artwork": {
+      "offset_from_wall": 2.0,
+      "z": 4.2,
+      "energy": 60,
+      "angle_deg": 40,
+      "penumbra": 0.3
+    }
+  },
+  "light_slits": [
+    { "name": "Ceiling_CrossSlit_X", "position": [0.0, 0.0, 4.45], "size": [14.5, 0.15, 0.05] },
+    { "name": "Ceiling_CrossSlit_Y", "position": [0.0, 0.0, 4.45], "size": [0.15, 9.5, 0.05] },
+    { "name": "Ceiling_LightSlit_0", "position": [-7.0, 0.0, 4.45], "size": [0.3, 9.0, 0.05] },
+    { "name": "Ceiling_LightSlit_1", "position": [7.0, 0.0, 4.45], "size": [0.3, 9.0, 0.05] },
+    { "name": "Wall_Slit_0", "position": [0.0, -9.7, 4.35], "size": [14.7, 0.05, 0.08] },
+    { "name": "Wall_Slit_1", "position": [0.0, 9.7, 4.35], "size": [14.7, 0.05, 0.08] },
+    { "name": "Wall_Slit_2", "position": [-14.7, 0.0, 4.35], "size": [0.05, 9.7, 0.08] },
+    { "name": "Wall_Slit_3", "position": [14.7, 0.0, 4.35], "size": [0.05, 9.7, 0.08] }
+  ]
+}
