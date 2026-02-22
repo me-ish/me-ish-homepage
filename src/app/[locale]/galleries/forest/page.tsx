@@ -10,7 +10,7 @@ import dynamic from 'next/dynamic';
 
 // SSR無効でCanvas系コンポーネントを読み込み
 const ForestGalleryScene = dynamic(
-  () => import('@/components/themeGalleries/test/ConcreteGalleryScene'),
+  () => import('@/components/themeGalleries/test/TestGalleryScene'),
   { ssr: false }
 );
 
