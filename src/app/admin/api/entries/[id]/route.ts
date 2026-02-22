@@ -35,7 +35,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (values.display_ready === true) {
     const { data: row, error: selErr } = await admin
       .from('entries')
-      .select('id,is_for_sale,display_plan,plan_payment_status')
+      .select('id,is_for_sale,display_plan,plan_payment_status,gallery_type,display_start_at')
       .eq('id', id)
       .maybeSingle();
 
@@ -62,6 +62,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         { error: 'image_processing_not_completed', job_status: job?.status ?? 'not_found' },
         { status: 409 }
       );
+    }
+
+    // display_start_at / display_end_at が未設定なら sync-display-ready と同じロジックで自動設定
+    if (!row.display_start_at) {
+      const now = new Date();
+      const galleryType = String(row.gallery_type ?? '').toLowerCase();
+      const isWhiteGallery = galleryType === 'white';
+
+      values.display_start_at = now.toISOString();
+      if (!isWhiteGallery) {
+        const endDate = new Date(now);
+        endDate.setMonth(endDate.getMonth() + 1);
+        values.display_end_at = endDate.toISOString();
+      }
     }
   }
 

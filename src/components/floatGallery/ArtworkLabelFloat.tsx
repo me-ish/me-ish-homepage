@@ -45,7 +45,6 @@ const ArtworkLabel = forwardRef<THREE.Group, ArtworkLabelProps>(
     ref
   ) => {
     const groupRef = useRef<THREE.Group>(null);
-    const auraRef = useRef<THREE.Mesh>(null);
     const { gl } = useThree();
 
     // Html の portal
@@ -57,27 +56,16 @@ const ArtworkLabel = forwardRef<THREE.Group, ArtworkLabelProps>(
 
     useImperativeHandle(ref, () => groupRef.current!, []);
 
-    // ラベルの"ローカル"オフセット（右下・内側）
-    const localOffset = useMemo(() => {
-      if (labelOffset) return new THREE.Vector3(...labelOffset);
-      return new THREE.Vector3(width / 3 - 3.5, -height / 3 - 0.2, 0);
-    }, [labelOffset, width, height]);
+    // ラベルのローカルオフセット（親 group の原点 = 作品中心 からの相対位置）
+    // 実際の作品サイズ: width=2.5*scale=4.5, height=4.5/aspect=3.75 → 半幅2.25, 半高1.875
+    // 北壁(rotY=PI)では local -X = world +X = 視聴者の右、全壁で local -Y = 下
+    const localOffset = useMemo<[number, number, number]>(() => {
+      if (labelOffset) return labelOffset;
+      return [-2.6, -2.2, 0];
+    }, [labelOffset]);
 
-    // 親の回転に合わせてオフセットを回す
-    const rotatedOffset = useMemo(() => {
-      const v = localOffset.clone();
-      v.applyEuler(new THREE.Euler(...rotation));
-      return v;
-    }, [localOffset, rotation]);
-
-    const labelPos: [number, number, number] = useMemo(() => [
-      position[0] + rotatedOffset.x,
-      position[1] + rotatedOffset.y,
-      position[2] + rotatedOffset.z,
-    ], [position, rotatedOffset]);
-
-    // 再利用用ベクトル（GC回避）
-    const labelPosVec = useMemo(() => new THREE.Vector3(...labelPos), [labelPos]);
+    // useFrame 内で getWorldPosition を使うための作業用ベクトル（GC回避）
+    const worldPosRef = useRef(new THREE.Vector3());
 
     const [{ scale, uiOpacity }, api] = useSpring(() => ({
       scale: 0.5,
@@ -85,12 +73,14 @@ const ArtworkLabel = forwardRef<THREE.Group, ArtworkLabelProps>(
       config: { mass: 1, tension: 220, friction: 22 },
     }));
 
-    useFrame(({ camera, clock }) => {
+    useFrame(({ camera }) => {
       const avatar = avatarRef.current;
       const group = groupRef.current;
       if (!avatar || !group) return;
 
-      const dist = avatar.position.distanceTo(labelPosVec);
+      // group のワールド座標を取得してアバターとの距離を計算
+      group.getWorldPosition(worldPosRef.current);
+      const dist = avatar.position.distanceTo(worldPosRef.current);
       const near = dist < nearDistance;
 
       api.start({
@@ -101,29 +91,10 @@ const ArtworkLabel = forwardRef<THREE.Group, ArtworkLabelProps>(
       const s = scale.get();
       group.scale.set(s, s, s);
       group.lookAt(camera.position);
-
-      if (auraRef.current) {
-        const t = clock.getElapsedTime();
-        const s = 1 + Math.sin(t * 3) * 0.05;
-        auraRef.current.scale.set(s, s, s);
-        const mat = auraRef.current.material as THREE.MeshBasicMaterial;
-        mat.opacity = 0.12 + Math.sin(t * 2) * 0.04;
-      }
     });
 
     return (
-      <group ref={groupRef} position={labelPos}>
-        <mesh ref={auraRef}>
-          <circleGeometry args={[1.2, 32]} />
-          <meshBasicMaterial
-            color="#00ffff"
-            transparent
-            opacity={0.15}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-          />
-        </mesh>
-
+      <group ref={groupRef} position={localOffset}>
         <Html
           center
           transform

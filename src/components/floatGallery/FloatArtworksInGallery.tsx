@@ -271,8 +271,8 @@ export default function FloatArtworksInGallery({
                   edition_sold={entry.edition_sold ?? 0}
                 />
                 <ArtworkLabel
-                  position={pos.position}
-                  rotation={pos.rotation}
+                  position={[0, 0, 0]}
+                  rotation={[0, 0, 0]}
                   width={labelWidth}
                   height={labelHeight}
                   nearDistance={LABEL_NEAR_DISTANCE}
