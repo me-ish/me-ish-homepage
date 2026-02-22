@@ -57,12 +57,14 @@ export default function Header() {
           { label: 'White Gallery', href: '/white' },
           { label: 'Float Gallery', href: '/float' },
         ],
+        AURA: [
+          { label: 'AURAとは（AIポートフォリオ）', href: '/aura' },
+        ],
+        CARD: [
+          { label: 'CARDとは（デジタル名刺）', href: '/card' },
+        ],
         知る: [
           { label: 'me-ishについて', href: '/modal/about' },
-          { label: 'AURAとは（ポートフォリオ）', href: '/aura' },
-          { label: 'ポートフォリオを作成', href: '/aura/form' },
-          { label: 'CARDとは（デジタル名刺）', href: '/card' },
-          { label: '名刺を作成', href: '/card/form' },
           { label: '出展ガイド', href: '/modal/creators' },
           { label: '購入ガイド', href: '/modal/buyers' },
           { label: 'プランと料金', href: '/modal/pricing' },
@@ -321,6 +323,24 @@ export default function Header() {
                   isActive={isActive}
                   onSelect={() => setOpen(false)}
                   firstFocus
+                />
+
+                <Divider />
+
+                <MenuSection
+                  title="AURA"
+                  items={nav.AURA}
+                  isActive={isActive}
+                  onSelect={() => setOpen(false)}
+                />
+
+                <Divider />
+
+                <MenuSection
+                  title="CARD"
+                  items={nav.CARD}
+                  isActive={isActive}
+                  onSelect={() => setOpen(false)}
                 />
 
                 <Divider />
