@@ -1,19 +1,18 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { Suspense, useRef, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 
-import DayLight from './DayLight';
-import GalleryLighting from './GalleryLighting';
+import ConcreteBuilding from '@/components/themeGalleries/forest/ForestGround';
+import ConcreteEnvironment from '@/components/themeGalleries/forest/ForestEnvironment';
+import ConcreteLightSlits from '@/components/themeGalleries/forest/ForestParticles';
+
 import FloatArtworksInGallery from './FloatArtworksInGallery';
 import FloatPanelArtworks from './FloatPanelArtworks';
-import FloatPanelsCenter from './FloatPanelsCenter';
-import FloatWalls from './FloatWalls';
-import FloatOutsideWorld from './FloatOutsideWorld';
 
 import Avatar from '@/components/shared/Avatar';
-import FloatAvatarController from '@/components/floatGallery/FloatAvatarController';
+import ConcreteAvatarController from '@/components/themeGalleries/forest/ConcreteAvatarController';
 import ThirdPersonCamera from '@/components/shared/ThirdPersonCamera';
 import ZoomArtworkDisplay from '@/components/shared/ZoomArtworkDisplay';
 import CoreSphere from '@/components/shared/CoreSphere';
@@ -37,7 +36,6 @@ export default function FloatGallery({ dateStr }: Props): React.JSX.Element {
   const coreSpherePos: [number, number, number] = [0, 5, 0];
   const lightBasePos: [number, number, number] = [coreSpherePos[0], 0, coreSpherePos[2]];
 
-  // モバイルでのスクロール・タッチ挙動を制御
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     const originalTouchAction = document.body.style.touchAction;
@@ -62,28 +60,25 @@ export default function FloatGallery({ dateStr }: Props): React.JSX.Element {
       )}
       <Canvas
         style={{ width: '100%', height: '100%' }}
-        camera={{ position: [0, 5, 15], fov: 60 }}
-        shadows
+        camera={{ position: [0, 5, 15], fov: 60, near: 0.1, far: 300 }}
         gl={{
           antialias: !isMobile,
           powerPreference: 'high-performance',
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 2.0,
+          toneMappingExposure: 1.0,
         }}
         dpr={isMobile ? 1 : [1, 2]}
         tabIndex={0}
         onPointerDown={(e) => e.currentTarget.focus()}
       >
-        <FloatOutsideWorld />
+        <Suspense fallback={null}>
+          <ConcreteEnvironment />
+          <ConcreteBuilding />
+          <ConcreteLightSlits />
+        </Suspense>
 
         <CoreSphere avatarRef={avatarRef} position={coreSpherePos} />
         <LightCircle position={lightBasePos} />
-
-        <DayLight />
-        <GalleryLighting />
-
-        <FloatWalls />
-        <FloatPanelsCenter />
 
         {/* 壁面（外壁24枚） */}
         <FloatArtworksInGallery
@@ -92,11 +87,11 @@ export default function FloatGallery({ dateStr }: Props): React.JSX.Element {
           dateStr={dateStr}
         />
 
-        {/* 中央パネル（別ロジックならそのまま） */}
+        {/* Spineパーティション面（8枚） */}
         <FloatPanelArtworks avatarRef={avatarRef} artworkRefs={artworkRefs} dateStr={dateStr} />
 
         <Avatar ref={avatarRef} />
-        <FloatAvatarController avatarRef={avatarRef} joystickRef={joystickRef} />
+        <ConcreteAvatarController avatarRef={avatarRef} joystickRef={joystickRef} />
         <ThirdPersonCamera avatarRef={avatarRef} />
       </Canvas>
 

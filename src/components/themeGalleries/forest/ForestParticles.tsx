@@ -19,14 +19,14 @@ const SLIT_EMISSIVE_INTENSITY = 5.0;
 type SlitDef = { name: string; position: [number, number, number]; size: [number, number, number] };
 
 const LIGHT_SLITS: SlitDef[] = [
-  // パーティション上部スリット（Spineのみ）
-  { name: 'Slit_L_Spine', position: [-10, 7.25, -1.5],  size: [0.05, 1.3, 21] },
-  { name: 'Slit_R_Spine', position: [10, 7.25, -1.5],   size: [0.05, 1.3, 21] },
-  // 外壁上部スリット（薄い光帯）
-  { name: 'Slit_Wall_Back',  position: [0, 7.7, 19.6],   size: [59, 0.15, 0.05] },
-  { name: 'Slit_Wall_Front', position: [0, 7.7, -19.6],  size: [59, 0.15, 0.05] },
-  { name: 'Slit_Wall_Left',  position: [-29.6, 7.7, 0],  size: [0.05, 0.15, 39] },
-  { name: 'Slit_Wall_Right', position: [29.6, 7.7, 0],   size: [0.05, 0.15, 39] },
+  // パーティション上部スリット（Spine 30m、中央揃え）
+  { name: 'Slit_L_Spine', position: [-10, 7.25, 0],  size: [0.05, 1.3, 30] },
+  { name: 'Slit_R_Spine', position: [10, 7.25, 0],   size: [0.05, 1.3, 30] },
+  // 外壁上部スリット（60×60正方形に対応）
+  { name: 'Slit_Wall_Back',  position: [0, 7.7, 29.6],   size: [59, 0.15, 0.05] },
+  { name: 'Slit_Wall_Front', position: [0, 7.7, -29.6],  size: [59, 0.15, 0.05] },
+  { name: 'Slit_Wall_Left',  position: [-29.6, 7.7, 0],  size: [0.05, 0.15, 59] },
+  { name: 'Slit_Wall_Right', position: [29.6, 7.7, 0],   size: [0.05, 0.15, 59] },
 ];
 
 export default function ConcreteLightSlits(): React.JSX.Element {

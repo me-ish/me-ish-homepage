@@ -22,24 +22,24 @@ const SUN_POSITION: [number, number, number] = [100, 60, -80];
 type OpeningLight = { position: [number, number, number]; intensity: number; distance: number };
 
 const OPENING_LIGHTS: OpeningLight[] = [
-  // 中庭開口 (8×8m)
-  { position: [0, 7.5, -3], intensity: 200, distance: 30 },
-  // 左Spineスリット (1×21m) — 3点分散
-  { position: [-10, 7.5, -8], intensity: 40, distance: 15 },
-  { position: [-10, 7.5, 0],  intensity: 40, distance: 15 },
-  { position: [-10, 7.5, 8],  intensity: 40, distance: 15 },
-  // 右Spineスリット (1×21m) — 3点分散
-  { position: [10, 7.5, -8], intensity: 40, distance: 15 },
-  { position: [10, 7.5, 0],  intensity: 40, distance: 15 },
-  { position: [10, 7.5, 8],  intensity: 40, distance: 15 },
-  // 左回廊スカイライト A (world z [6,10])
-  { position: [-20, 7.5, -8], intensity: 60, distance: 18 },
-  // 左回廊スカイライト B (world z [-10,-6])
-  { position: [-20, 7.5, 8],  intensity: 60, distance: 18 },
+  // 中庭開口 (8×8m、中央揃え)
+  { position: [0, 7.5, 0], intensity: 200, distance: 30 },
+  // 左Spineスリット (1×30m) — 3点分散
+  { position: [-10, 7.5, -10], intensity: 40, distance: 15 },
+  { position: [-10, 7.5, 0],   intensity: 40, distance: 15 },
+  { position: [-10, 7.5, 10],  intensity: 40, distance: 15 },
+  // 右Spineスリット (1×30m) — 3点分散
+  { position: [10, 7.5, -10], intensity: 40, distance: 15 },
+  { position: [10, 7.5, 0],   intensity: 40, distance: 15 },
+  { position: [10, 7.5, 10],  intensity: 40, distance: 15 },
+  // 左回廊スカイライト A (world z [16, 20])
+  { position: [-20, 7.5, -18], intensity: 60, distance: 18 },
+  // 左回廊スカイライト B (world z [-20, -16])
+  { position: [-20, 7.5, 18],  intensity: 60, distance: 18 },
   // 右回廊スカイライト A
-  { position: [20, 7.5, -8], intensity: 60, distance: 18 },
+  { position: [20, 7.5, -18], intensity: 60, distance: 18 },
   // 右回廊スカイライト B
-  { position: [20, 7.5, 8],  intensity: 60, distance: 18 },
+  { position: [20, 7.5, 18],  intensity: 60, distance: 18 },
 ];
 
 export default function ConcreteEnvironment(): React.JSX.Element {

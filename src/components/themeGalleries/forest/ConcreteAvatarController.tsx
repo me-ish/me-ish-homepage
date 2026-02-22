@@ -22,23 +22,23 @@ const AVATAR_RADIUS = 0.5;
 const PUSH_EPS = 0.001;
 
 // 外壁内面（壁厚0.4、半分0.2）
-// Building: 60×40 → 内面 x: ±29.6, z: ±19.6
+// Building: 60×60正方形 → 内面 x: ±29.6, z: ±29.6
 const BOUNDARY = {
   minX: -29.6 + AVATAR_RADIUS,
   maxX: 29.6 - AVATAR_RADIUS,
-  minZ: -19.6 + AVATAR_RADIUS,
-  maxZ: 19.6 - AVATAR_RADIUS,
+  minZ: -29.6 + AVATAR_RADIUS,
+  maxZ: 29.6 - AVATAR_RADIUS,
 };
 
 // 衝突ボックス一覧（XZ平面 AABB）
 type BoxAABB = { minX: number; maxX: number; minZ: number; maxZ: number };
 
 const COLLISION_BOXES: BoxAABB[] = [
-  // --- パーティション（Spineのみ） ---
-  // L_Spine: R3F pos [-10, 3.25, -1.5], size [0.35, 6.5, 21]
-  { minX: -10.175, maxX: -9.825, minZ: -12, maxZ: 9 },
-  // R_Spine: R3F pos [10, 3.25, -1.5], size [0.35, 6.5, 21]
-  { minX: 9.825, maxX: 10.175, minZ: -12, maxZ: 9 },
+  // --- パーティション（Spine 40m、中央揃え） ---
+  // L_Spine: R3F pos [-10, 3.25, 0], size [0.35, 6.5, 30]
+  { minX: -10.175, maxX: -9.825, minZ: -15, maxZ: 15 },
+  // R_Spine: R3F pos [10, 3.25, 0], size [0.35, 6.5, 30]
+  { minX: 9.825, maxX: 10.175, minZ: -15, maxZ: 15 },
 
 ];
 

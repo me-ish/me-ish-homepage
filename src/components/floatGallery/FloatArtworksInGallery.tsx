@@ -123,11 +123,11 @@ export default function FloatArtworksInGallery({
   dateStr,
 }: Props): React.JSX.Element {
   const wallY = 3.5;
-  const wallZ = 39;
-  const wallX = 39;
-  const offset = 10;
-  const centerGap = 30;
-  const start = -30;
+  // forest建物: 正方形60×60m（壁内面 x=±29.2, z=±29.2）
+  const wallZ = 29.2;
+  const wallX = 29.2;
+  // 全4面共通: 5枚均等 = -22, -11, 0, 11, 22（11m間隔）
+  const WALL_POSITIONS = [-22, -11, 0, 11, 22];
 
   const [allEntries, setAllEntries] = useState<Entry[]>([]);
   const [dailyEntries, setDailyEntries] = useState<Entry[]>([]);
@@ -207,12 +207,6 @@ export default function FloatArtworksInGallery({
     return pickDailyExhibits(stable, resolvedDate, FLOAT_DAILY_SLOT_COUNT) as Entry[];
   }, [dailyEntries, allEntries, resolvedDate]);
 
-  const generatePositions = (startPos: number): number[] => {
-    const left = Array.from({ length: 3 }, (_, i) => startPos + i * offset);
-    const right = Array.from({ length: 3 }, (_, i) => startPos + offset + centerGap + i * offset);
-    return [...left, ...right];
-  };
-
   const makeArtwork = (
     x: number,
     y: number,
@@ -229,11 +223,12 @@ export default function FloatArtworksInGallery({
     };
   };
 
+  // 外壁: 5枚×4面 = 20スロット（PANEL_REFS_OFFSET = 20）、全面同一間隔
   const positions = [
-    ...generatePositions(start).map((x) => makeArtwork(x, wallY, -wallZ, Math.PI)),
-    ...generatePositions(start).map((x) => makeArtwork(x, wallY, wallZ, 0)),
-    ...generatePositions(start).map((z) => makeArtwork(-wallX, wallY, z, -Math.PI / 2)),
-    ...generatePositions(start).map((z) => makeArtwork(wallX, wallY, z, Math.PI / 2)),
+    ...WALL_POSITIONS.map((x) => makeArtwork(x, wallY, -wallZ, Math.PI)),
+    ...WALL_POSITIONS.map((x) => makeArtwork(x, wallY, wallZ, 0)),
+    ...WALL_POSITIONS.map((z) => makeArtwork(-wallX, wallY, z, -Math.PI / 2)),
+    ...WALL_POSITIONS.map((z) => makeArtwork(wallX, wallY, z, Math.PI / 2)),
   ];
 
   const labelWidth = 2.5 * ARTWORK_SCALE * ARTWORK_ASPECT;

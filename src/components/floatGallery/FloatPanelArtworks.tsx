@@ -112,10 +112,10 @@ export default function FloatPanelArtworks({
   artworkRefs,
   dateStr,
 }: Props): JSX.Element {
-  const panelRadius = 16;
   const panelY = 3.5;
-  const artworkGap = 4.5;
-  const distanceFromPanel = 0.4;
+  // Spineパーティション（x=±10）の各面に2枚ずつ配置 = 4面×2 = 8スロット
+  // 面からのオフセット: Spine半厚(0.175) + 余裕
+  const SPINE_OFFSET = 0.7;
 
   const [allEntries, setAllEntries] = useState<Entry[]>([]);
   const [dailyEntries, setDailyEntries] = useState<Entry[]>([]);
@@ -183,40 +183,32 @@ export default function FloatPanelArtworks({
     return pickDailyExhibits(stable, resolvedDate, FLOAT_DAILY_SLOT_COUNT) as Entry[];
   }, [dailyEntries, allEntries, resolvedDate]);
 
-  const sides = [
-    { deg: 45, rotationY: Math.PI / 4 + Math.PI, frontScale: -2 },
-    { deg: 135, rotationY: (3 * Math.PI) / 4, frontScale: -2 },
-    { deg: 225, rotationY: (5 * Math.PI) / 4 + Math.PI, frontScale: -2 },
-    { deg: 315, rotationY: -Math.PI / 4, frontScale: -2 },
+  // Spineパーティション面への配置
+  // rotationY基準: ForestExhibitPanels と統一
+  //   面が+x方向を向く(左Spine内側/右Spine外側): rotY = -Math.PI/2
+  //   面が-x方向を向く(左Spine外側/右Spine内側): rotY = Math.PI/2
+  // z位置: Spine 30m を3等分 → 各区画中央 z = -10, 0, 10（10m間隔、端5m余白）
+  const artworks: { position: [number, number, number]; rotation: [number, number, number] }[] = [
+    // 左Spine内側（ギャラリー中央に向く, +x方向）
+    { position: [-10 + SPINE_OFFSET, panelY, -10], rotation: [0, -Math.PI / 2, 0] },
+    { position: [-10 + SPINE_OFFSET, panelY,   0], rotation: [0, -Math.PI / 2, 0] },
+    { position: [-10 + SPINE_OFFSET, panelY,  10], rotation: [0, -Math.PI / 2, 0] },
+    // 左Spine外側（回廊側に向く, -x方向）
+    { position: [-10 - SPINE_OFFSET, panelY, -10], rotation: [0,  Math.PI / 2, 0] },
+    { position: [-10 - SPINE_OFFSET, panelY,   0], rotation: [0,  Math.PI / 2, 0] },
+    { position: [-10 - SPINE_OFFSET, panelY,  10], rotation: [0,  Math.PI / 2, 0] },
+    // 右Spine内側（ギャラリー中央に向く, -x方向）
+    { position: [ 10 - SPINE_OFFSET, panelY, -10], rotation: [0,  Math.PI / 2, 0] },
+    { position: [ 10 - SPINE_OFFSET, panelY,   0], rotation: [0,  Math.PI / 2, 0] },
+    { position: [ 10 - SPINE_OFFSET, panelY,  10], rotation: [0,  Math.PI / 2, 0] },
+    // 右Spine外側（回廊側に向く, +x方向）
+    { position: [ 10 + SPINE_OFFSET, panelY, -10], rotation: [0, -Math.PI / 2, 0] },
+    { position: [ 10 + SPINE_OFFSET, panelY,   0], rotation: [0, -Math.PI / 2, 0] },
+    { position: [ 10 + SPINE_OFFSET, panelY,  10], rotation: [0, -Math.PI / 2, 0] },
   ];
 
-  const artworks = sides.flatMap(({ deg, rotationY, frontScale }) => {
-    const rad = (deg * Math.PI) / 180;
-    const center = new THREE.Vector3(
-      Math.cos(rad) * panelRadius,
-      panelY,
-      Math.sin(rad) * panelRadius
-    );
-
-    const xAxis = new THREE.Vector3(1, 0, 0).applyAxisAngle(
-      new THREE.Vector3(0, 1, 0),
-      rotationY
-    );
-    const front = new THREE.Vector3(0, 0, 1)
-      .applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY)
-      .multiplyScalar(distanceFromPanel * frontScale);
-
-    return [-1, 1].map((i) => {
-      const pos = center.clone().addScaledVector(xAxis, i * artworkGap).add(front);
-      return {
-        position: pos.toArray() as [number, number, number],
-        rotation: [0, rotationY, 0] as [number, number, number],
-      };
-    });
-  });
-
-  // artworkRefs のオフセット：外壁が 0-23 を使用するため、パネルは 24 から開始
-  const PANEL_REFS_OFFSET = 24;
+  // artworkRefs のオフセット：外壁が 0-19 を使用するため、Spineは 20 から開始
+  const PANEL_REFS_OFFSET = 20;
   const panelEntries = entries.slice(PANEL_REFS_OFFSET, PANEL_REFS_OFFSET + artworks.length);
 
   return (

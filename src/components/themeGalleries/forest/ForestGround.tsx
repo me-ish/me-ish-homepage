@@ -5,12 +5,12 @@ import * as THREE from 'three';
 import { useTexture } from '@react-three/drei';
 
 /**
- * ConcreteBuilding v2 — 打ちっぱなしコンクリート
+ * ConcreteBuilding v3 — 打ちっぱなしコンクリート（正方形 60×60m）
  *
  * 天井は ExtrudeGeometry（Shape + 7穴）で構築:
  *   - 中庭開口 (8×8m)
- *   - Spine上スリット ×2 (1×21m)
- *   - 外壁回廊スカイライト ×4 (3×4m)
+ *   - Spine上スリット ×2 (1×40m)
+ *   - 外壁回廊スカイライト ×4 (3×4m、z=±16〜20)
  */
 
 const TILE_SCALE = 3;
@@ -18,38 +18,38 @@ const CEILING_THICKNESS = 0.3;
 
 type BoxDef = { position: [number, number, number]; size: [number, number, number] };
 
-// --- 外壁 ---
+// --- 外壁（正方形 60×60m） ---
 const EXTERIOR_WALLS: BoxDef[] = [
-  { position: [0, 4, 19.8],   size: [60, 8, 0.4] },
-  { position: [0, 4, -19.8],  size: [60, 8, 0.4] },
-  { position: [-29.8, 4, 0],  size: [0.4, 8, 40] },
-  { position: [29.8, 4, 0],   size: [0.4, 8, 40] },
+  { position: [0, 4, 29.8],   size: [60, 8, 0.4] },
+  { position: [0, 4, -29.8],  size: [60, 8, 0.4] },
+  { position: [-29.8, 4, 0],  size: [0.4, 8, 60] },
+  { position: [29.8, 4, 0],   size: [0.4, 8, 60] },
 ];
 
-// --- パーティション（Spineのみ） ---
+// --- パーティション（Spine 30m、中央揃え） ---
 const PARTITIONS: BoxDef[] = [
-  { position: [-10, 3.25, -1.5], size: [0.35, 6.5, 21] },
-  { position: [10, 3.25, -1.5],  size: [0.35, 6.5, 21] },
+  { position: [-10, 3.25, 0], size: [0.35, 6.5, 30] },
+  { position: [10, 3.25, 0],  size: [0.35, 6.5, 30] },
 ];
 
 // --- 天井開口定義 ---
 // Shape座標系: shape_x = world_x, shape_y = -world_z
 // [x1, y1, x2, y2] で矩形の左下→右上
 const CEILING_HOLES: [number, number, number, number][] = [
-  // 中庭: world x [-4, 4], z [-7, 1] → shape y [-1, 7]
-  [-4, -1, 4, 7],
-  // 左Spineスリット: world x [-10.5, -9.5], z [-12, 9] → shape y [-9, 12]
-  [-10.5, -9, -9.5, 12],
-  // 右Spineスリット: world x [9.5, 10.5], z [-12, 9]
-  [9.5, -9, 10.5, 12],
-  // 左回廊スカイライト A: world x [-21.5, -18.5], z [6, 10] → shape y [-10, -6]
-  [-21.5, -10, -18.5, -6],
-  // 左回廊スカイライト B: world x [-21.5, -18.5], z [-10, -6] → shape y [6, 10]
-  [-21.5, 6, -18.5, 10],
-  // 右回廊スカイライト A: world x [18.5, 21.5], z [6, 10]
-  [18.5, -10, 21.5, -6],
-  // 右回廊スカイライト B: world x [18.5, 21.5], z [-10, -6]
-  [18.5, 6, 21.5, 10],
+  // 中庭: world x [-4, 4], z [-4, 4] → shape y [-4, 4]（中央揃え）
+  [-4, -4, 4, 4],
+  // 左Spineスリット: world x [-10.5, -9.5], z [-15, 15] → shape y [-15, 15]
+  [-10.5, -15, -9.5, 15],
+  // 右Spineスリット: world x [9.5, 10.5], z [-15, 15]
+  [9.5, -15, 10.5, 15],
+  // 左回廊スカイライト A: world x [-21.5, -18.5], z [16, 20] → shape y [-20, -16]
+  [-21.5, -20, -18.5, -16],
+  // 左回廊スカイライト B: world x [-21.5, -18.5], z [-20, -16] → shape y [16, 20]
+  [-21.5, 16, -18.5, 20],
+  // 右回廊スカイライト A: world x [18.5, 21.5], z [16, 20]
+  [18.5, -20, 21.5, -16],
+  // 右回廊スカイライト B: world x [18.5, 21.5], z [-20, -16]
+  [18.5, 16, 21.5, 20],
 ];
 
 // --- テクスチャユーティリティ ---
@@ -96,12 +96,12 @@ export default function ConcreteBuilding(): React.JSX.Element {
 
   // --- 天井ジオメトリ（ExtrudeGeometry + 7穴） ---
   const ceilingGeo = useMemo(() => {
-    // 外枠（CCW）
+    // 外枠（CCW）60×60正方形
     const shape = new THREE.Shape();
-    shape.moveTo(-30, -20);
-    shape.lineTo(30, -20);
-    shape.lineTo(30, 20);
-    shape.lineTo(-30, 20);
+    shape.moveTo(-30, -30);
+    shape.lineTo(30, -30);
+    shape.lineTo(30, 30);
+    shape.lineTo(-30, 30);
     shape.closePath();
 
     // 開口（CW）
@@ -139,7 +139,7 @@ export default function ConcreteBuilding(): React.JSX.Element {
   }, [concreteTex]);
 
   const floorMat = useMemo(() => {
-    const tex = makeTiledTextures(floorTex, 20, 14);
+    const tex = makeTiledTextures(floorTex, 20, 20);
     return new THREE.MeshStandardMaterial({
       ...tex,
       color: '#6B6660',
@@ -168,7 +168,7 @@ export default function ConcreteBuilding(): React.JSX.Element {
     <group name="concrete-building">
       {/* 床 */}
       <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} material={floorMat}>
-        <planeGeometry args={[60, 40]} />
+        <planeGeometry args={[60, 60]} />
       </mesh>
 
       {/* 天井（ExtrudeGeometry、開口付き） */}
