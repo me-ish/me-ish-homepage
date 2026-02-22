@@ -605,7 +605,7 @@ const DesktopHome = () => {
 
               {/* Float Gallery */}
               <BentoCard href="/float" className="stagger-item md:col-span-2">
-                <div className="relative h-full min-h-[200px] md:min-h-[200px]">
+                <div className="relative h-full min-h-[320px] md:min-h-[420px]">
                   <Image
                     src="/images/float-thumb.png"
                     alt="Float Gallery"
