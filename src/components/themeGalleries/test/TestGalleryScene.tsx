@@ -4,49 +4,28 @@ import React, { Suspense, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 
-import ConcreteEnvironment from './ForestEnvironment';
-import ConcreteBuilding from './ForestGround';
-import ConcreteLightSlits from './ForestParticles';
-import ConcreteArtworks from './ForestExhibitPanels';
-import ConcreteAvatarController from './ConcreteAvatarController';
+import TestEnvironment from './TestEnvironment';
+import TestBuilding from './TestBuilding';
+import TestLightSlits from './TestLightSlits';
 
 import Avatar from '@/components/shared/Avatar';
+import TestAvatarController from './TestAvatarController';
 import ThirdPersonCamera from '@/components/shared/ThirdPersonCamera';
 import JoystickInput from '@/components/shared/JoystickInput';
 import { useIsMobile } from '@/lib/useIsMobile';
 
 /**
- * ConcreteGalleryScene v2 — Dia:Beacon スケール
+ * TestGalleryScene — テスト用ギャラリー
  *
- * 60m × 40m、天井高8m、中庭水盤付き。作品40点。
+ * 建物・環境・アバターのみのクリーンな状態。
+ * 作品配置・機能テスト用途。
  */
 
 type Props = {
   className?: string;
 };
 
-function SceneContent({
-  avatarRef,
-  joystickRef,
-}: {
-  avatarRef: React.RefObject<THREE.Group>;
-  joystickRef: React.RefObject<{ x: number; y: number }>;
-}): React.JSX.Element {
-  return (
-    <>
-      <ConcreteEnvironment />
-      <ConcreteBuilding />
-      <ConcreteLightSlits />
-      <ConcreteArtworks />
-
-      <Avatar ref={avatarRef} position={[0, 2.5, 5]} />
-      <ConcreteAvatarController avatarRef={avatarRef} joystickRef={joystickRef} />
-      <ThirdPersonCamera avatarRef={avatarRef} />
-    </>
-  );
-}
-
-export default function ForestGalleryScene({ className }: Props): React.JSX.Element {
+export default function TestGalleryScene({ className }: Props): React.JSX.Element {
   const avatarRef = useRef<THREE.Group>(null);
   const joystickRef = useRef({ x: 0, y: 0 });
   const isMobile = useIsMobile();
@@ -72,12 +51,7 @@ export default function ForestGalleryScene({ className }: Props): React.JSX.Elem
         />
       )}
       <Canvas
-        camera={{
-          position: [0, 5, 20],
-          fov: 60,
-          near: 0.1,
-          far: 300,
-        }}
+        camera={{ position: [0, 5, 20], fov: 60, near: 0.1, far: 300 }}
         gl={{
           antialias: !isMobile,
           alpha: false,
@@ -90,8 +64,14 @@ export default function ForestGalleryScene({ className }: Props): React.JSX.Elem
         onPointerDown={(e) => e.currentTarget.focus()}
       >
         <Suspense fallback={null}>
-          <SceneContent avatarRef={avatarRef} joystickRef={joystickRef} />
+          <TestEnvironment />
+          <TestBuilding />
+          <TestLightSlits />
         </Suspense>
+
+        <Avatar ref={avatarRef} position={[0, 2.5, 5]} />
+        <TestAvatarController avatarRef={avatarRef} joystickRef={joystickRef} />
+        <ThirdPersonCamera avatarRef={avatarRef} />
       </Canvas>
     </div>
   );

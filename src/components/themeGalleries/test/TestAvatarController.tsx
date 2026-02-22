@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 
 /**
- * ConcreteAvatarController v2 — 60m×40m ギャラリー用
+ * TestAvatarController — テスト用ギャラリー
  *
  * WASD + ジョイスティック、カメラ相対移動。
  * 外壁境界 + パーティション6枚 + 中庭ガラス壁4面 + ベンチ4台の衝突判定。
@@ -69,7 +69,7 @@ function resolveCollisions(px: number, pz: number): { x: number; z: number } {
   return { x, z };
 }
 
-export default function ConcreteAvatarController({ avatarRef, joystickRef }: Props) {
+export default function TestAvatarController({ avatarRef, joystickRef }: Props) {
   const velocity = useRef(new THREE.Vector3());
   const keys = useRef<Record<string, boolean>>({});
   const { camera } = useThree();

@@ -6,7 +6,7 @@ import { Sky } from '@react-three/drei';
 import * as THREE from 'three';
 
 /**
- * ConcreteEnvironment v2 — ライティング + Sky
+ * TestEnvironment — ライティング + Sky
  *
  * 天井開口から見える空を drei の Sky で描画。
  * 安藤忠雄建築の「切り取られた空」を再現。
@@ -42,7 +42,7 @@ const OPENING_LIGHTS: OpeningLight[] = [
   { position: [20, 7.5, 18],  intensity: 60, distance: 18 },
 ];
 
-export default function ConcreteEnvironment(): React.JSX.Element {
+export default function TestEnvironment(): React.JSX.Element {
   const { scene } = useThree();
 
   useEffect(() => {

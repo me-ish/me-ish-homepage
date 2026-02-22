@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 
 /**
- * ConcreteArtworks v2 — 24点の大型アートワーク
+ * TestExhibitPanels — テスト用ダミーアートワーク
  *
  * サイズ 4m × 3m。余裕のある間隔で配置。
  * 外壁16点 + コの字Spine両面8点。
@@ -96,7 +96,7 @@ const ARTWORKS: ArtworkDef[] = [
   art('Art_32', [10.35, 8, H],   '+x'),
 ];
 
-export default function ConcreteArtworks(): React.JSX.Element {
+export default function TestExhibitPanels(): React.JSX.Element {
   const frameMaterial = useMemo(
     () => new THREE.MeshStandardMaterial(FRAME_MAT),
     []

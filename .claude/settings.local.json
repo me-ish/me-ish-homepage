@@ -18,7 +18,8 @@
       "Bash(dir:*)",
       "mcp__supabase__list_projects",
       "mcp__supabase__generate_typescript_types",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(cd:*)"
     ]
   }
 }

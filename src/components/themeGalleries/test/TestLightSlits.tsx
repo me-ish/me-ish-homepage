@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 
 /**
- * ConcreteLightSlits v2 — 光のスリット
+ * TestLightSlits — 光のスリット
  *
  * パーティション上部スリット（壁高6.5m↔天井8mの1.5m空間）
  * + 外壁天井接合部の薄い光帯。
@@ -29,7 +29,7 @@ const LIGHT_SLITS: SlitDef[] = [
   { name: 'Slit_Wall_Right', position: [29.6, 7.7, 0],   size: [0.05, 0.15, 59] },
 ];
 
-export default function ConcreteLightSlits(): React.JSX.Element {
+export default function TestLightSlits(): React.JSX.Element {
   const slitMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({

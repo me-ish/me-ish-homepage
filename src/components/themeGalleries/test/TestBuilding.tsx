@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { useTexture } from '@react-three/drei';
 
 /**
- * ConcreteBuilding v3 — 打ちっぱなしコンクリート（正方形 60×60m）
+ * TestBuilding — 打ちっぱなしコンクリート（正方形 60×60m）
  *
  * 天井は ExtrudeGeometry（Shape + 7穴）で構築:
  *   - 中庭開口 (8×8m)
@@ -81,7 +81,7 @@ function calcRepeat(size: [number, number, number]): [number, number] {
   ];
 }
 
-export default function ConcreteBuilding(): React.JSX.Element {
+export default function TestBuilding(): React.JSX.Element {
   const concreteTex = useTexture({
     map: '/textures/Plaster004_1K-JPG_Color.jpg',
     normalMap: '/textures/Plaster004_1K-JPG_NormalGL.jpg',

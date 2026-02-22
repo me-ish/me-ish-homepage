@@ -4,15 +4,15 @@ import React, { Suspense, useRef, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 
-import ConcreteBuilding from '@/components/themeGalleries/forest/ForestGround';
-import ConcreteEnvironment from '@/components/themeGalleries/forest/ForestEnvironment';
-import ConcreteLightSlits from '@/components/themeGalleries/forest/ForestParticles';
+import TestBuilding from '@/components/themeGalleries/test/TestBuilding';
+import TestEnvironment from '@/components/themeGalleries/test/TestEnvironment';
+import TestLightSlits from '@/components/themeGalleries/test/TestLightSlits';
 
 import FloatArtworksInGallery from './FloatArtworksInGallery';
 import FloatPanelArtworks from './FloatPanelArtworks';
 
 import Avatar from '@/components/shared/Avatar';
-import ConcreteAvatarController from '@/components/themeGalleries/forest/ConcreteAvatarController';
+import TestAvatarController from '@/components/themeGalleries/test/TestAvatarController';
 import ThirdPersonCamera from '@/components/shared/ThirdPersonCamera';
 import ZoomArtworkDisplay from '@/components/shared/ZoomArtworkDisplay';
 import CoreSphere from '@/components/shared/CoreSphere';
@@ -72,9 +72,9 @@ export default function FloatGallery({ dateStr }: Props): React.JSX.Element {
         onPointerDown={(e) => e.currentTarget.focus()}
       >
         <Suspense fallback={null}>
-          <ConcreteEnvironment />
-          <ConcreteBuilding />
-          <ConcreteLightSlits />
+          <TestEnvironment />
+          <TestBuilding />
+          <TestLightSlits />
         </Suspense>
 
         <CoreSphere avatarRef={avatarRef} position={coreSpherePos} />
@@ -91,7 +91,7 @@ export default function FloatGallery({ dateStr }: Props): React.JSX.Element {
         <FloatPanelArtworks avatarRef={avatarRef} artworkRefs={artworkRefs} dateStr={dateStr} />
 
         <Avatar ref={avatarRef} />
-        <ConcreteAvatarController avatarRef={avatarRef} joystickRef={joystickRef} />
+        <TestAvatarController avatarRef={avatarRef} joystickRef={joystickRef} />
         <ThirdPersonCamera avatarRef={avatarRef} />
       </Canvas>
 
