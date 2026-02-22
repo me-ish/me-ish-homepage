@@ -39,6 +39,9 @@ type ArtworkFrameProps = {
   edition_mode?: 'limited' | 'unlimited' | null;
   edition_total?: number | null;
   edition_sold?: number | null;
+  ai_usage?: 'none' | 'assist' | 'gen_assist' | null;
+  ai_usage_scope?: string[] | null;
+  ai_usage_note?: string | null;
 } & Omit<ThreeElements['group'], 'id'>;
 
 type ArtworkFrameHandle = THREE.Group & {
@@ -68,6 +71,9 @@ const ArtworkFrame = forwardRef<ArtworkFrameHandle, ArtworkFrameProps>(
       edition_mode = null,
       edition_total = null,
       edition_sold = 0,
+      ai_usage = null,
+      ai_usage_scope = null,
+      ai_usage_note = null,
       ...rest
     },
     ref
@@ -169,6 +175,9 @@ const ArtworkFrame = forwardRef<ArtworkFrameHandle, ArtworkFrameProps>(
             edition_mode: edition_mode ?? null,
             edition_total: total,
             edition_sold: sold,
+            ai_usage: ai_usage ?? null,
+            ai_usage_scope: ai_usage_scope ?? null,
+            ai_usage_note: ai_usage_note ?? null,
           } as any);
         }}
         {...rest}

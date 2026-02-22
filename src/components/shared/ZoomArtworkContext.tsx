@@ -20,6 +20,9 @@ export interface ZoomedArtwork {
   likes?: number;
   edition_total?: number;
   edition_sold?: number;
+  ai_usage?: 'none' | 'assist' | 'gen_assist' | null;
+  ai_usage_scope?: string[] | null;
+  ai_usage_note?: string | null;
 }
 
 interface ZoomArtworkContextType {

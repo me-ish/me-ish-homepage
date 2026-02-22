@@ -73,6 +73,9 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
   const is_sold: boolean = (a as any).is_sold ?? false;
   const created_at = (a as any).created_at ?? undefined;
   const id = (a as any).id ?? undefined;
+  const ai_usage: 'none' | 'assist' | 'gen_assist' | null = (a as any).ai_usage ?? null;
+  const ai_usage_scope: string[] | null = (a as any).ai_usage_scope ?? null;
+  const ai_usage_note: string | null = (a as any).ai_usage_note ?? null;
 
   // SNSリンク：文字列JSON / オブジェクト 両対応
   let links: Record<string, string> = {};
@@ -221,6 +224,8 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
           <div className="max-w-[90vw] text-white/90 text-base leading-relaxed">{description}</div>
         )}
 
+        <AiUsageSection usage={ai_usage} scope={ai_usage_scope} note={ai_usage_note} />
+
         {/* SNSリンク（外部リンクは <a> でOK。Portal化で親の <Link> と独立） */}
         {Object.keys(links).length > 0 && (
           <div className="space-y-2 pt-2 w-full max-w-[90vw]">
@@ -282,6 +287,49 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
   );
 
   return createPortal(node, document.body);
+}
+
+/* ====== AI使用状況セクション ====== */
+
+const AI_USAGE_SCOPE_LABELS: Record<string, string> = {
+  background: '背景',
+  props: '小物・装飾',
+  inpaint: '部分補完・不要物除去',
+  other: 'その他',
+};
+
+function AiUsageSection({
+  usage,
+  scope,
+  note,
+}: {
+  usage: 'none' | 'assist' | 'gen_assist' | null;
+  scope: string[] | null;
+  note: string | null;
+}) {
+  if (!usage || usage === 'none') return null;
+
+  const label =
+    usage === 'assist'
+      ? 'AI補助あり（構図・アイデア等）'
+      : 'AI生成・補助あり';
+
+  return (
+    <div className="w-full max-w-[90vw] space-y-1.5 text-center">
+      <div className="text-[11px] uppercase tracking-widest text-white/40">AI使用状況</div>
+      <div className="inline-block rounded-full px-3 py-0.5 text-xs font-medium bg-violet-900/60 text-violet-200 ring-1 ring-violet-500/30">
+        {label}
+      </div>
+      {usage === 'gen_assist' && scope && scope.length > 0 && (
+        <div className="text-xs text-white/60">
+          対象: {scope.map((s) => AI_USAGE_SCOPE_LABELS[s] ?? s).join('・')}
+        </div>
+      )}
+      {usage === 'gen_assist' && note && (
+        <div className="text-xs text-white/50 italic">{note}</div>
+      )}
+    </div>
+  );
 }
 
 /* ====== ここから追加：Badges & Legal Notices ====== */

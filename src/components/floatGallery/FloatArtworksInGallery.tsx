@@ -23,7 +23,8 @@ const SELECT_COLUMNS = `
   id, title, artist_name, image_url, description,
   is_for_sale, price, sns_links, created_at,
   is_sold, edition_mode, edition_total, edition_sold,
-  confirmed, display_ready, display_end_at
+  confirmed, display_ready, display_end_at,
+  ai_usage, ai_usage_scope, ai_usage_note
 `.replace(/\s+/g, '');
 
 /** クエリ上限 */
@@ -53,6 +54,9 @@ type Entry = {
   edition_total: number | null;
   edition_sold: number | null;
   display_end_at: string | null;
+  ai_usage: 'none' | 'assist' | 'gen_assist' | null;
+  ai_usage_scope: string[] | null;
+  ai_usage_note: string | null;
 };
 
 function ComingSoonPanel({
@@ -160,7 +164,8 @@ export default function FloatArtworksInGallery({
             id, title, artist_name, image_url, description,
             is_for_sale, price, sns_links, created_at,
             is_sold, edition_mode, edition_total, edition_sold,
-            confirmed, display_ready, display_end_at
+            confirmed, display_ready, display_end_at,
+            ai_usage, ai_usage_scope, ai_usage_note
           )
         `
         )
@@ -269,6 +274,9 @@ export default function FloatArtworksInGallery({
                   edition_mode={entry.edition_mode}
                   edition_total={entry.edition_total}
                   edition_sold={entry.edition_sold ?? 0}
+                  ai_usage={entry.ai_usage}
+                  ai_usage_scope={entry.ai_usage_scope}
+                  ai_usage_note={entry.ai_usage_note}
                 />
                 <ArtworkLabel
                   position={[0, 0, 0]}

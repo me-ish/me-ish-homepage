@@ -29,6 +29,9 @@ type LazyArtworkFrameProps = {
   edition_mode?: 'limited' | 'unlimited' | null;
   edition_total?: number | null;
   edition_sold?: number | null;
+  ai_usage?: 'none' | 'assist' | 'gen_assist' | null;
+  ai_usage_scope?: string[] | null;
+  ai_usage_note?: string | null;
 };
 
 /**
@@ -87,6 +90,9 @@ export default function LazyArtworkFrame({
   edition_mode = null,
   edition_total = null,
   edition_sold = 0,
+  ai_usage = null,
+  ai_usage_scope = null,
+  ai_usage_note = null,
 }: LazyArtworkFrameProps): React.JSX.Element {
   const [shouldLoad, setShouldLoad] = useState(false);
 
@@ -173,6 +179,9 @@ export default function LazyArtworkFrame({
         edition_mode={edition_mode}
         edition_total={edition_total}
         edition_sold={edition_sold}
+        ai_usage={ai_usage}
+        ai_usage_scope={ai_usage_scope}
+        ai_usage_note={ai_usage_note}
       />
     </Suspense>
   );

@@ -32,6 +32,10 @@ interface ArtworkData {
   edition_mode?: 'limited' | 'unlimited' | null
   edition_total?: number | null
   edition_sold?: number | null
+  // ▼ AI使用状況
+  ai_usage?: 'none' | 'assist' | 'gen_assist' | null
+  ai_usage_scope?: string[] | null
+  ai_usage_note?: string | null
 }
 
 interface ArtworkFrameWhiteProps extends PropsWithChildren {
@@ -62,6 +66,9 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
       edition_mode = null,
       edition_total = null,
       edition_sold = 0,
+      ai_usage = null,
+      ai_usage_scope = null,
+      ai_usage_note = null,
     } = data
 
     const groupRef = useRef<THREE.Group>(null)
@@ -145,6 +152,10 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
             edition_mode: edition_mode ?? null,
             edition_total: total,
             edition_sold: sold,
+            // ▼ AI使用状況
+            ai_usage: ai_usage ?? null,
+            ai_usage_scope: ai_usage_scope ?? null,
+            ai_usage_note: ai_usage_note ?? null,
           } as any)
         }}
       >
