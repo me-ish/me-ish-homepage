@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEmail } from '@/app/_actions/sendEmail'; // ★ 追加：サーバーアクション経由で送信
+import { saveBankAccount } from '@/app/_actions/saveBankAccount';
 
 export type FormValues = {
   artistName: string;
@@ -375,26 +376,19 @@ const FormWrapper = () => {
         return;
       }
 
-      // ★ 販売する場合のみ、口座情報を別テーブルに保存
+      // ★ 販売する場合のみ、口座情報を別テーブルに保存（サーバーアクション経由で RLS をバイパス）
       if (isSale) {
-        const { error: bankErr } = await supabase
-          .from('artists_bank_accounts')
-          .upsert(
-            [
-              {
-                external_user_id: externalUserId,
-                bank_code: data.bank_code,
-                branch_code: data.branch_code,
-                account_type: data.account_type,
-                account_number: data.account_number,
-                account_name_kana: data.account_name_kana,
-              },
-            ],
-            { onConflict: 'external_user_id' }
-          );
+        const { error: bankErrMsg } = await saveBankAccount({
+          external_user_id: externalUserId,
+          bank_code: data.bank_code,
+          branch_code: data.branch_code,
+          account_type: data.account_type,
+          account_number: data.account_number,
+          account_name_kana: data.account_name_kana,
+        });
 
-        if (bankErr) {
-          alert(`口座情報の登録に失敗しました: ${bankErr.message}`);
+        if (bankErrMsg) {
+          alert(`口座情報の登録に失敗しました: ${bankErrMsg}`);
           setSubmitting(false);
           return;
         }
