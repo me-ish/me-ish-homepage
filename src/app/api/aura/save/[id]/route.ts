@@ -1,5 +1,7 @@
 // src/app/api/aura/save/[id]/route.ts
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
 import { ContentSchema } from "@/lib/aura/aura.schema";
 import { publishContent } from "@/lib/aura/aura.db";
 import { claimMeishFree, claimFirst20Free } from "@/lib/aura/auraBillingGate";
@@ -7,6 +9,22 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { isAdminEmailAsync } from "@/lib/isAdmin";
+
+async function getSessionUserEmail(): Promise<string | null> {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !anonKey) return null;
+    const cookieStore = cookies();
+    const sb = createClient(url, anonKey, {
+      global: { headers: { cookie: cookieStore.toString() } },
+    });
+    const { data } = await sb.auth.getUser();
+    return data?.user?.email ?? null;
+  } catch {
+    return null;
+  }
+}
 
 type Params = { id: string };
 
@@ -67,16 +85,19 @@ export async function POST(req: Request, { params }: { params: Params }) {
 
       let allowed = paymentStatus === "paid";
 
-      if (!allowed && email) {
-
-        // 0) 管理者は決済スルー
-        if (await isAdminEmailAsync(email)) {
+      // 0) 管理者は決済スルー（セッションのメールで判定）
+      if (!allowed) {
+        const sessionEmail = await getSessionUserEmail();
+        if (sessionEmail && await isAdminEmailAsync(sessionEmail)) {
           await supabaseAdmin()
             .from("aura_requests")
             .update({ payment_status: "paid", updated_at: new Date().toISOString() })
             .eq("id", id);
           allowed = true;
         }
+      }
+
+      if (!allowed && email) {
 
         // 1) me-ish採用（entries.confirmed=true）で 1回無料
         const meishResult = await claimMeishFree(email, id);
