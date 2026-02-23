@@ -70,12 +70,12 @@ export async function requireStudioAccess(
   }
 
   const admin = supabaseAdmin();
-  const { data: rec, error } = await admin
-    .from('aura_projects')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: rec, error } = await (admin.from('aura_projects' as any) as any)
     .select('id, status, email, theme_id, visibility, public_id, payment_status, session_token')
     .eq('id', projectId)
     .eq('session_token', sessionToken)
-    .maybeSingle();
+    .maybeSingle() as { data: Record<string, unknown> | null; error: unknown };
 
   if (error || !rec) {
     return {
@@ -87,5 +87,5 @@ export async function requireStudioAccess(
     };
   }
 
-  return { ok: true, rec: rec as Record<string, unknown> };
+  return { ok: true, rec };
 }
