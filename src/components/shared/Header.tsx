@@ -57,9 +57,6 @@ export default function Header() {
           { label: 'White Gallery', href: '/white' },
           { label: 'Float Gallery', href: '/float' },
         ],
-        AURA: [
-          { label: 'AURAとは（AIポートフォリオ）', href: '/aura' },
-        ],
         CARD: [
           { label: 'CARDとは（デジタル名刺）', href: '/card' },
         ],
@@ -328,15 +325,6 @@ export default function Header() {
                   isActive={isActive}
                   onSelect={() => setOpen(false)}
                   firstFocus
-                />
-
-                <Divider />
-
-                <MenuSection
-                  title="AURA"
-                  items={nav.AURA}
-                  isActive={isActive}
-                  onSelect={() => setOpen(false)}
                 />
 
                 <Divider />

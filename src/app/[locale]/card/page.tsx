@@ -193,14 +193,6 @@ export default function CardLandingPage() {
         >
           デジタル名刺を作成する <ArrowRight className="w-4 h-4" />
         </Link>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-sm">
-          <Link
-            href="/aura"
-            className="underline text-[#0a5ea8] hover:opacity-80"
-          >
-            AURA（ポートフォリオ）を見る
-          </Link>
-        </div>
         <p className="text-xs text-[#667] mt-3">
           3ステップ・最短1分で完成。あなたの世界観を名刺に。
         </p>
