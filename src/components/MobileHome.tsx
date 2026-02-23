@@ -12,6 +12,7 @@ import {
   Eye,
   Users,
   ChevronUp,
+  Bell,
 } from 'lucide-react';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { useGalleryArtworks, useGalleryStats } from '@/hooks/useHomePageData';
@@ -113,11 +114,44 @@ function useFadeInOnScroll() {
 function HeroBackground() {
   return (
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,_rgba(0,161,233,0.18),_transparent_50%),radial-gradient(ellipse_70%_40%_at_50%_110%,_rgba(0,161,233,0.1),_transparent_45%)]" />
+      {/* Blob 1: sky blue, top-left */}
       <div
-        className="absolute inset-0 opacity-[0.025]"
+        className="absolute rounded-full aurora-blob-1"
         style={{
-          backgroundImage: 'radial-gradient(circle, rgba(0,161,233,0.8) 1px, transparent 1px)',
+          width: '90vw',
+          height: '90vw',
+          top: '-30%',
+          left: '-20%',
+          background: 'radial-gradient(circle, rgba(0,161,233,0.28) 0%, transparent 65%)',
+        }}
+      />
+      {/* Blob 2: cyan, top-right */}
+      <div
+        className="absolute rounded-full aurora-blob-2"
+        style={{
+          width: '70vw',
+          height: '70vw',
+          top: '-20%',
+          right: '-20%',
+          background: 'radial-gradient(circle, rgba(34,211,238,0.2) 0%, transparent 65%)',
+        }}
+      />
+      {/* Blob 3: indigo, bottom-center */}
+      <div
+        className="absolute rounded-full aurora-blob-3"
+        style={{
+          width: '65vw',
+          height: '65vw',
+          bottom: '-15%',
+          left: '15%',
+          background: 'radial-gradient(circle, rgba(129,140,248,0.16) 0%, transparent 65%)',
+        }}
+      />
+      {/* Dot grid */}
+      <div
+        className="absolute inset-0 opacity-[0.04]"
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(0,161,233,0.9) 1px, transparent 1px)',
           backgroundSize: '20px 20px',
         }}
       />
@@ -452,7 +486,10 @@ const MobileHome = () => {
         <section className={`fade-in-up ${LAYOUT.sectionX} ${LAYOUT.sectionYCompact} bg-gradient-to-b from-[#f8fbff] to-white`}>
           <div className={LAYOUT.container}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-gray-900">お知らせ</h2>
+              <h2 className="flex items-center gap-1.5 text-sm font-bold text-gray-900">
+                <Bell className="h-3.5 w-3.5 text-[#00a1e9]" />
+                お知らせ
+              </h2>
               <Link href="/news" className="text-xs text-[#00a1e9] font-medium">
                 すべて見る →
               </Link>
@@ -601,6 +638,35 @@ const MobileHome = () => {
 
       {/* Animations */}
       <style jsx global>{`
+        @keyframes aurora-blob-1 {
+          0%, 100% { transform: translate(0%, 0%) scale(1); }
+          25%  { transform: translate(4%, -3%) scale(1.06); }
+          50%  { transform: translate(-3%, 5%) scale(0.96); }
+          75%  { transform: translate(3%, 2%) scale(1.02); }
+        }
+        @keyframes aurora-blob-2 {
+          0%, 100% { transform: translate(0%, 0%) scale(1); }
+          33%  { transform: translate(-5%, 4%) scale(1.04); }
+          66%  { transform: translate(3%, -4%) scale(0.97); }
+        }
+        @keyframes aurora-blob-3 {
+          0%, 100% { transform: translate(0%, 0%) scale(1); }
+          40%  { transform: translate(3%, -5%) scale(1.05); }
+          80%  { transform: translate(-3%, 3%) scale(0.98); }
+        }
+        .aurora-blob-1 {
+          animation: aurora-blob-1 16s ease-in-out infinite;
+          will-change: transform;
+        }
+        .aurora-blob-2 {
+          animation: aurora-blob-2 21s ease-in-out infinite;
+          will-change: transform;
+        }
+        .aurora-blob-3 {
+          animation: aurora-blob-3 26s ease-in-out infinite;
+          will-change: transform;
+        }
+
         @keyframes float {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-12px); }
@@ -645,7 +711,10 @@ const MobileHome = () => {
 
         @media (prefers-reduced-motion: reduce) {
           .fade-in-up,
-          .animate-float-in {
+          .animate-float-in,
+          .aurora-blob-1,
+          .aurora-blob-2,
+          .aurora-blob-3 {
             opacity: 1;
             transform: none;
             animation: none;

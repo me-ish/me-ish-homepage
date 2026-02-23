@@ -12,6 +12,7 @@ import {
   Palette,
   Eye,
   Users,
+  Bell,
 } from 'lucide-react';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { useGalleryArtworks, useGalleryStats } from '@/hooks/useHomePageData';
@@ -394,19 +395,48 @@ function AnnouncementsStrip({ max = 3 }: { max?: number }) {
 function HeroBackground() {
   return (
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-      {/* メッシュグラデーション */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_20%_-20%,_rgba(0,161,233,0.15),_transparent_50%),radial-gradient(ellipse_60%_40%_at_80%_100%,_rgba(0,161,233,0.1),_transparent_40%)]" />
-
-      {/* 微細ドットパターン */}
+      {/* Blob 1: sky blue, top-left */}
       <div
-        className="absolute inset-0 opacity-[0.03]"
+        className="absolute rounded-full aurora-blob-1"
         style={{
-          backgroundImage: 'radial-gradient(circle, rgba(0,161,233,0.8) 1px, transparent 1px)',
+          width: '70vw',
+          height: '70vw',
+          top: '-25%',
+          left: '-10%',
+          background: 'radial-gradient(circle, rgba(0,161,233,0.22) 0%, transparent 65%)',
+        }}
+      />
+      {/* Blob 2: cyan, top-right */}
+      <div
+        className="absolute rounded-full aurora-blob-2"
+        style={{
+          width: '55vw',
+          height: '55vw',
+          top: '-20%',
+          right: '-10%',
+          background: 'radial-gradient(circle, rgba(34,211,238,0.18) 0%, transparent 65%)',
+        }}
+      />
+      {/* Blob 3: indigo, bottom-center */}
+      <div
+        className="absolute rounded-full aurora-blob-3"
+        style={{
+          width: '50vw',
+          height: '50vw',
+          bottom: '-15%',
+          left: '20%',
+          background: 'radial-gradient(circle, rgba(129,140,248,0.14) 0%, transparent 65%)',
+        }}
+      />
+      {/* Dot grid */}
+      <div
+        className="absolute inset-0 opacity-[0.04]"
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(0,161,233,0.9) 1px, transparent 1px)',
           backgroundSize: '24px 24px',
         }}
       />
-
-      {/* ノイズテクスチャ */}
+      {/* Noise texture */}
       <div className="absolute inset-0 opacity-[0.02]" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
       }} />
@@ -548,14 +578,18 @@ const DesktopHome = () => {
         {/* News Strip */}
         <section className="fade-in-up py-6 px-6 bg-gradient-to-b from-[#f8fbff] to-white">
           <div className={LAYOUT.container}>
-            <div className="flex items-center justify-between gap-6">
-              <AnnouncementsStrip max={3} />
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Bell className="h-4 w-4 text-[#00a1e9]" />
+                <span className="text-sm font-bold text-gray-900">お知らせ</span>
+              </div>
               <Button asChild variant="ghost" size="sm" className="text-[#00a1e9] hover:bg-[#e8f7ff] shrink-0">
                 <Link href="/news">
                   一覧を見る <ArrowRight className="h-3 w-3 ml-1" />
                 </Link>
               </Button>
             </div>
+            <AnnouncementsStrip max={3} />
           </div>
         </section>
 
@@ -621,7 +655,12 @@ const DesktopHome = () => {
 
                   <div className="absolute bottom-0 left-0 p-5">
                     <h3 className="text-xl font-bold text-white mb-1">Float Gallery</h3>
-                    <p className="text-white/80 text-sm">"漂う"ように入れ替わる美術館風ギャラリー</p>
+                    <p className="text-white/80 text-sm mb-4">"漂う"ように入れ替わる美術館風ギャラリー</p>
+                    <div className="flex gap-2">
+                      <span className="px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-white text-sm font-medium">
+                        3Dで見る →
+                      </span>
+                    </div>
                   </div>
                 </div>
               </BentoCard>
@@ -782,6 +821,35 @@ const DesktopHome = () => {
 
       {/* Animations */}
       <style jsx global>{`
+        @keyframes aurora-blob-1 {
+          0%, 100% { transform: translate(0%, 0%) scale(1); }
+          25%  { transform: translate(4%, -3%) scale(1.06); }
+          50%  { transform: translate(-3%, 5%) scale(0.96); }
+          75%  { transform: translate(3%, 2%) scale(1.02); }
+        }
+        @keyframes aurora-blob-2 {
+          0%, 100% { transform: translate(0%, 0%) scale(1); }
+          33%  { transform: translate(-5%, 4%) scale(1.04); }
+          66%  { transform: translate(3%, -4%) scale(0.97); }
+        }
+        @keyframes aurora-blob-3 {
+          0%, 100% { transform: translate(0%, 0%) scale(1); }
+          40%  { transform: translate(3%, -5%) scale(1.05); }
+          80%  { transform: translate(-3%, 3%) scale(0.98); }
+        }
+        .aurora-blob-1 {
+          animation: aurora-blob-1 16s ease-in-out infinite;
+          will-change: transform;
+        }
+        .aurora-blob-2 {
+          animation: aurora-blob-2 21s ease-in-out infinite;
+          will-change: transform;
+        }
+        .aurora-blob-3 {
+          animation: aurora-blob-3 26s ease-in-out infinite;
+          will-change: transform;
+        }
+
         @keyframes float {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
           50% { transform: translateY(-20px) rotate(2deg); }
@@ -839,7 +907,10 @@ const DesktopHome = () => {
         @media (prefers-reduced-motion: reduce) {
           .fade-in-up,
           .stagger-item,
-          .animate-float-in {
+          .animate-float-in,
+          .aurora-blob-1,
+          .aurora-blob-2,
+          .aurora-blob-3 {
             opacity: 1;
             transform: none;
             animation: none;
