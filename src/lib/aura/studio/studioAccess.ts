@@ -69,13 +69,15 @@ export async function requireStudioAccess(
     };
   }
 
-  const admin = supabaseAdmin();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rec, error } = await (admin.from('aura_projects' as any) as any)
+  // aura_projects は Database 生成型に未登録のため untyped client 経由でアクセス
+  // rome-ignore / biome-ignore 等もないプロジェクトなので as any で回避
+  const admin = supabaseAdmin() as any; // eslint-disable-line
+  const { data: rec, error } = (await admin
+    .from('aura_projects')
     .select('id, status, email, theme_id, visibility, public_id, payment_status, session_token')
     .eq('id', projectId)
     .eq('session_token', sessionToken)
-    .maybeSingle() as { data: Record<string, unknown> | null; error: unknown };
+    .maybeSingle()) as { data: Record<string, unknown> | null; error: unknown };
 
   if (error || !rec) {
     return {

@@ -36,8 +36,8 @@ export type AuraProjectRow = {
   updated_at: string;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = () => supabaseAdmin().from(TABLE as any);
+// aura_projects は Database 生成型に未登録のため untyped client 経由でアクセス
+const db = () => (supabaseAdmin() as any).from(TABLE); // eslint-disable-line
 
 /** ドラフト作成 */
 export async function createStudioDraft(sessionToken: string, email?: string) {
