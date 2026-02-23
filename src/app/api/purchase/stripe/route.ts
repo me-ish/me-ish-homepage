@@ -1,8 +1,27 @@
 // src/app/api/purchase/stripe/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
 import { checkCsrf } from '@/lib/auth/csrf';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { isAdminEmailAsync } from '@/lib/isAdmin';
+
+async function getSessionUserEmail(): Promise<string | null> {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !anonKey) return null;
+    const cookieStore = cookies();
+    const sb = createClient(url, anonKey, {
+      global: { headers: { cookie: cookieStore.toString() } },
+    });
+    const { data } = await sb.auth.getUser();
+    return data?.user?.email ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export const runtime = 'nodejs';
 
@@ -44,6 +63,32 @@ export async function POST(req: NextRequest) {
   const qty = Math.max(1, Math.min(Number(quantity) || 1, remaining));
   if (total !== null && qty > remaining) {
     return NextResponse.json({ error: 'sold out' }, { status: 409 });
+  }
+
+  // 管理者は決済スルー（finalize_sale RPC を直接呼び出し）
+  const userEmail = await getSessionUserEmail();
+  if (userEmail && await isAdminEmailAsync(userEmail)) {
+    const adminSessionId = `admin_bypass_${Date.now()}_${entry.id}`;
+    const admin = supabaseAdmin();
+    await admin.rpc('finalize_sale', {
+      p_entry_id: Number(entry.id),
+      p_quantity: qty,
+      p_session_id: adminSessionId,
+      p_price: 0,
+    });
+    await admin.from('sales').upsert({
+      entry_id: Number(entry.id),
+      stripe_session_id: adminSessionId,
+      buyer_email: userEmail,
+      price: 0,
+      meish_fee_yen: 0,
+      artist_reward_yen: 0,
+      payout_status: 'admin_bypass',
+      purchased_at: new Date().toISOString(),
+      metadata: { admin_bypass: true, quantity: qty },
+    }, { onConflict: 'stripe_session_id' });
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? '';
+    return NextResponse.json({ url: `${siteUrl}/purchase/success` });
   }
 
   const session = await stripe.checkout.sessions.create({

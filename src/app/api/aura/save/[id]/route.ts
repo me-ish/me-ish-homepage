@@ -6,6 +6,7 @@ import { claimMeishFree, claimFirst20Free } from "@/lib/aura/auraBillingGate";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";
 import { checkCsrf } from "@/lib/auth/csrf";
+import { isAdminEmailAsync } from "@/lib/isAdmin";
 
 type Params = { id: string };
 
@@ -67,6 +68,15 @@ export async function POST(req: Request, { params }: { params: Params }) {
       let allowed = paymentStatus === "paid";
 
       if (!allowed && email) {
+
+        // 0) 管理者は決済スルー
+        if (await isAdminEmailAsync(email)) {
+          await supabaseAdmin()
+            .from("aura_requests")
+            .update({ payment_status: "paid", updated_at: new Date().toISOString() })
+            .eq("id", id);
+          allowed = true;
+        }
 
         // 1) me-ish採用（entries.confirmed=true）で 1回無料
         const meishResult = await claimMeishFree(email, id);
