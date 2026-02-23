@@ -188,4 +188,6 @@ const ArtworkFrameWhite = forwardRef<THREE.Group, ArtworkFrameWhiteProps>(
   }
 )
 
+ArtworkFrameWhite.displayName = 'ArtworkFrameWhite';
+
 export default ArtworkFrameWhite

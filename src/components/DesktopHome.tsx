@@ -655,7 +655,7 @@ const DesktopHome = () => {
 
                   <div className="absolute bottom-0 left-0 p-5">
                     <h3 className="text-xl font-bold text-white mb-1">Float Gallery</h3>
-                    <p className="text-white/80 text-sm mb-4">"漂う"ように入れ替わる美術館風ギャラリー</p>
+                    <p className="text-white/80 text-sm mb-4">&quot;漂う&quot;ように入れ替わる美術館風ギャラリー</p>
                     <div className="flex gap-2">
                       <span className="px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-white text-sm font-medium">
                         3Dで見る →
@@ -740,8 +740,8 @@ const DesktopHome = () => {
                 me-ish（ミーイッシュ）は、誰もが自分らしく作品を展示できるオンラインギャラリー。
               </p>
               <p className="fade-in-up mt-4 text-lg md:text-xl leading-relaxed text-gray-600" style={{ animationDelay: '0.2s' }}>
-                作品の<span className="text-[#00a1e9] font-semibold">"見せ方"</span>と
-                <span className="text-[#00a1e9] font-semibold">"出会い方"</span>をデザインし、
+                作品の<span className="text-[#00a1e9] font-semibold">&quot;見せ方&quot;</span>と
+                <span className="text-[#00a1e9] font-semibold">&quot;出会い方&quot;</span>をデザインし、
                 <br className="hidden md:block" />
                 アーティストと鑑賞者の距離を縮めます。
               </p>

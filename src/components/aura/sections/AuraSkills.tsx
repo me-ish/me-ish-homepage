@@ -108,7 +108,6 @@ export const AuraSkills: React.FC<Props> = ({ section, theme, variant }) => {
     headings?.[0] ?? getDefaultHeading((theme as any)?.languageMode ?? (theme as any)?.language);
 
   const skills = useMemo(() => toSkillItems(items), [items]);
-  if (skills.length === 0) return null;
 
   // 世界観オーバーライド
   const worldview = String((variant as any)?.worldview ?? "business");
@@ -148,6 +147,8 @@ const accent =
     const n = typeof raw === "string" ? Number(raw) : Number(raw);
     return Number.isFinite(n) ? n : 0;
   }, [variant]);
+
+  if (skills.length === 0) return null;
 
   // 背景は共通コンポーネントに委譲
 

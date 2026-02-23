@@ -70,6 +70,8 @@ const Avatar = forwardRef<THREE.Group, AvatarProps>((props, ref) => {
   );
 });
 
+Avatar.displayName = 'Avatar';
+
 export default Avatar;
 
 
