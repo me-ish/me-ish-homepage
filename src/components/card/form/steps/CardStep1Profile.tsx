@@ -28,6 +28,7 @@ export default function CardStep1Profile({
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleAvatarUpload = async (file: File) => {
     let rid = requestId;
@@ -36,6 +37,7 @@ export default function CardStep1Profile({
       if (!rid) return;
     }
     setUploading(true);
+    setUploadError(null);
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -44,13 +46,15 @@ export default function CardStep1Profile({
         headers: { ...CSRF_HEADERS },
         body: fd,
       });
-      const json = await res.json();
-      if (json.ok) {
-        updateField("avatarUrl", json.url);
-        updateField("avatarPath", json.path);
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        setUploadError("画像のアップロードに失敗しました");
+        return;
       }
-    } catch (e) {
-      console.error("avatar upload failed", e);
+      updateField("avatarUrl", json.url);
+      updateField("avatarPath", json.path);
+    } catch {
+      setUploadError("通信エラーが発生しました");
     } finally {
       setUploading(false);
     }
@@ -116,6 +120,9 @@ export default function CardStep1Profile({
         <p className="text-xs text-slate-500">
           プロフィール画像（任意）
         </p>
+        {uploadError && (
+          <p className="text-xs text-red-500">{uploadError}</p>
+        )}
       </div>
 
       {/* Name */}

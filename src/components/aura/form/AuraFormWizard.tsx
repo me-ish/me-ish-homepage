@@ -1,7 +1,7 @@
 // src/components/aura/form/AuraFormWizard.tsx
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { ChevronDown, ChevronUp, Eye, EyeOff, Wand2 } from "lucide-react";
 import { STEPS, type StepId, type AuraFormData, validateStep } from "./auraFormTypes";
 import { useAuraFormDraft } from "./useAuraFormDraft";
@@ -38,7 +38,13 @@ export function AuraFormWizard() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Extracted hooks
-  const { draft, createDraftIfNeeded } = useAuraDraftServer(data.email, data.name, setError);
+  const { draft, emailSync, createDraftIfNeeded } = useAuraDraftServer(data.email, data.name, setError);
+
+  useEffect(() => {
+    if (emailSync.status === 'error' && emailSync.error) {
+      setError(emailSync.error);
+    }
+  }, [emailSync.status, emailSync.error]);
   const { formCardRef, previewCardRef, syncedHeight } = useSyncedHeights(currentStep);
   const { handleNext, handleBack, handleStepClick, handleEditStep, stepAnnouncement } =
     useStepNavigation(currentStep, setCurrentStep, data, setError, containerRef, formCardRef);
@@ -51,16 +57,17 @@ export function AuraFormWizard() {
     setError(null);
   }, [setData]);
 
-  const handleRequireDraft = useCallback(async () => {
+  const handleRequireDraft = useCallback(async (): Promise<string | null> => {
     if (!data.email.trim()) {
       setError("画像をアップロードするには、まずメールアドレスを入力してください。");
       setCurrentStep(1);
-      return;
+      return null;
     }
     try {
-      await createDraftIfNeeded(data.email, data.name);
+      return await createDraftIfNeeded(data.email, data.name);
     } catch {
       // error set inside createDraftIfNeeded
+      return null;
     }
   }, [data.email, data.name, createDraftIfNeeded, setCurrentStep]);
 

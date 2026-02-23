@@ -9,7 +9,7 @@ type Props = {
   data: AuraFormData;
   onChange: (updates: Partial<AuraFormData>) => void;
   requestId: string | null;
-  onRequireDraft: () => Promise<void>;
+  onRequireDraft: () => Promise<string | null>;
 };
 
 export function Step1Profile({ data, onChange, requestId, onRequireDraft }: Props) {
@@ -18,17 +18,13 @@ export function Step1Profile({ data, onChange, requestId, onRequireDraft }: Prop
   const [avatarError, setAvatarError] = useState<string | null>(null);
 
   const handleAvatarUpload = useCallback(async (file: File) => {
-    // まずdraftが必要
-    if (!requestId) {
-      try {
-        await onRequireDraft();
-      } catch {
-        return;
-      }
+    // requestIdを確定（なければdraft作成して即取得）
+    let rid = requestId;
+    if (!rid) {
+      rid = await onRequireDraft();
+      if (!rid) return;
     }
 
-    // draftができた後、再度requestIdを取得する必要があるため
-    // uploadはrequestIdが確定してから実行
     setAvatarUploading(true);
     setAvatarError(null);
 
@@ -36,15 +32,7 @@ export function Step1Profile({ data, onChange, requestId, onRequireDraft }: Prop
       const fd = new FormData();
       fd.append("file", file);
 
-      // requestIdが無い場合はonRequireDraft後に再実行されることを期待
-      const currentRequestId = requestId;
-      if (!currentRequestId) {
-        setAvatarError("下書きの作成を待っています...");
-        setAvatarUploading(false);
-        return;
-      }
-
-      const res = await fetch(`/api/aura/upload/avatar/${currentRequestId}`, {
+      const res = await fetch(`/api/aura/upload/avatar/${rid}`, {
         method: "POST",
         headers: { "x-requested-with": "me-ish" },
         body: fd,
@@ -57,7 +45,6 @@ export function Step1Profile({ data, onChange, requestId, onRequireDraft }: Prop
         return;
       }
 
-      // アップロード成功：URLを保存
       onChange({ avatarPreviewUrl: json.url });
     } catch (e) {
       console.error(e);

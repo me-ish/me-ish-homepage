@@ -72,6 +72,7 @@ const STATUS_PRIORITY: Record<string, number> = {
 export function MyWorksTab({ userId, userEmail }: { userId: string; userEmail?: string | null }) {
   const [entries, setEntries] = useState<EntryWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('new');
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
@@ -98,12 +99,14 @@ const publicUrl = useMemo(() => {
 
     (async () => {
       setLoading(true);
+      setFetchError(null);
       try {
         const data = await getEntriesWithStatus(supabase, userId, userEmail);
         setEntries(data);
       } catch (err) {
         console.error('[MyWorksTab] error:', err);
         setEntries([]);
+        setFetchError('作品の読み込みに失敗しました。再読み込みをお試しください。');
       } finally {
         setLoading(false);
       }
@@ -200,6 +203,17 @@ const publicUrl = useMemo(() => {
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
         <span className="ml-2 text-gray-500">読み込み中...</span>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="py-10 text-center">
+        <div className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+          {fetchError}
+        </div>
       </div>
     );
   }

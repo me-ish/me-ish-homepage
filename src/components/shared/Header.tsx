@@ -146,7 +146,12 @@ export default function Header() {
       router.refresh();
 
       // ログイン必須ページに居る場合に備えて / へ戻す（任意だが事故が減る）
-      if (pathname?.startsWith('/mypage') || pathname?.startsWith('/admin')) {
+      if (
+        pathname?.startsWith('/mypage') ||
+        pathname?.startsWith('/admin') ||
+        pathname?.startsWith('/settings') ||
+        pathname?.startsWith('/entry')
+      ) {
         router.replace('/');
       }
     } finally {

@@ -272,6 +272,19 @@ export default function MyPageClient() {
         }
         setEntries((es as Entry[]) ?? []);
 
+        // Phase2: 銀行口座登録チェック
+        if (hasEntries) {
+          const { data: bankData, error: bankErr } = await supabase
+            .from('artists_bank_accounts')
+            .select('id')
+            .eq('user_id', uid)
+            .maybeSingle();
+
+          if (!bankErr) {
+            setHasBankAccount(!!bankData);
+          }
+        }
+
         // Phase2: 売上サマリーを v_my_sales_summary から取得
         if (hasEntries) {
           const { data: summary, error: summaryErr } = await supabase
