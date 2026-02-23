@@ -137,8 +137,8 @@ export const FormInputSchema = z.object({
   // キャッチコピー（未入力OK）
   tagline: z.string().optional().or(z.literal("")).optional(),
 
-  // 自己紹介
-  bio: z.string().min(1, "自己紹介を入力してください"),
+  // 自己紹介（未入力OK）
+  bio: z.string().optional().or(z.literal("")).transform((v) => v ?? ""),
 
   /* ---------------------------------------------------------
    * ★ プロフィール画像（オプション）
