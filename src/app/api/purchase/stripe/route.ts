@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
       price: 0,
       meish_fee_yen: 0,
       artist_reward_yen: 0,
-      payout_status: 'admin_bypass',
+      payout_status: 'pending',
       purchased_at: new Date().toISOString(),
       metadata: { admin_bypass: true, quantity: qty },
     }, { onConflict: 'stripe_session_id' });
