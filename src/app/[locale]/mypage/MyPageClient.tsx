@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -108,6 +109,7 @@ const isUnlimited = (e: Entry) => e.edition_total == null;
 
 /* ===================== Component ===================== */
 export default function MyPageClient() {
+  const t = useTranslations('mypage');
   const [loading, setLoading] = useState(true);
   const [uid, setUid] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -351,7 +353,7 @@ export default function MyPageClient() {
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : String(e);
         console.error('[mypage load] fatal:', message);
-        setToast(message || '読み込みに失敗しました');
+        setToast(message || t('loadError'));
       } finally {
         setLoading(false);
       }
@@ -395,7 +397,7 @@ export default function MyPageClient() {
     try {
       const { data: auth } = await supabase.auth.getUser();
       const id = profile?.id || auth.user?.id;
-      if (!id) throw new Error('ユーザーIDが取得できませんでした。');
+      if (!id) throw new Error(t('toasts.userIdError'));
 
       const normalized: Profile = {
         id,
@@ -413,18 +415,18 @@ export default function MyPageClient() {
       if (error) throw error;
 
       setProfile(normalized);
-      setToast('プロフィールを保存しました');
+      setToast(t('toasts.profileSaved'));
       setEditOpen(false);
     } catch (e: unknown) {
       console.error(e);
       const message = e instanceof Error ? e.message : String(e);
-      setToast(message || '保存に失敗しました');
+      setToast(message || t('toasts.profileSaveError'));
     }
   }
 
   // 退会処理
   async function handleAccountDelete() {
-    if (deleteConfirmText !== '退会する') return;
+    if (deleteConfirmText !== t('deleteDialog.confirmWord')) return;
 
     try {
       setDeleteLoading(true);
@@ -435,7 +437,7 @@ export default function MyPageClient() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || '退会処理に失敗しました');
+        throw new Error(data.error || t('toasts.withdrawError'));
       }
 
       // ログアウト & トップにリダイレクト
@@ -444,7 +446,7 @@ export default function MyPageClient() {
     } catch (e: unknown) {
       console.error('[handleAccountDelete]', e);
       const message = e instanceof Error ? e.message : String(e);
-      setToast(message || '退会処理に失敗しました');
+      setToast(message || t('toasts.withdrawError'));
       setDeleteLoading(false);
     }
   }
@@ -480,10 +482,10 @@ export default function MyPageClient() {
                 <button
                   onClick={() => setEditOpen(true)}
                   className="inline-flex items-center gap-2 rounded-full bg-white/90 backdrop-blur px-3 py-2 text-sm shadow hover:shadow-md border"
-                  aria-label="プロフィール編集"
+                  aria-label={t('editProfileAriaLabel')}
                 >
                   <Edit3 className="w-4 h-4" />
-                  <span className="hidden sm:inline">プロフィールを編集</span>
+                  <span className="hidden sm:inline">{t('editProfile')}</span>
                 </button>
               </div>
             </div>
@@ -522,7 +524,7 @@ export default function MyPageClient() {
           <div className="mx-auto w-full max-w-6xl">
             <div className="flex items-center justify-center py-14 text-gray-500">
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span className="ml-2">読み込み中...</span>
+              <span className="ml-2">{t('loading')}</span>
             </div>
           </div>
         </section>
@@ -538,17 +540,17 @@ export default function MyPageClient() {
                   <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-amber-800">
-                      振込先口座が未登録です
+                      {t('bankAlert.title')}
                     </p>
                     <p className="text-sm text-amber-700 mt-1">
-                      作品が売れた際の報酬を受け取るには、銀行口座の登録が必要です。
+                      {t('bankAlert.body')}
                     </p>
                     <Link
                       href="/settings/bank"
                       className="inline-flex items-center gap-1 text-sm font-medium text-amber-800 hover:text-amber-900 mt-2 underline underline-offset-2"
                     >
                       <Wallet className="w-4 h-4" />
-                      口座を登録する
+                      {t('bankAlert.link')}
                     </Link>
                   </div>
                 </div>
@@ -563,43 +565,43 @@ export default function MyPageClient() {
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
                   <MetricCard
                     icon={<BadgeCheck className="w-5 h-5 text-emerald-500" />}
-                    label="展示中"
+                    label={t('metrics.displaying')}
                     value={metrics.displayingNow}
                     highlight={metrics.displayingNow > 0}
                   />
                   <MetricCard
                     icon={<Eye className="w-5 h-5 text-purple-500" />}
-                    label="閲覧数"
+                    label={t('metrics.views')}
                     value={viewStats?.totalViews ?? 0}
-                    subLabel={`ユニーク ${viewStats?.uniqueViews ?? 0}`}
+                    subLabel={t('metrics.uniqueViews', { count: viewStats?.uniqueViews ?? 0 })}
                   />
                   <MetricCard
                     icon={<Heart className="w-5 h-5 text-pink-500" />}
-                    label="いいね"
+                    label={t('metrics.likes')}
                     value={metrics.totalLikes}
                   />
                   <MetricCard
                     icon={<ShoppingCart className="w-5 h-5 text-blue-500" />}
-                    label="販売数"
+                    label={t('metrics.sold')}
                     value={metrics.soldCount}
                   />
                   <MetricCard
                     icon={<Coins className="w-5 h-5 text-yellow-500" />}
-                    label="売上"
+                    label={t('metrics.revenue')}
                     value={formatYen(salesSummary?.gross_sales_yen ?? 0)}
-                    subLabel="購入確定"
+                    subLabel={t('metrics.revenueNote')}
                   />
                   <MetricCard
                     icon={<Clock className="w-5 h-5 text-orange-500" />}
-                    label="入金予定"
+                    label={t('metrics.pending')}
                     value={formatYen(salesSummary?.pending_payout_yen ?? 0)}
-                    subLabel="振込待ち"
+                    subLabel={t('metrics.pendingNote')}
                   />
                   <MetricCard
                     icon={<CheckCircle2 className="w-5 h-5 text-green-500" />}
-                    label="入金済み"
+                    label={t('metrics.paid')}
                     value={formatYen(salesSummary?.paid_out_yen ?? 0)}
-                    subLabel="振込完了"
+                    subLabel={t('metrics.paidNote')}
                   />
                 </div>
               </div>
@@ -613,7 +615,7 @@ export default function MyPageClient() {
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100">
                   <Eye className="w-5 h-5 text-purple-500" />
                   <span className="text-sm text-gray-700">
-                    これまでに <span className="font-semibold text-purple-600">{myViewerStats.uniqueWorksViewed}</span> 作品を閲覧しました
+                    {t('viewerStats', { count: myViewerStats.uniqueWorksViewed })}
                   </span>
                 </div>
               </div>
@@ -627,11 +629,11 @@ export default function MyPageClient() {
                 <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
                   <TabsTrigger value="likes" className="gap-2">
                     <Heart className="w-4 h-4" />
-                    いいねした作品
+                    {t('tabs.likes')}
                   </TabsTrigger>
                   <TabsTrigger value="works" className="gap-2">
                     <ImageIcon className="w-4 h-4" />
-                    出展作品
+                    {t('tabs.works')}
                   </TabsTrigger>
                 </TabsList>
 
@@ -641,7 +643,7 @@ export default function MyPageClient() {
                       <LikedWorksTab userId={uid} />
                     ) : (
                       <div className="py-10 text-center text-gray-500">
-                        読み込み中...
+                        {t('loading')}
                       </div>
                     )}
                   </TabsContent>
@@ -651,7 +653,7 @@ export default function MyPageClient() {
                       <MyWorksTab userId={uid} userEmail={userEmail} />
                     ) : (
                       <div className="py-10 text-center text-gray-500">
-                        読み込み中...
+                        {t('loading')}
                       </div>
                     )}
                   </TabsContent>
@@ -666,7 +668,7 @@ export default function MyPageClient() {
               <div className="rounded-2xl border border-gray-200 bg-white p-6">
                 <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-sky-500" />
-                  ギャラリーを見る
+                  {t('gallery.title')}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Link
@@ -678,7 +680,7 @@ export default function MyPageClient() {
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-gray-900 group-hover:text-sky-700">Float Gallery</p>
-                      <p className="text-sm text-gray-500">雲の上の美術館</p>
+                      <p className="text-sm text-gray-500">{t('gallery.floatDesc')}</p>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-sky-500" />
                   </Link>
@@ -691,7 +693,7 @@ export default function MyPageClient() {
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-gray-900 group-hover:text-sky-700">White Gallery</p>
-                      <p className="text-sm text-gray-500">白い空間の美術館</p>
+                      <p className="text-sm text-gray-500">{t('gallery.whiteDesc')}</p>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-sky-500" />
                   </Link>
@@ -706,7 +708,7 @@ export default function MyPageClient() {
               <div className="rounded-2xl border border-gray-200 bg-white p-6">
                 <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Settings className="w-5 h-5 text-gray-500" />
-                  設定
+                  {t('settingsSection.title')}
                 </h2>
                 <div className="space-y-2">
                   {/* 振込先口座 */}
@@ -717,8 +719,8 @@ export default function MyPageClient() {
                     <div className="flex items-center gap-3">
                       <Wallet className="w-5 h-5 text-gray-500" />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">振込先口座</p>
-                        <p className="text-xs text-gray-500">売上の振込に使用する口座</p>
+                        <p className="text-sm font-medium text-gray-900">{t('settingsSection.bankTitle')}</p>
+                        <p className="text-xs text-gray-500">{t('settingsSection.bankDesc')}</p>
                       </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -735,8 +737,8 @@ export default function MyPageClient() {
                     <div className="flex items-center gap-3">
                       <UserX className="w-5 h-5 text-red-500" />
                       <div>
-                        <p className="text-sm font-medium text-red-600">退会する</p>
-                        <p className="text-xs text-gray-500">アカウントを削除します</p>
+                        <p className="text-sm font-medium text-red-600">{t('settingsSection.withdrawTitle')}</p>
+                        <p className="text-xs text-gray-500">{t('settingsSection.withdrawDesc')}</p>
                       </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -757,20 +759,20 @@ export default function MyPageClient() {
           <DialogHeader>
             <DialogTitle className="text-red-600 flex items-center gap-2">
               <UserX className="w-5 h-5" />
-              本当に退会しますか？
+              {t('deleteDialog.title')}
             </DialogTitle>
             <DialogDescription className="text-left pt-2 space-y-2">
-              <p>退会すると以下のデータが削除されます：</p>
+              <p>{t('deleteDialog.body')}</p>
               <ul className="list-disc list-inside text-sm space-y-1 ml-2">
-                <li>プロフィール情報</li>
-                <li>いいねした作品の履歴</li>
-                <li>ログイン情報</li>
+                <li>{t('deleteDialog.item1')}</li>
+                <li>{t('deleteDialog.item2')}</li>
+                <li>{t('deleteDialog.item3')}</li>
               </ul>
               <p className="text-sm text-gray-500 mt-3">
-                ※ 出展作品・取引履歴は法令に基づき保持されます。
+                {t('deleteDialog.notice')}
               </p>
               <p className="font-medium mt-4">
-                退会を確定するには「退会する」と入力してください。
+                {t('deleteDialog.confirmPrompt')}
               </p>
             </DialogDescription>
           </DialogHeader>
@@ -779,7 +781,7 @@ export default function MyPageClient() {
             type="text"
             value={deleteConfirmText}
             onChange={(e) => setDeleteConfirmText(e.target.value)}
-            placeholder="退会する"
+            placeholder={t('deleteDialog.confirmWord')}
             className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
             disabled={deleteLoading}
           />
@@ -793,20 +795,20 @@ export default function MyPageClient() {
               }}
               disabled={deleteLoading}
             >
-              キャンセル
+              {t('deleteDialog.cancel')}
             </Button>
             <Button
               variant="destructive"
               onClick={handleAccountDelete}
-              disabled={deleteConfirmText !== '退会する' || deleteLoading}
+              disabled={deleteConfirmText !== t('deleteDialog.confirmWord') || deleteLoading}
             >
               {deleteLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  処理中...
+                  {t('deleteDialog.processing')}
                 </>
               ) : (
-                '退会を確定'
+                t('deleteDialog.confirm')
               )}
             </Button>
           </DialogFooter>

@@ -59,18 +59,347 @@
     "title": "My Page",
     "profile": "Profile",
     "editProfile": "Edit Profile",
+    "editProfileAriaLabel": "Edit Profile",
     "likedWorks": "Liked Works",
     "myWorks": "My Works",
     "sales": "Sales",
     "settings": "Settings",
     "accountSettings": "Account Settings",
     "withdraw": "Delete Account",
-    "withdrawConfirm": "Are you sure you want to delete your account?"
+    "withdrawConfirm": "Are you sure you want to delete your account?",
+    "loading": "Loading...",
+    "loadError": "Failed to load",
+    "bankAlert": {
+      "title": "Bank account not registered",
+      "body": "You need to register a bank account to receive payments when your work is sold.",
+      "link": "Register account"
+    },
+    "metrics": {
+      "displaying": "On Display",
+      "views": "Views",
+      "uniqueViews": "Unique {count}",
+      "likes": "Likes",
+      "sold": "Sold",
+      "revenue": "Revenue",
+      "revenueNote": "Confirmed",
+      "pending": "Pending",
+      "pendingNote": "Awaiting transfer",
+      "paid": "Paid Out",
+      "paidNote": "Transferred"
+    },
+    "viewerStats": "You have viewed {count} works so far",
+    "tabs": {
+      "likes": "Liked Works",
+      "works": "My Works"
+    },
+    "gallery": {
+      "title": "Browse Gallery",
+      "floatDesc": "Museum above the clouds",
+      "whiteDesc": "Museum in white space"
+    },
+    "settingsSection": {
+      "title": "Settings",
+      "bankTitle": "Bank Account",
+      "bankDesc": "Account used for payout transfers",
+      "withdrawTitle": "Delete Account",
+      "withdrawDesc": "Permanently delete your account"
+    },
+    "deleteDialog": {
+      "title": "Are you sure you want to delete your account?",
+      "body": "The following data will be deleted:",
+      "item1": "Profile information",
+      "item2": "Liked works history",
+      "item3": "Login information",
+      "notice": "* Exhibition records and transaction history will be retained as required by law.",
+      "confirmPrompt": "Type \"delete\" to confirm account deletion.",
+      "confirmWord": "delete",
+      "cancel": "Cancel",
+      "processing": "Processing...",
+      "confirm": "Confirm Deletion"
+    },
+    "toasts": {
+      "profileSaved": "Profile saved",
+      "profileSaveError": "Failed to save",
+      "withdrawError": "Failed to delete account",
+      "userIdError": "Could not retrieve user ID."
+    }
   },
   "purchase": {
     "success": "Thank you for your purchase",
     "receipt": "Receipt",
     "downloadPdf": "Download PDF",
     "print": "Print"
+  },
+  "pages": {
+    "modal": {
+      "about": {
+        "title": "About me-ish",
+        "lead": "me-ish is an online gallery where anyone can showcase their work in their own unique way. We update the viewing experience with 3D presentation and original UI, designing how art is presented and discovered.",
+        "statsNote": "* Payment by credit card (JPY) only. Artist payouts are made monthly via bank transfer after deducting a 10% commission from sales. See FAQ for details.",
+        "stats": {
+          "joinLabel": "Join", "joinMain": "Apply & exhibit free", "joinSub": "No upfront cost for first-timers",
+          "sellLabel": "Sell", "sellMain": "10% commission", "sellSub": "Only on sales / Zero cost if nothing sells",
+          "paymentLabel": "Payment", "paymentMain": "Credit card only", "paymentSub": "Cryptocurrency payments not accepted",
+          "settingsLabel": "Settings", "settingsMain": "Choose to sell or not", "settingsSub": "Set sale status, price & edition at application"
+        },
+        "featuresTitle": "Features",
+        "features": [
+          { "title": "Experience designed for art", "body": "UI elements like holographic labels and spatial staging maximize the appeal of each artwork." },
+          { "title": "Simple exhibition flow", "body": "Guided application — no confusion. Sale settings and pricing are handled entirely in the form." },
+          { "title": "Image protection & safe operation", "body": "Multi-layered protection including signatures/watermarks and AI recognition disruption. Policies are clearly in place." }
+        ],
+        "stepsTitle": "How it works (5 steps)",
+        "steps": [
+          { "t": "Apply", "d": "Enter artwork details and upload your image. Just follow the guide." },
+          { "t": "Review", "d": "Quick review against basic standards. Results notified by email." },
+          { "t": "Exhibit", "d": "Listed in galleries like White / Float. SOLD and edition info shown automatically." },
+          { "t": "Sell", "d": "Credit card payment (JPY). SOLD appears on the artwork page once purchased." },
+          { "t": "Payout", "d": "Sales paid monthly via bank transfer per policy. Details viewable in My Page." }
+        ],
+        "recommendTitle": "Recommended for",
+        "recommend": ["Artists who want their work seen, regardless of title or track record", "Those who care about how their art is presented", "Anyone who wants to enjoy art casually, even on mobile", "Collectors looking to discover new talent"],
+        "protectionTitle": "Our approach to artwork protection",
+        "protectionBody": "Display images receive protections such as signature recommendations, watermarks, and AI recognition disruption. Policies for original data handling, secondary use, and deletion requests will be published in phases.",
+        "protectionNote": "See FAQ for details.",
+        "whyTitle": "Why we built me-ish",
+        "whyBody": "We wanted to create a space where anyone can exhibit based on the work itself, not their background or credentials. me-ish is designed as an accessible starting point — easy for first-timers to try, and safe to exhibit in.",
+        "ctaGuide": "View Exhibition Guide",
+        "ctaGallery": "Go to Gallery"
+      },
+      "pricing": {
+        "title": "Plans & Pricing",
+        "leadFreeStrong": "Apply & exhibit for free", "leadSellStrong": "10% commission only on sales", "leadOptionStrong": "Guaranteed display options", "leadSuffix": " are available.",
+        "guaranteeTitle": "Guaranteed Display Options (Optional)",
+        "guaranteeDesc": "Within the valid period from purchase, your artwork is guaranteed to be displayed the specified number of times (general rotation continues separately).",
+        "period": "1 Month", "recommended": "Recommended", "kpiGuarantee": "Guaranteed displays", "kpiPerUnit": "Per display", "comboNote": "Combined with general rotation",
+        "badgePerWork": "Per artwork", "badgePeriod": "Valid: 1 month from purchase", "badgeCombo": "General rotation included",
+        "planPaces": { "mini": "Reliable exposure ~once a week", "light": "Priority display ~twice a week", "standard": "Solid exposure 3–4 times a week", "premium": "Priority display nearly every day" },
+        "feesTitle": "Fees & Payments",
+        "feeItem1": "Sales commission is 10%, charged only on successful sales. Commission is deducted from sales and paid monthly via bank transfer (bank account registration required at application).",
+        "feeItem2": "Buyers pay by credit card (JPY). Cryptocurrency payments are not supported.",
+        "feeItem3": "See FAQ for details.",
+        "termsTitle": "Terms Summary (Key Points)", "termsViewFull": "View Full Terms of Service",
+        "termsItems": [
+          { "title": "Artwork Rights & Protection", "body": "Copyright remains with the artist. We request a license to use your work for exhibition, sales, and promotion. Signatures/watermarks and AI recognition disruption (e.g., Glaze) are applied — artwork is only displayed after protection is complete." },
+          { "title": "Review & Listing", "body": "Applying does not guarantee listing. Works go live after passing review (result notified by email). Display continues even after SOLD." },
+          { "title": "Guaranteed Display Policy", "body": "Options are purchased per artwork and guaranteed displays are fulfilled within the valid period. General rotation continues after the guarantee is fulfilled." },
+          { "title": "Cancellations & Refunds", "body": "Guaranteed display options are non-refundable after purchase by nature (except in cases of legal defect)." }
+        ],
+        "ctaButton": "Go to Application Form", "ctaNote": "Apply for free first. Listing begins after review approval."
+      },
+      "creators": {
+        "title": "Exhibition Guide",
+        "lead": "me-ish is an online gallery where anyone can exhibit their work in their own way, regardless of background or experience. Applying is simple. Image protection is handled by us. You choose whether to sell at the time of application.",
+        "statsNote": "* Artist payouts are made monthly via bank transfer after deducting a 10% commission. See FAQ for timing and breakdown.",
+        "stats": {
+          "joinLabel": "Join", "joinMain": "Apply & exhibit free", "joinSub": "No upfront cost (beta)",
+          "sellLabel": "Sell", "sellMain": "10% commission", "sellSub": "Only on sales / Zero cost if nothing sells",
+          "paymentLabel": "Payment", "paymentMain": "Credit card only", "paymentSub": "Cryptocurrency not supported",
+          "settingsLabel": "Settings", "settingsMain": "Sell or not", "settingsSub": "Set price & edition at application"
+        },
+        "checklistTitle": "What you'll need",
+        "checklist": ["Artwork image (recommended: 3000px long side / JPG or PNG / sRGB)", "Title & description (approx. 200–400 characters)", "Artist info (SNS / portfolio optional)", "Sales settings (optional): sell or not, price, edition size", "Signature (optional / if included, watermark may be omitted)", "Bank account details (required for monthly payouts if selling)"],
+        "checklistNote": "* See FAQ: Image Guide for detailed image requirements.",
+        "flowTitle": "How to exhibit",
+        "flow": [
+          { "title": "Submit the application form", "body": "Enter artwork details and upload your image. If selling, set price and edition size." },
+          { "title": "Content review by team", "body": "Check for public decency and rights. Estimated time: 1–2 business days." },
+          { "title": "Image protection processing", "body": "Signature recommended / watermark and AI recognition disruption (e.g., Glaze/steganography) applied." },
+          { "title": "Exhibition & sales start", "body": "Listed in the gallery. SOLD and edition info displayed automatically. (Display continues after SOLD.)" },
+          { "title": "Payment & payout", "body": "Buyers pay by credit card (JPY). Sales paid monthly via bank transfer after deducting a 10% commission." }
+        ],
+        "policyTitle": "Artwork Handling & Review",
+        "policy": ["Exhibited works receive signature recommendations, watermarks, and AI recognition disruption.", "We verify originality, public decency, and rights clearance.", "Works generated entirely by AI (with little to no human creativity) are not accepted. If AI was used, please declare it in the designated field at application.", "Minor resizing or compression may be applied to optimize display."],
+        "policyNote": "See Exhibition Policy for details.",
+        "moreExposureTitle": "Want guaranteed visibility?",
+        "moreExposureBody": "Optional guaranteed display plans ensure a minimum number of showings. See Plans & Pricing for details.",
+        "ctaButton": "Go to Application Form"
+      },
+      "buyers": {
+        "title": "Buyer's Guide",
+        "lead": "Anyone can freely view exhibited works on me-ish. You can purchase works you love right on the spot. Payment is by credit card (JPY) only.",
+        "flowTitle": "How to purchase",
+        "flow": [
+          { "title": "Open an artwork", "body": "Tap on an artwork in the gallery to view the price and description." },
+          { "title": "Start purchase", "body": "Tap 'Buy Now' to proceed (only shown when stock is available)." },
+          { "title": "Credit card payment", "body": "Pay securely via Stripe (JPY only)." },
+          { "title": "Receive your file", "body": "After purchase, a download link will be sent to your email." }
+        ],
+        "flowNote": "* After purchase, SOLD appears on the artwork, which continues to be displayed in the gallery during its exhibition period (for the viewing experience).",
+        "protectionTitle": "Artwork protection & handling",
+        "protectionItems": ["Display images have watermarks and AI recognition disruption (e.g., Glaze) applied.", "Purchased data may only be used for personal viewing (copyright is not transferred)."],
+        "faqTitle": "FAQ",
+        "faqItems": [
+          { "q": "Q. What payment methods are accepted?", "a": "→ Credit card (JPY) only. Cryptocurrency payments are not supported." },
+          { "q": "Q. Can I cancel or return a purchase?", "a": "→ Due to the nature of digital goods, cancellations are generally not accepted. Please contact us for accidental purchases." }
+        ],
+        "ctaGallery": "Browse artworks", "ctaFaq": "View FAQ"
+      }
+    },
+    "login": {
+      "title": "Log in to My Page",
+      "subtitle": "Access purchase history downloads, manage exhibited works, and notification settings.",
+      "subtitleNote": "Login is not required just to browse.",
+      "loginButton": "Log in with Google", "loggingIn": "Logging in...",
+      "loginError": "Login failed. Please try again later.",
+      "consentText": "By logging in, we retrieve your email address, display name, and icon (we do not access posts or contacts). By continuing, you agree to our",
+      "consentTerms": "Terms of Service", "consentAnd": " and ", "consentPrivacy": "Privacy Policy", "consentSuffix": ".",
+      "browseWithoutLogin": "Browse artworks without logging in", "loginHelp": "Having trouble logging in?",
+      "canDoTitle": "What you can do",
+      "canDoItems": ["Register & edit exhibited works", "Check sales & fees (10% only on success)", "Receive notifications about exhibitions & sales", "Edit profile and social media links"],
+      "safeTitle": "Our commitment to safety",
+      "safeItems": ["Multi-layer protection: watermarks, signatures & AI training disruption", "Credit card (JPY) only; cryptocurrency not supported", "Download your digital artwork immediately after purchase"]
+    },
+    "float2d": {
+      "today": "Today's Exhibition", "dateExhibition": "Exhibition for {date}",
+      "worksCount": "{count} works on display today.", "recruiting": "Now accepting artwork submissions.",
+      "viewingDate": "Viewing exhibition for {date}.", "viewToday": "View today's exhibition",
+      "collectionInfo": "The Float gallery rotates its artworks every day.",
+      "emptyMessage": "No works on display today", "view3d": "View in 3D"
+    },
+    "white2d": {
+      "subtitle": "Permanent Collection", "collectionInfo": "The permanent collection of the White gallery.",
+      "worksCount": "{count} works currently on display.", "recruiting": "Now accepting artwork submissions.",
+      "emptyMessage": "No works on display", "view3d": "View in 3D"
+    },
+    "workDetail": {
+      "backToGallery": "← Back to Gallery", "view3d": "View in 3D Gallery",
+      "price": "Price", "priceUnset": "Price TBD", "edition": "Edition", "editionRemain": "{n} remaining",
+      "status": "Status", "forSale": "For Sale", "displayOnly": "Display Only",
+      "description": "About this work", "artistLinks": "Artist Links", "homepage": "Website",
+      "galleryLabel": "Gallery", "notFound": "Artwork not found"
+    },
+    "cancel": {
+      "title": "Purchase Cancelled", "body": "Your purchase has been cancelled.", "backToHome": "Back to Home"
+    },
+    "contactComplete": {
+      "title": "Message Sent", "body": "Thank you for reaching out. Our team will get back to you shortly.", "backToTop": "Back to Top"
+    },
+    "artists": {
+      "loading": "Loading...", "notFound": "This artist could not be found.",
+      "noBio": "No bio has been added yet.", "noWorks": "No public works available.",
+      "private": "This portfolio is private.",
+      "privateNote": "You can change privacy settings in 'Portfolio Settings' on My Page.",
+      "backToMypage": "Back to My Page"
+    },
+    "entry": { "formTitle": "me-ish Application Form", "formSubtitle": "Share your work with the world" },
+    "news": { "title": "News", "loading": "Loading…" },
+    "specialThanks": { "subtitle": "To everyone who applied to the me-ish initial gallery (white)" },
+    "renew": {
+      "title": "Re-exhibit / Extend Plan", "subtitle": "Submit a re-exhibition request for works that have ended their display period.",
+      "loginRequired": "* Login required to re-exhibit", "noWorks": "No works available for re-exhibition at this time.",
+      "selectWork": "1. Select a work", "selectPlan": "2. Select a plan", "untitled": "(Untitled)",
+      "submitButton": "Submit Re-exhibition Request", "submitting": "Submitting…",
+      "alertLoginRequired": "Login required", "alertSelectWork": "Please select a work",
+      "alertSuccess": "Re-exhibition request received", "alertError": "Re-exhibition request failed",
+      "planDesc": { "free": "No display guarantee · rotation slot", "mini": "4 guaranteed displays/month", "light": "9 guaranteed displays/month", "standard": "14 guaranteed displays/month", "premium": "30 guaranteed displays/month" }
+    },
+    "bank": {
+      "backToMypage": "Back to My Page", "title": "Bank Account Settings", "subtitle": "Bank account for receiving sales payouts",
+      "noEntryWarning": "Please submit an artwork before registering bank account details.", "toEntryForm": "Go to Application Form →",
+      "bankLabel": "Bank (Name / Code)", "bankPlaceholder": "e.g. Chase / 0001",
+      "branchLabel": "Branch (Name / Code)", "branchPlaceholder": "e.g. Main Branch / 001",
+      "accountTypeLabel": "Account Type", "futsu": "Savings", "toza": "Checking",
+      "accountNumberLabel": "Account Number (up to 7 digits)", "accountNumberPlaceholder": "e.g. 1234567",
+      "accountNameLabel": "Account Name (Katakana)", "accountNamePlaceholder": "e.g. ヤマダ　タロウ",
+      "savedSr": "Bank account saved", "saving": "Saving...", "saved": "Saved", "save": "Save",
+      "validationBank": "Please select a bank.", "validationBranch": "Please select a branch.",
+      "validationAccountType": "Please select an account type.", "validationAccountNumber": "Please enter a valid account number.",
+      "validationAccountName": "Please enter the account name.",
+      "errorNoEntry": "No exhibition history found. Please submit an artwork first.", "errorSave": "Failed to save."
+    },
+    "mypagePage": { "loadingText": "Loading My Page..." }
+  },
+  "jaOnly": "This page is currently available in Japanese only.",
+  "home": {
+    "hero": {
+      "tagline": "Art, closer than ever.",
+      "viewGallery": "View Gallery",
+      "apply": "Apply Now",
+      "applyAriaLabel": "Apply with your artwork"
+    },
+    "stats": {
+      "works": "Artworks",
+      "artists": "Artists",
+      "views": "Unique Views"
+    },
+    "news": {
+      "title": "News",
+      "viewAll": "View All",
+      "viewAllShort": "View All"
+    },
+    "gallery": {
+      "title": "Explore Galleries",
+      "subtitle": "A new art experience in immersive 3D spaces",
+      "titleMobile": "Gallery",
+      "subtitleMobile": "View art in 3D",
+      "whiteBadge": "10 Works Only",
+      "whiteDesc": "A pure white gallery evoking a space of consciousness",
+      "floatBadge": "Daily Rotation",
+      "floatDesc": "A museum-style gallery with rotating artworks",
+      "view3d": "View in 3D",
+      "view2d": "View in 2D",
+      "view2dTitle": "View in 2D Mode",
+      "view2dDesc": "Lightweight 2D galleries are also available"
+    },
+    "features": {
+      "3dTitle": "3D Space Experience",
+      "3dDesc": "Immersive art viewing powered by Three.js",
+      "entryTitle": "Easy Application",
+      "entryDesc": "Submit your work with a guided, step-by-step flow",
+      "protectionTitle": "Image Protection",
+      "protectionDesc": "Watermarking & AI recognition disruption"
+    },
+    "about": {
+      "titlePrefix": "About ",
+      "titleSuffix": "",
+      "body1": "me-ish is an online gallery where anyone can showcase their work in their own unique way.",
+      "body2pre": "We design how art is ",
+      "body2highlight1": "presented",
+      "body2mid": " and ",
+      "body2highlight2": "discovered",
+      "body2post": ", bridging the gap between artists and viewers.",
+      "bodySimple": "An online gallery where anyone can showcase their art. We design how art is presented and discovered."
+    },
+    "apply": {
+      "title": "Share Your Art with the World",
+      "subtitle": "Anyone can exhibit their work on me-ish. Why not showcase your creations in a new space?",
+      "subtitleMobile": "Start exhibiting right away, even from your phone.",
+      "button": "Apply Now"
+    },
+    "thanks": {
+      "desc": "To everyone who applied to the me-ish initial gallery (white)"
+    },
+    "faq": {
+      "title": "FAQ",
+      "viewAll": "View All FAQs",
+      "viewMore": "View More",
+      "items": [
+        {
+          "q": "Can anyone apply?",
+          "a": "Yes, both professionals and amateurs are welcome. Exhibits are selected through a screening process."
+        },
+        {
+          "q": "Is there a fee to exhibit?",
+          "a": "Application and exhibition are free. A commission is only taken from sales if your work sells."
+        },
+        {
+          "q": "Can I use generative AI?",
+          "a": "Works created entirely by AI are not accepted. Supplementary AI use is evaluated on a case-by-case basis. Please check the FAQ for details."
+        }
+      ]
+    },
+    "contact": {
+      "title": "Contact",
+      "subtitle": "Feel free to reach out with any questions or inquiries.",
+      "form": "Contact Form",
+      "xLabel": "X (Twitter)",
+      "xAriaLabel": "Contact us on X (Twitter)"
+    },
+    "bottomBar": {
+      "gallery": "Gallery",
+      "apply": "Apply",
+      "backToTop": "Back to top"
+    }
   }
 }

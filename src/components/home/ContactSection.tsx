@@ -1,10 +1,15 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
 import { Mail } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 
 export function ContactSection({ variant }: { variant: 'desktop' | 'mobile' }) {
+  const t = useTranslations('home.contact');
+
   if (variant === 'desktop') {
     return (
       <section
@@ -36,10 +41,10 @@ export function ContactSection({ variant }: { variant: 'desktop' | 'mobile' }) {
               id="contact-title"
               className="text-4xl font-bold leading-tight text-white md:text-5xl"
             >
-              お問い合わせ
+              {t('title')}
             </h2>
             <p className="mt-4 text-lg text-white/40">
-              ご質問・ご相談などございましたら、お気軽にご連絡ください。
+              {t('subtitle')}
             </p>
 
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -50,7 +55,7 @@ export function ContactSection({ variant }: { variant: 'desktop' | 'mobile' }) {
               >
                 <Link href="/contact">
                   <Mail className="mr-2 h-5 w-5" />
-                  お問い合わせフォーム
+                  {t('form')}
                 </Link>
               </Button>
 
@@ -59,10 +64,10 @@ export function ContactSection({ variant }: { variant: 'desktop' | 'mobile' }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 rounded-full border border-white/15 px-6 py-3.5 text-white/60 transition-all duration-300 hover:border-white/35 hover:text-white"
-                aria-label="X（旧Twitter）でお問い合わせ"
+                aria-label={t('xAriaLabel')}
               >
                 <FaXTwitter className="h-5 w-5" />
-                X（旧Twitter）
+                {t('xLabel')}
               </a>
             </div>
           </div>
@@ -108,10 +113,10 @@ export function ContactSection({ variant }: { variant: 'desktop' | 'mobile' }) {
           id="contact-title"
           className="mb-2 text-center text-2xl font-bold text-white"
         >
-          お問い合わせ
+          {t('title')}
         </h2>
         <p className="mb-8 text-center text-sm text-white/40">
-          ご質問・ご相談などございましたら、お気軽にご連絡ください。
+          {t('subtitle')}
         </p>
 
         <div className="flex flex-col gap-3">
@@ -121,7 +126,7 @@ export function ContactSection({ variant }: { variant: 'desktop' | 'mobile' }) {
           >
             <Link href="/contact">
               <Mail className="mr-2 h-4 w-4" />
-              お問い合わせフォーム
+              {t('form')}
             </Link>
           </Button>
 
@@ -130,9 +135,10 @@ export function ContactSection({ variant }: { variant: 'desktop' | 'mobile' }) {
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 rounded-full border border-white/15 py-4 text-white/60 font-medium transition-all active:scale-[0.98] hover:border-white/30 hover:text-white/80"
+            aria-label={t('xAriaLabel')}
           >
             <FaXTwitter className="h-4 w-4" />
-            X（旧Twitter）
+            {t('xLabel')}
           </a>
         </div>
       </div>

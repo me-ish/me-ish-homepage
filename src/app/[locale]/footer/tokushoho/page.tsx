@@ -2,11 +2,23 @@
 'use client';
 
 import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
 
 const ENACTED_AT = "2025年8月18日";
 const REVISED_AT = "2026年2月16日"; // ★運用：更新時は"最終改定日"として置き換え推奨
 
 export default function TokushohoPage() {
+  const locale = useLocale();
+  const t = useTranslations();
+
+  if (locale === 'en') {
+    return (
+      <main className="min-h-[60vh] flex items-center justify-center px-6">
+        <p className="text-gray-500 text-center max-w-md">{t('jaOnly')}</p>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
       {/* ヘッダ */}

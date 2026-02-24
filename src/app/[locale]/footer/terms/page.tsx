@@ -3,6 +3,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
 
 // shadcn/ui
 import {
@@ -35,6 +36,8 @@ const tocItems: TocItem[] = [
 ];
 
 export default function TermsPage() {
+  const locale = useLocale();
+  const t = useTranslations();
   // 追従のON/OFF（スクロールにより “目次が邪魔” を防ぐ調整用）
   const [isSticky, setIsSticky] = useState(true);
 
@@ -62,6 +65,14 @@ export default function TermsPage() {
       </nav>
     );
   }, []);
+
+  if (locale === 'en') {
+    return (
+      <main className="min-h-[60vh] flex items-center justify-center px-6">
+        <p className="text-gray-500 text-center max-w-md">{t('jaOnly')}</p>
+      </main>
+    );
+  }
 
   return (
     <main id="main" className="mx-auto max-w-5xl px-4 py-10">

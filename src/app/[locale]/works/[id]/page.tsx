@@ -19,6 +19,7 @@ import {
   type EntryRow,
 } from '@/lib/gallery/galleryUtils';
 import { CommentSection } from '@/components/comments';
+import { useTranslations } from 'next-intl';
 
 /** 作品詳細に必要なカラム */
 const WORK_DETAIL_COLUMNS = `
@@ -42,6 +43,7 @@ function getOrCreateSessionId(): string {
 export default function WorkDetailPage() {
   const params = useParams();
   const id = params.id as string;
+  const t = useTranslations('pages.workDetail');
 
   const [entry, setEntry] = useState<EntryRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -95,7 +97,7 @@ export default function WorkDetailPage() {
 
       if (fetchError) {
         if (fetchError.code === 'PGRST116') {
-          setError('作品が見つかりません');
+          setError(t('notFound'));
         } else {
           console.error('Entry fetch error:', fetchError);
           setError(fetchError.message);
@@ -125,10 +127,10 @@ export default function WorkDetailPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
         <h1 className="text-xl font-bold text-gray-900 mb-4">
-          {error || '作品が見つかりません'}
+          {error || t('notFound')}
         </h1>
         <Link href="/float/2d">
-          <Button>ギャラリーに戻る</Button>
+          <Button>{t('backToGallery').replace('← ', '')}</Button>
         </Link>
       </div>
     );
@@ -150,7 +152,7 @@ export default function WorkDetailPage() {
             href={`/${galleryType}/2d`}
             className="text-sm text-[#00a1e9] hover:underline"
           >
-            ← ギャラリーに戻る
+            {t('backToGallery')}
           </Link>
         </div>
       </header>
@@ -194,7 +196,7 @@ export default function WorkDetailPage() {
             {/* 3D View Button */}
             <Link href={`/${galleryType}`} className="block">
               <Button variant="outline" className="w-full">
-                3Dギャラリーで見る
+                {t('view3d')}
               </Button>
             </Link>
           </div>
@@ -217,9 +219,9 @@ export default function WorkDetailPage() {
                 {/* Price */}
                 {entry.is_for_sale && (
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600">価格</span>
+                    <span className="text-gray-600">{t('price')}</span>
                     <span className="text-xl font-bold text-[#00a1e9]">
-                      {priceText || '価格未定'}
+                      {priceText || t('priceUnset')}
                     </span>
                   </div>
                 )}
@@ -227,22 +229,22 @@ export default function WorkDetailPage() {
                 {/* Edition */}
                 {editionText && (
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600">エディション</span>
+                    <span className="text-gray-600">{t('edition')}</span>
                     <span className="font-medium">
-                      残り {editionText} 点
+                      {t('editionRemain', { n: editionText })}
                     </span>
                   </div>
                 )}
 
                 {/* Status */}
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">ステータス</span>
+                  <span className="text-gray-600">{t('status')}</span>
                   {sold ? (
                     <Badge variant="destructive">SOLD OUT</Badge>
                   ) : entry.is_for_sale ? (
-                    <Badge className="bg-green-600">販売中</Badge>
+                    <Badge className="bg-green-600">{t('forSale')}</Badge>
                   ) : (
-                    <Badge variant="secondary">展示のみ</Badge>
+                    <Badge variant="secondary">{t('displayOnly')}</Badge>
                   )}
                 </div>
               </CardContent>
@@ -252,7 +254,7 @@ export default function WorkDetailPage() {
             {entry.description && (
               <div>
                 <h2 className="text-sm font-medium text-gray-500 mb-2">
-                  作品について
+                  {t('description')}
                 </h2>
                 <p className="text-gray-700 whitespace-pre-wrap">
                   {entry.description}
@@ -264,7 +266,7 @@ export default function WorkDetailPage() {
             {Object.keys(snsLinks).length > 0 && (
               <div>
                 <h2 className="text-sm font-medium text-gray-500 mb-2">
-                  アーティストリンク
+                  {t('artistLinks')}
                 </h2>
                 <div className="flex flex-wrap gap-4">
                   {snsLinks.homepage && (
@@ -275,7 +277,7 @@ export default function WorkDetailPage() {
                       className="inline-flex items-center gap-2 text-sm text-[#00a1e9] hover:underline"
                     >
                       <Globe size={16} />
-                      ホームページ
+                      {t('homepage')}
                     </a>
                   )}
                   {snsLinks.twitter && (
@@ -307,7 +309,7 @@ export default function WorkDetailPage() {
             {/* Gallery Info */}
             <div className="pt-4 border-t">
               <p className="text-xs text-gray-400">
-                展示場所:{' '}
+                {t('galleryLabel')}:{' '}
                 {galleryType === 'white' ? 'White Gallery' : 'Float Gallery'}
               </p>
             </div>

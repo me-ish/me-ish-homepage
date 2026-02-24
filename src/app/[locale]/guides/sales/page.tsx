@@ -1,6 +1,7 @@
 // src/app/guides/sales/page.tsx
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { ShieldCheck, Tags, GalleryHorizontalEnd, RefreshCcw, Info, Sparkles } from 'lucide-react';
 import CloseTabFooter from './_components/CloseTabFooter';
 
@@ -50,7 +51,18 @@ const Note = ({ children }: { children: React.ReactNode }) => (
   <p className="mt-3 text-sm text-gray-600">{children}</p>
 );
 
-export default function SalesGuidelinePage() {
+export default async function SalesGuidelinePage() {
+  const locale = await getLocale();
+  const t = await getTranslations();
+
+  if (locale === 'en') {
+    return (
+      <main className="min-h-[60vh] flex items-center justify-center px-6">
+        <p className="text-gray-500 text-center max-w-md">{t('jaOnly')}</p>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-[820px] px-4 py-8 font-zen">
       {/* ヘッダー */}

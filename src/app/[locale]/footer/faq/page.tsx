@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 
 type QA = { question: string; answer: React.ReactNode };
 type Category = { title: string; items: QA[] };
@@ -328,6 +329,8 @@ const FAQ_CATEGORIES: Category[] = [
 ];
 
 export default function FAQPage() {
+  const locale = useLocale();
+  const t = useTranslations();
   const [openTitle, setOpenTitle] = useState<string | null>(null);
   const [q, setQ] = useState("");
 
@@ -352,6 +355,14 @@ export default function FAQPage() {
     // ここは同期的に setState しない（レンダーループ回避）
     // openTitleが見えなくなった場合は、自然に閉じるだけでOK
     // （UX的にも検索結果に合わせて閉じた方が自然）
+  }
+
+  if (locale === 'en') {
+    return (
+      <main className="min-h-[60vh] flex items-center justify-center px-6">
+        <p className="text-gray-500 text-center max-w-md">{t('jaOnly')}</p>
+      </main>
+    );
   }
 
   return (

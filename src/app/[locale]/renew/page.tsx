@@ -5,19 +5,21 @@ import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from 'next-intl';
 
 type EntryLite = { id: number; title: string | null };
 
-const plans = [
-  { id: 'free',     name: 'Free',     price: 0,    desc: '表示保証なし・ローテーション枠' },
-  { id: 'mini',     name: 'Mini',     price: 400,  desc: '月4回保証' },
-  { id: 'light',    name: 'Light',    price: 800,  desc: '月9回保証' },
-  { id: 'standard', name: 'Standard', price: 1200, desc: '月14回保証' },
-  { id: 'premium',  name: 'Premium',  price: 2400, desc: '月30回保証' },
-];
+const planBases = [
+  { id: 'free',     name: 'Free',     price: 0    },
+  { id: 'mini',     name: 'Mini',     price: 400  },
+  { id: 'light',    name: 'Light',    price: 800  },
+  { id: 'standard', name: 'Standard', price: 1200 },
+  { id: 'premium',  name: 'Premium',  price: 2400 },
+] as const;
 
 export default function RenewPage() {
   const supabase = createClient();
+  const t = useTranslations('pages.renew');
 
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [entries, setEntries] = useState<EntryLite[]>([]);
@@ -50,11 +52,11 @@ export default function RenewPage() {
 
   const handleSubmit = async () => {
     if (!user) {
-      alert('ログインが必要です');
+      alert(t('alertLoginRequired'));
       return;
     }
     if (selectedEntryId == null) {
-      alert('作品を選択してください');
+      alert(t('alertSelectWork'));
       return;
     }
     setLoading(true);
@@ -71,9 +73,9 @@ export default function RenewPage() {
 
     if (error) {
       console.error('[renew] insert error:', error);
-      alert('再出展の申請に失敗しました');
+      alert(t('alertError'));
     } else {
-      alert('再出展の申請を受け付けました');
+      alert(t('alertSuccess'));
       setSelectedEntryId(null);
       setSelectedPlan('free');
     }
@@ -81,18 +83,18 @@ export default function RenewPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-6">
-      <h1 className="font-bold text-2xl text-[#00a1e9] mb-4">再出展・プラン延長</h1>
-      <p className="text-gray-700 mb-6">展示が終了した作品の再出展申請が行えます。</p>
+      <h1 className="font-bold text-2xl text-[#00a1e9] mb-4">{t('title')}</h1>
+      <p className="text-gray-700 mb-6">{t('subtitle')}</p>
 
       {!user ? (
-        <p className="text-gray-500">※ ログイン後に再出展が可能です</p>
+        <p className="text-gray-500">{t('loginRequired')}</p>
       ) : entries.length === 0 ? (
-        <p className="text-gray-500">現在、再出展可能な作品はありません。</p>
+        <p className="text-gray-500">{t('noWorks')}</p>
       ) : (
         <div className="space-y-8">
           {/* 1. 対象作品の選択 */}
           <div>
-            <h2 className="font-bold mb-2">1. 対象作品の選択</h2>
+            <h2 className="font-bold mb-2">{t('selectWork')}</h2>
             <div className="grid gap-4">
               {entries.map((entry) => (
                 <Card
@@ -101,7 +103,7 @@ export default function RenewPage() {
                   onClick={() => setSelectedEntryId(entry.id)}
                 >
                   <CardContent className="p-4">
-                    <p className="font-bold text-lg">{entry.title ?? '(無題)'}</p>
+                    <p className="font-bold text-lg">{entry.title ?? t('untitled')}</p>
                     <p className="text-sm text-gray-600">ID: {entry.id}</p>
                   </CardContent>
                 </Card>
@@ -111,16 +113,16 @@ export default function RenewPage() {
 
           {/* 2. プラン選択 */}
           <div>
-            <h2 className="font-bold mb-2">2. プラン選択</h2>
+            <h2 className="font-bold mb-2">{t('selectPlan')}</h2>
             <RadioGroup
-              defaultValue={selectedPlan}        // ← value ではなく defaultValue を使う
+              defaultValue={selectedPlan}
               onValueChange={(v) => setSelectedPlan(v)}
             >
-              {plans.map((plan) => (
+              {planBases.map((plan) => (
                 <div key={plan.id} className="flex items-center space-x-2 mb-2">
                   <RadioGroupItem value={plan.id} id={plan.id} />
                   <label htmlFor={plan.id} className="text-gray-800">
-                    {plan.name}（¥{plan.price.toLocaleString()} / {plan.desc}）
+                    {plan.name}（¥{plan.price.toLocaleString()} / {t(`planDesc.${plan.id}`)}）
                   </label>
                 </div>
               ))}
@@ -134,7 +136,7 @@ export default function RenewPage() {
               disabled={loading || selectedEntryId == null}
               className="bg-[#00a1e9] hover:bg-[#008ec4] text-white px-6 py-2 rounded-lg disabled:opacity-50"
             >
-              {loading ? '送信中…' : '再出展を申請する'}
+              {loading ? t('submitting') : t('submitButton')}
             </Button>
           </div>
         </div>

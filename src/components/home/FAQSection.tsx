@@ -1,6 +1,9 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { SectionHeader } from '@/components/shared/SectionHeader';
 import {
@@ -9,9 +12,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { FAQ_ITEMS } from './FAQData';
 
 export function FAQSection({ variant }: { variant: 'desktop' | 'mobile' }) {
+  const t = useTranslations('home.faq');
+  const items = t.raw('items') as Array<{ q: string; a: string }>;
   const isDesktop = variant === 'desktop';
 
   if (isDesktop) {
@@ -22,11 +26,11 @@ export function FAQSection({ variant }: { variant: 'desktop' | 'mobile' }) {
         aria-labelledby="faq-title"
       >
         <div className="mx-auto w-full max-w-[1200px] px-6">
-          <SectionHeader title="よくある質問" id="faq-title" underline />
+          <SectionHeader title={t('title')} id="faq-title" underline />
 
           <div className="max-w-[880px] mx-auto">
             <Accordion type="single" collapsible defaultValue="item-0" className="space-y-4">
-              {FAQ_ITEMS.map(({ q, a }, idx) => (
+              {items.map(({ q, a }, idx) => (
                 <AccordionItem
                   key={idx}
                   value={`item-${idx}`}
@@ -56,7 +60,7 @@ export function FAQSection({ variant }: { variant: 'desktop' | 'mobile' }) {
               className="rounded-full border-[#00a1e9] text-[#00a1e9] hover:bg-[#00a1e9] hover:text-white transition-all duration-300"
             >
               <Link href="/footer/faq">
-                すべてのFAQを見る <ArrowRight className="h-4 w-4" />
+                {t('viewAll')} <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
           </div>
@@ -73,10 +77,10 @@ export function FAQSection({ variant }: { variant: 'desktop' | 'mobile' }) {
       aria-labelledby="faq-title"
     >
       <div className="mx-auto w-full max-w-[680px]">
-        <SectionHeader title="よくある質問" id="faq-title" />
+        <SectionHeader title={t('title')} id="faq-title" />
 
         <Accordion type="single" collapsible className="space-y-2">
-          {FAQ_ITEMS.map(({ q, a }, idx) => (
+          {items.map(({ q, a }, idx) => (
             <AccordionItem
               key={idx}
               value={`q${idx + 1}`}
@@ -104,7 +108,7 @@ export function FAQSection({ variant }: { variant: 'desktop' | 'mobile' }) {
             className="rounded-full border-[#00a1e9] text-[#00a1e9]"
           >
             <Link href="/footer/faq">
-              もっと見る <ArrowRight className="h-4 w-4" />
+              {t('viewMore')} <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
         </div>

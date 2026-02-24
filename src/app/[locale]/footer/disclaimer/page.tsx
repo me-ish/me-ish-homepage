@@ -1,6 +1,7 @@
 // src/app/footer/disclaimer/page.tsx
 import Link from "next/link";
 import type { Metadata } from "next";
+import { getLocale, getTranslations } from 'next-intl/server';
 
 export const metadata: Metadata = {
   title: "免責事項 | me-ish",
@@ -8,7 +9,18 @@ export const metadata: Metadata = {
     "me-ish の免責事項。情報の正確性、サービス中断、第三者行為、出展作品の表示・管理、責任制限、問い合わせ窓口などを定めます。",
 };
 
-export default function DisclaimerPage() {
+export default async function DisclaimerPage() {
+  const locale = await getLocale();
+  const t = await getTranslations();
+
+  if (locale === 'en') {
+    return (
+      <main className="min-h-[60vh] flex items-center justify-center px-6">
+        <p className="text-gray-500 text-center max-w-md">{t('jaOnly')}</p>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
       {/* ヘッダ */}

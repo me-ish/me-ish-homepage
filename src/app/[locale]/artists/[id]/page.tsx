@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { supabase } from '@/lib/supabaseClient';
 
 type Profile = {
@@ -44,6 +45,7 @@ type PublicPortfolioResult = {
 export default function ArtistPublicPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const t = useTranslations('pages.artists');
 
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -123,7 +125,7 @@ export default function ArtistPublicPage() {
     return (
       <main className="font-zen">
         <div className="mx-auto w-full max-w-6xl px-4 md:px-6 py-16 text-gray-500">
-          読み込み中...
+          {t('loading')}
         </div>
       </main>
     );
@@ -133,7 +135,7 @@ export default function ArtistPublicPage() {
     return (
       <main className="font-zen">
         <div className="mx-auto w-full max-w-6xl px-4 md:px-6 py-16 text-gray-500">
-          このアーティストは見つかりませんでした。
+          {t('notFound')}
         </div>
       </main>
     );
@@ -195,16 +197,16 @@ export default function ArtistPublicPage() {
         <section className="mt-12 md:mt-14 mb-20">
           <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
             <div className="rounded-3xl border bg-white p-6 md:p-8 text-gray-700 shadow-sm">
-            <p className="font-medium">このポートフォリオは非公開です。</p>
+            <p className="font-medium">{t('private')}</p>
             <p className="text-sm text-gray-500 mt-2">
-              公開設定はマイページの「ポートフォリオ設定」から変更できます。
+              {t('privateNote')}
             </p>
             <div className="mt-4">
               <Link
                 href="/mypage"
                 className="inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium hover:bg-gray-50"
               >
-                マイページへ戻る
+                {t('backToMypage')}
               </Link>
             </div>
           </div>
@@ -266,7 +268,7 @@ export default function ArtistPublicPage() {
         <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
           <div className="rounded-3xl border bg-white p-5 md:p-7 shadow-sm">
             <p className="text-gray-700 leading-relaxed md:max-w-3xl">
-            {profile.bio || 'プロフィールはまだ記載されていません。'}
+            {profile.bio || t('noBio')}
           </p>
 
             <div className="mt-5 flex items-center gap-2 flex-wrap">
@@ -308,7 +310,7 @@ export default function ArtistPublicPage() {
       <section className="px-3 sm:px-6 lg:px-10 mt-10 mb-24">
         {entries.length === 0 ? (
           <div className="grid place-items-center py-16 text-gray-500">
-            公開中の作品はありません。
+            {t('noWorks')}
           </div>
         ) : entries.length === 1 ? (
           <div className="max-w-6xl mx-auto">

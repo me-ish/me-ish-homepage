@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { supabase } from '@/lib/supabaseClient';
 import { Gallery2DGrid } from '@/components/gallery2d/Gallery2DGrid';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ const DISPLAY_SLOTS = 32;
 const QUERY_LIMIT = 200;
 
 export default function Float2DPage() {
+  const t = useTranslations('pages.float2d');
   const searchParams = useSearchParams();
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,7 +109,7 @@ export default function Float2DPage() {
                 </span>
               </h1>
               <p className="text-sm text-gray-500 mt-1">
-                {isToday ? "Today's Exhibition" : `Exhibition on ${displayDate}`}
+                {isToday ? t('today') : t('dateExhibition', { date: displayDate })}
               </p>
             </div>
             <div className="flex gap-2">
@@ -127,12 +129,12 @@ export default function Float2DPage() {
         {!isToday && (
           <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
             <p className="text-sm text-amber-800">
-              {displayDate} の展示を表示中です。
+              {t('viewingDate', { date: displayDate })}
               <Link
                 href="/float/2d"
                 className="ml-2 underline hover:no-underline"
               >
-                今日の展示を見る
+                {t('viewToday')}
               </Link>
             </p>
           </div>
@@ -141,14 +143,14 @@ export default function Float2DPage() {
         {/* Exhibition Info */}
         <div className="mb-6 text-sm text-gray-600">
           <p>
-            Floatギャラリーでは毎日展示作品が入れ替わります。
+            {t('collectionInfo')}
             {actualCount > 0 ? (
               <span className="ml-1">
-                本日は <strong>{actualCount}点</strong> の作品を展示中。
+                {t('worksCount', { count: actualCount })}
               </span>
             ) : (
               <span className="ml-1">
-                現在作品を募集中です。
+                {t('recruiting')}
               </span>
             )}
           </p>
@@ -159,7 +161,7 @@ export default function Float2DPage() {
           entries={entries}
           loading={loading}
           error={error}
-          emptyMessage="本日の展示作品はありません"
+          emptyMessage={t('emptyMessage')}
         />
       </main>
 
@@ -168,7 +170,7 @@ export default function Float2DPage() {
         <div className="max-w-7xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
           <p>
             <Link href="/float" className="text-[#00a1e9] hover:underline">
-              3Dで見る
+              {t('view3d')}
             </Link>
             {' | '}
             <Link href="/white/2d" className="text-[#00a1e9] hover:underline">

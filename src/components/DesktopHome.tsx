@@ -14,6 +14,7 @@ import {
   Users,
   Bell,
 } from 'lucide-react';
+import { useTranslations, useLocale } from 'next-intl';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { useGalleryArtworks, useGalleryStats } from '@/hooks/useHomePageData';
 import { AnnouncementBadge } from '@/components/home/AnnouncementBadge';
@@ -121,7 +122,6 @@ function useStaggerFadeIn() {
     const callback: IntersectionObserverCallback = (entries, observer) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          // stagger-childrenの場合、子要素にも順番にクラス追加
           const children = entry.target.querySelectorAll<HTMLElement>('.stagger-item');
           if (children.length > 0) {
             children.forEach((child, idx) => {
@@ -210,7 +210,7 @@ function ProgressIndicator() {
           key={section.id}
           onClick={() => scrollToSection(section.id)}
           className="group flex items-center gap-3"
-          aria-label={`${section.label}へスクロール`}
+          aria-label={`Scroll to ${section.label}`}
         >
           <span className={`
             text-xs font-medium transition-all duration-300 opacity-0 -translate-x-2
@@ -235,6 +235,7 @@ function ProgressIndicator() {
    Floating CTA Button
 ────────────────────────────────────────────────────────────── */
 function FloatingCTA() {
+  const t = useTranslations('home');
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -258,10 +259,10 @@ function FloatingCTA() {
         hover:shadow-2xl hover:scale-105 hover:from-[#0090d4] hover:to-[#0070a8]
         ${visible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0 pointer-events-none'}
       `}
-      aria-label="作品を応募する"
+      aria-label={t('hero.applyAriaLabel')}
     >
       <Palette className="w-4 h-4" />
-      応募する
+      {t('hero.apply')}
     </Link>
   );
 }
@@ -334,11 +335,13 @@ type AnnouncementItem = {
 };
 
 function AnnouncementsStrip({ max = 3 }: { max?: number }) {
+  const t = useTranslations('home.news');
+  const locale = useLocale();
   const { items, loading } = useAnnouncements(max + 3);
 
   const fmt = useMemo(
-    () => new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }),
-    []
+    () => new Intl.DateTimeFormat(locale === 'ja' ? 'ja-JP' : 'en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+    [locale]
   );
 
   const ordered = useMemo(() => {
@@ -452,8 +455,8 @@ const DesktopHome = () => {
   const mousePosition = useMousePosition();
   const galleryArtworks = useGalleryArtworks(8);
   const galleryStats = useGalleryStats();
+  const t = useTranslations('home');
 
-  // 展示作品と配置パターンを組み合わせる
   const floatingArts = useMemo(() => {
     if (galleryArtworks.length === 0) return [];
     return FLOATING_POSITIONS.slice(0, galleryArtworks.length).map((pos, idx) => ({
@@ -476,7 +479,7 @@ const DesktopHome = () => {
           className="relative min-h-[calc(92svh-70px)] md:min-h-[calc(96svh-70px)] flex flex-col items-center justify-center overflow-hidden pt-10 md:pt-14 pb-10"
           aria-labelledby="hero-title"
         >
-          {/* 浮遊するアート作品（展示中の作品）またはシャボン玉 */}
+          {/* 浮遊するアート作品 またはシャボン玉 */}
           <div className="absolute inset-0 pointer-events-none">
             {floatingArts.length > 0 ? (
               floatingArts.map((art) => (
@@ -514,7 +517,7 @@ const DesktopHome = () => {
             </div>
 
             <p className="fade-in-up mt-8 text-[clamp(1.2rem,3vw,2rem)] font-medium text-gray-700" style={{ animationDelay: '0.2s' }}>
-              アートを、もっと近くに
+              {t('hero.tagline')}
             </p>
 
             {/* CTA Buttons */}
@@ -525,7 +528,7 @@ const DesktopHome = () => {
                 className="rounded-full px-10 py-6 h-auto text-lg font-semibold shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 bg-gradient-to-r from-[#00a1e9] to-[#0080c0] hover:from-[#0090d4] hover:to-[#0070a8]"
               >
                 <Link href="/float">
-                  ギャラリーを見る <ArrowRight className="h-5 w-5 ml-1" />
+                  {t('hero.viewGallery')} <ArrowRight className="h-5 w-5 ml-1" />
                 </Link>
               </Button>
               <Button
@@ -535,7 +538,7 @@ const DesktopHome = () => {
                 className="rounded-full px-8 py-5 h-auto text-base font-semibold border-2 border-[#00a1e9] text-[#00a1e9] hover:bg-[#00a1e9] hover:text-white transition-all duration-300"
               >
                 <Link href="/entry">
-                  応募する <ExternalLink className="h-4 w-4 ml-1" />
+                  {t('hero.apply')} <ExternalLink className="h-4 w-4 ml-1" />
                 </Link>
               </Button>
             </div>
@@ -545,27 +548,26 @@ const DesktopHome = () => {
               <StatCard
                 icon={Palette}
                 value={galleryStats ? `${galleryStats.worksCount}` : '–'}
-                label="展示作品"
+                label={t('stats.works')}
               />
               <StatCard
                 icon={Users}
                 value={galleryStats ? `${galleryStats.artistsCount}` : '–'}
-                label="アーティスト"
+                label={t('stats.artists')}
               />
               <StatCard
                 icon={Eye}
                 value={galleryStats ? `${galleryStats.uniqueViews.toLocaleString()}` : '–'}
-                label="ユニーク閲覧"
+                label={t('stats.views')}
               />
             </div>
           </div>
 
           {/* スクロールヒント */}
           <div
-  className="mt-auto pt-8 fade-in-up relative z-20 -translate-y-6 md:-translate-y-14"
-  style={{ animationDelay: '1s' }}
->
-
+            className="mt-auto pt-8 fade-in-up relative z-20 -translate-y-6 md:-translate-y-14"
+            style={{ animationDelay: '1s' }}
+          >
             <div className="flex flex-col items-center gap-2 text-[#00a1e9]/50">
               <span className="text-xs tracking-widest uppercase">Scroll</span>
               <div className="w-5 h-8 rounded-full border-2 border-current flex justify-center pt-2">
@@ -581,11 +583,11 @@ const DesktopHome = () => {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Bell className="h-4 w-4 text-[#00a1e9]" />
-                <span className="text-sm font-bold text-gray-900">お知らせ</span>
+                <span className="text-sm font-bold text-gray-900">{t('news.title')}</span>
               </div>
               <Button asChild variant="ghost" size="sm" className="text-[#00a1e9] hover:bg-[#e8f7ff] shrink-0">
                 <Link href="/news">
-                  一覧を見る <ArrowRight className="h-3 w-3 ml-1" />
+                  {t('news.viewAll')} <ArrowRight className="h-3 w-3 ml-1" />
                 </Link>
               </Button>
             </div>
@@ -601,9 +603,9 @@ const DesktopHome = () => {
         >
           <div className={LAYOUT.container}>
             <SectionHeader
-              title="ギャラリーを探索"
+              title={t('gallery.title')}
               id="gallery-title"
-              subtitle="3D空間で作品を鑑賞する、新しいアート体験"
+              subtitle={t('gallery.subtitle')}
               underline
             />
 
@@ -622,15 +624,15 @@ const DesktopHome = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
                   <div className="absolute top-4 left-4">
-                    <Badge className="bg-white/90 text-[#00a1e9] backdrop-blur-sm">10作品限定</Badge>
+                    <Badge className="bg-white/90 text-[#00a1e9] backdrop-blur-sm">{t('gallery.whiteBadge')}</Badge>
                   </div>
 
                   <div className="absolute bottom-0 left-0 right-0 p-6">
                     <h3 className="text-2xl font-bold text-white mb-2">White Gallery</h3>
-                    <p className="text-white/80 text-sm mb-4">「意識の空間」をイメージした真っ白なギャラリー</p>
+                    <p className="text-white/80 text-sm mb-4">{t('gallery.whiteDesc')}</p>
                     <div className="flex gap-2">
                       <span className="px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-white text-sm font-medium">
-                        3Dで見る →
+                        {t('gallery.view3d')} →
                       </span>
                     </div>
                   </div>
@@ -650,15 +652,15 @@ const DesktopHome = () => {
                   <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
 
                   <div className="absolute top-4 left-4">
-                    <Badge className="bg-amber-500 text-white">日替わり</Badge>
+                    <Badge className="bg-amber-500 text-white">{t('gallery.floatBadge')}</Badge>
                   </div>
 
                   <div className="absolute bottom-0 left-0 p-5">
                     <h3 className="text-xl font-bold text-white mb-1">Float Gallery</h3>
-                    <p className="text-white/80 text-sm mb-4">&quot;漂う&quot;ように入れ替わる美術館風ギャラリー</p>
+                    <p className="text-white/80 text-sm mb-4">{t('gallery.floatDesc')}</p>
                     <div className="flex gap-2">
                       <span className="px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-white text-sm font-medium">
-                        3Dで見る →
+                        {t('gallery.view3d')} →
                       </span>
                     </div>
                   </div>
@@ -671,8 +673,8 @@ const DesktopHome = () => {
                   <div className="p-3 rounded-xl bg-[#00a1e9]/10 w-fit">
                     <Sparkles className="w-6 h-6 text-[#00a1e9]" />
                   </div>
-                  <h3 className="mt-4 font-bold text-gray-900">3D空間体験</h3>
-                  <p className="mt-2 text-sm text-gray-600 flex-grow">Three.jsによる没入感のある鑑賞体験</p>
+                  <h3 className="mt-4 font-bold text-gray-900">{t('features.3dTitle')}</h3>
+                  <p className="mt-2 text-sm text-gray-600 flex-grow">{t('features.3dDesc')}</p>
                 </div>
               </BentoCard>
 
@@ -681,8 +683,8 @@ const DesktopHome = () => {
                   <div className="p-3 rounded-xl bg-amber-500/10 w-fit">
                     <Images className="w-6 h-6 text-amber-500" />
                   </div>
-                  <h3 className="mt-4 font-bold text-gray-900">簡単応募</h3>
-                  <p className="mt-2 text-sm text-gray-600 flex-grow">ガイド付きフローで迷わず出展</p>
+                  <h3 className="mt-4 font-bold text-gray-900">{t('features.entryTitle')}</h3>
+                  <p className="mt-2 text-sm text-gray-600 flex-grow">{t('features.entryDesc')}</p>
                 </div>
               </BentoCard>
 
@@ -691,8 +693,8 @@ const DesktopHome = () => {
                   <div className="p-3 rounded-xl bg-emerald-500/10 w-fit">
                     <ShieldCheck className="w-6 h-6 text-emerald-500" />
                   </div>
-                  <h3 className="mt-4 font-bold text-gray-900">画像保護</h3>
-                  <p className="mt-2 text-sm text-gray-600 flex-grow">ウォーターマーク・AI認識阻害処理</p>
+                  <h3 className="mt-4 font-bold text-gray-900">{t('features.protectionTitle')}</h3>
+                  <p className="mt-2 text-sm text-gray-600 flex-grow">{t('features.protectionDesc')}</p>
                 </div>
               </BentoCard>
 
@@ -700,8 +702,8 @@ const DesktopHome = () => {
               <BentoCard className="stagger-item md:col-span-2 p-6 bg-gray-50">
                 <div className="flex items-center justify-between h-full">
                   <div>
-                    <h3 className="font-bold text-gray-900">2Dモードで見る</h3>
-                    <p className="text-sm text-gray-500 mt-1">軽量な2Dギャラリーもあります</p>
+                    <h3 className="font-bold text-gray-900">{t('gallery.view2dTitle')}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{t('gallery.view2dDesc')}</p>
                   </div>
                   <div className="flex gap-3">
                     <Link
@@ -732,18 +734,20 @@ const DesktopHome = () => {
           <div className={LAYOUT.container}>
             <div className="max-w-3xl mx-auto text-center">
               <h2 id="about-title" className="fade-in-up text-[clamp(2rem,5vw,3rem)] font-bold leading-tight">
+                <span className="text-gray-900">{t('about.titlePrefix')}</span>
                 <span className="text-[#00a1e9] font-lilita">me-ish</span>
-                <span className="text-gray-900">とは</span>
+                <span className="text-gray-900">{t('about.titleSuffix')}</span>
               </h2>
 
               <p className="fade-in-up mt-8 text-lg md:text-xl leading-relaxed text-gray-600" style={{ animationDelay: '0.1s' }}>
-                me-ish（ミーイッシュ）は、誰もが自分らしく作品を展示できるオンラインギャラリー。
+                {t('about.body1')}
               </p>
               <p className="fade-in-up mt-4 text-lg md:text-xl leading-relaxed text-gray-600" style={{ animationDelay: '0.2s' }}>
-                作品の<span className="text-[#00a1e9] font-semibold">&quot;見せ方&quot;</span>と
-                <span className="text-[#00a1e9] font-semibold">&quot;出会い方&quot;</span>をデザインし、
-                <br className="hidden md:block" />
-                アーティストと鑑賞者の距離を縮めます。
+                {t('about.body2pre')}
+                <span className="text-[#00a1e9] font-semibold">{t('about.body2highlight1')}</span>
+                {t('about.body2mid')}
+                <span className="text-[#00a1e9] font-semibold">{t('about.body2highlight2')}</span>
+                {t('about.body2post')}
               </p>
             </div>
           </div>
@@ -774,14 +778,13 @@ const DesktopHome = () => {
 
               <div className="relative z-10">
                 <h2 id="apply-title" className="text-[clamp(1.8rem,4vw,2.8rem)] font-bold text-white leading-tight mb-4">
-                  あなたのアートを<br className="md:hidden" />世界に届けよう
+                  {t('apply.title')}
                 </h2>
                 <p className="text-white/80 text-lg mb-8 max-w-lg mx-auto">
-                  me-ishでは、どなたでも気軽に作品を展示できます。<br className="hidden md:block" />
-                  あなたの創作を、新しい空間で見せてみませんか？
+                  {t('apply.subtitle')}
                 </p>
                 <div className="inline-flex items-center gap-2 rounded-full bg-white text-[#00a1e9] font-bold px-8 py-4 shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all duration-300">
-                  応募する <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  {t('apply.button')} <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
             </Link>
@@ -806,7 +809,7 @@ const DesktopHome = () => {
                 <Sparkles className="h-5 w-5 text-amber-500 group-hover:animate-pulse" />
               </Link>
               <p className="mt-2 text-sm text-gray-500">
-                me-ish初期ギャラリー(white)に応募してくださった皆さま
+                {t('thanks.desc')}
               </p>
             </div>
           </div>

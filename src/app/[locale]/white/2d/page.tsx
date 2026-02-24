@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { supabase } from '@/lib/supabaseClient';
 import { Gallery2DGrid } from '@/components/gallery2d/Gallery2DGrid';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ const DISPLAY_SLOTS = 10;
 const QUERY_LIMIT = 50;
 
 export default function White2DPage() {
+  const t = useTranslations('pages.white2d');
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +76,7 @@ export default function White2DPage() {
                 </span>
               </h1>
               <p className="text-sm text-gray-500 mt-1">
-                常設展示コレクション
+                {t('subtitle')}
               </p>
             </div>
             <div className="flex gap-2">
@@ -93,14 +95,14 @@ export default function White2DPage() {
         {/* Collection Info */}
         <div className="mb-6 text-sm text-gray-600">
           <p>
-            Whiteギャラリーの常設コレクションです。
+            {t('collectionInfo')}
             {actualCount > 0 ? (
               <span className="ml-1">
-                現在 <strong>{actualCount}点</strong> の作品を展示中。
+                {t('worksCount', { count: actualCount })}
               </span>
             ) : (
               <span className="ml-1">
-                現在作品を募集中です。
+                {t('recruiting')}
               </span>
             )}
           </p>
@@ -111,7 +113,7 @@ export default function White2DPage() {
           entries={entries}
           loading={loading}
           error={error}
-          emptyMessage="展示作品がありません"
+          emptyMessage={t('emptyMessage')}
         />
       </main>
 
@@ -120,7 +122,7 @@ export default function White2DPage() {
         <div className="max-w-7xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
           <p>
             <Link href="/white" className="text-[#00a1e9] hover:underline">
-              3Dで見る
+              {t('view3d')}
             </Link>
             {' | '}
             <Link href="/float/2d" className="text-[#00a1e9] hover:underline">

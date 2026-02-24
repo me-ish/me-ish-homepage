@@ -14,6 +14,7 @@ import {
   ChevronUp,
   Bell,
 } from 'lucide-react';
+import { useTranslations, useLocale } from 'next-intl';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { useGalleryArtworks, useGalleryStats } from '@/hooks/useHomePageData';
 import { AnnouncementBadge } from '@/components/home/AnnouncementBadge';
@@ -180,6 +181,7 @@ function StatPill({
 
 // Bottom Fixed Bar
 function BottomFixedBar() {
+  const t = useTranslations('home.bottomBar');
   const [visible, setVisible] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
@@ -214,7 +216,7 @@ function BottomFixedBar() {
           className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-gray-100 text-gray-700 font-medium text-sm active:scale-95 transition-transform"
         >
           <Eye className="w-4 h-4" />
-          ギャラリー
+          {t('gallery')}
         </Link>
 
         <div className="flex items-center gap-2">
@@ -222,7 +224,7 @@ function BottomFixedBar() {
             <button
               onClick={scrollToTop}
               className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 text-gray-600 active:scale-95 transition-transform"
-              aria-label="トップへ戻る"
+              aria-label={t('backToTop')}
             >
               <ChevronUp className="w-5 h-5" />
             </button>
@@ -233,7 +235,7 @@ function BottomFixedBar() {
             className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#00a1e9] to-[#0080c0] text-white font-semibold text-sm shadow-lg active:scale-95 transition-transform"
           >
             <Palette className="w-4 h-4" />
-            応募する
+            {t('apply')}
           </Link>
         </div>
       </div>
@@ -244,11 +246,13 @@ function BottomFixedBar() {
 
 // Announcements Strip Mobile
 function AnnouncementsStripMobile() {
+  const t = useTranslations('home.news');
+  const locale = useLocale();
   const { items, loading } = useAnnouncements(3);
 
   const fmt = useMemo(
-    () => new Intl.DateTimeFormat('ja-JP', { month: '2-digit', day: '2-digit' }),
-    []
+    () => new Intl.DateTimeFormat(locale === 'ja' ? 'ja-JP' : 'en-US', { month: '2-digit', day: '2-digit' }),
+    [locale]
   );
 
   if (loading) {
@@ -287,7 +291,8 @@ function AnnouncementsStripMobile() {
 
 // Gallery Card Mobile
 function GalleryCard({
-  img, title, desc, badge, badgeColor, link, link2d
+  img, title, desc, badge, badgeColor, link, link2d,
+  view3dLabel, view2dLabel,
 }: {
   img: string;
   title: string;
@@ -296,6 +301,8 @@ function GalleryCard({
   badgeColor: string;
   link: string;
   link2d: string;
+  view3dLabel: string;
+  view2dLabel: string;
 }) {
   return (
     <div className="rounded-2xl bg-white ring-1 ring-gray-100 shadow-sm overflow-hidden">
@@ -326,13 +333,13 @@ function GalleryCard({
           href={link}
           className="flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl bg-[#00a1e9] text-white text-sm font-semibold active:scale-[0.98] transition-transform"
         >
-          3Dで見る <ArrowRight className="w-3.5 h-3.5" />
+          {view3dLabel} <ArrowRight className="w-3.5 h-3.5" />
         </Link>
         <Link
           href={link2d}
           className="flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl bg-white ring-1 ring-gray-200 text-gray-700 text-sm font-medium active:scale-[0.98] transition-transform"
         >
-          2Dで見る <ArrowRight className="w-3.5 h-3.5" />
+          {view2dLabel} <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
     </div>
@@ -372,8 +379,8 @@ const MobileHome = () => {
   useFadeInOnScroll();
   const galleryArtworks = useGalleryArtworks(4);
   const galleryStats = useGalleryStats();
+  const t = useTranslations('home');
 
-  // 展示作品と配置パターンを組み合わせる
   const floatingArts = useMemo(() => {
     if (galleryArtworks.length === 0) return [];
     return FLOATING_POSITIONS_MOBILE.slice(0, galleryArtworks.length).map((pos, idx) => ({
@@ -390,11 +397,11 @@ const MobileHome = () => {
 
       <main className="pt-[64px] relative z-10">
         {/* Hero Section */}
-<section
-  className="relative min-h-[calc(92svh-64px)] flex flex-col items-center overflow-hidden px-5 pt-10 pb-20"
-  aria-labelledby="hero-title"
->
-          {/* Floating artworks（展示中の作品）またはシャボン玉 */}
+        <section
+          className="relative min-h-[calc(92svh-64px)] flex flex-col items-center overflow-hidden px-5 pt-10 pb-20"
+          aria-labelledby="hero-title"
+        >
+          {/* Floating artworks またはシャボン玉 */}
           <div className="absolute inset-0 pointer-events-none">
             {floatingArts.length > 0 ? (
               floatingArts.map((art) => (
@@ -430,7 +437,7 @@ const MobileHome = () => {
             </div>
 
             <p className="fade-in-up mt-6 text-[clamp(1.1rem,5vw,1.4rem)] font-medium text-gray-700" style={{ animationDelay: '0.15s' }}>
-              アートを、もっと近くに
+              {t('hero.tagline')}
             </p>
 
             {/* CTA Buttons */}
@@ -441,7 +448,7 @@ const MobileHome = () => {
                 className="w-full rounded-full py-6 h-auto text-base font-semibold shadow-lg active:scale-[0.98] transition-transform bg-gradient-to-r from-[#00a1e9] to-[#0080c0]"
               >
                 <Link href="/float">
-                  ギャラリーを見る <ArrowRight className="h-4 w-4 ml-1" />
+                  {t('hero.viewGallery')} <ArrowRight className="h-4 w-4 ml-1" />
                 </Link>
               </Button>
               <Button
@@ -451,7 +458,7 @@ const MobileHome = () => {
                 className="w-full rounded-full py-5 h-auto text-base font-semibold border-2 border-[#00a1e9] text-[#00a1e9] active:bg-[#e8f7ff] transition-colors"
               >
                 <Link href="/entry">
-                  応募する <ArrowRight className="h-4 w-4 ml-1" />
+                  {t('hero.apply')} <ArrowRight className="h-4 w-4 ml-1" />
                 </Link>
               </Button>
             </div>
@@ -461,17 +468,17 @@ const MobileHome = () => {
               <StatPill
                 icon={Palette}
                 value={galleryStats ? `${galleryStats.worksCount}` : '–'}
-                label="展示作品"
+                label={t('stats.works')}
               />
               <StatPill
                 icon={Users}
                 value={galleryStats ? `${galleryStats.artistsCount}` : '–'}
-                label="アーティスト"
+                label={t('stats.artists')}
               />
             </div>
           </div>
 
-          {/* Scroll hint - w-full で確実に中央揃え */}
+          {/* Scroll hint */}
           <div className="mt-auto pt-6 w-full fade-in-up" style={{ animationDelay: '0.8s' }}>
             <div className="flex flex-col items-center justify-center gap-1.5 text-[#00a1e9]/40 w-full">
               <span className="text-[10px] tracking-widest uppercase">Scroll</span>
@@ -488,10 +495,10 @@ const MobileHome = () => {
             <div className="flex items-center justify-between mb-3">
               <h2 className="flex items-center gap-1.5 text-sm font-bold text-gray-900">
                 <Bell className="h-3.5 w-3.5 text-[#00a1e9]" />
-                お知らせ
+                {t('news.title')}
               </h2>
               <Link href="/news" className="text-xs text-[#00a1e9] font-medium">
-                すべて見る →
+                {t('news.viewAllShort')} →
               </Link>
             </div>
             <AnnouncementsStripMobile />
@@ -506,30 +513,34 @@ const MobileHome = () => {
         >
           <div className={LAYOUT.container}>
             <SectionHeader
-              title="ギャラリー"
+              title={t('gallery.titleMobile')}
               id="gallery-title"
-              subtitle="3D空間で作品を鑑賞"
+              subtitle={t('gallery.subtitleMobile')}
             />
 
             <div className="space-y-4">
               <GalleryCard
                 img="/images/white-thumb.png"
                 title="White Gallery"
-                desc="「意識の空間」をイメージした真っ白なギャラリー"
-                badge="10作品限定"
+                desc={t('gallery.whiteDesc')}
+                badge={t('gallery.whiteBadge')}
                 badgeColor="bg-white/90 text-[#00a1e9]"
                 link="/white"
                 link2d="/white/2d"
+                view3dLabel={t('gallery.view3d')}
+                view2dLabel={t('gallery.view2d')}
               />
 
               <GalleryCard
                 img="/images/float-thumb.png"
                 title="Float Gallery"
-                desc="漂うように入れ替わる美術館風ギャラリー"
-                badge="日替わり"
+                desc={t('gallery.floatDesc')}
+                badge={t('gallery.floatBadge')}
                 badgeColor="bg-amber-500 text-white"
                 link="/float"
                 link2d="/float/2d"
+                view3dLabel={t('gallery.view3d')}
+                view2dLabel={t('gallery.view2d')}
               />
             </div>
           </div>
@@ -546,32 +557,32 @@ const MobileHome = () => {
               id="about-title"
               className="text-center text-[clamp(1.5rem,7vw,2rem)] font-bold leading-tight mb-4"
             >
+              <span className="text-gray-900">{t('about.titlePrefix')}</span>
               <span className="text-[#00a1e9] font-lilita">me-ish</span>
-              <span className="text-gray-900">とは</span>
+              <span className="text-gray-900">{t('about.titleSuffix')}</span>
             </h2>
 
             <p className="text-center text-[15px] leading-relaxed text-gray-600 mb-8">
-              誰もが自分らしく作品を展示できる、オンラインギャラリー。
-              作品の見せ方と出会い方をデザインします。
+              {t('about.bodySimple')}
             </p>
 
             <div className="space-y-3">
               <FeatureCard
                 icon={Sparkles}
-                title="3D空間体験"
-                desc="Three.jsによる没入感のある鑑賞体験"
+                title={t('features.3dTitle')}
+                desc={t('features.3dDesc')}
                 color="blue"
               />
               <FeatureCard
                 icon={Images}
-                title="簡単応募"
-                desc="ガイド付きフローで迷わず出展"
+                title={t('features.entryTitle')}
+                desc={t('features.entryDesc')}
                 color="amber"
               />
               <FeatureCard
                 icon={ShieldCheck}
-                title="画像保護"
-                desc="ウォーターマーク・AI認識阻害処理"
+                title={t('features.protectionTitle')}
+                desc={t('features.protectionDesc')}
                 color="emerald"
               />
             </div>
@@ -602,13 +613,13 @@ const MobileHome = () => {
 
               <div className="relative z-10">
                 <h2 id="apply-title" className="text-xl font-bold text-white leading-tight mb-2">
-                  あなたのアートを<br />世界に届けよう
+                  {t('apply.title')}
                 </h2>
                 <p className="text-white/80 text-sm mb-5">
-                  me-ishなら、スマホだけでもすぐに展示
+                  {t('apply.subtitleMobile')}
                 </p>
                 <div className="inline-flex items-center gap-2 rounded-full bg-white text-[#00a1e9] font-bold px-6 py-3 shadow-md">
-                  応募する <ArrowRight className="h-4 w-4" />
+                  {t('apply.button')} <ArrowRight className="h-4 w-4" />
                 </div>
               </div>
             </Link>
@@ -628,6 +639,9 @@ const MobileHome = () => {
               </span>
               <Sparkles className="h-4 w-4 text-amber-500" />
             </Link>
+            <p className="mt-2 text-center text-xs text-gray-400">
+              {t('thanks.desc')}
+            </p>
           </div>
         </section>
 

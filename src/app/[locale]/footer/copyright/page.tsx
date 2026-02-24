@@ -1,6 +1,7 @@
 // src/app/footer/copyright/page.tsx
 import Link from "next/link";
 import type { Metadata } from "next";
+import { getLocale, getTranslations } from 'next-intl/server';
 
 // shadcn/ui
 import {
@@ -16,7 +17,18 @@ export const metadata: Metadata = {
     "アーティストの作品保護とAI学習防止に関するme-ishのポリシーです。著作権の帰属、利用範囲、AI学習防止措置、生成AIの取扱い、購入者の権利、無断利用の通報など。",
 };
 
-export default function CopyrightPolicyPage() {
+export default async function CopyrightPolicyPage() {
+  const locale = await getLocale();
+  const t = await getTranslations();
+
+  if (locale === 'en') {
+    return (
+      <main className="min-h-[60vh] flex items-center justify-center px-6">
+        <p className="text-gray-500 text-center max-w-md">{t('jaOnly')}</p>
+      </main>
+    );
+  }
+
   const tocItems: Array<[string, string]> = [
     ["目的・定義", "sec-0"],
     ["著作権の帰属", "sec-1"],

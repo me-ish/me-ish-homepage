@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { supabase } from '@/lib/supabaseClient';
 import { FcGoogle } from 'react-icons/fc';
 import {
@@ -25,6 +26,7 @@ function LoginInner() {
   const search = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const t = useTranslations('pages.login');
 
   // すでにログイン済みなら /mypage へ
   useEffect(() => {
@@ -51,7 +53,7 @@ function LoginInner() {
       if (error) throw error;
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
-      setErr(message || 'ログインに失敗しました。時間をおいて再度お試しください。');
+      setErr(message || t('loginError'));
       setLoading(false);
     }
   };
@@ -88,11 +90,11 @@ function LoginInner() {
           <div className="p-2 rounded-xl bg-[#00a1e9]/10">
             <LogIn className="w-5 h-5 text-[#00a1e9]" />
           </div>
-          マイページにログイン
+          {t('title')}
         </h1>
         <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-          購入履歴のダウンロード、出展作品の管理、通知設定などをご利用いただけます。
-          <span className="text-gray-500">鑑賞だけならログイン不要です。</span>
+          {t('subtitle')}
+          <span className="text-gray-500">{t('subtitleNote')}</span>
         </p>
 
         {/* Google ログイン */}
@@ -114,12 +116,12 @@ function LoginInner() {
           {loading ? (
             <>
               <Loader2 className="w-6 h-6 animate-spin text-[#00a1e9]" />
-              <span>ログイン中...</span>
+              <span>{t('loggingIn')}</span>
             </>
           ) : (
             <>
               <FcGoogle className="text-2xl" />
-              <span>Googleでログイン</span>
+              <span>{t('loginButton')}</span>
             </>
           )}
         </Button>
@@ -136,40 +138,36 @@ function LoginInner() {
 
         {/* 同意・安心情報 */}
         <div className="mt-5 text-xs text-gray-500 leading-relaxed">
-          ログインすると、<strong className="text-gray-700">メールアドレス・表示名・アイコン</strong>を取得します（投稿や連絡先へのアクセスは行いません）。
-          続行により{' '}
+          {t('consentText')}{' '}
           <Link href="/footer/terms" className="text-[#00a1e9] hover:underline">
-            利用規約
-          </Link>{' '}
-          と{' '}
+            {t('consentTerms')}
+          </Link>
+          {t('consentAnd')}
           <Link href="/footer/privacy" className="text-[#00a1e9] hover:underline">
-            プライバシーポリシー
-          </Link>{' '}
-          に同意したものとみなされます。
+            {t('consentPrivacy')}
+          </Link>
+          {t('consentSuffix')}
         </div>
       </div>
 
       {/* 機能のハイライト（2列 → モバイル1列） */}
       <div className="relative z-10 w-full max-w-[920px] grid grid-cols-1 md:grid-cols-2 gap-5 mt-10">
         <FeatureCard
-          title="できること"
+          title={t('canDoTitle')}
           icon={<Sparkles className="w-5 h-5 text-[#00a1e9]" />}
-          items={[
-            { icon: <Img className="w-4 h-4" />, text: '出展作品の登録・編集' },
-            { icon: <CreditCard className="w-4 h-4" />, text: '売上・手数料の確認（成功時のみ10%）' },
-            { icon: <Bell className="w-4 h-4" />, text: '展示・販売に関する通知の受け取り' },
-            { icon: <User className="w-4 h-4" />, text: 'プロフィール編集とSNSリンク' },
-          ]}
+          items={(t.raw('canDoItems') as string[]).map((text, i) => ({
+            icon: [<Img key={i} className="w-4 h-4" />, <CreditCard key={i} className="w-4 h-4" />, <Bell key={i} className="w-4 h-4" />, <User key={i} className="w-4 h-4" />][i],
+            text,
+          }))}
           accentColor="blue"
         />
         <FeatureCard
-          title="安心の取り組み"
+          title={t('safeTitle')}
           icon={<ShieldCheck className="w-5 h-5 text-emerald-500" />}
-          items={[
-            { icon: <ShieldCheck className="w-4 h-4" />, text: 'ウォーターマーク／署名とAI学習阻害の多層保護' },
-            { icon: <ShieldCheck className="w-4 h-4" />, text: '支払いはクレジット（円）のみ、暗号資産は非対応' },
-            { icon: <ShieldCheck className="w-4 h-4" />, text: '購入後すぐにデジタル作品をダウンロード' },
-          ]}
+          items={(t.raw('safeItems') as string[]).map((text, i) => ({
+            icon: <ShieldCheck key={i} className="w-4 h-4" />,
+            text,
+          }))}
           accentColor="emerald"
         />
       </div>
@@ -180,13 +178,13 @@ function LoginInner() {
           href="/#gallery"
           className="px-4 py-2 rounded-full bg-white ring-1 ring-gray-200 text-gray-600 hover:ring-[#00a1e9] hover:text-[#00a1e9] transition-all"
         >
-          ログインせずに作品を見る
+          {t('browseWithoutLogin')}
         </Link>
         <Link
           href="/#contact"
           className="px-4 py-2 rounded-full bg-white ring-1 ring-gray-200 text-gray-600 hover:ring-[#00a1e9] hover:text-[#00a1e9] transition-all"
         >
-          ログインできないとき
+          {t('loginHelp')}
         </Link>
       </div>
     </main>

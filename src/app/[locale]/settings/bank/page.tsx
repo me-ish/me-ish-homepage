@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { supabase } from '@/lib/supabaseClient';
 import { ArrowLeft, Loader2, CheckCircle2, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,7 @@ function matchBranch(br: Branch, q: string) {
 
 export default function BankSettingsPage() {
   const router = useRouter();
+  const t = useTranslations('pages.bank');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -201,11 +203,11 @@ export default function BankSettingsPage() {
 
   // バリデーション
   const validate = (): string | null => {
-    if (!bankCode || !/^\d{4}$/.test(bankCode)) return '銀行を選択してください。';
-    if (!branchCode || !/^\d{3}$/.test(branchCode)) return '支店を選択してください。';
-    if (!accountType) return '口座種別を選択してください。';
-    if (!accountNumber || !/^\d{1,7}$/.test(accountNumber)) return '口座番号を正しく入力してください。';
-    if (!accountNameKana.trim()) return '口座名義を入力してください。';
+    if (!bankCode || !/^\d{4}$/.test(bankCode)) return t('validationBank');
+    if (!branchCode || !/^\d{3}$/.test(branchCode)) return t('validationBranch');
+    if (!accountType) return t('validationAccountType');
+    if (!accountNumber || !/^\d{1,7}$/.test(accountNumber)) return t('validationAccountNumber');
+    if (!accountNameKana.trim()) return t('validationAccountName');
     return null;
   };
 
@@ -218,7 +220,7 @@ export default function BankSettingsPage() {
     }
 
     if (!externalUserId) {
-      setError('出展履歴がありません。まず作品を出展してください。');
+      setError(t('errorNoEntry'));
       return;
     }
 
@@ -247,7 +249,7 @@ export default function BankSettingsPage() {
     } catch (e: unknown) {
       console.error('[bank settings] save error:', e);
       const message = e instanceof Error ? e.message : String(e);
-      setError(message || '保存に失敗しました。');
+      setError(message || t('errorSave'));
     } finally {
       setSaving(false);
     }
@@ -272,7 +274,7 @@ export default function BankSettingsPage() {
           className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
-          マイページに戻る
+          {t('backToMypage')}
         </Link>
 
         {/* ヘッダー */}
@@ -281,8 +283,8 @@ export default function BankSettingsPage() {
             <Wallet className="w-6 h-6 text-sky-600" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">振込先口座設定</h1>
-            <p className="text-sm text-gray-500">売上の振込に使用する口座情報</p>
+            <h1 className="text-xl font-bold text-gray-900">{t('title')}</h1>
+            <p className="text-sm text-gray-500">{t('subtitle')}</p>
           </div>
         </div>
 
@@ -290,13 +292,13 @@ export default function BankSettingsPage() {
         {!externalUserId && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-6">
             <p className="text-sm text-amber-800">
-              口座情報を登録するには、まず作品を出展してください。
+              {t('noEntryWarning')}
             </p>
             <Link
               href="/entry"
               className="inline-block mt-2 text-sm font-medium text-amber-700 hover:underline"
             >
-              出展フォームへ →
+              {t('toEntryForm')}
             </Link>
           </div>
         )}
@@ -307,7 +309,7 @@ export default function BankSettingsPage() {
             {/* 銀行 */}
             <div className="mb-5">
               <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-                銀行（名称 / コード）
+                {t('bankLabel')}
               </label>
               <input
                 type="text"
@@ -319,7 +321,7 @@ export default function BankSettingsPage() {
                   if (m) setBankCode(m[1]);
                 }}
                 onBlur={commitBank}
-                placeholder="例）三菱UFJ / 0005"
+                placeholder={t('bankPlaceholder')}
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500"
                 list="bank-suggest"
               />
@@ -335,7 +337,7 @@ export default function BankSettingsPage() {
             {/* 支店 */}
             <div className="mb-5">
               <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-                支店（名称 / コード）
+                {t('branchLabel')}
               </label>
               <input
                 type="text"
@@ -347,7 +349,7 @@ export default function BankSettingsPage() {
                   if (m) setBranchCode(m[1]);
                 }}
                 onBlur={commitBranch}
-                placeholder="例）新宿 / 123"
+                placeholder={t('branchPlaceholder')}
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500"
                 list="branch-suggest"
                 disabled={!bankCode}
@@ -363,7 +365,7 @@ export default function BankSettingsPage() {
 
             {/* 口座種別 */}
             <div className="mb-5">
-              <span className="block text-sm font-semibold text-gray-800 mb-1.5">口座種別</span>
+              <span className="block text-sm font-semibold text-gray-800 mb-1.5">{t('accountTypeLabel')}</span>
               <div className="flex gap-6">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -373,7 +375,7 @@ export default function BankSettingsPage() {
                     checked={accountType === 'futsu'}
                     onChange={() => setAccountType('futsu')}
                   />
-                  普通
+                  {t('futsu')}
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -383,7 +385,7 @@ export default function BankSettingsPage() {
                     checked={accountType === 'toza'}
                     onChange={() => setAccountType('toza')}
                   />
-                  当座
+                  {t('toza')}
                 </label>
               </div>
             </div>
@@ -391,14 +393,14 @@ export default function BankSettingsPage() {
             {/* 口座番号 */}
             <div className="mb-5">
               <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-                口座番号（最大7桁）
+                {t('accountNumberLabel')}
               </label>
               <input
                 type="text"
                 inputMode="numeric"
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 7))}
-                placeholder="例）1234567"
+                placeholder={t('accountNumberPlaceholder')}
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
             </div>
@@ -406,13 +408,13 @@ export default function BankSettingsPage() {
             {/* 口座名義 */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-                口座名義（全角カナ）
+                {t('accountNameLabel')}
               </label>
               <input
                 type="text"
                 value={accountNameKana}
                 onChange={(e) => setAccountNameKana(e.target.value)}
-                placeholder="例）ヤマダ　タロウ"
+                placeholder={t('accountNamePlaceholder')}
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
             </div>
@@ -426,7 +428,7 @@ export default function BankSettingsPage() {
 
             {/* 保存成功のスクリーンリーダー通知 */}
             <div aria-live="polite" className="sr-only">
-              {saved ? '口座情報を保存しました' : ''}
+              {saved ? t('savedSr') : ''}
             </div>
 
             {/* 保存ボタン */}
@@ -438,15 +440,15 @@ export default function BankSettingsPage() {
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  保存中...
+                  {t('saving')}
                 </>
               ) : saved ? (
                 <>
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  保存しました
+                  {t('saved')}
                 </>
               ) : (
-                '保存する'
+                t('save')
               )}
             </Button>
           </div>

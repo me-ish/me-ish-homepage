@@ -1,9 +1,11 @@
 'use client';
 
 import { Palette } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import FormWrapper from './FormWrapper';
 
 export default function EntryPage() {
+  const t = useTranslations('pages.entry');
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#f8fbff] via-white to-white">
       {/* Hero Header */}
@@ -22,10 +24,10 @@ export default function EntryPage() {
             <Palette className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-2xl md:text-3xl font-bold text-white">
-            me-ish 応募フォーム
+            {t('formTitle')}
           </h1>
           <p className="mt-2 text-white/80 text-sm md:text-base">
-            あなたの作品を世界に届けよう
+            {t('formSubtitle')}
           </p>
         </div>
       </div>
