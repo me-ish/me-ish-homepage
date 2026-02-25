@@ -90,6 +90,8 @@ export async function saveStudioDraft(id: string, form: Partial<StudioFormData>)
   if (form.services !== undefined) patch.services = form.services;
   if (form.skills !== undefined) patch.skills = form.skills;
   if (form.social !== undefined) patch.social = form.social;
+  if (form.sectionOrder !== undefined) patch.section_order = form.sectionOrder;
+  if (form.sectionVisibility !== undefined) patch.section_visibility = form.sectionVisibility;
   if (form.themeId !== undefined) patch.theme_id = form.themeId;
   if (form.accentColor !== undefined) patch.accent_color = form.accentColor;
   if (form.fontPreset !== undefined) patch.font_preset = form.fontPreset;

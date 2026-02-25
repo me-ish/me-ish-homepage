@@ -8,6 +8,7 @@ import type { StudioFormData } from '@/lib/aura/studio/studioTypes';
 import StepProfile from './steps/StepProfile';
 import StepWorks from './steps/StepWorks';
 import StepExtras from './steps/StepExtras';
+import StepLayout from './steps/StepLayout';
 import StepTheme from './steps/StepTheme';
 import StudioPreview from './StudioPreview';
 import { ChevronLeft, ChevronRight, Eye, Loader2 } from 'lucide-react';
@@ -17,6 +18,7 @@ const STEPS = [
   { id: 'profile', label: 'プロフィール' },
   { id: 'works', label: '作品' },
   { id: 'extras', label: 'その他' },
+  { id: 'layout', label: 'レイアウト' },
   { id: 'theme', label: 'テーマ' },
 ] as const;
 
@@ -209,6 +211,9 @@ export default function StudioWizard({ initialProjectId }: Props) {
           )}
           {currentStep.id === 'extras' && (
             <StepExtras form={form} onChange={handleChangeWithSave} />
+          )}
+          {currentStep.id === 'layout' && (
+            <StepLayout form={form} onChange={handleChangeWithSave} />
           )}
           {currentStep.id === 'theme' && (
             <StepTheme form={form} onChange={handleChangeWithSave} />
