@@ -7,6 +7,15 @@ import { FaXTwitter } from 'react-icons/fa6';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 
+const FOOTER_LINKS = [
+  { href: '/footer/terms', label: '利用規約' },
+  { href: '/footer/privacy', label: 'プライバシーポリシー' },
+  { href: '/footer/tokushoho', label: '特定商取引法に基づく表記' },
+  { href: '/footer/copyright', label: '著作権・AI学習防止ポリシー' },
+  { href: '/footer/disclaimer', label: '免責事項' },
+  { href: '/footer/faq', label: 'よくある質問（FAQ）' },
+] as const;
+
 export function ContactSection({ variant }: { variant: 'desktop' | 'mobile' }) {
   const t = useTranslations('home.contact');
 
@@ -73,10 +82,23 @@ export function ContactSection({ variant }: { variant: 'desktop' | 'mobile' }) {
           </div>
         </div>
 
-        {/* Bottom credit */}
-        <p className="relative z-10 mt-20 text-center text-xs text-white/15">
-          © {new Date().getFullYear()} me-ish
-        </p>
+        {/* Footer links + Bottom credit */}
+        <div className="relative z-10 mt-20 border-t border-white/10 pt-8">
+          <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 px-4">
+            {FOOTER_LINKS.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className="text-xs text-white/30 hover:text-white/60 transition-colors"
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+          <p className="mt-4 text-center text-xs text-white/15">
+            © {new Date().getFullYear()} me-ish
+          </p>
+        </div>
       </section>
     );
   }
@@ -141,12 +163,25 @@ export function ContactSection({ variant }: { variant: 'desktop' | 'mobile' }) {
             {t('xLabel')}
           </a>
         </div>
-      </div>
 
-      {/* Bottom credit */}
-      <p className="relative z-10 mt-12 text-center text-xs text-white/15">
-        © {new Date().getFullYear()} me-ish
-      </p>
+        {/* Footer links + Bottom credit */}
+        <div className="mt-12 border-t border-white/10 pt-8">
+          <nav className="flex flex-wrap justify-center gap-x-4 gap-y-2 px-2">
+            {FOOTER_LINKS.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className="text-[11px] text-white/30 hover:text-white/60 transition-colors active:text-white/50"
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+          <p className="mt-4 text-center text-xs text-white/15">
+            © {new Date().getFullYear()} me-ish
+          </p>
+        </div>
+      </div>
     </section>
   );
 }

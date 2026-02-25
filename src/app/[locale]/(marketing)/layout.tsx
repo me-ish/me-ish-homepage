@@ -1,7 +1,6 @@
 // src/app/(marketing)/layout.tsx
 import { Suspense } from 'react';
 import Header from '@/components/shared/Header';
-import Footer from '@/components/shared/Footer';
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -23,8 +22,6 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <main id="main-content" className="pt-[var(--header-h,70px)]">
         {children}
       </main>
-
-      <Footer />
     </>
   );
 }
