@@ -58,10 +58,13 @@ export type StudioFormData = {
   sectionOrder: SectionId[];
   sectionVisibility: Record<SectionId, boolean>;
 
-  // Step 5: Theme
+  // Step 5: Theme + 詳細カスタマイズ
   themeId: 'pure' | 'night' | 'flow';
   accentColor: string;
   fontPreset: string;
+  layoutPref: string;   // '' = テーマデフォルト / 'center' / 'left'
+  avatarShape: string;  // 'circle' | 'rounded' | 'square'
+  bgPattern: string;    // 'none' | 'dots' | 'grid' | 'diagonal' | 'cross'
 };
 
 export const DEFAULT_STUDIO_FORM: StudioFormData = {
@@ -80,6 +83,9 @@ export const DEFAULT_STUDIO_FORM: StudioFormData = {
   themeId: 'pure',
   accentColor: '#00a1e9',
   fontPreset: 'cleanJa',
+  layoutPref: '',
+  avatarShape: 'circle',
+  bgPattern: 'none',
 };
 
 /** DB row からフォームデータへの変換 */
@@ -98,6 +104,9 @@ export function dbRowToFormData(row: {
   theme_id?: string | null;
   accent_color?: string | null;
   font_preset?: string | null;
+  layout_pref?: string | null;
+  avatar_shape?: string | null;
+  bg_pattern?: string | null;
 }): Partial<StudioFormData> {
   // section_order: DB値を検証してフォールバック
   const rawOrder = Array.isArray(row.section_order) ? row.section_order as string[] : [];
@@ -135,5 +144,8 @@ export function dbRowToFormData(row: {
     themeId: (['pure', 'night', 'flow'].includes(row.theme_id ?? '') ? row.theme_id : 'pure') as StudioFormData['themeId'],
     accentColor: row.accent_color ?? '#00a1e9',
     fontPreset: row.font_preset ?? 'cleanJa',
+    layoutPref: row.layout_pref ?? '',
+    avatarShape: (['circle', 'rounded', 'square'].includes(row.avatar_shape ?? '') ? row.avatar_shape : 'circle') as string,
+    bgPattern: (['none', 'dots', 'grid', 'diagonal', 'cross'].includes(row.bg_pattern ?? '') ? row.bg_pattern : 'none') as string,
   };
 }

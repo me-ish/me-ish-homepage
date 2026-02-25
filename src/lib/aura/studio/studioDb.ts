@@ -19,6 +19,8 @@ export type AuraProjectRow = {
   accent_color: string | null;
   font_preset: string | null;
   layout_pref: string | null;
+  avatar_shape: string | null;
+  bg_pattern: string | null;
   works: unknown;
   services: unknown;
   skills: unknown;
@@ -95,6 +97,9 @@ export async function saveStudioDraft(id: string, form: Partial<StudioFormData>)
   if (form.themeId !== undefined) patch.theme_id = form.themeId;
   if (form.accentColor !== undefined) patch.accent_color = form.accentColor;
   if (form.fontPreset !== undefined) patch.font_preset = form.fontPreset;
+  if (form.layoutPref !== undefined) patch.layout_pref = form.layoutPref || null;
+  if (form.avatarShape !== undefined) patch.avatar_shape = form.avatarShape;
+  if (form.bgPattern !== undefined) patch.bg_pattern = form.bgPattern;
 
   const { error } = await db().update(patch).eq('id', id);
   if (error) throw error;

@@ -4,7 +4,10 @@
 import type { StudioFormData, SectionId } from '@/lib/aura/studio/studioTypes';
 import { DEFAULT_SECTION_ORDER } from '@/lib/aura/studio/studioTypes';
 import { getTheme } from '@/lib/aura/studio/studioThemes';
-import { Globe, Twitter } from 'lucide-react';
+import { getFontPreset, getAvatarBorderRadius, getBgPatternStyle } from '@/lib/aura/studio/designPresets';
+import type { AvatarShape, BgPattern } from '@/lib/aura/studio/designPresets';
+import { Globe, Instagram } from 'lucide-react';
+import { FaXTwitter } from 'react-icons/fa6';
 
 type Props = {
   form: StudioFormData;
@@ -14,6 +17,10 @@ export default function StudioPreview({ form }: Props) {
   const theme = getTheme(form.themeId);
   const { colors } = theme;
   const accent = form.accentColor;
+  const fontPreset = getFontPreset(form.fontPreset);
+  const headerLayout = (form.layoutPref as import('@/lib/aura/studio/designPresets').LayoutPref) || theme.headerLayout;
+  const avatarBorderRadius = getAvatarBorderRadius((form.avatarShape || 'circle') as AvatarShape);
+  const bgPatternStyle = getBgPatternStyle((form.bgPattern || 'none') as BgPattern, colors.border);
 
   const sectionOrder: SectionId[] = form.sectionOrder?.length ? form.sectionOrder : DEFAULT_SECTION_ORDER;
   const sectionVisibility = form.sectionVisibility ?? {};
@@ -127,7 +134,18 @@ export default function StudioPreview({ form }: Props) {
               className="inline-flex items-center gap-2 text-xs"
               style={{ color: accent }}
             >
-              <Twitter className="w-3 h-3" /> X
+              <FaXTwitter className="w-3 h-3" /> X
+            </a>
+          )}
+          {form.social.instagram && (
+            <a
+              href={form.social.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-xs"
+              style={{ color: accent }}
+            >
+              <Instagram className="w-3 h-3" /> Instagram
             </a>
           )}
           {form.social.website && (
@@ -146,70 +164,131 @@ export default function StudioPreview({ form }: Props) {
     ) : null,
   };
 
+  const isBanner     = headerLayout === 'banner';
+  const isSideLeft   = headerLayout === 'side-left';
+  const isSideRight  = headerLayout === 'side-right';
+  const isHorizontal = isSideLeft || isSideRight;
+
+  // アバター要素（レイアウトに依存しない共通部分）
+  const AVATAR_SIZE = 72;
+  const avatarEl = form.avatarPreviewUrl || form.avatarPath ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={form.avatarPreviewUrl || `/api/aura/assets?path=${encodeURIComponent(form.avatarPath)}`}
+      alt="avatar"
+      style={{
+        width: AVATAR_SIZE, height: AVATAR_SIZE,
+        borderRadius: avatarBorderRadius,
+        objectFit: 'cover',
+        border: `3px solid ${accent}`,
+        flexShrink: 0,
+        display: 'block',
+      }}
+    />
+  ) : (
+    <div
+      style={{
+        width: AVATAR_SIZE, height: AVATAR_SIZE,
+        borderRadius: avatarBorderRadius,
+        background: accent,
+        color: '#fff',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '1.5rem',
+        fontWeight: 700,
+        flexShrink: 0,
+      }}
+    >
+      {(form.name || '?').charAt(0).toUpperCase()}
+    </div>
+  );
+
+  // テキスト要素
+  const textEl = (
+    <>
+      <h1 className="font-bold text-xl leading-tight" style={{ color: theme.gradient ? '#fff' : colors.text }}>
+        {form.name || '名前未入力'}
+      </h1>
+      {form.displayTitle && (
+        <p className="mt-1 text-sm font-medium" style={{ color: theme.gradient ? 'rgba(255,255,255,0.85)' : accent }}>
+          {form.displayTitle}
+        </p>
+      )}
+      {form.tagline && (
+        <p className="mt-2 text-xs" style={{ color: theme.gradient ? 'rgba(255,255,255,0.75)' : colors.muted }}>
+          {form.tagline}
+        </p>
+      )}
+    </>
+  );
+
+  const heroBg: React.CSSProperties = {
+    background: theme.gradient ?? colors.surface,
+    borderBottom: `1px solid ${colors.border}`,
+  };
+
   return (
     <div
       className="h-full overflow-y-auto text-sm"
-      style={{ background: colors.bg, color: colors.text, fontFamily: 'sans-serif' }}
+      style={{ background: colors.bg, color: colors.text, fontFamily: fontPreset.fontFamily, ...bgPatternStyle }}
     >
+      {/* Google Fonts 動的ロード */}
+      {fontPreset.googleFontUrl && (
+        // eslint-disable-next-line @next/next/no-page-custom-font
+        <style dangerouslySetInnerHTML={{ __html: `@import url('${fontPreset.googleFontUrl}');` }} />
+      )}
+
       {/* Hero（常に先頭・固定） */}
-      <section
-        className="px-6 py-8"
-        style={{
-          background: theme.gradient ?? colors.surface,
-          borderBottom: `1px solid ${colors.border}`,
-          textAlign: theme.headerLayout === 'center' ? 'center' : 'left',
-        }}
-      >
-        {form.avatarPreviewUrl || form.avatarPath ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={form.avatarPreviewUrl || `/api/aura/assets?path=${encodeURIComponent(form.avatarPath)}`}
-            alt="avatar"
-            className="rounded-full object-cover"
-            style={{
-              width: 72, height: 72,
-              display: theme.headerLayout === 'center' ? 'block' : 'inline-block',
-              margin: theme.headerLayout === 'center' ? '0 auto 12px' : '0 0 12px',
-              border: `3px solid ${accent}`,
-            }}
-          />
-        ) : (
-          <div
-            className="rounded-full flex items-center justify-center text-lg font-bold"
-            style={{
-              width: 72, height: 72,
-              background: accent,
-              color: '#fff',
-              display: theme.headerLayout === 'center' ? 'flex' : 'inline-flex',
-              margin: theme.headerLayout === 'center' ? '0 auto 12px' : '0 0 12px',
-            }}
-          >
-            {(form.name || '?').charAt(0).toUpperCase()}
-          </div>
-        )}
-        <h1
-          className="font-bold text-xl leading-tight"
-          style={{ color: theme.gradient ? '#fff' : colors.text }}
+      {isBanner ? (
+        /* バナー: テキスト中央・アバターが下端からはみ出す */
+        <section
+          style={{
+            ...heroBg,
+            padding: `1.5rem 1.5rem ${AVATAR_SIZE / 2 + 16}px`,
+            textAlign: 'center',
+            position: 'relative',
+          }}
         >
-          {form.name || '名前未入力'}
-        </h1>
-        {form.displayTitle && (
-          <p className="mt-1 text-sm font-medium" style={{ color: theme.gradient ? 'rgba(255,255,255,0.85)' : accent }}>
-            {form.displayTitle}
-          </p>
-        )}
-        {form.tagline && (
-          <p className="mt-2 text-xs" style={{ color: theme.gradient ? 'rgba(255,255,255,0.75)' : colors.muted }}>
-            {form.tagline}
-          </p>
-        )}
-      </section>
+          {textEl}
+          <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translate(-50%, 50%)', zIndex: 10 }}>
+            {avatarEl}
+          </div>
+        </section>
+      ) : isHorizontal ? (
+        /* 横並び */
+        <section style={{ ...heroBg, padding: '1.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: isSideRight ? 'row-reverse' : 'row', alignItems: 'center', gap: '1rem' }}>
+            {avatarEl}
+            <div>{textEl}</div>
+          </div>
+        </section>
+      ) : (
+        /* 縦積み（center / left / テーマデフォルト） */
+        <section
+          className="px-6 py-8"
+          style={{
+            ...heroBg,
+            textAlign: headerLayout === 'center' ? 'center' : 'left',
+          }}
+        >
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: '0.25rem',
+            alignItems: headerLayout === 'center' ? 'center' : 'flex-start',
+          }}>
+            <div style={{ marginBottom: '0.75rem' }}>{avatarEl}</div>
+            {textEl}
+          </div>
+        </section>
+      )}
 
       {/* セクション（順番・表示に従ってレンダリング） */}
-      {sectionOrder
-        .filter((id) => sectionVisibility[id] !== false)
-        .map((id) => sectionMap[id])
-        .filter(Boolean)}
+      <div style={{ paddingTop: isBanner ? AVATAR_SIZE / 2 + 8 : 0 }}>
+        {sectionOrder
+          .filter((id) => sectionVisibility[id] !== false)
+          .map((id) => sectionMap[id])
+          .filter(Boolean)}
+      </div>
     </div>
   );
 }
