@@ -3,9 +3,20 @@
 import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useZoomArtwork } from './ZoomArtworkContext';
+import { supabase } from '@/lib/supabaseClient';
 
 const ZoomArtworkMobileDisplay = dynamic(() => import('./ZoomArtworkMobileDisplay'), { ssr: false });
 const ZoomArtworkDesktopDisplay = dynamic(() => import('./ZoomArtworkDesktopDisplay'), { ssr: false });
+
+function getOrCreateSessionId(): string {
+  const key = 'meish_session_id';
+  let sessionId = sessionStorage.getItem(key);
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    sessionStorage.setItem(key, sessionId);
+  }
+  return sessionId;
+}
 
 export default function ZoomArtworkDisplay() {
   const { zoomedArtwork, setZoomedArtwork } = useZoomArtwork();
@@ -24,6 +35,27 @@ export default function ZoomArtworkDisplay() {
 
     return () => mql?.removeEventListener('change', onChange);
   }, []);
+
+  // 作品が開かれたときにビューを記録
+  useEffect(() => {
+    if (!zoomedArtwork?.id) return;
+
+    const recordView = async () => {
+      try {
+        const sessionId = getOrCreateSessionId();
+        const { data: { user } } = await supabase.auth.getUser();
+        await fetch(`/api/entries/${zoomedArtwork.id}/view`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, userId: user?.id ?? null }),
+        });
+      } catch {
+        // ビュー記録失敗は無視
+      }
+    };
+
+    recordView();
+  }, [zoomedArtwork?.id]);
 
   // SSRとの差分を無くす：マウント前 or 画面幅未判定 or 作品なし → 何も描かない
   if (!mounted || isMobile === null || !zoomedArtwork) return null;
