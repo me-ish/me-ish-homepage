@@ -244,6 +244,8 @@ const FormWrapper = () => {
 
     try {
       const externalUserId = uuidv4();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const authUserId = authUser?.id ?? null;
       const snsLinksJson = JSON.stringify({
         homepage: data.homepageUrl || '',
         twitter: data.twitterUrl || '',
@@ -353,6 +355,7 @@ const FormWrapper = () => {
 
           file_name: fileName,
           external_user_id: externalUserId,
+          user_id: authUserId,
 
           meish_fee_yen: isSale ? meishFeeYen : null,
           artist_reward_yen: isSale ? artistRewardYen : null,

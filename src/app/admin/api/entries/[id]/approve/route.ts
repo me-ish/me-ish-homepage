@@ -101,13 +101,21 @@ export async function POST(
     }
   }
 
-  // 3) DB 承認フラグ
+  // 3) DB 承認フラグ（+ user_id が未設定なら email で補完）
   let updatedEntry;
   {
-    const patch = {
+    const patch: Record<string, unknown> = {
       confirmed: true,
       confirmed_at: new Date().toISOString(),
     };
+
+    // user_id が未設定の場合、email でauth.usersを引いて補完する
+    if (entry.email) {
+      const authLookup = await admin.auth.admin.getUserByEmail(entry.email).catch(() => ({ data: { user: null } }));
+      if (authLookup.data?.user?.id) {
+        patch.user_id = authLookup.data.user.id;
+      }
+    }
     const { data: updated, error: updErr } = await admin
       .from('entries')
       .update(patch)
