@@ -84,8 +84,7 @@ export function AuraFormPreview({ data }: Props) {
         <div
           style={{
             width: RENDER_WIDTH,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            zoom: zoom as any,
+            zoom: zoom as unknown as number,
             pointerEvents: "none",
           }}
         >
