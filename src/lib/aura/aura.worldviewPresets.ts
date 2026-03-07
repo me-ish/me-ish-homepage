@@ -87,7 +87,8 @@ const COLOR_PRESETS: Record<
     accent: "#6366F1",
     bg: "#020617",
     text: "#E5E7EB",
-    gradient: "linear-gradient(145deg, #0f172a 0%, #020617 100%)",
+    // 青みの深みを追加してcyberとの差別化
+    gradient: "linear-gradient(145deg, #020617 0%, #0f172a 45%, #1e3a8a 100%)",
   },
   business: {
     primary: "#2563EB",
@@ -115,14 +116,16 @@ const COLOR_PRESETS: Record<
     accent: "#E5E7EB",
     bg: "#020617",
     text: "#E5E7EB",
-    gradient: "linear-gradient(145deg, #020617 0%, #020617 100%)",
+    // フラットだった背景に奥行きを追加
+    gradient: "linear-gradient(145deg, #020617 0%, #0f172a 60%, #111827 100%)",
   },
   cyber: {
     primary: "#22D3EE",
     accent: "#6366F1",
     bg: "#020617",
     text: "#E5E7EB",
-    gradient: "linear-gradient(145deg, #020617 0%, #0f172a 50%, #1e293b 100%)",
+    // インジゴの深みでmoderと差別化
+    gradient: "linear-gradient(145deg, #020617 0%, #0f172a 40%, #1e1b4b 100%)",
   },
   natural: {
     primary: "#22C55E",
@@ -136,7 +139,8 @@ const COLOR_PRESETS: Record<
     accent: "#F97316",
     bg: "#1C1917",
     text: "#FAFAF5",
-    gradient: "linear-gradient(145deg, #0c0a09 0%, #1c1917 60%, #292524 100%)",
+    // 温かみのある暗褐色で深みを追加
+    gradient: "linear-gradient(160deg, #0c0a09 0%, #1c1917 50%, #2d1a05 100%)",
   },
   retro: {
     primary: "#F97316",
@@ -159,7 +163,7 @@ const BG_STYLES: Record<WorldviewBase, CSSProperties> = {
   },
   modern: {
     backgroundColor: "#020617",
-    backgroundImage: "linear-gradient(145deg, #0f172a 0%, #020617 100%)",
+    backgroundImage: "linear-gradient(145deg, #020617 0%, #0f172a 45%, #1e3a8a 100%)",
   },
   business: {
     backgroundColor: "#EFF6FF",
@@ -175,11 +179,11 @@ const BG_STYLES: Record<WorldviewBase, CSSProperties> = {
   },
   dark: {
     backgroundColor: "#020617",
-    backgroundImage: "linear-gradient(145deg, #020617 0%, #0f172a 100%)",
+    backgroundImage: "linear-gradient(145deg, #020617 0%, #0f172a 60%, #111827 100%)",
   },
   cyber: {
     backgroundColor: "#020617",
-    backgroundImage: "linear-gradient(145deg, #020617 0%, #0f172a 50%, #1e293b 100%)",
+    backgroundImage: "linear-gradient(145deg, #020617 0%, #0f172a 40%, #1e1b4b 100%)",
   },
   natural: {
     backgroundColor: "#F0FDF4",
@@ -187,7 +191,7 @@ const BG_STYLES: Record<WorldviewBase, CSSProperties> = {
   },
   luxury: {
     backgroundColor: "#1C1917",
-    backgroundImage: "linear-gradient(145deg, #0c0a09 0%, #1c1917 60%, #292524 100%)",
+    backgroundImage: "linear-gradient(160deg, #0c0a09 0%, #1c1917 50%, #2d1a05 100%)",
   },
   retro: {
     backgroundColor: "#FFFBEB",
@@ -210,10 +214,10 @@ const WORLDVIEW_DEFINITIONS: Record<
 > = {
   minimal: { surface: "simple", pattern: "none", layout: "center" },
   modern: { surface: "glass", pattern: "grid-whisper", layout: "split" },
-  business: { surface: "card", pattern: "none", layout: "center" },
+  business: { surface: "card", pattern: "dot-whisper", layout: "center" },
   cute: { surface: "paper", pattern: "dot-whisper", layout: "center" },
   pop: { surface: "card", pattern: "diagonal-whisper", layout: "center" },
-  dark: { surface: "dark", pattern: "none", layout: "split" },
+  dark: { surface: "dark", pattern: "grid-whisper", layout: "split" },
   cyber: { surface: "neon", pattern: "scanlines-whisper", layout: "split" },
   natural: { surface: "paper", pattern: "fiber-whisper", layout: "center" },
   luxury: { surface: "dark", pattern: "diamond-whisper", layout: "center" },
@@ -281,7 +285,7 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "gallery",
     languageMode: "ja",
     fontPreset: "formalMincho",
-    patternLayers: [],
+    patternLayers: ["dot-whisper"],
     textureLayers: ["paper-fine"],
     bgStyle: BG_STYLES.business,
   },
@@ -302,7 +306,7 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     languageMode: "ja",
     fontPreset: "cuteRound",
     patternLayers: ["dot-whisper"],
-    textureLayers: [],
+    textureLayers: ["paper-warm"],
     bgStyle: BG_STYLES.cute,
   },
 
@@ -322,7 +326,7 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     languageMode: "ja",
     fontPreset: "popBold",
     patternLayers: ["diagonal-whisper"],
-    textureLayers: [],
+    textureLayers: ["grain-light"],
     bgStyle: BG_STYLES.pop,
   },
 
@@ -341,7 +345,7 @@ const PRESETS: Record<WorldviewBase, WorldviewPreset> = {
     showcaseStyle: "gallery",
     languageMode: "ja",
     fontPreset: "techMono",
-    patternLayers: [],
+    patternLayers: ["grid-whisper"],
     textureLayers: ["grain-dark"],
     bgStyle: BG_STYLES.dark,
   },

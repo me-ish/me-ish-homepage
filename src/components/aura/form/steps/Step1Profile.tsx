@@ -3,7 +3,33 @@
 
 import { useRef, useState, useCallback } from "react";
 import Image from "next/image";
+import { Sparkles, Loader2 } from "lucide-react";
 import type { AuraFormData } from "../auraFormTypes";
+
+const SPECIALTY_TAGS = [
+  "キャラクターデザイン", "背景・風景", "SNSアイコン",
+  "LINEスタンプ", "漫画・コミック", "グッズデザイン",
+  "ゲームCG", "VTuber衣装", "ちびキャラ・デフォルメ", "表紙・サムネイル",
+];
+
+const VIBE_TAGS = [
+  "やわらかい・ほんわか", "クール・スタイリッシュ", "ポップ・カラフル",
+  "和風・繊細", "ダーク・神秘的", "ナチュラル・温かみ",
+  "レトロ・ノスタルジック", "ファンタジー・幻想的", "水彩・透明感", "モノクロ・シンプル",
+];
+
+function toggleTag(
+  tag: string,
+  selected: string[],
+  setSelected: (v: string[]) => void,
+  max = 3,
+) {
+  if (selected.includes(tag)) {
+    setSelected(selected.filter((t) => t !== tag));
+  } else if (selected.length < max) {
+    setSelected([...selected, tag]);
+  }
+}
 
 type Props = {
   data: AuraFormData;
@@ -16,6 +42,44 @@ export function Step1Profile({ data, onChange, requestId, onRequireDraft }: Prop
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [taglineSuggesting, setTaglineSuggesting] = useState(false);
+  const [taglineSuggestError, setTaglineSuggestError] = useState<string | null>(null);
+  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
+  const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
+
+  const handleSuggestTagline = useCallback(async () => {
+    setTaglineSuggesting(true);
+    setTaglineSuggestError(null);
+    try {
+      const res = await fetch("/api/aura/form/ai-suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-requested-with": "me-ish" },
+        body: JSON.stringify({
+          field: "tagline",
+          name: data.name,
+          title: data.title,
+          bio: data.bio,
+          worldviewBase: data.worldviewBase,
+          tone: data.tone,
+          specialties: selectedSpecialties,
+          vibes: selectedVibes,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!json?.ok || !json?.text) {
+        setTaglineSuggestError("生成に失敗しました");
+        return;
+      }
+      onChange({
+        tagline: json.text,
+        aiLockedFields: { ...data.aiLockedFields, tagline: true },
+      });
+    } catch {
+      setTaglineSuggestError("通信エラーが発生しました");
+    } finally {
+      setTaglineSuggesting(false);
+    }
+  }, [data.name, data.title, data.bio, data.worldviewBase, data.tone, data.aiLockedFields, onChange, selectedSpecialties, selectedVibes]);
 
   const handleAvatarUpload = useCallback(async (file: File) => {
     // requestIdを確定（なければdraft作成して即取得）
@@ -173,23 +237,136 @@ export function Step1Profile({ data, onChange, requestId, onRequireDraft }: Prop
         </label>
 
         {/* タグライン */}
-        <label className="block">
+        <div className="space-y-3">
           <span className="text-sm font-medium text-slate-700">キャッチコピー</span>
+
+          {/* 得意なこと */}
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-slate-600">
+              得意なこと
+              <span className="ml-1 text-slate-400">（最大3つ）</span>
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {SPECIALTY_TAGS.map((tag) => {
+                const isSelected = selectedSpecialties.includes(tag);
+                const isDisabled = !isSelected && selectedSpecialties.length >= 3;
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag, selectedSpecialties, setSelectedSpecialties)}
+                    disabled={isDisabled}
+                    className={[
+                      "rounded-lg border px-2.5 py-1.5 text-left text-xs transition-all",
+                      isSelected
+                        ? "border-violet-400 bg-violet-50 text-violet-700 font-medium"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300",
+                      isDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer",
+                    ].join(" ")}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 雰囲気・スタイル */}
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-slate-600">
+              雰囲気・スタイル
+              <span className="ml-1 text-slate-400">（最大3つ）</span>
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {VIBE_TAGS.map((tag) => {
+                const isSelected = selectedVibes.includes(tag);
+                const isDisabled = !isSelected && selectedVibes.length >= 3;
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag, selectedVibes, setSelectedVibes)}
+                    disabled={isDisabled}
+                    className={[
+                      "rounded-lg border px-2.5 py-1.5 text-left text-xs transition-all",
+                      isSelected
+                        ? "border-violet-400 bg-violet-50 text-violet-700 font-medium"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300",
+                      isDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer",
+                    ].join(" ")}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 生成ボタン */}
+          <div className="flex items-center justify-between">
+            {data.aiLockedFields.tagline && (
+              <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-600">
+                AI生成済み
+              </span>
+            )}
+            <div className="ml-auto">
+              <button
+                type="button"
+                onClick={handleSuggestTagline}
+                disabled={
+                  taglineSuggesting ||
+                  (selectedSpecialties.length === 0 && selectedVibes.length === 0 && !data.name.trim())
+                }
+                className={[
+                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all",
+                  "border border-violet-300 bg-violet-50 text-violet-700",
+                  "hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50",
+                ].join(" ")}
+                title={
+                  selectedSpecialties.length === 0 && selectedVibes.length === 0 && !data.name.trim()
+                    ? "タグを選ぶか名前を入力してください"
+                    : "AIでキャッチコピーを生成"
+                }
+              >
+                {taglineSuggesting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                AIでキャッチコピーを生成
+              </button>
+            </div>
+          </div>
+
+          {/* テキスト入力 */}
           <input
             type="text"
             value={data.tagline}
-            onChange={(e) => onChange({ tagline: e.target.value })}
+            onChange={(e) =>
+              onChange({
+                tagline: e.target.value,
+                ...(data.aiLockedFields.tagline
+                  ? { aiLockedFields: { ...data.aiLockedFields, tagline: false } }
+                  : {}),
+              })
+            }
             placeholder="ユーザーの心に届くデジタル表現を"
             className={[
-              "mt-1.5 w-full rounded-xl border px-4 py-3 text-sm transition-all",
-              "bg-slate-50 placeholder:text-slate-400 border-slate-200",
-              "focus:border-sky-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-100",
+              "w-full rounded-xl border px-4 py-3 text-sm transition-all",
+              "bg-slate-50 placeholder:text-slate-400",
+              data.aiLockedFields.tagline
+                ? "border-violet-300 focus:border-violet-400 focus:ring-violet-100"
+                : "border-slate-200 focus:border-sky-400 focus:ring-sky-100",
+              "focus:bg-white focus:outline-none focus:ring-2",
             ].join(" ")}
           />
-          <p className="mt-1 text-[11px] text-slate-500">
-            「何が得意か」「どんな雰囲気か」が一目で伝わる短い言葉
+          {taglineSuggestError && (
+            <p className="mt-1 text-[11px] text-red-500">{taglineSuggestError}</p>
+          )}
+          <p className="text-[11px] text-slate-500">
+            タグを選んでAI生成するか、直接入力もできます
           </p>
-        </label>
+        </div>
 
         {/* アバター */}
         <div>
@@ -240,37 +417,6 @@ export function Step1Profile({ data, onChange, requestId, onRequireDraft }: Prop
           </div>
         </div>
 
-        {/* トーン / 色 */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">文章トーン</span>
-            <select
-              value={data.tone}
-              onChange={(e) =>
-                onChange({ tone: e.target.value as AuraFormData["tone"] })
-              }
-              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-sky-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-100"
-            >
-              <option value="ですます">丁寧（ですます）</option>
-              <option value="フレンドリー">フレンドリー</option>
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">好きな色</span>
-            <div className="mt-1.5 flex items-center gap-3">
-              <input
-                type="color"
-                value={data.color}
-                onChange={(e) => onChange({ color: e.target.value })}
-                className="h-12 w-14 cursor-pointer rounded-lg border border-slate-200"
-              />
-              <span className="text-xs text-slate-500">
-                差し色として使われます
-              </span>
-            </div>
-          </label>
-        </div>
       </div>
     </div>
   );

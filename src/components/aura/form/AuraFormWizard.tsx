@@ -2,11 +2,10 @@
 "use client";
 
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp, Eye, EyeOff, Wand2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, Send, Loader2, Wand2 } from "lucide-react";
 import { STEPS, type StepId, type AuraFormData, validateStep } from "./auraFormTypes";
 import { useAuraFormDraft } from "./useAuraFormDraft";
 import { AuraFormStepper } from "./AuraFormStepper";
-import { AuraFormNav } from "./AuraFormNav";
 import { Step1Profile } from "./steps/Step1Profile";
 import { Step2Design } from "./steps/Step2Design";
 import { Step3Works } from "./steps/Step3Works";
@@ -14,15 +13,11 @@ import { Step4About } from "./steps/Step4About";
 import { Step5ServicesSkills } from "./steps/Step5ServicesSkills";
 import { Step6Contact } from "./steps/Step6Contact";
 import { Step7Review } from "./steps/Step7Review";
+import { AuraFormPreview } from "./AuraFormPreview";
 
-import { AuraHeroSwitcher } from "@/components/aura/sections/AuraHeroSwitcher";
-import { buildBackgroundStyle } from "@/lib/aura/aura.background";
-import { getWorldviewPreset } from "@/lib/aura/aura.worldviewPresets";
 
 import { useAuraDraftServer } from "./hooks/useAuraDraftServer";
 import { useStepNavigation } from "./hooks/useStepNavigation";
-import { useSyncedHeights } from "./hooks/useSyncedHeights";
-import { buildMockTheme, buildMockVariant, buildMockHeroSection } from "./auraPreviewMocks";
 import { SAMPLE_FORM_DATA } from "./auraFormSampleData";
 
 export function AuraFormWizard() {
@@ -36,6 +31,7 @@ export function AuraFormWizard() {
 
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
+  const formCardRef = useRef<HTMLDivElement>(null);
 
   // Extracted hooks
   const { draft, emailSync, createDraftIfNeeded } = useAuraDraftServer(data.email, data.name, setError);
@@ -45,7 +41,7 @@ export function AuraFormWizard() {
       setError(emailSync.error);
     }
   }, [emailSync.status, emailSync.error]);
-  const { formCardRef, previewCardRef, syncedHeight } = useSyncedHeights(currentStep);
+
   const { handleNext, handleBack, handleStepClick, handleEditStep, stepAnnouncement } =
     useStepNavigation(currentStep, setCurrentStep, data, setError, containerRef, formCardRef);
 
@@ -66,7 +62,6 @@ export function AuraFormWizard() {
     try {
       return await createDraftIfNeeded(data.email, data.name);
     } catch {
-      // error set inside createDraftIfNeeded
       return null;
     }
   }, [data.email, data.name, createDraftIfNeeded, setCurrentStep]);
@@ -105,8 +100,6 @@ export function AuraFormWizard() {
           : []),
       ];
 
-      const preset = getWorldviewPreset(data.worldviewBase);
-
       const payload = {
         requestId: draft.requestId,
         email: data.email,
@@ -118,6 +111,10 @@ export function AuraFormWizard() {
         color: data.color,
         avatarUrl: data.avatarPreviewUrl,
         sections: data.sections,
+        contactEmail: data.contactEmail || undefined,
+        avatarShape: data.avatarShape,
+        avatarSize: data.avatarSize,
+        aiLockedFields: data.aiLockedFields,
         social: {
           twitter: data.twitter || undefined,
           instagram: data.instagram || undefined,
@@ -129,12 +126,12 @@ export function AuraFormWizard() {
         images: data.images,
         designAnswers: {
           worldviewBase: data.worldviewBase,
-          patternBase: preset.patternBase,
-          surfaceStyle: preset.surfaceStyle,
-          showcaseStyle: preset.showcaseStyle,
-          layoutPref: preset.layoutPref,
-          languageMode: preset.languageMode,
-          fontPreset: preset.fontPreset,
+          patternBase: data.patternBase,
+          surfaceStyle: data.surfaceStyle,
+          showcaseStyle: data.showcaseStyle,
+          layoutPref: data.layoutPref,
+          languageMode: data.languageMode,
+          fontPreset: data.fontPreset,
         },
         aiStrength: {
           worldview: data.aiSwing,
@@ -179,15 +176,6 @@ export function AuraFormWizard() {
   }, [data, draft.requestId, createDraftIfNeeded, clearDraft, setCurrentStep]);
 
   /* =========================================================
-   * Preview mock data
-   * ========================================================= */
-  const presetForPreview = useMemo(() => getWorldviewPreset(data.worldviewBase), [data.worldviewBase]);
-  const mockTheme = useMemo(() => buildMockTheme(data.worldviewBase, presetForPreview), [data.worldviewBase, presetForPreview]);
-  const mockVariant = useMemo(() => buildMockVariant(data.worldviewBase, data.aiSwing), [data.worldviewBase, data.aiSwing]);
-  const mockHeroSection = useMemo(() => buildMockHeroSection(data.tagline), [data.name, data.title, data.tagline]);
-  const previewBgStyle = useMemo(() => buildBackgroundStyle(mockTheme as any, mockVariant as any), [mockTheme, mockVariant]);
-
-  /* =========================================================
    * Step content
    * ========================================================= */
   const stepContent = useMemo(() => {
@@ -211,146 +199,174 @@ export function AuraFormWizard() {
     }
   }, [currentStep, data, draft.requestId, handleChange, handleRequireDraft, handleEditStep]);
 
+  const isFirstStep = currentStep === 1;
+  const isLastStep = currentStep === STEPS.length;
+
   /* =========================================================
    * RENDER
    * ========================================================= */
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-50 to-slate-100">
+    <div className="flex flex-col lg:flex-row min-h-screen">
       <div aria-live="polite" className="sr-only">{stepAnnouncement}</div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 pb-[calc(96px+env(safe-area-inset-bottom))] lg:py-10 lg:pb-0">
-        {/* Header */}
-        <header className="mb-6 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm lg:mb-8 lg:rounded-3xl lg:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="mb-2 inline-flex items-center gap-2 lg:mb-3 lg:gap-3">
-                <div className="inline-flex items-center rounded-full border border-cyan-300/70 bg-white px-2 py-0.5 shadow-sm lg:px-3 lg:py-1">
-                  <span className="font-lilita text-xs leading-none lg:text-sm">
-                    <span className="text-[#00a1e9]">me-ish</span>{" "}
-                    <span className="bg-gradient-to-r from-pink-400 via-purple-500 to-sky-400 bg-clip-text text-transparent">
-                      AURA
-                    </span>
+      {/* ── Left: Form pane ── */}
+      <div className="flex flex-col bg-white lg:w-[480px] xl:w-[540px] lg:border-r lg:border-slate-200 lg:min-h-screen">
+
+        {/* Pane header: brand + stepper */}
+        <div className="border-b border-slate-200 px-4 py-3">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="inline-flex items-center rounded-full border border-cyan-300/70 bg-white px-2 py-0.5 shadow-sm">
+                <span className="font-lilita text-xs leading-none">
+                  <span className="text-[#00a1e9]">me-ish</span>{" "}
+                  <span className="bg-gradient-to-r from-pink-400 via-purple-500 to-sky-400 bg-clip-text text-transparent">
+                    AURA
                   </span>
-                </div>
-                <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-slate-500 lg:text-[11px] lg:tracking-[0.16em]">
-                  Premium Portfolio Builder
                 </span>
               </div>
-
-              <div className="flex items-center gap-3">
-                <h1 className="text-xl font-semibold tracking-tight text-slate-900 lg:text-2xl xl:text-3xl">
-                  ポートフォリオ作成フォーム
-                </h1>
-                <button
-                  type="button"
-                  onClick={handleSampleFill}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100"
-                >
-                  <Wand2 className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">サンプル入力</span>
-                  <span className="sm:hidden">Sample</span>
-                </button>
-              </div>
-              <p className="mt-1 text-[11px] text-slate-500 lg:text-xs xl:text-sm">
-                テンプレートと調整度を選ぶだけで、破綻しないポートフォリオを自動生成します
-              </p>
+              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 hidden sm:inline">
+                Portfolio Builder
+              </span>
             </div>
-
-            <div className="hidden lg:block">
-              <AuraFormStepper currentStep={currentStep} onStepClick={handleStepClick} data={data} />
-            </div>
-          </div>
-
-          <div className="mt-4 lg:hidden">
-            <AuraFormStepper currentStep={currentStep} onStepClick={handleStepClick} data={data} />
-          </div>
-        </header>
-
-        {/* Main content */}
-        <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
-          {/* Form */}
-          <div className="flex-1" ref={containerRef}>
-            <div
-              ref={formCardRef}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:rounded-3xl lg:p-6 xl:p-8"
+            <button
+              type="button"
+              onClick={handleSampleFill}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100"
             >
-              {stepContent}
-            </div>
-
-            {/* Mobile preview toggle */}
-            <div className="mt-4 lg:hidden">
-              <button
-                type="button"
-                onClick={() => setMobilePreviewOpen(!mobilePreviewOpen)}
-                className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm"
-              >
-                <span className="flex items-center gap-2">
-                  {mobilePreviewOpen ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  プレビュー
-                </span>
-                {mobilePreviewOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </button>
-
-              {mobilePreviewOpen && (
-                <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
-                  <div className="relative w-full overflow-hidden rounded-2xl min-h-[360px] h-[52vh] max-h-[520px]">
-                    <div className="absolute inset-0" style={previewBgStyle}>
-                      <AuraHeroSwitcher theme={mockTheme as any} variant={mockVariant} section={mockHeroSection} />
-                    </div>
-                  </div>
-                  <div className="bg-slate-50 p-3 text-center">
-                    <span className="text-xs text-slate-500">
-                      {STEPS.find((s) => s.id === 2)?.label}で世界観を変更できます
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
+              <Wand2 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">サンプル入力</span>
+              <span className="sm:hidden">Sample</span>
+            </button>
           </div>
+          <AuraFormStepper currentStep={currentStep} onStepClick={handleStepClick} data={data} />
+        </div>
 
-          {/* Desktop preview */}
-          <div className="hidden lg:block lg:w-[420px] xl:w-[480px]">
-            <div className="sticky top-6">
+        {/* Scrollable form content */}
+        <div className="flex-1 overflow-y-auto px-4 py-5 lg:px-6" ref={containerRef}>
+          <div ref={formCardRef}>
+            {error && (
               <div
-                ref={previewCardRef}
-                className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:rounded-3xl"
-                style={{
-                  height: syncedHeight ? `${syncedHeight}px` : undefined,
-                  maxHeight: "calc(100vh - 24px)",
-                  transition: "height 0.2s ease-out",
-                }}
+                role="alert"
+                aria-live="assertive"
+                className="mb-4 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-600"
               >
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">ライブプレビュー</span>
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
-                    {data.worldviewBase}
-                  </span>
-                </div>
-                <div className="flex-1 overflow-hidden rounded-xl border border-slate-200">
-                  <div className="relative h-full w-full overflow-hidden" style={{ minHeight: "200px" }}>
-                    <div className="absolute inset-0" style={previewBgStyle}>
-                      <AuraHeroSwitcher theme={mockTheme as any} variant={mockVariant} section={mockHeroSection} />
-                    </div>
-                  </div>
-                </div>
-                <p className="mt-3 text-center text-[11px] text-slate-500">
-                  入力内容がリアルタイムで反映されます
-                </p>
+                {error}
               </div>
-            </div>
+            )}
+            {stepContent}
           </div>
         </div>
 
-        {/* Fixed navigation */}
-        <AuraFormNav
-          currentStep={currentStep}
-          onBack={handleBack}
-          onNext={handleNext}
-          onSubmit={handleSubmit}
-          loading={loading}
-          error={error}
-          data={data}
-        />
+        {/* Footer nav */}
+        <div className="border-t border-slate-200 bg-white px-4 py-3 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={handleBack}
+            disabled={isFirstStep}
+            className={[
+              "inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-medium transition-all",
+              isFirstStep
+                ? "cursor-not-allowed text-slate-300"
+                : "text-slate-600 hover:bg-slate-100 active:scale-[0.98]",
+            ].join(" ")}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>戻る</span>
+          </button>
+
+          <div className="flex items-center gap-2">
+            {/* Mobile preview toggle */}
+            <button
+              type="button"
+              onClick={() => setMobilePreviewOpen((v) => !v)}
+              className="lg:hidden inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              プレビュー
+            </button>
+
+            {isLastStep ? (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className={[
+                  "inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold transition-all",
+                  "bg-gradient-to-r from-sky-500 to-cyan-400 text-white shadow-lg shadow-sky-200/50",
+                  "hover:shadow-xl hover:shadow-sky-300/50 active:scale-[0.98]",
+                  "disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none",
+                ].join(" ")}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>生成中...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    <span>送信して生成</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleNext}
+                className={[
+                  "inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all",
+                  "bg-slate-900 text-white shadow-lg shadow-slate-200/50",
+                  "hover:bg-slate-800 active:scale-[0.98]",
+                ].join(" ")}
+              >
+                <span>次へ</span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Right: Preview pane ── */}
+      <div
+        className={[
+          "flex-1 bg-slate-100 border-l border-slate-200",
+          mobilePreviewOpen
+            ? "fixed inset-0 z-50 lg:relative lg:inset-auto lg:z-auto"
+            : "hidden lg:block",
+        ].join(" ")}
+      >
+        <div className="sticky top-0 h-screen flex flex-col overflow-hidden">
+          {/* Preview header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
+            <span className="text-xs font-medium text-slate-500">ライブプレビュー</span>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                {data.worldviewBase}
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobilePreviewOpen(false)}
+                className="lg:hidden text-xs text-slate-500 hover:text-slate-700"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+
+          {/* Preview content */}
+          <div className="flex-1 overflow-hidden p-5">
+            <div className="w-full h-full rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+              <AuraFormPreview data={data} />
+            </div>
+          </div>
+
+          <div className="border-t bg-white px-4 py-2 text-center">
+            <span className="text-[10px] text-slate-400">
+              入力内容がリアルタイムで反映されます
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -46,6 +46,11 @@ type Props = {
    * （sectionOrderOverride と併存した場合は sectionOrder を優先）
    */
   sectionOrder?: string[];
+
+  /**
+   * プレビューモード：window scroll を使わず、ヘッダーを常にスクロール後の状態で固定
+   */
+  previewMode?: boolean;
 };
 
 function uniq(arr: string[]) {
@@ -231,6 +236,7 @@ export default function AuraPortfolioRenderer({
   content,
   sectionOrderOverride,
   sectionOrder,
+  previewMode = false,
 }: Props) {
   const theme = design.theme;
 
@@ -367,17 +373,19 @@ export default function AuraPortfolioRenderer({
   const backgroundStyle = buildBackgroundStyle(theme, renderVariant);
 
     // ✅ V0型：スクロールでヘッダー表情を切り替え / SPは開閉メニュー
-  const [isScrolled, setIsScrolled] = useState(false);
+  // previewMode では window scroll を使わず常にスクロール後の状態にする
+  const [isScrolled, setIsScrolled] = useState(previewMode);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
+    if (previewMode) return;
     const onScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
     onScroll(); // 初期同期
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [previewMode]);
 
   // 表示しているセクションだけナビに出す（heroは除外）
   const languageMode = detectLanguageMode(design as any, normalizedContent as any);

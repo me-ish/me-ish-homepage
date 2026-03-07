@@ -5,6 +5,7 @@ import type { WorldviewBase } from "@/lib/aura/aura.worldviewPresets";
 import { getWorldviewPreset } from "@/lib/aura/aura.worldviewPresets";
 import type { Design, Content } from "@/lib/aura/aura.schema";
 import type { VariantSpec, PatternId } from "@/lib/aura/aura.variant.base";
+import type { AuraFormData } from "./auraFormTypes";
 
 /* =========================================================
  * Worldview colour / gradient maps
@@ -46,6 +47,10 @@ const LIGHT_TEXT_WORLDVIEWS: ReadonlySet<WorldviewBase> = new Set([
 export function buildMockTheme(
   worldviewBase: WorldviewBase,
   presetForPreview: ReturnType<typeof getWorldviewPreset>,
+  colorOverride?: string,
+  fontOverride?: string,
+  avatarShape?: string,
+  avatarSize?: string,
 ): Design["theme"] {
   const colors = WORLDVIEW_COLORS[worldviewBase];
   const anyPreset = presetForPreview as any;
@@ -66,8 +71,8 @@ export function buildMockTheme(
   const backgroundPattern: PatternId | "none" = (presetForPreview.patternBase as any) ?? "none";
 
   return {
-    colorPrimary: colors.primary,
-    colorAccent: colors.accent,
+    colorPrimary: colorOverride || colors.primary,
+    colorAccent: colorOverride || colors.accent,
     colorBG: colors.bg,
     colorText: LIGHT_TEXT_WORLDVIEWS.has(worldviewBase) ? "#111827" : "#E5E7EB",
     bgGradient,
@@ -82,23 +87,29 @@ export function buildMockTheme(
     patternColor,
     backgroundPattern,
     languageMode: presetForPreview.languageMode as any,
-    fontPreset: presetForPreview.fontPreset as any,
+    fontPreset: (fontOverride || presetForPreview.fontPreset) as any,
+    avatarShape: avatarShape ?? "circle",
+    avatarSize: avatarSize ?? "md",
   } as any;
 }
 
 export function buildMockVariant(
   worldviewBase: WorldviewBase,
   aiSwing: number,
+  surfaceOverride?: string,
+  showcaseOverride?: string,
+  layoutOverride?: string,
 ): VariantSpec {
-  const layout = aiSwing > 60 ? "split" : "centerBasic";
-  const surface = aiSwing > 20 ? "glass" : "card";
+  const layout = layoutOverride || (aiSwing > 60 ? "split" : "centerBasic");
+  const surface = surfaceOverride || (aiSwing > 20 ? "glass" : "card");
+  const showcase = showcaseOverride || "gallery";
 
   return {
     worldview: worldviewBase,
     layout: layout as any,
     surface: surface as any,
     pattern: "none" as any,
-    showcase: "gallery" as any,
+    showcase: showcase as any,
     variantId: "mock",
     shadow: aiSwing > 60 ? "deep" : "soft",
     radius: aiSwing >= 100 ? "extraLarge" : "large",
@@ -112,4 +123,160 @@ export function buildMockHeroSection(tagline: string): Content["sections"][numbe
       tagline || "あなたのキャッチコピーがここに表示されます",
     ],
   };
+}
+
+/* =========================================================
+ * フォームデータ → Content（全セクション）
+ * ========================================================= */
+export function buildMockContent(data: AuraFormData): Content {
+  const skills = [
+    ...data.skillPresets,
+    ...(data.manualSkills
+      ? data.manualSkills.split(",").map((s) => s.trim()).filter(Boolean)
+      : []),
+  ];
+
+  const filledServices = data.services.filter((s) => s.name);
+  const hasContact = data.twitter || data.instagram || data.behance || data.website;
+
+  const sections: Content["sections"] = [];
+
+  // Hero（常に先頭）：キャッチコピー → 大見出し、名前 → 小見出し
+  sections.push({
+    type: "hero",
+    headings: [
+      data.tagline || "あなたのキャッチコピーがここに表示されます",
+      data.name || "",
+    ].filter(Boolean) as string[],
+    paragraphs: [],
+    avatarUrl: data.avatarPreviewUrl || undefined,
+  } as any);
+
+  // About（データ未入力時はプレースホルダー）
+  if (data.sections.about) {
+    sections.push({
+      type: "about",
+      headings: [
+        "About",
+        data.name || "Your Name",
+        data.title || "",
+      ].filter(Boolean) as string[],
+      paragraphs: [
+        data.bio ||
+          "自己紹介テキストがここに表示されます。あなたの経歴・強み・こだわりなどを入力してください。",
+      ],
+      avatarUrl: data.avatarPreviewUrl || undefined,
+      aboutLayout: data.aboutLayout,
+    } as any);
+  }
+
+  // Works（データ未入力時はプレースホルダー）
+  if (data.sections.works) {
+    const workItems =
+      data.images.length > 0
+        ? data.images.map((img) => ({
+            imageUrl: img.imageUrl,
+            title: img.title,
+            description: img.description,
+          }))
+        : [
+            { imageUrl: "", title: "作品タイトル 1", description: "作品の説明テキスト" },
+            { imageUrl: "", title: "作品タイトル 2", description: "作品の説明テキスト" },
+            { imageUrl: "", title: "作品タイトル 3", description: "作品の説明テキスト" },
+          ];
+    sections.push({ type: "works", items: workItems } as any);
+  }
+
+  // Services（データ未入力時はプレースホルダー）
+  if (data.sections.services) {
+    const serviceItems =
+      filledServices.length > 0
+        ? filledServices.map((s) => ({
+            title: s.name,
+            priceHint: s.price,
+            description: s.desc,
+          }))
+        : [
+            { title: "サービス A", description: "提供するサービスの説明" },
+            { title: "サービス B", description: "提供するサービスの説明" },
+          ];
+    sections.push({ type: "services", items: serviceItems } as any);
+  }
+
+  // Skills（データ未入力時はプレースホルダー）
+  if (data.sections.skills) {
+    const skillItems =
+      skills.length > 0
+        ? skills.map((s) => ({ label: s }))
+        : ["Illustration", "Design", "Photoshop", "Procreate"].map((s) => ({ label: s }));
+    sections.push({ type: "skills", items: skillItems } as any);
+  }
+
+  // Contact（データ未入力時はプレースホルダー）
+  if (data.sections.contact) {
+    const contactLinks = [
+      ...(data.twitter ? [{ label: "X", href: data.twitter }] : []),
+      ...(data.instagram ? [{ label: "Instagram", href: data.instagram }] : []),
+      ...(data.behance ? [{ label: "Behance", href: data.behance }] : []),
+      ...(data.website ? [{ label: "Web", href: data.website }] : []),
+    ];
+    sections.push({
+      type: "contact",
+      email: data.contactEmail || undefined,
+      links: contactLinks.length > 0 ? contactLinks : undefined,
+    } as any);
+  }
+
+  return { sections };
+}
+
+/* =========================================================
+ * フォームデータ → Design（モック）
+ * ========================================================= */
+export function buildMockDesign(
+  worldviewBase: WorldviewBase,
+  aiSwing: number,
+  preset: ReturnType<typeof getWorldviewPreset>,
+  color?: string,
+  overrides?: {
+    fontPreset?: string;
+    surfaceStyle?: string;
+    showcaseStyle?: string;
+    layoutPref?: string;
+    avatarShape?: string;
+    avatarSize?: string;
+  },
+): Design {
+  const theme = buildMockTheme(
+    worldviewBase,
+    preset,
+    color,
+    overrides?.fontPreset,
+    overrides?.avatarShape,
+    overrides?.avatarSize,
+  );
+  const variant = buildMockVariant(
+    worldviewBase,
+    aiSwing,
+    overrides?.surfaceStyle,
+    overrides?.showcaseStyle,
+    overrides?.layoutPref,
+  );
+
+  return {
+    theme,
+    variantId: "mock",
+    // AuraPortfolioRenderer が (design as any).variantSpec で読む
+    variantSpec: variant,
+    // strength を注入（HeroMinimal の cardMode 判定に使われる）
+    overallStrength: aiSwing,
+    sections: [
+      { type: "hero",     order: 0 },
+      { type: "about",    order: 1 },
+      { type: "works",    order: 2 },
+      { type: "services", order: 3 },
+      { type: "skills",   order: 4 },
+      { type: "contact",  order: 5 },
+    ],
+  } as any;
 }

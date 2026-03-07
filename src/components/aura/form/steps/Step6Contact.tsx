@@ -9,7 +9,7 @@ type Props = {
 };
 
 export function Step6Contact({ data, onChange }: Props) {
-  const filledCount = [data.twitter, data.instagram, data.behance, data.website].filter(
+  const filledCount = [data.contactEmail, data.twitter, data.instagram, data.behance, data.website].filter(
     (v) => v.trim()
   ).length;
 
@@ -26,6 +26,28 @@ export function Step6Contact({ data, onChange }: Props) {
       </div>
 
       <div className="mx-auto max-w-md space-y-4">
+        {/* Email */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 transition-all focus-within:border-sky-400 focus-within:shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-sky-600 text-sm font-bold text-white">
+              @
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-slate-700">メールアドレス</span>
+                <span className="text-[10px] text-slate-400">任意・公開されます</span>
+              </div>
+              <input
+                type="email"
+                value={data.contactEmail}
+                onChange={(e) => onChange({ contactEmail: e.target.value })}
+                placeholder="contact@example.com"
+                className="mt-1 w-full border-none bg-transparent p-0 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* X (Twitter) */}
         <div className="rounded-2xl border border-slate-200 bg-white p-4 transition-all focus-within:border-sky-400 focus-within:shadow-sm">
           <div className="flex items-center gap-3">

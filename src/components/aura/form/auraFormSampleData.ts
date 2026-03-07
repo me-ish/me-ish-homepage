@@ -41,6 +41,9 @@ export const SAMPLE_FORM_DATA: AuraFormData = {
     contact: true,
   },
 
+  // Step 4 extras
+  aboutLayout: "splitTextLeft",
+
   // Step 5: Services & Skills
   services: [
     { name: "SNSアイコン制作", price: "¥8,000〜", desc: "用途に合わせて構図や表情をご提案します" },
@@ -50,8 +53,19 @@ export const SAMPLE_FORM_DATA: AuraFormData = {
   manualSkills: "厚塗り, やさしい色彩, 世界観づくり",
 
   // Step 6: Contact
+  contactEmail: "",
   twitter: "@sample_illust",
   instagram: "sample.illust",
   behance: "",
   website: "https://portfolio.example.com",
+
+  // Avatar customization
+  avatarShape: "circle",
+  avatarSize: "md",
+
+  // AI field locks
+  aiLockedFields: {
+    tagline: false,
+    bio: false,
+  },
 };

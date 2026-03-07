@@ -206,7 +206,6 @@ function resolveStyleTokens(
   };
 }
 
-/** surface は tokens を優先（世界観統一のため） */
 function resolveSurfaceModeFromTokens(tokens: StyleTokens): VariantSpec["surface"] {
   return tokens.surface as any;
 }
@@ -287,7 +286,7 @@ export function applyVariantStyle(variant: VariantSpec, theme: Design["theme"]):
 
   const { tokens, debugSource, debugBorrow } = resolveStyleTokens(worldview, strength);
 
-  const mode = resolveSurfaceModeFromTokens(tokens) ?? "card";
+  const mode = (variant.surface as VariantSpec["surface"]) ?? resolveSurfaceModeFromTokens(tokens) ?? "card";
 
   // ✅ surface の生成は registry に一本化（tokensを尊重）
   const s = buildSurfaceStyle({

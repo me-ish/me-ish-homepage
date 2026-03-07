@@ -218,6 +218,26 @@ export async function POST(req: Request) {
 
   const rawPortfolio = pick("portfolioUrl") ?? pick("portfolio");
 
+  const rawContactEmail = pick("contactEmail");
+
+  const AVATAR_SHAPES = ["circle", "rounded", "square"] as const;
+  const AVATAR_SIZES = ["sm", "md", "lg"] as const;
+
+  const rawAvatarShape = AVATAR_SHAPES.includes(raw.avatarShape)
+    ? (raw.avatarShape as typeof AVATAR_SHAPES[number])
+    : undefined;
+  const rawAvatarSize = AVATAR_SIZES.includes(raw.avatarSize)
+    ? (raw.avatarSize as typeof AVATAR_SIZES[number])
+    : undefined;
+
+  const rawAiLockedFields =
+    raw.aiLockedFields && typeof raw.aiLockedFields === "object"
+      ? {
+          tagline: raw.aiLockedFields.tagline === true,
+          bio: raw.aiLockedFields.bio === true,
+        }
+      : undefined;
+
   const normalizedSocial = {
     xUrl: buildPlatformUrl("x", rawX),
     instagramUrl: buildPlatformUrl("instagram", rawIg),
@@ -282,6 +302,10 @@ export async function POST(req: Request) {
 
   const formInput: FormInput & {
     avatarUrl?: string;
+    contactEmail?: string;
+    avatarShape?: "circle" | "rounded" | "square";
+    avatarSize?: "sm" | "md" | "lg";
+    aiLockedFields?: { tagline: boolean; bio: boolean };
     social?: any;
     links?: any[];
     socialLinks?: any[];
@@ -296,6 +320,10 @@ export async function POST(req: Request) {
   } = {
     ...parsed.data,
     avatarUrl,
+    ...(rawContactEmail ? { contactEmail: rawContactEmail } : {}),
+    ...(rawAvatarShape ? { avatarShape: rawAvatarShape } : {}),
+    ...(rawAvatarSize ? { avatarSize: rawAvatarSize } : {}),
+    ...(rawAiLockedFields ? { aiLockedFields: rawAiLockedFields } : {}),
     social: normalizedSocialObj,
     ...normalizedSocial,
     ...(rescuedLinksRaw ? { links: rescuedLinksRaw } : {}),

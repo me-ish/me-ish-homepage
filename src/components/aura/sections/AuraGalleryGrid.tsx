@@ -536,18 +536,6 @@ useEffect(() => {
                   <WorkCard item={items[0]} i={0} />
                   <WorkCard item={items[1]} i={1} />
                 </div>
-              ) : enableCountLayout && count === 3 ? (
-                <div className="mx-auto grid w-full max-w-5xl grid-cols-3 gap-4">
-                  <div className="col-span-2 row-span-2">
-                    <WorkCard item={items[0]} i={0} aspectClass="aspect-[16/10]" className="h-full" />
-                  </div>
-                  <div className="col-span-1">
-                    <WorkCard item={items[1]} i={1} />
-                  </div>
-                  <div className="col-span-1">
-                    <WorkCard item={items[2]} i={2} />
-                  </div>
-                </div>
               ) : (
                 <div className={`${gridClassDesktop} mx-auto w-full`}>
                   {items.map((item: any, i: number) => (

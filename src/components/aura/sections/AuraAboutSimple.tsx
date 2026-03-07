@@ -157,6 +157,18 @@ export const AuraAboutSimple: React.FC<Props> = ({
   const aboutLayout: AboutLayout =
     (safeStr((section as any)?.aboutLayout) as AboutLayout) || baseLayout;
 
+  const rawAvatarShape = safeStr((theme as any)?.avatarShape) || "circle";
+  const avatarShapeClass =
+    rawAvatarShape === "square" ? "rounded-md" :
+    rawAvatarShape === "rounded" ? "rounded-2xl" :
+    "rounded-full";
+
+  const rawAvatarSize = safeStr((theme as any)?.avatarSize) || "md";
+  const avatarSizeClass =
+    rawAvatarSize === "sm" ? "h-16 w-16 md:h-24 md:w-24" :
+    rawAvatarSize === "lg" ? "h-28 w-28 md:h-40 md:w-40" :
+    "h-20 w-20 md:h-32 md:w-32";
+
   const cards = Array.isArray((section as any)?.cards)
     ? ((section as any).cards as any[])
     : [];
@@ -198,7 +210,7 @@ export const AuraAboutSimple: React.FC<Props> = ({
     <div className={profileWrapClass}>
       <div className="relative flex-shrink-0">
         <div
-          className="h-20 w-20 overflow-hidden rounded-2xl border-2 shadow-sm md:h-32 md:w-32"
+          className={`${avatarSizeClass} overflow-hidden ${avatarShapeClass} border-2 shadow-sm`}
           style={{
             borderColor: "rgba(255,255,255,0.88)",
             background: avatarUrl ? "#f3f4f6" : accent,
@@ -253,7 +265,7 @@ export const AuraAboutSimple: React.FC<Props> = ({
   );
 
   const bodyAlignClass = aboutLayout === "center" ? "text-center" : "text-left";
-  const bodyInsetClass = aboutLayout === "center" ? "" : "pl-2 md:pl-4";
+  const bodyInsetClass = aboutLayout === "center" ? "mx-auto" : "pl-2 md:pl-4";
 
   const BodyBlock = (
     <div

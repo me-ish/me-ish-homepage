@@ -1,6 +1,8 @@
 // src/components/aura/form/steps/Step4About.tsx
 "use client";
 
+import { useState, useCallback } from "react";
+import { Sparkles, Loader2 } from "lucide-react";
 import type { AuraFormData } from "../auraFormTypes";
 
 const SECTION_LABELS: Record<keyof AuraFormData["sections"], string> = {
@@ -18,6 +20,41 @@ type Props = {
 };
 
 export function Step4About({ data, onChange }: Props) {
+  const [bioSuggesting, setBioSuggesting] = useState(false);
+  const [bioSuggestError, setBioSuggestError] = useState<string | null>(null);
+
+  const handleSuggestBio = useCallback(async () => {
+    setBioSuggesting(true);
+    setBioSuggestError(null);
+    try {
+      const res = await fetch("/api/aura/form/ai-suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-requested-with": "me-ish" },
+        body: JSON.stringify({
+          field: "bio",
+          name: data.name,
+          title: data.title,
+          bio: data.bio,
+          worldviewBase: data.worldviewBase,
+          tone: data.tone,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!json?.ok || !json?.text) {
+        setBioSuggestError("生成に失敗しました");
+        return;
+      }
+      onChange({
+        bio: json.text,
+        aiLockedFields: { ...data.aiLockedFields, bio: true },
+      });
+    } catch {
+      setBioSuggestError("通信エラーが発生しました");
+    } finally {
+      setBioSuggesting(false);
+    }
+  }, [data.name, data.title, data.bio, data.worldviewBase, data.tone, data.aiLockedFields, onChange]);
+
   const handleSectionToggle = (key: keyof AuraFormData["sections"]) => {
     onChange({
       sections: {
@@ -44,20 +81,58 @@ export function Step4About({ data, onChange }: Props) {
       <div className="mx-auto max-w-xl space-y-6">
         {/* 自己紹介 */}
         <div>
-          <label className="block">
+          <div className="flex items-center justify-between mb-1.5">
             <span className="text-sm font-medium text-slate-700">自己紹介文</span>
-            <textarea
-              value={data.bio}
-              onChange={(e) => onChange({ bio: e.target.value })}
-              rows={6}
-              placeholder="あなたのこと、活動のこと、好きなこと。ざっくりでOK。&#10;&#10;例：&#10;・イラストレーターとして5年活動しています&#10;・キャラクターデザインが得意です&#10;・ご依頼はお気軽にどうぞ！"
-              className={[
-                "mt-1.5 w-full rounded-xl border px-4 py-3 text-sm transition-all",
-                "bg-slate-50 placeholder:text-slate-400 border-slate-200",
-                "focus:border-sky-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-100",
-              ].join(" ")}
-            />
-          </label>
+            <div className="flex items-center gap-1.5">
+              {data.aiLockedFields.bio && (
+                <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-600">
+                  AI生成済み
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleSuggestBio}
+                disabled={bioSuggesting || !data.name.trim()}
+                className={[
+                  "inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all",
+                  "border border-violet-300 bg-violet-50 text-violet-700",
+                  "hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50",
+                ].join(" ")}
+                title={!data.name.trim() ? "名前を入力してください" : "AIで自己紹介文を生成"}
+              >
+                {bioSuggesting ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3 w-3" />
+                )}
+                AIで生成
+              </button>
+            </div>
+          </div>
+          <textarea
+            value={data.bio}
+            onChange={(e) =>
+              onChange({
+                bio: e.target.value,
+                ...(data.aiLockedFields.bio
+                  ? { aiLockedFields: { ...data.aiLockedFields, bio: false } }
+                  : {}),
+              })
+            }
+            rows={6}
+            placeholder="あなたのこと、活動のこと、好きなこと。ざっくりでOK。&#10;&#10;例：&#10;・イラストレーターとして5年活動しています&#10;・キャラクターデザインが得意です&#10;・ご依頼はお気軽にどうぞ！"
+            className={[
+              "w-full rounded-xl border px-4 py-3 text-sm transition-all",
+              "bg-slate-50 placeholder:text-slate-400",
+              data.aiLockedFields.bio
+                ? "border-violet-300 focus:border-violet-400 focus:ring-violet-100"
+                : "border-slate-200 focus:border-sky-400 focus:ring-sky-100",
+              "focus:bg-white focus:outline-none focus:ring-2",
+            ].join(" ")}
+          />
+          {bioSuggestError && (
+            <p className="mt-1 text-[11px] text-red-500">{bioSuggestError}</p>
+          )}
           <p className="mt-1 text-[11px] text-slate-500">
             プロフィールセクションに表示されます。実績、対応範囲、仕事へのスタンスなどを軽く書くのがおすすめ。
           </p>

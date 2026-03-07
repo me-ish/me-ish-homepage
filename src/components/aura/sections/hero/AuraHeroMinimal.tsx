@@ -39,22 +39,6 @@ const FONT_CLASS_BY_PRESET: Record<string, string> = {
 };
 
 // ---------------------------------------------------------
-// worldview -> Label 専用フォント
-// ---------------------------------------------------------
-const LABEL_FONT_BY_WORLDVIEW: Record<string, string> = {
-  minimal: "ai-portfolio-font-cleanJa",
-  modern: "ai-portfolio-font-modernSans",
-  business: "ai-portfolio-font-modernSans",
-  cute: "ai-portfolio-font-cuteJa",
-  pop: "ai-portfolio-font-popBold",
-  dark: "ai-portfolio-font-techMono",
-  cyber: "ai-portfolio-font-techMono",
-  natural: "ai-portfolio-font-serifJa",
-  luxury: "ai-portfolio-font-luxurySerif",
-  retro: "ai-portfolio-font-retroPixel",
-};
-
-// ---------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------
 function safeStr(v: unknown): string {
@@ -74,7 +58,6 @@ function getLanguageMode(section: Record<string, unknown>, theme: Record<string,
 
 function t(lang: "ja" | "en" | "jaEn", key: string) {
   const dict = {
-    eyebrow: { ja: "ILLUSTRATOR", en: "ILLUSTRATOR", jaEn: "ILLUSTRATOR" },
     ctaWorks: { ja: "作品を見る", en: "View Works", jaEn: "WORKSを見る" },
     ctaContact: { ja: "お問い合わせ", en: "Contact", jaEn: "CONTACT" },
     more: { ja: "もっと見る", en: "Scroll", jaEn: "もっと見る" },
@@ -127,11 +110,9 @@ export const AuraHeroMinimal: React.FC<HeroProps> = ({
   const cardMode = strength >= 70 ? 2 : strength >= 25 ? 1 : 0;
   const showCard = cardMode >= 1;
 
-  // Layout 判定（将来拡張用。今は見た目は固定し、崩れにくい方針）
-  const layoutHint =
-    heroLayout ||
-    layoutType ||
-    (variant.layout === "split" ? "splitHero" : "centerBasic");
+  // Hero は常に中央揃え固定
+  void heroLayout;
+  void layoutType;
 
   const lang = getLanguageMode(section as any, theme as any);
 
@@ -162,8 +143,6 @@ export const AuraHeroMinimal: React.FC<HeroProps> = ({
     if (preset.startsWith("ai-portfolio-font-")) return preset;
     return FONT_CLASS_BY_PRESET[preset] || cls;
   }, [theme]);
-
-  const labelFontClass = LABEL_FONT_BY_WORLDVIEW[variant.worldview] ?? fontClass;
 
   // Hero全体：1スクリーンで余裕を作る
   const heroOuterStyle: CSSProperties = {
@@ -222,7 +201,7 @@ export const AuraHeroMinimal: React.FC<HeroProps> = ({
   return (
     <section
       aria-label="Hero"
-      className={`relative w-full ${fontClass}`}
+      className={`relative w-full text-center ${fontClass}`}
       style={heroOuterStyle}
       data-hero-card-mode={cardMode}
       data-hero-strength={strength}
@@ -289,17 +268,7 @@ export const AuraHeroMinimal: React.FC<HeroProps> = ({
           {/* ✅ カード有無をここで分岐 */}
           {showCard ? (
             <div className={innerPaddingClass} style={heroCardStyle}>
-              {/* Eyebrow */}
-              <div className="mb-5 flex items-center justify-center md:justify-start">
-                <span
-                  className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${labelFontClass}`}
-                  style={{ color: v.mutedText }}
-                >
-                  {t(lang, "eyebrow")}
-                </span>
-              </div>
-
-              <div className={layoutHint === "splitHero" ? "md:max-w-3xl" : ""}>
+              <div>
                 <h1 className={headlineClass} style={{ color: v.textColor }}>
                   {h1 || "クリエイティブな"}
                   {h2 ? (
@@ -368,17 +337,7 @@ export const AuraHeroMinimal: React.FC<HeroProps> = ({
             // ✅ no-card
             <div className={innerPaddingClass}>
               <div className={noCardTextWrapClass}>
-                {/* Eyebrow */}
-                <div className="mb-5 flex items-center justify-center md:justify-start">
-                  <span
-                    className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${labelFontClass}`}
-                    style={{ color: v.mutedText }}
-                  >
-                    {t(lang, "eyebrow")}
-                  </span>
-                </div>
-
-                <div className={layoutHint === "splitHero" ? "md:max-w-3xl" : ""}>
+                <div>
                   <h1 className={headlineClass} style={{ color: v.textColor }}>
                     {h1 || "クリエイティブな"}
                     {h2 ? (

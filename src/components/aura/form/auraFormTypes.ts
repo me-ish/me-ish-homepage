@@ -40,6 +40,7 @@ export type AuraFormData = {
   layoutPref: string;
   languageMode: string;
   fontPreset: string;
+  aboutLayout: "center" | "splitTextLeft" | "splitTextRight";
 
   // Step 3: Works
   images: AuraImageItem[];
@@ -61,10 +62,21 @@ export type AuraFormData = {
   manualSkills: string;
 
   // Step 6: Contact
+  contactEmail: string;
   twitter: string;
   instagram: string;
   behance: string;
   website: string;
+
+  // Avatar customization
+  avatarShape: "circle" | "rounded" | "square";
+  avatarSize: "sm" | "md" | "lg";
+
+  // AI-generated field locks (true = user accepted AI suggestion, skip re-generation)
+  aiLockedFields: {
+    tagline: boolean;
+    bio: boolean;
+  };
 };
 
 export const defaultFormData: AuraFormData = {
@@ -73,7 +85,7 @@ export const defaultFormData: AuraFormData = {
   title: "",
   tagline: "",
   tone: "ですます",
-  color: "#111827",
+  color: "",
   avatarUrl: "",
   avatarPreviewUrl: "",
 
@@ -85,6 +97,7 @@ export const defaultFormData: AuraFormData = {
   layoutPref: "center",
   languageMode: "ja",
   fontPreset: "cleanJa",
+  aboutLayout: "splitTextLeft",
 
   images: [],
 
@@ -102,10 +115,19 @@ export const defaultFormData: AuraFormData = {
   skillPresets: [],
   manualSkills: "",
 
+  contactEmail: "",
   twitter: "",
   instagram: "",
   behance: "",
   website: "",
+
+  avatarShape: "circle",
+  avatarSize: "md",
+
+  aiLockedFields: {
+    tagline: false,
+    bio: false,
+  },
 };
 
 /* =========================================================

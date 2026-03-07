@@ -753,19 +753,19 @@ function buildDefaultContentSections(payload: FormInput, variant: VariantSpec): 
 
   /* ---------- hero ---------- */
   if (toggles.hero !== false) {
-    const heroH1 = (tagline && tagline.trim()) || (titleLegacy && titleLegacy.trim()) || "世界観のあるイラストを制作します";
-    const heroH2 = "";
-
-    const fromSkills = buildHeroSubcopyFromSkills(payload);
-    const heroDesc = fromSkills ?? "ご依頼の目的や用途に合わせて、丁寧にご提案します。";
+    // A案：キャッチコピー → 大見出し、名前 → 小見出し（肩書き・詳細はAboutへ）
+    const heroH1 = (tagline && tagline.trim())
+      || buildHeroSubcopyFromSkills(payload)
+      || "世界観のあるイラストを制作します";
+    const heroH2 = name || "";
 
     sections.push({
       type: "hero",
       title: heroH1,
       subtitle: heroH2 || undefined,
-      description: heroDesc,
+      description: "",
       headings: [heroH1, heroH2].filter(Boolean),
-      paragraphs: [heroDesc],
+      paragraphs: [],
       avatarUrl: undefined,
     } as any);
   }
@@ -880,7 +880,7 @@ function buildDefaultContentSections(payload: FormInput, variant: VariantSpec): 
 
   /* ---------- contact（SNS反映 + CTA廃止） ---------- */
   if (toggles.contact !== false) {
-    const mail = (email as string | undefined) || undefined;
+    const mail = ((payload as any).contactEmail as string | undefined) || undefined;
 
     const rawLinksArrays: any[][] = [
       (((payload as any).links as any[]) ?? []) as any[],
@@ -907,7 +907,8 @@ function buildDefaultContentSections(payload: FormInput, variant: VariantSpec): 
       contactLinks.push({ label: l, href: h });
     };
 
-    if (mail) pushLink(mail, `mailto:${mail}`);
+    // contactEmail はStep6で入力した公開用メール。formInput.email（決済用）とは別物。
+    if (mail) pushLink("Email", `mailto:${mail}`);
 
     for (const arr of rawLinksArrays) {
       for (const item of arr) {
@@ -1137,7 +1138,7 @@ async function refineContentWithOpenAI(payload: FormInput, design: Design, draft
     for (const { s, idx } of targets as any[]) {
       const r = refinedByType.get(s.type);
       if (!r || r.type !== s.type) continue;
-      out[idx] = mergeTextFieldsIntoSection(s, r);
+      out[idx] = mergeTextFieldsIntoSection(s, r, (payload as any).aiLockedFields);
     }
 
     return { ...draftContent, sections: out as any };
@@ -1146,11 +1147,22 @@ async function refineContentWithOpenAI(payload: FormInput, design: Design, draft
   }
 }
 
-function mergeTextFieldsIntoSection(original: any, refined: any) {
+function mergeTextFieldsIntoSection(
+  original: any,
+  refined: any,
+  lockedFields?: { tagline?: boolean; bio?: boolean },
+) {
   const out = { ...original };
 
+  // Lock hero copy (description / paragraphs) when tagline was user-AI-generated
+  const lockHeroCopy = original?.type === "hero" && lockedFields?.tagline;
+  // Lock about paragraphs when bio was user-AI-generated
+  const lockAboutParagraphs = original?.type === "about" && lockedFields?.bio;
+
   if (Array.isArray(refined?.headings)) out.headings = refined.headings;
-  if (Array.isArray(refined?.paragraphs)) out.paragraphs = refined.paragraphs;
+  if (!lockHeroCopy && !lockAboutParagraphs && Array.isArray(refined?.paragraphs)) {
+    out.paragraphs = refined.paragraphs;
+  }
 
   if (original?.type === "hero") {
     if (typeof refined?.title === "string" && refined.title.trim()) {
@@ -1165,10 +1177,13 @@ function mergeTextFieldsIntoSection(original: any, refined: any) {
       out.subtitle = refined.headings[1].trim();
     }
 
-    if (typeof refined?.description === "string" && refined.description.trim()) {
-      out.description = refined.description.trim();
-    } else if (Array.isArray(refined?.paragraphs) && typeof refined.paragraphs[0] === "string") {
-      out.description = refined.paragraphs[0].trim();
+    // Skip description (tagline) update when user pre-generated it in the form
+    if (!lockHeroCopy) {
+      if (typeof refined?.description === "string" && refined.description.trim()) {
+        out.description = refined.description.trim();
+      } else if (Array.isArray(refined?.paragraphs) && typeof refined.paragraphs[0] === "string") {
+        out.description = refined.paragraphs[0].trim();
+      }
     }
 
     if (typeof original?.avatarUrl === "string" && original.avatarUrl.trim()) {
@@ -1380,6 +1395,8 @@ export async function generatePortfolioFromForm(rawPayload: unknown): Promise<{ 
 
       // NEW
       sectionTheme,
+      avatarShape: (payload as any).avatarShape ?? "circle",
+      avatarSize: (payload as any).avatarSize ?? "md",
     },
     variantId: (variant as any).id ?? "auto",
     sections: designSections,
