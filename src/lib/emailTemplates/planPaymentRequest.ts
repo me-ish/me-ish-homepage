@@ -38,7 +38,7 @@ export function generatePlanPaymentRequestEmail(a: PlanPaymentRequestArgs) {
     <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:12px;padding:28px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',Meiryo,Arial,sans-serif;color:#1f2937;line-height:1.7;">
       <div style="text-align:center;margin-bottom:18px;">
         <div style="font-size:18px;font-weight:700;color:${BRAND_HEX};">me-ish</div>
-        <div style="font-size:12px;color:#9ca3af;">アートを、もっと近くに</div>
+        <div style="font-size:12px;color:#9ca3af;">あなたらしさを、かたちに</div>
       </div>
 
       <p style="margin:0 0 12px 0;">${esc(a.name)} 様</p>

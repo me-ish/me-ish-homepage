@@ -1,12 +1,17 @@
 {
   "permissions": {
+    "allow": [
+      "Read(./src/lib/aura/**)",
+      "Edit(./src/lib/aura/**)",
+      "Write(./src/lib/aura/**)"
+    ],
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)",
       "Read(./**/*.pem)",
       "Read(./**/*secret*.*)",
-      "Read(./**/*token*.*)",
-      "Read(./**/*key*.*)"
+      "Read(./**/*.token.*)",
+      "Read(./**/*.key.*)"
     ]
   }
 }

@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
 
   title: "me-ish",
-  description: "アートを、もっと近くに。",
+  description: "あなたらしさを、かたちに。",
   manifest: "/manifest.json",
 
   // ✅ 追加：タブ / ブックマーク / iOS用アイコン

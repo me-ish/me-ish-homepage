@@ -20,7 +20,11 @@
       "mcp__supabase__generate_typescript_types",
       "mcp__ide__getDiagnostics",
       "Bash(cd:*)",
-      "mcp__supabase__apply_migration"
+      "mcp__supabase__apply_migration",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "mcp__supabase__execute_sql"
     ]
   }
 }

@@ -60,7 +60,7 @@ export function generateRejectEmail(args: RejectEmailArgs) {
       <!-- brand -->
       <div style="text-align:center;margin-bottom:16px;">
         <div style="font-size:20px;font-weight:800;color:${BRAND_HEX};line-height:1;">me-ish</div>
-        <div style="font-size:12px;color:#9ca3af;">アートを、もっと近くに</div>
+        <div style="font-size:12px;color:#9ca3af;">あなたらしさを、かたちに</div>
       </div>
 
       <h1 style="margin:0 0 12px 0;font-size:18px;line-height:1.4;">審査結果のお知らせ</h1>
