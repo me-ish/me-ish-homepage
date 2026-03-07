@@ -111,9 +111,9 @@ export async function POST(
 
     // user_id が未設定の場合、email でauth.usersを引いて補完する
     if (entry.email) {
-      const authLookup = await admin.auth.admin.getUserByEmail(entry.email).catch(() => ({ data: { user: null } }));
-      if (authLookup.data?.user?.id) {
-        patch.user_id = authLookup.data.user.id;
+      const { data: authUserId } = await (admin.rpc as Function)('get_auth_user_id_by_email', { p_email: entry.email });
+      if (authUserId) {
+        patch.user_id = authUserId;
       }
     }
     const { data: updated, error: updErr } = await admin
