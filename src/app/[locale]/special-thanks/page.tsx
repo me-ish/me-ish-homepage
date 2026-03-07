@@ -4,17 +4,17 @@ import SpecialThanksClient from "./special-thanks.client";
 
 export const metadata: Metadata = {
   title: "Special Thanks | me-ish",
-  description: "me-ish初期ギャラリー(white)に応募してくださった皆さま",
+  description: "me-ishを応援してくださった皆さま",
   alternates: { canonical: "/special-thanks" },
   openGraph: {
     title: "Special Thanks | me-ish",
-    description: "me-ish初期ギャラリー(white)に応募してくださった皆さま",
+    description: "me-ishを応援してくださった皆さま",
     type: "website",
   },
   twitter: {
     card: "summary",
     title: "Special Thanks | me-ish",
-    description: "me-ish初期ギャラリー(white)に応募してくださった皆さま",
+    description: "me-ishを応援してくださった皆さま",
   },
 };
 

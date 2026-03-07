@@ -284,7 +284,7 @@
     },
     "entry": { "formTitle": "me-ish 応募フォーム", "formSubtitle": "あなたの作品を世界に届けよう" },
     "news": { "title": "お知らせ", "loading": "読み込み中…" },
-    "specialThanks": { "subtitle": "me-ish初期ギャラリー(white)に応募してくださった皆さま" },
+    "specialThanks": { "subtitle": "me-ishを応援してくださった皆さま" },
     "renew": {
       "title": "再出展・プラン延長", "subtitle": "展示が終了した作品の再出展申請が行えます。",
       "loginRequired": "※ ログイン後に再出展が可能です", "noWorks": "現在、再出展可能な作品はありません。",
@@ -368,7 +368,7 @@
       "button": "応募する"
     },
     "thanks": {
-      "desc": "me-ish初期ギャラリー(white)に応募してくださった皆さま"
+      "desc": "me-ishを応援してくださった皆さま"
     },
     "faq": {
       "title": "よくある質問",

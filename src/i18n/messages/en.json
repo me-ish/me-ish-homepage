@@ -284,7 +284,7 @@
     },
     "entry": { "formTitle": "me-ish Application Form", "formSubtitle": "Share your work with the world" },
     "news": { "title": "News", "loading": "Loading…" },
-    "specialThanks": { "subtitle": "To everyone who applied to the me-ish initial gallery (white)" },
+    "specialThanks": { "subtitle": "To everyone who has supported me-ish" },
     "renew": {
       "title": "Re-exhibit / Extend Plan", "subtitle": "Submit a re-exhibition request for works that have ended their display period.",
       "loginRequired": "* Login required to re-exhibit", "noWorks": "No works available for re-exhibition at this time.",
