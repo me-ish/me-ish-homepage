@@ -36,7 +36,7 @@ export default function PricingPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <PlanCard name="Mini"     price={400}  guarantees={4}  pace={t('planPaces.mini')}     period={t('period')} recommended={t('recommended')} kpiGuarantee={t('kpiGuarantee')} kpiPerUnit={t('kpiPerUnit')} comboNote={t('comboNote')} />
           <PlanCard name="Light"    price={800}  guarantees={9}  pace={t('planPaces.light')}    period={t('period')} recommended={t('recommended')} kpiGuarantee={t('kpiGuarantee')} kpiPerUnit={t('kpiPerUnit')} comboNote={t('comboNote')} />
-          <PlanCard name="Standard" price={1200} guarantees={14} pace={t('planPaces.standard')} period={t('period')} recommended={t('recommended')} kpiGuarantee={t('kpiGuarantee')} kpiPerUnit={t('kpiPerUnit')} comboNote={t('comboNote')} featured />
+          <PlanCard name="Standard" price={1200} guarantees={14} pace={t('planPaces.standard')} period={t('period')} recommended={t('recommended')} kpiGuarantee={t('kpiGuarantee')} kpiPerUnit={t('kpiPerUnit')} comboNote={t('comboNote')} />
           <PlanCard name="Premium"  price={2400} guarantees={30} pace={t('planPaces.premium')}  period={t('period')} recommended={t('recommended')} kpiGuarantee={t('kpiGuarantee')} kpiPerUnit={t('kpiPerUnit')} comboNote={t('comboNote')} />
         </div>
 
