@@ -626,7 +626,7 @@ const MobileHome = () => {
           </div>
         </section>
 
-        {/* Special Thanks */}
+        {/* Special Thanks — 非表示中（コードは保持）
         <section className={`fade-in-up ${LAYOUT.sectionX} ${LAYOUT.sectionYCompact}`}>
           <div className={LAYOUT.container}>
             <Link
@@ -644,6 +644,7 @@ const MobileHome = () => {
             </p>
           </div>
         </section>
+        */}
 
         {/* FAQ & Contact */}
         <FAQSection variant="mobile" />

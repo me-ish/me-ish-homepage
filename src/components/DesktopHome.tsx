@@ -791,7 +791,7 @@ const DesktopHome = () => {
           </div>
         </section>
 
-        {/* Special Thanks */}
+        {/* Special Thanks — 非表示中（コードは保持）
         <section
           className={`fade-in-up ${LAYOUT.sectionYCompact} px-6 bg-white`}
           aria-labelledby="thanks-title"
@@ -814,6 +814,7 @@ const DesktopHome = () => {
             </div>
           </div>
         </section>
+        */}
 
         {/* FAQ & Contact */}
         <FAQSection variant="desktop" />
