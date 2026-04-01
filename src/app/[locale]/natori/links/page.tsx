@@ -99,8 +99,8 @@ export default function Page() {
           style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(-16px)' }}
         >
           <div
-            className="relative h-28 w-28 overflow-hidden rounded-full shadow-xl ring-4 ring-white/80"
-            style={{ boxShadow: '0 0 0 4px rgba(255,255,255,0.8), 0 8px 32px rgba(236,64,122,0.25)' }}
+            className="relative h-28 w-28 overflow-hidden rounded-full shadow-xl ring-4 ring-white"
+            style={{ boxShadow: '0 0 0 4px #ffffff, 0 8px 32px rgba(236,64,122,0.25)' }}
           >
             <Image
               src="/natori/IMG_3825.jpeg"
