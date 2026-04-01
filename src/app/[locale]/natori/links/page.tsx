@@ -142,7 +142,7 @@ export default function Page() {
                 style={{
                   background: 'rgba(255,255,255,0.72)',
                   backdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(255,255,255,0.85)',
+                  border: '1px solid #ffffff',
                 }}
               >
                 {/* アイコン枠 */}
