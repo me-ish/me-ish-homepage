@@ -140,8 +140,7 @@ export default function Page() {
                 aria-label={`${lk.label} へ移動`}
                 className="group flex items-center gap-4 rounded-2xl px-5 py-4 shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
                 style={{
-                  background: 'rgba(255,255,255,0.72)',
-                  backdropFilter: 'blur(12px)',
+                  background: '#ffffff',
                   border: '1px solid #ffffff',
                 }}
               >
