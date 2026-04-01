@@ -103,7 +103,7 @@ export default function Page() {
             style={{ boxShadow: '0 0 0 4px rgba(255,255,255,0.8), 0 8px 32px rgba(236,64,122,0.25)' }}
           >
             <Image
-              src="/natori/portrait.jpg"
+              src="/natori/IMG_3825.jpeg"
               alt="ナトリ"
               fill
               className="object-cover"
