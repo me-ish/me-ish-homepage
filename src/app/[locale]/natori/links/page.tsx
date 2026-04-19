@@ -10,7 +10,7 @@ const LINKS = [
   {
     label: 'X（Twitter）',
     sub: '@natori_illust',
-    href: 'https://x.com/yourid',
+    href: 'https://x.com/natonato_o?s=21',
     icon: (
       <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden>
         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.265 5.64 5.899-5.64Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
@@ -20,7 +20,7 @@ const LINKS = [
   {
     label: 'TikTok',
     sub: '@natori_draw',
-    href: 'https://www.tiktok.com/@yourid',
+    href: 'https://www.tiktok.com/@natori_n?_r=1&_t=ZS-95f2mTSsI5c',
     icon: (
       <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden>
         <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.77 1.52V6.77a4.85 4.85 0 0 1-1-.08Z" />
@@ -30,7 +30,7 @@ const LINKS = [
   {
     label: 'BOOTH',
     sub: 'グッズ・同人誌',
-    href: 'https://yourid.booth.pm',
+    href: 'https://natori0716.booth.pm/',
     icon: (
       <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden>
         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
@@ -41,14 +41,14 @@ const LINKS = [
   {
     label: 'Wick',
     sub: 'コミュニティ',
-    href: 'https://wick.yourid',
+    href: 'https://wick-share.com/sns/share/lXY3b8Gw',
     icon: null,
     iconText: 'W',
   },
   {
     label: 'Skeb',
     sub: 'コミッション受付中',
-    href: 'https://skeb.jp/@yourid',
+    href: 'https://skeb.jp/@natonato_o',
     icon: null,
     iconText: 'S',
   },

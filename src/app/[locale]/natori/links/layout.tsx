@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'ナトリ — Official Links',
     description: 'X / TikTok / BOOTH / Wick / Skeb への入口ページ。',
-    url: 'https://your-domain.com/natori/links',
+    url: 'https://www.me-ish.art/natori/links',
     siteName: 'Natori Links',
     images: [{ url: '/og/natori-links.jpg', width: 1200, height: 630 }],
     locale: 'ja_JP',
