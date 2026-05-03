@@ -28,6 +28,13 @@ const LINKS = [
     ),
   },
   {
+    label: 'つなぐ',
+    sub: 'フォローはこちら',
+    href: 'https://tsunagu.cloud/users/natonato_o',
+    icon: null,
+    iconText: 'つ',
+  },
+  {
     label: 'BOOTH',
     sub: 'グッズ・同人誌',
     href: 'https://natori0716.booth.pm/',
