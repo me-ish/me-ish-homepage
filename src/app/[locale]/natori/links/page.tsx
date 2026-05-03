@@ -28,6 +28,13 @@ const LINKS = [
     ),
   },
   {
+    label: 'Wick',
+    sub: 'コミュニティ',
+    href: 'https://wick-share.com/sns/share/lXY3b8Gw',
+    icon: null,
+    iconText: 'W',
+  },
+  {
     label: 'つなぐ',
     sub: 'フォローはこちら',
     href: 'https://tsunagu.cloud/users/natonato_o',
@@ -44,13 +51,6 @@ const LINKS = [
       </svg>
     ),
     iconText: 'B',
-  },
-  {
-    label: 'Wick',
-    sub: 'コミュニティ',
-    href: 'https://wick-share.com/sns/share/lXY3b8Gw',
-    icon: null,
-    iconText: 'W',
   },
   {
     label: 'Skeb',
