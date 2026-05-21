@@ -41,8 +41,8 @@ export default function EstimateForm() {
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-      <section className="rounded-2xl border border-pink-100 bg-white/90 p-5 shadow-sm md:p-6">
+    <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-6">
+      <section className="min-w-0 rounded-2xl border border-pink-100 bg-white/90 p-4 shadow-sm sm:p-5 md:p-6">
         <div className="flex items-center gap-3">
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-pink-100 text-pink-600">
             <Clipboard className="h-5 w-5" aria-hidden />
@@ -57,14 +57,14 @@ export default function EstimateForm() {
           value={requestText}
           onChange={(event) => setRequestText(event.target.value)}
           placeholder="依頼文をここに貼り付けてください。例: 立ち絵、表情差分、商用利用、背景あり、急ぎ..."
-          className="mt-5 min-h-[280px] resize-y border-pink-100 bg-pink-50/30 text-base leading-7 focus-visible:ring-pink-300"
+          className="mt-5 min-h-[360px] resize-y border-pink-100 bg-pink-50/30 text-base leading-7 focus-visible:ring-pink-300 sm:min-h-[320px] lg:min-h-[280px]"
         />
 
         <div className="mt-4">
           <Button
             onClick={handleSubmit}
             disabled={!requestText.trim()}
-            className="h-11 rounded-full bg-pink-500 px-6 text-white hover:bg-pink-600"
+            className="h-12 w-full rounded-full bg-pink-500 px-6 text-base text-white hover:bg-pink-600 sm:w-auto sm:text-sm"
           >
             <Calculator className="h-4 w-4" aria-hidden />
             見積もり作成
@@ -78,9 +78,9 @@ export default function EstimateForm() {
         />
       </section>
 
-      <section className="rounded-2xl border border-pink-100 bg-white p-5 shadow-sm md:p-6">
+      <section className="min-w-0 rounded-2xl border border-pink-100 bg-white p-4 shadow-sm sm:p-5 md:p-6">
         {!estimate ? (
-          <div className="flex min-h-[460px] flex-col items-center justify-center rounded-xl border border-dashed border-pink-200 bg-pink-50/40 px-6 text-center">
+          <div className="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-pink-200 bg-pink-50/40 px-4 text-center sm:min-h-[420px] sm:px-6">
             <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-pink-500 shadow-sm">
               <Calculator className="h-6 w-6" aria-hidden />
             </div>
@@ -93,8 +93,8 @@ export default function EstimateForm() {
           <div className="space-y-5">
             <div className="rounded-2xl bg-gradient-to-br from-pink-50 to-white p-5">
               <p className="text-sm font-medium text-pink-700">概算合計</p>
-              <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-                <p className="text-4xl font-black tracking-normal text-pink-950">
+              <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+                <p className="break-words text-4xl font-black tracking-normal text-pink-950 sm:text-5xl lg:text-4xl">
                   {formatYen(estimate.total)}
                 </p>
                 <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-pink-700 shadow-sm">
@@ -112,13 +112,13 @@ export default function EstimateForm() {
                 <Button
                   variant="outline"
                   onClick={handleCopySummary}
-                  className="h-8 rounded-full border-pink-200 bg-white px-3 text-xs text-pink-700 hover:bg-pink-50"
+                  className="h-11 w-full rounded-full border-pink-200 bg-white px-4 text-sm text-pink-700 hover:bg-pink-50 sm:h-9 sm:w-auto sm:px-3 sm:text-xs"
                 >
                   {summaryCopied ? "コピー済み" : "コピー"}
                 </Button>
               }
             >
-              <pre className="whitespace-pre-wrap rounded-xl bg-white p-4 text-sm leading-7 text-gray-800 ring-1 ring-pink-50">
+              <pre className="max-w-full whitespace-pre-wrap break-words rounded-xl bg-white p-4 text-sm leading-7 text-gray-800 ring-1 ring-pink-50 [overflow-wrap:anywhere]">
                 {createEstimateSummary(estimate)}
               </pre>
             </ResultBlock>
@@ -154,12 +154,12 @@ export default function EstimateForm() {
             </ResultBlock>
 
             {estimate.warnings.length > 0 && (
-              <ResultBlock title="warning">
+              <ResultBlock title="注意が必要な項目">
                 <ul className="space-y-2">
                   {estimate.warnings.map((warning) => (
                     <li key={warning} className="flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
                       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                      <span>{warning}</span>
+                      <span className="min-w-0 break-words [overflow-wrap:anywhere]">{warning}</span>
                     </li>
                   ))}
                 </ul>
@@ -171,7 +171,7 @@ export default function EstimateForm() {
                 {estimate.questions.map((question) => (
                   <li key={question} className="flex gap-2 text-sm leading-6 text-gray-700">
                     <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-pink-500" aria-hidden />
-                    <span>{question}</span>
+                    <span className="min-w-0 break-words [overflow-wrap:anywhere]">{question}</span>
                   </li>
                 ))}
               </ul>
@@ -183,13 +183,13 @@ export default function EstimateForm() {
                 <Button
                   variant="outline"
                   onClick={handleCopy}
-                  className="h-8 rounded-full border-pink-200 bg-white px-3 text-xs text-pink-700 hover:bg-pink-50"
+                  className="h-11 w-full rounded-full border-pink-200 bg-white px-4 text-sm text-pink-700 hover:bg-pink-50 sm:h-9 sm:w-auto sm:px-3 sm:text-xs"
                 >
                   {copied ? "コピー済み" : "コピー"}
                 </Button>
               }
             >
-              <pre className="whitespace-pre-wrap rounded-xl bg-pink-50/60 p-4 text-sm leading-7 text-gray-800">
+              <pre className="max-w-full whitespace-pre-wrap break-words rounded-xl bg-pink-50/60 p-4 text-sm leading-7 text-gray-800 [overflow-wrap:anywhere]">
                 {estimate.replyDraft}
               </pre>
             </ResultBlock>
@@ -271,7 +271,7 @@ function PricingTable({
 
   return (
     <div className="mt-6 rounded-2xl border border-pink-100 bg-pink-50/30 p-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-sm font-bold text-pink-950">料金表</h3>
           <p className="mt-1 text-xs leading-5 text-pink-900/60">
@@ -326,7 +326,7 @@ function PricingTable({
         </EditablePriceGroup>
 
         <div>
-          <p className="text-xs font-bold text-pink-700">warning ルール</p>
+          <p className="text-xs font-bold text-pink-700">注意が必要な項目</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {pricingConfig.warningRules.map((rule) => (
               <span key={rule.id} className="rounded-full bg-white px-3 py-1 text-xs text-pink-800 shadow-sm">
@@ -361,15 +361,15 @@ function EditablePriceRow({
   onChange: (value: number) => void;
 }) {
   return (
-    <label className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-sm shadow-sm">
+    <label className="flex flex-col gap-2 rounded-xl bg-white px-3 py-2 text-sm shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3">
       <span className="min-w-0 flex-1 truncate text-gray-700">{label}</span>
-      <span className="flex items-center gap-2">
+      <span className="flex w-full items-center gap-2 sm:w-auto">
         <input
           type="number"
           min={0}
           value={value}
           onChange={(event) => onChange(Number(event.target.value))}
-          className="h-8 w-24 rounded-lg border border-pink-100 bg-white px-2 text-right text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-200"
+          className="h-10 min-w-0 flex-1 rounded-lg border border-pink-100 bg-white px-2 text-right text-base font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-200 sm:h-8 sm:w-24 sm:flex-none sm:text-sm"
         />
         <span className="w-5 text-xs text-gray-500">{suffix}</span>
       </span>
@@ -396,12 +396,12 @@ function LineItemGroup({
       {items.length > 0 ? (
         <ul className="divide-y divide-pink-50">
           {items.map((item) => (
-            <li key={item.id} className="flex items-center justify-between gap-4 px-3 py-2 text-sm">
-              <span className="text-gray-700">
+            <li key={item.id} className="flex flex-col gap-1 px-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-2">
+              <span className="min-w-0 text-gray-700">
                 {item.label}
                 {item.note && <span className="ml-2 text-xs text-gray-400">{item.note}</span>}
               </span>
-              <span className="font-bold text-gray-900">{formatYen(item.amount)}</span>
+              <span className="shrink-0 text-base font-bold text-gray-900 sm:text-sm">{formatYen(item.amount)}</span>
             </li>
           ))}
         </ul>
@@ -424,7 +424,7 @@ function ResultBlock({
 }) {
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between gap-3">
+      <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <h3 className="text-sm font-bold text-pink-950">{title}</h3>
         {action}
       </div>

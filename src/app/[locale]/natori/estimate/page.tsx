@@ -19,7 +19,7 @@ export default function NatoriEstimatePage() {
               "radial-gradient(55% 60% at 15% 15%, #ffd1e6 0%, transparent 60%), radial-gradient(65% 70% at 85% 20%, #fff0f7 0%, transparent 70%), linear-gradient(180deg, #fff7fb, #ffffff)",
           }}
         />
-        <div className="mx-auto max-w-6xl px-6 py-10 md:py-14">
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 md:py-14">
           <Link href="/natori" className="text-sm font-medium text-pink-600 hover:underline">
             Natori Portfolio
           </Link>
@@ -27,7 +27,7 @@ export default function NatoriEstimatePage() {
             <p className="text-sm font-bold uppercase tracking-[0.18em] text-pink-500">
               Estimate Helper
             </p>
-            <h1 className="mt-3 text-3xl font-black leading-tight text-pink-950 md:text-5xl">
+            <h1 className="mt-3 text-2xl font-black leading-tight text-pink-950 sm:text-3xl md:text-5xl">
               依頼文から概算見積もりを作成
             </h1>
             <p className="mt-4 text-base leading-7 text-gray-700 md:text-lg">
@@ -38,7 +38,7 @@ export default function NatoriEstimatePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-8 md:py-10">
+      <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 md:py-10">
         <EstimateForm />
       </section>
 
@@ -46,4 +46,3 @@ export default function NatoriEstimatePage() {
     </main>
   );
 }
-
