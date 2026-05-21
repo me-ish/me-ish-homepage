@@ -20,9 +20,17 @@ export default function NatoriEstimatePage() {
           }}
         />
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 md:py-14">
-          <Link href="/natori" className="text-sm font-medium text-pink-600 hover:underline">
-            Natori Portfolio
-          </Link>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Link href="/natori" className="text-sm font-medium text-pink-600 hover:underline">
+              Natori Portfolio
+            </Link>
+            <Link
+              href="/natori/projects"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-pink-200 bg-white px-4 text-sm font-bold text-pink-700 shadow-sm shadow-pink-100/60 hover:bg-pink-50 sm:h-9"
+            >
+              案件管理へ
+            </Link>
+          </div>
           <div className="mt-5 max-w-3xl">
             <p className="text-sm font-bold uppercase tracking-[0.18em] text-pink-500">
               Estimate Helper
