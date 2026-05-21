@@ -2,32 +2,18 @@
 
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { AlertTriangle, Calculator, CheckCircle2, Clipboard, RotateCcw, Sparkles } from "lucide-react";
+import { AlertTriangle, Calculator, CheckCircle2, Clipboard, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { createDefaultNatoriPricingConfig, createNatoriEstimate, formatYen } from "@/lib/natori/pricing";
-import type { NatoriEstimateLineItem, NatoriPricingConfig } from "@/types/natori/pricing";
-
-const SAMPLE_REQUESTS = [
-  {
-    label: "アイコン依頼",
-    text: "SNS用のアイコンをお願いしたいです。プロフィール画像として使用予定です。背景は簡単な色付きで、納期は来月上旬くらいを希望します。",
-  },
-  {
-    label: "SDキャラ依頼",
-    text: "SDキャラのイラストをお願いします。配信で使用したいです。表情差分を2つ追加できるかも知りたいです。",
-  },
-  {
-    label: "立ち絵＋商用利用",
-    text: "立ち絵を1点お願いしたいです。表情差分を3種類、商用利用でグッズ販売にも使いたいです。背景なし、可能なら今週中の短納期希望です。",
-  },
-] as const;
+import type { NatoriEstimateLineItem, NatoriEstimateResult, NatoriPricingConfig } from "@/types/natori/pricing";
 
 export default function EstimateForm() {
   const [requestText, setRequestText] = useState("");
   const [submittedText, setSubmittedText] = useState("");
   const [pricingConfig, setPricingConfig] = useState<NatoriPricingConfig>(() => createDefaultNatoriPricingConfig());
   const [copied, setCopied] = useState(false);
+  const [summaryCopied, setSummaryCopied] = useState(false);
 
   const estimate = useMemo(
     () => (submittedText.trim() ? createNatoriEstimate(submittedText, pricingConfig) : null),
@@ -39,12 +25,19 @@ export default function EstimateForm() {
     if (!trimmed) return;
     setSubmittedText(trimmed);
     setCopied(false);
+    setSummaryCopied(false);
   };
 
   const handleCopy = async () => {
     if (!estimate) return;
     await navigator.clipboard.writeText(estimate.replyDraft);
     setCopied(true);
+  };
+
+  const handleCopySummary = async () => {
+    if (!estimate) return;
+    await navigator.clipboard.writeText(createEstimateSummary(estimate));
+    setSummaryCopied(true);
   };
 
   return (
@@ -56,7 +49,7 @@ export default function EstimateForm() {
           </span>
           <div>
             <h2 className="text-lg font-bold text-pink-950">依頼文を貼り付け</h2>
-            <p className="text-sm text-pink-900/60">料金表ルールだけでローカル計算します。</p>
+            <p className="text-sm text-pink-900/60">貼る、確認する、返信文をコピーするための下書き画面です。</p>
           </div>
         </div>
 
@@ -67,7 +60,7 @@ export default function EstimateForm() {
           className="mt-5 min-h-[280px] resize-y border-pink-100 bg-pink-50/30 text-base leading-7 focus-visible:ring-pink-300"
         />
 
-        <div className="mt-4 flex flex-col gap-3">
+        <div className="mt-4">
           <Button
             onClick={handleSubmit}
             disabled={!requestText.trim()}
@@ -76,23 +69,6 @@ export default function EstimateForm() {
             <Calculator className="h-4 w-4" aria-hidden />
             見積もり作成
           </Button>
-
-          <div className="grid gap-2 sm:grid-cols-3">
-            {SAMPLE_REQUESTS.map((sample) => (
-              <Button
-                key={sample.label}
-                variant="outline"
-                onClick={() => {
-                  setRequestText(sample.text);
-                  setCopied(false);
-                }}
-                className="h-auto min-h-10 rounded-xl border-pink-200 bg-white px-3 py-2 text-xs text-pink-700 hover:bg-pink-50"
-              >
-                <Sparkles className="h-4 w-4" aria-hidden />
-                {sample.label}
-              </Button>
-            ))}
-          </div>
         </div>
 
         <PricingTable
@@ -110,7 +86,7 @@ export default function EstimateForm() {
             </div>
             <h2 className="mt-4 text-lg font-bold text-pink-950">概算見積もりがここに表示されます</h2>
             <p className="mt-2 max-w-sm text-sm leading-6 text-pink-900/60">
-              検出内容、料金内訳、注意点、確認事項、返信文のたたき台をまとめて確認できます。
+              料金内訳、注意点、確認事項、返信文のたたき台をまとめて確認できます。
             </p>
           </div>
         ) : (
@@ -130,20 +106,37 @@ export default function EstimateForm() {
               </p>
             </div>
 
-            <ResultBlock title="検出されたキーワード">
+            <ResultBlock
+              title="コピー用まとめ"
+              action={
+                <Button
+                  variant="outline"
+                  onClick={handleCopySummary}
+                  className="h-8 rounded-full border-pink-200 bg-white px-3 text-xs text-pink-700 hover:bg-pink-50"
+                >
+                  {summaryCopied ? "コピー済み" : "コピー"}
+                </Button>
+              }
+            >
+              <pre className="whitespace-pre-wrap rounded-xl bg-white p-4 text-sm leading-7 text-gray-800 ring-1 ring-pink-50">
+                {createEstimateSummary(estimate)}
+              </pre>
+            </ResultBlock>
+
+            <ResultBlock title="拾った項目">
               <div className="flex flex-wrap gap-2">
                 {estimate.detectedItems.map((item) => (
                   <span
                     key={item.id}
                     className="rounded-full bg-pink-50 px-3 py-1 text-sm font-medium text-pink-800"
-                    title={`検出語: ${item.matchedKeywords.join(" / ") || "fallback"}`}
+                    title={`該当語: ${item.matchedKeywords.join(" / ") || "通常イラスト扱い"}`}
                   >
                     {item.label}
                   </span>
                 ))}
               </div>
               <p className="mt-2 text-xs leading-5 text-gray-500">
-                検出: {estimate.detectedItems.map((item) => item.label).join(" / ")}
+                項目: {estimate.detectedItems.map((item) => item.label).join(" / ")}
               </p>
             </ResultBlock>
 
@@ -155,7 +148,7 @@ export default function EstimateForm() {
                   title="割合追加"
                   items={estimate.breakdown.percentage}
                   emptyText="割合追加は検出されていません。"
-                  footer={`割合追加の計算元: ${formatYen(estimate.subtotalBeforePercentage)}`}
+                  footer={`割合追加の計算元: 基本料金 ${formatYen(estimate.breakdown.base.amount)}`}
                 />
               </div>
             </ResultBlock>
@@ -205,6 +198,39 @@ export default function EstimateForm() {
       </section>
     </div>
   );
+}
+
+function createEstimateSummary(estimate: NatoriEstimateResult): string {
+  const fixedText = estimate.breakdown.fixed.length > 0
+    ? estimate.breakdown.fixed.map((item) => `・${item.label}: ${formatYen(item.amount)}`).join("\n")
+    : "・なし";
+  const percentageText = estimate.breakdown.percentage.length > 0
+    ? estimate.breakdown.percentage
+        .map((item) => `・${item.label}: ${formatYen(item.amount)}${item.note ? ` (${item.note})` : ""}`)
+        .join("\n")
+    : "・なし";
+  const warningText = estimate.warnings.length > 0
+    ? estimate.warnings.map((warning) => `・${warning}`).join("\n")
+    : "・なし";
+
+  return [
+    "【概算見積もり】",
+    `メニュー: ${estimate.category.label}`,
+    `概算合計: ${formatYen(estimate.total)}`,
+    "",
+    "【内訳】",
+    `基本料金: ${estimate.breakdown.base.label} ${formatYen(estimate.breakdown.base.amount)}`,
+    "固定追加:",
+    fixedText,
+    `割合追加: ※計算元 基本料金 ${formatYen(estimate.breakdown.base.amount)}`,
+    percentageText,
+    "",
+    "【注意点】",
+    warningText,
+    "",
+    "【確認事項】",
+    ...estimate.questions.slice(0, 6).map((question) => `・${question}`),
+  ].join("\n");
 }
 
 function PricingTable({

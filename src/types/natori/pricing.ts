@@ -1,17 +1,21 @@
 export type NatoriEstimateCategory =
-  | "icon"
-  | "sd_character"
-  | "standing"
-  | "general";
+  | "bust_up"
+  | "waist_up"
+  | "full_body";
 
 export type NatoriFixedOptionId =
+  | "complex_prop"
+  | "mascot_prop"
   | "expression_variation"
-  | "background";
+  | "detailed_background"
+  | "commercial_use"
+  | "sample_usage_denied"
+  | "private_work"
+  | "rush_delivery"
+  | "retake_extra";
 
 export type NatoriPercentageOptionId =
-  | "commercial_use"
-  | "rush"
-  | "private_work";
+  | "additional_character";
 
 export type NatoriWarningRuleId =
   | "copyright_transfer";
@@ -31,17 +35,20 @@ export type NatoriBaseItem = NatoriPricingKeyword & {
   id: NatoriEstimateCategory;
   basePrice: number;
   priority: number;
+  note?: string;
 };
 
 export type NatoriFixedOption = NatoriPricingKeyword & {
   id: NatoriFixedOptionId;
   amount: number;
+  note?: string;
   question?: string;
 };
 
 export type NatoriPercentageOption = NatoriPricingKeyword & {
   id: NatoriPercentageOptionId;
   rate: number;
+  note?: string;
   warning?: string;
   question?: string;
 };
@@ -90,3 +97,4 @@ export type NatoriEstimateResult = {
   questions: string[];
   replyDraft: string;
 };
+

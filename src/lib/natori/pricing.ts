@@ -12,75 +12,106 @@ import type {
 
 export const baseItems: readonly NatoriBaseItem[] = [
   {
-    id: "icon",
-    label: "アイコン",
-    basePrice: 8000,
+    id: "bust_up",
+    label: "胸上",
+    basePrice: 4000,
     priority: 10,
-    keywords: ["アイコン", "icon", "SNS用", "プロフィール画像", "プロフィール", "丸アイコン"],
+    note: "リテイク2回まで無料。簡単な小物、簡易背景無料。",
+    keywords: ["胸上", "バストアップ", "肩上", "顔アップ", "アイコン", "icon", "SNS用"],
   },
   {
-    id: "sd_character",
-    label: "SDキャラ",
-    basePrice: 15000,
+    id: "waist_up",
+    label: "膝〜腰上",
+    basePrice: 6000,
     priority: 20,
-    keywords: ["SD", "SDキャラ", "デフォルメ", "ちびキャラ", "ミニキャラ"],
+    note: "リテイク2回まで無料。簡単な小物、簡易背景無料。",
+    keywords: ["膝", "腰上", "腰まで", "膝上", "半身"],
   },
   {
-    id: "standing",
-    label: "立ち絵",
-    basePrice: 30000,
+    id: "full_body",
+    label: "全身",
+    basePrice: 10000,
     priority: 30,
-    keywords: ["立ち絵", "全身", "キャラクター全身", "配信用", "TRPG"],
-  },
-  {
-    id: "general",
-    label: "通常イラスト",
-    basePrice: 20000,
-    priority: 1,
-    keywords: ["イラスト", "一枚絵", "表紙", "サムネ", "グッズ"],
+    note: "リテイク2回まで無料。簡単な小物、簡易背景無料。",
+    keywords: ["全身", "立ち絵", "キャラクター全身", "配信用", "TRPG"],
   },
 ];
 
 export const fixedOptions: readonly NatoriFixedOption[] = [
   {
+    id: "complex_prop",
+    label: "複雑な小物追加",
+    amount: 500,
+    keywords: ["複雑な小物", "小物追加", "武器", "楽器", "装飾品"],
+    question: "追加したい小物の資料と複雑さを確認してください。",
+  },
+  {
+    id: "mascot_prop",
+    label: "ぬいぐるみ／マスコット追加",
+    amount: 500,
+    keywords: ["ぬいぐるみ", "マスコット", "ぬい", "ペット", "相棒キャラ"],
+    question: "追加するぬいぐるみ・マスコットの資料を確認してください。",
+  },
+  {
     id: "expression_variation",
     label: "表情差分",
-    amount: 3000,
+    amount: 500,
     keywords: ["表情差分", "差分", "笑顔", "怒り", "泣き顔", "表情追加"],
     question: "必要な表情差分の点数と、それぞれの内容を確認してください。",
   },
   {
-    id: "background",
-    label: "背景あり",
-    amount: 8000,
-    keywords: ["背景あり", "背景込み", "背景付き", "背景も", "風景", "室内", "屋外"],
+    id: "detailed_background",
+    label: "しっかり背景",
+    amount: 3000,
+    note: "内容により5,000円まで調整",
+    keywords: ["しっかり背景", "背景あり", "背景込み", "背景付き", "風景", "室内", "屋外"],
     question: "背景の複雑さ、資料の有無、描き込み量を確認してください。",
+  },
+  {
+    id: "commercial_use",
+    label: "商用利用",
+    amount: 3000,
+    keywords: ["商用利用", "収益化", "販売", "グッズ化", "配信で使用", "広告", "同人誌"],
+    question: "利用範囲、掲載媒体、販売物の種類、利用期間を確認してください。",
+  },
+  {
+    id: "sample_usage_denied",
+    label: "サンプル使用不可",
+    amount: 1000,
+    keywords: ["サンプル使用不可", "サンプル不可", "実績掲載不可", "ポートフォリオ掲載不可"],
+    question: "サンプル使用不可の範囲と、解禁可能日があるかを確認してください。",
+  },
+  {
+    id: "private_work",
+    label: "完全非公開",
+    amount: 2000,
+    keywords: ["完全非公開", "非公開", "公開不可", "秘密"],
+    question: "完全非公開が必要な理由と公開不可の範囲を確認してください。",
+  },
+  {
+    id: "rush_delivery",
+    label: "お急ぎ納品",
+    amount: 2000,
+    keywords: ["急ぎ", "お急ぎ", "短納期", "至急", "即日", "今週中", "明日", "なる早"],
+    question: "希望納期と、ラフ確認・修正確認に使える日数を確認してください。",
+  },
+  {
+    id: "retake_extra",
+    label: "リテイク3回目以降",
+    amount: 500,
+    note: "1回あたり",
+    keywords: ["リテイク3回", "リテイク三回", "修正3回", "修正三回", "追加修正"],
+    question: "リテイク回数が3回以上になる可能性があるか確認してください。",
   },
 ];
 
 export const percentageOptions: readonly NatoriPercentageOption[] = [
   {
-    id: "commercial_use",
-    label: "商用利用",
-    rate: 0.5,
-    keywords: ["商用利用", "収益化", "販売", "グッズ化", "配信で使用", "広告", "同人誌"],
-    question: "利用範囲、掲載媒体、販売物の種類、利用期間を確認してください。",
-  },
-  {
-    id: "rush",
-    label: "短納期",
-    rate: 0.3,
-    keywords: ["急ぎ", "短納期", "至急", "即日", "今週中", "明日", "なる早"],
-    warning: "短納期はスケジュール確認後に追加料金またはお断りの判断が必要です。",
-    question: "希望納期と、ラフ確認・修正確認に使える日数を確認してください。",
-  },
-  {
-    id: "private_work",
-    label: "実績非公開",
-    rate: 0.2,
-    keywords: ["実績非公開", "非公開", "公開不可", "ポートフォリオ掲載不可", "秘密"],
-    warning: "実績非公開は制作実績として掲載できないため、追加料金の対象です。",
-    question: "公開不可の範囲と、解禁可能日があるかを確認してください。",
+    id: "additional_character",
+    label: "人物追加",
+    rate: 0.7,
+    keywords: ["人物追加", "キャラ追加", "追加キャラ", "2人", "二人", "複数人", "ペア"],
+    question: "追加する人物の人数、構図、資料を確認してください。",
   },
 ];
 
@@ -142,25 +173,24 @@ export function createNatoriEstimate(
     id: category.id,
     label: `${category.label} 基本料金`,
     amount: category.basePrice,
+    note: category.note,
   };
   const fixedLineItems = detectedFixedOptions.map((option) => ({
     id: option.id,
     label: option.label,
     amount: option.amount,
+    note: option.note,
   }));
   const subtotalBeforePercentage = sumLineItems([baseLineItem, ...fixedLineItems]);
   const percentageLineItems = detectedPercentageOptions.map((option) => ({
     id: option.id,
     label: option.label,
-    amount: roundToHundreds(subtotalBeforePercentage * option.rate),
-    note: `${Math.round(option.rate * 100)}%加算`,
+    amount: roundToHundreds(category.basePrice * option.rate),
+    note: `${Math.round(option.rate * 100)}%加算（基本料金基準）`,
   }));
   const lineItems = [baseLineItem, ...fixedLineItems, ...percentageLineItems];
   const total = sumLineItems(lineItems);
-  const warnings = [
-    ...detectedPercentageOptions.flatMap((option) => option.warning ? [option.warning] : []),
-    ...detectedWarningRules.map((rule) => rule.warning),
-  ];
+  const warnings = detectedWarningRules.map((rule) => rule.warning);
   const questions = createQuestions(detectedFixedOptions, detectedPercentageOptions, detectedWarningRules);
 
   return {
@@ -195,7 +225,7 @@ function pickBaseItem(normalizedText: string, pricingConfig: NatoriPricingConfig
     .filter((item) => item.matchedKeywords.length > 0);
 
   if (matches.length === 0) {
-    return pricingConfig.baseItems.find((item) => item.id === "general")!;
+    return pricingConfig.baseItems.find((item) => item.id === "bust_up")!;
   }
 
   return matches.sort((a, b) => b.item.priority - a.item.priority)[0].item;
@@ -246,7 +276,7 @@ function createReplyDraft(
   const warningText = warnings.length > 0
     ? [
         "",
-        "※短納期・非公開・権利まわりなど確認が必要な項目があります。",
+        "※権利まわりなど確認が必要な項目があります。",
         "内容によっては追加料金、条件調整、またはお受けできない可能性があります。",
       ].join("\n")
     : "";
@@ -284,3 +314,4 @@ export function formatYen(value: number): string {
     maximumFractionDigits: 0,
   }).format(value);
 }
+
