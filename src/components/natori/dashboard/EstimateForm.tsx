@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { AlertTriangle, Calculator, CheckCircle2, Clipboard, Sparkles } from "lucide-react";
+import { AlertTriangle, Calculator, CheckCircle2, Clipboard, RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { createNatoriEstimate, formatYen } from "@/lib/natori/pricing";
-import type { NatoriEstimateLineItem } from "@/types/natori/pricing";
+import { createDefaultNatoriPricingConfig, createNatoriEstimate, formatYen } from "@/lib/natori/pricing";
+import type { NatoriEstimateLineItem, NatoriPricingConfig } from "@/types/natori/pricing";
 
 const SAMPLE_REQUESTS = [
   {
@@ -26,11 +26,12 @@ const SAMPLE_REQUESTS = [
 export default function EstimateForm() {
   const [requestText, setRequestText] = useState("");
   const [submittedText, setSubmittedText] = useState("");
+  const [pricingConfig, setPricingConfig] = useState<NatoriPricingConfig>(() => createDefaultNatoriPricingConfig());
   const [copied, setCopied] = useState(false);
 
   const estimate = useMemo(
-    () => (submittedText.trim() ? createNatoriEstimate(submittedText) : null),
-    [submittedText]
+    () => (submittedText.trim() ? createNatoriEstimate(submittedText, pricingConfig) : null),
+    [pricingConfig, submittedText]
   );
 
   const handleSubmit = () => {
@@ -93,6 +94,12 @@ export default function EstimateForm() {
             ))}
           </div>
         </div>
+
+        <PricingTable
+          pricingConfig={pricingConfig}
+          onChange={setPricingConfig}
+          onReset={() => setPricingConfig(createDefaultNatoriPricingConfig())}
+        />
       </section>
 
       <section className="rounded-2xl border border-pink-100 bg-white p-5 shadow-sm md:p-6">
@@ -200,6 +207,150 @@ export default function EstimateForm() {
   );
 }
 
+function PricingTable({
+  pricingConfig,
+  onChange,
+  onReset,
+}: {
+  pricingConfig: NatoriPricingConfig;
+  onChange: (next: NatoriPricingConfig) => void;
+  onReset: () => void;
+}) {
+  const updateBasePrice = (id: string, value: number) => {
+    onChange({
+      ...pricingConfig,
+      baseItems: pricingConfig.baseItems.map((item) =>
+        item.id === id ? { ...item, basePrice: Math.max(0, value) } : item
+      ),
+    });
+  };
+
+  const updateFixedAmount = (id: string, value: number) => {
+    onChange({
+      ...pricingConfig,
+      fixedOptions: pricingConfig.fixedOptions.map((option) =>
+        option.id === id ? { ...option, amount: Math.max(0, value) } : option
+      ),
+    });
+  };
+
+  const updatePercentageRate = (id: string, value: number) => {
+    onChange({
+      ...pricingConfig,
+      percentageOptions: pricingConfig.percentageOptions.map((option) =>
+        option.id === id ? { ...option, rate: Math.max(0, value) / 100 } : option
+      ),
+    });
+  };
+
+  return (
+    <div className="mt-6 rounded-2xl border border-pink-100 bg-pink-50/30 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-bold text-pink-950">料金表</h3>
+          <p className="mt-1 text-xs leading-5 text-pink-900/60">
+            この画面内だけで一時編集できます。変更後に見積もりを作成すると、編集後の金額で計算します。
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={onReset}
+          className="h-9 shrink-0 rounded-full border-pink-200 bg-white px-3 text-xs text-pink-700 hover:bg-pink-50"
+        >
+          <RotateCcw className="h-4 w-4" aria-hidden />
+          初期値
+        </Button>
+      </div>
+
+      <div className="mt-4 space-y-4">
+        <EditablePriceGroup title="基本料金">
+          {pricingConfig.baseItems.map((item) => (
+            <EditablePriceRow
+              key={item.id}
+              label={item.label}
+              value={item.basePrice}
+              suffix="円"
+              onChange={(value) => updateBasePrice(item.id, value)}
+            />
+          ))}
+        </EditablePriceGroup>
+
+        <EditablePriceGroup title="固定追加">
+          {pricingConfig.fixedOptions.map((option) => (
+            <EditablePriceRow
+              key={option.id}
+              label={option.label}
+              value={option.amount}
+              suffix="円"
+              onChange={(value) => updateFixedAmount(option.id, value)}
+            />
+          ))}
+        </EditablePriceGroup>
+
+        <EditablePriceGroup title="割合追加">
+          {pricingConfig.percentageOptions.map((option) => (
+            <EditablePriceRow
+              key={option.id}
+              label={option.label}
+              value={Math.round(option.rate * 100)}
+              suffix="%"
+              onChange={(value) => updatePercentageRate(option.id, value)}
+            />
+          ))}
+        </EditablePriceGroup>
+
+        <div>
+          <p className="text-xs font-bold text-pink-700">warning ルール</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {pricingConfig.warningRules.map((rule) => (
+              <span key={rule.id} className="rounded-full bg-white px-3 py-1 text-xs text-pink-800 shadow-sm">
+                {rule.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditablePriceGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div>
+      <p className="text-xs font-bold text-pink-700">{title}</p>
+      <div className="mt-2 space-y-2">{children}</div>
+    </div>
+  );
+}
+
+function EditablePriceRow({
+  label,
+  value,
+  suffix,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  suffix: string;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-sm shadow-sm">
+      <span className="min-w-0 flex-1 truncate text-gray-700">{label}</span>
+      <span className="flex items-center gap-2">
+        <input
+          type="number"
+          min={0}
+          value={value}
+          onChange={(event) => onChange(Number(event.target.value))}
+          className="h-8 w-24 rounded-lg border border-pink-100 bg-white px-2 text-right text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-200"
+        />
+        <span className="w-5 text-xs text-gray-500">{suffix}</span>
+      </span>
+    </label>
+  );
+}
+
 function LineItemGroup({
   title,
   items,
@@ -255,4 +406,3 @@ function ResultBlock({
     </div>
   );
 }
-

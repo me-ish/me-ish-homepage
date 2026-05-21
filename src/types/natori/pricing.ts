@@ -52,6 +52,13 @@ export type NatoriWarningRule = NatoriPricingKeyword & {
   question?: string;
 };
 
+export type NatoriPricingConfig = {
+  baseItems: NatoriBaseItem[];
+  fixedOptions: NatoriFixedOption[];
+  percentageOptions: NatoriPercentageOption[];
+  warningRules: NatoriWarningRule[];
+};
+
 export type NatoriDetectedItem = {
   id: NatoriPricingRuleId;
   label: string;
@@ -83,4 +90,3 @@ export type NatoriEstimateResult = {
   questions: string[];
   replyDraft: string;
 };
-

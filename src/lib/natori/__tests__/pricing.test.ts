@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createNatoriEstimate, formatYen } from "@/lib/natori/pricing";
+import { createDefaultNatoriPricingConfig, createNatoriEstimate, formatYen } from "@/lib/natori/pricing";
 
 describe("createNatoriEstimate", () => {
   it("keeps copyright transfer as a warning without automatic pricing", () => {
@@ -64,6 +64,22 @@ describe("createNatoriEstimate", () => {
     expect(estimate.replyDraft).toContain("概算");
     expect(estimate.replyDraft).toContain("正式料金は詳細確認後に確定します");
     expect(estimate.replyDraft).toContain("正式なお見積もりのため、下記を確認させてください");
+  });
+
+  it("uses edited pricing config values", () => {
+    const config = createDefaultNatoriPricingConfig();
+    config.baseItems = config.baseItems.map((item) =>
+      item.id === "icon" ? { ...item, basePrice: 10000 } : item
+    );
+    config.percentageOptions = config.percentageOptions.map((option) =>
+      option.id === "commercial_use" ? { ...option, rate: 0.25 } : option
+    );
+
+    const estimate = createNatoriEstimate("アイコンを商用利用で使いたいです。", config);
+
+    expect(estimate.breakdown.base.amount).toBe(10000);
+    expect(estimate.breakdown.percentage[0].amount).toBe(2500);
+    expect(estimate.total).toBe(12500);
   });
 });
 

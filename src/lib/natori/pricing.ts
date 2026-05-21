@@ -5,6 +5,7 @@ import type {
   NatoriEstimateResult,
   NatoriFixedOption,
   NatoriPercentageOption,
+  NatoriPricingConfig,
   NatoriPricingKeyword,
   NatoriWarningRule,
 } from "@/types/natori/pricing";
@@ -100,17 +101,42 @@ const DEFAULT_QUESTIONS = [
   "修正回数とラフ確認のタイミングを確認してください。",
 ] as const;
 
-export function createNatoriEstimate(sourceText: string): NatoriEstimateResult {
+export const defaultNatoriPricingConfig: NatoriPricingConfig = {
+  baseItems: baseItems.map((item) => ({ ...item, keywords: [...item.keywords] })),
+  fixedOptions: fixedOptions.map((option) => ({ ...option, keywords: [...option.keywords] })),
+  percentageOptions: percentageOptions.map((option) => ({ ...option, keywords: [...option.keywords] })),
+  warningRules: warningRules.map((rule) => ({ ...rule, keywords: [...rule.keywords] })),
+};
+
+export function createDefaultNatoriPricingConfig(): NatoriPricingConfig {
+  return {
+    baseItems: defaultNatoriPricingConfig.baseItems.map((item) => ({ ...item, keywords: [...item.keywords] })),
+    fixedOptions: defaultNatoriPricingConfig.fixedOptions.map((option) => ({
+      ...option,
+      keywords: [...option.keywords],
+    })),
+    percentageOptions: defaultNatoriPricingConfig.percentageOptions.map((option) => ({
+      ...option,
+      keywords: [...option.keywords],
+    })),
+    warningRules: defaultNatoriPricingConfig.warningRules.map((rule) => ({ ...rule, keywords: [...rule.keywords] })),
+  };
+}
+
+export function createNatoriEstimate(
+  sourceText: string,
+  pricingConfig: NatoriPricingConfig = defaultNatoriPricingConfig
+): NatoriEstimateResult {
   const normalizedText = normalizeText(sourceText);
-  const category = pickBaseItem(normalizedText);
+  const category = pickBaseItem(normalizedText, pricingConfig);
   const detectedBase = createDetectedItem(category, normalizedText) ?? {
     id: category.id,
     label: category.label,
     matchedKeywords: [],
   };
-  const detectedFixedOptions = findMatchingRules(fixedOptions, normalizedText);
-  const detectedPercentageOptions = findMatchingRules(percentageOptions, normalizedText);
-  const detectedWarningRules = findMatchingRules(warningRules, normalizedText);
+  const detectedFixedOptions = findMatchingRules(pricingConfig.fixedOptions, normalizedText);
+  const detectedPercentageOptions = findMatchingRules(pricingConfig.percentageOptions, normalizedText);
+  const detectedWarningRules = findMatchingRules(pricingConfig.warningRules, normalizedText);
 
   const baseLineItem: NatoriEstimateLineItem = {
     id: category.id,
@@ -160,8 +186,8 @@ export function createNatoriEstimate(sourceText: string): NatoriEstimateResult {
   };
 }
 
-function pickBaseItem(normalizedText: string): NatoriBaseItem {
-  const matches = baseItems
+function pickBaseItem(normalizedText: string, pricingConfig: NatoriPricingConfig): NatoriBaseItem {
+  const matches = pricingConfig.baseItems
     .map((item) => ({
       item,
       matchedKeywords: findMatchedKeywords(item.keywords, normalizedText),
@@ -169,7 +195,7 @@ function pickBaseItem(normalizedText: string): NatoriBaseItem {
     .filter((item) => item.matchedKeywords.length > 0);
 
   if (matches.length === 0) {
-    return baseItems.find((item) => item.id === "general")!;
+    return pricingConfig.baseItems.find((item) => item.id === "general")!;
   }
 
   return matches.sort((a, b) => b.item.priority - a.item.priority)[0].item;
@@ -258,4 +284,3 @@ export function formatYen(value: number): string {
     maximumFractionDigits: 0,
   }).format(value);
 }
-
