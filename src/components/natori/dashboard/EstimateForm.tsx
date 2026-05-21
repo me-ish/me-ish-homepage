@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { AlertTriangle, Calculator, CheckCircle2, Clipboard, RotateCcw } from "lucide-react";
+import { AlertTriangle, Calculator, CheckCircle2, ChevronDown, ChevronUp, Clipboard, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { createDefaultNatoriPricingConfig, createNatoriEstimate, formatYen } from "@/lib/natori/pricing";
@@ -14,11 +14,16 @@ export default function EstimateForm() {
   const [pricingConfig, setPricingConfig] = useState<NatoriPricingConfig>(() => createDefaultNatoriPricingConfig());
   const [copied, setCopied] = useState(false);
   const [summaryCopied, setSummaryCopied] = useState(false);
+  const [pricingOpen, setPricingOpen] = useState(false);
 
   const estimate = useMemo(
     () => (submittedText.trim() ? createNatoriEstimate(submittedText, pricingConfig) : null),
     [pricingConfig, submittedText]
   );
+
+  useEffect(() => {
+    setPricingOpen(window.matchMedia("(min-width: 640px)").matches);
+  }, []);
 
   const handleSubmit = () => {
     const trimmed = requestText.trim();
@@ -73,8 +78,10 @@ export default function EstimateForm() {
 
         <PricingTable
           pricingConfig={pricingConfig}
+          open={pricingOpen}
           onChange={setPricingConfig}
           onReset={() => setPricingConfig(createDefaultNatoriPricingConfig())}
+          onToggle={() => setPricingOpen((current) => !current)}
         />
       </section>
 
@@ -235,12 +242,16 @@ function createEstimateSummary(estimate: NatoriEstimateResult): string {
 
 function PricingTable({
   pricingConfig,
+  open,
   onChange,
   onReset,
+  onToggle,
 }: {
   pricingConfig: NatoriPricingConfig;
+  open: boolean;
   onChange: (next: NatoriPricingConfig) => void;
   onReset: () => void;
+  onToggle: () => void;
 }) {
   const updateBasePrice = (id: string, value: number) => {
     onChange({
@@ -270,25 +281,39 @@ function PricingTable({
   };
 
   return (
-    <div className="mt-6 rounded-2xl border border-pink-100 bg-pink-50/30 p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-6 min-w-0 rounded-2xl border border-pink-100 bg-pink-50/30 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="text-sm font-bold text-pink-950">料金表</h3>
           <p className="mt-1 text-xs leading-5 text-pink-900/60">
             この画面内だけで一時編集できます。変更後に見積もりを作成すると、編集後の金額で計算します。
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={onReset}
-          className="h-9 shrink-0 rounded-full border-pink-200 bg-white px-3 text-xs text-pink-700 hover:bg-pink-50"
-        >
-          <RotateCcw className="h-4 w-4" aria-hidden />
-          初期値
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            variant="outline"
+            onClick={onToggle}
+            aria-expanded={open}
+            className="h-11 w-full rounded-full border-pink-200 bg-white px-4 text-sm text-pink-700 hover:bg-pink-50 sm:h-9 sm:w-auto sm:px-3 sm:text-xs"
+          >
+            {open ? <ChevronUp className="h-4 w-4" aria-hidden /> : <ChevronDown className="h-4 w-4" aria-hidden />}
+            {open ? "料金表を閉じる" : "料金表を表示"}
+          </Button>
+          {open ? (
+            <Button
+              variant="outline"
+              onClick={onReset}
+              className="h-11 w-full rounded-full border-pink-200 bg-white px-4 text-sm text-pink-700 hover:bg-pink-50 sm:h-9 sm:w-auto sm:px-3 sm:text-xs"
+            >
+              <RotateCcw className="h-4 w-4" aria-hidden />
+              初期値
+            </Button>
+          ) : null}
+        </div>
       </div>
 
-      <div className="mt-4 space-y-4">
+      {open ? (
+        <div className="mt-4 space-y-4">
         <EditablePriceGroup title="基本料金">
           {pricingConfig.baseItems.map((item) => (
             <EditablePriceRow
@@ -335,7 +360,8 @@ function PricingTable({
             ))}
           </div>
         </div>
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }
