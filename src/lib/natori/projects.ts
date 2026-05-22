@@ -42,6 +42,10 @@ const STATUS_AUTOCOMPLETE_THRESHOLD: Record<NatoriProjectStatus, NatoriTaskStage
   completed: "delivery",
 };
 
+export function getStageForStatus(status: NatoriProjectStatus): NatoriTaskStage | null {
+  return STATUS_CURRENT_STAGE[status];
+}
+
 const STATUS_CURRENT_STAGE: Record<NatoriProjectStatus, NatoriTaskStage | null> = {
   consulting: null,
   quoted: null,

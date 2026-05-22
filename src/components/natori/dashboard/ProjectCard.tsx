@@ -3,10 +3,11 @@
 import { CalendarDays, CircleDollarSign, Sparkles, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { natoriProjectStatusMeta } from "@/lib/natori/mockProjects";
+import { natoriProjectStatusMeta, natoriStageMeta } from "@/lib/natori/mockProjects";
 import {
-  isProjectOverdue,
   daysUntilDue,
+  getStageForStatus,
+  isProjectOverdue,
 } from "@/lib/natori/projects";
 import { cn } from "@/lib/utils";
 import ProjectTaskChecklist from "./ProjectTaskChecklist";
@@ -37,9 +38,9 @@ function formatDueDate(value: string) {
 }
 
 const priorityChipMap: Record<NonNullable<NatoriProject["priority"]>, { label: string; className: string }> = {
-  high: { label: "優先度：高", className: "border-red-200 bg-red-50 text-red-700" },
-  normal: { label: "優先度：中", className: "border-pink-200 bg-pink-50 text-pink-700" },
-  low: { label: "優先度：低", className: "border-gray-200 bg-gray-50 text-gray-600" },
+  high: { label: "優先度：高", className: "border-red-300 bg-red-50 text-red-800" },
+  normal: { label: "優先度：中", className: "border-gray-300 bg-gray-50 text-gray-700" },
+  low: { label: "優先度：低", className: "border-gray-200 bg-gray-50 text-gray-500" },
 };
 
 export default function ProjectCard({
@@ -51,21 +52,23 @@ export default function ProjectCard({
   const overdue = isProjectOverdue(project, today);
   const days = daysUntilDue(project.dueDate, today);
   const priority = project.priority ? priorityChipMap[project.priority] : null;
+  const stage = getStageForStatus(project.status);
+  const stageMeta = stage ? natoriStageMeta[stage] : null;
 
   return (
     <Card
       className={cn(
-        "min-w-0 overflow-hidden rounded-2xl border-pink-100 bg-white shadow-sm shadow-pink-100/50",
-        overdue && "border-red-300"
+        "min-w-0 overflow-hidden rounded-2xl border-gray-200 bg-white shadow-sm",
+        overdue && "border-red-400"
       )}
     >
       <CardContent className="space-y-3 p-4 sm:space-y-4 sm:p-5">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="break-words text-base font-black leading-6 text-pink-950 sm:text-lg">
+            <p className="break-words text-base font-black leading-6 text-gray-900 sm:text-lg">
               {project.title}
             </p>
-            <p className="mt-1 break-words text-sm text-gray-500">{project.clientName}</p>
+            <p className="mt-1 break-words text-sm text-gray-600">{project.clientName}</p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
             <Badge
@@ -90,7 +93,7 @@ export default function ProjectCard({
         </div>
 
         {overdue ? (
-          <div className="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div className="flex items-start gap-2 rounded-2xl border border-red-300 bg-red-50 p-3 text-sm text-red-800">
             <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
             <span className="font-bold">
               納期を {Math.abs(days)} 日過ぎています。優先して進めましょう。
@@ -98,26 +101,33 @@ export default function ProjectCard({
           </div>
         ) : null}
 
-        <div className="rounded-2xl border border-pink-100 bg-pink-50/70 p-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-pink-700">
+        <div
+          className={cn(
+            "rounded-2xl border p-3",
+            stageMeta
+              ? cn("border-transparent", stageMeta.softClassName)
+              : "border-gray-200 bg-gray-50 text-gray-900"
+          )}
+        >
+          <div className="flex items-center gap-2 text-xs font-bold opacity-80">
             <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
             次やること
           </div>
-          <p className="mt-1 break-words text-lg font-black leading-7 text-pink-950">
+          <p className="mt-1 break-words text-lg font-black leading-7">
             {project.nextAction}
           </p>
         </div>
 
         <div className="grid grid-cols-1 gap-2 text-sm text-gray-700 sm:grid-cols-2">
-          <div className="flex min-w-0 items-center gap-2 rounded-xl bg-gray-50 px-3 py-2">
-            <CalendarDays className="h-4 w-4 shrink-0 text-pink-500" aria-hidden />
+          <div className="flex min-w-0 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
+            <CalendarDays className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
             <span className="shrink-0 text-gray-500">納期</span>
             <span className="min-w-0 break-words font-bold text-gray-900">
               {formatDueDate(project.dueDate)}
             </span>
           </div>
-          <div className="flex min-w-0 items-center gap-2 rounded-xl bg-gray-50 px-3 py-2">
-            <CircleDollarSign className="h-4 w-4 shrink-0 text-pink-500" aria-hidden />
+          <div className="flex min-w-0 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
+            <CircleDollarSign className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
             <span className="shrink-0 text-gray-500">金額</span>
             <span className="min-w-0 break-words font-bold text-gray-900">
               {yenFormatter.format(project.amount)}
@@ -126,7 +136,7 @@ export default function ProjectCard({
         </div>
 
         {project.note ? (
-          <p className="break-words text-sm leading-6 text-gray-600">{project.note}</p>
+          <p className="break-words text-sm leading-6 text-gray-700">{project.note}</p>
         ) : null}
 
         <ProjectTaskChecklist project={project} onToggle={onToggleTask} />

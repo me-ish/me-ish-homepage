@@ -3,58 +3,119 @@ import type {
   NatoriProject,
   NatoriProjectStatus,
   NatoriProjectStatusMeta,
+  NatoriTaskStage,
 } from "@/types/natori/projects";
+
+export type NatoriStageMeta = {
+  label: string;
+  chipClassName: string;
+  softClassName: string;
+  doneTaskClassName: string;
+  checkboxClassName: string;
+  dotClassName: string;
+};
+
+export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
+  material: {
+    label: "資料",
+    chipClassName: "border-slate-300 bg-slate-100 text-slate-800",
+    softClassName: "bg-slate-50 text-slate-800",
+    doneTaskClassName: "border-slate-300 bg-slate-100 text-slate-900",
+    checkboxClassName: "border-slate-600 bg-slate-600 text-white",
+    dotClassName: "bg-slate-500",
+  },
+  rough: {
+    label: "ラフ",
+    chipClassName: "border-amber-300 bg-amber-100 text-amber-900",
+    softClassName: "bg-amber-50 text-amber-900",
+    doneTaskClassName: "border-amber-300 bg-amber-100 text-amber-900",
+    checkboxClassName: "border-amber-500 bg-amber-500 text-white",
+    dotClassName: "bg-amber-500",
+  },
+  lineart: {
+    label: "線画",
+    chipClassName: "border-indigo-300 bg-indigo-100 text-indigo-900",
+    softClassName: "bg-indigo-50 text-indigo-900",
+    doneTaskClassName: "border-indigo-300 bg-indigo-100 text-indigo-900",
+    checkboxClassName: "border-indigo-500 bg-indigo-500 text-white",
+    dotClassName: "bg-indigo-500",
+  },
+  coloring: {
+    label: "着彩",
+    chipClassName: "border-fuchsia-300 bg-fuchsia-100 text-fuchsia-900",
+    softClassName: "bg-fuchsia-50 text-fuchsia-900",
+    doneTaskClassName: "border-fuchsia-300 bg-fuchsia-100 text-fuchsia-900",
+    checkboxClassName: "border-fuchsia-500 bg-fuchsia-500 text-white",
+    dotClassName: "bg-fuchsia-500",
+  },
+  finish: {
+    label: "仕上げ",
+    chipClassName: "border-violet-300 bg-violet-100 text-violet-900",
+    softClassName: "bg-violet-50 text-violet-900",
+    doneTaskClassName: "border-violet-300 bg-violet-100 text-violet-900",
+    checkboxClassName: "border-violet-500 bg-violet-500 text-white",
+    dotClassName: "bg-violet-500",
+  },
+  delivery: {
+    label: "納品",
+    chipClassName: "border-emerald-300 bg-emerald-100 text-emerald-900",
+    softClassName: "bg-emerald-50 text-emerald-900",
+    doneTaskClassName: "border-emerald-300 bg-emerald-100 text-emerald-900",
+    checkboxClassName: "border-emerald-500 bg-emerald-500 text-white",
+    dotClassName: "bg-emerald-500",
+  },
+};
 
 export const natoriProjectStatusMeta: Record<NatoriProjectStatus, NatoriProjectStatusMeta> = {
   consulting: {
     label: "相談中",
-    chipClassName: "border-amber-200 bg-amber-50 text-amber-700",
-    cellClassName: "bg-amber-50/60 text-amber-800",
+    chipClassName: "border-amber-300 bg-amber-50 text-amber-800",
+    cellClassName: "bg-amber-50 text-amber-900",
   },
   quoted: {
     label: "見積もり済",
-    chipClassName: "border-yellow-200 bg-yellow-50 text-yellow-700",
-    cellClassName: "bg-yellow-50/60 text-yellow-800",
+    chipClassName: "border-yellow-300 bg-yellow-50 text-yellow-800",
+    cellClassName: "bg-yellow-50 text-yellow-900",
   },
   awaiting_payment: {
     label: "入金待ち",
-    chipClassName: "border-orange-200 bg-orange-50 text-orange-700",
-    cellClassName: "bg-orange-50/60 text-orange-800",
+    chipClassName: "border-orange-300 bg-orange-50 text-orange-800",
+    cellClassName: "bg-orange-50 text-orange-900",
   },
   rough: {
     label: "ラフ",
-    chipClassName: "border-pink-200 bg-pink-50 text-pink-700",
-    cellClassName: "bg-pink-50/70 text-pink-800",
+    chipClassName: "border-amber-400 bg-amber-100 text-amber-900",
+    cellClassName: "bg-amber-100 text-amber-900",
   },
   lineart: {
     label: "線画",
-    chipClassName: "border-rose-200 bg-rose-50 text-rose-700",
-    cellClassName: "bg-rose-50/70 text-rose-800",
+    chipClassName: "border-indigo-400 bg-indigo-100 text-indigo-900",
+    cellClassName: "bg-indigo-100 text-indigo-900",
   },
   coloring: {
     label: "着彩",
-    chipClassName: "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700",
-    cellClassName: "bg-fuchsia-50/70 text-fuchsia-800",
+    chipClassName: "border-fuchsia-400 bg-fuchsia-100 text-fuchsia-900",
+    cellClassName: "bg-fuchsia-100 text-fuchsia-900",
   },
   waiting: {
     label: "確認待ち",
-    chipClassName: "border-sky-200 bg-sky-50 text-sky-700",
-    cellClassName: "bg-sky-50/70 text-sky-800",
+    chipClassName: "border-sky-300 bg-sky-50 text-sky-800",
+    cellClassName: "bg-sky-50 text-sky-900",
   },
   delivery_prep: {
     label: "納品準備",
-    chipClassName: "border-teal-200 bg-teal-50 text-teal-700",
-    cellClassName: "bg-teal-50/70 text-teal-800",
+    chipClassName: "border-violet-400 bg-violet-100 text-violet-900",
+    cellClassName: "bg-violet-100 text-violet-900",
   },
   delivered: {
     label: "納品済",
-    chipClassName: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    cellClassName: "bg-emerald-50/70 text-emerald-800",
+    chipClassName: "border-emerald-400 bg-emerald-100 text-emerald-900",
+    cellClassName: "bg-emerald-100 text-emerald-900",
   },
   completed: {
     label: "完了",
-    chipClassName: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    cellClassName: "bg-emerald-50/70 text-emerald-800",
+    chipClassName: "border-emerald-500 bg-emerald-200 text-emerald-900",
+    cellClassName: "bg-emerald-200 text-emerald-900",
   },
 };
 
