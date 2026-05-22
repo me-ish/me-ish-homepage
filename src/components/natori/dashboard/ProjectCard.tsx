@@ -1,14 +1,10 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, CalendarDays, CircleDollarSign, Sparkles, AlertTriangle } from "lucide-react";
+import { CalendarDays, CircleDollarSign, Sparkles, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { natoriProjectStatusMeta } from "@/lib/natori/mockProjects";
 import {
-  getNextStatus,
-  getPrevStatus,
-  isCurrentStageComplete,
-  isDoneStatus,
   isProjectOverdue,
   daysUntilDue,
 } from "@/lib/natori/projects";
@@ -20,8 +16,6 @@ type ProjectCardProps = {
   project: NatoriProject;
   today: Date;
   onToggleTask: (projectId: string, taskId: string) => void;
-  onAdvanceStatus: (projectId: string) => void;
-  onRetreatStatus: (projectId: string) => void;
 };
 
 const yenFormatter = new Intl.NumberFormat("ja-JP", {
@@ -52,17 +46,10 @@ export default function ProjectCard({
   project,
   today,
   onToggleTask,
-  onAdvanceStatus,
-  onRetreatStatus,
 }: ProjectCardProps) {
   const status = natoriProjectStatusMeta[project.status];
   const overdue = isProjectOverdue(project, today);
   const days = daysUntilDue(project.dueDate, today);
-  const nextStatus = getNextStatus(project.status);
-  const prevStatus = getPrevStatus(project.status);
-  const canAdvance = nextStatus !== project.status && !isDoneStatus(project.status);
-  const canRetreat = prevStatus !== project.status;
-  const stageReady = canAdvance && isCurrentStageComplete(project);
   const priority = project.priority ? priorityChipMap[project.priority] : null;
 
   return (
@@ -143,36 +130,6 @@ export default function ProjectCard({
         ) : null}
 
         <ProjectTaskChecklist project={project} onToggle={onToggleTask} />
-
-        {stageReady ? (
-          <div className="rounded-2xl border border-pink-200 bg-pink-50 p-3 text-sm text-pink-900">
-            このステップのタスクが揃いました。
-            <span className="ml-1 font-black">
-              {natoriProjectStatusMeta[nextStatus].label}へ進めますか？
-            </span>
-          </div>
-        ) : null}
-
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => onRetreatStatus(project.id)}
-            disabled={!canRetreat}
-            className="flex h-11 items-center justify-center gap-1 rounded-full border border-pink-200 bg-white px-3 text-sm font-bold text-pink-700 hover:bg-pink-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            前へ戻す
-          </button>
-          <button
-            type="button"
-            onClick={() => onAdvanceStatus(project.id)}
-            disabled={!canAdvance}
-            className="flex h-11 items-center justify-center gap-1 rounded-full bg-pink-600 px-3 text-sm font-bold text-white hover:bg-pink-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            次へ進める
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </button>
-        </div>
       </CardContent>
     </Card>
   );

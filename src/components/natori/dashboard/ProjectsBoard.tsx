@@ -3,10 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { mockNatoriProjects } from "@/lib/natori/mockProjects";
 import {
-  applyStatusToTasks,
-  getNextActionForStatus,
-  getNextStatus,
-  getPrevStatus,
+  deriveNextActionFromTasks,
+  deriveStatusFromTasks,
   getProjectsForDate,
   getPrioritySuggestions,
   toISODate,
@@ -85,42 +83,16 @@ export default function ProjectsBoard() {
     setProjects((current) =>
       current.map((project) => {
         if (project.id !== projectId) return project;
+        const nextTasks = project.tasks.map((task) =>
+          task.id === taskId ? { ...task, done: !task.done } : task
+        );
+        const nextStatus = deriveStatusFromTasks(nextTasks, project.status);
+        const nextAction = deriveNextActionFromTasks(nextTasks, project.nextAction);
         return {
           ...project,
-          tasks: project.tasks.map((task) =>
-            task.id === taskId ? { ...task, done: !task.done } : task
-          ),
-        };
-      })
-    );
-  };
-
-  const handleAdvanceStatus = (projectId: string) => {
-    setProjects((current) =>
-      current.map((project) => {
-        if (project.id !== projectId) return project;
-        const nextStatus = getNextStatus(project.status);
-        if (nextStatus === project.status) return project;
-        return {
-          ...project,
+          tasks: nextTasks,
           status: nextStatus,
-          nextAction: getNextActionForStatus(nextStatus),
-          tasks: applyStatusToTasks(project.tasks, nextStatus),
-        };
-      })
-    );
-  };
-
-  const handleRetreatStatus = (projectId: string) => {
-    setProjects((current) =>
-      current.map((project) => {
-        if (project.id !== projectId) return project;
-        const prevStatus = getPrevStatus(project.status);
-        if (prevStatus === project.status) return project;
-        return {
-          ...project,
-          status: prevStatus,
-          nextAction: getNextActionForStatus(prevStatus),
+          nextAction,
         };
       })
     );
@@ -150,8 +122,6 @@ export default function ProjectsBoard() {
         projects={dayProjects}
         today={today}
         onToggleTask={handleToggleTask}
-        onAdvanceStatus={handleAdvanceStatus}
-        onRetreatStatus={handleRetreatStatus}
       />
     </div>
   );

@@ -153,6 +153,43 @@ export function applyStatusToTasks(
   });
 }
 
+const STAGE_TO_STATUS: Record<NatoriTaskStage, NatoriProjectStatus> = {
+  material: "rough",
+  rough: "rough",
+  lineart: "lineart",
+  coloring: "coloring",
+  finish: "delivery_prep",
+  delivery: "delivery_prep",
+};
+
+const PREWORK_STATUSES: NatoriProjectStatus[] = ["consulting", "quoted", "awaiting_payment"];
+
+export function deriveStatusFromTasks(
+  tasks: NatoriProjectTask[],
+  currentStatus: NatoriProjectStatus
+): NatoriProjectStatus {
+  if (tasks.length === 0) return currentStatus;
+  const done = tasks.filter((task) => task.done).length;
+  if (done === tasks.length) return "completed";
+  if (done === 0) {
+    if (PREWORK_STATUSES.includes(currentStatus)) return currentStatus;
+    return "rough";
+  }
+  const firstPending = tasks.find((task) => !task.done);
+  if (!firstPending) return "completed";
+  return STAGE_TO_STATUS[firstPending.stage];
+}
+
+export function deriveNextActionFromTasks(
+  tasks: NatoriProjectTask[],
+  fallback: string
+): string {
+  if (tasks.length === 0) return fallback;
+  const firstPending = tasks.find((task) => !task.done);
+  if (!firstPending) return "完了";
+  return firstPending.label;
+}
+
 export function isCurrentStageComplete(project: NatoriProject): boolean {
   const stage = STATUS_CURRENT_STAGE[project.status];
   if (!stage) return false;

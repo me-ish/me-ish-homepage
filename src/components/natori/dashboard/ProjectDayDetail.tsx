@@ -17,8 +17,6 @@ type ProjectDayDetailProps = {
   projects: NatoriProject[];
   today: Date;
   onToggleTask: (projectId: string, taskId: string) => void;
-  onAdvanceStatus: (projectId: string) => void;
-  onRetreatStatus: (projectId: string) => void;
 };
 
 export default function ProjectDayDetail({
@@ -26,8 +24,6 @@ export default function ProjectDayDetail({
   projects,
   today,
   onToggleTask,
-  onAdvanceStatus,
-  onRetreatStatus,
 }: ProjectDayDetailProps) {
   const date = parseISODate(selectedISO);
   const dateLabel = detailDateFormatter.format(date);
@@ -59,8 +55,6 @@ export default function ProjectDayDetail({
               project={project}
               today={today}
               onToggleTask={onToggleTask}
-              onAdvanceStatus={onAdvanceStatus}
-              onRetreatStatus={onRetreatStatus}
             />
           ))}
         </div>

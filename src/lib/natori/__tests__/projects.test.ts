@@ -5,6 +5,8 @@ import {
   calculatePriorityScore,
   createTasksForType,
   daysUntilDue,
+  deriveNextActionFromTasks,
+  deriveStatusFromTasks,
   getNextActionForStatus,
   getNextStatus,
   getPrevStatus,
@@ -205,6 +207,59 @@ describe("calculatePriorityScore / getPrioritySuggestions", () => {
       buildProject({ id: `p-${idx}`, dueDate: `2026-05-${25 + idx}` })
     );
     expect(getPrioritySuggestions(projects, TODAY, 3)).toHaveLength(3);
+  });
+});
+
+describe("deriveStatusFromTasks", () => {
+  it("returns completed once every task is done", () => {
+    const tasks = createTasksForType("icon").map((task) => ({ ...task, done: true }));
+    expect(deriveStatusFromTasks(tasks, "rough")).toBe("completed");
+  });
+
+  it("preserves pre-work statuses when no task is started", () => {
+    const tasks = createTasksForType("sd");
+    expect(deriveStatusFromTasks(tasks, "consulting")).toBe("consulting");
+    expect(deriveStatusFromTasks(tasks, "awaiting_payment")).toBe("awaiting_payment");
+  });
+
+  it("falls back to rough when no task done and status is not pre-work", () => {
+    const tasks = createTasksForType("icon");
+    expect(deriveStatusFromTasks(tasks, "lineart")).toBe("rough");
+  });
+
+  it("maps the first pending task's stage to a working status", () => {
+    const tasks = createTasksForType("standing").map((task) =>
+      task.stage === "material" || task.stage === "rough"
+        ? { ...task, done: true }
+        : task
+    );
+    expect(deriveStatusFromTasks(tasks, "rough")).toBe("lineart");
+
+    const further = tasks.map((task) =>
+      task.stage === "lineart" ? { ...task, done: true } : task
+    );
+    expect(deriveStatusFromTasks(further, "lineart")).toBe("coloring");
+  });
+
+  it("maps remaining finish/delivery tasks to delivery_prep", () => {
+    const tasks = createTasksForType("sd").map((task) =>
+      task.stage === "delivery" ? task : { ...task, done: true }
+    );
+    expect(deriveStatusFromTasks(tasks, "coloring")).toBe("delivery_prep");
+  });
+});
+
+describe("deriveNextActionFromTasks", () => {
+  it("returns the first pending task label", () => {
+    const tasks = createTasksForType("standing").map((task) =>
+      task.stage === "material" ? { ...task, done: true } : task
+    );
+    expect(deriveNextActionFromTasks(tasks, "fallback")).toBe("ラフ作成");
+  });
+
+  it("returns 完了 when every task is done", () => {
+    const tasks = createTasksForType("icon").map((task) => ({ ...task, done: true }));
+    expect(deriveNextActionFromTasks(tasks, "fallback")).toBe("完了");
   });
 });
 
