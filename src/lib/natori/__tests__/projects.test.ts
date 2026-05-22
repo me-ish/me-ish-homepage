@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   applyStatusToTasks,
+  assignBarLanes,
   buildMonthCells,
   calculatePriorityScore,
+  computeProjectBars,
   computeStageMilestones,
   createTasksForType,
   daysUntilDue,
@@ -95,17 +97,67 @@ describe("getProjectsForDate / buildMonthCells", () => {
     expect(getProjectsForDate([a, b, c], "2026-05-24").map((p) => p.id)).toEqual(["a", "b"]);
   });
 
-  it("builds 42 cells covering the requested month", () => {
+  it("builds 42 cells with lane data covering the requested month", () => {
     const project = buildProject({ id: "x", type: "icon", dueDate: "2026-05-24" });
-    const cells = buildMonthCells(2026, 4, [project], TODAY);
+    const { cells, totalLanes } = buildMonthCells(2026, 4, [project], TODAY);
     expect(cells).toHaveLength(42);
     const inMonth = cells.filter((cell) => cell.inMonth);
     expect(inMonth.length).toBe(31);
-    const dueCell = cells.find((cell) => cell.iso === "2026-05-24");
-    const dueEntry = dueCell?.entries.find((entry) => entry.kind === "due");
-    expect(dueEntry && dueEntry.kind === "due" ? dueEntry.project.id : null).toBe("x");
     const today = cells.find((cell) => cell.isToday);
     expect(today?.iso).toBe("2026-05-22");
+    expect(totalLanes).toBeGreaterThan(0);
+    const deliveryDay = cells.find((cell) => cell.iso === "2026-05-24");
+    expect(deliveryDay?.lanes.some((entry) => entry?.bar.stage === "delivery" && entry.isEnd)).toBe(true);
+  });
+});
+
+describe("computeProjectBars", () => {
+  it("emits a bar per pending stage with the previous milestone + 1 as start", () => {
+    const project = buildProject({ id: "p1", type: "icon", dueDate: "2026-05-30", status: "rough" });
+    const bars = computeProjectBars(project);
+    const byStage = Object.fromEntries(bars.map((b) => [b.stage, b]));
+    expect(byStage.rough.startISO).toBe("2026-05-23");
+    expect(byStage.rough.endISO).toBe("2026-05-24");
+    expect(byStage.lineart.startISO).toBe("2026-05-25");
+    expect(byStage.lineart.endISO).toBe("2026-05-26");
+    expect(byStage.delivery.startISO).toBe("2026-05-29");
+    expect(byStage.delivery.endISO).toBe("2026-05-30");
+  });
+
+  it("omits bars for stages whose tasks are all done", () => {
+    const tasks = createTasksForType("icon").map((task) =>
+      task.stage === "rough" ? { ...task, done: true } : task
+    );
+    const project = buildProject({ id: "p1", type: "icon", tasks, dueDate: "2026-05-30", status: "lineart" });
+    const bars = computeProjectBars(project);
+    expect(bars.some((b) => b.stage === "rough")).toBe(false);
+    expect(bars.some((b) => b.stage === "lineart")).toBe(true);
+  });
+
+  it("returns no bars for delivered/completed projects", () => {
+    const project = buildProject({ id: "p1", type: "icon", dueDate: "2026-05-30", status: "delivered" });
+    expect(computeProjectBars(project)).toEqual([]);
+  });
+});
+
+describe("assignBarLanes", () => {
+  it("packs non-overlapping bars into the same lane", () => {
+    const project = buildProject({ id: "p1", type: "icon", dueDate: "2026-05-30", status: "rough" });
+    const bars = computeProjectBars(project);
+    const lanes = assignBarLanes(bars);
+    const laneNumbers = new Set(lanes.values());
+    expect(laneNumbers.size).toBe(1);
+    expect(laneNumbers.has(0)).toBe(true);
+  });
+
+  it("splits overlapping bars into separate lanes", () => {
+    const a = buildProject({ id: "a", type: "icon", dueDate: "2026-05-30", status: "rough" });
+    const b = buildProject({ id: "b", type: "icon", dueDate: "2026-05-30", status: "rough" });
+    const bars = [...computeProjectBars(a), ...computeProjectBars(b)];
+    const lanes = assignBarLanes(bars);
+    const aRoughLane = lanes.get("a-rough");
+    const bRoughLane = lanes.get("b-rough");
+    expect(aRoughLane).not.toBe(bRoughLane);
   });
 });
 

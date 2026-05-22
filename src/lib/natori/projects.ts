@@ -1,4 +1,6 @@
 import type {
+  NatoriCalendarBar,
+  NatoriCalendarCellBar,
   NatoriCalendarEntry,
   NatoriPriorityCandidate,
   NatoriProject,
@@ -296,12 +298,66 @@ export function getCalendarEntriesForDate(
   });
 }
 
+function shiftISODate(iso: string, days: number): string {
+  const date = parseISODate(iso);
+  return toISODate(new Date(date.getFullYear(), date.getMonth(), date.getDate() + days));
+}
+
+export function computeProjectBars(project: NatoriProject): NatoriCalendarBar[] {
+  if (isDoneStatus(project.status)) return [];
+  const milestones = computeStageMilestones(project);
+  if (milestones.length === 0) return [];
+
+  const bars: NatoriCalendarBar[] = [];
+  for (let i = 0; i < milestones.length; i += 1) {
+    const milestone = milestones[i];
+    if (milestone.allDone) continue;
+    const endISO = milestone.dateISO;
+    const startISO =
+      i === 0
+        ? shiftISODate(endISO, -(STAGE_GAP_DAYS - 1))
+        : shiftISODate(milestones[i - 1].dateISO, 1);
+    bars.push({
+      id: `${project.id}-${milestone.stage}`,
+      project,
+      stage: milestone.stage,
+      startISO,
+      endISO,
+    });
+  }
+  return bars;
+}
+
+export function assignBarLanes(bars: NatoriCalendarBar[]): Map<string, number> {
+  const sorted = bars.slice().sort((a, b) => {
+    if (a.startISO !== b.startISO) return a.startISO.localeCompare(b.startISO);
+    if (a.project.id !== b.project.id) return a.project.id.localeCompare(b.project.id);
+    return STAGE_SORT_ORDER.indexOf(a.stage) - STAGE_SORT_ORDER.indexOf(b.stage);
+  });
+  const laneEndISOs: string[] = [];
+  const result = new Map<string, number>();
+  for (const bar of sorted) {
+    let laneIdx = 0;
+    while (laneIdx < laneEndISOs.length && laneEndISOs[laneIdx] >= bar.startISO) {
+      laneIdx += 1;
+    }
+    laneEndISOs[laneIdx] = bar.endISO;
+    result.set(bar.id, laneIdx);
+  }
+  return result;
+}
+
 export type CalendarCell = {
   date: Date;
   iso: string;
   inMonth: boolean;
   isToday: boolean;
-  entries: NatoriCalendarEntry[];
+  lanes: Array<NatoriCalendarCellBar | null>;
+};
+
+export type MonthCalendarLayout = {
+  cells: CalendarCell[];
+  totalLanes: number;
 };
 
 export function buildMonthCells(
@@ -309,24 +365,45 @@ export function buildMonthCells(
   monthIndex: number,
   projects: NatoriProject[],
   today: Date
-): CalendarCell[] {
+): MonthCalendarLayout {
+  const allBars = projects.flatMap((project) => computeProjectBars(project));
+  const laneMap = assignBarLanes(allBars);
+  const totalLanes = allBars.reduce((max, bar) => {
+    const lane = laneMap.get(bar.id) ?? 0;
+    return Math.max(max, lane + 1);
+  }, 0);
+
+  const todayISO = toISODate(today);
   const firstOfMonth = new Date(year, monthIndex, 1);
   const startWeekday = firstOfMonth.getDay();
   const gridStart = new Date(year, monthIndex, 1 - startWeekday);
-  const todayISO = toISODate(today);
+
   const cells: CalendarCell[] = [];
   for (let i = 0; i < 42; i += 1) {
     const date = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
     const iso = toISODate(date);
+    const lanes: Array<NatoriCalendarCellBar | null> = Array(totalLanes).fill(null);
+    for (const bar of allBars) {
+      if (bar.startISO <= iso && bar.endISO >= iso) {
+        const laneIdx = laneMap.get(bar.id) ?? 0;
+        lanes[laneIdx] = {
+          bar,
+          isStart: bar.startISO === iso,
+          isEnd: bar.endISO === iso,
+          isOverdue: bar.endISO < todayISO,
+        };
+      }
+    }
     cells.push({
       date,
       iso,
       inMonth: date.getMonth() === monthIndex,
       isToday: iso === todayISO,
-      entries: getCalendarEntriesForDate(projects, iso),
+      lanes,
     });
   }
-  return cells;
+
+  return { cells, totalLanes };
 }
 
 const TYPE_WEIGHT: Record<NatoriProjectType, number> = {

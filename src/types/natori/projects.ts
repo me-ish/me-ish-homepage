@@ -71,3 +71,18 @@ export type NatoriCalendarEntry =
       stage: NatoriTaskStage;
       allDone: boolean;
     };
+
+export type NatoriCalendarBar = {
+  id: string;
+  project: NatoriProject;
+  stage: NatoriTaskStage;
+  startISO: string;
+  endISO: string;
+};
+
+export type NatoriCalendarCellBar = {
+  bar: NatoriCalendarBar;
+  isStart: boolean;
+  isEnd: boolean;
+  isOverdue: boolean;
+};

@@ -14,6 +14,7 @@ export type NatoriStageMeta = {
   checkboxClassName: string;
   dotClassName: string;
   borderLeftClassName: string;
+  barClassName: string;
 };
 
 export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
@@ -25,6 +26,7 @@ export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
     checkboxClassName: "border-slate-600 bg-slate-600 text-white",
     dotClassName: "bg-slate-500",
     borderLeftClassName: "border-l-2 border-slate-500",
+    barClassName: "bg-slate-300 text-slate-950",
   },
   rough: {
     label: "ラフ",
@@ -34,6 +36,7 @@ export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
     checkboxClassName: "border-amber-500 bg-amber-500 text-white",
     dotClassName: "bg-amber-500",
     borderLeftClassName: "border-l-2 border-amber-500",
+    barClassName: "bg-amber-300 text-amber-950",
   },
   lineart: {
     label: "線画",
@@ -43,6 +46,7 @@ export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
     checkboxClassName: "border-indigo-500 bg-indigo-500 text-white",
     dotClassName: "bg-indigo-500",
     borderLeftClassName: "border-l-2 border-indigo-500",
+    barClassName: "bg-indigo-300 text-indigo-950",
   },
   coloring: {
     label: "着彩",
@@ -52,6 +56,7 @@ export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
     checkboxClassName: "border-fuchsia-500 bg-fuchsia-500 text-white",
     dotClassName: "bg-fuchsia-500",
     borderLeftClassName: "border-l-2 border-fuchsia-500",
+    barClassName: "bg-fuchsia-300 text-fuchsia-950",
   },
   finish: {
     label: "仕上げ",
@@ -61,6 +66,7 @@ export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
     checkboxClassName: "border-violet-500 bg-violet-500 text-white",
     dotClassName: "bg-violet-500",
     borderLeftClassName: "border-l-2 border-violet-500",
+    barClassName: "bg-violet-300 text-violet-950",
   },
   delivery: {
     label: "納品",
@@ -70,6 +76,7 @@ export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
     checkboxClassName: "border-emerald-500 bg-emerald-500 text-white",
     dotClassName: "bg-emerald-500",
     borderLeftClassName: "border-l-2 border-emerald-500",
+    barClassName: "bg-emerald-300 text-emerald-950",
   },
 };
 
