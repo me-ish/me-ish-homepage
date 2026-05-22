@@ -47,14 +47,14 @@ export default function EstimateForm() {
 
   return (
     <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-6">
-      <section className="min-w-0 rounded-2xl border border-pink-100 bg-white/90 p-4 shadow-sm sm:p-5 md:p-6">
+      <section className="min-w-0 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5 md:p-6">
         <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-pink-100 text-pink-600">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-gray-900 text-white">
             <Clipboard className="h-5 w-5" aria-hidden />
           </span>
           <div>
-            <h2 className="text-lg font-bold text-pink-950">依頼文を貼り付け</h2>
-            <p className="text-sm text-pink-900/60">貼る、確認する、返信文をコピーするための下書き画面です。</p>
+            <h2 className="text-lg font-bold text-gray-900">依頼文を貼り付け</h2>
+            <p className="text-sm text-gray-600">貼る、確認する、返信文をコピーするための下書き画面です。</p>
           </div>
         </div>
 
@@ -62,7 +62,7 @@ export default function EstimateForm() {
           value={requestText}
           onChange={(event) => setRequestText(event.target.value)}
           placeholder="依頼文をここに貼り付けてください。例: 立ち絵、表情差分、商用利用、背景あり、急ぎ..."
-          className="mt-5 min-h-[360px] resize-y border-pink-100 bg-pink-50/30 text-base leading-7 focus-visible:ring-pink-300 sm:min-h-[320px] lg:min-h-[280px]"
+          className="mt-5 min-h-[360px] resize-y border-gray-200 bg-white text-base leading-7 text-gray-900 focus-visible:ring-gray-400 sm:min-h-[320px] lg:min-h-[280px]"
         />
 
         <div className="mt-4">
@@ -85,30 +85,30 @@ export default function EstimateForm() {
         />
       </section>
 
-      <section className="min-w-0 rounded-2xl border border-pink-100 bg-white p-4 shadow-sm sm:p-5 md:p-6">
+      <section className="min-w-0 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5 md:p-6">
         {!estimate ? (
-          <div className="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-pink-200 bg-pink-50/40 px-4 text-center sm:min-h-[420px] sm:px-6">
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-pink-500 shadow-sm">
+          <div className="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 text-center sm:min-h-[420px] sm:px-6">
+            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-gray-700 shadow-sm">
               <Calculator className="h-6 w-6" aria-hidden />
             </div>
-            <h2 className="mt-4 text-lg font-bold text-pink-950">概算見積もりがここに表示されます</h2>
-            <p className="mt-2 max-w-sm text-sm leading-6 text-pink-900/60">
+            <h2 className="mt-4 text-lg font-bold text-gray-900">概算見積もりがここに表示されます</h2>
+            <p className="mt-2 max-w-sm text-sm leading-6 text-gray-600">
               料金内訳、注意点、確認事項、返信文のたたき台をまとめて確認できます。
             </p>
           </div>
         ) : (
           <div className="space-y-5">
-            <div className="rounded-2xl bg-gradient-to-br from-pink-50 to-white p-5">
-              <p className="text-sm font-medium text-pink-700">概算合計</p>
+            <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-5">
+              <p className="text-sm font-bold uppercase tracking-wide text-emerald-800">概算合計</p>
               <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-                <p className="break-words text-4xl font-black tracking-normal text-pink-950 sm:text-5xl lg:text-4xl">
+                <p className="break-words text-4xl font-black tracking-normal text-emerald-900 sm:text-5xl lg:text-4xl">
                   {formatYen(estimate.total)}
                 </p>
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-pink-700 shadow-sm">
+                <span className="rounded-full border border-emerald-300 bg-white px-3 py-1 text-xs font-bold text-emerald-800 shadow-sm">
                   {estimate.category.label}
                 </span>
               </div>
-              <p className="mt-3 text-xs leading-5 text-pink-900/60">
+              <p className="mt-3 text-xs leading-5 text-emerald-900/80">
                 固定料金表から出した概算です。正式料金は詳細確認後に確定します。
               </p>
             </div>
@@ -119,13 +119,13 @@ export default function EstimateForm() {
                 <Button
                   variant="outline"
                   onClick={handleCopySummary}
-                  className="h-11 w-full rounded-full border-pink-200 bg-white px-4 text-sm text-pink-700 hover:bg-pink-50 sm:h-9 sm:w-auto sm:px-3 sm:text-xs"
+                  className="h-11 w-full rounded-full border-gray-300 bg-white px-4 text-sm text-gray-800 hover:bg-gray-50 sm:h-9 sm:w-auto sm:px-3 sm:text-xs"
                 >
                   {summaryCopied ? "コピー済み" : "コピー"}
                 </Button>
               }
             >
-              <pre className="max-w-full whitespace-pre-wrap break-words rounded-xl bg-white p-4 text-sm leading-7 text-gray-800 ring-1 ring-pink-50 [overflow-wrap:anywhere]">
+              <pre className="max-w-full whitespace-pre-wrap break-words rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm leading-7 text-gray-800 [overflow-wrap:anywhere]">
                 {createEstimateSummary(estimate)}
               </pre>
             </ResultBlock>
@@ -135,7 +135,7 @@ export default function EstimateForm() {
                 {estimate.detectedItems.map((item) => (
                   <span
                     key={item.id}
-                    className="rounded-full bg-pink-50 px-3 py-1 text-sm font-medium text-pink-800"
+                    className="rounded-full border border-gray-300 bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800"
                     title={`該当語: ${item.matchedKeywords.join(" / ") || "通常イラスト扱い"}`}
                   >
                     {item.label}
@@ -164,7 +164,7 @@ export default function EstimateForm() {
               <ResultBlock title="注意が必要な項目">
                 <ul className="space-y-2">
                   {estimate.warnings.map((warning) => (
-                    <li key={warning} className="flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    <li key={warning} className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
                       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                       <span className="min-w-0 break-words [overflow-wrap:anywhere]">{warning}</span>
                     </li>
@@ -176,8 +176,8 @@ export default function EstimateForm() {
             <ResultBlock title="確認事項">
               <ul className="space-y-2">
                 {estimate.questions.map((question) => (
-                  <li key={question} className="flex gap-2 text-sm leading-6 text-gray-700">
-                    <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-pink-500" aria-hidden />
+                  <li key={question} className="flex gap-2 text-sm leading-6 text-gray-800">
+                    <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
                     <span className="min-w-0 break-words [overflow-wrap:anywhere]">{question}</span>
                   </li>
                 ))}
@@ -190,13 +190,13 @@ export default function EstimateForm() {
                 <Button
                   variant="outline"
                   onClick={handleCopy}
-                  className="h-11 w-full rounded-full border-pink-200 bg-white px-4 text-sm text-pink-700 hover:bg-pink-50 sm:h-9 sm:w-auto sm:px-3 sm:text-xs"
+                  className="h-11 w-full rounded-full border-gray-300 bg-white px-4 text-sm text-gray-800 hover:bg-gray-50 sm:h-9 sm:w-auto sm:px-3 sm:text-xs"
                 >
                   {copied ? "コピー済み" : "コピー"}
                 </Button>
               }
             >
-              <pre className="max-w-full whitespace-pre-wrap break-words rounded-xl bg-pink-50/60 p-4 text-sm leading-7 text-gray-800 [overflow-wrap:anywhere]">
+              <pre className="max-w-full whitespace-pre-wrap break-words rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm leading-7 text-gray-800 [overflow-wrap:anywhere]">
                 {estimate.replyDraft}
               </pre>
             </ResultBlock>
@@ -281,11 +281,11 @@ function PricingTable({
   };
 
   return (
-    <div className="mt-6 min-w-0 rounded-2xl border border-pink-100 bg-pink-50/30 p-4">
+    <div className="mt-6 min-w-0 rounded-2xl border border-gray-200 bg-gray-50 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-sm font-bold text-pink-950">料金表</h3>
-          <p className="mt-1 text-xs leading-5 text-pink-900/60">
+          <h3 className="text-sm font-bold text-gray-900">料金表</h3>
+          <p className="mt-1 text-xs leading-5 text-gray-600">
             この画面内だけで一時編集できます。変更後に見積もりを作成すると、編集後の金額で計算します。
           </p>
         </div>
@@ -294,7 +294,7 @@ function PricingTable({
             variant="outline"
             onClick={onToggle}
             aria-expanded={open}
-            className="h-11 w-full rounded-full border-pink-200 bg-white px-4 text-sm text-pink-700 hover:bg-pink-50 sm:h-9 sm:w-auto sm:px-3 sm:text-xs"
+            className="h-11 w-full rounded-full border-gray-300 bg-white px-4 text-sm text-gray-800 hover:bg-gray-100 sm:h-9 sm:w-auto sm:px-3 sm:text-xs"
           >
             {open ? <ChevronUp className="h-4 w-4" aria-hidden /> : <ChevronDown className="h-4 w-4" aria-hidden />}
             {open ? "料金表を閉じる" : "料金表を表示"}
@@ -303,7 +303,7 @@ function PricingTable({
             <Button
               variant="outline"
               onClick={onReset}
-              className="h-11 w-full rounded-full border-pink-200 bg-white px-4 text-sm text-pink-700 hover:bg-pink-50 sm:h-9 sm:w-auto sm:px-3 sm:text-xs"
+              className="h-11 w-full rounded-full border-gray-300 bg-white px-4 text-sm text-gray-800 hover:bg-gray-100 sm:h-9 sm:w-auto sm:px-3 sm:text-xs"
             >
               <RotateCcw className="h-4 w-4" aria-hidden />
               初期値
@@ -351,10 +351,13 @@ function PricingTable({
         </EditablePriceGroup>
 
         <div>
-          <p className="text-xs font-bold text-pink-700">注意が必要な項目</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-gray-600">注意が必要な項目</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {pricingConfig.warningRules.map((rule) => (
-              <span key={rule.id} className="rounded-full bg-white px-3 py-1 text-xs text-pink-800 shadow-sm">
+              <span
+                key={rule.id}
+                className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-900"
+              >
                 {rule.label}
               </span>
             ))}
@@ -369,7 +372,7 @@ function PricingTable({
 function EditablePriceGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
-      <p className="text-xs font-bold text-pink-700">{title}</p>
+      <p className="text-xs font-bold uppercase tracking-wide text-gray-600">{title}</p>
       <div className="mt-2 space-y-2">{children}</div>
     </div>
   );
@@ -387,15 +390,15 @@ function EditablePriceRow({
   onChange: (value: number) => void;
 }) {
   return (
-    <label className="flex flex-col gap-2 rounded-xl bg-white px-3 py-2 text-sm shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-      <span className="min-w-0 flex-1 truncate text-gray-700">{label}</span>
+    <label className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <span className="min-w-0 flex-1 truncate text-gray-800">{label}</span>
       <span className="flex w-full items-center gap-2 sm:w-auto">
         <input
           type="number"
           min={0}
           value={value}
           onChange={(event) => onChange(Number(event.target.value))}
-          className="h-10 min-w-0 flex-1 rounded-lg border border-pink-100 bg-white px-2 text-right text-base font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-200 sm:h-8 sm:w-24 sm:flex-none sm:text-sm"
+          className="h-10 min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-2 text-right text-base font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 sm:h-8 sm:w-24 sm:flex-none sm:text-sm"
         />
         <span className="w-5 text-xs text-gray-500">{suffix}</span>
       </span>
@@ -415,26 +418,26 @@ function LineItemGroup({
   footer?: string;
 }) {
   return (
-    <div className="rounded-xl border border-pink-50 bg-white">
-      <div className="flex items-center justify-between border-b border-pink-50 px-3 py-2">
-        <p className="text-xs font-bold text-pink-700">{title}</p>
+    <div className="rounded-xl border border-gray-200 bg-white">
+      <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2">
+        <p className="text-xs font-bold uppercase tracking-wide text-gray-600">{title}</p>
       </div>
       {items.length > 0 ? (
-        <ul className="divide-y divide-pink-50">
+        <ul className="divide-y divide-gray-200">
           {items.map((item) => (
             <li key={item.id} className="flex flex-col gap-1 px-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-2">
-              <span className="min-w-0 text-gray-700">
+              <span className="min-w-0 text-gray-800">
                 {item.label}
-                {item.note && <span className="ml-2 text-xs text-gray-400">{item.note}</span>}
+                {item.note && <span className="ml-2 text-xs text-gray-500">{item.note}</span>}
               </span>
               <span className="shrink-0 text-base font-bold text-gray-900 sm:text-sm">{formatYen(item.amount)}</span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="px-3 py-2 text-sm text-gray-400">{emptyText}</p>
+        <p className="px-3 py-2 text-sm text-gray-500">{emptyText}</p>
       )}
-      {footer && <p className="border-t border-pink-50 px-3 py-2 text-xs text-gray-500">{footer}</p>}
+      {footer && <p className="border-t border-gray-200 px-3 py-2 text-xs text-gray-500">{footer}</p>}
     </div>
   );
 }
@@ -451,7 +454,7 @@ function ResultBlock({
   return (
     <div>
       <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-        <h3 className="text-sm font-bold text-pink-950">{title}</h3>
+        <h3 className="text-sm font-bold text-gray-900">{title}</h3>
         {action}
       </div>
       {children}
