@@ -13,6 +13,7 @@ export type NatoriStageMeta = {
   doneTaskClassName: string;
   checkboxClassName: string;
   dotClassName: string;
+  borderLeftClassName: string;
 };
 
 export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
@@ -23,6 +24,7 @@ export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
     doneTaskClassName: "border-slate-300 bg-slate-100 text-slate-900",
     checkboxClassName: "border-slate-600 bg-slate-600 text-white",
     dotClassName: "bg-slate-500",
+    borderLeftClassName: "border-l-2 border-slate-500",
   },
   rough: {
     label: "ラフ",
@@ -31,6 +33,7 @@ export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
     doneTaskClassName: "border-amber-300 bg-amber-100 text-amber-900",
     checkboxClassName: "border-amber-500 bg-amber-500 text-white",
     dotClassName: "bg-amber-500",
+    borderLeftClassName: "border-l-2 border-amber-500",
   },
   lineart: {
     label: "線画",
@@ -39,6 +42,7 @@ export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
     doneTaskClassName: "border-indigo-300 bg-indigo-100 text-indigo-900",
     checkboxClassName: "border-indigo-500 bg-indigo-500 text-white",
     dotClassName: "bg-indigo-500",
+    borderLeftClassName: "border-l-2 border-indigo-500",
   },
   coloring: {
     label: "着彩",
@@ -47,6 +51,7 @@ export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
     doneTaskClassName: "border-fuchsia-300 bg-fuchsia-100 text-fuchsia-900",
     checkboxClassName: "border-fuchsia-500 bg-fuchsia-500 text-white",
     dotClassName: "bg-fuchsia-500",
+    borderLeftClassName: "border-l-2 border-fuchsia-500",
   },
   finish: {
     label: "仕上げ",
@@ -55,6 +60,7 @@ export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
     doneTaskClassName: "border-violet-300 bg-violet-100 text-violet-900",
     checkboxClassName: "border-violet-500 bg-violet-500 text-white",
     dotClassName: "bg-violet-500",
+    borderLeftClassName: "border-l-2 border-violet-500",
   },
   delivery: {
     label: "納品",
@@ -63,6 +69,7 @@ export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
     doneTaskClassName: "border-emerald-300 bg-emerald-100 text-emerald-900",
     checkboxClassName: "border-emerald-500 bg-emerald-500 text-white",
     dotClassName: "bg-emerald-500",
+    borderLeftClassName: "border-l-2 border-emerald-500",
   },
 };
 

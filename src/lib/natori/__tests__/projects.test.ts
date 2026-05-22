@@ -3,10 +3,12 @@ import {
   applyStatusToTasks,
   buildMonthCells,
   calculatePriorityScore,
+  computeStageMilestones,
   createTasksForType,
   daysUntilDue,
   deriveNextActionFromTasks,
   deriveStatusFromTasks,
+  getCalendarEntriesForDate,
   getNextActionForStatus,
   getNextStatus,
   getPrevStatus,
@@ -94,15 +96,91 @@ describe("getProjectsForDate / buildMonthCells", () => {
   });
 
   it("builds 42 cells covering the requested month", () => {
-    const project = buildProject({ id: "x", dueDate: "2026-05-24" });
+    const project = buildProject({ id: "x", type: "icon", dueDate: "2026-05-24" });
     const cells = buildMonthCells(2026, 4, [project], TODAY);
     expect(cells).toHaveLength(42);
     const inMonth = cells.filter((cell) => cell.inMonth);
     expect(inMonth.length).toBe(31);
-    const target = cells.find((cell) => cell.iso === "2026-05-24");
-    expect(target?.projects.map((p) => p.id)).toEqual(["x"]);
+    const dueCell = cells.find((cell) => cell.iso === "2026-05-24");
+    const dueEntry = dueCell?.entries.find((entry) => entry.kind === "due");
+    expect(dueEntry && dueEntry.kind === "due" ? dueEntry.project.id : null).toBe("x");
     const today = cells.find((cell) => cell.isToday);
     expect(today?.iso).toBe("2026-05-22");
+  });
+});
+
+describe("computeStageMilestones", () => {
+  it("places the final stage on the due date and earlier stages spread back at 2-day intervals", () => {
+    const project = buildProject({ type: "icon", dueDate: "2026-05-30", status: "rough" });
+    const milestones = computeStageMilestones(project);
+    const map = Object.fromEntries(milestones.map((m) => [m.stage, m.dateISO]));
+    expect(map.delivery).toBe("2026-05-30");
+    expect(map.coloring).toBe("2026-05-28");
+    expect(map.lineart).toBe("2026-05-26");
+    expect(map.rough).toBe("2026-05-24");
+  });
+
+  it("uses only stages that appear in the project's tasks", () => {
+    const project = buildProject({ type: "standing", dueDate: "2026-06-05", status: "rough" });
+    const milestones = computeStageMilestones(project);
+    const stages = milestones.map((m) => m.stage);
+    expect(stages).toEqual(["material", "rough", "lineart", "coloring", "finish", "delivery"]);
+    expect(milestones[0].dateISO).toBe("2026-05-26");
+  });
+
+  it("reports allDone for stages whose tasks are all checked", () => {
+    const tasks = createTasksForType("icon").map((task) =>
+      task.stage === "rough" ? { ...task, done: true } : task
+    );
+    const project = buildProject({ type: "icon", tasks, dueDate: "2026-05-30", status: "lineart" });
+    const milestones = computeStageMilestones(project);
+    const rough = milestones.find((m) => m.stage === "rough");
+    const lineart = milestones.find((m) => m.stage === "lineart");
+    expect(rough?.allDone).toBe(true);
+    expect(lineart?.allDone).toBe(false);
+  });
+});
+
+describe("getCalendarEntriesForDate", () => {
+  it("yields due entries when the date matches a project's dueDate", () => {
+    const project = buildProject({ id: "p1", type: "icon", dueDate: "2026-05-30", status: "rough" });
+    const entries = getCalendarEntriesForDate([project], "2026-05-30");
+    expect(entries.some((e) => e.kind === "due")).toBe(true);
+  });
+
+  it("yields milestone entries for pending stages on their milestone date", () => {
+    const project = buildProject({ id: "p1", type: "icon", dueDate: "2026-05-30", status: "rough" });
+    const entries = getCalendarEntriesForDate([project], "2026-05-24");
+    const milestone = entries.find((e) => e.kind === "milestone");
+    expect(milestone && milestone.kind === "milestone" ? milestone.stage : null).toBe("rough");
+  });
+
+  it("skips milestone entries for stages whose tasks are all done", () => {
+    const tasks = createTasksForType("icon").map((task) =>
+      task.stage === "rough" ? { ...task, done: true } : task
+    );
+    const project = buildProject({ id: "p1", type: "icon", tasks, dueDate: "2026-05-30", status: "lineart" });
+    const entries = getCalendarEntriesForDate([project], "2026-05-24");
+    expect(entries.find((e) => e.kind === "milestone" && e.stage === "rough")).toBeUndefined();
+  });
+
+  it("does not emit a milestone entry for the delivery stage (covered by the due entry)", () => {
+    const project = buildProject({ id: "p1", type: "icon", dueDate: "2026-05-30", status: "rough" });
+    const entries = getCalendarEntriesForDate([project], "2026-05-30");
+    expect(entries.filter((e) => e.kind === "milestone" && e.stage === "delivery")).toHaveLength(0);
+  });
+
+  it("skips milestones for delivered or completed projects", () => {
+    const project = buildProject({ id: "p1", type: "icon", dueDate: "2026-05-30", status: "delivered" });
+    const entries = getCalendarEntriesForDate([project], "2026-05-24");
+    expect(entries.filter((e) => e.kind === "milestone")).toHaveLength(0);
+  });
+
+  it("sorts due entries before milestones", () => {
+    const projectA = buildProject({ id: "a", type: "icon", dueDate: "2026-05-30", status: "rough" });
+    const projectB = buildProject({ id: "b", type: "icon", dueDate: "2026-06-05", status: "rough" });
+    const entries = getCalendarEntriesForDate([projectA, projectB], "2026-05-30");
+    expect(entries[0]?.kind).toBe("due");
   });
 });
 

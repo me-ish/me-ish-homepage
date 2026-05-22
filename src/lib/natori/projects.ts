@@ -1,9 +1,11 @@
 import type {
+  NatoriCalendarEntry,
   NatoriPriorityCandidate,
   NatoriProject,
   NatoriProjectStatus,
   NatoriProjectTask,
   NatoriProjectType,
+  NatoriStageMilestone,
   NatoriTaskStage,
 } from "@/types/natori/projects";
 
@@ -233,12 +235,73 @@ export function getProjectsForDate(projects: NatoriProject[], dateISO: string): 
   return projects.filter((project) => project.dueDate === dateISO);
 }
 
+const STAGE_GAP_DAYS = 2;
+
+export function computeStageMilestones(project: NatoriProject): NatoriStageMilestone[] {
+  const ordered: NatoriTaskStage[] = ["material", "rough", "lineart", "coloring", "finish", "delivery"];
+  const usedStages = ordered.filter((stage) =>
+    project.tasks.some((task) => task.stage === stage)
+  );
+  if (usedStages.length === 0) return [];
+
+  const due = parseISODate(project.dueDate);
+
+  return usedStages.map((stage, idx) => {
+    const offset = (usedStages.length - 1 - idx) * STAGE_GAP_DAYS;
+    const date = new Date(due.getFullYear(), due.getMonth(), due.getDate() - offset);
+    const stageTasks = project.tasks.filter((task) => task.stage === stage);
+    const allDone = stageTasks.every((task) => task.done);
+    return { stage, dateISO: toISODate(date), allDone };
+  });
+}
+
+const STAGE_SORT_ORDER: NatoriTaskStage[] = [
+  "material",
+  "rough",
+  "lineart",
+  "coloring",
+  "finish",
+  "delivery",
+];
+
+export function getCalendarEntriesForDate(
+  projects: NatoriProject[],
+  dateISO: string
+): NatoriCalendarEntry[] {
+  const entries: NatoriCalendarEntry[] = [];
+
+  for (const project of projects) {
+    if (project.dueDate === dateISO) {
+      entries.push({ kind: "due", project });
+    }
+    if (isDoneStatus(project.status)) continue;
+    const milestones = computeStageMilestones(project);
+    for (const milestone of milestones) {
+      if (milestone.stage === "delivery") continue;
+      if (milestone.allDone) continue;
+      if (milestone.dateISO !== dateISO) continue;
+      entries.push({
+        kind: "milestone",
+        project,
+        stage: milestone.stage,
+        allDone: milestone.allDone,
+      });
+    }
+  }
+
+  return entries.sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === "due" ? -1 : 1;
+    if (a.kind === "due" || b.kind === "due") return 0;
+    return STAGE_SORT_ORDER.indexOf(a.stage) - STAGE_SORT_ORDER.indexOf(b.stage);
+  });
+}
+
 export type CalendarCell = {
   date: Date;
   iso: string;
   inMonth: boolean;
   isToday: boolean;
-  projects: NatoriProject[];
+  entries: NatoriCalendarEntry[];
 };
 
 export function buildMonthCells(
@@ -260,7 +323,7 @@ export function buildMonthCells(
       iso,
       inMonth: date.getMonth() === monthIndex,
       isToday: iso === todayISO,
-      projects: getProjectsForDate(projects, iso),
+      entries: getCalendarEntriesForDate(projects, iso),
     });
   }
   return cells;

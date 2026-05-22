@@ -119,6 +119,7 @@ export default function ProjectsBoard() {
 
       <ProjectDayDetail
         selectedISO={selectedISO}
+        allProjects={projects}
         projects={dayProjects}
         today={today}
         onToggleTask={handleToggleTask}

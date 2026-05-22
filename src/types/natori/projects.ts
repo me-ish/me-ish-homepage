@@ -56,3 +56,18 @@ export type NatoriPriorityCandidate = {
   score: number;
   reasons: string[];
 };
+
+export type NatoriStageMilestone = {
+  stage: NatoriTaskStage;
+  dateISO: string;
+  allDone: boolean;
+};
+
+export type NatoriCalendarEntry =
+  | { kind: "due"; project: NatoriProject }
+  | {
+      kind: "milestone";
+      project: NatoriProject;
+      stage: NatoriTaskStage;
+      allDone: boolean;
+    };

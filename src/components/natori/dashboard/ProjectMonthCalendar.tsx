@@ -8,7 +8,7 @@ import {
   isProjectOverdue,
   toISODate,
 } from "@/lib/natori/projects";
-import type { NatoriProject } from "@/types/natori/projects";
+import type { NatoriCalendarEntry, NatoriProject } from "@/types/natori/projects";
 
 const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
 
@@ -22,6 +22,12 @@ type ProjectMonthCalendarProps = {
   onPrevMonth: () => void;
   onNextMonth: () => void;
 };
+
+function isEntryOverdue(entry: NatoriCalendarEntry, today: Date, cellISO: string): boolean {
+  if (entry.kind === "due") return isProjectOverdue(entry.project, today);
+  const todayISO = toISODate(today);
+  return cellISO < todayISO;
+}
 
 export default function ProjectMonthCalendar({
   year,
@@ -81,22 +87,24 @@ export default function ProjectMonthCalendar({
         {cells.map((cell) => {
           const selected = cell.iso === selectedISO;
           const weekday = cell.date.getDay();
-          const overdueCount = cell.projects.filter((p) => isProjectOverdue(p, today)).length;
-          const visible = cell.projects.slice(0, 2);
-          const overflow = cell.projects.length - visible.length;
+          const dueOverdueCount = cell.entries.filter(
+            (entry) => entry.kind === "due" && isProjectOverdue(entry.project, today)
+          ).length;
+          const visible = cell.entries.slice(0, 3);
+          const overflow = cell.entries.length - visible.length;
           return (
             <button
               key={cell.iso}
               type="button"
               onClick={() => onSelect(cell.iso)}
               className={cn(
-                "flex min-h-[60px] flex-col items-stretch overflow-hidden rounded-xl border p-1 text-left transition sm:min-h-[88px] sm:p-2",
+                "flex min-h-[64px] flex-col items-stretch overflow-hidden rounded-xl border p-1 text-left transition sm:min-h-[96px] sm:p-2",
                 cell.inMonth
                   ? "border-gray-200 bg-white hover:border-gray-400"
                   : "border-transparent bg-gray-50 text-gray-300",
                 cell.isToday && "ring-2 ring-pink-500",
                 selected && "border-gray-900 ring-1 ring-gray-900",
-                overdueCount > 0 && cell.inMonth && "border-red-400"
+                dueOverdueCount > 0 && cell.inMonth && "border-red-400"
               )}
               aria-label={`${cell.iso} の案件を表示`}
               aria-pressed={selected}
@@ -113,36 +121,57 @@ export default function ProjectMonthCalendar({
                 >
                   {cell.date.getDate()}
                 </span>
-                {overdueCount > 0 ? (
+                {dueOverdueCount > 0 ? (
                   <span className="ml-1 rounded-full bg-red-500 px-1.5 text-[9px] font-bold text-white">
                     !
                   </span>
                 ) : null}
               </div>
               <div className="mt-1 flex min-w-0 flex-col gap-0.5">
-                {visible.map((project) => {
-                  const stage = getStageForStatus(project.status);
-                  const stageMeta = stage ? natoriStageMeta[stage] : null;
-                  const statusMeta = natoriProjectStatusMeta[project.status];
-                  const overdue = isProjectOverdue(project, today);
+                {visible.map((entry, idx) => {
+                  if (entry.kind === "due") {
+                    const stage = getStageForStatus(entry.project.status);
+                    const stageMeta = stage ? natoriStageMeta[stage] : null;
+                    const statusMeta = natoriProjectStatusMeta[entry.project.status];
+                    const overdue = isProjectOverdue(entry.project, today);
+                    return (
+                      <span
+                        key={`${entry.project.id}-due-${idx}`}
+                        className={cn(
+                          "flex min-w-0 items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] font-bold leading-tight sm:text-[11px]",
+                          overdue
+                            ? "bg-red-100 text-red-800"
+                            : stageMeta?.softClassName ?? statusMeta.cellClassName
+                        )}
+                        title={`${entry.project.clientName}｜納期`}
+                      >
+                        <span
+                          className={cn(
+                            "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
+                            overdue ? "bg-red-500" : stageMeta?.dotClassName ?? "bg-gray-400"
+                          )}
+                          aria-hidden
+                        />
+                        <span className="min-w-0 truncate">{entry.project.clientName}</span>
+                      </span>
+                    );
+                  }
+                  const stageMeta = natoriStageMeta[entry.stage];
+                  const overdue = isEntryOverdue(entry, today, cell.iso);
                   return (
                     <span
-                      key={project.id}
+                      key={`${entry.project.id}-${entry.stage}-${idx}`}
                       className={cn(
-                        "flex min-w-0 items-center gap-1 truncate rounded px-1 text-[10px] leading-tight sm:text-[11px]",
-                        overdue
-                          ? "bg-red-100 text-red-800"
-                          : stageMeta?.softClassName ?? statusMeta.cellClassName
+                        "flex min-w-0 items-center gap-1 truncate rounded-r bg-white pl-1 pr-1 text-[10px] leading-tight text-gray-800 sm:text-[11px]",
+                        stageMeta.borderLeftClassName,
+                        overdue && "text-red-700"
                       )}
+                      title={`${entry.project.clientName}｜${stageMeta.label}締切目安`}
                     >
-                      <span
-                        className={cn(
-                          "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
-                          overdue ? "bg-red-500" : stageMeta?.dotClassName ?? "bg-gray-400"
-                        )}
-                        aria-hidden
-                      />
-                      <span className="min-w-0 truncate">{project.clientName}</span>
+                      <span className="min-w-0 truncate">
+                        {entry.project.clientName}
+                        <span className="ml-1 text-gray-500">{stageMeta.label}</span>
+                      </span>
                     </span>
                   );
                 })}
@@ -163,6 +192,14 @@ export default function ProjectMonthCalendar({
         <span className="inline-flex items-center gap-1">
           <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
           期限切れ
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="inline-block h-2 w-2 rounded-sm bg-gray-700" />
+          納期
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="inline-block h-2.5 w-1 rounded-sm bg-amber-500" />
+          目安締切
         </span>
         <span className="inline-flex items-center gap-1">
           <span className="inline-block h-2 w-2 rounded-sm bg-amber-500" />
