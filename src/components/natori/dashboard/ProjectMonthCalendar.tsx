@@ -27,20 +27,23 @@ function BarSegment({ cellBar }: { cellBar: NatoriCalendarCellBar | null }) {
   }
   const stage = natoriStageMeta[cellBar.bar.stage];
   const { isStart, isEnd, isOverdue, bar } = cellBar;
+  const isDelivery = bar.stage === "delivery";
+  const showLabel = isStart || (isDelivery && isEnd);
   return (
     <span
       className={cn(
         "flex h-3 min-w-0 items-center overflow-hidden text-[9px] font-bold leading-3 sm:h-4 sm:text-[10px] sm:leading-4",
         isOverdue ? "bg-red-300 text-red-950" : stage.barClassName,
+        isDelivery && "ring-1 ring-inset ring-emerald-700/40",
         isStart && "rounded-l-md pl-1",
         isEnd && "rounded-r-md pr-1"
       )}
       title={`${bar.project.clientName}｜${stage.label}`}
     >
-      {isStart ? (
+      {showLabel ? (
         <span className="min-w-0 flex-1 truncate">
           {bar.project.clientName}
-          <span className="ml-1 opacity-80">{stage.label}</span>
+          <span className="ml-1 opacity-90">{stage.label}</span>
         </span>
       ) : null}
     </span>
@@ -105,6 +108,9 @@ export default function ProjectMonthCalendar({
           const selected = cell.iso === selectedISO;
           const weekday = cell.date.getDay();
           const overdueCount = cell.lanes.filter((cellBar) => cellBar?.isOverdue).length;
+          const deliveryEndCount = cell.lanes.filter(
+            (cellBar) => cellBar?.bar.stage === "delivery" && cellBar.isEnd
+          ).length;
 
           return (
             <button
@@ -116,6 +122,7 @@ export default function ProjectMonthCalendar({
                 idx % 7 !== 0 && "border-l border-gray-200",
                 idx >= 7 && "border-t border-gray-200",
                 cell.inMonth ? "bg-white hover:bg-gray-50" : "bg-gray-50 text-gray-300",
+                deliveryEndCount > 0 && cell.inMonth && "bg-emerald-50/70",
                 cell.isToday && "ring-2 ring-inset ring-pink-500",
                 selected && "ring-1 ring-inset ring-gray-900"
               )}
@@ -134,11 +141,19 @@ export default function ProjectMonthCalendar({
                 >
                   {cell.date.getDate()}
                 </span>
-                {overdueCount > 0 ? (
-                  <span className="ml-1 rounded-full bg-red-500 px-1.5 text-[9px] font-bold text-white">
-                    !
-                  </span>
-                ) : null}
+                <span className="ml-1 flex items-center gap-1">
+                  {deliveryEndCount > 0 ? (
+                    <span className="flex items-center gap-0.5 rounded bg-emerald-600 px-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm">
+                      <span aria-hidden>★</span>
+                      納品{deliveryEndCount > 1 ? `×${deliveryEndCount}` : ""}
+                    </span>
+                  ) : null}
+                  {overdueCount > 0 ? (
+                    <span className="rounded-full bg-red-500 px-1.5 text-[9px] font-bold text-white">
+                      !
+                    </span>
+                  ) : null}
+                </span>
               </div>
 
               <div className="mt-0.5 flex flex-col gap-0.5 pb-0.5 sm:hidden">

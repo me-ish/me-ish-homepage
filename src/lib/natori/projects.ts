@@ -328,6 +328,45 @@ export function computeProjectBars(project: NatoriProject): NatoriCalendarBar[] 
   return bars;
 }
 
+export type ActiveBarOnDate = {
+  bar: NatoriCalendarBar;
+  isStart: boolean;
+  isEnd: boolean;
+  isOverdue: boolean;
+  pendingTasks: NatoriProjectTask[];
+};
+
+export function getActiveBarsForDate(
+  projects: NatoriProject[],
+  dateISO: string,
+  today: Date
+): ActiveBarOnDate[] {
+  const todayISO = toISODate(today);
+  const results: ActiveBarOnDate[] = [];
+  for (const project of projects) {
+    const bars = computeProjectBars(project);
+    for (const bar of bars) {
+      if (bar.startISO > dateISO || bar.endISO < dateISO) continue;
+      const pendingTasks = project.tasks.filter(
+        (task) => task.stage === bar.stage && !task.done
+      );
+      results.push({
+        bar,
+        isStart: bar.startISO === dateISO,
+        isEnd: bar.endISO === dateISO,
+        isOverdue: bar.endISO < todayISO,
+        pendingTasks,
+      });
+    }
+  }
+  return results.sort((a, b) => {
+    const stageDiff =
+      STAGE_SORT_ORDER.indexOf(a.bar.stage) - STAGE_SORT_ORDER.indexOf(b.bar.stage);
+    if (stageDiff !== 0) return stageDiff;
+    return a.bar.project.id.localeCompare(b.bar.project.id);
+  });
+}
+
 export function assignBarLanes(bars: NatoriCalendarBar[]): Map<string, number> {
   const sorted = bars.slice().sort((a, b) => {
     if (a.startISO !== b.startISO) return a.startISO.localeCompare(b.startISO);

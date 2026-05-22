@@ -70,13 +70,13 @@ export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
   },
   delivery: {
     label: "納品",
-    chipClassName: "border-emerald-300 bg-emerald-100 text-emerald-900",
+    chipClassName: "border-emerald-500 bg-emerald-500 text-white",
     softClassName: "bg-emerald-50 text-emerald-900",
     doneTaskClassName: "border-emerald-300 bg-emerald-100 text-emerald-900",
     checkboxClassName: "border-emerald-500 bg-emerald-500 text-white",
     dotClassName: "bg-emerald-500",
     borderLeftClassName: "border-l-2 border-emerald-500",
-    barClassName: "bg-emerald-300 text-emerald-950",
+    barClassName: "bg-emerald-500 text-white",
   },
 };
 

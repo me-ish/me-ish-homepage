@@ -10,6 +10,7 @@ import {
   daysUntilDue,
   deriveNextActionFromTasks,
   deriveStatusFromTasks,
+  getActiveBarsForDate,
   getCalendarEntriesForDate,
   getNextActionForStatus,
   getNextStatus,
@@ -137,6 +138,51 @@ describe("computeProjectBars", () => {
   it("returns no bars for delivered/completed projects", () => {
     const project = buildProject({ id: "p1", type: "icon", dueDate: "2026-05-30", status: "delivered" });
     expect(computeProjectBars(project)).toEqual([]);
+  });
+});
+
+describe("getActiveBarsForDate", () => {
+  it("includes every bar whose range covers the date", () => {
+    const project = buildProject({ id: "p1", type: "icon", dueDate: "2026-05-30", status: "rough" });
+    const onStartOfRough = getActiveBarsForDate([project], "2026-05-23", TODAY);
+    expect(onStartOfRough).toHaveLength(1);
+    expect(onStartOfRough[0].bar.stage).toBe("rough");
+    expect(onStartOfRough[0].isStart).toBe(true);
+
+    const onMidLineart = getActiveBarsForDate([project], "2026-05-25", TODAY);
+    expect(onMidLineart[0].bar.stage).toBe("lineart");
+    expect(onMidLineart[0].isStart).toBe(true);
+  });
+
+  it("attaches pending tasks for the bar's stage", () => {
+    const tasks = createTasksForType("standing").map((task) =>
+      task.id === "rough" ? { ...task, done: true } : task
+    );
+    const project = buildProject({
+      id: "p1",
+      type: "standing",
+      tasks,
+      dueDate: "2026-06-05",
+      status: "rough",
+    });
+    const bars = computeProjectBars(project);
+    const roughBar = bars.find((b) => b.stage === "rough")!;
+    const entries = getActiveBarsForDate([project], roughBar.startISO, TODAY);
+    const roughEntry = entries.find((e) => e.bar.stage === "rough");
+    expect(roughEntry?.pendingTasks.map((task) => task.id)).toEqual(["rough-submit"]);
+  });
+
+  it("flags entries as overdue when their end is in the past", () => {
+    const project = buildProject({ id: "p1", type: "icon", dueDate: "2026-05-20", status: "rough" });
+    const bars = computeProjectBars(project);
+    const sample = bars[0];
+    const entries = getActiveBarsForDate([project], sample.startISO, TODAY);
+    expect(entries[0].isOverdue).toBe(true);
+  });
+
+  it("returns nothing for delivered projects", () => {
+    const project = buildProject({ id: "p1", type: "icon", dueDate: "2026-05-30", status: "delivered" });
+    expect(getActiveBarsForDate([project], "2026-05-24", TODAY)).toHaveLength(0);
   });
 });
 
