@@ -12,34 +12,27 @@ export default function NatoriEstimatePage() {
   return (
     <main className="min-h-screen bg-white">
       <section className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 md:py-14">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Link href="/natori" className="text-sm font-medium text-pink-600 hover:underline">
-              Natori Portfolio
-            </Link>
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:px-6 sm:py-3">
+          <Link href="/natori" className="text-xs font-medium text-pink-600 hover:underline">
+            Natori Portfolio
+          </Link>
+          <span className="text-xs text-gray-300">/</span>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-pink-600">Estimate</p>
+          <p className="hidden text-sm font-bold text-gray-900 sm:inline">
+            依頼文から概算見積もり
+          </p>
+          <div className="ml-auto">
             <Link
               href="/natori/projects"
-              className="inline-flex h-11 items-center justify-center rounded-full border border-gray-300 bg-white px-4 text-sm font-bold text-gray-800 shadow-sm hover:bg-gray-50 sm:h-9"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-gray-300 bg-white px-3 text-xs font-bold text-gray-800 shadow-sm hover:bg-gray-50"
             >
               案件管理へ
             </Link>
           </div>
-          <div className="mt-5 max-w-3xl">
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-pink-600">
-              Estimate Helper
-            </p>
-            <h1 className="mt-3 text-2xl font-black leading-tight text-gray-900 sm:text-3xl md:text-5xl">
-              依頼文から概算見積もりを作成
-            </h1>
-            <p className="mt-4 text-base leading-7 text-gray-700 md:text-lg">
-              固定料金表をもとに、メニュー判定、追加料金、確認事項、返信文のたたき台をローカルで作成します。
-              DB・AI API・Supabase は使いません。
-            </p>
-          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 md:py-10">
+      <section className="mx-auto max-w-6xl px-3 py-3 sm:px-6 sm:py-4">
         <EstimateForm />
       </section>
 
