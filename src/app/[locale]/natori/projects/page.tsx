@@ -20,9 +20,17 @@ export default function NatoriProjectsPage() {
           }}
         />
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 md:py-14">
-          <Link href="/natori" className="text-sm font-medium text-pink-600 hover:underline">
-            Natori Portfolio
-          </Link>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Link href="/natori" className="text-sm font-medium text-pink-600 hover:underline">
+              Natori Portfolio
+            </Link>
+            <Link
+              href="/natori/estimate"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-pink-200 bg-white px-4 text-sm font-bold text-pink-700 shadow-sm shadow-pink-100/60 hover:bg-pink-50 sm:h-9"
+            >
+              見積もりへ
+            </Link>
+          </div>
           <div className="mt-5 max-w-3xl">
             <p className="text-sm font-bold text-pink-500">Projects</p>
             <h1 className="mt-3 text-2xl font-black leading-tight text-pink-950 sm:text-3xl md:text-5xl">
