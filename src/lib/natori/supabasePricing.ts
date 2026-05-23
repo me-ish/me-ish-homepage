@@ -24,10 +24,11 @@ type PresetRow = {
 const TABLE = "natori_pricing_configs";
 
 export const DEFAULT_PRESET_SEEDS: Array<{ presetKey: string; name: string }> = [
-  { presetKey: "default", name: "デフォルト" },
   { presetKey: "tsunagu", name: "つなぐ用" },
   { presetKey: "vgen", name: "VGen用" },
 ];
+
+const VISIBLE_PRESET_KEYS = new Set(DEFAULT_PRESET_SEEDS.map((seed) => seed.presetKey));
 
 function rowToPreset(row: PresetRow): NatoriPricingPreset {
   return {
@@ -47,7 +48,9 @@ export async function fetchOwnPricingPresets(): Promise<NatoriPricingPreset[]> {
     .select("*")
     .order("sort_order", { ascending: true });
   if (error) throw error;
-  return (data ?? []).map((row) => rowToPreset(row as PresetRow));
+  return (data ?? [])
+    .map((row) => rowToPreset(row as PresetRow))
+    .filter((preset) => VISIBLE_PRESET_KEYS.has(preset.presetKey));
 }
 
 export async function seedDefaultPricingPresets(): Promise<NatoriPricingPreset[]> {
@@ -66,12 +69,11 @@ export async function seedDefaultPricingPresets(): Promise<NatoriPricingPreset[]
     sort_order: index,
   }));
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from(TABLE)
-    .insert(inserts)
-    .select("*");
+    .upsert(inserts, { onConflict: "user_id,preset_key", ignoreDuplicates: true });
   if (error) throw error;
-  return (data ?? []).map((row) => rowToPreset(row as PresetRow));
+  return fetchOwnPricingPresets();
 }
 
 export async function updatePricingPresetConfig(
