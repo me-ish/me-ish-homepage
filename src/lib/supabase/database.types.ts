@@ -984,6 +984,101 @@ export type Database = {
         }
         Relationships: []
       }
+      natori_projects: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          client_name: string
+          amount: number
+          type: string
+          status: string
+          delivery_plan: string
+          priority: string | null
+          start_date: string | null
+          due_date: string
+          next_action: string
+          note: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          client_name: string
+          amount?: number
+          type: string
+          status?: string
+          delivery_plan?: string
+          priority?: string | null
+          start_date?: string | null
+          due_date: string
+          next_action?: string
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          client_name?: string
+          amount?: number
+          type?: string
+          status?: string
+          delivery_plan?: string
+          priority?: string | null
+          start_date?: string | null
+          due_date?: string
+          next_action?: string
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      natori_project_tasks: {
+        Row: {
+          id: string
+          project_id: string
+          task_key: string
+          label: string
+          stage: string
+          estimated_hours: number | null
+          done: boolean
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          task_key: string
+          label: string
+          stage: string
+          estimated_hours?: number | null
+          done?: boolean
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          task_key?: string
+          label?: string
+          stage?: string
+          estimated_hours?: number | null
+          done?: boolean
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "natori_project_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "natori_projects"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       announcements_public: {
