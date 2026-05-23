@@ -17,7 +17,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "incremental": true,
-    "baseUrl": ".", // ★ 追加
     "paths": {
       "@/*": [
         "./src/*"
