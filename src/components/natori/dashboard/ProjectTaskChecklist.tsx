@@ -1,6 +1,7 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { natoriStageMeta } from "@/lib/natori/mockProjects";
 import { getTaskProgress } from "@/lib/natori/projects";
@@ -14,16 +15,32 @@ type ProjectTaskChecklistProps = {
 export default function ProjectTaskChecklist({ project, onToggle }: ProjectTaskChecklistProps) {
   const progress = getTaskProgress(project);
   const percent = Math.round(progress.ratio * 100);
+  // Open on desktop by default, closed on mobile to reduce vertical noise.
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setOpen(window.matchMedia("(min-width: 640px)").matches);
+  }, []);
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-3 sm:p-4">
-      <div className="flex items-center justify-between gap-2">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
         <p className="text-sm font-bold text-gray-900">タスク</p>
-        <p className="text-xs font-bold text-gray-700">
-          <span className="text-gray-900">{progress.done}/{progress.total}</span>
-          <span className="ml-1 text-gray-500">完了 / {percent}%</span>
-        </p>
-      </div>
+        <span className="flex items-center gap-2">
+          <span className="text-xs font-bold text-gray-700">
+            <span className="text-gray-900">{progress.done}/{progress.total}</span>
+            <span className="ml-1 text-gray-500">完了 / {percent}%</span>
+          </span>
+          <span className="text-gray-500">
+            {open ? <ChevronUp className="h-4 w-4" aria-hidden /> : <ChevronDown className="h-4 w-4" aria-hidden />}
+          </span>
+        </span>
+      </button>
 
       <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
         <div
@@ -33,6 +50,7 @@ export default function ProjectTaskChecklist({ project, onToggle }: ProjectTaskC
         />
       </div>
 
+      {open ? (
       <ul className="mt-3 flex flex-col gap-1.5">
         {project.tasks.map((task) => {
           const stage = natoriStageMeta[task.stage];
@@ -88,6 +106,7 @@ export default function ProjectTaskChecklist({ project, onToggle }: ProjectTaskC
           );
         })}
       </ul>
+      ) : null}
     </div>
   );
 }

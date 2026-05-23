@@ -9,10 +9,18 @@ import {
   getPrioritySuggestions,
   toISODate,
 } from "@/lib/natori/projects";
+import {
+  getAwaitingPaymentSummary,
+  getScheduleEntries,
+  getWeeklyForecast,
+  type NatoriScheduleEntry,
+} from "@/lib/natori/scheduling";
 import type { NatoriPriorityCandidate, NatoriProject } from "@/types/natori/projects";
 import ProjectMonthCalendar from "./ProjectMonthCalendar";
 import ProjectDayDetail from "./ProjectDayDetail";
 import ProjectPriorityList from "./ProjectPriorityList";
+import ScheduleSummary from "./ScheduleSummary";
+import AwaitingPaymentSummary from "./AwaitingPaymentSummary";
 
 type ViewMonth = { year: number; monthIndex: number };
 
@@ -41,6 +49,18 @@ export default function ProjectsBoard() {
   const dayProjects = useMemo(
     () => (selectedISO ? getProjectsForDate(projects, selectedISO) : []),
     [projects, selectedISO]
+  );
+
+  const scheduleEntries = useMemo(
+    () => (today ? getScheduleEntries(projects, today) : []),
+    [projects, today]
+  );
+
+  const forecast = useMemo(() => getWeeklyForecast(scheduleEntries), [scheduleEntries]);
+
+  const awaitingPaymentSummary = useMemo(
+    () => getAwaitingPaymentSummary(projects),
+    [projects]
   );
 
   if (!today || !selectedISO || !viewMonth) {
@@ -72,11 +92,19 @@ export default function ProjectsBoard() {
     });
   };
 
-  const handleSelectFromPriority = (candidate: NatoriPriorityCandidate) => {
-    const due = candidate.project.dueDate;
+  const focusProject = (project: NatoriProject) => {
+    const due = project.dueDate;
     setSelectedISO(due);
     const [y, m] = due.split("-").map(Number);
     setViewMonth({ year: y, monthIndex: m - 1 });
+  };
+
+  const handleSelectFromPriority = (candidate: NatoriPriorityCandidate) => {
+    focusProject(candidate.project);
+  };
+
+  const handleSelectFromSchedule = (entry: NatoriScheduleEntry) => {
+    focusProject(entry.project);
   };
 
   const handleToggleTask = (projectId: string, taskId: string) => {
@@ -100,6 +128,18 @@ export default function ProjectsBoard() {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      <ScheduleSummary
+        entries={scheduleEntries}
+        forecast={forecast}
+        onSelect={handleSelectFromSchedule}
+      />
+
+      <AwaitingPaymentSummary
+        summary={awaitingPaymentSummary}
+        today={today}
+        onSelect={focusProject}
+      />
+
       <ProjectPriorityList
         suggestions={suggestions}
         today={today}

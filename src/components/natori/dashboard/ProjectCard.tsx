@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, CircleDollarSign, Sparkles, AlertTriangle, Zap } from "lucide-react";
+import { CalendarDays, CircleDollarSign, Clock4, Sparkles, AlertTriangle, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { natoriProjectStatusMeta, natoriStageMeta } from "@/lib/natori/mockProjects";
@@ -10,6 +10,7 @@ import {
   isProjectOverdue,
 } from "@/lib/natori/projects";
 import { getDeliveryPlanMeta } from "@/lib/natori/deliveryPlans";
+import { computeProjectScheduling, formatHours } from "@/lib/natori/scheduling";
 import { cn } from "@/lib/utils";
 import ProjectTaskChecklist from "./ProjectTaskChecklist";
 import type { NatoriProject } from "@/types/natori/projects";
@@ -57,6 +58,7 @@ export default function ProjectCard({
   const stageMeta = stage ? natoriStageMeta[stage] : null;
   const deliveryPlanMeta = getDeliveryPlanMeta(project.deliveryPlan);
   const isRush = deliveryPlanMeta.isRush;
+  const scheduling = computeProjectScheduling(project, today);
 
   return (
     <Card
@@ -148,6 +150,44 @@ export default function ProjectCard({
               {yenFormatter.format(project.amount)}
             </span>
           </div>
+        </div>
+
+        <div
+          className={cn(
+            "rounded-2xl border p-3 text-xs sm:text-sm",
+            scheduling.isBlocked
+              ? "border-gray-200 bg-gray-50 text-gray-700"
+              : scheduling.isOverdue
+              ? "border-red-200 bg-red-50 text-red-900"
+              : isRush
+              ? cn("border-transparent", deliveryPlanMeta.softClassName)
+              : "border-pink-100 bg-pink-50/50 text-pink-900"
+          )}
+        >
+          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide opacity-80">
+            <Clock4 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            時間配分
+          </div>
+          {scheduling.isBlocked ? (
+            <p className="mt-1 font-bold">
+              着金・確認待ち中。残 {formatHours(scheduling.remainingHours)}（着金後に再配分）
+            </p>
+          ) : (
+            <div className="mt-1 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-[10px] opacity-70">残り</p>
+                <p className="text-sm font-black">{formatHours(scheduling.remainingHours)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] opacity-70">1日</p>
+                <p className="text-sm font-black">{formatHours(scheduling.requiredPerDay)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] opacity-70">今週</p>
+                <p className="text-sm font-black">{formatHours(scheduling.requiredThisWeek)}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {project.note ? (

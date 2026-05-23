@@ -104,38 +104,38 @@ export function createTasksForType(type: NatoriProjectType): NatoriProjectTask[]
   switch (type) {
     case "icon":
       return [
-        { id: "rough", label: "ラフ", stage: "rough", done: false },
-        { id: "lineart", label: "清書", stage: "lineart", done: false },
-        { id: "color", label: "着彩", stage: "coloring", done: false },
-        { id: "delivery", label: "納品", stage: "delivery", done: false },
+        { id: "rough", label: "ラフ", stage: "rough", done: false, estimatedHours: 1 },
+        { id: "lineart", label: "清書", stage: "lineart", done: false, estimatedHours: 1 },
+        { id: "color", label: "着彩", stage: "coloring", done: false, estimatedHours: 1.5 },
+        { id: "delivery", label: "納品", stage: "delivery", done: false, estimatedHours: 0.5 },
       ];
     case "sd":
       return [
-        { id: "rough", label: "ラフ", stage: "rough", done: false },
-        { id: "lineart", label: "清書", stage: "lineart", done: false },
-        { id: "color", label: "着彩", stage: "coloring", done: false },
-        { id: "review", label: "最終確認", stage: "finish", done: false },
-        { id: "delivery", label: "納品", stage: "delivery", done: false },
+        { id: "rough", label: "ラフ", stage: "rough", done: false, estimatedHours: 1.5 },
+        { id: "lineart", label: "清書", stage: "lineart", done: false, estimatedHours: 2.5 },
+        { id: "color", label: "着彩", stage: "coloring", done: false, estimatedHours: 4 },
+        { id: "review", label: "最終確認", stage: "finish", done: false, estimatedHours: 1 },
+        { id: "delivery", label: "納品", stage: "delivery", done: false, estimatedHours: 1 },
       ];
     case "standing":
       return [
-        { id: "material", label: "資料確認", stage: "material", done: false },
-        { id: "rough", label: "ラフ作成", stage: "rough", done: false },
-        { id: "rough-submit", label: "ラフ提出", stage: "rough", done: false },
-        { id: "line", label: "線画", stage: "lineart", done: false },
-        { id: "color", label: "着彩", stage: "coloring", done: false },
-        { id: "expressions", label: "表情差分", stage: "coloring", done: false },
-        { id: "review", label: "最終確認", stage: "finish", done: false },
-        { id: "delivery", label: "納品", stage: "delivery", done: false },
+        { id: "material", label: "資料確認", stage: "material", done: false, estimatedHours: 1 },
+        { id: "rough", label: "ラフ作成", stage: "rough", done: false, estimatedHours: 3 },
+        { id: "rough-submit", label: "ラフ提出", stage: "rough", done: false, estimatedHours: 0.5 },
+        { id: "line", label: "線画", stage: "lineart", done: false, estimatedHours: 6 },
+        { id: "color", label: "着彩", stage: "coloring", done: false, estimatedHours: 10 },
+        { id: "expressions", label: "表情差分", stage: "coloring", done: false, estimatedHours: 3 },
+        { id: "review", label: "最終確認", stage: "finish", done: false, estimatedHours: 1 },
+        { id: "delivery", label: "納品", stage: "delivery", done: false, estimatedHours: 0.5 },
       ];
     case "illustration":
       return [
-        { id: "material", label: "資料確認", stage: "material", done: false },
-        { id: "rough", label: "ラフ", stage: "rough", done: false },
-        { id: "line", label: "線画", stage: "lineart", done: false },
-        { id: "color", label: "着彩", stage: "coloring", done: false },
-        { id: "finishing", label: "仕上げ", stage: "finish", done: false },
-        { id: "delivery", label: "納品", stage: "delivery", done: false },
+        { id: "material", label: "資料確認", stage: "material", done: false, estimatedHours: 1 },
+        { id: "rough", label: "ラフ", stage: "rough", done: false, estimatedHours: 3 },
+        { id: "line", label: "線画", stage: "lineart", done: false, estimatedHours: 5 },
+        { id: "color", label: "着彩", stage: "coloring", done: false, estimatedHours: 7 },
+        { id: "finishing", label: "仕上げ", stage: "finish", done: false, estimatedHours: 1.5 },
+        { id: "delivery", label: "納品", stage: "delivery", done: false, estimatedHours: 0.5 },
       ];
   }
 }

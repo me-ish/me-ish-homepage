@@ -1,10 +1,7 @@
 "use client";
 
-import { CalendarRange, Flag, Star, Zap } from "lucide-react";
-import { natoriStageMeta } from "@/lib/natori/mockProjects";
+import { CalendarRange, Star } from "lucide-react";
 import { getActiveBarsForDate, parseISODate } from "@/lib/natori/projects";
-import { getDeliveryPlanMeta } from "@/lib/natori/deliveryPlans";
-import { cn } from "@/lib/utils";
 import ProjectCard from "./ProjectCard";
 import type { NatoriProject } from "@/types/natori/projects";
 
@@ -80,86 +77,6 @@ export default function ProjectDayDetail({
               ))}
             </ul>
           </div>
-        </div>
-      ) : null}
-
-      {activeBars.length > 0 ? (
-        <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-3 sm:p-4">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-700">
-            <Flag className="h-4 w-4" aria-hidden />
-            この日のタスク
-          </div>
-          <ul className="mt-2 flex flex-col gap-2">
-            {activeBars.map((entry) => {
-              const stage = natoriStageMeta[entry.bar.stage];
-              const isDelivery = entry.bar.stage === "delivery";
-              const deliveryPlanMeta = getDeliveryPlanMeta(entry.bar.project.deliveryPlan);
-              return (
-                <li
-                  key={entry.bar.id}
-                  className={cn(
-                    "flex flex-col gap-1 rounded-lg bg-white px-3 py-2 text-sm",
-                    stage.borderLeftClassName,
-                    entry.isOverdue && "border-l-2 border-red-500"
-                  )}
-                >
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span
-                      className={cn(
-                        "inline-block h-2 w-2 shrink-0 rounded-full",
-                        entry.isOverdue ? "bg-red-500" : stage.dotClassName
-                      )}
-                      aria-hidden
-                    />
-                    <span className="min-w-0 break-words font-bold text-gray-900">
-                      {entry.bar.project.clientName}｜{entry.bar.project.title}
-                    </span>
-                    <span
-                      className={cn(
-                        "shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold",
-                        stage.chipClassName
-                      )}
-                    >
-                      {stage.label}
-                    </span>
-                    {deliveryPlanMeta.isRush ? (
-                      <span
-                        className={cn(
-                          "inline-flex shrink-0 items-center gap-0.5 rounded-full border px-2 py-0.5 text-[10px] font-bold",
-                          deliveryPlanMeta.chipClassName
-                        )}
-                        title={deliveryPlanMeta.label}
-                      >
-                        <Zap className="h-3 w-3" aria-hidden />
-                        {deliveryPlanMeta.shortLabel}
-                      </span>
-                    ) : null}
-                    {entry.isEnd ? (
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
-                          isDelivery
-                            ? "bg-emerald-600 text-white"
-                            : "border border-amber-400 bg-amber-50 text-amber-900"
-                        )}
-                      >
-                        {isDelivery ? "★ 納品日" : "目安締切"}
-                      </span>
-                    ) : entry.isStart ? (
-                      <span className="shrink-0 rounded-full border border-gray-300 bg-white px-2 py-0.5 text-[10px] font-bold text-gray-700">
-                        開始
-                      </span>
-                    ) : null}
-                  </div>
-                  {entry.pendingTasks.length > 0 ? (
-                    <p className="break-words pl-4 text-xs leading-5 text-gray-700">
-                      残タスク：{entry.pendingTasks.map((task) => task.label).join("・")}
-                    </p>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
         </div>
       ) : null}
 

@@ -27,6 +27,7 @@ export type NatoriProjectTask = {
   label: string;
   stage: NatoriTaskStage;
   done: boolean;
+  estimatedHours?: number;
 };
 
 export type NatoriProjectPriority = "low" | "normal" | "high";
