@@ -20,6 +20,14 @@ describe("createNatoriEstimate", () => {
     expect(estimate.total).toBe(15500);
   });
 
+  it("does not add commercial use when the request explicitly says it is not needed", () => {
+    const estimate = createNatoriEstimate("全身で、表情差分あり。商用利用なしでお願いします。");
+
+    expect(estimate.breakdown.fixed.map((item) => item.id)).toEqual(["expression_variation"]);
+    expect(estimate.detectedItems.map((item) => item.id)).not.toContain("commercial_use");
+    expect(estimate.total).toBe(10500);
+  });
+
   it("adds an additional character as 70 percent of the base price", () => {
     const estimate = createNatoriEstimate("腰上で2人のペアイラストをお願いします。");
 
@@ -76,4 +84,3 @@ describe("formatYen", () => {
     expect(formatYen(4000)).toBe("￥4,000");
   });
 });
-

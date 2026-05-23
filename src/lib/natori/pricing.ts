@@ -9,6 +9,7 @@ import type {
   NatoriPercentageOption,
   NatoriPricingConfig,
   NatoriPricingKeyword,
+  NatoriPricingRuleId,
   NatoriWarningRule,
 } from "@/types/natori/pricing";
 
@@ -253,18 +254,20 @@ function pickBaseItem(normalizedText: string, pricingConfig: NatoriPricingConfig
   return matches.sort((a, b) => b.item.priority - a.item.priority)[0].item;
 }
 
-function findMatchingRules<T extends NatoriPricingKeyword>(
+type NatoriPricingRule = NatoriPricingKeyword & { id: NatoriPricingRuleId };
+
+function findMatchingRules<T extends NatoriPricingRule>(
   rules: readonly T[],
   normalizedText: string
 ): T[] {
-  return rules.filter((rule) => findMatchedKeywords(rule.keywords, normalizedText).length > 0);
+  return rules.filter((rule) => findMatchedKeywordsForRule(rule, normalizedText).length > 0);
 }
 
 function createDetectedItem<T extends NatoriPricingKeyword & { id: NatoriDetectedItem["id"] }>(
   item: T,
   normalizedText: string
 ): NatoriDetectedItem | null {
-  const matchedKeywords = findMatchedKeywords(item.keywords, normalizedText);
+  const matchedKeywords = findMatchedKeywordsForRule(item, normalizedText);
   if (matchedKeywords.length === 0) return null;
 
   return {
@@ -274,8 +277,29 @@ function createDetectedItem<T extends NatoriPricingKeyword & { id: NatoriDetecte
   };
 }
 
+function findMatchedKeywordsForRule<T extends NatoriPricingRule>(
+  rule: T,
+  normalizedText: string
+): string[] {
+  const matchedKeywords = findMatchedKeywords(rule.keywords, normalizedText);
+  if (rule.id !== "commercial_use") {
+    return matchedKeywords;
+  }
+
+  return matchedKeywords.filter(() => !hasNegatedCommercialUse(normalizedText));
+}
+
 function findMatchedKeywords(keywords: readonly string[], normalizedText: string): string[] {
   return keywords.filter((keyword) => normalizedText.includes(normalizeText(keyword)));
+}
+
+function hasNegatedCommercialUse(normalizedText: string): boolean {
+  const compactText = normalizedText.replace(/[\s　、。,.・:：/／\\-]+/g, "");
+
+  return (
+    compactText.includes("非商用") ||
+    /商用利用(?:は|の)?(?:予定)?(?:は)?(?:なし|無し|ナシ|ない|無|不可|不要|しない|しません|ありません|できません|ではない|じゃない)/.test(compactText)
+  );
 }
 
 function createQuestions(
@@ -336,4 +360,3 @@ export function formatYen(value: number): string {
     maximumFractionDigits: 0,
   }).format(value);
 }
-
