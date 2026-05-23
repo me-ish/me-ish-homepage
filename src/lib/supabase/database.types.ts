@@ -1038,6 +1038,42 @@ export type Database = {
         }
         Relationships: []
       }
+      natori_pricing_configs: {
+        Row: {
+          id: string
+          user_id: string
+          preset_key: string
+          name: string
+          config: Json
+          is_default: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          preset_key: string
+          name: string
+          config: Json
+          is_default?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          preset_key?: string
+          name?: string
+          config?: Json
+          is_default?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       natori_user_profiles: {
         Row: {
           user_id: string

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { AlertTriangle, Calculator, CheckCircle2, ChevronDown, ChevronUp, Clipboard, FolderPlus, RotateCcw, Zap } from "lucide-react";
+import { AlertTriangle, Calculator, CheckCircle2, ChevronDown, ChevronUp, Clipboard, FolderPlus, RotateCcw, Save, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { createDefaultNatoriPricingConfig, createNatoriEstimate, formatYen } from "@/lib/natori/pricing";
@@ -15,6 +15,13 @@ import {
 } from "@/lib/natori/deliveryPlans";
 import { toISODate } from "@/lib/natori/projects";
 import { createNatoriProject } from "@/lib/natori/supabaseProjects";
+import {
+  fetchOwnPricingPresets,
+  seedDefaultPricingPresets,
+  updatePricingPresetConfig,
+  type NatoriPricingPreset,
+} from "@/lib/natori/supabasePricing";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type {
   NatoriDeliveryPlan,
@@ -56,10 +63,47 @@ export default function EstimateForm() {
   const [pricingOpen, setPricingOpen] = useState(false);
   const [deliveryPlan, setDeliveryPlan] = useState<NatoriDeliveryPlan>(DEFAULT_NATORI_DELIVERY_PLAN);
   const [startDateISO, setStartDateISO] = useState<string>("");
+  const [authed, setAuthed] = useState(false);
+  const [presets, setPresets] = useState<NatoriPricingPreset[]>([]);
+  const [activePresetId, setActivePresetId] = useState<string | null>(null);
+  const [presetDirty, setPresetDirty] = useState(false);
+  const [presetSaving, setPresetSaving] = useState(false);
+  const [presetError, setPresetError] = useState<string | null>(null);
+
+  const loadPresets = useCallback(async () => {
+    try {
+      let list = await fetchOwnPricingPresets();
+      if (list.length === 0) {
+        list = await seedDefaultPricingPresets();
+      }
+      setPresets(list);
+      const initial = list.find((preset) => preset.isDefault) ?? list[0];
+      if (initial) {
+        setActivePresetId(initial.id);
+        setPricingConfig(initial.config);
+        setPresetDirty(false);
+      }
+    } catch (err) {
+      console.error("[EstimateForm] preset load failed", err);
+      setPresetError(err instanceof Error ? err.message : String(err));
+    }
+  }, []);
 
   useEffect(() => {
     setStartDateISO(toISODate(new Date()));
-  }, []);
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.auth.getUser();
+        if (data.user) {
+          setAuthed(true);
+          await loadPresets();
+        }
+      } catch (err) {
+        console.error("[EstimateForm] auth check failed", err);
+      }
+    })();
+  }, [loadPresets]);
 
   const dueDateISO = useMemo(
     () => (startDateISO ? calculateDueDate(startDateISO, deliveryPlan) : ""),
@@ -84,6 +128,50 @@ export default function EstimateForm() {
     setSubmittedText(trimmed);
     setCopied(false);
     setSummaryCopied(false);
+  };
+
+  const handleSelectPreset = (preset: NatoriPricingPreset) => {
+    setActivePresetId(preset.id);
+    setPricingConfig(preset.config);
+    setPresetDirty(false);
+    setPresetError(null);
+  };
+
+  const handlePricingConfigChange = (next: NatoriPricingConfig) => {
+    setPricingConfig(next);
+    if (authed && activePresetId) {
+      setPresetDirty(true);
+    }
+  };
+
+  const handleSavePreset = async () => {
+    if (!activePresetId) return;
+    setPresetSaving(true);
+    setPresetError(null);
+    try {
+      await updatePricingPresetConfig(activePresetId, pricingConfig);
+      setPresets((current) =>
+        current.map((preset) =>
+          preset.id === activePresetId ? { ...preset, config: pricingConfig } : preset
+        )
+      );
+      setPresetDirty(false);
+    } catch (err) {
+      setPresetError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPresetSaving(false);
+    }
+  };
+
+  const handleResetPreset = () => {
+    const active = presets.find((preset) => preset.id === activePresetId);
+    if (active) {
+      setPricingConfig(active.config);
+      setPresetDirty(false);
+      setPresetError(null);
+    } else {
+      setPricingConfig(createDefaultNatoriPricingConfig());
+    }
   };
 
   const handleCopy = async () => {
@@ -137,11 +225,23 @@ export default function EstimateForm() {
           </Button>
         </div>
 
+        {authed && presets.length > 0 ? (
+          <PresetSwitcher
+            presets={presets}
+            activePresetId={activePresetId}
+            dirty={presetDirty}
+            saving={presetSaving}
+            error={presetError}
+            onSelect={handleSelectPreset}
+            onSave={handleSavePreset}
+          />
+        ) : null}
+
         <PricingTable
           pricingConfig={pricingConfig}
           open={pricingOpen}
-          onChange={setPricingConfig}
-          onReset={() => setPricingConfig(createDefaultNatoriPricingConfig())}
+          onChange={handlePricingConfigChange}
+          onReset={handleResetPreset}
           onToggle={() => setPricingOpen((current) => !current)}
         />
       </section>
@@ -271,6 +371,75 @@ export default function EstimateForm() {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+function PresetSwitcher({
+  presets,
+  activePresetId,
+  dirty,
+  saving,
+  error,
+  onSelect,
+  onSave,
+}: {
+  presets: NatoriPricingPreset[];
+  activePresetId: string | null;
+  dirty: boolean;
+  saving: boolean;
+  error: string | null;
+  onSelect: (preset: NatoriPricingPreset) => void;
+  onSave: () => Promise<void>;
+}) {
+  return (
+    <div className="mt-5 rounded-2xl border border-pink-200 bg-pink-50/50 p-3 sm:p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-pink-900">料金プリセット</p>
+          <p className="mt-0.5 text-xs text-pink-800/80">
+            依頼元（つなぐ / VGen / 直接）ごとの料金表に切り替えられます。編集して「保存」を押すと自分のアカウントに残ります。
+          </p>
+        </div>
+        {dirty ? (
+          <Button
+            onClick={() => void onSave()}
+            disabled={saving}
+            className="h-9 rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60"
+          >
+            <Save className="h-3.5 w-3.5" aria-hidden />
+            {saving ? "保存中…" : "このプリセットを保存"}
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {presets.map((preset) => {
+          const active = preset.id === activePresetId;
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => onSelect(preset)}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-xs font-bold transition",
+                active
+                  ? "border-pink-500 bg-pink-500 text-white shadow"
+                  : "border-pink-200 bg-white text-pink-800 hover:border-pink-400"
+              )}
+            >
+              {preset.name}
+              {active && dirty ? <span className="ml-1 text-[10px] opacity-80">（未保存）</span> : null}
+            </button>
+          );
+        })}
+      </div>
+
+      {error ? (
+        <p className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
