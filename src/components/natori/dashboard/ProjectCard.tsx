@@ -163,7 +163,7 @@ export default function ProjectCard({
 
         <div
           className={cn(
-            "rounded-2xl border p-3 text-xs sm:text-sm",
+            "flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs sm:text-sm",
             scheduling.isBlocked
               ? "border-gray-200 bg-gray-50 text-gray-700"
               : scheduling.isOverdue
@@ -173,29 +173,15 @@ export default function ProjectCard({
               : "border-pink-100 bg-pink-50/50 text-pink-900"
           )}
         >
-          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide opacity-80">
-            <Clock4 className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            時間配分
-          </div>
+          <Clock4 className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
           {scheduling.isBlocked ? (
-            <p className="mt-1 font-bold">
-              着金・確認待ち中。残 {formatHours(scheduling.remainingHours)}（着金後に再配分）
-            </p>
+            <span className="min-w-0 font-bold">
+              着金・確認待ち中。残 {formatHours(scheduling.remainingHours)}
+            </span>
           ) : (
-            <div className="mt-1 grid grid-cols-3 gap-2 text-center">
-              <div>
-                <p className="text-[10px] opacity-70">残り</p>
-                <p className="text-sm font-black">{formatHours(scheduling.remainingHours)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] opacity-70">平日1日</p>
-                <p className="text-sm font-black">{formatHours(scheduling.requiredPerDay)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] opacity-70">今週</p>
-                <p className="text-sm font-black">{formatHours(scheduling.requiredThisWeek)}</p>
-              </div>
-            </div>
+            <span className="min-w-0">
+              残り作業 <span className="font-black">{formatHours(scheduling.remainingHours)}</span>
+            </span>
           )}
         </div>
 
