@@ -5,7 +5,6 @@ import { mockNatoriProjects } from "@/lib/natori/mockProjects";
 import {
   deriveNextActionFromTasks,
   deriveStatusFromTasks,
-  getProjectsForDate,
   getPrioritySuggestions,
   toISODate,
 } from "@/lib/natori/projects";
@@ -44,11 +43,6 @@ export default function ProjectsBoard() {
   const suggestions = useMemo<NatoriPriorityCandidate[]>(
     () => (today ? getPrioritySuggestions(projects, today, 3) : []),
     [projects, today]
-  );
-
-  const dayProjects = useMemo(
-    () => (selectedISO ? getProjectsForDate(projects, selectedISO) : []),
-    [projects, selectedISO]
   );
 
   const scheduleEntries = useMemo(
@@ -160,7 +154,6 @@ export default function ProjectsBoard() {
       <ProjectDayDetail
         selectedISO={selectedISO}
         allProjects={projects}
-        projects={dayProjects}
         today={today}
         onToggleTask={handleToggleTask}
       />

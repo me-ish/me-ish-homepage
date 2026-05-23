@@ -1,9 +1,24 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { CalendarRange, Star } from "lucide-react";
 import { getActiveBarsForDate, parseISODate } from "@/lib/natori/projects";
 import ProjectCard from "./ProjectCard";
 import type { NatoriProject } from "@/types/natori/projects";
+
+function computeStickyProjectIds(
+  allProjects: NatoriProject[],
+  selectedISO: string,
+  today: Date
+): string[] {
+  const dueIds = allProjects
+    .filter((project) => project.dueDate === selectedISO)
+    .map((project) => project.id);
+  const activeIds = getActiveBarsForDate(allProjects, selectedISO, today).map(
+    (entry) => entry.bar.project.id
+  );
+  return Array.from(new Set([...dueIds, ...activeIds]));
+}
 
 const detailDateFormatter = new Intl.DateTimeFormat("ja-JP", {
   year: "numeric",
@@ -15,7 +30,6 @@ const detailDateFormatter = new Intl.DateTimeFormat("ja-JP", {
 type ProjectDayDetailProps = {
   selectedISO: string;
   allProjects: NatoriProject[];
-  projects: NatoriProject[];
   today: Date;
   onToggleTask: (projectId: string, taskId: string) => void;
 };
@@ -23,7 +37,6 @@ type ProjectDayDetailProps = {
 export default function ProjectDayDetail({
   selectedISO,
   allProjects,
-  projects,
   today,
   onToggleTask,
 }: ProjectDayDetailProps) {
@@ -34,17 +47,29 @@ export default function ProjectDayDetail({
     (entry) => entry.bar.stage === "delivery" && entry.isEnd
   );
 
-  const dueProjectIds = new Set(projects.map((project) => project.id));
-  const activeOnlyProjects: NatoriProject[] = [];
-  const seenActiveIds = new Set<string>();
-  for (const entry of activeBars) {
-    const project = entry.bar.project;
-    if (dueProjectIds.has(project.id)) continue;
-    if (seenActiveIds.has(project.id)) continue;
-    seenActiveIds.add(project.id);
-    activeOnlyProjects.push(project);
-  }
-  const cardProjects: NatoriProject[] = [...projects, ...activeOnlyProjects];
+  // Snapshot which projects should appear on this day at the moment the day was
+  // selected, so that ticking off the last task of a stage does not make the
+  // card disappear mid-edit. Resets when selectedISO changes.
+  const [stickyProjectIds, setStickyProjectIds] = useState<string[]>(() =>
+    computeStickyProjectIds(allProjects, selectedISO, today)
+  );
+
+  useEffect(() => {
+    setStickyProjectIds(computeStickyProjectIds(allProjects, selectedISO, today));
+    // Intentionally ignore allProjects/today so the snapshot only resets on day change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedISO]);
+
+  const projectById = useMemo(
+    () => new Map(allProjects.map((project) => [project.id, project])),
+    [allProjects]
+  );
+
+  const cardProjects: NatoriProject[] = stickyProjectIds
+    .map((id) => projectById.get(id))
+    .filter((project): project is NatoriProject => Boolean(project));
+  const dueProjects = cardProjects.filter((project) => project.dueDate === selectedISO);
+  const activeOnlyProjects = cardProjects.filter((project) => project.dueDate !== selectedISO);
 
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5 md:p-6">
@@ -56,7 +81,7 @@ export default function ProjectDayDetail({
           <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Selected day</p>
           <p className="break-words text-lg font-black text-gray-900 sm:text-xl">{dateLabel}</p>
           <p className="mt-1 text-xs text-gray-700">
-            稼働中のタスク {activeBars.length} 件 / 納期 {projects.length} 件
+            稼働中のタスク {activeBars.length} 件 / 納期 {dueProjects.length} 件
           </p>
         </div>
       </div>
@@ -86,13 +111,13 @@ export default function ProjectDayDetail({
         </p>
       ) : (
         <div className="mt-4 space-y-3">
-          {projects.length > 0 ? (
+          {dueProjects.length > 0 ? (
             <p className="text-xs font-bold uppercase tracking-wide text-gray-600">
               この日が納期の案件
             </p>
           ) : null}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {projects.map((project) => (
+            {dueProjects.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}
