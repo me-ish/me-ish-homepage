@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarRange, Star } from "lucide-react";
+import { Banknote, CalendarRange, Star } from "lucide-react";
 import { getActiveBarsForDate, parseISODate } from "@/lib/natori/projects";
+import { getRemindersForDate } from "@/lib/natori/reminders";
+import { cn } from "@/lib/utils";
 import ProjectCard from "./ProjectCard";
 import type { NatoriProject } from "@/types/natori/projects";
 
@@ -46,6 +48,7 @@ export default function ProjectDayDetail({
   const deliveryEndBars = activeBars.filter(
     (entry) => entry.bar.stage === "delivery" && entry.isEnd
   );
+  const reminders = getRemindersForDate(selectedISO);
 
   // Snapshot which projects should appear on this day at the moment the day was
   // selected, so that ticking off the last task of a stage does not make the
@@ -85,6 +88,30 @@ export default function ProjectDayDetail({
           </p>
         </div>
       </div>
+
+      {reminders.length > 0 ? (
+        <ul className="mt-4 flex flex-col gap-2">
+          {reminders.map((reminder) => (
+            <li
+              key={reminder.id}
+              className={cn(
+                "flex items-start gap-2 rounded-2xl border p-3 text-sm sm:p-4",
+                reminder.bannerClassName
+              )}
+            >
+              <Banknote className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              <div className="min-w-0">
+                <p className="font-black">{reminder.label}</p>
+                {reminder.detail ? (
+                  <p className="mt-0.5 break-words text-xs leading-5 opacity-90">
+                    {reminder.detail}
+                  </p>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       {deliveryEndBars.length > 0 ? (
         <div className="mt-4 flex items-start gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900 sm:p-4">

@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { natoriStageMeta } from "@/lib/natori/mockProjects";
 import { buildMonthCells, toISODate } from "@/lib/natori/projects";
 import { getDeliveryPlanMeta } from "@/lib/natori/deliveryPlans";
+import { getRemindersForDayOfMonth } from "@/lib/natori/reminders";
 import type { NatoriCalendarCellBar, NatoriProject } from "@/types/natori/projects";
 
 const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
@@ -128,6 +129,7 @@ export default function ProjectMonthCalendar({
                     ?.deliveryPlan ?? rushDueProjects[0].deliveryPlan
                 )
               : null;
+          const cellReminders = cell.inMonth ? getRemindersForDayOfMonth(cell.date.getDate()) : [];
 
           return (
             <button
@@ -140,6 +142,7 @@ export default function ProjectMonthCalendar({
                 idx >= 7 && "border-t border-gray-200",
                 cell.inMonth ? "bg-white hover:bg-gray-50" : "bg-gray-50 text-gray-300",
                 deliveryEndCount > 0 && cell.inMonth && "bg-emerald-50/70",
+                cellReminders.length > 0 && cell.inMonth && "bg-amber-50/70",
                 cell.isToday && "ring-2 ring-inset ring-pink-500",
                 selected && "ring-1 ring-inset ring-gray-900"
               )}
@@ -159,6 +162,19 @@ export default function ProjectMonthCalendar({
                   {cell.date.getDate()}
                 </span>
                 <span className="ml-1 flex items-center gap-1">
+                  {cellReminders.map((reminder) => (
+                    <span
+                      key={reminder.id}
+                      className={cn(
+                        "flex items-center gap-0.5 rounded px-1 text-[9px] font-black uppercase tracking-wide shadow-sm",
+                        reminder.cellBadgeClassName
+                      )}
+                      title={reminder.label}
+                    >
+                      <span aria-hidden>¥</span>
+                      {reminder.shortLabel}
+                    </span>
+                  ))}
                   {topRushPlan ? (
                     <span
                       className={cn(
@@ -243,6 +259,10 @@ export default function ProjectMonthCalendar({
         <span className="inline-flex items-center gap-1">
           <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
           お急ぎ7日
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+          毎月25日 送金
         </span>
       </div>
     </section>
