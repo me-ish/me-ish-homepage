@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, CircleDollarSign, Sparkles, AlertTriangle } from "lucide-react";
+import { CalendarDays, CircleDollarSign, Sparkles, AlertTriangle, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { natoriProjectStatusMeta, natoriStageMeta } from "@/lib/natori/mockProjects";
@@ -9,6 +9,7 @@ import {
   getStageForStatus,
   isProjectOverdue,
 } from "@/lib/natori/projects";
+import { getDeliveryPlanMeta } from "@/lib/natori/deliveryPlans";
 import { cn } from "@/lib/utils";
 import ProjectTaskChecklist from "./ProjectTaskChecklist";
 import type { NatoriProject } from "@/types/natori/projects";
@@ -54,6 +55,8 @@ export default function ProjectCard({
   const priority = project.priority ? priorityChipMap[project.priority] : null;
   const stage = getStageForStatus(project.status);
   const stageMeta = stage ? natoriStageMeta[stage] : null;
+  const deliveryPlanMeta = getDeliveryPlanMeta(project.deliveryPlan);
+  const isRush = deliveryPlanMeta.isRush;
 
   return (
     <Card
@@ -79,6 +82,18 @@ export default function ProjectCard({
             >
               {status.label}
             </Badge>
+            {isRush ? (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                  deliveryPlanMeta.chipClassName
+                )}
+                title={deliveryPlanMeta.label}
+              >
+                <Zap className="h-3 w-3" aria-hidden />
+                {deliveryPlanMeta.shortLabel}
+              </span>
+            ) : null}
             {priority ? (
               <span
                 className={cn(

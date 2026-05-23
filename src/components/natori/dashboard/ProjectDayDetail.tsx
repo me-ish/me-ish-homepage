@@ -1,8 +1,9 @@
 "use client";
 
-import { CalendarRange, Flag, Star } from "lucide-react";
+import { CalendarRange, Flag, Star, Zap } from "lucide-react";
 import { natoriStageMeta } from "@/lib/natori/mockProjects";
 import { getActiveBarsForDate, parseISODate } from "@/lib/natori/projects";
+import { getDeliveryPlanMeta } from "@/lib/natori/deliveryPlans";
 import { cn } from "@/lib/utils";
 import ProjectCard from "./ProjectCard";
 import type { NatoriProject } from "@/types/natori/projects";
@@ -80,6 +81,7 @@ export default function ProjectDayDetail({
             {activeBars.map((entry) => {
               const stage = natoriStageMeta[entry.bar.stage];
               const isDelivery = entry.bar.stage === "delivery";
+              const deliveryPlanMeta = getDeliveryPlanMeta(entry.bar.project.deliveryPlan);
               return (
                 <li
                   key={entry.bar.id}
@@ -108,6 +110,18 @@ export default function ProjectDayDetail({
                     >
                       {stage.label}
                     </span>
+                    {deliveryPlanMeta.isRush ? (
+                      <span
+                        className={cn(
+                          "inline-flex shrink-0 items-center gap-0.5 rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                          deliveryPlanMeta.chipClassName
+                        )}
+                        title={deliveryPlanMeta.label}
+                      >
+                        <Zap className="h-3 w-3" aria-hidden />
+                        {deliveryPlanMeta.shortLabel}
+                      </span>
+                    ) : null}
                     {entry.isEnd ? (
                       <span
                         className={cn(

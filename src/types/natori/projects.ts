@@ -31,12 +31,30 @@ export type NatoriProjectTask = {
 
 export type NatoriProjectPriority = "low" | "normal" | "high";
 
+export type NatoriDeliveryPlan = "normal" | "rush_14_days" | "rush_7_days";
+
+export type NatoriDeliveryPlanMeta = {
+  id: NatoriDeliveryPlan;
+  label: string;
+  shortLabel: string;
+  description: string;
+  days: number;
+  extraFee: number;
+  isRush: boolean;
+  chipClassName: string;
+  softClassName: string;
+  barAccentClassName: string;
+  dotClassName: string;
+};
+
 export type NatoriProject = {
   id: string;
   title: string;
   clientName: string;
   amount: number;
+  startDate?: string;
   dueDate: string;
+  deliveryPlan?: NatoriDeliveryPlan;
   status: NatoriProjectStatus;
   nextAction: string;
   type: NatoriProjectType;

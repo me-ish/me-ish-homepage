@@ -1,3 +1,5 @@
+import { getDeliveryPlanMeta } from "@/lib/natori/deliveryPlans";
+import type { NatoriDeliveryPlan } from "@/types/natori/projects";
 import type {
   NatoriBaseItem,
   NatoriDetectedItem,
@@ -9,6 +11,10 @@ import type {
   NatoriPricingKeyword,
   NatoriWarningRule,
 } from "@/types/natori/pricing";
+
+export type NatoriEstimateOptions = {
+  deliveryPlan?: NatoriDeliveryPlan;
+};
 
 export const baseItems: readonly NatoriBaseItem[] = [
   {
@@ -156,7 +162,8 @@ export function createDefaultNatoriPricingConfig(): NatoriPricingConfig {
 
 export function createNatoriEstimate(
   sourceText: string,
-  pricingConfig: NatoriPricingConfig = defaultNatoriPricingConfig
+  pricingConfig: NatoriPricingConfig = defaultNatoriPricingConfig,
+  options: NatoriEstimateOptions = {}
 ): NatoriEstimateResult {
   const normalizedText = normalizeText(sourceText);
   const category = pickBaseItem(normalizedText, pricingConfig);
@@ -165,7 +172,14 @@ export function createNatoriEstimate(
     label: category.label,
     matchedKeywords: [],
   };
-  const detectedFixedOptions = findMatchingRules(pricingConfig.fixedOptions, normalizedText);
+  const deliveryPlanMeta = options.deliveryPlan ? getDeliveryPlanMeta(options.deliveryPlan) : null;
+  const explicitRushPlan = deliveryPlanMeta?.isRush ?? false;
+
+  const detectedFixedOptionsRaw = findMatchingRules(pricingConfig.fixedOptions, normalizedText);
+  // When a rush deliveryPlan is explicitly selected, the plan supplies the rush surcharge — drop the keyword-detected rush_delivery line to avoid double-counting.
+  const detectedFixedOptions = explicitRushPlan
+    ? detectedFixedOptionsRaw.filter((option) => option.id !== "rush_delivery")
+    : detectedFixedOptionsRaw;
   const detectedPercentageOptions = findMatchingRules(pricingConfig.percentageOptions, normalizedText);
   const detectedWarningRules = findMatchingRules(pricingConfig.warningRules, normalizedText);
 
@@ -175,12 +189,20 @@ export function createNatoriEstimate(
     amount: category.basePrice,
     note: category.note,
   };
-  const fixedLineItems = detectedFixedOptions.map((option) => ({
+  const fixedLineItems: NatoriEstimateLineItem[] = detectedFixedOptions.map((option) => ({
     id: option.id,
     label: option.label,
     amount: option.amount,
     note: option.note,
   }));
+  if (deliveryPlanMeta && deliveryPlanMeta.extraFee > 0) {
+    fixedLineItems.push({
+      id: `delivery_plan_${deliveryPlanMeta.id}`,
+      label: deliveryPlanMeta.label,
+      amount: deliveryPlanMeta.extraFee,
+      note: `納期目安 ${deliveryPlanMeta.description}`,
+    });
+  }
   const subtotalBeforePercentage = sumLineItems([baseLineItem, ...fixedLineItems]);
   const percentageLineItems = detectedPercentageOptions.map((option) => ({
     id: option.id,

@@ -2,10 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { AlertTriangle, Calculator, CheckCircle2, ChevronDown, ChevronUp, Clipboard, RotateCcw } from "lucide-react";
+import { AlertTriangle, Calculator, CheckCircle2, ChevronDown, ChevronUp, Clipboard, RotateCcw, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { createDefaultNatoriPricingConfig, createNatoriEstimate, formatYen } from "@/lib/natori/pricing";
+import {
+  DEFAULT_NATORI_DELIVERY_PLAN,
+  NATORI_DELIVERY_PLANS,
+  NATORI_DELIVERY_PLAN_ORDER,
+  calculateDueDate,
+} from "@/lib/natori/deliveryPlans";
+import { toISODate } from "@/lib/natori/projects";
+import { cn } from "@/lib/utils";
+import type { NatoriDeliveryPlan } from "@/types/natori/projects";
 import type { NatoriEstimateLineItem, NatoriEstimateResult, NatoriPricingConfig } from "@/types/natori/pricing";
 
 export default function EstimateForm() {
@@ -15,10 +24,24 @@ export default function EstimateForm() {
   const [copied, setCopied] = useState(false);
   const [summaryCopied, setSummaryCopied] = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
+  const [deliveryPlan, setDeliveryPlan] = useState<NatoriDeliveryPlan>(DEFAULT_NATORI_DELIVERY_PLAN);
+  const [startDateISO, setStartDateISO] = useState<string>("");
+
+  useEffect(() => {
+    setStartDateISO(toISODate(new Date()));
+  }, []);
+
+  const dueDateISO = useMemo(
+    () => (startDateISO ? calculateDueDate(startDateISO, deliveryPlan) : ""),
+    [startDateISO, deliveryPlan]
+  );
 
   const estimate = useMemo(
-    () => (submittedText.trim() ? createNatoriEstimate(submittedText, pricingConfig) : null),
-    [pricingConfig, submittedText]
+    () =>
+      submittedText.trim()
+        ? createNatoriEstimate(submittedText, pricingConfig, { deliveryPlan })
+        : null,
+    [pricingConfig, submittedText, deliveryPlan]
   );
 
   useEffect(() => {
@@ -63,6 +86,14 @@ export default function EstimateForm() {
           onChange={(event) => setRequestText(event.target.value)}
           placeholder="依頼文をここに貼り付けてください。例: 立ち絵、表情差分、商用利用、背景あり、急ぎ..."
           className="mt-5 min-h-[360px] resize-y border-gray-200 bg-white text-base leading-7 text-gray-900 focus-visible:ring-gray-400 sm:min-h-[320px] lg:min-h-[280px]"
+        />
+
+        <DeliveryPlanPicker
+          deliveryPlan={deliveryPlan}
+          onChange={setDeliveryPlan}
+          startDateISO={startDateISO}
+          onChangeStartDate={setStartDateISO}
+          dueDateISO={dueDateISO}
         />
 
         <div className="mt-4">
@@ -205,6 +236,88 @@ export default function EstimateForm() {
       </section>
     </div>
   );
+}
+
+function DeliveryPlanPicker({
+  deliveryPlan,
+  onChange,
+  startDateISO,
+  onChangeStartDate,
+  dueDateISO,
+}: {
+  deliveryPlan: NatoriDeliveryPlan;
+  onChange: (next: NatoriDeliveryPlan) => void;
+  startDateISO: string;
+  onChangeStartDate: (next: string) => void;
+  dueDateISO: string;
+}) {
+  const dueLabel = dueDateISO ? formatHumanDate(dueDateISO) : "";
+  return (
+    <div className="mt-5 rounded-2xl border border-pink-200 bg-pink-50/60 p-4">
+      <div className="flex items-center gap-2">
+        <span className="grid h-8 w-8 place-items-center rounded-xl bg-pink-500 text-white">
+          <Zap className="h-4 w-4" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-pink-900">納期プラン</p>
+          <p className="text-xs text-pink-800/80">通常は約1ヶ月。お急ぎ納品を選ぶと見積もりへ追加料金が自動加算されます。</p>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {NATORI_DELIVERY_PLAN_ORDER.map((id) => {
+          const meta = NATORI_DELIVERY_PLANS[id];
+          const selected = id === deliveryPlan;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onChange(id)}
+              aria-pressed={selected}
+              className={cn(
+                "min-w-0 rounded-2xl border px-3 py-2 text-left transition",
+                selected
+                  ? cn(meta.chipClassName, "ring-2 ring-offset-1", meta.barAccentClassName)
+                  : "border-pink-200 bg-white text-pink-900 hover:border-pink-300"
+              )}
+            >
+              <p className="text-sm font-black leading-5">{meta.label}</p>
+              <p className="mt-0.5 text-[11px] leading-4 opacity-80">
+                {meta.description}・追加 {meta.extraFee > 0 ? `+${formatYen(meta.extraFee)}` : "なし"}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 rounded-xl border border-pink-200 bg-white px-3 py-2 text-sm">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-pink-700">開始日</span>
+          <input
+            type="date"
+            value={startDateISO}
+            onChange={(event) => onChangeStartDate(event.target.value)}
+            className="h-9 rounded-md border border-pink-200 bg-white px-2 text-sm text-pink-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+          />
+        </label>
+        <div className="flex flex-col gap-1 rounded-xl border border-pink-200 bg-white px-3 py-2 text-sm">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-pink-700">納期目安（自動計算）</span>
+          <span className="text-base font-black text-pink-900">{dueLabel || "—"}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatHumanDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  }).format(date);
 }
 
 function createEstimateSummary(estimate: NatoriEstimateResult): string {

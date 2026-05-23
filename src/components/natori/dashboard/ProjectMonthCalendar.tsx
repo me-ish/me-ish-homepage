@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { natoriStageMeta } from "@/lib/natori/mockProjects";
 import { buildMonthCells, toISODate } from "@/lib/natori/projects";
+import { getDeliveryPlanMeta } from "@/lib/natori/deliveryPlans";
 import type { NatoriCalendarCellBar, NatoriProject } from "@/types/natori/projects";
 
 const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
@@ -29,21 +30,25 @@ function BarSegment({ cellBar }: { cellBar: NatoriCalendarCellBar | null }) {
   const { isStart, isEnd, isOverdue, bar } = cellBar;
   const isDelivery = bar.stage === "delivery";
   const showLabel = isStart || (isDelivery && isEnd);
+  const deliveryPlanMeta = getDeliveryPlanMeta(bar.project.deliveryPlan);
+  const rush = deliveryPlanMeta.isRush;
   return (
     <span
       className={cn(
         "flex h-3 min-w-0 items-center overflow-hidden text-[9px] font-bold leading-3 sm:h-4 sm:text-[10px] sm:leading-4",
         isOverdue ? "bg-red-300 text-red-950" : stage.barClassName,
         isDelivery && "ring-1 ring-inset ring-emerald-700/40",
+        rush && !isOverdue && cn("ring-1 ring-inset", deliveryPlanMeta.barAccentClassName),
         isStart && "rounded-l-md pl-1",
         isEnd && "rounded-r-md pr-1"
       )}
-      title={`${bar.project.clientName}｜${stage.label}`}
+      title={`${bar.project.clientName}｜${stage.label}${rush ? `｜${deliveryPlanMeta.shortLabel}` : ""}`}
     >
       {showLabel ? (
         <span className="min-w-0 flex-1 truncate">
           {bar.project.clientName}
           <span className="ml-1 opacity-90">{stage.label}</span>
+          {rush ? <span className="ml-1 font-black">⚡</span> : null}
         </span>
       ) : null}
     </span>
@@ -111,6 +116,18 @@ export default function ProjectMonthCalendar({
           const deliveryEndCount = cell.lanes.filter(
             (cellBar) => cellBar?.bar.stage === "delivery" && cellBar.isEnd
           ).length;
+          const rushDueProjects = projects.filter(
+            (project) =>
+              project.dueDate === cell.iso &&
+              getDeliveryPlanMeta(project.deliveryPlan).isRush
+          );
+          const topRushPlan =
+            rushDueProjects.length > 0
+              ? getDeliveryPlanMeta(
+                  rushDueProjects.find((project) => project.deliveryPlan === "rush_7_days")
+                    ?.deliveryPlan ?? rushDueProjects[0].deliveryPlan
+                )
+              : null;
 
           return (
             <button
@@ -142,6 +159,18 @@ export default function ProjectMonthCalendar({
                   {cell.date.getDate()}
                 </span>
                 <span className="ml-1 flex items-center gap-1">
+                  {topRushPlan ? (
+                    <span
+                      className={cn(
+                        "flex items-center gap-0.5 rounded px-1 text-[9px] font-black uppercase tracking-wide shadow-sm",
+                        topRushPlan.chipClassName
+                      )}
+                      title={topRushPlan.label}
+                    >
+                      <span aria-hidden>⚡</span>
+                      {topRushPlan.shortLabel}
+                    </span>
+                  ) : null}
                   {deliveryEndCount > 0 ? (
                     <span className="flex items-center gap-0.5 rounded bg-emerald-600 px-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm">
                       <span aria-hidden>★</span>
@@ -206,6 +235,14 @@ export default function ProjectMonthCalendar({
         <span className="inline-flex items-center gap-1">
           <span className="inline-block h-2 w-3 rounded-sm bg-emerald-300" />
           納品
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="inline-block h-2 w-2 rounded-full bg-orange-500" />
+          お急ぎ14日
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
+          お急ぎ7日
         </span>
       </div>
     </section>
