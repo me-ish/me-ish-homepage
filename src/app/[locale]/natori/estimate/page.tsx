@@ -13,8 +13,8 @@ export default function NatoriEstimatePage() {
     <main className="min-h-screen bg-white">
       <section className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:px-6 sm:py-3">
-          <Link href="/natori" className="text-xs font-medium text-pink-600 hover:underline">
-            Natori Portfolio
+          <Link href="/natori/dashboard" className="text-xs font-medium text-pink-600 hover:underline">
+            Dashboard
           </Link>
           <span className="text-xs text-gray-300">/</span>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-pink-600">Estimate</p>

@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { mockNatoriProjects } from "@/lib/natori/mockProjects";
+import { createTasksForType } from "@/lib/natori/projects";
+import { calculateDueDate } from "@/lib/natori/deliveryPlans";
 import type {
   NatoriDeliveryPlan,
   NatoriProject,
@@ -113,6 +115,75 @@ export async function updateNatoriProjectStatus(
     .update({ status, next_action: nextAction })
     .eq("id", projectId);
   if (error) throw error;
+}
+
+export type CreateNatoriProjectInput = {
+  title: string;
+  clientName: string;
+  amount: number;
+  type: NatoriProjectType;
+  status?: NatoriProjectStatus;
+  deliveryPlan?: NatoriDeliveryPlan;
+  startDateISO?: string;
+  dueDateISO?: string;
+  nextAction?: string;
+  note?: string;
+  priority?: NatoriProjectPriority;
+};
+
+/**
+ * Creates a project (with auto-generated tasks for the given type) for the
+ * currently signed-in user. Returns the new project ID.
+ */
+export async function createNatoriProject(input: CreateNatoriProjectInput): Promise<string> {
+  const supabase = createClient();
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  if (userErr) throw userErr;
+  const user = userData.user;
+  if (!user) throw new Error("ログインが必要です。");
+
+  const deliveryPlan = input.deliveryPlan ?? "normal";
+  const startDateISO = input.startDateISO ?? new Date().toISOString().slice(0, 10);
+  const dueDateISO = input.dueDateISO ?? calculateDueDate(startDateISO, deliveryPlan);
+  const status = input.status ?? "quoted";
+
+  const { data: insertedProject, error: projectErr } = await supabase
+    .from(PROJECTS_TABLE)
+    .insert({
+      user_id: user.id,
+      title: input.title,
+      client_name: input.clientName,
+      amount: input.amount,
+      type: input.type,
+      status,
+      delivery_plan: deliveryPlan,
+      priority: input.priority ?? null,
+      start_date: startDateISO,
+      due_date: dueDateISO,
+      next_action: input.nextAction ?? "",
+      note: input.note ?? null,
+    })
+    .select("id")
+    .single();
+  if (projectErr) throw projectErr;
+  const projectId = (insertedProject as { id: string }).id;
+
+  const tasks = createTasksForType(input.type);
+  const taskInserts = tasks.map((task, index) => ({
+    project_id: projectId,
+    task_key: task.id,
+    label: task.label,
+    stage: task.stage,
+    estimated_hours: task.estimatedHours ?? null,
+    done: task.done,
+    sort_order: index,
+  }));
+  if (taskInserts.length > 0) {
+    const { error: taskErr } = await supabase.from(TASKS_TABLE).insert(taskInserts);
+    if (taskErr) throw taskErr;
+  }
+
+  return projectId;
 }
 
 /**
