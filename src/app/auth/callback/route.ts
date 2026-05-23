@@ -6,8 +6,12 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // 同一オリジン or ルート始まりのみ許可（オープンリダイレクト対策）
+// `/login` 側は `?redirect=` を渡してくるので両方受け付ける。
 function safeNext(url: URL): string {
-  const raw = url.searchParams.get('next') || '/';
+  const raw =
+    url.searchParams.get('next') ||
+    url.searchParams.get('redirect') ||
+    '/';
   try {
     // ルート相対 /path は許可。ただし //evil のようなプロトコル相対は拒否
     if (raw.startsWith('/')) return raw.startsWith('//') ? '/' : raw;
