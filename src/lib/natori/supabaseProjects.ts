@@ -71,16 +71,20 @@ function rowToProject(row: ProjectRow, taskRows: TaskRow[]): NatoriProject {
 }
 
 export async function fetchNatoriProjects(): Promise<NatoriProject[]> {
-  const supabase = createClient();
-  const [{ data: projects, error: pe }, { data: tasks, error: te }] = await Promise.all([
-    supabase.from(PROJECTS_TABLE).select("*").order("due_date", { ascending: true }),
-    supabase.from(TASKS_TABLE).select("*").order("sort_order", { ascending: true }),
-  ]);
-  if (pe) throw pe;
-  if (te) throw te;
+  const response = await fetch("/api/natori/admin/projects", {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Natori projects (${response.status})`);
+  }
 
-  const projectRows = (projects ?? []) as ProjectRow[];
-  const taskRows = (tasks ?? []) as TaskRow[];
+  const payload = (await response.json()) as {
+    projects?: ProjectRow[];
+    tasks?: TaskRow[];
+  };
+
+  const projectRows = payload.projects ?? [];
+  const taskRows = payload.tasks ?? [];
   const tasksByProject = new Map<string, TaskRow[]>();
   for (const task of taskRows) {
     const list = tasksByProject.get(task.project_id) ?? [];
