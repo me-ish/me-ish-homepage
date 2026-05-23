@@ -2,6 +2,7 @@ import { getDeliveryPlanMeta } from "@/lib/natori/deliveryPlans";
 import {
   daysUntilDue,
   isDoneStatus,
+  parseISODate,
 } from "@/lib/natori/projects";
 import type {
   NatoriProject,
@@ -12,6 +13,35 @@ import type {
 
 export const DEFAULT_DAILY_CAPACITY_HOURS = 5;
 export const WEEK_LENGTH_DAYS = 7;
+export const WORKDAYS_PER_WEEK = 5;
+export const DEFAULT_WEEKDAYS_ONLY = true;
+
+export function isWeekend(date: Date): boolean {
+  const dow = date.getDay();
+  return dow === 0 || dow === 6;
+}
+
+// Count Mon-Fri days strictly after `startExclusive` up to and including `endInclusive`.
+// Matches the half-open window used by daysUntilDue (today excluded, due included).
+export function countWeekdaysInRange(startExclusive: Date, endInclusive: Date): number {
+  if (endInclusive.getTime() <= startExclusive.getTime()) return 0;
+  let count = 0;
+  const cursor = new Date(
+    startExclusive.getFullYear(),
+    startExclusive.getMonth(),
+    startExclusive.getDate() + 1
+  );
+  const end = new Date(
+    endInclusive.getFullYear(),
+    endInclusive.getMonth(),
+    endInclusive.getDate()
+  );
+  while (cursor.getTime() <= end.getTime()) {
+    if (!isWeekend(cursor)) count += 1;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return count;
+}
 
 export const DEFAULT_STAGE_HOURS: Record<NatoriTaskStage, number> = {
   material: 0.5,
@@ -71,6 +101,11 @@ export type NatoriScheduleEntry = {
 
 export type NatoriScheduleOptions = {
   dailyCapacityHours?: number;
+  /**
+   * When true (default), Sat/Sun count as 0h capacity. Per-day, this-week, and
+   * capacity-this-week numbers are scaled to a 5-day work week.
+   */
+  weekdaysOnly?: boolean;
 };
 
 export function computeProjectScheduling(
@@ -79,22 +114,30 @@ export function computeProjectScheduling(
   options: NatoriScheduleOptions = {}
 ): NatoriProjectScheduling {
   const dailyCapacityHours = options.dailyCapacityHours ?? DEFAULT_DAILY_CAPACITY_HOURS;
+  const weekdaysOnly = options.weekdaysOnly ?? DEFAULT_WEEKDAYS_ONLY;
   const totalHours = getProjectTotalHours(project);
   const remainingHours = getProjectRemainingHours(project);
   const days = daysUntilDue(project.dueDate, today);
-  const workable = Math.max(1, days);
+  const due = parseISODate(project.dueDate);
+  const workable = weekdaysOnly
+    ? Math.max(1, countWeekdaysInRange(today, due))
+    : Math.max(1, days);
   const isBlocked = isBlockedStatus(project.status);
   const done = isDoneStatus(project.status);
   const isOverdue = !done && days < 0;
   const isRush = getDeliveryPlanMeta(project.deliveryPlan).isRush;
 
   const requiredPerDay = done || isBlocked ? 0 : remainingHours / workable;
-  const daysThisWeek = Math.min(WEEK_LENGTH_DAYS, workable);
+  const weekWindow = weekdaysOnly ? WORKDAYS_PER_WEEK : WEEK_LENGTH_DAYS;
+  const daysThisWeek = Math.min(weekWindow, workable);
   const requiredThisWeek = done || isBlocked
     ? 0
     : Math.min(remainingHours, requiredPerDay * daysThisWeek);
-  const requiredToday = done || isBlocked ? 0 : Math.min(remainingHours, requiredPerDay);
-  const capacityThisWeek = dailyCapacityHours * WEEK_LENGTH_DAYS;
+  const todayCounts = !weekdaysOnly || !isWeekend(today);
+  const requiredToday = done || isBlocked || !todayCounts
+    ? 0
+    : Math.min(remainingHours, requiredPerDay);
+  const capacityThisWeek = dailyCapacityHours * weekWindow;
   const utilizationThisWeek = capacityThisWeek === 0 ? 0 : requiredThisWeek / capacityThisWeek;
 
   return {
@@ -165,7 +208,8 @@ export function getWeeklyForecast(
   options: NatoriScheduleOptions = {}
 ): NatoriWeeklyForecast {
   const dailyCapacityHours = options.dailyCapacityHours ?? DEFAULT_DAILY_CAPACITY_HOURS;
-  const capacityThisWeek = dailyCapacityHours * WEEK_LENGTH_DAYS;
+  const weekdaysOnly = options.weekdaysOnly ?? DEFAULT_WEEKDAYS_ONLY;
+  const capacityThisWeek = dailyCapacityHours * (weekdaysOnly ? WORKDAYS_PER_WEEK : WEEK_LENGTH_DAYS);
 
   let totalRequiredThisWeek = 0;
   let totalRequiredToday = 0;

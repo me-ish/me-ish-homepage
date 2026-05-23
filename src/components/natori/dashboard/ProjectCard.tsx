@@ -179,7 +179,7 @@ export default function ProjectCard({
                 <p className="text-sm font-black">{formatHours(scheduling.remainingHours)}</p>
               </div>
               <div>
-                <p className="text-[10px] opacity-70">1日</p>
+                <p className="text-[10px] opacity-70">平日1日</p>
                 <p className="text-sm font-black">{formatHours(scheduling.requiredPerDay)}</p>
               </div>
               <div>

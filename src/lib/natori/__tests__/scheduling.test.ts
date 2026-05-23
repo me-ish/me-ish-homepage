@@ -89,9 +89,11 @@ describe("computeProjectScheduling", () => {
     expect(s.totalHours).toBe(18);
     expect(s.remainingHours).toBe(18);
     expect(s.daysUntilDue).toBe(30);
-    expect(s.workableDaysUntilDue).toBe(30);
-    expect(s.requiredPerDay).toBeCloseTo(0.6, 5);
-    expect(s.requiredThisWeek).toBeCloseTo(4.2, 5);
+    // Weekdays only by default: TODAY=Fri 2026-05-22, due=Sun 2026-06-21 →
+    // 20 weekdays in (today, due]. 18h / 20 = 0.9h/平日, *5 = 4.5h this week.
+    expect(s.workableDaysUntilDue).toBe(20);
+    expect(s.requiredPerDay).toBeCloseTo(0.9, 5);
+    expect(s.requiredThisWeek).toBeCloseTo(4.5, 5);
     expect(s.isBlocked).toBe(false);
     expect(s.isOverdue).toBe(false);
     expect(s.isRush).toBe(false);
@@ -108,7 +110,35 @@ describe("computeProjectScheduling", () => {
     const s = computeProjectScheduling(project, TODAY);
     expect(s.isRush).toBe(true);
     expect(s.daysUntilDue).toBe(7);
-    expect(s.requiredPerDay).toBeCloseTo(18 / 7, 5);
+    // Weekdays only: gap from Fri 5/22 to Fri 5/29 contains 5 weekdays.
+    expect(s.workableDaysUntilDue).toBe(5);
+    expect(s.requiredPerDay).toBeCloseTo(18 / 5, 5);
+  });
+
+  it("treats Sat/Sun as 0h capacity for requiredToday by default", () => {
+    const project = buildProject({
+      type: "illustration",
+      status: "rough",
+      dueDate: "2026-06-21",
+      tasks: createTasksForType("illustration"),
+    });
+    const saturday = new Date(2026, 4, 23); // 2026-05-23 Sat
+    const sFromSat = computeProjectScheduling(project, saturday);
+    expect(sFromSat.requiredToday).toBe(0);
+    expect(sFromSat.requiredPerDay).toBeGreaterThan(0);
+  });
+
+  it("opting out of weekdaysOnly reverts to calendar-day math", () => {
+    const project = buildProject({
+      type: "illustration",
+      status: "rough",
+      dueDate: "2026-06-21",
+      tasks: createTasksForType("illustration"),
+    });
+    const s = computeProjectScheduling(project, TODAY, { weekdaysOnly: false });
+    expect(s.workableDaysUntilDue).toBe(30);
+    expect(s.requiredPerDay).toBeCloseTo(0.6, 5);
+    expect(s.capacityThisWeek).toBe(35);
   });
 
   it("treats consulting / awaiting_payment / waiting as 0h pressure", () => {
@@ -193,12 +223,12 @@ describe("getWeeklyForecast", () => {
     const entries = getScheduleEntries(projects, TODAY);
     const forecast = getWeeklyForecast(entries);
 
-    expect(forecast.capacityThisWeek).toBe(35); // 5h/day * 7d
+    expect(forecast.capacityThisWeek).toBe(25); // 5h/day * 5平日
     expect(forecast.totalRequiredThisWeek).toBeGreaterThan(0);
     expect(forecast.rushRequiredThisWeek).toBeGreaterThan(0);
     expect(forecast.blockedHours).toBeGreaterThan(0);
     expect(forecast.totalRequiredToday).toBeCloseTo(
-      forecast.totalRequiredThisWeek / 7,
+      forecast.totalRequiredThisWeek / 5,
       5
     );
   });
@@ -207,7 +237,7 @@ describe("getWeeklyForecast", () => {
     const projects = [buildProject({ deliveryPlan: "normal" })];
     const entries = getScheduleEntries(projects, TODAY, { dailyCapacityHours: 3 });
     const forecast = getWeeklyForecast(entries, { dailyCapacityHours: 3 });
-    expect(forecast.capacityThisWeek).toBe(21);
+    expect(forecast.capacityThisWeek).toBe(15); // 3h/day * 5平日
   });
 });
 

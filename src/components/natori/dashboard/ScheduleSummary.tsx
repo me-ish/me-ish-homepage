@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { natoriProjectStatusMeta } from "@/lib/natori/mockProjects";
 import { getDeliveryPlanMeta } from "@/lib/natori/deliveryPlans";
 import {
-  WEEK_LENGTH_DAYS,
+  WORKDAYS_PER_WEEK,
   formatHours,
   type NatoriScheduleEntry,
   type NatoriWeeklyForecast,
@@ -71,7 +71,7 @@ export default function ScheduleSummary({ entries, forecast, onSelect }: Schedul
               <div className="text-right">
                 <p className="text-[11px] font-bold uppercase tracking-wide text-pink-700">今日の目安</p>
                 <p className="text-2xl font-black text-pink-900">{formatHours(forecast.totalRequiredToday)}</p>
-                <p className="text-[11px] text-pink-700/80">1日 {forecast.dailyCapacityHours}h を目安</p>
+                <p className="text-[11px] text-pink-700/80">平日 1日 {forecast.dailyCapacityHours}h を目安</p>
               </div>
             </div>
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/80">
@@ -114,7 +114,7 @@ export default function ScheduleSummary({ entries, forecast, onSelect }: Schedul
                     : scheduling.daysUntilDue === 0
                     ? "納期は今日"
                     : `納期まで ${scheduling.daysUntilDue}日`;
-                const weekDays = Math.min(WEEK_LENGTH_DAYS, scheduling.workableDaysUntilDue);
+                const weekDays = Math.min(WORKDAYS_PER_WEEK, scheduling.workableDaysUntilDue);
 
                 return (
                   <li key={project.id}>
@@ -158,7 +158,7 @@ export default function ScheduleSummary({ entries, forecast, onSelect }: Schedul
                         <span>1日 {formatHours(scheduling.requiredPerDay)}</span>
                         <span className="font-bold">
                           今週 {formatHours(scheduling.requiredThisWeek)}
-                          {weekDays < WEEK_LENGTH_DAYS ? `（残${weekDays}日）` : ""}
+                          {weekDays < WORKDAYS_PER_WEEK ? `（残${weekDays}日）` : ""}
                         </span>
                       </div>
                       <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
