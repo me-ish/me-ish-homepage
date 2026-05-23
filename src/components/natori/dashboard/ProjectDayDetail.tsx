@@ -37,6 +37,18 @@ export default function ProjectDayDetail({
     (entry) => entry.bar.stage === "delivery" && entry.isEnd
   );
 
+  const dueProjectIds = new Set(projects.map((project) => project.id));
+  const activeOnlyProjects: NatoriProject[] = [];
+  const seenActiveIds = new Set<string>();
+  for (const entry of activeBars) {
+    const project = entry.bar.project;
+    if (dueProjectIds.has(project.id)) continue;
+    if (seenActiveIds.has(project.id)) continue;
+    seenActiveIds.add(project.id);
+    activeOnlyProjects.push(project);
+  }
+  const cardProjects: NatoriProject[] = [...projects, ...activeOnlyProjects];
+
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5 md:p-6">
       <div className="flex items-start gap-3">
@@ -151,22 +163,44 @@ export default function ProjectDayDetail({
         </div>
       ) : null}
 
-      {projects.length === 0 ? (
+      {cardProjects.length === 0 ? (
         <p className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm leading-6 text-gray-800">
-          {activeBars.length === 0
-            ? "この日に予定はありません。ゆっくり手を動かせます。"
-            : "この日が納期の案件はありません。手を動かす日です。"}
+          この日に予定はありません。ゆっくり手を動かせます。
         </p>
       ) : (
-        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {projects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              today={today}
-              onToggleTask={onToggleTask}
-            />
-          ))}
+        <div className="mt-4 space-y-3">
+          {projects.length > 0 ? (
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-600">
+              この日が納期の案件
+            </p>
+          ) : null}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {projects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                today={today}
+                onToggleTask={onToggleTask}
+              />
+            ))}
+          </div>
+          {activeOnlyProjects.length > 0 ? (
+            <>
+              <p className="pt-2 text-xs font-bold uppercase tracking-wide text-gray-600">
+                この日に手を動かす案件
+              </p>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {activeOnlyProjects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    today={today}
+                    onToggleTask={onToggleTask}
+                  />
+                ))}
+              </div>
+            </>
+          ) : null}
         </div>
       )}
     </section>
