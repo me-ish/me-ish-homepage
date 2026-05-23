@@ -39,7 +39,7 @@ export default function ScheduleSummary({ entries, forecast, onSelect }: Schedul
           <div className="min-w-0">
             <p className="text-sm font-bold text-gray-900">時間配分（今週・今日）</p>
             <p className="mt-0.5 text-xs text-gray-600">
-              今週 {formatHours(forecast.totalRequiredThisWeek)} / 容量 {formatHours(forecast.capacityThisWeek)}
+              カレンダーの色帯に被ってる作業を集計。今週 {formatHours(forecast.totalRequiredThisWeek)} / 容量 {formatHours(forecast.capacityThisWeek)}
               （{utilizationPercent}%）・今日 {formatHours(forecast.totalRequiredToday)}
             </p>
           </div>
@@ -54,7 +54,7 @@ export default function ScheduleSummary({ entries, forecast, onSelect }: Schedul
           <div className="rounded-2xl border border-pink-100 bg-pink-50/40 p-3">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-pink-700">今週の必要作業量</p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-pink-700">今週やる予定（色帯ベース）</p>
                 <p className="text-2xl font-black text-pink-900">
                   {formatHours(forecast.totalRequiredThisWeek)}
                   <span className="ml-1 text-sm font-bold text-pink-700/80">
@@ -69,9 +69,9 @@ export default function ScheduleSummary({ entries, forecast, onSelect }: Schedul
                 ) : null}
               </div>
               <div className="text-right">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-pink-700">今日の目安</p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-pink-700">今日やる予定</p>
                 <p className="text-2xl font-black text-pink-900">{formatHours(forecast.totalRequiredToday)}</p>
-                <p className="text-[11px] text-pink-700/80">平日 1日 {forecast.dailyCapacityHours}h を目安</p>
+                <p className="text-[11px] text-pink-700/80">平日1日 {forecast.dailyCapacityHours}h まで</p>
               </div>
             </div>
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/80">

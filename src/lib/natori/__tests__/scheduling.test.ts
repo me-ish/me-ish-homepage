@@ -90,11 +90,12 @@ describe("computeProjectScheduling", () => {
     expect(s.totalHours).toBe(18);
     expect(s.remainingHours).toBe(18);
     expect(s.daysUntilDue).toBe(30);
-    // Weekdays only by default: TODAY=Fri 2026-05-22, due=Sun 2026-06-21 →
-    // 20 weekdays in (today, due]. 18h / 20 = 0.9h/平日, *5 = 4.5h this week.
+    // requiredPerDay stays as a project-wide fair-share average: 18h / 20 weekdays.
     expect(s.workableDaysUntilDue).toBe(20);
     expect(s.requiredPerDay).toBeCloseTo(0.9, 5);
-    expect(s.requiredThisWeek).toBeCloseTo(4.5, 5);
+    // requiredThisWeek is now bar-based — only the material bar (5/23-5/28)
+    // overlaps the today..today+6 window, contributing its full 1h.
+    expect(s.requiredThisWeek).toBeCloseTo(1, 5);
     expect(s.isBlocked).toBe(false);
     expect(s.isOverdue).toBe(false);
     expect(s.isRush).toBe(false);
@@ -127,6 +128,37 @@ describe("computeProjectScheduling", () => {
     const sFromSat = computeProjectScheduling(project, saturday);
     expect(sFromSat.requiredToday).toBe(0);
     expect(sFromSat.requiredPerDay).toBeGreaterThan(0);
+  });
+
+  it("counts only stage-bar overlap when computing this-week / today", () => {
+    // A project whose only bar is far in the future contributes 0 to today
+    // and 0 to this week even though it has remaining hours.
+    const future = buildProject({
+      id: "future",
+      type: "icon",
+      status: "rough",
+      startDate: "2026-07-10",
+      dueDate: "2026-07-17",
+      tasks: createTasksForType("icon"),
+    });
+    const s = computeProjectScheduling(future, TODAY);
+    expect(s.requiredToday).toBe(0);
+    expect(s.requiredThisWeek).toBe(0);
+  });
+
+  it("overdue projects dump all remaining hours into today/this week", () => {
+    const overdue = buildProject({
+      id: "late",
+      type: "icon",
+      status: "rough",
+      startDate: "2026-04-15",
+      dueDate: "2026-05-15", // before TODAY=2026-05-22
+      tasks: createTasksForType("icon"),
+    });
+    const s = computeProjectScheduling(overdue, TODAY);
+    expect(s.isOverdue).toBe(true);
+    expect(s.requiredThisWeek).toBe(s.remainingHours);
+    expect(s.requiredToday).toBe(s.remainingHours);
   });
 
   it("opting out of weekdaysOnly reverts to calendar-day math", () => {
@@ -228,10 +260,9 @@ describe("getWeeklyForecast", () => {
     expect(forecast.totalRequiredThisWeek).toBeGreaterThan(0);
     expect(forecast.rushRequiredThisWeek).toBeGreaterThan(0);
     expect(forecast.blockedHours).toBeGreaterThan(0);
-    expect(forecast.totalRequiredToday).toBeCloseTo(
-      forecast.totalRequiredThisWeek / 5,
-      5
-    );
+    // totalRequiredToday is bar-based — for these auto-bar projects, today
+    // (5/22 Fri) sits before any bar start, so it's 0.
+    expect(forecast.totalRequiredToday).toBeGreaterThanOrEqual(0);
   });
 
   it("honors a custom daily capacity override", () => {

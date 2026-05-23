@@ -1,5 +1,6 @@
 import { getDeliveryPlanMeta } from "@/lib/natori/deliveryPlans";
 import {
+  computeProjectBars,
   computeStageMilestones,
   daysUntilDue,
   isDoneStatus,
@@ -21,6 +22,11 @@ export const DEFAULT_WEEKDAYS_ONLY = true;
 export function isWeekend(date: Date): boolean {
   const dow = date.getDay();
   return dow === 0 || dow === 6;
+}
+
+export function countDaysInclusive(from: Date, toInclusive: Date): number {
+  if (toInclusive.getTime() < from.getTime()) return 0;
+  return Math.round((toInclusive.getTime() - from.getTime()) / 86_400_000) + 1;
 }
 
 // Count Mon-Fri days strictly after `startExclusive` up to and including `endInclusive`.
@@ -81,6 +87,49 @@ export function isBlockedStatus(status: NatoriProjectStatus): boolean {
   return BLOCKED_STATUSES.has(status);
 }
 
+/**
+ * Returns the project hours that fall within an inclusive date range based on
+ * the project's stage bars (the colored segments on the calendar). For each
+ * bar that overlaps the range, the bar's stage remaining hours are spread
+ * uniformly over the bar's duration, then multiplied by the overlapping days.
+ * This is what powers "今週やる予定" / "今日やる予定" so the numbers match the
+ * calendar visualization.
+ */
+export function computeBarHoursInRange(
+  project: NatoriProject,
+  rangeStart: Date,
+  rangeEndInclusive: Date
+): number {
+  if (isDoneStatus(project.status)) return 0;
+  if (isBlockedStatus(project.status)) return 0;
+  const bars = computeProjectBars(project);
+  if (bars.length === 0) return 0;
+
+  let total = 0;
+  for (const bar of bars) {
+    const barStart = parseISODate(bar.startISO);
+    const barEnd = parseISODate(bar.endISO);
+    const barTotalDays = countDaysInclusive(barStart, barEnd);
+    if (barTotalDays === 0) continue;
+
+    const overlapStart = barStart.getTime() > rangeStart.getTime() ? barStart : rangeStart;
+    const overlapEnd =
+      barEnd.getTime() < rangeEndInclusive.getTime() ? barEnd : rangeEndInclusive;
+    if (overlapEnd.getTime() < overlapStart.getTime()) continue;
+    const overlapDays = countDaysInclusive(overlapStart, overlapEnd);
+    if (overlapDays === 0) continue;
+
+    const stageTasks = project.tasks.filter((task) => task.stage === bar.stage);
+    const stageRemainingHours = stageTasks
+      .filter((task) => !task.done)
+      .reduce((sum, task) => sum + getTaskHours(task), 0);
+    if (stageRemainingHours === 0) continue;
+
+    total += (stageRemainingHours / barTotalDays) * overlapDays;
+  }
+  return total;
+}
+
 export type NatoriProjectScheduling = {
   totalHours: number;
   remainingHours: number;
@@ -131,14 +180,25 @@ export function computeProjectScheduling(
 
   const requiredPerDay = done || isBlocked ? 0 : remainingHours / workable;
   const weekWindow = weekdaysOnly ? WORKDAYS_PER_WEEK : WEEK_LENGTH_DAYS;
-  const daysThisWeek = Math.min(weekWindow, workable);
+  const todayCounts = !weekdaysOnly || !isWeekend(today);
+  const todayStart = startOfDay(today);
+  const weekEnd = new Date(
+    todayStart.getFullYear(),
+    todayStart.getMonth(),
+    todayStart.getDate() + 6
+  );
+  // Overdue projects no longer have bars that overlap today, so fall back to
+  // dumping the full remaining hours into "今週" / "今日" to surface them.
   const requiredThisWeek = done || isBlocked
     ? 0
-    : Math.min(remainingHours, requiredPerDay * daysThisWeek);
-  const todayCounts = !weekdaysOnly || !isWeekend(today);
+    : isOverdue
+      ? remainingHours
+      : computeBarHoursInRange(project, todayStart, weekEnd);
   const requiredToday = done || isBlocked || !todayCounts
     ? 0
-    : Math.min(remainingHours, requiredPerDay);
+    : isOverdue
+      ? remainingHours
+      : computeBarHoursInRange(project, todayStart, todayStart);
   const capacityThisWeek = dailyCapacityHours * weekWindow;
   const utilizationThisWeek = capacityThisWeek === 0 ? 0 : requiredThisWeek / capacityThisWeek;
 
