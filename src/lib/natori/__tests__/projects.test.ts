@@ -113,15 +113,24 @@ describe("getProjectsForDate / buildMonthCells", () => {
 });
 
 describe("computeProjectBars", () => {
-  it("emits a bar per pending stage with the previous milestone + 1 as start", () => {
-    const project = buildProject({ id: "p1", type: "icon", dueDate: "2026-05-30", status: "rough" });
+  it("spreads pending stages across the planned duration and collapses delivery to one day", () => {
+    const project = buildProject({
+      id: "p1",
+      type: "icon",
+      startDate: "2026-05-23",
+      dueDate: "2026-05-30",
+      status: "rough",
+    });
     const bars = computeProjectBars(project);
     const byStage = Object.fromEntries(bars.map((b) => [b.stage, b]));
-    expect(byStage.rough.startISO).toBe("2026-05-23");
-    expect(byStage.rough.endISO).toBe("2026-05-24");
-    expect(byStage.lineart.startISO).toBe("2026-05-25");
-    expect(byStage.lineart.endISO).toBe("2026-05-26");
-    expect(byStage.delivery.startISO).toBe("2026-05-29");
+    // 7-day duration, 3 non-delivery stages, 1-day delivery on the due date.
+    expect(byStage.rough.startISO).toBe("2026-05-24");
+    expect(byStage.rough.endISO).toBe("2026-05-25");
+    expect(byStage.lineart.startISO).toBe("2026-05-26");
+    expect(byStage.lineart.endISO).toBe("2026-05-27");
+    expect(byStage.coloring.startISO).toBe("2026-05-28");
+    expect(byStage.coloring.endISO).toBe("2026-05-29");
+    expect(byStage.delivery.startISO).toBe("2026-05-30");
     expect(byStage.delivery.endISO).toBe("2026-05-30");
   });
 
@@ -143,15 +152,21 @@ describe("computeProjectBars", () => {
 
 describe("getActiveBarsForDate", () => {
   it("includes every bar whose range covers the date", () => {
-    const project = buildProject({ id: "p1", type: "icon", dueDate: "2026-05-30", status: "rough" });
-    const onStartOfRough = getActiveBarsForDate([project], "2026-05-23", TODAY);
+    const project = buildProject({
+      id: "p1",
+      type: "icon",
+      startDate: "2026-05-23",
+      dueDate: "2026-05-30",
+      status: "rough",
+    });
+    const onStartOfRough = getActiveBarsForDate([project], "2026-05-24", TODAY);
     expect(onStartOfRough).toHaveLength(1);
     expect(onStartOfRough[0].bar.stage).toBe("rough");
     expect(onStartOfRough[0].isStart).toBe(true);
 
-    const onMidLineart = getActiveBarsForDate([project], "2026-05-25", TODAY);
-    expect(onMidLineart[0].bar.stage).toBe("lineart");
-    expect(onMidLineart[0].isStart).toBe(true);
+    const onStartOfLineart = getActiveBarsForDate([project], "2026-05-26", TODAY);
+    expect(onStartOfLineart[0].bar.stage).toBe("lineart");
+    expect(onStartOfLineart[0].isStart).toBe(true);
   });
 
   it("attaches pending tasks for the bar's stage", () => {
@@ -208,22 +223,34 @@ describe("assignBarLanes", () => {
 });
 
 describe("computeStageMilestones", () => {
-  it("places the final stage on the due date and earlier stages spread back at 2-day intervals", () => {
-    const project = buildProject({ type: "icon", dueDate: "2026-05-30", status: "rough" });
+  it("places delivery on the due date and distributes other stages across the duration", () => {
+    const project = buildProject({
+      type: "icon",
+      startDate: "2026-05-23",
+      dueDate: "2026-05-30",
+      status: "rough",
+    });
     const milestones = computeStageMilestones(project);
     const map = Object.fromEntries(milestones.map((m) => [m.stage, m.dateISO]));
+    // 7-day duration → 3 non-delivery stages get gap=2 days, delivery sits on due.
     expect(map.delivery).toBe("2026-05-30");
-    expect(map.coloring).toBe("2026-05-28");
-    expect(map.lineart).toBe("2026-05-26");
-    expect(map.rough).toBe("2026-05-24");
+    expect(map.coloring).toBe("2026-05-29");
+    expect(map.lineart).toBe("2026-05-27");
+    expect(map.rough).toBe("2026-05-25");
   });
 
   it("uses only stages that appear in the project's tasks", () => {
-    const project = buildProject({ type: "standing", dueDate: "2026-06-05", status: "rough" });
+    const project = buildProject({
+      type: "standing",
+      startDate: "2026-05-22",
+      dueDate: "2026-06-05",
+      status: "rough",
+    });
     const milestones = computeStageMilestones(project);
     const stages = milestones.map((m) => m.stage);
     expect(stages).toEqual(["material", "rough", "lineart", "coloring", "finish", "delivery"]);
-    expect(milestones[0].dateISO).toBe("2026-05-26");
+    // 14-day duration → 5 non-delivery stages get gap=2.6, material lands ~11 days back from due.
+    expect(milestones[0].dateISO).toBe("2026-05-25");
   });
 
   it("reports allDone for stages whose tasks are all checked", () => {
@@ -247,8 +274,14 @@ describe("getCalendarEntriesForDate", () => {
   });
 
   it("yields milestone entries for pending stages on their milestone date", () => {
-    const project = buildProject({ id: "p1", type: "icon", dueDate: "2026-05-30", status: "rough" });
-    const entries = getCalendarEntriesForDate([project], "2026-05-24");
+    const project = buildProject({
+      id: "p1",
+      type: "icon",
+      startDate: "2026-05-23",
+      dueDate: "2026-05-30",
+      status: "rough",
+    });
+    const entries = getCalendarEntriesForDate([project], "2026-05-25");
     const milestone = entries.find((e) => e.kind === "milestone");
     expect(milestone && milestone.kind === "milestone" ? milestone.stage : null).toBe("rough");
   });

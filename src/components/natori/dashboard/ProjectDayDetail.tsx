@@ -6,6 +6,8 @@ import { getActiveBarsForDate, parseISODate } from "@/lib/natori/projects";
 import { getRemindersForDate } from "@/lib/natori/reminders";
 import { cn } from "@/lib/utils";
 import ProjectCard from "./ProjectCard";
+import PersonalEventsSection from "./PersonalEventsSection";
+import type { NatoriEvent } from "@/lib/natori/supabaseEvents";
 import type { NatoriProject } from "@/types/natori/projects";
 
 function computeStickyProjectIds(
@@ -34,6 +36,16 @@ type ProjectDayDetailProps = {
   allProjects: NatoriProject[];
   today: Date;
   onToggleTask: (projectId: string, taskId: string) => void;
+  events: NatoriEvent[];
+  authed: boolean;
+  eventsBusy: boolean;
+  eventsError: string | null;
+  onCreateEvent: (input: { title: string; date: string; note?: string }) => Promise<void>;
+  onUpdateEvent: (
+    id: string,
+    input: { title: string; date: string; note?: string }
+  ) => Promise<void>;
+  onDeleteEvent: (id: string) => Promise<void>;
 };
 
 export default function ProjectDayDetail({
@@ -41,6 +53,13 @@ export default function ProjectDayDetail({
   allProjects,
   today,
   onToggleTask,
+  events,
+  authed,
+  eventsBusy,
+  eventsError,
+  onCreateEvent,
+  onUpdateEvent,
+  onDeleteEvent,
 }: ProjectDayDetailProps) {
   const date = parseISODate(selectedISO);
   const dateLabel = detailDateFormatter.format(date);
@@ -88,6 +107,17 @@ export default function ProjectDayDetail({
           </p>
         </div>
       </div>
+
+      <PersonalEventsSection
+        selectedISO={selectedISO}
+        events={events}
+        authed={authed}
+        busy={eventsBusy}
+        error={eventsError}
+        onCreate={onCreateEvent}
+        onUpdate={onUpdateEvent}
+        onDelete={onDeleteEvent}
+      />
 
       {reminders.length > 0 ? (
         <ul className="mt-4 flex flex-col gap-2">

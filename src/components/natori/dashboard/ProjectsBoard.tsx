@@ -20,6 +20,13 @@ import {
   toggleNatoriTaskDone,
   updateNatoriProjectStatus,
 } from "@/lib/natori/supabaseProjects";
+import {
+  createNatoriEvent,
+  deleteNatoriEvent,
+  fetchNatoriEvents,
+  updateNatoriEvent,
+  type NatoriEvent,
+} from "@/lib/natori/supabaseEvents";
 import { createClient } from "@/lib/supabase/client";
 import type { NatoriPriorityCandidate, NatoriProject } from "@/types/natori/projects";
 import ProjectMonthCalendar from "./ProjectMonthCalendar";
@@ -45,10 +52,17 @@ export default function ProjectsBoard() {
   const [authed, setAuthed] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [events, setEvents] = useState<NatoriEvent[]>([]);
+  const [eventsBusy, setEventsBusy] = useState(false);
+  const [eventsError, setEventsError] = useState<string | null>(null);
 
   const loadFromSupabase = useCallback(async () => {
-    const data = await fetchNatoriProjects();
-    setProjects(data);
+    const [projectData, eventData] = await Promise.all([
+      fetchNatoriProjects(),
+      fetchNatoriEvents().catch(() => [] as NatoriEvent[]),
+    ]);
+    setProjects(projectData);
+    setEvents(eventData);
     setDataSource("supabase");
   }, []);
 
@@ -186,6 +200,68 @@ export default function ProjectsBoard() {
     }
   };
 
+  const handleCreateEvent = async (input: { title: string; date: string; note?: string }) => {
+    if (!authed) {
+      setEventsError("ログインが必要です。");
+      throw new Error("ログインが必要です。");
+    }
+    setEventsBusy(true);
+    setEventsError(null);
+    try {
+      const created = await createNatoriEvent(input);
+      setEvents((current) => [...current, created]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setEventsError(message);
+      throw err;
+    } finally {
+      setEventsBusy(false);
+    }
+  };
+
+  const handleUpdateEvent = async (
+    id: string,
+    input: { title: string; date: string; note?: string }
+  ) => {
+    if (!authed) {
+      setEventsError("ログインが必要です。");
+      throw new Error("ログインが必要です。");
+    }
+    setEventsBusy(true);
+    setEventsError(null);
+    try {
+      await updateNatoriEvent(id, { ...input, note: input.note ?? null });
+      setEvents((current) =>
+        current.map((event) =>
+          event.id === id ? { ...event, ...input } : event
+        )
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setEventsError(message);
+      throw err;
+    } finally {
+      setEventsBusy(false);
+    }
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    if (!authed) {
+      setEventsError("ログインが必要です。");
+      return;
+    }
+    setEventsBusy(true);
+    setEventsError(null);
+    try {
+      await deleteNatoriEvent(id);
+      setEvents((current) => current.filter((event) => event.id !== id));
+    } catch (err) {
+      setEventsError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setEventsBusy(false);
+    }
+  };
+
   const handleSeedDemo = async () => {
     setSeeding(true);
     setError(null);
@@ -256,6 +332,7 @@ export default function ProjectsBoard() {
         year={viewMonth.year}
         monthIndex={viewMonth.monthIndex}
         projects={projects}
+        events={events}
         today={today}
         selectedISO={selectedISO}
         onSelect={handleSelectDate}
@@ -268,6 +345,13 @@ export default function ProjectsBoard() {
         allProjects={projects}
         today={today}
         onToggleTask={handleToggleTask}
+        events={events}
+        authed={authed}
+        eventsBusy={eventsBusy}
+        eventsError={eventsError}
+        onCreateEvent={handleCreateEvent}
+        onUpdateEvent={handleUpdateEvent}
+        onDeleteEvent={handleDeleteEvent}
       />
     </div>
   );

@@ -1,3 +1,4 @@
+import { getDeliveryPlanMeta } from "@/lib/natori/deliveryPlans";
 import type {
   NatoriCalendarBar,
   NatoriCalendarCellBar,
@@ -237,7 +238,19 @@ export function getProjectsForDate(projects: NatoriProject[], dateISO: string): 
   return projects.filter((project) => project.dueDate === dateISO);
 }
 
-const STAGE_GAP_DAYS = 2;
+/**
+ * Returns the planned duration of the project in days. Prefers an explicit
+ * startDate; falls back to the delivery plan's nominal days.
+ */
+export function getProjectDurationDays(project: NatoriProject): number {
+  if (project.startDate) {
+    const start = parseISODate(project.startDate);
+    const due = parseISODate(project.dueDate);
+    const diff = Math.round((due.getTime() - start.getTime()) / 86_400_000);
+    if (diff > 0) return diff;
+  }
+  return getDeliveryPlanMeta(project.deliveryPlan).days;
+}
 
 export function computeStageMilestones(project: NatoriProject): NatoriStageMilestone[] {
   const ordered: NatoriTaskStage[] = ["material", "rough", "lineart", "coloring", "finish", "delivery"];
@@ -247,14 +260,38 @@ export function computeStageMilestones(project: NatoriProject): NatoriStageMiles
   if (usedStages.length === 0) return [];
 
   const due = parseISODate(project.dueDate);
+  const duration = getProjectDurationDays(project);
+  const hasDelivery = usedStages[usedStages.length - 1] === "delivery";
+  const nonDeliveryStages = hasDelivery ? usedStages.slice(0, -1) : usedStages;
+  const nonDeliveryCount = nonDeliveryStages.length;
+  // Delivery is collapsed onto the due date as a 1-day marker, so non-delivery
+  // stages share the remaining window.
+  const availableDays = Math.max(0, duration - (hasDelivery ? 1 : 0));
 
-  return usedStages.map((stage, idx) => {
-    const offset = (usedStages.length - 1 - idx) * STAGE_GAP_DAYS;
-    const date = new Date(due.getFullYear(), due.getMonth(), due.getDate() - offset);
-    const stageTasks = project.tasks.filter((task) => task.stage === stage);
-    const allDone = stageTasks.every((task) => task.done);
-    return { stage, dateISO: toISODate(date), allDone };
-  });
+  const milestones: NatoriStageMilestone[] = [];
+
+  if (nonDeliveryCount > 0) {
+    const gap = availableDays / nonDeliveryCount;
+    nonDeliveryStages.forEach((stage, idx) => {
+      const rawOffset = (nonDeliveryCount - 1 - idx) * gap + (hasDelivery ? 1 : 0);
+      const offset = Math.max(hasDelivery ? 1 : 0, Math.round(rawOffset));
+      const date = new Date(due.getFullYear(), due.getMonth(), due.getDate() - offset);
+      const stageTasks = project.tasks.filter((task) => task.stage === stage);
+      const allDone = stageTasks.every((task) => task.done);
+      milestones.push({ stage, dateISO: toISODate(date), allDone });
+    });
+  }
+
+  if (hasDelivery) {
+    const stageTasks = project.tasks.filter((task) => task.stage === "delivery");
+    milestones.push({
+      stage: "delivery",
+      dateISO: toISODate(due),
+      allDone: stageTasks.every((task) => task.done),
+    });
+  }
+
+  return milestones;
 }
 
 const STAGE_SORT_ORDER: NatoriTaskStage[] = [
@@ -308,15 +345,20 @@ export function computeProjectBars(project: NatoriProject): NatoriCalendarBar[] 
   const milestones = computeStageMilestones(project);
   if (milestones.length === 0) return [];
 
+  const duration = getProjectDurationDays(project);
+  const due = parseISODate(project.dueDate);
+  const startISOFirst = toISODate(
+    new Date(due.getFullYear(), due.getMonth(), due.getDate() - (duration - 1))
+  );
+
   const bars: NatoriCalendarBar[] = [];
   for (let i = 0; i < milestones.length; i += 1) {
     const milestone = milestones[i];
     if (milestone.allDone) continue;
     const endISO = milestone.dateISO;
-    const startISO =
-      i === 0
-        ? shiftISODate(endISO, -(STAGE_GAP_DAYS - 1))
-        : shiftISODate(milestones[i - 1].dateISO, 1);
+    const rawStart =
+      i === 0 ? startISOFirst : shiftISODate(milestones[i - 1].dateISO, 1);
+    const startISO = rawStart > endISO ? endISO : rawStart;
     bars.push({
       id: `${project.id}-${milestone.stage}`,
       project,

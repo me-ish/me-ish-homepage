@@ -5,6 +5,7 @@ import { natoriStageMeta } from "@/lib/natori/mockProjects";
 import { buildMonthCells, toISODate } from "@/lib/natori/projects";
 import { getDeliveryPlanMeta } from "@/lib/natori/deliveryPlans";
 import { getRemindersForDayOfMonth } from "@/lib/natori/reminders";
+import type { NatoriEvent } from "@/lib/natori/supabaseEvents";
 import type { NatoriCalendarCellBar, NatoriProject } from "@/types/natori/projects";
 
 const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
@@ -16,6 +17,7 @@ type ProjectMonthCalendarProps = {
   year: number;
   monthIndex: number;
   projects: NatoriProject[];
+  events: NatoriEvent[];
   today: Date;
   selectedISO: string;
   onSelect: (iso: string) => void;
@@ -60,6 +62,7 @@ export default function ProjectMonthCalendar({
   year,
   monthIndex,
   projects,
+  events,
   today,
   selectedISO,
   onSelect,
@@ -67,6 +70,12 @@ export default function ProjectMonthCalendar({
   onNextMonth,
 }: ProjectMonthCalendarProps) {
   const { cells, totalLanes } = buildMonthCells(year, monthIndex, projects, today);
+  const eventsByDate = new Map<string, NatoriEvent[]>();
+  for (const event of events) {
+    const list = eventsByDate.get(event.date) ?? [];
+    list.push(event);
+    eventsByDate.set(event.date, list);
+  }
   const monthLabel = `${year}年${monthIndex + 1}月`;
   const todayISO = toISODate(today);
   const mobileLaneLimit = Math.min(totalLanes, MAX_LANES_MOBILE);
@@ -130,6 +139,7 @@ export default function ProjectMonthCalendar({
                 )
               : null;
           const cellReminders = cell.inMonth ? getRemindersForDayOfMonth(cell.date.getDate()) : [];
+          const cellEvents = cell.inMonth ? eventsByDate.get(cell.iso) ?? [] : [];
 
           return (
             <button
@@ -198,6 +208,15 @@ export default function ProjectMonthCalendar({
                       !
                     </span>
                   ) : null}
+                  {cellEvents.length > 0 ? (
+                    <span
+                      className="flex items-center gap-0.5 rounded bg-purple-500 px-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm"
+                      title={cellEvents.map((event) => event.title).join(" / ")}
+                    >
+                      <span aria-hidden>●</span>
+                      予定{cellEvents.length > 1 ? `×${cellEvents.length}` : ""}
+                    </span>
+                  ) : null}
                 </span>
               </div>
 
@@ -263,6 +282,10 @@ export default function ProjectMonthCalendar({
         <span className="inline-flex items-center gap-1">
           <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
           毎月25日 送金
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="inline-block h-2 w-2 rounded-full bg-purple-500" />
+          個人予定
         </span>
       </div>
     </section>

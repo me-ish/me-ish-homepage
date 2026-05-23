@@ -239,6 +239,65 @@ describe("monthly reminder", () => {
   });
 });
 
+describe("calendar bar spans honor the delivery plan duration", () => {
+  function spanDays(project: ReturnType<typeof makeOrder>): number {
+    const bars = computeProjectBars(project);
+    if (bars.length === 0) return 0;
+    const first = bars.map((b) => b.startISO).sort()[0];
+    const last = bars.map((b) => b.endISO).sort().slice(-1)[0];
+    return (
+      Math.round((Date.parse(last) - Date.parse(first)) / 86_400_000) + 1
+    );
+  }
+
+  it("rush_7 fits within 7 days end-to-end", () => {
+    const project = makeOrder({
+      id: "r7",
+      type: "illustration",
+      deliveryPlan: "rush_7_days",
+      status: "rough",
+    });
+    expect(spanDays(project)).toBeLessThanOrEqual(7);
+  });
+
+  it("rush_14 fits within 14 days end-to-end", () => {
+    const project = makeOrder({
+      id: "r14",
+      type: "illustration",
+      deliveryPlan: "rush_14_days",
+      status: "rough",
+    });
+    expect(spanDays(project)).toBeLessThanOrEqual(14);
+  });
+
+  it("normal plan spreads across ~30 days, not collapsed to a few days", () => {
+    const project = makeOrder({
+      id: "n",
+      type: "illustration",
+      deliveryPlan: "normal",
+      status: "rough",
+    });
+    expect(spanDays(project)).toBeGreaterThanOrEqual(20);
+    expect(spanDays(project)).toBeLessThanOrEqual(30);
+  });
+
+  it("delivery bar is always a single day on the due date", () => {
+    for (const plan of ["normal", "rush_14_days", "rush_7_days"] as const) {
+      const project = makeOrder({
+        id: `p-${plan}`,
+        type: "illustration",
+        deliveryPlan: plan,
+        status: "rough",
+      });
+      const bars = computeProjectBars(project);
+      const deliveryBar = bars.find((b) => b.stage === "delivery");
+      expect(deliveryBar).toBeTruthy();
+      expect(deliveryBar!.startISO).toBe(project.dueDate);
+      expect(deliveryBar!.endISO).toBe(project.dueDate);
+    }
+  });
+});
+
 describe("estimate without rush plan but with お急ぎ keyword in text", () => {
   it("keeps the keyword-based rush_delivery charge (backward compat)", () => {
     const estimate = createNatoriEstimate(
