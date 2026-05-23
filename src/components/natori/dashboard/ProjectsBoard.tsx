@@ -8,12 +8,7 @@ import {
   getPrioritySuggestions,
   toISODate,
 } from "@/lib/natori/projects";
-import {
-  getAwaitingPaymentSummary,
-  getScheduleEntries,
-  getWeeklyForecast,
-  type NatoriScheduleEntry,
-} from "@/lib/natori/scheduling";
+import { getAwaitingPaymentSummary } from "@/lib/natori/scheduling";
 import {
   fetchNatoriProjects,
   seedNatoriDemoProjects,
@@ -32,7 +27,6 @@ import type { NatoriPriorityCandidate, NatoriProject } from "@/types/natori/proj
 import ProjectMonthCalendar from "./ProjectMonthCalendar";
 import ProjectDayDetail from "./ProjectDayDetail";
 import ProjectPriorityList from "./ProjectPriorityList";
-import ScheduleSummary from "./ScheduleSummary";
 import AwaitingPaymentSummary from "./AwaitingPaymentSummary";
 
 type ViewMonth = { year: number; monthIndex: number };
@@ -106,13 +100,6 @@ export default function ProjectsBoard() {
     [projects, today]
   );
 
-  const scheduleEntries = useMemo(
-    () => (today ? getScheduleEntries(projects, today) : []),
-    [projects, today]
-  );
-
-  const forecast = useMemo(() => getWeeklyForecast(scheduleEntries), [scheduleEntries]);
-
   const awaitingPaymentSummary = useMemo(
     () => getAwaitingPaymentSummary(projects),
     [projects]
@@ -156,10 +143,6 @@ export default function ProjectsBoard() {
 
   const handleSelectFromPriority = (candidate: NatoriPriorityCandidate) => {
     focusProject(candidate.project);
-  };
-
-  const handleSelectFromSchedule = (entry: NatoriScheduleEntry) => {
-    focusProject(entry.project);
   };
 
   const handleToggleTask = (projectId: string, taskId: string) => {
@@ -309,12 +292,6 @@ export default function ProjectsBoard() {
           {error ? <p className="mt-2 text-[11px] opacity-80">{error}</p> : null}
         </div>
       ) : null}
-
-      <ScheduleSummary
-        entries={scheduleEntries}
-        forecast={forecast}
-        onSelect={handleSelectFromSchedule}
-      />
 
       <AwaitingPaymentSummary
         summary={awaitingPaymentSummary}
