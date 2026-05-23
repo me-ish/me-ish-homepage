@@ -1038,6 +1038,39 @@ export type Database = {
         }
         Relationships: []
       }
+      natori_user_profiles: {
+        Row: {
+          user_id: string
+          handle: string | null
+          display_name: string | null
+          portfolio_url: string | null
+          links_url: string | null
+          daily_capacity_hours: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          handle?: string | null
+          display_name?: string | null
+          portfolio_url?: string | null
+          links_url?: string | null
+          daily_capacity_hours?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          handle?: string | null
+          display_name?: string | null
+          portfolio_url?: string | null
+          links_url?: string | null
+          daily_capacity_hours?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       natori_events: {
         Row: {
           id: string

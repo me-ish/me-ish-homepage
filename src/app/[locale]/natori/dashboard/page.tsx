@@ -1,20 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Calculator,
+  ChevronDown,
+  ChevronUp,
   FolderOpen,
   ImageIcon,
   Link2,
   LogIn,
   LogOut,
+  Settings,
   Sparkles,
   User2,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import {
+  fetchOwnNatoriProfile,
+  upsertOwnNatoriProfile,
+  type NatoriUserProfile,
+} from "@/lib/natori/supabaseProfile";
 import { Button } from "@/components/ui/button";
 import Footer from "@/components/natori/Footer";
 
@@ -25,6 +33,7 @@ type DashboardCard = {
   icon: LucideIcon;
   accent: string;
   requiresLogin?: boolean;
+  hrefKey?: "portfolio" | "links";
 };
 
 const CARDS: DashboardCard[] = [
@@ -49,6 +58,7 @@ const CARDS: DashboardCard[] = [
     description: "公開ページ・ギャラリー",
     icon: ImageIcon,
     accent: "from-fuchsia-100 to-fuchsia-50 text-fuchsia-700",
+    hrefKey: "portfolio",
   },
   {
     href: "/natori/links",
@@ -56,6 +66,7 @@ const CARDS: DashboardCard[] = [
     description: "X / TikTok / つなぐ / Skeb など",
     icon: Link2,
     accent: "from-amber-100 to-amber-50 text-amber-700",
+    hrefKey: "links",
   },
 ];
 
@@ -65,13 +76,25 @@ export default function NatoriDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<NatoriUserProfile | null>(null);
 
   const refresh = useCallback(async () => {
     try {
       const supabase = createClient();
       const { data, error: authErr } = await supabase.auth.getUser();
       if (authErr) throw authErr;
-      setEmail(data.user?.email ?? null);
+      const userEmail = data.user?.email ?? null;
+      setEmail(userEmail);
+      if (data.user) {
+        try {
+          const p = await fetchOwnNatoriProfile();
+          setProfile(p);
+        } catch (err) {
+          console.error("[dashboard] profile fetch failed", err);
+        }
+      } else {
+        setProfile(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -84,6 +107,7 @@ export default function NatoriDashboardPage() {
     const supabase = createClient();
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setEmail(session?.user.email ?? null);
+      if (!session) setProfile(null);
     });
     return () => {
       sub.subscription.unsubscribe();
@@ -102,12 +126,29 @@ export default function NatoriDashboardPage() {
       const { error: signOutErr } = await supabase.auth.signOut();
       if (signOutErr) throw signOutErr;
       setEmail(null);
+      setProfile(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSigningOut(false);
     }
   };
+
+  const displayName = profile?.displayName?.trim() || email || null;
+
+  const resolvedCards = useMemo(
+    () =>
+      CARDS.map((card) => {
+        if (card.hrefKey === "portfolio" && profile?.portfolioUrl) {
+          return { ...card, href: profile.portfolioUrl };
+        }
+        if (card.hrefKey === "links" && profile?.linksUrl) {
+          return { ...card, href: profile.linksUrl };
+        }
+        return card;
+      }),
+    [profile]
+  );
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-50/70 via-white to-white">
@@ -126,7 +167,7 @@ export default function NatoriDashboardPage() {
               <>
                 <span className="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 sm:inline-flex">
                   <User2 className="h-3.5 w-3.5" aria-hidden />
-                  {email}
+                  {displayName ?? email}
                 </span>
                 <Button
                   onClick={handleLogout}
@@ -157,14 +198,14 @@ export default function NatoriDashboardPage() {
             <Sparkles className="h-5 w-5" aria-hidden />
           </div>
           <div className="min-w-0">
-            <h1 className="text-2xl font-black text-gray-900 sm:text-3xl">仕事用ダッシュボード</h1>
+            <h1 className="text-2xl font-black text-gray-900 sm:text-3xl">
+              {displayName ? `${displayName} のダッシュボード` : "仕事用ダッシュボード"}
+            </h1>
             <p className="mt-1 text-sm leading-6 text-gray-600">
               案件管理・見積もり・ポートフォリオ・リンク集をここからまとめて開けます。
             </p>
           </div>
         </div>
-
-        {email && email === "info@me-ish.art" ? null : null}
 
         {error ? (
           <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 sm:text-sm">
@@ -182,11 +223,11 @@ export default function NatoriDashboardPage() {
         ) : null}
 
         <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-          {CARDS.map((card) => {
+          {resolvedCards.map((card) => {
             const Icon = card.icon;
             const locked = card.requiresLogin && !email;
             return (
-              <li key={card.href}>
+              <li key={card.title}>
                 <Link
                   href={card.href}
                   className={`group flex items-start gap-3 rounded-2xl border border-pink-100 bg-gradient-to-br ${card.accent} bg-white/80 p-4 shadow-sm transition hover:shadow-md sm:p-5`}
@@ -212,9 +253,186 @@ export default function NatoriDashboardPage() {
             );
           })}
         </ul>
+
+        {email ? (
+          <ProfileSettingsPanel
+            profile={profile}
+            onSaved={(next) => setProfile(next)}
+          />
+        ) : null}
       </section>
 
       <Footer />
     </main>
+  );
+}
+
+function ProfileSettingsPanel({
+  profile,
+  onSaved,
+}: {
+  profile: NatoriUserProfile | null;
+  onSaved: (next: NatoriUserProfile) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [displayName, setDisplayName] = useState(profile?.displayName ?? "");
+  const [handle, setHandle] = useState(profile?.handle ?? "");
+  const [portfolioUrl, setPortfolioUrl] = useState(profile?.portfolioUrl ?? "");
+  const [linksUrl, setLinksUrl] = useState(profile?.linksUrl ?? "");
+  const [dailyCapacity, setDailyCapacity] = useState<string>(
+    profile?.dailyCapacityHours != null ? String(profile.dailyCapacityHours) : ""
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setDisplayName(profile?.displayName ?? "");
+    setHandle(profile?.handle ?? "");
+    setPortfolioUrl(profile?.portfolioUrl ?? "");
+    setLinksUrl(profile?.linksUrl ?? "");
+    setDailyCapacity(
+      profile?.dailyCapacityHours != null ? String(profile.dailyCapacityHours) : ""
+    );
+  }, [profile]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    try {
+      const dailyNum = dailyCapacity.trim() === "" ? null : Number(dailyCapacity);
+      if (dailyNum !== null && (!Number.isFinite(dailyNum) || dailyNum < 0 || dailyNum > 24)) {
+        throw new Error("1日の作業時間は0〜24の範囲で入力してください。");
+      }
+      const next = await upsertOwnNatoriProfile({
+        handle: handle.trim() || null,
+        displayName: displayName.trim() || null,
+        portfolioUrl: portfolioUrl.trim() || null,
+        linksUrl: linksUrl.trim() || null,
+        dailyCapacityHours: dailyNum,
+      });
+      onSaved(next);
+      setSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="mt-6 rounded-2xl border border-pink-100 bg-white shadow-sm">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 rounded-2xl p-3 text-left hover:bg-pink-50/40 sm:p-4"
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gray-900 text-white">
+            <Settings className="h-4 w-4" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-gray-900">プロフィール設定</p>
+            <p className="mt-0.5 text-xs text-gray-600">
+              表示名・ポートフォリオ・リンク集のリンク先・1日の作業時間など、自分の情報を保存します。
+            </p>
+          </div>
+        </div>
+        <span className="shrink-0 text-gray-500">
+          {open ? <ChevronUp className="h-5 w-5" aria-hidden /> : <ChevronDown className="h-5 w-5" aria-hidden />}
+        </span>
+      </button>
+
+      {open ? (
+        <div className="border-t border-pink-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block text-sm">
+              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">表示名</span>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                placeholder="例: ナトリ"
+                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+                ハンドル（任意 / 将来のURL用）
+              </span>
+              <input
+                type="text"
+                value={handle}
+                onChange={(event) => setHandle(event.target.value)}
+                placeholder="例: natori"
+                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              />
+            </label>
+            <label className="block text-sm sm:col-span-2">
+              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+                ポートフォリオのリンク先
+              </span>
+              <input
+                type="text"
+                value={portfolioUrl}
+                onChange={(event) => setPortfolioUrl(event.target.value)}
+                placeholder="/natori または https://..."
+                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              />
+            </label>
+            <label className="block text-sm sm:col-span-2">
+              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+                リンク集のリンク先
+              </span>
+              <input
+                type="text"
+                value={linksUrl}
+                onChange={(event) => setLinksUrl(event.target.value)}
+                placeholder="/natori/links または https://..."
+                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+                1日の作業時間（h）
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={24}
+                step="0.5"
+                value={dailyCapacity}
+                onChange={(event) => setDailyCapacity(event.target.value)}
+                placeholder="例: 5"
+                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              />
+            </label>
+          </div>
+
+          {error ? (
+            <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+              {error}
+            </p>
+          ) : null}
+          {saved ? (
+            <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
+              保存しました。
+            </p>
+          ) : null}
+
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="h-10 rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60"
+            >
+              {saving ? "保存中…" : "保存"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 }
