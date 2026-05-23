@@ -10,7 +10,11 @@ import {
   isProjectOverdue,
 } from "@/lib/natori/projects";
 import { getDeliveryPlanMeta } from "@/lib/natori/deliveryPlans";
-import { computeProjectScheduling, formatHours } from "@/lib/natori/scheduling";
+import {
+  computeProjectScheduling,
+  formatHours,
+  getCurrentStagePlan,
+} from "@/lib/natori/scheduling";
 import { cn } from "@/lib/utils";
 import ProjectTaskChecklist from "./ProjectTaskChecklist";
 import type { NatoriProject } from "@/types/natori/projects";
@@ -39,6 +43,10 @@ function formatDueDate(value: string) {
   return dueDateFormatter.format(date);
 }
 
+function formatStageMilestone(value: string) {
+  return formatDueDate(value);
+}
+
 const priorityChipMap: Record<NonNullable<NatoriProject["priority"]>, { label: string; className: string }> = {
   high: { label: "優先度：高", className: "border-red-300 bg-red-50 text-red-800" },
   normal: { label: "優先度：中", className: "border-gray-300 bg-gray-50 text-gray-700" },
@@ -59,6 +67,7 @@ export default function ProjectCard({
   const deliveryPlanMeta = getDeliveryPlanMeta(project.deliveryPlan);
   const isRush = deliveryPlanMeta.isRush;
   const scheduling = computeProjectScheduling(project, today);
+  const stagePlan = getCurrentStagePlan(project, today);
 
   return (
     <Card
@@ -189,6 +198,47 @@ export default function ProjectCard({
             </div>
           )}
         </div>
+
+        {stagePlan ? (
+          <div
+            className={cn(
+              "rounded-2xl border p-3 text-xs sm:text-sm",
+              stagePlan.isOverdueMilestone
+                ? "border-red-200 bg-red-50 text-red-900"
+                : cn("border-transparent", natoriStageMeta[stagePlan.stage].softClassName)
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wide opacity-80">
+              <span>現在のステージ</span>
+              <span
+                className={cn(
+                  "rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                  natoriStageMeta[stagePlan.stage].chipClassName
+                )}
+              >
+                {natoriStageMeta[stagePlan.stage].label}
+              </span>
+            </div>
+            <div className="mt-1 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-[10px] opacity-70">残</p>
+                <p className="text-sm font-black">{formatHours(stagePlan.remainingHours)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] opacity-70">平日1日</p>
+                <p className="text-sm font-black">{formatHours(stagePlan.requiredPerDay)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] opacity-70">今週の枠</p>
+                <p className="text-sm font-black">{formatHours(stagePlan.requiredThisWeek)}</p>
+              </div>
+            </div>
+            <p className="mt-1 text-[10px] opacity-80">
+              目安: {formatStageMilestone(stagePlan.milestoneDateISO)}
+              {stagePlan.isOverdueMilestone ? "（過ぎてます）" : ""}
+            </p>
+          </div>
+        ) : null}
 
         {project.note ? (
           <p className="break-words text-sm leading-6 text-gray-700">{project.note}</p>

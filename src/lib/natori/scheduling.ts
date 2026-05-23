@@ -1,8 +1,10 @@
 import { getDeliveryPlanMeta } from "@/lib/natori/deliveryPlans";
 import {
+  computeStageMilestones,
   daysUntilDue,
   isDoneStatus,
   parseISODate,
+  startOfDay,
 } from "@/lib/natori/projects";
 import type {
   NatoriProject,
@@ -231,6 +233,79 @@ export function getWeeklyForecast(
     dailyCapacityHours,
     rushRequiredThisWeek,
     blockedHours,
+  };
+}
+
+export type NatoriStagePlan = {
+  stage: NatoriTaskStage;
+  remainingHours: number;
+  totalHours: number;
+  milestoneDateISO: string;
+  workableDaysUntilMilestone: number;
+  requiredPerDay: number;
+  requiredThisWeek: number;
+  isOverdueMilestone: boolean;
+};
+
+/**
+ * Returns the breakdown for the project's currently-active stage (the first
+ * stage with undone tasks), or null if the project is done or blocked.
+ * Useful when the user wants to see "ラフ にあと 3h / 今週ラフ枠 X" instead
+ * of the whole-project average.
+ */
+export function getCurrentStagePlan(
+  project: NatoriProject,
+  today: Date,
+  options: NatoriScheduleOptions = {}
+): NatoriStagePlan | null {
+  if (isDoneStatus(project.status)) return null;
+  if (isBlockedStatus(project.status)) return null;
+
+  const milestones = computeStageMilestones(project);
+  if (milestones.length === 0) return null;
+
+  const currentMilestone = milestones.find((milestone) =>
+    project.tasks.some((task) => task.stage === milestone.stage && !task.done)
+  );
+  if (!currentMilestone) return null;
+
+  const stageTasks = project.tasks.filter(
+    (task) => task.stage === currentMilestone.stage
+  );
+  const totalHours = stageTasks.reduce((sum, task) => sum + getTaskHours(task), 0);
+  const remainingHours = stageTasks
+    .filter((task) => !task.done)
+    .reduce((sum, task) => sum + getTaskHours(task), 0);
+
+  const weekdaysOnly = options.weekdaysOnly ?? DEFAULT_WEEKDAYS_ONLY;
+  const milestoneDate = parseISODate(currentMilestone.dateISO);
+  const todayStart = startOfDay(today);
+  const isOverdueMilestone = milestoneDate.getTime() < todayStart.getTime();
+  // If the stage milestone is already in the past, treat "today" as the effective
+  // deadline so the per-day pressure shows up as the full remaining amount.
+  const effectiveMilestoneDate = isOverdueMilestone ? todayStart : milestoneDate;
+  const calendarGap = Math.max(
+    1,
+    Math.round((effectiveMilestoneDate.getTime() - todayStart.getTime()) / 86_400_000)
+  );
+  const workable = weekdaysOnly
+    ? Math.max(1, countWeekdaysInRange(today, effectiveMilestoneDate))
+    : calendarGap;
+
+  const requiredPerDay = remainingHours / workable;
+  const weekWindow = weekdaysOnly ? WORKDAYS_PER_WEEK : WEEK_LENGTH_DAYS;
+  const daysThisWeek = Math.min(weekWindow, workable);
+  const requiredThisWeek = Math.min(remainingHours, requiredPerDay * daysThisWeek);
+
+  return {
+    stage: currentMilestone.stage,
+    remainingHours,
+    totalHours,
+    milestoneDateISO: currentMilestone.dateISO,
+    workableDaysUntilMilestone: workable,
+    requiredPerDay,
+    requiredThisWeek,
+    isOverdueMilestone,
   };
 }
 

@@ -8,6 +8,7 @@ import {
   computeProjectScheduling,
   formatHours,
   getAwaitingPaymentSummary,
+  getCurrentStagePlan,
   getProjectRemainingHours,
   getProjectTotalHours,
   getScheduleEntries,
@@ -238,6 +239,64 @@ describe("getWeeklyForecast", () => {
     const entries = getScheduleEntries(projects, TODAY, { dailyCapacityHours: 3 });
     const forecast = getWeeklyForecast(entries, { dailyCapacityHours: 3 });
     expect(forecast.capacityThisWeek).toBe(15); // 3h/day * 5平日
+  });
+});
+
+describe("getCurrentStagePlan", () => {
+  it("returns the first stage with undone tasks and its weekday-aware breakdown", () => {
+    const project = buildProject({
+      type: "illustration",
+      status: "rough",
+      startDate: "2026-05-22",
+      dueDate: "2026-06-21",
+      tasks: createTasksForType("illustration"),
+    });
+    const plan = getCurrentStagePlan(project, TODAY);
+    expect(plan).not.toBeNull();
+    expect(plan!.stage).toBe("material");
+    expect(plan!.remainingHours).toBe(1);
+    expect(plan!.requiredPerDay).toBeGreaterThan(0);
+    expect(plan!.requiredThisWeek).toBeGreaterThan(0);
+    expect(plan!.isOverdueMilestone).toBe(false);
+  });
+
+  it("advances to the next stage once earlier stages are fully done", () => {
+    const tasks = createTasksForType("illustration").map((task) =>
+      task.stage === "material" || task.stage === "rough"
+        ? { ...task, done: true }
+        : task
+    );
+    const project = buildProject({
+      type: "illustration",
+      status: "lineart",
+      startDate: "2026-05-22",
+      dueDate: "2026-06-21",
+      tasks,
+    });
+    const plan = getCurrentStagePlan(project, TODAY);
+    expect(plan!.stage).toBe("lineart");
+    expect(plan!.remainingHours).toBe(5);
+  });
+
+  it("returns null for blocked or completed projects", () => {
+    const blocked = buildProject({ status: "awaiting_payment", dueDate: "2026-06-21" });
+    expect(getCurrentStagePlan(blocked, TODAY)).toBeNull();
+    const done = buildProject({ status: "completed", dueDate: "2026-06-21" });
+    expect(getCurrentStagePlan(done, TODAY)).toBeNull();
+  });
+
+  it("flags isOverdueMilestone when the stage target date has already passed", () => {
+    const project = buildProject({
+      type: "icon",
+      status: "rough",
+      startDate: "2026-04-15",
+      dueDate: "2026-05-15", // already past TODAY=2026-05-22
+      tasks: createTasksForType("icon"),
+    });
+    const plan = getCurrentStagePlan(project, TODAY);
+    expect(plan).not.toBeNull();
+    expect(plan!.isOverdueMilestone).toBe(true);
+    expect(plan!.requiredPerDay).toBeGreaterThan(0);
   });
 });
 
