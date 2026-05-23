@@ -2,13 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import ProjectsBoard from "@/components/natori/dashboard/ProjectsBoard";
 import Footer from "@/components/natori/Footer";
+import { requireNatoriAdmin } from "@/lib/natori/requireNatoriAdmin";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Natori Projects | me-ish",
   description: "ナトリ先生の制作案件を軽く確認するための、スマホ向け案件一覧ページです。",
 };
 
-export default function NatoriProjectsPage() {
+export default async function NatoriProjectsPage() {
+  await requireNatoriAdmin("/natori/projects");
+
   return (
     <main className="min-h-screen bg-white">
       <section className="border-b border-gray-200 bg-white">

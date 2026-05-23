@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { requireNatoriAdmin } from "@/lib/natori/requireNatoriAdmin";
+
+export const dynamic = "force-dynamic";
 
 // Override the site-wide manifest so that "Add to Home Screen" from the
 // Natori dashboard lands back on the dashboard (and not the site root).
@@ -14,10 +17,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function NatoriDashboardLayout({
+export default async function NatoriDashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  await requireNatoriAdmin("/natori/dashboard");
+
+  return <>{children}</>;
 }
