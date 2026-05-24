@@ -31,6 +31,7 @@ import ProjectMonthCalendar from "./ProjectMonthCalendar";
 import ProjectDayDetail from "./ProjectDayDetail";
 import ProjectPriorityList from "./ProjectPriorityList";
 import AwaitingPaymentSummary from "./AwaitingPaymentSummary";
+import ProjectRegisterForm from "./ProjectRegisterForm";
 
 type ViewMonth = { year: number; monthIndex: number };
 
@@ -356,6 +357,19 @@ export default function ProjectsBoard() {
           </button>
           {error ? <p className="mt-2 text-[11px] opacity-80">{error}</p> : null}
         </div>
+      ) : null}
+
+      {authed ? (
+        <ProjectRegisterForm
+          mode="manual"
+          onCreated={() => {
+            if (dataSource === "supabase") {
+              loadFromSupabase().catch((err) => {
+                console.error("[ProjectsBoard] reload after register failed", err);
+              });
+            }
+          }}
+        />
       ) : null}
 
       <AwaitingPaymentSummary

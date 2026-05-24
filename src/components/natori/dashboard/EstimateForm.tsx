@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import type { ReactNode } from "react";
-import { AlertTriangle, Calculator, CheckCircle2, ChevronDown, ChevronUp, Clipboard, FolderPlus, RotateCcw, Save, Zap } from "lucide-react";
+import { AlertTriangle, Calculator, CheckCircle2, ChevronDown, ChevronUp, Clipboard, RotateCcw, Save, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { createDefaultNatoriPricingConfig, createNatoriEstimate, formatYen } from "@/lib/natori/pricing";
@@ -14,7 +13,6 @@ import {
   calculateDueDate,
 } from "@/lib/natori/deliveryPlans";
 import { toISODate } from "@/lib/natori/projects";
-import { createNatoriProject } from "@/lib/natori/supabaseProjects";
 import {
   fetchOwnPricingPresets,
   seedDefaultPricingPresets,
@@ -23,9 +21,9 @@ import {
 } from "@/lib/natori/supabasePricing";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import ProjectRegisterForm from "@/components/natori/dashboard/ProjectRegisterForm";
 import type {
   NatoriDeliveryPlan,
-  NatoriProjectStatus,
   NatoriProjectType,
 } from "@/types/natori/projects";
 import type {
@@ -40,19 +38,6 @@ const CATEGORY_TO_TYPE: Record<NatoriEstimateCategory, NatoriProjectType> = {
   waist_up: "sd",
   full_body: "standing",
 };
-
-const PROJECT_TYPE_LABELS: Record<NatoriProjectType, string> = {
-  icon: "アイコン",
-  sd: "SD",
-  standing: "立ち絵",
-  illustration: "イラスト",
-};
-
-const INITIAL_STATUS_OPTIONS: Array<{ value: NatoriProjectStatus; label: string }> = [
-  { value: "consulting", label: "相談中" },
-  { value: "quoted", label: "見積もり済" },
-  { value: "awaiting_payment", label: "入金待ち" },
-];
 
 export default function EstimateForm() {
   const [requestText, setRequestText] = useState("");
@@ -274,11 +259,19 @@ export default function EstimateForm() {
               </p>
             </div>
 
-            <ConvertToProject
-              estimate={estimate}
-              deliveryPlan={deliveryPlan}
-              startDateISO={startDateISO}
-              dueDateISO={dueDateISO}
+            <ProjectRegisterForm
+              mode="estimate"
+              defaults={{
+                title: `${estimate.category.label}の案件`,
+                type: CATEGORY_TO_TYPE[estimate.category.id],
+                amount: estimate.total,
+                deliveryPlan,
+                startDateISO,
+                dueDateISO,
+                note: buildProjectNoteFromEstimate(estimate),
+              }}
+              fixedAmount
+              fixedDeliveryPlan
             />
 
             <ResultBlock
@@ -524,198 +517,6 @@ function formatHumanDate(iso: string): string {
     day: "numeric",
     weekday: "short",
   }).format(date);
-}
-
-function ConvertToProject({
-  estimate,
-  deliveryPlan,
-  startDateISO,
-  dueDateISO,
-}: {
-  estimate: NatoriEstimateResult;
-  deliveryPlan: NatoriDeliveryPlan;
-  startDateISO: string;
-  dueDateISO: string;
-}) {
-  const defaultType: NatoriProjectType = CATEGORY_TO_TYPE[estimate.category.id];
-  const defaultTitle = `${estimate.category.label}の案件`;
-
-  const [open, setOpen] = useState(false);
-  const [clientName, setClientName] = useState("");
-  const [title, setTitle] = useState(defaultTitle);
-  const [type, setType] = useState<NatoriProjectType>(defaultType);
-  const [status, setStatus] = useState<NatoriProjectStatus>("quoted");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [createdId, setCreatedId] = useState<string | null>(null);
-
-  // Re-default when the estimate category changes (user toggled inputs).
-  useEffect(() => {
-    setTitle(`${estimate.category.label}の案件`);
-    setType(CATEGORY_TO_TYPE[estimate.category.id]);
-    setCreatedId(null);
-    setError(null);
-  }, [estimate.category.id, estimate.category.label]);
-
-  const note = useMemo(() => buildProjectNoteFromEstimate(estimate), [estimate]);
-
-  const handleSubmit = async () => {
-    if (!clientName.trim() || !title.trim()) return;
-    setSubmitting(true);
-    setError(null);
-    setCreatedId(null);
-    try {
-      const id = await createNatoriProject({
-        title: title.trim(),
-        clientName: clientName.trim(),
-        amount: estimate.total,
-        type,
-        status,
-        deliveryPlan,
-        startDateISO: startDateISO || undefined,
-        dueDateISO: dueDateISO || undefined,
-        nextAction:
-          status === "quoted"
-            ? "返信待ち"
-            : status === "awaiting_payment"
-            ? "入金確認"
-            : "依頼内容の確認",
-        note,
-      });
-      setCreatedId(id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="rounded-2xl border border-pink-200 bg-pink-50/60 p-4 sm:p-5">
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 text-left"
-      >
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-pink-500 text-white">
-            <FolderPlus className="h-4 w-4" aria-hidden />
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-black text-pink-900">この見積もりを案件化</p>
-            <p className="text-xs text-pink-800/80">
-              依頼者名・タイトル・タイプを確認して案件管理に追加します。
-            </p>
-          </div>
-        </div>
-        <span className="shrink-0 text-pink-700">
-          {open ? <ChevronUp className="h-5 w-5" aria-hidden /> : <ChevronDown className="h-5 w-5" aria-hidden />}
-        </span>
-      </button>
-
-      {open ? (
-        createdId ? (
-          <div className="mt-4 rounded-xl border border-emerald-300 bg-white p-3 text-sm text-emerald-900 sm:p-4">
-            <p className="font-black">案件管理に追加しました。</p>
-            <p className="mt-1 text-xs leading-5">
-              案件カレンダーから内容を確認できます。
-            </p>
-            <Link
-              href="/natori/projects"
-              className="mt-2 inline-flex h-9 items-center rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600"
-            >
-              案件カレンダーを開く
-            </Link>
-          </div>
-        ) : (
-          <div className="mt-4 space-y-3">
-            <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
-                依頼者名（必須）
-              </span>
-              <input
-                type="text"
-                value={clientName}
-                onChange={(event) => setClientName(event.target.value)}
-                placeholder="例: 月乃さん"
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
-                案件タイトル
-              </span>
-              <input
-                type="text"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
-              />
-            </label>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block text-sm">
-                <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
-                  案件タイプ
-                </span>
-                <select
-                  value={type}
-                  onChange={(event) => setType(event.target.value as NatoriProjectType)}
-                  className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
-                >
-                  {(Object.keys(PROJECT_TYPE_LABELS) as NatoriProjectType[]).map((value) => (
-                    <option key={value} value={value}>
-                      {PROJECT_TYPE_LABELS[value]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-sm">
-                <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
-                  初期ステータス
-                </span>
-                <select
-                  value={status}
-                  onChange={(event) => setStatus(event.target.value as NatoriProjectStatus)}
-                  className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
-                >
-                  {INITIAL_STATUS_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="rounded-xl border border-pink-100 bg-white p-3 text-xs leading-5 text-pink-900">
-              <p>
-                <span className="font-bold">金額:</span> {formatYen(estimate.total)}
-              </p>
-              <p>
-                <span className="font-bold">納期プラン:</span>{" "}
-                {NATORI_DELIVERY_PLANS[deliveryPlan].label}
-              </p>
-              <p>
-                <span className="font-bold">納期:</span> {dueDateISO || "—"}
-              </p>
-            </div>
-            {error ? (
-              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
-                {error}
-              </p>
-            ) : null}
-            <Button
-              onClick={handleSubmit}
-              disabled={submitting || !clientName.trim() || !title.trim()}
-              className="h-11 w-full rounded-full bg-pink-500 px-5 text-sm font-bold text-white hover:bg-pink-600 disabled:opacity-60 sm:w-auto"
-            >
-              {submitting ? "追加中…" : "案件管理に追加"}
-            </Button>
-          </div>
-        )
-      ) : null}
-    </div>
-  );
 }
 
 function buildProjectNoteFromEstimate(estimate: NatoriEstimateResult): string {
