@@ -37,7 +37,7 @@ const CARDS: DashboardCard[] = [
   {
     href: "/natori/projects",
     title: "案件管理",
-    description: "ログイン済みの関係者向けのカレンダー・スケジュール・タスクチェック",
+    description: "カレンダー・スケジュール・タスクチェック",
     icon: FolderOpen,
     accent: "from-pink-100 to-pink-50 text-pink-700",
   },
