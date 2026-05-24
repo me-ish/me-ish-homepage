@@ -16,7 +16,9 @@ import {
   fetchNatoriProjects,
   seedNatoriDemoProjects,
   toggleNatoriTaskDone,
+  updateNatoriProjectDetails,
   updateNatoriProjectStatus,
+  type UpdateNatoriProjectDetailsInput,
 } from "@/lib/natori/supabaseProjects";
 import {
   createNatoriEvent,
@@ -249,6 +251,48 @@ export default function ProjectsBoard() {
     }
   };
 
+  const handleEditDetails = async (
+    project: NatoriProject,
+    patch: UpdateNatoriProjectDetailsInput
+  ) => {
+    // Apply optimistically so the card snaps to the new values; if the API
+    // rejects, the catch block below restores from Supabase by re-fetching.
+    setProjects((current) =>
+      current.map((entry) => {
+        if (entry.id !== project.id) return entry;
+        return {
+          ...entry,
+          ...(patch.clientName !== undefined ? { clientName: patch.clientName.trim() } : null),
+          ...(patch.title !== undefined ? { title: patch.title.trim() } : null),
+          ...(patch.type !== undefined ? { type: patch.type } : null),
+          ...(patch.amount !== undefined
+            ? { amount: Math.max(0, Math.round(patch.amount)) }
+            : null),
+          ...(patch.deliveryPlan !== undefined ? { deliveryPlan: patch.deliveryPlan } : null),
+          ...(patch.startDate !== undefined
+            ? { startDate: patch.startDate ?? undefined }
+            : null),
+          ...(patch.dueDate !== undefined ? { dueDate: patch.dueDate } : null),
+          ...(patch.note !== undefined ? { note: patch.note ?? undefined } : null),
+        };
+      })
+    );
+
+    if (dataSource !== "supabase") return;
+    try {
+      await updateNatoriProjectDetails(project.id, patch);
+    } catch (err) {
+      console.error("[ProjectsBoard] edit details failed", err);
+      // Re-sync from the server so the optimistic state doesn't drift.
+      try {
+        await loadFromSupabase();
+      } catch (reloadErr) {
+        console.error("[ProjectsBoard] reload after edit failure failed", reloadErr);
+      }
+      throw err;
+    }
+  };
+
   const handleCreateEvent = async (input: { title: string; date: string; note?: string }) => {
     if (!authed) {
       setEventsError("ログインが必要です。");
@@ -405,6 +449,7 @@ export default function ProjectsBoard() {
         onToggleTask={handleToggleTask}
         onAdvanceStatus={handleAdvanceStatus}
         onConfirmPayment={handleConfirmPayment}
+        onEditDetails={handleEditDetails}
         advanceBusyId={advanceBusyId}
         events={events}
         authed={authed}

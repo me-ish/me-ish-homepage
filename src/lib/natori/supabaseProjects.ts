@@ -154,6 +154,131 @@ export async function confirmNatoriProjectPayment(
   });
 }
 
+/**
+ * Patch payload for editing the basic info of an existing project. Status,
+ * next_action, payment_confirmed_at, and any task data are intentionally
+ * excluded: status moves through the dedicated progress / confirm-payment
+ * actions, not this generic editor.
+ */
+export type UpdateNatoriProjectDetailsInput = {
+  clientName?: string;
+  title?: string;
+  type?: NatoriProjectType;
+  amount?: number;
+  deliveryPlan?: NatoriDeliveryPlan;
+  startDate?: string | null;
+  dueDate?: string;
+  note?: string | null;
+};
+
+export class NatoriProjectDetailsValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NatoriProjectDetailsValidationError";
+  }
+}
+
+const NATORI_PROJECT_TYPES: NatoriProjectType[] = ["icon", "sd", "standing", "illustration"];
+const NATORI_DELIVERY_PLANS_VALUES: NatoriDeliveryPlan[] = [
+  "normal",
+  "rush_14_days",
+  "rush_7_days",
+];
+
+function isValidISODate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [y, m, d] = value.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return (
+    date.getFullYear() === y &&
+    date.getMonth() === m - 1 &&
+    date.getDate() === d
+  );
+}
+
+/**
+ * Normalizes raw form input into the row-shaped patch that gets sent to the
+ * API. Pure function so it can be unit-tested without Supabase or React.
+ *
+ * - Trims string fields, rejects empty client_name / title.
+ * - Clamps amount to a non-negative integer.
+ * - Drops fields the caller did not supply (so PATCH is sparse).
+ * - Forbids status / next_action / payment_confirmed_at from ever appearing.
+ */
+export function normalizeNatoriProjectDetailsPatch(
+  input: UpdateNatoriProjectDetailsInput
+): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+
+  if (input.clientName !== undefined) {
+    const trimmed = input.clientName.trim();
+    if (!trimmed) throw new NatoriProjectDetailsValidationError("依頼者名は必須です。");
+    patch.client_name = trimmed;
+  }
+  if (input.title !== undefined) {
+    const trimmed = input.title.trim();
+    if (!trimmed) throw new NatoriProjectDetailsValidationError("案件タイトルは必須です。");
+    patch.title = trimmed;
+  }
+  if (input.type !== undefined) {
+    if (!NATORI_PROJECT_TYPES.includes(input.type)) {
+      throw new NatoriProjectDetailsValidationError("案件タイプが不正です。");
+    }
+    patch.type = input.type;
+  }
+  if (input.amount !== undefined) {
+    if (!Number.isFinite(input.amount) || input.amount < 0) {
+      throw new NatoriProjectDetailsValidationError("金額は0以上の数値で指定してください。");
+    }
+    patch.amount = Math.round(input.amount);
+  }
+  if (input.deliveryPlan !== undefined) {
+    if (!NATORI_DELIVERY_PLANS_VALUES.includes(input.deliveryPlan)) {
+      throw new NatoriProjectDetailsValidationError("納期プランが不正です。");
+    }
+    patch.delivery_plan = input.deliveryPlan;
+  }
+  if (input.startDate !== undefined) {
+    if (input.startDate === null || input.startDate === "") {
+      patch.start_date = null;
+    } else {
+      if (!isValidISODate(input.startDate)) {
+        throw new NatoriProjectDetailsValidationError("開始日が日付として不正です。");
+      }
+      patch.start_date = input.startDate;
+    }
+  }
+  if (input.dueDate !== undefined) {
+    if (!isValidISODate(input.dueDate)) {
+      throw new NatoriProjectDetailsValidationError("納期が日付として不正です。");
+    }
+    patch.due_date = input.dueDate;
+  }
+  if (input.note !== undefined) {
+    if (input.note === null) {
+      patch.note = null;
+    } else {
+      const trimmed = input.note.trim();
+      patch.note = trimmed ? trimmed : null;
+    }
+  }
+
+  return patch;
+}
+
+export async function updateNatoriProjectDetails(
+  projectId: string,
+  input: UpdateNatoriProjectDetailsInput
+): Promise<void> {
+  const patch = normalizeNatoriProjectDetailsPatch(input);
+  if (Object.keys(patch).length === 0) return;
+  await patchNatoriAdminProject({
+    kind: "project-details",
+    projectId,
+    patch,
+  });
+}
+
 export type CreateNatoriProjectInput = {
   title: string;
   clientName: string;

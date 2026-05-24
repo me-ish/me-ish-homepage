@@ -1,8 +1,11 @@
 "use client";
 
-import { ArrowRight, CalendarDays, CircleDollarSign, Clock4, Sparkles, AlertTriangle, Wallet, Zap } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, CalendarDays, CircleDollarSign, Clock4, Pencil, Sparkles, AlertTriangle, Wallet, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import ProjectEditForm from "./ProjectEditForm";
+import type { UpdateNatoriProjectDetailsInput } from "@/lib/natori/supabaseProjects";
 import { natoriProjectStatusMeta, natoriStageMeta } from "@/lib/natori/mockProjects";
 import {
   daysUntilDue,
@@ -27,6 +30,10 @@ type ProjectCardProps = {
   onToggleTask: (projectId: string, taskId: string) => void;
   onAdvanceStatus?: (project: NatoriProject) => void;
   onConfirmPayment?: (project: NatoriProject) => void;
+  onEditDetails?: (
+    project: NatoriProject,
+    patch: UpdateNatoriProjectDetailsInput
+  ) => Promise<void>;
   advanceBusy?: boolean;
 };
 
@@ -64,8 +71,10 @@ export default function ProjectCard({
   onToggleTask,
   onAdvanceStatus,
   onConfirmPayment,
+  onEditDetails,
   advanceBusy,
 }: ProjectCardProps) {
+  const [editing, setEditing] = useState(false);
   const status = natoriProjectStatusMeta[project.status];
   const overdue = isProjectOverdue(project, today);
   const days = daysUntilDue(project.dueDate, today);
@@ -252,6 +261,30 @@ export default function ProjectCard({
         ) : null}
 
         <ProjectTaskChecklist project={project} onToggle={onToggleTask} />
+
+        {onEditDetails ? (
+          editing ? (
+            <ProjectEditForm
+              project={project}
+              onCancel={() => setEditing(false)}
+              onSave={async (patch) => {
+                await onEditDetails(project, patch);
+                setEditing(false);
+              }}
+            />
+          ) : (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="inline-flex h-8 items-center gap-1 rounded-full border border-pink-200 bg-white px-3 text-[11px] font-bold text-pink-700 hover:bg-pink-50"
+              >
+                <Pencil className="h-3 w-3" aria-hidden />
+                編集
+              </button>
+            </div>
+          )
+        ) : null}
       </CardContent>
     </Card>
   );

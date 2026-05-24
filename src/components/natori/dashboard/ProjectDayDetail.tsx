@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import ProjectCard from "./ProjectCard";
 import PersonalEventsSection from "./PersonalEventsSection";
 import type { NatoriEvent } from "@/lib/natori/supabaseEvents";
+import type { UpdateNatoriProjectDetailsInput } from "@/lib/natori/supabaseProjects";
 import type { NatoriProject } from "@/types/natori/projects";
 
 function computeStickyProjectIds(
@@ -38,6 +39,10 @@ type ProjectDayDetailProps = {
   onToggleTask: (projectId: string, taskId: string) => void;
   onAdvanceStatus?: (project: NatoriProject) => void;
   onConfirmPayment?: (project: NatoriProject) => void;
+  onEditDetails?: (
+    project: NatoriProject,
+    patch: UpdateNatoriProjectDetailsInput
+  ) => Promise<void>;
   advanceBusyId?: string | null;
   events: NatoriEvent[];
   authed: boolean;
@@ -58,6 +63,7 @@ export default function ProjectDayDetail({
   onToggleTask,
   onAdvanceStatus,
   onConfirmPayment,
+  onEditDetails,
   advanceBusyId,
   events,
   authed,
@@ -188,6 +194,7 @@ export default function ProjectDayDetail({
                 onToggleTask={onToggleTask}
                 onAdvanceStatus={onAdvanceStatus}
                 onConfirmPayment={onConfirmPayment}
+                onEditDetails={onEditDetails}
                 advanceBusy={advanceBusyId === project.id}
               />
             ))}

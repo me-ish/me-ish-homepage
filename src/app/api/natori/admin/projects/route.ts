@@ -162,6 +162,50 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  // Generic editor for the project's basic info (依頼者名・タイトル・金額・納期
+  // など). Status / next_action / payment_confirmed_at are stripped server-side
+  // so this kind cannot be misused to skip the inquiry → … → rough flow.
+  if (kind === "project-details") {
+    const patch = isObject(payload.patch) ? payload.patch : null;
+    if (!patch) {
+      return NextResponse.json({ error: "patch is required" }, { status: 400 });
+    }
+
+    const allowed = new Set([
+      "client_name",
+      "title",
+      "type",
+      "amount",
+      "delivery_plan",
+      "start_date",
+      "due_date",
+      "note",
+    ]);
+    const update: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(patch)) {
+      if (allowed.has(key)) update[key] = value;
+    }
+    if (Object.keys(update).length === 0) {
+      return NextResponse.json({ error: "No editable fields supplied" }, { status: 400 });
+    }
+
+    const { data, error } = await (admin as any)
+      .from("natori_projects")
+      .update(update)
+      .eq("id", projectId)
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      console.error("[natori-admin-projects] details update failed", error);
+      return NextResponse.json({ error: "Failed to update project" }, { status: 500 });
+    }
+    if (!data) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   // "入金確認してラフ開始" button: stamps payment_confirmed_at and advances
   // status to `rough` so the project starts pressuring the production
   // schedule. If the payment_confirmed_at column does not exist yet (older
