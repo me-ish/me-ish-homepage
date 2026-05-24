@@ -141,33 +141,56 @@ export function isDoneStatus(status: NatoriProjectStatus): boolean {
   return status === "delivered" || status === "completed";
 }
 
+// キャラクター系 3 タイプ（胸上 / 膝〜腰上 / 全身）の共通タスクテンプレ。
+// ラフ作成 → ラフ提出 → 線画 → 着彩 → 最終確認 → 納品 の 6 工程で統一する。
+// 表情差分は本人の運用ヒアリングで除外。納期負荷の違いは estimatedHours で吸収。
+function createCharacterTasks(hours: {
+  roughCreate: number;
+  roughSubmit: number;
+  lineart: number;
+  color: number;
+  review: number;
+  delivery: number;
+}): NatoriProjectTask[] {
+  return [
+    { id: "rough", label: "ラフ作成", stage: "rough", done: false, estimatedHours: hours.roughCreate },
+    { id: "rough-submit", label: "ラフ提出", stage: "rough", done: false, estimatedHours: hours.roughSubmit },
+    { id: "lineart", label: "線画", stage: "lineart", done: false, estimatedHours: hours.lineart },
+    { id: "color", label: "着彩", stage: "coloring", done: false, estimatedHours: hours.color },
+    { id: "review", label: "最終確認", stage: "finish", done: false, estimatedHours: hours.review },
+    { id: "delivery", label: "納品", stage: "delivery", done: false, estimatedHours: hours.delivery },
+  ];
+}
+
 export function createTasksForType(type: NatoriProjectType): NatoriProjectTask[] {
   switch (type) {
     case "icon":
-      return [
-        { id: "rough", label: "ラフ", stage: "rough", done: false, estimatedHours: 1 },
-        { id: "lineart", label: "清書", stage: "lineart", done: false, estimatedHours: 1 },
-        { id: "color", label: "着彩", stage: "coloring", done: false, estimatedHours: 1.5 },
-        { id: "delivery", label: "納品", stage: "delivery", done: false, estimatedHours: 0.5 },
-      ];
+      return createCharacterTasks({
+        roughCreate: 1,
+        roughSubmit: 0.5,
+        lineart: 1,
+        color: 1.5,
+        review: 0.5,
+        delivery: 0.5,
+      });
     case "sd":
-      return [
-        { id: "rough", label: "ラフ", stage: "rough", done: false, estimatedHours: 1.5 },
-        { id: "lineart", label: "清書", stage: "lineart", done: false, estimatedHours: 2.5 },
-        { id: "color", label: "着彩", stage: "coloring", done: false, estimatedHours: 4 },
-        { id: "review", label: "最終確認", stage: "finish", done: false, estimatedHours: 1 },
-        { id: "delivery", label: "納品", stage: "delivery", done: false, estimatedHours: 1 },
-      ];
+      return createCharacterTasks({
+        roughCreate: 1.5,
+        roughSubmit: 0.5,
+        lineart: 2.5,
+        color: 4,
+        review: 1,
+        delivery: 1,
+      });
     case "standing":
-      return [
-        { id: "rough", label: "ラフ作成", stage: "rough", done: false, estimatedHours: 3 },
-        { id: "rough-submit", label: "ラフ提出", stage: "rough", done: false, estimatedHours: 0.5 },
-        { id: "line", label: "線画", stage: "lineart", done: false, estimatedHours: 6 },
-        { id: "color", label: "着彩", stage: "coloring", done: false, estimatedHours: 10 },
-        { id: "expressions", label: "表情差分", stage: "coloring", done: false, estimatedHours: 3 },
-        { id: "review", label: "最終確認", stage: "finish", done: false, estimatedHours: 1 },
-        { id: "delivery", label: "納品", stage: "delivery", done: false, estimatedHours: 0.5 },
-      ];
+      return createCharacterTasks({
+        roughCreate: 3,
+        roughSubmit: 0.5,
+        lineart: 6,
+        color: 10,
+        review: 1,
+        delivery: 0.5,
+      });
     case "illustration":
       return [
         { id: "rough", label: "ラフ", stage: "rough", done: false, estimatedHours: 3 },

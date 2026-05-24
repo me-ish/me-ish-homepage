@@ -51,7 +51,8 @@ describe("getTaskProgress", () => {
   it("returns 0 ratio when nothing is done", () => {
     const project = buildProject({ type: "icon" });
     const progress = getTaskProgress(project);
-    expect(progress.total).toBe(4);
+    // Unified character template: ラフ作成 / ラフ提出 / 線画 / 着彩 / 最終確認 / 納品
+    expect(progress.total).toBe(6);
     expect(progress.done).toBe(0);
     expect(progress.ratio).toBe(0);
   });
@@ -124,13 +125,17 @@ describe("computeProjectBars", () => {
     });
     const bars = computeProjectBars(project);
     const byStage = Object.fromEntries(bars.map((b) => [b.stage, b]));
-    // 7-day duration, 3 non-delivery stages, 1-day delivery on the due date.
+    // 7-day duration, 4 non-delivery stages (rough / lineart / coloring /
+    // finish), 1-day delivery on the due date. With the unified character
+    // template icon now also has a 最終確認 (finish) stage.
     expect(byStage.rough.startISO).toBe("2026-05-24");
-    expect(byStage.rough.endISO).toBe("2026-05-25");
-    expect(byStage.lineart.startISO).toBe("2026-05-26");
-    expect(byStage.lineart.endISO).toBe("2026-05-27");
-    expect(byStage.coloring.startISO).toBe("2026-05-28");
-    expect(byStage.coloring.endISO).toBe("2026-05-29");
+    expect(byStage.rough.endISO).toBe("2026-05-24");
+    expect(byStage.lineart.startISO).toBe("2026-05-25");
+    expect(byStage.lineart.endISO).toBe("2026-05-26");
+    expect(byStage.coloring.startISO).toBe("2026-05-27");
+    expect(byStage.coloring.endISO).toBe("2026-05-27");
+    expect(byStage.finish.startISO).toBe("2026-05-28");
+    expect(byStage.finish.endISO).toBe("2026-05-29");
     expect(byStage.delivery.startISO).toBe("2026-05-30");
     expect(byStage.delivery.endISO).toBe("2026-05-30");
   });
@@ -160,9 +165,12 @@ describe("computeProjectBars", () => {
 
     const bars = computeProjectBars(project, new Date(2026, 4, 24));
     const lineart = bars.find((bar) => bar.stage === "lineart");
+    // Unified template: 4 non-delivery stages (gap=1.5d). The first pending
+    // bar (lineart) is stretched back from its raw 05-25 start to today
+    // because rough is fully done.
     expect(lineart?.startISO).toBe("2026-05-24");
-    expect(lineart?.endISO).toBe("2026-05-27");
-    expect(bars.find((bar) => bar.stage === "coloring")?.startISO).toBe("2026-05-28");
+    expect(lineart?.endISO).toBe("2026-05-26");
+    expect(bars.find((bar) => bar.stage === "coloring")?.startISO).toBe("2026-05-27");
     expect(bars.find((bar) => bar.stage === "delivery")?.endISO).toBe("2026-05-30");
   });
 
@@ -186,7 +194,9 @@ describe("getActiveBarsForDate", () => {
     expect(onStartOfRough[0].bar.stage).toBe("rough");
     expect(onStartOfRough[0].isStart).toBe(true);
 
-    const onStartOfLineart = getActiveBarsForDate([project], "2026-05-26", TODAY);
+    // Unified template: lineart bar now spans 05-25 → 05-26 (was 05-26 → 05-27
+    // when icon only had 3 non-delivery stages).
+    const onStartOfLineart = getActiveBarsForDate([project], "2026-05-25", TODAY);
     expect(onStartOfLineart[0].bar.stage).toBe("lineart");
     expect(onStartOfLineart[0].isStart).toBe(true);
   });
@@ -254,11 +264,12 @@ describe("computeStageMilestones", () => {
     });
     const milestones = computeStageMilestones(project);
     const map = Object.fromEntries(milestones.map((m) => [m.stage, m.dateISO]));
-    // 7-day duration → 3 non-delivery stages get gap=2 days, delivery sits on due.
+    // 7-day duration → 4 non-delivery stages get gap=1.5d, delivery sits on due.
     expect(map.delivery).toBe("2026-05-30");
-    expect(map.coloring).toBe("2026-05-29");
-    expect(map.lineart).toBe("2026-05-27");
-    expect(map.rough).toBe("2026-05-25");
+    expect(map.finish).toBe("2026-05-29");
+    expect(map.coloring).toBe("2026-05-27");
+    expect(map.lineart).toBe("2026-05-26");
+    expect(map.rough).toBe("2026-05-24");
   });
 
   it("uses only stages that appear in the project's tasks", () => {
@@ -303,7 +314,8 @@ describe("getCalendarEntriesForDate", () => {
       dueDate: "2026-05-30",
       status: "rough",
     });
-    const entries = getCalendarEntriesForDate([project], "2026-05-25");
+    // Unified template shifts rough's milestone to 05-24.
+    const entries = getCalendarEntriesForDate([project], "2026-05-24");
     const milestone = entries.find((e) => e.kind === "milestone");
     expect(milestone && milestone.kind === "milestone" ? milestone.stage : null).toBe("rough");
   });

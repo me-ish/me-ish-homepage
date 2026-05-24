@@ -57,15 +57,18 @@ describe("calculateDueDate", () => {
 describe("getProjectTotalHours / getProjectRemainingHours", () => {
   it("sums estimated hours from task templates", () => {
     const project = buildProject({ type: "icon" });
-    expect(getProjectTotalHours(project)).toBe(4);
-    expect(getProjectRemainingHours(project)).toBe(4);
+    // Unified character template for icon:
+    // ラフ作成 1 + ラフ提出 0.5 + 線画 1 + 着彩 1.5 + 最終確認 0.5 + 納品 0.5 = 5h
+    expect(getProjectTotalHours(project)).toBe(5);
+    expect(getProjectRemainingHours(project)).toBe(5);
   });
 
   it("excludes completed tasks from remaining hours", () => {
     const project = buildProject({ type: "icon" });
-    project.tasks[0].done = true; // ラフ 1h
-    project.tasks[1].done = true; // 清書 1h
-    expect(getProjectRemainingHours(project)).toBe(1.5 + 0.5);
+    project.tasks[0].done = true; // ラフ作成 1h
+    project.tasks[1].done = true; // ラフ提出 0.5h
+    // 残り: 線画 1 + 着彩 1.5 + 最終確認 0.5 + 納品 0.5 = 3.5h
+    expect(getProjectRemainingHours(project)).toBe(3.5);
   });
 
   it("falls back to stage defaults when estimatedHours is missing", () => {
