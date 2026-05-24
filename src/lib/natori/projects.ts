@@ -349,6 +349,7 @@ export function computeProjectBars(project: NatoriProject, today?: Date): Natori
   const startISOFirst = toISODate(
     new Date(due.getFullYear(), due.getMonth(), due.getDate() - (duration - 1))
   );
+  const firstPendingIndex = milestones.findIndex((milestone) => !milestone.allDone);
 
   const bars: NatoriCalendarBar[] = [];
   for (let i = 0; i < milestones.length; i += 1) {
@@ -362,6 +363,7 @@ export function computeProjectBars(project: NatoriProject, today?: Date): Natori
       .some((previous) => previous.allDone);
     const stretchedStart =
       todayISO &&
+      i === firstPendingIndex &&
       hasCompletedPreviousStage &&
       todayISO >= startISOFirst &&
       todayISO < rawStart &&

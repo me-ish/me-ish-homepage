@@ -161,6 +161,7 @@ describe("computeProjectBars", () => {
     const lineart = bars.find((bar) => bar.stage === "lineart");
     expect(lineart?.startISO).toBe("2026-05-24");
     expect(lineart?.endISO).toBe("2026-05-27");
+    expect(bars.find((bar) => bar.stage === "coloring")?.startISO).toBe("2026-05-28");
     expect(bars.find((bar) => bar.stage === "delivery")?.endISO).toBe("2026-05-30");
   });
 
