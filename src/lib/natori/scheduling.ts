@@ -102,7 +102,7 @@ export function computeBarHoursInRange(
 ): number {
   if (isDoneStatus(project.status)) return 0;
   if (isBlockedStatus(project.status)) return 0;
-  const bars = computeProjectBars(project);
+  const bars = computeProjectBars(project, rangeStart);
   if (bars.length === 0) return 0;
 
   let total = 0;

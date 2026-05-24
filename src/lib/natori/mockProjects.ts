@@ -148,7 +148,7 @@ const seeds: MockSeed[] = [
     type: "standing",
     nextAction: "ラフ提出",
     note: "表情差分3点。先に全身バランスを確認。",
-    taskOverrides: { material: true, rough: true },
+    taskOverrides: { rough: true },
   },
   {
     id: "natori-project-002",

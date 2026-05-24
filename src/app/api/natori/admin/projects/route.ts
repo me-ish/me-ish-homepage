@@ -33,6 +33,27 @@ type TaskRow = {
   sort_order: number;
 };
 
+const NATORI_PROJECT_STATUSES = new Set([
+  "consulting",
+  "quoted",
+  "awaiting_payment",
+  "rough",
+  "lineart",
+  "coloring",
+  "waiting",
+  "delivery_prep",
+  "delivered",
+  "completed",
+]);
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
 async function isNatoriManagementRequest(): Promise<boolean> {
   const supabase = createClient();
   const {
@@ -68,4 +89,74 @@ export async function GET() {
     projects: (projects ?? []) as ProjectRow[],
     tasks: (tasks ?? []) as TaskRow[],
   });
+}
+
+export async function PATCH(request: Request) {
+  if (!(await isNatoriManagementRequest())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const payload = (await request.json().catch(() => null)) as unknown;
+  if (!isObject(payload)) {
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
+
+  const kind = payload.kind;
+  const projectId = readString(payload.projectId);
+  if (!projectId) {
+    return NextResponse.json({ error: "projectId is required" }, { status: 400 });
+  }
+
+  const admin = supabaseAdmin();
+
+  if (kind === "task") {
+    const taskKey = readString(payload.taskKey);
+    const done = payload.done;
+    if (!taskKey || typeof done !== "boolean") {
+      return NextResponse.json({ error: "taskKey and done are required" }, { status: 400 });
+    }
+
+    const { data, error } = await (admin as any)
+      .from("natori_project_tasks")
+      .update({ done })
+      .eq("project_id", projectId)
+      .eq("task_key", taskKey)
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      console.error("[natori-admin-projects] task update failed", error);
+      return NextResponse.json({ error: "Failed to update task" }, { status: 500 });
+    }
+    if (!data) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (kind === "project-status") {
+    const status = readString(payload.status);
+    const nextAction = readString(payload.nextAction) ?? "";
+    if (!status || !NATORI_PROJECT_STATUSES.has(status)) {
+      return NextResponse.json({ error: "Valid status is required" }, { status: 400 });
+    }
+
+    const { data, error } = await (admin as any)
+      .from("natori_projects")
+      .update({ status, next_action: nextAction })
+      .eq("id", projectId)
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      console.error("[natori-admin-projects] project status update failed", error);
+      return NextResponse.json({ error: "Failed to update project" }, { status: 500 });
+    }
+    if (!data) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  return NextResponse.json({ error: "Unknown update kind" }, { status: 400 });
 }

@@ -144,6 +144,26 @@ describe("computeProjectBars", () => {
     expect(bars.some((b) => b.stage === "lineart")).toBe(true);
   });
 
+  it("stretches the first pending stage bar back to today after earlier stages are done", () => {
+    const tasks = createTasksForType("icon").map((task) =>
+      task.stage === "rough" ? { ...task, done: true } : task
+    );
+    const project = buildProject({
+      id: "p1",
+      type: "icon",
+      tasks,
+      startDate: "2026-05-23",
+      dueDate: "2026-05-30",
+      status: "lineart",
+    });
+
+    const bars = computeProjectBars(project, new Date(2026, 4, 24));
+    const lineart = bars.find((bar) => bar.stage === "lineart");
+    expect(lineart?.startISO).toBe("2026-05-24");
+    expect(lineart?.endISO).toBe("2026-05-27");
+    expect(bars.find((bar) => bar.stage === "delivery")?.endISO).toBe("2026-05-30");
+  });
+
   it("returns no bars for delivered/completed projects", () => {
     const project = buildProject({ id: "p1", type: "icon", dueDate: "2026-05-30", status: "delivered" });
     expect(computeProjectBars(project)).toEqual([]);
@@ -248,8 +268,8 @@ describe("computeStageMilestones", () => {
     });
     const milestones = computeStageMilestones(project);
     const stages = milestones.map((m) => m.stage);
-    expect(stages).toEqual(["material", "rough", "lineart", "coloring", "finish", "delivery"]);
-    // 14-day duration → 5 non-delivery stages get gap=2.6, material lands ~11 days back from due.
+    expect(stages).toEqual(["rough", "lineart", "coloring", "finish", "delivery"]);
+    // 14-day duration → 4 non-delivery stages get gap=3.25, rough lands ~11 days back from due.
     expect(milestones[0].dateISO).toBe("2026-05-25");
   });
 
@@ -335,7 +355,6 @@ describe("applyStatusToTasks", () => {
     const project = buildProject({ type: "standing", status: "rough" });
     const after = applyStatusToTasks(project.tasks, "coloring");
     const labels = after.filter((task) => task.done).map((task) => task.label);
-    expect(labels).toContain("資料確認");
     expect(labels).toContain("ラフ作成");
     expect(labels).toContain("ラフ提出");
     expect(labels).toContain("線画");

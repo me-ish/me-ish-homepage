@@ -42,10 +42,23 @@ type TaskRow = {
 const PROJECTS_TABLE = "natori_projects";
 const TASKS_TABLE = "natori_project_tasks";
 
+async function patchNatoriAdminProject(payload: Record<string, unknown>): Promise<void> {
+  const response = await fetch("/api/natori/admin/projects", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error ?? `Failed to update Natori project (${response.status})`);
+  }
+}
+
 function rowToProject(row: ProjectRow, taskRows: TaskRow[]): NatoriProject {
   const tasks: NatoriProjectTask[] = taskRows
     .slice()
     .sort((a, b) => a.sort_order - b.sort_order)
+    .filter((task) => task.stage !== "material")
     .map((task) => ({
       id: task.task_key,
       label: task.label,
@@ -99,13 +112,12 @@ export async function toggleNatoriTaskDone(
   taskKey: string,
   done: boolean
 ): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from(TASKS_TABLE)
-    .update({ done })
-    .eq("project_id", projectId)
-    .eq("task_key", taskKey);
-  if (error) throw error;
+  await patchNatoriAdminProject({
+    kind: "task",
+    projectId,
+    taskKey,
+    done,
+  });
 }
 
 export async function updateNatoriProjectStatus(
@@ -113,12 +125,12 @@ export async function updateNatoriProjectStatus(
   status: NatoriProjectStatus,
   nextAction: string
 ): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from(PROJECTS_TABLE)
-    .update({ status, next_action: nextAction })
-    .eq("id", projectId);
-  if (error) throw error;
+  await patchNatoriAdminProject({
+    kind: "project-status",
+    projectId,
+    status,
+    nextAction,
+  });
 }
 
 export type CreateNatoriProjectInput = {

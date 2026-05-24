@@ -120,7 +120,6 @@ export function createTasksForType(type: NatoriProjectType): NatoriProjectTask[]
       ];
     case "standing":
       return [
-        { id: "material", label: "資料確認", stage: "material", done: false, estimatedHours: 1 },
         { id: "rough", label: "ラフ作成", stage: "rough", done: false, estimatedHours: 3 },
         { id: "rough-submit", label: "ラフ提出", stage: "rough", done: false, estimatedHours: 0.5 },
         { id: "line", label: "線画", stage: "lineart", done: false, estimatedHours: 6 },
@@ -131,7 +130,6 @@ export function createTasksForType(type: NatoriProjectType): NatoriProjectTask[]
       ];
     case "illustration":
       return [
-        { id: "material", label: "資料確認", stage: "material", done: false, estimatedHours: 1 },
         { id: "rough", label: "ラフ", stage: "rough", done: false, estimatedHours: 3 },
         { id: "line", label: "線画", stage: "lineart", done: false, estimatedHours: 5 },
         { id: "color", label: "着彩", stage: "coloring", done: false, estimatedHours: 7 },
@@ -340,13 +338,14 @@ function shiftISODate(iso: string, days: number): string {
   return toISODate(new Date(date.getFullYear(), date.getMonth(), date.getDate() + days));
 }
 
-export function computeProjectBars(project: NatoriProject): NatoriCalendarBar[] {
+export function computeProjectBars(project: NatoriProject, today?: Date): NatoriCalendarBar[] {
   if (isDoneStatus(project.status)) return [];
   const milestones = computeStageMilestones(project);
   if (milestones.length === 0) return [];
 
   const duration = getProjectDurationDays(project);
   const due = parseISODate(project.dueDate);
+  const todayISO = today ? toISODate(today) : null;
   const startISOFirst = toISODate(
     new Date(due.getFullYear(), due.getMonth(), due.getDate() - (duration - 1))
   );
@@ -358,7 +357,18 @@ export function computeProjectBars(project: NatoriProject): NatoriCalendarBar[] 
     const endISO = milestone.dateISO;
     const rawStart =
       i === 0 ? startISOFirst : shiftISODate(milestones[i - 1].dateISO, 1);
-    const startISO = rawStart > endISO ? endISO : rawStart;
+    const hasCompletedPreviousStage = milestones
+      .slice(0, i)
+      .some((previous) => previous.allDone);
+    const stretchedStart =
+      todayISO &&
+      hasCompletedPreviousStage &&
+      todayISO >= startISOFirst &&
+      todayISO < rawStart &&
+      todayISO <= endISO
+        ? todayISO
+        : rawStart;
+    const startISO = stretchedStart > endISO ? endISO : stretchedStart;
     bars.push({
       id: `${project.id}-${milestone.stage}`,
       project,
@@ -386,7 +396,7 @@ export function getActiveBarsForDate(
   const todayISO = toISODate(today);
   const results: ActiveBarOnDate[] = [];
   for (const project of projects) {
-    const bars = computeProjectBars(project);
+    const bars = computeProjectBars(project, today);
     for (const bar of bars) {
       if (bar.startISO > dateISO || bar.endISO < dateISO) continue;
       const pendingTasks = project.tasks.filter(
@@ -447,7 +457,7 @@ export function buildMonthCells(
   projects: NatoriProject[],
   today: Date
 ): MonthCalendarLayout {
-  const allBars = projects.flatMap((project) => computeProjectBars(project));
+  const allBars = projects.flatMap((project) => computeProjectBars(project, today));
   const laneMap = assignBarLanes(allBars);
   const totalLanes = allBars.reduce((max, bar) => {
     const lane = laneMap.get(bar.id) ?? 0;
