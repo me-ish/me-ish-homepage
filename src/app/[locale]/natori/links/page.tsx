@@ -9,8 +9,8 @@ import { useEffect, useState } from 'react';
 const LINKS = [
   {
     label: 'X（Twitter）',
-    sub: '@natori_illust',
-    href: 'https://x.com/natonato_o?s=21',
+    sub: '@natonato_o',
+    href: 'https://x.com/natonato_o',
     icon: (
       <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden>
         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.265 5.64 5.899-5.64Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />

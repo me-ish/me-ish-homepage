@@ -49,8 +49,8 @@ export default function Page() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Hero
-        vgenUrl="https://vgen.co/natori/characters"  // ← 実際のプロフィールURLに差し替えてください
-        twitterUrl="https://x.com/natonato_o/"
+        vgenUrl="https://vgen.co/natori"
+        twitterUrl="https://x.com/natonato_o"
         instaUrl="https://www.instagram.com/natori.o0716?igsh=cmVwejB5OG00d3hn&utm_source=qr"
       />
       <Gallery works={works} tags={allTags} />
