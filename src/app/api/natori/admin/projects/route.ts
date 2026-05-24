@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAdminEmailAsync } from "@/lib/isAdmin";
+import { canAccessNatoriManagement } from "@/lib/natori/requireNatoriAdmin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -33,17 +33,17 @@ type TaskRow = {
   sort_order: number;
 };
 
-async function isAdminRequest(): Promise<boolean> {
+async function isNatoriManagementRequest(): Promise<boolean> {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  return isAdminEmailAsync(user?.email ?? null);
+  return canAccessNatoriManagement(user?.email ?? null);
 }
 
 export async function GET() {
-  if (!(await isAdminRequest())) {
+  if (!(await isNatoriManagementRequest())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

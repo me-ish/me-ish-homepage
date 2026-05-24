@@ -270,7 +270,7 @@ export default function ProjectsBoard() {
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 sm:text-sm">
           {authed
             ? "Supabase からの読み込みに失敗したため、ローカルのデモデータを表示しています。"
-            : "ログインしていないため、ローカルのデモデータを表示しています。ログインすると自分の案件データに切り替わります。"}
+            : "認証情報を確認できないため、ローカルのデモデータを表示しています。"}
           {error ? <p className="mt-1 text-[11px] opacity-80">{error}</p> : null}
         </div>
       ) : null}

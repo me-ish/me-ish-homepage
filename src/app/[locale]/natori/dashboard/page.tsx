@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Calculator,
   ChevronDown,
@@ -10,7 +9,6 @@ import {
   FolderOpen,
   ImageIcon,
   Link2,
-  LogIn,
   LogOut,
   Settings,
   Sparkles,
@@ -32,7 +30,6 @@ type DashboardCard = {
   description: string;
   icon: LucideIcon;
   accent: string;
-  requiresLogin?: boolean;
   hrefKey?: "portfolio" | "links";
 };
 
@@ -40,22 +37,21 @@ const CARDS: DashboardCard[] = [
   {
     href: "/natori/projects",
     title: "案件管理",
-    description: "カレンダー・スケジュール・タスクチェック",
+    description: "ログイン済みの関係者向けのカレンダー・スケジュール・タスクチェック",
     icon: FolderOpen,
     accent: "from-pink-100 to-pink-50 text-pink-700",
-    requiresLogin: true,
   },
   {
     href: "/natori/estimate",
     title: "見積もり",
-    description: "依頼文から概算と返信文を作る",
+    description: "依頼文から概算見積もりと返信文のたたき台を作る内部ツール",
     icon: Calculator,
     accent: "from-rose-100 to-rose-50 text-rose-700",
   },
   {
     href: "/natori",
     title: "ポートフォリオ",
-    description: "公開ページ・ギャラリー",
+    description: "未ログインでも閲覧できる公開ページ・ギャラリー",
     icon: ImageIcon,
     accent: "from-fuchsia-100 to-fuchsia-50 text-fuchsia-700",
     hrefKey: "portfolio",
@@ -71,7 +67,6 @@ const CARDS: DashboardCard[] = [
 ];
 
 export default function NatoriDashboardPage() {
-  const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
@@ -113,10 +108,6 @@ export default function NatoriDashboardPage() {
       sub.subscription.unsubscribe();
     };
   }, [refresh]);
-
-  const handleLogin = () => {
-    router.push("/login?redirect=/natori/dashboard");
-  };
 
   const handleLogout = async () => {
     setSigningOut(true);
@@ -179,15 +170,7 @@ export default function NatoriDashboardPage() {
                   {signingOut ? "ログアウト中…" : "ログアウト"}
                 </Button>
               </>
-            ) : (
-              <Button
-                onClick={handleLogin}
-                className="h-9 rounded-full bg-pink-500 px-3 text-xs font-bold text-white hover:bg-pink-600"
-              >
-                <LogIn className="h-3.5 w-3.5" aria-hidden />
-                ログイン
-              </Button>
-            )}
+            ) : null}
           </div>
         </div>
       </section>
@@ -202,7 +185,10 @@ export default function NatoriDashboardPage() {
               {displayName ? `${displayName} のダッシュボード` : "仕事用ダッシュボード"}
             </h1>
             <p className="mt-1 text-sm leading-6 text-gray-600">
-              案件管理・見積もり・ポートフォリオ・リンク集をここからまとめて開けます。
+              案件管理・見積もり・ポートフォリオ導線をまとめた管理ダッシュボードです。
+            </p>
+            <p className="mt-1 text-sm leading-6 text-gray-600">
+              案件管理と見積もりはログイン済みの関係者のみ利用できます。リンク集と作品ページは公開ページです。
             </p>
           </div>
         </div>
@@ -213,19 +199,9 @@ export default function NatoriDashboardPage() {
           </div>
         ) : null}
 
-        {!loading && !email ? (
-          <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-900 sm:text-sm">
-            <p className="font-bold">ログインしていません。</p>
-            <p className="mt-1">
-              案件管理のデータはログインすると自分のアカウントに切り替わります。見積もりやポートフォリオはログインなしでも開けます。
-            </p>
-          </div>
-        ) : null}
-
         <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
           {resolvedCards.map((card) => {
             const Icon = card.icon;
-            const locked = card.requiresLogin && !email;
             return (
               <li key={card.title}>
                 <Link
@@ -238,11 +214,6 @@ export default function NatoriDashboardPage() {
                   <div className="min-w-0">
                     <p className="text-base font-black leading-6 text-gray-900">
                       {card.title}
-                      {locked ? (
-                        <span className="ml-2 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                          要ログイン
-                        </span>
-                      ) : null}
                     </p>
                     <p className="mt-1 break-words text-xs leading-5 text-gray-700 sm:text-sm">
                       {card.description}

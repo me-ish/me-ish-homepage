@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireNatoriAdmin } from "@/lib/natori/requireNatoriAdmin";
+import { requireNatoriAccess } from "@/lib/natori/requireNatoriAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export default async function NatoriDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireNatoriAdmin("/natori/dashboard");
+  await requireNatoriAccess("/natori/dashboard");
 
   return <>{children}</>;
 }

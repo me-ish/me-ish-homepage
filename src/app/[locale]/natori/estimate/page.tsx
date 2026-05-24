@@ -2,17 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import EstimateForm from "@/components/natori/dashboard/EstimateForm";
 import Footer from "@/components/natori/Footer";
-import { requireNatoriAdmin } from "@/lib/natori/requireNatoriAdmin";
+import { requireNatoriAccess } from "@/lib/natori/requireNatoriAdmin";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Natori Estimate | me-ish",
-  description: "ナトリ先生の制作相談向けに、依頼文から概算見積もりと返信文のたたき台を作成します。",
+  description: "ナトリ先生の制作相談向けに、依頼文から概算見積もりと返信文のたたき台を作成する関係者向け内部ツールです。",
 };
 
 export default async function NatoriEstimatePage() {
-  await requireNatoriAdmin("/natori/estimate");
+  await requireNatoriAccess("/natori/estimate");
 
   return (
     <main className="min-h-screen bg-white">
@@ -24,7 +24,7 @@ export default async function NatoriEstimatePage() {
           <span className="text-xs text-gray-300">/</span>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-pink-600">Estimate</p>
           <p className="hidden text-sm font-bold text-gray-900 sm:inline">
-            依頼文から概算見積もり
+            関係者向け見積もりツール
           </p>
           <div className="ml-auto">
             <Link

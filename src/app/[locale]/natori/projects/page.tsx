@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import ProjectsBoard from "@/components/natori/dashboard/ProjectsBoard";
 import Footer from "@/components/natori/Footer";
-import { requireNatoriAdmin } from "@/lib/natori/requireNatoriAdmin";
+import { requireNatoriAccess } from "@/lib/natori/requireNatoriAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function NatoriProjectsPage() {
-  await requireNatoriAdmin("/natori/projects");
+  await requireNatoriAccess("/natori/projects");
 
   return (
     <main className="min-h-screen bg-white">

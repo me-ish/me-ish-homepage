@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { supabaseServer } from '@/lib/supabaseServer';
 import { isAdminEmail } from '@/lib/isAdmin';
+import { canAccessNatoriManagement } from '@/lib/natori/requireNatoriAdmin';
 import AdminLoginClient from './AdminLoginClient';
 
 export const dynamic = 'force-dynamic';
@@ -26,8 +27,14 @@ export default async function Page({
 
   const nextPath = safePath(searchParams?.next);
 
-  // 既に管理者ならダッシュボード or 指定先へ
-  if (email && isAdminEmail(email)) {
+  const canUseNextPath =
+    email &&
+    (nextPath.startsWith('/natori/')
+      ? await canAccessNatoriManagement(email)
+      : isAdminEmail(email));
+
+  // 既に権限があればダッシュボード or 指定先へ
+  if (canUseNextPath) {
     redirect(nextPath);
   }
 

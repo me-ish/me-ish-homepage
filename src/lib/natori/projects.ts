@@ -67,7 +67,7 @@ const STATUS_CURRENT_STAGE: Record<NatoriProjectStatus, NatoriTaskStage | null> 
 const STATUS_NEXT_ACTION: Record<NatoriProjectStatus, string> = {
   consulting: "依頼内容の確認",
   quoted: "入金確認",
-  awaiting_payment: "ラフ開始準備",
+  awaiting_payment: "入金確認後、ラフ開始",
   rough: "ラフ提出",
   lineart: "線画作業",
   coloring: "着彩作業",
