@@ -145,10 +145,6 @@ export default function NatoriDashboardPage() {
     <main className="min-h-screen bg-gradient-to-b from-pink-50/70 via-white to-white">
       <section className="border-b border-pink-100 bg-white/70 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
-          <Link href="/natori" className="text-xs font-medium text-pink-600 hover:underline">
-            Natori
-          </Link>
-          <span className="text-xs text-gray-300">/</span>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-pink-600">Dashboard</p>
           <p className="hidden text-sm font-bold text-gray-900 sm:inline">仕事用ダッシュボード</p>
           <div className="ml-auto flex items-center gap-2">
