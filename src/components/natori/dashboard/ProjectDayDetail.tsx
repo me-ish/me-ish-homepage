@@ -36,6 +36,9 @@ type ProjectDayDetailProps = {
   allProjects: NatoriProject[];
   today: Date;
   onToggleTask: (projectId: string, taskId: string) => void;
+  onAdvanceStatus?: (project: NatoriProject) => void;
+  onConfirmPayment?: (project: NatoriProject) => void;
+  advanceBusyId?: string | null;
   events: NatoriEvent[];
   authed: boolean;
   eventsBusy: boolean;
@@ -53,6 +56,9 @@ export default function ProjectDayDetail({
   allProjects,
   today,
   onToggleTask,
+  onAdvanceStatus,
+  onConfirmPayment,
+  advanceBusyId,
   events,
   authed,
   eventsBusy,
@@ -180,6 +186,9 @@ export default function ProjectDayDetail({
                 project={project}
                 today={today}
                 onToggleTask={onToggleTask}
+                onAdvanceStatus={onAdvanceStatus}
+                onConfirmPayment={onConfirmPayment}
+                advanceBusy={advanceBusyId === project.id}
               />
             ))}
           </div>

@@ -173,8 +173,15 @@ describe("computeProjectScheduling", () => {
     expect(s.capacityThisWeek).toBe(35);
   });
 
-  it("treats consulting / awaiting_payment / waiting as 0h pressure", () => {
-    for (const status of ["consulting", "quoted", "awaiting_payment", "waiting"] as const) {
+  it("treats inquiry / estimating / consulting / quoted / awaiting_payment / waiting as 0h pressure", () => {
+    for (const status of [
+      "inquiry",
+      "estimating",
+      "consulting",
+      "quoted",
+      "awaiting_payment",
+      "waiting",
+    ] as const) {
       const project = buildProject({ status, dueDate: "2026-06-21" });
       const s = computeProjectScheduling(project, TODAY);
       expect(s.isBlocked).toBe(true);
@@ -182,6 +189,19 @@ describe("computeProjectScheduling", () => {
       expect(s.requiredThisWeek).toBe(0);
       expect(s.requiredToday).toBe(0);
     }
+  });
+
+  it("starts pressuring the schedule once status reaches rough (post-payment)", () => {
+    const project = buildProject({
+      type: "illustration",
+      status: "rough",
+      startDate: "2026-05-22",
+      dueDate: "2026-06-21",
+      tasks: createTasksForType("illustration"),
+    });
+    const s = computeProjectScheduling(project, TODAY);
+    expect(s.isBlocked).toBe(false);
+    expect(s.requiredPerDay).toBeGreaterThan(0);
   });
 
   it("returns 0h for completed projects", () => {

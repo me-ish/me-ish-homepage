@@ -1,4 +1,9 @@
 export type NatoriProjectStatus =
+  | "inquiry"
+  | "estimating"
+  // `consulting` is the legacy name for "依頼受付". Kept for back-compat with rows
+  // inserted before the inquiry / estimating split (2026-05); treated like inquiry
+  // everywhere in the app. New rows should use `inquiry`.
   | "consulting"
   | "quoted"
   | "awaiting_payment"
@@ -62,6 +67,7 @@ export type NatoriProject = {
   tasks: NatoriProjectTask[];
   priority?: NatoriProjectPriority;
   note?: string;
+  paymentConfirmedAt?: string;
 };
 
 export type NatoriProjectStatusMeta = {

@@ -12,8 +12,12 @@ import type {
   NatoriTaskStage,
 } from "@/types/natori/projects";
 
+// Production flow (2026-05): 依頼 → 見積もり → 案件化 → 入金待ち → 入金確認 → ラフ → ….
+// "consulting" is the legacy "依頼受付" value; kept in the order list for
+// back-compat with existing DB rows but treated identically to inquiry.
 export const NATORI_STATUS_ORDER: NatoriProjectStatus[] = [
-  "consulting",
+  "inquiry",
+  "estimating",
   "quoted",
   "awaiting_payment",
   "rough",
@@ -35,6 +39,8 @@ const STAGE_ORDER: NatoriTaskStage[] = [
 ];
 
 const STATUS_AUTOCOMPLETE_THRESHOLD: Record<NatoriProjectStatus, NatoriTaskStage | null> = {
+  inquiry: null,
+  estimating: null,
   consulting: null,
   quoted: null,
   awaiting_payment: null,
@@ -52,6 +58,8 @@ export function getStageForStatus(status: NatoriProjectStatus): NatoriTaskStage 
 }
 
 const STATUS_CURRENT_STAGE: Record<NatoriProjectStatus, NatoriTaskStage | null> = {
+  inquiry: null,
+  estimating: null,
   consulting: null,
   quoted: null,
   awaiting_payment: null,
@@ -65,8 +73,10 @@ const STATUS_CURRENT_STAGE: Record<NatoriProjectStatus, NatoriTaskStage | null> 
 };
 
 const STATUS_NEXT_ACTION: Record<NatoriProjectStatus, string> = {
-  consulting: "依頼内容の確認",
-  quoted: "入金確認",
+  inquiry: "依頼内容の確認・見積もり作成",
+  estimating: "見積もり提示",
+  consulting: "依頼内容の確認・見積もり作成",
+  quoted: "案件化（入金待ちへ）",
   awaiting_payment: "入金確認後、ラフ開始",
   rough: "ラフ提出",
   lineart: "線画作業",
@@ -77,19 +87,49 @@ const STATUS_NEXT_ACTION: Record<NatoriProjectStatus, string> = {
   completed: "完了",
 };
 
+// User-facing button label for advancing a project to the next status. For
+// the active production stages (rough → … → delivered) we keep these in sync
+// with the natural flow, even though the dashboard typically advances those
+// via task-checklist toggling.
+const STATUS_ADVANCE_BUTTON_LABEL: Record<NatoriProjectStatus, string | null> = {
+  inquiry: "見積もり作成へ",
+  estimating: "見積もり提示済みにする",
+  consulting: "見積もり作成へ",
+  quoted: "案件化して入金待ちにする",
+  awaiting_payment: "入金確認してラフ開始",
+  rough: "線画へ進む",
+  lineart: "着彩へ進む",
+  coloring: "納品準備へ進む",
+  waiting: "次工程へ進む",
+  delivery_prep: "納品済みにする",
+  delivered: "完了にする",
+  completed: null,
+};
+
+export function getAdvanceButtonLabel(status: NatoriProjectStatus): string | null {
+  return STATUS_ADVANCE_BUTTON_LABEL[status];
+}
+
+// Map legacy / alias statuses onto the canonical flow so ordering, advancing
+// and "prework" checks stay consistent. consulting → inquiry.
+function canonicalizeStatus(status: NatoriProjectStatus): NatoriProjectStatus {
+  if (status === "consulting") return "inquiry";
+  return status;
+}
+
 export function getStatusOrderIndex(status: NatoriProjectStatus): number {
-  return NATORI_STATUS_ORDER.indexOf(status);
+  return NATORI_STATUS_ORDER.indexOf(canonicalizeStatus(status));
 }
 
 export function getNextStatus(status: NatoriProjectStatus): NatoriProjectStatus {
   const idx = getStatusOrderIndex(status);
-  if (idx < 0 || idx >= NATORI_STATUS_ORDER.length - 1) return status;
+  if (idx < 0 || idx >= NATORI_STATUS_ORDER.length - 1) return canonicalizeStatus(status);
   return NATORI_STATUS_ORDER[idx + 1];
 }
 
 export function getPrevStatus(status: NatoriProjectStatus): NatoriProjectStatus {
   const idx = getStatusOrderIndex(status);
-  if (idx <= 0) return status;
+  if (idx <= 0) return canonicalizeStatus(status);
   return NATORI_STATUS_ORDER[idx - 1];
 }
 
@@ -169,7 +209,17 @@ const STAGE_TO_STATUS: Record<NatoriTaskStage, NatoriProjectStatus> = {
   delivery: "delivery_prep",
 };
 
-const PREWORK_STATUSES: NatoriProjectStatus[] = ["consulting", "quoted", "awaiting_payment"];
+const PREWORK_STATUSES: NatoriProjectStatus[] = [
+  "inquiry",
+  "estimating",
+  "consulting",
+  "quoted",
+  "awaiting_payment",
+];
+
+export function isPreworkStatus(status: NatoriProjectStatus): boolean {
+  return PREWORK_STATUSES.includes(status);
+}
 
 export function deriveStatusFromTasks(
   tasks: NatoriProjectTask[],
@@ -522,7 +572,13 @@ export function calculatePriorityScore(project: NatoriProject, today: Date): num
   score += (1 - progress.ratio) * 50;
 
   if (project.status === "waiting") score -= 25;
-  if (project.status === "consulting") score -= 10;
+  if (
+    project.status === "inquiry" ||
+    project.status === "estimating" ||
+    project.status === "consulting"
+  ) {
+    score -= 10;
+  }
   if (project.status === "quoted" || project.status === "awaiting_payment") score -= 15;
 
   score += TYPE_WEIGHT[project.type] ?? 0;
@@ -553,8 +609,14 @@ export function describePriorityReasons(project: NatoriProject, today: Date): st
 
   if (project.status === "waiting") {
     reasons.push("返信待ち");
-  } else if (project.status === "consulting") {
-    reasons.push("打ち合わせ中");
+  } else if (project.status === "inquiry" || project.status === "consulting") {
+    reasons.push("依頼受付");
+  } else if (project.status === "estimating") {
+    reasons.push("見積もり中");
+  } else if (project.status === "quoted") {
+    reasons.push("見積もり提示済み");
+  } else if (project.status === "awaiting_payment") {
+    reasons.push("入金待ち");
   } else if (project.tasks.some((task) => task.stage === "coloring" && !task.done) && progress.ratio < 0.6) {
     reasons.push("着彩未着手");
   }

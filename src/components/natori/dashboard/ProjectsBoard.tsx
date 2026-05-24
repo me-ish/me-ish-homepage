@@ -5,11 +5,14 @@ import { mockNatoriProjects } from "@/lib/natori/mockProjects";
 import {
   deriveNextActionFromTasks,
   deriveStatusFromTasks,
+  getNextActionForStatus,
+  getNextStatus,
   getPrioritySuggestions,
   toISODate,
 } from "@/lib/natori/projects";
 import { getAwaitingPaymentSummary } from "@/lib/natori/scheduling";
 import {
+  confirmNatoriProjectPayment,
   fetchNatoriProjects,
   seedNatoriDemoProjects,
   toggleNatoriTaskDone,
@@ -49,6 +52,7 @@ export default function ProjectsBoard() {
   const [events, setEvents] = useState<NatoriEvent[]>([]);
   const [eventsBusy, setEventsBusy] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
+  const [advanceBusyId, setAdvanceBusyId] = useState<string | null>(null);
 
   const loadFromSupabase = useCallback(async () => {
     const [projectData, eventData] = await Promise.all([
@@ -183,6 +187,67 @@ export default function ProjectsBoard() {
     }
   };
 
+  const handleAdvanceStatus = (project: NatoriProject) => {
+    const nextStatus = getNextStatus(project.status);
+    if (nextStatus === project.status) return;
+    const nextAction = getNextActionForStatus(nextStatus);
+    setAdvanceBusyId(project.id);
+    setProjects((current) =>
+      current.map((entry) =>
+        entry.id === project.id
+          ? { ...entry, status: nextStatus, nextAction }
+          : entry
+      )
+    );
+    if (dataSource === "supabase") {
+      (async () => {
+        try {
+          await updateNatoriProjectStatus(project.id, nextStatus, nextAction);
+        } catch (err) {
+          console.error("[ProjectsBoard] advance status failed", err);
+          setError(err instanceof Error ? err.message : String(err));
+        } finally {
+          setAdvanceBusyId((current) => (current === project.id ? null : current));
+        }
+      })();
+    } else {
+      setAdvanceBusyId((current) => (current === project.id ? null : current));
+    }
+  };
+
+  const handleConfirmPayment = (project: NatoriProject) => {
+    if (project.status !== "awaiting_payment") return;
+    const nextAction = getNextActionForStatus("rough");
+    const stampedAt = new Date().toISOString();
+    setAdvanceBusyId(project.id);
+    setProjects((current) =>
+      current.map((entry) =>
+        entry.id === project.id
+          ? {
+              ...entry,
+              status: "rough",
+              nextAction,
+              paymentConfirmedAt: stampedAt,
+            }
+          : entry
+      )
+    );
+    if (dataSource === "supabase") {
+      (async () => {
+        try {
+          await confirmNatoriProjectPayment(project.id, nextAction);
+        } catch (err) {
+          console.error("[ProjectsBoard] confirm payment failed", err);
+          setError(err instanceof Error ? err.message : String(err));
+        } finally {
+          setAdvanceBusyId((current) => (current === project.id ? null : current));
+        }
+      })();
+    } else {
+      setAdvanceBusyId((current) => (current === project.id ? null : current));
+    }
+  };
+
   const handleCreateEvent = async (input: { title: string; date: string; note?: string }) => {
     if (!authed) {
       setEventsError("ログインが必要です。");
@@ -297,6 +362,8 @@ export default function ProjectsBoard() {
         summary={awaitingPaymentSummary}
         today={today}
         onSelect={focusProject}
+        onConfirmPayment={handleConfirmPayment}
+        busyId={advanceBusyId}
       />
 
       <ProjectPriorityList
@@ -322,6 +389,9 @@ export default function ProjectsBoard() {
         allProjects={projects}
         today={today}
         onToggleTask={handleToggleTask}
+        onAdvanceStatus={handleAdvanceStatus}
+        onConfirmPayment={handleConfirmPayment}
+        advanceBusyId={advanceBusyId}
         events={events}
         authed={authed}
         eventsBusy={eventsBusy}

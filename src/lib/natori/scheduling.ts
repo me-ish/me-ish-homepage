@@ -62,7 +62,11 @@ export const DEFAULT_STAGE_HOURS: Record<NatoriTaskStage, number> = {
 
 // While these statuses are active, no client-side work is consumable. They do not
 // pressure the calendar capacity but should still be visible in the dashboard.
+// inquiry / estimating / quoted / awaiting_payment are all "pre-work": ラフ
+// 制作は入金確認後に開始するため、それまでは作業量・カレンダー負荷に入れない。
 const BLOCKED_STATUSES: ReadonlySet<NatoriProjectStatus> = new Set([
+  "inquiry",
+  "estimating",
   "consulting",
   "quoted",
   "awaiting_payment",

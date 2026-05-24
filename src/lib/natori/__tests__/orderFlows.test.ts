@@ -6,6 +6,8 @@ import {
   daysUntilDue,
   deriveNextActionFromTasks,
   deriveStatusFromTasks,
+  getAdvanceButtonLabel,
+  getNextStatus,
   isProjectOverdue,
   toISODate,
 } from "@/lib/natori/projects";
@@ -131,6 +133,47 @@ describe("order flow: rush 14 days", () => {
 
     const entries = getScheduleEntries([normal, r14, r7], TODAY);
     expect(entries.map((e) => e.project.id)).toEqual(["r7", "r14", "n"]);
+  });
+});
+
+describe("order flow: pre-work pipeline (依頼 → 見積り → 案件化 → 入金待ち → ラフ)", () => {
+  it("walks the canonical status order one step at a time", () => {
+    let status = getNextStatus("inquiry");
+    expect(status).toBe("estimating");
+    status = getNextStatus(status);
+    expect(status).toBe("quoted");
+    status = getNextStatus(status);
+    expect(status).toBe("awaiting_payment");
+    status = getNextStatus(status);
+    expect(status).toBe("rough");
+  });
+
+  it("labels operations with the production wording", () => {
+    expect(getAdvanceButtonLabel("quoted")).toBe("案件化して入金待ちにする");
+    expect(getAdvanceButtonLabel("awaiting_payment")).toBe("入金確認してラフ開始");
+  });
+
+  it("does not pressure the schedule until status reaches rough", () => {
+    for (const status of [
+      "inquiry",
+      "estimating",
+      "quoted",
+      "awaiting_payment",
+    ] as const) {
+      const project = makeOrder({ id: status, type: "illustration", status });
+      const s = computeProjectScheduling(project, TODAY);
+      expect(s.isBlocked).toBe(true);
+      expect(s.requiredThisWeek).toBe(0);
+    }
+    const inProgress = makeOrder({ id: "post-pay", type: "illustration", status: "rough" });
+    expect(computeProjectScheduling(inProgress, TODAY).isBlocked).toBe(false);
+  });
+
+  it("treats legacy consulting rows like inquiry (still blocked, no workload)", () => {
+    const legacy = makeOrder({ id: "legacy", type: "illustration", status: "consulting" });
+    const s = computeProjectScheduling(legacy, TODAY);
+    expect(s.isBlocked).toBe(true);
+    expect(s.requiredThisWeek).toBe(0);
   });
 });
 

@@ -11,6 +11,7 @@ import {
   deriveNextActionFromTasks,
   deriveStatusFromTasks,
   getActiveBarsForDate,
+  getAdvanceButtonLabel,
   getCalendarEntriesForDate,
   getNextActionForStatus,
   getNextStatus,
@@ -341,13 +342,37 @@ describe("status transitions", () => {
     expect(getNextStatus("rough")).toBe("lineart");
     expect(getPrevStatus("lineart")).toBe("rough");
     expect(getNextStatus("completed")).toBe("completed");
-    expect(getPrevStatus("consulting")).toBe("consulting");
+    // Legacy consulting canonicalizes to inquiry (the head of the flow).
+    expect(getPrevStatus("consulting")).toBe("inquiry");
+    expect(getPrevStatus("inquiry")).toBe("inquiry");
+  });
+
+  it("walks the production flow: inquiry → estimating → quoted → awaiting_payment → rough", () => {
+    expect(getNextStatus("inquiry")).toBe("estimating");
+    expect(getNextStatus("estimating")).toBe("quoted");
+    expect(getNextStatus("quoted")).toBe("awaiting_payment");
+    expect(getNextStatus("awaiting_payment")).toBe("rough");
+    expect(getNextStatus("rough")).toBe("lineart");
+  });
+
+  it("treats legacy consulting as inquiry for advancement", () => {
+    expect(getNextStatus("consulting")).toBe("estimating");
   });
 
   it("returns a next action for each status", () => {
     expect(getNextActionForStatus("rough")).toBe("ラフ提出");
     expect(getNextActionForStatus("lineart")).toBe("線画作業");
     expect(getNextActionForStatus("waiting")).toBe("返信待ち");
+    expect(getNextActionForStatus("inquiry")).toContain("見積もり");
+    expect(getNextActionForStatus("estimating")).toBe("見積もり提示");
+  });
+
+  it("exposes the operation-specific button label", () => {
+    expect(getAdvanceButtonLabel("inquiry")).toBe("見積もり作成へ");
+    expect(getAdvanceButtonLabel("estimating")).toBe("見積もり提示済みにする");
+    expect(getAdvanceButtonLabel("quoted")).toBe("案件化して入金待ちにする");
+    expect(getAdvanceButtonLabel("awaiting_payment")).toBe("入金確認してラフ開始");
+    expect(getAdvanceButtonLabel("completed")).toBeNull();
   });
 });
 

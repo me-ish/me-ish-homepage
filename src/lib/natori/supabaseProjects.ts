@@ -26,6 +26,9 @@ type ProjectRow = {
   due_date: string;
   next_action: string;
   note: string | null;
+  // Optional — added by 20260524_natori_project_flow.sql. Missing on older
+  // backends; treat as undefined.
+  payment_confirmed_at?: string | null;
 };
 
 type TaskRow = {
@@ -79,6 +82,7 @@ function rowToProject(row: ProjectRow, taskRows: TaskRow[]): NatoriProject {
     dueDate: row.due_date,
     nextAction: row.next_action,
     note: row.note ?? undefined,
+    paymentConfirmedAt: row.payment_confirmed_at ?? undefined,
     tasks,
   };
 }
@@ -133,6 +137,23 @@ export async function updateNatoriProjectStatus(
   });
 }
 
+/**
+ * Confirms payment for a project that is in `awaiting_payment`: stamps
+ * `payment_confirmed_at` (if the column exists) and advances status to `rough`
+ * so the project starts pressuring the calendar. Used by the
+ * "入金確認してラフ開始" button on the dashboard.
+ */
+export async function confirmNatoriProjectPayment(
+  projectId: string,
+  nextAction: string
+): Promise<void> {
+  await patchNatoriAdminProject({
+    kind: "confirm-payment",
+    projectId,
+    nextAction,
+  });
+}
+
 export type CreateNatoriProjectInput = {
   title: string;
   clientName: string;
@@ -161,7 +182,10 @@ export async function createNatoriProject(input: CreateNatoriProjectInput): Prom
   const deliveryPlan = input.deliveryPlan ?? "normal";
   const startDateISO = input.startDateISO ?? new Date().toISOString().slice(0, 10);
   const dueDateISO = input.dueDateISO ?? calculateDueDate(startDateISO, deliveryPlan);
-  const status = input.status ?? "quoted";
+  // Default to `inquiry` so the production flow starts at 依頼受付. Callers can
+  // still pass an explicit status (e.g. for back-fill or quick-add at a later
+  // stage).
+  const status = input.status ?? "inquiry";
 
   const { data: insertedProject, error: projectErr } = await supabase
     .from(PROJECTS_TABLE)

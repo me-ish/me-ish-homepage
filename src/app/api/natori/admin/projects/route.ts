@@ -34,6 +34,10 @@ type TaskRow = {
 };
 
 const NATORI_PROJECT_STATUSES = new Set([
+  "inquiry",
+  "estimating",
+  // `consulting` is the legacy "依頼受付" value; kept for back-compat with rows
+  // inserted before the inquiry/estimating split (2026-05).
   "consulting",
   "quoted",
   "awaiting_payment",
@@ -151,6 +155,44 @@ export async function PATCH(request: Request) {
     if (error) {
       console.error("[natori-admin-projects] project status update failed", error);
       return NextResponse.json({ error: "Failed to update project" }, { status: 500 });
+    }
+    if (!data) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  // "入金確認してラフ開始" button: stamps payment_confirmed_at and advances
+  // status to `rough` so the project starts pressuring the production
+  // schedule. If the payment_confirmed_at column does not exist yet (older
+  // backend), retry without it so the status change still goes through.
+  if (kind === "confirm-payment") {
+    const nextAction = readString(payload.nextAction) ?? "ラフ作成";
+    const baseUpdate = { status: "rough", next_action: nextAction } as Record<string, unknown>;
+    const withTimestamp = { ...baseUpdate, payment_confirmed_at: new Date().toISOString() };
+
+    let { data, error } = await (admin as any)
+      .from("natori_projects")
+      .update(withTimestamp)
+      .eq("id", projectId)
+      .select("id")
+      .maybeSingle();
+
+    if (error && /payment_confirmed_at/i.test(error.message ?? "")) {
+      // Column missing — fall back to a plain status update.
+      const retry = await (admin as any)
+        .from("natori_projects")
+        .update(baseUpdate)
+        .eq("id", projectId)
+        .select("id")
+        .maybeSingle();
+      data = retry.data;
+      error = retry.error;
+    }
+
+    if (error) {
+      console.error("[natori-admin-projects] confirm-payment failed", error);
+      return NextResponse.json({ error: "Failed to confirm payment" }, { status: 500 });
     }
     if (!data) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });

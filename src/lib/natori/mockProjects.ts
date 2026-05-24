@@ -81,13 +81,25 @@ export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
 };
 
 export const natoriProjectStatusMeta: Record<NatoriProjectStatus, NatoriProjectStatusMeta> = {
+  inquiry: {
+    label: "依頼受付",
+    chipClassName: "border-amber-300 bg-amber-50 text-amber-800",
+    cellClassName: "bg-amber-50 text-amber-900",
+  },
+  estimating: {
+    label: "見積もり中",
+    chipClassName: "border-amber-300 bg-amber-50 text-amber-900",
+    cellClassName: "bg-amber-50 text-amber-900",
+  },
+  // Legacy "相談中" rows. Kept for back-compat with existing data; rendered as
+  // "依頼受付（旧）" so it's obvious these should be migrated to `inquiry`.
   consulting: {
-    label: "相談中",
+    label: "依頼受付（旧）",
     chipClassName: "border-amber-300 bg-amber-50 text-amber-800",
     cellClassName: "bg-amber-50 text-amber-900",
   },
   quoted: {
-    label: "見積もり済",
+    label: "見積もり提示済み",
     chipClassName: "border-yellow-300 bg-yellow-50 text-yellow-800",
     cellClassName: "bg-yellow-50 text-yellow-900",
   },
@@ -179,7 +191,7 @@ const seeds: MockSeed[] = [
     clientName: "Reiさん",
     amount: 16000,
     dueDate: "2026-06-15",
-    status: "consulting",
+    status: "inquiry",
     type: "illustration",
     nextAction: "依頼内容の確認",
     note: "商用利用の範囲を確認してから確定。",

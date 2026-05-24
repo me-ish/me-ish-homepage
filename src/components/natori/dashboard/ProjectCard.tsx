@@ -1,11 +1,13 @@
 "use client";
 
-import { CalendarDays, CircleDollarSign, Clock4, Sparkles, AlertTriangle, Zap } from "lucide-react";
+import { ArrowRight, CalendarDays, CircleDollarSign, Clock4, Sparkles, AlertTriangle, Wallet, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { natoriProjectStatusMeta, natoriStageMeta } from "@/lib/natori/mockProjects";
 import {
   daysUntilDue,
+  getAdvanceButtonLabel,
+  getNextActionForStatus,
   getStageForStatus,
   isProjectOverdue,
 } from "@/lib/natori/projects";
@@ -23,6 +25,9 @@ type ProjectCardProps = {
   project: NatoriProject;
   today: Date;
   onToggleTask: (projectId: string, taskId: string) => void;
+  onAdvanceStatus?: (project: NatoriProject) => void;
+  onConfirmPayment?: (project: NatoriProject) => void;
+  advanceBusy?: boolean;
 };
 
 const yenFormatter = new Intl.NumberFormat("ja-JP", {
@@ -57,6 +62,9 @@ export default function ProjectCard({
   project,
   today,
   onToggleTask,
+  onAdvanceStatus,
+  onConfirmPayment,
+  advanceBusy,
 }: ProjectCardProps) {
   const status = natoriProjectStatusMeta[project.status];
   const overdue = isProjectOverdue(project, today);
@@ -140,9 +148,22 @@ export default function ProjectCard({
             次やること
           </div>
           <p className="mt-1 break-words text-lg font-black leading-7">
-            {project.nextAction}
+            {project.nextAction || getNextActionForStatus(project.status)}
           </p>
+          <ProjectAdvanceButton
+            project={project}
+            onAdvanceStatus={onAdvanceStatus}
+            onConfirmPayment={onConfirmPayment}
+            busy={advanceBusy}
+          />
         </div>
+
+        {project.status === "awaiting_payment" ? (
+          <div className="flex items-start gap-2 rounded-2xl border border-orange-300 bg-orange-50 p-3 text-xs text-orange-900 sm:text-sm">
+            <Wallet className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span>入金確認後に制作スケジュールへ反映されます。</span>
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-1 gap-2 text-sm text-gray-700 sm:grid-cols-2">
           <div className="flex min-w-0 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
@@ -233,5 +254,44 @@ export default function ProjectCard({
         <ProjectTaskChecklist project={project} onToggle={onToggleTask} />
       </CardContent>
     </Card>
+  );
+}
+
+function ProjectAdvanceButton({
+  project,
+  onAdvanceStatus,
+  onConfirmPayment,
+  busy,
+}: {
+  project: NatoriProject;
+  onAdvanceStatus?: (project: NatoriProject) => void;
+  onConfirmPayment?: (project: NatoriProject) => void;
+  busy?: boolean;
+}) {
+  const label = getAdvanceButtonLabel(project.status);
+  if (!label) return null;
+  const isConfirmPayment = project.status === "awaiting_payment";
+  const handler = isConfirmPayment ? onConfirmPayment : onAdvanceStatus;
+  if (!handler) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => handler(project)}
+      disabled={busy}
+      className={cn(
+        "mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full px-4 text-xs font-bold text-white shadow-sm transition disabled:opacity-60 sm:w-auto",
+        isConfirmPayment
+          ? "bg-orange-500 hover:bg-orange-600"
+          : "bg-pink-500 hover:bg-pink-600"
+      )}
+    >
+      {isConfirmPayment ? (
+        <Wallet className="h-3.5 w-3.5" aria-hidden />
+      ) : (
+        <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+      )}
+      {busy ? "更新中…" : label}
+    </button>
   );
 }
