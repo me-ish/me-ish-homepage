@@ -7,6 +7,7 @@ import {
   deriveNextActionFromTasks,
   deriveStatusFromTasks,
   getAdvanceButtonLabel,
+  getCalendarEntriesForDate,
   getNextStatus,
   isProjectOverdue,
   toISODate,
@@ -201,11 +202,60 @@ describe("order flow: awaiting payment", () => {
 
   it("produces no calendar bars (no heavy work before payment)", () => {
     const bars = computeProjectBars(order);
-    // material is auto-completed in applyStatusToTasks for awaiting_payment? No — only
-    // statuses past awaiting_payment auto-complete. So tasks remain, but the project
-    // status is blocked; bars are still computed mechanically from milestones.
-    // The user-facing widget filters via isBlocked, not the bars; bars are fine to exist.
-    expect(Array.isArray(bars)).toBe(true);
+    // Pre-work statuses are filtered out of computeProjectBars so the
+    // ProjectMonthCalendar grid stays clean until ラフ開始.
+    expect(bars).toEqual([]);
+  });
+});
+
+describe("calendar visibility: pre-work projects must stay off the schedule", () => {
+  it.each(["inquiry", "estimating", "quoted", "awaiting_payment"] as const)(
+    "%s status produces no calendar bars",
+    (status) => {
+      const project = makeOrder({
+        id: `prework-${status}`,
+        type: "illustration",
+        status,
+        deliveryPlan: "normal",
+      });
+      expect(computeProjectBars(project)).toEqual([]);
+    }
+  );
+
+  it.each(["inquiry", "estimating", "quoted", "awaiting_payment"] as const)(
+    "%s status emits no milestone calendar entries on any day",
+    (status) => {
+      const project = makeOrder({
+        id: `prework-${status}`,
+        type: "illustration",
+        status,
+        deliveryPlan: "normal",
+      });
+      const someMidpointISO = "2026-06-07";
+      const entries = getCalendarEntriesForDate([project], someMidpointISO);
+      expect(entries.find((entry) => entry.kind === "milestone")).toBeUndefined();
+    }
+  );
+
+  it("keeps the due-date marker so the user can still click into the project", () => {
+    const project = makeOrder({
+      id: "quoted",
+      type: "illustration",
+      status: "quoted",
+      deliveryPlan: "normal",
+    });
+    const entries = getCalendarEntriesForDate([project], project.dueDate);
+    expect(entries.find((entry) => entry.kind === "due")).toBeDefined();
+  });
+
+  it("rough (post-payment) does start producing calendar bars", () => {
+    const project = makeOrder({
+      id: "post-pay",
+      type: "illustration",
+      status: "rough",
+      deliveryPlan: "normal",
+    });
+    expect(computeProjectBars(project).length).toBeGreaterThan(0);
   });
 });
 

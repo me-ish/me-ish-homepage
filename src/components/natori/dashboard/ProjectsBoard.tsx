@@ -33,6 +33,7 @@ import ProjectMonthCalendar from "./ProjectMonthCalendar";
 import ProjectDayDetail from "./ProjectDayDetail";
 import ProjectPriorityList from "./ProjectPriorityList";
 import AwaitingPaymentSummary from "./AwaitingPaymentSummary";
+import PreworkProjectsSection from "./PreworkProjectsSection";
 import ProjectRegisterForm from "./ProjectRegisterForm";
 
 type ViewMonth = { year: number; monthIndex: number };
@@ -415,6 +416,13 @@ export default function ProjectsBoard() {
           }}
         />
       ) : null}
+
+      <PreworkProjectsSection
+        projects={projects}
+        busyId={advanceBusyId}
+        onSelect={focusProject}
+        onAdvanceStatus={handleAdvanceStatus}
+      />
 
       <AwaitingPaymentSummary
         summary={awaitingPaymentSummary}

@@ -362,6 +362,9 @@ export function getCalendarEntriesForDate(
       entries.push({ kind: "due", project });
     }
     if (isDoneStatus(project.status)) continue;
+    // Pre-work case の milestone（rough/lineart/...）はまだ着手しないので
+    // カレンダーに点として出さない。due だけ残してクリックで詳細に飛べる。
+    if (isPreworkStatus(project.status)) continue;
     const milestones = computeStageMilestones(project);
     for (const milestone of milestones) {
       if (milestone.stage === "delivery") continue;
@@ -390,6 +393,10 @@ function shiftISODate(iso: string, days: number): string {
 
 export function computeProjectBars(project: NatoriProject, today?: Date): NatoriCalendarBar[] {
   if (isDoneStatus(project.status)) return [];
+  // Pre-work (依頼受付・見積もり中・見積もり提示済み・入金待ち) は制作未着手なので
+  // カレンダーの stage バーには出さない。入金確認 → rough に進んでから初めて
+  // バーが描画されるようにする。
+  if (isPreworkStatus(project.status)) return [];
   const milestones = computeStageMilestones(project);
   if (milestones.length === 0) return [];
 
