@@ -52,10 +52,15 @@ const NATORI_PROJECT_STATUSES = new Set([
   "completed",
 ]);
 
-const CHARACTER_PROJECT_TYPES = new Set<NatoriProjectType>(["icon", "sd", "standing"]);
+const NORMALIZED_PROJECT_TYPES = new Set<NatoriProjectType>([
+  "icon",
+  "sd",
+  "standing",
+  "illustration",
+]);
 
-function isCharacterProjectType(type: string): type is NatoriProjectType {
-  return CHARACTER_PROJECT_TYPES.has(type as NatoriProjectType);
+function isNormalizedProjectType(type: string): type is NatoriProjectType {
+  return NORMALIZED_PROJECT_TYPES.has(type as NatoriProjectType);
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -114,13 +119,13 @@ function shouldTemplateTaskBeDone(
   }
 }
 
-async function normalizeCharacterProjectTasks(
+async function normalizeProjectTasks(
   admin: ReturnType<typeof supabaseAdmin>,
   projects: ProjectRow[],
   tasks: TaskRow[]
 ): Promise<TaskRow[]> {
   const projectsToNormalize = projects.filter((project) =>
-    isCharacterProjectType(project.type)
+    isNormalizedProjectType(project.type)
   );
   if (projectsToNormalize.length === 0) return tasks;
 
@@ -246,7 +251,7 @@ export async function GET() {
 
   let normalizedTasks: TaskRow[];
   try {
-    normalizedTasks = await normalizeCharacterProjectTasks(
+    normalizedTasks = await normalizeProjectTasks(
       admin,
       (projects ?? []) as ProjectRow[],
       (tasks ?? []) as TaskRow[]

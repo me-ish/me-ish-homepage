@@ -193,7 +193,8 @@ export function createTasksForType(type: NatoriProjectType): NatoriProjectTask[]
       });
     case "illustration":
       return [
-        { id: "rough", label: "ラフ", stage: "rough", done: false, estimatedHours: 3 },
+        { id: "rough", label: "ラフ", stage: "rough", done: false, estimatedHours: 2.5 },
+        { id: "rough-submit", label: "ラフ提出", stage: "rough", done: false, estimatedHours: 0.5 },
         { id: "line", label: "線画", stage: "lineart", done: false, estimatedHours: 5 },
         { id: "color", label: "着彩", stage: "coloring", done: false, estimatedHours: 7 },
         { id: "finishing", label: "仕上げ", stage: "finish", done: false, estimatedHours: 1.5 },
