@@ -1,0 +1,330 @@
+"use client";
+
+import { useState } from "react";
+import { ArrowRight, CalendarDays, CircleDollarSign, Clock4, Pencil, Sparkles, AlertTriangle, Wallet, Zap } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import ProjectEditForm from "./ProjectEditForm";
+import type { UpdateNatoriProjectDetailsInput } from "@/features/natori/data/supabaseProjects";
+import { natoriProjectStatusMeta, natoriStageMeta } from "@/features/natori/constants/mockProjects";
+import {
+  daysUntilDue,
+  getAdvanceButtonLabel,
+  getNextActionForStatus,
+  getStageForStatus,
+  isProjectOverdue,
+} from "@/features/natori/lib/projects";
+import { getDeliveryPlanMeta } from "@/features/natori/lib/deliveryPlans";
+import {
+  computeProjectScheduling,
+  formatHours,
+  getCurrentStagePlan,
+} from "@/features/natori/lib/scheduling";
+import { cn } from "@/lib/utils";
+import ProjectTaskChecklist from "./ProjectTaskChecklist";
+import type { NatoriProject } from "@/features/natori/types/projects";
+
+type ProjectCardProps = {
+  project: NatoriProject;
+  today: Date;
+  onToggleTask: (projectId: string, taskId: string) => void;
+  onAdvanceStatus?: (project: NatoriProject) => void;
+  onConfirmPayment?: (project: NatoriProject) => void;
+  onEditDetails?: (
+    project: NatoriProject,
+    patch: UpdateNatoriProjectDetailsInput
+  ) => Promise<void>;
+  advanceBusy?: boolean;
+};
+
+const yenFormatter = new Intl.NumberFormat("ja-JP", {
+  style: "currency",
+  currency: "JPY",
+  maximumFractionDigits: 0,
+});
+
+const dueDateFormatter = new Intl.DateTimeFormat("ja-JP", {
+  month: "numeric",
+  day: "numeric",
+  weekday: "short",
+});
+
+function formatDueDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return dueDateFormatter.format(date);
+}
+
+function formatStageMilestone(value: string) {
+  return formatDueDate(value);
+}
+
+const priorityChipMap: Record<NonNullable<NatoriProject["priority"]>, { label: string; className: string }> = {
+  high: { label: "優先度：高", className: "border-red-300 bg-red-50 text-red-800" },
+  normal: { label: "優先度：中", className: "border-gray-300 bg-gray-50 text-gray-700" },
+  low: { label: "優先度：低", className: "border-gray-200 bg-gray-50 text-gray-500" },
+};
+
+export default function ProjectCard({
+  project,
+  today,
+  onToggleTask,
+  onAdvanceStatus,
+  onConfirmPayment,
+  onEditDetails,
+  advanceBusy,
+}: ProjectCardProps) {
+  const [editing, setEditing] = useState(false);
+  const status = natoriProjectStatusMeta[project.status];
+  const overdue = isProjectOverdue(project, today);
+  const days = daysUntilDue(project.dueDate, today);
+  const priority = project.priority ? priorityChipMap[project.priority] : null;
+  const stage = getStageForStatus(project.status);
+  const stageMeta = stage ? natoriStageMeta[stage] : null;
+  const deliveryPlanMeta = getDeliveryPlanMeta(project.deliveryPlan);
+  const isRush = deliveryPlanMeta.isRush;
+  const scheduling = computeProjectScheduling(project, today);
+  const stagePlan = getCurrentStagePlan(project, today);
+
+  return (
+    <Card
+      className={cn(
+        "min-w-0 overflow-hidden rounded-2xl border-gray-200 bg-white shadow-sm",
+        overdue && "border-red-400"
+      )}
+    >
+      <CardContent className="space-y-3 p-4 sm:space-y-4 sm:p-5">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="break-words text-base font-black leading-6 text-gray-900 sm:text-lg">
+              {project.title}
+            </p>
+            <p className="mt-1 break-words text-sm text-gray-600">{project.clientName}</p>
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <Badge
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-bold shadow-none",
+                status.chipClassName
+              )}
+            >
+              {status.label}
+            </Badge>
+            {isRush ? (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                  deliveryPlanMeta.chipClassName
+                )}
+                title={deliveryPlanMeta.label}
+              >
+                <Zap className="h-3 w-3" aria-hidden />
+                {deliveryPlanMeta.shortLabel}
+              </span>
+            ) : null}
+            {priority ? (
+              <span
+                className={cn(
+                  "rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                  priority.className
+                )}
+              >
+                {priority.label}
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        {overdue ? (
+          <div className="flex items-start gap-2 rounded-2xl border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+            <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="font-bold">
+              納期を {Math.abs(days)} 日過ぎています。優先して進めましょう。
+            </span>
+          </div>
+        ) : null}
+
+        <div
+          className={cn(
+            "rounded-2xl border p-3",
+            stageMeta
+              ? cn("border-transparent", stageMeta.softClassName)
+              : "border-gray-200 bg-gray-50 text-gray-900"
+          )}
+        >
+          <div className="flex items-center gap-2 text-xs font-bold opacity-80">
+            <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+            次やること
+          </div>
+          <p className="mt-1 break-words text-lg font-black leading-7">
+            {project.nextAction || getNextActionForStatus(project.status)}
+          </p>
+          <ProjectAdvanceButton
+            project={project}
+            onAdvanceStatus={onAdvanceStatus}
+            onConfirmPayment={onConfirmPayment}
+            busy={advanceBusy}
+          />
+        </div>
+
+        {project.status === "awaiting_payment" ? (
+          <div className="flex items-start gap-2 rounded-2xl border border-orange-300 bg-orange-50 p-3 text-xs text-orange-900 sm:text-sm">
+            <Wallet className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span>入金確認後に制作スケジュールへ反映されます。</span>
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-2 text-sm text-gray-700 sm:grid-cols-2">
+          <div className="flex min-w-0 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
+            <CalendarDays className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
+            <span className="shrink-0 text-gray-500">納期</span>
+            <span className="min-w-0 break-words font-bold text-gray-900">
+              {formatDueDate(project.dueDate)}
+            </span>
+          </div>
+          <div className="flex min-w-0 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
+            <CircleDollarSign className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
+            <span className="shrink-0 text-gray-500">金額</span>
+            <span className="min-w-0 break-words font-bold text-gray-900">
+              {yenFormatter.format(project.amount)}
+            </span>
+          </div>
+        </div>
+
+        <div
+          className={cn(
+            "flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs sm:text-sm",
+            scheduling.isBlocked
+              ? "border-gray-200 bg-gray-50 text-gray-700"
+              : scheduling.isOverdue
+              ? "border-red-200 bg-red-50 text-red-900"
+              : isRush
+              ? cn("border-transparent", deliveryPlanMeta.softClassName)
+              : "border-pink-100 bg-pink-50/50 text-pink-900"
+          )}
+        >
+          <Clock4 className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+          {scheduling.isBlocked ? (
+            <span className="min-w-0 font-bold">
+              着金・確認待ち中。残 {formatHours(scheduling.remainingHours)}
+            </span>
+          ) : (
+            <span className="min-w-0">
+              残り作業 <span className="font-black">{formatHours(scheduling.remainingHours)}</span>
+            </span>
+          )}
+        </div>
+
+        {stagePlan ? (
+          <div
+            className={cn(
+              "rounded-2xl border p-3 text-xs sm:text-sm",
+              stagePlan.isOverdueMilestone
+                ? "border-red-200 bg-red-50 text-red-900"
+                : cn("border-transparent", natoriStageMeta[stagePlan.stage].softClassName)
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wide opacity-80">
+              <span>現在のステージ</span>
+              <span
+                className={cn(
+                  "rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                  natoriStageMeta[stagePlan.stage].chipClassName
+                )}
+              >
+                {natoriStageMeta[stagePlan.stage].label}
+              </span>
+            </div>
+            <div className="mt-1 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-[10px] opacity-70">残</p>
+                <p className="text-sm font-black">{formatHours(stagePlan.remainingHours)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] opacity-70">平日1日</p>
+                <p className="text-sm font-black">{formatHours(stagePlan.requiredPerDay)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] opacity-70">今週の枠</p>
+                <p className="text-sm font-black">{formatHours(stagePlan.requiredThisWeek)}</p>
+              </div>
+            </div>
+            <p className="mt-1 text-[10px] opacity-80">
+              目安: {formatStageMilestone(stagePlan.milestoneDateISO)}
+              {stagePlan.isOverdueMilestone ? "（過ぎてます）" : ""}
+            </p>
+          </div>
+        ) : null}
+
+        {project.note ? (
+          <p className="break-words text-sm leading-6 text-gray-700">{project.note}</p>
+        ) : null}
+
+        <ProjectTaskChecklist project={project} onToggle={onToggleTask} />
+
+        {onEditDetails ? (
+          editing ? (
+            <ProjectEditForm
+              project={project}
+              onCancel={() => setEditing(false)}
+              onSave={async (patch) => {
+                await onEditDetails(project, patch);
+                setEditing(false);
+              }}
+            />
+          ) : (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="inline-flex h-8 items-center gap-1 rounded-full border border-pink-200 bg-white px-3 text-[11px] font-bold text-pink-700 hover:bg-pink-50"
+              >
+                <Pencil className="h-3 w-3" aria-hidden />
+                編集
+              </button>
+            </div>
+          )
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProjectAdvanceButton({
+  project,
+  onAdvanceStatus,
+  onConfirmPayment,
+  busy,
+}: {
+  project: NatoriProject;
+  onAdvanceStatus?: (project: NatoriProject) => void;
+  onConfirmPayment?: (project: NatoriProject) => void;
+  busy?: boolean;
+}) {
+  const label = getAdvanceButtonLabel(project.status);
+  if (!label) return null;
+  const isConfirmPayment = project.status === "awaiting_payment";
+  const handler = isConfirmPayment ? onConfirmPayment : onAdvanceStatus;
+  if (!handler) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => handler(project)}
+      disabled={busy}
+      className={cn(
+        "mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full px-4 text-xs font-bold text-white shadow-sm transition disabled:opacity-60 sm:w-auto",
+        isConfirmPayment
+          ? "bg-orange-500 hover:bg-orange-600"
+          : "bg-pink-500 hover:bg-pink-600"
+      )}
+    >
+      {isConfirmPayment ? (
+        <Wallet className="h-3.5 w-3.5" aria-hidden />
+      ) : (
+        <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+      )}
+      {busy ? "更新中…" : label}
+    </button>
+  );
+}

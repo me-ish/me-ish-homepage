@@ -1,9 +1,9 @@
 // app/natori/page.tsx
 import type { Metadata } from "next";
-import Hero from "@/components/natori/Hero";
-import Gallery from "@/components/natori/Gallery";
-import About from "@/components/natori/About";
-import Footer from "@/components/natori/Footer";
+import Hero from "@/features/natori/components/Hero";
+import Gallery from "@/features/natori/components/Gallery";
+import About from "@/features/natori/components/About";
+import Footer from "@/features/natori/components/Footer";
 import { works } from "@/lib/natori/works";
 import { allTags } from "@/lib/natori/works";
 

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import ProjectsBoard from "@/components/natori/dashboard/ProjectsBoard";
-import Footer from "@/components/natori/Footer";
-import { requireNatoriAccess } from "@/lib/natori/requireNatoriAdmin";
+import ProjectsBoard from "@/features/natori/components/dashboard/ProjectsBoard";
+import Footer from "@/features/natori/components/Footer";
+import { requireNatoriAccess } from "@/features/natori/server/requireNatoriAdmin";
 
 export const dynamic = "force-dynamic";
 

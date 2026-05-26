@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { supabaseServer } from '@/lib/supabaseServer';
 import { isAdminEmail } from '@/lib/isAdmin';
-import { canAccessNatoriManagement } from '@/lib/natori/requireNatoriAdmin';
+import { canAccessNatoriManagement } from '@/features/natori/server/requireNatoriAdmin';
 import AdminLoginClient from './AdminLoginClient';
 
 export const dynamic = 'force-dynamic';

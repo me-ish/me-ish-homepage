@@ -20,9 +20,9 @@ import {
   fetchOwnNatoriProfile,
   upsertOwnNatoriProfile,
   type NatoriUserProfile,
-} from "@/lib/natori/supabaseProfile";
+} from "@/features/natori/data/supabaseProfile";
 import { Button } from "@/components/ui/button";
-import Footer from "@/components/natori/Footer";
+import Footer from "@/features/natori/components/Footer";
 
 type DashboardCard = {
   href: string;

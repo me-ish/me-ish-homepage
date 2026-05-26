@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireNatoriAccess } from "@/lib/natori/requireNatoriAdmin";
+import { requireNatoriAccess } from "@/features/natori/server/requireNatoriAdmin";
 
 export const dynamic = "force-dynamic";
 

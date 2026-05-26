@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import Footer from "@/components/natori/Footer";
+import Footer from "@/features/natori/components/Footer";
 import { works } from "@/lib/natori/works";
 
 type Props = { params: { slug: string } };

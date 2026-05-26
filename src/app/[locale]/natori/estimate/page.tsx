@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import EstimateForm from "@/components/natori/dashboard/EstimateForm";
-import Footer from "@/components/natori/Footer";
-import { requireNatoriAccess } from "@/lib/natori/requireNatoriAdmin";
+import EstimateForm from "@/features/natori/components/dashboard/EstimateForm";
+import Footer from "@/features/natori/components/Footer";
+import { requireNatoriAccess } from "@/features/natori/server/requireNatoriAdmin";
 
 export const dynamic = "force-dynamic";
 

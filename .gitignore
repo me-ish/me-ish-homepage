@@ -48,6 +48,7 @@ next-env.d.ts
 
 # IDEs / tools
 .vscode/
+.claude/settings.local.json
 .eslintcache
 .stylelintcache
 .tailwindcache/
