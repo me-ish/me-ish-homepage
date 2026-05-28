@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import Footer from "@/features/natori/components/Footer";
-import { works } from "@/lib/natori/works";
+import { works } from "@/features/natori/constants/works";
 
 type Props = { params: { slug: string } };
 

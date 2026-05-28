@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type { Work } from "@/lib/natori/works";
+import type { Work } from "@/features/natori/constants/works";
 
 const PINK = "#FFD1E6";
 

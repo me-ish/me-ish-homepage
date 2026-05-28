@@ -1,7 +1,7 @@
 // components/natori/WorkCard.tsx
 import Image from "next/image";
 import Link from "next/link";
-import type { Work } from "@/lib/natori/works";
+import type { Work } from "@/features/natori/constants/works";
 
 export default function WorkCard({ work }: { work: Work }) {
   return (

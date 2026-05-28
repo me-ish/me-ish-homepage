@@ -4,8 +4,8 @@ import Hero from "@/features/natori/components/Hero";
 import Gallery from "@/features/natori/components/Gallery";
 import About from "@/features/natori/components/About";
 import Footer from "@/features/natori/components/Footer";
-import { works } from "@/lib/natori/works";
-import { allTags } from "@/lib/natori/works";
+import { works } from "@/features/natori/constants/works";
+import { allTags } from "@/features/natori/constants/works";
 
 const title = "Natori Portfolio – me-ish";
 const description = "イラストレーター ナトリのポートフォリオ。透明感のある光と色。VGenからの依頼も受付中。";

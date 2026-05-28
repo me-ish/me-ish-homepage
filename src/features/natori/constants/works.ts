@@ -1,4 +1,4 @@
-// lib/natori/works.ts
+// features/natori/constants/works.ts
 export type Work = {
   slug: string;
   title: string;
