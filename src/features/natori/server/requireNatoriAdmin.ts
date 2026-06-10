@@ -38,6 +38,14 @@ export async function requireNatoriAdmin(nextPath: string): Promise<void> {
 }
 
 export async function requireNatoriAccess(nextPath: string): Promise<void> {
+  // TODO(temporary): ナトリ先生のログインループ回避のため、natori 管理画面を
+  // 一時的にログイン無しで閲覧可能にしている。恒久対応（本番 env に
+  // NATORI_STAFF_EMAILS を設定）が済んだら、この early-return を削除して
+  // 下のチェックを復活させること。
+  if (process.env.NATORI_REQUIRE_AUTH !== "1") {
+    return;
+  }
+
   const supabase = supabaseServer();
   const {
     data: { user },
