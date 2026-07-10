@@ -1,6 +1,8 @@
 // features/natori/components/portfolio/PortfolioHero.tsx
+import Image from "next/image";
 import {
   portfolioColors as c,
+  portfolioImages,
   portfolioProfile,
 } from "@/features/natori/constants/portfolioContent";
 import ChibiFace from "./ChibiFace";
@@ -20,8 +22,6 @@ export default function PortfolioHero() {
           {portfolioProfile.roleEn}
         </p>
         <h1 className="mb-4 text-4xl font-black leading-tight md:text-5xl">
-          {portfolioProfile.heroTitleLead}
-          <br />
           <span style={{ color: c.pink }}>{portfolioProfile.heroTitleAccent}</span>
           {portfolioProfile.heroTitleTail}
         </h1>
@@ -47,8 +47,9 @@ export default function PortfolioHero() {
       </div>
 
       <div className="relative flex justify-center">
+        {/* メインビジュアル。portfolioImages.hero を設定すると実画像に差し替わる */}
         <div
-          className="pf-floaty flex items-center justify-center rounded-full"
+          className="pf-floaty relative flex items-center justify-center overflow-hidden rounded-full"
           style={{
             width: 260,
             height: 260,
@@ -56,7 +57,17 @@ export default function PortfolioHero() {
             boxShadow: "0 20px 40px rgba(45,42,61,0.12)",
           }}
         >
-          <ChibiFace size={170} skin="#FFE3D1" hair="#F3A6C1" accent={c.pink} />
+          {portfolioImages.hero ? (
+            <Image
+              src={portfolioImages.hero}
+              alt={`${portfolioProfile.artistName} メインビジュアル`}
+              fill
+              sizes="260px"
+              className="object-cover"
+            />
+          ) : (
+            <ChibiFace size={170} skin="#FFE3D1" hair="#F3A6C1" accent={c.pink} />
+          )}
         </div>
         <span
           className="pf-wobble absolute -right-2 -top-2 rounded-full px-3 py-2 text-xs font-bold shadow"

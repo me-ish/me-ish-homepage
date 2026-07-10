@@ -73,10 +73,12 @@ export default function PortfolioGuidelines() {
           <h2 className="mb-6 text-center text-2xl font-black md:text-3xl">購入者へのお願い</h2>
           <ul className="space-y-1.5 rounded-2xl p-6 text-sm md:p-8 md:text-base" style={cardStyle}>
             {portfolioRequests.map((request) => (
-              <li key={request} className="flex items-start gap-2">
-                <span style={{ color: c.pinkDeep }} aria-hidden="true">
-                  ♥
-                </span>
+              <li key={request} className="flex items-start gap-2.5">
+                <span
+                  className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ background: c.pink }}
+                  aria-hidden="true"
+                />
                 <span style={{ color: c.inkSoft }}>{request}</span>
               </li>
             ))}

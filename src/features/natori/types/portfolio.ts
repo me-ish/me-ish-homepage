@@ -5,7 +5,9 @@ export type PortfolioArtwork = {
   id: number;
   title: string;
   tag: string;
-  /** プレースホルダーSVG用の配色（実画像に差し替えたら不要になる想定） */
+  /** 作品画像のパス（/public 配下、例: "/natori/portfolio/work-01.png"）。null ならプレースホルダーSVGを表示 */
+  image?: string | null;
+  /** プレースホルダーSVG用の配色（実画像を設定したら使われない） */
   skin: string;
   hair: string;
   accent: string;

@@ -42,9 +42,8 @@ export const commissionOpen = true;
 export const portfolioProfile = {
   artistName: "Natori* illust",
   roleEn: "Cute Anime Illustrator",
-  heroTitleLead: "やわらかくて、かわいい。",
-  heroTitleAccent: "あなたの推し",
-  heroTitleTail: "を描きます",
+  heroTitleAccent: "ナトリ",
+  heroTitleTail: "のポートフォリオへようこそ",
   heroDescription:
     "淡いピンクや水色を基調とした、やわらかく可愛い女の子のイラストを描いています。アニメ塗りをベースに、シンプルながらも印象に残る表現を心がけています。",
   aboutParagraphs: [
@@ -52,10 +51,20 @@ export const portfolioProfile = {
     "アイコン・一枚絵・創作キャラクターなどのご依頼を中心にお受けしています。ご希望の雰囲気やこだわりにも丁寧に寄り添い、一枚一枚大切に制作いたします。",
     "「かわいい」「きゅんとする」イラストをお求めの方は、ぜひお気軽にご相談ください。",
   ],
-  strengths:
-    "淡い色合い・キラキラ感・可愛い表情を得意としています。「かわいいだけじゃない、雰囲気のあるイラスト」が欲しい方におすすめです！",
   copyright: "© 2026 Natori* illust. All illustrations placeholder.",
 } as const;
+
+/* ------------------------------------------------------------------
+   画像の差し替え
+   画像ファイルを public/natori/portfolio/ に置いて、ここにパスを書くだけでOK。
+   null のままだとプレースホルダーSVG（ちびキャラ）が表示される。
+------------------------------------------------------------------- */
+export const portfolioImages = {
+  /** トップ(ヒーロー)の丸枠に入るメインビジュアル。例: "/natori/portfolio/hero.png" */
+  hero: null as string | null,
+  /** プロフィール欄の丸アイコン。例: "/natori/portfolio/icon.png" */
+  about: null as string | null,
+};
 
 /** 対応内容（Aboutのチップ・フォームのご依頼内容の選択肢） */
 export const portfolioServices = [
@@ -191,13 +200,25 @@ export const portfolioRequests = [
 ] as const;
 
 /* ------------------------------------------------------------------
-   フォームの予算選択肢
+   フォームの選択肢
 ------------------------------------------------------------------- */
 export const portfolioBudgetOptions = [
   "〜5,000円",
   "5,000円〜10,000円",
   "10,000円〜20,000円",
   "20,000円以上",
+  "未定・相談したい",
+] as const;
+
+export const portfolioCommercialOptions = [
+  "なし（個人利用）",
+  "あり（商用利用オプション +3,000円）",
+  "未定・相談したい",
+] as const;
+
+export const portfolioDeadlineOptions = [
+  "通常（約1ヶ月前後）",
+  "お急ぎ納品を希望（+2,000円・要相談）",
 ] as const;
 
 /* ------------------------------------------------------------------

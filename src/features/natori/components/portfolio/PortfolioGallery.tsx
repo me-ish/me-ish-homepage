@@ -2,6 +2,7 @@
 
 // features/natori/components/portfolio/PortfolioGallery.tsx
 import { useState } from "react";
+import Image from "next/image";
 import {
   portfolioArtworks,
   portfolioColors as c,
@@ -53,11 +54,22 @@ export default function PortfolioGallery() {
               style={{ background: c.tape, transform: "rotate(-4deg)" }}
               aria-hidden="true"
             />
+            {/* 作品画像。portfolioContent.ts の image にパスを設定すると実画像に差し替わる */}
             <div
-              className="mb-4 flex items-center justify-center rounded-lg"
+              className="relative mb-4 flex items-center justify-center overflow-hidden rounded-lg"
               style={{ background: c.paperAlt, height: 180 }}
             >
-              <ChibiFace size={110} skin={art.skin} hair={art.hair} accent={art.accent} />
+              {art.image ? (
+                <Image
+                  src={art.image}
+                  alt={art.title}
+                  fill
+                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                  className="object-cover"
+                />
+              ) : (
+                <ChibiFace size={110} skin={art.skin} hair={art.hair} accent={art.accent} />
+              )}
             </div>
             <div className="flex items-center justify-between">
               <p className="font-bold">{art.title}</p>
