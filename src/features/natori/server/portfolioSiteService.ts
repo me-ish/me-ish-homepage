@@ -6,8 +6,7 @@ import "server-only";
 import sharp from "sharp";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { createClient } from "@/lib/supabase/server";
-import { canAccessNatoriManagement } from "./requireNatoriAdmin";
+import { canUseNatoriManagement } from "./requireNatoriAdmin";
 import { parsePortfolioContent } from "@/features/natori/lib/portfolioContent";
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
@@ -33,20 +32,9 @@ const ALLOWED_IMAGE_MIMES = new Set([
 ]);
 const IMAGE_MAX_BYTES = 10 * 1024 * 1024; // 10MB
 
-/** 編集画面・編集APIのアクセス可否（requireNatoriAccess と同じ一時対応込み） */
+/** 編集画面・編集APIのアクセス可否（requireNatoriAccess と同じ判定） */
 export async function canEditNatoriPortfolio(): Promise<boolean> {
-  // TODO(temporary): ナトリ先生のログインループ回避のため、natori 管理画面を
-  // 一時的にログイン無しで利用可能にしている（requireNatoriAccess と同じ扱い）。
-  // 恒久対応が済んだらこの early-return を削除すること。
-  if (process.env.NATORI_REQUIRE_AUTH !== "1") {
-    return true;
-  }
-
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return canAccessNatoriManagement(user?.email ?? null);
+  return canUseNatoriManagement();
 }
 
 /** 掲載内容を読み込む。DB行が無い/壊れている/テーブル未作成ならデフォルトを返す */

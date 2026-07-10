@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { canAccessNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
+import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import {
   confirmNatoriProjectPayment,
   listNatoriAdminProjects,
@@ -8,7 +8,6 @@ import {
   setNatoriProjectStatus,
   setNatoriProjectTaskDone,
 } from "@/features/natori/server/projectsService";
-import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,17 +20,8 @@ function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
-async function isNatoriManagementRequest(): Promise<boolean> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  return canAccessNatoriManagement(user?.email ?? null);
-}
-
 export async function GET() {
-  if (!(await isNatoriManagementRequest())) {
+  if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -49,7 +39,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  if (!(await isNatoriManagementRequest())) {
+  if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
