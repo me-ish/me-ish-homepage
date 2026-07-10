@@ -19,7 +19,6 @@ import {
   updatePricingPresetConfig,
   type NatoriPricingPreset,
 } from "@/features/natori/data/supabasePricing";
-import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import ProjectRegisterForm from "@/features/natori/components/dashboard/ProjectRegisterForm";
 import type {
@@ -76,17 +75,11 @@ export default function EstimateForm() {
 
   useEffect(() => {
     setStartDateISO(toISODate(new Date()));
+    // 認可はプリセット API 側（合言葉キー / ログイン）に任せる。ここでは
+    // 常に読み込みを試み、成功したら保存系 UI を有効化する。
     (async () => {
-      try {
-        const supabase = createClient();
-        const { data } = await supabase.auth.getUser();
-        if (data.user) {
-          setAuthed(true);
-          await loadPresets();
-        }
-      } catch (err) {
-        console.error("[EstimateForm] auth check failed", err);
-      }
+      await loadPresets();
+      setAuthed(true);
     })();
   }, [loadPresets]);
 

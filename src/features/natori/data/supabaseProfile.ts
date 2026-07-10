@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/client";
+// natori プロフィールのデータアクセス。
+// 認可（合言葉キー / ログイン）はサーバー側 API に任せるため、
+// ブラウザ Supabase ではなく /api/natori/admin/profile を経由する。
 
 export type NatoriUserProfile = {
   userId: string;
@@ -18,7 +20,7 @@ type ProfileRow = {
   daily_capacity_hours: number | null;
 };
 
-const PROFILES_TABLE = "natori_user_profiles";
+const API_PATH = "/api/natori/admin/profile";
 
 function rowToProfile(row: ProfileRow): NatoriUserProfile {
   return {
@@ -31,21 +33,18 @@ function rowToProfile(row: ProfileRow): NatoriUserProfile {
   };
 }
 
-export async function fetchOwnNatoriProfile(): Promise<NatoriUserProfile | null> {
-  const supabase = createClient();
-  const { data: userData, error: userErr } = await supabase.auth.getUser();
-  if (userErr) throw userErr;
-  const user = userData.user;
-  if (!user) return null;
+async function readErrorMessage(response: Response, fallback: string): Promise<string> {
+  const body = (await response.json().catch(() => null)) as { error?: string } | null;
+  return body?.error ?? `${fallback} (${response.status})`;
+}
 
-  const { data, error } = await supabase
-    .from(PROFILES_TABLE)
-    .select("*")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) return null;
-  return rowToProfile(data as ProfileRow);
+export async function fetchOwnNatoriProfile(): Promise<NatoriUserProfile | null> {
+  const response = await fetch(API_PATH, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, "プロフィールの読み込みに失敗しました"));
+  }
+  const payload = (await response.json()) as { profile: ProfileRow | null };
+  return payload.profile ? rowToProfile(payload.profile) : null;
 }
 
 export type NatoriUserProfileInput = {
@@ -59,26 +58,14 @@ export type NatoriUserProfileInput = {
 export async function upsertOwnNatoriProfile(
   input: NatoriUserProfileInput
 ): Promise<NatoriUserProfile> {
-  const supabase = createClient();
-  const { data: userData, error: userErr } = await supabase.auth.getUser();
-  if (userErr) throw userErr;
-  const user = userData.user;
-  if (!user) throw new Error("ログインが必要です。");
-
-  const payload = {
-    user_id: user.id,
-    handle: input.handle ?? null,
-    display_name: input.displayName ?? null,
-    portfolio_url: input.portfolioUrl ?? null,
-    links_url: input.linksUrl ?? null,
-    daily_capacity_hours: input.dailyCapacityHours ?? null,
-  };
-
-  const { data, error } = await supabase
-    .from(PROFILES_TABLE)
-    .upsert(payload, { onConflict: "user_id" })
-    .select("*")
-    .single();
-  if (error) throw error;
-  return rowToProfile(data as ProfileRow);
+  const response = await fetch(API_PATH, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, "プロフィールの保存に失敗しました"));
+  }
+  const payload = (await response.json()) as { profile: ProfileRow };
+  return rowToProfile(payload.profile);
 }

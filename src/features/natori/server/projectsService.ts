@@ -1,7 +1,9 @@
 import "server-only";
 import { createTasksForType } from "@/features/natori/lib/projects";
+import { calculateDueDate } from "@/features/natori/lib/deliveryPlans";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type {
+  NatoriDeliveryPlan,
   NatoriProjectTask,
   NatoriProjectType,
 } from "@/features/natori/types/projects";
@@ -256,6 +258,86 @@ export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjects
   } catch {
     return { kind: "normalize-error" };
   }
+}
+
+export type CreateNatoriAdminProjectInput = {
+  userId: string;
+  title: string;
+  clientName: string;
+  amount: number;
+  type: NatoriProjectType;
+  status?: string;
+  deliveryPlan?: NatoriDeliveryPlan;
+  startDateISO?: string;
+  dueDateISO?: string;
+  nextAction?: string;
+  note?: string;
+  priority?: string;
+};
+
+export type CreateNatoriAdminProjectResult =
+  | { kind: "ok"; projectId: string }
+  | { kind: "db-error" };
+
+/**
+ * data/supabaseProjects.createNatoriProject のサーバー版。type に応じた
+ * タスクテンプレートも一緒に生成する。呼び出し側（API route）が userId を
+ * 解決してから渡すこと。
+ */
+export async function createNatoriAdminProject(
+  input: CreateNatoriAdminProjectInput
+): Promise<CreateNatoriAdminProjectResult> {
+  const deliveryPlan = input.deliveryPlan ?? "normal";
+  const startDateISO = input.startDateISO ?? new Date().toISOString().slice(0, 10);
+  const dueDateISO = input.dueDateISO ?? calculateDueDate(startDateISO, deliveryPlan);
+  const status = input.status ?? "inquiry";
+
+  const admin = supabaseAdmin();
+  const { data: insertedProject, error: projectErr } = await (admin as any)
+    .from("natori_projects")
+    .insert({
+      user_id: input.userId,
+      title: input.title,
+      client_name: input.clientName,
+      amount: input.amount,
+      type: input.type,
+      status,
+      delivery_plan: deliveryPlan,
+      priority: input.priority ?? null,
+      start_date: startDateISO,
+      due_date: dueDateISO,
+      next_action: input.nextAction ?? "",
+      note: input.note ?? null,
+    })
+    .select("id")
+    .single();
+  if (projectErr) {
+    console.error("[natori-admin-projects] project insert failed", projectErr);
+    return { kind: "db-error" };
+  }
+  const projectId = (insertedProject as { id: string }).id;
+
+  const tasks = createTasksForType(input.type);
+  const taskInserts = tasks.map((task, index) => ({
+    project_id: projectId,
+    task_key: task.id,
+    label: task.label,
+    stage: task.stage,
+    estimated_hours: task.estimatedHours ?? null,
+    done: task.done,
+    sort_order: index,
+  }));
+  if (taskInserts.length > 0) {
+    const { error: taskErr } = await (admin as any)
+      .from("natori_project_tasks")
+      .insert(taskInserts);
+    if (taskErr) {
+      console.error("[natori-admin-projects] task insert failed", taskErr);
+      return { kind: "db-error" };
+    }
+  }
+
+  return { kind: "ok", projectId };
 }
 
 export type NatoriProjectMutationResult =

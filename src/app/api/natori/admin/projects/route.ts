@@ -2,12 +2,21 @@ import { NextResponse } from "next/server";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import {
   confirmNatoriProjectPayment,
+  createNatoriAdminProject,
   listNatoriAdminProjects,
   NATORI_PROJECT_STATUSES,
   patchNatoriProjectDetails,
   setNatoriProjectStatus,
   setNatoriProjectTaskDone,
 } from "@/features/natori/server/projectsService";
+import {
+  NATORI_OWNER_UNRESOLVED_MESSAGE,
+  resolveNatoriActingUserId,
+} from "@/features/natori/server/natoriOwner";
+import type {
+  NatoriDeliveryPlan,
+  NatoriProjectType,
+} from "@/features/natori/types/projects";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +45,66 @@ export async function GET() {
     case "ok":
       return NextResponse.json({ projects: result.projects, tasks: result.tasks });
   }
+}
+
+const NATORI_PROJECT_TYPES = new Set<string>(["icon", "sd", "standing", "illustration"]);
+const NATORI_DELIVERY_PLANS = new Set<string>(["normal", "rush_14_days", "rush_7_days"]);
+
+export async function POST(request: Request) {
+  if (!(await canUseNatoriManagement())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const payload = (await request.json().catch(() => null)) as unknown;
+  if (!isObject(payload)) {
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
+
+  const title = readString(payload.title);
+  const clientName = readString(payload.clientName);
+  const type = readString(payload.type);
+  if (!title || !clientName || !type || !NATORI_PROJECT_TYPES.has(type)) {
+    return NextResponse.json(
+      { error: "title, clientName and a valid type are required" },
+      { status: 400 }
+    );
+  }
+
+  const amountRaw = Number(payload.amount);
+  const amount = Number.isFinite(amountRaw) ? Math.max(0, Math.round(amountRaw)) : 0;
+
+  const status = readString(payload.status) ?? undefined;
+  if (status && !NATORI_PROJECT_STATUSES.has(status)) {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  }
+  const deliveryPlan = readString(payload.deliveryPlan) ?? undefined;
+  if (deliveryPlan && !NATORI_DELIVERY_PLANS.has(deliveryPlan)) {
+    return NextResponse.json({ error: "Invalid deliveryPlan" }, { status: 400 });
+  }
+
+  const userId = await resolveNatoriActingUserId();
+  if (!userId) {
+    return NextResponse.json({ error: NATORI_OWNER_UNRESOLVED_MESSAGE }, { status: 500 });
+  }
+
+  const result = await createNatoriAdminProject({
+    userId,
+    title,
+    clientName,
+    amount,
+    type: type as NatoriProjectType,
+    status,
+    deliveryPlan: deliveryPlan as NatoriDeliveryPlan | undefined,
+    startDateISO: readString(payload.startDateISO) ?? undefined,
+    dueDateISO: readString(payload.dueDateISO) ?? undefined,
+    nextAction: readString(payload.nextAction) ?? undefined,
+    note: readString(payload.note) ?? undefined,
+    priority: readString(payload.priority) ?? undefined,
+  });
+  if (result.kind === "db-error") {
+    return NextResponse.json({ error: "Failed to create project" }, { status: 500 });
+  }
+  return NextResponse.json({ projectId: result.projectId });
 }
 
 export async function PATCH(request: Request) {

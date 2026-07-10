@@ -91,20 +91,18 @@ export default function NatoriDashboardPage() {
 
   const refresh = useCallback(async () => {
     try {
+      // セッションが無いのは正常系（合言葉キーでのアクセス）。エラー表示は
+      // しない。プロフィールは認可込みのサーバー API から取得する。
       const supabase = createClient();
-      const { data, error: authErr } = await supabase.auth.getUser();
-      if (authErr) throw authErr;
-      const userEmail = data.user?.email ?? null;
-      setEmail(userEmail);
-      if (data.user) {
-        try {
-          const p = await fetchOwnNatoriProfile();
-          setProfile(p);
-        } catch (err) {
-          console.error("[dashboard] profile fetch failed", err);
-        }
-      } else {
-        setProfile(null);
+      const { data } = await supabase.auth.getUser().catch(() => ({
+        data: { user: null },
+      }));
+      setEmail(data.user?.email ?? null);
+      try {
+        const p = await fetchOwnNatoriProfile();
+        setProfile(p);
+      } catch (err) {
+        console.error("[dashboard] profile fetch failed", err);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -117,8 +115,9 @@ export default function NatoriDashboardPage() {
     refresh();
     const supabase = createClient();
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      // プロフィールはセッションの有無に依らずサーバー API から取れるので、
+      // ここではログイン表示用の email だけ追従させる。
       setEmail(session?.user.email ?? null);
-      if (!session) setProfile(null);
     });
     return () => {
       sub.subscription.unsubscribe();
@@ -200,7 +199,7 @@ export default function NatoriDashboardPage() {
               案件管理・見積もり・ポートフォリオ導線をまとめた管理ダッシュボードです。
             </p>
             <p className="mt-1 text-sm leading-6 text-gray-600">
-              案件管理と見積もりはログイン済みの関係者のみ利用できます。リンク集と作品ページは公開ページです。
+              案件管理と見積もりは関係者専用ページです。リンク集と作品ページは公開ページです。
             </p>
           </div>
         </div>
@@ -237,12 +236,11 @@ export default function NatoriDashboardPage() {
           })}
         </ul>
 
-        {email ? (
-          <ProfileSettingsPanel
-            profile={profile}
-            onSaved={(next) => setProfile(next)}
-          />
-        ) : null}
+        <ProfileSettingsPanel
+          profile={profile}
+          onSaved={(next) => setProfile(next)}
+        />
+
       </section>
 
       <Footer />

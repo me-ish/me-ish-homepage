@@ -1,7 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
 import { mockNatoriProjects } from "@/features/natori/constants/mockProjects";
-import { createTasksForType } from "@/features/natori/lib/projects";
-import { calculateDueDate } from "@/features/natori/lib/deliveryPlans";
 import type {
   NatoriDeliveryPlan,
   NatoriProject,
@@ -294,61 +292,22 @@ export type CreateNatoriProjectInput = {
 };
 
 /**
- * Creates a project (with auto-generated tasks for the given type) for the
- * currently signed-in user. Returns the new project ID.
+ * Creates a project (with auto-generated tasks for the given type) via the
+ * admin API. Returns the new project ID. Ownership resolution (signed-in user
+ * or the existing data owner) happens server-side.
  */
 export async function createNatoriProject(input: CreateNatoriProjectInput): Promise<string> {
-  const supabase = createClient();
-  const { data: userData, error: userErr } = await supabase.auth.getUser();
-  if (userErr) throw userErr;
-  const user = userData.user;
-  if (!user) throw new Error("ログインが必要です。");
-
-  const deliveryPlan = input.deliveryPlan ?? "normal";
-  const startDateISO = input.startDateISO ?? new Date().toISOString().slice(0, 10);
-  const dueDateISO = input.dueDateISO ?? calculateDueDate(startDateISO, deliveryPlan);
-  // Default to `inquiry` so the production flow starts at 依頼受付. Callers can
-  // still pass an explicit status (e.g. for back-fill or quick-add at a later
-  // stage).
-  const status = input.status ?? "inquiry";
-
-  const { data: insertedProject, error: projectErr } = await supabase
-    .from(PROJECTS_TABLE)
-    .insert({
-      user_id: user.id,
-      title: input.title,
-      client_name: input.clientName,
-      amount: input.amount,
-      type: input.type,
-      status,
-      delivery_plan: deliveryPlan,
-      priority: input.priority ?? null,
-      start_date: startDateISO,
-      due_date: dueDateISO,
-      next_action: input.nextAction ?? "",
-      note: input.note ?? null,
-    })
-    .select("id")
-    .single();
-  if (projectErr) throw projectErr;
-  const projectId = (insertedProject as { id: string }).id;
-
-  const tasks = createTasksForType(input.type);
-  const taskInserts = tasks.map((task, index) => ({
-    project_id: projectId,
-    task_key: task.id,
-    label: task.label,
-    stage: task.stage,
-    estimated_hours: task.estimatedHours ?? null,
-    done: task.done,
-    sort_order: index,
-  }));
-  if (taskInserts.length > 0) {
-    const { error: taskErr } = await supabase.from(TASKS_TABLE).insert(taskInserts);
-    if (taskErr) throw taskErr;
+  const response = await fetch("/api/natori/admin/projects", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error ?? `Failed to create Natori project (${response.status})`);
   }
-
-  return projectId;
+  const payload = (await response.json()) as { projectId: string };
+  return payload.projectId;
 }
 
 /**

@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/client";
+// natori 管理画面のイベントデータアクセス。
+// 認可（合言葉キー / ログイン）はサーバー側 API に任せるため、
+// ブラウザ Supabase ではなく /api/natori/admin/events を経由する。
 
 export type NatoriEvent = {
   id: string;
@@ -15,7 +17,7 @@ type EventRow = {
   note: string | null;
 };
 
-const EVENTS_TABLE = "natori_events";
+const API_PATH = "/api/natori/admin/events";
 
 function rowToEvent(row: EventRow): NatoriEvent {
   return {
@@ -26,14 +28,18 @@ function rowToEvent(row: EventRow): NatoriEvent {
   };
 }
 
+async function readErrorMessage(response: Response, fallback: string): Promise<string> {
+  const body = (await response.json().catch(() => null)) as { error?: string } | null;
+  return body?.error ?? `${fallback} (${response.status})`;
+}
+
 export async function fetchNatoriEvents(): Promise<NatoriEvent[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from(EVENTS_TABLE)
-    .select("*")
-    .order("date", { ascending: true });
-  if (error) throw error;
-  return (data ?? []).map((row) => rowToEvent(row as EventRow));
+  const response = await fetch(API_PATH, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, "予定の読み込みに失敗しました"));
+  }
+  const payload = (await response.json()) as { events?: EventRow[] };
+  return (payload.events ?? []).map(rowToEvent);
 }
 
 export async function createNatoriEvent(input: {
@@ -41,41 +47,37 @@ export async function createNatoriEvent(input: {
   date: string;
   note?: string;
 }): Promise<NatoriEvent> {
-  const supabase = createClient();
-  const { data: userData, error: userErr } = await supabase.auth.getUser();
-  if (userErr) throw userErr;
-  const user = userData.user;
-  if (!user) throw new Error("ログインが必要です。");
-
-  const { data, error } = await supabase
-    .from(EVENTS_TABLE)
-    .insert({
-      user_id: user.id,
-      title: input.title,
-      date: input.date,
-      note: input.note ?? null,
-    })
-    .select("*")
-    .single();
-  if (error) throw error;
-  return rowToEvent(data as EventRow);
+  const response = await fetch(API_PATH, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, "予定の作成に失敗しました"));
+  }
+  const payload = (await response.json()) as { event: EventRow };
+  return rowToEvent(payload.event);
 }
 
 export async function updateNatoriEvent(
   id: string,
   input: { title?: string; date?: string; note?: string | null }
 ): Promise<void> {
-  const supabase = createClient();
-  const payload: { title?: string; date?: string; note?: string | null } = {};
-  if (input.title !== undefined) payload.title = input.title;
-  if (input.date !== undefined) payload.date = input.date;
-  if (input.note !== undefined) payload.note = input.note;
-  const { error } = await supabase.from(EVENTS_TABLE).update(payload).eq("id", id);
-  if (error) throw error;
+  const response = await fetch(API_PATH, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, ...input }),
+  });
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, "予定の更新に失敗しました"));
+  }
 }
 
 export async function deleteNatoriEvent(id: string): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase.from(EVENTS_TABLE).delete().eq("id", id);
-  if (error) throw error;
+  const response = await fetch(`${API_PATH}?id=${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, "予定の削除に失敗しました"));
+  }
 }

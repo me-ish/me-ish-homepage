@@ -27,7 +27,6 @@ import {
   updateNatoriEvent,
   type NatoriEvent,
 } from "@/features/natori/data/supabaseEvents";
-import { createClient } from "@/lib/supabase/client";
 import type { NatoriPriorityCandidate, NatoriProject } from "@/features/natori/types/projects";
 import ProjectMonthCalendar from "./ProjectMonthCalendar";
 import ProjectDayDetail from "./ProjectDayDetail";
@@ -78,21 +77,16 @@ export default function ProjectsBoard() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // 認可はサーバー API（合言葉キー / ログイン）に任せる。ここではまず
+      // 読み込みを試み、失敗したときだけデモデータに落とす。
       try {
-        const supabase = createClient();
-        const { data: userData } = await supabase.auth.getUser();
+        await loadFromSupabase();
         if (cancelled) return;
-        if (userData.user) {
-          setAuthed(true);
-          await loadFromSupabase();
-        } else {
-          setAuthed(false);
-          setProjects(mockNatoriProjects);
-          setDataSource("mock");
-        }
+        setAuthed(true);
       } catch (err) {
-        console.error("[ProjectsBoard] Supabase load failed, falling back to mock", err);
+        console.error("[ProjectsBoard] server load failed, falling back to mock", err);
         if (cancelled) return;
+        setAuthed(false);
         setError(err instanceof Error ? err.message : String(err));
         setProjects(mockNatoriProjects);
         setDataSource("mock");
@@ -296,8 +290,8 @@ export default function ProjectsBoard() {
 
   const handleCreateEvent = async (input: { title: string; date: string; note?: string }) => {
     if (!authed) {
-      setEventsError("ログインが必要です。");
-      throw new Error("ログインが必要です。");
+      setEventsError("デモ表示中は予定を編集できません。");
+      throw new Error("デモ表示中は予定を編集できません。");
     }
     setEventsBusy(true);
     setEventsError(null);
@@ -318,8 +312,8 @@ export default function ProjectsBoard() {
     input: { title: string; date: string; note?: string }
   ) => {
     if (!authed) {
-      setEventsError("ログインが必要です。");
-      throw new Error("ログインが必要です。");
+      setEventsError("デモ表示中は予定を編集できません。");
+      throw new Error("デモ表示中は予定を編集できません。");
     }
     setEventsBusy(true);
     setEventsError(null);
@@ -341,7 +335,7 @@ export default function ProjectsBoard() {
 
   const handleDeleteEvent = async (id: string) => {
     if (!authed) {
-      setEventsError("ログインが必要です。");
+      setEventsError("デモ表示中は予定を編集できません。");
       return;
     }
     setEventsBusy(true);
@@ -379,9 +373,7 @@ export default function ProjectsBoard() {
     <div className="space-y-4 md:space-y-6">
       {dataSource === "mock" ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 sm:text-sm">
-          {authed
-            ? "Supabase からの読み込みに失敗したため、ローカルのデモデータを表示しています。"
-            : "認証情報を確認できないため、ローカルのデモデータを表示しています。"}
+          サーバーからの読み込みに失敗したため、ローカルのデモデータを表示しています。合言葉付きのブックマークから開き直すか、時間をおいて再読み込みしてください。
           {error ? <p className="mt-1 text-[11px] opacity-80">{error}</p> : null}
         </div>
       ) : null}

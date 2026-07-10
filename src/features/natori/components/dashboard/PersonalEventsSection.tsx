@@ -93,7 +93,7 @@ export default function PersonalEventsSection({
 
       {!authed ? (
         <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
-          認証情報を確認できると個人の予定を追加・編集できます。
+          サーバーに接続できると個人の予定を追加・編集できます。
         </p>
       ) : null}
 
