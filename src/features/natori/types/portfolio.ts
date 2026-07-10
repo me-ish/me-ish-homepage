@@ -26,3 +26,18 @@ export type PortfolioSocialLink = {
   label: string;
   href: string;
 };
+
+export type PortfolioOption = {
+  name: string;
+  price: string;
+};
+
+export type PortfolioDeliveryNote = {
+  title: string;
+  body: string;
+};
+
+export type PortfolioWorkflowStep = {
+  title: string;
+  body: string;
+};

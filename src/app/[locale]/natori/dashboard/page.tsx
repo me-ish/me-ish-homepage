@@ -60,7 +60,7 @@ const CARDS: DashboardCard[] = [
   {
     href: "/natori/portfolio",
     title: "ポートフォリオ（コミッション）",
-    description: "SDキャラ・アニメ調イラストのコミッション受付ページ（VGenページとは別の独立ページ）",
+    description: "やわらかく可愛いイラストのコミッション受付ページ（VGenページとは別の独立ページ）",
     icon: Palette,
     accent: "from-violet-100 to-violet-50 text-violet-700",
   },

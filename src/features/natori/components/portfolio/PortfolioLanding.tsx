@@ -6,6 +6,7 @@ import PortfolioAbout from "./PortfolioAbout";
 import PortfolioCommissionForm from "./PortfolioCommissionForm";
 import PortfolioFooter from "./PortfolioFooter";
 import PortfolioGallery from "./PortfolioGallery";
+import PortfolioGuidelines from "./PortfolioGuidelines";
 import PortfolioHeader from "./PortfolioHeader";
 import PortfolioHero from "./PortfolioHero";
 import PortfolioPricing from "./PortfolioPricing";
@@ -24,6 +25,7 @@ export default function PortfolioLanding() {
       <PortfolioGallery />
       <PortfolioAbout />
       <PortfolioPricing />
+      <PortfolioGuidelines />
       <PortfolioCommissionForm />
       <PortfolioFooter />
     </main>

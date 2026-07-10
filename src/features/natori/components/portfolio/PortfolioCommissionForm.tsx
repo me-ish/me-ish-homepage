@@ -8,7 +8,7 @@ import {
   commissionOpen,
   portfolioBudgetOptions,
   portfolioColors as c,
-  portfolioPlans,
+  portfolioServices,
 } from "@/features/natori/constants/portfolioContent";
 import { fontEnStyle } from "./portfolioFonts";
 
@@ -21,7 +21,7 @@ export default function PortfolioCommissionForm() {
   };
 
   return (
-    <section id="form" className="py-16" style={{ background: c.paperAlt }}>
+    <section id="form" className="py-16" style={{ background: c.paper }}>
       <div className="mx-auto max-w-2xl px-5">
         <h2 className="mb-2 text-center text-2xl font-black md:text-3xl">ご依頼フォーム</h2>
         <p className="mb-8 text-center" style={{ color: c.inkSoft }}>
@@ -85,8 +85,8 @@ export default function PortfolioCommissionForm() {
                   className="pf-cute-focus w-full rounded-lg border-2 px-3 py-2"
                   style={{ borderColor: c.paperAlt }}
                 >
-                  {portfolioPlans.map((p) => (
-                    <option key={p.name}>{p.name}</option>
+                  {portfolioServices.map((service) => (
+                    <option key={service}>{service}</option>
                   ))}
                 </select>
               </div>

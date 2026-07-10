@@ -2,6 +2,7 @@
 import {
   portfolioColors as c,
   portfolioProfile,
+  portfolioServices,
 } from "@/features/natori/constants/portfolioContent";
 import ChibiFace from "./ChibiFace";
 
@@ -19,9 +20,28 @@ export default function PortfolioAbout() {
         </div>
         <div className="md:col-span-2">
           <h2 className="mb-3 text-2xl font-black">プロフィール</h2>
-          <p className="leading-relaxed" style={{ color: c.inkSoft }}>
-            {portfolioProfile.aboutText}
-          </p>
+          {portfolioProfile.aboutParagraphs.map((paragraph) => (
+            <p key={paragraph} className="mb-4 leading-relaxed" style={{ color: c.inkSoft }}>
+              {paragraph}
+            </p>
+          ))}
+          <div className="rounded-xl p-5" style={{ background: c.card }}>
+            <p className="mb-3 font-bold">対応内容</p>
+            <ul className="mb-4 flex flex-wrap gap-2">
+              {portfolioServices.map((service) => (
+                <li
+                  key={service}
+                  className="rounded-full border-2 px-3 py-1 text-xs font-bold md:text-sm"
+                  style={{ borderColor: c.paperAlt, color: c.inkSoft }}
+                >
+                  {service}
+                </li>
+              ))}
+            </ul>
+            <p className="text-sm leading-relaxed" style={{ color: c.inkSoft }}>
+              {portfolioProfile.strengths}
+            </p>
+          </div>
         </div>
       </div>
     </section>

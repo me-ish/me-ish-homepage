@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: "#gallery", label: "ギャラリー" },
   { href: "#about", label: "プロフィール" },
   { href: "#pricing", label: "料金" },
+  { href: "#flow", label: "制作の流れ" },
   { href: "#form", label: "ご依頼" },
 ];
 
