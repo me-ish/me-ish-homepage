@@ -10,6 +10,7 @@ import {
   ImageIcon,
   Link2,
   LogOut,
+  Palette,
   Settings,
   Sparkles,
   User2,
@@ -50,11 +51,18 @@ const CARDS: DashboardCard[] = [
   },
   {
     href: "/natori",
-    title: "ポートフォリオ",
+    title: "ポートフォリオ（VGen）",
     description: "未ログインでも閲覧できる公開ページ・ギャラリー",
     icon: ImageIcon,
     accent: "from-fuchsia-100 to-fuchsia-50 text-fuchsia-700",
     hrefKey: "portfolio",
+  },
+  {
+    href: "/natori/portfolio",
+    title: "ポートフォリオ（コミッション）",
+    description: "chibi・アニメ調イラストのコミッション受付ページ（VGenページとは別の独立ページ）",
+    icon: Palette,
+    accent: "from-violet-100 to-violet-50 text-violet-700",
   },
   {
     href: "/natori/links",
