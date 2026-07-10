@@ -14,6 +14,7 @@ import {
   PenLine,
   Settings,
   Sparkles,
+  Trophy,
   User2,
   type LucideIcon,
 } from "lucide-react";
@@ -49,6 +50,13 @@ const CARDS: DashboardCard[] = [
     description: "依頼文から概算見積もりと返信文のたたき台を作る内部ツール",
     icon: Calculator,
     accent: "from-rose-100 to-rose-50 text-rose-700",
+  },
+  {
+    href: "/natori/results",
+    title: "実績",
+    description: "納品済み案件の件数・売上・月別/タイプ別の推移",
+    icon: Trophy,
+    accent: "from-emerald-100 to-emerald-50 text-emerald-700",
   },
   {
     href: "/natori",
