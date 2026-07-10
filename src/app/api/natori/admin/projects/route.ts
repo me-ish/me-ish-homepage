@@ -3,6 +3,7 @@ import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAd
 import {
   confirmNatoriProjectPayment,
   createNatoriAdminProject,
+  deleteNatoriAdminProject,
   listNatoriAdminProjects,
   NATORI_PROJECT_STATUSES,
   patchNatoriProjectDetails,
@@ -189,4 +190,25 @@ export async function PATCH(request: Request) {
   }
 
   return NextResponse.json({ error: "Unknown update kind" }, { status: 400 });
+}
+
+export async function DELETE(request: Request) {
+  if (!(await canUseNatoriManagement())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) {
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+
+  const result = await deleteNatoriAdminProject(id);
+  switch (result.kind) {
+    case "db-error":
+      return NextResponse.json({ error: "Failed to delete project" }, { status: 500 });
+    case "not-found":
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    case "ok":
+      return NextResponse.json({ ok: true });
+  }
 }

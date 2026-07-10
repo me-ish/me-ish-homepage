@@ -311,6 +311,21 @@ export async function createNatoriProject(input: CreateNatoriProjectInput): Prom
 }
 
 /**
+ * Deletes a project together with its tasks. Used by the results page to fix
+ * manual-entry mistakes. Irreversible.
+ */
+export async function deleteNatoriProject(projectId: string): Promise<void> {
+  const response = await fetch(
+    `/api/natori/admin/projects?id=${encodeURIComponent(projectId)}`,
+    { method: "DELETE" }
+  );
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error ?? `Failed to delete Natori project (${response.status})`);
+  }
+}
+
+/**
  * Seeds the current user's account with the mock project set. Skips if the
  * user already has projects. Returns the number of projects inserted.
  */

@@ -426,6 +426,37 @@ export async function patchNatoriProjectDetails(
 }
 
 /**
+ * 案件を（タスクごと）完全に削除する。実績ページの手入力ミス修正用。
+ */
+export async function deleteNatoriAdminProject(
+  projectId: string
+): Promise<NatoriProjectMutationResult> {
+  const admin = supabaseAdmin();
+
+  const { error: taskErr } = await (admin as any)
+    .from("natori_project_tasks")
+    .delete()
+    .eq("project_id", projectId);
+  if (taskErr) {
+    console.error("[natori-admin-projects] task delete failed", taskErr);
+    return { kind: "db-error" };
+  }
+
+  const { data, error } = await (admin as any)
+    .from("natori_projects")
+    .delete()
+    .eq("id", projectId)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    console.error("[natori-admin-projects] project delete failed", error);
+    return { kind: "db-error" };
+  }
+  if (!data) return { kind: "not-found" };
+  return { kind: "ok" };
+}
+
+/**
  * "入金確認してラフ開始" button: stamps payment_confirmed_at and advances
  * status to `rough` so the project starts pressuring the production
  * schedule. If the payment_confirmed_at column does not exist yet (older
