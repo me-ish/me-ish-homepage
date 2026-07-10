@@ -1,9 +1,6 @@
 // features/natori/components/portfolio/PortfolioHeader.tsx
-import {
-  commissionOpen,
-  portfolioColors as c,
-  portfolioProfile,
-} from "@/features/natori/constants/portfolioContent";
+import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import type { PortfolioContent } from "@/features/natori/types/portfolio";
 import { fontEnStyle } from "./portfolioFonts";
 
 const NAV_LINKS = [
@@ -14,7 +11,7 @@ const NAV_LINKS = [
   { href: "#form", label: "ご依頼" },
 ];
 
-export default function PortfolioHeader() {
+export default function PortfolioHeader({ content }: { content: PortfolioContent }) {
   return (
     <header
       className="sticky top-0 z-50 border-b backdrop-blur"
@@ -25,7 +22,7 @@ export default function PortfolioHeader() {
           className="text-xl font-semibold tracking-wide"
           style={{ ...fontEnStyle, color: c.pinkDeep }}
         >
-          {portfolioProfile.artistName}
+          {content.artistName}
         </span>
         <nav className="hidden gap-6 text-sm font-medium md:flex" style={{ color: c.inkSoft }}>
           {NAV_LINKS.map((link) => (
@@ -37,11 +34,11 @@ export default function PortfolioHeader() {
         <span
           className="rounded-full px-3 py-1.5 text-xs font-bold"
           style={{
-            background: commissionOpen ? c.mint : "#D8D3E6",
-            color: commissionOpen ? "#0F4E40" : c.inkSoft,
+            background: content.commissionOpen ? c.mint : "#D8D3E6",
+            color: content.commissionOpen ? "#0F4E40" : c.inkSoft,
           }}
         >
-          {commissionOpen ? "● 受付中" : "受付停止中"}
+          {content.commissionOpen ? "● 受付中" : "受付停止中"}
         </span>
       </div>
     </header>

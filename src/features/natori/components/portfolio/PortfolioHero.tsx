@@ -1,15 +1,12 @@
 // features/natori/components/portfolio/PortfolioHero.tsx
 import Image from "next/image";
-import {
-  portfolioColors as c,
-  portfolioImages,
-  portfolioProfile,
-} from "@/features/natori/constants/portfolioContent";
+import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import type { PortfolioContent } from "@/features/natori/types/portfolio";
 import ChibiFace from "./ChibiFace";
 import Sparkle from "./Sparkle";
 import { fontEnStyle } from "./portfolioFonts";
 
-export default function PortfolioHero() {
+export default function PortfolioHero({ content }: { content: PortfolioContent }) {
   return (
     <section className="relative mx-auto grid max-w-6xl items-center gap-10 overflow-hidden px-5 pb-20 pt-16 md:grid-cols-2">
       <Sparkle style={{ top: 10, left: "40%" }} color={c.yellow} size={20} />
@@ -19,14 +16,14 @@ export default function PortfolioHero() {
           className="mb-3 text-sm font-semibold uppercase tracking-widest"
           style={{ ...fontEnStyle, color: c.pinkDeep }}
         >
-          {portfolioProfile.roleEn}
+          {content.roleEn}
         </p>
         <h1 className="mb-4 text-4xl font-black leading-tight md:text-5xl">
-          <span style={{ color: c.pink }}>{portfolioProfile.heroTitleAccent}</span>
-          {portfolioProfile.heroTitleTail}
+          <span style={{ color: c.pink }}>{content.heroTitleAccent}</span>
+          {content.heroTitleTail}
         </h1>
         <p className="mb-8 max-w-md text-base leading-relaxed" style={{ color: c.inkSoft }}>
-          {portfolioProfile.heroDescription}
+          {content.heroDescription}
         </p>
         <div className="flex flex-wrap gap-3">
           <a
@@ -47,7 +44,7 @@ export default function PortfolioHero() {
       </div>
 
       <div className="relative flex justify-center">
-        {/* メインビジュアル。portfolioImages.hero を設定すると実画像に差し替わる */}
+        {/* メインビジュアル。編集画面から画像を設定すると差し替わる */}
         <div
           className="pf-floaty relative flex items-center justify-center overflow-hidden rounded-full"
           style={{
@@ -57,10 +54,10 @@ export default function PortfolioHero() {
             boxShadow: "0 20px 40px rgba(45,42,61,0.12)",
           }}
         >
-          {portfolioImages.hero ? (
+          {content.heroImage ? (
             <Image
-              src={portfolioImages.hero}
-              alt={`${portfolioProfile.artistName} メインビジュアル`}
+              src={content.heroImage}
+              alt={`${content.artistName} メインビジュアル`}
               fill
               sizes="260px"
               className="object-cover"

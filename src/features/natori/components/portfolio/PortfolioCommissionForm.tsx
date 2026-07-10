@@ -4,29 +4,27 @@
 // ご依頼フォーム。送信すると /api/natori/portfolio/contact 経由でナトリ宛にメールが飛ぶ。
 import { useState, type FormEvent } from "react";
 import {
-  commissionOpen,
   portfolioBudgetOptions,
   portfolioColors as c,
   portfolioCommercialOptions,
   portfolioDeadlineOptions,
-  portfolioOptions,
-  portfolioPlans,
-  portfolioServices,
 } from "@/features/natori/constants/portfolioContent";
+import type { PortfolioContent } from "@/features/natori/types/portfolio";
 import { fontEnStyle } from "./portfolioFonts";
 
 type Status = "idle" | "sending" | "success" | "error";
 
-const planChoices = [
-  ...portfolioPlans.map((p) => `${p.name}（${p.price}）`),
-  "未定・相談して決めたい",
-];
-
 const inputClass = "pf-cute-focus w-full rounded-lg border-2 px-3 py-2";
 const labelClass = "mb-1.5 block text-sm font-bold";
 
-export default function PortfolioCommissionForm() {
+export default function PortfolioCommissionForm({ content }: { content: PortfolioContent }) {
   const [status, setStatus] = useState<Status>("idle");
+  const commissionOpen = content.commissionOpen;
+
+  const planChoices = [
+    ...content.plans.map((p) => `${p.name}（${p.price}）`),
+    "未定・相談して決めたい",
+  ];
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -144,7 +142,7 @@ export default function PortfolioCommissionForm() {
                   className={inputClass}
                   style={{ borderColor: c.paperAlt }}
                 >
-                  {portfolioServices.map((service) => (
+                  {content.services.map((service) => (
                     <option key={service}>{service}</option>
                   ))}
                 </select>
@@ -169,9 +167,9 @@ export default function PortfolioCommissionForm() {
             <fieldset>
               <legend className={labelClass}>追加オプション（複数選択可）</legend>
               <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
-                {portfolioOptions.map((option) => (
+                {content.options.map((option, index) => (
                   <label
-                    key={option.name}
+                    key={`${option.name}-${index}`}
                     className="flex cursor-pointer items-center gap-2 text-sm"
                     style={{ color: c.inkSoft }}
                   >

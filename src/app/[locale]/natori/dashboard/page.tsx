@@ -11,6 +11,7 @@ import {
   Link2,
   LogOut,
   Palette,
+  PenLine,
   Settings,
   Sparkles,
   User2,
@@ -63,6 +64,13 @@ const CARDS: DashboardCard[] = [
     description: "やわらかく可愛いイラストのコミッション受付ページ（VGenページとは別の独立ページ）",
     icon: Palette,
     accent: "from-violet-100 to-violet-50 text-violet-700",
+  },
+  {
+    href: "/natori/portfolio/edit",
+    title: "ポートフォリオ編集",
+    description: "コミッションページの文章・料金・作品画像をブラウザから編集",
+    icon: PenLine,
+    accent: "from-sky-100 to-sky-50 text-sky-700",
   },
   {
     href: "/natori/links",

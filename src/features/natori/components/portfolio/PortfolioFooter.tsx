@@ -1,18 +1,17 @@
 // features/natori/components/portfolio/PortfolioFooter.tsx
-import {
-  portfolioColors as c,
-  portfolioProfile,
-  portfolioSocialLinks,
-} from "@/features/natori/constants/portfolioContent";
+import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
-export default function PortfolioFooter() {
+export default function PortfolioFooter({ content }: { content: PortfolioContent }) {
   return (
     <footer className="py-10 text-center text-sm" style={{ color: c.inkSoft }}>
-      <div className="mb-4 flex justify-center gap-5">
-        {portfolioSocialLinks.map((link) => (
+      <div className="mb-4 flex flex-wrap justify-center gap-5">
+        {content.socialLinks.map((link) => (
           <a
             key={link.label}
             href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
             className="pf-cute-focus font-bold hover:opacity-70"
             style={{ color: c.pinkDeep }}
           >
@@ -20,7 +19,7 @@ export default function PortfolioFooter() {
           </a>
         ))}
       </div>
-      <p>{portfolioProfile.copyright}</p>
+      <p>{content.copyright}</p>
     </footer>
   );
 }
