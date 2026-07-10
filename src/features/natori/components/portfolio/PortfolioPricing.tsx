@@ -9,7 +9,7 @@ export default function PortfolioPricing() {
   return (
     <section id="pricing" className="mx-auto max-w-6xl px-5 py-16">
       <h2 className="mb-8 text-center text-2xl font-black md:text-3xl">コミッション料金</h2>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {portfolioPlans.map((p) => (
           <div
             key={p.name}

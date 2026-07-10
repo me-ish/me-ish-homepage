@@ -19,20 +19,9 @@ export default function PortfolioAbout() {
         </div>
         <div className="md:col-span-2">
           <h2 className="mb-3 text-2xl font-black">プロフィール</h2>
-          <p className="mb-4 leading-relaxed" style={{ color: c.inkSoft }}>
+          <p className="leading-relaxed" style={{ color: c.inkSoft }}>
             {portfolioProfile.aboutText}
           </p>
-          <div className="flex items-start gap-4 rounded-xl p-5" style={{ background: c.card }}>
-            <span className="text-2xl" aria-hidden="true">
-              🎀
-            </span>
-            <div>
-              <p className="mb-1 font-bold">{portfolioProfile.live2dNoteTitle}</p>
-              <p className="text-sm leading-relaxed" style={{ color: c.inkSoft }}>
-                {portfolioProfile.live2dNoteBody}
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </section>

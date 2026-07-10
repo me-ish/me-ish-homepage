@@ -36,19 +36,16 @@ export const commissionOpen = true;
    プロフィール（ダミー。公開前に差し替え）
 ------------------------------------------------------------------- */
 export const portfolioProfile = {
-  artistName: "Yukino* illust",
-  roleEn: "Chibi & Anime Illustrator",
+  artistName: "Natori* illust",
+  roleEn: "SD & Anime Illustrator",
   heroTitleLead: "ちいさくて、かわいい。",
   heroTitleAccent: "あなたの推し",
   heroTitleTail: "を描きます",
   heroDescription:
-    "ちびキャラ・バストアップ・全身イラストを中心に、あたたかみのあるアニメ調の絵柄で制作しています。Live2D化を前提にしたレイヤー分け納品にも対応。",
+    "SDキャラ・バストアップ・全身イラストを中心に、あたたかみのあるアニメ調の絵柄で制作しています。",
   aboutText:
-    "アニメ・chibiスタイルを中心に活動しているイラストレーターです。あたたかみのある線と、キャラクターの「かわいい瞬間」を切り取った絵柄が好みです。ファンアート・オリジナルキャラクターどちらのご依頼も歓迎しています。",
-  live2dNoteTitle: "Live2Dリギングもまとめて対応できます",
-  live2dNoteBody:
-    "夫がLive2Dリギングを専門にしているため、「イラスト+リギング」をワンストップでご依頼いただけます。動かすことを前提にしたレイヤー分けイラストのご相談もお気軽にどうぞ。",
-  copyright: "© 2026 Yukino* illust. All illustrations placeholder.",
+    "アニメ・SDキャラスタイルを中心に活動しているイラストレーターです。あたたかみのある線と、キャラクターの「かわいい瞬間」を切り取った絵柄が好みです。ファンアート・オリジナルキャラクターどちらのご依頼も歓迎しています。",
+  copyright: "© 2026 Natori* illust. All illustrations placeholder.",
 } as const;
 
 /* ------------------------------------------------------------------
@@ -56,19 +53,18 @@ export const portfolioProfile = {
 ------------------------------------------------------------------- */
 export const portfolioGalleryFilters = [
   "すべて",
-  "ちびキャラ",
+  "SDキャラ",
   "バストアップ",
   "全身",
-  "Live2D対応",
 ] as const;
 
 export const portfolioArtworks: PortfolioArtwork[] = [
   { id: 1, title: "夏色スケッチ", tag: "バストアップ", skin: "#FFE3D1", hair: "#B98BD8", accent: c.pink, rotate: "-rotate-3" },
-  { id: 2, title: "おひるねちゃん", tag: "ちびキャラ", skin: "#FFE9DA", hair: "#7FD9C4", accent: c.mint, rotate: "rotate-2" },
+  { id: 2, title: "おひるねちゃん", tag: "SDキャラ", skin: "#FFE9DA", hair: "#7FD9C4", accent: c.mint, rotate: "rotate-2" },
   { id: 3, title: "制服ver.", tag: "全身", skin: "#FDE0D0", hair: "#F3A6C1", accent: c.peach, rotate: "rotate-1" },
-  { id: 4, title: "推し色コーデ", tag: "Live2D対応", skin: "#FFE3D1", hair: "#FFC15E", accent: c.yellow, rotate: "-rotate-2" },
+  { id: 4, title: "推し色コーデ", tag: "全身", skin: "#FFE3D1", hair: "#FFC15E", accent: c.yellow, rotate: "-rotate-2" },
   { id: 5, title: "ふわもこパーカー", tag: "バストアップ", skin: "#FFE9DA", hair: "#9AB8F0", accent: c.mint, rotate: "rotate-3" },
-  { id: 6, title: "きらきら配信衣装", tag: "Live2D対応", skin: "#FDE0D0", hair: "#E893B0", accent: c.pink, rotate: "-rotate-1" },
+  { id: 6, title: "きらきら配信衣装", tag: "SDキャラ", skin: "#FDE0D0", hair: "#E893B0", accent: c.pink, rotate: "-rotate-1" },
 ];
 
 /* ------------------------------------------------------------------
@@ -76,7 +72,7 @@ export const portfolioArtworks: PortfolioArtwork[] = [
 ------------------------------------------------------------------- */
 export const portfolioPlans: PortfolioPlan[] = [
   {
-    name: "ちびキャラ",
+    name: "SDキャラ",
     price: "$25〜",
     desc: "SD／デフォルメスタイルの1体絵",
     features: ["背景シンプル", "納期 5〜7日", "修正1回まで"],
@@ -98,14 +94,6 @@ export const portfolioPlans: PortfolioPlan[] = [
     features: ["背景イラスト付き", "納期 10〜14日", "修正2回まで"],
     color: c.peach,
     badge: null,
-  },
-  {
-    name: "Live2D対応セット",
-    price: "$150〜",
-    desc: "リギング前提のレイヤー分けイラスト",
-    features: ["パーツ分け納品", "夫によるリギング相談可", "納期 応相談"],
-    color: c.yellow,
-    badge: "夫婦コンビ限定",
   },
 ];
 
