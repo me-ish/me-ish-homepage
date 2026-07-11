@@ -10,7 +10,11 @@ import { z } from "zod";
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const FROM = process.env.RESEND_FROM ?? "me-ish Gallery <noreply@me-ish.art>";
 /** 依頼メールの宛先。env で上書き可能 */
-const TO = process.env.NATORI_PORTFOLIO_CONTACT_TO ?? "natori.o0716@gmail.com";
+// TODO(temporary): フォームのテスト中はナトリ先生にメールが飛ばないよう
+// info@me-ish.art に向けている。テストが終わったら
+// natori.o0716@gmail.com に戻すこと（または本番 env の
+// NATORI_PORTFOLIO_CONTACT_TO で切り替える）。
+const TO = process.env.NATORI_PORTFOLIO_CONTACT_TO ?? "info@me-ish.art";
 
 /* ---------- Validation ---------- */
 export const portfolioContactSchema = z.object({
