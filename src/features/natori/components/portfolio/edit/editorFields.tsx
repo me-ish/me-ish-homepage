@@ -3,7 +3,7 @@
 // features/natori/components/portfolio/edit/editorFields.tsx
 // ポートフォリオ編集画面の汎用パーツ（入力欄・画像アップロード・並び替えボタン等）
 import { useId, useRef, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ImagePlus, Loader2, Plus, Trash2 } from "lucide-react";
+import { ImagePlus, Loader2, Plus, Trash2 } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 
 /* ---------- レイアウト ---------- */
@@ -113,43 +113,19 @@ export function TextArea({
 /* ---------- リスト操作 ---------- */
 
 export function RowControls({
-  index,
-  total,
-  onMove,
+  handle,
   onRemove,
 }: {
-  index: number;
-  total: number;
-  onMove: (from: number, to: number) => void;
-  onRemove: (index: number) => void;
+  /** SortableList から渡されるドラッグハンドル */
+  handle?: ReactNode;
+  onRemove: () => void;
 }) {
-  const buttonClass =
-    "grid h-8 w-8 place-items-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-pink-300";
   return (
     <div className="flex shrink-0 items-center gap-1">
+      {handle}
       <button
         type="button"
-        onClick={() => onMove(index, index - 1)}
-        disabled={index === 0}
-        className={buttonClass}
-        aria-label="上へ移動"
-        title="上へ移動"
-      >
-        <ArrowUp className="h-4 w-4" aria-hidden />
-      </button>
-      <button
-        type="button"
-        onClick={() => onMove(index, index + 1)}
-        disabled={index >= total - 1}
-        className={buttonClass}
-        aria-label="下へ移動"
-        title="下へ移動"
-      >
-        <ArrowDown className="h-4 w-4" aria-hidden />
-      </button>
-      <button
-        type="button"
-        onClick={() => onRemove(index)}
+        onClick={onRemove}
         className="grid h-8 w-8 place-items-center rounded-lg border border-red-200 bg-white text-red-500 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-pink-300"
         aria-label="削除"
         title="削除"
@@ -284,14 +260,6 @@ export function ImageUploadField({
 }
 
 /* ---------- 配列ヘルパー ---------- */
-
-export function moveItem<T>(items: T[], from: number, to: number): T[] {
-  if (to < 0 || to >= items.length) return items;
-  const next = [...items];
-  const [item] = next.splice(from, 1);
-  next.splice(to, 0, item);
-  return next;
-}
 
 export function updateItem<T>(items: T[], index: number, patch: Partial<T>): T[] {
   return items.map((item, i) => (i === index ? { ...item, ...patch } : item));

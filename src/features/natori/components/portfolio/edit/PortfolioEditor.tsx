@@ -15,10 +15,10 @@ import {
   SectionCard,
   TextArea,
   TextInput,
-  moveItem,
   removeItem,
   updateItem,
 } from "./editorFields";
+import SortableList from "./SortableList";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -254,9 +254,12 @@ export default function PortfolioEditor() {
           title="プロフィール文"
           description="1枠 = 1段落として表示されます。"
         >
-          <div className="space-y-3">
-            {content.aboutParagraphs.map((paragraph, index) => (
-              <div key={index} className="flex items-start gap-2">
+          <SortableList
+            items={content.aboutParagraphs}
+            onReorder={(next) => patch({ aboutParagraphs: next })}
+            className="space-y-3"
+            renderRow={(paragraph, index, handle) => (
+              <div className="flex items-start gap-2">
                 <TextArea
                   value={paragraph}
                   onChange={(v) =>
@@ -267,14 +270,12 @@ export default function PortfolioEditor() {
                   rows={2}
                 />
                 <RowControls
-                  index={index}
-                  total={content.aboutParagraphs.length}
-                  onMove={(from, to) => patch({ aboutParagraphs: moveItem(content.aboutParagraphs, from, to) })}
-                  onRemove={(i) => patch({ aboutParagraphs: removeItem(content.aboutParagraphs, i) })}
+                  handle={handle}
+                  onRemove={() => patch({ aboutParagraphs: removeItem(content.aboutParagraphs, index) })}
                 />
               </div>
-            ))}
-          </div>
+            )}
+          />
           <AddButton
             label="段落を追加"
             onClick={() => patch({ aboutParagraphs: [...content.aboutParagraphs, ""] })}
@@ -287,9 +288,12 @@ export default function PortfolioEditor() {
           title="対応内容バッジ"
           description="プロフィール欄のバッジと、ご依頼フォームの「ご依頼の種類」の選択肢になります。"
         >
-          <div className="space-y-2">
-            {content.services.map((service, index) => (
-              <div key={index} className="flex items-center gap-2">
+          <SortableList
+            items={content.services}
+            onReorder={(next) => patch({ services: next })}
+            className="space-y-2"
+            renderRow={(service, index, handle) => (
+              <div className="flex items-center gap-2">
                 <TextInput
                   value={service}
                   onChange={(v) =>
@@ -297,14 +301,12 @@ export default function PortfolioEditor() {
                   }
                 />
                 <RowControls
-                  index={index}
-                  total={content.services.length}
-                  onMove={(from, to) => patch({ services: moveItem(content.services, from, to) })}
-                  onRemove={(i) => patch({ services: removeItem(content.services, i) })}
+                  handle={handle}
+                  onRemove={() => patch({ services: removeItem(content.services, index) })}
                 />
               </div>
-            ))}
-          </div>
+            )}
+          />
           <AddButton label="バッジを追加" onClick={() => patch({ services: [...content.services, ""] })} />
         </SectionCard>
 
@@ -314,19 +316,18 @@ export default function PortfolioEditor() {
           title="作品ギャラリー"
           description="コルクボードに表示される作品です。タグは「、」区切りで複数つけられます。同じ言葉を使うと絞り込みボタンにまとまります（例: つなぐ、立ち絵）。"
         >
-          <div className="space-y-4">
-            {content.works.map((work, index) => (
-              <div
-                key={work.id}
-                className="rounded-xl border border-pink-100 bg-pink-50/40 p-3"
-              >
+          <SortableList
+            items={content.works}
+            getId={(work) => work.id}
+            onReorder={(next) => patch({ works: next })}
+            className="space-y-4"
+            renderRow={(work, index, handle) => (
+              <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <p className="text-xs font-bold text-pink-700">作品 {index + 1}</p>
                   <RowControls
-                    index={index}
-                    total={content.works.length}
-                    onMove={(from, to) => patch({ works: moveItem(content.works, from, to) })}
-                    onRemove={(i) => patch({ works: removeItem(content.works, i) })}
+                    handle={handle}
+                    onRemove={() => patch({ works: removeItem(content.works, index) })}
                   />
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -354,8 +355,8 @@ export default function PortfolioEditor() {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          />
           <AddButton
             label="作品を追加"
             onClick={() =>
@@ -375,16 +376,17 @@ export default function PortfolioEditor() {
           title="基本料金"
           description="料金カードとして表示されます。「含まれるもの」は1行に1つずつ書いてください。"
         >
-          <div className="space-y-4">
-            {content.plans.map((plan, index) => (
-              <div key={index} className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+          <SortableList
+            items={content.plans}
+            onReorder={(next) => patch({ plans: next })}
+            className="space-y-4"
+            renderRow={(plan, index, handle) => (
+              <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <p className="text-xs font-bold text-pink-700">プラン {index + 1}</p>
                   <RowControls
-                    index={index}
-                    total={content.plans.length}
-                    onMove={(from, to) => patch({ plans: moveItem(content.plans, from, to) })}
-                    onRemove={(i) => patch({ plans: removeItem(content.plans, i) })}
+                    handle={handle}
+                    onRemove={() => patch({ plans: removeItem(content.plans, index) })}
                   />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -416,8 +418,8 @@ export default function PortfolioEditor() {
                   />
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          />
           <AddButton
             label="プランを追加"
             onClick={() =>
@@ -437,9 +439,12 @@ export default function PortfolioEditor() {
           title="追加オプション"
           description="料金セクションの表と、ご依頼フォームのチェックボックスになります。"
         >
-          <div className="space-y-2">
-            {content.options.map((option, index) => (
-              <div key={index} className="flex items-center gap-2">
+          <SortableList
+            items={content.options}
+            onReorder={(next) => patch({ options: next })}
+            className="space-y-2"
+            renderRow={(option, index, handle) => (
+              <div className="flex items-center gap-2">
                 <TextInput
                   value={option.name}
                   onChange={(v) => patch({ options: updateItem(content.options, index, { name: v }) })}
@@ -453,14 +458,12 @@ export default function PortfolioEditor() {
                   />
                 </div>
                 <RowControls
-                  index={index}
-                  total={content.options.length}
-                  onMove={(from, to) => patch({ options: moveItem(content.options, from, to) })}
-                  onRemove={(i) => patch({ options: removeItem(content.options, i) })}
+                  handle={handle}
+                  onRemove={() => patch({ options: removeItem(content.options, index) })}
                 />
               </div>
-            ))}
-          </div>
+            )}
+          />
           <AddButton
             label="オプションを追加"
             onClick={() => patch({ options: [...content.options, { name: "", price: "" }] })}
@@ -476,16 +479,17 @@ export default function PortfolioEditor() {
               onChange={(v) => patch({ deliveryLead: v })}
               rows={3}
             />
-            <div className="space-y-3">
-              {content.deliveryNotes.map((note, index) => (
-                <div key={index} className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+            <SortableList
+              items={content.deliveryNotes}
+              onReorder={(next) => patch({ deliveryNotes: next })}
+              className="space-y-3"
+              renderRow={(note, index, handle) => (
+                <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <p className="text-xs font-bold text-pink-700">補足 {index + 1}</p>
                     <RowControls
-                      index={index}
-                      total={content.deliveryNotes.length}
-                      onMove={(from, to) => patch({ deliveryNotes: moveItem(content.deliveryNotes, from, to) })}
-                      onRemove={(i) => patch({ deliveryNotes: removeItem(content.deliveryNotes, i) })}
+                      handle={handle}
+                      onRemove={() => patch({ deliveryNotes: removeItem(content.deliveryNotes, index) })}
                     />
                   </div>
                   <div className="space-y-3">
@@ -502,8 +506,8 @@ export default function PortfolioEditor() {
                     />
                   </div>
                 </div>
-              ))}
-            </div>
+              )}
+            />
             <AddButton
               label="補足を追加"
               onClick={() => patch({ deliveryNotes: [...content.deliveryNotes, { title: "", body: "" }] })}
@@ -517,16 +521,17 @@ export default function PortfolioEditor() {
           title="制作の流れ"
           description="番号は上から自動で付きます。"
         >
-          <div className="space-y-3">
-            {content.workflow.map((step, index) => (
-              <div key={index} className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+          <SortableList
+            items={content.workflow}
+            onReorder={(next) => patch({ workflow: next })}
+            className="space-y-3"
+            renderRow={(step, index, handle) => (
+              <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <p className="text-xs font-bold text-pink-700">ステップ {index + 1}</p>
                   <RowControls
-                    index={index}
-                    total={content.workflow.length}
-                    onMove={(from, to) => patch({ workflow: moveItem(content.workflow, from, to) })}
-                    onRemove={(i) => patch({ workflow: removeItem(content.workflow, i) })}
+                    handle={handle}
+                    onRemove={() => patch({ workflow: removeItem(content.workflow, index) })}
                   />
                 </div>
                 <div className="space-y-3">
@@ -543,8 +548,8 @@ export default function PortfolioEditor() {
                   />
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          />
           <AddButton
             label="ステップを追加"
             onClick={() => patch({ workflow: [...content.workflow, { title: "", body: "" }] })}
@@ -553,9 +558,12 @@ export default function PortfolioEditor() {
 
         {/* 購入者へのお願い */}
         <SectionCard emoji="🙏" title="購入者へのお願い" description="1枠 = 1項目として表示されます。">
-          <div className="space-y-2">
-            {content.requests.map((request, index) => (
-              <div key={index} className="flex items-start gap-2">
+          <SortableList
+            items={content.requests}
+            onReorder={(next) => patch({ requests: next })}
+            className="space-y-2"
+            renderRow={(request, index, handle) => (
+              <div className="flex items-start gap-2">
                 <TextArea
                   value={request}
                   onChange={(v) =>
@@ -564,22 +572,23 @@ export default function PortfolioEditor() {
                   rows={2}
                 />
                 <RowControls
-                  index={index}
-                  total={content.requests.length}
-                  onMove={(from, to) => patch({ requests: moveItem(content.requests, from, to) })}
-                  onRemove={(i) => patch({ requests: removeItem(content.requests, i) })}
+                  handle={handle}
+                  onRemove={() => patch({ requests: removeItem(content.requests, index) })}
                 />
               </div>
-            ))}
-          </div>
+            )}
+          />
           <AddButton label="項目を追加" onClick={() => patch({ requests: [...content.requests, ""] })} />
         </SectionCard>
 
         {/* SNSリンク */}
-        <SectionCard emoji="🔗" title="SNSリンク" description="ページ最下部に表示されます。">
-          <div className="space-y-2">
-            {content.socialLinks.map((link, index) => (
-              <div key={index} className="flex items-center gap-2">
+        <SectionCard emoji="🔗" title="SNSリンク">
+          <SortableList
+            items={content.socialLinks}
+            onReorder={(next) => patch({ socialLinks: next })}
+            className="space-y-2"
+            renderRow={(link, index, handle) => (
+              <div className="flex items-center gap-2">
                 <div className="w-36 shrink-0">
                   <TextInput
                     value={link.label}
@@ -593,14 +602,12 @@ export default function PortfolioEditor() {
                   placeholder="https://..."
                 />
                 <RowControls
-                  index={index}
-                  total={content.socialLinks.length}
-                  onMove={(from, to) => patch({ socialLinks: moveItem(content.socialLinks, from, to) })}
-                  onRemove={(i) => patch({ socialLinks: removeItem(content.socialLinks, i) })}
+                  handle={handle}
+                  onRemove={() => patch({ socialLinks: removeItem(content.socialLinks, index) })}
                 />
               </div>
-            ))}
-          </div>
+            )}
+          />
           <AddButton
             label="リンクを追加"
             onClick={() => patch({ socialLinks: [...content.socialLinks, { label: "", href: "" }] })}
