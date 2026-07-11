@@ -1,9 +1,13 @@
 "use client";
 
 // features/natori/components/portfolio/PortfolioCommissionForm.tsx
-// ご依頼フォーム。送信すると /api/natori/portfolio/contact 経由でナトリ宛にメールが飛ぶ。
-import { useState, type FormEvent } from "react";
+// ご依頼フォーム。送信すると /api/natori/portfolio/contact 経由でナトリ宛に
+// メールが飛び、案件（依頼受付）として自動起票される。
+// 料金カードの「このプランで相談」からの遷移でプランが自動選択される。
+import { useEffect, useState, type FormEvent } from "react";
 import {
+  PLAN_SELECT_EVENT,
+  planChoiceLabel,
   portfolioBudgetOptions,
   portfolioColors as c,
   portfolioCommercialOptions,
@@ -17,14 +21,27 @@ type Status = "idle" | "sending" | "success" | "error";
 const inputClass = "pf-cute-focus w-full rounded-lg border-2 px-3 py-2";
 const labelClass = "mb-1.5 block text-sm font-bold";
 
+const PLAN_UNDECIDED = "未定・相談して決めたい";
+
 export default function PortfolioCommissionForm({ content }: { content: PortfolioContent }) {
   const [status, setStatus] = useState<Status>("idle");
+  const [selectedPlan, setSelectedPlan] = useState<string>(PLAN_UNDECIDED);
   const commissionOpen = content.commissionOpen;
 
-  const planChoices = [
-    ...content.plans.map((p) => `${p.name}（${p.price}）`),
-    "未定・相談して決めたい",
-  ];
+  const planChoices = [...content.plans.map(planChoiceLabel), PLAN_UNDECIDED];
+
+  // 料金カードの「このプランで相談」からプランを受け取る
+  useEffect(() => {
+    const choices = new Set([...content.plans.map(planChoiceLabel), PLAN_UNDECIDED]);
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      if (typeof detail === "string" && choices.has(detail)) {
+        setSelectedPlan(detail);
+      }
+    };
+    window.addEventListener(PLAN_SELECT_EVENT, handler);
+    return () => window.removeEventListener(PLAN_SELECT_EVENT, handler);
+  }, [content.plans]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -154,6 +171,8 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
                 <select
                   id="pf-plan"
                   name="plan"
+                  value={selectedPlan}
+                  onChange={(event) => setSelectedPlan(event.target.value)}
                   className={inputClass}
                   style={{ borderColor: c.paperAlt }}
                 >

@@ -10,6 +10,11 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// 本番で Supabase への fetch が Next のデータキャッシュに乗り、編集後も古い
+// 掲載内容を返し続ける事象があったため、fetch 単位でもキャッシュを禁止する。
+// （編集画面がここから古い内容を読み込んで保存すると、他の編集を巻き戻して
+// しまうため、このルートは常に最新を返す必要がある）
+export const fetchCache = "force-no-store";
 
 export async function GET() {
   // 掲載内容は公開ページと同じものなので認可不要

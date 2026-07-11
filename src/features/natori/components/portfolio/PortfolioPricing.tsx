@@ -1,17 +1,32 @@
+"use client";
+
 // features/natori/components/portfolio/PortfolioPricing.tsx
+// コミッション料金。「このプランで相談」はフォームへスクロールしつつ、
+// フォームの「サイズ / プラン」をそのプランに自動で合わせる。
 import {
+  PLAN_SELECT_EVENT,
+  planChoiceLabel,
   planColors,
   portfolioColors as c,
 } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
 export default function PortfolioPricing({ content }: { content: PortfolioContent }) {
+  const gridCols =
+    content.plans.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-3";
+
+  const handleSelectPlan = (plan: { name: string; price: string }) => {
+    window.dispatchEvent(
+      new CustomEvent<string>(PLAN_SELECT_EVENT, { detail: planChoiceLabel(plan) })
+    );
+  };
+
   return (
     <section id="pricing" className="mx-auto max-w-6xl px-5 py-16">
       <h2 className="mb-8 text-center text-2xl font-black md:text-3xl">コミッション料金</h2>
 
       {/* 基本料金 */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className={`grid gap-6 ${gridCols}`}>
         {content.plans.map((p, index) => (
           <div
             key={`${p.name}-${index}`}
@@ -42,6 +57,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
             </ul>
             <a
               href="#form"
+              onClick={() => handleSelectPlan(p)}
               className="pf-cute-focus rounded-full border-2 py-2.5 text-center font-bold"
               style={{ borderColor: planColors[index % planColors.length], color: c.ink }}
             >

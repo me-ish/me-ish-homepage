@@ -26,10 +26,6 @@ export const portfolioColors = {
   peach: "#FFB199",
   card: "#FFFFFF",
   tape: "#FFE8A3",
-  // コルクボード（ギャラリー背景）
-  cork: "#D9AE7E",
-  corkDark: "#B98B5C",
-  corkFrame: "#8B5E34",
 } as const;
 
 const c = portfolioColors;
@@ -70,6 +66,12 @@ export const defaultPortfolioContent: PortfolioContent = {
   ],
   plans: [
     {
+      name: "SDキャラ",
+      price: "3,000円",
+      desc: "SDフルカラーイラスト",
+      features: ["リテイク2回まで無料", "簡単な小物・簡易背景無料"],
+    },
+    {
       name: "胸上",
       price: "4,000円",
       desc: "胸から上のフルカラーイラスト",
@@ -97,8 +99,6 @@ export const defaultPortfolioContent: PortfolioContent = {
     { name: "商用利用", price: "+3,000円" },
     { name: "サンプル使用不可", price: "+1,000円" },
     { name: "完全非公開", price: "+2,000円" },
-    { name: "お急ぎ納品", price: "+2,000円" },
-    { name: "リテイク3回目以降", price: "+500円 / 回" },
   ],
   deliveryLead:
     "通常納期は、ご依頼確定後から約1ヶ月前後を目安としております。ご依頼内容やスケジュール状況によって前後する場合がございますので、あらかじめご了承ください。",
@@ -176,8 +176,19 @@ export const workRotations = [
 /** 料金プランの丸アイコン色（プラン数に応じて循環） */
 export const planColors = [c.mint, c.pink, c.peach, c.yellow] as const;
 
-/** コルクボードのピンの色（作品カードごとに循環） */
-export const pinColors = ["#E5484D", "#3FBE9E", "#4C8DFF", "#FFB020"] as const;
+/** マスキングテープの色（作品カードごとに循環） */
+export const tapeColors = ["#FFE8A3", "#FFD3E2", "#CFF3E8", "#DCE4FF"] as const;
+
+/* ------------------------------------------------------------------
+   料金プラン → ご依頼フォームの連動
+------------------------------------------------------------------- */
+/** フォームの「サイズ / プラン」選択肢の表記。料金カードとフォームで共有する */
+export function planChoiceLabel(plan: { name: string; price: string }): string {
+  return `${plan.name}（${plan.price}）`;
+}
+
+/** 「このプランで相談」→ フォームのプラン自動選択に使うイベント名 */
+export const PLAN_SELECT_EVENT = "natori-portfolio-select-plan";
 
 /* ------------------------------------------------------------------
    フォームの選択肢（編集画面の対象外。変えたいときはここを編集）
