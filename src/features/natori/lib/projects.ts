@@ -51,6 +51,7 @@ const STATUS_AUTOCOMPLETE_THRESHOLD: Record<NatoriProjectStatus, NatoriTaskStage
   delivery_prep: "finish",
   delivered: "delivery",
   completed: "delivery",
+  closed: null,
 };
 
 export function getStageForStatus(status: NatoriProjectStatus): NatoriTaskStage | null {
@@ -70,6 +71,7 @@ const STATUS_CURRENT_STAGE: Record<NatoriProjectStatus, NatoriTaskStage | null> 
   delivery_prep: "finish",
   delivered: "delivery",
   completed: "delivery",
+  closed: null,
 };
 
 const STATUS_NEXT_ACTION: Record<NatoriProjectStatus, string> = {
@@ -85,6 +87,7 @@ const STATUS_NEXT_ACTION: Record<NatoriProjectStatus, string> = {
   delivery_prep: "納品データ準備",
   delivered: "納品確認",
   completed: "完了",
+  closed: "見送り",
 };
 
 // User-facing button label for advancing a project to the next status. For
@@ -104,6 +107,7 @@ const STATUS_ADVANCE_BUTTON_LABEL: Record<NatoriProjectStatus, string | null> = 
   delivery_prep: "納品済みにする",
   delivered: "完了にする",
   completed: null,
+  closed: null,
 };
 
 export function getAdvanceButtonLabel(status: NatoriProjectStatus): string | null {
@@ -139,6 +143,19 @@ export function getNextActionForStatus(status: NatoriProjectStatus): string {
 
 export function isDoneStatus(status: NatoriProjectStatus): boolean {
   return status === "delivered" || status === "completed";
+}
+
+/** 見送り（不成立でパイプラインから外した相談）かどうか */
+export function isClosedStatus(status: NatoriProjectStatus): boolean {
+  return status === "closed";
+}
+
+/**
+ * ボード・カレンダー・優先度リストの対象外（完了 or 見送り）かどうか。
+ * 「これ以上手を動かすことがない案件」の共通判定。
+ */
+export function isInactiveStatus(status: NatoriProjectStatus): boolean {
+  return isDoneStatus(status) || isClosedStatus(status);
 }
 
 // キャラクター系 3 タイプ（胸上 / 膝〜腰上 / 全身）の共通タスクテンプレ。
@@ -249,6 +266,8 @@ export function deriveStatusFromTasks(
   tasks: NatoriProjectTask[],
   currentStatus: NatoriProjectStatus
 ): NatoriProjectStatus {
+  // 見送り案件はタスク操作で勝手に復活させない
+  if (isClosedStatus(currentStatus)) return currentStatus;
   if (tasks.length === 0) return currentStatus;
   const done = tasks.filter((task) => task.done).length;
   if (done === tasks.length) return "completed";
@@ -302,7 +321,7 @@ export function daysUntilDue(dueDate: string, today: Date): number {
 }
 
 export function isProjectOverdue(project: NatoriProject, today: Date): boolean {
-  if (isDoneStatus(project.status)) return false;
+  if (isInactiveStatus(project.status)) return false;
   return daysUntilDue(project.dueDate, today) < 0;
 }
 
@@ -382,6 +401,8 @@ export function getCalendarEntriesForDate(
   const entries: NatoriCalendarEntry[] = [];
 
   for (const project of projects) {
+    // 見送り案件は納期の点も出さない（カレンダーから完全に外す）
+    if (isClosedStatus(project.status)) continue;
     if (project.dueDate === dateISO) {
       entries.push({ kind: "due", project });
     }
@@ -416,7 +437,7 @@ function shiftISODate(iso: string, days: number): string {
 }
 
 export function computeProjectBars(project: NatoriProject, today?: Date): NatoriCalendarBar[] {
-  if (isDoneStatus(project.status)) return [];
+  if (isInactiveStatus(project.status)) return [];
   // Pre-work (依頼受付・見積もり中・見積もり提示済み・入金待ち) は制作未着手なので
   // カレンダーの stage バーには出さない。入金確認 → rough に進んでから初めて
   // バーが描画されるようにする。
@@ -588,7 +609,7 @@ const TYPE_WEIGHT: Record<NatoriProjectType, number> = {
 };
 
 export function calculatePriorityScore(project: NatoriProject, today: Date): number {
-  if (isDoneStatus(project.status)) return -1;
+  if (isInactiveStatus(project.status)) return -1;
 
   const progress = getTaskProgress(project);
   const days = daysUntilDue(project.dueDate, today);
@@ -661,7 +682,7 @@ export function getPrioritySuggestions(
   limit = 3
 ): NatoriPriorityCandidate[] {
   return projects
-    .filter((project) => !isDoneStatus(project.status))
+    .filter((project) => !isInactiveStatus(project.status))
     .map((project) => ({
       project,
       score: calculatePriorityScore(project, today),

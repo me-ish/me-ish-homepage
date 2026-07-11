@@ -143,6 +143,11 @@ export const natoriProjectStatusMeta: Record<NatoriProjectStatus, NatoriProjectS
     chipClassName: "border-emerald-500 bg-emerald-200 text-emerald-900",
     cellClassName: "bg-emerald-200 text-emerald-900",
   },
+  closed: {
+    label: "見送り",
+    chipClassName: "border-gray-300 bg-gray-100 text-gray-600",
+    cellClassName: "bg-gray-100 text-gray-600",
+  },
 };
 
 type MockSeed = Omit<NatoriProject, "tasks"> & {

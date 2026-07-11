@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   ArrowRight,
+  Archive,
   ChevronDown,
   ChevronUp,
   ClipboardList,
@@ -35,6 +36,7 @@ const STATUS_SORT_ORDER: Record<NatoriProjectStatus, number> = {
   delivery_prep: 99,
   delivered: 99,
   completed: 99,
+  closed: 99,
 };
 
 type PreworkProjectsSectionProps = {
@@ -42,6 +44,8 @@ type PreworkProjectsSectionProps = {
   busyId?: string | null;
   onSelect: (project: NatoriProject) => void;
   onAdvanceStatus: (project: NatoriProject) => void;
+  /** 条件がまとまらなかった相談を見送り（closed）にする */
+  onClose?: (project: NatoriProject) => void;
 };
 
 export default function PreworkProjectsSection({
@@ -49,6 +53,7 @@ export default function PreworkProjectsSection({
   busyId,
   onSelect,
   onAdvanceStatus,
+  onClose,
 }: PreworkProjectsSectionProps) {
   const prework = useMemo(
     () =>
@@ -128,17 +133,31 @@ export default function PreworkProjectsSection({
                     </span>
                   </div>
                 </button>
-                {label ? (
-                  <button
-                    type="button"
-                    onClick={() => onAdvanceStatus(project)}
-                    disabled={busy}
-                    className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-pink-500 px-3 text-xs font-bold text-white shadow-sm transition hover:bg-pink-600 disabled:opacity-60"
-                  >
-                    <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                    {busy ? "更新中…" : label}
-                  </button>
-                ) : null}
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {label ? (
+                    <button
+                      type="button"
+                      onClick={() => onAdvanceStatus(project)}
+                      disabled={busy}
+                      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-pink-500 px-3 text-xs font-bold text-white shadow-sm transition hover:bg-pink-600 disabled:opacity-60"
+                    >
+                      <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                      {busy ? "更新中…" : label}
+                    </button>
+                  ) : null}
+                  {onClose ? (
+                    <button
+                      type="button"
+                      onClick={() => onClose(project)}
+                      disabled={busy}
+                      className="inline-flex h-9 items-center justify-center gap-1 rounded-full border border-gray-300 bg-white px-3 text-xs font-bold text-gray-600 shadow-sm transition hover:bg-gray-50 disabled:opacity-60"
+                      title="条件がまとまらなかった相談をボードから外します（履歴は残ります）"
+                    >
+                      <Archive className="h-3.5 w-3.5" aria-hidden />
+                      見送り
+                    </button>
+                  ) : null}
+                </div>
               </li>
             );
           })}

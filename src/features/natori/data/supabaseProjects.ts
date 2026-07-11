@@ -136,6 +136,19 @@ export async function updateNatoriProjectStatus(
 }
 
 /**
+ * Closes an inquiry that didn't work out (見送り). The reason, if any, is
+ * appended to the note server-side so the history survives. Reversible by
+ * setting the status back (unlike delete).
+ */
+export async function closeNatoriProject(projectId: string, reason: string): Promise<void> {
+  await patchNatoriAdminProject({
+    kind: "close",
+    projectId,
+    reason,
+  });
+}
+
+/**
  * Confirms payment for a project that is in `awaiting_payment`: stamps
  * `payment_confirmed_at` (if the column exists) and advances status to `rough`
  * so the project starts pressuring the calendar. Used by the

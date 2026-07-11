@@ -50,6 +50,8 @@ export const NATORI_PROJECT_STATUSES: ReadonlySet<string> = new Set([
   "delivery_prep",
   "delivered",
   "completed",
+  // 見送り: 条件がまとまらなかった相談の終端（実績・ボード対象外）
+  "closed",
 ]);
 
 export const NATORI_PROJECT_DETAILS_ALLOWED_FIELDS: ReadonlySet<string> = new Set([
@@ -419,6 +421,53 @@ export async function patchNatoriProjectDetails(
 
   if (error) {
     console.error("[natori-admin-projects] details update failed", error);
+    return { kind: "db-error" };
+  }
+  if (!data) return { kind: "not-found" };
+  return { kind: "ok" };
+}
+
+/**
+ * 相談を「見送り（closed）」にする。理由が渡されたら日付付きでメモ末尾に
+ * 追記し、履歴として残す。削除と違い元に戻せる（status を戻すだけ）。
+ */
+export async function closeNatoriProject(
+  projectId: string,
+  reason: string
+): Promise<NatoriProjectMutationResult> {
+  const admin = supabaseAdmin();
+
+  const { data: current, error: fetchErr } = await (admin as any)
+    .from("natori_projects")
+    .select("id, note")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (fetchErr) {
+    console.error("[natori-admin-projects] close fetch failed", fetchErr);
+    return { kind: "db-error" };
+  }
+  if (!current) return { kind: "not-found" };
+
+  const update: Record<string, unknown> = {
+    status: "closed",
+    next_action: "",
+  };
+  const trimmedReason = reason.trim();
+  if (trimmedReason) {
+    const today = new Date().toISOString().slice(0, 10);
+    const existingNote = (current as { note: string | null }).note ?? "";
+    const entry = `【見送り ${today}】${trimmedReason}`;
+    update.note = existingNote ? `${existingNote}\n\n${entry}` : entry;
+  }
+
+  const { data, error } = await (admin as any)
+    .from("natori_projects")
+    .update(update)
+    .eq("id", projectId)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    console.error("[natori-admin-projects] close failed", error);
     return { kind: "db-error" };
   }
   if (!data) return { kind: "not-found" };

@@ -13,7 +13,10 @@ export type NatoriProjectStatus =
   | "waiting"
   | "delivery_prep"
   | "delivered"
-  | "completed";
+  | "completed"
+  // 見送り: 依頼受付〜見積もり段階で条件がまとまらなかった相談の終端。
+  // 実績にも案件ボードにも出さないが、履歴として残す。
+  | "closed";
 
 export type NatoriProjectFilter = "all" | "active" | "waiting" | "done";
 

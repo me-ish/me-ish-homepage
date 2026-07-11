@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import {
+  closeNatoriProject,
   confirmNatoriProjectPayment,
   createNatoriAdminProject,
   deleteNatoriAdminProject,
@@ -169,6 +170,19 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "No editable fields supplied" }, { status: 400 });
       case "db-error":
         return NextResponse.json({ error: "Failed to update project" }, { status: 500 });
+      case "not-found":
+        return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      case "ok":
+        return NextResponse.json({ ok: true });
+    }
+  }
+
+  if (kind === "close") {
+    const reason = readString(payload.reason) ?? "";
+    const result = await closeNatoriProject(projectId, reason);
+    switch (result.kind) {
+      case "db-error":
+        return NextResponse.json({ error: "Failed to close project" }, { status: 500 });
       case "not-found":
         return NextResponse.json({ error: "Project not found" }, { status: 404 });
       case "ok":

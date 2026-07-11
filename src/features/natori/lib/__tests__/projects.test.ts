@@ -538,3 +538,30 @@ describe("parseISODate / toISODate roundtrip", () => {
     expect(toISODate(date)).toBe("2026-05-22");
   });
 });
+
+describe("closed (見送り) status", () => {
+  it("is excluded from priority suggestions and scored inactive", () => {
+    const closed = buildProject({ id: "closed-1", status: "closed" });
+    const active = buildProject({ id: "active-1", status: "inquiry" });
+    expect(calculatePriorityScore(closed, TODAY)).toBe(-1);
+    const suggestions = getPrioritySuggestions([closed, active], TODAY, 5);
+    expect(suggestions.map((s) => s.project.id)).toEqual(["active-1"]);
+  });
+
+  it("draws no calendar bars or entries", () => {
+    const closed = buildProject({ id: "closed-2", status: "closed", dueDate: "2026-05-30" });
+    expect(computeProjectBars(closed, TODAY)).toEqual([]);
+    expect(getCalendarEntriesForDate([closed], "2026-05-30")).toEqual([]);
+  });
+
+  it("is never overdue and task toggles keep it closed", () => {
+    const closed = buildProject({ id: "closed-3", status: "closed", dueDate: "2020-01-01" });
+    expect(isProjectOverdue(closed, TODAY)).toBe(false);
+    expect(deriveStatusFromTasks(closed.tasks, "closed")).toBe("closed");
+  });
+
+  it("does not advance from closed", () => {
+    expect(getNextStatus("closed")).toBe("closed");
+    expect(getAdvanceButtonLabel("closed")).toBeNull();
+  });
+});

@@ -12,7 +12,9 @@ import {
 } from "@/features/natori/lib/projects";
 import { getAwaitingPaymentSummary } from "@/features/natori/lib/scheduling";
 import {
+  closeNatoriProject,
   confirmNatoriProjectPayment,
+  deleteNatoriProject,
   fetchNatoriProjects,
   seedNatoriDemoProjects,
   toggleNatoriTaskDone,
@@ -33,6 +35,7 @@ import ProjectDayDetail from "./ProjectDayDetail";
 import ProjectPriorityList from "./ProjectPriorityList";
 import AwaitingPaymentSummary from "./AwaitingPaymentSummary";
 import PreworkProjectsSection from "./PreworkProjectsSection";
+import ClosedProjectsSection from "./ClosedProjectsSection";
 import ProjectRegisterForm from "./ProjectRegisterForm";
 
 type ViewMonth = { year: number; monthIndex: number };
@@ -97,14 +100,25 @@ export default function ProjectsBoard() {
     };
   }, [loadFromSupabase]);
 
+  // 見送り（closed）はボード・カレンダー・優先度の対象から外し、
+  // 折りたたみの「見送りした相談」にだけ出す。
+  const activeProjects = useMemo(
+    () => projects.filter((project) => project.status !== "closed"),
+    [projects]
+  );
+  const closedProjects = useMemo(
+    () => projects.filter((project) => project.status === "closed"),
+    [projects]
+  );
+
   const suggestions = useMemo<NatoriPriorityCandidate[]>(
-    () => (today ? getPrioritySuggestions(projects, today, 3) : []),
-    [projects, today]
+    () => (today ? getPrioritySuggestions(activeProjects, today, 3) : []),
+    [activeProjects, today]
   );
 
   const awaitingPaymentSummary = useMemo(
-    () => getAwaitingPaymentSummary(projects),
-    [projects]
+    () => getAwaitingPaymentSummary(activeProjects),
+    [activeProjects]
   );
 
   if (!today || !selectedISO || !viewMonth || dataSource === "loading") {
@@ -237,6 +251,93 @@ export default function ProjectsBoard() {
         } catch (err) {
           console.error("[ProjectsBoard] confirm payment failed", err);
           setError(err instanceof Error ? err.message : String(err));
+        } finally {
+          setAdvanceBusyId((current) => (current === project.id ? null : current));
+        }
+      })();
+    } else {
+      setAdvanceBusyId((current) => (current === project.id ? null : current));
+    }
+  };
+
+  const handleCloseProject = (project: NatoriProject) => {
+    const reason = window.prompt(
+      `「${project.clientName}｜${project.title}」を見送りにします。\nボードとカレンダーから外れ、「見送りした相談」に移ります（あとで戻せます）。\n\n見送りの理由（任意・メモに記録されます）:`,
+      ""
+    );
+    if (reason === null) return; // キャンセル
+    setAdvanceBusyId(project.id);
+    setProjects((current) =>
+      current.map((entry) =>
+        entry.id === project.id ? { ...entry, status: "closed", nextAction: "" } : entry
+      )
+    );
+    if (dataSource === "supabase") {
+      (async () => {
+        try {
+          await closeNatoriProject(project.id, reason);
+          // 理由はサーバー側でメモに追記されるので、表示用に再取得する
+          await loadFromSupabase();
+        } catch (err) {
+          console.error("[ProjectsBoard] close project failed", err);
+          setError(err instanceof Error ? err.message : String(err));
+          try {
+            await loadFromSupabase();
+          } catch (reloadErr) {
+            console.error("[ProjectsBoard] reload after close failure failed", reloadErr);
+          }
+        } finally {
+          setAdvanceBusyId((current) => (current === project.id ? null : current));
+        }
+      })();
+    } else {
+      setAdvanceBusyId((current) => (current === project.id ? null : current));
+    }
+  };
+
+  const handleReopenProject = (project: NatoriProject) => {
+    const nextAction = getNextActionForStatus("inquiry");
+    setAdvanceBusyId(project.id);
+    setProjects((current) =>
+      current.map((entry) =>
+        entry.id === project.id ? { ...entry, status: "inquiry", nextAction } : entry
+      )
+    );
+    if (dataSource === "supabase") {
+      (async () => {
+        try {
+          await updateNatoriProjectStatus(project.id, "inquiry", nextAction);
+        } catch (err) {
+          console.error("[ProjectsBoard] reopen project failed", err);
+          setError(err instanceof Error ? err.message : String(err));
+        } finally {
+          setAdvanceBusyId((current) => (current === project.id ? null : current));
+        }
+      })();
+    } else {
+      setAdvanceBusyId((current) => (current === project.id ? null : current));
+    }
+  };
+
+  const handleDeleteClosedProject = (project: NatoriProject) => {
+    const confirmed = window.confirm(
+      `「${project.clientName}｜${project.title}」を完全に削除します。メモも含めて元に戻せません。よろしいですか？`
+    );
+    if (!confirmed) return;
+    setAdvanceBusyId(project.id);
+    setProjects((current) => current.filter((entry) => entry.id !== project.id));
+    if (dataSource === "supabase") {
+      (async () => {
+        try {
+          await deleteNatoriProject(project.id);
+        } catch (err) {
+          console.error("[ProjectsBoard] delete closed project failed", err);
+          setError(err instanceof Error ? err.message : String(err));
+          try {
+            await loadFromSupabase();
+          } catch (reloadErr) {
+            console.error("[ProjectsBoard] reload after delete failure failed", reloadErr);
+          }
         } finally {
           setAdvanceBusyId((current) => (current === project.id ? null : current));
         }
@@ -410,10 +511,11 @@ export default function ProjectsBoard() {
       ) : null}
 
       <PreworkProjectsSection
-        projects={projects}
+        projects={activeProjects}
         busyId={advanceBusyId}
         onSelect={focusProject}
         onAdvanceStatus={handleAdvanceStatus}
+        onClose={handleCloseProject}
       />
 
       <AwaitingPaymentSummary
@@ -433,7 +535,7 @@ export default function ProjectsBoard() {
       <ProjectMonthCalendar
         year={viewMonth.year}
         monthIndex={viewMonth.monthIndex}
-        projects={projects}
+        projects={activeProjects}
         events={events}
         today={today}
         selectedISO={selectedISO}
@@ -444,7 +546,7 @@ export default function ProjectsBoard() {
 
       <ProjectDayDetail
         selectedISO={selectedISO}
-        allProjects={projects}
+        allProjects={activeProjects}
         today={today}
         onToggleTask={handleToggleTask}
         onAdvanceStatus={handleAdvanceStatus}
@@ -458,6 +560,13 @@ export default function ProjectsBoard() {
         onCreateEvent={handleCreateEvent}
         onUpdateEvent={handleUpdateEvent}
         onDeleteEvent={handleDeleteEvent}
+      />
+
+      <ClosedProjectsSection
+        projects={closedProjects}
+        busyId={advanceBusyId}
+        onReopen={handleReopenProject}
+        onDelete={handleDeleteClosedProject}
       />
     </div>
   );
