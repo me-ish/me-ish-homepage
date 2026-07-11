@@ -66,6 +66,15 @@ export function filterProjectsByYear(
   return projects.filter((project) => project.dueDate.startsWith(prefix));
 }
 
+/** 年月（"2026-05" 形式）で実績を絞り込む（ym が null なら全期間） */
+export function filterProjectsByMonth(
+  projects: NatoriProject[],
+  ym: string | null
+): NatoriProject[] {
+  if (ym === null) return projects;
+  return projects.filter((project) => project.dueDate.startsWith(ym));
+}
+
 function toMonthLabel(ym: string): string {
   const [year, month] = ym.split("-");
   const monthNumber = Number(month);

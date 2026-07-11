@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  filterProjectsByMonth,
   filterProjectsByYear,
   isNatoriCompletedProject,
   listNatoriResultYears,
@@ -96,5 +97,11 @@ describe("listNatoriResultYears / filterProjectsByYear", () => {
   it("filters by year and passes through on null", () => {
     expect(filterProjectsByYear(projects, 2025).map((p) => p.id)).toEqual(["b"]);
     expect(filterProjectsByYear(projects, null)).toHaveLength(3);
+  });
+
+  it("filters by month and passes through on null", () => {
+    expect(filterProjectsByMonth(projects, "2026-05").map((p) => p.id)).toEqual(["a"]);
+    expect(filterProjectsByMonth(projects, "2025-12").map((p) => p.id)).toEqual(["b"]);
+    expect(filterProjectsByMonth(projects, null)).toHaveLength(3);
   });
 });

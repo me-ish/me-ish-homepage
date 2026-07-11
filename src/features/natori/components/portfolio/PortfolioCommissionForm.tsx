@@ -96,7 +96,7 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
             : "現在コミッションは停止中です。再開まで今しばらくお待ちください。"}
         </p>
         {tsunaguLink ? (
-          <p className="mb-8 text-center text-sm" style={{ color: c.inkSoft }}>
+          <p className="mb-8 text-center" style={{ color: c.inkSoft }}>
             <a
               href={tsunaguLink.href}
               target="_blank"

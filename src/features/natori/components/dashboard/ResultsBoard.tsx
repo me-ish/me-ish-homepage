@@ -26,6 +26,7 @@ import {
 import { toISODate } from "@/features/natori/lib/projects";
 import { formatYen } from "@/features/natori/lib/pricing";
 import {
+  filterProjectsByMonth,
   filterProjectsByYear,
   listNatoriResultYears,
   summarizeNatoriResults,
@@ -531,6 +532,16 @@ export default function ResultsBoard() {
     [projects, now, yearFilter]
   );
 
+  // 集計カード用。月が選択されているときはその月だけで集計し直す
+  // （月別メーターの一覧は年スコープのまま残したいので summary とは別に持つ）
+  const cardSummary = useMemo<NatoriResultsSummary | null>(
+    () =>
+      projects && now && monthFilter !== null
+        ? summarizeNatoriResults(filterProjectsByMonth(projects, monthFilter), now)
+        : summary,
+    [projects, now, monthFilter, summary]
+  );
+
   const listItems = useMemo(() => {
     if (!summary) return [];
     return summary.completed.filter(
@@ -600,7 +611,7 @@ export default function ResultsBoard() {
     );
   }
 
-  if (!summary || !now) {
+  if (!summary || !cardSummary || !now) {
     return (
       <div className="space-y-3">
         <div className="h-24 animate-pulse rounded-2xl bg-pink-50/60" />
@@ -635,8 +646,14 @@ export default function ResultsBoard() {
     0,
     ...summary.byType.map((entry) => (metric === "amount" ? entry.amount : entry.count))
   );
-  const monthsInScope = Math.max(1, summary.monthly.length);
+  const monthsInScope = Math.max(1, cardSummary.monthly.length);
   const scopeLabel = yearFilter === null ? "全期間" : `${yearFilter}年`;
+  const selectedMonth =
+    monthFilter === null ? null : summary.monthly.find((month) => month.ym === monthFilter);
+  // 集計カードの対象期間。月選択中はその月を表示する
+  const cardScopeLabel = selectedMonth?.label ?? monthFilter ?? scopeLabel;
+  // 期間チップに出す月の並びは古い月が先頭（summary.monthly は新しい月が先頭）
+  const monthChips = yearFilter === null ? [] : summary.monthly.slice().reverse();
   const activeFilterChips: Array<{ key: string; label: string; onClear: () => void }> = [];
   if (yearFilter !== null) {
     activeFilterChips.push({
@@ -737,15 +754,51 @@ export default function ResultsBoard() {
             </div>
           </div>
         </div>
+
+        {/* 年を選ぶと、その年の実績がある月をさらに絞り込める */}
+        {monthChips.length > 0 ? (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-pink-50 pt-2">
+            <span className="mr-1 text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              月別
+            </span>
+            <button
+              type="button"
+              onClick={() => setMonthFilter(null)}
+              aria-pressed={monthFilter === null}
+              className={`h-8 rounded-full border px-3 text-xs font-bold transition ${
+                monthFilter === null
+                  ? "border-pink-500 bg-pink-500 text-white"
+                  : "border-pink-200 bg-white text-gray-700 hover:bg-pink-50"
+              }`}
+            >
+              通年
+            </button>
+            {monthChips.map((month) => (
+              <button
+                key={month.ym}
+                type="button"
+                onClick={() => setMonthFilter(monthFilter === month.ym ? null : month.ym)}
+                aria-pressed={monthFilter === month.ym}
+                className={`h-8 rounded-full border px-3 text-xs font-bold transition ${
+                  monthFilter === month.ym
+                    ? "border-pink-500 bg-pink-500 text-white"
+                    : "border-pink-200 bg-white text-gray-700 hover:bg-pink-50"
+                }`}
+              >
+                {Number(month.ym.slice(5))}月
+              </button>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <StatTile label={`実績件数（${scopeLabel}）`} value={`${summary.totalCount}件`} />
-        <StatTile label="総売上" value={formatYen(summary.totalAmount)} />
-        <StatTile label="平均単価" value={formatYen(summary.averageAmount)} />
+        <StatTile label={`実績件数（${cardScopeLabel}）`} value={`${cardSummary.totalCount}件`} />
+        <StatTile label="総売上" value={formatYen(cardSummary.totalAmount)} />
+        <StatTile label="平均単価" value={formatYen(cardSummary.averageAmount)} />
         <StatTile
           label="月平均売上"
-          value={formatYen(Math.round(summary.totalAmount / monthsInScope))}
+          value={formatYen(Math.round(cardSummary.totalAmount / monthsInScope))}
           sub={`${monthsInScope}ヶ月分`}
         />
       </div>
@@ -755,7 +808,7 @@ export default function ResultsBoard() {
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         <SectionCard
           title={`月別の実績（${scopeLabel}）`}
-          description="納期の月ごとの集計です。行をタップすると実績一覧をその月に絞り込めます。"
+          description="納期の月ごとの集計です。行をタップすると集計カードと実績一覧をその月に絞り込めます。"
         >
           <ul className="mt-2 space-y-1.5">
             {summary.monthly.map((month) => (
