@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  filterProjectsByYear,
   isNatoriCompletedProject,
+  listNatoriResultYears,
   summarizeNatoriResults,
 } from "@/features/natori/lib/results";
 import type { NatoriProject } from "@/features/natori/types/projects";
@@ -77,5 +79,22 @@ describe("summarizeNatoriResults", () => {
 
     // 納期の新しい順
     expect(summary.completed.map((p) => p.id)).toEqual(["b", "a", "c"]);
+  });
+});
+
+describe("listNatoriResultYears / filterProjectsByYear", () => {
+  const projects = [
+    makeProject({ id: "a", dueDate: "2026-05-10" }),
+    makeProject({ id: "b", dueDate: "2025-12-01", status: "delivered" }),
+    makeProject({ id: "c", dueDate: "2024-01-01", status: "rough" }), // 未完了は年に数えない
+  ];
+
+  it("lists years of completed projects, newest first", () => {
+    expect(listNatoriResultYears(projects)).toEqual([2026, 2025]);
+  });
+
+  it("filters by year and passes through on null", () => {
+    expect(filterProjectsByYear(projects, 2025).map((p) => p.id)).toEqual(["b"]);
+    expect(filterProjectsByYear(projects, null)).toHaveLength(3);
   });
 });

@@ -45,6 +45,27 @@ export function isNatoriCompletedProject(project: NatoriProject): boolean {
   return COMPLETED_STATUSES.has(project.status);
 }
 
+/** 実績（完了案件）が存在する年の一覧。新しい年が先頭 */
+export function listNatoriResultYears(projects: NatoriProject[]): number[] {
+  const years = new Set<number>();
+  for (const project of projects) {
+    if (!isNatoriCompletedProject(project)) continue;
+    const year = Number(project.dueDate.slice(0, 4));
+    if (Number.isFinite(year)) years.add(year);
+  }
+  return Array.from(years).sort((a, b) => b - a);
+}
+
+/** 年で実績を絞り込む（year が null なら全期間） */
+export function filterProjectsByYear(
+  projects: NatoriProject[],
+  year: number | null
+): NatoriProject[] {
+  if (year === null) return projects;
+  const prefix = `${year}-`;
+  return projects.filter((project) => project.dueDate.startsWith(prefix));
+}
+
 function toMonthLabel(ym: string): string {
   const [year, month] = ym.split("-");
   const monthNumber = Number(month);

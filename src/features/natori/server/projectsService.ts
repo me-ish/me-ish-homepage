@@ -1,6 +1,7 @@
 import "server-only";
 import { createTasksForType } from "@/features/natori/lib/projects";
 import { calculateDueDate } from "@/features/natori/lib/deliveryPlans";
+import { deleteNatoriProjectThumb } from "@/features/natori/server/projectThumbsService";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type {
   NatoriDeliveryPlan,
@@ -502,6 +503,9 @@ export async function deleteNatoriAdminProject(
     return { kind: "db-error" };
   }
   if (!data) return { kind: "not-found" };
+
+  // サムネイル画像もベストエフォートで片付ける（失敗しても削除自体は成功扱い）
+  await deleteNatoriProjectThumb(projectId);
   return { kind: "ok" };
 }
 

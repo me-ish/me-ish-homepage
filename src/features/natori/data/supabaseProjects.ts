@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { mockNatoriProjects } from "@/features/natori/constants/mockProjects";
 import type {
   NatoriDeliveryPlan,
@@ -321,6 +322,39 @@ export async function createNatoriProject(input: CreateNatoriProjectInput): Prom
   }
   const payload = (await response.json()) as { projectId: string };
   return payload.projectId;
+}
+
+/**
+ * Fetches the projectId → public URL map of result thumbnails.
+ */
+export async function fetchNatoriProjectThumbs(): Promise<Record<string, string>> {
+  const response = await fetch("/api/natori/admin/project-thumbs", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch thumbnails (${response.status})`);
+  }
+  const payload = (await response.json()) as { thumbs?: Record<string, string> };
+  return payload.thumbs ?? {};
+}
+
+/**
+ * Uploads (or replaces) the thumbnail image for a project. Returns the new
+ * public URL (already cache-busted).
+ */
+export async function uploadNatoriProjectThumb(projectId: string, file: File): Promise<string> {
+  const form = new FormData();
+  form.set("projectId", projectId);
+  form.set("file", file);
+  const response = await fetch("/api/natori/admin/project-thumbs", {
+    method: "POST",
+    headers: { ...CSRF_HEADERS },
+    body: form,
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error ?? `Failed to upload thumbnail (${response.status})`);
+  }
+  const payload = (await response.json()) as { url: string };
+  return payload.url;
 }
 
 /**
