@@ -1,14 +1,14 @@
 // features/natori/components/portfolio/PortfolioHero.tsx
-import Image from "next/image";
+// メインビジュアル(丸画像)は当面非表示。content.heroImage 自体は残してあるので、
+// 復活させる場合は git 履歴のビジュアル列を戻す。
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
-import ChibiFace from "./ChibiFace";
 import Sparkle from "./Sparkle";
 import { fontEnStyle } from "./portfolioFonts";
 
 export default function PortfolioHero({ content }: { content: PortfolioContent }) {
   return (
-    <section className="relative mx-auto grid max-w-6xl items-center gap-10 overflow-hidden px-5 pb-20 pt-16 md:grid-cols-2">
+    <section className="relative mx-auto max-w-6xl overflow-hidden px-5 pb-20 pt-16">
       <Sparkle style={{ top: 10, left: "40%" }} color={c.yellow} size={20} />
       <Sparkle style={{ top: 90, left: "10%" }} color={c.pink} size={16} />
       <div>
@@ -41,37 +41,6 @@ export default function PortfolioHero({ content }: { content: PortfolioContent }
             依頼してみる
           </a>
         </div>
-      </div>
-
-      <div className="relative flex justify-center">
-        {/* メインビジュアル。編集画面から画像を設定すると差し替わる */}
-        <div
-          className="pf-floaty relative flex items-center justify-center overflow-hidden rounded-full"
-          style={{
-            width: 260,
-            height: 260,
-            background: c.card,
-            boxShadow: "0 20px 40px rgba(45,42,61,0.12)",
-          }}
-        >
-          {content.heroImage ? (
-            <Image
-              src={content.heroImage}
-              alt={`${content.artistName} メインビジュアル`}
-              fill
-              sizes="260px"
-              className="object-cover"
-            />
-          ) : (
-            <ChibiFace size={170} skin="#FFE3D1" hair="#F3A6C1" accent={c.pink} />
-          )}
-        </div>
-        <span
-          className="pf-wobble absolute -right-2 -top-2 rounded-full px-3 py-2 text-xs font-bold shadow"
-          style={{ ...fontEnStyle, background: c.yellow, color: c.ink }}
-        >
-          NEW ✦
-        </span>
       </div>
     </section>
   );

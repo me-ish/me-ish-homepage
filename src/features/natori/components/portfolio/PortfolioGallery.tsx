@@ -2,7 +2,8 @@
 
 // features/natori/components/portfolio/PortfolioGallery.tsx
 // 作品ギャラリー。マスキングテープで貼ったポラロイド風のカードを並べる。
-import { useState } from "react";
+// 画像はX(Twitter)の縦長表示に近い 3:4 で見せ、クリックでモーダル拡大表示。
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
   placeholderPalettes,
@@ -11,7 +12,7 @@ import {
   workRotations,
 } from "@/features/natori/constants/portfolioContent";
 import { galleryFiltersFromWorks } from "@/features/natori/lib/portfolioContent";
-import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import type { PortfolioContent, PortfolioWork } from "@/features/natori/types/portfolio";
 import ChibiFace from "./ChibiFace";
 
 function MaskingTape({ color, angle }: { color: string; angle: number }) {
@@ -35,6 +36,22 @@ function MaskingTape({ color, angle }: { color: string; angle: number }) {
 export default function PortfolioGallery({ content }: { content: PortfolioContent }) {
   const filters = galleryFiltersFromWorks(content.works);
   const [activeFilter, setActiveFilter] = useState<string>("すべて");
+  const [selected, setSelected] = useState<PortfolioWork | null>(null);
+
+  // モーダル表示中は Esc で閉じられるようにし、背景のスクロールを止める
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelected(null);
+    };
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [selected]);
 
   const shown =
     activeFilter === "すべて"
@@ -81,10 +98,15 @@ export default function PortfolioGallery({ content }: { content: PortfolioConten
               }}
             >
               <MaskingTape color={tape} angle={tapeAngle} />
-              {/* 作品画像。編集画面から画像を設定すると差し替わる */}
-              <div
-                className="relative mb-3 flex items-center justify-center overflow-hidden rounded-lg"
-                style={{ background: c.paperAlt, height: 180 }}
+              {/* 作品画像。編集画面から画像を設定すると差し替わる。クリックで拡大モーダル */}
+              <button
+                type="button"
+                onClick={work.image ? () => setSelected(work) : undefined}
+                aria-label={work.image ? `${work.title} を拡大表示` : undefined}
+                className={`pf-cute-focus relative mb-3 flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-lg ${
+                  work.image ? "cursor-zoom-in" : "cursor-default"
+                }`}
+                style={{ background: c.paperAlt }}
               >
                 {work.image ? (
                   <Image
@@ -102,7 +124,7 @@ export default function PortfolioGallery({ content }: { content: PortfolioConten
                     accent={palette.accent}
                   />
                 )}
-              </div>
+              </button>
               <div className="flex items-center justify-between gap-2">
                 <p className="min-w-0 truncate font-bold">{work.title}</p>
                 {work.tag ? (
@@ -122,6 +144,57 @@ export default function PortfolioGallery({ content }: { content: PortfolioConten
         <p className="py-8 text-center text-sm font-bold" style={{ color: c.inkSoft }}>
           このタグの作品はまだありません。
         </p>
+      ) : null}
+
+      {/* 拡大表示モーダル。背景クリック / ×ボタン / Esc で閉じる */}
+      {selected?.image ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={selected.title}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8"
+          style={{ background: "rgba(45,42,61,0.72)" }}
+          onClick={() => setSelected(null)}
+        >
+          <div
+            className="relative flex max-h-full w-full max-w-3xl flex-col rounded-xl p-3 pb-4"
+            style={{ background: c.card, boxShadow: "0 20px 40px rgba(45,42,61,0.30)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              aria-label="閉じる"
+              className="pf-cute-focus absolute -right-3 -top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full font-bold text-white shadow-md hover:brightness-105"
+              style={{ background: c.pink }}
+            >
+              ✕
+            </button>
+            <div
+              className="relative h-[70vh] w-full overflow-hidden rounded-lg md:h-[76vh]"
+              style={{ background: c.paperAlt }}
+            >
+              <Image
+                src={selected.image}
+                alt={selected.title}
+                fill
+                sizes="(min-width: 768px) 768px, 100vw"
+                className="object-contain"
+              />
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-2 px-1">
+              <p className="min-w-0 truncate font-bold">{selected.title}</p>
+              {selected.tag ? (
+                <span
+                  className="shrink-0 rounded-full px-2 py-1 text-xs font-bold"
+                  style={{ background: c.paperAlt, color: c.ink }}
+                >
+                  {selected.tag}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </div>
       ) : null}
     </section>
   );
