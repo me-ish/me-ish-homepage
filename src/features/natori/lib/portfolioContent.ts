@@ -7,12 +7,24 @@ const shortText = z.string().max(200);
 const longText = z.string().max(4000);
 const imageUrl = z.string().max(1000).nullable();
 
-const workSchema = z.object({
-  id: z.string().min(1).max(64),
-  title: shortText,
-  tag: shortText,
-  image: imageUrl,
-});
+// 旧形式 (tag: string) と新形式 (tags: string[]) の両方を受け付け、tags に正規化する。
+// DB に残っている旧データは読み込み時にここで自動移行される。
+const workSchema = z
+  .object({
+    id: z.string().min(1).max(64),
+    title: shortText,
+    tag: shortText.optional(),
+    tags: z.array(shortText).max(10).optional(),
+    image: imageUrl,
+  })
+  .transform(({ id, title, tag, tags, image }) => ({
+    id,
+    title,
+    tags: (tags ?? (tag !== undefined ? [tag] : []))
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0),
+    image,
+  }));
 
 const planSchema = z.object({
   name: shortText,
@@ -36,7 +48,9 @@ const socialLinkSchema = z.object({
   href: z.string().max(1000),
 });
 
-export const portfolioContentSchema: z.ZodType<PortfolioContent> = z.object({
+// works の旧形式→新形式 transform があるため入力型と出力型が異なる。
+// 出力が PortfolioContent と一致することは parsePortfolioContent の戻り値型で担保する。
+export const portfolioContentSchema = z.object({
   commissionOpen: z.boolean(),
   artistName: shortText,
   roleEn: shortText,
@@ -68,8 +82,10 @@ export function parsePortfolioContent(value: unknown): PortfolioContent | null {
 export function galleryFiltersFromWorks(works: PortfolioContent["works"]): string[] {
   const tags: string[] = [];
   for (const work of works) {
-    const tag = work.tag.trim();
-    if (tag && !tags.includes(tag)) tags.push(tag);
+    for (const raw of work.tags) {
+      const tag = raw.trim();
+      if (tag && !tags.includes(tag)) tags.push(tag);
+    }
   }
   return ["すべて", ...tags];
 }

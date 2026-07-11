@@ -57,12 +57,12 @@ export const defaultPortfolioContent: PortfolioContent = {
     "一枚絵",
   ],
   works: [
-    { id: "work-1", title: "夏色スケッチ", tag: "一枚絵", image: null },
-    { id: "work-2", title: "おひるねちゃん", tag: "アイコン", image: null },
-    { id: "work-3", title: "制服ver.", tag: "立ち絵", image: null },
-    { id: "work-4", title: "推し色コーデ", tag: "一枚絵", image: null },
-    { id: "work-5", title: "ふわもこパーカー", tag: "アイコン", image: null },
-    { id: "work-6", title: "きらきら配信衣装", tag: "立ち絵", image: null },
+    { id: "work-1", title: "夏色スケッチ", tags: ["一枚絵"], image: null },
+    { id: "work-2", title: "おひるねちゃん", tags: ["アイコン"], image: null },
+    { id: "work-3", title: "制服ver.", tags: ["立ち絵"], image: null },
+    { id: "work-4", title: "推し色コーデ", tags: ["一枚絵"], image: null },
+    { id: "work-5", title: "ふわもこパーカー", tags: ["アイコン"], image: null },
+    { id: "work-6", title: "きらきら配信衣装", tags: ["立ち絵"], image: null },
   ],
   plans: [
     {

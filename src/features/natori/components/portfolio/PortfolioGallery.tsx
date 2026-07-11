@@ -56,7 +56,7 @@ export default function PortfolioGallery({ content }: { content: PortfolioConten
   const shown =
     activeFilter === "すべて"
       ? content.works
-      : content.works.filter((work) => work.tag === activeFilter);
+      : content.works.filter((work) => work.tags.includes(activeFilter));
 
   return (
     <section id="gallery" className="mx-auto max-w-6xl px-5 py-16">
@@ -127,12 +127,17 @@ export default function PortfolioGallery({ content }: { content: PortfolioConten
               </button>
               <div className="flex items-center justify-between gap-2">
                 <p className="min-w-0 truncate font-bold">{work.title}</p>
-                {work.tag ? (
-                  <span
-                    className="shrink-0 rounded-full px-2 py-1 text-xs font-bold"
-                    style={{ background: palette.accent, color: c.ink }}
-                  >
-                    {work.tag}
+                {work.tags.length > 0 ? (
+                  <span className="flex shrink-0 flex-wrap justify-end gap-1">
+                    {work.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full px-2 py-1 text-xs font-bold"
+                        style={{ background: palette.accent, color: c.ink }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
                   </span>
                 ) : null}
               </div>
@@ -184,12 +189,17 @@ export default function PortfolioGallery({ content }: { content: PortfolioConten
             </div>
             <div className="mt-3 flex items-center justify-between gap-2 px-1">
               <p className="min-w-0 truncate font-bold">{selected.title}</p>
-              {selected.tag ? (
-                <span
-                  className="shrink-0 rounded-full px-2 py-1 text-xs font-bold"
-                  style={{ background: c.paperAlt, color: c.ink }}
-                >
-                  {selected.tag}
+              {selected.tags.length > 0 ? (
+                <span className="flex shrink-0 flex-wrap justify-end gap-1">
+                  {selected.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full px-2 py-1 text-xs font-bold"
+                      style={{ background: c.paperAlt, color: c.ink }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
                 </span>
               ) : null}
             </div>

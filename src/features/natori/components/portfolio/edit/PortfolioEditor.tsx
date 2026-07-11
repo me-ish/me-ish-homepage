@@ -31,7 +31,7 @@ function sanitizeContent(content: PortfolioContent): PortfolioContent {
     aboutParagraphs: cleanList(content.aboutParagraphs),
     services: cleanList(content.services),
     requests: cleanList(content.requests),
-    works: content.works.map((work) => ({ ...work, title: work.title.trim(), tag: work.tag.trim() })),
+    works: content.works.map((work) => ({ ...work, title: work.title.trim(), tags: cleanList(work.tags) })),
     plans: content.plans.map((plan) => ({ ...plan, features: cleanList(plan.features) })),
     socialLinks: content.socialLinks.filter(
       (link) => link.label.trim().length > 0 && link.href.trim().length > 0
@@ -312,7 +312,7 @@ export default function PortfolioEditor() {
         <SectionCard
           emoji="🎨"
           title="作品ギャラリー"
-          description="コルクボードに表示される作品です。タグは同じ言葉を使うと絞り込みボタンにまとまります（例: アイコン / 立ち絵 / 一枚絵）。"
+          description="コルクボードに表示される作品です。タグは「、」区切りで複数つけられます。同じ言葉を使うと絞り込みボタンにまとまります（例: つなぐ、立ち絵）。"
         >
           <div className="space-y-4">
             {content.works.map((work, index) => (
@@ -343,10 +343,13 @@ export default function PortfolioEditor() {
                       onChange={(v) => patch({ works: updateItem(content.works, index, { title: v }) })}
                     />
                     <TextInput
-                      label="タグ"
-                      value={work.tag}
-                      onChange={(v) => patch({ works: updateItem(content.works, index, { tag: v }) })}
-                      placeholder="例: アイコン"
+                      label="タグ（「、」区切りで複数OK）"
+                      value={work.tags.join("、")}
+                      onChange={(v) =>
+                        // 入力中の末尾「、」を消さないよう、trim/空除去は保存時 (sanitizeContent) に行う
+                        patch({ works: updateItem(content.works, index, { tags: v.split(/[、,]/) }) })
+                      }
+                      placeholder="例: つなぐ、立ち絵"
                     />
                   </div>
                 </div>
@@ -359,7 +362,7 @@ export default function PortfolioEditor() {
               patch({
                 works: [
                   ...content.works,
-                  { id: crypto.randomUUID(), title: "新しい作品", tag: "一枚絵", image: null },
+                  { id: crypto.randomUUID(), title: "新しい作品", tags: ["一枚絵"], image: null },
                 ],
               })
             }

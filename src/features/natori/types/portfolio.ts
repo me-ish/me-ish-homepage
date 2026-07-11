@@ -7,7 +7,8 @@ export type PortfolioWork = {
   /** 一意なID（編集画面で生成。react key と並び替えに使用） */
   id: string;
   title: string;
-  tag: string;
+  /** タグ（複数可。例: ["つなぐ", "立ち絵"]）。旧データの単一 tag はパース時に移行される */
+  tags: string[];
   /** 画像URL（アップロード済みの公開URL）。null ならプレースホルダーSVGを表示 */
   image: string | null;
 };
