@@ -29,14 +29,14 @@ export default function PortfolioHero({ content }: { content: PortfolioContent }
           <a
             href="#gallery"
             className="pf-cute-focus rounded-full px-6 py-3 font-bold text-white shadow-md hover:brightness-105"
-            style={{ ...fontEnStyle, background: c.pink }}
+            style={{ background: c.pink }}
           >
             作品を見る
           </a>
           <a
             href="#form"
             className="pf-cute-focus rounded-full border-2 px-6 py-3 font-bold hover:bg-white"
-            style={{ ...fontEnStyle, borderColor: c.pink, color: c.pinkDeep }}
+            style={{ borderColor: c.pink, color: c.pinkDeep }}
           >
             依頼してみる
           </a>

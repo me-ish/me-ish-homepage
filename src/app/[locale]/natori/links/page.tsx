@@ -8,6 +8,16 @@ import { useEffect, useState } from 'react';
 /* ------------------------------------------------------------------ */
 const LINKS = [
   {
+    label: 'ポートフォリオ',
+    sub: 'ご依頼・コミッションはこちら',
+    href: '/natori/portfolio',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden>
+        <path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.61-.23-1.2-.64-1.67-.08-.1-.13-.21-.13-.33 0-.28.22-.5.5-.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9Zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 8 6.5 8 8 8.67 8 9.5 7.33 11 6.5 11Zm3-4C8.67 7 8 6.33 8 5.5S8.67 4 9.5 4s1.5.67 1.5 1.5S10.33 7 9.5 7Zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 4 14.5 4s1.5.67 1.5 1.5S15.33 7 14.5 7Zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 8 17.5 8s1.5.67 1.5 1.5-.67 1.5-1.5 1.5Z" />
+      </svg>
+    ),
+  },
+  {
     label: 'X（Twitter）',
     sub: '@natonato_o',
     href: 'https://x.com/natonato_o',
@@ -142,8 +152,8 @@ export default function Page() {
             >
               <a
                 href={lk.href}
-                target="_blank"
-                rel="noopener noreferrer"
+                target={lk.href.startsWith('/') ? undefined : '_blank'}
+                rel={lk.href.startsWith('/') ? undefined : 'noopener noreferrer'}
                 aria-label={`${lk.label} へ移動`}
                 className="group flex items-center gap-4 rounded-2xl px-5 py-4 shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
                 style={{

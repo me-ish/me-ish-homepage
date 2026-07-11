@@ -7,7 +7,7 @@
 // 保存されていないときの初期値」なので、コードで直す必要は基本的にない。
 // 料金・自己紹介の初期値は つなぐ (https://tsunagu.cloud/users/natonato_o) がベース。
 
-import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import type { PortfolioContent, PortfolioSocialLink } from "@/features/natori/types/portfolio";
 
 /* ------------------------------------------------------------------
    カラートークン
@@ -151,6 +151,23 @@ export const defaultPortfolioContent: PortfolioContent = {
   ],
   copyright: "© 2026 Natori* illust. All rights reserved.",
 };
+
+/* ------------------------------------------------------------------
+   SNSリンクの振り分け
+   X はプロフィールアイコン直下、つなぐ はご依頼フォーム付近に表示するため、
+   フッターにはそれ以外のリンクだけを残す
+------------------------------------------------------------------- */
+export function isPortfolioXLink(link: PortfolioSocialLink): boolean {
+  return (
+    link.href.includes("x.com") ||
+    link.href.includes("twitter.com") ||
+    /twitter|^x\b/i.test(link.label)
+  );
+}
+
+export function isPortfolioTsunaguLink(link: PortfolioSocialLink): boolean {
+  return link.href.includes("tsunagu") || link.label.includes("つなぐ");
+}
 
 /* ------------------------------------------------------------------
    プレースホルダーSVGの配色・カードの傾き（作品画像が未設定のとき用）

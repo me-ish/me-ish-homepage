@@ -7,6 +7,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import {
   PLAN_SELECT_EVENT,
+  isPortfolioTsunaguLink,
   planChoiceLabel,
   portfolioBudgetOptions,
   portfolioColors as c,
@@ -14,7 +15,6 @@ import {
   portfolioDeadlineOptions,
 } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
-import { fontEnStyle } from "./portfolioFonts";
 
 type Status = "idle" | "sending" | "success" | "error";
 
@@ -27,6 +27,10 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
   const [status, setStatus] = useState<Status>("idle");
   const [selectedPlan, setSelectedPlan] = useState<string>(PLAN_UNDECIDED);
   const commissionOpen = content.commissionOpen;
+  // つなぐ経由の依頼案内。受付停止中は非表示
+  const tsunaguLink = commissionOpen
+    ? content.socialLinks.find(isPortfolioTsunaguLink)
+    : undefined;
 
   const planChoices = [...content.plans.map(planChoiceLabel), PLAN_UNDECIDED];
 
@@ -83,11 +87,28 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
     <section id="form" className="py-16" style={{ background: c.paper }}>
       <div className="mx-auto max-w-2xl px-5">
         <h2 className="mb-2 text-center text-2xl font-black md:text-3xl">ご依頼フォーム</h2>
-        <p className="mb-8 text-center" style={{ color: c.inkSoft }}>
+        <p
+          className={`${tsunaguLink ? "mb-2" : "mb-8"} text-center`}
+          style={{ color: c.inkSoft }}
+        >
           {commissionOpen
             ? "現在コミッション受付中です。決まっていない項目は「未定」のままでOK、まずはお気軽にご相談ください。"
             : "現在コミッションは停止中です。再開まで今しばらくお待ちください。"}
         </p>
+        {tsunaguLink ? (
+          <p className="mb-8 text-center text-sm" style={{ color: c.inkSoft }}>
+            <a
+              href={tsunaguLink.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pf-cute-focus font-bold underline decoration-2 underline-offset-4 hover:opacity-70"
+              style={{ color: c.pinkDeep, textDecorationColor: c.peach }}
+            >
+              つなぐ
+            </a>
+            からのご依頼も受け付けています
+          </p>
+        ) : null}
 
         {status === "success" ? (
           <div
@@ -318,7 +339,7 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
               type="submit"
               disabled={!commissionOpen || status === "sending"}
               className="pf-cute-focus w-full rounded-full py-3 font-bold text-white disabled:opacity-50"
-              style={{ ...fontEnStyle, background: c.pink }}
+              style={{ background: c.pink }}
             >
               {!commissionOpen
                 ? "現在受付停止中です"
