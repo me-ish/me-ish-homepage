@@ -8,6 +8,7 @@ import {
   ChevronUp,
   FolderOpen,
   ImageIcon,
+  Inbox,
   Link2,
   LogOut,
   Palette,
@@ -37,6 +38,13 @@ type DashboardCard = {
 };
 
 const CARDS: DashboardCard[] = [
+  {
+    href: "/natori/inquiries",
+    title: "問い合わせ管理",
+    description: "フォームから来た依頼の内容確認・見積もり/支払いメール送信・経過チェック",
+    icon: Inbox,
+    accent: "from-orange-100 to-orange-50 text-orange-700",
+  },
   {
     href: "/natori/projects",
     title: "案件管理",
