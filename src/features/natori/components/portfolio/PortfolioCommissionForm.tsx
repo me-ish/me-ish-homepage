@@ -165,6 +165,10 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
             <p className="text-sm" style={{ color: c.inkSoft }}>
               内容を確認のうえ、2〜3日以内にご連絡いたします。
             </p>
+            <p className="mt-2 text-xs" style={{ color: c.inkSoft }}>
+              ご入力のメールアドレス宛に受付確認メールをお送りしました。
+              届かない場合は迷惑メールフォルダをご確認ください。
+            </p>
           </div>
         ) : (
           <form

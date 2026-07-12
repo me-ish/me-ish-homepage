@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { AlertTriangle, Calculator, CheckCircle2, ChevronDown, ChevronUp, Clipboard, RotateCcw, Save, Zap } from "lucide-react";
+import { AlertTriangle, Calculator, CheckCircle2, ChevronDown, ChevronUp, Clipboard, Mail, RotateCcw, Save, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { createDefaultNatoriPricingConfig, createNatoriEstimate, formatYen } from "@/features/natori/lib/pricing";
@@ -12,17 +12,20 @@ import {
   NATORI_DELIVERY_PLAN_ORDER,
   calculateDueDate,
 } from "@/features/natori/lib/deliveryPlans";
-import { toISODate } from "@/features/natori/lib/projects";
+import { isPreworkStatus, toISODate } from "@/features/natori/lib/projects";
 import {
   fetchOwnPricingPresets,
   seedDefaultPricingPresets,
   updatePricingPresetConfig,
   type NatoriPricingPreset,
 } from "@/features/natori/data/supabasePricing";
+import { fetchNatoriProjects } from "@/features/natori/data/supabaseProjects";
 import { cn } from "@/lib/utils";
+import OrderMailPanel from "@/features/natori/components/dashboard/OrderMailPanel";
 import ProjectRegisterForm from "@/features/natori/components/dashboard/ProjectRegisterForm";
 import type {
   NatoriDeliveryPlan,
+  NatoriProject,
   NatoriProjectType,
 } from "@/features/natori/types/projects";
 import type {
@@ -53,6 +56,21 @@ export default function EstimateForm() {
   const [presetDirty, setPresetDirty] = useState(false);
   const [presetSaving, setPresetSaving] = useState(false);
   const [presetError, setPresetError] = useState<string | null>(null);
+  // 見積もりメール連携: 依頼受付〜入金待ちの案件（問い合わせ）一覧
+  const [inquiryProjects, setInquiryProjects] = useState<NatoriProject[] | null>(null);
+  const [selectedInquiryId, setSelectedInquiryId] = useState<string>("");
+  const [mailPanelOpen, setMailPanelOpen] = useState(false);
+
+  const refreshInquiries = useCallback(async () => {
+    try {
+      const projects = await fetchNatoriProjects();
+      setInquiryProjects(projects.filter((project) => isPreworkStatus(project.status)));
+    } catch (err) {
+      // 未認可などで取れないときは連携セクションごと隠す
+      console.error("[EstimateForm] inquiry projects load failed", err);
+      setInquiryProjects(null);
+    }
+  }, []);
 
   const loadPresets = useCallback(async () => {
     try {
@@ -80,8 +98,9 @@ export default function EstimateForm() {
     (async () => {
       await loadPresets();
       setAuthed(true);
+      await refreshInquiries();
     })();
-  }, [loadPresets]);
+  }, [loadPresets, refreshInquiries]);
 
   const dueDateISO = useMemo(
     () => (startDateISO ? calculateDueDate(startDateISO, deliveryPlan) : ""),
@@ -95,6 +114,19 @@ export default function EstimateForm() {
         : null,
     [pricingConfig, submittedText, deliveryPlan]
   );
+
+  // 見積もりメールの定型文に入れる内訳行
+  const estimateBreakdownLines = useMemo(() => {
+    if (!estimate) return [];
+    return [
+      estimate.breakdown.base,
+      ...estimate.breakdown.fixed,
+      ...estimate.breakdown.percentage,
+    ].map((item) => `${item.label}: ${formatYen(item.amount)}`);
+  }, [estimate]);
+
+  const selectedInquiry =
+    inquiryProjects?.find((project) => project.id === selectedInquiryId) ?? null;
 
   useEffect(() => {
     setPricingOpen(window.matchMedia("(min-width: 640px)").matches);
@@ -267,6 +299,37 @@ export default function EstimateForm() {
               fixedDeliveryPlan
             />
 
+            {inquiryProjects && inquiryProjects.length > 0 ? (
+              <ResultBlock title="この見積もりで問い合わせに返信">
+                <p className="text-xs leading-5 text-gray-600">
+                  問い合わせ（依頼受付〜入金待ちの案件）を選ぶと、この金額と内訳が入った見積もりメールの下書きが開きます。
+                </p>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <select
+                    value={selectedInquiryId}
+                    onChange={(event) => setSelectedInquiryId(event.target.value)}
+                    className="h-11 w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300 sm:h-10"
+                    aria-label="見積もりメールを送る問い合わせ"
+                  >
+                    <option value="">問い合わせを選択…</option>
+                    {inquiryProjects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.clientName}｜{project.title}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    onClick={() => setMailPanelOpen(true)}
+                    disabled={!selectedInquiry}
+                    className="h-11 shrink-0 rounded-full bg-pink-500 px-4 text-sm text-white hover:bg-pink-600 disabled:opacity-50 sm:h-10 sm:text-xs"
+                  >
+                    <Mail className="h-4 w-4" aria-hidden />
+                    見積もりメールを作成
+                  </Button>
+                </div>
+              </ResultBlock>
+            ) : null}
+
             <ResultBlock
               title="コピー用まとめ"
               action={
@@ -357,6 +420,22 @@ export default function EstimateForm() {
           </div>
         )}
       </section>
+
+      {/* 見積もりメール送信パネル（金額・内訳を引き継いだ下書きが開く） */}
+      {mailPanelOpen && selectedInquiry && estimate ? (
+        <OrderMailPanel
+          project={selectedInquiry}
+          kind="estimate"
+          initialAmount={estimate.total}
+          breakdownLines={estimateBreakdownLines}
+          onClose={() => setMailPanelOpen(false)}
+          onSent={() => {
+            refreshInquiries().catch((err) => {
+              console.error("[EstimateForm] inquiry reload after mail failed", err);
+            });
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -78,6 +78,12 @@ export function parsePortfolioContent(value: unknown): PortfolioContent | null {
   return result.success ? result.data : null;
 }
 
+/**
+ * 編集画面 → プレビュー画面へ未保存の内容を受け渡す localStorage キー。
+ * （タブをまたぐため sessionStorage ではなく localStorage を使う）
+ */
+export const PORTFOLIO_PREVIEW_STORAGE_KEY = "natori-portfolio-preview";
+
 /** 作品のタグからギャラリーのフィルタ一覧を作る（先頭は「すべて」） */
 export function galleryFiltersFromWorks(works: PortfolioContent["works"]): string[] {
   const tags: string[] = [];

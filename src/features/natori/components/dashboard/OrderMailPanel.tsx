@@ -36,9 +36,16 @@ const KIND_META: Record<
   },
 };
 
-function buildDraft(kind: OrderMailKind, project: NatoriProject, amount: number): NatoriOrderMailDraft {
+function buildDraft(
+  kind: OrderMailKind,
+  project: NatoriProject,
+  amount: number,
+  breakdownLines?: string[]
+): NatoriOrderMailDraft {
   const input = { clientName: project.clientName, title: project.title, amount };
-  return kind === "estimate" ? buildEstimateMailDraft(input) : buildPaymentMailDraft(input);
+  return kind === "estimate"
+    ? buildEstimateMailDraft({ ...input, breakdownLines })
+    : buildPaymentMailDraft(input);
 }
 
 const inputClass =
@@ -48,17 +55,29 @@ const labelClass = "mb-1 block text-xs font-bold text-pink-700";
 type OrderMailPanelProps = {
   project: NatoriProject;
   kind: OrderMailKind;
+  /** 見積もりツールなどから渡す初期金額（省略時は案件の金額） */
+  initialAmount?: number;
+  /** 見積もりツールから渡す内訳行。定型文の金額の下に入る（estimate のみ） */
+  breakdownLines?: string[];
   onClose: () => void;
   /** 送信成功後に呼ばれる（案件一覧の再読み込み用） */
   onSent: () => void;
 };
 
-export default function OrderMailPanel({ project, kind, onClose, onSent }: OrderMailPanelProps) {
+export default function OrderMailPanel({
+  project,
+  kind,
+  initialAmount,
+  breakdownLines,
+  onClose,
+  onSent,
+}: OrderMailPanelProps) {
   const meta = KIND_META[kind];
+  const startAmount = initialAmount ?? project.amount;
   const [to, setTo] = useState(extractClientEmailFromNote(project.note) ?? "");
-  const [amount, setAmount] = useState<number>(project.amount);
+  const [amount, setAmount] = useState<number>(startAmount);
   const [draft, setDraft] = useState<NatoriOrderMailDraft>(() =>
-    buildDraft(kind, project, project.amount)
+    buildDraft(kind, project, startAmount, breakdownLines)
   );
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +90,7 @@ export default function OrderMailPanel({ project, kind, onClose, onSent }: Order
     emailValid && amountValid && draft.subject.trim() && draft.body.trim() && !sending;
 
   const regenerate = () => {
-    setDraft(buildDraft(kind, project, Number.isFinite(amount) ? amount : 0));
+    setDraft(buildDraft(kind, project, Number.isFinite(amount) ? amount : 0, breakdownLines));
   };
 
   const handleSend = async () => {

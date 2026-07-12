@@ -30,6 +30,8 @@ export type NatoriEstimateMailInput = {
   clientName: string;
   title: string;
   amount: number;
+  /** 見積もりツールから渡す内訳（例: "基本料金（全身）: ¥10,000"）。金額の下に並ぶ */
+  breakdownLines?: string[];
   /** 納期目安の文言。省略時は「ご入金確認後、約1ヶ月前後」 */
   deliveryLead?: string;
   /** 署名・名乗り。省略時は「ナトリ」 */
@@ -40,6 +42,10 @@ export type NatoriEstimateMailInput = {
 export function buildEstimateMailDraft(input: NatoriEstimateMailInput): NatoriOrderMailDraft {
   const artist = input.artistName?.trim() || "ナトリ";
   const deliveryLead = input.deliveryLead?.trim() || "ご入金確認後、約1ヶ月前後";
+  const breakdown = (input.breakdownLines ?? [])
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => `　・${line}`);
   const subject = `【お見積もり】${input.title} について（${artist}）`;
   const body = [
     `${input.clientName} 様`,
@@ -52,6 +58,7 @@ export function buildEstimateMailDraft(input: NatoriEstimateMailInput): NatoriOr
     "──────────────",
     `■ ご依頼内容: ${input.title}`,
     `■ お見積もり金額: ${formatYen(input.amount)}`,
+    ...breakdown,
     `■ 納期目安: ${deliveryLead}`,
     "──────────────",
     "",

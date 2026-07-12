@@ -15,6 +15,9 @@ const FROM = process.env.RESEND_FROM ?? "me-ish Gallery <noreply@me-ish.art>";
 // natori.o0716@gmail.com に戻すこと（または本番 env の
 // NATORI_PORTFOLIO_CONTACT_TO で切り替える）。
 const TO = process.env.NATORI_PORTFOLIO_CONTACT_TO ?? "info@me-ish.art";
+/** 依頼者向け自動返信の差出人（orderMailService と同じ env を共有） */
+const AUTO_REPLY_FROM =
+  process.env.NATORI_ORDER_MAIL_FROM ?? "ナトリ（me-ish） <noreply@me-ish.art>";
 
 /* ---------- Validation ---------- */
 export const portfolioContactSchema = z.object({
@@ -137,6 +140,64 @@ export async function sendPortfolioContactEmail(
   });
   if (error) {
     console.error("[natori-portfolio-contact] mail send failed:", error);
+    return { mailed: false };
+  }
+  return { mailed: true };
+}
+
+/**
+ * 依頼者向けの受付確認メール（自動返信）。
+ * 送信内容の控えを添えて「2〜3日以内に返信する」旨を伝える。
+ * 失敗しても依頼の受付自体には影響させない（呼び出し側で best-effort 扱い）。
+ */
+export async function sendPortfolioContactAutoReply(
+  input: PortfolioContactInput
+): Promise<{ mailed: boolean }> {
+  const summaryRows: Array<[string, string]> = [
+    ["ご依頼の種類", input.requestType || "-"],
+    ["サイズ / プラン", input.plan || "-"],
+    ["追加オプション", input.options.length ? input.options.join(" / ") : "なし"],
+    ["ご予算", input.budget || "-"],
+    ["希望納期", input.deadline || "-"],
+    ["添付画像", input.refImages.length ? `${input.refImages.length}枚` : "なし"],
+  ];
+
+  const text = [
+    `${input.name} 様`,
+    "",
+    "この度はご依頼のお問い合わせをいただき、ありがとうございます。",
+    "イラストレーターのナトリです。",
+    "",
+    "以下の内容でご依頼を受け付けました。",
+    "内容を確認のうえ、2〜3日以内にお見積もりをご連絡いたします。",
+    "",
+    "──────────────",
+    ...summaryRows.map(([label, value]) => `■ ${label}: ${value}`),
+    "──────────────",
+    "",
+    "--- ご依頼の詳細 ---",
+    input.details,
+    ...(input.message ? ["", "--- その他・ご質問 ---", input.message] : []),
+    "",
+    "※このメールは自動送信です。追加のご連絡がある場合は、",
+    "　このメールにそのままご返信ください。",
+    "",
+    "ナトリ",
+  ].join("\n");
+
+  const resend = new Resend(RESEND_API_KEY);
+  const { error } = await resend.emails.send({
+    from: AUTO_REPLY_FROM,
+    to: [input.email],
+    subject: `【受付確認】ご依頼ありがとうございます（ナトリ）`,
+    text,
+    replyTo: TO, // 依頼者が返信するとナトリに届く
+    headers: {
+      "X-Meish-Template": "natori-portfolio-contact-auto-reply",
+    },
+  });
+  if (error) {
+    console.error("[natori-portfolio-contact] auto-reply send failed:", error);
     return { mailed: false };
   }
   return { mailed: true };

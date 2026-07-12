@@ -5,6 +5,7 @@ import { checkRateLimit, getIpFromRequest, rateLimitExceeded } from "@/lib/rateL
 import {
   isPortfolioContactConfigured,
   portfolioContactSchema,
+  sendPortfolioContactAutoReply,
   sendPortfolioContactEmail,
 } from "@/features/natori/server/portfolioContactService";
 import { createInquiryProject } from "@/features/natori/server/inquiryProjectService";
@@ -54,6 +55,12 @@ export async function POST(req: Request) {
     if (isPortfolioContactConfigured()) {
       const sent = await sendPortfolioContactEmail(parsed.data, ip);
       mailed = sent.mailed;
+      // 依頼者向けの受付確認（自動返信）。失敗しても受付自体は成功扱い
+      try {
+        await sendPortfolioContactAutoReply(parsed.data);
+      } catch (autoReplyErr) {
+        console.error("[natori-portfolio-contact] auto-reply threw:", autoReplyErr);
+      }
     } else {
       console.error("[natori-portfolio-contact] mail skipped: RESEND_API_KEY not set");
     }

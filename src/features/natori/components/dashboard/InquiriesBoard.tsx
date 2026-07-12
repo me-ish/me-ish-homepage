@@ -236,7 +236,50 @@ export default function InquiriesBoard() {
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-pink-100 bg-white shadow-sm">
+        <>
+          {/* スマホ: カード表示 */}
+          <ul className="space-y-2 sm:hidden">
+            {filteredRows.map((row) => {
+              const meta = natoriProjectStatusMeta[row.project.status];
+              const elapsed = daysSinceISO(row.lastActivityISO, today);
+              return (
+                <li key={row.project.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(row.project.id)}
+                    className="w-full rounded-2xl border border-pink-100 bg-white p-3 text-left shadow-sm transition hover:bg-pink-50/50"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="min-w-0 break-words text-sm font-black text-gray-900">
+                        {row.project.clientName}
+                      </p>
+                      <ElapsedBadge days={elapsed} />
+                    </div>
+                    <p className="mt-0.5 break-words text-xs text-gray-600">{row.project.title}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-600">
+                      <span
+                        className={cn(
+                          "inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                          meta.chipClassName
+                        )}
+                      >
+                        {meta.label}
+                      </span>
+                      <span className="font-bold text-gray-900">
+                        {row.project.amount > 0 ? formatYen(row.project.amount) : "金額未定"}
+                      </span>
+                      <span className="ml-auto text-gray-500">
+                        {row.lastActionLabel}・{formatDate(row.lastActivityISO)}
+                      </span>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* PC: テーブル表示 */}
+          <div className="hidden overflow-x-auto rounded-2xl border border-pink-100 bg-white shadow-sm sm:block">
           <table className="w-full min-w-[720px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-pink-100 text-[11px] font-bold uppercase tracking-wide text-pink-700">
@@ -291,7 +334,8 @@ export default function InquiriesBoard() {
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       <p className="text-[11px] text-gray-500">

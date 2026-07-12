@@ -5,8 +5,9 @@
 // コードを触らずに、文章・料金・作品画像・SNSリンクをすべて変更できる。
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Loader2, Save } from "lucide-react";
+import { ExternalLink, Eye, Loader2, Save } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
+import { PORTFOLIO_PREVIEW_STORAGE_KEY } from "@/features/natori/lib/portfolioContent";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 import {
   AddButton,
@@ -80,6 +81,20 @@ export default function PortfolioEditor() {
     setSaveState("idle");
   }, []);
 
+  // 未保存の内容を localStorage 経由でプレビュータブに渡す（公開データには触れない）
+  const handlePreview = () => {
+    if (!content) return;
+    try {
+      window.localStorage.setItem(
+        PORTFOLIO_PREVIEW_STORAGE_KEY,
+        JSON.stringify(sanitizeContent(content))
+      );
+      window.open("/natori/portfolio/edit/preview", "_blank");
+    } catch (err) {
+      console.error("[portfolio-edit] preview failed", err);
+    }
+  };
+
   const handleSave = async () => {
     if (!content || saveState === "saving") return;
     setSaveState("saving");
@@ -133,6 +148,15 @@ export default function PortfolioEditor() {
             <h1 className="text-lg font-black text-gray-900">ポートフォリオ編集</h1>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePreview}
+              className="inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-pink-50 px-4 py-2 text-xs font-bold text-pink-700 hover:bg-pink-100 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              title="いまの編集内容を保存せずに別タブで確認します"
+            >
+              <Eye className="h-3.5 w-3.5" aria-hidden />
+              プレビュー
+            </button>
             <Link
               href="/natori/portfolio"
               target="_blank"
@@ -149,7 +173,7 @@ export default function PortfolioEditor() {
         <p className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-xs leading-5 text-sky-900">
           ここで編集した内容は、下の「保存する」ボタンを押すとすぐに公開ページ（
           /natori/portfolio ）に反映されます。保存するまでは公開されないので、安心して
-          書き換えてOKです。
+          書き換えてOKです。書きかけの内容は右上の「プレビュー」で保存せずに確認できます。
         </p>
 
         {/* 受付状態 */}
