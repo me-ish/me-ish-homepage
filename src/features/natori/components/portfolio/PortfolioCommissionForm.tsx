@@ -25,6 +25,27 @@ const PLAN_UNDECIDED = "未定・相談して決めたい";
 const REQUEST_TYPE_OTHER = "その他";
 const MAX_REF_IMAGES = 5;
 
+/**
+ * ご依頼の詳細のテンプレート。1から書かずに、各見出しの下へ追記して
+ * もらう形式。不要な項目は消してもらってOK。
+ */
+const DETAILS_TEMPLATE = [
+  "【キャラクターの特徴】",
+  "（髪型・髪色・目の色・服装・体型など）",
+  "",
+  "【希望する表情・雰囲気】",
+  "（例: にっこり笑顔、きゅんとする感じ）",
+  "",
+  "【構図のイメージ】",
+  "（例: 正面バストアップ、少し見上げる角度）",
+  "",
+  "【使用目的】",
+  "（例: Xのアイコン、配信のサムネイル）",
+  "",
+  "【色のイメージ】",
+  "（例: 淡いピンク系でふんわり）",
+].join("\n");
+
 export default function PortfolioCommissionForm({ content }: { content: PortfolioContent }) {
   const [status, setStatus] = useState<Status>("idle");
   const [selectedPlan, setSelectedPlan] = useState<string>(PLAN_UNDECIDED);
@@ -380,13 +401,16 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
               <label htmlFor="pf-details" className={labelClass}>
                 ご依頼の詳細<span style={{ color: c.pinkDeep }}>＊</span>
               </label>
+              <p className="mb-2 text-xs" style={{ color: c.inkSoft }}>
+                テンプレートの各項目に追記してください。わかる範囲でOK、不要な項目は消してかまいません。
+              </p>
               <textarea
                 id="pf-details"
                 name="details"
-                rows={7}
+                rows={16}
                 required
                 maxLength={4000}
-                placeholder={"わかる範囲でOKです。以下があると制作がスムーズです！\n・キャラクターの特徴（髪型・髪色・目の色・服装・体型など）\n・希望する表情や雰囲気（例: にっこり笑顔、きゅんとする感じ）\n・構図のイメージ（例: 正面バストアップ、少し見上げる角度）\n・使用目的（例: Xのアイコン、配信のサムネイル）\n・色のイメージ（例: 淡いピンク系でふんわり）"}
+                defaultValue={DETAILS_TEMPLATE}
                 className={inputClass}
                 style={{ borderColor: c.paperAlt }}
               />

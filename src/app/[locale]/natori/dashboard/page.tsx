@@ -25,6 +25,8 @@ import {
   upsertOwnNatoriProfile,
   type NatoriUserProfile,
 } from "@/features/natori/data/supabaseProfile";
+import { fetchNatoriProjects } from "@/features/natori/data/supabaseProjects";
+import { isPreworkStatus } from "@/features/natori/lib/projects";
 import { Button } from "@/components/ui/button";
 import Footer from "@/features/natori/components/Footer";
 
@@ -104,6 +106,12 @@ export default function NatoriDashboardPage() {
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<NatoriUserProfile | null>(null);
+  // 問い合わせカードのバッジ用。未対応 = 依頼受付のまま止まっている件数、
+  // 対応中 = 見積もり中〜入金待ちの件数。未認可などで取れなければ非表示
+  const [inquiryCounts, setInquiryCounts] = useState<{
+    pending: number;
+    inProgress: number;
+  } | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -119,6 +127,17 @@ export default function NatoriDashboardPage() {
         setProfile(p);
       } catch (err) {
         console.error("[dashboard] profile fetch failed", err);
+      }
+      try {
+        const projects = await fetchNatoriProjects();
+        const prework = projects.filter((project) => isPreworkStatus(project.status));
+        const pending = prework.filter(
+          (project) => project.status === "inquiry" || project.status === "consulting"
+        ).length;
+        setInquiryCounts({ pending, inProgress: prework.length - pending });
+      } catch (err) {
+        console.error("[dashboard] inquiry count fetch failed", err);
+        setInquiryCounts(null);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -239,8 +258,22 @@ export default function NatoriDashboardPage() {
                     <Icon className="h-5 w-5" aria-hidden />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-base font-black leading-6 text-gray-900">
+                    <p className="flex flex-wrap items-center gap-2 text-base font-black leading-6 text-gray-900">
                       {card.title}
+                      {card.href === "/natori/inquiries" && inquiryCounts ? (
+                        <>
+                          {inquiryCounts.pending > 0 ? (
+                            <span className="inline-flex items-center rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white">
+                              未対応 {inquiryCounts.pending}件
+                            </span>
+                          ) : null}
+                          {inquiryCounts.inProgress > 0 ? (
+                            <span className="inline-flex items-center rounded-full border border-orange-300 bg-white px-2 py-0.5 text-[11px] font-bold text-orange-700">
+                              対応中 {inquiryCounts.inProgress}件
+                            </span>
+                          ) : null}
+                        </>
+                      ) : null}
                     </p>
                     <p className="mt-1 break-words text-xs leading-5 text-gray-700 sm:text-sm">
                       {card.description}
