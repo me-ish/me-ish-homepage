@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Wallet } from "lucide-react";
+import { ChevronDown, ChevronUp, Mail, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { daysUntilDue } from "@/features/natori/lib/projects";
 import type { NatoriAwaitingPaymentSummary } from "@/features/natori/lib/scheduling";
@@ -18,6 +18,8 @@ type AwaitingPaymentSummaryProps = {
   today: Date;
   onSelect: (project: NatoriProject) => void;
   onConfirmPayment?: (project: NatoriProject) => void;
+  /** 支払い依頼メールの（再）送信パネルを開く */
+  onSendPaymentMail?: (project: NatoriProject) => void;
   busyId?: string | null;
 };
 
@@ -26,6 +28,7 @@ export default function AwaitingPaymentSummary({
   today,
   onSelect,
   onConfirmPayment,
+  onSendPaymentMail,
   busyId,
 }: AwaitingPaymentSummaryProps) {
   const [open, setOpen] = useState(false);
@@ -86,17 +89,31 @@ export default function AwaitingPaymentSummary({
                     {yenFormatter.format(project.amount)}
                   </span>
                 </button>
-                {onConfirmPayment ? (
-                  <button
-                    type="button"
-                    onClick={() => onConfirmPayment(project)}
-                    disabled={busy}
-                    className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-orange-500 px-3 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-60"
-                  >
-                    <Wallet className="h-3.5 w-3.5" aria-hidden />
-                    {busy ? "更新中…" : "入金確認してラフ開始"}
-                  </button>
-                ) : null}
+                <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                  {onSendPaymentMail ? (
+                    <button
+                      type="button"
+                      onClick={() => onSendPaymentMail(project)}
+                      disabled={busy}
+                      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-orange-300 bg-white px-3 text-xs font-bold text-orange-700 shadow-sm transition hover:bg-orange-50 disabled:opacity-60"
+                      title="新しい支払いリンクを作って依頼者へ再送します"
+                    >
+                      <Mail className="h-3.5 w-3.5" aria-hidden />
+                      支払いメール再送
+                    </button>
+                  ) : null}
+                  {onConfirmPayment ? (
+                    <button
+                      type="button"
+                      onClick={() => onConfirmPayment(project)}
+                      disabled={busy}
+                      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-orange-500 px-3 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-60"
+                    >
+                      <Wallet className="h-3.5 w-3.5" aria-hidden />
+                      {busy ? "更新中…" : "入金確認してラフ開始"}
+                    </button>
+                  ) : null}
+                </div>
               </li>
             );
           })}

@@ -9,6 +9,7 @@ import Stripe from "stripe";
 import { issueReissueLink } from "@/lib/coa/server";
 import { getSiteUrl, calcFee, calcReward } from "@/lib/constants";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { markNatoriCommissionPaid } from "@/features/natori/server/orderMailService";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -122,6 +123,12 @@ export async function POST(req: NextRequest) {
     return handleCardPurchase(event.id, session, requestId);
   }
 
+  // ナトリのコミッション入金（支払い依頼メールの Payment Link 経由）
+  const natoriProjectId = String(session.metadata?.projectId ?? "");
+  if (kind === "natori_commission" && natoriProjectId && isUuidLike(natoriProjectId)) {
+    return handleNatoriCommissionPayment(event.id, session, natoriProjectId);
+  }
+
   // Entry plan purchase
   if (kind === "entry_plan" && entryId && isEntryIdLike(entryId)) {
     return handleEntryPlanPurchase(event.id, session, entryId);
@@ -135,6 +142,41 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, received: true }, { status: 200 });
+}
+
+/**
+ * ナトリのコミッション入金処理
+ * - natori_projects に payment_confirmed_at を記録し rough（作業開始）へ進める
+ * - ナトリ宛に入金通知メールを送る
+ * - 冪等性: 既に payment_confirmed_at 済みなら何もしない
+ */
+async function handleNatoriCommissionPayment(
+  eventId: string,
+  session: Stripe.Checkout.Session,
+  projectId: string
+): Promise<NextResponse> {
+  try {
+    const result = await markNatoriCommissionPaid(projectId, session.id, session.amount_total);
+    if (result.kind === "not-found" || result.kind === "db-error") {
+      console.error("[webhook/stripe/natori-commission] mark paid failed:", {
+        eventId,
+        sessionId: session.id,
+        projectId,
+        result: result.kind,
+      });
+    }
+    // 見つからない/DBエラーでも 200（Stripe の再送ループ回避。ログから追跡する）
+    return NextResponse.json({ ok: true, received: true }, { status: 200 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("[webhook/stripe/natori-commission] exception:", {
+      eventId,
+      sessionId: session.id,
+      projectId,
+      error: message,
+    });
+    return NextResponse.json({ ok: true, received: true }, { status: 200 });
+  }
 }
 
 /**

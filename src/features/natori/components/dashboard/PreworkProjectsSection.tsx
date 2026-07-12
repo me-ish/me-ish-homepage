@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronUp,
   ClipboardList,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
@@ -46,6 +47,8 @@ type PreworkProjectsSectionProps = {
   onAdvanceStatus: (project: NatoriProject) => void;
   /** 条件がまとまらなかった相談を見送り（closed）にする */
   onClose?: (project: NatoriProject) => void;
+  /** 依頼者へのメール送信パネルを開く（見積もり / 支払い依頼） */
+  onSendMail?: (project: NatoriProject, kind: "estimate" | "payment") => void;
 };
 
 export default function PreworkProjectsSection({
@@ -54,6 +57,7 @@ export default function PreworkProjectsSection({
   onSelect,
   onAdvanceStatus,
   onClose,
+  onSendMail,
 }: PreworkProjectsSectionProps) {
   const prework = useMemo(
     () =>
@@ -109,6 +113,10 @@ export default function PreworkProjectsSection({
             const meta = natoriProjectStatusMeta[project.status];
             const label = getAdvanceButtonLabel(project.status);
             const busy = busyId === project.id;
+            // 見積もり前は見積もりメール、提示済み（quoted）は支払い依頼メール
+            const mailKind: "estimate" | "payment" =
+              project.status === "quoted" ? "payment" : "estimate";
+            const mailLabel = mailKind === "payment" ? "支払い依頼メール" : "見積もりメール";
             return (
               <li
                 key={project.id}
@@ -133,7 +141,23 @@ export default function PreworkProjectsSection({
                     </span>
                   </div>
                 </button>
-                <div className="flex shrink-0 items-center gap-1.5">
+                <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                  {onSendMail ? (
+                    <button
+                      type="button"
+                      onClick={() => onSendMail(project, mailKind)}
+                      disabled={busy}
+                      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-pink-300 bg-white px-3 text-xs font-bold text-pink-700 shadow-sm transition hover:bg-pink-50 disabled:opacity-60"
+                      title={
+                        mailKind === "payment"
+                          ? "Stripeの支払いリンクを作って依頼者へメールします"
+                          : "定型文から見積もりメールを作って依頼者へ送ります"
+                      }
+                    >
+                      <Mail className="h-3.5 w-3.5" aria-hidden />
+                      {mailLabel}
+                    </button>
+                  ) : null}
                   {label ? (
                     <button
                       type="button"

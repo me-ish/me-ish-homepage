@@ -34,6 +34,7 @@ import ProjectMonthCalendar from "./ProjectMonthCalendar";
 import ProjectDayDetail from "./ProjectDayDetail";
 import ProjectPriorityList from "./ProjectPriorityList";
 import AwaitingPaymentSummary from "./AwaitingPaymentSummary";
+import OrderMailPanel, { type OrderMailKind } from "./OrderMailPanel";
 import PreworkProjectsSection from "./PreworkProjectsSection";
 import ClosedProjectsSection from "./ClosedProjectsSection";
 import ProjectRegisterForm from "./ProjectRegisterForm";
@@ -59,6 +60,11 @@ export default function ProjectsBoard() {
   const [eventsBusy, setEventsBusy] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [advanceBusyId, setAdvanceBusyId] = useState<string | null>(null);
+  // 依頼者へのメール送信パネル（見積もり / 支払い依頼）
+  const [mailTarget, setMailTarget] = useState<{
+    project: NatoriProject;
+    kind: OrderMailKind;
+  } | null>(null);
 
   const loadFromSupabase = useCallback(async () => {
     const [projectData, eventData] = await Promise.all([
@@ -516,6 +522,11 @@ export default function ProjectsBoard() {
         onSelect={focusProject}
         onAdvanceStatus={handleAdvanceStatus}
         onClose={handleCloseProject}
+        onSendMail={
+          authed && dataSource === "supabase"
+            ? (project, kind) => setMailTarget({ project, kind })
+            : undefined
+        }
       />
 
       <AwaitingPaymentSummary
@@ -523,8 +534,26 @@ export default function ProjectsBoard() {
         today={today}
         onSelect={focusProject}
         onConfirmPayment={handleConfirmPayment}
+        onSendPaymentMail={
+          authed && dataSource === "supabase"
+            ? (project) => setMailTarget({ project, kind: "payment" })
+            : undefined
+        }
         busyId={advanceBusyId}
       />
+
+      {mailTarget ? (
+        <OrderMailPanel
+          project={mailTarget.project}
+          kind={mailTarget.kind}
+          onClose={() => setMailTarget(null)}
+          onSent={() => {
+            loadFromSupabase().catch((err) => {
+              console.error("[ProjectsBoard] reload after order mail failed", err);
+            });
+          }}
+        />
+      ) : null}
 
       <ProjectPriorityList
         suggestions={suggestions}
