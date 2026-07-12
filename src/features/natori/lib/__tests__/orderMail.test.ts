@@ -37,7 +37,7 @@ describe("buildEstimateMailDraft", () => {
     expect(draft.subject).toContain("立ち絵一式");
     expect(draft.body).toContain("テスト太郎 様");
     expect(draft.body).toContain(formatYen(12000));
-    expect(draft.body).toContain("お願いします");
+    expect(draft.body).toContain("このメールにご返信ください");
   });
 });
 
