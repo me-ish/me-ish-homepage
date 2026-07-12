@@ -23,10 +23,11 @@ export const portfolioContactSchema = z.object({
   requestType: z.string().trim().min(1).max(50),
   plan: z.string().trim().max(50).optional().default(""),
   options: z.array(z.string().trim().max(50)).max(20).optional().default([]),
-  commercial: z.string().trim().max(50).optional().default(""),
   budget: z.string().trim().max(30).optional().default(""),
   deadline: z.string().trim().max(60).optional().default(""),
   refUrls: z.string().trim().max(2000).optional().default(""),
+  /** キャラクター資料（フォームからアップロードした画像の公開URL） */
+  refImages: z.array(z.string().trim().url().max(500)).max(5).optional().default([]),
   details: z.string().trim().min(1, "ご依頼の詳細を入力してください").max(4000),
   message: z.string().trim().max(2000).optional().default(""),
   /** 蜜壺（hidden）。ボットは埋めがち。ユーザーUIからは送らない想定 */
@@ -65,7 +66,6 @@ export async function sendPortfolioContactEmail(
     ["ご依頼の種類", input.requestType],
     ["サイズ / プラン", input.plan || "-"],
     ["追加オプション", input.options.length ? input.options.join(" / ") : "なし"],
-    ["商用利用", input.commercial || "-"],
     ["ご予算", input.budget || "-"],
     ["希望納期", input.deadline || "-"],
     ["IP", ip ?? "-"],
@@ -73,11 +73,16 @@ export async function sendPortfolioContactEmail(
 
   const subject = `【コミッション依頼】${sanitizeSubjectFragment(input.name)} 様より`;
 
+  const refLines = [
+    ...input.refImages.map((url, index) => `添付画像${index + 1}: ${url}`),
+    ...(input.refUrls ? [input.refUrls] : []),
+  ];
+
   const text = [
     ...rows.map(([label, value]) => `${label}: ${value}`),
     "",
-    "--- キャラクター資料・参考URL ---",
-    input.refUrls || "-",
+    "--- キャラクター資料 ---",
+    refLines.length ? refLines.join("\n") : "-",
     "",
     "--- ご依頼の詳細 ---",
     input.details,
@@ -97,8 +102,20 @@ export async function sendPortfolioContactEmail(
           .join("")}
       </table>
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0"/>
-      <p style="margin:0 0 4px"><b>キャラクター資料・参考URL</b></p>
-      <pre style="white-space:pre-wrap;font:inherit;margin:0 0 12px">${escapeHtml(input.refUrls || "-")}</pre>
+      <p style="margin:0 0 4px"><b>キャラクター資料</b></p>
+      ${
+        input.refImages.length
+          ? `<div style="margin:0 0 8px">${input.refImages
+              .map(
+                (url) =>
+                  `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 8px 8px 0"><img src="${escapeHtml(url)}" alt="添付画像" width="120" style="max-width:120px;height:auto;border-radius:8px;border:1px solid #e5e7eb"/></a>`
+              )
+              .join("")}</div>`
+          : ""
+      }
+      <pre style="white-space:pre-wrap;font:inherit;margin:0 0 12px">${escapeHtml(
+        [...input.refImages, ...(input.refUrls ? [input.refUrls] : [])].join("\n") || "-"
+      )}</pre>
       <p style="margin:0 0 4px"><b>ご依頼の詳細</b></p>
       <pre style="white-space:pre-wrap;font:inherit;margin:0 0 12px">${escapeHtml(input.details)}</pre>
       <p style="margin:0 0 4px"><b>その他・ご質問</b></p>

@@ -86,9 +86,10 @@ export type UploadPortfolioImageResult =
   | { kind: "too-large" }
   | { kind: "upload-error" };
 
-/** 画像を webp に変換して公開バケットへアップロードし、公開URLを返す */
-export async function uploadPortfolioImage(
-  file: File
+/** 画像を webp に変換して公開バケットの指定フォルダへアップロードし、公開URLを返す */
+async function uploadImageAsWebp(
+  file: File,
+  folder: string
 ): Promise<UploadPortfolioImageResult> {
   if (!ALLOWED_IMAGE_MIMES.has(file.type)) return { kind: "invalid-type" };
   if (file.size > IMAGE_MAX_BYTES) return { kind: "too-large" };
@@ -100,7 +101,7 @@ export async function uploadPortfolioImage(
     .webp({ quality: 88 })
     .toBuffer();
 
-  const path = `images/${crypto.randomUUID()}.webp`;
+  const path = `${folder}/${crypto.randomUUID()}.webp`;
   const admin = supabaseAdmin();
   const { error } = await admin.storage.from(BUCKET).upload(path, webp, {
     contentType: "image/webp",
@@ -112,4 +113,18 @@ export async function uploadPortfolioImage(
   }
   const { data } = admin.storage.from(BUCKET).getPublicUrl(path);
   return { kind: "ok", url: data.publicUrl };
+}
+
+/** 編集画面からの掲載用画像アップロード */
+export async function uploadPortfolioImage(
+  file: File
+): Promise<UploadPortfolioImageResult> {
+  return uploadImageAsWebp(file, "images");
+}
+
+/** ご依頼フォーム（公開）からのキャラクター資料アップロード。refs/ 配下に分けて保存する */
+export async function uploadPortfolioReferenceImage(
+  file: File
+): Promise<UploadPortfolioImageResult> {
+  return uploadImageAsWebp(file, "refs");
 }

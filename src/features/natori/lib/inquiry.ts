@@ -12,10 +12,11 @@ export type NatoriInquiryInput = {
   requestType: string;
   plan?: string;
   options?: string[];
-  commercial?: string;
   budget?: string;
   deadline?: string;
   refUrls?: string;
+  /** フォームから添付されたキャラクター資料画像の公開URL */
+  refImages?: string[];
   details: string;
   message?: string;
 };
@@ -49,18 +50,21 @@ export function buildInquiryTitle(input: NatoriInquiryInput): string {
  */
 export function buildInquiryNote(input: NatoriInquiryInput): string {
   const options = input.options && input.options.length ? input.options.join(" / ") : "なし";
+  const refLines = [
+    ...(input.refImages ?? []).map((url, index) => `添付画像${index + 1}: ${url}`),
+    ...(input.refUrls?.trim() ? [input.refUrls.trim()] : []),
+  ];
   const lines: string[] = [
     "【ご依頼フォームからの自動起票】",
     `メール: ${input.email}`,
     `ご依頼の種類: ${input.requestType || "-"}`,
     `サイズ / プラン: ${input.plan?.trim() || "-"}`,
     `追加オプション: ${options}`,
-    `商用利用: ${input.commercial?.trim() || "-"}`,
     `ご予算: ${input.budget?.trim() || "-"}`,
     `希望納期: ${input.deadline?.trim() || "-"}`,
     "",
-    "--- キャラクター資料・参考URL ---",
-    input.refUrls?.trim() || "-",
+    "--- キャラクター資料 ---",
+    refLines.length ? refLines.join("\n") : "-",
     "",
     "--- ご依頼の詳細 ---",
     input.details.trim(),

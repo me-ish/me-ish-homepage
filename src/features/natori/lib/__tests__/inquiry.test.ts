@@ -71,6 +71,19 @@ describe("buildInquiryNote", () => {
     expect(note).toContain("その他・ご質問");
     expect(note).toContain("非公開希望です");
   });
+
+  it("lists attached reference images and falls back to '-' without refs", () => {
+    const withRefs = buildInquiryNote(
+      makeInput({
+        refImages: ["https://example.com/a.webp", "https://example.com/b.webp"],
+      })
+    );
+    expect(withRefs).toContain("添付画像1: https://example.com/a.webp");
+    expect(withRefs).toContain("添付画像2: https://example.com/b.webp");
+
+    const withoutRefs = buildInquiryNote(makeInput());
+    expect(withoutRefs).toContain("--- キャラクター資料 ---\n-");
+  });
 });
 
 describe("buildInquiryProjectDraft", () => {

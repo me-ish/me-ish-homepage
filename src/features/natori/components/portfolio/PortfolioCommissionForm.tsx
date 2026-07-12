@@ -4,17 +4,17 @@
 // ご依頼フォーム。送信すると /api/natori/portfolio/contact 経由でナトリ宛に
 // メールが飛び、案件（依頼受付）として自動起票される。
 // 料金カードの「このプランで相談」からの遷移でプランが自動選択される。
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   PLAN_SELECT_EVENT,
   isPortfolioTsunaguLink,
   planChoiceLabel,
   portfolioBudgetOptions,
   portfolioColors as c,
-  portfolioCommercialOptions,
   portfolioDeadlineOptions,
 } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import { CSRF_HEADERS } from "@/lib/auth/csrf";
 
 type Status = "idle" | "sending" | "success" | "error";
 
@@ -22,10 +22,17 @@ const inputClass = "pf-cute-focus w-full rounded-lg border-2 px-3 py-2";
 const labelClass = "mb-1.5 block text-sm font-bold";
 
 const PLAN_UNDECIDED = "未定・相談して決めたい";
+const REQUEST_TYPE_OTHER = "その他";
+const MAX_REF_IMAGES = 5;
 
 export default function PortfolioCommissionForm({ content }: { content: PortfolioContent }) {
   const [status, setStatus] = useState<Status>("idle");
   const [selectedPlan, setSelectedPlan] = useState<string>(PLAN_UNDECIDED);
+  // キャラクター資料の添付画像（アップロード済み公開URL）
+  const [refImages, setRefImages] = useState<string[]>([]);
+  const [refUploading, setRefUploading] = useState(false);
+  const [refError, setRefError] = useState<string | null>(null);
+  const refFileInputRef = useRef<HTMLInputElement | null>(null);
   const commissionOpen = content.commissionOpen;
   // つなぐ経由の依頼案内。受付停止中は非表示
   const tsunaguLink = commissionOpen
@@ -47,9 +54,45 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
     return () => window.removeEventListener(PLAN_SELECT_EVENT, handler);
   }, [content.plans]);
 
+  // 選択された画像を順にアップロードし、公開URLを添付リストへ足す
+  const handleRefFiles = async (files: File[]) => {
+    if (files.length === 0 || refUploading) return;
+    const remaining = MAX_REF_IMAGES - refImages.length;
+    if (remaining <= 0) {
+      setRefError(`画像は最大${MAX_REF_IMAGES}枚までです。`);
+      return;
+    }
+    const selected = files.slice(0, remaining);
+    setRefUploading(true);
+    setRefError(null);
+    try {
+      const urls: string[] = [];
+      for (const file of selected) {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch("/api/natori/portfolio/contact/upload", {
+          method: "POST",
+          headers: { ...CSRF_HEADERS },
+          body: form,
+        });
+        const json = (await res.json().catch(() => null)) as { url?: string } | null;
+        if (!res.ok || !json?.url) throw new Error(`upload failed: ${res.status}`);
+        urls.push(json.url);
+      }
+      setRefImages((current) => [...current, ...urls].slice(0, MAX_REF_IMAGES));
+    } catch (err) {
+      console.error("[portfolio-form] ref upload failed", err);
+      setRefError(
+        `画像のアップロードに失敗しました。1枚10MBまで（png / jpg / webp / gif）です。`
+      );
+    } finally {
+      setRefUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (status === "sending") return;
+    if (status === "sending" || refUploading) return;
     setStatus("sending");
 
     const form = e.currentTarget;
@@ -60,10 +103,9 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
       requestType: String(data.get("requestType") ?? ""),
       plan: String(data.get("plan") ?? ""),
       options: data.getAll("options").map(String),
-      commercial: String(data.get("commercial") ?? ""),
       budget: String(data.get("budget") ?? ""),
       deadline: String(data.get("deadline") ?? ""),
-      refUrls: String(data.get("refUrls") ?? ""),
+      refImages,
       details: String(data.get("details") ?? ""),
       message: String(data.get("message") ?? ""),
       website: String(data.get("website") ?? ""), // honeypot
@@ -76,6 +118,7 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`request failed: ${res.status}`);
+      setRefImages([]);
       setStatus("success");
     } catch (err) {
       console.error("[portfolio-form] submit failed", err);
@@ -183,6 +226,7 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
                   {content.services.map((service) => (
                     <option key={service}>{service}</option>
                   ))}
+                  <option>{REQUEST_TYPE_OTHER}</option>
                 </select>
               </div>
               <div>
@@ -231,22 +275,7 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
               </div>
             </fieldset>
 
-            <div className="grid gap-5 sm:grid-cols-3">
-              <div>
-                <label htmlFor="pf-commercial" className={labelClass}>
-                  商用利用
-                </label>
-                <select
-                  id="pf-commercial"
-                  name="commercial"
-                  className={inputClass}
-                  style={{ borderColor: c.paperAlt }}
-                >
-                  {portfolioCommercialOptions.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
+            <div className="grid gap-5 sm:grid-cols-2">
               <div>
                 <label htmlFor="pf-budget" className={labelClass}>
                   ご予算
@@ -280,17 +309,66 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
             </div>
 
             <div>
-              <label htmlFor="pf-ref" className={labelClass}>
-                キャラクター資料・参考URL
-              </label>
-              <textarea
-                id="pf-ref"
-                name="refUrls"
-                rows={3}
-                maxLength={2000}
-                placeholder={"キャラクターの設定画・立ち絵・過去のイラストなどのURLを1行ずつ貼ってください\n例: https://...\n例: https://..."}
-                className={inputClass}
-                style={{ borderColor: c.paperAlt }}
+              <span className={labelClass}>キャラクター資料（画像添付）</span>
+              <p className="mb-2 text-xs" style={{ color: c.inkSoft }}>
+                キャラクターの設定画・立ち絵・過去のイラストなどを添付してください（最大
+                {MAX_REF_IMAGES}枚・各10MBまで）。URLで共有したい資料は「ご依頼の詳細」に貼ってOKです。
+              </p>
+              {refImages.length > 0 ? (
+                <ul className="mb-3 flex flex-wrap gap-3">
+                  {refImages.map((url, index) => (
+                    <li key={url} className="relative">
+                      {/* アップロード直後の外部URLプレビューなので next/image は使わない */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={`添付画像 ${index + 1}`}
+                        className="h-20 w-20 rounded-lg border-2 object-cover"
+                        style={{ borderColor: c.paperAlt }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setRefImages((current) => current.filter((_, i) => i !== index))
+                        }
+                        className="pf-cute-focus absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full text-xs font-bold text-white shadow"
+                        style={{ background: c.pinkDeep }}
+                        aria-label={`添付画像 ${index + 1} を外す`}
+                        title="この画像を外す"
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {refImages.length < MAX_REF_IMAGES ? (
+                <button
+                  type="button"
+                  onClick={() => refFileInputRef.current?.click()}
+                  disabled={refUploading}
+                  className="pf-cute-focus inline-flex items-center gap-1.5 rounded-full border-2 bg-white px-4 py-2 text-sm font-bold disabled:opacity-50"
+                  style={{ borderColor: c.pink, color: c.pinkDeep }}
+                >
+                  {refUploading ? "アップロード中…" : "＋ 画像を追加"}
+                </button>
+              ) : null}
+              {refError ? (
+                <p className="mt-2 text-xs font-bold" style={{ color: c.pinkDeep }} role="alert">
+                  {refError}
+                </p>
+              ) : null}
+              <input
+                ref={refFileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                multiple
+                className="hidden"
+                onChange={(event) => {
+                  const files = event.target.files ? Array.from(event.target.files) : [];
+                  event.target.value = "";
+                  void handleRefFiles(files);
+                }}
               />
             </div>
 
@@ -337,7 +415,7 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
 
             <button
               type="submit"
-              disabled={!commissionOpen || status === "sending"}
+              disabled={!commissionOpen || status === "sending" || refUploading}
               className="pf-cute-focus w-full rounded-full py-3 font-bold text-white disabled:opacity-50"
               style={{ background: c.pink }}
             >
@@ -345,7 +423,9 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
                 ? "現在受付停止中です"
                 : status === "sending"
                   ? "送信中…"
-                  : "この内容で送信する"}
+                  : refUploading
+                    ? "画像をアップロード中…"
+                    : "この内容で送信する"}
             </button>
           </form>
         )}

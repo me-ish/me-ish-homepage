@@ -218,12 +218,6 @@ export const portfolioBudgetOptions = [
   "未定・相談したい",
 ] as const;
 
-export const portfolioCommercialOptions = [
-  "なし（個人利用）",
-  "あり（商用利用オプション +3,000円）",
-  "未定・相談したい",
-] as const;
-
 export const portfolioDeadlineOptions = [
   "通常（約1ヶ月前後）",
   "お急ぎ納品を希望（+2,000円・要相談）",
