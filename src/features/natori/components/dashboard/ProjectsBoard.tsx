@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { ArrowRight, Inbox } from "lucide-react";
 import { mockNatoriProjects } from "@/features/natori/constants/mockProjects";
 import {
   deriveNextActionFromTasks,
@@ -8,11 +10,10 @@ import {
   getNextActionForStatus,
   getNextStatus,
   getPrioritySuggestions,
+  isPreworkStatus,
   toISODate,
 } from "@/features/natori/lib/projects";
-import { getAwaitingPaymentSummary } from "@/features/natori/lib/scheduling";
 import {
-  closeNatoriProject,
   confirmNatoriProjectPayment,
   deleteNatoriProject,
   fetchNatoriProjects,
@@ -33,9 +34,6 @@ import type { NatoriPriorityCandidate, NatoriProject } from "@/features/natori/t
 import ProjectMonthCalendar from "./ProjectMonthCalendar";
 import ProjectDayDetail from "./ProjectDayDetail";
 import ProjectPriorityList from "./ProjectPriorityList";
-import AwaitingPaymentSummary from "./AwaitingPaymentSummary";
-import OrderMailPanel, { type OrderMailKind } from "./OrderMailPanel";
-import PreworkProjectsSection from "./PreworkProjectsSection";
 import ClosedProjectsSection from "./ClosedProjectsSection";
 import ProjectRegisterForm from "./ProjectRegisterForm";
 
@@ -60,11 +58,6 @@ export default function ProjectsBoard() {
   const [eventsBusy, setEventsBusy] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [advanceBusyId, setAdvanceBusyId] = useState<string | null>(null);
-  // 依頼者へのメール送信パネル（見積もり / 支払い依頼）
-  const [mailTarget, setMailTarget] = useState<{
-    project: NatoriProject;
-    kind: OrderMailKind;
-  } | null>(null);
 
   const loadFromSupabase = useCallback(async () => {
     const [projectData, eventData] = await Promise.all([
@@ -122,8 +115,9 @@ export default function ProjectsBoard() {
     [activeProjects, today]
   );
 
-  const awaitingPaymentSummary = useMemo(
-    () => getAwaitingPaymentSummary(activeProjects),
+  // 依頼受付〜入金待ちは問い合わせ管理ページに集約したので、ここでは件数だけ出す
+  const preworkCount = useMemo(
+    () => activeProjects.filter((project) => isPreworkStatus(project.status)).length,
     [activeProjects]
   );
 
@@ -257,41 +251,6 @@ export default function ProjectsBoard() {
         } catch (err) {
           console.error("[ProjectsBoard] confirm payment failed", err);
           setError(err instanceof Error ? err.message : String(err));
-        } finally {
-          setAdvanceBusyId((current) => (current === project.id ? null : current));
-        }
-      })();
-    } else {
-      setAdvanceBusyId((current) => (current === project.id ? null : current));
-    }
-  };
-
-  const handleCloseProject = (project: NatoriProject) => {
-    const reason = window.prompt(
-      `「${project.clientName}｜${project.title}」を見送りにします。\nボードとカレンダーから外れ、「見送りした相談」に移ります（あとで戻せます）。\n\n見送りの理由（任意・メモに記録されます）:`,
-      ""
-    );
-    if (reason === null) return; // キャンセル
-    setAdvanceBusyId(project.id);
-    setProjects((current) =>
-      current.map((entry) =>
-        entry.id === project.id ? { ...entry, status: "closed", nextAction: "" } : entry
-      )
-    );
-    if (dataSource === "supabase") {
-      (async () => {
-        try {
-          await closeNatoriProject(project.id, reason);
-          // 理由はサーバー側でメモに追記されるので、表示用に再取得する
-          await loadFromSupabase();
-        } catch (err) {
-          console.error("[ProjectsBoard] close project failed", err);
-          setError(err instanceof Error ? err.message : String(err));
-          try {
-            await loadFromSupabase();
-          } catch (reloadErr) {
-            console.error("[ProjectsBoard] reload after close failure failed", reloadErr);
-          }
         } finally {
           setAdvanceBusyId((current) => (current === project.id ? null : current));
         }
@@ -516,43 +475,27 @@ export default function ProjectsBoard() {
         />
       ) : null}
 
-      <PreworkProjectsSection
-        projects={activeProjects}
-        busyId={advanceBusyId}
-        onSelect={focusProject}
-        onAdvanceStatus={handleAdvanceStatus}
-        onClose={handleCloseProject}
-        onSendMail={
-          authed && dataSource === "supabase"
-            ? (project, kind) => setMailTarget({ project, kind })
-            : undefined
-        }
-      />
-
-      <AwaitingPaymentSummary
-        summary={awaitingPaymentSummary}
-        today={today}
-        onSelect={focusProject}
-        onConfirmPayment={handleConfirmPayment}
-        onSendPaymentMail={
-          authed && dataSource === "supabase"
-            ? (project) => setMailTarget({ project, kind: "payment" })
-            : undefined
-        }
-        busyId={advanceBusyId}
-      />
-
-      {mailTarget ? (
-        <OrderMailPanel
-          project={mailTarget.project}
-          kind={mailTarget.kind}
-          onClose={() => setMailTarget(null)}
-          onSent={() => {
-            loadFromSupabase().catch((err) => {
-              console.error("[ProjectsBoard] reload after order mail failed", err);
-            });
-          }}
-        />
+      {/* 依頼受付〜入金待ちの対応（メール送信・入金確認・見送り）は問い合わせ管理へ集約 */}
+      {preworkCount > 0 ? (
+        <Link
+          href="/natori/inquiries"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-orange-200 bg-orange-50/60 p-3 shadow-sm transition hover:bg-orange-50 sm:p-4"
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-orange-500 text-white">
+              <Inbox className="h-4 w-4" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-gray-900">
+                問い合わせ・入金待ち {preworkCount}件
+              </p>
+              <p className="mt-0.5 text-xs text-gray-600">
+                見積もり・支払い依頼メール・入金確認は問い合わせ管理ページで対応します。
+              </p>
+            </div>
+          </div>
+          <ArrowRight className="h-5 w-5 shrink-0 text-orange-500" aria-hidden />
+        </Link>
       ) : null}
 
       <ProjectPriorityList

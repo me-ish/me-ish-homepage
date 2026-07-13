@@ -103,6 +103,12 @@ const CARD_GROUPS: DashboardCardGroup[] = [
         accent: "from-amber-100 to-amber-50 text-amber-700",
         hrefKey: "links",
       },
+      {
+        href: "/natori/links/edit",
+        title: "リンク集編集",
+        icon: PenLine,
+        accent: "from-teal-100 to-teal-50 text-teal-700",
+      },
     ],
   },
 ];
