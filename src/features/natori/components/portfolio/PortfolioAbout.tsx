@@ -6,6 +6,7 @@ import {
 } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 import ChibiFace from "./ChibiFace";
+import PortfolioSnsLink from "./PortfolioSnsLink";
 import { fontEnStyle } from "./portfolioFonts";
 
 /** X の URL から @ハンドルを取り出す（取れなければリンクのラベルで代用） */
@@ -54,10 +55,9 @@ export default function PortfolioAbout({ content }: { content: PortfolioContent 
             {content.roleEn}
           </p>
           {xLink ? (
-            <a
+            <PortfolioSnsLink
               href={xLink.href}
-              target="_blank"
-              rel="noopener noreferrer"
+              label="X"
               className="pf-cute-focus mt-3 inline-flex items-center gap-2 rounded-full border-2 px-4 py-1.5 text-sm font-bold hover:bg-white"
               style={{ borderColor: c.pink, color: c.pinkDeep, background: c.card }}
             >
@@ -65,7 +65,7 @@ export default function PortfolioAbout({ content }: { content: PortfolioContent 
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.265 5.64 5.899-5.64Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
               </svg>
               <span style={fontEnStyle}>{xHandle(xLink.href, xLink.label)}</span>
-            </a>
+            </PortfolioSnsLink>
           ) : null}
         </div>
         <div className="md:col-span-2">

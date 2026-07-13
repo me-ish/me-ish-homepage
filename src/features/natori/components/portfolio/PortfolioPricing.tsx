@@ -9,6 +9,7 @@ import {
   planColors,
   portfolioColors as c,
 } from "@/features/natori/constants/portfolioContent";
+import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
 export default function PortfolioPricing({ content }: { content: PortfolioContent }) {
@@ -16,6 +17,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
     content.plans.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-3";
 
   const handleSelectPlan = (plan: { name: string; price: string }) => {
+    trackNatoriPageEvent("portfolio_plan_click", plan.name);
     window.dispatchEvent(
       new CustomEvent<string>(PLAN_SELECT_EVENT, { detail: planChoiceLabel(plan) })
     );

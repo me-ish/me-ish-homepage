@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { trackNatoriPageEvent } from '@/features/natori/data/pageEvents';
 
 /* ------------------------------------------------------------------ */
 /*  Link data                                                           */
@@ -154,6 +155,7 @@ export default function Page() {
                 href={lk.href}
                 target={lk.href.startsWith('/') ? undefined : '_blank'}
                 rel={lk.href.startsWith('/') ? undefined : 'noopener noreferrer'}
+                onClick={() => trackNatoriPageEvent('links_click', lk.label)}
                 aria-label={`${lk.label} へ移動`}
                 className="group flex items-center gap-4 rounded-2xl px-5 py-4 shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
                 style={{

@@ -13,6 +13,7 @@ import {
   portfolioColors as c,
   portfolioDeadlineOptions,
 } from "@/features/natori/constants/portfolioContent";
+import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 
@@ -139,6 +140,7 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`request failed: ${res.status}`);
+      trackNatoriPageEvent("portfolio_form_submit", payload.requestType);
       setRefImages([]);
       setStatus("success");
     } catch (err) {
@@ -165,6 +167,7 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
               href={tsunaguLink.href}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackNatoriPageEvent("portfolio_sns_click", "つなぐ")}
               className="pf-cute-focus font-bold underline decoration-2 underline-offset-4 hover:opacity-70"
               style={{ color: c.pinkDeep, textDecorationColor: c.peach }}
             >

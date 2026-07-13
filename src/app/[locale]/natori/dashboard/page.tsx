@@ -28,75 +28,82 @@ import {
 import { fetchNatoriProjects } from "@/features/natori/data/supabaseProjects";
 import { isPreworkStatus } from "@/features/natori/lib/projects";
 import { Button } from "@/components/ui/button";
+import PageEventsPanel from "@/features/natori/components/dashboard/PageEventsPanel";
 import Footer from "@/features/natori/components/Footer";
 
 type DashboardCard = {
   href: string;
   title: string;
-  description: string;
   icon: LucideIcon;
   accent: string;
   hrefKey?: "portfolio" | "links";
 };
 
-const CARDS: DashboardCard[] = [
+type DashboardCardGroup = {
+  heading: string;
+  cards: DashboardCard[];
+};
+
+const CARD_GROUPS: DashboardCardGroup[] = [
   {
-    href: "/natori/inquiries",
-    title: "問い合わせ管理",
-    description: "フォームから来た依頼の内容確認・見積もり/支払いメール送信・経過チェック",
-    icon: Inbox,
-    accent: "from-orange-100 to-orange-50 text-orange-700",
+    heading: "管理ツール",
+    cards: [
+      {
+        href: "/natori/inquiries",
+        title: "問い合わせ管理",
+        icon: Inbox,
+        accent: "from-orange-100 to-orange-50 text-orange-700",
+      },
+      {
+        href: "/natori/projects",
+        title: "案件管理",
+        icon: FolderOpen,
+        accent: "from-pink-100 to-pink-50 text-pink-700",
+      },
+      {
+        href: "/natori/estimate",
+        title: "見積もり",
+        icon: Calculator,
+        accent: "from-rose-100 to-rose-50 text-rose-700",
+      },
+      {
+        href: "/natori/results",
+        title: "実績",
+        icon: Trophy,
+        accent: "from-emerald-100 to-emerald-50 text-emerald-700",
+      },
+    ],
   },
   {
-    href: "/natori/projects",
-    title: "案件管理",
-    description: "カレンダー・スケジュール・タスクチェック",
-    icon: FolderOpen,
-    accent: "from-pink-100 to-pink-50 text-pink-700",
-  },
-  {
-    href: "/natori/estimate",
-    title: "見積もり",
-    description: "依頼文から概算見積もりと返信文のたたき台を作る内部ツール",
-    icon: Calculator,
-    accent: "from-rose-100 to-rose-50 text-rose-700",
-  },
-  {
-    href: "/natori/results",
-    title: "実績",
-    description: "納品済み案件の件数・売上・月別/タイプ別の推移",
-    icon: Trophy,
-    accent: "from-emerald-100 to-emerald-50 text-emerald-700",
-  },
-  {
-    href: "/natori",
-    title: "ポートフォリオ（VGen）",
-    description: "未ログインでも閲覧できる公開ページ・ギャラリー",
-    icon: ImageIcon,
-    accent: "from-fuchsia-100 to-fuchsia-50 text-fuchsia-700",
-    hrefKey: "portfolio",
-  },
-  {
-    href: "/natori/portfolio",
-    title: "ポートフォリオ（コミッション）",
-    description: "やわらかく可愛いイラストのコミッション受付ページ（VGenページとは別の独立ページ）",
-    icon: Palette,
-    accent: "from-violet-100 to-violet-50 text-violet-700",
-  },
-  {
-    href: "/natori/portfolio/edit",
-    title: "ポートフォリオ編集",
-    description: "コミッションページの文章・料金・作品画像をブラウザから編集",
-    icon: PenLine,
-    accent: "from-sky-100 to-sky-50 text-sky-700",
-  },
-  {
-    href: "/natori/links",
-    title: "リンク集",
-    description: "X / TikTok / つなぐ / Skeb など",
-    icon: Link2,
-    accent: "from-amber-100 to-amber-50 text-amber-700",
-    hrefKey: "links",
+    heading: "公開ページ・編集",
+    cards: [
+      {
+        href: "/natori/portfolio",
+        title: "ポートフォリオ（コミッション）",
+        icon: Palette,
+        accent: "from-violet-100 to-violet-50 text-violet-700",
+      },
+      {
+        href: "/natori/portfolio/edit",
+        title: "ポートフォリオ編集",
+        icon: PenLine,
+        accent: "from-sky-100 to-sky-50 text-sky-700",
+      },
+      {
+        href: "/natori",
+        title: "ポートフォリオ（VGen）",
+        icon: ImageIcon,
+        accent: "from-fuchsia-100 to-fuchsia-50 text-fuchsia-700",
+        hrefKey: "portfolio",
+      },
+      {
+        href: "/natori/links",
+        title: "リンク集",
+        icon: Link2,
+        accent: "from-amber-100 to-amber-50 text-amber-700",
+        hrefKey: "links",
+      },
+    ],
   },
 ];
 
@@ -177,17 +184,20 @@ export default function NatoriDashboardPage() {
 
   const displayName = profile?.displayName?.trim() || email || null;
 
-  const resolvedCards = useMemo(
+  const resolvedGroups = useMemo(
     () =>
-      CARDS.map((card) => {
-        if (card.hrefKey === "portfolio" && profile?.portfolioUrl) {
-          return { ...card, href: profile.portfolioUrl };
-        }
-        if (card.hrefKey === "links" && profile?.linksUrl) {
-          return { ...card, href: profile.linksUrl };
-        }
-        return card;
-      }),
+      CARD_GROUPS.map((group) => ({
+        ...group,
+        cards: group.cards.map((card) => {
+          if (card.hrefKey === "portfolio" && profile?.portfolioUrl) {
+            return { ...card, href: profile.portfolioUrl };
+          }
+          if (card.hrefKey === "links" && profile?.linksUrl) {
+            return { ...card, href: profile.linksUrl };
+          }
+          return card;
+        }),
+      })),
     [profile]
   );
 
@@ -230,12 +240,6 @@ export default function NatoriDashboardPage() {
             <h1 className="text-2xl font-black text-gray-900 sm:text-3xl">
               {displayName ? `${displayName} のダッシュボード` : "仕事用ダッシュボード"}
             </h1>
-            <p className="mt-1 text-sm leading-6 text-gray-600">
-              案件管理・見積もり・ポートフォリオ導線をまとめた管理ダッシュボードです。
-            </p>
-            <p className="mt-1 text-sm leading-6 text-gray-600">
-              案件管理と見積もりは関係者専用ページです。リンク集と作品ページは公開ページです。
-            </p>
           </div>
         </div>
 
@@ -245,45 +249,49 @@ export default function NatoriDashboardPage() {
           </div>
         ) : null}
 
-        <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-          {resolvedCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <li key={card.title}>
-                <Link
-                  href={card.href}
-                  className={`group flex items-start gap-3 rounded-2xl border border-pink-100 bg-gradient-to-br ${card.accent} bg-white/80 p-4 shadow-sm transition hover:shadow-md sm:p-5`}
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm">
-                    <Icon className="h-5 w-5" aria-hidden />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="flex flex-wrap items-center gap-2 text-base font-black leading-6 text-gray-900">
-                      {card.title}
-                      {card.href === "/natori/inquiries" && inquiryCounts ? (
-                        <>
-                          {inquiryCounts.pending > 0 ? (
-                            <span className="inline-flex items-center rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white">
-                              未対応 {inquiryCounts.pending}件
-                            </span>
-                          ) : null}
-                          {inquiryCounts.inProgress > 0 ? (
-                            <span className="inline-flex items-center rounded-full border border-orange-300 bg-white px-2 py-0.5 text-[11px] font-bold text-orange-700">
-                              対応中 {inquiryCounts.inProgress}件
-                            </span>
-                          ) : null}
-                        </>
-                      ) : null}
-                    </p>
-                    <p className="mt-1 break-words text-xs leading-5 text-gray-700 sm:text-sm">
-                      {card.description}
-                    </p>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        {resolvedGroups.map((group) => (
+          <div key={group.heading} className="mt-6">
+            <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-pink-600">
+              {group.heading}
+            </h2>
+            <ul className="mt-2 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+              {group.cards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <li key={card.title}>
+                    <Link
+                      href={card.href}
+                      className={`group flex h-full items-center gap-3 rounded-2xl border border-pink-100 bg-gradient-to-br ${card.accent} bg-white/80 p-3 shadow-sm transition hover:shadow-md`}
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm">
+                        <Icon className="h-5 w-5" aria-hidden />
+                      </div>
+                      <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm font-black leading-5 text-gray-900">
+                        {card.title}
+                        {card.href === "/natori/inquiries" && inquiryCounts ? (
+                          <>
+                            {inquiryCounts.pending > 0 ? (
+                              <span className="inline-flex items-center rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white">
+                                未対応 {inquiryCounts.pending}件
+                              </span>
+                            ) : null}
+                            {inquiryCounts.inProgress > 0 ? (
+                              <span className="inline-flex items-center rounded-full border border-orange-300 bg-white px-2 py-0.5 text-[11px] font-bold text-orange-700">
+                                対応中 {inquiryCounts.inProgress}件
+                              </span>
+                            ) : null}
+                          </>
+                        ) : null}
+                      </p>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+
+        <PageEventsPanel />
 
         <ProfileSettingsPanel
           profile={profile}
