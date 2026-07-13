@@ -9,15 +9,24 @@ import { formatYen } from "@/features/natori/lib/pricing";
 /** 支払い依頼メール本文に入れるプレースホルダ。送信時に実URLへ差し替わる */
 export const PAYMENT_LINK_PLACEHOLDER = "{支払いリンク}";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /**
- * 案件メモ（自動起票の「メール: xxx」行）から依頼者のメールアドレスを取り出す。
- * 手入力案件などで見つからなければ null。
+ * 案件メモから依頼者のメールアドレスを取り出す。
+ * 1. 自動起票の「メール: xxx」行を優先
+ * 2. 無ければ（手入力案件など）送信ログの「宛先: xxx」から最新のものを使う
+ * どちらも無ければ null。
  */
 export function extractClientEmailFromNote(note: string | undefined | null): string | null {
   if (!note) return null;
-  const line = note.match(/メール:\s*([^\s\r\n]+)/);
-  const candidate = line?.[1] ?? null;
-  if (candidate && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidate)) return candidate;
+  const auto = note.match(/メール:\s*([^\s\r\n]+)/);
+  if (auto?.[1] && EMAIL_RE.test(auto[1])) return auto[1];
+
+  const logMatches = Array.from(note.matchAll(/宛先:\s*([^\s\r\n/]+)/g));
+  for (let i = logMatches.length - 1; i >= 0; i -= 1) {
+    const candidate = logMatches[i][1];
+    if (EMAIL_RE.test(candidate)) return candidate;
+  }
   return null;
 }
 

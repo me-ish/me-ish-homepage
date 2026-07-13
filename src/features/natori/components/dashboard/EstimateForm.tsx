@@ -35,9 +35,11 @@ import type {
   NatoriPricingConfig,
 } from "@/features/natori/types/pricing";
 
+// 見積もりカテゴリ → 案件タイプ（タスク雛形）の対応。
+// 腰上は SD（ちびキャラ）ではなく通常イラストの工程で扱う。
 const CATEGORY_TO_TYPE: Record<NatoriEstimateCategory, NatoriProjectType> = {
   bust_up: "icon",
-  waist_up: "sd",
+  waist_up: "illustration",
   full_body: "standing",
 };
 

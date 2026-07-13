@@ -24,6 +24,25 @@ describe("extractClientEmailFromNote", () => {
     expect(extractClientEmailFromNote("手入力の案件メモ")).toBeNull();
     expect(extractClientEmailFromNote("メール: -")).toBeNull();
   });
+
+  it("falls back to the latest send-log recipient for manual projects", () => {
+    const note = [
+      "手入力の案件メモ",
+      "",
+      buildOrderMailLogEntry("estimate", "2026-07-01", "old@example.com", 8000),
+      "",
+      buildOrderMailLogEntry("payment", "2026-07-05", "new@example.com", 8000, "https://pay.example.com/x"),
+    ].join("\n");
+    expect(extractClientEmailFromNote(note)).toBe("new@example.com");
+  });
+
+  it("prefers the auto-note email over log recipients", () => {
+    const note = [
+      "メール: form@example.com",
+      buildOrderMailLogEntry("estimate", "2026-07-01", "typo@example.com", 8000),
+    ].join("\n");
+    expect(extractClientEmailFromNote(note)).toBe("form@example.com");
+  });
 });
 
 describe("buildEstimateMailDraft", () => {

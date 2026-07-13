@@ -5,9 +5,10 @@
 // 定型文を下書きとして生成し、編集してから /api/natori/admin/order-mail で送信する。
 // 支払い依頼は送信時にサーバーで Stripe 支払いリンクが生成され、
 // 本文の {支払いリンク} の位置に差し込まれる。
-import { useState } from "react";
-import { Loader2, Mail, RotateCcw, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AlertTriangle, Loader2, Mail, RotateCcw, X } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
+import { parseInquiryNote } from "@/features/natori/lib/inquiryNoteView";
 import {
   PAYMENT_LINK_PLACEHOLDER,
   buildEstimateMailDraft,
@@ -83,6 +84,13 @@ export default function OrderMailPanel({
   const [error, setError] = useState<string | null>(null);
   const [sentLinkUrl, setSentLinkUrl] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+
+  // 同種メールの送信履歴（案件メモの送信ログから）。二重送信の気づき用
+  const lastSent = useMemo(() => {
+    const label = kind === "estimate" ? "見積もりメール送信" : "支払い依頼メール送信";
+    const logs = parseInquiryNote(project.note).logs.filter((log) => log.label === label);
+    return logs.length > 0 ? logs[logs.length - 1] : null;
+  }, [project.note, kind]);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim());
   const amountValid = Number.isFinite(amount) && amount >= (kind === "payment" ? 50 : 0);
@@ -188,6 +196,16 @@ export default function OrderMailPanel({
           </div>
         ) : (
           <div className="space-y-3">
+            {lastSent ? (
+              <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold leading-5 text-amber-900">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span>
+                  この案件には {lastSent.dateISO.replace(/-/g, "/")} に
+                  {kind === "estimate" ? "見積もりメール" : "支払い依頼メール"}
+                  を送信済みです。再送する場合はそのまま続けてください。
+                </span>
+              </p>
+            ) : null}
             <p className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs leading-5 text-sky-900">
               {meta.hint}
             </p>
