@@ -9,12 +9,8 @@ import { z } from "zod";
 /* ---------- Env ---------- */
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const FROM = process.env.RESEND_FROM ?? "me-ish Gallery <noreply@me-ish.art>";
-/** 依頼メールの宛先。env で上書き可能 */
-// TODO(temporary): フォームのテスト中はナトリ先生にメールが飛ばないよう
-// info@me-ish.art に向けている。テストが終わったら
-// natori.o0716@gmail.com に戻すこと（または本番 env の
-// NATORI_PORTFOLIO_CONTACT_TO で切り替える）。
-const TO = process.env.NATORI_PORTFOLIO_CONTACT_TO ?? "info@me-ish.art";
+/** 依頼メールの宛先（ナトリ先生）。テスト時は env NATORI_PORTFOLIO_CONTACT_TO で上書きする */
+const TO = process.env.NATORI_PORTFOLIO_CONTACT_TO ?? "natori.o0716@gmail.com";
 /** 依頼者向け自動返信の差出人（orderMailService と同じ env を共有） */
 const AUTO_REPLY_FROM =
   process.env.NATORI_ORDER_MAIL_FROM ?? "ナトリ（me-ish） <noreply@me-ish.art>";

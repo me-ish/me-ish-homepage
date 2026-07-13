@@ -24,9 +24,9 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const FROM = process.env.NATORI_ORDER_MAIL_FROM ?? "ナトリ（me-ish） <noreply@me-ish.art>";
 /**
  * 依頼者が返信したときの宛先（＝ナトリのアドレス）。
- * フォーム通知の宛先と同じ env を使う（テスト中は info@me-ish.art）。
+ * フォーム通知の宛先と同じ env で上書きできる。
  */
-const REPLY_TO = process.env.NATORI_PORTFOLIO_CONTACT_TO ?? "info@me-ish.art";
+const REPLY_TO = process.env.NATORI_PORTFOLIO_CONTACT_TO ?? "natori.o0716@gmail.com";
 
 export function isNatoriOrderMailConfigured(): boolean {
   return RESEND_API_KEY.length > 0;
