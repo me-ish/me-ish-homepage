@@ -324,11 +324,15 @@ describe("order flow: capacity vs forecast", () => {
 });
 
 describe("monthly reminder", () => {
-  it("matches the 25th of any month and ignores other days", () => {
-    expect(getRemindersForDate("2026-05-25").map((r) => r.id)).toEqual(["tsunagu_transfer"]);
-    expect(getRemindersForDate("2026-06-25").map((r) => r.id)).toEqual(["tsunagu_transfer"]);
-    expect(getRemindersForDate("2026-05-24")).toEqual([]);
-    expect(getRemindersForDate("2026-05-26")).toEqual([]);
+  it("matches the last day of any month and ignores other days", () => {
+    expect(getRemindersForDate("2026-05-31").map((r) => r.id)).toEqual(["tsunagu_transfer"]);
+    expect(getRemindersForDate("2026-06-30").map((r) => r.id)).toEqual(["tsunagu_transfer"]);
+    // 2026年はうるう年ではないので2月は28日が月末
+    expect(getRemindersForDate("2026-02-28").map((r) => r.id)).toEqual(["tsunagu_transfer"]);
+    expect(getRemindersForDate("2028-02-29").map((r) => r.id)).toEqual(["tsunagu_transfer"]);
+    expect(getRemindersForDate("2026-05-25")).toEqual([]);
+    expect(getRemindersForDate("2026-05-30")).toEqual([]);
+    expect(getRemindersForDate("2028-02-28")).toEqual([]);
   });
 });
 

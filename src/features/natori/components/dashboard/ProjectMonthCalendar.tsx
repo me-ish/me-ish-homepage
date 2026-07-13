@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { natoriStageMeta } from "@/features/natori/constants/mockProjects";
 import { buildMonthCells, toISODate } from "@/features/natori/lib/projects";
 import { getDeliveryPlanMeta } from "@/features/natori/lib/deliveryPlans";
-import { getRemindersForDayOfMonth } from "@/features/natori/lib/reminders";
+import { getRemindersForDate } from "@/features/natori/lib/reminders";
 import type { NatoriEvent } from "@/features/natori/data/supabaseEvents";
 import type { NatoriCalendarCellBar, NatoriProject } from "@/features/natori/types/projects";
 
@@ -138,7 +138,7 @@ export default function ProjectMonthCalendar({
                     ?.deliveryPlan ?? rushDueProjects[0].deliveryPlan
                 )
               : null;
-          const cellReminders = cell.inMonth ? getRemindersForDayOfMonth(cell.date.getDate()) : [];
+          const cellReminders = cell.inMonth ? getRemindersForDate(cell.iso) : [];
           const cellEvents = cell.inMonth ? eventsByDate.get(cell.iso) ?? [] : [];
 
           return (
@@ -281,7 +281,7 @@ export default function ProjectMonthCalendar({
         </span>
         <span className="inline-flex items-center gap-1">
           <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
-          毎月25日 送金
+          毎月月末 送金
         </span>
         <span className="inline-flex items-center gap-1">
           <span className="inline-block h-2 w-2 rounded-full bg-purple-500" />
