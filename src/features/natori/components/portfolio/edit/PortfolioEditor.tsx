@@ -275,9 +275,25 @@ export default function PortfolioEditor() {
         {/* プロフィール */}
         <SectionCard
           emoji="💬"
-          title="プロフィール文"
-          description="1枠 = 1段落として表示されます。"
+          title="プロフィール"
+          description="アイコン下の名前・肩書きと、紹介文（1枠 = 1段落）です。"
         >
+          <div className="mb-4 grid gap-4 sm:grid-cols-2">
+            <TextInput
+              label="名前（アイコンの下）"
+              value={content.profileName}
+              onChange={(v) => patch({ profileName: v })}
+              placeholder="例: ナトリ"
+              hint="空欄のときはサイト名と同じ表示になります"
+            />
+            <TextInput
+              label="肩書き（名前の下）"
+              value={content.profileRole}
+              onChange={(v) => patch({ profileRole: v })}
+              placeholder="例: Illustrator"
+              hint="空欄のときは英字の肩書きと同じ表示になります"
+            />
+          </div>
           <SortableList
             items={content.aboutParagraphs}
             onReorder={(next) => patch({ aboutParagraphs: next })}

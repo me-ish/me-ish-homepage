@@ -54,6 +54,9 @@ export const portfolioContentSchema = z.object({
   commissionOpen: z.boolean(),
   artistName: shortText,
   roleEn: shortText,
+  // 後から追加したフィールド。既存のDB行には無いので default で補う
+  profileName: shortText.optional().default(""),
+  profileRole: shortText.optional().default(""),
   heroTitleAccent: shortText,
   heroTitleTail: shortText,
   heroDescription: longText,

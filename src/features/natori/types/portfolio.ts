@@ -47,6 +47,10 @@ export type PortfolioContent = {
   artistName: string;
   /** ヒーローの英字肩書き */
   roleEn: string;
+  /** プロフィール欄（アイコン下）の名前。空ならサイト名 (artistName) と同じ表示 */
+  profileName: string;
+  /** プロフィール欄の肩書き。空ならヒーローの英字肩書き (roleEn) と同じ表示 */
+  profileRole: string;
   /** キャッチコピー（色付き部分） */
   heroTitleAccent: string;
   /** キャッチコピー（続き） */

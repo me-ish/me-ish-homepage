@@ -9,6 +9,8 @@ const validContent: PortfolioContent = {
   commissionOpen: true,
   artistName: "Natori* illust",
   roleEn: "Cute Anime Illustrator",
+  profileName: "ナトリ",
+  profileRole: "Illustrator",
   heroTitleAccent: "ナトリ",
   heroTitleTail: "のポートフォリオへようこそ",
   heroDescription: "紹介文",
@@ -33,6 +35,13 @@ const validContent: PortfolioContent = {
 describe("parsePortfolioContent", () => {
   it("正しい形の content はそのまま通る", () => {
     expect(parsePortfolioContent(validContent)).toEqual(validContent);
+  });
+
+  it("profileName / profileRole が無い旧データは空文字で補完される", () => {
+    const { profileName: _n, profileRole: _r, ...legacy } = validContent;
+    const parsed = parsePortfolioContent(legacy);
+    expect(parsed?.profileName).toBe("");
+    expect(parsed?.profileRole).toBe("");
   });
 
   it("壊れた値は null を返す（デフォルトへのフォールバック用）", () => {

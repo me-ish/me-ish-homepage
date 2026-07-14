@@ -21,6 +21,10 @@ function xHandle(href: string, fallback: string): string {
 
 export default function PortfolioAbout({ content }: { content: PortfolioContent }) {
   const xLink = content.socialLinks.find(isPortfolioXLink);
+  // プロフィール欄の名前・肩書きはヘッダー/ヒーローとは独立に設定できる。
+  // 未設定（旧データ）のときは従来どおりサイト名・英字肩書きを表示する
+  const profileName = content.profileName.trim() || content.artistName;
+  const profileRole = content.profileRole.trim() || content.roleEn;
   return (
     <section id="about" className="py-16" style={{ background: c.paperAlt }}>
       <div className="mx-auto grid max-w-6xl items-start gap-10 px-5 md:grid-cols-3">
@@ -45,14 +49,12 @@ export default function PortfolioAbout({ content }: { content: PortfolioContent 
             )}
           </div>
           {/* 名前とX。フッターにあったXリンクはここへ移設 */}
-          <p className="mt-5 text-center text-2xl font-black tracking-wide">
-            {content.artistName}
-          </p>
+          <p className="mt-5 text-center text-2xl font-black tracking-wide">{profileName}</p>
           <p
             className="mt-1 text-xs font-semibold uppercase tracking-widest"
             style={{ ...fontEnStyle, color: c.pinkDeep }}
           >
-            {content.roleEn}
+            {profileRole}
           </p>
           {xLink ? (
             <PortfolioSnsLink

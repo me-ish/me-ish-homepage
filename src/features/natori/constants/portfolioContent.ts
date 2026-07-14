@@ -37,6 +37,8 @@ export const defaultPortfolioContent: PortfolioContent = {
   commissionOpen: true,
   artistName: "Natori* illust",
   roleEn: "Cute Anime Illustrator",
+  profileName: "ナトリ",
+  profileRole: "Illustrator",
   heroTitleAccent: "ナトリ",
   heroTitleTail: "のポートフォリオへようこそ",
   heroDescription:

@@ -7,7 +7,6 @@ import {
   ChevronDown,
   ChevronUp,
   FolderOpen,
-  ImageIcon,
   Inbox,
   Link2,
   LogOut,
@@ -88,13 +87,6 @@ const CARD_GROUPS: DashboardCardGroup[] = [
         title: "ポートフォリオ編集",
         icon: PenLine,
         accent: "from-sky-100 to-sky-50 text-sky-700",
-      },
-      {
-        href: "/natori",
-        title: "ポートフォリオ（VGen）",
-        icon: ImageIcon,
-        accent: "from-fuchsia-100 to-fuchsia-50 text-fuchsia-700",
-        hrefKey: "portfolio",
       },
       {
         href: "/natori/links",
