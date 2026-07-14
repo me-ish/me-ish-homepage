@@ -9,9 +9,9 @@ import { fontEnStyle } from "./portfolioFonts";
 export default function PortfolioHero({ content }: { content: PortfolioContent }) {
   return (
     <section className="relative mx-auto max-w-6xl overflow-hidden px-5 pb-20 pt-16">
+      {/* 星は上部の余白帯（pt-16 の範囲内）に置き、テキストと重ねない */}
       <Sparkle style={{ top: 10, left: "40%" }} color={c.yellow} size={20} />
-      {/* ピンクの見出し文字と被らないよう、色はミント・位置は左端寄りにする */}
-      <Sparkle style={{ top: 64, left: "2%" }} color={c.mint} size={16} />
+      <Sparkle style={{ top: 30, right: "10%" }} color={c.mint} size={16} />
       <div>
         <p
           className="mb-3 text-sm font-semibold uppercase tracking-widest"

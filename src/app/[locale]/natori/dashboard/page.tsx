@@ -13,7 +13,6 @@ import {
   Palette,
   PenLine,
   Settings,
-  Sparkles,
   Trophy,
   User2,
   type LucideIcon,
@@ -49,7 +48,7 @@ const CARD_GROUPS: DashboardCardGroup[] = [
     cards: [
       {
         href: "/natori/inquiries",
-        title: "問い合わせ管理",
+        title: "問い合わせ",
         icon: Inbox,
         accent: "from-orange-100 to-orange-50 text-orange-700",
       },
@@ -67,7 +66,7 @@ const CARD_GROUPS: DashboardCardGroup[] = [
       },
       {
         href: "/natori/results",
-        title: "実績",
+        title: "売上・実績",
         icon: Trophy,
         accent: "from-emerald-100 to-emerald-50 text-emerald-700",
       },
@@ -78,7 +77,7 @@ const CARD_GROUPS: DashboardCardGroup[] = [
     cards: [
       {
         href: "/natori/portfolio",
-        title: "ポートフォリオ（コミッション）",
+        title: "ポートフォリオ",
         icon: Palette,
         accent: "from-violet-100 to-violet-50 text-violet-700",
       },
@@ -229,18 +228,7 @@ export default function NatoriDashboardPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-pink-500 text-white shadow-sm">
-            <Sparkles className="h-5 w-5" aria-hidden />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-2xl font-black text-gray-900 sm:text-3xl">
-              {displayName ? `${displayName} のダッシュボード` : "仕事用ダッシュボード"}
-            </h1>
-          </div>
-        </div>
-
+      <section className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
         {error ? (
           <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 sm:text-sm">
             {error}
