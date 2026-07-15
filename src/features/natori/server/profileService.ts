@@ -18,7 +18,7 @@ export type GetNatoriProfileResult =
 
 export async function getNatoriAdminProfile(userId: string): Promise<GetNatoriProfileResult> {
   const admin = supabaseAdmin();
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from(PROFILES_TABLE)
     .select("*")
     .eq("user_id", userId)
@@ -43,7 +43,7 @@ export async function upsertNatoriAdminProfile(input: {
   dailyCapacityHours: number | null;
 }): Promise<UpsertNatoriProfileResult> {
   const admin = supabaseAdmin();
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from(PROFILES_TABLE)
     .upsert(
       {

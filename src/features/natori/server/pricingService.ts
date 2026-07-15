@@ -1,5 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import type { Json } from "@/types/supabase";
 
 export type NatoriAdminPresetRow = {
   id: string;
@@ -19,7 +20,7 @@ export type ListNatoriPresetsResult =
 
 export async function listNatoriAdminPresets(userId: string): Promise<ListNatoriPresetsResult> {
   const admin = supabaseAdmin();
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from(TABLE)
     .select("*")
     .eq("user_id", userId)
@@ -42,11 +43,12 @@ export async function seedNatoriAdminPresets(
     user_id: userId,
     preset_key: seed.presetKey,
     name: seed.name,
-    config: seed.config,
+    // config はリクエストJSON由来なので JSON 直列化可能であることが保証されている
+    config: seed.config as Json,
     is_default: seed.isDefault,
     sort_order: seed.sortOrder,
   }));
-  const { error } = await (admin as any)
+  const { error } = await admin
     .from(TABLE)
     .upsert(inserts, { onConflict: "user_id,preset_key", ignoreDuplicates: true });
   if (error) {
@@ -66,9 +68,10 @@ export async function updateNatoriAdminPresetConfig(
   config: unknown
 ): Promise<NatoriPresetMutationResult> {
   const admin = supabaseAdmin();
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from(TABLE)
-    .update({ config })
+    // config はリクエストJSON由来なので JSON 直列化可能であることが保証されている
+    .update({ config: config as Json })
     .eq("id", id)
     .select("id")
     .maybeSingle();
@@ -85,7 +88,7 @@ export async function setNatoriAdminDefaultPreset(
   id: string
 ): Promise<NatoriPresetMutationResult> {
   const admin = supabaseAdmin();
-  const { error: clearErr } = await (admin as any)
+  const { error: clearErr } = await admin
     .from(TABLE)
     .update({ is_default: false })
     .eq("user_id", userId);
@@ -94,7 +97,7 @@ export async function setNatoriAdminDefaultPreset(
     return { kind: "db-error" };
   }
 
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from(TABLE)
     .update({ is_default: true })
     .eq("id", id)

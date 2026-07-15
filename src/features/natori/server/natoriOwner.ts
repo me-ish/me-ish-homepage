@@ -22,14 +22,15 @@ export async function resolveNatoriActingUserId(): Promise<string | null> {
   const envOwner = process.env.NATORI_OWNER_USER_ID?.trim();
   if (envOwner) return envOwner;
 
-  const admin = supabaseAdmin() as any;
-  for (const table of ["natori_user_profiles", "natori_projects", "natori_events"]) {
+  const admin = supabaseAdmin();
+  const tables = ["natori_user_profiles", "natori_projects", "natori_events"] as const;
+  for (const table of tables) {
     const { data, error } = await admin
       .from(table)
       .select("user_id")
       .limit(1)
       .maybeSingle();
-    if (!error && data?.user_id) return data.user_id as string;
+    if (!error && data?.user_id) return data.user_id;
   }
   return null;
 }

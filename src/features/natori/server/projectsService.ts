@@ -192,7 +192,7 @@ async function normalizeProjectTasks(
   if (upserts.length === 0 && deleteIds.length === 0) return tasks;
 
   if (upserts.length > 0) {
-    const { error } = await (admin as any)
+    const { error } = await admin
       .from("natori_project_tasks")
       .upsert(upserts, { onConflict: "project_id,task_key" });
     if (error) {
@@ -202,7 +202,7 @@ async function normalizeProjectTasks(
   }
 
   if (deleteIds.length > 0) {
-    const { error } = await (admin as any)
+    const { error } = await admin
       .from("natori_project_tasks")
       .delete()
       .in("id", deleteIds);
@@ -212,7 +212,7 @@ async function normalizeProjectTasks(
     }
   }
 
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from("natori_project_tasks")
     .select("*")
     .order("sort_order", { ascending: true });
@@ -238,8 +238,8 @@ export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjects
   const admin = supabaseAdmin();
   const [{ data: projects, error: projectError }, { data: tasks, error: taskError }] =
     await Promise.all([
-      (admin as any).from("natori_projects").select("*").order("due_date", { ascending: true }),
-      (admin as any).from("natori_project_tasks").select("*").order("sort_order", { ascending: true }),
+      admin.from("natori_projects").select("*").order("due_date", { ascending: true }),
+      admin.from("natori_project_tasks").select("*").order("sort_order", { ascending: true }),
     ]);
 
   if (projectError) {
@@ -296,7 +296,7 @@ export async function createNatoriAdminProject(
   const status = input.status ?? "inquiry";
 
   const admin = supabaseAdmin();
-  const { data: insertedProject, error: projectErr } = await (admin as any)
+  const { data: insertedProject, error: projectErr } = await admin
     .from("natori_projects")
     .insert({
       user_id: input.userId,
@@ -331,7 +331,7 @@ export async function createNatoriAdminProject(
     sort_order: index,
   }));
   if (taskInserts.length > 0) {
-    const { error: taskErr } = await (admin as any)
+    const { error: taskErr } = await admin
       .from("natori_project_tasks")
       .insert(taskInserts);
     if (taskErr) {
@@ -358,7 +358,7 @@ export async function setNatoriProjectTaskDone(
   done: boolean
 ): Promise<NatoriProjectMutationResult> {
   const admin = supabaseAdmin();
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from("natori_project_tasks")
     .update({ done })
     .eq("project_id", projectId)
@@ -380,7 +380,7 @@ export async function setNatoriProjectStatus(
   nextAction: string
 ): Promise<NatoriProjectMutationResult> {
   const admin = supabaseAdmin();
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from("natori_projects")
     .update({ status, next_action: nextAction })
     .eq("id", projectId)
@@ -413,7 +413,7 @@ export async function patchNatoriProjectDetails(
   }
 
   const admin = supabaseAdmin();
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from("natori_projects")
     .update(update)
     .eq("id", projectId)
@@ -438,7 +438,7 @@ export async function closeNatoriProject(
 ): Promise<NatoriProjectMutationResult> {
   const admin = supabaseAdmin();
 
-  const { data: current, error: fetchErr } = await (admin as any)
+  const { data: current, error: fetchErr } = await admin
     .from("natori_projects")
     .select("id, note")
     .eq("id", projectId)
@@ -461,7 +461,7 @@ export async function closeNatoriProject(
     update.note = existingNote ? `${existingNote}\n\n${entry}` : entry;
   }
 
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from("natori_projects")
     .update(update)
     .eq("id", projectId)
@@ -483,7 +483,7 @@ export async function deleteNatoriAdminProject(
 ): Promise<NatoriProjectMutationResult> {
   const admin = supabaseAdmin();
 
-  const { error: taskErr } = await (admin as any)
+  const { error: taskErr } = await admin
     .from("natori_project_tasks")
     .delete()
     .eq("project_id", projectId);
@@ -492,7 +492,7 @@ export async function deleteNatoriAdminProject(
     return { kind: "db-error" };
   }
 
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from("natori_projects")
     .delete()
     .eq("id", projectId)
@@ -523,7 +523,7 @@ export async function confirmNatoriProjectPayment(
   const baseUpdate = { status: "rough", next_action: nextAction } as Record<string, unknown>;
   const withTimestamp = { ...baseUpdate, payment_confirmed_at: new Date().toISOString() };
 
-  let { data, error } = await (admin as any)
+  let { data, error } = await admin
     .from("natori_projects")
     .update(withTimestamp)
     .eq("id", projectId)
@@ -532,7 +532,7 @@ export async function confirmNatoriProjectPayment(
 
   if (error && /payment_confirmed_at/i.test(error.message ?? "")) {
     // Column missing — fall back to a plain status update.
-    const retry = await (admin as any)
+    const retry = await admin
       .from("natori_projects")
       .update(baseUpdate)
       .eq("id", projectId)

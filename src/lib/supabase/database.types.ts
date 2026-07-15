@@ -10,10 +10,65 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "14.1"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          admin_email: string
+          created_at: string
+          detail: Json | null
+          id: string
+          resource_id: string | null
+          resource_type: string
+        }
+        Insert: {
+          action: string
+          admin_email: string
+          created_at?: string
+          detail?: Json | null
+          id?: string
+          resource_id?: string | null
+          resource_type: string
+        }
+        Update: {
+          action?: string
+          admin_email?: string
+          created_at?: string
+          detail?: Json | null
+          id?: string
+          resource_id?: string | null
+          resource_type?: string
+        }
+        Relationships: []
+      }
       admin_emails: {
         Row: {
           email: string
@@ -171,6 +226,102 @@ export type Database = {
           },
         ]
       }
+      aura_projects: {
+        Row: {
+          accent_color: string | null
+          avatar_path: string | null
+          avatar_shape: string
+          bg_pattern: string
+          bio: string | null
+          created_at: string
+          display_title: string | null
+          email: string | null
+          font_preset: string | null
+          id: string
+          layout_pref: string | null
+          name: string | null
+          payment_status: string
+          public_id: string | null
+          public_slug: string | null
+          published_at: string | null
+          renderer_version: string
+          section_order: string[] | null
+          section_visibility: Json
+          services: Json
+          session_token: string
+          skills: Json
+          social: Json
+          status: string
+          tagline: string | null
+          theme_id: string
+          updated_at: string
+          visibility: string
+          works: Json
+        }
+        Insert: {
+          accent_color?: string | null
+          avatar_path?: string | null
+          avatar_shape?: string
+          bg_pattern?: string
+          bio?: string | null
+          created_at?: string
+          display_title?: string | null
+          email?: string | null
+          font_preset?: string | null
+          id?: string
+          layout_pref?: string | null
+          name?: string | null
+          payment_status?: string
+          public_id?: string | null
+          public_slug?: string | null
+          published_at?: string | null
+          renderer_version?: string
+          section_order?: string[] | null
+          section_visibility?: Json
+          services?: Json
+          session_token: string
+          skills?: Json
+          social?: Json
+          status?: string
+          tagline?: string | null
+          theme_id?: string
+          updated_at?: string
+          visibility?: string
+          works?: Json
+        }
+        Update: {
+          accent_color?: string | null
+          avatar_path?: string | null
+          avatar_shape?: string
+          bg_pattern?: string
+          bio?: string | null
+          created_at?: string
+          display_title?: string | null
+          email?: string | null
+          font_preset?: string | null
+          id?: string
+          layout_pref?: string | null
+          name?: string | null
+          payment_status?: string
+          public_id?: string | null
+          public_slug?: string | null
+          published_at?: string | null
+          renderer_version?: string
+          section_order?: string[] | null
+          section_visibility?: Json
+          services?: Json
+          session_token?: string
+          skills?: Json
+          social?: Json
+          status?: string
+          tagline?: string | null
+          theme_id?: string
+          updated_at?: string
+          visibility?: string
+          works?: Json
+        }
+        Relationships: []
+      }
       aura_promo_counters: {
         Row: {
           key: string
@@ -249,6 +400,72 @@ export type Database = {
         }
         Relationships: []
       }
+      card_requests: {
+        Row: {
+          content: Json | null
+          created_at: string | null
+          design: Json | null
+          email: string
+          error: string | null
+          id: string
+          paid_at: string | null
+          payload: Json | null
+          payment_status: string | null
+          public_id: string | null
+          public_slug: string | null
+          published_at: string | null
+          renderer_version: string | null
+          session_token: string
+          status: string
+          stripe_session_id: string | null
+          tier: string | null
+          updated_at: string | null
+          visibility: string | null
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string | null
+          design?: Json | null
+          email: string
+          error?: string | null
+          id?: string
+          paid_at?: string | null
+          payload?: Json | null
+          payment_status?: string | null
+          public_id?: string | null
+          public_slug?: string | null
+          published_at?: string | null
+          renderer_version?: string | null
+          session_token: string
+          status?: string
+          stripe_session_id?: string | null
+          tier?: string | null
+          updated_at?: string | null
+          visibility?: string | null
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string | null
+          design?: Json | null
+          email?: string
+          error?: string | null
+          id?: string
+          paid_at?: string | null
+          payload?: Json | null
+          payment_status?: string | null
+          public_id?: string | null
+          public_slug?: string | null
+          published_at?: string | null
+          renderer_version?: string | null
+          session_token?: string
+          status?: string
+          stripe_session_id?: string | null
+          tier?: string | null
+          updated_at?: string | null
+          visibility?: string | null
+        }
+        Relationships: []
+      }
       cert_links: {
         Row: {
           created_at: string
@@ -318,11 +535,6 @@ export type Database = {
           created_at: string
           description: string
           display_end_at: string | null
-          guarantee_total: number | null
-          guarantee_remaining: number | null
-          guarantee_period_start: string | null
-          guarantee_period_end: string | null
-          guarantee_extended_count: number | null
           display_plan: string | null
           display_ready: boolean | null
           display_start_at: string | null
@@ -331,12 +543,17 @@ export type Database = {
           edition_sold: number
           edition_total: number | null
           email: string | null
-          ending_soon_notified_at: string | null
           end_notified_at: string | null
+          ending_soon_notified_at: string | null
           external_user_id: string | null
           file_name: string | null
           force_wm: boolean
           gallery_type: string | null
+          guarantee_extended_count: number | null
+          guarantee_period_end: string | null
+          guarantee_period_start: string | null
+          guarantee_remaining: number | null
+          guarantee_total: number | null
           has_signature: boolean | null
           id: number
           image_url: string
@@ -377,11 +594,6 @@ export type Database = {
           created_at?: string
           description: string
           display_end_at?: string | null
-          guarantee_total?: number | null
-          guarantee_remaining?: number | null
-          guarantee_period_start?: string | null
-          guarantee_period_end?: string | null
-          guarantee_extended_count?: number | null
           display_plan?: string | null
           display_ready?: boolean | null
           display_start_at?: string | null
@@ -390,12 +602,17 @@ export type Database = {
           edition_sold?: number
           edition_total?: number | null
           email?: string | null
-          ending_soon_notified_at?: string | null
           end_notified_at?: string | null
+          ending_soon_notified_at?: string | null
           external_user_id?: string | null
           file_name?: string | null
           force_wm?: boolean
           gallery_type?: string | null
+          guarantee_extended_count?: number | null
+          guarantee_period_end?: string | null
+          guarantee_period_start?: string | null
+          guarantee_remaining?: number | null
+          guarantee_total?: number | null
           has_signature?: boolean | null
           id?: number
           image_url: string
@@ -436,11 +653,6 @@ export type Database = {
           created_at?: string
           description?: string
           display_end_at?: string | null
-          guarantee_total?: number | null
-          guarantee_remaining?: number | null
-          guarantee_period_start?: string | null
-          guarantee_period_end?: string | null
-          guarantee_extended_count?: number | null
           display_plan?: string | null
           display_ready?: boolean | null
           display_start_at?: string | null
@@ -449,12 +661,17 @@ export type Database = {
           edition_sold?: number
           edition_total?: number | null
           email?: string | null
-          ending_soon_notified_at?: string | null
           end_notified_at?: string | null
+          ending_soon_notified_at?: string | null
           external_user_id?: string | null
           file_name?: string | null
           force_wm?: boolean
           gallery_type?: string | null
+          guarantee_extended_count?: number | null
+          guarantee_period_end?: string | null
+          guarantee_period_start?: string | null
+          guarantee_remaining?: number | null
+          guarantee_total?: number | null
           has_signature?: boolean | null
           id?: number
           image_url?: string
@@ -484,27 +701,82 @@ export type Database = {
         }
         Relationships: []
       }
-      entry_daily_slots: {
+      entry_comments: {
         Row: {
-          id: string
-          entry_id: number
-          display_date: string
-          slot_index: number
+          author_name: string
+          body: string
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          entry_id: number
+          id: string
+          user_id: string
         }
         Insert: {
-          id?: string
-          entry_id: number
-          display_date: string
-          slot_index: number
+          author_name?: string
+          body: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          entry_id: number
+          id?: string
+          user_id: string
         }
         Update: {
-          id?: string
-          entry_id?: number
-          display_date?: string
-          slot_index?: number
+          author_name?: string
+          body?: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          entry_id?: number
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entry_comments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entry_comments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_entry_workflow"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "entry_comments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_public_portfolio_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entry_daily_slots: {
+        Row: {
+          created_at: string
+          display_date: string
+          entry_id: number
+          id: string
+          slot_index: number
+        }
+        Insert: {
+          created_at?: string
+          display_date: string
+          entry_id: number
+          id?: string
+          slot_index: number
+        }
+        Update: {
+          created_at?: string
+          display_date?: string
+          entry_id?: number
+          id?: string
+          slot_index?: number
         }
         Relationships: [
           {
@@ -513,7 +785,21 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "entries"
             referencedColumns: ["id"]
-          }
+          },
+          {
+            foreignKeyName: "entry_daily_slots_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_entry_workflow"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "entry_daily_slots_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_public_portfolio_entries"
+            referencedColumns: ["id"]
+          },
         ]
       }
       entry_processing_jobs: {
@@ -647,6 +933,126 @@ export type Database = {
         }
         Relationships: []
       }
+      kpi_jobs: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          duration_sec: number | null
+          error_message: string | null
+          executed_at: string
+          id: string
+          job_name: string
+          slot: string | null
+          success: boolean
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          duration_sec?: number | null
+          error_message?: string | null
+          executed_at: string
+          id?: string
+          job_name: string
+          slot?: string | null
+          success?: boolean
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          duration_sec?: number | null
+          error_message?: string | null
+          executed_at?: string
+          id?: string
+          job_name?: string
+          slot?: string | null
+          success?: boolean
+        }
+        Relationships: []
+      }
+      kpi_posts: {
+        Row: {
+          content: string | null
+          created_at: string
+          delay_sec: number | null
+          engagement_rate: number | null
+          error_message: string | null
+          final_post_text: string | null
+          id: string
+          impressions: number | null
+          impressions_fetched_at: string | null
+          kind: string | null
+          likes: number | null
+          model_name: string | null
+          posted_at: string | null
+          profile_clicks: number | null
+          prompt_version: string | null
+          replies: number | null
+          retweets: number | null
+          safety_checked_at: string | null
+          safety_reasons: Json | null
+          safety_status: string | null
+          scheduled_at: string | null
+          source_market_snapshot: Json | null
+          source_news_ids: string[] | null
+          success: boolean | null
+          x_post_id: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          delay_sec?: number | null
+          engagement_rate?: number | null
+          error_message?: string | null
+          final_post_text?: string | null
+          id?: string
+          impressions?: number | null
+          impressions_fetched_at?: string | null
+          kind?: string | null
+          likes?: number | null
+          model_name?: string | null
+          posted_at?: string | null
+          profile_clicks?: number | null
+          prompt_version?: string | null
+          replies?: number | null
+          retweets?: number | null
+          safety_checked_at?: string | null
+          safety_reasons?: Json | null
+          safety_status?: string | null
+          scheduled_at?: string | null
+          source_market_snapshot?: Json | null
+          source_news_ids?: string[] | null
+          success?: boolean | null
+          x_post_id?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          delay_sec?: number | null
+          engagement_rate?: number | null
+          error_message?: string | null
+          final_post_text?: string | null
+          id?: string
+          impressions?: number | null
+          impressions_fetched_at?: string | null
+          kind?: string | null
+          likes?: number | null
+          model_name?: string | null
+          posted_at?: string | null
+          profile_clicks?: number | null
+          prompt_version?: string | null
+          replies?: number | null
+          retweets?: number | null
+          safety_checked_at?: string | null
+          safety_reasons?: Json | null
+          safety_status?: string | null
+          scheduled_at?: string | null
+          source_market_snapshot?: Json | null
+          source_news_ids?: string[] | null
+          success?: boolean | null
+          x_post_id?: string | null
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           created_at: string
@@ -689,6 +1095,263 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      natori_events: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          note: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          note?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          note?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      natori_links_content: {
+        Row: {
+          content: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          content: Json
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      natori_page_events: {
+        Row: {
+          created_at: string
+          event: string
+          id: number
+          label: string
+          path: string
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          id?: never
+          label?: string
+          path?: string
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          id?: never
+          label?: string
+          path?: string
+        }
+        Relationships: []
+      }
+      natori_portfolio_content: {
+        Row: {
+          content: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          content: Json
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      natori_pricing_configs: {
+        Row: {
+          config: Json
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          preset_key: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          config: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          preset_key: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          preset_key?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      natori_project_tasks: {
+        Row: {
+          done: boolean
+          estimated_hours: number | null
+          id: string
+          label: string
+          project_id: string
+          sort_order: number
+          stage: string
+          task_key: string
+        }
+        Insert: {
+          done?: boolean
+          estimated_hours?: number | null
+          id?: string
+          label: string
+          project_id: string
+          sort_order?: number
+          stage: string
+          task_key: string
+        }
+        Update: {
+          done?: boolean
+          estimated_hours?: number | null
+          id?: string
+          label?: string
+          project_id?: string
+          sort_order?: number
+          stage?: string
+          task_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "natori_project_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "natori_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      natori_projects: {
+        Row: {
+          amount: number
+          client_name: string
+          created_at: string
+          delivery_plan: string
+          due_date: string
+          id: string
+          next_action: string
+          note: string | null
+          payment_confirmed_at: string | null
+          priority: string | null
+          start_date: string | null
+          status: string
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          client_name: string
+          created_at?: string
+          delivery_plan?: string
+          due_date: string
+          id?: string
+          next_action?: string
+          note?: string | null
+          payment_confirmed_at?: string | null
+          priority?: string | null
+          start_date?: string | null
+          status?: string
+          title: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          client_name?: string
+          created_at?: string
+          delivery_plan?: string
+          due_date?: string
+          id?: string
+          next_action?: string
+          note?: string | null
+          payment_confirmed_at?: string | null
+          priority?: string | null
+          start_date?: string | null
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      natori_user_profiles: {
+        Row: {
+          created_at: string
+          daily_capacity_hours: number | null
+          display_name: string | null
+          handle: string | null
+          links_url: string | null
+          portfolio_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_capacity_hours?: number | null
+          display_name?: string | null
+          handle?: string | null
+          links_url?: string | null
+          portfolio_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_capacity_hours?: number | null
+          display_name?: string | null
+          handle?: string | null
+          links_url?: string | null
+          portfolio_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       payout_batches: {
         Row: {
@@ -984,199 +1647,71 @@ export type Database = {
         }
         Relationships: []
       }
-      natori_projects: {
+      youtube_videos: {
         Row: {
-          id: string
-          user_id: string
-          title: string
-          client_name: string
-          amount: number
-          type: string
-          status: string
-          delivery_plan: string
-          priority: string | null
-          start_date: string | null
-          due_date: string
-          next_action: string
-          note: string | null
-          created_at: string
-          updated_at: string
+          comment_count: number | null
+          content_type: string | null
+          duration_iso: string | null
+          duration_seconds: number | null
+          fetched_at: string | null
+          is_shorts: boolean | null
+          like_count: number | null
+          model_name: string | null
+          prompt_version: string | null
+          published_at: string | null
+          safety_checked_at: string | null
+          safety_reasons: Json | null
+          safety_status: string | null
+          shorts_type: string | null
+          slot: string | null
+          source_news_ids: string[] | null
+          title: string | null
+          video_id: string
+          view_count: number | null
         }
         Insert: {
-          id?: string
-          user_id: string
-          title: string
-          client_name: string
-          amount?: number
-          type: string
-          status?: string
-          delivery_plan?: string
-          priority?: string | null
-          start_date?: string | null
-          due_date: string
-          next_action?: string
-          note?: string | null
-          created_at?: string
-          updated_at?: string
+          comment_count?: number | null
+          content_type?: string | null
+          duration_iso?: string | null
+          duration_seconds?: number | null
+          fetched_at?: string | null
+          is_shorts?: boolean | null
+          like_count?: number | null
+          model_name?: string | null
+          prompt_version?: string | null
+          published_at?: string | null
+          safety_checked_at?: string | null
+          safety_reasons?: Json | null
+          safety_status?: string | null
+          shorts_type?: string | null
+          slot?: string | null
+          source_news_ids?: string[] | null
+          title?: string | null
+          video_id: string
+          view_count?: number | null
         }
         Update: {
-          id?: string
-          user_id?: string
-          title?: string
-          client_name?: string
-          amount?: number
-          type?: string
-          status?: string
-          delivery_plan?: string
-          priority?: string | null
-          start_date?: string | null
-          due_date?: string
-          next_action?: string
-          note?: string | null
-          created_at?: string
-          updated_at?: string
+          comment_count?: number | null
+          content_type?: string | null
+          duration_iso?: string | null
+          duration_seconds?: number | null
+          fetched_at?: string | null
+          is_shorts?: boolean | null
+          like_count?: number | null
+          model_name?: string | null
+          prompt_version?: string | null
+          published_at?: string | null
+          safety_checked_at?: string | null
+          safety_reasons?: Json | null
+          safety_status?: string | null
+          shorts_type?: string | null
+          slot?: string | null
+          source_news_ids?: string[] | null
+          title?: string | null
+          video_id?: string
+          view_count?: number | null
         }
         Relationships: []
-      }
-      natori_pricing_configs: {
-        Row: {
-          id: string
-          user_id: string
-          preset_key: string
-          name: string
-          config: Json
-          is_default: boolean
-          sort_order: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          preset_key: string
-          name: string
-          config: Json
-          is_default?: boolean
-          sort_order?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          preset_key?: string
-          name?: string
-          config?: Json
-          is_default?: boolean
-          sort_order?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      natori_user_profiles: {
-        Row: {
-          user_id: string
-          handle: string | null
-          display_name: string | null
-          portfolio_url: string | null
-          links_url: string | null
-          daily_capacity_hours: number | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          user_id: string
-          handle?: string | null
-          display_name?: string | null
-          portfolio_url?: string | null
-          links_url?: string | null
-          daily_capacity_hours?: number | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          user_id?: string
-          handle?: string | null
-          display_name?: string | null
-          portfolio_url?: string | null
-          links_url?: string | null
-          daily_capacity_hours?: number | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      natori_events: {
-        Row: {
-          id: string
-          user_id: string
-          title: string
-          date: string
-          note: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          title: string
-          date: string
-          note?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          title?: string
-          date?: string
-          note?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      natori_project_tasks: {
-        Row: {
-          id: string
-          project_id: string
-          task_key: string
-          label: string
-          stage: string
-          estimated_hours: number | null
-          done: boolean
-          sort_order: number
-        }
-        Insert: {
-          id?: string
-          project_id: string
-          task_key: string
-          label: string
-          stage: string
-          estimated_hours?: number | null
-          done?: boolean
-          sort_order?: number
-        }
-        Update: {
-          id?: string
-          project_id?: string
-          task_key?: string
-          label?: string
-          stage?: string
-          estimated_hours?: number | null
-          done?: boolean
-          sort_order?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "natori_project_tasks_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "natori_projects"
-            referencedColumns: ["id"]
-          }
-        ]
       }
     }
     Views: {
@@ -1219,6 +1754,35 @@ export type Database = {
         }
         Relationships: []
       }
+      entry_comment_counts: {
+        Row: {
+          comment_count: number | null
+          entry_id: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entry_comments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entry_comments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_entry_workflow"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "entry_comments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_public_portfolio_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entry_view_stats: {
         Row: {
           entry_id: number | null
@@ -1257,11 +1821,6 @@ export type Database = {
           confirmed_at: string | null
           created_at: string | null
           display_end_at: string | null
-          guarantee_total: number | null
-          guarantee_remaining: number | null
-          guarantee_period_start: string | null
-          guarantee_period_end: string | null
-          guarantee_extended_count: number | null
           display_ready: boolean | null
           display_start_at: string | null
           entry_id: number | null
@@ -1379,11 +1938,6 @@ export type Database = {
           created_at: string | null
           description: string | null
           display_end_at: string | null
-          guarantee_total: number | null
-          guarantee_remaining: number | null
-          guarantee_period_start: string | null
-          guarantee_period_end: string | null
-          guarantee_extended_count: number | null
           display_ready: boolean | null
           display_start_at: string | null
           edition_remaining: number | null
@@ -1405,11 +1959,6 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           display_end_at?: string | null
-          guarantee_total?: number | null
-          guarantee_remaining?: number | null
-          guarantee_period_start?: string | null
-          guarantee_period_end?: string | null
-          guarantee_extended_count?: number | null
           display_ready?: boolean | null
           display_start_at?: string | null
           edition_remaining?: number | null
@@ -1431,11 +1980,6 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           display_end_at?: string | null
-          guarantee_total?: number | null
-          guarantee_remaining?: number | null
-          guarantee_period_start?: string | null
-          guarantee_period_end?: string | null
-          guarantee_extended_count?: number | null
           display_ready?: boolean | null
           display_start_at?: string | null
           edition_remaining?: number | null
@@ -1509,6 +2053,15 @@ export type Database = {
               sold_out: boolean
             }[]
           }
+      get_auth_user_id_by_email: { Args: { p_email: string }; Returns: string }
+      get_gallery_stats: {
+        Args: never
+        Returns: {
+          artists_count: number
+          unique_views: number
+          works_count: number
+        }[]
+      }
       get_my_artist_view_stats: {
         Args: { p_user_id: string }
         Returns: {
@@ -1677,6 +2230,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       payout_status: ["pending", "scheduled", "paid", "failed"],

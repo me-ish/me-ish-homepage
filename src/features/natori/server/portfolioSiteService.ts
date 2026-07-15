@@ -4,7 +4,6 @@ import "server-only";
 // /natori/portfolio の掲載内容の読み込み・保存と画像アップロード。
 // 書き込みは service role 経由のみ（テーブルに書き込みRLSポリシーは無い）。
 import sharp from "sharp";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { canUseNatoriManagement } from "./requireNatoriAdmin";
 import { parsePortfolioContent } from "@/features/natori/lib/portfolioContent";
@@ -15,13 +14,8 @@ const TABLE = "natori_portfolio_content";
 const BUCKET = "natori-portfolio";
 const ROW_ID = "main";
 
-/**
- * 生成済みのDB型 (Database) に natori_portfolio_content がまだ含まれていないため、
- * 非ジェネリックな SupabaseClient として扱う（projectsService の cast と同じ事情）。
- * 型の再生成後に外してよい。
- */
-function adminClient(): SupabaseClient {
-  return supabaseAdmin() as unknown as SupabaseClient;
+function adminClient() {
+  return supabaseAdmin();
 }
 
 const ALLOWED_IMAGE_MIMES = new Set([

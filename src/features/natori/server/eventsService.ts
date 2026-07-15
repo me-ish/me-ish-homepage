@@ -17,7 +17,7 @@ export type ListNatoriEventsResult =
 
 export async function listNatoriAdminEvents(): Promise<ListNatoriEventsResult> {
   const admin = supabaseAdmin();
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from(EVENTS_TABLE)
     .select("*")
     .order("date", { ascending: true });
@@ -39,7 +39,7 @@ export async function createNatoriAdminEvent(input: {
   note?: string | null;
 }): Promise<CreateNatoriEventResult> {
   const admin = supabaseAdmin();
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from(EVENTS_TABLE)
     .insert({
       user_id: input.userId,
@@ -72,7 +72,7 @@ export async function updateNatoriAdminEvent(
   if (Object.keys(payload).length === 0) return { kind: "ok" };
 
   const admin = supabaseAdmin();
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from(EVENTS_TABLE)
     .update(payload)
     .eq("id", id)
@@ -88,7 +88,7 @@ export async function updateNatoriAdminEvent(
 
 export async function deleteNatoriAdminEvent(id: string): Promise<NatoriEventMutationResult> {
   const admin = supabaseAdmin();
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from(EVENTS_TABLE)
     .delete()
     .eq("id", id)

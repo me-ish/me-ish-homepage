@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       admin_audit_log: {
@@ -200,6 +225,102 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      aura_projects: {
+        Row: {
+          accent_color: string | null
+          avatar_path: string | null
+          avatar_shape: string
+          bg_pattern: string
+          bio: string | null
+          created_at: string
+          display_title: string | null
+          email: string | null
+          font_preset: string | null
+          id: string
+          layout_pref: string | null
+          name: string | null
+          payment_status: string
+          public_id: string | null
+          public_slug: string | null
+          published_at: string | null
+          renderer_version: string
+          section_order: string[] | null
+          section_visibility: Json
+          services: Json
+          session_token: string
+          skills: Json
+          social: Json
+          status: string
+          tagline: string | null
+          theme_id: string
+          updated_at: string
+          visibility: string
+          works: Json
+        }
+        Insert: {
+          accent_color?: string | null
+          avatar_path?: string | null
+          avatar_shape?: string
+          bg_pattern?: string
+          bio?: string | null
+          created_at?: string
+          display_title?: string | null
+          email?: string | null
+          font_preset?: string | null
+          id?: string
+          layout_pref?: string | null
+          name?: string | null
+          payment_status?: string
+          public_id?: string | null
+          public_slug?: string | null
+          published_at?: string | null
+          renderer_version?: string
+          section_order?: string[] | null
+          section_visibility?: Json
+          services?: Json
+          session_token: string
+          skills?: Json
+          social?: Json
+          status?: string
+          tagline?: string | null
+          theme_id?: string
+          updated_at?: string
+          visibility?: string
+          works?: Json
+        }
+        Update: {
+          accent_color?: string | null
+          avatar_path?: string | null
+          avatar_shape?: string
+          bg_pattern?: string
+          bio?: string | null
+          created_at?: string
+          display_title?: string | null
+          email?: string | null
+          font_preset?: string | null
+          id?: string
+          layout_pref?: string | null
+          name?: string | null
+          payment_status?: string
+          public_id?: string | null
+          public_slug?: string | null
+          published_at?: string | null
+          renderer_version?: string
+          section_order?: string[] | null
+          section_visibility?: Json
+          services?: Json
+          session_token?: string
+          skills?: Json
+          social?: Json
+          status?: string
+          tagline?: string | null
+          theme_id?: string
+          updated_at?: string
+          visibility?: string
+          works?: Json
+        }
+        Relationships: []
       }
       aura_promo_counters: {
         Row: {
@@ -812,6 +933,126 @@ export type Database = {
         }
         Relationships: []
       }
+      kpi_jobs: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          duration_sec: number | null
+          error_message: string | null
+          executed_at: string
+          id: string
+          job_name: string
+          slot: string | null
+          success: boolean
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          duration_sec?: number | null
+          error_message?: string | null
+          executed_at: string
+          id?: string
+          job_name: string
+          slot?: string | null
+          success?: boolean
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          duration_sec?: number | null
+          error_message?: string | null
+          executed_at?: string
+          id?: string
+          job_name?: string
+          slot?: string | null
+          success?: boolean
+        }
+        Relationships: []
+      }
+      kpi_posts: {
+        Row: {
+          content: string | null
+          created_at: string
+          delay_sec: number | null
+          engagement_rate: number | null
+          error_message: string | null
+          final_post_text: string | null
+          id: string
+          impressions: number | null
+          impressions_fetched_at: string | null
+          kind: string | null
+          likes: number | null
+          model_name: string | null
+          posted_at: string | null
+          profile_clicks: number | null
+          prompt_version: string | null
+          replies: number | null
+          retweets: number | null
+          safety_checked_at: string | null
+          safety_reasons: Json | null
+          safety_status: string | null
+          scheduled_at: string | null
+          source_market_snapshot: Json | null
+          source_news_ids: string[] | null
+          success: boolean | null
+          x_post_id: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          delay_sec?: number | null
+          engagement_rate?: number | null
+          error_message?: string | null
+          final_post_text?: string | null
+          id?: string
+          impressions?: number | null
+          impressions_fetched_at?: string | null
+          kind?: string | null
+          likes?: number | null
+          model_name?: string | null
+          posted_at?: string | null
+          profile_clicks?: number | null
+          prompt_version?: string | null
+          replies?: number | null
+          retweets?: number | null
+          safety_checked_at?: string | null
+          safety_reasons?: Json | null
+          safety_status?: string | null
+          scheduled_at?: string | null
+          source_market_snapshot?: Json | null
+          source_news_ids?: string[] | null
+          success?: boolean | null
+          x_post_id?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          delay_sec?: number | null
+          engagement_rate?: number | null
+          error_message?: string | null
+          final_post_text?: string | null
+          id?: string
+          impressions?: number | null
+          impressions_fetched_at?: string | null
+          kind?: string | null
+          likes?: number | null
+          model_name?: string | null
+          posted_at?: string | null
+          profile_clicks?: number | null
+          prompt_version?: string | null
+          replies?: number | null
+          retweets?: number | null
+          safety_checked_at?: string | null
+          safety_reasons?: Json | null
+          safety_status?: string | null
+          scheduled_at?: string | null
+          source_market_snapshot?: Json | null
+          source_news_ids?: string[] | null
+          success?: boolean | null
+          x_post_id?: string | null
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           created_at: string
@@ -854,6 +1095,263 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      natori_events: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          note: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          note?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          note?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      natori_links_content: {
+        Row: {
+          content: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          content: Json
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      natori_page_events: {
+        Row: {
+          created_at: string
+          event: string
+          id: number
+          label: string
+          path: string
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          id?: never
+          label?: string
+          path?: string
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          id?: never
+          label?: string
+          path?: string
+        }
+        Relationships: []
+      }
+      natori_portfolio_content: {
+        Row: {
+          content: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          content: Json
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      natori_pricing_configs: {
+        Row: {
+          config: Json
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          preset_key: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          config: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          preset_key: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          preset_key?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      natori_project_tasks: {
+        Row: {
+          done: boolean
+          estimated_hours: number | null
+          id: string
+          label: string
+          project_id: string
+          sort_order: number
+          stage: string
+          task_key: string
+        }
+        Insert: {
+          done?: boolean
+          estimated_hours?: number | null
+          id?: string
+          label: string
+          project_id: string
+          sort_order?: number
+          stage: string
+          task_key: string
+        }
+        Update: {
+          done?: boolean
+          estimated_hours?: number | null
+          id?: string
+          label?: string
+          project_id?: string
+          sort_order?: number
+          stage?: string
+          task_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "natori_project_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "natori_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      natori_projects: {
+        Row: {
+          amount: number
+          client_name: string
+          created_at: string
+          delivery_plan: string
+          due_date: string
+          id: string
+          next_action: string
+          note: string | null
+          payment_confirmed_at: string | null
+          priority: string | null
+          start_date: string | null
+          status: string
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          client_name: string
+          created_at?: string
+          delivery_plan?: string
+          due_date: string
+          id?: string
+          next_action?: string
+          note?: string | null
+          payment_confirmed_at?: string | null
+          priority?: string | null
+          start_date?: string | null
+          status?: string
+          title: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          client_name?: string
+          created_at?: string
+          delivery_plan?: string
+          due_date?: string
+          id?: string
+          next_action?: string
+          note?: string | null
+          payment_confirmed_at?: string | null
+          priority?: string | null
+          start_date?: string | null
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      natori_user_profiles: {
+        Row: {
+          created_at: string
+          daily_capacity_hours: number | null
+          display_name: string | null
+          handle: string | null
+          links_url: string | null
+          portfolio_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_capacity_hours?: number | null
+          display_name?: string | null
+          handle?: string | null
+          links_url?: string | null
+          portfolio_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_capacity_hours?: number | null
+          display_name?: string | null
+          handle?: string | null
+          links_url?: string | null
+          portfolio_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       payout_batches: {
         Row: {
@@ -1146,6 +1644,72 @@ export type Database = {
           sort_order?: number | null
           tagline?: string | null
           twitter_url?: string | null
+        }
+        Relationships: []
+      }
+      youtube_videos: {
+        Row: {
+          comment_count: number | null
+          content_type: string | null
+          duration_iso: string | null
+          duration_seconds: number | null
+          fetched_at: string | null
+          is_shorts: boolean | null
+          like_count: number | null
+          model_name: string | null
+          prompt_version: string | null
+          published_at: string | null
+          safety_checked_at: string | null
+          safety_reasons: Json | null
+          safety_status: string | null
+          shorts_type: string | null
+          slot: string | null
+          source_news_ids: string[] | null
+          title: string | null
+          video_id: string
+          view_count: number | null
+        }
+        Insert: {
+          comment_count?: number | null
+          content_type?: string | null
+          duration_iso?: string | null
+          duration_seconds?: number | null
+          fetched_at?: string | null
+          is_shorts?: boolean | null
+          like_count?: number | null
+          model_name?: string | null
+          prompt_version?: string | null
+          published_at?: string | null
+          safety_checked_at?: string | null
+          safety_reasons?: Json | null
+          safety_status?: string | null
+          shorts_type?: string | null
+          slot?: string | null
+          source_news_ids?: string[] | null
+          title?: string | null
+          video_id: string
+          view_count?: number | null
+        }
+        Update: {
+          comment_count?: number | null
+          content_type?: string | null
+          duration_iso?: string | null
+          duration_seconds?: number | null
+          fetched_at?: string | null
+          is_shorts?: boolean | null
+          like_count?: number | null
+          model_name?: string | null
+          prompt_version?: string | null
+          published_at?: string | null
+          safety_checked_at?: string | null
+          safety_reasons?: Json | null
+          safety_status?: string | null
+          shorts_type?: string | null
+          slot?: string | null
+          source_news_ids?: string[] | null
+          title?: string | null
+          video_id?: string
+          view_count?: number | null
         }
         Relationships: []
       }
@@ -1489,6 +2053,7 @@ export type Database = {
               sold_out: boolean
             }[]
           }
+      get_auth_user_id_by_email: { Args: { p_email: string }; Returns: string }
       get_gallery_stats: {
         Args: never
         Returns: {
@@ -1665,6 +2230,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       payout_status: ["pending", "scheduled", "paid", "failed"],

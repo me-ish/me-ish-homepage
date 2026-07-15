@@ -44,7 +44,7 @@ type ProjectRow = {
 
 async function fetchProjectRow(projectId: string): Promise<ProjectRow | null> {
   const admin = supabaseAdmin();
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from("natori_projects")
     .select("id, title, client_name, amount, status, note, payment_confirmed_at")
     .eq("id", projectId)
@@ -52,7 +52,7 @@ async function fetchProjectRow(projectId: string): Promise<ProjectRow | null> {
   if (error) {
     // payment_confirmed_at カラムが無い旧環境向けフォールバック
     if (/payment_confirmed_at/i.test(error.message ?? "")) {
-      const retry = await (admin as any)
+      const retry = await admin
         .from("natori_projects")
         .select("id, title, client_name, amount, status, note")
         .eq("id", projectId)
@@ -186,7 +186,7 @@ export async function sendNatoriOrderMail(
   }
 
   const admin = supabaseAdmin();
-  const { error } = await (admin as any)
+  const { error } = await admin
     .from("natori_projects")
     .update(update)
     .eq("id", project.id);
@@ -229,14 +229,14 @@ export async function markNatoriCommissionPaid(
   };
 
   const admin = supabaseAdmin();
-  let { error } = await (admin as any)
+  let { error } = await admin
     .from("natori_projects")
     .update(update)
     .eq("id", projectId);
   if (error && /payment_confirmed_at/i.test(error.message ?? "")) {
     // カラム未追加の旧環境ではステータス更新だけ通す
     delete update.payment_confirmed_at;
-    const retry = await (admin as any)
+    const retry = await admin
       .from("natori_projects")
       .update(update)
       .eq("id", projectId);

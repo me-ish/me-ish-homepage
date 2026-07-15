@@ -254,10 +254,9 @@ async function handleAuraPurchase(
   const admin = supabaseAdmin();
 
   try {
-    // stripe_session_id はDBに存在するが generated types に未反映のため as any
-    const { data: rec, error: selErr } = await (admin as any)
+    const { data: rec, error: selErr } = await admin
       .from("aura_requests")
-      .select("id, payment_status, stripe_session_id")
+      .select("id, payment_status")
       .eq("id", requestId)
       .maybeSingle();
 
@@ -277,11 +276,13 @@ async function handleAuraPurchase(
       return NextResponse.json({ ok: true, received: true }, { status: 200 });
     }
 
-    const { error: updErr } = await (admin as any)
+    // 注: aura_requests に stripe_session_id 列は存在しない（型再生成で発覚）。
+    // 以前は存在しない列を含む update が常に失敗し、paid 反映されないバグだった。
+    const { error: updErr } = await admin
       .from("aura_requests")
       .update({
         payment_status: "paid",
-        stripe_session_id: session.id,
+        paid_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq("id", requestId);
@@ -339,7 +340,7 @@ async function handleCardPurchase(
       return NextResponse.json({ ok: true, received: true }, { status: 200 });
     }
 
-    const alreadyPaid = String((rec as any).payment_status ?? "").toLowerCase() === "paid";
+    const alreadyPaid = String(rec.payment_status ?? "").toLowerCase() === "paid";
     if (alreadyPaid) {
       return NextResponse.json({ ok: true, received: true }, { status: 200 });
     }
