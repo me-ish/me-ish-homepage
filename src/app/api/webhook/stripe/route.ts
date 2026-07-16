@@ -9,6 +9,10 @@ import Stripe from "stripe";
 import { issueReissueLink } from "@/lib/coa/server";
 import { getSiteUrl, calcFee, calcReward } from "@/lib/constants";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import {
+  claimStripeEvent,
+  releaseStripeEvent,
+} from "@/lib/stripe/processedEvents";
 import { markNatoriCommissionPaid } from "@/features/natori/server/orderMailService";
 
 export const runtime = "nodejs";
@@ -109,6 +113,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, received: true }, { status: 200 });
   }
 
+  // イベント単位の dedup。同一 event.id の再送・同時配送は最初の1リクエスト
+  // だけが処理権を得る。処理が一時エラーで失敗した経路では releaseStripeEvent で
+  // 行を消してから 500 を返し、Stripe の再送でリトライさせる。
+  const claim = await claimStripeEvent(event.id);
+  if (claim === "duplicate") {
+    return NextResponse.json(
+      { ok: true, received: true, deduped: true },
+      { status: 200 }
+    );
+  }
+  if (claim === "error") {
+    // dedup 行は入っていないので、500 で再送させれば取りこぼさない
+    return NextResponse.json({ ok: false, error: "dedup_failed" }, { status: 500 });
+  }
+
   const kind = String(session.metadata?.kind ?? "");
   const entryId = String(session.metadata?.entryId ?? "");
   const requestId = String(session.metadata?.requestId ?? "");
@@ -148,7 +167,9 @@ export async function POST(req: NextRequest) {
  * ナトリのコミッション入金処理
  * - natori_projects に payment_confirmed_at を記録し rough（作業開始）へ進める
  * - ナトリ宛に入金通知メールを送る
- * - 冪等性: 既に payment_confirmed_at 済みなら何もしない
+ * - 冪等性: `payment_confirmed_at IS NULL` 条件の原子的 UPDATE（orderMailService 側）
+ * - 一時的な DB エラーは claim を解放して 500（Stripe に再送させる）。
+ *   対象行なしは恒久エラーなので 200 ACK。
  */
 async function handleNatoriCommissionPayment(
   eventId: string,
@@ -157,15 +178,23 @@ async function handleNatoriCommissionPayment(
 ): Promise<NextResponse> {
   try {
     const result = await markNatoriCommissionPaid(projectId, session.id, session.amount_total);
-    if (result.kind === "not-found" || result.kind === "db-error") {
+    if (result.kind === "db-error") {
       console.error("[webhook/stripe/natori-commission] mark paid failed:", {
         eventId,
         sessionId: session.id,
         projectId,
         result: result.kind,
       });
+      await releaseStripeEvent(eventId);
+      return NextResponse.json({ ok: false, error: "db_error" }, { status: 500 });
     }
-    // 見つからない/DBエラーでも 200（Stripe の再送ループ回避。ログから追跡する）
+    if (result.kind === "not-found") {
+      console.error("[webhook/stripe/natori-commission] project not found:", {
+        eventId,
+        sessionId: session.id,
+        projectId,
+      });
+    }
     return NextResponse.json({ ok: true, received: true }, { status: 200 });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
@@ -175,7 +204,8 @@ async function handleNatoriCommissionPayment(
       projectId,
       error: message,
     });
-    return NextResponse.json({ ok: true, received: true }, { status: 200 });
+    await releaseStripeEvent(eventId);
+    return NextResponse.json({ ok: false, error: "exception" }, { status: 500 });
   }
 }
 
@@ -193,36 +223,18 @@ async function handleEntryPlanPurchase(
   const admin = supabaseAdmin();
 
   try {
-    const id = Number(entryId);
-    const { data: rec, error: selErr } = await admin
-      .from("entries")
-      .select("id, plan_payment_status")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (selErr || !rec) {
-      console.error("[webhook/stripe/entry-plan] entry not found:", {
-        eventId,
-        sessionId: session.id,
-        entryId,
-        error: selErr,
-      });
-      return NextResponse.json({ ok: true, received: true }, { status: 200 });
-    }
-
-    const alreadyPaid = String(rec.plan_payment_status ?? "").toLowerCase() === "paid";
-    if (alreadyPaid) {
-      return NextResponse.json({ ok: true, received: true }, { status: 200 });
-    }
-
-    const { error: updErr } = await admin
+    // 未払い行だけを対象にした条件付き UPDATE。二重配送がレースしても
+    // 更新できるのは1リクエストだけ（select での事前判定はしない）。
+    const { data: updated, error: updErr } = await admin
       .from("entries")
       .update({
         plan_payment_status: "paid",
         plan_payment_paid_at: new Date().toISOString(),
         plan_payment_session_id: session.id,
       })
-      .eq("id", id);
+      .eq("id", Number(entryId))
+      .or("plan_payment_status.is.null,plan_payment_status.neq.paid")
+      .select("id");
 
     if (updErr) {
       console.error("[webhook/stripe/entry-plan] update failed:", {
@@ -230,6 +242,17 @@ async function handleEntryPlanPurchase(
         sessionId: session.id,
         entryId,
         error: updErr,
+      });
+      await releaseStripeEvent(eventId);
+      return NextResponse.json({ ok: false, error: "db_error" }, { status: 500 });
+    }
+
+    if (!updated || updated.length === 0) {
+      // already-paid か対象行なし。どちらも恒久なので ACK（ログで追跡）
+      console.log("[webhook/stripe/entry-plan] skipped (already paid or missing):", {
+        eventId,
+        sessionId: session.id,
+        entryId,
       });
     }
 
@@ -242,7 +265,8 @@ async function handleEntryPlanPurchase(
       entryId,
       error: message,
     });
-    return NextResponse.json({ ok: true, received: true }, { status: 200 });
+    await releaseStripeEvent(eventId);
+    return NextResponse.json({ ok: false, error: "exception" }, { status: 500 });
   }
 }
 
@@ -254,38 +278,19 @@ async function handleAuraPurchase(
   const admin = supabaseAdmin();
 
   try {
-    const { data: rec, error: selErr } = await admin
-      .from("aura_requests")
-      .select("id, payment_status")
-      .eq("id", requestId)
-      .maybeSingle();
-
-    if (selErr || !rec) {
-      console.error("[webhook/stripe/aura] request not found:", {
-        eventId,
-        sessionId: session.id,
-        requestId,
-        error: selErr,
-      });
-      // 見つからなくても 200（再送ループ回避）
-      return NextResponse.json({ ok: true, received: true }, { status: 200 });
-    }
-
-    const alreadyPaid = String(rec.payment_status ?? "").toLowerCase() === "paid";
-    if (alreadyPaid) {
-      return NextResponse.json({ ok: true, received: true }, { status: 200 });
-    }
-
+    // 未払い行だけを対象にした条件付き UPDATE（select での事前判定はしない）。
     // 注: aura_requests に stripe_session_id 列は存在しない（型再生成で発覚）。
     // 以前は存在しない列を含む update が常に失敗し、paid 反映されないバグだった。
-    const { error: updErr } = await admin
+    const { data: updated, error: updErr } = await admin
       .from("aura_requests")
       .update({
         payment_status: "paid",
         paid_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
-      .eq("id", requestId);
+      .eq("id", requestId)
+      .neq("payment_status", "paid")
+      .select("id");
 
     if (updErr) {
       console.error("[webhook/stripe/aura] update failed:", {
@@ -294,8 +299,17 @@ async function handleAuraPurchase(
         requestId,
         error: updErr,
       });
-      // 200返す（Stripe再送で復旧の可能性）
-      return NextResponse.json({ ok: true, received: true }, { status: 200 });
+      await releaseStripeEvent(eventId);
+      return NextResponse.json({ ok: false, error: "db_error" }, { status: 500 });
+    }
+
+    if (!updated || updated.length === 0) {
+      // already-paid か対象行なし。どちらも恒久なので ACK（ログで追跡）
+      console.log("[webhook/stripe/aura] skipped (already paid or missing):", {
+        eventId,
+        sessionId: session.id,
+        requestId,
+      });
     }
 
     return NextResponse.json({ ok: true, received: true }, { status: 200 });
@@ -307,14 +321,15 @@ async function handleAuraPurchase(
       requestId,
       error: message,
     });
-    return NextResponse.json({ ok: true, received: true }, { status: 200 });
+    await releaseStripeEvent(eventId);
+    return NextResponse.json({ ok: false, error: "exception" }, { status: 500 });
   }
 }
 
 /**
  * CARD購入処理
  * - card_requests.payment_status を paid に更新
- * - 冪等性: 既に paid なら何もしない
+ * - 冪等性: 未払い行だけを対象にした条件付き UPDATE
  */
 async function handleCardPurchase(
   eventId: string,
@@ -324,28 +339,8 @@ async function handleCardPurchase(
   const admin = supabaseAdmin();
 
   try {
-    const { data: rec, error: selErr } = await admin
-      .from("card_requests")
-      .select("id, payment_status, stripe_session_id")
-      .eq("id", requestId)
-      .maybeSingle();
-
-    if (selErr || !rec) {
-      console.error("[webhook/stripe/card] request not found:", {
-        eventId,
-        sessionId: session.id,
-        requestId,
-        error: selErr,
-      });
-      return NextResponse.json({ ok: true, received: true }, { status: 200 });
-    }
-
-    const alreadyPaid = String(rec.payment_status ?? "").toLowerCase() === "paid";
-    if (alreadyPaid) {
-      return NextResponse.json({ ok: true, received: true }, { status: 200 });
-    }
-
-    const { error: updErr } = await admin
+    // payment_status は nullable なので is.null も未払い扱いに含める
+    const { data: updated, error: updErr } = await admin
       .from("card_requests")
       .update({
         payment_status: "paid",
@@ -353,7 +348,9 @@ async function handleCardPurchase(
         paid_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
-      .eq("id", requestId);
+      .eq("id", requestId)
+      .or("payment_status.is.null,payment_status.neq.paid")
+      .select("id");
 
     if (updErr) {
       console.error("[webhook/stripe/card] update failed:", {
@@ -362,7 +359,16 @@ async function handleCardPurchase(
         requestId,
         error: updErr,
       });
-      return NextResponse.json({ ok: true, received: true }, { status: 200 });
+      await releaseStripeEvent(eventId);
+      return NextResponse.json({ ok: false, error: "db_error" }, { status: 500 });
+    }
+
+    if (!updated || updated.length === 0) {
+      console.log("[webhook/stripe/card] skipped (already paid or missing):", {
+        eventId,
+        sessionId: session.id,
+        requestId,
+      });
     }
 
     return NextResponse.json({ ok: true, received: true }, { status: 200 });
@@ -374,14 +380,16 @@ async function handleCardPurchase(
       requestId,
       error: message,
     });
-    return NextResponse.json({ ok: true, received: true }, { status: 200 });
+    await releaseStripeEvent(eventId);
+    return NextResponse.json({ ok: false, error: "exception" }, { status: 500 });
   }
 }
 
 /**
  * ギャラリー購入処理
- * - finalize_sale RPC で原子的に edition_sold を加算（※DB側で session 冪等化するのが理想）
- * - sales テーブルに記録（冪等性キー: stripe_session_id）
+ * - finalize_sale RPC が DB 側で stripe_session_id を冪等キーに原子化済み
+ *   （ON CONFLICT DO NOTHING で確保できた場合のみ edition_sold を加算）
+ * - 手前の sales select は早期 return 用の最適化で、正しさは RPC 側が担保
  */
 async function handleGalleryPurchase(
   eventId: string,
@@ -600,7 +608,10 @@ async function handleGalleryPurchase(
       entryId: entryId.toString(),
       error: message,
     });
-    return NextResponse.json({ ok: true, received: true }, { status: 200 });
+    // 一時障害の可能性が高いので claim を解放して再送させる
+    // （finalize_sale が session 冪等なので再実行しても二重加算しない）
+    await releaseStripeEvent(eventId);
+    return NextResponse.json({ ok: false, error: "exception" }, { status: 500 });
   }
 }
 

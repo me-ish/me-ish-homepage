@@ -207,21 +207,25 @@ export type MarkNatoriCommissionPaidResult =
 /**
  * Stripe Webhook からの入金反映。payment_confirmed_at を記録して rough
  * （作業開始）へ進め、ナトリ宛に入金通知メールを送る。
- * 二重配送されても payment_confirmed_at 済みならスキップ（冪等）。
+ *
+ * 冪等性は `payment_confirmed_at IS NULL` を条件に含めた原子的な UPDATE で
+ * 担保する。同一 Checkout の completed / async_payment_succeeded や再送が
+ * 同時に届いても、更新できるのは 1 リクエストだけで、note 追記・通知メールも
+ * その 1 回に限られる（select での事前判定はレースするため行わない）。
  */
 export async function markNatoriCommissionPaid(
   projectId: string,
   sessionId: string,
   amountTotal: number | null
 ): Promise<MarkNatoriCommissionPaidResult> {
+  // note 追記とメール本文のための読み取り。冪等判定には使わない。
   const project = await fetchProjectRow(projectId);
   if (!project) return { kind: "not-found" };
-  if (project.payment_confirmed_at) return { kind: "already-paid" };
 
   const today = new Date().toISOString().slice(0, 10);
   const amountText = amountTotal != null ? formatYen(amountTotal) : formatYen(project.amount);
   const logEntry = `【入金確認（Stripe） ${today}】${amountText} / session: ${sessionId}`;
-  const update: Record<string, unknown> = {
+  const update = {
     status: "rough",
     next_action: getNextActionForStatus("rough"),
     payment_confirmed_at: new Date().toISOString(),
@@ -229,22 +233,19 @@ export async function markNatoriCommissionPaid(
   };
 
   const admin = supabaseAdmin();
-  let { error } = await admin
+  const { data: updated, error } = await admin
     .from("natori_projects")
     .update(update)
-    .eq("id", projectId);
-  if (error && /payment_confirmed_at/i.test(error.message ?? "")) {
-    // カラム未追加の旧環境ではステータス更新だけ通す
-    delete update.payment_confirmed_at;
-    const retry = await admin
-      .from("natori_projects")
-      .update(update)
-      .eq("id", projectId);
-    error = retry.error;
-  }
+    .eq("id", projectId)
+    .is("payment_confirmed_at", null)
+    .select("id");
   if (error) {
     console.error("[natori-order-mail] mark paid failed", error);
     return { kind: "db-error" };
+  }
+  if (!updated || updated.length === 0) {
+    // 別リクエスト（再送・別イベント）が先に入金確定済み
+    return { kind: "already-paid" };
   }
 
   // ナトリへの入金通知（失敗しても入金反映自体は成功扱い）

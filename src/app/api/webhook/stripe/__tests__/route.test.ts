@@ -1,6 +1,8 @@
 // Stripe Webhook (POST /api/webhook/stripe) のテスト。
-// 署名検証まわりのガード、metadata による4分岐（gallery / entry_plan / aura /
-// card / natori_commission）のルーティング、二重配送への冪等性を固定する。
+// 署名検証まわりのガード、metadata による分岐（gallery / entry_plan / aura /
+// card / natori_commission）のルーティング、イベント単位の dedup
+// (processed_stripe_events) と条件付き UPDATE による二重配送への冪等性、
+// 一時 DB エラー時の 500（claim 解放つき）を固定する。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
@@ -42,7 +44,11 @@ import { POST } from "../route";
 
 type Result = { data: unknown; error: unknown };
 
-function chainResult(result: Result) {
+/**
+ * どこまでチェーンしても最後は result に解決される query builder モック。
+ * calls を渡すとチェーンしたメソッド呼び出し（filter 等）を記録する。
+ */
+function chainResult(result: Result, calls?: string[]) {
   const chain: unknown = new Proxy(
     {},
     {
@@ -51,32 +57,62 @@ function chainResult(result: Result) {
         if (prop === "single" || prop === "maybeSingle") {
           return vi.fn().mockResolvedValue(result);
         }
-        return vi.fn().mockReturnValue(chain);
+        return (...args: unknown[]) => {
+          calls?.push(`${String(prop)}(${args.map((a) => JSON.stringify(a)).join(",")})`);
+          return chain;
+        };
       },
     }
   );
   return chain;
 }
 
-/** テーブルごとの select 結果と、update / upsert payload の記録 */
-function makeTable(selectResult: Result, options: { updateResult?: Result } = {}) {
+/** テーブルごとの select 結果と、update / upsert / delete の記録 */
+function makeTable(
+  selectResult: Result,
+  options: { updateResult?: Result; upsertResult?: Result } = {}
+) {
   const updates: Record<string, unknown>[] = [];
+  const updateCalls: string[] = [];
   const upserts: unknown[] = [];
+  const deletes: string[] = [];
   return {
     updates,
+    updateCalls,
     upserts,
+    deletes,
     api: {
       select: vi.fn(() => chainResult(selectResult)),
       update: vi.fn((payload: Record<string, unknown>) => {
         updates.push(payload);
-        return chainResult(options.updateResult ?? { data: [{ id: "row-1" }], error: null });
+        return chainResult(
+          options.updateResult ?? { data: [{ id: "row-1" }], error: null },
+          updateCalls
+        );
       }),
       upsert: vi.fn((payload: unknown) => {
         upserts.push(payload);
-        return chainResult({ data: null, error: null });
+        return chainResult(options.upsertResult ?? { data: null, error: null });
       }),
+      delete: vi.fn(() => chainResult({ data: null, error: null }, deletes)),
     },
   };
+}
+
+/**
+ * processed_stripe_events（イベント dedup）テーブルのモック。
+ * claim: "claimed"（新規挿入=処理権あり） / "duplicate"（衝突=二重配送） / "error"
+ */
+function dedupTable(claim: "claimed" | "duplicate" | "error" = "claimed") {
+  return makeTable(
+    { data: null, error: null },
+    {
+      upsertResult:
+        claim === "error"
+          ? { data: null, error: { message: "db down" } }
+          : { data: claim === "claimed" ? [{ event_id: "evt_1" }] : [], error: null },
+    }
+  );
 }
 
 function useTables(tables: Record<string, { api: unknown }>) {
@@ -174,8 +210,53 @@ describe("webhook guards", () => {
 
 /* ---------- ルーティング ---------- */
 
+describe("event dedup (processed_stripe_events)", () => {
+  it("同一 event の再送は claim が duplicate になり、何も処理せず 200 ACK", async () => {
+    const dedup = dedupTable("duplicate");
+    useTables({ processed_stripe_events: dedup });
+    stubEvent(
+      makeSession({
+        metadata: { kind: "natori_commission", projectId: NATORI_PROJECT_ID },
+      })
+    );
+
+    const res = await POST(makeReq());
+    expect(res.status).toBe(200);
+    expect((await res.json()).deduped).toBe(true);
+    expect(mockMarkPaid).not.toHaveBeenCalled();
+  });
+
+  it("claim の挿入自体が失敗したら 500（dedup 行は無いので Stripe 再送で取りこぼさない）", async () => {
+    const dedup = dedupTable("error");
+    useTables({ processed_stripe_events: dedup });
+    stubEvent(
+      makeSession({
+        metadata: { kind: "natori_commission", projectId: NATORI_PROJECT_ID },
+      })
+    );
+
+    const res = await POST(makeReq());
+    expect(res.status).toBe(500);
+    expect(mockMarkPaid).not.toHaveBeenCalled();
+  });
+
+  it("claim は event.id で upsert（ignoreDuplicates）される", async () => {
+    const dedup = dedupTable("claimed");
+    useTables({ processed_stripe_events: dedup });
+    stubEvent(
+      makeSession({
+        metadata: { kind: "natori_commission", projectId: NATORI_PROJECT_ID },
+      })
+    );
+
+    await POST(makeReq());
+    expect(dedup.upserts).toEqual([{ event_id: "evt_1" }]);
+  });
+});
+
 describe("natori_commission routing", () => {
   it("kind=natori_commission + UUID projectId で入金反映を呼ぶ", async () => {
+    useTables({ processed_stripe_events: dedupTable() });
     stubEvent(
       makeSession({
         metadata: { kind: "natori_commission", projectId: NATORI_PROJECT_ID },
@@ -187,6 +268,7 @@ describe("natori_commission routing", () => {
   });
 
   it("projectId が UUID でなければ呼ばない", async () => {
+    useTables({ processed_stripe_events: dedupTable() });
     stubEvent(
       makeSession({ metadata: { kind: "natori_commission", projectId: "1 OR 1=1" } })
     );
@@ -195,13 +277,48 @@ describe("natori_commission routing", () => {
     expect(mockMarkPaid).not.toHaveBeenCalled();
   });
 
-  it("入金反映が失敗しても 200 を返す（Stripe の再送ループ回避）", async () => {
+  it("db-error（一時エラー）は claim を解放して 500（Stripe に再送させる）", async () => {
+    const dedup = dedupTable();
+    useTables({ processed_stripe_events: dedup });
     mockMarkPaid.mockResolvedValue({ kind: "db-error" });
     stubEvent(
       makeSession({
         metadata: { kind: "natori_commission", projectId: NATORI_PROJECT_ID },
       })
     );
+
+    const res = await POST(makeReq());
+    expect(res.status).toBe(500);
+    // 再送をパスさせるため dedup 行を event_id 指定で削除している
+    expect(dedup.api.delete).toHaveBeenCalledTimes(1);
+    expect(dedup.deletes).toContain('eq("event_id","evt_1")');
+  });
+
+  it("not-found（恒久エラー）は 200 ACK で再送ループさせない", async () => {
+    const dedup = dedupTable();
+    useTables({ processed_stripe_events: dedup });
+    mockMarkPaid.mockResolvedValue({ kind: "not-found" });
+    stubEvent(
+      makeSession({
+        metadata: { kind: "natori_commission", projectId: NATORI_PROJECT_ID },
+      })
+    );
+
+    const res = await POST(makeReq());
+    expect(res.status).toBe(200);
+    expect(dedup.api.delete).not.toHaveBeenCalled();
+  });
+
+  it("already-paid（completed 後の async_payment_succeeded 等）は 200 ACK", async () => {
+    useTables({ processed_stripe_events: dedupTable() });
+    mockMarkPaid.mockResolvedValue({ kind: "already-paid" });
+    stubEvent(
+      makeSession({
+        metadata: { kind: "natori_commission", projectId: NATORI_PROJECT_ID },
+      }),
+      "checkout.session.async_payment_succeeded"
+    );
+
     const res = await POST(makeReq());
     expect(res.status).toBe(200);
   });
@@ -210,12 +327,9 @@ describe("natori_commission routing", () => {
 describe("aura routing", () => {
   const AURA_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 
-  it("未払いレコードを paid にする（存在しない stripe_session_id 列は書かない）", async () => {
-    const aura = makeTable({
-      data: { id: AURA_ID, payment_status: "created" },
-      error: null,
-    });
-    useTables({ aura_requests: aura });
+  it("未払いレコードを条件付き UPDATE で paid にする（存在しない stripe_session_id 列は書かない）", async () => {
+    const aura = makeTable({ data: null, error: null });
+    useTables({ aura_requests: aura, processed_stripe_events: dedupTable() });
     stubEvent(makeSession({ metadata: { kind: "aura", requestId: AURA_ID } }));
 
     const res = await POST(makeReq());
@@ -225,31 +339,44 @@ describe("aura routing", () => {
     expect(aura.updates[0].paid_at).toBeTruthy();
     // 回帰テスト: aura_requests に存在しない列を書くと update 全体が失敗する
     expect(aura.updates[0]).not.toHaveProperty("stripe_session_id");
+    // select で事前判定せず、未払い行だけを対象にする条件が UPDATE に付いている
+    expect(aura.api.select).not.toHaveBeenCalled();
+    expect(aura.updateCalls).toContain('neq("payment_status","paid")');
   });
 
-  it("冪等: すでに paid なら update しない", async () => {
-    const aura = makeTable({
-      data: { id: AURA_ID, payment_status: "paid" },
-      error: null,
-    });
-    useTables({ aura_requests: aura });
+  it("冪等: 条件付き UPDATE が 0 行（既に paid）でも 200 ACK", async () => {
+    const aura = makeTable(
+      { data: null, error: null },
+      { updateResult: { data: [], error: null } }
+    );
+    useTables({ aura_requests: aura, processed_stripe_events: dedupTable() });
     stubEvent(makeSession({ metadata: { kind: "aura", requestId: AURA_ID } }));
 
     const res = await POST(makeReq());
     expect(res.status).toBe(200);
-    expect(aura.updates).toHaveLength(0);
+  });
+
+  it("update が DB エラーなら claim を解放して 500", async () => {
+    const aura = makeTable(
+      { data: null, error: null },
+      { updateResult: { data: null, error: { message: "db down" } } }
+    );
+    const dedup = dedupTable();
+    useTables({ aura_requests: aura, processed_stripe_events: dedup });
+    stubEvent(makeSession({ metadata: { kind: "aura", requestId: AURA_ID } }));
+
+    const res = await POST(makeReq());
+    expect(res.status).toBe(500);
+    expect(dedup.api.delete).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("card routing", () => {
   const CARD_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 
-  it("未払いレコードを paid にし、session id を記録する", async () => {
-    const card = makeTable({
-      data: { id: CARD_ID, payment_status: "pending", stripe_session_id: null },
-      error: null,
-    });
-    useTables({ card_requests: card });
+  it("未払いレコードを条件付き UPDATE で paid にし、session id を記録する", async () => {
+    const card = makeTable({ data: null, error: null });
+    useTables({ card_requests: card, processed_stripe_events: dedupTable() });
     stubEvent(makeSession({ metadata: { kind: "card", requestId: CARD_ID } }));
 
     const res = await POST(makeReq());
@@ -257,29 +384,29 @@ describe("card routing", () => {
     expect(card.updates).toHaveLength(1);
     expect(card.updates[0].payment_status).toBe("paid");
     expect(card.updates[0].stripe_session_id).toBe("cs_test_1");
+    // payment_status が nullable なので is.null も未払い扱いに含める
+    expect(card.updateCalls).toContain(
+      'or("payment_status.is.null,payment_status.neq.paid")'
+    );
   });
 
-  it("冪等: すでに paid なら update しない", async () => {
-    const card = makeTable({
-      data: { id: CARD_ID, payment_status: "paid", stripe_session_id: "cs_old" },
-      error: null,
-    });
-    useTables({ card_requests: card });
+  it("冪等: 条件付き UPDATE が 0 行（既に paid）でも 200 ACK", async () => {
+    const card = makeTable(
+      { data: null, error: null },
+      { updateResult: { data: [], error: null } }
+    );
+    useTables({ card_requests: card, processed_stripe_events: dedupTable() });
     stubEvent(makeSession({ metadata: { kind: "card", requestId: CARD_ID } }));
 
     const res = await POST(makeReq());
     expect(res.status).toBe(200);
-    expect(card.updates).toHaveLength(0);
   });
 });
 
 describe("entry plan routing", () => {
-  it("kind=entry_plan + 数値 entryId でプラン支払いを paid にする", async () => {
-    const entries = makeTable({
-      data: { id: 42, plan_payment_status: null },
-      error: null,
-    });
-    useTables({ entries });
+  it("kind=entry_plan + 数値 entryId でプラン支払いを条件付き UPDATE で paid にする", async () => {
+    const entries = makeTable({ data: null, error: null });
+    useTables({ entries, processed_stripe_events: dedupTable() });
     stubEvent(makeSession({ metadata: { kind: "entry_plan", entryId: "42" } }));
 
     const res = await POST(makeReq());
@@ -287,26 +414,42 @@ describe("entry plan routing", () => {
     expect(entries.updates).toHaveLength(1);
     expect(entries.updates[0].plan_payment_status).toBe("paid");
     expect(entries.updates[0].plan_payment_session_id).toBe("cs_test_1");
+    expect(entries.updateCalls).toContain(
+      'or("plan_payment_status.is.null,plan_payment_status.neq.paid")'
+    );
   });
 
-  it("冪等: すでに paid なら update しない", async () => {
-    const entries = makeTable({
-      data: { id: 42, plan_payment_status: "paid" },
-      error: null,
-    });
-    useTables({ entries });
+  it("冪等: 条件付き UPDATE が 0 行（既に paid）でも 200 ACK", async () => {
+    const entries = makeTable(
+      { data: null, error: null },
+      { updateResult: { data: [], error: null } }
+    );
+    useTables({ entries, processed_stripe_events: dedupTable() });
     stubEvent(makeSession({ metadata: { kind: "entry_plan", entryId: "42" } }));
 
     const res = await POST(makeReq());
     expect(res.status).toBe(200);
-    expect(entries.updates).toHaveLength(0);
+  });
+
+  it("update が DB エラーなら claim を解放して 500", async () => {
+    const entries = makeTable(
+      { data: null, error: null },
+      { updateResult: { data: null, error: { message: "db down" } } }
+    );
+    const dedup = dedupTable();
+    useTables({ entries, processed_stripe_events: dedup });
+    stubEvent(makeSession({ metadata: { kind: "entry_plan", entryId: "42" } }));
+
+    const res = await POST(makeReq());
+    expect(res.status).toBe(500);
+    expect(dedup.api.delete).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("gallery routing", () => {
   it("冪等: 同じ session の sales 行が既にあれば finalize_sale を呼ばない", async () => {
     const sales = makeTable({ data: { id: "sale-1" }, error: null });
-    useTables({ sales });
+    useTables({ sales, processed_stripe_events: dedupTable() });
     stubEvent(makeSession({ metadata: { entryId: "42" } }));
 
     const res = await POST(makeReq());
@@ -321,7 +464,7 @@ describe("gallery routing", () => {
       error: null,
     });
     const profiles = makeTable({ data: { display_name: "アーティスト" }, error: null });
-    useTables({ sales, entries, profiles });
+    useTables({ sales, entries, profiles, processed_stripe_events: dedupTable() });
     mockRpc.mockResolvedValue({
       data: [{ new_edition_sold: 1, sold_out: false }],
       error: null,

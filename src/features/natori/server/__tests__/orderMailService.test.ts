@@ -35,8 +35,11 @@ vi.mock("@/lib/supabaseAdmin", () => ({
 
 type Result = { data: unknown; error: unknown };
 
-/** どこまでチェーンしても最後は result に解決される query builder モック */
-function chainResult(result: Result) {
+/**
+ * どこまでチェーンしても最後は result に解決される query builder モック。
+ * calls を渡すとチェーンしたメソッド呼び出し（filter 等）を記録する。
+ */
+function chainResult(result: Result, calls?: string[]) {
   const chain: unknown = new Proxy(
     {},
     {
@@ -45,28 +48,41 @@ function chainResult(result: Result) {
         if (prop === "single" || prop === "maybeSingle") {
           return vi.fn().mockResolvedValue(result);
         }
-        return vi.fn().mockReturnValue(chain);
+        return (...args: unknown[]) => {
+          calls?.push(`${String(prop)}(${args.map((a) => JSON.stringify(a)).join(",")})`);
+          return chain;
+        };
       },
     }
   );
   return chain;
 }
 
-/** natori_projects テーブルのモック。update に渡された payload を記録する */
-function projectsTable(row: unknown, options: { updateError?: unknown } = {}) {
+/**
+ * natori_projects テーブルのモック。update に渡された payload と filter を記録する。
+ * updateRows: 条件付き UPDATE が返す行（省略時は1行更新成功、[] で0行=条件不一致）
+ */
+function projectsTable(
+  row: unknown,
+  options: { updateError?: unknown; updateRows?: unknown[] } = {}
+) {
   const updates: Record<string, unknown>[] = [];
+  const updateCalls: string[] = [];
   const api = {
     select: vi.fn(() => chainResult({ data: row, error: null })),
     update: vi.fn((payload: Record<string, unknown>) => {
       updates.push(payload);
-      return chainResult({ data: null, error: options.updateError ?? null });
+      const data = options.updateError
+        ? null
+        : options.updateRows ?? [{ id: (row as { id?: string })?.id ?? "row-1" }];
+      return chainResult({ data, error: options.updateError ?? null }, updateCalls);
     }),
   };
   mockAdminFrom.mockImplementation((table: string) => {
     if (table !== "natori_projects") throw new Error(`unexpected table: ${table}`);
     return api;
   });
-  return { api, updates };
+  return { api, updates, updateCalls };
 }
 
 function makeProjectRow(overrides: Record<string, unknown> = {}) {
@@ -106,7 +122,9 @@ afterEach(() => {
 describe("markNatoriCommissionPaid", () => {
   it("入金でラフに進み、メモに記録し、ナトリへ通知メールを送る", async () => {
     const { markNatoriCommissionPaid } = await loadService();
-    const { updates } = projectsTable(makeProjectRow({ status: "awaiting_payment" }));
+    const { updates, updateCalls } = projectsTable(
+      makeProjectRow({ status: "awaiting_payment" })
+    );
 
     const result = await markNatoriCommissionPaid("proj-1", "cs_test_123", 8000);
 
@@ -118,23 +136,49 @@ describe("markNatoriCommissionPaid", () => {
     expect(String(updates[0].note)).toContain("入金確認（Stripe）");
     expect(String(updates[0].note)).toContain("cs_test_123");
 
+    // 冪等ゲート: payment_confirmed_at IS NULL を UPDATE の条件に含める
+    expect(updateCalls).toContain('is("payment_confirmed_at",null)');
+
     expect(mockSend).toHaveBeenCalledTimes(1);
     const mail = mockSend.mock.calls[0][0] as { to: string[]; subject: string };
     expect(mail.to).toEqual(["natori-test@example.com"]);
     expect(mail.subject).toContain("入金確認");
   });
 
-  it("冪等: payment_confirmed_at 済みなら更新もメールもしない（Webhook 二重配送対策）", async () => {
+  it("冪等: 条件付き UPDATE が 0 行（既に入金確定済み）なら already-paid でメールも送らない", async () => {
     const { markNatoriCommissionPaid } = await loadService();
-    const { updates } = projectsTable(
-      makeProjectRow({ payment_confirmed_at: "2026-07-10T00:00:00Z" })
+    projectsTable(
+      makeProjectRow({ payment_confirmed_at: "2026-07-10T00:00:00Z" }),
+      { updateRows: [] }
     );
 
     const result = await markNatoriCommissionPaid("proj-1", "cs_test_123", 8000);
 
     expect(result).toEqual({ kind: "already-paid" });
-    expect(updates).toHaveLength(0);
     expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it("同一 Checkout の completed → async_payment_succeeded でも入金反映と通知は1回だけ", async () => {
+    const { markNatoriCommissionPaid } = await loadService();
+
+    // 1通目 (completed): 未払い行に条件付き UPDATE が当たり1行更新
+    projectsTable(makeProjectRow({ status: "awaiting_payment" }));
+    const first = await markNatoriCommissionPaid("proj-1", "cs_test_123", 8000);
+    expect(first).toEqual({ kind: "ok" });
+
+    // 2通目 (async_payment_succeeded): 行は確定済みになっており UPDATE は0行
+    projectsTable(
+      makeProjectRow({
+        status: "rough",
+        payment_confirmed_at: "2026-07-16T00:00:00Z",
+      }),
+      { updateRows: [] }
+    );
+    const second = await markNatoriCommissionPaid("proj-1", "cs_test_123", 8000);
+    expect(second).toEqual({ kind: "already-paid" });
+
+    // 通知メールは1通目の1回だけ
+    expect(mockSend).toHaveBeenCalledTimes(1);
   });
 
   it("案件が見つからなければ not-found", async () => {
