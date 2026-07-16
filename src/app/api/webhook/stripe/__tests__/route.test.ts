@@ -309,6 +309,21 @@ describe("natori_commission routing", () => {
     expect(dedup.api.delete).not.toHaveBeenCalled();
   });
 
+  it("amount-mismatch（金額不一致）は恒久エラー扱いで 200 ACK（通知は service 側で送信済み）", async () => {
+    const dedup = dedupTable();
+    useTables({ processed_stripe_events: dedup });
+    mockMarkPaid.mockResolvedValue({ kind: "amount-mismatch" });
+    stubEvent(
+      makeSession({
+        metadata: { kind: "natori_commission", projectId: NATORI_PROJECT_ID },
+      })
+    );
+
+    const res = await POST(makeReq());
+    expect(res.status).toBe(200);
+    expect(dedup.api.delete).not.toHaveBeenCalled();
+  });
+
   it("already-paid（completed 後の async_payment_succeeded 等）は 200 ACK", async () => {
     useTables({ processed_stripe_events: dedupTable() });
     mockMarkPaid.mockResolvedValue({ kind: "already-paid" });

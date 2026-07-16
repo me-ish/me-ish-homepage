@@ -1274,7 +1274,9 @@ export type Database = {
           next_action: string
           note: string | null
           payment_confirmed_at: string | null
+          payment_link_id: string | null
           priority: string | null
+          quoted_amount: number | null
           start_date: string | null
           status: string
           title: string
@@ -1292,7 +1294,9 @@ export type Database = {
           next_action?: string
           note?: string | null
           payment_confirmed_at?: string | null
+          payment_link_id?: string | null
           priority?: string | null
+          quoted_amount?: number | null
           start_date?: string | null
           status?: string
           title: string
@@ -1310,7 +1314,9 @@ export type Database = {
           next_action?: string
           note?: string | null
           payment_confirmed_at?: string | null
+          payment_link_id?: string | null
           priority?: string | null
+          quoted_amount?: number | null
           start_date?: string | null
           status?: string
           title?: string

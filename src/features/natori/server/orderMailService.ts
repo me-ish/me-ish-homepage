@@ -40,29 +40,20 @@ type ProjectRow = {
   status: string;
   note: string | null;
   payment_confirmed_at?: string | null;
+  payment_link_id?: string | null;
+  quoted_amount?: number | null;
 };
 
 async function fetchProjectRow(projectId: string): Promise<ProjectRow | null> {
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from("natori_projects")
-    .select("id, title, client_name, amount, status, note, payment_confirmed_at")
+    .select(
+      "id, title, client_name, amount, status, note, payment_confirmed_at, payment_link_id, quoted_amount"
+    )
     .eq("id", projectId)
     .maybeSingle();
   if (error) {
-    // payment_confirmed_at カラムが無い旧環境向けフォールバック
-    if (/payment_confirmed_at/i.test(error.message ?? "")) {
-      const retry = await admin
-        .from("natori_projects")
-        .select("id, title, client_name, amount, status, note")
-        .eq("id", projectId)
-        .maybeSingle();
-      if (retry.error) {
-        console.error("[natori-order-mail] project fetch failed", retry.error);
-        return null;
-      }
-      return (retry.data as ProjectRow | null) ?? null;
-    }
     console.error("[natori-order-mail] project fetch failed", error);
     return null;
   }
@@ -134,33 +125,61 @@ export async function sendNatoriOrderMail(
   // 支払い依頼のときは Stripe の支払いリンクを都度生成して本文へ差し込む
   let body = input.body;
   let paymentLinkUrl: string | undefined;
+  let paymentLinkId: string | undefined;
   if (input.kind === "payment") {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) return { kind: "not-configured" };
+    const stripe = new Stripe(secretKey);
+
+    // 再送（再見積もり）時は旧リンクを先に無効化し、旧金額での支払いを塞ぐ。
+    // 無効化に失敗したまま新リンクを発行すると旧リンクが生き残るため、
+    // resource_missing（Stripe 側に既に無い）以外の失敗は中断する。
+    if (project.payment_link_id) {
+      try {
+        await stripe.paymentLinks.update(project.payment_link_id, { active: false });
+      } catch (err) {
+        const code = (err as { code?: string } | null)?.code;
+        if (code !== "resource_missing") {
+          console.error("[natori-order-mail] old payment link deactivation failed", err);
+          return { kind: "stripe-error" };
+        }
+      }
+    }
+
+    // idempotency key: 同じ案件・同じ金額・同じ「直前のリンク」からの発行を
+    // 1つに畳む（送信ボタン二度押しでのリンク二重発行防止）。発行するたびに
+    // payment_link_id が変わるので、意図的な再発行では自然に別キーになる。
+    const idempotencyBase = `natori-plink:${project.id}:${input.amount}:${project.payment_link_id ?? "none"}`;
     try {
-      const stripe = new Stripe(secretKey);
-      const price = await stripe.prices.create({
-        currency: "jpy",
-        unit_amount: input.amount,
-        product_data: {
-          name: `コミッション: ${project.title}（${project.client_name} 様）`,
-        },
-      });
-      const link = await stripe.paymentLinks.create({
-        line_items: [{ price: price.id, quantity: 1 }],
-        // Webhook (checkout.session.completed) の分岐用。Payment Link の
-        // metadata は Checkout Session に自動でコピーされる。
-        metadata: { kind: "natori_commission", projectId: project.id },
-        restrictions: { completed_sessions: { limit: 1 } },
-        after_completion: {
-          type: "hosted_confirmation",
-          hosted_confirmation: {
-            custom_message:
-              "お支払いありがとうございます。入金の確認が取れ次第、制作を開始しご連絡いたします。",
+      const price = await stripe.prices.create(
+        {
+          currency: "jpy",
+          unit_amount: input.amount,
+          product_data: {
+            name: `コミッション: ${project.title}（${project.client_name} 様）`,
           },
         },
-      });
+        { idempotencyKey: `${idempotencyBase}:price` }
+      );
+      const link = await stripe.paymentLinks.create(
+        {
+          line_items: [{ price: price.id, quantity: 1 }],
+          // Webhook (checkout.session.completed) の分岐用。Payment Link の
+          // metadata は Checkout Session に自動でコピーされる。
+          metadata: { kind: "natori_commission", projectId: project.id },
+          restrictions: { completed_sessions: { limit: 1 } },
+          after_completion: {
+            type: "hosted_confirmation",
+            hosted_confirmation: {
+              custom_message:
+                "お支払いありがとうございます。入金の確認が取れ次第、制作を開始しご連絡いたします。",
+            },
+          },
+        },
+        { idempotencyKey: `${idempotencyBase}:link` }
+      );
       paymentLinkUrl = link.url;
+      paymentLinkId = link.id;
       body = injectPaymentLink(body, link.url);
     } catch (err) {
       console.error("[natori-order-mail] payment link creation failed", err);
@@ -184,6 +203,11 @@ export async function sendNatoriOrderMail(
     update.status = flow.to;
     update.next_action = getNextActionForStatus(flow.to);
   }
+  if (input.kind === "payment" && paymentLinkId) {
+    // 次回再送時の旧リンク無効化と、Webhook での入金金額照合に使う
+    update.payment_link_id = paymentLinkId;
+    update.quoted_amount = input.amount;
+  }
 
   const admin = supabaseAdmin();
   const { error } = await admin
@@ -202,7 +226,54 @@ export type MarkNatoriCommissionPaidResult =
   | { kind: "ok" }
   | { kind: "already-paid" }
   | { kind: "not-found" }
+  | { kind: "amount-mismatch" }
   | { kind: "db-error" };
+
+/** 金額不一致の入金: 警告を note に残し、ナトリへ要確認メールを送る（ステータス据え置き） */
+async function handleAmountMismatch(
+  project: ProjectRow,
+  sessionId: string,
+  amountTotal: number,
+  today: string
+): Promise<MarkNatoriCommissionPaidResult> {
+  const quotedText = formatYen(project.quoted_amount ?? 0);
+  const receivedText = formatYen(amountTotal);
+  const warnEntry = `【要確認: 入金金額不一致（Stripe） ${today}】受領 ${receivedText} / 見積 ${quotedText} / session: ${sessionId}`;
+
+  const admin = supabaseAdmin();
+  const { error } = await admin
+    .from("natori_projects")
+    .update({ note: appendNote(project.note, warnEntry) })
+    .eq("id", project.id);
+  if (error) {
+    console.error("[natori-order-mail] mismatch note update failed", error);
+  }
+
+  if (isNatoriOrderMailConfigured()) {
+    const noticeBody = [
+      "コミッションの入金がありましたが、金額が見積もりと一致しません。",
+      "ステータスは変更していません。Stripe ダッシュボードで決済内容を確認してください。",
+      "",
+      `■ 案件: ${project.title}`,
+      `■ 依頼者: ${project.client_name} 様`,
+      `■ 受領金額: ${receivedText}`,
+      `■ 見積金額: ${quotedText}`,
+      `■ Stripe session: ${sessionId}`,
+      "",
+      "ダッシュボード: https://www.me-ish.art/natori/projects",
+    ].join("\n");
+    const sent = await sendPlainMail(
+      REPLY_TO,
+      `【要確認】入金金額が見積もりと一致しません / ${project.client_name} 様 / ${project.title}`,
+      noticeBody
+    );
+    if (!sent) {
+      console.error("[natori-order-mail] mismatch notice mail failed (ignored)");
+    }
+  }
+
+  return { kind: "amount-mismatch" };
+}
 
 /**
  * Stripe Webhook からの入金反映。payment_confirmed_at を記録して rough
@@ -223,6 +294,20 @@ export async function markNatoriCommissionPaid(
   if (!project) return { kind: "not-found" };
 
   const today = new Date().toISOString().slice(0, 10);
+
+  // 金額照合: 支払いリンク発行時に保存した quoted_amount と受領額が一致しない
+  // 入金（無効化前の旧リンク経由など）は rough に進めない。note に警告を残して
+  // ナトリへ要確認メールを送る。payment_confirmed_at は立てないので、正しい
+  // 金額の入金が来ればそのとき通常フローで確定できる。
+  // quoted_amount が null の既存案件・amount_total が取れないセッションは照合対象外。
+  if (
+    project.quoted_amount != null &&
+    amountTotal != null &&
+    amountTotal !== project.quoted_amount
+  ) {
+    return handleAmountMismatch(project, sessionId, amountTotal, today);
+  }
+
   const amountText = amountTotal != null ? formatYen(amountTotal) : formatYen(project.amount);
   const logEntry = `【入金確認（Stripe） ${today}】${amountText} / session: ${sessionId}`;
   const update = {

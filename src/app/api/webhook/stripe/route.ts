@@ -195,6 +195,16 @@ async function handleNatoriCommissionPayment(
         projectId,
       });
     }
+    if (result.kind === "amount-mismatch") {
+      // 恒久エラー扱い（再送されても金額は変わらない）。管理者への要確認
+      // 通知とnote への警告は orderMailService 側で実施済み。
+      console.error("[webhook/stripe/natori-commission] amount mismatch:", {
+        eventId,
+        sessionId: session.id,
+        projectId,
+        amountTotal: session.amount_total,
+      });
+    }
     return NextResponse.json({ ok: true, received: true }, { status: 200 });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
