@@ -154,6 +154,11 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "Failed to update project" }, { status: 500 });
       case "not-found":
         return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      case "invalid-transition":
+        return NextResponse.json(
+          { error: `Invalid status transition: ${result.from} -> ${result.to}` },
+          { status: 409 }
+        );
       case "ok":
         return NextResponse.json({ ok: true });
     }
@@ -185,6 +190,11 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "Failed to close project" }, { status: 500 });
       case "not-found":
         return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      case "invalid-transition":
+        return NextResponse.json(
+          { error: `Invalid status transition: ${result.from} -> ${result.to}` },
+          { status: 409 }
+        );
       case "ok":
         return NextResponse.json({ ok: true });
     }
@@ -198,6 +208,11 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "Failed to confirm payment" }, { status: 500 });
       case "not-found":
         return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      case "invalid-transition":
+        return NextResponse.json(
+          { error: `Invalid status transition: ${result.from} -> ${result.to}` },
+          { status: 409 }
+        );
       case "ok":
         return NextResponse.json({ ok: true });
     }

@@ -243,6 +243,27 @@ describe("markNatoriCommissionPaid", () => {
     expect(updates[0].status).toBe("rough");
   });
 
+  it("入金イベントが遅れて届いても、制作中の案件は rough に巻き戻さない（入金記録のみ）", async () => {
+    const { markNatoriCommissionPaid } = await loadService();
+    const { updates } = projectsTable(
+      makeProjectRow({ status: "lineart", payment_confirmed_at: null })
+    );
+
+    const result = await markNatoriCommissionPaid("proj-1", "cs_test_123", 8000);
+
+    expect(result).toEqual({ kind: "ok" });
+    expect(updates).toHaveLength(1);
+    // ステータス・次アクションは触らず、入金記録とメモだけ
+    expect(updates[0].status).toBeUndefined();
+    expect(updates[0].next_action).toBeUndefined();
+    expect(updates[0].payment_confirmed_at).toBeTruthy();
+    expect(String(updates[0].note)).toContain("入金確認（Stripe）");
+
+    // 通知メールはステータス据え置きの文面になる
+    const mail = mockSend.mock.calls[0][0] as { text: string };
+    expect(mail.text).toContain("ステータスは変更していません");
+  });
+
   it("quoted_amount 未保存の既存案件は照合をスキップして通常どおり進む", async () => {
     const { markNatoriCommissionPaid } = await loadService();
     const { updates } = projectsTable(

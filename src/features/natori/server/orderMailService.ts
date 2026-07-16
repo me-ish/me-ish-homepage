@@ -15,6 +15,7 @@ import {
   injectPaymentLink,
 } from "@/features/natori/lib/orderMail";
 import { getNextActionForStatus } from "@/features/natori/lib/projects";
+import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { formatYen } from "@/features/natori/lib/pricing";
 import type { NatoriProjectStatus } from "@/features/natori/types/projects";
 
@@ -100,19 +101,14 @@ export type SendNatoriOrderMailResult =
   | { kind: "mail-error" }
   | { kind: "db-error" };
 
-/** 見積もりメール送信後は quoted、支払い依頼メール送信後は awaiting_payment に進める */
-const NEXT_STATUS: Record<
-  SendNatoriOrderMailInput["kind"],
-  { advanceFrom: ReadonlySet<string>; to: NatoriProjectStatus }
-> = {
-  estimate: {
-    advanceFrom: new Set(["inquiry", "consulting", "estimating"]),
-    to: "quoted",
-  },
-  payment: {
-    advanceFrom: new Set(["inquiry", "consulting", "estimating", "quoted"]),
-    to: "awaiting_payment",
-  },
+/**
+ * 見積もりメール送信後は quoted、支払い依頼メール送信後は awaiting_payment に
+ * 進める。進めてよいかは lib/statusTransitions の遷移表で判定する
+ * （既に先へ進んでいる案件への再送では巻き戻さない）。
+ */
+const NEXT_STATUS: Record<SendNatoriOrderMailInput["kind"], NatoriProjectStatus> = {
+  estimate: "quoted",
+  payment: "awaiting_payment",
 };
 
 export async function sendNatoriOrderMail(
@@ -211,16 +207,19 @@ export async function sendNatoriOrderMail(
   // いるので、ここで失敗しても呼び出し側には db-error として伝えるだけに留める。
   const today = new Date().toISOString().slice(0, 10);
   const logEntry = buildOrderMailLogEntry(input.kind, today, input.to, input.amount, paymentLinkUrl);
-  const flow = NEXT_STATUS[input.kind];
+  const nextStatus = NEXT_STATUS[input.kind];
   const update: Record<string, unknown> = {
     amount: input.amount,
     // 実際に送った宛先を正とする（手入力案件や宛先修正もここで反映される）
     client_email: input.to,
     note: appendNote(project.note, logEntry),
   };
-  if (flow.advanceFrom.has(project.status)) {
-    update.status = flow.to;
-    update.next_action = getNextActionForStatus(flow.to);
+  if (
+    project.status !== nextStatus &&
+    canTransitionNatoriStatus(project.status as NatoriProjectStatus, nextStatus)
+  ) {
+    update.status = nextStatus;
+    update.next_action = getNextActionForStatus(nextStatus);
   }
   if (input.kind === "payment" && paymentLinkId) {
     // 次回再送時の旧リンク無効化と、Webhook での入金金額照合に使う
@@ -328,12 +327,22 @@ export async function markNatoriCommissionPaid(
 
   const amountText = amountTotal != null ? formatYen(amountTotal) : formatYen(project.amount);
   const logEntry = `【入金確認（Stripe） ${today}】${amountText} / session: ${sessionId}`;
-  const update = {
-    status: "rough",
-    next_action: getNextActionForStatus("rough"),
+
+  // 遷移表の payment-confirmed ルール: 受注前の案件だけ rough（作業開始）へ進める。
+  // 既に制作中・完了の案件（手動で先に進めた等）は巻き戻さず、入金記録だけ残す。
+  const advanceToRough = canTransitionNatoriStatus(
+    project.status as NatoriProjectStatus,
+    "rough",
+    "payment-confirmed"
+  );
+  const update: Record<string, unknown> = {
     payment_confirmed_at: new Date().toISOString(),
     note: appendNote(project.note, logEntry),
   };
+  if (advanceToRough && project.status !== "rough") {
+    update.status = "rough";
+    update.next_action = getNextActionForStatus("rough");
+  }
 
   const admin = supabaseAdmin();
   const { data: updated, error } = await admin
@@ -353,6 +362,10 @@ export async function markNatoriCommissionPaid(
 
   // ナトリへの入金通知（失敗しても入金反映自体は成功扱い）
   if (isNatoriOrderMailConfigured()) {
+    const statusLine =
+      advanceToRough && project.status !== "rough"
+        ? "案件は自動で「ラフ」ステータスに進んでいます。"
+        : "案件のステータスは変更していません（入金記録のみ追加）。";
     const noticeBody = [
       "コミッションの入金がありました。制作を開始できます。",
       "",
@@ -360,7 +373,7 @@ export async function markNatoriCommissionPaid(
       `■ 依頼者: ${project.client_name} 様`,
       `■ 金額: ${amountText}`,
       "",
-      "案件は自動で「ラフ」ステータスに進んでいます。",
+      statusLine,
       "ダッシュボード: https://www.me-ish.art/natori/projects",
     ].join("\n");
     const sent = await sendPlainMail(

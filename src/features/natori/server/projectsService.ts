@@ -1,10 +1,12 @@
 import "server-only";
 import { createTasksForType } from "@/features/natori/lib/projects";
+import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { calculateDueDate } from "@/features/natori/lib/deliveryPlans";
 import { deleteNatoriProjectThumb } from "@/features/natori/server/projectThumbsService";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type {
   NatoriDeliveryPlan,
+  NatoriProjectStatus,
   NatoriProjectTask,
   NatoriProjectType,
 } from "@/features/natori/types/projects";
@@ -352,6 +354,11 @@ export type NatoriProjectMutationResult =
   | { kind: "not-found" }
   | { kind: "db-error" };
 
+/** ステータス遷移を伴う操作の結果（許可遷移表に無い遷移は invalid-transition） */
+export type NatoriProjectTransitionResult =
+  | NatoriProjectMutationResult
+  | { kind: "invalid-transition"; from: string; to: string };
+
 export type PatchNatoriProjectDetailsResult =
   | NatoriProjectMutationResult
   | { kind: "no-editable-fields" };
@@ -382,12 +389,37 @@ export async function setNatoriProjectStatus(
   projectId: string,
   status: string,
   nextAction: string
-): Promise<NatoriProjectMutationResult> {
+): Promise<NatoriProjectTransitionResult> {
   const admin = supabaseAdmin();
+
+  const { data: current, error: fetchErr } = await admin
+    .from("natori_projects")
+    .select("id, status")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (fetchErr) {
+    console.error("[natori-admin-projects] status fetch failed", fetchErr);
+    return { kind: "db-error" };
+  }
+  if (!current) return { kind: "not-found" };
+
+  const fromStatus = (current as { status: string }).status;
+  if (
+    !canTransitionNatoriStatus(
+      fromStatus as NatoriProjectStatus,
+      status as NatoriProjectStatus
+    )
+  ) {
+    return { kind: "invalid-transition", from: fromStatus, to: status };
+  }
+
+  // 読み取り時のステータスを条件に含め、並行更新とレースしたら書かない
+  // （0行なら状態が変わっているので invalid-transition として弾く）
   const { data, error } = await admin
     .from("natori_projects")
     .update({ status, next_action: nextAction })
     .eq("id", projectId)
+    .eq("status", fromStatus)
     .select("id")
     .maybeSingle();
 
@@ -395,7 +427,7 @@ export async function setNatoriProjectStatus(
     console.error("[natori-admin-projects] project status update failed", error);
     return { kind: "db-error" };
   }
-  if (!data) return { kind: "not-found" };
+  if (!data) return { kind: "invalid-transition", from: fromStatus, to: status };
   return { kind: "ok" };
 }
 
@@ -435,16 +467,17 @@ export async function patchNatoriProjectDetails(
 /**
  * 相談を「見送り（closed）」にする。理由が渡されたら日付付きでメモ末尾に
  * 追記し、履歴として残す。削除と違い元に戻せる（status を戻すだけ）。
+ * 受注前の案件のみ対象（入金済みの制作中案件は遷移表で弾かれる）。
  */
 export async function closeNatoriProject(
   projectId: string,
   reason: string
-): Promise<NatoriProjectMutationResult> {
+): Promise<NatoriProjectTransitionResult> {
   const admin = supabaseAdmin();
 
   const { data: current, error: fetchErr } = await admin
     .from("natori_projects")
-    .select("id, note")
+    .select("id, note, status")
     .eq("id", projectId)
     .maybeSingle();
   if (fetchErr) {
@@ -452,6 +485,11 @@ export async function closeNatoriProject(
     return { kind: "db-error" };
   }
   if (!current) return { kind: "not-found" };
+
+  const fromStatus = (current as { status: string }).status;
+  if (!canTransitionNatoriStatus(fromStatus as NatoriProjectStatus, "closed")) {
+    return { kind: "invalid-transition", from: fromStatus, to: "closed" };
+  }
 
   const update: Record<string, unknown> = {
     status: "closed",
@@ -513,43 +551,58 @@ export async function deleteNatoriAdminProject(
   return { kind: "ok" };
 }
 
+/** 入金確認（payment-confirmed 遷移）で rough に進める元ステータス（生値） */
+const PAYMENT_CONFIRMABLE_STATUSES = [
+  "inquiry",
+  "estimating",
+  "consulting",
+  "quoted",
+  "awaiting_payment",
+] as const;
+
 /**
  * "入金確認してラフ開始" button: stamps payment_confirmed_at and advances
- * status to `rough` so the project starts pressuring the production
- * schedule. If the payment_confirmed_at column does not exist yet (older
- * backend), retry without it so the status change still goes through.
+ * status to `rough`. 遷移表の payment-confirmed ルール（受注前 → rough のみ）を
+ * 条件付き UPDATE で原子的に適用する。既に制作中・完了・見送りの案件は 0 行に
+ * なり invalid-transition を返す（webhook との競合でも二重確定しない）。
  */
 export async function confirmNatoriProjectPayment(
   projectId: string,
   nextAction: string
-): Promise<NatoriProjectMutationResult> {
+): Promise<NatoriProjectTransitionResult> {
   const admin = supabaseAdmin();
-  const baseUpdate = { status: "rough", next_action: nextAction } as Record<string, unknown>;
-  const withTimestamp = { ...baseUpdate, payment_confirmed_at: new Date().toISOString() };
-
-  let { data, error } = await admin
+  const { data, error } = await admin
     .from("natori_projects")
-    .update(withTimestamp)
+    .update({
+      status: "rough",
+      next_action: nextAction,
+      payment_confirmed_at: new Date().toISOString(),
+    })
     .eq("id", projectId)
+    .in("status", [...PAYMENT_CONFIRMABLE_STATUSES])
     .select("id")
     .maybeSingle();
-
-  if (error && /payment_confirmed_at/i.test(error.message ?? "")) {
-    // Column missing — fall back to a plain status update.
-    const retry = await admin
-      .from("natori_projects")
-      .update(baseUpdate)
-      .eq("id", projectId)
-      .select("id")
-      .maybeSingle();
-    data = retry.data;
-    error = retry.error;
-  }
 
   if (error) {
     console.error("[natori-admin-projects] confirm-payment failed", error);
     return { kind: "db-error" };
   }
-  if (!data) return { kind: "not-found" };
-  return { kind: "ok" };
+  if (data) return { kind: "ok" };
+
+  // 0行: 案件が無いのか、受注前ではないのかを切り分ける
+  const { data: current, error: fetchErr } = await admin
+    .from("natori_projects")
+    .select("id, status")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (fetchErr) {
+    console.error("[natori-admin-projects] confirm-payment refetch failed", fetchErr);
+    return { kind: "db-error" };
+  }
+  if (!current) return { kind: "not-found" };
+  return {
+    kind: "invalid-transition",
+    from: (current as { status: string }).status,
+    to: "rough",
+  };
 }
