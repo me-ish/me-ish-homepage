@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { isAdminEmailAsync } from "@/lib/isAdmin";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { NATORI_KEY_COOKIE } from "@/features/natori/constants/dashboardKey";
+import { deriveNatoriDashboardCookieToken } from "@/features/natori/lib/dashboardKeyToken";
+import { safeCompare } from "@/lib/auth/timingSafe";
 
 function getNatoriStaffEmails(): Set<string> {
   const raw = [
@@ -44,29 +46,30 @@ function getNatoriDashboardKey(): string | null {
   return key ? key : null;
 }
 
-function hasNatoriKeyCookie(): boolean {
+async function hasNatoriKeyCookie(): Promise<boolean> {
   const key = getNatoriDashboardKey();
   if (!key) return false;
-  return cookies().get(NATORI_KEY_COOKIE)?.value === key;
+  const cookieValue = cookies().get(NATORI_KEY_COOKIE)?.value;
+  if (!cookieValue) return false;
+  // Cookie にはキー平文ではなく HMAC トークンを保存する（middleware.ts 参照）。
+  const expectedToken = await deriveNatoriDashboardCookieToken(key);
+  return safeCompare(cookieValue, expectedToken);
 }
 
 /**
  * natori 管理画面（ダッシュボード・案件管理・見積もり・ポートフォリオ編集）の
  * アクセス可否。ページ・API 共通で使う。
  *
- * モードは env で切り替える:
- * - NATORI_DASHBOARD_KEY を設定: 合言葉キー方式。`?natori-key=<値>` 付き URL を
- *   一度開くと Cookie がセットされ、以後ログイン不要（middleware.ts 参照）。
- *   Supabase ログイン（admin / NATORI_STAFF_EMAILS）でも通れる。
- * - NATORI_REQUIRE_AUTH=1（キー未設定）: 従来どおり Supabase ログイン必須。
- * - どちらも未設定: 制限なし（全開放）。
+ * デフォルトは deny。以下のいずれかを満たす場合のみ許可する:
+ * - NATORI_DASHBOARD_KEY を設定した合言葉キー方式: `?natori-key=<値>` 付き URL を
+ *   一度開くと HMAC トークン Cookie がセットされ、以後ログイン不要
+ *   （middleware.ts 参照）。
+ * - Supabase ログイン（admin / NATORI_STAFF_EMAILS / NATORI_OWNER_EMAILS）。
+ *
+ * env が何も設定されていない場合は全拒否（フェイルクローズ）。
  */
 export async function canUseNatoriManagement(): Promise<boolean> {
-  if (hasNatoriKeyCookie()) return true;
-
-  if (!getNatoriDashboardKey() && process.env.NATORI_REQUIRE_AUTH !== "1") {
-    return true;
-  }
+  if (await hasNatoriKeyCookie()) return true;
 
   const supabase = supabaseServer();
   const {
