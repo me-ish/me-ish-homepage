@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   if (csrfErr) return csrfErr;
 
   const ip = getIpFromRequest(req);
-  const rl = checkRateLimit(`studio-ai-polish:${ip}`, { limit: 10, windowMs: 5 * 60_000 });
+  const rl = await checkRateLimit(`studio-ai-polish:${ip}`, { limit: 10, windowMs: 5 * 60_000 });
   if (!rl.allowed) return rateLimitExceeded(rl.retryAfterMs);
 
   const apiKey = process.env.OPENAI_API_KEY;

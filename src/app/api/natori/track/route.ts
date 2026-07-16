@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   if (csrfErr) return csrfErr;
 
   const ip = getIpFromRequest(req);
-  const rl = checkRateLimit(`natori-track:${ip}`, { limit: 60, windowMs: 600_000 });
+  const rl = await checkRateLimit(`natori-track:${ip}`, { limit: 60, windowMs: 600_000 });
   if (!rl.allowed) return rateLimitExceeded(rl.retryAfterMs);
 
   const payload = (await req.json().catch(() => null)) as {

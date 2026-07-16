@@ -5,6 +5,7 @@ import "server-only";
 // 書き込みは service role 経由のみ（テーブルに書き込みRLSポリシーは無い）。
 import sharp from "sharp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { sniffImageFormat } from "@/lib/imageSniff";
 import { canUseNatoriManagement } from "./requireNatoriAdmin";
 import { parsePortfolioContent } from "@/features/natori/lib/portfolioContent";
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
@@ -89,6 +90,13 @@ async function uploadImageAsWebp(
   if (file.size > IMAGE_MAX_BYTES) return { kind: "too-large" };
 
   const input = Buffer.from(await file.arrayBuffer());
+
+  // MIME はクライアント申告値なので、実バイト（マジックナンバー）でも画像で
+  // あることを確認する。SVG はマジックナンバーを持たないためここで弾かれる。
+  if (sniffImageFormat(input) === null) return { kind: "invalid-type" };
+
+  // EXIF 等のメタデータは sharp の再エンコードで除去される（withMetadata() を
+  // 使っていないため位置情報などは出力に残らない）。回転だけ先に反映する。
   const webp = await sharp(input)
     .rotate() // EXIF回転を反映
     .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })

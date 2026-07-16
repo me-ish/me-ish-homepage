@@ -66,7 +66,7 @@ const resend = new Resend(RESEND_API_KEY);
 /* ---------- Handler ---------- */
 export async function POST(req: Request) {
   const ip = getIpFromRequest(req);
-  const rl = checkRateLimit(`contact:${ip}`, { limit: 3, windowMs: 600_000 });
+  const rl = await checkRateLimit(`contact:${ip}`, { limit: 3, windowMs: 600_000 });
   if (!rl.allowed) return rateLimitExceeded(rl.retryAfterMs);
 
   if (!RESEND_API_KEY) {

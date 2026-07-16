@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   if (csrfErr) return csrfErr;
 
   const ip = getIpFromRequest(req);
-  const rl = checkRateLimit(`aura-ai-suggest:${ip}`, { limit: 10, windowMs: 600_000 });
+  const rl = await checkRateLimit(`aura-ai-suggest:${ip}`, { limit: 10, windowMs: 600_000 });
   if (!rl.allowed) return rateLimitExceeded(rl.retryAfterMs);
 
   const json = await req.json().catch(() => null);

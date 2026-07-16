@@ -204,7 +204,7 @@ export async function POST(
       );
     }
 
-    const rl = checkRateLimit(`comments:${user.id}`, { limit: 10, windowMs: 60_000 });
+    const rl = await checkRateLimit(`comments:${user.id}`, { limit: 10, windowMs: 60_000 });
     if (!rl.allowed) return rateLimitExceeded(rl.retryAfterMs);
 
     let body: string;

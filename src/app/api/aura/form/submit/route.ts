@@ -153,7 +153,7 @@ export async function POST(req: Request) {
   if (csrfErr) return csrfErr;
 
   const ip = getIpFromRequest(req);
-  const rl = checkRateLimit(`aura-submit:${ip}`, { limit: 3, windowMs: 600_000 });
+  const rl = await checkRateLimit(`aura-submit:${ip}`, { limit: 3, windowMs: 600_000 });
   if (!rl.allowed) return rateLimitExceeded(rl.retryAfterMs);
 
   const supabase = supabaseAdmin();

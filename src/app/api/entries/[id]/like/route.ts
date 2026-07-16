@@ -51,7 +51,7 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
   }
 
   const ip = getIpFromRequest(req);
-  const rl = checkRateLimit(`like:${ip}`, { limit: 30, windowMs: 60_000 });
+  const rl = await checkRateLimit(`like:${ip}`, { limit: 30, windowMs: 60_000 });
   if (!rl.allowed) return rateLimitExceeded(rl.retryAfterMs);
 
   const id = parseId(ctx.params);
