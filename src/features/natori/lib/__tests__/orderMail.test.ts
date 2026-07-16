@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { formatYen } from "@/features/natori/lib/pricing";
 import {
+  ACCEPT_LINK_PLACEHOLDER,
   PAYMENT_LINK_PLACEHOLDER,
+  QUOTE_VALID_DAYS,
   buildEstimateMailDraft,
   buildOrderMailLogEntry,
+  buildPaidConfirmationMail,
   buildPaymentMailDraft,
   extractClientEmailFromNote,
+  injectAcceptLink,
   injectPaymentLink,
   resolveClientEmail,
 } from "@/features/natori/lib/orderMail";
@@ -85,7 +89,46 @@ describe("buildEstimateMailDraft", () => {
     expect(draft.subject).toContain("立ち絵一式");
     expect(draft.body).toContain("テスト太郎 様");
     expect(draft.body).toContain(formatYen(12000));
-    expect(draft.body).toContain("このメールにご返信ください");
+    expect(draft.body).toContain("ご返信");
+  });
+
+  it("有効期限とワンクリック承諾リンクのプレースホルダを含む", () => {
+    const draft = buildEstimateMailDraft({
+      clientName: "テスト太郎",
+      title: "立ち絵一式",
+      amount: 12000,
+    });
+    expect(draft.body).toContain(`${QUOTE_VALID_DAYS}日間`);
+    expect(draft.body).toContain(ACCEPT_LINK_PLACEHOLDER);
+    // 返信での承諾も案内している（ボタンを使わない依頼者向け）
+    expect(draft.body).toContain("ご返信でご承諾");
+  });
+});
+
+describe("injectAcceptLink", () => {
+  it("プレースホルダを実URLに差し替え、消えていたら末尾に追記する", () => {
+    const url = "https://www.me-ish.art/natori/quote/tok123";
+    expect(injectAcceptLink(`前\n${ACCEPT_LINK_PLACEHOLDER}\n後`, url)).toBe(
+      `前\n${url}\n後`
+    );
+    const appended = injectAcceptLink("プレースホルダ無し本文", url);
+    expect(appended).toContain(url);
+    expect(appended).toContain("ご承諾ページ");
+  });
+});
+
+describe("buildPaidConfirmationMail", () => {
+  it("入金確認と制作開始の案内を含む", () => {
+    const mail = buildPaidConfirmationMail({
+      clientName: "テスト太郎",
+      title: "立ち絵一式",
+      amount: 12000,
+    });
+    expect(mail.subject).toContain("ご入金確認");
+    expect(mail.body).toContain("テスト太郎 様");
+    expect(mail.body).toContain(formatYen(12000));
+    expect(mail.body).toContain("制作を開始いたします");
+    expect(mail.body).toContain("ご返信ください");
   });
 });
 
@@ -106,6 +149,16 @@ describe("buildPaymentMailDraft / injectPaymentLink", () => {
   it("appends the link when the placeholder was edited away", () => {
     const injected = injectPaymentLink("こんにちは", "https://pay.example.com/abc");
     expect(injected).toContain("https://pay.example.com/abc");
+  });
+
+  it("リンクの性質（1回限り・旧リンク無効）を明記している", () => {
+    const draft = buildPaymentMailDraft({
+      clientName: "テスト太郎",
+      title: "立ち絵一式",
+      amount: 12000,
+    });
+    expect(draft.body).toContain("1回限り有効");
+    expect(draft.body).toContain("そちらは無効");
   });
 });
 

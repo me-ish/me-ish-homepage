@@ -109,6 +109,7 @@ function makeProjectRow(overrides: Record<string, unknown> = {}) {
     payment_confirmed_at: null,
     payment_link_id: null,
     quoted_amount: null,
+    client_email: "client@example.com",
     ...overrides,
   };
 }
@@ -158,10 +159,26 @@ describe("markNatoriCommissionPaid", () => {
     // 冪等ゲート: payment_confirmed_at IS NULL を UPDATE の条件に含める
     expect(updateCalls).toContain('is("payment_confirmed_at",null)');
 
+    // 依頼者宛の入金確認メール + ナトリ宛の通知メールの2通
+    expect(mockSend).toHaveBeenCalledTimes(2);
+    const clientMail = mockSend.mock.calls[0][0] as { to: string[]; subject: string; text: string };
+    expect(clientMail.to).toEqual(["client@example.com"]);
+    expect(clientMail.subject).toContain("ご入金確認");
+    expect(clientMail.text).toContain("制作を開始いたします");
+    const natoriMail = mockSend.mock.calls[1][0] as { to: string[]; subject: string };
+    expect(natoriMail.to).toEqual(["natori-test@example.com"]);
+    expect(natoriMail.subject).toContain("入金確認");
+  });
+
+  it("client_email が無い既存案件は依頼者宛をスキップし、ナトリ宛通知だけ送る", async () => {
+    const { markNatoriCommissionPaid } = await loadService();
+    projectsTable(makeProjectRow({ client_email: null }));
+
+    const result = await markNatoriCommissionPaid("proj-1", "cs_test_123", 8000);
+    expect(result).toEqual({ kind: "ok" });
     expect(mockSend).toHaveBeenCalledTimes(1);
-    const mail = mockSend.mock.calls[0][0] as { to: string[]; subject: string };
+    const mail = mockSend.mock.calls[0][0] as { to: string[] };
     expect(mail.to).toEqual(["natori-test@example.com"]);
-    expect(mail.subject).toContain("入金確認");
   });
 
   it("冪等: 条件付き UPDATE が 0 行（既に入金確定済み）なら already-paid でメールも送らない", async () => {
@@ -196,8 +213,8 @@ describe("markNatoriCommissionPaid", () => {
     const second = await markNatoriCommissionPaid("proj-1", "cs_test_123", 8000);
     expect(second).toEqual({ kind: "already-paid" });
 
-    // 通知メールは1通目の1回だけ
-    expect(mockSend).toHaveBeenCalledTimes(1);
+    // メールは1通目の配送でのみ送られる（依頼者宛 + ナトリ宛の2通。2通目の配送では0通）
+    expect(mockSend).toHaveBeenCalledTimes(2);
   });
 
   it("案件が見つからなければ not-found", async () => {
@@ -259,9 +276,9 @@ describe("markNatoriCommissionPaid", () => {
     expect(updates[0].payment_confirmed_at).toBeTruthy();
     expect(String(updates[0].note)).toContain("入金確認（Stripe）");
 
-    // 通知メールはステータス据え置きの文面になる
-    const mail = mockSend.mock.calls[0][0] as { text: string };
-    expect(mail.text).toContain("ステータスは変更していません");
+    // ナトリ宛通知（2通目）はステータス据え置きの文面になる
+    const natoriMail = mockSend.mock.calls[1][0] as { text: string };
+    expect(natoriMail.text).toContain("ステータスは変更していません");
   });
 
   it("quoted_amount 未保存の既存案件は照合をスキップして通常どおり進む", async () => {
@@ -314,6 +331,16 @@ describe("sendNatoriOrderMail (estimate)", () => {
     expect(mockSend).toHaveBeenCalledTimes(1);
     const mail = mockSend.mock.calls[0][0] as { to: string[]; text: string };
     expect(mail.to).toEqual(["client@example.com"]);
+
+    // ワンクリック承諾ページのURLが本文に差し込まれる
+    expect(mail.text).toContain("/natori/quote/");
+    // DB にはトークンの SHA-256 ハッシュと有効期限を保存し、旧承諾をリセット
+    expect(String(updates[0].quote_accept_token_hash)).toMatch(/^[0-9a-f]{64}$/);
+    expect(updates[0].quote_token_expires_at).toBeTruthy();
+    expect(updates[0].quote_accepted_at).toBeNull();
+    // 本文のURLとDBのハッシュが対応している
+    const urlMatch = (mail.text as string).match(/\/natori\/quote\/([A-Za-z0-9_-]+)/);
+    expect(urlMatch).toBeTruthy();
 
     expect(updates).toHaveLength(1);
     expect(updates[0].amount).toBe(12000);

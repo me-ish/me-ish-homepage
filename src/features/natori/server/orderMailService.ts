@@ -7,11 +7,16 @@ import "server-only";
 //   フォーム依頼 (inquiry) → 見積もりメール送信 → quoted
 //   → 依頼者から承諾の返信 → 支払い依頼メール送信（Stripe 支払いリンク自動生成）
 //   → awaiting_payment → Stripe Webhook で入金確認 → rough（作業開始）
+import { createHash, randomBytes } from "crypto";
 import Stripe from "stripe";
 import { Resend } from "resend";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSiteUrl } from "@/lib/constants";
 import {
+  QUOTE_VALID_DAYS,
   buildOrderMailLogEntry,
+  buildPaidConfirmationMail,
+  injectAcceptLink,
   injectPaymentLink,
 } from "@/features/natori/lib/orderMail";
 import { getNextActionForStatus } from "@/features/natori/lib/projects";
@@ -83,6 +88,15 @@ async function sendPlainMail(to: string, subject: string, body: string): Promise
   return true;
 }
 
+/**
+ * ナトリ宛の内部通知メール（見積もり承諾通知などで使う）。
+ * 未設定なら false（呼び出し側はベストエフォート扱いにすること）。
+ */
+export async function sendNatoriNoticeMail(subject: string, body: string): Promise<boolean> {
+  if (!isNatoriOrderMailConfigured()) return false;
+  return sendPlainMail(REPLY_TO, subject, body);
+}
+
 export type SendNatoriOrderMailInput = {
   projectId: string;
   kind: "estimate" | "payment";
@@ -119,8 +133,24 @@ export async function sendNatoriOrderMail(
   const project = await fetchProjectRow(input.projectId);
   if (!project) return { kind: "not-found" };
 
-  // 支払い依頼のときは Stripe の支払いリンクを都度生成して本文へ差し込む
   let body = input.body;
+
+  // 見積もりのときはワンクリック承諾用のトークンを発行し、承諾ページURLを
+  // 本文へ差し込む。DB にはトークンの SHA-256 ハッシュだけ保存する。
+  // 再送（再見積もり）のたびに新しいトークンになり、旧リンクと過去の承諾は
+  // 無効化される（支払いリンクの再発行と同じ思想）。
+  let quoteTokenHash: string | undefined;
+  let quoteTokenExpiresAt: string | undefined;
+  if (input.kind === "estimate") {
+    const token = randomBytes(32).toString("base64url");
+    quoteTokenHash = createHash("sha256").update(token).digest("hex");
+    quoteTokenExpiresAt = new Date(
+      Date.now() + QUOTE_VALID_DAYS * 24 * 60 * 60 * 1000
+    ).toISOString();
+    body = injectAcceptLink(body, `${getSiteUrl()}/natori/quote/${token}`);
+  }
+
+  // 支払い依頼のときは Stripe の支払いリンクを都度生成して本文へ差し込む
   let paymentLinkUrl: string | undefined;
   let paymentLinkId: string | undefined;
   if (input.kind === "payment") {
@@ -225,6 +255,13 @@ export async function sendNatoriOrderMail(
     // 次回再送時の旧リンク無効化と、Webhook での入金金額照合に使う
     update.payment_link_id = paymentLinkId;
     update.quoted_amount = input.amount;
+  }
+  if (input.kind === "estimate" && quoteTokenHash) {
+    // 承諾トークンを最新の見積もりに付け替え、過去の承諾記録はリセットする
+    update.quote_accept_token_hash = quoteTokenHash;
+    update.quote_token_expires_at = quoteTokenExpiresAt;
+    update.quote_accepted_at = null;
+    update.quote_accepted_amount = null;
   }
 
   const { error } = await admin
@@ -358,6 +395,29 @@ export async function markNatoriCommissionPaid(
   if (!updated || updated.length === 0) {
     // 別リクエスト（再送・別イベント）が先に入金確定済み
     return { kind: "already-paid" };
+  }
+
+  // 依頼者への入金確認メール（失敗しても入金反映自体は成功扱い）。
+  // 決済直後の不安に応えるため、Stripe の完了画面とは別にメールで記録を残す。
+  if (isNatoriOrderMailConfigured() && project.client_email) {
+    const confirmation = buildPaidConfirmationMail({
+      clientName: project.client_name,
+      title: project.title,
+      amount: amountTotal ?? project.amount,
+    });
+    const sentToClient = await sendPlainMail(
+      project.client_email,
+      confirmation.subject,
+      confirmation.body
+    );
+    if (!sentToClient) {
+      console.error("[natori-order-mail] client paid confirmation mail failed (ignored)");
+    }
+  } else if (!project.client_email) {
+    console.error(
+      "[natori-order-mail] client paid confirmation skipped: client_email missing",
+      { projectId: project.id }
+    );
   }
 
   // ナトリへの入金通知（失敗しても入金反映自体は成功扱い）

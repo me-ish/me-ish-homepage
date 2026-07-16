@@ -1315,6 +1315,10 @@ export type Database = {
           payment_confirmed_at: string | null
           payment_link_id: string | null
           priority: string | null
+          quote_accept_token_hash: string | null
+          quote_accepted_amount: number | null
+          quote_accepted_at: string | null
+          quote_token_expires_at: string | null
           quoted_amount: number | null
           start_date: string | null
           status: string
@@ -1336,6 +1340,10 @@ export type Database = {
           payment_confirmed_at?: string | null
           payment_link_id?: string | null
           priority?: string | null
+          quote_accept_token_hash?: string | null
+          quote_accepted_amount?: number | null
+          quote_accepted_at?: string | null
+          quote_token_expires_at?: string | null
           quoted_amount?: number | null
           start_date?: string | null
           status?: string
@@ -1357,6 +1365,10 @@ export type Database = {
           payment_confirmed_at?: string | null
           payment_link_id?: string | null
           priority?: string | null
+          quote_accept_token_hash?: string | null
+          quote_accepted_amount?: number | null
+          quote_accepted_at?: string | null
+          quote_token_expires_at?: string | null
           quoted_amount?: number | null
           start_date?: string | null
           status?: string
