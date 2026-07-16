@@ -12,7 +12,22 @@ export const PAYMENT_LINK_PLACEHOLDER = "{支払いリンク}";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * 案件メモから依頼者のメールアドレスを取り出す。
+ * 依頼者メールの解決。client_email カラムを正とし、カラムが空の既存案件
+ * （移行スクリプト未実行・手入力）に限って note からの抽出にフォールバックする。
+ */
+export function resolveClientEmail(project: {
+  clientEmail?: string | null;
+  note?: string | null;
+}): string | null {
+  const fromColumn = project.clientEmail?.trim();
+  if (fromColumn && EMAIL_RE.test(fromColumn)) return fromColumn;
+  return extractClientEmailFromNote(project.note);
+}
+
+/**
+ * 【移行期の後方互換フォールバック】案件メモから依頼者のメールアドレスを取り出す。
+ * client_email カラム化（2026-07 タスク3）以降の新規参照は resolveClientEmail を
+ * 使うこと。note の手編集で壊れるため、このパースに新たに依存しない。
  * 1. 自動起票の「メール: xxx」行を優先
  * 2. 無ければ（手入力案件など）送信ログの「宛先: xxx」から最新のものを使う
  * どちらも無ければ null。

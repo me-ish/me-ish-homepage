@@ -28,6 +28,8 @@ type ProjectRow = {
   // Optional — added by 20260524_natori_project_flow.sql. Missing on older
   // backends; treat as undefined.
   payment_confirmed_at?: string | null;
+  // Optional — added by 20260717_natori_client_email_and_mail_logs.sql.
+  client_email?: string | null;
 };
 
 type TaskRow = {
@@ -72,6 +74,7 @@ function rowToProject(row: ProjectRow, taskRows: TaskRow[]): NatoriProject {
     id: row.id,
     title: row.title,
     clientName: row.client_name,
+    clientEmail: row.client_email ?? undefined,
     amount: row.amount,
     type: row.type as NatoriProjectType,
     status: row.status as NatoriProjectStatus,

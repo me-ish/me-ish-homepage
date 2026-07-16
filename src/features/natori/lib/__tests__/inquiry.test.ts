@@ -87,13 +87,19 @@ describe("buildInquiryNote", () => {
 });
 
 describe("buildInquiryProjectDraft", () => {
-  it("assembles title, client name, type and note", () => {
+  it("assembles title, client name, email, type and note", () => {
     const draft = buildInquiryProjectDraft(
       makeInput({ name: "  ナトリ  ", requestType: "SNSアイコン" })
     );
     expect(draft.clientName).toBe("ナトリ");
+    expect(draft.clientEmail).toBe("test@example.com");
     expect(draft.type).toBe("icon");
     expect(draft.title).toBe("SNSアイコン");
     expect(draft.note).toContain("自動起票");
+  });
+
+  it("trims the client email", () => {
+    const draft = buildInquiryProjectDraft(makeInput({ email: "  pad@example.com  " }));
+    expect(draft.clientEmail).toBe("pad@example.com");
   });
 });

@@ -1263,9 +1263,48 @@ export type Database = {
           },
         ]
       }
+      natori_order_mail_logs: {
+        Row: {
+          amount: number
+          id: number
+          kind: string
+          link_url: string | null
+          project_id: string
+          sent_at: string
+          to_email: string
+        }
+        Insert: {
+          amount: number
+          id?: never
+          kind: string
+          link_url?: string | null
+          project_id: string
+          sent_at?: string
+          to_email: string
+        }
+        Update: {
+          amount?: number
+          id?: never
+          kind?: string
+          link_url?: string | null
+          project_id?: string
+          sent_at?: string
+          to_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "natori_order_mail_logs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "natori_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       natori_projects: {
         Row: {
           amount: number
+          client_email: string | null
           client_name: string
           created_at: string
           delivery_plan: string
@@ -1286,6 +1325,7 @@ export type Database = {
         }
         Insert: {
           amount?: number
+          client_email?: string | null
           client_name: string
           created_at?: string
           delivery_plan?: string
@@ -1306,6 +1346,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          client_email?: string | null
           client_name?: string
           created_at?: string
           delivery_plan?: string

@@ -63,15 +63,17 @@ function chainResult(result: Result, calls?: string[]) {
 }
 
 /**
- * natori_projects テーブルのモック。update に渡された payload と filter を記録する。
+ * natori_projects と natori_order_mail_logs のモック。
+ * updates: projects への update payload / mailLogs: 送信ログへの insert payload
  * updateRows: 条件付き UPDATE が返す行（省略時は1行更新成功、[] で0行=条件不一致）
  */
 function projectsTable(
   row: unknown,
-  options: { updateError?: unknown; updateRows?: unknown[] } = {}
+  options: { updateError?: unknown; updateRows?: unknown[]; logError?: unknown } = {}
 ) {
   const updates: Record<string, unknown>[] = [];
   const updateCalls: string[] = [];
+  const mailLogs: Record<string, unknown>[] = [];
   const api = {
     select: vi.fn(() => chainResult({ data: row, error: null })),
     update: vi.fn((payload: Record<string, unknown>) => {
@@ -82,11 +84,18 @@ function projectsTable(
       return chainResult({ data, error: options.updateError ?? null }, updateCalls);
     }),
   };
+  const logsApi = {
+    insert: vi.fn((payload: Record<string, unknown>) => {
+      mailLogs.push(payload);
+      return chainResult({ data: null, error: options.logError ?? null });
+    }),
+  };
   mockAdminFrom.mockImplementation((table: string) => {
-    if (table !== "natori_projects") throw new Error(`unexpected table: ${table}`);
-    return api;
+    if (table === "natori_projects") return api;
+    if (table === "natori_order_mail_logs") return logsApi;
+    throw new Error(`unexpected table: ${table}`);
   });
-  return { api, updates, updateCalls };
+  return { api, updates, updateCalls, mailLogs };
 }
 
 function makeProjectRow(overrides: Record<string, unknown> = {}) {
@@ -269,7 +278,7 @@ describe("markNatoriCommissionPaid", () => {
 describe("sendNatoriOrderMail (estimate)", () => {
   it("見積もりメールを送り、案件を quoted に進めて送信ログを残す", async () => {
     const { sendNatoriOrderMail } = await loadService();
-    const { updates } = projectsTable(makeProjectRow({ status: "inquiry" }));
+    const { updates, mailLogs } = projectsTable(makeProjectRow({ status: "inquiry" }));
 
     const result = await sendNatoriOrderMail({
       projectId: "proj-1",
@@ -288,8 +297,39 @@ describe("sendNatoriOrderMail (estimate)", () => {
     expect(updates).toHaveLength(1);
     expect(updates[0].amount).toBe(12000);
     expect(updates[0].status).toBe("quoted");
+    // 実際に送った宛先が client_email カラムへ反映される
+    expect(updates[0].client_email).toBe("client@example.com");
     expect(String(updates[0].note)).toContain("見積もりメール送信");
     expect(String(updates[0].note)).toContain("client@example.com");
+
+    // 送信ログは natori_order_mail_logs が正
+    expect(mailLogs).toHaveLength(1);
+    expect(mailLogs[0]).toMatchObject({
+      project_id: "11111111-2222-3333-4444-555555555555",
+      kind: "estimate",
+      to_email: "client@example.com",
+      amount: 12000,
+      link_url: null,
+    });
+  });
+
+  it("送信ログの書き込みに失敗しても、メール送信済みなので処理は続行して ok", async () => {
+    const { sendNatoriOrderMail } = await loadService();
+    const { updates } = projectsTable(makeProjectRow({ status: "inquiry" }), {
+      logError: { message: "log table down" },
+    });
+
+    const result = await sendNatoriOrderMail({
+      projectId: "proj-1",
+      kind: "estimate",
+      to: "client@example.com",
+      subject: "お見積もり",
+      body: "本文です",
+      amount: 12000,
+    });
+
+    expect(result.kind).toBe("ok");
+    expect(updates).toHaveLength(1);
   });
 
   it("すでに入金待ちの案件へ再送してもステータスを巻き戻さない", async () => {
@@ -332,7 +372,7 @@ describe("sendNatoriOrderMail (estimate)", () => {
 describe("sendNatoriOrderMail (payment)", () => {
   it("1回限りの支払いリンクを発行して本文へ差し込み、awaiting_payment に進める", async () => {
     const { sendNatoriOrderMail } = await loadService();
-    const { updates } = projectsTable(makeProjectRow({ status: "quoted" }));
+    const { updates, mailLogs } = projectsTable(makeProjectRow({ status: "quoted" }));
 
     const result = await sendNatoriOrderMail({
       projectId: "proj-1",
@@ -344,6 +384,15 @@ describe("sendNatoriOrderMail (payment)", () => {
     });
 
     expect(result).toEqual({ kind: "ok", paymentLinkUrl: "https://pay.example.com/link-abc" });
+
+    // 送信ログに支払いリンク URL が記録される
+    expect(mailLogs).toHaveLength(1);
+    expect(mailLogs[0]).toMatchObject({
+      kind: "payment",
+      to_email: "client@example.com",
+      amount: 12000,
+      link_url: "https://pay.example.com/link-abc",
+    });
 
     // Payment Link は Webhook 分岐用 metadata と1回制限、二重発行防止の
     // idempotency key つきで作られる

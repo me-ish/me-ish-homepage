@@ -13,7 +13,7 @@ import {
   PAYMENT_LINK_PLACEHOLDER,
   buildEstimateMailDraft,
   buildPaymentMailDraft,
-  extractClientEmailFromNote,
+  resolveClientEmail,
   type NatoriOrderMailDraft,
 } from "@/features/natori/lib/orderMail";
 import { formatYen } from "@/features/natori/lib/pricing";
@@ -75,7 +75,7 @@ export default function OrderMailPanel({
 }: OrderMailPanelProps) {
   const meta = KIND_META[kind];
   const startAmount = initialAmount ?? project.amount;
-  const [to, setTo] = useState(extractClientEmailFromNote(project.note) ?? "");
+  const [to, setTo] = useState(resolveClientEmail(project) ?? "");
   const [amount, setAmount] = useState<number>(startAmount);
   const [draft, setDraft] = useState<NatoriOrderMailDraft>(() =>
     buildDraft(kind, project, startAmount, breakdownLines)

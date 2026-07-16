@@ -42,6 +42,7 @@ type ProjectRow = {
   payment_confirmed_at?: string | null;
   payment_link_id?: string | null;
   quoted_amount?: number | null;
+  client_email?: string | null;
 };
 
 async function fetchProjectRow(projectId: string): Promise<ProjectRow | null> {
@@ -49,7 +50,7 @@ async function fetchProjectRow(projectId: string): Promise<ProjectRow | null> {
   const { data, error } = await admin
     .from("natori_projects")
     .select(
-      "id, title, client_name, amount, status, note, payment_confirmed_at, payment_link_id, quoted_amount"
+      "id, title, client_name, amount, status, note, payment_confirmed_at, payment_link_id, quoted_amount, client_email"
     )
     .eq("id", projectId)
     .maybeSingle();
@@ -190,13 +191,31 @@ export async function sendNatoriOrderMail(
   const mailed = await sendPlainMail(input.to, input.subject, body);
   if (!mailed) return { kind: "mail-error" };
 
-  // 送信後の案件更新（金額・ステータス・送信ログ）。メールは送れているので、
-  // ここで失敗しても呼び出し側には db-error として伝えるだけに留める。
+  const admin = supabaseAdmin();
+
+  // 送信ログは natori_order_mail_logs が正（機械的参照はこちら）。note への
+  // 追記は人間可読の履歴表示用に残す。ログ書き込み失敗はメール送信済みの後
+  // なので処理は止めず、エラーログだけ残す。
+  const { error: logError } = await admin.from("natori_order_mail_logs").insert({
+    project_id: project.id,
+    kind: input.kind,
+    to_email: input.to,
+    amount: input.amount,
+    link_url: paymentLinkUrl ?? null,
+  });
+  if (logError) {
+    console.error("[natori-order-mail] mail log insert failed", logError);
+  }
+
+  // 送信後の案件更新（金額・宛先・ステータス・履歴メモ）。メールは送れて
+  // いるので、ここで失敗しても呼び出し側には db-error として伝えるだけに留める。
   const today = new Date().toISOString().slice(0, 10);
   const logEntry = buildOrderMailLogEntry(input.kind, today, input.to, input.amount, paymentLinkUrl);
   const flow = NEXT_STATUS[input.kind];
   const update: Record<string, unknown> = {
     amount: input.amount,
+    // 実際に送った宛先を正とする（手入力案件や宛先修正もここで反映される）
+    client_email: input.to,
     note: appendNote(project.note, logEntry),
   };
   if (flow.advanceFrom.has(project.status)) {
@@ -209,7 +228,6 @@ export async function sendNatoriOrderMail(
     update.quoted_amount = input.amount;
   }
 
-  const admin = supabaseAdmin();
   const { error } = await admin
     .from("natori_projects")
     .update(update)

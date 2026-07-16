@@ -14,6 +14,7 @@ export type NatoriAdminProjectRow = {
   user_id: string;
   title: string;
   client_name: string;
+  client_email?: string | null;
   amount: number;
   type: string;
   status: string;
@@ -267,6 +268,8 @@ export type CreateNatoriAdminProjectInput = {
   userId: string;
   title: string;
   clientName: string;
+  /** 依頼者メール（inquiry 起票時に保存。以後の送信画面はカラムを参照する） */
+  clientEmail?: string;
   amount: number;
   type: NatoriProjectType;
   status?: string;
@@ -302,6 +305,7 @@ export async function createNatoriAdminProject(
       user_id: input.userId,
       title: input.title,
       client_name: input.clientName,
+      client_email: input.clientEmail?.trim() || null,
       amount: input.amount,
       type: input.type,
       status,

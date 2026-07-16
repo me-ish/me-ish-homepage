@@ -27,6 +27,7 @@ export async function createInquiryProject(
     userId,
     title: draft.title,
     clientName: draft.clientName,
+    clientEmail: draft.clientEmail,
     amount: 0,
     type: draft.type,
     status: "inquiry",

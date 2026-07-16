@@ -79,15 +79,18 @@ export function buildInquiryNote(input: NatoriInquiryInput): string {
 export type NatoriInquiryProjectDraft = {
   title: string;
   clientName: string;
+  /** 依頼者メール。client_email カラムに保存する（note は人間可読の控えのみ） */
+  clientEmail: string;
   type: NatoriProjectType;
   note: string;
 };
 
-/** フォーム入力から案件下書き（タイトル・依頼者名・タイプ・メモ）を作る。 */
+/** フォーム入力から案件下書き（タイトル・依頼者名・メール・タイプ・メモ）を作る。 */
 export function buildInquiryProjectDraft(input: NatoriInquiryInput): NatoriInquiryProjectDraft {
   return {
     title: buildInquiryTitle(input),
     clientName: input.name.trim(),
+    clientEmail: input.email.trim(),
     type: inferNatoriProjectType(input.requestType, input.plan),
     note: buildInquiryNote(input),
   };

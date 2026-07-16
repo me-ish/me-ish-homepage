@@ -60,6 +60,8 @@ export type NatoriProject = {
   id: string;
   title: string;
   clientName: string;
+  /** 依頼者メール。カラム化済み（note からの抽出は移行期フォールバックのみ） */
+  clientEmail?: string;
   amount: number;
   startDate?: string;
   dueDate: string;

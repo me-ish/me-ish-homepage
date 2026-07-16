@@ -7,7 +7,36 @@ import {
   buildPaymentMailDraft,
   extractClientEmailFromNote,
   injectPaymentLink,
+  resolveClientEmail,
 } from "@/features/natori/lib/orderMail";
+
+describe("resolveClientEmail", () => {
+  it("client_email カラムを最優先で使う（note にある別のメールより優先）", () => {
+    expect(
+      resolveClientEmail({
+        clientEmail: "column@example.com",
+        note: "メール: note@example.com",
+      })
+    ).toBe("column@example.com");
+  });
+
+  it("カラムが空・不正なら note からの抽出にフォールバックする", () => {
+    expect(
+      resolveClientEmail({ clientEmail: null, note: "メール: note@example.com" })
+    ).toBe("note@example.com");
+    expect(
+      resolveClientEmail({ clientEmail: "   ", note: "メール: note@example.com" })
+    ).toBe("note@example.com");
+    expect(
+      resolveClientEmail({ clientEmail: "not-an-email", note: "メール: note@example.com" })
+    ).toBe("note@example.com");
+  });
+
+  it("カラムも note も無ければ null", () => {
+    expect(resolveClientEmail({ clientEmail: null, note: "手入力の案件メモ" })).toBeNull();
+    expect(resolveClientEmail({})).toBeNull();
+  });
+});
 
 describe("extractClientEmailFromNote", () => {
   it("finds the email line written by the inquiry auto-note", () => {
