@@ -4,7 +4,7 @@ import {
   isPortfolioXLink,
   portfolioColors as c,
 } from "@/features/natori/constants/portfolioContent";
-import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
 import ChibiFace from "./ChibiFace";
 import PortfolioSnsLink from "./PortfolioSnsLink";
 import { fontEnStyle } from "./portfolioFonts";
@@ -19,8 +19,15 @@ function xHandle(href: string, fallback: string): string {
   }
 }
 
-export default function PortfolioAbout({ content }: { content: PortfolioContent }) {
-  const xLink = content.socialLinks.find(isPortfolioXLink);
+export default function PortfolioAbout({
+  content,
+  variant = "full",
+}: {
+  content: PortfolioContent;
+  variant?: PortfolioVariant;
+}) {
+  // showcase ではXも直接連絡手段になり得るためリンクを出さない
+  const xLink = variant === "showcase" ? undefined : content.socialLinks.find(isPortfolioXLink);
   // プロフィール欄の名前・肩書きはヘッダー/ヒーローとは独立に設定できる。
   // 未設定（旧データ）のときは従来どおりサイト名・英字肩書きを表示する
   const profileName = content.profileName.trim() || content.artistName;

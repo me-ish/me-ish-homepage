@@ -6,12 +6,20 @@ import {
   isPortfolioXLink,
   portfolioColors as c,
 } from "@/features/natori/constants/portfolioContent";
-import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
 
-export default function PortfolioFooter({ content }: { content: PortfolioContent }) {
-  const links = content.socialLinks.filter(
-    (link) => !isPortfolioXLink(link) && !isPortfolioTsunaguLink(link),
-  );
+export default function PortfolioFooter({
+  content,
+  variant = "full",
+}: {
+  content: PortfolioContent;
+  variant?: PortfolioVariant;
+}) {
+  // showcase では外部SNSリンクも直接連絡手段になり得るため copyright のみ表示
+  const links =
+    variant === "showcase"
+      ? []
+      : content.socialLinks.filter((link) => !isPortfolioXLink(link) && !isPortfolioTsunaguLink(link));
   return (
     <footer className="py-10 text-center text-sm" style={{ color: c.inkSoft }}>
       {links.length > 0 ? (

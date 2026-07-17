@@ -3,6 +3,15 @@
 // 掲載内容一式は PortfolioContent に集約され、DB (natori_portfolio_content) に
 // jsonb として保存される。DB行が無い/壊れている場合は defaultPortfolioContent を使う。
 
+/**
+ * ポートフォリオの表示バリアント。
+ * - "full": /natori/portfolio。依頼フォーム・料金・SNSを含む通常表示
+ * - "showcase": /natori/works。営業先プラットフォーム（つなぐ等）に提示する
+ *   作品集専用表示。直接取引への誘導とみなされ得る導線
+ *   （依頼フォーム・料金・受付状況・SNSリンク）を一切含めない
+ */
+export type PortfolioVariant = "full" | "showcase";
+
 export type PortfolioWork = {
   /** 一意なID（編集画面で生成。react key と並び替えに使用） */
   id: string;

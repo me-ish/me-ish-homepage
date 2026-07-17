@@ -12,7 +12,7 @@ import {
   workRotations,
 } from "@/features/natori/constants/portfolioContent";
 import { galleryFiltersFromWorks } from "@/features/natori/lib/portfolioContent";
-import type { PortfolioContent, PortfolioWork } from "@/features/natori/types/portfolio";
+import type { PortfolioWork } from "@/features/natori/types/portfolio";
 import ChibiFace from "./ChibiFace";
 
 function MaskingTape({ color, angle }: { color: string; angle: number }) {
@@ -33,8 +33,11 @@ function MaskingTape({ color, angle }: { color: string; angle: number }) {
   );
 }
 
-export default function PortfolioGallery({ content }: { content: PortfolioContent }) {
-  const filters = galleryFiltersFromWorks(content.works);
+// client component のため props は RSC ペイロードとして HTML ソースに埋め込まれる。
+// content 丸ごとを渡すと SNS リンクや料金までソースに露出するので works だけ受け取る
+// （/natori/works を営業先に見せる際にソースにも販売導線を残さないため）。
+export default function PortfolioGallery({ works }: { works: PortfolioWork[] }) {
+  const filters = galleryFiltersFromWorks(works);
   const [activeFilter, setActiveFilter] = useState<string>("すべて");
   const [selected, setSelected] = useState<PortfolioWork | null>(null);
 
@@ -54,9 +57,7 @@ export default function PortfolioGallery({ content }: { content: PortfolioConten
   }, [selected]);
 
   const shown =
-    activeFilter === "すべて"
-      ? content.works
-      : content.works.filter((work) => work.tags.includes(activeFilter));
+    activeFilter === "すべて" ? works : works.filter((work) => work.tags.includes(activeFilter));
 
   return (
     <section id="gallery" className="mx-auto max-w-6xl px-5 py-16">

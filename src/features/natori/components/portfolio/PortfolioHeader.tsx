@@ -1,6 +1,6 @@
 // features/natori/components/portfolio/PortfolioHeader.tsx
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
-import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
 import { fontEnStyle } from "./portfolioFonts";
 
 const NAV_LINKS = [
@@ -11,7 +11,20 @@ const NAV_LINKS = [
   { href: "#form", label: "ご依頼" },
 ];
 
-export default function PortfolioHeader({ content }: { content: PortfolioContent }) {
+// showcase 表示ではページに存在しないセクション（料金・流れ・依頼）を除外
+const SHOWCASE_NAV_HREFS = new Set(["#gallery", "#about"]);
+
+export default function PortfolioHeader({
+  content,
+  variant = "full",
+}: {
+  content: PortfolioContent;
+  variant?: PortfolioVariant;
+}) {
+  const showcase = variant === "showcase";
+  const navLinks = showcase
+    ? NAV_LINKS.filter((link) => SHOWCASE_NAV_HREFS.has(link.href))
+    : NAV_LINKS;
   return (
     <header
       className="sticky top-0 z-50 border-b backdrop-blur"
@@ -25,21 +38,23 @@ export default function PortfolioHeader({ content }: { content: PortfolioContent
           {content.artistName}
         </span>
         <nav className="hidden gap-6 text-sm font-medium md:flex" style={{ color: c.inkSoft }}>
-          {NAV_LINKS.map((link) => (
+          {navLinks.map((link) => (
             <a key={link.href} href={link.href} className="pf-cute-focus hover:opacity-70">
               {link.label}
             </a>
           ))}
         </nav>
-        <span
-          className="rounded-full px-3 py-1.5 text-xs font-bold"
-          style={{
-            background: content.commissionOpen ? c.mint : "#D8D3E6",
-            color: content.commissionOpen ? "#0F4E40" : c.inkSoft,
-          }}
-        >
-          {content.commissionOpen ? "● 受付中" : "受付停止中"}
-        </span>
+        {showcase ? null : (
+          <span
+            className="rounded-full px-3 py-1.5 text-xs font-bold"
+            style={{
+              background: content.commissionOpen ? c.mint : "#D8D3E6",
+              color: content.commissionOpen ? "#0F4E40" : c.inkSoft,
+            }}
+          >
+            {content.commissionOpen ? "● 受付中" : "受付停止中"}
+          </span>
+        )}
       </div>
     </header>
   );

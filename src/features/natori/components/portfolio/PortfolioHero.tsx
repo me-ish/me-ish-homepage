@@ -2,11 +2,17 @@
 // メインビジュアル(丸画像)は当面非表示。content.heroImage 自体は残してあるので、
 // 復活させる場合は git 履歴のビジュアル列を戻す。
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
-import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
 import Sparkle from "./Sparkle";
 import { fontEnStyle } from "./portfolioFonts";
 
-export default function PortfolioHero({ content }: { content: PortfolioContent }) {
+export default function PortfolioHero({
+  content,
+  variant = "full",
+}: {
+  content: PortfolioContent;
+  variant?: PortfolioVariant;
+}) {
   return (
     <section className="relative mx-auto max-w-6xl overflow-hidden px-5 pb-20 pt-16">
       {/* 星は上部の余白帯（pt-16 の範囲内）に置き、テキストと重ねない */}
@@ -34,13 +40,15 @@ export default function PortfolioHero({ content }: { content: PortfolioContent }
           >
             作品を見る
           </a>
-          <a
-            href="#form"
-            className="pf-cute-focus rounded-full border-2 px-6 py-3 font-bold hover:bg-white"
-            style={{ borderColor: c.pink, color: c.pinkDeep }}
-          >
-            依頼してみる
-          </a>
+          {variant === "showcase" ? null : (
+            <a
+              href="#form"
+              className="pf-cute-focus rounded-full border-2 px-6 py-3 font-bold hover:bg-white"
+              style={{ borderColor: c.pink, color: c.pinkDeep }}
+            >
+              依頼してみる
+            </a>
+          )}
         </div>
       </div>
     </section>
