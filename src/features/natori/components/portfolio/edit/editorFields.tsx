@@ -9,18 +9,24 @@ import { CSRF_HEADERS } from "@/lib/auth/csrf";
 /* ---------- レイアウト ---------- */
 
 export function SectionCard({
+  id,
   emoji,
   title,
   description,
   children,
 }: {
+  /** 上部バーの目次ジャンプ用アンカー */
+  id?: string;
   emoji: string;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-pink-100 bg-white p-4 shadow-sm sm:p-5">
+    <section
+      id={id}
+      className="scroll-mt-28 rounded-2xl border border-pink-100 bg-white p-4 shadow-sm sm:p-5"
+    >
       <div className="mb-4">
         <h2 className="flex items-center gap-2 text-base font-black text-gray-900 sm:text-lg">
           <span aria-hidden="true">{emoji}</span>
@@ -115,17 +121,23 @@ export function TextArea({
 export function RowControls({
   handle,
   onRemove,
+  confirmMessage,
 }: {
   /** SortableList から渡されるドラッグハンドル */
   handle?: ReactNode;
   onRemove: () => void;
+  /** 指定すると削除前に確認ダイアログを出す（空行など失うものが無い行では省略する） */
+  confirmMessage?: string;
 }) {
   return (
     <div className="flex shrink-0 items-center gap-1">
       {handle}
       <button
         type="button"
-        onClick={onRemove}
+        onClick={() => {
+          if (confirmMessage && !window.confirm(confirmMessage)) return;
+          onRemove();
+        }}
         className="grid h-8 w-8 place-items-center rounded-lg border border-red-200 bg-white text-red-500 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-pink-300"
         aria-label="削除"
         title="削除"
@@ -151,7 +163,7 @@ export function AddButton({ label, onClick }: { label: string; onClick: () => vo
 
 /* ---------- 画像アップロード ---------- */
 
-async function uploadImageFile(file: File): Promise<string> {
+export async function uploadImageFile(file: File): Promise<string> {
   const form = new FormData();
   form.append("file", file);
   const res = await fetch("/api/natori/portfolio/upload", {

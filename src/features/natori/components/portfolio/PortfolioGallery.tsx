@@ -116,6 +116,8 @@ export default function PortfolioGallery({ works }: { works: PortfolioWork[] }) 
                     fill
                     sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                     className="object-cover"
+                    // 先頭の作品はファーストビューに入る（LCP）ので優先読み込み
+                    priority={index === 0}
                   />
                 ) : (
                   <ChibiFace

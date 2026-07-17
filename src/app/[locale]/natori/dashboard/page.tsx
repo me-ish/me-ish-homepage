@@ -8,6 +8,7 @@ import {
   ChevronUp,
   FolderOpen,
   Inbox,
+  KeyRound,
   Link2,
   LogOut,
   Palette,
@@ -26,8 +27,10 @@ import {
 import { fetchNatoriProjects } from "@/features/natori/data/supabaseProjects";
 import { isPreworkStatus } from "@/features/natori/lib/projects";
 import { Button } from "@/components/ui/button";
+import DashboardTodaySummary from "@/features/natori/components/dashboard/DashboardTodaySummary";
 import PageEventsPanel from "@/features/natori/components/dashboard/PageEventsPanel";
 import Footer from "@/features/natori/components/Footer";
+import type { NatoriProject } from "@/features/natori/types/projects";
 
 type DashboardCard = {
   href: string;
@@ -116,6 +119,8 @@ export default function NatoriDashboardPage() {
     pending: number;
     inProgress: number;
   } | null>(null);
+  // 「今日の状況」サマリ用。取れなければ非表示
+  const [projects, setProjects] = useState<NatoriProject[] | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -134,6 +139,7 @@ export default function NatoriDashboardPage() {
       }
       try {
         const projects = await fetchNatoriProjects();
+        setProjects(projects);
         const prework = projects.filter((project) => isPreworkStatus(project.status));
         const pending = prework.filter(
           (project) => project.status === "inquiry" || project.status === "consulting"
@@ -142,6 +148,7 @@ export default function NatoriDashboardPage() {
       } catch (err) {
         console.error("[dashboard] inquiry count fetch failed", err);
         setInquiryCounts(null);
+        setProjects(null);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -223,7 +230,13 @@ export default function NatoriDashboardPage() {
                   {signingOut ? "ログアウト中…" : "ログアウト"}
                 </Button>
               </>
-            ) : null}
+            ) : (
+              // ここまで表示できている時点で認可済みなので、email が無い = 合言葉キー
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-bold text-gray-600">
+                <KeyRound className="h-3.5 w-3.5" aria-hidden />
+                合言葉キーでアクセス中
+              </span>
+            )}
           </div>
         </div>
       </section>
@@ -234,6 +247,8 @@ export default function NatoriDashboardPage() {
             {error}
           </div>
         ) : null}
+
+        {projects ? <DashboardTodaySummary projects={projects} today={new Date()} /> : null}
 
         {resolvedGroups.map((group) => (
           <div key={group.heading} className="mt-6">

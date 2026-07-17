@@ -97,6 +97,7 @@ export default function LinksLanding({ links }: { links: NatoriLinkItem[] }) {
               src="/natori/IMG_3825.jpeg"
               alt="ナトリ"
               fill
+              sizes="112px"
               className="object-cover"
               priority
             />

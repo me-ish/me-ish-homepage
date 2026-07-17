@@ -78,11 +78,12 @@ export default function Hero({ vgenUrl, twitterUrl, instaUrl, homepageUrl }: Pro
           </div>
 
           <div className="relative">
-            <div className="aspect-[3/4] w-full overflow-hidden rounded-2xl border bg-white shadow-xl">
+            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl border bg-white shadow-xl">
               <Image
                 src="/natori/イラスト9リサイズ.jpg"
                 alt="Natori main visual"
                 fill
+                sizes="(min-width: 768px) 560px, 100vw"
                 className="object-cover"
                 priority
               />

@@ -3,12 +3,12 @@
 // features/natori/components/portfolio/edit/PortfolioEditor.tsx
 // /natori/portfolio の掲載内容をブラウザから編集する画面。
 // コードを触らずに、文章・料金・作品画像・SNSリンクをすべて変更できる。
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Eye, Loader2, Save } from "lucide-react";
+import { ExternalLink, Eye, ImagePlus, Loader2, Save } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { PORTFOLIO_PREVIEW_STORAGE_KEY } from "@/features/natori/lib/portfolioContent";
-import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import type { PortfolioContent, PortfolioWork } from "@/features/natori/types/portfolio";
 import {
   AddButton,
   ImageUploadField,
@@ -18,10 +18,27 @@ import {
   TextInput,
   removeItem,
   updateItem,
+  uploadImageFile,
 } from "./editorFields";
 import SortableList from "./SortableList";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
+
+/** 上部バーの目次。id は各 SectionCard のアンカーと一致させる */
+const SECTION_NAV = [
+  { id: "section-status", label: "受付状態" },
+  { id: "section-basic", label: "基本情報" },
+  { id: "section-images", label: "画像" },
+  { id: "section-profile", label: "プロフィール" },
+  { id: "section-services", label: "対応内容" },
+  { id: "section-works", label: "作品" },
+  { id: "section-plans", label: "料金" },
+  { id: "section-options", label: "オプション" },
+  { id: "section-delivery", label: "納期" },
+  { id: "section-workflow", label: "制作の流れ" },
+  { id: "section-requests", label: "お願い" },
+  { id: "section-sns", label: "SNS" },
+] as const;
 
 /** 保存前の軽い整理（空行・前後スペースを除去。空になった行は消す） */
 function sanitizeContent(content: PortfolioContent): PortfolioContent {
@@ -77,6 +94,17 @@ export default function PortfolioEditor() {
 
   const patch = useCallback((update: Partial<PortfolioContent>) => {
     setContent((current) => (current ? { ...current, ...update } : current));
+    setDirty(true);
+    setSaveState("idle");
+  }, []);
+
+  // まとめてアップロード中に他の編集が入っても取りこぼさないよう、
+  // works への追加は最新 state に対して行う
+  const appendWorks = useCallback((added: PortfolioWork[]) => {
+    if (added.length === 0) return;
+    setContent((current) =>
+      current ? { ...current, works: [...current.works, ...added] } : current
+    );
     setDirty(true);
     setSaveState("idle");
   }, []);
@@ -167,6 +195,18 @@ export default function PortfolioEditor() {
             </Link>
           </div>
         </div>
+        {/* 目次ジャンプ。ページが縦に長いので、直したいセクションへ一足で飛べるようにする */}
+        <nav className="mx-auto flex max-w-3xl gap-1.5 overflow-x-auto px-4 pb-2.5">
+          {SECTION_NAV.map((section) => (
+            <a
+              key={section.id}
+              href={`#${section.id}`}
+              className="shrink-0 whitespace-nowrap rounded-full border border-pink-200 bg-white px-3 py-1 text-[11px] font-bold text-pink-700 hover:bg-pink-50 focus:outline-none focus:ring-2 focus:ring-pink-300"
+            >
+              {section.label}
+            </a>
+          ))}
+        </nav>
       </div>
 
       <div className="mx-auto max-w-3xl space-y-5 px-4 pt-5">
@@ -178,6 +218,7 @@ export default function PortfolioEditor() {
 
         {/* 受付状態 */}
         <SectionCard
+          id="section-status"
           emoji="🚪"
           title="受付状態"
           description="コミッションの受付中・停止中を切り替えます。停止中はフォームから送信できなくなります。"
@@ -205,6 +246,7 @@ export default function PortfolioEditor() {
 
         {/* 基本情報 */}
         <SectionCard
+          id="section-basic"
           emoji="✏️"
           title="基本情報・キャッチコピー"
           description="ページ最上部に表示される内容です。"
@@ -250,6 +292,7 @@ export default function PortfolioEditor() {
 
         {/* 画像 */}
         <SectionCard
+          id="section-images"
           emoji="🖼️"
           title="画像"
           description="どちらも丸い枠に表示されます。正方形に近い画像がおすすめです。"
@@ -274,6 +317,7 @@ export default function PortfolioEditor() {
 
         {/* プロフィール */}
         <SectionCard
+          id="section-profile"
           emoji="💬"
           title="プロフィール"
           description="アイコン下の名前・肩書きと、紹介文（1枠 = 1段落）です。"
@@ -311,6 +355,7 @@ export default function PortfolioEditor() {
                 />
                 <RowControls
                   handle={handle}
+                  confirmMessage={paragraph.trim() ? "この段落を削除しますか？" : undefined}
                   onRemove={() => patch({ aboutParagraphs: removeItem(content.aboutParagraphs, index) })}
                 />
               </div>
@@ -324,6 +369,7 @@ export default function PortfolioEditor() {
 
         {/* 対応内容 */}
         <SectionCard
+          id="section-services"
           emoji="🏷️"
           title="対応内容バッジ"
           description="プロフィール欄のバッジと、ご依頼フォームの「ご依頼の種類」の選択肢になります。"
@@ -342,6 +388,9 @@ export default function PortfolioEditor() {
                 />
                 <RowControls
                   handle={handle}
+                  confirmMessage={
+                    service.trim() ? `バッジ「${service.trim()}」を削除しますか？` : undefined
+                  }
                   onRemove={() => patch({ services: removeItem(content.services, index) })}
                 />
               </div>
@@ -352,6 +401,7 @@ export default function PortfolioEditor() {
 
         {/* 作品ギャラリー */}
         <SectionCard
+          id="section-works"
           emoji="🎨"
           title="作品ギャラリー"
           description="コルクボードに表示される作品です。タグは「、」区切りで複数つけられます。同じ言葉を使うと絞り込みボタンにまとまります（例: つなぐ、立ち絵）。"
@@ -367,6 +417,7 @@ export default function PortfolioEditor() {
                   <p className="text-xs font-bold text-pink-700">作品 {index + 1}</p>
                   <RowControls
                     handle={handle}
+                    confirmMessage={`作品「${work.title.trim() || "無題"}」を削除しますか？`}
                     onRemove={() => patch({ works: removeItem(content.works, index) })}
                   />
                 </div>
@@ -397,21 +448,25 @@ export default function PortfolioEditor() {
               </div>
             )}
           />
-          <AddButton
-            label="作品を追加"
-            onClick={() =>
-              patch({
-                works: [
-                  ...content.works,
-                  { id: crypto.randomUUID(), title: "新しい作品", tags: ["一枚絵"], image: null },
-                ],
-              })
-            }
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <AddButton
+              label="作品を追加"
+              onClick={() =>
+                patch({
+                  works: [
+                    ...content.works,
+                    { id: crypto.randomUUID(), title: "新しい作品", tags: ["一枚絵"], image: null },
+                  ],
+                })
+              }
+            />
+            <BulkWorkImageAdd onAdded={appendWorks} />
+          </div>
         </SectionCard>
 
         {/* 基本料金 */}
         <SectionCard
+          id="section-plans"
           emoji="💰"
           title="基本料金"
           description="料金カードとして表示されます。「含まれるもの」は1行に1つずつ書いてください。"
@@ -426,6 +481,7 @@ export default function PortfolioEditor() {
                   <p className="text-xs font-bold text-pink-700">プラン {index + 1}</p>
                   <RowControls
                     handle={handle}
+                    confirmMessage={`プラン「${plan.name.trim() || "無題"}」を削除しますか？`}
                     onRemove={() => patch({ plans: removeItem(content.plans, index) })}
                   />
                 </div>
@@ -475,6 +531,7 @@ export default function PortfolioEditor() {
 
         {/* 追加オプション */}
         <SectionCard
+          id="section-options"
           emoji="➕"
           title="追加オプション"
           description="料金セクションの表と、ご依頼フォームのチェックボックスになります。"
@@ -499,6 +556,11 @@ export default function PortfolioEditor() {
                 </div>
                 <RowControls
                   handle={handle}
+                  confirmMessage={
+                    option.name.trim() || option.price.trim()
+                      ? `オプション「${option.name.trim() || "無題"}」を削除しますか？`
+                      : undefined
+                  }
                   onRemove={() => patch({ options: removeItem(content.options, index) })}
                 />
               </div>
@@ -511,7 +573,7 @@ export default function PortfolioEditor() {
         </SectionCard>
 
         {/* 納期について */}
-        <SectionCard emoji="📅" title="納期について">
+        <SectionCard id="section-delivery" emoji="📅" title="納期について">
           <div className="space-y-4">
             <TextArea
               label="納期の説明文"
@@ -529,6 +591,11 @@ export default function PortfolioEditor() {
                     <p className="text-xs font-bold text-pink-700">補足 {index + 1}</p>
                     <RowControls
                       handle={handle}
+                      confirmMessage={
+                        note.title.trim() || note.body.trim()
+                          ? `補足「${note.title.trim() || "無題"}」を削除しますか？`
+                          : undefined
+                      }
                       onRemove={() => patch({ deliveryNotes: removeItem(content.deliveryNotes, index) })}
                     />
                   </div>
@@ -557,6 +624,7 @@ export default function PortfolioEditor() {
 
         {/* 制作の流れ */}
         <SectionCard
+          id="section-workflow"
           emoji="🪄"
           title="制作の流れ"
           description="番号は上から自動で付きます。"
@@ -571,6 +639,11 @@ export default function PortfolioEditor() {
                   <p className="text-xs font-bold text-pink-700">ステップ {index + 1}</p>
                   <RowControls
                     handle={handle}
+                    confirmMessage={
+                      step.title.trim() || step.body.trim()
+                        ? `ステップ「${step.title.trim() || "無題"}」を削除しますか？`
+                        : undefined
+                    }
                     onRemove={() => patch({ workflow: removeItem(content.workflow, index) })}
                   />
                 </div>
@@ -597,7 +670,12 @@ export default function PortfolioEditor() {
         </SectionCard>
 
         {/* 購入者へのお願い */}
-        <SectionCard emoji="🙏" title="購入者へのお願い" description="1枠 = 1項目として表示されます。">
+        <SectionCard
+          id="section-requests"
+          emoji="🙏"
+          title="購入者へのお願い"
+          description="1枠 = 1項目として表示されます。"
+        >
           <SortableList
             items={content.requests}
             onReorder={(next) => patch({ requests: next })}
@@ -613,6 +691,7 @@ export default function PortfolioEditor() {
                 />
                 <RowControls
                   handle={handle}
+                  confirmMessage={request.trim() ? "この項目を削除しますか？" : undefined}
                   onRemove={() => patch({ requests: removeItem(content.requests, index) })}
                 />
               </div>
@@ -622,7 +701,7 @@ export default function PortfolioEditor() {
         </SectionCard>
 
         {/* SNSリンク */}
-        <SectionCard emoji="🔗" title="SNSリンク">
+        <SectionCard id="section-sns" emoji="🔗" title="SNSリンク">
           <SortableList
             items={content.socialLinks}
             onReorder={(next) => patch({ socialLinks: next })}
@@ -643,6 +722,11 @@ export default function PortfolioEditor() {
                 />
                 <RowControls
                   handle={handle}
+                  confirmMessage={
+                    link.label.trim() || link.href.trim()
+                      ? `リンク「${link.label.trim() || link.href.trim()}」を削除しますか？`
+                      : undefined
+                  }
                   onRemove={() => patch({ socialLinks: removeItem(content.socialLinks, index) })}
                 />
               </div>
@@ -685,5 +769,83 @@ export default function PortfolioEditor() {
         </div>
       </div>
     </main>
+  );
+}
+
+/** ファイル名から拡張子を除いて作品タイトルの初期値にする */
+function titleFromFileName(name: string): string {
+  const base = name.replace(/\.[^.]+$/, "").trim();
+  return base || "新しい作品";
+}
+
+/**
+ * 画像を複数選択して、1枚 = 1作品としてまとめて追加するボタン。
+ * タイトルはファイル名が初期値になる（あとから編集できる）。
+ * アップロードは1枚ずつ順番に行い、失敗した分は枚数だけ知らせる。
+ */
+function BulkWorkImageAdd({ onAdded }: { onAdded: (works: PortfolioWork[]) => void }) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleFiles = async (list: FileList | null) => {
+    const files = Array.from(list ?? []);
+    if (files.length === 0) return;
+    setProgress({ done: 0, total: files.length });
+    setError(null);
+    const added: PortfolioWork[] = [];
+    let failed = 0;
+    for (const [index, file] of files.entries()) {
+      try {
+        const url = await uploadImageFile(file);
+        added.push({
+          id: crypto.randomUUID(),
+          title: titleFromFileName(file.name),
+          tags: [],
+          image: url,
+        });
+      } catch (err) {
+        console.error("[portfolio-edit] bulk upload failed", file.name, err);
+        failed += 1;
+      }
+      setProgress({ done: index + 1, total: files.length });
+    }
+    onAdded(added);
+    setProgress(null);
+    if (failed > 0) {
+      setError(
+        `${failed}枚のアップロードに失敗しました。画像は10MBまで（png / jpg / webp / gif）です。`
+      );
+    }
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={progress !== null}
+        className="inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-white px-4 py-2 text-xs font-bold text-pink-700 hover:bg-pink-50 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-pink-300"
+      >
+        {progress ? (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+        ) : (
+          <ImagePlus className="h-4 w-4" aria-hidden />
+        )}
+        {progress
+          ? `アップロード中… ${progress.done}/${progress.total}`
+          : "画像から作品をまとめて追加"}
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        className="hidden"
+        onChange={(event) => handleFiles(event.target.files)}
+      />
+      {error ? <p className="mt-1 text-xs font-bold text-red-600">{error}</p> : null}
+    </div>
   );
 }

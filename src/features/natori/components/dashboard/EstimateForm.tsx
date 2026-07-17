@@ -479,7 +479,7 @@ function PresetSwitcher({
         <div className="min-w-0">
           <p className="text-sm font-bold text-pink-900">料金プリセット</p>
           <p className="mt-0.5 text-xs text-pink-800/80">
-            依頼元（つなぐ / VGen）ごとの料金表に切り替えられます。編集して「保存」を押すと自分のアカウントに残ります。
+            依頼元（つなぐ / VGen）ごとの料金表に切り替えられます。料金表を編集すると保存ボタンが表示され、押すと自分のアカウントに残ります。
           </p>
         </div>
         {dirty ? (
