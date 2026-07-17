@@ -14,6 +14,8 @@ const TO = process.env.NATORI_PORTFOLIO_CONTACT_TO ?? "natori.o0716@gmail.com";
 /** 依頼者向け自動返信の差出人（orderMailService と同じ env を共有） */
 const AUTO_REPLY_FROM =
   process.env.NATORI_ORDER_MAIL_FROM ?? "ナトリ（me-ish） <noreply@me-ish.art>";
+/** 全 natori メールの BCC（me-ish 側で控えを残す用）。未設定なら BCC なし */
+const BCC = process.env.NATORI_MAIL_BCC?.trim() || "";
 
 /* ---------- Validation ---------- */
 export const portfolioContactSchema = z.object({
@@ -126,6 +128,7 @@ export async function sendPortfolioContactEmail(
   const { error } = await resend.emails.send({
     from: FROM,
     to: [TO],
+    ...(BCC ? { bcc: [BCC] } : {}),
     subject,
     text,
     html,
@@ -185,6 +188,7 @@ export async function sendPortfolioContactAutoReply(
   const { error } = await resend.emails.send({
     from: AUTO_REPLY_FROM,
     to: [input.email],
+    ...(BCC ? { bcc: [BCC] } : {}),
     subject: `【受付確認】ご依頼ありがとうございます（ナトリ）`,
     text,
     replyTo: TO, // 依頼者が返信するとナトリに届く

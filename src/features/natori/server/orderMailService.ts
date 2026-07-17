@@ -33,6 +33,8 @@ const FROM = process.env.NATORI_ORDER_MAIL_FROM ?? "ナトリ（me-ish） <norep
  * フォーム通知の宛先と同じ env で上書きできる。
  */
 const REPLY_TO = process.env.NATORI_PORTFOLIO_CONTACT_TO ?? "natori.o0716@gmail.com";
+/** 全 natori メールの BCC（me-ish 側で控えを残す用）。未設定なら BCC なし */
+const BCC = process.env.NATORI_MAIL_BCC?.trim() || "";
 
 export function isNatoriOrderMailConfigured(): boolean {
   return RESEND_API_KEY.length > 0;
@@ -76,6 +78,7 @@ async function sendPlainMail(to: string, subject: string, body: string): Promise
   const { error } = await resend.emails.send({
     from: FROM,
     to: [to],
+    ...(BCC ? { bcc: [BCC] } : {}),
     subject: subject.replace(/[\r\n]+/g, " ").slice(0, 200),
     text: body,
     replyTo: REPLY_TO,
