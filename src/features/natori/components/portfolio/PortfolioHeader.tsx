@@ -56,6 +56,21 @@ export default function PortfolioHeader({
           </span>
         )}
       </div>
+      {/* モバイル用ナビ。md 以上は上のナビがあるので出さない */}
+      <nav
+        className="flex gap-5 overflow-x-auto px-5 pb-2.5 text-sm font-medium md:hidden"
+        style={{ color: c.inkSoft }}
+      >
+        {navLinks.map((link) => (
+          <a
+            key={link.href}
+            href={link.href}
+            className="pf-cute-focus shrink-0 whitespace-nowrap hover:opacity-70"
+          >
+            {link.label}
+          </a>
+        ))}
+      </nav>
     </header>
   );
 }

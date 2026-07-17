@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { AlertTriangle, Calculator, CheckCircle2, ChevronDown, ChevronUp, Clipboard, Mail, RotateCcw, Save, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -62,6 +62,7 @@ export default function EstimateForm() {
   const [inquiryProjects, setInquiryProjects] = useState<NatoriProject[] | null>(null);
   const [selectedInquiryId, setSelectedInquiryId] = useState<string>("");
   const [mailPanelOpen, setMailPanelOpen] = useState(false);
+  const resultSectionRef = useRef<HTMLElement | null>(null);
 
   const refreshInquiries = useCallback(async () => {
     try {
@@ -140,6 +141,16 @@ export default function EstimateForm() {
     setSubmittedText(trimmed);
     setCopied(false);
     setSummaryCopied(false);
+    // 1カラム表示（モバイル/タブレット）では結果セクションが画面外に描画される
+    // ため、見えていないときだけ結果へスクロールする
+    requestAnimationFrame(() => {
+      const el = resultSectionRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      if (rect.top < 0 || rect.top > window.innerHeight * 0.5) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
   };
 
   const handleSelectPreset = (preset: NatoriPricingPreset) => {
@@ -258,7 +269,10 @@ export default function EstimateForm() {
         />
       </section>
 
-      <section className="min-w-0 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5 md:p-6">
+      <section
+        ref={resultSectionRef}
+        className="min-w-0 scroll-mt-16 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5 md:p-6"
+      >
         {!estimate ? (
           <div className="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 text-center sm:min-h-[420px] sm:px-6">
             <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-gray-700 shadow-sm">

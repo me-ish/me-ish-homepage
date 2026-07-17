@@ -21,6 +21,7 @@ import {
   getCurrentStagePlan,
 } from "@/features/natori/lib/scheduling";
 import { cn } from "@/lib/utils";
+import ProjectNoteSummary from "./ProjectNoteSummary";
 import ProjectTaskChecklist from "./ProjectTaskChecklist";
 import type { NatoriProject } from "@/features/natori/types/projects";
 
@@ -256,9 +257,7 @@ export default function ProjectCard({
           </div>
         ) : null}
 
-        {project.note ? (
-          <p className="break-words text-sm leading-6 text-gray-700">{project.note}</p>
-        ) : null}
+        <ProjectNoteSummary note={project.note} />
 
         <ProjectTaskChecklist project={project} onToggle={onToggleTask} />
 

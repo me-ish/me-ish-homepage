@@ -11,6 +11,7 @@ import PortfolioGallery from "./PortfolioGallery";
 import PortfolioGuidelines from "./PortfolioGuidelines";
 import PortfolioHeader from "./PortfolioHeader";
 import PortfolioHero from "./PortfolioHero";
+import PortfolioMobileCta from "./PortfolioMobileCta";
 import PortfolioPricing from "./PortfolioPricing";
 import PortfolioStyles from "./PortfolioStyles";
 import { portfolioFontEn, portfolioFontJp } from "./portfolioFonts";
@@ -38,6 +39,7 @@ export default function PortfolioLanding({
           <PortfolioPricing content={content} />
           <PortfolioGuidelines content={content} />
           <PortfolioCommissionForm content={content} />
+          {content.commissionOpen ? <PortfolioMobileCta /> : null}
         </>
       )}
       <PortfolioFooter content={content} variant={variant} />
