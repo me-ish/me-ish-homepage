@@ -1,8 +1,14 @@
 // features/etorie/lib/demoData.ts
 // /etorie/demo で使う架空クリエイター「ユキノ」のデモデータ。
 // 実DB・実APIには一切依存しない純データ/純関数のみ（デモは read-only）。
-// 案件データは natori の実コンポーネント（ProjectCard 等）にそのまま渡せる形で作る。
-import type { NatoriProject } from "@/features/natori/types/projects";
+// メール文面は natori の実際の draft builder（純関数）を「ユキノ」名義で呼んで
+// 生成するので、本番で送られる文面と完全に同一になる。
+import {
+  buildEstimateMailDraft,
+  buildPaidConfirmationMail,
+  injectAcceptLink,
+} from "@/features/natori/lib/orderMail";
+import type { NatoriProject, NatoriProjectStatus } from "@/features/natori/types/projects";
 
 /** デモの主人公（架空のイラストレーター） */
 export const demoCreator = {
@@ -17,6 +23,9 @@ export const demoClient = {
   email: "yuki.usagi@example.com",
   request: "立ち絵・全身",
 } as const;
+
+const DEMO_TITLE = "全身立ち絵";
+const DEMO_AMOUNT = 24000;
 
 const DAY_MS = 86_400_000;
 
@@ -44,10 +53,10 @@ export function makeDemoProject(today: Date): NatoriProject {
   const paidDay = daysFrom(today, -3);
   return {
     id: "etorie-demo-project",
-    title: "全身立ち絵",
-    clientName: `${demoClient.name}`,
+    title: DEMO_TITLE,
+    clientName: demoClient.name,
     clientEmail: demoClient.email,
-    amount: 24000,
+    amount: DEMO_AMOUNT,
     startDate: start,
     dueDate: due,
     deliveryPlan: "normal",
@@ -82,54 +91,78 @@ export function makeDemoProject(today: Date): NatoriProject {
   };
 }
 
-/** 受信箱シーン: 問い合わせ一覧の行 */
-export const demoInquiries = [
+/** 受信箱シーン: 問い合わせ一覧の行（チップは natori の実ステータス色を使う） */
+export const demoInquiries: Array<{
+  name: string;
+  kind: string;
+  status: NatoriProjectStatus;
+  daysLabel: string;
+  daysTone: "ok" | "warn" | "alert";
+}> = [
   {
-    name: `${demoClient.name} 様`,
+    name: demoClient.name,
     kind: demoClient.request,
-    chip: "未対応・受付から今日",
-    tone: "alert" as const,
+    status: "inquiry",
+    daysLabel: "受付から今日",
+    daysTone: "alert",
   },
-  { name: "Kanata 様", kind: "SNSアイコン", chip: "見積もり送付済み", tone: "warn" as const },
-  { name: "ちくわ工房 様", kind: "一枚絵・商用", chip: "入金済み・制作中", tone: "ok" as const },
-  { name: "mio 様", kind: "TRPG立ち絵", chip: "納品完了", tone: "ok" as const },
+  { name: "Kanata", kind: "SNSアイコン", status: "quoted", daysLabel: "経過 2日", daysTone: "ok" },
+  {
+    name: "ちくわ工房",
+    kind: "一枚絵・商用",
+    status: "awaiting_payment",
+    daysLabel: "経過 1日",
+    daysTone: "ok",
+  },
+  { name: "mio", kind: "TRPG立ち絵", status: "estimating", daysLabel: "経過 5日", daysTone: "warn" },
 ];
 
-/** 見積もりシーン: 自動生成される内訳 */
+/** 見積もりシーン: ツールが自動生成する内訳 */
 export const demoEstimate = {
-  total: 24000,
+  total: DEMO_AMOUNT,
+  categoryLabel: "全身",
   rows: [
     { label: "全身イラスト", amount: 15000 },
     { label: "しっかり背景", amount: 5000 },
     { label: "商用利用", amount: 4000 },
   ],
-  mailExcerpt: [
-    "ゆきうさぎ 様",
-    "",
-    "お問い合わせありがとうございます。ユキノです。",
-    "いただいた内容でのお見積もりをご案内します。",
-    "",
-    "・全身イラスト: ¥15,000",
-    "・しっかり背景: ¥5,000",
-    "・商用利用: ¥4,000",
-    "──────────────",
-    "合計: ¥24,000（税込）",
-    "",
-    "ご依頼いただける場合は、下のボタンからご承諾ください。",
-    "{承諾リンク}",
-  ].join("\n"),
 };
 
-/** 実績シーン: 集計タイル */
+/** 見積もりメール: 本番と同じ draft builder で生成（ユキノ名義） */
+export const demoEstimateMail = (() => {
+  const draft = buildEstimateMailDraft({
+    clientName: demoClient.name,
+    title: DEMO_TITLE,
+    amount: DEMO_AMOUNT,
+    breakdownLines: demoEstimate.rows.map(
+      (row) => `${row.label}: ¥${row.amount.toLocaleString("ja-JP")}`
+    ),
+    artistName: demoCreator.name,
+  });
+  return {
+    subject: draft.subject,
+    body: injectAcceptLink(draft.body, "https://…/quote/a8f3…（依頼者専用の承諾ページ）"),
+  };
+})();
+
+/** 入金確認メール: 本番と同じ builder で生成（入金 webhook が自動送信するもの） */
+export const demoPaidMail = buildPaidConfirmationMail({
+  clientName: demoClient.name,
+  title: DEMO_TITLE,
+  amount: DEMO_AMOUNT,
+  artistName: demoCreator.name,
+});
+
+/** 実績シーン: 集計タイルと月別実績（実際の売上・実績ページと同じ構成） */
 export const demoResults = {
-  monthTotal: 86000,
-  monthCount: 5,
-  avg: 17200,
+  count: 9,
+  total: 152000,
+  avg: 16900,
+  monthlyAvg: 50700,
   monthly: [
-    { label: "3ヶ月前", amount: 42000 },
-    { label: "2ヶ月前", amount: 61000 },
-    { label: "先月", amount: 78000 },
-    { label: "今月", amount: 86000 },
+    { label: "今月", count: 2, amount: 38000 },
+    { label: "先月", count: 4, amount: 61000 },
+    { label: "2ヶ月前", count: 3, amount: 53000 },
   ],
 };
 
@@ -154,7 +187,7 @@ export const demoScenes: Array<{
     eyebrow: "RÉCEPTION",
     title: "依頼が届く",
     pain: "これまで — DM・メール・リプライを行き来して、どれが未返信か思い出す作業から一日が始まる。",
-    change: "エトリエでは、依頼はフォームからひとつの受信箱に届き、放置日数つきで並びます。依頼者には受付確認メールが自動で返ります。",
+    change: "依頼はフォームからひとつの受信箱に届き、状態と経過日数つきで並びます。依頼者には受付確認メールが自動で返ります。",
   },
   {
     id: "devis",
@@ -168,14 +201,14 @@ export const demoScenes: Array<{
     eyebrow: "ACCORD",
     title: "依頼者が承諾する",
     pain: "これまで —「この内容で大丈夫です」の返信を待って、言った言わないの不安を抱えたまま進める。",
-    change: "依頼者はメールのボタンを押すだけ。承諾は金額と日時つきで記録され、あとから確認できます。",
+    change: "依頼者はメールのリンクを開いてボタンを押すだけ。承諾は金額と日時つきで案件に記録されます。",
   },
   {
     id: "paiement",
     eyebrow: "PAIEMENT",
     title: "入金を確認する",
     pain: "これまで — 通帳や決済画面を見に行って、入金を確認してから「着手します」を手で送る。",
-    change: "カード決済リンクの入金は自動で確認。案件は自動で「制作開始」に進み、依頼者にも確認メールが届きます。",
+    change: "カード決済の入金は自動で確認。案件は自動で制作開始に進み、依頼者にはこの確認メールが自動で届きます。",
   },
   {
     id: "atelier",
@@ -189,6 +222,6 @@ export const demoScenes: Array<{
     eyebrow: "REGISTRE",
     title: "実績が勝手にたまる",
     pain: "これまで — 月末に売上を手集計して、営業用の実績リストを別途作る。",
-    change: "納品まで進んだ案件は、月別売上と作品つきの実績一覧に自動で積み上がります。確定申告も営業もここを見るだけ。",
+    change: "納品まで進んだ案件は、月別売上と実績一覧に自動で積み上がります。確定申告も営業もここを見るだけ。",
   },
 ];

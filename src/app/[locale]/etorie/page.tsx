@@ -4,9 +4,9 @@
 import type { Metadata } from "next";
 import EtorieLanding from "@/features/etorie/components/EtorieLanding";
 
-const title = "エトリエ étrier — 描くあなたを、支える道具。";
+const title = "エトリエ étrier — イラストレーターのための受注管理";
 const description =
-  "イラストレーターのための受注管理ツール。依頼の受付から見積もり・承諾・カード決済・案件管理・実績まで、コミッションの事務をひとつに。";
+  "コミッションの受付から入金まで、これひとつ。依頼の受付・見積もり・承諾・カード決済・案件管理・実績づくりをひとつの画面にまとめた受注管理ツールです。";
 
 export const metadata: Metadata = {
   title,
