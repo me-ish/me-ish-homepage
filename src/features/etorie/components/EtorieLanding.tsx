@@ -46,6 +46,9 @@ export default function EtorieLanding() {
                 機能一覧
               </Link>
             </div>
+            <p className="et-cta-note" style={{ marginTop: 12 }}>
+              架空のクリエイター「ユキノ」の一日で、依頼から納品までを追いかけます
+            </p>
           </div>
 
           <div className="et-mock" role="img" aria-label="問い合わせ一覧のイメージ画面">
@@ -99,12 +102,6 @@ export default function EtorieLanding() {
           <p className="et-pains-close">
             その時間を<b>描く時間</b>に戻すための道具です。
           </p>
-          <div className="et-cta-row" style={{ marginTop: 30 }}>
-            <Link href="/etorie/demo" className="et-btn">
-              依頼から納品までをデモで見る
-            </Link>
-            <span className="et-cta-note">架空のクリエイター「ユキノ」の一日を追いかけます</span>
-          </div>
         </section>
 
         <footer className="et-footer">
