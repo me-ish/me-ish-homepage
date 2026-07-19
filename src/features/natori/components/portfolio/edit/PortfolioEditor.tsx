@@ -354,7 +354,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
               label="名前（アイコンの下）"
               value={content.profileName}
               onChange={(v) => patch({ profileName: v })}
-              placeholder="例: ナトリ"
+              placeholder="例: 活動名"
               hint="空欄のときはサイト名と同じ表示になります"
             />
             <TextInput

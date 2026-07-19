@@ -36,7 +36,14 @@ function MaskingTape({ color, angle }: { color: string; angle: number }) {
 // client component のため props は RSC ペイロードとして HTML ソースに埋め込まれる。
 // content 丸ごとを渡すと SNS リンクや料金までソースに露出するので works だけ受け取る
 // （/natori/works を営業先に見せる際にソースにも販売導線を残さないため）。
-export default function PortfolioGallery({ works }: { works: PortfolioWork[] }) {
+export default function PortfolioGallery({
+  works,
+  flatPlaceholders,
+}: {
+  works: PortfolioWork[];
+  /** 画像なし作品のプレースホルダーをキャラSVGではなくベタ塗りにする（デモ用） */
+  flatPlaceholders?: boolean;
+}) {
   const filters = galleryFiltersFromWorks(works);
   const [activeFilter, setActiveFilter] = useState<string>("すべて");
   const [selected, setSelected] = useState<PortfolioWork | null>(null);
@@ -118,6 +125,12 @@ export default function PortfolioGallery({ works }: { works: PortfolioWork[] }) 
                     className="object-cover"
                     // 先頭の作品はファーストビューに入る（LCP）ので優先読み込み
                     priority={index === 0}
+                  />
+                ) : flatPlaceholders ? (
+                  <span
+                    aria-hidden
+                    className="absolute inset-0"
+                    style={{ background: palette.hair }}
                   />
                 ) : (
                   <ChibiFace

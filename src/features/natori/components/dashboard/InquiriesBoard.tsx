@@ -72,9 +72,11 @@ type InquiriesBoardProps = {
    * ローカル反映のみ、メールパネルは送信シミュレーション）。
    */
   demoProjects?: NatoriProject[];
+  /** デモ環境でのメール定型文の名乗り（例: ユキノ）。省略時は既定のナトリ */
+  demoArtistName?: string;
 };
 
-export default function InquiriesBoard({ demoProjects }: InquiriesBoardProps) {
+export default function InquiriesBoard({ demoProjects, demoArtistName }: InquiriesBoardProps) {
   const isDemo = Boolean(demoProjects);
   const [projects, setProjects] = useState<NatoriProject[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -409,6 +411,7 @@ export default function InquiriesBoard({ demoProjects }: InquiriesBoardProps) {
           project={selectedRow.project}
           kind={mailKind}
           demoMode={isDemo}
+          artistName={demoArtistName}
           onClose={() => setMailKind(null)}
           onSent={() => {
             if (isDemo) {

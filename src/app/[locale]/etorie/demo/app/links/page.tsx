@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import LinksLanding from "@/features/natori/components/links/LinksLanding";
 import DemoAppShell from "@/features/etorie/components/demoapp/DemoAppShell";
-import { demoLinksContent } from "@/features/etorie/lib/demoWorkspace";
+import { demoLinksContent, demoLinksProfile } from "@/features/etorie/lib/demoWorkspace";
 
 export const metadata: Metadata = {
   title: "エトリエ デモ | リンク集",
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <DemoAppShell bare>
-      <LinksLanding links={demoLinksContent.links} />
+      <LinksLanding links={demoLinksContent.links} profile={demoLinksProfile} />
     </DemoAppShell>
   );
 }

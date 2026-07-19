@@ -343,6 +343,14 @@ export const demoPortfolioContent: PortfolioContent = {
   copyright: `© 2026 ${demoCreator.brand}. All illustrations are sample placeholders.`,
 };
 
+/** ユキノ版リンク集のプロフィール（画像は使わずベタ塗り表示） */
+export const demoLinksProfile = {
+  name: demoCreator.name,
+  role: "イラストレーター",
+  avatarSrc: null,
+  copyright: demoCreator.brand,
+} as const;
+
 /** ユキノ版リンク集（リンク先はすべてダミー） */
 export const demoLinksContent: NatoriLinksContent = {
   links: [

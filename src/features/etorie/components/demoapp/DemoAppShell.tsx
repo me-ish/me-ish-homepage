@@ -53,24 +53,29 @@ export default function DemoAppShell({ children, crumb, title, bare }: DemoAppSh
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-50/70 via-white to-white">
       <DemoBanner />
-      <section className="border-b border-pink-100 bg-white/70 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
-          <Link
-            href="/etorie/demo/app"
-            className="inline-flex items-center gap-1 text-xs font-bold text-pink-600 hover:underline"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-            Dashboard
-          </Link>
-          {crumb ? (
-            <>
-              <span className="text-xs text-gray-400">/</span>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-pink-600">{crumb}</p>
-            </>
-          ) : null}
-          {title ? <p className="text-sm font-bold text-gray-900">{title}</p> : null}
-        </div>
-      </section>
+      {/* ダッシュボード自身（crumb/title なし）では「戻る」バーを出さない */}
+      {crumb || title ? (
+        <section className="border-b border-pink-100 bg-white/70 backdrop-blur">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
+            <Link
+              href="/etorie/demo/app"
+              className="inline-flex items-center gap-1 text-xs font-bold text-pink-600 hover:underline"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+              Dashboard
+            </Link>
+            {crumb ? (
+              <>
+                <span className="text-xs text-gray-400">/</span>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-pink-600">
+                  {crumb}
+                </p>
+              </>
+            ) : null}
+            {title ? <p className="text-sm font-bold text-gray-900">{title}</p> : null}
+          </div>
+        </section>
+      ) : null}
       <section className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">{children}</section>
     </main>
   );

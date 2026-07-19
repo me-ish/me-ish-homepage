@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import InquiriesBoard from "@/features/natori/components/dashboard/InquiriesBoard";
 import ProjectsBoard from "@/features/natori/components/dashboard/ProjectsBoard";
 import ResultsBoard from "@/features/natori/components/dashboard/ResultsBoard";
+import { demoCreator } from "@/features/etorie/lib/demoData";
 import {
   makeDemoEvents,
   makeDemoWorkspaceProjects,
@@ -21,7 +22,7 @@ function useDemoWorkspace() {
 
 export function DemoInquiries() {
   const { projects } = useDemoWorkspace();
-  return <InquiriesBoard demoProjects={projects} />;
+  return <InquiriesBoard demoProjects={projects} demoArtistName={demoCreator.name} />;
 }
 
 export function DemoProjects() {

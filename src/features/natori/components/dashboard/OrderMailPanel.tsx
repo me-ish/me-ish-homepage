@@ -41,9 +41,10 @@ function buildDraft(
   kind: OrderMailKind,
   project: NatoriProject,
   amount: number,
-  breakdownLines?: string[]
+  breakdownLines?: string[],
+  artistName?: string
 ): NatoriOrderMailDraft {
-  const input = { clientName: project.clientName, title: project.title, amount };
+  const input = { clientName: project.clientName, title: project.title, amount, artistName };
   return kind === "estimate"
     ? buildEstimateMailDraft({ ...input, breakdownLines })
     : buildPaymentMailDraft(input);
@@ -62,6 +63,8 @@ type OrderMailPanelProps = {
   breakdownLines?: string[];
   /** エトリエのデモ環境用。送信を実行せず成功をシミュレートする */
   demoMode?: boolean;
+  /** 定型文の署名・名乗り。省略時は「ナトリ」（デモではユキノを渡す） */
+  artistName?: string;
   onClose: () => void;
   /** 送信成功後に呼ばれる（案件一覧の再読み込み用） */
   onSent: () => void;
@@ -73,6 +76,7 @@ export default function OrderMailPanel({
   initialAmount,
   breakdownLines,
   demoMode,
+  artistName,
   onClose,
   onSent,
 }: OrderMailPanelProps) {
@@ -81,7 +85,7 @@ export default function OrderMailPanel({
   const [to, setTo] = useState(resolveClientEmail(project) ?? "");
   const [amount, setAmount] = useState<number>(startAmount);
   const [draft, setDraft] = useState<NatoriOrderMailDraft>(() =>
-    buildDraft(kind, project, startAmount, breakdownLines)
+    buildDraft(kind, project, startAmount, breakdownLines, artistName)
   );
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +105,9 @@ export default function OrderMailPanel({
     emailValid && amountValid && draft.subject.trim() && draft.body.trim() && !sending;
 
   const regenerate = () => {
-    setDraft(buildDraft(kind, project, Number.isFinite(amount) ? amount : 0, breakdownLines));
+    setDraft(
+      buildDraft(kind, project, Number.isFinite(amount) ? amount : 0, breakdownLines, artistName)
+    );
   };
 
   const handleSend = async () => {

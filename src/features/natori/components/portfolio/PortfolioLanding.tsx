@@ -20,11 +20,14 @@ export default function PortfolioLanding({
   content,
   variant = "full",
   demoContact,
+  flatPlaceholders,
 }: {
   content: PortfolioContent;
   variant?: PortfolioVariant;
   /** エトリエのデモ環境用。依頼フォームの送信をシミュレーションにする */
   demoContact?: boolean;
+  /** 画像なしのプレースホルダーをキャラSVGではなくベタ塗りにする（デモ用） */
+  flatPlaceholders?: boolean;
 }) {
   const showcase = variant === "showcase";
   return (
@@ -35,8 +38,8 @@ export default function PortfolioLanding({
       <PortfolioStyles />
       <PortfolioHeader content={content} variant={variant} />
       <PortfolioHero content={content} variant={variant} />
-      <PortfolioGallery works={content.works} />
-      <PortfolioAbout content={content} variant={variant} />
+      <PortfolioGallery works={content.works} flatPlaceholders={flatPlaceholders} />
+      <PortfolioAbout content={content} variant={variant} flatPlaceholders={flatPlaceholders} />
       {showcase ? null : (
         <>
           <PortfolioPricing content={content} />

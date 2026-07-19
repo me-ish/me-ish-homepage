@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <DemoAppShell bare>
-      <PortfolioLanding content={demoPortfolioContent} demoContact />
+      <PortfolioLanding content={demoPortfolioContent} demoContact flatPlaceholders />
     </DemoAppShell>
   );
 }

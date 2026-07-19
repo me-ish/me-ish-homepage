@@ -49,7 +49,31 @@ function LinkIcon({ link }: { link: NatoriLinkItem }) {
 /* ------------------------------------------------------------------ */
 /*  Page body                                                          */
 /* ------------------------------------------------------------------ */
-export default function LinksLanding({ links }: { links: NatoriLinkItem[] }) {
+
+export type LinksLandingProfile = {
+  name: string;
+  role: string;
+  /** null のときは画像を使わずベタ塗りの円を表示（デモ用） */
+  avatarSrc: string | null;
+  /** コピーライトの名義 */
+  copyright: string;
+};
+
+/** 既定はナトリ本人のプロフィール（/natori/links 用） */
+const NATORI_PROFILE: LinksLandingProfile = {
+  name: "ナトリ",
+  role: "イラストレーター",
+  avatarSrc: "/natori/IMG_3825.jpeg",
+  copyright: "Natori",
+};
+
+export default function LinksLanding({
+  links,
+  profile = NATORI_PROFILE,
+}: {
+  links: NatoriLinkItem[];
+  profile?: LinksLandingProfile;
+}) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -93,14 +117,22 @@ export default function LinksLanding({ links }: { links: NatoriLinkItem[] }) {
             className="relative h-28 w-28 overflow-hidden rounded-full shadow-xl ring-4 ring-white"
             style={{ boxShadow: "0 0 0 4px #ffffff, 0 8px 32px rgba(236,64,122,0.25)" }}
           >
-            <Image
-              src="/natori/IMG_3825.jpeg"
-              alt="ナトリ"
-              fill
-              sizes="112px"
-              className="object-cover"
-              priority
-            />
+            {profile.avatarSrc ? (
+              <Image
+                src={profile.avatarSrc}
+                alt={profile.name}
+                fill
+                sizes="112px"
+                className="object-cover"
+                priority
+              />
+            ) : (
+              <span
+                aria-hidden
+                className="absolute inset-0"
+                style={{ background: "linear-gradient(135deg, #f8bbd0, #f48fb1)" }}
+              />
+            )}
           </div>
         </div>
 
@@ -109,8 +141,8 @@ export default function LinksLanding({ links }: { links: NatoriLinkItem[] }) {
           className="mt-4 text-center transition-all duration-700 delay-100"
           style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(-10px)" }}
         >
-          <h1 className="text-2xl font-black tracking-wider text-pink-900/90">ナトリ</h1>
-          <p className="mt-1 text-sm text-pink-700/70">イラストレーター</p>
+          <h1 className="text-2xl font-black tracking-wider text-pink-900/90">{profile.name}</h1>
+          <p className="mt-1 text-sm text-pink-700/70">{profile.role}</p>
         </div>
 
         {/* ── リンク一覧 ── */}
@@ -176,7 +208,7 @@ export default function LinksLanding({ links }: { links: NatoriLinkItem[] }) {
           className="mt-12 text-center text-xs text-pink-400/70 transition-all duration-700 delay-[800ms]"
           style={{ opacity: visible ? 1 : 0 }}
         >
-          © {new Date().getFullYear()} Natori. All rights reserved.
+          © {new Date().getFullYear()} {profile.copyright}. All rights reserved.
         </footer>
       </div>
     </main>

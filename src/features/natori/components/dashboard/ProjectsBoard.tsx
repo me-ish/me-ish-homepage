@@ -530,6 +530,7 @@ export default function ProjectsBoard({ demoProjects, demoEvents }: ProjectsBoar
         events={events}
         today={today}
         selectedISO={selectedISO}
+        showReminders={!isDemo}
         onSelect={handleSelectDate}
         onPrevMonth={handlePrevMonth}
         onNextMonth={handleNextMonth}

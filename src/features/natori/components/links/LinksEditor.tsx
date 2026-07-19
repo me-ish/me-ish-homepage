@@ -198,7 +198,7 @@ export default function LinksEditor({ demoContent, publicHref }: LinksEditorProp
                     label="サブテキスト（任意）"
                     value={link.sub}
                     onChange={(v) => patch(updateItem(content.links, index, { sub: v }))}
-                    placeholder="例: @natonato_o"
+                    placeholder="例: @account_id"
                   />
                 </div>
                 <div className="mt-3">

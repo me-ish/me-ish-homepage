@@ -20,6 +20,11 @@ type ProjectMonthCalendarProps = {
   events: NatoriEvent[];
   today: Date;
   selectedISO: string;
+  /**
+   * 月末送金日などの固定リマインダーを表示するか。
+   * ナトリ運用固有の決め事なので、エトリエのデモ環境では false にする。
+   */
+  showReminders?: boolean;
   onSelect: (iso: string) => void;
   onPrevMonth: () => void;
   onNextMonth: () => void;
@@ -65,6 +70,7 @@ export default function ProjectMonthCalendar({
   events,
   today,
   selectedISO,
+  showReminders = true,
   onSelect,
   onPrevMonth,
   onNextMonth,
@@ -138,7 +144,7 @@ export default function ProjectMonthCalendar({
                     ?.deliveryPlan ?? rushDueProjects[0].deliveryPlan
                 )
               : null;
-          const cellReminders = cell.inMonth ? getRemindersForDate(cell.iso) : [];
+          const cellReminders = showReminders && cell.inMonth ? getRemindersForDate(cell.iso) : [];
           const cellEvents = cell.inMonth ? eventsByDate.get(cell.iso) ?? [] : [];
 
           return (
@@ -153,16 +159,20 @@ export default function ProjectMonthCalendar({
                 cell.inMonth ? "bg-white hover:bg-gray-50" : "bg-gray-50 text-gray-300",
                 deliveryEndCount > 0 && cell.inMonth && "bg-emerald-50/70",
                 cellReminders.length > 0 && cell.inMonth && "bg-amber-50/70",
-                cell.isToday && "ring-2 ring-inset ring-pink-500",
+                // 今日は枠線ではなく背景で示す（枠だと工程バーの上に重なって
+                // バーが分断されて見えるため）。日付側のピンクの丸と対で読む
+                cell.isToday && cell.inMonth && "bg-pink-50",
                 selected && "ring-1 ring-inset ring-gray-900"
               )}
               aria-label={`${cell.iso} の案件を表示`}
               aria-pressed={selected}
             >
-              <div className="flex items-center justify-between px-1 pt-0.5 sm:px-1.5">
+              {/* 日付とバッジの行。高さを固定して、今日の丸やバッジの有無で
+                  下の工程バーの開始位置がセルごとにずれないようにする */}
+              <div className="flex h-5 items-center justify-between px-1 sm:h-6 sm:px-1.5">
                 <span
                   className={cn(
-                    "text-[11px] font-bold sm:text-xs",
+                    "text-[11px] font-bold leading-none sm:text-xs",
                     cell.inMonth ? "text-gray-900" : "text-gray-300",
                     weekday === 0 && cell.inMonth && "text-rose-500",
                     weekday === 6 && cell.inMonth && "text-sky-500",
@@ -279,10 +289,12 @@ export default function ProjectMonthCalendar({
           <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
           お急ぎ7日
         </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
-          毎月月末 送金
-        </span>
+        {showReminders ? (
+          <span className="inline-flex items-center gap-1">
+            <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+            毎月月末 送金
+          </span>
+        ) : null}
         <span className="inline-flex items-center gap-1">
           <span className="inline-block h-2 w-2 rounded-full bg-purple-500" />
           個人予定

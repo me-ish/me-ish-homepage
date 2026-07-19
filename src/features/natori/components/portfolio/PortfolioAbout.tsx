@@ -22,9 +22,12 @@ function xHandle(href: string, fallback: string): string {
 export default function PortfolioAbout({
   content,
   variant = "full",
+  flatPlaceholders,
 }: {
   content: PortfolioContent;
   variant?: PortfolioVariant;
+  /** アイコン未設定時のプレースホルダーをキャラSVGではなくベタ塗りにする（デモ用） */
+  flatPlaceholders?: boolean;
 }) {
   // showcase ではXも直接連絡手段になり得るためリンクを出さない
   const xLink = variant === "showcase" ? undefined : content.socialLinks.find(isPortfolioXLink);
@@ -51,6 +54,12 @@ export default function PortfolioAbout({
                   className="object-cover"
                 />
               </div>
+            ) : flatPlaceholders ? (
+              <span
+                aria-hidden
+                className="block h-[140px] w-[140px] rounded-full"
+                style={{ background: c.paperAlt }}
+              />
             ) : (
               <ChibiFace size={140} skin="#FDE0D0" hair="#9AB8F0" accent={c.mint} />
             )}
