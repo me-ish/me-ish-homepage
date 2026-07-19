@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   ChevronDown,
   ChevronUp,
+  Download,
   ImagePlus,
   Pencil,
   Plus,
@@ -26,6 +27,7 @@ import {
 import { toISODate } from "@/features/natori/lib/projects";
 import { formatYen } from "@/features/natori/lib/pricing";
 import {
+  buildNatoriResultsCsv,
   filterProjectsByMonth,
   filterProjectsByYear,
   listNatoriResultYears,
@@ -895,6 +897,28 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
         title={`実績一覧（${listItems.length}件）`}
         description="サムネイルをタップで拡大、画像ボタンで作品画像の登録・差し替えができます。"
       >
+        <div className="mt-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              // いま画面に表示している一覧（絞り込み適用後）をそのまま書き出す
+              const csv = buildNatoriResultsCsv(listItems);
+              const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const anchor = document.createElement("a");
+              anchor.href = url;
+              anchor.download = `実績_${new Date().toISOString().slice(0, 10)}.csv`;
+              anchor.click();
+              URL.revokeObjectURL(url);
+            }}
+            disabled={listItems.length === 0}
+            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-pink-200 bg-white px-3 text-xs font-bold text-pink-700 hover:bg-pink-50 disabled:opacity-50"
+            title="表示中の実績一覧をCSVで保存します（確定申告・売上管理用）"
+          >
+            <Download className="h-3.5 w-3.5" aria-hidden />
+            CSVダウンロード
+          </button>
+        </div>
         {activeFilterChips.length > 0 ? (
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <span className="text-xs text-gray-500">絞り込み:</span>

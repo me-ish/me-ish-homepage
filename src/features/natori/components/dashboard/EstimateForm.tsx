@@ -12,6 +12,10 @@ import {
   NATORI_DELIVERY_PLAN_ORDER,
   calculateDueDate,
 } from "@/features/natori/lib/deliveryPlans";
+import {
+  buildEstimateInputFromInquiry,
+  parseInquiryNote,
+} from "@/features/natori/lib/inquiryNoteView";
 import { isPreworkStatus, toISODate } from "@/features/natori/lib/projects";
 import {
   fetchOwnPricingPresets,
@@ -45,13 +49,17 @@ const CATEGORY_TO_TYPE: Record<NatoriEstimateCategory, NatoriProjectType> = {
 
 type EstimateFormProps = {
   /**
-   * エトリエのデモ環境用。プリセット・問い合わせ連携の読み込みを行わず、
-   * 既定の料金表による計算・メール下書きだけを提供する（案件登録は非表示）。
+   * エトリエのデモ環境用。プリセットの読み込みを行わず、既定の料金表による
+   * 計算・メール下書きだけを提供する（案件登録は非表示・送信はシミュレーション）。
    */
   demo?: boolean;
+  /** デモ環境の問い合わせ一覧（「この見積もりで問い合わせに返信」用） */
+  demoProjects?: NatoriProject[];
+  /** デモ環境でのメール定型文の名乗り（例: ユキノ） */
+  demoArtistName?: string;
 };
 
-export default function EstimateForm({ demo }: EstimateFormProps) {
+export default function EstimateForm({ demo, demoProjects, demoArtistName }: EstimateFormProps) {
   const [requestText, setRequestText] = useState("");
   const [submittedText, setSubmittedText] = useState("");
   const [pricingConfig, setPricingConfig] = useState<NatoriPricingConfig>(() => createDefaultNatoriPricingConfig());
@@ -104,8 +112,14 @@ export default function EstimateForm({ demo }: EstimateFormProps) {
 
   useEffect(() => {
     setStartDateISO(toISODate(new Date()));
-    // デモ環境ではサーバーに触らない（既定の料金表のまま計算だけ提供）
-    if (demo) return;
+    // デモ環境ではサーバーに触らない（既定の料金表のまま計算だけ提供。
+    // 問い合わせ連携はデモデータで動かす）
+    if (demo) {
+      setInquiryProjects(
+        (demoProjects ?? []).filter((project) => isPreworkStatus(project.status))
+      );
+      return;
+    }
     // 認可はプリセット API 側（合言葉キー / ログイン）に任せる。ここでは
     // 常に読み込みを試み、成功したら保存系 UI を有効化する。
     (async () => {
@@ -113,7 +127,25 @@ export default function EstimateForm({ demo }: EstimateFormProps) {
       setAuthed(true);
       await refreshInquiries();
     })();
-  }, [loadPresets, refreshInquiries, demo]);
+  }, [loadPresets, refreshInquiries, demo, demoProjects]);
+
+  // 問い合わせ詳細の「この内容で見積もりを作る」からの深リンク
+  // （?inquiry=<id>）。依頼文を自動で貼り付けて概算を出し、返信先も選択する。
+  // useSearchParams は静的ページで Suspense 境界が必要になるため window から読む。
+  const deepLinkedRef = useRef(false);
+  useEffect(() => {
+    if (deepLinkedRef.current || !inquiryProjects) return;
+    deepLinkedRef.current = true;
+    const inquiryId = new URLSearchParams(window.location.search).get("inquiry");
+    if (!inquiryId) return;
+    const project = inquiryProjects.find((entry) => entry.id === inquiryId);
+    if (!project) return;
+    const text =
+      buildEstimateInputFromInquiry(parseInquiryNote(project.note)) || project.title;
+    setRequestText(text);
+    setSubmittedText(text);
+    setSelectedInquiryId(project.id);
+  }, [inquiryProjects]);
 
   const dueDateISO = useMemo(
     () => (startDateISO ? calculateDueDate(startDateISO, deliveryPlan) : ""),
@@ -461,8 +493,11 @@ export default function EstimateForm({ demo }: EstimateFormProps) {
           kind="estimate"
           initialAmount={estimate.total}
           breakdownLines={estimateBreakdownLines}
+          demoMode={demo}
+          artistName={demoArtistName}
           onClose={() => setMailPanelOpen(false)}
           onSent={() => {
+            if (demo) return;
             refreshInquiries().catch((err) => {
               console.error("[EstimateForm] inquiry reload after mail failed", err);
             });

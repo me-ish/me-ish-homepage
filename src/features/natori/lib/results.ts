@@ -45,6 +45,56 @@ export function isNatoriCompletedProject(project: NatoriProject): boolean {
   return COMPLETED_STATUSES.has(project.status);
 }
 
+/* ------------------------------------------------------------------
+   CSV 出力（確定申告・売上管理用）
+------------------------------------------------------------------- */
+
+const CSV_TYPE_LABELS: Record<NatoriProjectType, string> = {
+  icon: "アイコン",
+  sd: "SD",
+  standing: "立ち絵",
+  illustration: "イラスト",
+};
+
+const CSV_STATUS_LABELS: Record<string, string> = {
+  delivered: "納品済み",
+  completed: "対応完了",
+};
+
+/** カンマ・引用符・改行を含むセルを Excel 互換にエスケープする */
+function csvCell(value: string | number): string {
+  const text = String(value);
+  if (/[",\r\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+/**
+ * 実績一覧の CSV を組み立てる（納期の新しい順）。
+ * 先頭に BOM を付けて Excel で文字化けしないようにする。
+ * 対象は呼び出し側が絞り込んだ一覧（画面に表示中の実績と同じもの）。
+ */
+export function buildNatoriResultsCsv(projects: NatoriProject[]): string {
+  const header = ["納期", "依頼者", "件名", "種類", "金額(円)", "ステータス"];
+  const rows = projects
+    .slice()
+    .sort((a, b) => b.dueDate.localeCompare(a.dueDate))
+    .map((project) =>
+      [
+        project.dueDate,
+        project.clientName,
+        project.title,
+        CSV_TYPE_LABELS[project.type] ?? project.type,
+        project.amount,
+        CSV_STATUS_LABELS[project.status] ?? project.status,
+      ]
+        .map(csvCell)
+        .join(",")
+    );
+  return "﻿" + [header.map(csvCell).join(","), ...rows].join("\r\n") + "\r\n";
+}
+
 /** 実績（完了案件）が存在する年の一覧。新しい年が先頭 */
 export function listNatoriResultYears(projects: NatoriProject[]): number[] {
   const years = new Set<number>();

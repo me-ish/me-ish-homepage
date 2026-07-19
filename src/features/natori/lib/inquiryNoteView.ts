@@ -147,6 +147,26 @@ export function parseInquiryNote(note: string | null | undefined): NatoriInquiry
   };
 }
 
+/**
+ * 問い合わせの内容を、見積もりツールの「依頼文を貼り付け」欄に入れる
+ * テキストに組み立てる（/natori/estimate?inquiry=<id> の深リンク連携用）。
+ * 料金表のキーワード判定（全身・背景・商用など）が効くよう、
+ * ラベル付き項目と詳細本文をそのまま並べる。
+ */
+export function buildEstimateInputFromInquiry(view: NatoriInquiryNoteView): string {
+  const lines: string[] = [];
+  for (const field of view.fields) {
+    lines.push(`${field.label}: ${field.value}`);
+  }
+  if (view.details) {
+    lines.push("", view.details);
+  }
+  if (view.message) {
+    lines.push("", view.message);
+  }
+  return lines.join("\n").trim();
+}
+
 /** 最後の対応日（ログの最新日付。ログが無ければ fallback = 受付日） */
 export function getInquiryLastActivityISO(
   view: NatoriInquiryNoteView,

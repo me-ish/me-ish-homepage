@@ -36,6 +36,7 @@ import ProjectDayDetail from "./ProjectDayDetail";
 import ProjectPriorityList from "./ProjectPriorityList";
 import ClosedProjectsSection from "./ClosedProjectsSection";
 import ProjectRegisterForm from "./ProjectRegisterForm";
+import OrderMailPanel, { type OrderMailKind } from "./OrderMailPanel";
 
 type ViewMonth = { year: number; monthIndex: number };
 
@@ -52,11 +53,21 @@ type ProjectsBoardProps = {
    */
   demoProjects?: NatoriProject[];
   demoEvents?: NatoriEvent[];
+  /** デモ環境でのメール定型文の名乗り（例: ユキノ）。省略時は既定のナトリ */
+  demoArtistName?: string;
 };
 
-export default function ProjectsBoard({ demoProjects, demoEvents }: ProjectsBoardProps) {
+export default function ProjectsBoard({
+  demoProjects,
+  demoEvents,
+  demoArtistName,
+}: ProjectsBoardProps) {
   const isDemo = Boolean(demoProjects);
   const [today, setToday] = useState<Date | null>(null);
+  const [mailTarget, setMailTarget] = useState<{
+    project: NatoriProject;
+    kind: OrderMailKind;
+  } | null>(null);
   const [projects, setProjects] = useState<NatoriProject[]>([]);
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
   const [viewMonth, setViewMonth] = useState<ViewMonth | null>(null);
@@ -543,6 +554,7 @@ export default function ProjectsBoard({ demoProjects, demoEvents }: ProjectsBoar
         onToggleTask={handleToggleTask}
         onAdvanceStatus={handleAdvanceStatus}
         onConfirmPayment={handleConfirmPayment}
+        onOpenMail={(project, kind) => setMailTarget({ project, kind })}
         onEditDetails={handleEditDetails}
         advanceBusyId={advanceBusyId}
         events={events}
@@ -560,6 +572,38 @@ export default function ProjectsBoard({ demoProjects, demoEvents }: ProjectsBoar
         onReopen={handleReopenProject}
         onDelete={handleDeleteClosedProject}
       />
+
+      {/* ラフ提出・納品メール送信パネル */}
+      {mailTarget ? (
+        <OrderMailPanel
+          project={mailTarget.project}
+          kind={mailTarget.kind}
+          demoMode={isDemo}
+          artistName={demoArtistName}
+          onClose={() => setMailTarget(null)}
+          onSent={() => {
+            if (isDemo) {
+              // デモ: 本物と同じステータス遷移をローカルにだけ反映
+              const nextStatus = mailTarget.kind === "rough" ? "waiting" : "delivered";
+              setProjects((current) =>
+                current.map((entry) =>
+                  entry.id === mailTarget.project.id
+                    ? {
+                        ...entry,
+                        status: nextStatus,
+                        nextAction: getNextActionForStatus(nextStatus),
+                      }
+                    : entry
+                )
+              );
+              return;
+            }
+            loadFromSupabase().catch((err) => {
+              console.error("[ProjectsBoard] reload after mail failed", err);
+            });
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -402,6 +402,12 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
           onOpenMail={(kind) => setMailKind(kind)}
           onCloseInquiry={() => void handleCloseInquiry(selectedRow.project)}
           onConfirmPayment={() => void handleConfirmPayment(selectedRow.project)}
+          estimateHref={
+            isDemo
+              ? `/etorie/demo/app/estimate?inquiry=${selectedRow.project.id}`
+              : `/natori/estimate?inquiry=${selectedRow.project.id}`
+          }
+          projectsHref={isDemo ? "/etorie/demo/app/projects" : "/natori/projects"}
         />
       ) : null}
 

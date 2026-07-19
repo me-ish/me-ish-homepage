@@ -4,7 +4,7 @@
 // 問い合わせ管理画面の詳細パネル。フォームの依頼内容を整形表示し、
 // その場で見積もり / 支払い依頼メールの送信・入金確認・見送りができる。
 import Link from "next/link";
-import { Archive, CalendarDays, Mail, Wallet, X } from "lucide-react";
+import { Archive, Calculator, CalendarDays, Mail, Wallet, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
 import type { NatoriInquiryNoteView } from "@/features/natori/lib/inquiryNoteView";
@@ -38,6 +38,10 @@ type InquiryDetailPanelProps = {
   onOpenMail: (kind: OrderMailKind) => void;
   onCloseInquiry: () => void;
   onConfirmPayment: () => void;
+  /** 「この内容で見積もりを作る」のリンク先（デモではデモ用見積もりページへ） */
+  estimateHref?: string;
+  /** 「案件ボードへ」のリンク先（デモではデモ用案件ページへ） */
+  projectsHref?: string;
 };
 
 export default function InquiryDetailPanel({
@@ -48,6 +52,8 @@ export default function InquiryDetailPanel({
   onOpenMail,
   onCloseInquiry,
   onConfirmPayment,
+  estimateHref,
+  projectsHref,
 }: InquiryDetailPanelProps) {
   const meta = natoriProjectStatusMeta[project.status];
   const receivedISO = project.startDate ?? project.dueDate;
@@ -220,6 +226,16 @@ export default function InquiryDetailPanel({
 
         {/* アクション */}
         <div className="flex flex-wrap items-center gap-2 border-t border-pink-100 p-4 sm:p-5">
+          {ESTIMATE_MAIL_STATUSES.has(project.status) && estimateHref ? (
+            <Link
+              href={estimateHref}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-rose-300 bg-white px-4 text-xs font-bold text-rose-700 shadow-sm hover:bg-rose-50"
+              title="依頼内容を見積もりツールに貼り付けた状態で開きます（概算とメール下書きが自動で出ます）"
+            >
+              <Calculator className="h-3.5 w-3.5" aria-hidden />
+              この内容で見積もりを作る
+            </Link>
+          ) : null}
           {ESTIMATE_MAIL_STATUSES.has(project.status) ? (
             <button
               type="button"
@@ -256,7 +272,7 @@ export default function InquiryDetailPanel({
           ) : null}
           <div className="ml-auto flex items-center gap-2">
             <Link
-              href="/natori/projects"
+              href={projectsHref ?? "/natori/projects"}
               className="inline-flex h-9 items-center rounded-full border border-gray-300 bg-white px-3 text-xs font-bold text-gray-700 hover:bg-gray-50"
             >
               案件ボードへ

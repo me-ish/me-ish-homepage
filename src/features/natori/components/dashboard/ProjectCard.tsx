@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, CalendarDays, CircleDollarSign, Clock4, Pencil, Sparkles, AlertTriangle, Wallet, Zap } from "lucide-react";
+import { ArrowRight, CalendarDays, CircleDollarSign, Clock4, Mail, Pencil, Sparkles, AlertTriangle, Wallet, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import ProjectEditForm from "./ProjectEditForm";
@@ -31,12 +31,24 @@ type ProjectCardProps = {
   onToggleTask: (projectId: string, taskId: string) => void;
   onAdvanceStatus?: (project: NatoriProject) => void;
   onConfirmPayment?: (project: NatoriProject) => void;
+  /** ラフ提出・納品メールのパネルを開く（制作中の案件で表示） */
+  onOpenMail?: (project: NatoriProject, kind: "rough" | "delivery") => void;
   onEditDetails?: (
     project: NatoriProject,
     patch: UpdateNatoriProjectDetailsInput
   ) => Promise<void>;
   advanceBusy?: boolean;
 };
+
+/** ラフ提出・納品メールを出せるステータス（制作工程。完了後は出さない） */
+const WORK_MAIL_STATUSES = new Set<NatoriProject["status"]>([
+  "rough",
+  "lineart",
+  "coloring",
+  "waiting",
+  "delivery_prep",
+  "delivered",
+]);
 
 const yenFormatter = new Intl.NumberFormat("ja-JP", {
   style: "currency",
@@ -72,6 +84,7 @@ export default function ProjectCard({
   onToggleTask,
   onAdvanceStatus,
   onConfirmPayment,
+  onOpenMail,
   onEditDetails,
   advanceBusy,
 }: ProjectCardProps) {
@@ -260,6 +273,29 @@ export default function ProjectCard({
         <ProjectNoteSummary note={project.note} />
 
         <ProjectTaskChecklist project={project} onToggle={onToggleTask} />
+
+        {onOpenMail && WORK_MAIL_STATUSES.has(project.status) ? (
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => onOpenMail(project, "rough")}
+              className="inline-flex h-8 items-center gap-1 rounded-full border border-amber-300 bg-white px-3 text-[11px] font-bold text-amber-700 hover:bg-amber-50"
+              title="ラフ確認ファイルのリンク入りメールを送ります"
+            >
+              <Mail className="h-3 w-3" aria-hidden />
+              ラフ提出メール
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenMail(project, "delivery")}
+              className="inline-flex h-8 items-center gap-1 rounded-full border border-emerald-300 bg-white px-3 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50"
+              title="納品ページ（ダウンロード+受け取り確認）のリンク入りメールを送ります"
+            >
+              <Mail className="h-3 w-3" aria-hidden />
+              納品メール
+            </button>
+          </div>
+        ) : null}
 
         {onEditDetails ? (
           editing ? (

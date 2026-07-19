@@ -28,8 +28,11 @@ export async function POST(request: Request) {
   }
 
   const kind = payload.kind;
-  if (kind !== "estimate" && kind !== "payment") {
-    return NextResponse.json({ error: "kind must be estimate or payment" }, { status: 400 });
+  if (kind !== "estimate" && kind !== "payment" && kind !== "rough" && kind !== "delivery") {
+    return NextResponse.json(
+      { error: "kind must be estimate / payment / rough / delivery" },
+      { status: 400 }
+    );
   }
 
   const projectId = typeof payload.projectId === "string" ? payload.projectId.trim() : "";
@@ -61,6 +64,16 @@ export async function POST(request: Request) {
   switch (result.kind) {
     case "not-found":
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    case "no-files":
+      return NextResponse.json(
+        {
+          error:
+            kind === "rough"
+              ? "ラフ確認用のファイルが未アップロードです"
+              : "納品ファイルが未アップロードです",
+        },
+        { status: 400 }
+      );
     case "not-configured":
       return NextResponse.json(
         { error: "Mail or Stripe is not configured (RESEND_API_KEY / STRIPE_SECRET_KEY)" },

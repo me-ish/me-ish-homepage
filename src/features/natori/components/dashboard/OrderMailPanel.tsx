@@ -10,30 +10,54 @@ import { AlertTriangle, Loader2, Mail, RotateCcw, X } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { parseInquiryNote } from "@/features/natori/lib/inquiryNoteView";
 import {
+  DELIVERY_LINK_PLACEHOLDER,
+  FILES_LINK_PLACEHOLDER,
   PAYMENT_LINK_PLACEHOLDER,
+  buildDeliveryMailDraft,
   buildEstimateMailDraft,
   buildPaymentMailDraft,
+  buildRoughMailDraft,
   resolveClientEmail,
   type NatoriOrderMailDraft,
 } from "@/features/natori/lib/orderMail";
 import { formatYen } from "@/features/natori/lib/pricing";
 import type { NatoriProject } from "@/features/natori/types/projects";
+import DeliveryFilesManager from "./DeliveryFilesManager";
 
-export type OrderMailKind = "estimate" | "payment";
+export type OrderMailKind = "estimate" | "payment" | "rough" | "delivery";
 
 const KIND_META: Record<
   OrderMailKind,
-  { title: string; hint: string; sendLabel: string }
+  { title: string; hint: string; sendLabel: string; logLabel: string; sentNote: string }
 > = {
   estimate: {
     title: "見積もりメールを送る",
     hint: "送信すると案件は「見積もり提示済み」に進みます。本文の {承諾リンク} の位置にワンクリック承諾ページのURLが差し込まれ、依頼者が承諾すると通知メールが届きます（メール返信での承諾も従来どおり可能です）。",
     sendLabel: "見積もりメールを送信",
+    logLabel: "見積もりメール送信",
+    sentNote: "案件は「見積もり提示済み」に進みました。",
   },
   payment: {
     title: "支払い依頼メールを送る",
     hint: `送信時に Stripe のカード決済リンクが自動生成され、本文の ${PAYMENT_LINK_PLACEHOLDER} の位置に差し込まれます。入金があると案件は自動で「ラフ」に進み、通知メールが届きます。`,
     sendLabel: "支払いリンクを作って送信",
+    logLabel: "支払い依頼メール送信",
+    sentNote: "案件は「入金待ち」に進みました。入金があると自動で「ラフ」になります。",
+  },
+  rough: {
+    title: "ラフ提出メールを送る",
+    hint: `下でアップロードしたラフ確認ファイルへのリンク（14日間有効）が、本文の ${FILES_LINK_PLACEHOLDER} の位置に差し込まれます。送信すると案件は「返信待ち」に進みます。`,
+    sendLabel: "ラフ提出メールを送信",
+    logLabel: "ラフ提出メール送信",
+    sentNote: "案件は「返信待ち」に進みました。",
+  },
+  delivery: {
+    title: "納品メールを送る",
+    hint: `送信時に納品ページ（30日間有効）が発行され、本文の ${DELIVERY_LINK_PLACEHOLDER} の位置にURLが差し込まれます。依頼者がページで「受け取りました」を押すと、案件は自動で「対応完了」になり実績に入ります。`,
+    sendLabel: "納品メールを送信",
+    logLabel: "納品メール送信",
+    sentNote:
+      "案件は「納品済み」に進みました。依頼者が受け取り確認をすると自動で「対応完了」になります。",
   },
 };
 
@@ -45,9 +69,21 @@ function buildDraft(
   artistName?: string
 ): NatoriOrderMailDraft {
   const input = { clientName: project.clientName, title: project.title, amount, artistName };
-  return kind === "estimate"
-    ? buildEstimateMailDraft({ ...input, breakdownLines })
-    : buildPaymentMailDraft(input);
+  switch (kind) {
+    case "estimate":
+      return buildEstimateMailDraft({ ...input, breakdownLines });
+    case "payment":
+      return buildPaymentMailDraft(input);
+    case "rough":
+      return buildRoughMailDraft(input);
+    case "delivery":
+      return buildDeliveryMailDraft(input);
+  }
+}
+
+/** 金額を連絡するメールかどうか（金額欄・金額バリデーションの有無） */
+function isMoneyKind(kind: OrderMailKind): boolean {
+  return kind === "estimate" || kind === "payment";
 }
 
 const inputClass =
@@ -94,13 +130,15 @@ export default function OrderMailPanel({
 
   // 同種メールの送信履歴（案件メモの送信ログから）。二重送信の気づき用
   const lastSent = useMemo(() => {
-    const label = kind === "estimate" ? "見積もりメール送信" : "支払い依頼メール送信";
+    const label = KIND_META[kind].logLabel;
     const logs = parseInquiryNote(project.note).logs.filter((log) => log.label === label);
     return logs.length > 0 ? logs[logs.length - 1] : null;
   }, [project.note, kind]);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim());
-  const amountValid = Number.isFinite(amount) && amount >= (kind === "payment" ? 50 : 0);
+  const amountValid = isMoneyKind(kind)
+    ? Number.isFinite(amount) && amount >= (kind === "payment" ? 50 : 0)
+    : true;
   const canSend =
     emailValid && amountValid && draft.subject.trim() && draft.body.trim() && !sending;
 
@@ -185,7 +223,7 @@ export default function OrderMailPanel({
           <div className="space-y-3">
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
               {demoMode ? "送信しました（デモのため実際のメールは飛びません）。" : "送信しました。"}
-              {kind === "estimate" ? "案件は「見積もり提示済み」に進みました。" : "案件は「入金待ち」に進みました。入金があると自動で「ラフ」になります。"}
+              {meta.sentNote}
             </div>
             {sentLinkUrl ? (
               <div className="rounded-xl border border-pink-100 bg-pink-50/50 px-4 py-3 text-xs">
@@ -218,7 +256,7 @@ export default function OrderMailPanel({
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
                 <span>
                   この案件には {lastSent.dateISO.replace(/-/g, "/")} に
-                  {kind === "estimate" ? "見積もりメール" : "支払い依頼メール"}
+                  {meta.logLabel.replace("送信", "")}
                   を送信済みです。再送する場合はそのまま続けてください。
                 </span>
               </p>
@@ -226,6 +264,14 @@ export default function OrderMailPanel({
             <p className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs leading-5 text-sky-900">
               {meta.hint}
             </p>
+
+            {kind === "rough" || kind === "delivery" ? (
+              <DeliveryFilesManager
+                projectId={project.id}
+                folder={kind === "rough" ? "rough" : "final"}
+                demoMode={demoMode}
+              />
+            ) : null}
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
@@ -246,35 +292,49 @@ export default function OrderMailPanel({
                   </p>
                 ) : null}
               </div>
-              <div>
-                <label htmlFor="om-amount" className={labelClass}>
-                  金額（円・案件にも保存されます）
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="om-amount"
-                    type="number"
-                    min={0}
-                    value={Number.isFinite(amount) ? amount : 0}
-                    onChange={(event) => setAmount(Number(event.target.value))}
-                    className={`${inputClass} text-right`}
-                  />
+              {isMoneyKind(kind) ? (
+                <div>
+                  <label htmlFor="om-amount" className={labelClass}>
+                    金額（円・案件にも保存されます）
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="om-amount"
+                      type="number"
+                      min={0}
+                      value={Number.isFinite(amount) ? amount : 0}
+                      onChange={(event) => setAmount(Number(event.target.value))}
+                      className={`${inputClass} text-right`}
+                    />
+                    <button
+                      type="button"
+                      onClick={regenerate}
+                      className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-pink-200 bg-white px-3 text-xs font-bold text-pink-700 hover:bg-pink-50"
+                      title="この金額で件名・本文を作り直します（編集内容は上書きされます）"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                      定型文を再生成
+                    </button>
+                  </div>
+                  {kind === "payment" && Number.isFinite(amount) && amount < 50 ? (
+                    <p className="mt-1 text-[11px] font-bold text-red-600">
+                      カード決済は50円以上から利用できます。
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="flex items-end justify-end">
                   <button
                     type="button"
                     onClick={regenerate}
                     className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-pink-200 bg-white px-3 text-xs font-bold text-pink-700 hover:bg-pink-50"
-                    title="この金額で件名・本文を作り直します（編集内容は上書きされます）"
+                    title="件名・本文を作り直します（編集内容は上書きされます）"
                   >
                     <RotateCcw className="h-3.5 w-3.5" aria-hidden />
                     定型文を再生成
                   </button>
                 </div>
-                {kind === "payment" && Number.isFinite(amount) && amount < 50 ? (
-                  <p className="mt-1 text-[11px] font-bold text-red-600">
-                    カード決済は50円以上から利用できます。
-                  </p>
-                ) : null}
-              </div>
+              )}
             </div>
 
             <div>
@@ -308,6 +368,16 @@ export default function OrderMailPanel({
                   本文に {PAYMENT_LINK_PLACEHOLDER} がありません。この場合、支払いリンクは本文の末尾に追記されます。
                 </p>
               ) : null}
+              {kind === "rough" && !draft.body.includes(FILES_LINK_PLACEHOLDER) ? (
+                <p className="mt-1 text-[11px] font-bold text-amber-600">
+                  本文に {FILES_LINK_PLACEHOLDER} がありません。この場合、確認リンクは本文の末尾に追記されます。
+                </p>
+              ) : null}
+              {kind === "delivery" && !draft.body.includes(DELIVERY_LINK_PLACEHOLDER) ? (
+                <p className="mt-1 text-[11px] font-bold text-amber-600">
+                  本文に {DELIVERY_LINK_PLACEHOLDER} がありません。この場合、納品ページのURLは本文の末尾に追記されます。
+                </p>
+              ) : null}
             </div>
 
             {error ? (
@@ -320,9 +390,13 @@ export default function OrderMailPanel({
             ) : null}
 
             <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-              <p className="mr-auto text-[11px] text-gray-500">
-                送信金額: {formatYen(Number.isFinite(amount) ? Math.round(amount) : 0)}
-              </p>
+              {isMoneyKind(kind) ? (
+                <p className="mr-auto text-[11px] text-gray-500">
+                  送信金額: {formatYen(Number.isFinite(amount) ? Math.round(amount) : 0)}
+                </p>
+              ) : (
+                <span className="mr-auto" />
+              )}
               <button
                 type="button"
                 onClick={onClose}

@@ -39,6 +39,7 @@ type ProjectDayDetailProps = {
   onToggleTask: (projectId: string, taskId: string) => void;
   onAdvanceStatus?: (project: NatoriProject) => void;
   onConfirmPayment?: (project: NatoriProject) => void;
+  onOpenMail?: (project: NatoriProject, kind: "rough" | "delivery") => void;
   onEditDetails?: (
     project: NatoriProject,
     patch: UpdateNatoriProjectDetailsInput
@@ -63,6 +64,7 @@ export default function ProjectDayDetail({
   onToggleTask,
   onAdvanceStatus,
   onConfirmPayment,
+  onOpenMail,
   onEditDetails,
   advanceBusyId,
   events,
@@ -194,6 +196,7 @@ export default function ProjectDayDetail({
                 onToggleTask={onToggleTask}
                 onAdvanceStatus={onAdvanceStatus}
                 onConfirmPayment={onConfirmPayment}
+                onOpenMail={onOpenMail}
                 onEditDetails={onEditDetails}
                 advanceBusy={advanceBusyId === project.id}
               />
@@ -211,6 +214,7 @@ export default function ProjectDayDetail({
                     project={project}
                     today={today}
                     onToggleTask={onToggleTask}
+                    onOpenMail={onOpenMail}
                   />
                 ))}
               </div>

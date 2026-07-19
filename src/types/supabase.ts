@@ -1263,6 +1263,44 @@ export type Database = {
           },
         ]
       }
+      natori_delivery_files: {
+        Row: {
+          created_at: string
+          file_name: string
+          folder: string
+          id: string
+          project_id: string
+          size_bytes: number
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          folder: string
+          id?: string
+          project_id: string
+          size_bytes?: number
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          folder?: string
+          id?: string
+          project_id?: string
+          size_bytes?: number
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "natori_delivery_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "natori_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       natori_order_mail_logs: {
         Row: {
           amount: number
@@ -1307,7 +1345,11 @@ export type Database = {
           client_email: string | null
           client_name: string
           created_at: string
+          delivery_accepted_at: string | null
           delivery_plan: string
+          delivery_token_expires_at: string | null
+          delivery_token_hash: string | null
+          delivered_mail_at: string | null
           due_date: string
           id: string
           next_action: string
@@ -1332,7 +1374,11 @@ export type Database = {
           client_email?: string | null
           client_name: string
           created_at?: string
+          delivery_accepted_at?: string | null
           delivery_plan?: string
+          delivery_token_expires_at?: string | null
+          delivery_token_hash?: string | null
+          delivered_mail_at?: string | null
           due_date: string
           id?: string
           next_action?: string
@@ -1357,7 +1403,11 @@ export type Database = {
           client_email?: string | null
           client_name?: string
           created_at?: string
+          delivery_accepted_at?: string | null
           delivery_plan?: string
+          delivery_token_expires_at?: string | null
+          delivery_token_hash?: string | null
+          delivered_mail_at?: string | null
           due_date?: string
           id?: string
           next_action?: string

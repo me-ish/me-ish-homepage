@@ -211,13 +211,121 @@ export function buildPaidConfirmationMail(
 
 /** 送信ログとして案件メモ末尾に追記する1行を作る */
 export function buildOrderMailLogEntry(
-  kind: "estimate" | "payment",
+  kind: "estimate" | "payment" | "rough" | "delivery",
   dateISO: string,
   to: string,
   amount: number,
   paymentLinkUrl?: string
 ): string {
-  const label = kind === "estimate" ? "見積もりメール送信" : "支払い依頼メール送信";
-  const base = `【${label} ${dateISO}】宛先: ${to} / 金額: ${formatYen(amount)}`;
+  const label = ORDER_MAIL_LOG_LABELS[kind];
+  // ラフ提出・納品は金額の連絡ではないので宛先だけ記録する
+  const base =
+    kind === "rough" || kind === "delivery"
+      ? `【${label} ${dateISO}】宛先: ${to}`
+      : `【${label} ${dateISO}】宛先: ${to} / 金額: ${formatYen(amount)}`;
   return paymentLinkUrl ? `${base}\n支払いリンク: ${paymentLinkUrl}` : base;
+}
+
+const ORDER_MAIL_LOG_LABELS = {
+  estimate: "見積もりメール送信",
+  payment: "支払い依頼メール送信",
+  rough: "ラフ提出メール送信",
+  delivery: "納品メール送信",
+} as const;
+
+/* ------------------------------------------------------------------
+   ラフ提出・納品メール（納品フロー）
+------------------------------------------------------------------- */
+
+/** ラフ確認ファイルの署名URL一覧が差し込まれる位置 */
+export const FILES_LINK_PLACEHOLDER = "{ファイルリンク}";
+/** 納品ページURLが差し込まれる位置 */
+export const DELIVERY_LINK_PLACEHOLDER = "{納品ページリンク}";
+/** ラフ確認リンクの有効日数（署名URLの期限） */
+export const ROUGH_LINK_VALID_DAYS = 14;
+/** 納品ページの有効日数 */
+export const DELIVERY_VALID_DAYS = 30;
+
+export type NatoriWorkMailInput = {
+  clientName: string;
+  title: string;
+  artistName?: string;
+};
+
+/** ラフ提出メールの定型文。ファイルリンクは送信時にサーバーで差し込まれる */
+export function buildRoughMailDraft(input: NatoriWorkMailInput): NatoriOrderMailDraft {
+  const artist = input.artistName?.trim() || "ナトリ";
+  const subject = `【ラフのご確認】${input.title} について（${artist}）`;
+  const body = [
+    `${input.clientName} 様`,
+    "",
+    "お世話になっております。",
+    `イラストレーターの${artist}です。`,
+    "",
+    `「${input.title}」のラフが完成しましたので、ご確認をお願いいたします。`,
+    "",
+    "──────────────",
+    "■ ラフ確認用リンク:",
+    FILES_LINK_PLACEHOLDER,
+    `■ リンクの有効期限: ${ROUGH_LINK_VALID_DAYS}日間`,
+    "──────────────",
+    "",
+    "構図・表情・配色などをご確認ください。",
+    "修正のご希望は、このメールにそのままご返信いただければ反映いたします。",
+    "大きな修正はこのラフの段階でお願いできますと幸いです。",
+    "",
+    "問題がなければ、その旨ご返信ください。清書に進みます。",
+    "",
+    "※このメールにそのままご返信いただけます。",
+    artist,
+  ].join("\n");
+  return { subject, body };
+}
+
+/** 納品メールの定型文。納品ページのURLは送信時にサーバーで差し込まれる */
+export function buildDeliveryMailDraft(input: NatoriWorkMailInput): NatoriOrderMailDraft {
+  const artist = input.artistName?.trim() || "ナトリ";
+  const subject = `【納品】${input.title} について（${artist}）`;
+  const body = [
+    `${input.clientName} 様`,
+    "",
+    "お待たせいたしました。",
+    `「${input.title}」が完成しましたので、納品いたします。`,
+    "",
+    "──────────────",
+    "■ 納品ページ（ダウンロードはこちら）:",
+    DELIVERY_LINK_PLACEHOLDER,
+    `■ ページの有効期限: ${DELIVERY_VALID_DAYS}日間`,
+    "──────────────",
+    "",
+    "上記のページから完成データをダウンロードいただき、内容をご確認のうえ、",
+    "ページ内の「受け取りました」ボタンを押していただけますと納品完了となります。",
+    "",
+    "この度はご依頼いただき、本当にありがとうございました。",
+    "またの機会がありましたら、ぜひよろしくお願いいたします。",
+    "",
+    "※ご不明な点は、このメールにそのままご返信ください。",
+    artist,
+  ].join("\n");
+  return { subject, body };
+}
+
+/**
+ * 本文中のプレースホルダをラフ確認ファイルのリンク一覧に差し替える。
+ * プレースホルダが消えていた場合は末尾に追記（injectPaymentLink と同じ思想）。
+ */
+export function injectFilesLinks(body: string, lines: readonly string[]): string {
+  const text = lines.join("\n");
+  if (body.includes(FILES_LINK_PLACEHOLDER)) {
+    return body.split(FILES_LINK_PLACEHOLDER).join(text);
+  }
+  return `${body}\n\n■ ラフ確認用リンク:\n${text}`;
+}
+
+/** 本文中のプレースホルダを納品ページURLに差し替える（消えていたら末尾に追記） */
+export function injectDeliveryLink(body: string, url: string): string {
+  if (body.includes(DELIVERY_LINK_PLACEHOLDER)) {
+    return body.split(DELIVERY_LINK_PLACEHOLDER).join(url);
+  }
+  return `${body}\n\n■ 納品ページ:\n${url}`;
 }

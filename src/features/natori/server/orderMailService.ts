@@ -13,12 +13,17 @@ import { Resend } from "resend";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSiteUrl } from "@/lib/constants";
 import {
+  DELIVERY_VALID_DAYS,
   QUOTE_VALID_DAYS,
+  ROUGH_LINK_VALID_DAYS,
   buildOrderMailLogEntry,
   buildPaidConfirmationMail,
   injectAcceptLink,
+  injectDeliveryLink,
+  injectFilesLinks,
   injectPaymentLink,
 } from "@/features/natori/lib/orderMail";
+import { buildRoughFileLinkLines } from "@/features/natori/server/deliveryService";
 import { getNextActionForStatus } from "@/features/natori/lib/projects";
 import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { formatYen } from "@/features/natori/lib/pricing";
@@ -102,11 +107,11 @@ export async function sendNatoriNoticeMail(subject: string, body: string): Promi
 
 export type SendNatoriOrderMailInput = {
   projectId: string;
-  kind: "estimate" | "payment";
+  kind: "estimate" | "payment" | "rough" | "delivery";
   to: string;
   subject: string;
   body: string;
-  /** 送信時に案件へ保存する確定金額（円） */
+  /** 送信時に案件へ保存する確定金額（円）。rough / delivery では金額は更新しない */
   amount: number;
 };
 
@@ -114,18 +119,21 @@ export type SendNatoriOrderMailResult =
   | { kind: "ok"; paymentLinkUrl?: string }
   | { kind: "not-found" }
   | { kind: "not-configured" }
+  | { kind: "no-files" }
   | { kind: "stripe-error" }
   | { kind: "mail-error" }
   | { kind: "db-error" };
 
 /**
- * 見積もりメール送信後は quoted、支払い依頼メール送信後は awaiting_payment に
- * 進める。進めてよいかは lib/statusTransitions の遷移表で判定する
- * （既に先へ進んでいる案件への再送では巻き戻さない）。
+ * 送信後に進めるステータス。見積もり→提示済み、支払い依頼→入金待ち、
+ * ラフ提出→返信待ち、納品→納品済み。進めてよいかは lib/statusTransitions の
+ * 遷移表で判定する（既に先へ進んでいる案件への再送では巻き戻さない）。
  */
 const NEXT_STATUS: Record<SendNatoriOrderMailInput["kind"], NatoriProjectStatus> = {
   estimate: "quoted",
   payment: "awaiting_payment",
+  rough: "waiting",
+  delivery: "delivered",
 };
 
 export async function sendNatoriOrderMail(
@@ -151,6 +159,41 @@ export async function sendNatoriOrderMail(
       Date.now() + QUOTE_VALID_DAYS * 24 * 60 * 60 * 1000
     ).toISOString();
     body = injectAcceptLink(body, `${getSiteUrl()}/natori/quote/${token}`);
+  }
+
+  // ラフ提出のときはラフ確認ファイルの署名URL（14日間有効）を本文へ差し込む。
+  // ファイル未アップロードのまま送るとリンク無しメールになるので弾く。
+  if (input.kind === "rough") {
+    const lines = await buildRoughFileLinkLines(
+      project.id,
+      ROUGH_LINK_VALID_DAYS * 24 * 60 * 60
+    );
+    if (!lines) return { kind: "no-files" };
+    body = injectFilesLinks(body, lines);
+  }
+
+  // 納品のときは納品ページ用トークンを発行し、ページURLを本文へ差し込む。
+  // 再送のたびに新しいトークンになり、旧リンクと受け取り記録はリセットされる。
+  let deliveryTokenHash: string | undefined;
+  let deliveryTokenExpiresAt: string | undefined;
+  if (input.kind === "delivery") {
+    const { count, error: fileCountError } = await supabaseAdmin()
+      .from("natori_delivery_files")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", project.id)
+      .eq("folder", "final");
+    if (fileCountError) {
+      console.error("[natori-order-mail] delivery file count failed", fileCountError);
+      return { kind: "db-error" };
+    }
+    if ((count ?? 0) === 0) return { kind: "no-files" };
+
+    const token = randomBytes(32).toString("base64url");
+    deliveryTokenHash = createHash("sha256").update(token).digest("hex");
+    deliveryTokenExpiresAt = new Date(
+      Date.now() + DELIVERY_VALID_DAYS * 24 * 60 * 60 * 1000
+    ).toISOString();
+    body = injectDeliveryLink(body, `${getSiteUrl()}/natori/delivery/${token}`);
   }
 
   // 支払い依頼のときは Stripe の支払いリンクを都度生成して本文へ差し込む
@@ -242,11 +285,14 @@ export async function sendNatoriOrderMail(
   const logEntry = buildOrderMailLogEntry(input.kind, today, input.to, input.amount, paymentLinkUrl);
   const nextStatus = NEXT_STATUS[input.kind];
   const update: Record<string, unknown> = {
-    amount: input.amount,
     // 実際に送った宛先を正とする（手入力案件や宛先修正もここで反映される）
     client_email: input.to,
     note: appendNote(project.note, logEntry),
   };
+  // 金額の更新は金額を連絡するメールのみ（ラフ提出・納品では触らない）
+  if (input.kind === "estimate" || input.kind === "payment") {
+    update.amount = input.amount;
+  }
   if (
     project.status !== nextStatus &&
     canTransitionNatoriStatus(project.status as NatoriProjectStatus, nextStatus)
@@ -265,6 +311,13 @@ export async function sendNatoriOrderMail(
     update.quote_token_expires_at = quoteTokenExpiresAt;
     update.quote_accepted_at = null;
     update.quote_accepted_amount = null;
+  }
+  if (input.kind === "delivery" && deliveryTokenHash) {
+    // 納品トークンを最新の納品メールに付け替え、過去の受け取り記録はリセットする
+    update.delivery_token_hash = deliveryTokenHash;
+    update.delivery_token_expires_at = deliveryTokenExpiresAt;
+    update.delivery_accepted_at = null;
+    update.delivered_mail_at = new Date().toISOString();
   }
 
   const { error } = await admin
