@@ -12,6 +12,8 @@ export type NatoriPageEventName =
 
 export function trackNatoriPageEvent(event: NatoriPageEventName, label: string): void {
   try {
+    // エトリエのデモ環境（/etorie/*）からの操作はナトリの実解析に混ぜない
+    if (window.location.pathname.includes("/etorie")) return;
     void fetch("/api/natori/track", {
       method: "POST",
       headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },

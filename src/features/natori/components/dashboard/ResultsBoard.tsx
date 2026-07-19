@@ -473,7 +473,17 @@ function CompletedProjectRow({
 
 /* ---------------- 本体 ---------------- */
 
-export default function ResultsBoard() {
+type ResultsBoardProps = {
+  /**
+   * エトリエのデモ環境用。渡すとサーバーへは一切アクセスせず、
+   * このデータをローカル状態として表示・操作する（編集・削除もローカル反映のみ、
+   * 画像変更と手入力追加は非表示/無効）。
+   */
+  demoProjects?: NatoriProject[];
+};
+
+export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
+  const isDemo = Boolean(demoProjects);
   const [projects, setProjects] = useState<NatoriProject[] | null>(null);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -507,6 +517,11 @@ export default function ResultsBoard() {
 
   useEffect(() => {
     setNow(new Date());
+    if (demoProjects) {
+      setProjects(demoProjects);
+      setThumbs({});
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -520,7 +535,7 @@ export default function ResultsBoard() {
     return () => {
       cancelled = true;
     };
-  }, [reload]);
+  }, [reload, demoProjects]);
 
   const years = useMemo(() => (projects ? listNatoriResultYears(projects) : []), [projects]);
 
@@ -557,6 +572,27 @@ export default function ResultsBoard() {
   };
 
   const handleSaveEdit = async (projectId: string, patch: UpdateNatoriProjectDetailsInput) => {
+    if (isDemo) {
+      // デモ: ローカル状態にだけ反映
+      setProjects((current) =>
+        (current ?? []).map((entry) => {
+          if (entry.id !== projectId) return entry;
+          return {
+            ...entry,
+            ...(patch.clientName !== undefined ? { clientName: patch.clientName.trim() } : null),
+            ...(patch.title !== undefined ? { title: patch.title.trim() } : null),
+            ...(patch.type !== undefined ? { type: patch.type } : null),
+            ...(patch.amount !== undefined
+              ? { amount: Math.max(0, Math.round(patch.amount)) }
+              : null),
+            ...(patch.dueDate !== undefined ? { dueDate: patch.dueDate } : null),
+            ...(patch.note !== undefined ? { note: patch.note ?? undefined } : null),
+          };
+        })
+      );
+      setEditingId(null);
+      return;
+    }
     await updateNatoriProjectDetails(projectId, patch);
     await reload();
     setEditingId(null);
@@ -567,6 +603,10 @@ export default function ResultsBoard() {
       `「${project.title}」（${project.clientName} / ${formatYen(project.amount)}）を実績から削除します。案件データ・画像ごと削除され、元に戻せません。よろしいですか？`
     );
     if (!confirmed) return;
+    if (isDemo) {
+      setProjects((current) => (current ?? []).filter((entry) => entry.id !== project.id));
+      return;
+    }
     setDeletingId(project.id);
     setListError(null);
     try {
@@ -589,6 +629,10 @@ export default function ResultsBoard() {
     const projectId = uploadTargetRef.current;
     uploadTargetRef.current = null;
     if (!file || !projectId) return;
+    if (isDemo) {
+      setListError("デモ環境のため、作品画像の登録・変更はできません。");
+      return;
+    }
     setUploadingId(projectId);
     setListError(null);
     try {
@@ -633,7 +677,7 @@ export default function ResultsBoard() {
             案件のステータスが「納品済み」または「対応完了」になると、ここに件数や売上が表示されます。過去の案件は下のフォームから手入力でも追加できます。
           </p>
         </div>
-        <ResultAddForm onAdded={reload} />
+        {isDemo ? null : <ResultAddForm onAdded={reload} />}
       </div>
     );
   }
@@ -803,7 +847,7 @@ export default function ResultsBoard() {
         />
       </div>
 
-      <ResultAddForm onAdded={reload} />
+      {isDemo ? null : <ResultAddForm onAdded={reload} />}
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         <SectionCard

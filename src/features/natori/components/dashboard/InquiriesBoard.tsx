@@ -65,7 +65,17 @@ type InquiryRow = {
   lastActionLabel: string;
 };
 
-export default function InquiriesBoard() {
+type InquiriesBoardProps = {
+  /**
+   * エトリエのデモ環境用。渡すとサーバーへは一切アクセスせず、
+   * このデータをローカル状態として表示・操作する（見送り・入金確認も
+   * ローカル反映のみ、メールパネルは送信シミュレーション）。
+   */
+  demoProjects?: NatoriProject[];
+};
+
+export default function InquiriesBoard({ demoProjects }: InquiriesBoardProps) {
+  const isDemo = Boolean(demoProjects);
   const [projects, setProjects] = useState<NatoriProject[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [today, setToday] = useState<Date | null>(null);
@@ -81,6 +91,10 @@ export default function InquiriesBoard() {
 
   useEffect(() => {
     setToday(new Date());
+    if (demoProjects) {
+      setProjects(demoProjects);
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -93,7 +107,7 @@ export default function InquiriesBoard() {
     return () => {
       cancelled = true;
     };
-  }, [reload]);
+  }, [reload, demoProjects]);
 
   const rows = useMemo<InquiryRow[]>(() => {
     if (!projects) return [];
@@ -141,6 +155,24 @@ export default function InquiriesBoard() {
       ""
     );
     if (reason === null) return;
+    if (isDemo) {
+      // デモ: ローカル状態にだけ反映（履歴の見送りログも本物と同じ形式で追記）
+      const stamp = new Date().toISOString().slice(0, 10);
+      setProjects((current) =>
+        (current ?? []).map((entry) =>
+          entry.id === project.id
+            ? {
+                ...entry,
+                status: "closed",
+                nextAction: "-",
+                note: `${entry.note ?? ""}\n\n【見送り ${stamp}】${reason.trim() || "-"}`.trim(),
+              }
+            : entry
+        )
+      );
+      setSelectedId(null);
+      return;
+    }
     setBusyId(project.id);
     setError(null);
     try {
@@ -160,6 +192,22 @@ export default function InquiriesBoard() {
       `「${project.clientName}｜${project.title}」の入金を確認済みにして、ラフ開始に進めます。よろしいですか？`
     );
     if (!confirmed) return;
+    if (isDemo) {
+      setProjects((current) =>
+        (current ?? []).map((entry) =>
+          entry.id === project.id
+            ? {
+                ...entry,
+                status: "rough",
+                nextAction: getNextActionForStatus("rough"),
+                paymentConfirmedAt: new Date().toISOString(),
+              }
+            : entry
+        )
+      );
+      setSelectedId(null);
+      return;
+    }
     setBusyId(project.id);
     setError(null);
     try {
@@ -360,8 +408,25 @@ export default function InquiriesBoard() {
         <OrderMailPanel
           project={selectedRow.project}
           kind={mailKind}
+          demoMode={isDemo}
           onClose={() => setMailKind(null)}
           onSent={() => {
+            if (isDemo) {
+              // デモ: 本物と同じステータス遷移をローカルにだけ反映
+              const nextStatus = mailKind === "estimate" ? "quoted" : "awaiting_payment";
+              setProjects((current) =>
+                (current ?? []).map((entry) =>
+                  entry.id === selectedRow.project.id
+                    ? {
+                        ...entry,
+                        status: nextStatus,
+                        nextAction: getNextActionForStatus(nextStatus),
+                      }
+                    : entry
+                )
+              );
+              return;
+            }
             reload().catch((err) => {
               console.error("[InquiriesBoard] reload after mail failed", err);
             });

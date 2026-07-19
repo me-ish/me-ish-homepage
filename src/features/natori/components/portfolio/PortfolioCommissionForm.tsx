@@ -51,7 +51,14 @@ const DETAILS_TEMPLATE = [
   "（例: 淡いピンク系でふんわり）",
 ].join("\n");
 
-export default function PortfolioCommissionForm({ content }: { content: PortfolioContent }) {
+export default function PortfolioCommissionForm({
+  content,
+  demoMode,
+}: {
+  content: PortfolioContent;
+  /** エトリエのデモ環境用。送信を実行せず成功をシミュレートする */
+  demoMode?: boolean;
+}) {
   const [status, setStatus] = useState<Status>("idle");
   const [selectedPlan, setSelectedPlan] = useState<string>(PLAN_UNDECIDED);
   // キャラクター資料。選択時はローカル保持のみで、送信時に multipart で一括添付
@@ -112,6 +119,15 @@ export default function PortfolioCommissionForm({ content }: { content: Portfoli
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (status === "sending") return;
+    if (demoMode) {
+      // デモ: 実送信せず成功表示だけする（メールも飛ばない）
+      setRefImages((current) => {
+        current.forEach((entry) => URL.revokeObjectURL(entry.previewUrl));
+        return [];
+      });
+      setStatus("success");
+      return;
+    }
     setStatus("sending");
 
     // フォーム項目 + 添付画像をまとめて multipart で送る。

@@ -47,7 +47,8 @@ export default function EtorieLanding() {
               </Link>
             </div>
             <p className="et-cta-note" style={{ marginTop: 12 }}>
-              架空のクリエイター「ユキノ」の一日で、依頼から納品までを追いかけます
+              架空のクリエイター「ユキノ」の一日で、依頼から納品までを追いかけます。
+              デモの最後から、実際の管理画面をサンプルデータでさわれます
             </p>
           </div>
 

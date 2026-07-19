@@ -45,7 +45,17 @@ function getMonthFromDate(date: Date): ViewMonth {
   return { year: date.getFullYear(), monthIndex: date.getMonth() };
 }
 
-export default function ProjectsBoard() {
+type ProjectsBoardProps = {
+  /**
+   * エトリエのデモ環境用。渡すとサーバーへは一切アクセスせず、
+   * このデータをローカル状態として表示・操作する（mock モードと同じ扱い）。
+   */
+  demoProjects?: NatoriProject[];
+  demoEvents?: NatoriEvent[];
+};
+
+export default function ProjectsBoard({ demoProjects, demoEvents }: ProjectsBoardProps) {
+  const isDemo = Boolean(demoProjects);
   const [today, setToday] = useState<Date | null>(null);
   const [projects, setProjects] = useState<NatoriProject[]>([]);
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
@@ -77,6 +87,15 @@ export default function ProjectsBoard() {
   }, []);
 
   useEffect(() => {
+    // デモ環境: サーバーに触らず渡されたデータをそのまま使う。
+    // 以後の操作は dataSource !== "supabase" の分岐でローカル状態にのみ反映される。
+    if (demoProjects) {
+      setProjects(demoProjects);
+      setEvents(demoEvents ?? []);
+      setDataSource("mock");
+      setAuthed(false);
+      return;
+    }
     let cancelled = false;
     (async () => {
       // 認可はサーバー API（合言葉キー / ログイン）に任せる。ここではまず
@@ -97,7 +116,7 @@ export default function ProjectsBoard() {
     return () => {
       cancelled = true;
     };
-  }, [loadFromSupabase]);
+  }, [loadFromSupabase, demoProjects, demoEvents]);
 
   // 見送り（closed）はボード・カレンダー・優先度の対象から外し、
   // 折りたたみの「見送りした相談」にだけ出す。
@@ -437,7 +456,7 @@ export default function ProjectsBoard() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {dataSource === "mock" ? (
+      {dataSource === "mock" && !isDemo ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 sm:text-sm">
           サーバーからの読み込みに失敗したため、ローカルのデモデータを表示しています。合言葉付きのブックマークから開き直すか、時間をおいて再読み込みしてください。
           {error ? <p className="mt-1 text-[11px] opacity-80">{error}</p> : null}
@@ -478,7 +497,7 @@ export default function ProjectsBoard() {
       {/* 依頼受付〜入金待ちの対応（メール送信・入金確認・見送り）は問い合わせ管理へ集約 */}
       {preworkCount > 0 ? (
         <Link
-          href="/natori/inquiries"
+          href={isDemo ? "/etorie/demo/app/inquiries" : "/natori/inquiries"}
           className="flex items-center justify-between gap-3 rounded-2xl border border-orange-200 bg-orange-50/60 p-3 shadow-sm transition hover:bg-orange-50 sm:p-4"
         >
           <div className="flex min-w-0 items-center gap-3">

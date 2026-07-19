@@ -57,13 +57,29 @@ function sanitizeContent(content: PortfolioContent): PortfolioContent {
   };
 }
 
-export default function PortfolioEditor() {
+type PortfolioEditorProps = {
+  /**
+   * エトリエのデモ環境用。渡すとサーバーへは一切アクセスせず、
+   * 編集はローカル状態のみ・保存は成功をシミュレートする
+   * （プレビューは非表示、画像アップロードは失敗表示になる）。
+   */
+  demoContent?: PortfolioContent;
+  /** 「公開ページを見る」のリンク先（デモではデモ用公開ページへ） */
+  publicHref?: string;
+};
+
+export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEditorProps) {
+  const isDemo = Boolean(demoContent);
   const [content, setContent] = useState<PortfolioContent | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
+    if (demoContent) {
+      setContent(demoContent);
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -79,7 +95,7 @@ export default function PortfolioEditor() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [demoContent]);
 
   // 未保存の変更がある状態でページを閉じようとしたら警告
   useEffect(() => {
@@ -125,6 +141,13 @@ export default function PortfolioEditor() {
 
   const handleSave = async () => {
     if (!content || saveState === "saving") return;
+    if (isDemo) {
+      // デモ: 実保存せず成功表示だけする
+      setContent(sanitizeContent(content));
+      setDirty(false);
+      setSaveState("saved");
+      return;
+    }
     setSaveState("saving");
     try {
       const sanitized = sanitizeContent(content);
@@ -176,17 +199,19 @@ export default function PortfolioEditor() {
             <h1 className="text-lg font-black text-gray-900">ポートフォリオ編集</h1>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handlePreview}
-              className="inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-pink-50 px-4 py-2 text-xs font-bold text-pink-700 hover:bg-pink-100 focus:outline-none focus:ring-2 focus:ring-pink-300"
-              title="いまの編集内容を保存せずに別タブで確認します"
-            >
-              <Eye className="h-3.5 w-3.5" aria-hidden />
-              プレビュー
-            </button>
+            {isDemo ? null : (
+              <button
+                type="button"
+                onClick={handlePreview}
+                className="inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-pink-50 px-4 py-2 text-xs font-bold text-pink-700 hover:bg-pink-100 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                title="いまの編集内容を保存せずに別タブで確認します"
+              >
+                <Eye className="h-3.5 w-3.5" aria-hidden />
+                プレビュー
+              </button>
+            )}
             <Link
-              href="/natori/portfolio"
+              href={publicHref ?? "/natori/portfolio"}
               target="_blank"
               className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-pink-300"
             >
@@ -304,6 +329,7 @@ export default function PortfolioEditor() {
               onChange={(v) => patch({ heroImage: v })}
               shape="circle"
               hint="代表作や看板イラストなど"
+              uploadDisabled={isDemo}
             />
             <ImageUploadField
               label="プロフィールのアイコン"
@@ -311,6 +337,7 @@ export default function PortfolioEditor() {
               onChange={(v) => patch({ aboutImage: v })}
               shape="circle"
               hint="SNSと同じアイコンがおすすめ"
+              uploadDisabled={isDemo}
             />
           </div>
         </SectionCard>
@@ -427,6 +454,7 @@ export default function PortfolioEditor() {
                     value={work.image}
                     onChange={(v) => patch({ works: updateItem(content.works, index, { image: v }) })}
                     shape="square"
+                    uploadDisabled={isDemo}
                   />
                   <div className="space-y-3">
                     <TextInput
@@ -460,7 +488,7 @@ export default function PortfolioEditor() {
                 })
               }
             />
-            <BulkWorkImageAdd onAdded={appendWorks} />
+            {isDemo ? null : <BulkWorkImageAdd onAdded={appendWorks} />}
           </div>
         </SectionCard>
 
@@ -744,7 +772,11 @@ export default function PortfolioEditor() {
         <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-3 px-4 py-3">
           <div className="min-w-0 text-xs font-bold">
             {saveState === "saved" ? (
-              <span className="text-emerald-600">保存しました！公開ページに反映されています。</span>
+              <span className="text-emerald-600">
+                {isDemo
+                  ? "保存しました（デモのため実際には反映されません）。"
+                  : "保存しました！公開ページに反映されています。"}
+              </span>
             ) : saveState === "error" ? (
               <span className="text-red-600">保存に失敗しました。もう一度お試しください。</span>
             ) : dirty ? (

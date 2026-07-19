@@ -100,8 +100,11 @@ export default function EtorieFeatures() {
           </div>
           <FeatureGrid features={PUBLIC_FEATURES} />
           <div className="et-cta-row" style={{ marginTop: 40 }}>
-            <Link href="/etorie/demo" className="et-btn">
-              実際の画面をデモで見る
+            <Link href="/etorie/demo/app" className="et-btn">
+              実際の画面をさわってみる
+            </Link>
+            <Link href="/etorie/demo" className="et-btn et-btn-ghost">
+              流れで見るデモ（3分）
             </Link>
             <Link href="/etorie" className="et-btn et-btn-ghost">
               ← 紹介ページへ

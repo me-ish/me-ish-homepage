@@ -60,6 +60,8 @@ type OrderMailPanelProps = {
   initialAmount?: number;
   /** 見積もりツールから渡す内訳行。定型文の金額の下に入る（estimate のみ） */
   breakdownLines?: string[];
+  /** エトリエのデモ環境用。送信を実行せず成功をシミュレートする */
+  demoMode?: boolean;
   onClose: () => void;
   /** 送信成功後に呼ばれる（案件一覧の再読み込み用） */
   onSent: () => void;
@@ -70,6 +72,7 @@ export default function OrderMailPanel({
   kind,
   initialAmount,
   breakdownLines,
+  demoMode,
   onClose,
   onSent,
 }: OrderMailPanelProps) {
@@ -103,6 +106,13 @@ export default function OrderMailPanel({
 
   const handleSend = async () => {
     if (!canSend) return;
+    if (demoMode) {
+      // デモ: 実送信せず成功表示だけする（Stripe リンクもダミー）
+      setSentLinkUrl(kind === "payment" ? "https://buy.stripe.com/demo_xxxxxxxx（デモ）" : null);
+      setSent(true);
+      onSent();
+      return;
+    }
     setSending(true);
     setError(null);
     try {
@@ -168,7 +178,8 @@ export default function OrderMailPanel({
         {sent ? (
           <div className="space-y-3">
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
-              送信しました。{kind === "estimate" ? "案件は「見積もり提示済み」に進みました。" : "案件は「入金待ち」に進みました。入金があると自動で「ラフ」になります。"}
+              {demoMode ? "送信しました（デモのため実際のメールは飛びません）。" : "送信しました。"}
+              {kind === "estimate" ? "案件は「見積もり提示済み」に進みました。" : "案件は「入金待ち」に進みました。入金があると自動で「ラフ」になります。"}
             </div>
             {sentLinkUrl ? (
               <div className="rounded-xl border border-pink-100 bg-pink-50/50 px-4 py-3 text-xs">

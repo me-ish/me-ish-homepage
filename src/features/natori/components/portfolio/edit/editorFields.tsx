@@ -184,6 +184,7 @@ export function ImageUploadField({
   onChange,
   shape = "square",
   hint,
+  uploadDisabled,
 }: {
   label: string;
   value: string | null;
@@ -191,6 +192,8 @@ export function ImageUploadField({
   /** プレビューの形。circle はアイコン系、square は作品系 */
   shape?: "circle" | "square";
   hint?: string;
+  /** デモ環境用: アップロードを無効化して案内だけ出す */
+  uploadDisabled?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -236,7 +239,13 @@ export function ImageUploadField({
         <div className="flex flex-col gap-2">
           <button
             type="button"
-            onClick={() => inputRef.current?.click()}
+            onClick={() => {
+              if (uploadDisabled) {
+                setError("デモ環境のため、画像の変更はできません。");
+                return;
+              }
+              inputRef.current?.click();
+            }}
             disabled={uploading}
             className="inline-flex items-center gap-1.5 rounded-full bg-pink-500 px-4 py-2 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-pink-300"
           >

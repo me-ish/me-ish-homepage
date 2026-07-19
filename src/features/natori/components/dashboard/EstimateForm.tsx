@@ -43,7 +43,15 @@ const CATEGORY_TO_TYPE: Record<NatoriEstimateCategory, NatoriProjectType> = {
   full_body: "standing",
 };
 
-export default function EstimateForm() {
+type EstimateFormProps = {
+  /**
+   * エトリエのデモ環境用。プリセット・問い合わせ連携の読み込みを行わず、
+   * 既定の料金表による計算・メール下書きだけを提供する（案件登録は非表示）。
+   */
+  demo?: boolean;
+};
+
+export default function EstimateForm({ demo }: EstimateFormProps) {
   const [requestText, setRequestText] = useState("");
   const [submittedText, setSubmittedText] = useState("");
   const [pricingConfig, setPricingConfig] = useState<NatoriPricingConfig>(() => createDefaultNatoriPricingConfig());
@@ -96,6 +104,8 @@ export default function EstimateForm() {
 
   useEffect(() => {
     setStartDateISO(toISODate(new Date()));
+    // デモ環境ではサーバーに触らない（既定の料金表のまま計算だけ提供）
+    if (demo) return;
     // 認可はプリセット API 側（合言葉キー / ログイン）に任せる。ここでは
     // 常に読み込みを試み、成功したら保存系 UI を有効化する。
     (async () => {
@@ -103,7 +113,7 @@ export default function EstimateForm() {
       setAuthed(true);
       await refreshInquiries();
     })();
-  }, [loadPresets, refreshInquiries]);
+  }, [loadPresets, refreshInquiries, demo]);
 
   const dueDateISO = useMemo(
     () => (startDateISO ? calculateDueDate(startDateISO, deliveryPlan) : ""),
@@ -300,20 +310,27 @@ export default function EstimateForm() {
               </p>
             </div>
 
-            <ProjectRegisterForm
-              mode="estimate"
-              defaults={{
-                title: `${estimate.category.label}の案件`,
-                type: CATEGORY_TO_TYPE[estimate.category.id],
-                amount: estimate.total,
-                deliveryPlan,
-                startDateISO,
-                dueDateISO,
-                note: buildProjectNoteFromEstimate(estimate),
-              }}
-              fixedAmount
-              fixedDeliveryPlan
-            />
+            {demo ? (
+              <p className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-600">
+                実際の画面では、この見積もりをワンクリックで案件として登録したり、
+                問い合わせへの見積もりメール送信に引き継いだりできます（デモでは省略）。
+              </p>
+            ) : (
+              <ProjectRegisterForm
+                mode="estimate"
+                defaults={{
+                  title: `${estimate.category.label}の案件`,
+                  type: CATEGORY_TO_TYPE[estimate.category.id],
+                  amount: estimate.total,
+                  deliveryPlan,
+                  startDateISO,
+                  dueDateISO,
+                  note: buildProjectNoteFromEstimate(estimate),
+                }}
+                fixedAmount
+                fixedDeliveryPlan
+              />
+            )}
 
             {inquiryProjects && inquiryProjects.length > 0 ? (
               <ResultBlock title="この見積もりで問い合わせに返信">

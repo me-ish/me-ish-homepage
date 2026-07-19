@@ -34,13 +34,28 @@ function sanitizeContent(content: NatoriLinksContent): NatoriLinksContent {
   };
 }
 
-export default function LinksEditor() {
+type LinksEditorProps = {
+  /**
+   * エトリエのデモ環境用。渡すとサーバーへは一切アクセスせず、
+   * 編集はローカル状態のみ・保存は成功をシミュレートする。
+   */
+  demoContent?: NatoriLinksContent;
+  /** 「公開ページを見る」のリンク先（デモではデモ用公開ページへ） */
+  publicHref?: string;
+};
+
+export default function LinksEditor({ demoContent, publicHref }: LinksEditorProps) {
+  const isDemo = Boolean(demoContent);
   const [content, setContent] = useState<NatoriLinksContent | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
+    if (demoContent) {
+      setContent(demoContent);
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -56,7 +71,7 @@ export default function LinksEditor() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [demoContent]);
 
   // 未保存の変更がある状態でページを閉じようとしたら警告
   useEffect(() => {
@@ -77,6 +92,13 @@ export default function LinksEditor() {
 
   const handleSave = async () => {
     if (!content || saveState === "saving") return;
+    if (isDemo) {
+      // デモ: 実保存せず成功表示だけする
+      setContent(sanitizeContent(content));
+      setDirty(false);
+      setSaveState("saved");
+      return;
+    }
     setSaveState("saving");
     try {
       const sanitized = sanitizeContent(content);
@@ -129,7 +151,7 @@ export default function LinksEditor() {
           </div>
           <div className="ml-auto flex items-center gap-2">
             <Link
-              href="/natori/links"
+              href={publicHref ?? "/natori/links"}
               target="_blank"
               className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-pink-300"
             >
@@ -207,7 +229,11 @@ export default function LinksEditor() {
         <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-3 px-4 py-3">
           <div className="min-w-0 text-xs font-bold">
             {saveState === "saved" ? (
-              <span className="text-emerald-600">保存しました！公開ページに反映されています。</span>
+              <span className="text-emerald-600">
+                {isDemo
+                  ? "保存しました（デモのため実際には反映されません）。"
+                  : "保存しました！公開ページに反映されています。"}
+              </span>
             ) : saveState === "error" ? (
               <span className="text-red-600">保存に失敗しました。もう一度お試しください。</span>
             ) : dirty ? (

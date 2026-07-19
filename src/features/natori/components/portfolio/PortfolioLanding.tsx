@@ -19,9 +19,12 @@ import { portfolioFontEn, portfolioFontJp } from "./portfolioFonts";
 export default function PortfolioLanding({
   content,
   variant = "full",
+  demoContact,
 }: {
   content: PortfolioContent;
   variant?: PortfolioVariant;
+  /** エトリエのデモ環境用。依頼フォームの送信をシミュレーションにする */
+  demoContact?: boolean;
 }) {
   const showcase = variant === "showcase";
   return (
@@ -38,7 +41,7 @@ export default function PortfolioLanding({
         <>
           <PortfolioPricing content={content} />
           <PortfolioGuidelines content={content} />
-          <PortfolioCommissionForm content={content} />
+          <PortfolioCommissionForm content={content} demoMode={demoContact} />
           {content.commissionOpen ? <PortfolioMobileCta /> : null}
         </>
       )}
