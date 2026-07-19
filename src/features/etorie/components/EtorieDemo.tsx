@@ -37,6 +37,12 @@ export default function EtorieDemo() {
   const scene = demoScenes[stepIndex];
   const isLast = stepIndex === demoScenes.length - 1;
 
+  // シーン切替はページ遷移として扱い、必ずページ先頭から読ませる
+  const goToStep = (index: number) => {
+    setStepIndex(index);
+    window.scrollTo({ top: 0, left: 0 });
+  };
+
   const handleToggleTask = (_projectId: string, taskId: string) => {
     setProject((current) => ({
       ...current,
@@ -62,7 +68,7 @@ export default function EtorieDemo() {
             <span className="et-kana">エトリエ</span>
           </Link>
           <div className="et-byline">
-            DÉMO — 架空のクリエイター「{demoCreator.name}」（{demoCreator.role}）の一日
+            DÉMO — 架空のクリエイター「{demoCreator.name}」の一日
           </div>
         </header>
 
@@ -71,7 +77,7 @@ export default function EtorieDemo() {
             <button
               key={s.id}
               type="button"
-              onClick={() => setStepIndex(index)}
+              onClick={() => goToStep(index)}
               aria-current={index === stepIndex ? "step" : undefined}
             >
               {index + 1}. {s.title}
@@ -107,7 +113,7 @@ export default function EtorieDemo() {
               <button
                 type="button"
                 className="et-btn et-btn-ghost"
-                onClick={() => setStepIndex(stepIndex - 1)}
+                onClick={() => goToStep(stepIndex - 1)}
               >
                 ← 前へ
               </button>
@@ -117,14 +123,19 @@ export default function EtorieDemo() {
               </Link>
             )}
             {isLast ? (
-              <Link href="/etorie/features" className="et-btn">
-                機能一覧を見る
-              </Link>
+              <>
+                <Link href="/etorie/demo/app" className="et-btn">
+                  実際の画面をさわってみる
+                </Link>
+                <Link href="/etorie/features" className="et-btn et-btn-ghost">
+                  機能一覧
+                </Link>
+              </>
             ) : (
               <button
                 type="button"
                 className="et-btn"
-                onClick={() => setStepIndex(stepIndex + 1)}
+                onClick={() => goToStep(stepIndex + 1)}
               >
                 次のシーンへ →
               </button>

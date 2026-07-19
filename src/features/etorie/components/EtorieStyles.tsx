@@ -32,15 +32,18 @@ const css = `
 
 /* ---------- header ---------- */
 .etorie-page .et-header {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px;
   padding: 28px 0 0;
 }
 .etorie-page .et-logotype { display: flex; align-items: baseline; gap: 10px; }
 .etorie-page .et-logotype .et-latin {
   font-family: Georgia, serif; font-style: italic; font-size: 26px; letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 .etorie-page .et-logotype .et-latin .et-e { color: var(--et-accent); }
-.etorie-page .et-logotype .et-kana { font-size: 12.5px; letter-spacing: 0.32em; color: var(--et-mist); }
+.etorie-page .et-logotype .et-kana {
+  font-size: 12.5px; letter-spacing: 0.32em; color: var(--et-mist); white-space: nowrap;
+}
 .etorie-page .et-byline { font-size: 12px; color: var(--et-mist); letter-spacing: 0.08em; }
 .etorie-page .et-byline b { color: var(--et-ink); font-weight: 600; }
 
@@ -79,6 +82,7 @@ const css = `
   background: var(--et-accent); color: #fff; border: none; cursor: pointer;
   font: inherit; font-weight: 700; font-size: 15px;
   padding: 13px 30px; border-radius: 999px; text-decoration: none;
+  white-space: nowrap;
   box-shadow: 0 8px 20px rgba(196, 58, 110, 0.30);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -188,7 +192,7 @@ const css = `
 }
 
 /* ---------- demo ---------- */
-.etorie-page .et-demo-main { padding: 40px 0 80px; }
+.etorie-page .et-demo-main { padding-top: 40px; padding-bottom: 80px; }
 .etorie-page .et-stepper {
   display: flex; flex-wrap: wrap; gap: 8px; margin: 26px 0 30px;
 }
@@ -209,7 +213,7 @@ const css = `
 .etorie-page .et-scene-change { font-size: 15px; margin: 0 0 26px; }
 .etorie-page .et-scene-change b { color: var(--et-accent); }
 .etorie-page .et-scene-visual { margin: 0 0 30px; }
-.etorie-page .et-demo-nav { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.etorie-page .et-demo-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 6px; }
 .etorie-page .et-demo-nav .et-count { font-size: 12.5px; color: var(--et-mist); margin-left: auto; }
 .etorie-page .et-mail {
   background: var(--et-surface); border: 1px solid var(--et-line); border-radius: 14px;
@@ -253,6 +257,17 @@ const css = `
   .etorie-page .et-hero > * { animation: etRise 0.7s ease both; }
   .etorie-page .et-hero > *:nth-child(2) { animation-delay: 0.15s; }
   @keyframes etRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+}
+
+/* ---------- 幅の狭いスマホ向けの調整 ---------- */
+@media (max-width: 480px) {
+  .etorie-page .et-logotype .et-latin { font-size: 22px; }
+  .etorie-page .et-byline { font-size: 11px; }
+  .etorie-page .et-btn { padding: 11px 20px; font-size: 14px; }
+  .etorie-page .et-btn.et-btn-ghost { padding: 9px 18px; }
+  .etorie-page .et-stepper { gap: 6px; }
+  .etorie-page .et-stepper button { padding: 5px 10px; font-size: 11px; }
+  .etorie-page .et-demo-nav { gap: 8px; }
 }
 `;
 
