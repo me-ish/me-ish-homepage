@@ -6,7 +6,8 @@ import { requireAdminAuth } from '@/lib/auth/requireAdminAuth';
 
 const Body = z.object({ is_read: z.boolean() });
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await requireAdminAuth(req);
   if (!auth.ok) return auth.response;
 

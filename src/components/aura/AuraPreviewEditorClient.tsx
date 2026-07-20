@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import type { Content } from "@/lib/aura/aura.schema";
 
 type Section = {
@@ -566,9 +567,9 @@ export default function AuraPreviewEditorClient({
 
           <div className="mt-5 border-t pt-4 flex justify-between items-center">
             <p className="text-xs text-gray-600">困ったら me-ish に相談できます。</p>
-            <a href="/contact" className="text-sm underline">
+            <Link href="/contact" className="text-sm underline">
               お問い合わせへ
-            </a>
+            </Link>
           </div>
         </div>
       )}

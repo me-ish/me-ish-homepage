@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/server";
  * 「既にデータを持っている所有者」に書き込みを帰属させる。
  */
 export async function resolveNatoriActingUserId(): Promise<string | null> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

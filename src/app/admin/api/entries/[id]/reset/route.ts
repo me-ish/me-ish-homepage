@@ -4,7 +4,8 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { EntryReset } from '@/lib/schemas/entry';
 import { requireAdminAuth } from '@/lib/auth/requireAdminAuth';
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await requireAdminAuth(req);
   if (!auth.ok) return auth.response;
   const _ = await req.json().catch(() => ({}));

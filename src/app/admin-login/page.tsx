@@ -16,12 +16,13 @@ function safePath(p?: string | string[] | null) {
   return s.startsWith('/') ? s : '/admin';
 }
 
-export default async function Page({
-  searchParams,
-}: {
-  searchParams?: { [key: string]: string | string[] | undefined };
-}) {
-  const sb = supabaseServer();
+export default async function Page(
+  props: {
+    searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   const email = user?.email ?? null;
 

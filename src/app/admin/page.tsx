@@ -15,7 +15,7 @@ type AnnRow = Database["public"]["Tables"]["announcements"]["Row"];
 
 export default async function AdminPage() {
   // 1) 認証
-  const sb = supabaseServer();
+  const sb = await supabaseServer();
   const {
     data: { user },
   } = await sb.auth.getUser();

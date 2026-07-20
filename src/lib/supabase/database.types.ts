@@ -1268,6 +1268,7 @@ export type Database = {
           amount: number
           client_name: string
           created_at: string
+          deleted_at: string | null
           delivery_plan: string
           due_date: string
           id: string
@@ -1286,6 +1287,7 @@ export type Database = {
           amount?: number
           client_name: string
           created_at?: string
+          deleted_at?: string | null
           delivery_plan?: string
           due_date: string
           id?: string
@@ -1304,6 +1306,7 @@ export type Database = {
           amount?: number
           client_name?: string
           created_at?: string
+          deleted_at?: string | null
           delivery_plan?: string
           due_date?: string
           id?: string

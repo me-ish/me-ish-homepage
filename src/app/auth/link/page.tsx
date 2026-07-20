@@ -9,11 +9,12 @@ function isValidExternalId(s: string) {
   return /^[A-Za-z0-9._\-]{16,200}$/.test(s);
 }
 
-export default async function LinkExternalPage({
-  searchParams,
-}: {
-  searchParams: { external?: string | string[] };
-}) {
+export default async function LinkExternalPage(
+  props: {
+    searchParams: Promise<{ external?: string | string[] }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   // external を 1 値に正規化
   const raw = searchParams.external;
   const externalId = Array.isArray(raw) ? raw[0] : raw;
@@ -22,7 +23,7 @@ export default async function LinkExternalPage({
     redirect('/mypage?linked=error');
   }
 
-  const supabase = supabaseServer();
+  const supabase = await supabaseServer();
 
   // RSC では getUser() でOK（Cookieから判定）
   const {

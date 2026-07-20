@@ -9,6 +9,7 @@ import {
   listNatoriAdminProjects,
   NATORI_PROJECT_STATUSES,
   patchNatoriProjectDetails,
+  restoreNatoriAdminProject,
   setNatoriProjectStatus,
   setNatoriProjectTaskDone,
 } from "@/features/natori/server/projectsService";
@@ -48,6 +49,7 @@ export async function GET() {
     case "ok":
       return NextResponse.json({
         projects: result.projects,
+        archivedProjects: result.archivedProjects,
         tasks: result.tasks,
         referenceFiles: result.referenceFiles,
       });
@@ -233,6 +235,18 @@ export async function PATCH(request: Request) {
           { error: `Invalid status transition: ${result.from} -> ${result.to}` },
           { status: 409 }
         );
+      case "ok":
+        return NextResponse.json({ ok: true });
+    }
+  }
+
+  if (kind === "restore") {
+    const result = await restoreNatoriAdminProject(projectId);
+    switch (result.kind) {
+      case "db-error":
+        return NextResponse.json({ error: "Failed to restore project" }, { status: 500 });
+      case "not-found":
+        return NextResponse.json({ error: "Project not found" }, { status: 404 });
       case "ok":
         return NextResponse.json({ ok: true });
     }

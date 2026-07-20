@@ -2,9 +2,8 @@ import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
 import NewsList from '@/app/[locale]/news/_components/NewsList';
 
-export default async function NewsPage({
-  searchParams,
-}: { searchParams?: { q?: string } }) {
+export default async function NewsPage(props: { searchParams?: Promise<{ q?: string }> }) {
+  const searchParams = await props.searchParams;
   const t = await getTranslations('pages.news');
   const q = searchParams?.q ?? '';
   return (

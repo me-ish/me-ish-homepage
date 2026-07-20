@@ -1,8 +1,6 @@
 import { supabaseServer } from '@/lib/supabaseServer';
 import { escapeIlikePattern } from '@/lib/sanitize';
-import dynamic from 'next/dynamic';
-
-const AnnouncementCard = dynamic(() => import('./AnnouncementCard'), { ssr: false });
+import AnnouncementCard from './AnnouncementCard';
 
 type Ann = {
   id: string;
@@ -15,7 +13,7 @@ type Ann = {
 };
 
 export default async function NewsList({ q = '' }: { q?: string }) {
-  const supabase = supabaseServer();
+  const supabase = await supabaseServer();
 
   let query = supabase
     .from('announcements')

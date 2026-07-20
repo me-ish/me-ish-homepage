@@ -197,7 +197,8 @@ type Kind = keyof typeof templates;
 const resend = new Resend(RESEND_API_KEY);
 
 /* ---------- Handler ---------- */
-export async function POST(req: NextRequest, { params }: { params: { kind: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ kind: string }> }) {
+  const params = await props.params;
   const unauth = assertAdmin(req);
   if (unauth) return unauth;
 

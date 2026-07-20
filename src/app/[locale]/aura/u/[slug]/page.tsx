@@ -23,11 +23,12 @@ async function getPublicIdBySlug(slug: string): Promise<string | null> {
   return pid ? pid : null;
 }
 
-export default async function AuraSlugRedirectPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
+export default async function AuraSlugRedirectPage(
+  props: {
+    params: Promise<{ slug: string }>;
+  }
+) {
+  const params = await props.params;
   const publicId = await getPublicIdBySlug(params.slug);
   if (!publicId) notFound();
 

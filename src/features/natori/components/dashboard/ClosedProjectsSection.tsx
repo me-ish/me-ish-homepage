@@ -9,7 +9,7 @@ type ClosedProjectsSectionProps = {
   busyId?: string | null;
   /** 見送りを取り消して「依頼受付」に戻す */
   onReopen: (project: NatoriProject) => void;
-  /** 完全に削除する（スパム・テスト送信向け） */
+  /** 案件一覧から削除する（データは復元可能） */
   onDelete: (project: NatoriProject) => void;
 };
 
@@ -96,8 +96,8 @@ export default function ClosedProjectsSection({
                     onClick={() => onDelete(project)}
                     disabled={busy}
                     className="grid h-9 w-9 place-items-center rounded-full border border-red-200 bg-white text-red-600 shadow-sm transition hover:bg-red-50 disabled:opacity-60"
-                    aria-label={`「${project.title}」を完全に削除`}
-                    title="完全に削除（スパム・テスト送信向け。元に戻せません）"
+                    aria-label={`「${project.title}」を案件一覧から削除`}
+                    title="案件一覧から削除（あとで復元できます）"
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden />
                   </button>

@@ -6,11 +6,12 @@ import CardPreviewShellClient from "@/components/card/CardPreviewShellClient";
 
 type Params = { id: string };
 
-export default async function CardPreviewPage({
-  params,
-}: {
-  params: Params;
-}) {
+export default async function CardPreviewPage(
+  props: {
+    params: Promise<Params>;
+  }
+) {
+  const params = await props.params;
   const rec = await findCardRequest(params.id);
 
   if (!rec || !rec.design || !rec.content) {

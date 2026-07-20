@@ -10,7 +10,8 @@ type Params = { id: string };
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request, { params }: { params: Params }) {
+export async function POST(req: Request, props: { params: Promise<Params> }) {
+  const params = await props.params;
   const csrfErr = checkCsrf(req);
   if (csrfErr) return csrfErr;
 

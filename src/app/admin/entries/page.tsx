@@ -5,7 +5,7 @@ import { isAdminEmail } from '@/lib/isAdmin';
 import AdminEntriesClient from './AdminEntriesClient';
 
 export default async function AdminEntriesPage() {
-  const sb = supabaseServer();
+  const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   if (!user || !isAdminEmail(user.email)) redirect('/admin-login?err=unauthorized');
   return <AdminEntriesClient adminEmail={user.email!} />;

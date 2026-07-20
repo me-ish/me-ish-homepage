@@ -9,11 +9,12 @@ import AuraPreviewShellClient from "@/components/aura/AuraPreviewShellClient";
 
 type Params = { id: string };
 
-export default async function AuraPreviewPage({
-  params,
-}: {
-  params: Params;
-}) {
+export default async function AuraPreviewPage(
+  props: {
+    params: Promise<Params>;
+  }
+) {
+  const params = await props.params;
   const rec = await findRequest(params.id);
 
   if (!rec || !rec.design || !rec.content) {

@@ -29,6 +29,8 @@ vi.mock("@/features/natori/server/projectThumbsService", () => ({
 import {
   closeNatoriProject,
   confirmNatoriProjectPayment,
+  deleteNatoriAdminProject,
+  restoreNatoriAdminProject,
   setNatoriProjectStatus,
 } from "@/features/natori/server/projectsService";
 
@@ -192,5 +194,28 @@ describe("closeNatoriProject", () => {
     const result = await closeNatoriProject("proj-1", "キャンセル");
     expect(result).toEqual({ kind: "invalid-transition", from: "rough", to: "closed" });
     expect(updates).toHaveLength(0);
+  });
+});
+
+describe("project archive and restore", () => {
+  it("deleteは行を消さずdeleted_atを記録する", async () => {
+    const { updates, updateCalls } = projectsTable([]);
+
+    const result = await deleteNatoriAdminProject("proj-1");
+
+    expect(result).toEqual({ kind: "ok" });
+    expect(updates).toHaveLength(1);
+    expect(typeof updates[0].deleted_at).toBe("string");
+    expect(updateCalls).toContain('is("deleted_at",null)');
+  });
+
+  it("restoreはdeleted_atをnullへ戻す", async () => {
+    const { updates, updateCalls } = projectsTable([]);
+
+    const result = await restoreNatoriAdminProject("proj-1");
+
+    expect(result).toEqual({ kind: "ok" });
+    expect(updates).toEqual([{ deleted_at: null }]);
+    expect(updateCalls).toContain('not("deleted_at","is",null)');
   });
 });

@@ -1,5 +1,6 @@
 // src/components/legal/LegalNotices.tsx
 import React from 'react';
+import Link from 'next/link';
 
 export function LegalNotices() {
   return (
@@ -10,9 +11,9 @@ export function LegalNotices() {
       <p>※ デジタル商品のため<strong>購入後の返金・キャンセルは原則不可</strong>（重複課金・重大欠陥等は<strong>購入後7日以内</strong>に対応）。</p>
       <p>※ 表示保証オプションは<strong>1作品ごと</strong>に提供し、有効期間内に所定回数を保証。消化済み回数は返金不可。</p>
       <p className="pt-1">
-        <a href="/footer/tokushoho" className="underline underline-offset-2">特定商取引法に基づく表記</a>
+        <Link href="/footer/tokushoho" className="underline underline-offset-2">特定商取引法に基づく表記</Link>
         <span className="mx-1">／</span>
-        <a href="/footer/terms#sec-6" className="underline underline-offset-2">利用規約（展示・販売）</a>
+        <Link href="/footer/terms#sec-6" className="underline underline-offset-2">利用規約（展示・販売）</Link>
       </p>
     </div>
   );

@@ -2,6 +2,7 @@
 "use client";
 
 import { Twitter, Instagram, Globe, Mail } from "lucide-react";
+import Link from "next/link";
 import type { CardDesign, CardContent } from "@/lib/card/card.schema";
 import CardQRCode from "../CardQRCode";
 import { useParallax } from "../animations/useParallax";
@@ -239,13 +240,13 @@ export default function CardRenderer({ design, content, publicUrl }: Props) {
         <footer className="py-8 text-center">
           <p className="text-xs opacity-40" style={{ color: design.colorText }}>
             made with{" "}
-            <a
+            <Link
               href="/"
               className="underline hover:opacity-70"
               style={{ color: design.colorPrimary }}
             >
               me-ish
-            </a>
+            </Link>
           </p>
         </footer>
       )}

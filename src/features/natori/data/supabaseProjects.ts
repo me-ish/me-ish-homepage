@@ -1,6 +1,4 @@
-import { createClient } from "@/lib/supabase/client";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
-import { mockNatoriProjects } from "@/features/natori/constants/mockProjects";
 import type {
   NatoriDeliveryPlan,
   NatoriProject,
@@ -33,6 +31,7 @@ type ProjectRow = {
   completed_at?: string | null;
   // Optional — added by 20260717_natori_client_email_and_mail_logs.sql.
   client_email?: string | null;
+  deleted_at?: string | null;
 };
 
 type TaskRow = {
@@ -45,9 +44,6 @@ type TaskRow = {
   done: boolean;
   sort_order: number;
 };
-
-const PROJECTS_TABLE = "natori_projects";
-const TASKS_TABLE = "natori_project_tasks";
 
 async function patchNatoriAdminProject(payload: Record<string, unknown>): Promise<void> {
   const response = await fetch("/api/natori/admin/projects", {
@@ -95,12 +91,16 @@ function rowToProject(
     paidAt: row.paid_at ?? row.payment_confirmed_at ?? undefined,
     paidAmount: row.paid_amount ?? undefined,
     completedAt: row.completed_at ?? undefined,
+    deletedAt: row.deleted_at ?? undefined,
     referenceImageUrls,
     tasks,
   };
 }
 
-export async function fetchNatoriProjects(): Promise<NatoriProject[]> {
+export async function fetchNatoriProjectCollection(): Promise<{
+  projects: NatoriProject[];
+  archivedProjects: NatoriProject[];
+}> {
   const response = await fetch("/api/natori/admin/projects", {
     cache: "no-store",
   });
@@ -110,6 +110,7 @@ export async function fetchNatoriProjects(): Promise<NatoriProject[]> {
 
   const payload = (await response.json()) as {
     projects?: ProjectRow[];
+    archivedProjects?: ProjectRow[];
     tasks?: TaskRow[];
     referenceFiles?: Array<{ project_id: string; url: string }>;
   };
@@ -128,13 +129,20 @@ export async function fetchNatoriProjects(): Promise<NatoriProject[]> {
     list.push(reference.url);
     referencesByProject.set(reference.project_id, list);
   }
-  return projectRows.map((row) =>
+  const mapRow = (row: ProjectRow) =>
     rowToProject(
       row,
       tasksByProject.get(row.id) ?? [],
       referencesByProject.get(row.id) ?? []
-    )
-  );
+    );
+  return {
+    projects: projectRows.map(mapRow),
+    archivedProjects: (payload.archivedProjects ?? []).map(mapRow),
+  };
+}
+
+export async function fetchNatoriProjects(): Promise<NatoriProject[]> {
+  return (await fetchNatoriProjectCollection()).projects;
 }
 
 export async function toggleNatoriTaskDone(
@@ -389,8 +397,7 @@ export async function uploadNatoriProjectThumb(projectId: string, file: File): P
 }
 
 /**
- * Deletes a project together with its tasks. Used by the results page to fix
- * manual-entry mistakes. Irreversible.
+ * Archives a project without deleting its tasks, images, or history.
  */
 export async function deleteNatoriProject(projectId: string): Promise<void> {
   const response = await fetch(
@@ -403,86 +410,6 @@ export async function deleteNatoriProject(projectId: string): Promise<void> {
   }
 }
 
-/**
- * Seeds the current user's account with the mock project set. Skips if the
- * user already has projects. Returns the number of projects inserted.
- */
-export async function seedNatoriDemoProjects(): Promise<number> {
-  const supabase = createClient();
-  const { data: userData, error: userErr } = await supabase.auth.getUser();
-  if (userErr) throw userErr;
-  const user = userData.user;
-  if (!user) throw new Error("ログインが必要です。");
-
-  const { count, error: countErr } = await supabase
-    .from(PROJECTS_TABLE)
-    .select("id", { count: "exact", head: true });
-  if (countErr) throw countErr;
-  if ((count ?? 0) > 0) return 0;
-
-  const projectInserts = mockNatoriProjects.map((project) => ({
-    user_id: user.id,
-    title: project.title,
-    client_name: project.clientName,
-    amount: project.amount,
-    type: project.type,
-    status: project.status,
-    delivery_plan: project.deliveryPlan ?? "normal",
-    priority: project.priority ?? null,
-    start_date: project.startDate ?? null,
-    due_date: project.dueDate,
-    next_action: project.nextAction,
-    note: project.note ?? null,
-  }));
-
-  const { data: insertedProjects, error: projectErr } = await supabase
-    .from(PROJECTS_TABLE)
-    .insert(projectInserts)
-    .select("id, title, client_name, due_date");
-  if (projectErr) throw projectErr;
-
-  // Pair each inserted row back to its mock by (title, due_date, client_name) — the
-  // mock set is unique on that combination.
-  const insertedRows = (insertedProjects ?? []) as Array<{
-    id: string;
-    title: string;
-    client_name: string;
-    due_date: string;
-  }>;
-  const taskInserts: Array<{
-    project_id: string;
-    task_key: string;
-    label: string;
-    stage: NatoriTaskStage;
-    estimated_hours: number | null;
-    done: boolean;
-    sort_order: number;
-  }> = [];
-  for (const mock of mockNatoriProjects) {
-    const match = insertedRows.find(
-      (row) =>
-        row.title === mock.title &&
-        row.client_name === mock.clientName &&
-        row.due_date === mock.dueDate
-    );
-    if (!match) continue;
-    mock.tasks.forEach((task, index) => {
-      taskInserts.push({
-        project_id: match.id,
-        task_key: task.id,
-        label: task.label,
-        stage: task.stage,
-        estimated_hours: task.estimatedHours ?? null,
-        done: task.done,
-        sort_order: index,
-      });
-    });
-  }
-
-  if (taskInserts.length > 0) {
-    const { error: taskErr } = await supabase.from(TASKS_TABLE).insert(taskInserts);
-    if (taskErr) throw taskErr;
-  }
-
-  return insertedRows.length;
+export async function restoreNatoriProject(projectId: string): Promise<void> {
+  await patchNatoriAdminProject({ kind: "restore", projectId });
 }

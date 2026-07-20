@@ -30,7 +30,7 @@ export async function canAccessNatoriManagement(email?: string | null): Promise<
 }
 
 export async function requireNatoriAdmin(nextPath: string): Promise<void> {
-  const supabase = supabaseServer();
+  const supabase = await supabaseServer();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -49,7 +49,7 @@ function getNatoriDashboardKey(): string | null {
 async function hasNatoriKeyCookie(): Promise<boolean> {
   const key = getNatoriDashboardKey();
   if (!key) return false;
-  const cookieValue = cookies().get(NATORI_KEY_COOKIE)?.value;
+  const cookieValue = (await cookies()).get(NATORI_KEY_COOKIE)?.value;
   if (!cookieValue) return false;
   // Cookie にはキー平文ではなく HMAC トークンを保存する（middleware.ts 参照）。
   const expectedToken = await deriveNatoriDashboardCookieToken(key);
@@ -71,7 +71,7 @@ async function hasNatoriKeyCookie(): Promise<boolean> {
 export async function canUseNatoriManagement(): Promise<boolean> {
   if (await hasNatoriKeyCookie()) return true;
 
-  const supabase = supabaseServer();
+  const supabase = await supabaseServer();
   const {
     data: { user },
   } = await supabase.auth.getUser();

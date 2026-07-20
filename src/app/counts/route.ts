@@ -8,7 +8,7 @@ export const revalidate = 0;
 
 export async function GET() {
   // 1) ルートハンドラ向けの Supabase（ユーザー特定用）
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const {
     data: { user },

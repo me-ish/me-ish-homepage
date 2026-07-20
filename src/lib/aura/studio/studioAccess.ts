@@ -47,7 +47,7 @@ export async function requireStudioAccess(
     const cookieHeader = req.headers.get('cookie') ?? '';
     sessionToken = readCookieFromHeader(cookieHeader, cookieName);
   } else {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     sessionToken = cookieStore.get(cookieName)?.value ?? null;
     sessionToken = sessionToken ? decodeURIComponent(sessionToken) : null;
   }

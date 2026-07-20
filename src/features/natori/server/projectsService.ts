@@ -2,7 +2,6 @@ import "server-only";
 import { createTasksForType } from "@/features/natori/lib/projects";
 import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { calculateDueDate } from "@/features/natori/lib/deliveryPlans";
-import { deleteNatoriProjectThumb } from "@/features/natori/server/projectThumbsService";
 import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
 import { signPortfolioReferenceImage } from "@/features/natori/server/portfolioSiteService";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -28,6 +27,7 @@ export type NatoriAdminProjectRow = {
   due_date: string;
   next_action: string;
   note: string | null;
+  deleted_at: string | null;
 };
 
 export type NatoriAdminTaskRow = {
@@ -239,6 +239,7 @@ export type ListNatoriAdminProjectsResult =
   | {
       kind: "ok";
       projects: NatoriAdminProjectRow[];
+      archivedProjects: NatoriAdminProjectRow[];
       tasks: NatoriAdminTaskRow[];
       referenceFiles: NatoriAdminReferenceFile[];
     }
@@ -261,10 +262,18 @@ export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjects
     return { kind: "fetch-projects-error" };
   }
 
-  const projectRows = (projects ?? []) as NatoriAdminProjectRow[];
+  const allProjectRows = (projects ?? []) as NatoriAdminProjectRow[];
+  const projectRows = allProjectRows.filter((project) => !project.deleted_at);
+  const archivedProjectRows = allProjectRows.filter((project) => Boolean(project.deleted_at));
   const projectIds = projectRows.map((project) => project.id);
   if (projectIds.length === 0) {
-    return { kind: "ok", projects: [], tasks: [], referenceFiles: [] };
+    return {
+      kind: "ok",
+      projects: [],
+      archivedProjects: archivedProjectRows,
+      tasks: [],
+      referenceFiles: [],
+    };
   }
 
   const [{ data: tasks, error: taskError }, { data: references, error: referenceError }] =
@@ -299,7 +308,13 @@ export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjects
 
   try {
     const normalizedTasks = await normalizeProjectTasks(admin, projectRows, taskRows);
-    return { kind: "ok", projects: projectRows, tasks: normalizedTasks, referenceFiles };
+    return {
+      kind: "ok",
+      projects: projectRows,
+      archivedProjects: archivedProjectRows,
+      tasks: normalizedTasks,
+      referenceFiles,
+    };
   } catch {
     return { kind: "normalize-error" };
   }
@@ -440,6 +455,7 @@ export async function setNatoriProjectStatus(
     .select("id, status")
     .eq("id", projectId)
     .eq("user_id", ownerId)
+    .is("deleted_at", null)
     .maybeSingle();
   if (fetchErr) {
     console.error("[natori-admin-projects] status fetch failed", fetchErr);
@@ -457,6 +473,7 @@ export async function setNatoriProjectStatus(
       .select("id")
       .eq("id", projectId)
       .eq("user_id", ownerId)
+      .is("deleted_at", null)
       .not("payment_confirmed_at", "is", null)
       .maybeSingle();
     if (paidError) return { kind: "db-error" };
@@ -480,6 +497,7 @@ export async function setNatoriProjectStatus(
     .update(statusUpdate)
     .eq("id", projectId)
     .eq("user_id", ownerId)
+    .is("deleted_at", null)
     .eq("status", fromStatus)
     .select("id")
     .maybeSingle();
@@ -517,6 +535,7 @@ export async function patchNatoriProjectDetails(
     .update(update)
     .eq("id", projectId)
     .eq("user_id", ownerId)
+    .is("deleted_at", null)
     .select("id")
     .maybeSingle();
 
@@ -546,6 +565,7 @@ export async function closeNatoriProject(
     .select("id, note, status")
     .eq("id", projectId)
     .eq("user_id", ownerId)
+    .is("deleted_at", null)
     .maybeSingle();
   if (fetchErr) {
     console.error("[natori-admin-projects] close fetch failed", fetchErr);
@@ -575,6 +595,7 @@ export async function closeNatoriProject(
     .update(update)
     .eq("id", projectId)
     .eq("user_id", ownerId)
+    .is("deleted_at", null)
     .eq("status", fromStatus)
     .select("id")
     .maybeSingle();
@@ -594,18 +615,21 @@ export async function deleteNatoriAdminProject(
 ): Promise<NatoriProjectMutationResult> {
   const ownerId = await resolveNatoriActingUserId();
   if (!ownerId) return { kind: "not-found" };
-  const { data, error } = await supabaseAdmin().rpc("natori_delete_project", {
-    p_user_id: ownerId,
-    p_project_id: projectId,
-  });
+  const { data, error } = await supabaseAdmin()
+    .from("natori_projects")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", projectId)
+    .eq("user_id", ownerId)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
   if (error) {
-    console.error("[natori-admin-projects] project delete failed", error);
+    console.error("[natori-admin-projects] project archive failed", error);
     return { kind: "db-error" };
   }
-  if (data !== true) return { kind: "not-found" };
+  if (!data) return { kind: "not-found" };
 
   // サムネイル画像もベストエフォートで片付ける（失敗しても削除自体は成功扱い）
-  await deleteNatoriProjectThumb(projectId);
   return { kind: "ok" };
 }
 
@@ -615,6 +639,27 @@ export async function deleteNatoriAdminProject(
  * 条件付き UPDATE で原子的に適用する。既に制作中・完了・見送りの案件は 0 行に
  * なり invalid-transition を返す（webhook との競合でも二重確定しない）。
  */
+export async function restoreNatoriAdminProject(
+  projectId: string
+): Promise<NatoriProjectMutationResult> {
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return { kind: "not-found" };
+  const { data, error } = await supabaseAdmin()
+    .from("natori_projects")
+    .update({ deleted_at: null })
+    .eq("id", projectId)
+    .eq("user_id", ownerId)
+    .not("deleted_at", "is", null)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    console.error("[natori-admin-projects] project restore failed", error);
+    return { kind: "db-error" };
+  }
+  if (!data) return { kind: "not-found" };
+  return { kind: "ok" };
+}
+
 export async function confirmNatoriProjectPayment(
   projectId: string,
   nextAction: string
@@ -640,6 +685,7 @@ export async function confirmNatoriProjectPayment(
     .select("id, status")
     .eq("id", projectId)
     .eq("user_id", ownerId)
+    .is("deleted_at", null)
     .maybeSingle();
   if (fetchErr) {
     console.error("[natori-admin-projects] confirm-payment refetch failed", fetchErr);

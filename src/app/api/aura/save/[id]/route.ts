@@ -15,7 +15,7 @@ async function getSessionUserEmail(): Promise<string | null> {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (!url || !anonKey) return null;
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const sb = createClient(url, anonKey, {
       global: { headers: { cookie: cookieStore.toString() } },
     });
@@ -30,7 +30,8 @@ type Params = { id: string };
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request, { params }: { params: Params }) {
+export async function POST(req: Request, props: { params: Promise<Params> }) {
+  const params = await props.params;
   const csrfErr = checkCsrf(req);
   if (csrfErr) return csrfErr;
 
@@ -88,7 +89,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
       // 0) 管理者は決済スルー（セッションのメールで判定）
       if (!allowed) {
         const sessionEmail = await getSessionUserEmail();
-        if (sessionEmail && await isAdminEmailAsync(sessionEmail)) {
+        if (sessionEmail && (await isAdminEmailAsync(sessionEmail))) {
           await supabaseAdmin()
             .from("aura_requests")
             .update({ payment_status: "paid", updated_at: new Date().toISOString() })

@@ -607,7 +607,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
 
   const handleDelete = async (project: NatoriProject) => {
     const confirmed = window.confirm(
-      `「${project.title}」（${project.clientName} / ${formatYen(getNatoriResultAmount(project))}）を実績から削除します。案件データ・画像ごと削除され、元に戻せません。よろしいですか？`
+      `「${project.title}」（${project.clientName} / ${formatYen(getNatoriResultAmount(project))}）を実績から削除します。データと画像は保持され、案件管理画面から復元できます。よろしいですか？`
     );
     if (!confirmed) return;
     if (isDemo) {

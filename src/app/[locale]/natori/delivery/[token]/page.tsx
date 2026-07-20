@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-type Props = { params: { token: string } };
+type Props = { params: Promise<{ token: string }> };
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -44,7 +44,8 @@ function Notice({ title, body }: { title: string; body: string }) {
   );
 }
 
-export default async function DeliveryPage({ params }: Props) {
+export default async function DeliveryPage(props: Props) {
+  const params = await props.params;
   const result = await getNatoriDeliveryByToken(params.token);
 
   if (result.kind === "not-found") {

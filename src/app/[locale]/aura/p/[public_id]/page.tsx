@@ -104,11 +104,12 @@ function pickTitleAndDescription(data: PublicAuraRow, key: string) {
   return { title, description };
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { public_id: string };
-}): Promise<Metadata> {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ public_id: string }>;
+  }
+): Promise<Metadata> {
+  const params = await props.params;
   const key = params.public_id;
   const data = await getPublicAuraByKey(key);
 
@@ -123,11 +124,12 @@ export async function generateMetadata({
   };
 }
 
-export default async function AuraPublicPage({
-  params,
-}: {
-  params: { public_id: string };
-}) {
+export default async function AuraPublicPage(
+  props: {
+    params: Promise<{ public_id: string }>;
+  }
+) {
+  const params = await props.params;
   const key = params.public_id;
   const data = await getPublicAuraByKey(key);
   if (!data) notFound();

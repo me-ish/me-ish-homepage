@@ -25,7 +25,7 @@ export type PendingPayoutRow = {
 
 export default async function AdminPayoutsPage() {
   // 1) 認証チェック
-  const sb = supabaseServer();
+  const sb = await supabaseServer();
   const {
     data: { user },
   } = await sb.auth.getUser();

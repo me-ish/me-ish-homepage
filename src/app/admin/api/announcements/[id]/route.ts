@@ -40,7 +40,8 @@ function normalizePatch(v: unknown): Partial<AnnUpdate> {
   return out as Partial<AnnUpdate>;
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await requireAdminAuth(req);
   if (!auth.ok) return auth.response;
 
@@ -67,7 +68,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json(data);
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await requireAdminAuth(req);
   if (!auth.ok) return auth.response;
 

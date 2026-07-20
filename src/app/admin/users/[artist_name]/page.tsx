@@ -4,18 +4,19 @@ import { supabaseServer } from '@/lib/supabaseServer';
 import { isAdminEmail } from '@/lib/isAdmin';
 import AdminUserDetailClient from './AdminUserDetailClient';
 
-export default async function AdminUserDetailPage({
-  params,
-}: {
-  params: { artist_name: string };
-}) {
+export default async function AdminUserDetailPage(
+  props: {
+    params: Promise<{ artist_name: string }>;
+  }
+) {
+  const params = await props.params;
   const artistName = decodeURIComponent(
     Array.isArray(params?.artist_name)
       ? params.artist_name.join('/')
       : params?.artist_name ?? ''
   );
 
-  const sb = supabaseServer();
+  const sb = await supabaseServer();
   const {
     data: { user },
   } = await sb.auth.getUser();

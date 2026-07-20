@@ -6,13 +6,14 @@ import Link from "next/link";
 import Footer from "@/features/natori/components/Footer";
 import { works } from "@/features/natori/constants/works";
 
-type Props = { params: { slug: string } };
+type Props = { params: Promise<{ slug: string }> };
 
 export function generateStaticParams() {
   return works.map(w => ({ slug: w.slug }));
 }
 
-export function generateMetadata({ params }: Props): Metadata {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
   const work = works.find(w => w.slug === params.slug);
   if (!work) return { title: "Work not found – Natori" };
   const title = `${work.title} – Natori`;
@@ -25,7 +26,8 @@ export function generateMetadata({ params }: Props): Metadata {
   };
 }
 
-export default function WorkDetail({ params }: Props) {
+export default async function WorkDetail(props: Props) {
+  const params = await props.params;
   const work = works.find(w => w.slug === params.slug);
   if (!work) return notFound();
 

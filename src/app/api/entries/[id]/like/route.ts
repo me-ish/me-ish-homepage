@@ -22,11 +22,11 @@ function parseId(params: { id?: string }) {
 }
 
 /** 現在のいいね数を取得 */
-export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
-  const id = parseId(ctx.params);
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const id = parseId(await ctx.params);
   if (!id) return NextResponse.json({ error: 'invalid id' }, { status: 400 });
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('entries')
     .select('likes')
@@ -42,7 +42,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
 }
 
 /** いいねを +1（原子的に） */
-export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     assertOrigin(req); // 任意（簡易CSRF/埋め込み対策）
   } catch (e: unknown) {
@@ -54,10 +54,10 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
   const rl = await checkRateLimit(`like:${ip}`, { limit: 30, windowMs: 60_000 });
   if (!rl.allowed) return rateLimitExceeded(rl.retryAfterMs);
 
-  const id = parseId(ctx.params);
+  const id = parseId(await ctx.params);
   if (!id) return NextResponse.json({ error: 'invalid id' }, { status: 400 });
 
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // ✅ DBのRPCで原子的に +1（entriesを直接UPDATEしない）
   const { data: rpc, error: rpcErr } = await (supabase.rpc as any)('increment_entry_likes', { p_entry_id: id }) as { data: number | null; error: { message: string } | null };

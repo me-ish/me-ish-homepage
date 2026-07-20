@@ -14,7 +14,7 @@ const SAFE_DEBUG = process.env.NODE_ENV !== 'production';
 // 会話履歴の最大ターン数（system除く）
 const MAX_HISTORY_TURNS = 10;
 
-function sb() {
+async function sb() {
   return createClient();
 }
 
@@ -111,14 +111,14 @@ const tools = [
    Supabase 実装
    =========================== */
 async function impl_get_entry_by_id({ id }: { id: number }) {
-  let q = sb().from('entries').select(SELECT_COLUMNS).eq('id', id) as unknown as PB;
+  let q = (await sb()).from('entries').select(SELECT_COLUMNS).eq('id', id) as unknown as PB;
   const { data, error } = await applyPublicFilters(q).single();
   if (error) throw new Error(`Supabase(get_entry_by_id): ${error.message}`);
   return data;
 }
 
 async function impl_get_entry_by_title({ title_query, limit = 5 }: { title_query: string; limit?: number }) {
-  let q = sb()
+  let q = (await sb())
     .from('entries')
     .select(SELECT_COLUMNS)
     .ilike('title', `%${escapeIlikePattern(title_query)}%`)
@@ -140,7 +140,7 @@ type SearchArgs = {
 };
 
 async function impl_search_entries(args: SearchArgs) {
-  let q = sb().from('entries').select(SELECT_COLUMNS) as unknown as PB;
+  let q = (await sb()).from('entries').select(SELECT_COLUMNS) as unknown as PB;
 
   q = applyPublicFilters(q);
 

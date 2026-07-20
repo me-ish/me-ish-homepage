@@ -76,6 +76,7 @@ export type NatoriProject = {
   paidAt?: string;
   paidAmount?: number;
   completedAt?: string;
+  deletedAt?: string;
   /** 非公開バケットから都度発行した短時間署名URL */
   referenceImageUrls?: string[];
 };

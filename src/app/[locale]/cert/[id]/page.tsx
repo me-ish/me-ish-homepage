@@ -65,13 +65,14 @@ function ErrorCard({
   );
 }
 
-export default async function CertPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
-  searchParams: Record<string, string | string[] | undefined>;
-}) {
+export default async function CertPage(
+  props: {
+    params: Promise<{ id: string }>;
+    searchParams: Promise<Record<string, string | string[] | undefined>>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const idNum = Number(params.id);
 
   // Invalid URL check

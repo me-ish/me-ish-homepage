@@ -55,11 +55,12 @@ async function getPublicCard(key: string): Promise<CardRow | null> {
   return data as CardRow;
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { public_id: string };
-}): Promise<Metadata> {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ public_id: string }>;
+  }
+): Promise<Metadata> {
+  const params = await props.params;
   const key = params.public_id;
   const data = await getPublicCard(key);
 
@@ -78,11 +79,12 @@ export async function generateMetadata({
   };
 }
 
-export default async function CardPublicPage({
-  params,
-}: {
-  params: { public_id: string };
-}) {
+export default async function CardPublicPage(
+  props: {
+    params: Promise<{ public_id: string }>;
+  }
+) {
+  const params = await props.params;
   const key = params.public_id;
   const data = await getPublicCard(key);
   if (!data) notFound();

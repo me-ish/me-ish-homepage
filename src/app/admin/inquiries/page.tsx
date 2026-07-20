@@ -5,7 +5,7 @@ import { isAdminEmail } from '@/lib/isAdmin';
 import AdminInquiriesClient from './AdminInquiriesClient';
 
 export default async function InquiriesPage() {
-  const sb = supabaseServer();
+  const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   if (!user || !isAdminEmail(user.email)) redirect('/admin-login?err=unauthorized');
   return <AdminInquiriesClient adminEmail={user.email!} />;

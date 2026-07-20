@@ -5,7 +5,7 @@ import { isAdminEmail } from '@/lib/isAdmin';
 import AdminAnnouncementsClient from './AdminAnnouncementsClient';
 
 export default async function AdminAnnouncementsPage() {
-  const sb = supabaseServer();
+  const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   if (!user || !isAdminEmail(user.email)) {
     redirect('/admin-login?err=unauthorized');

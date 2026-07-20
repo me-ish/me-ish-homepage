@@ -5,10 +5,8 @@ import { requireAdminAuth } from '@/lib/auth/requireAdminAuth';
 
 export const revalidate = 0;
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { artist_name: string } }
-) {
+export async function GET(req: NextRequest, props: { params: Promise<{ artist_name: string }> }) {
+  const params = await props.params;
   const auth = await requireAdminAuth(req);
   if (!auth.ok) return auth.response;
 

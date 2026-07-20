@@ -15,10 +15,8 @@ function err(status: number, error: string, message?: string) {
   );
 }
 
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const csrfErr = checkCsrf(req);
   if (csrfErr) return csrfErr;
 

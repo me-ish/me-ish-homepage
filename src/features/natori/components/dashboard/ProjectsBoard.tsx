@@ -15,8 +15,8 @@ import {
 import {
   confirmNatoriProjectPayment,
   deleteNatoriProject,
-  fetchNatoriProjects,
-  seedNatoriDemoProjects,
+  fetchNatoriProjectCollection,
+  restoreNatoriProject,
   toggleNatoriTaskDone,
   updateNatoriProjectDetails,
   updateNatoriProjectStatus,
@@ -34,6 +34,7 @@ import ProjectMonthCalendar from "./ProjectMonthCalendar";
 import ProjectDayDetail from "./ProjectDayDetail";
 import ProjectPriorityList from "./ProjectPriorityList";
 import ClosedProjectsSection from "./ClosedProjectsSection";
+import ArchivedProjectsSection from "./ArchivedProjectsSection";
 import ProjectRegisterForm from "./ProjectRegisterForm";
 import OrderMailPanel, { type OrderMailKind } from "./OrderMailPanel";
 import { NatoriLoadError } from "./NatoriLoadError";
@@ -69,11 +70,11 @@ export default function ProjectsBoard({
     kind: OrderMailKind;
   } | null>(null);
   const [projects, setProjects] = useState<NatoriProject[]>([]);
+  const [archivedProjects, setArchivedProjects] = useState<NatoriProject[]>([]);
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
   const [viewMonth, setViewMonth] = useState<ViewMonth | null>(null);
   const [dataSource, setDataSource] = useState<DataSource>("loading");
   const [authed, setAuthed] = useState(false);
-  const [seeding, setSeeding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<NatoriEvent[]>([]);
   const [eventsBusy, setEventsBusy] = useState(false);
@@ -81,13 +82,35 @@ export default function ProjectsBoard({
   const [advanceBusyId, setAdvanceBusyId] = useState<string | null>(null);
 
   const loadFromSupabase = useCallback(async () => {
-    const [projectData, eventData] = await Promise.all([
-      fetchNatoriProjects(),
-      fetchNatoriEvents().catch(() => [] as NatoriEvent[]),
+    const [projectData, eventResult] = await Promise.all([
+      fetchNatoriProjectCollection(),
+      fetchNatoriEvents()
+        .then((data) => ({ ok: true as const, data }))
+        .catch((error: unknown) => ({ ok: false as const, error })),
     ]);
-    setProjects(projectData);
-    setEvents(eventData);
+    setProjects(projectData.projects);
+    setArchivedProjects(projectData.archivedProjects);
+    if (eventResult.ok) {
+      setEvents(eventResult.data);
+      setEventsError(null);
+    } else {
+      console.error("[ProjectsBoard] event load failed", eventResult.error);
+      setEventsError("予定だけ読み込めませんでした。案件データは最新です。");
+    }
     setDataSource("supabase");
+  }, []);
+
+  const retryEvents = useCallback(async () => {
+    setEventsBusy(true);
+    setEventsError(null);
+    try {
+      setEvents(await fetchNatoriEvents());
+    } catch (err) {
+      console.error("[ProjectsBoard] event retry failed", err);
+      setEventsError("予定の再読み込みに失敗しました。時間をおいて再試行してください。");
+    } finally {
+      setEventsBusy(false);
+    }
   }, []);
 
   const loadServerData = useCallback(async () => {
@@ -118,6 +141,7 @@ export default function ProjectsBoard({
     // 以後の操作は dataSource !== "supabase" の分岐でローカル状態にのみ反映される。
     if (demoProjects) {
       setProjects(demoProjects);
+      setArchivedProjects([]);
       setEvents(demoEvents ?? []);
       setDataSource("mock");
       setAuthed(false);
@@ -128,6 +152,21 @@ export default function ProjectsBoard({
     // 失敗時は実データと誤認し得るデモデータを表示せず、再試行できるエラー画面にする。
     void loadServerData();
   }, [loadServerData, demoProjects, demoEvents]);
+
+  const recoverFromMutationFailure = useCallback(
+    async (operation: string, err: unknown) => {
+      console.error(`[ProjectsBoard] ${operation} failed`, err);
+      const message = err instanceof Error ? err.message : String(err);
+      try {
+        await loadFromSupabase();
+        setError(`更新を保存できなかったため、サーバーの最新状態へ戻しました。${message}`);
+      } catch (reloadErr) {
+        console.error(`[ProjectsBoard] reload after ${operation} failure failed`, reloadErr);
+        setError(`更新と再読み込みに失敗しました。画面を再読み込みしてください。${message}`);
+      }
+    },
+    [loadFromSupabase]
+  );
 
   // 見送り（closed）はボード・カレンダー・優先度の対象から外し、
   // 折りたたみの「見送りした相談」にだけ出す。
@@ -202,36 +241,31 @@ export default function ProjectsBoard({
   };
 
   const handleToggleTask = (projectId: string, taskId: string) => {
-    let nextStatus: NatoriProject["status"] | null = null;
-    let nextAction = "";
-    let nextDone = false;
+    const project = projects.find((entry) => entry.id === projectId);
+    const task = project?.tasks.find((entry) => entry.id === taskId);
+    if (!project || !task) return;
+
+    setError(null);
+    const nextDone = !task.done;
+    const nextTasks = project.tasks.map((entry) =>
+      entry.id === taskId ? { ...entry, done: nextDone } : entry
+    );
+    const nextStatus = deriveStatusFromTasks(nextTasks, project.status);
+    const nextAction = deriveNextActionFromTasks(nextTasks, project.nextAction);
     setProjects((current) =>
-      current.map((project) => {
-        if (project.id !== projectId) return project;
-        const nextTasks = project.tasks.map((task) => {
-          if (task.id !== taskId) return task;
-          nextDone = !task.done;
-          return { ...task, done: nextDone };
-        });
-        nextStatus = deriveStatusFromTasks(nextTasks, project.status);
-        nextAction = deriveNextActionFromTasks(nextTasks, project.nextAction);
-        return {
-          ...project,
-          tasks: nextTasks,
-          status: nextStatus,
-          nextAction,
-        };
-      })
+      current.map((entry) =>
+        entry.id === projectId
+          ? { ...entry, tasks: nextTasks, status: nextStatus, nextAction }
+          : entry
+      )
     );
 
     if (dataSource === "supabase") {
       (async () => {
         try {
-          if (!nextStatus) throw new Error("次の案件状態を計算できませんでした。");
           await toggleNatoriTaskDone(projectId, taskId, nextDone, nextStatus, nextAction);
         } catch (err) {
-          console.error("[ProjectsBoard] Supabase task update failed", err);
-          setError(err instanceof Error ? err.message : String(err));
+          await recoverFromMutationFailure("task update", err);
         }
       })();
     }
@@ -241,6 +275,7 @@ export default function ProjectsBoard({
     const nextStatus = getNextStatus(project.status);
     if (nextStatus === project.status) return;
     const nextAction = getNextActionForStatus(nextStatus);
+    setError(null);
     setAdvanceBusyId(project.id);
     setProjects((current) =>
       current.map((entry) =>
@@ -254,8 +289,7 @@ export default function ProjectsBoard({
         try {
           await updateNatoriProjectStatus(project.id, nextStatus, nextAction);
         } catch (err) {
-          console.error("[ProjectsBoard] advance status failed", err);
-          setError(err instanceof Error ? err.message : String(err));
+          await recoverFromMutationFailure("status update", err);
         } finally {
           setAdvanceBusyId((current) => (current === project.id ? null : current));
         }
@@ -269,6 +303,7 @@ export default function ProjectsBoard({
     if (project.status !== "awaiting_payment") return;
     const nextAction = getNextActionForStatus("rough");
     const stampedAt = new Date().toISOString();
+    setError(null);
     setAdvanceBusyId(project.id);
     setProjects((current) =>
       current.map((entry) =>
@@ -287,8 +322,7 @@ export default function ProjectsBoard({
         try {
           await confirmNatoriProjectPayment(project.id, nextAction);
         } catch (err) {
-          console.error("[ProjectsBoard] confirm payment failed", err);
-          setError(err instanceof Error ? err.message : String(err));
+          await recoverFromMutationFailure("payment confirmation", err);
         } finally {
           setAdvanceBusyId((current) => (current === project.id ? null : current));
         }
@@ -300,6 +334,7 @@ export default function ProjectsBoard({
 
   const handleReopenProject = (project: NatoriProject) => {
     const nextAction = getNextActionForStatus("inquiry");
+    setError(null);
     setAdvanceBusyId(project.id);
     setProjects((current) =>
       current.map((entry) =>
@@ -311,8 +346,7 @@ export default function ProjectsBoard({
         try {
           await updateNatoriProjectStatus(project.id, "inquiry", nextAction);
         } catch (err) {
-          console.error("[ProjectsBoard] reopen project failed", err);
-          setError(err instanceof Error ? err.message : String(err));
+          await recoverFromMutationFailure("project reopen", err);
         } finally {
           setAdvanceBusyId((current) => (current === project.id ? null : current));
         }
@@ -324,7 +358,7 @@ export default function ProjectsBoard({
 
   const handleDeleteClosedProject = (project: NatoriProject) => {
     const confirmed = window.confirm(
-      `「${project.clientName}｜${project.title}」を完全に削除します。メモも含めて元に戻せません。よろしいですか？`
+      `「${project.clientName}｜${project.title}」を案件一覧から削除します。データと画像は保持され、あとで復元できます。よろしいですか？`
     );
     if (!confirmed) return;
     setAdvanceBusyId(project.id);
@@ -333,6 +367,10 @@ export default function ProjectsBoard({
       (async () => {
         try {
           await deleteNatoriProject(project.id);
+          setArchivedProjects((current) => [
+            { ...project, deletedAt: new Date().toISOString() },
+            ...current.filter((entry) => entry.id !== project.id),
+          ]);
         } catch (err) {
           console.error("[ProjectsBoard] delete closed project failed", err);
           setError(err instanceof Error ? err.message : String(err));
@@ -341,6 +379,26 @@ export default function ProjectsBoard({
           } catch (reloadErr) {
             console.error("[ProjectsBoard] reload after delete failure failed", reloadErr);
           }
+        } finally {
+          setAdvanceBusyId((current) => (current === project.id ? null : current));
+        }
+      })();
+    } else {
+      setAdvanceBusyId((current) => (current === project.id ? null : current));
+    }
+  };
+
+  const handleRestoreArchivedProject = (project: NatoriProject) => {
+    setAdvanceBusyId(project.id);
+    setError(null);
+    setArchivedProjects((current) => current.filter((entry) => entry.id !== project.id));
+    if (dataSource === "supabase") {
+      (async () => {
+        try {
+          await restoreNatoriProject(project.id);
+          await loadFromSupabase();
+        } catch (err) {
+          await recoverFromMutationFailure("project restore", err);
         } finally {
           setAdvanceBusyId((current) => (current === project.id ? null : current));
         }
@@ -454,45 +512,23 @@ export default function ProjectsBoard({
     }
   };
 
-  const handleSeedDemo = async () => {
-    setSeeding(true);
-    setError(null);
-    try {
-      const inserted = await seedNatoriDemoProjects();
-      if (inserted === 0) {
-        setError("既にデータが入っています。");
-      }
-      await loadFromSupabase();
-    } catch (err) {
-      console.error("[ProjectsBoard] seed failed", err);
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSeeding(false);
-    }
-  };
-
-  const showSeedBanner = dataSource === "supabase" && projects.length === 0;
-
   return (
     <div className="space-y-4 md:space-y-6">
-      {showSeedBanner ? (
-        <div className="rounded-2xl border border-pink-200 bg-pink-50/70 p-3 text-xs text-pink-900 sm:p-4 sm:text-sm">
-          <p className="font-bold">まだ案件データがありません。</p>
-          <p className="mt-1 opacity-90">
-            動作確認用にデモデータを投入できます。すでに案件がある場合は何もしません。
-          </p>
+      {error ? (
+        <div
+          role="alert"
+          className="flex items-start justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-xs text-red-800 sm:p-4 sm:text-sm"
+        >
+          <p>{error}</p>
           <button
             type="button"
-            onClick={handleSeedDemo}
-            disabled={seeding}
-            className="mt-2 inline-flex h-9 items-center rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60"
+            onClick={() => setError(null)}
+            className="shrink-0 font-bold underline underline-offset-2"
           >
-            {seeding ? "投入中…" : "デモデータを入れる"}
+            閉じる
           </button>
-          {error ? <p className="mt-2 text-[11px] opacity-80">{error}</p> : null}
         </div>
       ) : null}
-
       {authed ? (
         <ProjectRegisterForm
           mode="manual"
@@ -535,6 +571,23 @@ export default function ProjectsBoard({
         onSelect={handleSelectFromPriority}
       />
 
+      {eventsError ? (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 sm:p-4 sm:text-sm"
+        >
+          <p>{eventsError}</p>
+          <button
+            type="button"
+            onClick={() => void retryEvents()}
+            disabled={eventsBusy}
+            className="shrink-0 rounded-full border border-amber-300 bg-white px-3 py-1.5 font-bold hover:bg-amber-100 disabled:opacity-60"
+          >
+            {eventsBusy ? "再読込中…" : "予定を再読込"}
+          </button>
+        </div>
+      ) : null}
+
       <ProjectMonthCalendar
         year={viewMonth.year}
         monthIndex={viewMonth.monthIndex}
@@ -572,6 +625,12 @@ export default function ProjectsBoard({
         busyId={advanceBusyId}
         onReopen={handleReopenProject}
         onDelete={handleDeleteClosedProject}
+      />
+
+      <ArchivedProjectsSection
+        projects={archivedProjects}
+        busyId={advanceBusyId}
+        onRestore={handleRestoreArchivedProject}
       />
 
       {/* ラフ提出・納品メール送信パネル */}

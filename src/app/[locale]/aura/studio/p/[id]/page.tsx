@@ -1,6 +1,7 @@
 // src/app/[locale]/aura/studio/p/[id]/page.tsx
 // 公開ポートフォリオページ
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { getStudioProjectByPublicId } from '@/lib/aura/studio/studioDb';
 import { getTheme } from '@/lib/aura/studio/studioThemes';
 import { dbRowToFormData } from '@/lib/aura/studio/studioTypes';
@@ -13,7 +14,8 @@ import { FaXTwitter } from 'react-icons/fa6';
 
 type Params = { id: string };
 
-export async function generateMetadata({ params }: { params: Params }) {
+export async function generateMetadata(props: { params: Promise<Params> }) {
+  const params = await props.params;
   const project = await getStudioProjectByPublicId(params.id).catch(() => null);
   if (!project) return { title: 'ポートフォリオ' };
   return {
@@ -22,7 +24,8 @@ export async function generateMetadata({ params }: { params: Params }) {
   };
 }
 
-export default async function StudioPublicPage({ params }: { params: Params }) {
+export default async function StudioPublicPage(props: { params: Promise<Params> }) {
+  const params = await props.params;
   const project = await getStudioProjectByPublicId(params.id).catch(() => null);
   if (!project) notFound();
 
@@ -188,11 +191,11 @@ export default async function StudioPublicPage({ params }: { params: Params }) {
   // アバター要素
   const avatarEl = avatarUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img
+    (<img
       src={avatarUrl}
       alt={formData.name || 'avatar'}
       style={{ width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: avatarBorderRadius, objectFit: 'cover', border: `4px solid ${accent}`, display: 'block', flexShrink: 0 }}
-    />
+    />)
   ) : (
     <div
       style={{ width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: avatarBorderRadius, background: accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 700, flexShrink: 0 }}
@@ -225,36 +228,34 @@ export default async function StudioPublicPage({ params }: { params: Params }) {
       {/* Google Fonts 動的ロード */}
       {fontPreset.googleFontUrl && (
         // eslint-disable-next-line @next/next/no-page-custom-font
-        <style dangerouslySetInnerHTML={{ __html: `@import url('${fontPreset.googleFontUrl}');` }} />
+        (<style dangerouslySetInnerHTML={{ __html: `@import url('${fontPreset.googleFontUrl}');` }} />)
       )}
-
       {/* Hero（常に先頭・固定） */}
       {isBanner ? (
         /* バナー: テキスト中央・アバターが下端からはみ出す */
-        <section style={{ ...heroBg, padding: `3rem 1.5rem ${AVATAR_SIZE / 2 + 24}px`, textAlign: 'center', position: 'relative' }}>
+        (<section style={{ ...heroBg, padding: `3rem 1.5rem ${AVATAR_SIZE / 2 + 24}px`, textAlign: 'center', position: 'relative' }}>
           <div className="mx-auto" style={{ maxWidth: 640 }}>{textEl}</div>
           <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translate(-50%, 50%)', zIndex: 10 }}>
             {avatarEl}
           </div>
-        </section>
+        </section>)
       ) : isHorizontal ? (
         /* 横並び */
-        <section style={{ ...heroBg, padding: '3rem 1.5rem' }}>
+        (<section style={{ ...heroBg, padding: '3rem 1.5rem' }}>
           <div className="mx-auto" style={{ maxWidth: 640, display: 'flex', flexDirection: isSideRight ? 'row-reverse' : 'row', alignItems: 'center', gap: '2rem' }}>
             {avatarEl}
             <div>{textEl}</div>
           </div>
-        </section>
+        </section>)
       ) : (
         /* 縦積み（center / left / テーマデフォルト） */
-        <section style={{ ...heroBg, padding: '3rem 1.5rem', textAlign: headerLayout === 'center' ? 'center' : 'left' }}>
+        (<section style={{ ...heroBg, padding: '3rem 1.5rem', textAlign: headerLayout === 'center' ? 'center' : 'left' }}>
           <div className="mx-auto" style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', alignItems: headerLayout === 'center' ? 'center' : 'flex-start' }}>
             <div style={{ marginBottom: '1rem' }}>{avatarEl}</div>
             {textEl}
           </div>
-        </section>
+        </section>)
       )}
-
       {/* セクション（順番・表示に従ってレンダリング） */}
       <div className="mx-auto px-6 py-8 space-y-12" style={{ maxWidth: 640, paddingTop: isBanner ? `${AVATAR_SIZE / 2 + 32}px` : undefined }}>
         {sectionOrder
@@ -266,9 +267,9 @@ export default async function StudioPublicPage({ params }: { params: Params }) {
         <footer className="pt-4 border-t text-center" style={{ borderColor: colors.border }}>
           <p style={{ color: colors.muted, fontSize: '0.75rem' }}>
             Made with{' '}
-            <a href="/aura/studio" style={{ color: accent }}>
+            <Link href="/aura/studio" style={{ color: accent }}>
               AURA Studio
-            </a>
+            </Link>
           </p>
         </footer>
       </div>

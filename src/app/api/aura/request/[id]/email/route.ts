@@ -22,7 +22,8 @@ function normalizeEmail(email: string | null | undefined): string | null {
   return email.trim().toLowerCase();
 }
 
-export async function POST(req: Request, { params }: { params: Params }) {
+export async function POST(req: Request, props: { params: Promise<Params> }) {
+  const params = await props.params;
   const csrfErr = checkCsrf(req);
   if (csrfErr) return csrfErr;
 

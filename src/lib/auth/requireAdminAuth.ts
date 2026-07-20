@@ -33,7 +33,7 @@ export async function requireAdminAuth(
 
   // --- 方法2: Cookie-based session ---
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     const email = user?.email ?? null;
     if (email && isAdminEmail(email)) {

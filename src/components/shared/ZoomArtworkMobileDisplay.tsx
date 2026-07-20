@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { Heart, ShoppingCart, Globe, Instagram, Infinity, Hash, Ban } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
@@ -403,9 +404,9 @@ function LegalNotices() {
       <p>※ 支払方法：クレジットカード（Stripe／日本円）。購入確定時に<strong>即時決済</strong>されます。</p>
       <p>※ 引渡時期：決済確認後、<strong>即時〜24時間以内</strong>に納品（障害時は最長<strong>3営業日</strong>）。</p>
       <p>
-        <a href="/footer/tokushoho" className="underline underline-offset-2">特定商取引法に基づく表記</a>
+        <Link href="/footer/tokushoho" className="underline underline-offset-2">特定商取引法に基づく表記</Link>
         <span className="mx-1">／</span>
-        <a href="/footer/terms#sec-6" className="underline underline-offset-2">利用規約（展示・販売）</a>
+        <Link href="/footer/terms#sec-6" className="underline underline-offset-2">利用規約（展示・販売）</Link>
       </p>
     </div>
   );

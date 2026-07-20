@@ -7,12 +7,12 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function supabaseWithCookies() {
+async function supabaseWithCookies() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) throw new Error('Supabase env missing');
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   return createClient(url, anonKey, {
     global: {
       headers: {
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. 認証確認（Cookie-based session）
-    const sb = supabaseWithCookies();
+    const sb = await supabaseWithCookies();
     const {
       data: { user },
       error: authError,

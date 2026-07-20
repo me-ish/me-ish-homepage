@@ -69,7 +69,7 @@ export async function requireAuraRequestAccess(
     sessionToken = readCookieFromHeader(cookieHeader, cookieName);
   } else {
     // Route Handlerの暗黙コンテキスト
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     sessionToken = cookieStore.get(cookieName)?.value ?? null;
     sessionToken = sessionToken ? decodeURIComponent(sessionToken) : null;
   }

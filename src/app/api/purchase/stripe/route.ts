@@ -12,7 +12,7 @@ async function getSessionUserEmail(): Promise<string | null> {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (!url || !anonKey) return null;
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const sb = createClient(url, anonKey, {
       global: { headers: { cookie: cookieStore.toString() } },
     });
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
 
   // 管理者は決済スルー（finalize_sale RPC を直接呼び出し）
   const userEmail = await getSessionUserEmail();
-  if (userEmail && await isAdminEmailAsync(userEmail)) {
+  if (userEmail && (await isAdminEmailAsync(userEmail))) {
     const adminSessionId = `admin_bypass_${Date.now()}_${entry.id}`;
     const admin = supabaseAdmin();
     await admin.rpc('finalize_sale', {

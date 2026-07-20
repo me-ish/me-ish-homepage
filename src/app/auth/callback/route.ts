@@ -46,7 +46,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     await supabase.auth.exchangeCodeForSession(code);
   } catch (e) {
     console.error('[auth/callback] exchangeCodeForSession failed:', e);

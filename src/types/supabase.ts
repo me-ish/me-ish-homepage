@@ -1455,6 +1455,7 @@ export type Database = {
           client_name: string
           completed_at: string | null
           created_at: string
+          deleted_at: string | null
           delivery_accepted_at: string | null
           delivery_plan: string
           delivery_token_expires_at: string | null
@@ -1492,6 +1493,7 @@ export type Database = {
           client_name: string
           completed_at?: string | null
           created_at?: string
+          deleted_at?: string | null
           delivery_accepted_at?: string | null
           delivery_plan?: string
           delivery_token_expires_at?: string | null
@@ -1529,6 +1531,7 @@ export type Database = {
           client_name?: string
           completed_at?: string | null
           created_at?: string
+          deleted_at?: string | null
           delivery_accepted_at?: string | null
           delivery_plan?: string
           delivery_token_expires_at?: string | null
