@@ -25,6 +25,7 @@ import {
 import type { NatoriProject, NatoriProjectStatus } from "@/features/natori/types/projects";
 import InquiryDetailPanel from "./InquiryDetailPanel";
 import OrderMailPanel, { type OrderMailKind } from "./OrderMailPanel";
+import { NatoriLoadError } from "./NatoriLoadError";
 
 /** 一覧の状態フィルタ。consulting は inquiry と同じ「依頼受付」扱い */
 const STATUS_FILTERS: Array<{ key: string; label: string; statuses: NatoriProjectStatus[] }> = [
@@ -91,25 +92,26 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
     setProjects(data);
   }, []);
 
+  const loadServerData = useCallback(async () => {
+    setProjects(null);
+    setError(null);
+    try {
+      await reload();
+    } catch (err) {
+      console.error("[InquiriesBoard] load failed", err);
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, [reload]);
+
   useEffect(() => {
     setToday(new Date());
     if (demoProjects) {
       setProjects(demoProjects);
+      setError(null);
       return;
     }
-    let cancelled = false;
-    (async () => {
-      try {
-        await reload();
-      } catch (err) {
-        console.error("[InquiriesBoard] load failed", err);
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [reload, demoProjects]);
+    void loadServerData();
+  }, [loadServerData, demoProjects]);
 
   const rows = useMemo<InquiryRow[]>(() => {
     if (!projects) return [];
@@ -226,10 +228,11 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
 
   if (error && !projects) {
     return (
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 sm:text-sm">
-        問い合わせデータの読み込みに失敗しました。合言葉付きのブックマークから開き直すか、時間をおいて再読み込みしてください。
-        <p className="mt-1 text-[11px] opacity-80">{error}</p>
-      </div>
+      <NatoriLoadError
+        resourceLabel="問い合わせデータ"
+        error={error}
+        onRetry={() => void loadServerData()}
+      />
     );
   }
 

@@ -37,6 +37,7 @@ import {
   type NatoriResultsSummary,
 } from "@/features/natori/lib/results";
 import ProjectEditForm from "./ProjectEditForm";
+import { NatoriLoadError } from "./NatoriLoadError";
 import type {
   NatoriProject,
   NatoriProjectStatus,
@@ -521,27 +522,27 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
     setThumbs(thumbMap);
   }, []);
 
+  const loadServerData = useCallback(async () => {
+    setProjects(null);
+    setError(null);
+    try {
+      await reload();
+    } catch (err) {
+      console.error("[ResultsBoard] load failed", err);
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, [reload]);
+
   useEffect(() => {
     setNow(new Date());
     if (demoProjects) {
       setProjects(demoProjects);
       setThumbs({});
+      setError(null);
       return;
     }
-    let cancelled = false;
-    (async () => {
-      try {
-        await reload();
-      } catch (err) {
-        console.error("[ResultsBoard] load failed", err);
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : String(err));
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [reload, demoProjects]);
+    void loadServerData();
+  }, [loadServerData, demoProjects]);
 
   const years = useMemo(() => (projects ? listNatoriResultYears(projects) : []), [projects]);
 
@@ -654,10 +655,11 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 sm:text-sm">
-        実績データの読み込みに失敗しました。合言葉付きのブックマークから開き直すか、時間をおいて再読み込みしてください。
-        <p className="mt-1 text-[11px] opacity-80">{error}</p>
-      </div>
+      <NatoriLoadError
+        resourceLabel="実績データ"
+        error={error}
+        onRetry={() => void loadServerData()}
+      />
     );
   }
 

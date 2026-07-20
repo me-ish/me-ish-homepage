@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Inbox } from "lucide-react";
-import { mockNatoriProjects } from "@/features/natori/constants/mockProjects";
 import {
   deriveNextActionFromTasks,
   deriveStatusFromTasks,
@@ -37,10 +36,11 @@ import ProjectPriorityList from "./ProjectPriorityList";
 import ClosedProjectsSection from "./ClosedProjectsSection";
 import ProjectRegisterForm from "./ProjectRegisterForm";
 import OrderMailPanel, { type OrderMailKind } from "./OrderMailPanel";
+import { NatoriLoadError } from "./NatoriLoadError";
 
 type ViewMonth = { year: number; monthIndex: number };
 
-type DataSource = "loading" | "supabase" | "mock";
+type DataSource = "loading" | "supabase" | "mock" | "error";
 
 function getMonthFromDate(date: Date): ViewMonth {
   return { year: date.getFullYear(), monthIndex: date.getMonth() };
@@ -90,6 +90,22 @@ export default function ProjectsBoard({
     setDataSource("supabase");
   }, []);
 
+  const loadServerData = useCallback(async () => {
+    setDataSource("loading");
+    setAuthed(false);
+    setError(null);
+    try {
+      await loadFromSupabase();
+      setAuthed(true);
+    } catch (err) {
+      console.error("[ProjectsBoard] server load failed", err);
+      setProjects([]);
+      setEvents([]);
+      setError(err instanceof Error ? err.message : String(err));
+      setDataSource("error");
+    }
+  }, [loadFromSupabase]);
+
   useEffect(() => {
     const now = new Date();
     setToday(now);
@@ -105,29 +121,13 @@ export default function ProjectsBoard({
       setEvents(demoEvents ?? []);
       setDataSource("mock");
       setAuthed(false);
+      setError(null);
       return;
     }
-    let cancelled = false;
-    (async () => {
-      // 認可はサーバー API（合言葉キー / ログイン）に任せる。ここではまず
-      // 読み込みを試み、失敗したときだけデモデータに落とす。
-      try {
-        await loadFromSupabase();
-        if (cancelled) return;
-        setAuthed(true);
-      } catch (err) {
-        console.error("[ProjectsBoard] server load failed, falling back to mock", err);
-        if (cancelled) return;
-        setAuthed(false);
-        setError(err instanceof Error ? err.message : String(err));
-        setProjects(mockNatoriProjects);
-        setDataSource("mock");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [loadFromSupabase, demoProjects, demoEvents]);
+    // 認可はサーバー API（合言葉キー / ログイン）に任せる。
+    // 失敗時は実データと誤認し得るデモデータを表示せず、再試行できるエラー画面にする。
+    void loadServerData();
+  }, [loadServerData, demoProjects, demoEvents]);
 
   // 見送り（closed）はボード・カレンダー・優先度の対象から外し、
   // 折りたたみの「見送りした相談」にだけ出す。
@@ -157,6 +157,16 @@ export default function ProjectsBoard({
         <div className="h-28 animate-pulse rounded-2xl bg-pink-50/60" />
         <div className="h-72 animate-pulse rounded-2xl bg-pink-50/60" />
       </div>
+    );
+  }
+
+  if (dataSource === "error") {
+    return (
+      <NatoriLoadError
+        resourceLabel="案件データ"
+        error={error ?? "不明なエラー"}
+        onRetry={() => void loadServerData()}
+      />
     );
   }
 
@@ -465,13 +475,6 @@ export default function ProjectsBoard({
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {dataSource === "mock" && !isDemo ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 sm:text-sm">
-          サーバーからの読み込みに失敗したため、ローカルのデモデータを表示しています。合言葉付きのブックマークから開き直すか、時間をおいて再読み込みしてください。
-          {error ? <p className="mt-1 text-[11px] opacity-80">{error}</p> : null}
-        </div>
-      ) : null}
-
       {showSeedBanner ? (
         <div className="rounded-2xl border border-pink-200 bg-pink-50/70 p-3 text-xs text-pink-900 sm:p-4 sm:text-sm">
           <p className="font-bold">まだ案件データがありません。</p>
