@@ -3,12 +3,16 @@ import { buildNatoriResultsCsv } from "@/features/natori/lib/results";
 import type { NatoriProject } from "@/features/natori/types/projects";
 
 function makeProject(overrides: Partial<NatoriProject>): NatoriProject {
+  const resultAt = `${overrides.dueDate ?? "2026-07-01"}T00:00:00.000Z`;
   return {
     id: "p1",
     title: "全身立ち絵",
     clientName: "ゆきうさぎ",
     amount: 24000,
     dueDate: "2026-07-01",
+    paidAt: resultAt,
+    paidAmount: 24000,
+    completedAt: resultAt,
     status: "completed",
     nextAction: "-",
     type: "standing",
@@ -22,14 +26,14 @@ describe("buildNatoriResultsCsv", () => {
     const csv = buildNatoriResultsCsv([makeProject({})]);
     expect(csv.startsWith("﻿")).toBe(true);
     const lines = csv.slice(1).split("\r\n");
-    expect(lines[0]).toBe("納期,依頼者,件名,種類,金額(円),ステータス");
+    expect(lines[0]).toBe("完了日,依頼者,件名,種類,入金額(円),ステータス");
     expect(lines[1]).toBe("2026-07-01,ゆきうさぎ,全身立ち絵,立ち絵,24000,対応完了");
   });
 
-  it("納期の新しい順に並ぶ", () => {
+  it("完了日の新しい順に並ぶ", () => {
     const csv = buildNatoriResultsCsv([
-      makeProject({ id: "old", title: "古い", dueDate: "2026-05-01" }),
-      makeProject({ id: "new", title: "新しい", dueDate: "2026-07-01" }),
+      makeProject({ id: "old", title: "古い", dueDate: "2026-05-01", paidAt: "2026-05-01T00:00:00.000Z", completedAt: "2026-05-01T00:00:00.000Z" }),
+      makeProject({ id: "new", title: "新しい", dueDate: "2026-07-01", paidAt: "2026-07-01T00:00:00.000Z", completedAt: "2026-07-01T00:00:00.000Z" }),
     ]);
     const lines = csv.slice(1).split("\r\n");
     expect(lines[1]).toContain("新しい");

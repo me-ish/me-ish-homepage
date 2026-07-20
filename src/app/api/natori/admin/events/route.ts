@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import {
   createNatoriAdminEvent,
@@ -38,6 +39,8 @@ export async function POST(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
 
   const payload = (await request.json().catch(() => null)) as unknown;
   if (!isObject(payload)) {
@@ -70,6 +73,8 @@ export async function PATCH(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
 
   const payload = (await request.json().catch(() => null)) as unknown;
   if (!isObject(payload)) {
@@ -109,6 +114,8 @@ export async function DELETE(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
 
   const id = new URL(request.url).searchParams.get("id");
   if (!id) {

@@ -23,14 +23,24 @@ export async function resolveNatoriActingUserId(): Promise<string | null> {
   if (envOwner) return envOwner;
 
   const admin = supabaseAdmin();
+  const discoveredOwners = new Set<string>();
   const tables = ["natori_user_profiles", "natori_projects", "natori_events"] as const;
   for (const table of tables) {
     const { data, error } = await admin
       .from(table)
       .select("user_id")
-      .limit(1)
-      .maybeSingle();
-    if (!error && data?.user_id) return data.user_id;
+      .limit(10);
+    if (!error) {
+      for (const row of data ?? []) {
+        if (row.user_id) discoveredOwners.add(String(row.user_id));
+      }
+    }
+  }
+  if (discoveredOwners.size === 1) return [...discoveredOwners][0];
+  if (discoveredOwners.size > 1) {
+    console.error(
+      "[natori-owner] multiple owners detected; set NATORI_OWNER_USER_ID explicitly"
+    );
   }
   return null;
 }

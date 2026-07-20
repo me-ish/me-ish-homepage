@@ -4,10 +4,10 @@ import "server-only";
 // 見積もりのワンクリック承諾。見積もりメール内の承諾ページURL（トークン付き）
 // から呼ばれる公開フロー。
 //
-// - トークンは orderMailService が見積もり送信時に発行し、SHA-256 ハッシュのみ
-//   DB に保存されている。ここでは受け取ったトークンをハッシュ化して照合する。
-// - 承諾の確定は「quote_accepted_at IS NULL」を条件に含めた条件付き UPDATE で
-//   原子的に行う（二度押し・二重タブでも記録は1回だけ）。
+// - トークンは orderMailService が見積もり送信時に発行し、版付きの
+//   natori_quotes に SHA-256 ハッシュだけを保存する。
+// - 表示・承諾する内容は発行時スナップショットから読み、案件の現在値を参照しない。
+// - 承諾は DB 関数内で quote と project を同一トランザクションで更新する。
 // - GET（ページ表示）では状態を読むだけで何も書かない。メールセキュリティの
 //   リンク自動スキャンで承諾が確定してしまう事故を防ぐため、確定は必ず POST。
 import { createHash } from "crypto";
@@ -37,21 +37,22 @@ export type GetNatoriQuoteResult =
 
 type QuoteRow = {
   id: string;
+  project_id: string;
   title: string;
   client_name: string;
   amount: number;
-  note: string | null;
-  quote_accepted_at: string | null;
-  quote_token_expires_at: string | null;
+  accepted_at: string | null;
+  expires_at: string;
+  superseded_at: string | null;
 };
 
 async function fetchQuoteRow(token: string): Promise<QuoteRow | null> {
   if (!TOKEN_RE.test(token)) return null;
   const admin = supabaseAdmin();
   const { data, error } = await admin
-    .from("natori_projects")
-    .select("id, title, client_name, amount, note, quote_accepted_at, quote_token_expires_at")
-    .eq("quote_accept_token_hash", hashToken(token))
+    .from("natori_quotes")
+    .select("id, project_id, title, client_name, amount, accepted_at, expires_at, superseded_at")
+    .eq("token_hash", hashToken(token))
     .maybeSingle();
   if (error) {
     console.error("[natori-quote] quote fetch failed", error);
@@ -62,18 +63,17 @@ async function fetchQuoteRow(token: string): Promise<QuoteRow | null> {
 
 function isExpired(row: QuoteRow): boolean {
   // 承諾済みの見積もりは期限切れ後も「承諾済み」として表示し続ける
-  if (row.quote_accepted_at) return false;
-  if (!row.quote_token_expires_at) return false;
-  return new Date(row.quote_token_expires_at).getTime() < Date.now();
+  if (row.accepted_at) return false;
+  return new Date(row.expires_at).getTime() < Date.now();
 }
 
 function toView(row: QuoteRow): NatoriQuoteView {
   return {
-    projectId: row.id,
+    projectId: row.project_id,
     title: row.title,
     clientName: row.client_name,
     amount: row.amount,
-    acceptedAt: row.quote_accepted_at,
+    acceptedAt: row.accepted_at,
   };
 }
 
@@ -81,6 +81,7 @@ function toView(row: QuoteRow): NatoriQuoteView {
 export async function getNatoriQuoteByToken(token: string): Promise<GetNatoriQuoteResult> {
   const row = await fetchQuoteRow(token);
   if (!row) return { kind: "not-found" };
+  if (row.superseded_at) return { kind: "not-found" };
   if (isExpired(row)) return { kind: "expired" };
   return { kind: "ok", quote: toView(row) };
 }
@@ -96,34 +97,32 @@ export type AcceptNatoriQuoteResult =
 export async function acceptNatoriQuote(token: string): Promise<AcceptNatoriQuoteResult> {
   const row = await fetchQuoteRow(token);
   if (!row) return { kind: "not-found" };
+  if (row.superseded_at) return { kind: "not-found" };
   if (isExpired(row)) return { kind: "expired" };
-  if (row.quote_accepted_at) return { kind: "already-accepted", quote: toView(row) };
-
-  const today = new Date().toISOString().slice(0, 10);
-  const acceptedAt = new Date().toISOString();
-  const logEntry = `【見積もり承諾 ${today}】${formatYen(row.amount)}（承諾ページより）`;
-  const note = row.note ? `${row.note}\n\n${logEntry}` : logEntry;
+  if (row.accepted_at) return { kind: "already-accepted", quote: toView(row) };
 
   const admin = supabaseAdmin();
-  const { data: updated, error } = await admin
-    .from("natori_projects")
-    .update({
-      quote_accepted_at: acceptedAt,
-      quote_accepted_amount: row.amount,
-      next_action: "承諾済み・お支払いのご案内を送る",
-      note,
-    })
-    .eq("id", row.id)
-    .eq("quote_accept_token_hash", hashToken(token))
-    .is("quote_accepted_at", null)
-    .select("id");
+  const { data, error } = await admin.rpc("natori_accept_quote", {
+    p_token_hash: hashToken(token),
+  });
   if (error) {
     console.error("[natori-quote] accept update failed", error);
     return { kind: "db-error" };
   }
-  if (!updated || updated.length === 0) {
-    // 二度押し・二重タブで別リクエストが先に確定した
+  const outcome = (Array.isArray(data) ? data[0] : data) as
+    | { result?: string; accepted_at?: string | null }
+    | null;
+  if (!outcome || outcome.result === "not-found" || outcome.result === "superseded") {
+    return { kind: "not-found" };
+  }
+  if (outcome.result === "expired") return { kind: "expired" };
+  const acceptedAt = outcome.accepted_at ?? new Date().toISOString();
+  if (outcome.result === "already-accepted") {
     return { kind: "already-accepted", quote: { ...toView(row), acceptedAt } };
+  }
+  if (outcome.result !== "ok") {
+    console.error("[natori-quote] unexpected accept outcome", outcome.result);
+    return { kind: "db-error" };
   }
 
   // ナトリへの通知（ベストエフォート。失敗しても承諾自体は成立）

@@ -17,7 +17,8 @@ export type CreateInquiryProjectResult =
  * 見積もり時に案件画面から調整する前提。
  */
 export async function createInquiryProject(
-  input: NatoriInquiryInput
+  input: NatoriInquiryInput,
+  referencePaths: string[] = []
 ): Promise<CreateInquiryProjectResult> {
   const userId = await resolveNatoriActingUserId();
   if (!userId) return { kind: "no-owner" };
@@ -33,6 +34,7 @@ export async function createInquiryProject(
     status: "inquiry",
     nextAction: "内容確認・お見積もり",
     note: draft.note,
+    referencePaths,
   });
 
   if (result.kind === "db-error") return { kind: "db-error" };

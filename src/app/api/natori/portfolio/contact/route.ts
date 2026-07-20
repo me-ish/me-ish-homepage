@@ -14,7 +14,11 @@ import {
   sendPortfolioContactAutoReply,
   sendPortfolioContactEmail,
 } from "@/features/natori/server/portfolioContactService";
-import { uploadPortfolioReferenceImage } from "@/features/natori/server/portfolioSiteService";
+import {
+  deletePortfolioReferenceImages,
+  signPortfolioReferenceImage,
+  uploadPortfolioReferenceImage,
+} from "@/features/natori/server/portfolioSiteService";
 import { createInquiryProject } from "@/features/natori/server/inquiryProjectService";
 
 export const runtime = "nodejs";
@@ -92,28 +96,33 @@ export async function POST(req: Request) {
     if (files.length > MAX_REF_IMAGES) {
       return NextResponse.json({ error: "too_many_files" }, { status: 400 });
     }
-    const refImages: string[] = [];
+    const submissionId = crypto.randomUUID();
+    const referencePaths: string[] = [];
     for (const file of files) {
-      const result = await uploadPortfolioReferenceImage(file);
+      const result = await uploadPortfolioReferenceImage(file, submissionId);
       if (result.kind === "invalid-type") {
+        await deletePortfolioReferenceImages(referencePaths);
         return NextResponse.json({ error: "invalid_mime" }, { status: 400 });
       }
       if (result.kind === "too-large") {
+        await deletePortfolioReferenceImages(referencePaths);
         return NextResponse.json({ error: "file_too_large" }, { status: 400 });
       }
       if (result.kind === "upload-error") {
+        await deletePortfolioReferenceImages(referencePaths);
         return NextResponse.json({ error: "upload_failed" }, { status: 500 });
       }
-      refImages.push(result.url);
+      referencePaths.push(result.path);
     }
-    const input = { ...parsed.data, refImages };
+    // 非公開パスは案件資料テーブルへ関連付け、note やメール本文へは保存しない。
+    const input = { ...parsed.data, refImages: [] };
 
     // Phase 1: フォーム送信を案件（inquiry）として起票する。これを一次的な
     // 永続化とし、メールは通知として扱う。どちらか一方でも成功すれば依頼は
     // 失われないので success を返す。
     let caseCreated = false;
     try {
-      const result = await createInquiryProject(input);
+      const result = await createInquiryProject(input, referencePaths);
       caseCreated = result.kind === "ok";
       if (!caseCreated) {
         console.error("[natori-portfolio-contact] case creation failed:", result.kind);
@@ -122,13 +131,28 @@ export async function POST(req: Request) {
       console.error("[natori-portfolio-contact] case creation threw:", caseErr);
     }
 
+    if (!caseCreated && referencePaths.length > 0) {
+      await deletePortfolioReferenceImages(referencePaths);
+      return NextResponse.json({ error: "inquiry not recorded" }, { status: 500 });
+    }
+
+    // 通知メールにだけ7日間の署名URLを入れる。DBには非公開storage pathだけを保持。
+    const signedReferenceUrls = (
+      await Promise.all(
+        referencePaths.map((path) => signPortfolioReferenceImage(path, 60 * 60 * 24 * 7))
+      )
+    ).filter((url): url is string => Boolean(url));
+    const mailInput = { ...input, refImages: signedReferenceUrls };
+
     let mailed = false;
+    let autoReplied = false;
     if (isPortfolioContactConfigured()) {
-      const sent = await sendPortfolioContactEmail(input, ip);
+      const sent = await sendPortfolioContactEmail(mailInput, ip);
       mailed = sent.mailed;
       // 依頼者向けの受付確認（自動返信）。失敗しても受付自体は成功扱い
       try {
-        await sendPortfolioContactAutoReply(input);
+        const autoReply = await sendPortfolioContactAutoReply(mailInput);
+        autoReplied = autoReply.mailed;
       } catch (autoReplyErr) {
         console.error("[natori-portfolio-contact] auto-reply threw:", autoReplyErr);
       }
@@ -139,7 +163,7 @@ export async function POST(req: Request) {
     if (!caseCreated && !mailed) {
       return NextResponse.json({ error: "inquiry not recorded" }, { status: 500 });
     }
-    return NextResponse.json({ success: true, mailed, caseCreated });
+    return NextResponse.json({ success: true, mailed, autoReplied, caseCreated });
   } catch (err) {
     console.error("[natori-portfolio-contact] Unhandled Error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -1,6 +1,7 @@
 // natori プロフィールのデータアクセス。
 // 認可（合言葉キー / ログイン）はサーバー側 API に任せるため、
 // ブラウザ Supabase ではなく /api/natori/admin/profile を経由する。
+import { CSRF_HEADERS } from "@/lib/auth/csrf";
 
 export type NatoriUserProfile = {
   userId: string;
@@ -60,7 +61,7 @@ export async function upsertOwnNatoriProfile(
 ): Promise<NatoriUserProfile> {
   const response = await fetch(API_PATH, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
   if (!response.ok) {

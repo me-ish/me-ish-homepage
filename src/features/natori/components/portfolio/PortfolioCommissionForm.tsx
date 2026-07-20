@@ -60,6 +60,7 @@ export default function PortfolioCommissionForm({
   demoMode?: boolean;
 }) {
   const [status, setStatus] = useState<Status>("idle");
+  const [autoReplied, setAutoReplied] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<string>(PLAN_UNDECIDED);
   // キャラクター資料。選択時はローカル保持のみで、送信時に multipart で一括添付
   // する（送信前にサーバーへ置かない = 匿名アップロードの穴を作らない）
@@ -145,7 +146,11 @@ export default function PortfolioCommissionForm({
         headers: { ...CSRF_HEADERS },
         body: data,
       });
+      const response = (await res.json().catch(() => null)) as
+        | { autoReplied?: boolean }
+        | null;
       if (!res.ok) throw new Error(`request failed: ${res.status}`);
+      setAutoReplied(response?.autoReplied === true);
       trackNatoriPageEvent("portfolio_form_submit", requestType);
       setRefImages((current) => {
         current.forEach((entry) => URL.revokeObjectURL(entry.previewUrl));
@@ -199,8 +204,9 @@ export default function PortfolioCommissionForm({
               内容を確認のうえ、2〜3日以内にご連絡いたします。
             </p>
             <p className="mt-2 text-xs" style={{ color: c.inkSoft }}>
-              ご入力のメールアドレス宛に受付確認メールをお送りしました。
-              届かない場合は迷惑メールフォルダをご確認ください。
+              {autoReplied
+                ? "ご入力のメールアドレス宛に受付確認メールをお送りしました。届かない場合は迷惑メールフォルダをご確認ください。"
+                : "受付は完了しましたが、確認メールを送信できませんでした。2〜3日以内のご連絡をお待ちください。"}
             </p>
           </div>
         ) : (

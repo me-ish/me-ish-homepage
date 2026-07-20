@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import {
   getNatoriAdminProfile,
@@ -42,6 +43,8 @@ export async function PUT(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
 
   const payload = (await request.json().catch(() => null)) as unknown;
   if (!isObject(payload)) {

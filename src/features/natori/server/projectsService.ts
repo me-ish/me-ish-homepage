@@ -3,6 +3,8 @@ import { createTasksForType } from "@/features/natori/lib/projects";
 import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { calculateDueDate } from "@/features/natori/lib/deliveryPlans";
 import { deleteNatoriProjectThumb } from "@/features/natori/server/projectThumbsService";
+import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
+import { signPortfolioReferenceImage } from "@/features/natori/server/portfolioSiteService";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type {
   NatoriDeliveryPlan,
@@ -37,6 +39,11 @@ export type NatoriAdminTaskRow = {
   estimated_hours: number | null;
   done: boolean;
   sort_order: number;
+};
+
+export type NatoriAdminReferenceFile = {
+  project_id: string;
+  url: string;
 };
 
 export const NATORI_PROJECT_STATUSES: ReadonlySet<string> = new Set([
@@ -218,6 +225,7 @@ async function normalizeProjectTasks(
   const { data, error } = await admin
     .from("natori_project_tasks")
     .select("*")
+    .in("project_id", projectsToNormalize.map((project) => project.id))
     .order("sort_order", { ascending: true });
   if (error) {
     console.error("[natori-admin-projects] task normalization reload failed", error);
@@ -232,35 +240,66 @@ export type ListNatoriAdminProjectsResult =
       kind: "ok";
       projects: NatoriAdminProjectRow[];
       tasks: NatoriAdminTaskRow[];
+      referenceFiles: NatoriAdminReferenceFile[];
     }
   | { kind: "fetch-projects-error" }
   | { kind: "fetch-tasks-error" }
   | { kind: "normalize-error" };
 
 export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjectsResult> {
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return { kind: "fetch-projects-error" };
   const admin = supabaseAdmin();
-  const [{ data: projects, error: projectError }, { data: tasks, error: taskError }] =
-    await Promise.all([
-      admin.from("natori_projects").select("*").order("due_date", { ascending: true }),
-      admin.from("natori_project_tasks").select("*").order("sort_order", { ascending: true }),
-    ]);
+  const { data: projects, error: projectError } = await admin
+    .from("natori_projects")
+    .select("*")
+    .eq("user_id", ownerId)
+    .order("due_date", { ascending: true });
 
   if (projectError) {
     console.error("[natori-admin-projects] project fetch failed", projectError);
     return { kind: "fetch-projects-error" };
   }
 
+  const projectRows = (projects ?? []) as NatoriAdminProjectRow[];
+  const projectIds = projectRows.map((project) => project.id);
+  if (projectIds.length === 0) {
+    return { kind: "ok", projects: [], tasks: [], referenceFiles: [] };
+  }
+
+  const [{ data: tasks, error: taskError }, { data: references, error: referenceError }] =
+    await Promise.all([
+      admin
+        .from("natori_project_tasks")
+        .select("*")
+        .in("project_id", projectIds)
+        .order("sort_order", { ascending: true }),
+      admin
+        .from("natori_inquiry_reference_files")
+        .select("project_id, storage_path")
+        .in("project_id", projectIds)
+        .order("created_at", { ascending: true }),
+    ]);
+
   if (taskError) {
     console.error("[natori-admin-projects] task fetch failed", taskError);
     return { kind: "fetch-tasks-error" };
   }
 
-  const projectRows = (projects ?? []) as NatoriAdminProjectRow[];
   const taskRows = (tasks ?? []) as NatoriAdminTaskRow[];
+  if (referenceError) {
+    console.error("[natori-admin-projects] reference fetch failed", referenceError);
+  }
+
+  const referenceFiles: NatoriAdminReferenceFile[] = [];
+  for (const row of (references ?? []) as Array<{ project_id: string; storage_path: string }>) {
+    const url = await signPortfolioReferenceImage(row.storage_path, 60 * 60);
+    if (url) referenceFiles.push({ project_id: row.project_id, url });
+  }
 
   try {
     const normalizedTasks = await normalizeProjectTasks(admin, projectRows, taskRows);
-    return { kind: "ok", projects: projectRows, tasks: normalizedTasks };
+    return { kind: "ok", projects: projectRows, tasks: normalizedTasks, referenceFiles };
   } catch {
     return { kind: "normalize-error" };
   }
@@ -281,6 +320,7 @@ export type CreateNatoriAdminProjectInput = {
   nextAction?: string;
   note?: string;
   priority?: string;
+  referencePaths?: string[];
 };
 
 export type CreateNatoriAdminProjectResult =
@@ -299,36 +339,11 @@ export async function createNatoriAdminProject(
   const startDateISO = input.startDateISO ?? new Date().toISOString().slice(0, 10);
   const dueDateISO = input.dueDateISO ?? calculateDueDate(startDateISO, deliveryPlan);
   const status = input.status ?? "inquiry";
-
-  const admin = supabaseAdmin();
-  const { data: insertedProject, error: projectErr } = await admin
-    .from("natori_projects")
-    .insert({
-      user_id: input.userId,
-      title: input.title,
-      client_name: input.clientName,
-      client_email: input.clientEmail?.trim() || null,
-      amount: input.amount,
-      type: input.type,
-      status,
-      delivery_plan: deliveryPlan,
-      priority: input.priority ?? null,
-      start_date: startDateISO,
-      due_date: dueDateISO,
-      next_action: input.nextAction ?? "",
-      note: input.note ?? null,
-    })
-    .select("id")
-    .single();
-  if (projectErr) {
-    console.error("[natori-admin-projects] project insert failed", projectErr);
-    return { kind: "db-error" };
-  }
-  const projectId = (insertedProject as { id: string }).id;
+  const manualCompletedAt =
+    status === "completed" ? `${dueDateISO}T12:00:00+09:00` : "";
 
   const tasks = createTasksForType(input.type);
   const taskInserts = tasks.map((task, index) => ({
-    project_id: projectId,
     task_key: task.id,
     label: task.label,
     stage: task.stage,
@@ -336,17 +351,38 @@ export async function createNatoriAdminProject(
     done: task.done,
     sort_order: index,
   }));
-  if (taskInserts.length > 0) {
-    const { error: taskErr } = await admin
-      .from("natori_project_tasks")
-      .insert(taskInserts);
-    if (taskErr) {
-      console.error("[natori-admin-projects] task insert failed", taskErr);
-      return { kind: "db-error" };
+  const { data: projectId, error } = await supabaseAdmin().rpc(
+    "natori_create_project_with_tasks",
+    {
+      p_user_id: input.userId,
+      p_project: {
+        title: input.title,
+        client_name: input.clientName,
+        client_email: input.clientEmail?.trim() || "",
+        amount: input.amount,
+        type: input.type,
+        status,
+        delivery_plan: deliveryPlan,
+        priority: input.priority ?? "",
+        start_date: startDateISO,
+        due_date: dueDateISO,
+        next_action: input.nextAction ?? "",
+        note: input.note ?? "",
+        payment_confirmed_at: manualCompletedAt,
+        paid_at: manualCompletedAt,
+        paid_amount: manualCompletedAt ? input.amount : "",
+        completed_at: manualCompletedAt,
+      },
+      p_tasks: taskInserts,
+      p_reference_paths: input.referencePaths ?? [],
     }
+  );
+  if (error || !projectId) {
+    console.error("[natori-admin-projects] transactional project insert failed", error);
+    return { kind: "db-error" };
   }
 
-  return { kind: "ok", projectId };
+  return { kind: "ok", projectId: String(projectId) };
 }
 
 export type NatoriProjectMutationResult =
@@ -366,22 +402,27 @@ export type PatchNatoriProjectDetailsResult =
 export async function setNatoriProjectTaskDone(
   projectId: string,
   taskKey: string,
-  done: boolean
+  done: boolean,
+  status: string,
+  nextAction: string
 ): Promise<NatoriProjectMutationResult> {
-  const admin = supabaseAdmin();
-  const { data, error } = await admin
-    .from("natori_project_tasks")
-    .update({ done })
-    .eq("project_id", projectId)
-    .eq("task_key", taskKey)
-    .select("id")
-    .maybeSingle();
+  if (!NATORI_PROJECT_STATUSES.has(status)) return { kind: "db-error" };
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return { kind: "not-found" };
+  const { data, error } = await supabaseAdmin().rpc("natori_update_task_and_status", {
+    p_user_id: ownerId,
+    p_project_id: projectId,
+    p_task_key: taskKey,
+    p_done: done,
+    p_status: status,
+    p_next_action: nextAction,
+  });
 
   if (error) {
     console.error("[natori-admin-projects] task update failed", error);
     return { kind: "db-error" };
   }
-  if (!data) return { kind: "not-found" };
+  if (data !== true) return { kind: "not-found" };
   return { kind: "ok" };
 }
 
@@ -390,12 +431,15 @@ export async function setNatoriProjectStatus(
   status: string,
   nextAction: string
 ): Promise<NatoriProjectTransitionResult> {
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return { kind: "not-found" };
   const admin = supabaseAdmin();
 
   const { data: current, error: fetchErr } = await admin
     .from("natori_projects")
     .select("id, status")
     .eq("id", projectId)
+    .eq("user_id", ownerId)
     .maybeSingle();
   if (fetchErr) {
     console.error("[natori-admin-projects] status fetch failed", fetchErr);
@@ -404,6 +448,20 @@ export async function setNatoriProjectStatus(
   if (!current) return { kind: "not-found" };
 
   const fromStatus = (current as { status: string }).status;
+  const workStatuses = new Set([
+    "rough", "lineart", "coloring", "waiting", "delivery_prep", "delivered", "completed",
+  ]);
+  if (workStatuses.has(status)) {
+    const { data: paidProject, error: paidError } = await admin
+      .from("natori_projects")
+      .select("id")
+      .eq("id", projectId)
+      .eq("user_id", ownerId)
+      .not("payment_confirmed_at", "is", null)
+      .maybeSingle();
+    if (paidError) return { kind: "db-error" };
+    if (!paidProject) return { kind: "invalid-transition", from: fromStatus, to: status };
+  }
   if (
     !canTransitionNatoriStatus(
       fromStatus as NatoriProjectStatus,
@@ -415,10 +473,13 @@ export async function setNatoriProjectStatus(
 
   // 読み取り時のステータスを条件に含め、並行更新とレースしたら書かない
   // （0行なら状態が変わっているので invalid-transition として弾く）
+  const statusUpdate: Record<string, unknown> = { status, next_action: nextAction };
+  if (status === "completed") statusUpdate.completed_at = new Date().toISOString();
   const { data, error } = await admin
     .from("natori_projects")
-    .update({ status, next_action: nextAction })
+    .update(statusUpdate)
     .eq("id", projectId)
+    .eq("user_id", ownerId)
     .eq("status", fromStatus)
     .select("id")
     .maybeSingle();
@@ -440,6 +501,8 @@ export async function patchNatoriProjectDetails(
   projectId: string,
   patch: Record<string, unknown>
 ): Promise<PatchNatoriProjectDetailsResult> {
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return { kind: "not-found" };
   const update: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(patch)) {
     if (NATORI_PROJECT_DETAILS_ALLOWED_FIELDS.has(key)) update[key] = value;
@@ -453,6 +516,7 @@ export async function patchNatoriProjectDetails(
     .from("natori_projects")
     .update(update)
     .eq("id", projectId)
+    .eq("user_id", ownerId)
     .select("id")
     .maybeSingle();
 
@@ -473,12 +537,15 @@ export async function closeNatoriProject(
   projectId: string,
   reason: string
 ): Promise<NatoriProjectTransitionResult> {
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return { kind: "not-found" };
   const admin = supabaseAdmin();
 
   const { data: current, error: fetchErr } = await admin
     .from("natori_projects")
     .select("id, note, status")
     .eq("id", projectId)
+    .eq("user_id", ownerId)
     .maybeSingle();
   if (fetchErr) {
     console.error("[natori-admin-projects] close fetch failed", fetchErr);
@@ -507,6 +574,8 @@ export async function closeNatoriProject(
     .from("natori_projects")
     .update(update)
     .eq("id", projectId)
+    .eq("user_id", ownerId)
+    .eq("status", fromStatus)
     .select("id")
     .maybeSingle();
   if (error) {
@@ -523,42 +592,22 @@ export async function closeNatoriProject(
 export async function deleteNatoriAdminProject(
   projectId: string
 ): Promise<NatoriProjectMutationResult> {
-  const admin = supabaseAdmin();
-
-  const { error: taskErr } = await admin
-    .from("natori_project_tasks")
-    .delete()
-    .eq("project_id", projectId);
-  if (taskErr) {
-    console.error("[natori-admin-projects] task delete failed", taskErr);
-    return { kind: "db-error" };
-  }
-
-  const { data, error } = await admin
-    .from("natori_projects")
-    .delete()
-    .eq("id", projectId)
-    .select("id")
-    .maybeSingle();
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return { kind: "not-found" };
+  const { data, error } = await supabaseAdmin().rpc("natori_delete_project", {
+    p_user_id: ownerId,
+    p_project_id: projectId,
+  });
   if (error) {
     console.error("[natori-admin-projects] project delete failed", error);
     return { kind: "db-error" };
   }
-  if (!data) return { kind: "not-found" };
+  if (data !== true) return { kind: "not-found" };
 
   // サムネイル画像もベストエフォートで片付ける（失敗しても削除自体は成功扱い）
   await deleteNatoriProjectThumb(projectId);
   return { kind: "ok" };
 }
-
-/** 入金確認（payment-confirmed 遷移）で rough に進める元ステータス（生値） */
-const PAYMENT_CONFIRMABLE_STATUSES = [
-  "inquiry",
-  "estimating",
-  "consulting",
-  "quoted",
-  "awaiting_payment",
-] as const;
 
 /**
  * "入金確認してラフ開始" button: stamps payment_confirmed_at and advances
@@ -570,30 +619,27 @@ export async function confirmNatoriProjectPayment(
   projectId: string,
   nextAction: string
 ): Promise<NatoriProjectTransitionResult> {
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return { kind: "not-found" };
   const admin = supabaseAdmin();
-  const { data, error } = await admin
-    .from("natori_projects")
-    .update({
-      status: "rough",
-      next_action: nextAction,
-      payment_confirmed_at: new Date().toISOString(),
-    })
-    .eq("id", projectId)
-    .in("status", [...PAYMENT_CONFIRMABLE_STATUSES])
-    .select("id")
-    .maybeSingle();
+  const { data, error } = await admin.rpc("natori_confirm_manual_payment", {
+    p_user_id: ownerId,
+    p_project_id: projectId,
+    p_next_action: nextAction,
+  });
 
   if (error) {
     console.error("[natori-admin-projects] confirm-payment failed", error);
     return { kind: "db-error" };
   }
-  if (data) return { kind: "ok" };
+  if (data === true) return { kind: "ok" };
 
   // 0行: 案件が無いのか、受注前ではないのかを切り分ける
   const { data: current, error: fetchErr } = await admin
     .from("natori_projects")
     .select("id, status")
     .eq("id", projectId)
+    .eq("user_id", ownerId)
     .maybeSingle();
   if (fetchErr) {
     console.error("[natori-admin-projects] confirm-payment refetch failed", fetchErr);

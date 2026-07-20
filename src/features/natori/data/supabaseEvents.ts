@@ -1,6 +1,7 @@
 // natori 管理画面のイベントデータアクセス。
 // 認可（合言葉キー / ログイン）はサーバー側 API に任せるため、
 // ブラウザ Supabase ではなく /api/natori/admin/events を経由する。
+import { CSRF_HEADERS } from "@/lib/auth/csrf";
 
 export type NatoriEvent = {
   id: string;
@@ -49,7 +50,7 @@ export async function createNatoriEvent(input: {
 }): Promise<NatoriEvent> {
   const response = await fetch(API_PATH, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
   if (!response.ok) {
@@ -65,7 +66,7 @@ export async function updateNatoriEvent(
 ): Promise<void> {
   const response = await fetch(API_PATH, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
     body: JSON.stringify({ id, ...input }),
   });
   if (!response.ok) {
@@ -76,6 +77,7 @@ export async function updateNatoriEvent(
 export async function deleteNatoriEvent(id: string): Promise<void> {
   const response = await fetch(`${API_PATH}?id=${encodeURIComponent(id)}`, {
     method: "DELETE",
+    headers: { ...CSRF_HEADERS },
   });
   if (!response.ok) {
     throw new Error(await readErrorMessage(response, "予定の削除に失敗しました"));

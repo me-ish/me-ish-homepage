@@ -5,8 +5,8 @@ import type {
 
 /**
  * 実績ページ用の集計ロジック。「納品済み」「対応完了」の案件を実績として
- * 数える。時期のグルーピングは納期（dueDate）ベース（完了日時のカラムが
- * 無いため、納期を完了時期の近似として使う）。
+ * 数える。売上は入金記録があり、かつ対応完了した案件だけを対象にする。
+ * 時期は completedAt（未設定時は paidAt / paymentConfirmedAt）を使う。
  */
 
 export type NatoriMonthlyResult = {
@@ -39,10 +39,24 @@ export type NatoriResultsSummary = {
   completed: NatoriProject[];
 };
 
-const COMPLETED_STATUSES: ReadonlySet<string> = new Set(["delivered", "completed"]);
-
 export function isNatoriCompletedProject(project: NatoriProject): boolean {
-  return COMPLETED_STATUSES.has(project.status);
+  return (
+    project.status === "completed" &&
+    Boolean(project.paidAt ?? project.paymentConfirmedAt)
+  );
+}
+
+export function getNatoriResultDateISO(project: NatoriProject): string {
+  return (
+    project.completedAt ??
+    project.paidAt ??
+    project.paymentConfirmedAt ??
+    project.dueDate
+  ).slice(0, 10);
+}
+
+export function getNatoriResultAmount(project: NatoriProject): number {
+  return project.paidAmount ?? project.amount;
 }
 
 /* ------------------------------------------------------------------
@@ -76,17 +90,17 @@ function csvCell(value: string | number): string {
  * 対象は呼び出し側が絞り込んだ一覧（画面に表示中の実績と同じもの）。
  */
 export function buildNatoriResultsCsv(projects: NatoriProject[]): string {
-  const header = ["納期", "依頼者", "件名", "種類", "金額(円)", "ステータス"];
+  const header = ["完了日", "依頼者", "件名", "種類", "入金額(円)", "ステータス"];
   const rows = projects
     .slice()
-    .sort((a, b) => b.dueDate.localeCompare(a.dueDate))
+    .sort((a, b) => getNatoriResultDateISO(b).localeCompare(getNatoriResultDateISO(a)))
     .map((project) =>
       [
-        project.dueDate,
+        getNatoriResultDateISO(project),
         project.clientName,
         project.title,
         CSV_TYPE_LABELS[project.type] ?? project.type,
-        project.amount,
+        getNatoriResultAmount(project),
         CSV_STATUS_LABELS[project.status] ?? project.status,
       ]
         .map(csvCell)
@@ -100,7 +114,7 @@ export function listNatoriResultYears(projects: NatoriProject[]): number[] {
   const years = new Set<number>();
   for (const project of projects) {
     if (!isNatoriCompletedProject(project)) continue;
-    const year = Number(project.dueDate.slice(0, 4));
+    const year = Number(getNatoriResultDateISO(project).slice(0, 4));
     if (Number.isFinite(year)) years.add(year);
   }
   return Array.from(years).sort((a, b) => b - a);
@@ -113,7 +127,7 @@ export function filterProjectsByYear(
 ): NatoriProject[] {
   if (year === null) return projects;
   const prefix = `${year}-`;
-  return projects.filter((project) => project.dueDate.startsWith(prefix));
+  return projects.filter((project) => getNatoriResultDateISO(project).startsWith(prefix));
 }
 
 /** 年月（"2026-05" 形式）で実績を絞り込む（ym が null なら全期間） */
@@ -122,7 +136,7 @@ export function filterProjectsByMonth(
   ym: string | null
 ): NatoriProject[] {
   if (ym === null) return projects;
-  return projects.filter((project) => project.dueDate.startsWith(ym));
+  return projects.filter((project) => getNatoriResultDateISO(project).startsWith(ym));
 }
 
 function toMonthLabel(ym: string): string {
@@ -139,20 +153,30 @@ export function summarizeNatoriResults(
   const completed = projects
     .filter(isNatoriCompletedProject)
     .slice()
-    .sort((a, b) => (a.dueDate < b.dueDate ? 1 : a.dueDate > b.dueDate ? -1 : 0));
+    .sort((a, b) =>
+      getNatoriResultDateISO(b).localeCompare(getNatoriResultDateISO(a))
+    );
 
   const totalCount = completed.length;
-  const totalAmount = completed.reduce((sum, project) => sum + project.amount, 0);
+  const totalAmount = completed.reduce(
+    (sum, project) => sum + getNatoriResultAmount(project),
+    0
+  );
   const averageAmount = totalCount > 0 ? Math.round(totalAmount / totalCount) : 0;
 
   const thisYearPrefix = `${now.getFullYear()}-`;
-  const thisYear = completed.filter((project) => project.dueDate.startsWith(thisYearPrefix));
+  const thisYear = completed.filter((project) =>
+    getNatoriResultDateISO(project).startsWith(thisYearPrefix)
+  );
   const thisYearCount = thisYear.length;
-  const thisYearAmount = thisYear.reduce((sum, project) => sum + project.amount, 0);
+  const thisYearAmount = thisYear.reduce(
+    (sum, project) => sum + getNatoriResultAmount(project),
+    0
+  );
 
   const monthlyMap = new Map<string, NatoriMonthlyResult>();
   for (const project of completed) {
-    const ym = project.dueDate.slice(0, 7);
+    const ym = getNatoriResultDateISO(project).slice(0, 7);
     const entry = monthlyMap.get(ym) ?? {
       ym,
       label: toMonthLabel(ym),
@@ -160,7 +184,7 @@ export function summarizeNatoriResults(
       amount: 0,
     };
     entry.count += 1;
-    entry.amount += project.amount;
+    entry.amount += getNatoriResultAmount(project);
     monthlyMap.set(ym, entry);
   }
   const monthly = Array.from(monthlyMap.values()).sort((a, b) =>
@@ -175,7 +199,7 @@ export function summarizeNatoriResults(
       amount: 0,
     };
     entry.count += 1;
-    entry.amount += project.amount;
+    entry.amount += getNatoriResultAmount(project);
     typeMap.set(project.type, entry);
   }
   const byType = Array.from(typeMap.values()).sort((a, b) => b.amount - a.amount);

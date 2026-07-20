@@ -1,14 +1,25 @@
-// orderMailService のテスト。
-// 見積もり/支払い依頼メール送信後の案件更新と、Stripe Webhook からの
-// 入金反映 (markNatoriCommissionPaid) の冪等性を固定する。
+// 見積版・支払いリンク・送信ログ・Stripe Webhook の安全性を固定する。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PAYMENT_LINK_PLACEHOLDER } from "@/features/natori/lib/orderMail";
 
-/* ---------- Mocks ---------- */
-
 vi.mock("server-only", () => ({}));
 
-const mockSend = vi.fn();
+const {
+  mockSend,
+  mockPricesCreate,
+  mockLinksCreate,
+  mockLinksUpdate,
+  mockAdminFrom,
+  mockRpc,
+} = vi.hoisted(() => ({
+  mockSend: vi.fn(),
+  mockPricesCreate: vi.fn(),
+  mockLinksCreate: vi.fn(),
+  mockLinksUpdate: vi.fn(),
+  mockAdminFrom: vi.fn(),
+  mockRpc: vi.fn(),
+}));
+
 vi.mock("resend", () => ({
   Resend: class {
     emails = { send: (...args: unknown[]) => mockSend(...args) };
@@ -16,9 +27,6 @@ vi.mock("resend", () => ({
   },
 }));
 
-const mockPricesCreate = vi.fn();
-const mockLinksCreate = vi.fn();
-const mockLinksUpdate = vi.fn();
 vi.mock("stripe", () => ({
   default: class {
     prices = { create: (...args: unknown[]) => mockPricesCreate(...args) };
@@ -30,30 +38,30 @@ vi.mock("stripe", () => ({
   },
 }));
 
-const mockAdminFrom = vi.fn();
 vi.mock("@/lib/supabaseAdmin", () => ({
-  supabaseAdmin: vi.fn(() => ({ from: (...args: unknown[]) => mockAdminFrom(...args) })),
+  supabaseAdmin: vi.fn(() => ({
+    from: (...args: unknown[]) => mockAdminFrom(...args),
+    rpc: (...args: unknown[]) => mockRpc(...args),
+  })),
 }));
 
-/* ---------- Helpers ---------- */
+vi.mock("@/features/natori/server/natoriOwner", () => ({
+  resolveNatoriActingUserId: vi.fn().mockResolvedValue("owner-1"),
+}));
 
-type Result = { data: unknown; error: unknown };
+type Result = { data: unknown; error: unknown; count?: number | null };
 
-/**
- * どこまでチェーンしても最後は result に解決される query builder モック。
- * calls を渡すとチェーンしたメソッド呼び出し（filter 等）を記録する。
- */
-function chainResult(result: Result, calls?: string[]) {
+function chainResult(result: Result, calls: string[] = []) {
   const chain: unknown = new Proxy(
     {},
     {
       get(_, prop) {
-        if (prop === "then") return (resolve: (v: Result) => void) => resolve(result);
+        if (prop === "then") return (resolve: (value: Result) => void) => resolve(result);
         if (prop === "single" || prop === "maybeSingle") {
           return vi.fn().mockResolvedValue(result);
         }
         return (...args: unknown[]) => {
-          calls?.push(`${String(prop)}(${args.map((a) => JSON.stringify(a)).join(",")})`);
+          calls.push(`${String(prop)}(${args.map((arg) => JSON.stringify(arg)).join(",")})`);
           return chain;
         };
       },
@@ -62,45 +70,77 @@ function chainResult(result: Result, calls?: string[]) {
   return chain;
 }
 
-/**
- * natori_projects と natori_order_mail_logs のモック。
- * updates: projects への update payload / mailLogs: 送信ログへの insert payload
- * updateRows: 条件付き UPDATE が返す行（省略時は1行更新成功、[] で0行=条件不一致）
- */
-function projectsTable(
-  row: unknown,
-  options: { updateError?: unknown; updateRows?: unknown[]; logError?: unknown } = {}
-) {
-  const updates: Record<string, unknown>[] = [];
-  const updateCalls: string[] = [];
-  const mailLogs: Record<string, unknown>[] = [];
-  const api = {
-    select: vi.fn(() => chainResult({ data: row, error: null })),
+type DbOptions = {
+  quote?: unknown;
+  projectUpdateResults?: Result[];
+  logInsertError?: unknown;
+};
+
+function installDb(project: unknown, options: DbOptions = {}) {
+  const projectUpdates: Record<string, unknown>[] = [];
+  const projectUpdateCalls: string[][] = [];
+  const mailLogInserts: Record<string, unknown>[] = [];
+  const mailLogUpdates: Record<string, unknown>[] = [];
+  const ledgerInserts: Record<string, unknown>[] = [];
+  let projectUpdateIndex = 0;
+
+  const projectsApi = {
+    select: vi.fn(() => chainResult({ data: project, error: null })),
     update: vi.fn((payload: Record<string, unknown>) => {
-      updates.push(payload);
-      const data = options.updateError
-        ? null
-        : options.updateRows ?? [{ id: (row as { id?: string })?.id ?? "row-1" }];
-      return chainResult({ data, error: options.updateError ?? null }, updateCalls);
+      projectUpdates.push(payload);
+      const calls: string[] = [];
+      projectUpdateCalls.push(calls);
+      const result = options.projectUpdateResults?.[projectUpdateIndex] ?? {
+        data: [{ id: (project as { id?: string } | null)?.id ?? "proj-1" }],
+        error: null,
+      };
+      projectUpdateIndex += 1;
+      return chainResult(result, calls);
     }),
+  };
+  const quotesApi = {
+    select: vi.fn(() => chainResult({ data: options.quote ?? null, error: null })),
   };
   const logsApi = {
     insert: vi.fn((payload: Record<string, unknown>) => {
-      mailLogs.push(payload);
-      return chainResult({ data: null, error: options.logError ?? null });
+      mailLogInserts.push(payload);
+      return chainResult({ data: null, error: options.logInsertError ?? null });
+    }),
+    update: vi.fn((payload: Record<string, unknown>) => {
+      mailLogUpdates.push(payload);
+      return chainResult({ data: null, error: null });
     }),
   };
+  const ledgerApi = {
+    insert: vi.fn((payload: Record<string, unknown>) => {
+      ledgerInserts.push(payload);
+      return chainResult({ data: null, error: null });
+    }),
+  };
+
   mockAdminFrom.mockImplementation((table: string) => {
-    if (table === "natori_projects") return api;
+    if (table === "natori_projects") return projectsApi;
+    if (table === "natori_quotes") return quotesApi;
     if (table === "natori_order_mail_logs") return logsApi;
+    if (table === "natori_payment_transactions") return ledgerApi;
     throw new Error(`unexpected table: ${table}`);
   });
-  return { api, updates, updateCalls, mailLogs };
+
+  return {
+    projectsApi,
+    logsApi,
+    projectUpdates,
+    projectUpdateCalls,
+    mailLogInserts,
+    mailLogUpdates,
+    ledgerInserts,
+  };
 }
 
 function makeProjectRow(overrides: Record<string, unknown> = {}) {
   return {
     id: "11111111-2222-3333-4444-555555555555",
+    user_id: "owner-1",
     title: "立ち絵一式",
     client_name: "テスト太郎",
     amount: 8000,
@@ -108,15 +148,27 @@ function makeProjectRow(overrides: Record<string, unknown> = {}) {
     note: "既存メモ",
     payment_confirmed_at: null,
     payment_link_id: null,
+    payment_link_url: null,
+    payment_link_status: null,
+    payment_quote_id: null,
+    active_quote_id: null,
     quoted_amount: null,
+    stripe_payment_session_id: null,
     client_email: "client@example.com",
     ...overrides,
   };
 }
 
+const acceptedQuote = {
+  id: "quote-1",
+  amount: 12000,
+  accepted_at: "2026-07-19T00:00:00Z",
+  superseded_at: null,
+};
+
 async function loadService() {
   vi.resetModules();
-  return await import("@/features/natori/server/orderMailService");
+  return import("@/features/natori/server/orderMailService");
 }
 
 beforeEach(() => {
@@ -131,193 +183,98 @@ beforeEach(() => {
     url: "https://pay.example.com/link-abc",
   });
   mockLinksUpdate.mockResolvedValue({ id: "plink_old", active: false });
+  mockRpc.mockResolvedValue({ data: "quote-1", error: null });
 });
 
-afterEach(() => {
-  vi.unstubAllEnvs();
-});
-
-/* ---------- markNatoriCommissionPaid (Webhook 入金反映) ---------- */
+afterEach(() => vi.unstubAllEnvs());
 
 describe("markNatoriCommissionPaid", () => {
-  it("入金でラフに進み、メモに記録し、ナトリへ通知メールを送る", async () => {
+  it("入金を一度だけ確定し、受領額・session・台帳を残す", async () => {
     const { markNatoriCommissionPaid } = await loadService();
-    const { updates, updateCalls } = projectsTable(
-      makeProjectRow({ status: "awaiting_payment" })
-    );
+    installDb(makeProjectRow({
+      status: "awaiting_payment",
+      quoted_amount: 8000,
+      payment_quote_id: "quote-1",
+    }));
+    mockRpc.mockResolvedValue({
+      data: [{ result: "received", advanced: true, new_event: true, recorded_amount: 8000 }],
+      error: null,
+    });
 
-    const result = await markNatoriCommissionPaid("proj-1", "cs_test_123", 8000);
-
-    expect(result).toEqual({ kind: "ok" });
-    expect(updates).toHaveLength(1);
-    expect(updates[0].status).toBe("rough");
-    expect(updates[0].payment_confirmed_at).toBeTruthy();
-    expect(String(updates[0].note)).toContain("既存メモ");
-    expect(String(updates[0].note)).toContain("入金確認（Stripe）");
-    expect(String(updates[0].note)).toContain("cs_test_123");
-
-    // 冪等ゲート: payment_confirmed_at IS NULL を UPDATE の条件に含める
-    expect(updateCalls).toContain('is("payment_confirmed_at",null)');
-
-    // 依頼者宛の入金確認メール + ナトリ宛の通知メールの2通
+    await expect(markNatoriCommissionPaid("proj-1", "cs_test_123", 8000)).resolves.toEqual({ kind: "ok" });
+    expect(mockRpc).toHaveBeenCalledWith("natori_record_stripe_payment", {
+      p_project_id: "proj-1",
+      p_session_id: "cs_test_123",
+      p_amount: 8000,
+      p_quote_id: null,
+    });
     expect(mockSend).toHaveBeenCalledTimes(2);
-    const clientMail = mockSend.mock.calls[0][0] as { to: string[]; subject: string; text: string };
-    expect(clientMail.to).toEqual(["client@example.com"]);
-    expect(clientMail.subject).toContain("ご入金確認");
-    expect(clientMail.text).toContain("制作を開始いたします");
-    const natoriMail = mockSend.mock.calls[1][0] as { to: string[]; subject: string };
-    expect(natoriMail.to).toEqual(["natori-test@example.com"]);
-    expect(natoriMail.subject).toContain("入金確認");
   });
 
-  it("client_email が無い既存案件は依頼者宛をスキップし、ナトリ宛通知だけ送る", async () => {
+  it("同じsessionのWebhook再送はalready-paidで通知も台帳追加もしない", async () => {
     const { markNatoriCommissionPaid } = await loadService();
-    projectsTable(makeProjectRow({ client_email: null }));
-
-    const result = await markNatoriCommissionPaid("proj-1", "cs_test_123", 8000);
-    expect(result).toEqual({ kind: "ok" });
-    expect(mockSend).toHaveBeenCalledTimes(1);
-    const mail = mockSend.mock.calls[0][0] as { to: string[] };
-    expect(mail.to).toEqual(["natori-test@example.com"]);
-  });
-
-  it("冪等: 条件付き UPDATE が 0 行（既に入金確定済み）なら already-paid でメールも送らない", async () => {
-    const { markNatoriCommissionPaid } = await loadService();
-    projectsTable(
-      makeProjectRow({ payment_confirmed_at: "2026-07-10T00:00:00Z" }),
-      { updateRows: [] }
-    );
-
-    const result = await markNatoriCommissionPaid("proj-1", "cs_test_123", 8000);
-
-    expect(result).toEqual({ kind: "already-paid" });
-    expect(mockSend).not.toHaveBeenCalled();
-  });
-
-  it("同一 Checkout の completed → async_payment_succeeded でも入金反映と通知は1回だけ", async () => {
-    const { markNatoriCommissionPaid } = await loadService();
-
-    // 1通目 (completed): 未払い行に条件付き UPDATE が当たり1行更新
-    projectsTable(makeProjectRow({ status: "awaiting_payment" }));
-    const first = await markNatoriCommissionPaid("proj-1", "cs_test_123", 8000);
-    expect(first).toEqual({ kind: "ok" });
-
-    // 2通目 (async_payment_succeeded): 行は確定済みになっており UPDATE は0行
-    projectsTable(
+    installDb(
       makeProjectRow({
-        status: "rough",
-        payment_confirmed_at: "2026-07-16T00:00:00Z",
-      }),
-      { updateRows: [] }
+        payment_confirmed_at: "2026-07-20T00:00:00Z",
+        stripe_payment_session_id: "cs_test_123",
+      })
     );
-    const second = await markNatoriCommissionPaid("proj-1", "cs_test_123", 8000);
-    expect(second).toEqual({ kind: "already-paid" });
-
-    // メールは1通目の配送でのみ送られる（依頼者宛 + ナトリ宛の2通。2通目の配送では0通）
-    expect(mockSend).toHaveBeenCalledTimes(2);
-  });
-
-  it("案件が見つからなければ not-found", async () => {
-    const { markNatoriCommissionPaid } = await loadService();
-    projectsTable(null);
-
-    const result = await markNatoriCommissionPaid("missing", "cs_test_123", 8000);
-    expect(result).toEqual({ kind: "not-found" });
-  });
-
-  it("入金額が quoted_amount と不一致なら rough に進めず、警告メモ + 要確認メール", async () => {
-    const { markNatoriCommissionPaid } = await loadService();
-    const { updates } = projectsTable(
-      makeProjectRow({ status: "awaiting_payment", quoted_amount: 12000 })
-    );
-
-    const result = await markNatoriCommissionPaid("proj-1", "cs_test_123", 5000);
-
-    expect(result).toEqual({ kind: "amount-mismatch" });
-    // ステータス・入金確定は書かず、警告メモの追記だけ
-    expect(updates).toHaveLength(1);
-    expect(updates[0].status).toBeUndefined();
-    expect(updates[0].payment_confirmed_at).toBeUndefined();
-    expect(String(updates[0].note)).toContain("要確認");
-    expect(String(updates[0].note)).toContain("入金金額不一致");
-
-    // 要確認メールがナトリ宛に飛ぶ
-    expect(mockSend).toHaveBeenCalledTimes(1);
-    const mail = mockSend.mock.calls[0][0] as { to: string[]; subject: string; text: string };
-    expect(mail.to).toEqual(["natori-test@example.com"]);
-    expect(mail.subject).toContain("要確認");
-    expect(mail.text).toContain("cs_test_123");
-  });
-
-  it("入金額が quoted_amount と一致すれば通常どおり rough に進む", async () => {
-    const { markNatoriCommissionPaid } = await loadService();
-    const { updates } = projectsTable(
-      makeProjectRow({ status: "awaiting_payment", quoted_amount: 12000 })
-    );
-
-    const result = await markNatoriCommissionPaid("proj-1", "cs_test_123", 12000);
-    expect(result).toEqual({ kind: "ok" });
-    expect(updates[0].status).toBe("rough");
-  });
-
-  it("入金イベントが遅れて届いても、制作中の案件は rough に巻き戻さない（入金記録のみ）", async () => {
-    const { markNatoriCommissionPaid } = await loadService();
-    const { updates } = projectsTable(
-      makeProjectRow({ status: "lineart", payment_confirmed_at: null })
-    );
-
-    const result = await markNatoriCommissionPaid("proj-1", "cs_test_123", 8000);
-
-    expect(result).toEqual({ kind: "ok" });
-    expect(updates).toHaveLength(1);
-    // ステータス・次アクションは触らず、入金記録とメモだけ
-    expect(updates[0].status).toBeUndefined();
-    expect(updates[0].next_action).toBeUndefined();
-    expect(updates[0].payment_confirmed_at).toBeTruthy();
-    expect(String(updates[0].note)).toContain("入金確認（Stripe）");
-
-    // ナトリ宛通知（2通目）はステータス据え置きの文面になる
-    const natoriMail = mockSend.mock.calls[1][0] as { text: string };
-    expect(natoriMail.text).toContain("ステータスは変更していません");
-  });
-
-  it("quoted_amount 未保存の既存案件は照合をスキップして通常どおり進む", async () => {
-    const { markNatoriCommissionPaid } = await loadService();
-    const { updates } = projectsTable(
-      makeProjectRow({ status: "awaiting_payment", quoted_amount: null })
-    );
-
-    const result = await markNatoriCommissionPaid("proj-1", "cs_test_123", 5000);
-    expect(result).toEqual({ kind: "ok" });
-    expect(updates[0].status).toBe("rough");
-  });
-
-  it("更新に失敗したら db-error を返し、通知メールは送らない", async () => {
-    const { markNatoriCommissionPaid } = await loadService();
-    projectsTable(makeProjectRow(), { updateError: { message: "boom" } });
-
-    const result = await markNatoriCommissionPaid("proj-1", "cs_test_123", 8000);
-    expect(result).toEqual({ kind: "db-error" });
+    mockRpc.mockResolvedValue({
+      data: [{ result: "already-paid", advanced: false, new_event: false, recorded_amount: 8000 }],
+      error: null,
+    });
+    await expect(markNatoriCommissionPaid("proj-1", "cs_test_123", 8000)).resolves.toEqual({ kind: "already-paid" });
     expect(mockSend).not.toHaveBeenCalled();
   });
 
-  it("通知メールが失敗しても入金反映自体は ok（メールはベストエフォート）", async () => {
+  it("別sessionの追加入金は重複入金として台帳と警告を残す", async () => {
     const { markNatoriCommissionPaid } = await loadService();
-    projectsTable(makeProjectRow());
-    mockSend.mockResolvedValue({ error: { message: "mail down" } });
+    installDb(
+      makeProjectRow({
+        payment_confirmed_at: "2026-07-20T00:00:00Z",
+        stripe_payment_session_id: "cs_original",
+      })
+    );
+    mockRpc.mockResolvedValue({
+      data: [{ result: "duplicate-payment", advanced: false, new_event: true, recorded_amount: 8000 }],
+      error: null,
+    });
+    await expect(markNatoriCommissionPaid("proj-1", "cs_second", 8000)).resolves.toEqual({ kind: "already-paid" });
+    expect(mockSend).toHaveBeenCalledTimes(1);
+  });
 
-    const result = await markNatoriCommissionPaid("proj-1", "cs_test_123", 8000);
-    expect(result).toEqual({ kind: "ok" });
+  it("金額不一致は入金確定せず、監査台帳へ記録する", async () => {
+    const { markNatoriCommissionPaid } = await loadService();
+    installDb(makeProjectRow({ quoted_amount: 12000, payment_quote_id: "quote-1" }));
+    mockRpc.mockResolvedValue({
+      data: [{ result: "amount-mismatch", advanced: false, new_event: true, recorded_amount: 5000 }],
+      error: null,
+    });
+    await expect(markNatoriCommissionPaid("proj-1", "cs_mismatch", 5000)).resolves.toEqual({ kind: "amount-mismatch" });
+    expect(mockSend).toHaveBeenCalledTimes(1);
+  });
+
+  it("旧見積もりのリンクからの入金は制作開始せず警告する", async () => {
+    const { markNatoriCommissionPaid } = await loadService();
+    installDb(makeProjectRow({ payment_quote_id: "quote-current" }));
+    mockRpc.mockResolvedValue({
+      data: [{ result: "quote-mismatch", advanced: false, new_event: true, recorded_amount: 12000 }],
+      error: null,
+    });
+    await expect(
+      markNatoriCommissionPaid("proj-1", "cs_stale", 12000, "quote-old")
+    ).resolves.toEqual({ kind: "quote-mismatch" });
+    expect(mockRpc).toHaveBeenCalledWith("natori_record_stripe_payment", expect.objectContaining({
+      p_quote_id: "quote-old",
+    }));
+    expect(mockSend).toHaveBeenCalledTimes(1);
   });
 });
 
-/* ---------- sendNatoriOrderMail ---------- */
-
 describe("sendNatoriOrderMail (estimate)", () => {
-  it("見積もりメールを送り、案件を quoted に進めて送信ログを残す", async () => {
+  it("不変な見積版とpendingログをメール前に保存し、成功後にsentへ進める", async () => {
     const { sendNatoriOrderMail } = await loadService();
-    const { updates, mailLogs } = projectsTable(makeProjectRow({ status: "inquiry" }));
-
+    const db = installDb(makeProjectRow());
     const result = await sendNatoriOrderMail({
       projectId: "proj-1",
       kind: "estimate",
@@ -328,233 +285,121 @@ describe("sendNatoriOrderMail (estimate)", () => {
     });
 
     expect(result.kind).toBe("ok");
-    expect(mockSend).toHaveBeenCalledTimes(1);
-    const mail = mockSend.mock.calls[0][0] as { to: string[]; text: string };
-    expect(mail.to).toEqual(["client@example.com"]);
-
-    // ワンクリック承諾ページのURLが本文に差し込まれる
+    expect(mockRpc).toHaveBeenCalledWith("natori_issue_quote", expect.objectContaining({
+      p_user_id: "owner-1",
+      p_amount: 12000,
+      p_body_snapshot: "本文です",
+    }));
+    expect(db.mailLogInserts[0]).toMatchObject({ status: "pending", quote_id: "quote-1", sent_at: null });
+    expect(db.logsApi.insert.mock.invocationCallOrder[0]).toBeLessThan(mockSend.mock.invocationCallOrder[0]);
+    expect(db.mailLogUpdates).toContainEqual(expect.objectContaining({ status: "sent" }));
+    const mail = mockSend.mock.calls[0][0] as { text: string };
     expect(mail.text).toContain("/natori/quote/");
-    // DB にはトークンの SHA-256 ハッシュと有効期限を保存し、旧承諾をリセット
-    expect(String(updates[0].quote_accept_token_hash)).toMatch(/^[0-9a-f]{64}$/);
-    expect(updates[0].quote_token_expires_at).toBeTruthy();
-    expect(updates[0].quote_accepted_at).toBeNull();
-    // 本文のURLとDBのハッシュが対応している
-    const urlMatch = (mail.text as string).match(/\/natori\/quote\/([A-Za-z0-9_-]+)/);
-    expect(urlMatch).toBeTruthy();
-
-    expect(updates).toHaveLength(1);
-    expect(updates[0].amount).toBe(12000);
-    expect(updates[0].status).toBe("quoted");
-    // 実際に送った宛先が client_email カラムへ反映される
-    expect(updates[0].client_email).toBe("client@example.com");
-    expect(String(updates[0].note)).toContain("見積もりメール送信");
-    expect(String(updates[0].note)).toContain("client@example.com");
-
-    // 送信ログは natori_order_mail_logs が正
-    expect(mailLogs).toHaveLength(1);
-    expect(mailLogs[0]).toMatchObject({
-      project_id: "11111111-2222-3333-4444-555555555555",
-      kind: "estimate",
-      to_email: "client@example.com",
-      amount: 12000,
-      link_url: null,
-    });
   });
 
-  it("送信ログの書き込みに失敗しても、メール送信済みなので処理は続行して ok", async () => {
+  it("pendingログを保存できなければメールを送らない", async () => {
     const { sendNatoriOrderMail } = await loadService();
-    const { updates } = projectsTable(makeProjectRow({ status: "inquiry" }), {
-      logError: { message: "log table down" },
-    });
-
-    const result = await sendNatoriOrderMail({
+    installDb(makeProjectRow(), { logInsertError: { message: "log down" } });
+    await expect(sendNatoriOrderMail({
       projectId: "proj-1",
       kind: "estimate",
       to: "client@example.com",
       subject: "お見積もり",
       body: "本文です",
       amount: 12000,
-    });
-
-    expect(result.kind).toBe("ok");
-    expect(updates).toHaveLength(1);
-  });
-
-  it("すでに入金待ちの案件へ再送してもステータスを巻き戻さない", async () => {
-    const { sendNatoriOrderMail } = await loadService();
-    const { updates } = projectsTable(makeProjectRow({ status: "awaiting_payment" }));
-
-    const result = await sendNatoriOrderMail({
-      projectId: "proj-1",
-      kind: "estimate",
-      to: "client@example.com",
-      subject: "お見積もり（再送）",
-      body: "本文です",
-      amount: 12000,
-    });
-
-    expect(result.kind).toBe("ok");
-    expect(updates).toHaveLength(1);
-    // ステータス変更は含まれない（送信ログと金額のみ）
-    expect(updates[0].status).toBeUndefined();
-  });
-
-  it("RESEND_API_KEY 未設定なら not-configured で何もしない", async () => {
-    vi.stubEnv("RESEND_API_KEY", "");
-    const { sendNatoriOrderMail } = await loadService();
-    projectsTable(makeProjectRow());
-
-    const result = await sendNatoriOrderMail({
-      projectId: "proj-1",
-      kind: "estimate",
-      to: "client@example.com",
-      subject: "お見積もり",
-      body: "本文です",
-      amount: 12000,
-    });
-    expect(result.kind).toBe("not-configured");
+    })).resolves.toEqual({ kind: "db-error" });
     expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it("メール失敗をfailedとして記録し、案件をquotedに進めない", async () => {
+    const { sendNatoriOrderMail } = await loadService();
+    const db = installDb(makeProjectRow());
+    mockSend.mockResolvedValue({ error: { message: "mail down" } });
+    await expect(sendNatoriOrderMail({
+      projectId: "proj-1",
+      kind: "estimate",
+      to: "client@example.com",
+      subject: "お見積もり",
+      body: "本文です",
+      amount: 12000,
+    })).resolves.toEqual({ kind: "mail-error" });
+    expect(db.mailLogUpdates).toContainEqual(expect.objectContaining({ status: "failed" }));
+    expect(db.projectUpdates.some((update) => update.status === "quoted")).toBe(false);
   });
 });
 
 describe("sendNatoriOrderMail (payment)", () => {
-  it("1回限りの支払いリンクを発行して本文へ差し込み、awaiting_payment に進める", async () => {
+  const input = {
+    projectId: "proj-1",
+    kind: "payment" as const,
+    to: "client@example.com",
+    subject: "お支払いのご案内",
+    body: PAYMENT_LINK_PLACEHOLDER,
+    amount: 12000,
+  };
+
+  it("承諾済み見積版と同額の場合だけ1回制限リンクを発行し、メール前に保存する", async () => {
     const { sendNatoriOrderMail } = await loadService();
-    const { updates, mailLogs } = projectsTable(makeProjectRow({ status: "quoted" }));
-
-    const result = await sendNatoriOrderMail({
-      projectId: "proj-1",
-      kind: "payment",
-      to: "client@example.com",
-      subject: "お支払いのご案内",
-      body: `リンクはこちら\n${PAYMENT_LINK_PLACEHOLDER}\n以上`,
-      amount: 12000,
+    const db = installDb(makeProjectRow({ status: "quoted", active_quote_id: "quote-1" }), {
+      quote: acceptedQuote,
     });
-
-    expect(result).toEqual({ kind: "ok", paymentLinkUrl: "https://pay.example.com/link-abc" });
-
-    // 送信ログに支払いリンク URL が記録される
-    expect(mailLogs).toHaveLength(1);
-    expect(mailLogs[0]).toMatchObject({
-      kind: "payment",
-      to_email: "client@example.com",
-      amount: 12000,
-      link_url: "https://pay.example.com/link-abc",
+    await expect(sendNatoriOrderMail(input)).resolves.toEqual({
+      kind: "ok",
+      paymentLinkUrl: "https://pay.example.com/link-abc",
     });
-
-    // Payment Link は Webhook 分岐用 metadata と1回制限、二重発行防止の
-    // idempotency key つきで作られる
-    expect(mockPricesCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ currency: "jpy", unit_amount: 12000 }),
-      expect.objectContaining({ idempotencyKey: expect.stringContaining("natori-plink:") })
-    );
     expect(mockLinksCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        metadata: {
-          kind: "natori_commission",
-          projectId: "11111111-2222-3333-4444-555555555555",
-        },
+        metadata: expect.objectContaining({ projectId: expect.any(String), quoteId: "quote-1" }),
         restrictions: { completed_sessions: { limit: 1 } },
       }),
-      expect.objectContaining({ idempotencyKey: expect.stringContaining("natori-plink:") })
+      expect.objectContaining({ idempotencyKey: expect.stringContaining(":quote-1:12000:link") })
     );
-
-    // 初回発行（payment_link_id なし）では旧リンク無効化は呼ばれない
-    expect(mockLinksUpdate).not.toHaveBeenCalled();
-
-    // 本文のプレースホルダは実URLに置き換わって送信される
-    const mail = mockSend.mock.calls[0][0] as { text: string };
-    expect(mail.text).toContain("https://pay.example.com/link-abc");
-    expect(mail.text).not.toContain(PAYMENT_LINK_PLACEHOLDER);
-
-    expect(updates[0].status).toBe("awaiting_payment");
-    expect(String(updates[0].note)).toContain("https://pay.example.com/link-abc");
-    // 発行した link.id と確定金額を保存（再発行時の無効化・入金金額照合に使う）
-    expect(updates[0].payment_link_id).toBe("plink_new");
-    expect(updates[0].quoted_amount).toBe(12000);
+    const persisted = db.projectUpdates.find((update) => update.payment_link_id === "plink_new");
+    expect(persisted).toMatchObject({
+      payment_link_url: "https://pay.example.com/link-abc",
+      payment_quote_id: "quote-1",
+      quoted_amount: 12000,
+    });
+    expect(db.projectsApi.update.mock.invocationCallOrder[1]).toBeLessThan(mockSend.mock.invocationCallOrder[0]);
   });
 
-  it("再発行時は旧 Payment Link を無効化してから新リンクを発行する", async () => {
+  it("同じ見積版への再送は既存リンクを再利用し、Stripeで二重発行しない", async () => {
     const { sendNatoriOrderMail } = await loadService();
-    const { updates } = projectsTable(
-      makeProjectRow({ status: "awaiting_payment", payment_link_id: "plink_old", quoted_amount: 10000 })
-    );
-
-    const result = await sendNatoriOrderMail({
-      projectId: "proj-1",
-      kind: "payment",
-      to: "client@example.com",
-      subject: "お支払いのご案内（再送）",
-      body: PAYMENT_LINK_PLACEHOLDER,
-      amount: 12000,
+    installDb(makeProjectRow({
+      status: "awaiting_payment",
+      active_quote_id: "quote-1",
+      payment_quote_id: "quote-1",
+      payment_link_id: "plink_existing",
+      payment_link_url: "https://pay.example.com/existing",
+      payment_link_status: "sent",
+      quoted_amount: 12000,
+    }), { quote: acceptedQuote });
+    await expect(sendNatoriOrderMail(input)).resolves.toEqual({
+      kind: "ok",
+      paymentLinkUrl: "https://pay.example.com/existing",
     });
-
-    expect(result.kind).toBe("ok");
-    expect(mockLinksUpdate).toHaveBeenCalledWith("plink_old", { active: false });
-    // 無効化 → 新規発行 の順
-    expect(mockLinksUpdate.mock.invocationCallOrder[0]).toBeLessThan(
-      mockLinksCreate.mock.invocationCallOrder[0]
-    );
-    // 新しい link.id と金額で上書き
-    expect(updates[0].payment_link_id).toBe("plink_new");
-    expect(updates[0].quoted_amount).toBe(12000);
-  });
-
-  it("旧リンクが Stripe 側に無い（resource_missing）場合は無効化をスキップして続行する", async () => {
-    const { sendNatoriOrderMail } = await loadService();
-    projectsTable(makeProjectRow({ payment_link_id: "plink_gone" }));
-    mockLinksUpdate.mockRejectedValue(
-      Object.assign(new Error("No such payment link"), { code: "resource_missing" })
-    );
-
-    const result = await sendNatoriOrderMail({
-      projectId: "proj-1",
-      kind: "payment",
-      to: "client@example.com",
-      subject: "お支払いのご案内",
-      body: PAYMENT_LINK_PLACEHOLDER,
-      amount: 12000,
-    });
-
-    expect(result.kind).toBe("ok");
-    expect(mockLinksCreate).toHaveBeenCalledTimes(1);
-  });
-
-  it("旧リンクの無効化がその他のエラーで失敗したら中断（旧リンクを生かしたまま新発行しない）", async () => {
-    const { sendNatoriOrderMail } = await loadService();
-    projectsTable(makeProjectRow({ payment_link_id: "plink_old" }));
-    mockLinksUpdate.mockRejectedValue(new Error("stripe down"));
-
-    const result = await sendNatoriOrderMail({
-      projectId: "proj-1",
-      kind: "payment",
-      to: "client@example.com",
-      subject: "お支払いのご案内",
-      body: PAYMENT_LINK_PLACEHOLDER,
-      amount: 12000,
-    });
-
-    expect(result.kind).toBe("stripe-error");
+    expect(mockPricesCreate).not.toHaveBeenCalled();
     expect(mockLinksCreate).not.toHaveBeenCalled();
-    expect(mockSend).not.toHaveBeenCalled();
+    const mail = mockSend.mock.calls[0][0] as { text: string };
+    expect(mail.text).toContain("https://pay.example.com/existing");
   });
 
-  it("Stripe のリンク生成に失敗したらメールを送らず stripe-error", async () => {
+  it("未承諾・金額相違・入金済みでは支払いリンクを発行しない", async () => {
     const { sendNatoriOrderMail } = await loadService();
-    const { updates } = projectsTable(makeProjectRow({ status: "quoted" }));
-    mockLinksCreate.mockRejectedValue(new Error("stripe down"));
+    installDb(makeProjectRow({ status: "quoted", active_quote_id: "quote-1" }));
+    await expect(sendNatoriOrderMail(input)).resolves.toEqual({ kind: "quote-not-accepted" });
 
-    const result = await sendNatoriOrderMail({
-      projectId: "proj-1",
-      kind: "payment",
-      to: "client@example.com",
-      subject: "お支払いのご案内",
-      body: PAYMENT_LINK_PLACEHOLDER,
-      amount: 12000,
+    installDb(makeProjectRow({ status: "quoted", active_quote_id: "quote-1" }), {
+      quote: { ...acceptedQuote, amount: 13000 },
     });
+    await expect(sendNatoriOrderMail(input)).resolves.toEqual({ kind: "amount-mismatch" });
 
-    expect(result.kind).toBe("stripe-error");
-    expect(mockSend).not.toHaveBeenCalled();
-    expect(updates).toHaveLength(0);
+    installDb(makeProjectRow({
+      status: "awaiting_payment",
+      active_quote_id: "quote-1",
+      payment_confirmed_at: "2026-07-20T00:00:00Z",
+    }), { quote: acceptedQuote });
+    await expect(sendNatoriOrderMail(input)).resolves.toEqual({ kind: "already-paid" });
+    expect(mockLinksCreate).not.toHaveBeenCalled();
   });
 });

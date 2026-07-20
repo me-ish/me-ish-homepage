@@ -264,7 +264,7 @@ describe("natori_commission routing", () => {
     );
     const res = await POST(makeReq());
     expect(res.status).toBe(200);
-    expect(mockMarkPaid).toHaveBeenCalledWith(NATORI_PROJECT_ID, "cs_test_1", 8000);
+    expect(mockMarkPaid).toHaveBeenCalledWith(NATORI_PROJECT_ID, "cs_test_1", 8000, null);
   });
 
   it("projectId が UUID でなければ呼ばない", async () => {

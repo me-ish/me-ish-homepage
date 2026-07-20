@@ -64,6 +64,7 @@ export type NatoriPresetMutationResult =
   | { kind: "db-error" };
 
 export async function updateNatoriAdminPresetConfig(
+  userId: string,
   id: string,
   config: unknown
 ): Promise<NatoriPresetMutationResult> {
@@ -73,6 +74,7 @@ export async function updateNatoriAdminPresetConfig(
     // config はリクエストJSON由来なので JSON 直列化可能であることが保証されている
     .update({ config: config as Json })
     .eq("id", id)
+    .eq("user_id", userId)
     .select("id")
     .maybeSingle();
   if (error) {
@@ -101,6 +103,7 @@ export async function setNatoriAdminDefaultPreset(
     .from(TABLE)
     .update({ is_default: true })
     .eq("id", id)
+    .eq("user_id", userId)
     .select("id")
     .maybeSingle();
   if (error) {

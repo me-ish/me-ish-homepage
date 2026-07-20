@@ -2,6 +2,7 @@
 // 認可（合言葉キー / ログイン）はサーバー側 API に任せるため、
 // ブラウザ Supabase ではなく /api/natori/admin/pricing を経由する。
 import { createDefaultNatoriPricingConfig } from "@/features/natori/lib/pricing";
+import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import type { NatoriPricingConfig } from "@/features/natori/types/pricing";
 
 export type NatoriPricingPreset = {
@@ -71,7 +72,7 @@ export async function seedDefaultPricingPresets(): Promise<NatoriPricingPreset[]
   }));
   const response = await fetch(API_PATH, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
     body: JSON.stringify({ seeds }),
   });
   if (!response.ok) {
@@ -87,7 +88,7 @@ export async function updatePricingPresetConfig(
 ): Promise<void> {
   const response = await fetch(API_PATH, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
     body: JSON.stringify({ kind: "config", id, config }),
   });
   if (!response.ok) {
@@ -98,7 +99,7 @@ export async function updatePricingPresetConfig(
 export async function setDefaultPricingPreset(id: string): Promise<void> {
   const response = await fetch(API_PATH, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
     body: JSON.stringify({ kind: "default", id }),
   });
   if (!response.ok) {

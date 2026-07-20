@@ -15,7 +15,7 @@ const intlMiddleware = createMiddleware(routing);
 
 export default async function middleware(request: NextRequest) {
   // natori 管理画面の合言葉キー: `?natori-key=<NATORI_DASHBOARD_KEY>` 付きで
-  // 開くと 1 年有効の Cookie をセットし、キーを消した URL にリダイレクトする。
+  // 開くと 8 時間有効の Cookie をセットし、キーを消した URL にリダイレクトする。
   // Cookie 値はキー平文ではなく HMAC トークン（漏洩してもキーは復元不可）。
   // 判定本体は features/natori/server/requireNatoriAdmin.ts の
   // canUseNatoriManagement を参照。
@@ -47,7 +47,7 @@ export default async function middleware(request: NextRequest) {
       secure: true,
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 365,
+      maxAge: 60 * 60 * 8,
     });
     return response;
   }

@@ -57,6 +57,10 @@ export default function InquiryDetailPanel({
 }: InquiryDetailPanelProps) {
   const meta = natoriProjectStatusMeta[project.status];
   const receivedISO = project.startDate ?? project.dueDate;
+  const referenceImages = [
+    ...(project.referenceImageUrls ?? []),
+    ...view.refImages,
+  ];
 
   return (
     <div
@@ -124,14 +128,14 @@ export default function InquiryDetailPanel({
           ) : null}
 
           {/* キャラクター資料 */}
-          {view.refImages.length > 0 || view.refText ? (
+          {referenceImages.length > 0 || view.refText ? (
             <section>
               <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700">
                 キャラクター資料
               </h3>
-              {view.refImages.length > 0 ? (
+              {referenceImages.length > 0 ? (
                 <ul className="flex flex-wrap gap-2">
-                  {view.refImages.map((url, index) => (
+                  {referenceImages.map((url, index) => (
                     <li key={url}>
                       <a
                         href={url}
@@ -139,7 +143,7 @@ export default function InquiryDetailPanel({
                         rel="noopener noreferrer"
                         title="クリックで原寸表示"
                       >
-                        {/* 依頼者がアップロードした公開バケット画像のプレビュー */}
+                        {/* 非公開バケットから発行した短時間署名URLのプレビュー */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={url}

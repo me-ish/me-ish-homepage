@@ -73,6 +73,11 @@ export type NatoriProject = {
   priority?: NatoriProjectPriority;
   note?: string;
   paymentConfirmedAt?: string;
+  paidAt?: string;
+  paidAmount?: number;
+  completedAt?: string;
+  /** 非公開バケットから都度発行した短時間署名URL */
+  referenceImageUrls?: string[];
 };
 
 export type NatoriProjectStatusMeta = {

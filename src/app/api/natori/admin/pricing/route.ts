@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import {
   listNatoriAdminPresets,
@@ -44,6 +45,8 @@ export async function POST(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
 
   const payload = (await request.json().catch(() => null)) as unknown;
   if (!isObject(payload) || !Array.isArray(payload.seeds)) {
@@ -95,6 +98,8 @@ export async function PATCH(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
 
   const payload = (await request.json().catch(() => null)) as unknown;
   if (!isObject(payload)) {
@@ -109,7 +114,11 @@ export async function PATCH(request: Request) {
     if (!isObject(payload.config)) {
       return NextResponse.json({ error: "config is required" }, { status: 400 });
     }
-    const result = await updateNatoriAdminPresetConfig(id, payload.config);
+    const userId = await resolveNatoriActingUserId();
+    if (!userId) {
+      return NextResponse.json({ error: NATORI_OWNER_UNRESOLVED_MESSAGE }, { status: 500 });
+    }
+    const result = await updateNatoriAdminPresetConfig(userId, id, payload.config);
     if (result.kind === "db-error") {
       return NextResponse.json({ error: "Failed to update preset" }, { status: 500 });
     }

@@ -1301,33 +1301,86 @@ export type Database = {
           },
         ]
       }
+      natori_inquiry_reference_files: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "natori_inquiry_reference_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "natori_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       natori_order_mail_logs: {
         Row: {
           amount: number
+          body_snapshot: string
+          created_at: string
+          error_message: string | null
           id: number
           kind: string
           link_url: string | null
           project_id: string
-          sent_at: string
+          quote_id: string | null
+          request_id: string
+          sent_at: string | null
+          status: string
+          subject: string
           to_email: string
+          updated_at: string
         }
         Insert: {
           amount: number
+          body_snapshot: string
+          created_at?: string
+          error_message?: string | null
           id?: never
           kind: string
           link_url?: string | null
           project_id: string
-          sent_at?: string
+          quote_id?: string | null
+          request_id: string
+          sent_at?: string | null
+          status: string
+          subject: string
           to_email: string
+          updated_at?: string
         }
         Update: {
           amount?: number
+          body_snapshot?: string
+          created_at?: string
+          error_message?: string | null
           id?: never
           kind?: string
           link_url?: string | null
           project_id?: string
-          sent_at?: string
+          quote_id?: string | null
+          request_id?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string
           to_email?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -1337,13 +1390,70 @@ export type Database = {
             referencedRelation: "natori_projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "natori_order_mail_logs_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "natori_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      natori_payment_transactions: {
+        Row: {
+          amount: number
+          id: string
+          note: string | null
+          project_id: string
+          quote_id: string | null
+          received_at: string
+          status: string
+          stripe_session_id: string | null
+        }
+        Insert: {
+          amount: number
+          id?: string
+          note?: string | null
+          project_id: string
+          quote_id?: string | null
+          received_at?: string
+          status: string
+          stripe_session_id?: string | null
+        }
+        Update: {
+          amount?: number
+          id?: string
+          note?: string | null
+          project_id?: string
+          quote_id?: string | null
+          received_at?: string
+          status?: string
+          stripe_session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "natori_payment_transactions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "natori_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "natori_payment_transactions_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "natori_quotes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       natori_projects: {
         Row: {
+          active_quote_id: string | null
           amount: number
           client_email: string | null
           client_name: string
+          completed_at: string | null
           created_at: string
           delivery_accepted_at: string | null
           delivery_plan: string
@@ -1354,8 +1464,13 @@ export type Database = {
           id: string
           next_action: string
           note: string | null
+          paid_amount: number | null
+          paid_at: string | null
           payment_confirmed_at: string | null
           payment_link_id: string | null
+          payment_link_status: string | null
+          payment_link_url: string | null
+          payment_quote_id: string | null
           priority: string | null
           quote_accept_token_hash: string | null
           quote_accepted_amount: number | null
@@ -1364,15 +1479,18 @@ export type Database = {
           quoted_amount: number | null
           start_date: string | null
           status: string
+          stripe_payment_session_id: string | null
           title: string
           type: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          active_quote_id?: string | null
           amount?: number
           client_email?: string | null
           client_name: string
+          completed_at?: string | null
           created_at?: string
           delivery_accepted_at?: string | null
           delivery_plan?: string
@@ -1383,8 +1501,13 @@ export type Database = {
           id?: string
           next_action?: string
           note?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
           payment_confirmed_at?: string | null
           payment_link_id?: string | null
+          payment_link_status?: string | null
+          payment_link_url?: string | null
+          payment_quote_id?: string | null
           priority?: string | null
           quote_accept_token_hash?: string | null
           quote_accepted_amount?: number | null
@@ -1393,15 +1516,18 @@ export type Database = {
           quoted_amount?: number | null
           start_date?: string | null
           status?: string
+          stripe_payment_session_id?: string | null
           title: string
           type: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          active_quote_id?: string | null
           amount?: number
           client_email?: string | null
           client_name?: string
+          completed_at?: string | null
           created_at?: string
           delivery_accepted_at?: string | null
           delivery_plan?: string
@@ -1412,8 +1538,13 @@ export type Database = {
           id?: string
           next_action?: string
           note?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
           payment_confirmed_at?: string | null
           payment_link_id?: string | null
+          payment_link_status?: string | null
+          payment_link_url?: string | null
+          payment_quote_id?: string | null
           priority?: string | null
           quote_accept_token_hash?: string | null
           quote_accepted_amount?: number | null
@@ -1422,12 +1553,90 @@ export type Database = {
           quoted_amount?: number | null
           start_date?: string | null
           status?: string
+          stripe_payment_session_id?: string | null
           title?: string
           type?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "natori_projects_active_quote_id_fkey"
+            columns: ["active_quote_id"]
+            isOneToOne: false
+            referencedRelation: "natori_quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "natori_projects_payment_quote_id_fkey"
+            columns: ["payment_quote_id"]
+            isOneToOne: false
+            referencedRelation: "natori_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      natori_quotes: {
+        Row: {
+          accepted_at: string | null
+          amount: number
+          body_snapshot: string
+          client_name: string
+          created_at: string
+          expires_at: string
+          id: string
+          project_id: string
+          subject: string
+          superseded_at: string | null
+          title: string
+          to_email: string
+          token_hash: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          accepted_at?: string | null
+          amount: number
+          body_snapshot: string
+          client_name: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          project_id: string
+          subject: string
+          superseded_at?: string | null
+          title: string
+          to_email: string
+          token_hash: string
+          user_id: string
+          version: number
+        }
+        Update: {
+          accepted_at?: string | null
+          amount?: number
+          body_snapshot?: string
+          client_name?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          project_id?: string
+          subject?: string
+          superseded_at?: string | null
+          title?: string
+          to_email?: string
+          token_hash?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "natori_quotes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "natori_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       natori_user_profiles: {
         Row: {
@@ -2140,6 +2349,76 @@ export type Database = {
           total_amount: number
           updated_count: number
         }[]
+      }
+      natori_accept_quote: {
+        Args: { p_token_hash: string }
+        Returns: {
+          accepted_at: string | null
+          project_id: string | null
+          quote_id: string | null
+          result: string
+        }[]
+      }
+      natori_confirm_manual_payment: {
+        Args: {
+          p_next_action: string
+          p_project_id: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      natori_create_project_with_tasks: {
+        Args: {
+          p_project: Json
+          p_reference_paths: Json
+          p_tasks: Json
+          p_user_id: string
+        }
+        Returns: string
+      }
+      natori_delete_project: {
+        Args: { p_project_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      natori_issue_quote: {
+        Args: {
+          p_amount: number
+          p_body_snapshot: string
+          p_client_name: string
+          p_expires_at: string
+          p_project_id: string
+          p_subject: string
+          p_title: string
+          p_to_email: string
+          p_token_hash: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      natori_record_stripe_payment: {
+        Args: {
+          p_amount: number | null
+          p_project_id: string
+          p_quote_id: string | null
+          p_session_id: string
+        }
+        Returns: {
+          advanced: boolean
+          new_event: boolean
+          recorded_amount: number | null
+          result: string
+        }[]
+      }
+      natori_update_task_and_status: {
+        Args: {
+          p_done: boolean
+          p_next_action: string
+          p_project_id: string
+          p_status: string
+          p_task_key: string
+          p_user_id: string
+        }
+        Returns: boolean
       }
       aura_claim_first20_free: {
         Args: { p_email: string; p_request_id?: string }

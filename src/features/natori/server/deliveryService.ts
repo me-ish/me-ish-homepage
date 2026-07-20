@@ -14,6 +14,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getNextActionForStatus } from "@/features/natori/lib/projects";
 import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { sendNatoriNoticeMail } from "@/features/natori/server/orderMailService";
+import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
 import type { NatoriProjectStatus } from "@/features/natori/types/projects";
 
 const BUCKET = "natori-deliveries";
@@ -21,8 +22,8 @@ const TOKEN_RE = /^[A-Za-z0-9_-]{20,64}$/;
 
 export const DELIVERY_MAX_FILES_PER_FOLDER = 10;
 export const DELIVERY_MAX_FILE_BYTES = 200 * 1024 * 1024; // 200MB
-/** 納品ページを開くたびに発行するダウンロードURLの有効秒数（24時間） */
-const DOWNLOAD_URL_TTL_SECONDS = 60 * 60 * 24;
+/** 納品ページを開くたびに発行するダウンロードURLの有効秒数（1時間） */
+const DOWNLOAD_URL_TTL_SECONDS = 60 * 60;
 
 export type NatoriDeliveryFolder = "rough" | "final";
 
@@ -65,7 +66,16 @@ function toFileView(row: FileRow): NatoriDeliveryFile {
 export async function listNatoriDeliveryFiles(
   projectId: string
 ): Promise<NatoriDeliveryFile[] | null> {
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return null;
   const admin = supabaseAdmin();
+  const { data: ownedProject, error: ownerError } = await admin
+    .from("natori_projects")
+    .select("id")
+    .eq("id", projectId)
+    .eq("user_id", ownerId)
+    .maybeSingle();
+  if (ownerError || !ownedProject) return null;
   const { data, error } = await admin
     .from("natori_delivery_files")
     .select("id, project_id, folder, storage_path, file_name, size_bytes, created_at")
@@ -99,11 +109,14 @@ export async function signNatoriDeliveryUpload(input: {
 }): Promise<SignDeliveryUploadResult> {
   if (input.sizeBytes > DELIVERY_MAX_FILE_BYTES) return { kind: "too-large" };
 
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return { kind: "not-found" };
   const admin = supabaseAdmin();
   const { data: project, error: projectError } = await admin
     .from("natori_projects")
     .select("id")
     .eq("id", input.projectId)
+    .eq("user_id", ownerId)
     .maybeSingle();
   if (projectError) {
     console.error("[natori-delivery] project lookup failed", projectError);
@@ -154,10 +167,12 @@ export async function signNatoriDeliveryUpload(input: {
 }
 
 export async function deleteNatoriDeliveryFile(fileId: string): Promise<boolean> {
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return false;
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from("natori_delivery_files")
-    .select("id, storage_path")
+    .select("id, project_id, storage_path")
     .eq("id", fileId)
     .maybeSingle();
   if (error) {
@@ -165,6 +180,14 @@ export async function deleteNatoriDeliveryFile(fileId: string): Promise<boolean>
     return false;
   }
   if (!data) return true; // 既に無い
+
+  const { data: ownedProject, error: ownerError } = await admin
+    .from("natori_projects")
+    .select("id")
+    .eq("id", data.project_id as string)
+    .eq("user_id", ownerId)
+    .maybeSingle();
+  if (ownerError || !ownedProject) return false;
 
   // 実体の削除はベストエフォート（失敗しても台帳は消して見た目を揃える）
   const { error: removeError } = await admin.storage
@@ -246,6 +269,7 @@ type DeliveryProjectRow = {
   note: string | null;
   delivery_accepted_at: string | null;
   delivery_token_expires_at: string | null;
+  payment_confirmed_at: string | null;
 };
 
 async function fetchDeliveryRow(token: string): Promise<DeliveryProjectRow | null> {
@@ -254,7 +278,7 @@ async function fetchDeliveryRow(token: string): Promise<DeliveryProjectRow | nul
   const { data, error } = await admin
     .from("natori_projects")
     .select(
-      "id, title, client_name, status, note, delivery_accepted_at, delivery_token_expires_at"
+      "id, title, client_name, status, note, delivery_accepted_at, delivery_token_expires_at, payment_confirmed_at"
     )
     .eq("delivery_token_hash", hashToken(token))
     .maybeSingle();
@@ -266,8 +290,6 @@ async function fetchDeliveryRow(token: string): Promise<DeliveryProjectRow | nul
 }
 
 function isExpired(row: DeliveryProjectRow): boolean {
-  // 受け取り確認済みなら期限後もページは「完了」表示のまま見られる
-  if (row.delivery_accepted_at) return false;
   if (!row.delivery_token_expires_at) return false;
   return new Date(row.delivery_token_expires_at).getTime() < Date.now();
 }
@@ -278,6 +300,7 @@ export async function getNatoriDeliveryByToken(
 ): Promise<GetNatoriDeliveryResult> {
   const row = await fetchDeliveryRow(token);
   if (!row) return { kind: "not-found" };
+  if (!row.payment_confirmed_at) return { kind: "not-found" };
   if (isExpired(row)) return { kind: "expired" };
 
   const admin = supabaseAdmin();
@@ -337,6 +360,7 @@ export type AcceptNatoriDeliveryResult =
 export async function acceptNatoriDelivery(token: string): Promise<AcceptNatoriDeliveryResult> {
   const row = await fetchDeliveryRow(token);
   if (!row) return { kind: "not-found" };
+  if (!row.payment_confirmed_at) return { kind: "not-found" };
   if (isExpired(row)) return { kind: "expired" };
   if (row.delivery_accepted_at) return { kind: "already-accepted" };
 
@@ -346,6 +370,7 @@ export async function acceptNatoriDelivery(token: string): Promise<AcceptNatoriD
 
   const update: Record<string, unknown> = {
     delivery_accepted_at: new Date().toISOString(),
+    completed_at: new Date().toISOString(),
     note,
   };
   // 検収 = 実績入り。遷移表で許される場合のみ「対応完了」へ進める
