@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import {
   closeNatoriProject,
@@ -45,7 +46,11 @@ export async function GET() {
     case "normalize-error":
       return NextResponse.json({ error: "Failed to normalize project tasks" }, { status: 500 });
     case "ok":
-      return NextResponse.json({ projects: result.projects, tasks: result.tasks });
+      return NextResponse.json({
+        projects: result.projects,
+        tasks: result.tasks,
+        referenceFiles: result.referenceFiles,
+      });
   }
 }
 
@@ -56,6 +61,8 @@ export async function POST(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
 
   const payload = (await request.json().catch(() => null)) as unknown;
   if (!isObject(payload)) {
@@ -113,6 +120,8 @@ export async function PATCH(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
 
   const payload = (await request.json().catch(() => null)) as unknown;
   if (!isObject(payload)) {
@@ -128,10 +137,21 @@ export async function PATCH(request: Request) {
   if (kind === "task") {
     const taskKey = readString(payload.taskKey);
     const done = payload.done;
-    if (!taskKey || typeof done !== "boolean") {
-      return NextResponse.json({ error: "taskKey and done are required" }, { status: 400 });
+    const status = readString(payload.status);
+    const nextAction = readString(payload.nextAction) ?? "";
+    if (!taskKey || typeof done !== "boolean" || !status || !NATORI_PROJECT_STATUSES.has(status)) {
+      return NextResponse.json(
+        { error: "taskKey, done and a valid status are required" },
+        { status: 400 }
+      );
     }
-    const result = await setNatoriProjectTaskDone(projectId, taskKey, done);
+    const result = await setNatoriProjectTaskDone(
+      projectId,
+      taskKey,
+      done,
+      status,
+      nextAction
+    );
     switch (result.kind) {
       case "db-error":
         return NextResponse.json({ error: "Failed to update task" }, { status: 500 });
@@ -225,6 +245,8 @@ export async function DELETE(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
 
   const id = new URL(request.url).searchParams.get("id");
   if (!id) {

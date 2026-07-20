@@ -7,9 +7,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const mockAdminFrom = vi.fn();
+const { mockAdminFrom, mockRpc } = vi.hoisted(() => ({
+  mockAdminFrom: vi.fn(),
+  mockRpc: vi.fn(),
+}));
 vi.mock("@/lib/supabaseAdmin", () => ({
-  supabaseAdmin: vi.fn(() => ({ from: (...args: unknown[]) => mockAdminFrom(...args) })),
+  supabaseAdmin: vi.fn(() => ({
+    from: (...args: unknown[]) => mockAdminFrom(...args),
+    rpc: (...args: unknown[]) => mockRpc(...args),
+  })),
+}));
+
+vi.mock("@/features/natori/server/natoriOwner", () => ({
+  resolveNatoriActingUserId: vi.fn().mockResolvedValue("owner-1"),
 }));
 
 vi.mock("@/features/natori/server/projectThumbsService", () => ({
@@ -79,6 +89,7 @@ function projectsTable(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockRpc.mockResolvedValue({ data: true, error: null });
   mockAdminFrom.mockImplementation((table: string) => {
     throw new Error(`unexpected table access: ${table}`);
   });
@@ -132,34 +143,29 @@ describe("setNatoriProjectStatus", () => {
 });
 
 describe("confirmNatoriProjectPayment", () => {
-  it("受注前の案件は原子的な条件付き UPDATE で rough に進める", async () => {
-    const { updates, updateCalls } = projectsTable([
-      { data: { id: "proj-1", status: "awaiting_payment" }, error: null },
-    ]);
+  it("受注前の案件はDB関数で入金台帳と案件を原子的に更新する", async () => {
+    projectsTable([{ data: { id: "proj-1", status: "awaiting_payment" }, error: null }]);
 
     const result = await confirmNatoriProjectPayment("proj-1", "ラフ作成");
     expect(result).toEqual({ kind: "ok" });
-    expect(updates).toHaveLength(1);
-    expect(updates[0].status).toBe("rough");
-    expect(updates[0].payment_confirmed_at).toBeTruthy();
-    // 受注前ステータスだけを対象にする条件が付いている
-    expect(updateCalls.some((call) => call.startsWith("in("))).toBe(true);
+    expect(mockRpc).toHaveBeenCalledWith("natori_confirm_manual_payment", {
+      p_user_id: "owner-1",
+      p_project_id: "proj-1",
+      p_next_action: "ラフ作成",
+    });
   });
 
   it("既に制作中なら 0 行 → invalid-transition（巻き戻さない）", async () => {
-    projectsTable(
-      [{ data: { id: "proj-1", status: "coloring" }, error: null }],
-      { updateResult: { data: null, error: null } }
-    );
+    mockRpc.mockResolvedValue({ data: false, error: null });
+    projectsTable([{ data: { id: "proj-1", status: "coloring" }, error: null }]);
 
     const result = await confirmNatoriProjectPayment("proj-1", "ラフ作成");
     expect(result).toEqual({ kind: "invalid-transition", from: "coloring", to: "rough" });
   });
 
   it("案件が無ければ not-found", async () => {
-    projectsTable([{ data: null, error: null }], {
-      updateResult: { data: null, error: null },
-    });
+    mockRpc.mockResolvedValue({ data: false, error: null });
+    projectsTable([{ data: null, error: null }]);
     const result = await confirmNatoriProjectPayment("missing", "ラフ作成");
     expect(result).toEqual({ kind: "not-found" });
   });

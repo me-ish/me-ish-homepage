@@ -8,12 +8,14 @@ import { _resetRateLimitStore } from "@/lib/rateLimit";
 
 vi.mock("server-only", () => ({}));
 
-const { mockSendContact, mockAutoReply, mockCreateInquiry, mockUpload } = vi.hoisted(
+const { mockSendContact, mockAutoReply, mockCreateInquiry, mockUpload, mockSign, mockDelete } = vi.hoisted(
   () => ({
     mockSendContact: vi.fn(),
     mockAutoReply: vi.fn(),
     mockCreateInquiry: vi.fn(),
     mockUpload: vi.fn(),
+    mockSign: vi.fn(),
+    mockDelete: vi.fn(),
   })
 );
 
@@ -34,6 +36,8 @@ vi.mock("@/features/natori/server/inquiryProjectService", () => ({
 
 vi.mock("@/features/natori/server/portfolioSiteService", () => ({
   uploadPortfolioReferenceImage: (...args: unknown[]) => mockUpload(...args),
+  signPortfolioReferenceImage: (...args: unknown[]) => mockSign(...args),
+  deletePortfolioReferenceImages: (...args: unknown[]) => mockDelete(...args),
 }));
 
 import { POST } from "../route";
@@ -88,7 +92,9 @@ beforeEach(() => {
   mockSendContact.mockResolvedValue({ mailed: true });
   mockAutoReply.mockResolvedValue({ mailed: true });
   mockCreateInquiry.mockResolvedValue({ kind: "ok", projectId: "proj-1" });
-  mockUpload.mockResolvedValue({ kind: "ok", url: "https://cdn.example.com/refs/a.webp" });
+  mockUpload.mockResolvedValue({ kind: "ok", path: "submission/a.webp" });
+  mockSign.mockResolvedValue("https://signed.example.com/refs/a.webp");
+  mockDelete.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -132,17 +138,18 @@ describe("guards", () => {
 });
 
 describe("multipart（ファイル同梱）", () => {
-  it("正規のフォーム添付フロー: 画像を保存し、URL を案件・メールに引き継ぐ", async () => {
+  it("正規のフォーム添付フロー: 非公開パスを案件へ、署名URLをメールだけへ引き継ぐ", async () => {
     const res = await POST(makeMultipartReq(VALID_FIELDS, [makePngFile()]));
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toMatchObject({ success: true, mailed: true, caseCreated: true });
 
     expect(mockUpload).toHaveBeenCalledTimes(1);
+    expect(mockCreateInquiry.mock.calls[0][1]).toEqual(["submission/a.webp"]);
     const inquiryInput = mockCreateInquiry.mock.calls[0][0] as { refImages: string[] };
-    expect(inquiryInput.refImages).toEqual(["https://cdn.example.com/refs/a.webp"]);
+    expect(inquiryInput.refImages).toEqual([]);
     const mailInput = mockSendContact.mock.calls[0][0] as { refImages: string[] };
-    expect(mailInput.refImages).toEqual(["https://cdn.example.com/refs/a.webp"]);
+    expect(mailInput.refImages).toEqual(["https://signed.example.com/refs/a.webp"]);
   });
 
   it("ファイル無しの multipart 送信も通る", async () => {

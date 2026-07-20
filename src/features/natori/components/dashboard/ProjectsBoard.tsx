@@ -217,10 +217,8 @@ export default function ProjectsBoard({
     if (dataSource === "supabase") {
       (async () => {
         try {
-          await toggleNatoriTaskDone(projectId, taskId, nextDone);
-          if (nextStatus) {
-            await updateNatoriProjectStatus(projectId, nextStatus, nextAction);
-          }
+          if (!nextStatus) throw new Error("次の案件状態を計算できませんでした。");
+          await toggleNatoriTaskDone(projectId, taskId, nextDone, nextStatus, nextAction);
         } catch (err) {
           console.error("[ProjectsBoard] Supabase task update failed", err);
           setError(err instanceof Error ? err.message : String(err));

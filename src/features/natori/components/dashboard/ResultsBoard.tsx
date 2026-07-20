@@ -30,6 +30,8 @@ import {
   buildNatoriResultsCsv,
   filterProjectsByMonth,
   filterProjectsByYear,
+  getNatoriResultAmount,
+  getNatoriResultDateISO,
   listNatoriResultYears,
   summarizeNatoriResults,
   type NatoriResultsSummary,
@@ -422,7 +424,9 @@ function CompletedProjectRow({
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
           <p className="min-w-0 break-words text-sm font-bold text-gray-900">{project.title}</p>
           <div className="flex shrink-0 items-center gap-1.5">
-            <p className="text-sm font-bold text-gray-900">{formatYen(project.amount)}</p>
+            <p className="text-sm font-bold text-gray-900">
+              {formatYen(getNatoriResultAmount(project))}
+            </p>
             <button
               type="button"
               onClick={onPickImage}
@@ -461,7 +465,7 @@ function CompletedProjectRow({
           <span className="rounded-full bg-white px-2 py-0.5 font-bold text-emerald-700">
             {RESULT_STATUS_LABELS[project.status] ?? project.status}
           </span>
-          <span className="ml-auto">納期 {formatDate(project.dueDate)}</span>
+          <span className="ml-auto">完了 {formatDate(getNatoriResultDateISO(project))}</span>
         </div>
         {project.note ? (
           <p className="mt-1 line-clamp-2 break-words text-xs leading-5 text-gray-500">
@@ -563,7 +567,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
     if (!summary) return [];
     return summary.completed.filter(
       (project) =>
-        (monthFilter === null || project.dueDate.startsWith(monthFilter)) &&
+        (monthFilter === null || getNatoriResultDateISO(project).startsWith(monthFilter)) &&
         (typeFilter === null || project.type === typeFilter)
     );
   }, [summary, monthFilter, typeFilter]);
@@ -602,7 +606,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
 
   const handleDelete = async (project: NatoriProject) => {
     const confirmed = window.confirm(
-      `「${project.title}」（${project.clientName} / ${formatYen(project.amount)}）を実績から削除します。案件データ・画像ごと削除され、元に戻せません。よろしいですか？`
+      `「${project.title}」（${project.clientName} / ${formatYen(getNatoriResultAmount(project))}）を実績から削除します。案件データ・画像ごと削除され、元に戻せません。よろしいですか？`
     );
     if (!confirmed) return;
     if (isDemo) {
@@ -676,7 +680,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
           </span>
           <p className="mt-3 text-sm font-bold text-gray-900">まだ実績がありません</p>
           <p className="mt-1 text-xs leading-5 text-gray-600">
-            案件のステータスが「納品済み」または「対応完了」になると、ここに件数や売上が表示されます。過去の案件は下のフォームから手入力でも追加できます。
+            入金確認済みの案件が「対応完了」になると、ここに件数と入金額が表示されます。過去の案件は下のフォームから手入力でも追加できます。
           </p>
         </div>
         {isDemo ? null : <ResultAddForm onAdded={reload} />}
@@ -779,7 +783,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
             <div className="flex rounded-full border border-pink-200 bg-white p-0.5">
               {(
                 [
-                  { value: "amount", label: "売上" },
+                  { value: "amount", label: "入金額" },
                   { value: "count", label: "件数" },
                 ] as Array<{ value: ResultMetric; label: string }>
               ).map((option) => (
@@ -840,10 +844,10 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <StatTile label={`実績件数（${cardScopeLabel}）`} value={`${cardSummary.totalCount}件`} />
-        <StatTile label="総売上" value={formatYen(cardSummary.totalAmount)} />
+        <StatTile label="総入金額" value={formatYen(cardSummary.totalAmount)} />
         <StatTile label="平均単価" value={formatYen(cardSummary.averageAmount)} />
         <StatTile
-          label="月平均売上"
+          label="月平均入金額"
           value={formatYen(Math.round(cardSummary.totalAmount / monthsInScope))}
           sub={`${monthsInScope}ヶ月分`}
         />
@@ -854,7 +858,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         <SectionCard
           title={`月別の実績（${scopeLabel}）`}
-          description="納期の月ごとの集計です。行をタップすると集計カードと実績一覧をその月に絞り込めます。"
+          description="完了日の月ごとの集計です。行をタップすると集計カードと実績一覧をその月に絞り込めます。"
         >
           <ul className="mt-2 space-y-1.5">
             {summary.monthly.map((month) => (

@@ -1,5 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
 
 export type NatoriAdminEventRow = {
   id: string;
@@ -16,10 +17,13 @@ export type ListNatoriEventsResult =
   | { kind: "db-error" };
 
 export async function listNatoriAdminEvents(): Promise<ListNatoriEventsResult> {
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return { kind: "ok", events: [] };
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from(EVENTS_TABLE)
     .select("*")
+    .eq("user_id", ownerId)
     .order("date", { ascending: true });
   if (error) {
     console.error("[natori-admin-events] fetch failed", error);
@@ -65,6 +69,8 @@ export async function updateNatoriAdminEvent(
   id: string,
   input: { title?: string; date?: string; note?: string | null }
 ): Promise<NatoriEventMutationResult> {
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return { kind: "not-found" };
   const payload: Record<string, unknown> = {};
   if (input.title !== undefined) payload.title = input.title;
   if (input.date !== undefined) payload.date = input.date;
@@ -76,6 +82,7 @@ export async function updateNatoriAdminEvent(
     .from(EVENTS_TABLE)
     .update(payload)
     .eq("id", id)
+    .eq("user_id", ownerId)
     .select("id")
     .maybeSingle();
   if (error) {
@@ -87,11 +94,14 @@ export async function updateNatoriAdminEvent(
 }
 
 export async function deleteNatoriAdminEvent(id: string): Promise<NatoriEventMutationResult> {
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return { kind: "not-found" };
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from(EVENTS_TABLE)
     .delete()
     .eq("id", id)
+    .eq("user_id", ownerId)
     .select("id")
     .maybeSingle();
   if (error) {

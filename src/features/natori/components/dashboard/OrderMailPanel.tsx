@@ -6,6 +6,7 @@
 // 支払い依頼は送信時にサーバーで Stripe 支払いリンクが生成され、
 // 本文の {支払いリンク} の位置に差し込まれる。
 import { useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 import { AlertTriangle, Loader2, Mail, RotateCcw, X } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { parseInquiryNote } from "@/features/natori/lib/inquiryNoteView";
@@ -125,6 +126,7 @@ export default function OrderMailPanel({
   );
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [sentLinkUrl, setSentLinkUrl] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
 
@@ -159,6 +161,7 @@ export default function OrderMailPanel({
     }
     setSending(true);
     setError(null);
+    setWarning(null);
     try {
       const res = await fetch("/api/natori/admin/order-mail", {
         method: "POST",
@@ -175,12 +178,14 @@ export default function OrderMailPanel({
       const json = (await res.json().catch(() => null)) as {
         ok?: boolean;
         error?: string;
+        warning?: string;
         paymentLinkUrl?: string | null;
       } | null;
       if (!res.ok || !json?.ok) {
         throw new Error(json?.error ?? `send failed: ${res.status}`);
       }
       setSentLinkUrl(json.paymentLinkUrl ?? null);
+      setWarning(json.warning ?? null);
       setSent(true);
       onSent();
     } catch (err) {
@@ -221,9 +226,19 @@ export default function OrderMailPanel({
 
         {sent ? (
           <div className="space-y-3">
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
-              {demoMode ? "送信しました（デモのため実際のメールは飛びません）。" : "送信しました。"}
-              {meta.sentNote}
+            <div
+              className={cn(
+                "rounded-xl border px-4 py-3 text-sm font-bold",
+                warning
+                  ? "border-amber-300 bg-amber-50 text-amber-800"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700"
+              )}
+              role={warning ? "alert" : "status"}
+            >
+              {warning ??
+                (demoMode
+                  ? "送信しました（デモのため実際のメールは飛びません）。"
+                  : `送信しました。${meta.sentNote}`)}
             </div>
             {sentLinkUrl ? (
               <div className="rounded-xl border border-pink-100 bg-pink-50/50 px-4 py-3 text-xs">

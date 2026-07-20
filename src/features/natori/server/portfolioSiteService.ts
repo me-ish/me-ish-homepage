@@ -13,6 +13,7 @@ import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
 const TABLE = "natori_portfolio_content";
 const BUCKET = "natori-portfolio";
+const REFERENCE_BUCKET = "natori-inquiry-refs";
 const ROW_ID = "main";
 
 function adminClient() {
@@ -81,31 +82,42 @@ export type UploadPortfolioImageResult =
   | { kind: "too-large" }
   | { kind: "upload-error" };
 
+export type UploadPortfolioReferenceImageResult =
+  | { kind: "ok"; path: string }
+  | { kind: "invalid-type" }
+  | { kind: "too-large" }
+  | { kind: "upload-error" };
+
+async function prepareImageAsWebp(file: File): Promise<
+  | { kind: "ok"; webp: Buffer }
+  | { kind: "invalid-type" }
+  | { kind: "too-large" }
+> {
+  if (!ALLOWED_IMAGE_MIMES.has(file.type)) return { kind: "invalid-type" };
+  if (file.size > IMAGE_MAX_BYTES) return { kind: "too-large" };
+
+  const input = Buffer.from(await file.arrayBuffer());
+  if (sniffImageFormat(input) === null) return { kind: "invalid-type" };
+
+  const webp = await sharp(input)
+    .rotate()
+    .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 88 })
+    .toBuffer();
+  return { kind: "ok", webp };
+}
+
 /** 画像を webp に変換して公開バケットの指定フォルダへアップロードし、公開URLを返す */
 async function uploadImageAsWebp(
   file: File,
   folder: string
 ): Promise<UploadPortfolioImageResult> {
-  if (!ALLOWED_IMAGE_MIMES.has(file.type)) return { kind: "invalid-type" };
-  if (file.size > IMAGE_MAX_BYTES) return { kind: "too-large" };
-
-  const input = Buffer.from(await file.arrayBuffer());
-
-  // MIME はクライアント申告値なので、実バイト（マジックナンバー）でも画像で
-  // あることを確認する。SVG はマジックナンバーを持たないためここで弾かれる。
-  if (sniffImageFormat(input) === null) return { kind: "invalid-type" };
-
-  // EXIF 等のメタデータは sharp の再エンコードで除去される（withMetadata() を
-  // 使っていないため位置情報などは出力に残らない）。回転だけ先に反映する。
-  const webp = await sharp(input)
-    .rotate() // EXIF回転を反映
-    .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
-    .webp({ quality: 88 })
-    .toBuffer();
+  const prepared = await prepareImageAsWebp(file);
+  if (prepared.kind !== "ok") return prepared;
 
   const path = `${folder}/${crypto.randomUUID()}.webp`;
   const admin = supabaseAdmin();
-  const { error } = await admin.storage.from(BUCKET).upload(path, webp, {
+  const { error } = await admin.storage.from(BUCKET).upload(path, prepared.webp, {
     contentType: "image/webp",
     upsert: false,
   });
@@ -124,9 +136,42 @@ export async function uploadPortfolioImage(
   return uploadImageAsWebp(file, "images");
 }
 
-/** ご依頼フォーム（公開）からのキャラクター資料アップロード。refs/ 配下に分けて保存する */
+/** ご依頼フォームの資料を専用の非公開バケットへ保存する。 */
 export async function uploadPortfolioReferenceImage(
-  file: File
-): Promise<UploadPortfolioImageResult> {
-  return uploadImageAsWebp(file, "refs");
+  file: File,
+  submissionId: string
+): Promise<UploadPortfolioReferenceImageResult> {
+  const prepared = await prepareImageAsWebp(file);
+  if (prepared.kind !== "ok") return prepared;
+
+  const path = `${submissionId}/${crypto.randomUUID()}.webp`;
+  const { error } = await supabaseAdmin().storage
+    .from(REFERENCE_BUCKET)
+    .upload(path, prepared.webp, { contentType: "image/webp", upsert: false });
+  if (error) {
+    console.error("[natori-portfolio] private reference upload failed:", error);
+    return { kind: "upload-error" };
+  }
+  return { kind: "ok", path };
+}
+
+/** メール・管理画面表示用の短時間署名URLを発行する。 */
+export async function signPortfolioReferenceImage(
+  path: string,
+  ttlSeconds = 60 * 60
+): Promise<string | null> {
+  const { data, error } = await supabaseAdmin().storage
+    .from(REFERENCE_BUCKET)
+    .createSignedUrl(path, ttlSeconds);
+  if (error || !data) {
+    console.error("[natori-portfolio] private reference signing failed:", error);
+    return null;
+  }
+  return data.signedUrl;
+}
+
+export async function deletePortfolioReferenceImages(paths: string[]): Promise<void> {
+  if (paths.length === 0) return;
+  const { error } = await supabaseAdmin().storage.from(REFERENCE_BUCKET).remove(paths);
+  if (error) console.error("[natori-portfolio] private reference cleanup failed:", error);
 }

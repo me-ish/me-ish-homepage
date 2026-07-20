@@ -4,6 +4,7 @@
 // （POST はその署名URLを発行するだけ。Vercel のボディ制限を通らない）。
 // 業務ロジックは deliveryService に集約（route は薄く）。
 import { NextResponse } from "next/server";
+import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import {
   DELIVERY_MAX_FILE_BYTES,
@@ -34,6 +35,8 @@ export async function POST(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
   const payload = (await request.json().catch(() => null)) as {
     projectId?: unknown;
     folder?: unknown;
@@ -84,6 +87,8 @@ export async function DELETE(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
   const payload = (await request.json().catch(() => null)) as { fileId?: unknown } | null;
   const fileId = typeof payload?.fileId === "string" ? payload.fileId.trim() : "";
   if (!fileId) return NextResponse.json({ error: "fileId is required" }, { status: 400 });

@@ -9,12 +9,15 @@ import {
 import type { NatoriProject } from "@/features/natori/types/projects";
 
 function makeProject(overrides: Partial<NatoriProject>): NatoriProject {
+  const resultAt = `${overrides.dueDate ?? "2026-05-10"}T00:00:00.000Z`;
   return {
     id: "p1",
     title: "テスト案件",
     clientName: "テスト依頼者",
     amount: 10000,
     dueDate: "2026-05-10",
+    paidAt: resultAt,
+    completedAt: resultAt,
     status: "completed",
     nextAction: "",
     type: "icon",
@@ -24,9 +27,10 @@ function makeProject(overrides: Partial<NatoriProject>): NatoriProject {
 }
 
 describe("isNatoriCompletedProject", () => {
-  it("counts delivered and completed as results", () => {
-    expect(isNatoriCompletedProject(makeProject({ status: "delivered" }))).toBe(true);
+  it("counts only paid and completed projects as results", () => {
+    expect(isNatoriCompletedProject(makeProject({ status: "delivered" }))).toBe(false);
     expect(isNatoriCompletedProject(makeProject({ status: "completed" }))).toBe(true);
+    expect(isNatoriCompletedProject(makeProject({ status: "completed", paidAt: undefined }))).toBe(false);
     expect(isNatoriCompletedProject(makeProject({ status: "rough" }))).toBe(false);
     expect(isNatoriCompletedProject(makeProject({ status: "inquiry" }))).toBe(false);
   });
@@ -52,7 +56,7 @@ describe("summarizeNatoriResults", () => {
     const summary = summarizeNatoriResults(
       [
         makeProject({ id: "a", amount: 10000, dueDate: "2026-05-10", type: "icon" }),
-        makeProject({ id: "b", amount: 30000, dueDate: "2026-05-20", type: "standing", status: "delivered" }),
+        makeProject({ id: "b", amount: 30000, paidAmount: 30000, dueDate: "2026-05-20", paidAt: "2026-05-20T00:00:00.000Z", completedAt: "2026-05-20T00:00:00.000Z", type: "standing" }),
         makeProject({ id: "c", amount: 20000, dueDate: "2025-12-01", type: "icon" }),
         // 進行中は集計に入らない
         makeProject({ id: "d", amount: 99999, dueDate: "2026-06-01", status: "coloring" }),
@@ -78,7 +82,7 @@ describe("summarizeNatoriResults", () => {
     expect(summary.byType.map((t) => t.type)).toEqual(["standing", "icon"]);
     expect(summary.byType[1]).toMatchObject({ count: 2, amount: 30000 });
 
-    // 納期の新しい順
+    // 完了日の新しい順
     expect(summary.completed.map((p) => p.id)).toEqual(["b", "a", "c"]);
   });
 });
@@ -86,7 +90,7 @@ describe("summarizeNatoriResults", () => {
 describe("listNatoriResultYears / filterProjectsByYear", () => {
   const projects = [
     makeProject({ id: "a", dueDate: "2026-05-10" }),
-    makeProject({ id: "b", dueDate: "2025-12-01", status: "delivered" }),
+    makeProject({ id: "b", dueDate: "2025-12-01", paidAt: "2025-12-01T00:00:00.000Z", completedAt: "2025-12-01T00:00:00.000Z" }),
     makeProject({ id: "c", dueDate: "2024-01-01", status: "rough" }), // 未完了は年に数えない
   ];
 

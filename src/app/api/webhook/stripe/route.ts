@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
  * ナトリのコミッション入金処理
  * - natori_projects に payment_confirmed_at を記録し rough（作業開始）へ進める
  * - ナトリ宛に入金通知メールを送る
- * - 冪等性: `payment_confirmed_at IS NULL` 条件の原子的 UPDATE（orderMailService 側）
+ * - 冪等性: 案件・見積版・入金台帳をDB関数内で原子的に判定・更新
  * - 一時的な DB エラーは claim を解放して 500（Stripe に再送させる）。
  *   対象行なしは恒久エラーなので 200 ACK。
  */
@@ -177,7 +177,12 @@ async function handleNatoriCommissionPayment(
   projectId: string
 ): Promise<NextResponse> {
   try {
-    const result = await markNatoriCommissionPaid(projectId, session.id, session.amount_total);
+    const result = await markNatoriCommissionPaid(
+      projectId,
+      session.id,
+      session.amount_total,
+      session.metadata?.quoteId ?? null
+    );
     if (result.kind === "db-error") {
       console.error("[webhook/stripe/natori-commission] mark paid failed:", {
         eventId,
@@ -203,6 +208,14 @@ async function handleNatoriCommissionPayment(
         sessionId: session.id,
         projectId,
         amountTotal: session.amount_total,
+      });
+    }
+    if (result.kind === "quote-mismatch") {
+      console.error("[webhook/stripe/natori-commission] quote mismatch:", {
+        eventId,
+        sessionId: session.id,
+        projectId,
+        quoteId: session.metadata?.quoteId ?? null,
       });
     }
     return NextResponse.json({ ok: true, received: true }, { status: 200 });

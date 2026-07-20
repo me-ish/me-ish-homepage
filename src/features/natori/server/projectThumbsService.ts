@@ -5,6 +5,7 @@ import "server-only";
 // パス規約で管理する（案件IDから一意に引ける）。
 import sharp from "sharp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
 
 const BUCKET = "natori-portfolio";
 const FOLDER = "project-thumbs";
@@ -34,7 +35,15 @@ export type ListProjectThumbsResult =
 
 /** projectId → 公開URL のマップを返す */
 export async function listNatoriProjectThumbs(): Promise<ListProjectThumbsResult> {
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return { kind: "ok", thumbs: {} };
   const admin = supabaseAdmin();
+  const { data: projects, error: projectError } = await admin
+    .from("natori_projects")
+    .select("id")
+    .eq("user_id", ownerId);
+  if (projectError) return { kind: "storage-error" };
+  const allowedIds = new Set((projects ?? []).map((project) => String(project.id)));
   const { data, error } = await admin.storage.from(BUCKET).list(FOLDER, {
     limit: 1000,
   });
@@ -46,6 +55,7 @@ export async function listNatoriProjectThumbs(): Promise<ListProjectThumbsResult
   for (const item of data ?? []) {
     if (!item.name.endsWith(".webp")) continue;
     const projectId = item.name.slice(0, -".webp".length);
+    if (!allowedIds.has(projectId)) continue;
     thumbs[projectId] = versionedPublicUrl(projectId, item.updated_at ?? "");
   }
   return { kind: "ok", thumbs };
@@ -72,7 +82,16 @@ export async function uploadNatoriProjectThumb(
     .webp({ quality: 86 })
     .toBuffer();
 
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return { kind: "upload-error" };
   const admin = supabaseAdmin();
+  const { data: project, error: projectError } = await admin
+    .from("natori_projects")
+    .select("id")
+    .eq("id", projectId)
+    .eq("user_id", ownerId)
+    .maybeSingle();
+  if (projectError || !project) return { kind: "upload-error" };
   const { error } = await admin.storage.from(BUCKET).upload(thumbPath(projectId), webp, {
     contentType: "image/webp",
     upsert: true,

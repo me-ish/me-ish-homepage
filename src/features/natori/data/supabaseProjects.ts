@@ -28,6 +28,9 @@ type ProjectRow = {
   // Optional — added by 20260524_natori_project_flow.sql. Missing on older
   // backends; treat as undefined.
   payment_confirmed_at?: string | null;
+  paid_at?: string | null;
+  paid_amount?: number | null;
+  completed_at?: string | null;
   // Optional — added by 20260717_natori_client_email_and_mail_logs.sql.
   client_email?: string | null;
 };
@@ -49,7 +52,7 @@ const TASKS_TABLE = "natori_project_tasks";
 async function patchNatoriAdminProject(payload: Record<string, unknown>): Promise<void> {
   const response = await fetch("/api/natori/admin/projects", {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!response.ok) {
@@ -58,7 +61,11 @@ async function patchNatoriAdminProject(payload: Record<string, unknown>): Promis
   }
 }
 
-function rowToProject(row: ProjectRow, taskRows: TaskRow[]): NatoriProject {
+function rowToProject(
+  row: ProjectRow,
+  taskRows: TaskRow[],
+  referenceImageUrls: string[]
+): NatoriProject {
   const tasks: NatoriProjectTask[] = taskRows
     .slice()
     .sort((a, b) => a.sort_order - b.sort_order)
@@ -85,6 +92,10 @@ function rowToProject(row: ProjectRow, taskRows: TaskRow[]): NatoriProject {
     nextAction: row.next_action,
     note: row.note ?? undefined,
     paymentConfirmedAt: row.payment_confirmed_at ?? undefined,
+    paidAt: row.paid_at ?? row.payment_confirmed_at ?? undefined,
+    paidAmount: row.paid_amount ?? undefined,
+    completedAt: row.completed_at ?? undefined,
+    referenceImageUrls,
     tasks,
   };
 }
@@ -100,29 +111,46 @@ export async function fetchNatoriProjects(): Promise<NatoriProject[]> {
   const payload = (await response.json()) as {
     projects?: ProjectRow[];
     tasks?: TaskRow[];
+    referenceFiles?: Array<{ project_id: string; url: string }>;
   };
 
   const projectRows = payload.projects ?? [];
   const taskRows = payload.tasks ?? [];
   const tasksByProject = new Map<string, TaskRow[]>();
+  const referencesByProject = new Map<string, string[]>();
   for (const task of taskRows) {
     const list = tasksByProject.get(task.project_id) ?? [];
     list.push(task);
     tasksByProject.set(task.project_id, list);
   }
-  return projectRows.map((row) => rowToProject(row, tasksByProject.get(row.id) ?? []));
+  for (const reference of payload.referenceFiles ?? []) {
+    const list = referencesByProject.get(reference.project_id) ?? [];
+    list.push(reference.url);
+    referencesByProject.set(reference.project_id, list);
+  }
+  return projectRows.map((row) =>
+    rowToProject(
+      row,
+      tasksByProject.get(row.id) ?? [],
+      referencesByProject.get(row.id) ?? []
+    )
+  );
 }
 
 export async function toggleNatoriTaskDone(
   projectId: string,
   taskKey: string,
-  done: boolean
+  done: boolean,
+  status: NatoriProjectStatus,
+  nextAction: string
 ): Promise<void> {
   await patchNatoriAdminProject({
     kind: "task",
     projectId,
     taskKey,
     done,
+    status,
+    nextAction,
   });
 }
 
@@ -316,7 +344,7 @@ export type CreateNatoriProjectInput = {
 export async function createNatoriProject(input: CreateNatoriProjectInput): Promise<string> {
   const response = await fetch("/api/natori/admin/projects", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
   if (!response.ok) {
@@ -367,7 +395,7 @@ export async function uploadNatoriProjectThumb(projectId: string, file: File): P
 export async function deleteNatoriProject(projectId: string): Promise<void> {
   const response = await fetch(
     `/api/natori/admin/projects?id=${encodeURIComponent(projectId)}`,
-    { method: "DELETE" }
+    { method: "DELETE", headers: { ...CSRF_HEADERS } }
   );
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { error?: string } | null;

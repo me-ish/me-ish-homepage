@@ -2,6 +2,7 @@
 // ダッシュボードから依頼者へ見積もりメール / 支払い依頼メールを送る。
 // 業務ロジックは orderMailService に集約（route は薄く）。
 import { NextResponse } from "next/server";
+import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import { sendNatoriOrderMail } from "@/features/natori/server/orderMailService";
 
@@ -14,6 +15,8 @@ export async function POST(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
 
   const payload = (await request.json().catch(() => null)) as {
     kind?: unknown;
@@ -84,10 +87,32 @@ export async function POST(request: Request) {
     case "mail-error":
       return NextResponse.json({ error: "Failed to send mail" }, { status: 502 });
     case "db-error":
-      // メール自体は送信済み。案件更新だけ失敗したことを呼び出し側へ伝える
+      return NextResponse.json({ error: "Failed to persist mail state" }, { status: 500 });
+    case "state-error-after-send":
+      return NextResponse.json({
+        ok: true,
+        warning: "メールは送信済みですが、案件状態の更新に失敗しました。再送せず管理者へ確認してください。",
+        paymentLinkUrl: result.paymentLinkUrl ?? null,
+      });
+    case "invalid-state":
       return NextResponse.json(
-        { ok: true, warning: "mail sent but project update failed" },
-        { status: 200 }
+        { error: "現在の案件状態ではこのメールを送信できません。画面を再読み込みしてください。" },
+        { status: 409 }
+      );
+    case "quote-not-accepted":
+      return NextResponse.json(
+        { error: "承諾済みの最新見積もりがありません。先に見積もり承諾を確認してください。" },
+        { status: 409 }
+      );
+    case "amount-mismatch":
+      return NextResponse.json(
+        { error: "支払い金額が承諾済み見積もりと一致しません。" },
+        { status: 409 }
+      );
+    case "already-paid":
+      return NextResponse.json(
+        { error: "この案件は入金確認済みのため、新しい支払いリンクは発行できません。" },
+        { status: 409 }
       );
     case "ok":
       return NextResponse.json({ ok: true, paymentLinkUrl: result.paymentLinkUrl ?? null });
