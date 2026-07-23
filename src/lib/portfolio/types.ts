@@ -1,7 +1,5 @@
 // src/lib/portfolio/types.ts
 
-export type PortfolioMode = 'template' | 'aura';
-
 export type WorksFilter = 'displaying' | 'for_sale' | 'all';
 export type SortKey = 'new' | 'likes';
 
@@ -12,19 +10,6 @@ export type PortfolioSettings = {
   sort_key: SortKey;
   created_at?: string;
   updated_at?: string;
-};
-
-export type PortfolioProfile = {
-  id: string;
-  user_id: string;
-  public_slug: string | null;
-  is_public: boolean;
-  mode: PortfolioMode;
-  aura_request_id: string | null;
-  works_filter: WorksFilter;
-  sort_key: SortKey;
-  created_at: string;
-  updated_at: string;
 };
 
 export type LikedEntry = {
@@ -88,13 +73,4 @@ export type TemplateContent = {
     title: string;
     image_url: string;
   }>;
-};
-
-export type PublicPortfolioData = PortfolioProfile & {
-  profile: {
-    display_name: string;
-    avatar_url: string | null;
-    bio: string | null;
-    sns_links: Record<string, string> | null;
-  } | null;
 };

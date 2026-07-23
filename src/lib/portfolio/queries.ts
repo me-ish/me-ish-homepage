@@ -2,11 +2,9 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import type {
-  PortfolioProfile,
   LikedEntry,
   EntryWithStatus,
   TemplateContent,
-  PublicPortfolioData,
   WorksFilter,
   SortKey,
   PortfolioSettings,
@@ -65,118 +63,7 @@ export async function upsertPortfolioSettings(
 }
 
 /* =========================================================
- * B) スラッグ / プロファイル（将来用: portfolio_profiles）
- *   ※ テーブルが未作成なら、このセクションは未使用のまま置く or 削除
- * ========================================================= */
-
-/**
- * ポートフォリオプロフィールを取得（本人用）
- * NOTE: 公開ON/OFFの source of truth ではない（slug / mode 等の用途）
- */
-export async function getPortfolioProfile(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<PortfolioProfile | null> {
-  const { data, error } = await supabase
-    .from("portfolio_profiles")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[getPortfolioProfile] error:", error);
-    return null;
-  }
-  return data as PortfolioProfile | null;
-}
-
-/**
- * スラッグで公開ポートフォリオを取得（slug公開をやる場合用）
- * NOTE: 現状は get_public_portfolio RPC を使っているなら未使用でもOK
- */
-export async function getPublicPortfolioBySlug(
-  supabase: SupabaseClient,
-  slug: string
-): Promise<PublicPortfolioData | null> {
-  const { data, error } = await supabase
-    .from("portfolio_profiles")
-    .select(
-      `
-      *,
-      profile:profiles (
-        display_name,
-        avatar_url,
-        bio,
-        sns_links
-      )
-    `
-    )
-    .eq("public_slug", slug)
-    .eq("is_public", true)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[getPublicPortfolioBySlug] error:", error);
-    return null;
-  }
-  return data as PublicPortfolioData | null;
-}
-
-/**
- * スラッグの利用可能チェック（slug公開をやる場合用）
- */
-export async function isSlugAvailable(
-  supabase: SupabaseClient,
-  slug: string,
-  excludeUserId?: string
-): Promise<boolean> {
-  let query = supabase
-    .from("portfolio_profiles")
-    .select("id")
-    .eq("public_slug", slug);
-
-  if (excludeUserId) {
-    query = query.neq("user_id", excludeUserId);
-  }
-
-  const { data, error } = await query.maybeSingle();
-  if (error) {
-    console.error("[isSlugAvailable] error:", error);
-    // エラー時は「利用不可」扱いに倒す（安全側）
-    return false;
-  }
-  return !data;
-}
-
-/**
- * （将来用）portfolio_profiles を upsert（slug/mode 等を管理したい場合）
- * NOTE: 公開ON/OFFは portfolio_settings が正。ここで is_public を持つなら二重管理になるので注意。
- */
-export async function upsertPortfolioProfile(
-  supabase: SupabaseClient,
-  userId: string,
-  updates: Partial<Pick<PortfolioProfile, "public_slug" | "mode" | "aura_request_id">>
-): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase
-    .from("portfolio_profiles")
-    .upsert(
-      {
-        user_id: userId,
-        ...updates,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" }
-    );
-
-  if (error) {
-    console.error("[upsertPortfolioProfile] error:", error);
-    return { success: false, error: error.message };
-  }
-  return { success: true };
-}
-
-/* =========================================================
- * C) 作品 / いいね / テンプレ
+ * B) 作品 / いいね / テンプレ
  * ========================================================= */
 
 /**
@@ -498,7 +385,7 @@ export async function updateEntryConsent(
 }
 
 /* =========================================================
- * D) プレビュー用プロフィール
+ * C) プレビュー用プロフィール
  * ========================================================= */
 
 export type UserProfile = {
@@ -528,7 +415,7 @@ export async function getUserProfile(
 }
 
 /* =========================================================
- * E) 公開ポートフォリオ用ビュー（v_public_portfolio_entries）
+ * D) 公開ポートフォリオ用ビュー（v_public_portfolio_entries）
  * ========================================================= */
 
 export type PublicPortfolioEntry = {

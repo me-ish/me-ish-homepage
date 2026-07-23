@@ -13,6 +13,11 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "check:etorie-migrations": "node scripts/etorie-baseline-static-check.mjs",
+    "etorie:baseline:check": "node scripts/etorie-baseline-static-check.mjs",
+    "etorie:schema:checksum": "node scripts/etorie-schema-checksum.mjs",
+    "etorie:schema:diff": "node scripts/etorie-schema-diff.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

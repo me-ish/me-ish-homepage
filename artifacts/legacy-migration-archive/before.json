@@ -1,0 +1,459 @@
+{
+  "checksumMethod": "SHA-256 of exact file bytes",
+  "expectedCount": 55,
+  "actualCount": 55,
+  "files": [
+    {
+      "filename": "20250120_entry_processing_jobs.sql",
+      "oldPath": "supabase/migrations/20250120_entry_processing_jobs.sql",
+      "version": "20250120",
+      "sha256": "082c8378076797900e825c844bd3ad4adff9ca714827d4666f928b79a6ccfc63",
+      "sizeBytes": 3104
+    },
+    {
+      "filename": "20250124_mypage_extension.sql",
+      "oldPath": "supabase/migrations/20250124_mypage_extension.sql",
+      "version": "20250124",
+      "sha256": "7c521cfe0b91067ac7022009f98e10deef0163004703e0a8d068065f542366c1",
+      "sizeBytes": 6559
+    },
+    {
+      "filename": "20250125_sales_payout_management.sql",
+      "oldPath": "supabase/migrations/20250125_sales_payout_management.sql",
+      "version": "20250125",
+      "sha256": "39c595b2504d0239ed56b5ca98a6a75fe1460874c9509d2f58aa3da479c0e6ef",
+      "sizeBytes": 10257
+    },
+    {
+      "filename": "20250201_ending_soon_notification.sql",
+      "oldPath": "supabase/migrations/20250201_ending_soon_notification.sql",
+      "version": "20250201",
+      "sha256": "a67b700c4ff647e2218630f7436ebceb3336a8fb041ed033d2e43b821a42ab45",
+      "sizeBytes": 605
+    },
+    {
+      "filename": "20260131_profile_banner_focus.sql",
+      "oldPath": "supabase/migrations/20260131_profile_banner_focus.sql",
+      "version": "20260131",
+      "sha256": "bb25ecf0de79a96d13cf0a82635f2612dd1dd911c6ecbb0256a2610d9a71d3c0",
+      "sizeBytes": 833
+    },
+    {
+      "filename": "20260201_entries_email_rls.sql",
+      "oldPath": "supabase/migrations/20260201_entries_email_rls.sql",
+      "version": "20260201",
+      "sha256": "7d74e03b19fb5c8a2a371b3d75963d2319981156c5612ba45171f839996a89c7",
+      "sizeBytes": 589
+    },
+    {
+      "filename": "20260202_admin_entry_workflow_view.sql",
+      "oldPath": "supabase/migrations/20260202_admin_entry_workflow_view.sql",
+      "version": "20260202",
+      "sha256": "c3aaeb36e576f1654a3fad438a3c392762a42a2bb1c75e6fa052e9c215d82e19",
+      "sizeBytes": 2837
+    },
+    {
+      "filename": "20260203_entry_plan_payment.sql",
+      "oldPath": "supabase/migrations/20260203_entry_plan_payment.sql",
+      "version": "20260203",
+      "sha256": "532c5b152f02ca38187da1f1516d1c50d4a2850063761772d05459b4f1ef4b9b",
+      "sizeBytes": 1152
+    },
+    {
+      "filename": "20260205_view_stats.sql",
+      "oldPath": "supabase/migrations/20260205_view_stats.sql",
+      "version": "20260205",
+      "sha256": "481fdfd33049bd15eb9f43517cfb528c679d2b05edd3b6c1822a137c7be350bf",
+      "sizeBytes": 2722
+    },
+    {
+      "filename": "20260206_entry_comments.sql",
+      "oldPath": "supabase/migrations/20260206_entry_comments.sql",
+      "version": "20260206",
+      "sha256": "9c8fa5593c4c2f534120d3543a50e3e94310cd6e57c1dea14e72ef4f15768271",
+      "sizeBytes": 3927
+    },
+    {
+      "filename": "20260207_add_guarantee_and_daily_slots.sql",
+      "oldPath": "supabase/migrations/20260207_add_guarantee_and_daily_slots.sql",
+      "version": "20260207",
+      "sha256": "45413a33b645e7b41c38037a8c9a7969cd8e0a7d914e952e139fa51b9e0c1830",
+      "sizeBytes": 1671
+    },
+    {
+      "filename": "20260208_fix_fee_rounding.sql",
+      "oldPath": "supabase/migrations/20260208_fix_fee_rounding.sql",
+      "version": "20260208",
+      "sha256": "b43af227fa72805c667fc36efef020200f4e344a90d126ce1ddfd669ef1f031c",
+      "sizeBytes": 3612
+    },
+    {
+      "filename": "20260208_payout_tables.sql",
+      "oldPath": "supabase/migrations/20260208_payout_tables.sql",
+      "version": "20260208",
+      "sha256": "eb950b532a42e6dbc8fcd42a387b705e75d164b1d5dc755407e2f849c6eb3070",
+      "sizeBytes": 3073
+    },
+    {
+      "filename": "20260208_performance_indexes.sql",
+      "oldPath": "supabase/migrations/20260208_performance_indexes.sql",
+      "version": "20260208",
+      "sha256": "9a135bfb75493d314f25c1b8eaf1c37946fa92e3aa1f7982e45c8da069c75122",
+      "sizeBytes": 3343
+    },
+    {
+      "filename": "20260208_rls_unprotected_tables.sql",
+      "oldPath": "supabase/migrations/20260208_rls_unprotected_tables.sql",
+      "version": "20260208",
+      "sha256": "6a6b4df4bbb18b49db04c91154f9e7d150fa9bdf69f35f587a70f978c527010b",
+      "sizeBytes": 4915
+    },
+    {
+      "filename": "20260209_admin_audit_log.sql",
+      "oldPath": "supabase/migrations/20260209_admin_audit_log.sql",
+      "version": "20260209",
+      "sha256": "305da6271ee0e7e446baf9a6bf47a1e9ad88fe2265581a752ddba6cd20ddb07f",
+      "sizeBytes": 1021
+    },
+    {
+      "filename": "20260209_gallery_stats_rpc.sql",
+      "oldPath": "supabase/migrations/20260209_gallery_stats_rpc.sql",
+      "version": "20260209",
+      "sha256": "abcbdb5570d7420a0c146efbfab0aab945fb2fdda4e1d3d343cc1078feb316bf",
+      "sizeBytes": 587
+    },
+    {
+      "filename": "20260210_end_notified_at.sql",
+      "oldPath": "supabase/migrations/20260210_end_notified_at.sql",
+      "version": "20260210",
+      "sha256": "446f9e1ea999944a1616f61e4df0736a02117647f711578deb90dbaf4bf9e64a",
+      "sizeBytes": 83
+    },
+    {
+      "filename": "20260211_add_rls_deny_policies_server_only.sql",
+      "oldPath": "supabase/migrations/20260211_add_rls_deny_policies_server_only.sql",
+      "version": "20260211",
+      "sha256": "1e36a83377b8ef278dd252a23df0d4eb5c1845d9fab2728447e3e088a52e5345",
+      "sizeBytes": 1888
+    },
+    {
+      "filename": "20260211_artists_bank_accounts_rls.sql",
+      "oldPath": "supabase/migrations/20260211_artists_bank_accounts_rls.sql",
+      "version": "20260211",
+      "sha256": "fde4124f26e309f164c13a29ea517c722db3dcd2d9eb89a3a2a2f8cb4cf2f82b",
+      "sizeBytes": 2906
+    },
+    {
+      "filename": "20260211_enable_rls_server_only_tables.sql",
+      "oldPath": "supabase/migrations/20260211_enable_rls_server_only_tables.sql",
+      "version": "20260211",
+      "sha256": "b4d8a0fea527ee715e2c0f594d9aacab2202581e946cdaa1608260423efa84a5",
+      "sizeBytes": 2789
+    },
+    {
+      "filename": "20260211_entries_update_own_policy.sql",
+      "oldPath": "supabase/migrations/20260211_entries_update_own_policy.sql",
+      "version": "20260211",
+      "sha256": "e611f73608c07d1c75944bd6102ddd3c73d6c58e38178c5e232507d6dc6be32e",
+      "sizeBytes": 321
+    },
+    {
+      "filename": "20260211_fix_aura_select_own_email_policy.sql",
+      "oldPath": "supabase/migrations/20260211_fix_aura_select_own_email_policy.sql",
+      "version": "20260211",
+      "sha256": "3c2566bb7bf4b547307c613cf558a815e71a2007f9eba4fd3d9695ee63466b45",
+      "sizeBytes": 538
+    },
+    {
+      "filename": "20260211_fix_function_search_path.sql",
+      "oldPath": "supabase/migrations/20260211_fix_function_search_path.sql",
+      "version": "20260211",
+      "sha256": "15a4c1eee3bbff6c841e9ba41ed1bf11d15f6037f5c9b78ce2a3c2e548e0364e",
+      "sizeBytes": 1859
+    },
+    {
+      "filename": "20260211_fix_rls_inquiries_insert.sql",
+      "oldPath": "supabase/migrations/20260211_fix_rls_inquiries_insert.sql",
+      "version": "20260211",
+      "sha256": "6bb512797c7e8c35185b16844b168bc5c67711369774985350ccdb2dc4dfccff",
+      "sizeBytes": 676
+    },
+    {
+      "filename": "20260211_fix_rls_policies_entries_inquiries.sql",
+      "oldPath": "supabase/migrations/20260211_fix_rls_policies_entries_inquiries.sql",
+      "version": "20260211",
+      "sha256": "78aea32cbfc4e04124c5fe729b1b812c236d2dc2f2b26824be8cecd8deb5edea",
+      "sizeBytes": 2169
+    },
+    {
+      "filename": "20260211_fix_sales_select_buyer_policy.sql",
+      "oldPath": "supabase/migrations/20260211_fix_sales_select_buyer_policy.sql",
+      "version": "20260211",
+      "sha256": "dad1db56f51d7074f21d6b0a8983151db1975ba6f878cc129d1e0236db7352fa",
+      "sizeBytes": 773
+    },
+    {
+      "filename": "20260211_fix_security_advisor_remaining_views.sql",
+      "oldPath": "supabase/migrations/20260211_fix_security_advisor_remaining_views.sql",
+      "version": "20260211",
+      "sha256": "ebe64b7acef4a5d2fdad498e0498c0b08cd12b08a3f3baf0726dac2f17bd917b",
+      "sizeBytes": 2678
+    },
+    {
+      "filename": "20260211_fix_security_advisor_views.sql",
+      "oldPath": "supabase/migrations/20260211_fix_security_advisor_views.sql",
+      "version": "20260211",
+      "sha256": "7bf2f2f5040849e1486d11b021d10ccf526f713fd3f27002a2be909ff3350795",
+      "sizeBytes": 3983
+    },
+    {
+      "filename": "20260211_fix_v_pending_payouts_security_invoker.sql",
+      "oldPath": "supabase/migrations/20260211_fix_v_pending_payouts_security_invoker.sql",
+      "version": "20260211",
+      "sha256": "1290d8239f904e362caee9b3157759712c0a792a77a723ba439925e76ee8dc20",
+      "sizeBytes": 124
+    },
+    {
+      "filename": "20260211_fix_view_grants_minimal.sql",
+      "oldPath": "supabase/migrations/20260211_fix_view_grants_minimal.sql",
+      "version": "20260211",
+      "sha256": "61e3100f6003abb5bd92122cd65dbd6f952f06db771a6b827b7a2334c3b31265",
+      "sizeBytes": 1420
+    },
+    {
+      "filename": "20260211_move_citext_to_extensions_schema.sql",
+      "oldPath": "supabase/migrations/20260211_move_citext_to_extensions_schema.sql",
+      "version": "20260211",
+      "sha256": "743eb942aa709c899d7bbfe47286698c7902a85fad310f87b4cae0cbe703948c",
+      "sizeBytes": 387
+    },
+    {
+      "filename": "20260211_mypage_rls_sales_and_jobs.sql",
+      "oldPath": "supabase/migrations/20260211_mypage_rls_sales_and_jobs.sql",
+      "version": "20260211",
+      "sha256": "d04430feeba6dec1857fcca922dd31f0ec2fe79a203df6ae1e0ba0655a1081d7",
+      "sizeBytes": 2683
+    },
+    {
+      "filename": "20260308_get_auth_user_id_by_email.sql",
+      "oldPath": "supabase/migrations/20260308_get_auth_user_id_by_email.sql",
+      "version": "20260308",
+      "sha256": "14a5e87df2130d66da206dcba601da144f0d9f0a96588a7489be601aa88c3307",
+      "sizeBytes": 300
+    },
+    {
+      "filename": "20260523_natori_projects.sql",
+      "oldPath": "supabase/migrations/20260523_natori_projects.sql",
+      "version": "20260523",
+      "sha256": "b08cccc0f69d8532f8ab0a4d14da3e6c553e6aa2b1276db285dbd29b32101b30",
+      "sizeBytes": 4076
+    },
+    {
+      "filename": "20260524_natori_events.sql",
+      "oldPath": "supabase/migrations/20260524_natori_events.sql",
+      "version": "20260524",
+      "sha256": "101eaf46fad043c2dc6967641a84016513961361c1718cebee87989c753ec3cd",
+      "sizeBytes": 1527
+    },
+    {
+      "filename": "20260524_natori_project_flow.sql",
+      "oldPath": "supabase/migrations/20260524_natori_project_flow.sql",
+      "version": "20260524",
+      "sha256": "e3f9cb4a5008e89c92d50650f2306d8f4ed45af4b67372316dcc34f556f308b1",
+      "sizeBytes": 1211
+    },
+    {
+      "filename": "20260525_natori_user_profiles.sql",
+      "oldPath": "supabase/migrations/20260525_natori_user_profiles.sql",
+      "version": "20260525",
+      "sha256": "ba15edea24b8645edb17f1619c361be1e3a87d36c63d9544ea28a01eea452715",
+      "sizeBytes": 1590
+    },
+    {
+      "filename": "20260526_natori_pricing_configs.sql",
+      "oldPath": "supabase/migrations/20260526_natori_pricing_configs.sql",
+      "version": "20260526",
+      "sha256": "84a4c167a989610f8b9a72947eac5316d7edbe01aa265ad8ab0a8617abee99f4",
+      "sizeBytes": 1965
+    },
+    {
+      "filename": "20260527_natori_unified_character_tasks.sql",
+      "oldPath": "supabase/migrations/20260527_natori_unified_character_tasks.sql",
+      "version": "20260527",
+      "sha256": "2c2d259640659fe468ccaf61511aa902a16f0290f8723fd0a7aa8d8b483970f9",
+      "sizeBytes": 4541
+    },
+    {
+      "filename": "20260528_natori_illustration_rough_submit.sql",
+      "oldPath": "supabase/migrations/20260528_natori_illustration_rough_submit.sql",
+      "version": "20260528",
+      "sha256": "c9a870400debdc90f487af4ab1b45ac792556aa4f6c0f744bf174acc42748e75",
+      "sizeBytes": 3726
+    },
+    {
+      "filename": "20260710_natori_portfolio_content.sql",
+      "oldPath": "supabase/migrations/20260710_natori_portfolio_content.sql",
+      "version": "20260710",
+      "sha256": "38d04acc0c7948b03222ddc36667eab051c721ac055ce997fdd5efa2164b77a2",
+      "sizeBytes": 1550
+    },
+    {
+      "filename": "20260711_natori_closed_status.sql",
+      "oldPath": "supabase/migrations/20260711_natori_closed_status.sql",
+      "version": "20260711",
+      "sha256": "1f44c009faab4236d20bcc4b94f96058a064caf64620dc9ce10a8c0f5f1d973b",
+      "sizeBytes": 848
+    },
+    {
+      "filename": "20260713_natori_page_events.sql",
+      "oldPath": "supabase/migrations/20260713_natori_page_events.sql",
+      "version": "20260713",
+      "sha256": "fc8193c3564325b09901fa8c881667bb859e671770eb70e08ac6ef588cde60f9",
+      "sizeBytes": 934
+    },
+    {
+      "filename": "20260714_natori_links_content.sql",
+      "oldPath": "supabase/migrations/20260714_natori_links_content.sql",
+      "version": "20260714",
+      "sha256": "584fec643a11eef7f682edd36307c7ecdbd7e8fe2ab46c2bc85a87d077ae1410",
+      "sizeBytes": 1167
+    },
+    {
+      "filename": "20260716_natori_payment_link_columns.sql",
+      "oldPath": "supabase/migrations/20260716_natori_payment_link_columns.sql",
+      "version": "20260716",
+      "sha256": "633b3d0a3771b625852843616e332f6992795b0942647bdad056c5118543dcb8",
+      "sizeBytes": 744
+    },
+    {
+      "filename": "20260716_processed_stripe_events.sql",
+      "oldPath": "supabase/migrations/20260716_processed_stripe_events.sql",
+      "version": "20260716",
+      "sha256": "289bcf02c5cf069e16717341781dba2f3275fac49b37c5b0ec44d3091ed2b4b5",
+      "sizeBytes": 930
+    },
+    {
+      "filename": "20260717_natori_client_email_and_mail_logs.sql",
+      "oldPath": "supabase/migrations/20260717_natori_client_email_and_mail_logs.sql",
+      "version": "20260717",
+      "sha256": "5c50284f0ab559e77709321a68926fd967217e87fcaef4180beafaf2574730eb",
+      "sizeBytes": 1567
+    },
+    {
+      "filename": "20260717_natori_quote_acceptance.sql",
+      "oldPath": "supabase/migrations/20260717_natori_quote_acceptance.sql",
+      "version": "20260717",
+      "sha256": "6fe7a1dced8488ecbbc1c23c223da42346757bebf571829b2c6d2058d3beda3f",
+      "sizeBytes": 1150
+    },
+    {
+      "filename": "20260720_natori_delivery.sql",
+      "oldPath": "supabase/migrations/20260720_natori_delivery.sql",
+      "version": "20260720",
+      "sha256": "d8ab915a00639237dc7ddcef5c466d1cbdb2d804ae75f40c4686234d1611ac3d",
+      "sizeBytes": 2715
+    },
+    {
+      "filename": "202607200001_natori_beta_safety.sql",
+      "oldPath": "supabase/migrations/202607200001_natori_beta_safety.sql",
+      "version": "202607200001",
+      "sha256": "5d2360e42a66a36230900ff8267565958347ea206d1e5a19c26897ff2321a66e",
+      "sizeBytes": 26388
+    },
+    {
+      "filename": "202607200002_natori_backfill_legacy_completed_results.sql",
+      "oldPath": "supabase/migrations/202607200002_natori_backfill_legacy_completed_results.sql",
+      "version": "202607200002",
+      "sha256": "d87b98acace246dd15a5bd49b5e66f8f7bfef3e7a395ca4a97d7a2f020bf3796",
+      "sizeBytes": 966
+    },
+    {
+      "filename": "20260720102549_harden_natori_rpc_privileges.sql",
+      "oldPath": "supabase/migrations/20260720102549_harden_natori_rpc_privileges.sql",
+      "version": "20260720102549",
+      "sha256": "46fe3842ee3cdb65cd57f74e39669f081c250c2590c69232674c107fce5b3b89",
+      "sizeBytes": 1889
+    },
+    {
+      "filename": "20260720103406_add_natori_project_soft_delete.sql",
+      "oldPath": "supabase/migrations/20260720103406_add_natori_project_soft_delete.sql",
+      "version": "20260720103406",
+      "sha256": "c5ece01664ddc01d975739aa7f26ec4fd1f8eb47f7a667ef86144694046ab94f",
+      "sizeBytes": 515
+    },
+    {
+      "filename": "20260720104033_harden_natori_data_api_and_indexes.sql",
+      "oldPath": "supabase/migrations/20260720104033_harden_natori_data_api_and_indexes.sql",
+      "version": "20260720104033",
+      "sha256": "dbc16fe8e4d33617171b41de4be7ec5d611097a0b8d006e2f7ee66e8b1edb452",
+      "sizeBytes": 9179
+    }
+  ],
+  "classification": {
+    "active_baseline": [
+      "20260723111730_etorie_baseline.sql"
+    ],
+    "active_security_hardening": [
+      "20260723111741_baseline_security_hardening.sql"
+    ],
+    "legacy_local_migration": [
+      "20250120_entry_processing_jobs.sql",
+      "20250124_mypage_extension.sql",
+      "20250125_sales_payout_management.sql",
+      "20250201_ending_soon_notification.sql",
+      "20260131_profile_banner_focus.sql",
+      "20260201_entries_email_rls.sql",
+      "20260202_admin_entry_workflow_view.sql",
+      "20260203_entry_plan_payment.sql",
+      "20260205_view_stats.sql",
+      "20260206_entry_comments.sql",
+      "20260207_add_guarantee_and_daily_slots.sql",
+      "20260208_fix_fee_rounding.sql",
+      "20260208_payout_tables.sql",
+      "20260208_performance_indexes.sql",
+      "20260208_rls_unprotected_tables.sql",
+      "20260209_admin_audit_log.sql",
+      "20260209_gallery_stats_rpc.sql",
+      "20260210_end_notified_at.sql",
+      "20260211_add_rls_deny_policies_server_only.sql",
+      "20260211_artists_bank_accounts_rls.sql",
+      "20260211_enable_rls_server_only_tables.sql",
+      "20260211_entries_update_own_policy.sql",
+      "20260211_fix_aura_select_own_email_policy.sql",
+      "20260211_fix_function_search_path.sql",
+      "20260211_fix_rls_inquiries_insert.sql",
+      "20260211_fix_rls_policies_entries_inquiries.sql",
+      "20260211_fix_sales_select_buyer_policy.sql",
+      "20260211_fix_security_advisor_remaining_views.sql",
+      "20260211_fix_security_advisor_views.sql",
+      "20260211_fix_v_pending_payouts_security_invoker.sql",
+      "20260211_fix_view_grants_minimal.sql",
+      "20260211_move_citext_to_extensions_schema.sql",
+      "20260211_mypage_rls_sales_and_jobs.sql",
+      "20260308_get_auth_user_id_by_email.sql",
+      "20260523_natori_projects.sql",
+      "20260524_natori_events.sql",
+      "20260524_natori_project_flow.sql",
+      "20260525_natori_user_profiles.sql",
+      "20260526_natori_pricing_configs.sql",
+      "20260527_natori_unified_character_tasks.sql",
+      "20260528_natori_illustration_rough_submit.sql",
+      "20260710_natori_portfolio_content.sql",
+      "20260711_natori_closed_status.sql",
+      "20260713_natori_page_events.sql",
+      "20260714_natori_links_content.sql",
+      "20260716_natori_payment_link_columns.sql",
+      "20260716_processed_stripe_events.sql",
+      "20260717_natori_client_email_and_mail_logs.sql",
+      "20260717_natori_quote_acceptance.sql",
+      "20260720_natori_delivery.sql",
+      "202607200001_natori_beta_safety.sql",
+      "202607200002_natori_backfill_legacy_completed_results.sql",
+      "20260720102549_harden_natori_rpc_privileges.sql",
+      "20260720103406_add_natori_project_soft_delete.sql",
+      "20260720104033_harden_natori_data_api_and_indexes.sql"
+    ],
+    "baseline_after_migration": [],
+    "unknown": []
+  }
+}

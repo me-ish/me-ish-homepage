@@ -1,0 +1,141 @@
+{
+    "schemaVersion":  2,
+    "strategy":  "hybrid",
+    "baselineScope":  "etorie_natori_schema_and_required_security_contract",
+    "activeMigrationDirectory":  "supabase/migrations",
+    "legacyMigrationDirectory":  "supabase/legacy-migrations",
+    "baselineMigration":  "20260723111730_etorie_baseline.sql",
+    "securityHardeningMigration":  "20260723111741_baseline_security_hardening.sql",
+    "activeMigrations":  [
+                             "supabase/migrations/20260723111730_etorie_baseline.sql",
+                             "supabase/migrations/20260723111741_baseline_security_hardening.sql"
+                         ],
+    "activeMigrationCount":  2,
+    "legacyMigrationCount":  55,
+    "remoteOnlyEvidenceCount":  3,
+    "sourceProjectRef":  "lvnfspyainrxtztjytbo",
+    "generatedBy":  {
+                        "command":  "supabase migration new",
+                        "cliVersion":  "2.98.2",
+                        "locallyInstalledPackageVersion":  "2.109.1",
+                        "note":  "The installed v2.109.1 Windows binary was blocked by host Application Control; recheck the generated pair with v2.109.1 on the verification host."
+                    },
+    "generatedFrom":  {
+                          "ledger":  "docs/etorie-p0-01-migration-baseline-ledger.md",
+                          "baselineSpec":  "docs/etorie-p0-01-baseline-spec.md",
+                          "historyStrategy":  "docs/etorie-p0-01-history-strategy.md"
+                      },
+    "excludedObjects":  [
+                            "public.portfolio_profiles"
+                        ],
+    "requiredSequence":  [
+                             "20260723111730_etorie_baseline.sql",
+                             "20260723111741_baseline_security_hardening.sql"
+                         ],
+    "archiveVerification":  {
+                                "status":  "verified",
+                                "expectedCount":  55,
+                                "actualCount":  55,
+                                "allChecksumsMatch":  true,
+                                "beforeArtifact":  "artifacts/legacy-migration-archive/before.json",
+                                "afterArtifact":  "artifacts/legacy-migration-archive/after.json",
+                                "verificationArtifact":  "artifacts/legacy-migration-archive/verification.json"
+                            },
+    "checksumArtifactGeneration":  {
+                                       "algorithm":  "SHA-256",
+                                       "input":  "exact raw file bytes",
+                                       "newlineNormalization":  "none",
+                                       "encodingConversion":  "none"
+                                   },
+    "objects":  [
+                    "extension:extensions.pgcrypto",
+                    "table:public.natori_projects",
+                    "table:public.natori_project_tasks",
+                    "table:public.natori_events",
+                    "table:public.natori_user_profiles",
+                    "table:public.natori_pricing_configs",
+                    "table:public.natori_portfolio_content",
+                    "table:public.natori_links_content",
+                    "table:public.natori_page_events",
+                    "table:public.natori_quotes",
+                    "table:public.natori_payment_transactions",
+                    "table:public.natori_order_mail_logs",
+                    "table:public.natori_inquiry_reference_files",
+                    "table:public.natori_delivery_files",
+                    "table:public.processed_stripe_events",
+                    "function:public.natori_create_project_with_tasks(uuid,jsonb,jsonb,jsonb)",
+                    "function:public.natori_delete_project(uuid,uuid)",
+                    "function:public.natori_update_task_and_status(uuid,uuid,text,boolean,text,text)",
+                    "function:public.natori_confirm_manual_payment(uuid,uuid,text)",
+                    "function:public.natori_record_stripe_payment(uuid,text,integer,uuid)",
+                    "function:public.natori_issue_quote(uuid,uuid,text,text,text,integer,text,text,text,timestamptz)",
+                    "function:public.natori_accept_quote(text)",
+                    "function:public.touch_natori_projects_updated_at()",
+                    "function:public.touch_natori_events_updated_at()",
+                    "function:public.touch_natori_user_profiles_updated_at()",
+                    "function:public.touch_natori_pricing_configs_updated_at()",
+                    "function:public.touch_natori_portfolio_content_updated_at()",
+                    "function:public.touch_natori_links_content_updated_at()",
+                    "rls:public.natori_*",
+                    "rls:public.processed_stripe_events",
+                    "grant:service_role-only-Natori-base-tables",
+                    "grant:service_role-select-insert-delete-public.processed_stripe_events",
+                    "bucket:natori-inquiry-refs",
+                    "bucket:natori-deliveries",
+                    "bucket:natori-portfolio",
+                    "hardening:storage.objects.Allow Insert 1exduyn_0-removal",
+                    "hardening:public.card_requests-server-only-conditional",
+                    "hardening:public.aura_projects-server-only-conditional"
+                ],
+    "storage":  {
+                    "natori-inquiry-refs":  {
+                                                "public":  false,
+                                                "fileSizeLimit":  10485760,
+                                                "allowedMimeTypes":  [
+                                                                         "image/jpeg",
+                                                                         "image/png",
+                                                                         "image/webp",
+                                                                         "image/gif"
+                                                                     ],
+                                                "pathConvention":  "{projectId}/{uuid}.{ext}",
+                                                "writeModel":  "service_role"
+                                            },
+                    "natori-deliveries":  {
+                                              "public":  false,
+                                              "fileSizeLimit":  null,
+                                              "allowedMimeTypes":  null,
+                                              "pathConvention":  "{projectId}/{rough|final}/{uuid}.{ext}",
+                                              "writeModel":  "service_role_or_path_scoped_signed_upload"
+                                          },
+                    "natori-portfolio":  {
+                                             "public":  true,
+                                             "fileSizeLimit":  null,
+                                             "allowedMimeTypes":  null,
+                                             "pathConvention":  "server-managed application path",
+                                             "writeModel":  "service_role"
+                                         }
+                },
+    "checksums":  {
+                      "sha256:supabase/migrations/20260723111730_etorie_baseline.sql":  "cbe412613b6eadbe284499ea6f749afab6869bc9f6d40be17db9ac1f23d18ca4",
+                      "sha256:supabase/migrations/20260723111741_baseline_security_hardening.sql":  "dc13f7299b14db7f46c157864e1ed8707c1b0c23c3e918fe7e1f3b5506582be1",
+                      "sha256:supabase/fixtures/etorie-baseline.sql":  "aaff81f89a5d5d4b18430b6ec9376105cfb55af529b2494d5f68f9ff7224d8cf",
+                      "sha256:supabase/baseline/legacy-migrations.json":  "16c0b04613be8f7bdf0faf39282f3bc3e2a3fd58791bb74ad5f3982cb0d6f0da",
+                      "sha256:artifacts/legacy-migration-archive/before.json":  "102251c2824e69d336230ed511a4b2c1af5004ad3df710fb95aecba2578c735b",
+                      "sha256:artifacts/legacy-migration-archive/after.json":  "7eb6fe788e9de5ed34144f4e133f52657e0d44c3e7f2a01a53446b223f39f6b5",
+                      "sha256:artifacts/legacy-migration-archive/verification.json":  "c30b34cb22279364b02f188d866681919f6f315618cd73f85ab5d39e3e7db100",
+                      "expectedNormalizedSchema":  "operator_confirmation_required_after_pattern_b"
+                  },
+    "operatorConfirmationRequired":  [
+                                         "target project ref is non-production and not lvnfspyainrxtztjytbo",
+                                         "target database URL is explicitly supplied and does not reference production",
+                                         "CONFIRM_NON_PRODUCTION=YES is set only for an approved verification execution",
+                                         "Supabase CLI v2.109.1 behavior is rechecked in the verification host",
+                                         "the active migration list and archive verification artifacts are reviewed",
+                                         "a fresh Pattern B reference snapshot is reviewed and its normalized checksum is frozen",
+                                         "the deterministic fixture Auth user is created through the verification Auth API",
+                                         "artworks, avatars, banners, and Natori signed-upload positive/negative tests pass",
+                                         "backup/PITR and Storage restore evidence is attached",
+                                         "executor, approver, security reviewer, and rollback owner are assigned",
+                                         "Pattern C remains blocked until reviewed history transition SQL and rollback SQL are supplied"
+                                     ]
+}

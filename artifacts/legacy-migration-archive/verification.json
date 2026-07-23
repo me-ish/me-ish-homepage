@@ -1,0 +1,11 @@
+{
+  "expectedCount": 55,
+  "actualCount": 55,
+  "allChecksumsMatch": true,
+  "allSizesMatch": true,
+  "allFilenamesMatch": true,
+  "activeLegacyFiles": [],
+  "missingFiles": [],
+  "unexpectedFiles": [],
+  "contentChanges": []
+}
