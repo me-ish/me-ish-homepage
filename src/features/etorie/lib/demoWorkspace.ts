@@ -235,6 +235,8 @@ export function makeDemoWorkspaceProjects(today: Date): NatoriProject[] {
       note: "推しのアイコン。淡い色味の希望。",
     },
     // ---- 完了（実績に載る） ----
+    // 実績集計は「completed かつ入金記録あり」が条件（lib/results.ts）なので、
+    // 入金日時と完了日時を必ず付ける
     {
       id: "demo-done-1",
       title: "IRIAM用立ち絵",
@@ -245,6 +247,8 @@ export function makeDemoWorkspaceProjects(today: Date): NatoriProject[] {
       status: "completed",
       nextAction: "対応完了",
       type: "standing",
+      paymentConfirmedAt: `${day(today, -39)}T10:00:00+09:00`,
+      completedAt: `${day(today, -12)}T18:00:00+09:00`,
       tasks: makeTasks(["rough", "lineart", "coloring", "finish", "delivery"]),
       note: "最終データ送付済み。",
     },
@@ -258,6 +262,8 @@ export function makeDemoWorkspaceProjects(today: Date): NatoriProject[] {
       status: "completed",
       nextAction: "対応完了",
       type: "illustration",
+      paymentConfirmedAt: `${day(today, -34)}T10:00:00+09:00`,
+      completedAt: `${day(today, -20)}T18:00:00+09:00`,
       tasks: makeTasks(["rough", "lineart", "coloring", "finish", "delivery"]),
     },
     {
@@ -270,6 +276,8 @@ export function makeDemoWorkspaceProjects(today: Date): NatoriProject[] {
       status: "completed",
       nextAction: "対応完了",
       type: "sd",
+      paymentConfirmedAt: `${day(today, -59)}T10:00:00+09:00`,
+      completedAt: `${day(today, -38)}T18:00:00+09:00`,
       tasks: makeTasks(["rough", "lineart", "coloring", "finish", "delivery"]),
     },
     {
@@ -282,6 +290,8 @@ export function makeDemoWorkspaceProjects(today: Date): NatoriProject[] {
       status: "completed",
       nextAction: "対応完了",
       type: "illustration",
+      paymentConfirmedAt: `${day(today, -69)}T10:00:00+09:00`,
+      completedAt: `${day(today, -45)}T18:00:00+09:00`,
       tasks: makeTasks(["rough", "lineart", "coloring", "finish", "delivery"]),
     },
     {
@@ -294,6 +304,8 @@ export function makeDemoWorkspaceProjects(today: Date): NatoriProject[] {
       status: "completed",
       nextAction: "対応完了",
       type: "icon",
+      paymentConfirmedAt: `${day(today, -79)}T10:00:00+09:00`,
+      completedAt: `${day(today, -66)}T18:00:00+09:00`,
       tasks: makeTasks(["rough", "lineart", "coloring", "finish", "delivery"]),
     },
     // ---- 見送り ----
