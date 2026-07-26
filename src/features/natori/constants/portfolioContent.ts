@@ -7,7 +7,11 @@
 // 保存されていないときの初期値」なので、コードで直す必要は基本的にない。
 // 料金・自己紹介の初期値は つなぐ (https://tsunagu.cloud/users/natonato_o) がベース。
 
-import type { PortfolioContent, PortfolioSocialLink } from "@/features/natori/types/portfolio";
+import type {
+  PortfolioContent,
+  PortfolioPlan,
+  PortfolioSocialLink,
+} from "@/features/natori/types/portfolio";
 
 /* ------------------------------------------------------------------
    カラートークン
@@ -29,6 +33,48 @@ export const portfolioColors = {
 } as const;
 
 const c = portfolioColors;
+
+/* ------------------------------------------------------------------
+   料金・依頼contractと共有するstable ID
+
+   Phase 0の正式設計に合わせ、IDはlower ASCIIのsnake_caseを採用する。
+   labelや配列位置から新規生成せず、既知legacy labelだけを完全一致で補完する。
+------------------------------------------------------------------- */
+export const PORTFOLIO_PLAN_IDS = {
+  sd: "sd",
+  bustUp: "bust_up",
+  waistUp: "waist_up",
+  fullBody: "full_body",
+} as const;
+
+export const PORTFOLIO_OPTION_IDS = {
+  complexProp: "complex_prop",
+  mascotProp: "mascot_prop",
+  expressionVariation: "expression_variation",
+  additionalCharacter: "additional_character",
+  detailedBackground: "detailed_background",
+  commercialUse: "commercial_use",
+  sampleUsageDenied: "sample_usage_denied",
+  privateWork: "private_work",
+} as const;
+
+export const LEGACY_PORTFOLIO_PLAN_ID_BY_EXACT_NAME: Readonly<Record<string, string>> = {
+  "SDキャラ": PORTFOLIO_PLAN_IDS.sd,
+  胸上: PORTFOLIO_PLAN_IDS.bustUp,
+  "膝〜腰上": PORTFOLIO_PLAN_IDS.waistUp,
+  全身: PORTFOLIO_PLAN_IDS.fullBody,
+};
+
+export const LEGACY_PORTFOLIO_OPTION_ID_BY_EXACT_NAME: Readonly<Record<string, string>> = {
+  複雑な小物追加: PORTFOLIO_OPTION_IDS.complexProp,
+  "ぬいぐるみ / マスコット追加": PORTFOLIO_OPTION_IDS.mascotProp,
+  表情差分: PORTFOLIO_OPTION_IDS.expressionVariation,
+  人物追加: PORTFOLIO_OPTION_IDS.additionalCharacter,
+  しっかり背景: PORTFOLIO_OPTION_IDS.detailedBackground,
+  商用利用: PORTFOLIO_OPTION_IDS.commercialUse,
+  サンプル使用不可: PORTFOLIO_OPTION_IDS.sampleUsageDenied,
+  完全非公開: PORTFOLIO_OPTION_IDS.privateWork,
+};
 
 /* ------------------------------------------------------------------
    デフォルト掲載内容（DB未保存時の初期値）
@@ -68,24 +114,28 @@ export const defaultPortfolioContent: PortfolioContent = {
   ],
   plans: [
     {
+      id: PORTFOLIO_PLAN_IDS.sd,
       name: "SDキャラ",
       price: "3,000円",
       desc: "SDフルカラーイラスト",
       features: ["リテイク2回まで無料", "簡単な小物・簡易背景無料"],
     },
     {
+      id: PORTFOLIO_PLAN_IDS.bustUp,
       name: "胸上",
       price: "4,000円",
       desc: "胸から上のフルカラーイラスト",
       features: ["リテイク2回まで無料", "簡単な小物・簡易背景無料"],
     },
     {
+      id: PORTFOLIO_PLAN_IDS.waistUp,
       name: "膝〜腰上",
       price: "6,000円",
       desc: "膝〜腰上までのフルカラーイラスト",
       features: ["リテイク2回まで無料", "簡単な小物・簡易背景無料"],
     },
     {
+      id: PORTFOLIO_PLAN_IDS.fullBody,
       name: "全身",
       price: "10,000円",
       desc: "全身のフルカラーイラスト",
@@ -93,14 +143,30 @@ export const defaultPortfolioContent: PortfolioContent = {
     },
   ],
   options: [
-    { name: "複雑な小物追加", price: "+500円" },
-    { name: "ぬいぐるみ / マスコット追加", price: "+500円" },
-    { name: "表情差分", price: "+500円" },
-    { name: "人物追加", price: "基本料金の+70%" },
-    { name: "しっかり背景", price: "+3,000円〜5,000円" },
-    { name: "商用利用", price: "+3,000円" },
-    { name: "サンプル使用不可", price: "+1,000円" },
-    { name: "完全非公開", price: "+2,000円" },
+    { id: PORTFOLIO_OPTION_IDS.complexProp, name: "複雑な小物追加", price: "+500円" },
+    {
+      id: PORTFOLIO_OPTION_IDS.mascotProp,
+      name: "ぬいぐるみ / マスコット追加",
+      price: "+500円",
+    },
+    { id: PORTFOLIO_OPTION_IDS.expressionVariation, name: "表情差分", price: "+500円" },
+    {
+      id: PORTFOLIO_OPTION_IDS.additionalCharacter,
+      name: "人物追加",
+      price: "基本料金の+70%",
+    },
+    {
+      id: PORTFOLIO_OPTION_IDS.detailedBackground,
+      name: "しっかり背景",
+      price: "+3,000円〜5,000円",
+    },
+    { id: PORTFOLIO_OPTION_IDS.commercialUse, name: "商用利用", price: "+3,000円" },
+    {
+      id: PORTFOLIO_OPTION_IDS.sampleUsageDenied,
+      name: "サンプル使用不可",
+      price: "+1,000円",
+    },
+    { id: PORTFOLIO_OPTION_IDS.privateWork, name: "完全非公開", price: "+2,000円" },
   ],
   deliveryLead:
     "通常納期は、ご依頼確定後から約1ヶ月前後を目安としております。ご依頼内容やスケジュール状況によって前後する場合がございますので、あらかじめご了承ください。",
@@ -208,6 +274,16 @@ export const tapeColors = ["#FFE8A3", "#FFD3E2", "#CFF3E8", "#DCE4FF"] as const;
 /** フォームの「サイズ / プラン」選択肢の表記。料金カードとフォームで共有する */
 export function planChoiceLabel(plan: { name: string; price: string }): string {
   return `${plan.name}（${plan.price}）`;
+}
+
+export type PortfolioPlanSelectDetail = {
+  /** null はID導入前の未知legacy planだけ。 */
+  id: string | null;
+  label: string;
+};
+
+export function portfolioPlanSelectDetail(plan: PortfolioPlan): PortfolioPlanSelectDetail {
+  return { id: plan.id, label: planChoiceLabel(plan) };
 }
 
 /** 「このプランで相談」→ フォームのプラン自動選択に使うイベント名 */

@@ -1,11 +1,20 @@
 // features/natori/lib/portfolioContent.ts
 // PortfolioContent の検証・正規化（DB非依存の純関数）。
 import { z } from "zod";
+import {
+  LEGACY_PORTFOLIO_OPTION_ID_BY_EXACT_NAME,
+  LEGACY_PORTFOLIO_PLAN_ID_BY_EXACT_NAME,
+} from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
 const shortText = z.string().max(200);
 const longText = z.string().max(4000);
 const imageUrl = z.string().max(1000).nullable();
+const stableContentId = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z0-9]+(?:[_-][a-z0-9]+)*$/u);
 
 // 旧形式 (tag: string) と新形式 (tags: string[]) の両方を受け付け、tags に正規化する。
 // DB に残っている旧データは読み込み時にここで自動移行される。
@@ -26,17 +35,29 @@ const workSchema = z
     image,
   }));
 
-const planSchema = z.object({
-  name: shortText,
-  price: shortText,
-  desc: z.string().max(500),
-  features: z.array(shortText).max(20),
-});
+const planSchema = z
+  .object({
+    id: stableContentId.nullable().optional(),
+    name: shortText,
+    price: shortText,
+    desc: z.string().max(500),
+    features: z.array(shortText).max(20),
+  })
+  .transform(({ id, ...plan }) => ({
+    id: id ?? LEGACY_PORTFOLIO_PLAN_ID_BY_EXACT_NAME[plan.name] ?? null,
+    ...plan,
+  }));
 
-const optionSchema = z.object({
-  name: shortText,
-  price: shortText,
-});
+const optionSchema = z
+  .object({
+    id: stableContentId.nullable().optional(),
+    name: shortText,
+    price: shortText,
+  })
+  .transform(({ id, ...option }) => ({
+    id: id ?? LEGACY_PORTFOLIO_OPTION_ID_BY_EXACT_NAME[option.name] ?? null,
+    ...option,
+  }));
 
 const titleBodySchema = z.object({
   title: shortText,
@@ -79,6 +100,52 @@ export const portfolioContentSchema = z.object({
 export function parsePortfolioContent(value: unknown): PortfolioContent | null {
   const result = portfolioContentSchema.safeParse(value);
   return result.success ? result.data : null;
+}
+
+/**
+ * 編集画面へ渡す時だけ、ID導入前の未知項目へopaque IDを一度発行する。
+ * 既存IDは保持し、DBへの書き込みは明示的な保存操作まで行わない。
+ */
+export function withPortfolioEditorStableIds(
+  content: PortfolioContent,
+  createId: () => string = () => crypto.randomUUID()
+): PortfolioContent {
+  return {
+    ...content,
+    plans: content.plans.map((plan) =>
+      plan.id === null ? { ...plan, id: `custom-plan-${createId()}` } : plan
+    ),
+    options: content.options.map((option) =>
+      option.id === null ? { ...option, id: `custom-option-${createId()}` } : option
+    ),
+  };
+}
+
+/**
+ * editorのpreview/save共通入口。軽い正規化後もserverと同じschemaで再検証する。
+ * 不正な入力は送信せず null を返す。
+ */
+export function preparePortfolioContentForSave(content: PortfolioContent): PortfolioContent | null {
+  const cleanList = (items: string[]) =>
+    items.map((item) => item.trim()).filter((item) => item.length > 0);
+  return parsePortfolioContent({
+    ...content,
+    aboutParagraphs: cleanList(content.aboutParagraphs),
+    services: cleanList(content.services),
+    requests: cleanList(content.requests),
+    works: content.works.map((work) => ({
+      ...work,
+      title: work.title.trim(),
+      tags: cleanList(work.tags),
+    })),
+    plans: content.plans.map((plan) => ({
+      ...plan,
+      features: cleanList(plan.features),
+    })),
+    socialLinks: content.socialLinks.filter(
+      (link) => link.label.trim().length > 0 && link.href.trim().length > 0
+    ),
+  });
 }
 
 /**

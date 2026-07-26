@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   galleryFiltersFromWorks,
   parsePortfolioContent,
+  preparePortfolioContentForSave,
+  withPortfolioEditorStableIds,
 } from "../portfolioContent";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
@@ -22,8 +24,16 @@ const validContent: PortfolioContent = {
     { id: "w1", title: "作品1", tags: ["アイコン"], image: null },
     { id: "w2", title: "作品2", tags: ["つなぐ", "立ち絵"], image: "https://example.com/a.webp" },
   ],
-  plans: [{ name: "胸上", price: "4,000円", desc: "説明", features: ["リテイク2回まで無料"] }],
-  options: [{ name: "表情差分", price: "+500円" }],
+  plans: [
+    {
+      id: "bust_up",
+      name: "胸上",
+      price: "4,000円",
+      desc: "説明",
+      features: ["リテイク2回まで無料"],
+    },
+  ],
+  options: [{ id: "expression_variation", name: "表情差分", price: "+500円" }],
   deliveryLead: "約1ヶ月前後",
   deliveryNotes: [{ title: "お急ぎ納品", body: "最短7日" }],
   workflow: [{ title: "ご相談", body: "内容確認" }],
@@ -73,6 +83,80 @@ describe("parsePortfolioContent", () => {
       { id: "w2", title: "タグ空", tags: [], image: null },
       { id: "w3", title: "タグ無し", tags: [], image: null },
     ]);
+  });
+
+  it("IDの無い既知legacy項目は完全一致labelだけでstable IDへ補完する", () => {
+    const parsed = parsePortfolioContent({
+      ...validContent,
+      plans: [{ name: "胸上", price: "4,000円", desc: "説明", features: [] }],
+      options: [{ name: "表情差分", price: "+500円" }],
+    });
+
+    expect(parsed?.plans[0]?.id).toBe("bust_up");
+    expect(parsed?.options[0]?.id).toBe("expression_variation");
+  });
+
+  it("未知legacy項目を既知IDへ推測で割り当てず、内容を保持する", () => {
+    const parsed = parsePortfolioContent({
+      ...validContent,
+      plans: [{ name: "胸あたり", price: "応相談", desc: "独自", features: ["補足"] }],
+      options: [{ name: "独自オプション", price: "+700円" }],
+    });
+
+    expect(parsed?.plans[0]).toEqual({
+      id: null,
+      name: "胸あたり",
+      price: "応相談",
+      desc: "独自",
+      features: ["補足"],
+    });
+    expect(parsed?.options[0]).toEqual({
+      id: null,
+      name: "独自オプション",
+      price: "+700円",
+    });
+  });
+});
+
+describe("portfolio editor stable IDs", () => {
+  it("既存IDは編集・並べ替え・保存準備で再生成しない", () => {
+    const reordered: PortfolioContent = {
+      ...validContent,
+      plans: [
+        { id: "full_body", name: "全身", price: "10,000円", desc: "", features: [] },
+        { ...validContent.plans[0], name: "胸上イラスト（改名後）" },
+      ],
+      options: [
+        { id: "commercial_use", name: "商用利用", price: "+3,000円" },
+        { ...validContent.options[0], name: "表情バリエーション（改名後）" },
+      ],
+    };
+
+    const prepared = preparePortfolioContentForSave(reordered);
+    expect(prepared?.plans.map((plan) => plan.id)).toEqual(["full_body", "bust_up"]);
+    expect(prepared?.options.map((option) => option.id)).toEqual([
+      "commercial_use",
+      "expression_variation",
+    ]);
+  });
+
+  it("未知legacy項目にはeditor読込時に一度だけopaque IDを発行する", () => {
+    const legacy: PortfolioContent = {
+      ...validContent,
+      plans: [{ ...validContent.plans[0], id: null, name: "独自プラン" }],
+      options: [{ ...validContent.options[0], id: null, name: "独自オプション" }],
+    };
+    const ids = ["plan-opaque", "option-opaque"];
+    const first = withPortfolioEditorStableIds(legacy, () => ids.shift() ?? "unexpected");
+    const second = withPortfolioEditorStableIds(first, () => "must-not-regenerate");
+    const prepared = preparePortfolioContentForSave(second);
+
+    expect(first.plans[0]?.id).toBe("custom-plan-plan-opaque");
+    expect(first.options[0]?.id).toBe("custom-option-option-opaque");
+    expect(second.plans[0]?.id).toBe(first.plans[0]?.id);
+    expect(second.options[0]?.id).toBe(first.options[0]?.id);
+    expect(prepared?.plans[0]?.id).toBe(first.plans[0]?.id);
+    expect(prepared?.options[0]?.id).toBe(first.options[0]?.id);
   });
 });
 
