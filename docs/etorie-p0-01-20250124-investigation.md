@@ -19,7 +19,7 @@ baseline ledgerの`partially_applied`は現在のobject存在状態を表す。�
 - `schema_migrations.statements`には31 statementが保存されている。
 - 保存SQLには`portfolio_profiles`、2 index、trigger、RLS、4 policy、commentに加え、`likes`、`entry_view_events`、`entry_view_stats`の全定義が含まれる。
 - statement配列をLFで連結したUTF-8列のSHA-256は`034218c843f92a69166dc831bb63bd93c05197d413a423eaded8d9702da0db89`である。
-- 現在のローカルファイルbyte列のSHA-256は`7c521cfe0b91067ac7022009f98e10deef0163004703e0a8d068065f542366c1`である。checksumの対象表現が異なるため、2値の直接一致は期待しない。
+- archive pathにある現在の正準Git blob byte列のSHA-256は`a47df960080e1e562425b05c997f18fa6d56a8dafbfe4c9bdb9a2ad0b06bcab2`である。これをauthoritative checksumとする。`.gitattributes`の`supabase/** -text`により現在のworking tree raw byte列も同一だが、属性適用前のCRLF working treeやtext読込後の値はauthoritativeではない。remote historyのstatement配列表現とはchecksum対象が異なるため、2値の直接一致は期待しない。
 
 ### 2.2 Git履歴
 

@@ -1,7 +1,20 @@
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  collectCanonicalArchiveEntries,
+  verifyMigrationEvidenceEntries,
+} from "../../../scripts/lib/etorie-migration-evidence.mjs";
 import {
   PRODUCTION_PROJECT_REF,
   assertSafeTarget,
@@ -133,7 +146,10 @@ describe("Etorie migration archive", () => {
     activeMigrationCount: number;
     legacyMigrationCount: number;
     requiredSequence: string[];
-    archiveVerification: { allChecksumsMatch: boolean };
+    archiveVerification: {
+      allChecksumsMatch: boolean;
+      verificationArtifact: string;
+    };
   }>(path.join("supabase", "baseline", "manifest.json"));
   const legacyManifest = readJson<{
     localLegacyFileCount: number;
@@ -144,10 +160,30 @@ describe("Etorie migration archive", () => {
     files: Array<{
       filename: string;
       oldPath: string;
+      version: string;
       sha256: string;
       sizeBytes: number;
     }>;
   }>(path.join("artifacts", "legacy-migration-archive", "before.json"));
+  const after = readJson<{
+    files: Array<{
+      filename: string;
+      archivedPath: string;
+      version: string;
+      sha256: string;
+      sizeBytes: number;
+    }>;
+  }>(path.join("artifacts", "legacy-migration-archive", "after.json"));
+  const verification = readJson<{
+    beforeCount: number;
+    afterCount: number;
+    ledgerCount: number;
+    gitBlobCount: number;
+    allChecksumsMatch: boolean;
+    gitBlobsMatch: boolean;
+    duplicateEntries: string[];
+    contentChanges: string[];
+  }>(manifest.archiveVerification.verificationArtifact);
 
   it("keeps only the ordered baseline lane active with unique CLI versions", () => {
     const active = readdirSync(activeDirectory)
@@ -199,13 +235,101 @@ describe("Etorie migration archive", () => {
     }
   });
 
-  it("proves archived SQL matches the pre-move byte ledger", () => {
-    for (const entry of before.files) {
-      const archivedPath = path.join(legacyDirectory, entry.filename);
-      expect(fileSha256(archivedPath)).toBe(entry.sha256);
-      expect(readFileSync(archivedPath).byteLength).toBe(entry.sizeBytes);
+  it("proves archive, before, after, and ledger match canonical bytes 55/55", async () => {
+    const actualEntries = await collectCanonicalArchiveEntries();
+    const ledgerEntries = legacyManifest.migrations.filter(
+      (
+        entry,
+      ): entry is LegacyMigrationEntry & {
+        filename: string;
+        oldPath: string;
+        archivedPath: string;
+        sizeBytes: number;
+      } => entry.filename !== null,
+    );
+    const direct = verifyMigrationEvidenceEntries({
+      actualEntries,
+      beforeEntries: before.files,
+      afterEntries: after.files,
+      ledgerEntries,
+    });
+
+    expect(direct.failures).toEqual([]);
+    expect(direct.counts).toEqual({
+      archive: 55,
+      before: 55,
+      after: 55,
+      ledger: 55,
+    });
+    for (const label of ["before", "after", "ledger"] as const) {
+      expect(direct.matches[label].filename).toBe(55);
+      expect(direct.matches[label].path).toBe(55);
+      expect(direct.matches[label].version).toBe(55);
+      expect(direct.matches[label].sizeBytes).toBe(55);
+      expect(direct.matches[label].sha256).toBe(55);
     }
+    for (const entry of actualEntries) {
+      expect(readFileSync(entry.archivedPath).includes(13)).toBe(false);
+    }
+    expect(verification.beforeCount).toBe(55);
+    expect(verification.afterCount).toBe(55);
+    expect(verification.ledgerCount).toBe(55);
+    expect(verification.gitBlobCount).toBe(55);
+    expect(verification.allChecksumsMatch).toBe(true);
+    expect(verification.gitBlobsMatch).toBe(true);
+    expect(verification.duplicateEntries).toEqual([]);
+    expect(verification.contentChanges).toEqual([]);
     expect(manifest.archiveVerification.allChecksumsMatch).toBe(true);
+  });
+
+  it("rejects a corrupted checksum in a temporary evidence fixture", async () => {
+    const fixtureRoot = mkdtempSync(
+      path.join(tmpdir(), "etorie-migration-evidence-"),
+    );
+    try {
+      const fixtureDirectory = path.join(
+        fixtureRoot,
+        "supabase",
+        "legacy-migrations",
+      );
+      mkdirSync(fixtureDirectory, { recursive: true });
+      writeFileSync(
+        path.join(fixtureDirectory, "20260101000000_first.sql"),
+        "select 1;\n",
+      );
+      writeFileSync(
+        path.join(fixtureDirectory, "20260101000001_second.sql"),
+        "select 2;\n",
+      );
+      const actualEntries = await collectCanonicalArchiveEntries({
+        root: fixtureRoot,
+      });
+      const beforeEntries = actualEntries.map(
+        ({ archivedPath: _archivedPath, ...entry }) => entry,
+      );
+      const afterEntries = actualEntries.map(
+        ({ oldPath: _oldPath, ...entry }) => entry,
+      );
+      const ledgerEntries = actualEntries.map((entry) => ({ ...entry }));
+      afterEntries[0] = {
+        ...afterEntries[0],
+        sha256: "0".repeat(64),
+      };
+
+      const direct = verifyMigrationEvidenceEntries({
+        actualEntries,
+        beforeEntries,
+        afterEntries,
+        ledgerEntries,
+        expectedCount: 2,
+      });
+      expect(direct.failures).toContain(
+        "after sha256 mismatch: 20260101000000_first.sql",
+      );
+      expect(direct.matches.after.sha256).toBe(1);
+    } finally {
+      rmSync(fixtureRoot, { recursive: true, force: true });
+    }
   });
 
   it("does not synthesize remote-only history or portfolio_profiles", () => {

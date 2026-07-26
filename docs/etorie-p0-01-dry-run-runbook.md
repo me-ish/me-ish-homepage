@@ -36,6 +36,7 @@ schema baselineとhistory切替が、fresh replay、current-state互換、applic
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_URL`
 - server-side Supabase key変数（repoで使用する正式名称を実行前に確認）
+- `NATORI_OWNER_USER_ID`（非productionの専用Auth test user ID。未設定でownerを一意解決できない場合はNatori server APIが500となる）
 - Stripe test modeのpublishable/secret/webhook変数
 - verification用site URL
 - mail sandbox変数、または送信無効flag
@@ -157,10 +158,11 @@ checks:
 5. bucket設定とStorage policyを確認する。
 6. baseline後migrationをversion順に適用する。
 7. 専用Auth test userを作成し、guard付き匿名fixtureを投入する。
-8. checksumを取得し、review済みreference snapshotとdiffする。
-9. Vercel Previewを接続し、smoke/E2Eを実行する。
-10. `migration list`と`db push --dry-run`でpending 0を確認する。
-11. environmentを破棄する前に全artifactを保存する。
+8. Previewの`NATORI_OWNER_USER_ID`を専用Auth test user IDに設定する。値はartifactへ記録しない。
+9. checksumを取得し、review済みreference snapshotとdiffする。
+10. Vercel Previewを接続し、smoke/E2Eを実行する。
+11. `migration list`と`db push --dry-run`でpending 0を確認する。
+12. environmentを破棄する前に全artifactを保存する。
 
 checks:
 
@@ -171,6 +173,14 @@ checks:
 - `portfolio_profiles`がschemaとactive runtimeの双方に存在しない。
 - Storage private/public/signed URLのpositive/negative test。
 - Auth test userのRLS境界。
+
+owner解決のpreflight:
+
+- login済みSupabase userがある場合は、そのuser IDを最優先で使用する。
+- login userがなく`NATORI_OWNER_USER_ID`が設定済みの場合は、その値を使用する。
+- いずれもない場合は`natori_user_profiles`、`natori_projects`、`natori_events`から各table最大10行の`user_id`を探索し、取得成功した行のunionがexactly 1 ownerのときだけ解決する。query errorとなったtableは探索結果へ含まれない。このfallbackは全件監査ではないため、Pattern B smoke testでは依存せず専用ownerを明示する。
+- 既存ownerが0件または複数なら解決結果はnullとなり、ownerを必要とするNatori server APIはHTTP 500と`NATORI_OWNER_UNRESOLVED_MESSAGE`を返す。Pattern Bの空DB/fixture作成前後はこの経路に該当し得る。
+- 本番反映前にVercel production環境で`NATORI_OWNER_USER_ID`の設定有無をoperatorが確認する。今回のローカル検証ではVercelへ接続していないため、これは`operator_confirmation_required`の未確認blockerである。
 
 成功条件:
 
@@ -229,6 +239,7 @@ checks:
 
 最低限:
 
+- owner解決preflight: login user、`NATORI_OWNER_USER_ID`、既存dataからの一意解決の各経路と、解決不能時のHTTP 500をverification環境で確認する。
 - Natori: inquiry作成、task更新、quote発行/承認、manual/Stripe payment記録、delivery、archive/restore、portfolio公開/非公開、reference upload/signed URL。
 - Stripe webhook: 同一eventのdedup、失敗時retry、`processed_stripe_events`のservice-only access。
 - Card/AURA（Pattern Cのみ）: session tokenによるowner access、public slug/public id、upload/signed URL、unauthorized negative case。

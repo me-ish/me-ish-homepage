@@ -120,9 +120,9 @@
                       "sha256:supabase/migrations/20260723111741_baseline_security_hardening.sql":  "dc13f7299b14db7f46c157864e1ed8707c1b0c23c3e918fe7e1f3b5506582be1",
                       "sha256:supabase/fixtures/etorie-baseline.sql":  "aaff81f89a5d5d4b18430b6ec9376105cfb55af529b2494d5f68f9ff7224d8cf",
                       "sha256:supabase/baseline/legacy-migrations.json":  "3864fa7d84701688cd2f7ce12913e2da10f2eb5c4e983649bf2105015091152d",
-                      "sha256:artifacts/legacy-migration-archive/before.json":  "102251c2824e69d336230ed511a4b2c1af5004ad3df710fb95aecba2578c735b",
-                      "sha256:artifacts/legacy-migration-archive/after.json":  "7eb6fe788e9de5ed34144f4e133f52657e0d44c3e7f2a01a53446b223f39f6b5",
-                      "sha256:artifacts/legacy-migration-archive/verification.json":  "c30b34cb22279364b02f188d866681919f6f315618cd73f85ab5d39e3e7db100",
+                      "sha256:artifacts/legacy-migration-archive/before.json":  "11f85bb9f1e1a265c803b0b756add08a97767786af8b0b065641079f602a832e",
+                      "sha256:artifacts/legacy-migration-archive/after.json":  "44dc21dac31100e9e3a7a685139c410ab6b3b65f11aab616d306695d960ef096",
+                      "sha256:artifacts/legacy-migration-archive/verification.json":  "090f3f98f958f5b6d08431541e156187ca8e89507fb0f3a49b41431fb8a8591f",
                       "expectedNormalizedSchema":  "operator_confirmation_required_after_pattern_b"
                   },
     "operatorConfirmationRequired":  [

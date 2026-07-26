@@ -3,6 +3,10 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import {
+  ETORIE_EVIDENCE_EXPECTED_COUNT,
+  readMigrationEvidence,
+} from "./lib/etorie-migration-evidence.mjs";
 
 const baselineName = "20260723111730_etorie_baseline.sql";
 const hardeningName =
@@ -284,6 +288,41 @@ const verificationText = await readFile(
   "utf8",
 );
 const verification = JSON.parse(verificationText);
+const directEvidence = await readMigrationEvidence({
+  root: ".",
+  beforePath: manifest.archiveVerification.beforeArtifact,
+  afterPath: manifest.archiveVerification.afterArtifact,
+  ledgerPath: legacyManifestPath,
+});
+for (const failure of directEvidence.verification.failures) {
+  check(false, `archive evidence: ${failure}`);
+}
+for (const failure of directEvidence.git.failures) {
+  check(false, `archive Git evidence: ${failure}`);
+}
+check(
+  directEvidence.git.matchedCount === ETORIE_EVIDENCE_EXPECTED_COUNT,
+  "archive Git blob comparison must match 55/55",
+);
+for (const label of ["before", "after", "ledger"]) {
+  const direct = directEvidence.verification;
+  check(
+    direct.counts[label] === ETORIE_EVIDENCE_EXPECTED_COUNT,
+    `${label} evidence must contain 55 entries`,
+  );
+  for (const field of [
+    "filename",
+    "path",
+    "version",
+    "sizeBytes",
+    "sha256",
+  ]) {
+    check(
+      direct.matches[label][field] === ETORIE_EVIDENCE_EXPECTED_COUNT,
+      `${label} ${field} comparison must match 55/55`,
+    );
+  }
+}
 check(
   manifest.archiveVerification.status === "verified" &&
     manifest.archiveVerification.expectedCount === 55 &&
@@ -294,9 +333,19 @@ check(
 check(
   verification.expectedCount === 55 &&
     verification.actualCount === 55 &&
+    verification.beforeCount === 55 &&
+    verification.afterCount === 55 &&
+    verification.ledgerCount === 55 &&
+    verification.gitBlobCount === 55 &&
     verification.allChecksumsMatch === true &&
+    verification.allSizesMatch === true &&
+    verification.allPathsMatch === true &&
+    verification.allVersionsMatch === true &&
+    verification.allFilenamesMatch === true &&
+    verification.gitBlobsMatch === true &&
     verification.missingFiles.length === 0 &&
     verification.unexpectedFiles.length === 0 &&
+    verification.duplicateEntries.length === 0 &&
     verification.contentChanges.length === 0,
   "archive verification artifact reports a mismatch",
 );

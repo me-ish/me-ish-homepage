@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit",
     "check:etorie-migrations": "node scripts/etorie-baseline-static-check.mjs",
     "etorie:baseline:check": "node scripts/etorie-baseline-static-check.mjs",
+    "etorie:evidence:generate": "node scripts/etorie-migration-evidence.mjs",
     "etorie:schema:checksum": "node scripts/etorie-schema-checksum.mjs",
     "etorie:schema:diff": "node scripts/etorie-schema-diff.mjs",
     "test:e2e": "playwright test",
