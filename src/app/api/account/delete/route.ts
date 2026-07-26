@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 6. Supabase Auth からユーザーを削除
-    // (likes, comments, portfolio_profiles are CASCADE-deleted)
+    // likes/commentsなど、auth.users参照の関連行はCASCADEされる。
     const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
 
     if (deleteError) {

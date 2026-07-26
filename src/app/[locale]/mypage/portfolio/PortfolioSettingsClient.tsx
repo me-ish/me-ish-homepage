@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import {
-  getPortfolioProfile,
+  getPortfolioSettings,
   getPortfolioEntries,
   upsertPortfolioSettings,
   updateEntryPortfolioHidden,
@@ -13,7 +13,7 @@ import {
   type UserProfile,
 } from '@/lib/portfolio/queries';
 import type {
-  PortfolioProfile,
+  PortfolioSettings,
   EntryWithStatus,
   WorksFilter,
   SortKey,
@@ -45,7 +45,7 @@ export default function PortfolioSettingsClient() {
   const [loading, setLoading] = useState(true);
 
   // ポートフォリオ設定
-  const [portfolioProfile, setPortfolioProfile] = useState<PortfolioProfile | null>(null);
+  const [portfolioSettings, setPortfolioSettings] = useState<PortfolioSettings | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [entries, setEntries] = useState<EntryWithStatus[]>([]);
 
@@ -97,12 +97,12 @@ export default function PortfolioSettingsClient() {
 
         // 並行取得
         const [profileData, entriesData, userProf] = await Promise.all([
-          getPortfolioProfile(supabase, user.id),
+          getPortfolioSettings(supabase, user.id),
           getPortfolioEntries(supabase, user.id),
           getUserProfile(supabase, user.id),
         ]);
 
-        setPortfolioProfile(profileData);
+        setPortfolioSettings(profileData);
         setEntries(entriesData);
         setUserProfile(userProf);
       } catch (err) {
@@ -115,22 +115,18 @@ export default function PortfolioSettingsClient() {
 
   // プロフィール設定更新
   const handleUpdateProfile = useCallback(
-    async (updates: Partial<Pick<PortfolioProfile, 'is_public' | 'works_filter' | 'sort_key'>>) => {
+    async (updates: Partial<Pick<PortfolioSettings, 'is_public' | 'works_filter' | 'sort_key'>>) => {
       if (!userId) return;
       setSaving(true);
       try {
         const result = await upsertPortfolioSettings(supabase, userId, updates);
         if (result.success) {
-          setPortfolioProfile((prev) =>
+          setPortfolioSettings((prev) =>
             prev
               ? { ...prev, ...updates }
               : {
-                  id: '',
                   user_id: userId,
-                  public_slug: null,
                   is_public: true,
-                  mode: 'template',
-                  aura_request_id: null,
                   works_filter: 'displaying',
                   sort_key: 'new',
                   created_at: new Date().toISOString(),
@@ -235,9 +231,9 @@ export default function PortfolioSettingsClient() {
     );
   }
 
-  const isPublic = portfolioProfile?.is_public ?? true;
-  const worksFilter = portfolioProfile?.works_filter ?? 'displaying';
-  const sortKey = portfolioProfile?.sort_key ?? 'new';
+  const isPublic = portfolioSettings?.is_public ?? true;
+  const worksFilter = portfolioSettings?.works_filter ?? 'displaying';
+  const sortKey = portfolioSettings?.sort_key ?? 'new';
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
