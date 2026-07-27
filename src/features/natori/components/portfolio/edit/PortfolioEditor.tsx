@@ -7,7 +7,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Eye, ImagePlus, Loader2, Save } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
-import { PORTFOLIO_PREVIEW_STORAGE_KEY } from "@/features/natori/lib/portfolioContent";
+import {
+  PORTFOLIO_PREVIEW_STORAGE_KEY,
+  preparePortfolioContentForSave,
+  withPortfolioEditorStableIds,
+} from "@/features/natori/lib/portfolioContent";
 import type { PortfolioContent, PortfolioWork } from "@/features/natori/types/portfolio";
 import {
   AddButton,
@@ -40,23 +44,6 @@ const SECTION_NAV = [
   { id: "section-sns", label: "SNS" },
 ] as const;
 
-/** 保存前の軽い整理（空行・前後スペースを除去。空になった行は消す） */
-function sanitizeContent(content: PortfolioContent): PortfolioContent {
-  const cleanList = (items: string[]) =>
-    items.map((item) => item.trim()).filter((item) => item.length > 0);
-  return {
-    ...content,
-    aboutParagraphs: cleanList(content.aboutParagraphs),
-    services: cleanList(content.services),
-    requests: cleanList(content.requests),
-    works: content.works.map((work) => ({ ...work, title: work.title.trim(), tags: cleanList(work.tags) })),
-    plans: content.plans.map((plan) => ({ ...plan, features: cleanList(plan.features) })),
-    socialLinks: content.socialLinks.filter(
-      (link) => link.label.trim().length > 0 && link.href.trim().length > 0
-    ),
-  };
-}
-
 type PortfolioEditorProps = {
   /**
    * エトリエのデモ環境用。渡すとサーバーへは一切アクセスせず、
@@ -77,7 +64,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
 
   useEffect(() => {
     if (demoContent) {
-      setContent(demoContent);
+      setContent(withPortfolioEditorStableIds(demoContent));
       return;
     }
     let cancelled = false;
@@ -86,7 +73,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
         const res = await fetch("/api/natori/portfolio/content");
         if (!res.ok) throw new Error(`load failed: ${res.status}`);
         const json = (await res.json()) as { content: PortfolioContent };
-        if (!cancelled) setContent(json.content);
+        if (!cancelled) setContent(withPortfolioEditorStableIds(json.content));
       } catch (err) {
         console.error("[portfolio-edit] load failed", err);
         if (!cancelled) setLoadError(true);
@@ -129,9 +116,11 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
   const handlePreview = () => {
     if (!content) return;
     try {
+      const prepared = preparePortfolioContentForSave(content);
+      if (!prepared) throw new Error("portfolio content validation failed");
       window.localStorage.setItem(
         PORTFOLIO_PREVIEW_STORAGE_KEY,
-        JSON.stringify(sanitizeContent(content))
+        JSON.stringify(prepared)
       );
       window.open("/natori/portfolio/edit/preview", "_blank");
     } catch (err) {
@@ -143,14 +132,20 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
     if (!content || saveState === "saving") return;
     if (isDemo) {
       // デモ: 実保存せず成功表示だけする
-      setContent(sanitizeContent(content));
+      const prepared = preparePortfolioContentForSave(content);
+      if (!prepared) {
+        setSaveState("error");
+        return;
+      }
+      setContent(prepared);
       setDirty(false);
       setSaveState("saved");
       return;
     }
     setSaveState("saving");
     try {
-      const sanitized = sanitizeContent(content);
+      const sanitized = preparePortfolioContentForSave(content);
+      if (!sanitized) throw new Error("portfolio content validation failed");
       const res = await fetch("/api/natori/portfolio/content", {
         method: "PUT",
         headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
@@ -466,7 +461,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
                       label="タグ（「、」区切りで複数OK）"
                       value={work.tags.join("、")}
                       onChange={(v) =>
-                        // 入力中の末尾「、」を消さないよう、trim/空除去は保存時 (sanitizeContent) に行う
+                        // 入力中の末尾「、」を消さないよう、trim/空除去は保存準備時に行う
                         patch({ works: updateItem(content.works, index, { tags: v.split(/[、,]/) }) })
                       }
                       placeholder="例: つなぐ、立ち絵"
@@ -501,6 +496,10 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
         >
           <SortableList
             items={content.plans}
+            getId={(plan) => {
+              if (plan.id === null) throw new Error("editor plan ID is missing");
+              return plan.id;
+            }}
             onReorder={(next) => patch({ plans: next })}
             className="space-y-4"
             renderRow={(plan, index, handle) => (
@@ -550,7 +549,13 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
               patch({
                 plans: [
                   ...content.plans,
-                  { name: "新しいプラン", price: "0円", desc: "", features: [] },
+                  {
+                    id: `custom-plan-${crypto.randomUUID()}`,
+                    name: "新しいプラン",
+                    price: "0円",
+                    desc: "",
+                    features: [],
+                  },
                 ],
               })
             }
@@ -566,6 +571,10 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
         >
           <SortableList
             items={content.options}
+            getId={(option) => {
+              if (option.id === null) throw new Error("editor option ID is missing");
+              return option.id;
+            }}
             onReorder={(next) => patch({ options: next })}
             className="space-y-2"
             renderRow={(option, index, handle) => (
@@ -596,7 +605,14 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
           />
           <AddButton
             label="オプションを追加"
-            onClick={() => patch({ options: [...content.options, { name: "", price: "" }] })}
+            onClick={() =>
+              patch({
+                options: [
+                  ...content.options,
+                  { id: `custom-option-${crypto.randomUUID()}`, name: "", price: "" },
+                ],
+              })
+            }
           />
         </SectionCard>
 

@@ -23,6 +23,11 @@ export type PortfolioWork = {
 };
 
 export type PortfolioPlan = {
+  /**
+   * 表示名から独立した永続ID。ID導入前の未知legacy項目だけは null のまま保持し、
+   * 既知項目へ推測で割り当てない。
+   */
+  id: string | null;
   name: string;
   price: string;
   desc: string;
@@ -30,6 +35,8 @@ export type PortfolioPlan = {
 };
 
 export type PortfolioOption = {
+  /** PortfolioPlan.id と同じ互換方針。 */
+  id: string | null;
   name: string;
   price: string;
 };

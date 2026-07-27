@@ -5,21 +5,21 @@
 // フォームの「サイズ / プラン」をそのプランに自動で合わせる。
 import {
   PLAN_SELECT_EVENT,
-  planChoiceLabel,
+  portfolioPlanSelectDetail,
   planColors,
   portfolioColors as c,
 } from "@/features/natori/constants/portfolioContent";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
-import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import type { PortfolioContent, PortfolioPlan } from "@/features/natori/types/portfolio";
 
 export default function PortfolioPricing({ content }: { content: PortfolioContent }) {
   const gridCols =
     content.plans.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-3";
 
-  const handleSelectPlan = (plan: { name: string; price: string }) => {
+  const handleSelectPlan = (plan: PortfolioPlan) => {
     trackNatoriPageEvent("portfolio_plan_click", plan.name);
     window.dispatchEvent(
-      new CustomEvent<string>(PLAN_SELECT_EVENT, { detail: planChoiceLabel(plan) })
+      new CustomEvent(PLAN_SELECT_EVENT, { detail: portfolioPlanSelectDetail(plan) })
     );
   };
 
@@ -31,7 +31,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
       <div className={`grid gap-6 ${gridCols}`}>
         {content.plans.map((p, index) => (
           <div
-            key={`${p.name}-${index}`}
+            key={p.id ?? `legacy-plan-${index}`}
             className="relative flex flex-col rounded-2xl p-6"
             style={{ background: c.card, boxShadow: "0 10px 22px rgba(45,42,61,0.10)" }}
           >
@@ -78,7 +78,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
         <ul className="divide-y" style={{ borderColor: c.paperAlt }}>
           {content.options.map((option, index) => (
             <li
-              key={`${option.name}-${index}`}
+              key={option.id ?? `legacy-option-${index}`}
               className="flex items-baseline justify-between gap-4 py-2.5 text-sm md:text-base"
               style={{ borderColor: c.paperAlt }}
             >

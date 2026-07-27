@@ -12,6 +12,7 @@ import {
   portfolioBudgetOptions,
   portfolioColors as c,
   portfolioDeadlineOptions,
+  type PortfolioPlanSelectDetail,
 } from "@/features/natori/constants/portfolioContent";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
@@ -77,12 +78,16 @@ export default function PortfolioCommissionForm({
 
   // 料金カードの「このプランで相談」からプランを受け取る
   useEffect(() => {
-    const choices = new Set([...content.plans.map(planChoiceLabel), PLAN_UNDECIDED]);
     const handler = (event: Event) => {
-      const detail = (event as CustomEvent<string>).detail;
-      if (typeof detail === "string" && choices.has(detail)) {
-        setSelectedPlan(detail);
-      }
+      const detail = (event as CustomEvent<PortfolioPlanSelectDetail>).detail;
+      if (!detail || typeof detail.label !== "string") return;
+      const matchingPlan =
+        detail.id === null
+          ? content.plans.find(
+              (plan) => plan.id === null && planChoiceLabel(plan) === detail.label
+            )
+          : content.plans.find((plan) => plan.id === detail.id);
+      if (matchingPlan) setSelectedPlan(planChoiceLabel(matchingPlan));
     };
     window.addEventListener(PLAN_SELECT_EVENT, handler);
     return () => window.removeEventListener(PLAN_SELECT_EVENT, handler);
@@ -296,7 +301,7 @@ export default function PortfolioCommissionForm({
               <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
                 {content.options.map((option, index) => (
                   <label
-                    key={`${option.name}-${index}`}
+                    key={option.id ?? `legacy-option-${index}`}
                     className="flex cursor-pointer items-center gap-2 text-sm"
                     style={{ color: c.inkSoft }}
                   >
@@ -304,6 +309,7 @@ export default function PortfolioCommissionForm({
                       type="checkbox"
                       name="options"
                       value={`${option.name}（${option.price}）`}
+                      data-option-id={option.id ?? undefined}
                       className="pf-cute-focus h-4 w-4 shrink-0"
                       style={{ accentColor: c.pink }}
                     />
