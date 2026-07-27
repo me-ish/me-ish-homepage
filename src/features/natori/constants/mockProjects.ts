@@ -1,5 +1,6 @@
 import { applyStatusToTasks, createTasksForType } from "@/features/natori/lib/projects";
 import type {
+  NatoriConcreteProjectType,
   NatoriProject,
   NatoriProjectStatus,
   NatoriProjectStatusMeta,
@@ -150,7 +151,8 @@ export const natoriProjectStatusMeta: Record<NatoriProjectStatus, NatoriProjectS
   },
 };
 
-type MockSeed = Omit<NatoriProject, "tasks"> & {
+type MockSeed = Omit<NatoriProject, "tasks" | "type"> & {
+  type: NatoriConcreteProjectType;
   taskOverrides?: Partial<Record<string, boolean>>;
 };
 

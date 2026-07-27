@@ -22,8 +22,8 @@ import { createNatoriProject } from "@/features/natori/data/supabaseProjects";
 import { cn } from "@/lib/utils";
 import type {
   NatoriDeliveryPlan,
+  NatoriConcreteProjectType,
   NatoriProjectStatus,
-  NatoriProjectType,
 } from "@/features/natori/types/projects";
 
 // Status options exposed in the unified register form. We intentionally cap
@@ -53,7 +53,7 @@ export function getDefaultStatusForMode(
   return mode === "estimate" ? "quoted" : "inquiry";
 }
 
-const PROJECT_TYPE_LABELS: Record<NatoriProjectType, string> = {
+const PROJECT_TYPE_LABELS: Record<NatoriConcreteProjectType, string> = {
   icon: "アイコン",
   sd: "SD",
   standing: "立ち絵",
@@ -62,7 +62,7 @@ const PROJECT_TYPE_LABELS: Record<NatoriProjectType, string> = {
 
 type ProjectRegisterDefaults = {
   title?: string;
-  type?: NatoriProjectType;
+  type?: NatoriConcreteProjectType;
   amount?: number;
   note?: string;
   deliveryPlan?: NatoriDeliveryPlan;
@@ -126,7 +126,9 @@ export default function ProjectRegisterForm({
 
   const [clientName, setClientName] = useState("");
   const [title, setTitle] = useState(defaults?.title ?? "");
-  const [type, setType] = useState<NatoriProjectType>(defaults?.type ?? "illustration");
+  const [type, setType] = useState<NatoriConcreteProjectType>(
+    defaults?.type ?? "illustration"
+  );
   const [status, setStatus] = useState<NatoriProjectStatus>(initialStatus);
   const [amount, setAmount] = useState<number>(defaults?.amount ?? 0);
   const [deliveryPlan, setDeliveryPlan] = useState<NatoriDeliveryPlan>(
@@ -298,10 +300,12 @@ export default function ProjectRegisterForm({
           </span>
           <select
             value={type}
-            onChange={(event) => setType(event.target.value as NatoriProjectType)}
+            onChange={(event) =>
+              setType(event.target.value as NatoriConcreteProjectType)
+            }
             className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
           >
-            {(Object.keys(PROJECT_TYPE_LABELS) as NatoriProjectType[]).map((value) => (
+            {(Object.keys(PROJECT_TYPE_LABELS) as NatoriConcreteProjectType[]).map((value) => (
               <option key={value} value={value}>
                 {PROJECT_TYPE_LABELS[value]}
               </option>

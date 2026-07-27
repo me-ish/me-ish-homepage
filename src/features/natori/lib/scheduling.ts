@@ -1,4 +1,5 @@
 import { getDeliveryPlanMeta } from "@/features/natori/lib/deliveryPlans";
+import { isActiveNatoriProject } from "@/features/natori/lib/projectReadModel";
 import {
   computeProjectBars,
   computeStageMilestones,
@@ -137,8 +138,8 @@ export function computeBarHoursInRange(
 export type NatoriProjectScheduling = {
   totalHours: number;
   remainingHours: number;
-  daysUntilDue: number;
-  workableDaysUntilDue: number;
+  daysUntilDue: number | null;
+  workableDaysUntilDue: number | null;
   isBlocked: boolean;
   isOverdue: boolean;
   isRush: boolean;
@@ -172,6 +173,24 @@ export function computeProjectScheduling(
   const weekdaysOnly = options.weekdaysOnly ?? DEFAULT_WEEKDAYS_ONLY;
   const totalHours = getProjectTotalHours(project);
   const remainingHours = getProjectRemainingHours(project);
+  const weekWindow = weekdaysOnly ? WORKDAYS_PER_WEEK : WEEK_LENGTH_DAYS;
+  const capacityThisWeek = dailyCapacityHours * weekWindow;
+  if (!isActiveNatoriProject(project) || project.dueDate === null) {
+    return {
+      totalHours,
+      remainingHours,
+      daysUntilDue: null,
+      workableDaysUntilDue: null,
+      isBlocked: isBlockedStatus(project.status),
+      isOverdue: false,
+      isRush: false,
+      requiredPerDay: 0,
+      requiredToday: 0,
+      requiredThisWeek: 0,
+      capacityThisWeek,
+      utilizationThisWeek: 0,
+    };
+  }
   const days = daysUntilDue(project.dueDate, today);
   const due = parseISODate(project.dueDate);
   const workable = weekdaysOnly
@@ -183,7 +202,6 @@ export function computeProjectScheduling(
   const isRush = getDeliveryPlanMeta(project.deliveryPlan).isRush;
 
   const requiredPerDay = done || isBlocked ? 0 : remainingHours / workable;
-  const weekWindow = weekdaysOnly ? WORKDAYS_PER_WEEK : WEEK_LENGTH_DAYS;
   const todayCounts = !weekdaysOnly || !isWeekend(today);
   const todayStart = startOfDay(today);
   const weekEnd = new Date(
@@ -203,7 +221,6 @@ export function computeProjectScheduling(
     : isOverdue
       ? remainingHours
       : computeBarHoursInRange(project, todayStart, todayStart);
-  const capacityThisWeek = dailyCapacityHours * weekWindow;
   const utilizationThisWeek = capacityThisWeek === 0 ? 0 : requiredThisWeek / capacityThisWeek;
 
   return {
@@ -228,7 +245,12 @@ export function getScheduleEntries(
   options: NatoriScheduleOptions = {}
 ): NatoriScheduleEntry[] {
   return projects
-    .filter((project) => !isDoneStatus(project.status))
+    .filter(
+      (project) =>
+        isActiveNatoriProject(project) &&
+        project.dueDate !== null &&
+        !isDoneStatus(project.status)
+    )
     .map((project) => ({
       project,
       scheduling: computeProjectScheduling(project, today, options),
@@ -255,7 +277,12 @@ export function getScheduleEntries(
       if (a.scheduling.requiredPerDay !== b.scheduling.requiredPerDay) {
         return b.scheduling.requiredPerDay - a.scheduling.requiredPerDay;
       }
-      return a.project.dueDate.localeCompare(b.project.dueDate);
+      const aDue = a.project.dueDate;
+      const bDue = b.project.dueDate;
+      if (aDue === null && bDue === null) return 0;
+      if (aDue === null) return 1;
+      if (bDue === null) return -1;
+      return aDue.localeCompare(bDue);
     });
 }
 
@@ -377,12 +404,23 @@ export type NatoriAwaitingPaymentSummary = {
   projects: NatoriProject[];
   count: number;
   totalAmount: number;
+  undecidedAmountCount: number;
 };
 
 export function getAwaitingPaymentSummary(projects: NatoriProject[]): NatoriAwaitingPaymentSummary {
-  const list = projects.filter((project) => project.status === "awaiting_payment");
-  const totalAmount = list.reduce((sum, project) => sum + project.amount, 0);
-  return { projects: list, count: list.length, totalAmount };
+  const list = projects.filter(
+    (project) => isActiveNatoriProject(project) && project.status === "awaiting_payment"
+  );
+  const totalAmount = list.reduce(
+    (sum, project) => (project.amount === null ? sum : sum + project.amount),
+    0
+  );
+  return {
+    projects: list,
+    count: list.length,
+    totalAmount,
+    undecidedAmountCount: list.filter((project) => project.amount === null).length,
+  };
 }
 
 export function formatHours(value: number): string {

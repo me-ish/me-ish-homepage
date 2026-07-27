@@ -5,6 +5,7 @@ import { natoriStageMeta } from "@/features/natori/constants/mockProjects";
 import { buildMonthCells, toISODate } from "@/features/natori/lib/projects";
 import { getDeliveryPlanMeta } from "@/features/natori/lib/deliveryPlans";
 import { getRemindersForDate } from "@/features/natori/lib/reminders";
+import { isActiveNatoriProject } from "@/features/natori/lib/projectReadModel";
 import type { NatoriEvent } from "@/features/natori/data/supabaseEvents";
 import type { NatoriCalendarCellBar, NatoriProject } from "@/features/natori/types/projects";
 
@@ -134,6 +135,7 @@ export default function ProjectMonthCalendar({
           ).length;
           const rushDueProjects = projects.filter(
             (project) =>
+              isActiveNatoriProject(project) &&
               project.dueDate === cell.iso &&
               getDeliveryPlanMeta(project.deliveryPlan).isRush
           );

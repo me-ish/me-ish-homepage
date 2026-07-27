@@ -22,10 +22,10 @@ import { calculateDueDate, getDeliveryPlanMeta } from "@/features/natori/lib/del
 import { createDefaultNatoriPricingConfig, createNatoriEstimate } from "@/features/natori/lib/pricing";
 import { getRemindersForDate } from "@/features/natori/lib/reminders";
 import type {
+  NatoriConcreteProjectType,
   NatoriDeliveryPlan,
   NatoriProject,
   NatoriProjectStatus,
-  NatoriProjectType,
 } from "@/features/natori/types/projects";
 
 const TODAY = new Date(2026, 4, 22); // 2026-05-22
@@ -35,13 +35,13 @@ type OrderInput = {
   title?: string;
   clientName?: string;
   amount?: number;
-  type: NatoriProjectType;
+  type: NatoriConcreteProjectType;
   status?: NatoriProjectStatus;
   startDateISO?: string;
   deliveryPlan?: NatoriDeliveryPlan;
 };
 
-function makeOrder(input: OrderInput): NatoriProject {
+function makeOrder(input: OrderInput): NatoriProject & { dueDate: string } {
   const status = input.status ?? "consulting";
   const tasks = applyStatusToTasks(createTasksForType(input.type), status);
   const startDateISO = input.startDateISO ?? toISODate(TODAY);

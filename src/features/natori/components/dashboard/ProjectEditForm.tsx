@@ -15,18 +15,18 @@ import {
   type UpdateNatoriProjectDetailsInput,
 } from "@/features/natori/data/supabaseProjects";
 import { cn } from "@/lib/utils";
+import {
+  getNatoriNullableEditChanges,
+  NATORI_CONCRETE_PROJECT_TYPES,
+  NATORI_PROJECT_TYPE_LABELS,
+  toNatoriAmountInputValue,
+  toNatoriDueDateInputValue,
+} from "@/features/natori/lib/projectReadModel";
 import type {
   NatoriDeliveryPlan,
   NatoriProject,
   NatoriProjectType,
 } from "@/features/natori/types/projects";
-
-const PROJECT_TYPE_LABELS: Record<NatoriProjectType, string> = {
-  icon: "アイコン",
-  sd: "SD",
-  standing: "立ち絵",
-  illustration: "イラスト",
-};
 
 export type ProjectEditFormProps = {
   project: NatoriProject;
@@ -42,12 +42,16 @@ export default function ProjectEditForm({
   const [clientName, setClientName] = useState(project.clientName);
   const [title, setTitle] = useState(project.title);
   const [type, setType] = useState<NatoriProjectType>(project.type);
-  const [amount, setAmount] = useState<number>(project.amount);
+  const [amount, setAmount] = useState<string>(
+    toNatoriAmountInputValue(project.amount)
+  );
   const [deliveryPlan, setDeliveryPlan] = useState<NatoriDeliveryPlan>(
     project.deliveryPlan ?? DEFAULT_NATORI_DELIVERY_PLAN
   );
   const [startDate, setStartDate] = useState<string>(project.startDate ?? "");
-  const [dueDate, setDueDate] = useState<string>(project.dueDate);
+  const [dueDate, setDueDate] = useState<string>(
+    toNatoriDueDateInputValue(project.dueDate)
+  );
   const [note, setNote] = useState<string>(project.note ?? "");
 
   const [saving, setSaving] = useState(false);
@@ -59,10 +63,10 @@ export default function ProjectEditForm({
     setClientName(project.clientName);
     setTitle(project.title);
     setType(project.type);
-    setAmount(project.amount);
+    setAmount(toNatoriAmountInputValue(project.amount));
     setDeliveryPlan(project.deliveryPlan ?? DEFAULT_NATORI_DELIVERY_PLAN);
     setStartDate(project.startDate ?? "");
-    setDueDate(project.dueDate);
+    setDueDate(toNatoriDueDateInputValue(project.dueDate));
     setNote(project.note ?? "");
     setError(null);
   }, [
@@ -82,13 +86,14 @@ export default function ProjectEditForm({
     const input: UpdateNatoriProjectDetailsInput = {
       clientName,
       title,
-      type,
-      amount,
       deliveryPlan,
       startDate: startDate ? startDate : null,
-      dueDate,
       note: note,
     };
+    Object.assign(
+      input,
+      getNatoriNullableEditChanges(project, { type, amount, dueDate })
+    );
     // Validate locally first so we don't fire a request just to get a 400 back.
     try {
       normalizeNatoriProjectDetailsPatch(input);
@@ -160,9 +165,14 @@ export default function ProjectEditForm({
               onChange={(event) => setType(event.target.value as NatoriProjectType)}
               className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
             >
-              {(Object.keys(PROJECT_TYPE_LABELS) as NatoriProjectType[]).map((value) => (
+              {type === "undecided" ? (
+                <option value="undecided" disabled>
+                  {NATORI_PROJECT_TYPE_LABELS.undecided}
+                </option>
+              ) : null}
+              {NATORI_CONCRETE_PROJECT_TYPES.map((value) => (
                 <option key={value} value={value}>
-                  {PROJECT_TYPE_LABELS[value]}
+                  {NATORI_PROJECT_TYPE_LABELS[value]}
                 </option>
               ))}
             </select>
@@ -174,10 +184,16 @@ export default function ProjectEditForm({
             <input
               type="number"
               min={0}
-              value={Number.isFinite(amount) ? amount : 0}
-              onChange={(event) => setAmount(Number(event.target.value))}
+              value={amount}
+              placeholder="未定"
+              onChange={(event) => setAmount(event.target.value)}
               className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-right text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
             />
+            {project.amount === null && !amount ? (
+              <span className="mt-1 block text-[11px] text-gray-500">
+                金額未定のまま保存する場合、この欄は空欄にしてください。
+              </span>
+            ) : null}
           </label>
         </div>
 
@@ -222,7 +238,7 @@ export default function ProjectEditForm({
           </label>
           <label className="block text-sm">
             <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
-              納期（必須）
+              納期
             </span>
             <input
               type="date"
@@ -230,6 +246,11 @@ export default function ProjectEditForm({
               onChange={(event) => setDueDate(event.target.value)}
               className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
             />
+            {project.dueDate === null && !dueDate ? (
+              <span className="mt-1 block text-[11px] text-gray-500">
+                納期未定のまま保存する場合、この欄は空欄にしてください。
+              </span>
+            ) : null}
           </label>
         </div>
 

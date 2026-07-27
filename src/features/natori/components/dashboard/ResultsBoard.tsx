@@ -27,6 +27,11 @@ import {
 import { toISODate } from "@/features/natori/lib/projects";
 import { formatYen } from "@/features/natori/lib/pricing";
 import {
+  formatNatoriProjectAmount,
+  NATORI_CONCRETE_PROJECT_TYPES,
+  NATORI_PROJECT_TYPE_LABELS,
+} from "@/features/natori/lib/projectReadModel";
+import {
   buildNatoriResultsCsv,
   filterProjectsByMonth,
   filterProjectsByYear,
@@ -39,17 +44,10 @@ import {
 import ProjectEditForm from "./ProjectEditForm";
 import { NatoriLoadError } from "./NatoriLoadError";
 import type {
+  NatoriConcreteProjectType,
   NatoriProject,
   NatoriProjectStatus,
-  NatoriProjectType,
 } from "@/features/natori/types/projects";
-
-const PROJECT_TYPE_LABELS: Record<NatoriProjectType, string> = {
-  icon: "アイコン",
-  sd: "SD",
-  standing: "立ち絵",
-  illustration: "イラスト",
-};
 
 const RESULT_STATUS_LABELS: Partial<Record<NatoriProjectStatus, string>> = {
   delivered: "納品済み",
@@ -162,7 +160,7 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const [clientName, setClientName] = useState("");
   const [title, setTitle] = useState("");
-  const [type, setType] = useState<NatoriProjectType>("illustration");
+  const [type, setType] = useState<NatoriConcreteProjectType>("illustration");
   const [status, setStatus] = useState<NatoriProjectStatus>("completed");
   const [amount, setAmount] = useState<number>(0);
   const [dateISO, setDateISO] = useState<string>("");
@@ -265,12 +263,14 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
               </span>
               <select
                 value={type}
-                onChange={(event) => setType(event.target.value as NatoriProjectType)}
+                onChange={(event) =>
+                  setType(event.target.value as NatoriConcreteProjectType)
+                }
                 className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
               >
-                {(Object.keys(PROJECT_TYPE_LABELS) as NatoriProjectType[]).map((value) => (
+                {NATORI_CONCRETE_PROJECT_TYPES.map((value) => (
                   <option key={value} value={value}>
-                    {PROJECT_TYPE_LABELS[value]}
+                    {NATORI_PROJECT_TYPE_LABELS[value]}
                   </option>
                 ))}
               </select>
@@ -426,7 +426,7 @@ function CompletedProjectRow({
           <p className="min-w-0 break-words text-sm font-bold text-gray-900">{project.title}</p>
           <div className="flex shrink-0 items-center gap-1.5">
             <p className="text-sm font-bold text-gray-900">
-              {formatYen(getNatoriResultAmount(project))}
+              {formatNatoriProjectAmount(getNatoriResultAmount(project))}
             </p>
             <button
               type="button"
@@ -461,7 +461,7 @@ function CompletedProjectRow({
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-600">
           <span>{project.clientName}</span>
           <span className="rounded-full bg-white px-2 py-0.5 font-bold text-pink-700">
-            {PROJECT_TYPE_LABELS[project.type]}
+            {NATORI_PROJECT_TYPE_LABELS[project.type]}
           </span>
           <span className="rounded-full bg-white px-2 py-0.5 font-bold text-emerald-700">
             {RESULT_STATUS_LABELS[project.status] ?? project.status}
@@ -504,7 +504,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
   // 絞り込み・表示指標
   const [yearFilter, setYearFilter] = useState<number | null>(null);
   const [monthFilter, setMonthFilter] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<NatoriProjectType | null>(null);
+  const [typeFilter, setTypeFilter] = useState<NatoriConcreteProjectType | null>(null);
   const [metric, setMetric] = useState<ResultMetric>("amount");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -607,7 +607,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
 
   const handleDelete = async (project: NatoriProject) => {
     const confirmed = window.confirm(
-      `「${project.title}」（${project.clientName} / ${formatYen(getNatoriResultAmount(project))}）を実績から削除します。データと画像は保持され、案件管理画面から復元できます。よろしいですか？`
+      `「${project.title}」（${project.clientName} / ${formatNatoriProjectAmount(getNatoriResultAmount(project))}）を実績から削除します。データと画像は保持され、案件管理画面から復元できます。よろしいですか？`
     );
     if (!confirmed) return;
     if (isDemo) {
@@ -725,7 +725,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
   if (typeFilter !== null) {
     activeFilterChips.push({
       key: "type",
-      label: PROJECT_TYPE_LABELS[typeFilter],
+      label: NATORI_PROJECT_TYPE_LABELS[typeFilter],
       onClear: () => setTypeFilter(null),
     });
   }
@@ -846,8 +846,24 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <StatTile label={`実績件数（${cardScopeLabel}）`} value={`${cardSummary.totalCount}件`} />
-        <StatTile label="総入金額" value={formatYen(cardSummary.totalAmount)} />
-        <StatTile label="平均単価" value={formatYen(cardSummary.averageAmount)} />
+        <StatTile
+          label="総入金額"
+          value={formatYen(cardSummary.totalAmount)}
+          sub={
+            cardSummary.undecidedAmountCount > 0
+              ? `金額未定 ${cardSummary.undecidedAmountCount}件`
+              : undefined
+          }
+        />
+        <StatTile
+          label="平均単価"
+          value={formatYen(cardSummary.averageAmount)}
+          sub={
+            cardSummary.undecidedAmountCount > 0
+              ? "金額未定の実績は平均から除外"
+              : undefined
+          }
+        />
         <StatTile
           label="月平均入金額"
           value={formatYen(Math.round(cardSummary.totalAmount / monthsInScope))}
@@ -886,7 +902,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
             {summary.byType.map((entry) => (
               <MeterRow
                 key={entry.type}
-                label={PROJECT_TYPE_LABELS[entry.type]}
+                label={NATORI_PROJECT_TYPE_LABELS[entry.type]}
                 count={entry.count}
                 amount={entry.amount}
                 metric={metric}

@@ -26,10 +26,16 @@ vi.mock("@/features/natori/server/projectThumbsService", () => ({
   deleteNatoriProjectThumb: vi.fn(),
 }));
 
+vi.mock("@/features/natori/server/portfolioSiteService", () => ({
+  signPortfolioReferenceImage: vi.fn(),
+}));
+
 import {
   closeNatoriProject,
   confirmNatoriProjectPayment,
   deleteNatoriAdminProject,
+  listNatoriAdminProjects,
+  normalizeProjectTasksForRead,
   restoreNatoriAdminProject,
   setNatoriProjectStatus,
 } from "@/features/natori/server/projectsService";
@@ -217,5 +223,96 @@ describe("project archive and restore", () => {
     expect(result).toEqual({ kind: "ok" });
     expect(updates).toEqual([{ deleted_at: null }]);
     expect(updateCalls).toContain('not("deleted_at","is",null)');
+  });
+});
+
+describe("listNatoriAdminProjects", () => {
+  it("reads active/archive lanes without performing any database write", async () => {
+    const calls: string[] = [];
+    let projectQueryIndex = 0;
+    mockAdminFrom.mockImplementation((table: string) => {
+      if (table === "natori_projects") {
+        const result =
+          projectQueryIndex++ === 0
+            ? {
+                data: [
+                  { id: "active-1", deleted_at: null },
+                  // Application guard must reject this even if the query mock leaks it.
+                  { id: "leaked-archive", deleted_at: "2026-07-01T00:00:00Z" },
+                ],
+                error: null,
+              }
+            : {
+                data: [
+                  { id: "archive-1", deleted_at: "2026-07-02T00:00:00Z" },
+                  // Application guard must reject this from the archive lane.
+                  { id: "leaked-active", deleted_at: null },
+                ],
+                error: null,
+              };
+        return chainResult(result, calls);
+      }
+      if (table === "natori_project_tasks") {
+        return chainResult({ data: [], error: null }, calls);
+      }
+      if (table === "natori_inquiry_reference_files") {
+        return chainResult({ data: [], error: null }, calls);
+      }
+      throw new Error(`unexpected table access: ${table}`);
+    });
+
+    const result = await listNatoriAdminProjects();
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") throw new Error("expected successful project list");
+    expect(result.projects.map((project) => project.id)).toEqual(["active-1"]);
+    expect(result.archivedProjects.map((project) => project.id)).toEqual([
+      "archive-1",
+    ]);
+    expect(calls).toContain('is("deleted_at",null)');
+    expect(calls).toContain('not("deleted_at","is",null)');
+    expect(calls.some((call) => /^(update|upsert|delete|insert)\(/.test(call))).toBe(
+      false
+    );
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("normalizeProjectTasksForRead", () => {
+  const baseProject = {
+    id: "project-1",
+    user_id: "owner-1",
+    title: "案件",
+    client_name: "依頼者",
+    amount: null,
+    type: "icon",
+    status: "rough",
+    delivery_plan: "normal",
+    priority: null,
+    start_date: null,
+    due_date: null,
+    created_at: "2026-07-27T00:00:00.000Z",
+    next_action: "ラフ作成",
+    note: null,
+    deleted_at: null,
+  };
+
+  it("normalizes concrete-type tasks in memory without a database client", () => {
+    const tasks = normalizeProjectTasksForRead([baseProject], []);
+    expect(tasks).toHaveLength(6);
+    expect(tasks[0]).toMatchObject({
+      project_id: "project-1",
+      task_key: "rough",
+      sort_order: 0,
+    });
+  });
+
+  it("does not generate a task template for an undecided type", () => {
+    expect(
+      normalizeProjectTasksForRead(
+        [{ ...baseProject, type: "undecided" }],
+        []
+      )
+    ).toEqual([]);
   });
 });

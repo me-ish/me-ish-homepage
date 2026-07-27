@@ -2,14 +2,15 @@ import "server-only";
 import { createTasksForType } from "@/features/natori/lib/projects";
 import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { calculateDueDate } from "@/features/natori/lib/deliveryPlans";
+import { isNatoriConcreteProjectType } from "@/features/natori/lib/projectReadModel";
 import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
 import { signPortfolioReferenceImage } from "@/features/natori/server/portfolioSiteService";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type {
+  NatoriConcreteProjectType,
   NatoriDeliveryPlan,
   NatoriProjectStatus,
   NatoriProjectTask,
-  NatoriProjectType,
 } from "@/features/natori/types/projects";
 
 export type NatoriAdminProjectRow = {
@@ -18,13 +19,14 @@ export type NatoriAdminProjectRow = {
   title: string;
   client_name: string;
   client_email?: string | null;
-  amount: number;
+  amount: number | null;
   type: string;
   status: string;
   delivery_plan: string;
   priority: string | null;
   start_date: string | null;
-  due_date: string;
+  due_date: string | null;
+  created_at: string;
   next_action: string;
   note: string | null;
   deleted_at: string | null;
@@ -76,17 +78,6 @@ export const NATORI_PROJECT_DETAILS_ALLOWED_FIELDS: ReadonlySet<string> = new Se
   "note",
 ]);
 
-const NORMALIZED_PROJECT_TYPES = new Set<NatoriProjectType>([
-  "icon",
-  "sd",
-  "standing",
-  "illustration",
-]);
-
-function isNormalizedProjectType(type: string): type is NatoriProjectType {
-  return NORMALIZED_PROJECT_TYPES.has(type as NatoriProjectType);
-}
-
 function existingTaskDone(
   tasksByKey: Map<string, NatoriAdminTaskRow>,
   keys: string[]
@@ -101,24 +92,35 @@ function shouldTemplateTaskBeDone(
 ): boolean {
   switch (templateTask.id) {
     case "rough":
-      return (
-        existingTaskDone(tasksByKey, ["rough"]) ||
-        ["lineart", "coloring", "waiting", "delivery_prep", "delivered", "completed"].includes(project.status)
-      );
     case "rough-submit":
       return (
-        existingTaskDone(tasksByKey, ["rough-submit"]) ||
-        ["lineart", "coloring", "waiting", "delivery_prep", "delivered", "completed"].includes(project.status)
+        existingTaskDone(tasksByKey, [templateTask.id]) ||
+        [
+          "lineart",
+          "coloring",
+          "waiting",
+          "delivery_prep",
+          "delivered",
+          "completed",
+        ].includes(project.status)
       );
     case "lineart":
       return (
         existingTaskDone(tasksByKey, ["lineart", "line"]) ||
-        ["coloring", "waiting", "delivery_prep", "delivered", "completed"].includes(project.status)
+        [
+          "coloring",
+          "waiting",
+          "delivery_prep",
+          "delivered",
+          "completed",
+        ].includes(project.status)
       );
     case "color":
       return (
         existingTaskDone(tasksByKey, ["color", "coloring"]) ||
-        ["waiting", "delivery_prep", "delivered", "completed"].includes(project.status)
+        ["waiting", "delivery_prep", "delivered", "completed"].includes(
+          project.status
+        )
       );
     case "review":
       return (
@@ -135,16 +137,14 @@ function shouldTemplateTaskBeDone(
   }
 }
 
-async function normalizeProjectTasks(
-  admin: ReturnType<typeof supabaseAdmin>,
+/**
+ * Keeps the legacy concrete-type display compatible without persisting any
+ * normalization. Undecided/future types retain only their existing task rows.
+ */
+export function normalizeProjectTasksForRead(
   projects: NatoriAdminProjectRow[],
   tasks: NatoriAdminTaskRow[]
-): Promise<NatoriAdminTaskRow[]> {
-  const projectsToNormalize = projects.filter((project) =>
-    isNormalizedProjectType(project.type)
-  );
-  if (projectsToNormalize.length === 0) return tasks;
-
+): NatoriAdminTaskRow[] {
   const tasksByProject = new Map<string, NatoriAdminTaskRow[]>();
   for (const task of tasks) {
     const list = tasksByProject.get(task.project_id) ?? [];
@@ -152,26 +152,18 @@ async function normalizeProjectTasks(
     tasksByProject.set(task.project_id, list);
   }
 
-  const upserts: Array<{
-    project_id: string;
-    task_key: string;
-    label: string;
-    stage: string;
-    estimated_hours: number | null;
-    done: boolean;
-    sort_order: number;
-  }> = [];
-  const deleteIds: string[] = [];
-
-  for (const project of projectsToNormalize) {
-    const templateTasks = createTasksForType(project.type as NatoriProjectType);
-    const templateKeys = new Set(templateTasks.map((task) => task.id));
+  return projects.flatMap((project) => {
     const existingTasks = tasksByProject.get(project.id) ?? [];
-    const tasksByKey = new Map(existingTasks.map((task) => [task.task_key, task]));
-
-    templateTasks.forEach((templateTask, index) => {
+    if (!isNatoriConcreteProjectType(project.type)) {
+      return existingTasks;
+    }
+    const tasksByKey = new Map(
+      existingTasks.map((task) => [task.task_key, task])
+    );
+    return createTasksForType(project.type).map((templateTask, index) => {
       const existing = tasksByKey.get(templateTask.id);
-      const desired = {
+      return {
+        id: existing?.id ?? `read-template:${project.id}:${templateTask.id}`,
         project_id: project.id,
         task_key: templateTask.id,
         label: templateTask.label,
@@ -180,59 +172,8 @@ async function normalizeProjectTasks(
         done: shouldTemplateTaskBeDone(project, templateTask, tasksByKey),
         sort_order: index,
       };
-      if (
-        !existing ||
-        existing.label !== desired.label ||
-        existing.stage !== desired.stage ||
-        existing.estimated_hours !== desired.estimated_hours ||
-        existing.done !== desired.done ||
-        existing.sort_order !== desired.sort_order
-      ) {
-        upserts.push(desired);
-      }
     });
-
-    for (const existing of existingTasks) {
-      if (!templateKeys.has(existing.task_key)) {
-        deleteIds.push(existing.id);
-      }
-    }
-  }
-
-  if (upserts.length === 0 && deleteIds.length === 0) return tasks;
-
-  if (upserts.length > 0) {
-    const { error } = await admin
-      .from("natori_project_tasks")
-      .upsert(upserts, { onConflict: "project_id,task_key" });
-    if (error) {
-      console.error("[natori-admin-projects] task normalization upsert failed", error);
-      throw error;
-    }
-  }
-
-  if (deleteIds.length > 0) {
-    const { error } = await admin
-      .from("natori_project_tasks")
-      .delete()
-      .in("id", deleteIds);
-    if (error) {
-      console.error("[natori-admin-projects] task normalization delete failed", error);
-      throw error;
-    }
-  }
-
-  const { data, error } = await admin
-    .from("natori_project_tasks")
-    .select("*")
-    .in("project_id", projectsToNormalize.map((project) => project.id))
-    .order("sort_order", { ascending: true });
-  if (error) {
-    console.error("[natori-admin-projects] task normalization reload failed", error);
-    throw error;
-  }
-
-  return (data ?? []) as NatoriAdminTaskRow[];
+  });
 }
 
 export type ListNatoriAdminProjectsResult =
@@ -244,27 +185,46 @@ export type ListNatoriAdminProjectsResult =
       referenceFiles: NatoriAdminReferenceFile[];
     }
   | { kind: "fetch-projects-error" }
-  | { kind: "fetch-tasks-error" }
-  | { kind: "normalize-error" };
+  | { kind: "fetch-tasks-error" };
 
 export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjectsResult> {
   const ownerId = await resolveNatoriActingUserId();
   if (!ownerId) return { kind: "fetch-projects-error" };
   const admin = supabaseAdmin();
-  const { data: projects, error: projectError } = await admin
-    .from("natori_projects")
-    .select("*")
-    .eq("user_id", ownerId)
-    .order("due_date", { ascending: true });
+  const [
+    { data: projects, error: projectError },
+    { data: archivedProjects, error: archivedProjectError },
+  ] = await Promise.all([
+    admin
+      .from("natori_projects")
+      .select("*")
+      .eq("user_id", ownerId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: true }),
+    admin
+      .from("natori_projects")
+      .select("*")
+      .eq("user_id", ownerId)
+      .not("deleted_at", "is", null)
+      .order("deleted_at", { ascending: false }),
+  ]);
 
-  if (projectError) {
-    console.error("[natori-admin-projects] project fetch failed", projectError);
+  if (projectError || archivedProjectError) {
+    console.error(
+      "[natori-admin-projects] project fetch failed",
+      projectError ?? archivedProjectError
+    );
     return { kind: "fetch-projects-error" };
   }
 
-  const allProjectRows = (projects ?? []) as NatoriAdminProjectRow[];
-  const projectRows = allProjectRows.filter((project) => !project.deleted_at);
-  const archivedProjectRows = allProjectRows.filter((project) => Boolean(project.deleted_at));
+  // Keep application-side guards as defense in depth in case a mock, proxy, or
+  // future query change returns rows outside the requested deleted_at lane.
+  const projectRows = ((projects ?? []) as NatoriAdminProjectRow[]).filter(
+    (project) => !project.deleted_at
+  );
+  const archivedProjectRows = (
+    (archivedProjects ?? []) as NatoriAdminProjectRow[]
+  ).filter((project) => Boolean(project.deleted_at));
   const projectIds = projectRows.map((project) => project.id);
   if (projectIds.length === 0) {
     return {
@@ -296,6 +256,7 @@ export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjects
   }
 
   const taskRows = (tasks ?? []) as NatoriAdminTaskRow[];
+  const normalizedTasks = normalizeProjectTasksForRead(projectRows, taskRows);
   if (referenceError) {
     console.error("[natori-admin-projects] reference fetch failed", referenceError);
   }
@@ -306,18 +267,13 @@ export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjects
     if (url) referenceFiles.push({ project_id: row.project_id, url });
   }
 
-  try {
-    const normalizedTasks = await normalizeProjectTasks(admin, projectRows, taskRows);
-    return {
-      kind: "ok",
-      projects: projectRows,
-      archivedProjects: archivedProjectRows,
-      tasks: normalizedTasks,
-      referenceFiles,
-    };
-  } catch {
-    return { kind: "normalize-error" };
-  }
+  return {
+    kind: "ok",
+    projects: projectRows,
+    archivedProjects: archivedProjectRows,
+    tasks: normalizedTasks,
+    referenceFiles,
+  };
 }
 
 export type CreateNatoriAdminProjectInput = {
@@ -327,7 +283,7 @@ export type CreateNatoriAdminProjectInput = {
   /** 依頼者メール（inquiry 起票時に保存。以後の送信画面はカラムを参照する） */
   clientEmail?: string;
   amount: number;
-  type: NatoriProjectType;
+  type: NatoriConcreteProjectType;
   status?: string;
   deliveryPlan?: NatoriDeliveryPlan;
   startDateISO?: string;

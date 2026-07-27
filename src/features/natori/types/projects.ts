@@ -20,7 +20,9 @@ export type NatoriProjectStatus =
 
 export type NatoriProjectFilter = "all" | "active" | "waiting" | "done";
 
-export type NatoriProjectType = "icon" | "sd" | "standing" | "illustration";
+export type NatoriConcreteProjectType = "icon" | "sd" | "standing" | "illustration";
+
+export type NatoriProjectType = NatoriConcreteProjectType | "undecided";
 
 export type NatoriTaskStage =
   | "material"
@@ -62,9 +64,13 @@ export type NatoriProject = {
   clientName: string;
   /** 依頼者メール。カラム化済み（note からの抽出は移行期フォールバックのみ） */
   clientEmail?: string;
-  amount: number;
+  /** null は金額未定。0（無料）とは区別する。 */
+  amount: number | null;
+  /** 問い合わせ受付日時。受付順・経過日数の基準に使う。 */
+  createdAt?: string;
   startDate?: string;
-  dueDate: string;
+  /** null は納期未定。日付ベースの計算・カレンダーから除外する。 */
+  dueDate: string | null;
   deliveryPlan?: NatoriDeliveryPlan;
   status: NatoriProjectStatus;
   nextAction: string;

@@ -14,6 +14,7 @@ import {
   isInactiveStatus,
   isPreworkStatus,
 } from "@/features/natori/lib/projects";
+import { isActiveNatoriProject } from "@/features/natori/lib/projectReadModel";
 import { cn } from "@/lib/utils";
 import type { NatoriProject } from "@/features/natori/types/projects";
 
@@ -36,11 +37,18 @@ export default function DashboardTodaySummary({
   projects: NatoriProject[];
   today: Date;
 }) {
-  const active = projects.filter((project) => !isInactiveStatus(project.status));
+  const active = projects.filter(
+    (project) => isActiveNatoriProject(project) && !isInactiveStatus(project.status)
+  );
   const working = active.filter((project) => !isPreworkStatus(project.status));
   const top = getPrioritySuggestions(active, today, 1)[0];
 
-  const nearest = working.reduce<NatoriProject | null>(
+  const nearest = working
+    .filter(
+      (project): project is NatoriProject & { dueDate: string } =>
+        project.dueDate !== null
+    )
+    .reduce<NatoriProject & { dueDate: string } | null>(
     (best, project) =>
       !best || project.dueDate < best.dueDate ? project : best,
     null

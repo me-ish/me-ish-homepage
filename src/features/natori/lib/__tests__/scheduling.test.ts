@@ -21,19 +21,24 @@ import type {
   NatoriProjectStatus,
   NatoriProjectType,
 } from "@/features/natori/types/projects";
+import { isNatoriConcreteProjectType } from "@/features/natori/lib/projectReadModel";
 
 const TODAY = new Date(2026, 4, 22);
 
 function buildProject(overrides: Partial<NatoriProject> = {}): NatoriProject {
   const type: NatoriProjectType = overrides.type ?? "illustration";
   const status: NatoriProjectStatus = overrides.status ?? "rough";
-  const tasks = overrides.tasks ?? applyStatusToTasks(createTasksForType(type), status);
+  const tasks =
+    overrides.tasks ??
+    (isNatoriConcreteProjectType(type)
+      ? applyStatusToTasks(createTasksForType(type), status)
+      : []);
   return {
     id: overrides.id ?? "p-1",
     title: overrides.title ?? "テスト案件",
     clientName: overrides.clientName ?? "テストさん",
-    amount: overrides.amount ?? 10000,
-    dueDate: overrides.dueDate ?? "2026-06-21",
+    amount: overrides.amount !== undefined ? overrides.amount : 10000,
+    dueDate: overrides.dueDate !== undefined ? overrides.dueDate : "2026-06-21",
     status,
     nextAction: overrides.nextAction ?? "次の作業",
     type,
@@ -42,6 +47,7 @@ function buildProject(overrides: Partial<NatoriProject> = {}): NatoriProject {
     note: overrides.note,
     deliveryPlan: overrides.deliveryPlan,
     startDate: overrides.startDate,
+    deletedAt: overrides.deletedAt,
   };
 }
 
@@ -82,6 +88,19 @@ describe("getProjectTotalHours / getProjectRemainingHours", () => {
 });
 
 describe("computeProjectScheduling", () => {
+  it("returns zero schedule pressure for a null due date", () => {
+    const project = buildProject({ dueDate: null, status: "rough" });
+    const scheduling = computeProjectScheduling(project, TODAY);
+
+    expect(scheduling.daysUntilDue).toBeNull();
+    expect(scheduling.workableDaysUntilDue).toBeNull();
+    expect(scheduling.isOverdue).toBe(false);
+    expect(scheduling.requiredPerDay).toBe(0);
+    expect(scheduling.requiredToday).toBe(0);
+    expect(scheduling.requiredThisWeek).toBe(0);
+    expect(scheduling.utilizationThisWeek).toBe(0);
+  });
+
   it("spreads remaining hours across the days until due", () => {
     const project = buildProject({
       type: "illustration",
@@ -236,6 +255,20 @@ describe("computeProjectScheduling", () => {
 });
 
 describe("getScheduleEntries sorting", () => {
+  it("excludes null-due and archived projects from schedule entries", () => {
+    const projects = [
+      buildProject({ id: "undated", dueDate: null }),
+      buildProject({
+        id: "archived",
+        deletedAt: "2026-05-01T00:00:00.000Z",
+      }),
+      buildProject({ id: "active" }),
+    ];
+    expect(getScheduleEntries(projects, TODAY).map((entry) => entry.project.id)).toEqual([
+      "active",
+    ]);
+  });
+
   it("ranks rush_7 before rush_14 before normal", () => {
     const projects = [
       buildProject({ id: "n", deliveryPlan: "normal" }),
@@ -373,6 +406,17 @@ describe("getAwaitingPaymentSummary", () => {
     ]);
     expect(summary.count).toBe(0);
     expect(summary.totalAmount).toBe(0);
+    expect(summary.undecidedAmountCount).toBe(0);
+  });
+
+  it("counts an undecided amount without adding it as zero revenue", () => {
+    const summary = getAwaitingPaymentSummary([
+      buildProject({ id: "unknown", status: "awaiting_payment", amount: null }),
+      buildProject({ id: "free", status: "awaiting_payment", amount: 0 }),
+    ]);
+    expect(summary.count).toBe(2);
+    expect(summary.totalAmount).toBe(0);
+    expect(summary.undecidedAmountCount).toBe(1);
   });
 });
 

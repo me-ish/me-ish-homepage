@@ -25,6 +25,7 @@ import {
   toISODate,
 } from "@/features/natori/lib/projects";
 import type { NatoriProject, NatoriProjectStatus, NatoriProjectType } from "@/features/natori/types/projects";
+import { isNatoriConcreteProjectType } from "@/features/natori/lib/projectReadModel";
 
 const TODAY = new Date(2026, 4, 22);
 
@@ -35,12 +36,14 @@ function buildProject(overrides: Partial<NatoriProject> = {}): NatoriProject {
     id: overrides.id ?? "p-1",
     title: overrides.title ?? "テスト案件",
     clientName: overrides.clientName ?? "テストさん",
-    amount: overrides.amount ?? 10000,
-    dueDate: overrides.dueDate ?? "2026-05-30",
+    amount: overrides.amount !== undefined ? overrides.amount : 10000,
+    dueDate: overrides.dueDate !== undefined ? overrides.dueDate : "2026-05-30",
     status,
     nextAction: overrides.nextAction ?? "ラフ提出",
     type,
-    tasks: overrides.tasks ?? createTasksForType(type),
+    tasks:
+      overrides.tasks ??
+      (isNatoriConcreteProjectType(type) ? createTasksForType(type) : []),
     priority: overrides.priority,
     note: overrides.note,
   };
@@ -563,5 +566,41 @@ describe("closed (見送り) status", () => {
   it("does not advance from closed", () => {
     expect(getNextStatus("closed")).toBe("closed");
     expect(getAdvanceButtonLabel("closed")).toBeNull();
+  });
+});
+
+describe("nullable due-date compatibility", () => {
+  it("does not mark an undated project overdue or place it on a calendar", () => {
+    const project = buildProject({
+      id: "undated",
+      dueDate: null,
+      status: "rough",
+    });
+
+    expect(isProjectOverdue(project, TODAY)).toBe(false);
+    expect(getCalendarEntriesForDate([project], "2026-05-22")).toEqual([]);
+    expect(computeStageMilestones(project)).toEqual([]);
+    expect(computeProjectBars(project, TODAY)).toEqual([]);
+    expect(buildMonthCells(2026, 4, [project], TODAY).totalLanes).toBe(0);
+  });
+
+  it("keeps an undated project out of date-priority suggestions", () => {
+    const project = buildProject({ id: "undated", dueDate: null, status: "rough" });
+    expect(getPrioritySuggestions([project], TODAY)).toEqual([]);
+  });
+});
+
+describe("archived project compatibility", () => {
+  it("excludes archived projects from calendar and priority helpers", () => {
+    const project = buildProject({
+      id: "archived",
+      deletedAt: "2026-05-21T00:00:00.000Z",
+      dueDate: "2026-05-22",
+      status: "rough",
+    });
+
+    expect(getCalendarEntriesForDate([project], "2026-05-22")).toEqual([]);
+    expect(computeProjectBars(project, TODAY)).toEqual([]);
+    expect(getPrioritySuggestions([project], TODAY)).toEqual([]);
   });
 });

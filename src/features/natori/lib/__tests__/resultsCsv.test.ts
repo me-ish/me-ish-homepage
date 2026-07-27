@@ -47,4 +47,28 @@ describe("buildNatoriResultsCsv", () => {
     expect(csv).toContain('"A,B""C"');
     expect(csv).toContain('"行1\n行2"');
   });
+
+  it("金額未定・無料・種別未定を区別して出力する", () => {
+    const csv = buildNatoriResultsCsv([
+      makeProject({ id: "unknown", amount: null, paidAmount: undefined, type: "undecided" }),
+      makeProject({ id: "free", amount: 0, paidAmount: undefined, type: "icon" }),
+    ]);
+    const lines = csv.slice(1).split("\r\n");
+    expect(lines.some((line) => line.includes(",未定,未定,対応完了"))).toBe(true);
+    expect(lines.some((line) => line.includes(",アイコン,0,対応完了"))).toBe(true);
+    expect(csv).not.toContain(",null,");
+  });
+
+  it("アーカイブ済み案件を出力しない", () => {
+    const csv = buildNatoriResultsCsv([
+      makeProject({ id: "active", title: "表示する" }),
+      makeProject({
+        id: "archived",
+        title: "表示しない",
+        deletedAt: "2026-07-01T00:00:00.000Z",
+      }),
+    ]);
+    expect(csv).toContain("表示する");
+    expect(csv).not.toContain("表示しない");
+  });
 });

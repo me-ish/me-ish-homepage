@@ -16,7 +16,12 @@ import {
   type NatoriInquiryNoteView,
 } from "@/features/natori/lib/inquiryNoteView";
 import { getNextActionForStatus, isPreworkStatus } from "@/features/natori/lib/projects";
-import { formatYen } from "@/features/natori/lib/pricing";
+import {
+  formatNatoriProjectAmount,
+  compareNatoriInquiriesByReceivedAt,
+  getNatoriInquiryReceivedISO,
+  isActiveNatoriProject,
+} from "@/features/natori/lib/projectReadModel";
 import {
   closeNatoriProject,
   confirmNatoriProjectPayment,
@@ -116,10 +121,12 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   const rows = useMemo<InquiryRow[]>(() => {
     if (!projects) return [];
     return projects
-      .filter((project) => isPreworkStatus(project.status))
+      .filter(
+        (project) => isActiveNatoriProject(project) && isPreworkStatus(project.status)
+      )
       .map((project) => {
         const view = parseInquiryNote(project.note);
-        const receivedISO = project.startDate ?? project.dueDate;
+        const receivedISO = getNatoriInquiryReceivedISO(project);
         const lastActivityISO = getInquiryLastActivityISO(view, receivedISO);
         const lastLog = view.logs[view.logs.length - 1];
         return {
@@ -130,8 +137,10 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
           lastActionLabel: lastLog ? lastLog.label : "受付のみ",
         };
       })
-      // 対応が止まっているものが上に来るよう、最終アクションの古い順
-      .sort((a, b) => a.lastActivityISO.localeCompare(b.lastActivityISO));
+      // 受付日時は natori_projects.created_at を正とし、納期では並べない。
+      .sort((a, b) =>
+        compareNatoriInquiriesByReceivedAt(a.project, b.project)
+      );
   }, [projects]);
 
   const filteredRows = useMemo(() => {
@@ -319,7 +328,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
                         {meta.label}
                       </span>
                       <span className="font-bold text-gray-900">
-                        {row.project.amount > 0 ? formatYen(row.project.amount) : "金額未定"}
+                        {formatNatoriProjectAmount(row.project.amount)}
                       </span>
                       <span className="ml-auto text-gray-500">
                         {row.lastActionLabel}・{formatDate(row.lastActivityISO)}
@@ -363,7 +372,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
                       <p className="truncate text-xs text-gray-600">{row.project.title}</p>
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-right font-bold text-gray-900">
-                      {row.project.amount > 0 ? formatYen(row.project.amount) : "未定"}
+                      {formatNatoriProjectAmount(row.project.amount)}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5">
                       <span
