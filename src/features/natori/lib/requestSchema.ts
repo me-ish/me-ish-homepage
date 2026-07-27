@@ -280,20 +280,11 @@ const requestDataSizeSchema = z.unknown().refine(
 export const natoriRequestDataV1Schema: z.ZodType<NatoriRequestDataV1> =
   requestDataSizeSchema.pipe(requestDataUnionSchema);
 
-export const natoriRequestSubmissionV1Schema: z.ZodType<NatoriRequestSubmissionV1> = z
-  .strictObject({
+export const natoriRequestSubmissionV1Schema: z.ZodType<NatoriRequestSubmissionV1> =
+  z.strictObject({
     clientName: text(100).min(1),
     clientEmail: text(254).pipe(z.email()),
     requestData: natoriRequestDataV1Schema,
-  })
-  .superRefine((value, ctx) => {
-    if (value.requestData.inquiryMode === "consultation" && value.requestData.message.length === 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["requestData", "message"],
-        message: "相談では相談内容を入力してください",
-      });
-    }
   });
 
 export type NatoriRequestFieldError = {

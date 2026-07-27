@@ -207,7 +207,7 @@ describe("NatoriRequestData V1 conditional validation", () => {
     expect(result.success).toBe(false);
   });
 
-  it("送信用envelopeは依頼者名・連絡先・相談内容を必須にする", () => {
+  it("送信用envelopeは依頼者名・連絡先・詳細項目の相談内容を必須にする", () => {
     const detailsOnlyConsultation = {
       ...mutableClone(consultationExample),
       characterFeatures: "内容は決まっています",
@@ -221,14 +221,30 @@ describe("NatoriRequestData V1 conditional validation", () => {
         requestData: detailsOnlyConsultation,
       }).success
     ).toBe(false);
-    const missingConsultationMessage = natoriRequestSubmissionV1Schema.safeParse({
+    expect(
+      natoriRequestSubmissionV1Schema.safeParse({
+        clientName: "依頼者",
+        clientEmail: "client@example.com",
+        requestData: detailsOnlyConsultation,
+      }).success
+    ).toBe(true);
+
+    const missingConsultationDetails = natoriRequestSubmissionV1Schema.safeParse({
       clientName: "依頼者",
       clientEmail: "client@example.com",
-      requestData: detailsOnlyConsultation,
+      requestData: {
+        ...mutableClone(consultationExample),
+        characterFeatures: "",
+        expressionMood: "",
+        composition: "",
+        colorDirection: "",
+        referenceNotes: "",
+        message: "",
+      },
     });
-    expect(missingConsultationMessage.success).toBe(false);
-    if (!missingConsultationMessage.success) {
-      expect(missingConsultationMessage.error.issues).toContainEqual(
+    expect(missingConsultationDetails.success).toBe(false);
+    if (!missingConsultationDetails.success) {
+      expect(missingConsultationDetails.error.issues).toContainEqual(
         expect.objectContaining({ path: ["requestData", "message"] })
       );
     }
