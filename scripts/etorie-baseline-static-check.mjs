@@ -11,11 +11,25 @@ import {
 const baselineName = "20260723111730_etorie_baseline.sql";
 const hardeningName =
   "20260723111741_baseline_security_hardening.sql";
+const phase1ExpandName =
+  "20260729115313_etorie_phase1_expand.sql";
+const phase1ConstraintsName =
+  "20260729115323_etorie_phase1_project_constraints.sql";
 const activeDirectory = path.join("supabase", "migrations");
 const legacyDirectory = path.join("supabase", "legacy-migrations");
 const baselinePath = path.join(activeDirectory, baselineName);
 const hardeningPath = path.join(activeDirectory, hardeningName);
+const phase1ExpandPath = path.join(activeDirectory, phase1ExpandName);
+const phase1ConstraintsPath = path.join(
+  activeDirectory,
+  phase1ConstraintsName,
+);
 const fixturePath = path.join("supabase", "fixtures", "etorie-baseline.sql");
+const phase1VerificationPath = path.join(
+  "supabase",
+  "verification",
+  "etorie-p1-03-selects.sql",
+);
 const manifestPath = path.join("supabase", "baseline", "manifest.json");
 const legacyManifestPath = path.join(
   "supabase",
@@ -27,6 +41,9 @@ const legacyReadmePath = path.join(legacyDirectory, "README.md");
 const [
   baseline,
   hardening,
+  phase1Expand,
+  phase1Constraints,
+  phase1Verification,
   fixture,
   manifestText,
   legacyText,
@@ -37,6 +54,9 @@ const [
   await Promise.all([
     readFile(baselinePath, "utf8"),
     readFile(hardeningPath, "utf8"),
+    readFile(phase1ExpandPath, "utf8"),
+    readFile(phase1ConstraintsPath, "utf8"),
+    readFile(phase1VerificationPath, "utf8"),
     readFile(fixturePath, "utf8"),
     readFile(manifestPath, "utf8"),
     readFile(legacyManifestPath, "utf8"),
@@ -64,6 +84,14 @@ function checkDollarQuotes(sql, label) {
   check(stack.length === 0, `${label}: unbalanced dollar quote delimiters`);
 }
 
+function executableStatements(sql) {
+  return sql
+    .replace(/--.*$/gm, "")
+    .split(";")
+    .map((statement) => statement.trim())
+    .filter(Boolean);
+}
+
 async function exists(target) {
   try {
     await stat(target);
@@ -79,7 +107,13 @@ const archived = archivedMigrations
   .filter((name) => name.endsWith(".sql"))
   .sort();
 const activeVersions = active.map((name) => name.split("_", 1)[0]);
-const expectedActivePaths = [baselineName, hardeningName].map(
+const baselineEvidenceNames = [baselineName, hardeningName];
+const expectedActiveNames = [
+  ...baselineEvidenceNames,
+  phase1ExpandName,
+  phase1ConstraintsName,
+];
+const expectedActivePaths = expectedActiveNames.map(
   (name) => `supabase/migrations/${name}`,
 );
 const manifestActiveNames = (manifest.activeMigrations ?? []).map((entry) =>
@@ -95,17 +129,22 @@ check(
   "active migration versions must be unique",
 );
 check(
-  active[0] === baselineName && active[1] === hardeningName,
+  JSON.stringify(active) === JSON.stringify(expectedActiveNames),
+  "active migrations must be the ordered baseline, hardening, expand, and constraint lane",
+);
+check(
+  JSON.stringify(active.slice(0, 2)) ===
+    JSON.stringify(baselineEvidenceNames),
   "baseline must sort immediately before security hardening",
 );
 check(
-  JSON.stringify(active) === JSON.stringify(manifestActiveNames),
+  JSON.stringify(manifestActiveNames) === JSON.stringify(active),
   "active directory and manifest active migration list must match exactly",
 );
 check(
   JSON.stringify(manifest.activeMigrations) ===
     JSON.stringify(expectedActivePaths),
-  "manifest must declare the two current active migration paths",
+  "manifest must declare the four current active migration paths",
 );
 check(
   manifest.activeMigrationDirectory === "supabase/migrations" &&
@@ -122,6 +161,8 @@ check(
 );
 checkDollarQuotes(baseline, "baseline");
 checkDollarQuotes(hardening, "hardening");
+checkDollarQuotes(phase1Expand, "P1-03 expand");
+checkDollarQuotes(phase1Constraints, "P1-03 constraints");
 check(
   /^\s*--[\s\S]*?\bbegin;\s/i.test(baseline) && /\bcommit;\s*$/i.test(baseline),
   "baseline must be transaction wrapped",
@@ -130,6 +171,16 @@ check(
   /^\s*--[\s\S]*?\bbegin;\s/i.test(hardening) &&
     /\bcommit;\s*$/i.test(hardening),
   "hardening must be transaction wrapped",
+);
+check(
+  /^\s*--[\s\S]*?\bbegin;\s/i.test(phase1Expand) &&
+    /\bcommit;\s*$/i.test(phase1Expand),
+  "P1-03 expand must be transaction wrapped",
+);
+check(
+  /^\s*--[\s\S]*?\bbegin;\s/i.test(phase1Constraints) &&
+    /\bcommit;\s*$/i.test(phase1Constraints),
+  "P1-03 constraints must be transaction wrapped",
 );
 check(
   !baseline.includes("portfolio_profiles"),
@@ -182,6 +233,28 @@ check(
   ),
   "aura_projects RLS guard is missing",
 );
+const phase1Sql = `${phase1Expand}\n${phase1Constraints}`;
+check(
+  !/\b(?:insert\s+into|update\s+public\.|delete\s+from)\b/i.test(phase1Sql),
+  "P1-03 migrations must not mutate existing rows",
+);
+check(
+  !/create\s+policy[\s\S]*?(?:using|with\s+check)\s*\(\s*true\s*\)/i.test(
+    phase1Sql,
+  ),
+  "P1-03 migrations must not create broad true policies",
+);
+check(
+  !phase1Sql.includes(manifest.sourceProjectRef) &&
+    !phase1Verification.includes(manifest.sourceProjectRef),
+  "P1-03 artifacts must not embed the production project ref",
+);
+check(
+  executableStatements(phase1Verification).every((statement) =>
+    /^select\b/i.test(statement),
+  ),
+  "P1-03 verification SQL must contain SELECT statements only",
+);
 check(
   fixture.includes("fixture_confirmation_required") &&
     fixture.includes("production_fixture_target_blocked"),
@@ -198,7 +271,7 @@ check(
 );
 check(
   JSON.stringify(manifest.requiredSequence) ===
-    JSON.stringify([baselineName, hardeningName]),
+    JSON.stringify(expectedActiveNames),
   "manifest required sequence is invalid",
 );
 check(
@@ -363,6 +436,9 @@ const secretPattern =
 for (const [label, content] of [
   [baselineName, baseline],
   [hardeningName, hardening],
+  [phase1ExpandName, phase1Expand],
+  [phase1ConstraintsName, phase1Constraints],
+  ["etorie-p1-03-selects.sql", phase1Verification],
   ["etorie-baseline.sql", fixture],
   ["manifest.json", manifestText],
   ["legacy-migrations.json", legacyText],
@@ -377,10 +453,17 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-const digest = createHash("sha256")
+const baselinePairDigest = createHash("sha256")
   .update(`${baseline}\n${hardening}`, "utf8")
+  .digest("hex");
+const activeLaneDigest = createHash("sha256")
+  .update(
+    `${baseline}\n${hardening}\n${phase1Expand}\n${phase1Constraints}`,
+    "utf8",
+  )
   .digest("hex");
 console.log(`PASS: ${failures.length} failures`);
 console.log(`Active migrations: ${active.length}`);
 console.log(`Archived legacy migrations: ${archived.length}`);
-console.log(`Active migration pair SHA-256: ${digest}`);
+console.log(`Frozen baseline pair SHA-256: ${baselinePairDigest}`);
+console.log(`Current active lane SHA-256: ${activeLaneDigest}`);

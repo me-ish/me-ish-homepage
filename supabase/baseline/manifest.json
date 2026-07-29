@@ -8,9 +8,11 @@
     "securityHardeningMigration":  "20260723111741_baseline_security_hardening.sql",
     "activeMigrations":  [
                              "supabase/migrations/20260723111730_etorie_baseline.sql",
-                             "supabase/migrations/20260723111741_baseline_security_hardening.sql"
+                             "supabase/migrations/20260723111741_baseline_security_hardening.sql",
+                             "supabase/migrations/20260729115313_etorie_phase1_expand.sql",
+                             "supabase/migrations/20260729115323_etorie_phase1_project_constraints.sql"
                          ],
-    "activeMigrationCount":  2,
+    "activeMigrationCount":  4,
     "legacyMigrationCount":  55,
     "remoteOnlyEvidenceCount":  3,
     "sourceProjectRef":  "lvnfspyainrxtztjytbo",
@@ -30,7 +32,9 @@
                         ],
     "requiredSequence":  [
                              "20260723111730_etorie_baseline.sql",
-                             "20260723111741_baseline_security_hardening.sql"
+                             "20260723111741_baseline_security_hardening.sql",
+                             "20260729115313_etorie_phase1_expand.sql",
+                             "20260729115323_etorie_phase1_project_constraints.sql"
                          ],
     "archiveVerification":  {
                                 "status":  "verified",
@@ -50,6 +54,7 @@
     "objects":  [
                     "extension:extensions.pgcrypto",
                     "table:public.natori_projects",
+                    "column:public.natori_projects.request_data",
                     "table:public.natori_project_tasks",
                     "table:public.natori_events",
                     "table:public.natori_user_profiles",
@@ -58,6 +63,9 @@
                     "table:public.natori_links_content",
                     "table:public.natori_page_events",
                     "table:public.natori_quotes",
+                    "column:public.natori_quotes.request_snapshot",
+                    "column:public.natori_quotes.pricing_snapshot",
+                    "table:public.natori_project_reference_links",
                     "table:public.natori_payment_transactions",
                     "table:public.natori_order_mail_logs",
                     "table:public.natori_inquiry_reference_files",
@@ -118,6 +126,9 @@
     "checksums":  {
                       "sha256:supabase/migrations/20260723111730_etorie_baseline.sql":  "cbe412613b6eadbe284499ea6f749afab6869bc9f6d40be17db9ac1f23d18ca4",
                       "sha256:supabase/migrations/20260723111741_baseline_security_hardening.sql":  "dc13f7299b14db7f46c157864e1ed8707c1b0c23c3e918fe7e1f3b5506582be1",
+                      "sha256:supabase/migrations/20260729115313_etorie_phase1_expand.sql":  "b7e1ca1b96740376b7fad58f4ac490381c21275ae69d761d1cd68f95fe167a63",
+                      "sha256:supabase/migrations/20260729115323_etorie_phase1_project_constraints.sql":  "e9d8d678f379a60a8899f9a19ec617f265d23909cc758ef034a4087cf3e19a2f",
+                      "sha256:supabase/verification/etorie-p1-03-selects.sql":  "311f4fb3e0164683097683c2eb1738ef1324c312d5564efa71597a0be2344274",
                       "sha256:supabase/fixtures/etorie-baseline.sql":  "aaff81f89a5d5d4b18430b6ec9376105cfb55af529b2494d5f68f9ff7224d8cf",
                       "sha256:supabase/baseline/legacy-migrations.json":  "3864fa7d84701688cd2f7ce12913e2da10f2eb5c4e983649bf2105015091152d",
                       "sha256:artifacts/legacy-migration-archive/before.json":  "11f85bb9f1e1a265c803b0b756add08a97767786af8b0b065641079f602a832e",
