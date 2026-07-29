@@ -91,6 +91,7 @@
                     "bucket:natori-inquiry-refs",
                     "bucket:natori-deliveries",
                     "bucket:natori-portfolio",
+                    "verification:etorie-p1-04-security-selects",
                     "hardening:storage.objects.Allow Insert 1exduyn_0-removal",
                     "hardening:public.card_requests-server-only-conditional",
                     "hardening:public.aura_projects-server-only-conditional"
@@ -129,6 +130,7 @@
                       "sha256:supabase/migrations/20260729115313_etorie_phase1_expand.sql":  "b7e1ca1b96740376b7fad58f4ac490381c21275ae69d761d1cd68f95fe167a63",
                       "sha256:supabase/migrations/20260729115323_etorie_phase1_project_constraints.sql":  "e9d8d678f379a60a8899f9a19ec617f265d23909cc758ef034a4087cf3e19a2f",
                       "sha256:supabase/verification/etorie-p1-03-selects.sql":  "311f4fb3e0164683097683c2eb1738ef1324c312d5564efa71597a0be2344274",
+                      "sha256:supabase/verification/etorie-p1-04-security-selects.sql":  "ac0c99d5de58834ddc104e3500e6554e3c377be04a49f9e4682431305b0c105c",
                       "sha256:supabase/fixtures/etorie-baseline.sql":  "aaff81f89a5d5d4b18430b6ec9376105cfb55af529b2494d5f68f9ff7224d8cf",
                       "sha256:supabase/baseline/legacy-migrations.json":  "3864fa7d84701688cd2f7ce12913e2da10f2eb5c4e983649bf2105015091152d",
                       "sha256:artifacts/legacy-migration-archive/before.json":  "11f85bb9f1e1a265c803b0b756add08a97767786af8b0b065641079f602a832e",

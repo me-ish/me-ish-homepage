@@ -183,6 +183,38 @@ describe("multipart（ファイル同梱）", () => {
     expect((await res.json()).error).toBe("too_many_files");
     expect(mockUpload).not.toHaveBeenCalled();
   });
+
+  it("途中のuploadが失敗したら、それまでに保存した同一submissionのpathをcleanupする", async () => {
+    mockUpload
+      .mockResolvedValueOnce({
+        kind: "ok",
+        path: "submission/first.webp",
+      })
+      .mockResolvedValueOnce({ kind: "upload-error" });
+
+    const res = await POST(
+      makeMultipartReq(VALID_FIELDS, [
+        makePngFile("first.png"),
+        makePngFile("second.png"),
+      ])
+    );
+
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("upload_failed");
+    expect(mockDelete).toHaveBeenCalledWith(["submission/first.webp"]);
+    expect(mockCreateInquiry).not.toHaveBeenCalled();
+  });
+
+  it("案件作成が失敗したら、保存済みの非公開pathをcleanupする", async () => {
+    mockCreateInquiry.mockResolvedValueOnce({ kind: "db-error" });
+
+    const res = await POST(makeMultipartReq(VALID_FIELDS, [makePngFile()]));
+
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("inquiry not recorded");
+    expect(mockDelete).toHaveBeenCalledWith(["submission/a.webp"]);
+    expect(mockSendContact).not.toHaveBeenCalled();
+  });
 });
 
 describe("JSON 経路", () => {

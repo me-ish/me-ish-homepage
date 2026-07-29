@@ -30,6 +30,11 @@ const phase1VerificationPath = path.join(
   "verification",
   "etorie-p1-03-selects.sql",
 );
+const phase1SecurityVerificationPath = path.join(
+  "supabase",
+  "verification",
+  "etorie-p1-04-security-selects.sql",
+);
 const manifestPath = path.join("supabase", "baseline", "manifest.json");
 const legacyManifestPath = path.join(
   "supabase",
@@ -44,6 +49,7 @@ const [
   phase1Expand,
   phase1Constraints,
   phase1Verification,
+  phase1SecurityVerification,
   fixture,
   manifestText,
   legacyText,
@@ -57,6 +63,7 @@ const [
     readFile(phase1ExpandPath, "utf8"),
     readFile(phase1ConstraintsPath, "utf8"),
     readFile(phase1VerificationPath, "utf8"),
+    readFile(phase1SecurityVerificationPath, "utf8"),
     readFile(fixturePath, "utf8"),
     readFile(manifestPath, "utf8"),
     readFile(legacyManifestPath, "utf8"),
@@ -84,9 +91,14 @@ function checkDollarQuotes(sql, label) {
   check(stack.length === 0, `${label}: unbalanced dollar quote delimiters`);
 }
 
-function executableStatements(sql) {
+function stripSqlComments(sql) {
   return sql
-    .replace(/--.*$/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/--.*$/gm, "");
+}
+
+function executableStatements(sql) {
+  return stripSqlComments(sql)
     .split(";")
     .map((statement) => statement.trim())
     .filter(Boolean);
@@ -187,7 +199,9 @@ check(
   "portfolio_profiles must not appear in baseline",
 );
 check(
-  !/create\s+policy[\s\S]*allow insert 1exduyn_0/i.test(baseline),
+  !/create\s+policy[\s\S]*allow insert 1exduyn_0/i.test(
+    stripSqlComments(baseline),
+  ),
   "baseline must not create the broad Storage INSERT policy",
 );
 check(
@@ -196,20 +210,95 @@ check(
   ),
   "hardening must drop the broad Storage INSERT policy",
 );
+
+const activeSql = [
+  baseline,
+  hardening,
+  phase1Expand,
+  phase1Constraints,
+].join("\n");
+const activeStatements = executableStatements(activeSql);
+const storageObjectPolicies = activeStatements.filter(
+  (statement) =>
+    /^create\s+policy\b/i.test(statement) &&
+    /\bon\s+storage\.objects\b/i.test(statement),
+);
+check(
+  storageObjectPolicies.every(
+    (statement) => !/\ballow insert 1exduyn_0\b/i.test(statement),
+  ),
+  "active migrations must not recreate Allow Insert 1exduyn_0",
+);
+check(
+  storageObjectPolicies.every(
+    (statement) =>
+      !/\b(?:using|with\s+check)\s*\(\s*true\s*\)/i.test(statement),
+  ),
+  "active migrations must not create an unconditional storage.objects policy",
+);
+
+const executableBaseline = stripSqlComments(baseline);
+check(
+  /values\s*\(\s*'natori-inquiry-refs'\s*,\s*'natori-inquiry-refs'\s*,\s*false\s*,\s*10485760\s*,\s*array\s*\[\s*'image\/jpeg'\s*,\s*'image\/png'\s*,\s*'image\/webp'\s*,\s*'image\/gif'\s*\]::text\[\]\s*\)/i.test(
+    executableBaseline,
+  ),
+  "natori-inquiry-refs must remain private with the approved 10 MiB image contract",
+);
+check(
+  /values\s*\(\s*'natori-deliveries'\s*,\s*'natori-deliveries'\s*,\s*false\s*,\s*null\s*,\s*null\s*\)/i.test(
+    executableBaseline,
+  ),
+  "natori-deliveries must remain private without inferred bucket limits",
+);
+check(
+  /values\s*\(\s*'natori-portfolio'\s*,\s*'natori-portfolio'\s*,\s*true\s*,\s*null\s*,\s*null\s*\)/i.test(
+    executableBaseline,
+  ),
+  "natori-portfolio must preserve public reads and server-managed writes",
+);
+
+const executableHardening = stripSqlComments(hardening);
+const processedStripeGrants = [
+  ...executableHardening.matchAll(
+    /grant\s+([^;]+?)\s+on\s+table\s+public\.processed_stripe_events\s+to\s+([^;]+);/gi,
+  ),
+];
+check(
+  processedStripeGrants.length === 1,
+  "hardening must declare exactly one processed_stripe_events grant",
+);
+for (const grant of processedStripeGrants) {
+  const privileges = grant[1]
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .sort();
+  check(
+    JSON.stringify(privileges) ===
+      JSON.stringify(["delete", "insert", "select"]),
+    "processed_stripe_events service_role privileges must be SELECT, INSERT, DELETE only",
+  );
+  check(
+    grant[2].trim().toLowerCase() === "service_role",
+    "processed_stripe_events must not grant privileges to a client role",
+  );
+}
 check(
   /revoke\s+all\s+privileges\s+on\s+table\s+public\.processed_stripe_events[\s\S]*from\s+public,\s*anon,\s*authenticated/i.test(
-    hardening,
+    executableHardening,
   ),
   "hardening must revoke processed_stripe_events client grants",
 );
 check(
   /grant\s+select,\s*insert,\s*delete\s+on\s+table\s+public\.processed_stripe_events[\s\S]*to\s+service_role/i.test(
-    hardening,
+    executableHardening,
   ),
   "hardening must grant only required processed_stripe_events operations",
 );
 
-const softDeleteFunction = hardening.match(
+const softDeleteDefinition = executableHardening.match(
+  /create\s+or\s+replace\s+function\s+public\.natori_delete_project[\s\S]*?\$\$;/i,
+)?.[0];
+const softDeleteFunction = softDeleteDefinition?.match(
   /create\s+or\s+replace\s+function\s+public\.natori_delete_project[\s\S]*?as\s+\$\$([\s\S]*?)\$\$;/i,
 )?.[1];
 check(Boolean(softDeleteFunction), "hardening soft-delete function is missing");
@@ -220,6 +309,30 @@ check(
 check(
   softDeleteFunction && /deleted_at\s*=\s*coalesce\(deleted_at,\s*now\(\)\)/i.test(softDeleteFunction),
   "hardening natori_delete_project must be idempotent soft delete",
+);
+check(
+  softDeleteFunction &&
+    /where\s+id\s*=\s*p_project_id\s+and\s+user_id\s*=\s*p_user_id/i.test(
+      softDeleteFunction,
+    ),
+  "hardening natori_delete_project must enforce project ownership",
+);
+check(
+  softDeleteDefinition &&
+    /\bsecurity\s+definer\b/i.test(softDeleteDefinition) &&
+    /\bset\s+search_path\s*=\s*pg_catalog\s*,\s*public\b/i.test(
+      softDeleteDefinition,
+    ),
+  "hardening natori_delete_project must be SECURITY DEFINER with a fixed search_path",
+);
+check(
+  /revoke\s+all\s+on\s+function\s+public\.natori_delete_project\(uuid,\s*uuid\)\s+from\s+public,\s*anon,\s*authenticated/i.test(
+    executableHardening,
+  ) &&
+    /grant\s+execute\s+on\s+function\s+public\.natori_delete_project\(uuid,\s*uuid\)\s+to\s+service_role/i.test(
+      executableHardening,
+    ),
+  "hardening natori_delete_project EXECUTE must be service_role-only",
 );
 check(
   /alter\s+table\s+public\.card_requests\s+enable\s+row\s+level\s+security/i.test(
@@ -254,6 +367,12 @@ check(
     /^select\b/i.test(statement),
   ),
   "P1-03 verification SQL must contain SELECT statements only",
+);
+check(
+  executableStatements(phase1SecurityVerification).every((statement) =>
+    /^select\b/i.test(statement),
+  ),
+  "P1-04 security verification SQL must contain SELECT statements only",
 );
 check(
   fixture.includes("fixture_confirmation_required") &&
@@ -439,6 +558,7 @@ for (const [label, content] of [
   [phase1ExpandName, phase1Expand],
   [phase1ConstraintsName, phase1Constraints],
   ["etorie-p1-03-selects.sql", phase1Verification],
+  ["etorie-p1-04-security-selects.sql", phase1SecurityVerification],
   ["etorie-baseline.sql", fixture],
   ["manifest.json", manifestText],
   ["legacy-migrations.json", legacyText],
