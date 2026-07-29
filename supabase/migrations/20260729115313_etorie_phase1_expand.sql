@@ -63,7 +63,7 @@ using (false)
 with check (false);
 
 revoke all privileges on table public.natori_project_reference_links
-from public, anon, authenticated;
+from public, anon, authenticated, service_role;
 
 grant select, insert, update, delete
 on table public.natori_project_reference_links

@@ -95,6 +95,21 @@ where table_schema = 'public'
 order by grantee, privilege_type;
 
 select
+  coalesce(
+    array_agg(privilege_type::text order by privilege_type::text),
+    array[]::text[]
+  ) as service_role_privileges,
+  coalesce(
+    array_agg(privilege_type::text order by privilege_type::text),
+    array[]::text[]
+  ) = array['DELETE', 'INSERT', 'SELECT', 'UPDATE']::text[]
+    as service_role_has_crud_only
+from information_schema.role_table_grants
+where table_schema = 'public'
+  and table_name = 'natori_project_reference_links'
+  and grantee = 'service_role';
+
+select
   c.conname as foreign_key_name,
   c.conrelid::regclass::text as source_table,
   c.confrelid::regclass::text as target_table,

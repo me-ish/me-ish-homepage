@@ -94,10 +94,24 @@ describe("Etorie P1-03 schema migrations", () => {
       /create\s+policy\s+natori_service_only[\s\S]*to\s+anon,\s*authenticated[\s\S]*using\s*\(\s*false\s*\)[\s\S]*with\s+check\s*\(\s*false\s*\)/i,
     );
     expect(expandSql).toMatch(
-      /revoke\s+all\s+privileges\s+on\s+table\s+public\.natori_project_reference_links[\s\S]*from\s+public,\s*anon,\s*authenticated/i,
+      /revoke\s+all\s+privileges\s+on\s+table\s+public\.natori_project_reference_links\s+from\s+public,\s*anon,\s*authenticated,\s*service_role\s*;/i,
     );
     expect(expandSql).toMatch(
-      /grant\s+select,\s*insert,\s*update,\s*delete[\s\S]*on\s+table\s+public\.natori_project_reference_links[\s\S]*to\s+service_role/i,
+      /grant\s+select,\s*insert,\s*update,\s*delete\s+on\s+table\s+public\.natori_project_reference_links\s+to\s+service_role\s*;/i,
+    );
+    const serviceRoleGrants = [
+      ...expandSql.matchAll(
+        /grant\s+([\s\S]*?)\s+on\s+table\s+public\.natori_project_reference_links\s+to\s+service_role\s*;/gi,
+      ),
+    ];
+    expect(serviceRoleGrants).toHaveLength(1);
+    expect(
+      serviceRoleGrants[0][1]
+        .split(",")
+        .map((privilege) => privilege.trim().toUpperCase()),
+    ).toEqual(["SELECT", "INSERT", "UPDATE", "DELETE"]);
+    expect(serviceRoleGrants[0][1]).not.toMatch(
+      /\b(?:ALL|REFERENCES|TRIGGER|TRUNCATE)\b/i,
     );
     expect(expandSql).not.toMatch(
       /create\s+policy[\s\S]*?(?:using|with\s+check)\s*\(\s*true\s*\)/i,
@@ -241,6 +255,9 @@ describe("Etorie P1-03 schema migrations", () => {
     expect(verificationSql).toContain("pg_catalog.pg_indexes");
     expect(verificationSql).toContain("pg_catalog.pg_policies");
     expect(verificationSql).toContain("information_schema.role_table_grants");
+    expect(verificationSql).toMatch(
+      /array\[\s*'DELETE',\s*'INSERT',\s*'SELECT',\s*'UPDATE'\s*\]::text\[\][\s\S]*as\s+service_role_has_crud_only[\s\S]*table_name\s*=\s*'natori_project_reference_links'[\s\S]*grantee\s*=\s*'service_role'/i,
+    );
     expect(verificationSql).toContain(
       "duplicate_project_normalized_url_groups",
     );
