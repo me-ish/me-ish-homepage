@@ -141,6 +141,10 @@ describe("Etorie migration archive", () => {
   const baselineName = "20260723111730_etorie_baseline.sql";
   const hardeningName =
     "20260723111741_baseline_security_hardening.sql";
+  const phase1ExpandName =
+    "20260729115313_etorie_phase1_expand.sql";
+  const phase1ConstraintsName =
+    "20260729115323_etorie_phase1_project_constraints.sql";
   const manifest = readJson<{
     activeMigrations: string[];
     activeMigrationCount: number;
@@ -185,22 +189,29 @@ describe("Etorie migration archive", () => {
     contentChanges: string[];
   }>(manifest.archiveVerification.verificationArtifact);
 
-  it("keeps only the ordered baseline lane active with unique CLI versions", () => {
+  it("keeps the frozen baseline pair followed by the ordered Phase 1 lane", () => {
     const active = readdirSync(activeDirectory)
       .filter((entry) => entry.endsWith(".sql"))
       .sort();
     const versions = active.map((entry) => entry.split("_", 1)[0]);
 
-    expect(active).toEqual([baselineName, hardeningName]);
+    expect(active).toEqual([
+      baselineName,
+      hardeningName,
+      phase1ExpandName,
+      phase1ConstraintsName,
+    ]);
     expect(new Set(versions).size).toBe(versions.length);
     expect(active.every((entry) => /^\d{14}_[a-z0-9_]+\.sql$/.test(entry))).toBe(
       true,
     );
     expect(manifest.activeMigrations).toEqual(
-      active.map((entry) => `supabase/migrations/${entry}`),
+      active.map(
+        (entry) => `supabase/migrations/${entry}`,
+      ),
     );
-    expect(manifest.requiredSequence).toEqual([baselineName, hardeningName]);
-    expect(manifest.activeMigrationCount).toBe(2);
+    expect(manifest.requiredSequence).toEqual(active);
+    expect(manifest.activeMigrationCount).toBe(4);
   });
 
   it("archives exactly 55 manifest-listed migrations outside the active lane", () => {
