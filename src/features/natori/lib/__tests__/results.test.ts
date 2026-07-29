@@ -85,6 +85,41 @@ describe("summarizeNatoriResults", () => {
     // 完了日の新しい順
     expect(summary.completed.map((p) => p.id)).toEqual(["b", "a", "c"]);
   });
+
+  it("excludes undecided type from type totals and unknown amounts from revenue math", () => {
+    const summary = summarizeNatoriResults(
+      [
+        makeProject({ id: "unknown", type: "undecided", amount: null }),
+        makeProject({ id: "free", type: "icon", amount: 0 }),
+        makeProject({ id: "paid", type: "icon", amount: 12000 }),
+      ],
+      now
+    );
+
+    expect(summary.totalCount).toBe(3);
+    expect(summary.totalAmount).toBe(12000);
+    expect(summary.undecidedAmountCount).toBe(1);
+    expect(summary.averageAmount).toBe(6000);
+    expect(summary.byType).toEqual([{ type: "icon", count: 2, amount: 12000 }]);
+  });
+
+  it("excludes archived projects from all result aggregates", () => {
+    const summary = summarizeNatoriResults(
+      [
+        makeProject({ id: "active", amount: 10000 }),
+        makeProject({
+          id: "archived",
+          amount: 90000,
+          deletedAt: "2026-07-01T00:00:00.000Z",
+        }),
+      ],
+      now
+    );
+
+    expect(summary.completed.map((project) => project.id)).toEqual(["active"]);
+    expect(summary.totalCount).toBe(1);
+    expect(summary.totalAmount).toBe(10000);
+  });
 });
 
 describe("listNatoriResultYears / filterProjectsByYear", () => {
@@ -100,12 +135,12 @@ describe("listNatoriResultYears / filterProjectsByYear", () => {
 
   it("filters by year and passes through on null", () => {
     expect(filterProjectsByYear(projects, 2025).map((p) => p.id)).toEqual(["b"]);
-    expect(filterProjectsByYear(projects, null)).toHaveLength(3);
+    expect(filterProjectsByYear(projects, null)).toHaveLength(2);
   });
 
   it("filters by month and passes through on null", () => {
     expect(filterProjectsByMonth(projects, "2026-05").map((p) => p.id)).toEqual(["a"]);
     expect(filterProjectsByMonth(projects, "2025-12").map((p) => p.id)).toEqual(["b"]);
-    expect(filterProjectsByMonth(projects, null)).toHaveLength(3);
+    expect(filterProjectsByMonth(projects, null)).toHaveLength(2);
   });
 });

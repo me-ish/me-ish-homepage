@@ -3,14 +3,18 @@ import type {
   NatoriCalendarBar,
   NatoriCalendarCellBar,
   NatoriCalendarEntry,
+  NatoriConcreteProjectType,
   NatoriPriorityCandidate,
   NatoriProject,
   NatoriProjectStatus,
   NatoriProjectTask,
-  NatoriProjectType,
   NatoriStageMilestone,
   NatoriTaskStage,
 } from "@/features/natori/types/projects";
+import {
+  isActiveNatoriProject,
+  isNatoriConcreteProjectType,
+} from "@/features/natori/lib/projectReadModel";
 
 // Production flow (2026-05): 依頼 → 見積もり → 案件化 → 入金待ち → 入金確認 → ラフ → ….
 // "consulting" is the legacy "依頼受付" value; kept in the order list for
@@ -179,7 +183,7 @@ function createCharacterTasks(hours: {
   ];
 }
 
-export function createTasksForType(type: NatoriProjectType): NatoriProjectTask[] {
+export function createTasksForType(type: NatoriConcreteProjectType): NatoriProjectTask[] {
   switch (type) {
     case "icon":
       return createCharacterTasks({
@@ -321,12 +325,16 @@ export function daysUntilDue(dueDate: string, today: Date): number {
 }
 
 export function isProjectOverdue(project: NatoriProject, today: Date): boolean {
-  if (isInactiveStatus(project.status)) return false;
+  if (!isActiveNatoriProject(project) || isInactiveStatus(project.status) || !project.dueDate) {
+    return false;
+  }
   return daysUntilDue(project.dueDate, today) < 0;
 }
 
 export function getProjectsForDate(projects: NatoriProject[], dateISO: string): NatoriProject[] {
-  return projects.filter((project) => project.dueDate === dateISO);
+  return projects.filter(
+    (project) => isActiveNatoriProject(project) && project.dueDate === dateISO
+  );
 }
 
 /**
@@ -334,7 +342,7 @@ export function getProjectsForDate(projects: NatoriProject[], dateISO: string): 
  * startDate; falls back to the delivery plan's nominal days.
  */
 export function getProjectDurationDays(project: NatoriProject): number {
-  if (project.startDate) {
+  if (project.startDate && project.dueDate) {
     const start = parseISODate(project.startDate);
     const due = parseISODate(project.dueDate);
     const diff = Math.round((due.getTime() - start.getTime()) / 86_400_000);
@@ -344,6 +352,7 @@ export function getProjectDurationDays(project: NatoriProject): number {
 }
 
 export function computeStageMilestones(project: NatoriProject): NatoriStageMilestone[] {
+  if (!isActiveNatoriProject(project) || !project.dueDate) return [];
   const ordered: NatoriTaskStage[] = ["material", "rough", "lineart", "coloring", "finish", "delivery"];
   const usedStages = ordered.filter((stage) =>
     project.tasks.some((task) => task.stage === stage)
@@ -401,6 +410,7 @@ export function getCalendarEntriesForDate(
   const entries: NatoriCalendarEntry[] = [];
 
   for (const project of projects) {
+    if (!isActiveNatoriProject(project) || !project.dueDate) continue;
     // 見送り案件は納期の点も出さない（カレンダーから完全に外す）
     if (isClosedStatus(project.status)) continue;
     if (project.dueDate === dateISO) {
@@ -437,7 +447,9 @@ function shiftISODate(iso: string, days: number): string {
 }
 
 export function computeProjectBars(project: NatoriProject, today?: Date): NatoriCalendarBar[] {
-  if (isInactiveStatus(project.status)) return [];
+  if (!isActiveNatoriProject(project) || isInactiveStatus(project.status) || !project.dueDate) {
+    return [];
+  }
   // Pre-work (依頼受付・見積もり中・見積もり提示済み・入金待ち) は制作未着手なので
   // カレンダーの stage バーには出さない。入金確認 → rough に進んでから初めて
   // バーが描画されるようにする。
@@ -601,7 +613,7 @@ export function buildMonthCells(
   return { cells, totalLanes };
 }
 
-const TYPE_WEIGHT: Record<NatoriProjectType, number> = {
+const TYPE_WEIGHT: Record<NatoriConcreteProjectType, number> = {
   icon: 0,
   sd: 3,
   standing: 8,
@@ -609,7 +621,13 @@ const TYPE_WEIGHT: Record<NatoriProjectType, number> = {
 };
 
 export function calculatePriorityScore(project: NatoriProject, today: Date): number {
-  if (isInactiveStatus(project.status)) return -1;
+  if (
+    !isActiveNatoriProject(project) ||
+    isInactiveStatus(project.status) ||
+    !project.dueDate
+  ) {
+    return -1;
+  }
 
   const progress = getTaskProgress(project);
   const days = daysUntilDue(project.dueDate, today);
@@ -633,7 +651,9 @@ export function calculatePriorityScore(project: NatoriProject, today: Date): num
   }
   if (project.status === "quoted" || project.status === "awaiting_payment") score -= 15;
 
-  score += TYPE_WEIGHT[project.type] ?? 0;
+  if (isNatoriConcreteProjectType(project.type)) {
+    score += TYPE_WEIGHT[project.type];
+  }
 
   if (project.priority === "high") score += 20;
   if (project.priority === "low") score -= 20;
@@ -643,11 +663,13 @@ export function calculatePriorityScore(project: NatoriProject, today: Date): num
 
 export function describePriorityReasons(project: NatoriProject, today: Date): string[] {
   const reasons: string[] = [];
-  const days = daysUntilDue(project.dueDate, today);
+  const days = project.dueDate === null ? null : daysUntilDue(project.dueDate, today);
   const progress = getTaskProgress(project);
   const percent = Math.round(progress.ratio * 100);
 
-  if (days < 0) {
+  if (days === null) {
+    reasons.push("納期未定");
+  } else if (days < 0) {
     reasons.push(`期限切れ ${Math.abs(days)}日`);
   } else if (days === 0) {
     reasons.push("納期は今日");
@@ -682,7 +704,12 @@ export function getPrioritySuggestions(
   limit = 3
 ): NatoriPriorityCandidate[] {
   return projects
-    .filter((project) => !isInactiveStatus(project.status))
+    .filter(
+      (project) =>
+        isActiveNatoriProject(project) &&
+        !isInactiveStatus(project.status) &&
+        project.dueDate !== null
+    )
     .map((project) => ({
       project,
       score: calculatePriorityScore(project, today),

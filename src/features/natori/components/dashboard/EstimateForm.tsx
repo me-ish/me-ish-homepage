@@ -30,7 +30,7 @@ import ProjectRegisterForm from "@/features/natori/components/dashboard/ProjectR
 import type {
   NatoriDeliveryPlan,
   NatoriProject,
-  NatoriProjectType,
+  NatoriConcreteProjectType,
 } from "@/features/natori/types/projects";
 import type {
   NatoriEstimateCategory,
@@ -41,7 +41,7 @@ import type {
 
 // 見積もりカテゴリ → 案件タイプ（タスク雛形）の対応。
 // 腰上は SD（ちびキャラ）ではなく通常イラストの工程で扱う。
-const CATEGORY_TO_TYPE: Record<NatoriEstimateCategory, NatoriProjectType> = {
+const CATEGORY_TO_TYPE: Record<NatoriEstimateCategory, NatoriConcreteProjectType> = {
   bust_up: "icon",
   waist_up: "illustration",
   full_body: "standing",

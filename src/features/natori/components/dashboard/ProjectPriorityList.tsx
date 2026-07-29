@@ -61,10 +61,13 @@ export default function ProjectPriorityList({ suggestions, today, onSelect }: Pr
               const meta = natoriProjectStatusMeta[project.status];
               const stage = getStageForStatus(project.status);
               const stageMeta = stage ? natoriStageMeta[stage] : null;
-              const days = daysUntilDue(project.dueDate, today);
+              const days =
+                project.dueDate === null ? null : daysUntilDue(project.dueDate, today);
               const rankClass = rankClassMap[idx] ?? "bg-gray-400";
               const dueClass =
-                days < 0
+                days === null
+                  ? "text-gray-500"
+                  : days < 0
                   ? "text-red-700"
                   : days <= 2
                   ? "text-amber-700"
@@ -103,7 +106,9 @@ export default function ProjectPriorityList({ suggestions, today, onSelect }: Pr
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <p className={cn("text-xs font-bold", dueClass)}>
-                          {days < 0
+                          {days === null
+                            ? "納期未定"
+                            : days < 0
                             ? `期限切れ ${Math.abs(days)}日`
                             : days === 0
                             ? "納期は今日"

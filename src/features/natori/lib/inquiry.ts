@@ -1,4 +1,4 @@
-import type { NatoriProjectType } from "@/features/natori/types/projects";
+import type { NatoriConcreteProjectType } from "@/features/natori/types/projects";
 
 /**
  * ご依頼フォーム（/natori/portfolio）の入力から、案件（natori_projects）の
@@ -26,7 +26,10 @@ export type NatoriInquiryInput = {
  * 判定できないものは illustration（一枚絵）に寄せる。ナトリ先生が案件画面で
  * あとから直せる前提の、あくまで初期値。
  */
-export function inferNatoriProjectType(requestType: string, plan?: string): NatoriProjectType {
+export function inferNatoriProjectType(
+  requestType: string,
+  plan?: string
+): NatoriConcreteProjectType {
   const haystack = `${requestType} ${plan ?? ""}`;
   if (/アイコン|icon/i.test(haystack)) return "icon";
   if (/立ち絵|立絵|standing/i.test(haystack)) return "standing";
@@ -81,7 +84,7 @@ export type NatoriInquiryProjectDraft = {
   clientName: string;
   /** 依頼者メール。client_email カラムに保存する（note は人間可読の控えのみ） */
   clientEmail: string;
-  type: NatoriProjectType;
+  type: NatoriConcreteProjectType;
   note: string;
 };
 

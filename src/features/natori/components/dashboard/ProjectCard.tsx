@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, CalendarDays, CircleDollarSign, Clock4, Mail, Pencil, Sparkles, AlertTriangle, Wallet, Zap } from "lucide-react";
+import { ArrowRight, CalendarDays, CircleDollarSign, Clock4, Mail, Pencil, Sparkles, AlertTriangle, Tag, Wallet, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import ProjectEditForm from "./ProjectEditForm";
@@ -20,6 +20,11 @@ import {
   formatHours,
   getCurrentStagePlan,
 } from "@/features/natori/lib/scheduling";
+import {
+  formatNatoriProjectAmount,
+  formatNatoriProjectDueDate,
+  NATORI_PROJECT_TYPE_LABELS,
+} from "@/features/natori/lib/projectReadModel";
 import { cn } from "@/lib/utils";
 import ProjectNoteSummary from "./ProjectNoteSummary";
 import ProjectTaskChecklist from "./ProjectTaskChecklist";
@@ -49,12 +54,6 @@ const WORK_MAIL_STATUSES = new Set<NatoriProject["status"]>([
   "delivery_prep",
   "delivered",
 ]);
-
-const yenFormatter = new Intl.NumberFormat("ja-JP", {
-  style: "currency",
-  currency: "JPY",
-  maximumFractionDigits: 0,
-});
 
 const dueDateFormatter = new Intl.DateTimeFormat("ja-JP", {
   month: "numeric",
@@ -91,7 +90,7 @@ export default function ProjectCard({
   const [editing, setEditing] = useState(false);
   const status = natoriProjectStatusMeta[project.status];
   const overdue = isProjectOverdue(project, today);
-  const days = daysUntilDue(project.dueDate, today);
+  const days = project.dueDate === null ? null : daysUntilDue(project.dueDate, today);
   const priority = project.priority ? priorityChipMap[project.priority] : null;
   const stage = getStageForStatus(project.status);
   const stageMeta = stage ? natoriStageMeta[stage] : null;
@@ -153,7 +152,7 @@ export default function ProjectCard({
           <div className="flex items-start gap-2 rounded-2xl border border-red-300 bg-red-50 p-3 text-sm text-red-800">
             <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
             <span className="font-bold">
-              納期を {Math.abs(days)} 日過ぎています。優先して進めましょう。
+              納期を {Math.abs(days ?? 0)} 日過ぎています。優先して進めましょう。
             </span>
           </div>
         ) : null}
@@ -188,19 +187,26 @@ export default function ProjectCard({
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-2 text-sm text-gray-700 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 text-sm text-gray-700 sm:grid-cols-3">
           <div className="flex min-w-0 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
             <CalendarDays className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
             <span className="shrink-0 text-gray-500">納期</span>
             <span className="min-w-0 break-words font-bold text-gray-900">
-              {formatDueDate(project.dueDate)}
+              {formatNatoriProjectDueDate(project.dueDate, formatDueDate)}
             </span>
           </div>
           <div className="flex min-w-0 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
             <CircleDollarSign className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
             <span className="shrink-0 text-gray-500">金額</span>
             <span className="min-w-0 break-words font-bold text-gray-900">
-              {yenFormatter.format(project.amount)}
+              {formatNatoriProjectAmount(project.amount)}
+            </span>
+          </div>
+          <div className="flex min-w-0 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
+            <Tag className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
+            <span className="shrink-0 text-gray-500">種別</span>
+            <span className="min-w-0 break-words font-bold text-gray-900">
+              {NATORI_PROJECT_TYPE_LABELS[project.type]}
             </span>
           </div>
         </div>
@@ -218,7 +224,11 @@ export default function ProjectCard({
           )}
         >
           <Clock4 className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
-          {scheduling.isBlocked ? (
+          {project.dueDate === null ? (
+            <span className="min-w-0 font-bold">
+              納期未定。スケジュール負荷には含めません。
+            </span>
+          ) : scheduling.isBlocked ? (
             <span className="min-w-0 font-bold">
               着金・確認待ち中。残 {formatHours(scheduling.remainingHours)}
             </span>

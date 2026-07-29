@@ -1,7 +1,12 @@
 import type {
+  NatoriConcreteProjectType,
   NatoriProject,
-  NatoriProjectType,
 } from "@/features/natori/types/projects";
+import {
+  isActiveNatoriProject,
+  isNatoriConcreteProjectType,
+  NATORI_PROJECT_TYPE_LABELS,
+} from "@/features/natori/lib/projectReadModel";
 
 /**
  * 実績ページ用の集計ロジック。「納品済み」「対応完了」の案件を実績として
@@ -19,7 +24,7 @@ export type NatoriMonthlyResult = {
 };
 
 export type NatoriTypeResult = {
-  type: NatoriProjectType;
+  type: NatoriConcreteProjectType;
   count: number;
   amount: number;
 };
@@ -27,6 +32,8 @@ export type NatoriTypeResult = {
 export type NatoriResultsSummary = {
   totalCount: number;
   totalAmount: number;
+  /** 金額未定の実績件数。0円案件とは区別する。 */
+  undecidedAmountCount: number;
   /** 実績0件のときは 0 */
   averageAmount: number;
   thisYearCount: number;
@@ -42,33 +49,28 @@ export type NatoriResultsSummary = {
 export function isNatoriCompletedProject(project: NatoriProject): boolean {
   return (
     project.status === "completed" &&
+    isActiveNatoriProject(project) &&
     Boolean(project.paidAt ?? project.paymentConfirmedAt)
   );
 }
 
 export function getNatoriResultDateISO(project: NatoriProject): string {
-  return (
+  const value =
     project.completedAt ??
     project.paidAt ??
     project.paymentConfirmedAt ??
-    project.dueDate
-  ).slice(0, 10);
+    project.dueDate ??
+    project.createdAt;
+  return value?.slice(0, 10) ?? "";
 }
 
-export function getNatoriResultAmount(project: NatoriProject): number {
+export function getNatoriResultAmount(project: NatoriProject): number | null {
   return project.paidAmount ?? project.amount;
 }
 
 /* ------------------------------------------------------------------
    CSV 出力（確定申告・売上管理用）
 ------------------------------------------------------------------- */
-
-const CSV_TYPE_LABELS: Record<NatoriProjectType, string> = {
-  icon: "アイコン",
-  sd: "SD",
-  standing: "立ち絵",
-  illustration: "イラスト",
-};
 
 const CSV_STATUS_LABELS: Record<string, string> = {
   delivered: "納品済み",
@@ -92,15 +94,15 @@ function csvCell(value: string | number): string {
 export function buildNatoriResultsCsv(projects: NatoriProject[]): string {
   const header = ["完了日", "依頼者", "件名", "種類", "入金額(円)", "ステータス"];
   const rows = projects
-    .slice()
+    .filter(isNatoriCompletedProject)
     .sort((a, b) => getNatoriResultDateISO(b).localeCompare(getNatoriResultDateISO(a)))
     .map((project) =>
       [
         getNatoriResultDateISO(project),
         project.clientName,
         project.title,
-        CSV_TYPE_LABELS[project.type] ?? project.type,
-        getNatoriResultAmount(project),
+        NATORI_PROJECT_TYPE_LABELS[project.type],
+        getNatoriResultAmount(project) ?? "未定",
         CSV_STATUS_LABELS[project.status] ?? project.status,
       ]
         .map(csvCell)
@@ -125,9 +127,10 @@ export function filterProjectsByYear(
   projects: NatoriProject[],
   year: number | null
 ): NatoriProject[] {
-  if (year === null) return projects;
+  const completed = projects.filter(isNatoriCompletedProject);
+  if (year === null) return completed;
   const prefix = `${year}-`;
-  return projects.filter((project) => getNatoriResultDateISO(project).startsWith(prefix));
+  return completed.filter((project) => getNatoriResultDateISO(project).startsWith(prefix));
 }
 
 /** 年月（"2026-05" 形式）で実績を絞り込む（ym が null なら全期間） */
@@ -135,8 +138,9 @@ export function filterProjectsByMonth(
   projects: NatoriProject[],
   ym: string | null
 ): NatoriProject[] {
-  if (ym === null) return projects;
-  return projects.filter((project) => getNatoriResultDateISO(project).startsWith(ym));
+  const completed = projects.filter(isNatoriCompletedProject);
+  if (ym === null) return completed;
+  return completed.filter((project) => getNatoriResultDateISO(project).startsWith(ym));
 }
 
 function toMonthLabel(ym: string): string {
@@ -158,11 +162,19 @@ export function summarizeNatoriResults(
     );
 
   const totalCount = completed.length;
+  const knownAmounts = completed
+    .map(getNatoriResultAmount)
+    .filter((amount): amount is number => amount !== null);
   const totalAmount = completed.reduce(
-    (sum, project) => sum + getNatoriResultAmount(project),
+    (sum, project) => {
+      const amount = getNatoriResultAmount(project);
+      return amount === null ? sum : sum + amount;
+    },
     0
   );
-  const averageAmount = totalCount > 0 ? Math.round(totalAmount / totalCount) : 0;
+  const undecidedAmountCount = totalCount - knownAmounts.length;
+  const averageAmount =
+    knownAmounts.length > 0 ? Math.round(totalAmount / knownAmounts.length) : 0;
 
   const thisYearPrefix = `${now.getFullYear()}-`;
   const thisYear = completed.filter((project) =>
@@ -170,7 +182,10 @@ export function summarizeNatoriResults(
   );
   const thisYearCount = thisYear.length;
   const thisYearAmount = thisYear.reduce(
-    (sum, project) => sum + getNatoriResultAmount(project),
+    (sum, project) => {
+      const amount = getNatoriResultAmount(project);
+      return amount === null ? sum : sum + amount;
+    },
     0
   );
 
@@ -184,22 +199,25 @@ export function summarizeNatoriResults(
       amount: 0,
     };
     entry.count += 1;
-    entry.amount += getNatoriResultAmount(project);
+    const amount = getNatoriResultAmount(project);
+    if (amount !== null) entry.amount += amount;
     monthlyMap.set(ym, entry);
   }
   const monthly = Array.from(monthlyMap.values()).sort((a, b) =>
     a.ym < b.ym ? 1 : a.ym > b.ym ? -1 : 0
   );
 
-  const typeMap = new Map<NatoriProjectType, NatoriTypeResult>();
+  const typeMap = new Map<NatoriConcreteProjectType, NatoriTypeResult>();
   for (const project of completed) {
+    if (!isNatoriConcreteProjectType(project.type)) continue;
     const entry = typeMap.get(project.type) ?? {
       type: project.type,
       count: 0,
       amount: 0,
     };
     entry.count += 1;
-    entry.amount += getNatoriResultAmount(project);
+    const amount = getNatoriResultAmount(project);
+    if (amount !== null) entry.amount += amount;
     typeMap.set(project.type, entry);
   }
   const byType = Array.from(typeMap.values()).sort((a, b) => b.amount - a.amount);
@@ -207,6 +225,7 @@ export function summarizeNatoriResults(
   return {
     totalCount,
     totalAmount,
+    undecidedAmountCount,
     averageAmount,
     thisYearCount,
     thisYearAmount,

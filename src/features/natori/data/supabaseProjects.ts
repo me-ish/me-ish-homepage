@@ -1,26 +1,31 @@
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import type {
   NatoriDeliveryPlan,
+  NatoriConcreteProjectType,
   NatoriProject,
   NatoriProjectPriority,
   NatoriProjectStatus,
   NatoriProjectTask,
-  NatoriProjectType,
   NatoriTaskStage,
 } from "@/features/natori/types/projects";
+import {
+  NATORI_CONCRETE_PROJECT_TYPES,
+  readNatoriProjectType,
+} from "@/features/natori/lib/projectReadModel";
 
-type ProjectRow = {
+export type ProjectRow = {
   id: string;
   user_id: string;
   title: string;
   client_name: string;
-  amount: number;
+  amount: number | null;
   type: string;
   status: string;
   delivery_plan: string;
   priority: string | null;
   start_date: string | null;
-  due_date: string;
+  due_date: string | null;
+  created_at: string;
   next_action: string;
   note: string | null;
   // Optional — added by 20260524_natori_project_flow.sql. Missing on older
@@ -34,7 +39,7 @@ type ProjectRow = {
   deleted_at?: string | null;
 };
 
-type TaskRow = {
+export type TaskRow = {
   id: string;
   project_id: string;
   task_key: string;
@@ -57,7 +62,7 @@ async function patchNatoriAdminProject(payload: Record<string, unknown>): Promis
   }
 }
 
-function rowToProject(
+export function rowToProject(
   row: ProjectRow,
   taskRows: TaskRow[],
   referenceImageUrls: string[]
@@ -79,12 +84,13 @@ function rowToProject(
     clientName: row.client_name,
     clientEmail: row.client_email ?? undefined,
     amount: row.amount,
-    type: row.type as NatoriProjectType,
+    type: readNatoriProjectType(row.type),
     status: row.status as NatoriProjectStatus,
     deliveryPlan: row.delivery_plan as NatoriDeliveryPlan,
     priority: (row.priority ?? undefined) as NatoriProjectPriority | undefined,
     startDate: row.start_date ?? undefined,
     dueDate: row.due_date,
+    createdAt: row.created_at,
     nextAction: row.next_action,
     note: row.note ?? undefined,
     paymentConfirmedAt: row.payment_confirmed_at ?? undefined,
@@ -136,8 +142,10 @@ export async function fetchNatoriProjectCollection(): Promise<{
       referencesByProject.get(row.id) ?? []
     );
   return {
-    projects: projectRows.map(mapRow),
-    archivedProjects: (payload.archivedProjects ?? []).map(mapRow),
+    projects: projectRows.map(mapRow).filter((project) => !project.deletedAt),
+    archivedProjects: (payload.archivedProjects ?? [])
+      .map(mapRow)
+      .filter((project) => Boolean(project.deletedAt)),
   };
 }
 
@@ -214,7 +222,7 @@ export async function confirmNatoriProjectPayment(
 export type UpdateNatoriProjectDetailsInput = {
   clientName?: string;
   title?: string;
-  type?: NatoriProjectType;
+  type?: NatoriConcreteProjectType;
   amount?: number;
   deliveryPlan?: NatoriDeliveryPlan;
   startDate?: string | null;
@@ -229,7 +237,6 @@ export class NatoriProjectDetailsValidationError extends Error {
   }
 }
 
-const NATORI_PROJECT_TYPES: NatoriProjectType[] = ["icon", "sd", "standing", "illustration"];
 const NATORI_DELIVERY_PLANS_VALUES: NatoriDeliveryPlan[] = [
   "normal",
   "rush_14_days",
@@ -272,7 +279,7 @@ export function normalizeNatoriProjectDetailsPatch(
     patch.title = trimmed;
   }
   if (input.type !== undefined) {
-    if (!NATORI_PROJECT_TYPES.includes(input.type)) {
+    if (!NATORI_CONCRETE_PROJECT_TYPES.includes(input.type)) {
       throw new NatoriProjectDetailsValidationError("案件タイプが不正です。");
     }
     patch.type = input.type;
@@ -334,7 +341,7 @@ export type CreateNatoriProjectInput = {
   title: string;
   clientName: string;
   amount: number;
-  type: NatoriProjectType;
+  type: NatoriConcreteProjectType;
   status?: NatoriProjectStatus;
   deliveryPlan?: NatoriDeliveryPlan;
   startDateISO?: string;

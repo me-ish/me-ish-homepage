@@ -8,7 +8,11 @@ import { Archive, Calculator, CalendarDays, Mail, Wallet, X } from "lucide-react
 import { cn } from "@/lib/utils";
 import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
 import type { NatoriInquiryNoteView } from "@/features/natori/lib/inquiryNoteView";
-import { formatYen } from "@/features/natori/lib/pricing";
+import {
+  formatNatoriProjectAmount,
+  getNatoriInquiryReceivedISO,
+  NATORI_PROJECT_TYPE_LABELS,
+} from "@/features/natori/lib/projectReadModel";
 import type { NatoriProject } from "@/features/natori/types/projects";
 import type { OrderMailKind } from "./OrderMailPanel";
 
@@ -56,7 +60,7 @@ export default function InquiryDetailPanel({
   projectsHref,
 }: InquiryDetailPanelProps) {
   const meta = natoriProjectStatusMeta[project.status];
-  const receivedISO = project.startDate ?? project.dueDate;
+  const receivedISO = getNatoriInquiryReceivedISO(project);
   const referenceImages = [
     ...(project.referenceImageUrls ?? []),
     ...view.refImages,
@@ -95,7 +99,12 @@ export default function InquiryDetailPanel({
                 <CalendarDays className="h-3.5 w-3.5" aria-hidden />
                 受付 {formatDate(receivedISO)}
               </span>
-              <span className="font-bold text-gray-900">{formatYen(project.amount)}</span>
+              <span className="font-bold text-gray-900">
+                {formatNatoriProjectAmount(project.amount)}
+              </span>
+              <span className="font-bold text-gray-900">
+                種別 {NATORI_PROJECT_TYPE_LABELS[project.type]}
+              </span>
               {view.email ? <span className="break-all">{view.email}</span> : null}
             </p>
           </div>

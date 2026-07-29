@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Inbox } from "lucide-react";
+import { ArrowRight, CalendarClock, Inbox } from "lucide-react";
 import {
   deriveNextActionFromTasks,
   deriveStatusFromTasks,
@@ -33,6 +33,7 @@ import type { NatoriPriorityCandidate, NatoriProject } from "@/features/natori/t
 import ProjectMonthCalendar from "./ProjectMonthCalendar";
 import ProjectDayDetail from "./ProjectDayDetail";
 import ProjectPriorityList from "./ProjectPriorityList";
+import ProjectCard from "./ProjectCard";
 import ClosedProjectsSection from "./ClosedProjectsSection";
 import ArchivedProjectsSection from "./ArchivedProjectsSection";
 import ProjectRegisterForm from "./ProjectRegisterForm";
@@ -171,11 +172,17 @@ export default function ProjectsBoard({
   // 見送り（closed）はボード・カレンダー・優先度の対象から外し、
   // 折りたたみの「見送りした相談」にだけ出す。
   const activeProjects = useMemo(
-    () => projects.filter((project) => project.status !== "closed"),
+    () =>
+      projects.filter(
+        (project) => !project.deletedAt && project.status !== "closed"
+      ),
     [projects]
   );
   const closedProjects = useMemo(
-    () => projects.filter((project) => project.status === "closed"),
+    () =>
+      projects.filter(
+        (project) => !project.deletedAt && project.status === "closed"
+      ),
     [projects]
   );
 
@@ -187,6 +194,10 @@ export default function ProjectsBoard({
   // 依頼受付〜入金待ちは問い合わせ管理ページに集約したので、ここでは件数だけ出す
   const preworkCount = useMemo(
     () => activeProjects.filter((project) => isPreworkStatus(project.status)).length,
+    [activeProjects]
+  );
+  const undatedProjects = useMemo(
+    () => activeProjects.filter((project) => project.dueDate === null),
     [activeProjects]
   );
 
@@ -231,6 +242,7 @@ export default function ProjectsBoard({
 
   const focusProject = (project: NatoriProject) => {
     const due = project.dueDate;
+    if (!due) return;
     setSelectedISO(due);
     const [y, m] = due.split("-").map(Number);
     setViewMonth({ year: y, monthIndex: m - 1 });
@@ -586,6 +598,41 @@ export default function ProjectsBoard({
             {eventsBusy ? "再読込中…" : "予定を再読込"}
           </button>
         </div>
+      ) : null}
+
+      {undatedProjects.length > 0 ? (
+        <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex items-start gap-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gray-700 text-white">
+              <CalendarClock className="h-4 w-4" aria-hidden />
+            </span>
+            <div>
+              <h2 className="text-sm font-black text-gray-900">
+                納期未定の案件 {undatedProjects.length}件
+              </h2>
+              <p className="mt-0.5 text-xs text-gray-600">
+                一覧には保持し、納期が決まるまでカレンダーと負荷計算から除外します。
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {undatedProjects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                today={today}
+                onToggleTask={handleToggleTask}
+                onAdvanceStatus={handleAdvanceStatus}
+                onConfirmPayment={handleConfirmPayment}
+                onOpenMail={(entry, kind) =>
+                  setMailTarget({ project: entry, kind })
+                }
+                onEditDetails={handleEditDetails}
+                advanceBusy={advanceBusyId === project.id}
+              />
+            ))}
+          </div>
+        </section>
       ) : null}
 
       <ProjectMonthCalendar

@@ -65,20 +65,28 @@ const KIND_META: Record<
 function buildDraft(
   kind: OrderMailKind,
   project: NatoriProject,
-  amount: number,
+  amount: number | null,
   breakdownLines?: string[],
   artistName?: string
 ): NatoriOrderMailDraft {
-  const input = { clientName: project.clientName, title: project.title, amount, artistName };
+  const baseInput = {
+    clientName: project.clientName,
+    title: project.title,
+    artistName,
+  };
   switch (kind) {
     case "estimate":
-      return buildEstimateMailDraft({ ...input, breakdownLines });
+      return amount === null
+        ? { subject: "", body: "" }
+        : buildEstimateMailDraft({ ...baseInput, amount, breakdownLines });
     case "payment":
-      return buildPaymentMailDraft(input);
+      return amount === null
+        ? { subject: "", body: "" }
+        : buildPaymentMailDraft({ ...baseInput, amount });
     case "rough":
-      return buildRoughMailDraft(input);
+      return buildRoughMailDraft(baseInput);
     case "delivery":
-      return buildDeliveryMailDraft(input);
+      return buildDeliveryMailDraft(baseInput);
   }
 }
 
@@ -120,7 +128,7 @@ export default function OrderMailPanel({
   const meta = KIND_META[kind];
   const startAmount = initialAmount ?? project.amount;
   const [to, setTo] = useState(resolveClientEmail(project) ?? "");
-  const [amount, setAmount] = useState<number>(startAmount);
+  const [amount, setAmount] = useState<number | "">(startAmount ?? "");
   const [draft, setDraft] = useState<NatoriOrderMailDraft>(() =>
     buildDraft(kind, project, startAmount, breakdownLines, artistName)
   );
@@ -138,20 +146,32 @@ export default function OrderMailPanel({
   }, [project.note, kind]);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim());
-  const amountValid = isMoneyKind(kind)
-    ? Number.isFinite(amount) && amount >= (kind === "payment" ? 50 : 0)
-    : true;
+  const amountValid =
+    typeof amount === "number" &&
+    Number.isFinite(amount) &&
+    (!isMoneyKind(kind) || amount >= (kind === "payment" ? 50 : 0));
   const canSend =
     emailValid && amountValid && draft.subject.trim() && draft.body.trim() && !sending;
 
   const regenerate = () => {
+    if (isMoneyKind(kind) && typeof amount !== "number") {
+      setWarning("金額を入力してから定型文を再生成してください。");
+      return;
+    }
+    setWarning(null);
     setDraft(
-      buildDraft(kind, project, Number.isFinite(amount) ? amount : 0, breakdownLines, artistName)
+      buildDraft(
+        kind,
+        project,
+        typeof amount === "number" && Number.isFinite(amount) ? amount : null,
+        breakdownLines,
+        artistName
+      )
     );
   };
 
   const handleSend = async () => {
-    if (!canSend) return;
+    if (!canSend || typeof amount !== "number") return;
     if (demoMode) {
       // デモ: 実送信せず成功表示だけする（Stripe リンクもダミー）
       setSentLinkUrl(kind === "payment" ? "https://buy.stripe.com/demo_xxxxxxxx（デモ）" : null);
@@ -317,8 +337,13 @@ export default function OrderMailPanel({
                       id="om-amount"
                       type="number"
                       min={0}
-                      value={Number.isFinite(amount) ? amount : 0}
-                      onChange={(event) => setAmount(Number(event.target.value))}
+                      value={amount}
+                      placeholder="未定"
+                      onChange={(event) =>
+                        setAmount(
+                          event.target.value === "" ? "" : Number(event.target.value)
+                        )
+                      }
                       className={`${inputClass} text-right`}
                     />
                     <button
@@ -331,14 +356,17 @@ export default function OrderMailPanel({
                       定型文を再生成
                     </button>
                   </div>
-                  {kind === "payment" && Number.isFinite(amount) && amount < 50 ? (
+                  {kind === "payment" &&
+                  typeof amount === "number" &&
+                  Number.isFinite(amount) &&
+                  amount < 50 ? (
                     <p className="mt-1 text-[11px] font-bold text-red-600">
                       カード決済は50円以上から利用できます。
                     </p>
                   ) : null}
                 </div>
               ) : (
-                <div className="flex items-end justify-end">
+                <div className="flex flex-col items-end justify-end gap-1">
                   <button
                     type="button"
                     onClick={regenerate}
@@ -348,6 +376,11 @@ export default function OrderMailPanel({
                     <RotateCcw className="h-3.5 w-3.5" aria-hidden />
                     定型文を再生成
                   </button>
+                  {amount === "" ? (
+                    <p className="text-[11px] font-bold text-amber-700">
+                      金額未定の案件は送信できません。先に案件情報で金額を確定してください。
+                    </p>
+                  ) : null}
                 </div>
               )}
             </div>
@@ -407,7 +440,10 @@ export default function OrderMailPanel({
             <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
               {isMoneyKind(kind) ? (
                 <p className="mr-auto text-[11px] text-gray-500">
-                  送信金額: {formatYen(Number.isFinite(amount) ? Math.round(amount) : 0)}
+                  送信金額:{" "}
+                  {typeof amount === "number" && Number.isFinite(amount)
+                    ? formatYen(Math.round(amount))
+                    : "未定"}
                 </p>
               ) : (
                 <span className="mr-auto" />

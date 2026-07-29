@@ -18,8 +18,8 @@ import {
   resolveNatoriActingUserId,
 } from "@/features/natori/server/natoriOwner";
 import type {
+  NatoriConcreteProjectType,
   NatoriDeliveryPlan,
-  NatoriProjectType,
 } from "@/features/natori/types/projects";
 
 export const runtime = "nodejs";
@@ -44,8 +44,6 @@ export async function GET() {
       return NextResponse.json({ error: "Failed to fetch projects" }, { status: 500 });
     case "fetch-tasks-error":
       return NextResponse.json({ error: "Failed to fetch tasks" }, { status: 500 });
-    case "normalize-error":
-      return NextResponse.json({ error: "Failed to normalize project tasks" }, { status: 500 });
     case "ok":
       return NextResponse.json({
         projects: result.projects,
@@ -103,7 +101,7 @@ export async function POST(request: Request) {
     title,
     clientName,
     amount,
-    type: type as NatoriProjectType,
+    type: type as NatoriConcreteProjectType,
     status,
     deliveryPlan: deliveryPlan as NatoriDeliveryPlan | undefined,
     startDateISO: readString(payload.startDateISO) ?? undefined,
