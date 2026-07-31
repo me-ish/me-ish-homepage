@@ -48,17 +48,29 @@ create function public.natori_jsonb_has_exact_keys_v1(
   p_keys text[]
 )
 returns boolean
-language sql
+language plpgsql
 immutable
 security invoker
 set search_path = ''
 as $function$
-  select coalesce(
-    jsonb_typeof(p_value) = 'object'
-    and jsonb_object_length(p_value) = cardinality(p_keys)
-    and p_value ?& p_keys,
-    false
-  );
+declare
+  v_key_count bigint;
+begin
+  if p_value is null or p_keys is null then
+    return false;
+  end if;
+
+  if pg_catalog.jsonb_typeof(p_value) <> 'object' then
+    return false;
+  end if;
+
+  select count(*)
+  into v_key_count
+  from pg_catalog.jsonb_object_keys(p_value) as object_keys(key_name);
+
+  return v_key_count = pg_catalog.cardinality(p_keys)
+    and p_value ?& p_keys;
+end;
 $function$;
 
 create function public.natori_request_data_is_valid_v1(

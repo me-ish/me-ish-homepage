@@ -509,6 +509,10 @@ const requestDataValidationDefinition = functionDefinition(
   intakeRpcs,
   "natori_request_data_is_valid_v1",
 );
+const exactKeysDefinition = functionDefinition(
+  intakeRpcs,
+  "natori_jsonb_has_exact_keys_v1",
+);
 check(
   !/\b(?:insert\s+into|update\s+public\.|delete\s+from|truncate\s+table)\b/i.test(
     intakeMigrationTopLevel,
@@ -518,6 +522,21 @@ check(
 check(
   Boolean(createIntakeDefinition) && Boolean(confirmTypeDefinition),
   "P1-05 must define both versioned RPCs",
+);
+check(
+  exactKeysDefinition &&
+    !/\bjsonb_object_length\s*\(/i.test(executableIntakeRpcs) &&
+    /\blanguage\s+plpgsql\b/i.test(exactKeysDefinition) &&
+    /\bimmutable\b/i.test(exactKeysDefinition) &&
+    /\bsecurity\s+invoker\b/i.test(exactKeysDefinition) &&
+    /\bset\s+search_path\s*=\s*''/i.test(exactKeysDefinition) &&
+    /if\s+p_value\s+is\s+null\s+or\s+p_keys\s+is\s+null\s+then\s+return\s+false;\s+end\s+if;[\s\S]*?if\s+pg_catalog\.jsonb_typeof\(p_value\)\s*<>\s*'object'\s+then\s+return\s+false;\s+end\s+if;[\s\S]*?select\s+count\(\*\)[\s\S]*?from\s+pg_catalog\.jsonb_object_keys\(p_value\)/i.test(
+      exactKeysDefinition,
+    ) &&
+    /v_key_count\s*=\s*pg_catalog\.cardinality\(p_keys\)[\s\S]*?p_value\s*\?&\s*p_keys/i.test(
+      exactKeysDefinition,
+    ),
+  "P1-05 exact-key helper must safely enumerate object keys with supported PostgreSQL functions",
 );
 check(
   /create\s+function\s+public\.natori_create_project_with_tasks_v2\s*\(\s*p_user_id\s+uuid,\s*p_project_id\s+uuid,\s*p_client_name\s+text,\s*p_client_email\s+text,\s*p_request_data\s+jsonb,\s*p_reference_files\s+jsonb,\s*p_reference_links\s+jsonb\s*\)/i.test(
@@ -675,6 +694,7 @@ check(
     !/['"]postgres['"]/i.test(intakeRpcsVerification) &&
     intakeRpcsVerification.includes("function_body_sha256") &&
     intakeRpcsVerification.includes("empty_search_path_exact") &&
+    intakeRpcsVerification.includes("exact_key_helper_contract_ok") &&
     intakeRpcsVerification.includes("supabase_migrations.schema_migrations"),
   "P1-05 verification must check dynamic owners, ACLs, old-RPC hash, and active history",
 );

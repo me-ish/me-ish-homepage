@@ -50,6 +50,22 @@ function functionDefinition(name: string): string {
 }
 
 describe("Etorie P1-05 intake RPC migration", () => {
+  it("uses supported JSONB key enumeration for exact object keys", () => {
+    const exactKeys = functionDefinition("natori_jsonb_has_exact_keys_v1");
+
+    expect(migration).not.toMatch(/\bjsonb_object_length\s*\(/iu);
+    expect(exactKeys).toMatch(/\blanguage\s+plpgsql\b/iu);
+    expect(exactKeys).toMatch(/\bimmutable\b/iu);
+    expect(exactKeys).toMatch(/\bsecurity\s+invoker\b/iu);
+    expect(exactKeys).toMatch(/\bset\s+search_path\s*=\s*''/iu);
+    expect(exactKeys).toMatch(
+      /if\s+p_value\s+is\s+null\s+or\s+p_keys\s+is\s+null\s+then\s+return\s+false;\s+end\s+if;[\s\S]*?if\s+pg_catalog\.jsonb_typeof\(p_value\)\s*<>\s*'object'\s+then\s+return\s+false;\s+end\s+if;[\s\S]*?select\s+count\(\*\)[\s\S]*?from\s+pg_catalog\.jsonb_object_keys\(p_value\)/iu
+    );
+    expect(exactKeys).toMatch(
+      /v_key_count\s*=\s*pg_catalog\.cardinality\(p_keys\)[\s\S]*?p_value\s*\?&\s*p_keys/iu
+    );
+  });
+
   it("is one explicit transaction with no migration-time row mutation", () => {
     expect(migration).toMatch(/^\s*--[\s\S]*?\bbegin;\s/iu);
     expect(migration).toMatch(/\bcommit;\s*$/iu);
@@ -108,7 +124,7 @@ describe("Etorie P1-05 intake RPC migration", () => {
     expect(create).toContain("invalid_client_email");
     expect(create).toContain("public.natori_request_data_is_valid_v1");
     expect(validate).toContain("public.natori_jsonb_has_exact_keys_v1");
-    expect(migration).toContain("jsonb_object_length(p_value)");
+    expect(migration).toContain("pg_catalog.jsonb_object_keys(p_value)");
     expect(validate).toContain("schemaVersion");
     expect(validate).toContain("etorie-request-v1");
     expect(validate).toContain("natori-portfolio-v1");
@@ -248,5 +264,6 @@ describe("Etorie P1-05 SELECT-only verification", () => {
     expect(verification).toContain("empty_search_path_exact");
     expect(verification).toContain("function_body_sha256");
     expect(verification).toContain("supabase_migrations.schema_migrations");
+    expect(verification).toContain("exact_key_helper_contract_ok");
   });
 });

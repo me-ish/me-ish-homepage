@@ -196,3 +196,41 @@ where version in (
   '20260731115652'
 )
 order by version;
+
+-- 11. Exact-key helper truth table. Expected result: true. This proves the
+-- supported key-enumeration path accepts only the exact object key set and
+-- safely returns false for missing/extra keys, non-objects, and SQL NULL.
+select
+  public.natori_jsonb_has_exact_keys_v1(
+    '{"a": 1, "b": 2}'::jsonb,
+    array['a', 'b']::text[]
+  ) is true
+  and public.natori_jsonb_has_exact_keys_v1(
+    '{}'::jsonb,
+    array[]::text[]
+  ) is true
+  and public.natori_jsonb_has_exact_keys_v1(
+    '{"a": 1}'::jsonb,
+    array['a', 'b']::text[]
+  ) is false
+  and public.natori_jsonb_has_exact_keys_v1(
+    '{"a": 1, "b": 2, "c": 3}'::jsonb,
+    array['a', 'b']::text[]
+  ) is false
+  and public.natori_jsonb_has_exact_keys_v1(
+    '[]'::jsonb,
+    array[]::text[]
+  ) is false
+  and public.natori_jsonb_has_exact_keys_v1(
+    'null'::jsonb,
+    array[]::text[]
+  ) is false
+  and public.natori_jsonb_has_exact_keys_v1(
+    null::jsonb,
+    array['a']::text[]
+  ) is false
+  and public.natori_jsonb_has_exact_keys_v1(
+    '{"a": 1}'::jsonb,
+    null::text[]
+  ) is false
+  as exact_key_helper_contract_ok;

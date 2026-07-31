@@ -170,6 +170,7 @@ attach the output. Require:
 - `SECURITY DEFINER` plus an exact empty `search_path`;
 - effective EXECUTE for the function owner and `service_role` only;
 - owner-only internal helpers;
+- exact-key helper truth table for exact, missing, extra, non-object, and NULL inputs;
 - 24 expected template rows and six unique keys per type;
 - unchanged old create-RPC body hash/ACL;
 - six expected active migration-history entries.
