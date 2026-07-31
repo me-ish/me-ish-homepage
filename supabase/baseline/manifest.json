@@ -6,13 +6,15 @@
     "legacyMigrationDirectory":  "supabase/legacy-migrations",
     "baselineMigration":  "20260723111730_etorie_baseline.sql",
     "securityHardeningMigration":  "20260723111741_baseline_security_hardening.sql",
+    "remainingPrivilegesMigration":  "20260731111025_harden_natori_remaining_privileges.sql",
     "activeMigrations":  [
                              "supabase/migrations/20260723111730_etorie_baseline.sql",
                              "supabase/migrations/20260723111741_baseline_security_hardening.sql",
                              "supabase/migrations/20260729115313_etorie_phase1_expand.sql",
-                             "supabase/migrations/20260729115323_etorie_phase1_project_constraints.sql"
+                             "supabase/migrations/20260729115323_etorie_phase1_project_constraints.sql",
+                             "supabase/migrations/20260731111025_harden_natori_remaining_privileges.sql"
                          ],
-    "activeMigrationCount":  4,
+    "activeMigrationCount":  5,
     "legacyMigrationCount":  55,
     "remoteOnlyEvidenceCount":  3,
     "sourceProjectRef":  "lvnfspyainrxtztjytbo",
@@ -34,7 +36,8 @@
                              "20260723111730_etorie_baseline.sql",
                              "20260723111741_baseline_security_hardening.sql",
                              "20260729115313_etorie_phase1_expand.sql",
-                             "20260729115323_etorie_phase1_project_constraints.sql"
+                             "20260729115323_etorie_phase1_project_constraints.sql",
+                             "20260731111025_harden_natori_remaining_privileges.sql"
                          ],
     "archiveVerification":  {
                                 "status":  "verified",
@@ -91,7 +94,9 @@
                     "bucket:natori-inquiry-refs",
                     "bucket:natori-deliveries",
                     "bucket:natori-portfolio",
+                    "verification:etorie-p1-04-security-selects",
                     "hardening:storage.objects.Allow Insert 1exduyn_0-removal",
+                    "hardening:public.processed_stripe_events-exact-service-role-acl",
                     "hardening:public.card_requests-server-only-conditional",
                     "hardening:public.aura_projects-server-only-conditional"
                 ],
@@ -128,7 +133,9 @@
                       "sha256:supabase/migrations/20260723111741_baseline_security_hardening.sql":  "dc13f7299b14db7f46c157864e1ed8707c1b0c23c3e918fe7e1f3b5506582be1",
                       "sha256:supabase/migrations/20260729115313_etorie_phase1_expand.sql":  "b7e1ca1b96740376b7fad58f4ac490381c21275ae69d761d1cd68f95fe167a63",
                       "sha256:supabase/migrations/20260729115323_etorie_phase1_project_constraints.sql":  "e9d8d678f379a60a8899f9a19ec617f265d23909cc758ef034a4087cf3e19a2f",
+                      "sha256:supabase/migrations/20260731111025_harden_natori_remaining_privileges.sql":  "ba775794f3f15d67e555df9c17624d4df6a84eee1df0a11a8131ce3f8971043c",
                       "sha256:supabase/verification/etorie-p1-03-selects.sql":  "311f4fb3e0164683097683c2eb1738ef1324c312d5564efa71597a0be2344274",
+                      "sha256:supabase/verification/etorie-p1-04-security-selects.sql":  "e5afabadbf07ac385ca0f2b986cfd1f039e9d46f682827c64b9c3c010fc6cca2",
                       "sha256:supabase/fixtures/etorie-baseline.sql":  "aaff81f89a5d5d4b18430b6ec9376105cfb55af529b2494d5f68f9ff7224d8cf",
                       "sha256:supabase/baseline/legacy-migrations.json":  "3864fa7d84701688cd2f7ce12913e2da10f2eb5c4e983649bf2105015091152d",
                       "sha256:artifacts/legacy-migration-archive/before.json":  "11f85bb9f1e1a265c803b0b756add08a97767786af8b0b065641079f602a832e",

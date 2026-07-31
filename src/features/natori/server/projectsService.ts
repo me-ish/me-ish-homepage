@@ -563,9 +563,7 @@ export async function closeNatoriProject(
   return { kind: "ok" };
 }
 
-/**
- * 案件を（タスクごと）完全に削除する。実績ページの手入力ミス修正用。
- */
+/** 案件を復元可能なアーカイブへ移動する。行とStorageオブジェクトは保持する。 */
 export async function deleteNatoriAdminProject(
   projectId: string
 ): Promise<NatoriProjectMutationResult> {
@@ -585,7 +583,6 @@ export async function deleteNatoriAdminProject(
   }
   if (!data) return { kind: "not-found" };
 
-  // サムネイル画像もベストエフォートで片付ける（失敗しても削除自体は成功扱い）
   return { kind: "ok" };
 }
 

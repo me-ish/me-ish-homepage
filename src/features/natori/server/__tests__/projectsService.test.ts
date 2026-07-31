@@ -39,6 +39,7 @@ import {
   restoreNatoriAdminProject,
   setNatoriProjectStatus,
 } from "@/features/natori/server/projectsService";
+import { deleteNatoriProjectThumb } from "@/features/natori/server/projectThumbsService";
 
 /* ---------- Helpers ---------- */
 
@@ -212,7 +213,33 @@ describe("project archive and restore", () => {
     expect(result).toEqual({ kind: "ok" });
     expect(updates).toHaveLength(1);
     expect(typeof updates[0].deleted_at).toBe("string");
+    expect(updateCalls).toContain('eq("user_id","owner-1")');
     expect(updateCalls).toContain('is("deleted_at",null)');
+    expect(deleteNatoriProjectThumb).not.toHaveBeenCalled();
+  });
+
+  it("同じ案件を再度archiveしても行やStorageを物理削除しない", async () => {
+    const { updates } = projectsTable([], {
+      updateResult: { data: null, error: null },
+    });
+
+    const result = await deleteNatoriAdminProject("proj-1");
+
+    expect(result).toEqual({ kind: "not-found" });
+    expect(updates).toHaveLength(1);
+    expect(deleteNatoriProjectThumb).not.toHaveBeenCalled();
+  });
+
+  it("ownerが一致しない案件はarchiveできない", async () => {
+    const { updateCalls } = projectsTable([], {
+      updateResult: { data: null, error: null },
+    });
+
+    const result = await deleteNatoriAdminProject("project-of-another-owner");
+
+    expect(result).toEqual({ kind: "not-found" });
+    expect(updateCalls).toContain('eq("user_id","owner-1")');
+    expect(deleteNatoriProjectThumb).not.toHaveBeenCalled();
   });
 
   it("restoreはdeleted_atをnullへ戻す", async () => {
@@ -222,6 +249,7 @@ describe("project archive and restore", () => {
 
     expect(result).toEqual({ kind: "ok" });
     expect(updates).toEqual([{ deleted_at: null }]);
+    expect(updateCalls).toContain('eq("user_id","owner-1")');
     expect(updateCalls).toContain('not("deleted_at","is",null)');
   });
 });
