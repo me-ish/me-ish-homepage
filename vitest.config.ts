@@ -2,10 +2,14 @@ import { defineConfig } from 'vitest/config';
 import path from 'path';
 
 export default defineConfig({
+  // tsconfig の jsx は Next の "preserve" のため、テスト変換側で automatic runtime を使う
+  esbuild: { jsx: 'automatic' },
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    // component test は各ファイル冒頭の `// @vitest-environment jsdom` で
+    // 環境を切り替える（既定は node のまま）。
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'text-summary', 'lcov'],

@@ -17,6 +17,7 @@ import {
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
+import PortfolioStructuredCommissionForm from "./PortfolioStructuredCommissionForm";
 
 type Status = "idle" | "sending" | "success" | "error";
 
@@ -55,10 +56,16 @@ const DETAILS_TEMPLATE = [
 export default function PortfolioCommissionForm({
   content,
   demoMode,
+  structuredIntake,
 }: {
   content: PortfolioContent;
   /** エトリエのデモ環境用。送信を実行せず成功をシミュレートする */
   demoMode?: boolean;
+  /**
+   * P1-06 の構造化受付（RequestData V1 + create v2 RPC）を使うか。
+   * server 側の rollout guard から渡る。false（既定）では現行フォームのまま。
+   */
+  structuredIntake?: boolean;
 }) {
   const [status, setStatus] = useState<Status>("idle");
   const [autoReplied, setAutoReplied] = useState(true);
@@ -214,6 +221,16 @@ export default function PortfolioCommissionForm({
                 : "受付は完了しましたが、確認メールを送信できませんでした。2〜3日以内のご連絡をお待ちください。"}
             </p>
           </div>
+        ) : structuredIntake ? (
+          <PortfolioStructuredCommissionForm
+            content={content}
+            demoMode={demoMode}
+            commissionOpen={commissionOpen}
+            onSuccess={(outcome) => {
+              setAutoReplied(outcome.autoReplied);
+              setStatus("success");
+            }}
+          />
         ) : (
           <form
             onSubmit={handleSubmit}

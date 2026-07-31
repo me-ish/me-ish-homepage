@@ -5,6 +5,18 @@ import "server-only";
 // Resend でナトリ宛にメール通知する（DB保存はしない）。
 import { Resend } from "resend";
 import { z } from "zod";
+import {
+  NATORI_COMMERCIAL_USE_LABELS_V1,
+  NATORI_INQUIRY_MODE_LABELS_V1,
+  NATORI_PUBLICATION_POLICY_LABELS_V1,
+  describeNatoriBudget,
+  describeNatoriCommissionScope,
+  describeNatoriDeadline,
+  describeNatoriRequestType,
+  describeNatoriSelectedOptions,
+  describeNatoriUsageTypes,
+} from "@/features/natori/lib/requestPresentation";
+import type { NatoriRequestDataV1 } from "@/features/natori/types/request";
 
 /* ---------- Env ---------- */
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
@@ -198,6 +210,187 @@ export async function sendPortfolioContactAutoReply(
   });
   if (error) {
     console.error("[natori-portfolio-contact] auto-reply send failed:", error);
+    return { mailed: false };
+  }
+  return { mailed: true };
+}
+
+/* ---------- Structured (RequestData V1) mail ---------- */
+
+/**
+ * structured 受付の通知メール入力。
+ * request_data の raw JSON、署名URL、Storage path、project/owner UUID は
+ * 意図的に含めない。管理画面 (P1-07) が資料の唯一の閲覧経路になる。
+ */
+export type StructuredPortfolioContactInput = {
+  clientName: string;
+  clientEmail: string;
+  requestData: NatoriRequestDataV1;
+  referenceImageCount: number;
+  /** server 側で normalize 済みの外部参照 URL。表示は escape 済み text のみ。 */
+  referenceLinkUrls: string[];
+};
+
+function structuredSummaryRows(
+  input: StructuredPortfolioContactInput
+): Array<[string, string]> {
+  const request = input.requestData;
+  return [
+    ["受付区分", NATORI_INQUIRY_MODE_LABELS_V1[request.inquiryMode]],
+    ["ご依頼の種類", describeNatoriRequestType(request)],
+    ["制作範囲", describeNatoriCommissionScope(request)],
+    ["追加オプション", describeNatoriSelectedOptions(request)],
+    ["使用目的", describeNatoriUsageTypes(request)],
+    ["商用利用", NATORI_COMMERCIAL_USE_LABELS_V1[request.commercialUse]],
+    ["公開可否", NATORI_PUBLICATION_POLICY_LABELS_V1[request.publicationPolicy]],
+    ["ご予算", describeNatoriBudget(request.budget)],
+    ["希望納期", describeNatoriDeadline(request.deadline)],
+    ["添付画像", `${input.referenceImageCount}件`],
+    ["参考URL", `${input.referenceLinkUrls.length}件`],
+  ];
+}
+
+function structuredDetailRows(request: NatoriRequestDataV1): Array<[string, string]> {
+  return (
+    [
+      ["キャラクターの特徴", request.characterFeatures],
+      ["表情・雰囲気", request.expressionMood],
+      ["構図", request.composition],
+      ["色のイメージ", request.colorDirection],
+      ["資料の補足", request.referenceNotes],
+      ["ご相談・ご質問", request.message],
+    ] as Array<[string, string]>
+  ).filter(([, value]) => value.length > 0);
+}
+
+function renderRowsHtml(rows: Array<[string, string]>): string {
+  return rows
+    .map(
+      ([label, value]) =>
+        `<tr><td style="padding:2px 12px 2px 0;color:#6b7280;white-space:nowrap;vertical-align:top"><b>${escapeHtml(label)}</b></td><td style="padding:2px 0">${escapeHtml(value)}</td></tr>`
+    )
+    .join("");
+}
+
+/**
+ * 管理者向けの structured 受付通知。
+ * 依頼者が入力した外部URLは、既存契約どおり escape 済みの平文としてだけ載せ、
+ * <img src> や自動リンクにはしない。
+ */
+export async function sendStructuredPortfolioContactEmail(
+  input: StructuredPortfolioContactInput
+): Promise<{ mailed: boolean }> {
+  const request = input.requestData;
+  const modeLabel = NATORI_INQUIRY_MODE_LABELS_V1[request.inquiryMode];
+  const rows: Array<[string, string]> = [
+    ["お名前", input.clientName],
+    ["メール", input.clientEmail],
+    ...structuredSummaryRows(input),
+  ];
+  const details = structuredDetailRows(request);
+  const linkLines =
+    input.referenceLinkUrls.length > 0 ? input.referenceLinkUrls : ["なし"];
+
+  const subject = `【コミッション依頼・${sanitizeSubjectFragment(modeLabel)}】${sanitizeSubjectFragment(input.clientName)} 様より`;
+
+  const text = [
+    ...rows.map(([label, value]) => `${label}: ${value}`),
+    "",
+    "--- 参考URL（リンクを開く前に内容をご確認ください） ---",
+    ...linkLines,
+    "",
+    "--- ご依頼の詳細 ---",
+    ...(details.length > 0
+      ? details.map(([label, value]) => `【${label}】\n${value}`)
+      : ["（詳細の記入はありません）"]),
+    "",
+    "添付画像は管理画面からご確認ください。",
+  ].join("\n");
+
+  const html = `
+    <div style="font:14px/1.7 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo, Arial, sans-serif;">
+      <table style="border-collapse:collapse">${renderRowsHtml(rows)}</table>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0"/>
+      <p style="margin:0 0 4px"><b>参考URL</b>（リンクを開く前に内容をご確認ください）</p>
+      <pre style="white-space:pre-wrap;font:inherit;margin:0 0 12px">${escapeHtml(linkLines.join("\n"))}</pre>
+      <p style="margin:0 0 4px"><b>ご依頼の詳細</b></p>
+      ${
+        details.length > 0
+          ? `<table style="border-collapse:collapse">${renderRowsHtml(details)}</table>`
+          : `<p style="margin:0">（詳細の記入はありません）</p>`
+      }
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0"/>
+      <p style="margin:0">添付画像は管理画面からご確認ください。</p>
+    </div>
+  `;
+
+  const resend = new Resend(RESEND_API_KEY);
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to: [TO],
+    ...(BCC ? { bcc: [BCC] } : {}),
+    subject,
+    text,
+    html,
+    replyTo: input.clientEmail,
+    headers: {
+      "X-Meish-Template": "natori-portfolio-contact-v2",
+    },
+  });
+  if (error) {
+    console.error("[natori-portfolio-contact] structured mail send failed");
+    return { mailed: false };
+  }
+  return { mailed: true };
+}
+
+/** 依頼者向けの structured 受付確認。失敗しても受付自体は取り消さない。 */
+export async function sendStructuredPortfolioContactAutoReply(
+  input: StructuredPortfolioContactInput
+): Promise<{ mailed: boolean }> {
+  const request = input.requestData;
+  const details = structuredDetailRows(request);
+  const nextStep =
+    request.inquiryMode === "quote"
+      ? "内容を確認のうえ、2〜3日以内にお見積もりをご連絡いたします。"
+      : "内容を確認のうえ、2〜3日以内にご相談のお返事をいたします。";
+
+  const text = [
+    `${input.clientName} 様`,
+    "",
+    "この度はご依頼のお問い合わせをいただき、ありがとうございます。",
+    "イラストレーターのナトリです。",
+    "",
+    "以下の内容で受け付けました。",
+    nextStep,
+    "",
+    "──────────────",
+    ...structuredSummaryRows(input).map(([label, value]) => `■ ${label}: ${value}`),
+    "──────────────",
+    ...(details.length > 0
+      ? ["", "--- ご入力の詳細 ---", ...details.map(([label, value]) => `【${label}】\n${value}`)]
+      : []),
+    "",
+    "※このメールは自動送信です。追加のご連絡がある場合は、",
+    "　このメールにそのままご返信ください。",
+    "",
+    "ナトリ",
+  ].join("\n");
+
+  const resend = new Resend(RESEND_API_KEY);
+  const { error } = await resend.emails.send({
+    from: AUTO_REPLY_FROM,
+    to: [input.clientEmail],
+    ...(BCC ? { bcc: [BCC] } : {}),
+    subject: `【受付確認】ご依頼ありがとうございます（ナトリ）`,
+    text,
+    replyTo: TO,
+    headers: {
+      "X-Meish-Template": "natori-portfolio-contact-v2-auto-reply",
+    },
+  });
+  if (error) {
+    console.error("[natori-portfolio-contact] structured auto-reply send failed");
     return { mailed: false };
   }
   return { mailed: true };
