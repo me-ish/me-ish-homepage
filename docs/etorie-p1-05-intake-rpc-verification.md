@@ -40,6 +40,14 @@ canonical `jsonb::text`, while the application guard measures compact
 guard and still be rejected safely by the database; both representations belong
 in the isolated boundary test, and the database limit is authoritative.
 
+Both `consultation` and `quote` intake accept `requestType = undecided` and
+`commissionScope = undecided`. In P1-05, `quote` means that the requester wants
+a quote; it is not an issued formal quote and must not import the P1-09 issuance
+preconditions. Invalid enum values, `other`-detail consistency, budget, and
+deadline validation remain unchanged. Regardless of inquiry mode or those two
+request fields, create-v2 persists `type = undecided`, `amount = NULL`,
+`due_date = NULL`, and zero tasks.
+
 ## URL normalization contract
 
 The server uses the WHATWG `URL` parser and computes `normalized_url`; callers
@@ -119,8 +127,10 @@ Create-v2 success cases:
 
 1. Consultation: confirm `inquiry`, `undecided`, null amount/due, consultation
    next action, zero tasks, exact RequestData V1, and expected files/links.
-2. Quote: confirm the same initial administrative state with the quote next
-   action.
+2. Quote with `requestType = undecided` and `commissionScope = undecided`:
+   confirm the same initial administrative state (`type = undecided`, null
+   amount/due, and zero tasks) with the quote next action. This is quote intake,
+   not formal quote issuance; P1-09 owns issuance preconditions.
 3. Confirm the returned project ID equals the submitted UUID and exactly one
    project exists for it.
 

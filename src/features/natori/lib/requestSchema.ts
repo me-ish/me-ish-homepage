@@ -3,8 +3,6 @@
 import { z } from "zod";
 import {
   NATORI_COMMISSION_SCOPES_V1,
-  NATORI_CONCRETE_COMMISSION_SCOPES_V1,
-  NATORI_CONCRETE_REQUEST_TYPES_V1,
   NATORI_REQUEST_SCHEMA_VERSION,
   NATORI_REQUEST_TYPES_V1,
   NATORI_USAGE_TYPES_V1,
@@ -118,9 +116,7 @@ const legacySourceSchema = z.strictObject({
 });
 
 const requestTypeSchema = z.enum(NATORI_REQUEST_TYPES_V1);
-const concreteRequestTypeSchema = z.enum(NATORI_CONCRETE_REQUEST_TYPES_V1);
 const commissionScopeSchema = z.enum(NATORI_COMMISSION_SCOPES_V1);
-const concreteCommissionScopeSchema = z.enum(NATORI_CONCRETE_COMMISSION_SCOPES_V1);
 const usageTypeSchema = z.enum(NATORI_USAGE_TYPES_V1);
 
 const sharedRequestFields = {
@@ -160,8 +156,8 @@ const consultationRequestSchema = z.strictObject({
 const quoteRequestSchema = z.strictObject({
   ...sharedRequestFields,
   inquiryMode: z.literal("quote"),
-  requestType: concreteRequestTypeSchema,
-  commissionScope: concreteCommissionScopeSchema,
+  requestType: requestTypeSchema,
+  commissionScope: commissionScopeSchema,
 });
 
 function addRequestCrossFieldIssues(

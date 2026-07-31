@@ -111,7 +111,8 @@ P1-10 の activity table と P1-12 の delivery atomicity は、日程上 Phase 
 - **テスト内容**:
   - target design の3 JSON example が成功。
   - consultation のほぼ未定入力が成功。
-  - quote の undecided type/scope、other 補足欠落、重複 option、範囲逆転、invalid date、oversize が失敗。
+  - quote の undecided type/scope が成功。
+  - other 補足欠落、重複 option、範囲逆転、invalid date、oversize が失敗。
   - 旧 Portfolio content が既存表示を維持。
 - **依存関係**: P0-02。
 - **受け入れ条件**:

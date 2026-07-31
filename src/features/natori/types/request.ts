@@ -149,9 +149,9 @@ export type NatoriConsultationRequestDataV1 = NatoriRequestDataV1Base & {
 
 export type NatoriQuoteRequestDataV1 = NatoriRequestDataV1Base & {
   inquiryMode: "quote";
-  requestType: NatoriConcreteRequestTypeV1;
+  requestType: NatoriRequestTypeV1;
   requestTypeOther: string | null;
-  commissionScope: NatoriConcreteCommissionScopeV1;
+  commissionScope: NatoriCommissionScopeV1;
   commissionScopeOther: string | null;
 };
 

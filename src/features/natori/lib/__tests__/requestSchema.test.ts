@@ -155,9 +155,30 @@ describe("NatoriRequestData V1 examples", () => {
 });
 
 describe("NatoriRequestData V1 conditional validation", () => {
-  it("quoteの未定商品種別と未定制作範囲を拒否する", () => {
-    const value = { ...mutableClone(consultationExample), inquiryMode: "quote" };
-    expect(natoriRequestDataV1Schema.safeParse(value).success).toBe(false);
+  it("quoteでも未定商品種別と未定制作範囲を受け付け、consultationも維持する", () => {
+    const quoteWithUndecided = {
+      ...mutableClone(consultationExample),
+      inquiryMode: "quote" as const,
+    };
+
+    expect(natoriRequestDataV1Schema.safeParse(quoteWithUndecided).success).toBe(true);
+    expect(
+      natoriRequestSubmissionV1Schema.safeParse({
+        clientName: "テスト依頼者",
+        clientEmail: "client@example.com",
+        requestData: quoteWithUndecided,
+      }).success
+    ).toBe(true);
+    expect(natoriRequestDataV1Schema.parse(quoteWithUndecided)).toMatchObject({
+      inquiryMode: "quote",
+      requestType: "undecided",
+      commissionScope: "undecided",
+    });
+    expect(natoriRequestDataV1Schema.parse(consultationExample)).toMatchObject({
+      inquiryMode: "consultation",
+      requestType: "undecided",
+      commissionScope: "undecided",
+    });
   });
 
   it.each([

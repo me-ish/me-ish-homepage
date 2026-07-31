@@ -76,7 +76,6 @@ declare
   v_deadline jsonb;
   v_legacy jsonb;
   v_kind text;
-  v_mode text;
   v_request_type text;
   v_scope text;
   v_date_text text;
@@ -114,7 +113,6 @@ begin
     return false;
   end if;
 
-  v_mode := p_request_data ->> 'inquiryMode';
   v_request_type := p_request_data ->> 'requestType';
   v_scope := p_request_data ->> 'commissionScope';
 
@@ -122,12 +120,10 @@ begin
      or v_request_type not in (
        'undecided', 'icon', 'sd', 'standing', 'illustration', 'other'
      )
-     or (v_mode = 'quote' and v_request_type = 'undecided')
      or jsonb_typeof(p_request_data -> 'commissionScope') <> 'string'
      or v_scope not in (
        'undecided', 'bust_up', 'waist_up', 'full_body', 'other'
      )
-     or (v_mode = 'quote' and v_scope = 'undecided')
   then
     return false;
   end if;

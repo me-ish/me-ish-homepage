@@ -69,6 +69,10 @@ describe("Etorie P1-05 intake RPC migration", () => {
     expect(migration).not.toMatch(
       /(?:create(?:\s+or\s+replace)?|drop)\s+function\s+public\.natori_create_project_with_tasks\s*\(/iu
     );
+    expect(migration).not.toMatch(
+      /(?:create(?:\s+or\s+replace)?|drop)\s+function\s+public\.natori_issue_quote\s*\(/iu
+    );
+    expect(migration).not.toMatch(/insert\s+into\s+public\.natori_quotes\b/iu);
   });
 
   it("keeps both RPCs definer-secured with empty paths and service-role-only execute", () => {
@@ -110,6 +114,15 @@ describe("Etorie P1-05 intake RPC migration", () => {
     expect(validate).toContain("natori-portfolio-v1");
     expect(validate).toContain("consultation");
     expect(validate).toContain("quote");
+    expect(validate).toMatch(
+      /v_request_type\s+not\s+in\s*\(\s*'undecided',\s*'icon',\s*'sd',\s*'standing',\s*'illustration',\s*'other'\s*\)/iu
+    );
+    expect(validate).toMatch(
+      /v_scope\s+not\s+in\s*\(\s*'undecided',\s*'bust_up',\s*'waist_up',\s*'full_body',\s*'other'\s*\)/iu
+    );
+    expect(validate).not.toMatch(
+      /(?:inquiryMode|v_mode)[\s\S]*?quote[\s\S]*?(?:v_request_type|v_scope)\s*=\s*'undecided'/iu
+    );
     expect(validate).toContain("jsonb_array_length(p_request_data -> 'options') > 20");
     expect(validate).toContain("jsonb_array_length(p_request_data -> 'usageTypes') > 10");
     expect(validate).toContain("not between 1 and 10");
@@ -119,14 +132,24 @@ describe("Etorie P1-05 intake RPC migration", () => {
     expect(validate).toContain("referenceUrlsText");
   });
 
-  it("creates one undecided project and file/link rows but no task rows", () => {
+  it("keeps quote and consultation intake undecided, unquoted, undated, and task-free", () => {
     const create = functionDefinition("natori_create_project_with_tasks_v2");
-    expect(create).toMatch(
-      /insert\s+into\s+public\.natori_projects\s*\([\s\S]*?request_data[\s\S]*?\)\s*values/iu
+    const projectInsert = create.match(
+      /insert\s+into\s+public\.natori_projects\s*\(([\s\S]*?)\)\s*values\s*\(([\s\S]*?)\)\s*on\s+conflict\s*\(\s*id\s*\)/iu
     );
+    expect(projectInsert).not.toBeNull();
+    const columns = (projectInsert?.[1] ?? "").split(",").map((value) => value.trim());
+    const values = (projectInsert?.[2] ?? "").split(",").map((value) => value.trim());
+    expect(values).toHaveLength(columns.length);
+    const inserted = Object.fromEntries(columns.map((column, index) => [column, values[index]]));
+
+    expect(inserted).toMatchObject({
+      amount: "null",
+      type: "'undecided'",
+      status: "'inquiry'",
+      due_date: "null",
+    });
     expect(create).toContain("p_project_id");
-    expect(create).toContain("'undecided'");
-    expect(create).toContain("'inquiry'");
     expect(create).toContain("'相談内容を確認'");
     expect(create).toContain("'内容確認・案件種別を確定'");
     expect(create).toMatch(

@@ -119,6 +119,38 @@ describe("createStructuredInquiryProject", () => {
     expect(mockDeleteReferences).not.toHaveBeenCalled();
   });
 
+  it("accepts quote intake while request type and scope are undecided", async () => {
+    const quoteSubmission = {
+      ...consultationSubmission,
+      requestData: {
+        ...consultationSubmission.requestData,
+        inquiryMode: "quote" as const,
+      },
+    };
+
+    await expect(
+      createStructuredInquiryProject({
+        submissionId: PROJECT_ID,
+        submission: quoteSubmission,
+        referencePaths: [],
+        referenceLinks: [],
+      }),
+    ).resolves.toEqual({ kind: "ok", projectId: PROJECT_ID });
+
+    expect(mockCreateIntake).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ownerId: OWNER_ID,
+        projectId: PROJECT_ID,
+        requestData: expect.objectContaining({
+          inquiryMode: "quote",
+          requestType: "undecided",
+          commissionScope: "undecided",
+        }),
+      }),
+    );
+    expect(mockDeleteReferences).not.toHaveBeenCalled();
+  });
+
   it("cleans up after a definite rejection but retains files for an unknown outcome", async () => {
     const referencePaths = [REFERENCE_PATH];
     mockCreateIntake.mockResolvedValueOnce({ kind: "rejected" });

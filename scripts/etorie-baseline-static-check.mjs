@@ -505,6 +505,10 @@ const confirmTypeDefinition = functionDefinition(
   intakeRpcs,
   "natori_confirm_project_type_v1",
 );
+const requestDataValidationDefinition = functionDefinition(
+  intakeRpcs,
+  "natori_request_data_is_valid_v1",
+);
 check(
   !/\b(?:insert\s+into|update\s+public\.|delete\s+from|truncate\s+table)\b/i.test(
     intakeMigrationTopLevel,
@@ -560,9 +564,18 @@ check(
   "P1-05 must not redefine or drop the rollback-compatible create RPC",
 );
 check(
+  !/(?:create(?:\s+or\s+replace)?|drop)\s+function\s+public\.natori_issue_quote\s*\(/i.test(
+    executableIntakeRpcs,
+  ) && !/insert\s+into\s+public\.natori_quotes\b/i.test(executableIntakeRpcs),
+  "P1-05 intake must not implement formal quote issuance; P1-09 owns that contract",
+);
+check(
   createIntakeDefinition &&
     /from\s+auth\.users/i.test(createIntakeDefinition) &&
     /insert\s+into\s+public\.natori_projects/i.test(createIntakeDefinition) &&
+    /insert\s+into\s+public\.natori_projects\s*\(\s*id,\s*user_id,\s*title,\s*client_name,\s*client_email,\s*amount,\s*type,\s*status,\s*delivery_plan,\s*priority,\s*start_date,\s*due_date,[\s\S]*?\)\s*values\s*\(\s*p_project_id,\s*p_user_id,\s*v_title,\s*p_client_name,\s*p_client_email,\s*null,\s*'undecided',\s*'inquiry',\s*'normal',\s*null,\s*null,\s*null,/i.test(
+      createIntakeDefinition,
+    ) &&
     /insert\s+into\s+public\.natori_inquiry_reference_files/i.test(
       createIntakeDefinition,
     ) &&
@@ -609,8 +622,18 @@ check(
 );
 check(
   createIntakeDefinition &&
+    requestDataValidationDefinition &&
     /natori_request_data_is_valid_v1/i.test(createIntakeDefinition) &&
     /65536/i.test(executableIntakeRpcs) &&
+    /v_request_type\s+not\s+in\s*\(\s*'undecided',\s*'icon',\s*'sd',\s*'standing',\s*'illustration',\s*'other'\s*\)/i.test(
+      requestDataValidationDefinition,
+    ) &&
+    /v_scope\s+not\s+in\s*\(\s*'undecided',\s*'bust_up',\s*'waist_up',\s*'full_body',\s*'other'\s*\)/i.test(
+      requestDataValidationDefinition,
+    ) &&
+    !/(?:inquiryMode|v_mode)[\s\S]*?quote[\s\S]*?(?:v_request_type|v_scope)\s*=\s*'undecided'/i.test(
+      requestDataValidationDefinition,
+    ) &&
     /jsonb_array_length\(p_request_data\s*->\s*'options'\)\s*>\s*20/i.test(
       executableIntakeRpcs,
     ) &&
@@ -618,7 +641,7 @@ check(
       executableIntakeRpcs,
     ) &&
     /make_date/i.test(executableIntakeRpcs),
-  "P1-05 detailed RequestData V1 validation is incomplete",
+  "P1-05 RequestData V1 validation must allow undecided quote intake without weakening detailed validation",
 );
 check(
   confirmTypeDefinition &&
