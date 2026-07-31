@@ -54,13 +54,14 @@ function statements(sql: string): string[] {
 }
 
 describe("Etorie P1-04 migration security contract", () => {
-  it("keeps the ACL correction as the fifth and final active migration", () => {
+  it("keeps the ACL correction fifth before the P1-05 intake RPC migration", () => {
     expect(migrationNames).toEqual([
       "20260723111730_etorie_baseline.sql",
       "20260723111741_baseline_security_hardening.sql",
       "20260729115313_etorie_phase1_expand.sql",
       "20260729115323_etorie_phase1_project_constraints.sql",
       remainingPrivilegesName,
+      "20260731115652_etorie_intake_rpcs.sql",
     ]);
   });
 

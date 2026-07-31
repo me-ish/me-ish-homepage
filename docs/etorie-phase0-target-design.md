@@ -479,7 +479,7 @@ export type NatoriRequestDataV1 = {
 共通条件:
 
 - characterFeatures、expressionMood、composition、colorDirection、referenceNotes、message の少なくとも1つは非空。
-- quote mode は requestType と commissionScope を確定入力とする。ただし管理 project.type は管理者が確認するまで undecided のまま。
+- quote mode でも requestType と commissionScope は undecided を許可する。quote は見積希望の受付であり、管理 project.type は管理者が確認するまで undecided のまま。正式見積の発行条件は P1-09 で検証する。
 - unknown は入力拒否ではなく review warning にする。依頼者が分からない状態でフォームを離脱させない。
 - text は trim し、制御文字を拒否する。表示時は text として escape し HTML として扱わない。
 

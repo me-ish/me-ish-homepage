@@ -144,6 +144,7 @@ function makeProjectRow(overrides: Record<string, unknown> = {}) {
     title: "立ち絵一式",
     client_name: "テスト太郎",
     amount: 8000,
+    type: "standing",
     status: "inquiry",
     note: "既存メモ",
     payment_confirmed_at: null,
@@ -189,6 +190,15 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("markNatoriCommissionPaid", () => {
+  it("does not advance an undecided project after a Stripe payment", async () => {
+    const { markNatoriCommissionPaid } = await loadService();
+    installDb(makeProjectRow({ type: "undecided", status: "awaiting_payment" }));
+    await expect(
+      markNatoriCommissionPaid("proj-1", "cs_test_undecided", 8000)
+    ).resolves.toEqual({ kind: "db-error" });
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
   it("入金を一度だけ確定し、受領額・session・台帳を残す", async () => {
     const { markNatoriCommissionPaid } = await loadService();
     installDb(makeProjectRow({
@@ -272,6 +282,23 @@ describe("markNatoriCommissionPaid", () => {
 });
 
 describe("sendNatoriOrderMail (estimate)", () => {
+  it("does not issue a quote while the project type is undecided", async () => {
+    const { sendNatoriOrderMail } = await loadService();
+    installDb(makeProjectRow({ type: "undecided" }));
+    await expect(
+      sendNatoriOrderMail({
+        projectId: "proj-1",
+        kind: "estimate",
+        to: "client@example.com",
+        subject: "見積",
+        body: "本文",
+        amount: 12000,
+      })
+    ).resolves.toEqual({ kind: "invalid-state" });
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
   it("不変な見積版とpendingログをメール前に保存し、成功後にsentへ進める", async () => {
     const { sendNatoriOrderMail } = await loadService();
     const db = installDb(makeProjectRow());

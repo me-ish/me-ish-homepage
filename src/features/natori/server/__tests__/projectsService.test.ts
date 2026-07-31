@@ -7,8 +7,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { mockAdminFrom, mockRpc } = vi.hoisted(() => ({
+const { mockAdminFrom, mockResolveOwner, mockRpc } = vi.hoisted(() => ({
   mockAdminFrom: vi.fn(),
+  mockResolveOwner: vi.fn(),
   mockRpc: vi.fn(),
 }));
 vi.mock("@/lib/supabaseAdmin", () => ({
@@ -19,7 +20,7 @@ vi.mock("@/lib/supabaseAdmin", () => ({
 }));
 
 vi.mock("@/features/natori/server/natoriOwner", () => ({
-  resolveNatoriActingUserId: vi.fn().mockResolvedValue("owner-1"),
+  resolveNatoriActingUserId: (...args: unknown[]) => mockResolveOwner(...args),
 }));
 
 vi.mock("@/features/natori/server/projectThumbsService", () => ({
@@ -32,10 +33,12 @@ vi.mock("@/features/natori/server/portfolioSiteService", () => ({
 
 import {
   closeNatoriProject,
+  confirmNatoriProjectType,
   confirmNatoriProjectPayment,
   deleteNatoriAdminProject,
   listNatoriAdminProjects,
   normalizeProjectTasksForRead,
+  patchNatoriProjectDetails,
   restoreNatoriAdminProject,
   setNatoriProjectStatus,
 } from "@/features/natori/server/projectsService";
@@ -98,6 +101,7 @@ function projectsTable(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockResolveOwner.mockResolvedValue("owner-1");
   mockRpc.mockResolvedValue({ data: true, error: null });
   mockAdminFrom.mockImplementation((table: string) => {
     throw new Error(`unexpected table access: ${table}`);
@@ -122,7 +126,7 @@ describe("setNatoriProjectStatus", () => {
 
   it("不許可の遷移（制作中 → 受注前の逆行）は DB に書かず invalid-transition", async () => {
     const { updates } = projectsTable([
-      { data: { id: "proj-1", status: "lineart" }, error: null },
+      { data: { id: "proj-1", status: "lineart", type: "icon" }, error: null },
     ]);
 
     const result = await setNatoriProjectStatus("proj-1", "awaiting_payment", "");
@@ -149,11 +153,33 @@ describe("setNatoriProjectStatus", () => {
     const result = await setNatoriProjectStatus("missing", "quoted", "");
     expect(result).toEqual({ kind: "not-found" });
   });
+
+  it("does not start production while the project type is undecided", async () => {
+    const { updates } = projectsTable([
+      {
+        data: { id: "proj-1", status: "inquiry", type: "undecided" },
+        error: null,
+      },
+    ]);
+    await expect(
+      setNatoriProjectStatus("proj-1", "rough", "ラフ作成")
+    ).resolves.toEqual({
+      kind: "invalid-transition",
+      from: "inquiry",
+      to: "rough",
+    });
+    expect(updates).toHaveLength(0);
+  });
 });
 
 describe("confirmNatoriProjectPayment", () => {
   it("受注前の案件はDB関数で入金台帳と案件を原子的に更新する", async () => {
-    projectsTable([{ data: { id: "proj-1", status: "awaiting_payment" }, error: null }]);
+    projectsTable([
+      {
+        data: { id: "proj-1", status: "awaiting_payment", type: "icon" },
+        error: null,
+      },
+    ]);
 
     const result = await confirmNatoriProjectPayment("proj-1", "ラフ作成");
     expect(result).toEqual({ kind: "ok" });
@@ -166,7 +192,12 @@ describe("confirmNatoriProjectPayment", () => {
 
   it("既に制作中なら 0 行 → invalid-transition（巻き戻さない）", async () => {
     mockRpc.mockResolvedValue({ data: false, error: null });
-    projectsTable([{ data: { id: "proj-1", status: "coloring" }, error: null }]);
+    projectsTable([
+      {
+        data: { id: "proj-1", status: "coloring", type: "icon" },
+        error: null,
+      },
+    ]);
 
     const result = await confirmNatoriProjectPayment("proj-1", "ラフ作成");
     expect(result).toEqual({ kind: "invalid-transition", from: "coloring", to: "rough" });
@@ -177,6 +208,23 @@ describe("confirmNatoriProjectPayment", () => {
     projectsTable([{ data: null, error: null }]);
     const result = await confirmNatoriProjectPayment("missing", "ラフ作成");
     expect(result).toEqual({ kind: "not-found" });
+  });
+
+  it("does not confirm payment while the project type is undecided", async () => {
+    projectsTable([
+      {
+        data: { id: "proj-1", status: "awaiting_payment", type: "undecided" },
+        error: null,
+      },
+    ]);
+    await expect(
+      confirmNatoriProjectPayment("proj-1", "ラフ作成")
+    ).resolves.toEqual({
+      kind: "invalid-transition",
+      from: "awaiting_payment",
+      to: "rough",
+    });
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 });
 
@@ -251,6 +299,160 @@ describe("project archive and restore", () => {
     expect(updates).toEqual([{ deleted_at: null }]);
     expect(updateCalls).toContain('eq("user_id","owner-1")');
     expect(updateCalls).toContain('not("deleted_at","is",null)');
+  });
+});
+
+describe("confirmNatoriProjectType", () => {
+  const projectId = "2ef91cb1-e0a3-4f32-b846-a0d8c6bbf44c";
+
+  it("resolves the owner and returns a newly confirmed type", async () => {
+    mockRpc.mockResolvedValue({
+      data: [
+        {
+          result: "confirmed",
+          project_id: projectId,
+          project_type: "standing",
+          task_count: 6,
+        },
+      ],
+      error: null,
+    });
+
+    await expect(confirmNatoriProjectType(projectId, "standing")).resolves.toEqual({
+      kind: "ok",
+      alreadyConfirmed: false,
+      projectId,
+      projectType: "standing",
+      taskCount: 6,
+    });
+    expect(mockRpc).toHaveBeenCalledWith("natori_confirm_project_type_v1", {
+      p_user_id: "owner-1",
+      p_project_id: projectId,
+      p_type: "standing",
+    });
+  });
+
+  it("treats the same-type retry as an idempotent success", async () => {
+    mockRpc.mockResolvedValue({
+      data: [
+        {
+          result: "already_confirmed",
+          project_id: projectId,
+          project_type: "icon",
+          task_count: 6,
+        },
+      ],
+      error: null,
+    });
+    await expect(confirmNatoriProjectType(projectId, "icon")).resolves.toMatchObject({
+      kind: "ok",
+      alreadyConfirmed: true,
+      taskCount: 6,
+    });
+  });
+
+  it.each([
+    ["not_found", "not-found"],
+    ["conflict", "conflict"],
+    ["invalid_type", "invalid-type"],
+  ] as const)("maps %s to %s", async (rpcResult, expected) => {
+    mockRpc.mockResolvedValue({
+      data: [
+        {
+          result: rpcResult,
+          project_id: rpcResult === "conflict" ? projectId : null,
+          project_type: rpcResult === "conflict" ? "undecided" : null,
+          task_count: 0,
+        },
+      ],
+      error: null,
+    });
+    await expect(confirmNatoriProjectType(projectId, "icon")).resolves.toEqual({
+      kind: expected,
+    });
+  });
+
+  it("does not call the RPC when no owner can be resolved", async () => {
+    mockResolveOwner.mockResolvedValue(null);
+    await expect(confirmNatoriProjectType(projectId, "icon")).resolves.toEqual({
+      kind: "not-found",
+    });
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("patchNatoriProjectDetails type delegation", () => {
+  const projectId = "2ef91cb1-e0a3-4f32-b846-a0d8c6bbf44c";
+
+  it("delegates an undecided type-only patch to the confirmation RPC", async () => {
+    const { updates } = projectsTable([
+      { data: { id: projectId, type: "undecided" }, error: null },
+    ]);
+    mockRpc.mockResolvedValue({
+      data: [
+        {
+          result: "confirmed",
+          project_id: projectId,
+          project_type: "icon",
+          task_count: 6,
+        },
+      ],
+      error: null,
+    });
+
+    await expect(
+      patchNatoriProjectDetails(projectId, { type: "icon" })
+    ).resolves.toEqual({ kind: "ok" });
+    expect(mockRpc).toHaveBeenCalledWith("natori_confirm_project_type_v1", {
+      p_user_id: "owner-1",
+      p_project_id: projectId,
+      p_type: "icon",
+    });
+    expect(updates).toHaveLength(0);
+  });
+
+  it("confirms type but never writes it through a mixed generic patch", async () => {
+    const { updates } = projectsTable([
+      { data: { id: projectId, type: "undecided" }, error: null },
+    ]);
+    mockRpc.mockResolvedValue({
+      data: [
+        {
+          result: "confirmed",
+          project_id: projectId,
+          project_type: "standing",
+          task_count: 6,
+        },
+      ],
+      error: null,
+    });
+
+    await expect(
+      patchNatoriProjectDetails(projectId, { type: "standing", amount: 12000 })
+    ).resolves.toEqual({ kind: "ok" });
+    expect(updates).toEqual([{ amount: 12000 }]);
+  });
+
+  it("rejects a direct rewrite from one concrete type to another", async () => {
+    const { updates } = projectsTable([
+      { data: { id: projectId, type: "icon" }, error: null },
+    ]);
+    await expect(
+      patchNatoriProjectDetails(projectId, { type: "sd", amount: 12000 })
+    ).resolves.toEqual({ kind: "invalid-type-change" });
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(updates).toHaveLength(0);
+  });
+
+  it("treats the unchanged concrete type as a no-op and persists other fields", async () => {
+    const { updates } = projectsTable([
+      { data: { id: projectId, type: "icon" }, error: null },
+    ]);
+    await expect(
+      patchNatoriProjectDetails(projectId, { type: "icon", amount: 12000 })
+    ).resolves.toEqual({ kind: "ok" });
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(updates).toEqual([{ amount: 12000 }]);
   });
 });
 

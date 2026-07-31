@@ -197,6 +197,11 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "Failed to update project" }, { status: 500 });
       case "not-found":
         return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      case "invalid-type-change":
+        return NextResponse.json(
+          { error: "Project type confirmation conflicted with the current state" },
+          { status: 409 }
+        );
       case "ok":
         return NextResponse.json({ ok: true });
     }
