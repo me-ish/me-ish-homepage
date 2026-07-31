@@ -52,6 +52,7 @@ type ProjectRow = {
   title: string;
   client_name: string;
   amount: number;
+  type: string;
   status: string;
   note: string | null;
   payment_confirmed_at?: string | null;
@@ -73,7 +74,7 @@ async function fetchProjectRow(
   let query = admin
     .from("natori_projects")
     .select(
-      "id, user_id, title, client_name, amount, status, note, payment_confirmed_at, payment_link_id, quoted_amount, client_email, active_quote_id, payment_quote_id, payment_link_url, payment_link_status, stripe_payment_session_id"
+      "id, user_id, title, client_name, amount, type, status, note, payment_confirmed_at, payment_link_id, quoted_amount, client_email, active_quote_id, payment_quote_id, payment_link_url, payment_link_status, stripe_payment_session_id"
     )
     .eq("id", projectId);
   if (ownerId) query = query.eq("user_id", ownerId);
@@ -195,6 +196,7 @@ export async function sendNatoriOrderMail(
   if (!ownerId) return { kind: "not-found" };
   const project = await fetchProjectRow(input.projectId, ownerId);
   if (!project) return { kind: "not-found" };
+  if (project.type === "undecided") return { kind: "invalid-state" };
   const projectStatus = project.status as NatoriProjectStatus;
   if (!ALLOWED_MAIL_STATUSES[input.kind].has(projectStatus)) {
     return { kind: "invalid-state" };
@@ -631,6 +633,10 @@ export async function markNatoriCommissionPaid(
   // note 追記とメール本文のための読み取り。冪等判定には使わない。
   const project = await fetchProjectRow(projectId);
   if (!project) return { kind: "not-found" };
+  if (project.type === "undecided") {
+    console.error("[natori-order-mail] payment received before type confirmation");
+    return { kind: "db-error" };
+  }
 
   const admin = supabaseAdmin();
   const { data, error } = await admin.rpc("natori_record_stripe_payment", {

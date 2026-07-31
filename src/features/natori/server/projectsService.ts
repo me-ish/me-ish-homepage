@@ -3,6 +3,7 @@ import { createTasksForType } from "@/features/natori/lib/projects";
 import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { calculateDueDate } from "@/features/natori/lib/deliveryPlans";
 import { isNatoriConcreteProjectType } from "@/features/natori/lib/projectReadModel";
+import { confirmNatoriProjectTypeViaRpc } from "@/features/natori/server/intakeRpcAdapter";
 import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
 import { signPortfolioReferenceImage } from "@/features/natori/server/portfolioSiteService";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -70,7 +71,6 @@ export const NATORI_PROJECT_STATUSES: ReadonlySet<string> = new Set([
 export const NATORI_PROJECT_DETAILS_ALLOWED_FIELDS: ReadonlySet<string> = new Set([
   "client_name",
   "title",
-  "type",
   "amount",
   "delivery_plan",
   "start_date",
@@ -361,6 +361,50 @@ export type NatoriProjectMutationResult =
   | { kind: "not-found" }
   | { kind: "db-error" };
 
+export type ConfirmNatoriProjectTypeResult =
+  | {
+      kind: "ok";
+      alreadyConfirmed: boolean;
+      projectId: string;
+      projectType: NatoriConcreteProjectType;
+      taskCount: number;
+    }
+  | { kind: "not-found" }
+  | { kind: "conflict" }
+  | { kind: "invalid-type" }
+  | { kind: "db-error" };
+
+/** Confirms an undecided administrative type and creates its DB-owned tasks. */
+export async function confirmNatoriProjectType(
+  projectId: string,
+  projectType: NatoriConcreteProjectType
+): Promise<ConfirmNatoriProjectTypeResult> {
+  const ownerId = await resolveNatoriActingUserId();
+  if (!ownerId) return { kind: "not-found" };
+
+  const result = await confirmNatoriProjectTypeViaRpc({
+    ownerId,
+    projectId,
+    projectType,
+  });
+  switch (result.kind) {
+    case "db-error":
+    case "not-found":
+    case "conflict":
+    case "invalid-type":
+      return { kind: result.kind };
+    case "confirmed":
+    case "already-confirmed":
+      return {
+        kind: "ok",
+        alreadyConfirmed: result.kind === "already-confirmed",
+        projectId: result.projectId,
+        projectType: result.projectType,
+        taskCount: result.taskCount,
+      };
+  }
+}
+
 /** ステータス遷移を伴う操作の結果（許可遷移表に無い遷移は invalid-transition） */
 export type NatoriProjectTransitionResult =
   | NatoriProjectMutationResult
@@ -368,7 +412,8 @@ export type NatoriProjectTransitionResult =
 
 export type PatchNatoriProjectDetailsResult =
   | NatoriProjectMutationResult
-  | { kind: "no-editable-fields" };
+  | { kind: "no-editable-fields" }
+  | { kind: "invalid-type-change" };
 
 export async function setNatoriProjectTaskDone(
   projectId: string,
@@ -408,7 +453,7 @@ export async function setNatoriProjectStatus(
 
   const { data: current, error: fetchErr } = await admin
     .from("natori_projects")
-    .select("id, status")
+    .select("id, status, type")
     .eq("id", projectId)
     .eq("user_id", ownerId)
     .is("deleted_at", null)
@@ -420,9 +465,13 @@ export async function setNatoriProjectStatus(
   if (!current) return { kind: "not-found" };
 
   const fromStatus = (current as { status: string }).status;
+  const currentType = (current as { type?: string }).type;
   const workStatuses = new Set([
     "rough", "lineart", "coloring", "waiting", "delivery_prep", "delivered", "completed",
   ]);
+  if (workStatuses.has(status) && currentType === "undecided") {
+    return { kind: "invalid-transition", from: fromStatus, to: status };
+  }
   if (workStatuses.has(status)) {
     const { data: paidProject, error: paidError } = await admin
       .from("natori_projects")
@@ -468,8 +517,9 @@ export async function setNatoriProjectStatus(
 
 /**
  * Generic editor for the project's basic info (依頼者名・タイトル・金額・納期
- * など). Status / next_action / payment_confirmed_at are stripped server-side
- * so this kind cannot be misused to skip the inquiry → … → rough flow.
+ * など). An undecided -> concrete type request is delegated to the atomic type
+ * confirmation RPC; direct concrete-type rewrites are rejected. Status /
+ * next_action / payment_confirmed_at are stripped server-side.
  */
 export async function patchNatoriProjectDetails(
   projectId: string,
@@ -477,15 +527,63 @@ export async function patchNatoriProjectDetails(
 ): Promise<PatchNatoriProjectDetailsResult> {
   const ownerId = await resolveNatoriActingUserId();
   if (!ownerId) return { kind: "not-found" };
+  const admin = supabaseAdmin();
+  let typeConfirmed = false;
+  if (Object.prototype.hasOwnProperty.call(patch, "type")) {
+    const requestedType = patch.type;
+    if (
+      typeof requestedType !== "string" ||
+      !isNatoriConcreteProjectType(requestedType)
+    ) {
+      return { kind: "invalid-type-change" };
+    }
+
+    const { data: currentProject, error: currentProjectError } = await admin
+      .from("natori_projects")
+      .select("id, type")
+      .eq("id", projectId)
+      .eq("user_id", ownerId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (currentProjectError) return { kind: "db-error" };
+    if (!currentProject) return { kind: "not-found" };
+    const currentType = (currentProject as { type: string }).type;
+
+    if (currentType === requestedType) {
+      typeConfirmed = true;
+    } else if (currentType !== "undecided") {
+      return { kind: "invalid-type-change" };
+    } else {
+      const confirmation = await confirmNatoriProjectTypeViaRpc({
+        ownerId,
+        projectId,
+        projectType: requestedType,
+      });
+      switch (confirmation.kind) {
+        case "confirmed":
+        case "already-confirmed":
+          typeConfirmed = true;
+          break;
+        case "not-found":
+          return { kind: "not-found" };
+        case "conflict":
+        case "invalid-type":
+          return { kind: "invalid-type-change" };
+        case "db-error":
+          return { kind: "db-error" };
+      }
+    }
+  }
+
   const update: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(patch)) {
     if (NATORI_PROJECT_DETAILS_ALLOWED_FIELDS.has(key)) update[key] = value;
   }
   if (Object.keys(update).length === 0) {
+    if (typeConfirmed) return { kind: "ok" };
     return { kind: "no-editable-fields" };
   }
 
-  const admin = supabaseAdmin();
   const { data, error } = await admin
     .from("natori_projects")
     .update(update)
@@ -620,6 +718,23 @@ export async function confirmNatoriProjectPayment(
   const ownerId = await resolveNatoriActingUserId();
   if (!ownerId) return { kind: "not-found" };
   const admin = supabaseAdmin();
+  const { data: prePaymentProject, error: prePaymentError } = await admin
+    .from("natori_projects")
+    .select("id, status, type")
+    .eq("id", projectId)
+    .eq("user_id", ownerId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (prePaymentError) return { kind: "db-error" };
+  if (!prePaymentProject) return { kind: "not-found" };
+  const prePaymentState = prePaymentProject as { status: string; type?: string };
+  if (prePaymentState.type === "undecided") {
+    return {
+      kind: "invalid-transition",
+      from: prePaymentState.status,
+      to: "rough",
+    };
+  }
   const { data, error } = await admin.rpc("natori_confirm_manual_payment", {
     p_user_id: ownerId,
     p_project_id: projectId,

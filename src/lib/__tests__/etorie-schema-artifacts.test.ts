@@ -147,6 +147,8 @@ describe("Etorie migration archive", () => {
     "20260729115323_etorie_phase1_project_constraints.sql";
   const remainingPrivilegesName =
     "20260731111025_harden_natori_remaining_privileges.sql";
+  const intakeRpcsName =
+    "20260731115652_etorie_intake_rpcs.sql";
   const manifest = readJson<{
     activeMigrations: string[];
     activeMigrationCount: number;
@@ -203,6 +205,7 @@ describe("Etorie migration archive", () => {
       phase1ExpandName,
       phase1ConstraintsName,
       remainingPrivilegesName,
+      intakeRpcsName,
     ]);
     expect(new Set(versions).size).toBe(versions.length);
     expect(active.every((entry) => /^\d{14}_[a-z0-9_]+\.sql$/.test(entry))).toBe(
@@ -214,7 +217,7 @@ describe("Etorie migration archive", () => {
       ),
     );
     expect(manifest.requiredSequence).toEqual(active);
-    expect(manifest.activeMigrationCount).toBe(5);
+    expect(manifest.activeMigrationCount).toBe(6);
   });
 
   it("archives exactly 55 manifest-listed migrations outside the active lane", () => {

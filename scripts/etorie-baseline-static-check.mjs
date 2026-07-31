@@ -17,6 +17,20 @@ const phase1ConstraintsName =
   "20260729115323_etorie_phase1_project_constraints.sql";
 const remainingPrivilegesName =
   "20260731111025_harden_natori_remaining_privileges.sql";
+const intakeRpcsName =
+  "20260731115652_etorie_intake_rpcs.sql";
+const frozenPreIntakeMigrationChecksums = {
+  [baselineName]:
+    "cbe412613b6eadbe284499ea6f749afab6869bc9f6d40be17db9ac1f23d18ca4",
+  [hardeningName]:
+    "dc13f7299b14db7f46c157864e1ed8707c1b0c23c3e918fe7e1f3b5506582be1",
+  [phase1ExpandName]:
+    "b7e1ca1b96740376b7fad58f4ac490381c21275ae69d761d1cd68f95fe167a63",
+  [phase1ConstraintsName]:
+    "e9d8d678f379a60a8899f9a19ec617f265d23909cc758ef034a4087cf3e19a2f",
+  [remainingPrivilegesName]:
+    "ba775794f3f15d67e555df9c17624d4df6a84eee1df0a11a8131ce3f8971043c",
+};
 const activeDirectory = path.join("supabase", "migrations");
 const legacyDirectory = path.join("supabase", "legacy-migrations");
 const baselinePath = path.join(activeDirectory, baselineName);
@@ -30,6 +44,7 @@ const remainingPrivilegesPath = path.join(
   activeDirectory,
   remainingPrivilegesName,
 );
+const intakeRpcsPath = path.join(activeDirectory, intakeRpcsName);
 const fixturePath = path.join("supabase", "fixtures", "etorie-baseline.sql");
 const phase1VerificationPath = path.join(
   "supabase",
@@ -40,6 +55,11 @@ const phase1SecurityVerificationPath = path.join(
   "supabase",
   "verification",
   "etorie-p1-04-security-selects.sql",
+);
+const intakeRpcsVerificationPath = path.join(
+  "supabase",
+  "verification",
+  "etorie-p1-05-intake-rpcs-selects.sql",
 );
 const manifestPath = path.join("supabase", "baseline", "manifest.json");
 const legacyManifestPath = path.join(
@@ -55,8 +75,10 @@ const [
   phase1Expand,
   phase1Constraints,
   remainingPrivileges,
+  intakeRpcs,
   phase1Verification,
   phase1SecurityVerification,
+  intakeRpcsVerification,
   fixture,
   manifestText,
   legacyText,
@@ -70,8 +92,10 @@ const [
     readFile(phase1ExpandPath, "utf8"),
     readFile(phase1ConstraintsPath, "utf8"),
     readFile(remainingPrivilegesPath, "utf8"),
+    readFile(intakeRpcsPath, "utf8"),
     readFile(phase1VerificationPath, "utf8"),
     readFile(phase1SecurityVerificationPath, "utf8"),
+    readFile(intakeRpcsVerificationPath, "utf8"),
     readFile(fixturePath, "utf8"),
     readFile(manifestPath, "utf8"),
     readFile(legacyManifestPath, "utf8"),
@@ -112,6 +136,23 @@ function executableStatements(sql) {
     .filter(Boolean);
 }
 
+function stripDollarQuotedBodies(sql) {
+  return sql.replace(
+    /as\s+\$([A-Za-z_][A-Za-z0-9_]*)\$[\s\S]*?\$\1\$/gi,
+    "as omitted_body",
+  );
+}
+
+function functionDefinition(sql, name) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return sql.match(
+    new RegExp(
+      `create\\s+function\\s+public\\.${escaped}\\([\\s\\S]*?\\$function\\$;`,
+      "i",
+    ),
+  )?.[0];
+}
+
 async function exists(target) {
   try {
     await stat(target);
@@ -133,6 +174,7 @@ const expectedActiveNames = [
   phase1ExpandName,
   phase1ConstraintsName,
   remainingPrivilegesName,
+  intakeRpcsName,
 ];
 const expectedActivePaths = expectedActiveNames.map(
   (name) => `supabase/migrations/${name}`,
@@ -151,7 +193,7 @@ check(
 );
 check(
   JSON.stringify(active) === JSON.stringify(expectedActiveNames),
-  "active migrations must be the ordered baseline, hardening, expand, constraint, and ACL lane",
+  "active migrations must be the ordered baseline, hardening, expand, constraint, ACL, and intake RPC lane",
 );
 check(
   JSON.stringify(active.slice(0, 2)) ===
@@ -165,7 +207,7 @@ check(
 check(
   JSON.stringify(manifest.activeMigrations) ===
     JSON.stringify(expectedActivePaths),
-  "manifest must declare the five current active migration paths",
+  "manifest must declare the six current active migration paths",
 );
 check(
   manifest.activeMigrationDirectory === "supabase/migrations" &&
@@ -185,6 +227,7 @@ checkDollarQuotes(hardening, "hardening");
 checkDollarQuotes(phase1Expand, "P1-03 expand");
 checkDollarQuotes(phase1Constraints, "P1-03 constraints");
 checkDollarQuotes(remainingPrivileges, "P1-04 remaining privileges");
+checkDollarQuotes(intakeRpcs, "P1-05 intake RPCs");
 check(
   /^\s*--[\s\S]*?\bbegin;\s/i.test(baseline) && /\bcommit;\s*$/i.test(baseline),
   "baseline must be transaction wrapped",
@@ -210,6 +253,11 @@ check(
   "P1-04 remaining privilege hardening must be transaction wrapped",
 );
 check(
+  /^\s*--[\s\S]*?\bbegin;\s/i.test(intakeRpcs) &&
+    /\bcommit;\s*$/i.test(intakeRpcs),
+  "P1-05 intake RPC migration must be transaction wrapped",
+);
+check(
   !baseline.includes("portfolio_profiles"),
   "portfolio_profiles must not appear in baseline",
 );
@@ -232,6 +280,7 @@ const activeSql = [
   phase1Expand,
   phase1Constraints,
   remainingPrivileges,
+  intakeRpcs,
 ].join("\n");
 const activeStatements = executableStatements(activeSql);
 const storageObjectPolicies = activeStatements.filter(
@@ -439,6 +488,178 @@ check(
   ),
   "P1-04 security verification SQL must contain SELECT statements only",
 );
+check(
+  executableStatements(intakeRpcsVerification).every((statement) =>
+    /^select\b/i.test(statement),
+  ),
+  "P1-05 intake RPC verification SQL must contain SELECT statements only",
+);
+
+const executableIntakeRpcs = stripSqlComments(intakeRpcs);
+const intakeMigrationTopLevel = stripDollarQuotedBodies(executableIntakeRpcs);
+const createIntakeDefinition = functionDefinition(
+  intakeRpcs,
+  "natori_create_project_with_tasks_v2",
+);
+const confirmTypeDefinition = functionDefinition(
+  intakeRpcs,
+  "natori_confirm_project_type_v1",
+);
+check(
+  !/\b(?:insert\s+into|update\s+public\.|delete\s+from|truncate\s+table)\b/i.test(
+    intakeMigrationTopLevel,
+  ),
+  "P1-05 migration must not mutate rows while the migration itself is applied",
+);
+check(
+  Boolean(createIntakeDefinition) && Boolean(confirmTypeDefinition),
+  "P1-05 must define both versioned RPCs",
+);
+check(
+  /create\s+function\s+public\.natori_create_project_with_tasks_v2\s*\(\s*p_user_id\s+uuid,\s*p_project_id\s+uuid,\s*p_client_name\s+text,\s*p_client_email\s+text,\s*p_request_data\s+jsonb,\s*p_reference_files\s+jsonb,\s*p_reference_links\s+jsonb\s*\)/i.test(
+    executableIntakeRpcs,
+  ),
+  "P1-05 create-v2 identity arguments are invalid",
+);
+check(
+  /create\s+function\s+public\.natori_confirm_project_type_v1\s*\(\s*p_user_id\s+uuid,\s*p_project_id\s+uuid,\s*p_type\s+text\s*\)/i.test(
+    executableIntakeRpcs,
+  ),
+  "P1-05 type-confirm identity arguments are invalid",
+);
+for (const [label, definition] of [
+  ["create-v2", createIntakeDefinition],
+  ["type-confirm", confirmTypeDefinition],
+]) {
+  check(
+    definition &&
+      /\bsecurity\s+definer\b/i.test(definition) &&
+      /\bset\s+search_path\s*=\s*''/i.test(definition),
+    `P1-05 ${label} must be SECURITY DEFINER with an empty search_path`,
+  );
+}
+check(
+  /revoke\s+all\s+on\s+function\s+public\.natori_create_project_with_tasks_v2\s*\(\s*uuid,\s*uuid,\s*text,\s*text,\s*jsonb,\s*jsonb,\s*jsonb\s*\)\s*from\s+public,\s*anon,\s*authenticated,\s*service_role/i.test(
+    executableIntakeRpcs,
+  ) &&
+    /grant\s+execute\s+on\s+function\s+public\.natori_create_project_with_tasks_v2[\s\S]*?to\s+service_role/i.test(
+      executableIntakeRpcs,
+    ) &&
+    /revoke\s+all\s+on\s+function\s+public\.natori_confirm_project_type_v1\s*\(\s*uuid,\s*uuid,\s*text\s*\)\s*from\s+public,\s*anon,\s*authenticated,\s*service_role/i.test(
+      executableIntakeRpcs,
+    ) &&
+    /grant\s+execute\s+on\s+function\s+public\.natori_confirm_project_type_v1[\s\S]*?to\s+service_role/i.test(
+      executableIntakeRpcs,
+    ),
+  "P1-05 RPC EXECUTE privileges must be service_role-only",
+);
+check(
+  !/(?:create(?:\s+or\s+replace)?|drop)\s+function\s+public\.natori_create_project_with_tasks\s*\(/i.test(
+    executableIntakeRpcs,
+  ),
+  "P1-05 must not redefine or drop the rollback-compatible create RPC",
+);
+check(
+  createIntakeDefinition &&
+    /from\s+auth\.users/i.test(createIntakeDefinition) &&
+    /insert\s+into\s+public\.natori_projects/i.test(createIntakeDefinition) &&
+    /insert\s+into\s+public\.natori_inquiry_reference_files/i.test(
+      createIntakeDefinition,
+    ) &&
+    /insert\s+into\s+public\.natori_project_reference_links/i.test(
+      createIntakeDefinition,
+    ) &&
+    !/insert\s+into\s+public\.natori_project_tasks/i.test(
+      createIntakeDefinition,
+    ),
+  "P1-05 create-v2 must atomically create the project/file/link envelope and zero tasks",
+);
+check(
+  createIntakeDefinition &&
+    /on\s+conflict\s*\(\s*id\s*\)\s+do\s+nothing/i.test(
+      createIntakeDefinition,
+    ) &&
+    /submission_conflict/i.test(createIntakeDefinition) &&
+    /projects\.request_data\s*=\s*p_request_data/i.test(
+      createIntakeDefinition,
+    ) &&
+    /reference_files\.project_id\s*<>\s*p_project_id/i.test(
+      createIntakeDefinition,
+    ) &&
+    /jsonb_array_length\(p_reference_files\)/i.test(
+      createIntakeDefinition,
+    ) &&
+    /jsonb_array_length\(p_reference_links\)/i.test(createIntakeDefinition),
+  "P1-05 create-v2 must accept only an exact idempotent submission retry",
+);
+check(
+  createIntakeDefinition &&
+    /jsonb_array_length\(p_reference_files\)\s*>\s*5/i.test(
+      createIntakeDefinition,
+    ) &&
+    /jsonb_array_length\(p_reference_links\)\s*>\s*5/i.test(
+      createIntakeDefinition,
+    ) &&
+    /storage\.objects/i.test(createIntakeDefinition) &&
+    /natori-inquiry-refs/i.test(createIntakeDefinition) &&
+    /https:\/\//i.test(createIntakeDefinition) &&
+    /position\(\s*'@'\s+in\s+substring/i.test(createIntakeDefinition) &&
+    /duplicate_reference_link/i.test(createIntakeDefinition),
+  "P1-05 create-v2 file/link bounds are incomplete",
+);
+check(
+  createIntakeDefinition &&
+    /natori_request_data_is_valid_v1/i.test(createIntakeDefinition) &&
+    /65536/i.test(executableIntakeRpcs) &&
+    /jsonb_array_length\(p_request_data\s*->\s*'options'\)\s*>\s*20/i.test(
+      executableIntakeRpcs,
+    ) &&
+    /jsonb_array_length\(p_request_data\s*->\s*'usageTypes'\)\s*>\s*10/i.test(
+      executableIntakeRpcs,
+    ) &&
+    /make_date/i.test(executableIntakeRpcs),
+  "P1-05 detailed RequestData V1 validation is incomplete",
+);
+check(
+  confirmTypeDefinition &&
+    /for\s+update/i.test(confirmTypeDefinition) &&
+    /projects\.user_id\s*=\s*p_user_id/i.test(confirmTypeDefinition) &&
+    /projects\.deleted_at\s+is\s+null/i.test(confirmTypeDefinition) &&
+    /payment_confirmed_at\s+is\s+not\s+null/i.test(confirmTypeDefinition) &&
+    /v_task_count\s*<>\s*0/i.test(confirmTypeDefinition) &&
+    /natori_project_task_template_v1/i.test(confirmTypeDefinition) &&
+    /template\.done\s+is\s+not\s+distinct\s+from\s+tasks\.done/i.test(
+      confirmTypeDefinition,
+    ) &&
+    !/\bon\s+conflict\b/i.test(confirmTypeDefinition),
+  "P1-05 type-confirm concurrency or conflict guard is incomplete",
+);
+check(
+  createIntakeDefinition &&
+    confirmTypeDefinition &&
+    !/\bdelete\s+from\b/i.test(createIntakeDefinition) &&
+    !/\bdelete\s+from\b/i.test(confirmTypeDefinition),
+  "P1-05 RPCs must not physically delete rows",
+);
+check(
+  intakeRpcsVerification.includes(
+    "unauthorized_intake_rpc_execute_count",
+  ) &&
+    /acl\.grantee\s*<>\s*p\.proowner/i.test(intakeRpcsVerification) &&
+    /coalesce\(pg_get_userbyid\(acl\.grantee\),\s*'PUBLIC'\)\s*<>\s*'service_role'/i.test(
+      intakeRpcsVerification,
+    ) &&
+    !/['"]postgres['"]/i.test(intakeRpcsVerification) &&
+    intakeRpcsVerification.includes("function_body_sha256") &&
+    intakeRpcsVerification.includes("empty_search_path_exact") &&
+    intakeRpcsVerification.includes("supabase_migrations.schema_migrations"),
+  "P1-05 verification must check dynamic owners, ACLs, old-RPC hash, and active history",
+);
+check(
+  !intakeRpcs.includes(manifest.sourceProjectRef) &&
+    !intakeRpcsVerification.includes(manifest.sourceProjectRef),
+  "P1-05 artifacts must not embed the production project ref",
+);
 const securityVerificationStatements = executableStatements(
   phase1SecurityVerification,
 );
@@ -500,7 +721,8 @@ check(
 check(
   manifest.baselineMigration === baselineName &&
     manifest.securityHardeningMigration === hardeningName &&
-    manifest.remainingPrivilegesMigration === remainingPrivilegesName,
+    manifest.remainingPrivilegesMigration === remainingPrivilegesName &&
+    manifest.intakeRpcsMigration === intakeRpcsName,
   "manifest migration filenames do not match",
 );
 check(
@@ -508,6 +730,14 @@ check(
     JSON.stringify(expectedActiveNames),
   "manifest required sequence is invalid",
 );
+for (const [name, checksum] of Object.entries(
+  frozenPreIntakeMigrationChecksums,
+)) {
+  check(
+    manifest.checksums[`sha256:supabase/migrations/${name}`] === checksum,
+    `pre-P1-05 migration checksum must remain frozen: ${name}`,
+  );
+}
 check(
   manifest.excludedObjects?.includes("public.portfolio_profiles"),
   "manifest must exclude public.portfolio_profiles",
@@ -657,6 +887,27 @@ check(
   "archive verification artifact reports a mismatch",
 );
 
+const expectedChecksummedPaths = [
+  ...expectedActivePaths,
+  "supabase/verification/etorie-p1-03-selects.sql",
+  "supabase/verification/etorie-p1-04-security-selects.sql",
+  "supabase/verification/etorie-p1-05-intake-rpcs-selects.sql",
+  "supabase/fixtures/etorie-baseline.sql",
+  "supabase/baseline/legacy-migrations.json",
+  "artifacts/legacy-migration-archive/before.json",
+  "artifacts/legacy-migration-archive/after.json",
+  "artifacts/legacy-migration-archive/verification.json",
+].sort();
+const declaredChecksummedPaths = Object.keys(manifest.checksums)
+  .filter((key) => key.startsWith("sha256:"))
+  .map((key) => key.slice("sha256:".length))
+  .sort();
+check(
+  JSON.stringify(declaredChecksummedPaths) ===
+    JSON.stringify(expectedChecksummedPaths),
+  "manifest must checksum every active migration and verification artifact exactly once",
+);
+
 for (const [key, expected] of Object.entries(manifest.checksums)) {
   if (!key.startsWith("sha256:")) continue;
   const target = key.slice("sha256:".length);
@@ -673,8 +924,10 @@ for (const [label, content] of [
   [phase1ExpandName, phase1Expand],
   [phase1ConstraintsName, phase1Constraints],
   [remainingPrivilegesName, remainingPrivileges],
+  [intakeRpcsName, intakeRpcs],
   ["etorie-p1-03-selects.sql", phase1Verification],
   ["etorie-p1-04-security-selects.sql", phase1SecurityVerification],
+  ["etorie-p1-05-intake-rpcs-selects.sql", intakeRpcsVerification],
   ["etorie-baseline.sql", fixture],
   ["manifest.json", manifestText],
   ["legacy-migrations.json", legacyText],
