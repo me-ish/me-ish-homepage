@@ -13,6 +13,7 @@ import { safeCompare } from "@/lib/auth/timingSafe";
 import {
   NATORI_ORPHAN_DEFAULT_MAX_DELETIONS,
   NATORI_ORPHAN_DEFAULT_MIN_AGE_MS,
+  NATORI_ORPHAN_MAX_OFFSET,
   scanNatoriInquiryReferenceOrphans,
 } from "@/features/natori/server/inquiryOrphanService";
 
@@ -32,11 +33,27 @@ function isAuthorized(req: NextRequest): boolean {
   return false;
 }
 
-function readPositiveInt(value: string | null, fallback: number, max: number): number {
-  if (!value) return fallback;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) return fallback;
-  return Math.min(parsed, max);
+type ParsedParam =
+  | { ok: true; value: number | undefined }
+  | { ok: false; parameter: string };
+
+/**
+ * 未指定なら undefined（既定値を使う）。指定があるのに 0 以上の整数でない、
+ * または上限を超える場合は黙って fallback せず error にする。
+ */
+function readIntegerParam(
+  params: URLSearchParams,
+  name: string,
+  { min, max }: { min: number; max: number }
+): ParsedParam {
+  const raw = params.get(name);
+  if (raw === null || raw === "") return { ok: true, value: undefined };
+  if (!/^\d+$/u.test(raw)) return { ok: false, parameter: name };
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) {
+    return { ok: false, parameter: name };
+  }
+  return { ok: true, value: parsed };
 }
 
 async function handle(req: NextRequest, allowDeletion: boolean) {
@@ -47,17 +64,32 @@ async function handle(req: NextRequest, allowDeletion: boolean) {
   const params = req.nextUrl.searchParams;
   // 既定は dry-run。削除は POST かつ dryRun=0 の明示指定のときだけ。
   const dryRun = !allowDeletion || params.get("dryRun") !== "0";
-  const minimumAgeHours = readPositiveInt(params.get("minAgeHours"), 24, 24 * 90);
-  const maxDeletions = readPositiveInt(
-    params.get("limit"),
-    NATORI_ORPHAN_DEFAULT_MAX_DELETIONS,
-    NATORI_ORPHAN_DEFAULT_MAX_DELETIONS
-  );
 
+  // 前回実行の nextOffset を受けて続きから走査する。
+  const offset = readIntegerParam(params, "offset", { min: 0, max: NATORI_ORPHAN_MAX_OFFSET });
+  const minAgeHours = readIntegerParam(params, "minAgeHours", { min: 1, max: 24 * 90 });
+  const limit = readIntegerParam(params, "limit", {
+    min: 1,
+    max: NATORI_ORPHAN_DEFAULT_MAX_DELETIONS,
+  });
+
+  if (!offset.ok || !minAgeHours.ok || !limit.ok) {
+    const failed = [offset, minAgeHours, limit].find(
+      (parsed): parsed is { ok: false; parameter: string } => !parsed.ok
+    );
+    // parameter 名だけを返す。値・path・secret は返さない。
+    return NextResponse.json(
+      { ok: false, error: "invalid_parameter", parameter: failed?.parameter },
+      { status: 400 }
+    );
+  }
+
+  const minimumAgeHours = minAgeHours.value ?? 24;
   const result = await scanNatoriInquiryReferenceOrphans({
     dryRun,
+    startOffset: offset.value,
     minimumAgeMs: Math.max(minimumAgeHours * 60 * 60 * 1000, NATORI_ORPHAN_DEFAULT_MIN_AGE_MS),
-    maxDeletions,
+    maxDeletions: limit.value,
   });
 
   if (result.kind === "unavailable") {

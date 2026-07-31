@@ -81,6 +81,36 @@ route は RPC 後の cleanup を行わず、二重削除しない。
 - 一度の削除上限は既定 50 件（`limit` で縮小のみ可）。
 - secret も storage path も log に出さない。
 
+#### prefix pagination
+
+bucket root は1回の list では読み切れないため、offset 付きで走査する。
+
+- 内部では 100 件ページで list し、**1回の実行あたり最大 200 entry** まで消費する。
+- 読み切れなかった場合は `truncated = true` と `nextOffset` を返す。
+  root のページが上限ちょうどで返った場合も、後続が存在する可能性として
+  `truncated = true` にする。
+- 削除上限で prefix の途中を打ち切った場合は、その prefix の offset を
+  `nextOffset` として返す（同じ prefix から再開する。削除済み object は
+  次回の list に現れないため再実行は安全）。
+- 走査し切っていれば `nextOffset = null`。
+- 運用者は `?offset=<前回の nextOffset>` で続きを実行する。
+
+response フィールド:
+
+| field | 意味 |
+| --- | --- |
+| `startOffset` | 今回の走査開始位置 |
+| `scannedPrefixes` | 今回検査した project UUID prefix の数 |
+| `inspectedObjects` | 形式が一致した object の数 |
+| `candidateCount` | 台帳未登録と確認できた orphan の数 |
+| `deletedCount` | 実際に削除した数（dry-run では 0） |
+| `truncated` | 未走査 prefix または未処理候補が残る可能性 |
+| `nextOffset` | 次回の `offset`。走査し切っていれば `null` |
+
+query parameter（`offset` / `minAgeHours` / `limit`）は 0 以上の整数のみを受け付け、
+指定があるのに不正・範囲外なら黙って既定値へ倒さず 400 `invalid_parameter` を返す。
+error response には parameter 名だけを載せ、値・path・secret は載せない。
+
 **`vercel.json` へ schedule は追加していない。** 推測で本番 job を新設せず、
 運用者が Preview / 手動で実行できる状態までを P1-06 の範囲とする。
 定期実行の要否と頻度は P1-13 で判断する。
@@ -96,7 +126,10 @@ route は RPC 後の cleanup を行わず、二重削除しない。
 4. `GET /api/natori/maintenance/inquiry-orphans` を dry-run で実行し、
    候補件数を確認する。
 5. 想定どおりなら `POST .../inquiry-orphans?dryRun=0` を実行する。
-6. 実行結果（scannedPrefixes / candidateCount / deletedCount）を記録する。
+6. 実行結果（startOffset / scannedPrefixes / inspectedObjects / candidateCount /
+   deletedCount / truncated / nextOffset）を記録する。
+7. `truncated = true` なら `?offset=<nextOffset>` を付けて 4〜6 を繰り返し、
+   `nextOffset = null` になるまで進める。
 
 ## 4. メール契約
 
