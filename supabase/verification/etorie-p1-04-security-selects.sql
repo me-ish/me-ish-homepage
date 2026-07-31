@@ -72,18 +72,73 @@ where n.nspname = 'public'
   and c.relname = 'processed_stripe_events'
   and c.relkind in ('r', 'p');
 
--- 6. Expected result: service_role has SELECT, INSERT, DELETE only; PUBLIC,
--- anon, and authenticated have no rows.
+-- 6. Direct ACL detail. Expected result: service_role has SELECT, INSERT,
+-- DELETE only; PUBLIC, anon, and authenticated have no rows. This catalog
+-- expansion includes PUBLIC grants (information_schema.role_table_grants does
+-- not), so it is suitable for diagnosing a failed equality check below.
 select
-  grantee,
-  privilege_type
-from information_schema.role_table_grants
-where table_schema = 'public'
-  and table_name = 'processed_stripe_events'
-  and grantee in ('PUBLIC', 'anon', 'authenticated', 'service_role')
+  case
+    when acl.grantee = 0 then 'PUBLIC'
+    else pg_get_userbyid(acl.grantee)
+  end as grantee,
+  acl.privilege_type,
+  acl.is_grantable
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+cross join lateral aclexplode(
+  coalesce(c.relacl, acldefault('r', c.relowner))
+) acl
+where n.nspname = 'public'
+  and c.relname = 'processed_stripe_events'
+  and c.relkind in ('r', 'p')
+  and (
+    acl.grantee = 0
+    or pg_get_userbyid(acl.grantee) in ('anon', 'authenticated', 'service_role')
+  )
 order by grantee, privilege_type;
 
--- 7. No policy is required for the service-role webhook path. Any row here
+-- 7. Expected result: true. Check all seven table privileges as effective
+-- privileges so grants inherited from PUBLIC or another role cannot false-green.
+-- service_role must have SELECT, INSERT, DELETE and no other table privilege;
+-- anon and authenticated must have none. PUBLIC must also have no direct grant.
+select
+  bool_and(
+    has_table_privilege(
+      roles.role_name::name,
+      'public.processed_stripe_events',
+      privileges.privilege_name
+    ) = (
+      roles.role_name = 'service_role'
+      and privileges.privilege_name in ('SELECT', 'INSERT', 'DELETE')
+    )
+  )
+  and not exists (
+    select 1
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    cross join lateral aclexplode(
+      coalesce(c.relacl, acldefault('r', c.relowner))
+    ) acl
+    where n.nspname = 'public'
+      and c.relname = 'processed_stripe_events'
+      and c.relkind in ('r', 'p')
+      and acl.grantee = 0
+  ) as processed_stripe_events_privileges_exact
+from (
+  values ('service_role'), ('anon'), ('authenticated')
+) as roles(role_name)
+cross join (
+  values
+    ('SELECT'),
+    ('INSERT'),
+    ('UPDATE'),
+    ('DELETE'),
+    ('TRUNCATE'),
+    ('REFERENCES'),
+    ('TRIGGER')
+) as privileges(privilege_name);
+
+-- 8. No policy is required for the service-role webhook path. Any row here
 -- needs review; adding a permissive policy merely to silence Advisor is unsafe.
 select
   policyname,
@@ -96,7 +151,7 @@ where schemaname = 'public'
   and tablename = 'processed_stripe_events'
 order by policyname;
 
--- 8. Function identity, owner, SECURITY DEFINER flag, fixed configuration,
+-- 9. Function identity, owner, SECURITY DEFINER flag, fixed configuration,
 -- ACL, and body. The body must update deleted_at and contain no physical delete.
 select
   n.nspname as function_schema,
@@ -113,7 +168,8 @@ where n.nspname = 'public'
   and p.proname = 'natori_delete_project'
   and pg_get_function_identity_arguments(p.oid) = 'p_user_id uuid, p_project_id uuid';
 
--- 9. Expanded function EXECUTE ACL. Expected effective grantee: service_role.
+-- 10. Expanded function EXECUTE ACL. Expected effective grantees are the
+-- function owner and service_role.
 select
   case
     when acl.grantee = 0 then 'PUBLIC'
@@ -131,7 +187,8 @@ where n.nspname = 'public'
   and pg_get_function_identity_arguments(p.oid) = 'p_user_id uuid, p_project_id uuid'
 order by grantee, acl.privilege_type;
 
--- 10. A nonzero result is a release blocker.
+-- 11. A nonzero result is a release blocker. The function owner is derived
+-- dynamically from pg_proc.proowner; no owner role name is hard-coded.
 select count(*) as unauthorized_delete_project_execute_count
 from pg_proc p
 join pg_namespace n on n.oid = p.pronamespace
@@ -142,4 +199,5 @@ where n.nspname = 'public'
   and p.proname = 'natori_delete_project'
   and pg_get_function_identity_arguments(p.oid) = 'p_user_id uuid, p_project_id uuid'
   and acl.privilege_type = 'EXECUTE'
+  and acl.grantee <> p.proowner
   and coalesce(pg_get_userbyid(acl.grantee), 'PUBLIC') <> 'service_role';

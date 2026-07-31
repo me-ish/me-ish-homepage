@@ -1,6 +1,6 @@
 # Etorie P1-04 Storage・RLS・危険RPC hardening監査
 
-監査日: 2026-07-29
+監査日: 2026-07-29（検証用実DB監査の反映: 2026-07-31）
 対象: `main` commit `5dceaa5452e0ca5573923988a3505366ab3a0a36` から作成した
 `chore/etorie-p1-04-security-audit`
 実施範囲: リポジトリ内のコード、active migration、テスト、文書の読み取りと
@@ -8,21 +8,26 @@
 
 ## 1. 結論
 
-P1-04が要求するDB上の最終状態は、既存のactive baselineと直後のsecurity
-hardening migrationで既に表現されている。新しいmigrationは作成しない。
+P1-04が要求するDB上の最終状態の大部分は、既存のactive baselineと直後の
+security hardening migrationで表現されている。ただし、検証用実DBの監査で
+`processed_stripe_events`の`service_role`にSupabaseの既定権限由来の
+`REFERENCES`, `TRIGGER`, `TRUNCATE`が残ることが判明した。この差分を閉じるため、
+ACL是正migrationを1本追加する。
 
 - `Allow Insert 1exduyn_0`はhardeningで削除され、active migration内で再作成されない。
 - Natoriの非公開bucketにanon/authenticated向けINSERT policyは作られない。
-- `processed_stripe_events`はRLS enabledで、client roleのgrantをrevokeし、
-  `service_role`へ`SELECT, INSERT, DELETE`だけを付与する。
+- `20260731111025_harden_natori_remaining_privileges.sql`は
+  `processed_stripe_events`の4 roleから一度全権限をrevokeし、`service_role`へ
+  `SELECT, INSERT, DELETE`だけを再grantする。table data、RLS、policyは変更しない。
 - `natori_delete_project(uuid, uuid)`の最終定義はowner確認付きの冪等soft archiveで、
-  EXECUTEは`service_role`だけに付与される。
+  明示的なEXECUTE grantは`service_role`だけ、正当な実効granteeはfunction ownerと
+  `service_role`である。
 - アプリの案件削除経路は`deleted_at`更新だけで、案件行やStorage objectを
   物理削除しない。復元は`deleted_at = null`である。
 
-追加DDLは既存の最終定義を重複させ、Pattern B/Pattern Cの差分を不必要に増やす。
-今回不足していたのは、caller inventory、コメントに左右されない直接検査、
-mock回帰テスト、SELECT-only検証artifactである。
+active migrationはbaseline、hardening、P1-03の2本、今回のACL是正の計5本である。
+ACL是正以外のschema変更は追加しない。caller inventory、コメントに左右されない
+直接検査、mock回帰テスト、SELECT-only検証artifactも維持する。
 
 ## 2. 要件分類
 
@@ -32,7 +37,7 @@ mock回帰テスト、SELECT-only検証artifactである。
 | Natori private bucketを非公開にする | A: 充足 | baselineの`storage.buckets`定義 | 設定値を直接検査 |
 | inquiry/deliveryのserverまたは署名uploadを維持 | A: 充足 | `portfolioSiteService.ts`、`deliveryService.ts`、`supabaseDeliveryFiles.ts` | mock回帰testを追加 |
 | `natori-portfolio`は公開read、server write | A: 充足 | baselineとserver service | mock回帰testを追加 |
-| `processed_stripe_events`をclient roleから閉じる | A: 充足 | baseline/hardeningのRLS・ACL | 許可privilegeの完全一致testを追加 |
+| `processed_stripe_events`をclient roleから閉じ、service ACLを限定する | B: 部分充足（検証用実DBで余分な既定権限を確認） | baseline/hardeningのRLS・ACLと実DB監査結果 | ACL是正migrationを1本追加し、7 privilegeの完全一致testを追加 |
 | dangerous RPCをowner付きsoft archiveへ置換 | A: 充足 | hardening内の最終function body・ACL | body/ACL/search_path testを追加 |
 | UI削除をarchive/restoreだけにする | A: 充足 | `projectsService.ts`とdashboard UI | 再実行・owner mismatch・Storage非削除testを追加 |
 | upload caller inventory | B: 部分充足 | コード内に経路はあるが集約文書なし | 本書に集約 |
@@ -94,6 +99,13 @@ static checkとcontract testはSQLコメントを除去してから`CREATE POLIC
 - RLS: enabled
 - policy: なしでよい
 
+`20260731111025_harden_natori_remaining_privileges.sql`は、`PUBLIC`, `anon`,
+`authenticated`, `service_role`から`ALL PRIVILEGES`をrevokeした後、
+`service_role`へ必要な3 privilegeだけをgrantする。既存migrationは変更せず、
+table data、RLS、policyにも触れない。SELECT-only verificationは
+`SELECT`, `INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`, `REFERENCES`, `TRIGGER`の
+7種類を実効権限で比較し、PUBLICの直接grantもcatalog ACLから別途検出する。
+
 service roleはRLSをbypassする正規server経路なので、Advisor警告を消す目的で
 permissive policyを追加しない。
 
@@ -110,7 +122,9 @@ baseline内の互換定義は、同一active laneの直後に必須となるhard
 - `deleted_at = coalesce(deleted_at, now())`で再実行しても元timestampを維持
 - `DELETE FROM`なし
 - `PUBLIC`, `anon`, `authenticated`からEXECUTEをrevoke
-- `service_role`だけにEXECUTEをgrant
+- 明示的なEXECUTE grantは`service_role`だけ
+- ACL検証上の正当な実効granteeは`pg_proc.proowner`から動的に得るfunction ownerと
+  `service_role`。`postgres`など特定のowner role名は固定しない
 
 ## 5. アプリのarchive / restore contract
 
@@ -131,8 +145,8 @@ owner条件付きの`UPDATE deleted_at`だけである。コメントも「完�
 
 追加・強化した検証:
 
-- active migrationのStorage policy、bucket設定、Stripe ledger ACL、最終RPC body・
-  ACL・search_pathをコメント除外後のSQLから直接検査
+- active migration 5本の順序とchecksum、およびStorage policy、bucket設定、
+  Stripe ledgerの最終ACL、最終RPC body・ACL・search_pathをコメント除外後のSQLから直接検査
 - inquiry referenceのserver upload、error、signed read、failure cleanup
 - portfolioのserver write
 - deliveryのserver-side owner checkとsigned upload発行、署名発行失敗時のDB insert防止
@@ -148,9 +162,10 @@ owner条件付きの`UPDATE deleted_at`だけである。コメントも「完�
 | command | 結果 |
 | --- | --- |
 | `npm run check:etorie-migrations` | PASS、0 failures |
+| targeted security/artifact tests | PASS、2/2 files、20/20 tests |
 | `npm run typecheck` | PASS |
 | `npm run lint` | error 0（既存warningのみ） |
-| `npm test` | PASS、46/46 files、519/519 tests |
+| `npm test` | PASS、46/46 files、521/521 tests |
 | `npm run build` | production build PASS |
 | `git diff --check` | PASS |
 
@@ -172,7 +187,8 @@ owner条件付きの`UPDATE deleted_at`だけである。コメントも「完�
 - bucket条件なしのtrue write policyが1件以上
 - private bucketにclient writeを許すpolicy
 - `processed_stripe_events`にclient grant、余分なservice privilege、または意図しないpolicy
-- RPCがsoft archive以外、固定search_pathでない、またはservice role以外にEXECUTE可能
+- RPCがsoft archive以外、固定search_pathでない、またはfunction ownerと
+  `service_role`以外にEXECUTEが付与されている
 - artworks/avatar/bannerの正規browser upload回帰
 - inquiry/deliveryのserver・signed upload回帰
 
@@ -192,4 +208,5 @@ Pattern Bのapp smoke testおよび本番反映前には、値を表示せず設
 - Supabase接続・DB query・DDL/DML・`db push`・migration repair: 実施なし
 - Vercel接続・環境変数閲覧/変更: 実施なし
 - 既存active/legacy migrationの変更: なし
-- 新規migration: なし
+- 新規migration: `20260731111025_harden_natori_remaining_privileges.sql` 1本
+  （ACLのみ。table data、RLS、policy変更なし）

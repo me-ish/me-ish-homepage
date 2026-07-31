@@ -15,6 +15,8 @@ const phase1ExpandName =
   "20260729115313_etorie_phase1_expand.sql";
 const phase1ConstraintsName =
   "20260729115323_etorie_phase1_project_constraints.sql";
+const remainingPrivilegesName =
+  "20260731111025_harden_natori_remaining_privileges.sql";
 const activeDirectory = path.join("supabase", "migrations");
 const legacyDirectory = path.join("supabase", "legacy-migrations");
 const baselinePath = path.join(activeDirectory, baselineName);
@@ -23,6 +25,10 @@ const phase1ExpandPath = path.join(activeDirectory, phase1ExpandName);
 const phase1ConstraintsPath = path.join(
   activeDirectory,
   phase1ConstraintsName,
+);
+const remainingPrivilegesPath = path.join(
+  activeDirectory,
+  remainingPrivilegesName,
 );
 const fixturePath = path.join("supabase", "fixtures", "etorie-baseline.sql");
 const phase1VerificationPath = path.join(
@@ -48,6 +54,7 @@ const [
   hardening,
   phase1Expand,
   phase1Constraints,
+  remainingPrivileges,
   phase1Verification,
   phase1SecurityVerification,
   fixture,
@@ -62,6 +69,7 @@ const [
     readFile(hardeningPath, "utf8"),
     readFile(phase1ExpandPath, "utf8"),
     readFile(phase1ConstraintsPath, "utf8"),
+    readFile(remainingPrivilegesPath, "utf8"),
     readFile(phase1VerificationPath, "utf8"),
     readFile(phase1SecurityVerificationPath, "utf8"),
     readFile(fixturePath, "utf8"),
@@ -124,6 +132,7 @@ const expectedActiveNames = [
   ...baselineEvidenceNames,
   phase1ExpandName,
   phase1ConstraintsName,
+  remainingPrivilegesName,
 ];
 const expectedActivePaths = expectedActiveNames.map(
   (name) => `supabase/migrations/${name}`,
@@ -142,7 +151,7 @@ check(
 );
 check(
   JSON.stringify(active) === JSON.stringify(expectedActiveNames),
-  "active migrations must be the ordered baseline, hardening, expand, and constraint lane",
+  "active migrations must be the ordered baseline, hardening, expand, constraint, and ACL lane",
 );
 check(
   JSON.stringify(active.slice(0, 2)) ===
@@ -156,7 +165,7 @@ check(
 check(
   JSON.stringify(manifest.activeMigrations) ===
     JSON.stringify(expectedActivePaths),
-  "manifest must declare the four current active migration paths",
+  "manifest must declare the five current active migration paths",
 );
 check(
   manifest.activeMigrationDirectory === "supabase/migrations" &&
@@ -175,6 +184,7 @@ checkDollarQuotes(baseline, "baseline");
 checkDollarQuotes(hardening, "hardening");
 checkDollarQuotes(phase1Expand, "P1-03 expand");
 checkDollarQuotes(phase1Constraints, "P1-03 constraints");
+checkDollarQuotes(remainingPrivileges, "P1-04 remaining privileges");
 check(
   /^\s*--[\s\S]*?\bbegin;\s/i.test(baseline) && /\bcommit;\s*$/i.test(baseline),
   "baseline must be transaction wrapped",
@@ -193,6 +203,11 @@ check(
   /^\s*--[\s\S]*?\bbegin;\s/i.test(phase1Constraints) &&
     /\bcommit;\s*$/i.test(phase1Constraints),
   "P1-03 constraints must be transaction wrapped",
+);
+check(
+  /^\s*--[\s\S]*?\bbegin;\s/i.test(remainingPrivileges) &&
+    /\bcommit;\s*$/i.test(remainingPrivileges),
+  "P1-04 remaining privilege hardening must be transaction wrapped",
 );
 check(
   !baseline.includes("portfolio_profiles"),
@@ -216,6 +231,7 @@ const activeSql = [
   hardening,
   phase1Expand,
   phase1Constraints,
+  remainingPrivileges,
 ].join("\n");
 const activeStatements = executableStatements(activeSql);
 const storageObjectPolicies = activeStatements.filter(
@@ -293,6 +309,55 @@ check(
     executableHardening,
   ),
   "hardening must grant only required processed_stripe_events operations",
+);
+
+const executableRemainingPrivileges = stripSqlComments(remainingPrivileges);
+const remainingPrivilegeStatements = executableStatements(
+  remainingPrivileges,
+);
+check(
+  remainingPrivilegeStatements.length === 4 &&
+    /^begin$/i.test(remainingPrivilegeStatements[0]) &&
+    /^revoke\b/i.test(remainingPrivilegeStatements[1]) &&
+    /^grant\b/i.test(remainingPrivilegeStatements[2]) &&
+    /^commit$/i.test(remainingPrivilegeStatements[3]),
+  "P1-04 remaining privilege hardening must contain only BEGIN, REVOKE, GRANT, COMMIT",
+);
+check(
+  /revoke\s+all\s+privileges\s+on\s+table\s+public\.processed_stripe_events\s+from\s+public,\s*anon,\s*authenticated,\s*service_role\s*;/i.test(
+    executableRemainingPrivileges,
+  ),
+  "P1-04 must revoke all processed_stripe_events privileges from client roles and service_role",
+);
+const finalProcessedStripeGrants = [
+  ...executableRemainingPrivileges.matchAll(
+    /grant\s+([^;]+?)\s+on\s+table\s+public\.processed_stripe_events\s+to\s+([^;]+);/gi,
+  ),
+];
+check(
+  finalProcessedStripeGrants.length === 1,
+  "P1-04 must declare exactly one final processed_stripe_events grant",
+);
+for (const grant of finalProcessedStripeGrants) {
+  const privileges = grant[1]
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .sort();
+  check(
+    JSON.stringify(privileges) ===
+      JSON.stringify(["delete", "insert", "select"]),
+    "P1-04 service_role privileges must be SELECT, INSERT, DELETE only",
+  );
+  check(
+    grant[2].trim().toLowerCase() === "service_role",
+    "P1-04 must grant processed_stripe_events only to service_role",
+  );
+}
+check(
+  !/\b(?:insert\s+into|update\s+public\.|delete\s+from|alter\s+table|create\s+policy|drop\s+policy)\b/i.test(
+    executableRemainingPrivileges,
+  ),
+  "P1-04 remaining privilege hardening must not change data, RLS, or policies",
 );
 
 const softDeleteDefinition = executableHardening.match(
@@ -374,6 +439,55 @@ check(
   ),
   "P1-04 security verification SQL must contain SELECT statements only",
 );
+const securityVerificationStatements = executableStatements(
+  phase1SecurityVerification,
+);
+const exactProcessedStripePrivileges = securityVerificationStatements.find(
+  (statement) =>
+    statement.includes("processed_stripe_events_privileges_exact"),
+);
+check(
+  exactProcessedStripePrivileges !== undefined &&
+    /\bbool_and\s*\(/i.test(exactProcessedStripePrivileges) &&
+    /\bhas_table_privilege\s*\(/i.test(exactProcessedStripePrivileges) &&
+    /values\s*\(\s*'service_role'\s*\),\s*\(\s*'anon'\s*\),\s*\(\s*'authenticated'\s*\)/i.test(
+      exactProcessedStripePrivileges,
+    ) &&
+    [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE",
+      "TRUNCATE",
+      "REFERENCES",
+      "TRIGGER",
+    ].every((privilege) =>
+      exactProcessedStripePrivileges.includes(`'${privilege}'`),
+    ) &&
+    /roles\.role_name\s*=\s*'service_role'[\s\S]*privileges\.privilege_name\s+in\s*\(\s*'SELECT'\s*,\s*'INSERT'\s*,\s*'DELETE'\s*\)/i.test(
+      exactProcessedStripePrivileges,
+    ) &&
+    /not\s+exists[\s\S]*acl\.grantee\s*=\s*0/i.test(
+      exactProcessedStripePrivileges,
+    ) &&
+    !/role_table_grants/i.test(exactProcessedStripePrivileges),
+  "P1-04 verification must compare all effective processed_stripe_events privileges and reject PUBLIC grants",
+);
+const unauthorizedDeleteProjectExecute = securityVerificationStatements.find(
+  (statement) =>
+    statement.includes("unauthorized_delete_project_execute_count"),
+);
+check(
+  unauthorizedDeleteProjectExecute !== undefined &&
+    /acl\.grantee\s*<>\s*p\.proowner/i.test(
+      unauthorizedDeleteProjectExecute,
+    ) &&
+    /coalesce\(pg_get_userbyid\(acl\.grantee\),\s*'PUBLIC'\)\s*<>\s*'service_role'/i.test(
+      unauthorizedDeleteProjectExecute,
+    ) &&
+    !/['"]postgres['"]/i.test(unauthorizedDeleteProjectExecute),
+  "P1-04 verification must allow the dynamic function owner and service_role only",
+);
 check(
   fixture.includes("fixture_confirmation_required") &&
     fixture.includes("production_fixture_target_blocked"),
@@ -385,7 +499,8 @@ check(
 );
 check(
   manifest.baselineMigration === baselineName &&
-    manifest.securityHardeningMigration === hardeningName,
+    manifest.securityHardeningMigration === hardeningName &&
+    manifest.remainingPrivilegesMigration === remainingPrivilegesName,
   "manifest migration filenames do not match",
 );
 check(
@@ -557,6 +672,7 @@ for (const [label, content] of [
   [hardeningName, hardening],
   [phase1ExpandName, phase1Expand],
   [phase1ConstraintsName, phase1Constraints],
+  [remainingPrivilegesName, remainingPrivileges],
   ["etorie-p1-03-selects.sql", phase1Verification],
   ["etorie-p1-04-security-selects.sql", phase1SecurityVerification],
   ["etorie-baseline.sql", fixture],
@@ -577,10 +693,7 @@ const baselinePairDigest = createHash("sha256")
   .update(`${baseline}\n${hardening}`, "utf8")
   .digest("hex");
 const activeLaneDigest = createHash("sha256")
-  .update(
-    `${baseline}\n${hardening}\n${phase1Expand}\n${phase1Constraints}`,
-    "utf8",
-  )
+  .update(activeSql, "utf8")
   .digest("hex");
 console.log(`PASS: ${failures.length} failures`);
 console.log(`Active migrations: ${active.length}`);

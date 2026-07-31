@@ -25,6 +25,12 @@ const hardening = readFileSync(
   ),
   "utf8",
 );
+const remainingPrivilegesName =
+  "20260731111025_harden_natori_remaining_privileges.sql";
+const remainingPrivileges = readFileSync(
+  path.join(migrationsDirectory, remainingPrivilegesName),
+  "utf8",
+);
 const verification = readFileSync(
   path.join(
     "supabase",
@@ -48,6 +54,16 @@ function statements(sql: string): string[] {
 }
 
 describe("Etorie P1-04 migration security contract", () => {
+  it("keeps the ACL correction as the fifth and final active migration", () => {
+    expect(migrationNames).toEqual([
+      "20260723111730_etorie_baseline.sql",
+      "20260723111741_baseline_security_hardening.sql",
+      "20260729115313_etorie_phase1_expand.sql",
+      "20260729115323_etorie_phase1_project_constraints.sql",
+      remainingPrivilegesName,
+    ]);
+  });
+
   it("does not recreate the legacy policy or any unconditional Storage write policy", () => {
     const storagePolicies = statements(activeSql).filter(
       (statement) =>
@@ -88,9 +104,9 @@ describe("Etorie P1-04 migration security contract", () => {
   });
 
   it("keeps processed_stripe_events client-inaccessible with only required service grants", () => {
-    const executable = stripSqlComments(hardening);
+    const executable = stripSqlComments(remainingPrivileges);
     expect(executable).toMatch(
-      /revoke\s+all\s+privileges\s+on\s+table\s+public\.processed_stripe_events\s+from\s+public,\s*anon,\s*authenticated\s*;/i,
+      /revoke\s+all\s+privileges\s+on\s+table\s+public\.processed_stripe_events\s+from\s+public,\s*anon,\s*authenticated,\s*service_role\s*;/i,
     );
     const grants = [
       ...executable.matchAll(
@@ -105,8 +121,12 @@ describe("Etorie P1-04 migration security contract", () => {
         .sort(),
     ).toEqual(["delete", "insert", "select"]);
     expect(grants[0][2].trim().toLowerCase()).toBe("service_role");
-    expect(executable).toMatch(
+    expect(stripSqlComments(hardening)).toMatch(
       /alter\s+table\s+public\.processed_stripe_events\s+enable\s+row\s+level\s+security/i,
+    );
+    expect(statements(remainingPrivileges)).toHaveLength(4);
+    expect(executable).not.toMatch(
+      /\b(?:insert\s+into|update\s+public\.|delete\s+from|alter\s+table|create\s+policy|drop\s+policy)\b/i,
     );
   });
 
@@ -145,6 +165,47 @@ describe("Etorie P1-04 migration security contract", () => {
     expect(
       executable.every((statement) => /^select\b/i.test(statement)),
     ).toBe(true);
+  });
+
+  it("verifies exact table privileges and excludes the dynamic function owner from violations", () => {
+    const executable = statements(verification);
+    const exactPrivileges = executable.find((statement) =>
+      statement.includes("processed_stripe_events_privileges_exact"),
+    );
+    const unauthorizedExecute = executable.find((statement) =>
+      statement.includes("unauthorized_delete_project_execute_count"),
+    );
+
+    expect(exactPrivileges).toMatch(/\bbool_and\s*\(/i);
+    expect(exactPrivileges).toMatch(/\bhas_table_privilege\s*\(/i);
+    expect(exactPrivileges).toMatch(
+      /values\s*\(\s*'service_role'\s*\),\s*\(\s*'anon'\s*\),\s*\(\s*'authenticated'\s*\)/i,
+    );
+    for (const privilege of [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE",
+      "TRUNCATE",
+      "REFERENCES",
+      "TRIGGER",
+    ]) {
+      expect(exactPrivileges).toContain(`'${privilege}'`);
+    }
+    expect(exactPrivileges).toMatch(
+      /roles\.role_name\s*=\s*'service_role'[\s\S]*privileges\.privilege_name\s+in\s*\(\s*'SELECT'\s*,\s*'INSERT'\s*,\s*'DELETE'\s*\)/i,
+    );
+    expect(exactPrivileges).toMatch(
+      /not\s+exists[\s\S]*acl\.grantee\s*=\s*0/i,
+    );
+    expect(exactPrivileges).not.toMatch(/role_table_grants/i);
+    expect(unauthorizedExecute).toMatch(
+      /acl\.grantee\s*<>\s*p\.proowner/i,
+    );
+    expect(unauthorizedExecute).toMatch(
+      /coalesce\(pg_get_userbyid\(acl\.grantee\),\s*'PUBLIC'\)\s*<>\s*'service_role'/i,
+    );
+    expect(unauthorizedExecute).not.toMatch(/['"]postgres['"]/i);
   });
 
   it("keeps service credentials out of the browser delivery module", () => {

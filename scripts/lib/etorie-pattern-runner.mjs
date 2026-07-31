@@ -139,10 +139,7 @@ export async function inspectMigrationLayout() {
   );
   assertLayout(
     JSON.stringify(manifest.requiredSequence) ===
-      JSON.stringify([
-        manifest.baselineMigration,
-        manifest.securityHardeningMigration,
-      ]),
+      JSON.stringify(activeFiles),
     "required migration sequence is invalid",
   );
   assertLayout(
