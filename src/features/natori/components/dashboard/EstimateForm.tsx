@@ -17,6 +17,7 @@ import {
   parseInquiryNote,
 } from "@/features/natori/lib/inquiryNoteView";
 import { isPreworkStatus, toISODate } from "@/features/natori/lib/projects";
+import { resolveLegacyEstimateRegistrationType } from "@/features/natori/lib/legacyEstimateRegistration";
 import {
   fetchOwnPricingPresets,
   seedDefaultPricingPresets,
@@ -30,22 +31,12 @@ import ProjectRegisterForm from "@/features/natori/components/dashboard/ProjectR
 import type {
   NatoriDeliveryPlan,
   NatoriProject,
-  NatoriConcreteProjectType,
 } from "@/features/natori/types/projects";
 import type {
-  NatoriEstimateCategory,
   NatoriEstimateLineItem,
   NatoriEstimateResult,
   NatoriPricingConfig,
 } from "@/features/natori/types/pricing";
-
-// 見積もりカテゴリ → 案件タイプ（タスク雛形）の対応。
-// 腰上は SD（ちびキャラ）ではなく通常イラストの工程で扱う。
-const CATEGORY_TO_TYPE: Record<NatoriEstimateCategory, NatoriConcreteProjectType> = {
-  bust_up: "icon",
-  waist_up: "illustration",
-  full_body: "standing",
-};
 
 type EstimateFormProps = {
   /**
@@ -352,7 +343,7 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
                 mode="estimate"
                 defaults={{
                   title: `${estimate.category.label}の案件`,
-                  type: CATEGORY_TO_TYPE[estimate.category.id],
+                  type: resolveLegacyEstimateRegistrationType(selectedInquiry),
                   amount: estimate.total,
                   deliveryPlan,
                   startDateISO,

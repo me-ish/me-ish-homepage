@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import EstimateForm from "@/features/natori/components/dashboard/EstimateForm";
+import EstimateWorkspace from "@/features/natori/components/dashboard/EstimateWorkspace";
 import Footer from "@/features/natori/components/Footer";
 import { requireNatoriAccess } from "@/features/natori/server/requireNatoriAdmin";
 
@@ -38,7 +38,7 @@ export default async function NatoriEstimatePage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-3 py-3 sm:px-6 sm:py-4">
-        <EstimateForm />
+        <EstimateWorkspace />
       </section>
 
       <Footer />
