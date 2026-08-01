@@ -85,6 +85,30 @@ export type NatoriProject = {
   deletedAt?: string;
   /** 非公開バケットから都度発行した短時間署名URL */
   referenceImageUrls?: string[];
+  /** 表示名付きの参考画像。Storage path は含めない。 */
+  referenceFiles?: NatoriProjectReferenceFileView[];
+  /** 外部参照リンク（sort_order 昇順） */
+  referenceLinks?: NatoriProjectReferenceLinkView[];
+  /**
+   * 受付時の原回答（RequestData V1）。legacy 案件では undefined。
+   * 管理画面では読み取り専用として扱い、書き戻さない。
+   */
+  requestData?: unknown;
+};
+
+export type NatoriProjectReferenceFileView = {
+  /** 短時間署名URL。保存も log 出力もしない。 */
+  url: string;
+  /** Storage path を露出しない表示名 */
+  name: string;
+};
+
+export type NatoriProjectReferenceLinkView = {
+  id: string;
+  url: string;
+  label: string | null;
+  sortOrder: number;
+  createdAt: string;
 };
 
 export type NatoriProjectStatusMeta = {

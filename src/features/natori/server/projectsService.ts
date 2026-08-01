@@ -6,6 +6,7 @@ import { isNatoriConcreteProjectType } from "@/features/natori/lib/projectReadMo
 import { confirmNatoriProjectTypeViaRpc } from "@/features/natori/server/intakeRpcAdapter";
 import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
 import { signPortfolioReferenceImage } from "@/features/natori/server/portfolioSiteService";
+import { selectReferenceLinksForProjects } from "@/features/natori/server/referenceLinkTableAdapter";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type {
   NatoriConcreteProjectType,
@@ -31,6 +32,11 @@ export type NatoriAdminProjectRow = {
   next_action: string;
   note: string | null;
   deleted_at: string | null;
+  /**
+   * P1-06 の受付で保存される原回答（RequestData V1）。legacy 案件は NULL。
+   * 管理操作では読み取り専用として扱い、決して書き戻さない。
+   */
+  request_data?: unknown;
 };
 
 export type NatoriAdminTaskRow = {
@@ -46,8 +52,32 @@ export type NatoriAdminTaskRow = {
 
 export type NatoriAdminReferenceFile = {
   project_id: string;
+  /** 非公開バケットの短時間署名URL。DB へも log へも保存しない。 */
   url: string;
+  /**
+   * 画面表示用の安全なラベル。Storage path をそのまま出さず、
+   * object UUID の先頭だけを識別子として見せる。
+   */
+  name: string;
 };
+
+/** 表示用の外部参照リンク（一覧 API のレスポンス形）。 */
+export type NatoriAdminReferenceLink = {
+  project_id: string;
+  id: string;
+  url: string;
+  label: string | null;
+  sort_order: number;
+  created_at: string;
+};
+
+/** `{projectId}/{fileUuid}.webp` から、path を露出しない短い表示名を作る。 */
+export function referenceFileDisplayName(storagePath: string, index: number): string {
+  const fileName = storagePath.split("/").pop() ?? "";
+  const withoutExtension = fileName.replace(/\.webp$/u, "");
+  const shortId = withoutExtension.slice(0, 8);
+  return shortId ? `資料${index + 1}（${shortId}）` : `資料${index + 1}`;
+}
 
 export const NATORI_PROJECT_STATUSES: ReadonlySet<string> = new Set([
   "inquiry",
@@ -77,6 +107,75 @@ export const NATORI_PROJECT_DETAILS_ALLOWED_FIELDS: ReadonlySet<string> = new Se
   "due_date",
   "note",
 ]);
+
+/**
+ * 管理補正から絶対に書き換えさせない列。
+ * request_data は受付時の原回答（immutable）なので、暗黙に無視するのではなく
+ * payload に含まれていた時点で拒否する。
+ */
+export const NATORI_PROJECT_IMMUTABLE_FIELDS: ReadonlySet<string> = new Set([
+  "request_data",
+  "id",
+  "user_id",
+  "created_at",
+  "deleted_at",
+  "status",
+  "next_action",
+  "payment_confirmed_at",
+  "paid_at",
+  "paid_amount",
+  "completed_at",
+]);
+
+const NATORI_DELIVERY_PLAN_VALUES: ReadonlySet<string> = new Set([
+  "normal",
+  "rush_14_days",
+  "rush_7_days",
+]);
+
+function isValidISODateValue(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  // UTC で組み立てて比較し、ローカル timezone による前日/翌日ずれを避ける。
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+/**
+ * 管理補正値の server 側検証。client を信用せず、
+ * amount は null / 0 / 正の安全整数だけ、due_date は null / YYYY-MM-DD だけ通す。
+ */
+export function validateNatoriProjectDetailsValue(
+  key: string,
+  value: unknown
+): boolean {
+  switch (key) {
+    case "amount":
+      if (value === null) return true;
+      return (
+        typeof value === "number" &&
+        Number.isSafeInteger(value) &&
+        value >= 0
+      );
+    case "due_date":
+    case "start_date":
+      if (value === null) return true;
+      return typeof value === "string" && isValidISODateValue(value);
+    case "delivery_plan":
+      return typeof value === "string" && NATORI_DELIVERY_PLAN_VALUES.has(value);
+    case "client_name":
+    case "title":
+      return typeof value === "string" && value.trim().length > 0;
+    case "note":
+      return value === null || typeof value === "string";
+    default:
+      return false;
+  }
+}
 
 function existingTaskDone(
   tasksByKey: Map<string, NatoriAdminTaskRow>,
@@ -183,6 +282,7 @@ export type ListNatoriAdminProjectsResult =
       archivedProjects: NatoriAdminProjectRow[];
       tasks: NatoriAdminTaskRow[];
       referenceFiles: NatoriAdminReferenceFile[];
+      referenceLinks: NatoriAdminReferenceLink[];
     }
   | { kind: "fetch-projects-error" }
   | { kind: "fetch-tasks-error" };
@@ -233,6 +333,7 @@ export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjects
       archivedProjects: archivedProjectRows,
       tasks: [],
       referenceFiles: [],
+      referenceLinks: [],
     };
   }
 
@@ -262,10 +363,34 @@ export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjects
   }
 
   const referenceFiles: NatoriAdminReferenceFile[] = [];
+  const perProjectIndex = new Map<string, number>();
   for (const row of (references ?? []) as Array<{ project_id: string; storage_path: string }>) {
+    const index = perProjectIndex.get(row.project_id) ?? 0;
+    perProjectIndex.set(row.project_id, index + 1);
+    // 署名の失敗は資料1件が見えなくなるだけで、案件表示自体は続行する。
     const url = await signPortfolioReferenceImage(row.storage_path, 60 * 60);
-    if (url) referenceFiles.push({ project_id: row.project_id, url });
+    if (url) {
+      referenceFiles.push({
+        project_id: row.project_id,
+        url,
+        name: referenceFileDisplayName(row.storage_path, index),
+      });
+    }
   }
+
+  // 外部参照リンクの取得失敗は詳細表示の一部が欠けるだけなので、案件一覧は返す。
+  const linkResult = await selectReferenceLinksForProjects(projectIds);
+  const referenceLinks: NatoriAdminReferenceLink[] =
+    linkResult.kind === "ok"
+      ? linkResult.value.map((row) => ({
+          project_id: row.project_id,
+          id: row.id,
+          url: row.url,
+          label: row.label,
+          sort_order: row.sort_order,
+          created_at: row.created_at,
+        }))
+      : [];
 
   return {
     kind: "ok",
@@ -273,6 +398,7 @@ export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjects
     archivedProjects: archivedProjectRows,
     tasks: normalizedTasks,
     referenceFiles,
+    referenceLinks,
   };
 }
 
@@ -413,7 +539,11 @@ export type NatoriProjectTransitionResult =
 export type PatchNatoriProjectDetailsResult =
   | NatoriProjectMutationResult
   | { kind: "no-editable-fields" }
-  | { kind: "invalid-type-change" };
+  | { kind: "invalid-type-change" }
+  /** request_data など書き換え不可の列が payload に含まれていた。 */
+  | { kind: "immutable-field"; field: string }
+  /** 値が列の契約（amount 3状態 / ISO date など）に合わない。 */
+  | { kind: "invalid-value"; field: string };
 
 export async function setNatoriProjectTaskDone(
   projectId: string,
@@ -525,6 +655,20 @@ export async function patchNatoriProjectDetails(
   projectId: string,
   patch: Record<string, unknown>
 ): Promise<PatchNatoriProjectDetailsResult> {
+  // 原回答や状態遷移列は、暗黙に無視せず明示的に拒否する。
+  for (const key of Object.keys(patch)) {
+    if (NATORI_PROJECT_IMMUTABLE_FIELDS.has(key)) {
+      return { kind: "immutable-field", field: key };
+    }
+  }
+  for (const [key, value] of Object.entries(patch)) {
+    if (key === "type") continue;
+    if (!NATORI_PROJECT_DETAILS_ALLOWED_FIELDS.has(key)) continue;
+    if (!validateNatoriProjectDetailsValue(key, value)) {
+      return { kind: "invalid-value", field: key };
+    }
+  }
+
   const ownerId = await resolveNatoriActingUserId();
   if (!ownerId) return { kind: "not-found" };
   const admin = supabaseAdmin();
