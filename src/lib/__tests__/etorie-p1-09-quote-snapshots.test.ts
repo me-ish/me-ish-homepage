@@ -6,7 +6,7 @@ const migration = readFileSync(
   path.join(
     "supabase",
     "migrations",
-    "20260802084500_etorie_quote_snapshots.sql"
+    "20260801234935_etorie_quote_snapshots_retry.sql"
   ),
   "utf8"
 );
