@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import EstimateForm from "@/features/natori/components/dashboard/EstimateForm";
@@ -11,6 +11,7 @@ import {
   fetchOwnPricingPresets,
   seedDefaultPricingPresets,
 } from "@/features/natori/data/supabasePricing";
+import { resolveEstimateWorkspaceMode } from "@/features/natori/lib/estimateWorkspaceMode";
 import { createDefaultNatoriPricingConfig } from "@/features/natori/lib/pricing";
 import type { NatoriPricingConfigWithStructured } from "@/features/natori/lib/pricingSuggestionConfig";
 import type { NatoriProject } from "@/features/natori/types/projects";
@@ -62,8 +63,6 @@ export default function EstimateWorkspace() {
     };
   }, []);
 
-  const isStructured = useMemo(() => Boolean(project?.requestData), [project]);
-
   if (loading) {
     return (
       <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-gray-200 bg-white">
@@ -74,8 +73,6 @@ export default function EstimateWorkspace() {
       </div>
     );
   }
-
-  if (!inquiryId) return <EstimateForm />;
 
   if (error) {
     return (
@@ -91,7 +88,15 @@ export default function EstimateWorkspace() {
     );
   }
 
-  if (!project) {
+  const mode = resolveEstimateWorkspaceMode({
+    inquiryId,
+    projectFound: Boolean(project),
+    hasRequestData: Boolean(project?.requestData),
+  });
+
+  if (mode === "manual" || mode === "legacy") return <EstimateForm />;
+
+  if (mode === "not-found" || !project) {
     return (
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
         <h2 className="font-bold text-amber-900">問い合わせが見つかりません</h2>
@@ -104,8 +109,6 @@ export default function EstimateWorkspace() {
       </div>
     );
   }
-
-  if (!isStructured) return <EstimateForm />;
 
   return (
     <div className="space-y-5">
