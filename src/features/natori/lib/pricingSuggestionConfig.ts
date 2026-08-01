@@ -6,10 +6,28 @@ export type NatoriPricingConfigWithStructured = NatoriPricingConfig & {
   structuredPricing?: unknown;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * P1-08以前に保存された、schemaVersionだけを持たないstructured料金を読む。
+ * currency/itemsの内容検証はV1 readerへ委譲し、壊れた値や別shapeは採用しない。
+ */
+export function readVersionlessStructuredPricingConfig(
+  value: unknown
+): NatoriPricingConfigV1 | null {
+  if (!isRecord(value) || value.schemaVersion !== undefined) return null;
+  return readNatoriPricingConfigV1({ ...value, schemaVersion: 1 });
+}
+
 export function readStructuredPricingConfig(
   legacy: NatoriPricingConfigWithStructured
 ): NatoriPricingConfigV1 | null {
-  return readNatoriPricingConfigV1(legacy.structuredPricing);
+  return (
+    readNatoriPricingConfigV1(legacy.structuredPricing) ??
+    readVersionlessStructuredPricingConfig(legacy.structuredPricing)
+  );
 }
 
 /**
