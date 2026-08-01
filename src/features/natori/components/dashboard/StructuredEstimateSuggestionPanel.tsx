@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import { createNatoriEstimateSuggestionV1 } from "@/features/natori/lib/pricingSuggestion";
 import { createStructuredSuggestionConfigFromLegacy } from "@/features/natori/lib/pricingSuggestionConfig";
@@ -27,14 +28,47 @@ export default function StructuredEstimateSuggestionPanel({
   deliveryPlan,
   onStateChange,
 }: Props) {
-  if (!project?.requestData) {
-    onStateChange?.({ structured: false, canIssueQuote: true, total: null });
-    return null;
-  }
+  const result = useMemo(() => {
+    if (!project?.requestData) {
+      return { kind: "legacy" as const };
+    }
 
-  const request = readNatoriRequestData(project.requestData);
-  if (!request.success) {
-    onStateChange?.({ structured: true, canIssueQuote: false, total: null });
+    const request = readNatoriRequestData(project.requestData);
+    if (!request.success) {
+      return { kind: "invalid" as const };
+    }
+
+    return {
+      kind: "structured" as const,
+      suggestion: createNatoriEstimateSuggestionV1({
+        projectType: project.type,
+        requestData: request.data,
+        pricingConfig: createStructuredSuggestionConfigFromLegacy(pricingConfig),
+        deliveryPlan,
+      }),
+    };
+  }, [deliveryPlan, pricingConfig, project]);
+
+  useEffect(() => {
+    if (!onStateChange) return;
+    if (result.kind === "legacy") {
+      onStateChange({ structured: false, canIssueQuote: true, total: null });
+      return;
+    }
+    if (result.kind === "invalid") {
+      onStateChange({ structured: true, canIssueQuote: false, total: null });
+      return;
+    }
+    onStateChange({
+      structured: true,
+      canIssueQuote: result.suggestion.canIssueQuote,
+      total: result.suggestion.total,
+    });
+  }, [onStateChange, result]);
+
+  if (result.kind === "legacy") return null;
+
+  if (result.kind === "invalid") {
     return (
       <section className="rounded-2xl border border-red-200 bg-red-50 p-4">
         <div className="flex gap-3">
@@ -50,17 +84,7 @@ export default function StructuredEstimateSuggestionPanel({
     );
   }
 
-  const suggestion = createNatoriEstimateSuggestionV1({
-    projectType: project.type,
-    requestData: request.data,
-    pricingConfig: createStructuredSuggestionConfigFromLegacy(pricingConfig),
-    deliveryPlan,
-  });
-  onStateChange?.({
-    structured: true,
-    canIssueQuote: suggestion.canIssueQuote,
-    total: suggestion.total,
-  });
+  const { suggestion } = result;
 
   return (
     <section className="space-y-4 rounded-2xl border border-violet-200 bg-violet-50/50 p-4">
