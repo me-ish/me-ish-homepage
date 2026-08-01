@@ -86,6 +86,52 @@ beforeEach(() => {
   });
 });
 
+describe("createStructuredInquiryProject owner boundary (P1-06)", () => {
+  const PUBLIC_OWNER_ID = "6a2c0c31-1a3e-4c02-8a1f-6b0a51e3d7c4";
+
+  it("uses an explicitly supplied owner without consulting the session resolver", async () => {
+    await expect(
+      createStructuredInquiryProject({
+        submissionId: PROJECT_ID,
+        ownerId: PUBLIC_OWNER_ID,
+        submission: consultationSubmission,
+        referencePaths: [],
+        referenceLinks: [],
+      }),
+    ).resolves.toEqual({ kind: "ok", projectId: PROJECT_ID });
+
+    expect(mockResolveOwner).not.toHaveBeenCalled();
+    expect(mockCreateIntake).toHaveBeenCalledWith(
+      expect.objectContaining({ ownerId: PUBLIC_OWNER_ID }),
+    );
+  });
+
+  it("rejects a malformed explicit owner before reaching the RPC", async () => {
+    await expect(
+      createStructuredInquiryProject({
+        submissionId: PROJECT_ID,
+        ownerId: "natori-owner",
+        submission: consultationSubmission,
+        referencePaths: [],
+        referenceLinks: [],
+      }),
+    ).resolves.toEqual({ kind: "invalid-input" });
+    expect(mockCreateIntake).not.toHaveBeenCalled();
+  });
+
+  it("never writes a note field (raw answers stay in request_data only)", async () => {
+    await createStructuredInquiryProject({
+      submissionId: PROJECT_ID,
+      ownerId: PUBLIC_OWNER_ID,
+      submission: consultationSubmission,
+      referencePaths: [],
+      referenceLinks: [],
+    });
+    expect(mockCreateIntake.mock.calls[0][0]).not.toHaveProperty("note");
+    expect(mockCreateAdminProject).not.toHaveBeenCalled();
+  });
+});
+
 describe("createStructuredInquiryProject", () => {
   it("validates and sends an undecided task-free project with normalized links", async () => {
     const referencePaths = [REFERENCE_PATH];
@@ -174,7 +220,7 @@ describe("createStructuredInquiryProject", () => {
         referencePaths,
         referenceLinks: [],
       }),
-    ).resolves.toEqual({ kind: "db-error" });
+    ).resolves.toEqual({ kind: "unresolved" });
     expect(mockDeleteReferences).not.toHaveBeenCalled();
 
     vi.clearAllMocks();

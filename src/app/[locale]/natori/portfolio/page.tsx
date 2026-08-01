@@ -5,6 +5,7 @@
 import type { Metadata } from "next";
 import PortfolioLanding from "@/features/natori/components/portfolio/PortfolioLanding";
 import { loadPortfolioContent } from "@/features/natori/server/portfolioSiteService";
+import { isPublicStructuredIntakeEnabled } from "@/features/natori/server/publicIntakeRollout";
 
 export const dynamic = "force-dynamic";
 
@@ -30,5 +31,11 @@ export const metadata: Metadata = {
 
 export default async function Page() {
   const content = await loadPortfolioContent();
-  return <PortfolioLanding content={content} />;
+  // 既定は無効。NATORI_PUBLIC_INTAKE_V2=1 を設定した環境だけ構造化受付になる。
+  return (
+    <PortfolioLanding
+      content={content}
+      structuredIntake={isPublicStructuredIntakeEnabled()}
+    />
+  );
 }

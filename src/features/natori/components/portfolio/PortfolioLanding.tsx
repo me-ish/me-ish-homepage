@@ -21,6 +21,7 @@ export default function PortfolioLanding({
   variant = "full",
   demoContact,
   flatPlaceholders,
+  structuredIntake,
 }: {
   content: PortfolioContent;
   variant?: PortfolioVariant;
@@ -28,6 +29,8 @@ export default function PortfolioLanding({
   demoContact?: boolean;
   /** 画像なしのプレースホルダーをキャラSVGではなくベタ塗りにする（デモ用） */
   flatPlaceholders?: boolean;
+  /** P1-06 構造化受付の rollout guard。server component から渡す */
+  structuredIntake?: boolean;
 }) {
   const showcase = variant === "showcase";
   return (
@@ -44,7 +47,11 @@ export default function PortfolioLanding({
         <>
           <PortfolioPricing content={content} />
           <PortfolioGuidelines content={content} />
-          <PortfolioCommissionForm content={content} demoMode={demoContact} />
+          <PortfolioCommissionForm
+            content={content}
+            demoMode={demoContact}
+            structuredIntake={structuredIntake}
+          />
           {content.commissionOpen ? <PortfolioMobileCta /> : null}
         </>
       )}

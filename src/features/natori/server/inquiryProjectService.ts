@@ -108,6 +108,12 @@ const structuredReferenceLinkSchema = z.strictObject({
 const structuredInquiryInputSchema = z
   .strictObject({
     submissionId: z.uuid().transform((value) => value.toLowerCase()),
+    /**
+     * 呼び出し元が owner を明示する経路。公開受付 route は
+     * resolvePublicIntakeOwnerId の結果を必ずここへ渡し、session を owner 候補に
+     * しない。未指定のときだけ管理系の session-first resolver へ委譲する。
+     */
+    ownerId: z.uuid().optional(),
     submission: natoriRequestSubmissionV1Schema,
     referencePaths: z
       .array(z.string().trim().length(NATORI_REFERENCE_PATH_LENGTH))
@@ -144,7 +150,13 @@ export type CreateStructuredInquiryProjectResult =
   | { kind: "ok"; projectId: string }
   | { kind: "invalid-input" }
   | { kind: "no-owner" }
-  | { kind: "db-error" };
+  /** DB が明確に拒否した。未参照 object は best-effort で cleanup 済み。 */
+  | { kind: "db-error" }
+  /**
+   * 同一 envelope の1回 retry 後も結果が不明。commit 済みかもしれないので
+   * Storage object は保持し、呼び出し元は ambiguous upstream として扱う。
+   */
+  | { kind: "unresolved" };
 
 function normalizeReferenceLinks(
   links: Array<z.output<typeof structuredReferenceLinkSchema>>
@@ -188,12 +200,14 @@ export async function createStructuredInquiryProject(
     return { kind: "invalid-input" };
   }
 
-  let ownerId: string | null;
-  try {
-    ownerId = await resolveNatoriActingUserId();
-  } catch {
-    await cleanupUnlinkedReferencePaths(referencePaths);
-    return { kind: "no-owner" };
+  let ownerId: string | null = parsed.data.ownerId ?? null;
+  if (!ownerId) {
+    try {
+      ownerId = await resolveNatoriActingUserId();
+    } catch {
+      await cleanupUnlinkedReferencePaths(referencePaths);
+      return { kind: "no-owner" };
+    }
   }
   if (!ownerId) {
     await cleanupUnlinkedReferencePaths(referencePaths);
@@ -215,10 +229,10 @@ export async function createStructuredInquiryProject(
     return { kind: "db-error" };
   }
   if (result.kind === "unknown") {
-    return { kind: "db-error" };
+    return { kind: "unresolved" };
   }
   if (result.projectId !== submissionId) {
-    return { kind: "db-error" };
+    return { kind: "unresolved" };
   }
   return { kind: "ok", projectId: result.projectId };
 }
