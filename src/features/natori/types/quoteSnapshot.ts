@@ -1,5 +1,6 @@
 import type { NatoriRequestDataV1 } from "@/features/natori/types/request";
 import type { NatoriConcreteProjectType } from "@/features/natori/types/projects";
+import type { NatoriReviewWarningSeverityV1 } from "@/features/natori/types/pricingSuggestion";
 
 export const NATORI_QUOTE_PRICING_SNAPSHOT_SCHEMA_VERSION = 1 as const;
 
@@ -23,6 +24,15 @@ export type NatoriQuoteSnapshotItemV1 = {
   note: string | null;
 };
 
+export type NatoriQuoteReviewItemSnapshotV1 = {
+  code: string;
+  severity: NatoriReviewWarningSeverityV1;
+  title: string;
+  action: string;
+  sourceField: string;
+  ruleId: string;
+};
+
 export type NatoriQuoteReviewResolutionV1 = {
   code: string;
   ruleId: string;
@@ -39,6 +49,7 @@ export type NatoriQuotePricingSnapshotV1 = {
   pricingPresetNameSnapshot: string;
   projectTypeSnapshot: NatoriConcreteProjectType;
   items: NatoriQuoteSnapshotItemV1[];
+  reviewItems: NatoriQuoteReviewItemSnapshotV1[];
   reviewResolutions: NatoriQuoteReviewResolutionV1[];
   subtotalBeforePercentage: number;
   total: number;
