@@ -44,6 +44,16 @@ function validPayload() {
           note: "管理者確認済み",
         },
       ],
+      reviewItems: [
+        {
+          code: "publication_policy_requires_review",
+          severity: "attention",
+          title: "公開条件の確認",
+          action: "公開予定日を確認してください。",
+          sourceField: "publicationPolicy",
+          ruleId: "publication:delayed",
+        },
+      ],
       reviewResolutions: [
         {
           code: "publication_policy_requires_review",
@@ -124,6 +134,28 @@ describe("validateNatoriQuoteIssuePayloadV1", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.issues.map((issue) => issue.code)).toContain("request_snapshot_invalid");
+    }
+  });
+
+  it("rejects unresolved review items", () => {
+    const payload = validPayload();
+    payload.pricingSnapshot.reviewResolutions = [];
+
+    const result = validateNatoriQuoteIssuePayloadV1(payload);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.issues.map((issue) => issue.code)).toContain("unresolved_review_item");
+    }
+  });
+
+  it("rejects orphan review resolutions", () => {
+    const payload = validPayload();
+    payload.pricingSnapshot.reviewItems = [];
+
+    const result = validateNatoriQuoteIssuePayloadV1(payload);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.issues.map((issue) => issue.code)).toContain("orphan_review_resolution");
     }
   });
 });
