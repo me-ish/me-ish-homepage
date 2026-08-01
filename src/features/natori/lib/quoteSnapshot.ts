@@ -50,16 +50,21 @@ function readItem(
   const unitAmount = value.unitAmount;
   const amount = value.amount;
   const sourceFields = value.sourceFields;
+  const hasValidQuantity =
+    typeof quantity === "number" &&
+    Number.isSafeInteger(quantity) &&
+    quantity >= 1 &&
+    quantity <= 100;
 
   if (!id || id.length > 100) push(issues, `${path}.id`, "item_id_invalid", "明細IDが不正です。");
   if (!ITEM_KINDS.has(String(value.kind))) push(issues, `${path}.kind`, "item_kind_invalid", "明細種別が不正です。");
   if (!labelSnapshot || labelSnapshot.length > 200) push(issues, `${path}.labelSnapshot`, "item_label_invalid", "明細名が不正です。");
-  if (!Number.isSafeInteger(quantity) || Number(quantity) < 1 || Number(quantity) > 100) {
+  if (!hasValidQuantity) {
     push(issues, `${path}.quantity`, "item_quantity_invalid", "数量は1〜100の整数である必要があります。");
   }
   if (!isSafeMoney(unitAmount)) push(issues, `${path}.unitAmount`, "item_unit_amount_invalid", "単価が不正です。");
   if (!isSafeMoney(amount)) push(issues, `${path}.amount`, "item_amount_invalid", "金額が不正です。");
-  if (isSafeMoney(unitAmount) && Number.isSafeInteger(quantity) && isSafeMoney(amount) && amount !== unitAmount * quantity) {
+  if (isSafeMoney(unitAmount) && hasValidQuantity && isSafeMoney(amount) && amount !== unitAmount * quantity) {
     push(issues, `${path}.amount`, "item_amount_mismatch", "金額が単価×数量と一致しません。");
   }
   if (typeof value.automatic !== "boolean") push(issues, `${path}.automatic`, "item_automatic_invalid", "automaticが不正です。");
