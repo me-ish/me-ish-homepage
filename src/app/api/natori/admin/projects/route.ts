@@ -4,6 +4,7 @@ import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAd
 import {
   closeNatoriProject,
   confirmNatoriProjectPayment,
+  confirmNatoriProjectType,
   createNatoriAdminProject,
   deleteNatoriAdminProject,
   listNatoriAdminProjects,
@@ -50,6 +51,7 @@ export async function GET() {
         archivedProjects: result.archivedProjects,
         tasks: result.tasks,
         referenceFiles: result.referenceFiles,
+        referenceLinks: result.referenceLinks,
       });
   }
 }
@@ -202,8 +204,48 @@ export async function PATCH(request: Request) {
           { error: "Project type confirmation conflicted with the current state" },
           { status: 409 }
         );
+      case "immutable-field":
+        // request_data 等は暗黙に無視せず拒否する。列名以外は返さない。
+        return NextResponse.json(
+          { error: "immutable_field", field: result.field },
+          { status: 400 }
+        );
+      case "invalid-value":
+        return NextResponse.json(
+          { error: "invalid_request", field: result.field },
+          { status: 400 }
+        );
       case "ok":
         return NextResponse.json({ ok: true });
+    }
+  }
+
+  // 案件種別の確定は task 生成を伴うため、通常の project update とは分離する。
+  if (kind === "confirm-type") {
+    const projectType = readString(payload.projectType);
+    if (!projectType || !NATORI_PROJECT_TYPES.has(projectType)) {
+      return NextResponse.json({ error: "invalid_request" }, { status: 400 });
+    }
+    const result = await confirmNatoriProjectType(
+      projectId,
+      projectType as NatoriConcreteProjectType
+    );
+    switch (result.kind) {
+      case "db-error":
+        return NextResponse.json({ error: "temporarily_unavailable" }, { status: 503 });
+      case "not-found":
+        return NextResponse.json({ error: "not_found" }, { status: 404 });
+      case "conflict":
+        return NextResponse.json({ error: "conflict" }, { status: 409 });
+      case "invalid-type":
+        return NextResponse.json({ error: "invalid_request" }, { status: 400 });
+      case "ok":
+        return NextResponse.json({
+          ok: true,
+          alreadyConfirmed: result.alreadyConfirmed,
+          projectType: result.projectType,
+          taskCount: result.taskCount,
+        });
     }
   }
 

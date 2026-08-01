@@ -4,6 +4,8 @@ import type {
   NatoriConcreteProjectType,
   NatoriProject,
   NatoriProjectPriority,
+  NatoriProjectReferenceFileView,
+  NatoriProjectReferenceLinkView,
   NatoriProjectStatus,
   NatoriProjectTask,
   NatoriTaskStage,
@@ -12,6 +14,7 @@ import {
   NATORI_CONCRETE_PROJECT_TYPES,
   readNatoriProjectType,
 } from "@/features/natori/lib/projectReadModel";
+import { sortNatoriReferenceLinks } from "@/features/natori/lib/projectReferenceLinks";
 
 export type ProjectRow = {
   id: string;
@@ -37,6 +40,19 @@ export type ProjectRow = {
   // Optional — added by 20260717_natori_client_email_and_mail_logs.sql.
   client_email?: string | null;
   deleted_at?: string | null;
+  // Optional — added by the Phase 1 expand migration. Legacy rows return null.
+  request_data?: unknown;
+};
+
+export type ReferenceFileRow = { project_id: string; url: string; name?: string };
+
+export type ReferenceLinkRow = {
+  project_id: string;
+  id: string;
+  url: string;
+  label: string | null;
+  sort_order: number;
+  created_at: string;
 };
 
 export type TaskRow = {
@@ -65,7 +81,11 @@ async function patchNatoriAdminProject(payload: Record<string, unknown>): Promis
 export function rowToProject(
   row: ProjectRow,
   taskRows: TaskRow[],
-  referenceImageUrls: string[]
+  referenceImageUrls: string[],
+  extras: {
+    referenceFiles?: NatoriProjectReferenceFileView[];
+    referenceLinks?: NatoriProjectReferenceLinkView[];
+  } = {}
 ): NatoriProject {
   const tasks: NatoriProjectTask[] = taskRows
     .slice()
@@ -99,6 +119,9 @@ export function rowToProject(
     completedAt: row.completed_at ?? undefined,
     deletedAt: row.deleted_at ?? undefined,
     referenceImageUrls,
+    referenceFiles: extras.referenceFiles ?? [],
+    referenceLinks: extras.referenceLinks ?? [],
+    requestData: row.request_data ?? undefined,
     tasks,
   };
 }
@@ -118,28 +141,52 @@ export async function fetchNatoriProjectCollection(): Promise<{
     projects?: ProjectRow[];
     archivedProjects?: ProjectRow[];
     tasks?: TaskRow[];
-    referenceFiles?: Array<{ project_id: string; url: string }>;
+    referenceFiles?: ReferenceFileRow[];
+    referenceLinks?: ReferenceLinkRow[];
   };
 
   const projectRows = payload.projects ?? [];
   const taskRows = payload.tasks ?? [];
   const tasksByProject = new Map<string, TaskRow[]>();
   const referencesByProject = new Map<string, string[]>();
+  const referenceFilesByProject = new Map<string, NatoriProjectReferenceFileView[]>();
+  const referenceLinksByProject = new Map<string, NatoriProjectReferenceLinkView[]>();
   for (const task of taskRows) {
     const list = tasksByProject.get(task.project_id) ?? [];
     list.push(task);
     tasksByProject.set(task.project_id, list);
   }
-  for (const reference of payload.referenceFiles ?? []) {
-    const list = referencesByProject.get(reference.project_id) ?? [];
-    list.push(reference.url);
-    referencesByProject.set(reference.project_id, list);
+  for (const [index, reference] of (payload.referenceFiles ?? []).entries()) {
+    const urls = referencesByProject.get(reference.project_id) ?? [];
+    urls.push(reference.url);
+    referencesByProject.set(reference.project_id, urls);
+
+    const files = referenceFilesByProject.get(reference.project_id) ?? [];
+    files.push({ url: reference.url, name: reference.name ?? `資料${index + 1}` });
+    referenceFilesByProject.set(reference.project_id, files);
+  }
+  for (const link of payload.referenceLinks ?? []) {
+    const list = referenceLinksByProject.get(link.project_id) ?? [];
+    list.push({
+      id: link.id,
+      url: link.url,
+      label: link.label,
+      sortOrder: link.sort_order,
+      createdAt: link.created_at,
+    });
+    referenceLinksByProject.set(link.project_id, list);
   }
   const mapRow = (row: ProjectRow) =>
     rowToProject(
       row,
       tasksByProject.get(row.id) ?? [],
-      referencesByProject.get(row.id) ?? []
+      referencesByProject.get(row.id) ?? [],
+      {
+        referenceFiles: referenceFilesByProject.get(row.id) ?? [],
+        referenceLinks: sortNatoriReferenceLinks(
+          referenceLinksByProject.get(row.id) ?? []
+        ),
+      }
     );
   return {
     projects: projectRows.map(mapRow).filter((project) => !project.deletedAt),
@@ -223,10 +270,12 @@ export type UpdateNatoriProjectDetailsInput = {
   clientName?: string;
   title?: string;
   type?: NatoriConcreteProjectType;
-  amount?: number;
+  /** null は「未確定」。0（無料）とは区別する。 */
+  amount?: number | null;
   deliveryPlan?: NatoriDeliveryPlan;
   startDate?: string | null;
-  dueDate?: string;
+  /** null は「未確定」。 */
+  dueDate?: string | null;
   note?: string | null;
 };
 
@@ -285,10 +334,16 @@ export function normalizeNatoriProjectDetailsPatch(
     patch.type = input.type;
   }
   if (input.amount !== undefined) {
-    if (!Number.isFinite(input.amount) || input.amount < 0) {
-      throw new NatoriProjectDetailsValidationError("金額は0以上の数値で指定してください。");
+    if (input.amount === null) {
+      // 未確定。0（無料）と混同しないよう NULL のまま保存する。
+      patch.amount = null;
+    } else if (!Number.isSafeInteger(input.amount) || input.amount < 0) {
+      throw new NatoriProjectDetailsValidationError(
+        "金額は0以上の整数で指定してください（未確定は空欄にしてください）。"
+      );
+    } else {
+      patch.amount = input.amount;
     }
-    patch.amount = Math.round(input.amount);
   }
   if (input.deliveryPlan !== undefined) {
     if (!NATORI_DELIVERY_PLANS_VALUES.includes(input.deliveryPlan)) {
@@ -307,10 +362,13 @@ export function normalizeNatoriProjectDetailsPatch(
     }
   }
   if (input.dueDate !== undefined) {
-    if (!isValidISODate(input.dueDate)) {
+    if (input.dueDate === null || input.dueDate === "") {
+      patch.due_date = null;
+    } else if (!isValidISODate(input.dueDate)) {
       throw new NatoriProjectDetailsValidationError("納期が日付として不正です。");
+    } else {
+      patch.due_date = input.dueDate;
     }
-    patch.due_date = input.dueDate;
   }
   if (input.note !== undefined) {
     if (input.note === null) {
@@ -419,4 +477,31 @@ export async function deleteNatoriProject(projectId: string): Promise<void> {
 
 export async function restoreNatoriProject(projectId: string): Promise<void> {
   await patchNatoriAdminProject({ kind: "restore", projectId });
+}
+
+/**
+ * 案件種別の確定。task 生成を伴うため、通常の project 更新とは別 API kind を使う。
+ * task の INSERT は DB 側 RPC の責務で、application からは行わない。
+ */
+export async function confirmNatoriProjectType(
+  projectId: string,
+  projectType: NatoriConcreteProjectType
+): Promise<{ alreadyConfirmed: boolean; taskCount: number }> {
+  const response = await fetch("/api/natori/admin/projects", {
+    method: "PATCH",
+    headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
+    body: JSON.stringify({ kind: "confirm-type", projectId, projectType }),
+  });
+  const body = (await response.json().catch(() => null)) as {
+    error?: string;
+    alreadyConfirmed?: boolean;
+    taskCount?: number;
+  } | null;
+  if (!response.ok) {
+    throw new Error(body?.error ?? `confirm_type_failed_${response.status}`);
+  }
+  return {
+    alreadyConfirmed: body?.alreadyConfirmed === true,
+    taskCount: body?.taskCount ?? 0,
+  };
 }

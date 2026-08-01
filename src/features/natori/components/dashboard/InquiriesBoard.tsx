@@ -25,12 +25,42 @@ import {
 import {
   closeNatoriProject,
   confirmNatoriProjectPayment,
+  confirmNatoriProjectType,
   fetchNatoriProjects,
+  updateNatoriProjectDetails,
+  updateNatoriProjectStatus,
+  type UpdateNatoriProjectDetailsInput,
 } from "@/features/natori/data/supabaseProjects";
-import type { NatoriProject, NatoriProjectStatus } from "@/features/natori/types/projects";
+import {
+  addNatoriProjectReferenceLink,
+  deleteNatoriProjectReferenceLink,
+  describeNatoriReferenceLinkError,
+  reorderNatoriProjectReferenceLinks,
+  updateNatoriProjectReferenceLink,
+} from "@/features/natori/data/supabaseProjectReferenceLinks";
+import type {
+  NatoriConcreteProjectType,
+  NatoriProject,
+  NatoriProjectStatus,
+} from "@/features/natori/types/projects";
 import InquiryDetailPanel from "./InquiryDetailPanel";
 import OrderMailPanel, { type OrderMailKind } from "./OrderMailPanel";
 import { NatoriLoadError } from "./NatoriLoadError";
+
+/** 種別確定の失敗を、DB 内部情報を含まない案内文へ写す。 */
+function describeConfirmTypeError(error: unknown): string {
+  const code = error instanceof Error ? error.message : "";
+  switch (code) {
+    case "conflict":
+      return "既に別の種別で確定済みか、制作が進んでいるため変更できません。";
+    case "not_found":
+      return "案件が見つかりませんでした。画面を再読み込みしてください。";
+    case "invalid_request":
+      return "選択した種別が不正です。";
+    default:
+      return "確定できませんでした。時間をおいてお試しください。";
+  }
+}
 
 /** 一覧の状態フィルタ。consulting は inquiry と同じ「依頼受付」扱い */
 const STATUS_FILTERS: Array<{ key: string; label: string; statuses: NatoriProjectStatus[] }> = [
@@ -197,6 +227,50 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusyId(null);
+    }
+  };
+
+  /** 案件種別の確定。成功後は project と tasks を再取得する。 */
+  const handleConfirmType = async (
+    projectId: string,
+    projectType: NatoriConcreteProjectType
+  ) => {
+    setError(null);
+    try {
+      await confirmNatoriProjectType(projectId, projectType);
+      await reload();
+    } catch (err) {
+      console.error("[InquiriesBoard] confirm type failed");
+      throw new Error(describeConfirmTypeError(err));
+    }
+  };
+
+  /** 金額 / 納品予定日 / 納期プランの管理補正。request_data は送らない。 */
+  const handleSaveCorrection = async (
+    projectId: string,
+    patch: UpdateNatoriProjectDetailsInput
+  ) => {
+    setError(null);
+    await updateNatoriProjectDetails(projectId, patch);
+    await reload();
+  };
+
+  /** 次のアクションのみの更新。既存の status 遷移 API を同一 status で使う。 */
+  const handleSaveNextAction = async (project: NatoriProject, nextAction: string) => {
+    setError(null);
+    await updateNatoriProjectStatus(project.id, project.status, nextAction);
+    await reload();
+  };
+
+  /** link 変更は成功・失敗どちらでも一覧を再取得し、既存集合を失わない。 */
+  const handleLinkMutation = async (action: () => Promise<unknown>) => {
+    setError(null);
+    try {
+      await action();
+    } catch (err) {
+      throw new Error(describeNatoriReferenceLinkError(err));
+    } finally {
+      await reload();
     }
   };
 
@@ -414,6 +488,57 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
           onOpenMail={(kind) => setMailKind(kind)}
           onCloseInquiry={() => void handleCloseInquiry(selectedRow.project)}
           onConfirmPayment={() => void handleConfirmPayment(selectedRow.project)}
+          onConfirmType={
+            isDemo ? undefined : (type) => handleConfirmType(selectedRow.project.id, type)
+          }
+          onSaveCorrection={
+            isDemo ? undefined : (patch) => handleSaveCorrection(selectedRow.project.id, patch)
+          }
+          onSaveNextAction={
+            isDemo
+              ? undefined
+              : (nextAction) =>
+                  handleSaveNextAction(selectedRow.project, nextAction)
+          }
+          onAddLink={
+            isDemo
+              ? undefined
+              : (url, label) => handleLinkMutation(() =>
+                  addNatoriProjectReferenceLink(selectedRow.project.id, url, label)
+                )
+          }
+          onUpdateLink={
+            isDemo
+              ? undefined
+              : (linkId, url, label) =>
+                  handleLinkMutation(() =>
+                    updateNatoriProjectReferenceLink(
+                      selectedRow.project.id,
+                      linkId,
+                      url,
+                      label
+                    )
+                  )
+          }
+          onDeleteLink={
+            isDemo
+              ? undefined
+              : (linkId) =>
+                  handleLinkMutation(() =>
+                    deleteNatoriProjectReferenceLink(selectedRow.project.id, linkId)
+                  )
+          }
+          onReorderLinks={
+            isDemo
+              ? undefined
+              : (orderedIds) =>
+                  handleLinkMutation(() =>
+                    reorderNatoriProjectReferenceLinks(
+                      selectedRow.project.id,
+                      orderedIds
+                    )
+                  )
+          }
           estimateHref={
             isDemo
               ? `/etorie/demo/app/estimate?inquiry=${selectedRow.project.id}`

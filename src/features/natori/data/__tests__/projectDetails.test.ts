@@ -76,10 +76,37 @@ describe("normalizeNatoriProjectDetailsPatch", () => {
     );
   });
 
-  it("rounds non-integer amounts and clamps the type to number", () => {
-    const patch = normalizeNatoriProjectDetailsPatch({ amount: 1234.7 });
-    expect(patch.amount).toBe(1235);
-    expect(typeof patch.amount).toBe("number");
+  // P1-07: 金額は 未確定(null) / 無料(0) / 有料(正の安全整数) の3状態を厳密に扱う。
+  // 小数の暗黙丸めは、依頼者提示額とのズレを生むため拒否に変更した。
+  it("rejects non-integer amounts instead of rounding them", () => {
+    expect(() => normalizeNatoriProjectDetailsPatch({ amount: 1234.7 })).toThrow(
+      NatoriProjectDetailsValidationError
+    );
+  });
+
+  it("keeps null as undecided and 0 as free", () => {
+    expect(normalizeNatoriProjectDetailsPatch({ amount: null }).amount).toBeNull();
+    expect(normalizeNatoriProjectDetailsPatch({ amount: 0 }).amount).toBe(0);
+    expect(normalizeNatoriProjectDetailsPatch({ amount: 8000 }).amount).toBe(8000);
+  });
+
+  it("rejects negative and unsafe amounts", () => {
+    for (const amount of [-1, Number.NaN, Number.MAX_SAFE_INTEGER + 2, Infinity]) {
+      expect(() => normalizeNatoriProjectDetailsPatch({ amount })).toThrow(
+        NatoriProjectDetailsValidationError
+      );
+    }
+  });
+
+  it("keeps a blank or null due date as undecided", () => {
+    expect(normalizeNatoriProjectDetailsPatch({ dueDate: null }).due_date).toBeNull();
+    expect(normalizeNatoriProjectDetailsPatch({ dueDate: "" }).due_date).toBeNull();
+    expect(normalizeNatoriProjectDetailsPatch({ dueDate: "2026-09-01" }).due_date).toBe(
+      "2026-09-01"
+    );
+    expect(() => normalizeNatoriProjectDetailsPatch({ dueDate: "2026-02-30" })).toThrow(
+      NatoriProjectDetailsValidationError
+    );
   });
 
   it("accepts a blank start date and stores it as null", () => {

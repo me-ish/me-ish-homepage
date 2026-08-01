@@ -590,7 +590,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
             ...(patch.title !== undefined ? { title: patch.title.trim() } : null),
             ...(patch.type !== undefined ? { type: patch.type } : null),
             ...(patch.amount !== undefined
-              ? { amount: Math.max(0, Math.round(patch.amount)) }
+              ? { amount: patch.amount === null ? null : Math.max(0, patch.amount) }
               : null),
             ...(patch.dueDate !== undefined ? { dueDate: patch.dueDate } : null),
             ...(patch.note !== undefined ? { note: patch.note ?? undefined } : null),

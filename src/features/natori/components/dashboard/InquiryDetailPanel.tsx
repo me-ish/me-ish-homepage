@@ -13,7 +13,20 @@ import {
   getNatoriInquiryReceivedISO,
   NATORI_PROJECT_TYPE_LABELS,
 } from "@/features/natori/lib/projectReadModel";
-import type { NatoriProject } from "@/features/natori/types/projects";
+import { buildNatoriInquiryRequestView } from "@/features/natori/lib/inquiryRequestView";
+import { collectNatoriInquiryReviewWarnings } from "@/features/natori/lib/inquiryReviewWarnings";
+import { isPreworkStatus } from "@/features/natori/lib/projects";
+import type {
+  NatoriConcreteProjectType,
+  NatoriProject,
+} from "@/features/natori/types/projects";
+import type { UpdateNatoriProjectDetailsInput } from "@/features/natori/data/supabaseProjects";
+import InquiryAdminCorrectionForm from "./inquiry/InquiryAdminCorrectionForm";
+import InquiryReferenceFiles from "./inquiry/InquiryReferenceFiles";
+import InquiryReferenceLinks from "./inquiry/InquiryReferenceLinks";
+import InquiryRequestSummary from "./inquiry/InquiryRequestSummary";
+import InquiryReviewWarnings from "./inquiry/InquiryReviewWarnings";
+import InquiryTypeConfirmation from "./inquiry/InquiryTypeConfirmation";
 import type { OrderMailKind } from "./OrderMailPanel";
 
 const ESTIMATE_MAIL_STATUSES: ReadonlySet<NatoriProject["status"]> = new Set([
@@ -46,6 +59,16 @@ type InquiryDetailPanelProps = {
   estimateHref?: string;
   /** 「案件ボードへ」のリンク先（デモではデモ用案件ページへ） */
   projectsHref?: string;
+  /** 案件種別の確定（task 生成を伴う専用 RPC 経路） */
+  onConfirmType?: (projectType: NatoriConcreteProjectType) => Promise<void>;
+  /** 金額 / 納品予定日 / 納期プランの管理補正 */
+  onSaveCorrection?: (patch: UpdateNatoriProjectDetailsInput) => Promise<void>;
+  /** 次のアクションの更新（既存の status 遷移 API を同一 status で使う） */
+  onSaveNextAction?: (nextAction: string) => Promise<void>;
+  onAddLink?: (url: string, label: string | null) => Promise<void>;
+  onUpdateLink?: (linkId: string, url: string, label: string | null) => Promise<void>;
+  onDeleteLink?: (linkId: string) => Promise<void>;
+  onReorderLinks?: (orderedIds: string[]) => Promise<void>;
 };
 
 export default function InquiryDetailPanel({
@@ -58,13 +81,32 @@ export default function InquiryDetailPanel({
   onConfirmPayment,
   estimateHref,
   projectsHref,
+  onConfirmType,
+  onSaveCorrection,
+  onSaveNextAction,
+  onAddLink,
+  onUpdateLink,
+  onDeleteLink,
+  onReorderLinks,
 }: InquiryDetailPanelProps) {
   const meta = natoriProjectStatusMeta[project.status];
   const receivedISO = getNatoriInquiryReceivedISO(project);
-  const referenceImages = [
-    ...(project.referenceImageUrls ?? []),
-    ...view.refImages,
-  ];
+  // legacy note 由来の画像は既存表示を維持し、structured 案件は署名URL付きの
+  // referenceFiles を使う。
+  const legacyReferenceImages = view.refImages;
+  const referenceFiles = project.referenceFiles ?? [];
+  const referenceLinks = project.referenceLinks ?? [];
+  const archived = Boolean(project.deletedAt);
+
+  // 未対応 version / 壊れた JSON でも throw せず、表示可能な範囲だけを描画する。
+  const requestView = buildNatoriInquiryRequestView(project.requestData);
+  const reviewWarnings = collectNatoriInquiryReviewWarnings({
+    projectType: project.type,
+    amount: project.amount,
+    dueDateISO: project.dueDate,
+    isPrework: isPreworkStatus(project.status),
+    requestView,
+  });
 
   return (
     <div
@@ -119,8 +161,55 @@ export default function InquiryDetailPanel({
         </div>
 
         <div className="max-h-[65vh] space-y-4 overflow-y-auto p-4 sm:p-5">
-          {/* フォームの項目 */}
-          {view.fields.length > 0 ? (
+          {/* 2. 要確認事項 */}
+          <InquiryReviewWarnings warnings={reviewWarnings} />
+
+          {/* 3. 原依頼内容（structured のみ。legacy は下の note 表示を使う） */}
+          <InquiryRequestSummary view={requestView} />
+
+          {archived ? (
+            <p className="rounded-xl border border-gray-300 bg-gray-50 p-3 text-xs text-gray-600">
+              アーカイブ済みの案件です。内容の閲覧のみ可能で、確定・編集はできません。
+            </p>
+          ) : null}
+
+          {/* 4. 管理確定項目 */}
+          {onSaveCorrection && onSaveNextAction && !archived ? (
+            <InquiryAdminCorrectionForm
+              project={project}
+              disabled={busy}
+              onSave={onSaveCorrection}
+              onSaveNextAction={onSaveNextAction}
+            />
+          ) : null}
+
+          {/* 5. 参考画像 */}
+          <InquiryReferenceFiles files={referenceFiles} />
+
+          {/* 6. 外部リンク */}
+          {onAddLink && onUpdateLink && onDeleteLink && onReorderLinks ? (
+            <InquiryReferenceLinks
+              links={referenceLinks}
+              readOnly={archived}
+              onAdd={onAddLink}
+              onUpdate={onUpdateLink}
+              onDelete={onDeleteLink}
+              onReorder={onReorderLinks}
+            />
+          ) : null}
+
+          {/* 7. 案件種別の確定・タスク生成 */}
+          {onConfirmType && !archived ? (
+            <InquiryTypeConfirmation
+              projectType={project.type}
+              taskCount={project.tasks.length}
+              disabled={busy}
+              onConfirm={onConfirmType}
+            />
+          ) : null}
+
+          {/* legacy: フォームの項目（note 由来） */}
+          {requestView.kind !== "structured" && view.fields.length > 0 ? (
             <section>
               <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700">
                 ご依頼内容
@@ -136,15 +225,15 @@ export default function InquiryDetailPanel({
             </section>
           ) : null}
 
-          {/* キャラクター資料 */}
-          {referenceImages.length > 0 || view.refText ? (
+          {/* legacy: note に埋め込まれた資料URL・資料テキスト */}
+          {legacyReferenceImages.length > 0 || view.refText ? (
             <section>
               <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700">
-                キャラクター資料
+                キャラクター資料（旧形式）
               </h3>
-              {referenceImages.length > 0 ? (
+              {legacyReferenceImages.length > 0 ? (
                 <ul className="flex flex-wrap gap-2">
-                  {referenceImages.map((url, index) => (
+                  {legacyReferenceImages.map((url, index) => (
                     <li key={url}>
                       <a
                         href={url}

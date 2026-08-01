@@ -435,7 +435,7 @@ export default function ProjectsBoard({
           ...(patch.title !== undefined ? { title: patch.title.trim() } : null),
           ...(patch.type !== undefined ? { type: patch.type } : null),
           ...(patch.amount !== undefined
-            ? { amount: Math.max(0, Math.round(patch.amount)) }
+            ? { amount: patch.amount === null ? null : Math.max(0, patch.amount) }
             : null),
           ...(patch.deliveryPlan !== undefined ? { deliveryPlan: patch.deliveryPlan } : null),
           ...(patch.startDate !== undefined
