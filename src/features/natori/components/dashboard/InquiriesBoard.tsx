@@ -35,7 +35,6 @@ import {
   addNatoriProjectReferenceLink,
   deleteNatoriProjectReferenceLink,
   describeNatoriReferenceLinkError,
-  reorderNatoriProjectReferenceLinks,
   updateNatoriProjectReferenceLink,
 } from "@/features/natori/data/supabaseProjectReferenceLinks";
 import type {
@@ -526,17 +525,6 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
               : (linkId) =>
                   handleLinkMutation(() =>
                     deleteNatoriProjectReferenceLink(selectedRow.project.id, linkId)
-                  )
-          }
-          onReorderLinks={
-            isDemo
-              ? undefined
-              : (orderedIds) =>
-                  handleLinkMutation(() =>
-                    reorderNatoriProjectReferenceLinks(
-                      selectedRow.project.id,
-                      orderedIds
-                    )
                   )
           }
           estimateHref={

@@ -4,20 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const {
-  mockCanUse,
-  mockList,
-  mockAdd,
-  mockUpdate,
-  mockDelete,
-  mockReorder,
-} = vi.hoisted(() => ({
+const { mockCanUse, mockList, mockAdd, mockUpdate, mockDelete } = vi.hoisted(() => ({
   mockCanUse: vi.fn(),
   mockList: vi.fn(),
   mockAdd: vi.fn(),
   mockUpdate: vi.fn(),
   mockDelete: vi.fn(),
-  mockReorder: vi.fn(),
 }));
 
 vi.mock("@/features/natori/server/requireNatoriAdmin", () => ({
@@ -29,7 +21,6 @@ vi.mock("@/features/natori/server/projectReferenceLinksService", () => ({
   addNatoriProjectReferenceLink: (...args: unknown[]) => mockAdd(...args),
   updateNatoriProjectReferenceLink: (...args: unknown[]) => mockUpdate(...args),
   deleteNatoriProjectReferenceLink: (...args: unknown[]) => mockDelete(...args),
-  reorderNatoriProjectReferenceLinks: (...args: unknown[]) => mockReorder(...args),
 }));
 
 import { DELETE, GET, PATCH, POST } from "../route";
@@ -59,7 +50,7 @@ function jsonReq(
 beforeEach(() => {
   vi.clearAllMocks();
   mockCanUse.mockResolvedValue(true);
-  for (const mock of [mockList, mockAdd, mockUpdate, mockDelete, mockReorder]) {
+  for (const mock of [mockList, mockAdd, mockUpdate, mockDelete]) {
     mock.mockResolvedValue({ kind: "ok", links: OK_LINKS });
   }
 });
@@ -156,17 +147,6 @@ describe("CRUD", () => {
     });
   });
 
-  it("並び替えは orderedIds を渡す", async () => {
-    await PATCH(
-      jsonReq("PATCH", {
-        kind: "reorder",
-        projectId: PROJECT_ID,
-        orderedIds: ["link-2", "link-1"],
-      })
-    );
-    expect(mockReorder).toHaveBeenCalledWith(PROJECT_ID, ["link-2", "link-1"]);
-  });
-
   it("削除は query から projectId / linkId を取る", async () => {
     const res = await DELETE(
       new Request(`${BASE}?projectId=${PROJECT_ID}&linkId=link-1`, {
@@ -178,12 +158,55 @@ describe("CRUD", () => {
     expect(mockDelete).toHaveBeenCalledWith(PROJECT_ID, "link-1");
   });
 
-  it("orderedIds に文字列以外が混ざれば 400", async () => {
+});
+
+describe("並び替えは受け付けない（P1-07 の範囲外）", () => {
+  it("旧 reorder payload を 400 unsupported_action で拒否する", async () => {
     const res = await PATCH(
-      jsonReq("PATCH", { kind: "reorder", projectId: PROJECT_ID, orderedIds: ["a", 1] })
+      jsonReq("PATCH", {
+        kind: "reorder",
+        projectId: PROJECT_ID,
+        orderedIds: ["link-2", "link-1"],
+      })
     );
     expect(res.status).toBe(400);
-    expect(mockReorder).not.toHaveBeenCalled();
+    expect((await res.json()).error).toBe("unsupported_action");
+  });
+
+  it("reorder payload が add / update / delete として処理されない", async () => {
+    await PATCH(
+      jsonReq("PATCH", {
+        kind: "reorder",
+        projectId: PROJECT_ID,
+        orderedIds: ["link-2", "link-1"],
+      })
+    );
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockAdd).not.toHaveBeenCalled();
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it("orderedIds だけを含む payload も拒否する", async () => {
+    const res = await PATCH(
+      jsonReq("PATCH", {
+        projectId: PROJECT_ID,
+        linkId: "link-1",
+        url: "https://example.com/a",
+        orderedIds: ["link-1"],
+      })
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("unsupported_action");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("未知の kind も拒否する", async () => {
+    const res = await PATCH(
+      jsonReq("PATCH", { kind: "move", projectId: PROJECT_ID, linkId: "link-1" })
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("unsupported_action");
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });
 

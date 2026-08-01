@@ -45,11 +45,11 @@ vi.mock("@/features/natori/server/referenceLinkTableAdapter", () => ({
   selectReferenceLinksForProjects: vi.fn(),
 }));
 
+import * as referenceLinksService from "@/features/natori/server/projectReferenceLinksService";
 import {
   addNatoriProjectReferenceLink,
   deleteNatoriProjectReferenceLink,
   listNatoriProjectReferenceLinks,
-  reorderNatoriProjectReferenceLinks,
   updateNatoriProjectReferenceLink,
 } from "@/features/natori/server/projectReferenceLinksService";
 
@@ -122,9 +122,6 @@ describe("owner scope / archive", () => {
     await expect(
       deleteNatoriProjectReferenceLink(PROJECT_ID, "link-0")
     ).resolves.toEqual({ kind: "project-archived" });
-    await expect(reorderNatoriProjectReferenceLinks(PROJECT_ID, [])).resolves.toEqual({
-      kind: "project-archived",
-    });
     expect(mockInsert).not.toHaveBeenCalled();
     expect(mockDelete).not.toHaveBeenCalled();
 
@@ -262,59 +259,123 @@ describe("update", () => {
   });
 });
 
-describe("delete / reorder", () => {
-  it("削除後に sort_order を 0..n-1 へ詰め直す", async () => {
-    const remaining = [row(1, "https://example.com/b"), row(2, "https://example.com/c")];
-    mockSelect
-      .mockResolvedValueOnce({ kind: "ok", value: remaining })
-      .mockResolvedValue({ kind: "ok", value: remaining });
-
-    await deleteNatoriProjectReferenceLink(PROJECT_ID, "link-0");
-
-    expect(mockDelete).toHaveBeenCalledWith(PROJECT_ID, "link-0");
-    expect(mockUpdate).toHaveBeenCalledWith(PROJECT_ID, "link-1", { sort_order: 0 });
-    expect(mockUpdate).toHaveBeenCalledWith(PROJECT_ID, "link-2", { sort_order: 1 });
+describe("sort_order（追加時のみ決める）", () => {
+  it("既存が空なら 0 を使う", async () => {
+    stubLinks([]);
+    await addNatoriProjectReferenceLink({
+      projectId: PROJECT_ID,
+      url: "https://example.com/a",
+      label: null,
+    });
+    expect(mockInsert.mock.calls[0][0].sortOrder).toBe(0);
   });
 
-  it("並び替えは sort_order だけを更新し、delete/insert しない", async () => {
+  it("欠番があっても max(sort_order) + 1 を使う（件数は使わない）", async () => {
+    // 0, 2, 5 の3件。件数 3 を使うと既存の途中へ割り込む。
     stubLinks([
-      row(0, "https://example.com/a"),
-      row(1, "https://example.com/b"),
-      row(2, "https://example.com/c"),
+      { ...row(0, "https://example.com/a"), sort_order: 0 },
+      { ...row(1, "https://example.com/b"), sort_order: 2 },
+      { ...row(2, "https://example.com/c"), sort_order: 5 },
     ]);
-    await reorderNatoriProjectReferenceLinks(PROJECT_ID, ["link-2", "link-0", "link-1"]);
-
-    expect(mockDelete).not.toHaveBeenCalled();
-    expect(mockInsert).not.toHaveBeenCalled();
-    expect(mockUpdate).toHaveBeenCalledWith(PROJECT_ID, "link-2", { sort_order: 0 });
-    expect(mockUpdate).toHaveBeenCalledWith(PROJECT_ID, "link-0", { sort_order: 1 });
-    expect(mockUpdate).toHaveBeenCalledWith(PROJECT_ID, "link-1", { sort_order: 2 });
+    await addNatoriProjectReferenceLink({
+      projectId: PROJECT_ID,
+      url: "https://example.com/d",
+      label: null,
+    });
+    expect(mockInsert.mock.calls[0][0].sortOrder).toBe(6);
+    expect(mockInsert.mock.calls[0][0].sortOrder).not.toBe(3);
   });
 
-  it("集合が一致しない並び替え指示は適用しない（link を失わない）", async () => {
+  it("追加操作で既存 link の sort_order を書き換えない", async () => {
+    stubLinks([
+      { ...row(0, "https://example.com/a"), sort_order: 0 },
+      { ...row(1, "https://example.com/b"), sort_order: 5 },
+    ]);
+    await addNatoriProjectReferenceLink({
+      projectId: PROJECT_ID,
+      url: "https://example.com/c",
+      label: null,
+    });
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("編集では sort_order を送らない", async () => {
+    stubLinks([{ ...row(0, "https://example.com/a"), sort_order: 5 }]);
+    await updateNatoriProjectReferenceLink({
+      projectId: PROJECT_ID,
+      linkId: "link-0",
+      url: "https://example.com/b",
+      label: null,
+    });
+    expect(mockUpdate.mock.calls[0][2]).not.toHaveProperty("sort_order");
+  });
+});
+
+describe("delete", () => {
+  it("単一 DELETE だけで完了し、残りの link を UPDATE しない", async () => {
+    const remaining = [
+      { ...row(1, "https://example.com/b"), sort_order: 1 },
+      { ...row(2, "https://example.com/c"), sort_order: 2 },
+    ];
+    mockSelect.mockResolvedValue({ kind: "ok", value: remaining });
+
+    const result = await deleteNatoriProjectReferenceLink(PROJECT_ID, "link-0");
+
+    expect(mockDelete).toHaveBeenCalledTimes(1);
+    expect(mockDelete).toHaveBeenCalledWith(PROJECT_ID, "link-0");
+    // 詰め直しをしないので sort_order の欠番はそのまま残る
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ kind: "ok" });
+    if (result.kind !== "ok") return;
+    expect(result.links.map((link) => link.sortOrder)).toEqual([1, 2]);
+  });
+
+  it("DELETE が失敗したら他 link への UPDATE を一切行わない", async () => {
     stubLinks([row(0, "https://example.com/a"), row(1, "https://example.com/b")]);
+    mockDelete.mockResolvedValue({ kind: "db-error" });
 
     await expect(
-      reorderNatoriProjectReferenceLinks(PROJECT_ID, ["link-0"])
-    ).resolves.toEqual({ kind: "not-found" });
+      deleteNatoriProjectReferenceLink(PROJECT_ID, "link-0")
+    ).resolves.toEqual({ kind: "db-error" });
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("存在しない link の削除は not-found で、UPDATE しない", async () => {
+    mockDelete.mockResolvedValue({ kind: "not-found" });
     await expect(
-      reorderNatoriProjectReferenceLinks(PROJECT_ID, ["link-0", "link-0"])
-    ).resolves.toEqual({ kind: "not-found" });
-    await expect(
-      reorderNatoriProjectReferenceLinks(PROJECT_ID, ["link-0", "unknown"])
+      deleteNatoriProjectReferenceLink(PROJECT_ID, "missing")
     ).resolves.toEqual({ kind: "not-found" });
     expect(mockUpdate).not.toHaveBeenCalled();
-    expect(mockDelete).not.toHaveBeenCalled();
+  });
+});
+
+describe("並び替えは P1-07 の範囲外", () => {
+  it("reorder service を export しない", () => {
+    expect(
+      (referenceLinksService as Record<string, unknown>).reorderNatoriProjectReferenceLinks
+    ).toBeUndefined();
+    expect(
+      Object.keys(referenceLinksService).some((key) =>
+        key.toLowerCase().includes("reorder")
+      )
+    ).toBe(false);
   });
 
-  it("並び替えの一部が失敗しても link は削除されない", async () => {
+  it("どの操作でも delete all + insert all をしない", async () => {
     stubLinks([row(0, "https://example.com/a"), row(1, "https://example.com/b")]);
-    mockUpdate.mockResolvedValue({ kind: "db-error" });
-
-    await expect(
-      reorderNatoriProjectReferenceLinks(PROJECT_ID, ["link-1", "link-0"])
-    ).resolves.toEqual({ kind: "db-error" });
+    await addNatoriProjectReferenceLink({
+      projectId: PROJECT_ID,
+      url: "https://example.com/c",
+      label: null,
+    });
+    await updateNatoriProjectReferenceLink({
+      projectId: PROJECT_ID,
+      linkId: "link-0",
+      url: "https://example.com/d",
+      label: null,
+    });
     expect(mockDelete).not.toHaveBeenCalled();
+    expect(mockInsert).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -340,5 +401,24 @@ describe("外部アクセスをしない", () => {
 
     expect(fetchSpy).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+});
+
+describe("追加時の sort_order は正規化ではなく service が決める", () => {
+  it("最終セット検証の戻り値に sortOrder を含めない", async () => {
+    stubLinks([]);
+    await addNatoriProjectReferenceLink({
+      projectId: PROJECT_ID,
+      url: "https://example.com/a",
+      label: null,
+    });
+    // insert へ渡すのは service が計算した値のみ
+    expect(Object.keys(mockInsert.mock.calls[0][0]).sort()).toEqual([
+      "label",
+      "normalizedUrl",
+      "projectId",
+      "sortOrder",
+      "url",
+    ]);
   });
 });

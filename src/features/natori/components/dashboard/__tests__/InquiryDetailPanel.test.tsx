@@ -78,7 +78,6 @@ function renderPanel(overrides: Partial<NatoriProject> = {}) {
       onAddLink={async () => undefined}
       onUpdateLink={async () => undefined}
       onDeleteLink={async () => undefined}
-      onReorderLinks={async () => undefined}
     />
   );
 }
@@ -300,6 +299,52 @@ describe("外部リンクと参考画像", () => {
     expect(
       screen.getByText(/リンク先が開けない場合はURLを確認してください/)
     ).toBeTruthy();
+  });
+
+  it("並び替え操作は提供しない（P1-07 は add/edit/delete のみ）", () => {
+    renderPanel({
+      requestData: structuredRequest(),
+      referenceLinks: [
+        {
+          id: "link-1",
+          url: "https://example.com/a",
+          label: "資料1",
+          sortOrder: 0,
+          createdAt: "2026-08-01T00:00:00.000Z",
+        },
+        {
+          id: "link-2",
+          url: "https://example.com/b",
+          label: "資料2",
+          sortOrder: 5,
+          createdAt: "2026-08-02T00:00:00.000Z",
+        },
+      ],
+    });
+    expect(screen.queryByRole("button", { name: /上へ/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /下へ/ })).toBeNull();
+    // 編集・削除は維持する
+    expect(screen.getAllByRole("button", { name: /を編集/ })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: /を削除/ })).toHaveLength(2);
+  });
+
+  it("sort_order の数値は利用者へ見せない", () => {
+    const { container } = renderPanel({
+      requestData: structuredRequest(),
+      referenceLinks: [
+        {
+          id: "link-1",
+          url: "https://example.com/a",
+          label: "資料1",
+          sortOrder: 5,
+          createdAt: "2026-08-01T00:00:00.000Z",
+        },
+      ],
+    });
+    const linkRow = container.querySelector('[data-link-id="link-1"]');
+    expect(linkRow?.textContent).not.toContain("5");
+    expect(container.textContent).not.toContain("sortOrder");
+    expect(container.textContent).not.toContain("sort_order");
   });
 
   it("参考画像は表示名付きで並び、Storage path を出さない", () => {

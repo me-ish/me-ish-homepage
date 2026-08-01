@@ -12,7 +12,6 @@ import {
   addNatoriProjectReferenceLink,
   deleteNatoriProjectReferenceLink,
   listNatoriProjectReferenceLinks,
-  reorderNatoriProjectReferenceLinks,
   updateNatoriProjectReferenceLink,
   type ReferenceLinkServiceResult,
 } from "@/features/natori/server/projectReferenceLinksService";
@@ -114,14 +113,11 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
   }
 
-  if (payload.kind === "reorder") {
-    const orderedIds = Array.isArray(payload.orderedIds)
-      ? payload.orderedIds.filter((id): id is string => typeof id === "string")
-      : null;
-    if (!orderedIds || orderedIds.length !== (payload.orderedIds as unknown[]).length) {
-      return NextResponse.json({ error: "invalid_request" }, { status: 400 });
-    }
-    return respond(await reorderNatoriProjectReferenceLinks(projectId, orderedIds));
+  // PATCH は URL / label の更新のみ。並び替えは原子的に行えないため P1-07 では
+  // 提供せず、旧 client の reorder payload が update として処理されないよう
+  // 明示的に拒否する（kind の指定自体を未対応 action として弾く）。
+  if (payload.kind !== undefined || "orderedIds" in payload) {
+    return NextResponse.json({ error: "unsupported_action" }, { status: 400 });
   }
 
   const linkId = readString(payload.linkId);

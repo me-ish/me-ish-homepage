@@ -5,17 +5,26 @@ import "server-only";
 // URL 正規化・重複判定は referenceLinks.ts / projectReferenceLinks.ts に委ねる。
 //
 // 一貫性の方針:
-// natori_project_reference_links の unique 制約は (project_id, normalized_url)
-// だけで sort_order には無いため、並び替えは sort_order の逐次 UPDATE で行える。
-// add / edit / delete はいずれも単文で原子的、reorder は途中失敗しても
-// 並び順が乱れるだけで link を失わない（読み出しは sort_order, created_at 順で
-// 決定的、再実行で復旧する）。delete all + insert all は行わない。
+// P1-07 は add / edit / delete のみを提供する。いずれも単一 SQL 文で完結し、
+// 部分適用が残らない。delete all + insert all は行わない。
+//
+// 並び替えは複数行の sort_order を書き換える必要があり、application 層の
+// 逐次 UPDATE では途中失敗時に部分適用が残って原子性を保証できない。
+// P1-07 は migration なしが条件のため、原子的な RPC を伴う並び替えは
+// 後続工程へ分離した（このモジュールに reorder は存在しない）。
+//
+// sort_order の扱い:
+// - 追加は max(既存 sort_order) + 1（件数ではない。欠番があっても末尾に付く）
+// - 削除後に詰め直さない。欠番は許容する
+// - 編集で sort_order は変更しない
+// - 読み出しは sort_order ASC, created_at ASC で決定的
 //
 // URL には一切アクセスしない（fetch / metadata / OGP / redirect 追跡なし）。
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
 import {
   NATORI_PROJECT_REFERENCE_LINK_MAX,
+  nextNatoriReferenceLinkSortOrder,
   normalizeNatoriReferenceLinkSet,
   type NatoriReferenceLinkDraft,
 } from "@/features/natori/lib/projectReferenceLinks";
@@ -141,7 +150,8 @@ export async function addNatoriProjectReferenceLink(
     url: added.url,
     normalizedUrl: added.normalizedUrl,
     label: added.label,
-    sortOrder: added.sortOrder,
+    // 件数ではなく既存最大値 + 1。欠番（0, 2, 5）でも末尾に付く。
+    sortOrder: nextNatoriReferenceLinkSortOrder(existing.links),
   });
   if (inserted.kind === "duplicate") return { kind: "duplicate-link" };
   if (inserted.kind !== "ok") return { kind: "db-error" };
@@ -199,6 +209,11 @@ export async function updateNatoriProjectReferenceLink(
   return currentLinks(input.projectId);
 }
 
+/**
+ * 削除は単一 DELETE で完結する。
+ * 残った link の sort_order は詰め直さない（欠番を許容する）。詰め直しは
+ * 複数行 UPDATE になり、途中失敗で部分適用が残るため P1-07 では行わない。
+ */
 export async function deleteNatoriProjectReferenceLink(
   projectId: string,
   linkId: string
@@ -210,65 +225,7 @@ export async function deleteNatoriProjectReferenceLink(
   if (removed.kind === "not-found") return { kind: "not-found" };
   if (removed.kind !== "ok") return { kind: "db-error" };
 
-  // 削除後に 0..n-1 へ詰め直す。途中で失敗しても link は失われず、
-  // 並びが乱れるだけなので再実行で回復できる。
-  const remaining = await currentLinks(projectId);
-  if (remaining.kind === "db-error") return { kind: "db-error" };
-  await applySortOrder(projectId, remaining.links);
-
   return currentLinks(projectId);
-}
-
-/**
- * 並び替え。link の追加・削除は行わず sort_order だけを書き換える。
- * orderedIds は現在の link 集合と完全に一致している必要がある。
- */
-export async function reorderNatoriProjectReferenceLinks(
-  projectId: string,
-  orderedIds: string[]
-): Promise<ReferenceLinkServiceResult> {
-  const scope = await resolveProjectScope(projectId, { allowArchived: false });
-  if (scope.kind !== "ok") return scope;
-
-  const existing = await currentLinks(projectId);
-  if (existing.kind === "db-error") return { kind: "db-error" };
-
-  const existingIds = new Set(existing.links.map((link) => link.id));
-  const requestedIds = new Set(orderedIds);
-  if (
-    orderedIds.length !== existing.links.length ||
-    requestedIds.size !== orderedIds.length ||
-    orderedIds.some((id) => !existingIds.has(id))
-  ) {
-    // 集合が一致しない指示は、link を失う恐れがあるため適用しない。
-    return { kind: "not-found" };
-  }
-
-  const byId = new Map(existing.links.map((link) => [link.id, link]));
-  const ordered = orderedIds
-    .map((id) => byId.get(id))
-    .filter((link): link is NatoriProjectReferenceLink => Boolean(link));
-
-  const failed = await applySortOrder(projectId, ordered);
-  if (failed) return { kind: "db-error" };
-
-  return currentLinks(projectId);
-}
-
-/** sort_order を 0..n-1 へ揃える。失敗したかどうかだけを返す。 */
-async function applySortOrder(
-  projectId: string,
-  ordered: NatoriProjectReferenceLink[]
-): Promise<boolean> {
-  let failed = false;
-  for (const [index, link] of ordered.entries()) {
-    if (link.sortOrder === index) continue;
-    const result = await updateProjectReferenceLink(projectId, link.id, {
-      sort_order: index,
-    });
-    if (result.kind !== "ok") failed = true;
-  }
-  return failed;
 }
 
 export { NATORI_PROJECT_REFERENCE_LINK_MAX };

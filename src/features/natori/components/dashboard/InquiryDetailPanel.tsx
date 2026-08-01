@@ -68,7 +68,6 @@ type InquiryDetailPanelProps = {
   onAddLink?: (url: string, label: string | null) => Promise<void>;
   onUpdateLink?: (linkId: string, url: string, label: string | null) => Promise<void>;
   onDeleteLink?: (linkId: string) => Promise<void>;
-  onReorderLinks?: (orderedIds: string[]) => Promise<void>;
 };
 
 export default function InquiryDetailPanel({
@@ -87,7 +86,6 @@ export default function InquiryDetailPanel({
   onAddLink,
   onUpdateLink,
   onDeleteLink,
-  onReorderLinks,
 }: InquiryDetailPanelProps) {
   const meta = natoriProjectStatusMeta[project.status];
   const receivedISO = getNatoriInquiryReceivedISO(project);
@@ -187,14 +185,13 @@ export default function InquiryDetailPanel({
           <InquiryReferenceFiles files={referenceFiles} />
 
           {/* 6. 外部リンク */}
-          {onAddLink && onUpdateLink && onDeleteLink && onReorderLinks ? (
+          {onAddLink && onUpdateLink && onDeleteLink ? (
             <InquiryReferenceLinks
               links={referenceLinks}
               readOnly={archived}
               onAdd={onAddLink}
               onUpdate={onUpdateLink}
               onDelete={onDeleteLink}
-              onReorder={onReorderLinks}
             />
           ) : null}
 

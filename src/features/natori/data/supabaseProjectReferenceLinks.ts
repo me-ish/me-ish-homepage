@@ -1,6 +1,7 @@
 // features/natori/data/supabaseProjectReferenceLinks.ts
 // 外部参照リンク CRUD の client 側入口。admin API 経由でのみ操作し、
 // 認可・owner scope・archive guard は server service が担保する。
+// P1-07 は add / edit / delete のみ（並び替えは後続工程）。
 // URL へは一切アクセスしない（プレビューも favicon も取得しない）。
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import type { NatoriProjectReferenceLinkView } from "@/features/natori/types/projects";
@@ -10,6 +11,7 @@ const ENDPOINT = "/api/natori/admin/project-links";
 /** 外部へ出す error code。DB 内部情報は含まない。 */
 export type NatoriReferenceLinkErrorCode =
   | "invalid_request"
+  | "unsupported_action"
   | "unauthorized"
   | "not_found"
   | "project_archived"
@@ -28,6 +30,7 @@ export class NatoriReferenceLinkError extends Error {
 
 const ERROR_MESSAGES: Record<NatoriReferenceLinkErrorCode, string> = {
   invalid_request: "URLの形式が正しくありません（https:// で始まるURLのみ）。",
+  unsupported_action: "この操作は現在サポートされていません。",
   unauthorized: "権限がありません。ログイン状態をご確認ください。",
   not_found: "対象のリンクが見つかりませんでした。画面を再読み込みしてください。",
   project_archived: "アーカイブ済みの案件のリンクは変更できません。",
@@ -91,18 +94,6 @@ export async function updateNatoriProjectReferenceLink(
     method: "PATCH",
     headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
     body: JSON.stringify({ projectId, linkId, url, label }),
-  });
-  return readLinks(response);
-}
-
-export async function reorderNatoriProjectReferenceLinks(
-  projectId: string,
-  orderedIds: string[]
-): Promise<NatoriProjectReferenceLinkView[]> {
-  const response = await fetch(ENDPOINT, {
-    method: "PATCH",
-    headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
-    body: JSON.stringify({ kind: "reorder", projectId, orderedIds }),
   });
   return readLinks(response);
 }

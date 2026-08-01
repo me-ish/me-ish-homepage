@@ -16,12 +16,16 @@ export type NatoriReferenceLinkDraft = {
   label: string | null;
 };
 
+/**
+ * 検証済みの link。sort_order は含めない。
+ * 並び替えは原子的に行えないため P1-07 では扱わず、追加時のみ
+ * service が max(sort_order) + 1 を決める。
+ */
 export type NatoriNormalizedReferenceLink = {
   id: string | null;
   url: string;
   normalizedUrl: string;
   label: string | null;
-  sortOrder: number;
 };
 
 export type NatoriReferenceLinkSetError =
@@ -35,9 +39,9 @@ export type NatoriReferenceLinkSetResult =
   | { ok: false; error: NatoriReferenceLinkSetError };
 
 /**
- * 保存直前の最終セットを検証し、sort_order を 0..n-1 へ振り直す。
- * 部分更新ではなく最終セット全体で重複を判定するため、並び替えや
- * URL 変更で一時的に重複が生まれる経路を塞げる。
+ * 保存直前の最終セット全体を検証する（件数・URL 正規化・重複・label 長）。
+ * 部分更新ではなく最終セットで重複を判定するため、URL 変更で一時的に
+ * 重複が生まれる経路を塞げる。sort_order はここでは決めない。
  */
 export function normalizeNatoriReferenceLinkSet(
   drafts: NatoriReferenceLinkDraft[]
@@ -70,14 +74,33 @@ export function normalizeNatoriReferenceLinkSet(
       url,
       normalizedUrl,
       label: label && label.length > 0 ? label : null,
-      sortOrder: index,
     });
   }
 
   return { ok: true, links };
 }
 
-/** 表示・保存の並び順を安定させる（sort_order 同値は作成順で解決）。 */
+/**
+ * 新規追加の sort_order。既存の最大値 + 1 を使う。
+ * 件数をそのまま使うと欠番（0, 2, 5）のときに既存の途中へ割り込むため。
+ * link が 0 件なら 0。safe integer を超える場合は既存最大値を据え置く。
+ */
+export function nextNatoriReferenceLinkSortOrder(
+  existing: Array<{ sortOrder: number }>
+): number {
+  if (existing.length === 0) return 0;
+  const max = existing.reduce(
+    (current, link) => (link.sortOrder > current ? link.sortOrder : current),
+    0
+  );
+  if (!Number.isSafeInteger(max) || max + 1 > Number.MAX_SAFE_INTEGER) return max;
+  return max + 1;
+}
+
+/**
+ * 表示順を決定的にする。sort_order には unique 制約が無く欠番も同値もあり得るため、
+ * created_at を第2キーにして同順位でも並びがぶれないようにする。
+ */
 export function sortNatoriReferenceLinks<
   T extends { sortOrder: number; createdAt?: string },
 >(links: T[]): T[] {
@@ -85,15 +108,4 @@ export function sortNatoriReferenceLinks<
     if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
     return (a.createdAt ?? "").localeCompare(b.createdAt ?? "");
   });
-}
-
-/** 並び替え UI 用。範囲外の移動は元配列をそのまま返す。 */
-export function moveNatoriReferenceLink<T>(links: T[], from: number, to: number): T[] {
-  if (from === to) return links;
-  if (from < 0 || from >= links.length) return links;
-  if (to < 0 || to >= links.length) return links;
-  const next = [...links];
-  const [moved] = next.splice(from, 1);
-  next.splice(to, 0, moved);
-  return next;
 }

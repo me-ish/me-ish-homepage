@@ -1,15 +1,17 @@
 "use client";
 
-// 外部参照リンクの一覧・追加・編集・削除・並び替え。
+// 外部参照リンクの一覧・追加・編集・削除。
 // 検証と保存は server service（referenceLinks.ts が正規化の真実源）が担当し、
 // ここは操作 UI と楽観 UI を持たない素直な再取得だけを行う。
+//
+// 並び替えは複数行の sort_order 更新が必要で、原子的な RPC 無しでは
+// 部分適用が残るため P1-07 では提供しない。表示は API が返す
+// sort_order ASC / created_at ASC の順をそのまま使い、数値は利用者へ見せない。
+//
 // URL へは一切アクセスしない（プレビュー・favicon・OGP を取得しない）。
 import { useState } from "react";
-import { ArrowDown, ArrowUp, ExternalLink, Pencil, Plus, Trash2, X } from "lucide-react";
-import {
-  NATORI_PROJECT_REFERENCE_LINK_MAX,
-  moveNatoriReferenceLink,
-} from "@/features/natori/lib/projectReferenceLinks";
+import { ExternalLink, Pencil, Plus, Trash2, X } from "lucide-react";
+import { NATORI_PROJECT_REFERENCE_LINK_MAX } from "@/features/natori/lib/projectReferenceLinks";
 import type { NatoriProjectReferenceLinkView } from "@/features/natori/types/projects";
 
 export type InquiryReferenceLinksProps = {
@@ -19,7 +21,6 @@ export type InquiryReferenceLinksProps = {
   onAdd: (url: string, label: string | null) => Promise<void>;
   onUpdate: (linkId: string, url: string, label: string | null) => Promise<void>;
   onDelete: (linkId: string) => Promise<void>;
-  onReorder: (orderedIds: string[]) => Promise<void>;
 };
 
 export default function InquiryReferenceLinks({
@@ -28,7 +29,6 @@ export default function InquiryReferenceLinks({
   onAdd,
   onUpdate,
   onDelete,
-  onReorder,
 }: InquiryReferenceLinksProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,12 +58,6 @@ export default function InquiryReferenceLinks({
     setEditingId(link.id);
     setEditUrl(link.url);
     setEditLabel(link.label ?? "");
-  };
-
-  const move = (index: number, delta: number) => {
-    const reordered = moveNatoriReferenceLink(links, index, index + delta);
-    if (reordered === links) return;
-    void run(() => onReorder(reordered.map((link) => link.id)));
   };
 
   return (
@@ -164,24 +158,6 @@ export default function InquiryReferenceLinks({
                     </a>
                     {readOnly ? null : (
                       <>
-                        <button
-                          type="button"
-                          onClick={() => move(index, -1)}
-                          disabled={busy || index === 0}
-                          aria-label={`${index + 1}番目のリンクを上へ`}
-                          className="grid h-8 w-8 place-items-center rounded-full border border-gray-300 text-gray-600 disabled:opacity-40"
-                        >
-                          <ArrowUp className="h-3.5 w-3.5" aria-hidden />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => move(index, 1)}
-                          disabled={busy || index === links.length - 1}
-                          aria-label={`${index + 1}番目のリンクを下へ`}
-                          className="grid h-8 w-8 place-items-center rounded-full border border-gray-300 text-gray-600 disabled:opacity-40"
-                        >
-                          <ArrowDown className="h-3.5 w-3.5" aria-hidden />
-                        </button>
                         <button
                           type="button"
                           onClick={() => startEdit(link)}
