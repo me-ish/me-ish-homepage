@@ -14,6 +14,7 @@ const IDEMPOTENCY_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,199}$/;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const PROJECT_TYPES = new Set(["icon", "sd", "standing", "illustration"]);
 const ITEM_KINDS = new Set(["base", "fixed", "percentage", "manual"]);
+const WARNING_SEVERITIES = new Set(["blocker", "attention"]);
 const RESOLUTIONS = new Set(["accepted", "overridden", "not_applicable"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -79,9 +80,9 @@ function readItem(
     presetItemId: typeof value.presetItemId === "string" ? value.presetItemId : null,
     kind: value.kind as NatoriQuoteSnapshotItemV1["kind"],
     labelSnapshot,
-    quantity: quantity as number,
-    unitAmount: unitAmount as number,
-    amount: amount as number,
+    quantity,
+    unitAmount,
+    amount,
     automatic: value.automatic as boolean,
     sourceFields: sourceFields as string[],
     ruleId: typeof value.ruleId === "string" ? value.ruleId : null,
@@ -140,6 +141,28 @@ export function validateNatoriQuoteIssuePayloadV1(
       seenIds.add(item.id);
     }
 
+    const reviewKeys = new Set<string>();
+    if (!Array.isArray(pricing.reviewItems)) {
+      push(issues, "pricingSnapshot.reviewItems", "review_items_invalid", "確認対象が不正です。");
+    } else {
+      pricing.reviewItems.forEach((reviewItem, index) => {
+        const path = `pricingSnapshot.reviewItems.${index}`;
+        if (!isRecord(reviewItem)) return push(issues, path, "review_item_invalid", "確認対象が不正です。");
+        if (typeof reviewItem.code !== "string" || !reviewItem.code) push(issues, `${path}.code`, "review_code_invalid", "warning codeが不正です。");
+        if (!WARNING_SEVERITIES.has(String(reviewItem.severity))) push(issues, `${path}.severity`, "review_severity_invalid", "severityが不正です。");
+        if (typeof reviewItem.title !== "string" || !reviewItem.title) push(issues, `${path}.title`, "review_title_invalid", "確認タイトルが不正です。");
+        if (typeof reviewItem.action !== "string" || !reviewItem.action) push(issues, `${path}.action`, "review_action_invalid", "確認アクションが不正です。");
+        if (typeof reviewItem.sourceField !== "string" || !reviewItem.sourceField) push(issues, `${path}.sourceField`, "review_source_invalid", "根拠フィールドが不正です。");
+        if (typeof reviewItem.ruleId !== "string" || !reviewItem.ruleId) push(issues, `${path}.ruleId`, "review_rule_id_invalid", "ruleIdが不正です。");
+        if (typeof reviewItem.code === "string" && typeof reviewItem.ruleId === "string") {
+          const key = `${reviewItem.code}\u0000${reviewItem.ruleId}`;
+          if (reviewKeys.has(key)) push(issues, "pricingSnapshot.reviewItems", "duplicate_review_item", "確認対象が重複しています。");
+          reviewKeys.add(key);
+        }
+      });
+    }
+
+    const resolutionKeys = new Set<string>();
     if (!Array.isArray(pricing.reviewResolutions)) {
       push(issues, "pricingSnapshot.reviewResolutions", "review_resolutions_invalid", "確認結果が不正です。");
     } else {
@@ -151,7 +174,23 @@ export function validateNatoriQuoteIssuePayloadV1(
         if (!RESOLUTIONS.has(String(resolution.resolution))) push(issues, `${path}.resolution`, "review_resolution_value_invalid", "解決区分が不正です。");
         if (typeof resolution.note !== "string" || resolution.note.length > 1000) push(issues, `${path}.note`, "review_note_invalid", "確認メモが不正です。");
         if (!ISO_DATE_RE.test(String(resolution.resolvedAt)) || Number.isNaN(Date.parse(String(resolution.resolvedAt)))) push(issues, `${path}.resolvedAt`, "review_resolved_at_invalid", "確認時刻が不正です。");
+        if (typeof resolution.code === "string" && typeof resolution.ruleId === "string") {
+          const key = `${resolution.code}\u0000${resolution.ruleId}`;
+          if (resolutionKeys.has(key)) push(issues, "pricingSnapshot.reviewResolutions", "duplicate_review_resolution", "確認結果が重複しています。");
+          resolutionKeys.add(key);
+        }
       });
+    }
+
+    for (const key of reviewKeys) {
+      if (!resolutionKeys.has(key)) {
+        push(issues, "pricingSnapshot.reviewResolutions", "unresolved_review_item", "未解決の確認項目があります。");
+      }
+    }
+    for (const key of resolutionKeys) {
+      if (!reviewKeys.has(key)) {
+        push(issues, "pricingSnapshot.reviewResolutions", "orphan_review_resolution", "対応する確認対象がない解決記録があります。");
+      }
     }
 
     const subtotal = pricing.subtotalBeforePercentage;
