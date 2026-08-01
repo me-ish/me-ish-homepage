@@ -5,29 +5,23 @@ import Link from "next/link";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import EstimateForm from "@/features/natori/components/dashboard/EstimateForm";
 import StructuredEstimateSuggestionPanel from "@/features/natori/components/dashboard/StructuredEstimateSuggestionPanel";
+import StructuredPricingEditor from "@/features/natori/components/dashboard/StructuredPricingEditor";
 import { fetchNatoriProjects } from "@/features/natori/data/supabaseProjects";
 import {
   fetchOwnPricingPresets,
   seedDefaultPricingPresets,
 } from "@/features/natori/data/supabasePricing";
 import { createDefaultNatoriPricingConfig } from "@/features/natori/lib/pricing";
-import type { NatoriPricingConfig } from "@/features/natori/types/pricing";
+import type { NatoriPricingConfigWithStructured } from "@/features/natori/lib/pricingSuggestionConfig";
 import type { NatoriProject } from "@/features/natori/types/projects";
 
-/**
- * P1-08 migration boundary.
- *
- * - legacy/manual entry keeps the current keyword estimate tool.
- * - a structured inquiry deep-link (`?inquiry=<id>`) is routed to the stable-ID
- *   suggestion review instead, so the old keyword engine cannot silently issue
- *   a quote for structured request_data.
- */
 export default function EstimateWorkspace() {
   const [inquiryId, setInquiryId] = useState<string | null>(null);
   const [project, setProject] = useState<NatoriProject | null>(null);
-  const [pricingConfig, setPricingConfig] = useState<NatoriPricingConfig>(() =>
+  const [pricingConfig, setPricingConfig] = useState<NatoriPricingConfigWithStructured>(() =>
     createDefaultNatoriPricingConfig()
   );
+  const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +45,10 @@ export default function EstimateWorkspace() {
         if (cancelled) return;
         setProject(projects.find((entry) => entry.id === id) ?? null);
         const activePreset = presetList.find((preset) => preset.isDefault) ?? presetList[0];
-        if (activePreset) setPricingConfig(activePreset.config);
+        if (activePreset) {
+          setActivePresetId(activePreset.id);
+          setPricingConfig(activePreset.config);
+        }
       } catch (cause) {
         if (cancelled) return;
         setError(cause instanceof Error ? cause.message : String(cause));
@@ -65,10 +62,7 @@ export default function EstimateWorkspace() {
     };
   }, []);
 
-  const isStructured = useMemo(
-    () => Boolean(project?.requestData),
-    [project]
-  );
+  const isStructured = useMemo(() => Boolean(project?.requestData), [project]);
 
   if (loading) {
     return (
@@ -104,10 +98,7 @@ export default function EstimateWorkspace() {
         <p className="mt-1 text-sm text-amber-800">
           削除済み、アーカイブ済み、またはアクセス対象外の可能性があります。
         </p>
-        <Link
-          href="/natori/estimate"
-          className="mt-4 inline-flex rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-bold text-amber-900"
-        >
+        <Link href="/natori/estimate" className="mt-4 inline-flex rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-bold text-amber-900">
           通常の見積もり画面へ
         </Link>
       </div>
@@ -119,18 +110,13 @@ export default function EstimateWorkspace() {
   return (
     <div className="space-y-5">
       <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-pink-600">
-          Structured inquiry
-        </p>
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-pink-600">Structured inquiry</p>
         <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h1 className="break-words text-xl font-black text-gray-950">{project.title}</h1>
             <p className="mt-1 text-sm text-gray-600">{project.clientName}</p>
           </div>
-          <Link
-            href="/natori/dashboard"
-            className="inline-flex h-10 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white px-4 text-xs font-bold text-gray-800 hover:bg-gray-50"
-          >
+          <Link href="/natori/dashboard" className="inline-flex h-10 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white px-4 text-xs font-bold text-gray-800 hover:bg-gray-50">
             問い合わせ管理へ戻る
           </Link>
         </div>
@@ -139,6 +125,14 @@ export default function EstimateWorkspace() {
           stable ID候補を確認し、blockerを解消してから正式見積へ進みます。
         </p>
       </section>
+
+      {activePresetId ? (
+        <StructuredPricingEditor
+          presetId={activePresetId}
+          legacyConfig={pricingConfig}
+          onSaved={setPricingConfig}
+        />
+      ) : null}
 
       <StructuredEstimateSuggestionPanel
         project={project}
