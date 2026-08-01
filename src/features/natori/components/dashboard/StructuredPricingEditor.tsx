@@ -38,7 +38,7 @@ export default function StructuredPricingEditor({ presetId, legacyConfig, onSave
     setSaving(true);
     setMessage(null);
     try {
-      const baseIds = new Set(BASES.map(([id]) => id));
+      const baseIds = new Set<string>(BASES.map(([id]) => id));
       const config: NatoriPricingConfigV1 = {
         schemaVersion: 1,
         currency: "JPY",
