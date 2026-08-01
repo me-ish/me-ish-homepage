@@ -1,14 +1,26 @@
+import { readNatoriPricingConfigV1 } from "@/features/natori/lib/pricingSuggestion";
 import type { NatoriPricingConfig } from "@/features/natori/types/pricing";
 import type { NatoriPricingConfigV1 } from "@/features/natori/types/pricingSuggestion";
 
+export type NatoriPricingConfigWithStructured = NatoriPricingConfig & {
+  structuredPricing?: unknown;
+};
+
+export function readStructuredPricingConfig(
+  legacy: NatoriPricingConfigWithStructured
+): NatoriPricingConfigV1 | null {
+  return readNatoriPricingConfigV1(legacy.structuredPricing);
+}
+
 /**
- * 既存料金表から、stable ID がそのまま一致する加算項目だけをV1へ移す。
- * 既存の基本料金は scope 軸なので、商品種別の基本料金へ推測変換しない。
- * そのため structured 見積では pricing_base_rule_missing が明示される。
+ * 既存料金表から、stable ID が一致する加算項目だけをV1へ移す。
+ * scope軸の基本料金は商品種別へ推測変換しない。
  */
 export function createStructuredSuggestionConfigFromLegacy(
-  legacy: NatoriPricingConfig
+  legacy: NatoriPricingConfigWithStructured
 ): NatoriPricingConfigV1 {
+  const stored = readStructuredPricingConfig(legacy);
+  if (stored) return stored;
   return {
     schemaVersion: 1,
     currency: "JPY",
@@ -29,4 +41,11 @@ export function createStructuredSuggestionConfigFromLegacy(
       })),
     ],
   };
+}
+
+export function withStructuredPricingConfig(
+  legacy: NatoriPricingConfigWithStructured,
+  structuredPricing: NatoriPricingConfigV1
+): NatoriPricingConfigWithStructured {
+  return { ...legacy, structuredPricing };
 }
