@@ -2,9 +2,10 @@ import "server-only";
 
 import { createHash } from "crypto";
 import { Resend } from "resend";
-import { injectAcceptLink, buildOrderMailLogEntry } from "@/features/natori/lib/orderMail";
+import { injectAcceptLink } from "@/features/natori/lib/orderMail";
 import { getNextActionForStatus } from "@/features/natori/lib/projects";
 import { validateStructuredQuoteDeliveryAttempt } from "@/features/natori/lib/structuredQuoteAttempt";
+import { appendStructuredQuoteMailLog } from "@/features/natori/lib/structuredQuoteMailLog";
 import { issueNatoriQuoteViaRpc } from "@/features/natori/server/quoteIssueRpcAdapter";
 import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -110,13 +111,13 @@ export async function issueStructuredQuoteAndSend(
   }
 
   const sentAt = new Date().toISOString().slice(0, 10);
-  const noteEntry = buildOrderMailLogEntry(
-    "estimate",
+  const nextNote = appendStructuredQuoteMailLog({
+    currentNote: project.note,
+    quoteId: issued.quoteId,
     sentAt,
-    input.toEmail,
-    input.pricingSnapshot.total,
-  );
-  const nextNote = project.note ? `${project.note}\n\n${noteEntry}` : noteEntry;
+    toEmail: input.toEmail,
+    amount: input.pricingSnapshot.total,
+  });
   const { error: updateError } = await supabaseAdmin()
     .from("natori_projects")
     .update({
