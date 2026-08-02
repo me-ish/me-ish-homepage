@@ -1,14 +1,16 @@
 import "server-only";
 
-import { createHash, randomBytes } from "crypto";
+import { createHash } from "crypto";
 import { Resend } from "resend";
-import { injectAcceptLink, buildOrderMailLogEntry, QUOTE_VALID_DAYS } from "@/features/natori/lib/orderMail";
+import { injectAcceptLink, buildOrderMailLogEntry } from "@/features/natori/lib/orderMail";
 import { getNextActionForStatus } from "@/features/natori/lib/projects";
+import { validateStructuredQuoteDeliveryAttempt } from "@/features/natori/lib/structuredQuoteAttempt";
 import { issueNatoriQuoteViaRpc } from "@/features/natori/server/quoteIssueRpcAdapter";
 import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSiteUrl } from "@/lib/constants";
 import type { NatoriQuoteIssuePayloadV1 } from "@/features/natori/types/quoteSnapshot";
+import type { StructuredQuoteDeliveryAttempt } from "@/features/natori/lib/structuredQuoteAttempt";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const FROM = process.env.NATORI_ORDER_MAIL_FROM ?? "ナトリ（me-ish） <noreply@me-ish.art>";
@@ -24,16 +26,30 @@ type ProjectRow = {
   note: string | null;
 };
 
-export type IssueStructuredQuoteInput = NatoriQuoteIssuePayloadV1;
+export type IssueStructuredQuoteInput = NatoriQuoteIssuePayloadV1 &
+  StructuredQuoteDeliveryAttempt;
 
 export type IssueStructuredQuoteResult =
   | { kind: "ok"; quoteId: string; version: number; reused: boolean }
-  | { kind: "not-found" | "not-configured" | "invalid-state" | "rejected" | "db-error" | "mail-error"; reason?: string };
+  | {
+      kind:
+        | "not-found"
+        | "not-configured"
+        | "invalid-state"
+        | "invalid-attempt"
+        | "rejected"
+        | "db-error"
+        | "mail-error";
+      reason?: string;
+    };
 
 export async function issueStructuredQuoteAndSend(
   input: IssueStructuredQuoteInput,
 ): Promise<IssueStructuredQuoteResult> {
   if (!RESEND_API_KEY) return { kind: "not-configured" };
+
+  const attempt = validateStructuredQuoteDeliveryAttempt(input);
+  if (!attempt.success) return { kind: "invalid-attempt" };
 
   const ownerId = await resolveNatoriActingUserId();
   if (!ownerId) return { kind: "not-found" };
@@ -51,19 +67,23 @@ export async function issueStructuredQuoteAndSend(
     return { kind: "invalid-state" };
   }
 
-  const token = randomBytes(32).toString("base64url");
-  const tokenHash = createHash("sha256").update(token).digest("hex");
-  const expiresAt = new Date(
-    Date.now() + QUOTE_VALID_DAYS * 24 * 60 * 60 * 1000,
-  ).toISOString();
+  const tokenHash = createHash("sha256")
+    .update(attempt.data.acceptToken)
+    .digest("hex");
 
   const issued = await issueNatoriQuoteViaRpc({
-    ...input,
+    projectId: input.projectId,
+    toEmail: input.toEmail,
+    subject: input.subject,
+    bodySnapshot: input.bodySnapshot,
+    idempotencyKey: input.idempotencyKey,
+    requestSnapshot: input.requestSnapshot,
+    pricingSnapshot: input.pricingSnapshot,
     ownerId,
     title: project.title,
     clientName: project.client_name,
     tokenHash,
-    expiresAt,
+    expiresAt: attempt.data.expiresAt,
   });
   if (issued.kind === "rejected") {
     return { kind: "rejected", reason: issued.reason };
@@ -72,7 +92,7 @@ export async function issueStructuredQuoteAndSend(
 
   const body = injectAcceptLink(
     input.bodySnapshot,
-    `${getSiteUrl()}/natori/quote/${token}`,
+    `${getSiteUrl()}/natori/quote/${attempt.data.acceptToken}`,
   );
   const resend = new Resend(RESEND_API_KEY);
   const { error: mailError } = await resend.emails.send({
