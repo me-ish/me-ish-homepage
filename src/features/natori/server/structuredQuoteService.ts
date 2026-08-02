@@ -96,15 +96,22 @@ export async function issueStructuredQuoteAndSend(
     `${getSiteUrl()}/natori/quote/${attempt.data.acceptToken}`,
   );
   const resend = new Resend(RESEND_API_KEY);
-  const { error: mailError } = await resend.emails.send({
-    from: FROM,
-    to: [input.toEmail],
-    ...(BCC ? { bcc: [BCC] } : {}),
-    subject: input.subject.replace(/[\r\n]+/g, " ").slice(0, 200),
-    text: body,
-    replyTo: REPLY_TO,
-    headers: { "X-Meish-Template": "natori-structured-quote" },
-  });
+  const { error: mailError } = await resend.emails.send(
+    {
+      from: FROM,
+      to: [input.toEmail],
+      ...(BCC ? { bcc: [BCC] } : {}),
+      subject: input.subject.replace(/[\r\n]+/g, " ").slice(0, 200),
+      text: body,
+      replyTo: REPLY_TO,
+      headers: { "X-Meish-Template": "natori-structured-quote" },
+    },
+    {
+      // A lost HTTP response must not cause the same quote email to be delivered twice.
+      // Resend retains idempotency keys for 24 hours, which covers normal retries.
+      idempotencyKey: `natori-structured-quote/${issued.quoteId}`,
+    },
+  );
   if (mailError) {
     console.error("[natori-structured-quote] mail send failed", mailError);
     return { kind: "mail-error" };
