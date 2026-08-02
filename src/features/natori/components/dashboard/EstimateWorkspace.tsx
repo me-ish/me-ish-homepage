@@ -25,6 +25,7 @@ export default function EstimateWorkspace() {
   );
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [activePresetName, setActivePresetName] = useState("料金プリセット");
+  const [pricingRevision, setPricingRevision] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -136,7 +137,10 @@ export default function EstimateWorkspace() {
         <StructuredPricingEditor
           presetId={activePresetId}
           legacyConfig={pricingConfig}
-          onSaved={setPricingConfig}
+          onSaved={(nextConfig) => {
+            setPricingConfig(nextConfig);
+            setPricingRevision((current) => current + 1);
+          }}
         />
       ) : null}
 
@@ -147,6 +151,7 @@ export default function EstimateWorkspace() {
       />
 
       <StructuredQuoteIssuePanel
+        key={`${project.id}:${activePresetId ?? "none"}:${pricingRevision}`}
         project={project}
         pricingConfig={pricingConfig}
         pricingPresetId={activePresetId}
