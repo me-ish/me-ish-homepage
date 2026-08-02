@@ -93,13 +93,17 @@ npm run build
 
 1. PRをReady for reviewへ変更
 2. 最終レビュー
-3. PRをマージ
+3. Production deploymentを開始しない状態を確認する
 4. 本番SupabaseへP1-09 migrationを適用
-5. Production deploymentの成功確認
-6. 管理画面で1件の最小動作確認
-7. quote発行・承諾ページ・案件状態を確認
+5. `natori_issue_quote_v1`、追加列、trigger、権限が利用可能であることを確認する
+6. PRをマージしてProduction deploymentを開始する
+7. Production deploymentの成功確認
+8. 管理画面で1件の最小動作確認
+9. quote発行・承諾ページ・案件状態を確認
 
-migrationとアプリケーションの順序を入れ替えない。新コードが新RPCを呼ぶため、Production deployment前にDB側contractが利用可能である必要がある場合は、実際のデプロイ方式に合わせてメンテナンス手順を確定する。
+Vercelが`main`へのマージを契機に自動Production deploymentする場合、**migrationをマージ前に適用する**。新コードは新RPCを呼ぶため、アプリケーションを先に公開してはならない。
+
+今回のmigrationは既存経路を壊さない後方互換の追加変更として設計しているが、適用直前に改めて差分を確認する。migration適用後、アプリのマージを中止した場合も、追加列・function・triggerを慌てて削除せず、そのまま保持して原因を確認する。
 
 ## 7. ロールバック判断
 
@@ -123,6 +127,6 @@ P1-09 migrationは列・index・function・triggerを追加するため、障害
 - 改訂発行と旧quote無効化を確認
 - retryable / nonretryable挙動を確認
 - PR最終レビュー完了
+- 明示承認後、本番migrationを先行適用
 - 明示承認後にマージ
-- 本番migration適用成功
 - Production最小動作確認成功
