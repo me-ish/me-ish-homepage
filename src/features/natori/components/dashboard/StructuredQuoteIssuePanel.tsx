@@ -165,6 +165,10 @@ export default function StructuredQuoteIssuePanel({
         retryable?: boolean;
       } | null;
       if (!response.ok || !json?.ok || !json.quoteId || !json.version) {
+        if (json?.retryable !== true) {
+          requestBodyRef.current = null;
+          setAttemptLocked(false);
+        }
         throw new Error(json?.error ?? `発行に失敗しました (${response.status})`);
       }
       setIssued({ quoteId: json.quoteId, version: json.version });
