@@ -6,7 +6,7 @@ const migration = readFileSync(
   path.join(
     "supabase",
     "migrations",
-    "20260802092000_harden_quote_snapshot_numeric_validation.sql"
+    "20260802002947_harden_quote_snapshot_numeric_validation.sql"
   ),
   "utf8"
 );
