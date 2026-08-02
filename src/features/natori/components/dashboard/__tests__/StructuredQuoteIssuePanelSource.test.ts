@@ -15,10 +15,19 @@ const source = readFileSync(
 );
 
 describe("StructuredQuoteIssuePanel retry lock", () => {
-  it("keeps the frozen attempt only for retryable server responses", () => {
-    expect(source).toContain("if (json?.retryable !== true)");
+  it("unlocks only when the server explicitly returns a non-retryable client error", () => {
+    expect(source).toContain("const responseIsExplicitlyNonRetryable =");
+    expect(source).toContain(
+      "json !== null && response.status < 500 && json.retryable !== true",
+    );
+    expect(source).toContain("if (responseIsExplicitlyNonRetryable)");
     expect(source).toContain("requestBodyRef.current = null");
     expect(source).toContain("setAttemptLocked(false)");
+  });
+
+  it("keeps the attempt for malformed or missing JSON and all 5xx responses", () => {
+    expect(source).toContain("json !== null");
+    expect(source).toContain("response.status < 500");
   });
 
   it("does not clear the frozen attempt in the generic catch path", () => {
