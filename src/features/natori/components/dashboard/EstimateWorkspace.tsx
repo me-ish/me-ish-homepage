@@ -6,6 +6,7 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import EstimateForm from "@/features/natori/components/dashboard/EstimateForm";
 import StructuredEstimateSuggestionPanel from "@/features/natori/components/dashboard/StructuredEstimateSuggestionPanel";
 import StructuredPricingEditor from "@/features/natori/components/dashboard/StructuredPricingEditor";
+import StructuredQuoteIssuePanel from "@/features/natori/components/dashboard/StructuredQuoteIssuePanel";
 import { fetchNatoriProjects } from "@/features/natori/data/supabaseProjects";
 import {
   fetchOwnPricingPresets,
@@ -23,6 +24,7 @@ export default function EstimateWorkspace() {
     createDefaultNatoriPricingConfig()
   );
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
+  const [activePresetName, setActivePresetName] = useState("料金プリセット");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,6 +50,7 @@ export default function EstimateWorkspace() {
         const activePreset = presetList.find((preset) => preset.isDefault) ?? presetList[0];
         if (activePreset) {
           setActivePresetId(activePreset.id);
+          setActivePresetName(activePreset.name);
           setPricingConfig(activePreset.config);
         }
       } catch (cause) {
@@ -125,7 +128,7 @@ export default function EstimateWorkspace() {
         </div>
         <p className="mt-4 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-sm leading-6 text-violet-900">
           この案件は構造化された原回答を持つため、旧キーワード見積には渡しません。
-          stable ID候補を確認し、blockerを解消してから正式見積へ進みます。
+          stable ID候補と確認項目を確定し、正式見積snapshotとして発行します。
         </p>
       </section>
 
@@ -143,8 +146,16 @@ export default function EstimateWorkspace() {
         deliveryPlan={project.deliveryPlan ?? "normal"}
       />
 
+      <StructuredQuoteIssuePanel
+        project={project}
+        pricingConfig={pricingConfig}
+        pricingPresetId={activePresetId}
+        pricingPresetName={activePresetName}
+      />
+
       <section className="rounded-2xl border border-gray-200 bg-white p-4 text-sm leading-6 text-gray-700 shadow-sm">
-        P1-08では候補と発行可否だけを扱います。正式見積の保存・snapshot・DB発行guardはP1-09で追加します。
+        発行すると依頼内容・料金明細・確認結果・メール本文がversion付きsnapshotとして固定されます。
+        内容を変更する場合は、既存見積を上書きせず新しいversionを発行します。
       </section>
     </div>
   );
