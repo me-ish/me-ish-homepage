@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import { validateNatoriQuoteIssuePayloadV1 } from "@/features/natori/lib/quoteSnapshot";
+import { validateStructuredQuoteDeliveryAttempt } from "@/features/natori/lib/structuredQuoteAttempt";
 import { issueStructuredQuoteAndSend } from "@/features/natori/server/structuredQuoteService";
 
 export const runtime = "nodejs";
@@ -16,19 +17,31 @@ export async function POST(request: Request) {
 
   const raw = await request.json().catch(() => null);
   const parsed = validateNatoriQuoteIssuePayloadV1(raw);
-  if (!parsed.success) {
+  const attempt = validateStructuredQuoteDeliveryAttempt(raw);
+  if (!parsed.success || !attempt.success) {
     return NextResponse.json(
-      { error: "正式見積の内容が不正です", issues: parsed.issues },
+      {
+        error: "正式見積の内容が不正です",
+        issues: parsed.success ? [{ code: "delivery_attempt_invalid" }] : parsed.issues,
+      },
       { status: 400 },
     );
   }
 
-  const result = await issueStructuredQuoteAndSend(parsed.data);
+  const result = await issueStructuredQuoteAndSend({
+    ...parsed.data,
+    ...attempt.data,
+  });
   switch (result.kind) {
     case "not-found":
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     case "not-configured":
       return NextResponse.json({ error: "Mail is not configured" }, { status: 500 });
+    case "invalid-attempt":
+      return NextResponse.json(
+        { error: "見積発行操作の再試行情報が不正です" },
+        { status: 400 },
+      );
     case "invalid-state":
       return NextResponse.json(
         { error: "現在の案件状態では正式見積を発行できません" },
@@ -40,10 +53,19 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     case "db-error":
-      return NextResponse.json({ error: "正式見積の保存に失敗しました" }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: "正式見積の保存結果を確認できませんでした。同じ内容で再試行してください。",
+          retryable: true,
+        },
+        { status: 500 },
+      );
     case "mail-error":
       return NextResponse.json(
-        { error: "正式見積は保存されましたが、メール送信に失敗しました。再発行しないでください。" },
+        {
+          error: "正式見積は保存されましたが、メール送信に失敗しました。同じ内容で再試行してください。",
+          retryable: true,
+        },
         { status: 502 },
       );
     case "ok":
