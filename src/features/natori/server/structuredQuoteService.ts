@@ -89,12 +89,13 @@ export async function issueStructuredQuoteAndSend(
     return { kind: "mail-error" };
   }
 
-  const noteEntry = buildOrderMailLogEntry({
-    kind: "estimate",
-    to: input.toEmail,
-    subject: input.subject,
-    amount: input.pricingSnapshot.total,
-  });
+  const sentAt = new Date().toISOString().slice(0, 10);
+  const noteEntry = buildOrderMailLogEntry(
+    "estimate",
+    sentAt,
+    input.toEmail,
+    input.pricingSnapshot.total,
+  );
   const nextNote = project.note ? `${project.note}\n\n${noteEntry}` : noteEntry;
   const { error: updateError } = await supabaseAdmin()
     .from("natori_projects")
