@@ -165,7 +165,9 @@ export default function StructuredQuoteIssuePanel({
         retryable?: boolean;
       } | null;
       if (!response.ok || !json?.ok || !json.quoteId || !json.version) {
-        if (json?.retryable !== true) {
+        const responseIsExplicitlyNonRetryable =
+          json !== null && response.status < 500 && json.retryable !== true;
+        if (responseIsExplicitlyNonRetryable) {
           requestBodyRef.current = null;
           setAttemptLocked(false);
         }
