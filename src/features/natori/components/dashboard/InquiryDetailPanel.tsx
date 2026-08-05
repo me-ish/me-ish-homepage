@@ -28,6 +28,7 @@ import InquiryRequestSummary from "./inquiry/InquiryRequestSummary";
 import InquiryReviewWarnings from "./inquiry/InquiryReviewWarnings";
 import InquiryTypeConfirmation from "./inquiry/InquiryTypeConfirmation";
 import type { OrderMailKind } from "./OrderMailPanel";
+import ProjectActivityTimeline from "./ProjectActivityTimeline";
 
 const ESTIMATE_MAIL_STATUSES: ReadonlySet<NatoriProject["status"]> = new Set([
   "inquiry",
@@ -292,35 +293,7 @@ export default function InquiryDetailPanel({
             </section>
           ) : null}
 
-          {/* 対応履歴 */}
-          <section>
-            <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700">
-              対応履歴
-            </h3>
-            {view.logs.length === 0 ? (
-              <p className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-500">
-                まだ対応履歴がありません（受付のみ）。
-              </p>
-            ) : (
-              <ol className="space-y-1.5">
-                {view.logs.map((log, index) => (
-                  <li
-                    key={`${log.dateISO}-${index}`}
-                    className="rounded-xl border border-pink-100 bg-pink-50/40 px-3 py-2 text-xs"
-                  >
-                    <p className="font-bold text-gray-900">
-                      {formatDate(log.dateISO)}｜{log.label}
-                    </p>
-                    {log.body ? (
-                      <p className="mt-0.5 whitespace-pre-wrap break-all text-gray-600">
-                        {log.body}
-                      </p>
-                    ) : null}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
+          <ProjectActivityTimeline projectId={project.id} legacyLogs={view.logs} />
         </div>
 
         {/* アクション */}

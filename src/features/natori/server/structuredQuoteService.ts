@@ -5,7 +5,6 @@ import { Resend } from "resend";
 import { injectAcceptLink } from "@/features/natori/lib/orderMail";
 import { getNextActionForStatus } from "@/features/natori/lib/projects";
 import { validateStructuredQuoteDeliveryAttempt } from "@/features/natori/lib/structuredQuoteAttempt";
-import { appendStructuredQuoteMailLog } from "@/features/natori/lib/structuredQuoteMailLog";
 import { issueNatoriQuoteViaRpc } from "@/features/natori/server/quoteIssueRpcAdapter";
 import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -24,7 +23,6 @@ type ProjectRow = {
   title: string;
   client_name: string;
   status: string;
-  note: string | null;
 };
 
 export type IssueStructuredQuoteInput = NatoriQuoteIssuePayloadV1 &
@@ -57,7 +55,7 @@ export async function issueStructuredQuoteAndSend(
 
   const { data, error } = await supabaseAdmin()
     .from("natori_projects")
-    .select("id, user_id, title, client_name, status, note")
+    .select("id, user_id, title, client_name, status")
     .eq("id", input.projectId)
     .eq("user_id", ownerId)
     .maybeSingle();
@@ -117,20 +115,13 @@ export async function issueStructuredQuoteAndSend(
     return { kind: "mail-error" };
   }
 
-  const sentAt = new Date().toISOString().slice(0, 10);
-  const nextNote = appendStructuredQuoteMailLog({
-    currentNote: project.note,
-    quoteId: issued.quoteId,
-    sentAt,
-    toEmail: input.toEmail,
-    amount: input.pricingSnapshot.total,
-  });
+  // Lifecycle history is recorded in natori_project_activity by DB triggers.
+  // Keep note reserved for administrator-authored free text.
   const { error: updateError } = await supabaseAdmin()
     .from("natori_projects")
     .update({
       status: "quoted",
       next_action: getNextActionForStatus("quoted"),
-      note: nextNote,
     })
     .eq("id", project.id)
     .eq("user_id", ownerId);
