@@ -10,10 +10,21 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams?: Promise<{ structured?: string }>;
+}) {
+  const params = await searchParams;
+
   return (
     <DemoAppShell bare>
-      <PortfolioLanding content={demoPortfolioContent} demoContact flatPlaceholders />
+      <PortfolioLanding
+        content={demoPortfolioContent}
+        demoContact
+        flatPlaceholders
+        structuredIntake={params?.structured === "1"}
+      />
     </DemoAppShell>
   );
 }

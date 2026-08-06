@@ -28,7 +28,6 @@ jobs:
 
   lint:
     name: Lint
-    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +39,7 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run lint || true
+      - run: npm run lint
 
   audit:
     name: Security Audit
@@ -58,7 +57,6 @@ jobs:
 
   test:
     name: Test
-    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,18 +68,10 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run test:coverage || true
-
-      - uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: coverage-report
-          path: coverage/
-          retention-days: 14
+      - run: npm test
 
   e2e:
     name: E2E Tests
-    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -95,7 +85,7 @@ jobs:
 
       - run: npx playwright install --with-deps chromium
 
-      - run: npm run test:e2e || true
+      - run: npm run test:e2e
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
