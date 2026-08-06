@@ -34,6 +34,10 @@ import {
 import { resolvePublicIntakeOwnerId } from "@/features/natori/server/publicIntakeOwner";
 import { isPublicStructuredIntakeEnabled } from "@/features/natori/server/publicIntakeRollout";
 import {
+  recordPublicIntakeMetric,
+  type PublicIntakeMetricCode,
+} from "@/features/natori/server/publicIntakeMetrics";
+import {
   NATORI_REQUEST_DATA_MAX_BYTES,
   natoriRequestSubmissionV1Schema,
 } from "@/features/natori/lib/requestSchema";
@@ -71,6 +75,16 @@ function fail(code: ContactErrorCode, status: number, fields?: FieldError[]) {
     { ok: false, error: code, ...(fields && fields.length > 0 ? { fields } : {}) },
     { status }
   );
+}
+
+function structuredFail(
+  metric: PublicIntakeMetricCode,
+  code: ContactErrorCode,
+  status: number,
+  fields?: FieldError[]
+) {
+  recordPublicIntakeMetric(metric);
+  return fail(code, status, fields);
 }
 
 /** multipart のフィールドを portfolioContactSchema の入力形へ組み立てる */
@@ -147,7 +161,7 @@ export async function POST(req: Request) {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     if (body.formVersion === NATORI_STRUCTURED_FORM_VERSION) {
       // structured 受付は資料同梱のため multipart のみ受け付ける。
-      return fail("invalid_request", 400);
+      return structuredFail("structured_payload_invalid", "invalid_request", 400);
     }
     // JSON 経路では refImages（任意URL）を受け付けない。外部URLを通知メールの
     // <img> に流し込まれるのを防ぐ（資料URLはテキストの refUrls / 詳細欄で受ける）
@@ -302,7 +316,7 @@ async function handleStructuredSubmission(form: FormData) {
 
   // Production では既定で無効。Preview で明示的に有効化した環境だけ v2 writer を使う。
   if (!isPublicStructuredIntakeEnabled()) {
-    return fail("temporarily_unavailable", 503);
+    return structuredFail("structured_flag_disabled", "temporarily_unavailable", 503);
   }
 
   // 3. shared RequestData V1 schema validation
@@ -312,13 +326,20 @@ async function handleStructuredSubmission(form: FormData) {
     formText(form, "email")
   );
   if (parsedSubmission.kind === "invalid") {
-    return fail("invalid_request", 400, parsedSubmission.fields);
+    return structuredFail(
+      "structured_payload_invalid",
+      "invalid_request",
+      400,
+      parsedSubmission.fields
+    );
   }
   const submission = parsedSubmission.submission;
 
   // 4. public intake owner 解決（session は owner 候補にしない）
   const owner = resolvePublicIntakeOwnerId();
-  if (owner.kind !== "ok") return fail("temporarily_unavailable", 503);
+  if (owner.kind !== "ok") {
+    return structuredFail("structured_owner_unavailable", "temporarily_unavailable", 503);
+  }
 
   // 5. project UUID は画像 path 生成より前に1回だけ作る（retry でも変えない）
   const projectId = crypto.randomUUID();
@@ -326,19 +347,24 @@ async function handleStructuredSubmission(form: FormData) {
   // 6. external URL normalize / duplicate 検証（URL へは接続しない）
   const parsedLinks = parseReferenceLinkRows(formText(form, "referenceLinks"));
   if (parsedLinks.kind === "invalid") {
-    return fail("invalid_request", 400, parsedLinks.fields);
+    return structuredFail(
+      "structured_reference_invalid",
+      "invalid_request",
+      400,
+      parsedLinks.fields
+    );
   }
 
   // 7. 画像 validation / 変換 / upload
   const files = form.getAll("refImages").filter((v): v is File => v instanceof File);
   if (files.length > MAX_REF_IMAGES) {
-    return fail("invalid_request", 400, [
+    return structuredFail("structured_upload_invalid", "invalid_request", 400, [
       { path: "refImages", message: `画像は最大${MAX_REF_IMAGES}枚までです。` },
     ]);
   }
   const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
   if (totalBytes > NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES) {
-    return fail("invalid_request", 400, [
+    return structuredFail("structured_upload_invalid", "invalid_request", 400, [
       { path: "refImages", message: "画像の合計サイズが上限を超えています。" },
     ]);
   }
@@ -352,8 +378,10 @@ async function handleStructuredSubmission(form: FormData) {
     }
     // RPC 呼び出し前の失敗なので、今回 upload した object だけを削除する。
     await deletePortfolioReferenceImages(referencePaths);
-    if (result.kind === "upload-error") return fail("upload_failed", 502);
-    return fail("invalid_request", 400, [
+    if (result.kind === "upload-error") {
+      return structuredFail("structured_upload_failed", "upload_failed", 502);
+    }
+    return structuredFail("structured_upload_invalid", "invalid_request", 400, [
       {
         path: "refImages",
         message:
@@ -373,15 +401,17 @@ async function handleStructuredSubmission(form: FormData) {
     referenceLinks: parsedLinks.links,
   });
 
-  if (created.kind === "no-owner") return fail("temporarily_unavailable", 503);
+  if (created.kind === "no-owner") {
+    return structuredFail("structured_owner_unavailable", "temporarily_unavailable", 503);
+  }
   if (created.kind === "unresolved") {
     // 結果不明。commit 済みの可能性があるため object は保持し、
     // project UUID は内部の突合キーとしてのみ扱う（response / 一般 log に出さない）。
-    return fail("temporarily_unavailable", 503);
+    return structuredFail("structured_create_unresolved", "temporarily_unavailable", 503);
   }
   if (created.kind !== "ok") {
     // 明確な validation / rejection。未参照 object は service 側で cleanup 済み。
-    return fail("submission_rejected", 400);
+    return structuredFail("structured_create_rejected", "submission_rejected", 400);
   }
 
   // 9. 成功メール。DB 受付成功後は失敗しても案件を rollback / archive / 削除しない。
@@ -398,18 +428,25 @@ async function handleStructuredSubmission(form: FormData) {
     try {
       const sent = await sendStructuredPortfolioContactEmail(mailInput);
       mailed = sent.mailed;
+      recordPublicIntakeMetric(mailed ? "structured_mail_sent" : "structured_mail_failed");
     } catch {
-      console.error("[natori-portfolio-contact] structured mail threw");
+      recordPublicIntakeMetric("structured_mail_failed");
     }
     try {
       const autoReply = await sendStructuredPortfolioContactAutoReply(mailInput);
       autoReplied = autoReply.mailed;
+      recordPublicIntakeMetric(
+        autoReplied ? "structured_auto_reply_sent" : "structured_auto_reply_failed"
+      );
     } catch {
-      console.error("[natori-portfolio-contact] structured auto-reply threw");
+      recordPublicIntakeMetric("structured_auto_reply_failed");
     }
   } else {
-    console.error("[natori-portfolio-contact] mail skipped: RESEND_API_KEY not set");
+    recordPublicIntakeMetric("structured_mail_skipped");
+    recordPublicIntakeMetric("structured_auto_reply_skipped");
   }
+
+  recordPublicIntakeMetric("structured_accepted");
 
   // 10. safe response。submission ID / project ID は返さない。
   return NextResponse.json(

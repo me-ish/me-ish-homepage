@@ -8,12 +8,14 @@ const {
   mockCreateSignedUrl,
   mockInsert,
   mockStorageFrom,
+  mockUpdate,
 } = vi.hoisted(() => ({
   mockAdminFrom: vi.fn(),
   mockCreateSignedUploadUrl: vi.fn(),
   mockCreateSignedUrl: vi.fn(),
   mockInsert: vi.fn(),
   mockStorageFrom: vi.fn(),
+  mockUpdate: vi.fn(),
 }));
 
 vi.mock("@/lib/supabaseAdmin", () => ({
@@ -34,6 +36,7 @@ vi.mock("@/features/natori/server/orderMailService", () => ({
 }));
 
 import {
+  acceptNatoriDelivery,
   getNatoriDeliveryByToken,
   signNatoriDeliveryUpload,
 } from "@/features/natori/server/deliveryService";
@@ -234,5 +237,48 @@ describe("Natori delivery Storage", () => {
       3600,
       { download: "file.pdf" },
     );
+  });
+});
+
+describe("Natori delivery acceptance retry", () => {
+  const activeDelivery = {
+    id: "project-1",
+    title: "Final",
+    client_name: "Client",
+    status: "delivered",
+    note: null,
+    delivery_accepted_at: null,
+    delivery_token_expires_at: null,
+    payment_confirmed_at: "2026-07-01T00:00:00.000Z",
+  };
+
+  it("treats a repeated acceptance as an idempotent success", async () => {
+    mockAdminFrom.mockReturnValue({
+      select: vi.fn(() =>
+        query({
+          data: { ...activeDelivery, delivery_accepted_at: "2026-07-02T00:00:00.000Z" },
+          error: null,
+        })
+      ),
+      update: mockUpdate,
+    });
+
+    await expect(acceptNatoriDelivery("abcdefghijklmnopqrstuvwx")).resolves.toEqual({
+      kind: "already-accepted",
+    });
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("treats a zero-row conditional update as a concurrent acceptance", async () => {
+    mockUpdate.mockReturnValue(query({ data: [], error: null }));
+    mockAdminFrom.mockReturnValue({
+      select: vi.fn(() => query({ data: activeDelivery, error: null })),
+      update: mockUpdate,
+    });
+
+    await expect(acceptNatoriDelivery("abcdefghijklmnopqrstuvwx")).resolves.toEqual({
+      kind: "already-accepted",
+    });
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
   });
 });
