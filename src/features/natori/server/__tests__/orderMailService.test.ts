@@ -199,6 +199,26 @@ describe("markNatoriCommissionPaid", () => {
     expect(mockRpc).not.toHaveBeenCalled();
   });
 
+  it("does not record a Stripe payment without a confirmed amount", async () => {
+    const { markNatoriCommissionPaid } = await loadService();
+    installDb(makeProjectRow());
+
+    await expect(
+      markNatoriCommissionPaid("proj-1", "cs_test_missing_amount", null, "quote-1")
+    ).resolves.toEqual({ kind: "db-error" });
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it("does not record a Stripe payment without its quote ID", async () => {
+    const { markNatoriCommissionPaid } = await loadService();
+    installDb(makeProjectRow());
+
+    await expect(
+      markNatoriCommissionPaid("proj-1", "cs_test_missing_quote", 8000)
+    ).resolves.toEqual({ kind: "db-error" });
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
   it("入金を一度だけ確定し、受領額・session・台帳を残す", async () => {
     const { markNatoriCommissionPaid } = await loadService();
     installDb(makeProjectRow({
@@ -211,12 +231,12 @@ describe("markNatoriCommissionPaid", () => {
       error: null,
     });
 
-    await expect(markNatoriCommissionPaid("proj-1", "cs_test_123", 8000)).resolves.toEqual({ kind: "ok" });
+    await expect(markNatoriCommissionPaid("proj-1", "cs_test_123", 8000, "quote-1")).resolves.toEqual({ kind: "ok" });
     expect(mockRpc).toHaveBeenCalledWith("natori_record_stripe_payment", {
       p_project_id: "proj-1",
       p_session_id: "cs_test_123",
       p_amount: 8000,
-      p_quote_id: null,
+      p_quote_id: "quote-1",
     });
     expect(mockSend).toHaveBeenCalledTimes(2);
   });
@@ -233,7 +253,7 @@ describe("markNatoriCommissionPaid", () => {
       data: [{ result: "already-paid", advanced: false, new_event: false, recorded_amount: 8000 }],
       error: null,
     });
-    await expect(markNatoriCommissionPaid("proj-1", "cs_test_123", 8000)).resolves.toEqual({ kind: "already-paid" });
+    await expect(markNatoriCommissionPaid("proj-1", "cs_test_123", 8000, "quote-1")).resolves.toEqual({ kind: "already-paid" });
     expect(mockSend).not.toHaveBeenCalled();
   });
 
@@ -249,7 +269,7 @@ describe("markNatoriCommissionPaid", () => {
       data: [{ result: "duplicate-payment", advanced: false, new_event: true, recorded_amount: 8000 }],
       error: null,
     });
-    await expect(markNatoriCommissionPaid("proj-1", "cs_second", 8000)).resolves.toEqual({ kind: "already-paid" });
+    await expect(markNatoriCommissionPaid("proj-1", "cs_second", 8000, "quote-1")).resolves.toEqual({ kind: "already-paid" });
     expect(mockSend).toHaveBeenCalledTimes(1);
   });
 
@@ -260,7 +280,7 @@ describe("markNatoriCommissionPaid", () => {
       data: [{ result: "amount-mismatch", advanced: false, new_event: true, recorded_amount: 5000 }],
       error: null,
     });
-    await expect(markNatoriCommissionPaid("proj-1", "cs_mismatch", 5000)).resolves.toEqual({ kind: "amount-mismatch" });
+    await expect(markNatoriCommissionPaid("proj-1", "cs_mismatch", 5000, "quote-1")).resolves.toEqual({ kind: "amount-mismatch" });
     expect(mockSend).toHaveBeenCalledTimes(1);
   });
 
