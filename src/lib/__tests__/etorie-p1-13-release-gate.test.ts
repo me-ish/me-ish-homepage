@@ -61,5 +61,11 @@ describe("Etorie P1-13 release gate assets", () => {
       expect(block).not.toContain("continue-on-error: true");
       expect(block).not.toContain("|| true");
     }
+
+    const e2eStart = workflow.indexOf("  e2e:");
+    const e2eBlock = workflow.slice(e2eStart);
+    expect(e2eBlock).toContain("NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321");
+    expect(e2eBlock).toContain("NEXT_PUBLIC_SUPABASE_ANON_KEY: e2e-placeholder");
+    expect(e2eBlock).not.toMatch(/supabase\.co/i);
   });
 });
