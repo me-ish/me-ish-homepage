@@ -5,25 +5,6 @@ import { validateNatoriQuoteIssuePayloadV1 } from "@/features/natori/lib/quoteSn
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { NatoriQuoteIssuePayloadV1 } from "@/features/natori/types/quoteSnapshot";
 
-type QuoteIssueRpcResponse = {
-  data: unknown;
-  error: unknown;
-  status?: number;
-};
-
-type QuoteIssueRpcClient = {
-  rpc(
-    name: "natori_issue_quote_v1",
-    args: Record<string, unknown>,
-  ): PromiseLike<QuoteIssueRpcResponse>;
-};
-
-function getQuoteIssueRpcClient(): QuoteIssueRpcClient {
-  // TODO(P1-11): remove this narrow bridge after the generated Database type
-  // contains natori_issue_quote_v1.
-  return supabaseAdmin() as unknown as QuoteIssueRpcClient;
-}
-
 export type IssueNatoriQuoteRpcInput = NatoriQuoteIssuePayloadV1 & {
   ownerId: string;
   title: string;
@@ -116,7 +97,7 @@ export async function issueNatoriQuoteViaRpc(
   }
 
   try {
-    const { data, error, status } = await getQuoteIssueRpcClient().rpc(
+    const { data, error, status } = await supabaseAdmin().rpc(
       "natori_issue_quote_v1",
       {
         p_user_id: input.ownerId,

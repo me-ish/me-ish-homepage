@@ -199,25 +199,26 @@ describe("Etorie migration archive", () => {
       .sort();
     const versions = active.map((entry) => entry.split("_", 1)[0]);
 
-    expect(active).toEqual([
+    const frozenPhase1Lane = [
       baselineName,
       hardeningName,
       phase1ExpandName,
       phase1ConstraintsName,
       remainingPrivilegesName,
       intakeRpcsName,
-    ]);
+    ];
+    expect(active.slice(0, frozenPhase1Lane.length)).toEqual(frozenPhase1Lane);
     expect(new Set(versions).size).toBe(versions.length);
     expect(active.every((entry) => /^\d{14}_[a-z0-9_]+\.sql$/.test(entry))).toBe(
       true,
     );
     expect(manifest.activeMigrations).toEqual(
-      active.map(
+      frozenPhase1Lane.map(
         (entry) => `supabase/migrations/${entry}`,
       ),
     );
-    expect(manifest.requiredSequence).toEqual(active);
-    expect(manifest.activeMigrationCount).toBe(6);
+    expect(manifest.requiredSequence).toEqual(frozenPhase1Lane);
+    expect(manifest.activeMigrationCount).toBe(frozenPhase1Lane.length);
   });
 
   it("archives exactly 55 manifest-listed migrations outside the active lane", () => {

@@ -31,7 +31,7 @@ describe("StructuredQuoteIssuePanel retry lock", () => {
   });
 
   it("does not clear the frozen attempt in the generic catch path", () => {
-    const catchBlock = source.match(/} catch \(cause\) \{[\s\S]*?\n    } finally/u)?.[0];
+    const catchBlock = source.match(/\} catch \(cause\) \{[\s\S]*?\n    \} finally/u)?.[0];
     expect(catchBlock).toBeTruthy();
     expect(catchBlock).not.toContain("requestBodyRef.current = null");
     expect(catchBlock).not.toContain("setAttemptLocked(false)");

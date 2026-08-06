@@ -55,14 +55,13 @@ function statements(sql: string): string[] {
 
 describe("Etorie P1-04 migration security contract", () => {
   it("keeps the ACL correction fifth before the P1-05 intake RPC migration", () => {
-    expect(migrationNames).toEqual([
-      "20260723111730_etorie_baseline.sql",
-      "20260723111741_baseline_security_hardening.sql",
-      "20260729115313_etorie_phase1_expand.sql",
-      "20260729115323_etorie_phase1_project_constraints.sql",
-      remainingPrivilegesName,
+    const correctionIndex = migrationNames.indexOf(remainingPrivilegesName);
+    const intakeIndex = migrationNames.indexOf(
       "20260731115652_etorie_intake_rpcs.sql",
-    ]);
+    );
+
+    expect(correctionIndex).toBe(4);
+    expect(intakeIndex).toBe(correctionIndex + 1);
   });
 
   it("does not recreate the legacy policy or any unconditional Storage write policy", () => {

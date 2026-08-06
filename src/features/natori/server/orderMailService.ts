@@ -637,6 +637,14 @@ export async function markNatoriCommissionPaid(
     console.error("[natori-order-mail] payment received before type confirmation");
     return { kind: "db-error" };
   }
+  if (amountTotal === null) {
+    console.error("[natori-order-mail] Stripe payment amount is unavailable");
+    return { kind: "db-error" };
+  }
+  if (quoteId === null) {
+    console.error("[natori-order-mail] Stripe payment quote ID is unavailable");
+    return { kind: "db-error" };
+  }
 
   const admin = supabaseAdmin();
   const { data, error } = await admin.rpc("natori_record_stripe_payment", {
@@ -649,16 +657,9 @@ export async function markNatoriCommissionPaid(
     console.error("[natori-order-mail] atomic payment record failed", error);
     return { kind: "db-error" };
   }
-  const outcome = (Array.isArray(data) ? data[0] : data) as
-    | {
-        result?: string;
-        advanced?: boolean;
-        new_event?: boolean;
-        recorded_amount?: number | null;
-      }
-    | null;
+  const outcome = data?.[0] ?? null;
   if (!outcome || outcome.result === "not-found") return { kind: "not-found" };
-  const recordedAmount = outcome.recorded_amount ?? amountTotal ?? project.amount;
+  const recordedAmount = outcome.recorded_amount ?? amountTotal;
 
   if (outcome.result === "amount-mismatch") {
     return handleAmountMismatch(project, sessionId, recordedAmount, outcome.new_event === true);

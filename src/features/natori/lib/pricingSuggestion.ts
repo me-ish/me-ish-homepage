@@ -20,6 +20,7 @@ const FIXED_OPTION_IDS = new Set([
   "expression_variation",
   "detailed_background",
   "retake_extra",
+  "commercial_use",
 ]);
 
 const PERCENTAGE_OPTION_IDS = new Set(["additional_character"]);

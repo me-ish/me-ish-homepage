@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "docs:supabase": "node scripts/generate-supabase-docs.mjs",
+    "types:supabase": "node scripts/generate-supabase-types.mjs",
     "build:banks": "node scripts/build-bank-json.mjs",
     "prebuild": "npm run build:banks",
     "test": "vitest run",

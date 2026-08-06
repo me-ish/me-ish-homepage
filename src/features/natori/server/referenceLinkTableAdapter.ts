@@ -3,34 +3,17 @@ import "server-only";
 // features/natori/server/referenceLinkTableAdapter.ts
 // natori_project_reference_links への唯一のアクセス経路。
 //
-// TODO(P1-11): 生成済み Database 型に natori_project_reference_links が
-// 含まれていないため、ここ1か所だけ narrow な cast を置き、外へは runtime
-// 検証済みの型付き関数だけを公開する。P1-11 で型を再生成したらこの adapter の
-// cast を外す。P1-05 の intakeRpcAdapter と同じ方針で、workaround を
-// service / route / component へ広げない。
 import { z } from "zod";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import type { Database } from "@/types/supabase";
 
 const TABLE = "natori_project_reference_links";
 
-type QueryResult = { data: unknown; error: unknown };
+type LinkUpdate =
+  Database["public"]["Tables"]["natori_project_reference_links"]["Update"];
 
-type Chainable = PromiseLike<QueryResult> & {
-  select(columns?: string): Chainable;
-  eq(column: string, value: string | number): Chainable;
-  order(column: string, options?: { ascending?: boolean }): Chainable;
-  maybeSingle(): PromiseLike<QueryResult>;
-};
-
-type LinkTable = {
-  select(columns?: string): Chainable;
-  insert(values: Record<string, unknown>): Chainable;
-  update(values: Record<string, unknown>): Chainable;
-  delete(): Chainable;
-};
-
-function linkTable(): LinkTable {
-  return (supabaseAdmin() as unknown as { from(table: string): LinkTable }).from(TABLE);
+function linkTable() {
+  return supabaseAdmin().from(TABLE);
 }
 
 const linkRowSchema = z.object({
@@ -124,7 +107,7 @@ export async function insertProjectReferenceLink(
 export async function updateProjectReferenceLink(
   projectId: string,
   linkId: string,
-  patch: Record<string, unknown>
+  patch: Pick<LinkUpdate, "url" | "normalized_url" | "label">
 ): Promise<ReferenceLinkWriteResult> {
   try {
     const { data, error } = await linkTable()
@@ -173,14 +156,7 @@ export async function selectReferenceLinksForProjects(
 ): Promise<ReferenceLinkQueryResult<NatoriProjectReferenceLinkRow[]>> {
   if (projectIds.length === 0) return { kind: "ok", value: [] };
   try {
-    const table = supabaseAdmin() as unknown as {
-      from(table: string): {
-        select(columns: string): {
-          in(column: string, values: string[]): PromiseLike<QueryResult>;
-        };
-      };
-    };
-    const { data, error } = await table
+    const { data, error } = await supabaseAdmin()
       .from(TABLE)
       .select("id, project_id, url, normalized_url, label, provider, sort_order, created_at")
       .in("project_id", projectIds);

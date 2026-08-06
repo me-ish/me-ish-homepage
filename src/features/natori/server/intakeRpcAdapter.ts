@@ -6,29 +6,7 @@ import type {
   NatoriConcreteProjectType,
   NatoriProjectType,
 } from "@/features/natori/types/projects";
-
-type IntakeRpcName =
-  | "natori_create_project_with_tasks_v2"
-  | "natori_confirm_project_type_v1";
-
-type IntakeRpcResponse = {
-  data: unknown;
-  error: unknown;
-  status?: number;
-};
-
-type IntakeRpcClient = {
-  rpc(
-    name: IntakeRpcName,
-    args: Record<string, unknown>,
-  ): PromiseLike<IntakeRpcResponse>;
-};
-
-function getIntakeRpcClient(): IntakeRpcClient {
-  // TODO(P1-11): remove this narrow bridge after the canonical generated
-  // Database type contains both versioned intake RPCs.
-  return supabaseAdmin() as unknown as IntakeRpcClient;
-}
+import type { Json } from "@/types/supabase";
 
 export type NatoriIntakeReferenceLinkRow = {
   url: string;
@@ -43,7 +21,7 @@ export type CreateNatoriIntakeRpcInput = {
   projectId: string;
   clientName: string;
   clientEmail: string;
-  requestData: unknown;
+  requestData: Json;
   referenceFiles: string[];
   referenceLinks: NatoriIntakeReferenceLinkRow[];
 };
@@ -77,7 +55,7 @@ async function attemptCreateNatoriIntakeViaRpc(
   input: CreateNatoriIntakeRpcInput,
 ): Promise<CreateNatoriIntakeRpcResult> {
   try {
-    const { data, error, status } = await getIntakeRpcClient().rpc(
+    const { data, error, status } = await supabaseAdmin().rpc(
       "natori_create_project_with_tasks_v2",
       {
         p_user_id: input.ownerId,
@@ -252,7 +230,7 @@ export async function confirmNatoriProjectTypeViaRpc(
   input: ConfirmNatoriProjectTypeRpcInput,
 ): Promise<ConfirmNatoriProjectTypeRpcResult> {
   try {
-    const { data, error } = await getIntakeRpcClient().rpc(
+    const { data, error } = await supabaseAdmin().rpc(
       "natori_confirm_project_type_v1",
       {
         p_user_id: input.ownerId,
