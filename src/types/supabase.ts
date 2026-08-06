@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       admin_audit_log: {
@@ -1096,173 +1071,6 @@ export type Database = {
           },
         ]
       }
-      natori_events: {
-        Row: {
-          created_at: string
-          date: string
-          id: string
-          note: string | null
-          title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          date: string
-          id?: string
-          note?: string | null
-          title: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          date?: string
-          id?: string
-          note?: string | null
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      natori_links_content: {
-        Row: {
-          content: Json
-          id: string
-          updated_at: string
-        }
-        Insert: {
-          content: Json
-          id?: string
-          updated_at?: string
-        }
-        Update: {
-          content?: Json
-          id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      natori_page_events: {
-        Row: {
-          created_at: string
-          event: string
-          id: number
-          label: string
-          path: string
-        }
-        Insert: {
-          created_at?: string
-          event: string
-          id?: never
-          label?: string
-          path?: string
-        }
-        Update: {
-          created_at?: string
-          event?: string
-          id?: never
-          label?: string
-          path?: string
-        }
-        Relationships: []
-      }
-      natori_portfolio_content: {
-        Row: {
-          content: Json
-          id: string
-          updated_at: string
-        }
-        Insert: {
-          content: Json
-          id?: string
-          updated_at?: string
-        }
-        Update: {
-          content?: Json
-          id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      natori_pricing_configs: {
-        Row: {
-          config: Json
-          created_at: string
-          id: string
-          is_default: boolean
-          name: string
-          preset_key: string
-          sort_order: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          config: Json
-          created_at?: string
-          id?: string
-          is_default?: boolean
-          name: string
-          preset_key: string
-          sort_order?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          config?: Json
-          created_at?: string
-          id?: string
-          is_default?: boolean
-          name?: string
-          preset_key?: string
-          sort_order?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      natori_project_tasks: {
-        Row: {
-          done: boolean
-          estimated_hours: number | null
-          id: string
-          label: string
-          project_id: string
-          sort_order: number
-          stage: string
-          task_key: string
-        }
-        Insert: {
-          done?: boolean
-          estimated_hours?: number | null
-          id?: string
-          label: string
-          project_id: string
-          sort_order?: number
-          stage: string
-          task_key: string
-        }
-        Update: {
-          done?: boolean
-          estimated_hours?: number | null
-          id?: string
-          label?: string
-          project_id?: string
-          sort_order?: number
-          stage?: string
-          task_key?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "natori_project_tasks_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "natori_projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       natori_delivery_files: {
         Row: {
           created_at: string
@@ -1301,6 +1109,36 @@ export type Database = {
           },
         ]
       }
+      natori_events: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          note: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          note?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          note?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       natori_inquiry_reference_files: {
         Row: {
           created_at: string
@@ -1329,6 +1167,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      natori_links_content: {
+        Row: {
+          content: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          content: Json
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       natori_order_mail_logs: {
         Row: {
@@ -1399,6 +1255,30 @@ export type Database = {
           },
         ]
       }
+      natori_page_events: {
+        Row: {
+          created_at: string
+          event: string
+          id: number
+          label: string
+          path: string
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          id?: never
+          label?: string
+          path?: string
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          id?: never
+          label?: string
+          path?: string
+        }
+        Relationships: []
+      }
       natori_payment_transactions: {
         Row: {
           amount: number
@@ -1447,21 +1327,207 @@ export type Database = {
           },
         ]
       }
+      natori_portfolio_content: {
+        Row: {
+          content: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          content: Json
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      natori_pricing_configs: {
+        Row: {
+          config: Json
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          preset_key: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          config: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          preset_key: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          preset_key?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      natori_project_activity: {
+        Row: {
+          created_at: string
+          dedupe_key: string | null
+          event_type: string
+          id: string
+          occurred_at: string
+          payload: Json
+          project_id: string
+          source_id: string
+          source_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dedupe_key?: string | null
+          event_type: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          project_id: string
+          source_id: string
+          source_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dedupe_key?: string | null
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          project_id?: string
+          source_id?: string
+          source_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "natori_project_activity_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "natori_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      natori_project_reference_links: {
+        Row: {
+          created_at: string
+          id: string
+          label: string | null
+          normalized_url: string
+          project_id: string
+          provider: string | null
+          sort_order: number
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          normalized_url: string
+          project_id: string
+          provider?: string | null
+          sort_order?: number
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          normalized_url?: string
+          project_id?: string
+          provider?: string | null
+          sort_order?: number
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "natori_project_reference_links_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "natori_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      natori_project_tasks: {
+        Row: {
+          done: boolean
+          estimated_hours: number | null
+          id: string
+          label: string
+          project_id: string
+          sort_order: number
+          stage: string
+          task_key: string
+        }
+        Insert: {
+          done?: boolean
+          estimated_hours?: number | null
+          id?: string
+          label: string
+          project_id: string
+          sort_order?: number
+          stage: string
+          task_key: string
+        }
+        Update: {
+          done?: boolean
+          estimated_hours?: number | null
+          id?: string
+          label?: string
+          project_id?: string
+          sort_order?: number
+          stage?: string
+          task_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "natori_project_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "natori_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       natori_projects: {
         Row: {
           active_quote_id: string | null
-          amount: number
+          amount: number | null
           client_email: string | null
           client_name: string
           completed_at: string | null
           created_at: string
           deleted_at: string | null
+          delivered_mail_at: string | null
           delivery_accepted_at: string | null
           delivery_plan: string
           delivery_token_expires_at: string | null
           delivery_token_hash: string | null
-          delivered_mail_at: string | null
-          due_date: string
+          due_date: string | null
           id: string
           next_action: string
           note: string | null
@@ -1478,6 +1544,7 @@ export type Database = {
           quote_accepted_at: string | null
           quote_token_expires_at: string | null
           quoted_amount: number | null
+          request_data: Json | null
           start_date: string | null
           status: string
           stripe_payment_session_id: string | null
@@ -1488,18 +1555,18 @@ export type Database = {
         }
         Insert: {
           active_quote_id?: string | null
-          amount?: number
+          amount?: number | null
           client_email?: string | null
           client_name: string
           completed_at?: string | null
           created_at?: string
           deleted_at?: string | null
+          delivered_mail_at?: string | null
           delivery_accepted_at?: string | null
           delivery_plan?: string
           delivery_token_expires_at?: string | null
           delivery_token_hash?: string | null
-          delivered_mail_at?: string | null
-          due_date: string
+          due_date?: string | null
           id?: string
           next_action?: string
           note?: string | null
@@ -1516,28 +1583,29 @@ export type Database = {
           quote_accepted_at?: string | null
           quote_token_expires_at?: string | null
           quoted_amount?: number | null
+          request_data?: Json | null
           start_date?: string | null
           status?: string
           stripe_payment_session_id?: string | null
           title: string
-          type: string
+          type?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           active_quote_id?: string | null
-          amount?: number
+          amount?: number | null
           client_email?: string | null
           client_name?: string
           completed_at?: string | null
           created_at?: string
           deleted_at?: string | null
+          delivered_mail_at?: string | null
           delivery_accepted_at?: string | null
           delivery_plan?: string
           delivery_token_expires_at?: string | null
           delivery_token_hash?: string | null
-          delivered_mail_at?: string | null
-          due_date?: string
+          due_date?: string | null
           id?: string
           next_action?: string
           note?: string | null
@@ -1554,6 +1622,7 @@ export type Database = {
           quote_accepted_at?: string | null
           quote_token_expires_at?: string | null
           quoted_amount?: number | null
+          request_data?: Json | null
           start_date?: string | null
           status?: string
           stripe_payment_session_id?: string | null
@@ -1588,7 +1657,11 @@ export type Database = {
           created_at: string
           expires_at: string
           id: string
+          idempotency_key: string | null
+          issued_at: string | null
+          pricing_snapshot: Json | null
           project_id: string
+          request_snapshot: Json | null
           subject: string
           superseded_at: string | null
           title: string
@@ -1605,7 +1678,11 @@ export type Database = {
           created_at?: string
           expires_at: string
           id?: string
+          idempotency_key?: string | null
+          issued_at?: string | null
+          pricing_snapshot?: Json | null
           project_id: string
+          request_snapshot?: Json | null
           subject: string
           superseded_at?: string | null
           title: string
@@ -1622,7 +1699,11 @@ export type Database = {
           created_at?: string
           expires_at?: string
           id?: string
+          idempotency_key?: string | null
+          issued_at?: string | null
+          pricing_snapshot?: Json | null
           project_id?: string
+          request_snapshot?: Json | null
           subject?: string
           superseded_at?: string | null
           title?: string
@@ -2353,76 +2434,6 @@ export type Database = {
           updated_count: number
         }[]
       }
-      natori_accept_quote: {
-        Args: { p_token_hash: string }
-        Returns: {
-          accepted_at: string | null
-          project_id: string | null
-          quote_id: string | null
-          result: string
-        }[]
-      }
-      natori_confirm_manual_payment: {
-        Args: {
-          p_next_action: string
-          p_project_id: string
-          p_user_id: string
-        }
-        Returns: boolean
-      }
-      natori_create_project_with_tasks: {
-        Args: {
-          p_project: Json
-          p_reference_paths: Json
-          p_tasks: Json
-          p_user_id: string
-        }
-        Returns: string
-      }
-      natori_delete_project: {
-        Args: { p_project_id: string; p_user_id: string }
-        Returns: boolean
-      }
-      natori_issue_quote: {
-        Args: {
-          p_amount: number
-          p_body_snapshot: string
-          p_client_name: string
-          p_expires_at: string
-          p_project_id: string
-          p_subject: string
-          p_title: string
-          p_to_email: string
-          p_token_hash: string
-          p_user_id: string
-        }
-        Returns: string
-      }
-      natori_record_stripe_payment: {
-        Args: {
-          p_amount: number | null
-          p_project_id: string
-          p_quote_id: string | null
-          p_session_id: string
-        }
-        Returns: {
-          advanced: boolean
-          new_event: boolean
-          recorded_amount: number | null
-          result: string
-        }[]
-      }
-      natori_update_task_and_status: {
-        Args: {
-          p_done: boolean
-          p_next_action: string
-          p_project_id: string
-          p_status: string
-          p_task_key: string
-          p_user_id: string
-        }
-        Returns: boolean
-      }
       aura_claim_first20_free: {
         Args: { p_email: string; p_request_id?: string }
         Returns: Json
@@ -2497,6 +2508,141 @@ export type Database = {
       }
       get_public_portfolio: { Args: { p_user_id: string }; Returns: Json }
       increment_entry_likes: { Args: { p_entry_id: number }; Returns: number }
+      natori_accept_quote: {
+        Args: { p_token_hash: string }
+        Returns: {
+          accepted_at: string
+          project_id: string
+          quote_id: string
+          result: string
+        }[]
+      }
+      natori_confirm_manual_payment: {
+        Args: { p_next_action: string; p_project_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      natori_confirm_project_type_v1: {
+        Args: { p_project_id: string; p_type: string; p_user_id: string }
+        Returns: {
+          project_id: string
+          project_type: string
+          result: string
+          task_count: number
+        }[]
+      }
+      natori_create_project_with_tasks: {
+        Args: {
+          p_project: Json
+          p_reference_paths: Json
+          p_tasks: Json
+          p_user_id: string
+        }
+        Returns: string
+      }
+      natori_create_project_with_tasks_v2: {
+        Args: {
+          p_client_email: string
+          p_client_name: string
+          p_project_id: string
+          p_reference_files: Json
+          p_reference_links: Json
+          p_request_data: Json
+          p_user_id: string
+        }
+        Returns: {
+          created_at: string
+          project_id: string
+        }[]
+      }
+      natori_delete_project: {
+        Args: { p_project_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      natori_issue_quote: {
+        Args: {
+          p_amount: number
+          p_body_snapshot: string
+          p_client_name: string
+          p_expires_at: string
+          p_project_id: string
+          p_subject: string
+          p_title: string
+          p_to_email: string
+          p_token_hash: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      natori_issue_quote_v1: {
+        Args: {
+          p_amount: number
+          p_body_snapshot: string
+          p_client_name: string
+          p_expires_at: string
+          p_idempotency_key: string
+          p_pricing_snapshot: Json
+          p_project_id: string
+          p_request_snapshot: Json
+          p_subject: string
+          p_title: string
+          p_to_email: string
+          p_token_hash: string
+          p_user_id: string
+        }
+        Returns: {
+          quote_id: string
+          reused: boolean
+          version: number
+        }[]
+      }
+      natori_jsonb_has_exact_keys_v1: {
+        Args: { p_keys: string[]; p_value: Json }
+        Returns: boolean
+      }
+      natori_project_task_template_v1: {
+        Args: { p_type: string }
+        Returns: {
+          done: boolean
+          estimated_hours: number
+          label: string
+          sort_order: number
+          stage: string
+          task_key: string
+        }[]
+      }
+      natori_record_stripe_payment: {
+        Args: {
+          p_amount: number
+          p_project_id: string
+          p_quote_id: string
+          p_session_id: string
+        }
+        Returns: {
+          advanced: boolean
+          new_event: boolean
+          recorded_amount: number
+          result: string
+        }[]
+      }
+      natori_request_data_is_valid_v1: {
+        Args: { p_request_data: Json }
+        Returns: boolean
+      }
+      natori_request_text_is_valid_v1: {
+        Args: { p_max_length: number; p_min_length: number; p_value: string }
+        Returns: boolean
+      }
+      natori_update_task_and_status: {
+        Args: {
+          p_done: boolean
+          p_next_action: string
+          p_project_id: string
+          p_status: string
+          p_task_key: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       set_entry_portfolio_hidden: {
         Args: { p_entry_id: number; p_hidden: boolean }
         Returns: undefined
@@ -2636,9 +2782,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       payout_status: ["pending", "scheduled", "paid", "failed"],
