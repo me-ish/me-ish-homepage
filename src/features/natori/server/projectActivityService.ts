@@ -8,26 +8,6 @@ import type { NatoriProjectActivity } from "@/features/natori/lib/projectActivit
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 
-type ActivityQueryResult = {
-  data: unknown[] | null;
-  error: unknown;
-};
-
-type ActivityQueryBuilder = PromiseLike<ActivityQueryResult> & {
-  eq(column: string, value: string): ActivityQueryBuilder;
-  order(
-    column: string,
-    options: { ascending: boolean },
-  ): ActivityQueryBuilder;
-  limit(value: number): ActivityQueryBuilder;
-};
-
-type ActivityTableClient = {
-  from(relation: "natori_project_activity"): {
-    select(columns: string): ActivityQueryBuilder;
-  };
-};
-
 export async function listNatoriProjectActivity(
   projectId: string,
   limit = DEFAULT_LIMIT,
@@ -51,10 +31,7 @@ export async function listNatoriProjectActivity(
   }
   if (!project) return null;
 
-  // P1-11で生成型を一本化するまでの限定的な互換境界。
-  // DB migrationは適用済みだが、既存の巨大な生成型へP1-10だけを手編集しない。
-  const activityClient = admin as unknown as ActivityTableClient;
-  const { data, error } = await activityClient
+  const { data, error } = await admin
     .from("natori_project_activity")
     .select(
       "id, project_id, event_type, source_type, source_id, payload, occurred_at",
