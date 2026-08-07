@@ -213,12 +213,12 @@ describe("Etorie migration archive", () => {
       true,
     );
     expect(manifest.activeMigrations).toEqual(
-      frozenPhase1Lane.map(
+      active.map(
         (entry) => `supabase/migrations/${entry}`,
       ),
     );
-    expect(manifest.requiredSequence).toEqual(frozenPhase1Lane);
-    expect(manifest.activeMigrationCount).toBe(frozenPhase1Lane.length);
+    expect(manifest.requiredSequence).toEqual(active);
+    expect(manifest.activeMigrationCount).toBe(active.length);
   });
 
   it("archives exactly 55 manifest-listed migrations outside the active lane", () => {
