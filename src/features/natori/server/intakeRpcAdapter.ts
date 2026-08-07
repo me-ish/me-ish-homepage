@@ -68,7 +68,16 @@ async function attemptCreateNatoriIntakeViaRpc(
       },
     );
     if (error) {
-      console.error("[natori-intake-rpc] create failed");
+      const errorCode =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        typeof error.code === "string"
+          ? error.code
+          : "unknown";
+      console.error(
+        `[natori-intake-rpc] create failed status=${status ?? "unknown"} code=${errorCode}`,
+      );
       return isDefiniteCreateRejection(error, status)
         ? { kind: "rejected" }
         : { kind: "unknown" };

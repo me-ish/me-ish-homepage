@@ -87,7 +87,7 @@ describe("createNatoriIntakeViaRpc", () => {
   it("distinguishes a definite RPC rejection from an ambiguous outcome", async () => {
     mockRpc.mockResolvedValueOnce({
       data: null,
-      error: { message: "failed" },
+      error: { code: "PGRST_TEST", message: "failed" },
       status: 400,
     });
     const input = {
@@ -102,6 +102,9 @@ describe("createNatoriIntakeViaRpc", () => {
     await expect(createNatoriIntakeViaRpc(input)).resolves.toEqual({
       kind: "rejected",
     });
+    expect(console.error).toHaveBeenCalledWith(
+      "[natori-intake-rpc] create failed status=400 code=PGRST_TEST",
+    );
     expect(mockRpc).toHaveBeenCalledTimes(1);
 
     mockRpc
