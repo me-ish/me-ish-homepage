@@ -18,6 +18,15 @@ const activityMigration = readFileSync(
   ),
   "utf8",
 );
+const serviceSource = readFileSync(
+  path.join("src", "features", "natori", "server", "deliveryService.ts"),
+  "utf8",
+);
+const canonicalTypes = readFileSync(
+  path.join("src", "types", "supabase.ts"),
+  "utf8",
+);
+
 function stripSqlComments(sql: string): string {
   return sql
     .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -91,6 +100,16 @@ describe("Etorie P1-12 delivery acceptance contract", () => {
     );
     expect(executable).toMatch(
       /grant\s+execute\s+on\s+function\s+public\.natori_accept_delivery_v1\(text\)\s+to\s+service_role/i,
+    );
+  });
+
+  it("uses the RPC instead of a multi-step application update", () => {
+    expect(serviceSource).toContain('.rpc("natori_accept_delivery_v1"');
+    expect(serviceSource).not.toMatch(
+      /acceptNatoriDelivery[\s\S]*\.from\("natori_projects"\)[\s\S]*\.update\(/,
+    );
+    expect(canonicalTypes).toMatch(
+      /natori_accept_delivery_v1:\s*\{[\s\S]*Args:\s*\{\s*p_token_hash:\s*string\s*\}[\s\S]*project_title:\s*string[\s\S]*result:\s*string/i,
     );
   });
 });

@@ -11,11 +11,8 @@ import "server-only";
 //   SHA-256 ハッシュのみ保存・再送で無効化・確定は必ず POST。
 import { createHash, randomUUID } from "crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { getNextActionForStatus } from "@/features/natori/lib/projects";
-import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { sendNatoriNoticeMail } from "@/features/natori/server/orderMailService";
 import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
-import type { NatoriProjectStatus } from "@/features/natori/types/projects";
 
 const BUCKET = "natori-deliveries";
 const TOKEN_RE = /^[A-Za-z0-9_-]{20,64}$/;
@@ -357,55 +354,61 @@ export type AcceptNatoriDeliveryResult =
   | { kind: "db-error" };
 
 /** 「受け取りました」ボタン（POST）からの検収確定。案件は対応完了へ進む */
-export async function acceptNatoriDelivery(token: string): Promise<AcceptNatoriDeliveryResult> {
-  const row = await fetchDeliveryRow(token);
-  if (!row) return { kind: "not-found" };
-  if (!row.payment_confirmed_at) return { kind: "not-found" };
-  if (isExpired(row)) return { kind: "expired" };
-  if (row.delivery_accepted_at) return { kind: "already-accepted" };
-
-  const today = new Date().toISOString().slice(0, 10);
-  const logEntry = `【納品受け取り確認 ${today}】納品ページより`;
-  const note = row.note ? `${row.note}\n\n${logEntry}` : logEntry;
-
-  const update: Record<string, unknown> = {
-    delivery_accepted_at: new Date().toISOString(),
-    completed_at: new Date().toISOString(),
-    note,
-  };
-  // 検収 = 実績入り。遷移表で許される場合のみ「対応完了」へ進める
-  if (canTransitionNatoriStatus(row.status as NatoriProjectStatus, "completed")) {
-    update.status = "completed";
-    update.next_action = getNextActionForStatus("completed");
-  }
+export async function acceptNatoriDelivery(
+  token: string,
+): Promise<AcceptNatoriDeliveryResult> {
+  if (!TOKEN_RE.test(token)) return { kind: "not-found" };
 
   const admin = supabaseAdmin();
-  const { data: updated, error } = await admin
-    .from("natori_projects")
-    .update(update)
-    .eq("id", row.id)
-    .eq("delivery_token_hash", hashToken(token))
-    .is("delivery_accepted_at", null)
-    .select("id");
+  const { data, error } = await admin.rpc("natori_accept_delivery_v1", {
+    p_token_hash: hashToken(token),
+  });
   if (error) {
-    console.error("[natori-delivery] accept update failed", error);
+    console.error("[natori-delivery] accept RPC failed", error);
     return { kind: "db-error" };
   }
-  if (!updated || updated.length === 0) {
+
+  const accepted = data?.[0];
+  if (!accepted) {
+    console.error("[natori-delivery] accept RPC returned no result");
+    return { kind: "db-error" };
+  }
+  if (accepted.result === "already-accepted") {
     return { kind: "already-accepted" };
+  }
+  if (accepted.result === "expired") {
+    return { kind: "expired" };
+  }
+  if (
+    accepted.result === "not-found" ||
+    accepted.result === "unpaid" ||
+    accepted.result === "archived" ||
+    accepted.result === "invalid-state"
+  ) {
+    return { kind: "not-found" };
+  }
+  if (
+    accepted.result !== "accepted" ||
+    !accepted.project_title ||
+    !accepted.client_name
+  ) {
+    console.error("[natori-delivery] accept RPC returned unexpected result", {
+      result: accepted.result,
+    });
+    return { kind: "db-error" };
   }
 
   // ナトリへの通知（ベストエフォート）
   const noticeBody = [
     "納品の受け取りが確認されました。案件は「対応完了」になり、実績に追加されています。",
     "",
-    `■ 案件: ${row.title}`,
-    `■ 依頼者: ${row.client_name} 様`,
+    `■ 案件: ${accepted.project_title}`,
+    `■ 依頼者: ${accepted.client_name} 様`,
     "",
     "実績ページ: https://www.me-ish.art/natori/results",
   ].join("\n");
   const sent = await sendNatoriNoticeMail(
-    `【納品完了】${row.client_name} 様 / ${row.title}`,
+    `【納品完了】${accepted.client_name} 様 / ${accepted.project_title}`,
     noticeBody
   );
   if (!sent) {

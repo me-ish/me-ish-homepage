@@ -692,7 +692,7 @@ consulting は legacy alias として reader/transition の互換だけ維持し
 
 active_quote_id を quote の現在版参照として維持する。旧 token、quote_accepted_amount、quoted_amount は Phase 1 では削除しないが、新規 reader は active quote を優先する。paid_at/paid_amount/payment_confirmed_at は一覧用 summary とし、transaction ledger との整合性 SELECT をリリース検証へ入れる。
 
-delivery_accepted_at は依頼者の受取、completed_at は業務完了として分けたままにする。受取で両方を同時に進めるなら、将来 atomic RPC 化する。
+delivery_accepted_at は依頼者が有効な納品トークンから明示的に受取確定した日時、completed_at は案件の業務完了日時として意味を分けたままにする。P1-12 以降の新規 token acceptance では、paid・active・delivered・期限内を RPC 内で再検証し、両 timestamp と status=completed を同一時刻・同一 transaction で確定する。管理画面から手動完了した既存案件に delivery_accepted_at を補完せず、受取済み token の再送は already-accepted として成功扱いにする。
 
 ## 12. UI の後方互換
 

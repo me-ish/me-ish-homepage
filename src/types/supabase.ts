@@ -2508,6 +2508,16 @@ export type Database = {
       }
       get_public_portfolio: { Args: { p_user_id: string }; Returns: Json }
       increment_entry_likes: { Args: { p_entry_id: number }; Returns: number }
+      natori_accept_delivery_v1: {
+        Args: { p_token_hash: string }
+        Returns: {
+          accepted_at: string
+          client_name: string
+          project_id: string
+          project_title: string
+          result: string
+        }[]
+      }
       natori_accept_quote: {
         Args: { p_token_hash: string }
         Returns: {
