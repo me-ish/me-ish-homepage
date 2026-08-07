@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createHash } from "crypto";
 
 vi.mock("server-only", () => ({}));
 
@@ -7,20 +8,23 @@ const {
   mockCreateSignedUploadUrl,
   mockCreateSignedUrl,
   mockInsert,
+  mockNotice,
+  mockRpc,
   mockStorageFrom,
-  mockUpdate,
 } = vi.hoisted(() => ({
   mockAdminFrom: vi.fn(),
   mockCreateSignedUploadUrl: vi.fn(),
   mockCreateSignedUrl: vi.fn(),
   mockInsert: vi.fn(),
+  mockNotice: vi.fn(),
+  mockRpc: vi.fn(),
   mockStorageFrom: vi.fn(),
-  mockUpdate: vi.fn(),
 }));
 
 vi.mock("@/lib/supabaseAdmin", () => ({
   supabaseAdmin: vi.fn(() => ({
     from: (...args: unknown[]) => mockAdminFrom(...args),
+    rpc: (...args: unknown[]) => mockRpc(...args),
     storage: {
       from: (...args: unknown[]) => mockStorageFrom(...args),
     },
@@ -32,7 +36,7 @@ vi.mock("@/features/natori/server/natoriOwner", () => ({
 }));
 
 vi.mock("@/features/natori/server/orderMailService", () => ({
-  sendNatoriNoticeMail: vi.fn().mockResolvedValue(true),
+  sendNatoriNoticeMail: (...args: unknown[]) => mockNotice(...args),
 }));
 
 import {
@@ -40,6 +44,9 @@ import {
   getNatoriDeliveryByToken,
   signNatoriDeliveryUpload,
 } from "@/features/natori/server/deliveryService";
+
+const TOKEN = "abcDEF123_-".repeat(4);
+const TOKEN_HASH = createHash("sha256").update(TOKEN).digest("hex");
 
 type QueryResult = {
   count?: number | null;
@@ -80,6 +87,96 @@ beforeEach(() => {
   mockCreateSignedUrl.mockResolvedValue({
     data: { signedUrl: "https://signed.invalid/delivery" },
     error: null,
+  });
+  mockRpc.mockResolvedValue({
+    data: [
+      {
+        result: "accepted",
+        project_id: "project-1",
+        project_title: "Final",
+        client_name: "Client",
+        accepted_at: "2026-08-06T12:00:00.000Z",
+      },
+    ],
+    error: null,
+  });
+  mockNotice.mockResolvedValue(true);
+});
+
+describe("acceptNatoriDelivery", () => {
+  it("accepts and completes the delivery through one atomic RPC", async () => {
+    await expect(acceptNatoriDelivery(TOKEN)).resolves.toEqual({ kind: "ok" });
+
+    expect(mockAdminFrom).not.toHaveBeenCalled();
+    expect(mockRpc).toHaveBeenCalledWith("natori_accept_delivery_v1", {
+      p_token_hash: TOKEN_HASH,
+    });
+    expect(mockNotice).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call the database for a malformed token", async () => {
+    await expect(acceptNatoriDelivery("short")).resolves.toEqual({
+      kind: "not-found",
+    });
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it("treats an accepted retry as success without sending another notice", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: [
+        {
+          result: "already-accepted",
+          project_id: "project-1",
+          project_title: "Final",
+          client_name: "Client",
+          accepted_at: "2026-08-06T12:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+
+    await expect(acceptNatoriDelivery(TOKEN)).resolves.toEqual({
+      kind: "already-accepted",
+    });
+    expect(mockNotice).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["expired", "expired"],
+    ["not-found", "not-found"],
+    ["unpaid", "not-found"],
+    ["archived", "not-found"],
+    ["invalid-state", "not-found"],
+  ] as const)("maps the %s database result to %s", async (result, kind) => {
+    mockRpc.mockResolvedValueOnce({
+      data: [
+        {
+          result,
+          project_id: "project-1",
+          project_title: "Final",
+          client_name: "Client",
+          accepted_at: null,
+        },
+      ],
+      error: null,
+    });
+
+    await expect(acceptNatoriDelivery(TOKEN)).resolves.toEqual({ kind });
+  });
+
+  it("returns db-error when the RPC fails or has no domain result", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: null,
+      error: { message: "transaction failed" },
+    });
+    await expect(acceptNatoriDelivery(TOKEN)).resolves.toEqual({
+      kind: "db-error",
+    });
+
+    mockRpc.mockResolvedValueOnce({ data: [], error: null });
+    await expect(acceptNatoriDelivery(TOKEN)).resolves.toEqual({
+      kind: "db-error",
+    });
   });
 });
 
@@ -240,45 +337,41 @@ describe("Natori delivery Storage", () => {
   });
 });
 
-describe("Natori delivery acceptance retry", () => {
-  const activeDelivery = {
-    id: "project-1",
-    title: "Final",
-    client_name: "Client",
-    status: "delivered",
-    note: null,
-    delivery_accepted_at: null,
-    delivery_token_expires_at: null,
-    payment_confirmed_at: "2026-07-01T00:00:00.000Z",
-  };
+describe("Natori delivery acceptance concurrency", () => {
+  it("maps the serialized winner and loser RPC results without duplicate notice", async () => {
+    mockRpc
+      .mockResolvedValueOnce({
+        data: [
+          {
+            result: "accepted",
+            project_id: "project-1",
+            project_title: "Final",
+            client_name: "Client",
+            accepted_at: "2026-08-06T12:00:00.000Z",
+          },
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            result: "already-accepted",
+            project_id: "project-1",
+            project_title: "Final",
+            client_name: "Client",
+            accepted_at: "2026-08-06T12:00:00.000Z",
+          },
+        ],
+        error: null,
+      });
 
-  it("treats a repeated acceptance as an idempotent success", async () => {
-    mockAdminFrom.mockReturnValue({
-      select: vi.fn(() =>
-        query({
-          data: { ...activeDelivery, delivery_accepted_at: "2026-07-02T00:00:00.000Z" },
-          error: null,
-        })
-      ),
-      update: mockUpdate,
-    });
-
-    await expect(acceptNatoriDelivery("abcdefghijklmnopqrstuvwx")).resolves.toEqual({
-      kind: "already-accepted",
-    });
-    expect(mockUpdate).not.toHaveBeenCalled();
-  });
-
-  it("treats a zero-row conditional update as a concurrent acceptance", async () => {
-    mockUpdate.mockReturnValue(query({ data: [], error: null }));
-    mockAdminFrom.mockReturnValue({
-      select: vi.fn(() => query({ data: activeDelivery, error: null })),
-      update: mockUpdate,
-    });
-
-    await expect(acceptNatoriDelivery("abcdefghijklmnopqrstuvwx")).resolves.toEqual({
-      kind: "already-accepted",
-    });
-    expect(mockUpdate).toHaveBeenCalledTimes(1);
+    await expect(
+      Promise.all([
+        acceptNatoriDelivery(TOKEN),
+        acceptNatoriDelivery(TOKEN),
+      ]),
+    ).resolves.toEqual([{ kind: "ok" }, { kind: "already-accepted" }]);
+    expect(mockRpc).toHaveBeenCalledTimes(2);
+    expect(mockNotice).toHaveBeenCalledTimes(1);
   });
 });
