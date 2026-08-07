@@ -18,6 +18,27 @@ const activityMigration = readFileSync(
   ),
   "utf8",
 );
+const serviceSource = readFileSync(
+  path.join("src", "features", "natori", "server", "deliveryService.ts"),
+  "utf8",
+);
+const canonicalTypes = readFileSync(
+  path.join("src", "types", "supabase.ts"),
+  "utf8",
+);
+const verification = readFileSync(
+  path.join(
+    "supabase",
+    "verification",
+    "etorie-p1-12-delivery-acceptance-selects.sql",
+  ),
+  "utf8",
+);
+const releaseRunbook = readFileSync(
+  path.join("docs", "etorie-p1-12-delivery-acceptance-release.md"),
+  "utf8",
+);
+
 function stripSqlComments(sql: string): string {
   return sql
     .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -92,5 +113,35 @@ describe("Etorie P1-12 delivery acceptance contract", () => {
     expect(executable).toMatch(
       /grant\s+execute\s+on\s+function\s+public\.natori_accept_delivery_v1\(text\)\s+to\s+service_role/i,
     );
+  });
+
+  it("uses the RPC instead of a multi-step application update", () => {
+    expect(serviceSource).toContain('.rpc("natori_accept_delivery_v1"');
+    expect(serviceSource).not.toMatch(
+      /acceptNatoriDelivery[\s\S]*\.from\("natori_projects"\)[\s\S]*\.update\(/,
+    );
+    expect(canonicalTypes).toMatch(
+      /natori_accept_delivery_v1:\s*\{[\s\S]*Args:\s*\{\s*p_token_hash:\s*string\s*\}[\s\S]*project_title:\s*string[\s\S]*result:\s*string/i,
+    );
+  });
+
+  it("keeps production verification read-only and the deployment order explicit", () => {
+    const statements = stripSqlComments(verification)
+      .split(";")
+      .map((statement) => statement.trim())
+      .filter(Boolean);
+
+    expect(statements.length).toBeGreaterThan(0);
+    expect(statements.every((statement) => /^select\b/iu.test(statement))).toBe(true);
+    expect(verification).not.toMatch(
+      /\bfrom\s+public\.natori_accept_delivery_v1\s*\(/iu,
+    );
+    expect(verification).toContain("delivery_accept_rpc_contract_anomaly_count");
+    expect(verification).toContain("delivery_accept_state_anomaly_count");
+    expect(releaseRunbook).toContain("normal `supabase db push`");
+    expect(releaseRunbook).toContain("Deploy in this order only");
+    expect(releaseRunbook).toContain("roll back the Vercel deployment first");
+    expect(releaseRunbook).toContain("production migration version: `20260807215620`");
+    expect(releaseRunbook).toContain("approver and rollback/application owner: `me-ish`");
   });
 });
