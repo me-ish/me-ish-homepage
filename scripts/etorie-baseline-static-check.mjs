@@ -169,14 +169,14 @@ const archived = archivedMigrations
   .sort();
 const activeVersions = active.map((name) => name.split("_", 1)[0]);
 const baselineEvidenceNames = [baselineName, hardeningName];
-const expectedActiveNames = [
+const requiredFoundationNames = [
   ...baselineEvidenceNames,
   phase1ExpandName,
   phase1ConstraintsName,
   remainingPrivilegesName,
   intakeRpcsName,
 ];
-const expectedActivePaths = expectedActiveNames.map(
+const activePaths = active.map(
   (name) => `supabase/migrations/${name}`,
 );
 const manifestActiveNames = (manifest.activeMigrations ?? []).map((entry) =>
@@ -192,8 +192,9 @@ check(
   "active migration versions must be unique",
 );
 check(
-  JSON.stringify(active) === JSON.stringify(expectedActiveNames),
-  "active migrations must be the ordered baseline, hardening, expand, constraint, ACL, and intake RPC lane",
+  JSON.stringify(active.slice(0, requiredFoundationNames.length)) ===
+    JSON.stringify(requiredFoundationNames),
+  "active migrations must keep the frozen foundation lane before append-only Phase 1 migrations",
 );
 check(
   JSON.stringify(active.slice(0, 2)) ===
@@ -206,8 +207,8 @@ check(
 );
 check(
   JSON.stringify(manifest.activeMigrations) ===
-    JSON.stringify(expectedActivePaths),
-  "manifest must declare the six current active migration paths",
+    JSON.stringify(activePaths),
+  "manifest must declare every active migration path in filename order",
 );
 check(
   manifest.activeMigrationDirectory === "supabase/migrations" &&
@@ -770,7 +771,7 @@ check(
 );
 check(
   JSON.stringify(manifest.requiredSequence) ===
-    JSON.stringify(expectedActiveNames),
+    JSON.stringify(active),
   "manifest required sequence is invalid",
 );
 for (const [name, checksum] of Object.entries(
@@ -931,7 +932,7 @@ check(
 );
 
 const expectedChecksummedPaths = [
-  ...expectedActivePaths,
+  ...activePaths,
   "supabase/verification/etorie-p1-03-selects.sql",
   "supabase/verification/etorie-p1-04-security-selects.sql",
   "supabase/verification/etorie-p1-05-intake-rpcs-selects.sql",
