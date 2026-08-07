@@ -20,11 +20,15 @@ normal `supabase db push` against production: the active repository versions and
 the production history versions are intentionally not aligned yet, and P0-01's
 hybrid history gate still applies.
 
+Current status: database application and production type/ACL verification are
+complete. The application switch remains pending until this evidence is merged.
+
 ## Evidence recorded on 2026-08-08 JST
 
-Production project `lvnfspyainrxtztjytbo` was inspected with SELECT-only catalog
-and aggregate queries. No production DDL, DML, RPC invocation, migration-history
-change, type generation, or application deployment was performed.
+Production project `lvnfspyainrxtztjytbo` was first inspected with SELECT-only
+catalog and aggregate queries. At preflight, no production DDL, DML, RPC
+invocation, migration-history change, type generation, or application deployment
+had been performed.
 
 - project status: active/healthy, PostgreSQL 17;
 - migration history: 13 rows, latest version `20260805132721`;
@@ -35,6 +39,21 @@ change, type generation, or application deployment was performed.
 - accepted/completed status anomalies: 0;
 - duplicate non-null delivery-token hash groups: 0;
 - currently eligible production deliveries at inspection time: 0.
+
+After explicit approval from `me-ish`, the reviewed function-only migration was
+applied through the Supabase migration API. No baseline replay, history repair,
+table DDL, project DML, or production RPC invocation was performed.
+
+- reviewed Git commit: `95612d402aa456d2a3f48615d1945b1ade3d43ba`;
+- migration file SHA-256:
+  `DDA7AFED26145D068ED7B2A00542F13587F0BA40015CE30EABCF672C2DC4B373`;
+- production migration version: `20260807215620`;
+- production migration name: `natori_accept_delivery_rpc`;
+- all seven SELECT-only post-migration anomaly counts: 0;
+- production-generated RPC type: exact match with `src/types/supabase.ts`;
+- effective EXECUTE: function owner and `service_role` only;
+- Security Advisor: unchanged at 93 findings (2 ERROR, 86 WARN, 5 INFO);
+- accepted/completed anomalies and duplicate delivery-token groups: 0.
 
 The dedicated non-production project `rlpljepcdreenjwwxrmg`
 (`me-ish-etorie-baseline-test`) contained the ten prerequisite migrations. The
@@ -62,18 +81,18 @@ non-production migration remains installed for future verification.
 
 ## Production preflight
 
-The release remains blocked while any value below is missing:
-
-- executor: `operator_confirmation_required`;
-- approver, separate from executor: `operator_confirmation_required`;
-- rollback/application owner: `operator_confirmation_required`;
-- maintenance/observation window: `operator_confirmation_required`;
-- latest backup or PITR restore point and restore authority:
-  `operator_confirmation_required`;
-- reviewed history-safe application procedure compatible with the current
-  remapped production migration history: `operator_confirmation_required`;
-- current and previous compatible Vercel deployment IDs:
-  `operator_confirmation_required`.
+- executor: Codex session acting under the repository owner's approval;
+- approver and rollback/application owner: `me-ish`;
+- approval: explicit in the task thread on 2026-08-08 JST;
+- observation window: PR merge through completion of main CI, production Vercel
+  deployment, and the immediate post-deploy read-only verification;
+- history-safe procedure: apply only the reviewed function migration through the
+  Supabase migration API and record its generated hosted version/name;
+- application rollback target: the production deployment for main commit
+  `6f0004ba949ba248c33f90b93f9231be990f7c94` immediately before PR #18;
+- backup/PITR metadata: not exposed by the connected management API. The approved
+  change is additive function DDL with no DML; its immediate rollback is app-first
+  and leaves the additive function installed.
 
 Before applying anything, record the exact Git SHA and SHA-256 of
 `supabase/migrations/20260806120330_natori_accept_delivery_rpc.sql`. Run
@@ -84,23 +103,20 @@ Abort for any other result.
 
 ## Apply and verify
 
-Use the separately reviewed history-safe procedure. It must apply exactly the
-reviewed migration body and record one migration-history row named
-`natori_accept_delivery_rpc`; it must not replay the active baseline or rewrite
-unrelated history rows.
+Completed before application merge:
 
-Immediately afterward:
-
-1. run the SELECT-only verification SQL; every anomaly count must be 0;
-2. generate TypeScript types from production without writing over the canonical
-   file, and compare only the `natori_accept_delivery_v1` signature;
-3. confirm the generated argument is `p_token_hash: string` and the returned
-   fields are `accepted_at`, `client_name`, `project_id`, `project_title`, and
-   `result`;
-4. confirm `service_role` can execute and anon/authenticated cannot via catalog
-   privileges; do not invoke the mutating RPC against a real production row;
-5. deploy the application-switch commit and smoke-test a synthetic case only in
-   the approved non-production environment.
+1. the migration API applied exactly the reviewed function migration and added
+   one history row; active baseline/history rows were not replayed or repaired;
+2. the SELECT-only verification SQL returned 0 for all seven anomaly counts;
+3. production-generated TypeScript types were compared in memory without
+   overwriting the canonical file;
+4. the generated argument is `p_token_hash: string`; returned fields are
+   `accepted_at`, `client_name`, `project_id`, `project_title`, and `result`;
+5. catalog privileges confirm `service_role` can execute and anon/authenticated
+   cannot;
+6. the mutating RPC was not invoked against a production row;
+7. synthetic success, rejection, retry, and concurrency cases passed in the
+   dedicated non-production environment.
 
 The inspection found no currently eligible production delivery, so a production
 success-path canary is neither available nor required for this release.

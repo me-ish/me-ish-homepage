@@ -141,6 +141,7 @@ describe("Etorie P1-12 delivery acceptance contract", () => {
     expect(releaseRunbook).toContain("normal `supabase db push`");
     expect(releaseRunbook).toContain("Deploy in this order only");
     expect(releaseRunbook).toContain("roll back the Vercel deployment first");
-    expect(releaseRunbook).toContain("operator_confirmation_required");
+    expect(releaseRunbook).toContain("production migration version: `20260807215620`");
+    expect(releaseRunbook).toContain("approver and rollback/application owner: `me-ish`");
   });
 });
