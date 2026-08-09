@@ -1,0 +1,1947 @@
+{
+  "generatedAt": "2026-08-09T08:59:23.608Z",
+  "sourceDirectory": "C:/tmp/pf00-lighthouse",
+  "reportCount": 12,
+  "fieldInpAvailable": false,
+  "labResponsivenessProxy": "total-blocking-time",
+  "groups": {
+    "portfolio-desktop": {
+      "runCount": 3,
+      "medians": {
+        "performanceScore": 63,
+        "accessibilityScore": 97,
+        "fcpMs": 1550,
+        "lcpMs": 7056,
+        "cls": 0,
+        "tbtMs": 56,
+        "totalByteWeight": 7911961
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 19,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 36.0pt (48px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 22.5pt (30px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > div.flex > a.pf-cute-focus > span",
+              "nodeLabel": "@natonato_o",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > ul.divide-y > li.flex > span.shrink-0",
+              "nodeLabel": "+500円",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 13.5pt (18px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "failedRuns": 3
+        }
+      ]
+    },
+    "portfolio-mobile": {
+      "runCount": 3,
+      "medians": {
+        "performanceScore": 54,
+        "accessibilityScore": 97,
+        "fcpMs": 7663,
+        "lcpMs": 39122,
+        "cls": 0,
+        "tbtMs": 151,
+        "totalByteWeight": 7651389
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 20,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 9.2pt (12.25px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 23.6pt (31.5px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 15.8pt (21px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 7.9pt (10.5px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 7.9pt (10.5px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > div.flex > a.pf-cute-focus > span",
+              "nodeLabel": "@natonato_o",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 9.2pt (12.25px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > ul.divide-y > li.flex > span.shrink-0",
+              "nodeLabel": "+500円",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 9.2pt (12.25px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "failedRuns": 3
+        }
+      ]
+    },
+    "works-desktop": {
+      "runCount": 3,
+      "medians": {
+        "performanceScore": 63,
+        "accessibilityScore": 96,
+        "fcpMs": 1366,
+        "lcpMs": 7009,
+        "cls": 0,
+        "tbtMs": 0,
+        "totalByteWeight": 7772931
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 6,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 36.0pt (48px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 22.5pt (30px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "failedRuns": 3
+        }
+      ]
+    },
+    "works-mobile": {
+      "runCount": 3,
+      "medians": {
+        "performanceScore": 54,
+        "accessibilityScore": 96,
+        "fcpMs": 6765,
+        "lcpMs": 38956,
+        "cls": 0,
+        "tbtMs": 146,
+        "totalByteWeight": 7512266
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 6,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 9.2pt (12.25px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 23.6pt (31.5px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 15.8pt (21px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 7.9pt (10.5px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 7.9pt (10.5px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "failedRuns": 3
+        }
+      ]
+    }
+  },
+  "runs": [
+    {
+      "target": "portfolio-desktop",
+      "run": 1,
+      "fetchTime": "2026-08-09T08:53:52.205Z",
+      "finalUrl": "https://www.me-ish.art/natori/portfolio",
+      "lighthouseVersion": "13.4.1",
+      "chromeUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+      "benchmarkIndex": 3571.5,
+      "settings": {
+        "formFactor": "desktop",
+        "throttlingMethod": "simulate",
+        "throttling": {
+          "rttMs": 40,
+          "throughputKbps": 10240,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 1
+        },
+        "screenEmulation": {
+          "mobile": false,
+          "width": 1440,
+          "height": 900,
+          "deviceScaleFactor": 1,
+          "disabled": false
+        }
+      },
+      "metrics": {
+        "performanceScore": 64,
+        "accessibilityScore": 97,
+        "fcpMs": 1457,
+        "lcpMs": 7043,
+        "cls": 0,
+        "tbtMs": 0,
+        "totalByteWeight": 7911961
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 19,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 36.0pt (48px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 22.5pt (30px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > div.flex > a.pf-cute-focus > span",
+              "nodeLabel": "@natonato_o",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > ul.divide-y > li.flex > span.shrink-0",
+              "nodeLabel": "+500円",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 13.5pt (18px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "lcpBreakdown": {
+        "timings": [
+          {
+            "subpart": "timeToFirstByte",
+            "durationMs": 100
+          },
+          {
+            "subpart": "resourceLoadDelay",
+            "durationMs": 1166
+          },
+          {
+            "subpart": "resourceLoadDuration",
+            "durationMs": 1069
+          },
+          {
+            "subpart": "elementRenderDelay",
+            "durationMs": 341
+          }
+        ],
+        "selector": "div.grid > div.pf-pin-card > button.pf-cute-focus > img.object-cover",
+        "nodeLabel": "水鏡ステラ様"
+      },
+      "resourceBreakdown": {
+        "Document": {
+          "requests": 1,
+          "transferBytes": 38323,
+          "resourceBytes": 231491
+        },
+        "Font": {
+          "requests": 393,
+          "transferBytes": 6685027,
+          "resourceBytes": 6598140
+        },
+        "Stylesheet": {
+          "requests": 6,
+          "transferBytes": 338116,
+          "resourceBytes": 1707279
+        },
+        "Script": {
+          "requests": 20,
+          "transferBytes": 433163,
+          "resourceBytes": 1358835
+        },
+        "Image": {
+          "requests": 10,
+          "transferBytes": 395030,
+          "resourceBytes": 392894
+        },
+        "Fetch": {
+          "requests": 2,
+          "transferBytes": 720,
+          "resourceBytes": 2
+        },
+        "Other": {
+          "requests": 1,
+          "transferBytes": 21582,
+          "resourceBytes": 21334
+        }
+      },
+      "renderBlocking": {
+        "resourceCount": 6,
+        "potentialSavingsMs": 668
+      },
+      "runWarnings": []
+    },
+    {
+      "target": "portfolio-desktop",
+      "run": 2,
+      "fetchTime": "2026-08-09T08:54:07.407Z",
+      "finalUrl": "https://www.me-ish.art/natori/portfolio",
+      "lighthouseVersion": "13.4.1",
+      "chromeUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+      "benchmarkIndex": 3602,
+      "settings": {
+        "formFactor": "desktop",
+        "throttlingMethod": "simulate",
+        "throttling": {
+          "rttMs": 40,
+          "throughputKbps": 10240,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 1
+        },
+        "screenEmulation": {
+          "mobile": false,
+          "width": 1440,
+          "height": 900,
+          "deviceScaleFactor": 1,
+          "disabled": false
+        }
+      },
+      "metrics": {
+        "performanceScore": 63,
+        "accessibilityScore": 97,
+        "fcpMs": 1550,
+        "lcpMs": 7056,
+        "cls": 0,
+        "tbtMs": 64,
+        "totalByteWeight": 7912021
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 19,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 36.0pt (48px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 22.5pt (30px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > div.flex > a.pf-cute-focus > span",
+              "nodeLabel": "@natonato_o",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > ul.divide-y > li.flex > span.shrink-0",
+              "nodeLabel": "+500円",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 13.5pt (18px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "lcpBreakdown": {
+        "timings": [
+          {
+            "subpart": "timeToFirstByte",
+            "durationMs": 136
+          },
+          {
+            "subpart": "resourceLoadDelay",
+            "durationMs": 1401
+          },
+          {
+            "subpart": "resourceLoadDuration",
+            "durationMs": 205
+          },
+          {
+            "subpart": "elementRenderDelay",
+            "durationMs": 762
+          }
+        ],
+        "selector": "div.grid > div.pf-pin-card > button.pf-cute-focus > img.object-cover",
+        "nodeLabel": "水鏡ステラ様"
+      },
+      "resourceBreakdown": {
+        "Document": {
+          "requests": 1,
+          "transferBytes": 38308,
+          "resourceBytes": 231491
+        },
+        "Font": {
+          "requests": 393,
+          "transferBytes": 6684612,
+          "resourceBytes": 6598140
+        },
+        "Stylesheet": {
+          "requests": 6,
+          "transferBytes": 338358,
+          "resourceBytes": 1707279
+        },
+        "Script": {
+          "requests": 20,
+          "transferBytes": 433299,
+          "resourceBytes": 1358835
+        },
+        "Image": {
+          "requests": 10,
+          "transferBytes": 395181,
+          "resourceBytes": 392894
+        },
+        "Other": {
+          "requests": 1,
+          "transferBytes": 21563,
+          "resourceBytes": 21334
+        },
+        "Fetch": {
+          "requests": 2,
+          "transferBytes": 700,
+          "resourceBytes": 2
+        }
+      },
+      "renderBlocking": {
+        "resourceCount": 6,
+        "potentialSavingsMs": 709
+      },
+      "runWarnings": []
+    },
+    {
+      "target": "portfolio-desktop",
+      "run": 3,
+      "fetchTime": "2026-08-09T08:54:23.694Z",
+      "finalUrl": "https://www.me-ish.art/natori/portfolio",
+      "lighthouseVersion": "13.4.1",
+      "chromeUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+      "benchmarkIndex": 3553,
+      "settings": {
+        "formFactor": "desktop",
+        "throttlingMethod": "simulate",
+        "throttling": {
+          "rttMs": 40,
+          "throughputKbps": 10240,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 1
+        },
+        "screenEmulation": {
+          "mobile": false,
+          "width": 1440,
+          "height": 900,
+          "deviceScaleFactor": 1,
+          "disabled": false
+        }
+      },
+      "metrics": {
+        "performanceScore": 62,
+        "accessibilityScore": 97,
+        "fcpMs": 1562,
+        "lcpMs": 7349,
+        "cls": 0,
+        "tbtMs": 56,
+        "totalByteWeight": 7911720
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 19,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 36.0pt (48px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 22.5pt (30px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > div.flex > a.pf-cute-focus > span",
+              "nodeLabel": "@natonato_o",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > ul.divide-y > li.flex > span.shrink-0",
+              "nodeLabel": "+500円",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 13.5pt (18px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "lcpBreakdown": {
+        "timings": [
+          {
+            "subpart": "timeToFirstByte",
+            "durationMs": 136
+          },
+          {
+            "subpart": "resourceLoadDelay",
+            "durationMs": 1680
+          },
+          {
+            "subpart": "resourceLoadDuration",
+            "durationMs": 523
+          },
+          {
+            "subpart": "elementRenderDelay",
+            "durationMs": 748
+          }
+        ],
+        "selector": "div.grid > div.pf-pin-card > button.pf-cute-focus > img.object-cover",
+        "nodeLabel": "水鏡ステラ様"
+      },
+      "resourceBreakdown": {
+        "Document": {
+          "requests": 1,
+          "transferBytes": 38056,
+          "resourceBytes": 231491
+        },
+        "Font": {
+          "requests": 393,
+          "transferBytes": 6684643,
+          "resourceBytes": 6598140
+        },
+        "Stylesheet": {
+          "requests": 6,
+          "transferBytes": 338372,
+          "resourceBytes": 1707279
+        },
+        "Script": {
+          "requests": 20,
+          "transferBytes": 433198,
+          "resourceBytes": 1358828
+        },
+        "Image": {
+          "requests": 10,
+          "transferBytes": 395156,
+          "resourceBytes": 392894
+        },
+        "Other": {
+          "requests": 1,
+          "transferBytes": 21581,
+          "resourceBytes": 21334
+        },
+        "Fetch": {
+          "requests": 2,
+          "transferBytes": 714,
+          "resourceBytes": 2
+        }
+      },
+      "renderBlocking": {
+        "resourceCount": 6,
+        "potentialSavingsMs": 745
+      },
+      "runWarnings": []
+    },
+    {
+      "target": "portfolio-mobile",
+      "run": 1,
+      "fetchTime": "2026-08-09T08:52:33.075Z",
+      "finalUrl": "https://www.me-ish.art/natori/portfolio",
+      "lighthouseVersion": "13.4.1",
+      "chromeUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+      "benchmarkIndex": 3607,
+      "settings": {
+        "formFactor": "mobile",
+        "throttlingMethod": "simulate",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "screenEmulation": {
+          "mobile": true,
+          "width": 375,
+          "height": 812,
+          "deviceScaleFactor": 1,
+          "disabled": false
+        }
+      },
+      "metrics": {
+        "performanceScore": 54,
+        "accessibilityScore": 97,
+        "fcpMs": 7663,
+        "lcpMs": 39122,
+        "cls": 0,
+        "tbtMs": 155,
+        "totalByteWeight": 7651146
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 20,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 9.2pt (12.25px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 23.6pt (31.5px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 15.8pt (21px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 7.9pt (10.5px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 7.9pt (10.5px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > div.flex > a.pf-cute-focus > span",
+              "nodeLabel": "@natonato_o",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 9.2pt (12.25px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > ul.divide-y > li.flex > span.shrink-0",
+              "nodeLabel": "+500円",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 9.2pt (12.25px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "lcpBreakdown": {
+        "timings": [
+          {
+            "subpart": "timeToFirstByte",
+            "durationMs": 102
+          },
+          {
+            "subpart": "elementRenderDelay",
+            "durationMs": 3575
+          }
+        ],
+        "selector": "main.__variable_15e15c > section.relative > div > p.mb-8",
+        "nodeLabel": "淡いピンクや水色を基調とした、やわらかく可愛い女の子のイラストを描いています。アニメ塗りをベースに、シンプルながらも印象に残る表現を心がけています。"
+      },
+      "resourceBreakdown": {
+        "Document": {
+          "requests": 1,
+          "transferBytes": 38055,
+          "resourceBytes": 231491
+        },
+        "Font": {
+          "requests": 393,
+          "transferBytes": 6684460,
+          "resourceBytes": 6598140
+        },
+        "Stylesheet": {
+          "requests": 6,
+          "transferBytes": 338354,
+          "resourceBytes": 1707279
+        },
+        "Script": {
+          "requests": 20,
+          "transferBytes": 433156,
+          "resourceBytes": 1358848
+        },
+        "Image": {
+          "requests": 6,
+          "transferBytes": 134859,
+          "resourceBytes": 133320
+        },
+        "Other": {
+          "requests": 1,
+          "transferBytes": 21536,
+          "resourceBytes": 21334
+        },
+        "Fetch": {
+          "requests": 2,
+          "transferBytes": 726,
+          "resourceBytes": 2
+        }
+      },
+      "renderBlocking": {
+        "resourceCount": 6,
+        "potentialSavingsMs": 4204
+      },
+      "runWarnings": []
+    },
+    {
+      "target": "portfolio-mobile",
+      "run": 2,
+      "fetchTime": "2026-08-09T08:53:18.758Z",
+      "finalUrl": "https://www.me-ish.art/natori/portfolio",
+      "lighthouseVersion": "13.4.1",
+      "chromeUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+      "benchmarkIndex": 3566.5,
+      "settings": {
+        "formFactor": "mobile",
+        "throttlingMethod": "simulate",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "screenEmulation": {
+          "mobile": true,
+          "width": 375,
+          "height": 812,
+          "deviceScaleFactor": 1,
+          "disabled": false
+        }
+      },
+      "metrics": {
+        "performanceScore": 54,
+        "accessibilityScore": 97,
+        "fcpMs": 7936,
+        "lcpMs": 40337,
+        "cls": 0,
+        "tbtMs": 138,
+        "totalByteWeight": 7651449
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 20,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 9.2pt (12.25px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 23.6pt (31.5px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 15.8pt (21px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 7.9pt (10.5px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 7.9pt (10.5px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > div.flex > a.pf-cute-focus > span",
+              "nodeLabel": "@natonato_o",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 9.2pt (12.25px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > ul.divide-y > li.flex > span.shrink-0",
+              "nodeLabel": "+500円",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 9.2pt (12.25px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "lcpBreakdown": {
+        "timings": [
+          {
+            "subpart": "timeToFirstByte",
+            "durationMs": 111
+          },
+          {
+            "subpart": "elementRenderDelay",
+            "durationMs": 3586
+          }
+        ],
+        "selector": "main.__variable_15e15c > section.relative > div > p.mb-8",
+        "nodeLabel": "淡いピンクや水色を基調とした、やわらかく可愛い女の子のイラストを描いています。アニメ塗りをベースに、シンプルながらも印象に残る表現を心がけています。"
+      },
+      "resourceBreakdown": {
+        "Document": {
+          "requests": 1,
+          "transferBytes": 38324,
+          "resourceBytes": 231491
+        },
+        "Font": {
+          "requests": 393,
+          "transferBytes": 6684455,
+          "resourceBytes": 6598140
+        },
+        "Stylesheet": {
+          "requests": 6,
+          "transferBytes": 338329,
+          "resourceBytes": 1707279
+        },
+        "Script": {
+          "requests": 20,
+          "transferBytes": 433232,
+          "resourceBytes": 1358815
+        },
+        "Image": {
+          "requests": 6,
+          "transferBytes": 134843,
+          "resourceBytes": 133320
+        },
+        "Other": {
+          "requests": 1,
+          "transferBytes": 21566,
+          "resourceBytes": 21334
+        },
+        "Fetch": {
+          "requests": 2,
+          "transferBytes": 700,
+          "resourceBytes": 2
+        }
+      },
+      "renderBlocking": {
+        "resourceCount": 6,
+        "potentialSavingsMs": 4230
+      },
+      "runWarnings": []
+    },
+    {
+      "target": "portfolio-mobile",
+      "run": 3,
+      "fetchTime": "2026-08-09T08:53:36.542Z",
+      "finalUrl": "https://www.me-ish.art/natori/portfolio",
+      "lighthouseVersion": "13.4.1",
+      "chromeUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+      "benchmarkIndex": 3558,
+      "settings": {
+        "formFactor": "mobile",
+        "throttlingMethod": "simulate",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "screenEmulation": {
+          "mobile": true,
+          "width": 375,
+          "height": 812,
+          "deviceScaleFactor": 1,
+          "disabled": false
+        }
+      },
+      "metrics": {
+        "performanceScore": 54,
+        "accessibilityScore": 97,
+        "fcpMs": 7541,
+        "lcpMs": 39040,
+        "cls": 0,
+        "tbtMs": 151,
+        "totalByteWeight": 7651389
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 20,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 9.2pt (12.25px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 23.6pt (31.5px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 15.8pt (21px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 7.9pt (10.5px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 7.9pt (10.5px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > div.flex > a.pf-cute-focus > span",
+              "nodeLabel": "@natonato_o",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 9.2pt (12.25px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "div.mx-auto > ul.divide-y > li.flex > span.shrink-0",
+              "nodeLabel": "+500円",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.61 (foreground color: #e84c86, background color: #ffffff, font size: 9.2pt (12.25px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "lcpBreakdown": {
+        "timings": [
+          {
+            "subpart": "timeToFirstByte",
+            "durationMs": 76
+          },
+          {
+            "subpart": "elementRenderDelay",
+            "durationMs": 3540
+          }
+        ],
+        "selector": "main.__variable_15e15c > section.relative > div > p.mb-8",
+        "nodeLabel": "淡いピンクや水色を基調とした、やわらかく可愛い女の子のイラストを描いています。アニメ塗りをベースに、シンプルながらも印象に残る表現を心がけています。"
+      },
+      "resourceBreakdown": {
+        "Document": {
+          "requests": 1,
+          "transferBytes": 38325,
+          "resourceBytes": 231491
+        },
+        "Font": {
+          "requests": 393,
+          "transferBytes": 6684775,
+          "resourceBytes": 6598140
+        },
+        "Stylesheet": {
+          "requests": 6,
+          "transferBytes": 338195,
+          "resourceBytes": 1707279
+        },
+        "Script": {
+          "requests": 20,
+          "transferBytes": 433224,
+          "resourceBytes": 1358828
+        },
+        "Image": {
+          "requests": 6,
+          "transferBytes": 134567,
+          "resourceBytes": 133320
+        },
+        "Other": {
+          "requests": 1,
+          "transferBytes": 21589,
+          "resourceBytes": 21334
+        },
+        "Fetch": {
+          "requests": 2,
+          "transferBytes": 714,
+          "resourceBytes": 2
+        }
+      },
+      "renderBlocking": {
+        "resourceCount": 6,
+        "potentialSavingsMs": 4231
+      },
+      "runWarnings": []
+    },
+    {
+      "target": "works-desktop",
+      "run": 1,
+      "fetchTime": "2026-08-09T08:55:29.093Z",
+      "finalUrl": "https://www.me-ish.art/natori/works",
+      "lighthouseVersion": "13.4.1",
+      "chromeUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+      "benchmarkIndex": 3590,
+      "settings": {
+        "formFactor": "desktop",
+        "throttlingMethod": "simulate",
+        "throttling": {
+          "rttMs": 40,
+          "throughputKbps": 10240,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 1
+        },
+        "screenEmulation": {
+          "mobile": false,
+          "width": 1440,
+          "height": 900,
+          "deviceScaleFactor": 1,
+          "disabled": false
+        }
+      },
+      "metrics": {
+        "performanceScore": 64,
+        "accessibilityScore": 96,
+        "fcpMs": 1353,
+        "lcpMs": 7009,
+        "cls": 0,
+        "tbtMs": 22,
+        "totalByteWeight": 7772486
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 6,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 36.0pt (48px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 22.5pt (30px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "lcpBreakdown": {
+        "timings": [
+          {
+            "subpart": "timeToFirstByte",
+            "durationMs": 86
+          },
+          {
+            "subpart": "resourceLoadDelay",
+            "durationMs": 1129
+          },
+          {
+            "subpart": "resourceLoadDuration",
+            "durationMs": 546
+          },
+          {
+            "subpart": "elementRenderDelay",
+            "durationMs": 591
+          }
+        ],
+        "selector": "div.grid > div.pf-pin-card > button.pf-cute-focus > img.object-cover",
+        "nodeLabel": "水鏡ステラ様"
+      },
+      "resourceBreakdown": {
+        "Document": {
+          "requests": 1,
+          "transferBytes": 30678,
+          "resourceBytes": 175708
+        },
+        "Font": {
+          "requests": 383,
+          "transferBytes": 6552833,
+          "resourceBytes": 6468432
+        },
+        "Stylesheet": {
+          "requests": 6,
+          "transferBytes": 338332,
+          "resourceBytes": 1707279
+        },
+        "Script": {
+          "requests": 20,
+          "transferBytes": 432981,
+          "resourceBytes": 1358828
+        },
+        "Image": {
+          "requests": 10,
+          "transferBytes": 395197,
+          "resourceBytes": 392894
+        },
+        "Other": {
+          "requests": 1,
+          "transferBytes": 21742,
+          "resourceBytes": 21334
+        },
+        "Fetch": {
+          "requests": 2,
+          "transferBytes": 723,
+          "resourceBytes": 2
+        }
+      },
+      "renderBlocking": {
+        "resourceCount": 6,
+        "potentialSavingsMs": 615
+      },
+      "runWarnings": []
+    },
+    {
+      "target": "works-desktop",
+      "run": 2,
+      "fetchTime": "2026-08-09T08:55:44.925Z",
+      "finalUrl": "https://www.me-ish.art/natori/works",
+      "lighthouseVersion": "13.4.1",
+      "chromeUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+      "benchmarkIndex": 3586.5,
+      "settings": {
+        "formFactor": "desktop",
+        "throttlingMethod": "simulate",
+        "throttling": {
+          "rttMs": 40,
+          "throughputKbps": 10240,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 1
+        },
+        "screenEmulation": {
+          "mobile": false,
+          "width": 1440,
+          "height": 900,
+          "deviceScaleFactor": 1,
+          "disabled": false
+        }
+      },
+      "metrics": {
+        "performanceScore": 63,
+        "accessibilityScore": 96,
+        "fcpMs": 1366,
+        "lcpMs": 6992,
+        "cls": 0,
+        "tbtMs": 0,
+        "totalByteWeight": 7773021
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 6,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 36.0pt (48px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 22.5pt (30px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "lcpBreakdown": {
+        "timings": [
+          {
+            "subpart": "timeToFirstByte",
+            "durationMs": 106
+          },
+          {
+            "subpart": "resourceLoadDelay",
+            "durationMs": 653
+          },
+          {
+            "subpart": "resourceLoadDuration",
+            "durationMs": 977
+          },
+          {
+            "subpart": "elementRenderDelay",
+            "durationMs": 692
+          }
+        ],
+        "selector": "div.grid > div.pf-pin-card > button.pf-cute-focus > img.object-cover",
+        "nodeLabel": "水鏡ステラ様"
+      },
+      "resourceBreakdown": {
+        "Document": {
+          "requests": 1,
+          "transferBytes": 30995,
+          "resourceBytes": 175708
+        },
+        "Font": {
+          "requests": 383,
+          "transferBytes": 6553220,
+          "resourceBytes": 6468432
+        },
+        "Stylesheet": {
+          "requests": 6,
+          "transferBytes": 338176,
+          "resourceBytes": 1707279
+        },
+        "Script": {
+          "requests": 20,
+          "transferBytes": 433170,
+          "resourceBytes": 1358815
+        },
+        "Image": {
+          "requests": 10,
+          "transferBytes": 395177,
+          "resourceBytes": 392894
+        },
+        "Other": {
+          "requests": 1,
+          "transferBytes": 21558,
+          "resourceBytes": 21334
+        },
+        "Fetch": {
+          "requests": 2,
+          "transferBytes": 725,
+          "resourceBytes": 2
+        }
+      },
+      "renderBlocking": {
+        "resourceCount": 6,
+        "potentialSavingsMs": 601
+      },
+      "runWarnings": []
+    },
+    {
+      "target": "works-desktop",
+      "run": 3,
+      "fetchTime": "2026-08-09T08:56:00.945Z",
+      "finalUrl": "https://www.me-ish.art/natori/works",
+      "lighthouseVersion": "13.4.1",
+      "chromeUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+      "benchmarkIndex": 3510,
+      "settings": {
+        "formFactor": "desktop",
+        "throttlingMethod": "simulate",
+        "throttling": {
+          "rttMs": 40,
+          "throughputKbps": 10240,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 1
+        },
+        "screenEmulation": {
+          "mobile": false,
+          "width": 1440,
+          "height": 900,
+          "deviceScaleFactor": 1,
+          "disabled": false
+        }
+      },
+      "metrics": {
+        "performanceScore": 63,
+        "accessibilityScore": 96,
+        "fcpMs": 1368,
+        "lcpMs": 7028,
+        "cls": 0,
+        "tbtMs": 0,
+        "totalByteWeight": 7772931
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 6,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 36.0pt (48px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 22.5pt (30px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "lcpBreakdown": {
+        "timings": [
+          {
+            "subpart": "timeToFirstByte",
+            "durationMs": 90
+          },
+          {
+            "subpart": "resourceLoadDelay",
+            "durationMs": 577
+          },
+          {
+            "subpart": "resourceLoadDuration",
+            "durationMs": 919
+          },
+          {
+            "subpart": "elementRenderDelay",
+            "durationMs": 835
+          }
+        ],
+        "selector": "div.grid > div.pf-pin-card > button.pf-cute-focus > img.object-cover",
+        "nodeLabel": "水鏡ステラ様"
+      },
+      "resourceBreakdown": {
+        "Document": {
+          "requests": 1,
+          "transferBytes": 30997,
+          "resourceBytes": 175708
+        },
+        "Font": {
+          "requests": 383,
+          "transferBytes": 6553001,
+          "resourceBytes": 6468432
+        },
+        "Stylesheet": {
+          "requests": 6,
+          "transferBytes": 338216,
+          "resourceBytes": 1707279
+        },
+        "Script": {
+          "requests": 20,
+          "transferBytes": 433255,
+          "resourceBytes": 1358835
+        },
+        "Image": {
+          "requests": 10,
+          "transferBytes": 395168,
+          "resourceBytes": 392894
+        },
+        "Other": {
+          "requests": 1,
+          "transferBytes": 21581,
+          "resourceBytes": 21334
+        },
+        "Fetch": {
+          "requests": 2,
+          "transferBytes": 713,
+          "resourceBytes": 2
+        }
+      },
+      "renderBlocking": {
+        "resourceCount": 6,
+        "potentialSavingsMs": 707
+      },
+      "runWarnings": []
+    },
+    {
+      "target": "works-mobile",
+      "run": 1,
+      "fetchTime": "2026-08-09T08:54:39.034Z",
+      "finalUrl": "https://www.me-ish.art/natori/works",
+      "lighthouseVersion": "13.4.1",
+      "chromeUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+      "benchmarkIndex": 3519.5,
+      "settings": {
+        "formFactor": "mobile",
+        "throttlingMethod": "simulate",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "screenEmulation": {
+          "mobile": true,
+          "width": 375,
+          "height": 812,
+          "deviceScaleFactor": 1,
+          "disabled": false
+        }
+      },
+      "metrics": {
+        "performanceScore": 53,
+        "accessibilityScore": 96,
+        "fcpMs": 6782,
+        "lcpMs": 39353,
+        "cls": 0,
+        "tbtMs": 207,
+        "totalByteWeight": 7512266
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 6,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 9.2pt (12.25px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 23.6pt (31.5px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 15.8pt (21px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 7.9pt (10.5px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 7.9pt (10.5px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "lcpBreakdown": {
+        "timings": [
+          {
+            "subpart": "timeToFirstByte",
+            "durationMs": 95
+          },
+          {
+            "subpart": "elementRenderDelay",
+            "durationMs": 3537
+          }
+        ],
+        "selector": "main.__variable_15e15c > section.relative > div > p.mb-8",
+        "nodeLabel": "淡いピンクや水色を基調とした、やわらかく可愛い女の子のイラストを描いています。アニメ塗りをベースに、シンプルながらも印象に残る表現を心がけています。"
+      },
+      "resourceBreakdown": {
+        "Document": {
+          "requests": 1,
+          "transferBytes": 30997,
+          "resourceBytes": 175708
+        },
+        "Font": {
+          "requests": 383,
+          "transferBytes": 6552702,
+          "resourceBytes": 6468432
+        },
+        "Stylesheet": {
+          "requests": 6,
+          "transferBytes": 338329,
+          "resourceBytes": 1707279
+        },
+        "Script": {
+          "requests": 20,
+          "transferBytes": 433333,
+          "resourceBytes": 1358835
+        },
+        "Image": {
+          "requests": 6,
+          "transferBytes": 134557,
+          "resourceBytes": 133320
+        },
+        "Other": {
+          "requests": 1,
+          "transferBytes": 21578,
+          "resourceBytes": 21334
+        },
+        "Fetch": {
+          "requests": 2,
+          "transferBytes": 770,
+          "resourceBytes": 2
+        }
+      },
+      "renderBlocking": {
+        "resourceCount": 6,
+        "potentialSavingsMs": 4332
+      },
+      "runWarnings": []
+    },
+    {
+      "target": "works-mobile",
+      "run": 2,
+      "fetchTime": "2026-08-09T08:54:56.290Z",
+      "finalUrl": "https://www.me-ish.art/natori/works",
+      "lighthouseVersion": "13.4.1",
+      "chromeUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+      "benchmarkIndex": 3525.5,
+      "settings": {
+        "formFactor": "mobile",
+        "throttlingMethod": "simulate",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "screenEmulation": {
+          "mobile": true,
+          "width": 375,
+          "height": 812,
+          "deviceScaleFactor": 1,
+          "disabled": false
+        }
+      },
+      "metrics": {
+        "performanceScore": 55,
+        "accessibilityScore": 96,
+        "fcpMs": 6765,
+        "lcpMs": 38956,
+        "cls": 0,
+        "tbtMs": 95,
+        "totalByteWeight": 7512167
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 6,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 9.2pt (12.25px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 23.6pt (31.5px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 15.8pt (21px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 7.9pt (10.5px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 7.9pt (10.5px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "lcpBreakdown": {
+        "timings": [
+          {
+            "subpart": "timeToFirstByte",
+            "durationMs": 119
+          },
+          {
+            "subpart": "elementRenderDelay",
+            "durationMs": 3555
+          }
+        ],
+        "selector": "main.__variable_15e15c > section.relative > div > p.mb-8",
+        "nodeLabel": "淡いピンクや水色を基調とした、やわらかく可愛い女の子のイラストを描いています。アニメ塗りをベースに、シンプルながらも印象に残る表現を心がけています。"
+      },
+      "resourceBreakdown": {
+        "Document": {
+          "requests": 1,
+          "transferBytes": 30996,
+          "resourceBytes": 175708
+        },
+        "Font": {
+          "requests": 383,
+          "transferBytes": 6552752,
+          "resourceBytes": 6468432
+        },
+        "Stylesheet": {
+          "requests": 6,
+          "transferBytes": 338231,
+          "resourceBytes": 1707279
+        },
+        "Script": {
+          "requests": 20,
+          "transferBytes": 433294,
+          "resourceBytes": 1358835
+        },
+        "Image": {
+          "requests": 6,
+          "transferBytes": 134591,
+          "resourceBytes": 133320
+        },
+        "Other": {
+          "requests": 1,
+          "transferBytes": 21565,
+          "resourceBytes": 21334
+        },
+        "Fetch": {
+          "requests": 2,
+          "transferBytes": 738,
+          "resourceBytes": 2
+        }
+      },
+      "renderBlocking": {
+        "resourceCount": 6,
+        "potentialSavingsMs": 4016
+      },
+      "runWarnings": []
+    },
+    {
+      "target": "works-mobile",
+      "run": 3,
+      "fetchTime": "2026-08-09T08:55:11.838Z",
+      "finalUrl": "https://www.me-ish.art/natori/works",
+      "lighthouseVersion": "13.4.1",
+      "chromeUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+      "benchmarkIndex": 3516,
+      "settings": {
+        "formFactor": "mobile",
+        "throttlingMethod": "simulate",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "screenEmulation": {
+          "mobile": true,
+          "width": 375,
+          "height": 812,
+          "deviceScaleFactor": 1,
+          "disabled": false
+        }
+      },
+      "metrics": {
+        "performanceScore": 54,
+        "accessibilityScore": 96,
+        "fcpMs": 6482,
+        "lcpMs": 38871,
+        "cls": 0,
+        "tbtMs": 146,
+        "totalByteWeight": 7512353
+      },
+      "accessibilityFailures": [
+        {
+          "id": "color-contrast",
+          "title": "背景色と前景色には十分なコントラスト比がありません",
+          "score": 0,
+          "nodeCount": 6,
+          "examples": [
+            {
+              "selector": "main.__variable_15e15c > section.relative > div > p.mb-3",
+              "nodeLabel": "ILLUSTRATION PORTFOLIO",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #e84c86, background color: #f7f3fb, font size: 9.2pt (12.25px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section.relative > div > h1.mb-4 > span",
+              "nodeLabel": "ナトリのあとりえ",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.37 (foreground color: #ff6fa5, background color: #f7f3fb, font size: 23.6pt (31.5px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section.relative > div > div.flex > a.pf-cute-focus",
+              "nodeLabel": "作品を見る",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 15.0pt (20px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > h2.text-2xl > span",
+              "nodeLabel": "°˖✧",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.11 (foreground color: #3fbe9e, background color: #f7f3fb, font size: 15.8pt (21px), font weight: bold). Expected contrast ratio of 3:1"
+            },
+            {
+              "selector": "section#gallery > div.mb-8 > div.flex > button.pf-cute-focus",
+              "nodeLabel": "すべて",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.6 (foreground color: #ffffff, background color: #ff6fa5, font size: 7.9pt (10.5px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "selector": "section#about > div.mx-auto > div.flex > p.mt-1",
+              "nodeLabel": "ILLUSTRATOR",
+              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #e84c86, background color: #efe7f7, font size: 7.9pt (10.5px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "lcpBreakdown": {
+        "timings": [
+          {
+            "subpart": "timeToFirstByte",
+            "durationMs": 95
+          },
+          {
+            "subpart": "elementRenderDelay",
+            "durationMs": 3570
+          }
+        ],
+        "selector": "main.__variable_15e15c > section.relative > div > p.mb-8",
+        "nodeLabel": "淡いピンクや水色を基調とした、やわらかく可愛い女の子のイラストを描いています。アニメ塗りをベースに、シンプルながらも印象に残る表現を心がけています。"
+      },
+      "resourceBreakdown": {
+        "Document": {
+          "requests": 1,
+          "transferBytes": 30995,
+          "resourceBytes": 175708
+        },
+        "Font": {
+          "requests": 383,
+          "transferBytes": 6552786,
+          "resourceBytes": 6468432
+        },
+        "Stylesheet": {
+          "requests": 6,
+          "transferBytes": 338219,
+          "resourceBytes": 1707279
+        },
+        "Script": {
+          "requests": 20,
+          "transferBytes": 433130,
+          "resourceBytes": 1358828
+        },
+        "Image": {
+          "requests": 6,
+          "transferBytes": 134831,
+          "resourceBytes": 133320
+        },
+        "Other": {
+          "requests": 1,
+          "transferBytes": 21679,
+          "resourceBytes": 21334
+        },
+        "Fetch": {
+          "requests": 2,
+          "transferBytes": 713,
+          "resourceBytes": 2
+        }
+      },
+      "renderBlocking": {
+        "resourceCount": 6,
+        "potentialSavingsMs": 3967
+      },
+      "runWarnings": []
+    }
+  ]
+}
