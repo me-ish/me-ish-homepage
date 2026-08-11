@@ -30,14 +30,18 @@ export default function PortfolioHeader({
       className="sticky top-0 z-50 border-b backdrop-blur"
       style={{ background: c.pageTranslucent, borderColor: c.borderSubtle }}
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">
         <span
-          className="text-xl font-semibold tracking-wide"
+          className="min-w-0 max-w-[58vw] truncate text-xl font-semibold tracking-wide sm:max-w-none"
           style={{ ...fontEnStyle, color: c.accent }}
         >
           {content.artistName}
         </span>
-        <nav className="hidden gap-6 text-sm font-medium md:flex" style={{ color: c.textSoft }}>
+        <nav
+          aria-label="メインナビゲーション"
+          className="hidden gap-6 text-sm font-medium md:flex"
+          style={{ color: c.textSoft }}
+        >
           {navLinks.map((link) => (
             <a key={link.href} href={link.href} className="pf-cute-focus hover:opacity-70">
               {link.label}
@@ -59,6 +63,7 @@ export default function PortfolioHeader({
       </div>
       {/* モバイル用ナビ。md 以上は上のナビがあるので出さない */}
       <nav
+        aria-label="メインナビゲーション（モバイル）"
         className="flex gap-5 overflow-x-auto px-5 pb-2.5 text-sm font-medium md:hidden"
         style={{ color: c.textSoft }}
       >
