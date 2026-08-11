@@ -4,11 +4,11 @@ import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types
 import { fontEnStyle } from "./portfolioFonts";
 
 const NAV_LINKS = [
-  { href: "#gallery", label: "ギャラリー" },
-  { href: "#about", label: "プロフィール" },
-  { href: "#pricing", label: "料金" },
+  { href: "#gallery", label: "作品" },
+  { href: "#pricing", label: "料金・ご依頼" },
   { href: "#flow", label: "制作の流れ" },
-  { href: "#form", label: "ご依頼" },
+  { href: "#about", label: "プロフィール" },
+  { href: "#form", label: "相談・見積もり" },
 ];
 
 // showcase 表示ではページに存在しないセクション（料金・流れ・依頼）を除外
