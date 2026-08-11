@@ -1,12 +1,7 @@
 // features/natori/components/portfolio/PortfolioHero.tsx
-// メインビジュアル(丸画像)は当面非表示。content.heroImage 自体は残してあるので、
-// 復活させる場合は git 履歴のビジュアル列を戻す。
-import {
-  portfolioColors as c,
-  portfolioDecorativeColors as d,
-} from "@/features/natori/constants/portfolioContent";
+import Image from "next/image";
+import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
-import Sparkle from "./Sparkle";
 import { fontEnStyle } from "./portfolioFonts";
 
 export default function PortfolioHero({
@@ -16,43 +11,94 @@ export default function PortfolioHero({
   content: PortfolioContent;
   variant?: PortfolioVariant;
 }) {
+  const fallbackWork = content.works.find((work) => Boolean(work.image));
+  const representativeImage = content.heroImage || fallbackWork?.image || null;
+  const hasExplicitHeroImage = Boolean(content.heroImage);
+  const representativeAlt = hasExplicitHeroImage
+    ? `${content.artistName}の代表作品`
+    : fallbackWork?.title ?? "";
+
   return (
-    <section className="relative mx-auto max-w-6xl overflow-hidden px-5 pb-20 pt-16">
-      {/* 星は上部の余白帯（pt-16 の範囲内）に置き、テキストと重ねない */}
-      <Sparkle style={{ top: 10, left: "40%" }} color={d.sparkleWarm} size={20} />
-      <Sparkle style={{ top: 30, right: "10%" }} color={d.sparkleCool} size={16} />
-      <div>
-        <p
-          className="mb-3 text-sm font-semibold uppercase tracking-widest"
-          style={{ ...fontEnStyle, color: c.accent }}
-        >
-          {content.roleEn}
-        </p>
-        <h1 className="mb-4 text-4xl font-black leading-tight md:text-5xl">
-          <span style={{ color: c.accent }}>{content.heroTitleAccent}</span>
-          {content.heroTitleTail}
-        </h1>
-        <p className="mb-8 max-w-md text-base leading-relaxed" style={{ color: c.textSoft }}>
-          {content.heroDescription}
-        </p>
-        <div className="flex flex-wrap gap-3">
-          <a
-            href="#gallery"
-            className="pf-cute-focus rounded-full px-6 py-3 font-bold text-white shadow-md hover:brightness-105"
-            style={{ background: c.accent, color: c.onAccent }}
+    <section
+      id="hero"
+      className="mx-auto max-w-6xl scroll-mt-28 px-5 pb-16 pt-12 md:pb-20 md:pt-16"
+    >
+      <div
+        className={`grid items-center gap-10 md:gap-14 ${
+          representativeImage
+            ? "md:grid-cols-[minmax(0,0.9fr)_minmax(20rem,1.1fr)]"
+            : "max-w-2xl"
+        }`}
+      >
+        <div className="max-w-xl">
+          <p className="mb-2 text-sm font-bold tracking-wide" style={{ color: c.textSoft }}>
+            {content.artistName}
+          </p>
+          <p
+            className="mb-4 text-sm font-semibold uppercase tracking-[0.18em]"
+            style={{ ...fontEnStyle, color: c.accent }}
           >
-            作品を見る
-          </a>
-          {variant === "showcase" ? null : (
+            {content.roleEn}
+          </p>
+          <h1 className="mb-5 text-4xl font-black leading-[1.18] tracking-tight md:text-5xl lg:text-6xl">
+            <span style={{ color: c.accent }}>{content.heroTitleAccent}</span>
+            {content.heroTitleTail}
+          </h1>
+          <p
+            className="mb-8 max-w-lg text-base leading-relaxed md:text-lg"
+            style={{ color: c.textSoft }}
+          >
+            {content.heroDescription}
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            {variant === "showcase" ? null : (
+              <a
+                href="#form"
+                className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-xl px-6 py-3 font-bold"
+                style={{ background: c.accent, color: c.onAccent }}
+              >
+                相談・見積もり
+              </a>
+            )}
             <a
-              href="#form"
-              className="pf-cute-focus rounded-full border-2 px-6 py-3 font-bold hover:bg-white"
-              style={{ borderColor: c.accent, color: c.accent }}
+              href="#gallery"
+              className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-xl border-2 px-6 py-3 font-bold"
+              style={{ background: c.surface, borderColor: c.accent, color: c.accent }}
             >
-              依頼してみる
+              作品を見る
             </a>
-          )}
+          </div>
         </div>
+
+        {representativeImage ? (
+          <figure className="w-full min-w-0 max-w-md justify-self-center md:justify-self-end">
+            <div
+              className="relative aspect-square overflow-hidden rounded-2xl border"
+              style={{ background: c.surfaceSubtle, borderColor: c.borderSubtle }}
+            >
+              <Image
+                src={representativeImage}
+                alt={representativeAlt}
+                fill
+                sizes="(min-width: 1024px) 448px, (min-width: 768px) 46vw, calc(100vw - 40px)"
+                className="object-contain"
+              />
+            </div>
+            {!hasExplicitHeroImage && fallbackWork ? (
+              <figcaption
+                className="mt-3 flex items-baseline gap-2 text-sm"
+                style={{ color: c.textSoft }}
+              >
+                <span className="text-xs font-semibold uppercase tracking-[0.16em]">
+                  Selected work
+                </span>
+                <span className="font-bold" style={{ color: c.text }}>
+                  {fallbackWork.title}
+                </span>
+              </figcaption>
+            ) : null}
+          </figure>
+        ) : null}
       </div>
     </section>
   );
