@@ -27,7 +27,11 @@ export default function PortfolioMobileCta() {
     <a
       href="#form"
       className="pf-cute-focus fixed bottom-5 right-5 z-40 rounded-full px-5 py-3 text-sm font-bold text-white shadow-lg hover:brightness-105 md:hidden"
-      style={{ background: c.pink, boxShadow: "0 8px 20px rgba(244,114,182,0.45)" }}
+      style={{
+        background: c.accent,
+        color: c.onAccent,
+        boxShadow: "0 8px 20px rgba(36,36,36,0.22)",
+      }}
     >
       依頼してみる
     </a>

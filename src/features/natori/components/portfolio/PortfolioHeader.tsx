@@ -28,16 +28,16 @@ export default function PortfolioHeader({
   return (
     <header
       className="sticky top-0 z-50 border-b backdrop-blur"
-      style={{ background: "rgba(247,243,251,0.85)", borderColor: c.paperAlt }}
+      style={{ background: c.pageTranslucent, borderColor: c.borderSubtle }}
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
         <span
           className="text-xl font-semibold tracking-wide"
-          style={{ ...fontEnStyle, color: c.pinkDeep }}
+          style={{ ...fontEnStyle, color: c.accent }}
         >
           {content.artistName}
         </span>
-        <nav className="hidden gap-6 text-sm font-medium md:flex" style={{ color: c.inkSoft }}>
+        <nav className="hidden gap-6 text-sm font-medium md:flex" style={{ color: c.textSoft }}>
           {navLinks.map((link) => (
             <a key={link.href} href={link.href} className="pf-cute-focus hover:opacity-70">
               {link.label}
@@ -48,8 +48,9 @@ export default function PortfolioHeader({
           <span
             className="rounded-full px-3 py-1.5 text-xs font-bold"
             style={{
-              background: content.commissionOpen ? c.mint : "#D8D3E6",
-              color: content.commissionOpen ? "#0F4E40" : c.inkSoft,
+              background: content.commissionOpen ? c.successSoft : c.surfaceSubtle,
+              color: content.commissionOpen ? c.success : c.textSoft,
+              border: `1px solid ${content.commissionOpen ? c.success : c.borderStrong}`,
             }}
           >
             {content.commissionOpen ? "● 受付中" : "受付停止中"}
@@ -59,7 +60,7 @@ export default function PortfolioHeader({
       {/* モバイル用ナビ。md 以上は上のナビがあるので出さない */}
       <nav
         className="flex gap-5 overflow-x-auto px-5 pb-2.5 text-sm font-medium md:hidden"
-        style={{ color: c.inkSoft }}
+        style={{ color: c.textSoft }}
       >
         {navLinks.map((link) => (
           <a

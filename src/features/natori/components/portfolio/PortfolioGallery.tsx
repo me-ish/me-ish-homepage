@@ -8,6 +8,7 @@ import Image from "next/image";
 import {
   placeholderPalettes,
   portfolioColors as c,
+  portfolioDecorativeColors as d,
   tapeColors,
   workRotations,
 } from "@/features/natori/constants/portfolioContent";
@@ -25,7 +26,7 @@ function MaskingTape({ color, angle }: { color: string; angle: number }) {
         background: `linear-gradient(rgba(255,255,255,0.35), rgba(255,255,255,0) 45%), ${color}`,
         opacity: 0.85,
         transform: `translateX(-50%) rotate(${angle}deg)`,
-        boxShadow: "0 1px 2px rgba(45,42,61,0.18)",
+        boxShadow: "0 1px 2px rgba(36,36,36,0.16)",
         clipPath:
           "polygon(2% 0%, 98% 0%, 100% 18%, 98% 38%, 100% 60%, 98% 80%, 100% 100%, 2% 100%, 0% 78%, 2% 58%, 0% 38%, 2% 20%)",
       }}
@@ -70,20 +71,22 @@ export default function PortfolioGallery({
     <section id="gallery" className="mx-auto max-w-6xl px-5 py-16">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <h2 className="text-2xl font-black md:text-3xl">
-          作品ギャラリー <span style={{ color: c.mintDeep }}>°˖✧</span>
+          作品ギャラリー <span style={{ color: d.sparkleCool }}>°˖✧</span>
         </h2>
         <div className="flex flex-wrap gap-2">
           {filters.map((f) => (
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
-              className="pf-cute-focus rounded-full border-2 px-4 py-2 text-xs font-bold transition md:text-sm"
+              aria-pressed={activeFilter === f}
+              className="pf-cute-focus inline-flex items-center gap-1.5 rounded-full border-2 px-4 py-2 text-xs font-bold transition md:text-sm"
               style={
                 activeFilter === f
-                  ? { background: c.pink, borderColor: c.pink, color: "#fff" }
-                  : { background: "transparent", borderColor: c.paperAlt, color: c.inkSoft }
+                  ? { background: c.accent, borderColor: c.accent, color: c.onAccent }
+                  : { background: "transparent", borderColor: c.borderStrong, color: c.textSoft }
               }
             >
+              {activeFilter === f ? <span aria-hidden="true">✓</span> : null}
               {f}
             </button>
           ))}
@@ -101,8 +104,8 @@ export default function PortfolioGallery({
               key={work.id}
               className={`pf-pin-card ${rotate} relative rounded-xl p-3 pb-4 pt-5`}
               style={{
-                background: c.card,
-                boxShadow: "0 10px 20px rgba(45,42,61,0.10)",
+                background: c.surface,
+                boxShadow: "0 10px 20px rgba(36,36,36,0.08)",
               }}
             >
               <MaskingTape color={tape} angle={tapeAngle} />
@@ -114,7 +117,7 @@ export default function PortfolioGallery({
                 className={`pf-cute-focus relative mb-3 flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-lg ${
                   work.image ? "cursor-zoom-in" : "cursor-default"
                 }`}
-                style={{ background: c.paperAlt }}
+                style={{ background: c.surfaceSubtle }}
               >
                 {work.image ? (
                   <Image
@@ -149,7 +152,7 @@ export default function PortfolioGallery({
                       <span
                         key={tag}
                         className="rounded-full px-2 py-1 text-xs font-bold"
-                        style={{ background: palette.accent, color: c.ink }}
+                        style={{ background: palette.accent, color: c.text }}
                       >
                         {tag}
                       </span>
@@ -162,7 +165,7 @@ export default function PortfolioGallery({
         })}
       </div>
       {shown.length === 0 ? (
-        <p className="py-8 text-center text-sm font-bold" style={{ color: c.inkSoft }}>
+        <p className="py-8 text-center text-sm font-bold" style={{ color: c.textSoft }}>
           このタグの作品はまだありません。
         </p>
       ) : null}
@@ -174,12 +177,12 @@ export default function PortfolioGallery({
           aria-modal="true"
           aria-label={selected.title}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8"
-          style={{ background: "rgba(45,42,61,0.72)" }}
+          style={{ background: c.overlay }}
           onClick={() => setSelected(null)}
         >
           <div
             className="relative flex max-h-full w-full max-w-3xl flex-col rounded-xl p-3 pb-4"
-            style={{ background: c.card, boxShadow: "0 20px 40px rgba(45,42,61,0.30)" }}
+            style={{ background: c.surface, boxShadow: "0 20px 40px rgba(36,36,36,0.26)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -187,13 +190,13 @@ export default function PortfolioGallery({
               onClick={() => setSelected(null)}
               aria-label="閉じる"
               className="pf-cute-focus absolute -right-3 -top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full font-bold text-white shadow-md hover:brightness-105"
-              style={{ background: c.pink }}
+              style={{ background: c.accent, color: c.onAccent }}
             >
               ✕
             </button>
             <div
               className="relative h-[70vh] w-full overflow-hidden rounded-lg md:h-[76vh]"
-              style={{ background: c.paperAlt }}
+              style={{ background: c.surfaceSubtle }}
             >
               <Image
                 src={selected.image}
@@ -211,7 +214,7 @@ export default function PortfolioGallery({
                     <span
                       key={tag}
                       className="rounded-full px-2 py-1 text-xs font-bold"
-                      style={{ background: c.paperAlt, color: c.ink }}
+                      style={{ background: c.surfaceSubtle, color: c.text }}
                     >
                       {tag}
                     </span>

@@ -5,7 +5,7 @@
 // 押下で /api/natori/delivery/accept へ POST して検収を確定する。
 // リンクを開いただけでは何も確定しない（確定は必ずこのボタンの POST）。
 import { useState } from "react";
-import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import { legacyNatoriTransactionColors as c } from "@/features/natori/constants/portfolioContent";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 
 type DeliveryFileView = { fileName: string; sizeBytes: number; url: string };

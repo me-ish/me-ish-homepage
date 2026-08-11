@@ -5,7 +5,7 @@
 import type { Metadata } from "next";
 import QuoteAcceptCard from "@/features/natori/components/quote/QuoteAcceptCard";
 import { getNatoriQuoteByToken } from "@/features/natori/server/quoteAcceptService";
-import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import { legacyNatoriTransactionColors as c } from "@/features/natori/constants/portfolioContent";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {

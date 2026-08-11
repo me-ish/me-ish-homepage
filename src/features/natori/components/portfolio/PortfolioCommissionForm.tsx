@@ -176,26 +176,26 @@ export default function PortfolioCommissionForm({
   };
 
   return (
-    <section id="form" className="py-16" style={{ background: c.paper }}>
+    <section id="form" className="py-16" style={{ background: c.page }}>
       <div className="mx-auto max-w-2xl px-5">
         <h2 className="mb-2 text-center text-2xl font-black md:text-3xl">ご依頼フォーム</h2>
         <p
           className={`${tsunaguLink ? "mb-2" : "mb-8"} text-center`}
-          style={{ color: c.inkSoft }}
+          style={{ color: c.textSoft }}
         >
           {commissionOpen
             ? "現在コミッション受付中です。決まっていない項目は「未定」のままでOK、まずはお気軽にご相談ください。"
             : "現在コミッションは停止中です。再開まで今しばらくお待ちください。"}
         </p>
         {tsunaguLink ? (
-          <p className="mb-8 text-center" style={{ color: c.inkSoft }}>
+          <p className="mb-8 text-center" style={{ color: c.textSoft }}>
             <a
               href={tsunaguLink.href}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackNatoriPageEvent("portfolio_sns_click", "つなぐ")}
               className="pf-cute-focus font-bold underline decoration-2 underline-offset-4 hover:opacity-70"
-              style={{ color: c.pinkDeep, textDecorationColor: c.peach }}
+              style={{ color: c.accent, textDecorationColor: c.accentSoft }}
             >
               つなぐ
             </a>
@@ -206,16 +206,16 @@ export default function PortfolioCommissionForm({
         {status === "success" ? (
           <div
             className="rounded-2xl p-8 text-center"
-            style={{ background: c.card, boxShadow: "0 10px 22px rgba(45,42,61,0.10)" }}
+            style={{ background: c.surface, boxShadow: "0 10px 22px rgba(36,36,36,0.08)" }}
           >
             <p className="mb-2 text-3xl" aria-hidden="true">
               🎉
             </p>
             <p className="mb-1 text-lg font-bold">送信ありがとうございます!</p>
-            <p className="text-sm" style={{ color: c.inkSoft }}>
+            <p className="text-sm" style={{ color: c.textSoft }}>
               内容を確認のうえ、2〜3日以内にご連絡いたします。
             </p>
-            <p className="mt-2 text-xs" style={{ color: c.inkSoft }}>
+            <p className="mt-2 text-xs" style={{ color: c.textSoft }}>
               {autoReplied
                 ? "ご入力のメールアドレス宛に受付確認メールをお送りしました。届かない場合は迷惑メールフォルダをご確認ください。"
                 : "受付は完了しましたが、確認メールを送信できませんでした。2〜3日以内のご連絡をお待ちください。"}
@@ -235,7 +235,7 @@ export default function PortfolioCommissionForm({
           <form
             onSubmit={handleSubmit}
             className="space-y-5 rounded-2xl p-6 md:p-8"
-            style={{ background: c.card, boxShadow: "0 10px 22px rgba(45,42,61,0.10)" }}
+            style={{ background: c.surface, boxShadow: "0 10px 22px rgba(36,36,36,0.08)" }}
           >
             {/* honeypot: 人間には見えない。ボット対策 */}
             <input
@@ -250,7 +250,7 @@ export default function PortfolioCommissionForm({
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
                 <label htmlFor="pf-name" className={labelClass}>
-                  お名前（活動名でOK）<span style={{ color: c.pinkDeep }}>＊</span>
+                  お名前（活動名でOK）<span style={{ color: c.error }}>＊</span>
                 </label>
                 <input
                   id="pf-name"
@@ -258,12 +258,12 @@ export default function PortfolioCommissionForm({
                   required
                   maxLength={100}
                   className={inputClass}
-                  style={{ borderColor: c.paperAlt }}
+                  style={{ borderColor: c.borderStrong }}
                 />
               </div>
               <div>
                 <label htmlFor="pf-email" className={labelClass}>
-                  メールアドレス<span style={{ color: c.pinkDeep }}>＊</span>
+                  メールアドレス<span style={{ color: c.error }}>＊</span>
                 </label>
                 <input
                   id="pf-email"
@@ -272,7 +272,7 @@ export default function PortfolioCommissionForm({
                   required
                   maxLength={254}
                   className={inputClass}
-                  style={{ borderColor: c.paperAlt }}
+                  style={{ borderColor: c.borderStrong }}
                 />
               </div>
             </div>
@@ -286,7 +286,7 @@ export default function PortfolioCommissionForm({
                   id="pf-type"
                   name="requestType"
                   className={inputClass}
-                  style={{ borderColor: c.paperAlt }}
+                  style={{ borderColor: c.borderStrong }}
                 >
                   {content.services.map((service) => (
                     <option key={service}>{service}</option>
@@ -304,7 +304,7 @@ export default function PortfolioCommissionForm({
                   value={selectedPlan}
                   onChange={(event) => setSelectedPlan(event.target.value)}
                   className={inputClass}
-                  style={{ borderColor: c.paperAlt }}
+                  style={{ borderColor: c.borderStrong }}
                 >
                   {planChoices.map((plan) => (
                     <option key={plan}>{plan}</option>
@@ -320,7 +320,7 @@ export default function PortfolioCommissionForm({
                   <label
                     key={option.id ?? `legacy-option-${index}`}
                     className="flex cursor-pointer items-center gap-2 text-sm"
-                    style={{ color: c.inkSoft }}
+                    style={{ color: c.textSoft }}
                   >
                     <input
                       type="checkbox"
@@ -328,11 +328,11 @@ export default function PortfolioCommissionForm({
                       value={`${option.name}（${option.price}）`}
                       data-option-id={option.id ?? undefined}
                       className="pf-cute-focus h-4 w-4 shrink-0"
-                      style={{ accentColor: c.pink }}
+                      style={{ accentColor: c.accent }}
                     />
                     <span>
                       {option.name}
-                      <span className="ml-1 text-xs font-bold" style={{ color: c.pinkDeep }}>
+                      <span className="ml-1 text-xs font-bold" style={{ color: c.accent }}>
                         {option.price}
                       </span>
                     </span>
@@ -350,7 +350,7 @@ export default function PortfolioCommissionForm({
                   id="pf-budget"
                   name="budget"
                   className={inputClass}
-                  style={{ borderColor: c.paperAlt }}
+                  style={{ borderColor: c.borderStrong }}
                 >
                   {portfolioBudgetOptions.map((option) => (
                     <option key={option}>{option}</option>
@@ -365,7 +365,7 @@ export default function PortfolioCommissionForm({
                   id="pf-deadline"
                   name="deadline"
                   className={inputClass}
-                  style={{ borderColor: c.paperAlt }}
+                  style={{ borderColor: c.borderStrong }}
                 >
                   {portfolioDeadlineOptions.map((option) => (
                     <option key={option}>{option}</option>
@@ -376,7 +376,7 @@ export default function PortfolioCommissionForm({
 
             <div>
               <span className={labelClass}>キャラクター資料（画像添付）</span>
-              <p className="mb-2 text-xs" style={{ color: c.inkSoft }}>
+              <p className="mb-2 text-xs" style={{ color: c.textSoft }}>
                 キャラクターの設定画・立ち絵・過去のイラストなどを添付してください（最大
                 {MAX_REF_IMAGES}枚・各10MBまで）。URLで共有したい資料は「ご依頼の詳細」に貼ってOKです。
               </p>
@@ -390,13 +390,13 @@ export default function PortfolioCommissionForm({
                         src={entry.previewUrl}
                         alt={`添付画像 ${index + 1}`}
                         className="h-20 w-20 rounded-lg border-2 object-cover"
-                        style={{ borderColor: c.paperAlt }}
+                        style={{ borderColor: c.borderStrong }}
                       />
                       <button
                         type="button"
                         onClick={() => removeRefImage(index)}
                         className="pf-cute-focus absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full text-xs font-bold text-white shadow"
-                        style={{ background: c.pinkDeep }}
+                        style={{ background: c.error, color: c.onAccent }}
                         aria-label={`添付画像 ${index + 1} を外す`}
                         title="この画像を外す"
                       >
@@ -411,13 +411,13 @@ export default function PortfolioCommissionForm({
                   type="button"
                   onClick={() => refFileInputRef.current?.click()}
                   className="pf-cute-focus inline-flex items-center gap-1.5 rounded-full border-2 bg-white px-4 py-2 text-sm font-bold disabled:opacity-50"
-                  style={{ borderColor: c.pink, color: c.pinkDeep }}
+                  style={{ borderColor: c.accent, color: c.accent }}
                 >
                   ＋ 画像を追加
                 </button>
               ) : null}
               {refError ? (
-                <p className="mt-2 text-xs font-bold" style={{ color: c.pinkDeep }} role="alert">
+                <p className="mt-2 text-xs font-bold" style={{ color: c.error }} role="alert">
                   {refError}
                 </p>
               ) : null}
@@ -437,9 +437,9 @@ export default function PortfolioCommissionForm({
 
             <div>
               <label htmlFor="pf-details" className={labelClass}>
-                ご依頼の詳細<span style={{ color: c.pinkDeep }}>＊</span>
+                ご依頼の詳細<span style={{ color: c.error }}>＊</span>
               </label>
-              <p className="mb-2 text-xs" style={{ color: c.inkSoft }}>
+              <p className="mb-2 text-xs" style={{ color: c.textSoft }}>
                 テンプレートの各項目に追記してください。わかる範囲でOK、不要な項目は消してかまいません。
               </p>
               <textarea
@@ -450,7 +450,7 @@ export default function PortfolioCommissionForm({
                 maxLength={4000}
                 defaultValue={DETAILS_TEMPLATE}
                 className={inputClass}
-                style={{ borderColor: c.paperAlt }}
+                style={{ borderColor: c.borderStrong }}
               />
             </div>
 
@@ -465,14 +465,14 @@ export default function PortfolioCommissionForm({
                 maxLength={2000}
                 placeholder="納期のご相談・非公開希望・そのほか気になることがあればどうぞ"
                 className={inputClass}
-                style={{ borderColor: c.paperAlt }}
+                style={{ borderColor: c.borderStrong }}
               />
             </div>
 
             {status === "error" ? (
               <p
                 className="rounded-xl border-2 px-3 py-2 text-sm font-bold"
-                style={{ borderColor: c.peach, color: c.pinkDeep, background: "#FFF5F0" }}
+                style={{ borderColor: c.error, color: c.error, background: c.errorSoft }}
                 role="alert"
               >
                 送信に失敗しました。時間をおいて再度お試しいただくか、SNSのDMからご連絡ください。
@@ -483,7 +483,7 @@ export default function PortfolioCommissionForm({
               type="submit"
               disabled={!commissionOpen || status === "sending"}
               className="pf-cute-focus w-full rounded-full py-3 font-bold text-white disabled:opacity-50"
-              style={{ background: c.pink }}
+              style={{ background: c.accent, color: c.onAccent }}
             >
               {!commissionOpen
                 ? "現在受付停止中です"

@@ -10,12 +10,19 @@ export default function PortfolioStyles() {
       @keyframes pf-wobble { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
       .pf-floaty { animation: pf-floaty 4s ease-in-out infinite; }
       .pf-wobble { animation: pf-wobble 2.4s ease-in-out infinite; }
+      .pf-pin-card { transition: transform 0.25s ease, box-shadow 0.25s ease; }
+      .pf-pin-card:hover, .pf-pin-card:focus-within { transform: rotate(0deg) translateY(-6px) !important; box-shadow: 0 18px 30px rgba(36,36,36,0.16); }
+      .pf-form-control { border-color: ${c.borderStrong}; }
+      .pf-cute-focus:focus-visible,
+      .pf-portfolio-root :where(a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+        outline: 3px solid ${c.accentHover};
+        outline-offset: 3px;
+      }
       @media (prefers-reduced-motion: reduce) {
         .pf-floaty, .pf-wobble { animation: none; }
+        .pf-pin-card { transition: none; }
+        .pf-pin-card:hover, .pf-pin-card:focus-within { transform: none !important; }
       }
-      .pf-pin-card { transition: transform 0.25s ease, box-shadow 0.25s ease; }
-      .pf-pin-card:hover, .pf-pin-card:focus-within { transform: rotate(0deg) translateY(-6px) !important; box-shadow: 0 18px 30px rgba(45,42,61,0.18); }
-      .pf-cute-focus:focus-visible { outline: 3px solid ${c.pink}; outline-offset: 3px; }
     `}</style>
   );
 }
