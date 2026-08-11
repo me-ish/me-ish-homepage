@@ -36,8 +36,8 @@ export default function PortfolioLanding({
   const showcase = variant === "showcase";
   return (
     <main
-      className={`${portfolioFontJp.variable} ${portfolioFontEn.variable} ${portfolioFontJp.className} min-h-screen`}
-      style={{ background: c.paper, color: c.ink }}
+      className={`${portfolioFontJp.variable} ${portfolioFontEn.variable} ${portfolioFontJp.className} pf-portfolio-root min-h-screen`}
+      style={{ background: c.page, color: c.text }}
     >
       <PortfolioStyles />
       <PortfolioHeader content={content} variant={variant} />

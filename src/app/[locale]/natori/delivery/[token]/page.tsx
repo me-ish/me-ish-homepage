@@ -6,7 +6,7 @@
 import type { Metadata } from "next";
 import DeliveryAcceptCard from "@/features/natori/components/quote/DeliveryAcceptCard";
 import { getNatoriDeliveryByToken } from "@/features/natori/server/deliveryService";
-import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import { legacyNatoriTransactionColors as c } from "@/features/natori/constants/portfolioContent";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {

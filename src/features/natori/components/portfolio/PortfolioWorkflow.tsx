@@ -3,13 +3,13 @@ import { portfolioColors as c } from "@/features/natori/constants/portfolioConte
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
 const cardStyle = {
-  background: c.card,
-  boxShadow: "0 10px 22px rgba(45,42,61,0.10)",
+  background: c.surface,
+  boxShadow: "0 10px 22px rgba(36,36,36,0.08)",
 } as const;
 
 export default function PortfolioWorkflow({ content }: { content: PortfolioContent }) {
   return (
-    <section id="flow" className="py-16" style={{ background: c.paperAlt }}>
+    <section id="flow" className="py-16" style={{ background: c.surfaceSubtle }}>
       <div className="mx-auto max-w-4xl space-y-10 px-5">
         <div>
           <h2 className="mb-6 text-center text-2xl font-black md:text-3xl">制作の流れ</h2>
@@ -22,14 +22,14 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioConte
               >
                 <span
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                  style={{ background: c.pink }}
+                  style={{ background: c.accent }}
                   aria-hidden="true"
                 >
                   {index + 1}
                 </span>
                 <div>
                   <p className="mb-1 font-bold">{step.title}</p>
-                  <p className="text-sm leading-relaxed" style={{ color: c.inkSoft }}>
+                  <p className="text-sm leading-relaxed" style={{ color: c.textSoft }}>
                     {step.body}
                   </p>
                 </div>
@@ -41,7 +41,7 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioConte
         <div>
           <h2 className="mb-6 text-center text-2xl font-black md:text-3xl">納期について</h2>
           <div className="rounded-2xl p-6 md:p-8" style={cardStyle}>
-            <p className="mb-5 leading-relaxed" style={{ color: c.inkSoft }}>
+            <p className="mb-5 leading-relaxed" style={{ color: c.textSoft }}>
               {content.deliveryLead}
             </p>
             <dl className="space-y-4">
@@ -50,12 +50,12 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioConte
                   <dt className="mb-1 flex items-center gap-2 font-bold">
                     <span
                       className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ background: c.mint }}
+                      style={{ background: c.accent }}
                       aria-hidden="true"
                     />
                     {note.title}
                   </dt>
-                  <dd className="pl-4 text-sm leading-relaxed" style={{ color: c.inkSoft }}>
+                  <dd className="pl-4 text-sm leading-relaxed" style={{ color: c.textSoft }}>
                     {note.body}
                   </dd>
                 </div>

@@ -6,7 +6,7 @@
 // リンクを開いただけでは何も確定しない（確定は必ずこのボタンの POST）。
 import { useState } from "react";
 import { formatYen } from "@/features/natori/lib/pricing";
-import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import { legacyNatoriTransactionColors as c } from "@/features/natori/constants/portfolioContent";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 
 type Props = {

@@ -33,7 +33,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
           <div
             key={p.id ?? `legacy-plan-${index}`}
             className="relative flex flex-col rounded-2xl p-6"
-            style={{ background: c.card, boxShadow: "0 10px 22px rgba(45,42,61,0.10)" }}
+            style={{ background: c.surface, boxShadow: "0 10px 22px rgba(36,36,36,0.08)" }}
           >
             <div
               className="mb-4 h-10 w-10 rounded-full"
@@ -41,19 +41,19 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
               aria-hidden="true"
             />
             <h3 className="mb-1 text-lg font-bold">{p.name}</h3>
-            <p className="mb-2 text-2xl font-bold" style={{ color: c.pinkDeep }}>
+            <p className="mb-2 text-2xl font-bold" style={{ color: c.accent }}>
               {p.price}
             </p>
-            <p className="mb-4 text-sm" style={{ color: c.inkSoft }}>
+            <p className="mb-4 text-sm" style={{ color: c.textSoft }}>
               {p.desc}
             </p>
             <ul className="mb-6 flex-1 space-y-1.5 text-sm">
               {p.features.map((f) => (
                 <li key={f} className="flex items-start gap-2">
-                  <span style={{ color: c.mintDeep }} aria-hidden="true">
+                  <span style={{ color: c.success }} aria-hidden="true">
                     ✓
                   </span>
-                  <span style={{ color: c.inkSoft }}>{f}</span>
+                  <span style={{ color: c.textSoft }}>{f}</span>
                 </li>
               ))}
             </ul>
@@ -61,7 +61,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
               href="#form"
               onClick={() => handleSelectPlan(p)}
               className="pf-cute-focus rounded-full border-2 py-2.5 text-center font-bold"
-              style={{ borderColor: planColors[index % planColors.length], color: c.ink }}
+              style={{ borderColor: c.borderStrong, color: c.text }}
             >
               このプランで相談
             </a>
@@ -72,18 +72,18 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
       {/* 追加オプション */}
       <div
         className="mx-auto mt-12 max-w-3xl rounded-2xl p-6 md:p-8"
-        style={{ background: c.card, boxShadow: "0 10px 22px rgba(45,42,61,0.10)" }}
+        style={{ background: c.surface, boxShadow: "0 10px 22px rgba(36,36,36,0.08)" }}
       >
         <h3 className="mb-4 text-lg font-black md:text-xl">追加オプション</h3>
-        <ul className="divide-y" style={{ borderColor: c.paperAlt }}>
+        <ul className="divide-y" style={{ borderColor: c.borderSubtle }}>
           {content.options.map((option, index) => (
             <li
               key={option.id ?? `legacy-option-${index}`}
               className="flex items-baseline justify-between gap-4 py-2.5 text-sm md:text-base"
-              style={{ borderColor: c.paperAlt }}
+              style={{ borderColor: c.borderSubtle }}
             >
-              <span style={{ color: c.inkSoft }}>{option.name}</span>
-              <span className="shrink-0 font-bold" style={{ color: c.pinkDeep }}>
+              <span style={{ color: c.textSoft }}>{option.name}</span>
+              <span className="shrink-0 font-bold" style={{ color: c.accent }}>
                 {option.price}
               </span>
             </li>

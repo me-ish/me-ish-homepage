@@ -18,18 +18,52 @@ import type {
    ここを書き換えるだけで全体の配色を調整できます
 ------------------------------------------------------------------- */
 export const portfolioColors = {
+  page: "#FAF8F5",
+  surface: "#FFFFFF",
+  surfaceSubtle: "#F4F0EC",
+  text: "#242424",
+  textSoft: "#6B625E",
+  borderSubtle: "#E4DED8",
+  borderStrong: "#8A817C",
+  accent: "#A84F68",
+  accentHover: "#8F455A",
+  accentSoft: "#F4E6EA",
+  onAccent: "#FFFFFF",
+  error: "#B42318",
+  errorSoft: "#FEF3F2",
+  success: "#217A5B",
+  successSoft: "#ECF8F3",
+  overlay: "rgba(36,36,36,0.72)",
+  pageTranslucent: "rgba(250,248,245,0.92)",
+} as const;
+
+/**
+ * 作品未設定時のプレースホルダーと既存装飾に限る一時 palette。
+ * UI状態や本文には使わず、tape/rotation/tagの整理と合わせてPF-04/05で縮小する。
+ */
+export const portfolioDecorativeColors = {
+  sparkleWarm: "#A66A12",
+  sparkleCool: "#217A5B",
+  placeholderRose: "#D88AA2",
+  placeholderMint: "#8DCDBD",
+  placeholderPeach: "#E7A38F",
+  placeholderGold: "#E6B94E",
+} as const;
+
+/**
+ * Quote/delivery画面が従来借用していた配色の互換境界。
+ * PF-02は公開portfolioだけを対象とするため、取引画面の見た目を変えずに依存を分離する。
+ * 新しいportfolio componentからは参照しない。
+ */
+export const legacyNatoriTransactionColors = {
   paper: "#F7F3FB",
   paperAlt: "#EFE7F7",
   ink: "#2D2A3D",
   inkSoft: "#5B5670",
   pink: "#FF6FA5",
   pinkDeep: "#E84C86",
-  mint: "#6FE0C3",
-  mintDeep: "#3FBE9E",
-  yellow: "#FFD166",
   peach: "#FFB199",
   card: "#FFFFFF",
-  tape: "#FFE8A3",
 } as const;
 
 const c = portfolioColors;
@@ -245,12 +279,12 @@ export function isPortfolioTsunaguLink(link: PortfolioSocialLink): boolean {
    プレースホルダーSVGの配色・カードの傾き（作品画像が未設定のとき用）
 ------------------------------------------------------------------- */
 export const placeholderPalettes = [
-  { skin: "#FFE3D1", hair: "#B98BD8", accent: c.pink },
-  { skin: "#FFE9DA", hair: "#7FD9C4", accent: c.mint },
-  { skin: "#FDE0D0", hair: "#F3A6C1", accent: c.peach },
-  { skin: "#FFE3D1", hair: "#FFC15E", accent: c.yellow },
-  { skin: "#FFE9DA", hair: "#9AB8F0", accent: c.mint },
-  { skin: "#FDE0D0", hair: "#E893B0", accent: c.pink },
+  { skin: "#FFE3D1", hair: "#B98BD8", accent: portfolioDecorativeColors.placeholderRose },
+  { skin: "#FFE9DA", hair: "#7FD9C4", accent: portfolioDecorativeColors.placeholderMint },
+  { skin: "#FDE0D0", hair: "#F3A6C1", accent: portfolioDecorativeColors.placeholderPeach },
+  { skin: "#FFE3D1", hair: "#FFC15E", accent: portfolioDecorativeColors.placeholderGold },
+  { skin: "#FFE9DA", hair: "#9AB8F0", accent: portfolioDecorativeColors.placeholderMint },
+  { skin: "#FDE0D0", hair: "#E893B0", accent: portfolioDecorativeColors.placeholderRose },
 ] as const;
 
 export const workRotations = [
@@ -262,10 +296,10 @@ export const workRotations = [
   "-rotate-1",
 ] as const;
 
-/** 料金プランの丸アイコン色（プラン数に応じて循環） */
-export const planColors = [c.mint, c.pink, c.peach, c.yellow] as const;
+/** 料金プランの既存装飾。意味は持たせず、PF-05でicon/label hierarchyと一緒に廃止予定。 */
+export const planColors = [c.successSoft, c.accentSoft, "#F6ECE4", "#F6F0DD"] as const;
 
-/** マスキングテープの色（作品カードごとに循環） */
+/** 作品カードの既存装飾。作品を主役にするPF-04でtape自体を含めて削減予定。 */
 export const tapeColors = ["#FFE8A3", "#FFD3E2", "#CFF3E8", "#DCE4FF"] as const;
 
 /* ------------------------------------------------------------------

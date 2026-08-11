@@ -49,7 +49,7 @@ import {
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 
-const inputClass = "pf-cute-focus w-full rounded-lg border-2 px-3 py-2";
+const inputClass = "pf-cute-focus pf-form-control w-full rounded-lg border-2 px-3 py-2";
 const labelClass = "mb-1.5 block text-sm font-bold";
 const optionalBadgeClass = "ml-2 rounded-full px-2 py-0.5 text-[11px] font-bold";
 
@@ -62,7 +62,7 @@ function OptionalBadge() {
   return (
     <span
       className={optionalBadgeClass}
-      style={{ background: c.paperAlt, color: c.inkSoft }}
+      style={{ background: c.surfaceSubtle, color: c.textSoft }}
     >
       任意
     </span>
@@ -76,7 +76,7 @@ function FieldError({ id, message }: { id: string; message?: string }) {
       id={id}
       role="alert"
       className="mt-1.5 text-xs font-bold"
-      style={{ color: c.pinkDeep }}
+      style={{ color: c.error }}
     >
       {message}
     </p>
@@ -105,7 +105,7 @@ function FormSection({
     <>
       <span
         className="mr-2 inline-grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-black text-white"
-        style={{ background: c.pink }}
+        style={{ background: c.accent, color: c.onAccent }}
         aria-hidden="true"
       >
         {step}
@@ -116,10 +116,10 @@ function FormSection({
 
   if (!collapsible) {
     return (
-      <section className="rounded-xl border-2 p-4" style={{ borderColor: c.paperAlt }}>
+      <section className="rounded-xl border-2 p-4" style={{ borderColor: c.borderSubtle }}>
         <h3 className="mb-3 flex items-center text-base font-black">{heading}</h3>
         {description ? (
-          <p className="mb-3 text-xs" style={{ color: c.inkSoft }}>
+          <p className="mb-3 text-xs" style={{ color: c.textSoft }}>
             {description}
           </p>
         ) : null}
@@ -131,7 +131,7 @@ function FormSection({
   return (
     <details
       className="rounded-xl border-2 p-4"
-      style={{ borderColor: c.paperAlt }}
+      style={{ borderColor: c.borderSubtle }}
       open={open}
       onToggle={(event) => onToggle?.(event.currentTarget.open)}
     >
@@ -140,7 +140,7 @@ function FormSection({
         <OptionalBadge />
       </summary>
       {description ? (
-        <p className="mt-3 text-xs" style={{ color: c.inkSoft }}>
+        <p className="mt-3 text-xs" style={{ color: c.textSoft }}>
           {description}
         </p>
       ) : null}
@@ -383,7 +383,7 @@ export default function PortfolioStructuredCommissionForm({
       onSubmit={handleSubmit}
       noValidate={false}
       className="space-y-4 rounded-2xl p-5 md:p-8"
-      style={{ background: c.card, boxShadow: "0 10px 22px rgba(45,42,61,0.10)" }}
+      style={{ background: c.surface, boxShadow: "0 10px 22px rgba(36,36,36,0.08)" }}
     >
       {/* honeypot: 人間には見えない。ボット対策 */}
       <input
@@ -408,8 +408,8 @@ export default function PortfolioStructuredCommissionForm({
                 key={mode}
                 className="pf-cute-focus flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold"
                 style={{
-                  borderColor: state.inquiryMode === mode ? c.pink : c.paperAlt,
-                  color: state.inquiryMode === mode ? c.pinkDeep : c.inkSoft,
+                  borderColor: state.inquiryMode === mode ? c.accent : c.borderStrong,
+                  color: state.inquiryMode === mode ? c.accent : c.textSoft,
                 }}
               >
                 <input
@@ -418,7 +418,7 @@ export default function PortfolioStructuredCommissionForm({
                   checked={state.inquiryMode === mode}
                   onChange={() => changeMode(mode)}
                   className="h-4 w-4 shrink-0"
-                  style={{ accentColor: c.pink }}
+                  style={{ accentColor: c.accent }}
                 />
                 {NATORI_INQUIRY_MODE_LABELS_V1[mode]}
               </label>
@@ -429,7 +429,7 @@ export default function PortfolioStructuredCommissionForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="pf-name" className={labelClass}>
-              お名前（活動名でOK）<span style={{ color: c.pinkDeep }}>＊</span>
+              お名前（活動名でOK）<span style={{ color: c.error }}>＊</span>
             </label>
             <input
               id="pf-name"
@@ -438,14 +438,13 @@ export default function PortfolioStructuredCommissionForm({
               maxLength={100}
               autoComplete="name"
               className={inputClass}
-              style={{ borderColor: c.paperAlt }}
               aria-describedby={serverErrorFor("clientName") ? "pf-name-error" : undefined}
             />
             <FieldError id="pf-name-error" message={serverErrorFor("clientName")} />
           </div>
           <div>
             <label htmlFor="pf-email" className={labelClass}>
-              メールアドレス<span style={{ color: c.pinkDeep }}>＊</span>
+              メールアドレス<span style={{ color: c.error }}>＊</span>
             </label>
             <input
               id="pf-email"
@@ -455,7 +454,6 @@ export default function PortfolioStructuredCommissionForm({
               maxLength={254}
               autoComplete="email"
               className={inputClass}
-              style={{ borderColor: c.paperAlt }}
               aria-describedby={serverErrorFor("clientEmail") ? "pf-email-error" : undefined}
             />
             <FieldError id="pf-email-error" message={serverErrorFor("clientEmail")} />
@@ -483,7 +481,6 @@ export default function PortfolioStructuredCommissionForm({
                 update({ requestType: event.target.value as typeof state.requestType })
               }
               className={inputClass}
-              style={{ borderColor: c.paperAlt }}
             >
               {NATORI_REQUEST_TYPES_V1.map((type) => (
                 <option key={type} value={type}>
@@ -503,7 +500,6 @@ export default function PortfolioStructuredCommissionForm({
                 update({ commissionScope: event.target.value as typeof state.commissionScope })
               }
               className={inputClass}
-              style={{ borderColor: c.paperAlt }}
             >
               {NATORI_COMMISSION_SCOPES_V1.map((scope) => (
                 <option key={scope} value={scope}>
@@ -517,7 +513,7 @@ export default function PortfolioStructuredCommissionForm({
         {state.requestType === "other" ? (
           <div>
             <label htmlFor="pf-request-type-other" className={labelClass}>
-              ご依頼の種類（その他の内容）<span style={{ color: c.pinkDeep }}>＊</span>
+              ご依頼の種類（その他の内容）<span style={{ color: c.error }}>＊</span>
             </label>
             <input
               id="pf-request-type-other"
@@ -525,7 +521,6 @@ export default function PortfolioStructuredCommissionForm({
               onChange={(event) => update({ requestTypeOther: event.target.value })}
               maxLength={100}
               className={inputClass}
-              style={{ borderColor: c.paperAlt }}
               aria-describedby={
                 serverErrorFor("requestData.requestTypeOther")
                   ? "pf-request-type-other-error"
@@ -542,7 +537,7 @@ export default function PortfolioStructuredCommissionForm({
         {state.commissionScope === "other" ? (
           <div>
             <label htmlFor="pf-scope-other" className={labelClass}>
-              制作範囲（その他の内容）<span style={{ color: c.pinkDeep }}>＊</span>
+              制作範囲（その他の内容）<span style={{ color: c.error }}>＊</span>
             </label>
             <input
               id="pf-scope-other"
@@ -550,7 +545,6 @@ export default function PortfolioStructuredCommissionForm({
               onChange={(event) => update({ commissionScopeOther: event.target.value })}
               maxLength={100}
               className={inputClass}
-              style={{ borderColor: c.paperAlt }}
               aria-describedby={
                 serverErrorFor("requestData.commissionScopeOther")
                   ? "pf-scope-other-error"
@@ -576,7 +570,7 @@ export default function PortfolioStructuredCommissionForm({
                 <div
                   key={choice.key}
                   className="rounded-lg border-2 p-2"
-                  style={{ borderColor: checked ? c.pink : c.paperAlt }}
+                  style={{ borderColor: checked ? c.accent : c.borderStrong }}
                 >
                   <label className="flex cursor-pointer items-center gap-2 text-sm">
                     <input
@@ -586,11 +580,11 @@ export default function PortfolioStructuredCommissionForm({
                         setOptionSelection(choice.key, { selected: event.target.checked })
                       }
                       className="pf-cute-focus h-4 w-4 shrink-0"
-                      style={{ accentColor: c.pink }}
+                      style={{ accentColor: c.accent }}
                     />
-                    <span style={{ color: c.inkSoft }}>
+                    <span style={{ color: c.textSoft }}>
                       {choice.label}
-                      <span className="ml-1 text-xs font-bold" style={{ color: c.pinkDeep }}>
+                      <span className="ml-1 text-xs font-bold" style={{ color: c.accent }}>
                         {choice.price}
                       </span>
                     </span>
@@ -601,7 +595,7 @@ export default function PortfolioStructuredCommissionForm({
                         <label
                           htmlFor={`pf-option-${choice.key}-quantity`}
                           className="mb-1 block text-xs font-bold"
-                          style={{ color: c.inkSoft }}
+                          style={{ color: c.textSoft }}
                         >
                           数量
                         </label>
@@ -616,15 +610,14 @@ export default function PortfolioStructuredCommissionForm({
                               quantity: Number(event.target.value),
                             })
                           }
-                          className={inputClass}
-                          style={{ borderColor: c.paperAlt }}
+              className={inputClass}
                         />
                       </div>
                       <div>
                         <label
                           htmlFor={`pf-option-${choice.key}-notes`}
                           className="mb-1 block text-xs font-bold"
-                          style={{ color: c.inkSoft }}
+                          style={{ color: c.textSoft }}
                         >
                           補足（任意）
                         </label>
@@ -635,8 +628,7 @@ export default function PortfolioStructuredCommissionForm({
                             setOptionSelection(choice.key, { notes: event.target.value })
                           }
                           maxLength={300}
-                          className={inputClass}
-                          style={{ borderColor: c.paperAlt }}
+              className={inputClass}
                         />
                       </div>
                     </div>
@@ -663,14 +655,14 @@ export default function PortfolioStructuredCommissionForm({
               <label
                 key={usage}
                 className="flex cursor-pointer items-center gap-2 text-sm"
-                style={{ color: c.inkSoft }}
+                style={{ color: c.textSoft }}
               >
                 <input
                   type="checkbox"
                   checked={state.usageTypes.includes(usage)}
                   onChange={() => toggleUsageType(usage)}
                   className="pf-cute-focus h-4 w-4 shrink-0"
-                  style={{ accentColor: c.pink }}
+                  style={{ accentColor: c.accent }}
                 />
                 {NATORI_USAGE_TYPE_LABELS_V1[usage]}
               </label>
@@ -681,7 +673,7 @@ export default function PortfolioStructuredCommissionForm({
         {state.usageTypes.includes("other") ? (
           <div>
             <label htmlFor="pf-usage-other" className={labelClass}>
-              使用目的（その他の内容）<span style={{ color: c.pinkDeep }}>＊</span>
+              使用目的（その他の内容）<span style={{ color: c.error }}>＊</span>
             </label>
             <input
               id="pf-usage-other"
@@ -689,7 +681,6 @@ export default function PortfolioStructuredCommissionForm({
               onChange={(event) => update({ usageTypeOther: event.target.value })}
               maxLength={200}
               className={inputClass}
-              style={{ borderColor: c.paperAlt }}
               aria-describedby={
                 serverErrorFor("requestData.usageTypeOther") ? "pf-usage-other-error" : undefined
               }
@@ -713,7 +704,6 @@ export default function PortfolioStructuredCommissionForm({
                 update({ commercialUse: event.target.value as typeof state.commercialUse })
               }
               className={inputClass}
-              style={{ borderColor: c.paperAlt }}
             >
               {(Object.keys(NATORI_COMMERCIAL_USE_LABELS_V1) as Array<
                 keyof typeof NATORI_COMMERCIAL_USE_LABELS_V1
@@ -737,7 +727,6 @@ export default function PortfolioStructuredCommissionForm({
                 })
               }
               className={inputClass}
-              style={{ borderColor: c.paperAlt }}
             >
               {(Object.keys(NATORI_PUBLICATION_POLICY_LABELS_V1) as Array<
                 keyof typeof NATORI_PUBLICATION_POLICY_LABELS_V1
@@ -769,8 +758,7 @@ export default function PortfolioStructuredCommissionForm({
             onChange={(event) =>
               update({ budgetKind: event.target.value as NatoriBudgetV1["kind"] })
             }
-            className={inputClass}
-            style={{ borderColor: c.paperAlt }}
+              className={inputClass}
           >
             {budgetKinds.map((kind) => (
               <option key={kind} value={kind}>
@@ -791,7 +779,6 @@ export default function PortfolioStructuredCommissionForm({
                   value={state.budgetMin}
                   onChange={(event) => update({ budgetMin: event.target.value })}
                   className={inputClass}
-                  style={{ borderColor: c.paperAlt }}
                   aria-describedby={
                     serverErrorFor("requestData.budget.min") ? "pf-budget-min-error" : undefined
                   }
@@ -811,7 +798,6 @@ export default function PortfolioStructuredCommissionForm({
                   value={state.budgetMax}
                   onChange={(event) => update({ budgetMax: event.target.value })}
                   className={inputClass}
-                  style={{ borderColor: c.paperAlt }}
                   aria-describedby={
                     serverErrorFor("requestData.budget.max") ? "pf-budget-max-error" : undefined
                   }
@@ -835,7 +821,6 @@ export default function PortfolioStructuredCommissionForm({
                 value={state.budgetMin}
                 onChange={(event) => update({ budgetMin: event.target.value })}
                 className={inputClass}
-                style={{ borderColor: c.paperAlt }}
                 aria-describedby={
                   serverErrorFor("requestData.budget.min") ? "pf-budget-fixed-error" : undefined
                 }
@@ -859,7 +844,6 @@ export default function PortfolioStructuredCommissionForm({
               update({ deadlineKind: event.target.value as NatoriDeadlineV1["kind"] })
             }
             className={inputClass}
-            style={{ borderColor: c.paperAlt }}
           >
             {deadlineKinds.map((kind) => (
               <option key={kind} value={kind}>
@@ -874,9 +858,9 @@ export default function PortfolioStructuredCommissionForm({
               <label htmlFor="pf-deadline-date" className="mb-1 block text-xs font-bold">
                 希望日
                 {state.deadlineKind === "preferred_date" ? (
-                  <span style={{ color: c.pinkDeep }}>＊</span>
+                  <span style={{ color: c.error }}>＊</span>
                 ) : (
-                  <span style={{ color: c.inkSoft }}>（任意）</span>
+                  <span style={{ color: c.textSoft }}>（任意）</span>
                 )}
               </label>
               <input
@@ -885,7 +869,6 @@ export default function PortfolioStructuredCommissionForm({
                 value={state.deadlineDate}
                 onChange={(event) => update({ deadlineDate: event.target.value })}
                 className={inputClass}
-                style={{ borderColor: c.paperAlt }}
                 aria-describedby={
                   serverErrorFor("requestData.deadline.date")
                     ? "pf-deadline-date-error"
@@ -909,7 +892,6 @@ export default function PortfolioStructuredCommissionForm({
               onChange={(event) => update({ deadlineNote: event.target.value })}
               maxLength={500}
               className={inputClass}
-              style={{ borderColor: c.paperAlt }}
             />
           </div>
         </div>
@@ -922,7 +904,7 @@ export default function PortfolioStructuredCommissionForm({
       >
         <div>
           <label htmlFor="pf-message" className={labelClass}>
-            ご相談・ご依頼の内容<span style={{ color: c.pinkDeep }}>＊</span>
+            ご相談・ご依頼の内容<span style={{ color: c.error }}>＊</span>
           </label>
           <textarea
             id="pf-message"
@@ -932,7 +914,6 @@ export default function PortfolioStructuredCommissionForm({
             onChange={(event) => update({ message: event.target.value })}
             placeholder="描いてほしいもの、気になっていること、ご相談したいことをご記入ください。"
             className={inputClass}
-            style={{ borderColor: c.paperAlt }}
             aria-describedby={
               serverErrorFor("requestData.message") ? "pf-message-error" : undefined
             }
@@ -961,7 +942,6 @@ export default function PortfolioStructuredCommissionForm({
                 onChange={(event) => update({ characterFeatures: event.target.value })}
                 placeholder="髪型・髪色・目の色・服装・体型など"
                 className={inputClass}
-                style={{ borderColor: c.paperAlt }}
               />
             </div>
             <div>
@@ -975,7 +955,6 @@ export default function PortfolioStructuredCommissionForm({
                 value={state.expressionMood}
                 onChange={(event) => update({ expressionMood: event.target.value })}
                 className={inputClass}
-                style={{ borderColor: c.paperAlt }}
               />
             </div>
             <div>
@@ -989,7 +968,6 @@ export default function PortfolioStructuredCommissionForm({
                 value={state.composition}
                 onChange={(event) => update({ composition: event.target.value })}
                 className={inputClass}
-                style={{ borderColor: c.paperAlt }}
               />
             </div>
             <div>
@@ -1003,7 +981,6 @@ export default function PortfolioStructuredCommissionForm({
                 value={state.colorDirection}
                 onChange={(event) => update({ colorDirection: event.target.value })}
                 className={inputClass}
-                style={{ borderColor: c.paperAlt }}
               />
             </div>
             <div>
@@ -1017,7 +994,6 @@ export default function PortfolioStructuredCommissionForm({
                 value={state.referenceNotes}
                 onChange={(event) => update({ referenceNotes: event.target.value })}
                 className={inputClass}
-                style={{ borderColor: c.paperAlt }}
               />
             </div>
           </div>
@@ -1044,13 +1020,13 @@ export default function PortfolioStructuredCommissionForm({
                     src={entry.previewUrl}
                     alt={`添付画像 ${index + 1}`}
                     className="h-20 w-20 rounded-lg border-2 object-cover"
-                    style={{ borderColor: c.paperAlt }}
+                    style={{ borderColor: c.borderSubtle }}
                   />
                   <button
                     type="button"
                     onClick={() => removeRefImage(index)}
                     className="pf-cute-focus absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full text-xs font-bold text-white shadow"
-                    style={{ background: c.pinkDeep }}
+                    style={{ background: c.error, color: c.onAccent }}
                     aria-label={`添付画像 ${index + 1} を外す`}
                   >
                     ×
@@ -1064,7 +1040,7 @@ export default function PortfolioStructuredCommissionForm({
               type="button"
               onClick={() => refFileInputRef.current?.click()}
               className="pf-cute-focus inline-flex items-center gap-1.5 rounded-full border-2 bg-white px-4 py-2 text-sm font-bold"
-              style={{ borderColor: c.pink, color: c.pinkDeep }}
+              style={{ borderColor: c.accent, color: c.accent }}
             >
               ＋ 画像を追加
             </button>
@@ -1089,7 +1065,7 @@ export default function PortfolioStructuredCommissionForm({
           <legend className={labelClass}>
             参考URL<OptionalBadge />
           </legend>
-          <p className="mb-2 text-xs" style={{ color: c.inkSoft }}>
+          <p className="mb-2 text-xs" style={{ color: c.textSoft }}>
             https:// で始まるURLのみ受け付けます。こちらからURLへアクセスはしません。
           </p>
           <ul className="space-y-3">
@@ -1097,13 +1073,13 @@ export default function PortfolioStructuredCommissionForm({
               const error = linkErrors.find((item) => item.index === index)?.message;
               const serverError = serverErrorFor(`referenceLinks.${index}.url`);
               return (
-                <li key={index} className="rounded-lg border-2 p-2" style={{ borderColor: c.paperAlt }}>
+                <li key={index} className="rounded-lg border-2 p-2" style={{ borderColor: c.borderSubtle }}>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div>
                       <label
                         htmlFor={`pf-ref-url-${index}`}
                         className="mb-1 block text-xs font-bold"
-                        style={{ color: c.inkSoft }}
+                        style={{ color: c.textSoft }}
                       >
                         参考URL {index + 1}
                       </label>
@@ -1116,7 +1092,6 @@ export default function PortfolioStructuredCommissionForm({
                         maxLength={2048}
                         placeholder="https://"
                         className={inputClass}
-                        style={{ borderColor: c.paperAlt }}
                         aria-describedby={
                           error || serverError ? `pf-ref-url-${index}-error` : undefined
                         }
@@ -1126,7 +1101,7 @@ export default function PortfolioStructuredCommissionForm({
                       <label
                         htmlFor={`pf-ref-label-${index}`}
                         className="mb-1 block text-xs font-bold"
-                        style={{ color: c.inkSoft }}
+                        style={{ color: c.textSoft }}
                       >
                         ラベル（任意）
                       </label>
@@ -1138,7 +1113,6 @@ export default function PortfolioStructuredCommissionForm({
                         }
                         maxLength={100}
                         className={inputClass}
-                        style={{ borderColor: c.paperAlt }}
                       />
                     </div>
                   </div>
@@ -1148,7 +1122,7 @@ export default function PortfolioStructuredCommissionForm({
                       type="button"
                       onClick={() => removeReferenceLinkRow(index)}
                       className="pf-cute-focus mt-2 text-xs font-bold underline"
-                      style={{ color: c.pinkDeep }}
+                      style={{ color: c.error }}
                     >
                       {`参考URL ${index + 1} を削除`}
                     </button>
@@ -1162,7 +1136,7 @@ export default function PortfolioStructuredCommissionForm({
               type="button"
               onClick={addReferenceLinkRow}
               className="pf-cute-focus mt-3 inline-flex items-center gap-1.5 rounded-full border-2 bg-white px-4 py-2 text-sm font-bold"
-              style={{ borderColor: c.pink, color: c.pinkDeep }}
+              style={{ borderColor: c.accent, color: c.accent }}
             >
               ＋ 参考URLを追加
             </button>
@@ -1174,14 +1148,14 @@ export default function PortfolioStructuredCommissionForm({
         {submitError ? (
           <p
             className="rounded-xl border-2 px-3 py-2 text-sm font-bold"
-            style={{ borderColor: c.peach, color: c.pinkDeep, background: "#FFF5F0" }}
+            style={{ borderColor: c.error, color: c.error, background: c.errorSoft }}
             role="alert"
           >
             {submitError}
           </p>
         ) : null}
         {serverFieldErrors.length > 0 ? (
-          <ul className="space-y-1 text-xs font-bold" style={{ color: c.pinkDeep }}>
+          <ul className="space-y-1 text-xs font-bold" style={{ color: c.error }}>
             {serverFieldErrors.map((error) => (
               <li key={`${error.path}:${error.message}`}>{error.message}</li>
             ))}
@@ -1192,7 +1166,7 @@ export default function PortfolioStructuredCommissionForm({
           disabled={!commissionOpen || sending}
           aria-busy={sending}
           className="pf-cute-focus w-full rounded-full py-3 font-bold text-white disabled:opacity-50"
-          style={{ background: c.pink }}
+          style={{ background: c.accent, color: c.onAccent }}
         >
           {!commissionOpen ? "現在受付停止中です" : sending ? "送信中…" : "この内容で送信する"}
         </button>
