@@ -17,17 +17,18 @@ import type {
    カラートークン
    ここを書き換えるだけで全体の配色を調整できます
 ------------------------------------------------------------------- */
+// 桜色はaccent用途に集約し、本文の可読性と作品が主役になるneutral背景を維持する。
 export const portfolioColors = {
   page: "#FAF8F5",
   surface: "#FFFFFF",
   surfaceSubtle: "#F4F0EC",
-  text: "#242424",
-  textSoft: "#6B625E",
+  text: "#32252A",
+  textSoft: "#6F5861",
   borderSubtle: "#E4DED8",
   borderStrong: "#8A817C",
-  accent: "#A84F68",
-  accentHover: "#8F455A",
-  accentSoft: "#F4E6EA",
+  accent: "#B5446D",
+  accentHover: "#973754",
+  accentSoft: "#FBE8EF",
   onAccent: "#FFFFFF",
   error: "#B42318",
   errorSoft: "#FEF3F2",
