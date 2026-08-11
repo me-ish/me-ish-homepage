@@ -14,6 +14,7 @@ import PortfolioHero from "./PortfolioHero";
 import PortfolioMobileCta from "./PortfolioMobileCta";
 import PortfolioPricing from "./PortfolioPricing";
 import PortfolioStyles from "./PortfolioStyles";
+import PortfolioWorkflow from "./PortfolioWorkflow";
 import { portfolioFontEn, portfolioFontJp } from "./portfolioFonts";
 
 export default function PortfolioLanding({
@@ -42,10 +43,13 @@ export default function PortfolioLanding({
       <PortfolioHeader content={content} variant={variant} />
       <PortfolioHero content={content} variant={variant} />
       <PortfolioGallery works={content.works} flatPlaceholders={flatPlaceholders} />
-      <PortfolioAbout content={content} variant={variant} flatPlaceholders={flatPlaceholders} />
-      {showcase ? null : (
+      {showcase ? (
+        <PortfolioAbout content={content} variant={variant} flatPlaceholders={flatPlaceholders} />
+      ) : (
         <>
           <PortfolioPricing content={content} />
+          <PortfolioWorkflow content={content} />
+          <PortfolioAbout content={content} variant={variant} flatPlaceholders={flatPlaceholders} />
           <PortfolioGuidelines content={content} />
           <PortfolioCommissionForm
             content={content}
