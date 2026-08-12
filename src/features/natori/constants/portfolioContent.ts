@@ -18,23 +18,26 @@ import type {
    ここを書き換えるだけで全体の配色を調整できます
 ------------------------------------------------------------------- */
 export const portfolioColors = {
-  page: "#F7F3FB",
+  page: "#FFF7FA",
   surface: "#FFFFFF",
-  surfaceSubtle: "#EFE7F7",
-  text: "#2D2A3D",
-  textSoft: "#5B5670",
-  borderSubtle: "#DED5E7",
-  borderStrong: "#80788C",
-  accent: "#B33F69",
-  accentHover: "#9E365B",
-  accentSoft: "#FCE3ED",
-  onAccent: "#FFFFFF",
+  surfaceSubtle: "#FFF0F5",
+  text: "#3B2D35",
+  textSoft: "#6B5660",
+  borderSubtle: "#F0D9E2",
+  borderStrong: "#9D7485",
+  accent: "#F172A3",
+  accentDisplay: "#E75D92",
+  accentText: "#C0356E",
+  accentHover: "#D94E85",
+  accentSoft: "#FFE3EE",
+  onAccent: "#3B2D35",
+  onError: "#FFFFFF",
   error: "#B42318",
   errorSoft: "#FEF3F2",
   success: "#217A5B",
   successSoft: "#ECF8F3",
-  overlay: "rgba(45,42,61,0.72)",
-  pageTranslucent: "rgba(247,243,251,0.92)",
+  overlay: "rgba(59,45,53,0.72)",
+  pageTranslucent: "rgba(255,247,250,0.92)",
 } as const;
 
 /**

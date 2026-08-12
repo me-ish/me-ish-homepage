@@ -104,7 +104,7 @@ function FormSection({
   const heading = (
     <>
       <span
-        className="mr-2 inline-grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-black text-white"
+        className="mr-2 inline-grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-black"
         style={{ background: c.accent, color: c.onAccent }}
         aria-hidden="true"
       >
@@ -409,7 +409,7 @@ export default function PortfolioStructuredCommissionForm({
                 className="pf-cute-focus flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold"
                 style={{
                   borderColor: state.inquiryMode === mode ? c.accent : c.borderStrong,
-                  color: state.inquiryMode === mode ? c.accent : c.textSoft,
+                  color: state.inquiryMode === mode ? c.accentText : c.textSoft,
                 }}
               >
                 <input
@@ -584,7 +584,7 @@ export default function PortfolioStructuredCommissionForm({
                     />
                     <span style={{ color: c.textSoft }}>
                       {choice.label}
-                      <span className="ml-1 text-xs font-bold" style={{ color: c.accent }}>
+                      <span className="ml-1 text-xs font-bold" style={{ color: c.accentText }}>
                         {choice.price}
                       </span>
                     </span>
@@ -1026,7 +1026,7 @@ export default function PortfolioStructuredCommissionForm({
                     type="button"
                     onClick={() => removeRefImage(index)}
                     className="pf-cute-focus absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full text-xs font-bold text-white shadow"
-                    style={{ background: c.error, color: c.onAccent }}
+                    style={{ background: c.error, color: c.onError }}
                     aria-label={`添付画像 ${index + 1} を外す`}
                   >
                     ×
@@ -1040,7 +1040,7 @@ export default function PortfolioStructuredCommissionForm({
               type="button"
               onClick={() => refFileInputRef.current?.click()}
               className="pf-cute-focus inline-flex items-center gap-1.5 rounded-full border-2 bg-white px-4 py-2 text-sm font-bold"
-              style={{ borderColor: c.accent, color: c.accent }}
+              style={{ borderColor: c.accent, color: c.accentText }}
             >
               ＋ 画像を追加
             </button>
@@ -1136,7 +1136,7 @@ export default function PortfolioStructuredCommissionForm({
               type="button"
               onClick={addReferenceLinkRow}
               className="pf-cute-focus mt-3 inline-flex items-center gap-1.5 rounded-full border-2 bg-white px-4 py-2 text-sm font-bold"
-              style={{ borderColor: c.accent, color: c.accent }}
+              style={{ borderColor: c.accent, color: c.accentText }}
             >
               ＋ 参考URLを追加
             </button>
@@ -1165,7 +1165,7 @@ export default function PortfolioStructuredCommissionForm({
           type="submit"
           disabled={!commissionOpen || sending}
           aria-busy={sending}
-          className="pf-cute-focus w-full rounded-full py-3 font-bold text-white disabled:opacity-50"
+          className="pf-cute-focus w-full rounded-full py-3 font-bold disabled:opacity-50"
           style={{ background: c.accent, color: c.onAccent }}
         >
           {!commissionOpen ? "現在受付停止中です" : sending ? "送信中…" : "この内容で送信する"}

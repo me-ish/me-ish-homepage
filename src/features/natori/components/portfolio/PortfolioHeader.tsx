@@ -33,7 +33,7 @@ export default function PortfolioHeader({
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">
         <span
           className="min-w-0 max-w-[58vw] truncate text-xl font-semibold tracking-wide sm:max-w-none"
-          style={{ ...fontEnStyle, color: c.accent }}
+          style={{ ...fontEnStyle, color: c.accentDisplay }}
         >
           {content.artistName}
         </span>

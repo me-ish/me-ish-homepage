@@ -26,7 +26,7 @@ export default function PortfolioMobileCta() {
   return (
     <a
       href="#form"
-      className="pf-cute-focus fixed bottom-5 right-5 z-40 rounded-full px-5 py-3 text-sm font-bold text-white shadow-lg hover:brightness-105 md:hidden"
+      className="pf-cute-focus fixed bottom-5 right-5 z-40 rounded-full px-5 py-3 text-sm font-bold shadow-lg hover:brightness-105 md:hidden"
       style={{
         background: c.accent,
         color: c.onAccent,

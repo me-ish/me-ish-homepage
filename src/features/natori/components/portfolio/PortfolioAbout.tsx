@@ -68,7 +68,7 @@ export default function PortfolioAbout({
           <p className="mt-5 text-center text-2xl font-black tracking-wide">{profileName}</p>
           <p
             className="mt-1 text-xs font-semibold uppercase tracking-widest"
-            style={{ ...fontEnStyle, color: c.accent }}
+            style={{ ...fontEnStyle, color: c.accentText }}
           >
             {profileRole}
           </p>
@@ -77,7 +77,7 @@ export default function PortfolioAbout({
               href={xLink.href}
               label="X"
               className="pf-cute-focus mt-3 inline-flex items-center gap-2 rounded-full border-2 px-4 py-1.5 text-sm font-bold hover:bg-white"
-              style={{ borderColor: c.accent, color: c.accent, background: c.surface }}
+              style={{ borderColor: c.accent, color: c.accentText, background: c.surface }}
             >
               <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current" aria-hidden="true">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.265 5.64 5.899-5.64Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />

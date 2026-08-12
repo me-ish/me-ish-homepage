@@ -195,7 +195,7 @@ export default function PortfolioCommissionForm({
               rel="noopener noreferrer"
               onClick={() => trackNatoriPageEvent("portfolio_sns_click", "つなぐ")}
               className="pf-cute-focus font-bold underline decoration-2 underline-offset-4 hover:opacity-70"
-              style={{ color: c.accent, textDecorationColor: c.accentSoft }}
+              style={{ color: c.accentText, textDecorationColor: c.accentSoft }}
             >
               つなぐ
             </a>
@@ -332,7 +332,7 @@ export default function PortfolioCommissionForm({
                     />
                     <span>
                       {option.name}
-                      <span className="ml-1 text-xs font-bold" style={{ color: c.accent }}>
+                      <span className="ml-1 text-xs font-bold" style={{ color: c.accentText }}>
                         {option.price}
                       </span>
                     </span>
@@ -396,7 +396,7 @@ export default function PortfolioCommissionForm({
                         type="button"
                         onClick={() => removeRefImage(index)}
                         className="pf-cute-focus absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full text-xs font-bold text-white shadow"
-                        style={{ background: c.error, color: c.onAccent }}
+                        style={{ background: c.error, color: c.onError }}
                         aria-label={`添付画像 ${index + 1} を外す`}
                         title="この画像を外す"
                       >
@@ -411,7 +411,7 @@ export default function PortfolioCommissionForm({
                   type="button"
                   onClick={() => refFileInputRef.current?.click()}
                   className="pf-cute-focus inline-flex items-center gap-1.5 rounded-full border-2 bg-white px-4 py-2 text-sm font-bold disabled:opacity-50"
-                  style={{ borderColor: c.accent, color: c.accent }}
+                  style={{ borderColor: c.accent, color: c.accentText }}
                 >
                   ＋ 画像を追加
                 </button>
@@ -482,7 +482,7 @@ export default function PortfolioCommissionForm({
             <button
               type="submit"
               disabled={!commissionOpen || status === "sending"}
-              className="pf-cute-focus w-full rounded-full py-3 font-bold text-white disabled:opacity-50"
+              className="pf-cute-focus w-full rounded-full py-3 font-bold disabled:opacity-50"
               style={{ background: c.accent, color: c.onAccent }}
             >
               {!commissionOpen

@@ -31,7 +31,7 @@ export default function PortfolioFooter({
               target="_blank"
               rel="noopener noreferrer"
               className="pf-cute-focus font-bold hover:opacity-70"
-              style={{ color: c.accent }}
+              style={{ color: c.accentText }}
             >
               {link.label}
             </a>

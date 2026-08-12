@@ -42,9 +42,15 @@ describe("PF-02 portfolio semantic colors", () => {
       portfolioColors.surface,
       portfolioColors.surfaceSubtle,
     ]) {
-      expect(contrastRatio(portfolioColors.accent, background)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(portfolioColors.accentText, background)).toBeGreaterThanOrEqual(4.5);
+    }
+    for (const background of [portfolioColors.page, portfolioColors.surface]) {
+      expect(contrastRatio(portfolioColors.accentDisplay, background)).toBeGreaterThanOrEqual(3);
     }
     expect(contrastRatio(portfolioColors.onAccent, portfolioColors.accent)).toBeGreaterThanOrEqual(
+      4.5
+    );
+    expect(contrastRatio(portfolioColors.onError, portfolioColors.error)).toBeGreaterThanOrEqual(
       4.5
     );
     expect(contrastRatio(portfolioColors.error, portfolioColors.errorSoft)).toBeGreaterThanOrEqual(

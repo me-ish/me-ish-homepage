@@ -48,7 +48,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
         >
           <span
             className="shrink-0 rounded-full px-3 py-1 text-xs font-bold"
-            style={{ background: c.surface, color: c.accent }}
+            style={{ background: c.surface, color: c.accentText }}
           >
             全プラン共通
           </span>
@@ -67,7 +67,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
             style={{ background: c.surface, boxShadow: "0 10px 22px rgba(36,36,36,0.08)" }}
           >
             <h3 className="mb-1 text-lg font-bold">{p.name}</h3>
-            <p className="mb-2 text-2xl font-bold" style={{ color: c.accent }}>
+            <p className="mb-2 text-2xl font-bold" style={{ color: c.accentDisplay }}>
               {p.price}
             </p>
             <div className="mb-6 flex-1">
@@ -115,7 +115,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
               style={{ borderColor: c.borderSubtle }}
             >
               <span style={{ color: c.textSoft }}>{option.name}</span>
-              <span className="shrink-0 font-bold" style={{ color: c.accent }}>
+              <span className="shrink-0 font-bold" style={{ color: c.accentText }}>
                 {option.price}
               </span>
             </li>

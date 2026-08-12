@@ -36,12 +36,12 @@ export default function PortfolioHero({
           </p>
           <p
             className="mb-4 text-sm font-semibold uppercase tracking-[0.18em]"
-            style={{ ...fontEnStyle, color: c.accent }}
+            style={{ ...fontEnStyle, color: c.accentText }}
           >
             {content.roleEn}
           </p>
           <h1 className="mb-5 text-4xl font-black leading-[1.18] tracking-tight md:text-5xl lg:text-6xl">
-            <span style={{ color: c.accent }}>{content.heroTitleAccent}</span>
+            <span style={{ color: c.accentDisplay }}>{content.heroTitleAccent}</span>
             {content.heroTitleTail}
           </h1>
           <p
@@ -63,7 +63,7 @@ export default function PortfolioHero({
             <a
               href="#gallery"
               className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-xl border-2 px-6 py-3 font-bold"
-              style={{ background: c.surface, borderColor: c.accent, color: c.accent }}
+              style={{ background: c.surface, borderColor: c.accent, color: c.accentText }}
             >
               作品を見る
             </a>
