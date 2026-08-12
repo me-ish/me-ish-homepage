@@ -47,7 +47,7 @@ describe("PF-02 portfolio semantic colors", () => {
     for (const background of [portfolioColors.page, portfolioColors.surface]) {
       expect(contrastRatio(portfolioColors.accentDisplay, background)).toBeGreaterThanOrEqual(3);
     }
-    expect(contrastRatio(portfolioColors.onAccent, portfolioColors.accent)).toBeGreaterThanOrEqual(
+    expect(contrastRatio(portfolioColors.onAction, portfolioColors.action)).toBeGreaterThanOrEqual(
       4.5
     );
     expect(contrastRatio(portfolioColors.onError, portfolioColors.error)).toBeGreaterThanOrEqual(

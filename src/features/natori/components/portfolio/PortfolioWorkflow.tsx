@@ -22,7 +22,7 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioConte
               >
                 <span
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-                  style={{ background: c.accent, color: c.onAccent }}
+                  style={{ background: c.action, color: c.onAction }}
                   aria-hidden="true"
                 >
                   {index + 1}

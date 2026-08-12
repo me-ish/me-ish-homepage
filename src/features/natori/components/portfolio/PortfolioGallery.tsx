@@ -82,7 +82,7 @@ export default function PortfolioGallery({
               className="pf-cute-focus inline-flex items-center gap-1.5 rounded-full border-2 px-4 py-2 text-xs font-bold transition md:text-sm"
               style={
                 activeFilter === f
-                  ? { background: c.accent, borderColor: c.accent, color: c.onAccent }
+                  ? { background: c.action, borderColor: c.action, color: c.onAction }
                   : { background: "transparent", borderColor: c.borderStrong, color: c.textSoft }
               }
             >
@@ -190,7 +190,7 @@ export default function PortfolioGallery({
               onClick={() => setSelected(null)}
               aria-label="閉じる"
               className="pf-cute-focus absolute -right-3 -top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full font-bold shadow-md hover:brightness-105"
-              style={{ background: c.accent, color: c.onAccent }}
+              style={{ background: c.action, color: c.onAction }}
             >
               ✕
             </button>

@@ -55,7 +55,7 @@ export default function PortfolioHero({
               <a
                 href="#form"
                 className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-xl px-6 py-3 font-bold"
-                style={{ background: c.accent, color: c.onAccent }}
+                style={{ background: c.action, color: c.onAction }}
               >
                 相談・見積もり
               </a>

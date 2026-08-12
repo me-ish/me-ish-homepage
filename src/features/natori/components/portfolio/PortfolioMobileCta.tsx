@@ -28,8 +28,8 @@ export default function PortfolioMobileCta() {
       href="#form"
       className="pf-cute-focus fixed bottom-5 right-5 z-40 rounded-full px-5 py-3 text-sm font-bold shadow-lg hover:brightness-105 md:hidden"
       style={{
-        background: c.accent,
-        color: c.onAccent,
+        background: c.action,
+        color: c.onAction,
         boxShadow: "0 8px 20px rgba(36,36,36,0.22)",
       }}
     >

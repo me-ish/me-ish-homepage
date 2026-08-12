@@ -483,7 +483,7 @@ export default function PortfolioCommissionForm({
               type="submit"
               disabled={!commissionOpen || status === "sending"}
               className="pf-cute-focus w-full rounded-full py-3 font-bold disabled:opacity-50"
-              style={{ background: c.accent, color: c.onAccent }}
+              style={{ background: c.action, color: c.onAction }}
             >
               {!commissionOpen
                 ? "現在受付停止中です"
