@@ -6,7 +6,6 @@
 import {
   PLAN_SELECT_EVENT,
   portfolioPlanSelectDetail,
-  planColors,
   portfolioColors as c,
 } from "@/features/natori/constants/portfolioContent";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
@@ -15,6 +14,15 @@ import type { PortfolioContent, PortfolioPlan } from "@/features/natori/types/po
 export default function PortfolioPricing({ content }: { content: PortfolioContent }) {
   const gridCols =
     content.plans.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-3";
+  const commonFeatures =
+    content.plans.length > 0
+      ? content.plans[0].features.filter((feature) =>
+          content.plans.every((plan) => plan.features.includes(feature))
+        )
+      : [];
+  const includedFeatures = commonFeatures
+    .map((feature) => feature.replace(/無料[。．.]?$/u, "").trim())
+    .join("、");
 
   const handleSelectPlan = (plan: PortfolioPlan) => {
     trackNatoriPageEvent("portfolio_plan_click", plan.name);
@@ -25,7 +33,30 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
 
   return (
     <section id="pricing" className="mx-auto max-w-6xl px-5 py-16">
-      <h2 className="mb-8 text-center text-2xl font-black md:text-3xl">コミッション料金</h2>
+      <h2
+        className={`text-center text-2xl font-black md:text-3xl ${
+          commonFeatures.length > 0 ? "mb-5" : "mb-8"
+        }`}
+      >
+        コミッション料金
+      </h2>
+
+      {commonFeatures.length > 0 && (
+        <div
+          className="mx-auto mb-8 flex max-w-3xl flex-col items-center gap-2 rounded-2xl border px-5 py-4 text-center sm:flex-row sm:justify-center sm:gap-4 sm:text-left"
+          style={{ background: c.accentSoft, borderColor: c.borderSubtle }}
+        >
+          <span
+            className="shrink-0 rounded-full px-3 py-1 text-xs font-bold"
+            style={{ background: c.surface, color: c.accent }}
+          >
+            全プラン共通
+          </span>
+          <p className="text-sm font-medium" style={{ color: c.textSoft }}>
+            表示価格には、{includedFeatures}が含まれます。
+          </p>
+        </div>
+      )}
 
       {/* 基本料金 */}
       <div className={`grid gap-6 ${gridCols}`}>
@@ -35,28 +66,29 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
             className="relative flex flex-col rounded-2xl p-6"
             style={{ background: c.surface, boxShadow: "0 10px 22px rgba(36,36,36,0.08)" }}
           >
-            <div
-              className="mb-4 h-10 w-10 rounded-full"
-              style={{ background: planColors[index % planColors.length] }}
-              aria-hidden="true"
-            />
             <h3 className="mb-1 text-lg font-bold">{p.name}</h3>
             <p className="mb-2 text-2xl font-bold" style={{ color: c.accent }}>
               {p.price}
             </p>
-            <p className="mb-4 text-sm" style={{ color: c.textSoft }}>
-              {p.desc}
-            </p>
-            <ul className="mb-6 flex-1 space-y-1.5 text-sm">
-              {p.features.map((f) => (
-                <li key={f} className="flex items-start gap-2">
-                  <span style={{ color: c.success }} aria-hidden="true">
-                    ✓
-                  </span>
-                  <span style={{ color: c.textSoft }}>{f}</span>
-                </li>
-              ))}
-            </ul>
+            <div className="mb-6 flex-1">
+              <p className="text-sm" style={{ color: c.textSoft }}>
+                {p.desc}
+              </p>
+              {p.features.some((feature) => !commonFeatures.includes(feature)) && (
+                <ul className="mt-4 space-y-1.5 text-sm">
+                  {p.features
+                    .filter((feature) => !commonFeatures.includes(feature))
+                    .map((feature) => (
+                      <li key={feature} className="flex items-start gap-2">
+                        <span style={{ color: c.success }} aria-hidden="true">
+                          ✓
+                        </span>
+                        <span style={{ color: c.textSoft }}>{feature}</span>
+                      </li>
+                    ))}
+                </ul>
+              )}
+            </div>
             <a
               href="#form"
               onClick={() => handleSelectPlan(p)}
