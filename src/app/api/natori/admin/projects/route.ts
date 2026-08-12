@@ -111,6 +111,13 @@ export async function POST(request: Request) {
     nextAction: readString(payload.nextAction) ?? undefined,
     note: readString(payload.note) ?? undefined,
     priority: readString(payload.priority) ?? undefined,
+    externalOrder:
+      payload.externalOrder === true
+        ? {
+            source: readString(payload.externalSource)?.slice(0, 100) ?? undefined,
+            paymentConfirmed: payload.externalPaymentConfirmed === true,
+          }
+        : undefined,
   });
   if (result.kind === "db-error") {
     return NextResponse.json({ error: "Failed to create project" }, { status: 500 });

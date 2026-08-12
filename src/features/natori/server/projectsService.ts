@@ -1,5 +1,8 @@
 import "server-only";
-import { createTasksForType } from "@/features/natori/lib/projects";
+import {
+  createTasksForType,
+  getNextActionForStatus,
+} from "@/features/natori/lib/projects";
 import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { calculateDueDate } from "@/features/natori/lib/deliveryPlans";
 import { isNatoriConcreteProjectType } from "@/features/natori/lib/projectReadModel";
@@ -418,6 +421,10 @@ export type CreateNatoriAdminProjectInput = {
   note?: string;
   priority?: string;
   referencePaths?: string[];
+  externalOrder?: {
+    source?: string;
+    paymentConfirmed: boolean;
+  };
 };
 
 export type CreateNatoriAdminProjectResult =
@@ -435,9 +442,27 @@ export async function createNatoriAdminProject(
   const deliveryPlan = input.deliveryPlan ?? "normal";
   const startDateISO = input.startDateISO ?? new Date().toISOString().slice(0, 10);
   const dueDateISO = input.dueDateISO ?? calculateDueDate(startDateISO, deliveryPlan);
-  const status = input.status ?? "inquiry";
+  const status: NatoriProjectStatus = input.externalOrder
+    ? input.externalOrder.paymentConfirmed
+      ? "rough"
+      : "awaiting_payment"
+    : (input.status as NatoriProjectStatus | undefined) ?? "inquiry";
   const manualCompletedAt =
     status === "completed" ? `${dueDateISO}T12:00:00+09:00` : "";
+  const externalPaidAt = input.externalOrder?.paymentConfirmed
+    ? new Date().toISOString()
+    : "";
+  const paidAt = externalPaidAt || manualCompletedAt;
+  const externalOrderNote = input.externalOrder
+    ? [
+        `【外部受注】受注元: ${input.externalOrder.source?.trim() || "外部サービス"} / ${
+          input.externalOrder.paymentConfirmed ? "支払い確認済み" : "支払い待ち"
+        }`,
+        input.note?.trim(),
+      ]
+        .filter(Boolean)
+        .join("\n")
+    : input.note ?? "";
 
   const tasks = createTasksForType(input.type);
   const taskInserts = tasks.map((task, index) => ({
@@ -463,11 +488,13 @@ export async function createNatoriAdminProject(
         priority: input.priority ?? "",
         start_date: startDateISO,
         due_date: dueDateISO,
-        next_action: input.nextAction ?? "",
-        note: input.note ?? "",
-        payment_confirmed_at: manualCompletedAt,
-        paid_at: manualCompletedAt,
-        paid_amount: manualCompletedAt ? input.amount : "",
+        next_action: input.externalOrder
+          ? getNextActionForStatus(status)
+          : input.nextAction ?? "",
+        note: externalOrderNote,
+        payment_confirmed_at: paidAt,
+        paid_at: paidAt,
+        paid_amount: paidAt ? input.amount : "",
         completed_at: manualCompletedAt,
       },
       p_tasks: taskInserts,

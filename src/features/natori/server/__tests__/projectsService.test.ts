@@ -35,6 +35,7 @@ import {
   closeNatoriProject,
   confirmNatoriProjectType,
   confirmNatoriProjectPayment,
+  createNatoriAdminProject,
   deleteNatoriAdminProject,
   listNatoriAdminProjects,
   normalizeProjectTasksForRead,
@@ -109,6 +110,73 @@ beforeEach(() => {
 });
 
 /* ---------- Tests ---------- */
+
+describe("createNatoriAdminProject external orders", () => {
+  const baseInput = {
+    userId: "owner-1",
+    title: "配信用立ち絵",
+    clientName: "月乃さん",
+    amount: 24000,
+    type: "standing" as const,
+    startDateISO: "2026-08-12",
+    dueDateISO: "2026-09-12",
+  };
+
+  it("creates a paid external order directly in rough with payment stamps", async () => {
+    mockRpc.mockResolvedValue({ data: "external-project-1", error: null });
+
+    const result = await createNatoriAdminProject({
+      ...baseInput,
+      status: "inquiry",
+      nextAction: "ignored for external orders",
+      note: "表情差分あり",
+      externalOrder: {
+        source: "つなぐ",
+        paymentConfirmed: true,
+      },
+    });
+
+    expect(result).toEqual({ kind: "ok", projectId: "external-project-1" });
+    const rpcArgs = mockRpc.mock.calls[0]?.[1] as {
+      p_project: Record<string, unknown>;
+    };
+    expect(rpcArgs.p_project).toMatchObject({
+      status: "rough",
+      next_action: "ラフ提出",
+      paid_amount: 24000,
+    });
+    expect(rpcArgs.p_project.note).toBe(
+      "【外部受注】受注元: つなぐ / 支払い確認済み\n表情差分あり"
+    );
+    expect(rpcArgs.p_project.payment_confirmed_at).toEqual(expect.any(String));
+    expect(rpcArgs.p_project.paid_at).toBe(
+      rpcArgs.p_project.payment_confirmed_at
+    );
+  });
+
+  it("creates an unpaid external order without payment stamps", async () => {
+    mockRpc.mockResolvedValue({ data: "external-project-2", error: null });
+
+    await createNatoriAdminProject({
+      ...baseInput,
+      externalOrder: {
+        paymentConfirmed: false,
+      },
+    });
+
+    const rpcArgs = mockRpc.mock.calls[0]?.[1] as {
+      p_project: Record<string, unknown>;
+    };
+    expect(rpcArgs.p_project).toMatchObject({
+      status: "awaiting_payment",
+      next_action: "入金確認後、ラフ開始",
+      note: "【外部受注】受注元: 外部サービス / 支払い待ち",
+      payment_confirmed_at: "",
+      paid_at: "",
+      paid_amount: "",
+    });
+  });
+});
 
 describe("setNatoriProjectStatus", () => {
   it("許可された遷移は現在ステータスを条件に含めて更新する", async () => {

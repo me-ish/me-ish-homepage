@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   NATORI_REGISTER_STATUS_OPTIONS,
+  getExternalOrderStatus,
   getDefaultStatusForMode,
 } from "@/features/natori/components/dashboard/ProjectRegisterForm";
 
@@ -45,5 +46,15 @@ describe("NATORI_REGISTER_STATUS_OPTIONS", () => {
     expect(byValue.estimating).toBe("見積もり中");
     expect(byValue.quoted).toBe("見積もり提示済み");
     expect(byValue.awaiting_payment).toBe("入金待ち");
+  });
+});
+
+describe("getExternalOrderStatus", () => {
+  it("starts paid external orders directly in rough production", () => {
+    expect(getExternalOrderStatus(true)).toBe("rough");
+  });
+
+  it("keeps unpaid external orders waiting for payment", () => {
+    expect(getExternalOrderStatus(false)).toBe("awaiting_payment");
   });
 });

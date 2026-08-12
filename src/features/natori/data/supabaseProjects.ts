@@ -407,6 +407,9 @@ export type CreateNatoriProjectInput = {
   nextAction?: string;
   note?: string;
   priority?: NatoriProjectPriority;
+  externalOrder?: boolean;
+  externalSource?: string;
+  externalPaymentConfirmed?: boolean;
 };
 
 /**

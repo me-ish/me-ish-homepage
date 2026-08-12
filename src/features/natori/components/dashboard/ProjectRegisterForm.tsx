@@ -40,6 +40,13 @@ export const NATORI_REGISTER_STATUS_OPTIONS: Array<{
 ];
 
 export type ProjectRegisterMode = "estimate" | "manual";
+export type ProjectRegistrationRoute = "standard" | "external";
+
+export function getExternalOrderStatus(
+  paymentConfirmed: boolean
+): NatoriProjectStatus {
+  return paymentConfirmed ? "rough" : "awaiting_payment";
+}
 
 /**
  * estimate モード: 見積もりツール内から呼ばれる。金額・納期がもう出ているので
@@ -130,6 +137,10 @@ export default function ProjectRegisterForm({
     defaults?.type ?? "illustration"
   );
   const [status, setStatus] = useState<NatoriProjectStatus>(initialStatus);
+  const [registrationRoute, setRegistrationRoute] =
+    useState<ProjectRegistrationRoute>("standard");
+  const [externalSource, setExternalSource] = useState("");
+  const [externalPaymentConfirmed, setExternalPaymentConfirmed] = useState(true);
   const [amount, setAmount] = useState<number>(defaults?.amount ?? 0);
   const [deliveryPlan, setDeliveryPlan] = useState<NatoriDeliveryPlan>(
     defaults?.deliveryPlan ?? DEFAULT_NATORI_DELIVERY_PLAN
@@ -184,6 +195,10 @@ export default function ProjectRegisterForm({
     () => (dueDateISO ? formatHumanDate(dueDateISO) : "—"),
     [dueDateISO]
   );
+  const isExternalOrder = mode === "manual" && registrationRoute === "external";
+  const submissionStatus = isExternalOrder
+    ? getExternalOrderStatus(externalPaymentConfirmed)
+    : status;
 
   const handleSubmit = async () => {
     if (!clientName.trim() || !title.trim()) return;
@@ -196,12 +211,19 @@ export default function ProjectRegisterForm({
         clientName: clientName.trim(),
         amount: Math.max(0, Number.isFinite(amount) ? Math.round(amount) : 0),
         type,
-        status,
+        status: submissionStatus,
         deliveryPlan,
         startDateISO: startDateISO || undefined,
         dueDateISO: dueDateISO || undefined,
-        nextAction: getNextActionForStatus(status),
+        nextAction: getNextActionForStatus(submissionStatus),
         note: note.trim() ? note.trim() : undefined,
+        externalOrder: isExternalOrder,
+        externalSource: isExternalOrder
+          ? externalSource.trim() || undefined
+          : undefined,
+        externalPaymentConfirmed: isExternalOrder
+          ? externalPaymentConfirmed
+          : undefined,
       });
       setCreatedId(id);
       onCreated?.(id);
@@ -269,6 +291,104 @@ export default function ProjectRegisterForm({
     </div>
   ) : (
     <div className="mt-4 space-y-3">
+      {mode === "manual" ? (
+        <fieldset className="rounded-2xl border border-pink-200 bg-white p-3">
+          <legend className="px-1 text-[11px] font-bold uppercase tracking-wide text-pink-700">
+            登録ルート
+          </legend>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setRegistrationRoute("standard")}
+              aria-pressed={registrationRoute === "standard"}
+              className={cn(
+                "rounded-xl border px-3 py-2.5 text-left transition",
+                registrationRoute === "standard"
+                  ? "border-pink-500 bg-pink-50 text-pink-950 ring-1 ring-pink-300"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-pink-300"
+              )}
+            >
+              <span className="block text-sm font-black">通常の依頼</span>
+              <span className="mt-0.5 block text-[11px] leading-4 opacity-80">
+                問い合わせ・見積もり段階から登録
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setRegistrationRoute("external")}
+              aria-pressed={registrationRoute === "external"}
+              className={cn(
+                "rounded-xl border px-3 py-2.5 text-left transition",
+                registrationRoute === "external"
+                  ? "border-emerald-500 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-300"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-emerald-300"
+              )}
+            >
+              <span className="block text-sm font-black">外部で受注済み</span>
+              <span className="mt-0.5 block text-[11px] leading-4 opacity-80">
+                つなぐ・SKIMAなど。メール送信を省略
+              </span>
+            </button>
+          </div>
+
+          {isExternalOrder ? (
+            <div className="mt-3 space-y-3 border-t border-emerald-100 pt-3">
+              <label className="block text-sm">
+                <span className="block text-[11px] font-bold uppercase tracking-wide text-emerald-800">
+                  受注元
+                </span>
+                <input
+                  type="text"
+                  value={externalSource}
+                  onChange={(event) => setExternalSource(event.target.value)}
+                  maxLength={100}
+                  placeholder="例: つなぐ"
+                  className="mt-1 h-10 w-full rounded-lg border border-emerald-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                />
+              </label>
+              <fieldset>
+                <legend className="text-[11px] font-bold uppercase tracking-wide text-emerald-800">
+                  支払い状況
+                </legend>
+                <div className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setExternalPaymentConfirmed(true)}
+                    aria-pressed={externalPaymentConfirmed}
+                    className={cn(
+                      "rounded-lg border px-3 py-2 text-left text-xs font-bold transition",
+                      externalPaymentConfirmed
+                        ? "border-emerald-500 bg-emerald-100 text-emerald-950"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-emerald-300"
+                    )}
+                  >
+                    支払い確認済み
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setExternalPaymentConfirmed(false)}
+                    aria-pressed={!externalPaymentConfirmed}
+                    className={cn(
+                      "rounded-lg border px-3 py-2 text-left text-xs font-bold transition",
+                      !externalPaymentConfirmed
+                        ? "border-orange-500 bg-orange-100 text-orange-950"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-orange-300"
+                    )}
+                  >
+                    まだ支払い待ち
+                  </button>
+                </div>
+              </fieldset>
+              <p className="text-xs leading-5 text-emerald-900">
+                {externalPaymentConfirmed
+                  ? "見積もり・支払い依頼メールを送らず、ラフ制作から開始します。"
+                  : "見積もり・支払い依頼メールを送らず、入金待ちとして登録します。"}
+              </p>
+            </div>
+          ) : null}
+        </fieldset>
+      ) : null}
+
       <label className="block text-sm">
         <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
           依頼者名（必須）
@@ -312,22 +432,33 @@ export default function ProjectRegisterForm({
             ))}
           </select>
         </label>
-        <label className="block text-sm">
-          <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
-            初期ステータス
-          </span>
-          <select
-            value={status}
-            onChange={(event) => setStatus(event.target.value as NatoriProjectStatus)}
-            className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
-          >
-            {NATORI_REGISTER_STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {isExternalOrder ? (
+          <div className="text-sm">
+            <span className="block text-[11px] font-bold uppercase tracking-wide text-emerald-800">
+              初期ステータス
+            </span>
+            <div className="mt-1 flex h-10 items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-sm font-bold text-emerald-950">
+              {externalPaymentConfirmed ? "ラフ制作" : "入金待ち"}
+            </div>
+          </div>
+        ) : (
+          <label className="block text-sm">
+            <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              初期ステータス
+            </span>
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.target.value as NatoriProjectStatus)}
+              className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+            >
+              {NATORI_REGISTER_STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       {fixedAmount ? (
@@ -429,7 +560,7 @@ export default function ProjectRegisterForm({
         />
       </label>
 
-      {status === "awaiting_payment" ? (
+      {submissionStatus === "awaiting_payment" ? (
         <p className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs leading-5 text-orange-900">
           入金待ちとして登録します。制作スケジュールに反映されるのは
           「入金確認してラフ開始」を押してからです。
@@ -447,7 +578,11 @@ export default function ProjectRegisterForm({
         disabled={submitting || !clientName.trim() || !title.trim()}
         className="h-11 w-full rounded-full bg-pink-500 px-5 text-sm font-bold text-white hover:bg-pink-600 disabled:opacity-60 sm:w-auto"
       >
-        {submitting ? "追加中…" : "案件管理に追加"}
+        {submitting
+          ? "追加中…"
+          : isExternalOrder
+            ? "外部受注案件として追加"
+            : "案件管理に追加"}
       </Button>
     </div>
   );
