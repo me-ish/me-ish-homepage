@@ -98,6 +98,16 @@ describe("structured view", () => {
     expect(value).not.toContain("expression_variation");
   });
 
+  it("公開延期は公開可能日を併記する", () => {
+    const view = buildNatoriInquiryRequestView(requestData({
+      publicationPolicy: "delayed",
+      publicationAllowedFrom: "2026-10-15",
+    }));
+    expect(fieldValue(view, "publicationPolicy")).toBe(
+      "一定期間後なら公開してよい（2026年10月15日から）"
+    );
+  });
+
   it("other の補足を併記する", () => {
     const view = buildNatoriInquiryRequestView(
       requestData({

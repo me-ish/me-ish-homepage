@@ -7,10 +7,10 @@ import { readNatoriRequestData } from "@/features/natori/lib/requestSchema";
 import {
   NATORI_COMMERCIAL_USE_LABELS_V1,
   NATORI_INQUIRY_MODE_LABELS_V1,
-  NATORI_PUBLICATION_POLICY_LABELS_V1,
   describeNatoriBudget,
   describeNatoriCommissionScope,
   describeNatoriDeadline,
+  describeNatoriPublicationPolicy,
   describeNatoriRequestType,
   describeNatoriSelectedOptions,
   describeNatoriUsageTypes,
@@ -113,7 +113,7 @@ function buildSections(request: NatoriRequestDataV1): NatoriInquiryRequestSectio
         {
           key: "publicationPolicy",
           label: "公開可否",
-          value: NATORI_PUBLICATION_POLICY_LABELS_V1[request.publicationPolicy],
+          value: describeNatoriPublicationPolicy(request),
         },
       ],
     },

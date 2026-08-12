@@ -155,6 +155,36 @@ describe("NatoriRequestData V1 examples", () => {
 });
 
 describe("NatoriRequestData V1 conditional validation", () => {
+  it("新フォームの公開延期には公開可能日を必須にし、旧データの未定義は読める", () => {
+    const missingDate = {
+      ...quoteExample,
+      publicationPolicy: "delayed" as const,
+      publicationAllowedFrom: null,
+    };
+    expect(natoriRequestDataV1Schema.safeParse(missingDate).success).toBe(false);
+
+    const withDate = { ...missingDate, publicationAllowedFrom: "2026-10-15" };
+    expect(natoriRequestDataV1Schema.safeParse(withDate).success).toBe(true);
+
+    const legacyWithoutField = { ...quoteExample, publicationPolicy: "delayed" as const };
+    expect(natoriRequestDataV1Schema.safeParse(legacyWithoutField).success).toBe(true);
+  });
+
+  it("公開延期以外では公開可能日を受け付けない", () => {
+    const result = validateNatoriRequestDataV1({
+      ...quoteExample,
+      publicationAllowedFrom: "2026-10-15",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: "publicationAllowedFrom" }),
+        ])
+      );
+    }
+  });
+
   it("quoteでも未定商品種別と未定制作範囲を受け付け、consultationも維持する", () => {
     const quoteWithUndecided = {
       ...mutableClone(consultationExample),

@@ -69,6 +69,13 @@ export const NATORI_PUBLICATION_POLICY_LABELS_V1: Readonly<
   unknown: "わからない・相談したい",
 };
 
+export function describeNatoriPublicationPolicy(data: NatoriRequestDataV1): string {
+  const label = NATORI_PUBLICATION_POLICY_LABELS_V1[data.publicationPolicy];
+  if (data.publicationPolicy !== "delayed" || !data.publicationAllowedFrom) return label;
+  const [year, month, day] = data.publicationAllowedFrom.split("-").map(Number);
+  return `${label}（${year}年${month}月${day}日から）`;
+}
+
 export const NATORI_INQUIRY_MODE_LABELS_V1: Readonly<
   Record<NatoriInquiryModeV1, string>
 > = {

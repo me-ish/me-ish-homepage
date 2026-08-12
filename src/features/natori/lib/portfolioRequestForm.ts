@@ -83,6 +83,7 @@ export type PortfolioRequestFormState = {
   usageTypeOther: string;
   commercialUse: NatoriRequestDataV1["commercialUse"];
   publicationPolicy: NatoriRequestDataV1["publicationPolicy"];
+  publicationAllowedFrom: string;
   budgetKind: NatoriBudgetV1["kind"];
   budgetMin: string;
   budgetMax: string;
@@ -110,6 +111,7 @@ export function createInitialPortfolioRequestFormState(): PortfolioRequestFormSt
     usageTypeOther: "",
     commercialUse: "unknown",
     publicationPolicy: "unknown",
+    publicationAllowedFrom: "",
     budgetKind: "undecided",
     budgetMin: "",
     budgetMax: "",
@@ -187,6 +189,8 @@ export function pruneHiddenPortfolioRequestFields(
     commissionScopeOther:
       state.commissionScope === "other" ? state.commissionScopeOther : "",
     usageTypeOther: state.usageTypes.includes("other") ? state.usageTypeOther : "",
+    publicationAllowedFrom:
+      state.publicationPolicy === "delayed" ? state.publicationAllowedFrom : "",
     budgetMin: budgetUsesAmount ? state.budgetMin : "",
     budgetMax: budgetUsesRange ? state.budgetMax : "",
     deadlineDate: deadlineUsesDate ? state.deadlineDate : "",
@@ -303,6 +307,10 @@ export function buildNatoriRequestDataV1(
     usageTypeOther: usageTypes.includes("other") ? state.usageTypeOther.trim() : null,
     commercialUse: state.commercialUse,
     publicationPolicy: state.publicationPolicy,
+    publicationAllowedFrom:
+      state.publicationPolicy === "delayed"
+        ? state.publicationAllowedFrom.trim() || null
+        : null,
     budget: buildBudget(state),
     deadline: buildDeadline(state),
     characterFeatures: state.characterFeatures.trim(),

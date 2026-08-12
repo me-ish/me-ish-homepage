@@ -31,9 +31,6 @@ export default function PortfolioHero({
         }`}
       >
         <div className="max-w-xl">
-          <p className="mb-2 text-sm font-bold tracking-wide" style={{ color: c.textSoft }}>
-            {content.artistName}
-          </p>
           <p
             className="mb-4 text-sm font-semibold uppercase tracking-[0.18em]"
             style={{ ...fontEnStyle, color: c.accentText }}

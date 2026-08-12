@@ -10,7 +10,7 @@ import { defaultPortfolioContent } from "@/features/natori/constants/portfolioCo
 afterEach(cleanup);
 
 describe("PF-03 portfolio hero", () => {
-  it("shows identity, purpose, representative artwork, and the two full-variant actions", () => {
+  it("shows purpose, representative artwork, and the two full-variant actions without repeating the header name", () => {
     render(
       <PortfolioHero
         content={{
@@ -20,7 +20,7 @@ describe("PF-03 portfolio hero", () => {
       />
     );
 
-    expect(screen.getByText(defaultPortfolioContent.artistName)).toBeTruthy();
+    expect(screen.queryByText(defaultPortfolioContent.artistName)).toBeNull();
     expect(screen.getByText(defaultPortfolioContent.roleEn)).toBeTruthy();
     expect(screen.getByText(defaultPortfolioContent.heroDescription)).toBeTruthy();
     expect(

@@ -135,6 +135,7 @@ const sharedRequestFields = {
     "fully_private",
     "unknown",
   ]),
+  publicationAllowedFrom: isoDateSchema.nullable().optional(),
   budget: budgetSchema,
   deadline: deadlineSchema,
   characterFeatures: text(1000),
@@ -214,6 +215,24 @@ function addRequestCrossFieldIssues(
       code: "custom",
       path: ["usageTypes"],
       message: "使用目的を重複して指定できません",
+    });
+  }
+
+  if (value.publicationPolicy === "delayed" && value.publicationAllowedFrom === null) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["publicationAllowedFrom"],
+      message: "公開可能日を入力してください",
+    });
+  } else if (
+    value.publicationPolicy !== "delayed" &&
+    value.publicationAllowedFrom !== null &&
+    value.publicationAllowedFrom !== undefined
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["publicationAllowedFrom"],
+      message: "公開条件が「一定期間後」でない場合は null にしてください",
     });
   }
 

@@ -192,6 +192,28 @@ describe("buildNatoriRequestDataV1", () => {
     expect(data.usageTypes).toEqual(["social_icon", "streaming"]);
     expect(validateNatoriRequestDataV1(data).success).toBe(true);
   });
+
+  it("公開可能日は delayed のときだけ保持する", () => {
+    const delayed = buildNatoriRequestDataV1(
+      state({
+        publicationPolicy: "delayed",
+        publicationAllowedFrom: "2026-10-15",
+        message: "x",
+      }),
+      choices
+    );
+    expect(delayed.publicationAllowedFrom).toBe("2026-10-15");
+
+    const allowed = buildNatoriRequestDataV1(
+      state({
+        publicationPolicy: "allowed",
+        publicationAllowedFrom: "2026-10-15",
+        message: "x",
+      }),
+      choices
+    );
+    expect(allowed.publicationAllowedFrom).toBeNull();
+  });
 });
 
 describe("buildSelectedOptions", () => {

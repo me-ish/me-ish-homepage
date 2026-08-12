@@ -746,6 +746,34 @@ export default function PortfolioStructuredCommissionForm({
             </select>
           </div>
         </div>
+
+        {state.publicationPolicy === "delayed" ? (
+          <div>
+            <label htmlFor="pf-publication-allowed-from" className={labelClass}>
+              公開可能日<span style={{ color: c.error }}>＊</span>
+            </label>
+            <input
+              id="pf-publication-allowed-from"
+              type="date"
+              required
+              value={state.publicationAllowedFrom}
+              onChange={(event) => update({ publicationAllowedFrom: event.target.value })}
+              className={inputClass}
+              aria-describedby={
+                serverErrorFor("requestData.publicationAllowedFrom")
+                  ? "pf-publication-allowed-from-error"
+                  : undefined
+              }
+            />
+            <p className="mt-1 text-xs" style={{ color: c.textSoft }}>
+              この日以降、ポートフォリオやSNSへ掲載できます。
+            </p>
+            <FieldError
+              id="pf-publication-allowed-from-error"
+              message={serverErrorFor("requestData.publicationAllowedFrom")}
+            />
+          </div>
+        ) : null}
       </FormSection>
 
       <FormSection

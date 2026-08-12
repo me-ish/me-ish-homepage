@@ -128,6 +128,8 @@ type NatoriRequestDataV1Base = {
     | "work_private"
     | "fully_private"
     | "unknown";
+  /** delayed のときの公開可能日。導入前データとの互換性のため省略可。 */
+  publicationAllowedFrom?: string | null;
   budget: NatoriBudgetV1;
   deadline: NatoriDeadlineV1;
   characterFeatures: string;

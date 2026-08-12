@@ -172,6 +172,44 @@ describe("条件付き入力", () => {
     expect(submittedRequestData().usageTypes).toEqual(["social_icon", "streaming"]);
   });
 
+  it("一定期間後に公開可を選ぶと公開可能日を送る", async () => {
+    renderForm();
+    const publicationPolicy = screen.getByLabelText("作品の公開可否");
+    expect(screen.queryByLabelText("公開可能日＊")).toBeNull();
+
+    await userEvent.selectOptions(publicationPolicy, "delayed");
+    fireEvent.change(screen.getByLabelText("公開可能日＊"), {
+      target: { value: "2026-10-15" },
+    });
+
+    await fillMinimum();
+    submit();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(submittedRequestData()).toMatchObject({
+      publicationPolicy: "delayed",
+      publicationAllowedFrom: "2026-10-15",
+    });
+  });
+
+  it("公開条件を変更すると公開可能日を送らない", async () => {
+    renderForm();
+    const publicationPolicy = screen.getByLabelText("作品の公開可否");
+    await userEvent.selectOptions(publicationPolicy, "delayed");
+    fireEvent.change(screen.getByLabelText("公開可能日＊"), {
+      target: { value: "2026-10-15" },
+    });
+    await userEvent.selectOptions(publicationPolicy, "allowed");
+    expect(screen.queryByLabelText("公開可能日＊")).toBeNull();
+
+    await fillMinimum();
+    submit();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(submittedRequestData()).toMatchObject({
+      publicationPolicy: "allowed",
+      publicationAllowedFrom: null,
+    });
+  });
+
   it("予算は kind に応じて入力欄が切り替わり、隠れた値は送らない", async () => {
     renderForm();
     const budgetKind = screen.getByLabelText("ご予算");
