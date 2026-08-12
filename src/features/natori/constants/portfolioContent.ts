@@ -25,8 +25,8 @@ export const portfolioColors = {
   textSoft: "#5B5670",
   borderSubtle: "#DED5E7",
   borderStrong: "#80788C",
-  accent: "#C82065",
-  accentHover: "#A91953",
+  accent: "#CC3F70",
+  accentHover: "#B83264",
   accentSoft: "#FCE3ED",
   onAccent: "#FFFFFF",
   error: "#B42318",
@@ -295,9 +295,6 @@ export const workRotations = [
   "rotate-3",
   "-rotate-1",
 ] as const;
-
-/** 料金プランの既存装飾。意味は持たせず、PF-05でicon/label hierarchyと一緒に廃止予定。 */
-export const planColors = [c.successSoft, c.accentSoft, "#F6ECE4", "#F6F0DD"] as const;
 
 /** 作品カードの既存装飾。作品を主役にするPF-04でtape自体を含めて削減予定。 */
 export const tapeColors = ["#FFE8A3", "#FFD3E2", "#CFF3E8", "#DCE4FF"] as const;
