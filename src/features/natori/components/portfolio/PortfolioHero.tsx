@@ -71,7 +71,7 @@ export default function PortfolioHero({
         </div>
 
         {representativeImage ? (
-          <figure className="w-full min-w-0 max-w-md justify-self-center md:justify-self-end">
+          <figure className="w-full min-w-0 max-w-lg justify-self-center md:justify-self-end">
             <div
               className="relative aspect-square overflow-hidden rounded-2xl border"
               style={{ background: c.surfaceSubtle, borderColor: c.borderSubtle }}
@@ -80,7 +80,7 @@ export default function PortfolioHero({
                 src={representativeImage}
                 alt={representativeAlt}
                 fill
-                sizes="(min-width: 1024px) 448px, (min-width: 768px) 46vw, calc(100vw - 40px)"
+                sizes="(min-width: 1024px) 512px, (min-width: 768px) 46vw, calc(100vw - 40px)"
                 className="object-contain"
               />
             </div>
