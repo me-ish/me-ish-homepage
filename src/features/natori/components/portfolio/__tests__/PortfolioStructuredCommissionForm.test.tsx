@@ -223,6 +223,18 @@ describe("条件付き入力", () => {
 });
 
 describe("オプション", () => {
+  it("固定オプションには数量欄を表示しない", async () => {
+    renderForm();
+    const commercialUse = screen.getByRole("checkbox", { name: /商用利用/ });
+    await userEvent.click(commercialUse);
+    expect(screen.queryByLabelText("数量")).toBeNull();
+    expect(screen.getByLabelText("補足（任意）")).toBeTruthy();
+
+    await userEvent.click(commercialUse);
+    await userEvent.click(screen.getByLabelText(/表情差分/));
+    expect(screen.getByLabelText("数量")).toBeTruthy();
+  });
+
   it("stable ID・label snapshot・数量・補足を送る", async () => {
     renderForm();
     await userEvent.click(screen.getByLabelText(/表情差分/));

@@ -9,6 +9,7 @@ import {
   collectPortfolioReferenceLinkErrors,
   createInitialPortfolioRequestFormState,
   portfolioOptionChoices,
+  portfolioOptionAllowsQuantity,
   pruneHiddenPortfolioRequestFields,
   submittedPortfolioReferenceLinks,
   type PortfolioOptionChoice,
@@ -22,6 +23,16 @@ function state(overrides: Partial<PortfolioRequestFormState> = {}): PortfolioReq
 }
 
 const choices = portfolioOptionChoices(defaultPortfolioContent);
+
+describe("portfolioOptionAllowsQuantity", () => {
+  it("個数課金だけ数量あり、固定オプションは数量なしにする", () => {
+    const byId = (id: string) => choices.find((choice) => choice.stableId === id)!;
+    expect(portfolioOptionAllowsQuantity(byId("expression_variation"))).toBe(true);
+    expect(portfolioOptionAllowsQuantity(byId("additional_character"))).toBe(true);
+    expect(portfolioOptionAllowsQuantity(byId("commercial_use"))).toBe(false);
+    expect(portfolioOptionAllowsQuantity(byId("sample_usage_denied"))).toBe(false);
+  });
+});
 
 describe("buildNatoriRequestDataV1", () => {
   it("consultation の最低入力が共有 schema を通る", () => {

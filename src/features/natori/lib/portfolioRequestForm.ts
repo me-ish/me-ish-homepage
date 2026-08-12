@@ -7,6 +7,7 @@ import {
   NATORI_REFERENCE_LINK_MAX_LENGTH,
   normalizeNatoriReferenceUrl,
 } from "@/features/natori/lib/referenceLinks";
+import { PORTFOLIO_OPTION_IDS } from "@/features/natori/constants/portfolioContent";
 import { NATORI_REQUEST_SCHEMA_VERSION } from "@/features/natori/types/request";
 import type {
   NatoriBudgetV1,
@@ -33,6 +34,12 @@ export const NATORI_OTHER_OPTION_ID = "other";
 const OTHER_OPTION_LABEL = "その他のオプション";
 const OPTION_LABEL_MAX_LENGTH = 100;
 const OPTION_NOTES_MAX_LENGTH = 300;
+const QUANTITY_OPTION_IDS = new Set<string>([
+  PORTFOLIO_OPTION_IDS.complexProp,
+  PORTFOLIO_OPTION_IDS.mascotProp,
+  PORTFOLIO_OPTION_IDS.expressionVariation,
+  PORTFOLIO_OPTION_IDS.additionalCharacter,
+]);
 
 export type PortfolioOptionChoice = {
   /** React key / DOM id 用。stable ID が無い項目でも一意になる。 */
@@ -127,6 +134,13 @@ export function portfolioOptionChoices(
     label: option.name.trim().slice(0, OPTION_LABEL_MAX_LENGTH),
     price: option.price,
   }));
+}
+
+/** 個数で料金が増えるオプションだけ数量入力を表示する。legacy項目は安全側で表示する。 */
+export function portfolioOptionAllowsQuantity(
+  choice: Pick<PortfolioOptionChoice, "stableId">
+): boolean {
+  return choice.stableId === null || QUANTITY_OPTION_IDS.has(choice.stableId);
 }
 
 /**

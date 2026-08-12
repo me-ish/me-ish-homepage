@@ -21,6 +21,7 @@ import {
   buildNatoriRequestDataV1,
   collectPortfolioReferenceLinkErrors,
   createInitialPortfolioRequestFormState,
+  portfolioOptionAllowsQuantity,
   portfolioOptionChoices,
   pruneHiddenPortfolioRequestFields,
   submittedPortfolioReferenceLinks,
@@ -566,6 +567,7 @@ export default function PortfolioStructuredCommissionForm({
             {optionChoices.map((choice) => {
               const selection = state.optionSelections[choice.key];
               const checked = selection?.selected === true;
+              const allowsQuantity = portfolioOptionAllowsQuantity(choice);
               return (
                 <div
                   key={choice.key}
@@ -590,29 +592,35 @@ export default function PortfolioStructuredCommissionForm({
                     </span>
                   </label>
                   {checked ? (
-                    <div className="mt-2 grid gap-2 sm:grid-cols-[7rem_1fr]">
-                      <div>
-                        <label
-                          htmlFor={`pf-option-${choice.key}-quantity`}
-                          className="mb-1 block text-xs font-bold"
-                          style={{ color: c.textSoft }}
-                        >
-                          数量
-                        </label>
-                        <input
-                          id={`pf-option-${choice.key}-quantity`}
-                          type="number"
-                          min={1}
-                          max={10}
-                          value={selection?.quantity ?? 1}
-                          onChange={(event) =>
-                            setOptionSelection(choice.key, {
-                              quantity: Number(event.target.value),
-                            })
-                          }
-              className={inputClass}
-                        />
-                      </div>
+                    <div
+                      className={`mt-2 grid gap-2 ${
+                        allowsQuantity ? "sm:grid-cols-[7rem_1fr]" : ""
+                      }`}
+                    >
+                      {allowsQuantity ? (
+                        <div>
+                          <label
+                            htmlFor={`pf-option-${choice.key}-quantity`}
+                            className="mb-1 block text-xs font-bold"
+                            style={{ color: c.textSoft }}
+                          >
+                            数量
+                          </label>
+                          <input
+                            id={`pf-option-${choice.key}-quantity`}
+                            type="number"
+                            min={1}
+                            max={10}
+                            value={selection?.quantity ?? 1}
+                            onChange={(event) =>
+                              setOptionSelection(choice.key, {
+                                quantity: Number(event.target.value),
+                              })
+                            }
+                            className={inputClass}
+                          />
+                        </div>
+                      ) : null}
                       <div>
                         <label
                           htmlFor={`pf-option-${choice.key}-notes`}
@@ -628,7 +636,7 @@ export default function PortfolioStructuredCommissionForm({
                             setOptionSelection(choice.key, { notes: event.target.value })
                           }
                           maxLength={300}
-              className={inputClass}
+                          className={inputClass}
                         />
                       </div>
                     </div>
