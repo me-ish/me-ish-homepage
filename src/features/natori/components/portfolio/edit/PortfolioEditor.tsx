@@ -12,7 +12,11 @@ import {
   preparePortfolioContentForSave,
   withPortfolioEditorStableIds,
 } from "@/features/natori/lib/portfolioContent";
-import type { PortfolioContent, PortfolioWork } from "@/features/natori/types/portfolio";
+import type {
+  PortfolioCollection,
+  PortfolioContent,
+  PortfolioWork,
+} from "@/features/natori/types/portfolio";
 import {
   AddButton,
   ImageUploadField,
@@ -35,6 +39,7 @@ const SECTION_NAV = [
   { id: "section-images", label: "画像" },
   { id: "section-profile", label: "プロフィール" },
   { id: "section-services", label: "対応内容" },
+  { id: "section-collections", label: "コレクション" },
   { id: "section-works", label: "作品" },
   { id: "section-plans", label: "料金" },
   { id: "section-options", label: "オプション" },
@@ -42,6 +47,15 @@ const SECTION_NAV = [
   { id: "section-workflow", label: "制作の流れ" },
   { id: "section-requests", label: "お願い" },
   { id: "section-sns", label: "SNS" },
+] as const;
+
+const COLLECTION_COLOR_OPTIONS = [
+  "#FFD6E5",
+  "#D9F3EE",
+  "#E8DDF7",
+  "#DCEBFA",
+  "#FBE2D5",
+  "#FFF0C9",
 ] as const;
 
 type PortfolioEditorProps = {
@@ -421,19 +435,117 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
           <AddButton label="バッジを追加" onClick={() => patch({ services: [...content.services, ""] })} />
         </SectionCard>
 
+        {/* 作品コレクション */}
+        <SectionCard
+          id="section-collections"
+          emoji="🗂️"
+          title="作品コレクション"
+          description="公開ページでは、コレクションごとに代表作品を最大3件表示します。並び順はここで変更できます。"
+        >
+          <SortableList
+            items={content.collections}
+            getId={(collection) => collection.id}
+            onReorder={(next) => patch({ collections: next })}
+            className="space-y-4"
+            renderRow={(collection, index, handle) => {
+              const memberCount = content.works.filter(
+                (work) => work.collectionId === collection.id
+              ).length;
+              return (
+                <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <p className="text-xs font-bold text-pink-700">
+                      コレクション {index + 1} ・ {memberCount}作品
+                    </p>
+                    <RowControls
+                      handle={handle}
+                      confirmMessage={`コレクション「${collection.name.trim() || "無題"}」を削除しますか？作品は削除されず、未分類になります。`}
+                      onRemove={() =>
+                        patch({
+                          collections: removeItem(content.collections, index),
+                          works: content.works.map((work) =>
+                            work.collectionId === collection.id
+                              ? { ...work, collectionId: null, featured: false }
+                              : work
+                          ),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+                    <TextInput
+                      label="コレクション名"
+                      value={collection.name}
+                      onChange={(value) =>
+                        patch({
+                          collections: updateItem(content.collections, index, { name: value }),
+                        })
+                      }
+                    />
+                    <TextInput
+                      label="説明（任意）"
+                      value={collection.description}
+                      onChange={(value) =>
+                        patch({
+                          collections: updateItem(content.collections, index, {
+                            description: value,
+                          }),
+                        })
+                      }
+                    />
+                    <label className="block text-xs font-bold text-pink-700">
+                      テーマ色
+                      <input
+                        type="color"
+                        value={collection.color}
+                        onChange={(event) =>
+                          patch({
+                            collections: updateItem(content.collections, index, {
+                              color: event.target.value.toUpperCase(),
+                            }),
+                          })
+                        }
+                        className="mt-1 block h-10 w-16 cursor-pointer rounded-lg border border-pink-200 bg-white p-1"
+                      />
+                    </label>
+                  </div>
+                </div>
+              );
+            }}
+          />
+          <AddButton
+            label="コレクションを追加"
+            onClick={() => {
+              const color = COLLECTION_COLOR_OPTIONS[content.collections.length % COLLECTION_COLOR_OPTIONS.length];
+              const collection: PortfolioCollection = {
+                id: `collection-${crypto.randomUUID()}`,
+                name: "新しいコレクション",
+                description: "",
+                color,
+              };
+              patch({ collections: [...content.collections, collection] });
+            }}
+          />
+        </SectionCard>
+
         {/* 作品ギャラリー */}
         <SectionCard
           id="section-works"
           emoji="🎨"
           title="作品ギャラリー"
-          description="コルクボードに表示される作品です。タグは「、」区切りで複数つけられます。同じ言葉を使うと絞り込みボタンにまとまります（例: つなぐ、立ち絵）。"
+          description="作品の所属コレクション、代表表示、公開状態を設定できます。補助タグは受注経路などの管理用です。"
         >
           <SortableList
             items={content.works}
             getId={(work) => work.id}
             onReorder={(next) => patch({ works: next })}
             className="space-y-4"
-            renderRow={(work, index, handle) => (
+            renderRow={(work, index, handle) => {
+              const featuredCount = content.works.filter(
+                (candidate) =>
+                  candidate.collectionId === work.collectionId && candidate.featured
+              ).length;
+              return (
               <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <p className="text-xs font-bold text-pink-700">作品 {index + 1}</p>
@@ -457,19 +569,83 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
                       value={work.title}
                       onChange={(v) => patch({ works: updateItem(content.works, index, { title: v }) })}
                     />
+                    <label className="block text-xs font-bold text-pink-700">
+                      所属コレクション
+                      <select
+                        value={work.collectionId ?? ""}
+                        onChange={(event) => {
+                          const collectionId = event.target.value || null;
+                          const otherFeaturedCount = content.works.filter(
+                            (candidate) =>
+                              candidate.id !== work.id &&
+                              candidate.collectionId === collectionId &&
+                              candidate.featured
+                          ).length;
+                          patch({
+                            works: updateItem(content.works, index, {
+                              collectionId,
+                              featured:
+                                collectionId !== null && work.featured && otherFeaturedCount < 3,
+                            }),
+                          });
+                        }}
+                        className="mt-1 w-full rounded-lg border border-pink-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                      >
+                        <option value="">未分類</option>
+                        {content.collections.map((collection) => (
+                          <option key={collection.id} value={collection.id}>
+                            {collection.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="flex flex-wrap gap-x-5 gap-y-2 rounded-lg border border-pink-100 bg-white px-3 py-2.5 text-xs font-bold text-gray-700">
+                      <label className="flex cursor-pointer items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={work.published}
+                          onChange={(event) =>
+                            patch({
+                              works: updateItem(content.works, index, {
+                                published: event.target.checked,
+                              }),
+                            })
+                          }
+                          className="h-4 w-4 accent-pink-500"
+                        />
+                        公開する
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={work.featured}
+                          disabled={!work.collectionId || (!work.featured && featuredCount >= 3)}
+                          onChange={(event) =>
+                            patch({
+                              works: updateItem(content.works, index, {
+                                featured: event.target.checked,
+                              }),
+                            })
+                          }
+                          className="h-4 w-4 accent-pink-500 disabled:opacity-40"
+                        />
+                        代表作品として優先（{featuredCount}/3）
+                      </label>
+                    </div>
                     <TextInput
-                      label="タグ（「、」区切りで複数OK）"
+                      label="補助タグ（「、」区切りで複数OK）"
                       value={work.tags.join("、")}
                       onChange={(v) =>
                         // 入力中の末尾「、」を消さないよう、trim/空除去は保存準備時に行う
                         patch({ works: updateItem(content.works, index, { tags: v.split(/[、,]/) }) })
                       }
-                      placeholder="例: つなぐ、立ち絵"
+                      placeholder="例: つなぐ、商用実績"
                     />
                   </div>
                 </div>
               </div>
-            )}
+              );
+            }}
           />
           <div className="flex flex-wrap items-center gap-2">
             <AddButton
@@ -478,12 +654,25 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
                 patch({
                   works: [
                     ...content.works,
-                    { id: crypto.randomUUID(), title: "新しい作品", tags: ["一枚絵"], image: null },
+                    {
+                      id: crypto.randomUUID(),
+                      title: "新しい作品",
+                      tags: [],
+                      image: null,
+                      collectionId: content.collections[0]?.id ?? null,
+                      featured: false,
+                      published: true,
+                    },
                   ],
                 })
               }
             />
-            {isDemo ? null : <BulkWorkImageAdd onAdded={appendWorks} />}
+            {isDemo ? null : (
+              <BulkWorkImageAdd
+                onAdded={appendWorks}
+                defaultCollectionId={content.collections[0]?.id ?? null}
+              />
+            )}
           </div>
         </SectionCard>
 
@@ -831,7 +1020,13 @@ function titleFromFileName(name: string): string {
  * タイトルはファイル名が初期値になる（あとから編集できる）。
  * アップロードは1枚ずつ順番に行い、失敗した分は枚数だけ知らせる。
  */
-function BulkWorkImageAdd({ onAdded }: { onAdded: (works: PortfolioWork[]) => void }) {
+function BulkWorkImageAdd({
+  onAdded,
+  defaultCollectionId,
+}: {
+  onAdded: (works: PortfolioWork[]) => void;
+  defaultCollectionId: string | null;
+}) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -851,6 +1046,9 @@ function BulkWorkImageAdd({ onAdded }: { onAdded: (works: PortfolioWork[]) => vo
           title: titleFromFileName(file.name),
           tags: [],
           image: url,
+          collectionId: defaultCollectionId,
+          featured: false,
+          published: true,
         });
       } catch (err) {
         console.error("[portfolio-edit] bulk upload failed", file.name, err);

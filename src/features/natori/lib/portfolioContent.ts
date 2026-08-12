@@ -15,6 +15,14 @@ const stableContentId = z
   .min(1)
   .max(64)
   .regex(/^[a-z0-9]+(?:[_-][a-z0-9]+)*$/u);
+const collectionColor = z.string().regex(/^#[0-9A-F]{6}$/iu);
+
+const collectionSchema = z.object({
+  id: stableContentId,
+  name: shortText,
+  description: z.string().max(500),
+  color: collectionColor,
+});
 
 // 旧形式 (tag: string) と新形式 (tags: string[]) の両方を受け付け、tags に正規化する。
 // DB に残っている旧データは読み込み時にここで自動移行される。
@@ -25,14 +33,20 @@ const workSchema = z
     tag: shortText.optional(),
     tags: z.array(shortText).max(10).optional(),
     image: imageUrl,
+    collectionId: stableContentId.nullable().optional(),
+    featured: z.boolean().optional(),
+    published: z.boolean().optional(),
   })
-  .transform(({ id, title, tag, tags, image }) => ({
+  .transform(({ id, title, tag, tags, image, collectionId, featured, published }) => ({
     id,
     title,
     tags: (tags ?? (tag !== undefined ? [tag] : []))
       .map((t) => t.trim())
       .filter((t) => t.length > 0),
     image,
+    collectionId: collectionId ?? null,
+    featured: featured ?? false,
+    published: published ?? true,
   }));
 
 const planSchema = z
@@ -71,7 +85,7 @@ const socialLinkSchema = z.object({
 
 // works の旧形式→新形式 transform があるため入力型と出力型が異なる。
 // 出力が PortfolioContent と一致することは parsePortfolioContent の戻り値型で担保する。
-export const portfolioContentSchema = z.object({
+const portfolioContentBaseSchema = z.object({
   commissionOpen: z.boolean(),
   artistName: shortText,
   roleEn: shortText,
@@ -85,7 +99,8 @@ export const portfolioContentSchema = z.object({
   aboutImage: imageUrl,
   aboutParagraphs: z.array(longText).max(20),
   services: z.array(shortText).max(30),
-  works: z.array(workSchema).max(60),
+  works: z.array(workSchema).max(300),
+  collections: z.array(collectionSchema).max(20).optional(),
   plans: z.array(planSchema).max(12),
   options: z.array(optionSchema).max(30),
   deliveryLead: longText,
@@ -95,6 +110,71 @@ export const portfolioContentSchema = z.object({
   socialLinks: z.array(socialLinkSchema).max(10),
   copyright: shortText,
 });
+
+const LEGACY_NON_COLLECTION_TAGS = new Set(["つなぐ", "VGen", "外部受注"]);
+const LEGACY_COLLECTION_COLORS = ["#FFD6E5", "#D9F3EE", "#E8DDF7", "#DCEBFA", "#FBE2D5"];
+
+function legacyCollectionColor(name: string, index: number): string {
+  if (/SD|アイコン/i.test(name)) return "#D9F3EE";
+  if (name.includes("一枚絵")) return "#FFD6E5";
+  if (name.includes("立ち絵")) return "#E8DDF7";
+  if (name.includes("卵")) return "#FFF0C9";
+  if (name.includes("グッズ")) return "#FBE2D5";
+  return LEGACY_COLLECTION_COLORS[index % LEGACY_COLLECTION_COLORS.length];
+}
+
+/** collections導入前のタグ式ギャラリーを、読み込み時だけコレクションへ正規化する。 */
+function withLegacyCollections(
+  content: z.output<typeof portfolioContentBaseSchema>
+): PortfolioContent {
+  if (content.collections) {
+    const collectionIds = new Set(content.collections.map((collection) => collection.id));
+    return {
+      ...content,
+      collections: content.collections,
+      works: content.works.map((work) => ({
+        ...work,
+        collectionId:
+          work.collectionId !== null && collectionIds.has(work.collectionId)
+            ? work.collectionId
+            : null,
+      })),
+    };
+  }
+
+  const collections: PortfolioContent["collections"] = [];
+  const collectionIdByName = new Map<string, string>();
+  const featuredCountByCollection = new Map<string, number>();
+  const works = content.works.map((work) => {
+    const collectionName =
+      work.tags.find((tag) => !LEGACY_NON_COLLECTION_TAGS.has(tag)) ?? "その他";
+    let collectionId = collectionIdByName.get(collectionName);
+    if (!collectionId) {
+      collectionId = `legacy_collection_${collections.length + 1}`;
+      collectionIdByName.set(collectionName, collectionId);
+      collections.push({
+        id: collectionId,
+        name: collectionName,
+        description: "",
+        color: legacyCollectionColor(collectionName, collections.length),
+      });
+    }
+    const featuredCount = featuredCountByCollection.get(collectionId) ?? 0;
+    featuredCountByCollection.set(collectionId, featuredCount + 1);
+    return {
+      ...work,
+      tags: work.tags.filter((tag) => tag !== collectionName),
+      collectionId,
+      featured: featuredCount < 3,
+      published: true,
+    };
+  });
+
+  return { ...content, collections, works };
+}
+
+// collectionsは後から追加されたため、旧JSONを読み込み時に自動移行する。
+export const portfolioContentSchema = portfolioContentBaseSchema.transform(withLegacyCollections);
 
 /** unknown な値（DB由来など）を検証して PortfolioContent に。失敗時は null */
 export function parsePortfolioContent(value: unknown): PortfolioContent | null {
@@ -138,6 +218,11 @@ export function preparePortfolioContentForSave(content: PortfolioContent): Portf
       title: work.title.trim(),
       tags: cleanList(work.tags),
     })),
+    collections: content.collections.map((collection) => ({
+      ...collection,
+      name: collection.name.trim(),
+      description: collection.description.trim(),
+    })),
     plans: content.plans.map((plan) => ({
       ...plan,
       features: cleanList(plan.features),
@@ -154,14 +239,7 @@ export function preparePortfolioContentForSave(content: PortfolioContent): Portf
  */
 export const PORTFOLIO_PREVIEW_STORAGE_KEY = "natori-portfolio-preview";
 
-/** 作品のタグからギャラリーのフィルタ一覧を作る（先頭は「すべて」） */
-export function galleryFiltersFromWorks(works: PortfolioContent["works"]): string[] {
-  const tags: string[] = [];
-  for (const work of works) {
-    for (const raw of work.tags) {
-      const tag = raw.trim();
-      if (tag && !tags.includes(tag)) tags.push(tag);
-    }
-  }
-  return ["すべて", ...tags];
+/** 受注経路など、公開カードでは見せない管理用タグを除く。 */
+export function publicPortfolioWorkTags(tags: string[]): string[] {
+  return tags.filter((tag) => !LEGACY_NON_COLLECTION_TAGS.has(tag));
 }

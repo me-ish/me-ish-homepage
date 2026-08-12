@@ -12,6 +12,16 @@
  */
 export type PortfolioVariant = "full" | "showcase";
 
+export type PortfolioCollection = {
+  /** 表示名から独立した一意なID。並べ替え・作品との紐付けに使用 */
+  id: string;
+  name: string;
+  /** コレクション見出しの補足。空文字なら非表示 */
+  description: string;
+  /** テープ・ジャンルバッジに使う淡色の6桁HEX */
+  color: string;
+};
+
 export type PortfolioWork = {
   /** 一意なID（編集画面で生成。react key と並び替えに使用） */
   id: string;
@@ -20,6 +30,12 @@ export type PortfolioWork = {
   tags: string[];
   /** 画像URL（アップロード済みの公開URL）。null ならプレースホルダーSVGを表示 */
   image: string | null;
+  /** 所属コレクション。null は「その他」として扱う */
+  collectionId: string | null;
+  /** コレクション先頭の代表3件へ優先表示する */
+  featured: boolean;
+  /** false の作品は保存したまま公開ギャラリーから外す */
+  published: boolean;
 };
 
 export type PortfolioPlan = {
@@ -83,6 +99,8 @@ export type PortfolioContent = {
   services: string[];
   /** 作品ギャラリー */
   works: PortfolioWork[];
+  /** 作品をまとめる公開コレクション。配列順が公開ページの表示順 */
+  collections: PortfolioCollection[];
   /** 基本料金プラン */
   plans: PortfolioPlan[];
   /** 追加オプション */

@@ -42,7 +42,11 @@ export default function PortfolioLanding({
       <PortfolioStyles />
       <PortfolioHeader content={content} variant={variant} />
       <PortfolioHero content={content} variant={variant} />
-      <PortfolioGallery works={content.works} flatPlaceholders={flatPlaceholders} />
+      <PortfolioGallery
+        works={content.works}
+        collections={content.collections}
+        flatPlaceholders={flatPlaceholders}
+      />
       {showcase ? (
         <PortfolioAbout content={content} variant={variant} flatPlaceholders={flatPlaceholders} />
       ) : (

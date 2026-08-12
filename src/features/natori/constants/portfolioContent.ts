@@ -142,13 +142,18 @@ export const defaultPortfolioContent: PortfolioContent = {
     "動画サムネイル",
     "一枚絵",
   ],
+  collections: [
+    { id: "illustration", name: "一枚絵", description: "", color: "#FFD6E5" },
+    { id: "icon", name: "アイコン", description: "", color: "#D9F3EE" },
+    { id: "standing", name: "立ち絵", description: "", color: "#E8DDF7" },
+  ],
   works: [
-    { id: "work-1", title: "夏色スケッチ", tags: ["一枚絵"], image: null },
-    { id: "work-2", title: "おひるねちゃん", tags: ["アイコン"], image: null },
-    { id: "work-3", title: "制服ver.", tags: ["立ち絵"], image: null },
-    { id: "work-4", title: "推し色コーデ", tags: ["一枚絵"], image: null },
-    { id: "work-5", title: "ふわもこパーカー", tags: ["アイコン"], image: null },
-    { id: "work-6", title: "きらきら配信衣装", tags: ["立ち絵"], image: null },
+    { id: "work-1", title: "夏色スケッチ", tags: [], image: null, collectionId: "illustration", featured: true, published: true },
+    { id: "work-2", title: "おひるねちゃん", tags: [], image: null, collectionId: "icon", featured: true, published: true },
+    { id: "work-3", title: "制服ver.", tags: [], image: null, collectionId: "standing", featured: true, published: true },
+    { id: "work-4", title: "推し色コーデ", tags: [], image: null, collectionId: "illustration", featured: true, published: true },
+    { id: "work-5", title: "ふわもこパーカー", tags: [], image: null, collectionId: "icon", featured: true, published: true },
+    { id: "work-6", title: "きらきら配信衣装", tags: [], image: null, collectionId: "standing", featured: true, published: true },
   ],
   plans: [
     {

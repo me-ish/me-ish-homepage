@@ -11,7 +11,7 @@ export default function PortfolioHero({
   content: PortfolioContent;
   variant?: PortfolioVariant;
 }) {
-  const fallbackWork = content.works.find((work) => Boolean(work.image));
+  const fallbackWork = content.works.find((work) => work.published && Boolean(work.image));
   const representativeImage = content.heroImage || fallbackWork?.image || null;
   const hasExplicitHeroImage = Boolean(content.heroImage);
   const representativeAlt = hasExplicitHeroImage

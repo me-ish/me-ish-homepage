@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  galleryFiltersFromWorks,
   parsePortfolioContent,
   preparePortfolioContentForSave,
+  publicPortfolioWorkTags,
   withPortfolioEditorStableIds,
 } from "../portfolioContent";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
@@ -20,9 +20,13 @@ const validContent: PortfolioContent = {
   aboutImage: "https://example.com/icon.webp",
   aboutParagraphs: ["段落1", "段落2"],
   services: ["SNSアイコン"],
+  collections: [
+    { id: "icon", name: "アイコン", description: "", color: "#D9F3EE" },
+    { id: "standing", name: "立ち絵", description: "", color: "#E8DDF7" },
+  ],
   works: [
-    { id: "w1", title: "作品1", tags: ["アイコン"], image: null },
-    { id: "w2", title: "作品2", tags: ["つなぐ", "立ち絵"], image: "https://example.com/a.webp" },
+    { id: "w1", title: "作品1", tags: [], image: null, collectionId: "icon", featured: true, published: true },
+    { id: "w2", title: "作品2", tags: ["つなぐ"], image: "https://example.com/a.webp", collectionId: "standing", featured: true, published: true },
   ],
   plans: [
     {
@@ -70,8 +74,9 @@ describe("parsePortfolioContent", () => {
   });
 
   it("旧形式の単一 tag は tags に移行される", () => {
+    const { collections: _collections, ...legacyContent } = validContent;
     const parsed = parsePortfolioContent({
-      ...validContent,
+      ...legacyContent,
       works: [
         { id: "w1", title: "旧作品", tag: "アイコン", image: null },
         { id: "w2", title: "タグ空", tag: "  ", image: null },
@@ -79,10 +84,35 @@ describe("parsePortfolioContent", () => {
       ],
     });
     expect(parsed?.works).toEqual([
-      { id: "w1", title: "旧作品", tags: ["アイコン"], image: null },
-      { id: "w2", title: "タグ空", tags: [], image: null },
-      { id: "w3", title: "タグ無し", tags: [], image: null },
+      { id: "w1", title: "旧作品", tags: [], image: null, collectionId: "legacy_collection_1", featured: true, published: true },
+      { id: "w2", title: "タグ空", tags: [], image: null, collectionId: "legacy_collection_2", featured: true, published: true },
+      { id: "w3", title: "タグ無し", tags: [], image: null, collectionId: "legacy_collection_2", featured: true, published: true },
     ]);
+    expect(parsed?.collections.map((collection) => collection.name)).toEqual(["アイコン", "その他"]);
+  });
+
+  it("旧タグから受注経路を除いてコレクションを作り、最初の3件を代表にする", () => {
+    const { collections: _collections, ...legacyContent } = validContent;
+    const parsed = parsePortfolioContent({
+      ...legacyContent,
+      works: [1, 2, 3, 4].map((number) => ({
+        id: `w${number}`,
+        title: `SD ${number}`,
+        tags: ["つなぐ", "SDキャラ"],
+        image: null,
+      })),
+    });
+
+    expect(parsed?.collections).toHaveLength(1);
+    expect(parsed?.collections[0]?.name).toBe("SDキャラ");
+    expect(parsed?.collections[0]?.color).toBe("#D9F3EE");
+    expect(parsed?.works.map((work) => work.tags)).toEqual([
+      ["つなぐ"],
+      ["つなぐ"],
+      ["つなぐ"],
+      ["つなぐ"],
+    ]);
+    expect(parsed?.works.map((work) => work.featured)).toEqual([true, true, true, false]);
   });
 
   it("IDの無い既知legacy項目は完全一致labelだけでstable IDへ補完する", () => {
@@ -160,20 +190,10 @@ describe("portfolio editor stable IDs", () => {
   });
 });
 
-describe("galleryFiltersFromWorks", () => {
-  it("先頭に「すべて」、以降は作品タグを重複なし・出現順で返す", () => {
-    expect(
-      galleryFiltersFromWorks([
-        { id: "1", title: "a", tags: ["アイコン"], image: null },
-        { id: "2", title: "b", tags: ["つなぐ", "一枚絵"], image: null },
-        { id: "3", title: "c", tags: ["アイコン", "つなぐ"], image: null },
-        { id: "4", title: "d", tags: ["  "], image: null },
-        { id: "5", title: "e", tags: [], image: null },
-      ])
-    ).toEqual(["すべて", "アイコン", "つなぐ", "一枚絵"]);
-  });
-
-  it("作品ゼロなら「すべて」のみ", () => {
-    expect(galleryFiltersFromWorks([])).toEqual(["すべて"]);
+describe("publicPortfolioWorkTags", () => {
+  it("受注経路タグだけを公開表示から除く", () => {
+    expect(publicPortfolioWorkTags(["つなぐ", "VGen", "外部受注", "商用実績"])).toEqual([
+      "商用実績",
+    ]);
   });
 });

@@ -9,12 +9,16 @@ import {
   placeholderPalettes,
   portfolioColors as c,
   portfolioDecorativeColors as d,
-  tapeColors,
   workRotations,
 } from "@/features/natori/constants/portfolioContent";
-import { galleryFiltersFromWorks } from "@/features/natori/lib/portfolioContent";
-import type { PortfolioWork } from "@/features/natori/types/portfolio";
+import { publicPortfolioWorkTags } from "@/features/natori/lib/portfolioContent";
+import type {
+  PortfolioCollection,
+  PortfolioWork,
+} from "@/features/natori/types/portfolio";
 import ChibiFace from "./ChibiFace";
+
+const COLLECTION_PREVIEW_LIMIT = 3;
 
 function MaskingTape({ color, angle }: { color: string; angle: number }) {
   return (
@@ -39,15 +43,48 @@ function MaskingTape({ color, angle }: { color: string; angle: number }) {
 // （/natori/works を営業先に見せる際にソースにも販売導線を残さないため）。
 export default function PortfolioGallery({
   works,
+  collections,
   flatPlaceholders,
 }: {
   works: PortfolioWork[];
+  collections: PortfolioCollection[];
   /** 画像なし作品のプレースホルダーをキャラSVGではなくベタ塗りにする（デモ用） */
   flatPlaceholders?: boolean;
 }) {
-  const filters = galleryFiltersFromWorks(works);
-  const [activeFilter, setActiveFilter] = useState<string>("すべて");
   const [selected, setSelected] = useState<PortfolioWork | null>(null);
+  const [expandedCollectionIds, setExpandedCollectionIds] = useState<
+    Set<string>
+  >(() => new Set());
+
+  const collectionGroups = collections
+    .map((collection) => ({
+      collection,
+      works: works
+        .filter((work) => work.published && work.collectionId === collection.id)
+        .toSorted((a, b) => Number(b.featured) - Number(a.featured)),
+    }))
+    .filter((group) => group.works.length > 0);
+  const unassignedWorks = works.filter(
+    (work) =>
+      work.published &&
+      (work.collectionId === null ||
+        !collections.some((collection) => collection.id === work.collectionId)),
+  );
+  const groups =
+    unassignedWorks.length > 0
+      ? [
+          ...collectionGroups,
+          {
+            collection: {
+              id: "unassigned",
+              name: "その他",
+              description: "",
+              color: c.accentSoft,
+            },
+            works: unassignedWorks,
+          },
+        ]
+      : collectionGroups;
 
   // モーダル表示中は Esc で閉じられるようにし、背景のスクロールを止める
   useEffect(() => {
@@ -64,109 +101,113 @@ export default function PortfolioGallery({
     };
   }, [selected]);
 
-  const shown =
-    activeFilter === "すべて" ? works : works.filter((work) => work.tags.includes(activeFilter));
+  const toggleCollection = (collectionId: string) => {
+    setExpandedCollectionIds((current) => {
+      const next = new Set(current);
+      if (next.has(collectionId)) next.delete(collectionId);
+      else next.add(collectionId);
+      return next;
+    });
+  };
+
+  const selectedCollection = selected
+    ? (collections.find(
+        (collection) => collection.id === selected.collectionId,
+      ) ?? null)
+    : null;
 
   return (
     <section id="gallery" className="mx-auto max-w-6xl px-5 py-16">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-10">
         <h2 className="text-2xl font-black md:text-3xl">
           作品ギャラリー <span style={{ color: d.sparkleCool }}>°˖✧</span>
         </h2>
-        <div className="flex flex-wrap gap-2">
-          {filters.map((f) => (
-            <button
-              key={f}
-              onClick={() => setActiveFilter(f)}
-              aria-pressed={activeFilter === f}
-              className="pf-cute-focus inline-flex items-center gap-1.5 rounded-full border-2 px-4 py-2 text-xs font-bold transition md:text-sm"
-              style={
-                activeFilter === f
-                  ? { background: c.action, borderColor: c.action, color: c.onAction }
-                  : { background: "transparent", borderColor: c.borderStrong, color: c.textSoft }
-              }
-            >
-              {activeFilter === f ? <span aria-hidden="true">✓</span> : null}
-              {f}
-            </button>
-          ))}
-        </div>
+        <p className="mt-2 text-sm" style={{ color: c.textSoft }}>
+          ジャンルごとに代表作品をご覧いただけます。
+        </p>
       </div>
 
-      <div className="grid gap-x-8 gap-y-10 pt-2 sm:grid-cols-2 lg:grid-cols-3">
-        {shown.map((work, index) => {
-          const palette = placeholderPalettes[index % placeholderPalettes.length];
-          const rotate = workRotations[index % workRotations.length];
-          const tape = tapeColors[index % tapeColors.length];
-          const tapeAngle = index % 2 === 0 ? -4 : 3;
+      <div className="space-y-14">
+        {groups.map(({ collection, works: collectionWorks }, groupIndex) => {
+          const expanded = expandedCollectionIds.has(collection.id);
+          const shownWorks = expanded
+            ? collectionWorks
+            : collectionWorks.slice(0, COLLECTION_PREVIEW_LIMIT);
           return (
-            <div
-              key={work.id}
-              className={`pf-pin-card ${rotate} relative rounded-xl p-3 pb-4 pt-5`}
-              style={{
-                background: c.surface,
-                boxShadow: "0 10px 20px rgba(36,36,36,0.08)",
-              }}
+            <section
+              key={collection.id}
+              aria-labelledby={`collection-${collection.id}`}
             >
-              <MaskingTape color={tape} angle={tapeAngle} />
-              {/* 作品画像。編集画面から画像を設定すると差し替わる。クリックで拡大モーダル */}
-              <button
-                type="button"
-                onClick={work.image ? () => setSelected(work) : undefined}
-                aria-label={work.image ? `${work.title} を拡大表示` : undefined}
-                className={`pf-cute-focus relative mb-3 flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-lg ${
-                  work.image ? "cursor-zoom-in" : "cursor-default"
-                }`}
-                style={{ background: c.surfaceSubtle }}
-              >
-                {work.image ? (
-                  <Image
-                    src={work.image}
-                    alt={work.title}
-                    fill
-                    sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                    className="object-cover"
-                    // 先頭の作品はファーストビューに入る（LCP）ので優先読み込み
-                    priority={index === 0}
-                  />
-                ) : flatPlaceholders ? (
+              <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2.5">
                   <span
-                    aria-hidden
-                    className="absolute inset-0"
-                    style={{ background: palette.hair }}
+                      className="h-3 w-3 rounded-full"
+                      style={{ background: collection.color }}
+                      aria-hidden="true"
                   />
-                ) : (
-                  <ChibiFace
-                    size={110}
-                    skin={palette.skin}
-                    hair={palette.hair}
-                    accent={palette.accent}
-                  />
-                )}
-              </button>
-              <div className="flex items-center justify-between gap-2">
-                <p className="min-w-0 truncate font-bold">{work.title}</p>
-                {work.tags.length > 0 ? (
-                  <span className="flex shrink-0 flex-wrap justify-end gap-1">
-                    {work.tags.map((tag) => (
+                    <h3
+                      id={`collection-${collection.id}`}
+                      className="text-xl font-black md:text-2xl"
+                    >
+                      {collection.name}
+                    </h3>
                       <span
-                        key={tag}
-                        className="rounded-full px-2 py-1 text-xs font-bold"
-                        style={{ background: palette.accent, color: c.text }}
+                      className="text-xs font-bold"
+                      style={{ color: c.textSoft }}
                       >
-                        {tag}
-                      </span>
-                    ))}
+                      {collectionWorks.length}作品
                   </span>
+                  </div>
+                  {collection.description ? (
+                    <p className="mt-2 text-sm" style={{ color: c.textSoft }}>
+                      {collection.description}
+                    </p>
                 ) : null}
               </div>
             </div>
+              <div className="grid gap-x-8 gap-y-10 pt-2 sm:grid-cols-2 lg:grid-cols-3">
+                {shownWorks.map((work, index) => (
+                  <PortfolioWorkCard
+                    key={work.id}
+                    work={work}
+                    index={index}
+                    collection={collection}
+                    flatPlaceholder={flatPlaceholders}
+                    priority={groupIndex === 0 && index === 0}
+                    onSelect={setSelected}
+                  />
+                ))}
+              </div>
+              {collectionWorks.length > COLLECTION_PREVIEW_LIMIT ? (
+                <div className="mt-7 text-center">
+                  <button
+                    type="button"
+                    aria-expanded={expanded}
+                    onClick={() => toggleCollection(collection.id)}
+                    className="pf-cute-focus rounded-full border-2 px-5 py-2.5 text-sm font-bold"
+                    style={{
+                      borderColor: collection.color,
+                      background: c.surface,
+                      color: c.text,
+                    }}
+                  >
+                    {expanded
+                      ? "代表作品だけ表示"
+                      : `${collectionWorks.length}作品をすべて見る`}
+                  </button>
+                </div>
+              ) : null}
+            </section>
           );
         })}
       </div>
-      {shown.length === 0 ? (
-        <p className="py-8 text-center text-sm font-bold" style={{ color: c.textSoft }}>
-          このタグの作品はまだありません。
+      {groups.length === 0 ? (
+        <p
+          className="py-10 text-center text-sm font-bold"
+          style={{ color: c.textSoft }}
+        >
+          公開中の作品はまだありません。
         </p>
       ) : null}
 
@@ -182,7 +223,10 @@ export default function PortfolioGallery({
         >
           <div
             className="relative flex max-h-full w-full max-w-3xl flex-col rounded-xl p-3 pb-4"
-            style={{ background: c.surface, boxShadow: "0 20px 40px rgba(36,36,36,0.26)" }}
+            style={{
+              background: c.surface,
+              boxShadow: "0 20px 40px rgba(36,36,36,0.26)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -208,9 +252,21 @@ export default function PortfolioGallery({
             </div>
             <div className="mt-3 flex items-center justify-between gap-2 px-1">
               <p className="min-w-0 truncate font-bold">{selected.title}</p>
-              {selected.tags.length > 0 ? (
+              {selectedCollection ||
+              publicPortfolioWorkTags(selected.tags).length > 0 ? (
                 <span className="flex shrink-0 flex-wrap justify-end gap-1">
-                  {selected.tags.map((tag) => (
+                  {selectedCollection ? (
+                    <span
+                      className="rounded-full px-2 py-1 text-xs font-bold"
+                      style={{
+                        background: selectedCollection.color,
+                        color: c.text,
+                      }}
+                    >
+                      {selectedCollection.name}
+                    </span>
+                  ) : null}
+                  {publicPortfolioWorkTags(selected.tags).map((tag) => (
                     <span
                       key={tag}
                       className="rounded-full px-2 py-1 text-xs font-bold"
@@ -226,5 +282,91 @@ export default function PortfolioGallery({
         </div>
       ) : null}
     </section>
+  );
+}
+
+function PortfolioWorkCard({
+  work,
+  index,
+  collection,
+  flatPlaceholder,
+  priority,
+  onSelect,
+}: {
+  work: PortfolioWork;
+  index: number;
+  collection: PortfolioCollection;
+  flatPlaceholder?: boolean;
+  priority: boolean;
+  onSelect: (work: PortfolioWork) => void;
+}) {
+  const palette = placeholderPalettes[index % placeholderPalettes.length];
+  const rotate = workRotations[index % workRotations.length];
+  const tapeAngle = index % 2 === 0 ? -4 : 3;
+  const publicTags = publicPortfolioWorkTags(work.tags);
+
+  return (
+    <div
+      className={`pf-pin-card ${rotate} relative rounded-xl p-3 pb-4 pt-5`}
+      style={{
+        background: c.surface,
+        boxShadow: "0 10px 20px rgba(36,36,36,0.08)",
+      }}
+    >
+      <MaskingTape color={collection.color} angle={tapeAngle} />
+      <button
+        type="button"
+        onClick={work.image ? () => onSelect(work) : undefined}
+        aria-label={work.image ? `${work.title} を拡大表示` : undefined}
+        className={`pf-cute-focus relative mb-3 flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-lg ${
+          work.image ? "cursor-zoom-in" : "cursor-default"
+        }`}
+        style={{ background: c.surfaceSubtle }}
+      >
+        {work.image ? (
+          <Image
+            src={work.image}
+            alt={work.title}
+            fill
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            className="object-cover"
+            priority={priority}
+          />
+        ) : flatPlaceholder ? (
+          <span
+            aria-hidden
+            className="absolute inset-0"
+            style={{ background: palette.hair }}
+          />
+        ) : (
+          <ChibiFace
+            size={110}
+            skin={palette.skin}
+            hair={palette.hair}
+            accent={palette.accent}
+          />
+        )}
+      </button>
+      <div className="flex items-center justify-between gap-2">
+        <p className="min-w-0 truncate font-bold">{work.title}</p>
+        <span className="flex shrink-0 flex-wrap justify-end gap-1">
+          <span
+            className="rounded-full px-2 py-1 text-xs font-bold"
+            style={{ background: collection.color, color: c.text }}
+          >
+            {collection.name}
+          </span>
+          {publicTags.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full px-2 py-1 text-xs font-bold"
+              style={{ background: c.surfaceSubtle, color: c.textSoft }}
+            >
+              {tag}
+            </span>
+          ))}
+        </span>
+      </div>
+    </div>
   );
 }
