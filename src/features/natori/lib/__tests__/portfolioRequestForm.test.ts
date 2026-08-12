@@ -29,8 +29,18 @@ describe("portfolioOptionAllowsQuantity", () => {
     const byId = (id: string) => choices.find((choice) => choice.stableId === id)!;
     expect(portfolioOptionAllowsQuantity(byId("expression_variation"))).toBe(true);
     expect(portfolioOptionAllowsQuantity(byId("additional_character"))).toBe(true);
-    expect(portfolioOptionAllowsQuantity(byId("commercial_use"))).toBe(false);
-    expect(portfolioOptionAllowsQuantity(byId("sample_usage_denied"))).toBe(false);
+    expect(portfolioOptionAllowsQuantity(byId("detailed_background"))).toBe(false);
+  });
+});
+
+describe("portfolioOptionChoices", () => {
+  it("商用利用と公開可否の専用フィールドに重複する選択肢を除く", () => {
+    expect(choices.map((choice) => choice.stableId)).not.toEqual(
+      expect.arrayContaining(["commercial_use", "sample_usage_denied", "private_work"])
+    );
+    expect(choices.map((choice) => choice.stableId)).toEqual(
+      expect.arrayContaining(["expression_variation", "detailed_background"])
+    );
   });
 });
 

@@ -225,14 +225,23 @@ describe("条件付き入力", () => {
 describe("オプション", () => {
   it("固定オプションには数量欄を表示しない", async () => {
     renderForm();
-    const commercialUse = screen.getByRole("checkbox", { name: /商用利用/ });
-    await userEvent.click(commercialUse);
+    const detailedBackground = screen.getByRole("checkbox", { name: /しっかり背景/ });
+    await userEvent.click(detailedBackground);
     expect(screen.queryByLabelText("数量")).toBeNull();
     expect(screen.getByLabelText("補足（任意）")).toBeTruthy();
 
-    await userEvent.click(commercialUse);
+    await userEvent.click(detailedBackground);
     await userEvent.click(screen.getByLabelText(/表情差分/));
     expect(screen.getByLabelText("数量")).toBeTruthy();
+  });
+
+  it("商用利用と公開可否は専用項目だけに表示する", () => {
+    renderForm();
+    expect(screen.queryByRole("checkbox", { name: /商用利用/ })).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: /サンプル使用不可/ })).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: /完全非公開/ })).toBeNull();
+    expect(screen.getByLabelText("商用利用")).toBeTruthy();
+    expect(screen.getByLabelText("作品の公開可否")).toBeTruthy();
   });
 
   it("stable ID・label snapshot・数量・補足を送る", async () => {

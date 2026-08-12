@@ -40,6 +40,11 @@ const QUANTITY_OPTION_IDS = new Set<string>([
   PORTFOLIO_OPTION_IDS.expressionVariation,
   PORTFOLIO_OPTION_IDS.additionalCharacter,
 ]);
+const DEDICATED_FIELD_OPTION_IDS = new Set<string>([
+  PORTFOLIO_OPTION_IDS.commercialUse,
+  PORTFOLIO_OPTION_IDS.sampleUsageDenied,
+  PORTFOLIO_OPTION_IDS.privateWork,
+]);
 
 export type PortfolioOptionChoice = {
   /** React key / DOM id 用。stable ID が無い項目でも一意になる。 */
@@ -123,17 +128,20 @@ export function createInitialPortfolioRequestFormState(): PortfolioRequestFormSt
 
 /**
  * 掲載設定の追加オプションを、フォームの選択肢へ変換する。
+ * 商用利用・公開可否は専用フィールドで回答するため、重複する項目は除く。
  * 掲載 ID をそのまま stable ID として使い、label 一致からの推定はしない。
  */
 export function portfolioOptionChoices(
   content: Pick<PortfolioContent, "options">
 ): PortfolioOptionChoice[] {
-  return content.options.map((option, index) => ({
-    key: option.id ?? `legacy-option-${index}`,
-    stableId: option.id,
-    label: option.name.trim().slice(0, OPTION_LABEL_MAX_LENGTH),
-    price: option.price,
-  }));
+  return content.options
+    .filter((option) => option.id === null || !DEDICATED_FIELD_OPTION_IDS.has(option.id))
+    .map((option, index) => ({
+      key: option.id ?? `legacy-option-${index}`,
+      stableId: option.id,
+      label: option.name.trim().slice(0, OPTION_LABEL_MAX_LENGTH),
+      price: option.price,
+    }));
 }
 
 /** 個数で料金が増えるオプションだけ数量入力を表示する。legacy項目は安全側で表示する。 */
