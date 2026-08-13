@@ -70,4 +70,43 @@ describe("PortfolioGallery collections", () => {
     expect(screen.queryByText("つなぐ")).toBeNull();
     expect(screen.getByText("商用実績")).toBeTruthy();
   });
+
+  it("モーダル内へフォーカスを移し、Tabを閉じ込め、閉じた後に作品へ戻す", () => {
+    render(
+      <PortfolioGallery
+        collections={collections}
+        works={[work("1", { image: "https://example.com/work.webp" })]}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: "作品1 を拡大表示" });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const dialog = screen.getByRole("dialog", { name: "作品1" });
+    const closeButton = within(dialog).getByRole("button", { name: "閉じる" });
+    expect(document.activeElement).toBe(closeButton);
+
+    fireEvent.keyDown(window, { key: "Tab" });
+    expect(document.activeElement).toBe(closeButton);
+    fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(closeButton);
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("Gallery画像をLCP候補として先読みしない", () => {
+    render(
+      <PortfolioGallery
+        collections={collections}
+        works={[work("1", { image: "https://example.com/work.webp" })]}
+      />,
+    );
+
+    expect(screen.getByRole("img", { name: "作品1" }).getAttribute("fetchpriority")).not.toBe(
+      "high",
+    );
+  });
 });

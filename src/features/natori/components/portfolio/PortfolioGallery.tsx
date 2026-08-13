@@ -3,7 +3,7 @@
 // features/natori/components/portfolio/PortfolioGallery.tsx
 // 作品ギャラリー。マスキングテープで貼ったポラロイド風のカードを並べる。
 // 画像はX(Twitter)の縦長表示に近い 3:4 で見せ、クリックでモーダル拡大表示。
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   placeholderPalettes,
@@ -55,6 +55,9 @@ export default function PortfolioGallery({
   const [expandedCollectionIds, setExpandedCollectionIds] = useState<
     Set<string>
   >(() => new Set());
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const modalTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const collectionGroups = collections
     .map((collection) => ({
@@ -86,11 +89,53 @@ export default function PortfolioGallery({
         ]
       : collectionGroups;
 
-  // モーダル表示中は Esc で閉じられるようにし、背景のスクロールを止める
+  const closeModal = useCallback(() => setSelected(null), []);
+
+  const openModal = (work: PortfolioWork, trigger: HTMLButtonElement) => {
+    modalTriggerRef.current = trigger;
+    setSelected(work);
+  };
+
+  // モーダル表示中はフォーカスを内部に保ち、Esc で閉じ、背景のスクロールを止める。
+  // close 後は作品カードへフォーカスを戻す。
   useEffect(() => {
     if (!selected) return;
+    const trigger = modalTriggerRef.current;
+    closeButtonRef.current?.focus();
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSelected(null);
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeModal();
+        return;
+      }
+      if (e.key !== "Tab") return;
+
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (focusable.length === 0) {
+        e.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!dialog.contains(document.activeElement)) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      } else if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
@@ -98,8 +143,9 @@ export default function PortfolioGallery({
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
+      trigger?.focus();
     };
-  }, [selected]);
+  }, [closeModal, selected]);
 
   const toggleCollection = (collectionId: string) => {
     setExpandedCollectionIds((current) => {
@@ -128,7 +174,7 @@ export default function PortfolioGallery({
       </div>
 
       <div className="space-y-14">
-        {groups.map(({ collection, works: collectionWorks }, groupIndex) => {
+        {groups.map(({ collection, works: collectionWorks }) => {
           const expanded = expandedCollectionIds.has(collection.id);
           const shownWorks = expanded
             ? collectionWorks
@@ -174,8 +220,7 @@ export default function PortfolioGallery({
                     index={index}
                     collection={collection}
                     flatPlaceholder={flatPlaceholders}
-                    priority={groupIndex === 0 && index === 0}
-                    onSelect={setSelected}
+                    onSelect={openModal}
                   />
                 ))}
               </div>
@@ -214,12 +259,14 @@ export default function PortfolioGallery({
       {/* 拡大表示モーダル。背景クリック / ×ボタン / Esc で閉じる */}
       {selected?.image ? (
         <div
+          ref={dialogRef}
           role="dialog"
           aria-modal="true"
           aria-label={selected.title}
+          tabIndex={-1}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8"
           style={{ background: c.overlay }}
-          onClick={() => setSelected(null)}
+          onClick={closeModal}
         >
           <div
             className="relative flex max-h-full w-full max-w-3xl flex-col rounded-xl p-3 pb-4"
@@ -230,8 +277,9 @@ export default function PortfolioGallery({
             onClick={(e) => e.stopPropagation()}
           >
             <button
+              ref={closeButtonRef}
               type="button"
-              onClick={() => setSelected(null)}
+              onClick={closeModal}
               aria-label="閉じる"
               className="pf-cute-focus absolute -right-3 -top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full font-bold shadow-md hover:brightness-105"
               style={{ background: c.action, color: c.onAction }}
@@ -290,15 +338,13 @@ function PortfolioWorkCard({
   index,
   collection,
   flatPlaceholder,
-  priority,
   onSelect,
 }: {
   work: PortfolioWork;
   index: number;
   collection: PortfolioCollection;
   flatPlaceholder?: boolean;
-  priority: boolean;
-  onSelect: (work: PortfolioWork) => void;
+  onSelect: (work: PortfolioWork, trigger: HTMLButtonElement) => void;
 }) {
   const palette = placeholderPalettes[index % placeholderPalettes.length];
   const rotate = workRotations[index % workRotations.length];
@@ -316,7 +362,7 @@ function PortfolioWorkCard({
       <MaskingTape color={collection.color} angle={tapeAngle} />
       <button
         type="button"
-        onClick={work.image ? () => onSelect(work) : undefined}
+        onClick={work.image ? (event) => onSelect(work, event.currentTarget) : undefined}
         aria-label={work.image ? `${work.title} を拡大表示` : undefined}
         className={`pf-cute-focus relative mb-3 flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-lg ${
           work.image ? "cursor-zoom-in" : "cursor-default"
@@ -330,7 +376,6 @@ function PortfolioWorkCard({
             fill
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             className="object-cover"
-            priority={priority}
           />
         ) : flatPlaceholder ? (
           <span

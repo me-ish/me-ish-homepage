@@ -122,8 +122,10 @@ describe("PF-02 interaction states", () => {
     expect(stylesSource).toContain("transition: none");
   });
 
-  it("marks the selected gallery filter beyond color alone", () => {
-    expect(gallerySource).toContain("aria-pressed={activeFilter === f}");
-    expect(gallerySource).toContain('aria-hidden="true">✓</span>');
+  it("labels gallery collections beyond their decorative color", () => {
+    expect(gallerySource).toContain('aria-labelledby={`collection-${collection.id}`}');
+    expect(gallerySource).toContain('id={`collection-${collection.id}`}');
+    expect(gallerySource).toContain("{collection.name}");
+    expect(gallerySource).toContain("aria-expanded={expanded}");
   });
 });
