@@ -1,8 +1,21 @@
 // @vitest-environment jsdom
+import type { ImgHTMLAttributes } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../portfolioFonts", () => ({ fontEnStyle: {} }));
+vi.mock("next/image", () => ({
+  default: ({
+    fill: _fill,
+    priority,
+    alt = "",
+    ...props
+  }: ImgHTMLAttributes<HTMLImageElement> & { fill?: boolean; priority?: boolean }) => (
+    // next/image の priority prop を検証するためのテスト専用 mock。
+    // eslint-disable-next-line @next/next/no-img-element
+    <img {...props} alt={alt} data-priority={priority ? "true" : undefined} />
+  ),
+}));
 
 import PortfolioHero from "@/features/natori/components/portfolio/PortfolioHero";
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
@@ -23,9 +36,11 @@ describe("PF-03 portfolio hero", () => {
     expect(screen.queryByText(defaultPortfolioContent.artistName)).toBeNull();
     expect(screen.getByText(defaultPortfolioContent.roleEn)).toBeTruthy();
     expect(screen.getByText(defaultPortfolioContent.heroDescription)).toBeTruthy();
-    expect(
-      screen.getByRole("img", { name: `${defaultPortfolioContent.artistName}の代表作品` })
-    ).toBeTruthy();
+    const representativeImage = screen.getByRole("img", {
+      name: `${defaultPortfolioContent.artistName}の代表作品`,
+    });
+    expect(representativeImage).toBeTruthy();
+    expect(representativeImage.getAttribute("data-priority")).toBe("true");
     expect(screen.getByRole("link", { name: "相談・見積もり" }).getAttribute("href")).toBe(
       "#form"
     );

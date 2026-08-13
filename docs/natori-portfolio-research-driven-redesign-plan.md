@@ -590,25 +590,25 @@ A + B。
 ### 維持
 
 - `next/image`
-- filter
+- collection grouping / expand-collapse
 - modal enlargement
 - image alt
 - keyboard close / Escape
 - body scroll lock
 - responsive grid
 
-### 削減・変更
+### Visual review 後の確定事項（2026-08-14）
 
-原則削除:
+以下は作品サイトとしての個性と分類の分かりやすさに寄与しているため、現行デザインを維持する。
 
 - masking tape
-- per-card rotation
-- hover rotation reset
-- per-card decorative palette
-- colored tag pill per artwork
-- default strong card shadow
+- per-card rotation / hover rotation reset
+- collection color と tag 表示
+- 現行の card shadow
 
-初期 target:
+当初の「装飾を原則削除する」仮説は採用しない。今後の PF-04 作業は、これらの再設計ではなく modal accessibility と PF-08 の画像読み込み確認に限定する。
+
+維持する構成:
 
 ```text
 image
@@ -637,7 +637,7 @@ small neutral category text
 ### 受け入れ条件
 
 - 作品一覧の主な色が artwork 由来になる。
-- filter selection は色以外でも識別可能。
+- collection は色だけでなく見出しテキストでも識別可能。
 - modal が keyboard だけで開閉できる。
 - first image priority が LCP に本当に寄与する位置か PF-08 で再確認。
 
@@ -1135,10 +1135,10 @@ PF-04 の非対象までリファクタしないでください。
 | D-01 | visual complexity を現行より下げる | A/B | 採用 |
 | D-02 | artwork を装飾より視覚優先する | B | 採用 |
 | D-03 | form は single primary column | A | 採用 |
-| D-04 | Warm neutral + muted rose を初期 palette とする | C | 仮採用、visual review 対象 |
-| D-05 | decorative pink/mint/yellow/peach 同時使用をやめる | B/C | 仮採用 |
-| D-06 | Gallery の tape/rotation を削減する | B/C | 仮採用 |
-| D-07 | Hero に代表 artwork を戻す | B | 仮採用 |
+| D-04 | Warm neutral + muted rose を初期 palette とする | C | 不採用。visual review により lavender + vivid pink を採用 |
+| D-05 | semantic UI color と Gallery の装飾色を分離する | B/C | 採用。collection/tape の装飾色は維持 |
+| D-06 | Gallery の tape/rotation/tag を現行デザインの個性として維持する | C | visual review 後に採用 |
+| D-07 | Hero に代表 artwork を戻す | B | 採用 |
 | D-08 | About を作品・依頼条件より後ろへ置く | B | 仮採用、analytics 対象 |
 | D-09 | consultation / quote domain contract は維持 | existing architecture | 採用 |
 | D-10 | showcase の直接取引導線禁止を維持 | existing product requirement | 採用 |

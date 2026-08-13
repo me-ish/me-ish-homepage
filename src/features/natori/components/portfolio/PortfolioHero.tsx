@@ -77,6 +77,7 @@ export default function PortfolioHero({
                 src={representativeImage}
                 alt={representativeAlt}
                 fill
+                priority
                 sizes="(min-width: 1024px) 512px, (min-width: 768px) 46vw, calc(100vw - 40px)"
                 className="object-contain"
               />
