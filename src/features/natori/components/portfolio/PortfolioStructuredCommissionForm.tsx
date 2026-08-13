@@ -70,6 +70,17 @@ function OptionalBadge() {
   );
 }
 
+function RequiredBadge() {
+  return (
+    <span
+      className={optionalBadgeClass}
+      style={{ background: c.errorSoft, color: c.error }}
+    >
+      必須
+    </span>
+  );
+}
+
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
   return (
@@ -174,6 +185,7 @@ export default function PortfolioStructuredCommissionForm({
     requestType: false,
     usage: false,
     budget: false,
+    materials: false,
   });
   const refFileInputRef = useRef<HTMLInputElement | null>(null);
   const sendingRef = useRef(false);
@@ -188,7 +200,12 @@ export default function PortfolioStructuredCommissionForm({
   const changeMode = (inquiryMode: NatoriInquiryModeV1) => {
     update({ inquiryMode });
     const expanded = inquiryMode === "quote";
-    setOpenSections({ requestType: expanded, usage: expanded, budget: expanded });
+    setOpenSections({
+      requestType: expanded,
+      usage: expanded,
+      budget: expanded,
+      materials: expanded,
+    });
     setDetailsOpen(expanded);
   };
 
@@ -403,6 +420,7 @@ export default function PortfolioStructuredCommissionForm({
       >
         <fieldset>
           <legend className={labelClass}>ご希望</legend>
+          {/* 同じ意思決定の2択を比較するカードなので、desktopのみ横並びにする。 */}
           <div className="grid gap-2 sm:grid-cols-2">
             {(["consultation", "quote"] as const).map((mode) => (
               <label
@@ -427,10 +445,10 @@ export default function PortfolioStructuredCommissionForm({
           </div>
         </fieldset>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4">
           <div>
             <label htmlFor="pf-name" className={labelClass}>
-              お名前（活動名でOK）<span style={{ color: c.error }}>＊</span>
+              お名前（活動名でOK）<RequiredBadge />
             </label>
             <input
               id="pf-name"
@@ -445,7 +463,7 @@ export default function PortfolioStructuredCommissionForm({
           </div>
           <div>
             <label htmlFor="pf-email" className={labelClass}>
-              メールアドレス<span style={{ color: c.error }}>＊</span>
+              メールアドレス<RequiredBadge />
             </label>
             <input
               id="pf-email"
@@ -470,7 +488,7 @@ export default function PortfolioStructuredCommissionForm({
         open={openSections.requestType}
         onToggle={(next) => setOpenSections((current) => ({ ...current, requestType: next }))}
       >
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4">
           <div>
             <label htmlFor="pf-request-type" className={labelClass}>
               ご依頼の種類
@@ -514,7 +532,7 @@ export default function PortfolioStructuredCommissionForm({
         {state.requestType === "other" ? (
           <div>
             <label htmlFor="pf-request-type-other" className={labelClass}>
-              ご依頼の種類（その他の内容）<span style={{ color: c.error }}>＊</span>
+              ご依頼の種類（その他の内容）<RequiredBadge />
             </label>
             <input
               id="pf-request-type-other"
@@ -538,7 +556,7 @@ export default function PortfolioStructuredCommissionForm({
         {state.commissionScope === "other" ? (
           <div>
             <label htmlFor="pf-scope-other" className={labelClass}>
-              制作範囲（その他の内容）<span style={{ color: c.error }}>＊</span>
+              制作範囲（その他の内容）<RequiredBadge />
             </label>
             <input
               id="pf-scope-other"
@@ -591,6 +609,7 @@ export default function PortfolioStructuredCommissionForm({
                       </span>
                     </span>
                   </label>
+                  {/* 数量と補足は同じ追加オプションに属するため、desktopのみ横並びにする。 */}
                   {checked ? (
                     <div
                       className={`mt-2 grid gap-2 ${
@@ -681,7 +700,7 @@ export default function PortfolioStructuredCommissionForm({
         {state.usageTypes.includes("other") ? (
           <div>
             <label htmlFor="pf-usage-other" className={labelClass}>
-              使用目的（その他の内容）<span style={{ color: c.error }}>＊</span>
+              使用目的（その他の内容）<RequiredBadge />
             </label>
             <input
               id="pf-usage-other"
@@ -700,7 +719,7 @@ export default function PortfolioStructuredCommissionForm({
           </div>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4">
           <div>
             <label htmlFor="pf-commercial" className={labelClass}>
               商用利用
@@ -750,7 +769,7 @@ export default function PortfolioStructuredCommissionForm({
         {state.publicationPolicy === "delayed" ? (
           <div>
             <label htmlFor="pf-publication-allowed-from" className={labelClass}>
-              公開可能日<span style={{ color: c.error }}>＊</span>
+              公開可能日<RequiredBadge />
             </label>
             <input
               id="pf-publication-allowed-from"
@@ -804,6 +823,7 @@ export default function PortfolioStructuredCommissionForm({
           </select>
 
           {state.budgetKind === "range" ? (
+            /* 下限と上限は1つの予算範囲を構成するため、desktopのみ横並びにする。 */
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               <div>
                 <label htmlFor="pf-budget-min" className="mb-1 block text-xs font-bold">
@@ -894,7 +914,7 @@ export default function PortfolioStructuredCommissionForm({
               <label htmlFor="pf-deadline-date" className="mb-1 block text-xs font-bold">
                 希望日
                 {state.deadlineKind === "preferred_date" ? (
-                  <span style={{ color: c.error }}>＊</span>
+                  <RequiredBadge />
                 ) : (
                   <span style={{ color: c.textSoft }}>（任意）</span>
                 )}
@@ -940,7 +960,7 @@ export default function PortfolioStructuredCommissionForm({
       >
         <div>
           <label htmlFor="pf-message" className={labelClass}>
-            ご相談・ご依頼の内容<span style={{ color: c.error }}>＊</span>
+            ご相談・ご依頼の内容<RequiredBadge />
           </label>
           <textarea
             id="pf-message"
@@ -1041,8 +1061,8 @@ export default function PortfolioStructuredCommissionForm({
         title="資料"
         description={`画像は最大${NATORI_MAX_REFERENCE_IMAGES}枚（合計10MBまで）、参考URLは最大${NATORI_MAX_REFERENCE_LINKS}件までお送りいただけます。`}
         collapsible
-        open
-        onToggle={() => undefined}
+        open={openSections.materials}
+        onToggle={(next) => setOpenSections((current) => ({ ...current, materials: next }))}
       >
         <div>
           <span className={labelClass}>キャラクター資料（画像添付）</span>
@@ -1110,6 +1130,7 @@ export default function PortfolioStructuredCommissionForm({
               const serverError = serverErrorFor(`referenceLinks.${index}.url`);
               return (
                 <li key={index} className="rounded-lg border-2 p-2" style={{ borderColor: c.borderSubtle }}>
+                  {/* URLとそのラベルは同じ参考資料を表すため、desktopのみ横並びにする。 */}
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div>
                       <label

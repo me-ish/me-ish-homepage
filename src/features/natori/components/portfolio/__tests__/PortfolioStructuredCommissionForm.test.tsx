@@ -47,6 +47,14 @@ function formElement(): HTMLFormElement {
   return document.querySelector("form") as HTMLFormElement;
 }
 
+function detailsBySummary(text: string): HTMLDetailsElement {
+  const details = Array.from(document.querySelectorAll("details")).find((element) =>
+    element.querySelector("summary")?.textContent?.includes(text)
+  );
+  if (!details) throw new Error(`details not found: ${text}`);
+  return details;
+}
+
 function submit() {
   fireEvent.submit(formElement());
 }
@@ -178,7 +186,7 @@ describe("条件付き入力", () => {
     expect(screen.queryByLabelText("公開可能日＊")).toBeNull();
 
     await userEvent.selectOptions(publicationPolicy, "delayed");
-    fireEvent.change(screen.getByLabelText("公開可能日＊"), {
+    fireEvent.change(screen.getByLabelText("公開可能日必須"), {
       target: { value: "2026-10-15" },
     });
 
@@ -195,7 +203,7 @@ describe("条件付き入力", () => {
     renderForm();
     const publicationPolicy = screen.getByLabelText("作品の公開可否");
     await userEvent.selectOptions(publicationPolicy, "delayed");
-    fireEvent.change(screen.getByLabelText("公開可能日＊"), {
+    fireEvent.change(screen.getByLabelText("公開可能日必須"), {
       target: { value: "2026-10-15" },
     });
     await userEvent.selectOptions(publicationPolicy, "allowed");
@@ -406,6 +414,48 @@ describe("server error の表示", () => {
 });
 
 describe("アクセシビリティ / モバイル想定 DOM", () => {
+  it("consultation は任意セクションを閉じ、quote は必要な入力を展開する", async () => {
+    renderForm();
+
+    for (const title of [
+      "依頼の種類",
+      "用途・条件",
+      "予算・納期",
+      "キャラクター・イメージの詳細",
+      "資料",
+    ]) {
+      expect(detailsBySummary(title).open).toBe(false);
+    }
+
+    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+
+    for (const title of [
+      "依頼の種類",
+      "用途・条件",
+      "予算・納期",
+      "キャラクター・イメージの詳細",
+      "資料",
+    ]) {
+      expect(detailsBySummary(title).open).toBe(true);
+    }
+  });
+
+  it("primary fields は desktop でも1列で、必須を文字で示す", () => {
+    renderForm();
+
+    for (const label of [/お名前/, /メールアドレス/, "ご依頼の種類", "商用利用"]) {
+      const control = screen.getByLabelText(label);
+      expect(control.parentElement?.parentElement?.className).not.toContain("sm:grid-cols-2");
+    }
+
+    expect(screen.getAllByText("必須")).toHaveLength(3);
+    expect(screen.getByLabelText(/お名前/).closest("div")?.textContent).toContain("必須");
+    expect(screen.getByLabelText(/メールアドレス/).closest("div")?.textContent).toContain("必須");
+    expect(screen.getByLabelText(/ご相談・ご依頼の内容/).closest("div")?.textContent).toContain(
+      "必須"
+    );
+  });
+
   it("主要入力が label と関連付いている", () => {
     renderForm();
     for (const labelText of [
