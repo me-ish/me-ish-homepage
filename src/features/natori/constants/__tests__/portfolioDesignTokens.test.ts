@@ -122,6 +122,14 @@ describe("PF-02 interaction states", () => {
     expect(stylesSource).toContain("transition: none");
   });
 
+  it("offsets in-page targets below the sticky header", () => {
+    expect(stylesSource).toContain(
+      ":where(#gallery, #pricing, #flow, #about, #requests, #form)"
+    );
+    expect(stylesSource).toContain("scroll-margin-top: 128px");
+    expect(stylesSource).toContain("scroll-margin-top: 88px");
+  });
+
   it("labels gallery collections beyond their decorative color", () => {
     expect(gallerySource).toContain('aria-labelledby={`collection-${collection.id}`}');
     expect(gallerySource).toContain('id={`collection-${collection.id}`}');

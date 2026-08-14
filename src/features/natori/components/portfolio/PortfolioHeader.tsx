@@ -1,6 +1,7 @@
 // features/natori/components/portfolio/PortfolioHeader.tsx
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
+import PortfolioMobileNav from "./PortfolioMobileNav";
 import { fontEnStyle } from "./portfolioFonts";
 
 const NAV_LINKS = [
@@ -62,21 +63,7 @@ export default function PortfolioHeader({
         )}
       </div>
       {/* モバイル用ナビ。md 以上は上のナビがあるので出さない */}
-      <nav
-        aria-label="メインナビゲーション（モバイル）"
-        className="flex gap-5 overflow-x-auto px-5 pb-2.5 text-sm font-medium md:hidden"
-        style={{ color: c.textSoft }}
-      >
-        {navLinks.map((link) => (
-          <a
-            key={link.href}
-            href={link.href}
-            className="pf-cute-focus shrink-0 whitespace-nowrap hover:opacity-70"
-          >
-            {link.label}
-          </a>
-        ))}
-      </nav>
+      <PortfolioMobileNav links={navLinks} />
     </header>
   );
 }
