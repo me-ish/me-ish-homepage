@@ -7,6 +7,9 @@ export const portfolioFontJp = Zen_Maru_Gothic({
   weight: ["400", "500", "700", "900"],
   variable: "--pf-font-jp",
   display: "swap",
+  // 日本語フォントは unicode-range ごとに多数のファイルへ分割される。
+  // 全断片の preload は初期転送を圧迫するため、実際に使う文字だけ通常読込する。
+  preload: false,
 });
 
 export const portfolioFontEn = Fredoka({

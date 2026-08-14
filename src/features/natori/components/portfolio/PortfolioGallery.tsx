@@ -294,7 +294,7 @@ export default function PortfolioGallery({
                 src={selected.image}
                 alt={selected.title}
                 fill
-                sizes="(min-width: 768px) 768px, 100vw"
+                sizes="(min-width: 768px) 768px, calc(100vw - 32px)"
                 className="object-contain"
               />
             </div>
@@ -374,7 +374,7 @@ function PortfolioWorkCard({
             src={work.image}
             alt={work.title}
             fill
-            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            sizes="(min-width: 1024px) 352px, (min-width: 640px) calc(50vw - 36px), calc(100vw - 40px)"
             className="object-cover"
           />
         ) : flatPlaceholder ? (
