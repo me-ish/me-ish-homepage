@@ -436,8 +436,7 @@ export default function PortfolioStructuredCommissionForm({
                   value={mode}
                   checked={state.inquiryMode === mode}
                   onChange={() => changeMode(mode)}
-                  className="h-4 w-4 shrink-0"
-                  style={{ accentColor: c.accent }}
+                  className="pf-choice-control h-4 w-4 shrink-0"
                 />
                 {NATORI_INQUIRY_MODE_LABELS_V1[mode]}
               </label>
@@ -599,8 +598,7 @@ export default function PortfolioStructuredCommissionForm({
                       onChange={(event) =>
                         setOptionSelection(choice.key, { selected: event.target.checked })
                       }
-                      className="pf-cute-focus h-4 w-4 shrink-0"
-                      style={{ accentColor: c.accent }}
+                      className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0"
                     />
                     <span style={{ color: c.textSoft }}>
                       {choice.label}
@@ -688,8 +686,7 @@ export default function PortfolioStructuredCommissionForm({
                   type="checkbox"
                   checked={state.usageTypes.includes(usage)}
                   onChange={() => toggleUsageType(usage)}
-                  className="pf-cute-focus h-4 w-4 shrink-0"
-                  style={{ accentColor: c.accent }}
+                  className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0"
                 />
                 {NATORI_USAGE_TYPE_LABELS_V1[usage]}
               </label>

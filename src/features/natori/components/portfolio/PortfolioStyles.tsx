@@ -13,6 +13,26 @@ export default function PortfolioStyles() {
       .pf-pin-card { transition: transform 0.25s ease, box-shadow 0.25s ease; }
       .pf-pin-card:hover, .pf-pin-card:focus-within { transform: rotate(0deg) translateY(-6px) !important; box-shadow: 0 18px 30px rgba(36,36,36,0.16); }
       .pf-form-control { border-color: ${c.borderStrong}; }
+      .pf-choice-control {
+        appearance: none;
+        border: 2px solid ${c.borderStrong};
+        background-color: ${c.surface};
+        background-position: center;
+        background-repeat: no-repeat;
+        transition: background-color 0.15s ease, border-color 0.15s ease;
+      }
+      .pf-choice-control[type="radio"] { border-radius: 9999px; }
+      .pf-choice-control[type="checkbox"] { border-radius: 0.25rem; }
+      .pf-choice-control:checked {
+        border-color: ${c.action};
+        background-color: ${c.action};
+      }
+      .pf-choice-control[type="radio"]:checked {
+        background-image: radial-gradient(circle, ${c.onAction} 0 30%, transparent 34%);
+      }
+      .pf-choice-control[type="checkbox"]:checked {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3.5 8.5 3 3 6-7' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      }
       .pf-portfolio-root :where(#gallery, #pricing, #flow, #about, #requests, #form) { scroll-margin-top: 128px; }
       .pf-cute-focus:focus-visible,
       .pf-portfolio-root :where(a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
@@ -26,6 +46,13 @@ export default function PortfolioStyles() {
         .pf-floaty, .pf-wobble { animation: none; }
         .pf-pin-card { transition: none; }
         .pf-pin-card:hover, .pf-pin-card:focus-within { transform: none !important; }
+        .pf-choice-control { transition: none; }
+      }
+      @media (forced-colors: active) {
+        .pf-choice-control {
+          appearance: auto;
+          background-image: none;
+        }
       }
     `}</style>
   );

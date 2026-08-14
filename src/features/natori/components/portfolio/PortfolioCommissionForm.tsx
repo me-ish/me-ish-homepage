@@ -327,8 +327,7 @@ export default function PortfolioCommissionForm({
                       name="options"
                       value={`${option.name}（${option.price}）`}
                       data-option-id={option.id ?? undefined}
-                      className="pf-cute-focus h-4 w-4 shrink-0"
-                      style={{ accentColor: c.accent }}
+                      className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0"
                     />
                     <span>
                       {option.name}
