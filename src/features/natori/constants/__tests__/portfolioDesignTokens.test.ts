@@ -161,3 +161,37 @@ describe("PF-08 image and font loading", () => {
     );
   });
 });
+
+describe("portfolio choice controls", () => {
+  const stylesSource = readFileSync(
+    resolve(process.cwd(), "src/features/natori/components/portfolio/PortfolioStyles.tsx"),
+    "utf8"
+  );
+  const structuredFormSource = readFileSync(
+    resolve(
+      process.cwd(),
+      "src/features/natori/components/portfolio/PortfolioStructuredCommissionForm.tsx"
+    ),
+    "utf8"
+  );
+  const legacyFormSource = readFileSync(
+    resolve(process.cwd(), "src/features/natori/components/portfolio/PortfolioCommissionForm.tsx"),
+    "utf8"
+  );
+
+  it("uses white selection marks instead of browser-selected black marks", () => {
+    expect(stylesSource).toContain('.pf-choice-control[type="radio"]:checked');
+    expect(stylesSource).toContain("radial-gradient(circle, ${c.onAction}");
+    expect(stylesSource).toContain("stroke='white'");
+  });
+
+  it("applies the custom choice control to current and legacy forms", () => {
+    expect(structuredFormSource).toContain('className="pf-choice-control h-4 w-4 shrink-0"');
+    expect(structuredFormSource).toContain(
+      'className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0"'
+    );
+    expect(legacyFormSource).toContain(
+      'className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0"'
+    );
+  });
+});
