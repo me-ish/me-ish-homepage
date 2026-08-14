@@ -137,3 +137,27 @@ describe("PF-02 interaction states", () => {
     expect(gallerySource).toContain("aria-expanded={expanded}");
   });
 });
+
+describe("PF-08 image and font loading", () => {
+  const fontsSource = readFileSync(
+    resolve(process.cwd(), "src/features/natori/components/portfolio/portfolioFonts.ts"),
+    "utf8"
+  );
+  const gallerySource = readFileSync(
+    resolve(process.cwd(), "src/features/natori/components/portfolio/PortfolioGallery.tsx"),
+    "utf8"
+  );
+
+  it("does not preload every Japanese font unicode-range fragment", () => {
+    expect(fontsSource).toContain("preload: false");
+  });
+
+  it("matches gallery image candidates to the bounded responsive grid", () => {
+    expect(gallerySource).toContain(
+      'sizes="(min-width: 1024px) 352px, (min-width: 640px) calc(50vw - 36px), calc(100vw - 40px)"'
+    );
+    expect(gallerySource).toContain(
+      'sizes="(min-width: 768px) 768px, calc(100vw - 32px)"'
+    );
+  });
+});
