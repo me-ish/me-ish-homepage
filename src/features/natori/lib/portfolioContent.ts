@@ -176,10 +176,23 @@ function withLegacyCollections(
 // collectionsは後から追加されたため、旧JSONを読み込み時に自動移行する。
 export const portfolioContentSchema = portfolioContentBaseSchema.transform(withLegacyCollections);
 
+const LEGACY_NATORI_HERO_TITLES = new Set([
+  "ナトリのあとりえへようこそ",
+  "ナトリのポートフォリオへようこそ",
+]);
+
+/** 保存済みの翻訳調タイトルを、現在の自然な表記へ読み込み時に移行する。 */
+function withNaturalNatoriHeroTitle(content: PortfolioContent): PortfolioContent {
+  if (!LEGACY_NATORI_HERO_TITLES.has(`${content.heroTitleAccent}${content.heroTitleTail}`)) {
+    return content;
+  }
+  return { ...content, heroTitleAccent: "ナトリの", heroTitleTail: "あとりえ" };
+}
+
 /** unknown な値（DB由来など）を検証して PortfolioContent に。失敗時は null */
 export function parsePortfolioContent(value: unknown): PortfolioContent | null {
   const result = portfolioContentSchema.safeParse(value);
-  return result.success ? result.data : null;
+  return result.success ? withNaturalNatoriHeroTitle(result.data) : null;
 }
 
 /**

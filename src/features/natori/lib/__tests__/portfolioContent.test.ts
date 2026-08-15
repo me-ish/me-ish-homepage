@@ -13,8 +13,8 @@ const validContent: PortfolioContent = {
   roleEn: "Cute Anime Illustrator",
   profileName: "ナトリ",
   profileRole: "Illustrator",
-  heroTitleAccent: "ナトリ",
-  heroTitleTail: "のポートフォリオへようこそ",
+  heroTitleAccent: "ナトリの",
+  heroTitleTail: "あとりえ",
   heroDescription: "紹介文",
   heroImage: null,
   aboutImage: "https://example.com/icon.webp",
@@ -49,6 +49,16 @@ const validContent: PortfolioContent = {
 describe("parsePortfolioContent", () => {
   it("正しい形の content はそのまま通る", () => {
     expect(parsePortfolioContent(validContent)).toEqual(validContent);
+  });
+
+  it("保存済みの『へようこそ』タイトルを自然な表記へ移行する", () => {
+    expect(
+      parsePortfolioContent({
+        ...validContent,
+        heroTitleAccent: "ナトリのあとりえ",
+        heroTitleTail: "へようこそ",
+      })
+    ).toMatchObject({ heroTitleAccent: "ナトリの", heroTitleTail: "あとりえ" });
   });
 
   it("profileName / profileRole が無い旧データは空文字で補完される", () => {

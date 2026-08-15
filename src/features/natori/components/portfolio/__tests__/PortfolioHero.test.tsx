@@ -41,6 +41,12 @@ describe("PF-03 portfolio hero", () => {
     expect(screen.queryByText(defaultPortfolioContent.artistName)).toBeNull();
     expect(screen.getByText(defaultPortfolioContent.roleEn)).toBeTruthy();
     expect(screen.getByText(defaultPortfolioContent.heroDescription)).toBeTruthy();
+    const heroTitle = screen.getByRole("heading", { level: 1, name: "ナトリのあとりえ" });
+    const coloredCharacters = heroTitle.querySelectorAll("span.whitespace-nowrap > span");
+    expect(coloredCharacters).toHaveLength(4);
+    expect(
+      new Set(Array.from(coloredCharacters, (element) => element.getAttribute("style"))).size
+    ).toBe(4);
     const representativeImage = screen.getByRole("img", {
       name: `${defaultPortfolioContent.artistName}の代表作品`,
     });

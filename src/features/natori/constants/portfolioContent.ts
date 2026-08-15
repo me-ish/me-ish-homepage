@@ -41,6 +41,14 @@ export const portfolioColors = {
   pageTranslucent: "rgba(255,247,250,0.92)",
 } as const;
 
+/** Heroの「あとりえ」を、淡い背景でも読める画材色で彩る。 */
+export const portfolioHeroTitleColors = [
+  portfolioColors.accentText,
+  "#397A95",
+  "#9A6314",
+  portfolioColors.success,
+] as const;
+
 /**
  * 作品未設定時のプレースホルダーと既存装飾に限る一時 palette。
  * UI状態や本文には使わず、tape/rotation/tagの整理と合わせてPF-04/05で縮小する。
@@ -123,8 +131,8 @@ export const defaultPortfolioContent: PortfolioContent = {
   roleEn: "Cute Anime Illustrator",
   profileName: "ナトリ",
   profileRole: "Illustrator",
-  heroTitleAccent: "ナトリ",
-  heroTitleTail: "のポートフォリオへようこそ",
+  heroTitleAccent: "ナトリの",
+  heroTitleTail: "あとりえ",
   heroDescription:
     "淡いピンクや水色を基調とした、やわらかく可愛い女の子のイラストを描いています。アニメ塗りをベースに、シンプルながらも印象に残る表現を心がけています。",
   heroImage: null,

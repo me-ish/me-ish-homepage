@@ -83,9 +83,9 @@ export type PortfolioContent = {
   profileName: string;
   /** プロフィール欄の肩書き。空ならヒーローの英字肩書き (roleEn) と同じ表示 */
   profileRole: string;
-  /** キャッチコピー（色付き部分） */
+  /** Heroタイトルの前半（基本の文字色） */
   heroTitleAccent: string;
-  /** キャッチコピー（続き） */
+  /** Heroタイトルの後半（画材色で一文字ずつ彩る部分） */
   heroTitleTail: string;
   /** ヒーローの紹介文 */
   heroDescription: string;
