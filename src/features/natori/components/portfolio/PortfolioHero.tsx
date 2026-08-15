@@ -3,6 +3,7 @@ import Image from "next/image";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
 import { fontEnStyle } from "./portfolioFonts";
+import PortfolioHeroPrimaryCta from "./PortfolioHeroPrimaryCta";
 
 export default function PortfolioHero({
   content,
@@ -49,13 +50,10 @@ export default function PortfolioHero({
           </p>
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             {variant === "showcase" ? null : (
-              <a
-                href="#form"
+              <PortfolioHeroPrimaryCta
                 className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-xl px-6 py-3 font-bold"
                 style={{ background: c.action, color: c.onAction }}
-              >
-                相談・見積もり
-              </a>
+              />
             )}
             <a
               href="#gallery"

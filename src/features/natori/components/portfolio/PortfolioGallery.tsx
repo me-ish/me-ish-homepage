@@ -11,7 +11,9 @@ import {
   portfolioDecorativeColors as d,
   workRotations,
 } from "@/features/natori/constants/portfolioContent";
+import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import { publicPortfolioWorkTags } from "@/features/natori/lib/portfolioContent";
+import { portfolioGalleryEventLabel } from "@/features/natori/lib/pageEvents";
 import type {
   PortfolioCollection,
   PortfolioWork,
@@ -91,8 +93,16 @@ export default function PortfolioGallery({
 
   const closeModal = useCallback(() => setSelected(null), []);
 
-  const openModal = (work: PortfolioWork, trigger: HTMLButtonElement) => {
+  const openModal = (
+    work: PortfolioWork,
+    collectionName: string,
+    trigger: HTMLButtonElement
+  ) => {
     modalTriggerRef.current = trigger;
+    trackNatoriPageEvent(
+      "portfolio_gallery_open",
+      portfolioGalleryEventLabel(collectionName, work.title)
+    );
     setSelected(work);
   };
 
@@ -344,7 +354,7 @@ function PortfolioWorkCard({
   index: number;
   collection: PortfolioCollection;
   flatPlaceholder?: boolean;
-  onSelect: (work: PortfolioWork, trigger: HTMLButtonElement) => void;
+  onSelect: (work: PortfolioWork, collectionName: string, trigger: HTMLButtonElement) => void;
 }) {
   const palette = placeholderPalettes[index % placeholderPalettes.length];
   const rotate = workRotations[index % workRotations.length];
@@ -362,7 +372,11 @@ function PortfolioWorkCard({
       <MaskingTape color={collection.color} angle={tapeAngle} />
       <button
         type="button"
-        onClick={work.image ? (event) => onSelect(work, event.currentTarget) : undefined}
+        onClick={
+          work.image
+            ? (event) => onSelect(work, collection.name, event.currentTarget)
+            : undefined
+        }
         aria-label={work.image ? `${work.title} を拡大表示` : undefined}
         className={`pf-cute-focus relative mb-3 flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-lg ${
           work.image ? "cursor-zoom-in" : "cursor-default"

@@ -198,6 +198,8 @@ export default function PortfolioStructuredCommissionForm({
 
   /** モード切替で任意セクションの開閉だけを変える。残留値は prune で落とす。 */
   const changeMode = (inquiryMode: NatoriInquiryModeV1) => {
+    if (inquiryMode === state.inquiryMode) return;
+    trackNatoriPageEvent("portfolio_form_mode_select", inquiryMode);
     update({ inquiryMode });
     const expanded = inquiryMode === "quote";
     setOpenSections({
