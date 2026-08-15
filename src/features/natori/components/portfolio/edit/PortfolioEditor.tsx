@@ -300,12 +300,12 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <TextInput
-                label="キャッチコピー（ピンク色になる部分）"
+                label="トップタイトル前半（濃い文字色）"
                 value={content.heroTitleAccent}
                 onChange={(v) => patch({ heroTitleAccent: v })}
               />
               <TextInput
-                label="キャッチコピー（続き）"
+                label="トップタイトル後半（画材のような色付き文字）"
                 value={content.heroTitleTail}
                 onChange={(v) => patch({ heroTitleTail: v })}
               />

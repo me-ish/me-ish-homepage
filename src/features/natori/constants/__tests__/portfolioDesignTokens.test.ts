@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   legacyNatoriTransactionColors,
   portfolioColors,
+  portfolioHeroTitleColors,
 } from "@/features/natori/constants/portfolioContent";
 
 function relativeLuminance(hex: string): number {
@@ -65,6 +66,12 @@ describe("PF-02 portfolio semantic colors", () => {
     expect(
       contrastRatio(portfolioColors.borderStrong, portfolioColors.surface)
     ).toBeGreaterThanOrEqual(3);
+  });
+
+  it("keeps every colorful Hero title letter readable on the page background", () => {
+    for (const color of portfolioHeroTitleColors) {
+      expect(contrastRatio(color, portfolioColors.page)).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   it("does not expose the old color-as-purpose token names", () => {

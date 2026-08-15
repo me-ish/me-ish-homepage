@@ -1,6 +1,9 @@
 // features/natori/components/portfolio/PortfolioHero.tsx
 import Image from "next/image";
-import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import {
+  portfolioColors as c,
+  portfolioHeroTitleColors,
+} from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
 import { fontEnStyle } from "./portfolioFonts";
 import PortfolioHeroPrimaryCta from "./PortfolioHeroPrimaryCta";
@@ -38,9 +41,25 @@ export default function PortfolioHero({
           >
             {content.roleEn}
           </p>
-          <h1 className="mb-5 text-4xl font-black leading-[1.18] tracking-tight md:text-5xl lg:text-6xl">
-            <span style={{ color: c.accentDisplay }}>{content.heroTitleAccent}</span>
-            {content.heroTitleTail}
+          <h1
+            aria-label={`${content.heroTitleAccent}${content.heroTitleTail}`}
+            className="mb-5 text-4xl font-black leading-[1.18] tracking-tight md:text-5xl lg:text-6xl"
+          >
+            <span aria-hidden="true" style={{ color: c.text }}>
+              {content.heroTitleAccent}
+            </span>
+            <span aria-hidden="true" className="whitespace-nowrap">
+              {Array.from(content.heroTitleTail).map((character, index) => (
+                <span
+                  key={`${character}-${index}`}
+                  style={{
+                    color: portfolioHeroTitleColors[index % portfolioHeroTitleColors.length],
+                  }}
+                >
+                  {character}
+                </span>
+              ))}
+            </span>
           </h1>
           <p
             className="mb-8 max-w-lg text-base leading-relaxed md:text-lg"
