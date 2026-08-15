@@ -25,6 +25,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
     .join("、");
 
   const handleSelectPlan = (plan: PortfolioPlan) => {
+    trackNatoriPageEvent("portfolio_primary_cta_click", "pricing");
     trackNatoriPageEvent("portfolio_plan_click", plan.name);
     window.dispatchEvent(
       new CustomEvent(PLAN_SELECT_EVENT, { detail: portfolioPlanSelectDetail(plan) })

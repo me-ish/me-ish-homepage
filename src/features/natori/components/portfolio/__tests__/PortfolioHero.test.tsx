@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import type { ImgHTMLAttributes } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../portfolioFonts", () => ({ fontEnStyle: {} }));
+const trackNatoriPageEvent = vi.hoisted(() => vi.fn());
+vi.mock("@/features/natori/data/pageEvents", () => ({ trackNatoriPageEvent }));
 vi.mock("next/image", () => ({
   default: ({
     fill: _fill,
@@ -20,7 +22,10 @@ vi.mock("next/image", () => ({
 import PortfolioHero from "@/features/natori/components/portfolio/PortfolioHero";
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
 
 describe("PF-03 portfolio hero", () => {
   it("shows purpose, representative artwork, and the two full-variant actions without repeating the header name", () => {
@@ -46,6 +51,12 @@ describe("PF-03 portfolio hero", () => {
     );
     expect(screen.getByRole("link", { name: "作品を見る" }).getAttribute("href")).toBe(
       "#gallery"
+    );
+
+    fireEvent.click(screen.getByRole("link", { name: "相談・見積もり" }));
+    expect(trackNatoriPageEvent).toHaveBeenCalledWith(
+      "portfolio_primary_cta_click",
+      "hero"
     );
   });
 

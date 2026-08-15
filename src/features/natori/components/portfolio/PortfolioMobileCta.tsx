@@ -7,6 +7,7 @@
 // フォーム自体が画面内にある間は重なって邪魔なので自動で隠す。
 import { useEffect, useState } from "react";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 
 export default function PortfolioMobileCta() {
   const [formVisible, setFormVisible] = useState(false);
@@ -26,6 +27,7 @@ export default function PortfolioMobileCta() {
   return (
     <a
       href="#form"
+      onClick={() => trackNatoriPageEvent("portfolio_primary_cta_click", "mobile_sticky")}
       className="pf-cute-focus fixed right-5 z-40 inline-flex min-h-[44px] items-center rounded-full px-5 py-3 text-sm font-bold shadow-lg hover:brightness-105 md:hidden"
       style={{
         background: c.action,

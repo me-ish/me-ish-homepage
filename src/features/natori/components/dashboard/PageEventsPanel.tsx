@@ -12,6 +12,22 @@ import {
 
 const EVENT_META: Array<{ event: string; title: string; hint?: string }> = [
   { event: "links_click", title: "リンク集のクリック", hint: "/natori/links" },
+  {
+    event: "portfolio_primary_cta_click",
+    title: "主要相談CTAクリック",
+    hint: "hero / mobile_sticky / pricing",
+  },
+  { event: "portfolio_gallery_open", title: "作品の拡大表示", hint: "コレクション / 作品名" },
+  {
+    event: "portfolio_form_start",
+    title: "ご依頼フォーム入力開始",
+    hint: "1ページ表示につき1回",
+  },
+  {
+    event: "portfolio_form_mode_select",
+    title: "ご希望モード選択",
+    hint: "consultation / quote",
+  },
   { event: "portfolio_form_submit", title: "ご依頼フォーム送信", hint: "/natori/portfolio" },
   { event: "portfolio_plan_click", title: "「このプランで相談」クリック", hint: "料金カード" },
   { event: "portfolio_sns_click", title: "SNSリンクのクリック", hint: "ポートフォリオ内の X / つなぐ" },

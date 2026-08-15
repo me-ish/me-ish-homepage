@@ -5,9 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-vi.mock("@/features/natori/data/pageEvents", () => ({
-  trackNatoriPageEvent: vi.fn(),
-}));
+const trackNatoriPageEvent = vi.hoisted(() => vi.fn());
+vi.mock("@/features/natori/data/pageEvents", () => ({ trackNatoriPageEvent }));
 
 import PortfolioCommissionForm from "@/features/natori/components/portfolio/PortfolioCommissionForm";
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
@@ -136,6 +135,40 @@ describe("最低入力と送信", () => {
 
     release(okResponse());
     await screen.findByText("送信ありがとうございます!");
+    expect(
+      trackNatoriPageEvent.mock.calls.filter(
+        ([event]) => event === "portfolio_form_submit"
+      )
+    ).toHaveLength(1);
+  });
+});
+
+describe("PF-09 analytics", () => {
+  it("最初の実入力だけを form_start として記録する", async () => {
+    renderForm();
+    await userEvent.type(screen.getByLabelText(/お名前/), "テスト太郎");
+    await userEvent.type(screen.getByLabelText(/メールアドレス/), "client@example.com");
+
+    expect(
+      trackNatoriPageEvent.mock.calls.filter(
+        ([event]) => event === "portfolio_form_start"
+      )
+    ).toEqual([["portfolio_form_start", "form"]]);
+  });
+
+  it("利用者が選んだフォームモードを記録する", async () => {
+    renderForm();
+    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    await userEvent.click(screen.getByLabelText("まず相談したい"));
+
+    expect(
+      trackNatoriPageEvent.mock.calls.filter(
+        ([event]) => event === "portfolio_form_mode_select"
+      )
+    ).toEqual([
+      ["portfolio_form_mode_select", "quote"],
+      ["portfolio_form_mode_select", "consultation"],
+    ]);
   });
 });
 
@@ -410,6 +443,11 @@ describe("server error の表示", () => {
       )
     ).toBeTruthy();
     expect(screen.queryByText("送信ありがとうございます!")).toBeNull();
+    expect(
+      trackNatoriPageEvent.mock.calls.some(
+        ([event]) => event === "portfolio_form_submit"
+      )
+    ).toBe(false);
   });
 });
 

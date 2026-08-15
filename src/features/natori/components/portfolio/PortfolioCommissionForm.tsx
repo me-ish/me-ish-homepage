@@ -75,6 +75,7 @@ export default function PortfolioCommissionForm({
   const [refImages, setRefImages] = useState<RefImageEntry[]>([]);
   const [refError, setRefError] = useState<string | null>(null);
   const refFileInputRef = useRef<HTMLInputElement | null>(null);
+  const formStartTrackedRef = useRef(false);
   const commissionOpen = content.commissionOpen;
   // つなぐ経由の依頼案内。受付停止中は非表示
   const tsunaguLink = commissionOpen
@@ -82,6 +83,12 @@ export default function PortfolioCommissionForm({
     : undefined;
 
   const planChoices = [...content.plans.map(planChoiceLabel), PLAN_UNDECIDED];
+
+  const trackFormStart = () => {
+    if (formStartTrackedRef.current) return;
+    formStartTrackedRef.current = true;
+    trackNatoriPageEvent("portfolio_form_start", "form");
+  };
 
   // 料金カードの「このプランで相談」からプランを受け取る
   useEffect(() => {
@@ -176,7 +183,13 @@ export default function PortfolioCommissionForm({
   };
 
   return (
-    <section id="form" className="py-16" style={{ background: c.page }}>
+    <section
+      id="form"
+      className="py-16"
+      style={{ background: c.page }}
+      onInputCapture={trackFormStart}
+      onChangeCapture={trackFormStart}
+    >
       <div className="mx-auto max-w-2xl px-5">
         <h2 className="mb-2 text-center text-2xl font-black md:text-3xl">ご依頼フォーム</h2>
         <p

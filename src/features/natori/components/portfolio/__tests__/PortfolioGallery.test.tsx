@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const trackNatoriPageEvent = vi.hoisted(() => vi.fn());
+vi.mock("@/features/natori/data/pageEvents", () => ({ trackNatoriPageEvent }));
 
 import PortfolioGallery from "@/features/natori/components/portfolio/PortfolioGallery";
 import type { PortfolioWork } from "@/features/natori/types/portfolio";
@@ -27,6 +30,8 @@ const collections = [
     color: "#D9F3EE",
   },
 ];
+
+beforeEach(() => vi.clearAllMocks());
 
 describe("PortfolioGallery collections", () => {
   it("代表作品を優先して3件だけ表示し、残りをその場で展開する", () => {
@@ -82,6 +87,11 @@ describe("PortfolioGallery collections", () => {
     const trigger = screen.getByRole("button", { name: "作品1 を拡大表示" });
     trigger.focus();
     fireEvent.click(trigger);
+
+    expect(trackNatoriPageEvent).toHaveBeenCalledWith(
+      "portfolio_gallery_open",
+      "SDキャラ / 作品1",
+    );
 
     const dialog = screen.getByRole("dialog", { name: "作品1" });
     const closeButton = within(dialog).getByRole("button", { name: "閉じる" });
