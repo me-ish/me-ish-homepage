@@ -1159,7 +1159,7 @@ export default function PortfolioStructuredCommissionForm({
                         className="mb-1 block text-xs font-bold"
                         style={{ color: c.textSoft }}
                       >
-                        ラベル（任意）
+                        このURLの内容（任意）
                       </label>
                       <input
                         id={`pf-ref-label-${index}`}
@@ -1168,6 +1168,7 @@ export default function PortfolioStructuredCommissionForm({
                           setReferenceLink(index, { label: event.target.value })
                         }
                         maxLength={100}
+                        placeholder="例：キャラクター設定資料、衣装の参考"
                         className={inputClass}
                       />
                     </div>

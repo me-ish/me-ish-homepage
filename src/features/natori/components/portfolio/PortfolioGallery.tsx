@@ -178,9 +178,6 @@ export default function PortfolioGallery({
         <h2 className="text-2xl font-black md:text-3xl">
           作品ギャラリー <span style={{ color: d.sparkleCool }}>°˖✧</span>
         </h2>
-        <p className="mt-2 text-sm" style={{ color: c.textSoft }}>
-          ジャンルごとに代表作品をご覧いただけます。
-        </p>
       </div>
 
       <div className="space-y-14">

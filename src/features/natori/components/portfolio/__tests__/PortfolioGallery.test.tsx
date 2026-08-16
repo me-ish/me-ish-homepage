@@ -54,6 +54,7 @@ describe("PortfolioGallery collections", () => {
     expect(within(collection).getByText("作品1")).toBeTruthy();
     expect(within(collection).queryByText("作品3")).toBeNull();
     expect(screen.queryByText("作品hidden")).toBeNull();
+    expect(screen.queryByText("ジャンルごとに代表作品をご覧いただけます。")).toBeNull();
 
     fireEvent.click(
       within(collection).getByRole("button", { name: "4作品をすべて見る" }),
