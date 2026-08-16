@@ -364,7 +364,11 @@ describe("資料", () => {
   it("入力済みURLだけを順序どおり送る", async () => {
     renderForm();
     await userEvent.type(screen.getByLabelText("参考URL 1"), "https://example.com/first");
-    await userEvent.type(screen.getByLabelText("ラベル（任意）"), "一つ目");
+    const urlDescription = screen.getByLabelText("このURLの内容（任意）");
+    expect(urlDescription.getAttribute("placeholder")).toBe(
+      "例：キャラクター設定資料、衣装の参考"
+    );
+    await userEvent.type(urlDescription, "一つ目");
 
     await fillMinimum();
     submit();
