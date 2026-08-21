@@ -18,35 +18,35 @@ import type {
    ここを書き換えるだけで全体の配色を調整できます
 ------------------------------------------------------------------- */
 export const portfolioColors = {
-  page: "#FFF7FA",
+  page: "#FFFBFD",
   surface: "#FFFFFF",
-  surfaceSubtle: "#FFF0F5",
-  text: "#3B2D35",
-  textSoft: "#6B5660",
-  borderSubtle: "#F0D9E2",
-  borderStrong: "#9D7485",
-  accent: "#F172A3",
-  accentDisplay: "#E75D92",
-  accentText: "#C0356E",
-  accentHover: "#D94E85",
-  accentSoft: "#FFE3EE",
-  action: "#C83B73",
+  surfaceSubtle: "#FFF2F7",
+  text: "#3B3036",
+  textSoft: "#6F5A65",
+  borderSubtle: "#F3DDE7",
+  borderStrong: "#9F7185",
+  accent: "#F06AA5",
+  accentDisplay: "#DD3F83",
+  accentText: "#C4276B",
+  accentHover: "#E14C8D",
+  accentSoft: "#FFE4EF",
+  action: "#D12F78",
   onAction: "#FFFFFF",
   onError: "#FFFFFF",
   error: "#B42318",
   errorSoft: "#FEF3F2",
-  success: "#217A5B",
-  successSoft: "#ECF8F3",
-  overlay: "rgba(59,45,53,0.72)",
-  pageTranslucent: "rgba(255,247,250,0.92)",
+  success: "#21805A",
+  successSoft: "#ECFAF4",
+  overlay: "rgba(59,48,54,0.72)",
+  pageTranslucent: "rgba(255,251,253,0.92)",
 } as const;
 
 /** Heroの「あとりえ」を、淡い背景でも読める画材色で彩る。 */
 export const portfolioHeroTitleColors = [
-  portfolioColors.accentText,
-  "#397A95",
-  "#9A6314",
-  portfolioColors.success,
+  "#D12F78",
+  "#16789F",
+  "#AC5512",
+  "#21805A",
 ] as const;
 
 /**
@@ -54,12 +54,12 @@ export const portfolioHeroTitleColors = [
  * UI状態や本文には使わず、tape/rotation/tagの整理と合わせてPF-04/05で縮小する。
  */
 export const portfolioDecorativeColors = {
-  sparkleWarm: "#A66A12",
-  sparkleCool: "#217A5B",
-  placeholderRose: "#D88AA2",
-  placeholderMint: "#8DCDBD",
-  placeholderPeach: "#E7A38F",
-  placeholderGold: "#E6B94E",
+  sparkleWarm: "#F2A93B",
+  sparkleCool: "#42BFA0",
+  placeholderRose: "#F09AB7",
+  placeholderMint: "#8EDCC8",
+  placeholderPeach: "#F4A98C",
+  placeholderGold: "#F2C451",
 } as const;
 
 /**
