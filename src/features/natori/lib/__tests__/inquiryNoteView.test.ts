@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildInquiryNote } from "@/features/natori/lib/inquiry";
 import {
+  compareInquiryActivityOldestFirst,
   daysSinceISO,
   getInquiryLastActivityISO,
   parseInquiryNote,
@@ -99,5 +100,25 @@ describe("getInquiryLastActivityISO / daysSinceISO", () => {
     expect(daysSinceISO("2026-07-05", today)).toBe(7);
     expect(daysSinceISO("2026-07-12", today)).toBe(0);
     expect(daysSinceISO("2026-07-20", today)).toBe(0);
+  });
+
+  it("sorts by oldest last activity instead of oldest received date", () => {
+    const rows = [
+      {
+        id: "received-old-but-replied",
+        receivedISO: "2026-07-01",
+        lastActivityISO: "2026-07-20",
+      },
+      {
+        id: "received-new-but-unanswered",
+        receivedISO: "2026-07-10",
+        lastActivityISO: "2026-07-10",
+      },
+    ];
+
+    expect(rows.sort(compareInquiryActivityOldestFirst).map((row) => row.id)).toEqual([
+      "received-new-but-unanswered",
+      "received-old-but-replied",
+    ]);
   });
 });

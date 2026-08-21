@@ -10,6 +10,7 @@ import { Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
 import {
+  compareInquiryActivityOldestFirst,
   daysSinceISO,
   getInquiryLastActivityISO,
   parseInquiryNote,
@@ -18,7 +19,6 @@ import {
 import { getNextActionForStatus, isPreworkStatus } from "@/features/natori/lib/projects";
 import {
   formatNatoriProjectAmount,
-  compareNatoriInquiriesByReceivedAt,
   getNatoriInquiryReceivedISO,
   isActiveNatoriProject,
 } from "@/features/natori/lib/projectReadModel";
@@ -166,10 +166,9 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
           lastActionLabel: lastLog ? lastLog.label : "受付のみ",
         };
       })
-      // 受付日時は natori_projects.created_at を正とし、納期では並べない。
-      .sort((a, b) =>
-        compareNatoriInquiriesByReceivedAt(a.project, b.project)
-      );
+      // 返答待ちの見落としを防ぐため、最後に対応した日が古いものから並べる。
+      // 同日の場合だけ受付日を使い、表示順を安定させる。
+      .sort(compareInquiryActivityOldestFirst);
   }, [projects]);
 
   const filteredRows = useMemo(() => {

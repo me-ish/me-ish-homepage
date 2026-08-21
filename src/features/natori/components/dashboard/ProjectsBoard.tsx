@@ -81,6 +81,8 @@ export default function ProjectsBoard({
   const [eventsBusy, setEventsBusy] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [advanceBusyId, setAdvanceBusyId] = useState<string | null>(null);
+  const [requestedProjectId, setRequestedProjectId] = useState<string | null>(null);
+  const [focusedProjectId, setFocusedProjectId] = useState<string | null>(null);
 
   const loadFromSupabase = useCallback(async () => {
     const [projectData, eventResult] = await Promise.all([
@@ -135,6 +137,9 @@ export default function ProjectsBoard({
     setToday(now);
     setSelectedISO(toISODate(now));
     setViewMonth(getMonthFromDate(now));
+    setRequestedProjectId(
+      new URLSearchParams(window.location.search).get("project")
+    );
   }, []);
 
   useEffect(() => {
@@ -153,6 +158,49 @@ export default function ProjectsBoard({
     // 失敗時は実データと誤認し得るデモデータを表示せず、再試行できるエラー画面にする。
     void loadServerData();
   }, [loadServerData, demoProjects, demoEvents]);
+
+  useEffect(() => {
+    if (
+      !requestedProjectId ||
+      !today ||
+      (dataSource !== "supabase" && dataSource !== "mock")
+    ) {
+      return;
+    }
+
+    const target = projects.find(
+      (project) => project.id === requestedProjectId && !project.deletedAt
+    );
+    setRequestedProjectId(null);
+    if (!target) return;
+
+    setFocusedProjectId(target.id);
+    if (target.dueDate) {
+      setSelectedISO(target.dueDate);
+      const [year, month] = target.dueDate.split("-").map(Number);
+      setViewMonth({ year, monthIndex: month - 1 });
+    }
+  }, [dataSource, projects, requestedProjectId, today]);
+
+  useEffect(() => {
+    if (!focusedProjectId || dataSource === "loading") return;
+
+    let innerFrame: number | null = null;
+    const outerFrame = window.requestAnimationFrame(() => {
+      innerFrame = window.requestAnimationFrame(() => {
+        const target = document.getElementById(
+          `natori-project-${focusedProjectId}`
+        );
+        target?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+        target?.focus({ preventScroll: true });
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(outerFrame);
+      if (innerFrame !== null) window.cancelAnimationFrame(innerFrame);
+    };
+  }, [dataSource, focusedProjectId, selectedISO]);
 
   const recoverFromMutationFailure = useCallback(
     async (operation: string, err: unknown) => {
@@ -221,6 +269,7 @@ export default function ProjectsBoard({
   }
 
   const handleSelectDate = (iso: string) => {
+    setFocusedProjectId(null);
     setSelectedISO(iso);
   };
 
@@ -241,6 +290,7 @@ export default function ProjectsBoard({
   };
 
   const focusProject = (project: NatoriProject) => {
+    setFocusedProjectId(project.id);
     const due = project.dueDate;
     if (!due) return;
     setSelectedISO(due);
@@ -617,19 +667,35 @@ export default function ProjectsBoard({
           </div>
           <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
             {undatedProjects.map((project) => (
-              <ProjectCard
+              <div
                 key={project.id}
-                project={project}
-                today={today}
-                onToggleTask={handleToggleTask}
-                onAdvanceStatus={handleAdvanceStatus}
-                onConfirmPayment={handleConfirmPayment}
-                onOpenMail={(entry, kind) =>
-                  setMailTarget({ project: entry, kind })
+                id={`natori-project-${project.id}`}
+                data-focused={focusedProjectId === project.id ? "true" : undefined}
+                tabIndex={focusedProjectId === project.id ? -1 : undefined}
+                aria-label={
+                  focusedProjectId === project.id
+                    ? `対象案件: ${project.clientName}｜${project.title}`
+                    : undefined
                 }
-                onEditDetails={handleEditDetails}
-                advanceBusy={advanceBusyId === project.id}
-              />
+                className={
+                  focusedProjectId === project.id
+                    ? "scroll-mt-28 rounded-2xl ring-2 ring-pink-400 ring-offset-2"
+                    : "scroll-mt-28"
+                }
+              >
+                <ProjectCard
+                  project={project}
+                  today={today}
+                  onToggleTask={handleToggleTask}
+                  onAdvanceStatus={handleAdvanceStatus}
+                  onConfirmPayment={handleConfirmPayment}
+                  onOpenMail={(entry, kind) =>
+                    setMailTarget({ project: entry, kind })
+                  }
+                  onEditDetails={handleEditDetails}
+                  advanceBusy={advanceBusyId === project.id}
+                />
+              </div>
             ))}
           </div>
         </section>
@@ -665,6 +731,7 @@ export default function ProjectsBoard({
         onCreateEvent={handleCreateEvent}
         onUpdateEvent={handleUpdateEvent}
         onDeleteEvent={handleDeleteEvent}
+        focusedProjectId={focusedProjectId}
       />
 
       <ClosedProjectsSection

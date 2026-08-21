@@ -55,6 +55,7 @@ type ProjectDayDetailProps = {
     input: { title: string; date: string; note?: string }
   ) => Promise<void>;
   onDeleteEvent: (id: string) => Promise<void>;
+  focusedProjectId?: string | null;
 };
 
 export default function ProjectDayDetail({
@@ -74,6 +75,7 @@ export default function ProjectDayDetail({
   onCreateEvent,
   onUpdateEvent,
   onDeleteEvent,
+  focusedProjectId,
 }: ProjectDayDetailProps) {
   const date = parseISODate(selectedISO);
   const dateLabel = detailDateFormatter.format(date);
@@ -189,17 +191,33 @@ export default function ProjectDayDetail({
           ) : null}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {dueProjects.map((project) => (
-              <ProjectCard
+              <div
                 key={project.id}
-                project={project}
-                today={today}
-                onToggleTask={onToggleTask}
-                onAdvanceStatus={onAdvanceStatus}
-                onConfirmPayment={onConfirmPayment}
-                onOpenMail={onOpenMail}
-                onEditDetails={onEditDetails}
-                advanceBusy={advanceBusyId === project.id}
-              />
+                id={`natori-project-${project.id}`}
+                data-focused={focusedProjectId === project.id ? "true" : undefined}
+                tabIndex={focusedProjectId === project.id ? -1 : undefined}
+                aria-label={
+                  focusedProjectId === project.id
+                    ? `対象案件: ${project.clientName}｜${project.title}`
+                    : undefined
+                }
+                className={cn(
+                  "scroll-mt-28",
+                  focusedProjectId === project.id &&
+                    "rounded-2xl ring-2 ring-pink-400 ring-offset-2"
+                )}
+              >
+                <ProjectCard
+                  project={project}
+                  today={today}
+                  onToggleTask={onToggleTask}
+                  onAdvanceStatus={onAdvanceStatus}
+                  onConfirmPayment={onConfirmPayment}
+                  onOpenMail={onOpenMail}
+                  onEditDetails={onEditDetails}
+                  advanceBusy={advanceBusyId === project.id}
+                />
+              </div>
             ))}
           </div>
           {activeOnlyProjects.length > 0 ? (
@@ -209,13 +227,33 @@ export default function ProjectDayDetail({
               </p>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {activeOnlyProjects.map((project) => (
-                  <ProjectCard
+                  <div
                     key={project.id}
-                    project={project}
-                    today={today}
-                    onToggleTask={onToggleTask}
-                    onOpenMail={onOpenMail}
-                  />
+                    id={`natori-project-${project.id}`}
+                    data-focused={focusedProjectId === project.id ? "true" : undefined}
+                    tabIndex={focusedProjectId === project.id ? -1 : undefined}
+                    aria-label={
+                      focusedProjectId === project.id
+                        ? `対象案件: ${project.clientName}｜${project.title}`
+                        : undefined
+                    }
+                    className={cn(
+                      "scroll-mt-28",
+                      focusedProjectId === project.id &&
+                        "rounded-2xl ring-2 ring-pink-400 ring-offset-2"
+                    )}
+                  >
+                    <ProjectCard
+                      project={project}
+                      today={today}
+                      onToggleTask={onToggleTask}
+                      onAdvanceStatus={onAdvanceStatus}
+                      onConfirmPayment={onConfirmPayment}
+                      onOpenMail={onOpenMail}
+                      onEditDetails={onEditDetails}
+                      advanceBusy={advanceBusyId === project.id}
+                    />
+                  </div>
                 ))}
               </div>
             </>

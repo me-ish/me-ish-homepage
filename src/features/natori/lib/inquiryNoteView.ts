@@ -179,6 +179,22 @@ export function getInquiryLastActivityISO(
   return latest;
 }
 
+type NatoriInquiryActivitySortKey = {
+  lastActivityISO: string;
+  receivedISO: string;
+};
+
+/** 最終対応が古い問い合わせを先にし、同日の場合だけ受付日で安定化する。 */
+export function compareInquiryActivityOldestFirst(
+  a: NatoriInquiryActivitySortKey,
+  b: NatoriInquiryActivitySortKey
+): number {
+  return (
+    a.lastActivityISO.localeCompare(b.lastActivityISO) ||
+    a.receivedISO.localeCompare(b.receivedISO)
+  );
+}
+
 /** ISO日付から today までの経過日数（today より未来なら 0） */
 export function daysSinceISO(iso: string, today: Date): number {
   const [y, m, d] = iso.split("-").map(Number);
