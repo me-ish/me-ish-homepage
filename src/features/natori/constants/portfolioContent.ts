@@ -43,10 +43,10 @@ export const portfolioColors = {
 
 /** Heroの「あとりえ」を、淡い背景でも鮮やかに読めるポップカラーで彩る。 */
 export const portfolioHeroTitleColors = [
-  "#ED3B8C",
-  "#2687E8",
-  "#E96336",
-  "#9254DE",
+  "#D42175",
+  "#1372CA",
+  "#D03B2B",
+  "#8244D8",
 ] as const;
 
 /**
