@@ -41,12 +41,12 @@ export const portfolioColors = {
   pageTranslucent: "rgba(255,251,253,0.92)",
 } as const;
 
-/** Heroの「あとりえ」を、淡い背景でも読める画材色で彩る。 */
+/** Heroの「あとりえ」を、淡い背景でも鮮やかに読めるポップカラーで彩る。 */
 export const portfolioHeroTitleColors = [
-  "#D12F78",
-  "#16789F",
-  "#AC5512",
-  "#21805A",
+  "#D42175",
+  "#1372CA",
+  "#D03B2B",
+  "#8244D8",
 ] as const;
 
 /**
