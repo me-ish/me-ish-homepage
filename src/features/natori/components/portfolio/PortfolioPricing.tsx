@@ -11,6 +11,11 @@ import {
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import type { PortfolioContent, PortfolioPlan } from "@/features/natori/types/portfolio";
 
+function startingPriceLabel(price: string): string {
+  if (!price.includes("円") || /[〜～~]/u.test(price)) return price;
+  return `${price}～`;
+}
+
 export default function PortfolioPricing({ content }: { content: PortfolioContent }) {
   const gridCols =
     content.plans.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-3";
@@ -44,8 +49,8 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
 
       {commonFeatures.length > 0 && (
         <div
-          className="mx-auto mb-8 flex max-w-3xl flex-col items-center gap-2 rounded-2xl border px-5 py-4 text-center sm:flex-row sm:justify-center sm:gap-4 sm:text-left"
-          style={{ background: c.accentSoft, borderColor: c.borderSubtle }}
+          className="mx-auto mb-8 flex max-w-3xl flex-col items-center gap-2 rounded-2xl px-5 py-4 text-center sm:flex-row sm:justify-center sm:gap-4 sm:text-left"
+          style={{ background: c.accentSoft }}
         >
           <span
             className="shrink-0 rounded-full px-3 py-1 text-xs font-bold"
@@ -69,7 +74,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
           >
             <h3 className="mb-1 text-lg font-bold">{p.name}</h3>
             <p className="mb-2 text-2xl font-bold" style={{ color: c.accentDisplay }}>
-              {p.price}
+              {startingPriceLabel(p.price)}
             </p>
             <div className="mb-6 flex-1">
               <p className="text-sm" style={{ color: c.textSoft }}>

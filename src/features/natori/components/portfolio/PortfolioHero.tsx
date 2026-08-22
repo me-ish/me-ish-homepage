@@ -1,9 +1,6 @@
 // features/natori/components/portfolio/PortfolioHero.tsx
 import Image from "next/image";
-import {
-  portfolioColors as c,
-  portfolioHeroTitleColors,
-} from "@/features/natori/constants/portfolioContent";
+import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
 import { fontEnStyle } from "./portfolioFonts";
 import PortfolioHeroPrimaryCta from "./PortfolioHeroPrimaryCta";
@@ -36,14 +33,9 @@ export default function PortfolioHero({
       >
         <div className="max-w-xl">
           <p
-            className="mb-4 flex items-center gap-2.5 text-sm font-semibold uppercase tracking-[0.18em]"
+            className="mb-4 text-sm font-semibold uppercase tracking-[0.18em]"
             style={{ ...fontEnStyle, color: c.accentText }}
           >
-            <span
-              aria-hidden="true"
-              className="h-0.5 w-7 shrink-0 rounded-full"
-              style={{ background: c.highlight }}
-            />
             {content.roleEn}
           </p>
           <h1
@@ -53,17 +45,8 @@ export default function PortfolioHero({
             <span aria-hidden="true" style={{ color: c.text }}>
               {content.heroTitleAccent}
             </span>
-            <span aria-hidden="true" className="whitespace-nowrap">
-              {Array.from(content.heroTitleTail).map((character, index) => (
-                <span
-                  key={`${character}-${index}`}
-                  style={{
-                    color: portfolioHeroTitleColors[index % portfolioHeroTitleColors.length],
-                  }}
-                >
-                  {character}
-                </span>
-              ))}
+            <span aria-hidden="true" className="whitespace-nowrap" style={{ color: c.action }}>
+              {content.heroTitleTail}
             </span>
           </h1>
           <p
@@ -82,7 +65,7 @@ export default function PortfolioHero({
             <a
               href="#gallery"
               className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-xl border-2 px-6 py-3 font-bold"
-              style={{ background: c.surface, borderColor: c.accent, color: c.accentText }}
+              style={{ background: c.surface, borderColor: c.action, color: c.text }}
             >
               作品を見る
             </a>
