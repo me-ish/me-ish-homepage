@@ -47,6 +47,11 @@ describe("PF-03 portfolio hero", () => {
     expect(
       new Set(Array.from(coloredCharacters, (element) => element.getAttribute("style"))).size
     ).toBe(4);
+    expect(
+      Array.from(coloredCharacters).every(
+        (element) => !element.getAttribute("style")?.includes("stroke")
+      )
+    ).toBe(true);
     const representativeImage = screen.getByRole("img", {
       name: `${defaultPortfolioContent.artistName}の代表作品`,
     });

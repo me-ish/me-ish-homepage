@@ -219,7 +219,7 @@ export default function PortfolioCommissionForm({
         {status === "success" ? (
           <div
             className="rounded-2xl p-8 text-center"
-            style={{ background: c.surface, boxShadow: "0 10px 22px rgba(36,36,36,0.08)" }}
+            style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
           >
             <p className="mb-2 text-3xl" aria-hidden="true">
               🎉
@@ -248,7 +248,7 @@ export default function PortfolioCommissionForm({
           <form
             onSubmit={handleSubmit}
             className="space-y-5 rounded-2xl p-6 md:p-8"
-            style={{ background: c.surface, boxShadow: "0 10px 22px rgba(36,36,36,0.08)" }}
+            style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
           >
             {/* honeypot: 人間には見えない。ボット対策 */}
             <input

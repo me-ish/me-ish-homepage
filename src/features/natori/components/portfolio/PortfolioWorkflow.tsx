@@ -4,7 +4,7 @@ import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
 const cardStyle = {
   background: c.surface,
-  boxShadow: "0 10px 22px rgba(36,36,36,0.08)",
+  boxShadow: `0 10px 22px ${c.shadowSoft}`,
 } as const;
 
 export default function PortfolioWorkflow({ content }: { content: PortfolioContent }) {

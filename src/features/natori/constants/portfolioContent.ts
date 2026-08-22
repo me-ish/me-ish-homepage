@@ -17,28 +17,32 @@ import type {
    カラートークン
    ここを書き換えるだけで全体の配色を調整できます
 ------------------------------------------------------------------- */
+/** プールサイドの参考配色を基準に、ピンクと水色を土台、オレンジを主アクセントにする。 */
 export const portfolioColors = {
-  page: "#FFFBFD",
+  page: "#FFF9F8",
   surface: "#FFFFFF",
-  surfaceSubtle: "#FFF2F7",
-  text: "#3B3036",
-  textSoft: "#6F5A65",
-  borderSubtle: "#F3DDE7",
-  borderStrong: "#9F7185",
-  accent: "#F06AA5",
-  accentDisplay: "#DD3F83",
-  accentText: "#C4276B",
-  accentHover: "#E14C8D",
-  accentSoft: "#FFE4EF",
-  action: "#D12F78",
-  onAction: "#FFFFFF",
+  surfaceSubtle: "#FFF1F2",
+  text: "#456579",
+  textSoft: "#4F7188",
+  borderSubtle: "#F2AEB4",
+  borderStrong: "#6F91AD",
+  accent: "#F29E38",
+  accentDisplay: "#D87814",
+  accentText: "#AC5900",
+  accentHover: "#26AFCA",
+  accentSoft: "#FFF0D8",
+  action: "#F29E38",
+  onAction: "#27465B",
   onError: "#FFFFFF",
   error: "#B42318",
   errorSoft: "#FEF3F2",
-  success: "#21805A",
-  successSoft: "#ECFAF4",
-  overlay: "rgba(59,48,54,0.72)",
-  pageTranslucent: "rgba(255,251,253,0.92)",
+  success: "#26798F",
+  successSoft: "#E8FAFC",
+  overlay: "rgba(39,70,91,0.68)",
+  pageTranslucent: "rgba(255,249,248,0.94)",
+  shadowSoft: "rgba(111,145,173,0.14)",
+  shadowHover: "rgba(111,145,173,0.22)",
+  shadowFloating: "rgba(74,110,137,0.28)",
 } as const;
 
 /** Heroの「あ・と・り・え」を、暖色から寒色へ自然につながる虹色で彩る。 */
@@ -49,20 +53,17 @@ export const portfolioHeroTitleColors = [
   "#73C7FF",
 ] as const;
 
-/** 淡い虹色の塗りを変えずに、明るい背景上で文字の輪郭を保つ。 */
-export const portfolioHeroTitleOutlineColor = portfolioColors.textSoft;
-
 /**
  * 作品未設定時のプレースホルダーと既存装飾に限る一時 palette。
  * UI状態や本文には使わず、tape/rotation/tagの整理と合わせてPF-04/05で縮小する。
  */
 export const portfolioDecorativeColors = {
-  sparkleWarm: "#F2A93B",
-  sparkleCool: "#42BFA0",
-  placeholderRose: "#F09AB7",
-  placeholderMint: "#8EDCC8",
-  placeholderPeach: "#F4A98C",
-  placeholderGold: "#F2C451",
+  sparkleWarm: "#F29E38",
+  sparkleCool: "#26AFCA",
+  placeholderRose: "#F2AEB4",
+  placeholderMint: "#59CCD9",
+  placeholderPeach: "#F6C48C",
+  placeholderGold: "#F4C95D",
 } as const;
 
 /**
