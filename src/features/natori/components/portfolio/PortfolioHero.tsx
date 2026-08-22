@@ -3,6 +3,7 @@ import Image from "next/image";
 import {
   portfolioColors as c,
   portfolioHeroTitleColors,
+  portfolioHeroTitleOutlineColor,
 } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
 import { fontEnStyle } from "./portfolioFonts";
@@ -54,6 +55,7 @@ export default function PortfolioHero({
                   key={`${character}-${index}`}
                   style={{
                     color: portfolioHeroTitleColors[index % portfolioHeroTitleColors.length],
+                    WebkitTextStroke: `0.75px ${portfolioHeroTitleOutlineColor}`,
                   }}
                 >
                   {character}

@@ -41,13 +41,16 @@ export const portfolioColors = {
   pageTranslucent: "rgba(255,251,253,0.92)",
 } as const;
 
-/** Heroの「あとりえ」を、淡い背景でも鮮やかに読めるポップカラーで彩る。 */
+/** Heroの「あ・と・り・え」を、暖色から寒色へ自然につながる虹色で彩る。 */
 export const portfolioHeroTitleColors = [
-  "#D42175",
-  "#1372CA",
-  "#D03B2B",
-  "#8244D8",
+  "#FF9B73",
+  "#FFD85A",
+  "#7ED9A3",
+  "#73C7FF",
 ] as const;
+
+/** 淡い虹色の塗りを変えずに、明るい背景上で文字の輪郭を保つ。 */
+export const portfolioHeroTitleOutlineColor = portfolioColors.textSoft;
 
 /**
  * 作品未設定時のプレースホルダーと既存装飾に限る一時 palette。

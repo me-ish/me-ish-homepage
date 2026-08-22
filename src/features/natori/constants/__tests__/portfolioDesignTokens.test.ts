@@ -6,6 +6,7 @@ import {
   legacyNatoriTransactionColors,
   portfolioColors,
   portfolioHeroTitleColors,
+  portfolioHeroTitleOutlineColor,
 } from "@/features/natori/constants/portfolioContent";
 
 function relativeLuminance(hex: string): number {
@@ -68,10 +69,16 @@ describe("PF-02 portfolio semantic colors", () => {
     ).toBeGreaterThanOrEqual(3);
   });
 
-  it("keeps every colorful Hero title letter readable on the page background", () => {
-    for (const color of portfolioHeroTitleColors) {
-      expect(contrastRatio(color, portfolioColors.page)).toBeGreaterThanOrEqual(4.5);
-    }
+  it("uses the approved warm-to-cool Hero rainbow with a readable outline", () => {
+    expect(portfolioHeroTitleColors).toEqual([
+      "#FF9B73",
+      "#FFD85A",
+      "#7ED9A3",
+      "#73C7FF",
+    ]);
+    expect(
+      contrastRatio(portfolioHeroTitleOutlineColor, portfolioColors.page)
+    ).toBeGreaterThanOrEqual(4.5);
   });
 
   it("does not expose the old color-as-purpose token names", () => {
