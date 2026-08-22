@@ -18,6 +18,34 @@ afterEach(() => {
 });
 
 describe("PortfolioPricing analytics", () => {
+  it("shows each fixed plan price as a starting price without altering ranges", () => {
+    render(
+      <PortfolioPricing
+        content={{
+          ...defaultPortfolioContent,
+          plans: [
+            ...defaultPortfolioContent.plans.slice(0, 2),
+            { ...defaultPortfolioContent.plans[2], price: "6,000円〜8,000円" },
+            { ...defaultPortfolioContent.plans[3], price: "応相談" },
+          ],
+        }}
+      />
+    );
+
+    expect(screen.getByText("3,000円～")).toBeTruthy();
+    expect(screen.getByText("4,000円～")).toBeTruthy();
+    expect(screen.getByText("6,000円〜8,000円")).toBeTruthy();
+    expect(screen.getByText("応相談")).toBeTruthy();
+  });
+
+  it("does not draw a border around the common plan note", () => {
+    render(<PortfolioPricing content={defaultPortfolioContent} />);
+
+    const commonNote = screen.getByText("全プラン共通").parentElement as HTMLElement;
+    expect(commonNote.className.split(/\s+/)).not.toContain("border");
+    expect(commonNote.style.borderColor).toBe("");
+  });
+
   it("records both the pricing CTA and selected public plan name", () => {
     const planEvent = vi.fn();
     window.addEventListener(PLAN_SELECT_EVENT, planEvent);

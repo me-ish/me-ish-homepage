@@ -42,27 +42,21 @@ describe("PF-03 portfolio hero", () => {
     expect(screen.getByText(defaultPortfolioContent.roleEn)).toBeTruthy();
     expect(screen.getByText(defaultPortfolioContent.heroDescription)).toBeTruthy();
     const heroTitle = screen.getByRole("heading", { level: 1, name: "ナトリのあとりえ" });
-    const coloredCharacters = heroTitle.querySelectorAll("span.whitespace-nowrap > span");
-    expect(coloredCharacters).toHaveLength(4);
-    expect(
-      new Set(Array.from(coloredCharacters, (element) => element.getAttribute("style"))).size
-    ).toBe(4);
-    expect(
-      Array.from(coloredCharacters).every(
-        (element) => !element.getAttribute("style")?.includes("stroke")
-      )
-    ).toBe(true);
+    const titleTail = heroTitle.querySelector("span.whitespace-nowrap") as HTMLElement;
+    expect(titleTail.textContent).toBe(defaultPortfolioContent.heroTitleTail);
+    expect(titleTail.style.color).toBe("rgb(242, 174, 180)");
+    expect(titleTail.querySelectorAll("span")).toHaveLength(0);
     const representativeImage = screen.getByRole("img", {
       name: `${defaultPortfolioContent.artistName}の代表作品`,
     });
     expect(representativeImage).toBeTruthy();
     expect(representativeImage.getAttribute("data-priority")).toBe("true");
-    expect(screen.getByRole("link", { name: "相談・見積もり" }).getAttribute("href")).toBe(
-      "#form"
-    );
-    expect(screen.getByRole("link", { name: "作品を見る" }).getAttribute("href")).toBe(
-      "#gallery"
-    );
+    const primaryLink = screen.getByRole("link", { name: "相談・見積もり" });
+    expect(primaryLink.getAttribute("href")).toBe("#form");
+    expect((primaryLink as HTMLElement).style.color).toBe("rgb(255, 255, 255)");
+    const worksLink = screen.getByRole("link", { name: "作品を見る" });
+    expect(worksLink.getAttribute("href")).toBe("#gallery");
+    expect((worksLink as HTMLElement).style.borderColor).toBe("rgb(242, 174, 180)");
 
     fireEvent.click(screen.getByRole("link", { name: "相談・見積もり" }));
     expect(trackNatoriPageEvent).toHaveBeenCalledWith(

@@ -32,7 +32,7 @@ export const portfolioColors = {
   accentHover: "#26AFCA",
   accentSoft: "#E8FAFC",
   action: "#F2AEB4",
-  onAction: "#164A63",
+  onAction: "#FFFFFF",
   highlight: "#F29E38",
   onError: "#FFFFFF",
   error: "#B42318",
@@ -41,18 +41,10 @@ export const portfolioColors = {
   successSoft: "#E8FFF8",
   overlay: "rgba(22,74,99,0.68)",
   pageTranslucent: "rgba(255,249,250,0.94)",
-  shadowSoft: "rgba(38,175,202,0.12)",
-  shadowHover: "rgba(38,175,202,0.2)",
-  shadowFloating: "rgba(8,126,152,0.24)",
+  shadowSoft: "rgba(0,0,0,0.08)",
+  shadowHover: "rgba(0,0,0,0.14)",
+  shadowFloating: "rgba(0,0,0,0.24)",
 } as const;
-
-/** Heroの「あ・と・り・え」を、暖色から寒色へ自然につながる虹色で彩る。 */
-export const portfolioHeroTitleColors = [
-  "#FF9B73",
-  "#FFD85A",
-  "#7ED9A3",
-  "#73C7FF",
-] as const;
 
 /**
  * 作品未設定時のプレースホルダーと既存装飾に限る一時 palette。

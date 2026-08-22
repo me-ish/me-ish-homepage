@@ -6,7 +6,6 @@ import {
   legacyNatoriTransactionColors,
   portfolioColors,
   portfolioDecorativeColors,
-  portfolioHeroTitleColors,
 } from "@/features/natori/constants/portfolioContent";
 
 function relativeLuminance(hex: string): number {
@@ -47,7 +46,7 @@ describe("PF-02 portfolio semantic colors", () => {
     expect(portfolioDecorativeColors.placeholderMint).toBe("#59CCD9");
   });
 
-  it("limits orange to one non-text Hero detail", () => {
+  it("limits orange to the profile X link and removes it from Hero", () => {
     const componentDirectory = resolve(
       process.cwd(),
       "src/features/natori/components/portfolio"
@@ -57,14 +56,15 @@ describe("PF-02 portfolio semantic colors", () => {
       .filter((fileName) =>
         readFileSync(resolve(componentDirectory, fileName), "utf8").includes("c.highlight")
       );
-    const heroSource = readFileSync(
-      resolve(componentDirectory, "PortfolioHero.tsx"),
+    const aboutSource = readFileSync(
+      resolve(componentDirectory, "PortfolioAbout.tsx"),
       "utf8"
     );
+    const heroSource = readFileSync(resolve(componentDirectory, "PortfolioHero.tsx"), "utf8");
 
-    expect(highlightUsages).toEqual(["PortfolioHero.tsx"]);
-    expect(heroSource).toContain("background: c.highlight");
-    expect(heroSource).not.toContain("color: c.highlight");
+    expect(highlightUsages).toEqual(["PortfolioAbout.tsx"]);
+    expect(aboutSource).toContain("borderColor: c.highlight, color: c.highlight");
+    expect(heroSource).not.toContain("c.highlight");
   });
 
   it("keeps body and semantic text at WCAG AA contrast", () => {
@@ -86,9 +86,6 @@ describe("PF-02 portfolio semantic colors", () => {
     for (const background of [portfolioColors.page, portfolioColors.surface]) {
       expect(contrastRatio(portfolioColors.accentDisplay, background)).toBeGreaterThanOrEqual(3);
     }
-    expect(contrastRatio(portfolioColors.onAction, portfolioColors.action)).toBeGreaterThanOrEqual(
-      4.5
-    );
     expect(contrastRatio(portfolioColors.onError, portfolioColors.error)).toBeGreaterThanOrEqual(
       4.5
     );
@@ -106,13 +103,12 @@ describe("PF-02 portfolio semantic colors", () => {
     ).toBeGreaterThanOrEqual(3);
   });
 
-  it("uses the approved warm-to-cool Hero rainbow without adding an outline", () => {
-    expect(portfolioHeroTitleColors).toEqual([
-      "#FF9B73",
-      "#FFD85A",
-      "#7ED9A3",
-      "#73C7FF",
-    ]);
+  it("uses the specified pink with white CTA text and neutral shadows", () => {
+    expect(portfolioColors.action).toBe("#F2AEB4");
+    expect(portfolioColors.onAction).toBe("#FFFFFF");
+    expect(portfolioColors.shadowSoft).toBe("rgba(0,0,0,0.08)");
+    expect(portfolioColors.shadowHover).toBe("rgba(0,0,0,0.14)");
+    expect(portfolioColors.shadowFloating).toBe("rgba(0,0,0,0.24)");
   });
 
   it("does not expose the old color-as-purpose token names", () => {
