@@ -27,6 +27,19 @@ class IntersectionObserverMock {
   unobserve = vi.fn();
 }
 
+function intersectionEntry(target: Element, isIntersecting: boolean): IntersectionObserverEntry {
+  const rect = target.getBoundingClientRect();
+  return {
+    boundingClientRect: rect,
+    intersectionRatio: isIntersecting ? 1 : 0,
+    intersectionRect: rect,
+    isIntersecting,
+    rootBounds: null,
+    target,
+    time: 0,
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("IntersectionObserver", IntersectionObserverMock);
@@ -60,13 +73,28 @@ describe("PF-07 mobile navigation", () => {
     });
   });
 
-  it("matches the hero CTA wording, respects the safe area, and hides over the form", () => {
+  it("matches the hero CTA wording, respects the safe area, and avoids guarded sections", () => {
     render(
       <>
+        <section id="hero" />
         <section id="form" />
         <PortfolioMobileCta />
       </>
     );
+
+    expect(screen.queryByRole("link", { name: "相談・見積もり" })).toBeNull();
+
+    const hero = document.getElementById("hero") as HTMLElement;
+    const form = document.getElementById("form") as HTMLElement;
+    act(() => {
+      intersectionCallback(
+        [
+          intersectionEntry(hero, false),
+          intersectionEntry(form, false),
+        ],
+        {} as IntersectionObserver
+      );
+    });
 
     const cta = screen.getByRole("link", { name: "相談・見積もり" });
     expect(cta.className).toContain("min-h-[44px]");
@@ -74,11 +102,27 @@ describe("PF-07 mobile navigation", () => {
 
     act(() => {
       intersectionCallback(
-        [{ isIntersecting: true } as IntersectionObserverEntry],
+        [intersectionEntry(hero, true)],
         {} as IntersectionObserver
       );
     });
 
+    expect(screen.queryByRole("link", { name: "相談・見積もり" })).toBeNull();
+
+    act(() => {
+      intersectionCallback(
+        [intersectionEntry(hero, false)],
+        {} as IntersectionObserver
+      );
+    });
+    expect(screen.getByRole("link", { name: "相談・見積もり" })).toBeTruthy();
+
+    act(() => {
+      intersectionCallback(
+        [intersectionEntry(form, true)],
+        {} as IntersectionObserver
+      );
+    });
     expect(screen.queryByRole("link", { name: "相談・見積もり" })).toBeNull();
     expect(disconnect).not.toHaveBeenCalled();
   });

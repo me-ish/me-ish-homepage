@@ -31,10 +31,12 @@ function contrastRatio(foreground: string, background: string): number {
 describe("PF-02 portfolio semantic colors", () => {
   it("keeps pink and cyan primary while reserving orange for a point accent", () => {
     expect(portfolioColors).toMatchObject({
-      action: "#F2AEB4",
+      action: "#F39CAF",
+      actionDisplay: "#DE6682",
       accent: "#59CCD9",
       accentHover: "#26AFCA",
       highlight: "#F29E38",
+      highlightText: "#AE5200",
     });
     expect([
       portfolioColors.action,
@@ -42,28 +44,42 @@ describe("PF-02 portfolio semantic colors", () => {
       portfolioColors.accentDisplay,
       portfolioColors.accentText,
     ]).not.toContain(portfolioColors.highlight);
-    expect(portfolioDecorativeColors.sparkleWarm).toBe("#F2AEB4");
+    expect(portfolioDecorativeColors.sparkleWarm).toBe("#F39CAF");
     expect(portfolioDecorativeColors.placeholderMint).toBe("#59CCD9");
   });
 
-  it("limits orange to the profile X link and removes it from Hero", () => {
+  it("limits orange to the profile X link and gallery sparkle", () => {
     const componentDirectory = resolve(
       process.cwd(),
       "src/features/natori/components/portfolio"
     );
-    const highlightUsages = readdirSync(componentDirectory)
+    const componentSources = readdirSync(componentDirectory)
       .filter((fileName) => fileName.endsWith(".tsx"))
-      .filter((fileName) =>
-        readFileSync(resolve(componentDirectory, fileName), "utf8").includes("c.highlight")
-      );
+      .map((fileName) => ({
+        fileName,
+        source: readFileSync(resolve(componentDirectory, fileName), "utf8"),
+      }));
+    const highlightUsages = componentSources
+      .filter(({ source }) => /\bc\.highlight\b/.test(source))
+      .map(({ fileName }) => fileName);
+    const highlightTextUsages = componentSources
+      .filter(({ source }) => /\bc\.highlightText\b/.test(source))
+      .map(({ fileName }) => fileName);
     const aboutSource = readFileSync(
       resolve(componentDirectory, "PortfolioAbout.tsx"),
       "utf8"
     );
+    const gallerySource = readFileSync(
+      resolve(componentDirectory, "PortfolioGallery.tsx"),
+      "utf8"
+    );
     const heroSource = readFileSync(resolve(componentDirectory, "PortfolioHero.tsx"), "utf8");
 
-    expect(highlightUsages).toEqual(["PortfolioAbout.tsx"]);
-    expect(aboutSource).toContain("borderColor: c.highlight, color: c.highlight");
+    expect(highlightUsages).toEqual(["PortfolioGallery.tsx"]);
+    expect(highlightTextUsages).toEqual(["PortfolioAbout.tsx"]);
+    expect(aboutSource).toContain("borderColor: c.highlightText");
+    expect(aboutSource).toContain("color: c.highlightText");
+    expect(gallerySource).toContain("color: c.highlight");
     expect(heroSource).not.toContain("c.highlight");
   });
 
@@ -85,7 +101,18 @@ describe("PF-02 portfolio semantic colors", () => {
     }
     for (const background of [portfolioColors.page, portfolioColors.surface]) {
       expect(contrastRatio(portfolioColors.accentDisplay, background)).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(portfolioColors.actionDisplay, background)).toBeGreaterThanOrEqual(3);
     }
+    for (const background of [
+      portfolioColors.page,
+      portfolioColors.surface,
+      portfolioColors.surfaceSubtle,
+    ]) {
+      expect(contrastRatio(portfolioColors.highlightText, background)).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(contrastRatio(portfolioColors.onAction, portfolioColors.action)).toBeGreaterThanOrEqual(
+      4.5
+    );
     expect(contrastRatio(portfolioColors.onError, portfolioColors.error)).toBeGreaterThanOrEqual(
       4.5
     );
@@ -103,9 +130,10 @@ describe("PF-02 portfolio semantic colors", () => {
     ).toBeGreaterThanOrEqual(3);
   });
 
-  it("uses the specified pink with white CTA text and neutral shadows", () => {
-    expect(portfolioColors.action).toBe("#F2AEB4");
-    expect(portfolioColors.onAction).toBe("#FFFFFF");
+  it("uses bright pink with dark CTA text and neutral shadows", () => {
+    expect(portfolioColors.action).toBe("#F39CAF");
+    expect(portfolioColors.actionDisplay).toBe("#DE6682");
+    expect(portfolioColors.onAction).toBe("#164A63");
     expect(portfolioColors.shadowSoft).toBe("rgba(0,0,0,0.08)");
     expect(portfolioColors.shadowHover).toBe("rgba(0,0,0,0.14)");
     expect(portfolioColors.shadowFloating).toBe("rgba(0,0,0,0.24)");

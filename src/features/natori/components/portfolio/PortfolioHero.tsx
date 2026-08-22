@@ -45,7 +45,11 @@ export default function PortfolioHero({
             <span aria-hidden="true" style={{ color: c.text }}>
               {content.heroTitleAccent}
             </span>
-            <span aria-hidden="true" className="whitespace-nowrap" style={{ color: c.action }}>
+            <span
+              aria-hidden="true"
+              className="whitespace-nowrap"
+              style={{ color: c.actionDisplay }}
+            >
               {content.heroTitleTail}
             </span>
           </h1>
@@ -65,7 +69,7 @@ export default function PortfolioHero({
             <a
               href="#gallery"
               className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-xl border-2 px-6 py-3 font-bold"
-              style={{ background: c.surface, borderColor: c.action, color: c.text }}
+              style={{ background: c.surface, borderColor: c.actionDisplay, color: c.text }}
             >
               作品を見る
             </a>

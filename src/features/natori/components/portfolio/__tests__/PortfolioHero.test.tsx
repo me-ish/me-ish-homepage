@@ -44,7 +44,7 @@ describe("PF-03 portfolio hero", () => {
     const heroTitle = screen.getByRole("heading", { level: 1, name: "ナトリのあとりえ" });
     const titleTail = heroTitle.querySelector("span.whitespace-nowrap") as HTMLElement;
     expect(titleTail.textContent).toBe(defaultPortfolioContent.heroTitleTail);
-    expect(titleTail.style.color).toBe("rgb(242, 174, 180)");
+    expect(titleTail.style.color).toBe("rgb(222, 102, 130)");
     expect(titleTail.querySelectorAll("span")).toHaveLength(0);
     const representativeImage = screen.getByRole("img", {
       name: `${defaultPortfolioContent.artistName}の代表作品`,
@@ -53,10 +53,10 @@ describe("PF-03 portfolio hero", () => {
     expect(representativeImage.getAttribute("data-priority")).toBe("true");
     const primaryLink = screen.getByRole("link", { name: "相談・見積もり" });
     expect(primaryLink.getAttribute("href")).toBe("#form");
-    expect((primaryLink as HTMLElement).style.color).toBe("rgb(255, 255, 255)");
+    expect((primaryLink as HTMLElement).style.color).toBe("rgb(22, 74, 99)");
     const worksLink = screen.getByRole("link", { name: "作品を見る" });
     expect(worksLink.getAttribute("href")).toBe("#gallery");
-    expect((worksLink as HTMLElement).style.borderColor).toBe("rgb(242, 174, 180)");
+    expect((worksLink as HTMLElement).style.borderColor).toBe("rgb(222, 102, 130)");
 
     fireEvent.click(screen.getByRole("link", { name: "相談・見積もり" }));
     expect(trackNatoriPageEvent).toHaveBeenCalledWith(

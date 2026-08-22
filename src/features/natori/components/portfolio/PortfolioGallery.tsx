@@ -8,7 +8,6 @@ import Image from "next/image";
 import {
   placeholderPalettes,
   portfolioColors as c,
-  portfolioDecorativeColors as d,
   workRotations,
 } from "@/features/natori/constants/portfolioContent";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
@@ -176,7 +175,7 @@ export default function PortfolioGallery({
     <section id="gallery" className="mx-auto max-w-6xl px-5 py-16">
       <div className="mb-10">
         <h2 className="text-2xl font-black md:text-3xl">
-          作品ギャラリー <span style={{ color: d.sparkleCool }}>°˖✧</span>
+          作品ギャラリー <span style={{ color: c.highlight }}>°˖✧</span>
         </h2>
       </div>
 
