@@ -36,9 +36,14 @@ export default function PortfolioHero({
       >
         <div className="max-w-xl">
           <p
-            className="mb-4 text-sm font-semibold uppercase tracking-[0.18em]"
+            className="mb-4 flex items-center gap-2.5 text-sm font-semibold uppercase tracking-[0.18em]"
             style={{ ...fontEnStyle, color: c.accentText }}
           >
+            <span
+              aria-hidden="true"
+              className="h-0.5 w-7 shrink-0 rounded-full"
+              style={{ background: c.highlight }}
+            />
             {content.roleEn}
           </p>
           <h1

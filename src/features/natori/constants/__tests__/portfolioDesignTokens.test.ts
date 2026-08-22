@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -30,15 +30,41 @@ function contrastRatio(foreground: string, background: string): number {
 }
 
 describe("PF-02 portfolio semantic colors", () => {
-  it("keeps the supplied poolside palette and orange primary accent", () => {
+  it("keeps pink and cyan primary while reserving orange for a point accent", () => {
     expect(portfolioColors).toMatchObject({
-      borderSubtle: "#F2AEB4",
-      borderStrong: "#6F91AD",
-      accent: "#F29E38",
-      action: "#F29E38",
+      action: "#F2AEB4",
+      accent: "#59CCD9",
       accentHover: "#26AFCA",
+      highlight: "#F29E38",
     });
+    expect([
+      portfolioColors.action,
+      portfolioColors.accent,
+      portfolioColors.accentDisplay,
+      portfolioColors.accentText,
+    ]).not.toContain(portfolioColors.highlight);
+    expect(portfolioDecorativeColors.sparkleWarm).toBe("#F2AEB4");
     expect(portfolioDecorativeColors.placeholderMint).toBe("#59CCD9");
+  });
+
+  it("limits orange to one non-text Hero detail", () => {
+    const componentDirectory = resolve(
+      process.cwd(),
+      "src/features/natori/components/portfolio"
+    );
+    const highlightUsages = readdirSync(componentDirectory)
+      .filter((fileName) => fileName.endsWith(".tsx"))
+      .filter((fileName) =>
+        readFileSync(resolve(componentDirectory, fileName), "utf8").includes("c.highlight")
+      );
+    const heroSource = readFileSync(
+      resolve(componentDirectory, "PortfolioHero.tsx"),
+      "utf8"
+    );
+
+    expect(highlightUsages).toEqual(["PortfolioHero.tsx"]);
+    expect(heroSource).toContain("background: c.highlight");
+    expect(heroSource).not.toContain("color: c.highlight");
   });
 
   it("keeps body and semantic text at WCAG AA contrast", () => {

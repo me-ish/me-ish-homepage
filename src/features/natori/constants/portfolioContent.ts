@@ -17,32 +17,33 @@ import type {
    カラートークン
    ここを書き換えるだけで全体の配色を調整できます
 ------------------------------------------------------------------- */
-/** プールサイドの参考配色を基準に、ピンクと水色を土台、オレンジを主アクセントにする。 */
+/** プールサイドの参考配色を基準に、ピンクと水色を主役、オレンジを限定的な差し色にする。 */
 export const portfolioColors = {
-  page: "#FFF9F8",
+  page: "#FFF9FA",
   surface: "#FFFFFF",
-  surfaceSubtle: "#FFF1F2",
-  text: "#456579",
-  textSoft: "#4F7188",
-  borderSubtle: "#F2AEB4",
-  borderStrong: "#6F91AD",
-  accent: "#F29E38",
-  accentDisplay: "#D87814",
-  accentText: "#AC5900",
+  surfaceSubtle: "#FFF0F4",
+  text: "#164A63",
+  textSoft: "#245F78",
+  borderSubtle: "#F7CBD0",
+  borderStrong: "#00758D",
+  accent: "#59CCD9",
+  accentDisplay: "#00758D",
+  accentText: "#00758D",
   accentHover: "#26AFCA",
-  accentSoft: "#FFF0D8",
-  action: "#F29E38",
-  onAction: "#27465B",
+  accentSoft: "#E8FAFC",
+  action: "#F2AEB4",
+  onAction: "#164A63",
+  highlight: "#F29E38",
   onError: "#FFFFFF",
   error: "#B42318",
   errorSoft: "#FEF3F2",
-  success: "#26798F",
-  successSoft: "#E8FAFC",
-  overlay: "rgba(39,70,91,0.68)",
-  pageTranslucent: "rgba(255,249,248,0.94)",
-  shadowSoft: "rgba(111,145,173,0.14)",
-  shadowHover: "rgba(111,145,173,0.22)",
-  shadowFloating: "rgba(74,110,137,0.28)",
+  success: "#007D64",
+  successSoft: "#E8FFF8",
+  overlay: "rgba(22,74,99,0.68)",
+  pageTranslucent: "rgba(255,249,250,0.94)",
+  shadowSoft: "rgba(38,175,202,0.12)",
+  shadowHover: "rgba(38,175,202,0.2)",
+  shadowFloating: "rgba(8,126,152,0.24)",
 } as const;
 
 /** Heroの「あ・と・り・え」を、暖色から寒色へ自然につながる虹色で彩る。 */
@@ -58,7 +59,7 @@ export const portfolioHeroTitleColors = [
  * UI状態や本文には使わず、tape/rotation/tagの整理と合わせてPF-04/05で縮小する。
  */
 export const portfolioDecorativeColors = {
-  sparkleWarm: "#F29E38",
+  sparkleWarm: "#F2AEB4",
   sparkleCool: "#26AFCA",
   placeholderRose: "#F2AEB4",
   placeholderMint: "#59CCD9",
