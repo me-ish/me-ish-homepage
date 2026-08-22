@@ -42,7 +42,7 @@ export default function PortfolioAbout({
           {/* プロフィールアイコン。編集画面から画像を設定すると差し替わる */}
           <div
             className="rounded-full p-6"
-            style={{ background: c.surface, boxShadow: "0 12px 24px rgba(36,36,36,0.08)" }}
+            style={{ background: c.surface, boxShadow: `0 12px 24px ${c.shadowSoft}` }}
           >
             {content.aboutImage ? (
               <div className="relative h-[140px] w-[140px] overflow-hidden rounded-full">

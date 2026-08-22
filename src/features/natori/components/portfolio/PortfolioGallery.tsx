@@ -32,7 +32,7 @@ function MaskingTape({ color, angle }: { color: string; angle: number }) {
         background: `linear-gradient(rgba(255,255,255,0.35), rgba(255,255,255,0) 45%), ${color}`,
         opacity: 0.85,
         transform: `translateX(-50%) rotate(${angle}deg)`,
-        boxShadow: "0 1px 2px rgba(36,36,36,0.16)",
+        boxShadow: `0 1px 2px ${c.shadowHover}`,
         clipPath:
           "polygon(2% 0%, 98% 0%, 100% 18%, 98% 38%, 100% 60%, 98% 80%, 100% 100%, 2% 100%, 0% 78%, 2% 58%, 0% 38%, 2% 20%)",
       }}
@@ -279,7 +279,7 @@ export default function PortfolioGallery({
             className="relative flex max-h-full w-full max-w-3xl flex-col rounded-xl p-3 pb-4"
             style={{
               background: c.surface,
-              boxShadow: "0 20px 40px rgba(36,36,36,0.26)",
+              boxShadow: `0 20px 40px ${c.shadowFloating}`,
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -363,7 +363,7 @@ function PortfolioWorkCard({
       className={`pf-pin-card ${rotate} relative rounded-xl p-3 pb-4 pt-5`}
       style={{
         background: c.surface,
-        boxShadow: "0 10px 20px rgba(36,36,36,0.08)",
+        boxShadow: `0 10px 20px ${c.shadowSoft}`,
       }}
     >
       <MaskingTape color={collection.color} angle={tapeAngle} />

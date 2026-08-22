@@ -65,7 +65,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
           <div
             key={p.id ?? `legacy-plan-${index}`}
             className="relative flex flex-col rounded-2xl p-6"
-            style={{ background: c.surface, boxShadow: "0 10px 22px rgba(36,36,36,0.08)" }}
+            style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
           >
             <h3 className="mb-1 text-lg font-bold">{p.name}</h3>
             <p className="mb-2 text-2xl font-bold" style={{ color: c.accentDisplay }}>
@@ -105,7 +105,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
       {/* 追加オプション */}
       <div
         className="mx-auto mt-12 max-w-3xl rounded-2xl p-6 md:p-8"
-        style={{ background: c.surface, boxShadow: "0 10px 22px rgba(36,36,36,0.08)" }}
+        style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
       >
         <h3 className="mb-4 text-lg font-black md:text-xl">追加オプション</h3>
         <ul className="divide-y" style={{ borderColor: c.borderSubtle }}>

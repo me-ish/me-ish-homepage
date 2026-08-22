@@ -403,7 +403,7 @@ export default function PortfolioStructuredCommissionForm({
       onSubmit={handleSubmit}
       noValidate={false}
       className="space-y-4 rounded-2xl p-5 md:p-8"
-      style={{ background: c.surface, boxShadow: "0 10px 22px rgba(36,36,36,0.08)" }}
+      style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
     >
       {/* honeypot: 人間には見えない。ボット対策 */}
       <input

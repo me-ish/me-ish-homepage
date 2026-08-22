@@ -33,7 +33,7 @@ export default function PortfolioMobileCta() {
         background: c.action,
         color: c.onAction,
         bottom: "calc(1.25rem + env(safe-area-inset-bottom))",
-        boxShadow: "0 8px 20px rgba(36,36,36,0.22)",
+        boxShadow: `0 8px 20px ${c.shadowFloating}`,
       }}
     >
       相談・見積もり

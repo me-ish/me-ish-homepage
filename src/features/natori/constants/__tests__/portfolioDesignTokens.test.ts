@@ -5,8 +5,8 @@ import { describe, expect, it } from "vitest";
 import {
   legacyNatoriTransactionColors,
   portfolioColors,
+  portfolioDecorativeColors,
   portfolioHeroTitleColors,
-  portfolioHeroTitleOutlineColor,
 } from "@/features/natori/constants/portfolioContent";
 
 function relativeLuminance(hex: string): number {
@@ -30,6 +30,17 @@ function contrastRatio(foreground: string, background: string): number {
 }
 
 describe("PF-02 portfolio semantic colors", () => {
+  it("keeps the supplied poolside palette and orange primary accent", () => {
+    expect(portfolioColors).toMatchObject({
+      borderSubtle: "#F2AEB4",
+      borderStrong: "#6F91AD",
+      accent: "#F29E38",
+      action: "#F29E38",
+      accentHover: "#26AFCA",
+    });
+    expect(portfolioDecorativeColors.placeholderMint).toBe("#59CCD9");
+  });
+
   it("keeps body and semantic text at WCAG AA contrast", () => {
     for (const background of [
       portfolioColors.page,
@@ -69,16 +80,13 @@ describe("PF-02 portfolio semantic colors", () => {
     ).toBeGreaterThanOrEqual(3);
   });
 
-  it("uses the approved warm-to-cool Hero rainbow with a readable outline", () => {
+  it("uses the approved warm-to-cool Hero rainbow without adding an outline", () => {
     expect(portfolioHeroTitleColors).toEqual([
       "#FF9B73",
       "#FFD85A",
       "#7ED9A3",
       "#73C7FF",
     ]);
-    expect(
-      contrastRatio(portfolioHeroTitleOutlineColor, portfolioColors.page)
-    ).toBeGreaterThanOrEqual(4.5);
   });
 
   it("does not expose the old color-as-purpose token names", () => {
@@ -195,7 +203,7 @@ describe("portfolio choice controls", () => {
 
   it("uses white selection marks instead of browser-selected black marks", () => {
     expect(stylesSource).toContain('.pf-choice-control[type="radio"]:checked');
-    expect(stylesSource).toContain("radial-gradient(circle, ${c.onAction}");
+    expect(stylesSource).toContain("radial-gradient(circle, ${c.surface}");
     expect(stylesSource).toContain("stroke='white'");
   });
 
