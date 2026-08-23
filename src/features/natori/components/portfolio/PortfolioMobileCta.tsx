@@ -40,7 +40,7 @@ export default function PortfolioMobileCta() {
     <a
       href="#form"
       onClick={() => trackNatoriPageEvent("portfolio_primary_cta_click", "mobile_sticky")}
-      className="pf-cute-focus fixed right-5 z-40 inline-flex min-h-[44px] items-center rounded-full px-5 py-3 text-sm font-bold shadow-lg hover:brightness-105 md:hidden"
+      className="pf-cute-focus fixed right-5 z-40 inline-flex min-h-[44px] items-center rounded-full px-5 py-3 text-base font-black shadow-lg hover:brightness-105 md:hidden"
       style={{
         background: c.action,
         color: c.onAction,

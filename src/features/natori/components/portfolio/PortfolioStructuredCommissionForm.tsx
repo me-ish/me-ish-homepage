@@ -116,7 +116,7 @@ function FormSection({
   const heading = (
     <>
       <span
-        className="mr-2 inline-grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-black"
+        className="mr-2 inline-grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-black"
         style={{ background: c.action, color: c.onAction }}
         aria-hidden="true"
       >
@@ -1222,7 +1222,7 @@ export default function PortfolioStructuredCommissionForm({
           type="submit"
           disabled={!commissionOpen || sending}
           aria-busy={sending}
-          className="pf-cute-focus w-full rounded-full py-3 font-bold disabled:opacity-50"
+          className="pf-cute-focus w-full rounded-full py-3.5 text-base font-black disabled:opacity-50"
           style={{ background: c.action, color: c.onAction }}
         >
           {!commissionOpen ? "現在受付停止中です" : sending ? "送信中…" : "この内容で送信する"}

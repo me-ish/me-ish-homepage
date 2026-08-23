@@ -53,7 +53,9 @@ describe("PF-03 portfolio hero", () => {
     expect(representativeImage.getAttribute("data-priority")).toBe("true");
     const primaryLink = screen.getByRole("link", { name: "相談・見積もり" });
     expect(primaryLink.getAttribute("href")).toBe("#form");
-    expect((primaryLink as HTMLElement).style.color).toBe("rgb(22, 74, 99)");
+    expect((primaryLink as HTMLElement).style.background).toBe("rgb(213, 46, 113)");
+    expect((primaryLink as HTMLElement).style.color).toBe("rgb(255, 255, 255)");
+    expect(primaryLink.className).toContain("text-base font-black");
     const worksLink = screen.getByRole("link", { name: "作品を見る" });
     expect(worksLink.getAttribute("href")).toBe("#gallery");
     expect((worksLink as HTMLElement).style.borderColor).toBe("rgb(222, 102, 130)");

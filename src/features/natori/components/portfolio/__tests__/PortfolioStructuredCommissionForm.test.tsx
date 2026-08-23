@@ -525,5 +525,15 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     renderForm();
     const headings = screen.getAllByRole("heading", { level: 3 });
     expect(headings.length).toBeGreaterThanOrEqual(3);
+    const firstStepNumber = headings[0].querySelector("span[aria-hidden='true']") as HTMLElement;
+    expect(firstStepNumber.className).toContain("h-7 w-7");
+    expect(firstStepNumber.className).toContain("text-sm font-black");
+    expect(firstStepNumber.style.background).toBe("rgb(213, 46, 113)");
+    expect(firstStepNumber.style.color).toBe("rgb(255, 255, 255)");
+
+    const submitButton = screen.getByRole("button", { name: "この内容で送信する" });
+    expect(submitButton.className).toContain("text-base font-black");
+    expect(submitButton.style.background).toBe("rgb(213, 46, 113)");
+    expect(submitButton.style.color).toBe("rgb(255, 255, 255)");
   });
 });

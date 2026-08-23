@@ -19,6 +19,11 @@ describe("PF-01 guideline responsibility split", () => {
     expect(within(flow as HTMLElement).getByText(defaultPortfolioContent.workflow[0].title)).toBeTruthy();
     expect(within(flow as HTMLElement).getByText(defaultPortfolioContent.deliveryLead)).toBeTruthy();
     expect(within(flow as HTMLElement).queryByText(defaultPortfolioContent.requests[0])).toBeNull();
+    const firstStepNumber = flow?.querySelector("ol > li > span") as HTMLElement;
+    expect(firstStepNumber.className).toContain("h-10 w-10");
+    expect(firstStepNumber.className).toContain("text-base font-black");
+    expect(firstStepNumber.style.background).toBe("rgb(213, 46, 113)");
+    expect(firstStepNumber.style.color).toBe("rgb(255, 255, 255)");
   });
 
   it("keeps existing request guidance separate without adding FAQ content", () => {

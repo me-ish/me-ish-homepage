@@ -31,12 +31,11 @@ function contrastRatio(foreground: string, background: string): number {
 describe("PF-02 portfolio semantic colors", () => {
   it("keeps pink and cyan primary while reserving orange for a point accent", () => {
     expect(portfolioColors).toMatchObject({
-      action: "#F39CAF",
+      action: "#D52E71",
       actionDisplay: "#DE6682",
       accent: "#59CCD9",
       accentHover: "#26AFCA",
-      highlight: "#F29E38",
-      highlightText: "#AE5200",
+      highlight: "#F8A63E",
     });
     expect([
       portfolioColors.action,
@@ -62,9 +61,6 @@ describe("PF-02 portfolio semantic colors", () => {
     const highlightUsages = componentSources
       .filter(({ source }) => /\bc\.highlight\b/.test(source))
       .map(({ fileName }) => fileName);
-    const highlightTextUsages = componentSources
-      .filter(({ source }) => /\bc\.highlightText\b/.test(source))
-      .map(({ fileName }) => fileName);
     const aboutSource = readFileSync(
       resolve(componentDirectory, "PortfolioAbout.tsx"),
       "utf8"
@@ -75,10 +71,10 @@ describe("PF-02 portfolio semantic colors", () => {
     );
     const heroSource = readFileSync(resolve(componentDirectory, "PortfolioHero.tsx"), "utf8");
 
-    expect(highlightUsages).toEqual(["PortfolioGallery.tsx"]);
-    expect(highlightTextUsages).toEqual(["PortfolioAbout.tsx"]);
-    expect(aboutSource).toContain("borderColor: c.highlightText");
-    expect(aboutSource).toContain("color: c.highlightText");
+    expect(highlightUsages).toEqual(["PortfolioAbout.tsx", "PortfolioGallery.tsx"]);
+    expect(aboutSource).toContain("borderColor: c.highlight");
+    expect(aboutSource).toContain("background: c.highlight");
+    expect(aboutSource).toContain("color: c.text");
     expect(gallerySource).toContain("color: c.highlight");
     expect(heroSource).not.toContain("c.highlight");
   });
@@ -103,13 +99,9 @@ describe("PF-02 portfolio semantic colors", () => {
       expect(contrastRatio(portfolioColors.accentDisplay, background)).toBeGreaterThanOrEqual(3);
       expect(contrastRatio(portfolioColors.actionDisplay, background)).toBeGreaterThanOrEqual(3);
     }
-    for (const background of [
-      portfolioColors.page,
-      portfolioColors.surface,
-      portfolioColors.surfaceSubtle,
-    ]) {
-      expect(contrastRatio(portfolioColors.highlightText, background)).toBeGreaterThanOrEqual(4.5);
-    }
+    expect(contrastRatio(portfolioColors.text, portfolioColors.highlight)).toBeGreaterThanOrEqual(
+      4.5
+    );
     expect(contrastRatio(portfolioColors.onAction, portfolioColors.action)).toBeGreaterThanOrEqual(
       4.5
     );
@@ -130,10 +122,10 @@ describe("PF-02 portfolio semantic colors", () => {
     ).toBeGreaterThanOrEqual(3);
   });
 
-  it("uses bright pink with dark CTA text and neutral shadows", () => {
-    expect(portfolioColors.action).toBe("#F39CAF");
+  it("uses vivid pink with white CTA text and neutral shadows", () => {
+    expect(portfolioColors.action).toBe("#D52E71");
     expect(portfolioColors.actionDisplay).toBe("#DE6682");
-    expect(portfolioColors.onAction).toBe("#164A63");
+    expect(portfolioColors.onAction).toBe("#FFFFFF");
     expect(portfolioColors.shadowSoft).toBe("rgba(0,0,0,0.08)");
     expect(portfolioColors.shadowHover).toBe("rgba(0,0,0,0.14)");
     expect(portfolioColors.shadowFloating).toBe("rgba(0,0,0,0.24)");
@@ -265,5 +257,16 @@ describe("portfolio choice controls", () => {
     expect(legacyFormSource).toContain(
       'className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0"'
     );
+  });
+
+  it("keeps both request-form submit buttons large, bold, and on the action colors", () => {
+    const submitClass =
+      'className="pf-cute-focus w-full rounded-full py-3.5 text-base font-black disabled:opacity-50"';
+    const submitColors = "style={{ background: c.action, color: c.onAction }}";
+
+    expect(structuredFormSource).toContain(submitClass);
+    expect(structuredFormSource).toContain(submitColors);
+    expect(legacyFormSource).toContain(submitClass);
+    expect(legacyFormSource).toContain(submitColors);
   });
 });

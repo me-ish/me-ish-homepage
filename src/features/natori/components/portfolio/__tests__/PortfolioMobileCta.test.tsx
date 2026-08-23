@@ -20,7 +20,11 @@ describe("PortfolioMobileCta analytics", () => {
   it("records the sticky mobile CTA source", () => {
     render(<PortfolioMobileCta />);
 
-    fireEvent.click(screen.getByRole("link", { name: "相談・見積もり" }));
+    const cta = screen.getByRole("link", { name: "相談・見積もり" });
+    expect(cta.className).toContain("text-base font-black");
+    expect(cta.style.background).toBe("rgb(213, 46, 113)");
+    expect(cta.style.color).toBe("rgb(255, 255, 255)");
+    fireEvent.click(cta);
     expect(trackNatoriPageEvent).toHaveBeenCalledWith(
       "portfolio_primary_cta_click",
       "mobile_sticky"

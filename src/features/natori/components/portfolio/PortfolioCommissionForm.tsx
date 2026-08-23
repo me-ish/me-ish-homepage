@@ -494,7 +494,7 @@ export default function PortfolioCommissionForm({
             <button
               type="submit"
               disabled={!commissionOpen || status === "sending"}
-              className="pf-cute-focus w-full rounded-full py-3 font-bold disabled:opacity-50"
+              className="pf-cute-focus w-full rounded-full py-3.5 text-base font-black disabled:opacity-50"
               style={{ background: c.action, color: c.onAction }}
             >
               {!commissionOpen

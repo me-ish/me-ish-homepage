@@ -31,15 +31,13 @@ export const portfolioColors = {
   accentText: "#00758D",
   accentHover: "#26AFCA",
   accentSoft: "#E8FAFC",
-  /** CTAなど広い面に使う、ローズ寄りではない明るいピンク。 */
-  action: "#F39CAF",
+  /** 白文字のCTA・番号に使う、ローズ寄りではない鮮やかなピンク。 */
+  action: "#D52E71",
   /** 大見出し・アウトライン用。淡い背景上でも輪郭が残るピンク。 */
   actionDisplay: "#DE6682",
-  onAction: "#164A63",
+  onAction: "#FFFFFF",
   /** 小さな装飾にだけ使う明るいオレンジ。 */
-  highlight: "#F29E38",
-  /** 白背景上の小さなリンク文字・枠に使うオレンジ。 */
-  highlightText: "#AE5200",
+  highlight: "#F8A63E",
   onError: "#FFFFFF",
   error: "#B42318",
   errorSoft: "#FEF3F2",

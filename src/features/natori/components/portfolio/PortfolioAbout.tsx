@@ -31,10 +31,9 @@ export default function PortfolioAbout({
 }) {
   // showcase ではXも直接連絡手段になり得るためリンクを出さない
   const xLink = variant === "showcase" ? undefined : content.socialLinks.find(isPortfolioXLink);
-  // プロフィール欄の名前・肩書きはヘッダー/ヒーローとは独立に設定できる。
-  // 未設定（旧データ）のときは従来どおりサイト名・英字肩書きを表示する
+  // プロフィール欄の名前はヘッダー/ヒーローとは独立に設定できる。
+  // 未設定（旧データ）のときは従来どおりサイト名を表示する
   const profileName = content.profileName.trim() || content.artistName;
-  const profileRole = content.profileRole.trim() || content.roleEn;
   return (
     <section id="about" className="py-16" style={{ background: c.surfaceSubtle }}>
       <div className="mx-auto grid max-w-6xl items-start gap-10 px-5 md:grid-cols-3">
@@ -66,21 +65,15 @@ export default function PortfolioAbout({
           </div>
           {/* 名前とX。フッターにあったXリンクはここへ移設 */}
           <p className="mt-5 text-center text-2xl font-black tracking-wide">{profileName}</p>
-          <p
-            className="mt-1 text-xs font-semibold uppercase tracking-widest"
-            style={{ ...fontEnStyle, color: c.accentText }}
-          >
-            {profileRole}
-          </p>
           {xLink ? (
             <PortfolioSnsLink
               href={xLink.href}
               label="X"
-              className="pf-cute-focus mt-3 inline-flex items-center gap-2 rounded-full border-2 px-4 py-1.5 text-sm font-bold hover:bg-white"
+              className="pf-cute-focus mt-3 inline-flex items-center gap-2 rounded-full border-2 px-4 py-1.5 text-sm font-black hover:brightness-105"
               style={{
-                borderColor: c.highlightText,
-                color: c.highlightText,
-                background: c.surface,
+                borderColor: c.highlight,
+                color: c.text,
+                background: c.highlight,
               }}
             >
               <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current" aria-hidden="true">

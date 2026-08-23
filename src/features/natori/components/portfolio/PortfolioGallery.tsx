@@ -287,7 +287,7 @@ export default function PortfolioGallery({
               type="button"
               onClick={closeModal}
               aria-label="閉じる"
-              className="pf-cute-focus absolute -right-3 -top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full font-bold shadow-md hover:brightness-105"
+              className="pf-cute-focus absolute -right-3 -top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full font-black shadow-md hover:brightness-105"
               style={{ background: c.action, color: c.onAction }}
             >
               ✕
