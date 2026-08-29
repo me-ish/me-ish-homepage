@@ -36,9 +36,9 @@ describe("PF-02 portfolio semantic colors", () => {
       surfaceSubtle: "#FFF8FA",
       text: "#242027",
       textSoft: "#353038",
-      action: "#FF99D3",
-      actionText: "#FF99D3",
-      actionDisplay: "#D95A9F",
+      action: "#E66AA9",
+      actionText: "#E66AA9",
+      actionDisplay: "#C94B89",
       onAction: "#FFFFFF",
       accent: "#A9DDE3",
       accentHover: "#4D93A2",
@@ -52,7 +52,8 @@ describe("PF-02 portfolio semantic colors", () => {
       portfolioColors.accentDisplay,
       portfolioColors.accentText,
     ]).not.toContain(portfolioColors.highlight);
-    expect(portfolioDecorativeColors.sparkleWarm).toBe("#FF99D3");
+    expect(portfolioDecorativeColors.sparkleWarm).toBe("#FFC6DE");
+    expect(portfolioDecorativeColors.placeholderRose).toBe("#FFC6DE");
     expect(portfolioDecorativeColors.placeholderMint).toBe("#A9DDE3");
   });
 
@@ -128,11 +129,12 @@ describe("PF-02 portfolio semantic colors", () => {
     ).toBeGreaterThanOrEqual(3);
   });
 
-  it("uses the requested pink base with white labels, a darker outline, and soft shadows", () => {
-    expect(portfolioColors.action).toBe("#FF99D3");
-    expect(portfolioColors.actionText).toBe("#FF99D3");
-    expect(portfolioColors.actionDisplay).toBe("#D95A9F");
+  it("uses one pastel-pop pink family for text, controls, outlines, and decoration", () => {
+    expect(portfolioColors.action).toBe("#E66AA9");
+    expect(portfolioColors.actionText).toBe("#E66AA9");
+    expect(portfolioColors.actionDisplay).toBe("#C94B89");
     expect(portfolioColors.onAction).toBe("#FFFFFF");
+    expect(portfolioDecorativeColors.sparkleWarm).toBe("#FFC6DE");
     expect(portfolioColors.shadowSoft).toBe("rgba(0,0,0,0.06)");
     expect(portfolioColors.shadowHover).toBe("rgba(0,0,0,0.10)");
     expect(portfolioColors.shadowFloating).toBe("rgba(0,0,0,0.16)");

@@ -32,10 +32,10 @@ export const portfolioColors = {
   accentHover: "#4D93A2",
   accentSoft: "#EEF9FA",
   /** CTA・番号の面に使うパステルピンク。 */
-  action: "#FF99D3",
-  actionText: "#FF99D3",
+  action: "#E66AA9",
+  actionText: "#E66AA9",
   /** ピンク面の枠に使う一段濃いピンク。 */
-  actionDisplay: "#D95A9F",
+  actionDisplay: "#C94B89",
   onAction: "#FFFFFF",
   /** 小さな装飾にだけ使うパステルオレンジ。 */
   highlight: "#FFD7A3",
@@ -59,9 +59,9 @@ export const portfolioColors = {
  * UI状態や本文には使わず、tape/rotation/tagの整理と合わせてPF-04/05で縮小する。
  */
 export const portfolioDecorativeColors = {
-  sparkleWarm: "#FF99D3",
+  sparkleWarm: "#FFC6DE",
   sparkleCool: "#A9DDE3",
-  placeholderRose: "#FF99D3",
+  placeholderRose: "#FFC6DE",
   placeholderMint: "#A9DDE3",
   placeholderPeach: "#F8D5B8",
   placeholderGold: "#F6E2A6",
