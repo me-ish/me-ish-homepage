@@ -35,6 +35,7 @@ describe("PF-02 portfolio semantic colors", () => {
       surface: "#FFFFFF",
       surfaceSubtle: "#FFF8FA",
       action: "#FF99D3",
+      actionText: "#FF99D3",
       actionDisplay: "#D95A9F",
       onAction: "#FFFFFF",
       accent: "#A9DDE3",
@@ -127,6 +128,7 @@ describe("PF-02 portfolio semantic colors", () => {
 
   it("uses the requested pink base with white labels, a darker outline, and soft shadows", () => {
     expect(portfolioColors.action).toBe("#FF99D3");
+    expect(portfolioColors.actionText).toBe("#FF99D3");
     expect(portfolioColors.actionDisplay).toBe("#D95A9F");
     expect(portfolioColors.onAction).toBe("#FFFFFF");
     expect(portfolioColors.shadowSoft).toBe("rgba(0,0,0,0.06)");

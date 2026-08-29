@@ -48,7 +48,7 @@ export default function PortfolioHero({
             <span
               aria-hidden="true"
               className="whitespace-nowrap"
-              style={{ color: c.actionDisplay }}
+              style={{ color: c.actionText }}
             >
               {content.heroTitleTail}
             </span>

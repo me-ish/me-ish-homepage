@@ -33,7 +33,8 @@ export const portfolioColors = {
   accentSoft: "#EEF9FA",
   /** CTA・番号の面に使うパステルピンク。 */
   action: "#FF99D3",
-  /** ピンク面の枠・大見出しに使う一段濃いピンク。 */
+  actionText: "#FF99D3",
+  /** ピンク面の枠に使う一段濃いピンク。 */
   actionDisplay: "#D95A9F",
   onAction: "#FFFFFF",
   /** 小さな装飾にだけ使うパステルオレンジ。 */
