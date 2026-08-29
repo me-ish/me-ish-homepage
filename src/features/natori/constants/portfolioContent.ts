@@ -32,13 +32,14 @@ export const portfolioColors = {
   accentHover: "#4D93A2",
   accentSoft: "#EEF9FA",
   /** CTA・番号の面に使うパステルピンク。 */
-  action: "#F8C3D0",
+  action: "#FF99D3",
   /** ピンク面の枠・大見出しに使う一段濃いピンク。 */
-  actionDisplay: "#B45A73",
-  onAction: "#7A334A",
+  actionDisplay: "#D95A9F",
+  onAction: "#FFFFFF",
   /** 小さな装飾にだけ使うパステルオレンジ。 */
   highlight: "#FFD7A3",
-  /** オレンジ面の文字・枠にだけ使う濃いオレンジ。 */
+  highlightBorder: "#FFB01C",
+  /** オレンジ面の文字にだけ使う濃いオレンジ。 */
   highlightDisplay: "#8A4800",
   onError: "#FFFFFF",
   error: "#B42318",
@@ -57,9 +58,9 @@ export const portfolioColors = {
  * UI状態や本文には使わず、tape/rotation/tagの整理と合わせてPF-04/05で縮小する。
  */
 export const portfolioDecorativeColors = {
-  sparkleWarm: "#F8C3D0",
+  sparkleWarm: "#FF99D3",
   sparkleCool: "#A9DDE3",
-  placeholderRose: "#F8C3D0",
+  placeholderRose: "#FF99D3",
   placeholderMint: "#A9DDE3",
   placeholderPeach: "#F8D5B8",
   placeholderGold: "#F6E2A6",

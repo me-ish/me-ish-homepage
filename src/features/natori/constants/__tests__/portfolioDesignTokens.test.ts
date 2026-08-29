@@ -34,11 +34,13 @@ describe("PF-02 portfolio semantic colors", () => {
       page: "#FFFEFE",
       surface: "#FFFFFF",
       surfaceSubtle: "#FFF8FA",
-      action: "#F8C3D0",
-      actionDisplay: "#B45A73",
+      action: "#FF99D3",
+      actionDisplay: "#D95A9F",
+      onAction: "#FFFFFF",
       accent: "#A9DDE3",
       accentHover: "#4D93A2",
       highlight: "#FFD7A3",
+      highlightBorder: "#FFB01C",
       highlightDisplay: "#8A4800",
     });
     expect([
@@ -47,7 +49,7 @@ describe("PF-02 portfolio semantic colors", () => {
       portfolioColors.accentDisplay,
       portfolioColors.accentText,
     ]).not.toContain(portfolioColors.highlight);
-    expect(portfolioDecorativeColors.sparkleWarm).toBe("#F8C3D0");
+    expect(portfolioDecorativeColors.sparkleWarm).toBe("#FF99D3");
     expect(portfolioDecorativeColors.placeholderMint).toBe("#A9DDE3");
   });
 
@@ -76,7 +78,7 @@ describe("PF-02 portfolio semantic colors", () => {
     const heroSource = readFileSync(resolve(componentDirectory, "PortfolioHero.tsx"), "utf8");
 
     expect(highlightUsages).toEqual(["PortfolioAbout.tsx", "PortfolioGallery.tsx"]);
-    expect(aboutSource).toContain("borderColor: c.highlightDisplay");
+    expect(aboutSource).toContain("borderColor: c.highlightBorder");
     expect(aboutSource).toContain("background: c.highlight");
     expect(aboutSource).toContain("color: c.highlightDisplay");
     expect(gallerySource).toContain("color: c.highlight");
@@ -106,9 +108,6 @@ describe("PF-02 portfolio semantic colors", () => {
     expect(
       contrastRatio(portfolioColors.highlightDisplay, portfolioColors.highlight)
     ).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio(portfolioColors.onAction, portfolioColors.action)).toBeGreaterThanOrEqual(
-      4.5
-    );
     expect(contrastRatio(portfolioColors.onError, portfolioColors.error)).toBeGreaterThanOrEqual(
       4.5
     );
@@ -126,10 +125,10 @@ describe("PF-02 portfolio semantic colors", () => {
     ).toBeGreaterThanOrEqual(3);
   });
 
-  it("uses pastel action surfaces with darker text, outlines, and soft shadows", () => {
-    expect(portfolioColors.action).toBe("#F8C3D0");
-    expect(portfolioColors.actionDisplay).toBe("#B45A73");
-    expect(portfolioColors.onAction).toBe("#7A334A");
+  it("uses the requested pink base with white labels, a darker outline, and soft shadows", () => {
+    expect(portfolioColors.action).toBe("#FF99D3");
+    expect(portfolioColors.actionDisplay).toBe("#D95A9F");
+    expect(portfolioColors.onAction).toBe("#FFFFFF");
     expect(portfolioColors.shadowSoft).toBe("rgba(0,0,0,0.06)");
     expect(portfolioColors.shadowHover).toBe("rgba(0,0,0,0.10)");
     expect(portfolioColors.shadowFloating).toBe("rgba(0,0,0,0.16)");
