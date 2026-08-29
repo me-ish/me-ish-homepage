@@ -22,8 +22,10 @@ describe("PortfolioMobileCta analytics", () => {
 
     const cta = screen.getByRole("link", { name: "相談・見積もり" });
     expect(cta.className).toContain("text-base font-black");
-    expect(cta.style.background).toBe("rgb(213, 46, 113)");
-    expect(cta.style.color).toBe("rgb(255, 255, 255)");
+    expect(cta.className).toContain("border-2");
+    expect(cta.style.background).toBe("rgb(248, 195, 208)");
+    expect(cta.style.borderColor).toBe("rgb(180, 90, 115)");
+    expect(cta.style.color).toBe("rgb(122, 51, 74)");
     fireEvent.click(cta);
     expect(trackNatoriPageEvent).toHaveBeenCalledWith(
       "portfolio_primary_cta_click",

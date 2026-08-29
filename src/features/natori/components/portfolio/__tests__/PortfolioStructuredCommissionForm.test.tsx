@@ -528,12 +528,16 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     const firstStepNumber = headings[0].querySelector("span[aria-hidden='true']") as HTMLElement;
     expect(firstStepNumber.className).toContain("h-7 w-7");
     expect(firstStepNumber.className).toContain("text-sm font-black");
-    expect(firstStepNumber.style.background).toBe("rgb(213, 46, 113)");
-    expect(firstStepNumber.style.color).toBe("rgb(255, 255, 255)");
+    expect(firstStepNumber.className).toContain("border-2");
+    expect(firstStepNumber.style.background).toBe("rgb(248, 195, 208)");
+    expect(firstStepNumber.style.borderColor).toBe("rgb(180, 90, 115)");
+    expect(firstStepNumber.style.color).toBe("rgb(122, 51, 74)");
 
     const submitButton = screen.getByRole("button", { name: "この内容で送信する" });
     expect(submitButton.className).toContain("text-base font-black");
-    expect(submitButton.style.background).toBe("rgb(213, 46, 113)");
-    expect(submitButton.style.color).toBe("rgb(255, 255, 255)");
+    expect(submitButton.className).toContain("border-2");
+    expect(submitButton.style.background).toBe("rgb(248, 195, 208)");
+    expect(submitButton.style.borderColor).toBe("rgb(180, 90, 115)");
+    expect(submitButton.style.color).toBe("rgb(122, 51, 74)");
   });
 });

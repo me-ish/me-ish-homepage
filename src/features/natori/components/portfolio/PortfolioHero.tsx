@@ -62,8 +62,12 @@ export default function PortfolioHero({
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             {variant === "showcase" ? null : (
               <PortfolioHeroPrimaryCta
-                className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-xl px-6 py-3 text-base font-black"
-                style={{ background: c.action, color: c.onAction }}
+                className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-xl border-2 px-6 py-3 text-base font-black hover:brightness-95"
+                style={{
+                  background: c.action,
+                  borderColor: c.actionDisplay,
+                  color: c.onAction,
+                }}
               />
             )}
             <a

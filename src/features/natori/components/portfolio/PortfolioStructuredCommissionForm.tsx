@@ -116,8 +116,12 @@ function FormSection({
   const heading = (
     <>
       <span
-        className="mr-2 inline-grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-black"
-        style={{ background: c.action, color: c.onAction }}
+        className="mr-2 inline-grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 text-sm font-black"
+        style={{
+          background: c.action,
+          borderColor: c.actionDisplay,
+          color: c.onAction,
+        }}
         aria-hidden="true"
       >
         {step}
@@ -1222,8 +1226,12 @@ export default function PortfolioStructuredCommissionForm({
           type="submit"
           disabled={!commissionOpen || sending}
           aria-busy={sending}
-          className="pf-cute-focus w-full rounded-full py-3.5 text-base font-black disabled:opacity-50"
-          style={{ background: c.action, color: c.onAction }}
+          className="pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black hover:brightness-95 disabled:opacity-50"
+          style={{
+            background: c.action,
+            borderColor: c.actionDisplay,
+            color: c.onAction,
+          }}
         >
           {!commissionOpen ? "現在受付停止中です" : sending ? "送信中…" : "この内容で送信する"}
         </button>

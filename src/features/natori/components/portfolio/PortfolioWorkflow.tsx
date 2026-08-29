@@ -21,8 +21,12 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioConte
                 style={cardStyle}
               >
                 <span
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base font-black"
-                  style={{ background: c.action, color: c.onAction }}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-base font-black"
+                  style={{
+                    background: c.action,
+                    borderColor: c.actionDisplay,
+                    color: c.onAction,
+                  }}
                   aria-hidden="true"
                 >
                   {index + 1}

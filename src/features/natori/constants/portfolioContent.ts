@@ -17,37 +17,39 @@ import type {
    カラートークン
    ここを書き換えるだけで全体の配色を調整できます
 ------------------------------------------------------------------- */
-/** プールサイドの参考配色を基準に、ピンクと水色を主役、オレンジを限定的な差し色にする。 */
+/** 白に近い背景を基準に、パステルのピンクと水色、少量のオレンジを使う。 */
 export const portfolioColors = {
-  page: "#FFF9FA",
+  page: "#FFFEFE",
   surface: "#FFFFFF",
-  surfaceSubtle: "#FFF0F4",
+  surfaceSubtle: "#FFF8FA",
   text: "#164A63",
   textSoft: "#245F78",
-  borderSubtle: "#F7CBD0",
-  borderStrong: "#00758D",
-  accent: "#59CCD9",
-  accentDisplay: "#00758D",
-  accentText: "#00758D",
-  accentHover: "#26AFCA",
-  accentSoft: "#E8FAFC",
-  /** 白文字のCTA・番号に使う、ローズ寄りではない鮮やかなピンク。 */
-  action: "#D52E71",
-  /** 大見出し・アウトライン用。淡い背景上でも輪郭が残るピンク。 */
-  actionDisplay: "#DE6682",
-  onAction: "#FFFFFF",
-  /** 小さな装飾にだけ使う明るいオレンジ。 */
-  highlight: "#F8A63E",
+  borderSubtle: "#F2D9E0",
+  borderStrong: "#5C95A4",
+  accent: "#A9DDE3",
+  accentDisplay: "#367A8B",
+  accentText: "#367A8B",
+  accentHover: "#4D93A2",
+  accentSoft: "#EEF9FA",
+  /** CTA・番号の面に使うパステルピンク。 */
+  action: "#F8C3D0",
+  /** ピンク面の枠・大見出しに使う一段濃いピンク。 */
+  actionDisplay: "#B45A73",
+  onAction: "#7A334A",
+  /** 小さな装飾にだけ使うパステルオレンジ。 */
+  highlight: "#FFD7A3",
+  /** オレンジ面の文字・枠にだけ使う濃いオレンジ。 */
+  highlightDisplay: "#8A4800",
   onError: "#FFFFFF",
   error: "#B42318",
   errorSoft: "#FEF3F2",
   success: "#007D64",
   successSoft: "#E8FFF8",
   overlay: "rgba(22,74,99,0.68)",
-  pageTranslucent: "rgba(255,249,250,0.94)",
-  shadowSoft: "rgba(0,0,0,0.08)",
-  shadowHover: "rgba(0,0,0,0.14)",
-  shadowFloating: "rgba(0,0,0,0.24)",
+  pageTranslucent: "rgba(255,254,254,0.96)",
+  shadowSoft: "rgba(0,0,0,0.06)",
+  shadowHover: "rgba(0,0,0,0.10)",
+  shadowFloating: "rgba(0,0,0,0.16)",
 } as const;
 
 /**
@@ -55,12 +57,12 @@ export const portfolioColors = {
  * UI状態や本文には使わず、tape/rotation/tagの整理と合わせてPF-04/05で縮小する。
  */
 export const portfolioDecorativeColors = {
-  sparkleWarm: "#F39CAF",
-  sparkleCool: "#26AFCA",
-  placeholderRose: "#F39CAF",
-  placeholderMint: "#59CCD9",
-  placeholderPeach: "#F6C48C",
-  placeholderGold: "#F4C95D",
+  sparkleWarm: "#F8C3D0",
+  sparkleCool: "#A9DDE3",
+  placeholderRose: "#F8C3D0",
+  placeholderMint: "#A9DDE3",
+  placeholderPeach: "#F8D5B8",
+  placeholderGold: "#F6E2A6",
 } as const;
 
 /**

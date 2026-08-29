@@ -29,13 +29,17 @@ function contrastRatio(foreground: string, background: string): number {
 }
 
 describe("PF-02 portfolio semantic colors", () => {
-  it("keeps pink and cyan primary while reserving orange for a point accent", () => {
+  it("uses near-white surfaces with pastel pink, cyan, and a small orange accent", () => {
     expect(portfolioColors).toMatchObject({
-      action: "#D52E71",
-      actionDisplay: "#DE6682",
-      accent: "#59CCD9",
-      accentHover: "#26AFCA",
-      highlight: "#F8A63E",
+      page: "#FFFEFE",
+      surface: "#FFFFFF",
+      surfaceSubtle: "#FFF8FA",
+      action: "#F8C3D0",
+      actionDisplay: "#B45A73",
+      accent: "#A9DDE3",
+      accentHover: "#4D93A2",
+      highlight: "#FFD7A3",
+      highlightDisplay: "#8A4800",
     });
     expect([
       portfolioColors.action,
@@ -43,8 +47,8 @@ describe("PF-02 portfolio semantic colors", () => {
       portfolioColors.accentDisplay,
       portfolioColors.accentText,
     ]).not.toContain(portfolioColors.highlight);
-    expect(portfolioDecorativeColors.sparkleWarm).toBe("#F39CAF");
-    expect(portfolioDecorativeColors.placeholderMint).toBe("#59CCD9");
+    expect(portfolioDecorativeColors.sparkleWarm).toBe("#F8C3D0");
+    expect(portfolioDecorativeColors.placeholderMint).toBe("#A9DDE3");
   });
 
   it("limits orange to the profile X link and gallery sparkle", () => {
@@ -72,9 +76,9 @@ describe("PF-02 portfolio semantic colors", () => {
     const heroSource = readFileSync(resolve(componentDirectory, "PortfolioHero.tsx"), "utf8");
 
     expect(highlightUsages).toEqual(["PortfolioAbout.tsx", "PortfolioGallery.tsx"]);
-    expect(aboutSource).toContain("borderColor: c.highlight");
+    expect(aboutSource).toContain("borderColor: c.highlightDisplay");
     expect(aboutSource).toContain("background: c.highlight");
-    expect(aboutSource).toContain("color: c.text");
+    expect(aboutSource).toContain("color: c.highlightDisplay");
     expect(gallerySource).toContain("color: c.highlight");
     expect(heroSource).not.toContain("c.highlight");
   });
@@ -99,9 +103,9 @@ describe("PF-02 portfolio semantic colors", () => {
       expect(contrastRatio(portfolioColors.accentDisplay, background)).toBeGreaterThanOrEqual(3);
       expect(contrastRatio(portfolioColors.actionDisplay, background)).toBeGreaterThanOrEqual(3);
     }
-    expect(contrastRatio(portfolioColors.text, portfolioColors.highlight)).toBeGreaterThanOrEqual(
-      4.5
-    );
+    expect(
+      contrastRatio(portfolioColors.highlightDisplay, portfolioColors.highlight)
+    ).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(portfolioColors.onAction, portfolioColors.action)).toBeGreaterThanOrEqual(
       4.5
     );
@@ -122,13 +126,13 @@ describe("PF-02 portfolio semantic colors", () => {
     ).toBeGreaterThanOrEqual(3);
   });
 
-  it("uses vivid pink with white CTA text and neutral shadows", () => {
-    expect(portfolioColors.action).toBe("#D52E71");
-    expect(portfolioColors.actionDisplay).toBe("#DE6682");
-    expect(portfolioColors.onAction).toBe("#FFFFFF");
-    expect(portfolioColors.shadowSoft).toBe("rgba(0,0,0,0.08)");
-    expect(portfolioColors.shadowHover).toBe("rgba(0,0,0,0.14)");
-    expect(portfolioColors.shadowFloating).toBe("rgba(0,0,0,0.24)");
+  it("uses pastel action surfaces with darker text, outlines, and soft shadows", () => {
+    expect(portfolioColors.action).toBe("#F8C3D0");
+    expect(portfolioColors.actionDisplay).toBe("#B45A73");
+    expect(portfolioColors.onAction).toBe("#7A334A");
+    expect(portfolioColors.shadowSoft).toBe("rgba(0,0,0,0.06)");
+    expect(portfolioColors.shadowHover).toBe("rgba(0,0,0,0.10)");
+    expect(portfolioColors.shadowFloating).toBe("rgba(0,0,0,0.16)");
   });
 
   it("does not expose the old color-as-purpose token names", () => {
@@ -261,12 +265,11 @@ describe("portfolio choice controls", () => {
 
   it("keeps both request-form submit buttons large, bold, and on the action colors", () => {
     const submitClass =
-      'className="pf-cute-focus w-full rounded-full py-3.5 text-base font-black disabled:opacity-50"';
-    const submitColors = "style={{ background: c.action, color: c.onAction }}";
+      'className="pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black hover:brightness-95 disabled:opacity-50"';
 
     expect(structuredFormSource).toContain(submitClass);
-    expect(structuredFormSource).toContain(submitColors);
+    expect(structuredFormSource).toContain("borderColor: c.actionDisplay");
     expect(legacyFormSource).toContain(submitClass);
-    expect(legacyFormSource).toContain(submitColors);
+    expect(legacyFormSource).toContain("borderColor: c.actionDisplay");
   });
 });
