@@ -34,6 +34,8 @@ describe("PF-02 portfolio semantic colors", () => {
       page: "#FFFEFE",
       surface: "#FFFFFF",
       surfaceSubtle: "#FFF8FA",
+      text: "#242027",
+      textSoft: "#353038",
       action: "#FF99D3",
       actionText: "#FF99D3",
       actionDisplay: "#D95A9F",
