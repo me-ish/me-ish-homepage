@@ -75,6 +75,8 @@ export type PortfolioSocialLink = {
 export type PortfolioContent = {
   /** コミッション受付中かどうか */
   commissionOpen: boolean;
+  /** 量産イラストだけの受付状態。停止中も選択肢自体は公開フォームに表示する */
+  massProductionIllustrationOpen: boolean;
   /** ヘッダーのサイト名 */
   artistName: string;
   /** ヒーローの英字肩書き */

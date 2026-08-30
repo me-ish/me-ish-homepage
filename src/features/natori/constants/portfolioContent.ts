@@ -26,6 +26,10 @@ export const portfolioColors = {
   textSoft: "#353038",
   borderSubtle: "#F2D9E0",
   borderStrong: "#5C95A4",
+  /** フォームの通常枠。白背景でも分かる淡いピンク。 */
+  formBorder: "#E8A9C6",
+  /** フォームの選択・フォーカス時に使う濃いピンク。 */
+  formBorderActive: "#C94B89",
   accent: "#A9DDE3",
   accentDisplay: "#367A8B",
   accentText: "#367A8B",
@@ -132,6 +136,7 @@ export const LEGACY_PORTFOLIO_OPTION_ID_BY_EXACT_NAME: Readonly<Record<string, s
 ------------------------------------------------------------------- */
 export const defaultPortfolioContent: PortfolioContent = {
   commissionOpen: true,
+  massProductionIllustrationOpen: true,
   artistName: "Natori* illust",
   roleEn: "Cute Anime Illustrator",
   profileName: "ナトリ",

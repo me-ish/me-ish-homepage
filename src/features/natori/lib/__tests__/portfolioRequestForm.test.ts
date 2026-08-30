@@ -3,18 +3,23 @@
 import { describe, expect, it } from "vitest";
 import {
   NATORI_MAX_REFERENCE_LINKS,
+  NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE,
+  applyPortfolioRequestTypeSelection,
   applyPortfolioPlanSelection,
   buildNatoriRequestDataV1,
   buildSelectedOptions,
   collectPortfolioReferenceLinkErrors,
   createInitialPortfolioRequestFormState,
+  isMassProductionIllustrationSelection,
   portfolioOptionChoices,
   portfolioOptionAllowsQuantity,
+  portfolioRequestTypeChoiceValue,
   pruneHiddenPortfolioRequestFields,
   submittedPortfolioReferenceLinks,
   type PortfolioOptionChoice,
   type PortfolioRequestFormState,
 } from "@/features/natori/lib/portfolioRequestForm";
+import { NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL } from "@/features/natori/lib/requestPresentation";
 import { validateNatoriRequestDataV1 } from "@/features/natori/lib/requestSchema";
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
 
@@ -23,6 +28,52 @@ function state(overrides: Partial<PortfolioRequestFormState> = {}): PortfolioReq
 }
 
 const choices = portfolioOptionChoices(defaultPortfolioContent);
+
+describe("量産イラスト", () => {
+  it("依頼種別と制作範囲を既存の その他 へ自動入力する", () => {
+    const selected = applyPortfolioRequestTypeSelection(
+      state(),
+      NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE
+    );
+
+    expect(selected).toMatchObject({
+      requestType: "other",
+      requestTypeOther: NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL,
+      commissionScope: "other",
+      commissionScopeOther: NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL,
+    });
+    expect(isMassProductionIllustrationSelection(selected)).toBe(true);
+    expect(portfolioRequestTypeChoiceValue(selected)).toBe(
+      NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE
+    );
+
+    const data = buildNatoriRequestDataV1(
+      { ...selected, message: "量産イラストをお願いします。" },
+      choices
+    );
+    expect(data).toMatchObject({
+      requestType: "other",
+      requestTypeOther: NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL,
+      commissionScope: "other",
+      commissionScopeOther: NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL,
+    });
+    expect(validateNatoriRequestDataV1(data).success).toBe(true);
+  });
+
+  it("別の依頼種別へ戻すと量産イラストの自動入力を残さない", () => {
+    const selected = applyPortfolioRequestTypeSelection(
+      state(),
+      NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE
+    );
+    const reverted = applyPortfolioRequestTypeSelection(selected, "icon");
+    expect(reverted).toMatchObject({
+      requestType: "icon",
+      requestTypeOther: "",
+      commissionScope: "undecided",
+      commissionScopeOther: "",
+    });
+  });
+});
 
 describe("portfolioOptionAllowsQuantity", () => {
   it("個数課金だけ数量あり、固定オプションは数量なしにする", () => {

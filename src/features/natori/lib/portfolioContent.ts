@@ -87,6 +87,8 @@ const socialLinkSchema = z.object({
 // 出力が PortfolioContent と一致することは parsePortfolioContent の戻り値型で担保する。
 const portfolioContentBaseSchema = z.object({
   commissionOpen: z.boolean(),
+  // 後から追加したフィールド。既存のDB行では受付中として補う
+  massProductionIllustrationOpen: z.boolean().optional().default(true),
   artistName: shortText,
   roleEn: shortText,
   // 後から追加したフィールド。既存のDB行には無いので default で補う

@@ -10,12 +10,14 @@ vi.mock("@/features/natori/data/pageEvents", () => ({ trackNatoriPageEvent }));
 
 import PortfolioCommissionForm from "@/features/natori/components/portfolio/PortfolioCommissionForm";
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
+import { NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE } from "@/features/natori/lib/portfolioRequestForm";
+import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
 const fetchMock = vi.fn();
 
-function renderForm() {
+function renderForm(content: PortfolioContent = defaultPortfolioContent) {
   return render(
-    <PortfolioCommissionForm content={defaultPortfolioContent} structuredIntake />
+    <PortfolioCommissionForm content={content} structuredIntake />
   );
 }
 
@@ -173,6 +175,58 @@ describe("PF-09 analytics", () => {
 });
 
 describe("条件付き入力", () => {
+  it("量産イラストは制作範囲の その他 と補足を自動入力する", async () => {
+    renderForm();
+
+    await userEvent.selectOptions(
+      screen.getByLabelText("ご依頼の種類"),
+      NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE
+    );
+
+    expect((screen.getByLabelText("ご依頼の種類") as HTMLSelectElement).value).toBe(
+      NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE
+    );
+    const scope = screen.getByLabelText("制作範囲") as HTMLSelectElement;
+    expect(scope.value).toBe("other");
+    expect(scope.disabled).toBe(true);
+    expect(screen.queryByLabelText(/ご依頼の種類（その他の内容）/)).toBeNull();
+    const scopeOther = screen.getByLabelText(
+      /制作範囲（その他の内容）/
+    ) as HTMLInputElement;
+    expect(scopeOther.value).toBe("量産イラスト");
+    expect(scopeOther.readOnly).toBe(true);
+    expect(screen.getByText("量産イラストのため自動入力されています。")).toBeTruthy();
+
+    await fillMinimum("量産イラストをお願いします。");
+    submit();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(submittedRequestData()).toMatchObject({
+      requestType: "other",
+      requestTypeOther: "量産イラスト",
+      commissionScope: "other",
+      commissionScopeOther: "量産イラスト",
+    });
+  });
+
+  it("量産イラスト停止中は選択を変えず、Xへの案内を表示する", async () => {
+    renderForm({ ...defaultPortfolioContent, massProductionIllustrationOpen: false });
+
+    await userEvent.selectOptions(
+      screen.getByLabelText("ご依頼の種類"),
+      NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE
+    );
+
+    expect((screen.getByLabelText("ご依頼の種類") as HTMLSelectElement).value).toBe(
+      "undecided"
+    );
+    expect(
+      screen.getByText(/現在、量産イラストは受け付けていません。/)
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "X" }).getAttribute("href")).toBe(
+      "https://x.com/natonato_o"
+    );
+  });
+
   it("その他を選んだときだけ補足欄が現れ、戻すと値を送らない", async () => {
     renderForm();
     expect(screen.queryByLabelText(/ご依頼の種類（その他の内容）/)).toBeNull();
@@ -529,15 +583,15 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     expect(firstStepNumber.className).toContain("h-7 w-7");
     expect(firstStepNumber.className).toContain("text-sm font-black");
     expect(firstStepNumber.className).toContain("border-2");
-    expect(firstStepNumber.style.background).toBe("rgb(248, 195, 208)");
-    expect(firstStepNumber.style.borderColor).toBe("rgb(180, 90, 115)");
-    expect(firstStepNumber.style.color).toBe("rgb(122, 51, 74)");
+    expect(firstStepNumber.style.background).toBe("rgb(230, 106, 169)");
+    expect(firstStepNumber.style.borderColor).toBe("rgb(201, 75, 137)");
+    expect(firstStepNumber.style.color).toBe("rgb(255, 255, 255)");
 
     const submitButton = screen.getByRole("button", { name: "この内容で送信する" });
     expect(submitButton.className).toContain("text-base font-black");
     expect(submitButton.className).toContain("border-2");
-    expect(submitButton.style.background).toBe("rgb(248, 195, 208)");
-    expect(submitButton.style.borderColor).toBe("rgb(180, 90, 115)");
-    expect(submitButton.style.color).toBe("rgb(122, 51, 74)");
+    expect(submitButton.style.background).toBe("rgb(230, 106, 169)");
+    expect(submitButton.style.borderColor).toBe("rgb(201, 75, 137)");
+    expect(submitButton.style.color).toBe("rgb(255, 255, 255)");
   });
 });

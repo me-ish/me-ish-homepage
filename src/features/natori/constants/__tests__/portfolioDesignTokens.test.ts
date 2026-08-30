@@ -36,6 +36,8 @@ describe("PF-02 portfolio semantic colors", () => {
       surfaceSubtle: "#FFF8FA",
       text: "#242027",
       textSoft: "#353038",
+      formBorder: "#E8A9C6",
+      formBorderActive: "#C94B89",
       action: "#E66AA9",
       actionText: "#E66AA9",
       actionDisplay: "#C94B89",
@@ -187,6 +189,8 @@ describe("PF-02 interaction states", () => {
     expect(stylesSource).toContain(".pf-portfolio-root :where(a[href], button, input");
     expect(stylesSource).toContain(":focus-visible");
     expect(stylesSource).toContain("outline: 3px solid ${c.accentHover}");
+    expect(stylesSource).toContain("border-color: ${c.formBorder}");
+    expect(stylesSource).toContain("outline-color: ${c.formBorderActive}");
   });
 
   it("keeps reduced-motion behavior for animation and card transitions", () => {

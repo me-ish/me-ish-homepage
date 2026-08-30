@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   PLAN_SELECT_EVENT,
+  isPortfolioXLink,
   portfolioColors as c,
   type PortfolioPlanSelectDetail,
 } from "@/features/natori/constants/portfolioContent";
@@ -14,17 +15,22 @@ import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import {
   NATORI_MAX_REFERENCE_IMAGES,
   NATORI_MAX_REFERENCE_LINKS,
+  NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE,
   NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES,
   NATORI_REFERENCE_IMAGE_MAX_BYTES,
   NATORI_STRUCTURED_FORM_VERSION,
+  applyPortfolioRequestTypeSelection,
   applyPortfolioPlanSelection,
   buildNatoriRequestDataV1,
   collectPortfolioReferenceLinkErrors,
   createInitialPortfolioRequestFormState,
+  isMassProductionIllustrationSelection,
   portfolioOptionAllowsQuantity,
   portfolioOptionChoices,
+  portfolioRequestTypeChoiceValue,
   pruneHiddenPortfolioRequestFields,
   submittedPortfolioReferenceLinks,
+  type PortfolioRequestTypeChoiceValue,
   type PortfolioRequestFormState,
 } from "@/features/natori/lib/portfolioRequestForm";
 import {
@@ -33,6 +39,7 @@ import {
   NATORI_COMMISSION_SCOPE_LABELS_V1,
   NATORI_DEADLINE_KIND_LABELS_V1,
   NATORI_INQUIRY_MODE_LABELS_V1,
+  NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL,
   NATORI_PUBLICATION_POLICY_LABELS_V1,
   NATORI_REQUEST_TYPE_LABELS_V1,
   NATORI_USAGE_TYPE_LABELS_V1,
@@ -184,6 +191,7 @@ export default function PortfolioStructuredCommissionForm({
   const [serverFieldErrors, setServerFieldErrors] = useState<ServerFieldError[]>([]);
   const [refImages, setRefImages] = useState<RefImageEntry[]>([]);
   const [refImageError, setRefImageError] = useState<string | null>(null);
+  const [massProductionNotice, setMassProductionNotice] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [openSections, setOpenSections] = useState({
     requestType: false,
@@ -196,9 +204,24 @@ export default function PortfolioStructuredCommissionForm({
 
   const optionChoices = useMemo(() => portfolioOptionChoices(content), [content]);
   const linkErrors = collectPortfolioReferenceLinkErrors(state.referenceLinks);
+  const massProductionSelected = isMassProductionIllustrationSelection(state);
+  const requestTypeChoice = portfolioRequestTypeChoiceValue(state);
+  const xLink = content.socialLinks.find(isPortfolioXLink);
 
   const update = (patch: Partial<PortfolioRequestFormState>) =>
     setState((current) => pruneHiddenPortfolioRequestFields({ ...current, ...patch }));
+
+  const changeRequestType = (value: PortfolioRequestTypeChoiceValue) => {
+    if (
+      value === NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE &&
+      !content.massProductionIllustrationOpen
+    ) {
+      setMassProductionNotice(true);
+      return;
+    }
+    setMassProductionNotice(false);
+    setState((current) => applyPortfolioRequestTypeSelection(current, value));
+  };
 
   /** モード切替で任意セクションの開閉だけを変える。残留値は prune で落とす。 */
   const changeMode = (inquiryMode: NatoriInquiryModeV1) => {
@@ -433,8 +456,9 @@ export default function PortfolioStructuredCommissionForm({
                 key={mode}
                 className="pf-cute-focus flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold"
                 style={{
-                  borderColor: state.inquiryMode === mode ? c.accent : c.borderStrong,
-                  color: state.inquiryMode === mode ? c.accentText : c.textSoft,
+                  borderColor:
+                    state.inquiryMode === mode ? c.formBorderActive : c.formBorder,
+                  color: state.inquiryMode === mode ? c.formBorderActive : c.textSoft,
                 }}
               >
                 <input
@@ -500,18 +524,51 @@ export default function PortfolioStructuredCommissionForm({
             </label>
             <select
               id="pf-request-type"
-              value={state.requestType}
+              value={requestTypeChoice}
               onChange={(event) =>
-                update({ requestType: event.target.value as typeof state.requestType })
+                changeRequestType(event.target.value as PortfolioRequestTypeChoiceValue)
               }
               className={inputClass}
+              aria-describedby={massProductionNotice ? "pf-mass-production-notice" : undefined}
             >
-              {NATORI_REQUEST_TYPES_V1.map((type) => (
+              {NATORI_REQUEST_TYPES_V1.filter((type) => type !== "other").map((type) => (
                 <option key={type} value={type}>
                   {NATORI_REQUEST_TYPE_LABELS_V1[type]}
                 </option>
               ))}
+              <option value={NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE}>
+                {NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL}
+              </option>
+              <option value="other">{NATORI_REQUEST_TYPE_LABELS_V1.other}</option>
             </select>
+            {massProductionNotice ? (
+              <div
+                id="pf-mass-production-notice"
+                role="alert"
+                className="mt-2 rounded-lg border-2 px-3 py-2 text-sm font-bold"
+                style={{
+                  borderColor: c.formBorder,
+                  background: c.surfaceSubtle,
+                  color: c.text,
+                }}
+              >
+                現在、量産イラストは受け付けていません。再開・詳細は
+                {xLink ? (
+                  <a
+                    href={xLink.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pf-cute-focus mx-1 underline decoration-2 underline-offset-4 hover:opacity-70"
+                    style={{ color: c.formBorderActive }}
+                  >
+                    X
+                  </a>
+                ) : (
+                  "X"
+                )}
+                をご確認ください。
+              </div>
+            ) : null}
           </div>
           <div>
             <label htmlFor="pf-scope" className={labelClass}>
@@ -523,7 +580,8 @@ export default function PortfolioStructuredCommissionForm({
               onChange={(event) =>
                 update({ commissionScope: event.target.value as typeof state.commissionScope })
               }
-              className={inputClass}
+              disabled={massProductionSelected}
+              className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-70`}
             >
               {NATORI_COMMISSION_SCOPES_V1.map((scope) => (
                 <option key={scope} value={scope}>
@@ -534,7 +592,7 @@ export default function PortfolioStructuredCommissionForm({
           </div>
         </div>
 
-        {state.requestType === "other" ? (
+        {state.requestType === "other" && !massProductionSelected ? (
           <div>
             <label htmlFor="pf-request-type-other" className={labelClass}>
               ご依頼の種類（その他の内容）<RequiredBadge />
@@ -567,14 +625,26 @@ export default function PortfolioStructuredCommissionForm({
               id="pf-scope-other"
               value={state.commissionScopeOther}
               onChange={(event) => update({ commissionScopeOther: event.target.value })}
+              readOnly={massProductionSelected}
               maxLength={100}
               className={inputClass}
               aria-describedby={
-                serverErrorFor("requestData.commissionScopeOther")
+                massProductionSelected
+                  ? "pf-scope-mass-production-help"
+                  : serverErrorFor("requestData.commissionScopeOther")
                   ? "pf-scope-other-error"
                   : undefined
               }
             />
+            {massProductionSelected ? (
+              <p
+                id="pf-scope-mass-production-help"
+                className="mt-1.5 text-xs font-bold"
+                style={{ color: c.formBorderActive }}
+              >
+                量産イラストのため自動入力されています。
+              </p>
+            ) : null}
             <FieldError
               id="pf-scope-other-error"
               message={serverErrorFor("requestData.commissionScopeOther")}
@@ -595,7 +665,9 @@ export default function PortfolioStructuredCommissionForm({
                 <div
                   key={choice.key}
                   className="rounded-lg border-2 p-2"
-                  style={{ borderColor: checked ? c.accent : c.borderStrong }}
+                  style={{
+                    borderColor: checked ? c.formBorderActive : c.formBorder,
+                  }}
                 >
                   <label className="flex cursor-pointer items-center gap-2 text-sm">
                     <input
@@ -1099,7 +1171,7 @@ export default function PortfolioStructuredCommissionForm({
               type="button"
               onClick={() => refFileInputRef.current?.click()}
               className="pf-cute-focus inline-flex items-center gap-1.5 rounded-full border-2 bg-white px-4 py-2 text-sm font-bold"
-              style={{ borderColor: c.accent, color: c.accentText }}
+              style={{ borderColor: c.formBorderActive, color: c.formBorderActive }}
             >
               ＋ 画像を追加
             </button>
@@ -1197,7 +1269,7 @@ export default function PortfolioStructuredCommissionForm({
               type="button"
               onClick={addReferenceLinkRow}
               className="pf-cute-focus mt-3 inline-flex items-center gap-1.5 rounded-full border-2 bg-white px-4 py-2 text-sm font-bold"
-              style={{ borderColor: c.accent, color: c.accentText }}
+              style={{ borderColor: c.formBorderActive, color: c.formBorderActive }}
             >
               ＋ 参考URLを追加
             </button>

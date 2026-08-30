@@ -117,6 +117,19 @@ describe("structured view", () => {
     );
     expect(fieldValue(view, "requestType")).toBe("その他（アクリルスタンド）");
   });
+
+  it("量産イラストは専用の依頼種別名で表示する", () => {
+    const view = buildNatoriInquiryRequestView(
+      requestData({
+        requestType: "other",
+        requestTypeOther: "量産イラスト",
+        commissionScope: "other",
+        commissionScopeOther: "量産イラスト",
+      } as Partial<NatoriRequestDataV1>)
+    );
+    expect(fieldValue(view, "requestType")).toBe("量産イラスト");
+    expect(fieldValue(view, "commissionScope")).toBe("その他（量産イラスト）");
+  });
 });
 
 describe("legacy view", () => {

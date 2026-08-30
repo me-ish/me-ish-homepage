@@ -12,6 +12,9 @@ import type {
   NatoriUsageTypeV1,
 } from "@/features/natori/types/request";
 
+/** UIでは専用の依頼種別として見せ、保存時は other の補足に使う固定表示名。 */
+export const NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL = "量産イラスト";
+
 /**
  * natori_create_project_with_tasks_v2 が案件 title に使う表示語と同一。
  * 変更する場合は RPC 側の CASE 式と同時に更新する。
@@ -110,6 +113,9 @@ function formatJpy(amount: number): string {
 export function describeNatoriRequestType(data: NatoriRequestDataV1): string {
   const base = NATORI_REQUEST_TYPE_LABELS_V1[data.requestType];
   if (data.requestType !== "other") return base;
+  if (data.requestTypeOther === NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL) {
+    return NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL;
+  }
   return data.requestTypeOther ? `${base}（${data.requestTypeOther}）` : base;
 }
 

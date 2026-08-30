@@ -9,6 +9,7 @@ import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
 const validContent: PortfolioContent = {
   commissionOpen: true,
+  massProductionIllustrationOpen: true,
   artistName: "Natori* illust",
   roleEn: "Cute Anime Illustrator",
   profileName: "ナトリ",
@@ -66,6 +67,17 @@ describe("parsePortfolioContent", () => {
     const parsed = parsePortfolioContent(legacy);
     expect(parsed?.profileName).toBe("");
     expect(parsed?.profileRole).toBe("");
+  });
+
+  it("量産イラストの受付状態が無い旧データは受付中で補完される", () => {
+    const { massProductionIllustrationOpen: _open, ...legacy } = validContent;
+    expect(parsePortfolioContent(legacy)?.massProductionIllustrationOpen).toBe(true);
+    expect(
+      parsePortfolioContent({
+        ...validContent,
+        massProductionIllustrationOpen: false,
+      })?.massProductionIllustrationOpen
+    ).toBe(false);
   });
 
   it("壊れた値は null を返す（デフォルトへのフォールバック用）", () => {

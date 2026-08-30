@@ -255,26 +255,70 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
           id="section-status"
           emoji="🚪"
           title="受付状態"
-          description="コミッションの受付中・停止中を切り替えます。停止中はフォームから送信できなくなります。"
+          description="コミッション全体と、量産イラストだけの受付状態をそれぞれ切り替えます。"
         >
-          <div className="flex gap-2">
-            {[
-              { value: true, label: "● 受付中", active: "bg-emerald-500 text-white border-emerald-500" },
-              { value: false, label: "受付停止中", active: "bg-gray-700 text-white border-gray-700" },
-            ].map((choice) => (
-              <button
-                key={String(choice.value)}
-                type="button"
-                onClick={() => patch({ commissionOpen: choice.value })}
-                className={`rounded-full border px-5 py-2 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-pink-300 ${
-                  content.commissionOpen === choice.value
-                    ? choice.active
-                    : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
-                }`}
-              >
-                {choice.label}
-              </button>
-            ))}
+          <div className="space-y-5">
+            <div>
+              <p className="mb-2 text-sm font-black text-gray-900">コミッション全体</p>
+              <p className="mb-3 text-xs leading-5 text-gray-600">
+                停止中はご依頼フォーム全体から送信できなくなります。
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: true, label: "● 受付中", active: "bg-emerald-500 text-white border-emerald-500" },
+                  { value: false, label: "受付停止中", active: "bg-gray-700 text-white border-gray-700" },
+                ].map((choice) => (
+                  <button
+                    key={String(choice.value)}
+                    type="button"
+                    onClick={() => patch({ commissionOpen: choice.value })}
+                    className={`rounded-full border px-5 py-2 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-pink-300 ${
+                      content.commissionOpen === choice.value
+                        ? choice.active
+                        : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    {choice.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-pink-100 pt-5">
+              <p className="mb-2 text-sm font-black text-gray-900">量産イラスト</p>
+              <p className="mb-3 text-xs leading-5 text-gray-600">
+                停止中もフォームの選択肢には表示され、選んだ方へXの確認案内を表示します。
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  {
+                    value: true,
+                    label: "● 量産イラスト受付中",
+                    active: "border-pink-500 bg-pink-500 text-white",
+                  },
+                  {
+                    value: false,
+                    label: "量産イラスト受付停止中",
+                    active: "border-gray-700 bg-gray-700 text-white",
+                  },
+                ].map((choice) => (
+                  <button
+                    key={String(choice.value)}
+                    type="button"
+                    onClick={() =>
+                      patch({ massProductionIllustrationOpen: choice.value })
+                    }
+                    className={`rounded-full border px-5 py-2 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-pink-300 ${
+                      content.massProductionIllustrationOpen === choice.value
+                        ? choice.active
+                        : "border-pink-200 bg-white text-gray-600 hover:bg-pink-50"
+                    }`}
+                  >
+                    {choice.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </SectionCard>
 

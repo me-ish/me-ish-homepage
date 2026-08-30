@@ -21,7 +21,7 @@ import PortfolioStructuredCommissionForm from "./PortfolioStructuredCommissionFo
 
 type Status = "idle" | "sending" | "success" | "error";
 
-const inputClass = "pf-cute-focus w-full rounded-lg border-2 px-3 py-2";
+const inputClass = "pf-cute-focus pf-form-control w-full rounded-lg border-2 px-3 py-2";
 const labelClass = "mb-1.5 block text-sm font-bold";
 
 const PLAN_UNDECIDED = "未定・相談して決めたい";
@@ -271,7 +271,7 @@ export default function PortfolioCommissionForm({
                   required
                   maxLength={100}
                   className={inputClass}
-                  style={{ borderColor: c.borderStrong }}
+                  style={{ borderColor: c.formBorder }}
                 />
               </div>
               <div>
@@ -285,7 +285,7 @@ export default function PortfolioCommissionForm({
                   required
                   maxLength={254}
                   className={inputClass}
-                  style={{ borderColor: c.borderStrong }}
+                  style={{ borderColor: c.formBorder }}
                 />
               </div>
             </div>
@@ -299,7 +299,7 @@ export default function PortfolioCommissionForm({
                   id="pf-type"
                   name="requestType"
                   className={inputClass}
-                  style={{ borderColor: c.borderStrong }}
+                  style={{ borderColor: c.formBorder }}
                 >
                   {content.services.map((service) => (
                     <option key={service}>{service}</option>
@@ -317,7 +317,7 @@ export default function PortfolioCommissionForm({
                   value={selectedPlan}
                   onChange={(event) => setSelectedPlan(event.target.value)}
                   className={inputClass}
-                  style={{ borderColor: c.borderStrong }}
+                  style={{ borderColor: c.formBorder }}
                 >
                   {planChoices.map((plan) => (
                     <option key={plan}>{plan}</option>
@@ -362,7 +362,7 @@ export default function PortfolioCommissionForm({
                   id="pf-budget"
                   name="budget"
                   className={inputClass}
-                  style={{ borderColor: c.borderStrong }}
+                  style={{ borderColor: c.formBorder }}
                 >
                   {portfolioBudgetOptions.map((option) => (
                     <option key={option}>{option}</option>
@@ -377,7 +377,7 @@ export default function PortfolioCommissionForm({
                   id="pf-deadline"
                   name="deadline"
                   className={inputClass}
-                  style={{ borderColor: c.borderStrong }}
+                  style={{ borderColor: c.formBorder }}
                 >
                   {portfolioDeadlineOptions.map((option) => (
                     <option key={option}>{option}</option>
@@ -402,7 +402,7 @@ export default function PortfolioCommissionForm({
                         src={entry.previewUrl}
                         alt={`添付画像 ${index + 1}`}
                         className="h-20 w-20 rounded-lg border-2 object-cover"
-                        style={{ borderColor: c.borderStrong }}
+                        style={{ borderColor: c.formBorder }}
                       />
                       <button
                         type="button"
@@ -423,7 +423,7 @@ export default function PortfolioCommissionForm({
                   type="button"
                   onClick={() => refFileInputRef.current?.click()}
                   className="pf-cute-focus inline-flex items-center gap-1.5 rounded-full border-2 bg-white px-4 py-2 text-sm font-bold disabled:opacity-50"
-                  style={{ borderColor: c.accent, color: c.accentText }}
+                  style={{ borderColor: c.formBorderActive, color: c.formBorderActive }}
                 >
                   ＋ 画像を追加
                 </button>
@@ -462,7 +462,7 @@ export default function PortfolioCommissionForm({
                 maxLength={4000}
                 defaultValue={DETAILS_TEMPLATE}
                 className={inputClass}
-                style={{ borderColor: c.borderStrong }}
+                style={{ borderColor: c.formBorder }}
               />
             </div>
 
@@ -477,7 +477,7 @@ export default function PortfolioCommissionForm({
                 maxLength={2000}
                 placeholder="納期のご相談・非公開希望・そのほか気になることがあればどうぞ"
                 className={inputClass}
-                style={{ borderColor: c.borderStrong }}
+                style={{ borderColor: c.formBorder }}
               />
             </div>
 

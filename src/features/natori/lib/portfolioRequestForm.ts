@@ -7,6 +7,7 @@ import {
   NATORI_REFERENCE_LINK_MAX_LENGTH,
   normalizeNatoriReferenceUrl,
 } from "@/features/natori/lib/referenceLinks";
+import { NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL } from "@/features/natori/lib/requestPresentation";
 import { PORTFOLIO_OPTION_IDS } from "@/features/natori/constants/portfolioContent";
 import { NATORI_REQUEST_SCHEMA_VERSION } from "@/features/natori/types/request";
 import type {
@@ -28,6 +29,16 @@ export const NATORI_MAX_REFERENCE_IMAGES = 5;
 export const NATORI_MAX_REFERENCE_LINKS = 5;
 export const NATORI_REFERENCE_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 export const NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES = 10 * 1024 * 1024;
+
+/**
+ * 公開フォーム専用の選択値。保存時は既存 contract の「その他」へ正規化し、
+ * RPC・過去データとの互換性を保つ。
+ */
+export const NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE =
+  "mass_production_illustration" as const;
+export type PortfolioRequestTypeChoiceValue =
+  | NatoriRequestTypeV1
+  | typeof NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE;
 
 /** 依頼者が任意補足を書く「その他」オプションの stable ID。 */
 export const NATORI_OTHER_OPTION_ID = "other";
@@ -146,6 +157,54 @@ export function portfolioOptionChoices(
     }));
 }
 
+/** 「量産イラスト」を既存 RequestData V1 の other 表現から判定する。 */
+export function isMassProductionIllustrationSelection(
+  state: Pick<PortfolioRequestFormState, "requestType" | "requestTypeOther">
+): boolean {
+  return (
+    state.requestType === "other" &&
+    state.requestTypeOther === NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL
+  );
+}
+
+/** canonical state を公開フォームの専用選択値へ戻す。 */
+export function portfolioRequestTypeChoiceValue(
+  state: Pick<PortfolioRequestFormState, "requestType" | "requestTypeOther">
+): PortfolioRequestTypeChoiceValue {
+  return isMassProductionIllustrationSelection(state)
+    ? NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE
+    : state.requestType;
+}
+
+/**
+ * 依頼種別の変更を適用する。量産イラストは依頼種別・制作範囲ともに
+ * 「その他（量産イラスト）」へ自動入力する。
+ */
+export function applyPortfolioRequestTypeSelection(
+  state: PortfolioRequestFormState,
+  value: PortfolioRequestTypeChoiceValue
+): PortfolioRequestFormState {
+  if (value === NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE) {
+    return pruneHiddenPortfolioRequestFields({
+      ...state,
+      requestType: "other",
+      requestTypeOther: NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL,
+      commissionScope: "other",
+      commissionScopeOther: NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL,
+    });
+  }
+
+  const wasMassProduction = isMassProductionIllustrationSelection(state);
+  return pruneHiddenPortfolioRequestFields({
+    ...state,
+    requestType: value,
+    requestTypeOther: "",
+    ...(wasMassProduction
+      ? { commissionScope: "undecided" as const, commissionScopeOther: "" }
+      : {}),
+  });
+}
+
 /** 個数で料金が増えるオプションだけ数量入力を表示する。legacy項目は安全側で表示する。 */
 export function portfolioOptionAllowsQuantity(
   choice: Pick<PortfolioOptionChoice, "stableId">
@@ -163,10 +222,23 @@ export function applyPortfolioPlanSelection(
   planId: string | null
 ): PortfolioRequestFormState {
   if (planId === "sd") {
-    return pruneHiddenPortfolioRequestFields({ ...state, requestType: "sd" });
+    return pruneHiddenPortfolioRequestFields({
+      ...state,
+      requestType: "sd",
+      requestTypeOther: "",
+      ...(isMassProductionIllustrationSelection(state)
+        ? { commissionScope: "undecided" as const, commissionScopeOther: "" }
+        : {}),
+    });
   }
   if (planId === "bust_up" || planId === "waist_up" || planId === "full_body") {
-    return pruneHiddenPortfolioRequestFields({ ...state, commissionScope: planId });
+    return pruneHiddenPortfolioRequestFields({
+      ...state,
+      commissionScope: planId,
+      ...(isMassProductionIllustrationSelection(state)
+        ? { requestType: "undecided" as const, requestTypeOther: "" }
+        : {}),
+    });
   }
   return state;
 }

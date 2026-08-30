@@ -12,10 +12,10 @@ export default function PortfolioStyles() {
       .pf-wobble { animation: pf-wobble 2.4s ease-in-out infinite; }
       .pf-pin-card { transition: transform 0.25s ease, box-shadow 0.25s ease; }
       .pf-pin-card:hover, .pf-pin-card:focus-within { transform: rotate(0deg) translateY(-6px) !important; box-shadow: 0 18px 30px ${c.shadowHover}; }
-      .pf-form-control { border-color: ${c.borderStrong}; }
+      .pf-form-control { border-color: ${c.formBorder}; }
       .pf-choice-control {
         appearance: none;
-        border: 2px solid ${c.borderStrong};
+        border: 2px solid ${c.formBorder};
         background-color: ${c.surface};
         background-position: center;
         background-repeat: no-repeat;
@@ -24,8 +24,8 @@ export default function PortfolioStyles() {
       .pf-choice-control[type="radio"] { border-radius: 9999px; }
       .pf-choice-control[type="checkbox"] { border-radius: 0.25rem; }
       .pf-choice-control:checked {
-        border-color: ${c.accentDisplay};
-        background-color: ${c.accentDisplay};
+        border-color: ${c.formBorderActive};
+        background-color: ${c.formBorderActive};
       }
       .pf-choice-control[type="radio"]:checked {
         background-image: radial-gradient(circle, ${c.surface} 0 30%, transparent 34%);
@@ -38,6 +38,10 @@ export default function PortfolioStyles() {
       .pf-portfolio-root :where(a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
         outline: 3px solid ${c.accentHover};
         outline-offset: 3px;
+      }
+      .pf-portfolio-root :where(.pf-form-control, .pf-choice-control):focus-visible {
+        border-color: ${c.formBorderActive};
+        outline-color: ${c.formBorderActive};
       }
       @media (min-width: 768px) {
         .pf-portfolio-root :where(#gallery, #pricing, #flow, #about, #requests, #form) { scroll-margin-top: 88px; }
