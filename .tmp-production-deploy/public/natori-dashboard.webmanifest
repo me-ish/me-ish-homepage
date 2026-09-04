@@ -1,0 +1,21 @@
+{
+  "name": "Natori Dashboard",
+  "short_name": "Natori",
+  "start_url": "/natori/dashboard",
+  "scope": "/natori",
+  "display": "standalone",
+  "background_color": "#fdf2f8",
+  "theme_color": "#ec4899",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

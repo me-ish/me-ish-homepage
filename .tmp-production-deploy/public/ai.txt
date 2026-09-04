@@ -1,0 +1,10 @@
+# ai.txt for me-ish
+# https://site.spawning.ai/spawning-ai-txt
+# AI Training Opt-Out Declaration
+
+User-Agent: *
+Disallow: /
+
+# This website does not consent to AI training on any content.
+# All artworks displayed on this site are protected by copyright.
+# See our copyright policy: https://me-ish.art/footer/copyright

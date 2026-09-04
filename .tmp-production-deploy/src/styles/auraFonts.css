@@ -1,0 +1,81 @@
+/* src/styles/auraFonts.css */
+
+/* ============================================
+   Fonts
+   - next/font で読み込んだフォントを使用
+   - CSS変数 --font-zen, --font-lilita は layout.tsx で設定
+   ============================================ */
+
+/* フォントファミリーのフォールバック定義 */
+
+/* ✅ homepage / site 共通の "止血クラス"
+   next/font の CSS変数を使用 */
+.font-zen {
+  font-family: var(--font-zen), "Zen Maru Gothic", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+.font-lilita {
+  font-family: var(--font-lilita), "Lilita One", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ============================================
+   aura root
+   - 既存方針：基本は body を継承
+   - ただし、プリセットクラスが付いた場合は上書き可能にする
+   ============================================ */
+.ai-portfolio-root {
+  font-family: inherit;
+}
+
+/* 子要素は root から普通に継承 */
+.ai-portfolio-root * {
+  font-family: inherit;
+}
+
+/* ============================================
+   aura presets（必要最低限の実体）
+   - src/styles/auraFonts.ts が返す className と対応
+   - ここは今後、好みのフォントセットに拡張していける
+   ============================================ */
+
+/* Clean JP Sans（丸みのある読みやすい体） */
+.ai-portfolio-font-cleanJa {
+  font-family: var(--font-zen), "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif;
+}
+
+/* Modern Sans */
+.ai-portfolio-font-modernSans {
+  font-family: "Helvetica Neue", "Helvetica", "Arial", ui-sans-serif, sans-serif;
+}
+
+/* Formal Mincho */
+.ai-portfolio-font-formalMincho {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", "Times New Roman", Georgia, serif;
+}
+
+/* Cute Round（シャープな丸ゴシック） */
+.ai-portfolio-font-cuteRound {
+  font-family: "Meiryo", "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", ui-sans-serif, sans-serif;
+}
+
+/* Pop Bold */
+.ai-portfolio-font-popBold {
+  font-family: "Impact", "Arial Black", "Haettenschweiler", ui-sans-serif, sans-serif;
+}
+
+/* Tech Mono */
+.ai-portfolio-font-techMono {
+  font-family: "SF Mono", "Consolas", "Monaco", "Courier New", ui-monospace, monospace;
+}
+
+/* Luxury Serif */
+.ai-portfolio-font-luxurySerif {
+  font-family: "Palatino Linotype", "Palatino", "Book Antiqua", Georgia, serif;
+}
+
+/* Retro Pixel */
+.ai-portfolio-font-retroPixel {
+  font-family: "Courier New", "Lucida Console", "Andale Mono", monospace;
+}

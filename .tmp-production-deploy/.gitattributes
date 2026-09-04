@@ -1,0 +1,6 @@
+# マイグレーションと証跡アーカイブは SHA-256 のバイト一致が要件
+# （supabase/baseline/manifest.json は raw bytes・改行正規化なしでチェックサムを取る）。
+# Windows の core.autocrlf=true チェックアウトで CRLF 化すると検証が誤検知するため、
+# これらのレーンは改行変換を一切行わない。
+supabase/** -text
+artifacts/** -text

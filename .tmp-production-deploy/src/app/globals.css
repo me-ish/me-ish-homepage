@@ -1,0 +1,264 @@
+/* =========================================
+ * Google Fonts
+ * - Lilita One / Zen Maru Gothic（既存）
+ * - Noto Sans JP（クリーン系）
+ * - Shippori Mincho（フォーマル / ラグジュアリー）
+ * - Mochiy Pop One（ポップ）
+ * - DotGothic16（レトロ・ドット）
+ * - Share Tech Mono（テック / モノスペース）
+ * ========================================= */
+@import url("https://fonts.googleapis.com/css2?family=Lilita+One&family=Zen+Maru+Gothic&family=Noto+Sans+JP:wght@400;500;700&family=Shippori+Mincho:wght@400;600&family=Mochiy+Pop+One&family=DotGothic16&family=Share+Tech+Mono&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================================
+ * me-ish Design System CSS Variables
+ * ========================================= */
+@layer base {
+  :root {
+    /* Primary Brand Colors */
+    --meish-primary: 199 100% 46%;        /* #00a1e9 */
+    --meish-primary-dark: 199 100% 38%;   /* #0080c0 */
+    --meish-primary-light: 199 100% 97%;  /* #f0f9ff */
+
+    /* Text Colors */
+    --meish-text-heading: 200 100% 7%;    /* #002233 */
+    --meish-text-body: 220 9% 46%;        /* gray-600 */
+    --meish-text-muted: 220 9% 46%;       /* gray-500 */
+
+    /* Spacing Scale */
+    --spacing-section: 3rem;              /* 48px */
+    --spacing-section-md: 5rem;           /* 80px */
+
+    /* Border Radius Scale */
+    --radius-sm: 0.5rem;                  /* 8px */
+    --radius-md: 0.75rem;                 /* 12px */
+    --radius-lg: 1rem;                    /* 16px */
+    --radius-xl: 1.5rem;                  /* 24px */
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --spacing-section: 5rem;            /* 80px on desktop */
+      --spacing-section-md: 7rem;         /* 112px on desktop */
+    }
+  }
+}
+
+/* ✅ モバイルだけ少し小さく（例: 14px） */
+@media (max-width: 639px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  position: relative;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ロゴ用フォント */
+.font-lilita {
+  font-family: "Lilita One", cursive;
+}
+
+/* （必要なら）汎用丸ゴ */
+.font-zen {
+  font-family: "Zen Maru Gothic", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "ヒラギノ角ゴ ProN", "Hiragino Kaku Gothic ProN",
+    "Yu Gothic", "游ゴシック体", sans-serif;
+}
+
+.fade-in-start {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.9s ease-out;
+}
+
+.fade-in-start.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* =========================================
+ * aura 用フォントプリセット
+ * （Tailwind safelist と対応）
+ * ========================================= */
+
+/* 1. Minimal / Natural 向け：素直で読みやすいサンセリフ */
+.ai-portfolio-font-cleanJa {
+  font-family: "Noto Sans JP", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "ヒラギノ角ゴ ProN", "Hiragino Kaku Gothic ProN",
+    "Yu Gothic", "游ゴシック体", sans-serif;
+}
+
+/* 2. Modern 向け：ややシャープなモダン・サンセリフ */
+.ai-portfolio-font-modernSans {
+  font-family: "Noto Sans JP", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "ヒラギノ角ゴ ProN", "Hiragino Kaku Gothic ProN",
+    "Yu Gothic", "游ゴシック体", sans-serif;
+}
+
+/* 3. Business / かっちり系：フォーマルな明朝 */
+.ai-portfolio-font-formalMincho {
+  font-family: "Shippori Mincho", "Yu Mincho", "游明朝",
+    "Hiragino Mincho ProN", "ヒラギノ明朝 ProN", "MS PMincho",
+    "Times New Roman", serif;
+}
+
+/* 4. Cute：丸ゴ系・やわらかいトーン */
+.ai-portfolio-font-cuteRound {
+  font-family: "Zen Maru Gothic", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "ヒラギノ角ゴ ProN", "Hiragino Kaku Gothic ProN",
+    "Yu Gothic", "游ゴシック体", sans-serif;
+}
+
+/* 5. Pop：少し太めで元気なポップ体 */
+.ai-portfolio-font-popBold {
+  font-family: "Mochiy Pop One", "Zen Maru Gothic", system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", "ヒラギノ角ゴ ProN",
+    "Hiragino Kaku Gothic ProN", "Yu Gothic", "游ゴシック体", sans-serif;
+}
+
+/* 6. Dark / Cyber：テック感のあるモノスペース */
+.ai-portfolio-font-techMono {
+  font-family: "Share Tech Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* 7. Luxury：上品めの明朝（ビジネスよりリッチ寄せ） */
+.ai-portfolio-font-luxurySerif {
+  font-family: "Shippori Mincho", "Yu Mincho", "游明朝",
+    "Hiragino Mincho ProN", "ヒラギノ明朝 ProN", "MS PMincho",
+    "Times New Roman", serif;
+}
+
+/* 8. Retro：ドット感のあるレトロフォント */
+.ai-portfolio-font-retroPixel {
+  font-family: "DotGothic16", "MS Gothic", "Osaka-mono", ui-monospace,
+    monospace;
+}
+
+/* =========================================
+ * 互換用エイリアス（旧 preset 名 → 新 preset へ）
+ * 既存レコードが壊れないようにそのまま残す
+ * ========================================= */
+
+.ai-portfolio-font-cuteJa {
+  /* 旧 cuteJa → cuteRound と同等扱い */
+  font-family: "Zen Maru Gothic", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "ヒラギノ角ゴ ProN", "Hiragino Kaku Gothic ProN",
+    "Yu Gothic", "游ゴシック体", sans-serif;
+}
+
+.ai-portfolio-font-formalJa {
+  /* 旧 formalJa → formalMincho と同等扱い */
+  font-family: "Shippori Mincho", "Yu Mincho", "游明朝",
+    "Hiragino Mincho ProN", "ヒラギノ明朝 ProN", "MS PMincho",
+    "Times New Roman", serif;
+}
+
+.ai-portfolio-font-globalBold {
+  /* 旧 globalBold → popBold 寄りに近づける（太めサンセリフ） */
+  font-family: "Mochiy Pop One", "Noto Sans JP", system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.ai-portfolio-font-serifJa {
+  /* 旧 serifJa → luxurySerif 相当 */
+  font-family: "Shippori Mincho", "Yu Mincho", "游明朝",
+    "Hiragino Mincho ProN", "ヒラギノ明朝 ProN", "MS PMincho",
+    "Times New Roman", serif;
+}
+
+.ai-portfolio-font-retroPop {
+  /* 旧 retroPop → retroPixel と pop の中間くらい */
+  font-family: "DotGothic16", "Mochiy Pop One", "Zen Maru Gothic",
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

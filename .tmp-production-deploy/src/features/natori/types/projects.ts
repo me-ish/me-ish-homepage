@@ -1,0 +1,154 @@
+export type NatoriProjectStatus =
+  | "inquiry"
+  | "estimating"
+  // `consulting` is the legacy name for "依頼受付". Kept for back-compat with rows
+  // inserted before the inquiry / estimating split (2026-05); treated like inquiry
+  // everywhere in the app. New rows should use `inquiry`.
+  | "consulting"
+  | "quoted"
+  | "awaiting_payment"
+  | "rough"
+  | "lineart"
+  | "coloring"
+  | "waiting"
+  | "delivery_prep"
+  | "delivered"
+  | "completed"
+  // 見送り: 依頼受付〜見積もり段階で条件がまとまらなかった相談の終端。
+  // 実績にも案件ボードにも出さないが、履歴として残す。
+  | "closed";
+
+export type NatoriProjectFilter = "all" | "active" | "waiting" | "done";
+
+export type NatoriConcreteProjectType = "icon" | "sd" | "standing" | "illustration";
+
+export type NatoriProjectType = NatoriConcreteProjectType | "undecided";
+
+export type NatoriTaskStage =
+  | "material"
+  | "rough"
+  | "lineart"
+  | "coloring"
+  | "finish"
+  | "delivery";
+
+export type NatoriProjectTask = {
+  id: string;
+  label: string;
+  stage: NatoriTaskStage;
+  done: boolean;
+  estimatedHours?: number;
+};
+
+export type NatoriProjectPriority = "low" | "normal" | "high";
+
+export type NatoriDeliveryPlan = "normal" | "rush_14_days" | "rush_7_days";
+
+export type NatoriDeliveryPlanMeta = {
+  id: NatoriDeliveryPlan;
+  label: string;
+  shortLabel: string;
+  description: string;
+  days: number;
+  extraFee: number;
+  isRush: boolean;
+  chipClassName: string;
+  softClassName: string;
+  barAccentClassName: string;
+  dotClassName: string;
+};
+
+export type NatoriProject = {
+  id: string;
+  title: string;
+  clientName: string;
+  /** 依頼者メール。カラム化済み（note からの抽出は移行期フォールバックのみ） */
+  clientEmail?: string;
+  /** null は金額未定。0（無料）とは区別する。 */
+  amount: number | null;
+  /** 問い合わせ受付日時。受付順・経過日数の基準に使う。 */
+  createdAt?: string;
+  startDate?: string;
+  /** null は納期未定。日付ベースの計算・カレンダーから除外する。 */
+  dueDate: string | null;
+  deliveryPlan?: NatoriDeliveryPlan;
+  status: NatoriProjectStatus;
+  nextAction: string;
+  type: NatoriProjectType;
+  tasks: NatoriProjectTask[];
+  priority?: NatoriProjectPriority;
+  note?: string;
+  paymentConfirmedAt?: string;
+  paidAt?: string;
+  paidAmount?: number;
+  completedAt?: string;
+  deletedAt?: string;
+  /** 非公開バケットから都度発行した短時間署名URL */
+  referenceImageUrls?: string[];
+  /** 表示名付きの参考画像。Storage path は含めない。 */
+  referenceFiles?: NatoriProjectReferenceFileView[];
+  /** 外部参照リンク（sort_order 昇順） */
+  referenceLinks?: NatoriProjectReferenceLinkView[];
+  /**
+   * 受付時の原回答（RequestData V1）。legacy 案件では undefined。
+   * 管理画面では読み取り専用として扱い、書き戻さない。
+   */
+  requestData?: unknown;
+};
+
+export type NatoriProjectReferenceFileView = {
+  /** 短時間署名URL。保存も log 出力もしない。 */
+  url: string;
+  /** Storage path を露出しない表示名 */
+  name: string;
+};
+
+export type NatoriProjectReferenceLinkView = {
+  id: string;
+  url: string;
+  label: string | null;
+  sortOrder: number;
+  createdAt: string;
+};
+
+export type NatoriProjectStatusMeta = {
+  label: string;
+  chipClassName: string;
+  cellClassName: string;
+};
+
+export type NatoriPriorityCandidate = {
+  project: NatoriProject;
+  score: number;
+  reasons: string[];
+};
+
+export type NatoriStageMilestone = {
+  stage: NatoriTaskStage;
+  dateISO: string;
+  allDone: boolean;
+};
+
+export type NatoriCalendarEntry =
+  | { kind: "due"; project: NatoriProject }
+  | {
+      kind: "milestone";
+      project: NatoriProject;
+      stage: NatoriTaskStage;
+      allDone: boolean;
+    };
+
+export type NatoriCalendarBar = {
+  id: string;
+  project: NatoriProject;
+  stage: NatoriTaskStage;
+  startISO: string;
+  endISO: string;
+};
+
+export type NatoriCalendarCellBar = {
+  bar: NatoriCalendarBar;
+  isStart: boolean;
+  isEnd: boolean;
+  isOverdue: boolean;
+};

@@ -1,0 +1,155 @@
+// src/app/admin/api/entries/sync-display-ready/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminAuth } from "@/lib/auth/requireAdminAuth";
+import path from "node:path";
+import { checkFloatGuaranteeCapacity, getGuaranteeTotalForPlan } from "@/lib/guarantee/capacity";
+import { logAdminAction } from "@/lib/adminAudit";
+
+export const revalidate = 0;
+
+function ensureTrailingSlash(u: string) {
+  return u.endsWith("/") ? u : `${u}/`;
+}
+
+export async function POST(req: NextRequest) {
+  const auth = await requireAdminAuth(req);
+  if (!auth.ok) return auth.response;
+
+  const admin = supabaseAdmin();
+
+  // ✅ confirmed=true で display_ready=false のものだけ同期対象
+  // （必要なら confirmed 条件を外してもOKだが、運用上はこれが安全）
+  const { data: targets, error: qErr } = await admin
+    .from("entries")
+    .select("id,file_name,is_for_sale,display_plan,plan_payment_status,gallery_type")
+    .eq("confirmed", true)
+    .eq("display_ready", false)
+    .limit(200);
+
+  if (qErr) return NextResponse.json({ error: "query_failed" }, { status: 500 });
+
+  const rows = targets ?? [];
+  if (rows.length === 0) {
+    return NextResponse.json({ ok: true, updated: 0, skipped: 0, skippedReasons: {} });
+  }
+
+  const now = new Date();
+  const capacityBase = await checkFloatGuaranteeCapacity(0, now);
+  let capacityReserved = 0;
+
+  // 画像処理ジョブのステータスを一括取得
+  const entryIds = rows.map((r) => (r as any).id as number);
+  const { data: jobs } = await admin
+    .from("entry_processing_jobs")
+    .select("entry_id, status")
+    .in("entry_id", entryIds);
+
+  const jobStatusMap = new Map<number, string>();
+  for (const j of jobs ?? []) {
+    jobStatusMap.set(j.entry_id, j.status);
+  }
+
+  // public URL を deterministic に組む（list を毎回叩かない＝高速）
+  // 注意: NEXT_PUBLIC_SUPABASE_URL が無い環境なら SUPABASE_URL を用意しておく
+  const base =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    "";
+  if (!base) {
+    return NextResponse.json({ error: "missing_supabase_url_env" }, { status: 500 });
+  }
+  const SUPABASE_URL = ensureTrailingSlash(base);
+
+  let updated = 0;
+  let skipped = 0;
+  const skippedReasons: Record<string, number> = {};
+
+  const countSkip = (reason: string) => {
+    skipped++;
+    skippedReasons[reason] = (skippedReasons[reason] ?? 0) + 1;
+  };
+
+  for (const e of rows) {
+    const entryId = (e as any).id as number;
+
+    // ✅ 画像処理ジョブが succeeded でなければスキップ
+    const jobStatus = jobStatusMap.get(entryId);
+    if (jobStatus !== "succeeded") {
+      countSkip(`job_${jobStatus ?? "not_found"}`);
+      continue;
+    }
+
+    const paidPlan =
+      (e as any).is_for_sale === true &&
+      String((e as any).display_plan ?? "free") !== "free";
+    const planPaid = String((e as any).plan_payment_status ?? "").toLowerCase() === "paid";
+    if (paidPlan && !planPaid) {
+      countSkip("payment_pending");
+      continue;
+    }
+
+    const fileName = (e as any).file_name as string | null;
+    if (!fileName) {
+      countSkip("no_file_name");
+      continue;
+    }
+
+    const stem = path.parse(fileName).name; // 1769..._usachan
+    const finalName = `${stem}.png`;
+    const objectPath = `artworks/final/${finalName}`;
+    const publicUrl = `${SUPABASE_URL}storage/v1/object/public/${objectPath}`;
+
+    // Note: DO_EXISTENCE_CHECK は廃止。processing_job.status で判断する。
+
+    // 展示期間を設定: display_ready=true のタイミングで開始
+    const galleryType = String((e as any).gallery_type ?? "").toLowerCase();
+    const isWhiteGallery = galleryType === "white";
+
+    // White Gallery は無期限、それ以外は1ヶ月後に終了
+    let displayEndAt: string | null = null;
+    if (!isWhiteGallery) {
+      const endDate = new Date(now);
+      endDate.setMonth(endDate.getMonth() + 1);
+      displayEndAt = endDate.toISOString();
+    }
+
+    const plan = String((e as any).display_plan ?? "free").toLowerCase();
+    const guaranteeTotal = getGuaranteeTotalForPlan(plan);
+    const guaranteeRemaining = guaranteeTotal > 0 ? guaranteeTotal : 0;
+    const guaranteePeriodStart = guaranteeTotal > 0 ? now.toISOString() : null;
+    const guaranteePeriodEnd = guaranteeTotal > 0 ? displayEndAt : null;
+
+    if (!isWhiteGallery && guaranteeTotal > 0) {
+      if (capacityBase.remaining - capacityReserved < guaranteeTotal) {
+        countSkip("capacity_full");
+        continue;
+      }
+      capacityReserved += guaranteeTotal;
+    }
+
+    const { error: uErr } = await admin
+      .from("entries")
+      .update({
+        image_url: publicUrl,
+        display_ready: true,
+        display_start_at: now.toISOString(),
+        display_end_at: displayEndAt,
+        guarantee_total: guaranteeTotal,
+        guarantee_remaining: guaranteeRemaining,
+        guarantee_period_start: guaranteePeriodStart,
+        guarantee_period_end: guaranteePeriodEnd,
+      })
+      .eq("id", (e as any).id);
+
+    if (uErr) {
+      countSkip("update_failed");
+      continue;
+    }
+    updated++;
+  }
+
+  logAdminAction({ adminEmail: auth.adminEmail, action: "sync_display_ready", resourceType: "entry", detail: { updated, skipped, skippedReasons } });
+
+  return NextResponse.json({ ok: true, updated, skipped, skippedReasons });
+}

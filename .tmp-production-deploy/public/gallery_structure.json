@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "name": "Concrete Gallery v2 - Dia:Beacon Scale",
+    "units": "meters",
+    "blender_coords": "Y-forward, Z-up",
+    "r3f_transform": "[blender_x, blender_z, -blender_y]",
+    "total_artworks": 40,
+    "footprint": "60m x 40m",
+    "ceiling_height": "8m",
+    "reference": "Dia:Beacon + Ando Tadao light slits + courtyard water basin"
+  },
+  "building": {
+    "width": 60, "depth": 40, "height": 8, "wall_thickness": 0.4,
+    "floor": { "z": 0, "thickness": 0.3 },
+    "ceiling": { "z": 8, "thickness": 0.3, "note": "Open 8x8m hole above courtyard at (0,3)" }
+  },
+  "courtyard": {
+    "position": [0, 3], "size": 8, "water_level": 0.05,
+    "glass_walls": true, "open_ceiling": true
+  },
+  "materials": {
+    "concrete_wall": { "color": "#9E9A91", "roughness": 0.82, "metalness": 0, "bumpScale": 0.12 },
+    "concrete_floor": { "color": "#6B6660", "roughness": 0.3, "metalness": 0 },
+    "concrete_ceiling": { "color": "#ADA8A1", "roughness": 0.9, "metalness": 0 },
+    "frame": { "color": "#1F1F1F", "roughness": 0.25, "metalness": 0.85 },
+    "canvas": { "color": "#E0D9CC", "roughness": 0.65, "metalness": 0 },
+    "light_slit": { "color": "#F2F7FF", "emissiveIntensity": 5.0 },
+    "water": { "color": "#263841", "roughness": 0.05, "opacity": 0.6 },
+    "glass": { "color": "#E5F0FF", "roughness": 0.0, "opacity": 0.15 }
+  },
+  "exterior_walls": [
+    { "name": "Wall_Back", "position": [0.0, -19.8, 4.0], "size": [60.0, 0.4, 8.0] },
+    { "name": "Wall_Front", "position": [0.0, 19.8, 4.0], "size": [60.0, 0.4, 8.0] },
+    { "name": "Wall_Left", "position": [-29.8, 0.0, 4.0], "size": [0.4, 40.0, 8.0] },
+    { "name": "Wall_Right", "position": [29.8, 0.0, 4.0], "size": [0.4, 40.0, 8.0] }
+  ],
+  "partitions": [
+    { "name": "U_L_Spine", "group": "left_u", "role": "spine", "position": [-10.0, 1.5, 3.25], "size": [0.35, 21.0, 6.5], "wall_height": 6.5, "ceiling_gap": 1.5 },
+    { "name": "U_L_Top", "group": "left_u", "role": "top_arm", "position": [-16.0, 12.0, 3.25], "size": [12.0, 0.35, 6.5], "wall_height": 6.5, "ceiling_gap": 1.5 },
+    { "name": "U_L_Bottom", "group": "left_u", "role": "bottom_arm", "position": [-16.0, -9.0, 3.25], "size": [12.0, 0.35, 6.5], "wall_height": 6.5, "ceiling_gap": 1.5 },
+    { "name": "U_R_Spine", "group": "right_u", "role": "spine", "position": [10.0, 1.5, 3.25], "size": [0.35, 21.0, 6.5], "wall_height": 6.5, "ceiling_gap": 1.5 },
+    { "name": "U_R_Top", "group": "right_u", "role": "top_arm", "position": [16.0, 12.0, 3.25], "size": [12.0, 0.35, 6.5], "wall_height": 6.5, "ceiling_gap": 1.5 },
+    { "name": "U_R_Bottom", "group": "right_u", "role": "bottom_arm", "position": [16.0, -9.0, 3.25], "size": [12.0, 0.35, 6.5], "wall_height": 6.5, "ceiling_gap": 1.5 }
+  ],
+  "artworks": [
+    { "id": "Art_01", "position": [-22.5, -19.4, 2.2], "facing": "+y", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_02", "position": [-15.0, -19.4, 2.2], "facing": "+y", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_03", "position": [-7.5, -19.4, 2.2], "facing": "+y", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_04", "position": [0.0, -19.4, 2.2], "facing": "+y", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_05", "position": [7.5, -19.4, 2.2], "facing": "+y", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_06", "position": [15.0, -19.4, 2.2], "facing": "+y", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_07", "position": [22.5, -19.4, 2.2], "facing": "+y", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_08", "position": [-22.5, 19.4, 2.2], "facing": "-y", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_09", "position": [-15.0, 19.4, 2.2], "facing": "-y", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_10", "position": [-7.5, 19.4, 2.2], "facing": "-y", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_11", "position": [0.0, 19.4, 2.2], "facing": "-y", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_12", "position": [7.5, 19.4, 2.2], "facing": "-y", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_13", "position": [15.0, 19.4, 2.2], "facing": "-y", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_14", "position": [22.5, 19.4, 2.2], "facing": "-y", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_15", "position": [-29.4, -14.0, 2.2], "facing": "+x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_16", "position": [-29.4, -7.0, 2.2], "facing": "+x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_17", "position": [-29.4, 0.0, 2.2], "facing": "+x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_18", "position": [-29.4, 7.0, 2.2], "facing": "+x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_19", "position": [-29.4, 14.0, 2.2], "facing": "+x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_20", "position": [29.4, -14.0, 2.2], "facing": "-x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_21", "position": [29.4, -7.0, 2.2], "facing": "-x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_22", "position": [29.4, 0.0, 2.2], "facing": "-x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_23", "position": [29.4, 7.0, 2.2], "facing": "-x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_24", "position": [29.4, 14.0, 2.2], "facing": "-x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_25", "position": [-9.65, -6.0, 2.2], "facing": "+x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_26", "position": [-9.65, -0.5, 2.2], "facing": "+x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_27", "position": [-9.65, 5.0, 2.2], "facing": "+x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_28", "position": [-9.65, 10.5, 2.2], "facing": "+x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_29", "position": [-10.35, -6.0, 2.2], "facing": "-x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_30", "position": [-10.35, -0.5, 2.2], "facing": "-x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_31", "position": [-10.35, 5.0, 2.2], "facing": "-x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_32", "position": [-10.35, 10.5, 2.2], "facing": "-x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_33", "position": [9.65, -6.0, 2.2], "facing": "-x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_34", "position": [9.65, -0.5, 2.2], "facing": "-x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_35", "position": [9.65, 5.0, 2.2], "facing": "-x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_36", "position": [9.65, 10.5, 2.2], "facing": "-x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_37", "position": [10.35, -6.0, 2.2], "facing": "+x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_38", "position": [10.35, -0.5, 2.2], "facing": "+x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_39", "position": [10.35, 5.0, 2.2], "facing": "+x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } },
+    { "id": "Art_40", "position": [10.35, 10.5, 2.2], "facing": "+x", "size": { "width": 2.0, "height": 1.5 }, "frame": { "depth": 0.06, "border": 0.05 } }
+  ],
+  "light_slits": [
+    { "name": "Slit_UL_Bot", "position": [-16.0, -9.0, 7.25], "size": [12.0, 0.05, 1.3] },
+    { "name": "Slit_UL_Spine", "position": [-10.0, 1.5, 7.25], "size": [0.05, 21.0, 1.3] },
+    { "name": "Slit_UL_Top", "position": [-16.0, 12.0, 7.25], "size": [12.0, 0.05, 1.3] },
+    { "name": "Slit_UR_Bot", "position": [16.0, -9.0, 7.25], "size": [12.0, 0.05, 1.3] },
+    { "name": "Slit_UR_Spine", "position": [10.0, 1.5, 7.25], "size": [0.05, 21.0, 1.3] },
+    { "name": "Slit_UR_Top", "position": [16.0, 12.0, 7.25], "size": [12.0, 0.05, 1.3] },
+    { "name": "Slit_Wall_Back", "position": [0.0, -19.6, 7.7], "size": [59.0, 0.05, 0.15] },
+    { "name": "Slit_Wall_Front", "position": [0.0, 19.6, 7.7], "size": [59.0, 0.05, 0.15] },
+    { "name": "Slit_Wall_Left", "position": [-29.6, 0.0, 7.7], "size": [0.05, 39.0, 0.15] },
+    { "name": "Slit_Wall_Right", "position": [29.6, 0.0, 7.7], "size": [0.05, 39.0, 0.15] }
+  ],
+  "courtyard_elements": [
+    { "name": "Court_Glass_N", "position": [0.0, 7.0, 4.0], "size": [8.0, 0.05, 8.0] },
+    { "name": "Court_Glass_S", "position": [0.0, -1.0, 4.0], "size": [8.0, 0.05, 8.0] },
+    { "name": "Court_Glass_E", "position": [4.0, 3.0, 4.0], "size": [0.05, 8.0, 8.0] },
+    { "name": "Court_Glass_W", "position": [-4.0, 3.0, 4.0], "size": [0.05, 8.0, 8.0] },
+    { "name": "Water_Basin", "position": [0.0, 3.0, 0.05], "size": [7.8, 7.8, 0.1] },
+    { "name": "Court_Floor", "position": [0.0, 3.0, -0.05], "size": [8.0, 8.0, 0.1] }
+  ],
+  "furniture": [
+    { "name": "Bench_0", "position": [0.0, -4.0, 0.22], "size": [1.5, 0.3, 0.22] },
+    { "name": "Bench_1", "position": [0.0, 2.0, 0.22], "size": [1.5, 0.3, 0.22] },
+    { "name": "Bench_2", "position": [-18.0, 0.0, 0.25], "size": [3.0, 0.5, 0.5] },
+    { "name": "Bench_3", "position": [18.0, 0.0, 0.25], "size": [3.0, 0.5, 0.5] }
+  ],
+  "lighting": {
+    "sun": { "intensity": 3.0, "color": "#FFF9F0" },
+    "area_lights": [
+      { "position": [-20, 0, 7.8], "size": [2, 30], "intensity": 800 },
+      { "position": [0, 0, 7.8], "size": [2, 30], "intensity": 800 },
+      { "position": [20, 0, 7.8], "size": [2, 30], "intensity": 800 }
+    ],
+    "spot_per_artwork": { "offset": 2.5, "z": 7.5, "energy": 100, "angle_deg": 45, "penumbra": 0.3 }
+  }
+}

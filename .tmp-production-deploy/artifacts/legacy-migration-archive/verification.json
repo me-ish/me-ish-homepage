@@ -1,0 +1,19 @@
+{
+  "expectedCount": 55,
+  "actualCount": 55,
+  "beforeCount": 55,
+  "afterCount": 55,
+  "ledgerCount": 55,
+  "gitBlobCount": 55,
+  "allChecksumsMatch": true,
+  "allSizesMatch": true,
+  "allPathsMatch": true,
+  "allVersionsMatch": true,
+  "allFilenamesMatch": true,
+  "gitBlobsMatch": true,
+  "activeLegacyFiles": [],
+  "missingFiles": [],
+  "unexpectedFiles": [],
+  "duplicateEntries": [],
+  "contentChanges": []
+}

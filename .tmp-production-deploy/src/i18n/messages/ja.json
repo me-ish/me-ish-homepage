@@ -1,0 +1,405 @@
+{
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラーが発生しました",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "delete": "削除",
+    "edit": "編集",
+    "close": "閉じる",
+    "back": "戻る",
+    "next": "次へ",
+    "submit": "送信",
+    "search": "検索"
+  },
+  "nav": {
+    "home": "ホーム",
+    "gallery": "ギャラリー",
+    "works": "作品",
+    "artists": "アーティスト",
+    "about": "me-ishとは",
+    "contact": "お問い合わせ",
+    "mypage": "マイページ",
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "entry": "作品を出展する"
+  },
+  "footer": {
+    "terms": "利用規約",
+    "privacy": "プライバシーポリシー",
+    "tokushoho": "特定商取引法に基づく表記",
+    "faq": "よくある質問",
+    "copyright": "著作権・AI学習防止",
+    "disclaimer": "免責事項"
+  },
+  "cookie": {
+    "message": "当サイトでは、サービス向上のためCookieを使用しています。",
+    "learnMore": "詳しくはプライバシーポリシーをご確認ください。",
+    "accept": "同意する",
+    "decline": "拒否"
+  },
+  "auth": {
+    "loginWithGoogle": "Googleでログイン",
+    "loginRequired": "ログインが必要です",
+    "logoutSuccess": "ログアウトしました"
+  },
+  "works": {
+    "title": "作品タイトル",
+    "artist": "作家",
+    "price": "価格",
+    "soldOut": "SOLD OUT",
+    "limited": "限定",
+    "edition": "エディション",
+    "likes": "いいね",
+    "buy": "購入する",
+    "addToCart": "カートに追加"
+  },
+  "mypage": {
+    "title": "マイページ",
+    "profile": "プロフィール",
+    "editProfile": "プロフィールを編集",
+    "editProfileAriaLabel": "プロフィール編集",
+    "likedWorks": "いいねした作品",
+    "myWorks": "出展作品",
+    "sales": "売上",
+    "settings": "設定",
+    "accountSettings": "アカウント設定",
+    "withdraw": "退会する",
+    "withdrawConfirm": "本当に退会しますか？",
+    "loading": "読み込み中...",
+    "loadError": "読み込みに失敗しました",
+    "bankAlert": {
+      "title": "振込先口座が未登録です",
+      "body": "作品が売れた際の報酬を受け取るには、銀行口座の登録が必要です。",
+      "link": "口座を登録する"
+    },
+    "metrics": {
+      "displaying": "展示中",
+      "views": "閲覧数",
+      "uniqueViews": "ユニーク {count}",
+      "likes": "いいね",
+      "sold": "販売数",
+      "revenue": "売上",
+      "revenueNote": "購入確定",
+      "pending": "入金予定",
+      "pendingNote": "振込待ち",
+      "paid": "入金済み",
+      "paidNote": "振込完了"
+    },
+    "viewerStats": "これまでに {count} 作品を閲覧しました",
+    "tabs": {
+      "likes": "いいねした作品",
+      "works": "出展作品"
+    },
+    "gallery": {
+      "title": "ギャラリーを見る",
+      "floatDesc": "雲の上の美術館",
+      "whiteDesc": "白い空間の美術館"
+    },
+    "settingsSection": {
+      "title": "設定",
+      "bankTitle": "振込先口座",
+      "bankDesc": "売上の振込に使用する口座",
+      "withdrawTitle": "退会する",
+      "withdrawDesc": "アカウントを削除します"
+    },
+    "deleteDialog": {
+      "title": "本当に退会しますか？",
+      "body": "退会すると以下のデータが削除されます：",
+      "item1": "プロフィール情報",
+      "item2": "いいねした作品の履歴",
+      "item3": "ログイン情報",
+      "notice": "※ 出展作品・取引履歴は法令に基づき保持されます。",
+      "confirmPrompt": "退会を確定するには「退会する」と入力してください。",
+      "confirmWord": "退会する",
+      "cancel": "キャンセル",
+      "processing": "処理中...",
+      "confirm": "退会を確定"
+    },
+    "toasts": {
+      "profileSaved": "プロフィールを保存しました",
+      "profileSaveError": "保存に失敗しました",
+      "withdrawError": "退会処理に失敗しました",
+      "userIdError": "ユーザーIDが取得できませんでした。"
+    }
+  },
+  "purchase": {
+    "success": "ご購入ありがとうございます",
+    "receipt": "領収書",
+    "downloadPdf": "PDFダウンロード",
+    "print": "印刷"
+  },
+  "pages": {
+    "modal": {
+      "about": {
+        "title": "me-ishについて",
+        "lead": "me-ish（ミーイッシュ）は、誰もが自分らしく作品を展示できるオンラインギャラリー。3D的な見せ方や独自UIで鑑賞体験をアップデートし、作品の「見せ方」と「出会い方」をデザインします。",
+        "statsNote": "※ 決済は購入者のクレジットカード（円）のみ。アーティストへのお支払いは売上から手数料（10%）を控除のうえ、月次で銀行振込します。詳細はFAQをご確認ください。",
+        "stats": {
+          "joinLabel": "参加", "joinMain": "応募・展示無料", "joinSub": "はじめてでも費用はかかりません",
+          "sellLabel": "販売", "sellMain": "手数料10％", "sellSub": "販売成立時のみ ／ 売れなければ費用ゼロ",
+          "paymentLabel": "決済", "paymentMain": "クレジットのみ", "paymentSub": "暗号資産での支払いには非対応",
+          "settingsLabel": "設定", "settingsMain": "販売する／しないを選べる", "settingsSub": "出展時に販売有無・価格・点数を設定できます"
+        },
+        "featuresTitle": "特長",
+        "features": [
+          { "title": "作品が映える体験設計", "body": "ホログラム風ラベルや空間演出など、作品の魅力を最大化するUI。" },
+          { "title": "簡単な出展フロー", "body": "ガイド付き応募で迷わない。販売の有無や価格設定も応募フォームで完結します。" },
+          { "title": "画像保護と安心運営", "body": "サイン/ウォーターマークやAI認識阻害など、多層的に保護。ポリシーも整備しています。" }
+        ],
+        "stepsTitle": "使い方（5ステップ）",
+        "steps": [
+          { "t": "応募", "d": "作品情報を入力して画像をアップロード。ガイドに沿って進むだけ。" },
+          { "t": "審査", "d": "基本的な基準に沿ってクイックレビュー。結果はメール通知。" },
+          { "t": "展示", "d": "White / Float などギャラリーへ掲出。SOLDやエディション情報も自動表示。" },
+          { "t": "販売", "d": "クレジット決済（円）。購入が成立すると作品ページにSOLDが表示されます。" },
+          { "t": "還元", "d": "売上は規定に沿って月次で銀行振込。明細はマイページから確認予定。" }
+        ],
+        "recommendTitle": "こんな方におすすめ",
+        "recommend": ["肩書きや実績に関係なく、作品をまず見てほしいアーティスト", "作品の見せ方（体験設計）にもこだわりたい方", "スマホでも気軽にアートを楽しみたい方", "新しい才能を発掘したいコレクター"],
+        "protectionTitle": "作品保護への取り組み",
+        "protectionBody": "表示用画像には、サインの推奨・ウォーターマーク・AI認識阻害などの対策を適用します。オリジナルデータの扱い、二次利用、削除依頼のフローは順次公開予定です。",
+        "protectionNote": "詳細はFAQをご確認ください。",
+        "whyTitle": "なぜme-ishを作ったのか",
+        "whyBody": "立場や経歴に左右されず、「作品そのもの」を起点に出展できる場を作りたいと思いました。はじめての方でも挑戦しやすく、安心して展示できる——そんな入口として me-ish を設計しています。",
+        "ctaGuide": "出展ガイドを見る",
+        "ctaGallery": "ギャラリーへ行く"
+      },
+      "pricing": {
+        "title": "プランと料金",
+        "leadFreeStrong": "応募・展示は無料", "leadSellStrong": "売れたときだけ手数料10%", "leadOptionStrong": "表示保証オプション", "leadSuffix": "を用意しています。",
+        "guaranteeTitle": "表示保証オプション（任意）",
+        "guaranteeDesc": "購入から有効期間内に、下記回数は必ずギャラリーで表示されます（一般ローテーションは別で実施）。",
+        "period": "1ヶ月", "recommended": "おすすめ", "kpiGuarantee": "保証表示回数", "kpiPerUnit": "1回あたり", "comboNote": "一般ローテーション表示と併用",
+        "badgePerWork": "1作品ごとに適用", "badgePeriod": "有効期限：購入日から1ヶ月", "badgeCombo": "一般ローテーション併用",
+        "planPaces": { "mini": "週1回ペースで確実な露出", "light": "週2回前後で優先表示", "standard": "週3〜4回でしっかり露出", "premium": "ほぼ毎日ペースで優先表示" },
+        "feesTitle": "手数料・決済",
+        "feeItem1": "販売手数料は成功時のみ10%です。売上から手数料を控除のうえ、月次まとめ払いでアーティストへ銀行振込します（応募時に振込口座の登録が必要）。",
+        "feeItem2": "購入者の決済方法はクレジットカード（円）です（暗号資産での支払いには対応していません）。",
+        "feeItem3": "詳細はFAQをご確認ください。",
+        "termsTitle": "ご利用規約（要点抜粋）", "termsViewFull": "利用規約（全文）を見る",
+        "termsItems": [
+          { "title": "作品権利・保護", "body": "著作権はアーティストに帰属。展示・販売・広報に必要な範囲での利用許諾をいただきます。me-ish側でサイン／ウォーターマーク、AI認識阻害処理（例：Glaze・ステガノ等）を適用し、保護完了後のみ展示します。" },
+          { "title": "審査と掲載", "body": "応募＝掲載確定ではありません。審査通過後に掲載・販売開始となります（審査結果はメール通知）。SOLD後も展示を継続します。" },
+          { "title": "表示保証の扱い", "body": "オプションは1作品ごとに購入でき、有効期間内に保証回数を消化します。保証回数消化後も一般ローテーションでの表示は継続されます。" },
+          { "title": "キャンセル・返金", "body": "表示保証オプションは性質上、購入後の返金はできません（法令上の瑕疵に該当する場合を除く）。" }
+        ],
+        "ctaButton": "応募フォームへ進む", "ctaNote": "まずは無料で応募。掲載は審査通過後に開始されます。"
+      },
+      "creators": {
+        "title": "出展ガイド",
+        "lead": "me-ishは、立場や経歴に関係なく、誰でも自分らしく作品を展示できるオンラインギャラリーです。応募はかんたん。作品保護も運営側で対応します。出展時に「販売する／しない」を選べます。",
+        "statsNote": "※ アーティストへのお支払いは、売上から手数料（10%）を控除のうえ月次で銀行振込します。内訳・時期はFAQをご確認ください。",
+        "stats": {
+          "joinLabel": "参加", "joinMain": "応募・展示無料", "joinSub": "はじめてでも費用はかかりません（β）",
+          "sellLabel": "販売", "sellMain": "手数料10%", "sellSub": "販売成立時のみ／売れなければ費用ゼロ",
+          "paymentLabel": "決済", "paymentMain": "クレジットのみ", "paymentSub": "暗号資産での支払いには非対応",
+          "settingsLabel": "設定", "settingsMain": "販売する／しない", "settingsSub": "価格・点数も応募時に設定"
+        },
+        "checklistTitle": "準備するもの",
+        "checklist": ["作品画像（推奨：長辺 3000px / JPG or PNG / sRGB）", "作品タイトル・説明（200〜400字目安）", "作者情報（SNS/ポートフォリオは任意）", "販売設定（任意）：販売する／しない、価格、点数（エディション）", "署名（サイン）（任意／ある場合はWM省略可）", "振込口座情報（売上の月次振込に使用／販売する場合は必須）"],
+        "checklistNote": "※ 画像要件の詳細はFAQ: 画像ガイドを参照。",
+        "flowTitle": "出展までの流れ",
+        "flow": [
+          { "title": "応募フォームの送信", "body": "作品情報と画像を入力して送信。販売する場合は「価格」「点数（エディション）」も設定します。" },
+          { "title": "運営による内容確認", "body": "公序良俗・権利面のチェック。目安：1〜2営業日。" },
+          { "title": "画像の保護処理", "body": "サイン推奨／ウォーターマーク、AI認識阻害（例：Glaze/ステガノ）等を適用します。" },
+          { "title": "展示・販売スタート", "body": "ギャラリーに掲出。SOLD／エディション情報は自動表示。（SOLD後も表示は継続）" },
+          { "title": "決済・売上の還元", "body": "購入者の支払いはクレジットカード（円）。売上は手数料（10%）を控除のうえ、規定に沿って月次で銀行振込します。" }
+        ],
+        "policyTitle": "作品の取り扱いと審査",
+        "policy": ["出展作品には、サイン推奨／ウォーターマークとAI認識阻害処理を適用します。", "オリジナル性、公序良俗、権利クリアを確認します。", "完全自動生成（生成AIの出力のみで、人の創作性がほぼ無い）作品は受け付けません。AIを使用した場合は、応募時に所定の項目で申告してください。", "展示の最適化のため、軽微なリサイズ・圧縮を行う場合があります。"],
+        "policyNote": "詳細は出展ポリシーをご確認ください。",
+        "moreExposureTitle": "より確実に見てもらうには",
+        "moreExposureBody": "任意の表示保証オプションで、一定回数の掲出を保証できます。くわしくはプランと料金をご確認ください。",
+        "ctaButton": "応募フォームへ進む"
+      },
+      "buyers": {
+        "title": "購入ガイド",
+        "lead": "me-ishでは、どなたでも展示中の作品を自由に鑑賞できます。気に入った作品はその場で購入可能です。お支払いはクレジットカード（円）のみです。",
+        "flowTitle": "購入の流れ",
+        "flow": [
+          { "title": "作品を開く", "body": "展示内で作品をタップし、価格や説明を確認します。" },
+          { "title": "購入手続きへ", "body": "「購入する」ボタンから手続きに進みます（在庫がある場合のみ表示されます）。" },
+          { "title": "クレジット決済", "body": "Stripe経由で安全に決済します（円のみ）。" },
+          { "title": "データ受け取り", "body": "購入完了後、ダウンロードリンクをメールでお送りします。" }
+        ],
+        "flowNote": "※ 購入後は作品に「SOLD」表示がつき、展示期間中もギャラリー内に表示され続けます（鑑賞体験のため）。",
+        "protectionTitle": "作品の保護と取り扱い",
+        "protectionItems": ["表示用画像にはウォーターマークやAI認識阻害処理（例：Glaze）を適用しています。", "購入データの利用範囲は「私的鑑賞」の範囲に限られます（著作権の譲渡はありません）。"],
+        "faqTitle": "よくあるご質問",
+        "faqItems": [
+          { "q": "Q. 支払い方法は？", "a": "→ クレジットカード（円）のみです。暗号資産での支払いには対応していません。" },
+          { "q": "Q. キャンセルや返品はできますか？", "a": "→ デジタル商品の性質上、原則キャンセルはできません。誤購入等はお問い合わせからご相談ください。" }
+        ],
+        "ctaGallery": "作品を見に行く", "ctaFaq": "FAQを見る"
+      }
+    },
+    "login": {
+      "title": "マイページにログイン",
+      "subtitle": "購入履歴のダウンロード、出展作品の管理、通知設定などをご利用いただけます。",
+      "subtitleNote": "鑑賞だけならログイン不要です。",
+      "loginButton": "Googleでログイン", "loggingIn": "ログイン中...",
+      "loginError": "ログインに失敗しました。時間をおいて再度お試しください。",
+      "consentText": "ログインすると、メールアドレス・表示名・アイコンを取得します（投稿や連絡先へのアクセスは行いません）。続行により",
+      "consentTerms": "利用規約", "consentAnd": "と", "consentPrivacy": "プライバシーポリシー", "consentSuffix": "に同意したものとみなされます。",
+      "browseWithoutLogin": "ログインせずに作品を見る", "loginHelp": "ログインできないとき",
+      "canDoTitle": "できること",
+      "canDoItems": ["出展作品の登録・編集", "売上・手数料の確認（成功時のみ10%）", "展示・販売に関する通知の受け取り", "プロフィール編集とSNSリンク"],
+      "safeTitle": "安心の取り組み",
+      "safeItems": ["ウォーターマーク／署名とAI学習阻害の多層保護", "支払いはクレジット（円）のみ、暗号資産は非対応", "購入後すぐにデジタル作品をダウンロード"]
+    },
+    "float2d": {
+      "today": "本日の展示", "dateExhibition": "{date} の展示",
+      "worksCount": "本日は{count}点の作品を展示中。", "recruiting": "現在作品を募集中です。",
+      "viewingDate": "{date} の展示を表示中です。", "viewToday": "今日の展示を見る",
+      "collectionInfo": "Floatギャラリーでは毎日展示作品が入れ替わります。",
+      "emptyMessage": "本日の展示作品はありません", "view3d": "3Dで見る"
+    },
+    "white2d": {
+      "subtitle": "常設展示コレクション", "collectionInfo": "Whiteギャラリーの常設コレクションです。",
+      "worksCount": "現在{count}点の作品を展示中。", "recruiting": "現在作品を募集中です。",
+      "emptyMessage": "展示作品がありません", "view3d": "3Dで見る"
+    },
+    "workDetail": {
+      "backToGallery": "← ギャラリーに戻る", "view3d": "3Dギャラリーで見る",
+      "price": "価格", "priceUnset": "価格未定", "edition": "エディション", "editionRemain": "残り{n}点",
+      "status": "ステータス", "forSale": "販売中", "displayOnly": "展示のみ",
+      "description": "作品について", "artistLinks": "アーティストリンク", "homepage": "ホームページ",
+      "galleryLabel": "展示場所", "notFound": "作品が見つかりません"
+    },
+    "cancel": {
+      "title": "キャンセルされました", "body": "購入手続きはキャンセルされました。", "backToHome": "ホームページに戻る"
+    },
+    "contactComplete": {
+      "title": "送信完了", "body": "お問い合わせありがとうございました。担当者より折り返しご連絡いたします。", "backToTop": "トップページへ戻る"
+    },
+    "artists": {
+      "loading": "読み込み中...", "notFound": "このアーティストは見つかりませんでした。",
+      "noBio": "プロフィールはまだ記載されていません。", "noWorks": "公開中の作品はありません。",
+      "private": "このポートフォリオは非公開です。",
+      "privateNote": "公開設定はマイページの「ポートフォリオ設定」から変更できます。",
+      "backToMypage": "マイページへ戻る"
+    },
+    "entry": { "formTitle": "me-ish 応募フォーム", "formSubtitle": "あなたの作品を世界に届けよう" },
+    "news": { "title": "お知らせ", "loading": "読み込み中…" },
+    "specialThanks": { "subtitle": "me-ishを応援してくださった皆さま" },
+    "renew": {
+      "title": "再出展・プラン延長", "subtitle": "展示が終了した作品の再出展申請が行えます。",
+      "loginRequired": "※ ログイン後に再出展が可能です", "noWorks": "現在、再出展可能な作品はありません。",
+      "selectWork": "1. 対象作品の選択", "selectPlan": "2. プラン選択", "untitled": "（無題）",
+      "submitButton": "再出展を申請する", "submitting": "送信中…",
+      "alertLoginRequired": "ログインが必要です", "alertSelectWork": "作品を選択してください",
+      "alertSuccess": "再出展の申請を受け付けました", "alertError": "再出展の申請に失敗しました",
+      "planDesc": { "free": "表示保証なし・ローテーション枠", "mini": "月4回保証", "light": "月9回保証", "standard": "月14回保証", "premium": "月30回保証" }
+    },
+    "bank": {
+      "backToMypage": "マイページに戻る", "title": "振込先口座設定", "subtitle": "売上の振込に使用する口座情報",
+      "noEntryWarning": "口座情報を登録するには、まず作品を出展してください。", "toEntryForm": "出展フォームへ →",
+      "bankLabel": "銀行（名称 / コード）", "bankPlaceholder": "例）三菱UFJ / 0005",
+      "branchLabel": "支店（名称 / コード）", "branchPlaceholder": "例）新宿 / 123",
+      "accountTypeLabel": "口座種別", "futsu": "普通", "toza": "当座",
+      "accountNumberLabel": "口座番号（最大7桁）", "accountNumberPlaceholder": "例）1234567",
+      "accountNameLabel": "口座名義（全角カナ）", "accountNamePlaceholder": "例）ヤマダ　タロウ",
+      "savedSr": "口座情報を保存しました", "saving": "保存中...", "saved": "保存しました", "save": "保存する",
+      "validationBank": "銀行を選択してください。", "validationBranch": "支店を選択してください。",
+      "validationAccountType": "口座種別を選択してください。", "validationAccountNumber": "口座番号を正しく入力してください。",
+      "validationAccountName": "口座名義を入力してください。",
+      "errorNoEntry": "出展履歴がありません。まず作品を出展してください。", "errorSave": "保存に失敗しました。"
+    },
+    "mypagePage": { "loadingText": "マイページを読み込み中です..." }
+  },
+  "jaOnly": "このページは現在日本語のみでご覧いただけます。",
+  "home": {
+    "hero": {
+      "tagline": "あなたらしさを、かたちに",
+      "viewGallery": "ギャラリーを見る",
+      "apply": "応募する",
+      "applyAriaLabel": "作品を応募する"
+    },
+    "stats": {
+      "works": "展示作品",
+      "artists": "アーティスト",
+      "views": "ユニーク閲覧"
+    },
+    "news": {
+      "title": "お知らせ",
+      "viewAll": "一覧を見る",
+      "viewAllShort": "すべて見る"
+    },
+    "gallery": {
+      "title": "ギャラリーを探索",
+      "subtitle": "3D空間で作品を鑑賞する、新しいアート体験",
+      "titleMobile": "ギャラリー",
+      "subtitleMobile": "3D空間で作品を鑑賞",
+      "whiteBadge": "10作品限定",
+      "whiteDesc": "「意識の空間」をイメージした真っ白なギャラリー",
+      "floatBadge": "日替わり",
+      "floatDesc": "\"漂う\"ように入れ替わる美術館風ギャラリー",
+      "view3d": "3Dで見る",
+      "view2d": "2Dで見る",
+      "view2dTitle": "2Dモードで見る",
+      "view2dDesc": "軽量な2Dギャラリーもあります"
+    },
+    "features": {
+      "3dTitle": "3D空間体験",
+      "3dDesc": "Three.jsによる没入感のある鑑賞体験",
+      "entryTitle": "簡単応募",
+      "entryDesc": "ガイド付きフローで迷わず出展",
+      "protectionTitle": "画像保護",
+      "protectionDesc": "ウォーターマーク・AI認識阻害処理"
+    },
+    "about": {
+      "titlePrefix": "",
+      "titleSuffix": "とは",
+      "body1": "me-ish（ミーイッシュ）は、誰もが自分らしく作品を展示できるオンラインギャラリー。",
+      "body2pre": "作品の",
+      "body2highlight1": "\"見せ方\"",
+      "body2mid": "と",
+      "body2highlight2": "\"出会い方\"",
+      "body2post": "をデザインし、アーティストと鑑賞者の距離を縮めます。",
+      "bodySimple": "誰もが自分らしく作品を展示できる、オンラインギャラリー。作品の見せ方と出会い方をデザインします。"
+    },
+    "apply": {
+      "title": "あなたのアートを世界に届けよう",
+      "subtitle": "me-ishでは、どなたでも気軽に作品を展示できます。あなたの創作を、新しい空間で見せてみませんか？",
+      "subtitleMobile": "me-ishなら、スマホだけでもすぐに展示",
+      "button": "応募する"
+    },
+    "thanks": {
+      "desc": "me-ishを応援してくださった皆さま"
+    },
+    "faq": {
+      "title": "よくある質問",
+      "viewAll": "すべてのFAQを見る",
+      "viewMore": "もっと見る",
+      "items": [
+        {
+          "q": "誰でも出展できますか？",
+          "a": "はい、プロ・アマ問わずご応募いただけます。展示は審査制です。"
+        },
+        {
+          "q": "出展に料金はかかりますか？",
+          "a": "応募・展示は無料です。作品が売れた場合のみ、売上から手数料をいただきます。"
+        },
+        {
+          "q": "生成AIは使ってもいいですか？",
+          "a": "AIだけで作った\"完全生成\"作品は不可です。補助的な利用はケースにより異なります。詳細はFAQをご確認ください。"
+        }
+      ]
+    },
+    "contact": {
+      "title": "お問い合わせ",
+      "subtitle": "ご質問・ご相談などございましたら、お気軽にご連絡ください。",
+      "form": "お問い合わせフォーム",
+      "xLabel": "X（旧Twitter）",
+      "xAriaLabel": "X（旧Twitter）でお問い合わせ"
+    },
+    "bottomBar": {
+      "gallery": "ギャラリー",
+      "apply": "応募する",
+      "backToTop": "トップへ戻る"
+    }
+  }
+}
