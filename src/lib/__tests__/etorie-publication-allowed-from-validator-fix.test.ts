@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 const migrationPath = path.join(
   "supabase",
   "migrations",
-  "20260908123441_etorie_publication_allowed_from_validator_fix.sql"
+  "20260908124222_etorie_publication_allowed_from_validator_fix.sql"
 );
 const migration = readFileSync(migrationPath, "utf8");
 
