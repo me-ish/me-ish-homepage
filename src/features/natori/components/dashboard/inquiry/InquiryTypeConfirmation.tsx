@@ -3,7 +3,7 @@
 // 案件種別の確定と制作タスク生成。
 // 確定は natori_confirm_project_type_v1 RPC が担い、application からは
 // task を INSERT しない。通常の project 更新とは経路を分ける。
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, ListChecks } from "lucide-react";
 import {
   NATORI_CONCRETE_PROJECT_TYPES,
@@ -16,6 +16,7 @@ import type {
 
 export type InquiryTypeConfirmationProps = {
   projectType: NatoriProjectType;
+  suggestedProjectType?: NatoriConcreteProjectType | null;
   taskCount: number;
   disabled?: boolean;
   onConfirm: (projectType: NatoriConcreteProjectType) => Promise<void>;
@@ -23,18 +24,25 @@ export type InquiryTypeConfirmationProps = {
 
 export default function InquiryTypeConfirmation({
   projectType,
+  suggestedProjectType = null,
   taskCount,
   disabled,
   onConfirm,
 }: InquiryTypeConfirmationProps) {
-  const [selected, setSelected] = useState<NatoriConcreteProjectType>("icon");
+  const [selected, setSelected] = useState<NatoriConcreteProjectType | "">(
+    suggestedProjectType ?? ""
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const confirmed = projectType !== "undecided";
 
+  useEffect(() => {
+    if (!confirmed) setSelected(suggestedProjectType ?? "");
+  }, [confirmed, suggestedProjectType]);
+
   const handleConfirm = async () => {
-    if (saving) return;
+    if (saving || !selected) return;
     setSaving(true);
     setError(null);
     try {
@@ -73,7 +81,8 @@ export default function InquiryTypeConfirmation({
       ) : (
         <div className="rounded-xl border border-pink-100 bg-white p-3 shadow-sm">
           <p className="mb-2 text-xs leading-5 text-gray-700">
-            種別を確定すると、制作タスクが自動で作成されます。確定後の変更はできません。
+            依頼内容から候補が分かる場合だけ初期選択します。内容を確認してから確定してください。
+            確定すると制作タスクが自動で作成され、ここからは変更できません。
           </p>
           <div className="flex flex-wrap items-end gap-2">
             <div>
@@ -87,11 +96,12 @@ export default function InquiryTypeConfirmation({
                 id="inquiry-type-select"
                 value={selected}
                 onChange={(event) =>
-                  setSelected(event.target.value as NatoriConcreteProjectType)
+                  setSelected(event.target.value as NatoriConcreteProjectType | "")
                 }
                 disabled={disabled || saving}
                 className="h-9 rounded-lg border border-gray-300 bg-white px-2 text-sm"
               >
+                <option value="">選択してください</option>
                 {NATORI_CONCRETE_PROJECT_TYPES.map((type) => (
                   <option key={type} value={type}>
                     {NATORI_PROJECT_TYPE_LABELS[type]}
@@ -102,7 +112,7 @@ export default function InquiryTypeConfirmation({
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={disabled || saving}
+              disabled={disabled || saving || !selected}
               aria-busy={saving}
               className="inline-flex h-9 items-center gap-1.5 rounded-full bg-pink-500 px-4 text-xs font-bold text-white shadow-sm hover:bg-pink-600 disabled:opacity-60"
             >
