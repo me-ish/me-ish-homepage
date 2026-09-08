@@ -5,27 +5,29 @@ import Link from "next/link";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import EstimateForm from "@/features/natori/components/dashboard/EstimateForm";
 import StructuredEstimateSuggestionPanel from "@/features/natori/components/dashboard/StructuredEstimateSuggestionPanel";
-import StructuredPricingEditor from "@/features/natori/components/dashboard/StructuredPricingEditor";
 import StructuredQuoteIssuePanel from "@/features/natori/components/dashboard/StructuredQuoteIssuePanel";
 import { fetchNatoriProjects } from "@/features/natori/data/supabaseProjects";
-import {
-  fetchOwnPricingPresets,
-  seedDefaultPricingPresets,
-} from "@/features/natori/data/supabasePricing";
 import { resolveEstimateWorkspaceMode } from "@/features/natori/lib/estimateWorkspaceMode";
-import { createDefaultNatoriPricingConfig } from "@/features/natori/lib/pricing";
-import type { NatoriPricingConfigWithStructured } from "@/features/natori/lib/pricingSuggestionConfig";
+import { createPortfolioStructuredPricingConfig } from "@/features/natori/lib/portfolioPricing";
+import type { PortfolioContent } from "@/features/natori/types/portfolio";
 import type { NatoriProject } from "@/features/natori/types/projects";
+
+const PRICING_SOURCE_NAME = "ポートフォリオ公開料金";
+
+async function fetchPortfolioContent(): Promise<PortfolioContent> {
+  const response = await fetch("/api/natori/portfolio/content", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`公開料金の読み込みに失敗しました (${response.status})`);
+  }
+  const payload = (await response.json()) as { content?: PortfolioContent };
+  if (!payload.content) throw new Error("公開料金を読み込めませんでした");
+  return payload.content;
+}
 
 export default function EstimateWorkspace() {
   const [inquiryId, setInquiryId] = useState<string | null>(null);
   const [project, setProject] = useState<NatoriProject | null>(null);
-  const [pricingConfig, setPricingConfig] = useState<NatoriPricingConfigWithStructured>(() =>
-    createDefaultNatoriPricingConfig()
-  );
-  const [activePresetId, setActivePresetId] = useState<string | null>(null);
-  const [activePresetName, setActivePresetName] = useState("料金プリセット");
-  const [pricingRevision, setPricingRevision] = useState(0);
+  const [portfolioContent, setPortfolioContent] = useState<PortfolioContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,20 +42,13 @@ export default function EstimateWorkspace() {
     let cancelled = false;
     (async () => {
       try {
-        const [projects, presetList] = await Promise.all([
+        const [projects, content] = await Promise.all([
           fetchNatoriProjects(),
-          fetchOwnPricingPresets().then(async (list) =>
-            list.length > 0 ? list : seedDefaultPricingPresets()
-          ),
+          fetchPortfolioContent(),
         ]);
         if (cancelled) return;
         setProject(projects.find((entry) => entry.id === id) ?? null);
-        const activePreset = presetList.find((preset) => preset.isDefault) ?? presetList[0];
-        if (activePreset) {
-          setActivePresetId(activePreset.id);
-          setActivePresetName(activePreset.name);
-          setPricingConfig(activePreset.config);
-        }
+        setPortfolioContent(content);
       } catch (cause) {
         if (cancelled) return;
         setError(cause instanceof Error ? cause.message : String(cause));
@@ -114,6 +109,16 @@ export default function EstimateWorkspace() {
     );
   }
 
+  if (!portfolioContent) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-bold text-red-900">
+        公開料金を読み込めないため、structured見積を作成できません。
+      </div>
+    );
+  }
+
+  const pricingConfig = createPortfolioStructuredPricingConfig(portfolioContent);
+
   return (
     <div className="space-y-5">
       <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
@@ -129,20 +134,19 @@ export default function EstimateWorkspace() {
         </div>
         <p className="mt-4 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-sm leading-6 text-violet-900">
           この案件は構造化された原回答を持つため、旧キーワード見積には渡しません。
-          stable ID候補と確認項目を確定し、正式見積snapshotとして発行します。
+          公開ポートフォリオの料金とstable IDから候補を作り、確認後に正式見積snapshotとして発行します。
         </p>
       </section>
 
-      {activePresetId ? (
-        <StructuredPricingEditor
-          presetId={activePresetId}
-          legacyConfig={pricingConfig}
-          onSaved={(nextConfig) => {
-            setPricingConfig(nextConfig);
-            setPricingRevision((current) => current + 1);
-          }}
-        />
-      ) : null}
+      <section className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm leading-6 text-sky-950 shadow-sm">
+        <p className="font-bold">料金ソース: {PRICING_SOURCE_NAME}</p>
+        <p className="mt-1 text-xs text-sky-800">
+          基本料金・追加オプションを変更する場合はポートフォリオ編集画面で変更してください。自サイトのstructured見積は同じ公開料金を直接参照します。
+        </p>
+        <Link href="/natori/portfolio/edit#section-plans" className="mt-2 inline-flex text-xs font-bold underline underline-offset-2">
+          ポートフォリオ料金を編集する
+        </Link>
+      </section>
 
       <StructuredEstimateSuggestionPanel
         project={project}
@@ -151,11 +155,10 @@ export default function EstimateWorkspace() {
       />
 
       <StructuredQuoteIssuePanel
-        key={`${project.id}:${activePresetId ?? "none"}:${pricingRevision}`}
+        key={project.id}
         project={project}
         pricingConfig={pricingConfig}
-        pricingPresetId={activePresetId}
-        pricingPresetName={activePresetName}
+        pricingSourceName={PRICING_SOURCE_NAME}
       />
 
       <section className="rounded-2xl border border-gray-200 bg-white p-4 text-sm leading-6 text-gray-700 shadow-sm">
