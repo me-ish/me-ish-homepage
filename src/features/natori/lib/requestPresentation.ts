@@ -2,6 +2,7 @@
 // RequestData V1 の表示語（label snapshot）と要約整形。UI と通知メールで同じ
 // 表示語を使い、stable ID を label から推定しないための単方向 mapping を置く。
 // DB・fetch・process.env には依存しない純関数だけを置く。
+import { NATORI_RUSH_DELIVERY_AMOUNT } from "@/features/natori/constants/portfolioPricing";
 import type {
   NatoriBudgetV1,
   NatoriCommissionScopeV1,
@@ -100,7 +101,7 @@ export const NATORI_DEADLINE_KIND_LABELS_V1: Readonly<
   undecided: "未定・相談して決めたい",
   standard: "通常納期でよい",
   preferred_date: "希望日がある",
-  rush_consultation: "お急ぎ希望（要相談）",
+  rush_consultation: `お急ぎ希望（+${NATORI_RUSH_DELIVERY_AMOUNT.toLocaleString("ja-JP")}円／要相談）`,
 };
 
 const UNDECIDED_DISPLAY = "未定";
