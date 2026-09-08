@@ -3,10 +3,9 @@
 import { useEffect, useMemo } from "react";
 import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import { createNatoriEstimateSuggestionV1 } from "@/features/natori/lib/pricingSuggestion";
-import { createStructuredSuggestionConfigFromLegacy } from "@/features/natori/lib/pricingSuggestionConfig";
 import { readNatoriRequestData } from "@/features/natori/lib/requestSchema";
 import { formatYen } from "@/features/natori/lib/pricing";
-import type { NatoriPricingConfig } from "@/features/natori/types/pricing";
+import type { NatoriPricingConfigV1 } from "@/features/natori/types/pricingSuggestion";
 import type { NatoriDeliveryPlan, NatoriProject } from "@/features/natori/types/projects";
 
 export type StructuredEstimateSuggestionState = {
@@ -17,7 +16,7 @@ export type StructuredEstimateSuggestionState = {
 
 type Props = {
   project: NatoriProject | null;
-  pricingConfig: NatoriPricingConfig;
+  pricingConfig: NatoriPricingConfigV1;
   deliveryPlan: NatoriDeliveryPlan;
   onStateChange?: (state: StructuredEstimateSuggestionState) => void;
 };
@@ -43,7 +42,7 @@ export default function StructuredEstimateSuggestionPanel({
       suggestion: createNatoriEstimateSuggestionV1({
         projectType: project.type,
         requestData: request.data,
-        pricingConfig: createStructuredSuggestionConfigFromLegacy(pricingConfig),
+        pricingConfig,
         deliveryPlan,
       }),
     };
@@ -93,13 +92,13 @@ export default function StructuredEstimateSuggestionPanel({
           Stable ID 見積候補
         </p>
         <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-          <h3 className="text-lg font-black text-violet-950">構造化依頼からの自動候補</h3>
+          <h3 className="text-lg font-black text-violet-950">公開料金からの自動候補</h3>
           <span className="text-2xl font-black text-violet-950">
             {formatYen(suggestion.total)}
           </span>
         </div>
         <p className="mt-1 text-xs leading-5 text-violet-800">
-          商品種別とstable IDだけを使用しています。自由記述や制作範囲から料金を推測しません。
+          自サイトの公開料金とstable IDを使用しています。SDはSD料金、通常依頼は制作範囲、量産イラストは専用基本料金で計算します。
         </p>
       </div>
 
