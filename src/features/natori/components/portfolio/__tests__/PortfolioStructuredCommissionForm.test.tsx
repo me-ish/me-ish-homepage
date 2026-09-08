@@ -255,13 +255,16 @@ describe("条件付き入力", () => {
     const otherInput = screen.getByLabelText(/ご依頼の種類（その他の内容）/);
     await userEvent.type(otherInput, "アクリルスタンド");
 
-    await userEvent.selectOptions(screen.getByLabelText("ご依頼の種類"), "icon");
+    await userEvent.selectOptions(screen.getByLabelText("ご依頼の種類"), "standing");
     expect(screen.queryByLabelText(/ご依頼の種類（その他の内容）/)).toBeNull();
 
     await fillMinimum();
     submit();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    expect(submittedRequestData().requestTypeOther).toBeNull();
+    expect(submittedRequestData()).toMatchObject({
+      requestType: "standing",
+      requestTypeOther: null,
+    });
   });
 
   it("使用目的の その他 で補足欄が出る", async () => {
