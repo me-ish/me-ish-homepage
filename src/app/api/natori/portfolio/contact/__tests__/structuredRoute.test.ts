@@ -192,15 +192,16 @@ describe("structured intake: 受付成功", () => {
     expect(JSON.stringify(json)).not.toMatch(UUID_PATTERN);
   });
 
-  it("quote でも requestType / commissionScope が undecided のまま受け付ける", async () => {
+  it("quote は内容欄が空で requestType / commissionScope が undecided でも受け付ける", async () => {
     const res = await POST(
       makeStructuredReq({
-        requestData: quoteRequestData({ message: "お見積もりをお願いします。" }),
+        requestData: quoteRequestData({ message: "" }),
       })
     );
     expect(res.status).toBe(201);
     const arg = structuredCallArg();
     expect(arg.submission.requestData.inquiryMode).toBe("quote");
+    expect(arg.submission.requestData.message).toBe("");
     expect(arg.submission.requestData.requestType).toBe("undecided");
     expect(arg.submission.requestData.commissionScope).toBe("undecided");
   });

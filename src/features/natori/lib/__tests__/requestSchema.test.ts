@@ -282,7 +282,13 @@ describe("NatoriRequestData V1 conditional validation", () => {
     }
   });
 
-  it("詳細6項目がすべて空なら拒否する", () => {
+  it("見積もりは自由記述が空でも受け付ける", () => {
+    const requestData = { ...mutableClone(consultationExample), inquiryMode: "quote", message: "   " };
+    const parsed = natoriRequestSubmissionV1Schema.parse({ clientName: "依頼者", clientEmail: "client@example.com", requestData });
+    expect(parsed.requestData.message).toBe("");
+  });
+
+  it("相談の詳細6項目がすべて空なら拒否する", () => {
     const result = natoriRequestDataV1Schema.safeParse({
       ...mutableClone(consultationExample),
       message: "",
@@ -419,7 +425,7 @@ describe("versioned request reader", () => {
     expect(invalid.success).toBe(true);
 
     const missingDetails = readNatoriRequestData({
-      ...mutableClone(quoteExample),
+      ...mutableClone(consultationExample),
       characterFeatures: "",
       expressionMood: "",
       composition: "",

@@ -107,7 +107,14 @@ describe("最低入力と送信", () => {
   it("quote に切り替えても type / scope は未定のまま送信できる", async () => {
     renderForm();
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
-    await fillMinimum("見積もりをお願いします。");
+    await userEvent.type(screen.getByLabelText(/お名前/), "テスト太郎");
+    await userEvent.type(screen.getByLabelText(/メールアドレス/), "client@example.com");
+    const message = screen.getByLabelText("ご相談・ご依頼の内容任意") as HTMLTextAreaElement;
+    expect(message.required).toBe(false);
+    await userEvent.click(screen.getByLabelText("まず相談したい"));
+    expect(message.required).toBe(true);
+    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    expect(message.required).toBe(false);
     submit();
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
@@ -115,6 +122,7 @@ describe("最低入力と送信", () => {
       inquiryMode: "quote",
       requestType: "undecided",
       commissionScope: "undecided",
+      message: "",
     });
   });
 
@@ -214,8 +222,8 @@ describe("条件付き入力", () => {
       expressionMood: "笑顔と、差分は泣き顔",
       commercialUse: "yes",
       options: [
-        { id: "mass_costume_color_change", label: "衣装カラーチェンジ", quantity: 1, notes: "" },
         { id: "mass_expression_variation", label: "表情差分", quantity: 1, notes: "" },
+        { id: "mass_costume_color_change", label: "衣装カラーチェンジ", quantity: 1, notes: "" },
       ],
     });
   });

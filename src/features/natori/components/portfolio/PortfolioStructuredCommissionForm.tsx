@@ -452,11 +452,11 @@ export default function PortfolioStructuredCommissionForm({
       >
         <div>
           <label htmlFor="pf-message" className={labelClass}>
-            ご相談・ご依頼の内容<RequiredBadge />
+            ご相談・ご依頼の内容{state.inquiryMode === "quote" ? <OptionalBadge /> : <RequiredBadge />}
           </label>
           <textarea
             id="pf-message"
-            required
+            required={state.inquiryMode === "consultation"}
             rows={4}
             maxLength={2000}
             value={state.message}
@@ -630,6 +630,24 @@ export default function PortfolioStructuredCommissionForm({
               </div>
             ) : null}
 
+            {massProductionSelected ? (
+              <div>
+                <label htmlFor="pf-mass-expression" className={labelClass}>表情指定<RequiredBadge /></label>
+                <textarea
+                  id="pf-mass-expression"
+                  required
+                  rows={3}
+                  maxLength={1000}
+                  value={state.expressionMood}
+                  onChange={(event) => update({ expressionMood: event.target.value })}
+                  placeholder="例：口を開けた笑顔。表情差分ありの場合は、追加分の表情もご記入ください。"
+                  className={inputClass}
+                  aria-describedby={serverErrorFor("requestData.expressionMood") ? "pf-mass-expression-error" : undefined}
+                />
+                <FieldError id="pf-mass-expression-error" message={serverErrorFor("requestData.expressionMood")} />
+              </div>
+            ) : null}
+
             <fieldset>
               <legend className={labelClass}>
                 {massProductionSelected ? "量産イラスト専用オプション" : "追加オプション"}<OptionalBadge />
@@ -722,21 +740,6 @@ export default function PortfolioStructuredCommissionForm({
 
             {massProductionSelected ? (
               <>
-                <div>
-                  <label htmlFor="pf-mass-expression" className={labelClass}>表情指定<RequiredBadge /></label>
-                  <textarea
-                    id="pf-mass-expression"
-                    required
-                    rows={3}
-                    maxLength={1000}
-                    value={state.expressionMood}
-                    onChange={(event) => update({ expressionMood: event.target.value })}
-                    placeholder="例：口を開けた笑顔。表情差分ありの場合は、追加分の表情もご記入ください。"
-                    className={inputClass}
-                    aria-describedby={serverErrorFor("requestData.expressionMood") ? "pf-mass-expression-error" : undefined}
-                  />
-                  <FieldError id="pf-mass-expression-error" message={serverErrorFor("requestData.expressionMood")} />
-                </div>
                 <label className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border-2 p-3 text-sm" style={{ borderColor: state.commercialUse === "yes" ? c.formBorderActive : c.formBorder }}>
                   <input
                     type="checkbox"
@@ -1292,7 +1295,7 @@ export default function PortfolioStructuredCommissionForm({
 
       <FormSection
         title="ご希望・連絡先"
-        description={massProductionSelected ? "量産イラストは、デザインと表情指定もご入力ください。" : "お名前・メール・相談内容の3項目で送信できます。"}
+        description={massProductionSelected ? "量産イラストは、デザインと表情指定もご入力ください。" : state.inquiryMode === "quote" ? "お名前・メールを入力し、決まっている依頼内容をご選択ください。相談内容の入力は任意です。" : "お名前・メール・相談内容の3項目で送信できます。"}
       >
         <fieldset>
           <legend className={labelClass}>ご希望</legend>

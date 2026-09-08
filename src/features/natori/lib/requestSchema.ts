@@ -264,7 +264,7 @@ function addRequestCrossFieldIssues(
     value.referenceNotes,
     value.message,
   ];
-  if (!detailFields.some((field) => field.length > 0)) {
+  if (value.inquiryMode === "consultation" && !detailFields.some((field) => field.length > 0)) {
     ctx.addIssue({
       code: "custom",
       path: ["message"],

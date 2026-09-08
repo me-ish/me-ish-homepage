@@ -23,7 +23,6 @@ export default function PortfolioHero({
   const representativeAlt = hasExplicitHeroImage
     ? `${content.artistName}の代表作品`
     : fallbackWork?.title ?? "";
-  const replyStep = content.workflow.find((step) => /見積もり|お見積り/u.test(step.title));
 
   return (
     <section
@@ -65,14 +64,6 @@ export default function PortfolioHero({
           >
             {variant === "showcase" ? content.heroDescription : firstSentence(content.heroDescription)}
           </p>
-          {variant !== "showcase" ? (
-            <div className="mb-6 space-y-2 text-sm leading-relaxed" style={{ color: c.textSoft }}>
-              {content.deliveryLead ? <p>{firstSentence(content.deliveryLead)}</p> : null}
-              {replyStep ? (
-                <p>{firstSentence(replyStep.body)}</p>
-              ) : null}
-            </div>
-          ) : null}
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             {variant === "showcase" ? null : (
               <PortfolioHeroPrimaryCta
