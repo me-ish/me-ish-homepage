@@ -5,20 +5,18 @@ import { AlertTriangle, CheckCircle2, Loader2, Mail } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { buildEstimateMailDraft, resolveClientEmail } from "@/features/natori/lib/orderMail";
 import { createNatoriEstimateSuggestionV1 } from "@/features/natori/lib/pricingSuggestion";
-import { createStructuredSuggestionConfigFromLegacy } from "@/features/natori/lib/pricingSuggestionConfig";
 import { readNatoriRequestData } from "@/features/natori/lib/requestSchema";
 import { createStructuredQuoteOperationAttempt } from "@/features/natori/lib/structuredQuoteAttempt";
 import { formatYen } from "@/features/natori/lib/pricing";
-import type { NatoriPricingConfigWithStructured } from "@/features/natori/lib/pricingSuggestionConfig";
+import type { NatoriPricingConfigV1 } from "@/features/natori/types/pricingSuggestion";
 import type { NatoriProject } from "@/features/natori/types/projects";
 
 const inputClass = "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-600";
 
 type Props = {
   project: NatoriProject;
-  pricingConfig: NatoriPricingConfigWithStructured;
-  pricingPresetId: string | null;
-  pricingPresetName: string;
+  pricingConfig: NatoriPricingConfigV1;
+  pricingSourceName: string;
   onIssued?: () => void;
 };
 
@@ -37,8 +35,7 @@ type StructuredQuoteRequestBody = {
 export default function StructuredQuoteIssuePanel({
   project,
   pricingConfig,
-  pricingPresetId,
-  pricingPresetName,
+  pricingSourceName,
   onIssued,
 }: Props) {
   const calculated = useMemo(() => {
@@ -47,7 +44,7 @@ export default function StructuredQuoteIssuePanel({
     const suggestion = createNatoriEstimateSuggestionV1({
       projectType: project.type,
       requestData: request.data,
-      pricingConfig: createStructuredSuggestionConfigFromLegacy(pricingConfig),
+      pricingConfig,
       deliveryPlan: project.deliveryPlan ?? "normal",
     });
     return { requestData: request.data, suggestion };
@@ -117,8 +114,8 @@ export default function StructuredQuoteIssuePanel({
         schemaVersion: 1,
         mappingVersion: suggestion.mappingVersion,
         pricingConfigVersion: suggestion.pricingConfigVersion,
-        pricingPresetId,
-        pricingPresetNameSnapshot: pricingPresetName,
+        pricingPresetId: null,
+        pricingPresetNameSnapshot: pricingSourceName,
         projectTypeSnapshot: project.type,
         items: suggestion.automaticItems.map((item) => ({
           id: item.id,
@@ -204,7 +201,7 @@ export default function StructuredQuoteIssuePanel({
         <Mail className="h-5 w-5 text-pink-600" aria-hidden />
         <div>
           <h2 className="font-black text-gray-950">正式見積を発行する</h2>
-          <p className="text-xs text-gray-600">snapshotを固定してからメールを送信します。</p>
+          <p className="text-xs text-gray-600">{pricingSourceName}をsnapshot固定してからメールを送信します。</p>
         </div>
       </div>
 
