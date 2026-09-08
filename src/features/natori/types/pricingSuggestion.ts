@@ -2,7 +2,7 @@ import type { NatoriConcreteProjectType, NatoriDeliveryPlan, NatoriProjectType }
 import type { NatoriRequestDataV1 } from "@/features/natori/types/request";
 
 export const NATORI_PRICING_CONFIG_SCHEMA_VERSION = 1 as const;
-export const NATORI_PRICING_MAPPING_VERSION = "natori-pricing-mapping-v1" as const;
+export const NATORI_PRICING_MAPPING_VERSION = "natori-pricing-mapping-v2" as const;
 export const NATORI_ESTIMATE_SUGGESTION_SCHEMA_VERSION = 1 as const;
 
 export type NatoriPricingItemKindV1 = "base" | "fixed" | "percentage";
@@ -74,6 +74,10 @@ export type CreateNatoriEstimateSuggestionInputV1 = {
   pricingConfig: NatoriPricingConfigV1;
 };
 
+/**
+ * P1-08までの商品種別ベース料金ID。旧structured presetの互換読取に残す。
+ * 自サイトのv2 mappingは sd / commissionScope / mass_production_illustration を使う。
+ */
 export const NATORI_BASE_PRICING_ITEM_IDS = [
   "icon",
   "sd",
