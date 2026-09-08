@@ -1,5 +1,9 @@
 import type { NatoriDeliveryPlan } from "@/features/natori/types/projects";
-import { MASS_PRODUCTION_COMMERCIAL_AMOUNT, MASS_PRODUCTION_OPTIONS, MASS_PRODUCTION_VARIANTS } from "@/features/natori/constants/massProductionIllustration";
+import {
+  MASS_PRODUCTION_COMMERCIAL_AMOUNT,
+  MASS_PRODUCTION_OPTIONS,
+  MASS_PRODUCTION_VARIANTS,
+} from "@/features/natori/constants/massProductionIllustration";
 import { NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL } from "@/features/natori/lib/requestPresentation";
 import type {
   CreateNatoriEstimateSuggestionInputV1,
@@ -27,6 +31,7 @@ const FIXED_OPTION_IDS = new Set([
 
 const PERCENTAGE_OPTION_IDS = new Set(["additional_character"]);
 const COPYRIGHT_OPTION_IDS = new Set(["copyright_transfer"]);
+const SCOPE_BASE_IDS = new Set(["bust_up", "waist_up", "full_body"]);
 
 export function readNatoriPricingConfigV1(value: unknown): NatoriPricingConfigV1 | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -72,38 +77,96 @@ export function createNatoriEstimateSuggestionV1(
   const massProduction = input.requestData.requestType === "other" &&
     input.requestData.requestTypeOther === NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL &&
     MASS_PRODUCTION_VARIANTS.some((variant) => variant === input.requestData.commissionScopeOther);
+
   if (massProduction) {
     for (const option of MASS_PRODUCTION_OPTIONS) {
       itemIndex.set(option.id, { ...option, kind: "fixed" });
     }
-    itemIndex.set("commercial_use", { id: "commercial_use", kind: "fixed", label: "商用利用（量産イラスト）", amount: MASS_PRODUCTION_COMMERCIAL_AMOUNT });
+    itemIndex.set("commercial_use", {
+      id: "commercial_use",
+      kind: "fixed",
+      label: "商用利用（量産イラスト）",
+      amount: MASS_PRODUCTION_COMMERCIAL_AMOUNT,
+    });
   }
 
-  let baseAmount = 0;
   if (input.projectType === "undecided") {
     reviewItems.push(warning(
       "project_type_unconfirmed",
       "blocker",
       "案件の商品種別が未確定です",
-      "商品種別を確定してから基本料金を選択してください。",
+      "案件種別を確認して制作タスクを確定してから正式見積を発行してください。",
       "project.type",
       "project-type-required"
     ));
-  } else {
-    const baseRule = itemIndex.get(input.projectType);
+  }
+
+  let baseAmount = 0;
+  const baseSelection = (() => {
+    if (massProduction) {
+      return {
+        id: "mass_production_illustration",
+        sourceField: "requestData.requestType",
+        ruleId: "base:mass_production_illustration",
+      };
+    }
+    if (input.requestData.requestType === "sd") {
+      return {
+        id: "sd",
+        sourceField: "requestData.requestType",
+        ruleId: "base:sd",
+      };
+    }
+    if (SCOPE_BASE_IDS.has(input.requestData.commissionScope)) {
+      return {
+        id: input.requestData.commissionScope,
+        sourceField: "requestData.commissionScope",
+        ruleId: `base:${input.requestData.commissionScope}`,
+      };
+    }
+    if (input.projectType !== "undecided") {
+      return {
+        id: input.projectType,
+        sourceField: "project.type",
+        ruleId: `base:${input.projectType}`,
+      };
+    }
+    return null;
+  })();
+
+  if (baseSelection) {
+    const baseRule = itemIndex.get(baseSelection.id);
     if (!baseRule || baseRule.kind !== "base" || baseRule.amount === undefined) {
       reviewItems.push(warning(
         "pricing_base_rule_missing",
         "blocker",
         "基本料金ルールがありません",
-        `料金プリセットに ${input.projectType} の基本料金を追加してください。`,
-        "project.type",
-        `base:${input.projectType}`
+        `${baseSelection.id} の公開料金を確認してください。`,
+        baseSelection.sourceField,
+        baseSelection.ruleId
       ));
     } else {
       baseAmount = baseRule.amount;
-      automaticItems.set(baseRule.id, quoteItem(baseRule, 1, baseRule.amount, "project.type", `base:${input.projectType}`));
+      automaticItems.set(
+        baseRule.id,
+        quoteItem(
+          baseRule,
+          1,
+          baseRule.amount,
+          baseSelection.sourceField,
+          baseSelection.ruleId
+        )
+      );
     }
+  } else {
+    reviewItems.push(warning(
+      "pricing_base_scope_unresolved",
+      "blocker",
+      "基本料金を決める制作範囲が未確定です",
+      "SD以外の通常依頼は、胸上／膝〜腰上／全身の制作範囲を確定してください。",
+      "requestData.commissionScope",
+      "base:scope-required"
+    ));
   }
 
   const optionQuantities = new Map<string, number>();
@@ -137,11 +200,41 @@ export function createNatoriEstimateSuggestionV1(
       continue;
     }
 
-    addRuleCandidate({ automaticItems, itemIndex, reviewItems, presetItemId: optionId, quantity, sourceField: "requestData.options", ruleId: `option:${optionId}`, baseAmount });
+    addRuleCandidate({
+      automaticItems,
+      itemIndex,
+      reviewItems,
+      presetItemId: optionId,
+      quantity,
+      sourceField: "requestData.options",
+      ruleId: `option:${optionId}`,
+      baseAmount,
+    });
+
+    if (optionId === "detailed_background") {
+      const rule = itemIndex.get(optionId);
+      reviewItems.push(warning(
+        "detailed_background_requires_review",
+        "attention",
+        "背景料金の最終確認が必要です",
+        rule?.note ?? "背景の描き込み量を確認し、公開料金レンジ内で最終額を調整してください。",
+        "requestData.options",
+        "option:detailed_background:review"
+      ));
+    }
   }
 
   if (input.requestData.commercialUse === "yes") {
-    addRuleCandidate({ automaticItems, itemIndex, reviewItems, presetItemId: "commercial_use", quantity: 1, sourceField: "requestData.commercialUse", ruleId: "commercial-use", baseAmount });
+    addRuleCandidate({
+      automaticItems,
+      itemIndex,
+      reviewItems,
+      presetItemId: "commercial_use",
+      quantity: 1,
+      sourceField: "requestData.commercialUse",
+      ruleId: "commercial-use",
+      baseAmount,
+    });
   } else if (input.requestData.commercialUse === "unknown") {
     reviewItems.push(warning(
       "commercial_use_unknown",
@@ -154,9 +247,27 @@ export function createNatoriEstimateSuggestionV1(
   }
 
   if (input.requestData.publicationPolicy === "work_private") {
-    addRuleCandidate({ automaticItems, itemIndex, reviewItems, presetItemId: "sample_usage_denied", quantity: 1, sourceField: "requestData.publicationPolicy", ruleId: "publication:work_private", baseAmount });
+    addRuleCandidate({
+      automaticItems,
+      itemIndex,
+      reviewItems,
+      presetItemId: "sample_usage_denied",
+      quantity: 1,
+      sourceField: "requestData.publicationPolicy",
+      ruleId: "publication:work_private",
+      baseAmount,
+    });
   } else if (input.requestData.publicationPolicy === "fully_private") {
-    addRuleCandidate({ automaticItems, itemIndex, reviewItems, presetItemId: "private_work", quantity: 1, sourceField: "requestData.publicationPolicy", ruleId: "publication:fully_private", baseAmount });
+    addRuleCandidate({
+      automaticItems,
+      itemIndex,
+      reviewItems,
+      presetItemId: "private_work",
+      quantity: 1,
+      sourceField: "requestData.publicationPolicy",
+      ruleId: "publication:fully_private",
+      baseAmount,
+    });
   } else if (input.requestData.publicationPolicy === "unknown" || input.requestData.publicationPolicy === "delayed") {
     reviewItems.push(warning(
       "publication_policy_requires_review",
@@ -171,7 +282,24 @@ export function createNatoriEstimateSuggestionV1(
   const requestRush = input.requestData.deadline.kind === "rush_consultation";
   const planRush = isRushDeliveryPlan(input.deliveryPlan);
   if (requestRush || planRush) {
-    addRuleCandidate({ automaticItems, itemIndex, reviewItems, presetItemId: "rush_delivery", quantity: 1, sourceField: requestRush ? "requestData.deadline" : "project.deliveryPlan", ruleId: requestRush ? "deadline:rush_consultation" : `delivery-plan:${input.deliveryPlan}`, baseAmount });
+    addRuleCandidate({
+      automaticItems,
+      itemIndex,
+      reviewItems,
+      presetItemId: "rush_delivery",
+      quantity: 1,
+      sourceField: requestRush ? "requestData.deadline" : "project.deliveryPlan",
+      ruleId: requestRush ? "deadline:rush_consultation" : `delivery-plan:${input.deliveryPlan}`,
+      baseAmount,
+    });
+    reviewItems.push(warning(
+      "rush_availability_requires_review",
+      "attention",
+      "お急ぎ納品の対応可否を確認してください",
+      "スケジュールを確認し、希望日に対応できることを確認してから発行してください。",
+      "requestData.deadline",
+      "rush-availability-review"
+    ));
   }
   if (requestRush !== planRush && input.deliveryPlan !== undefined) {
     reviewItems.push(warning(
@@ -184,7 +312,7 @@ export function createNatoriEstimateSuggestionV1(
     ));
   }
 
-  if (input.requestData.requestType === "undecided" || input.requestData.requestType === "other") {
+  if (!massProduction && (input.requestData.requestType === "undecided" || input.requestData.requestType === "other")) {
     reviewItems.push(warning(
       "request_type_requires_review",
       "attention",
@@ -194,7 +322,7 @@ export function createNatoriEstimateSuggestionV1(
       `request-type:${input.requestData.requestType}`
     ));
   }
-  if (input.requestData.commissionScope === "undecided" || input.requestData.commissionScope === "other") {
+  if (!massProduction && (input.requestData.commissionScope === "undecided" || input.requestData.commissionScope === "other")) {
     reviewItems.push(warning(
       "commission_scope_requires_review",
       "attention",
@@ -206,7 +334,6 @@ export function createNatoriEstimateSuggestionV1(
   }
 
   ignoredFields.push(
-    { sourceField: "requestData.commissionScope", reason: "基本料金は商品種別を主キーとするため自動料金化しません。" },
     { sourceField: "requestData.usageTypes", reason: "用途は確認情報として保持し、用途だけでは自動加算しません。" },
     { sourceField: "requestData.budget", reason: "予算は料金候補の上限・下限として自動適用しません。" },
     { sourceField: "requestData.characterFeatures", reason: "自由記述は意味推論せず管理者が確認します。" },
@@ -216,7 +343,9 @@ export function createNatoriEstimateSuggestionV1(
   );
 
   const items = Array.from(automaticItems.values());
-  const subtotalBeforePercentage = items.filter((item) => item.kind !== "percentage").reduce((sum, item) => sum + item.amount, 0);
+  const subtotalBeforePercentage = items
+    .filter((item) => item.kind !== "percentage")
+    .reduce((sum, item) => sum + item.amount, 0);
   const total = items.reduce((sum, item) => sum + item.amount, 0);
 
   return {
@@ -232,7 +361,10 @@ export function createNatoriEstimateSuggestionV1(
   };
 }
 
-function indexPricingItems(items: readonly NatoriPricingItemV1[], reviewItems: NatoriReviewWarningV1[]) {
+function indexPricingItems(
+  items: readonly NatoriPricingItemV1[],
+  reviewItems: NatoriReviewWarningV1[]
+) {
   const index = new Map<string, NatoriPricingItemV1>();
   const duplicates = new Set<string>();
   for (const item of items) {
@@ -269,7 +401,7 @@ function addRuleCandidate(args: {
       "pricing_rule_missing",
       "blocker",
       "料金ルールがありません",
-      `${args.presetItemId} の料金ルールをプリセットへ追加してください。`,
+      `${args.presetItemId} の料金ルールを公開料金で確認してください。`,
       args.sourceField,
       args.ruleId
     ));
@@ -295,7 +427,17 @@ function addRuleCandidate(args: {
       return;
     }
     const unitAmount = roundToHundreds(args.baseAmount * rule.rate);
-    args.automaticItems.set(rule.id, quoteItem(rule, args.quantity, unitAmount, args.sourceField, args.ruleId, args.baseAmount));
+    args.automaticItems.set(
+      rule.id,
+      quoteItem(
+        rule,
+        args.quantity,
+        unitAmount,
+        args.sourceField,
+        args.ruleId,
+        args.baseAmount
+      )
+    );
     return;
   }
 
@@ -310,7 +452,10 @@ function addRuleCandidate(args: {
     ));
     return;
   }
-  args.automaticItems.set(rule.id, quoteItem(rule, args.quantity, rule.amount, args.sourceField, args.ruleId));
+  args.automaticItems.set(
+    rule.id,
+    quoteItem(rule, args.quantity, rule.amount, args.sourceField, args.ruleId)
+  );
 }
 
 function quoteItem(
