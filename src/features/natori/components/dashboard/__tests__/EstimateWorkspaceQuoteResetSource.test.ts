@@ -14,12 +14,13 @@ const source = readFileSync(
   "utf8",
 );
 
-describe("EstimateWorkspace structured quote draft reset", () => {
-  it("remounts the issue panel for another project or pricing revision", () => {
-    expect(source).toContain("const [pricingRevision, setPricingRevision] = useState(0)");
-    expect(source).toContain("setPricingRevision((current) => current + 1)");
-    expect(source).toContain(
-      'key={`${project.id}:${activePresetId ?? "none"}:${pricingRevision}`}',
-    );
+describe("EstimateWorkspace structured pricing source", () => {
+  it("loads portfolio pricing and remounts the issue panel only when the project changes", () => {
+    expect(source).toContain('fetch("/api/natori/portfolio/content", { cache: "no-store" })');
+    expect(source).toContain("createPortfolioStructuredPricingConfig(portfolioContent)");
+    expect(source).toContain('const PRICING_SOURCE_NAME = "ポートフォリオ公開料金"');
+    expect(source).toContain("key={project.id}");
+    expect(source).not.toContain("pricingRevision");
+    expect(source).not.toContain("activePresetId");
   });
 });
