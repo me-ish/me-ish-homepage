@@ -131,11 +131,6 @@ export type NatoriLegacyRequestSourceV1 = {
 type NatoriRequestDataV1Base = {
   schemaVersion: typeof NATORI_REQUEST_SCHEMA_VERSION;
   formVersion: "etorie-request-v1" | "natori-portfolio-v1";
-  inquiryMode: NatoriInquiryModeV1;
-  requestType: NatoriRequestTypeV1;
-  requestTypeOther: string | null;
-  commissionScope: NatoriCommissionScopeV1;
-  commissionScopeOther: string | null;
   options: NatoriSelectedOptionV1[];
   usageTypes: NatoriUsageTypeV1[];
   usageTypeOther: string | null;
@@ -146,6 +141,7 @@ type NatoriRequestDataV1Base = {
     | "work_private"
     | "fully_private"
     | "unknown";
+  /** delayed のときの公開可能日。導入前データとの互換性のため省略可。 */
   publicationAllowedFrom?: string | null;
   budget: NatoriBudgetV1;
   deadline: NatoriDeadlineV1;
@@ -155,24 +151,36 @@ type NatoriRequestDataV1Base = {
   colorDirection: string;
   referenceNotes: string;
   message: string;
-};
-
-export type NatoriRequestDataV1 = NatoriRequestDataV1Base & {
   legacySource: NatoriLegacyRequestSourceV1 | null;
 };
 
-export type NatoriVersionedRequestData = NatoriRequestDataV1;
+export type NatoriConsultationRequestDataV1 = NatoriRequestDataV1Base & {
+  inquiryMode: "consultation";
+  requestType: NatoriRequestTypeV1;
+  requestTypeOther: string | null;
+  commissionScope: NatoriCommissionScopeV1;
+  commissionScopeOther: string | null;
+};
 
+export type NatoriQuoteRequestDataV1 = NatoriRequestDataV1Base & {
+  inquiryMode: "quote";
+  requestType: NatoriRequestTypeV1;
+  requestTypeOther: string | null;
+  commissionScope: NatoriCommissionScopeV1;
+  commissionScopeOther: string | null;
+};
+
+/** inquiryMode を discriminant にした V1 contract。 */
+export type NatoriRequestDataV1 =
+  | NatoriConsultationRequestDataV1
+  | NatoriQuoteRequestDataV1;
+
+/** 氏名・連絡先は request_data に複製せず、案件の通常列へ保存する。 */
 export type NatoriRequestSubmissionV1 = {
   clientName: string;
   clientEmail: string;
   requestData: NatoriRequestDataV1;
-  referenceFiles: string[];
-  referenceLinks: Array<{
-    url: string;
-    normalizedUrl: string;
-    label: string | null;
-    provider: string | null;
-    sortOrder: number;
-  }>;
 };
+
+/** 将来 V2 を追加するときはこの union と reader の switch を同時に更新する。 */
+export type NatoriVersionedRequestData = NatoriRequestDataV1;
