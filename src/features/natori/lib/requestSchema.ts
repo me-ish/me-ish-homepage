@@ -1,6 +1,8 @@
 // features/natori/lib/requestSchema.ts
 // RequestData V1 の UI / server 共用 validation。DB・fetch・process.env には依存しない。
 import { z } from "zod";
+import { MASS_PRODUCTION_OPTIONS, MASS_PRODUCTION_VARIANTS } from "@/features/natori/constants/massProductionIllustration";
+import { NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL } from "@/features/natori/lib/requestPresentation";
 import {
   NATORI_COMMISSION_SCOPES_V1,
   NATORI_REQUEST_SCHEMA_VERSION,
@@ -300,6 +302,24 @@ export const natoriRequestSubmissionV1Schema: z.ZodType<NatoriRequestSubmissionV
     clientName: text(100).min(1),
     clientEmail: text(254).pipe(z.email()),
     requestData: natoriRequestDataV1Schema,
+  }).superRefine(({ requestData }, ctx) => {
+    // 新規受付のみ必須化し、旧形式の保存済み依頼は従来どおり読み取る。
+    const massProduction = requestData.requestType === "other" &&
+      requestData.requestTypeOther === NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL;
+    if (massProduction) {
+      if (requestData.commissionScope !== "other" || !MASS_PRODUCTION_VARIANTS.some((variant) => variant === requestData.commissionScopeOther)) {
+        ctx.addIssue({ code: "custom", path: ["requestData", "commissionScopeOther"], message: "「おばけ」か「魔女」を選択してください" });
+      }
+      if (!requestData.expressionMood.trim()) {
+        ctx.addIssue({ code: "custom", path: ["requestData", "expressionMood"], message: "表情指定を入力してください" });
+      }
+    }
+    requestData.options.forEach((option, index) => {
+      const dedicated = MASS_PRODUCTION_OPTIONS.some((item) => item.id === option.id);
+      if ((massProduction && (!dedicated || option.quantity !== 1)) || (!massProduction && dedicated)) {
+        ctx.addIssue({ code: "custom", path: ["requestData", "options", index], message: "依頼の種類に合うオプションを選択してください" });
+      }
+    });
   });
 
 export type NatoriRequestFieldError = {

@@ -175,8 +175,9 @@ describe("PF-09 analytics", () => {
 });
 
 describe("条件付き入力", () => {
-  it("量産イラストは制作範囲の その他 と補足を自動入力する", async () => {
+  it("量産イラストのデザイン・表情指定・専用オプションを送る", async () => {
     renderForm();
+    await userEvent.click(screen.getByLabelText("見積もりを希望"));
 
     await userEvent.selectOptions(
       screen.getByLabelText("ご依頼の種類"),
@@ -186,16 +187,21 @@ describe("条件付き入力", () => {
     expect((screen.getByLabelText("ご依頼の種類") as HTMLSelectElement).value).toBe(
       NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE
     );
-    const scope = screen.getByLabelText("制作範囲") as HTMLSelectElement;
-    expect(scope.value).toBe("other");
-    expect(scope.disabled).toBe(true);
+    expect(screen.queryByLabelText("制作範囲")).toBeNull();
     expect(screen.queryByLabelText(/ご依頼の種類（その他の内容）/)).toBeNull();
-    const scopeOther = screen.getByLabelText(
-      /制作範囲（その他の内容）/
-    ) as HTMLInputElement;
-    expect(scopeOther.value).toBe("量産イラスト");
-    expect(scopeOther.readOnly).toBe(true);
-    expect(screen.getByText("量産イラストのため自動入力されています。")).toBeTruthy();
+    const design = screen.getByLabelText("デザイン必須") as HTMLSelectElement;
+    expect(design.required).toBe(true);
+    expect(Array.from(design.options).map((option) => option.text)).toEqual(["デザインを選択してください", "おばけ", "魔女"]);
+    await userEvent.selectOptions(design, "おばけ");
+    await userEvent.type(screen.getByLabelText("表情指定必須"), "笑顔と、差分は泣き顔");
+    await userEvent.click(screen.getByRole("checkbox", { name: /衣装カラーチェンジ\s*\+500円/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /表情差分\s*\+500円/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /商用利用\s*\+1,000円/ }));
+    expect(screen.queryByRole("checkbox", { name: /しっかり背景/ })).toBeNull();
+    expect(screen.queryByLabelText("数量")).toBeNull();
+    for (const title of ["用途・条件", "予算・納期", "キャラクター・イメージの詳細"]) {
+      expect(detailsBySummary(title).open).toBe(false);
+    }
 
     await fillMinimum("量産イラストをお願いします。");
     submit();
@@ -204,7 +210,13 @@ describe("条件付き入力", () => {
       requestType: "other",
       requestTypeOther: "量産イラスト",
       commissionScope: "other",
-      commissionScopeOther: "量産イラスト",
+      commissionScopeOther: "おばけ",
+      expressionMood: "笑顔と、差分は泣き顔",
+      commercialUse: "yes",
+      options: [
+        { id: "mass_costume_color_change", label: "衣装カラーチェンジ", quantity: 1, notes: "" },
+        { id: "mass_expression_variation", label: "表情差分", quantity: 1, notes: "" },
+      ],
     });
   });
 
@@ -510,6 +522,39 @@ describe("server error の表示", () => {
 });
 
 describe("アクセシビリティ / モバイル想定 DOM", () => {
+  it("相談と見積もりでDOM順序を切り替え、入力欄を再作成しない", async () => {
+    renderForm();
+    await fillMinimum("入力を残してください。");
+    const message = screen.getByLabelText(/ご相談・ご依頼の内容/);
+    const optional = detailsBySummary("詳しい条件を追加する");
+    expect(message.compareDocumentPosition(optional) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    expect(optional.compareDocumentPosition(message) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByLabelText(/ご相談・ご依頼の内容/)).toBe(message);
+    await userEvent.click(screen.getByLabelText("まず相談したい"));
+    expect(message.compareDocumentPosition(optional) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect((message as HTMLTextAreaElement).value).toBe("入力を残してください。");
+  });
+
+  it("量産の必須項目が空なら送信せず、通常プランへ戻すと専用項目を外す", async () => {
+    renderForm();
+    await userEvent.selectOptions(screen.getByLabelText("ご依頼の種類"), NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE);
+    await fillMinimum();
+    submit();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getAllByText("表情指定を入力してください").length).toBeGreaterThan(0);
+    await userEvent.selectOptions(screen.getByLabelText("デザイン必須"), "魔女");
+    await userEvent.type(screen.getByLabelText("表情指定必須"), "笑顔");
+    await userEvent.click(screen.getByRole("checkbox", { name: /衣装カラーチェンジ/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /商用利用/ }));
+    fireEvent(window, new CustomEvent(PLAN_SELECT_EVENT, { detail: { id: "sd", name: "SDキャラ" } }));
+    expect(screen.queryByLabelText("表情指定必須")).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: /衣装カラーチェンジ/ })).toBeNull();
+    submit();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(submittedRequestData()).toMatchObject({ options: [], commercialUse: "unknown", expressionMood: "", commissionScopeOther: null });
+  });
+
   it("プランを引き継いで詳細を開き、モードを戻しても入力内容を保持する", async () => {
     renderForm();
     await fillMinimum("SDキャラを相談したいです。");

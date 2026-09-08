@@ -47,6 +47,26 @@ function request(overrides: Partial<NatoriRequestDataV1> = {}): NatoriRequestDat
 }
 
 describe("createNatoriEstimateSuggestionV1", () => {
+  it("量産の専用オプションと商用利用を500/500/1000円で見積もる", () => {
+    const result = createNatoriEstimateSuggestionV1({
+      projectType: "undecided",
+      pricingConfig,
+      requestData: request({
+        requestType: "other", requestTypeOther: "量産イラスト",
+        commissionScope: "other", commissionScopeOther: "おばけ", expressionMood: "笑顔",
+        commercialUse: "yes",
+        options: [
+          { id: "mass_costume_color_change", label: "衣装カラーチェンジ", quantity: 1, notes: "" },
+          { id: "mass_expression_variation", label: "表情差分", quantity: 1, notes: "" },
+        ],
+      }),
+    });
+    expect(result.automaticItems.map((item) => [item.presetItemId, item.amount])).toEqual([
+      ["mass_costume_color_change", 500], ["mass_expression_variation", 500], ["commercial_use", 1000],
+    ]);
+    expect(result.canIssueQuote).toBe(false); // 未指定の基本料金は推測しない。
+  });
+
   it("uses project type stable ID instead of commission scope", () => {
     const result = createNatoriEstimateSuggestionV1({
       projectType: "icon",

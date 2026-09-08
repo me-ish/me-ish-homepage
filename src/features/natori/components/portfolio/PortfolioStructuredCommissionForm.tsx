@@ -12,6 +12,7 @@ import {
   type PortfolioPlanSelectDetail,
 } from "@/features/natori/constants/portfolioContent";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
+import { MASS_PRODUCTION_COMMERCIAL_AMOUNT, MASS_PRODUCTION_VARIANTS } from "@/features/natori/constants/massProductionIllustration";
 import {
   NATORI_MAX_REFERENCE_IMAGES,
   NATORI_MAX_REFERENCE_LINKS,
@@ -25,6 +26,7 @@ import {
   collectPortfolioReferenceLinkErrors,
   createInitialPortfolioRequestFormState,
   isMassProductionIllustrationSelection,
+  massProductionOptionChoices,
   portfolioOptionAllowsQuantity,
   portfolioOptionChoices,
   portfolioRequestTypeChoiceValue,
@@ -107,6 +109,7 @@ function FormSection({
   title,
   description,
   collapsible,
+  required,
   open,
   onToggle,
   children,
@@ -114,6 +117,7 @@ function FormSection({
   title: string;
   description?: string;
   collapsible?: boolean;
+  required?: boolean;
   open?: boolean;
   onToggle?: (next: boolean) => void;
   children: ReactNode;
@@ -141,7 +145,7 @@ function FormSection({
     >
       <summary className="pf-cute-focus flex min-h-[44px] cursor-pointer list-none items-center text-base font-black [&::-webkit-details-marker]:hidden">
         {title}
-        <OptionalBadge />
+        {required ? <RequiredBadge /> : <OptionalBadge />}
         <span aria-hidden="true" className="ml-auto group-open/section:rotate-180">⌄</span>
       </summary>
       {description ? (
@@ -185,9 +189,12 @@ export default function PortfolioStructuredCommissionForm({
   const refFileInputRef = useRef<HTMLInputElement | null>(null);
   const sendingRef = useRef(false);
 
-  const optionChoices = useMemo(() => portfolioOptionChoices(content), [content]);
   const linkErrors = collectPortfolioReferenceLinkErrors(state.referenceLinks);
   const massProductionSelected = isMassProductionIllustrationSelection(state);
+  const optionChoices = useMemo(
+    () => massProductionSelected ? massProductionOptionChoices() : portfolioOptionChoices(content),
+    [content, massProductionSelected],
+  );
   const requestTypeChoice = portfolioRequestTypeChoiceValue(state);
   const xLink = content.socialLinks.find(isPortfolioXLink);
 
@@ -204,6 +211,11 @@ export default function PortfolioStructuredCommissionForm({
     }
     setMassProductionNotice(false);
     setState((current) => applyPortfolioRequestTypeSelection(current, value));
+    if (value === NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE) {
+      setOptionalOpen(true);
+      setOpenSections({ requestType: true, usage: false, budget: false, materials: false });
+      setDetailsOpen(false);
+    }
   };
 
   /** モード切替で任意セクションの開閉だけを変える。残留値は prune で落とす。 */
@@ -214,11 +226,11 @@ export default function PortfolioStructuredCommissionForm({
     const expanded = inquiryMode === "quote";
     setOpenSections({
       requestType: expanded,
-      usage: expanded,
-      budget: expanded,
+      usage: expanded && !massProductionSelected,
+      budget: expanded && !massProductionSelected,
       materials: expanded,
     });
-    setDetailsOpen(expanded);
+    setDetailsOpen(expanded && !massProductionSelected);
     setOptionalOpen(expanded);
   };
 
@@ -339,6 +351,22 @@ export default function PortfolioStructuredCommissionForm({
     event.preventDefault();
     // 二重 submit 防止。state 更新前の連打も ref で塞ぐ。
     if (sendingRef.current) return;
+    if (massProductionSelected) {
+      const errors: ServerFieldError[] = [];
+      if (!MASS_PRODUCTION_VARIANTS.some((variant) => variant === state.commissionScopeOther)) {
+        errors.push({ path: "requestData.commissionScopeOther", message: "「おばけ」か「魔女」を選択してください" });
+      }
+      if (!state.expressionMood.trim()) {
+        errors.push({ path: "requestData.expressionMood", message: "表情指定を入力してください" });
+      }
+      if (errors.length > 0) {
+        setServerFieldErrors(errors);
+        setSubmitError("量産イラストのデザインと表情指定をご確認ください。");
+        setOptionalOpen(true);
+        setOpenSections((current) => ({ ...current, requestType: true }));
+        return;
+      }
+    }
     if (linkErrors.length > 0) {
       setOptionalOpen(true);
       setOpenSections((current) => ({ ...current, materials: true }));
@@ -417,98 +445,8 @@ export default function PortfolioStructuredCommissionForm({
     "rush_consultation",
   ];
 
-  return (
-    <form
-      onSubmit={handleSubmit}
-      onInvalidCapture={(event) => {
-        // 閉じた詳細内の必須項目にも、ブラウザがフォーカスを移せるようにする。
-        let details = (event.target as HTMLElement).closest("details");
-        while (details) {
-          details.open = true;
-          details = details.parentElement?.closest("details") ?? null;
-        }
-      }}
-      noValidate={false}
-      className="space-y-4 rounded-2xl p-5 md:p-8"
-      style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
-    >
-      {/* honeypot: 人間には見えない。ボット対策 */}
-      <input
-        type="text"
-        name="website"
-        tabIndex={-1}
-        autoComplete="off"
-        aria-hidden="true"
-        className="hidden"
-      />
-
-      <FormSection
-        title="ご希望・連絡先"
-        description="お名前・メール・相談内容の3項目で送信できます。"
-      >
-        <fieldset>
-          <legend className={labelClass}>ご希望</legend>
-          {/* 同じ意思決定の2択を比較するカードなので、desktopのみ横並びにする。 */}
-          <div className="grid gap-2 sm:grid-cols-2">
-            {(["consultation", "quote"] as const).map((mode) => (
-              <label
-                key={mode}
-                className="pf-cute-focus flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold"
-                style={{
-                  borderColor:
-                    state.inquiryMode === mode ? c.formBorderActive : c.formBorder,
-                  color: state.inquiryMode === mode ? c.formBorderActive : c.textSoft,
-                }}
-              >
-                <input
-                  type="radio"
-                  value={mode}
-                  checked={state.inquiryMode === mode}
-                  onChange={() => changeMode(mode)}
-                  className="pf-choice-control h-4 w-4 shrink-0"
-                />
-                {NATORI_INQUIRY_MODE_LABELS_V1[mode]}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-
-        <div className="grid gap-4">
-          <div>
-            <label htmlFor="pf-name" className={labelClass}>
-              お名前（活動名でOK）<RequiredBadge />
-            </label>
-            <input
-              id="pf-name"
-              name="name"
-              required
-              maxLength={100}
-              autoComplete="name"
-              className={inputClass}
-              aria-describedby={serverErrorFor("clientName") ? "pf-name-error" : undefined}
-            />
-            <FieldError id="pf-name-error" message={serverErrorFor("clientName")} />
-          </div>
-          <div>
-            <label htmlFor="pf-email" className={labelClass}>
-              メールアドレス<RequiredBadge />
-            </label>
-            <input
-              id="pf-email"
-              name="email"
-              type="email"
-              required
-              maxLength={254}
-              autoComplete="email"
-              className={inputClass}
-              aria-describedby={serverErrorFor("clientEmail") ? "pf-email-error" : undefined}
-            />
-            <FieldError id="pf-email-error" message={serverErrorFor("clientEmail")} />
-          </div>
-        </div>
-      </FormSection>
-
-      <FormSection
+  const messageSection = (
+    <FormSection key="message"
         title="ご相談・ご依頼の内容"
         description="描いてほしいものや気になることを、わかる範囲でお聞かせください。"
       >
@@ -532,23 +470,28 @@ export default function PortfolioStructuredCommissionForm({
           <FieldError id="pf-message-error" message={serverErrorFor("requestData.message")} />
         </div>
       </FormSection>
+  );
 
-      <details
+  const optionalSection = (
+    <details key="optional"
         open={optionalOpen}
         onToggle={(event) => setOptionalOpen(event.currentTarget.open)}
         className="group/optional rounded-xl border p-4"
         style={{ borderColor: c.borderSubtle }}
       >
         <summary className="pf-cute-focus flex min-h-[44px] cursor-pointer list-none items-center gap-2 font-bold [&::-webkit-details-marker]:hidden">
-          詳しい条件を追加する<OptionalBadge />
+          {massProductionSelected ? <>量産イラストの依頼内容<RequiredBadge /></> : <>詳しい条件を追加する<OptionalBadge /></>}
           <span aria-hidden="true" className="ml-auto group-open/optional:rotate-180">⌄</span>
         </summary>
-        <p className="mt-2 text-sm" style={{ color: c.textSoft }}>種類・用途・予算・資料など、決まっていることだけご入力ください。</p>
+        <p className="mt-2 text-sm" style={{ color: c.textSoft }}>
+          {massProductionSelected ? "デザインと表情指定は必須です。必要な追加オプションを選択してください。" : "種類・用途・予算・資料など、決まっていることだけご入力ください。"}
+        </p>
         <div className="mt-4 space-y-4">
           <FormSection
             title="依頼の種類"
-            description="未定のままでも受け付けます。決まっている場合だけご選択ください。"
+            description={massProductionSelected ? "「おばけ」か「魔女」を選び、ご希望の表情をご記入ください。" : "未定のままでも受け付けます。決まっている場合だけご選択ください。"}
             collapsible
+            required={massProductionSelected}
             open={openSections.requestType}
             onToggle={(next) => setOpenSections((current) => ({ ...current, requestType: next }))}
           >
@@ -605,6 +548,7 @@ export default function PortfolioStructuredCommissionForm({
                   </div>
                 ) : null}
               </div>
+              {!massProductionSelected ? (
               <div>
                 <label htmlFor="pf-scope" className={labelClass}>
                   制作範囲
@@ -625,6 +569,7 @@ export default function PortfolioStructuredCommissionForm({
                   ))}
                 </select>
               </div>
+              ) : null}
             </div>
 
             {state.requestType === "other" && !massProductionSelected ? (
@@ -654,32 +599,30 @@ export default function PortfolioStructuredCommissionForm({
             {state.commissionScope === "other" ? (
               <div>
                 <label htmlFor="pf-scope-other" className={labelClass}>
-                  制作範囲（その他の内容）<RequiredBadge />
+                  {massProductionSelected ? "デザイン" : "制作範囲（その他の内容）"}<RequiredBadge />
                 </label>
-                <input
-                  id="pf-scope-other"
-                  value={state.commissionScopeOther}
-                  onChange={(event) => update({ commissionScopeOther: event.target.value })}
-                  readOnly={massProductionSelected}
-                  maxLength={100}
-                  className={inputClass}
-                  aria-describedby={
-                    massProductionSelected
-                      ? "pf-scope-mass-production-help"
-                      : serverErrorFor("requestData.commissionScopeOther")
-                      ? "pf-scope-other-error"
-                      : undefined
-                  }
-                />
                 {massProductionSelected ? (
-                  <p
-                    id="pf-scope-mass-production-help"
-                    className="mt-1.5 text-xs font-bold"
-                    style={{ color: c.formBorderActive }}
+                  <select
+                    id="pf-scope-other"
+                    required
+                    value={state.commissionScopeOther}
+                    onChange={(event) => update({ commissionScopeOther: event.target.value })}
+                    className={inputClass}
+                    aria-describedby={serverErrorFor("requestData.commissionScopeOther") ? "pf-scope-other-error" : undefined}
                   >
-                    量産イラストのため自動入力されています。
-                  </p>
-                ) : null}
+                    <option value="">デザインを選択してください</option>
+                    {MASS_PRODUCTION_VARIANTS.map((variant) => <option key={variant} value={variant}>{variant}</option>)}
+                  </select>
+                ) : (
+                  <input
+                    id="pf-scope-other"
+                    value={state.commissionScopeOther}
+                    onChange={(event) => update({ commissionScopeOther: event.target.value })}
+                    maxLength={100}
+                    className={inputClass}
+                    aria-describedby={serverErrorFor("requestData.commissionScopeOther") ? "pf-scope-other-error" : undefined}
+                  />
+                )}
                 <FieldError
                   id="pf-scope-other-error"
                   message={serverErrorFor("requestData.commissionScopeOther")}
@@ -689,7 +632,7 @@ export default function PortfolioStructuredCommissionForm({
 
             <fieldset>
               <legend className={labelClass}>
-                追加オプション<OptionalBadge />
+                {massProductionSelected ? "量産イラスト専用オプション" : "追加オプション"}<OptionalBadge />
               </legend>
               <div className="space-y-2">
                 {optionChoices.map((choice) => {
@@ -721,7 +664,7 @@ export default function PortfolioStructuredCommissionForm({
                         </span>
                       </label>
                       {/* 数量と補足は同じ追加オプションに属するため、desktopのみ横並びにする。 */}
-                      {checked ? (
+                      {checked && !massProductionSelected ? (
                         <div
                           className={`mt-2 grid gap-2 ${
                             allowsQuantity ? "sm:grid-cols-[7rem_1fr]" : ""
@@ -776,6 +719,36 @@ export default function PortfolioStructuredCommissionForm({
                 })}
               </div>
             </fieldset>
+
+            {massProductionSelected ? (
+              <>
+                <div>
+                  <label htmlFor="pf-mass-expression" className={labelClass}>表情指定<RequiredBadge /></label>
+                  <textarea
+                    id="pf-mass-expression"
+                    required
+                    rows={3}
+                    maxLength={1000}
+                    value={state.expressionMood}
+                    onChange={(event) => update({ expressionMood: event.target.value })}
+                    placeholder="例：口を開けた笑顔。表情差分ありの場合は、追加分の表情もご記入ください。"
+                    className={inputClass}
+                    aria-describedby={serverErrorFor("requestData.expressionMood") ? "pf-mass-expression-error" : undefined}
+                  />
+                  <FieldError id="pf-mass-expression-error" message={serverErrorFor("requestData.expressionMood")} />
+                </div>
+                <label className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border-2 p-3 text-sm" style={{ borderColor: state.commercialUse === "yes" ? c.formBorderActive : c.formBorder }}>
+                  <input
+                    type="checkbox"
+                    checked={state.commercialUse === "yes"}
+                    onChange={(event) => update({ commercialUse: event.target.checked ? "yes" : "none" })}
+                    className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0"
+                  />
+                  商用利用
+                  <span className="font-bold" style={{ color: c.accentText }}>+{MASS_PRODUCTION_COMMERCIAL_AMOUNT.toLocaleString("ja-JP")}円</span>
+                </label>
+              </>
+            ) : null}
           </FormSection>
 
           <FormSection
@@ -829,6 +802,7 @@ export default function PortfolioStructuredCommissionForm({
             ) : null}
 
             <div className="grid gap-4">
+              {!massProductionSelected ? (
               <div>
                 <label htmlFor="pf-commercial" className={labelClass}>
                   商用利用
@@ -850,6 +824,7 @@ export default function PortfolioStructuredCommissionForm({
                   ))}
                 </select>
               </div>
+              ) : null}
               <div>
                 <label htmlFor="pf-publication" className={labelClass}>
                   作品の公開可否
@@ -1084,6 +1059,7 @@ export default function PortfolioStructuredCommissionForm({
                   className={inputClass}
                 />
               </div>
+              {!massProductionSelected ? (
               <div>
                 <label htmlFor="pf-expression" className={labelClass}>
                   希望する表情・雰囲気
@@ -1097,6 +1073,7 @@ export default function PortfolioStructuredCommissionForm({
                   className={inputClass}
                 />
               </div>
+              ) : null}
               <div>
                 <label htmlFor="pf-composition" className={labelClass}>
                   構図のイメージ
@@ -1286,6 +1263,100 @@ export default function PortfolioStructuredCommissionForm({
 
         </div>
       </details>
+  );
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      onInvalidCapture={(event) => {
+        // 閉じた詳細内の必須項目にも、ブラウザがフォーカスを移せるようにする。
+        let details = (event.target as HTMLElement).closest("details");
+        while (details) {
+          details.open = true;
+          details = details.parentElement?.closest("details") ?? null;
+        }
+      }}
+      noValidate={false}
+      className="space-y-4 rounded-2xl p-5 md:p-8"
+      style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
+    >
+      {/* honeypot: 人間には見えない。ボット対策 */}
+      <input
+        type="text"
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        className="hidden"
+      />
+
+      <FormSection
+        title="ご希望・連絡先"
+        description={massProductionSelected ? "量産イラストは、デザインと表情指定もご入力ください。" : "お名前・メール・相談内容の3項目で送信できます。"}
+      >
+        <fieldset>
+          <legend className={labelClass}>ご希望</legend>
+          {/* 同じ意思決定の2択を比較するカードなので、desktopのみ横並びにする。 */}
+          <div className="grid gap-2 sm:grid-cols-2">
+            {(["consultation", "quote"] as const).map((mode) => (
+              <label
+                key={mode}
+                className="pf-cute-focus flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold"
+                style={{
+                  borderColor:
+                    state.inquiryMode === mode ? c.formBorderActive : c.formBorder,
+                  color: state.inquiryMode === mode ? c.formBorderActive : c.textSoft,
+                }}
+              >
+                <input
+                  type="radio"
+                  value={mode}
+                  checked={state.inquiryMode === mode}
+                  onChange={() => changeMode(mode)}
+                  className="pf-choice-control h-4 w-4 shrink-0"
+                />
+                {NATORI_INQUIRY_MODE_LABELS_V1[mode]}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <div className="grid gap-4">
+          <div>
+            <label htmlFor="pf-name" className={labelClass}>
+              お名前（活動名でOK）<RequiredBadge />
+            </label>
+            <input
+              id="pf-name"
+              name="name"
+              required
+              maxLength={100}
+              autoComplete="name"
+              className={inputClass}
+              aria-describedby={serverErrorFor("clientName") ? "pf-name-error" : undefined}
+            />
+            <FieldError id="pf-name-error" message={serverErrorFor("clientName")} />
+          </div>
+          <div>
+            <label htmlFor="pf-email" className={labelClass}>
+              メールアドレス<RequiredBadge />
+            </label>
+            <input
+              id="pf-email"
+              name="email"
+              type="email"
+              required
+              maxLength={254}
+              autoComplete="email"
+              className={inputClass}
+              aria-describedby={serverErrorFor("clientEmail") ? "pf-email-error" : undefined}
+            />
+            <FieldError id="pf-email-error" message={serverErrorFor("clientEmail")} />
+          </div>
+        </div>
+      </FormSection>
+
+      {state.inquiryMode === "quote" ? [optionalSection, messageSection] : [messageSection, optionalSection]}
 
       <FormSection title="確認して送信">
         {submitError ? (

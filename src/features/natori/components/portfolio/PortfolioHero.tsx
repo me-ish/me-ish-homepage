@@ -23,10 +23,6 @@ export default function PortfolioHero({
   const representativeAlt = hasExplicitHeroImage
     ? `${content.artistName}の代表作品`
     : fallbackWork?.title ?? "";
-  const firstPlan = content.plans[0];
-  const startingPrice = firstPlan && firstPlan.price.includes("円") && !/[〜～~]/u.test(firstPlan.price)
-    ? `${firstPlan.price}～`
-    : firstPlan?.price;
   const replyStep = content.workflow.find((step) => /見積もり|お見積り/u.test(step.title));
 
   return (
@@ -70,27 +66,11 @@ export default function PortfolioHero({
             {variant === "showcase" ? content.heroDescription : firstSentence(content.heroDescription)}
           </p>
           {variant !== "showcase" ? (
-            <div className="mb-6 space-y-3">
-              <dl className="grid gap-3 rounded-xl p-4 text-sm" style={{ background: c.accentSoft }}>
-                {firstPlan ? (
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <dt className="font-bold">{firstPlan.name}</dt>
-                    <dd className="text-lg font-black" style={{ color: c.accentText }}>{startingPrice}</dd>
-                  </div>
-                ) : null}
-                {content.deliveryLead ? (
-                  <div>
-                    <dt className="mb-1 font-bold">納期の目安</dt>
-                    <dd className="leading-relaxed">{firstSentence(content.deliveryLead)}</dd>
-                  </div>
-                ) : null}
-              </dl>
+            <div className="mb-6 space-y-2 text-sm leading-relaxed" style={{ color: c.textSoft }}>
+              {content.deliveryLead ? <p>{firstSentence(content.deliveryLead)}</p> : null}
               {replyStep ? (
-                <p className="text-sm leading-relaxed" style={{ color: c.textSoft }}>{firstSentence(replyStep.body)}</p>
+                <p>{firstSentence(replyStep.body)}</p>
               ) : null}
-              <a href="#pricing" className="pf-cute-focus inline-flex min-h-[44px] items-center text-sm font-bold underline underline-offset-4" style={{ color: c.accentText }}>
-                料金・追加オプションを確認
-              </a>
             </div>
           ) : null}
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">

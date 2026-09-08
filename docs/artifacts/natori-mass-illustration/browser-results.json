@@ -1,0 +1,34 @@
+[
+  {
+    "width": 390,
+    "passed": true,
+    "pageErrors": [],
+    "consoleErrors": [],
+    "failedRequests": [
+      {
+        "url": "https://www.google-analytics.com/g/collect",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "https://www.google-analytics.com/g/collect",
+        "error": "net::ERR_ABORTED"
+      }
+    ]
+  },
+  {
+    "width": 1440,
+    "passed": true,
+    "pageErrors": [],
+    "consoleErrors": [],
+    "failedRequests": [
+      {
+        "url": "https://www.google-analytics.com/g/collect",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "https://www.google-analytics.com/g/collect",
+        "error": "net::ERR_ABORTED"
+      }
+    ]
+  }
+]

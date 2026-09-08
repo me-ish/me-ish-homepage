@@ -1,0 +1,36 @@
+{
+  "passed": 141,
+  "failed": 0,
+  "suites": [
+    {
+      "file": "src/features/natori/lib/__tests__/portfolioRequestForm.test.ts",
+      "status": "passed",
+      "tests": 22
+    },
+    {
+      "file": "src/features/natori/lib/__tests__/pricingSuggestion.test.ts",
+      "status": "passed",
+      "tests": 8
+    },
+    {
+      "file": "src/features/natori/lib/__tests__/requestSchema.test.ts",
+      "status": "passed",
+      "tests": 35
+    },
+    {
+      "file": "src/features/natori/components/portfolio/__tests__/PortfolioHero.test.tsx",
+      "status": "passed",
+      "tests": 4
+    },
+    {
+      "file": "src/features/natori/components/portfolio/__tests__/PortfolioStructuredCommissionForm.test.tsx",
+      "status": "passed",
+      "tests": 33
+    },
+    {
+      "file": "src/app/api/natori/portfolio/contact/__tests__/structuredRoute.test.ts",
+      "status": "passed",
+      "tests": 39
+    }
+  ]
+}

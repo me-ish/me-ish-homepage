@@ -40,7 +40,7 @@ describe("量産イラスト", () => {
       requestType: "other",
       requestTypeOther: NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL,
       commissionScope: "other",
-      commissionScopeOther: NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL,
+      commissionScopeOther: "",
     });
     expect(isMassProductionIllustrationSelection(selected)).toBe(true);
     expect(portfolioRequestTypeChoiceValue(selected)).toBe(
@@ -48,14 +48,14 @@ describe("量産イラスト", () => {
     );
 
     const data = buildNatoriRequestDataV1(
-      { ...selected, message: "量産イラストをお願いします。" },
+      { ...selected, commissionScopeOther: "魔女", expressionMood: "笑顔", message: "量産イラストをお願いします。" },
       choices
     );
     expect(data).toMatchObject({
       requestType: "other",
       requestTypeOther: NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL,
       commissionScope: "other",
-      commissionScopeOther: NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL,
+      commissionScopeOther: "魔女",
     });
     expect(validateNatoriRequestDataV1(data).success).toBe(true);
   });

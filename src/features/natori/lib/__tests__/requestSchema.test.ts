@@ -32,6 +32,38 @@ const consultationExample = {
   legacySource: null,
 } as const;
 
+describe("量産イラストの新規受付", () => {
+  const massRequest = {
+    ...consultationExample,
+    requestType: "other",
+    requestTypeOther: "量産イラスト",
+    commissionScope: "other",
+    commissionScopeOther: "魔女",
+    expressionMood: "笑顔",
+    commercialUse: "yes",
+    options: [{ id: "mass_costume_color_change", label: "衣装カラーチェンジ", quantity: 1, notes: "" }],
+  };
+  const submission = (requestData: unknown) => ({ clientName: "テスト", clientEmail: "test@example.com", requestData });
+
+  it("専用デザインと表情指定を受け付ける", () => {
+    expect(natoriRequestSubmissionV1Schema.safeParse(submission(massRequest)).success).toBe(true);
+  });
+  it.each([
+    { commissionScopeOther: "別の衣装" },
+    { expressionMood: "   " },
+    { options: [{ id: "expression_variation", label: "表情差分", quantity: 1, notes: "" }] },
+    { options: [{ id: "mass_costume_color_change", label: "衣装カラーチェンジ", quantity: 2, notes: "" }] },
+  ])("不正な専用項目を拒否する: %o", (overrides) => {
+    expect(natoriRequestSubmissionV1Schema.safeParse(submission({ ...massRequest, ...overrides })).success).toBe(false);
+  });
+  it("保存済みの旧形式は引き続き読み取る", () => {
+    expect(readNatoriRequestData({ ...massRequest, commissionScopeOther: "量産イラスト", expressionMood: "", options: [] }).success).toBe(true);
+  });
+  it("通常依頼へ量産専用オプションを混ぜない", () => {
+    expect(natoriRequestSubmissionV1Schema.safeParse(submission({ ...consultationExample, options: massRequest.options })).success).toBe(false);
+  });
+});
+
 const quoteExample = {
   schemaVersion: 1,
   formVersion: "etorie-request-v1",

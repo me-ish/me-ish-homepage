@@ -1,4 +1,6 @@
 import type { NatoriDeliveryPlan } from "@/features/natori/types/projects";
+import { MASS_PRODUCTION_COMMERCIAL_AMOUNT, MASS_PRODUCTION_OPTIONS, MASS_PRODUCTION_VARIANTS } from "@/features/natori/constants/massProductionIllustration";
+import { NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL } from "@/features/natori/lib/requestPresentation";
 import type {
   CreateNatoriEstimateSuggestionInputV1,
   NatoriEstimateSuggestionV1,
@@ -67,6 +69,15 @@ export function createNatoriEstimateSuggestionV1(
   const ignoredFields: NatoriIgnoredFieldV1[] = [];
   const automaticItems = new Map<string, NatoriQuoteItemV1>();
   const itemIndex = indexPricingItems(input.pricingConfig.items, reviewItems);
+  const massProduction = input.requestData.requestType === "other" &&
+    input.requestData.requestTypeOther === NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL &&
+    MASS_PRODUCTION_VARIANTS.some((variant) => variant === input.requestData.commissionScopeOther);
+  if (massProduction) {
+    for (const option of MASS_PRODUCTION_OPTIONS) {
+      itemIndex.set(option.id, { ...option, kind: "fixed" });
+    }
+    itemIndex.set("commercial_use", { id: "commercial_use", kind: "fixed", label: "商用利用（量産イラスト）", amount: MASS_PRODUCTION_COMMERCIAL_AMOUNT });
+  }
 
   let baseAmount = 0;
   if (input.projectType === "undecided") {
@@ -113,7 +124,8 @@ export function createNatoriEstimateSuggestionV1(
       continue;
     }
 
-    if (!FIXED_OPTION_IDS.has(optionId) && !PERCENTAGE_OPTION_IDS.has(optionId)) {
+    const dedicatedOption = massProduction && MASS_PRODUCTION_OPTIONS.some((option) => option.id === optionId);
+    if (!dedicatedOption && !FIXED_OPTION_IDS.has(optionId) && !PERCENTAGE_OPTION_IDS.has(optionId)) {
       reviewItems.push(warning(
         "unknown_pricing_option",
         "attention",

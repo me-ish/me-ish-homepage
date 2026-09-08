@@ -41,7 +41,8 @@ describe("PF-03 portfolio hero", () => {
     expect(screen.queryByText(defaultPortfolioContent.artistName)).toBeNull();
     expect(screen.getByText(defaultPortfolioContent.roleEn)).toBeTruthy();
     expect(screen.getByText(defaultPortfolioContent.heroDescription.split("。")[0] + "。")).toBeTruthy();
-    expect(screen.getByText("3,000円～")).toBeTruthy();
+    expect(screen.queryByText("3,000円～")).toBeNull();
+    expect(screen.queryByRole("link", { name: "料金・追加オプションを確認" })).toBeNull();
     expect(screen.getByText(defaultPortfolioContent.deliveryLead.split("。")[0] + "。")).toBeTruthy();
     expect(screen.getByText(/2〜3日以内にメールで/)).toBeTruthy();
     const heroTitle = screen.getByRole("heading", { level: 1, name: "ナトリのあとりえ" });

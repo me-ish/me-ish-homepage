@@ -9,6 +9,7 @@ import {
 } from "@/features/natori/lib/referenceLinks";
 import { NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL } from "@/features/natori/lib/requestPresentation";
 import { PORTFOLIO_OPTION_IDS } from "@/features/natori/constants/portfolioContent";
+import { MASS_PRODUCTION_OPTIONS } from "@/features/natori/constants/massProductionIllustration";
 import { NATORI_REQUEST_SCHEMA_VERSION } from "@/features/natori/types/request";
 import type {
   NatoriBudgetV1,
@@ -157,6 +158,15 @@ export function portfolioOptionChoices(
     }));
 }
 
+export function massProductionOptionChoices(): PortfolioOptionChoice[] {
+  return MASS_PRODUCTION_OPTIONS.map((option) => ({
+    key: option.id,
+    stableId: option.id,
+    label: option.label,
+    price: `+${option.amount.toLocaleString("ja-JP")}円`,
+  }));
+}
+
 /** 「量産イラスト」を既存 RequestData V1 の other 表現から判定する。 */
 export function isMassProductionIllustrationSelection(
   state: Pick<PortfolioRequestFormState, "requestType" | "requestTypeOther">
@@ -178,19 +188,23 @@ export function portfolioRequestTypeChoiceValue(
 
 /**
  * 依頼種別の変更を適用する。量産イラストは依頼種別・制作範囲ともに
- * 「その他（量産イラスト）」へ自動入力する。
+ * 「その他」へ対応付け、制作範囲の補足でデザインを選んでもらう。
  */
 export function applyPortfolioRequestTypeSelection(
   state: PortfolioRequestFormState,
   value: PortfolioRequestTypeChoiceValue
 ): PortfolioRequestFormState {
   if (value === NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE) {
+    if (isMassProductionIllustrationSelection(state)) return state;
     return pruneHiddenPortfolioRequestFields({
       ...state,
       requestType: "other",
       requestTypeOther: NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL,
       commissionScope: "other",
-      commissionScopeOther: NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL,
+      commissionScopeOther: "",
+      optionSelections: {},
+      commercialUse: "none",
+      expressionMood: "",
     });
   }
 
@@ -200,7 +214,7 @@ export function applyPortfolioRequestTypeSelection(
     requestType: value,
     requestTypeOther: "",
     ...(wasMassProduction
-      ? { commissionScope: "undecided" as const, commissionScopeOther: "" }
+      ? { commissionScope: "undecided" as const, commissionScopeOther: "", optionSelections: {}, commercialUse: "unknown" as const, expressionMood: "" }
       : {}),
   });
 }
@@ -227,7 +241,7 @@ export function applyPortfolioPlanSelection(
       requestType: "sd",
       requestTypeOther: "",
       ...(isMassProductionIllustrationSelection(state)
-        ? { commissionScope: "undecided" as const, commissionScopeOther: "" }
+        ? { commissionScope: "undecided" as const, commissionScopeOther: "", optionSelections: {}, commercialUse: "unknown" as const, expressionMood: "" }
         : {}),
     });
   }
@@ -236,7 +250,7 @@ export function applyPortfolioPlanSelection(
       ...state,
       commissionScope: planId,
       ...(isMassProductionIllustrationSelection(state)
-        ? { requestType: "undecided" as const, requestTypeOther: "" }
+        ? { requestType: "undecided" as const, requestTypeOther: "", optionSelections: {}, commercialUse: "unknown" as const, expressionMood: "" }
         : {}),
     });
   }
@@ -319,7 +333,10 @@ export function buildSelectedOptions(
   const options: NatoriSelectedOptionV1[] = [];
   const unmappedLabels: string[] = [];
 
-  for (const choice of choices) {
+  const applicableChoices = isMassProductionIllustrationSelection(state)
+    ? massProductionOptionChoices()
+    : choices.filter((choice) => !MASS_PRODUCTION_OPTIONS.some((option) => option.id === choice.stableId));
+  for (const choice of applicableChoices) {
     const selection = state.optionSelections[choice.key];
     if (!selection?.selected) continue;
     if (choice.stableId === null) {
