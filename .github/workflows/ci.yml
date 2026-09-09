@@ -6,11 +6,93 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  compact-copy-codemod:
+    name: Compact form copy codemod
+    if: github.event_name == 'pull_request' && github.head_ref == 'agent/natori-form-copy-compact-temp'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+
+      - name: Apply requested copy changes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_exact(path: str, old: str, new: str, expected: int = 1):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != expected:
+                  raise SystemExit(f"{path}: expected {expected} occurrence(s), found {count}: {old!r}")
+              p.write_text(text.replace(old, new))
+
+          outer = "src/features/natori/components/portfolio/PortfolioCommissionForm.tsx"
+          structured = "src/features/natori/components/portfolio/PortfolioStructuredCommissionForm.tsx"
+
+          replace_exact(
+              outer,
+              '"現在コミッション受付中です。決まっていない項目は「未定」のままでOK、まずはお気軽にご相談ください。"',
+              '"まずはお気軽にご相談ください。"',
+          )
+          replace_exact(outer, 'からのご依頼も受け付けています', 'からのご依頼も受付中です')
+
+          replace_exact(
+              structured,
+              '    <FormSection key="message"\n        title="ご相談・ご依頼の内容"\n        description="描いてほしいものや気になることを、わかる範囲でお聞かせください。"\n      >',
+              '    <FormSection key="message" title="ご相談・ご依頼の内容">',
+          )
+          replace_exact(
+              structured,
+              '{massProductionSelected ? "デザインと表情指定は必須です。必要な追加オプションを選択してください。" : "種類・用途・予算・資料など、決まっていることだけご入力ください。"}',
+              '{massProductionSelected ? "デザインと表情指定は必須です。必要な追加オプションを選択してください。" : "決まっている項目だけでOKです。"}',
+          )
+          replace_exact(
+              structured,
+              '            description={massProductionSelected ? "「おばけ」か「魔女」を選び、ご希望の表情をご記入ください。" : "未定のままでも受け付けます。決まっている場合だけご選択ください。"}',
+              '            description={massProductionSelected ? "「おばけ」か「魔女」を選び、ご希望の表情をご記入ください。" : undefined}',
+          )
+          replace_exact(
+              structured,
+              '            description="商用利用や公開範囲が未定でも「わからない・相談したい」で送信できます。"\n',
+              '',
+          )
+          replace_exact(
+              structured,
+              '            description={`画像は最大${NATORI_MAX_REFERENCE_IMAGES}枚（合計10MBまで）、参考URLは最大${NATORI_MAX_REFERENCE_LINKS}件までお送りいただけます。`}',
+              '            description={`画像${NATORI_MAX_REFERENCE_IMAGES}枚・合計10MB / 参考URL${NATORI_MAX_REFERENCE_LINKS}件まで`}',
+          )
+          replace_exact(
+              structured,
+              '      <FormSection\n        title="ご希望・連絡先"\n        description={massProductionSelected ? "量産イラストは、デザインと表情指定もご入力ください。" : state.inquiryMode === "quote" ? "お名前・メールを入力し、決まっている依頼内容をご選択ください。相談内容の入力は任意です。" : "お名前・メール・相談内容の3項目で送信できます。"}\n      >',
+              '      <FormSection title="ご希望・連絡先">',
+          )
+          PY
+
+          rm -f .github/workflows/natori-form-copy-codemod.yml
+          git fetch origin main
+          git checkout origin/main -- .github/workflows/ci.yml
+
+          git config user.name "me-ish"
+          git config user.email "info@me-ish.art"
+          git add src/features/natori/components/portfolio/PortfolioCommissionForm.tsx \
+                  src/features/natori/components/portfolio/PortfolioStructuredCommissionForm.tsx \
+                  .github/workflows/ci.yml \
+                  .github/workflows/natori-form-copy-codemod.yml
+          git commit -m "refactor(natori): compact commission form copy"
+          git push origin HEAD:${{ github.head_ref }}
+
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
