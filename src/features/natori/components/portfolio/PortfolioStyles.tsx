@@ -13,6 +13,7 @@ export default function PortfolioStyles() {
       .pf-pin-card { transition: transform 0.25s ease, box-shadow 0.25s ease; }
       .pf-pin-card:hover, .pf-pin-card:focus-within { transform: rotate(0deg) translateY(-6px) !important; box-shadow: 0 18px 30px ${c.shadowHover}; }
       .pf-form-control { border-color: ${c.formBorder}; }
+      .pf-form-control::placeholder { font-size: 0.875rem; }
       .pf-choice-control {
         appearance: none;
         border: 2px solid ${c.formBorder};

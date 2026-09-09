@@ -737,7 +737,7 @@ export default function PortfolioStructuredCommissionForm({
 
             {massProductionSelected ? (
               <>
-                <label className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border-2 p-3 text-sm" style={{ borderColor: state.commercialUse === "yes" ? c.formBorderActive : c.formBorder }}>
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg border-2 p-2 text-sm" style={{ borderColor: state.commercialUse === "yes" ? c.formBorderActive : c.formBorder }}>
                   <input
                     type="checkbox"
                     checked={state.commercialUse === "yes"}
@@ -745,7 +745,7 @@ export default function PortfolioStructuredCommissionForm({
                     className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0"
                   />
                   商用利用
-                  <span className="font-bold" style={{ color: c.accentText }}>+{MASS_PRODUCTION_COMMERCIAL_AMOUNT.toLocaleString("ja-JP")}円</span>
+                  <span className="text-xs font-bold" style={{ color: c.accentText }}>+{MASS_PRODUCTION_COMMERCIAL_AMOUNT.toLocaleString("ja-JP")}円</span>
                 </label>
               </>
             ) : null}
