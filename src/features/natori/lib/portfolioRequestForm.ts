@@ -227,14 +227,19 @@ export function portfolioOptionAllowsQuantity(
 }
 
 /**
- * 料金カードの「このプランで相談」を反映する。plan の stable ID が
- * request type / commission scope のどちらに対応するかだけを見て、
- * 未知の ID では何も変更しない。
+ * 料金表示のCTAをフォームへ反映する。通常 plan の stable ID に加えて、
+ * 量産イラストの公開専用値も canonical state へ変換する。
  */
 export function applyPortfolioPlanSelection(
   state: PortfolioRequestFormState,
   planId: string | null
 ): PortfolioRequestFormState {
+  if (planId === NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE) {
+    return applyPortfolioRequestTypeSelection(
+      state,
+      NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE
+    );
+  }
   if (planId === "sd") {
     return pruneHiddenPortfolioRequestFields({
       ...state,

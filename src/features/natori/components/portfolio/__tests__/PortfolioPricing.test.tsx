@@ -11,13 +11,14 @@ import {
   PLAN_SELECT_EVENT,
   defaultPortfolioContent,
 } from "@/features/natori/constants/portfolioContent";
+import { NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE } from "@/features/natori/lib/portfolioRequestForm";
 
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
 
-describe("PortfolioPricing analytics", () => {
+describe("PortfolioPricing", () => {
   it("shows each fixed plan price as a starting price without altering ranges", () => {
     render(
       <PortfolioPricing
@@ -32,18 +33,23 @@ describe("PortfolioPricing analytics", () => {
       />
     );
 
-    expect(screen.getByText("3,000円～")).toBeTruthy();
-    expect(screen.getByText("4,000円～")).toBeTruthy();
-    expect(screen.getByText("6,000円〜8,000円")).toBeTruthy();
-    expect(screen.getByText("応相談")).toBeTruthy();
+    expect(screen.getAllByText("3,000円～")).toHaveLength(2);
+    expect(screen.getAllByText("4,000円～")).toHaveLength(2);
+    expect(screen.getAllByText("6,000円〜8,000円")).toHaveLength(2);
+    expect(screen.getAllByText("応相談")).toHaveLength(2);
   });
 
-  it("does not draw a border around the common plan note", () => {
+  it("uses compact mobile selection rows and labels common conditions as normal-illustration only", () => {
     render(<PortfolioPricing content={defaultPortfolioContent} />);
 
-    const commonNote = screen.getByText("全プラン共通").parentElement as HTMLElement;
+    for (const plan of defaultPortfolioContent.plans) {
+      expect(screen.getByRole("link", { name: `${plan.name}を選ぶ` })).toBeTruthy();
+    }
+
+    const commonNote = screen.getByText("通常イラスト共通").parentElement as HTMLElement;
     expect(commonNote.className.split(/\s+/)).not.toContain("border");
     expect(commonNote.style.borderColor).toBe("");
+    expect(screen.getByText(/リテイク2回まで、簡単な小物・簡易背景/)).toBeTruthy();
   });
 
   it("records both the pricing CTA and selected public plan name", () => {
@@ -66,5 +72,48 @@ describe("PortfolioPricing analytics", () => {
     );
     expect(planEvent).toHaveBeenCalledOnce();
     window.removeEventListener(PLAN_SELECT_EVENT, planEvent);
+  });
+
+  it("shows mass-production illustration from 1,500 yen with its different included conditions", () => {
+    render(<PortfolioPricing content={defaultPortfolioContent} />);
+
+    expect(screen.getByRole("heading", { name: "量産イラスト" })).toBeTruthy();
+    expect(screen.getByText("1,500円～")).toBeTruthy();
+    expect(screen.getByText(/リテイク・小物・背景は基本料金に含まれません/)).toBeTruthy();
+  });
+
+  it("dispatches the mass-production request value from its CTA", () => {
+    const planEvent = vi.fn();
+    window.addEventListener(PLAN_SELECT_EVENT, planEvent);
+    render(<PortfolioPricing content={defaultPortfolioContent} />);
+
+    const massCta = screen.getAllByRole("link", { name: "このプランで相談" }).at(-1);
+    expect(massCta).toBeTruthy();
+    fireEvent.click(massCta as HTMLAnchorElement);
+
+    expect(planEvent).toHaveBeenCalledOnce();
+    const event = planEvent.mock.calls[0][0] as CustomEvent;
+    expect(event.detail).toMatchObject({
+      id: NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE,
+      label: "量産イラスト（1,500円）",
+    });
+    expect(trackNatoriPageEvent).toHaveBeenCalledWith(
+      "portfolio_plan_click",
+      "量産イラスト"
+    );
+    window.removeEventListener(PLAN_SELECT_EVENT, planEvent);
+  });
+
+  it("shows paused state instead of a mass-production CTA when intake is closed", () => {
+    render(
+      <PortfolioPricing
+        content={{ ...defaultPortfolioContent, massProductionIllustrationOpen: false }}
+      />
+    );
+
+    expect(screen.getByText("現在受付停止中")).toBeTruthy();
+    expect(screen.getAllByRole("link", { name: "このプランで相談" })).toHaveLength(
+      defaultPortfolioContent.plans.length
+    );
   });
 });
