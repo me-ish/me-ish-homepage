@@ -662,7 +662,7 @@ export default function PortfolioStructuredCommissionForm({
                         borderColor: checked ? c.formBorderActive : c.formBorder,
                       }}
                     >
-                      <label className="flex cursor-pointer items-center gap-2 text-sm">
+                      <label className="flex cursor-pointer items-center gap-2 text-[13px]">
                         <input
                           type="checkbox"
                           checked={checked}
@@ -737,7 +737,7 @@ export default function PortfolioStructuredCommissionForm({
 
             {massProductionSelected ? (
               <>
-                <label className="flex cursor-pointer items-center gap-2 rounded-lg border-2 p-2 text-sm" style={{ borderColor: state.commercialUse === "yes" ? c.formBorderActive : c.formBorder }}>
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg border-2 p-2 text-[13px]" style={{ borderColor: state.commercialUse === "yes" ? c.formBorderActive : c.formBorder }}>
                   <input
                     type="checkbox"
                     checked={state.commercialUse === "yes"}
@@ -763,7 +763,7 @@ export default function PortfolioStructuredCommissionForm({
                 {NATORI_USAGE_TYPES_V1.map((usage) => (
                   <label
                     key={usage}
-                    className="flex cursor-pointer items-center gap-2 text-sm"
+                    className="flex cursor-pointer items-center gap-2 text-[13px]"
                     style={{ color: c.textSoft }}
                   >
                     <input
@@ -1297,7 +1297,7 @@ export default function PortfolioStructuredCommissionForm({
             {(["consultation", "quote"] as const).map((mode) => (
               <label
                 key={mode}
-                className="pf-cute-focus flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold"
+                className="pf-cute-focus flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-[13px] font-bold"
                 style={{
                   borderColor:
                     state.inquiryMode === mode ? c.formBorderActive : c.formBorder,
