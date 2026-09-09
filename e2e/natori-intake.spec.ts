@@ -35,8 +35,8 @@ test.describe("Natori public intake rollout", () => {
   test("submits the structured quote flow without external writes", async ({ page }) => {
     await page.goto(`${DEMO_PATH}?structured=1`);
 
-    await page.getByRole("radio", { name: "見積もりを希望" }).check();
-    await expect(page.getByRole("radio", { name: "見積もりを希望" })).toBeChecked();
+    await page.getByRole("radio", { name: "見積りを希望" }).check();
+    await expect(page.getByRole("radio", { name: "見積りを希望" })).toBeChecked();
     await submitMinimumRequest(page, "quote");
   });
 });
