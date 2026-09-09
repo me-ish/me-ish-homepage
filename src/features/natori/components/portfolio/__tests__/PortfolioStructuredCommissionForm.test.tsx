@@ -106,14 +106,14 @@ describe("最低入力と送信", () => {
 
   it("quote に切り替えても type / scope は未定のまま送信できる", async () => {
     renderForm();
-    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    await userEvent.click(screen.getByLabelText("見積りを希望"));
     await userEvent.type(screen.getByLabelText(/お名前/), "テスト太郎");
     await userEvent.type(screen.getByLabelText(/メールアドレス/), "client@example.com");
     const message = screen.getByLabelText("ご相談・ご依頼の内容任意") as HTMLTextAreaElement;
     expect(message.required).toBe(false);
     await userEvent.click(screen.getByLabelText("まず相談したい"));
     expect(message.required).toBe(true);
-    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    await userEvent.click(screen.getByLabelText("見積りを希望"));
     expect(message.required).toBe(false);
     submit();
 
@@ -168,7 +168,7 @@ describe("PF-09 analytics", () => {
 
   it("利用者が選んだフォームモードを記録する", async () => {
     renderForm();
-    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    await userEvent.click(screen.getByLabelText("見積りを希望"));
     await userEvent.click(screen.getByLabelText("まず相談したい"));
 
     expect(
@@ -185,7 +185,7 @@ describe("PF-09 analytics", () => {
 describe("条件付き入力", () => {
   it("量産イラストのデザイン・表情指定・専用オプションを送る", async () => {
     renderForm();
-    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    await userEvent.click(screen.getByLabelText("見積りを希望"));
 
     await userEvent.selectOptions(
       screen.getByLabelText("ご依頼の種類"),
@@ -533,13 +533,13 @@ describe("server error の表示", () => {
 });
 
 describe("アクセシビリティ / モバイル想定 DOM", () => {
-  it("相談と見積もりでDOM順序を切り替え、入力欄を再作成しない", async () => {
+  it("相談と見積りでDOM順序を切り替え、入力欄を再作成しない", async () => {
     renderForm();
     await fillMinimum("入力を残してください。");
     const message = screen.getByLabelText(/ご相談・ご依頼の内容/);
     const optional = detailsBySummary("詳しい条件を追加する");
     expect(message.compareDocumentPosition(optional) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    await userEvent.click(screen.getByLabelText("見積りを希望"));
     expect(optional.compareDocumentPosition(message) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByLabelText(/ご相談・ご依頼の内容/)).toBe(message);
     await userEvent.click(screen.getByLabelText("まず相談したい"));
@@ -573,7 +573,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     expect(detailsBySummary("詳しい条件を追加する").open).toBe(true);
     expect(detailsBySummary("依頼の種類").open).toBe(true);
     expect((screen.getByLabelText("ご依頼の種類") as HTMLSelectElement).value).toBe("sd");
-    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    expect(screen.getByLabelText("見積りを希望")).toBeChecked();
     await userEvent.click(screen.getByLabelText("まず相談したい"));
     expect(detailsBySummary("詳しい条件を追加する").open).toBe(false);
     expect((screen.getByLabelText(/お名前/) as HTMLInputElement).value).toBe("テスト太郎");
@@ -586,7 +586,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
 
   it("閉じた条件欄の入力エラーでも該当欄を表示する", async () => {
     renderForm();
-    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    await userEvent.click(screen.getByLabelText("見積りを希望"));
     await userEvent.selectOptions(screen.getByLabelText("作品の公開可否"), "delayed");
     await userEvent.click(screen.getByLabelText("まず相談したい"));
     fireEvent.invalid(screen.getByLabelText("公開可能日必須"));
@@ -608,7 +608,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
       expect(detailsBySummary(title).open).toBe(false);
     }
 
-    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    await userEvent.click(screen.getByLabelText("見積りを希望"));
 
     for (const title of [
       "詳しい条件を追加する",
