@@ -85,7 +85,7 @@ describe("管理者向け structured メール", () => {
   it("受付区分・依頼内容の要約と件数を載せる", async () => {
     await sendStructuredPortfolioContactEmail(input());
     const payload = sentPayload();
-    expect(payload.subject).toContain("見積もりを希望");
+    expect(payload.subject).toContain("見積りを希望");
     expect(payload.subject).toContain("テスト太郎");
     expect(payload.replyTo).toBe("client@example.com");
     for (const fragment of [
