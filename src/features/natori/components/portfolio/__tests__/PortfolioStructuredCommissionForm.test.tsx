@@ -573,7 +573,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     expect(detailsBySummary("詳しい条件を追加する").open).toBe(true);
     expect(detailsBySummary("依頼の種類").open).toBe(true);
     expect((screen.getByLabelText("ご依頼の種類") as HTMLSelectElement).value).toBe("sd");
-    expect(screen.getByLabelText("見積りを希望")).toBeChecked();
+    expect((screen.getByLabelText("見積りを希望") as HTMLInputElement).checked).toBe(true);
     await userEvent.click(screen.getByLabelText("まず相談したい"));
     expect(detailsBySummary("詳しい条件を追加する").open).toBe(false);
     expect((screen.getByLabelText(/お名前/) as HTMLInputElement).value).toBe("テスト太郎");
