@@ -84,7 +84,7 @@ export const NATORI_INQUIRY_MODE_LABELS_V1: Readonly<
   Record<NatoriInquiryModeV1, string>
 > = {
   consultation: "まず相談したい",
-  quote: "見積もりを希望",
+  quote: "見積りを希望",
 };
 
 export const NATORI_BUDGET_KIND_LABELS_V1: Readonly<

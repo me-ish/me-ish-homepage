@@ -101,9 +101,9 @@ describe("structured 表示", () => {
 
     // 受付区分は badge と「依頼の内容」欄の両方に出る
     expect(container.querySelector('[data-inquiry-mode="quote"]')?.textContent).toBe(
-      "見積もりを希望"
+      "見積りを希望"
     );
-    expect(field("inquiryMode")).toBe("見積もりを希望");
+    expect(field("inquiryMode")).toBe("見積りを希望");
     expect(field("requestType")).toBe("SNSアイコン");
     expect(field("commissionScope")).toBe("胸上");
     expect(field("options")).toBe("表情差分 ×2（笑顔）");
