@@ -229,20 +229,25 @@ export function portfolioOptionAllowsQuantity(
 /**
  * 料金表示のCTAをフォームへ反映する。通常 plan の stable ID に加えて、
  * 量産イラストの公開専用値も canonical state へ変換する。
+ * 料金から選んだ時点で見積り意図が明確なため、quote モードへ切り替える。
  */
 export function applyPortfolioPlanSelection(
   state: PortfolioRequestFormState,
   planId: string | null
 ): PortfolioRequestFormState {
   if (planId === NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE) {
-    return applyPortfolioRequestTypeSelection(
-      state,
-      NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE
-    );
+    return {
+      ...applyPortfolioRequestTypeSelection(
+        state,
+        NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE
+      ),
+      inquiryMode: "quote",
+    };
   }
   if (planId === "sd") {
     return pruneHiddenPortfolioRequestFields({
       ...state,
+      inquiryMode: "quote",
       requestType: "sd",
       requestTypeOther: "",
       ...(isMassProductionIllustrationSelection(state)
@@ -253,6 +258,7 @@ export function applyPortfolioPlanSelection(
   if (planId === "bust_up" || planId === "waist_up" || planId === "full_body") {
     return pruneHiddenPortfolioRequestFields({
       ...state,
+      inquiryMode: "quote",
       commissionScope: planId,
       ...(isMassProductionIllustrationSelection(state)
         ? { requestType: "undecided" as const, requestTypeOther: "", optionSelections: {}, commercialUse: "unknown" as const, expressionMood: "" }
