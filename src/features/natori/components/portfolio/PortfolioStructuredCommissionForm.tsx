@@ -446,10 +446,7 @@ export default function PortfolioStructuredCommissionForm({
   ];
 
   const messageSection = (
-    <FormSection key="message"
-        title="ご相談・ご依頼の内容"
-        description="描いてほしいものや気になることを、わかる範囲でお聞かせください。"
-      >
+    <FormSection key="message" title="ご相談・ご依頼の内容">
         <div>
           <label htmlFor="pf-message" className={labelClass}>
             ご相談・ご依頼の内容{state.inquiryMode === "quote" ? <OptionalBadge /> : <RequiredBadge />}
@@ -484,12 +481,12 @@ export default function PortfolioStructuredCommissionForm({
           <span aria-hidden="true" className="ml-auto group-open/optional:rotate-180">⌄</span>
         </summary>
         <p className="mt-2 text-sm" style={{ color: c.textSoft }}>
-          {massProductionSelected ? "デザインと表情指定は必須です。必要な追加オプションを選択してください。" : "種類・用途・予算・資料など、決まっていることだけご入力ください。"}
+          {massProductionSelected ? "デザインと表情指定は必須です。必要な追加オプションを選択してください。" : "決まっている項目だけでOKです。"}
         </p>
         <div className="mt-4 space-y-4">
           <FormSection
             title="依頼の種類"
-            description={massProductionSelected ? "「おばけ」か「魔女」を選び、ご希望の表情をご記入ください。" : "未定のままでも受け付けます。決まっている場合だけご選択ください。"}
+            description={massProductionSelected ? "「おばけ」か「魔女」を選び、ご希望の表情をご記入ください。" : undefined}
             collapsible
             required={massProductionSelected}
             open={openSections.requestType}
@@ -756,7 +753,6 @@ export default function PortfolioStructuredCommissionForm({
 
           <FormSection
             title="用途・条件"
-            description="商用利用や公開範囲が未定でも「わからない・相談したい」で送信できます。"
             collapsible
             open={openSections.usage}
             onToggle={(next) => setOpenSections((current) => ({ ...current, usage: next }))}
@@ -1121,7 +1117,7 @@ export default function PortfolioStructuredCommissionForm({
 
           <FormSection
             title="資料"
-            description={`画像は最大${NATORI_MAX_REFERENCE_IMAGES}枚（合計10MBまで）、参考URLは最大${NATORI_MAX_REFERENCE_LINKS}件までお送りいただけます。`}
+            description={`画像${NATORI_MAX_REFERENCE_IMAGES}枚・合計10MB / 参考URL${NATORI_MAX_REFERENCE_LINKS}件まで`}
             collapsible
             open={openSections.materials}
             onToggle={(next) => setOpenSections((current) => ({ ...current, materials: next }))}
@@ -1293,10 +1289,7 @@ export default function PortfolioStructuredCommissionForm({
         className="hidden"
       />
 
-      <FormSection
-        title="ご希望・連絡先"
-        description={massProductionSelected ? "量産イラストは、デザインと表情指定もご入力ください。" : state.inquiryMode === "quote" ? "お名前・メールを入力し、決まっている依頼内容をご選択ください。相談内容の入力は任意です。" : "お名前・メール・相談内容の3項目で送信できます。"}
-      >
+      <FormSection title="ご希望・連絡先">
         <fieldset>
           <legend className={labelClass}>ご希望</legend>
           {/* 同じ意思決定の2択を比較するカードなので、desktopのみ横並びにする。 */}
