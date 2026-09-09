@@ -1,0 +1,59 @@
+name: Natori choice text size codemod
+
+on:
+  push:
+    branches:
+      - agent/natori-choice-text-size
+    paths:
+      - .github/workflows/natori-choice-text-size-codemod.yml
+
+permissions:
+  contents: write
+
+jobs:
+  codemod:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/natori-choice-text-size
+      - name: Reduce selectable option label text by one pixel
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/features/natori/components/portfolio/PortfolioStructuredCommissionForm.tsx')
+          s = p.read_text()
+
+          replacements = [
+              (
+                  'className="flex cursor-pointer items-center gap-2 text-sm"',
+                  'className="flex cursor-pointer items-center gap-2 text-[13px]"',
+                  2,
+              ),
+              (
+                  'className="flex cursor-pointer items-center gap-2 rounded-lg border-2 p-2 text-sm"',
+                  'className="flex cursor-pointer items-center gap-2 rounded-lg border-2 p-2 text-[13px]"',
+                  1,
+              ),
+              (
+                  'className="pf-cute-focus flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold"',
+                  'className="pf-cute-focus flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-[13px] font-bold"',
+                  1,
+              ),
+          ]
+
+          for old, new, expected in replacements:
+              count = s.count(old)
+              if count != expected:
+                  raise SystemExit(f'expected {expected} occurrences of {old!r}, found {count}')
+              s = s.replace(old, new)
+
+          p.write_text(s)
+          PY
+      - name: Commit change
+        run: |
+          git config user.name "me-ish"
+          git config user.email "info@me-ish.art"
+          git add src/features/natori/components/portfolio/PortfolioStructuredCommissionForm.tsx
+          git commit -m "fix(natori): reduce choice label text size"
+          git push
