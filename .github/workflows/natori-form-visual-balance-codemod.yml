@@ -1,0 +1,60 @@
+name: Natori form visual balance codemod
+
+on:
+  push:
+    branches: [agent/natori-form-visual-balance]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply visual balance fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_exact(path: str, old: str, new: str):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected 1 occurrence, found {count}: {old!r}")
+              p.write_text(text.replace(old, new))
+
+          styles = "src/features/natori/components/portfolio/PortfolioStyles.tsx"
+          form = "src/features/natori/components/portfolio/PortfolioStructuredCommissionForm.tsx"
+
+          replace_exact(
+              styles,
+              '      .pf-form-control { border-color: ${c.formBorder}; }',
+              '      .pf-form-control { border-color: ${c.formBorder}; }\n      .pf-form-control::placeholder { font-size: 0.875rem; }',
+          )
+          replace_exact(
+              form,
+              '                <label className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border-2 p-3 text-sm" style={{ borderColor: state.commercialUse === "yes" ? c.formBorderActive : c.formBorder }}>',
+              '                <label className="flex cursor-pointer items-center gap-2 rounded-lg border-2 p-2 text-sm" style={{ borderColor: state.commercialUse === "yes" ? c.formBorderActive : c.formBorder }}>',
+          )
+          replace_exact(
+              form,
+              '                  <span className="font-bold" style={{ color: c.accentText }}>+{MASS_PRODUCTION_COMMERCIAL_AMOUNT.toLocaleString("ja-JP")}円</span>',
+              '                  <span className="text-xs font-bold" style={{ color: c.accentText }}>+{MASS_PRODUCTION_COMMERCIAL_AMOUNT.toLocaleString("ja-JP")}円</span>',
+          )
+          PY
+
+          rm -f .github/workflows/natori-form-visual-balance-codemod.yml
+
+          git config user.name "me-ish"
+          git config user.email "info@me-ish.art"
+          git add src/features/natori/components/portfolio/PortfolioStyles.tsx \
+                  src/features/natori/components/portfolio/PortfolioStructuredCommissionForm.tsx \
+                  .github/workflows/natori-form-visual-balance-codemod.yml
+          git commit -m "fix(natori): balance form placeholder and mass option sizing"
+          git push origin HEAD:agent/natori-form-visual-balance
