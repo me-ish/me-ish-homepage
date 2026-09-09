@@ -197,7 +197,7 @@ export default function PortfolioCommissionForm({
           style={{ color: c.textSoft }}
         >
           {commissionOpen
-            ? "現在コミッション受付中です。決まっていない項目は「未定」のままでOK、まずはお気軽にご相談ください。"
+            ? "まずはお気軽にご相談ください。"
             : "現在コミッションは停止中です。再開まで今しばらくお待ちください。"}
         </p>
         {tsunaguLink ? (
@@ -212,7 +212,7 @@ export default function PortfolioCommissionForm({
             >
               つなぐ
             </a>
-            からのご依頼も受け付けています
+            からのご依頼も受付中です
           </p>
         ) : null}
 
