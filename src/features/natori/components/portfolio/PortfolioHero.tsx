@@ -5,11 +5,6 @@ import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types
 import { fontEnStyle } from "./portfolioFonts";
 import PortfolioHeroPrimaryCta from "./PortfolioHeroPrimaryCta";
 
-function firstSentence(text: string): string {
-  const end = text.indexOf("。");
-  return end < 0 ? text : text.slice(0, end + 1);
-}
-
 export default function PortfolioHero({
   content,
   variant = "full",
@@ -62,7 +57,7 @@ export default function PortfolioHero({
             className="mb-5 max-w-lg text-base leading-relaxed md:text-lg"
             style={{ color: c.textSoft }}
           >
-            {variant === "showcase" ? content.heroDescription : firstSentence(content.heroDescription)}
+            {content.heroDescription}
           </p>
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             {variant === "showcase" ? null : (
