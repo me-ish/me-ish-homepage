@@ -66,7 +66,7 @@ describe("structured view", () => {
     expect(view.kind).toBe("structured");
     if (view.kind !== "structured") return;
     expect(view.inquiryMode).toBe("quote");
-    expect(view.modeLabel).toBe("見積もりを希望");
+    expect(view.modeLabel).toBe("見積りを希望");
   });
 
   it("未定・未選択は空欄ではなく既存の表示語になる", () => {
