@@ -23,9 +23,9 @@ describe("PF-01 guideline responsibility split", () => {
     expect(firstStepNumber.className).toContain("h-10 w-10");
     expect(firstStepNumber.className).toContain("text-base font-black");
     expect(firstStepNumber.className).toContain("border-2");
-    expect(firstStepNumber.style.background).toBe("rgb(248, 195, 208)");
-    expect(firstStepNumber.style.borderColor).toBe("rgb(180, 90, 115)");
-    expect(firstStepNumber.style.color).toBe("rgb(122, 51, 74)");
+    expect(firstStepNumber.style.background).toBe("rgb(230, 106, 169)");
+    expect(firstStepNumber.style.borderColor).toBe("rgb(201, 75, 137)");
+    expect(firstStepNumber.style.color).toBe("rgb(255, 255, 255)");
   });
 
   it("keeps existing request guidance separate without adding FAQ content", () => {

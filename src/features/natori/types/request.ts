@@ -5,7 +5,20 @@ export const NATORI_REQUEST_SCHEMA_VERSION = 1 as const;
 
 export type NatoriInquiryModeV1 = "consultation" | "quote";
 
+/**
+ * 新規公開フォームで提示する依頼種別。icon は用途との重複を避けるため表示しない。
+ * 過去の RequestData 互換のため、保存値としての icon は下の VALUES に残す。
+ */
 export const NATORI_REQUEST_TYPES_V1 = [
+  "undecided",
+  "sd",
+  "standing",
+  "illustration",
+  "other",
+] as const;
+
+/** RequestData V1 が受理する全stable value（legacy icon を含む）。 */
+export const NATORI_REQUEST_TYPE_VALUES_V1 = [
   "undecided",
   "icon",
   "sd",
@@ -13,7 +26,7 @@ export const NATORI_REQUEST_TYPES_V1 = [
   "illustration",
   "other",
 ] as const;
-export type NatoriRequestTypeV1 = (typeof NATORI_REQUEST_TYPES_V1)[number];
+export type NatoriRequestTypeV1 = (typeof NATORI_REQUEST_TYPE_VALUES_V1)[number];
 
 export type NatoriConcreteRequestTypeV1 = Exclude<NatoriRequestTypeV1, "undecided">;
 export const NATORI_CONCRETE_REQUEST_TYPES_V1 = [

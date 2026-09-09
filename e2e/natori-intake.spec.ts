@@ -18,7 +18,8 @@ test.describe("Natori public intake rollout", () => {
   test("keeps the legacy form as the default", async ({ page }) => {
     await page.goto(DEMO_PATH);
 
-    await expect(page.getByRole("heading", { name: /ご相談か、お見積もりか/ })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "ご希望・連絡先" })).toHaveCount(0);
+    await expect(page.getByRole("radio", { name: "まず相談したい" })).toHaveCount(0);
     await expect(page.getByLabel("ご依頼の詳細")).toBeVisible();
     await submitMinimumRequest(page, "legacy");
   });
@@ -26,7 +27,7 @@ test.describe("Natori public intake rollout", () => {
   test("submits the structured consultation flow without external writes", async ({ page }) => {
     await page.goto(`${DEMO_PATH}?structured=1`);
 
-    await expect(page.getByRole("heading", { name: /ご相談か、お見積もりか/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "ご希望・連絡先" })).toBeVisible();
     await expect(page.getByRole("radio", { name: "まず相談したい" })).toBeChecked();
     await submitMinimumRequest(page, "consultation");
   });

@@ -10,7 +10,6 @@ type Choice<T extends string> = Readonly<{ id: T; label: string }>;
 
 export const NATORI_REQUEST_TYPE_CHOICES = [
   { id: "undecided", label: "未定・相談して決めたい" },
-  { id: "icon", label: "SNSアイコン" },
   { id: "sd", label: "SDキャラクター" },
   { id: "standing", label: "立ち絵" },
   { id: "illustration", label: "一枚絵" },

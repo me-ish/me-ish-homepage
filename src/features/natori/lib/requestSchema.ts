@@ -6,7 +6,7 @@ import { NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL } from "@/features/natori/lib
 import {
   NATORI_COMMISSION_SCOPES_V1,
   NATORI_REQUEST_SCHEMA_VERSION,
-  NATORI_REQUEST_TYPES_V1,
+  NATORI_REQUEST_TYPE_VALUES_V1,
   NATORI_USAGE_TYPES_V1,
   type NatoriRequestDataV1,
   type NatoriRequestSubmissionV1,
@@ -117,7 +117,7 @@ const legacySourceSchema = z.strictObject({
   message: text(2000),
 });
 
-const requestTypeSchema = z.enum(NATORI_REQUEST_TYPES_V1);
+const requestTypeSchema = z.enum(NATORI_REQUEST_TYPE_VALUES_V1);
 const commissionScopeSchema = z.enum(NATORI_COMMISSION_SCOPES_V1);
 const usageTypeSchema = z.enum(NATORI_USAGE_TYPES_V1);
 

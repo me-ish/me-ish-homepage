@@ -36,7 +36,7 @@ describe("PortfolioAbout profile identity", () => {
     const xLink = screen.getByRole("link", { name: "@natonato_o" });
     expect(xLink.className).toContain("font-black");
     expect(xLink.style.background).toBe("rgb(255, 215, 163)");
-    expect(xLink.style.borderColor).toBe("rgb(138, 72, 0)");
+    expect(xLink.style.borderColor).toBe("rgb(255, 176, 28)");
     expect(xLink.style.color).toBe("rgb(138, 72, 0)");
   });
 });
