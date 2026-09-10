@@ -38,6 +38,10 @@ describe("PF-03 portfolio hero", () => {
       />
     );
 
+    const hero = document.getElementById("hero") as HTMLElement;
+    expect(hero.className).toContain("pb-8");
+    expect(hero.className).toContain("pt-12");
+    expect(hero.className).toContain("md:pb-20");
     expect(screen.queryByText(defaultPortfolioContent.artistName)).toBeNull();
     expect(screen.getByText(defaultPortfolioContent.roleEn)).toBeTruthy();
     expect(screen.getByText(defaultPortfolioContent.heroDescription)).toBeTruthy();
