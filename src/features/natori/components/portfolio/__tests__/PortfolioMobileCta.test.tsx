@@ -17,11 +17,15 @@ afterEach(() => {
 });
 
 describe("PortfolioMobileCta analytics", () => {
-  it("records the sticky mobile CTA source", () => {
+  it("records the sticky mobile CTA source while keeping a 44px target with a smaller footprint", () => {
     render(<PortfolioMobileCta />);
 
     const cta = screen.getByRole("link", { name: "相談・見積もり" });
-    expect(cta.className).toContain("text-base font-black");
+    expect(cta.className).toContain("min-h-[44px]");
+    expect(cta.className).toContain("px-4");
+    expect(cta.className).toContain("py-2");
+    expect(cta.className).toContain("text-sm font-black");
+    expect(cta.className).toContain("shadow-md");
     expect(cta.className).toContain("border-2");
     expect(cta.style.background).toBe("rgb(230, 106, 169)");
     expect(cta.style.borderColor).toBe("rgb(201, 75, 137)");
