@@ -21,7 +21,7 @@ export default function PortfolioFooter({
       ? []
       : content.socialLinks.filter((link) => !isPortfolioXLink(link) && !isPortfolioTsunaguLink(link));
   return (
-    <footer className="py-10 text-center text-sm" style={{ color: c.textSoft }}>
+    <footer className="pb-10 pt-0 text-center text-sm md:py-10" style={{ color: c.textSoft }}>
       {links.length > 0 ? (
         <div className="mb-4 flex flex-wrap justify-center gap-5">
           {links.map((link) => (
