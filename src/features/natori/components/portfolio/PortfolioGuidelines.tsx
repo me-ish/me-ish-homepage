@@ -10,7 +10,7 @@ const cardStyle = {
 
 export default function PortfolioGuidelines({ content }: { content: PortfolioContent }) {
   return (
-    <section id="requests" className="py-16" style={{ background: c.surfaceSubtle }}>
+    <section id="requests" className="pt-6 pb-16 md:py-16" style={{ background: c.surfaceSubtle }}>
       <div className="mx-auto max-w-4xl px-5">
         <h2 className="mb-6 text-center text-2xl font-black md:text-3xl">購入者へのお願い</h2>
         <ul className="space-y-1.5 rounded-2xl p-6 text-sm md:p-8 md:text-base" style={cardStyle}>
