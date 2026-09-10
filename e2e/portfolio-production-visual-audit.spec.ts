@@ -1,11 +1,19 @@
-import { expect, test, type Page } from "@playwright/test";
-import { mkdir, writeFile } from "node:fs/promises";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
 const PRODUCTION_URL = "https://www.me-ish.art/natori/portfolio";
-const OUTPUT_DIR = "playwright-report/visual-audit";
 const SECTIONS = ["hero", "gallery", "pricing", "flow", "about", "requests", "form"] as const;
 
-async function capture(page: Page, name: string, width: number, height: number) {
+async function attachPng(testInfo: TestInfo, name: string, body: Buffer) {
+  await testInfo.attach(name, { body, contentType: "image/png" });
+}
+
+async function capture(
+  page: Page,
+  testInfo: TestInfo,
+  name: string,
+  width: number,
+  height: number
+) {
   await page.setViewportSize({ width, height });
   const response = await page.goto(PRODUCTION_URL, {
     waitUntil: "domcontentloaded",
@@ -19,18 +27,16 @@ async function capture(page: Page, name: string, width: number, height: number) 
   });
   await page.waitForTimeout(1_000);
 
-  await mkdir(OUTPUT_DIR, { recursive: true });
-  await page.screenshot({
-    path: `${OUTPUT_DIR}/${name}-full.png`,
-    fullPage: true,
-  });
+  await attachPng(
+    testInfo,
+    `${name}-full`,
+    await page.screenshot({ fullPage: true })
+  );
 
   for (const id of SECTIONS) {
     const section = page.locator(`#${id}`);
     if ((await section.count()) === 0) continue;
-    await section.screenshot({
-      path: `${OUTPUT_DIR}/${name}-${id}.png`,
-    });
+    await attachPng(testInfo, `${name}-${id}`, await section.screenshot());
   }
 
   const metrics = await page.evaluate((ids) => {
@@ -66,15 +72,17 @@ async function capture(page: Page, name: string, width: number, height: number) 
     }));
   }, [...SECTIONS]);
 
-  await writeFile(
-    `${OUTPUT_DIR}/${name}-metrics.json`,
-    JSON.stringify({ viewport: { width, height }, sections: metrics }, null, 2),
-    "utf8"
-  );
+  await testInfo.attach(`${name}-metrics`, {
+    body: Buffer.from(
+      JSON.stringify({ viewport: { width, height }, sections: metrics }, null, 2),
+      "utf8"
+    ),
+    contentType: "application/json",
+  });
 }
 
-test("capture current production portfolio for spacing and color audit", async ({ page }) => {
+test("capture current production portfolio for spacing and color audit", async ({ page }, testInfo) => {
   test.setTimeout(180_000);
-  await capture(page, "mobile-390", 390, 844);
-  await capture(page, "desktop-1440", 1440, 900);
+  await capture(page, testInfo, "mobile-390", 390, 844);
+  await capture(page, testInfo, "desktop-1440", 1440, 900);
 });
