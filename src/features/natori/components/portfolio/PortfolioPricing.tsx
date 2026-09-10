@@ -58,7 +58,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
   };
 
   return (
-    <section id="pricing" className="mx-auto max-w-6xl px-5 py-12 md:py-16">
+    <section id="pricing" className="mx-auto max-w-6xl px-5 pb-12 pt-6 md:py-16">
       <h2 className="mb-6 text-center text-2xl font-black md:mb-8 md:text-3xl">
         コミッション料金
       </h2>
