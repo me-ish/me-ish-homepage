@@ -19,7 +19,7 @@ const SERVICE_DISPLAY_ORDER = [
   "SDキャラ",
 ] as const;
 
-const SERVICE_DISPLAY_PRIORITY = new Map(
+const SERVICE_DISPLAY_PRIORITY = new Map<string, number>(
   SERVICE_DISPLAY_ORDER.map((service, index) => [service, index])
 );
 
