@@ -63,7 +63,7 @@ export default function PortfolioAbout({
   );
 
   return (
-    <section id="about" className="pt-16 pb-6 md:py-16" style={{ background: c.surfaceSubtle }}>
+    <section id="about" className="pb-6 pt-6 md:py-16" style={{ background: c.surfaceSubtle }}>
       <div className="mx-auto grid max-w-6xl items-start gap-10 px-5 md:grid-cols-3">
         <div className="flex flex-col items-center md:col-span-1">
           {/* プロフィールアイコン。編集画面から画像を設定すると差し替わる */}
