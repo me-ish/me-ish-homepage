@@ -18,6 +18,9 @@ describe("PF-01 guideline responsibility split", () => {
     expect(within(flow as HTMLElement).getByRole("heading", { level: 2, name: "納期について" })).toBeTruthy();
     expect(within(flow as HTMLElement).getByText(defaultPortfolioContent.workflow[0].title)).toBeTruthy();
     expect(within(flow as HTMLElement).getByText(defaultPortfolioContent.deliveryLead)).toBeTruthy();
+    expect(within(flow as HTMLElement).getByText("お急ぎ納品")).toBeTruthy();
+    expect(within(flow as HTMLElement).queryByText("サンプル使用不可")).toBeNull();
+    expect(within(flow as HTMLElement).queryByText("完全非公開")).toBeNull();
     expect(within(flow as HTMLElement).queryByText(defaultPortfolioContent.requests[0])).toBeNull();
     const firstStepNumber = flow?.querySelector("ol > li > span") as HTMLElement;
     expect(firstStepNumber.className).toContain("h-10 w-10");
