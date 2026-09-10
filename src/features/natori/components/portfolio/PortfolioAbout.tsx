@@ -9,6 +9,20 @@ import ChibiFace from "./ChibiFace";
 import PortfolioSnsLink from "./PortfolioSnsLink";
 import { fontEnStyle } from "./portfolioFonts";
 
+const SERVICE_DISPLAY_ORDER = [
+  "SNSアイコン",
+  "配信用立ち絵",
+  "TRPG立ち絵",
+  "一枚絵",
+  "オリジナルキャラクター",
+  "動画サムネイル",
+  "SDキャラ",
+] as const;
+
+const SERVICE_DISPLAY_PRIORITY = new Map(
+  SERVICE_DISPLAY_ORDER.map((service, index) => [service, index])
+);
+
 /** X の URL から @ハンドルを取り出す（取れなければリンクのラベルで代用） */
 function xHandle(href: string, fallback: string): string {
   try {
@@ -34,8 +48,22 @@ export default function PortfolioAbout({
   // プロフィール欄の名前はヘッダー/ヒーローとは独立に設定できる。
   // 未設定（旧データ）のときは従来どおりサイト名を表示する
   const profileName = content.profileName.trim() || content.artistName;
+  // 短いラベルを先にまとめ、スマホでは4件+3件の2段に収める。
+  // 未知の追加項目は既存順を保ったまま後ろに回す。
+  const orderedServices = content.services
+    .map((service, index) => ({ service, index }))
+    .sort((a, b) => {
+      const aPriority = SERVICE_DISPLAY_PRIORITY.get(a.service) ?? SERVICE_DISPLAY_ORDER.length + a.index;
+      const bPriority = SERVICE_DISPLAY_PRIORITY.get(b.service) ?? SERVICE_DISPLAY_ORDER.length + b.index;
+      return aPriority - bPriority;
+    })
+    .map(({ service }) => service);
+  const serviceRows = [orderedServices.slice(0, 4), orderedServices.slice(4)].filter(
+    (row) => row.length > 0
+  );
+
   return (
-    <section id="about" className="py-16" style={{ background: c.surfaceSubtle }}>
+    <section id="about" className="pt-16 pb-6 md:py-16" style={{ background: c.surfaceSubtle }}>
       <div className="mx-auto grid max-w-6xl items-start gap-10 px-5 md:grid-cols-3">
         <div className="flex flex-col items-center md:col-span-1">
           {/* プロフィールアイコン。編集画面から画像を設定すると差し替わる */}
@@ -90,37 +118,27 @@ export default function PortfolioAbout({
               {paragraph}
             </p>
           ))}
-          <div className="rounded-xl p-5" style={{ background: c.surface }}>
-            <p className="mb-3 font-bold">対応内容</p>
-            <ul className="grid grid-cols-2 gap-2 md:grid-cols-3">
-              {content.services.map((service, index) => {
-                const isLast = index === content.services.length - 1;
-                const centerLastOnMobile = isLast && content.services.length % 2 === 1;
-                const centerLastOnDesktop = isLast && content.services.length % 3 === 1;
-
-                return (
-                  <li
-                    key={service}
-                    className={[
-                      "flex min-h-11 items-center justify-center rounded-xl border px-3 py-2 text-center text-xs font-bold leading-snug md:text-sm",
-                      centerLastOnMobile
-                        ? "col-span-2 w-[calc(50%_-_0.25rem)] justify-self-center md:col-span-1 md:w-full"
-                        : "md:col-span-1",
-                      centerLastOnDesktop ? "md:col-start-2" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    style={{
-                      borderColor: c.borderSubtle,
-                      color: c.textSoft,
-                      background: c.accentSoft,
-                    }}
-                  >
-                    {service}
-                  </li>
-                );
-              })}
-            </ul>
+          <div className="rounded-xl p-3 md:p-5" style={{ background: c.surface }}>
+            <p className="mb-2 font-bold md:mb-3">対応内容</p>
+            <div className="space-y-1.5 md:space-y-2">
+              {serviceRows.map((row, rowIndex) => (
+                <ul key={rowIndex} className="flex flex-wrap justify-center gap-1 md:gap-2">
+                  {row.map((service) => (
+                    <li
+                      key={service}
+                      className="whitespace-nowrap rounded-full border px-1.5 py-1 text-[11px] font-bold leading-none md:px-3 md:py-1.5 md:text-xs"
+                      style={{
+                        borderColor: c.borderSubtle,
+                        color: c.textSoft,
+                        background: c.accentSoft,
+                      }}
+                    >
+                      {service}
+                    </li>
+                  ))}
+                </ul>
+              ))}
+            </div>
           </div>
         </div>
       </div>
