@@ -22,7 +22,7 @@ export default function PortfolioHero({
   return (
     <section
       id="hero"
-      className="mx-auto max-w-6xl scroll-mt-28 px-5 pb-16 pt-12 md:pb-20 md:pt-16"
+      className="mx-auto max-w-6xl scroll-mt-28 px-5 pb-8 pt-12 md:pb-20 md:pt-16"
     >
       <div
         className={`grid items-center gap-10 md:gap-14 ${
