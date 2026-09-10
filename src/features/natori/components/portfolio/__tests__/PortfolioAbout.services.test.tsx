@@ -36,6 +36,7 @@ describe("PortfolioAbout service pills", () => {
     );
     const firstPill = rows[0]?.querySelector("li") as HTMLElement;
 
+    expect(about.className).toContain("pt-6");
     expect(about.className).toContain("pb-6");
     expect(about.className).toContain("md:py-16");
     expect(rows).toHaveLength(2);

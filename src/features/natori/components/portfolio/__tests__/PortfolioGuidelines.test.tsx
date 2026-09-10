@@ -11,18 +11,21 @@ afterEach(cleanup);
 describe("PF-01 guideline responsibility split", () => {
   it("keeps workflow and delivery together with level-two section headings", () => {
     render(<PortfolioWorkflow content={defaultPortfolioContent} />);
-    const flow = document.getElementById("flow");
+    const flow = document.getElementById("flow") as HTMLElement;
 
     expect(flow).not.toBeNull();
-    expect(within(flow as HTMLElement).getByRole("heading", { level: 2, name: "制作の流れ" })).toBeTruthy();
-    expect(within(flow as HTMLElement).getByRole("heading", { level: 2, name: "納期について" })).toBeTruthy();
-    expect(within(flow as HTMLElement).getByText(defaultPortfolioContent.workflow[0].title)).toBeTruthy();
-    expect(within(flow as HTMLElement).getByText(defaultPortfolioContent.deliveryLead)).toBeTruthy();
-    expect(within(flow as HTMLElement).getByText("お急ぎ納品")).toBeTruthy();
-    expect(within(flow as HTMLElement).queryByText("サンプル使用不可")).toBeNull();
-    expect(within(flow as HTMLElement).queryByText("完全非公開")).toBeNull();
-    expect(within(flow as HTMLElement).queryByText(defaultPortfolioContent.requests[0])).toBeNull();
-    const firstStepNumber = flow?.querySelector("ol > li > span") as HTMLElement;
+    expect(flow.className).toContain("pt-16");
+    expect(flow.className).toContain("pb-6");
+    expect(flow.className).toContain("md:py-16");
+    expect(within(flow).getByRole("heading", { level: 2, name: "制作の流れ" })).toBeTruthy();
+    expect(within(flow).getByRole("heading", { level: 2, name: "納期について" })).toBeTruthy();
+    expect(within(flow).getByText(defaultPortfolioContent.workflow[0].title)).toBeTruthy();
+    expect(within(flow).getByText(defaultPortfolioContent.deliveryLead)).toBeTruthy();
+    expect(within(flow).getByText("お急ぎ納品")).toBeTruthy();
+    expect(within(flow).queryByText("サンプル使用不可")).toBeNull();
+    expect(within(flow).queryByText("完全非公開")).toBeNull();
+    expect(within(flow).queryByText(defaultPortfolioContent.requests[0])).toBeNull();
+    const firstStepNumber = flow.querySelector("ol > li > span") as HTMLElement;
     expect(firstStepNumber.className).toContain("h-10 w-10");
     expect(firstStepNumber.className).toContain("text-base font-black");
     expect(firstStepNumber.className).toContain("border-2");

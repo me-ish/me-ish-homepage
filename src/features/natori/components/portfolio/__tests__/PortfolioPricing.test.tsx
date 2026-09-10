@@ -42,6 +42,11 @@ describe("PortfolioPricing", () => {
   it("uses compact mobile selection rows and labels common conditions as normal-illustration only", () => {
     render(<PortfolioPricing content={defaultPortfolioContent} />);
 
+    const pricing = document.getElementById("pricing") as HTMLElement;
+    expect(pricing.className).toContain("pt-6");
+    expect(pricing.className).toContain("pb-12");
+    expect(pricing.className).toContain("md:py-16");
+
     for (const plan of defaultPortfolioContent.plans) {
       expect(screen.getByRole("link", { name: `${plan.name}を選ぶ` })).toBeTruthy();
     }

@@ -40,13 +40,13 @@ export default function PortfolioMobileCta() {
     <a
       href="#form"
       onClick={() => trackNatoriPageEvent("portfolio_primary_cta_click", "mobile_sticky")}
-      className="pf-cute-focus fixed right-5 z-40 inline-flex min-h-[44px] items-center rounded-full border-2 px-5 py-3 text-base font-black shadow-lg hover:brightness-95 md:hidden"
+      className="pf-cute-focus fixed right-5 z-40 inline-flex min-h-[44px] items-center rounded-full border-2 px-4 py-2 text-sm font-black shadow-md hover:brightness-95 md:hidden"
       style={{
         background: c.action,
         borderColor: c.actionDisplay,
         color: c.onAction,
         bottom: "calc(1.25rem + env(safe-area-inset-bottom))",
-        boxShadow: `0 8px 20px ${c.shadowFloating}`,
+        boxShadow: `0 6px 16px ${c.shadowFloating}`,
       }}
     >
       相談・見積もり
