@@ -92,16 +92,34 @@ export default function PortfolioAbout({
           ))}
           <div className="rounded-xl p-5" style={{ background: c.surface }}>
             <p className="mb-3 font-bold">対応内容</p>
-            <ul className="flex flex-wrap gap-2">
-              {content.services.map((service) => (
-                <li
-                  key={service}
-                  className="rounded-full border-2 px-3 py-1 text-xs font-bold md:text-sm"
-                  style={{ borderColor: c.borderStrong, color: c.textSoft }}
-                >
-                  {service}
-                </li>
-              ))}
+            <ul className="grid grid-cols-2 gap-2 md:grid-cols-3">
+              {content.services.map((service, index) => {
+                const isLast = index === content.services.length - 1;
+                const centerLastOnMobile = isLast && content.services.length % 2 === 1;
+                const centerLastOnDesktop = isLast && content.services.length % 3 === 1;
+
+                return (
+                  <li
+                    key={service}
+                    className={[
+                      "flex min-h-11 items-center justify-center rounded-xl border px-3 py-2 text-center text-xs font-bold leading-snug md:text-sm",
+                      centerLastOnMobile
+                        ? "col-span-2 w-[calc(50%_-_0.25rem)] justify-self-center md:col-span-1 md:w-full"
+                        : "md:col-span-1",
+                      centerLastOnDesktop ? "md:col-start-2" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    style={{
+                      borderColor: c.borderSubtle,
+                      color: c.textSoft,
+                      background: c.accentSoft,
+                    }}
+                  >
+                    {service}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
