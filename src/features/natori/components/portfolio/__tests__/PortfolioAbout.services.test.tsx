@@ -10,8 +10,8 @@ import { defaultPortfolioContent } from "@/features/natori/constants/portfolioCo
 
 afterEach(cleanup);
 
-describe("PortfolioAbout service cards", () => {
-  it("uses a balanced responsive grid and centers an odd final item", () => {
+describe("PortfolioAbout service pills", () => {
+  it("keeps the current seven services in two compact rows with short labels first", () => {
     const { container } = render(
       <PortfolioAbout
         content={{
@@ -29,17 +29,20 @@ describe("PortfolioAbout service cards", () => {
       />
     );
 
-    const list = container.querySelector("#about ul");
-    const items = Array.from(container.querySelectorAll("#about ul > li"));
-    const last = items.at(-1);
+    const about = container.querySelector("#about") as HTMLElement;
+    const rows = Array.from(container.querySelectorAll("#about ul"));
+    const rowLabels = rows.map((row) =>
+      Array.from(row.querySelectorAll("li")).map((item) => item.textContent)
+    );
+    const firstPill = rows[0]?.querySelector("li") as HTMLElement;
 
-    expect(list?.className).toContain("grid-cols-2");
-    expect(list?.className).toContain("md:grid-cols-3");
-    expect(items).toHaveLength(7);
-    expect(last?.className).toContain("col-span-2");
-    expect(last?.className).toContain("justify-self-center");
-    expect(last?.className).toContain("md:col-start-2");
-    expect(last?.className).toContain("min-h-11");
-    expect(last?.className).toContain("text-center");
+    expect(about.className).toContain("pb-6");
+    expect(about.className).toContain("md:py-16");
+    expect(rows).toHaveLength(2);
+    expect(rowLabels[0]).toEqual(["SNSアイコン", "配信用立ち絵", "TRPG立ち絵", "一枚絵"]);
+    expect(rowLabels[1]).toEqual(["オリジナルキャラクター", "動画サムネイル", "SDキャラ"]);
+    expect(firstPill.className).toContain("rounded-full");
+    expect(firstPill.className).toContain("text-[11px]");
+    expect(firstPill.className).toContain("whitespace-nowrap");
   });
 });

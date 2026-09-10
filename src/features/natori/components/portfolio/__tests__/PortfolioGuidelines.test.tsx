@@ -33,16 +33,19 @@ describe("PF-01 guideline responsibility split", () => {
 
   it("keeps existing request guidance separate without adding FAQ content", () => {
     render(<PortfolioGuidelines content={defaultPortfolioContent} />);
-    const requests = document.getElementById("requests");
+    const requests = document.getElementById("requests") as HTMLElement;
 
     expect(requests).not.toBeNull();
+    expect(requests.className).toContain("pt-6");
+    expect(requests.className).toContain("pb-16");
+    expect(requests.className).toContain("md:py-16");
     expect(
-      within(requests as HTMLElement).getByRole("heading", {
+      within(requests).getByRole("heading", {
         level: 2,
         name: "購入者へのお願い",
       })
     ).toBeTruthy();
-    expect(within(requests as HTMLElement).getByText(defaultPortfolioContent.requests[0])).toBeTruthy();
+    expect(within(requests).getByText(defaultPortfolioContent.requests[0])).toBeTruthy();
     expect(screen.queryByRole("heading", { name: /FAQ/i })).toBeNull();
   });
 });
