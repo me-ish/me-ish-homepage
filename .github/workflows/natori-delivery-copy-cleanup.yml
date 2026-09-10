@@ -1,0 +1,40 @@
+name: One-off Natori delivery copy cleanup
+
+on:
+  push:
+    branches:
+      - agent/natori-delivery-copy-cleanup
+    paths:
+      - .github/workflows/natori-delivery-copy-cleanup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  codemod:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/natori-delivery-copy-cleanup
+          fetch-depth: 0
+      - name: Update delivery copy
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/features/natori/constants/portfolioContent.ts')
+          s = p.read_text()
+          old = '''  deliveryLead:\n    "通常納期は、ご依頼確定後から約1ヶ月前後を目安としております。ご依頼内容やスケジュール状況によって前後する場合がございますので、あらかじめご了承ください。",\n  deliveryNotes: [\n    {\n      title: "お急ぎ納品",\n      body: "通常より優先して制作を進め、可能な限り早めに納品いたします。内容に応じて、最短7日〜14日前後での納品を予定しております。※スケジュール状況によってはお受けできない場合がございます。お急ぎの場合は事前にご相談ください。",\n    },\n    {\n      title: "サンプル使用不可",\n      body: "完成イラストをポートフォリオ・SNS・サンプル画像等へ掲載しないオプションです。",\n    },\n    {\n      title: "完全非公開",\n      body: "制作内容・完成イラストを含め、一切公開を行わないオプションです。ご依頼内容そのものも非公開で対応いたします。",\n    },\n  ],'''
+          new = '''  deliveryLead:\n    "通常は、ご入金確認後から約1か月での納品を目安としています。ご依頼内容やスケジュール状況により前後する場合があります。",\n  deliveryNotes: [\n    {\n      title: "お急ぎ納品",\n      body: "お急ぎの場合は、内容やスケジュールに応じて7〜14日程度での納品にも対応しています。ご希望の場合は事前にご相談ください。",\n    },\n  ],'''
+          if s.count(old) != 1:
+              raise SystemExit(f'expected exactly one delivery block, found {s.count(old)}')
+          p.write_text(s.replace(old, new))
+          PY
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/natori-delivery-copy-cleanup.yml
+          git add src/features/natori/constants/portfolioContent.ts
+          git commit -m "refactor(natori): simplify delivery guidance"
+          git push origin HEAD:agent/natori-delivery-copy-cleanup
