@@ -9,7 +9,7 @@ const cardStyle = {
 
 export default function PortfolioWorkflow({ content }: { content: PortfolioContent }) {
   return (
-    <section id="flow" className="py-16" style={{ background: c.surfaceSubtle }}>
+    <section id="flow" className="pb-6 pt-16 md:py-16" style={{ background: c.surfaceSubtle }}>
       <div className="mx-auto max-w-4xl space-y-10 px-5">
         <div>
           <h2 className="mb-6 text-center text-2xl font-black md:text-3xl">制作の流れ</h2>
