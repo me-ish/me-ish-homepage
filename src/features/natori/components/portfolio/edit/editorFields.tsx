@@ -2,7 +2,7 @@
 
 // features/natori/components/portfolio/edit/editorFields.tsx
 // ポートフォリオ編集画面の汎用パーツ（入力欄・画像アップロード・並び替えボタン等）
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ImagePlus, Loader2, Plus, Trash2 } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 
@@ -196,8 +196,21 @@ export function ImageUploadField({
   uploadDisabled?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const onChangeRef = useRef(onChange);
+  const mountedRef = useRef(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const handleFile = async (file: File | null) => {
     if (!file) return;
@@ -205,12 +218,14 @@ export function ImageUploadField({
     setError(null);
     try {
       const url = await uploadImageFile(file);
-      onChange(url);
+      if (mountedRef.current) onChangeRef.current(url);
     } catch (err) {
       console.error("[portfolio-edit] upload failed", err);
-      setError("アップロードに失敗しました。画像は10MBまで（png / jpg / webp / gif）です。");
+      if (mountedRef.current) {
+        setError("アップロードに失敗しました。画像は10MBまで（png / jpg / webp / gif）です。");
+      }
     } finally {
-      setUploading(false);
+      if (mountedRef.current) setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
     }
   };

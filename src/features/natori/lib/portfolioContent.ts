@@ -245,9 +245,10 @@ export function preparePortfolioContentForSave(content: PortfolioContent): Portf
     aboutParagraphs: cleanList(content.aboutParagraphs),
     services: cleanList(content.services),
     requests: cleanList(content.requests),
-    massProductionSamples: (content.massProductionSamples ?? [])
-      .map((sample) => ({ ...sample, name: sample.name.trim() }))
-      .filter((sample) => sample.name.length > 0),
+    massProductionSamples: (content.massProductionSamples ?? []).map((sample) => ({
+      ...sample,
+      name: sample.name.trim(),
+    })),
     works: content.works.map((work) => ({
       ...work,
       title: work.title.trim(),
