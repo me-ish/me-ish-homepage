@@ -23,11 +23,11 @@ jobs:
           cache: npm
 
       - name: Upgrade patched direct dependencies
-        run: npm install --save-exact next@15.5.25 eslint-config-next@15.5.25 sharp@0.35.4 vitest@4.1.11 @vitest/coverage-v8@4.1.11
+        run: npm install --save-exact next@15.5.25 eslint-config-next@15.5.25 sharp@0.35.4 vitest@4.1.11 @vitest/coverage-v8@4.1.11 postcss@8.5.28
 
-      - name: Override vulnerable PostCSS within the same major
+      - name: Override vulnerable transitive PostCSS within the same major
         run: |
-          npm pkg set "overrides.postcss=8.5.28"
+          npm pkg set 'overrides.postcss=$postcss'
           npm install
 
       - name: Require zero high-or-critical advisories
