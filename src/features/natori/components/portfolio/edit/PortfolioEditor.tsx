@@ -373,7 +373,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
           id="section-images"
           emoji="🖼️"
           title="画像"
-          description="どちらも丸い枠に表示されます。正方形に近い画像がおすすめです。"
+          description="メイン画像・アイコンと、量産イラストの作例画像を管理します。"
         >
           <div className="grid gap-5 sm:grid-cols-2">
             <ImageUploadField
@@ -391,6 +391,86 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
               shape="circle"
               hint="SNSと同じアイコンがおすすめ"
               uploadDisabled={isDemo}
+            />
+          </div>
+
+          <div className="mt-5 border-t border-pink-100 pt-5">
+            <p className="text-sm font-black text-gray-900">量産イラスト作例</p>
+            <p className="mt-1 text-xs leading-5 text-gray-600">
+              画像を設定した作例だけ公開ページに表示されます。正方形の画像がおすすめです。
+            </p>
+
+            <div className="mt-4 space-y-4">
+              {(content.massProductionSamples ?? []).map((sample, index) => (
+                <div
+                  key={sample.id}
+                  className="rounded-xl border border-pink-100 bg-pink-50/30 p-3"
+                >
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <TextInput
+                        label={`作例${index + 1}の名前`}
+                        value={sample.name}
+                        onChange={(v) =>
+                          patch({
+                            massProductionSamples: updateItem(
+                              content.massProductionSamples ?? [],
+                              index,
+                              { name: v }
+                            ),
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="pt-5">
+                      <RowControls
+                        onRemove={() =>
+                          patch({
+                            massProductionSamples: removeItem(
+                              content.massProductionSamples ?? [],
+                              index
+                            ),
+                          })
+                        }
+                        confirmMessage={`${sample.name || `作例${index + 1}`}を削除しますか？`}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <ImageUploadField
+                      label={`${sample.name || `作例${index + 1}`}の画像`}
+                      value={sample.image}
+                      onChange={(v) =>
+                        patch({
+                          massProductionSamples: updateItem(
+                            content.massProductionSamples ?? [],
+                            index,
+                            { image: v }
+                          ),
+                        })
+                      }
+                      hint="公開ページでは正方形にトリミングして表示されます"
+                      uploadDisabled={isDemo}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <AddButton
+              label="作例を追加"
+              onClick={() =>
+                patch({
+                  massProductionSamples: [
+                    ...(content.massProductionSamples ?? []),
+                    {
+                      id: `sample-${crypto.randomUUID()}`,
+                      name: "新しい作例",
+                      image: null,
+                    },
+                  ],
+                })
+              }
             />
           </div>
         </SectionCard>

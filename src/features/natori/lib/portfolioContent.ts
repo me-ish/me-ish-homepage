@@ -83,12 +83,29 @@ const socialLinkSchema = z.object({
   href: z.string().max(1000),
 });
 
+const massProductionSampleSchema = z.object({
+  id: stableContentId,
+  name: shortText,
+  image: imageUrl,
+});
+
+const LEGACY_MASS_PRODUCTION_SAMPLES = [
+  { id: "obake", name: "おばけ", image: null },
+  { id: "majo", name: "魔女", image: null },
+];
+
 // works の旧形式→新形式 transform があるため入力型と出力型が異なる。
 // 出力が PortfolioContent と一致することは parsePortfolioContent の戻り値型で担保する。
 const portfolioContentBaseSchema = z.object({
   commissionOpen: z.boolean(),
   // 後から追加したフィールド。既存のDB行では受付中として補う
   massProductionIllustrationOpen: z.boolean().optional().default(true),
+  // 旧DB行では「おばけ」「魔女」の空のアップロード枠を補う
+  massProductionSamples: z
+    .array(massProductionSampleSchema)
+    .max(12)
+    .optional()
+    .default(LEGACY_MASS_PRODUCTION_SAMPLES),
   artistName: shortText,
   roleEn: shortText,
   // 後から追加したフィールド。既存のDB行には無いので default で補う
@@ -228,6 +245,9 @@ export function preparePortfolioContentForSave(content: PortfolioContent): Portf
     aboutParagraphs: cleanList(content.aboutParagraphs),
     services: cleanList(content.services),
     requests: cleanList(content.requests),
+    massProductionSamples: (content.massProductionSamples ?? [])
+      .map((sample) => ({ ...sample, name: sample.name.trim() }))
+      .filter((sample) => sample.name.length > 0),
     works: content.works.map((work) => ({
       ...work,
       title: work.title.trim(),

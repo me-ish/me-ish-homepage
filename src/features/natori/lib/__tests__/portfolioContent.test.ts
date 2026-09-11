@@ -10,6 +10,10 @@ import type { PortfolioContent } from "@/features/natori/types/portfolio";
 const validContent: PortfolioContent = {
   commissionOpen: true,
   massProductionIllustrationOpen: true,
+  massProductionSamples: [
+    { id: "obake", name: "おばけ", image: "https://example.com/obake.webp" },
+    { id: "majo", name: "魔女", image: null },
+  ],
   artistName: "Natori* illust",
   roleEn: "Cute Anime Illustrator",
   profileName: "ナトリ",
@@ -78,6 +82,14 @@ describe("parsePortfolioContent", () => {
         massProductionIllustrationOpen: false,
       })?.massProductionIllustrationOpen
     ).toBe(false);
+  });
+
+  it("量産イラスト作例が無い旧データは空のアップロード枠で補完される", () => {
+    const { massProductionSamples: _samples, ...legacy } = validContent;
+    expect(parsePortfolioContent(legacy)?.massProductionSamples).toEqual([
+      { id: "obake", name: "おばけ", image: null },
+      { id: "majo", name: "魔女", image: null },
+    ]);
   });
 
   it("壊れた値は null を返す（デフォルトへのフォールバック用）", () => {
