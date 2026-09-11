@@ -1,7 +1,7 @@
 "use client";
 
 // features/natori/components/portfolio/PortfolioGallery.tsx
-// 作品ギャラリー。マスキングテープで貼ったポラロイド風のカードを並べる。
+// ご依頼実績。マスキングテープで貼ったポラロイド風のカードを並べる。
 // 画像はX(Twitter)の縦長表示に近い 3:4 で見せ、クリックでモーダル拡大表示。
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
@@ -20,6 +20,14 @@ import type {
 import ChibiFace from "./ChibiFace";
 
 const GALLERY_PREVIEW_LIMIT = 6;
+
+function formatProductionMonth(value?: string | null): string | null {
+  if (!value) return null;
+  const [year, month] = value.split("-");
+  const monthNumber = Number(month);
+  if (!year || !Number.isInteger(monthNumber)) return null;
+  return `${year}年${monthNumber}月制作`;
+}
 
 function MaskingTape({ color, angle }: { color: string; angle: number }) {
   return (
@@ -178,7 +186,7 @@ export default function PortfolioGallery({
     <section id="gallery" className="mx-auto max-w-6xl px-5 py-16">
       <div className="mb-10">
         <h2 className="text-2xl font-black md:text-3xl">
-          作品ギャラリー <span style={{ color: c.highlight }}>°˖✧</span>
+          ご依頼実績 <span style={{ color: c.highlight }}>°˖✧</span>
         </h2>
       </div>
 
@@ -296,7 +304,14 @@ export default function PortfolioGallery({
               />
             </div>
             <div className="mt-3 flex items-center justify-between gap-2 px-1">
-              <p className="min-w-0 truncate font-bold">{selected.title}</p>
+              <div className="min-w-0">
+                <p className="truncate font-bold">{selected.title}</p>
+                {formatProductionMonth(selected.productionMonth) ? (
+                  <p className="mt-0.5 text-xs" style={{ color: c.textSoft }}>
+                    {formatProductionMonth(selected.productionMonth)}
+                  </p>
+                ) : null}
+              </div>
               {selectedCollection ||
               publicPortfolioWorkTags(selected.tags).length > 0 ? (
                 <span className="flex shrink-0 flex-wrap justify-end gap-1">
@@ -394,7 +409,14 @@ function PortfolioWorkCard({
         )}
       </button>
       <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="w-full min-w-0 truncate text-sm font-bold sm:w-auto sm:text-base">{work.title}</p>
+        <div className="w-full min-w-0 sm:w-auto">
+          <p className="truncate text-sm font-bold sm:text-base">{work.title}</p>
+          {formatProductionMonth(work.productionMonth) ? (
+            <p className="mt-0.5 text-xs" style={{ color: c.textSoft }}>
+              {formatProductionMonth(work.productionMonth)}
+            </p>
+          ) : null}
+        </div>
         <span className="flex shrink-0 flex-wrap justify-end gap-1">
           <span
             className="rounded-full px-2 py-1 text-xs font-bold"

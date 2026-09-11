@@ -56,6 +56,23 @@ describe("parsePortfolioContent", () => {
     expect(parsePortfolioContent(validContent)).toEqual(validContent);
   });
 
+  it("作品の制作年月を YYYY-MM 形式で保持する", () => {
+    const withMonth: PortfolioContent = {
+      ...validContent,
+      works: validContent.works.map((work, index) =>
+        index === 0 ? { ...work, productionMonth: "2026-05" } : work
+      ),
+    };
+
+    expect(parsePortfolioContent(withMonth)?.works[0]?.productionMonth).toBe("2026-05");
+    expect(
+      parsePortfolioContent({
+        ...withMonth,
+        works: [{ ...withMonth.works[0], productionMonth: "2026-13" }],
+      })
+    ).toBeNull();
+  });
+
   it("保存済みの『へようこそ』タイトルを自然な表記へ移行する", () => {
     expect(
       parsePortfolioContent({

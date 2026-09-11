@@ -652,12 +652,12 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
           />
         </SectionCard>
 
-        {/* 作品ギャラリー */}
+        {/* ご依頼実績 */}
         <SectionCard
           id="section-works"
           emoji="🎨"
-          title="作品ギャラリー"
-          description="作品の所属コレクション、代表表示、公開状態を設定できます。補助タグは受注経路などの管理用です。"
+          title="ご依頼実績"
+          description="ご依頼実績の制作年月、所属コレクション、代表表示、公開状態を設定できます。補助タグは受注経路などの管理用です。"
         >
           <SortableList
             items={content.works}
@@ -693,6 +693,21 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
                       value={work.title}
                       onChange={(v) => patch({ works: updateItem(content.works, index, { title: v }) })}
                     />
+                    <label className="block text-xs font-bold text-pink-700">
+                      制作年月
+                      <input
+                        type="month"
+                        value={work.productionMonth ?? ""}
+                        onChange={(event) =>
+                          patch({
+                            works: updateItem(content.works, index, {
+                              productionMonth: event.target.value || null,
+                            }),
+                          })
+                        }
+                        className="mt-1 w-full rounded-lg border border-pink-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                      />
+                    </label>
                     <label className="block text-xs font-bold text-pink-700">
                       所属コレクション
                       <select
@@ -781,6 +796,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
                     {
                       id: crypto.randomUUID(),
                       title: "新しい作品",
+                      productionMonth: null,
                       tags: [],
                       image: null,
                       collectionId: content.collections[0]?.id ?? null,
@@ -1168,6 +1184,7 @@ function BulkWorkImageAdd({
         added.push({
           id: crypto.randomUUID(),
           title: titleFromFileName(file.name),
+          productionMonth: null,
           tags: [],
           image: url,
           collectionId: defaultCollectionId,
