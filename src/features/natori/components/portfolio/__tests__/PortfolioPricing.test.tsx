@@ -79,12 +79,15 @@ describe("PortfolioPricing", () => {
     window.removeEventListener(PLAN_SELECT_EVENT, planEvent);
   });
 
-  it("shows mass-production illustration from 1,500 yen with its different included conditions", () => {
+  it("shows mass-production illustration from 1,500 yen with its retake policy", () => {
     render(<PortfolioPricing content={defaultPortfolioContent} />);
 
     expect(screen.getByRole("heading", { name: "量産イラスト" })).toBeTruthy();
     expect(screen.getByText("1,500円～")).toBeTruthy();
-    expect(screen.getByText(/リテイク・小物・背景は基本料金に含まれません/)).toBeTruthy();
+    expect(
+      screen.getByText(/量産イラストのため、原則としてリテイクはお受けしておりません/)
+    ).toBeTruthy();
+    expect(screen.queryByText(/小物・背景は基本料金に含まれません/)).toBeNull();
   });
 
   it("shows only mass-production samples with uploaded images", () => {
