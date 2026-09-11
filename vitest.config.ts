@@ -25,6 +25,10 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@/features/natori/server/publicCommissionAvailability': path.resolve(
+        __dirname,
+        './src/test/mocks/publicCommissionAvailability.ts',
+      ),
       '@': path.resolve(__dirname, './src'),
     },
   },
