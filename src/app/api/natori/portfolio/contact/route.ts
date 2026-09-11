@@ -31,6 +31,10 @@ import {
   createInquiryProject,
   createStructuredInquiryProject,
 } from "@/features/natori/server/inquiryProjectService";
+import {
+  loadPublicCommissionAvailability,
+  type PublicCommissionAvailability,
+} from "@/features/natori/server/publicCommissionAvailability";
 import { resolvePublicIntakeOwnerId } from "@/features/natori/server/publicIntakeOwner";
 import { isPublicStructuredIntakeEnabled } from "@/features/natori/server/publicIntakeRollout";
 import {
@@ -41,6 +45,7 @@ import {
   NATORI_REQUEST_DATA_MAX_BYTES,
   natoriRequestSubmissionV1Schema,
 } from "@/features/natori/lib/requestSchema";
+import { NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL } from "@/features/natori/lib/requestPresentation";
 import {
   NATORI_REQUEST_SCHEMA_VERSION,
   type NatoriRequestSubmissionV1,
@@ -60,6 +65,8 @@ export const revalidate = 0;
 const MAX_REF_IMAGES = NATORI_MAX_REFERENCE_IMAGES;
 /** multipart 全体の上限。画像10MiB + フォーム本文の余裕分。 */
 const MAX_REQUEST_BYTES = 12 * 1024 * 1024;
+
+type AvailableCommission = Extract<PublicCommissionAvailability, { kind: "ok" }>;
 
 /** 外部へ返す error 分類。内部 DB error や constraint 名は返さない。 */
 type ContactErrorCode =
@@ -143,6 +150,12 @@ export async function POST(req: Request) {
   });
   if (!rl.allowed) return rateLimitExceeded(rl.retryAfterMs);
 
+  // UI の disabled 状態は認可境界にしない。公開API自身が現在の受付状態を読み直し、
+  // 受付停止中や状態を安全に確認できない場合は案件・画像・メールを一切作らない。
+  const availability = await loadPublicCommissionAvailability();
+  if (availability.kind !== "ok") return fail("temporarily_unavailable", 503);
+  if (!availability.commissionOpen) return fail("submission_rejected", 409);
+
   try {
     const isMultipart = (req.headers.get("content-type") ?? "").includes(
       "multipart/form-data"
@@ -152,10 +165,10 @@ export async function POST(req: Request) {
     if (isMultipart) {
       const form = await req.formData();
       if (formText(form, "formVersion") === NATORI_STRUCTURED_FORM_VERSION) {
-        return await handleStructuredSubmission(form);
+        return await handleStructuredSubmission(form, availability);
       }
       const files = form.getAll("refImages").filter((v): v is File => v instanceof File);
-      return await handleLegacySubmission(fieldsFromFormData(form), files, ip);
+      return await handleLegacySubmission(fieldsFromFormData(form), files, ip, availability);
     }
 
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -165,7 +178,7 @@ export async function POST(req: Request) {
     }
     // JSON 経路では refImages（任意URL）を受け付けない。外部URLを通知メールの
     // <img> に流し込まれるのを防ぐ（資料URLはテキストの refUrls / 詳細欄で受ける）
-    return await handleLegacySubmission({ ...body, refImages: [] }, [], ip);
+    return await handleLegacySubmission({ ...body, refImages: [] }, [], ip, availability);
   } catch (err) {
     console.error("[natori-portfolio-contact] Unhandled Error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -310,7 +323,10 @@ function parseCanonicalRequestData(
   return { kind: "ok", submission: parsed.data };
 }
 
-async function handleStructuredSubmission(form: FormData) {
+async function handleStructuredSubmission(
+  form: FormData,
+  availability: AvailableCommission
+) {
   // honeypot は保存・送信の前に判定する。
   if (isHoneypotFilled(formText(form, "website"))) return honeypotResponse();
 
@@ -334,6 +350,13 @@ async function handleStructuredSubmission(form: FormData) {
     );
   }
   const submission = parsedSubmission.submission;
+
+  const isMassProductionIllustration =
+    submission.requestData.requestType === "other" &&
+    submission.requestData.requestTypeOther === NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL;
+  if (isMassProductionIllustration && !availability.massProductionIllustrationOpen) {
+    return fail("submission_rejected", 409);
+  }
 
   // 4. public intake owner 解決（session は owner 候補にしない）
   const owner = resolvePublicIntakeOwnerId();
@@ -468,7 +491,8 @@ async function handleStructuredSubmission(form: FormData) {
 async function handleLegacySubmission(
   rawFields: Record<string, unknown>,
   files: File[],
-  ip: string | null
+  ip: string | null,
+  availability: AvailableCommission
 ) {
   const parsed = portfolioContactSchema.safeParse(rawFields);
   if (!parsed.success) {
@@ -482,6 +506,13 @@ async function handleLegacySubmission(
   // 画像の保存より先に判定することで、ボットにストレージを使わせない。
   if (parsed.data.website && parsed.data.website.trim() !== "") {
     return NextResponse.json({ success: true, mailed: false, spam: true });
+  }
+
+  if (
+    parsed.data.requestType === NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL &&
+    !availability.massProductionIllustrationOpen
+  ) {
+    return fail("submission_rejected", 409);
   }
 
   // 添付画像の保存（フォーム送信と一体でのみ行う）
