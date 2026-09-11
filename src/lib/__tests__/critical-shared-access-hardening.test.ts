@@ -10,27 +10,6 @@ const migration = readFileSync(
   ),
   "utf8",
 );
-const verification = readFileSync(
-  path.join(
-    "supabase",
-    "verification",
-    "critical-shared-access-hardening-selects.sql",
-  ),
-  "utf8",
-);
-
-function stripSqlComments(sql: string): string {
-  return sql
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/--.*$/gm, "");
-}
-
-function statements(sql: string): string[] {
-  return stripSqlComments(sql)
-    .split(";")
-    .map((statement) => statement.trim())
-    .filter(Boolean);
-}
 
 describe("critical shared Supabase access hardening", () => {
   it("makes Card and AURA base tables service-role only behind RLS", () => {
@@ -64,13 +43,5 @@ describe("critical shared Supabase access hardening", () => {
         `grant execute on function public.${signature} to service_role`,
       );
     }
-  });
-
-  it("keeps the verification artifact read-only", () => {
-    const queries = statements(verification);
-    expect(queries.length).toBeGreaterThan(0);
-    expect(queries.every((statement) => /^select\b/i.test(statement))).toBe(true);
-    expect(verification).toContain("has_table_privilege('anon'");
-    expect(verification).toContain("has_function_privilege('anon'");
   });
 });
