@@ -1,15 +1,7 @@
 // @vitest-environment jsdom
 
-import type { ImgHTMLAttributes } from "react";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("next/image", () => ({
-  default: ({ alt = "", ...props }: ImgHTMLAttributes<HTMLImageElement>) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img {...props} alt={alt} />
-  ),
-}));
 
 const trackNatoriPageEvent = vi.hoisted(() => vi.fn());
 vi.mock("@/features/natori/data/pageEvents", () => ({ trackNatoriPageEvent }));
@@ -95,19 +87,30 @@ describe("PortfolioPricing", () => {
     expect(screen.getByText(/リテイク・小物・背景は基本料金に含まれません/)).toBeTruthy();
   });
 
-  it("shows the two compact mass-production samples", () => {
-    render(<PortfolioPricing content={defaultPortfolioContent} />);
+  it("shows only mass-production samples with uploaded images", () => {
+    render(
+      <PortfolioPricing
+        content={{
+          ...defaultPortfolioContent,
+          massProductionSamples: [
+            { id: "obake", name: "おばけ", image: "https://example.com/obake.webp" },
+            { id: "majo", name: "魔女", image: null },
+          ],
+        }}
+      />
+    );
 
     const samples = screen.getByRole("group", { name: "量産イラスト作例" });
-    expect(samples.className).toContain("grid-cols-2");
-    expect(samples.className).toContain("max-w-[18rem]");
-
+    expect(samples.className).toContain("grid-cols-1");
     const obake = within(samples).getByRole("img", { name: "量産イラスト作例「おばけ」" });
-    const majo = within(samples).getByRole("img", { name: "量産イラスト作例「魔女」" });
-    expect(obake.getAttribute("src")).toBe("/natori/portfolio/mass-production/obake.webp");
-    expect(majo.getAttribute("src")).toBe("/natori/portfolio/mass-production/majo.webp");
+    expect(obake.getAttribute("src")).toBe("https://example.com/obake.webp");
     expect(within(samples).getByText("おばけ")).toBeTruthy();
-    expect(within(samples).getByText("魔女")).toBeTruthy();
+    expect(within(samples).queryByText("魔女")).toBeNull();
+  });
+
+  it("hides the sample area while no sample image is uploaded", () => {
+    render(<PortfolioPricing content={defaultPortfolioContent} />);
+    expect(screen.queryByRole("group", { name: "量産イラスト作例" })).toBeNull();
   });
 
   it("dispatches the mass-production request value from its CTA", () => {

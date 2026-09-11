@@ -57,6 +57,15 @@ export type PortfolioOption = {
   price: string;
 };
 
+export type PortfolioMassProductionSample = {
+  /** 表示名から独立した一意なID。編集画面での追加・削除に使用 */
+  id: string;
+  /** 公開側で画像下に表示する作例名 */
+  name: string;
+  /** アップロード済みの公開画像URL。null の作例は公開側で非表示 */
+  image: string | null;
+};
+
 export type PortfolioDeliveryNote = {
   title: string;
   body: string;
@@ -77,6 +86,8 @@ export type PortfolioContent = {
   commissionOpen: boolean;
   /** 量産イラストだけの受付状態。停止中も選択肢自体は公開フォームに表示する */
   massProductionIllustrationOpen: boolean;
+  /** 量産イラスト作例。旧データ互換のため未設定を許容し、読込時に補完する */
+  massProductionSamples?: PortfolioMassProductionSample[];
   /** ヘッダーのサイト名 */
   artistName: string;
   /** ヒーローの英字肩書き */

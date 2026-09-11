@@ -3,7 +3,6 @@
 // features/natori/components/portfolio/PortfolioPricing.tsx
 // コミッション料金。通常プランはスマホで一覧性を優先してコンパクトに表示し、
 // CTA からフォームへスクロールしつつ依頼種別 / 制作範囲を自動で合わせる。
-import Image from "next/image";
 import {
   PLAN_SELECT_EVENT,
   portfolioPlanSelectDetail,
@@ -23,17 +22,6 @@ function yen(amount: number): string {
   return `${amount.toLocaleString("ja-JP")}円`;
 }
 
-const MASS_PRODUCTION_SAMPLES = [
-  {
-    label: "おばけ",
-    src: "/natori/portfolio/mass-production/obake.webp",
-  },
-  {
-    label: "魔女",
-    src: "/natori/portfolio/mass-production/majo.webp",
-  },
-] as const;
-
 export default function PortfolioPricing({ content }: { content: PortfolioContent }) {
   const gridCols =
     content.plans.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-3";
@@ -47,6 +35,9 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
     .map((feature) => feature.replace(/無料[。．.]?$/u, "").trim())
     .join("、");
   const massProductionPrice = yen(NATORI_MASS_PRODUCTION_BASE_AMOUNT);
+  const massProductionSamples = (content.massProductionSamples ?? []).filter(
+    (sample) => Boolean(sample.image)
+  );
 
   const handleSelectPlan = (plan: PortfolioPlan) => {
     trackNatoriPageEvent("portfolio_primary_cta_click", "pricing");
@@ -184,31 +175,37 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
             ※リテイク・小物・背景は基本料金に含まれません。
           </p>
 
-          <div
-            role="group"
-            aria-label="量産イラスト作例"
-            className="mx-auto mt-3 grid max-w-[18rem] grid-cols-2 gap-2 sm:mx-0 sm:max-w-xs sm:gap-3"
-          >
-            {MASS_PRODUCTION_SAMPLES.map((sample) => (
-              <figure key={sample.label}>
-                <Image
-                  src={sample.src}
-                  alt={`量産イラスト作例「${sample.label}」`}
-                  width={480}
-                  height={480}
-                  sizes="(min-width: 640px) 152px, 140px"
-                  className="aspect-square w-full rounded-xl border object-cover"
-                  style={{ borderColor: c.borderSubtle }}
-                />
-                <figcaption
-                  className="mt-1 text-center text-[11px] font-bold"
-                  style={{ color: c.textSoft }}
-                >
-                  {sample.label}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
+          {massProductionSamples.length > 0 ? (
+            <div
+              role="group"
+              aria-label="量産イラスト作例"
+              className={`mx-auto mt-3 grid gap-2 sm:mx-0 sm:gap-3 ${
+                massProductionSamples.length === 1
+                  ? "max-w-[9rem] grid-cols-1"
+                  : "max-w-[18rem] grid-cols-2 sm:max-w-xs"
+              }`}
+            >
+              {massProductionSamples.map((sample) => (
+                <figure key={sample.id}>
+                  {/* アップロード画像は公開Storage URLなので next/image のhost設定に依存させない */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={sample.image ?? ""}
+                    alt={`量産イラスト作例「${sample.name}」`}
+                    loading="lazy"
+                    className="aspect-square w-full rounded-xl border object-cover"
+                    style={{ borderColor: c.borderSubtle }}
+                  />
+                  <figcaption
+                    className="mt-1 text-center text-[11px] font-bold"
+                    style={{ color: c.textSoft }}
+                  >
+                    {sample.name}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         {content.massProductionIllustrationOpen ? (

@@ -134,9 +134,15 @@ export const LEGACY_PORTFOLIO_OPTION_ID_BY_EXACT_NAME: Readonly<Record<string, s
 /* ------------------------------------------------------------------
    デフォルト掲載内容（DB未保存時の初期値）
 ------------------------------------------------------------------- */
+export const DEFAULT_MASS_PRODUCTION_SAMPLES = [
+  { id: "obake", name: "おばけ", image: null },
+  { id: "majo", name: "魔女", image: null },
+] satisfies NonNullable<PortfolioContent["massProductionSamples"]>;
+
 export const defaultPortfolioContent: PortfolioContent = {
   commissionOpen: true,
   massProductionIllustrationOpen: true,
+  massProductionSamples: DEFAULT_MASS_PRODUCTION_SAMPLES.map((sample) => ({ ...sample })),
   artistName: "Natori* illust",
   roleEn: "Cute Anime Illustrator",
   profileName: "ナトリ",
