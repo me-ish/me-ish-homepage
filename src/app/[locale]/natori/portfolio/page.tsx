@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 const title = "Natori* illust – Commission Portfolio";
 const description =
-  "淡いピンクや水色を基調とした、やわらかく可愛い女の子のイラストのコミッションポートフォリオ。作品ギャラリー・料金・ご依頼フォーム。";
+  "淡いピンクや水色を基調とした、やわらかく可愛い女の子のイラストのコミッションポートフォリオ。ご依頼実績・料金・ご依頼フォーム。";
 const siteUrl = "https://www.me-ish.art/natori/portfolio";
 
 export const metadata: Metadata = {

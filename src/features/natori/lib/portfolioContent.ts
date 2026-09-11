@@ -33,17 +33,19 @@ const workSchema = z
     tag: shortText.optional(),
     tags: z.array(shortText).max(10).optional(),
     image: imageUrl,
+    productionMonth: z.string().regex(/^\d{4}-(?:0[1-9]|1[0-2])$/u).nullable().optional(),
     collectionId: stableContentId.nullable().optional(),
     featured: z.boolean().optional(),
     published: z.boolean().optional(),
   })
-  .transform(({ id, title, tag, tags, image, collectionId, featured, published }) => ({
+  .transform(({ id, title, tag, tags, image, productionMonth, collectionId, featured, published }) => ({
     id,
     title,
     tags: (tags ?? (tag !== undefined ? [tag] : []))
       .map((t) => t.trim())
       .filter((t) => t.length > 0),
     image,
+    ...(productionMonth !== undefined ? { productionMonth } : {}),
     collectionId: collectionId ?? null,
     featured: featured ?? false,
     published: published ?? true,

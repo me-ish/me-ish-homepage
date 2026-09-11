@@ -26,6 +26,8 @@ export type PortfolioWork = {
   /** 一意なID（編集画面で生成。react key と並び替えに使用） */
   id: string;
   title: string;
+  /** 制作年月（YYYY-MM）。旧データ互換のため未設定を許容する */
+  productionMonth?: string | null;
   /** タグ（複数可。例: ["つなぐ", "立ち絵"]）。旧データの単一 tag はパース時に移行される */
   tags: string[];
   /** 画像URL（アップロード済みの公開URL）。null ならプレースホルダーSVGを表示 */
@@ -110,7 +112,7 @@ export type PortfolioContent = {
   aboutParagraphs: string[];
   /** 対応内容のバッジ */
   services: string[];
-  /** 作品ギャラリー */
+  /** ご依頼実績 */
   works: PortfolioWork[];
   /** 作品をまとめる公開コレクション。配列順が公開ページの表示順 */
   collections: PortfolioCollection[];
