@@ -172,7 +172,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
             用意されたデザインから制作する、量産向けのイラストプランです。
           </p>
           <p className="mt-1 text-xs leading-relaxed" style={{ color: c.textSoft }}>
-            ※リテイク・小物・背景は基本料金に含まれません。
+            ※量産イラストのため、原則としてリテイクはお受けしておりません。
           </p>
 
           {massProductionSamples.length > 0 ? (
