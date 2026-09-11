@@ -29,15 +29,13 @@ jobs:
               p = Path(path)
               text = p.read_text()
               if old not in text:
-                  raise SystemExit(f"pattern not found in {path}: {old[:80]!r}")
-              text = text.replace(old, new, 1)
-              p.write_text(text)
+                  raise SystemExit(f"pattern not found in {path}: {old[:120]!r}")
+              p.write_text(text.replace(old, new, 1))
 
-          # Type: production month is optional for backward compatibility with existing JSON.
           replace_once(
               "src/features/natori/types/portfolio.ts",
-              "  title: string;\n  /** タグ（複数可。例: [\\\"つなぐ\\\", \\\"立ち絵\\\"]）。旧データの単一 tag はパース時に移行される */",
-              "  title: string;\n  /** 制作年月（YYYY-MM）。旧データ互換のため未設定を許容する */\n  productionMonth?: string | null;\n  /** タグ（複数可。例: [\\\"つなぐ\\\", \\\"立ち絵\\\"]）。旧データの単一 tag はパース時に移行される */",
+              "  id: string;\n  title: string;\n",
+              "  id: string;\n  title: string;\n  /** 制作年月（YYYY-MM）。旧データ互換のため未設定を許容する */\n  productionMonth?: string | null;\n",
           )
           replace_once(
               "src/features/natori/types/portfolio.ts",
@@ -45,7 +43,6 @@ jobs:
               "  /** ご依頼実績 */",
           )
 
-          # Parser: preserve productionMonth when present; old rows remain unchanged.
           replace_once(
               "src/features/natori/lib/portfolioContent.ts",
               "    image: imageUrl,\n    collectionId: stableContentId.nullable().optional(),",
@@ -62,7 +59,6 @@ jobs:
               "    image,\n    ...(productionMonth !== undefined ? { productionMonth } : {}),\n    collectionId: collectionId ?? null,",
           )
 
-          # Public gallery: rename section and show production month on cards + modal.
           replace_once(
               "src/features/natori/components/portfolio/PortfolioGallery.tsx",
               "// 作品ギャラリー。マスキングテープで貼ったポラロイド風のカードを並べる。",
@@ -89,7 +85,6 @@ jobs:
               "      <div className=\"flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between\">\n        <div className=\"w-full min-w-0 sm:w-auto\">\n          <p className=\"truncate text-sm font-bold sm:text-base\">{work.title}</p>\n          {formatProductionMonth(work.productionMonth) ? (\n            <p className=\"mt-0.5 text-xs\" style={{ color: c.textSoft }}>\n              {formatProductionMonth(work.productionMonth)}\n            </p>\n          ) : null}\n        </div>\n        <span className=\"flex shrink-0 flex-wrap justify-end gap-1\">",
           )
 
-          # Editor: expose production month so future works can be maintained without DB edits.
           replace_once(
               "src/features/natori/components/portfolio/edit/PortfolioEditor.tsx",
               "        {/* 作品ギャラリー */}\n        <SectionCard\n          id=\"section-works\"\n          emoji=\"🎨\"\n          title=\"作品ギャラリー\"\n          description=\"作品の所属コレクション、代表表示、公開状態を設定できます。補助タグは受注経路などの管理用です。\"",
@@ -111,14 +106,12 @@ jobs:
               "          title: titleFromFileName(file.name),\n          productionMonth: null,\n          tags: [],",
           )
 
-          # SEO copy follows the visible section name.
           replace_once(
               "src/app/[locale]/natori/portfolio/page.tsx",
               "コミッションポートフォリオ。作品ギャラリー・料金・ご依頼フォーム。",
               "コミッションポートフォリオ。ご依頼実績・料金・ご依頼フォーム。",
           )
 
-          # Parser regression coverage.
           replace_once(
               "src/features/natori/lib/__tests__/portfolioContent.test.ts",
               "  it(\"保存済みの『へようこそ』タイトルを自然な表記へ移行する\", () => {",
