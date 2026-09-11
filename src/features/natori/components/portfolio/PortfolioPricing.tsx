@@ -3,6 +3,7 @@
 // features/natori/components/portfolio/PortfolioPricing.tsx
 // コミッション料金。通常プランはスマホで一覧性を優先してコンパクトに表示し、
 // CTA からフォームへスクロールしつつ依頼種別 / 制作範囲を自動で合わせる。
+import Image from "next/image";
 import {
   PLAN_SELECT_EVENT,
   portfolioPlanSelectDetail,
@@ -21,6 +22,17 @@ function startingPriceLabel(price: string): string {
 function yen(amount: number): string {
   return `${amount.toLocaleString("ja-JP")}円`;
 }
+
+const MASS_PRODUCTION_SAMPLES = [
+  {
+    label: "おばけ",
+    src: "/natori/portfolio/mass-production/obake.webp",
+  },
+  {
+    label: "魔女",
+    src: "/natori/portfolio/mass-production/majo.webp",
+  },
+] as const;
 
 export default function PortfolioPricing({ content }: { content: PortfolioContent }) {
   const gridCols =
@@ -155,10 +167,10 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
 
       {/* 量産イラストは通常プランと条件が違うため、独立したコンパクト枠で案内する */}
       <div
-        className="mx-auto mt-6 max-w-3xl rounded-2xl border-2 px-4 py-4 sm:flex sm:items-center sm:gap-5 sm:px-5"
+        className="mx-auto mt-6 max-w-3xl rounded-2xl border-2 px-4 py-4 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-5 sm:px-5"
         style={{ background: c.surface, borderColor: c.accent }}
       >
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           <div className="flex items-baseline justify-between gap-3">
             <h3 className="font-black">量産イラスト</h3>
             <p className="shrink-0 text-xl font-black" style={{ color: c.accentDisplay }}>
@@ -171,6 +183,32 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
           <p className="mt-1 text-xs leading-relaxed" style={{ color: c.textSoft }}>
             ※リテイク・小物・背景は基本料金に含まれません。
           </p>
+
+          <div
+            role="group"
+            aria-label="量産イラスト作例"
+            className="mx-auto mt-3 grid max-w-[18rem] grid-cols-2 gap-2 sm:mx-0 sm:max-w-xs sm:gap-3"
+          >
+            {MASS_PRODUCTION_SAMPLES.map((sample) => (
+              <figure key={sample.label}>
+                <Image
+                  src={sample.src}
+                  alt={`量産イラスト作例「${sample.label}」`}
+                  width={480}
+                  height={480}
+                  sizes="(min-width: 640px) 152px, 140px"
+                  className="aspect-square w-full rounded-xl border object-cover"
+                  style={{ borderColor: c.borderSubtle }}
+                />
+                <figcaption
+                  className="mt-1 text-center text-[11px] font-bold"
+                  style={{ color: c.textSoft }}
+                >
+                  {sample.label}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
         </div>
 
         {content.massProductionIllustrationOpen ? (
