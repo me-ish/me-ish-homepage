@@ -25,9 +25,9 @@ jobs:
       - name: Upgrade patched direct dependencies
         run: npm install --save-exact next@15.5.25 eslint-config-next@15.5.25 sharp@0.35.4 vitest@4.1.11 @vitest/coverage-v8@4.1.11
 
-      - name: Override vulnerable Next-internal PostCSS within the same major
+      - name: Override vulnerable PostCSS within the same major
         run: |
-          npm pkg set "overrides.next.postcss=8.5.28"
+          npm pkg set "overrides.postcss=8.5.28"
           npm install
 
       - name: Require zero high-or-critical advisories
