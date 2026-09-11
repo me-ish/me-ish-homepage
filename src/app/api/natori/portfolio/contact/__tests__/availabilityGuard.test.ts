@@ -3,7 +3,7 @@ import { _resetRateLimitStore } from "@/lib/rateLimit";
 import {
   resetMockPublicCommissionAvailability,
   setMockPublicCommissionAvailability,
-} from "@/features/natori/server/publicCommissionAvailability";
+} from "@/test/mocks/publicCommissionAvailability";
 
 vi.mock("server-only", () => ({}));
 
