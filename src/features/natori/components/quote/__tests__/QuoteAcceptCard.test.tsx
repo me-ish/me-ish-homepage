@@ -36,9 +36,12 @@ describe("QuoteAcceptCard", () => {
     renderCard();
 
     expect(screen.getByRole("heading", { name: "お申込み内容の最終確認" })).toBeTruthy();
+    expect(screen.getByText("上記内容のイラスト制作 1案件")).toBeTruthy();
     expect(screen.getByText(formatYen(12000))).toBeTruthy();
     expect(screen.getByText("支払い案内メール送信日から7日以内")).toBeTruthy();
-    expect(screen.getByText("入金確認後")).toBeTruthy();
+    expect(screen.getByText(/入金確認後に制作を開始し/)).toBeTruthy();
+    expect(screen.getByText(/実施済み作業相当の費用をご負担いただく場合があります/)).toBeTruthy();
+    expect(screen.getByText("2026年10月1日まで")).toBeTruthy();
 
     const terms = screen.getByRole("link", { name: "ご依頼規約" });
     const tokushoho = screen.getByRole("link", { name: "特定商取引法に基づく表記" });
