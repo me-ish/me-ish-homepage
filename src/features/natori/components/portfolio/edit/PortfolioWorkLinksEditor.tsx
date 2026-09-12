@@ -121,8 +121,8 @@ export default function PortfolioWorkLinksEditor({
         <Plus className="h-3.5 w-3.5" aria-hidden />
         リンクを追加
       </button>
-      <p className="mt-2 text-[11px] text-gray-400">
-        URLは http:// または https:// で始まる公開ページを入力してください。
+      <p className="mt-2 text-[11px] leading-4 text-gray-400">
+        関連リンクを保存・公開するには作品画像が必要です。URLは http:// または https:// で始まる公開ページを入力してください。
       </p>
     </div>
   );
