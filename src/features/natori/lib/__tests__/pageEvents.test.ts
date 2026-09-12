@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   NATORI_PAGE_EVENT_NAMES,
   portfolioGalleryEventLabel,
+  portfolioWorkLinkEventLabel,
 } from "@/features/natori/lib/pageEvents";
 
 describe("natori page event definitions", () => {
@@ -13,6 +14,7 @@ describe("natori page event definitions", () => {
       "portfolio_plan_click",
       "portfolio_primary_cta_click",
       "portfolio_gallery_open",
+      "portfolio_work_link_click",
       "portfolio_form_start",
       "portfolio_form_mode_select",
       "portfolio_form_submit",
@@ -23,5 +25,12 @@ describe("natori page event definitions", () => {
   it("builds a bounded gallery label from public collection and work names", () => {
     expect(portfolioGalleryEventLabel("SDキャラ", "作品1")).toBe("SDキャラ / 作品1");
     expect(portfolioGalleryEventLabel("collection", "x".repeat(200))).toHaveLength(100);
+  });
+
+  it("builds a bounded work-link label from public work and link metadata", () => {
+    expect(portfolioWorkLinkEventLabel("作品1", "client", "YouTube")).toBe(
+      "作品1 / client / YouTube",
+    );
+    expect(portfolioWorkLinkEventLabel("x".repeat(200), "usage", "BOOTH")).toHaveLength(100);
   });
 });
