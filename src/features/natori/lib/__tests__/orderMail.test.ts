@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { formatYen } from "@/features/natori/lib/pricing";
 import {
   ACCEPT_LINK_PLACEHOLDER,
+  PAYMENT_DUE_DAYS,
   PAYMENT_LINK_PLACEHOLDER,
   QUOTE_VALID_DAYS,
   buildEstimateMailDraft,
@@ -92,7 +93,7 @@ describe("buildEstimateMailDraft", () => {
     expect(draft.body).toContain("ご返信");
   });
 
-  it("有効期限とワンクリック承諾リンクのプレースホルダを含む", () => {
+  it("有効期限と契約確定用の承諾リンクを含む", () => {
     const draft = buildEstimateMailDraft({
       clientName: "テスト太郎",
       title: "立ち絵一式",
@@ -100,8 +101,8 @@ describe("buildEstimateMailDraft", () => {
     });
     expect(draft.body).toContain(`${QUOTE_VALID_DAYS}日間`);
     expect(draft.body).toContain(ACCEPT_LINK_PLACEHOLDER);
-    // 返信での承諾も案内している（ボタンを使わない依頼者向け）
-    expect(draft.body).toContain("ご返信でご承諾");
+    expect(draft.body).toContain("この内容で依頼を確定する");
+    expect(draft.body).not.toContain("ご返信でご承諾");
   });
 });
 
@@ -140,6 +141,7 @@ describe("buildPaymentMailDraft / injectPaymentLink", () => {
       amount: 12000,
     });
     expect(draft.body).toContain(PAYMENT_LINK_PLACEHOLDER);
+    expect(draft.body).toContain(`本メール送信日から${PAYMENT_DUE_DAYS}日以内`);
 
     const injected = injectPaymentLink(draft.body, "https://pay.example.com/abc");
     expect(injected).toContain("https://pay.example.com/abc");
