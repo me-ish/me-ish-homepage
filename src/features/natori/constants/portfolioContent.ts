@@ -51,7 +51,7 @@ export const portfolioColors = {
   errorSoft: "#FEF3F2",
   success: "#007D64",
   successSoft: "#E8FFF8",
-  overlay: "rgba(22,74,99,0.68)",
+  overlay: "rgba(32,32,32,0.52)",
   pageTranslucent: "rgba(255,254,254,0.96)",
   shadowSoft: "rgba(0,0,0,0.06)",
   shadowHover: "rgba(0,0,0,0.10)",
