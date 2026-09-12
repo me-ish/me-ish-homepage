@@ -28,6 +28,7 @@ import {
   updateItem,
   uploadImageFile,
 } from "./editorFields";
+import PortfolioWorkLinksEditor from "./PortfolioWorkLinksEditor";
 import SortableList from "./SortableList";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -779,6 +780,14 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
                         patch({ works: updateItem(content.works, index, { tags: v.split(/[、,]/) }) })
                       }
                       placeholder="例: つなぐ、商用実績"
+                    />
+                    <PortfolioWorkLinksEditor
+                      links={work.relatedLinks ?? []}
+                      onChange={(relatedLinks) =>
+                        patch({
+                          works: updateItem(content.works, index, { relatedLinks }),
+                        })
+                      }
                     />
                   </div>
                 </div>
