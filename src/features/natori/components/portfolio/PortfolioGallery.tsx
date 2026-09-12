@@ -71,31 +71,39 @@ export default function PortfolioGallery({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const modalTriggerRef = useRef<HTMLButtonElement | null>(null);
 
+  const unassignedCollection: PortfolioCollection = {
+    id: "unassigned",
+    name: "その他",
+    description: "",
+    color: c.accentSoft,
+  };
+  const publishedWorks = works.filter((work) => work.published);
+  const collectionById = new Map(collections.map((collection) => [collection.id, collection]));
+
+  // 編集画面で保存された works の配列順を公開ページの唯一の表示順とする。
+  // featured やカテゴリによる再ソートは行わず、絞り込み時も元の相対順を維持する。
+  const orderedWorks = publishedWorks.map((work) => ({
+    work,
+    collection: work.collectionId
+      ? (collectionById.get(work.collectionId) ?? unassignedCollection)
+      : unassignedCollection,
+  }));
+
   const collectionGroups = collections
     .map((collection) => ({
       collection,
-      works: works
-        .filter((work) => work.published && work.collectionId === collection.id)
-        .toSorted((a, b) => Number(b.featured) - Number(a.featured)),
+      works: publishedWorks.filter((work) => work.collectionId === collection.id),
     }))
     .filter((group) => group.works.length > 0);
-  const unassignedWorks = works.filter(
-    (work) =>
-      work.published &&
-      (work.collectionId === null ||
-        !collections.some((collection) => collection.id === work.collectionId)),
-  );
+  const unassignedWorks = orderedWorks
+    .filter(({ collection }) => collection.id === unassignedCollection.id)
+    .map(({ work }) => work);
   const groups =
     unassignedWorks.length > 0
       ? [
           ...collectionGroups,
           {
-            collection: {
-              id: "unassigned",
-              name: "その他",
-              description: "",
-              color: c.accentSoft,
-            },
+            collection: unassignedCollection,
             works: unassignedWorks,
           },
         ]
@@ -167,17 +175,12 @@ export default function PortfolioGallery({
     };
   }, [closeModal, selected]);
 
-  // 各カテゴリの先頭から交互に並べ、少数カテゴリも初期表示に含める。
-  const mixedWorks = Array.from(
-    { length: Math.max(0, ...groups.map((group) => group.works.length)) },
-    (_, index) => groups.flatMap((group) =>
-      group.works[index] ? [{ work: group.works[index], collection: group.collection }] : [],
-    ),
-  ).flat();
   const activeCollection = groups.find((group) => group.collection.id === activeCollectionId);
   const filteredWorks = activeCollection
-    ? activeCollection.works.map((work) => ({ work, collection: activeCollection.collection }))
-    : mixedWorks;
+    ? orderedWorks.filter(
+        ({ collection }) => collection.id === activeCollection.collection.id,
+      )
+    : orderedWorks;
   const shownWorks = expanded ? filteredWorks : filteredWorks.slice(0, GALLERY_PREVIEW_LIMIT);
 
   const selectedCollection = selected
@@ -246,7 +249,7 @@ export default function PortfolioGallery({
                 className="pf-cute-focus min-h-[44px] rounded-full border-2 px-5 py-2.5 text-sm font-bold"
                 style={{ borderColor: c.accentDisplay, background: c.surface, color: c.text }}
               >
-                {expanded ? "代表作品だけ表示" : "全" + filteredWorks.length + "作品を見る"}
+                {expanded ? "最初の6作品だけ表示" : "全" + filteredWorks.length + "作品を見る"}
               </button>
             </div>
           ) : null}
