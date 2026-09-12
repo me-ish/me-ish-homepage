@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import QuoteAcceptCard from "@/features/natori/components/quote/QuoteAcceptCard";
+import { formatYen } from "@/features/natori/lib/pricing";
 
 const fetchMock = vi.fn();
 
@@ -35,7 +36,7 @@ describe("QuoteAcceptCard", () => {
     renderCard();
 
     expect(screen.getByRole("heading", { name: "お申込み内容の最終確認" })).toBeTruthy();
-    expect(screen.getByText("¥12,000")).toBeTruthy();
+    expect(screen.getByText(formatYen(12000))).toBeTruthy();
     expect(screen.getByText("支払い案内メール送信日から7日以内")).toBeTruthy();
     expect(screen.getByText("入金確認後")).toBeTruthy();
 
