@@ -15,7 +15,6 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { formatYen } from "@/features/natori/lib/pricing";
 import { sendNatoriNoticeMail } from "@/features/natori/server/orderMailService";
 
-/** base64url 32バイト（43文字）を想定。形式外は照合せず弾く */
 const TOKEN_RE = /^[A-Za-z0-9_-]{20,64}$/;
 
 function hashToken(token: string): string {
@@ -28,6 +27,7 @@ export type NatoriQuoteView = {
   clientName: string;
   amount: number;
   acceptedAt: string | null;
+  expiresAt: string;
 };
 
 export type GetNatoriQuoteResult =
@@ -62,7 +62,6 @@ async function fetchQuoteRow(token: string): Promise<QuoteRow | null> {
 }
 
 function isExpired(row: QuoteRow): boolean {
-  // 承諾済みの見積もりは期限切れ後も「承諾済み」として表示し続ける
   if (row.accepted_at) return false;
   return new Date(row.expires_at).getTime() < Date.now();
 }
@@ -74,10 +73,10 @@ function toView(row: QuoteRow): NatoriQuoteView {
     clientName: row.client_name,
     amount: row.amount,
     acceptedAt: row.accepted_at,
+    expiresAt: row.expires_at,
   };
 }
 
-/** 承諾ページ（GET）用。読むだけで何も書かない */
 export async function getNatoriQuoteByToken(token: string): Promise<GetNatoriQuoteResult> {
   const row = await fetchQuoteRow(token);
   if (!row) return { kind: "not-found" };
@@ -93,7 +92,6 @@ export type AcceptNatoriQuoteResult =
   | { kind: "not-found" }
   | { kind: "db-error" };
 
-/** 承諾ボタン（POST）からの確定処理 */
 export async function acceptNatoriQuote(token: string): Promise<AcceptNatoriQuoteResult> {
   const row = await fetchQuoteRow(token);
   if (!row) return { kind: "not-found" };
@@ -125,7 +123,6 @@ export async function acceptNatoriQuote(token: string): Promise<AcceptNatoriQuot
     return { kind: "db-error" };
   }
 
-  // ナトリへの通知（ベストエフォート。失敗しても承諾自体は成立）
   const noticeBody = [
     "見積もりが承諾されました。お支払いのご案内を送ってください。",
     "",
