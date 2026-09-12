@@ -86,6 +86,75 @@ describe("PortfolioGallery collections", () => {
     expect(screen.getByText("商用実績")).toBeTruthy();
   });
 
+  it("公開ポートフォリオの拡大画面だけに関連リンクを表示してクリックを計測する", () => {
+    const linkedWork = work("1", {
+      image: "https://example.com/work.webp",
+      relatedLinks: [
+        {
+          id: "work-link-client",
+          kind: "client",
+          label: "YouTubeチャンネル",
+          href: "https://www.youtube.com/@example",
+        },
+        {
+          id: "work-link-usage",
+          kind: "usage",
+          label: "グッズページ",
+          href: "https://example.com/goods",
+        },
+      ],
+    });
+
+    const { unmount } = render(
+      <PortfolioGallery collections={collections} works={[linkedWork]} variant="full" />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "作品1 を拡大表示" }));
+
+    expect(screen.getByText("ご依頼者様")).toBeTruthy();
+    expect(screen.getByText("制作物の使用例")).toBeTruthy();
+    const youtube = screen.getByRole("link", { name: /YouTubeチャンネル/u });
+    expect(youtube.getAttribute("href")).toBe("https://www.youtube.com/@example");
+    fireEvent.click(youtube);
+    expect(trackNatoriPageEvent).toHaveBeenCalledWith(
+      "portfolio_work_link_click",
+      "作品1 / client / YouTubeチャンネル",
+    );
+
+    unmount();
+    vi.clearAllMocks();
+
+    render(
+      <PortfolioGallery collections={collections} works={[linkedWork]} variant="showcase" />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "作品1 を拡大表示" }));
+    expect(screen.queryByText("ご依頼者様")).toBeNull();
+    expect(screen.queryByRole("link", { name: /YouTubeチャンネル/u })).toBeNull();
+  });
+
+  it("表示名が空ならURLからサービス名を補う", () => {
+    render(
+      <PortfolioGallery
+        collections={collections}
+        works={[
+          work("1", {
+            image: "https://example.com/work.webp",
+            relatedLinks: [
+              {
+                id: "work-link-youtube",
+                kind: "client",
+                label: "",
+                href: "https://youtu.be/example",
+              },
+            ],
+          }),
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "作品1 を拡大表示" }));
+    expect(screen.getByRole("link", { name: /YouTube/u })).toBeTruthy();
+  });
+
   it("モーダル内へフォーカスを移し、Tabを閉じ込め、閉じた後に作品へ戻す", () => {
     render(
       <PortfolioGallery
