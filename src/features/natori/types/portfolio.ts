@@ -22,6 +22,19 @@ export type PortfolioCollection = {
   color: string;
 };
 
+export type PortfolioWorkLinkKind = "client" | "usage";
+
+export type PortfolioWorkLink = {
+  /** 編集画面での追加・削除に使う一意なID */
+  id: string;
+  /** client: ご依頼者様の活動先 / usage: 制作物の実際の使用先 */
+  kind: PortfolioWorkLinkKind;
+  /** 公開ボタンに表示する任意ラベル。空ならURLからサービス名を推定する */
+  label: string;
+  /** 公開されている http / https URL */
+  href: string;
+};
+
 export type PortfolioWork = {
   /** 一意なID（編集画面で生成。react key と並び替えに使用） */
   id: string;
@@ -32,6 +45,8 @@ export type PortfolioWork = {
   tags: string[];
   /** 画像URL（アップロード済みの公開URL）。null ならプレースホルダーSVGを表示 */
   image: string | null;
+  /** 作品に紐づく外部リンク。旧データ互換のため未設定を許容する */
+  relatedLinks?: PortfolioWorkLink[];
   /** 所属コレクション。null は「その他」として扱う */
   collectionId: string | null;
   /** ギャラリーの代表作品として、カテゴリ内で優先表示する */

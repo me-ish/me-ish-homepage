@@ -24,6 +24,24 @@ const collectionSchema = z.object({
   color: collectionColor,
 });
 
+const workLinkHref = z.string().max(1000).refine((value) => {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return true;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}, "関連リンクは http:// または https:// のURLを指定してください");
+
+const workLinkSchema = z.object({
+  id: stableContentId,
+  kind: z.enum(["client", "usage"]),
+  label: z.string().max(80),
+  href: workLinkHref,
+});
+
 // 旧形式 (tag: string) と新形式 (tags: string[]) の両方を受け付け、tags に正規化する。
 // DB に残っている旧データは読み込み時にここで自動移行される。
 const workSchema = z
@@ -34,22 +52,47 @@ const workSchema = z
     tags: z.array(shortText).max(10).optional(),
     image: imageUrl,
     productionMonth: z.string().regex(/^\d{4}-(?:0[1-9]|1[0-2])$/u).nullable().optional(),
+    relatedLinks: z.array(workLinkSchema).max(6).optional(),
     collectionId: stableContentId.nullable().optional(),
     featured: z.boolean().optional(),
     published: z.boolean().optional(),
   })
-  .transform(({ id, title, tag, tags, image, productionMonth, collectionId, featured, published }) => ({
-    id,
-    title,
-    tags: (tags ?? (tag !== undefined ? [tag] : []))
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0),
-    image,
-    ...(productionMonth !== undefined ? { productionMonth } : {}),
-    collectionId: collectionId ?? null,
-    featured: featured ?? false,
-    published: published ?? true,
-  }));
+  .superRefine((work, ctx) => {
+    const hasRelatedLinks =
+      work.relatedLinks?.some((link) => link.href.trim().length > 0) ?? false;
+    if (hasRelatedLinks && work.image === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["relatedLinks"],
+        message: "関連リンクを保存するには作品画像が必要です",
+      });
+    }
+  })
+  .transform(
+    ({ id, title, tag, tags, image, productionMonth, relatedLinks, collectionId, featured, published }) => ({
+      id,
+      title,
+      tags: (tags ?? (tag !== undefined ? [tag] : []))
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0),
+      image,
+      ...(productionMonth !== undefined ? { productionMonth } : {}),
+      ...(relatedLinks !== undefined
+        ? {
+            relatedLinks: relatedLinks
+              .filter((link) => link.href.trim().length > 0)
+              .map((link) => ({
+                ...link,
+                label: link.label.trim(),
+                href: link.href.trim(),
+              })),
+          }
+        : {}),
+      collectionId: collectionId ?? null,
+      featured: featured ?? false,
+      published: published ?? true,
+    }),
+  );
 
 const planSchema = z
   .object({
@@ -255,6 +298,17 @@ export function preparePortfolioContentForSave(content: PortfolioContent): Portf
       ...work,
       title: work.title.trim(),
       tags: cleanList(work.tags),
+      ...(work.relatedLinks !== undefined
+        ? {
+            relatedLinks: work.relatedLinks
+              .filter((link) => link.href.trim().length > 0)
+              .map((link) => ({
+                ...link,
+                label: link.label.trim(),
+                href: link.href.trim(),
+              })),
+          }
+        : {}),
     })),
     collections: content.collections.map((collection) => ({
       ...collection,

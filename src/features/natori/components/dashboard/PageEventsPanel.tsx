@@ -19,6 +19,11 @@ const EVENT_META: Array<{ event: string; title: string; hint?: string }> = [
   },
   { event: "portfolio_gallery_open", title: "作品の拡大表示", hint: "コレクション / 作品名" },
   {
+    event: "portfolio_work_link_click",
+    title: "実績の関連リンククリック",
+    hint: "作品名 / client・usage / 表示名",
+  },
+  {
     event: "portfolio_form_start",
     title: "ご依頼フォーム入力開始",
     hint: "1ページ表示につき1回",

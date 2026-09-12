@@ -15,9 +15,11 @@ import { publicPortfolioWorkTags } from "@/features/natori/lib/portfolioContent"
 import { portfolioGalleryEventLabel } from "@/features/natori/lib/pageEvents";
 import type {
   PortfolioCollection,
+  PortfolioVariant,
   PortfolioWork,
 } from "@/features/natori/types/portfolio";
 import ChibiFace from "./ChibiFace";
+import PortfolioWorkRelatedLinks from "./PortfolioWorkRelatedLinks";
 
 const GALLERY_PREVIEW_LIMIT = 6;
 
@@ -53,10 +55,12 @@ function MaskingTape({ color, angle }: { color: string; angle: number }) {
 export default function PortfolioGallery({
   works,
   collections,
+  variant = "full",
   flatPlaceholders,
 }: {
   works: PortfolioWork[];
   collections: PortfolioCollection[];
+  variant?: PortfolioVariant;
   /** 画像なし作品のプレースホルダーをキャラSVGではなくベタ塗りにする（デモ用） */
   flatPlaceholders?: boolean;
 }) {
@@ -338,6 +342,14 @@ export default function PortfolioGallery({
                 </span>
               ) : null}
             </div>
+            {variant === "full" && selected.relatedLinks ? (
+              <div className="px-1">
+                <PortfolioWorkRelatedLinks
+                  workTitle={selected.title}
+                  links={selected.relatedLinks}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
