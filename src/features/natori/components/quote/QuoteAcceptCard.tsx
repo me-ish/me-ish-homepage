@@ -73,6 +73,10 @@ export default function QuoteAcceptCard({
             <dd className="font-bold text-right">{title}</dd>
           </div>
           <div className="flex justify-between gap-4">
+            <dt style={{ color: c.inkSoft }}>役務の分量</dt>
+            <dd className="font-bold text-right">上記内容のイラスト制作 1案件</dd>
+          </div>
+          <div className="flex justify-between gap-4">
             <dt style={{ color: c.inkSoft }}>お支払い総額</dt>
             <dd className="text-lg font-black" style={{ color: c.pinkDeep }}>
               {formatYen(amount)}
@@ -86,17 +90,21 @@ export default function QuoteAcceptCard({
             <dt style={{ color: c.inkSoft }}>お支払い期限</dt>
             <dd className="font-bold text-right">支払い案内メール送信日から7日以内</dd>
           </div>
-          <div className="flex justify-between gap-4">
-            <dt style={{ color: c.inkSoft }}>制作開始</dt>
-            <dd className="font-bold text-right">入金確認後</dd>
+          <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
+            <dt style={{ color: c.inkSoft }}>役務の提供時期</dt>
+            <dd className="font-bold sm:text-right">
+              入金確認後に制作を開始し、通常は約1か月で納品します。お見積もりに別の納期が記載されている場合は、その条件を優先します。
+            </dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt style={{ color: c.inkSoft }}>納期</dt>
-            <dd className="font-bold text-right">お見積もりメールに記載の条件</dd>
+            <dt style={{ color: c.inkSoft }}>申込期限</dt>
+            <dd className="font-bold text-right">{formatDate(expiresAt)}まで</dd>
           </div>
-          <div className="flex justify-between gap-4">
-            <dt style={{ color: c.inkSoft }}>見積有効期限</dt>
-            <dd className="font-bold text-right">{formatDate(expiresAt)}</dd>
+          <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
+            <dt style={{ color: c.inkSoft }}>キャンセル</dt>
+            <dd className="font-bold sm:text-right">
+              契約成立後はメールでご連絡ください。入金後または制作開始後は、進行状況や実施済み作業等を確認し、返金の可否・精算額を個別にご案内します。実施済み作業相当の費用をご負担いただく場合があります。
+            </dd>
           </div>
         </dl>
       </div>
@@ -127,11 +135,21 @@ export default function QuoteAcceptCard({
               className="mt-1 h-4 w-4 shrink-0"
             />
             <span>
-              <Link href="/natori/legal/terms" target="_blank" className="font-bold underline underline-offset-4">
+              <Link
+                href="/natori/legal/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold underline underline-offset-4"
+              >
                 ご依頼規約
               </Link>
               、
-              <Link href="/natori/legal/tokushoho" target="_blank" className="font-bold underline underline-offset-4">
+              <Link
+                href="/natori/legal/tokushoho"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold underline underline-offset-4"
+              >
                 特定商取引法に基づく表記
               </Link>
               および上記のお見積もり内容を確認しました。
