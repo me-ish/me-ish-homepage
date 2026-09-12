@@ -34,19 +34,19 @@ const collections = [
 beforeEach(() => vi.clearAllMocks());
 
 describe("PortfolioGallery collections", () => {
-  it("カテゴリを混ぜて代表6件を表示し、全件表示と絞り込みを切り替える", () => {
+  it("編集画面の保存順を維持したまま初期6件・全件表示・カテゴリ絞り込みを切り替える", () => {
     render(
       <PortfolioGallery
         collections={[...collections, { id: "single", name: "一枚絵", description: "", color: "#F2D9E0" }]}
         works={[
           work("1"),
+          work("single", { collectionId: "single" }),
           work("2", { featured: true }),
+          work("unassigned", { collectionId: "missing" }),
           work("3"),
           work("4", { featured: true }),
           work("5"),
           work("6"),
-          work("single", { collectionId: "single" }),
-          work("unassigned", { collectionId: "missing" }),
           work("hidden", { published: false }),
         ]}
       />,
@@ -54,24 +54,51 @@ describe("PortfolioGallery collections", () => {
 
     const results = document.getElementById("portfolio-gallery-results") as HTMLElement;
     expect(results.children).toHaveLength(6);
-    expect(results.children[0].textContent).toContain("作品2");
-    expect(screen.getByText("作品single")).toBeTruthy();
-    expect(screen.getByText("作品unassigned")).toBeTruthy();
-    expect(screen.queryByText("作品6")).toBeNull();
+    expect(Array.from(results.children).map((child) => child.textContent)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("作品1"),
+        expect.stringContaining("作品single"),
+        expect.stringContaining("作品2"),
+        expect.stringContaining("作品unassigned"),
+        expect.stringContaining("作品3"),
+        expect.stringContaining("作品4"),
+      ]),
+    );
+    expect(results.children[0].textContent).toContain("作品1");
+    expect(results.children[1].textContent).toContain("作品single");
+    expect(results.children[2].textContent).toContain("作品2");
+    expect(results.children[3].textContent).toContain("作品unassigned");
+    expect(results.children[4].textContent).toContain("作品3");
+    expect(results.children[5].textContent).toContain("作品4");
+    expect(screen.queryByText("作品5")).toBeNull();
     expect(screen.queryByText("作品hidden")).toBeNull();
     expect(screen.queryByText("ジャンルごとに代表作品をご覧いただけます。")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "全8作品を見る" }));
     expect(results.children).toHaveLength(8);
-    expect(screen.getByText("作品6")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "代表作品だけ表示" }));
+    expect(results.children[6].textContent).toContain("作品5");
+    expect(results.children[7].textContent).toContain("作品6");
+    fireEvent.click(screen.getByRole("button", { name: "最初の6作品だけ表示" }));
     expect(results.children).toHaveLength(6);
+
+    fireEvent.click(screen.getByRole("button", { name: "SDキャラ" }));
+    expect(results.children).toHaveLength(6);
+    expect(Array.from(results.children).map((child) => child.textContent)).toEqual([
+      expect.stringContaining("作品1"),
+      expect.stringContaining("作品2"),
+      expect.stringContaining("作品3"),
+      expect.stringContaining("作品4"),
+      expect.stringContaining("作品5"),
+      expect.stringContaining("作品6"),
+    ]);
+
     fireEvent.click(screen.getByRole("button", { name: "一枚絵" }));
     expect(results.children).toHaveLength(1);
     expect(screen.queryByText("作品2")).toBeNull();
     expect(screen.getByRole("button", { name: "一枚絵" }).getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(screen.getByRole("button", { name: "すべて" }));
     expect(results.children).toHaveLength(6);
+    expect(results.children[0].textContent).toContain("作品1");
   });
 
   it("受注経路タグは公開カードに表示しない", () => {
