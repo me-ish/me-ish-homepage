@@ -28,7 +28,7 @@ const labelClass = "mb-1.5 block text-sm font-bold";
 const PLAN_UNDECIDED = "未定・相談して決めたい";
 const REQUEST_TYPE_OTHER = "その他";
 const MAX_REF_IMAGES = 5;
-const REF_IMAGE_MAX_BYTES = 10 * 1024 * 1024; // サーバー側 IMAGE_MAX_BYTES と揃える
+const REF_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 
 type RefImageEntry = { file: File; previewUrl: string };
 
@@ -214,15 +214,18 @@ export default function PortfolioCommissionForm({
             </p>
           </div>
         ) : structuredIntake ? (
-          <PortfolioStructuredCommissionForm
-            content={content}
-            demoMode={demoMode}
-            commissionOpen={commissionOpen}
-            onSuccess={(outcome) => {
-              setAutoReplied(outcome.autoReplied);
-              setStatus("success");
-            }}
-          />
+          <div className="space-y-4">
+            <PortfolioLegalNotice />
+            <PortfolioStructuredCommissionForm
+              content={content}
+              demoMode={demoMode}
+              commissionOpen={commissionOpen}
+              onSuccess={(outcome) => {
+                setAutoReplied(outcome.autoReplied);
+                setStatus("success");
+              }}
+            />
+          </div>
         ) : (
           <form
             onSubmit={handleSubmit}
