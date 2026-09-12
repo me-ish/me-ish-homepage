@@ -20,9 +20,18 @@ type Props = {
 
 type Status = "idle" | "sending" | "accepted" | "error";
 
+const JAPAN_DATE_FORMATTER = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo",
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+});
+
 function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+  const parts = JAPAN_DATE_FORMATTER.formatToParts(new Date(iso));
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}年${value("month")}月${value("day")}日`;
 }
 
 export default function QuoteAcceptCard({
