@@ -73,12 +73,13 @@ describe("parsePortfolioContent", () => {
     ).toBeNull();
   });
 
-  it("作品の関連リンクは最大6件の http/https URLだけを保持する", () => {
+  it("作品の関連リンクは画像付き作品に最大6件の http/https URLだけを保持する", () => {
     const withLinks: PortfolioContent = {
       ...validContent,
       works: [
         {
           ...validContent.works[0],
+          image: "https://example.com/linked.webp",
           relatedLinks: [
             {
               id: "work-link-client",
@@ -105,6 +106,12 @@ describe("parsePortfolioContent", () => {
         href: "https://youtube.com/@example",
       },
     ]);
+    expect(
+      parsePortfolioContent({
+        ...withLinks,
+        works: [{ ...withLinks.works[0], image: null }],
+      }),
+    ).toBeNull();
     expect(
       parsePortfolioContent({
         ...withLinks,
