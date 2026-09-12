@@ -85,8 +85,9 @@ beforeEach(() => {
 });
 
 describe("getNatoriQuoteByToken", () => {
-  it("発行時の見積もりスナップショットを返す", async () => {
-    const { calls } = quoteTable(makeQuoteRow());
+  it("発行時の見積もりスナップショットと有効期限を返す", async () => {
+    const row = makeQuoteRow();
+    const { calls } = quoteTable(row);
     await expect(getNatoriQuoteByToken(TOKEN)).resolves.toEqual({
       kind: "ok",
       quote: {
@@ -95,6 +96,7 @@ describe("getNatoriQuoteByToken", () => {
         clientName: "テスト太郎",
         amount: 12000,
         acceptedAt: null,
+        expiresAt: row.expires_at,
       },
     });
     expect(calls).toContain(`eq("token_hash","${TOKEN_HASH}")`);
