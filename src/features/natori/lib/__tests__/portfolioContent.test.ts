@@ -73,6 +73,74 @@ describe("parsePortfolioContent", () => {
     ).toBeNull();
   });
 
+  it("作品の関連リンクは最大6件の http/https URLだけを保持する", () => {
+    const withLinks: PortfolioContent = {
+      ...validContent,
+      works: [
+        {
+          ...validContent.works[0],
+          relatedLinks: [
+            {
+              id: "work-link-client",
+              kind: "client",
+              label: " YouTube ",
+              href: " https://youtube.com/@example ",
+            },
+            {
+              id: "work-link-empty",
+              kind: "usage",
+              label: "未入力",
+              href: "",
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(parsePortfolioContent(withLinks)?.works[0]?.relatedLinks).toEqual([
+      {
+        id: "work-link-client",
+        kind: "client",
+        label: "YouTube",
+        href: "https://youtube.com/@example",
+      },
+    ]);
+    expect(
+      parsePortfolioContent({
+        ...withLinks,
+        works: [
+          {
+            ...withLinks.works[0],
+            relatedLinks: [
+              {
+                id: "work-link-bad",
+                kind: "client",
+                label: "危険なリンク",
+                href: "javascript:alert(1)",
+              },
+            ],
+          },
+        ],
+      }),
+    ).toBeNull();
+    expect(
+      parsePortfolioContent({
+        ...withLinks,
+        works: [
+          {
+            ...withLinks.works[0],
+            relatedLinks: Array.from({ length: 7 }, (_, index) => ({
+              id: `work-link-${index}`,
+              kind: "client" as const,
+              label: `link${index}`,
+              href: `https://example.com/${index}`,
+            })),
+          },
+        ],
+      }),
+    ).toBeNull();
+  });
+
   it("保存済みの『へようこそ』タイトルを自然な表記へ移行する", () => {
     expect(
       parsePortfolioContent({
