@@ -58,14 +58,33 @@ export default function PortfolioHeader({
         </nav>
         {showcase ? null : (
           <span
-            className="rounded-full px-3 py-1.5 text-xs font-bold"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold"
             style={{
               background: content.commissionOpen ? c.successSoft : c.surfaceSubtle,
               color: content.commissionOpen ? c.success : c.textSoft,
               border: `1px solid ${content.commissionOpen ? c.success : c.borderStrong}`,
             }}
           >
-            {content.commissionOpen ? "● 受付中" : "受付停止中"}
+            {content.commissionOpen ? (
+              <>
+                <span className="relative flex h-2.5 w-2.5 shrink-0" aria-hidden="true">
+                  <span
+                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 motion-reduce:animate-none"
+                    style={{ background: c.success }}
+                  />
+                  <span
+                    className="relative inline-flex h-2.5 w-2.5 rounded-full"
+                    style={{
+                      background: c.success,
+                      boxShadow: `0 0 0 2px ${c.successSoft}, 0 0 8px ${c.success}`,
+                    }}
+                  />
+                </span>
+                受付中
+              </>
+            ) : (
+              "受付停止中"
+            )}
           </span>
         )}
       </div>
