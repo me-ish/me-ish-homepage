@@ -57,6 +57,17 @@ const workSchema = z
     featured: z.boolean().optional(),
     published: z.boolean().optional(),
   })
+  .superRefine((work, ctx) => {
+    const hasRelatedLinks =
+      work.relatedLinks?.some((link) => link.href.trim().length > 0) ?? false;
+    if (hasRelatedLinks && work.image === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["relatedLinks"],
+        message: "関連リンクを保存するには作品画像が必要です",
+      });
+    }
+  })
   .transform(
     ({ id, title, tag, tags, image, productionMonth, relatedLinks, collectionId, featured, published }) => ({
       id,
