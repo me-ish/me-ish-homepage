@@ -29,7 +29,7 @@ const JAPAN_DATE_FORMATTER = new Intl.DateTimeFormat("ja-JP", {
 
 function formatDate(iso: string): string {
   const parts = JAPAN_DATE_FORMATTER.formatToParts(new Date(iso));
-  const value = (type: Intl.DateTimeFormatPartTypes) =>
+  const value = (type: "year" | "month" | "day") =>
     parts.find((part) => part.type === type)?.value ?? "";
   return `${value("year")}年${value("month")}月${value("day")}日`;
 }
