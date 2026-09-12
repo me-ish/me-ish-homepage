@@ -34,6 +34,12 @@ export default function PortfolioLanding({
   structuredIntake?: boolean;
 }) {
   const showcase = variant === "showcase";
+  // /natori/works は外部プラットフォーム提出用。関連URLを描画しないだけでなく、
+  // Client Component のRSCペイロードにもURL値を載せない。
+  const galleryWorks = showcase
+    ? content.works.map((work) => ({ ...work, relatedLinks: undefined }))
+    : content.works;
+
   return (
     <main
       className={`${portfolioFontJp.variable} ${portfolioFontEn.variable} ${portfolioFontJp.className} pf-portfolio-root min-h-screen`}
@@ -43,8 +49,9 @@ export default function PortfolioLanding({
       <PortfolioHeader content={content} variant={variant} />
       <PortfolioHero content={content} variant={variant} />
       <PortfolioGallery
-        works={content.works}
+        works={galleryWorks}
         collections={content.collections}
+        variant={variant}
         flatPlaceholders={flatPlaceholders}
       />
       {showcase ? (
