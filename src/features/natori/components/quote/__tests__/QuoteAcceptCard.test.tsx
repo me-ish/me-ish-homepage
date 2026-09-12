@@ -53,7 +53,7 @@ describe("QuoteAcceptCard", () => {
 
     await userEvent.click(
       screen.getByRole("checkbox", {
-        name: /ご依頼規約、特定商取引法に基づく表記および上記のお見積もり内容を確認しました/,
+        name: /ご依頼規約.*特定商取引法に基づく表記.*および上記のお見積もり内容を確認しました/,
       })
     );
     expect((button as HTMLButtonElement).disabled).toBe(false);
