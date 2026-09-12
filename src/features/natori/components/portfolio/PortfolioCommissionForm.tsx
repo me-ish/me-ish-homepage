@@ -17,6 +17,7 @@ import {
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
+import PortfolioLegalNotice from "./PortfolioLegalNotice";
 import PortfolioStructuredCommissionForm from "./PortfolioStructuredCommissionForm";
 
 type Status = "idle" | "sending" | "success" | "error";
@@ -29,13 +30,8 @@ const REQUEST_TYPE_OTHER = "その他";
 const MAX_REF_IMAGES = 5;
 const REF_IMAGE_MAX_BYTES = 10 * 1024 * 1024; // サーバー側 IMAGE_MAX_BYTES と揃える
 
-/** 選択済みのキャラクター資料。previewUrl は URL.createObjectURL で作る */
 type RefImageEntry = { file: File; previewUrl: string };
 
-/**
- * ご依頼の詳細のテンプレート。1から書かずに、各見出しの下へ追記して
- * もらう形式。不要な項目は消してもらってOK。
- */
 const DETAILS_TEMPLATE = [
   "【キャラクターの特徴】",
   "（髪型・髪色・目の色・服装・体型など）",
@@ -59,25 +55,17 @@ export default function PortfolioCommissionForm({
   structuredIntake,
 }: {
   content: PortfolioContent;
-  /** エトリエのデモ環境用。送信を実行せず成功をシミュレートする */
   demoMode?: boolean;
-  /**
-   * P1-06 の構造化受付（RequestData V1 + create v2 RPC）を使うか。
-   * server 側の rollout guard から渡る。false（既定）では現行フォームのまま。
-   */
   structuredIntake?: boolean;
 }) {
   const [status, setStatus] = useState<Status>("idle");
   const [autoReplied, setAutoReplied] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<string>(PLAN_UNDECIDED);
-  // キャラクター資料。選択時はローカル保持のみで、送信時に multipart で一括添付
-  // する（送信前にサーバーへ置かない = 匿名アップロードの穴を作らない）
   const [refImages, setRefImages] = useState<RefImageEntry[]>([]);
   const [refError, setRefError] = useState<string | null>(null);
   const refFileInputRef = useRef<HTMLInputElement | null>(null);
   const formStartTrackedRef = useRef(false);
   const commissionOpen = content.commissionOpen;
-  // つなぐ経由の依頼案内。受付停止中は非表示
   const tsunaguLink = commissionOpen
     ? content.socialLinks.find(isPortfolioTsunaguLink)
     : undefined;
@@ -90,7 +78,6 @@ export default function PortfolioCommissionForm({
     trackNatoriPageEvent("portfolio_form_start", "form");
   };
 
-  // 料金カードの「このプランで相談」からプランを受け取る
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<PortfolioPlanSelectDetail>).detail;
@@ -107,7 +94,6 @@ export default function PortfolioCommissionForm({
     return () => window.removeEventListener(PLAN_SELECT_EVENT, handler);
   }, [content.plans]);
 
-  // 選択された画像をローカルの添付リストへ足す（サーバー送信はしない）
   const handleRefFiles = (files: File[]) => {
     if (files.length === 0) return;
     const remaining = MAX_REF_IMAGES - refImages.length;
@@ -117,7 +103,7 @@ export default function PortfolioCommissionForm({
     }
     const oversized = files.find((file) => file.size > REF_IMAGE_MAX_BYTES);
     if (oversized) {
-      setRefError(`1枚10MBまで（png / jpg / webp / gif）です。`);
+      setRefError("1枚10MBまで（png / jpg / webp / gif）です。");
       return;
     }
     setRefError(null);
@@ -140,7 +126,6 @@ export default function PortfolioCommissionForm({
     e.preventDefault();
     if (status === "sending") return;
     if (demoMode) {
-      // デモ: 実送信せず成功表示だけする（メールも飛ばない）
       setRefImages((current) => {
         current.forEach((entry) => URL.revokeObjectURL(entry.previewUrl));
         return [];
@@ -150,14 +135,10 @@ export default function PortfolioCommissionForm({
     }
     setStatus("sending");
 
-    // フォーム項目 + 添付画像をまとめて multipart で送る。
-    // Content-Type は指定しない（ブラウザが boundary 付きで設定する）
     const form = e.currentTarget;
     const data = new FormData(form);
     const requestType = String(data.get("requestType") ?? "");
-    for (const entry of refImages) {
-      data.append("refImages", entry.file);
-    }
+    for (const entry of refImages) data.append("refImages", entry.file);
 
     try {
       const res = await fetch("/api/natori/portfolio/contact", {
@@ -221,9 +202,7 @@ export default function PortfolioCommissionForm({
             className="rounded-2xl p-8 text-center"
             style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
           >
-            <p className="mb-2 text-3xl" aria-hidden="true">
-              🎉
-            </p>
+            <p className="mb-2 text-3xl" aria-hidden="true">🎉</p>
             <p className="mb-1 text-lg font-bold">送信ありがとうございます!</p>
             <p className="text-sm" style={{ color: c.textSoft }}>
               内容を確認のうえ、2〜3日以内にご連絡いたします。
@@ -250,7 +229,6 @@ export default function PortfolioCommissionForm({
             className="space-y-5 rounded-2xl p-6 md:p-8"
             style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
           >
-            {/* honeypot: 人間には見えない。ボット対策 */}
             <input
               type="text"
               name="website"
@@ -292,25 +270,19 @@ export default function PortfolioCommissionForm({
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label htmlFor="pf-type" className={labelClass}>
-                  ご依頼の種類
-                </label>
+                <label htmlFor="pf-type" className={labelClass}>ご依頼の種類</label>
                 <select
                   id="pf-type"
                   name="requestType"
                   className={inputClass}
                   style={{ borderColor: c.formBorder }}
                 >
-                  {content.services.map((service) => (
-                    <option key={service}>{service}</option>
-                  ))}
+                  {content.services.map((service) => <option key={service}>{service}</option>)}
                   <option>{REQUEST_TYPE_OTHER}</option>
                 </select>
               </div>
               <div>
-                <label htmlFor="pf-plan" className={labelClass}>
-                  サイズ / プラン
-                </label>
+                <label htmlFor="pf-plan" className={labelClass}>サイズ / プラン</label>
                 <select
                   id="pf-plan"
                   name="plan"
@@ -319,9 +291,7 @@ export default function PortfolioCommissionForm({
                   className={inputClass}
                   style={{ borderColor: c.formBorder }}
                 >
-                  {planChoices.map((plan) => (
-                    <option key={plan}>{plan}</option>
-                  ))}
+                  {planChoices.map((plan) => <option key={plan}>{plan}</option>)}
                 </select>
               </div>
             </div>
@@ -355,33 +325,25 @@ export default function PortfolioCommissionForm({
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label htmlFor="pf-budget" className={labelClass}>
-                  ご予算
-                </label>
+                <label htmlFor="pf-budget" className={labelClass}>ご予算</label>
                 <select
                   id="pf-budget"
                   name="budget"
                   className={inputClass}
                   style={{ borderColor: c.formBorder }}
                 >
-                  {portfolioBudgetOptions.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
+                  {portfolioBudgetOptions.map((option) => <option key={option}>{option}</option>)}
                 </select>
               </div>
               <div>
-                <label htmlFor="pf-deadline" className={labelClass}>
-                  希望納期
-                </label>
+                <label htmlFor="pf-deadline" className={labelClass}>希望納期</label>
                 <select
                   id="pf-deadline"
                   name="deadline"
                   className={inputClass}
                   style={{ borderColor: c.formBorder }}
                 >
-                  {portfolioDeadlineOptions.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
+                  {portfolioDeadlineOptions.map((option) => <option key={option}>{option}</option>)}
                 </select>
               </div>
             </div>
@@ -396,7 +358,6 @@ export default function PortfolioCommissionForm({
                 <ul className="mb-3 flex flex-wrap gap-3">
                   {refImages.map((entry, index) => (
                     <li key={entry.previewUrl} className="relative">
-                      {/* ローカル選択ファイルの objectURL プレビューなので next/image は使わない */}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={entry.previewUrl}
@@ -429,9 +390,7 @@ export default function PortfolioCommissionForm({
                 </button>
               ) : null}
               {refError ? (
-                <p className="mt-2 text-xs font-bold" style={{ color: c.error }} role="alert">
-                  {refError}
-                </p>
+                <p className="mt-2 text-xs font-bold" style={{ color: c.error }} role="alert">{refError}</p>
               ) : null}
               <input
                 ref={refFileInputRef}
@@ -467,9 +426,7 @@ export default function PortfolioCommissionForm({
             </div>
 
             <div>
-              <label htmlFor="pf-message" className={labelClass}>
-                その他・ご質問
-              </label>
+              <label htmlFor="pf-message" className={labelClass}>その他・ご質問</label>
               <textarea
                 id="pf-message"
                 name="message"
@@ -490,6 +447,8 @@ export default function PortfolioCommissionForm({
                 送信に失敗しました。時間をおいて再度お試しいただくか、SNSのDMからご連絡ください。
               </p>
             ) : null}
+
+            <PortfolioLegalNotice />
 
             <button
               type="submit"
