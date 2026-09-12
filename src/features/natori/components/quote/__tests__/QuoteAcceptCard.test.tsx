@@ -26,7 +26,7 @@ function renderCard() {
       clientName="テスト太郎"
       amount={12000}
       acceptedAt={null}
-      expiresAt="2026-10-01T00:00:00.000Z"
+      expiresAt="2026-10-01T16:00:00.000Z"
     />
   );
 }
@@ -41,7 +41,7 @@ describe("QuoteAcceptCard", () => {
     expect(screen.getByText("支払い案内メール送信日から7日以内")).toBeTruthy();
     expect(screen.getByText(/入金確認後に制作を開始し/)).toBeTruthy();
     expect(screen.getByText(/実施済み作業相当の費用をご負担いただく場合があります/)).toBeTruthy();
-    expect(screen.getByText("2026年10月1日まで")).toBeTruthy();
+    expect(screen.getByText("2026年10月2日まで")).toBeTruthy();
 
     const terms = screen.getByRole("link", { name: "ご依頼規約" });
     const tokushoho = screen.getByRole("link", { name: "特定商取引法に基づく表記" });
