@@ -28,8 +28,10 @@ export const NATORI_STRUCTURED_FORM_VERSION = "etorie-request-v1";
 
 export const NATORI_MAX_REFERENCE_IMAGES = 5;
 export const NATORI_MAX_REFERENCE_LINKS = 5;
-export const NATORI_REFERENCE_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
-export const NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES = 10 * 1024 * 1024;
+// Vercel Functions の 4.5MB request body 上限より十分小さく保つ。
+// multipart 境界・RequestData（最大64KiB）・参考URL等の余白を確保する。
+export const NATORI_REFERENCE_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
+export const NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES = 4 * 1024 * 1024;
 
 /**
  * 公開フォーム専用の選択値。保存時は既存 contract の「その他」へ正規化し、

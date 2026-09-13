@@ -15,6 +15,11 @@ import {
   type PortfolioPlanSelectDetail,
 } from "@/features/natori/constants/portfolioContent";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
+import {
+  NATORI_MAX_REFERENCE_IMAGES,
+  NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES,
+  NATORI_REFERENCE_IMAGE_MAX_BYTES,
+} from "@/features/natori/lib/portfolioRequestForm";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import PortfolioLegalNotice from "./PortfolioLegalNotice";
@@ -27,8 +32,8 @@ const labelClass = "mb-1.5 block text-sm font-bold";
 
 const PLAN_UNDECIDED = "未定・相談して決めたい";
 const REQUEST_TYPE_OTHER = "その他";
-const MAX_REF_IMAGES = 5;
-const REF_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+const MAX_REF_IMAGES = NATORI_MAX_REFERENCE_IMAGES;
+const REF_IMAGE_MAX_BYTES = NATORI_REFERENCE_IMAGE_MAX_BYTES;
 
 type RefImageEntry = { file: File; previewUrl: string };
 
@@ -106,13 +111,22 @@ export default function PortfolioCommissionForm({
       setRefError(`画像は最大${MAX_REF_IMAGES}枚までです。`);
       return;
     }
-    const oversized = files.find((file) => file.size > REF_IMAGE_MAX_BYTES);
+    const selectedFiles = files.slice(0, remaining);
+    const oversized = selectedFiles.find((file) => file.size > REF_IMAGE_MAX_BYTES);
     if (oversized) {
-      setRefError("1枚10MBまで（png / jpg / webp / gif）です。");
+      setRefError("1枚4MBまで（png / jpg / webp / gif）です。");
+      return;
+    }
+    const totalBytes = [...refImages.map((entry) => entry.file), ...selectedFiles].reduce(
+      (sum, file) => sum + file.size,
+      0
+    );
+    if (totalBytes > NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES) {
+      setRefError("画像の合計サイズは4MBまでです。");
       return;
     }
     setRefError(null);
-    const selected = files.slice(0, remaining).map((file) => ({
+    const selected = selectedFiles.map((file) => ({
       file,
       previewUrl: URL.createObjectURL(file),
     }));
@@ -361,7 +375,7 @@ export default function PortfolioCommissionForm({
               <span className={labelClass}>キャラクター資料（画像添付）</span>
               <p className="mb-2 text-xs" style={{ color: c.textSoft }}>
                 キャラクターの設定画・立ち絵・過去のイラストなどを添付してください（最大
-                {MAX_REF_IMAGES}枚・各10MBまで）。URLで共有したい資料は「ご依頼の詳細」に貼ってOKです。
+                {MAX_REF_IMAGES}枚・合計4MBまで）。URLで共有したい資料は「ご依頼の詳細」に貼ってOKです。
               </p>
               {refImages.length > 0 ? (
                 <ul className="mb-3 flex flex-wrap gap-3">

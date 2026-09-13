@@ -25,7 +25,7 @@
 
 1. PortfolioCommissionForm が氏名、メール、依頼種別、プラン、オプション、予算帯、納期区分、参考画像、詳細、メッセージを multipart/form-data で送る。
 2. contact API が CSRF ヘッダー、honeypot、IP 単位 3回/10分のレート制限、Zod 検証を行う。
-3. 参考画像は最大5件、各10MBまで。MIME を確認後、非公開 natori-inquiry-refs bucket へ保存する。
+3. 参考画像は最大5件・合計4MBまで。MIME を確認後、非公開 natori-inquiry-refs bucket へ保存する。
 4. inquiryProjectService がフォームの表示文字列から案件種別を推測する。認識できない依頼種別は illustration へ倒れる。
 5. createNatoriAdminProject が次を生成し、natori_create_project_with_tasks RPC で案件・タスク・参考ファイルメタデータをまとめて保存する。
    - status = inquiry

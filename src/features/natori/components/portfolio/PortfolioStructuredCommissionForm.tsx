@@ -378,7 +378,7 @@ export default function PortfolioStructuredCommissionForm({
       return;
     }
     if (files.some((file) => file.size > NATORI_REFERENCE_IMAGE_MAX_BYTES)) {
-      setRefImageError("1枚10MBまで（png / jpg / webp / gif）です。");
+      setRefImageError("1枚4MBまで（png / jpg / webp / gif）です。");
       return;
     }
     const selected = files.slice(0, remaining);
@@ -387,7 +387,7 @@ export default function PortfolioStructuredCommissionForm({
       0
     );
     if (nextTotal > NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES) {
-      setRefImageError("画像の合計サイズが10MBを超えています。");
+      setRefImageError("画像の合計サイズは4MBまでです。");
       return;
     }
     setRefImageError(null);
@@ -1273,7 +1273,7 @@ export default function PortfolioStructuredCommissionForm({
             summary={refImages.length > 0 || state.referenceLinks.some((row) => row.url.trim())
               ? `画像${refImages.length}枚／参考URL${state.referenceLinks.filter((row) => row.url.trim()).length}件`
               : undefined}
-            description={`画像${NATORI_MAX_REFERENCE_IMAGES}枚・合計10MB / 参考URL${NATORI_MAX_REFERENCE_LINKS}件まで`}
+            description={`画像${NATORI_MAX_REFERENCE_IMAGES}枚・合計4MB / 参考URL${NATORI_MAX_REFERENCE_LINKS}件まで`}
             collapsible
             open={openSections.materials}
             onToggle={(next) => setOpenSections((current) => ({ ...current, materials: next }))}

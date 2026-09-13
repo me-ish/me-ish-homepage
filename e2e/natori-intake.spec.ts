@@ -1,6 +1,23 @@
+import { Buffer } from "node:buffer";
 import { expect, test, type Page } from "@playwright/test";
 
 const DEMO_PATH = "/ja/etorie/demo/app/portfolio";
+const TWO_MIB_PLUS_ONE = 2 * 1024 * 1024 + 1;
+
+function oversizedReferencePair() {
+  return [
+    {
+      name: "reference-a.png",
+      mimeType: "image/png",
+      buffer: Buffer.alloc(TWO_MIB_PLUS_ONE),
+    },
+    {
+      name: "reference-b.png",
+      mimeType: "image/png",
+      buffer: Buffer.alloc(TWO_MIB_PLUS_ONE),
+    },
+  ];
+}
 
 async function submitMinimumRequest(
   page: Page,
@@ -81,12 +98,32 @@ test.describe("Natori public intake rollout", () => {
     await submitMinimumRequest(page, "legacy");
   });
 
+  test("rejects legacy reference images above the 4MiB combined limit", async ({ page }) => {
+    await page.goto(DEMO_PATH);
+
+    await page.locator('input[type="file"]').setInputFiles(oversizedReferencePair());
+
+    await expect(page.getByText("画像の合計サイズは4MBまでです。", { exact: true })).toBeVisible();
+    await expect(page.getByText("送信ありがとうございます!", { exact: true })).toHaveCount(0);
+  });
+
   test("submits the structured consultation flow without external writes", async ({ page }) => {
     await page.goto(`${DEMO_PATH}?structured=1`);
 
     await expect(page.getByRole("heading", { name: "ご希望・連絡先" })).toBeVisible();
     await expect(page.getByRole("radio", { name: "まず相談したい" })).toBeChecked();
     await submitMinimumRequest(page, "consultation");
+  });
+
+  test("rejects structured reference images above the 4MiB combined limit", async ({ page }) => {
+    await page.goto(`${DEMO_PATH}?structured=1`);
+    await page.locator("summary").filter({ hasText: "詳しい条件を追加する" }).click();
+    await page.locator("summary").filter({ hasText: /^資料/ }).click();
+
+    await page.locator('input[type="file"]').setInputFiles(oversizedReferencePair());
+
+    await expect(page.getByText("画像の合計サイズは4MBまでです。", { exact: true })).toBeVisible();
+    await expect(page.getByText("送信ありがとうございます!", { exact: true })).toHaveCount(0);
   });
 
   test("submits the structured quote flow without external writes", async ({ page }) => {

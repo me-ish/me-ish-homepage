@@ -472,7 +472,7 @@ export type NatoriRequestDataV1 = {
 | colorDirection | string | 任意 | 任意 | 1000 |  |
 | referenceNotes | string | 任意 | 任意 | 2000 | URL 本体は別 table |
 | message | string | 条件必須 | 任意 | 2000 | 相談は詳細全体が空なら必須 |
-| reference images | file[] | 任意 | 任意 | 5件、各10MB | 現行制約を維持 |
+| reference images | file[] | 任意 | 任意 | 5件・合計4MB | Vercel Function の request body 上限を考慮 |
 | reference links | link[] | 任意 | 任意 | 5件 | HTTPS、URL 2048、label 100 |
 | request_data 全体 | JSON object | 必須（新フォーム） | 必須（新フォーム） | 64KiB | legacy project は NULL |
 

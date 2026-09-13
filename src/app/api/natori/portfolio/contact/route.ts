@@ -63,8 +63,8 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const MAX_REF_IMAGES = NATORI_MAX_REFERENCE_IMAGES;
-/** multipart 全体の上限。画像10MiB + フォーム本文の余裕分。 */
-const MAX_REQUEST_BYTES = 12 * 1024 * 1024;
+/** Vercel Function の 4.5MB request body 上限より手前で拒否する。 */
+const MAX_REQUEST_BYTES = 4_400_000;
 
 type AvailableCommission = Extract<PublicCommissionAvailability, { kind: "ok" }>;
 
@@ -518,6 +518,10 @@ async function handleLegacySubmission(
   // 添付画像の保存（フォーム送信と一体でのみ行う）
   if (files.length > MAX_REF_IMAGES) {
     return NextResponse.json({ error: "too_many_files" }, { status: 400 });
+  }
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+  if (totalBytes > NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES) {
+    return NextResponse.json({ error: "files_too_large" }, { status: 400 });
   }
   const submissionId = crypto.randomUUID();
   const referencePaths: string[] = [];
