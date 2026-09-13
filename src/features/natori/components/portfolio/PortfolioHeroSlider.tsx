@@ -11,14 +11,23 @@ type HeroSlide = {
 };
 
 const AUTOPLAY_INTERVAL_MS = 5000;
+const SWIPE_THRESHOLD_PX = 48;
+const SWIPE_DIRECTION_RATIO = 1.1;
+
+type TouchOrigin = {
+  x: number;
+  y: number;
+};
 
 export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
   const [focusWithin, setFocusWithin] = useState(false);
+  const [touching, setTouching] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const paused = hovered || focusWithin;
+  const touchOriginRef = useRef<TouchOrigin | null>(null);
+  const paused = hovered || focusWithin || touching;
 
   useEffect(() => {
     if (typeof window.matchMedia !== "function") return;
@@ -47,6 +56,44 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
   const hasMultiple = slides.length > 1;
   const goTo = (index: number) => setActiveIndex((index + slides.length) % slides.length);
 
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!hasMultiple || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    touchOriginRef.current = { x: touch.clientX, y: touch.clientY };
+    setTouching(true);
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const origin = touchOriginRef.current;
+    touchOriginRef.current = null;
+    setTouching(false);
+    if (!origin || !hasMultiple || event.changedTouches.length !== 1) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - origin.x;
+    const deltaY = touch.clientY - origin.y;
+    const horizontalDistance = Math.abs(deltaX);
+    const verticalDistance = Math.abs(deltaY);
+
+    if (
+      horizontalDistance < SWIPE_THRESHOLD_PX ||
+      horizontalDistance <= verticalDistance * SWIPE_DIRECTION_RATIO
+    ) {
+      return;
+    }
+
+    if (deltaX < 0) {
+      goTo(activeIndex + 1);
+      return;
+    }
+    goTo(activeIndex - 1);
+  };
+
+  const cancelTouch = () => {
+    touchOriginRef.current = null;
+    setTouching(false);
+  };
+
   return (
     <div
       ref={rootRef}
@@ -65,8 +112,11 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
       }}
     >
       <div
-        className="relative aspect-square overflow-hidden rounded-2xl border"
+        className="relative aspect-square touch-pan-y select-none overflow-hidden rounded-2xl border"
         style={{ background: c.surfaceSubtle, borderColor: c.borderSubtle }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={cancelTouch}
       >
         <Image
           key={activeSlide.src}
@@ -75,7 +125,8 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
           fill
           priority={activeIndex === 0}
           sizes="(min-width: 1024px) 512px, (min-width: 768px) 46vw, calc(100vw - 40px)"
-          className="object-contain"
+          className="pointer-events-none object-contain"
+          draggable={false}
         />
 
         {hasMultiple ? (
