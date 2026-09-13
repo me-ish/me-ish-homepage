@@ -9,7 +9,8 @@ import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
 const shortText = z.string().max(200);
 const longText = z.string().max(4000);
-const imageUrl = z.string().max(1000).nullable();
+const imageStringUrl = z.string().max(1000);
+const imageUrl = imageStringUrl.nullable();
 const stableContentId = z
   .string()
   .min(1)
@@ -160,6 +161,8 @@ const portfolioContentBaseSchema = z.object({
   heroTitleTail: shortText,
   heroDescription: longText,
   heroImage: imageUrl,
+  // 旧データには存在しないため空配列で受け、parse時にheroImageから補完する
+  heroImages: z.array(imageStringUrl).max(5).optional().default([]),
   aboutImage: imageUrl,
   aboutParagraphs: z.array(longText).max(20),
   services: z.array(shortText).max(30),
@@ -253,10 +256,24 @@ function withNaturalNatoriHeroTitle(content: PortfolioContent): PortfolioContent
   return { ...content, heroTitleAccent: "ナトリの", heroTitleTail: "あとりえ" };
 }
 
+/** heroImages導入前のheroImageを1枚目へ移し、互換フィールドも先頭画像と同期する。 */
+function withCanonicalHeroImages(content: PortfolioContent): PortfolioContent {
+  const heroImages = (content.heroImages ?? []).filter((image) => image.length > 0).slice(0, 5);
+  if (heroImages.length > 0) {
+    return { ...content, heroImages, heroImage: heroImages[0] };
+  }
+  if (content.heroImage) {
+    return { ...content, heroImages: [content.heroImage] };
+  }
+  return { ...content, heroImages: [], heroImage: null };
+}
+
 /** unknown な値（DB由来など）を検証して PortfolioContent に。失敗時は null */
 export function parsePortfolioContent(value: unknown): PortfolioContent | null {
   const result = portfolioContentSchema.safeParse(value);
-  return result.success ? withNaturalNatoriHeroTitle(result.data) : null;
+  return result.success
+    ? withCanonicalHeroImages(withNaturalNatoriHeroTitle(result.data))
+    : null;
 }
 
 /**
@@ -285,8 +302,13 @@ export function withPortfolioEditorStableIds(
 export function preparePortfolioContentForSave(content: PortfolioContent): PortfolioContent | null {
   const cleanList = (items: string[]) =>
     items.map((item) => item.trim()).filter((item) => item.length > 0);
+  const heroImages = (content.heroImages ?? (content.heroImage ? [content.heroImage] : []))
+    .filter((image) => image.length > 0)
+    .slice(0, 5);
   return parsePortfolioContent({
     ...content,
+    heroImages,
+    heroImage: heroImages[0] ?? null,
     aboutParagraphs: cleanList(content.aboutParagraphs),
     services: cleanList(content.services),
     requests: cleanList(content.requests),

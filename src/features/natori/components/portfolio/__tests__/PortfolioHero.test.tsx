@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 describe("PF-03 portfolio hero", () => {
-  it("shows purpose, representative artwork, and the two full-variant actions without repeating the header name", () => {
+  it("shows artwork before description on mobile while keeping the full-variant actions", () => {
     render(
       <PortfolioHero
         content={{
@@ -44,7 +44,8 @@ describe("PF-03 portfolio hero", () => {
     expect(hero.className).toContain("md:pb-20");
     expect(screen.queryByText(defaultPortfolioContent.artistName)).toBeNull();
     expect(screen.getByText(defaultPortfolioContent.roleEn)).toBeTruthy();
-    expect(screen.getByText(defaultPortfolioContent.heroDescription)).toBeTruthy();
+    const description = screen.getByText(defaultPortfolioContent.heroDescription);
+    expect(description).toBeTruthy();
     expect(screen.queryByText("3,000円～")).toBeNull();
     expect(screen.queryByRole("link", { name: "料金・追加オプションを確認" })).toBeNull();
     expect(screen.queryByText(defaultPortfolioContent.deliveryLead.split("。")[0] + "。")).toBeNull();
@@ -59,6 +60,14 @@ describe("PF-03 portfolio hero", () => {
     });
     expect(representativeImage).toBeTruthy();
     expect(representativeImage.getAttribute("data-priority")).toBe("true");
+
+    const titleBlock = heroTitle.parentElement as HTMLElement;
+    const figure = hero.querySelector("figure") as HTMLElement;
+    const descriptionBlock = description.parentElement as HTMLElement;
+    expect(titleBlock.className).toContain("order-1");
+    expect(figure.className).toContain("order-2");
+    expect(descriptionBlock.className).toContain("order-3");
+
     const primaryLink = screen.getByRole("link", { name: "相談・見積もり" });
     expect(primaryLink.getAttribute("href")).toBe("#form");
     expect((primaryLink as HTMLElement).style.background).toBe("rgb(230, 106, 169)");
@@ -77,7 +86,38 @@ describe("PF-03 portfolio hero", () => {
     );
   });
 
-  it("uses the first real work image when heroImage is not configured", () => {
+  it("supports multiple configured hero images with manual controls", () => {
+    render(
+      <PortfolioHero
+        content={{
+          ...defaultPortfolioContent,
+          heroImage: "https://example.com/hero-a.webp",
+          heroImages: [
+            "https://example.com/hero-a.webp",
+            "https://example.com/hero-b.webp",
+          ],
+        }}
+      />
+    );
+
+    expect(
+      screen.getByRole("img", { name: `${defaultPortfolioContent.artistName}の代表作品` })
+        .getAttribute("src")
+    ).toBe("https://example.com/hero-a.webp");
+    expect(screen.getByRole("button", { name: "前の作品" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "次の作品" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "1枚目を表示" }).getAttribute("aria-current")).toBe("true");
+
+    fireEvent.click(screen.getByRole("button", { name: "次の作品" }));
+
+    expect(
+      screen.getByRole("img", { name: `${defaultPortfolioContent.artistName}の代表作品 2` })
+        .getAttribute("src")
+    ).toBe("https://example.com/hero-b.webp");
+    expect(screen.getByRole("button", { name: "2枚目を表示" }).getAttribute("aria-current")).toBe("true");
+  });
+
+  it("uses the first real work image when hero images are not configured", () => {
     const fallbackWork = {
       ...defaultPortfolioContent.works[0],
       title: "代表作品テスト",
@@ -89,6 +129,7 @@ describe("PF-03 portfolio hero", () => {
         content={{
           ...defaultPortfolioContent,
           heroImage: null,
+          heroImages: [],
           works: [fallbackWork, ...defaultPortfolioContent.works.slice(1)],
         }}
       />
@@ -96,10 +137,11 @@ describe("PF-03 portfolio hero", () => {
 
     expect(screen.getByRole("img", { name: fallbackWork.title })).toBeTruthy();
     expect(screen.getByText(fallbackWork.title)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "次の作品" })).toBeNull();
   });
 
   it("does not invent a decorative visual when no real artwork is configured", () => {
-    render(<PortfolioHero content={defaultPortfolioContent} />);
+    render(<PortfolioHero content={{ ...defaultPortfolioContent, heroImages: [] }} />);
 
     expect(screen.queryByRole("img")).toBeNull();
     expect(document.querySelector("svg")).toBeNull();

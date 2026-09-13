@@ -22,6 +22,7 @@ const validContent: PortfolioContent = {
   heroTitleTail: "あとりえ",
   heroDescription: "紹介文",
   heroImage: null,
+  heroImages: [],
   aboutImage: "https://example.com/icon.webp",
   aboutParagraphs: ["段落1", "段落2"],
   services: ["SNSアイコン"],
@@ -54,6 +55,17 @@ const validContent: PortfolioContent = {
 describe("parsePortfolioContent", () => {
   it("正しい形の content はそのまま通る", () => {
     expect(parsePortfolioContent(validContent)).toEqual(validContent);
+  });
+
+  it("旧heroImageだけのデータをHeroスライダー1枚目へ移行する", () => {
+    const { heroImages: _heroImages, ...legacy } = {
+      ...validContent,
+      heroImage: "https://example.com/legacy-hero.webp",
+    };
+    expect(parsePortfolioContent(legacy)).toMatchObject({
+      heroImage: "https://example.com/legacy-hero.webp",
+      heroImages: ["https://example.com/legacy-hero.webp"],
+    });
   });
 
   it("作品の制作年月を YYYY-MM 形式で保持する", () => {
