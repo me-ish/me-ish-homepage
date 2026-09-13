@@ -2,7 +2,7 @@
 // 構造化ご依頼フォームの DOM テスト。label 関連付け、条件付き表示、
 // 二重 submit 防止、server field error 表示、送信 payload の形を固定する。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const trackNatoriPageEvent = vi.hoisted(() => vi.fn());
@@ -81,6 +81,34 @@ afterEach(() => {
 });
 
 describe("最低入力と送信", () => {
+  it("相談本文がなくても詳細欄が埋まっていれば共有スキーマどおり送信できる", async () => {
+    renderForm();
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: "テスト" } });
+    fireEvent.change(screen.getByLabelText(/メールアドレス/), { target: { value: "client@example.com" } });
+    fireEvent.change(screen.getByLabelText("キャラクターの特徴"), { target: { value: "水色の髪のキャラクターです。" } });
+    expect((screen.getByLabelText(/ご相談・ご依頼の内容/) as HTMLTextAreaElement).required).toBe(false);
+    submit();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(submittedRequestData()).toMatchObject({ message: "", characterFeatures: "水色の髪のキャラクターです。" });
+  });
+
+  it("入力不足は通信前にまとめて検証し、名前へフォーカスする", async () => {
+    renderForm();
+    submit();
+    expect(fetchMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText(/お名前/)));
+    expect(screen.getByLabelText(/お名前/).getAttribute("aria-invalid")).toBe("true");
+    expect(detailsBySummary("詳しい条件を追加する").open).toBe(false);
+  });
+
+  it("demo でも同じ必須条件を検証し、不正な入力を成功にしない", async () => {
+    render(<PortfolioCommissionForm content={defaultPortfolioContent} structuredIntake demoMode />);
+    submit();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.queryByText("送信ありがとうございます!")).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText(/お名前/)));
+  });
+
   it("consultation は氏名・メール・相談内容だけで送信できる", async () => {
     renderForm();
     await fillMinimum();
@@ -292,7 +320,7 @@ describe("条件付き入力", () => {
 
   it("一定期間後に公開可を選ぶと公開可能日を送る", async () => {
     renderForm();
-    const publicationPolicy = screen.getByLabelText("作品の公開可否");
+    const publicationPolicy = screen.getByLabelText(/作品の公開可否/);
     expect(screen.queryByLabelText("公開可能日＊")).toBeNull();
 
     await userEvent.selectOptions(publicationPolicy, "delayed");
@@ -311,7 +339,7 @@ describe("条件付き入力", () => {
 
   it("公開条件を変更すると公開可能日を送らない", async () => {
     renderForm();
-    const publicationPolicy = screen.getByLabelText("作品の公開可否");
+    const publicationPolicy = screen.getByLabelText(/作品の公開可否/);
     await userEvent.selectOptions(publicationPolicy, "delayed");
     fireEvent.change(screen.getByLabelText("公開可能日必須"), {
       target: { value: "2026-10-15" },
@@ -333,13 +361,13 @@ describe("条件付き入力", () => {
     const budgetKind = screen.getByLabelText("ご予算");
 
     await userEvent.selectOptions(budgetKind, "range");
-    await userEvent.type(screen.getByLabelText("下限（円）"), "5000");
+    await userEvent.type(screen.getByLabelText(/下限（円）/), "5000");
     await userEvent.type(screen.getByLabelText("上限（円・任意）"), "9000");
 
     await userEvent.selectOptions(budgetKind, "fixed");
     // 上限は kind 切替で非表示になり、送信対象からも外れる
     expect(screen.queryByLabelText("上限（円・任意）")).toBeNull();
-    const fixedAmount = screen.getByLabelText("ご予算（円）");
+    const fixedAmount = screen.getByLabelText(/ご予算（円）/);
     await userEvent.clear(fixedAmount);
     await userEvent.type(fixedAmount, "8000");
 
@@ -397,7 +425,7 @@ describe("オプション", () => {
     expect(screen.queryByRole("checkbox", { name: /サンプル使用不可/ })).toBeNull();
     expect(screen.queryByRole("checkbox", { name: /完全非公開/ })).toBeNull();
     expect(screen.getByLabelText("商用利用")).toBeTruthy();
-    expect(screen.getByLabelText("作品の公開可否")).toBeTruthy();
+    expect(screen.getByLabelText(/作品の公開可否/)).toBeTruthy();
   });
 
   it("stable ID・label snapshot・数量・補足を送る", async () => {
@@ -434,7 +462,7 @@ describe("資料", () => {
     await fillMinimum();
     submit();
 
-    expect(await screen.findByText("1行目と同じURLです。")).toBeTruthy();
+    expect((await screen.findAllByText("1行目と同じURLです。")).length).toBeGreaterThan(0);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -478,6 +506,94 @@ describe("資料", () => {
 });
 
 describe("server error の表示", () => {
+  it("予算エラーでは予算だけ開き、通信せずに修正・再送できる", async () => {
+    renderForm();
+    await fillMinimum();
+    await userEvent.selectOptions(screen.getByLabelText("ご予算"), "range");
+    fireEvent.change(screen.getByLabelText(/下限（円）/), { target: { value: "10000" } });
+    fireEvent.change(screen.getByLabelText("上限（円・任意）"), { target: { value: "5000" } });
+    submit();
+    expect(fetchMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("上限（円・任意）")));
+    expect(detailsBySummary("予算・納期").open).toBe(true);
+    for (const title of ["依頼の種類", "用途・条件", "資料", "キャラクター・イメージの詳細"]) {
+      expect(detailsBySummary(title).open).toBe(false);
+    }
+    expect(screen.getByLabelText("上限（円・任意）").getAttribute("aria-invalid")).toBe("true");
+    fireEvent.change(screen.getByLabelText("上限（円・任意）"), { target: { value: "15000" } });
+    submit();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(submittedRequestData()).toMatchObject({ budget: { kind: "range", min: 10000, max: 15000 } });
+  });
+
+  it.each([
+    ["ご依頼の種類", "other", "pf-request-type-other"],
+    ["制作範囲", "other", "pf-scope-other"],
+    ["希望納期", "preferred_date", "pf-deadline-date"],
+    ["ご予算", "fixed", "pf-budget-fixed"],
+  ])("%s の条件付き必須を送信前に検証する", async (label, value, targetId) => {
+    renderForm();
+    await fillMinimum();
+    await userEvent.selectOptions(screen.getByLabelText(label), value);
+    submit();
+    expect(fetchMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(document.activeElement?.id).toBe(targetId));
+    expect(document.getElementById(targetId)?.getAttribute("aria-invalid")).toBe("true");
+    expect((document.getElementById(targetId) as HTMLInputElement).required).toBe(true);
+  });
+
+  it("サーバーのエラー一覧から閉じた該当欄へ戻れる", async () => {
+    fetchMock.mockResolvedValue({ ok: false, status: 400, json: async () => ({
+      error: "invalid_request", fields: [{ path: "requestData.deadline.note", message: "納期の補足をご確認ください" }],
+    }) } as Response);
+    renderForm();
+    await fillMinimum();
+    submit();
+    await waitFor(() => expect(document.activeElement?.id).toBe("pf-deadline-note"));
+    expect(detailsBySummary("資料").open).toBe(false);
+    await userEvent.click(detailsBySummary("予算・納期").querySelector("summary")!);
+    await userEvent.click(screen.getByRole("button", { name: "納期の補足をご確認ください" }));
+    expect(detailsBySummary("予算・納期").open).toBe(true);
+    expect(document.activeElement?.id).toBe("pf-deadline-note");
+  });
+
+  it("参考URLの空行を除いたサーバー添字を元の入力行へ戻す", async () => {
+    fetchMock.mockResolvedValue({ ok: false, status: 400, json: async () => ({
+      error: "invalid_request", fields: [{ path: "referenceLinks.0.url", message: "参考資料のURLをご確認ください" }],
+    }) } as Response);
+    renderForm();
+    await fillMinimum();
+    await userEvent.click(screen.getByRole("button", { name: "＋ 参考URLを追加" }));
+    fireEvent.change(screen.getByLabelText("参考URL 2"), { target: { value: "https://example.com/reference" } });
+    submit();
+    await waitFor(() => expect(document.activeElement?.id).toBe("pf-ref-url-1"));
+    expect(screen.getByLabelText("参考URL 2").getAttribute("aria-invalid")).toBe("true");
+  });
+
+  it("429のRetry-Afterが過ぎたら入力を保って再送できる", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: "rate_limited" }), {
+      status: 429, headers: { "Retry-After": "2" },
+    }));
+    renderForm();
+    await fillMinimum();
+    vi.useFakeTimers();
+    try {
+      await act(async () => submit());
+      expect(document.activeElement?.id).toBe("pf-submit-errors");
+      expect((screen.getByRole("button", { name: "再送まで 2秒" }) as HTMLButtonElement).disabled).toBe(true);
+      submit();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await act(async () => vi.advanceTimersByTime(2000));
+      expect((screen.getByRole("button", { name: "相談内容を送信する" }) as HTMLButtonElement).disabled).toBe(false);
+      expect((screen.getByLabelText(/ご相談・ご依頼の内容/) as HTMLTextAreaElement).value).toBe("ご相談させてください。");
+      await act(async () => submit());
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(document.activeElement?.textContent).toBe("送信ありがとうございます!");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("field error を該当項目のそばに出す", async () => {
     fetchMock.mockResolvedValue({
       ok: false,
@@ -533,14 +649,26 @@ describe("server error の表示", () => {
 });
 
 describe("アクセシビリティ / モバイル想定 DOM", () => {
-  it("相談と見積りでDOM順序を切り替え、入力欄を再作成しない", async () => {
+  it("ラジオを同じグループにし、法務案内は送信ボタンの前に置く", async () => {
+    renderForm();
+    expect(screen.getByRole("radio", { name: "まず相談したい" }).getAttribute("name")).toBe("inquiryMode");
+    expect(screen.getByRole("radio", { name: "見積りを希望" }).getAttribute("name")).toBe("inquiryMode");
+    await userEvent.click(screen.getByRole("radio", { name: "見積りを希望" }));
+    expect((screen.getByRole("radio", { name: "見積りを希望" }) as HTMLInputElement).checked).toBe(true);
+    const notice = screen.getByText(/このフォームは、ご相談・お見積もりの受付フォームです/);
+    const button = screen.getByRole("button", { name: "見積もり相談を送信する" });
+    expect(notice.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(formElement().contains(notice)).toBe(true);
+  });
+
+  it("相談と見積りでDOM順序と入力欄を保持する", async () => {
     renderForm();
     await fillMinimum("入力を残してください。");
     const message = screen.getByLabelText(/ご相談・ご依頼の内容/);
     const optional = detailsBySummary("詳しい条件を追加する");
     expect(message.compareDocumentPosition(optional) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await userEvent.click(screen.getByLabelText("見積りを希望"));
-    expect(optional.compareDocumentPosition(message) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(message.compareDocumentPosition(optional) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByLabelText(/ご相談・ご依頼の内容/)).toBe(message);
     await userEvent.click(screen.getByLabelText("まず相談したい"));
     expect(message.compareDocumentPosition(optional) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -587,14 +715,14 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
   it("閉じた条件欄の入力エラーでも該当欄を表示する", async () => {
     renderForm();
     await userEvent.click(screen.getByLabelText("見積りを希望"));
-    await userEvent.selectOptions(screen.getByLabelText("作品の公開可否"), "delayed");
+    await userEvent.selectOptions(screen.getByLabelText(/作品の公開可否/), "delayed");
     await userEvent.click(screen.getByLabelText("まず相談したい"));
     fireEvent.invalid(screen.getByLabelText("公開可能日必須"));
     expect(detailsBySummary("詳しい条件を追加する").open).toBe(true);
     expect(detailsBySummary("用途・条件").open).toBe(true);
   });
 
-  it("consultation は任意セクションを閉じ、quote は必要な入力を展開する", async () => {
+  it("quote でも依頼の種類以外を一斉展開しない", async () => {
     renderForm();
 
     for (const title of [
@@ -610,15 +738,15 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
 
     await userEvent.click(screen.getByLabelText("見積りを希望"));
 
+    expect(detailsBySummary("詳しい条件を追加する").open).toBe(true);
+    expect(detailsBySummary("依頼の種類").open).toBe(true);
     for (const title of [
-      "詳しい条件を追加する",
-      "依頼の種類",
       "用途・条件",
       "予算・納期",
       "キャラクター・イメージの詳細",
       "資料",
     ]) {
-      expect(detailsBySummary(title).open).toBe(true);
+      expect(detailsBySummary(title).open).toBe(false);
     }
   });
 
@@ -673,11 +801,11 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     expect(message.closest("details")).toBeNull();
     expect(message.compareDocumentPosition(detailsBySummary("詳しい条件を追加する")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-    const submitButton = screen.getByRole("button", { name: "この内容で送信する" });
+    const submitButton = screen.getByRole("button", { name: "相談内容を送信する" });
     expect(submitButton.className).toContain("text-base font-black");
     expect(submitButton.className).toContain("border-2");
-    expect(submitButton.style.background).toBe("rgb(230, 106, 169)");
-    expect(submitButton.style.borderColor).toBe("rgb(201, 75, 137)");
+    expect(submitButton.style.background).toBe("rgb(166, 50, 104)");
+    expect(submitButton.style.borderColor).toBe("rgb(166, 50, 104)");
     expect(submitButton.style.color).toBe("rgb(255, 255, 255)");
   });
 });
