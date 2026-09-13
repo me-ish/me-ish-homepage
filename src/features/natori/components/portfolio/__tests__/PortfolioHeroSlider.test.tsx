@@ -25,19 +25,21 @@ describe("PortfolioHeroSlider swipe", () => {
 
     const surface = screen.getByRole("img", { name: "作品1" }).parentElement as HTMLElement;
     fireEvent.touchStart(surface, {
-      touches: [{ clientX: 240, clientY: 120 }],
+      touches: [{ identifier: 1, clientX: 240, clientY: 120 }],
     });
     fireEvent.touchEnd(surface, {
-      changedTouches: [{ clientX: 120, clientY: 124 }],
+      touches: [],
+      changedTouches: [{ identifier: 1, clientX: 120, clientY: 124 }],
     });
 
     expect(screen.getByRole("img", { name: "作品2" })).toBeTruthy();
 
     fireEvent.touchStart(surface, {
-      touches: [{ clientX: 120, clientY: 120 }],
+      touches: [{ identifier: 2, clientX: 120, clientY: 120 }],
     });
     fireEvent.touchEnd(surface, {
-      changedTouches: [{ clientX: 240, clientY: 124 }],
+      touches: [],
+      changedTouches: [{ identifier: 2, clientX: 240, clientY: 124 }],
     });
 
     expect(screen.getByRole("img", { name: "作品1" })).toBeTruthy();
@@ -48,19 +50,42 @@ describe("PortfolioHeroSlider swipe", () => {
 
     const surface = screen.getByRole("img", { name: "作品1" }).parentElement as HTMLElement;
     fireEvent.touchStart(surface, {
-      touches: [{ clientX: 220, clientY: 100 }],
+      touches: [{ identifier: 1, clientX: 220, clientY: 100 }],
     });
     fireEvent.touchEnd(surface, {
-      changedTouches: [{ clientX: 190, clientY: 104 }],
+      touches: [],
+      changedTouches: [{ identifier: 1, clientX: 190, clientY: 104 }],
     });
     expect(screen.getByRole("img", { name: "作品1" })).toBeTruthy();
 
     fireEvent.touchStart(surface, {
-      touches: [{ clientX: 220, clientY: 100 }],
+      touches: [{ identifier: 2, clientX: 220, clientY: 100 }],
     });
     fireEvent.touchEnd(surface, {
-      changedTouches: [{ clientX: 150, clientY: 230 }],
+      touches: [],
+      changedTouches: [{ identifier: 2, clientX: 150, clientY: 230 }],
     });
+    expect(screen.getByRole("img", { name: "作品1" })).toBeTruthy();
+  });
+
+  it("cancels the swipe when a second touch joins the gesture", () => {
+    render(<PortfolioHeroSlider slides={slides} />);
+
+    const surface = screen.getByRole("img", { name: "作品1" }).parentElement as HTMLElement;
+    fireEvent.touchStart(surface, {
+      touches: [{ identifier: 1, clientX: 240, clientY: 120 }],
+    });
+    fireEvent.touchStart(surface, {
+      touches: [
+        { identifier: 1, clientX: 230, clientY: 120 },
+        { identifier: 2, clientX: 120, clientY: 120 },
+      ],
+    });
+    fireEvent.touchEnd(surface, {
+      touches: [{ identifier: 2, clientX: 120, clientY: 120 }],
+      changedTouches: [{ identifier: 1, clientX: 90, clientY: 120 }],
+    });
+
     expect(screen.getByRole("img", { name: "作品1" })).toBeTruthy();
   });
 });
