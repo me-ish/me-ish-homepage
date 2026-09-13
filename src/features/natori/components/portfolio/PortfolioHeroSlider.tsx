@@ -15,6 +15,7 @@ const SWIPE_THRESHOLD_PX = 48;
 const SWIPE_DIRECTION_RATIO = 1.1;
 
 type TouchOrigin = {
+  identifier: number;
   x: number;
   y: number;
 };
@@ -57,19 +58,43 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
   const goTo = (index: number) => setActiveIndex((index + slides.length) % slides.length);
 
   const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
-    if (!hasMultiple || event.touches.length !== 1) return;
+    if (!hasMultiple) return;
+    setTouching(event.touches.length > 0);
+    if (event.touches.length !== 1) {
+      touchOriginRef.current = null;
+      return;
+    }
     const touch = event.touches[0];
-    touchOriginRef.current = { x: touch.clientX, y: touch.clientY };
-    setTouching(true);
+    touchOriginRef.current = {
+      identifier: touch.identifier,
+      x: touch.clientX,
+      y: touch.clientY,
+    };
+  };
+
+  const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    const origin = touchOriginRef.current;
+    if (
+      !origin ||
+      event.touches.length !== 1 ||
+      event.touches[0]?.identifier !== origin.identifier
+    ) {
+      touchOriginRef.current = null;
+    }
+    setTouching(event.touches.length > 0);
   };
 
   const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
     const origin = touchOriginRef.current;
     touchOriginRef.current = null;
-    setTouching(false);
-    if (!origin || !hasMultiple || event.changedTouches.length !== 1) return;
+    setTouching(event.touches.length > 0);
+    if (!origin || !hasMultiple) return;
 
-    const touch = event.changedTouches[0];
+    const touch = Array.from(event.changedTouches).find(
+      (changedTouch) => changedTouch.identifier === origin.identifier,
+    );
+    if (!touch) return;
+
     const deltaX = touch.clientX - origin.x;
     const deltaY = touch.clientY - origin.y;
     const horizontalDistance = Math.abs(deltaX);
@@ -115,6 +140,7 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
         className="relative aspect-square touch-pan-y select-none overflow-hidden rounded-2xl border"
         style={{ background: c.surfaceSubtle, borderColor: c.borderSubtle }}
         onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={cancelTouch}
       >
