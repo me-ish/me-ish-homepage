@@ -14,7 +14,10 @@ export default function PortfolioHeroImagesEditor({
   onChange: (next: string[]) => void;
   uploadDisabled?: boolean;
 }) {
-  const normalized = images.filter((image) => image.length > 0).slice(0, MAX_HERO_IMAGES);
+  const normalized = Array.from(new Set(images.filter((image) => image.length > 0))).slice(
+    0,
+    MAX_HERO_IMAGES
+  );
 
   const updateAt = (index: number, value: string | null) => {
     if (value === null) {
@@ -35,6 +38,7 @@ export default function PortfolioHeroImagesEditor({
       {normalized.length > 0 ? (
         <SortableList
           items={normalized}
+          getId={(image) => image}
           onReorder={onChange}
           className="mt-4 space-y-3"
           renderRow={(image, index, handle) => (
