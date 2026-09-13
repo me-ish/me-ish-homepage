@@ -500,7 +500,7 @@ describe("資料", () => {
     const big = new File([new Uint8Array(11 * 1024 * 1024)], "big.png", { type: "image/png" });
     fireEvent.change(input, { target: { files: [big] } });
 
-    expect(screen.getByText("1枚10MBまで（png / jpg / webp / gif）です。")).toBeTruthy();
+    expect(screen.getByText("1枚4MBまで（png / jpg / webp / gif）です。")).toBeTruthy();
     expect(screen.queryAllByRole("img")).toHaveLength(0);
   });
 });
