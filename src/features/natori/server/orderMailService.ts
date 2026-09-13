@@ -303,8 +303,8 @@ export async function sendNatoriOrderMail(
   let paymentLinkUrl: string | undefined;
   let paymentLinkId: string | undefined;
   if (input.kind === "payment") {
-    // 同じ承諾済み見積もりへの再送は、既存の1回限りリンクを再利用する。
-    // 新しいリンクを作るのは「別の承諾済み見積もり」になった場合だけ。
+    // 同じ承諾済み見積もりへの通常再送は既存リンクを再利用する。
+    // 別見積もり、または期限切れで void になったリンクは新規発行する。
     const canReuseExisting =
       project.payment_quote_id === quoteId &&
       Boolean(project.payment_link_id) &&
@@ -354,7 +354,12 @@ export async function sendNatoriOrderMail(
         }
       }
 
-      const idempotencyBase = `natori-plink:${project.id}:${quoteId}:${input.amount}`;
+      // 前回リンクIDを世代キーに含めることで、同じ見積・同額でも期限切れ後は
+      // 新しいPayment Linkを発行する。一方、DB保存失敗の再試行では前回リンクIDが
+      // 変わらないため、Stripe側では同じ生成結果を安全に回収できる。
+      const paymentLinkGeneration = project.payment_link_id ?? "initial";
+      const idempotencyBase =
+        `natori-plink:${project.id}:${quoteId}:${input.amount}:${paymentLinkGeneration}`;
       try {
         const price = await stripe.prices.create(
           {
