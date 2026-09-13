@@ -14,9 +14,11 @@ const AUTOPLAY_INTERVAL_MS = 5000;
 
 export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focusWithin, setFocusWithin] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const paused = hovered || focusWithin;
 
   useEffect(() => {
     if (typeof window.matchMedia !== "function") return;
@@ -52,13 +54,13 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
       role="region"
       aria-roledescription="carousel"
       aria-label="代表作品"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocusCapture={() => setPaused(true)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocusCapture={() => setFocusWithin(true)}
       onBlurCapture={(event) => {
         const nextTarget = event.relatedTarget;
         if (!(nextTarget instanceof Node) || !rootRef.current?.contains(nextTarget)) {
-          setPaused(false);
+          setFocusWithin(false);
         }
       }}
     >
