@@ -20,6 +20,8 @@ function makeReq(body: unknown, headers: Record<string, string> = CSRF) {
   return new Request(URL_, { method: "POST", headers, body: JSON.stringify(body) });
 }
 
+const acceptedBody = (token = "t".repeat(43)) => ({ token, termsAccepted: true });
+
 beforeEach(() => {
   vi.clearAllMocks();
   _resetRateLimitStore();
@@ -28,35 +30,44 @@ beforeEach(() => {
 
 describe("POST /api/natori/quote/accept", () => {
   it("CSRF ヘッダーが無ければ 403", async () => {
-    const res = await POST(makeReq({ token: "t".repeat(43) }, { "content-type": "application/json" }));
+    const res = await POST(
+      makeReq(acceptedBody(), { "content-type": "application/json" })
+    );
     expect(res.status).toBe(403);
     expect(mockAccept).not.toHaveBeenCalled();
   });
 
   it("token が無ければ 400", async () => {
-    const res = await POST(makeReq({}));
+    const res = await POST(makeReq({ termsAccepted: true }));
     expect(res.status).toBe(400);
+    expect(mockAccept).not.toHaveBeenCalled();
+  });
+
+  it("規約確認が無ければ 400 で承諾処理を呼ばない", async () => {
+    const res = await POST(makeReq({ token: "t".repeat(43) }));
+    expect(res.status).toBe(400);
+    expect(mockAccept).not.toHaveBeenCalled();
   });
 
   it("承諾成功は 200、既に承諾済みは already フラグつき 200", async () => {
-    const okRes = await POST(makeReq({ token: "t".repeat(43) }));
+    const okRes = await POST(makeReq(acceptedBody()));
     expect(okRes.status).toBe(200);
     expect((await okRes.json()).ok).toBe(true);
 
     mockAccept.mockResolvedValue({ kind: "already-accepted", quote: {} });
-    const alreadyRes = await POST(makeReq({ token: "t".repeat(43) }));
+    const alreadyRes = await POST(makeReq(acceptedBody()));
     expect(alreadyRes.status).toBe(200);
     expect((await alreadyRes.json()).already).toBe(true);
   });
 
   it("無効トークンは 404、期限切れは 410、DBエラーは 500", async () => {
     mockAccept.mockResolvedValue({ kind: "not-found" });
-    expect((await POST(makeReq({ token: "x".repeat(43) }))).status).toBe(404);
+    expect((await POST(makeReq(acceptedBody("x".repeat(43))))).status).toBe(404);
 
     mockAccept.mockResolvedValue({ kind: "expired" });
-    expect((await POST(makeReq({ token: "x".repeat(43) }))).status).toBe(410);
+    expect((await POST(makeReq(acceptedBody("x".repeat(43))))).status).toBe(410);
 
     mockAccept.mockResolvedValue({ kind: "db-error" });
-    expect((await POST(makeReq({ token: "x".repeat(43) }))).status).toBe(500);
+    expect((await POST(makeReq(acceptedBody("x".repeat(43))))).status).toBe(500);
   });
 });

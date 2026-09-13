@@ -1,5 +1,5 @@
 // api/natori/quote/accept/route.ts
-// 見積もり承諾ページの「この内容でお願いする」ボタンからの確定。
+// 見積もり承諾ページの「この内容で依頼を確定する」ボタンからの確定。
 // 公開エンドポイント（トークンが資格情報）。業務ロジックは quoteAcceptService に集約。
 import { NextResponse } from "next/server";
 import { checkCsrf } from "@/lib/auth/csrf";
@@ -20,10 +20,15 @@ export async function POST(req: Request) {
   });
   if (!rl.allowed) return rateLimitExceeded(rl.retryAfterMs);
 
-  const payload = (await req.json().catch(() => null)) as { token?: unknown } | null;
+  const payload = (await req.json().catch(() => null)) as
+    | { token?: unknown; termsAccepted?: unknown }
+    | null;
   const token = typeof payload?.token === "string" ? payload.token.trim() : "";
   if (!token) {
     return NextResponse.json({ error: "token is required" }, { status: 400 });
+  }
+  if (payload?.termsAccepted !== true) {
+    return NextResponse.json({ error: "terms acceptance is required" }, { status: 400 });
   }
 
   const result = await acceptNatoriQuote(token);

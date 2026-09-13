@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/exhibit-end",
       "schedule": "10 0 * * *"
+    },
+    {
+      "path": "/api/cron/natori-payment-expiry",
+      "schedule": "20 0 * * *"
     }
   ]
 }
