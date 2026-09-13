@@ -272,7 +272,7 @@ P1-10 の activity table と P1-12 の delivery atomicity は、日程上 Phase 
   - 外部 URL を最大5件の row UI にし、label 任意。
   - options は stable ID を submit し、表示 label snapshot も保存。
   - current form から段階移行する場合は legacySource を作る。
-  - CSRF、honeypot、3回/10分、画像5件/10MB/MIME、cleanup を維持。
+  - CSRF、honeypot、3回/10分、画像最大5件・合計4MB/MIME、cleanup を維持。
   - URL は parse/normalize だけで fetch しない。
   - success mail には必要最小限を表示し、signed URL/JSON を log に残さない。
 - **テスト内容**:
