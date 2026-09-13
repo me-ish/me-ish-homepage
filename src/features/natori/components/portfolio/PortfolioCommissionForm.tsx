@@ -65,7 +65,12 @@ export default function PortfolioCommissionForm({
   const [refError, setRefError] = useState<string | null>(null);
   const refFileInputRef = useRef<HTMLInputElement | null>(null);
   const formStartTrackedRef = useRef(false);
+  const successHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const commissionOpen = content.commissionOpen;
+
+  useEffect(() => {
+    if (status === "success") successHeadingRef.current?.focus();
+  }, [status]);
   const tsunaguLink = commissionOpen
     ? content.socialLinks.find(isPortfolioTsunaguLink)
     : undefined;
@@ -203,7 +208,9 @@ export default function PortfolioCommissionForm({
             style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
           >
             <p className="mb-2 text-3xl" aria-hidden="true">🎉</p>
-            <p className="mb-1 text-lg font-bold">送信ありがとうございます!</p>
+            <h3 ref={successHeadingRef} tabIndex={-1} className="mb-1 text-lg font-bold outline-none">
+              送信ありがとうございます!
+            </h3>
             <p className="text-sm" style={{ color: c.textSoft }}>
               内容を確認のうえ、2〜3日以内にご連絡いたします。
             </p>
@@ -224,7 +231,6 @@ export default function PortfolioCommissionForm({
                 setStatus("success");
               }}
             />
-            <PortfolioLegalNotice />
           </div>
         ) : (
           <form
