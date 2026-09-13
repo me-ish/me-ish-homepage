@@ -1,0 +1,131 @@
+name: Apply Natori payload limit fix
+
+on:
+  push:
+    branches:
+      - fix/natori-attachment-payload-limit
+
+permissions:
+  contents: write
+
+jobs:
+  apply-fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/natori-attachment-payload-limit
+          fetch-depth: 0
+
+      - name: Apply scoped payload-limit changes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_exact(path: str, old: str, new: str, count: int = 1):
+              p = Path(path)
+              text = p.read_text()
+              actual = text.count(old)
+              if actual != count:
+                  raise SystemExit(f"{path}: expected {count} occurrence(s), found {actual}: {old!r}")
+              p.write_text(text.replace(old, new))
+
+          # Shared public-intake attachment limits. Keep the total under Vercel's
+          # 4.5 MB Function request-body ceiling with room for RequestData/multipart overhead.
+          replace_exact(
+              "src/features/natori/lib/portfolioRequestForm.ts",
+              "export const NATORI_REFERENCE_IMAGE_MAX_BYTES = 10 * 1024 * 1024;\nexport const NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES = 10 * 1024 * 1024;",
+              "// Vercel Functions の 4.5MB request body 上限より十分小さく保つ。\n// multipart 境界・RequestData（最大64KiB）・参考URL等の余白を確保する。\nexport const NATORI_REFERENCE_IMAGE_MAX_BYTES = 4 * 1024 * 1024;\nexport const NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES = 4 * 1024 * 1024;",
+          )
+
+          replace_exact(
+              "src/features/natori/components/portfolio/PortfolioStructuredCommissionForm.tsx",
+              'setRefImageError("1枚10MBまで（png / jpg / webp / gif）です。");',
+              'setRefImageError("1枚4MBまで（png / jpg / webp / gif）です。");',
+          )
+          replace_exact(
+              "src/features/natori/components/portfolio/PortfolioStructuredCommissionForm.tsx",
+              'setRefImageError("画像の合計サイズが10MBを超えています。");',
+              'setRefImageError("画像の合計サイズは4MBまでです。");',
+          )
+          replace_exact(
+              "src/features/natori/components/portfolio/PortfolioStructuredCommissionForm.tsx",
+              'description={`画像${NATORI_MAX_REFERENCE_IMAGES}枚・合計10MB / 参考URL${NATORI_MAX_REFERENCE_LINKS}件まで`}',
+              'description={`画像${NATORI_MAX_REFERENCE_IMAGES}枚・合計4MB / 参考URL${NATORI_MAX_REFERENCE_LINKS}件まで`}',
+          )
+
+          legacy = "src/features/natori/components/portfolio/PortfolioCommissionForm.tsx"
+          replace_exact(
+              legacy,
+              'import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";\n',
+              'import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";\nimport {\n  NATORI_MAX_REFERENCE_IMAGES,\n  NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES,\n  NATORI_REFERENCE_IMAGE_MAX_BYTES,\n} from "@/features/natori/lib/portfolioRequestForm";\n',
+          )
+          replace_exact(
+              legacy,
+              'const MAX_REF_IMAGES = 5;\nconst REF_IMAGE_MAX_BYTES = 10 * 1024 * 1024;',
+              'const MAX_REF_IMAGES = NATORI_MAX_REFERENCE_IMAGES;\nconst REF_IMAGE_MAX_BYTES = NATORI_REFERENCE_IMAGE_MAX_BYTES;',
+          )
+          replace_exact(
+              legacy,
+              '    const oversized = files.find((file) => file.size > REF_IMAGE_MAX_BYTES);\n    if (oversized) {\n      setRefError("1枚10MBまで（png / jpg / webp / gif）です。");\n      return;\n    }\n    setRefError(null);\n    const selected = files.slice(0, remaining).map((file) => ({\n      file,\n      previewUrl: URL.createObjectURL(file),\n    }));',
+              '    const selectedFiles = files.slice(0, remaining);\n    const oversized = selectedFiles.find((file) => file.size > REF_IMAGE_MAX_BYTES);\n    if (oversized) {\n      setRefError("1枚4MBまで（png / jpg / webp / gif）です。");\n      return;\n    }\n    const totalBytes = [...refImages.map((entry) => entry.file), ...selectedFiles].reduce(\n      (sum, file) => sum + file.size,\n      0\n    );\n    if (totalBytes > NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES) {\n      setRefError("画像の合計サイズは4MBまでです。");\n      return;\n    }\n    setRefError(null);\n    const selected = selectedFiles.map((file) => ({\n      file,\n      previewUrl: URL.createObjectURL(file),\n    }));',
+          )
+          replace_exact(
+              legacy,
+              '{MAX_REF_IMAGES}枚・各10MBまで）。URLで共有したい資料は「ご依頼の詳細」に貼ってOKです。',
+              '{MAX_REF_IMAGES}枚・合計4MBまで）。URLで共有したい資料は「ご依頼の詳細」に貼ってOKです。',
+          )
+
+          route = "src/app/api/natori/portfolio/contact/route.ts"
+          replace_exact(
+              route,
+              '/** multipart 全体の上限。画像10MiB + フォーム本文の余裕分。 */\nconst MAX_REQUEST_BYTES = 12 * 1024 * 1024;',
+              '/** Vercel Function の 4.5MB request body 上限より手前で拒否する。 */\nconst MAX_REQUEST_BYTES = 4_400_000;',
+          )
+          replace_exact(
+              route,
+              '  if (files.length > MAX_REF_IMAGES) {\n    return NextResponse.json({ error: "too_many_files" }, { status: 400 });\n  }\n  const submissionId = crypto.randomUUID();',
+              '  if (files.length > MAX_REF_IMAGES) {\n    return NextResponse.json({ error: "too_many_files" }, { status: 400 });\n  }\n  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);\n  if (totalBytes > NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES) {\n    return NextResponse.json({ error: "files_too_large" }, { status: 400 });\n  }\n  const submissionId = crypto.randomUUID();',
+          )
+
+          # Historical design docs should no longer claim the unsupported 10MB intake limit.
+          replace_exact(
+              "docs/etorie-phase0-target-design.md",
+              "| reference images | file[] | 任意 | 任意 | 5件、各10MB | 現行制約を維持 |",
+              "| reference images | file[] | 任意 | 任意 | 5件・合計4MB | Vercel Function の request body 上限を考慮 |",
+          )
+          replace_exact(
+              "docs/etorie-phase0-gap-analysis.md",
+              "3. 参考画像は最大5件、各10MBまで。MIME を確認後、非公開 natori-inquiry-refs bucket へ保存する。",
+              "3. 参考画像は最大5件・合計4MBまで。MIME を確認後、非公開 natori-inquiry-refs bucket へ保存する。",
+          )
+          replace_exact(
+              "docs/etorie-phase1-work-items.md",
+              "- CSRF、honeypot、3回/10分、画像5件/10MB/MIME、cleanup を維持。",
+              "- CSRF、honeypot、3回/10分、画像最大5件・合計4MB/MIME、cleanup を維持。",
+          )
+
+          # This workflow is only a transport for a precise branch edit; keep it out of the PR diff.
+          Path(".github/workflows/natori-payload-limit-fix.yml").unlink()
+
+      - name: Verify diff
+        run: |
+          git diff --check
+          git diff --exit-code -- .github/workflows/natori-payload-limit-fix.yml || true
+          git status --short
+
+      - name: Commit scoped fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/natori/lib/portfolioRequestForm.ts \
+                  src/features/natori/components/portfolio/PortfolioStructuredCommissionForm.tsx \
+                  src/features/natori/components/portfolio/PortfolioCommissionForm.tsx \
+                  src/app/api/natori/portfolio/contact/route.ts \
+                  docs/etorie-phase0-target-design.md \
+                  docs/etorie-phase0-gap-analysis.md \
+                  docs/etorie-phase1-work-items.md \
+                  .github/workflows/natori-payload-limit-fix.yml
+          git commit -m "fix(natori): keep intake attachments below function limit"
+          git push origin HEAD:fix/natori-attachment-payload-limit
