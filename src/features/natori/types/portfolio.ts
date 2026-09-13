@@ -119,8 +119,10 @@ export type PortfolioContent = {
   heroTitleTail: string;
   /** ヒーローの紹介文 */
   heroDescription: string;
-  /** トップのメインビジュアル画像URL。null ならプレースホルダー */
+  /** 旧データ互換用のトップメインビジュアル。heroImagesの先頭と同期する */
   heroImage: string | null;
+  /** Heroスライダー画像。配列順が表示順。旧データではheroImageから補完する */
+  heroImages?: string[];
   /** プロフィールアイコン画像URL。null ならプレースホルダー */
   aboutImage: string | null;
   /** プロフィール文（1要素=1段落） */
