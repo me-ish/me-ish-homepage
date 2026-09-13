@@ -22,6 +22,7 @@ const validContent: PortfolioContent = {
   heroTitleTail: "あとりえ",
   heroDescription: "紹介文",
   heroImage: null,
+  heroImages: [],
   aboutImage: "https://example.com/icon.webp",
   aboutParagraphs: ["段落1", "段落2"],
   services: ["SNSアイコン"],
