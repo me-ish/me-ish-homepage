@@ -399,7 +399,7 @@ describe("sendNatoriOrderMail (payment)", () => {
         metadata: expect.objectContaining({ projectId: expect.any(String), quoteId: "quote-1" }),
         restrictions: { completed_sessions: { limit: 1 } },
       }),
-      expect.objectContaining({ idempotencyKey: expect.stringContaining(":quote-1:12000:link") })
+      expect.objectContaining({ idempotencyKey: expect.stringContaining(":quote-1:12000:initial:link") })
     );
     const persisted = db.projectUpdates.find((update) => update.payment_link_id === "plink_new");
     expect(persisted).toMatchObject({
@@ -429,6 +429,34 @@ describe("sendNatoriOrderMail (payment)", () => {
     expect(mockLinksCreate).not.toHaveBeenCalled();
     const mail = mockSend.mock.calls[0][0] as { text: string };
     expect(mail.text).toContain("https://pay.example.com/existing");
+  });
+
+  it("期限切れvoidリンクの再案内では前回リンクIDを世代キーにして新規発行する", async () => {
+    const { sendNatoriOrderMail } = await loadService();
+    installDb(makeProjectRow({
+      status: "awaiting_payment",
+      active_quote_id: "quote-1",
+      payment_quote_id: "quote-1",
+      payment_link_id: "plink_expired",
+      payment_link_url: "https://pay.example.com/expired",
+      payment_link_status: "void",
+      quoted_amount: 12000,
+    }), { quote: acceptedQuote });
+
+    await expect(sendNatoriOrderMail(input)).resolves.toEqual({
+      kind: "ok",
+      paymentLinkUrl: "https://pay.example.com/link-abc",
+    });
+    expect(mockLinksUpdate).toHaveBeenCalledWith("plink_expired", { active: false });
+    expect(mockLinksCreate).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        idempotencyKey: expect.stringContaining(":quote-1:12000:plink_expired:link"),
+      })
+    );
+    const mail = mockSend.mock.calls[0][0] as { text: string };
+    expect(mail.text).toContain("https://pay.example.com/link-abc");
+    expect(mail.text).not.toContain("https://pay.example.com/expired");
   });
 
   it("未承諾・金額相違・入金済みでは支払いリンクを発行しない", async () => {
