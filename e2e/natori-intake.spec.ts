@@ -117,6 +117,7 @@ test.describe("Natori public intake rollout", () => {
 
   test("rejects structured reference images above the 4MiB combined limit", async ({ page }) => {
     await page.goto(`${DEMO_PATH}?structured=1`);
+    await page.getByText("資料", { exact: true }).click();
 
     await page.locator('input[type="file"]').setInputFiles(oversizedReferencePair());
 
