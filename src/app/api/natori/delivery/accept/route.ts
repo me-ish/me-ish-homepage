@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { checkRateLimit, getIpFromRequest, rateLimitExceeded } from "@/lib/rateLimit";
 import { acceptNatoriDelivery } from "@/features/natori/server/deliveryService";
+import { sendNatoriDeliveryCompletionMail } from "@/features/natori/server/deliveryCompletionMailService";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +38,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "internal_error" }, { status: 500 });
     case "already-accepted":
       return NextResponse.json({ ok: true, already: true });
-    case "ok":
+    case "ok": {
+      const mailed = await sendNatoriDeliveryCompletionMail(token);
+      if (!mailed) {
+        console.error("[natori-delivery] completion mail failed (ignored)");
+      }
       return NextResponse.json({ ok: true });
+    }
   }
 }
