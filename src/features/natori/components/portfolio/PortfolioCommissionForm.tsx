@@ -215,7 +215,6 @@ export default function PortfolioCommissionForm({
           </div>
         ) : structuredIntake ? (
           <div className="space-y-4">
-            <PortfolioLegalNotice />
             <PortfolioStructuredCommissionForm
               content={content}
               demoMode={demoMode}
@@ -225,6 +224,7 @@ export default function PortfolioCommissionForm({
                 setStatus("success");
               }}
             />
+            <PortfolioLegalNotice />
           </div>
         ) : (
           <form
@@ -451,8 +451,6 @@ export default function PortfolioCommissionForm({
               </p>
             ) : null}
 
-            <PortfolioLegalNotice />
-
             <button
               type="submit"
               disabled={!commissionOpen || status === "sending"}
@@ -469,6 +467,8 @@ export default function PortfolioCommissionForm({
                   ? "送信中…"
                   : "この内容で送信する"}
             </button>
+
+            <PortfolioLegalNotice />
           </form>
         )}
       </div>
