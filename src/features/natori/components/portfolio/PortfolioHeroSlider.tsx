@@ -19,6 +19,7 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const sync = () => setReducedMotion(media.matches);
     sync();
