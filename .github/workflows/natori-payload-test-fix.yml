@@ -1,0 +1,38 @@
+name: Update Natori payload test expectation
+
+on:
+  push:
+    branches:
+      - fix/natori-attachment-payload-limit
+
+permissions:
+  contents: write
+
+jobs:
+  apply-test-fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/natori-attachment-payload-limit
+      - name: Update exact test expectation
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path("src/features/natori/components/portfolio/__tests__/PortfolioStructuredCommissionForm.test.tsx")
+          text = path.read_text()
+          old = 'expect(screen.getByText("1枚10MBまで（png / jpg / webp / gif）です。")).toBeInTheDocument();'
+          new = 'expect(screen.getByText("1枚4MBまで（png / jpg / webp / gif）です。")).toBeInTheDocument();'
+          if text.count(old) != 1:
+              raise SystemExit(f"expected one old assertion, found {text.count(old)}")
+          path.write_text(text.replace(old, new))
+          Path(".github/workflows/natori-payload-test-fix.yml").unlink()
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/natori/components/portfolio/__tests__/PortfolioStructuredCommissionForm.test.tsx .github/workflows/natori-payload-test-fix.yml
+          git diff --cached --check
+          git commit -m "test(natori): update attachment size expectation"
+          git push origin HEAD:fix/natori-attachment-payload-limit
