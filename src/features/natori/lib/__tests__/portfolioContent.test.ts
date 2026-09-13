@@ -57,6 +57,17 @@ describe("parsePortfolioContent", () => {
     expect(parsePortfolioContent(validContent)).toEqual(validContent);
   });
 
+  it("旧heroImageだけのデータをHeroスライダー1枚目へ移行する", () => {
+    const { heroImages: _heroImages, ...legacy } = {
+      ...validContent,
+      heroImage: "https://example.com/legacy-hero.webp",
+    };
+    expect(parsePortfolioContent(legacy)).toMatchObject({
+      heroImage: "https://example.com/legacy-hero.webp",
+      heroImages: ["https://example.com/legacy-hero.webp"],
+    });
+  });
+
   it("作品の制作年月を YYYY-MM 形式で保持する", () => {
     const withMonth: PortfolioContent = {
       ...validContent,
