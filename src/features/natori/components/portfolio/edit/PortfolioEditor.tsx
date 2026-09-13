@@ -28,6 +28,7 @@ import {
   updateItem,
   uploadImageFile,
 } from "./editorFields";
+import PortfolioHeroImagesEditor from "./PortfolioHeroImagesEditor";
 import PortfolioWorkLinksEditor from "./PortfolioWorkLinksEditor";
 import SortableList from "./SortableList";
 
@@ -196,6 +197,18 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
       </main>
     );
   }
+
+  const heroImages = (
+    content.heroImages?.length
+      ? content.heroImages
+      : content.heroImage
+        ? [content.heroImage]
+        : []
+  ).filter((image): image is string => Boolean(image)).slice(0, 5);
+  const updateHeroImages = (next: string[]) => {
+    const normalized = next.filter((image) => image.length > 0).slice(0, 5);
+    patch({ heroImages: normalized, heroImage: normalized[0] ?? null });
+  };
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-50/70 via-white to-white pb-28">
@@ -374,25 +387,24 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
           id="section-images"
           emoji="🖼️"
           title="画像"
-          description="メイン画像・アイコンと、量産イラストの作例画像を管理します。"
+          description="Heroスライダー・プロフィールアイコンと、量産イラストの作例画像を管理します。"
         >
-          <div className="grid gap-5 sm:grid-cols-2">
-            <ImageUploadField
-              label="トップのメインビジュアル"
-              value={content.heroImage}
-              onChange={(v) => patch({ heroImage: v })}
-              shape="circle"
-              hint="代表作や看板イラストなど"
+          <div className="space-y-5">
+            <PortfolioHeroImagesEditor
+              images={heroImages}
+              onChange={updateHeroImages}
               uploadDisabled={isDemo}
             />
-            <ImageUploadField
-              label="プロフィールのアイコン"
-              value={content.aboutImage}
-              onChange={(v) => patch({ aboutImage: v })}
-              shape="circle"
-              hint="SNSと同じアイコンがおすすめ"
-              uploadDisabled={isDemo}
-            />
+            <div className="border-t border-pink-100 pt-5">
+              <ImageUploadField
+                label="プロフィールのアイコン"
+                value={content.aboutImage}
+                onChange={(v) => patch({ aboutImage: v })}
+                shape="circle"
+                hint="SNSと同じアイコンがおすすめ"
+                uploadDisabled={isDemo}
+              />
+            </div>
           </div>
 
           <div className="mt-5 border-t border-pink-100 pt-5">
