@@ -45,7 +45,7 @@ type GuidelineGroup = {
 
 function groupRequests(requests: string[]): GuidelineGroup[] {
   const remaining = [...requests];
-  const groups = DEFAULT_REQUEST_GROUPS.map((group) => {
+  const groups: GuidelineGroup[] = DEFAULT_REQUEST_GROUPS.map((group) => {
     const items = group.items.filter((item) => {
       const index = remaining.indexOf(item);
       if (index < 0) return false;
@@ -53,7 +53,7 @@ function groupRequests(requests: string[]): GuidelineGroup[] {
       return true;
     });
 
-    return { title: group.title, items };
+    return { title: group.title, items: [...items] };
   }).filter((group) => group.items.length > 0);
 
   if (remaining.length > 0) {
