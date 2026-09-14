@@ -116,11 +116,11 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
                 <a
                   href="#form"
                   onClick={() => handleSelectPlan(plan)}
-                  className="pf-cute-focus inline-flex min-h-[32px] shrink-0 items-center justify-center rounded-full border-2 px-3.5 py-1 text-xs font-bold"
+                  className="pf-cute-focus inline-flex min-h-[32px] shrink-0 items-center justify-center rounded-full border-2 px-3 py-1 text-[11px] font-bold"
                   style={{ borderColor: c.borderStrong, color: c.text }}
                   aria-label={`${plan.name}を選ぶ`}
                 >
-                  相談する
+                  このプランで相談
                 </a>
               </div>
             </li>
