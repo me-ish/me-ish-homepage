@@ -1,7 +1,7 @@
 "use client";
 
 // features/natori/components/portfolio/PortfolioPricing.tsx
-// コミッション料金。通常プランはスマホで一覧性を優先してコンパクトに表示し、
+// コミッション料金。通常プランはスマホでも説明とプラン固有条件を確認できるようにし、
 // CTA からフォームへスクロールしつつ依頼種別 / 制作範囲を自動で合わせる。
 import {
   PLAN_SELECT_EVENT,
@@ -68,33 +68,59 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
 
       <p className="mb-2 text-sm font-black sm:mb-3">通常イラスト</p>
 
-      {/* スマホ: 料金を1行ずつ見せ、縦スクロールを抑える */}
-      <div
+      {/* スマホ: 料金・説明・プラン固有条件を同時に確認できるコンパクトな一覧 */}
+      <ul
+        aria-label="通常イラスト料金（スマホ）"
         className="overflow-hidden rounded-2xl border sm:hidden"
         style={{ background: c.surface, borderColor: c.borderSubtle }}
       >
-        {content.plans.map((plan, index) => (
-          <div
-            key={plan.id ?? `legacy-mobile-plan-${index}`}
-            className="flex items-center gap-3 border-b px-4 py-3 last:border-b-0"
-            style={{ borderColor: c.borderSubtle }}
-          >
-            <span className="min-w-0 flex-1 font-bold">{plan.name}</span>
-            <span className="shrink-0 font-bold" style={{ color: c.accentDisplay }}>
-              {startingPriceLabel(plan.price)}
-            </span>
-            <a
-              href="#form"
-              onClick={() => handleSelectPlan(plan)}
-              className="pf-cute-focus shrink-0 rounded-full border-2 px-3 py-1.5 text-xs font-bold"
-              style={{ borderColor: c.borderStrong, color: c.text }}
-              aria-label={`${plan.name}を選ぶ`}
+        {content.plans.map((plan, index) => {
+          const planSpecificFeatures = plan.features.filter(
+            (feature) => !commonFeatures.includes(feature)
+          );
+
+          return (
+            <li
+              key={plan.id ?? `legacy-mobile-plan-${index}`}
+              className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 border-b px-4 py-3.5 last:border-b-0"
+              style={{ borderColor: c.borderSubtle }}
             >
-              選ぶ
-            </a>
-          </div>
-        ))}
-      </div>
+              <div className="min-w-0">
+                <h3 className="font-bold">{plan.name}</h3>
+                <p className="mt-1 text-xs leading-relaxed" style={{ color: c.textSoft }}>
+                  {plan.desc}
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                <span className="font-bold" style={{ color: c.accentDisplay }}>
+                  {startingPriceLabel(plan.price)}
+                </span>
+                <a
+                  href="#form"
+                  onClick={() => handleSelectPlan(plan)}
+                  className="pf-cute-focus min-h-[40px] rounded-full border-2 px-3 py-2 text-xs font-bold"
+                  style={{ borderColor: c.borderStrong, color: c.text }}
+                  aria-label={`${plan.name}を選ぶ`}
+                >
+                  選ぶ
+                </a>
+              </div>
+              {planSpecificFeatures.length > 0 ? (
+                <ul className="col-span-2 space-y-1 text-xs">
+                  {planSpecificFeatures.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2">
+                      <span style={{ color: c.success }} aria-hidden="true">
+                        ✓
+                      </span>
+                      <span style={{ color: c.textSoft }}>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
 
       {/* タブレット / PC: 従来のカード表示を維持 */}
       <div className={`hidden gap-6 sm:grid ${gridCols}`}>
