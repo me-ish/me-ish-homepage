@@ -12,6 +12,13 @@ export default function PortfolioStyles() {
       .pf-wobble { animation: pf-wobble 2.4s ease-in-out infinite; }
       .pf-pin-card { transition: transform 0.25s ease, box-shadow 0.25s ease; }
       .pf-pin-card:hover, .pf-pin-card:focus-within { transform: rotate(0deg) translateY(-6px) !important; box-shadow: 0 18px 30px ${c.shadowHover}; }
+      .pf-portfolio-root #gallery .pf-pin-card > button > img[alt] {
+        object-fit: contain !important;
+        padding: clamp(0.25rem, 1.5vw, 0.5rem);
+        background:
+          radial-gradient(circle at 22% 18%, ${c.accentSoft} 0%, transparent 42%),
+          linear-gradient(145deg, ${c.surfaceSubtle}, ${c.surface});
+      }
       .pf-form-control { border-color: ${c.formBorder}; }
       .pf-form-control::placeholder { font-size: 0.875rem; }
       .pf-choice-control {
