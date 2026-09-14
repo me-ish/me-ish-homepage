@@ -221,9 +221,14 @@ export default function PortfolioGallery({
               </button>
             ))}
           </div>
-          <p role="status" className="mb-6 text-sm" style={{ color: c.textSoft }}>
-            {activeCollection?.collection.name ?? "すべての作品"}：{filteredWorks.length}作品中{shownWorks.length}作品を表示
-          </p>
+          <div className="mb-6" style={{ color: c.textSoft }}>
+            <p role="status" className="text-sm">
+              {activeCollection?.collection.name ?? "すべての作品"}：{filteredWorks.length}作品中{shownWorks.length}作品を表示
+            </p>
+            {shownWorks.some(({ work }) => work.image) ? (
+              <p className="mt-1 text-xs">画像をタップ・クリックで拡大できます。</p>
+            ) : null}
+          </div>
           {activeCollection?.collection.description ? (
             <p className="mb-6 text-sm" style={{ color: c.textSoft }}>{activeCollection.collection.description}</p>
           ) : null}
@@ -272,12 +277,12 @@ export default function PortfolioGallery({
           aria-modal="true"
           aria-label={selected.title}
           tabIndex={-1}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8"
+          className="fixed inset-0 z-50 flex h-[100dvh] items-center justify-center pb-[calc(1.5rem+env(safe-area-inset-bottom))] pl-[calc(1.5rem+env(safe-area-inset-left))] pr-[calc(1.5rem+env(safe-area-inset-right))] pt-[calc(1.5rem+env(safe-area-inset-top))]"
           style={{ background: c.overlay }}
           onClick={closeModal}
         >
           <div
-            className="relative flex max-h-full w-full max-w-3xl flex-col rounded-xl p-3 pb-4"
+            className="relative flex max-h-full min-h-0 w-full max-w-3xl flex-col rounded-xl p-3 pb-4"
             style={{
               background: c.surface,
               boxShadow: `0 20px 40px ${c.shadowFloating}`,
@@ -289,70 +294,83 @@ export default function PortfolioGallery({
               type="button"
               onClick={closeModal}
               aria-label="閉じる"
-              className="pf-cute-focus absolute -right-3 -top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border-2 font-black shadow-md hover:brightness-95"
-              style={{
-                background: c.action,
-                borderColor: c.actionDisplay,
-                color: c.onAction,
-              }}
+              className="pf-cute-focus absolute -right-[16px] -top-[16px] z-10 flex h-[44px] w-[44px] items-center justify-center rounded-full hover:brightness-95"
             >
-              ✕
+              <span
+                aria-hidden="true"
+                className="flex h-9 w-9 items-center justify-center rounded-full border-2 font-black shadow-md"
+                style={{
+                  background: c.action,
+                  borderColor: c.actionDisplay,
+                  color: c.onAction,
+                }}
+              >
+                ✕
+              </span>
             </button>
+            {/* 閉じる操作は固定し、低い画面でも画像・詳細を最後まで読めるようにする。 */}
             <div
-              className="relative h-[70vh] w-full overflow-hidden rounded-lg md:h-[76vh]"
-              style={{ background: c.surfaceSubtle }}
+              role="region"
+              aria-label="作品画像と詳細"
+              tabIndex={0}
+              className="pf-cute-focus min-h-0 overflow-y-auto overscroll-contain rounded-lg [overflow-wrap:anywhere]"
             >
-              <Image
-                src={selected.image}
-                alt={selected.title}
-                fill
-                sizes="(min-width: 768px) 768px, calc(100vw - 32px)"
-                className="object-contain"
-              />
-            </div>
-            <div className="mt-3 flex items-center justify-between gap-2 px-1">
-              <div className="min-w-0">
-                <p className="truncate font-bold">{selected.title}</p>
-                {formatProductionMonth(selected.productionMonth) ? (
-                  <p className="mt-0.5 text-xs" style={{ color: c.textSoft }}>
-                    {formatProductionMonth(selected.productionMonth)}
-                  </p>
-                ) : null}
-              </div>
-              {selectedCollection ||
-              publicPortfolioWorkTags(selected.tags).length > 0 ? (
-                <span className="flex shrink-0 flex-wrap justify-end gap-1">
-                  {selectedCollection ? (
-                    <span
-                      className="rounded-full px-2 py-1 text-xs font-bold"
-                      style={{
-                        background: selectedCollection.color,
-                        color: c.text,
-                      }}
-                    >
-                      {selectedCollection.name}
-                    </span>
-                  ) : null}
-                  {publicPortfolioWorkTags(selected.tags).map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full px-2 py-1 text-xs font-bold"
-                      style={{ background: c.surfaceSubtle, color: c.text }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </span>
-              ) : null}
-            </div>
-            {variant === "full" && selected.relatedLinks ? (
-              <div className="px-1">
-                <PortfolioWorkRelatedLinks
-                  workTitle={selected.title}
-                  links={selected.relatedLinks}
+              <div
+                className="relative h-[70dvh] w-full overflow-hidden rounded-lg md:h-[76dvh]"
+                style={{ background: c.surfaceSubtle }}
+              >
+                <Image
+                  src={selected.image}
+                  alt={selected.title}
+                  fill
+                  sizes="(min-width: 816px) 744px, calc(100vw - 72px)"
+                  className="object-contain"
                 />
               </div>
-            ) : null}
+              <div className="mt-3 flex flex-col items-start gap-2 px-1 sm:flex-row sm:justify-between">
+                <div className="min-w-0 sm:flex-1">
+                  <h3 className="font-bold">{selected.title}</h3>
+                  {formatProductionMonth(selected.productionMonth) ? (
+                    <p className="mt-0.5 text-xs" style={{ color: c.textSoft }}>
+                      {formatProductionMonth(selected.productionMonth)}
+                    </p>
+                  ) : null}
+                </div>
+                {selectedCollection ||
+                publicPortfolioWorkTags(selected.tags).length > 0 ? (
+                  <span className="flex max-w-full flex-wrap gap-1 sm:max-w-[50%] sm:justify-end">
+                    {selectedCollection ? (
+                      <span
+                        className="min-w-0 rounded-full px-2 py-1 text-xs font-bold"
+                        style={{
+                          background: selectedCollection.color,
+                          color: c.text,
+                        }}
+                      >
+                        {selectedCollection.name}
+                      </span>
+                    ) : null}
+                    {publicPortfolioWorkTags(selected.tags).map((tag) => (
+                      <span
+                        key={tag}
+                        className="min-w-0 rounded-full px-2 py-1 text-xs font-bold"
+                        style={{ background: c.surfaceSubtle, color: c.text }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </span>
+                ) : null}
+              </div>
+              {variant === "full" && selected.relatedLinks ? (
+                <div className="px-1">
+                  <PortfolioWorkRelatedLinks
+                    workTitle={selected.title}
+                    links={selected.relatedLinks}
+                  />
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}
