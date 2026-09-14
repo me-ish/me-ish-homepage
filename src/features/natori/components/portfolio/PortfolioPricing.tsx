@@ -1,7 +1,7 @@
 "use client";
 
 // features/natori/components/portfolio/PortfolioPricing.tsx
-// コミッション料金。通常プランはスマホでも説明とプラン固有条件を確認できるようにし、
+// コミッション料金。通常プランはスマホでも説明を確認しつつ比較しやすい密度で表示し、
 // CTA からフォームへスクロールしつつ依頼種別 / 制作範囲を自動で合わせる。
 import {
   PLAN_SELECT_EVENT,
@@ -68,7 +68,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
 
       <p className="mb-2 text-sm font-black sm:mb-3">通常イラスト</p>
 
-      {/* スマホ: 料金・説明・プラン固有条件を同時に確認できるコンパクトな一覧 */}
+      {/* スマホ: 2段構成で説明を残しつつ、複数プランを比較しやすい密度にする */}
       <ul
         aria-label="通常イラスト料金（スマホ）"
         className="overflow-hidden rounded-2xl border sm:hidden"
@@ -82,41 +82,47 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
           return (
             <li
               key={plan.id ?? `legacy-mobile-plan-${index}`}
-              className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 border-b px-4 py-3.5 last:border-b-0"
+              className="border-b px-4 py-2 last:border-b-0"
               style={{ borderColor: c.borderSubtle }}
             >
-              <div className="min-w-0">
-                <h3 className="font-bold">{plan.name}</h3>
-                <p className="mt-1 text-xs leading-relaxed" style={{ color: c.textSoft }}>
-                  {plan.desc}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-2">
-                <span className="font-bold" style={{ color: c.accentDisplay }}>
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="min-w-0 font-bold">{plan.name}</h3>
+                <span className="shrink-0 font-bold" style={{ color: c.accentDisplay }}>
                   {startingPriceLabel(plan.price)}
                 </span>
+              </div>
+
+              <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-xs leading-5" style={{ color: c.textSoft }}>
+                    {plan.desc}
+                  </p>
+                  {planSpecificFeatures.length > 0 ? (
+                    <ul className="mt-0.5 space-y-0.5 text-[11px] leading-4">
+                      {planSpecificFeatures.map((feature) => (
+                        <li key={feature} className="flex items-start gap-1.5">
+                          <span style={{ color: c.success }} aria-hidden="true">
+                            ✓
+                          </span>
+                          <span className="truncate" style={{ color: c.textSoft }}>
+                            {feature}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+
                 <a
                   href="#form"
                   onClick={() => handleSelectPlan(plan)}
-                  className="pf-cute-focus min-h-[40px] rounded-full border-2 px-3 py-2 text-xs font-bold"
+                  className="pf-cute-focus inline-flex min-h-[32px] shrink-0 items-center justify-center rounded-full border-2 px-3 py-1 text-[11px] font-bold"
                   style={{ borderColor: c.borderStrong, color: c.text }}
                   aria-label={`${plan.name}を選ぶ`}
                 >
-                  選ぶ
+                  このプランで相談
                 </a>
               </div>
-              {planSpecificFeatures.length > 0 ? (
-                <ul className="col-span-2 space-y-1 text-xs">
-                  {planSpecificFeatures.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2">
-                      <span style={{ color: c.success }} aria-hidden="true">
-                        ✓
-                      </span>
-                      <span style={{ color: c.textSoft }}>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
             </li>
           );
         })}
@@ -167,16 +173,16 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
 
       {commonFeatures.length > 0 && (
         <div
-          className="mx-auto mt-4 flex max-w-3xl items-start gap-3 rounded-xl px-4 py-3 sm:mt-6 sm:items-center"
+          className="mx-auto mt-3 flex max-w-3xl items-start gap-2 rounded-xl px-3 py-2 sm:mt-6 sm:items-center sm:gap-3 sm:px-4 sm:py-3"
           style={{ background: c.accentSoft }}
         >
           <span
-            className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold sm:text-xs"
+            className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold sm:px-2.5 sm:py-1 sm:text-xs"
             style={{ background: c.surface, color: c.accentText }}
           >
             通常イラスト共通
           </span>
-          <p className="text-xs font-medium leading-relaxed sm:text-sm" style={{ color: c.textSoft }}>
+          <p className="text-[11px] font-medium leading-5 sm:text-sm sm:leading-relaxed" style={{ color: c.textSoft }}>
             表示価格には、{includedFeatures}が含まれます。
           </p>
         </div>
