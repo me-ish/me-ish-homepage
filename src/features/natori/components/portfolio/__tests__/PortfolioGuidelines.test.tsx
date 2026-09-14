@@ -34,7 +34,7 @@ describe("PF-01 guideline responsibility split", () => {
     expect(firstStepNumber.style.color).toBe("rgb(255, 255, 255)");
   });
 
-  it("keeps existing request guidance separate without adding FAQ content", () => {
+  it("groups request guidance for pre-request review and links to legal details", () => {
     render(<PortfolioGuidelines content={defaultPortfolioContent} />);
     const requests = document.getElementById("requests") as HTMLElement;
 
@@ -45,10 +45,41 @@ describe("PF-01 guideline responsibility split", () => {
     expect(
       within(requests).getByRole("heading", {
         level: 2,
-        name: "購入者へのお願い",
+        name: "ご依頼前にご確認ください",
       })
     ).toBeTruthy();
-    expect(within(requests).getByText(defaultPortfolioContent.requests[0])).toBeTruthy();
+
+    for (const heading of ["ご依頼内容", "修正について", "商用利用・実績公開", "禁止事項"]) {
+      expect(within(requests).getByRole("heading", { level: 3, name: heading })).toBeTruthy();
+    }
+    for (const request of defaultPortfolioContent.requests) {
+      expect(within(requests).getByText(request)).toBeTruthy();
+    }
+
+    expect(within(requests).getByRole("link", { name: "ご依頼規約" }).getAttribute("href")).toBe(
+      "/natori/legal/terms"
+    );
+    expect(
+      within(requests).getByRole("link", { name: "プライバシーポリシー" }).getAttribute("href")
+    ).toBe("/natori/legal/privacy");
+    expect(
+      within(requests)
+        .getByRole("link", { name: "特定商取引法に基づく表記" })
+        .getAttribute("href")
+    ).toBe("/natori/legal/tokushoho");
     expect(screen.queryByRole("heading", { name: /FAQ/i })).toBeNull();
+  });
+
+  it("keeps editor-customized request text visible as other guidance", () => {
+    const customized = {
+      ...defaultPortfolioContent,
+      requests: [...defaultPortfolioContent.requests, "独自の確認事項です"],
+    };
+
+    render(<PortfolioGuidelines content={customized} />);
+    const requests = document.getElementById("requests") as HTMLElement;
+
+    expect(within(requests).getByRole("heading", { level: 3, name: "その他のお願い" })).toBeTruthy();
+    expect(within(requests).getByText("独自の確認事項です")).toBeTruthy();
   });
 });
