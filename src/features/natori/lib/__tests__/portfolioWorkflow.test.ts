@@ -25,7 +25,27 @@ describe("portfolioWorkflow", () => {
     expect(resolved[4].body).toContain("受け取りました");
   });
 
-  it("keeps a custom workflow unchanged", () => {
+  it("also replaces the legacy workflow currently saved in production", () => {
+    const savedLegacy = defaultPortfolioContent.workflow.map((step) => ({ ...step }));
+    savedLegacy[2] = {
+      ...savedLegacy[2],
+      body: "お見積もりにご承諾いただけましたら、お支払い用のリンクをメールでお送りします。ご入金の確認後、制作を開始いたします。",
+    };
+
+    expect(resolvePortfolioWorkflow(savedLegacy)).toEqual(NATORI_PUBLIC_WORKFLOW);
+  });
+
+  it("keeps body-only editor customizations unchanged", () => {
+    const customized = defaultPortfolioContent.workflow.map((step) => ({ ...step }));
+    customized[3] = {
+      ...customized[3],
+      body: "ラフ確認は独自の進行方法でご案内します。",
+    };
+
+    expect(resolvePortfolioWorkflow(customized)).toBe(customized);
+  });
+
+  it("keeps a fully custom workflow unchanged", () => {
     const custom = [{ title: "独自ステップ", body: "独自の案内" }];
 
     expect(resolvePortfolioWorkflow(custom)).toBe(custom);
