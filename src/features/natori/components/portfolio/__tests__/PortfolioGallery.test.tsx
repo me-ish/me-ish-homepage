@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const trackNatoriPageEvent = vi.hoisted(() => vi.fn());
@@ -182,11 +183,13 @@ describe("PortfolioGallery collections", () => {
     expect(screen.getByRole("link", { name: /YouTube/u })).toBeTruthy();
   });
 
-  it("モーダル内へフォーカスを移し、Tabを閉じ込め、閉じた後に作品へ戻す", () => {
+  it.each(["full", "showcase"] as const)("%s: 詳細をキーボードで操作でき、Tabを閉じ込め、Esc後に作品へ戻す", async (variant) => {
+    const user = userEvent.setup();
     render(
       <PortfolioGallery
         collections={collections}
         works={[work("1", { image: "https://example.com/work.webp" })]}
+        variant={variant}
       />,
     );
 
@@ -201,14 +204,71 @@ describe("PortfolioGallery collections", () => {
 
     const dialog = screen.getByRole("dialog", { name: "作品1" });
     const closeButton = within(dialog).getByRole("button", { name: "閉じる" });
+    const details = within(dialog).getByRole("region", { name: "作品画像と詳細" });
+    expect(document.activeElement).toBe(closeButton);
+    expect(document.body.style.overflow).toBe("hidden");
+
+    await user.tab();
+    expect(document.activeElement).toBe(details);
+    await user.tab();
+    expect(document.activeElement).toBe(closeButton);
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(details);
+    await user.tab({ shift: true });
     expect(document.activeElement).toBe(closeButton);
 
-    fireEvent.keyDown(window, { key: "Tab" });
-    expect(document.activeElement).toBe(closeButton);
-    fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
-    expect(document.activeElement).toBe(closeButton);
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+    expect(document.body.style.overflow).not.toBe("hidden");
+  });
 
-    fireEvent.keyDown(window, { key: "Escape" });
+  it("絞り込み後に拡大できる画像があるときだけ案内する", () => {
+    render(
+      <PortfolioGallery
+        collections={[...collections, { id: "empty", name: "準備中", description: "", color: "#F2D9E0" }]}
+        works={[
+          work("1", { image: "https://example.com/work.webp" }),
+          work("2", { collectionId: "empty" }),
+        ]}
+      />,
+    );
+    expect(screen.getByText("画像をタップ・クリックで拡大できます。")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "準備中" }));
+    expect(screen.queryByText("画像をタップ・クリックで拡大できます。")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "すべて" }));
+    expect(screen.getByText("画像をタップ・クリックで拡大できます。")).toBeTruthy();
+  });
+
+  it("長い作品名と関連リンクを詳細領域に表示し、末尾のリンクからフォーカスを循環する", async () => {
+    const user = userEvent.setup();
+    const title = "配信活動の周年記念イラストとオリジナルグッズのための描き下ろし作品";
+    render(
+      <PortfolioGallery
+        collections={collections}
+        works={[work("1", {
+          title,
+          image: "https://example.com/work.webp",
+          relatedLinks: [{ id: "usage", kind: "usage", label: "グッズページ", href: "https://example.com/goods" }],
+        })]}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: `${title} を拡大表示` });
+    await user.click(trigger);
+    const dialog = screen.getByRole("dialog", { name: title });
+    const details = within(dialog).getByRole("region", { name: "作品画像と詳細" });
+    expect(within(details).getByRole("heading", { name: title })).toBeTruthy();
+    const link = within(details).getByRole("link", { name: /グッズページ/u });
+    const close = within(dialog).getByRole("button", { name: "閉じる" });
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(link);
+    await user.tab();
+    expect(document.activeElement).toBe(close);
+    await user.click(close);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+    await user.click(trigger);
+    fireEvent.click(screen.getByRole("dialog"));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(document.activeElement).toBe(trigger);
   });

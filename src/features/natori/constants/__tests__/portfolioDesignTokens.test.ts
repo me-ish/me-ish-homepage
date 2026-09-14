@@ -235,7 +235,7 @@ describe("PF-08 image and font loading", () => {
       'sizes="(min-width: 1024px) 352px, (min-width: 640px) calc(50vw - 36px), calc(50vw - 44px)"'
     );
     expect(gallerySource).toContain(
-      'sizes="(min-width: 768px) 768px, calc(100vw - 32px)"'
+      'sizes="(min-width: 816px) 744px, calc(100vw - 72px)"'
     );
   });
 });
