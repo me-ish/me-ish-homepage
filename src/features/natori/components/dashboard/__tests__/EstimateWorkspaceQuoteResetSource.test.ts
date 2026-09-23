@@ -14,12 +14,12 @@ const source = readFileSync(
   "utf8",
 );
 
-describe("EstimateWorkspace structured pricing source", () => {
-  it("loads portfolio pricing and remounts the issue panel only when the project changes", () => {
+describe("EstimateWorkspace estimate journey", () => {
+  it("loads the project and delegates both portfolio and external requests to the same workflow", () => {
     expect(source).toContain('fetch("/api/natori/portfolio/content", { cache: "no-store" })');
-    expect(source).toContain("createPortfolioStructuredPricingConfig(portfolioContent)");
-    expect(source).toContain('const PRICING_SOURCE_NAME = "ポートフォリオ公開料金"');
-    expect(source).toContain("key={project.id}");
+    expect(source).toContain("<EstimateJourney project={project} portfolioContent={portfolioContent} />");
+    expect(source).toContain("<ExternalInquiryStarter />");
+    expect(source).not.toContain("<StructuredQuoteIssuePanel");
     expect(source).not.toContain("pricingRevision");
     expect(source).not.toContain("activePresetId");
   });

@@ -30,6 +30,7 @@ export type NatoriQuoteView = {
   acceptedAt: string | null;
   expiresAt: string;
   terms: NatoriQuoteTerms | null;
+  items: { label: string; quantity: number; amount: number }[];
 };
 
 export type GetNatoriQuoteResult =
@@ -47,6 +48,7 @@ type QuoteRow = {
   expires_at: string;
   superseded_at: string | null;
   quote_terms: unknown;
+  pricing_snapshot: unknown;
 };
 
 async function fetchQuoteRow(token: string): Promise<QuoteRow | null> {
@@ -54,7 +56,7 @@ async function fetchQuoteRow(token: string): Promise<QuoteRow | null> {
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from("natori_quotes")
-    .select("id, project_id, title, client_name, amount, accepted_at, expires_at, superseded_at, quote_terms")
+    .select("id, project_id, title, client_name, amount, accepted_at, expires_at, superseded_at, quote_terms, pricing_snapshot")
     .eq("token_hash", hashToken(token))
     .maybeSingle();
   if (error) {
@@ -70,6 +72,16 @@ function isExpired(row: QuoteRow): boolean {
 }
 
 function toView(row: QuoteRow): NatoriQuoteView {
+  const pricing = row.pricing_snapshot && typeof row.pricing_snapshot === "object" && !Array.isArray(row.pricing_snapshot)
+    ? row.pricing_snapshot as Record<string, unknown> : null;
+  const items = Array.isArray(pricing?.items) ? pricing.items.flatMap((value: unknown) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+    const item = value as Record<string, unknown>;
+    return typeof item.labelSnapshot === "string" && item.labelSnapshot.length <= 200
+      && typeof item.amount === "number" && Number.isSafeInteger(item.amount) && item.amount >= 0
+      && typeof item.quantity === "number" && Number.isSafeInteger(item.quantity) && item.quantity >= 1 && item.quantity <= 100
+      ? [{ label: item.labelSnapshot, quantity: item.quantity, amount: item.amount }] : [];
+  }).slice(0, 30) : [];
   return {
     projectId: row.project_id,
     title: row.title,
@@ -78,6 +90,7 @@ function toView(row: QuoteRow): NatoriQuoteView {
     acceptedAt: row.accepted_at,
     expiresAt: row.expires_at,
     terms: readNatoriQuoteTerms(row.quote_terms),
+    items,
   };
 }
 

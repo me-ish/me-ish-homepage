@@ -18,7 +18,9 @@ export async function POST(request: Request) {
   const raw = await request.json().catch(() => null);
   const parsed = validateNatoriQuoteIssuePayloadV1(raw);
   const attempt = validateStructuredQuoteDeliveryAttempt(raw);
-  if (!parsed.success || !attempt.success) {
+  const draftRevision = raw && typeof raw === "object" && "draftRevision" in raw
+    ? (raw as { draftRevision: unknown }).draftRevision : null;
+  if (!parsed.success || !attempt.success || !Number.isSafeInteger(draftRevision) || Number(draftRevision) < 1) {
     return NextResponse.json(
       {
         error: "正式見積の内容が不正です",
@@ -31,6 +33,7 @@ export async function POST(request: Request) {
   const result = await issueStructuredQuoteAndSend({
     ...parsed.data,
     ...attempt.data,
+    draftRevision: Number(draftRevision),
   });
   switch (result.kind) {
     case "not-found":
@@ -47,11 +50,15 @@ export async function POST(request: Request) {
         { error: "現在の案件状態では正式見積を発行できません" },
         { status: 409 },
       );
-    case "rejected":
+    case "rejected": {
+      const message = result.reason === "estimate_draft_changed" ? "下書きが更新されました。再読み込みして確認してください。"
+        : result.reason === "estimate_terms_incomplete" || result.reason === "estimate_due_date_past"
+          ? "制作条件と納品日を確認してください。" : "正式見積りの内容を確認してください。";
       return NextResponse.json(
-        { error: "正式見積の発行条件を満たしていません", reason: result.reason },
+        { error: message, reason: result.reason },
         { status: 409 },
       );
+    }
     case "db-error":
       return NextResponse.json(
         {

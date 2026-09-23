@@ -18,6 +18,8 @@ type Props = {
   acceptedAt: string | null;
   expiresAt: string;
   terms?: NatoriQuoteTerms | null;
+  preview?: boolean;
+  items?: { label: string; quantity: number; amount: number }[];
 };
 
 type Status = "idle" | "sending" | "accepted" | "error";
@@ -44,6 +46,8 @@ export default function QuoteAcceptCard({
   acceptedAt,
   expiresAt,
   terms,
+  preview = false,
+  items = [],
 }: Props) {
   const [status, setStatus] = useState<Status>(acceptedAt ? "accepted" : "idle");
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -92,12 +96,27 @@ export default function QuoteAcceptCard({
               {terms?.deliverables ?? "上記内容のイラスト制作 1案件"}
             </dd>
           </div>
+          {terms ? ([
+            ["制作範囲", terms.scope], ["用途", terms.usage],
+            ["商用利用", terms.commercialUse], ["実績公開", terms.publication],
+          ] as const).filter(([, value]) => value).map(([label, value]) => (
+            <div key={label} className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
+              <dt style={{ color: c.inkSoft }}>{label}</dt>
+              <dd className="font-bold whitespace-pre-wrap break-words sm:text-right">{value}</dd>
+            </div>
+          )) : null}
           <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
             <dt style={{ color: c.inkSoft }}>{terms ? "お支払い金額" : "お支払い総額"}</dt>
             <dd className="text-lg font-black" style={{ color: c.pinkDeep }}>
               {formatYen(amount)}
             </dd>
           </div>
+          {items.length > 0 ? <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
+            <dt style={{ color: c.inkSoft }}>金額の内訳</dt>
+            <dd className="space-y-1 sm:text-right">{items.map((item, index) => (
+              <p key={`${index}-${item.label}`} className="break-words">{item.label} × {item.quantity}　{formatYen(item.amount)}</p>
+            ))}</dd>
+          </div> : null}
           <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
             <dt style={{ color: c.inkSoft }}>お支払い方法</dt>
             <dd className="font-bold sm:text-right">
@@ -139,7 +158,11 @@ export default function QuoteAcceptCard({
         </dl>
       </div>
 
-      {status === "accepted" ? (
+      {preview ? (
+        <p className="rounded-xl px-4 py-3 text-sm font-bold" style={{ background: c.paperAlt, color: c.inkSoft }}>
+          これは送信前のプレビューです。依頼者には承諾ボタンも表示されます。
+        </p>
+      ) : status === "accepted" ? (
         <div className="text-center">
           <p className="mb-2 text-3xl" aria-hidden="true">🎉</p>
           <p className="mb-1 font-bold">ご依頼の確定ありがとうございます!</p>

@@ -119,6 +119,16 @@ describe("readIssueNatoriQuoteRpcResult", () => {
 });
 
 describe("issueNatoriQuoteViaRpc", () => {
+  it("uses the draft-bound transaction for a negotiated estimate", async () => {
+    mockRpc.mockResolvedValue({ data: [{ quote_id: QUOTE_ID, version: 1, reused: false }], error: null });
+    const input = { ...validInput(), draftRevision: 2 };
+    await issueNatoriQuoteViaRpc(input);
+    expect(mockRpc).toHaveBeenCalledWith("natori_issue_quote_from_draft_v1", expect.objectContaining({
+      p_expected_revision: 2,
+      p_pricing_snapshot: input.pricingSnapshot,
+    }));
+  });
+
   it("calls natori_issue_quote_v1 with the exact immutable envelope", async () => {
     mockRpc.mockResolvedValue({
       data: [{ quote_id: QUOTE_ID, version: 1, reused: false }],

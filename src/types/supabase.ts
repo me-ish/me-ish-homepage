@@ -1408,6 +1408,12 @@ export type Database = {
         Update: { id?: string; project_id?: string; sender?: string; storage_path?: string; file_name?: string; mime_type?: string; size_bytes?: number; created_at?: string; finalized_at?: string | null }
         Relationships: [{ foreignKeyName: "natori_consultation_uploads_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "natori_projects"; referencedColumns: ["id"] }]
       }
+      natori_estimate_drafts: {
+        Row: { project_id: string; user_id: string; agreed_terms: Json; items: Json; revision: number; updated_at: string }
+        Insert: { project_id: string; user_id: string; agreed_terms: Json; items: Json; revision?: number; updated_at?: string }
+        Update: { project_id?: string; user_id?: string; agreed_terms?: Json; items?: Json; revision?: number; updated_at?: string }
+        Relationships: [{ foreignKeyName: "natori_estimate_drafts_project_id_fkey"; columns: ["project_id"]; isOneToOne: true; referencedRelation: "natori_projects"; referencedColumns: ["id"] }]
+      }
       natori_project_activity: {
         Row: {
           created_at: string
@@ -2633,6 +2639,15 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      natori_issue_quote_from_draft_v1: {
+        Args: {
+          p_user_id: string; p_project_id: string; p_title: string; p_client_name: string
+          p_to_email: string; p_amount: number; p_subject: string; p_body_snapshot: string
+          p_token_hash: string; p_expires_at: string; p_request_snapshot: Json
+          p_pricing_snapshot: Json; p_idempotency_key: string; p_expected_revision: number
+        }
+        Returns: { quote_id: string; version: number; reused: boolean }[]
       }
       natori_issue_quote_v1: {
         Args: {

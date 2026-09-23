@@ -9,6 +9,7 @@ import { issueNatoriQuoteViaRpc } from "@/features/natori/server/quoteIssueRpcAd
 import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSiteUrl } from "@/lib/constants";
+import { readNatoriRequestData } from "@/features/natori/lib/requestSchema";
 import type { NatoriQuoteIssuePayloadV1 } from "@/features/natori/types/quoteSnapshot";
 import type { StructuredQuoteDeliveryAttempt } from "@/features/natori/lib/structuredQuoteAttempt";
 
@@ -26,7 +27,7 @@ type ProjectRow = {
 };
 
 export type IssueStructuredQuoteInput = NatoriQuoteIssuePayloadV1 &
-  StructuredQuoteDeliveryAttempt;
+  StructuredQuoteDeliveryAttempt & { draftRevision: number };
 
 export type IssueStructuredQuoteResult =
   | { kind: "ok"; quoteId: string; version: number; reused: boolean }
@@ -49,6 +50,15 @@ export async function issueStructuredQuoteAndSend(
 
   const attempt = validateStructuredQuoteDeliveryAttempt(input);
   if (!attempt.success) return { kind: "invalid-attempt" };
+  if (!Number.isSafeInteger(input.draftRevision) || input.draftRevision < 1 || !input.pricingSnapshot.agreedTerms) {
+    return { kind: "rejected", reason: "estimate_draft_required" };
+  }
+  if (input.requestSnapshot) {
+    const request = readNatoriRequestData(input.requestSnapshot);
+    if (!request.success || request.data.options.some((option) => option.id === "copyright_transfer")) {
+      return { kind: "rejected", reason: "copyright_terms_require_individual_review" };
+    }
+  }
 
   const ownerId = await resolveNatoriActingUserId();
   if (!ownerId) return { kind: "not-found" };
@@ -83,6 +93,7 @@ export async function issueStructuredQuoteAndSend(
     clientName: project.client_name,
     tokenHash,
     expiresAt: attempt.data.expiresAt,
+    draftRevision: input.draftRevision,
   });
   if (issued.kind === "rejected") {
     return { kind: "rejected", reason: issued.reason };
