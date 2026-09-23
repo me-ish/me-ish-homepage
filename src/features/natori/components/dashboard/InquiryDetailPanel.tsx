@@ -405,13 +405,13 @@ export default function InquiryDetailPanel({
 
         {/* アクション */}
         <div
-          className={`${screen === "conversation" ? "hidden" : "flex shrink-0 flex-wrap items-center gap-2 border-t border-pink-100 p-3 sm:p-5"}`}
+          className={`${screen === "conversation" ? "hidden" : "flex shrink-0 items-center gap-2 border-t border-pink-100 bg-white px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 sm:p-5"}`}
         >
           {!archived && !demoMode ? (
             <button
               type="button"
               onClick={() => setScreen("conversation")}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600"
+              className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-pink-500 px-2 text-[11px] font-bold text-white hover:bg-pink-600 sm:flex-none sm:px-4 sm:text-xs"
             >
               <MessageCircle className="h-3.5 w-3.5" aria-hidden />
               相談に返信
@@ -420,18 +420,18 @@ export default function InquiryDetailPanel({
           {ESTIMATE_MAIL_STATUSES.has(project.status) && estimateHref ? (
             <Link
               href={estimateHref}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-rose-300 bg-white px-4 text-xs font-bold text-rose-700 shadow-sm hover:bg-rose-50"
+              className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-rose-300 bg-white px-2 text-[11px] font-bold text-rose-700 shadow-sm hover:bg-rose-50 sm:flex-none sm:px-4 sm:text-xs"
               title="依頼内容を見積もりツールに貼り付けた状態で開きます（概算とメール下書きが自動で出ます）"
             >
               <Calculator className="h-3.5 w-3.5" aria-hidden />
-              この内容で見積もりを作る
+              見積りを作る
             </Link>
           ) : null}
-          <details className="group relative w-full sm:w-auto">
-            <summary className="cursor-pointer list-none rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-700 marker:hidden [&::-webkit-details-marker]:hidden">
-              その他の操作 ↓
+          <details className="group relative ml-auto shrink-0">
+            <summary className="flex h-10 cursor-pointer list-none items-center rounded-full border border-gray-300 bg-white px-3 text-[11px] font-bold text-gray-700 marker:hidden [&::-webkit-details-marker]:hidden sm:px-4 sm:text-xs">
+              その他 ↑
             </summary>
-            <div className="mt-2 flex flex-wrap gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2">
+            <div className="absolute bottom-full right-0 z-10 mb-2 flex max-h-[50dvh] w-[min(88vw,24rem)] flex-wrap gap-2 overflow-y-auto rounded-xl border border-gray-200 bg-white p-3 shadow-xl">
               {ESTIMATE_MAIL_STATUSES.has(project.status) ? (
                 <button
                   type="button"
