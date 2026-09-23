@@ -804,8 +804,8 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     const submitButton = screen.getByRole("button", { name: "相談内容を送信する" });
     expect(submitButton.className).toContain("text-base font-black");
     expect(submitButton.className).toContain("border-2");
-    expect(submitButton.style.background).toBe("rgb(166, 50, 104)");
-    expect(submitButton.style.borderColor).toBe("rgb(166, 50, 104)");
+    expect(submitButton.style.background).toBe("rgb(230, 106, 169)");
+    expect(submitButton.style.borderColor).toBe("rgb(201, 75, 137)");
     expect(submitButton.style.color).toBe("rgb(255, 255, 255)");
   });
 });

@@ -3,10 +3,9 @@ import { portfolioColors } from "@/features/natori/constants/portfolioContent";
 // フォーム内だけで使い、Hero / Gallery / showcase の色は変えない。
 export const portfolioFormColors = {
   ...portfolioColors,
-  formBorder: "#A76282",
-  formBorderActive: "#A63268",
-  action: "#A63268",
-  actionDisplay: "#A63268",
+  borderSubtle: "#E3E0E2",
+  formBorder: "#878287",
+  formBorderActive: portfolioColors.accentText,
 };
 
 export default function PortfolioFormStyles() {
