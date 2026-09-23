@@ -14,6 +14,7 @@ import { createHash } from "crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { formatYen } from "@/features/natori/lib/pricing";
 import { sendNatoriNoticeMail } from "@/features/natori/server/orderMailService";
+import { readNatoriQuoteTerms, type NatoriQuoteTerms } from "@/features/natori/lib/quoteTerms";
 
 const TOKEN_RE = /^[A-Za-z0-9_-]{20,64}$/;
 
@@ -28,6 +29,7 @@ export type NatoriQuoteView = {
   amount: number;
   acceptedAt: string | null;
   expiresAt: string;
+  terms: NatoriQuoteTerms | null;
 };
 
 export type GetNatoriQuoteResult =
@@ -44,6 +46,7 @@ type QuoteRow = {
   accepted_at: string | null;
   expires_at: string;
   superseded_at: string | null;
+  quote_terms: unknown;
 };
 
 async function fetchQuoteRow(token: string): Promise<QuoteRow | null> {
@@ -51,7 +54,7 @@ async function fetchQuoteRow(token: string): Promise<QuoteRow | null> {
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from("natori_quotes")
-    .select("id, project_id, title, client_name, amount, accepted_at, expires_at, superseded_at")
+    .select("id, project_id, title, client_name, amount, accepted_at, expires_at, superseded_at, quote_terms")
     .eq("token_hash", hashToken(token))
     .maybeSingle();
   if (error) {
@@ -74,6 +77,7 @@ function toView(row: QuoteRow): NatoriQuoteView {
     amount: row.amount,
     acceptedAt: row.accepted_at,
     expiresAt: row.expires_at,
+    terms: readNatoriQuoteTerms(row.quote_terms),
   };
 }
 

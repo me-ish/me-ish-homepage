@@ -22,6 +22,7 @@ import {
   type NatoriOrderMailDraft,
 } from "@/features/natori/lib/orderMail";
 import { formatYen } from "@/features/natori/lib/pricing";
+import { formatQuoteDate, isValidQuoteDate } from "@/features/natori/lib/quoteTerms";
 import type { NatoriProject } from "@/features/natori/types/projects";
 import DeliveryFilesManager from "./DeliveryFilesManager";
 
@@ -67,7 +68,9 @@ function buildDraft(
   project: NatoriProject,
   amount: number | null,
   breakdownLines?: string[],
-  artistName?: string
+  artistName?: string,
+  quoteTitle?: string,
+  deliverables?: string
 ): NatoriOrderMailDraft {
   const baseInput = {
     clientName: project.clientName,
@@ -78,7 +81,14 @@ function buildDraft(
     case "estimate":
       return amount === null
         ? { subject: "", body: "" }
-        : buildEstimateMailDraft({ ...baseInput, amount, breakdownLines });
+        : buildEstimateMailDraft({
+            ...baseInput,
+            title: quoteTitle?.trim() || project.title,
+            amount,
+            breakdownLines,
+            deliverables: deliverables?.trim(),
+            dueDate: project.dueDate ?? undefined,
+          });
     case "payment":
       return amount === null
         ? { subject: "", body: "" }
@@ -129,6 +139,9 @@ export default function OrderMailPanel({
   const startAmount = initialAmount ?? project.amount;
   const [to, setTo] = useState(resolveClientEmail(project) ?? "");
   const [amount, setAmount] = useState<number | "">(startAmount ?? "");
+  // 案件の受付タイトルはフォームの選択肢を含むため、顧客向け名称は別に確定する。
+  const [quoteTitle, setQuoteTitle] = useState("");
+  const [deliverables, setDeliverables] = useState("");
   const [draft, setDraft] = useState<NatoriOrderMailDraft>(() =>
     buildDraft(kind, project, startAmount, breakdownLines, artistName)
   );
@@ -151,7 +164,19 @@ export default function OrderMailPanel({
     Number.isFinite(amount) &&
     (!isMoneyKind(kind) || amount >= (kind === "payment" ? 50 : 0));
   const canSend =
-    emailValid && amountValid && draft.subject.trim() && draft.body.trim() && !sending;
+    emailValid && amountValid && draft.subject.trim() && draft.body.trim() && !sending &&
+    (kind !== "estimate" || (
+      quoteTitle.trim().length > 0 && quoteTitle.length <= 200 &&
+      deliverables.trim().length > 0 && deliverables.length <= 1000 &&
+      isValidQuoteDate(project.dueDate ?? "")
+    ));
+
+  const updateQuoteDescription = (nextTitle: string, nextDeliverables: string) => {
+    setQuoteTitle(nextTitle);
+    setDeliverables(nextDeliverables);
+    setDraft(buildDraft(kind, project, typeof amount === "number" ? amount : null,
+      breakdownLines, artistName, nextTitle, nextDeliverables));
+  };
 
   const regenerate = () => {
     if (isMoneyKind(kind) && typeof amount !== "number") {
@@ -165,7 +190,9 @@ export default function OrderMailPanel({
         project,
         typeof amount === "number" && Number.isFinite(amount) ? amount : null,
         breakdownLines,
-        artistName
+        artistName,
+        quoteTitle,
+        deliverables
       )
     );
   };
@@ -193,6 +220,11 @@ export default function OrderMailPanel({
           subject: draft.subject.trim(),
           body: draft.body,
           amount: Math.round(amount),
+          ...(kind === "estimate" ? {
+            quoteTitle: quoteTitle.trim(),
+            deliverables: deliverables.trim(),
+            dueDate: project.dueDate,
+          } : {}),
         }),
       });
       const json = (await res.json().catch(() => null)) as {
@@ -299,6 +331,37 @@ export default function OrderMailPanel({
             <p className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs leading-5 text-sky-900">
               {meta.hint}
             </p>
+
+            {kind === "estimate" ? (
+              <div className="space-y-3 rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+                <p className="text-xs font-bold text-pink-800">
+                  依頼者に表示する内容（送信後はこの見積もりの記録として固定されます）
+                </p>
+                <div>
+                  <label htmlFor="om-quote-title" className={labelClass}>ご依頼内容</label>
+                  <input id="om-quote-title" value={quoteTitle} maxLength={200}
+                    onChange={(event) => updateQuoteDescription(event.target.value, deliverables)}
+                    placeholder="例：アクリルスタンド用キャラクターイラスト" className={inputClass} />
+                </div>
+                <div>
+                  <label htmlFor="om-deliverables" className={labelClass}>制作するもの</label>
+                  <textarea id="om-deliverables" value={deliverables} maxLength={1000} rows={3}
+                    onChange={(event) => updateQuoteDescription(quoteTitle, event.target.value)}
+                    placeholder="例：全身イラスト1点。アクリルスタンド用、背景透過PNGで納品" className={inputClass} />
+                </div>
+                <p className="text-xs text-gray-700">
+                  納品日：{project.dueDate && isValidQuoteDate(project.dueDate)
+                    ? `${formatQuoteDate(project.dueDate)}まで`
+                    : "未設定"}（案件情報のカレンダーで設定した日付）
+                </p>
+                <p className="text-xs text-gray-600">
+                  ご依頼内容と制作するものを変更すると、メールの下書きも更新されます。
+                </p>
+                {!isValidQuoteDate(project.dueDate ?? "") ? (
+                  <p className="text-xs font-bold text-red-700">見積もり送信前に案件情報で納品日を設定してください。</p>
+                ) : null}
+              </div>
+            ) : null}
 
             {kind === "rough" || kind === "delivery" ? (
               <DeliveryFilesManager

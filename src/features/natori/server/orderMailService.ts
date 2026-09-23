@@ -27,6 +27,7 @@ import { buildRoughFileLinkLines } from "@/features/natori/server/deliveryServic
 import { getNextActionForStatus } from "@/features/natori/lib/projects";
 import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { formatYen } from "@/features/natori/lib/pricing";
+import { isValidQuoteDate } from "@/features/natori/lib/quoteTerms";
 import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
 import type { NatoriProjectStatus } from "@/features/natori/types/projects";
 
@@ -50,6 +51,7 @@ type ProjectRow = {
   id: string;
   user_id: string;
   title: string;
+  due_date: string | null;
   client_name: string;
   amount: number;
   type: string;
@@ -74,7 +76,7 @@ async function fetchProjectRow(
   let query = admin
     .from("natori_projects")
     .select(
-      "id, user_id, title, client_name, amount, type, status, note, payment_confirmed_at, payment_link_id, quoted_amount, client_email, active_quote_id, payment_quote_id, payment_link_url, payment_link_status, stripe_payment_session_id"
+      "id, user_id, title, due_date, client_name, amount, type, status, note, payment_confirmed_at, payment_link_id, quoted_amount, client_email, active_quote_id, payment_quote_id, payment_link_url, payment_link_status, stripe_payment_session_id"
     )
     .eq("id", projectId);
   if (ownerId) query = query.eq("user_id", ownerId);
@@ -125,6 +127,10 @@ export type SendNatoriOrderMailInput = {
   body: string;
   /** 送信時に案件へ保存する確定金額（円）。rough / delivery では金額は更新しない */
   amount: number;
+  /** 見積もり発行時に依頼者へ提示する確定条件。 */
+  quoteTitle?: string;
+  deliverables?: string;
+  dueDate?: string;
 };
 
 export type SendNatoriOrderMailResult =
@@ -207,6 +213,12 @@ export async function sendNatoriOrderMail(
   if (project.payment_confirmed_at && input.kind === "estimate") {
     return { kind: "invalid-state" };
   }
+  if (input.kind === "estimate" && (
+    !input.quoteTitle?.trim() || input.quoteTitle.length > 200 ||
+    !input.deliverables?.trim() || input.deliverables.length > 1000 ||
+    !input.dueDate || !isValidQuoteDate(input.dueDate) ||
+    input.dueDate !== project.due_date
+  )) return { kind: "invalid-state" };
 
   let body = input.body;
   let quoteId: string | undefined;
@@ -242,11 +254,11 @@ export async function sendNatoriOrderMail(
     // 発行時点の件名・依頼者・金額・本文を不変スナップショットとして、メールを
     // 送る前に保存する。案件の金額を後から編集しても承諾内容は変わらない。
     const { data: issuedQuoteId, error: quoteError } = await supabaseAdmin().rpc(
-      "natori_issue_quote",
+      "natori_issue_quote_with_terms",
       {
         p_user_id: ownerId,
         p_project_id: project.id,
-        p_title: project.title,
+        p_title: input.quoteTitle!.trim(),
         p_client_name: project.client_name,
         p_to_email: input.to,
         p_amount: input.amount,
@@ -255,6 +267,8 @@ export async function sendNatoriOrderMail(
         p_body_snapshot: input.body,
         p_token_hash: quoteTokenHash,
         p_expires_at: quoteTokenExpiresAt,
+        p_quote_terms: { deliverables: input.deliverables!.trim(), dueDate: input.dueDate },
+        p_expected_due_date: input.dueDate!,
       }
     );
     if (quoteError || !issuedQuoteId) {

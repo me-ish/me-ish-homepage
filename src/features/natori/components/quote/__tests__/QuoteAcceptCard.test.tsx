@@ -32,6 +32,23 @@ function renderCard() {
 }
 
 describe("QuoteAcceptCard", () => {
+  it("新しい見積もりは送信時の制作内容と確定納品日を表示する", () => {
+    render(<QuoteAcceptCard
+      token="token-12345678901234567890"
+      title="アクリルスタンド用キャラクターイラスト"
+      clientName="テスト太郎"
+      amount={12000}
+      acceptedAt={null}
+      expiresAt="2026-10-01T16:00:00.000Z"
+      terms={{ deliverables: "全身イラスト1点、背景透過PNGで納品", dueDate: "2026-11-30" }}
+    />);
+    expect(screen.getByRole("heading", { name: "ご依頼内容をご確認ください" })).toBeTruthy();
+    expect(screen.getByText("全身イラスト1点、背景透過PNGで納品")).toBeTruthy();
+    expect(screen.getByText("2026年11月30日まで")).toBeTruthy();
+    expect(screen.getByText(/上記の納品日までに納品します/)).toBeTruthy();
+    expect(screen.queryByText("上記内容のイラスト制作 1案件")).toBeNull();
+  });
+
   it("契約条件と法務リンクを最終確認として表示する", () => {
     renderCard();
 

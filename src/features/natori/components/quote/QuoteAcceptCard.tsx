@@ -8,6 +8,7 @@ import { useState } from "react";
 import { formatYen } from "@/features/natori/lib/pricing";
 import { legacyNatoriTransactionColors as c } from "@/features/natori/constants/portfolioContent";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
+import { formatQuoteDate, type NatoriQuoteTerms } from "@/features/natori/lib/quoteTerms";
 
 type Props = {
   token: string;
@@ -16,6 +17,7 @@ type Props = {
   amount: number;
   acceptedAt: string | null;
   expiresAt: string;
+  terms?: NatoriQuoteTerms | null;
 };
 
 type Status = "idle" | "sending" | "accepted" | "error";
@@ -41,6 +43,7 @@ export default function QuoteAcceptCard({
   amount,
   acceptedAt,
   expiresAt,
+  terms,
 }: Props) {
   const [status, setStatus] = useState<Status>(acceptedAt ? "accepted" : "idle");
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -71,48 +74,66 @@ export default function QuoteAcceptCard({
         {clientName} 様
       </p>
 
-      <h2 className="mb-3 text-base font-black">お申込み内容の最終確認</h2>
+      <h2 className="mb-3 text-base font-black">
+        {terms ? "ご依頼内容をご確認ください" : "お申込み内容の最終確認"}
+      </h2>
       <div
         className="mb-6 rounded-xl border-2 p-4"
         style={{ borderColor: c.paperAlt }}
       >
         <dl className="space-y-3 text-sm">
-          <div className="flex justify-between gap-4">
+          <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
             <dt style={{ color: c.inkSoft }}>ご依頼内容</dt>
-            <dd className="font-bold text-right">{title}</dd>
+            <dd className="font-bold sm:text-right break-words">{title}</dd>
           </div>
-          <div className="flex justify-between gap-4">
-            <dt style={{ color: c.inkSoft }}>役務の分量</dt>
-            <dd className="font-bold text-right">上記内容のイラスト制作 1案件</dd>
+          <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
+            <dt style={{ color: c.inkSoft }}>{terms ? "制作するもの" : "役務の分量"}</dt>
+            <dd className="font-bold whitespace-pre-wrap break-words sm:text-right">
+              {terms?.deliverables ?? "上記内容のイラスト制作 1案件"}
+            </dd>
           </div>
-          <div className="flex justify-between gap-4">
-            <dt style={{ color: c.inkSoft }}>お支払い総額</dt>
+          <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
+            <dt style={{ color: c.inkSoft }}>{terms ? "お支払い金額" : "お支払い総額"}</dt>
             <dd className="text-lg font-black" style={{ color: c.pinkDeep }}>
               {formatYen(amount)}
             </dd>
           </div>
-          <div className="flex justify-between gap-4">
-            <dt style={{ color: c.inkSoft }}>お支払い方法</dt>
-            <dd className="font-bold text-right">Stripeによるカード決済</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt style={{ color: c.inkSoft }}>お支払い期限</dt>
-            <dd className="font-bold text-right">支払い案内メール送信日から7日以内</dd>
-          </div>
           <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
-            <dt style={{ color: c.inkSoft }}>役務の提供時期</dt>
+            <dt style={{ color: c.inkSoft }}>お支払い方法</dt>
             <dd className="font-bold sm:text-right">
-              入金確認後に制作を開始し、通常は約1か月で納品します。お見積もりに別の納期が記載されている場合は、その条件を優先します。
+              {terms ? "クレジットカード決済" : "Stripeによるカード決済"}
             </dd>
           </div>
-          <div className="flex justify-between gap-4">
-            <dt style={{ color: c.inkSoft }}>申込期限</dt>
-            <dd className="font-bold text-right">{formatDate(expiresAt)}まで</dd>
+          <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
+            <dt style={{ color: c.inkSoft }}>お支払い期限</dt>
+            <dd className="font-bold sm:text-right">
+              {terms ? "お支払いのご案内メールをお送りしてから7日以内" : "支払い案内メール送信日から7日以内"}
+            </dd>
+          </div>
+          {terms ? (
+            <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
+              <dt style={{ color: c.inkSoft }}>納品日</dt>
+              <dd className="font-bold sm:text-right">{formatQuoteDate(terms.dueDate)}まで</dd>
+            </div>
+          ) : null}
+          <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
+            <dt style={{ color: c.inkSoft }}>{terms ? "制作・納品について" : "役務の提供時期"}</dt>
+            <dd className="font-bold sm:text-right">
+              {terms
+                ? "ご入金を確認してから制作を開始し、上記の納品日までに納品します。"
+                : "入金確認後に制作を開始し、通常は約1か月で納品します。お見積もりに別の納期が記載されている場合は、その条件を優先します。"}
+            </dd>
           </div>
           <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
-            <dt style={{ color: c.inkSoft }}>キャンセル</dt>
+            <dt style={{ color: c.inkSoft }}>{terms ? "このお見積もりの期限" : "申込期限"}</dt>
+            <dd className="font-bold sm:text-right">{formatDate(expiresAt)}まで</dd>
+          </div>
+          <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
+            <dt style={{ color: c.inkSoft }}>{terms ? "キャンセル・返金について" : "キャンセル"}</dt>
             <dd className="font-bold sm:text-right">
-              契約成立後はメールでご連絡ください。入金後または制作開始後は、進行状況や実施済み作業等を確認し、返金の可否・精算額を個別にご案内します。実施済み作業相当の費用をご負担いただく場合があります。
+              {terms
+                ? "ご依頼確定後のキャンセルは、メールでご連絡ください。ご入金後や制作開始後は、進み具合と完了した作業を確認したうえで、返金できるかどうかと金額をご案内します。完了した作業に応じた費用をお願いする場合があります。"
+                : "契約成立後はメールでご連絡ください。入金後または制作開始後は、進行状況や実施済み作業等を確認し、返金の可否・精算額を個別にご案内します。実施済み作業相当の費用をご負担いただく場合があります。"}
             </dd>
           </div>
         </dl>
@@ -133,7 +154,9 @@ export default function QuoteAcceptCard({
             className="mb-4 rounded-xl px-4 py-3 text-xs leading-6"
             style={{ background: c.paperAlt, color: c.inkSoft }}
           >
-            このページで依頼を確定するまでは契約は成立しません。内容の変更をご希望の場合は、確定前にお見積もりメールへご返信ください。
+            {terms
+              ? "内容を変更したい場合は、依頼を確定する前にお見積もりメールへご返信ください。"
+              : "このページで依頼を確定するまでは契約は成立しません。内容の変更をご希望の場合は、確定前にお見積もりメールへご返信ください。"}
           </div>
 
           <label className="mb-4 flex cursor-pointer items-start gap-3 text-sm leading-6">

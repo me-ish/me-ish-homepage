@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import { sendNatoriOrderMail } from "@/features/natori/server/orderMailService";
+import { isValidQuoteDate } from "@/features/natori/lib/quoteTerms";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,6 +26,9 @@ export async function POST(request: Request) {
     subject?: unknown;
     body?: unknown;
     amount?: unknown;
+    quoteTitle?: unknown;
+    deliverables?: unknown;
+    dueDate?: unknown;
   } | null;
   if (!payload) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -63,7 +67,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "payment amount must be at least 50 yen" }, { status: 400 });
   }
 
-  const result = await sendNatoriOrderMail({ kind, projectId, to, subject, body, amount });
+  const quoteTitle = typeof payload.quoteTitle === "string" ? payload.quoteTitle.trim() : "";
+  const deliverables = typeof payload.deliverables === "string" ? payload.deliverables.trim() : "";
+  const dueDate = typeof payload.dueDate === "string" ? payload.dueDate : "";
+  if (kind === "estimate" && (
+    !quoteTitle || quoteTitle.length > 200 ||
+    !deliverables || deliverables.length > 1000 ||
+    !isValidQuoteDate(dueDate)
+  )) {
+    return NextResponse.json({ error: "ご依頼内容・制作するもの・納品日を確認してください。" }, { status: 400 });
+  }
+
+  const result = await sendNatoriOrderMail({
+    kind, projectId, to, subject, body, amount,
+    ...(kind === "estimate" ? { quoteTitle, deliverables, dueDate } : {}),
+  });
   switch (result.kind) {
     case "not-found":
       return NextResponse.json({ error: "Project not found" }, { status: 404 });

@@ -80,6 +80,16 @@ describe("extractClientEmailFromNote", () => {
 });
 
 describe("buildEstimateMailDraft", () => {
+  it("確定した制作物と納品日を依頼者向けに記載する", () => {
+    const draft = buildEstimateMailDraft({
+      clientName: "依頼者", title: "アクリルスタンド用イラスト", amount: 15000,
+      deliverables: "全身イラスト1点、背景透過PNG", dueDate: "2026-11-30",
+    });
+    expect(draft.body).toContain("■ 制作するもの: 全身イラスト1点、背景透過PNG");
+    expect(draft.body).toContain("■ 納品日: 2026年11月30日まで");
+    expect(draft.body).not.toContain("約1ヶ月前後");
+  });
+
   it("includes client name, title, amount and acceptance ask", () => {
     const draft = buildEstimateMailDraft({
       clientName: "テスト太郎",

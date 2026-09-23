@@ -1688,6 +1688,7 @@ export type Database = {
           issued_at: string | null
           pricing_snapshot: Json | null
           project_id: string
+          quote_terms: Json | null
           request_snapshot: Json | null
           subject: string
           superseded_at: string | null
@@ -1709,6 +1710,7 @@ export type Database = {
           issued_at?: string | null
           pricing_snapshot?: Json | null
           project_id: string
+          quote_terms?: Json | null
           request_snapshot?: Json | null
           subject: string
           superseded_at?: string | null
@@ -1730,6 +1732,7 @@ export type Database = {
           issued_at?: string | null
           pricing_snapshot?: Json | null
           project_id?: string
+          quote_terms?: Json | null
           request_snapshot?: Json | null
           subject?: string
           superseded_at?: string | null
@@ -2606,6 +2609,23 @@ export type Database = {
           p_client_name: string
           p_expires_at: string
           p_project_id: string
+          p_subject: string
+          p_title: string
+          p_to_email: string
+          p_token_hash: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      natori_issue_quote_with_terms: {
+        Args: {
+          p_amount: number
+          p_body_snapshot: string
+          p_client_name: string
+          p_expected_due_date: string
+          p_expires_at: string
+          p_project_id: string
+          p_quote_terms: Json
           p_subject: string
           p_title: string
           p_to_email: string
