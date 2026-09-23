@@ -3,6 +3,7 @@
 // 原依頼内容（request_data）の field 単位表示。
 // structured / legacy / 表示不能 の3系統は lib/inquiryRequestView.ts が判別し、
 // ここは描画だけを持つ。raw JSON は表示しない。
+import { useState } from "react";
 import { FileWarning } from "lucide-react";
 import type { NatoriInquiryRequestView } from "@/features/natori/lib/inquiryRequestView";
 
@@ -11,6 +12,7 @@ export default function InquiryRequestSummary({
 }: {
   view: NatoriInquiryRequestView;
 }) {
+  const [messageExpanded, setMessageExpanded] = useState(false);
   if (view.kind === "legacy") return null;
 
   if (view.kind === "unsupported") {
@@ -33,6 +35,10 @@ export default function InquiryRequestSummary({
       </section>
     );
   }
+
+  const message = view.sections
+    .flatMap((section) => section.fields)
+    .find((field) => field.key === "message");
 
   return (
     <section aria-labelledby="inquiry-request-heading">
@@ -58,25 +64,56 @@ export default function InquiryRequestSummary({
         </span>
       </div>
 
+      {message && message.value !== "未記入" ? (
+        <div className="mb-3 rounded-xl border border-pink-100 bg-white p-3">
+          <p className="mb-2 text-xs font-bold text-pink-700">
+            依頼者からのメッセージ
+          </p>
+          <p
+            data-field="message"
+            className={`whitespace-pre-wrap break-words text-sm leading-6 text-gray-900 ${messageExpanded ? "" : "line-clamp-5"}`}
+          >
+            {message.value}
+          </p>
+          {message.value.length > 140 ? (
+            <button
+              type="button"
+              onClick={() => setMessageExpanded((current) => !current)}
+              className="mt-2 text-xs font-bold text-pink-700 underline underline-offset-2"
+            >
+              {messageExpanded ? "閉じる" : "全文を見る"}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <div className="space-y-3">
         {view.sections.map((section) => (
           <div
             key={section.key}
             className="rounded-xl border border-pink-100 bg-pink-50/40 p-3"
           >
-            <p className="mb-1.5 text-[11px] font-bold text-pink-700">{section.title}</p>
+            <p className="mb-1.5 text-[11px] font-bold text-pink-700">
+              {section.title}
+            </p>
             <dl className="grid grid-cols-1 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-2">
-              {section.fields.map((field) => (
-                <div key={field.key} className="flex min-w-0 gap-2">
-                  <dt className="shrink-0 font-bold text-gray-600">{field.label}:</dt>
-                  <dd
-                    data-field={field.key}
-                    className="min-w-0 whitespace-pre-wrap break-words text-gray-900"
-                  >
-                    {field.value}
-                  </dd>
-                </div>
-              ))}
+              {section.fields
+                .filter(
+                  (field) =>
+                    field.key !== "message" || field.value === "未記入",
+                )
+                .map((field) => (
+                  <div key={field.key} className="flex min-w-0 gap-2">
+                    <dt className="shrink-0 font-bold text-gray-600">
+                      {field.label}:
+                    </dt>
+                    <dd
+                      data-field={field.key}
+                      className="min-w-0 whitespace-pre-wrap break-words text-gray-900"
+                    >
+                      {field.value}
+                    </dd>
+                  </div>
+                ))}
             </dl>
           </div>
         ))}

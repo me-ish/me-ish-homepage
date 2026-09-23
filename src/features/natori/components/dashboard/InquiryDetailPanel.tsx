@@ -4,7 +4,17 @@
 // 問い合わせ管理画面の詳細パネル。フォームの依頼内容を整形表示し、
 // その場で見積もり / 支払い依頼メールの送信・入金確認・見送りができる。
 import Link from "next/link";
-import { Archive, Calculator, CalendarDays, Mail, MessageCircle, Wallet, X } from "lucide-react";
+import { useState } from "react";
+import {
+  Archive,
+  ArrowLeft,
+  Calculator,
+  CalendarDays,
+  Mail,
+  MessageCircle,
+  Wallet,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
 import type { NatoriInquiryNoteView } from "@/features/natori/lib/inquiryNoteView";
@@ -69,7 +79,11 @@ type InquiryDetailPanelProps = {
   /** 次のアクションの更新（既存の status 遷移 API を同一 status で使う） */
   onSaveNextAction?: (nextAction: string) => Promise<void>;
   onAddLink?: (url: string, label: string | null) => Promise<void>;
-  onUpdateLink?: (linkId: string, url: string, label: string | null) => Promise<void>;
+  onUpdateLink?: (
+    linkId: string,
+    url: string,
+    label: string | null,
+  ) => Promise<void>;
   onDeleteLink?: (linkId: string) => Promise<void>;
 };
 
@@ -91,6 +105,7 @@ export default function InquiryDetailPanel({
   onUpdateLink,
   onDeleteLink,
 }: InquiryDetailPanelProps) {
+  const [screen, setScreen] = useState<"overview" | "conversation">("overview");
   const meta = natoriProjectStatusMeta[project.status];
   const receivedISO = getNatoriInquiryReceivedISO(project);
   // legacy note 由来の画像は既存表示を維持し、structured 案件は署名URL付きの
@@ -98,6 +113,11 @@ export default function InquiryDetailPanel({
   const legacyReferenceImages = view.refImages;
   const referenceFiles = project.referenceFiles ?? [];
   const referenceLinks = project.referenceLinks ?? [];
+  const hasReferences =
+    referenceFiles.length > 0 ||
+    legacyReferenceImages.length > 0 ||
+    Boolean(view.refText) ||
+    referenceLinks.length > 0;
   const archived = Boolean(project.deletedAt);
 
   // 未対応 version / 壊れた JSON でも throw せず、表示可能な範囲だけを描画する。
@@ -112,45 +132,60 @@ export default function InquiryDetailPanel({
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-gray-900/60 p-4"
+      className="fixed inset-0 z-50 grid place-items-center bg-gray-900/60 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label="問い合わせの詳細"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl rounded-2xl border border-pink-100 bg-white shadow-xl"
+        className="flex h-[100dvh] w-full max-w-2xl flex-col border border-pink-100 bg-white shadow-xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         {/* ヘッダー */}
-        <div className="flex items-start justify-between gap-3 border-b border-pink-100 p-4 sm:p-5">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-pink-100 p-4 sm:p-5">
           <div className="min-w-0">
+            {screen === "conversation" ? (
+              <button
+                type="button"
+                onClick={() => setScreen("overview")}
+                className="mb-2 inline-flex items-center gap-1 text-sm font-bold text-pink-700"
+              >
+                <ArrowLeft className="h-4 w-4" aria-hidden /> 案件詳細へ戻る
+              </button>
+            ) : null}
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="break-words text-base font-black text-gray-900">
-                {project.clientName}｜{project.title}
+                {screen === "conversation"
+                  ? `${project.clientName}さんとの相談`
+                  : `${project.clientName}｜${project.title}`}
               </h2>
               <span
                 className={cn(
                   "inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold",
-                  meta.chipClassName
+                  meta.chipClassName,
                 )}
               >
                 {meta.label}
               </span>
             </div>
-            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
-              <span className="inline-flex items-center gap-1">
-                <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-                受付 {formatDate(receivedISO)}
-              </span>
-              <span className="font-bold text-gray-900">
-                {formatNatoriProjectAmount(project.amount)}
-              </span>
-              <span className="font-bold text-gray-900">
-                種別 {NATORI_PROJECT_TYPE_LABELS[project.type]}
-              </span>
-              {view.email ? <span className="break-all">{view.email}</span> : null}
-            </p>
+            {screen === "overview" ? (
+              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
+                <span className="inline-flex items-center gap-1">
+                  <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+                  受付 {formatDate(receivedISO)}
+                </span>
+                <span className="font-bold text-gray-900">
+                  {formatNatoriProjectAmount(project.amount)}
+                </span>
+                <span className="font-bold text-gray-900">
+                  種別 {NATORI_PROJECT_TYPE_LABELS[project.type]}
+                </span>
+                {view.email ? (
+                  <span className="break-all">{view.email}</span>
+                ) : null}
+              </p>
+            ) : null}
           </div>
           <button
             type="button"
@@ -162,51 +197,28 @@ export default function InquiryDetailPanel({
           </button>
         </div>
 
-        <div className="max-h-[65vh] space-y-4 overflow-y-auto p-4 sm:p-5">
-          {/* 2. 要確認事項 */}
-          <InquiryReviewWarnings warnings={reviewWarnings} />
-
-          {/* 3. 原依頼内容（structured のみ。legacy は下の note 表示を使う） */}
+        {screen === "conversation" ? (
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+            {!archived && !demoMode ? (
+              <ConsultationThread
+                mode="staff"
+                standalone
+                projectId={project.id}
+                clientEmail={project.clientEmail ?? view.email ?? undefined}
+              />
+            ) : null}
+          </div>
+        ) : null}
+        <div
+          className={`${screen === "conversation" ? "hidden" : "min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5"}`}
+        >
+          {/* 依頼の原回答を最初に見せる */}
           <InquiryRequestSummary view={requestView} />
 
           {archived ? (
             <p className="rounded-xl border border-gray-300 bg-gray-50 p-3 text-xs text-gray-600">
               アーカイブ済みの案件です。内容の閲覧のみ可能で、確定・編集はできません。
             </p>
-          ) : null}
-
-          {/* 4. 管理確定項目 */}
-          {onSaveCorrection && onSaveNextAction && !archived ? (
-            <InquiryAdminCorrectionForm
-              project={project}
-              disabled={busy}
-              onSave={onSaveCorrection}
-              onSaveNextAction={onSaveNextAction}
-            />
-          ) : null}
-
-          {/* 5. 参考画像 */}
-          <InquiryReferenceFiles files={referenceFiles} />
-
-          {/* 6. 外部リンク */}
-          {onAddLink && onUpdateLink && onDeleteLink ? (
-            <InquiryReferenceLinks
-              links={referenceLinks}
-              readOnly={archived}
-              onAdd={onAddLink}
-              onUpdate={onUpdateLink}
-              onDelete={onDeleteLink}
-            />
-          ) : null}
-
-          {/* 7. 案件種別の確定・タスク生成 */}
-          {onConfirmType && !archived ? (
-            <InquiryTypeConfirmation
-              projectType={project.type}
-              taskCount={project.tasks.length}
-              disabled={busy}
-              onConfirm={onConfirmType}
-            />
           ) : null}
 
           {/* legacy: フォームの項目（note 由来） */}
@@ -218,46 +230,77 @@ export default function InquiryDetailPanel({
               <dl className="grid grid-cols-1 gap-x-4 gap-y-1.5 rounded-xl border border-pink-100 bg-pink-50/40 p-3 text-sm sm:grid-cols-2">
                 {view.fields.map((field) => (
                   <div key={field.label} className="flex min-w-0 gap-2">
-                    <dt className="shrink-0 font-bold text-gray-600">{field.label}:</dt>
-                    <dd className="min-w-0 break-words text-gray-900">{field.value}</dd>
+                    <dt className="shrink-0 font-bold text-gray-600">
+                      {field.label}:
+                    </dt>
+                    <dd className="min-w-0 break-words text-gray-900">
+                      {field.value}
+                    </dd>
                   </div>
                 ))}
               </dl>
             </section>
           ) : null}
 
-          {/* legacy: note に埋め込まれた資料URL・資料テキスト */}
-          {legacyReferenceImages.length > 0 || view.refText ? (
-            <section>
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700">
-                キャラクター資料（旧形式）
+          {/* 資料がある案件だけ表示する。空のURL欄は案件設定へ。 */}
+          {hasReferences ? (
+            <section className="space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wide text-pink-700">
+                参考資料
               </h3>
-              {legacyReferenceImages.length > 0 ? (
-                <ul className="flex flex-wrap gap-2">
-                  {legacyReferenceImages.map((url, index) => (
-                    <li key={url}>
+              <InquiryReferenceFiles files={referenceFiles} />
+              {legacyReferenceImages.length > 0 || view.refText ? (
+                <section>
+                  {legacyReferenceImages.length > 0 ? (
+                    <ul className="flex flex-wrap gap-2">
+                      {legacyReferenceImages.map((url, index) => (
+                        <li key={url}>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="クリックで原寸表示"
+                          >
+                            {/* 非公開バケットから発行した短時間署名URLのプレビュー */}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={url}
+                              alt={`添付画像 ${index + 1}`}
+                              className="h-24 w-24 rounded-lg border border-pink-200 object-cover transition hover:opacity-80"
+                            />
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {view.refText ? (
+                    <p className="mt-2 whitespace-pre-wrap break-words rounded-xl border border-pink-100 bg-pink-50/40 p-3 text-sm text-gray-900">
+                      {view.refText}
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
+              {referenceLinks.length > 0 &&
+              onAddLink &&
+              onUpdateLink &&
+              onDeleteLink ? (
+                <ul className="space-y-2">
+                  {referenceLinks.map((link) => (
+                    <li
+                      key={link.id}
+                      className="rounded-xl border border-pink-100 bg-white p-3 text-sm"
+                    >
                       <a
-                        href={url}
+                        href={link.url}
                         target="_blank"
-                        rel="noopener noreferrer"
-                        title="クリックで原寸表示"
+                        rel="noopener noreferrer nofollow"
+                        className="block break-all font-bold text-pink-800 underline underline-offset-2"
                       >
-                        {/* 非公開バケットから発行した短時間署名URLのプレビュー */}
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={url}
-                          alt={`添付画像 ${index + 1}`}
-                          className="h-24 w-24 rounded-lg border border-pink-200 object-cover transition hover:opacity-80"
-                        />
+                        {link.label || link.url}
                       </a>
                     </li>
                   ))}
                 </ul>
-              ) : null}
-              {view.refText ? (
-                <p className="mt-2 whitespace-pre-wrap break-words rounded-xl border border-pink-100 bg-pink-50/40 p-3 text-sm text-gray-900">
-                  {view.refText}
-                </p>
               ) : null}
             </section>
           ) : null}
@@ -296,16 +339,82 @@ export default function InquiryDetailPanel({
             </section>
           ) : null}
 
-          {!archived && !demoMode ? <div id={`consultation-thread-${project.id}`}><ConsultationThread key={project.id} mode="staff" projectId={project.id} clientEmail={project.clientEmail ?? view.email ?? undefined} /></div> : null}
-          <ProjectActivityTimeline projectId={project.id} legacyLogs={view.logs} />
+          {!archived && !demoMode ? (
+            <section className="rounded-xl border border-pink-200 bg-pink-50/40 p-4">
+              <h3 className="text-sm font-bold text-gray-900">
+                相談のやり取り
+              </h3>
+              <p className="mt-1 text-xs text-gray-600">
+                依頼者との会話と添付ファイルを確認できます。
+              </p>
+              <button
+                type="button"
+                onClick={() => setScreen("conversation")}
+                className="mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-pink-500 px-4 text-sm font-bold text-white hover:bg-pink-600"
+              >
+                <MessageCircle className="h-4 w-4" aria-hidden />
+                相談を開く
+              </button>
+            </section>
+          ) : null}
+          <InquiryReviewWarnings warnings={reviewWarnings} />
+
+          <details className="group rounded-xl border border-pink-100 bg-white">
+            <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-pink-800 marker:hidden [&::-webkit-details-marker]:hidden">
+              案件の設定{" "}
+              <span className="float-right text-xs group-open:hidden">
+                開く ↓
+              </span>
+              <span className="float-right hidden text-xs group-open:inline">
+                閉じる ↑
+              </span>
+            </summary>
+            <div className="space-y-4 border-t border-pink-100 p-3">
+              {onSaveCorrection && onSaveNextAction && !archived ? (
+                <InquiryAdminCorrectionForm
+                  project={project}
+                  disabled={busy}
+                  onSave={onSaveCorrection}
+                  onSaveNextAction={onSaveNextAction}
+                />
+              ) : null}
+              {onConfirmType && !archived ? (
+                <InquiryTypeConfirmation
+                  projectType={project.type}
+                  taskCount={project.tasks.length}
+                  disabled={busy}
+                  onConfirm={onConfirmType}
+                />
+              ) : null}
+              {onAddLink && onUpdateLink && onDeleteLink && !archived ? (
+                <InquiryReferenceLinks
+                  links={referenceLinks}
+                  readOnly={archived}
+                  onAdd={onAddLink}
+                  onUpdate={onUpdateLink}
+                  onDelete={onDeleteLink}
+                />
+              ) : null}
+            </div>
+          </details>
+          <ProjectActivityTimeline
+            projectId={project.id}
+            legacyLogs={view.logs}
+          />
         </div>
 
         {/* アクション */}
-        <div className="flex flex-wrap items-center gap-2 border-t border-pink-100 p-4 sm:p-5">
+        <div
+          className={`${screen === "conversation" ? "hidden" : "flex shrink-0 flex-wrap items-center gap-2 border-t border-pink-100 p-3 sm:p-5"}`}
+        >
           {!archived && !demoMode ? (
-            <button type="button" onClick={() => document.getElementById(`consultation-thread-${project.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600">
-              <MessageCircle className="h-3.5 w-3.5" aria-hidden />相談に返信
+            <button
+              type="button"
+              onClick={() => setScreen("conversation")}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600"
+            >
+              <MessageCircle className="h-3.5 w-3.5" aria-hidden />
+              相談に返信
             </button>
           ) : null}
           {ESTIMATE_MAIL_STATUSES.has(project.status) && estimateHref ? (
@@ -318,58 +427,67 @@ export default function InquiryDetailPanel({
               この内容で見積もりを作る
             </Link>
           ) : null}
-          {ESTIMATE_MAIL_STATUSES.has(project.status) ? (
-            <button
-              type="button"
-              onClick={() => onOpenMail("estimate")}
-              disabled={busy}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-pink-500 px-4 text-xs font-bold text-white shadow-sm hover:bg-pink-600 disabled:opacity-60"
-            >
-              <Mail className="h-3.5 w-3.5" aria-hidden />
-              見積もりメール{project.status === "quoted" ? "を再送" : "を送る"}
-            </button>
-          ) : null}
-          {PAYMENT_MAIL_STATUSES.has(project.status) ? (
-            <button
-              type="button"
-              onClick={() => onOpenMail("payment")}
-              disabled={busy}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-orange-500 px-4 text-xs font-bold text-white shadow-sm hover:bg-orange-600 disabled:opacity-60"
-            >
-              <Mail className="h-3.5 w-3.5" aria-hidden />
-              支払い依頼メール{project.status === "awaiting_payment" ? "を再送" : "を送る"}
-            </button>
-          ) : null}
-          {project.status === "awaiting_payment" ? (
-            <button
-              type="button"
-              onClick={onConfirmPayment}
-              disabled={busy}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-orange-300 bg-white px-4 text-xs font-bold text-orange-700 shadow-sm hover:bg-orange-50 disabled:opacity-60"
-              title="銀行振込などシステム外の入金を手動で確認したときに使います"
-            >
-              <Wallet className="h-3.5 w-3.5" aria-hidden />
-              {busy ? "更新中…" : "入金確認してラフ開始"}
-            </button>
-          ) : null}
-          <div className="ml-auto flex items-center gap-2">
-            <Link
-              href={projectsHref ?? "/natori/projects"}
-              className="inline-flex h-9 items-center rounded-full border border-gray-300 bg-white px-3 text-xs font-bold text-gray-700 hover:bg-gray-50"
-            >
-              案件ボードへ
-            </Link>
-            <button
-              type="button"
-              onClick={onCloseInquiry}
-              disabled={busy}
-              className="inline-flex h-9 items-center gap-1 rounded-full border border-gray-300 bg-white px-3 text-xs font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-60"
-              title="条件がまとまらなかった相談を一覧から外します（履歴は残ります）"
-            >
-              <Archive className="h-3.5 w-3.5" aria-hidden />
-              見送り
-            </button>
-          </div>
+          <details className="group relative w-full sm:w-auto">
+            <summary className="cursor-pointer list-none rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-700 marker:hidden [&::-webkit-details-marker]:hidden">
+              その他の操作 ↓
+            </summary>
+            <div className="mt-2 flex flex-wrap gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2">
+              {ESTIMATE_MAIL_STATUSES.has(project.status) ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenMail("estimate")}
+                  disabled={busy}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-pink-500 px-4 text-xs font-bold text-white shadow-sm hover:bg-pink-600 disabled:opacity-60"
+                >
+                  <Mail className="h-3.5 w-3.5" aria-hidden />
+                  見積もりメール
+                  {project.status === "quoted" ? "を再送" : "を送る"}
+                </button>
+              ) : null}
+              {PAYMENT_MAIL_STATUSES.has(project.status) ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenMail("payment")}
+                  disabled={busy}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-orange-500 px-4 text-xs font-bold text-white shadow-sm hover:bg-orange-600 disabled:opacity-60"
+                >
+                  <Mail className="h-3.5 w-3.5" aria-hidden />
+                  支払い依頼メール
+                  {project.status === "awaiting_payment" ? "を再送" : "を送る"}
+                </button>
+              ) : null}
+              {project.status === "awaiting_payment" ? (
+                <button
+                  type="button"
+                  onClick={onConfirmPayment}
+                  disabled={busy}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-orange-300 bg-white px-4 text-xs font-bold text-orange-700 shadow-sm hover:bg-orange-50 disabled:opacity-60"
+                  title="銀行振込などシステム外の入金を手動で確認したときに使います"
+                >
+                  <Wallet className="h-3.5 w-3.5" aria-hidden />
+                  {busy ? "更新中…" : "入金確認してラフ開始"}
+                </button>
+              ) : null}
+              <div className="ml-auto flex items-center gap-2">
+                <Link
+                  href={projectsHref ?? "/natori/projects"}
+                  className="inline-flex h-9 items-center rounded-full border border-gray-300 bg-white px-3 text-xs font-bold text-gray-700 hover:bg-gray-50"
+                >
+                  案件ボードへ
+                </Link>
+                <button
+                  type="button"
+                  onClick={onCloseInquiry}
+                  disabled={busy}
+                  className="inline-flex h-9 items-center gap-1 rounded-full border border-gray-300 bg-white px-3 text-xs font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+                  title="条件がまとまらなかった相談を一覧から外します（履歴は残ります）"
+                >
+                  <Archive className="h-3.5 w-3.5" aria-hidden />
+                  見送り
+                </button>
+              </div>
+            </div>
+          </details>
         </div>
       </div>
     </div>

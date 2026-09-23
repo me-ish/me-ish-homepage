@@ -6,7 +6,7 @@ import { Paperclip } from "lucide-react";
 import type { ConsultationMessage } from "@/features/natori/server/consultationService";
 
 type Props =
-  | { mode: "staff"; projectId: string; clientEmail?: string; initialMessages?: never; token?: never; closed?: never }
+  | { mode: "staff"; projectId: string; clientEmail?: string; standalone?: boolean; initialMessages?: never; token?: never; closed?: never }
   | { mode: "client"; token: string; initialMessages: ConsultationMessage[]; closed: boolean; projectId?: never; clientEmail?: never };
 
 function dateTime(value: string): string {
@@ -167,7 +167,7 @@ export default function ConsultationThread(props: Props) {
         {props.mode === "staff" && !props.clientEmail ? <p className="text-xs text-amber-700">依頼者のメールアドレスがないため返信できません。</p> : null}
       </div>
       {loading ? <p className="text-xs text-gray-500">読み込み中…</p> : messages.length === 0 ? <p className="text-xs text-gray-500">返信はまだありません。最初のメッセージを送れます。</p> : (
-        <ol className="max-h-72 space-y-2 overflow-y-auto">
+        <ol className={props.mode === "staff" && props.standalone ? "space-y-2" : "max-h-72 space-y-2 overflow-y-auto"}>
           {messages.map((message) => (
             <li key={message.id} className={`rounded-xl px-3 py-2 text-sm ${message.sender === "staff" ? "bg-pink-50" : "bg-gray-100"}`}>
               <p className="mb-1 text-xs font-semibold text-gray-600">{message.sender === "staff" ? "ナトリ" : "依頼者"} · {dateTime(message.createdAt)}</p>
@@ -188,7 +188,7 @@ export default function ConsultationThread(props: Props) {
       {!cannotSend ? (
         <div className="space-y-2">
           <label className="block text-xs font-bold text-gray-700" htmlFor="consultation-reply">メッセージ</label>
-          <textarea id="consultation-reply" value={body} onChange={(event) => setBody(event.target.value)} maxLength={4000} rows={4}
+          <textarea id="consultation-reply" autoFocus={props.mode === "staff" && props.standalone} value={body} onChange={(event) => setBody(event.target.value)} maxLength={4000} rows={4}
             placeholder="相談への返信や共有URLを入力してください" className="w-full rounded-lg border border-gray-300 p-3 text-sm text-gray-900 focus:border-pink-400 focus:outline-none" />
           <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.mp3,.m4a,.wav" className="hidden" aria-label="相談ファイルを選ぶ" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadFile(file); }} />
           <p className="text-xs text-gray-500">ファイルを選ぶとそのまま送信します。画像・PDFは10MB、音声は50MBまで。大きな楽曲は共有URLを貼ってください。</p>
