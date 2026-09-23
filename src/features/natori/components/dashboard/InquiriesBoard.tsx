@@ -489,6 +489,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
           project={selectedRow.project}
           view={selectedRow.view}
           busy={busyId === selectedRow.project.id}
+          demoMode={isDemo}
           onClose={() => setSelectedId(null)}
           onOpenMail={(kind) => setMailKind(kind)}
           onCloseInquiry={() => void handleCloseInquiry(selectedRow.project)}

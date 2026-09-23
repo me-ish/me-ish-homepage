@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import ConsultationThread from "@/features/natori/components/consultation/ConsultationThread";
+import RenewConsultationLink from "@/features/natori/components/consultation/RenewConsultationLink";
 import { getClientConsultation } from "@/features/natori/server/consultationService";
 
 export const dynamic = "force-dynamic";
@@ -19,9 +20,10 @@ export default async function NatoriConsultationPage({ params }: Props) {
         </div>
         {conversation ? <>
           {conversation.initialInquiry ? <div className="rounded-xl bg-gray-50 p-3 text-sm"><p className="mb-1 font-bold">最初のご相談</p><p className="whitespace-pre-wrap break-words">{conversation.initialInquiry}</p></div> : null}
+          {conversation.initialFiles.length ? <div className="space-y-1 rounded-xl bg-gray-50 p-3 text-sm"><p className="font-bold">受付時の資料</p>{conversation.initialFiles.map((file) => <a key={file.id} href={file.url} target="_blank" rel="noopener noreferrer" className="block text-pink-700 underline">{file.name}</a>)}</div> : null}
           <ConsultationThread mode="client" token={token} initialMessages={conversation.messages} closed={conversation.closed} />
         </>
-          : <p className="text-sm text-gray-700">このリンクは無効か、有効期限が切れています。届いたメールにご返信ください。</p>}
+          : <RenewConsultationLink token={token} />}
       </div>
     </main>
   );

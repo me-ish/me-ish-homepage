@@ -15,16 +15,17 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const FROM = process.env.NATORI_ORDER_MAIL_FROM ?? "ナトリ（me-ish） <noreply@me-ish.art>";
 const REPLY_TO = process.env.NATORI_PORTFOLIO_CONTACT_TO ?? "natori.o0716@gmail.com";
 
-type ProjectRow = { id: string; user_id: string; title: string; client_name: string; client_email: string | null; note: string | null; request_data: Json | null; status: string; deleted_at: string | null };
+export type ProjectRow = { id: string; user_id: string; title: string; client_name: string; client_email: string | null; note: string | null; request_data: Json | null; status: string; deleted_at: string | null };
 type MessageRow = { id: string; project_id: string; sender: string; body: string; notification_status: string; created_at: string };
-export type ConsultationMessage = { id: string; sender: "staff" | "client"; body: string; notificationStatus: string; createdAt: string };
+export type ConsultationFile = { id: string; name: string; sizeBytes: number; url: string };
+export type ConsultationMessage = { id: string; sender: "staff" | "client"; body: string; notificationStatus: string; createdAt: string; files: ConsultationFile[] };
 
 function hash(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-function asMessage(row: MessageRow): ConsultationMessage {
-  return { id: row.id, sender: row.sender as "staff" | "client", body: row.body, notificationStatus: row.notification_status, createdAt: row.created_at };
+function asMessage(row: MessageRow, files: ConsultationFile[]): ConsultationMessage {
+  return { id: row.id, sender: row.sender as "staff" | "client", body: row.body, notificationStatus: row.notification_status, createdAt: row.created_at, files };
 }
 
 async function getProject(projectId: string, ownerId?: string): Promise<ProjectRow | null> {
@@ -41,7 +42,7 @@ async function getProject(projectId: string, ownerId?: string): Promise<ProjectR
   return data as ProjectRow | null;
 }
 
-async function getClientProject(token: string): Promise<ProjectRow | null> {
+export async function getClientProject(token: string): Promise<ProjectRow | null> {
   if (!TOKEN_RE.test(token)) return null;
   const { data, error } = await supabaseAdmin().from("natori_consultation_access")
     .select("project_id")
@@ -53,7 +54,8 @@ async function getClientProject(token: string): Promise<ProjectRow | null> {
 }
 
 async function getMessages(projectId: string): Promise<ConsultationMessage[] | null> {
-  const { data, error } = await supabaseAdmin().from("natori_consultation_messages")
+  const admin = supabaseAdmin();
+  const { data, error } = await admin.from("natori_consultation_messages")
     .select("id, project_id, sender, body, notification_status, created_at")
     .eq("project_id", projectId)
     .order("created_at", { ascending: true })
@@ -62,7 +64,30 @@ async function getMessages(projectId: string): Promise<ConsultationMessage[] | n
     console.error("[natori-consultation] message list failed", error);
     return null;
   }
-  return ((data ?? []) as MessageRow[]).map(asMessage);
+  const { data: fileRows, error: fileError } = await admin.from("natori_consultation_files")
+    .select("id, message_id, storage_path, file_name, size_bytes")
+    .eq("project_id", projectId);
+  if (fileError) {
+    console.error("[natori-consultation] file list failed", fileError);
+    return null;
+  }
+  const signed = await Promise.all((fileRows ?? []).map(async (file) => {
+    const { data: urlData, error: urlError } = await admin.storage.from("natori-consultations")
+      .createSignedUrl(file.storage_path, 600, { download: file.file_name });
+    if (urlError || !urlData) {
+      console.error("[natori-consultation] file link failed", urlError);
+      return null;
+    }
+    return { messageId: file.message_id, file: { id: file.id, name: file.file_name, sizeBytes: file.size_bytes, url: urlData.signedUrl } };
+  }));
+  const byMessage = new Map<string, ConsultationFile[]>();
+  for (const entry of signed) {
+    if (!entry) continue;
+    const existing = byMessage.get(entry.messageId) ?? [];
+    existing.push(entry.file);
+    byMessage.set(entry.messageId, existing);
+  }
+  return ((data ?? []) as MessageRow[]).map((row) => asMessage(row, byMessage.get(row.id) ?? []));
 }
 
 export async function getStaffConsultation(projectId: string) {
@@ -79,11 +104,20 @@ export async function getClientConsultation(token: string) {
   const project = await getClientProject(token);
   if (!project) return null;
   const messages = await getMessages(project.id);
+  const { data: referenceRows, error: referenceError } = await supabaseAdmin()
+    .from("natori_inquiry_reference_files").select("id, storage_path")
+    .eq("project_id", project.id).order("created_at", { ascending: true });
+  if (referenceError) console.error("[natori-consultation] initial reference list failed", referenceError);
+  const initialFiles = (await Promise.all((referenceRows ?? []).map(async (row, index) => {
+    const { data } = await supabaseAdmin().storage.from("natori-inquiry-refs")
+      .createSignedUrl(row.storage_path, 600, { download: true });
+    return data ? { id: row.id, name: `受付時の資料 ${index + 1}`, url: data.signedUrl } : null;
+  }))).filter((row): row is { id: string; name: string; url: string } => row !== null);
   const request = project.request_data;
   const initialInquiry = request && typeof request === "object" && !Array.isArray(request) && typeof request.message === "string"
     ? request.message
     : parseInquiryNote(project.note).message || parseInquiryNote(project.note).details;
-  return messages === null ? null : { title: project.title, clientName: project.client_name, initialInquiry, messages, closed: project.status === "closed" || Boolean(project.deleted_at) };
+  return messages === null ? null : { title: project.title, clientName: project.client_name, initialInquiry, initialFiles, messages, closed: project.status === "closed" || Boolean(project.deleted_at) };
 }
 
 export type SendConsultationResult = "ok" | "notification-failed" | "not-found" | "invalid" | "db-error";
@@ -205,6 +239,54 @@ export async function retryStaffConsultationNotification(projectId: string, mess
   if (updateError) {
     console.error("[natori-consultation] retry status update failed", updateError);
     return "db-error";
+  }
+  return "ok";
+}
+
+/** An expired link can only send a replacement link to the project's saved email. */
+export async function renewClientConsultationLink(token: string): Promise<"ok" | "not-found" | "throttled" | "mail-error"> {
+  if (!TOKEN_RE.test(token)) return "not-found";
+  const admin = supabaseAdmin();
+  const { data: oldLink, error: lookupError } = await admin.from("natori_consultation_access")
+    .select("id, project_id, created_at, renewed_at")
+    .eq("token_hash", hash(token))
+    .maybeSingle();
+  if (lookupError || !oldLink) return "not-found";
+  if (new Date(oldLink.created_at).getTime() < Date.now() - 90 * 86400000) return "not-found";
+  const project = await getProject(oldLink.project_id);
+  const clientEmail = project?.client_email ?? extractClientEmailFromNote(project?.note);
+  if (!project || project.deleted_at || project.status === "closed" || !clientEmail) return "not-found";
+  const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  if (oldLink.renewed_at && oldLink.renewed_at > cutoff) return "throttled";
+  // The conditional update ensures concurrent requests for the same link do
+  // not send multiple emails. No conversation content is returned here.
+  let claim = admin.from("natori_consultation_access")
+    .update({ renewed_at: new Date().toISOString() }).eq("id", oldLink.id);
+  claim = oldLink.renewed_at ? claim.eq("renewed_at", oldLink.renewed_at) : claim.is("renewed_at", null);
+  const { data: claimed, error: claimError } = await claim.select("id").maybeSingle();
+  if (claimError || !claimed) return "throttled";
+  const newToken = randomBytes(32).toString("base64url");
+  const { error: insertError } = await admin.from("natori_consultation_access").insert({
+    project_id: project.id,
+    token_hash: hash(newToken),
+    expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+  });
+  if (insertError) {
+    console.error("[natori-consultation] renewal insert failed", insertError);
+    return "mail-error";
+  }
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return "mail-error";
+  try {
+    const { error: mailError } = await new Resend(key).emails.send({
+      from: FROM, to: [clientEmail], replyTo: REPLY_TO,
+      subject: "【ナトリ】相談ページの新しいリンク",
+      text: `${project.client_name} 様\n\n相談ページの新しいリンクをお送りします。\n${getSiteUrl()}/natori/consult/${newToken}\n\nこのリンクの有効期間は30日です。`,
+    });
+    if (mailError) throw mailError;
+  } catch (mailError) {
+    console.error("[natori-consultation] renewal email failed", mailError);
+    return "mail-error";
   }
   return "ok";
 }
