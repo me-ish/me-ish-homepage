@@ -4,7 +4,7 @@
 // 問い合わせ管理画面の詳細パネル。フォームの依頼内容を整形表示し、
 // その場で見積もり / 支払い依頼メールの送信・入金確認・見送りができる。
 import Link from "next/link";
-import { Archive, Calculator, CalendarDays, Mail, Wallet, X } from "lucide-react";
+import { Archive, Calculator, CalendarDays, Mail, MessageCircle, Wallet, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
 import type { NatoriInquiryNoteView } from "@/features/natori/lib/inquiryNoteView";
@@ -29,6 +29,7 @@ import InquiryReviewWarnings from "./inquiry/InquiryReviewWarnings";
 import InquiryTypeConfirmation from "./inquiry/InquiryTypeConfirmation";
 import type { OrderMailKind } from "./OrderMailPanel";
 import ProjectActivityTimeline from "./ProjectActivityTimeline";
+import ConsultationThread from "@/features/natori/components/consultation/ConsultationThread";
 
 const ESTIMATE_MAIL_STATUSES: ReadonlySet<NatoriProject["status"]> = new Set([
   "inquiry",
@@ -52,6 +53,7 @@ type InquiryDetailPanelProps = {
   project: NatoriProject;
   view: NatoriInquiryNoteView;
   busy: boolean;
+  demoMode?: boolean;
   onClose: () => void;
   onOpenMail: (kind: OrderMailKind) => void;
   onCloseInquiry: () => void;
@@ -75,6 +77,7 @@ export default function InquiryDetailPanel({
   project,
   view,
   busy,
+  demoMode,
   onClose,
   onOpenMail,
   onCloseInquiry,
@@ -293,11 +296,18 @@ export default function InquiryDetailPanel({
             </section>
           ) : null}
 
+          {!archived && !demoMode ? <div id={`consultation-thread-${project.id}`}><ConsultationThread key={project.id} mode="staff" projectId={project.id} clientEmail={project.clientEmail ?? view.email ?? undefined} /></div> : null}
           <ProjectActivityTimeline projectId={project.id} legacyLogs={view.logs} />
         </div>
 
         {/* アクション */}
         <div className="flex flex-wrap items-center gap-2 border-t border-pink-100 p-4 sm:p-5">
+          {!archived && !demoMode ? (
+            <button type="button" onClick={() => document.getElementById(`consultation-thread-${project.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600">
+              <MessageCircle className="h-3.5 w-3.5" aria-hidden />相談に返信
+            </button>
+          ) : null}
           {ESTIMATE_MAIL_STATUSES.has(project.status) && estimateHref ? (
             <Link
               href={estimateHref}

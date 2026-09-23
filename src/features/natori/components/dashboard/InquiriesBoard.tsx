@@ -121,6 +121,12 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   const [mailKind, setMailKind] = useState<OrderMailKind | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isDemo) return;
+    const projectId = new URLSearchParams(window.location.search).get("project");
+    if (projectId && /^[0-9a-f-]{36}$/i.test(projectId)) setSelectedId(projectId);
+  }, [isDemo]);
+
   const reload = useCallback(async () => {
     const data = await fetchNatoriProjects();
     setProjects(data);
@@ -483,6 +489,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
           project={selectedRow.project}
           view={selectedRow.view}
           busy={busyId === selectedRow.project.id}
+          demoMode={isDemo}
           onClose={() => setSelectedId(null)}
           onOpenMail={(kind) => setMailKind(kind)}
           onCloseInquiry={() => void handleCloseInquiry(selectedRow.project)}

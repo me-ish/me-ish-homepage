@@ -1381,6 +1381,33 @@ export type Database = {
         }
         Relationships: []
       }
+      natori_consultation_access: {
+        Row: { id: string; project_id: string; token_hash: string; expires_at: string; created_at: string; renewed_at: string | null }
+        Insert: { id?: string; project_id: string; token_hash: string; expires_at: string; created_at?: string; renewed_at?: string | null }
+        Update: { id?: string; project_id?: string; token_hash?: string; expires_at?: string; created_at?: string; renewed_at?: string | null }
+        Relationships: [{ foreignKeyName: "natori_consultation_access_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "natori_projects"; referencedColumns: ["id"] }]
+      }
+      natori_consultation_files: {
+        Row: { id: string; project_id: string; message_id: string; storage_path: string; file_name: string; mime_type: string; size_bytes: number; created_at: string }
+        Insert: { id?: string; project_id: string; message_id: string; storage_path: string; file_name: string; mime_type: string; size_bytes: number; created_at?: string }
+        Update: { id?: string; project_id?: string; message_id?: string; storage_path?: string; file_name?: string; mime_type?: string; size_bytes?: number; created_at?: string }
+        Relationships: [
+          { foreignKeyName: "natori_consultation_files_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "natori_projects"; referencedColumns: ["id"] },
+          { foreignKeyName: "natori_consultation_files_message_id_fkey"; columns: ["message_id"]; isOneToOne: false; referencedRelation: "natori_consultation_messages"; referencedColumns: ["id"] }
+        ]
+      }
+      natori_consultation_messages: {
+        Row: { id: string; project_id: string; sender: string; body: string; notification_status: string; created_at: string }
+        Insert: { id?: string; project_id: string; sender: string; body: string; notification_status?: string; created_at?: string }
+        Update: { id?: string; project_id?: string; sender?: string; body?: string; notification_status?: string; created_at?: string }
+        Relationships: [{ foreignKeyName: "natori_consultation_messages_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "natori_projects"; referencedColumns: ["id"] }]
+      }
+      natori_consultation_uploads: {
+        Row: { id: string; project_id: string; sender: string; storage_path: string; file_name: string; mime_type: string; size_bytes: number; created_at: string; finalized_at: string | null }
+        Insert: { id?: string; project_id: string; sender: string; storage_path: string; file_name: string; mime_type: string; size_bytes: number; created_at?: string; finalized_at?: string | null }
+        Update: { id?: string; project_id?: string; sender?: string; storage_path?: string; file_name?: string; mime_type?: string; size_bytes?: number; created_at?: string; finalized_at?: string | null }
+        Relationships: [{ foreignKeyName: "natori_consultation_uploads_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "natori_projects"; referencedColumns: ["id"] }]
+      }
       natori_project_activity: {
         Row: {
           created_at: string
@@ -2427,6 +2454,10 @@ export type Database = {
       }
     }
     Functions: {
+      natori_finalize_consultation_file: {
+        Args: { p_project_id: string; p_sender: string; p_storage_path: string; p_file_name: string; p_mime_type: string; p_size_bytes: number }
+        Returns: string
+      }
       admin_mark_sales_paid: {
         Args: { p_batch_id?: string; p_user_id: string }
         Returns: {
