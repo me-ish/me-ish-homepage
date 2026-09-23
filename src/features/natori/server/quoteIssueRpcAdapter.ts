@@ -11,6 +11,7 @@ export type IssueNatoriQuoteRpcInput = NatoriQuoteIssuePayloadV1 & {
   clientName: string;
   tokenHash: string;
   expiresAt: string;
+  draftRevision?: number;
 };
 
 export type IssueNatoriQuoteRpcResult =
@@ -84,6 +85,11 @@ function readRpcErrorReason(error: unknown): string | null {
     "unresolved_review_item",
     "orphan_review_resolution",
     "idempotency_conflict",
+    "estimate_draft_changed",
+    "estimate_draft_mismatch",
+    "estimate_terms_incomplete",
+    "estimate_due_date_past",
+    "quote_terms_conflict",
   ];
   return knownReasons.find((reason) => message.includes(reason)) ?? null;
 }
@@ -97,9 +103,7 @@ export async function issueNatoriQuoteViaRpc(
   }
 
   try {
-    const { data, error, status } = await supabaseAdmin().rpc(
-      "natori_issue_quote_v1",
-      {
+    const params = {
         p_user_id: input.ownerId,
         p_project_id: input.projectId,
         p_title: input.title,
@@ -113,8 +117,13 @@ export async function issueNatoriQuoteViaRpc(
         p_request_snapshot: input.requestSnapshot,
         p_pricing_snapshot: input.pricingSnapshot,
         p_idempotency_key: input.idempotencyKey,
-      },
-    );
+      };
+    const { data, error, status } = input.draftRevision === undefined
+      ? await supabaseAdmin().rpc("natori_issue_quote_v1", params)
+      : await supabaseAdmin().rpc("natori_issue_quote_from_draft_v1", {
+          ...params,
+          p_expected_revision: input.draftRevision,
+        });
 
     if (error) {
       const reason = readRpcErrorReason(error);

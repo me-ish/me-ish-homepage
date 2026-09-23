@@ -32,6 +32,23 @@ function renderCard() {
 }
 
 describe("QuoteAcceptCard", () => {
+  it("shows agreed usage on the same read-only preview used before issuance", () => {
+    render(<QuoteAcceptCard preview token="" title="一枚絵" clientName="依頼者" amount={3500}
+      acceptedAt={null} expiresAt="2026-10-01T00:00:00.000Z"
+      terms={{ deliverables: "サムネイル1点", dueDate: "2026-11-30", scope: "胸上", usage: "動画サムネイル", commercialUse: "あり", publication: "公開不可" }} />);
+    expect(screen.getByText("動画サムネイル")).toBeTruthy();
+    expect(screen.getByText("公開不可")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "この内容で依頼を確定する" })).toBeNull();
+  });
+
+  it("正式見積りの明細を依頼者向けに表示する", () => {
+    render(<QuoteAcceptCard preview token="" title="一枚絵" clientName="依頼者" amount={3500}
+      acceptedAt={null} expiresAt="2026-10-01T00:00:00.000Z"
+      items={[{ label: "表情差分", quantity: 1, amount: 500 }, { label: "商用利用", quantity: 1, amount: 3000 }]} />);
+    expect(screen.getByText(/表情差分 × 1/)).toBeTruthy();
+    expect(screen.getByText(/商用利用 × 1/)).toBeTruthy();
+  });
+
   it("新しい見積もりは送信時の制作内容と確定納品日を表示する", () => {
     render(<QuoteAcceptCard
       token="token-12345678901234567890"

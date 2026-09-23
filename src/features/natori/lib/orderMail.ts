@@ -55,6 +55,10 @@ export type NatoriEstimateMailInput = {
   deliveryLead?: string;
   deliverables?: string;
   dueDate?: string;
+  scope?: string;
+  usage?: string;
+  commercialUse?: string;
+  publication?: string;
   artistName?: string;
 };
 
@@ -77,6 +81,10 @@ export function buildEstimateMailDraft(input: NatoriEstimateMailInput): NatoriOr
     "──────────────",
     `■ ご依頼内容: ${input.title}`,
     ...(input.deliverables ? [`■ 制作するもの: ${input.deliverables}`] : []),
+    ...(input.scope ? [`■ 制作範囲: ${input.scope}`] : []),
+    ...(input.usage ? [`■ 用途: ${input.usage}`] : []),
+    ...(input.commercialUse ? [`■ 商用利用: ${input.commercialUse}`] : []),
+    ...(input.publication ? [`■ 実績公開: ${input.publication}`] : []),
     `■ お見積もり金額: ${formatYen(input.amount)}`,
     ...breakdown,
     input.dueDate ? `■ 納品日: ${formatQuoteDate(input.dueDate)}まで` : `■ 納期目安: ${deliveryLead}`,

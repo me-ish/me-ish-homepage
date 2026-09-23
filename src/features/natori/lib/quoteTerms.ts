@@ -2,6 +2,10 @@
 export type NatoriQuoteTerms = {
   deliverables: string;
   dueDate: string;
+  scope?: string;
+  usage?: string;
+  commercialUse?: string;
+  publication?: string;
 };
 
 export function isValidQuoteDate(value: string): boolean {
@@ -20,7 +24,14 @@ export function readNatoriQuoteTerms(value: unknown): NatoriQuoteTerms | null {
     typeof terms.dueDate !== "string" ||
     !isValidQuoteDate(terms.dueDate)
   ) return null;
-  return { deliverables: terms.deliverables.trim(), dueDate: terms.dueDate };
+  const optional = (key: "scope" | "usage" | "commercialUse" | "publication") =>
+    typeof terms[key] === "string" && terms[key].trim() && terms[key].length <= 300
+      ? terms[key].trim() : undefined;
+  return {
+    deliverables: terms.deliverables.trim(), dueDate: terms.dueDate,
+    scope: optional("scope"), usage: optional("usage"),
+    commercialUse: optional("commercialUse"), publication: optional("publication"),
+  };
 }
 
 export function formatQuoteDate(value: string): string {

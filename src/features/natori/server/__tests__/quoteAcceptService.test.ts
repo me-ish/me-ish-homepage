@@ -99,9 +99,18 @@ describe("getNatoriQuoteByToken", () => {
         acceptedAt: null,
         expiresAt: row.expires_at,
         terms: null,
+        items: [],
       },
     });
     expect(calls).toContain(`eq("token_hash","${TOKEN_HASH}")`);
+  });
+
+  it("依頼者には発行時の明細ラベルと金額だけを渡す", async () => {
+    quoteTable(makeQuoteRow({ pricing_snapshot: { items: [
+      { labelSnapshot: "表情差分", quantity: 1, amount: 500, ruleId: "private-rule" },
+    ] } }));
+    const result = await getNatoriQuoteByToken(TOKEN);
+    expect(result).toMatchObject({ kind: "ok", quote: { items: [{ label: "表情差分", quantity: 1, amount: 500 }] } });
   });
 
   it("形式外トークンはDBを引かず、該当なし・失効・旧版も表示しない", async () => {

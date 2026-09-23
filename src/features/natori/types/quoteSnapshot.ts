@@ -1,6 +1,7 @@
 import type { NatoriRequestDataV1 } from "@/features/natori/types/request";
 import type { NatoriConcreteProjectType } from "@/features/natori/types/projects";
 import type { NatoriReviewWarningSeverityV1 } from "@/features/natori/types/pricingSuggestion";
+import type { NatoriAgreedTerms } from "@/features/natori/lib/estimateDraft";
 
 export const NATORI_QUOTE_PRICING_SNAPSHOT_SCHEMA_VERSION = 1 as const;
 
@@ -55,6 +56,7 @@ export type NatoriQuotePricingSnapshotV1 = {
   total: number;
   currency: "JPY";
   issuedAt: string;
+  agreedTerms?: NatoriAgreedTerms;
 };
 
 export type NatoriQuoteIssuePayloadV1 = {
