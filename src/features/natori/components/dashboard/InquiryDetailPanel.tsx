@@ -29,6 +29,7 @@ import InquiryReviewWarnings from "./inquiry/InquiryReviewWarnings";
 import InquiryTypeConfirmation from "./inquiry/InquiryTypeConfirmation";
 import type { OrderMailKind } from "./OrderMailPanel";
 import ProjectActivityTimeline from "./ProjectActivityTimeline";
+import ConsultationThread from "@/features/natori/components/consultation/ConsultationThread";
 
 const ESTIMATE_MAIL_STATUSES: ReadonlySet<NatoriProject["status"]> = new Set([
   "inquiry",
@@ -293,6 +294,7 @@ export default function InquiryDetailPanel({
             </section>
           ) : null}
 
+          {!archived ? <ConsultationThread key={project.id} mode="staff" projectId={project.id} clientEmail={project.clientEmail ?? view.email ?? undefined} /> : null}
           <ProjectActivityTimeline projectId={project.id} legacyLogs={view.logs} />
         </div>
 

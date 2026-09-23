@@ -52,7 +52,12 @@ export default async function middleware(request: NextRequest) {
     return response;
   }
 
-  return intlMiddleware(request);
+  const response = intlMiddleware(request);
+  if (/\/natori\/consult\/[A-Za-z0-9_-]+\/?$/.test(request.nextUrl.pathname)) {
+    response.headers.set('Referrer-Policy', 'no-referrer');
+    response.headers.set('Cache-Control', 'private, no-store');
+  }
+  return response;
 }
 
 export const config = {

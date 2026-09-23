@@ -1381,6 +1381,18 @@ export type Database = {
         }
         Relationships: []
       }
+      natori_consultation_access: {
+        Row: { id: string; project_id: string; token_hash: string; expires_at: string; created_at: string }
+        Insert: { id?: string; project_id: string; token_hash: string; expires_at: string; created_at?: string }
+        Update: { id?: string; project_id?: string; token_hash?: string; expires_at?: string; created_at?: string }
+        Relationships: [{ foreignKeyName: "natori_consultation_access_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "natori_projects"; referencedColumns: ["id"] }]
+      }
+      natori_consultation_messages: {
+        Row: { id: string; project_id: string; sender: string; body: string; notification_status: string; created_at: string }
+        Insert: { id?: string; project_id: string; sender: string; body: string; notification_status?: string; created_at?: string }
+        Update: { id?: string; project_id?: string; sender?: string; body?: string; notification_status?: string; created_at?: string }
+        Relationships: [{ foreignKeyName: "natori_consultation_messages_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "natori_projects"; referencedColumns: ["id"] }]
+      }
       natori_project_activity: {
         Row: {
           created_at: string

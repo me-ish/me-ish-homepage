@@ -121,6 +121,12 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   const [mailKind, setMailKind] = useState<OrderMailKind | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isDemo) return;
+    const projectId = new URLSearchParams(window.location.search).get("project");
+    if (projectId && /^[0-9a-f-]{36}$/i.test(projectId)) setSelectedId(projectId);
+  }, [isDemo]);
+
   const reload = useCallback(async () => {
     const data = await fetchNatoriProjects();
     setProjects(data);
