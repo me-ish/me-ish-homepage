@@ -7,6 +7,7 @@ import {
   portfolioColors,
   portfolioDecorativeColors,
 } from "@/features/natori/constants/portfolioContent";
+import { portfolioFormColors } from "@/features/natori/components/portfolio/PortfolioFormStyles";
 
 function relativeLuminance(hex: string): number {
   const channels = hex
@@ -29,6 +30,15 @@ function contrastRatio(foreground: string, background: string): number {
 }
 
 describe("PF-02 portfolio semantic colors", () => {
+  it("uses quiet neutral form borders, teal interaction states, and the Hero CTA pink", () => {
+    expect(portfolioFormColors.action).toBe(portfolioColors.action);
+    expect(portfolioFormColors.actionDisplay).toBe(portfolioColors.actionDisplay);
+    expect(portfolioFormColors.formBorder).not.toBe(portfolioColors.formBorder);
+    expect(portfolioFormColors.borderSubtle).not.toBe(portfolioColors.borderSubtle);
+    expect(portfolioFormColors.formBorderActive).toBe(portfolioColors.accentText);
+    expect(contrastRatio(portfolioFormColors.formBorder, portfolioColors.surface)).toBeGreaterThanOrEqual(3);
+  });
+
   it("uses near-white surfaces with pastel pink, cyan, and a small orange accent", () => {
     expect(portfolioColors).toMatchObject({
       page: "#FFFEFE",
