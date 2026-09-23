@@ -142,6 +142,7 @@ function makeProjectRow(overrides: Record<string, unknown> = {}) {
     id: "11111111-2222-3333-4444-555555555555",
     user_id: "owner-1",
     title: "立ち絵一式",
+    due_date: "2026-11-30",
     client_name: "テスト太郎",
     amount: 8000,
     type: "standing",
@@ -313,6 +314,9 @@ describe("sendNatoriOrderMail (estimate)", () => {
         subject: "見積",
         body: "本文",
         amount: 12000,
+        quoteTitle: "キャラクター立ち絵",
+        deliverables: "全身立ち絵1点、透過PNGで納品",
+        dueDate: "2026-11-30",
       })
     ).resolves.toEqual({ kind: "invalid-state" });
     expect(mockRpc).not.toHaveBeenCalled();
@@ -329,13 +333,19 @@ describe("sendNatoriOrderMail (estimate)", () => {
       subject: "お見積もり",
       body: "本文です",
       amount: 12000,
+      quoteTitle: "キャラクター立ち絵",
+      deliverables: "全身立ち絵1点、透過PNGで納品",
+      dueDate: "2026-11-30",
     });
 
     expect(result.kind).toBe("ok");
-    expect(mockRpc).toHaveBeenCalledWith("natori_issue_quote", expect.objectContaining({
+    expect(mockRpc).toHaveBeenCalledWith("natori_issue_quote_with_terms", expect.objectContaining({
       p_user_id: "owner-1",
       p_amount: 12000,
+      p_title: "キャラクター立ち絵",
       p_body_snapshot: "本文です",
+      p_expected_due_date: "2026-11-30",
+      p_quote_terms: { deliverables: "全身立ち絵1点、透過PNGで納品", dueDate: "2026-11-30" },
     }));
     expect(db.mailLogInserts[0]).toMatchObject({ status: "pending", quote_id: "quote-1", sent_at: null });
     expect(db.logsApi.insert.mock.invocationCallOrder[0]).toBeLessThan(mockSend.mock.invocationCallOrder[0]);
@@ -354,6 +364,9 @@ describe("sendNatoriOrderMail (estimate)", () => {
       subject: "お見積もり",
       body: "本文です",
       amount: 12000,
+      quoteTitle: "キャラクター立ち絵",
+      deliverables: "全身立ち絵1点、透過PNGで納品",
+      dueDate: "2026-11-30",
     })).resolves.toEqual({ kind: "db-error" });
     expect(mockSend).not.toHaveBeenCalled();
   });
@@ -369,9 +382,38 @@ describe("sendNatoriOrderMail (estimate)", () => {
       subject: "お見積もり",
       body: "本文です",
       amount: 12000,
+      quoteTitle: "キャラクター立ち絵",
+      deliverables: "全身立ち絵1点、透過PNGで納品",
+      dueDate: "2026-11-30",
     })).resolves.toEqual({ kind: "mail-error" });
     expect(db.mailLogUpdates).toContainEqual(expect.objectContaining({ status: "failed" }));
     expect(db.projectUpdates.some((update) => update.status === "quoted")).toBe(false);
+  });
+
+  it("納品日が案件の確定日と異なる見積もりは発行しない", async () => {
+    const { sendNatoriOrderMail } = await loadService();
+    installDb(makeProjectRow());
+    const result = await sendNatoriOrderMail({
+      projectId: "proj-1", kind: "estimate", to: "client@example.com",
+      subject: "見積", body: "本文", amount: 12000,
+      quoteTitle: "立ち絵", deliverables: "全身1点", dueDate: "2026-12-01",
+    });
+    expect(result).toEqual({ kind: "invalid-state" });
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it("見積もりと条件の同時発行に失敗したらメールを送らない", async () => {
+    const { sendNatoriOrderMail } = await loadService();
+    installDb(makeProjectRow());
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: "db down" } });
+    const result = await sendNatoriOrderMail({
+      projectId: "proj-1", kind: "estimate", to: "client@example.com",
+      subject: "見積", body: "本文", amount: 12000,
+      quoteTitle: "立ち絵", deliverables: "全身1点", dueDate: "2026-11-30",
+    });
+    expect(result).toEqual({ kind: "db-error" });
+    expect(mockSend).not.toHaveBeenCalled();
   });
 });
 

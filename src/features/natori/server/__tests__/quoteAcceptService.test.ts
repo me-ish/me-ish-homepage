@@ -68,6 +68,7 @@ function makeQuoteRow(overrides: Record<string, unknown> = {}) {
     accepted_at: null,
     expires_at: new Date(Date.now() + 86_400_000).toISOString(),
     superseded_at: null,
+    quote_terms: null,
     ...overrides,
   };
 }
@@ -97,6 +98,7 @@ describe("getNatoriQuoteByToken", () => {
         amount: 12000,
         acceptedAt: null,
         expiresAt: row.expires_at,
+        terms: null,
       },
     });
     expect(calls).toContain(`eq("token_hash","${TOKEN_HASH}")`);

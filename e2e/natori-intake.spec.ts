@@ -51,7 +51,7 @@ test.describe("Natori public intake rollout", () => {
     const mode = page.getByRole("radio", { name: "まず相談したい" });
     await mode.focus();
     await page.keyboard.press("ArrowRight");
-    await expect(page.getByRole("radio", { name: "見積りを希望" })).toBeChecked();
+    await expect(page.getByRole("radio", { name: "見積もりを希望" })).toBeChecked();
     await expect(page.locator("#pf-request-type")).toBeVisible();
     await expect(page.locator("#pf-budget-kind")).not.toBeVisible();
     await expect(page.locator("#pf-character")).not.toBeVisible();
@@ -129,8 +129,8 @@ test.describe("Natori public intake rollout", () => {
   test("submits the structured quote flow without external writes", async ({ page }) => {
     await page.goto(`${DEMO_PATH}?structured=1`);
 
-    await page.getByRole("radio", { name: "見積りを希望" }).check();
-    await expect(page.getByRole("radio", { name: "見積りを希望" })).toBeChecked();
+    await page.getByRole("radio", { name: "見積もりを希望" }).check();
+    await expect(page.getByRole("radio", { name: "見積もりを希望" })).toBeChecked();
     await submitMinimumRequest(page, "quote");
   });
 });

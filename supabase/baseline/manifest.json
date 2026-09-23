@@ -22,9 +22,13 @@
                              "supabase/migrations/20260806120330_natori_accept_delivery_rpc.sql",
                              "supabase/migrations/20260908111337_etorie_quote_optional_message.sql",
                              "supabase/migrations/20260908124222_etorie_publication_allowed_from_validator_fix.sql",
-                             "supabase/migrations/20260911132256_critical_shared_access_hardening.sql"
+                             "supabase/migrations/20260911132256_critical_shared_access_hardening.sql",
+                             "supabase/migrations/20260923033156_natori_consultation_messages.sql",
+                             "supabase/migrations/20260923033205_natori_consultation_files.sql",
+                             "supabase/migrations/20260923033212_natori_consultation_link_renewal.sql",
+                             "supabase/migrations/20260923062556_natori_quote_agreed_terms.sql"
                          ],
-    "activeMigrationCount":  14,
+    "activeMigrationCount":  18,
     "legacyMigrationCount":  55,
     "remoteOnlyEvidenceCount":  3,
     "sourceProjectRef":  "lvnfspyainrxtztjytbo",
@@ -56,7 +60,11 @@
                              "20260806120330_natori_accept_delivery_rpc.sql",
                              "20260908111337_etorie_quote_optional_message.sql",
                              "20260908124222_etorie_publication_allowed_from_validator_fix.sql",
-                             "20260911132256_critical_shared_access_hardening.sql"
+                             "20260911132256_critical_shared_access_hardening.sql",
+                             "20260923033156_natori_consultation_messages.sql",
+                             "20260923033205_natori_consultation_files.sql",
+                             "20260923033212_natori_consultation_link_renewal.sql",
+                             "20260923062556_natori_quote_agreed_terms.sql"
                          ],
     "archiveVerification":  {
                                 "status":  "verified",
@@ -179,6 +187,10 @@
                       "sha256:supabase/migrations/20260908111337_etorie_quote_optional_message.sql":  "0f247a69a240f05f0697cc41adfee23b66dc00e0a93ae03b5e4adbfc6b3dc22b",
                       "sha256:supabase/migrations/20260908124222_etorie_publication_allowed_from_validator_fix.sql":  "46beb006c0e5d86eead40298c978d94c871b452a5f0df11ec15fe1353e0eb756",
                       "sha256:supabase/migrations/20260911132256_critical_shared_access_hardening.sql":  "7fe5f78d3e5a73a8f1ee784e6fc6160d6eb23f11f6f440d0b1a886a78b16bbe4",
+                      "sha256:supabase/migrations/20260923033156_natori_consultation_messages.sql":  "a362198af07430464429094aaa596544ba9d8fb7c5026c052fabc9dfccc82361",
+                      "sha256:supabase/migrations/20260923033205_natori_consultation_files.sql":  "843786a4a2c603dabb990bda0df3d1b2dcdc2778dec761bd97a9b8b5b21b3189",
+                      "sha256:supabase/migrations/20260923033212_natori_consultation_link_renewal.sql":  "a72b3ae98dc6cf0f3c6cf241b19f0c6eaa4fc0f910c392341baf6350b865f79b",
+                      "sha256:supabase/migrations/20260923062556_natori_quote_agreed_terms.sql":  "16ee00718d318d57932ccba557d1a59809c7d95f8012f404932cc0637c6a790d",
                       "sha256:supabase/verification/etorie-p1-03-selects.sql":  "311f4fb3e0164683097683c2eb1738ef1324c312d5564efa71597a0be2344274",
                       "sha256:supabase/verification/etorie-p1-04-security-selects.sql":  "e5afabadbf07ac385ca0f2b986cfd1f039e9d46f682827c64b9c3c010fc6cca2",
                       "sha256:supabase/verification/etorie-p1-05-intake-rpcs-selects.sql":  "8facf40488911e3ee63bccafcbce4bc797c811089daf21b27c12d28f2d65bedb",

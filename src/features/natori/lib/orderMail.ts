@@ -1,4 +1,5 @@
 import { formatYen } from "@/features/natori/lib/pricing";
+import { formatQuoteDate } from "@/features/natori/lib/quoteTerms";
 
 /**
  * ご依頼フォーム → 見積もり提示 → 支払い案内 の依頼者向けメール定型文。
@@ -52,6 +53,8 @@ export type NatoriEstimateMailInput = {
   amount: number;
   breakdownLines?: string[];
   deliveryLead?: string;
+  deliverables?: string;
+  dueDate?: string;
   artistName?: string;
 };
 
@@ -73,9 +76,10 @@ export function buildEstimateMailDraft(input: NatoriEstimateMailInput): NatoriOr
     "",
     "──────────────",
     `■ ご依頼内容: ${input.title}`,
+    ...(input.deliverables ? [`■ 制作するもの: ${input.deliverables}`] : []),
     `■ お見積もり金額: ${formatYen(input.amount)}`,
     ...breakdown,
-    `■ 納期目安: ${deliveryLead}`,
+    input.dueDate ? `■ 納品日: ${formatQuoteDate(input.dueDate)}まで` : `■ 納期目安: ${deliveryLead}`,
     `■ お見積もり有効期限: 本メール送信日から${QUOTE_VALID_DAYS}日間`,
     "──────────────",
     "",
