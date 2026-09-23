@@ -2,7 +2,7 @@
 // 問い合わせ詳細パネルの表示。structured / legacy / 表示不能の3系統と、
 // raw JSON 非表示・parse error でも画面が壊れないことを固定する。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import InquiryDetailPanel from "@/features/natori/components/dashboard/InquiryDetailPanel";
 import { parseInquiryNote } from "@/features/natori/lib/inquiryNoteView";
@@ -90,7 +90,29 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   errorSpy.mockRestore();
+});
+
+describe("案件詳細の導線", () => {
+  it("参考資料がなければ空の資料欄を出さず、確認事項は閉じている", () => {
+    const { container } = renderPanel({ requestData: structuredRequest() });
+    expect(screen.queryByText("参考資料")).toBeNull();
+    const warnings = screen.getByText(/見積り前に確認すること/).closest("details");
+    expect(warnings?.open).toBe(false);
+    expect(container.querySelectorAll("[data-warning-code]").length).toBeGreaterThan(0);
+  });
+
+  it("相談は案件概要とは別の画面で開き、戻れる", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ messages: [] }) }));
+    renderPanel({ requestData: structuredRequest() });
+    expect(screen.queryByText("返信はまだありません。最初のメッセージを送れます。")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "相談に返信" }));
+    expect(screen.getByText("テスト太郎さんとの相談")).toBeTruthy();
+    await waitFor(() => expect(screen.getByText("返信はまだありません。最初のメッセージを送れます。")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "案件詳細へ戻る" }));
+    expect(screen.getByText(/テスト太郎｜/)).toBeTruthy();
+  });
 });
 
 describe("structured 表示", () => {
@@ -226,7 +248,7 @@ describe("review warning と管理確定", () => {
       dueDate: "2026-09-01",
     });
     expect(container.querySelectorAll("[data-warning-code]")).toHaveLength(0);
-    expect(screen.getByText("未確定の項目はありません。見積もりに進めます。")).toBeTruthy();
+    expect(screen.queryByText(/見積り前に確認すること/)).toBeNull();
   });
 
   it("amount の3状態を統一表記で出す", () => {
