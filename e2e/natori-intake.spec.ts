@@ -58,6 +58,7 @@ test.describe("Natori public intake rollout", () => {
     await expect(page.getByLabel("ご依頼の種類")).toBeVisible();
     await expect(page.getByLabel("ご予算")).toBeHidden();
     await page.getByRole("button", { name: "条件・連絡先へ" }).click();
+    await expect(page.getByLabel("ご予算")).toBeVisible();
     await expect(page.getByLabel(/お名前/)).toBeVisible();
     await fillContact(page, "quote");
     await page.getByRole("button", { name: "内容を確認する" }).click();

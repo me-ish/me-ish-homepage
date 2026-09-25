@@ -275,19 +275,19 @@ export default function PortfolioStructuredCommissionForm({
 
   const focusError = (error: ServerFieldError) => {
     openErrorSections([error]);
-    setFocusTarget({ id: portfolioErrorTarget(error.path, state, optionChoices).id });
+    const target = portfolioErrorTarget(error.path, state, optionChoices);
+    if (state.inquiryMode === "quote") {
+      setStep(target.section === "usage" || target.section === "budget" || error.path === "clientName" || error.path === "clientEmail" ? 1 : 0);
+    } else {
+      setStep(0);
+    }
+    setFocusTarget({ id: target.id });
   };
 
   const showFieldErrors = (errors: ServerFieldError[]) => {
     setServerFieldErrors(errors);
     setSubmitError("入力内容をご確認ください。下の項目から修正箇所へ移動できます。");
     openErrorSections(errors);
-    const first = errors[0];
-    if (first) {
-      const section = portfolioErrorTarget(first.path, state, optionChoices).section;
-      setStep(state.inquiryMode === "consultation" ? 0
-        : section === "usage" || section === "budget" || first.path === "clientName" || first.path === "clientEmail" ? 1 : 0);
-    }
     if (errors[0]) focusError(errors[0]);
   };
 
@@ -904,6 +904,8 @@ export default function PortfolioStructuredCommissionForm({
             ) : null}
           </FormSection>
 
+          </div>
+          <div hidden={state.inquiryMode === "quote" && step !== 1}>
           <FormSection
             title="用途・条件"
             summary={state.usageTypes.length > 0 || state.commercialUse !== "unknown" || state.publicationPolicy !== "unknown"

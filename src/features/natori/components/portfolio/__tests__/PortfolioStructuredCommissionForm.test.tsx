@@ -651,6 +651,22 @@ describe("server error の表示", () => {
 });
 
 describe("アクセシビリティ / モバイル想定 DOM", () => {
+  it("見積もりの条件を2画面目に表示し、別画面のエラーへ移動できる", async () => {
+    renderForm();
+    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    fireEvent.change(screen.getByLabelText("参考URL 1"), { target: { value: "ftp://invalid.example" } });
+    expect(screen.getByLabelText("ご予算").closest("div[hidden]")).not.toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
+    expect(screen.getByLabelText("ご予算").closest("div[hidden]")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
+    await waitFor(() => expect(document.activeElement?.id).toBe("pf-name"));
+    await userEvent.click(screen.getByRole("button", { name: /https:\/\/ で始まる URL を入力してください/ }));
+    await waitFor(() => expect(document.activeElement?.id).toBe("pf-ref-url-0"));
+    expect(document.getElementById("pf-ref-url-0")?.closest("div[hidden]")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: /お名前を1〜100文字で入力してください/ }));
+    await waitFor(() => expect(document.activeElement?.id).toBe("pf-name"));
+  });
+
   it("ラジオを同じグループにし、法務案内は送信ボタンの前に置く", async () => {
     renderForm();
     await fillMinimum();
