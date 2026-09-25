@@ -26,7 +26,7 @@ test.describe("Natori public intake rollout", () => {
     });
   });
 
-  test("mobile consultation validates, confirms, and retains a draft after closing", async ({ page }) => {
+  test("structured consultation flow validates, confirms, and retains a draft after closing", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
@@ -51,7 +51,7 @@ test.describe("Natori public intake rollout", () => {
     expect(errors).toEqual([]);
   });
 
-  test("quote separates production details, conditions, and review", async ({ page }) => {
+  test("structured quote flow separates production details, conditions, and review", async ({ page }) => {
     await page.goto(`${DEMO_PATH}?structured=1`);
     await openInquiry(page, "見積もりをお願いしたい");
     await expect(page.getByRole("radio", { name: "見積もりを希望" })).toBeChecked();
@@ -66,7 +66,7 @@ test.describe("Natori public intake rollout", () => {
     await expect(page.getByRole("heading", { name: "送信ありがとうございます!" })).toBeVisible();
   });
 
-  test("legacy intake remains available and requires review", async ({ page }) => {
+  test("keeps the legacy form as the default and requires review", async ({ page }) => {
     await page.goto(DEMO_PATH);
     await openInquiry(page);
     await expect(page.getByLabel("ご依頼の詳細")).toBeVisible();
