@@ -5,7 +5,7 @@
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
 import PortfolioAbout from "./PortfolioAbout";
-import PortfolioCommissionForm from "./PortfolioCommissionForm";
+import PortfolioInquiryDialog from "./PortfolioInquiryDialog";
 import PortfolioFooter from "./PortfolioFooter";
 import PortfolioGallery from "./PortfolioGallery";
 import PortfolioGuidelines from "./PortfolioGuidelines";
@@ -62,7 +62,7 @@ export default function PortfolioLanding({
           <PortfolioWorkflow content={content} />
           <PortfolioAbout content={content} variant={variant} flatPlaceholders={flatPlaceholders} />
           <PortfolioGuidelines content={content} />
-          <PortfolioCommissionForm
+          <PortfolioInquiryDialog
             content={content}
             demoMode={demoContact}
             structuredIntake={structuredIntake}

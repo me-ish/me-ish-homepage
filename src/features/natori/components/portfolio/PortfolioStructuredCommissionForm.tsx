@@ -174,15 +174,24 @@ export default function PortfolioStructuredCommissionForm({
   demoMode,
   commissionOpen,
   onSuccess,
+  initialMode,
+  opening,
+  fromPlan,
 }: {
   content: PortfolioContent;
   demoMode?: boolean;
   commissionOpen: boolean;
   onSuccess: (outcome: StructuredSubmitOutcome) => void;
+  initialMode?: NatoriInquiryModeV1;
+  opening?: number;
+  fromPlan?: boolean;
 }) {
   const [state, setState] = useState<PortfolioRequestFormState>(
     createInitialPortfolioRequestFormState
   );
+  const [step, setStep] = useState(0);
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [serverFieldErrors, setServerFieldErrors] = useState<ServerFieldError[]>([]);
@@ -204,6 +213,19 @@ export default function PortfolioStructuredCommissionForm({
   const [retrySeconds, setRetrySeconds] = useState(0);
   const retryUntilRef = useRef(0);
   const waitingToRetry = retrySeconds > 0;
+  const lastStep = state.inquiryMode === "quote" ? 2 : 1;
+  const stepTitle = step === lastStep ? "内容を確認して送信" : state.inquiryMode === "consultation"
+    ? "ご相談内容を教えてください" : step === 0 ? "どんなイラストをご希望ですか？" : "ご希望の条件と連絡先";
+
+  useEffect(() => {
+    if (!opening || !initialMode) return;
+    setState((current) => ({ ...current, inquiryMode: initialMode }));
+    if (initialMode === "quote" || fromPlan) {
+      setOptionalOpen(true);
+      setOpenSections((current) => ({ ...current, requestType: true }));
+    }
+    setStep(0);
+  }, [opening, initialMode, fromPlan]);
 
   useEffect(() => {
     if (!waitingToRetry) return;
@@ -221,7 +243,7 @@ export default function PortfolioStructuredCommissionForm({
     const fallback = document.getElementById("pf-submit-errors");
     if (target && formRef.current?.contains(target)) target.focus();
     else fallback?.focus();
-  }, [focusTarget]);
+  }, [focusTarget, step]);
 
   const linkErrors = collectPortfolioReferenceLinkErrors(state.referenceLinks);
   const massProductionSelected = isMassProductionIllustrationSelection(state);
@@ -253,7 +275,13 @@ export default function PortfolioStructuredCommissionForm({
 
   const focusError = (error: ServerFieldError) => {
     openErrorSections([error]);
-    setFocusTarget({ id: portfolioErrorTarget(error.path, state, optionChoices).id });
+    const target = portfolioErrorTarget(error.path, state, optionChoices);
+    if (state.inquiryMode === "quote") {
+      setStep(target.section === "usage" || target.section === "budget" || error.path === "clientName" || error.path === "clientEmail" ? 1 : 0);
+    } else {
+      setStep(0);
+    }
+    setFocusTarget({ id: target.id });
   };
 
   const showFieldErrors = (errors: ServerFieldError[]) => {
@@ -296,6 +324,7 @@ export default function PortfolioStructuredCommissionForm({
     if (inquiryMode === state.inquiryMode) return;
     trackNatoriPageEvent("portfolio_form_mode_select", inquiryMode);
     update({ inquiryMode });
+    setStep(0);
     const expanded = inquiryMode === "quote";
     setOpenSections((current) => ({ ...current, requestType: expanded || current.requestType }));
     setOptionalOpen(expanded);
@@ -313,6 +342,28 @@ export default function PortfolioStructuredCommissionForm({
     window.addEventListener(PLAN_SELECT_EVENT, handler);
     return () => window.removeEventListener(PLAN_SELECT_EVENT, handler);
   }, []);
+
+  const nextStep = () => {
+    // The shared schema validates the complete request once all input screens are filled.
+    if (step === (state.inquiryMode === "quote" ? 1 : 0)) {
+      const parsed = natoriRequestSubmissionV1Schema.safeParse({
+        clientName, clientEmail,
+        requestData: buildNatoriRequestDataV1(state, optionChoices),
+      });
+      const errors: ServerFieldError[] = parsed.success ? [] : parsed.error.issues.map((issue) => ({
+        path: issue.path.join("."), message: portfolioValidationMessage(issue),
+      }));
+      errors.push(...linkErrors.map((error) => ({ path: `referenceLinks.${error.index}.url`, message: error.message })));
+      if (errors.length) { showFieldErrors(errors); return; }
+    }
+    setServerFieldErrors([]);
+    setSubmitError(null);
+    if (state.inquiryMode === "quote" && step === 0) {
+      setOpenSections((current) => ({ ...current, usage: true, budget: true }));
+    }
+    setStep((current) => Math.min(current + 1, lastStep));
+    formRef.current?.closest('[data-inquiry-scroll]')?.scrollTo({ top: 0 });
+  };
 
   const serverErrorFor = (path: string) =>
     serverFieldErrors.find((error) => error.path === path)?.message;
@@ -549,19 +600,20 @@ export default function PortfolioStructuredCommissionForm({
 
   const optionalSection = (
     <details key="optional"
-        open={optionalOpen}
-        onToggle={(event) => setOptionalOpen(event.currentTarget.open)}
+        open={state.inquiryMode === "quote" || optionalOpen}
+        onToggle={(event) => { if (state.inquiryMode === "consultation") setOptionalOpen(event.currentTarget.open); }}
         className="group/optional rounded-xl border p-4"
         style={{ borderColor: c.borderSubtle }}
       >
         <summary className="pf-cute-focus flex min-h-[44px] cursor-pointer list-none items-center gap-2 font-bold [&::-webkit-details-marker]:hidden">
-          {massProductionSelected ? <>量産イラストの依頼内容<RequiredBadge /></> : <>詳しい条件を追加する<OptionalBadge /></>}
+          {state.inquiryMode === "quote" ? "詳しい内容" : massProductionSelected ? <>量産イラストの依頼内容<RequiredBadge /></> : <>詳しい条件を追加する<OptionalBadge /></>}
           <span aria-hidden="true" className="ml-auto group-open/optional:rotate-180">⌄</span>
         </summary>
         <p className="mt-2 text-sm" style={{ color: c.textSoft }}>
           {massProductionSelected ? "デザインと表情指定は必須です。必要な追加オプションを選択してください。" : "決まっている項目だけでOKです。"}
         </p>
         <div className="mt-4 space-y-4">
+          <div hidden={state.inquiryMode === "quote" && step !== 0}>
           <FormSection
             title="依頼の種類"
             summary={state.requestType !== "undecided" || state.commissionScope !== "undecided"
@@ -852,6 +904,8 @@ export default function PortfolioStructuredCommissionForm({
             ) : null}
           </FormSection>
 
+          </div>
+          <div hidden={state.inquiryMode === "quote" && step !== 1}>
           <FormSection
             title="用途・条件"
             summary={state.usageTypes.length > 0 || state.commercialUse !== "unknown" || state.publicationPolicy !== "unknown"
@@ -1183,6 +1237,8 @@ export default function PortfolioStructuredCommissionForm({
             </div>
           </FormSection>
 
+          </div>
+          <div hidden={state.inquiryMode === "quote" && step !== 0}>
           <details
             open={detailsOpen}
             onToggle={(event) => setDetailsOpen(event.currentTarget.open)}
@@ -1419,7 +1475,7 @@ export default function PortfolioStructuredCommissionForm({
               ) : null}
             </fieldset>
           </FormSection>
-
+          </div>
         </div>
       </details>
   );
@@ -1451,115 +1507,85 @@ export default function PortfolioStructuredCommissionForm({
         className="hidden"
       />
 
-      <FormSection title="ご希望・連絡先">
-        <fieldset>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold" style={{ color: c.accentText }}>
+            {state.inquiryMode === "consultation" ? `${step + 1} / 2` : `${step + 1} / 3`}
+          </p>
+          <h3 className="mt-1 text-lg font-black" tabIndex={-1}>{stepTitle}</h3>
+        </div>
+        {step > 0 && <button type="button" onClick={() => setStep((current) => current - 1)} className="pf-cute-focus min-h-[44px] text-sm font-bold underline">戻る</button>}
+      </div>
+      <div className="flex gap-2" aria-label={`進行状況 ${step + 1} / ${lastStep + 1}`}>
+        {Array.from({ length: lastStep + 1 }, (_, index) => <span key={index} className="h-1 flex-1 rounded-full" style={{ background: index <= step ? c.formBorderActive : c.borderSubtle }} />)}
+      </div>
+      {step !== lastStep && (
+        <fieldset className="rounded-xl border p-3" style={{ borderColor: c.borderSubtle }}>
           <legend className={labelClass}>ご希望</legend>
-          {/* 同じ意思決定の2択を比較するカードなので、desktopのみ横並びにする。 */}
           <div className="grid gap-2 sm:grid-cols-2">
             {(["consultation", "quote"] as const).map((mode) => (
-              <label
-                key={mode}
-                className="pf-cute-focus flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-[13px] font-bold"
-                style={{
-                  borderColor:
-                    state.inquiryMode === mode ? c.formBorderActive : c.formBorder,
-                  color: state.inquiryMode === mode ? c.formBorderActive : c.textSoft,
-                }}
-              >
-                <input
-                  type="radio"
-                  name="inquiryMode"
-                  value={mode}
-                  checked={state.inquiryMode === mode}
-                  onChange={() => changeMode(mode)}
-                  className="pf-choice-control h-4 w-4 shrink-0"
-                />
+              <label key={mode} className="pf-cute-focus flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold"
+                style={{ borderColor: state.inquiryMode === mode ? c.formBorderActive : c.formBorder, color: state.inquiryMode === mode ? c.formBorderActive : c.textSoft }}>
+                <input type="radio" name="inquiryMode" value={mode} checked={state.inquiryMode === mode} onChange={() => changeMode(mode)} className="pf-choice-control h-4 w-4 shrink-0" />
                 {NATORI_INQUIRY_MODE_LABELS_V1[mode]}
               </label>
             ))}
           </div>
         </fieldset>
-
-        <div className="grid gap-4">
-          <div>
-            <label htmlFor="pf-name" className={labelClass}>
-              お名前（活動名でOK）<RequiredBadge />
-            </label>
-            <input
-              id="pf-name"
-              {...errorAttributes("pf-name")}
-              name="name"
-              required
-              maxLength={100}
-              autoComplete="name"
-              className={inputClass}
-              aria-describedby={serverErrorFor("clientName") ? "pf-name-error" : undefined}
-            />
-            <FieldError id="pf-name-error" message={serverErrorFor("clientName")} />
+      )}
+      <div hidden={step === lastStep || (state.inquiryMode === "quote" && step !== 1)}>
+        <FormSection title="ご連絡先">
+          <div className="grid gap-4">
+            <div>
+              <label htmlFor="pf-name" className={labelClass}>お名前（活動名でOK）<RequiredBadge /></label>
+              <input id="pf-name" {...errorAttributes("pf-name")} name="name" required maxLength={100} autoComplete="name" value={clientName} onChange={(event) => setClientName(event.target.value)} className={inputClass} />
+              <FieldError id="pf-name-error" message={serverErrorFor("clientName")} />
+            </div>
+            <div>
+              <label htmlFor="pf-email" className={labelClass}>メールアドレス<RequiredBadge /></label>
+              <input id="pf-email" {...errorAttributes("pf-email")} name="email" type="email" required maxLength={254} autoComplete="email" value={clientEmail} onChange={(event) => setClientEmail(event.target.value)} className={inputClass} />
+              <FieldError id="pf-email-error" message={serverErrorFor("clientEmail")} />
+            </div>
           </div>
-          <div>
-            <label htmlFor="pf-email" className={labelClass}>
-              メールアドレス<RequiredBadge />
-            </label>
-            <input
-              id="pf-email"
-              {...errorAttributes("pf-email")}
-              name="email"
-              type="email"
-              required
-              maxLength={254}
-              autoComplete="email"
-              className={inputClass}
-              aria-describedby={serverErrorFor("clientEmail") ? "pf-email-error" : undefined}
-            />
-            <FieldError id="pf-email-error" message={serverErrorFor("clientEmail")} />
+        </FormSection>
+      </div>
+      <div hidden={step === lastStep || (state.inquiryMode === "quote" && step !== 0)}>{messageSection}</div>
+      <div hidden={step === lastStep}>{optionalSection}</div>
+      {step === lastStep && (
+        <section className="space-y-4 rounded-xl border p-4" style={{ borderColor: c.borderSubtle }}>
+          <p className="text-sm" style={{ color: c.textSoft }}>内容をご確認ください。各項目は「修正する」から戻れます。</p>
+          <div className="border-b pb-3" style={{ borderColor: c.borderSubtle }}>
+            <div className="flex justify-between gap-3"><b>ご相談・制作内容</b><button type="button" className="pf-cute-focus text-sm underline" onClick={() => setStep(0)}>修正する</button></div>
+            <p className="mt-2 whitespace-pre-wrap break-words text-sm">{state.message || "相談内容なし"}</p>
+            {state.inquiryMode === "quote" && <p className="mt-2 text-sm">{massProductionSelected ? NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL : NATORI_REQUEST_TYPE_LABELS_V1[state.requestType]}／{massProductionSelected ? state.commissionScopeOther : NATORI_COMMISSION_SCOPE_LABELS_V1[state.commissionScope]}</p>}
+            {refImages.length > 0 && <p className="mt-2 text-sm">参考画像：{refImages.length}枚</p>}
+            {state.referenceLinks.some((row) => row.url.trim()) && <p className="mt-2 text-sm">参考URL：{state.referenceLinks.filter((row) => row.url.trim()).length}件</p>}
           </div>
-        </div>
-      </FormSection>
-
-      {messageSection}
-      {optionalSection}
-
-      <FormSection title="確認して送信">
-        {submitError ? (
-          <p
-            id="pf-submit-errors"
-            tabIndex={-1}
-            className="rounded-xl border-2 px-3 py-2 text-sm font-bold"
-            style={{ borderColor: c.error, color: c.error, background: c.errorSoft }}
-            role="alert"
-          >
-            {submitError}
-          </p>
-        ) : null}
-        {serverFieldErrors.length > 0 ? (
-          <ul className="space-y-1 text-xs font-bold" style={{ color: c.error }}>
-            {serverFieldErrors.map((error, index) => (
-              <li key={`${error.path}:${error.message}`} id={`pf-submit-error-${index}`}>
-                <button type="button" className="pf-cute-focus min-h-[44px] text-left underline underline-offset-4" onClick={() => focusError(error)}>
-                  {error.message}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <PortfolioLegalNotice />
-        <button
-          type="submit"
-          disabled={!commissionOpen || sending || retrySeconds > 0}
-          aria-busy={sending}
-          className="pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black hover:brightness-95 disabled:opacity-50"
-          style={{
-            background: c.action,
-            borderColor: c.actionDisplay,
-            color: c.onAction,
-          }}
-        >
-          {!commissionOpen ? "現在受付停止中です" : sending ? "送信中…" : retrySeconds > 0
-            ? `再送まで ${retrySeconds}秒`
-            : state.inquiryMode === "quote" ? "見積もり相談を送信する" : "相談内容を送信する"}
-        </button>
-      </FormSection>
+          {state.inquiryMode === "quote" && <div className="border-b pb-3" style={{ borderColor: c.borderSubtle }}>
+            <div className="flex justify-between gap-3"><b>用途・予算・納期</b><button type="button" className="pf-cute-focus text-sm underline" onClick={() => setStep(1)}>修正する</button></div>
+            <p className="mt-2 text-sm">用途：{state.usageTypes.length ? state.usageTypes.map((item) => NATORI_USAGE_TYPE_LABELS_V1[item]).join("、") : "相談して決めたい"}</p>
+            <p className="mt-1 text-sm">予算：{NATORI_BUDGET_KIND_LABELS_V1[state.budgetKind]}{state.budgetKind !== "undecided" ? ` ${state.budgetMin}${state.budgetMax ? `〜${state.budgetMax}` : ""}円` : ""}</p>
+            <p className="mt-1 text-sm">納期：{NATORI_DEADLINE_KIND_LABELS_V1[state.deadlineKind]}{state.deadlineDate ? ` ${state.deadlineDate}` : ""}</p>
+          </div>}
+          <div className="flex justify-between gap-3"><div><b>ご連絡先</b><p className="mt-2 text-sm">{clientName}<br />{clientEmail}</p></div><button type="button" className="pf-cute-focus self-start text-sm underline" onClick={() => setStep(state.inquiryMode === "quote" ? 1 : 0)}>修正する</button></div>
+        </section>
+      )}
+      {submitError && <p id="pf-submit-errors" tabIndex={-1} role="alert" className="rounded-xl border-2 px-3 py-2 text-sm font-bold" style={{ borderColor: c.error, color: c.error, background: c.errorSoft }}>{submitError}</p>}
+      {serverFieldErrors.length > 0 && <ul className="space-y-1 text-sm" style={{ color: c.error }}>
+        {serverFieldErrors.map((error, index) => <li key={`${error.path}:${index}`} id={`pf-submit-error-${index}`}><button type="button" className="pf-cute-focus min-h-[44px] text-left underline" onClick={() => focusError(error)}>{error.message}</button></li>)}
+      </ul>}
+      {step === lastStep ? (
+        <FormSection title="確認して送信">
+          <PortfolioLegalNotice />
+          <button type="submit" disabled={!commissionOpen || sending || retrySeconds > 0} aria-busy={sending}
+            className="pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black hover:brightness-95 disabled:opacity-50"
+            style={{ background: c.action, borderColor: c.actionDisplay, color: c.onAction }}>
+            {!commissionOpen ? "現在受付停止中です" : sending ? "送信中…" : retrySeconds > 0 ? `再送まで ${retrySeconds}秒` : state.inquiryMode === "quote" ? "見積もりを依頼する" : "相談内容を送信する"}
+          </button>
+        </FormSection>
+      ) : <button type="button" onClick={nextStep} className="pf-cute-focus w-full min-h-[48px] rounded-full border-2 px-4 py-3 font-black" style={{ background: c.action, borderColor: c.actionDisplay, color: c.onAction }}>
+        {step === 0 && state.inquiryMode === "quote" ? "条件・連絡先へ" : "内容を確認する"}
+      </button>}
     </form>
   );
 }

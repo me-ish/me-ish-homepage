@@ -26,9 +26,10 @@
                              "supabase/migrations/20260923033156_natori_consultation_messages.sql",
                              "supabase/migrations/20260923033205_natori_consultation_files.sql",
                              "supabase/migrations/20260923033212_natori_consultation_link_renewal.sql",
-                             "supabase/migrations/20260923062556_natori_quote_agreed_terms.sql"
+                             "supabase/migrations/20260923062556_natori_quote_agreed_terms.sql",
+                             "supabase/migrations/20260923122157_natori_estimate_drafts_and_issuance.sql"
                          ],
-    "activeMigrationCount":  18,
+    "activeMigrationCount":  19,
     "legacyMigrationCount":  55,
     "remoteOnlyEvidenceCount":  3,
     "sourceProjectRef":  "lvnfspyainrxtztjytbo",
@@ -64,7 +65,8 @@
                              "20260923033156_natori_consultation_messages.sql",
                              "20260923033205_natori_consultation_files.sql",
                              "20260923033212_natori_consultation_link_renewal.sql",
-                             "20260923062556_natori_quote_agreed_terms.sql"
+                             "20260923062556_natori_quote_agreed_terms.sql",
+                             "20260923122157_natori_estimate_drafts_and_issuance.sql"
                          ],
     "archiveVerification":  {
                                 "status":  "verified",

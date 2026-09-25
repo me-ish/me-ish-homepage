@@ -12,6 +12,7 @@ import { NATORI_MASS_PRODUCTION_BASE_AMOUNT } from "@/features/natori/constants/
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import { NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE } from "@/features/natori/lib/portfolioRequestForm";
 import type { PortfolioContent, PortfolioPlan } from "@/features/natori/types/portfolio";
+import { OPEN_PORTFOLIO_INQUIRY } from "./portfolioInquiryEvents";
 
 function startingPriceLabel(price: string): string {
   if (!price.includes("円") || /[〜～~]/u.test(price)) return price;
@@ -45,6 +46,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
     window.dispatchEvent(
       new CustomEvent(PLAN_SELECT_EVENT, { detail: portfolioPlanSelectDetail(plan) })
     );
+    window.dispatchEvent(new CustomEvent(OPEN_PORTFOLIO_INQUIRY, { detail: { mode: "quote", fromPlan: true } }));
   };
 
   const handleSelectMassProduction = () => {
@@ -58,6 +60,7 @@ export default function PortfolioPricing({ content }: { content: PortfolioConten
         },
       })
     );
+    window.dispatchEvent(new CustomEvent(OPEN_PORTFOLIO_INQUIRY, { detail: { mode: "quote", fromPlan: true } }));
   };
 
   return (

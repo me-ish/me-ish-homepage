@@ -163,6 +163,7 @@ describe("最低入力と送信", () => {
     );
     renderForm();
     await fillMinimum();
+    await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
 
     submit();
     submit();
@@ -576,6 +577,7 @@ describe("server error の表示", () => {
     }));
     renderForm();
     await fillMinimum();
+    await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
     vi.useFakeTimers();
     try {
       await act(async () => submit());
@@ -649,14 +651,33 @@ describe("server error の表示", () => {
 });
 
 describe("アクセシビリティ / モバイル想定 DOM", () => {
+  it("見積もりの条件を2画面目に表示し、別画面のエラーへ移動できる", async () => {
+    renderForm();
+    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    fireEvent.change(screen.getByLabelText("参考URL 1"), { target: { value: "ftp://invalid.example" } });
+    expect(screen.getByLabelText("ご予算").closest("div[hidden]")).not.toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
+    expect(screen.getByLabelText("ご予算").closest("div[hidden]")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
+    await waitFor(() => expect(document.activeElement?.id).toBe("pf-name"));
+    await userEvent.click(screen.getByRole("button", { name: /https:\/\/ で始まる URL を入力してください/ }));
+    await waitFor(() => expect(document.activeElement?.id).toBe("pf-ref-url-0"));
+    expect(document.getElementById("pf-ref-url-0")?.closest("div[hidden]")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: /お名前を1〜100文字で入力してください/ }));
+    await waitFor(() => expect(document.activeElement?.id).toBe("pf-name"));
+  });
+
   it("ラジオを同じグループにし、法務案内は送信ボタンの前に置く", async () => {
     renderForm();
+    await fillMinimum();
     expect(screen.getByRole("radio", { name: "まず相談したい" }).getAttribute("name")).toBe("inquiryMode");
     expect(screen.getByRole("radio", { name: "見積もりを希望" }).getAttribute("name")).toBe("inquiryMode");
     await userEvent.click(screen.getByRole("radio", { name: "見積もりを希望" }));
     expect((screen.getByRole("radio", { name: "見積もりを希望" }) as HTMLInputElement).checked).toBe(true);
+    await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
+    await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
     const notice = screen.getByText(/このフォームは、ご相談・お見積もりの受付フォームです/);
-    const button = screen.getByRole("button", { name: "見積もり相談を送信する" });
+    const button = screen.getByRole("button", { name: "見積もりを依頼する" });
     expect(notice.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(formElement().contains(notice)).toBe(true);
   });
@@ -698,7 +719,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     renderForm();
     await fillMinimum("SDキャラを相談したいです。");
     fireEvent(window, new CustomEvent(PLAN_SELECT_EVENT, { detail: { id: "sd", name: "SDキャラ" } }));
-    expect(detailsBySummary("詳しい条件を追加する").open).toBe(true);
+    expect(detailsBySummary("詳しい内容").open).toBe(true);
     expect(detailsBySummary("依頼の種類").open).toBe(true);
     expect((screen.getByLabelText("ご依頼の種類") as HTMLSelectElement).value).toBe("sd");
     expect((screen.getByLabelText("見積もりを希望") as HTMLInputElement).checked).toBe(true);
@@ -738,7 +759,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
 
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
 
-    expect(detailsBySummary("詳しい条件を追加する").open).toBe(true);
+    expect(detailsBySummary("詳しい内容").open).toBe(true);
     expect(detailsBySummary("依頼の種類").open).toBe(true);
     for (const title of [
       "用途・条件",
@@ -794,15 +815,15 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     const headings = screen.getAllByRole("heading", { level: 3 });
     expect(headings.length).toBeGreaterThanOrEqual(3);
     expect(headings.map((heading) => heading.textContent)).toEqual([
-      "ご希望・連絡先", "ご相談・ご依頼の内容", "確認して送信",
+      "ご相談内容を教えてください", "ご連絡先", "ご相談・ご依頼の内容",
     ]);
     const message = screen.getByLabelText(/ご相談・ご依頼の内容/) as HTMLTextAreaElement;
     expect(message.required).toBe(true);
     expect(message.closest("details")).toBeNull();
     expect(message.compareDocumentPosition(detailsBySummary("詳しい条件を追加する")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-    const submitButton = screen.getByRole("button", { name: "相談内容を送信する" });
-    expect(submitButton.className).toContain("text-base font-black");
+    const submitButton = screen.getByRole("button", { name: "内容を確認する" });
+    expect(submitButton.className).toContain("font-black");
     expect(submitButton.className).toContain("border-2");
     expect(submitButton.style.background).toBe("rgb(230, 106, 169)");
     expect(submitButton.style.borderColor).toBe("rgb(201, 75, 137)");

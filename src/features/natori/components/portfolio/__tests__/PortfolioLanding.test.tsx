@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("../PortfolioAbout", () => ({
   default: () => <section id="about" data-section="about"><h2>プロフィール</h2></section>,
 }));
-vi.mock("../PortfolioCommissionForm", () => ({
+vi.mock("../PortfolioInquiryDialog", () => ({
   default: () => <section id="form" data-section="form"><h2>相談・見積もり</h2></section>,
 }));
 vi.mock("../PortfolioFooter", () => ({
