@@ -7,7 +7,7 @@ const TWO_MIB_PLUS_ONE = 2 * 1024 * 1024 + 1;
 async function openInquiry(page: Page, label = "まず相談したい") {
   await page.locator("#form").getByRole("link", { name: label }).click();
   await expect(page).toHaveURL(/\/portfolio\/contact\?/);
-  await expect(page.getByRole("heading", { name: "ご相談・ご依頼" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ご相談・ご依頼", exact: true })).toBeVisible();
 }
 
 async function fillContact(page: Page, suffix: string) {
@@ -74,13 +74,13 @@ test.describe("Natori public intake rollout", () => {
     await page.goto(DEMO_PATH);
     await page.getByRole("link", { name: "相談・見積もり" }).first().click();
     await expect(page).toHaveURL(/\/portfolio\/contact/);
-    await expect(page.getByRole("heading", { name: "ご相談・ご依頼" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "ご相談・ご依頼", exact: true })).toBeVisible();
     await page.goBack();
     const firstPlan = page.getByRole("link", { name: "このプランで相談" }).first();
     const planId = new URL(await firstPlan.getAttribute("href") ?? "", page.url()).searchParams.get("plan");
     await firstPlan.click();
     await expect(page).toHaveURL(new RegExp(`plan=${planId}`));
-    await expect(page.getByRole("heading", { name: "ご相談・ご依頼" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "ご相談・ご依頼", exact: true })).toBeVisible();
   });
 
   test("keeps the legacy form as the default and requires review", async ({ page }) => {
