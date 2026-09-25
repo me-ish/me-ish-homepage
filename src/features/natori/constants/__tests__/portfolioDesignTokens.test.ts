@@ -240,9 +240,12 @@ describe("PF-08 image and font loading", () => {
     expect(fontsSource).toContain("preload: false");
   });
 
-  it("matches gallery image candidates to the bounded responsive grid", () => {
+  it("matches portrait and landscape image candidates to their responsive grid widths", () => {
     expect(gallerySource).toContain(
-      'sizes="(min-width: 1024px) 352px, (min-width: 640px) calc(50vw - 36px), calc(50vw - 44px)"'
+      '"(min-width: 1024px) 1120px, calc(100vw - 40px)"'
+    );
+    expect(gallerySource).toContain(
+      '"(min-width: 1024px) 352px, (min-width: 640px) calc(50vw - 36px), calc(50vw - 44px)"'
     );
     expect(gallerySource).toContain(
       'sizes="(min-width: 816px) 744px, calc(100vw - 72px)"'
