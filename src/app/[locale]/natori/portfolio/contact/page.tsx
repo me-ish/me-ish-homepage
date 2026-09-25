@@ -6,7 +6,7 @@ import { isPublicStructuredIntakeEnabled } from "@/features/natori/server/public
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "ご相談・ご依頼 | ナトリのあとりえ", robots: { index: false, follow: true } };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ mode?: string; plan?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<{ mode?: string; plan?: string; planLabel?: string }> }) {
   const [content, params] = await Promise.all([loadPortfolioContent(), searchParams]);
-  return <PortfolioContactPage content={content} mode={params.mode} plan={params.plan} structuredIntake={isPublicStructuredIntakeEnabled()} />;
+  return <PortfolioContactPage content={content} mode={params.mode} plan={params.plan} planLabel={params.planLabel} structuredIntake={isPublicStructuredIntakeEnabled()} />;
 }

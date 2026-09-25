@@ -3,11 +3,11 @@
 // features/natori/components/portfolio/PortfolioPricing.tsx
 // コミッション料金。通常プランはスマホでも説明を確認しつつ比較しやすい密度で表示し、
 // CTA からフォームへスクロールしつつ依頼種別 / 制作範囲を自動で合わせる。
-import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import { planChoiceLabel, portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import { NATORI_MASS_PRODUCTION_BASE_AMOUNT } from "@/features/natori/constants/portfolioPricing";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import { NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE } from "@/features/natori/lib/portfolioRequestForm";
-import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import type { PortfolioContent, PortfolioPlan } from "@/features/natori/types/portfolio";
 
 function startingPriceLabel(price: string): string {
   if (!price.includes("円") || /[〜～~]/u.test(price)) return price;
@@ -39,7 +39,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
     trackNatoriPageEvent("portfolio_primary_cta_click", "pricing");
     trackNatoriPageEvent("portfolio_plan_click", name);
   };
-  const planHref = (id: string | null) => `${contactPath}?mode=quote${id ? `&plan=${encodeURIComponent(id)}` : ""}${structuredIntake ? "&structured=1" : ""}`;
+  const planHref = (plan: PortfolioPlan) => `${contactPath}?mode=quote${plan.id ? `&plan=${encodeURIComponent(plan.id)}` : `&planLabel=${encodeURIComponent(planChoiceLabel(plan))}`}${structuredIntake ? "&structured=1" : ""}`;
 
   return (
     <section id="pricing" className="mx-auto max-w-6xl px-5 pb-12 pt-6 md:py-16">
@@ -95,7 +95,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                 </div>
 
                 <a
-                  href={planHref(plan.id)}
+                  href={planHref(plan)}
                   onClick={() => trackPlan(plan.name)}
                   className="pf-cute-focus inline-flex min-h-[32px] shrink-0 items-center justify-center rounded-full border-2 px-3 py-1 text-[11px] font-bold"
                   style={{ borderColor: c.borderStrong, color: c.text }}
@@ -141,7 +141,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
               )}
             </div>
             <a
-              href={planHref(plan.id)}
+              href={planHref(plan)}
               onClick={() => trackPlan(plan.name)}
               className="pf-cute-focus rounded-full border-2 py-2.5 text-center font-bold"
               style={{ borderColor: c.borderStrong, color: c.text }}
@@ -223,7 +223,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
 
         {content.massProductionIllustrationOpen ? (
           <a
-            href={planHref(NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE)}
+            href={`${contactPath}?mode=quote&plan=${NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE}${structuredIntake ? "&structured=1" : ""}`}
             onClick={() => trackPlan("量産イラスト")}
             className="pf-cute-focus mt-3 block shrink-0 rounded-full border-2 px-5 py-2.5 text-center text-sm font-bold sm:mt-0"
             style={{ borderColor: c.actionDisplay, color: c.actionDisplay }}

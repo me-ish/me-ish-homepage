@@ -62,6 +62,7 @@ export default function PortfolioCommissionForm({
   opening,
   fromPlan,
   initialPlan,
+  initialPlanLabel,
 }: {
   content: PortfolioContent;
   demoMode?: boolean;
@@ -70,12 +71,13 @@ export default function PortfolioCommissionForm({
   opening?: number;
   fromPlan?: boolean;
   initialPlan?: string;
+  initialPlanLabel?: string;
 }) {
   const [status, setStatus] = useState<Status>("idle");
   const [autoReplied, setAutoReplied] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<string>(() => {
     const plan = content.plans.find((entry) => entry.id === initialPlan);
-    return plan ? planChoiceLabel(plan) : PLAN_UNDECIDED;
+    return plan ? planChoiceLabel(plan) : initialPlanLabel ?? PLAN_UNDECIDED;
   });
   const [refImages, setRefImages] = useState<RefImageEntry[]>([]);
   const [refError, setRefError] = useState<string | null>(null);

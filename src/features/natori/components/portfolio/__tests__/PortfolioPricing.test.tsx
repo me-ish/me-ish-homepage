@@ -74,6 +74,14 @@ describe("PortfolioPricing", () => {
     );
   });
 
+  it("carries a legacy plan without an ID by its exact label", () => {
+    const legacyPlan = { ...defaultPortfolioContent.plans[0], id: null };
+    render(<PortfolioPricing content={{ ...defaultPortfolioContent, plans: [legacyPlan] }} />);
+    const link = screen.getByRole("link", { name: `${legacyPlan.name}を選ぶ` });
+    expect(new URL(link.getAttribute("href") ?? "", "https://example.com").searchParams.get("planLabel"))
+      .toBe(`${legacyPlan.name}（${legacyPlan.price}）`);
+  });
+
   it("shows mass-production illustration from 1,500 yen with its retake policy", () => {
     render(<PortfolioPricing content={defaultPortfolioContent} />);
 
