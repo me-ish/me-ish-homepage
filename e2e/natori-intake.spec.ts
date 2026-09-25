@@ -5,8 +5,9 @@ const DEMO_PATH = "/ja/etorie/demo/app/portfolio";
 const TWO_MIB_PLUS_ONE = 2 * 1024 * 1024 + 1;
 
 async function openInquiry(page: Page, label = "まず相談したい") {
-  await page.locator("#form").getByRole("button", { name: label }).click();
-  await expect(page.getByRole("dialog", { name: "ご相談・ご依頼" })).toBeVisible();
+  await page.locator("#form").getByRole("link", { name: label }).click();
+  await expect(page).toHaveURL(/\/portfolio\/contact\?/);
+  await expect(page.getByRole("heading", { name: "ご相談・ご依頼" })).toBeVisible();
 }
 
 async function fillContact(page: Page, suffix: string) {
@@ -26,7 +27,7 @@ test.describe("Natori public intake rollout", () => {
     });
   });
 
-  test("structured consultation flow validates, confirms, and retains a draft after closing", async ({ page }) => {
+  test("structured consultation flow validates and confirms on a scrollable page", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
@@ -36,9 +37,10 @@ test.describe("Natori public intake rollout", () => {
     await expect(page.getByLabel(/お名前/)).toBeFocused();
     await fillContact(page, "consultation");
     await page.getByLabel("ご相談・ご依頼の内容").fill("安全なデモ送信です。");
-    await page.getByRole("button", { name: "フォームを閉じる" }).click();
-    await expect(page.getByRole("dialog", { name: "ご相談・ご依頼" })).toBeHidden();
-    await openInquiry(page);
+    const scroll = await page.evaluate(() => ({ height: document.documentElement.scrollHeight, viewport: innerHeight }));
+    expect(scroll.height).toBeGreaterThan(scroll.viewport);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.getByRole("button", { name: "内容を確認する" })).toBeInViewport();
     await expect(page.getByLabel("ご相談・ご依頼の内容")).toHaveValue("安全なデモ送信です。");
     await page.getByRole("button", { name: "内容を確認する" }).click();
     const notice = page.getByText(/このフォームは、ご相談・お見積もりの受付フォームです/);
@@ -65,6 +67,20 @@ test.describe("Natori public intake rollout", () => {
     await expect(page.getByText("用途・予算・納期")).toBeVisible();
     await page.getByRole("button", { name: "見積もりを依頼する" }).click();
     await expect(page.getByRole("heading", { name: "送信ありがとうございます!" })).toBeVisible();
+  });
+
+  test("mobile plan and hero links open a dedicated contact page", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 700 });
+    await page.goto(DEMO_PATH);
+    await page.getByRole("link", { name: "相談・見積もり" }).first().click();
+    await expect(page).toHaveURL(/\/portfolio\/contact/);
+    await expect(page.getByRole("heading", { name: "ご相談・ご依頼" })).toBeVisible();
+    await page.goBack();
+    const firstPlan = page.getByRole("link", { name: "このプランで相談" }).first();
+    const planId = new URL(await firstPlan.getAttribute("href") ?? "", page.url()).searchParams.get("plan");
+    await firstPlan.click();
+    await expect(page).toHaveURL(new RegExp(`plan=${planId}`));
+    await expect(page.getByRole("heading", { name: "ご相談・ご依頼" })).toBeVisible();
   });
 
   test("keeps the legacy form as the default and requires review", async ({ page }) => {

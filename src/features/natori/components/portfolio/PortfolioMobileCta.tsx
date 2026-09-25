@@ -10,7 +10,7 @@ import { portfolioColors as c } from "@/features/natori/constants/portfolioConte
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import { PORTFOLIO_INQUIRY_VISIBILITY } from "./portfolioInquiryEvents";
 
-export default function PortfolioMobileCta() {
+export default function PortfolioMobileCta({ href = "/natori/portfolio/contact" }: { href?: string }) {
   const [guardedSectionVisible, setGuardedSectionVisible] = useState(true);
   const [inquiryVisible, setInquiryVisible] = useState(false);
 
@@ -46,7 +46,7 @@ export default function PortfolioMobileCta() {
 
   return (
     <a
-      href="#form"
+      href={href}
       onClick={() => trackNatoriPageEvent("portfolio_primary_cta_click", "mobile_sticky")}
       className="pf-cute-focus fixed right-5 z-40 inline-flex min-h-[44px] items-center rounded-full border-2 px-4 py-2 text-sm font-black shadow-md hover:brightness-95 md:hidden"
       style={{

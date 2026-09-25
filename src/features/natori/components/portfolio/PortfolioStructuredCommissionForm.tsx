@@ -177,6 +177,7 @@ export default function PortfolioStructuredCommissionForm({
   initialMode,
   opening,
   fromPlan,
+  initialPlan,
 }: {
   content: PortfolioContent;
   demoMode?: boolean;
@@ -185,9 +186,13 @@ export default function PortfolioStructuredCommissionForm({
   initialMode?: NatoriInquiryModeV1;
   opening?: number;
   fromPlan?: boolean;
+  initialPlan?: string;
 }) {
   const [state, setState] = useState<PortfolioRequestFormState>(
-    createInitialPortfolioRequestFormState
+    () => {
+      const initial = createInitialPortfolioRequestFormState();
+      return initialPlan ? applyPortfolioPlanSelection(initial, initialPlan) : initial;
+    }
   );
   const [step, setStep] = useState(0);
   const [clientName, setClientName] = useState("");
