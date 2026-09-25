@@ -8,9 +8,17 @@
 import { useEffect, useState } from "react";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
+import { PORTFOLIO_INQUIRY_VISIBILITY } from "./portfolioInquiryEvents";
 
 export default function PortfolioMobileCta() {
   const [guardedSectionVisible, setGuardedSectionVisible] = useState(true);
+  const [inquiryVisible, setInquiryVisible] = useState(false);
+
+  useEffect(() => {
+    const handler = (event: Event) => setInquiryVisible(Boolean((event as CustomEvent<boolean>).detail));
+    window.addEventListener(PORTFOLIO_INQUIRY_VISIBILITY, handler);
+    return () => window.removeEventListener(PORTFOLIO_INQUIRY_VISIBILITY, handler);
+  }, []);
 
   useEffect(() => {
     const guardedSections = ["hero", "form"]
@@ -34,7 +42,7 @@ export default function PortfolioMobileCta() {
     return () => observer.disconnect();
   }, []);
 
-  if (guardedSectionVisible) return null;
+  if (guardedSectionVisible || inquiryVisible) return null;
 
   return (
     <a

@@ -58,10 +58,16 @@ export default function PortfolioCommissionForm({
   content,
   demoMode,
   structuredIntake,
+  initialMode,
+  opening,
+  fromPlan,
 }: {
   content: PortfolioContent;
   demoMode?: boolean;
   structuredIntake?: boolean;
+  initialMode?: "consultation" | "quote";
+  opening?: number;
+  fromPlan?: boolean;
 }) {
   const [status, setStatus] = useState<Status>("idle");
   const [autoReplied, setAutoReplied] = useState(true);
@@ -71,11 +77,39 @@ export default function PortfolioCommissionForm({
   const refFileInputRef = useRef<HTMLInputElement | null>(null);
   const formStartTrackedRef = useRef(false);
   const successHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const legacyFormRef = useRef<HTMLFormElement | null>(null);
+  const [legacyMode, setLegacyMode] = useState<"consultation" | "quote">(initialMode ?? "consultation");
+  const [legacyStep, setLegacyStep] = useState(0);
   const commissionOpen = content.commissionOpen;
 
   useEffect(() => {
     if (status === "success") successHeadingRef.current?.focus();
   }, [status]);
+  useEffect(() => {
+    if (!opening) return;
+    setLegacyMode(initialMode ?? "consultation");
+    setLegacyStep(0);
+  }, [opening, initialMode]);
+  const legacyLastStep = legacyMode === "quote" ? 2 : 1;
+  const legacyReview = legacyStep === legacyLastStep;
+  const nextLegacyStep = () => {
+    const form = legacyFormRef.current;
+    if (!form) return;
+    const names = legacyMode === "quote" && legacyStep === 0
+      ? ["details"]
+      : ["name", "email", "details"];
+    for (const name of names) {
+      const field = form.elements.namedItem(name);
+      if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
+        if (!field.checkValidity()) {
+          field.reportValidity();
+          field.focus();
+          return;
+        }
+      }
+    }
+    setLegacyStep((current) => current + 1);
+  };
   const tsunaguLink = commissionOpen
     ? content.socialLinks.find(isPortfolioTsunaguLink)
     : undefined;
@@ -144,6 +178,17 @@ export default function PortfolioCommissionForm({
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (status === "sending") return;
+    if (legacyStep !== legacyLastStep) return;
+    for (const name of ["name", "email", "details"]) {
+      const field = e.currentTarget.elements.namedItem(name);
+      if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
+        if (!field.checkValidity()) {
+          setLegacyStep(legacyMode === "quote" && name === "details" ? 0 : legacyLastStep - 1);
+          requestAnimationFrame(() => { field.reportValidity(); field.focus(); });
+          return;
+        }
+      }
+    }
     if (demoMode) {
       setRefImages((current) => {
         current.forEach((entry) => URL.revokeObjectURL(entry.previewUrl));
@@ -184,8 +229,7 @@ export default function PortfolioCommissionForm({
 
   return (
     <section
-      id="form"
-      className="py-16"
+      className="py-5"
       style={{ background: c.page }}
       onInputCapture={trackFormStart}
       onChangeCapture={trackFormStart}
@@ -240,6 +284,9 @@ export default function PortfolioCommissionForm({
               content={content}
               demoMode={demoMode}
               commissionOpen={commissionOpen}
+              initialMode={initialMode}
+              opening={opening}
+              fromPlan={fromPlan}
               onSuccess={(outcome) => {
                 setAutoReplied(outcome.autoReplied);
                 setStatus("success");
@@ -248,7 +295,9 @@ export default function PortfolioCommissionForm({
           </div>
         ) : (
           <form
+            ref={legacyFormRef}
             onSubmit={handleSubmit}
+            noValidate
             className="space-y-5 rounded-2xl p-6 md:p-8"
             style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
           >
@@ -261,7 +310,22 @@ export default function PortfolioCommissionForm({
               className="hidden"
             />
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="お問い合わせの種類">
+              {(["consultation", "quote"] as const).map((choice) => (
+                <button key={choice} type="button" aria-pressed={legacyMode === choice}
+                  onClick={() => { setLegacyMode(choice); setLegacyStep(0); }}
+                  className="pf-cute-focus rounded-full border-2 px-4 py-2 text-sm font-bold"
+                  style={{ background: legacyMode === choice ? c.action : c.surface, borderColor: c.actionDisplay, color: legacyMode === choice ? c.onAction : c.text }}>
+                  {choice === "consultation" ? "まず相談したい" : "見積もりを希望"}
+                </button>
+              ))}
+            </div>
+            <p className="text-sm font-bold" aria-live="polite">
+              {legacyMode === "quote" ? `ステップ ${legacyStep + 1} / 3` : `ステップ ${legacyStep + 1} / 2`}
+              <span className="ml-2">{legacyReview ? "内容の確認" : legacyMode === "quote" && legacyStep === 0 ? "制作内容" : "ご連絡先・ご相談内容"}</span>
+            </p>
+
+            <div hidden={legacyReview || (legacyMode === "quote" && legacyStep === 0)} className="grid gap-5 sm:grid-cols-2">
               <div>
                 <label htmlFor="pf-name" className={labelClass}>
                   お名前（活動名でOK）<span style={{ color: c.error }}>＊</span>
@@ -291,7 +355,7 @@ export default function PortfolioCommissionForm({
               </div>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div hidden={legacyMode !== "quote" || legacyStep !== 0} className="grid gap-5 sm:grid-cols-2">
               <div>
                 <label htmlFor="pf-type" className={labelClass}>ご依頼の種類</label>
                 <select
@@ -319,7 +383,7 @@ export default function PortfolioCommissionForm({
               </div>
             </div>
 
-            <fieldset>
+            <fieldset hidden={legacyMode !== "quote" || legacyStep !== 0}>
               <legend className={labelClass}>追加オプション（複数選択可）</legend>
               <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
                 {content.options.map((option, index) => (
@@ -346,7 +410,7 @@ export default function PortfolioCommissionForm({
               </div>
             </fieldset>
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div hidden={legacyMode !== "quote" || legacyStep !== 1} className="grid gap-5 sm:grid-cols-2">
               <div>
                 <label htmlFor="pf-budget" className={labelClass}>ご予算</label>
                 <select
@@ -371,7 +435,7 @@ export default function PortfolioCommissionForm({
               </div>
             </div>
 
-            <div>
+            <div hidden={legacyReview || (legacyMode === "quote" && legacyStep !== 0)}>
               <span className={labelClass}>キャラクター資料（画像添付）</span>
               <p className="mb-2 text-xs" style={{ color: c.textSoft }}>
                 キャラクターの設定画・立ち絵・過去のイラストなどを添付してください（最大
@@ -429,7 +493,7 @@ export default function PortfolioCommissionForm({
               />
             </div>
 
-            <div>
+            <div hidden={legacyReview || (legacyMode === "quote" && legacyStep !== 0)}>
               <label htmlFor="pf-details" className={labelClass}>
                 ご依頼の詳細<span style={{ color: c.error }}>＊</span>
               </label>
@@ -448,7 +512,7 @@ export default function PortfolioCommissionForm({
               />
             </div>
 
-            <div>
+            <div hidden={legacyReview || (legacyMode === "quote" && legacyStep !== 1)}>
               <label htmlFor="pf-message" className={labelClass}>その他・ご質問</label>
               <textarea
                 id="pf-message"
@@ -461,6 +525,16 @@ export default function PortfolioCommissionForm({
               />
             </div>
 
+            {legacyReview && (
+              <div className="space-y-2 rounded-xl p-4 text-sm" style={{ background: c.page }}>
+                <p><strong>お名前：</strong>{legacyFormRef.current?.elements.namedItem("name") instanceof HTMLInputElement ? (legacyFormRef.current.elements.namedItem("name") as HTMLInputElement).value : ""}</p>
+                <p><strong>メール：</strong>{legacyFormRef.current?.elements.namedItem("email") instanceof HTMLInputElement ? (legacyFormRef.current.elements.namedItem("email") as HTMLInputElement).value : ""}</p>
+                {legacyMode === "quote" && <p><strong>プラン：</strong>{selectedPlan}</p>}
+                <p><strong>内容：</strong>{legacyFormRef.current?.elements.namedItem("details") instanceof HTMLTextAreaElement ? (legacyFormRef.current.elements.namedItem("details") as HTMLTextAreaElement).value : ""}</p>
+                {refImages.length > 0 && <p><strong>添付画像：</strong>{refImages.map((entry) => entry.file.name).join("、")}</p>}
+              </div>
+            )}
+
             {status === "error" ? (
               <p
                 className="rounded-xl border-2 px-3 py-2 text-sm font-bold"
@@ -471,7 +545,9 @@ export default function PortfolioCommissionForm({
               </p>
             ) : null}
 
-            <button
+            {legacyReview && <PortfolioLegalNotice />}
+            {legacyStep > 0 && <button type="button" onClick={() => setLegacyStep((step) => step - 1)} className="pf-cute-focus rounded-full border px-5 py-2 text-sm font-bold">戻る</button>}
+            {legacyReview ? <button
               type="submit"
               disabled={!commissionOpen || status === "sending"}
               className="pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black hover:brightness-95 disabled:opacity-50"
@@ -486,9 +562,8 @@ export default function PortfolioCommissionForm({
                 : status === "sending"
                   ? "送信中…"
                   : "この内容で送信する"}
-            </button>
+            </button> : <button type="button" onClick={nextLegacyStep} disabled={!commissionOpen} className="pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black disabled:opacity-50" style={{ background: c.action, borderColor: c.actionDisplay, color: c.onAction }}>次へ進む</button>}
 
-            <PortfolioLegalNotice />
           </form>
         )}
       </div>

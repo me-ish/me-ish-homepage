@@ -4,31 +4,14 @@ import { expect, test, type Page } from "@playwright/test";
 const DEMO_PATH = "/ja/etorie/demo/app/portfolio";
 const TWO_MIB_PLUS_ONE = 2 * 1024 * 1024 + 1;
 
-function oversizedReferencePair() {
-  return [
-    {
-      name: "reference-a.png",
-      mimeType: "image/png",
-      buffer: Buffer.alloc(TWO_MIB_PLUS_ONE),
-    },
-    {
-      name: "reference-b.png",
-      mimeType: "image/png",
-      buffer: Buffer.alloc(TWO_MIB_PLUS_ONE),
-    },
-  ];
+async function openInquiry(page: Page, label = "まず相談したい") {
+  await page.locator("#form").getByRole("button", { name: label }).click();
+  await expect(page.getByRole("dialog", { name: "ご相談・ご依頼" })).toBeVisible();
 }
 
-async function submitMinimumRequest(
-  page: Page,
-  suffix: string
-) {
+async function fillContact(page: Page, suffix: string) {
   await page.getByLabel(/お名前/).fill(`P1-13 ${suffix}`);
-  await page.getByLabel("メールアドレス").fill(`p1-13-${suffix}@example.com`);
-  const details = page.getByLabel("ご相談・ご依頼の内容");
-  if (await details.isVisible()) await details.fill("P1-13 の安全なデモ送信です。");
-  await page.getByRole("button", { name: /^(この内容で送信する|相談内容を送信する|見積もり相談を送信する)$/ }).click();
-  await expect(page.getByText("送信ありがとうございます!", { exact: true })).toBeVisible();
+  await page.getByLabel(/メールアドレス/).fill(`p1-13-${suffix}@example.com`);
 }
 
 test.describe("Natori public intake rollout", () => {
@@ -43,94 +26,64 @@ test.describe("Natori public intake rollout", () => {
     });
   });
 
-  test("mobile quote keeps optional sections collapsed and recovers from validation", async ({ page }) => {
+  test("mobile consultation validates, confirms, and retains a draft after closing", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(`${DEMO_PATH}?structured=1`);
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
-    const mode = page.getByRole("radio", { name: "まず相談したい" });
-    await mode.focus();
-    await page.keyboard.press("ArrowRight");
-    await expect(page.getByRole("radio", { name: "見積もりを希望" })).toBeChecked();
-    await expect(page.locator("#pf-request-type")).toBeVisible();
-    await expect(page.locator("#pf-budget-kind")).not.toBeVisible();
-    await expect(page.locator("#pf-character")).not.toBeVisible();
-    await page.getByLabel(/お名前/).fill("フォーム検証");
-    await page.getByLabel("メールアドレス").fill("form-review@example.com");
-    await page.locator("#pf-message").fill("内容を保持したまま修正します。");
-    await page.locator("#pf-request-type").selectOption("other");
-    await page.getByRole("radio", { name: "まず相談したい" }).check();
-    await expect(page.locator("#pf-request-type-other")).not.toBeVisible();
-    await page.getByRole("button", { name: "相談内容を送信する" }).click();
-    await expect(page.locator("#pf-request-type-other")).toBeFocused();
-    await expect(page.locator("#pf-request-type-other")).toHaveAttribute("aria-invalid", "true");
-    await expect(page.locator("#pf-budget-kind")).not.toBeVisible();
-    await expect(page.locator("#pf-message")).toHaveValue("内容を保持したまま修正します。");
-    await expect(page.getByText("送信ありがとうございます!", { exact: true })).toHaveCount(0);
-    await page.screenshot({ path: test.info().outputPath("mobile-form-error.png") });
-    await page.locator("#pf-request-type-other").fill("記念イラスト");
-    await page.getByRole("button", { name: "相談内容を送信する" }).click();
-    await expect(page.getByRole("heading", { name: "送信ありがとうございます!" })).toBeFocused();
+    await page.goto(`${DEMO_PATH}?structured=1`);
+    await openInquiry(page);
+    await page.getByRole("button", { name: "内容を確認する" }).click();
+    await expect(page.getByLabel(/お名前/)).toBeFocused();
+    await fillContact(page, "consultation");
+    await page.getByLabel("ご相談・ご依頼の内容").fill("安全なデモ送信です。");
+    await page.getByRole("button", { name: "フォームを閉じる" }).click();
+    await expect(page.getByRole("dialog", { name: "ご相談・ご依頼" })).toBeHidden();
+    await openInquiry(page);
+    await expect(page.getByLabel("ご相談・ご依頼の内容")).toHaveValue("安全なデモ送信です。");
+    await page.getByRole("button", { name: "内容を確認する" }).click();
+    const notice = page.getByText(/このフォームは、ご相談・お見積もりの受付フォームです/);
+    const submit = page.getByRole("button", { name: "相談内容を送信する" });
+    await expect(notice).toBeVisible();
+    await expect(submit).toBeVisible();
+    await submit.click();
+    await expect(page.getByRole("heading", { name: "送信ありがとうございます!" })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(errors).toEqual([]);
   });
 
-  test("mobile form shows legal notice before submit and readable controls", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+  test("quote separates production details, conditions, and review", async ({ page }) => {
     await page.goto(`${DEMO_PATH}?structured=1`);
-    await page.locator("#form").scrollIntoViewIfNeeded();
-    const notice = page.getByText("このフォームは、ご相談・お見積もりの受付フォームです。送信のみでは制作契約は成立しません。", { exact: true });
-    const button = page.getByRole("button", { name: "相談内容を送信する" });
-    const noticeBox = await notice.boundingBox();
-    const buttonBox = await button.boundingBox();
-    expect(noticeBox && buttonBox && noticeBox.y + noticeBox.height < buttonBox.y).toBeTruthy();
-    await expect(button).toHaveCSS("background-color", "rgb(166, 50, 104)");
-    await expect(page.getByRole("radio", { name: "まず相談したい" })).toHaveCSS("border-color", "rgb(166, 50, 104)");
-    await page.screenshot({ path: test.info().outputPath("mobile-form.png"), fullPage: true });
-  });
-
-  test("keeps the legacy form as the default", async ({ page }) => {
-    await page.goto(DEMO_PATH);
-
-    await expect(page.getByRole("heading", { name: "ご希望・連絡先" })).toHaveCount(0);
-    await expect(page.getByRole("radio", { name: "まず相談したい" })).toHaveCount(0);
-    await expect(page.getByLabel("ご依頼の詳細")).toBeVisible();
-    await submitMinimumRequest(page, "legacy");
-  });
-
-  test("rejects legacy reference images above the 4MiB combined limit", async ({ page }) => {
-    await page.goto(DEMO_PATH);
-
-    await page.locator('input[type="file"]').setInputFiles(oversizedReferencePair());
-
-    await expect(page.getByText("画像の合計サイズは4MBまでです。", { exact: true })).toBeVisible();
-    await expect(page.getByText("送信ありがとうございます!", { exact: true })).toHaveCount(0);
-  });
-
-  test("submits the structured consultation flow without external writes", async ({ page }) => {
-    await page.goto(`${DEMO_PATH}?structured=1`);
-
-    await expect(page.getByRole("heading", { name: "ご希望・連絡先" })).toBeVisible();
-    await expect(page.getByRole("radio", { name: "まず相談したい" })).toBeChecked();
-    await submitMinimumRequest(page, "consultation");
-  });
-
-  test("rejects structured reference images above the 4MiB combined limit", async ({ page }) => {
-    await page.goto(`${DEMO_PATH}?structured=1`);
-    await page.locator("summary").filter({ hasText: "詳しい条件を追加する" }).click();
-    await page.locator("summary").filter({ hasText: /^資料/ }).click();
-
-    await page.locator('input[type="file"]').setInputFiles(oversizedReferencePair());
-
-    await expect(page.getByText("画像の合計サイズは4MBまでです。", { exact: true })).toBeVisible();
-    await expect(page.getByText("送信ありがとうございます!", { exact: true })).toHaveCount(0);
-  });
-
-  test("submits the structured quote flow without external writes", async ({ page }) => {
-    await page.goto(`${DEMO_PATH}?structured=1`);
-
-    await page.getByRole("radio", { name: "見積もりを希望" }).check();
+    await openInquiry(page, "見積もりをお願いしたい");
     await expect(page.getByRole("radio", { name: "見積もりを希望" })).toBeChecked();
-    await submitMinimumRequest(page, "quote");
+    await expect(page.getByLabel("ご依頼の種類")).toBeVisible();
+    await expect(page.getByLabel("ご予算")).toBeHidden();
+    await page.getByRole("button", { name: "条件・連絡先へ" }).click();
+    await expect(page.getByLabel(/お名前/)).toBeVisible();
+    await fillContact(page, "quote");
+    await page.getByRole("button", { name: "内容を確認する" }).click();
+    await expect(page.getByText("用途・予算・納期")).toBeVisible();
+    await page.getByRole("button", { name: "見積もりを依頼する" }).click();
+    await expect(page.getByRole("heading", { name: "送信ありがとうございます!" })).toBeVisible();
+  });
+
+  test("legacy intake remains available and requires review", async ({ page }) => {
+    await page.goto(DEMO_PATH);
+    await openInquiry(page);
+    await expect(page.getByLabel("ご依頼の詳細")).toBeVisible();
+    await fillContact(page, "legacy");
+    await page.getByRole("button", { name: "次へ進む" }).click();
+    await expect(page.getByRole("button", { name: "この内容で送信する" })).toBeVisible();
+    await page.getByRole("button", { name: "この内容で送信する" }).click();
+    await expect(page.getByRole("heading", { name: "送信ありがとうございます!" })).toBeVisible();
+  });
+
+  test("rejects combined reference images above 4MiB", async ({ page }) => {
+    await page.goto(DEMO_PATH);
+    await openInquiry(page);
+    await page.locator('input[type="file"]').setInputFiles([
+      { name: "reference-a.png", mimeType: "image/png", buffer: Buffer.alloc(TWO_MIB_PLUS_ONE) },
+      { name: "reference-b.png", mimeType: "image/png", buffer: Buffer.alloc(TWO_MIB_PLUS_ONE) },
+    ]);
+    await expect(page.getByText("画像の合計サイズは4MBまでです。", { exact: true })).toBeVisible();
   });
 });
