@@ -5,9 +5,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("../PortfolioAbout", () => ({
   default: () => <section id="about" data-section="about"><h2>プロフィール</h2></section>,
 }));
-vi.mock("../PortfolioInquiryDialog", () => ({
-  default: () => <section id="form" data-section="form"><h2>相談・見積もり</h2></section>,
-}));
 vi.mock("../PortfolioFooter", () => ({
   default: () => <footer data-section="footer" />,
 }));
@@ -68,7 +65,6 @@ describe("PF-01 portfolio information architecture", () => {
       "workflow",
       "about",
       "guidelines",
-      "form",
       "mobile-cta",
       "footer",
     ]);
@@ -77,10 +73,12 @@ describe("PF-01 portfolio information architecture", () => {
       { href: "#pricing", label: "料金・ご依頼" },
       { href: "#flow", label: "制作の流れ" },
       { href: "#about", label: "プロフィール" },
-      { href: "#form", label: "相談・見積もり" },
+      { href: "/natori/portfolio/contact", label: "相談・見積もり" },
+      { href: "/natori/portfolio/contact?mode=consultation", label: "まず相談したい" },
+      { href: "/natori/portfolio/contact?mode=quote", label: "見積もりをお願いしたい" },
     ]);
     for (const { href } of uniqueNavLinks()) {
-      expect(document.querySelector(href)).not.toBeNull();
+      if (href.startsWith("#")) expect(document.querySelector(href)).not.toBeNull();
     }
 
     const headingLevels = screen

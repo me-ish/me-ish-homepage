@@ -61,6 +61,8 @@ export default function PortfolioCommissionForm({
   initialMode,
   opening,
   fromPlan,
+  initialPlan,
+  initialPlanLabel,
 }: {
   content: PortfolioContent;
   demoMode?: boolean;
@@ -68,10 +70,15 @@ export default function PortfolioCommissionForm({
   initialMode?: "consultation" | "quote";
   opening?: number;
   fromPlan?: boolean;
+  initialPlan?: string;
+  initialPlanLabel?: string;
 }) {
   const [status, setStatus] = useState<Status>("idle");
   const [autoReplied, setAutoReplied] = useState(true);
-  const [selectedPlan, setSelectedPlan] = useState<string>(PLAN_UNDECIDED);
+  const [selectedPlan, setSelectedPlan] = useState<string>(() => {
+    const plan = content.plans.find((entry) => entry.id === initialPlan);
+    return plan ? planChoiceLabel(plan) : initialPlanLabel ?? PLAN_UNDECIDED;
+  });
   const [refImages, setRefImages] = useState<RefImageEntry[]>([]);
   const [refError, setRefError] = useState<string | null>(null);
   const refFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -280,13 +287,14 @@ export default function PortfolioCommissionForm({
           </div>
         ) : structuredIntake ? (
           <div className="space-y-4">
-            <PortfolioStructuredCommissionForm
+          <PortfolioStructuredCommissionForm
               content={content}
               demoMode={demoMode}
               commissionOpen={commissionOpen}
               initialMode={initialMode}
               opening={opening}
               fromPlan={fromPlan}
+              initialPlan={initialPlan}
               onSuccess={(outcome) => {
                 setAutoReplied(outcome.autoReplied);
                 setStatus("success");

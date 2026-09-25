@@ -9,14 +9,14 @@ const NAV_LINKS = [
   { href: "#pricing", label: "料金・ご依頼" },
   { href: "#flow", label: "制作の流れ" },
   { href: "#about", label: "プロフィール" },
-  { href: "#form", label: "相談・見積もり" },
+  { href: "/natori/portfolio/contact", label: "相談・見積もり" },
 ];
 
 const MOBILE_NAV_LINKS = [
   { href: "#gallery", label: "作品" },
   { href: "#pricing", label: "料金" },
   { href: "#flow", label: "流れ" },
-  { href: "#form", label: "相談" },
+  { href: "/natori/portfolio/contact", label: "相談" },
 ];
 
 // showcase 表示ではページに存在しないセクション（料金・流れ・依頼）を除外
@@ -25,14 +25,17 @@ const SHOWCASE_NAV_HREFS = new Set(["#gallery", "#about"]);
 export default function PortfolioHeader({
   content,
   variant = "full",
+  contactPath = "/natori/portfolio/contact",
 }: {
   content: PortfolioContent;
   variant?: PortfolioVariant;
+  contactPath?: string;
 }) {
   const showcase = variant === "showcase";
   const navLinks = showcase
     ? NAV_LINKS.filter((link) => SHOWCASE_NAV_HREFS.has(link.href))
-    : NAV_LINKS;
+    : NAV_LINKS.map((link) => link.href === "/natori/portfolio/contact" ? { ...link, href: contactPath } : link);
+  const mobileLinks = showcase ? navLinks : MOBILE_NAV_LINKS.map((link) => link.href === "/natori/portfolio/contact" ? { ...link, href: contactPath } : link);
   return (
     <header
       className="sticky top-0 z-50 border-b backdrop-blur"
@@ -89,7 +92,7 @@ export default function PortfolioHeader({
         )}
       </div>
       {/* モバイル用ナビ。md 以上は上のナビがあるので出さない */}
-      <PortfolioMobileNav links={showcase ? navLinks : MOBILE_NAV_LINKS} />
+      <PortfolioMobileNav links={mobileLinks} />
     </header>
   );
 }

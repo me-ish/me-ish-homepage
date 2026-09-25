@@ -8,9 +8,11 @@ import PortfolioHeroSlider from "./PortfolioHeroSlider";
 export default function PortfolioHero({
   content,
   variant = "full",
+  contactPath,
 }: {
   content: PortfolioContent;
   variant?: PortfolioVariant;
+  contactPath?: string;
 }) {
   const fallbackWork = content.works.find((work) => work.published && Boolean(work.image));
   const configuredHeroImages = (
@@ -82,6 +84,7 @@ export default function PortfolioHero({
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               {variant === "showcase" ? null : (
                 <PortfolioHeroPrimaryCta
+                  href={contactPath}
                   className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-xl border-2 px-6 py-3 text-base font-black hover:brightness-95"
                   style={{
                     background: c.action,

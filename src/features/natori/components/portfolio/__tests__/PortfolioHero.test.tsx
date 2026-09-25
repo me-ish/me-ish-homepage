@@ -69,7 +69,7 @@ describe("PF-03 portfolio hero", () => {
     expect(descriptionBlock.className).toContain("order-3");
 
     const primaryLink = screen.getByRole("link", { name: "相談・見積もり" });
-    expect(primaryLink.getAttribute("href")).toBe("#form");
+    expect(primaryLink.getAttribute("href")).toBe("/natori/portfolio/contact");
     expect((primaryLink as HTMLElement).style.background).toBe("rgb(230, 106, 169)");
     expect((primaryLink as HTMLElement).style.borderColor).toBe("rgb(201, 75, 137)");
     expect((primaryLink as HTMLElement).style.color).toBe("rgb(255, 255, 255)");

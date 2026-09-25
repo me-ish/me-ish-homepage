@@ -7,10 +7,7 @@ const trackNatoriPageEvent = vi.hoisted(() => vi.fn());
 vi.mock("@/features/natori/data/pageEvents", () => ({ trackNatoriPageEvent }));
 
 import PortfolioPricing from "@/features/natori/components/portfolio/PortfolioPricing";
-import {
-  PLAN_SELECT_EVENT,
-  defaultPortfolioContent,
-} from "@/features/natori/constants/portfolioContent";
+import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
 import { NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE } from "@/features/natori/lib/portfolioRequestForm";
 
 afterEach(() => {
@@ -58,12 +55,12 @@ describe("PortfolioPricing", () => {
   });
 
   it("records both the pricing CTA and selected public plan name", () => {
-    const planEvent = vi.fn();
-    window.addEventListener(PLAN_SELECT_EVENT, planEvent);
     render(<PortfolioPricing content={defaultPortfolioContent} />);
 
     const firstPlan = defaultPortfolioContent.plans[0];
-    fireEvent.click(screen.getAllByRole("link", { name: "このプランで相談" })[0]);
+    const link = screen.getAllByRole("link", { name: "このプランで相談" })[0];
+    expect(link.getAttribute("href")).toBe(`/natori/portfolio/contact?mode=quote&plan=${firstPlan.id}`);
+    fireEvent.click(link);
 
     expect(trackNatoriPageEvent).toHaveBeenNthCalledWith(
       1,
@@ -75,8 +72,14 @@ describe("PortfolioPricing", () => {
       "portfolio_plan_click",
       firstPlan.name
     );
-    expect(planEvent).toHaveBeenCalledOnce();
-    window.removeEventListener(PLAN_SELECT_EVENT, planEvent);
+  });
+
+  it("carries a legacy plan without an ID by its exact label", () => {
+    const legacyPlan = { ...defaultPortfolioContent.plans[0], id: null };
+    render(<PortfolioPricing content={{ ...defaultPortfolioContent, plans: [legacyPlan] }} />);
+    const link = screen.getByRole("link", { name: `${legacyPlan.name}を選ぶ` });
+    expect(new URL(link.getAttribute("href") ?? "", "https://example.com").searchParams.get("planLabel"))
+      .toBe(`${legacyPlan.name}（${legacyPlan.price}）`);
   });
 
   it("shows mass-production illustration from 1,500 yen with its retake policy", () => {
@@ -117,25 +120,17 @@ describe("PortfolioPricing", () => {
   });
 
   it("dispatches the mass-production request value from its CTA", () => {
-    const planEvent = vi.fn();
-    window.addEventListener(PLAN_SELECT_EVENT, planEvent);
     render(<PortfolioPricing content={defaultPortfolioContent} />);
 
     const massCta = screen.getAllByRole("link", { name: "このプランで相談" }).at(-1);
     expect(massCta).toBeTruthy();
+    expect(massCta?.getAttribute("href")).toBe(`/natori/portfolio/contact?mode=quote&plan=${NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE}`);
     fireEvent.click(massCta as HTMLAnchorElement);
 
-    expect(planEvent).toHaveBeenCalledOnce();
-    const event = planEvent.mock.calls[0][0] as CustomEvent;
-    expect(event.detail).toMatchObject({
-      id: NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE,
-      label: "量産イラスト（1,500円）",
-    });
     expect(trackNatoriPageEvent).toHaveBeenCalledWith(
       "portfolio_plan_click",
       "量産イラスト"
     );
-    window.removeEventListener(PLAN_SELECT_EVENT, planEvent);
   });
 
   it("shows paused state instead of a mass-production CTA when intake is closed", () => {
