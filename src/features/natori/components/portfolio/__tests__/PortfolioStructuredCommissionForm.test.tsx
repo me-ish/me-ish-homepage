@@ -651,6 +651,23 @@ describe("server error の表示", () => {
 });
 
 describe("アクセシビリティ / モバイル想定 DOM", () => {
+  it("相談と見積もりで残りの段階を示し、選択欄をコンパクトに表示する", async () => {
+    renderForm();
+    const consultationSteps = screen.getByRole("list", { name: "進行状況 1 / 2" });
+    expect(consultationSteps.textContent).toBe("ご相談内容確認・送信");
+    expect(consultationSteps.querySelector('[aria-current="step"]')?.textContent).toBe("ご相談内容");
+
+    const choiceGroup = screen.getByRole("group", { name: "ご希望" });
+    expect(choiceGroup.className).not.toContain("rounded-xl");
+    expect(screen.getByLabelText("まず相談したい").closest("label")?.className).not.toContain("border-2");
+
+    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    const quoteSteps = screen.getByRole("list", { name: "進行状況 1 / 3" });
+    expect(quoteSteps.textContent).toBe("制作内容条件・連絡先確認・送信");
+    await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
+    expect(screen.getByRole("list", { name: "進行状況 2 / 3" }).querySelector('[aria-current="step"]')?.textContent).toBe("条件・連絡先");
+  });
+
   it("見積もりの条件を2画面目に表示し、別画面のエラーへ移動できる", async () => {
     renderForm();
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
