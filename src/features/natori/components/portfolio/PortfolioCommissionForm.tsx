@@ -548,6 +548,7 @@ export default function PortfolioCommissionForm({
             {legacyReview && <PortfolioLegalNotice />}
             {legacyStep > 0 && <button type="button" onClick={() => setLegacyStep((step) => step - 1)} className="pf-cute-focus rounded-full border px-5 py-2 text-sm font-bold">戻る</button>}
             {legacyReview ? <button
+              key="legacy-submit"
               type="submit"
               disabled={!commissionOpen || status === "sending"}
               className="pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black hover:brightness-95 disabled:opacity-50"
@@ -562,7 +563,7 @@ export default function PortfolioCommissionForm({
                 : status === "sending"
                   ? "送信中…"
                   : "この内容で送信する"}
-            </button> : <button type="button" onClick={nextLegacyStep} disabled={!commissionOpen} className="pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black disabled:opacity-50" style={{ background: c.action, borderColor: c.actionDisplay, color: c.onAction }}>次へ進む</button>}
+            </button> : <button key="legacy-next" type="button" onClick={(event) => { event.preventDefault(); nextLegacyStep(); }} disabled={!commissionOpen} className="pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black disabled:opacity-50" style={{ background: c.action, borderColor: c.actionDisplay, color: c.onAction }}>次へ進む</button>}
 
           </form>
         )}

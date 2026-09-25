@@ -220,7 +220,7 @@ export default function PortfolioStructuredCommissionForm({
   useEffect(() => {
     if (!opening || !initialMode) return;
     setState((current) => ({ ...current, inquiryMode: initialMode }));
-    if (fromPlan) {
+    if (initialMode === "quote" || fromPlan) {
       setOptionalOpen(true);
       setOpenSections((current) => ({ ...current, requestType: true }));
     }
