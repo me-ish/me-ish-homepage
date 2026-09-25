@@ -100,6 +100,9 @@ export default function PortfolioCommissionForm({
     setLegacyStep(0);
   }, [opening, initialMode]);
   const legacyLastStep = legacyMode === "quote" ? 2 : 1;
+  const legacyStepLabels = legacyMode === "quote"
+    ? ["制作内容", "条件・連絡先", "確認・送信"]
+    : ["ご相談内容", "確認・送信"];
   const legacyReview = legacyStep === legacyLastStep;
   const nextLegacyStep = () => {
     const form = legacyFormRef.current;
@@ -320,20 +323,29 @@ export default function PortfolioCommissionForm({
               className="hidden"
             />
 
-            <div className="flex flex-wrap gap-2" role="group" aria-label="お問い合わせの種類">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b pb-2 text-sm" role="group" aria-label="お問い合わせの種類" style={{ borderColor: c.borderSubtle }}>
+              <span className="text-xs font-bold" style={{ color: c.textSoft }}>ご希望</span>
               {(["consultation", "quote"] as const).map((choice) => (
                 <button key={choice} type="button" aria-pressed={legacyMode === choice}
                   onClick={() => { setLegacyMode(choice); setLegacyStep(0); }}
-                  className="pf-cute-focus rounded-full border-2 px-4 py-2 text-sm font-bold"
-                  style={{ background: legacyMode === choice ? c.action : c.surface, borderColor: c.actionDisplay, color: legacyMode === choice ? c.onAction : c.text }}>
+                  className="pf-cute-focus min-h-11 border-b-2 px-1 text-sm font-bold"
+                  style={{ borderColor: legacyMode === choice ? c.accentText : "transparent", color: legacyMode === choice ? c.accentText : c.textSoft }}>
                   {choice === "consultation" ? "まず相談したい" : "見積もりを希望"}
                 </button>
               ))}
             </div>
             <p className="text-sm font-bold" aria-live="polite">
-              {legacyMode === "quote" ? `ステップ ${legacyStep + 1} / 3` : `ステップ ${legacyStep + 1} / 2`}
-              <span className="ml-2">{legacyReview ? "内容の確認" : legacyMode === "quote" && legacyStep === 0 ? "制作内容" : "ご連絡先・ご相談内容"}</span>
+              ステップ {legacyStep + 1} / {legacyStepLabels.length}
+              <span className="ml-2">{legacyStepLabels[legacyStep]}</span>
             </p>
+            <ol className="flex gap-2" aria-label={`進行状況 ${legacyStep + 1} / ${legacyStepLabels.length}`}>
+              {legacyStepLabels.map((label, index) => (
+                <li key={label} className="min-w-0 flex-1" aria-current={index === legacyStep ? "step" : undefined}>
+                  <span className="block h-1 rounded-full" style={{ background: index <= legacyStep ? c.accentText : c.borderSubtle }} />
+                  <span className="mt-2 block text-center text-[11px] font-bold leading-tight sm:text-xs" style={{ color: index === legacyStep ? c.accentText : c.textSoft }}>{label}</span>
+                </li>
+              ))}
+            </ol>
 
             <div hidden={legacyReview || (legacyMode === "quote" && legacyStep === 0)} className="grid gap-5 sm:grid-cols-2">
               <div>

@@ -133,7 +133,7 @@ function FormSection({
 }) {
   if (!collapsible) {
     return (
-      <section className="rounded-xl border p-4" style={{ borderColor: c.borderSubtle }}>
+      <section className="border-b pb-5" style={{ borderColor: c.borderSubtle }}>
         <h3 className="mb-3 flex items-center text-base font-black">{title}</h3>
         {description ? (
           <p className="mb-3 text-sm leading-relaxed" style={{ color: c.textSoft }}>
@@ -147,7 +147,7 @@ function FormSection({
 
   return (
     <details
-      className="group/section rounded-xl border p-4"
+      className="group/section border-b pb-4"
       style={{ borderColor: c.borderSubtle }}
       open={open}
       onToggle={(event) => onToggle?.(event.currentTarget.open)}
@@ -219,6 +219,9 @@ export default function PortfolioStructuredCommissionForm({
   const retryUntilRef = useRef(0);
   const waitingToRetry = retrySeconds > 0;
   const lastStep = state.inquiryMode === "quote" ? 2 : 1;
+  const stepLabels = state.inquiryMode === "quote"
+    ? ["制作内容", "条件・連絡先", "確認・送信"]
+    : ["ご相談内容", "確認・送信"];
   const stepTitle = step === lastStep ? "内容を確認して送信" : state.inquiryMode === "consultation"
     ? "ご相談内容を教えてください" : step === 0 ? "どんなイラストをご希望ですか？" : "ご希望の条件と連絡先";
 
@@ -607,8 +610,7 @@ export default function PortfolioStructuredCommissionForm({
     <details key="optional"
         open={state.inquiryMode === "quote" || optionalOpen}
         onToggle={(event) => { if (state.inquiryMode === "consultation") setOptionalOpen(event.currentTarget.open); }}
-        className="group/optional rounded-xl border p-4"
-        style={{ borderColor: c.borderSubtle }}
+        className="group/optional"
       >
         <summary className="pf-cute-focus flex min-h-[44px] cursor-pointer list-none items-center gap-2 font-bold [&::-webkit-details-marker]:hidden">
           {state.inquiryMode === "quote" ? "詳しい内容" : massProductionSelected ? <>量産イラストの依頼内容<RequiredBadge /></> : <>詳しい条件を追加する<OptionalBadge /></>}
@@ -1515,22 +1517,29 @@ export default function PortfolioStructuredCommissionForm({
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-bold" style={{ color: c.accentText }}>
-            {state.inquiryMode === "consultation" ? `${step + 1} / 2` : `${step + 1} / 3`}
+            ステップ {step + 1} / {stepLabels.length}
           </p>
           <h3 className="mt-1 text-lg font-black" tabIndex={-1}>{stepTitle}</h3>
         </div>
         {step > 0 && <button type="button" onClick={() => setStep((current) => current - 1)} className="pf-cute-focus min-h-[44px] text-sm font-bold underline">戻る</button>}
       </div>
-      <div className="flex gap-2" aria-label={`進行状況 ${step + 1} / ${lastStep + 1}`}>
-        {Array.from({ length: lastStep + 1 }, (_, index) => <span key={index} className="h-1 flex-1 rounded-full" style={{ background: index <= step ? c.formBorderActive : c.borderSubtle }} />)}
-      </div>
+      <ol className="flex gap-2" aria-label={`進行状況 ${step + 1} / ${stepLabels.length}`}>
+        {stepLabels.map((label, index) => (
+          <li key={label} className="min-w-0 flex-1" aria-current={index === step ? "step" : undefined}>
+            <span className="block h-1 rounded-full" style={{ background: index <= step ? c.formBorderActive : c.borderSubtle }} />
+            <span className="mt-2 block text-center text-[11px] font-bold leading-tight sm:text-xs" style={{ color: index === step ? c.accentText : c.textSoft }}>
+              {label}
+            </span>
+          </li>
+        ))}
+      </ol>
       {step !== lastStep && (
-        <fieldset className="rounded-xl border p-3" style={{ borderColor: c.borderSubtle }}>
-          <legend className={labelClass}>ご希望</legend>
-          <div className="grid gap-2 sm:grid-cols-2">
+        <fieldset className="border-b pb-3" style={{ borderColor: c.borderSubtle }}>
+          <legend className="text-xs font-bold" style={{ color: c.textSoft }}>ご希望</legend>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
             {(["consultation", "quote"] as const).map((mode) => (
-              <label key={mode} className="pf-cute-focus flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold"
-                style={{ borderColor: state.inquiryMode === mode ? c.formBorderActive : c.formBorder, color: state.inquiryMode === mode ? c.formBorderActive : c.textSoft }}>
+              <label key={mode} className="pf-cute-focus inline-flex min-h-[44px] cursor-pointer items-center gap-2 text-sm font-bold"
+                style={{ color: state.inquiryMode === mode ? c.formBorderActive : c.textSoft }}>
                 <input type="radio" name="inquiryMode" value={mode} checked={state.inquiryMode === mode} onChange={() => changeMode(mode)} className="pf-choice-control h-4 w-4 shrink-0" />
                 {NATORI_INQUIRY_MODE_LABELS_V1[mode]}
               </label>
@@ -1557,7 +1566,7 @@ export default function PortfolioStructuredCommissionForm({
       <div hidden={step === lastStep || (state.inquiryMode === "quote" && step !== 0)}>{messageSection}</div>
       <div hidden={step === lastStep}>{optionalSection}</div>
       {step === lastStep && (
-        <section className="space-y-4 rounded-xl border p-4" style={{ borderColor: c.borderSubtle }}>
+        <section className="space-y-4">
           <p className="text-sm" style={{ color: c.textSoft }}>内容をご確認ください。各項目は「修正する」から戻れます。</p>
           <div className="border-b pb-3" style={{ borderColor: c.borderSubtle }}>
             <div className="flex justify-between gap-3"><b>ご相談・制作内容</b><button type="button" className="pf-cute-focus text-sm underline" onClick={() => setStep(0)}>修正する</button></div>
