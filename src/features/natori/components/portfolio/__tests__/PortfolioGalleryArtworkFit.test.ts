@@ -21,8 +21,10 @@ describe("PortfolioGallery artwork fit", () => {
     expect(stylesSource).toContain("radial-gradient(circle at 22% 18%");
   });
 
-  it("既存の3:4カード比率と2列/3列レイアウトを維持する", () => {
+  it("縦長作品は3:4、横長作品は横幅いっぱいで見せる", () => {
     expect(gallerySource).toContain("aspect-[3/4]");
+    expect(gallerySource).toContain("aspect-video");
+    expect(gallerySource).toContain("col-span-2 lg:col-span-3");
     expect(gallerySource).toContain("grid grid-cols-2");
     expect(gallerySource).toContain("lg:grid-cols-3");
   });

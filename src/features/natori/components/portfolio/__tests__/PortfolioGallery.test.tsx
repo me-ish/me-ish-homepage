@@ -35,6 +35,30 @@ const collections = [
 beforeEach(() => vi.clearAllMocks());
 
 describe("PortfolioGallery collections", () => {
+  it("横長画像はカードを全幅にし、縦長画像は通常の比率を保つ", () => {
+    render(
+      <PortfolioGallery
+        collections={collections}
+        works={[
+          work("wide", { image: "https://example.com/wide.webp" }),
+          work("tall", { image: "https://example.com/tall.webp" }),
+        ]}
+      />,
+    );
+
+    const wideImage = screen.getByRole("img", { name: "作品wide" });
+    const tallImage = screen.getByRole("img", { name: "作品tall" });
+    Object.defineProperties(wideImage, { naturalWidth: { value: 1600 }, naturalHeight: { value: 900 } });
+    Object.defineProperties(tallImage, { naturalWidth: { value: 900 }, naturalHeight: { value: 1600 } });
+    fireEvent.load(wideImage);
+    fireEvent.load(tallImage);
+
+    expect(wideImage.closest(".pf-pin-card")?.className).toContain("col-span-2 lg:col-span-3");
+    expect(wideImage.parentElement?.className).toContain("aspect-video");
+    expect(tallImage.closest(".pf-pin-card")?.className).not.toContain("col-span-2");
+    expect(tallImage.parentElement?.className).toContain("aspect-[3/4]");
+  });
+
   it("編集画面の保存順を維持したまま初期6件・全件表示・カテゴリ絞り込みを切り替える", () => {
     render(
       <PortfolioGallery

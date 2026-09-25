@@ -391,6 +391,7 @@ function PortfolioWorkCard({
   flatPlaceholder?: boolean;
   onSelect: (work: PortfolioWork, collectionName: string, trigger: HTMLButtonElement) => void;
 }) {
+  const [landscape, setLandscape] = useState(false);
   const palette = placeholderPalettes[index % placeholderPalettes.length];
   const rotate = workRotations[index % workRotations.length];
   const tapeAngle = index % 2 === 0 ? -4 : 3;
@@ -398,7 +399,7 @@ function PortfolioWorkCard({
 
   return (
     <div
-      className={`pf-pin-card ${rotate} relative min-w-0 rounded-xl p-2 pb-3 pt-4 sm:p-3 sm:pb-4 sm:pt-5`}
+      className={`pf-pin-card ${rotate} relative min-w-0 rounded-xl p-2 pb-3 pt-4 sm:p-3 sm:pb-4 sm:pt-5 ${landscape ? "col-span-2 lg:col-span-3" : ""}`}
       style={{
         background: c.surface,
         boxShadow: `0 10px 20px ${c.shadowSoft}`,
@@ -413,7 +414,7 @@ function PortfolioWorkCard({
             : undefined
         }
         aria-label={work.image ? `${work.title} を拡大表示` : undefined}
-        className={`pf-cute-focus relative mb-3 flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-lg ${
+        className={`pf-cute-focus relative mb-3 flex w-full items-center justify-center overflow-hidden rounded-lg ${landscape ? "aspect-video lg:max-h-[32rem]" : "aspect-[3/4]"} ${
           work.image ? "cursor-zoom-in" : "cursor-default"
         }`}
         style={{ background: c.surfaceSubtle }}
@@ -423,8 +424,11 @@ function PortfolioWorkCard({
             src={work.image}
             alt={work.title}
             fill
-            sizes="(min-width: 1024px) 352px, (min-width: 640px) calc(50vw - 36px), calc(50vw - 44px)"
+            sizes={landscape
+              ? "(min-width: 1024px) 1120px, calc(100vw - 40px)"
+              : "(min-width: 1024px) 352px, (min-width: 640px) calc(50vw - 36px), calc(50vw - 44px)"}
             className="object-cover"
+            onLoad={(event) => setLandscape(event.currentTarget.naturalWidth > event.currentTarget.naturalHeight)}
           />
         ) : flatPlaceholder ? (
           <span

@@ -193,7 +193,8 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
               <span
                 className="block h-2.5 w-2.5 rounded-full transition-transform"
                 style={{
-                  background: index === activeIndex ? c.actionDisplay : c.borderSubtle,
+                  background: c.action,
+                  opacity: index === activeIndex ? 1 : 0.25,
                   transform: index === activeIndex ? "scale(1.2)" : undefined,
                 }}
                 aria-hidden="true"

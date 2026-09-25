@@ -77,7 +77,12 @@ describe("PF-01 portfolio information architecture", () => {
       { href: "/natori/portfolio/contact?mode=consultation", label: "まず相談したい" },
       { href: "/natori/portfolio/contact?mode=quote", label: "見積もりをお願いしたい" },
     ]);
-    expect((screen.getByRole("link", { name: "見積もりをお願いしたい" }) as HTMLElement).style.borderColor).toBe("rgb(255, 176, 28)");
+    const consult = screen.getByRole("link", { name: "まず相談したい" }) as HTMLElement;
+    const quote = screen.getByRole("link", { name: "見積もりをお願いしたい" }) as HTMLElement;
+    expect(consult.style.borderColor).toBe("rgb(236, 72, 153)");
+    expect(consult.style.backgroundColor).toBe("rgb(255, 255, 255)");
+    expect(quote.style.borderColor).toBe("rgb(236, 72, 153)");
+    expect(quote.style.backgroundColor).toBe("rgb(236, 72, 153)");
     for (const { href } of uniqueNavLinks()) {
       if (href.startsWith("#")) expect(document.querySelector(href)).not.toBeNull();
     }

@@ -70,8 +70,8 @@ export default function PortfolioLanding({
               {content.commissionOpen ? "イメージが決まっていなくても大丈夫。まずは気軽にお話を聞かせてください。" : "現在コミッションは停止中です。再開まで今しばらくお待ちください。"}
             </p>
             {content.commissionOpen && <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-              <a href={`${contactPath}?mode=consultation${demoStructuredQuery}`} className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-full border-2 px-6 py-2 font-bold" style={{ borderColor: c.action, background: c.action, color: c.onAction }}>まず相談したい</a>
-              <a href={`${contactPath}?mode=quote${demoStructuredQuery}`} className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-full border-2 px-6 py-2 font-bold" style={{ borderColor: c.highlightBorder, background: c.surface, color: c.text }}>見積もりをお願いしたい</a>
+              <a href={`${contactPath}?mode=consultation${demoStructuredQuery}`} className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-full border-2 px-6 py-2 font-bold" style={{ borderColor: c.action, background: c.surface, color: c.text }}>まず相談したい</a>
+              <a href={`${contactPath}?mode=quote${demoStructuredQuery}`} className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-full border-2 px-6 py-2 font-bold" style={{ borderColor: c.action, background: c.action, color: c.onAction }}>見積もりをお願いしたい</a>
             </div>}
           </section>
           {content.commissionOpen ? <PortfolioMobileCta href={directContactPath} /> : null}
