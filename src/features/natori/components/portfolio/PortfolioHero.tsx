@@ -85,18 +85,18 @@ export default function PortfolioHero({
               {variant === "showcase" ? null : (
                 <PortfolioHeroPrimaryCta
                   href={contactPath}
-                  className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-xl border-2 px-6 py-3 text-base font-black hover:brightness-95"
+                  className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-full border-2 px-6 py-3 text-base font-black hover:brightness-95"
                   style={{
                     background: c.action,
-                    borderColor: c.actionDisplay,
+                    borderColor: c.action,
                     color: c.onAction,
                   }}
                 />
               )}
               <a
                 href="#gallery"
-                className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-xl border-2 px-6 py-3 font-bold"
-                style={{ background: c.surface, borderColor: c.actionDisplay, color: c.text }}
+                className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-full border-2 px-6 py-3 font-bold"
+                style={{ background: c.surface, borderColor: c.action, color: c.text }}
               >
                 作品を見る
               </a>

@@ -35,9 +35,9 @@ export const portfolioColors = {
   accentText: "#367A8B",
   accentHover: "#4D93A2",
   accentSoft: "#EEF9FA",
-  /** CTA・番号の面に使うパステルピンク。 */
-  action: "#E66AA9",
-  actionText: "#E66AA9",
+  /** CTA・番号・HEROのアクセントに使うブランドピンク。 */
+  action: "#EC4899",
+  actionText: "#EC4899",
   /** ピンク面の枠に使う一段濃いピンク。 */
   actionDisplay: "#C94B89",
   onAction: "#FFFFFF",

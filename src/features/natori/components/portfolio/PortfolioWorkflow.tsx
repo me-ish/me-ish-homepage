@@ -27,7 +27,7 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioConte
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-base font-black"
                   style={{
                     background: c.action,
-                    borderColor: c.actionDisplay,
+                    borderColor: c.action,
                     color: c.onAction,
                   }}
                   aria-hidden="true"

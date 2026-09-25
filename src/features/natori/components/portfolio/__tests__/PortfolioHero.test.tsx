@@ -53,7 +53,7 @@ describe("PF-03 portfolio hero", () => {
     const heroTitle = screen.getByRole("heading", { level: 1, name: "ナトリのあとりえ" });
     const titleTail = heroTitle.querySelector("span.break-words") as HTMLElement;
     expect(titleTail.textContent).toBe(defaultPortfolioContent.heroTitleTail);
-    expect(titleTail.style.color).toBe("rgb(230, 106, 169)");
+    expect(titleTail.style.color).toBe("rgb(236, 72, 153)");
     expect(titleTail.querySelectorAll("span")).toHaveLength(0);
     const representativeImage = screen.getByRole("img", {
       name: `${defaultPortfolioContent.artistName}の代表作品`,
@@ -70,14 +70,16 @@ describe("PF-03 portfolio hero", () => {
 
     const primaryLink = screen.getByRole("link", { name: "相談・見積もり" });
     expect(primaryLink.getAttribute("href")).toBe("/natori/portfolio/contact");
-    expect((primaryLink as HTMLElement).style.background).toBe("rgb(230, 106, 169)");
-    expect((primaryLink as HTMLElement).style.borderColor).toBe("rgb(201, 75, 137)");
+    expect((primaryLink as HTMLElement).style.background).toBe("rgb(236, 72, 153)");
+    expect((primaryLink as HTMLElement).style.borderColor).toBe("rgb(236, 72, 153)");
     expect((primaryLink as HTMLElement).style.color).toBe("rgb(255, 255, 255)");
     expect(primaryLink.className).toContain("border-2");
+    expect(primaryLink.className).toContain("rounded-full");
     expect(primaryLink.className).toContain("text-base font-black");
     const worksLink = screen.getByRole("link", { name: "作品を見る" });
     expect(worksLink.getAttribute("href")).toBe("#gallery");
-    expect((worksLink as HTMLElement).style.borderColor).toBe("rgb(201, 75, 137)");
+    expect((worksLink as HTMLElement).style.borderColor).toBe("rgb(236, 72, 153)");
+    expect(worksLink.className).toContain("rounded-full");
 
     fireEvent.click(screen.getByRole("link", { name: "相談・見積もり" }));
     expect(trackNatoriPageEvent).toHaveBeenCalledWith(

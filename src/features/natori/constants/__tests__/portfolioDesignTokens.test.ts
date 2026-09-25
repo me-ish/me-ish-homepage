@@ -48,8 +48,8 @@ describe("PF-02 portfolio semantic colors", () => {
       textSoft: "#353038",
       formBorder: "#E8A9C6",
       formBorderActive: "#C94B89",
-      action: "#E66AA9",
-      actionText: "#E66AA9",
+      action: "#EC4899",
+      actionText: "#EC4899",
       actionDisplay: "#C94B89",
       onAction: "#FFFFFF",
       accent: "#A9DDE3",
@@ -142,8 +142,8 @@ describe("PF-02 portfolio semantic colors", () => {
   });
 
   it("uses one pastel-pop pink family for text, controls, outlines, and decoration", () => {
-    expect(portfolioColors.action).toBe("#E66AA9");
-    expect(portfolioColors.actionText).toBe("#E66AA9");
+    expect(portfolioColors.action).toBe("#EC4899");
+    expect(portfolioColors.actionText).toBe("#EC4899");
     expect(portfolioColors.actionDisplay).toBe("#C94B89");
     expect(portfolioColors.onAction).toBe("#FFFFFF");
     expect(portfolioDecorativeColors.sparkleWarm).toBe("#FFC6DE");

@@ -63,6 +63,7 @@ export default function PortfolioCommissionForm({
   fromPlan,
   initialPlan,
   initialPlanLabel,
+  hideHeading = false,
 }: {
   content: PortfolioContent;
   demoMode?: boolean;
@@ -72,6 +73,7 @@ export default function PortfolioCommissionForm({
   fromPlan?: boolean;
   initialPlan?: string;
   initialPlanLabel?: string;
+  hideHeading?: boolean;
 }) {
   const [status, setStatus] = useState<Status>("idle");
   const [autoReplied, setAutoReplied] = useState(true);
@@ -236,13 +238,13 @@ export default function PortfolioCommissionForm({
 
   return (
     <section
-      className="py-5"
+      className={hideHeading ? "pb-5 pt-3" : "py-5"}
       style={{ background: c.page }}
       onInputCapture={trackFormStart}
       onChangeCapture={trackFormStart}
     >
       <div className="mx-auto max-w-2xl px-5">
-        <h2 className="mb-2 text-center text-2xl font-black md:text-3xl">ご依頼フォーム</h2>
+        {!hideHeading && <h2 className="mb-2 text-center text-2xl font-black md:text-3xl">ご依頼フォーム</h2>}
         <p
           className={`${tsunaguLink ? "mb-2" : "mb-8"} text-center`}
           style={{ color: c.textSoft }}

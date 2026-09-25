@@ -1,7 +1,5 @@
 // features/natori/components/portfolio/PortfolioGuidelines.tsx
 // ご依頼前の確認事項。規約本文は別ページに分離し、ここでは意思決定に必要な要点だけを見せる。
-import Link from "next/link";
-
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
@@ -30,12 +28,6 @@ const DEFAULT_REQUEST_GROUPS = [
     title: "禁止事項",
     items: ["自作発言・AI学習は禁止しております"],
   },
-] as const;
-
-const legalLinks = [
-  { href: "/natori/legal/terms", label: "ご依頼規約" },
-  { href: "/natori/legal/privacy", label: "プライバシーポリシー" },
-  { href: "/natori/legal/tokushoho", label: "特定商取引法に基づく表記" },
 ] as const;
 
 type GuidelineGroup = {
@@ -111,29 +103,6 @@ export default function PortfolioGuidelines({ content }: { content: PortfolioCon
           })}
         </div>
 
-        <div
-          className="mt-4 rounded-2xl border p-5 text-sm md:flex md:items-center md:justify-between md:gap-6 md:text-base"
-          style={{ background: c.accentSoft, borderColor: c.borderStrong }}
-        >
-          <div className="mb-3 md:mb-0">
-            <p className="font-black">詳しい条件はこちら</p>
-            <p className="mt-1 text-sm leading-relaxed" style={{ color: c.textSoft }}>
-              お支払い・個人情報の取り扱いなど、詳細は各ページをご確認ください。
-            </p>
-          </div>
-          <nav aria-label="ご依頼に関する規約" className="flex flex-wrap gap-2 md:justify-end">
-            {legalLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="rounded-full border-2 px-3 py-2 text-sm font-bold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                style={{ borderColor: c.borderStrong, color: c.accentText }}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
       </div>
     </section>
   );

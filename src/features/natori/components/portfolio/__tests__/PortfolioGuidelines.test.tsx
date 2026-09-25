@@ -29,12 +29,12 @@ describe("PF-01 guideline responsibility split", () => {
     expect(firstStepNumber.className).toContain("h-10 w-10");
     expect(firstStepNumber.className).toContain("text-base font-black");
     expect(firstStepNumber.className).toContain("border-2");
-    expect(firstStepNumber.style.background).toBe("rgb(230, 106, 169)");
-    expect(firstStepNumber.style.borderColor).toBe("rgb(201, 75, 137)");
+    expect(firstStepNumber.style.background).toBe("rgb(236, 72, 153)");
+    expect(firstStepNumber.style.borderColor).toBe("rgb(236, 72, 153)");
     expect(firstStepNumber.style.color).toBe("rgb(255, 255, 255)");
   });
 
-  it("groups request guidance for pre-request review and links to legal details", () => {
+  it("groups request guidance without the extra legal-details panel", () => {
     render(<PortfolioGuidelines content={defaultPortfolioContent} />);
     const requests = document.getElementById("requests") as HTMLElement;
 
@@ -56,17 +56,8 @@ describe("PF-01 guideline responsibility split", () => {
       expect(within(requests).getByText(request)).toBeTruthy();
     }
 
-    expect(within(requests).getByRole("link", { name: "ご依頼規約" }).getAttribute("href")).toBe(
-      "/natori/legal/terms"
-    );
-    expect(
-      within(requests).getByRole("link", { name: "プライバシーポリシー" }).getAttribute("href")
-    ).toBe("/natori/legal/privacy");
-    expect(
-      within(requests)
-        .getByRole("link", { name: "特定商取引法に基づく表記" })
-        .getAttribute("href")
-    ).toBe("/natori/legal/tokushoho");
+    expect(within(requests).queryByText("詳しい条件はこちら")).toBeNull();
+    expect(within(requests).queryByRole("navigation", { name: "ご依頼に関する規約" })).toBeNull();
     expect(screen.queryByRole("heading", { name: /FAQ/i })).toBeNull();
   });
 
