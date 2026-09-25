@@ -27,8 +27,8 @@ describe("PortfolioMobileCta analytics", () => {
     expect(cta.className).toContain("text-sm font-black");
     expect(cta.className).toContain("shadow-md");
     expect(cta.className).toContain("border-2");
-    expect(cta.style.background).toBe("rgb(230, 106, 169)");
-    expect(cta.style.borderColor).toBe("rgb(201, 75, 137)");
+    expect(cta.style.background).toBe("rgb(236, 72, 153)");
+    expect(cta.style.borderColor).toBe("rgb(236, 72, 153)");
     expect(cta.style.color).toBe("rgb(255, 255, 255)");
     fireEvent.click(cta);
     expect(trackNatoriPageEvent).toHaveBeenCalledWith(
