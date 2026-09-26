@@ -60,6 +60,18 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
     if (activeIndex >= slides.length) setActiveIndex(0);
   }, [activeIndex, slides.length]);
 
+  useEffect(() => {
+    if (!animating) return;
+    // Some browsers omit transitionend when a tab is hidden mid-animation.
+    const fallback = window.setTimeout(() => {
+      if (pendingIndex !== null) setActiveIndex(pendingIndex);
+      setPendingIndex(null);
+      setDragX(0);
+      setAnimating(false);
+    }, 500);
+    return () => window.clearTimeout(fallback);
+  }, [animating, pendingIndex]);
+
   if (slides.length === 0) return null;
 
   const hasMultiple = slides.length > 1;
@@ -79,7 +91,7 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
   };
 
   const settleTransition = (event: React.TransitionEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget || event.propertyName !== "transform") return;
+    if (event.target !== event.currentTarget || (event.propertyName && event.propertyName !== "transform")) return;
     if (pendingIndex !== null) setActiveIndex(pendingIndex);
     setPendingIndex(null);
     setDragX(0);
