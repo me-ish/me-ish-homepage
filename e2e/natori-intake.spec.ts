@@ -60,11 +60,16 @@ test.describe("Natori public intake rollout", () => {
     await expect(page.getByLabel("ご依頼の種類")).toBeVisible();
     await expect(page.getByLabel("ご予算")).toBeHidden();
     await page.getByRole("button", { name: "条件・連絡先へ" }).click();
+    await expect(page.getByRole("heading", { name: "ご希望の条件と連絡先" })).toBeFocused();
     await expect(page.getByLabel("ご予算")).toBeVisible();
     await expect(page.getByLabel(/お名前/)).toBeVisible();
     await fillContact(page, "quote");
+    await page.getByLabel("商用利用").selectOption("yes");
+    await page.getByLabel(/作品の公開可否/).selectOption("fully_private");
     await page.getByRole("button", { name: "内容を確認する" }).click();
-    await expect(page.getByText("用途・予算・納期")).toBeVisible();
+    await expect(page.getByText("用途・条件")).toBeVisible();
+    await expect(page.getByText("商用利用：商用利用する")).toBeVisible();
+    await expect(page.getByText("実績掲載：完全非公開")).toBeVisible();
     await page.getByRole("button", { name: "見積もりを依頼する" }).click();
     await expect(page.getByRole("heading", { name: "送信ありがとうございます!" })).toBeVisible();
   });
