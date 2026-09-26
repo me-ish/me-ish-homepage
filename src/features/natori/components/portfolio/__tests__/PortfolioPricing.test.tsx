@@ -16,6 +16,11 @@ afterEach(() => {
 });
 
 describe("PortfolioPricing", () => {
+  it("膝・腰上プランの範囲を正確に示し、非公開オプションの違いを説明する", () => {
+    render(<PortfolioPricing content={defaultPortfolioContent} />);
+    expect(screen.getAllByText("膝・腰上から上のフルカラーイラスト")).toHaveLength(2);
+    expect(screen.getByText(/ご依頼内容も非公開で対応します/)).toBeTruthy();
+  });
   it("shows each fixed plan price as a starting price without altering ranges", () => {
     render(
       <PortfolioPricing

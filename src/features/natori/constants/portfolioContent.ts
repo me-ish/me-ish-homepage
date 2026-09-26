@@ -198,7 +198,7 @@ export const defaultPortfolioContent: PortfolioContent = {
       id: PORTFOLIO_PLAN_IDS.waistUp,
       name: "膝〜腰上",
       price: "6,000円",
-      desc: "膝〜腰上までのフルカラーイラスト",
+      desc: "膝・腰上から上のフルカラーイラスト",
       features: ["リテイク2回まで無料", "簡単な小物・簡易背景無料"],
     },
     {

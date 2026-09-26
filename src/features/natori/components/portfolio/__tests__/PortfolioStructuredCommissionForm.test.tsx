@@ -651,6 +651,25 @@ describe("server error の表示", () => {
 });
 
 describe("アクセシビリティ / モバイル想定 DOM", () => {
+  it("段階を進めたら新しい見出しへ移動し、確認画面に商用・公開条件を表示する", async () => {
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scrollIntoView });
+    renderForm();
+    await userEvent.click(screen.getByLabelText("見積もりを希望"));
+    await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
+    await waitFor(() => expect(document.activeElement?.textContent).toBe("ご希望の条件と連絡先"));
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
+
+    fireEvent.change(screen.getByLabelText(/お名前/), { target: { value: "テスト太郎" } });
+    fireEvent.change(screen.getByLabelText(/メールアドレス/), { target: { value: "client@example.com" } });
+    await userEvent.selectOptions(screen.getByLabelText("商用利用"), "yes");
+    await userEvent.selectOptions(screen.getByLabelText(/作品の公開可否/), "fully_private");
+    expect(screen.getByText(/ご依頼内容も非公開で対応します/)).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
+    expect(screen.getByText("商用利用：商用利用する")).toBeTruthy();
+    expect(screen.getByText("実績掲載：完全非公開")).toBeTruthy();
+  });
+
   it("相談と見積もりで残りの段階を示し、選択欄をコンパクトに表示する", async () => {
     renderForm();
     const consultationSteps = screen.getByRole("list", { name: "進行状況 1 / 2" });
@@ -736,7 +755,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     renderForm();
     await fillMinimum("SDキャラを相談したいです。");
     fireEvent(window, new CustomEvent(PLAN_SELECT_EVENT, { detail: { id: "sd", name: "SDキャラ" } }));
-    expect(detailsBySummary("詳しい内容").open).toBe(true);
+    expect(detailsBySummary("選べる詳細項目").open).toBe(true);
     expect(detailsBySummary("依頼の種類").open).toBe(true);
     expect((screen.getByLabelText("ご依頼の種類") as HTMLSelectElement).value).toBe("sd");
     expect((screen.getByLabelText("見積もりを希望") as HTMLInputElement).checked).toBe(true);
@@ -776,7 +795,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
 
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
 
-    expect(detailsBySummary("詳しい内容").open).toBe(true);
+    expect(detailsBySummary("選べる詳細項目").open).toBe(true);
     expect(detailsBySummary("依頼の種類").open).toBe(true);
     for (const title of [
       "用途・条件",
@@ -832,8 +851,9 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     const headings = screen.getAllByRole("heading", { level: 3 });
     expect(headings.length).toBeGreaterThanOrEqual(3);
     expect(headings.map((heading) => heading.textContent)).toEqual([
-      "ご相談内容を教えてください", "ご連絡先", "ご相談・ご依頼の内容",
+      "ご相談内容を教えてください", "ご連絡先", "ご相談内容",
     ]);
+    expect(screen.queryByText("ご相談・ご依頼の内容")).toBeNull();
     const message = screen.getByLabelText(/ご相談・ご依頼の内容/) as HTMLTextAreaElement;
     expect(message.required).toBe(true);
     expect(message.closest("details")).toBeNull();
