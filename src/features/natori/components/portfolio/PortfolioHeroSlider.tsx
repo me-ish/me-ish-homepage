@@ -18,6 +18,7 @@ type TouchOrigin = {
   identifier: number;
   x: number;
   y: number;
+  axis: "horizontal" | "vertical" | null;
 };
 
 export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] }) {
@@ -25,10 +26,16 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
   const [hovered, setHovered] = useState(false);
   const [focusWithin, setFocusWithin] = useState(false);
   const [touching, setTouching] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [dragX, setDragX] = useState(0);
+  const [animating, setAnimating] = useState(false);
+  const [pendingIndex, setPendingIndex] = useState<number | null>(null);
+  const [direction, setDirection] = useState<1 | -1>(1);
   const [reducedMotion, setReducedMotion] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const surfaceRef = useRef<HTMLDivElement | null>(null);
   const touchOriginRef = useRef<TouchOrigin | null>(null);
-  const paused = hovered || focusWithin || touching;
+  const paused = hovered || focusWithin || touching || dragging || animating;
 
   useEffect(() => {
     if (typeof window.matchMedia !== "function") return;
@@ -42,9 +49,11 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
   useEffect(() => {
     if (slides.length <= 1 || paused || reducedMotion) return;
     const timer = window.setInterval(() => {
-      setActiveIndex((current) => (current + 1) % slides.length);
+      startTransition((activeIndex + 1) % slides.length, 1);
     }, AUTOPLAY_INTERVAL_MS);
     return () => window.clearInterval(timer);
+    // The timer restarts after each completed slide, manual selection, or pause.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIndex, paused, reducedMotion, slides.length]);
 
   useEffect(() => {
@@ -53,15 +62,46 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
 
   if (slides.length === 0) return null;
 
-  const activeSlide = slides[activeIndex] ?? slides[0];
   const hasMultiple = slides.length > 1;
-  const goTo = (index: number) => setActiveIndex((index + slides.length) % slides.length);
+  const wrap = (index: number) => (index + slides.length) % slides.length;
+  const startTransition = (index: number, nextDirection: 1 | -1) => {
+    const target = wrap(index);
+    if (target === activeIndex || animating) return;
+    setDragging(false);
+    if (reducedMotion) {
+      setDragX(0);
+      setActiveIndex(target);
+      return;
+    }
+    setDirection(nextDirection);
+    setPendingIndex(target);
+    setAnimating(true);
+  };
+
+  const settleTransition = (event: React.TransitionEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget || event.propertyName !== "transform") return;
+    if (pendingIndex !== null) setActiveIndex(pendingIndex);
+    setPendingIndex(null);
+    setDragX(0);
+    setAnimating(false);
+  };
+
+  const snapBack = () => {
+    setDragging(false);
+    if (dragX !== 0 && !reducedMotion) {
+      setAnimating(true);
+      setDragX(0);
+    } else {
+      setDragX(0);
+    }
+  };
 
   const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
-    if (!hasMultiple) return;
+    if (!hasMultiple || animating) return;
     setTouching(event.touches.length > 0);
     if (event.touches.length !== 1) {
       touchOriginRef.current = null;
+      snapBack();
       return;
     }
     const touch = event.touches[0];
@@ -69,6 +109,7 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
       identifier: touch.identifier,
       x: touch.clientX,
       y: touch.clientY,
+      axis: null,
     };
   };
 
@@ -80,20 +121,41 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
       event.touches[0]?.identifier !== origin.identifier
     ) {
       touchOriginRef.current = null;
+      snapBack();
+      setTouching(event.touches.length > 0);
+      return;
     }
     setTouching(event.touches.length > 0);
+    const deltaX = event.touches[0].clientX - origin.x;
+    const deltaY = event.touches[0].clientY - origin.y;
+    if (origin.axis === null && Math.max(Math.abs(deltaX), Math.abs(deltaY)) > 8) {
+      origin.axis = Math.abs(deltaX) > Math.abs(deltaY) * SWIPE_DIRECTION_RATIO
+        ? "horizontal"
+        : "vertical";
+    }
+    if (origin.axis === "horizontal") {
+      setDragging(true);
+      const width = surfaceRef.current?.clientWidth ?? 0;
+      setDragX(width ? Math.max(-width, Math.min(width, deltaX)) : deltaX);
+    }
   };
 
   const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
     const origin = touchOriginRef.current;
     touchOriginRef.current = null;
     setTouching(event.touches.length > 0);
-    if (!origin || !hasMultiple) return;
+    if (!origin || !hasMultiple) {
+      snapBack();
+      return;
+    }
 
     const touch = Array.from(event.changedTouches).find(
       (changedTouch) => changedTouch.identifier === origin.identifier,
     );
-    if (!touch) return;
+    if (!touch) {
+      snapBack();
+      return;
+    }
 
     const deltaX = touch.clientX - origin.x;
     const deltaY = touch.clientY - origin.y;
@@ -102,22 +164,28 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
 
     if (
       horizontalDistance < SWIPE_THRESHOLD_PX ||
-      horizontalDistance <= verticalDistance * SWIPE_DIRECTION_RATIO
+      horizontalDistance <= verticalDistance * SWIPE_DIRECTION_RATIO ||
+      origin.axis === "vertical"
     ) {
+      snapBack();
       return;
     }
 
-    if (deltaX < 0) {
-      goTo(activeIndex + 1);
-      return;
-    }
-    goTo(activeIndex - 1);
+    startTransition(activeIndex + (deltaX < 0 ? 1 : -1), deltaX < 0 ? 1 : -1);
   };
 
   const cancelTouch = () => {
     touchOriginRef.current = null;
     setTouching(false);
+    snapBack();
   };
+
+  const previousSlide = slides[pendingIndex !== null && direction === -1 ? pendingIndex : wrap(activeIndex - 1)];
+  const activeSlide = slides[activeIndex] ?? slides[0];
+  const nextSlide = slides[pendingIndex !== null && direction === 1 ? pendingIndex : wrap(activeIndex + 1)];
+  const trackPosition = pendingIndex !== null
+    ? direction === 1 ? "-66.666667%" : "0%"
+    : `calc(-33.333333% + ${dragX}px)`;
 
   return (
     <div
@@ -137,6 +205,8 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
       }}
     >
       <div
+        ref={surfaceRef}
+        data-testid="hero-slide-surface"
         className="relative aspect-square touch-pan-y select-none overflow-hidden rounded-2xl border"
         style={{ background: c.surfaceSubtle, borderColor: c.borderSubtle }}
         onTouchStart={handleTouchStart}
@@ -144,22 +214,36 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
         onTouchEnd={handleTouchEnd}
         onTouchCancel={cancelTouch}
       >
-        <Image
-          key={activeSlide.src}
-          src={activeSlide.src}
-          alt={activeSlide.alt}
-          fill
-          priority={activeIndex === 0}
-          sizes="(min-width: 1024px) 512px, (min-width: 768px) 46vw, calc(100vw - 40px)"
-          className="pointer-events-none object-contain"
-          draggable={false}
-        />
+        <div
+          data-testid="hero-slide-track"
+          className="absolute inset-y-0 left-0 flex w-[300%]"
+          style={{
+            transform: `translate3d(${trackPosition}, 0, 0)`,
+            transition: animating ? "transform 420ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
+          }}
+          onTransitionEnd={settleTransition}
+        >
+          {[previousSlide, activeSlide, nextSlide].map((slide, slot) => (
+            <div key={`${slot}-${slide.src}`} className="relative h-full w-1/3 shrink-0" aria-hidden={slot !== 1}>
+              <Image
+                src={slide.src}
+                alt={slot === 1 ? slide.alt : ""}
+                fill
+                priority={slot === 1 && activeIndex === 0}
+                loading={slot === 1 && activeIndex === 0 ? undefined : "eager"}
+                sizes="(min-width: 1024px) 512px, (min-width: 768px) 46vw, calc(100vw - 40px)"
+                className="pointer-events-none object-contain"
+                draggable={false}
+              />
+            </div>
+          ))}
+        </div>
 
         {hasMultiple ? (
           <>
             <button
               type="button"
-              onClick={() => goTo(activeIndex - 1)}
+              onClick={() => startTransition(activeIndex - 1, -1)}
               className="pf-cute-focus absolute left-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border bg-white/90 shadow-sm backdrop-blur hover:bg-white"
               style={{ borderColor: c.borderSubtle, color: c.text }}
               aria-label="前の作品"
@@ -168,7 +252,7 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
             </button>
             <button
               type="button"
-              onClick={() => goTo(activeIndex + 1)}
+              onClick={() => startTransition(activeIndex + 1, 1)}
               className="pf-cute-focus absolute right-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border bg-white/90 shadow-sm backdrop-blur hover:bg-white"
               style={{ borderColor: c.borderSubtle, color: c.text }}
               aria-label="次の作品"
@@ -185,7 +269,7 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
             <button
               key={`${slide.src}-${index}`}
               type="button"
-              onClick={() => goTo(index)}
+              onClick={() => startTransition(index, index > activeIndex ? 1 : -1)}
               className="pf-cute-focus grid h-8 w-8 place-items-center rounded-full"
               aria-label={`${index + 1}枚目を表示`}
               aria-current={index === activeIndex ? "true" : undefined}
