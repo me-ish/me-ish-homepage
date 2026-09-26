@@ -3,7 +3,7 @@
 // features/natori/components/portfolio/PortfolioPricing.tsx
 // コミッション料金。通常プランはスマホでも説明を確認しつつ比較しやすい密度で表示し、
 // CTA からフォームへスクロールしつつ依頼種別 / 制作範囲を自動で合わせる。
-import { planChoiceLabel, portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import { PORTFOLIO_OPTION_IDS, planChoiceLabel, portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import { NATORI_MASS_PRODUCTION_BASE_AMOUNT } from "@/features/natori/constants/portfolioPricing";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import { NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE } from "@/features/natori/lib/portfolioRequestForm";
@@ -16,6 +16,12 @@ function startingPriceLabel(price: string): string {
 
 function yen(amount: number): string {
   return `${amount.toLocaleString("ja-JP")}円`;
+}
+
+function planDescription(description: string): string {
+  return description === "膝〜腰上までのフルカラーイラスト"
+    ? "膝・腰上から上のフルカラーイラスト"
+    : description;
 }
 
 export default function PortfolioPricing({ content, contactPath = "/natori/portfolio/contact", structuredIntake = false }: { content: PortfolioContent; contactPath?: string; structuredIntake?: boolean }) {
@@ -76,7 +82,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
               <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-xs leading-5" style={{ color: c.textSoft }}>
-                    {plan.desc}
+                    {planDescription(plan.desc)}
                   </p>
                   {planSpecificFeatures.length > 0 ? (
                     <ul className="mt-0.5 space-y-0.5 text-[11px] leading-4">
@@ -123,7 +129,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
             </p>
             <div className="mb-6 flex-1">
               <p className="text-sm" style={{ color: c.textSoft }}>
-                {plan.desc}
+                {planDescription(plan.desc)}
               </p>
               {plan.features.some((feature) => !commonFeatures.includes(feature)) && (
                 <ul className="mt-4 space-y-1.5 text-sm">
@@ -260,6 +266,13 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
             </li>
           ))}
         </ul>
+        {content.options.some((option) => option.id === PORTFOLIO_OPTION_IDS.sampleUsageDenied || option.id === PORTFOLIO_OPTION_IDS.privateWork) ? (
+          <details className="mt-3 text-sm leading-relaxed" style={{ color: c.textSoft }}>
+            <summary className="pf-cute-focus min-h-[44px] cursor-pointer py-2 font-bold underline">非公開オプションの違い</summary>
+            <p className="mt-2"><b>サンプル使用不可：</b>完成イラストをポートフォリオ・SNS・サンプル画像等へ掲載しません。</p>
+            <p className="mt-2"><b>完全非公開：</b>制作内容・完成イラストを含め一切公開せず、ご依頼内容も非公開で対応します。</p>
+          </details>
+        ) : null}
       </div>
     </section>
   );

@@ -21,12 +21,12 @@ describe("PortfolioGallery artwork fit", () => {
     expect(stylesSource).toContain("radial-gradient(circle at 22% 18%");
   });
 
-  it("縦長作品は3:4、横長作品は横幅いっぱいで見せる", () => {
+  it("縦長作品は3:4、横長作品はスマホ1列・PC2列で見せる", () => {
     expect(gallerySource).toContain("aspect-[3/4]");
     expect(gallerySource).toContain("aspect-video");
     expect(gallerySource).toContain("col-span-2 lg:col-span-3");
     expect(gallerySource).toContain("grid grid-cols-2");
-    expect(gallerySource).toContain("lg:grid-cols-3");
+    expect(gallerySource).toContain("lg:grid-cols-6");
   });
 
   it("拡大モーダルは従来どおりobject-containを維持する", () => {

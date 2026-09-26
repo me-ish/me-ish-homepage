@@ -23,6 +23,10 @@ import PortfolioWorkRelatedLinks from "./PortfolioWorkRelatedLinks";
 
 const GALLERY_PREVIEW_LIMIT = 6;
 
+function collectionLabel(name: string): string {
+  return name === "卵商品" ? "つなぐ 卵商品" : name;
+}
+
 function formatProductionMonth(value?: string | null): string | null {
   if (!value) return null;
   const [year, month] = value.split("-");
@@ -217,13 +221,13 @@ export default function PortfolioGallery({
                   color: c.text,
                 }}
               >
-                {collection.name}
+                  {collectionLabel(collection.name)}
               </button>
             ))}
           </div>
           <div className="mb-6" style={{ color: c.textSoft }}>
             <p role="status" className="text-sm">
-              {activeCollection?.collection.name ?? "すべての作品"}：{filteredWorks.length}作品中{shownWorks.length}作品を表示
+              {activeCollection ? collectionLabel(activeCollection.collection.name) : "すべての作品"}：{filteredWorks.length}作品中{shownWorks.length}作品を表示
             </p>
             {shownWorks.some(({ work }) => work.image) ? (
               <p className="mt-1 text-xs">画像をタップ・クリックで拡大できます。</p>
@@ -232,7 +236,7 @@ export default function PortfolioGallery({
           {activeCollection?.collection.description ? (
             <p className="mb-6 text-sm" style={{ color: c.textSoft }}>{activeCollection.collection.description}</p>
           ) : null}
-          <div id="portfolio-gallery-results" className="grid grid-cols-2 gap-x-4 gap-y-8 pt-2 sm:gap-x-8 sm:gap-y-10 lg:grid-cols-3">
+          <div id="portfolio-gallery-results" className="grid grid-cols-2 gap-x-4 gap-y-8 pt-2 sm:gap-x-8 sm:gap-y-10 lg:grid-cols-6">
             {shownWorks.map(({ work, collection }, index) => (
               <PortfolioWorkCard
                 key={work.id}
@@ -399,7 +403,7 @@ function PortfolioWorkCard({
 
   return (
     <div
-      className={`pf-pin-card ${rotate} relative min-w-0 rounded-xl p-2 pb-3 pt-4 sm:p-3 sm:pb-4 sm:pt-5 ${landscape ? "col-span-2 lg:col-span-3" : ""}`}
+      className={`pf-pin-card ${rotate} relative min-w-0 rounded-xl p-2 pb-3 pt-4 sm:p-3 sm:pb-4 sm:pt-5 ${landscape ? "col-span-2 lg:col-span-3" : "lg:col-span-2"}`}
       style={{
         background: c.surface,
         boxShadow: `0 10px 20px ${c.shadowSoft}`,
@@ -425,7 +429,7 @@ function PortfolioWorkCard({
             alt={work.title}
             fill
             sizes={landscape
-              ? "(min-width: 1024px) 1120px, calc(100vw - 40px)"
+              ? "(min-width: 1024px) 540px, calc(100vw - 40px)"
               : "(min-width: 1024px) 352px, (min-width: 640px) calc(50vw - 36px), calc(50vw - 44px)"}
             className="object-cover"
             onLoad={(event) => setLandscape(event.currentTarget.naturalWidth > event.currentTarget.naturalHeight)}
@@ -459,7 +463,7 @@ function PortfolioWorkCard({
             className="rounded-full px-2 py-1 text-xs font-bold"
             style={{ background: collection.color, color: c.text }}
           >
-            {collection.name}
+              {collectionLabel(collection.name)}
           </span>
           {publicTags.map((tag) => (
             <span

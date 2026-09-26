@@ -213,6 +213,7 @@ export default function PortfolioStructuredCommissionForm({
   });
   const refFileInputRef = useRef<HTMLInputElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const stepHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const sendingRef = useRef(false);
   const [focusTarget, setFocusTarget] = useState<{ id: string } | null>(null);
   const [retrySeconds, setRetrySeconds] = useState(0);
@@ -268,6 +269,17 @@ export default function PortfolioStructuredCommissionForm({
   const publicationOptions = content.options.filter((option) =>
     option.id === PORTFOLIO_OPTION_IDS.sampleUsageDenied || option.id === PORTFOLIO_OPTION_IDS.privateWork
   );
+  const publicationPrice = (id: string) => publicationOptions.find((option) => option.id === id)?.price;
+
+  const goToStep = (next: number) => {
+    setStep(next);
+    const positionStep = () => {
+      stepHeadingRef.current?.scrollIntoView?.({ block: "start" });
+      stepHeadingRef.current?.focus({ preventScroll: true });
+    };
+    if (typeof window.requestAnimationFrame === "function") window.requestAnimationFrame(positionStep);
+    else window.setTimeout(positionStep, 0);
+  };
 
   const openErrorSections = (errors: ServerFieldError[]) => {
     const sections = errors.map((error) => portfolioErrorTarget(error.path, state, optionChoices).section);
@@ -369,8 +381,7 @@ export default function PortfolioStructuredCommissionForm({
     if (state.inquiryMode === "quote" && step === 0) {
       setOpenSections((current) => ({ ...current, usage: true, budget: true }));
     }
-    setStep((current) => Math.min(current + 1, lastStep));
-    formRef.current?.closest('[data-inquiry-scroll]')?.scrollTo({ top: 0 });
+    goToStep(Math.min(step + 1, lastStep));
   };
 
   const serverErrorFor = (path: string) =>
@@ -579,13 +590,14 @@ export default function PortfolioStructuredCommissionForm({
   ];
 
   const messageSection = (
-    <FormSection key="message" title="ご相談・ご依頼の内容">
+    <FormSection key="message" title={state.inquiryMode === "quote" ? "描いてほしいもの・相談したいこと" : "ご相談内容"}>
         <div>
           <label htmlFor="pf-message" className={labelClass}>
-            ご相談・ご依頼の内容{messageRequired ? <RequiredBadge /> : <OptionalBadge />}
+            内容{messageRequired ? <RequiredBadge /> : <OptionalBadge />}
           </label>
           <textarea
             id="pf-message"
+            aria-label={`ご相談・ご依頼の内容${messageRequired ? "必須" : "任意"}`}
             {...errorAttributes("pf-message")}
             required={messageRequired}
             rows={4}
@@ -599,9 +611,6 @@ export default function PortfolioStructuredCommissionForm({
             }
           />
           <FieldError id="pf-message-error" message={serverErrorFor("requestData.message")} />
-          <p className="mt-2 text-sm" style={{ color: c.textSoft }}>
-            決まっている範囲だけで大丈夫です。詳しい条件は下の欄から追加できます。
-          </p>
         </div>
       </FormSection>
   );
@@ -613,12 +622,10 @@ export default function PortfolioStructuredCommissionForm({
         className="group/optional"
       >
         <summary className="pf-cute-focus flex min-h-[44px] cursor-pointer list-none items-center gap-2 font-bold [&::-webkit-details-marker]:hidden">
-          {state.inquiryMode === "quote" ? "詳しい内容" : massProductionSelected ? <>量産イラストの依頼内容<RequiredBadge /></> : <>詳しい条件を追加する<OptionalBadge /></>}
+          {state.inquiryMode === "quote" ? "選べる詳細項目" : massProductionSelected ? <>量産イラストの依頼内容<RequiredBadge /></> : <>詳しい条件を追加する<OptionalBadge /></>}
           <span aria-hidden="true" className="ml-auto group-open/optional:rotate-180">⌄</span>
         </summary>
-        <p className="mt-2 text-sm" style={{ color: c.textSoft }}>
-          {massProductionSelected ? "デザインと表情指定は必須です。必要な追加オプションを選択してください。" : "決まっている項目だけでOKです。"}
-        </p>
+        {massProductionSelected ? <p className="mt-2 text-sm" style={{ color: c.textSoft }}>デザインと表情を選んでください。</p> : null}
         <div className="mt-4 space-y-4">
           <div hidden={state.inquiryMode === "quote" && step !== 0}>
           <FormSection
@@ -991,9 +998,8 @@ export default function PortfolioStructuredCommissionForm({
                   ))}
                 </select>
                 <p id="pf-commercial-help" className="mt-2 text-sm leading-relaxed" style={{ color: c.textSoft }}>
-                  収益化された配信・動画、グッズ、広告・宣伝など営利目的での利用はお知らせください。
-                  {commercialPrice ? `料金表の商用利用：${commercialPrice}。` : ""}
-                  わからない場合も相談できます。利用範囲と追加料金はお見積もり時に確定します。
+                  収益化された配信・動画、グッズ、広告などで使う場合です。
+                  {commercialPrice ? ` 商用利用 ${commercialPrice}。` : ""}未定でも相談できます。
                 </p>
               </div>
               ) : null}
@@ -1021,17 +1027,22 @@ export default function PortfolioStructuredCommissionForm({
                   ))}
                 </select>
                 <p id="pf-publication-help" className="mt-2 text-sm leading-relaxed" style={{ color: c.textSoft }}>
-                  ナトリがポートフォリオやSNSで制作実績として紹介してよいかをお知らせください。
-                  公開範囲や時期は、お見積もり等で合意した内容を優先します。
+                  {state.publicationPolicy === "work_private"
+                    ? `サンプル使用不可${publicationPrice(PORTFOLIO_OPTION_IDS.sampleUsageDenied) ? `（${publicationPrice(PORTFOLIO_OPTION_IDS.sampleUsageDenied)}）` : ""}：完成イラストをポートフォリオ・SNS・サンプル画像等へ掲載しません。`
+                    : state.publicationPolicy === "fully_private"
+                      ? `完全非公開${publicationPrice(PORTFOLIO_OPTION_IDS.privateWork) ? `（${publicationPrice(PORTFOLIO_OPTION_IDS.privateWork)}）` : ""}：制作内容・完成イラストを含め一切公開せず、ご依頼内容も非公開で対応します。`
+                      : state.publicationPolicy === "delayed"
+                        ? "指定した日までは公開しません。"
+                        : state.publicationPolicy === "allowed"
+                          ? "完成イラストを制作実績として紹介できます。"
+                          : "公開条件はお見積もり時に相談できます。"}
                 </p>
-                {publicationOptions.length > 0 ? (
-                  <p className="mt-2 text-sm" style={{ color: c.textSoft }}>
-                    料金表との対応：{publicationOptions.map((option) => {
-                      const policy = option.id === PORTFOLIO_OPTION_IDS.sampleUsageDenied ? "work_private" : "fully_private";
-                      return `${NATORI_PUBLICATION_POLICY_LABELS_V1[policy]} → ${option.name}（${option.price}）`;
-                    }).join("／")}。
-                    非公開にしたい内容は相談欄へご記入ください。条件と追加料金はお見積もりでご確認いただけます。
-                  </p>
+                {state.publicationPolicy === "unknown" && publicationOptions.length > 0 ? (
+                  <details className="mt-2 text-sm" style={{ color: c.textSoft }}>
+                    <summary className="pf-cute-focus cursor-pointer underline">非公開オプションの違い</summary>
+                    <p className="mt-2">サンプル使用不可：完成イラストをポートフォリオ・SNS・サンプル画像等へ掲載しません。</p>
+                    <p className="mt-1">完全非公開：制作内容・完成イラストを含め一切公開せず、ご依頼内容も非公開で対応します。</p>
+                  </details>
                 ) : null}
               </div>
             </div>
@@ -1519,9 +1530,9 @@ export default function PortfolioStructuredCommissionForm({
           <p className="text-xs font-bold" style={{ color: c.accentText }}>
             ステップ {step + 1} / {stepLabels.length}
           </p>
-          <h3 className="mt-1 text-lg font-black" tabIndex={-1}>{stepTitle}</h3>
+          <h3 ref={stepHeadingRef} className="mt-1 scroll-mt-24 text-lg font-black" tabIndex={-1}>{stepTitle}</h3>
         </div>
-        {step > 0 && <button type="button" onClick={() => setStep((current) => current - 1)} className="pf-cute-focus min-h-[44px] text-sm font-bold underline">戻る</button>}
+        {step > 0 && <button type="button" onClick={() => goToStep(step - 1)} className="pf-cute-focus min-h-[44px] text-sm font-bold underline">戻る</button>}
       </div>
       <ol className="flex gap-2" aria-label={`進行状況 ${step + 1} / ${stepLabels.length}`}>
         {stepLabels.map((label, index) => (
@@ -1569,19 +1580,21 @@ export default function PortfolioStructuredCommissionForm({
         <section className="space-y-4">
           <p className="text-sm" style={{ color: c.textSoft }}>内容をご確認ください。各項目は「修正する」から戻れます。</p>
           <div className="border-b pb-3" style={{ borderColor: c.borderSubtle }}>
-            <div className="flex justify-between gap-3"><b>ご相談・制作内容</b><button type="button" className="pf-cute-focus text-sm underline" onClick={() => setStep(0)}>修正する</button></div>
+            <div className="flex justify-between gap-3"><b>ご相談・制作内容</b><button type="button" className="pf-cute-focus text-sm underline" onClick={() => goToStep(0)}>修正する</button></div>
             <p className="mt-2 whitespace-pre-wrap break-words text-sm">{state.message || "相談内容なし"}</p>
             {state.inquiryMode === "quote" && <p className="mt-2 text-sm">{massProductionSelected ? NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL : NATORI_REQUEST_TYPE_LABELS_V1[state.requestType]}／{massProductionSelected ? state.commissionScopeOther : NATORI_COMMISSION_SCOPE_LABELS_V1[state.commissionScope]}</p>}
             {refImages.length > 0 && <p className="mt-2 text-sm">参考画像：{refImages.length}枚</p>}
             {state.referenceLinks.some((row) => row.url.trim()) && <p className="mt-2 text-sm">参考URL：{state.referenceLinks.filter((row) => row.url.trim()).length}件</p>}
           </div>
           {state.inquiryMode === "quote" && <div className="border-b pb-3" style={{ borderColor: c.borderSubtle }}>
-            <div className="flex justify-between gap-3"><b>用途・予算・納期</b><button type="button" className="pf-cute-focus text-sm underline" onClick={() => setStep(1)}>修正する</button></div>
+            <div className="flex justify-between gap-3"><b>用途・条件</b><button type="button" className="pf-cute-focus text-sm underline" onClick={() => goToStep(1)}>修正する</button></div>
             <p className="mt-2 text-sm">用途：{state.usageTypes.length ? state.usageTypes.map((item) => NATORI_USAGE_TYPE_LABELS_V1[item]).join("、") : "相談して決めたい"}</p>
+            {!massProductionSelected && <p className="mt-1 text-sm">商用利用：{NATORI_COMMERCIAL_USE_LABELS_V1[state.commercialUse]}</p>}
+            <p className="mt-1 text-sm">実績掲載：{NATORI_PUBLICATION_POLICY_LABELS_V1[state.publicationPolicy]}{state.publicationAllowedFrom ? `（${state.publicationAllowedFrom}から）` : ""}</p>
             <p className="mt-1 text-sm">予算：{NATORI_BUDGET_KIND_LABELS_V1[state.budgetKind]}{state.budgetKind !== "undecided" ? ` ${state.budgetMin}${state.budgetMax ? `〜${state.budgetMax}` : ""}円` : ""}</p>
             <p className="mt-1 text-sm">納期：{NATORI_DEADLINE_KIND_LABELS_V1[state.deadlineKind]}{state.deadlineDate ? ` ${state.deadlineDate}` : ""}</p>
           </div>}
-          <div className="flex justify-between gap-3"><div><b>ご連絡先</b><p className="mt-2 text-sm">{clientName}<br />{clientEmail}</p></div><button type="button" className="pf-cute-focus self-start text-sm underline" onClick={() => setStep(state.inquiryMode === "quote" ? 1 : 0)}>修正する</button></div>
+          <div className="flex justify-between gap-3"><div><b>ご連絡先</b><p className="mt-2 text-sm">{clientName}<br />{clientEmail}</p></div><button type="button" className="pf-cute-focus self-start text-sm underline" onClick={() => goToStep(state.inquiryMode === "quote" ? 1 : 0)}>修正する</button></div>
         </section>
       )}
       {submitError && <p id="pf-submit-errors" tabIndex={-1} role="alert" className="rounded-xl border-2 px-3 py-2 text-sm font-bold" style={{ borderColor: c.error, color: c.error, background: c.errorSoft }}>{submitError}</p>}
