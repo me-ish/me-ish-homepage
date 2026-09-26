@@ -221,7 +221,7 @@ describe("PF-02 interaction states", () => {
     expect(gallerySource).toContain('role="group" aria-label="作品のカテゴリ"');
     expect(gallerySource).toContain("aria-pressed={collection.id === (activeCollection?.collection.id ?? null)}");
     expect(gallerySource).toContain('aria-controls="portfolio-gallery-results"');
-    expect(gallerySource).toContain("{collection.name}");
+    expect(gallerySource).toContain("collectionLabel(collection.name)");
     expect(gallerySource).toContain("aria-expanded={expanded}");
   });
 });
@@ -242,7 +242,7 @@ describe("PF-08 image and font loading", () => {
 
   it("matches portrait and landscape image candidates to their responsive grid widths", () => {
     expect(gallerySource).toContain(
-      '"(min-width: 1024px) 1120px, calc(100vw - 40px)"'
+      '"(min-width: 1024px) 540px, calc(100vw - 40px)"'
     );
     expect(gallerySource).toContain(
       '"(min-width: 1024px) 352px, (min-width: 640px) calc(50vw - 36px), calc(50vw - 44px)"'

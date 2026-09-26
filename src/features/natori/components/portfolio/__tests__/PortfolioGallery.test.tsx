@@ -64,7 +64,7 @@ describe("PortfolioGallery collections", () => {
     expect(wideImage.closest(".pf-pin-card")?.className).toContain("col-span-2 lg:col-span-3");
     expect(wideImage.closest("#portfolio-gallery-results")?.className).toContain("lg:grid-cols-6");
     expect(wideImage.parentElement?.className).toContain("aspect-video");
-    expect(tallImage.closest(".pf-pin-card")?.className).not.toContain("col-span-2");
+    expect(tallImage.closest(".pf-pin-card")?.className).toContain("lg:col-span-2");
     expect(tallImage.parentElement?.className).toContain("aspect-[3/4]");
   });
 

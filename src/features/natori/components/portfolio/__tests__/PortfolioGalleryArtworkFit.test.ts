@@ -27,6 +27,7 @@ describe("PortfolioGallery artwork fit", () => {
     expect(gallerySource).toContain("col-span-2 lg:col-span-3");
     expect(gallerySource).toContain("grid grid-cols-2");
     expect(gallerySource).toContain("lg:grid-cols-6");
+    expect(gallerySource).toContain('"(min-width: 1024px) 540px, calc(100vw - 40px)"');
   });
 
   it("拡大モーダルは従来どおりobject-containを維持する", () => {

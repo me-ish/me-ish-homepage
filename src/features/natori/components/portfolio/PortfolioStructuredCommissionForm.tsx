@@ -4,7 +4,7 @@
 // P1-06 の構造化ご依頼フォーム本体。入力 state → RequestData V1 の変換は
 // features/natori/lib/portfolioRequestForm.ts（共有純関数）に集約し、
 // UI 独自の payload 形は作らない。client / server は同じ共有 schema で検証する。
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   PLAN_SELECT_EVENT,
   isPortfolioXLink,
@@ -214,6 +214,7 @@ export default function PortfolioStructuredCommissionForm({
   const refFileInputRef = useRef<HTMLInputElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   const stepHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const focusStepOnChangeRef = useRef(false);
   const sendingRef = useRef(false);
   const [focusTarget, setFocusTarget] = useState<{ id: string } | null>(null);
   const [retrySeconds, setRetrySeconds] = useState(0);
@@ -254,6 +255,13 @@ export default function PortfolioStructuredCommissionForm({
     else fallback?.focus();
   }, [focusTarget, step]);
 
+  useLayoutEffect(() => {
+    if (!focusStepOnChangeRef.current) return;
+    focusStepOnChangeRef.current = false;
+    stepHeadingRef.current?.scrollIntoView?.({ block: "start" });
+    stepHeadingRef.current?.focus({ preventScroll: true });
+  }, [step]);
+
   const linkErrors = collectPortfolioReferenceLinkErrors(state.referenceLinks);
   const massProductionSelected = isMassProductionIllustrationSelection(state);
   const optionChoices = useMemo(
@@ -272,13 +280,8 @@ export default function PortfolioStructuredCommissionForm({
   const publicationPrice = (id: string) => publicationOptions.find((option) => option.id === id)?.price;
 
   const goToStep = (next: number) => {
+    focusStepOnChangeRef.current = true;
     setStep(next);
-    const positionStep = () => {
-      stepHeadingRef.current?.scrollIntoView?.({ block: "start" });
-      stepHeadingRef.current?.focus({ preventScroll: true });
-    };
-    if (typeof window.requestAnimationFrame === "function") window.requestAnimationFrame(positionStep);
-    else window.setTimeout(positionStep, 0);
   };
 
   const openErrorSections = (errors: ServerFieldError[]) => {
