@@ -67,7 +67,7 @@ test.describe("Natori public intake rollout", () => {
     await page.getByLabel("商用利用").selectOption("yes");
     await page.getByLabel(/作品の公開可否/).selectOption("fully_private");
     await page.getByRole("button", { name: "内容を確認する" }).click();
-    await expect(page.getByText("用途・条件")).toBeVisible();
+    await expect(page.getByText("用途・条件", { exact: true })).toBeVisible();
     await expect(page.getByText("商用利用：商用利用する")).toBeVisible();
     await expect(page.getByText("実績掲載：完全非公開")).toBeVisible();
     await page.getByRole("button", { name: "見積もりを依頼する" }).click();
