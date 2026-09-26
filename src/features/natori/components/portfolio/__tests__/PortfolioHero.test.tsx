@@ -111,6 +111,7 @@ describe("PF-03 portfolio hero", () => {
     expect(screen.getByRole("button", { name: "1枚目を表示" }).getAttribute("aria-current")).toBe("true");
 
     fireEvent.click(screen.getByRole("button", { name: "次の作品" }));
+    fireEvent.transitionEnd(screen.getByTestId("hero-slide-track"), { propertyName: "transform" });
 
     expect(
       screen.getByRole("img", { name: `${defaultPortfolioContent.artistName}の代表作品 2` })
