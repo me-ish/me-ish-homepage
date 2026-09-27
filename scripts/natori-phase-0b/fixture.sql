@@ -3,6 +3,7 @@ do $$ begin
   if current_setting('phase_t.sandbox',true) is distinct from 'ephemeral' then raise exception 'Sandbox required'; end if;
   if to_regclass('public.natori_projects') is not null then raise exception 'Nonempty target'; end if;
 end $$;
+create table public.natori_page_events (id uuid primary key default gen_random_uuid(), event text, label text, path text, created_at timestamptz default now());
 create table public.admin_emails (email text primary key);
 create table public.natori_projects (
   id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users,
@@ -43,7 +44,7 @@ create table public.natori_pricing_configs (
 -- This fixture verifies server authorization using service-role queries. It makes
 -- no claim about historical application RLS; all direct anon/user table access is denied.
 do $$ declare t text; begin
-  foreach t in array array['admin_emails','natori_projects','natori_project_tasks','natori_inquiry_reference_files','natori_project_reference_links','natori_payment_transactions','natori_events','natori_user_profiles','natori_pricing_configs'] loop
+  foreach t in array array['natori_page_events','admin_emails','natori_projects','natori_project_tasks','natori_inquiry_reference_files','natori_project_reference_links','natori_payment_transactions','natori_events','natori_user_profiles','natori_pricing_configs'] loop
     execute format('alter table public.%I enable row level security',t);
     execute format('revoke all on public.%I from anon,authenticated',t);
     execute format('grant all on public.%I to service_role',t);

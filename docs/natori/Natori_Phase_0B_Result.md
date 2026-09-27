@@ -103,3 +103,25 @@ Phase T の current/baseline は監査時の広い policy を再現した架空�
 初回 CI 後の差分は、設定エラーの日本語表示、対応する reader 試験 3 件、専用 workflow の該当 path、実行バージョン記録への SSR 追加、この証跡のみ。最終 head に対して再度 CI を実行し、その SHA・結果を PR 本文へ記録する。証跡文書に自身の将来の commit SHA を埋め込むための繰り返し commit は行わない。
 
 CLI の通常 push は GitHub 認証が利用できず失敗したため、接続済み GitHub の Git API で同一 tree（`a21e61fa2845361b3cfe2fc5503a75aba45861da`）を保存した。branch 作成および後続更新は通常の親子関係を維持し、force 更新なし。認証情報の取り出し・権限迂回なし。
+
+
+## 本番反映承認後の補足（2026-09-27）
+
+利用者は14:02 JSTに、別 owner の過去予定（2026-06-07）と未使用の「つなぐ用」設定を引き継がないことを確認。元行の削除や移動は行わない。14:07 JSTに本番反映を承認した。承認は下記の未完確認を免除するものではない。最新の配信状況・対象 SHA は PR 本文を正とする。
+
+通常運用は合言葉付き専用 URL。確認用クラウドブラウザにその認可がなく、一般の Google ログインへ案内したため、この方法での確認を中止した。利用者に秘密 URL の送付や Google ログインを求めない。代わりに既存 Phase T の隔離環境へブラウザ試験を追加する。これは必須 gate の省略ではなく、同じ合言葉・Cookie・ページ描画を架空データで確かめる実施方法の変更。
+
+### 追加ブラウザ試験
+
+- 既存 lockfile の Playwright 1.58.2、公式 `mcr.microsoft.com/playwright:v1.58.2-noble`、`.node-version` からの Node 22 を使用。image digest、実 Node 版、コピーした route/middleware の checksum を成果物に記録。依存・lockfile は変更しない。
+- `prepare-browser.mjs` は管理 dashboard/projects、middleware、API、関連 feature を専用一時ディレクトリへコピー。対象 page/layout/API と認可コードは無変更。最上位 shell からのみ外部フォント・解析・ギャラリー overlay を除外するため、サイト全体の視覚比較や本番 OAuth の試験とは扱わない。
+- 合言葉経路は実 middleware で Cookie を発行し、URL からのキー除去、HttpOnly/Secure/SameSite、別画面への遷移、同一ブラウザ内での再オープンを確認。Cookie 注入でこの経路を代替しない。
+- 本人・スタッフ2名・一般ユーザーは使い捨て Auth。テスト専用 form/route で実 `signInWithPassword` と本物の Next `cookies()` を使う。テスト専用 route は `scripts` 配下で組み立てる一時 app のみに存在し、製品 app へ追加しない。Auth/API/DB のモックや `cookies()` adapter は使わない。
+- 合言葉 + 一般ログイン、スタッフのログアウト・再ログイン、匿名/一般ユーザー/誤キー拒否、設定不足/不正値の HTTP 503 と画面のエラー詳細表示、前後の業務行不変を確認。初回は12シナリオを予定。実結果は Actions 完了後に PR へ記録し、作成だけで成功としない。
+- 既存の17隔離試験・35+35 Storage・19 Auth/DBは維持。ブラウザ段階だけ同じ network namespace 内の `127.0.0.1:3000` とその応答を追加許可。一般の loopback、DNS、外部宛先、host gateway は遮断したまま、17隔離試験を再実行する。新コンテナとその子プロセスも同じ kernel 制限を継承。公開 port/トンネルなし。
+- ブラウザ用コンテナは非 root、cap-drop、read-only root、4 GiB/2 CPU/pids256、実行600秒・再試行なし。全 workflow は従来どおり25分・同時実行制限あり。cleanup はこの job のラベル付き専用コンテナだけを対象。
+- Next の生ログ・trace・storageState・credential file を artifact に含めない。架空案件画面のスクリーンショットと件数/固定エラーコードのみ公開。起動失敗は skip でなく失敗。
+
+### 本番の追加読み取り
+
+同じ専用テスト案件に基づく集計で、owner の Auth 存在を boolean で確認した。案件は18件、別 owner の案件は0件。現在の本番配信が ready になった後の新規2件は同じ owner に属し、最新の作成時刻は2026-09-27 13:30:51 JST。これは稼働中経路と既存案件の整合根拠であり、次回配信用の設定値を直接取得した証明ではない。顧客本文・メール・Auth一覧・秘密値は取得していない。

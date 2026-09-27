@@ -35,6 +35,9 @@ cleanup() {
   local status=$?
   trap - EXIT
   set +e
+  if [[ $(docker inspect -f '{{index .Config.Labels "natori.phase-t"}}' "$project-browser" 2>/dev/null) == "$project" ]]; then
+    docker rm -f "$project-browser" >/dev/null
+  fi
   if [[ $(docker inspect -f '{{index .Config.Labels "natori.phase-t"}}' "$runner" 2>/dev/null) == "$project" ]]; then
     docker rm -f "$runner" >/dev/null
   fi
@@ -100,6 +103,7 @@ export SUPABASE_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1
 # mounts only locked dependencies installed during construction, never .env files.
 node_image="node:$(node -p 'process.versions.node')-bookworm-slim"
 timeout 180 docker pull "$node_image" >"$work/pull.private" 2>&1
+if [[ $phase0b == 1 ]]; then bash "$repo/scripts/natori-phase-0b/prepare-browser.sh" "$repo" "$work" "$node_image" "$project"; fi
 ROOT="$root" WORK="$work" PROJECT="$project" node --input-type=module <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
@@ -294,6 +298,7 @@ if [[ $phase0a == 1 ]]; then timeout 240 docker exec "$runner" node /phase0a/int
 if [[ $phase0b == 1 ]]; then
   dbsql <"$work/phase0b.sql" >/dev/null
   timeout 240 docker exec "$runner" node /phase0b/integration.cjs
+  bash "$repo/scripts/natori-phase-0b/run-browser.sh" "$repo" "$work" "$runner" "$project" "$pid"
 fi
 sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/egress-counters.txt"
 sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/egress-counters.txt"
