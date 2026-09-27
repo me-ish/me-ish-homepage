@@ -275,10 +275,10 @@ async function main() {
     });
     await test("management-auth-csrf-owner-and-response-redaction", async () => {
       const p = await project("Foreign", stranger.data.user!.id); await acceptNatoriDelivery(p.token); const id = (await jobs(p.id))[0].id;
-      check((await cookieScope.run(new Map(), () => routes.GET())).status === 401, "ANON_ADMIN_ALLOWED");
+      check((await cookieScope.run(new Map(), () => routes.GET(new Request("http://localhost/api/natori/admin/notifications")))).status === 401, "ANON_ADMIN_ALLOWED");
       check((await management(() => routes.POST(request(id, false)))).status === 403, "CSRF_ALLOWED");
       check((await management(() => routes.POST(request(id)))).status === 409, "FOREIGN_RETRY_ALLOWED");
-      const response = await management(() => routes.GET()); check(response.status === 200, "MANAGED_LIST");
+      const response = await management(() => routes.GET(new Request("http://localhost/api/natori/admin/notifications"))); check(response.status === 200, "MANAGED_LIST");
       const text = await response.text();
       check(!text.includes(p.id) && !/@phase-n.invalid|provider_id|payload|snapshot|token_hash|claim_token/.test(text), "PRIVATE_DETAILS_EXPOSED");
     });
@@ -291,7 +291,7 @@ async function main() {
       const p = await project(); const initial = randomUUID(), stamp = past();
       const batch = [{ id: initial, notification_key: `pagination/${initial}`, project_id: p.id, purpose: "quote_accept_artist", snapshot: {}, status: "pending", created_at: stamp },
         ...Array.from({ length: 55 }, () => { const id = randomUUID(); return { id, notification_key: `pagination/${id}`, project_id: p.id, purpose: "quote_accept_artist", snapshot: {}, status: "sent", provider_id: randomUUID(), sent_at: new Date().toISOString() }; })];
-      check(!(await admin.from("natori_notification_jobs").insert(batch)).error, "PAGINATION_FIXTURE");
+      check(!(await admin.from("natori_notification_jobs").insert(batch, { defaultToNull: false })).error, "PAGINATION_FIXTURE");
       const first = await admin.rpc("natori_notification_list_v1", { p_owner_id: owner, p_offset: 0 });
       const second = await admin.rpc("natori_notification_list_v1", { p_owner_id: owner, p_offset: 50 });
       check(!first.error && !second.error && first.data.length === 51 && second.data.length > 0, "PAGINATION_FAILED");

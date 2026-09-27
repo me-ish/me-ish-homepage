@@ -65,4 +65,3 @@ end;
 $catalog$;
 revoke all on function public.natori_accept_quote(text) from public,anon,authenticated;
 grant execute on function public.natori_accept_quote(text) to service_role;
-

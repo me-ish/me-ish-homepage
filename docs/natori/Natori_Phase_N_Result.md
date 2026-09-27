@@ -48,6 +48,8 @@ Phase Tを引き継ぎ、GitHub-hosted Ubuntu 24.04で一時Supabase DB/Auth/Sto
 - 初回通常CIの2失敗は、RPC呼出しをソース文字列で確認するテストと新migrationのmanifest登録不足。旧RPC維持を検証する内容へ更新し、新migrationを末尾に登録。既存 `20260923122157_natori_estimate_drafts_and_issuance.sql` に不足していたchecksum 1件も、内容を変更せず追記。skip/判定条件の緩和は行っていない。関連20テスト成功。続けて全126ファイル1,163テスト成功。
 - 関連既存unit/APIテスト: 5ファイル49件成功、失敗0、skip0。
 - 初回隔離DB/HTTP捕捉試験: 21件成功、失敗0、skip0。run [36304578389](https://github.com/me-ish/me-ish-homepage/actions/runs/36304578389)、head `c39a09c0653eccf201c2e26534f6b5f747683804`。追加のページング/ブラウザ試験を同PRで継続中。
+- 2回目の専用run `36305175799`: 22件成功、1件はページング用fixtureの一括INSERTで未指定値をnull扱いして失敗。`defaultToNull: false`でDB defaultを使用するよう修正。必須失敗でブラウザ段階へ進まなかったことを確認。
+- 同SHAの通常CIは全成功。Vercel Previewは配信用のroute型チェックで失敗し、GETのRequest引数をNextの契約に合わせて必須に修正。Next `typegen`だけと実配信用buildの差も確認する。
 - ブラウザ: 隔離Next/Chromiumの7業務シナリオを追加、Actions確認中。実機Safariは未確認。
 
 ## 本番移行の順序・停止条件
