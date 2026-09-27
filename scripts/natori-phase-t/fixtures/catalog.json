@@ -1,0 +1,251 @@
+{
+  "rls": true,
+  "grants": [
+    {
+      "role": "anon",
+      "delete": true,
+      "insert": true,
+      "select": true,
+      "update": true,
+      "schema_usage": true
+    },
+    {
+      "role": "authenticated",
+      "delete": true,
+      "insert": true,
+      "select": true,
+      "update": true,
+      "schema_usage": true
+    },
+    {
+      "role": "service_role",
+      "delete": true,
+      "insert": true,
+      "select": true,
+      "update": true,
+      "schema_usage": true
+    }
+  ],
+  "buckets": [
+    {
+      "id": "artworks",
+      "public": true,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "avatars",
+      "public": true,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "banners",
+      "public": true,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "natori-consultations",
+      "public": false,
+      "file_size_limit": 52428800,
+      "allowed_mime_types": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "application/pdf",
+        "audio/mpeg",
+        "audio/mp4",
+        "audio/x-m4a",
+        "audio/wav",
+        "audio/x-wav"
+      ]
+    },
+    {
+      "id": "natori-deliveries",
+      "public": false,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "natori-inquiry-refs",
+      "public": false,
+      "file_size_limit": 10485760,
+      "allowed_mime_types": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif"
+      ]
+    },
+    {
+      "id": "processing-meta",
+      "public": false,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    }
+  ],
+  "policies": [
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "public"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "Allow Insert 1exduyn_0",
+      "with_check": "true"
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "(bucket_id = 'artworks'::text)",
+      "roles": [
+        "public"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "Allow public access 1exduyn_0",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "qual": "(bucket_id = 'artworks'::text)",
+      "roles": [
+        "public"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "Allow public access 1exduyn_1",
+      "with_check": null
+    },
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "public"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "Allow public access 1exduyn_2",
+      "with_check": "(bucket_id = 'artworks'::text)"
+    },
+    {
+      "cmd": "DELETE",
+      "qual": "(bucket_id = 'artworks'::text)",
+      "roles": [
+        "public"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "Allow public access 1exduyn_3",
+      "with_check": null
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "(bucket_id = 'processing-meta'::text)",
+      "roles": [
+        "public"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "Allow public read access sudlkv_0",
+      "with_check": null
+    },
+    {
+      "cmd": "DELETE",
+      "qual": "((bucket_id = 'avatars'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+      "roles": [
+        "authenticated"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "delete own avatar",
+      "with_check": null
+    },
+    {
+      "cmd": "DELETE",
+      "qual": "((bucket_id = 'banners'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+      "roles": [
+        "authenticated"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "delete own banner",
+      "with_check": null
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "(bucket_id = ANY (ARRAY['avatars'::text, 'banners'::text]))",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "public read avatars & banners",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "qual": "((bucket_id = 'avatars'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+      "roles": [
+        "authenticated"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "update own avatar",
+      "with_check": "((bucket_id = 'avatars'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))"
+    },
+    {
+      "cmd": "UPDATE",
+      "qual": "((bucket_id = 'banners'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+      "roles": [
+        "authenticated"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "update own banner",
+      "with_check": "((bucket_id = 'banners'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))"
+    },
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "upload own avatar",
+      "with_check": "((bucket_id = 'avatars'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))"
+    },
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "upload own banner",
+      "with_check": "((bucket_id = 'banners'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))"
+    },
+    {
+      "cmd": "DELETE",
+      "qual": "((bucket_id = ANY (ARRAY['avatars'::text, 'banners'::text])) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+      "roles": [
+        "authenticated"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "user can delete own avatars & banners",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "qual": "((bucket_id = ANY (ARRAY['avatars'::text, 'banners'::text])) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+      "roles": [
+        "authenticated"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "user can update own avatars & banners",
+      "with_check": "((bucket_id = ANY (ARRAY['avatars'::text, 'banners'::text])) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))"
+    },
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "permissive": "PERMISSIVE",
+      "policyname": "user can upload own avatars & banners",
+      "with_check": "((bucket_id = ANY (ARRAY['avatars'::text, 'banners'::text])) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))"
+    }
+  ]
+}
