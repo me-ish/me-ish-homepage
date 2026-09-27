@@ -8,13 +8,13 @@ const require = createRequire('/app/package.json');
 const { createClient } = require('@supabase/supabase-js');
 const { chromium, expect } = require('@playwright/test');
 setDefaultResultOrder('ipv4first');
-const appOrigin = 'http://localhost:3000', results = [];
+const appOrigin = 'http://localhost:3000', results = [], browserProblems = new Set();
 const check = (ok, code) => { if (!ok) throw new Error(code); };
 let stage = 'preflight', server, browser, capture;
 async function test(name, fn) {
   stage = name;
   try { await fn(); results.push({ name, status: 'passed' }); console.log(`PASS phase4/${name}`); }
-  catch (error) { const code = /^[A-Z_0-9]+$/.test(error?.message ?? '') ? error.message : 'ASSERTION_FAILED'; results.push({ name, status: 'failed', code }); console.log(`FAIL phase4/${name} ${code}`); }
+  catch (error) { const message = error?.message ?? ''; const code = /^[A-Z_0-9]+$/.test(message) ? message : message.includes('strict mode violation') ? 'STRICT_LOCATOR' : message.includes('toBeVisible') ? 'NOT_VISIBLE' : 'ASSERTION_FAILED'; results.push({ name, status: 'failed', code }); console.log(`FAIL phase4/${name} ${code}`); }
 }
 async function main() {
   check(process.env.PHASE_N_BROWSER === 'ephemeral', 'EPHEMERAL_REQUIRED');
@@ -110,7 +110,19 @@ async function main() {
   }
   if (!ready) { console.log(`Next startup: ${[...classifications].join(',')}`); throw new Error('NEXT_NOT_READY'); }
   browser = await chromium.launch({ headless: true, args: ['--host-resolver-rules=MAP localhost 127.0.0.1'] });
-  const context = async () => { const c = await browser.newContext({ baseURL: appOrigin, serviceWorkers: 'block' }); c.setDefaultTimeout(15000); return c; };
+  const context = async () => { const c = await browser.newContext({ baseURL: appOrigin, serviceWorkers: 'block' }); c.setDefaultTimeout(15000); c.setDefaultNavigationTimeout(60000);
+    c.on('page', page => {
+      page.on('pageerror', () => browserProblems.add('UNHANDLED_PAGE_ERROR'));
+      page.on('console', msg => {
+        if (!['warning', 'error'].includes(msg.type())) return;
+        const text = msg.text();
+        if (/hydrat|cannot be a descendant|cannot be a child|cannot contain a nested/i.test(text)) {
+          const tags = [...new Set([...text.matchAll(/<\/?[a-z][a-z0-9]*>/g)].map(m => m[0]))].join(',');
+          browserProblems.add(`DOM_OR_HYDRATION${tags ? ':' + tags : ''}`);
+        }
+        if (/Missing.*Description|DialogContent.*DialogTitle/.test(text)) browserProblems.add('DIALOG_ACCESSIBILITY');
+      });
+    }); return c; };
   const client = await context(), manager = await context();
   const page = await manager.newPage(), clientPage = await client.newPage();
   await page.goto(`/natori/dashboard?natori-key=${sharedKey}`);
@@ -197,7 +209,7 @@ async function main() {
     rejectMail = false;
   });
   await test('existing-private-attachment-opens-for-staff-and-client-with-real-bytes', async () => {
-    const bytes = Buffer.from('phase4-synthetic-private-attachment');
+    const bytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jP2kAAAAASUVORK5CYII=', 'base64');
     const path = `${rough.id}/phase4-fixture.png`;
     check(!(await admin.storage.from('natori-consultations').upload(path, bytes, { contentType: 'image/png' })).error, 'STORAGE_FIXTURE');
     const message = await admin.from('natori_consultation_messages').select('id').eq('project_id', rough.id).order('created_at').limit(1).single();
@@ -232,7 +244,7 @@ async function main() {
     await clientPage.route('**/api/natori/consult/*', route => route.request().method() === 'GET' ? route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }) : route.continue());
     await clientPage.getByRole('textbox', { name: 'メッセージ', exact: true }).fill('Saved before history outage');
     await clientPage.getByRole('button', { name: 'メッセージを送信', exact: true }).click();
-    await expect(clientPage.getByRole('alert')).toContainText('送信は保存済み');
+    await expect(clientPage.getByRole('alert').filter({ hasText: '送信は保存済み' })).toBeVisible();
     await expect(clientPage.getByText(/返信はまだありません/)).toHaveCount(0);
     await expect(clientPage.getByRole('button', { name: 'メッセージを送信', exact: true })).toBeDisabled();
     const saved = await admin.from('natori_consultation_messages').select('id').eq('project_id', rough.id).eq('body', 'Saved before history outage'); check(saved.data?.length === 1, 'SAVED_MESSAGE_COUNT');
@@ -242,14 +254,18 @@ async function main() {
   await test('detail-fetch-failure-is-visible-and-retry-recovers', async () => {
     await page.route('**/api/natori/admin/projects?projectId=*', route => route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
     await page.goto(`/natori/inquiries?project=${prep.id}`);
-    await expect(page.getByText('案件の詳細を取得できませんでした。再試行してください。', { exact: true })).toBeVisible();
+    await expect(page.getByRole('alert').filter({ hasText: '案件の詳細を取得できませんでした。再試行してください。' })).toBeVisible();
     await page.unroute('**/api/natori/admin/projects?projectId=*'); await page.getByRole('button', { name: '詳細を再試行' }).click(); await expect(page.getByRole('dialog')).toBeVisible();
   });
+  await test('no-unhandled-browser-or-hydration-errors', async () => {
+    check(browserProblems.size === 0, 'BROWSER_RUNTIME_ERRORS');
+  });
+  console.log(`Phase 4 browser diagnostics: ${[...browserProblems].join(',') || 'none'}`);
   await client.close(); await manager.close();
-  const summary = { tests: results, passed: results.filter(r => r.status === 'passed').length, failed: results.filter(r => r.status === 'failed').length, skipped: 0, engine: 'Chromium 1.58.2; mobile viewport only, not iPhone Safari', providerRequests: providerCalls };
+  const summary = { tests: results, passed: results.filter(r => r.status === 'passed').length, failed: results.filter(r => r.status === 'failed').length, skipped: 0, engine: 'Chromium 1.58.2; mobile viewport only, not iPhone Safari', providerRequests: providerCalls, browserProblems: [...browserProblems] };
   writeFileSync('/results/phase4-browser.json', JSON.stringify(summary, null, 2));
   console.log(`PHASE 4 ${summary.passed} passed / ${summary.failed} failed / 0 skipped`);
-  check(results.length === 16 && summary.failed === 0, 'PHASE4_FAILED');
+  check(results.length === 17 && summary.failed === 0, 'PHASE4_FAILED');
 }
 main().catch(() => { console.error(`Phase 4 failed at ${stage}; raw URLs and credentials withheld`); process.exitCode = 1; }).finally(async () => {
   await browser?.close();

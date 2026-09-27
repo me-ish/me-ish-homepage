@@ -12,7 +12,7 @@
 ## 変更したこと
 
 1. 全工程を同じ相談詳細へ接続。旧 `/natori/inquiries?project=...` を保持し、相談メールと案件カードは `view=conversation` 付きで同じ画面を開く。filterに含まれない案件もowner条件付きのID検索で開く。
-2. 最新の実メッセージのsender/created_at/idを集計し、「新規・未対応」「ナトリの返信待ち」「依頼者の返信待ち」を表示。制作status、noteのメール記録、既読は判定に使わない。最終発言が古い順で表示し、日付は日本時間。
+2. 最新の実メッセージのsender/created_at/idを集計し、「新規・未対応」「ナトリの返信待ち」「依頼者の返信待ち」を表示。制作status、noteのメール記録、既読は判定に使わない。ラフや見積りメール送信も相談の最終senderを自動変更しない。最終発言が古い順で表示し、日付は日本時間。
 3. 管理ホームに全工程の要確認リスト、案件カードと相談一覧に返信状況を表示。メールの失敗・未送信を別に表示。Phase Nは各notification_keyの最新attemptだけを集計し、過去のfailedを再通知扱いにしない。
 4. 相談履歴は表示時・画面復帰時・手動更新・送信後に取得。履歴更新で下書きや表示中の過去履歴を消さず、新着へは明示操作で進む。保存後に取得失敗しても「送信失敗」にはしない。
 5. closed/archiveは履歴のみ。実APIの既存書込拒否を維持。詳細は既存Radix Dialogへ接続し、キーボード、Escape、フォーカス復帰を扱う。相談内の固定スクロール領域を除去。
@@ -45,6 +45,7 @@ rollbackはapplicationを直前版へ戻せる。追加RPCを残して旧コー�
 - Draft PR: https://github.com/me-ish/me-ish-homepage/pull/100
 - 初回head: `88834caa801866e99dd076edb77e6d1b11afb7c5`。通常CIは1208件成功、既存E2Eは15成功/0失敗/既存4skip。Phase T/0A/0B/Nは成功。
 - 初回専用run https://github.com/me-ish/me-ish-homepage/actions/runs/36314137772 はDB2件成功後、起動確認がNextのlocale転送に追従せず停止。環境失敗をskip成功にはしていない。検査側を同一originに限定した転送確認へ修正し再実行する。
+- 2回目head `d4a8b2f1aad1ecf2622e8b0489aab0dd833236ea` / run https://github.com/me-ish/me-ish-homepage/actions/runs/36314518899 は16件中14成功・2失敗・0skip。通常フロー、owner/role拒否、13工程とarchive、旧リンク不変、通知失敗、添付実体、キーボードと360/390pxは成功。残る通信エラー表示2件はNextのroute-announcerを含む汎用alert/子button付き要素の指定を、本文で対象を限定する検査へ修正。必須条件は緩めず再実行する。
 - 以後の最終実行SHA・成功件数はPR本文とActionsの非秘密artifactへ記録する。本書だけを実Storage/ブラウザ試験の完了証跡にはしない。
 - 端末のGit HTTP送信用認証が使えなかったため、接続済みGitHubのGit Data APIで同一treeを照合し、作業branchをfast-forward更新した。forceなし、main更新なし。
 - Nodeは既存`.node-version`、CLI/Playwright/隔離方法は `scripts/natori-phase-4/README.md`。
