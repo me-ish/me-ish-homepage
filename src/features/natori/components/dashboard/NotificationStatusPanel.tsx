@@ -31,6 +31,16 @@ export default function NotificationStatusPanel() {
     } catch { setError("通知の状態を確認できませんでした。少し待って「状態を更新」を押してください。承諾・受取の記録は変更されません。"); }
     finally { setBusy(false); }
   };
+  return <NotificationStatusView data={data} error={error} busy={busy} run={run} />;
+}
+
+/** Shared rendering lets the bounded verification page exercise the actual mobile UI. */
+export function NotificationStatusView({ data, error, busy, run }: {
+  data: NatoriNotificationList | null;
+  error: string;
+  busy: boolean;
+  run: (id?: string, offset?: number) => Promise<void>;
+}) {
   if (data?.enabled === false) return null;
   if (!data && !error) return null;
   return <section aria-labelledby="notification-heading" aria-busy={busy} className="mt-6 rounded-2xl border border-pink-100 bg-white p-4">
