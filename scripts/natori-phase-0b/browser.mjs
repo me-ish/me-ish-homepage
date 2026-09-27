@@ -62,7 +62,7 @@ async function main(){
   const baseEnv={PATH:'/runtime-bin:/usr/local/bin:/usr/bin:/bin',HOME:'/tmp',TMPDIR:'/tmp',NODE_ENV:'development',NODE_OPTIONS:'--dns-result-order=ipv4first',NEXT_TELEMETRY_DISABLED:'1',PHASE_0B_BROWSER:'ephemeral',NEXT_PUBLIC_SUPABASE_URL:origin,NEXT_PUBLIC_SUPABASE_ANON_KEY:keys.anon,SUPABASE_SERVICE_ROLE_KEY:keys.service,NATORI_DASHBOARD_KEY:sharedKey,NATORI_OWNER_EMAILS:owner.email,NATORI_STAFF_EMAILS:others.slice(0,2).map(a=>a.email).join(','),NEXT_PUBLIC_SITE_URL:appOrigin};
   async function startServer(setting){
     await stopServer();
-    server=spawn(process.execPath,['/app/node_modules/next/dist/bin/next','dev','--hostname','127.0.0.1','--port','3000'],{cwd:'/app',env:{...baseEnv,NATORI_OWNER_USER_ID:setting},stdio:['ignore','pipe','pipe']});
+    server=spawn(process.execPath,['/app/node_modules/next/dist/bin/next','dev','--hostname','localhost','--port','3000'],{cwd:'/app',env:{...baseEnv,NATORI_OWNER_USER_ID:setting},stdio:['ignore','pipe','pipe']});
     // Never publish raw Next logs, whose request URLs could contain the ephemeral key.
     const diagnostics=new Set(),diagnosticLines=[];let lastStatus=null,lastFetchError=null;let readyPath='/fixture-session';const redirects=new Set();
     const ephemeral=[keys.anon,keys.service,sharedKey,...actors.map(a=>a.password)];
@@ -81,6 +81,7 @@ async function main(){
         if(r.status>=300&&r.status<400){
           const next=new URL(r.headers.get('location')??'',`${appOrigin}${readyPath}`);
           check(next.origin===appOrigin,'NEXT_REDIRECT_OUTSIDE_ORIGIN');
+          if(redirects.has(next.pathname))console.log(`Next loopback path loop: ${[...redirects,next.pathname].join(' -> ')}`);
           check(!redirects.has(next.pathname),'NEXT_REDIRECT_LOOP');redirects.add(next.pathname);readyPath=next.pathname;
         }
       }catch(error){
@@ -149,7 +150,7 @@ async function main(){
     const ctx=await context();try{
       const page=await ctx.newPage();await login(page,actors[2]);await list(page);
       await page.goto('/natori/dashboard');await page.getByRole('button',{name:'ログアウト',exact:true}).click();
-      await expect(page.getByRole('button',{name:'ログアウト',exact:true})).toHaveCount(0);
+      await expect(page.getByText('合言葉キーでアクセス中',{exact:true})).toBeVisible({timeout:30000});
       await page.goto('/natori/projects');await expect(page).toHaveURL(/\/admin-login\?/);
       await login(page,actors[2]);await list(page);
     }finally{await ctx.close();}
