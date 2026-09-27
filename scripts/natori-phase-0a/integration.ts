@@ -110,7 +110,7 @@ async function main() {
   await test("signed-scope-cannot-change-path",async()=>{
     const s=await sign();const altered=s.path.replace("entry_","other_");
     const r=await anon.storage.from(ENTRY_UPLOAD_BUCKET).uploadToSignedUrl(altered,s.uploadToken,png,{contentType:"image/png"});
-    check(r.error,"SCOPE_BYPASS");await absent(ENTRY_UPLOAD_BUCKET,altered);
+    check(r.error && /invalid signature/i.test(r.error.message),"SCOPE_BYPASS");await absent(ENTRY_UPLOAD_BUCKET,altered);
   });
   await test("storage-enforces-size-and-mime",async()=>{
     const s=await sign();
@@ -159,6 +159,14 @@ async function main() {
       const owned=`phase0a/service-${mode}-${randomUUID()}.png`;
       check(!(await admin.storage.from(bucket).upload(owned,png,{contentType:"image/png"})).error,"SERVICE_INSERT");
       await content(bucket,owned,png);
+      const publicRead=await fetch(`${origin}/storage/v1/object/public/${bucket}/${owned}`);
+      if(bucket==="natori-portfolio") {
+        check(publicRead.ok && Buffer.from(await publicRead.arrayBuffer()).equals(png),"PORTFOLIO_PUBLIC_BYTES");
+      } else {
+        check([400,404].includes(publicRead.status),"PRIVATE_BUCKET_PUBLIC_READ");
+        const denied=await anon.storage.from(bucket).download(owned);
+        check(denied.error && /object not found/i.test(denied.error.message),"PRIVATE_BUCKET_ANON_READ");
+      }
       check(!(await admin.storage.from(bucket).update(owned,jpg,{contentType:"image/jpeg"})).error,"SERVICE_UPDATE");
       await content(bucket,owned,jpg);
       check(!(await admin.storage.from(bucket).remove([owned])).error,"SERVICE_DELETE");await absent(bucket,owned);

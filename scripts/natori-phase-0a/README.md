@@ -23,6 +23,8 @@ PUBLIC INSERT `true` と artworksのPUBLIC UPDATE/INSERT/DELETEを削除する�
 | natori-portfolio | 管理service | CRUD成功、public画像維持 | 実Storage + portfolio service確認 |
 | gallery-entry-intake（新規） | serviceが発行したpath限定署名だけ | JPEG/PNG・10MiB、private。通常anon/Auth CRUD禁止 | restrictive policyを旧PUBLIC INSERTと併存させて実試験 |
 
+照合した主な呼出箇所: `src/app/[locale]/entry/FormWrapper.tsx`、`src/app/admin/api/entries/[id]/approve/route.ts`（管理認可→artworks copy/processing-meta）、`src/components/ProfileEditModal.tsx`（所有uid prefix）、`src/features/natori/data/supabaseDeliveryFiles.ts`、`src/features/natori/server/consultationFilesService.ts`、`src/features/natori/components/consultation/ConsultationThread.tsx`、`portfolioSiteService.ts`・`projectThumbsService.ts`、`src/app/api/aura/upload/works/[id]/route.ts`・card同等route（request access認可→admin）。Storage操作と業務認可の責任を区別し、service JWTの成功だけで各製品の全業務認可が検証済みとはしない。
+
 ## ギャラリー応募の実装
 
 1. `POST /api/entry/upload` action=sign。8KiB以下のstrict JSON、同一Origin、既存CSRFヘッダー。PNG/JPEG・10MiB以下・SHA256のみ受け付ける。bucket/pathは指定できない。
@@ -39,7 +41,7 @@ receiptは既存server専用service keyをdomain separation付きHMACに使う�
 
 ## 定義照合とバージョン
 
-- 2026-09-27に本番 `storage.buckets` 設定と `pg_policies` のみ再照合。16 policyはPhase Tの記録と一致。業務行、Storage objectsの実行、実ファイル、Authユーザー、秘密鍵は取得していない。
+- 2026-09-27に本番 `storage.buckets` 設定と `pg_policies` のみ再照合。16 policyはPhase Tの記録と一致。業務行、storage.objectsの行、実ファイル、Authユーザー、秘密鍵は取得していない。
 - Phase Tの7bucketに、aura-assets・card-assets（private）、natori-portfolio（public）の3bucketを追加したfixtureを使用。3bucketとも本番の容量/MIME制限はNULL。新規private bucketを加えた11bucketを正確比較する。
 - GRANT/RLSはPhase T取得値を保持。切替直前に再照合する。GRANT一括取消はしない。
 - Supabase CLI 2.118.0（SHA256検証）、CLIが指定するStorage v1.77.0。Nodeは既存 `.node-version` の22系。Dockerイメージdigest/runner patch/Node解決版は毎回artifact `versions.txt` へ残す。

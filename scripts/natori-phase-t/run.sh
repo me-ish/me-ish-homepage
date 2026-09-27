@@ -197,7 +197,7 @@ node "$root/verify-catalog.mjs" "$work/results/catalog-current.json" current
   printf 'tested_sha=%s\nhead_sha=%s\n' "$(git rev-parse HEAD)" "${PHASE_T_HEAD_SHA:-unknown}"
   printf 'supabase_cli=2.118.0\nnode=%s\nrunner_image=%s\n' "$(node --version)" "${ImageVersion:-unknown}"
   if [[ $phase0a == 1 ]]; then
-    node -e 'for(const p of ["@supabase/supabase-js","sharp","tus-js-client","esbuild"])console.log(`${p}=${require(`${p}/package.json`).version}`)'
+    node -e 'const fs=require("node:fs");for(const p of ["@supabase/supabase-js","sharp","tus-js-client","esbuild"])console.log(`${p}=${JSON.parse(fs.readFileSync(`node_modules/${p}/package.json`,"utf8")).version}`)'
     sha256sum "$repo/package-lock.json"
   fi
   docker version --format 'docker_server={{.Server.Version}} docker_client={{.Client.Version}}'

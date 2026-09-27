@@ -6,8 +6,8 @@
 
 - Phase T Draft PR [#95](https://github.com/me-ish/me-ish-homepage/pull/95) を最終レビューし、ユーザー承認に基づきmainへ取り込み済み。
 - 開始main/merge SHA: `e59e48ae51544217fdd141840b3b754200bd90cf`。PR95最終head: `a639a41199edc06f8db63bcd47a5ffaa74e72aa1`。
-- PR95 ready後のPhase T再実行 [36284336717](https://github.com/me-ish/me-ish-homepage/actions/runs/36284336717) 成功。main側CI [36284495914](https://github.com/me-ish/me-ish-homepage/actions/runs/36284495914) 全ジョブ成功。
-- 作業ブランチ: `codex/natori-phase-0a`。Phase 0AはDraft PRで止める。本番適用・本PRのmergeは未実施。
+- PR95 ready後のPhase T再実行 [36284336717](https://github.com/me-ish/me-ish-homepage/actions/runs/36284336717) 成功。main側CI [36284495914](https://github.com/me-ish/me-ish-homepage/actions/runs/36284495914) 全ジョブ成功。Vercelの通常自動Production配信も同じmerge SHAでREADYを確認した。
+- 作業ブランチ: `codex/natori-phase-0a`。Phase 0Aは [Draft PR #96](https://github.com/me-ish/me-ish-homepage/pull/96) で止める。本番適用・本PRのmergeは未実施。
 
 ## 実装
 

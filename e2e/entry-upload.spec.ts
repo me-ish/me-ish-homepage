@@ -37,6 +37,8 @@ for(const rejected of [false,true]) {
     await page.locator('[name="ai_usage"][value="none"]').check();
     await page.getByRole("button",{name:"次へ"}).click();
     await page.locator('[name="isForSale"][value="no"]').check();
+    await page.getByLabel("利用規約の要点（スクロールして全文確認）").evaluate(el=>el.scrollTo({top:el.scrollHeight}));
+    await expect(page.locator('[name="agreeTerms"]')).toBeEnabled();
     for(const name of ["agreeTerms","confirmRights","confirmOriginal","confirmAge"])await page.locator(`[name="${name}"]`).check();
     await page.getByRole("button",{name:"次へ"}).click();
     await page.getByRole("button",{name:"送信する",exact:true}).click();
