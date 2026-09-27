@@ -1,6 +1,7 @@
 import {readFileSync,writeFileSync} from 'node:fs';
 import {randomBytes} from 'node:crypto';
 import {spawn} from 'node:child_process';
+import {createServer} from 'node:http';
 import {createRequire} from 'node:module';
 const require=createRequire('/app/package.json');
 const {createClient}=require('@supabase/supabase-js');
@@ -32,6 +33,12 @@ async function main(){
     try{validateOrigin('https://production-example.supabase.co',origin);calls++;}catch{rejected=true;}
     check(rejected&&calls===0,'DESTINATION_GUARD_FAILED');
   });
+  await test('dedicated-next-loopback-port-reachable',async()=>{
+    const probe=createServer((_request,response)=>response.end('phase0b-only'));
+    await new Promise(resolve=>probe.listen(3000,'127.0.0.1',resolve));
+    try{const r=await fetch(appOrigin,{signal:AbortSignal.timeout(3000)});check(await r.text()==='phase0b-only','NEXT_PORT_BLOCKED');}finally{await new Promise(resolve=>probe.close(resolve));}
+  });
+  check(!results.some(r=>r.status==='failed'),'PREFLIGHT_FAILED');
   const keys=JSON.parse(readFileSync('/runtime/credentials.json','utf8'));
   const admin=createClient(origin,keys.service,{auth:{persistSession:false,autoRefreshToken:false}});
   stage='fixture';
@@ -53,14 +60,21 @@ async function main(){
     await stopServer();
     server=spawn(process.execPath,['/app/node_modules/next/dist/bin/next','dev','--hostname','127.0.0.1','--port','3000'],{cwd:'/app',env:{...baseEnv,NATORI_OWNER_USER_ID:setting},stdio:['ignore','pipe','pipe']});
     // Never publish raw Next logs, whose request URLs could contain the ephemeral key.
-    const diagnostics=new Set();
-    for(const stream of [server.stdout,server.stderr])stream.on('data',data=>{const s=data.toString();for(const code of ['Module not found','EADDRINUSE','EACCES','SyntaxError','Failed to compile'])if(s.includes(code))diagnostics.add(code);});
+    const diagnostics=new Set(),diagnosticLines=[];let lastStatus=null,lastFetchError=null;
+    const ephemeral=[keys.anon,keys.service,sharedKey,...actors.map(a=>a.password)];
+    for(const stream of [server.stdout,server.stderr])stream.on('data',data=>{
+      let s=data.toString();
+      for(const value of ephemeral)s=s.split(value).join('[redacted]');
+      s=s.replace(/eyJ[\w-]+\.[\w-]+\.[\w-]+|[a-fA-F0-9]{48,}/g,'[redacted]').replace(/(?:https?|wss?):\/\/[^\s"']+/g,'[url]');
+      for(const code of ['Ready in','Starting','Module not found','EADDRINUSE','EACCES','EAI_AGAIN','ECONNREFUSED','fetch failed','SyntaxError','Failed to compile','Downloading','panicked'])if(s.includes(code))diagnostics.add(code);
+      for(const line of s.split('\n'))if(/error|failed|Error|Error:|panicked|Cannot|could not|SWC/.test(line)&&!/(?:cookie|token|secret|password|apikey|authorization)/i.test(line))diagnosticLines.push(line.slice(0,250));
+    });
     const deadline=Date.now()+120000;let ready=false;
     while(Date.now()<deadline&&server.exitCode===null){
-      try{const r=await fetch(`${appOrigin}/fixture-session`,{signal:AbortSignal.timeout(2000)});if(r.ok){ready=true;break;}}catch{}
+      try{const r=await fetch(`${appOrigin}/fixture-session`,{signal:AbortSignal.timeout(2000)});lastStatus=r.status;if(r.ok){ready=true;break;}}catch(error){lastFetchError=error?.cause?.code??error?.name??'unknown';}
       await new Promise(resolve=>setTimeout(resolve,500));
     }
-    if(!ready){console.log(`Next startup classifications: ${[...diagnostics].join(',')||'not-ready'}`);throw new Error('NEXT_NOT_READY');}
+    if(!ready){console.log(`Next startup classifications: ${[...diagnostics].join(',')||'not-ready'} status=${lastStatus} fetch=${lastFetchError}`);for(const line of diagnosticLines.slice(-8))console.log(`Next sanitized diagnostic: ${line}`);throw new Error('NEXT_NOT_READY');}
   }
   stage='next-start';await startServer(owner.id);
   stage='chromium';browser=await chromium.launch({headless:true});
