@@ -19,6 +19,7 @@ workflow_dispatch / main先行マージ / pull_request_target / 本番Secretsは
 - Phase Nの既存試験23件とブラウザ9件はそのまま実行。その後、同じ限定コンテナにPhase 4の読み取り専用スクリプトを追加mountして実行する。
 - `build-fixture.mjs` はPhase N fixtureに、明示的に確認した相談3migrationと新しい集計RPCだけを追加する。全migration/seed/.temp/本番行のコピーなし。
 - 試験専用Authログインページを用い、owner・staff2名・strangerの実Supabaseセッションを取得。Google認証は再現しない。合言葉キーの正規管理入口も実行する。
+- 案件履歴APIも実ソースをコピーする。Next devのエラーバッジは障害注入後にモバイル操作を覆うため、試験用config wrapperだけで `devIndicators: false` とする。製品configは変更せず、ブラウザの未処理例外・hydration/DOM・Dialog警告の検査は継続する。元configとwrapperのchecksumを別々に残す。
 - 正規相談API→実DB→HTTPメールcapture→実画面を確認。captureへ向けるpreloadはテストコンテナ専用、製品コードには読み込ませない。
 - URL、token、cookie、秘密鍵、Nextの生ログは出力しない。成果物は件数・固定試験名・架空画面のみ。後始末はPhase Tが作成したラベル付きリソースに限定する。
 

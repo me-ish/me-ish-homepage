@@ -10,11 +10,11 @@ const { chromium, expect } = require('@playwright/test');
 setDefaultResultOrder('ipv4first');
 const appOrigin = 'http://localhost:3000', results = [], browserProblems = new Set();
 const check = (ok, code) => { if (!ok) throw new Error(code); };
-let stage = 'preflight', server, browser, capture;
+let stage = 'preflight', checkpoint = 'START', server, browser, capture;
 async function test(name, fn) {
-  stage = name;
+  stage = name; checkpoint = 'START';
   try { await fn(); results.push({ name, status: 'passed' }); console.log(`PASS phase4/${name}`); }
-  catch (error) { const message = error?.message ?? ''; const code = /^[A-Z_0-9]+$/.test(message) ? message : message.includes('strict mode violation') ? 'STRICT_LOCATOR' : message.includes('toBeVisible') ? 'NOT_VISIBLE' : 'ASSERTION_FAILED'; results.push({ name, status: 'failed', code }); console.log(`FAIL phase4/${name} ${code}`); }
+  catch (error) { const message = error?.message ?? ''; const code = /^[A-Z_0-9]+$/.test(message) ? message : message.includes('strict mode violation') ? 'STRICT_LOCATOR' : message.includes('toBeVisible') ? 'NOT_VISIBLE' : 'ASSERTION_FAILED'; const line = error?.stack?.match(/browser\.mjs:\d+:\d+/)?.[0] ?? ''; const reasons = ['intercepts pointer events', 'not visible', 'not enabled', 'outside of the viewport'].filter(value => message.includes(value)); results.push({ name, status: 'failed', code, checkpoint, line, reasons }); console.log(`FAIL phase4/${name} ${code} ${checkpoint} ${line} ${reasons.join(',')}`); }
 }
 async function main() {
   check(process.env.PHASE_N_BROWSER === 'ephemeral', 'EPHEMERAL_REQUIRED');
@@ -256,14 +256,19 @@ async function main() {
     await page.goto(`/natori/inquiries?project=${prep.id}`);
     await expect(page.getByRole('alert').filter({ hasText: '案件の詳細を取得できませんでした。再試行してください。' })).toBeVisible();
     await page.unroute('**/api/natori/admin/projects?projectId=*'); await page.getByRole('button', { name: '詳細を再試行' }).click(); await expect(page.getByRole('dialog')).toBeVisible();
+    checkpoint = 'OPEN_CONVERSATION';
     await page.getByRole('button', { name: '相談に返信', exact: true }).click();
+    checkpoint = 'SEND_BEFORE_DETAIL_OUTAGE';
     await page.route('**/api/natori/admin/projects?projectId=*', route => route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
     await page.getByRole('textbox', { name: 'メッセージ', exact: true }).fill('Reply before detail refresh outage');
     await page.getByRole('button', { name: 'メッセージを送信', exact: true }).click();
+    checkpoint = 'CHECK_SAVED_AND_STALE_WARNING';
     await expect(page.getByText('Reply before detail refresh outage', { exact: true })).toBeVisible();
     await expect(page.getByRole('dialog').getByRole('alert').filter({ hasText: '表示中の案件情報が古い可能性があります。' })).toBeVisible();
     await page.unroute('**/api/natori/admin/projects?projectId=*');
+    checkpoint = 'RETRY_STALE_DETAIL';
     await page.getByRole('button', { name: '案件情報を再取得', exact: true }).click();
+    checkpoint = 'CHECK_REFRESHED_DETAIL';
     await expect(page.getByRole('dialog').getByText('依頼者の返信待ち', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: '案件情報を再取得', exact: true })).toHaveCount(0);
   });
