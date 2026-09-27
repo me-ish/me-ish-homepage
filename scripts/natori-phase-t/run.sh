@@ -86,7 +86,7 @@ firewall_created=1
 docker network create --internal --subnet "$subnet" --label "natori.phase-t=$project" "$network" >/dev/null
 network_created=1
 stack_started=1
-if ! timeout 540 "$work/bin/supabase" start --workdir "$work/stack" --network-id "$network" \
+if ! timeout 540 "$work/bin/supabase" start --output-format json --workdir "$work/stack" --network-id "$network" \
   --exclude realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor >"$work/startup.private" 2>&1; then
   echo 'Supabase startup failed; mandatory tests have NOT passed'
   # Only classifications, never raw CLI logs (which can contain credentials).
@@ -112,6 +112,17 @@ for line in raw.splitlines():
     message=re.sub(r'(?:https?|postgres(?:ql)?)://[^\s\"\']+', '[url]', message)
     message=re.sub(r'(?i)(password|token|secret|key)\s*[=:]\s*[^\s,;]+', r'\1=[redacted]', message)
     print('startup error: '+message[:800])
+# Some bootstrap errors use plain stderr instead of the structured error envelope.
+# Suppress credential-bearing lines and opaque strings, then show only the last 12.
+safe=[]
+for line in raw.splitlines():
+    line=re.sub(r'\x1b\[[0-9;]*[A-Za-z]', '', line)
+    if re.search(r'(?i)token|secret|password|api.?key|authorization|postgresql://|service.role|jwt',line): continue
+    for value in secrets.values():
+        if isinstance(value,str) and len(value)>15: line=line.replace(value,'[redacted]')
+    line=re.sub(r'[A-Za-z0-9_./+=:-]{24,}', '[opaque]', line)
+    safe.append(line[:300])
+for line in safe[-12:]: print('startup diagnostic: '+line)
 PY
   docker ps -a --filter "label=com.supabase.cli.project=$project" --format '{{.Names}} {{.Status}}'
   exit 1
