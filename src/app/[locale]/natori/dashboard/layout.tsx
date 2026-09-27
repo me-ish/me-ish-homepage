@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireNatoriAccess } from "@/features/natori/server/requireNatoriAdmin";
+import { notificationVerificationAvailable } from "@/features/natori/server/notificationVerification";
 
 export const dynamic = "force-dynamic";
 
@@ -24,5 +26,10 @@ export default async function NatoriDashboardLayout({
 }) {
   await requireNatoriAccess("/natori/dashboard");
 
-  return <>{children}</>;
+  return <>
+    {notificationVerificationAvailable() && <aside className="mx-auto max-w-3xl px-4 pt-4 text-sm">
+      <Link href="/natori/dashboard/notification-check" className="inline-block rounded-lg border border-pink-300 bg-pink-50 px-4 py-3 underline">メール通知の確認（テスト）</Link>
+    </aside>}
+    {children}
+  </>;
 }

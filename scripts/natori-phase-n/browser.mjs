@@ -71,6 +71,10 @@ async function main(){
     check((await client.request.get('/api/natori/admin/notifications')).status()===401,'ANON_READ');
     const list=await rows(quote.id);check((await client.request.post('/api/natori/admin/notifications',{headers:{'x-requested-with':'me-ish'},data:{id:list[0].id}})).status()===401,'ANON_RETRY');
   });
+  await test('anonymous-cannot-access-real-mail-verification',async()=>{
+    check((await client.request.get('/api/natori/admin/notification-verification')).status()===401,'ANON_VERIFY_READ');
+    check((await client.request.post('/api/natori/admin/notification-verification',{headers:{'x-requested-with':'me-ish'},data:{purpose:'all'}})).status()===401,'ANON_VERIFY_SEND');
+  });
   const manager=await browser.newContext({baseURL:appOrigin,serviceWorkers:'block'}),management=await manager.newPage();
   await test('shared-key-home-shows-failed-notices-without-email-data',async()=>{
     await management.goto(`/natori/dashboard?natori-key=${sharedKey}`);
@@ -88,6 +92,13 @@ async function main(){
     const after=(await admin.from('natori_quotes').select('*').eq('id',q.data.id).single()).data;
     check(JSON.stringify(before)===JSON.stringify(after),'RETRY_MUTATED_ACCEPTANCE');
   });
+  await test('real-mail-verification-is-disabled-and-csrf-protected-by-default',async()=>{
+    const before=providerCalls;
+    check((await manager.request.get('/api/natori/admin/notification-verification')).status()===404,'VERIFY_DISABLED_READ');
+    check((await manager.request.post('/api/natori/admin/notification-verification',{headers:{'x-requested-with':'me-ish'},data:{purpose:'all'}})).status()===404,'VERIFY_DISABLED_SEND');
+    check((await manager.request.post('/api/natori/admin/notification-verification',{data:{purpose:'all'}})).status()===403,'VERIFY_CSRF');
+    check(providerCalls===before,'VERIFY_UNEXPECTED_MAIL');
+  });
   await test('mobile-width-status-controls-and-no-horizontal-overflow',async()=>{
     await management.setViewportSize({width:390,height:844});
     const panel=management.getByRole('region',{name:'承諾・受取のメール通知'});
@@ -104,6 +115,6 @@ async function main(){
   await client.close();await manager.close();
   writeFileSync('/results/phasen-browser.json',JSON.stringify({tests:results,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,engine:'Chromium 1.58.2; mobile viewport only, not iPhone Safari',providerRequests:providerCalls,distinctAcceptedMessages:messages.size},null,2));
   console.log(`PHASE N BROWSER ${results.filter(r=>r.status==='passed').length} passed / ${results.filter(r=>r.status==='failed').length} failed / 0 skipped`);
-  check(results.length===7&&results.every(r=>r.status==='passed'),'BROWSER_FAILED');
+  check(results.length===9&&results.every(r=>r.status==='passed'),'BROWSER_FAILED');
 }
 main().catch(()=>{console.error(`Phase N browser failed at ${stage}; raw URLs and logs withheld`);process.exitCode=1;}).finally(async()=>{await browser?.close();if(server?.exitCode===null){server.kill('SIGTERM');await Promise.race([new Promise(r=>server.once('exit',r)),new Promise(r=>setTimeout(()=>{server.kill('SIGKILL');r();},5000))]);}if(capture)await new Promise(r=>capture.close(r));});

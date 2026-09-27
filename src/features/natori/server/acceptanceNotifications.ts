@@ -26,7 +26,7 @@ export type NotificationSendResult =
   | { status: "failed" | "unknown"; errorCode: string };
 export type NotificationTransport = (payload: NotificationPayload, key: string) => Promise<NotificationSendResult>;
 
-function buildPayload(job: NatoriNotificationRow): NotificationPayload {
+export function buildAcceptanceNotificationPayload(job: Pick<NatoriNotificationRow, "payload" | "snapshot" | "purpose">): NotificationPayload {
   // A retry never renders from current project values or current mail settings.
   if (job.payload) return payloadSchema.parse(job.payload);
   const snapshot = z.object({
@@ -96,7 +96,7 @@ export async function dispatchAcceptanceNotification(
     const job = claim.data?.[0];
     if (claim.error || !job) return;
     let payload: NotificationPayload;
-    try { payload = buildPayload(job); }
+    try { payload = buildAcceptanceNotificationPayload(job); }
     catch {
       // No provider request has been made; a new attempt is safe after configuration is corrected.
       await admin.rpc("natori_notification_finish_v1", { p_id: id, p_claim_token: claimToken,
