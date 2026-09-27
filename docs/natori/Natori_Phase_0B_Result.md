@@ -17,6 +17,7 @@ Phase 0A の取り込み済み main から分離した worktree で作業。依�
 - `requireNatoriAdmin.ts`: 認可結果を `auth-user/userId` または `shared-key/null` として返す。共有 Cookie で許可した場合、同居するログインユーザーへ操作を誤帰属させない。既存の管理用 allowlist と Cookie の HMAC 検証は維持。
 - `natoriOwner.ts`: 認可後に固定 owner を解決。未認可は 401、owner 設定の不足・形式不正は 503。設定エラーを「案件なし」「プロフィールなし」「料金設定なし」の成功応答へ変換しない。
 - `natoriManagementScope.ts` / `natoriManagementRoute.ts`: リクエスト単位の AsyncLocalStorage。認可済み owner/operator を下位 service へ渡し、並行リクエスト間で混ぜない。共有のプロセス全体キャッシュに認証情報を保持しない。
+- 案件一覧 reader: `natori_owner_unavailable` の日本語説明を既存の画面エラー表示まで伝える。その他の未知の失敗は従来の一般エラーを維持。
 - 管理 API: projects/events/profile/pricing、delivery-files、consultation、estimate-draft、external-inquiry、structured-quote、order-mail、project-activity、project-links、project-thumbs を同じ境界で包む。CSRF・入力検証・既存 owner 条件は維持。
 - `consultation-file`: 管理者による projectId 経路だけを境界で包む。依頼者 token 経路は従来の token 検証を維持し、管理設定への依存を追加しない。
 - 管理案件作成: HTTP 入力の userId を採用せず、service でも固定 owner を強制。公開 legacy 起票は、公開専用の信頼済み設定解決から既存 RPC を呼ぶ。古いタブ・ブックマークを廃止しない。設定不備なら legacy route も画像保存・起票・通知より前に停止。
@@ -50,7 +51,7 @@ Phase 0A の取り込み済み main から分離した worktree で作業。依�
 - Next の `cookies()` だけを request-local adapter に差し替える。Supabase SSR client / Auth / DB は本物。実ブラウザの Cookie 保存、middleware、ページ描画をこの試験で実証したとは扱わない。
 - 既存 CI、Phase T、Phase 0A の条件・skip・continue-on-error は変更しない。
 
-ローカル検証: Vitest 126 files / 1,160 passed / 0 failed / 0 skipped、型チェック成功、変更範囲 ESLint 成功。既存 jsdom の navigation 未実装メッセージは試験失敗なし。PR・Actions URL と実 Supabase の結果は CI 完了後に追記する。Work の Node は 24.19.0、Actions は既存 `.node-version` の 22 系。依存は既存 lockfile を使用。Supabase CLI 2.118.0 と固定 checksum、実際の Node/Docker/DB/image digest は Phase T artifact の `versions.txt` に記録する。
+ローカル検証: Vitest 126 files / 1,160 passed / 0 failed / 0 skipped、型チェック成功、変更範囲 ESLint 成功。既存 jsdom の navigation 未実装メッセージは試験失敗なし。追加した案件 reader の検証は 7 件成功（既存 4 件 + 新規 3 件）。最終差分の合計は CI で再確認する。Work の Node は 24.19.0、Actions は既存 `.node-version` の 22 系。依存は既存 lockfile を使用。Supabase CLI 2.118.0 と固定 checksum、実際の Node/Docker/DB/image digest は Phase T artifact の `versions.txt` に記録する。
 
 ### 通信と実行制限
 
@@ -84,3 +85,21 @@ DB 変更なしなのでデータの巻き戻しは不要。ただし旧 session
 - F23 全体、通知状態分離、決済/見積り/納品の状態整合性は後続 Phase。本変更で解消したと主張しない。
 - Safari ホーム画面版の添付白画面（PWA-01）は利用者承認済みの別課題。今回変更しない。
 - Phase 0A の残存テストファイル cleanup は混ぜない。既存ファイル・リンクを維持。
+
+
+## GitHub 実行証跡
+
+[Draft PR #97](https://github.com/me-ish/me-ish-homepage/pull/97)。初回実装 head: `33d75a347472b6fca20cfe1bf3495173c691c65e`、Actions が実行した PR merge SHA: `5281f347b32db1050e9181cce962daa686d0b5f5`。本番 merge ではなく PR 試験用の合成コミット。
+
+| 検証 | run | 実際の結果 |
+|---|---|---|
+| Phase 0B | [36295109496](https://github.com/me-ish/me-ish-homepage/actions/runs/36295109496) | 実 Auth/DB 19 成功・0 失敗・0 skip。隔離 17 + Storage baseline 35 + candidate 35 も成功。専用リソース cleanup 成功 |
+| Phase 0A 回帰 | [36295109492](https://github.com/me-ish/me-ish-homepage/actions/runs/36295109492) | 隔離 17、Storage 35 + 35、実 server adapter 24 + 24、cutover approval/drift guard 成功。0 失敗・0 skip |
+| Phase T | [36295109604](https://github.com/me-ish/me-ish-homepage/actions/runs/36295109604) | job 成功 |
+| 既存 CI | [36295109479](https://github.com/me-ish/me-ish-homepage/actions/runs/36295109479) | 型・Lint・Audit・Vitest 1,160 件成功。E2E と最終差分の結果は PR の検証欄で確認 |
+
+Phase T の current/baseline は監査時の広い policy を再現した架空環境を指す。本番は Phase 0A 適用後であり、現在の本番がその広い policy のままであるという意味ではない。
+
+初回 CI 後の差分は、設定エラーの日本語表示、対応する reader 試験 3 件、専用 workflow の該当 path、実行バージョン記録への SSR 追加、この証跡のみ。最終 head に対して再度 CI を実行し、その SHA・結果を PR 本文へ記録する。証跡文書に自身の将来の commit SHA を埋め込むための繰り返し commit は行わない。
+
+CLI の通常 push は GitHub 認証が利用できず失敗したため、接続済み GitHub の Git API で同一 tree（`a21e61fa2845361b3cfe2fc5503a75aba45861da`）を保存した。branch 作成および後続更新は通常の親子関係を維持し、force 更新なし。認証情報の取り出し・権限迂回なし。

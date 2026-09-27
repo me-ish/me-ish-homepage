@@ -134,6 +134,12 @@ export async function fetchNatoriProjectCollection(): Promise<{
     cache: "no-store",
   });
   if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      code?: unknown; error?: unknown;
+    } | null;
+    if (body?.code === "natori_owner_unavailable" && typeof body.error === "string") {
+      throw new Error(body.error);
+    }
     throw new Error(`Failed to fetch Natori projects (${response.status})`);
   }
 

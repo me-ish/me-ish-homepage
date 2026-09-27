@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { rowToProject, type ProjectRow } from "@/features/natori/data/supabaseProjects";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fetchNatoriProjectCollection, rowToProject, type ProjectRow } from "@/features/natori/data/supabaseProjects";
 
 function makeRow(overrides: Partial<ProjectRow> = {}): ProjectRow {
   return {
@@ -75,5 +75,20 @@ describe("rowToProject nullable compatibility", () => {
         estimatedHours: undefined,
       },
     ]);
+  });
+});
+
+
+afterEach(() => vi.unstubAllGlobals());
+describe("owner configuration error", () => {
+  it("surfaces the server configuration message instead of an empty list", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({
+      code: "natori_owner_unavailable", error: "管理対象の設定を確認できません。",
+    }, {status: 503})));
+    await expect(fetchNatoriProjectCollection()).rejects.toThrow("管理対象の設定を確認できません。");
+  });
+  it.each(["not-json", JSON.stringify({error:"internal details"})])("keeps an unknown failure generic", async body => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body,{status:500})));
+    await expect(fetchNatoriProjectCollection()).rejects.toThrow("Failed to fetch Natori projects (500)");
   });
 });

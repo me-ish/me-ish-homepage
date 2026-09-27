@@ -9,6 +9,8 @@ on:
       - 'scripts/natori-phase-t/**'
       - 'scripts/natori-phase-0b/**'
       - 'src/features/natori/server/**'
+      - 'src/features/natori/data/supabaseProjects.ts'
+      - 'src/features/natori/data/__tests__/projectReader.test.ts'
       - 'src/app/api/natori/**'
       - 'src/lib/supabase/**'
       - 'src/lib/supabaseServer.ts'
