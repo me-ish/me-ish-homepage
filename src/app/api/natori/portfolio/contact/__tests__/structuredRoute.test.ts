@@ -59,7 +59,7 @@ vi.mock("@/features/natori/server/portfolioSiteService", () => ({
 
 // 公開 route が管理系の session-first resolver を使わないことを固定する。
 vi.mock("@/features/natori/server/natoriOwner", () => ({
-  resolveNatoriActingUserId: (...args: unknown[]) => mockResolveActingUser(...args),
+  resolveNatoriOwnerId: (...args: unknown[]) => mockResolveActingUser(...args),
   NATORI_OWNER_UNRESOLVED_MESSAGE: "",
 }));
 

@@ -21,7 +21,7 @@ import "server-only";
 //
 // URL には一切アクセスしない（fetch / metadata / OGP / redirect 追跡なし）。
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
+import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 import {
   NATORI_PROJECT_REFERENCE_LINK_MAX,
   nextNatoriReferenceLinkSortOrder,
@@ -79,7 +79,7 @@ async function resolveProjectScope(
   projectId: string,
   { allowArchived }: { allowArchived: boolean }
 ): Promise<ProjectScope> {
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
 
   const { data, error } = await supabaseAdmin()

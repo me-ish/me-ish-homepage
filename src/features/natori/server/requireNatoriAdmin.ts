@@ -6,6 +6,7 @@ import { supabaseServer } from "@/lib/supabaseServer";
 import { NATORI_KEY_COOKIE } from "@/features/natori/constants/dashboardKey";
 import { deriveNatoriDashboardCookieToken } from "@/features/natori/lib/dashboardKeyToken";
 import { safeCompare } from "@/lib/auth/timingSafe";
+import { natoriManagementScope, type NatoriOperator } from "@/features/natori/server/natoriManagementScope";
 
 function getNatoriStaffEmails(): Set<string> {
   const raw = [
@@ -69,13 +70,23 @@ async function hasNatoriKeyCookie(): Promise<boolean> {
  * env が何も設定されていない場合は全拒否（フェイルクローズ）。
  */
 export async function canUseNatoriManagement(): Promise<boolean> {
-  if (await hasNatoriKeyCookie()) return true;
+  return (await resolveNatoriOperator()) !== null;
+}
 
-  const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return canAccessNatoriManagement(user?.email ?? null);
+/** A cookie authorizes shared management, not the identity of an unrelated login. */
+export async function resolveNatoriOperator(): Promise<NatoriOperator | null> {
+  const scoped = natoriManagementScope.getStore();
+  if (scoped) return scoped.operator;
+  // Keep the existing shared-key path independent of Auth availability.
+  if (await hasNatoriKeyCookie()) return { kind: "shared-key", userId: null };
+  try {
+    const supabase = await supabaseServer();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user?.id || !(await canAccessNatoriManagement(user.email))) return null;
+    return { kind: "auth-user", userId: user.id };
+  } catch {
+    return null;
+  }
 }
 
 export async function requireNatoriAccess(nextPath: string): Promise<void> {

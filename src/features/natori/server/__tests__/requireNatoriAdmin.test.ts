@@ -39,6 +39,7 @@ import {
   canAccessNatoriManagement,
   canUseNatoriManagement,
   requireNatoriAccess,
+  resolveNatoriOperator,
 } from "@/features/natori/server/requireNatoriAdmin";
 
 /* ---------- Env / helper setup ---------- */
@@ -54,7 +55,7 @@ const savedEnv: Record<string, string | undefined> = {};
 
 function setLoggedInUser(email: string | null) {
   mockGetUser.mockResolvedValue({
-    data: { user: email ? { email } : null },
+    data: { user: email ? { id: "operator-test-id", email } : null },
   });
 }
 
@@ -98,6 +99,20 @@ describe("canUseNatoriManagement", () => {
       name === NATORI_KEY_COOKIE ? { value: token } : undefined
     );
     await expect(canUseNatoriManagement()).resolves.toBe(true);
+  });
+
+  it("shared cookie with unrelated login records shared operator, never that user's ID", async () => {
+    process.env.NATORI_DASHBOARD_KEY = "correct-key";
+    const token = await deriveNatoriDashboardCookieToken("correct-key");
+    mockGetCookie.mockImplementation(name => name === NATORI_KEY_COOKIE ? {value: token} : undefined);
+    setLoggedInUser("stranger@example.com");
+    await expect(resolveNatoriOperator()).resolves.toEqual({kind:"shared-key",userId:null});
+    expect(mockGetUser).not.toHaveBeenCalled();
+  });
+
+  it("Auth error fails closed", async () => {
+    mockGetUser.mockRejectedValue(new Error("Auth unavailable"));
+    await expect(resolveNatoriOperator()).resolves.toBeNull();
   });
 
   it("誤ったキー由来のトークン Cookie は拒否する", async () => {

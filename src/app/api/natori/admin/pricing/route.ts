@@ -1,3 +1,4 @@
+import { withNatoriManagement } from "@/features/natori/server/natoriManagementRoute";
 import { NextResponse } from "next/server";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
@@ -8,8 +9,7 @@ import {
   updateNatoriAdminPresetConfig,
 } from "@/features/natori/server/pricingService";
 import {
-  NATORI_OWNER_UNRESOLVED_MESSAGE,
-  resolveNatoriActingUserId,
+  resolveNatoriOwnerId,
 } from "@/features/natori/server/natoriOwner";
 
 export const runtime = "nodejs";
@@ -23,25 +23,22 @@ function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
-export async function GET() {
+export const GET = withNatoriManagement("pricing.GET", false, async function GET() {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userId = await resolveNatoriActingUserId();
-  if (!userId) {
-    return NextResponse.json({ presets: [] });
-  }
+  const userId = await resolveNatoriOwnerId();
 
   const result = await listNatoriAdminPresets(userId);
   if (result.kind === "db-error") {
     return NextResponse.json({ error: "Failed to fetch presets" }, { status: 500 });
   }
   return NextResponse.json({ presets: result.presets });
-}
+});
 
 /** デフォルトプリセットの投入（既に存在するキーはスキップ） */
-export async function POST(request: Request) {
+export const POST = withNatoriManagement("pricing.POST", true, async function POST(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -77,10 +74,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const userId = await resolveNatoriActingUserId();
-  if (!userId) {
-    return NextResponse.json({ error: NATORI_OWNER_UNRESOLVED_MESSAGE }, { status: 500 });
-  }
+  const userId = await resolveNatoriOwnerId();
 
   const result = await seedNatoriAdminPresets(userId, seeds);
   if (result.kind === "db-error") {
@@ -92,9 +86,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to fetch presets" }, { status: 500 });
   }
   return NextResponse.json({ presets: list.presets });
-}
+});
 
-export async function PATCH(request: Request) {
+export const PATCH = withNatoriManagement("pricing.PATCH", true, async function PATCH(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -114,10 +108,7 @@ export async function PATCH(request: Request) {
     if (!isObject(payload.config)) {
       return NextResponse.json({ error: "config is required" }, { status: 400 });
     }
-    const userId = await resolveNatoriActingUserId();
-    if (!userId) {
-      return NextResponse.json({ error: NATORI_OWNER_UNRESOLVED_MESSAGE }, { status: 500 });
-    }
+    const userId = await resolveNatoriOwnerId();
     const result = await updateNatoriAdminPresetConfig(userId, id, payload.config);
     if (result.kind === "db-error") {
       return NextResponse.json({ error: "Failed to update preset" }, { status: 500 });
@@ -129,10 +120,7 @@ export async function PATCH(request: Request) {
   }
 
   if (payload.kind === "default") {
-    const userId = await resolveNatoriActingUserId();
-    if (!userId) {
-      return NextResponse.json({ error: NATORI_OWNER_UNRESOLVED_MESSAGE }, { status: 500 });
-    }
+    const userId = await resolveNatoriOwnerId();
     const result = await setNatoriAdminDefaultPreset(userId, id);
     if (result.kind === "db-error") {
       return NextResponse.json({ error: "Failed to update preset" }, { status: 500 });
@@ -144,4 +132,4 @@ export async function PATCH(request: Request) {
   }
 
   return NextResponse.json({ error: "Unknown update kind" }, { status: 400 });
-}
+});

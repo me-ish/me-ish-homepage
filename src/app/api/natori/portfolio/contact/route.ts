@@ -515,6 +515,11 @@ async function handleLegacySubmission(
     return fail("submission_rejected", 409);
   }
 
+  // Legacy tabs/bookmarks use the same fixed owner; fail before upload or mail.
+  if (resolvePublicIntakeOwnerId().kind !== "ok") {
+    return fail("temporarily_unavailable", 503);
+  }
+
   // 添付画像の保存（フォーム送信と一体でのみ行う）
   if (files.length > MAX_REF_IMAGES) {
     return NextResponse.json({ error: "too_many_files" }, { status: 400 });

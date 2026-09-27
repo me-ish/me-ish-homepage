@@ -6,7 +6,7 @@ import { injectAcceptLink } from "@/features/natori/lib/orderMail";
 import { getNextActionForStatus } from "@/features/natori/lib/projects";
 import { validateStructuredQuoteDeliveryAttempt } from "@/features/natori/lib/structuredQuoteAttempt";
 import { issueNatoriQuoteViaRpc } from "@/features/natori/server/quoteIssueRpcAdapter";
-import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
+import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSiteUrl } from "@/lib/constants";
 import { readNatoriRequestData } from "@/features/natori/lib/requestSchema";
@@ -60,7 +60,7 @@ export async function issueStructuredQuoteAndSend(
     }
   }
 
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
 
   const { data, error } = await supabaseAdmin()

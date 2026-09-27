@@ -1,3 +1,4 @@
+import { withNatoriManagement } from "@/features/natori/server/natoriManagementRoute";
 import { NextResponse } from "next/server";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
@@ -14,10 +15,7 @@ import {
   setNatoriProjectStatus,
   setNatoriProjectTaskDone,
 } from "@/features/natori/server/projectsService";
-import {
-  NATORI_OWNER_UNRESOLVED_MESSAGE,
-  resolveNatoriActingUserId,
-} from "@/features/natori/server/natoriOwner";
+
 import type {
   NatoriConcreteProjectType,
   NatoriDeliveryPlan,
@@ -34,7 +32,7 @@ function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
-export async function GET() {
+export const GET = withNatoriManagement("projects.GET", false, async function GET() {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -54,12 +52,12 @@ export async function GET() {
         referenceLinks: result.referenceLinks,
       });
   }
-}
+});
 
 const NATORI_PROJECT_TYPES = new Set<string>(["icon", "sd", "standing", "illustration"]);
 const NATORI_DELIVERY_PLANS = new Set<string>(["normal", "rush_14_days", "rush_7_days"]);
 
-export async function POST(request: Request) {
+export const POST = withNatoriManagement("projects.POST", true, async function POST(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -93,13 +91,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid deliveryPlan" }, { status: 400 });
   }
 
-  const userId = await resolveNatoriActingUserId();
-  if (!userId) {
-    return NextResponse.json({ error: NATORI_OWNER_UNRESOLVED_MESSAGE }, { status: 500 });
-  }
-
   const result = await createNatoriAdminProject({
-    userId,
     title,
     clientName,
     amount,
@@ -116,9 +108,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to create project" }, { status: 500 });
   }
   return NextResponse.json({ projectId: result.projectId });
-}
+});
 
-export async function PATCH(request: Request) {
+export const PATCH = withNatoriManagement("projects.PATCH", true, async function PATCH(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -298,9 +290,9 @@ export async function PATCH(request: Request) {
   }
 
   return NextResponse.json({ error: "Unknown update kind" }, { status: 400 });
-}
+});
 
-export async function DELETE(request: Request) {
+export const DELETE = withNatoriManagement("projects.DELETE", true, async function DELETE(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -321,4 +313,4 @@ export async function DELETE(request: Request) {
     case "ok":
       return NextResponse.json({ ok: true });
   }
-}
+});

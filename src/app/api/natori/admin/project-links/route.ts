@@ -1,3 +1,4 @@
+import { withNatoriManagement } from "@/features/natori/server/natoriManagementRoute";
 // api/natori/admin/project-links/route.ts
 // 案件の外部参照リンク CRUD。業務ロジックは projectReferenceLinksService に集約。
 //
@@ -62,7 +63,7 @@ async function guard(request: Request) {
   return null;
 }
 
-export async function GET(request: Request) {
+export const GET = withNatoriManagement("project-links.GET", false, async function GET(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -71,9 +72,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
   }
   return respond(await listNatoriProjectReferenceLinks(projectId));
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withNatoriManagement("project-links.POST", true, async function POST(request: Request) {
   const blocked = await guard(request);
   if (blocked) return blocked;
 
@@ -94,9 +95,9 @@ export async function POST(request: Request) {
   const label = typeof payload.label === "string" ? payload.label : null;
 
   return respond(await addNatoriProjectReferenceLink({ projectId, url, label }));
-}
+});
 
-export async function PATCH(request: Request) {
+export const PATCH = withNatoriManagement("project-links.PATCH", true, async function PATCH(request: Request) {
   const blocked = await guard(request);
   if (blocked) return blocked;
 
@@ -130,9 +131,9 @@ export async function PATCH(request: Request) {
   return respond(
     await updateNatoriProjectReferenceLink({ projectId, linkId, url, label })
   );
-}
+});
 
-export async function DELETE(request: Request) {
+export const DELETE = withNatoriManagement("project-links.DELETE", true, async function DELETE(request: Request) {
   const blocked = await guard(request);
   if (blocked) return blocked;
 
@@ -143,4 +144,4 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
   }
   return respond(await deleteNatoriProjectReferenceLink(projectId, linkId));
-}
+});

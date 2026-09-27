@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "crypto";
 import { Resend } from "resend";
 import { getSiteUrl } from "@/lib/constants";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
+import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 import { sendNatoriNoticeMail } from "@/features/natori/server/orderMailService";
 import { extractClientEmailFromNote } from "@/features/natori/lib/orderMail";
 import { parseInquiryNote } from "@/features/natori/lib/inquiryNoteView";
@@ -92,7 +92,7 @@ async function getMessages(projectId: string): Promise<ConsultationMessage[] | n
 
 export async function getStaffConsultation(projectId: string) {
   if (!UUID_RE.test(projectId)) return null;
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return null;
   const project = await getProject(projectId, ownerId);
   if (!project) return null;
@@ -124,7 +124,7 @@ export type SendConsultationResult = "ok" | "notification-failed" | "not-found" 
 
 export async function sendStaffConsultation(projectId: string, body: string): Promise<SendConsultationResult> {
   if (!UUID_RE.test(projectId) || !body.trim() || body.length > 4000) return "invalid";
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return "not-found";
   const project = await getProject(projectId, ownerId);
   if (!project || project.deleted_at || project.status === "closed") return "not-found";
@@ -202,7 +202,7 @@ export async function sendClientConsultation(token: string, body: string): Promi
 /** Re-send a failed staff notification without inserting another conversation message. */
 export async function retryStaffConsultationNotification(projectId: string, messageId: string): Promise<SendConsultationResult> {
   if (!UUID_RE.test(projectId) || !UUID_RE.test(messageId)) return "invalid";
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return "not-found";
   const project = await getProject(projectId, ownerId);
   if (!project || project.deleted_at || project.status === "closed") return "not-found";

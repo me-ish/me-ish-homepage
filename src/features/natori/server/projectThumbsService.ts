@@ -5,7 +5,7 @@ import "server-only";
 // パス規約で管理する（案件IDから一意に引ける）。
 import sharp from "sharp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
+import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 
 const BUCKET = "natori-portfolio";
 const FOLDER = "project-thumbs";
@@ -35,7 +35,7 @@ export type ListProjectThumbsResult =
 
 /** projectId → 公開URL のマップを返す */
 export async function listNatoriProjectThumbs(): Promise<ListProjectThumbsResult> {
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "ok", thumbs: {} };
   const admin = supabaseAdmin();
   const { data: projects, error: projectError } = await admin
@@ -82,7 +82,7 @@ export async function uploadNatoriProjectThumb(
     .webp({ quality: 86 })
     .toBuffer();
 
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "upload-error" };
   const admin = supabaseAdmin();
   const { data: project, error: projectError } = await admin

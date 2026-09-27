@@ -28,7 +28,7 @@ import { getNextActionForStatus } from "@/features/natori/lib/projects";
 import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { formatYen } from "@/features/natori/lib/pricing";
 import { isValidQuoteDate } from "@/features/natori/lib/quoteTerms";
-import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
+import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 import type { NatoriProjectStatus } from "@/features/natori/types/projects";
 
 /* ---------- Env ---------- */
@@ -198,7 +198,7 @@ export async function sendNatoriOrderMail(
 ): Promise<SendNatoriOrderMailResult> {
   if (!isNatoriOrderMailConfigured()) return { kind: "not-configured" };
 
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
   const project = await fetchProjectRow(input.projectId, ownerId);
   if (!project) return { kind: "not-found" };

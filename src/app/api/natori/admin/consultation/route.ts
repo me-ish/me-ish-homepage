@@ -1,3 +1,4 @@
+import { withNatoriManagement } from "@/features/natori/server/natoriManagementRoute";
 import { NextResponse } from "next/server";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
@@ -6,14 +7,14 @@ import { getStaffConsultation, retryStaffConsultationNotification, sendStaffCons
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export const GET = withNatoriManagement("consultation.GET", false, async function GET(request: Request) {
   if (!(await canUseNatoriManagement())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const projectId = new URL(request.url).searchParams.get("projectId") ?? "";
   const result = await getStaffConsultation(projectId);
   return result ? NextResponse.json({ messages: result.messages }) : NextResponse.json({ error: "Not found" }, { status: 404 });
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withNatoriManagement("consultation.POST", true, async function POST(request: Request) {
   if (!(await canUseNatoriManagement())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const csrfError = checkCsrf(request);
   if (csrfError) return csrfError;
@@ -26,4 +27,4 @@ export async function POST(request: Request) {
   if (result === "not-found") return NextResponse.json({ error: "案件または依頼者メールが見つかりません" }, { status: 404 });
   if (result === "db-error") return NextResponse.json({ error: "相談内容を保存できませんでした" }, { status: 500 });
   return NextResponse.json({ ok: true, notificationFailed: result === "notification-failed" });
-}
+});

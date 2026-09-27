@@ -13,6 +13,8 @@ done
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo=$(git rev-parse --show-toplevel)
 phase0a=${PHASE_0A:-0}
+phase0b=${PHASE_0B:-0}
+[[ $phase0b == 0 || $phase0b == 1 ]] || exit 1
 [[ $phase0a == 0 || $phase0a == 1 ]] || exit 1
 work=$(mktemp -d "${RUNNER_TEMP:?}/natori-phase-t.XXXXXXXX")
 project="natori-phase-t-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
@@ -33,6 +35,9 @@ cleanup() {
   local status=$?
   trap - EXIT
   set +e
+  if [[ $(docker inspect -f '{{index .Config.Labels "natori.phase-t"}}' "$project-browser" 2>/dev/null) == "$project" ]]; then
+    docker rm -f "$project-browser" >/dev/null
+  fi
   if [[ $(docker inspect -f '{{index .Config.Labels "natori.phase-t"}}' "$runner" 2>/dev/null) == "$project" ]]; then
     docker rm -f "$runner" >/dev/null
   fi
@@ -72,6 +77,18 @@ if [[ $phase0a == 1 ]]; then
   test_memory=512m
 fi
 
+if [[ $phase0b == 1 ]]; then
+  mkdir -p "$work/phase0b"
+  node "$repo/scripts/natori-phase-0b/build.mjs" "$work/phase0b/integration.cjs"
+  node "$repo/scripts/natori-phase-0b/build-fixture.mjs" "$work/phase0b.sql"
+  extra_mounts+=(--mount "type=bind,source=$work/phase0b,target=/phase0b,readonly")
+  if [[ $phase0a == 0 ]]; then
+    extra_mounts+=(--mount "type=bind,source=$repo/node_modules,target=/app/node_modules,readonly")
+    extra_mounts+=(-e NODE_PATH=/app/node_modules)
+  fi
+  test_memory=512m
+fi
+
 echo 'BUILD: download tools/images; production credentials are absent'
 curl --fail --silent --show-error --location --connect-timeout 15 --max-time 120 --retry 1 \
   https://github.com/supabase/cli/releases/download/v2.118.0/supabase_2.118.0_linux_amd64.tar.gz -o "$work/cli.tar.gz"
@@ -86,6 +103,7 @@ export SUPABASE_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1
 # mounts only locked dependencies installed during construction, never .env files.
 node_image="node:$(node -p 'process.versions.node')-bookworm-slim"
 timeout 180 docker pull "$node_image" >"$work/pull.private" 2>&1
+if [[ $phase0b == 1 ]]; then bash "$repo/scripts/natori-phase-0b/prepare-browser.sh" "$repo" "$work" "$node_image" "$project"; fi
 ROOT="$root" WORK="$work" PROJECT="$project" node --input-type=module <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
@@ -196,8 +214,8 @@ node "$root/verify-catalog.mjs" "$work/results/catalog-current.json" current
 {
   printf 'tested_sha=%s\nhead_sha=%s\n' "$(git rev-parse HEAD)" "${PHASE_T_HEAD_SHA:-unknown}"
   printf 'supabase_cli=2.118.0\nnode=%s\nrunner_image=%s\n' "$(node --version)" "${ImageVersion:-unknown}"
-  if [[ $phase0a == 1 ]]; then
-    node -e 'const fs=require("node:fs");for(const p of ["@supabase/supabase-js","sharp","tus-js-client","esbuild"])console.log(`${p}=${JSON.parse(fs.readFileSync(`node_modules/${p}/package.json`,"utf8")).version}`)'
+  if [[ $phase0a == 1 || $phase0b == 1 ]]; then
+    node -e 'const fs=require("node:fs");for(const p of ["@supabase/supabase-js","@supabase/ssr","sharp","tus-js-client","esbuild"])console.log(`${p}=${JSON.parse(fs.readFileSync(`node_modules/${p}/package.json`,"utf8")).version}`)'
     sha256sum "$repo/package-lock.json"
   fi
   docker version --format 'docker_server={{.Server.Version}} docker_client={{.Client.Version}}'
@@ -277,6 +295,11 @@ else
 fi
 timeout 180 docker exec "$runner" node /tests/storage.mjs candidate
 if [[ $phase0a == 1 ]]; then timeout 240 docker exec "$runner" node /phase0a/integration.cjs after; fi
+if [[ $phase0b == 1 ]]; then
+  dbsql <"$work/phase0b.sql" >/dev/null
+  timeout 240 docker exec "$runner" node /phase0b/integration.cjs
+  bash "$repo/scripts/natori-phase-0b/run-browser.sh" "$repo" "$work" "$runner" "$project" "$pid"
+fi
 sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/egress-counters.txt"
 sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/egress-counters.txt"
 echo 'Required real Storage tests completed; production remains unchanged'

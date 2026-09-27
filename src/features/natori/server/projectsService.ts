@@ -4,7 +4,7 @@ import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitio
 import { calculateDueDate } from "@/features/natori/lib/deliveryPlans";
 import { isNatoriConcreteProjectType } from "@/features/natori/lib/projectReadModel";
 import { confirmNatoriProjectTypeViaRpc } from "@/features/natori/server/intakeRpcAdapter";
-import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
+import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 import { signPortfolioReferenceImage } from "@/features/natori/server/portfolioSiteService";
 import { selectReferenceLinksForProjects } from "@/features/natori/server/referenceLinkTableAdapter";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -288,7 +288,7 @@ export type ListNatoriAdminProjectsResult =
   | { kind: "fetch-tasks-error" };
 
 export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjectsResult> {
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "fetch-projects-error" };
   const admin = supabaseAdmin();
   const [
@@ -426,10 +426,16 @@ export type CreateNatoriAdminProjectResult =
 
 /**
  * data/supabaseProjects.createNatoriProject のサーバー版。type に応じた
- * タスクテンプレートも一緒に生成する。呼び出し側（API route）が userId を
- * 解決してから渡すこと。
+ * 管理操作では認可済みの固定 owner を使用する。入力の userId は受け取らない。
  */
 export async function createNatoriAdminProject(
+  input: Omit<CreateNatoriAdminProjectInput, "userId">
+): Promise<CreateNatoriAdminProjectResult> {
+  return createNatoriProjectForOwner({ ...input, userId: await resolveNatoriOwnerId() });
+}
+
+/** Server-only persistence boundary. Callers must resolve a trusted owner first. */
+export async function createNatoriProjectForOwner(
   input: CreateNatoriAdminProjectInput
 ): Promise<CreateNatoriAdminProjectResult> {
   const deliveryPlan = input.deliveryPlan ?? "normal";
@@ -505,7 +511,7 @@ export async function confirmNatoriProjectType(
   projectId: string,
   projectType: NatoriConcreteProjectType
 ): Promise<ConfirmNatoriProjectTypeResult> {
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
 
   const result = await confirmNatoriProjectTypeViaRpc({
@@ -553,7 +559,7 @@ export async function setNatoriProjectTaskDone(
   nextAction: string
 ): Promise<NatoriProjectMutationResult> {
   if (!NATORI_PROJECT_STATUSES.has(status)) return { kind: "db-error" };
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
   const { data, error } = await supabaseAdmin().rpc("natori_update_task_and_status", {
     p_user_id: ownerId,
@@ -577,7 +583,7 @@ export async function setNatoriProjectStatus(
   status: string,
   nextAction: string
 ): Promise<NatoriProjectTransitionResult> {
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
   const admin = supabaseAdmin();
 
@@ -669,7 +675,7 @@ export async function patchNatoriProjectDetails(
     }
   }
 
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
   const admin = supabaseAdmin();
   let typeConfirmed = false;
@@ -754,7 +760,7 @@ export async function closeNatoriProject(
   projectId: string,
   reason: string
 ): Promise<NatoriProjectTransitionResult> {
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
   const admin = supabaseAdmin();
 
@@ -809,7 +815,7 @@ export async function closeNatoriProject(
 export async function deleteNatoriAdminProject(
   projectId: string
 ): Promise<NatoriProjectMutationResult> {
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
   const { data, error } = await supabaseAdmin()
     .from("natori_projects")
@@ -837,7 +843,7 @@ export async function deleteNatoriAdminProject(
 export async function restoreNatoriAdminProject(
   projectId: string
 ): Promise<NatoriProjectMutationResult> {
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
   const { data, error } = await supabaseAdmin()
     .from("natori_projects")
@@ -859,7 +865,7 @@ export async function confirmNatoriProjectPayment(
   projectId: string,
   nextAction: string
 ): Promise<NatoriProjectTransitionResult> {
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
   const admin = supabaseAdmin();
   const { data: prePaymentProject, error: prePaymentError } = await admin

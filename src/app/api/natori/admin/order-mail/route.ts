@@ -1,3 +1,4 @@
+import { withNatoriManagement } from "@/features/natori/server/natoriManagementRoute";
 // api/natori/admin/order-mail/route.ts
 // ダッシュボードから依頼者へ見積もりメール / 支払い依頼メールを送る。
 // 業務ロジックは orderMailService に集約（route は薄く）。
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export async function POST(request: Request) {
+export const POST = withNatoriManagement("order-mail.POST", true, async function POST(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -135,4 +136,4 @@ export async function POST(request: Request) {
     case "ok":
       return NextResponse.json({ ok: true, paymentLinkUrl: result.paymentLinkUrl ?? null });
   }
-}
+});

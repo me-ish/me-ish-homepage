@@ -12,8 +12,9 @@ import {
   type NatoriIntakeReferenceLinkRow,
 } from "@/features/natori/server/intakeRpcAdapter";
 import { deletePortfolioReferenceImages } from "@/features/natori/server/portfolioSiteService";
-import { createNatoriAdminProject } from "@/features/natori/server/projectsService";
-import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
+import { createNatoriProjectForOwner } from "@/features/natori/server/projectsService";
+import { resolvePublicIntakeOwnerId } from "@/features/natori/server/publicIntakeOwner";
+import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 
 export type CreateInquiryProjectResult =
   | { kind: "ok"; projectId: string }
@@ -32,11 +33,12 @@ export async function createInquiryProject(
   input: NatoriInquiryInput,
   referencePaths: string[] = []
 ): Promise<CreateInquiryProjectResult> {
-  const userId = await resolveNatoriActingUserId();
-  if (!userId) return { kind: "no-owner" };
+  const owner = resolvePublicIntakeOwnerId();
+  if (owner.kind !== "ok") return { kind: "no-owner" };
+  const userId = owner.ownerId;
 
   const draft = buildInquiryProjectDraft(input);
-  const result = await createNatoriAdminProject({
+  const result = await createNatoriProjectForOwner({
     userId,
     title: draft.title,
     clientName: draft.clientName,
@@ -111,7 +113,7 @@ const structuredInquiryInputSchema = z
     /**
      * 呼び出し元が owner を明示する経路。公開受付 route は
      * resolvePublicIntakeOwnerId の結果を必ずここへ渡し、session を owner 候補に
-     * しない。未指定のときだけ管理系の session-first resolver へ委譲する。
+     * しない。未指定のときだけ認可済み管理系の固定 owner resolver へ委譲する。
      */
     ownerId: z.uuid().optional(),
     submission: natoriRequestSubmissionV1Schema,
@@ -203,7 +205,7 @@ export async function createStructuredInquiryProject(
   let ownerId: string | null = parsed.data.ownerId ?? null;
   if (!ownerId) {
     try {
-      ownerId = await resolveNatoriActingUserId();
+      ownerId = await resolveNatoriOwnerId();
     } catch {
       await cleanupUnlinkedReferencePaths(referencePaths);
       return { kind: "no-owner" };

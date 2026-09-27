@@ -1,3 +1,4 @@
+import { withNatoriManagement } from "@/features/natori/server/natoriManagementRoute";
 import { NextResponse } from "next/server";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
@@ -9,7 +10,7 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withNatoriManagement("project-thumbs.GET", false, async function GET() {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -19,9 +20,9 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to list thumbnails" }, { status: 500 });
   }
   return NextResponse.json({ thumbs: result.thumbs });
-}
+});
 
-export async function POST(req: Request) {
+export const POST = withNatoriManagement("project-thumbs.POST", true, async function POST(req: Request) {
   const csrfErr = checkCsrf(req);
   if (csrfErr) return csrfErr;
 
@@ -55,4 +56,4 @@ export async function POST(req: Request) {
     console.error("[natori-project-thumbs] error", err);
     return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
-}
+});

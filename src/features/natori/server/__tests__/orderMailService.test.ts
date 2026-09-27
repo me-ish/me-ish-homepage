@@ -46,7 +46,7 @@ vi.mock("@/lib/supabaseAdmin", () => ({
 }));
 
 vi.mock("@/features/natori/server/natoriOwner", () => ({
-  resolveNatoriActingUserId: vi.fn().mockResolvedValue("owner-1"),
+  resolveNatoriOwnerId: vi.fn().mockResolvedValue("owner-1"),
 }));
 
 type Result = { data: unknown; error: unknown; count?: number | null };
