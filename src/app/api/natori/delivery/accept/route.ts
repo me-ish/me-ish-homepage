@@ -3,6 +3,7 @@
 // 公開エンドポイント（トークンが資格情報）。業務ロジックは deliveryService に集約。
 // quote/accept と同じ思想: 確定は必ず POST（メールスキャナの自動GET対策）。
 import { NextResponse } from "next/server";
+import { scheduleAcceptanceNotifications } from "@/features/natori/server/scheduleAcceptanceNotifications";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { checkRateLimit, getIpFromRequest, rateLimitExceeded } from "@/lib/rateLimit";
 import { acceptNatoriDelivery } from "@/features/natori/server/deliveryService";
@@ -29,6 +30,7 @@ export async function POST(req: Request) {
   }
 
   const result = await acceptNatoriDelivery(token);
+  if ("notificationIds" in result) scheduleAcceptanceNotifications(result.notificationIds ?? []);
   switch (result.kind) {
     case "not-found":
       return NextResponse.json({ error: "delivery_not_found" }, { status: 404 });
@@ -39,7 +41,8 @@ export async function POST(req: Request) {
     case "already-accepted":
       return NextResponse.json({ ok: true, already: true });
     case "ok": {
-      const mailed = await sendNatoriDeliveryCompletionMail(token);
+      if (result.notificationIds !== undefined) return NextResponse.json({ ok: true });
+      const mailed = await sendNatoriDeliveryCompletionMail(token).catch(() => false);
       if (!mailed) {
         console.error("[natori-delivery] completion mail failed (ignored)");
       }

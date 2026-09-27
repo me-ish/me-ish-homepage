@@ -14,6 +14,9 @@ root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo=$(git rev-parse --show-toplevel)
 phase0a=${PHASE_0A:-0}
 phase0b=${PHASE_0B:-0}
+phasen=${PHASE_N:-0}
+[[ $phasen == 0 || $phasen == 1 ]] || exit 1
+[[ $phasen == 0 || ( $phase0a == 0 && $phase0b == 0 ) ]] || exit 1
 [[ $phase0b == 0 || $phase0b == 1 ]] || exit 1
 [[ $phase0a == 0 || $phase0a == 1 ]] || exit 1
 work=$(mktemp -d "${RUNNER_TEMP:?}/natori-phase-t.XXXXXXXX")
@@ -86,6 +89,16 @@ if [[ $phase0b == 1 ]]; then
     extra_mounts+=(--mount "type=bind,source=$repo/node_modules,target=/app/node_modules,readonly")
     extra_mounts+=(-e NODE_PATH=/app/node_modules)
   fi
+  test_memory=512m
+fi
+
+if [[ $phasen == 1 ]]; then
+  mkdir -p "$work/phasen"
+  node "$repo/scripts/natori-phase-n/build.mjs" "$work/phasen/integration.cjs"
+  node "$repo/scripts/natori-phase-n/build-fixture.mjs" "$work/phasen.sql"
+  extra_mounts+=(--mount "type=bind,source=$work/phasen,target=/phasen,readonly")
+  extra_mounts+=(--mount "type=bind,source=$repo/node_modules,target=/app/node_modules,readonly")
+  extra_mounts+=(-e NODE_PATH=/app/node_modules)
   test_memory=512m
 fi
 
@@ -214,7 +227,7 @@ node "$root/verify-catalog.mjs" "$work/results/catalog-current.json" current
 {
   printf 'tested_sha=%s\nhead_sha=%s\n' "$(git rev-parse HEAD)" "${PHASE_T_HEAD_SHA:-unknown}"
   printf 'supabase_cli=2.118.0\nnode=%s\nrunner_image=%s\n' "$(node --version)" "${ImageVersion:-unknown}"
-  if [[ $phase0a == 1 || $phase0b == 1 ]]; then
+  if [[ $phase0a == 1 || $phase0b == 1 || $phasen == 1 ]]; then
     node -e 'const fs=require("node:fs");for(const p of ["@supabase/supabase-js","@supabase/ssr","sharp","tus-js-client","esbuild"])console.log(`${p}=${JSON.parse(fs.readFileSync(`node_modules/${p}/package.json`,"utf8")).version}`)'
     sha256sum "$repo/package-lock.json"
   fi
@@ -299,6 +312,14 @@ if [[ $phase0b == 1 ]]; then
   dbsql <"$work/phase0b.sql" >/dev/null
   timeout 240 docker exec "$runner" node /phase0b/integration.cjs
   bash "$repo/scripts/natori-phase-0b/run-browser.sh" "$repo" "$work" "$runner" "$project" "$pid"
+fi
+if [[ $phasen == 1 ]]; then
+  dbsql <"$work/phasen.sql" >/dev/null
+  # Only a capture server in the same sealed namespace; no internet mail provider.
+  sudo nsenter -t "$pid" -n iptables -I OUTPUT 1 -d 127.0.0.1 -p tcp --dport 3101 -j ACCEPT
+  sudo nsenter -t "$pid" -n iptables -I OUTPUT 2 -s 127.0.0.1 -d 127.0.0.1 -p tcp --sport 3101 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+  timeout 45 docker exec "$runner" node /tests/isolation.mjs
+  timeout 240 docker exec "$runner" node /phasen/integration.cjs
 fi
 sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/egress-counters.txt"
 sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/egress-counters.txt"

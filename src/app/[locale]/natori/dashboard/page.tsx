@@ -28,6 +28,7 @@ import { fetchNatoriProjects } from "@/features/natori/data/supabaseProjects";
 import { isPreworkStatus } from "@/features/natori/lib/projects";
 import { Button } from "@/components/ui/button";
 import DashboardTodaySummary from "@/features/natori/components/dashboard/DashboardTodaySummary";
+import NotificationStatusPanel from "@/features/natori/components/dashboard/NotificationStatusPanel";
 import PageEventsPanel from "@/features/natori/components/dashboard/PageEventsPanel";
 import Footer from "@/features/natori/components/Footer";
 import type { NatoriProject } from "@/features/natori/types/projects";
@@ -249,6 +250,7 @@ export default function NatoriDashboardPage() {
         ) : null}
 
         {projects ? <DashboardTodaySummary projects={projects} today={new Date()} /> : null}
+        <NotificationStatusPanel />
 
         {resolvedGroups.map((group) => (
           <div key={group.heading} className="mt-6">

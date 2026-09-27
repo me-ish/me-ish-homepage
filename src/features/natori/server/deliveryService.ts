@@ -13,6 +13,7 @@ import { createHash, randomUUID } from "crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendNatoriNoticeMail } from "@/features/natori/server/orderMailService";
 import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
+import { acceptanceOutboxEnabled } from "./acceptanceNotifications";
 
 const BUCKET = "natori-deliveries";
 const TOKEN_RE = /^[A-Za-z0-9_-]{20,64}$/;
@@ -347,8 +348,8 @@ export async function getNatoriDeliveryByToken(
 }
 
 export type AcceptNatoriDeliveryResult =
-  | { kind: "ok" }
-  | { kind: "already-accepted" }
+  | { kind: "ok"; notificationIds?: string[] }
+  | { kind: "already-accepted"; notificationIds?: string[] }
   | { kind: "expired" }
   | { kind: "not-found" }
   | { kind: "db-error" };
@@ -360,11 +361,17 @@ export async function acceptNatoriDelivery(
   if (!TOKEN_RE.test(token)) return { kind: "not-found" };
 
   const admin = supabaseAdmin();
-  const { data, error } = await admin.rpc("natori_accept_delivery_v1", {
+  const outbox = acceptanceOutboxEnabled();
+  const { data, error } = await admin.rpc(outbox ? "natori_accept_delivery_with_notifications_v1" : "natori_accept_delivery_v1", {
     p_token_hash: hashToken(token),
-  });
+  }).then(result => result, () => ({ data: null, error: { code: "transport" } }));
   if (error) {
-    console.error("[natori-delivery] accept RPC failed", error);
+    if (outbox) {
+      const confirmed = await admin.from("natori_projects").select("delivery_accepted_at")
+        .eq("delivery_token_hash", hashToken(token)).maybeSingle();
+      if (!confirmed.error && confirmed.data?.delivery_accepted_at) return { kind: "already-accepted", notificationIds: [] };
+    }
+    console.error("[natori-delivery] accept RPC unconfirmed");
     return { kind: "db-error" };
   }
 
@@ -373,9 +380,13 @@ export async function acceptNatoriDelivery(
     console.error("[natori-delivery] accept RPC returned no result");
     return { kind: "db-error" };
   }
+  const notificationIds = "notification_ids" in accepted && Array.isArray(accepted.notification_ids)
+    ? accepted.notification_ids.filter((id): id is string => typeof id === "string") : [];
+  const notification = outbox ? { notificationIds } : {};
   if (accepted.result === "already-accepted") {
-    return { kind: "already-accepted" };
+    return { kind: "already-accepted", ...notification };
   }
+
   if (accepted.result === "expired") {
     return { kind: "expired" };
   }
@@ -398,6 +409,8 @@ export async function acceptNatoriDelivery(
     return { kind: "db-error" };
   }
 
+  if (outbox) return accepted.accepted_at ? { kind: "ok", ...notification } : { kind: "db-error" };
+
   // ナトリへの通知（ベストエフォート）
   const noticeBody = [
     "納品の受け取りが確認されました。案件は「対応完了」になり、実績に追加されています。",
@@ -410,7 +423,7 @@ export async function acceptNatoriDelivery(
   const sent = await sendNatoriNoticeMail(
     `【納品完了】${accepted.client_name} 様 / ${accepted.project_title}`,
     noticeBody
-  );
+  ).catch(() => false);
   if (!sent) {
     console.error("[natori-delivery] accept notice mail failed (ignored)");
   }

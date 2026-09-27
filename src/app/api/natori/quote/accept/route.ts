@@ -2,6 +2,7 @@
 // 見積もり承諾ページの「この内容で依頼を確定する」ボタンからの確定。
 // 公開エンドポイント（トークンが資格情報）。業務ロジックは quoteAcceptService に集約。
 import { NextResponse } from "next/server";
+import { scheduleAcceptanceNotifications } from "@/features/natori/server/scheduleAcceptanceNotifications";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { checkRateLimit, getIpFromRequest, rateLimitExceeded } from "@/lib/rateLimit";
 import { acceptNatoriQuote } from "@/features/natori/server/quoteAcceptService";
@@ -32,6 +33,7 @@ export async function POST(req: Request) {
   }
 
   const result = await acceptNatoriQuote(token);
+  if ("notificationIds" in result) scheduleAcceptanceNotifications(result.notificationIds ?? []);
   switch (result.kind) {
     case "not-found":
       return NextResponse.json({ error: "quote_not_found" }, { status: 404 });
