@@ -67,7 +67,7 @@ async function main() {
   stage="tests";
   for(const actor of [...actors.slice(0,3),{name:"shared",id:null,jar:shared},{name:"shared-plus-stranger",id:null,jar:mixed}]){
     await test(`same-owner-list-${actor.name}`,async()=>{
-      const r=await run(actor.jar,()=>projects.GET());check(r.status===200,"LIST_STATUS");
+      const r=await run(actor.jar,()=>projects.GET(new Request("http://localhost/api/natori/admin/projects")));check(r.status===200,"LIST_STATUS");
       const body=await r.json();check(body.projects.length===1&&body.projects[0].id===ownerRow.id,"WRONG_OWNER_DATASET");
       const context=await run(actor.jar,resolveNatoriManagementContext);
       check(context.ownerId===owner.id&&context.operator.userId===actor.id,"WRONG_OPERATOR");
@@ -76,7 +76,7 @@ async function main() {
   }
   for(const [name,jar] of [["anonymous",new Map<string,string>()],["stranger",stranger.jar],["forged-cookie",new Map([[NATORI_KEY_COOKIE,"invalid"]])]] as const){
     await test(`deny-${name}`,async()=>{
-      check((await run(jar,()=>projects.GET())).status===401,"DENIED_READ");
+      check((await run(jar,()=>projects.GET(new Request("http://localhost/api/natori/admin/projects")))).status===401,"DENIED_READ");
       check((await run(jar,()=>projects.POST(req("POST",{title:"bad",clientName:"bad",type:"icon"})))).status===401,"DENIED_WRITE");
     });
   }
@@ -126,7 +126,7 @@ async function main() {
       const before=await admin.from("natori_projects").select("id",{count:"exact",head:true});check(!before.error,"COUNT_BEFORE");
       process.env.NATORI_OWNER_USER_ID=setting;
       try{
-        for(const get of [projects.GET,events.GET,profile.GET,pricing.GET]){
+        for(const get of [() => projects.GET(new Request("http://localhost/api/natori/admin/projects")),events.GET,profile.GET,pricing.GET]){
           const r=await run(a.jar,get);check(r.status===503,"CONFIG_EMPTY_SUCCESS");check((await r.json()).code==="natori_owner_unavailable","CONFIG_ERROR_CODE");
         }
         check((await run(mixed,()=>projects.POST(req("POST",draft)))).status===503,"CONFIG_WRITE_ALLOWED");

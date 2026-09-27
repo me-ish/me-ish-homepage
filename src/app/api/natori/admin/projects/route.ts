@@ -32,12 +32,16 @@ function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
-export const GET = withNatoriManagement("projects.GET", false, async function GET() {
+export const GET = withNatoriManagement("projects.GET", false, async function GET(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await listNatoriAdminProjects();
+  const projectId = new URL(request.url).searchParams.get("projectId");
+  if (projectId !== null && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
+    return NextResponse.json({ error: "Invalid project ID" }, { status: 400 });
+  }
+  const result = await listNatoriAdminProjects(projectId ?? undefined);
   switch (result.kind) {
     case "fetch-projects-error":
       return NextResponse.json({ error: "Failed to fetch projects" }, { status: 500 });
@@ -50,7 +54,7 @@ export const GET = withNatoriManagement("projects.GET", false, async function GE
         tasks: result.tasks,
         referenceFiles: result.referenceFiles,
         referenceLinks: result.referenceLinks,
-      });
+      }, { headers: { "Cache-Control": "no-store" } });
   }
 });
 

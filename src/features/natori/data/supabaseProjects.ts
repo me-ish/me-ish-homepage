@@ -1,3 +1,4 @@
+import type { ConsultationOverview } from "@/features/natori/types/consultation";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import type {
   NatoriDeliveryPlan,
@@ -17,6 +18,7 @@ import {
 import { sortNatoriReferenceLinks } from "@/features/natori/lib/projectReferenceLinks";
 
 export type ProjectRow = {
+  consultation?: ConsultationOverview | null;
   id: string;
   user_id: string;
   title: string;
@@ -100,6 +102,7 @@ export function rowToProject(
     }));
   return {
     id: row.id,
+    consultation: row.consultation ?? null,
     title: row.title,
     clientName: row.client_name,
     clientEmail: row.client_email ?? undefined,
@@ -126,11 +129,11 @@ export function rowToProject(
   };
 }
 
-export async function fetchNatoriProjectCollection(): Promise<{
+export async function fetchNatoriProjectCollection(projectId?: string): Promise<{
   projects: NatoriProject[];
   archivedProjects: NatoriProject[];
 }> {
-  const response = await fetch("/api/natori/admin/projects", {
+  const response = await fetch(projectId ? `/api/natori/admin/projects?projectId=${encodeURIComponent(projectId)}` : "/api/natori/admin/projects", {
     cache: "no-store",
   });
   if (!response.ok) {
@@ -200,6 +203,11 @@ export async function fetchNatoriProjectCollection(): Promise<{
       .map(mapRow)
       .filter((project) => Boolean(project.deletedAt)),
   };
+}
+
+export async function fetchNatoriProject(projectId: string): Promise<NatoriProject | null> {
+  const result = await fetchNatoriProjectCollection(projectId);
+  return [...result.projects, ...result.archivedProjects].find(project => project.id === projectId) ?? null;
 }
 
 export async function fetchNatoriProjects(): Promise<NatoriProject[]> {

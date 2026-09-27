@@ -15,6 +15,8 @@ repo=$(git rev-parse --show-toplevel)
 phase0a=${PHASE_0A:-0}
 phase0b=${PHASE_0B:-0}
 phasen=${PHASE_N:-0}
+phase4=${PHASE_4:-0}
+[[ $phase4 == 0 || ( $phase4 == 1 && $phasen == 1 ) ]] || exit 1
 [[ $phasen == 0 || $phasen == 1 ]] || exit 1
 [[ $phasen == 0 || ( $phase0a == 0 && $phase0b == 0 ) ]] || exit 1
 [[ $phase0b == 0 || $phase0b == 1 ]] || exit 1
@@ -96,6 +98,7 @@ if [[ $phasen == 1 ]]; then
   mkdir -p "$work/phasen"
   node "$repo/scripts/natori-phase-n/build.mjs" "$work/phasen/integration.cjs"
   node "$repo/scripts/natori-phase-n/build-fixture.mjs" "$work/phasen.sql"
+  if [[ $phase4 == 1 ]]; then node "$repo/scripts/natori-phase-4/build-fixture.mjs" "$work/phase4.sql"; fi
   extra_mounts+=(--mount "type=bind,source=$work/phasen,target=/phasen,readonly")
   extra_mounts+=(--mount "type=bind,source=$repo/node_modules,target=/app/node_modules,readonly")
   extra_mounts+=(-e NODE_PATH=/app/node_modules)
@@ -120,6 +123,7 @@ if [[ $phase0b == 1 ]]; then bash "$repo/scripts/natori-phase-0b/prepare-browser
 if [[ $phasen == 1 ]]; then
   bash "$repo/scripts/natori-phase-0b/prepare-browser.sh" "$repo" "$work" "$node_image" "$project"
   node "$repo/scripts/natori-phase-n/prepare-browser.mjs" "$work/browser-app"
+  if [[ $phase4 == 1 ]]; then node "$repo/scripts/natori-phase-4/prepare-browser.mjs" "$work/browser-app"; fi
   cp "$work/browser-app/source-checksums.json" "$work/results/browser-source-checksums.json"
 fi
 ROOT="$root" WORK="$work" PROJECT="$project" node --input-type=module <<'JS'
@@ -320,6 +324,7 @@ if [[ $phase0b == 1 ]]; then
 fi
 if [[ $phasen == 1 ]]; then
   dbsql <"$work/phasen.sql" >/dev/null
+  if [[ $phase4 == 1 ]]; then dbsql <"$work/phase4.sql" >/dev/null; fi
   # Only a capture server in the same sealed namespace; no internet mail provider.
   sudo nsenter -t "$pid" -n iptables -I OUTPUT 1 -d 127.0.0.1 -p tcp --dport 3101 -j ACCEPT
   sudo nsenter -t "$pid" -n iptables -I OUTPUT 2 -s 127.0.0.1 -d 127.0.0.1 -p tcp --sport 3101 -m conntrack --ctstate ESTABLISHED -j ACCEPT
