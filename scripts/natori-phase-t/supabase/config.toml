@@ -35,7 +35,9 @@ additional_redirect_urls = []
 enable_signup = false
 enable_anonymous_sign_ins = false
 [auth.email]
-enable_signup = false
+# Keep the email/password provider available for admin-created synthetic users.
+# Global auth.enable_signup=false still prevents public registration.
+enable_signup = true
 enable_confirmations = false
 [edge_runtime]
 enabled = false
