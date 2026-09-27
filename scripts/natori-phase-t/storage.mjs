@@ -79,6 +79,37 @@ if (!actors.owner || !actors.other) {
 }
 
 const privateBuckets = ['natori-inquiry-refs', 'natori-consultations', 'natori-deliveries'];
+await test('existing-files-and-pre-cutover-signed-links', async () => {
+  const key = 'compatibility/existing.png';
+  if (mode === 'current') {
+    await seed('artworks', key);
+    const links = [];
+    for (const bucket of privateBuckets) {
+      await seed(bucket, key);
+      const signed = await responseJson(await success(await request(`/storage/v1/object/sign/${bucket}/${key}`, { method: 'POST', headers: json(service), body: '{"expiresIn":600}' }), 'COMPAT_SIGN'));
+      check(typeof signed.signedURL === 'string' && signed.signedURL.startsWith('/object/sign/'), 'COMPAT_PATH');
+      links.push({ bucket, path: `/storage/v1${signed.signedURL}` });
+    }
+    // Runtime tmpfs only: never a log/artifact/committed fixture.
+    writeFileSync('/state/links.json', JSON.stringify(links), { mode: 0o600 });
+  }
+  const publicRead = await success(await request(`/storage/v1/object/public/artworks/${key}`), 'COMPAT_PUBLIC');
+  check(Buffer.from(await publicRead.arrayBuffer()).equals(original), 'COMPAT_PUBLIC_BYTES');
+  for (const { bucket, path } of JSON.parse(readFileSync('/state/links.json'))) {
+    const r = await success(await request(path), 'COMPAT_SIGNED_READ');
+    check(Buffer.from(await r.arrayBuffer()).equals(original), 'COMPAT_SIGNED_BYTES');
+    await content(bucket, key, original);
+  }
+});
+for (const bucket of privateBuckets) {
+  await test(`unprivileged-authenticated-insert/${bucket}`, async () => {
+    const key = `${mode}/unprivileged-${randomUUID()}.png`;
+    await absent(bucket, key);
+    const r = await upload(bucket, key, actors.other.token);
+    if (mode === 'current') { await success(r, 'CURRENT_AUTH_INSERT'); await content(bucket, key, original); }
+    else { await rlsDenied(r); await absent(bucket, key); }
+  });
+}
 for (const bucket of ['artworks', ...privateBuckets, 'avatars', 'banners', 'processing-meta']) {
   await test(`anonymous-insert/${bucket}`, async () => {
     const key = `${mode}/arbitrary-${randomUUID()}.png`;

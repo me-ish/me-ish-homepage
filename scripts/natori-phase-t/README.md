@@ -26,22 +26,22 @@ Storage/認証の起動失敗はジョブ失敗。skip/continue-on-error/成功�
 - Nodeは既存`.node-version`の**22**をsetup-nodeで解決。同じ完全バージョンの`node:<version>-bookworm-slim`を試験containerにも使用。独自のNode指定を増やさない。
 - checkout/setup-node/upload-artifactはworkflow内のcommit SHAで固定。
 - Supabase各イメージのタグはCLI版が指定。実取得RepoDigest、Postgres、Node、Docker、Python、iptables、runner image版を`versions.txt`に記録。hosted runnerのDocker/OS patch版はGitHub管理で、固定されたVM imageではない。
-- 1 PRにつき同時1ジョブ。22分上限、起動9分、Storage各3分、通信10秒、CLIダウンロードretry1回。試験自体の自動retryは0。不要な全migration、npm ci、製品依存追加は行わない。
+- 1 PRにつき同時1ジョブ。22分上限、起動9分、Storage各3分、通信10秒、CLIダウンロードretry1回。試験自体の自動retryは0。network切替後のAuth readiness待ちのみ最大30回/40秒。不要な全migration、npm ci、製品依存追加は行わない。
 - 自動再実行ループはない。手動再実行は同一原因で1回まで、再失敗は原因を修正する。
 
 ## 隔離境界
 
 構築中はrunnerがCLI/コンテナimageを取得する。`RUNNER_TEMP`の専用mktempディレクトリへconfigだけをコピーし、repoの`supabase/.temp`、リンク設定、`.env`、migration、seedを読まない。
-ローカルAuthのJWT secret/API keysは実行ごとに乱数生成。架空Auth user/passwordも実行時生成する。CLIのローカルDB bootstrapは専用コンテナ内のpostgresであり、本番資格情報を使わない。
+ローカルDB passwordとAuthのJWT secret/API keysは実行ごとに乱数生成。架空Auth user/passwordも実行時生成する。DB bootstrapも専用コンテナ内で行い、本番資格情報を使わない。
 
-Supabaseは最初から`--internal`の専用Docker network上で起動。外部から公開portへの転送はDOCKER-USERの専用chainで拒否する。公開URL・トンネルなし。試験前にNode containerのnetwork namespaceのOUTPUTをdenyにし、**同じnetwork内Kong IPのTCP8000だけ**許可する。DNS、IPv6、host gateway、他portも許可しない。
+CLI bootstrapだけはループバックbindの専用構築networkを使用する。初期化後、全containerを`--internal`の専用試験networkに接続し、構築networkから切断する。aliasを維持し、DBを使うserviceは再起動して旧接続を破棄する。全containerが試験networkのみを持ち、構築networkが空であることを検査する。外部から公開portへの転送はDOCKER-USERの専用chainでも拒否する。公開URL・トンネルなし。試験前にNode containerのnetwork namespaceのOUTPUTをdenyにし、**同じnetwork内Kong IPのTCP8000だけ**許可する。DNS、IPv6、host gateway、他portも許可しない。
 テストcontainerは非root、capabilities全剥奪、no-new-privileges、readonly root、Docker socketなし。子プロセスも同じnamespaceを継承する。NodeのURL guardだけに隔離を依存しない。
 
 `isolation.mjs`は、prod風Supabase/Stripe/mail/DB URLをtransport呼出前に拒否する試験と、実socket/UDP/子プロセスの通信拒否、許可APIへの接続成功を実施する。外部IPの否定試験は文書用予約IPを使い、本番をprobeしない。redirectも禁止。
 テスト中のSQLは専用名・label検証済みDBに`docker exec`のローカルsocketで渡す。SQLfixtureは追加の`phase_t.sandbox=ephemeral` guard必須。
 
 資格情報はruntimeの限定JSONだけ。CLI status/start/stopのraw log、config、Auth user、JWT、署名URLはログ/artifact/Gitへ出さない。artifactは件数・固定試験名・非機密catalog・バージョン・namespaceルールのみ。
-EXIT trapは当該project IDのstack、当該test container/network/firewall chainだけを後始末する。`--all`/pruneなし。ジョブ強制終了時もGitHub-hosted VMの破棄が最終境界となる。共有runnerへの流用は禁止。
+EXIT trapは当該project IDのstack、当該test container/network/firewall chainだけを後始末する。`--all`/グローバルpruneなし（CLI stop内部のpruneもproject label限定）。ジョブ強制終了時もGitHub-hosted VMの破棄が最終境界となる。共有runnerへの流用は禁止。
 
 ## 定義の照合（2026-09-27、開始main `21d4e34587d062cebe361acfb6557ad15daa69e3`）
 
@@ -80,6 +80,7 @@ EXIT trapは当該project IDのstack、当該test container/network/firewall cha
 ## 判定
 
 HTTP成功だけで判定しない。upload/update後はservice readでbytes一致、delete後は不存在を確認。拒否後も元bytesを確認する。
+policy切替前の架空既存objectと署名読取URLも、切替後に同じbytesで取得できるか確認する。署名URLはcontainer内tmpfsだけに置き、出力しない。
 DELETEはRLSにより200+空配列になる場合があり、事前SELECT/実体存在、空結果、事後bytes不変を合わせて拒否とする。invalid JWTとbucket不存在は別controlであり、RLS成功に加算しない。
 setup失敗はfailで止める。必須実Storage成功までは結果報告を「未完了」とする。
 

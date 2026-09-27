@@ -14,6 +14,7 @@ root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 work=$(mktemp -d "${RUNNER_TEMP:?}/natori-phase-t.XXXXXXXX")
 project="natori-phase-t-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
 network="$project"
+build_network="$project-build"
 runner="$project-test"
 db="supabase_db_$project"
 subnet='172.30.250.0/24'
@@ -21,6 +22,7 @@ chain="NT${GITHUB_RUN_ID: -12}${GITHUB_RUN_ATTEMPT}"
 mkdir -p "$work/stack/supabase" "$work/runtime" "$work/results" "$work/bin"
 printf 'PHASE_T_RESULTS=%s\n' "$work/results" >> "$GITHUB_ENV"
 network_created=0
+build_network_created=0
 firewall_created=0
 stack_started=0
 
@@ -37,6 +39,7 @@ cleanup() {
     if (( $? != 0 )); then echo 'Dedicated stack cleanup failed'; status=1; fi
   fi
   if (( network_created )); then docker network rm "$network" >/dev/null || status=1; fi
+  if (( build_network_created )); then docker network rm "$build_network" >/dev/null || status=1; fi
   if (( firewall_created )); then
     sudo iptables -D DOCKER-USER -j "$chain"
     sudo iptables -F "$chain"
@@ -73,6 +76,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 let config = readFileSync(`${process.env.ROOT}/supabase/config.toml`, 'utf8');
 config = config.replace('natori-phase-t-placeholder', process.env.PROJECT);
+config = config.replace('[db]', `[db]\npassword = "${randomBytes(32).toString('hex')}"`);
 config = config.replace('[auth]', `[auth]\njwt_secret = "${randomBytes(48).toString('hex')}"\npublishable_key = "sb_publishable_${randomBytes(24).toString('base64url')}"\nsecret_key = "sb_secret_${randomBytes(24).toString('base64url')}"`);
 writeFileSync(`${process.env.WORK}/stack/supabase/config.toml`, config, { mode: 0o600 });
 JS
@@ -80,13 +84,16 @@ JS
 # Inbound publication guard before any Supabase ports are bound.
 sudo iptables -N "$chain"
 sudo iptables -A "$chain" -d "$subnet" ! -s "$subnet" -j DROP
+sudo iptables -A "$chain" -d 172.30.249.0/24 ! -s 172.30.249.0/24 -j DROP
 sudo iptables -A "$chain" -j RETURN
 sudo iptables -I DOCKER-USER 1 -j "$chain"
 firewall_created=1
-docker network create --internal --subnet "$subnet" --label "natori.phase-t=$project" "$network" >/dev/null
-network_created=1
+# CLI bootstrap needs the host-published DB port. Bind it to loopback only.
+docker network create --subnet 172.30.249.0/24 --opt com.docker.network.bridge.host_binding_ipv4=127.0.0.1 \
+  --label "natori.phase-t=$project" "$build_network" >/dev/null
+build_network_created=1
 stack_started=1
-if ! timeout 540 "$work/bin/supabase" start --output-format json --workdir "$work/stack" --network-id "$network" \
+if ! timeout 540 "$work/bin/supabase" start --output-format json --workdir "$work/stack" --network-id "$build_network" \
   --exclude realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor >"$work/startup.private" 2>&1; then
   echo 'Supabase startup failed; mandatory tests have NOT passed'
   # Only classifications, never raw CLI logs (which can contain credentials).
@@ -128,11 +135,31 @@ PY
   exit 1
 fi
 "$work/bin/supabase" status --workdir "$work/stack" -o json >"$work/status.private" 2>/dev/null
-[[ $(docker network inspect -f '{{.Internal}}' "$network") == true ]]
 for service_name in db auth storage kong; do
   [[ $(docker inspect -f '{{index .Config.Labels "com.supabase.cli.project"}}' "supabase_${service_name}_$project") == "$project" ]]
   [[ $(docker inspect -f '{{.State.Running}}' "supabase_${service_name}_$project") == true ]]
 done
+# FREEZE: move every stack container onto an internal-only network, preserving DNS aliases.
+# There is no test process yet. No container may retain its construction network.
+docker network create --internal --subnet "$subnet" --label "natori.phase-t=$project" "$network" >/dev/null
+network_created=1
+mapfile -t stack_containers < <(docker ps -aq --filter "label=com.supabase.cli.project=$project")
+(( ${#stack_containers[@]} >= 4 ))
+for container in "${stack_containers[@]}"; do
+  [[ $(docker inspect -f '{{len .NetworkSettings.Networks}}' "$container") == 1 ]]
+  mapfile -t aliases < <(docker inspect -f "{{range (index .NetworkSettings.Networks \"$build_network\").Aliases}}{{println .}}{{end}}" "$container" | sed '/^$/d')
+  alias_args=()
+  for alias in "${aliases[@]}"; do alias_args+=(--alias "$alias"); done
+  docker network connect "${alias_args[@]}" "$network" "$container"
+done
+for container in "${stack_containers[@]}"; do
+  docker network disconnect "$build_network" "$container"
+  [[ $(docker inspect -f '{{len .NetworkSettings.Networks}}' "$container") == 1 ]]
+done
+[[ $(docker network inspect -f '{{len .Containers}}' "$build_network") == 0 ]]
+[[ $(docker network inspect -f '{{.Internal}}' "$network") == true ]]
+# Clear pre-freeze database pools and DNS caches on services that consume Postgres.
+for service_name in auth rest storage kong; do docker restart "supabase_${service_name}_$project" >/dev/null; done
 api_ip=$(docker inspect -f "{{(index .NetworkSettings.Networks \"$network\").IPAddress}}" "supabase_kong_$project")
 [[ $api_ip =~ ^172\.30\.250\.[0-9]+$ ]]
 WORK="$work" API_IP="$api_ip" node --input-type=module <<'JS'
@@ -165,6 +192,7 @@ node "$root/verify-catalog.mjs" "$work/results/catalog-current.json" current
 docker run -d --name "$runner" --label "natori.phase-t=$project" --network "$network" \
   --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges:true --read-only \
   --pids-limit 64 --memory 256m --cpus 1 --log-driver none \
+  --tmpfs /state:rw,noexec,nosuid,size=1m,mode=1777 \
   --mount "type=bind,source=$root,target=/tests,readonly" \
   --mount "type=bind,source=$work/runtime,target=/runtime,readonly" \
   --mount "type=bind,source=$work/results,target=/results" \
@@ -179,6 +207,16 @@ sudo nsenter -t "$pid" -n iptables -A OUTPUT -d "$api_ip" -p tcp --dport 8000 -j
 sudo nsenter -t "$pid" -n iptables -A OUTPUT -j REJECT
 sudo nsenter -t "$pid" -n ip6tables -P OUTPUT DROP
 echo 'TEST: kernel egress allowlist active; no downloads or production destinations'
+timeout 40 docker exec "$runner" node --input-type=module -e '
+  import {readFileSync} from "node:fs";
+  const {origin}=JSON.parse(readFileSync("/runtime/network.json"));
+  let ready=false;
+  for(let n=0;n<30;n++) {
+    try { const r=await fetch(`${origin}/auth/v1/health`,{signal:AbortSignal.timeout(1000),redirect:"error"});if(r.ok){ready=true;break;} } catch {}
+    await new Promise(r=>setTimeout(r,500));
+  }
+  if(!ready) process.exit(1);
+'
 timeout 45 docker exec "$runner" node /tests/isolation.mjs
 timeout 180 docker exec "$runner" node /tests/storage.mjs current
 dbsql <"$root/fixtures/candidate.sql" >/dev/null
