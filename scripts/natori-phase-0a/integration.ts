@@ -384,9 +384,28 @@ async function main() {
           "PRIVATE_BUCKET_PUBLIC_READ",
         );
         const denied = await anon.storage.from(bucket).download(owned);
+        // Storage deliberately masks private buckets from anon callers as 404.
+        // The preceding service byte-read and following signed read prove that
+        // this is an access boundary, not an absent bucket/file or failed network.
         check(
-          denied.error && /object not found/i.test(denied.error.message),
+          denied.error &&
+            "statusCode" in denied.error &&
+            String(denied.error.statusCode) === "404" &&
+            /^(bucket|object) not found$/i.test(denied.error.message),
           "PRIVATE_BUCKET_ANON_READ",
+        );
+        const signed = await admin.storage
+          .from(bucket)
+          .createSignedUrl(owned, 60);
+        check(signed.data && !signed.error, "PRIVATE_SIGN_READ");
+        check(
+          new URL(signed.data.signedUrl).origin === origin,
+          "PRIVATE_SIGN_ORIGIN",
+        );
+        const visible = await fetch(signed.data.signedUrl);
+        check(
+          visible.ok && Buffer.from(await visible.arrayBuffer()).equals(png),
+          "PRIVATE_SIGNED_BYTES",
         );
       }
       check(
