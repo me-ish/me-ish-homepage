@@ -2,6 +2,8 @@
 
 作業日: 2026-09-27。状態: 実装と隔離実Storage試験が完了。本番適用は未実施、Draft PRでレビュー待ち。
 
+追記（2026-09-27、本番移行再開前）: ユーザーがbucket追加→PR #96のmain取り込み→本番配信→Storage policy切替を、必須確認できない場合はその段階で停止する条件で承認した。事前の読み取り照合では本番10bucket・16policy・3roleのGRANT・RLSが試験fixtureと一致。Colab画像加工についても「現在不使用、今後も利用予定なし」と確認したため、Colab credential roleは確認成功ではなく**運用対象外**として移行条件から除外する。他のcloud正規経路・iPhone実機等の条件は維持する。以下の実装時点の結果と、適用後の状態は区別し、移行の進行状況はPR #96に記録する。
+
 ## 開始点とPhase T
 
 - Phase T Draft PR [#95](https://github.com/me-ish/me-ish-homepage/pull/95) を最終レビューし、ユーザー承認に基づきmainへ取り込み済み。
@@ -88,8 +90,8 @@ Node 22.23.2（既存 `.node-version`）、Supabase CLI 2.118.0、Docker 28.0.4�
 
 ## 本番への残課題
 
-1. 全カタログの直前再照合とColab鍵のrole確認（値は表示しない）。
-2. 新private bucket追加→互換コード配信→正常経路確認→policy切替の個別承認。コードよりbucketが先。
+1. 全カタログの直前再照合。Colab鍵のrole確認は2026-09-27のユーザー確認により運用対象外。
+2. 承認済みの新private bucket追加→互換コード配信→正常経路確認→policy切替。コードよりbucketが先。各段階の必須確認ができない場合は停止。
 3. cloud Storage gatewayのsigned TUS/CORS、iPhone Safari、中断再開を許可された架空データで確認する手順の合意。
 4. 仮置きファイルの容量監視・残留対応担当と切替時の古いタブ再読込案内。
 

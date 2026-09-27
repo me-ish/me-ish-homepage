@@ -2,6 +2,8 @@
 
 対象: F01 / NEW-01。Phase Tで露呈した正常アップロードの互換性を先に確保し、Storageの公開書込policyを閉じる。本番適用は別承認。PRをマージするだけで下記cutover SQLを自動実行しない。
 
+2026-09-27の運用確認: ユーザーが本番移行を条件付き承認済み。Colab画像加工は「現在使っておらず、今後も使う予定がない」と明示されたため、Colab credential role確認は本移行の必須条件から除外する。これは権限確認に成功したという意味ではない。Colabコード・既存画像・鍵は変更せず、将来再開する場合は限定policy下で別途確認する。cloud正規経路・iPhone Safariなど、他の確認条件は維持する。
+
 ## 変更理由と境界
 
 PUBLIC INSERT `true` と artworksのPUBLIC UPDATE/INSERT/DELETEを削除すると、従来の匿名ギャラリー応募が止まる。相談のTUSも署名を検証する専用routeへ合わせる必要がある。そこで製品側の互換コードと、限定policyの手動適用ファイルを分離する。案件・quote・支払・納品・相談の行、既存オブジェクト名・公開URL・token/hashは変更しない。全migrationの一括適用はしない。
@@ -13,7 +15,7 @@ PUBLIC INSERT `true` と artworksのPUBLIC UPDATE/INSERT/DELETEを削除する�
 | bucket / 経路 | 主体・権限 | 切替後の期待 | 確認方法 |
 | --- | --- | --- | --- |
 | artworks / ギャラリー応募 | 匿名利用者 → 同一origin API → 署名付きprivate仮置き → server検証 → service保存 | 指定された新規画像だけ公開。任意path指定、既存作品更新・削除不可 | 実POST/service + SDK + 実Storage、ブラウザUIは通信mock |
-| artworks / 管理・Colab | service_role、正規管理処理 | CRUD成功、公開URL維持 | 隔離service JWTでCRUD。実Colabに設定された鍵のroleは未確認 |
+| artworks / 管理 | service_role、正規管理処理 | CRUD成功、公開URL維持 | 隔離service JWTでCRUD。Colab画像加工はユーザー確認により運用対象外 |
 | avatars・banners | Auth JWT、先頭path = auth.uid() | 自分のupload/upsert/delete成功、他人の更新・削除/新規書込拒否 | Phase T実Auth/Storage回帰 |
 | natori-inquiry-refs | 既存署名発行 → 署名upload | 成功、匿名直接書込/読取拒否 | Phase T署名Storage試験。応募業務全体は対象外 |
 | natori-consultations | 既存相談token認可 → service署名 → x-signature付TUS `/sign` | 作成・分割PATCH・中断再開・取得成功 | 実tus-js-client、偽署名拒否、UI component回帰 |
@@ -63,7 +65,7 @@ receiptは既存server専用service keyをdomain separation付きHMACに使う�
 
 ## 承認後の本番反映順（このPR作業中は実行しない）
 
-1. **read/verify**: 全bucket・全Storage policy・GRANT/RLSを再照合。想定16 policyと差があれば中止。呼出主体を確認し、特にColab `SUPABASE_KEY` は値を表示せずservice_roleであることを運用担当が確認。通常anon書込をする未把握consumerがないか確認する。
+1. **read/verify**: 全bucket・全Storage policy・GRANT/RLSを再照合。想定16 policyと差があれば中止。呼出主体と通常anon書込consumerを確認する。Colab画像加工はユーザーが不使用・再開予定なしと確認したため運用対象外とし、credential roleの確認を要求しない。
 2. **expand**: 別承認のうえ `supabase/migrations/20260927010903_natori_phase_0a_gallery_intake.sql` だけを適用。private bucketとrestrictive policyを同じtransactionで追加。既存migration履歴を一括pushしない。既存10bucketを変更しない。新bucketが既にあれば自動上書きせず差を確認。
 3. **deploy compatibility**: 上記存在確認後にこのPRをmainへ取り込み、通常のVercel配信を確認。順序を逆転すると新規応募の署名発行が失敗する。現時点のPR Previewを本番credentialで試験しない。
 4. **verify compatibility**: 専用の架空案件/運用上許可された検証データでギャラリー画像・既存公開画像、Auth所有avatar/banner、相談の実ブラウザsigned TUS（特に本番gateway、CORS、中断再開/iPhone Safari）を確認する。既存顧客のファイル/tokenを試験に使わない。既存タブの再読込案内と切替時間を決める。署名TTLが最大2時間であることを考慮する。
@@ -71,7 +73,7 @@ receiptは既存server専用service keyをdomain separation付きHMACに使う�
 6. **observe**: 新旧公開画像、private資料の署名取得、管理service操作、avatar/bannerの所有者境界、応募/相談uploadエラー率を確認。顧客ファイルの取得や変更を無断で行わない。古い応募タブからの直接uploadは拒否されるため再読込で復帰させる。再読込でフォーム入力が失われる点は切替時の案内に含める。
 7. **contract**: このWorkではcolumn削除/旧ファイル移動/既存token再発行は不要。仮置き残留の監視・保存期限を運用担当と決める。将来削除jobを作る際は、このbucketのpending prefix・署名2時間を十分超える経過期間・完了確認を限定条件にし、既存artworksや案件資料を触らない。無制限の自動一括削除はしない。
 
-本番反映前の残条件: 架空データによるcloud gatewayとiPhone Safari確認方法/担当の合意、Colab credential role確認、仮置き容量監視と残留時の対応責任者、上記expand→deploy→cutoverそれぞれの承認。これらが未完了のまま「本番修正済み」としない。
+本番反映の残条件: 架空データによるcloud gatewayとiPhone Safari確認方法/担当の合意、仮置き容量監視と残留時の対応責任者。expand→deploy→cutoverはユーザーが本書の順序・確認条件を守ることを条件に承認済み。必須確認ができない段階で停止する。Colabの運用対象外化によって他の確認を省略せず、未完了のまま「本番修正済み」としない。
 
 ## Rollback
 
