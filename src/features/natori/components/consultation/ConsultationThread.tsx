@@ -42,6 +42,7 @@ export default function ConsultationThread(props: Props) {
   const [newMessages, setNewMessages] = useState(false);
   const lastMessageRef = useRef<HTMLLIElement>(null);
   const knownMessages = useRef(new Set(messages.map(message => message.id)));
+  const historyLoaded = useRef(props.mode === "client");
   const requestVersion = useRef({ value: 0 });
   const lastRefresh = useRef(0);
   const changed = props.mode === "staff" ? props.onChanged : undefined;
@@ -58,7 +59,8 @@ export default function ConsultationThread(props: Props) {
       const data = await response.json() as { messages: ConsultationMessage[]; closed?: boolean };
       if (!Array.isArray(data.messages)) throw new Error("相談履歴を読み込めませんでした");
       if (version !== requestVersion.current.value) return false;
-      if (data.messages.some(message => !knownMessages.current.has(message.id))) setNewMessages(true);
+      if (historyLoaded.current && data.messages.some(message => !knownMessages.current.has(message.id))) setNewMessages(true);
+      historyLoaded.current = true;
       knownMessages.current = new Set(data.messages.map(message => message.id));
       setMessages(data.messages);
       if (typeof data.closed === "boolean") setClosed(data.closed);
@@ -231,6 +233,8 @@ export default function ConsultationThread(props: Props) {
                   <Paperclip className="h-4 w-4 shrink-0" aria-hidden /> {file.name} ({(file.sizeBytes / 1024 / 1024).toFixed(1)}MB)
                 </a>
               ))}
+              {props.mode === "staff" && message.notificationStatus === "failed" && (message.sender !== "staff" || closed) ? <p className="mt-1 text-xs font-bold text-amber-700">メール通知に失敗 · 相談内容は保存済み</p> : null}
+              {props.mode === "staff" && message.notificationStatus === "pending" ? <p className="mt-1 text-xs text-amber-700">通知未送信・処理中 · 相談内容は保存済み</p> : null}
               {props.mode === "staff" && !closed && message.sender === "staff" && message.notificationStatus === "failed" ? (
                 <button type="button" disabled={busy} onClick={() => void retry(message.id)} className="mt-1 text-xs font-bold text-amber-700 underline disabled:opacity-50">メール通知に失敗 · 再送する</button>
               ) : null}

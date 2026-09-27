@@ -7,6 +7,12 @@ const message = (id: string): ConsultationMessage => ({ id, sender: "staff", bod
 const mount = () => render(<ConsultationThread mode="client" token="synthetic" initialMessages={[message("original")]} closed={false} />);
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 describe("consultation history refresh", () => {
+  it("does not label existing staff history as a new arrival on first open", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ messages: [message("existing history")] })));
+    render(<ConsultationThread mode="staff" projectId="synthetic" clientEmail="fixture@example.invalid" />);
+    await screen.findByText("existing history");
+    expect(screen.queryByRole("button", { name: "新しいやり取りを見る" })).toBeNull();
+  });
   it("keeps displayed history and the draft while refreshing, and never scrolls automatically", async () => {
     let finish!: (response: Response) => void;
     const scroll = vi.fn(); Element.prototype.scrollIntoView = scroll;

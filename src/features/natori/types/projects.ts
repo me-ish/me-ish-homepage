@@ -61,7 +61,7 @@ export type NatoriDeliveryPlanMeta = {
 };
 
 export type NatoriProject = {
-  /** null/undefined means unavailable, not no messages. */
+  /** null means unavailable; undefined is reserved for legacy/demo data without a projection. */
   consultation?: ConsultationOverview | null;
   id: string;
   title: string;

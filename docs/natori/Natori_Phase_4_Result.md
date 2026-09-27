@@ -42,7 +42,11 @@ rollbackはapplicationを直前版へ戻せる。追加RPCを残して旧コー�
 
 ローカル関連テスト、型検査、baseline静的検査、lintを実行し、続いてDraft PRのActionsで本番から隔離したDB/Auth/Storage・HTTPメールcapture・Chromiumを検証する。
 
-- 実行結果とrun/checkout SHAは本書の最終更新で記録する。現段階のスクリプト作成だけでは完了扱いにしない。
+- Draft PR: https://github.com/me-ish/me-ish-homepage/pull/100
+- 初回head: `88834caa801866e99dd076edb77e6d1b11afb7c5`。通常CIは1208件成功、既存E2Eは15成功/0失敗/既存4skip。Phase T/0A/0B/Nは成功。
+- 初回専用run https://github.com/me-ish/me-ish-homepage/actions/runs/36314137772 はDB2件成功後、起動確認がNextのlocale転送に追従せず停止。環境失敗をskip成功にはしていない。検査側を同一originに限定した転送確認へ修正し再実行する。
+- 以後の最終実行SHA・成功件数はPR本文とActionsの非秘密artifactへ記録する。本書だけを実Storage/ブラウザ試験の完了証跡にはしない。
+- 端末のGit HTTP送信用認証が使えなかったため、接続済みGitHubのGit Data APIで同一treeを照合し、作業branchをfast-forward更新した。forceなし、main更新なし。
 - Nodeは既存`.node-version`、CLI/Playwright/隔離方法は `scripts/natori-phase-4/README.md`。
 - 既存CIは条件もskipも変更しない。Phase T/0B/Nの安全条件を維持。
 

@@ -98,7 +98,14 @@ async function main() {
   for (const stream of [server.stdout, server.stderr]) stream.on('data', b => { const s = b.toString(); for (const code of ['Module not found', 'Failed to compile', 'SyntaxError', 'EADDRINUSE']) if (s.includes(code)) classifications.add(code); });
   let ready = false; const deadline = Date.now() + 120000;
   while (Date.now() < deadline && server.exitCode === null) {
-    try { const r = await fetch(`${appOrigin}/ja/fixture-session`, { signal: AbortSignal.timeout(2000), redirect: 'manual' }); if (r.ok) { ready = true; break; } } catch { /* bounded startup polling, no raw logs */ }
+    try { const r = await fetch(`${appOrigin}/ja/fixture-session`, { signal: AbortSignal.timeout(2000), redirect: 'manual' }); if (r.ok) { ready = true; break; }
+      if (r.status >= 300 && r.status < 400) {
+        const location = new URL(r.headers.get('location'), appOrigin);
+        check(location.origin === appOrigin, 'REDIRECT_OUTSIDE');
+        const next = await fetch(location, { signal: AbortSignal.timeout(2000), redirect: 'manual' });
+        if (next.ok) { ready = true; break; }
+      }
+    } catch { /* bounded startup polling, no raw logs */ }
     await new Promise(resolve => setTimeout(resolve, 500));
   }
   if (!ready) { console.log(`Next startup: ${[...classifications].join(',')}`); throw new Error('NEXT_NOT_READY'); }
