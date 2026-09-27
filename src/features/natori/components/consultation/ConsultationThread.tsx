@@ -4,14 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { Paperclip } from "lucide-react";
 import { consultationUploadEndpoint } from "@/features/natori/lib/consultationUploadEndpoint";
-import type { ConsultationMessage } from "@/features/natori/server/consultationService";
+import type { ConsultationMessage } from "@/features/natori/types/consultation";
 
 type Props =
-  | { mode: "staff"; projectId: string; clientEmail?: string; standalone?: boolean; initialMessages?: never; token?: never; closed?: never }
+  | { mode: "staff"; projectId: string; clientEmail?: string; standalone?: boolean; initialMessages?: never; token?: never; closed?: boolean; onChanged?: () => void }
   | { mode: "client"; token: string; initialMessages: ConsultationMessage[]; closed: boolean; projectId?: never; clientEmail?: never };
 
 function dateTime(value: string): string {
-  return new Intl.DateTimeFormat("ja-JP", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat("ja-JP", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Tokyo" }).format(new Date(value));
 }
 
 function renderText(value: string) {
@@ -37,25 +37,77 @@ export default function ConsultationThread(props: Props) {
   const [loading, setLoading] = useState(props.mode === "staff");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [closed, setClosed] = useState(props.closed ?? false);
+  const [historyUnavailable, setHistoryUnavailable] = useState(false);
+  const [newMessages, setNewMessages] = useState(false);
+  const lastMessageRef = useRef<HTMLLIElement>(null);
+  const knownMessages = useRef(new Set(messages.map(message => message.id)));
+  const historyLoaded = useRef(props.mode === "client");
+  const requestVersion = useRef({ value: 0 });
+  const lastRefresh = useRef(0);
+  const changed = props.mode === "staff" ? props.onChanged : undefined;
   const fileRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
 
   const reload = useCallback(async () => {
-    const response = await fetch(endpoint, { cache: "no-store" });
-    if (!response.ok) throw new Error("相談履歴を読み込めませんでした");
-    const data = await response.json() as { messages: ConsultationMessage[] };
-    setMessages(data.messages);
+    const version = ++requestVersion.current.value;
+    lastRefresh.current = Date.now();
+    try {
+      const response = await fetch(endpoint, { cache: "no-store" });
+      if (version !== requestVersion.current.value) return false;
+      if (!response.ok) throw new Error("相談履歴を読み込めませんでした。リンクが有効か確認して、もう一度更新してください。");
+      const data = await response.json() as { messages: ConsultationMessage[]; closed?: boolean };
+      if (!Array.isArray(data.messages)) throw new Error("相談履歴を読み込めませんでした");
+      if (version !== requestVersion.current.value) return false;
+      if (historyLoaded.current && data.messages.some(message => !knownMessages.current.has(message.id))) setNewMessages(true);
+      historyLoaded.current = true;
+      knownMessages.current = new Set(data.messages.map(message => message.id));
+      setMessages(data.messages);
+      if (typeof data.closed === "boolean") setClosed(data.closed);
+      setHistoryUnavailable(false);
+      return true;
+    } catch (error) {
+      if (version !== requestVersion.current.value) return false;
+      throw error;
+    }
   }, [endpoint]);
 
-  useEffect(() => {
-    if (props.mode === "client") return;
-    let active = true;
+  const refresh = useCallback(async () => {
     setLoading(true);
-    void reload().catch(() => {
-      if (active) setError("相談履歴を読み込めませんでした。画面を開き直してください。");
-    }).finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [props.mode, reload]);
+    const version = requestVersion.current.value + 1;
+    try { if (await reload()) setError(""); }
+    catch (err) { setHistoryUnavailable(true); setError(err instanceof Error ? err.message : "相談履歴を読み込めませんでした"); }
+    finally { if (version === requestVersion.current.value) setLoading(false); }
+  }, [reload]);
+
+  useEffect(() => {
+    const requests = requestVersion.current;
+    void refresh();
+    const resume = () => {
+      if (document.visibilityState === "visible" && Date.now() - lastRefresh.current > 1000) void refresh();
+    };
+    window.addEventListener("focus", resume);
+    window.addEventListener("pageshow", resume);
+    document.addEventListener("visibilitychange", resume);
+    return () => {
+      requests.value++;
+      window.removeEventListener("focus", resume);
+      window.removeEventListener("pageshow", resume);
+      document.removeEventListener("visibilitychange", resume);
+    };
+  }, [refresh]);
+
+  const showLatest = () => {
+    lastMessageRef.current?.scrollIntoView({ block: "nearest" });
+    lastMessageRef.current?.focus({ preventScroll: true });
+    setNewMessages(false);
+  };
+
+  const refreshAfterSend = async () => {
+    changed?.();
+    try { await reload(); }
+    catch { setHistoryUnavailable(true); setError("送信は保存済みですが、履歴を更新できませんでした。「履歴を更新」で確認してください。本文を送り直す必要はありません。"); }
+  };
 
   const send = async () => {
     if (!body.trim() || busy) return;
@@ -74,7 +126,7 @@ export default function ConsultationThread(props: Props) {
       setNotice(result.notificationFailed
         ? "相談内容は保存されましたが、メール通知に失敗しました。別の方法でもご連絡ください。"
         : "送信しました。");
-      await reload();
+      await refreshAfterSend();
     } catch (err) {
       setError(err instanceof Error ? err.message : "送信できませんでした");
     } finally {
@@ -94,7 +146,7 @@ export default function ConsultationThread(props: Props) {
       const result = await response.json() as { error?: string; notificationFailed?: boolean };
       if (!response.ok || result.notificationFailed) throw new Error(result.error ?? "メールを再送できませんでした");
       setNotice("メール通知を再送しました。");
-      await reload();
+      await refreshAfterSend();
     } catch (err) {
       setError(err instanceof Error ? err.message : "メールを再送できませんでした");
     } finally { setBusy(false); }
@@ -146,7 +198,7 @@ export default function ConsultationThread(props: Props) {
       const finished = await finishedResponse.json() as { error?: string; notificationFailed?: boolean };
       if (!finishedResponse.ok) throw new Error(finished.error ?? "ファイルを会話に保存できませんでした");
       setNotice(finished.notificationFailed ? "ファイルは保存されましたが、メール通知に失敗しました。" : "ファイルを共有しました。");
-      await reload();
+      await refreshAfterSend();
     } catch (err) {
       setError(err instanceof Error ? err.message : "アップロードできませんでした");
     } finally {
@@ -156,17 +208,24 @@ export default function ConsultationThread(props: Props) {
     }
   };
 
-  const cannotSend = props.mode === "client" ? props.closed : !props.clientEmail;
+  const cannotSend = closed || (props.mode === "staff" && !props.clientEmail);
   return (
     <section className="space-y-3 rounded-xl border border-pink-200 bg-white p-3" aria-label="相談のやり取り">
       <div>
-        <h3 className="text-sm font-bold text-pink-800">相談のやり取り</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-bold text-pink-800">相談のやり取り</h3>
+          <button type="button" disabled={loading || busy} onClick={() => void refresh()} className="rounded-full border px-3 py-2 text-xs font-bold disabled:opacity-50">履歴を更新</button>
+        </div>
+        <p className="mt-1 text-xs text-gray-600">{props.mode === "client" ? "ナトリからの返事はメールでもお知らせします。ご返信はこの相談ページからお願いします。" : "相談内容とメール通知の状態は別に記録されます。"} メールへの直接返信は、この履歴には自動で入りません。</p>
+        {newMessages && !loading ? <button type="button" onClick={showLatest} className="mt-2 text-xs font-bold text-pink-700 underline">新しいやり取りを見る</button> : null}
         {props.mode === "staff" && !props.clientEmail ? <p className="text-xs text-amber-700">依頼者のメールアドレスがないため返信できません。</p> : null}
       </div>
-      {loading ? <p className="text-xs text-gray-500">読み込み中…</p> : messages.length === 0 ? <p className="text-xs text-gray-500">返信はまだありません。最初のメッセージを送れます。</p> : (
-        <ol className={props.mode === "staff" && props.standalone ? "space-y-2" : "max-h-72 space-y-2 overflow-y-auto"}>
-          {messages.map((message) => (
-            <li key={message.id} className={`rounded-xl px-3 py-2 text-sm ${message.sender === "staff" ? "bg-pink-50" : "bg-gray-100"}`}>
+      {loading ? <p role="status" className="text-xs text-gray-500">履歴を確認中…</p> : null}
+      {!loading && !historyUnavailable && messages.length === 0 ? <p className="text-xs text-gray-500">{closed ? "相談履歴はありません。" : "返信はまだありません。最初のメッセージを送れます。"}</p> : null}
+      {messages.length > 0 ? (
+        <ol className="space-y-2">
+          {messages.map((message, index) => (
+            <li key={message.id} ref={index === messages.length - 1 ? lastMessageRef : undefined} tabIndex={-1} className={`rounded-xl px-3 py-2 text-sm ${message.sender === "staff" ? "bg-pink-50" : "bg-gray-100"}`}>
               <p className="mb-1 text-xs font-semibold text-gray-600">{message.sender === "staff" ? "ナトリ" : "依頼者"} · {dateTime(message.createdAt)}</p>
               <p className="whitespace-pre-wrap break-words text-gray-900">{renderText(message.body)}</p>
               {message.files?.map((file) => (
@@ -174,13 +233,15 @@ export default function ConsultationThread(props: Props) {
                   <Paperclip className="h-4 w-4 shrink-0" aria-hidden /> {file.name} ({(file.sizeBytes / 1024 / 1024).toFixed(1)}MB)
                 </a>
               ))}
-              {props.mode === "staff" && message.sender === "staff" && message.notificationStatus === "failed" ? (
+              {props.mode === "staff" && message.notificationStatus === "failed" && (message.sender !== "staff" || closed) ? <p className="mt-1 text-xs font-bold text-amber-700">メール通知に失敗 · 相談内容は保存済み</p> : null}
+              {props.mode === "staff" && message.notificationStatus === "pending" ? <p className="mt-1 text-xs text-amber-700">通知未送信・処理中 · 相談内容は保存済み</p> : null}
+              {props.mode === "staff" && !closed && message.sender === "staff" && message.notificationStatus === "failed" ? (
                 <button type="button" disabled={busy} onClick={() => void retry(message.id)} className="mt-1 text-xs font-bold text-amber-700 underline disabled:opacity-50">メール通知に失敗 · 再送する</button>
               ) : null}
             </li>
           ))}
         </ol>
-      )}
+      ) : null}
       {messages.some((message) => message.files?.length) ? <p className="text-[11px] text-gray-500">添付が開けない場合は、ページを再読み込みしてください。</p> : null}
       {!cannotSend ? (
         <div className="space-y-2">
@@ -190,11 +251,11 @@ export default function ConsultationThread(props: Props) {
           <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.mp3,.m4a,.wav" className="hidden" aria-label="相談ファイルを選ぶ" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadFile(file); }} />
           <p className="text-xs text-gray-500">ファイルを選ぶとそのまま送信します。画像・PDFは10MB、音声は50MBまで。大きな楽曲は共有URLを貼ってください。</p>
           {progress !== null ? <p role="status" className="text-xs text-pink-700">アップロード中 {progress}%</p> : null}
-          <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || loading} className="mr-2 rounded-full border border-pink-300 px-4 py-2 text-sm font-bold text-pink-800 disabled:opacity-50">ファイルを選んで送信</button>
-          <button type="button" onClick={() => void send()} disabled={!body.trim() || busy || loading}
+          <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || loading || historyUnavailable} className="mr-2 rounded-full border border-pink-300 px-4 py-2 text-sm font-bold text-pink-800 disabled:opacity-50">ファイルを選んで送信</button>
+          <button type="button" onClick={() => void send()} disabled={!body.trim() || busy || loading || historyUnavailable}
             className="rounded-full bg-pink-500 px-5 py-2 text-sm font-bold text-white disabled:opacity-50">{busy ? "送信中…" : "メッセージを送信"}</button>
         </div>
-      ) : props.mode === "client" ? <p className="text-xs text-gray-600">この相談は終了しています。</p> : null}
+      ) : closed ? <p className="text-xs text-gray-600">この相談は終了しています。履歴のみ確認できます。</p> : null}
       {notice ? <p role="status" className="text-xs text-green-700">{notice}</p> : null}
       {error ? <p role="alert" className="text-xs text-red-700">{error}</p> : null}
     </section>

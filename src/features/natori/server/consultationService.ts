@@ -1,4 +1,5 @@
 import "server-only";
+import { staffConsultationHref } from "@/features/natori/lib/consultationOverview";
 
 import { createHash, randomBytes } from "crypto";
 import { Resend } from "resend";
@@ -17,8 +18,8 @@ const REPLY_TO = process.env.NATORI_PORTFOLIO_CONTACT_TO ?? "natori.o0716@gmail.
 
 export type ProjectRow = { id: string; user_id: string; title: string; client_name: string; client_email: string | null; note: string | null; request_data: Json | null; status: string; deleted_at: string | null };
 type MessageRow = { id: string; project_id: string; sender: string; body: string; notification_status: string; created_at: string };
-export type ConsultationFile = { id: string; name: string; sizeBytes: number; url: string };
-export type ConsultationMessage = { id: string; sender: "staff" | "client"; body: string; notificationStatus: string; createdAt: string; files: ConsultationFile[] };
+import type { ConsultationFile, ConsultationMessage } from "@/features/natori/types/consultation";
+export type { ConsultationFile, ConsultationMessage } from "@/features/natori/types/consultation";
 
 function hash(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -188,7 +189,7 @@ export async function sendClientConsultation(token: string, body: string): Promi
   try {
     sent = await sendNatoriNoticeMail(
       `【相談返信】${project.client_name} 様 / ${project.title}`.replace(/[\r\n]/g, " ").slice(0, 200),
-      `${project.client_name} 様から相談への返信が届きました。\n\n管理画面でご確認ください。\n${getSiteUrl()}/natori/inquiries?project=${project.id}`
+      `${project.client_name} 様から相談への返信が届きました。\n\n管理画面でご確認ください。\n${getSiteUrl()}${staffConsultationHref(project.id)}`
     );
   } catch (mailError) {
     console.error("[natori-consultation] staff notification failed", mailError);

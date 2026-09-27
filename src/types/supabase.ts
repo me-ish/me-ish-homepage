@@ -2495,6 +2495,10 @@ export type Database = {
       }
     }
     Functions: {
+      natori_consultation_overview_v1: {
+        Args: { p_owner_id: string; p_project_ids: string[] }
+        Returns: { project_id: string; latest_message_id: string | null; latest_sender: string | null; latest_message_at: string | null; notification_failed: number; notification_pending: number }[]
+      }
       natori_notification_list_v1: {
         Args: { p_owner_id: string; p_offset?: number }
         Returns: { id: string; project_id: string; project_title: string; purpose: string; status: string; attempt_no: number; claim_count: number; lease_expires_at: string | null; send_started_at: string | null; retry_after: string | null; last_sent_at: string | null }[]

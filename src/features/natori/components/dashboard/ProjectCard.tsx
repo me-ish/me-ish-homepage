@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { staffConsultationHref } from "@/features/natori/lib/consultationOverview";
+import ConsultationStatus from "./ConsultationStatus";
 import { useState } from "react";
 import { ArrowRight, CalendarDays, CircleDollarSign, Clock4, Mail, Pencil, Sparkles, AlertTriangle, Tag, Wallet, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -279,6 +282,11 @@ export default function ProjectCard({
             </p>
           </div>
         ) : null}
+
+        {project.consultation !== undefined ? <div className="space-y-2 rounded-xl border border-pink-200 p-3">
+          <ConsultationStatus project={project} />
+          <Link href={staffConsultationHref(project.id)} className="inline-flex min-h-10 items-center rounded-full border border-pink-300 px-4 text-sm font-bold text-pink-800">相談を開く</Link>
+        </div> : null}
 
         <ProjectNoteSummary note={project.note} />
 

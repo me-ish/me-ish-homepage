@@ -11,7 +11,7 @@ export const GET = withNatoriManagement("consultation.GET", false, async functio
   if (!(await canUseNatoriManagement())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const projectId = new URL(request.url).searchParams.get("projectId") ?? "";
   const result = await getStaffConsultation(projectId);
-  return result ? NextResponse.json({ messages: result.messages }) : NextResponse.json({ error: "Not found" }, { status: 404 });
+  return result ? NextResponse.json({ messages: result.messages, closed: result.project.status === "closed" || Boolean(result.project.deleted_at) }, { headers: { "Cache-Control": "no-store" } }) : NextResponse.json({ error: "Not found" }, { status: 404 });
 });
 
 export const POST = withNatoriManagement("consultation.POST", true, async function POST(request: Request) {

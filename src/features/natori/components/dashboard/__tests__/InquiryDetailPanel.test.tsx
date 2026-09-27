@@ -96,11 +96,11 @@ afterEach(() => {
 
 describe("案件詳細の導線", () => {
   it("参考資料がなければ空の資料欄を出さず、確認事項は閉じている", () => {
-    const { container } = renderPanel({ requestData: structuredRequest() });
+    renderPanel({ requestData: structuredRequest() });
     expect(screen.queryByText("参考資料")).toBeNull();
     const warnings = screen.getByText(/見積り前に確認すること/).closest("details");
     expect(warnings?.open).toBe(false);
-    expect(container.querySelectorAll("[data-warning-code]").length).toBeGreaterThan(0);
+    expect(document.body.querySelectorAll("[data-warning-code]").length).toBeGreaterThan(0);
   });
 
   it("相談は案件概要とは別の画面で開き、戻れる", async () => {
@@ -117,12 +117,12 @@ describe("案件詳細の導線", () => {
 
 describe("structured 表示", () => {
   it("受付区分と field ごとの値を表示する", () => {
-    const { container } = renderPanel({ requestData: structuredRequest() });
+    renderPanel({ requestData: structuredRequest() });
     const field = (key: string) =>
-      container.querySelector(`[data-field="${key}"]`)?.textContent;
+      document.body.querySelector(`[data-field="${key}"]`)?.textContent;
 
     // 受付区分は badge と「依頼の内容」欄の両方に出る
-    expect(container.querySelector('[data-inquiry-mode="quote"]')?.textContent).toBe(
+    expect(document.body.querySelector('[data-inquiry-mode="quote"]')?.textContent).toBe(
       "見積もりを希望"
     );
     expect(field("inquiryMode")).toBe("見積もりを希望");
@@ -137,17 +137,17 @@ describe("structured 表示", () => {
   });
 
   it("stable ID を主表示に出さない", () => {
-    const { container } = renderPanel({ requestData: structuredRequest() });
-    expect(container.textContent).not.toContain("expression_variation");
-    expect(container.textContent).not.toContain("bust_up");
-    expect(container.textContent).not.toContain("etorie-request-v1");
+    renderPanel({ requestData: structuredRequest() });
+    expect(document.body.textContent).not.toContain("expression_variation");
+    expect(document.body.textContent).not.toContain("bust_up");
+    expect(document.body.textContent).not.toContain("etorie-request-v1");
   });
 
   it("raw JSON を表示しない", () => {
-    const { container } = renderPanel({ requestData: structuredRequest() });
-    expect(container.textContent).not.toContain("schemaVersion");
-    expect(container.textContent).not.toContain("legacySource");
-    expect(container.textContent).not.toContain('{"');
+    renderPanel({ requestData: structuredRequest() });
+    expect(document.body.textContent).not.toContain("schemaVersion");
+    expect(document.body.textContent).not.toContain("legacySource");
+    expect(document.body.textContent).not.toContain('{"');
   });
 
   it("未定は既存の表示語に揃える", () => {
@@ -182,8 +182,8 @@ describe("legacy 表示", () => {
   });
 
   it("legacy note を新 schema へ推測変換しない", () => {
-    const { container } = renderPanel({ requestData: undefined, note: legacyNote });
-    expect(container.querySelector("[data-inquiry-mode]")).toBeNull();
+    renderPanel({ requestData: undefined, note: legacyNote });
+    expect(document.body.querySelector("[data-inquiry-mode]")).toBeNull();
   });
 });
 
@@ -205,11 +205,11 @@ describe("表示不能な request_data", () => {
   });
 
   it("表示不能でも raw JSON と依頼者本文を出さない", () => {
-    const { container } = renderPanel({
+    renderPanel({
       requestData: { schemaVersion: 1, message: CLIENT_MESSAGE, email: CLIENT_EMAIL },
     });
-    expect(container.textContent).not.toContain(CLIENT_MESSAGE);
-    expect(container.textContent).not.toContain("schemaVersion");
+    expect(document.body.textContent).not.toContain(CLIENT_MESSAGE);
+    expect(document.body.textContent).not.toContain("schemaVersion");
   });
 
   it("parse error を PII 付きで log しない", () => {
@@ -225,8 +225,8 @@ describe("表示不能な request_data", () => {
 
 describe("review warning と管理確定", () => {
   it("未確定項目を要確認事項として並べる", () => {
-    const { container } = renderPanel({ requestData: structuredRequest() });
-    const codes = Array.from(container.querySelectorAll("[data-warning-code]")).map(
+    renderPanel({ requestData: structuredRequest() });
+    const codes = Array.from(document.body.querySelectorAll("[data-warning-code]")).map(
       (node) => node.getAttribute("data-warning-code")
     );
     expect(codes).toContain("project_type_unconfirmed");
@@ -237,7 +237,7 @@ describe("review warning と管理確定", () => {
   });
 
   it("全て確定済みなら不要な warning を出さない", () => {
-    const { container } = renderPanel({
+    renderPanel({
       requestData: structuredRequest({
         commercialUse: "none",
         budget: { kind: "fixed", min: 8000, max: 8000, currency: "JPY" },
@@ -247,7 +247,7 @@ describe("review warning と管理確定", () => {
       amount: 8000,
       dueDate: "2026-09-01",
     });
-    expect(container.querySelectorAll("[data-warning-code]")).toHaveLength(0);
+    expect(document.body.querySelectorAll("[data-warning-code]")).toHaveLength(0);
     expect(screen.queryByText(/見積り前に確認すること/)).toBeNull();
   });
 
@@ -351,7 +351,7 @@ describe("外部リンクと参考画像", () => {
   });
 
   it("sort_order の数値は利用者へ見せない", () => {
-    const { container } = renderPanel({
+    renderPanel({
       requestData: structuredRequest(),
       referenceLinks: [
         {
@@ -363,14 +363,14 @@ describe("外部リンクと参考画像", () => {
         },
       ],
     });
-    const linkRow = container.querySelector('[data-link-id="link-1"]');
+    const linkRow = document.body.querySelector('[data-link-id="link-1"]');
     expect(linkRow?.textContent).not.toContain("5");
-    expect(container.textContent).not.toContain("sortOrder");
-    expect(container.textContent).not.toContain("sort_order");
+    expect(document.body.textContent).not.toContain("sortOrder");
+    expect(document.body.textContent).not.toContain("sort_order");
   });
 
   it("参考画像は表示名付きで並び、Storage path を出さない", () => {
-    const { container } = renderPanel({
+    renderPanel({
       requestData: structuredRequest(),
       referenceFiles: [
         { url: "https://signed.example.com/a.webp?token=x", name: "資料1（b65e16de）" },
@@ -378,8 +378,8 @@ describe("外部リンクと参考画像", () => {
     });
     expect(screen.getByText("参考画像（1件）")).toBeTruthy();
     expect(screen.getByAltText("資料1（b65e16de）")).toBeTruthy();
-    expect(container.textContent).not.toContain("natori-inquiry-refs");
-    expect(container.textContent).not.toContain("token=");
+    expect(document.body.textContent).not.toContain("natori-inquiry-refs");
+    expect(document.body.textContent).not.toContain("token=");
   });
 
   it("画像が無ければセクションごと出さない", () => {

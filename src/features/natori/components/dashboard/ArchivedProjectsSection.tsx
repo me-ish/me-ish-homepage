@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { staffConsultationHref } from "@/features/natori/lib/consultationOverview";
+import ConsultationStatus from "./ConsultationStatus";
 import { useState } from "react";
 import { ArchiveRestore, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import type { NatoriProject } from "@/features/natori/types/projects";
@@ -55,11 +58,12 @@ export default function ArchivedProjectsSection({
             const archivedAt = formatArchivedAt(project.deletedAt);
             const busy = busyId === project.id;
             return (
-              <li key={project.id} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-gray-50/60 p-3">
+              <li key={project.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-gray-50/60 p-3">
                 <span className="min-w-0">
                   <span className="block break-words text-sm font-bold text-gray-700">{project.clientName}・{project.title}</span>
                   {archivedAt ? <span className="mt-0.5 block text-xs text-gray-500">{archivedAt}に削除</span> : null}
                 </span>
+                {project.consultation !== undefined ? <div className="space-y-1"><ConsultationStatus project={project} /><Link href={staffConsultationHref(project.id)} className="inline-flex min-h-10 items-center text-sm font-bold text-pink-700 underline">相談履歴</Link></div> : null}
                 <button
                   type="button"
                   onClick={() => onRestore(project)}

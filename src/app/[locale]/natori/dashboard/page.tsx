@@ -24,8 +24,8 @@ import {
   upsertOwnNatoriProfile,
   type NatoriUserProfile,
 } from "@/features/natori/data/supabaseProfile";
-import { fetchNatoriProjects } from "@/features/natori/data/supabaseProjects";
-import { isPreworkStatus } from "@/features/natori/lib/projects";
+import { fetchNatoriProjectCollection } from "@/features/natori/data/supabaseProjects";
+import ConsultationAttentionPanel from "@/features/natori/components/dashboard/ConsultationAttentionPanel";
 import { Button } from "@/components/ui/button";
 import DashboardTodaySummary from "@/features/natori/components/dashboard/DashboardTodaySummary";
 import NotificationStatusPanel from "@/features/natori/components/dashboard/NotificationStatusPanel";
@@ -114,14 +114,8 @@ export default function NatoriDashboardPage() {
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<NatoriUserProfile | null>(null);
-  // 問い合わせカードのバッジ用。未対応 = 依頼受付のまま止まっている件数、
-  // 対応中 = 見積もり中〜入金待ちの件数。未認可などで取れなければ非表示
-  const [inquiryCounts, setInquiryCounts] = useState<{
-    pending: number;
-    inProgress: number;
-  } | null>(null);
-  // 「今日の状況」サマリ用。取れなければ非表示
   const [projects, setProjects] = useState<NatoriProject[] | null>(null);
+  const [allProjects, setAllProjects] = useState<NatoriProject[] | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -139,16 +133,12 @@ export default function NatoriDashboardPage() {
         console.error("[dashboard] profile fetch failed", err);
       }
       try {
-        const projects = await fetchNatoriProjects();
-        setProjects(projects);
-        const prework = projects.filter((project) => isPreworkStatus(project.status));
-        const pending = prework.filter(
-          (project) => project.status === "inquiry" || project.status === "consulting"
-        ).length;
-        setInquiryCounts({ pending, inProgress: prework.length - pending });
+        const collection = await fetchNatoriProjectCollection();
+        setProjects(collection.projects);
+        setAllProjects([...collection.projects, ...collection.archivedProjects]);
       } catch (err) {
         console.error("[dashboard] inquiry count fetch failed", err);
-        setInquiryCounts(null);
+        setAllProjects(null);
         setProjects(null);
       }
     } catch (err) {
@@ -250,6 +240,7 @@ export default function NatoriDashboardPage() {
         ) : null}
 
         {projects ? <DashboardTodaySummary projects={projects} today={new Date()} /> : null}
+        <ConsultationAttentionPanel projects={allProjects} loading={loading} onRefresh={() => void refresh()} />
         <NotificationStatusPanel />
 
         {resolvedGroups.map((group) => (
@@ -271,20 +262,6 @@ export default function NatoriDashboardPage() {
                       </div>
                       <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm font-black leading-5 text-gray-900">
                         {card.title}
-                        {card.href === "/natori/inquiries" && inquiryCounts ? (
-                          <>
-                            {inquiryCounts.pending > 0 ? (
-                              <span className="inline-flex items-center rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white">
-                                未対応 {inquiryCounts.pending}件
-                              </span>
-                            ) : null}
-                            {inquiryCounts.inProgress > 0 ? (
-                              <span className="inline-flex items-center rounded-full border border-orange-300 bg-white px-2 py-0.5 text-[11px] font-bold text-orange-700">
-                                対応中 {inquiryCounts.inProgress}件
-                              </span>
-                            ) : null}
-                          </>
-                        ) : null}
                       </p>
                     </Link>
                   </li>

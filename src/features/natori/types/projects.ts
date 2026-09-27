@@ -1,3 +1,5 @@
+import type { ConsultationOverview } from "./consultation";
+
 export type NatoriProjectStatus =
   | "inquiry"
   | "estimating"
@@ -59,6 +61,8 @@ export type NatoriDeliveryPlanMeta = {
 };
 
 export type NatoriProject = {
+  /** null means unavailable; undefined is reserved for legacy/demo data without a projection. */
+  consultation?: ConsultationOverview | null;
   id: string;
   title: string;
   clientName: string;

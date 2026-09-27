@@ -1,4 +1,6 @@
 import "server-only";
+import { loadConsultationOverviews } from "./consultationOverviewService";
+import type { ConsultationOverview } from "@/features/natori/types/consultation";
 import { createTasksForType } from "@/features/natori/lib/projects";
 import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { calculateDueDate } from "@/features/natori/lib/deliveryPlans";
@@ -16,6 +18,7 @@ import type {
 } from "@/features/natori/types/projects";
 
 export type NatoriAdminProjectRow = {
+  consultation?: ConsultationOverview | null;
   id: string;
   user_id: string;
   title: string;
@@ -287,27 +290,15 @@ export type ListNatoriAdminProjectsResult =
   | { kind: "fetch-projects-error" }
   | { kind: "fetch-tasks-error" };
 
-export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjectsResult> {
+export async function listNatoriAdminProjects(projectId?: string): Promise<ListNatoriAdminProjectsResult> {
   const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "fetch-projects-error" };
   const admin = supabaseAdmin();
-  const [
-    { data: projects, error: projectError },
-    { data: archivedProjects, error: archivedProjectError },
-  ] = await Promise.all([
-    admin
-      .from("natori_projects")
-      .select("*")
-      .eq("user_id", ownerId)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: true }),
-    admin
-      .from("natori_projects")
-      .select("*")
-      .eq("user_id", ownerId)
-      .not("deleted_at", "is", null)
-      .order("deleted_at", { ascending: false }),
-  ]);
+  let activeQuery = admin.from("natori_projects").select("*").eq("user_id", ownerId).is("deleted_at", null).order("created_at", { ascending: true });
+  let archivedQuery = admin.from("natori_projects").select("*").eq("user_id", ownerId).not("deleted_at", "is", null).order("deleted_at", { ascending: false });
+  // Direct lookup is owner-scoped and independent of list/status filters.
+  if (projectId) { activeQuery = activeQuery.eq("id", projectId); archivedQuery = archivedQuery.eq("id", projectId); }
+  const [{ data: projects, error: projectError }, { data: archivedProjects, error: archivedProjectError }] = await Promise.all([activeQuery, archivedQuery]);
 
   if (projectError || archivedProjectError) {
     console.error(
@@ -325,7 +316,8 @@ export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjects
   const archivedProjectRows = (
     (archivedProjects ?? []) as NatoriAdminProjectRow[]
   ).filter((project) => Boolean(project.deleted_at));
-  const projectIds = projectRows.map((project) => project.id);
+  const allRows = [...projectRows, ...archivedProjectRows];
+  const projectIds = allRows.map((project) => project.id);
   if (projectIds.length === 0) {
     return {
       kind: "ok",
@@ -337,7 +329,7 @@ export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjects
     };
   }
 
-  const [{ data: tasks, error: taskError }, { data: references, error: referenceError }] =
+  const [{ data: tasks, error: taskError }, { data: references, error: referenceError }, overviews] =
     await Promise.all([
       admin
         .from("natori_project_tasks")
@@ -349,6 +341,7 @@ export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjects
         .select("project_id, storage_path")
         .in("project_id", projectIds)
         .order("created_at", { ascending: true }),
+      loadConsultationOverviews(ownerId, projectIds),
     ]);
 
   if (taskError) {
@@ -357,7 +350,7 @@ export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjects
   }
 
   const taskRows = (tasks ?? []) as NatoriAdminTaskRow[];
-  const normalizedTasks = normalizeProjectTasksForRead(projectRows, taskRows);
+  const normalizedTasks = normalizeProjectTasksForRead(allRows, taskRows);
   if (referenceError) {
     console.error("[natori-admin-projects] reference fetch failed", referenceError);
   }
@@ -392,10 +385,11 @@ export async function listNatoriAdminProjects(): Promise<ListNatoriAdminProjects
         }))
       : [];
 
+  const withOverview = (row: NatoriAdminProjectRow): NatoriAdminProjectRow => ({ ...row, consultation: overviews?.get(row.id) ?? null });
   return {
     kind: "ok",
-    projects: projectRows,
-    archivedProjects: archivedProjectRows,
+    projects: projectRows.map(withOverview),
+    archivedProjects: archivedProjectRows.map(withOverview),
     tasks: normalizedTasks,
     referenceFiles,
     referenceLinks,

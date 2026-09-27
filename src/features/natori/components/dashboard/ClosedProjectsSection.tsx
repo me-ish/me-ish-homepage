@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { staffConsultationHref } from "@/features/natori/lib/consultationOverview";
+import ConsultationStatus from "./ConsultationStatus";
 import { useState } from "react";
 import { Archive, ChevronDown, ChevronUp, RotateCcw, Trash2 } from "lucide-react";
 import type { NatoriProject } from "@/features/natori/types/projects";
@@ -81,6 +84,7 @@ export default function ClosedProjectsSection({
                     <p className="mt-0.5 break-words text-xs text-gray-500">見送り {reason}</p>
                   ) : null}
                 </div>
+                {project.consultation !== undefined ? <div className="space-y-1"><ConsultationStatus project={project} /><Link href={staffConsultationHref(project.id)} className="inline-flex min-h-10 items-center text-sm font-bold text-pink-700 underline">相談履歴</Link></div> : null}
                 <div className="flex shrink-0 items-center gap-1.5">
                   <button
                     type="button"

@@ -504,7 +504,9 @@ describe("listNatoriAdminProjects", () => {
     expect(calls.some((call) => /^(update|upsert|delete|insert)\(/.test(call))).toBe(
       false
     );
-    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockRpc).toHaveBeenCalledExactlyOnceWith("natori_consultation_overview_v1", {
+      p_owner_id: "owner-1", p_project_ids: ["active-1", "archive-1"],
+    });
   });
 });
 

@@ -4,7 +4,9 @@
 // 問い合わせ管理画面の詳細パネル。フォームの依頼内容を整形表示し、
 // その場で見積もり / 支払い依頼メールの送信・入金確認・見送りができる。
 import Link from "next/link";
-import { useState } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import ConsultationStatus from "./ConsultationStatus";
+import { useRef, useState } from "react";
 import {
   Archive,
   ArrowLeft,
@@ -64,6 +66,10 @@ type InquiryDetailPanelProps = {
   view: NatoriInquiryNoteView;
   busy: boolean;
   demoMode?: boolean;
+  initialScreen?: "overview" | "conversation";
+  onConversationChanged?: () => void;
+  refreshError?: string;
+  onRetryRefresh?: () => void;
   onClose: () => void;
   onOpenMail: (kind: OrderMailKind) => void;
   onCloseInquiry: () => void;
@@ -92,6 +98,10 @@ export default function InquiryDetailPanel({
   view,
   busy,
   demoMode,
+  initialScreen = "overview",
+  onConversationChanged,
+  refreshError,
+  onRetryRefresh,
   onClose,
   onOpenMail,
   onCloseInquiry,
@@ -105,7 +115,8 @@ export default function InquiryDetailPanel({
   onUpdateLink,
   onDeleteLink,
 }: InquiryDetailPanelProps) {
-  const [screen, setScreen] = useState<"overview" | "conversation">("overview");
+  const [screen, setScreen] = useState<"overview" | "conversation">(initialScreen);
+  const returnFocus = useRef<HTMLElement | null>(typeof document !== "undefined" && document.activeElement instanceof HTMLElement ? document.activeElement : null);
   const meta = natoriProjectStatusMeta[project.status];
   const receivedISO = getNatoriInquiryReceivedISO(project);
   // legacy note 由来の画像は既存表示を維持し、structured 案件は署名URL付きの
@@ -119,6 +130,7 @@ export default function InquiryDetailPanel({
     Boolean(view.refText) ||
     referenceLinks.length > 0;
   const archived = Boolean(project.deletedAt);
+  const readOnly = archived || project.status === "closed";
 
   // 未対応 version / 壊れた JSON でも throw せず、表示可能な範囲だけを描画する。
   const requestView = buildNatoriInquiryRequestView(project.requestData);
@@ -131,17 +143,10 @@ export default function InquiryDetailPanel({
   });
 
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-gray-900/60 sm:p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="問い合わせの詳細"
-      onClick={onClose}
-    >
-      <div
-        className="flex h-[100dvh] w-full max-w-2xl flex-col border border-pink-100 bg-white shadow-xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
+    <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
+      <DialogContent hideCloseButton aria-describedby={undefined} aria-label="問い合わせの詳細"
+        onCloseAutoFocus={event => { event.preventDefault(); returnFocus.current?.focus(); }}
+        className="flex h-[100dvh] w-full max-w-2xl flex-col gap-0 border border-pink-100 bg-white p-0 shadow-xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl">
         {/* ヘッダー */}
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-pink-100 p-4 sm:p-5">
           <div className="min-w-0">
@@ -155,11 +160,11 @@ export default function InquiryDetailPanel({
               </button>
             ) : null}
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="break-words text-base font-black text-gray-900">
+              <DialogTitle className="break-words text-base font-black text-gray-900">
                 {screen === "conversation"
                   ? `${project.clientName}さんとの相談`
                   : `${project.clientName}｜${project.title}`}
-              </h2>
+              </DialogTitle>
               <span
                 className={cn(
                   "inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold",
@@ -169,6 +174,11 @@ export default function InquiryDetailPanel({
                 {meta.label}
               </span>
             </div>
+            <ConsultationStatus project={project} />
+            {refreshError ? <div role="alert" className="mt-2 text-xs text-amber-800">
+              {refreshError} 表示中の案件情報が古い可能性があります。
+              {onRetryRefresh ? <button type="button" onClick={onRetryRefresh} className="ml-2 min-h-8 font-bold underline">案件情報を再取得</button> : null}
+            </div> : null}
             {screen === "overview" ? (
               <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
                 <span className="inline-flex items-center gap-1">
@@ -199,10 +209,12 @@ export default function InquiryDetailPanel({
 
         {screen === "conversation" ? (
           <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-            {!archived && !demoMode ? (
+            {!demoMode ? (
               <ConsultationThread
                 mode="staff"
                 standalone
+                closed={readOnly}
+                onChanged={onConversationChanged}
                 projectId={project.id}
                 clientEmail={project.clientEmail ?? view.email ?? undefined}
               />
@@ -339,7 +351,7 @@ export default function InquiryDetailPanel({
             </section>
           ) : null}
 
-          {!archived && !demoMode ? (
+          {!demoMode ? (
             <section className="rounded-xl border border-pink-200 bg-pink-50/40 p-4">
               <h3 className="text-sm font-bold text-gray-900">
                 相談のやり取り
@@ -370,7 +382,7 @@ export default function InquiryDetailPanel({
               </span>
             </summary>
             <div className="space-y-4 border-t border-pink-100 p-3">
-              {onSaveCorrection && onSaveNextAction && !archived ? (
+              {onSaveCorrection && onSaveNextAction && !readOnly ? (
                 <InquiryAdminCorrectionForm
                   project={project}
                   disabled={busy}
@@ -378,7 +390,7 @@ export default function InquiryDetailPanel({
                   onSaveNextAction={onSaveNextAction}
                 />
               ) : null}
-              {onConfirmType && !archived ? (
+              {onConfirmType && !readOnly ? (
                 <InquiryTypeConfirmation
                   projectType={project.type}
                   taskCount={project.tasks.length}
@@ -386,7 +398,7 @@ export default function InquiryDetailPanel({
                   onConfirm={onConfirmType}
                 />
               ) : null}
-              {onAddLink && onUpdateLink && onDeleteLink && !archived ? (
+              {onAddLink && onUpdateLink && onDeleteLink && !readOnly ? (
                 <InquiryReferenceLinks
                   links={referenceLinks}
                   readOnly={archived}
@@ -407,17 +419,17 @@ export default function InquiryDetailPanel({
         <div
           className={`${screen === "conversation" ? "hidden" : "flex shrink-0 items-center gap-2 border-t border-pink-100 bg-white px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 sm:p-5"}`}
         >
-          {!archived && !demoMode ? (
+          {!demoMode ? (
             <button
               type="button"
               onClick={() => setScreen("conversation")}
               className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-pink-500 px-2 text-[11px] font-bold text-white hover:bg-pink-600 sm:flex-none sm:px-4 sm:text-xs"
             >
               <MessageCircle className="h-3.5 w-3.5" aria-hidden />
-              相談に返信
+              {readOnly ? "相談履歴を開く" : "相談に返信"}
             </button>
           ) : null}
-          {ESTIMATE_MAIL_STATUSES.has(project.status) && estimateHref ? (
+          {!readOnly && ESTIMATE_MAIL_STATUSES.has(project.status) && estimateHref ? (
             <Link
               href={estimateHref}
               className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-rose-300 bg-white px-2 text-[11px] font-bold text-rose-700 shadow-sm hover:bg-rose-50 sm:flex-none sm:px-4 sm:text-xs"
@@ -432,7 +444,7 @@ export default function InquiryDetailPanel({
               その他 ↑
             </summary>
             <div className="absolute bottom-full right-0 z-10 mb-2 flex max-h-[50dvh] w-[min(88vw,24rem)] flex-wrap gap-2 overflow-y-auto rounded-xl border border-gray-200 bg-white p-3 shadow-xl">
-              {ESTIMATE_MAIL_STATUSES.has(project.status) ? (
+              {!readOnly && ESTIMATE_MAIL_STATUSES.has(project.status) ? (
                 <button
                   type="button"
                   onClick={() => onOpenMail("estimate")}
@@ -444,7 +456,7 @@ export default function InquiryDetailPanel({
                   {project.status === "quoted" ? "を再送" : "を送る"}
                 </button>
               ) : null}
-              {PAYMENT_MAIL_STATUSES.has(project.status) ? (
+              {!readOnly && PAYMENT_MAIL_STATUSES.has(project.status) ? (
                 <button
                   type="button"
                   onClick={() => onOpenMail("payment")}
@@ -453,10 +465,10 @@ export default function InquiryDetailPanel({
                 >
                   <Mail className="h-3.5 w-3.5" aria-hidden />
                   支払い依頼メール
-                  {project.status === "awaiting_payment" ? "を再送" : "を送る"}
+                  {!readOnly && project.status === "awaiting_payment" ? "を再送" : "を送る"}
                 </button>
               ) : null}
-              {project.status === "awaiting_payment" ? (
+              {!readOnly && project.status === "awaiting_payment" ? (
                 <button
                   type="button"
                   onClick={onConfirmPayment}
@@ -475,7 +487,7 @@ export default function InquiryDetailPanel({
                 >
                   案件ボードへ
                 </Link>
-                <button
+                {!readOnly && isPreworkStatus(project.status) ? <button
                   type="button"
                   onClick={onCloseInquiry}
                   disabled={busy}
@@ -484,12 +496,12 @@ export default function InquiryDetailPanel({
                 >
                   <Archive className="h-3.5 w-3.5" aria-hidden />
                   見送り
-                </button>
+                </button> : null}
               </div>
             </div>
           </details>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

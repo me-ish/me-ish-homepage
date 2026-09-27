@@ -1,4 +1,5 @@
 import "server-only";
+import { staffConsultationHref } from "@/features/natori/lib/consultationOverview";
 
 import { createHash, randomBytes, randomUUID } from "crypto";
 import { Resend } from "resend";
@@ -124,7 +125,7 @@ export async function finishConsultationUpload(input: FileInput & { path: string
     if (actor.sender === "client") {
       sent = await sendNatoriNoticeMail(
         `【相談資料】${actor.project.client_name} 様 / ${actor.project.title}`.replace(/[\r\n]/g, " ").slice(0, 200),
-        `依頼者からファイルが届きました。\n\n${getSiteUrl()}/natori/inquiries?project=${actor.project.id}`
+        `依頼者からファイルが届きました。\n\n${getSiteUrl()}${staffConsultationHref(actor.project.id)}`
       );
     } else {
       const email = actor.project.client_email ?? extractClientEmailFromNote(actor.project.note);

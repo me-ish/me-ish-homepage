@@ -1,7 +1,8 @@
 "use client";
 
 // features/natori/components/dashboard/InquiriesBoard.tsx
-// 問い合わせ管理画面。フォームから来た依頼（＝ラフ開始前の案件）を
+// 全工程の相談管理。返信待ちと通知状態を案件進捗から分離して表示する。
+// フォームから来た依頼を
 // 受付日・最終アクション・経過日数付きの一覧で見て、詳細パネルから
 // 見積もり / 支払い依頼メールの送信・入金確認・見送りまで行える。
 // データソースは案件管理と同じ natori_projects（別テーブルは持たない）。
@@ -11,22 +12,20 @@ import { cn } from "@/lib/utils";
 import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
 import {
   daysSinceISO,
-  getInquiryLastActivityISO,
   parseInquiryNote,
   type NatoriInquiryNoteView,
 } from "@/features/natori/lib/inquiryNoteView";
-import { getNextActionForStatus, isPreworkStatus } from "@/features/natori/lib/projects";
+import { getNextActionForStatus } from "@/features/natori/lib/projects";
 import {
   formatNatoriProjectAmount,
-  compareNatoriInquiriesByReceivedAt,
   getNatoriInquiryReceivedISO,
-  isActiveNatoriProject,
 } from "@/features/natori/lib/projectReadModel";
 import {
   closeNatoriProject,
   confirmNatoriProjectPayment,
   confirmNatoriProjectType,
-  fetchNatoriProjects,
+  fetchNatoriProjectCollection,
+  fetchNatoriProject,
   updateNatoriProjectDetails,
   updateNatoriProjectStatus,
   type UpdateNatoriProjectDetailsInput,
@@ -44,6 +43,8 @@ import type {
 } from "@/features/natori/types/projects";
 import InquiryDetailPanel from "./InquiryDetailPanel";
 import OrderMailPanel, { type OrderMailKind } from "./OrderMailPanel";
+import ConsultationStatus from "./ConsultationStatus";
+import { consultationActivityDay, compareConsultationActivity, consultationNeedsAttention, consultationReplyState } from "@/features/natori/lib/consultationOverview";
 import { NatoriLoadError } from "./NatoriLoadError";
 
 /** 種別確定の失敗を、DB 内部情報を含まない案内文へ写す。 */
@@ -63,7 +64,11 @@ function describeConfirmTypeError(error: unknown): string {
 
 /** 一覧の状態フィルタ。consulting は inquiry と同じ「依頼受付」扱い */
 const STATUS_FILTERS: Array<{ key: string; label: string; statuses: NatoriProjectStatus[] }> = [
-  { key: "all", label: "すべて", statuses: [] },
+  { key: "all", label: "すべての工程", statuses: [] },
+  { key: "attention", label: "対応・確認が必要", statuses: [] },
+  { key: "staff", label: "ナトリの返信待ち", statuses: [] },
+  { key: "client", label: "依頼者の返信待ち", statuses: [] },
+  { key: "ended", label: "終了・アーカイブ", statuses: [] },
   { key: "inquiry", label: "依頼受付", statuses: ["inquiry", "consulting"] },
   { key: "estimating", label: "見積もり中", statuses: ["estimating"] },
   { key: "quoted", label: "提示済み", statuses: ["quoted"] },
@@ -118,19 +123,62 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   const [today, setToday] = useState<Date | null>(null);
   const [filter, setFilter] = useState<string>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedProject, setSelectedProject] = useState<NatoriProject | null>(null);
+  const [selectedError, setSelectedError] = useState("");
+  const [detailVersion, setDetailVersion] = useState(0);
+  const [initialScreen, setInitialScreen] = useState<"overview" | "conversation">("overview");
   const [mailKind, setMailKind] = useState<OrderMailKind | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isDemo) return;
-    const projectId = new URLSearchParams(window.location.search).get("project");
-    if (projectId && /^[0-9a-f-]{36}$/i.test(projectId)) setSelectedId(projectId);
+    const sync = () => {
+      const params = new URLSearchParams(window.location.search);
+      const projectId = params.get("project");
+      const requestedFilter = params.get("filter");
+      if (requestedFilter && STATUS_FILTERS.some(entry => entry.key === requestedFilter)) setFilter(requestedFilter);
+      setSelectedId(projectId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId) ? projectId : null);
+      setInitialScreen(params.get("view") === "conversation" ? "conversation" : "overview");
+    };
+    sync();
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
   }, [isDemo]);
 
   const reload = useCallback(async () => {
-    const data = await fetchNatoriProjects();
-    setProjects(data);
+    const data = await fetchNatoriProjectCollection();
+    setProjects([...data.projects, ...data.archivedProjects]);
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    setSelectedProject(current => current?.id === selectedId ? current : null);
+    setSelectedError("");
+    if (!selectedId) return;
+    if (isDemo) { setSelectedProject(projects?.find(p => p.id === selectedId) ?? null); return; }
+    void fetchNatoriProject(selectedId).then(project => {
+      if (!active) return;
+      setSelectedProject(project);
+      if (!project) setSelectedError("案件が見つかりません。管理権限とリンクをご確認ください。");
+    }).catch(() => { if (active) setSelectedError("案件の詳細を取得できませんでした。再試行してください。"); });
+    return () => { active = false; };
+  }, [selectedId, projects, isDemo, detailVersion]);
+
+  const openProject = (id: string) => {
+    setInitialScreen("overview");
+    setSelectedId(id);
+    if (!isDemo) {
+      const url = new URL(window.location.href); url.searchParams.set("project", id); url.searchParams.delete("view");
+      window.history.pushState(null, "", url);
+    }
+  };
+  const closeDetail = () => {
+    setSelectedId(null);
+    if (!isDemo) {
+      const url = new URL(window.location.href); url.searchParams.delete("project"); url.searchParams.delete("view");
+      window.history.replaceState(null, "", url);
+    }
+  };
 
   const loadServerData = useCallback(async () => {
     setProjects(null);
@@ -156,46 +204,36 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   const rows = useMemo<InquiryRow[]>(() => {
     if (!projects) return [];
     return projects
-      .filter(
-        (project) => isActiveNatoriProject(project) && isPreworkStatus(project.status)
-      )
       .map((project) => {
         const view = parseInquiryNote(project.note);
         const receivedISO = getNatoriInquiryReceivedISO(project);
-        const lastActivityISO = getInquiryLastActivityISO(view, receivedISO);
-        const lastLog = view.logs[view.logs.length - 1];
+        const lastActivityISO = consultationActivityDay(project) || receivedISO;
         return {
           project,
           view,
           receivedISO,
           lastActivityISO,
-          lastActionLabel: lastLog ? lastLog.label : "受付のみ",
+          lastActionLabel: project.consultation?.latestSender === "client" ? "依頼者から" : project.consultation?.latestSender === "staff" ? "ナトリから" : project.consultation ? "会話なし" : "取得できません",
         };
       })
-      // 受付日時は natori_projects.created_at を正とし、納期では並べない。
+      // 最終相談日時（会話なしは受付日時）が古い順。メモのメール日付は使わない。
       .sort((a, b) =>
-        compareNatoriInquiriesByReceivedAt(a.project, b.project)
+        compareConsultationActivity(a.project, b.project)
       );
   }, [projects]);
 
-  const filteredRows = useMemo(() => {
-    const entry = STATUS_FILTERS.find((item) => item.key === filter);
-    if (!entry || entry.statuses.length === 0) return rows;
-    const set = new Set(entry.statuses);
-    return rows.filter((row) => set.has(row.project.status));
-  }, [rows, filter]);
-
-  const countFor = (statuses: NatoriProjectStatus[]) => {
-    if (statuses.length === 0) return rows.length;
-    const set = new Set(statuses);
-    return rows.filter((row) => set.has(row.project.status)).length;
+  const matchesFilter = (row: InquiryRow, key: string) => {
+    const ended = Boolean(row.project.deletedAt) || row.project.status === "closed";
+    if (key === "ended") return ended;
+    if (key === "attention") return consultationNeedsAttention(row.project);
+    if (ended) return false;
+    if (key === "staff") return ["staff", "new"].includes(consultationReplyState(row.project));
+    if (key === "client") return consultationReplyState(row.project) === "client";
+    const entry = STATUS_FILTERS.find(item => item.key === key);
+    return !entry?.statuses.length || entry.statuses.includes(row.project.status);
   };
-
-  const selectedRow = selectedId
-    ? filteredRows.find((row) => row.project.id === selectedId) ??
-      rows.find((row) => row.project.id === selectedId) ??
-      null
-    : null;
+  const filteredRows = rows.filter(row => matchesFilter(row, filter));
+  const selectedRow = selectedProject ? { project: selectedProject, view: parseInquiryNote(selectedProject.note) } : null;
 
   const handleCloseInquiry = async (project: NatoriProject) => {
     const reason = window.prompt(
@@ -218,7 +256,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
             : entry
         )
       );
-      setSelectedId(null);
+      closeDetail();
       return;
     }
     setBusyId(project.id);
@@ -226,7 +264,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
     try {
       await closeNatoriProject(project.id, reason.trim());
       await reload();
-      setSelectedId(null);
+      closeDetail();
     } catch (err) {
       console.error("[InquiriesBoard] close failed", err);
       setError(err instanceof Error ? err.message : String(err));
@@ -297,7 +335,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
             : entry
         )
       );
-      setSelectedId(null);
+      closeDetail();
       return;
     }
     setBusyId(project.id);
@@ -305,7 +343,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
     try {
       await confirmNatoriProjectPayment(project.id, getNextActionForStatus("rough"));
       await reload();
-      setSelectedId(null);
+      closeDetail();
     } catch (err) {
       console.error("[InquiriesBoard] confirm payment failed", err);
       setError(err instanceof Error ? err.message : String(err));
@@ -314,7 +352,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
     }
   };
 
-  if (error && !projects) {
+  if (error && !projects && !selectedId) {
     return (
       <NatoriLoadError
         resourceLabel="問い合わせデータ"
@@ -324,7 +362,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
     );
   }
 
-  if (!projects || !today) {
+  if ((!projects && !selectedId) || !today) {
     return (
       <div className="space-y-3">
         <div className="h-12 animate-pulse rounded-2xl bg-pink-50/60" />
@@ -335,6 +373,15 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
 
   return (
     <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-gray-600">制作の進捗と返信待ちは別に表示します。既読の判定ではありません。</p>
+        {!isDemo ? <button type="button" onClick={() => void reload().catch(() => setError("最新の状況を取得できませんでした。"))} className="shrink-0 rounded-full border px-3 py-2 text-xs font-bold">状態を更新</button> : null}
+      </div>
+      {selectedId && !selectedProject ? <div role={selectedError ? "alert" : "status"} className="rounded-xl border p-3 text-sm">
+        {selectedError || "案件詳細を読み込み中…"}
+        {selectedError ? <button type="button" onClick={() => setDetailVersion(n => n + 1)} className="ml-3 underline">詳細を再試行</button> : null}
+        <button type="button" onClick={closeDetail} className="ml-3 underline">閉じる</button>
+      </div> : null}
       {/* 状態フィルタ */}
       <div className="flex flex-wrap items-center gap-1.5">
         {STATUS_FILTERS.map((entry) => (
@@ -352,7 +399,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
           >
             {entry.label}
             <span className={cn("ml-1", filter === entry.key ? "opacity-90" : "text-gray-400")}>
-              {countFor(entry.statuses)}
+              {rows.filter(row => matchesFilter(row, entry.key)).length}
             </span>
           </button>
         ))}
@@ -364,7 +411,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
         </p>
       ) : null}
 
-      {filteredRows.length === 0 ? (
+      {!projects ? <p role="status" className="text-sm">一覧を取得できていません。案件詳細は個別に確認します。</p> : filteredRows.length === 0 ? (
         <div className="rounded-2xl border border-pink-100 bg-white p-8 text-center shadow-sm">
           <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-pink-50 text-pink-500">
             <Inbox className="h-6 w-6" aria-hidden />
@@ -373,7 +420,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
             {rows.length === 0 ? "対応中の問い合わせはありません" : "この条件の問い合わせはありません"}
           </p>
           <p className="mt-1 text-xs leading-5 text-gray-600">
-            ご依頼フォームから送信があると、ここに自動で並びます。ラフ開始後の案件は案件ボードで管理します。
+            制作中・納品後の相談も、ここから開けます。終了した案件は「終了・アーカイブ」で確認できます。
           </p>
         </div>
       ) : (
@@ -387,7 +434,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
                 <li key={row.project.id}>
                   <button
                     type="button"
-                    onClick={() => setSelectedId(row.project.id)}
+                    onClick={() => openProject(row.project.id)}
                     className="w-full rounded-2xl border border-pink-100 bg-white p-3 text-left shadow-sm transition hover:bg-pink-50/50"
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -413,6 +460,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
                         {row.lastActionLabel}・{formatDate(row.lastActivityISO)}
                       </span>
                     </div>
+                    <span className="mt-2 block"><ConsultationStatus project={row.project} /></span>
                   </button>
                 </li>
               );
@@ -439,16 +487,17 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
                 return (
                   <tr
                     key={row.project.id}
-                    onClick={() => setSelectedId(row.project.id)}
-                    className="cursor-pointer border-b border-pink-50 transition last:border-b-0 hover:bg-pink-50/50"
-                    title="クリックで詳細を開く"
+                    className="border-b border-pink-50 transition last:border-b-0 hover:bg-pink-50/50"
                   >
                     <td className="whitespace-nowrap px-3 py-2.5 text-xs text-gray-600">
                       {formatDate(row.receivedISO)}
                     </td>
                     <td className="max-w-[260px] px-3 py-2.5">
-                      <p className="truncate font-bold text-gray-900">{row.project.clientName}</p>
-                      <p className="truncate text-xs text-gray-600">{row.project.title}</p>
+                      <button type="button" onClick={() => openProject(row.project.id)} className="max-w-full text-left underline decoration-pink-200 underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-500">
+                        <span className="block truncate font-bold text-gray-900">{row.project.clientName}</span>
+                        <span className="block truncate text-xs text-gray-600">{row.project.title}</span>
+                      </button>
+                      <ConsultationStatus project={row.project} />
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-right font-bold text-gray-900">
                       {formatNatoriProjectAmount(row.project.amount)}
@@ -480,17 +529,22 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
       )}
 
       <p className="text-[11px] text-gray-500">
-        最終アクションが古い順に並びます。経過は最後の対応（無ければ受付）からの日数で、7日で黄色・14日で赤になります。
+        相談の最終発言が古い順（会話がなければ受付順）です。経過はその日からの日数で、7日で黄色・14日で赤になります。
       </p>
 
       {/* 詳細パネル */}
       {selectedRow && !mailKind ? (
         <InquiryDetailPanel
+          key={selectedRow.project.id}
+          initialScreen={initialScreen}
+          refreshError={selectedError || error || undefined}
+          onRetryRefresh={() => { setError(null); setDetailVersion(n => n + 1); void reload().catch(() => setError("返信状況を更新できませんでした。")); }}
+          onConversationChanged={() => { void reload().catch(() => setError("返信状況を更新できませんでした。状態を更新してください。")); }}
           project={selectedRow.project}
           view={selectedRow.view}
           busy={busyId === selectedRow.project.id}
           demoMode={isDemo}
-          onClose={() => setSelectedId(null)}
+          onClose={closeDetail}
           onOpenMail={(kind) => setMailKind(kind)}
           onCloseInquiry={() => void handleCloseInquiry(selectedRow.project)}
           onConfirmPayment={() => void handleConfirmPayment(selectedRow.project)}
