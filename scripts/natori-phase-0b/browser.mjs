@@ -2,11 +2,15 @@ import {readFileSync,writeFileSync} from 'node:fs';
 import {randomBytes} from 'node:crypto';
 import {spawn} from 'node:child_process';
 import {createServer} from 'node:http';
+import {setDefaultResultOrder} from 'node:dns';
 import {createRequire} from 'node:module';
 const require=createRequire('/app/package.json');
 const {createClient}=require('@supabase/supabase-js');
 const {chromium,expect}=require('@playwright/test');
-const appOrigin='http://127.0.0.1:3000';
+// NextURL canonicalizes loopback IPs to localhost (locked Next 15.5.25).
+// Resolve that local name from /etc/hosts; the kernel still permits only IPv4:3000.
+setDefaultResultOrder('ipv4first');
+const appOrigin='http://localhost:3000';
 const check=(ok,code)=>{if(!ok)throw new Error(code);};
 let stage='preflight',server,browser;
 const results=[];
@@ -55,7 +59,7 @@ async function main(){
   check(!seed.error&&seed.data.length===4,'PROJECT_FIXTURE_FAILED');
   const target=seed.data.find(r=>r.user_id===owner.id).id;
   const sharedKey=randomBytes(32).toString('hex');
-  const baseEnv={PATH:'/runtime-bin:/usr/local/bin:/usr/bin:/bin',HOME:'/tmp',TMPDIR:'/tmp',NODE_ENV:'development',NEXT_TELEMETRY_DISABLED:'1',PHASE_0B_BROWSER:'ephemeral',NEXT_PUBLIC_SUPABASE_URL:origin,NEXT_PUBLIC_SUPABASE_ANON_KEY:keys.anon,SUPABASE_SERVICE_ROLE_KEY:keys.service,NATORI_DASHBOARD_KEY:sharedKey,NATORI_OWNER_EMAILS:owner.email,NATORI_STAFF_EMAILS:others.slice(0,2).map(a=>a.email).join(','),NEXT_PUBLIC_SITE_URL:appOrigin};
+  const baseEnv={PATH:'/runtime-bin:/usr/local/bin:/usr/bin:/bin',HOME:'/tmp',TMPDIR:'/tmp',NODE_ENV:'development',NODE_OPTIONS:'--dns-result-order=ipv4first',NEXT_TELEMETRY_DISABLED:'1',PHASE_0B_BROWSER:'ephemeral',NEXT_PUBLIC_SUPABASE_URL:origin,NEXT_PUBLIC_SUPABASE_ANON_KEY:keys.anon,SUPABASE_SERVICE_ROLE_KEY:keys.service,NATORI_DASHBOARD_KEY:sharedKey,NATORI_OWNER_EMAILS:owner.email,NATORI_STAFF_EMAILS:others.slice(0,2).map(a=>a.email).join(','),NEXT_PUBLIC_SITE_URL:appOrigin};
   async function startServer(setting){
     await stopServer();
     server=spawn(process.execPath,['/app/node_modules/next/dist/bin/next','dev','--hostname','127.0.0.1','--port','3000'],{cwd:'/app',env:{...baseEnv,NATORI_OWNER_USER_ID:setting},stdio:['ignore','pipe','pipe']});
@@ -88,7 +92,7 @@ async function main(){
     if(!ready){console.log(`Next startup classifications: ${[...diagnostics].join(',')||'not-ready'} status=${lastStatus} fetch=${lastFetchError}`);for(const line of diagnosticLines.slice(-8))console.log(`Next sanitized diagnostic: ${line}`);throw new Error('NEXT_NOT_READY');}
   }
   stage='next-start';await startServer(owner.id);
-  stage='chromium';browser=await chromium.launch({headless:true});
+  stage='chromium';browser=await chromium.launch({headless:true,args:['--host-resolver-rules=MAP localhost 127.0.0.1']});
   async function context(){return browser.newContext({baseURL:appOrigin,serviceWorkers:'block'});}
   async function login(page,actor){
     await page.goto('/fixture-session');

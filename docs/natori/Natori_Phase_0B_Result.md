@@ -117,7 +117,7 @@ CLI の通常 push は GitHub 認証が利用できず失敗したため、接�
 - `prepare-browser.mjs` は管理 dashboard/projects、middleware、API、関連 feature を専用一時ディレクトリへコピー。対象 page/layout/API と認可コードは無変更。最上位 shell からのみ外部フォント・解析・ギャラリー overlay を除外するため、サイト全体の視覚比較や本番 OAuth の試験とは扱わない。
 - 合言葉経路は実 middleware で Cookie を発行し、URL からのキー除去、HttpOnly/Secure/SameSite、別画面への遷移、同一ブラウザ内での再オープンを確認。Cookie 注入でこの経路を代替しない。
 - 本人・スタッフ2名・一般ユーザーは使い捨て Auth。テスト専用 form/route で実 `signInWithPassword` と本物の Next `cookies()` を使う。テスト専用 route は `scripts` 配下で組み立てる一時 app のみに存在し、製品 app へ追加しない。Auth/API/DB のモックや `cookies()` adapter は使わない。
-- 合言葉 + 一般ログイン、スタッフのログアウト・再ログイン、匿名/一般ユーザー/誤キー拒否、設定不足/不正値の HTTP 503 と画面のエラー詳細表示、前後の業務行不変を確認。初回は12シナリオを予定。実結果は Actions 完了後に PR へ記録し、作成だけで成功としない。
+- 合言葉 + 一般ログイン、スタッフのログアウト・再ログイン、匿名/一般ユーザー/誤キー拒否、設定不足/不正値の HTTP 503 と画面のエラー詳細表示、前後の業務行不変を確認。loopback 接続の対照試験を含め13シナリオを予定。実結果は Actions 完了後に PR へ記録し、作成だけで成功としない。
 - 既存の17隔離試験・35+35 Storage・19 Auth/DBは維持。ブラウザ段階だけ同じ network namespace 内の `127.0.0.1:3000` とその応答を追加許可。一般の loopback、DNS、外部宛先、host gateway は遮断したまま、17隔離試験を再実行する。新コンテナとその子プロセスも同じ kernel 制限を継承。公開 port/トンネルなし。
 - ブラウザ用コンテナは非 root、cap-drop、read-only root、4 GiB/2 CPU/pids256、実行600秒・再試行なし。全 workflow は従来どおり25分・同時実行制限あり。cleanup はこの job のラベル付き専用コンテナだけを対象。
 - Next の生ログ・trace・storageState・credential file を artifact に含めない。架空案件画面のスクリーンショットと件数/固定エラーコードのみ公開。起動失敗は skip でなく失敗。
@@ -125,3 +125,6 @@ CLI の通常 push は GitHub 認証が利用できず失敗したため、接�
 ### 本番の追加読み取り
 
 同じ専用テスト案件に基づく集計で、owner の Auth 存在を boolean で確認した。案件は18件、別 owner の案件は0件。現在の本番配信が ready になった後の新規2件は同じ owner に属し、最新の作成時刻は2026-09-27 13:30:51 JST。これは稼働中経路と既存案件の整合根拠であり、次回配信用の設定値を直接取得した証明ではない。顧客本文・メール・Auth一覧・秘密値は取得していない。
+
+
+ブラウザ起動時の安全確認では、Next 15.5.25 の `NextURL` が loopback IP を `localhost` に正規化するため、初期指定の `127.0.0.1` と origin が一致せず停止する問題を検出した。テスト URL を `http://localhost:3000` に統一し、Node の localhost 解決は IPv4 優先、Chromium は localhost を127.0.0.1へ固定。kernel の接続許可先は127.0.0.1:3000のままとし、別originへのredirectを許可する修正はしない。正式データや認可処理の修正ではなく、隔離環境内の住所の整合修正である。
