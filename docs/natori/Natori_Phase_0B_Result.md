@@ -192,8 +192,14 @@ Supabaseは既知の専用テスト案件の作成時刻を参照点に、件数
 
 現行本番の公開受付は `NATORI_OWNER_USER_ID` を必須とし、session/DB探索fallbackがない。Phase 0Bでも同じ設定名・正規化・UUID検証を使うため、稼働中の保存先と既存案件が整合する根拠はある。一方、現在接続されているVercelツールには環境変数の一覧/対象環境/値を照合する操作がなく、project/deployment取得結果にも当該設定は含まれない。Workに認証済みVercel CLIもない。別の資格情報の探索や.env読取で補わない。
 
-したがって**現在稼働中の経路の整合は確認できたが、次回配信に適用されるProduction設定の直接照合は未完**。設定値をチャットへ貼ってもらう方法は使わない。連携機能で不足する確認をブラウザへ切り替えるには、その手段の承認を得たうえでVercel管理画面の必要箇所だけを読み取り確認する。無関係なSecretsを表示しない。
+当初は次回配信に適用されるProduction設定の直接照合が未完だったが、**2026-09-27の利用者によるブラウザ確認許可とログイン協力の後、直接照合を完了した**。Vercelの対象プロジェクト `me-ish-homepage-vsiv` の [Environment Variables](https://vercel.com/me-ishs-projects/me-ish-homepage-vsiv/settings/environment-variables) で `NATORI_OWNER_USER_ID` を検索し、対象が **Production** の設定を確認した。Previewの別ブランチ用設定は対象外。設定変更・保存・再配信は行っていない。
+
+Productionの非秘密識別子は公開せず、比較用ダイジェストによるSupabaseの読み取り照合で、参照案件のownerとの一致=true、Auth存在=true、案件18件すべて一致、別owner/NULL=0件、paid_atのある一致行15件、現行配信ready後の構造化受付1件も一致を確認した。ダイジェストはこの同一性確認だけに使い、認証やセキュリティ判定には使わない。途中、作業中の照合用メモとの不一致があったため、そのメモを根拠にせず実DBとの直接比較で確定した。本番設定の不一致ではなかった。識別子自体もダイジェストも文書・PRには残さず、値は確認後に再び非表示にした。無関係なSecrets、顧客本文・メール・Auth一覧・実ファイルは取得していない。
+
+これは確認時点で次回Production配信に使用される設定が正しいことの証拠であり、Phase 0Bを配信した証拠ではない。配信までに設定が変更された場合は同じ照合をやり直す。今回の手段で秘密値をチャットへ貼る操作、資格情報の探索、`.env`読取は行っていない。
 
 ### 本番取り込みの判断
 
-2点を解消済みと偽って取り込まない。同時保存503は再現と直接経路の特定まで完了したが、製品修正は未実施。次回配信用の設定照合も残るため、現在はDraft・未mergeのまま。案件/予定/料金設定の移動や削除、token再発行、本番への検査データ追加は不要。最新の試験状態はPR本文へ記録し、文書へ自己SHAを埋め込むための再commitは行わない。
+Production owner設定の照合は完了。同時保存503は再現と直接経路の特定まで完了したが、製品修正は未実施のため、現在はDraft・未mergeのまま。本番反映の承認は既に得ており再承認待ちではないが、異常時に停止する条件は維持する。案件/予定/料金設定の移動や削除、token再発行、本番への検査データ追加は不要。最新の試験状態はPR本文へ記録し、文書へ自己SHAを埋め込むための再commitは行わない。
+
+直前の文書更新head `6015813aea8de3f582b07d603b5f89f3612121d8` は [Phase 0A 36300829563](https://github.com/me-ish/me-ish-homepage/actions/runs/36300829563)、[Phase 0B 36300829436](https://github.com/me-ish/me-ish-homepage/actions/runs/36300829436)、[CI 36300829416](https://github.com/me-ish/me-ish-homepage/actions/runs/36300829416)、[Phase T 36300829467](https://github.com/me-ish/me-ish-homepage/actions/runs/36300829467) がすべて成功した。ただし製品コードは変わっておらず、先行runで再現した同時保存503を解消済みとは扱わない。
