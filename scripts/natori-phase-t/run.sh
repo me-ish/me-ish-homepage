@@ -11,6 +11,9 @@ for key in SUPABASE_URL NEXT_PUBLIC_SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY SUPAB
 done
 
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+repo=$(git rev-parse --show-toplevel)
+phase0a=${PHASE_0A:-0}
+[[ $phase0a == 0 || $phase0a == 1 ]] || exit 1
 work=$(mktemp -d "${RUNNER_TEMP:?}/natori-phase-t.XXXXXXXX")
 project="natori-phase-t-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
 network="$project"
@@ -58,6 +61,17 @@ PY
 }
 trap cleanup EXIT
 
+extra_mounts=()
+test_memory=256m
+if [[ $phase0a == 1 ]]; then
+  mkdir -p "$work/phase0a"
+  node "$repo/scripts/natori-phase-0a/build.mjs" "$work/phase0a/integration.cjs"
+  extra_mounts+=(--mount "type=bind,source=$work/phase0a,target=/phase0a,readonly")
+  extra_mounts+=(--mount "type=bind,source=$repo/node_modules,target=/app/node_modules,readonly")
+  extra_mounts+=(-e NODE_PATH=/app/node_modules)
+  test_memory=512m
+fi
+
 echo 'BUILD: download tools/images; production credentials are absent'
 curl --fail --silent --show-error --location --connect-timeout 15 --max-time 120 --retry 1 \
   https://github.com/supabase/cli/releases/download/v2.118.0/supabase_2.118.0_linux_amd64.tar.gz -o "$work/cli.tar.gz"
@@ -68,7 +82,8 @@ export SUPABASE_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1
 "$work/bin/supabase" start --help >"$work/results/cli-start-help.txt"
 "$work/bin/supabase" stop --help >"$work/results/cli-stop-help.txt"
 
-# Same resolved Node version as setup-node(.node-version), no npm/project dependencies.
+# Same resolved Node version as setup-node(.node-version). Phase 0A additionally
+# mounts only locked dependencies installed during construction, never .env files.
 node_image="node:$(node -p 'process.versions.node')-bookworm-slim"
 timeout 180 docker pull "$node_image" >"$work/pull.private" 2>&1
 ROOT="$root" WORK="$work" PROJECT="$project" node --input-type=module <<'JS'
@@ -181,6 +196,10 @@ node "$root/verify-catalog.mjs" "$work/results/catalog-current.json" current
 {
   printf 'tested_sha=%s\nhead_sha=%s\n' "$(git rev-parse HEAD)" "${PHASE_T_HEAD_SHA:-unknown}"
   printf 'supabase_cli=2.118.0\nnode=%s\nrunner_image=%s\n' "$(node --version)" "${ImageVersion:-unknown}"
+  if [[ $phase0a == 1 ]]; then
+    node -e 'const fs=require("node:fs");for(const p of ["@supabase/supabase-js","sharp","tus-js-client","esbuild"])console.log(`${p}=${JSON.parse(fs.readFileSync(`node_modules/${p}/package.json`,"utf8")).version}`)'
+    sha256sum "$repo/package-lock.json"
+  fi
   docker version --format 'docker_server={{.Server.Version}} docker_client={{.Client.Version}}'
   python3 --version
   sudo iptables --version
@@ -194,11 +213,12 @@ node "$root/verify-catalog.mjs" "$work/results/catalog-current.json" current
 [[ $(id -u) != 0 ]]
 docker run -d --name "$runner" --label "natori.phase-t=$project" --network "$network" \
   --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges:true --read-only \
-  --pids-limit 64 --memory 256m --cpus 1 --log-driver none \
+  --pids-limit 64 --memory "$test_memory" --cpus 1 --log-driver none \
   --tmpfs /state:rw,noexec,nosuid,size=1m,mode=1777 \
   --mount "type=bind,source=$root,target=/tests,readonly" \
   --mount "type=bind,source=$work/runtime,target=/runtime,readonly" \
   --mount "type=bind,source=$work/results,target=/results" \
+  "${extra_mounts[@]}" \
   "$node_image" node -e 'setTimeout(() => {}, 900000)' >/dev/null
 pid=$(docker inspect -f '{{.State.Pid}}' "$runner")
 [[ $pid =~ ^[1-9][0-9]*$ ]]
@@ -222,10 +242,41 @@ timeout 40 docker exec "$runner" node --input-type=module -e '
 '
 timeout 45 docker exec "$runner" node /tests/isolation.mjs
 timeout 180 docker exec "$runner" node /tests/storage.mjs current
-dbsql <"$root/fixtures/candidate.sql" >/dev/null
-dbsql -At <"$root/catalog.sql" >"$work/results/catalog-candidate.json"
-node "$root/verify-catalog.mjs" "$work/results/catalog-candidate.json" candidate
+if [[ $phase0a == 1 ]]; then
+  dbsql <"$repo/scripts/natori-phase-0a/extra-buckets.sql" >/dev/null
+  dbsql <"$repo/supabase/migrations/20260927010903_natori_phase_0a_gallery_intake.sql" >/dev/null
+  dbsql -At <"$root/catalog.sql" >"$work/results/catalog-phase0a-before.json"
+  node "$repo/scripts/natori-phase-0a/verify-catalog.mjs" "$work/results/catalog-phase0a-before.json" before
+  timeout 240 docker exec "$runner" node /phase0a/integration.cjs before
+  # Mandatory negative gate: unset approval must reject without dropping any policy.
+  if dbsql <"$repo/supabase/operations/natori-phase-0a/restrict-storage.sql" >"$work/cutover-guard.private" 2>&1; then
+    echo 'FAIL cutover approval guard'; exit 1
+  fi
+  grep -Fq 'Explicit Phase 0A cutover approval required' "$work/cutover-guard.private"
+  dbsql -At <"$root/catalog.sql" >"$work/results/catalog-phase0a-guard.json"
+  node "$repo/scripts/natori-phase-0a/verify-catalog.mjs" "$work/results/catalog-phase0a-guard.json" before
+  echo 'PASS cutover approval guard: no catalogue changes'
+  # Same-name drift must also reject, even when the acknowledgement is set.
+  dbsql -c 'ALTER POLICY "Allow public access 1exduyn_1" ON storage.objects WITH CHECK (true);' >/dev/null
+  if { echo "SET natori.phase_0a_cutover='approved';"; cat "$repo/supabase/operations/natori-phase-0a/restrict-storage.sql"; } | dbsql >"$work/cutover-drift.private" 2>&1; then
+    echo 'FAIL cutover catalogue drift guard'; exit 1
+  fi
+  grep -Fq 'Reviewed write policy differs:' "$work/cutover-drift.private"
+  dbsql -c 'DROP POLICY "Allow public access 1exduyn_1" ON storage.objects; CREATE POLICY "Allow public access 1exduyn_1" ON storage.objects FOR UPDATE TO public USING (bucket_id = '\''artworks'\'');' >/dev/null
+  dbsql -At <"$root/catalog.sql" >"$work/results/catalog-phase0a-drift-restored.json"
+  node "$repo/scripts/natori-phase-0a/verify-catalog.mjs" "$work/results/catalog-phase0a-drift-restored.json" before
+  echo 'PASS cutover catalogue drift guard: no partial policy removal'
+  # Only the already verified disposable DB gets the acknowledgement flag.
+  { echo "SET natori.phase_0a_cutover='approved';"; cat "$repo/supabase/operations/natori-phase-0a/restrict-storage.sql"; } | dbsql >/dev/null
+  dbsql -At <"$root/catalog.sql" >"$work/results/catalog-phase0a-after.json"
+  node "$repo/scripts/natori-phase-0a/verify-catalog.mjs" "$work/results/catalog-phase0a-after.json" after
+else
+  dbsql <"$root/fixtures/candidate.sql" >/dev/null
+  dbsql -At <"$root/catalog.sql" >"$work/results/catalog-candidate.json"
+  node "$root/verify-catalog.mjs" "$work/results/catalog-candidate.json" candidate
+fi
 timeout 180 docker exec "$runner" node /tests/storage.mjs candidate
+if [[ $phase0a == 1 ]]; then timeout 240 docker exec "$runner" node /phase0a/integration.cjs after; fi
 sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/egress-counters.txt"
 sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/egress-counters.txt"
 echo 'Required real Storage tests completed; production remains unchanged'

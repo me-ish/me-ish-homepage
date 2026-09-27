@@ -27,9 +27,10 @@
                              "supabase/migrations/20260923033205_natori_consultation_files.sql",
                              "supabase/migrations/20260923033212_natori_consultation_link_renewal.sql",
                              "supabase/migrations/20260923062556_natori_quote_agreed_terms.sql",
-                             "supabase/migrations/20260923122157_natori_estimate_drafts_and_issuance.sql"
+                             "supabase/migrations/20260923122157_natori_estimate_drafts_and_issuance.sql",
+                             "supabase/migrations/20260927010903_natori_phase_0a_gallery_intake.sql"
                          ],
-    "activeMigrationCount":  19,
+    "activeMigrationCount":  20,
     "legacyMigrationCount":  55,
     "remoteOnlyEvidenceCount":  3,
     "sourceProjectRef":  "lvnfspyainrxtztjytbo",
@@ -66,7 +67,8 @@
                              "20260923033205_natori_consultation_files.sql",
                              "20260923033212_natori_consultation_link_renewal.sql",
                              "20260923062556_natori_quote_agreed_terms.sql",
-                             "20260923122157_natori_estimate_drafts_and_issuance.sql"
+                             "20260923122157_natori_estimate_drafts_and_issuance.sql",
+                             "20260927010903_natori_phase_0a_gallery_intake.sql"
                          ],
     "archiveVerification":  {
                                 "status":  "verified",
@@ -175,6 +177,7 @@
                                          }
                 },
     "checksums":  {
+                      "sha256:supabase/migrations/20260927010903_natori_phase_0a_gallery_intake.sql":  "b35f328d8473e881ae75f7401012f8d5b3689644571b9115a9b4e198348ffd79",
                       "sha256:supabase/migrations/20260723111730_etorie_baseline.sql":  "cbe412613b6eadbe284499ea6f749afab6869bc9f6d40be17db9ac1f23d18ca4",
                       "sha256:supabase/migrations/20260723111741_baseline_security_hardening.sql":  "dc13f7299b14db7f46c157864e1ed8707c1b0c23c3e918fe7e1f3b5506582be1",
                       "sha256:supabase/migrations/20260729115313_etorie_phase1_expand.sql":  "b7e1ca1b96740376b7fad58f4ac490381c21275ae69d761d1cd68f95fe167a63",
