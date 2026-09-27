@@ -6,6 +6,29 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+// Phase N additive schema; existing generated table/function definitions remain unchanged.
+export type NatoriNotificationRow = {
+  id: string
+  notification_key: string
+  attempt_no: number
+  project_id: string
+  quote_id: string | null
+  purpose: string
+  snapshot: Json
+  payload: Json | null
+  status: string
+  claim_token: string | null
+  lease_expires_at: string | null
+  claim_count: number
+  send_started_at: string | null
+  retry_after: string | null
+  provider_id: string | null
+  sent_at: string | null
+  error_code: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -14,6 +37,15 @@ export type Database = {
   }
   public: {
     Tables: {
+      natori_notification_jobs: {
+        Row: NatoriNotificationRow
+        Insert: Pick<NatoriNotificationRow, "notification_key" | "project_id" | "purpose" | "snapshot"> & Partial<NatoriNotificationRow>
+        Update: Partial<NatoriNotificationRow>
+        Relationships: [
+          { foreignKeyName: "natori_notification_jobs_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "natori_projects"; referencedColumns: ["id"] },
+          { foreignKeyName: "natori_notification_jobs_quote_id_fkey"; columns: ["quote_id"]; isOneToOne: false; referencedRelation: "natori_quotes"; referencedColumns: ["id"] }
+        ]
+      }
       admin_audit_log: {
         Row: {
           action: string
@@ -2463,6 +2495,34 @@ export type Database = {
       }
     }
     Functions: {
+      natori_notification_list_v1: {
+        Args: { p_owner_id: string; p_offset?: number }
+        Returns: { id: string; project_id: string; project_title: string; purpose: string; status: string; attempt_no: number; claim_count: number; lease_expires_at: string | null; send_started_at: string | null; retry_after: string | null; last_sent_at: string | null }[]
+      }
+      natori_accept_quote_with_notifications_v1: {
+        Args: { p_token_hash: string }
+        Returns: { result: string; quote_id: string; project_id: string; accepted_at: string | null; notification_ids: string[] }[]
+      }
+      natori_accept_delivery_with_notifications_v1: {
+        Args: { p_token_hash: string }
+        Returns: { result: string; project_id: string; project_title: string; client_name: string; accepted_at: string | null; notification_ids: string[] }[]
+      }
+      natori_notification_claim_v1: {
+        Args: { p_id: string; p_claim_token: string; p_manual?: boolean }
+        Returns: NatoriNotificationRow[]
+      }
+      natori_notification_start_v1: {
+        Args: { p_id: string; p_claim_token: string; p_payload: Json }
+        Returns: NatoriNotificationRow[]
+      }
+      natori_notification_finish_v1: {
+        Args: { p_id: string; p_claim_token: string; p_status: string; p_provider_id?: string; p_error_code?: string }
+        Returns: boolean
+      }
+      natori_notification_retry_v1: {
+        Args: { p_id: string; p_owner_id: string }
+        Returns: string
+      }
       natori_finalize_consultation_file: {
         Args: { p_project_id: string; p_sender: string; p_storage_path: string; p_file_name: string; p_mime_type: string; p_size_bytes: number }
         Returns: string

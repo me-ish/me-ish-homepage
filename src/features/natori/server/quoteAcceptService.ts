@@ -15,6 +15,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { formatYen } from "@/features/natori/lib/pricing";
 import { sendNatoriNoticeMail } from "@/features/natori/server/orderMailService";
 import { readNatoriQuoteTerms, type NatoriQuoteTerms } from "@/features/natori/lib/quoteTerms";
+import { acceptanceOutboxEnabled } from "./acceptanceNotifications";
 
 const TOKEN_RE = /^[A-Za-z0-9_-]{20,64}$/;
 
@@ -103,8 +104,8 @@ export async function getNatoriQuoteByToken(token: string): Promise<GetNatoriQuo
 }
 
 export type AcceptNatoriQuoteResult =
-  | { kind: "ok"; quote: NatoriQuoteView }
-  | { kind: "already-accepted"; quote: NatoriQuoteView }
+  | { kind: "ok"; quote: NatoriQuoteView; notificationIds?: string[] }
+  | { kind: "already-accepted"; quote: NatoriQuoteView; notificationIds?: string[] }
   | { kind: "expired" }
   | { kind: "not-found" }
   | { kind: "db-error" };
@@ -114,31 +115,44 @@ export async function acceptNatoriQuote(token: string): Promise<AcceptNatoriQuot
   if (!row) return { kind: "not-found" };
   if (row.superseded_at) return { kind: "not-found" };
   if (isExpired(row)) return { kind: "expired" };
-  if (row.accepted_at) return { kind: "already-accepted", quote: toView(row) };
+  const outbox = acceptanceOutboxEnabled();
+  if (row.accepted_at && !outbox) return { kind: "already-accepted", quote: toView(row) };
 
   const admin = supabaseAdmin();
-  const { data, error } = await admin.rpc("natori_accept_quote", {
+  const { data, error } = await admin.rpc(outbox ? "natori_accept_quote_with_notifications_v1" : "natori_accept_quote", {
     p_token_hash: hashToken(token),
-  });
+  }).then(result => result, () => ({ data: null, error: { code: "transport" } }));
   if (error) {
-    console.error("[natori-quote] accept update failed", error);
+    // The transaction may have committed before its response was lost. Confirm the fact;
+    // never fabricate an acceptance timestamp or fall back to the old sender.
+    if (outbox) {
+      const confirmed = await fetchQuoteRow(token);
+      if (confirmed?.accepted_at) {
+        return { kind: "already-accepted", quote: toView(confirmed), notificationIds: [] };
+      }
+    }
+    console.error("[natori-quote] accept update unconfirmed");
     return { kind: "db-error" };
   }
   const outcome = (Array.isArray(data) ? data[0] : data) as
-    | { result?: string; accepted_at?: string | null }
+    | { result?: string; accepted_at?: string | null; notification_ids?: string[] }
     | null;
   if (!outcome || outcome.result === "not-found" || outcome.result === "superseded") {
     return { kind: "not-found" };
   }
   if (outcome.result === "expired") return { kind: "expired" };
-  const acceptedAt = outcome.accepted_at ?? new Date().toISOString();
+  const acceptedAt = outcome.accepted_at;
+  if (!acceptedAt) return { kind: "db-error" };
+  const notification = outbox ? { notificationIds: outcome.notification_ids ?? [] } : {};
   if (outcome.result === "already-accepted") {
-    return { kind: "already-accepted", quote: { ...toView(row), acceptedAt } };
+    return { kind: "already-accepted", quote: { ...toView(row), acceptedAt }, ...notification };
   }
+
   if (outcome.result !== "ok") {
     console.error("[natori-quote] unexpected accept outcome", outcome.result);
     return { kind: "db-error" };
   }
+  if (outbox) return { kind: "ok", quote: { ...toView(row), acceptedAt }, ...notification };
 
   const noticeBody = [
     "見積もりが承諾されました。お支払いのご案内を送ってください。",
@@ -154,7 +168,7 @@ export async function acceptNatoriQuote(token: string): Promise<AcceptNatoriQuot
   const sent = await sendNatoriNoticeMail(
     `【承諾】${row.client_name} 様 / ${row.title}`,
     noticeBody
-  );
+  ).catch(() => false);
   if (!sent) {
     console.error("[natori-quote] accept notice mail failed (ignored)");
   }

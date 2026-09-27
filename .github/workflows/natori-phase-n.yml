@@ -1,0 +1,56 @@
+name: Natori Phase N
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/natori-phase-n.yml'
+      - 'scripts/natori-phase-n/**'
+      - 'scripts/natori-phase-t/**'
+      - 'scripts/natori-phase-0b/**'
+      - 'src/features/natori/server/**'
+      - 'src/features/natori/components/dashboard/**'
+      - 'src/features/natori/components/quote/**'
+      - 'src/app/**/natori/**'
+      - 'src/types/supabase.ts'
+      - 'supabase/migrations/**'
+      - 'docs/natori/Natori_Phase_N*'
+      - '.node-version'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: natori-phase-n-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  notifications:
+    name: Atomic acceptance and isolated notification recovery
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PHASE_T_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PHASE_N: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.node-version'
+          cache: npm
+      - name: Install locked test dependencies during construction
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify actual DB transactions, races and captured HTTP mail
+        run: bash scripts/natori-phase-t/run.sh
+      - name: Publish non-secret evidence only
+        if: always() && env.PHASE_T_RESULTS != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: natori-phase-n-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.PHASE_T_RESULTS }}/*
+          if-no-files-found: error
+          retention-days: 7
