@@ -60,7 +60,7 @@ async function main(){
     await stopServer();
     server=spawn(process.execPath,['/app/node_modules/next/dist/bin/next','dev','--hostname','127.0.0.1','--port','3000'],{cwd:'/app',env:{...baseEnv,NATORI_OWNER_USER_ID:setting},stdio:['ignore','pipe','pipe']});
     // Never publish raw Next logs, whose request URLs could contain the ephemeral key.
-    const diagnostics=new Set(),diagnosticLines=[];let lastStatus=null,lastFetchError=null;
+    const diagnostics=new Set(),diagnosticLines=[];let lastStatus=null,lastFetchError=null;let readyPath='/fixture-session';const redirects=new Set();
     const ephemeral=[keys.anon,keys.service,sharedKey,...actors.map(a=>a.password)];
     for(const stream of [server.stdout,server.stderr])stream.on('data',data=>{
       let s=data.toString();
@@ -71,7 +71,18 @@ async function main(){
     });
     const deadline=Date.now()+120000;let ready=false;
     while(Date.now()<deadline&&server.exitCode===null){
-      try{const r=await fetch(`${appOrigin}/fixture-session`,{signal:AbortSignal.timeout(2000)});lastStatus=r.status;if(r.ok){ready=true;break;}}catch(error){lastFetchError=error?.cause?.code??error?.name??'unknown';}
+      try{
+        const r=await fetch(`${appOrigin}${readyPath}`,{signal:AbortSignal.timeout(2000),redirect:'manual'});lastStatus=r.status;
+        if(r.ok){ready=true;break;}
+        if(r.status>=300&&r.status<400){
+          const next=new URL(r.headers.get('location')??'',`${appOrigin}${readyPath}`);
+          check(next.origin===appOrigin,'NEXT_REDIRECT_OUTSIDE_ORIGIN');
+          check(!redirects.has(next.pathname),'NEXT_REDIRECT_LOOP');redirects.add(next.pathname);readyPath=next.pathname;
+        }
+      }catch(error){
+        if(/^NEXT_REDIRECT_/.test(error?.message??''))throw error;
+        lastFetchError=[error?.name,error?.cause?.code,error?.cause?.message].filter(Boolean).join(' ').replace(/(?:https?|wss?):\/\/[^\s"']+/g,'[url]').slice(0,200);
+      }
       await new Promise(resolve=>setTimeout(resolve,500));
     }
     if(!ready){console.log(`Next startup classifications: ${[...diagnostics].join(',')||'not-ready'} status=${lastStatus} fetch=${lastFetchError}`);for(const line of diagnosticLines.slice(-8))console.log(`Next sanitized diagnostic: ${line}`);throw new Error('NEXT_NOT_READY');}
