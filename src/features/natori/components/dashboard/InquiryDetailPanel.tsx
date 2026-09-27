@@ -68,6 +68,8 @@ type InquiryDetailPanelProps = {
   demoMode?: boolean;
   initialScreen?: "overview" | "conversation";
   onConversationChanged?: () => void;
+  refreshError?: string;
+  onRetryRefresh?: () => void;
   onClose: () => void;
   onOpenMail: (kind: OrderMailKind) => void;
   onCloseInquiry: () => void;
@@ -98,6 +100,8 @@ export default function InquiryDetailPanel({
   demoMode,
   initialScreen = "overview",
   onConversationChanged,
+  refreshError,
+  onRetryRefresh,
   onClose,
   onOpenMail,
   onCloseInquiry,
@@ -171,6 +175,10 @@ export default function InquiryDetailPanel({
               </span>
             </div>
             <ConsultationStatus project={project} />
+            {refreshError ? <div role="alert" className="mt-2 text-xs text-amber-800">
+              {refreshError} 表示中の案件情報が古い可能性があります。
+              {onRetryRefresh ? <button type="button" onClick={onRetryRefresh} className="ml-2 min-h-8 font-bold underline">案件情報を再取得</button> : null}
+            </div> : null}
             {screen === "overview" ? (
               <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
                 <span className="inline-flex items-center gap-1">

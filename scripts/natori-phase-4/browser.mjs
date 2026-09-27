@@ -209,7 +209,7 @@ async function main() {
     rejectMail = false;
   });
   await test('existing-private-attachment-opens-for-staff-and-client-with-real-bytes', async () => {
-    const bytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jP2kAAAAASUVORK5CYII=', 'base64');
+    const bytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP40DD7PwAHegMLe6mEsQAAAABJRU5ErkJggg==', 'base64');
     const path = `${rough.id}/phase4-fixture.png`;
     check(!(await admin.storage.from('natori-consultations').upload(path, bytes, { contentType: 'image/png' })).error, 'STORAGE_FIXTURE');
     const message = await admin.from('natori_consultation_messages').select('id').eq('project_id', rough.id).order('created_at').limit(1).single();
@@ -256,6 +256,16 @@ async function main() {
     await page.goto(`/natori/inquiries?project=${prep.id}`);
     await expect(page.getByRole('alert').filter({ hasText: '案件の詳細を取得できませんでした。再試行してください。' })).toBeVisible();
     await page.unroute('**/api/natori/admin/projects?projectId=*'); await page.getByRole('button', { name: '詳細を再試行' }).click(); await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button', { name: '相談に返信', exact: true }).click();
+    await page.route('**/api/natori/admin/projects?projectId=*', route => route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
+    await page.getByRole('textbox', { name: 'メッセージ', exact: true }).fill('Reply before detail refresh outage');
+    await page.getByRole('button', { name: 'メッセージを送信', exact: true }).click();
+    await expect(page.getByText('Reply before detail refresh outage', { exact: true })).toBeVisible();
+    await expect(page.getByRole('dialog').getByRole('alert').filter({ hasText: '表示中の案件情報が古い可能性があります。' })).toBeVisible();
+    await page.unroute('**/api/natori/admin/projects?projectId=*');
+    await page.getByRole('button', { name: '案件情報を再取得', exact: true }).click();
+    await expect(page.getByRole('dialog').getByText('依頼者の返信待ち', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '案件情報を再取得', exact: true })).toHaveCount(0);
   });
   await test('no-unhandled-browser-or-hydration-errors', async () => {
     check(browserProblems.size === 0, 'BROWSER_RUNTIME_ERRORS');

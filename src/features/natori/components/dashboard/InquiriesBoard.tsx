@@ -537,6 +537,8 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
         <InquiryDetailPanel
           key={selectedRow.project.id}
           initialScreen={initialScreen}
+          refreshError={selectedError || error || undefined}
+          onRetryRefresh={() => { setError(null); setDetailVersion(n => n + 1); void reload().catch(() => setError("返信状況を更新できませんでした。")); }}
           onConversationChanged={() => { void reload().catch(() => setError("返信状況を更新できませんでした。状態を更新してください。")); }}
           project={selectedRow.project}
           view={selectedRow.view}
