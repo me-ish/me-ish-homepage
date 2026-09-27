@@ -40,7 +40,7 @@ export async function POST(request:Request) {
 mkdirSync(resolve(output,'src/app/[locale]/fixture-session'),{recursive:true});
 writeFileSync(resolve(output,'src/app/[locale]/fixture-session/page.tsx'), `'use client';
 import {useState} from 'react';
-export default function Page(){const [done,setDone]=useState(false);return <form onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const r=await fetch('/api/fixture-session',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:f.get('email'),password:f.get('password')})});setDone(r.ok);}}><label>Email<input name="email" type="email"/></label><label>Password<input name="password" type="password"/></label><button>Sign in</button>{done&&<p>Session ready</p>}</form>;}
+export default function Page(){const [done,setDone]=useState(false);return <form method="post" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const r=await fetch('/api/fixture-session',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:f.get('email'),password:f.get('password')})});setDone(r.ok);}}><label>Email<input name="email" type="email"/></label><label>Password<input name="password" type="password"/></label><button>Sign in</button>{done&&<p>Session ready</p>}</form>;}
 `);
 writeFileSync(resolve(output,'source-checksums.json'),JSON.stringify(checksums,null,2));
 console.log('Prepared unchanged management routes and isolated test-only shell');

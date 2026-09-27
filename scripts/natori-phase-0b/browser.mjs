@@ -109,7 +109,9 @@ async function main(){
     const body=await r.json();check(body.projects.length===1&&body.projects[0].id===target,'WRONG_OWNER_DATASET');
     await expect(page.getByText(title,{exact:true}).first()).toBeVisible({timeout:30000});
     for(const a of others)await expect(page.getByText(`Foreign fixture ${a.name}`,{exact:true})).toHaveCount(0);
-    await expect(page.getByRole('alert')).toHaveCount(0);
+    // Next's screen-reader route announcer also has role=alert outside main.
+    // Only business errors in the actual project screen must be absent.
+    await expect(page.getByRole('main').getByRole('alert')).toHaveCount(0);
   }
   stage='browser-tests';
   for(const actor of actors.slice(0,3))await test(`real-login-same-project-${actor.name}`,async()=>{
