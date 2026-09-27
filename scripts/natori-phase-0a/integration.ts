@@ -387,11 +387,21 @@ async function main() {
         // Storage deliberately masks private buckets from anon callers as 404.
         // The preceding service byte-read and following signed read prove that
         // this is an access boundary, not an absent bucket/file or failed network.
+        // storage-js download uses noResolveJson and wraps the HTTP Response in
+        // StorageUnknownError; inspect that response, not its generic message.
+        const deniedResponse =
+          denied.error && "originalError" in denied.error
+            ? denied.error.originalError
+            : null;
+        check(deniedResponse instanceof Response, "PRIVATE_DENIAL_NOT_HTTP");
+        const deniedBody = (await deniedResponse.json()) as {
+          statusCode?: string;
+          message?: string;
+        };
         check(
-          denied.error &&
-            "statusCode" in denied.error &&
-            String(denied.error.statusCode) === "404" &&
-            /^(bucket|object) not found$/i.test(denied.error.message),
+          [400, 404].includes(deniedResponse.status) &&
+            String(deniedBody.statusCode) === "404" &&
+            /^(bucket|object) not found$/i.test(deniedBody.message ?? ""),
           "PRIVATE_BUCKET_ANON_READ",
         );
         const signed = await admin.storage

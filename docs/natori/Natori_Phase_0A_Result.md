@@ -5,7 +5,8 @@
 ## 開始点とPhase T
 
 - Phase T Draft PR [#95](https://github.com/me-ish/me-ish-homepage/pull/95) を最終レビューし、ユーザー承認に基づきmainへ取り込み済み。
-- 開始main/merge SHA: `e59e48ae51544217fdd141840b3b754200bd90cf`。PR95最終head: `a639a41199edc06f8db63bcd47a5ffaa74e72aa1`。
+- PR95レビュー開始時main: `21d4e34587d062cebe361acfb6557ad15daa69e3`。
+- Phase 0A開始main/merge SHA: `e59e48ae51544217fdd141840b3b754200bd90cf`。PR95最終head: `a639a41199edc06f8db63bcd47a5ffaa74e72aa1`。
 - PR95 ready後のPhase T再実行 [36284336717](https://github.com/me-ish/me-ish-homepage/actions/runs/36284336717) 成功。main側CI [36284495914](https://github.com/me-ish/me-ish-homepage/actions/runs/36284495914) 全ジョブ成功。Vercelの通常自動Production配信も同じmerge SHAでREADYを確認した。
 - 作業ブランチ: `codex/natori-phase-0a`。Phase 0Aは [Draft PR #96](https://github.com/me-ish/me-ish-homepage/pull/96) で止める。本番適用・本PRのmergeは未実施。
 
@@ -20,6 +21,16 @@ F01/NEW-01に対応する4つのPUBLIC書込policyを閉じる前提として、
 ## 検証結果
 
 Work内の型検査・unit/component、Actions上の実Storage試験、既存CI/新規ブラウザ試験の結果は確定後に記録する。スクリプト作成やmock成功だけで完了とはしない。
+
+### 試験中に修正した点
+
+- migration管理台帳への新規1件の追加（既存の台帳一致テストを維持）。
+- バージョン収集時のpackage exports制限を避け、インストール済みpackage metadataから取得。
+- 実APIを読み込むtest bundleで、Reactの実験的なreact-server条件を外した。製品APIのserver-only境界は維持。
+- ブラウザ試験で、規約の末尾までスクロールする既存の操作手順を追加。UIの同意条件は変更なし。
+- storage-jsのdownload失敗はJSONを解決せずHTTP Responseをラップするため、試験側で元HTTP応答を確認。private bucketの秘匿404と、実際の不存在・通信失敗を混同しない。service/署名readの同一bytesをpositive controlにする。
+
+失敗した実行を成功扱いにはせず、修正を通常commitで積み上げた。専用試験・既存CIのskipやcontinue-on-errorは追加していない。
 
 ## 本番への残課題
 
