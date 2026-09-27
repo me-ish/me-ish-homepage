@@ -91,11 +91,27 @@ if ! timeout 540 "$work/bin/supabase" start --workdir "$work/stack" --network-id
   echo 'Supabase startup failed; mandatory tests have NOT passed'
   # Only classifications, never raw CLI logs (which can contain credentials).
   WORK="$work" python3 - <<'PY'
-import os,re
+import os,re,json,tomllib
 from pathlib import Path
-text=(Path(os.environ['WORK'])/'startup.private').read_text(errors='replace').lower()
+w=Path(os.environ['WORK'])
+raw=(w/'startup.private').read_text(errors='replace')
+text=raw.lower()
 for label in ['invalid config','unknown field','failed to pull','unhealthy','permission denied','connection refused','timeout','failed to start']:
     if label in text: print('startup classification: '+label)
+secrets=tomllib.loads((w/'stack/supabase/config.toml').read_text())['auth']
+for line in raw.splitlines():
+    try: err=json.loads(line).get('error',{})
+    except (ValueError,AttributeError): continue
+    if not isinstance(err,dict): continue
+    code=err.get('code','')
+    if re.fullmatch(r'[A-Za-z0-9_]+',code): print('startup code: '+code)
+    message=str(err.get('message',''))
+    for name in ['jwt_secret','publishable_key','secret_key']:
+        message=message.replace(secrets.get(name,'<unset>'),'[redacted]')
+    message=re.sub(r'eyJ[\w-]+\.[\w-]+\.[\w-]+|sb_(?:secret|publishable)_[\w-]+|[a-fA-F0-9]{48,}', '[redacted]', message)
+    message=re.sub(r'(?:https?|postgres(?:ql)?)://[^\s\"\']+', '[url]', message)
+    message=re.sub(r'(?i)(password|token|secret|key)\s*[=:]\s*[^\s,;]+', r'\1=[redacted]', message)
+    print('startup error: '+message[:800])
 PY
   docker ps -a --filter "label=com.supabase.cli.project=$project" --format '{{.Names}} {{.Status}}'
   exit 1
