@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { Paperclip } from "lucide-react";
+import { consultationUploadEndpoint } from "@/features/natori/lib/consultationUploadEndpoint";
 import type { ConsultationMessage } from "@/features/natori/server/consultationService";
 
 type Props =
@@ -121,11 +122,7 @@ export default function ConsultationThread(props: Props) {
       if (!signedResponse.ok || !signed.path || !signed.uploadToken) throw new Error(signed.error ?? "アップロードを準備できませんでした");
       const storageUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       if (!storageUrl) throw new Error("アップロード先を確認できませんでした");
-      const storageOrigin = new URL(storageUrl);
-      if (storageOrigin.hostname.endsWith(".supabase.co") && !storageOrigin.hostname.endsWith(".storage.supabase.co")) {
-        storageOrigin.hostname = storageOrigin.hostname.replace(/\.supabase\.co$/, ".storage.supabase.co");
-      }
-      const uploadEndpoint = `${storageOrigin.origin}/storage/v1/upload/resumable`;
+      const uploadEndpoint = consultationUploadEndpoint(storageUrl);
       const { Upload } = await import("tus-js-client");
       await new Promise<void>((resolve, reject) => {
         const upload = new Upload(file, {

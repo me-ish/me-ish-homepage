@@ -11,6 +11,7 @@ import ConfirmPage from '@/components/entryForm/ConfirmPage';
 import CompletePage from '@/components/entryForm/CompletePage';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabaseClient';
+import { uploadEntryImage } from '@/lib/entryUploadClient';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEmail } from '@/app/_actions/sendEmail'; // ★ 追加：サーバーアクション経由で送信
 import { saveBankAccount } from '@/app/_actions/saveBankAccount';
@@ -262,27 +263,8 @@ const FormWrapper = () => {
       // 展示開始/終了日は display_ready=true 時（sync-display-ready）に設定
       // 応募時点では null のまま
 
-      // ファイル名サニタイズ
-      const originalName = imageFile.name;
-      const extension = originalName.split('.').pop();
-      const baseName = originalName.split('.').slice(0, -1).join('.');
-      const sanitizedBase = baseName.normalize('NFKC').replace(/[^\w.-]/g, '_');
-      const fileName = `${Date.now()}_${sanitizedBase}.${extension}`;
-
-      // 画像アップロード
-      const uploadRes = await supabase.storage.from('artworks').upload(fileName, imageFile, { upsert: true });
-      if (uploadRes.error || !uploadRes.data) {
-        alert('画像のアップロードに失敗しました');
-        setSubmitting(false);
-        return;
-      }
-
-      const { publicUrl } = supabase.storage.from('artworks').getPublicUrl(uploadRes.data.path).data;
-      if (!publicUrl) {
-        alert('画像URLの取得に失敗しました');
-        setSubmitting(false);
-        return;
-      }
+      // Server-issued upload scope; only verified image bytes become public.
+      const { fileName, publicUrl } = await uploadEntryImage(imageFile);
 
       const isSale = data.isForSale === 'yes';
 
