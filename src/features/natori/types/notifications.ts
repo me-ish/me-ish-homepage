@@ -15,4 +15,5 @@ export type NatoriNotificationList = {
   sendingEnabled: boolean;
   notifications: NatoriNotificationSummary[];
   truncated: boolean;
+  offset: number;
 };

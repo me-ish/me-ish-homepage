@@ -9,8 +9,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "no-store" };
 
-export const GET = withNatoriManagement("notifications.GET", false, async () => {
-  try { return NextResponse.json(await listAcceptanceNotifications(), { headers }); }
+export const GET = withNatoriManagement("notifications.GET", false, async (request?: Request) => {
+  const offset = Number(request ? new URL(request.url).searchParams.get("offset") ?? 0 : 0);
+  if (!Number.isInteger(offset) || offset < 0 || offset > 100000) return NextResponse.json({ error: "invalid_offset" }, { status: 400, headers });
+  try { return NextResponse.json(await listAcceptanceNotifications(offset), { headers }); }
   catch { return NextResponse.json({ error: "notification_read_failed" }, { status: 503, headers }); }
 });
 

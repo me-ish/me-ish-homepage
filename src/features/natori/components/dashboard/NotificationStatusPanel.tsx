@@ -14,26 +14,26 @@ export default function NotificationStatusPanel() {
   const [data, setData] = useState<NatoriNotificationList | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const refresh = useCallback(async () => {
-    const response = await fetch("/api/natori/admin/notifications", { cache: "no-store" });
+  const refresh = useCallback(async (offset = 0) => {
+    const response = await fetch(`/api/natori/admin/notifications?offset=${offset}`, { cache: "no-store" });
     if (!response.ok) throw new Error("read");
     setData(await response.json());
   }, []);
   useEffect(() => { void refresh().catch(() => setError("メール通知の状態を取得できませんでした。")); }, [refresh]);
-  const run = async (id?: string) => {
+  const run = async (id?: string, offset = data?.offset ?? 0) => {
     setBusy(true); setError("");
     try {
       if (id) {
         const result = await fetch("/api/natori/admin/notifications", { method: "POST", headers: { "Content-Type": "application/json", "x-requested-with": "me-ish" }, body: JSON.stringify({ id }) });
         if (!result.ok) throw new Error("retry");
       }
-      await refresh();
+      await refresh(offset);
     } catch { setError("通知の状態を確認できませんでした。少し待って「状態を更新」を押してください。承諾・受取の記録は変更されません。"); }
     finally { setBusy(false); }
   };
   if (data?.enabled === false) return null;
   if (!data && !error) return null;
-  return <section aria-labelledby="notification-heading" className="mt-6 rounded-2xl border border-pink-100 bg-white p-4">
+  return <section aria-labelledby="notification-heading" aria-busy={busy} className="mt-6 rounded-2xl border border-pink-100 bg-white p-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h2 id="notification-heading" className="font-bold">承諾・受取のメール通知</h2>
       <button className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50" disabled={busy} onClick={() => void run()}>状態を更新</button>
@@ -50,6 +50,9 @@ export default function NotificationStatusPanel() {
         {item.retryAvailable && <button className="mt-2 rounded-lg border border-pink-300 px-3 py-2 disabled:opacity-50" disabled={busy || !data.sendingEnabled} onClick={() => void run(item.id)}>メールだけ再試行</button>}
       </li>)}
     </ul>
-    {data?.truncated && <p className="mt-3 text-sm text-amber-800">最新100回分の試行を表示しています。古い通知は管理担当者による確認が必要です。</p>}
+    {data && (data.offset > 0 || data.truncated) && <div className="mt-3 flex gap-3 text-sm">
+      <button disabled={busy || data.offset === 0} className="rounded-lg border px-3 py-2 disabled:opacity-50" onClick={() => void run(undefined, Math.max(0, data.offset - 50))}>前の通知</button>
+      <button disabled={busy || !data.truncated} className="rounded-lg border px-3 py-2 disabled:opacity-50" onClick={() => void run(undefined, data.offset + 50)}>次の通知</button>
+    </div>}
   </section>;
 }

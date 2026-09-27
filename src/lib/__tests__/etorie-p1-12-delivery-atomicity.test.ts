@@ -116,7 +116,12 @@ describe("Etorie P1-12 delivery acceptance contract", () => {
   });
 
   it("uses the RPC instead of a multi-step application update", () => {
-    expect(serviceSource).toContain('.rpc("natori_accept_delivery_v1"');
+    expect(serviceSource).toContain('.rpc(outbox ? "natori_accept_delivery_with_notifications_v1" : "natori_accept_delivery_v1"');
+    const notificationMigration = stripSqlComments(readFileSync(
+      "supabase/migrations/20260927073530_natori_acceptance_notifications.sql", "utf8",
+    ));
+    expect(notificationMigration).toContain("from public.natori_accept_delivery_v1(p_token_hash)");
+    expect(notificationMigration).toContain("insert into public.natori_notification_jobs");
     expect(serviceSource).not.toMatch(
       /acceptNatoriDelivery[\s\S]*\.from\("natori_projects"\)[\s\S]*\.update\(/,
     );

@@ -117,6 +117,11 @@ export SUPABASE_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1
 node_image="node:$(node -p 'process.versions.node')-bookworm-slim"
 timeout 180 docker pull "$node_image" >"$work/pull.private" 2>&1
 if [[ $phase0b == 1 ]]; then bash "$repo/scripts/natori-phase-0b/prepare-browser.sh" "$repo" "$work" "$node_image" "$project"; fi
+if [[ $phasen == 1 ]]; then
+  bash "$repo/scripts/natori-phase-0b/prepare-browser.sh" "$repo" "$work" "$node_image" "$project"
+  node "$repo/scripts/natori-phase-n/prepare-browser.mjs" "$work/browser-app"
+  cp "$work/browser-app/source-checksums.json" "$work/results/browser-source-checksums.json"
+fi
 ROOT="$root" WORK="$work" PROJECT="$project" node --input-type=module <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
@@ -320,6 +325,7 @@ if [[ $phasen == 1 ]]; then
   sudo nsenter -t "$pid" -n iptables -I OUTPUT 2 -s 127.0.0.1 -d 127.0.0.1 -p tcp --sport 3101 -m conntrack --ctstate ESTABLISHED -j ACCEPT
   timeout 45 docker exec "$runner" node /tests/isolation.mjs
   timeout 240 docker exec "$runner" node /phasen/integration.cjs
+  bash "$repo/scripts/natori-phase-n/run-browser.sh" "$repo" "$work" "$runner" "$project" "$pid"
 fi
 sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/egress-counters.txt"
 sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/egress-counters.txt"

@@ -12,7 +12,7 @@ for (const dir of ['components','features','hooks','i18n','lib','styles','types'
 const exact = ['src/middleware.ts','src/app/globals.css','src/app/[locale]/layout.tsx',
   'src/app/[locale]/natori/dashboard/page.tsx','src/app/[locale]/natori/dashboard/layout.tsx',
   'src/app/[locale]/natori/projects/page.tsx','src/app/admin-login/page.tsx','src/app/admin-login/AdminLoginClient.tsx',
-  ...['projects','events','profile','pricing','page-events'].map(p=>`src/app/api/natori/admin/${p}/route.ts`),
+  ...['projects','events','profile','pricing','page-events','notifications'].map(p=>`src/app/api/natori/admin/${p}/route.ts`),
   'next.config.mjs','tsconfig.json','tailwind.config.js','postcss.config.js','package.json'];
 const checksums = {};
 for (const path of exact) {

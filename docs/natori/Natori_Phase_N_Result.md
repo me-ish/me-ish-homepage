@@ -36,7 +36,7 @@ Phase Tを引き継ぎ、GitHub-hosted Ubuntu 24.04で一時Supabase DB/Auth/Sto
 
 `Natori Phase N` workflowはmain向けPRのopened/synchronize/reopened/ready_for_reviewで動く。mainへ先にマージする必要はない。GitHubの同一run再実行は、そのrunのSHAで検証する。最新コードはPR更新に伴う新runを確認する。
 
-構築時のみツール/イメージを取得し、その後全stackをinternal networkへ移す。試験プロセスと子プロセスには、専用Kong IP:8000と同じnamespaceの捕捉サーバ127.0.0.1:3101だけを許可する。外部providerへの通信は行わない。To/BCC/Reply-Toは架空アドレスの明示allowlist。ログ・artifactへ本文、宛先、認証情報を出さない。上限25分、PRごと同時1run、後始末は専用ラベル/プロジェクトのみ。
+構築時のみツール/イメージを取得し、その後全stackをinternal networkへ移す。試験プロセスと子プロセスには、専用Kong IP:8000と同じnamespaceの捕捉サーバ127.0.0.1:3101を許可する。ブラウザ段階では同namespaceのNext用127.0.0.1:3000だけを追加し、通信の否定試験を再実行する。外部providerへの通信は行わない。To/BCC/Reply-Toは架空アドレスの明示allowlist。ログ・artifactへ本文、宛先、認証情報を出さない。上限25分、PRごと同時1run、後始末は専用ラベル/プロジェクトのみ。
 
 試験では製品のResend HTTP送信関数をそのまま呼ぶが、**隔離試験コード内だけ**で通信をローカル捕捉サーバに接続する。捕捉サーバは同key同payloadの受付再現、明確な拒否、受付後応答切断を行う。本番コードに任意provider URL設定は追加しない。
 
@@ -45,9 +45,10 @@ Phase Tを引き継ぎ、GitHub-hosted Ubuntu 24.04で一時Supabase DB/Auth/Sto
 ## 検証結果
 
 - ローカル型チェック: 成功。
+- 初回通常CIの2失敗は、RPC呼出しをソース文字列で確認するテストと新migrationのmanifest登録不足。旧RPC維持を検証する内容へ更新し、新migrationを末尾に登録。既存 `20260923122157_natori_estimate_drafts_and_issuance.sql` に不足していたchecksum 1件も、内容を変更せず追記。skip/判定条件の緩和は行っていない。関連20テスト成功。続けて全126ファイル1,163テスト成功。
 - 関連既存unit/APIテスト: 5ファイル49件成功、失敗0、skip0。
-- 隔離DB/HTTP捕捉試験: Actions実行待ち。結果を後追記する。
-- ブラウザ: 準備中。実機Safariは未確認。
+- 初回隔離DB/HTTP捕捉試験: 21件成功、失敗0、skip0。run [36304578389](https://github.com/me-ish/me-ish-homepage/actions/runs/36304578389)、head `c39a09c0653eccf201c2e26534f6b5f747683804`。追加のページング/ブラウザ試験を同PRで継続中。
+- ブラウザ: 隔離Next/Chromiumの7業務シナリオを追加、Actions確認中。実機Safariは未確認。
 
 ## 本番移行の順序・停止条件
 
@@ -66,7 +67,7 @@ Phase Tを引き継ぎ、GitHub-hosted Ubuntu 24.04で一時Supabase DB/Auth/Sto
 - 新sender障害時はlease失効後に管理ホームで「状態を更新」→対象の「メールだけ再試行」。承諾/受取APIを再実行して通知を作り直さない。
 - `sent`はprovider受付済み。迷惑メール振分け/後日bounce/相手が未読であることと区別する。
 - 23時間超unknownはprovider管理画面で既存受付を照合する。証拠なしに新keyで再送しない。このWorkでは強制送信/結果確定ボタンを作らない。
-- 管理表示の取得失敗を「通知なし」に見せない。管理画面の詳細は最新100試行が上限であり、超過時は明示する。
+- 管理表示の取得失敗を「通知なし」に見せない。管理画面の詳細は未解決を先に、通知ごとの最新状態を50件ずつ表示し、前/次ページで全件を確認する。
 - 外部メール試験、iPhone Safari実機、最終本番承認は本番切替前の残条件。納品実体/readyのF04・U04、見積り発行・支払・相談通知は後続Phaseで接続する。
 
 参照: [Resend idempotency](https://resend.com/docs/dashboard/emails/idempotency-keys)、[Next.js after](https://nextjs.org/docs/app/api-reference/functions/after)、[Supabase Functions](https://supabase.com/docs/guides/database/functions)。

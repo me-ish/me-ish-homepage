@@ -135,6 +135,8 @@ async function main() {
         check(!!(await client.from("natori_notification_jobs").select("id")).error, "QUEUE_DISCLOSED");
         check(!!(await client.rpc("natori_accept_quote_with_notifications_v1", { p_token_hash: "0".repeat(64) })).error, "RPC_EXPOSED");
         check(!!(await client.rpc("natori_notification_claim_v1", { p_id: randomUUID(), p_claim_token: randomUUID() })).error, "CLAIM_EXPOSED");
+        check(!!(await client.rpc("natori_notification_list_v1", { p_owner_id: owner })).error, "LIST_EXPOSED");
+        check(!!(await client.rpc("natori_notification_retry_v1", { p_id: randomUUID(), p_owner_id: owner })).error, "RETRY_EXPOSED");
       }
     });
     await test("quote-race-one-business-fact-one-notice", async () => {
@@ -225,12 +227,22 @@ async function main() {
       await reenable(id); await dispatchAcceptanceNotification(id, true);
       check((await job(id)).status === "sent" && accepted.size === count + 1, "SAVE_LOSS_DUPLICATE");
     });
+    await test("replay-credential-failure-does-not-erase-an-unknown-send", async () => {
+      const q = await quote(); await acceptNatoriQuote(q.token); const id = (await jobs(q.id))[0].id;
+      mode = "drop"; await dispatchAcceptanceNotification(id); await reenable(id);
+      delete process.env.RESEND_API_KEY;
+      try { await dispatchAcceptanceNotification(id, true); } finally { process.env.RESEND_API_KEY = apiKey; }
+      check((await job(id)).status === "unknown", "UNKNOWN_REPLACED_WITH_FAILURE");
+      const retry = await admin.rpc("natori_notification_retry_v1", { p_id: id, p_owner_id: owner });
+      check(retry.data === id && (await jobs(q.id)).length === 1, "UNKNOWN_KEY_REPLACED");
+    });
     await test("stopped-worker-before-send-and-stale-fence", async () => {
       const q = await quote(); await acceptNatoriQuote(q.token); const id = (await jobs(q.id))[0].id, old = randomUUID(), next = randomUUID();
       check((await admin.rpc("natori_notification_claim_v1", { p_id: id, p_claim_token: old })).data?.length === 1, "FIRST_CLAIM");
       check((await admin.rpc("natori_notification_claim_v1", { p_id: id, p_claim_token: next })).data?.length === 0, "LIVE_LEASE_STOLEN");
       await reenable(id); check((await admin.rpc("natori_notification_claim_v1", { p_id: id, p_claim_token: next })).data?.length === 1, "LEASE_RECOVERY");
       check((await admin.rpc("natori_notification_finish_v1", { p_id: id, p_claim_token: old, p_status: "failed", p_error_code: "stale" })).data === false, "STALE_WORKER_OVERWRITE");
+      check((await admin.rpc("natori_notification_start_v1", { p_id: id, p_claim_token: old, p_payload: { test: true } })).data?.length === 0, "STALE_WORKER_STARTED_SEND");
       await reenable(id); await dispatchAcceptanceNotification(id, true); check((await job(id)).status === "sent", "STOPPED_WORKER_NOT_RECOVERED");
     });
     await test("old-unknown-outside-key-window-does-not-contact-provider", async () => {
@@ -274,6 +286,18 @@ async function main() {
       const q = await quote(); await acceptNatoriQuote(q.token); const id = (await jobs(q.id))[0].id, before = providerCalls;
       process.env.NATORI_NOTIFICATION_SENDING_ENABLED = "0"; await dispatchAcceptanceNotification(id); process.env.NATORI_NOTIFICATION_SENDING_ENABLED = "1";
       check((await job(id)).status === "pending" && providerCalls === before, "PAUSE_SENT_MAIL");
+    });
+    await test("management-pagination-keeps-old-pending-before-success-history", async () => {
+      const p = await project(); const initial = randomUUID(), stamp = past();
+      const batch = [{ id: initial, notification_key: `pagination/${initial}`, project_id: p.id, purpose: "quote_accept_artist", snapshot: {}, status: "pending", created_at: stamp },
+        ...Array.from({ length: 55 }, () => { const id = randomUUID(); return { id, notification_key: `pagination/${id}`, project_id: p.id, purpose: "quote_accept_artist", snapshot: {}, status: "sent", provider_id: randomUUID(), sent_at: new Date().toISOString() }; })];
+      check(!(await admin.from("natori_notification_jobs").insert(batch)).error, "PAGINATION_FIXTURE");
+      const first = await admin.rpc("natori_notification_list_v1", { p_owner_id: owner, p_offset: 0 });
+      const second = await admin.rpc("natori_notification_list_v1", { p_owner_id: owner, p_offset: 50 });
+      check(!first.error && !second.error && first.data.length === 51 && second.data.length > 0, "PAGINATION_FAILED");
+      check(first.data.some((r: { id: string }) => r.id === initial), "PENDING_HIDDEN_BY_HISTORY");
+      const ids = [...first.data.slice(0, 50), ...second.data].map((r: { id: string }) => r.id);
+      check(new Set(ids).size === ids.length, "PAGINATION_DUPLICATE");
     });
     writeFileSync("/results/phasen.json", JSON.stringify({ tests: results, passed: results.filter(r => r.status === "passed").length, failed: results.filter(r => r.status === "failed").length, skipped: 0, provider: "sealed-http-capture-not-real-resend", providerRequests: providerCalls, distinctAcceptedMessages: accepted.size }, null, 2));
     console.log(`PHASE N ${results.filter(r => r.status === "passed").length} passed / ${results.filter(r => r.status === "failed").length} failed / 0 skipped`);

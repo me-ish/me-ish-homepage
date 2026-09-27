@@ -163,6 +163,25 @@ begin
 end;
 $$;
 
+-- Latest attempt per logical notification, unresolved first. Pagination must not
+-- hide an old pending notification behind a long history of successful sends.
+create function public.natori_notification_list_v1(p_owner_id uuid,p_offset integer default 0)
+returns table(id uuid,project_id uuid,project_title text,purpose text,status text,attempt_no integer,
+  claim_count integer,lease_expires_at timestamptz,send_started_at timestamptz,retry_after timestamptz,last_sent_at timestamptz)
+language sql security invoker set search_path = '' as $$
+  with history as (
+    select j.*,p.title as project_title,max(j.sent_at) over (partition by j.notification_key) as last_sent_at
+    from public.natori_notification_jobs j join public.natori_projects p on p.id=j.project_id
+    where p.user_id=p_owner_id
+  ), latest as (
+    select distinct on (h.notification_key) h.* from history h order by h.notification_key,h.attempt_no desc
+  )
+  select l.id,l.project_id,l.project_title,l.purpose,l.status,l.attempt_no,l.claim_count,
+    l.lease_expires_at,l.send_started_at,l.retry_after,l.last_sent_at
+  from latest l order by (l.status='sent'),l.created_at desc,l.id
+  limit 51 offset greatest(0,least(p_offset,100000));
+$$;
+
 -- No PUBLIC default EXECUTE; no browser/Auth JWT can inspect recipients or operate the queue.
 revoke all on function public.natori_notification_immutable_v1() from public,anon,authenticated,service_role;
 revoke all on function public.natori_accept_quote_with_notifications_v1(text) from public,anon,authenticated,service_role;
@@ -171,11 +190,13 @@ revoke all on function public.natori_notification_claim_v1(uuid,uuid,boolean) fr
 revoke all on function public.natori_notification_start_v1(uuid,uuid,jsonb) from public,anon,authenticated,service_role;
 revoke all on function public.natori_notification_finish_v1(uuid,uuid,text,text,text) from public,anon,authenticated,service_role;
 revoke all on function public.natori_notification_retry_v1(uuid,uuid) from public,anon,authenticated,service_role;
+revoke all on function public.natori_notification_list_v1(uuid,integer) from public,anon,authenticated,service_role;
 grant execute on function public.natori_accept_quote_with_notifications_v1(text) to service_role;
 grant execute on function public.natori_accept_delivery_with_notifications_v1(text) to service_role;
 grant execute on function public.natori_notification_claim_v1(uuid,uuid,boolean) to service_role;
 grant execute on function public.natori_notification_start_v1(uuid,uuid,jsonb) to service_role;
 grant execute on function public.natori_notification_finish_v1(uuid,uuid,text,text,text) to service_role;
 grant execute on function public.natori_notification_retry_v1(uuid,uuid) to service_role;
+grant execute on function public.natori_notification_list_v1(uuid,integer) to service_role;
 notify pgrst, 'reload schema';
 commit;

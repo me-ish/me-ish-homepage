@@ -19,3 +19,10 @@ alter table public.natori_projects add foreign key(active_quote_id) references p
 alter table public.natori_quotes enable row level security;
 revoke all on public.natori_quotes from public,anon,authenticated;
 grant all on public.natori_quotes to service_role;
+create table public.natori_delivery_files (
+  id uuid primary key default gen_random_uuid(),project_id uuid references public.natori_projects,
+  folder text,storage_path text,file_name text,size_bytes bigint,created_at timestamptz default now()
+);
+alter table public.natori_delivery_files enable row level security;
+revoke all on public.natori_delivery_files from public,anon,authenticated;
+grant all on public.natori_delivery_files to service_role;
