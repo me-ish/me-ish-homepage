@@ -16,7 +16,7 @@ for (const path of [
   copyFileSync(path, resolve(output, path));
   checksums[path] = createHash('sha256').update(readFileSync(path)).digest('hex');
 }
-// The Next dev issue badge covers mobile controls after expected failure injection.
+// Keep Next development badges away from mobile controls during failure injection.
 // Production has no dev badge. Keep runtime/hydration checks; disable only the
 // development indicator in this disposable test shell, never in product config.
 copyFileSync('next.config.mjs', resolve(output, 'phase4-source-config.mjs'));

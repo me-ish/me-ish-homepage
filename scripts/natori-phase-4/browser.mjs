@@ -252,8 +252,13 @@ async function main() {
     await expect(clientPage.getByText('Saved before history outage', { exact: true })).toBeVisible();
   });
   await test('detail-fetch-failure-is-visible-and-retry-recovers', async () => {
+    // Finish the collection load before injecting a detail outage. Otherwise
+    // its automatic detail refresh can recover between unroute and retry click.
+    await page.goto('/natori/inquiries');
+    const opener = page.getByRole('button').filter({ hasText: prep.title }).filter({ visible: true }).first();
+    await expect(opener).toBeVisible();
     await page.route('**/api/natori/admin/projects?projectId=*', route => route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
-    await page.goto(`/natori/inquiries?project=${prep.id}`);
+    await opener.click();
     await expect(page.getByRole('alert').filter({ hasText: '案件の詳細を取得できませんでした。再試行してください。' })).toBeVisible();
     await page.unroute('**/api/natori/admin/projects?projectId=*'); await page.getByRole('button', { name: '詳細を再試行' }).click(); await expect(page.getByRole('dialog')).toBeVisible();
     checkpoint = 'OPEN_CONVERSATION';
