@@ -1,7 +1,7 @@
 import "server-only";
 
 import { estimateDraftSchema, type NatoriEstimateDraft, type NatoriEstimateDraftData } from "@/features/natori/lib/estimateDraft";
-import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
+import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type Result =
@@ -13,7 +13,7 @@ const idPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[
 
 export async function getEstimateDraft(projectId: string): Promise<Result> {
   if (!idPattern.test(projectId)) return { kind: "not-found" };
-  const userId = await resolveNatoriActingUserId();
+  const userId = await resolveNatoriOwnerId();
   if (!userId) return { kind: "not-found" };
   const db = supabaseAdmin();
   const { data: project, error: projectError } = await db.from("natori_projects")
@@ -40,7 +40,7 @@ export async function saveEstimateDraft(projectId: string, expectedRevision: num
   const existing = await getEstimateDraft(projectId);
   if (existing.kind !== "ok") return existing;
   if ((existing.draft?.revision ?? 0) !== expectedRevision) return { kind: "conflict" };
-  const userId = await resolveNatoriActingUserId();
+  const userId = await resolveNatoriOwnerId();
   if (!userId) return { kind: "not-found" };
   const db = supabaseAdmin();
   const payload = { agreed_terms: input.agreedTerms, items: input.items, updated_at: new Date().toISOString() };

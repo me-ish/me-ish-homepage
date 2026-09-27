@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
+import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 
 export type NatoriAdminEventRow = {
   id: string;
@@ -17,8 +17,7 @@ export type ListNatoriEventsResult =
   | { kind: "db-error" };
 
 export async function listNatoriAdminEvents(): Promise<ListNatoriEventsResult> {
-  const ownerId = await resolveNatoriActingUserId();
-  if (!ownerId) return { kind: "ok", events: [] };
+  const ownerId = await resolveNatoriOwnerId();
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from(EVENTS_TABLE)
@@ -69,7 +68,7 @@ export async function updateNatoriAdminEvent(
   id: string,
   input: { title?: string; date?: string; note?: string | null }
 ): Promise<NatoriEventMutationResult> {
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
   const payload: Record<string, unknown> = {};
   if (input.title !== undefined) payload.title = input.title;
@@ -94,7 +93,7 @@ export async function updateNatoriAdminEvent(
 }
 
 export async function deleteNatoriAdminEvent(id: string): Promise<NatoriEventMutationResult> {
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
   const admin = supabaseAdmin();
   const { data, error } = await admin

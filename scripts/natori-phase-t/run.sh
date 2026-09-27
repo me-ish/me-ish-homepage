@@ -13,6 +13,8 @@ done
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo=$(git rev-parse --show-toplevel)
 phase0a=${PHASE_0A:-0}
+phase0b=${PHASE_0B:-0}
+[[ $phase0b == 0 || $phase0b == 1 ]] || exit 1
 [[ $phase0a == 0 || $phase0a == 1 ]] || exit 1
 work=$(mktemp -d "${RUNNER_TEMP:?}/natori-phase-t.XXXXXXXX")
 project="natori-phase-t-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
@@ -69,6 +71,18 @@ if [[ $phase0a == 1 ]]; then
   extra_mounts+=(--mount "type=bind,source=$work/phase0a,target=/phase0a,readonly")
   extra_mounts+=(--mount "type=bind,source=$repo/node_modules,target=/app/node_modules,readonly")
   extra_mounts+=(-e NODE_PATH=/app/node_modules)
+  test_memory=512m
+fi
+
+if [[ $phase0b == 1 ]]; then
+  mkdir -p "$work/phase0b"
+  node "$repo/scripts/natori-phase-0b/build.mjs" "$work/phase0b/integration.cjs"
+  node "$repo/scripts/natori-phase-0b/build-fixture.mjs" "$work/phase0b.sql"
+  extra_mounts+=(--mount "type=bind,source=$work/phase0b,target=/phase0b,readonly")
+  if [[ $phase0a == 0 ]]; then
+    extra_mounts+=(--mount "type=bind,source=$repo/node_modules,target=/app/node_modules,readonly")
+    extra_mounts+=(-e NODE_PATH=/app/node_modules)
+  fi
   test_memory=512m
 fi
 
@@ -196,7 +210,7 @@ node "$root/verify-catalog.mjs" "$work/results/catalog-current.json" current
 {
   printf 'tested_sha=%s\nhead_sha=%s\n' "$(git rev-parse HEAD)" "${PHASE_T_HEAD_SHA:-unknown}"
   printf 'supabase_cli=2.118.0\nnode=%s\nrunner_image=%s\n' "$(node --version)" "${ImageVersion:-unknown}"
-  if [[ $phase0a == 1 ]]; then
+  if [[ $phase0a == 1 || $phase0b == 1 ]]; then
     node -e 'const fs=require("node:fs");for(const p of ["@supabase/supabase-js","sharp","tus-js-client","esbuild"])console.log(`${p}=${JSON.parse(fs.readFileSync(`node_modules/${p}/package.json`,"utf8")).version}`)'
     sha256sum "$repo/package-lock.json"
   fi
@@ -277,6 +291,10 @@ else
 fi
 timeout 180 docker exec "$runner" node /tests/storage.mjs candidate
 if [[ $phase0a == 1 ]]; then timeout 240 docker exec "$runner" node /phase0a/integration.cjs after; fi
+if [[ $phase0b == 1 ]]; then
+  dbsql <"$work/phase0b.sql" >/dev/null
+  timeout 240 docker exec "$runner" node /phase0b/integration.cjs
+fi
 sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/egress-counters.txt"
 sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/egress-counters.txt"
 echo 'Required real Storage tests completed; production remains unchanged'

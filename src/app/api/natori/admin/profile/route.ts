@@ -1,3 +1,4 @@
+import { withNatoriManagement } from "@/features/natori/server/natoriManagementRoute";
 import { NextResponse } from "next/server";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
@@ -6,8 +7,7 @@ import {
   upsertNatoriAdminProfile,
 } from "@/features/natori/server/profileService";
 import {
-  NATORI_OWNER_UNRESOLVED_MESSAGE,
-  resolveNatoriActingUserId,
+  resolveNatoriOwnerId,
 } from "@/features/natori/server/natoriOwner";
 
 export const runtime = "nodejs";
@@ -21,25 +21,21 @@ function readNullableString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
-export async function GET() {
+export const GET = withNatoriManagement("profile.GET", false, async function GET() {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userId = await resolveNatoriActingUserId();
-  if (!userId) {
-    // まだ誰のデータも無い＝プロフィール未作成として扱う
-    return NextResponse.json({ profile: null });
-  }
+  const userId = await resolveNatoriOwnerId();
 
   const result = await getNatoriAdminProfile(userId);
   if (result.kind === "db-error") {
     return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 });
   }
   return NextResponse.json({ profile: result.profile });
-}
+});
 
-export async function PUT(request: Request) {
+export const PUT = withNatoriManagement("profile.PUT", true, async function PUT(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -63,10 +59,7 @@ export async function PUT(request: Request) {
     dailyCapacityHours = value;
   }
 
-  const userId = await resolveNatoriActingUserId();
-  if (!userId) {
-    return NextResponse.json({ error: NATORI_OWNER_UNRESOLVED_MESSAGE }, { status: 500 });
-  }
+  const userId = await resolveNatoriOwnerId();
 
   const result = await upsertNatoriAdminProfile({
     userId,
@@ -80,4 +73,4 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Failed to save profile" }, { status: 500 });
   }
   return NextResponse.json({ profile: result.profile });
-}
+});

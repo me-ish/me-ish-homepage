@@ -20,7 +20,7 @@ vi.mock("@/lib/supabaseAdmin", () => ({
 }));
 
 vi.mock("@/features/natori/server/natoriOwner", () => ({
-  resolveNatoriActingUserId: (...args: unknown[]) => mockResolveOwner(...args),
+  resolveNatoriOwnerId: (...args: unknown[]) => mockResolveOwner(...args),
 }));
 
 vi.mock("@/features/natori/server/projectThumbsService", () => ({

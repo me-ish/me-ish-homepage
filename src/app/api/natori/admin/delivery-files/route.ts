@@ -1,3 +1,4 @@
+import { withNatoriManagement } from "@/features/natori/server/natoriManagementRoute";
 // api/natori/admin/delivery-files/route.ts
 // ラフ確認・納品ファイルの台帳操作（一覧 / アップロード署名 / 削除）。
 // 実体のアップロードはブラウザから Supabase Storage へ直接行う
@@ -16,7 +17,7 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export const GET = withNatoriManagement("delivery-files.GET", false, async function GET(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -29,9 +30,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Failed to list files" }, { status: 500 });
   }
   return NextResponse.json({ files });
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withNatoriManagement("delivery-files.POST", true, async function POST(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -81,9 +82,9 @@ export async function POST(request: Request) {
         token: result.token,
       });
   }
-}
+});
 
-export async function DELETE(request: Request) {
+export const DELETE = withNatoriManagement("delivery-files.DELETE", true, async function DELETE(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -96,4 +97,4 @@ export async function DELETE(request: Request) {
   const ok = await deleteNatoriDeliveryFile(fileId);
   if (!ok) return NextResponse.json({ error: "Failed to delete file" }, { status: 500 });
   return NextResponse.json({ ok: true });
-}
+});

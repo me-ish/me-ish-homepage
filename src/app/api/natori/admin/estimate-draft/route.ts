@@ -1,3 +1,4 @@
+import { withNatoriManagement } from "@/features/natori/server/natoriManagementRoute";
 import { NextResponse } from "next/server";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { checkSameOrigin } from "@/lib/auth/origin";
@@ -18,12 +19,12 @@ function response(result: Awaited<ReturnType<typeof getEstimateDraft>>) {
   }
 }
 
-export async function GET(request: Request) {
+export const GET = withNatoriManagement("estimate-draft.GET", false, async function GET(request: Request) {
   if (!(await canUseNatoriManagement())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   return response(await getEstimateDraft(new URL(request.url).searchParams.get("projectId") ?? ""));
-}
+});
 
-export async function PUT(request: Request) {
+export const PUT = withNatoriManagement("estimate-draft.PUT", true, async function PUT(request: Request) {
   if (!(await canUseNatoriManagement())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const originError = checkSameOrigin(request);
   if (originError) return originError;
@@ -39,4 +40,4 @@ export async function PUT(request: Request) {
   const parsed = estimateDraftSchema.safeParse({ agreedTerms: input.agreedTerms, items: input.items });
   if (!parsed.success) return NextResponse.json({ error: "invalid_draft" }, { status: 400 });
   return response(await saveEstimateDraft(input.projectId, Number(input.revision), parsed.data));
-}
+});

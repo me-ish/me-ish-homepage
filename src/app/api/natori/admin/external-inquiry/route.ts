@@ -1,3 +1,4 @@
+import { withNatoriManagement } from "@/features/natori/server/natoriManagementRoute";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { checkCsrf } from "@/lib/auth/csrf";
@@ -15,7 +16,7 @@ const schema = z.strictObject({
   note: z.string().max(4000),
 });
 
-export async function POST(request: Request) {
+export const POST = withNatoriManagement("external-inquiry.POST", true, async function POST(request: Request) {
   if (!(await canUseNatoriManagement())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const originError = checkSameOrigin(request);
   if (originError) return originError;
@@ -27,4 +28,4 @@ export async function POST(request: Request) {
   if (result.kind === "no-owner") return NextResponse.json({ error: "no_owner" }, { status: 503 });
   if (result.kind !== "ok") return NextResponse.json({ error: "temporarily_unavailable" }, { status: 503 });
   return NextResponse.json({ ok: true, projectId: result.projectId });
-}
+});

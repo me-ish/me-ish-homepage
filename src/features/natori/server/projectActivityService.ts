@@ -1,7 +1,7 @@
 import "server-only";
 
 import { parseNatoriProjectActivityRow } from "@/features/natori/lib/projectActivity";
-import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
+import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { NatoriProjectActivity } from "@/features/natori/lib/projectActivity";
 
@@ -12,7 +12,7 @@ export async function listNatoriProjectActivity(
   projectId: string,
   limit = DEFAULT_LIMIT,
 ): Promise<NatoriProjectActivity[] | null> {
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return null;
 
   const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), MAX_LIMIT);

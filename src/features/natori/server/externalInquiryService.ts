@@ -1,12 +1,12 @@
 import "server-only";
 
-import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
+import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function createExternalNatoriInquiry(input: {
   clientName: string; title: string; clientEmail: string; source: string; note: string;
 }): Promise<{ kind: "ok"; projectId: string } | { kind: "no-owner" | "db-error" }> {
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "no-owner" };
   const { data, error } = await supabaseAdmin().from("natori_projects").insert({
     user_id: ownerId,

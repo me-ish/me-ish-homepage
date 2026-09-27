@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const { from, owner } = vi.hoisted(() => ({ from: vi.fn(), owner: vi.fn() }));
 vi.mock("@/lib/supabaseAdmin", () => ({ supabaseAdmin: () => ({ from }) }));
-vi.mock("@/features/natori/server/natoriOwner", () => ({ resolveNatoriActingUserId: owner }));
+vi.mock("@/features/natori/server/natoriOwner", () => ({ resolveNatoriOwnerId: owner }));
 import { createExternalNatoriInquiry } from "@/features/natori/server/externalInquiryService";
 
 beforeEach(() => { from.mockReset(); owner.mockResolvedValue("owner"); });

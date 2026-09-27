@@ -1,0 +1,57 @@
+name: Natori Phase 0B
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/natori-phase-0b.yml'
+      - 'scripts/natori-phase-t/**'
+      - 'scripts/natori-phase-0b/**'
+      - 'src/features/natori/server/**'
+      - 'src/app/api/natori/**'
+      - 'src/lib/supabase/**'
+      - 'src/lib/supabaseServer.ts'
+      - 'src/lib/supabaseAdmin.ts'
+      - 'src/lib/isAdmin.ts'
+      - 'src/lib/auth/**'
+      - 'supabase/legacy-migrations/202607200001_natori_beta_safety.sql'
+      - 'docs/natori/Natori_Phase_0B*'
+      - '.node-version'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: natori-phase-0b-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  storage:
+    name: Fixed owner with real Auth and DB
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PHASE_T_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PHASE_0B: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.node-version'
+          cache: npm
+      - name: Install locked test dependencies during construction
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Test fixed owner and operators in isolated Supabase
+        run: bash scripts/natori-phase-t/run.sh
+      - name: Publish non-secret evidence only
+        if: always() && env.PHASE_T_RESULTS != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: natori-phase-0b-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.PHASE_T_RESULTS }}/*
+          if-no-files-found: error
+          retention-days: 7

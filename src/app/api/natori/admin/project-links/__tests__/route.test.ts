@@ -3,6 +3,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+// Route-specific validation; the outer owner/auth boundary has dedicated tests.
+vi.mock("@/features/natori/server/natoriManagementRoute", () => ({
+  withNatoriManagement: (_operation: string, _mutation: boolean, handler: unknown) => handler,
+}));
 
 const { mockCanUse, mockList, mockAdd, mockUpdate, mockDelete } = vi.hoisted(() => ({
   mockCanUse: vi.fn(),

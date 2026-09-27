@@ -87,6 +87,7 @@ function makePngFile(name = "ref.png") {
 }
 
 beforeEach(() => {
+  vi.stubEnv("NATORI_OWNER_USER_ID", "a2823bd4-9b9a-4ae0-b408-e2d131c2ba09");
   vi.clearAllMocks();
   _resetRateLimitStore();
   mockSendContact.mockResolvedValue({ mailed: true });
@@ -104,6 +105,15 @@ afterEach(() => {
 /* ---------- Tests ---------- */
 
 describe("guards", () => {
+  it("owner 未設定なら画像・案件・メールの処理前に停止する", async () => {
+    vi.stubEnv("NATORI_OWNER_USER_ID", "");
+    const res = await POST(makeMultipartReq(VALID_FIELDS, [makePngFile()]));
+    expect(res.status).toBe(503);
+    for (const mock of [mockUpload, mockCreateInquiry, mockSendContact, mockAutoReply]) {
+      expect(mock).not.toHaveBeenCalled();
+    }
+  });
+
   it("CSRF ヘッダーが無ければ 403（フォーム本体にも CSRF を適用）", async () => {
     const res = await POST(makeJsonReq(VALID_FIELDS, {}));
     expect(res.status).toBe(403);

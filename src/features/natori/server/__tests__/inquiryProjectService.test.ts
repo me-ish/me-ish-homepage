@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
@@ -17,7 +17,7 @@ const {
 }));
 
 vi.mock("@/features/natori/server/projectsService", () => ({
-  createNatoriAdminProject: (...args: unknown[]) =>
+  createNatoriProjectForOwner: (...args: unknown[]) =>
     mockCreateAdminProject(...args),
 }));
 
@@ -33,7 +33,7 @@ vi.mock("@/features/natori/server/portfolioSiteService", () => ({
 }));
 
 vi.mock("@/features/natori/server/natoriOwner", () => ({
-  resolveNatoriActingUserId: (...args: unknown[]) => mockResolveOwner(...args),
+  resolveNatoriOwnerId: (...args: unknown[]) => mockResolveOwner(...args),
 }));
 
 import {
@@ -74,7 +74,10 @@ const consultationSubmission = {
   },
 } as const;
 
+afterEach(() => vi.unstubAllEnvs());
+
 beforeEach(() => {
+  vi.stubEnv("NATORI_OWNER_USER_ID", OWNER_ID);
   vi.clearAllMocks();
   mockCreateIntake.mockResolvedValue({ kind: "ok", projectId: PROJECT_ID });
   mockDeleteReferences.mockResolvedValue(undefined);
@@ -392,6 +395,8 @@ describe("createStructuredInquiryProject", () => {
       refUrls: "",
     });
     expect(mockCreateAdminProject).toHaveBeenCalledTimes(1);
+    expect(mockCreateAdminProject).toHaveBeenCalledWith(expect.objectContaining({ userId: OWNER_ID }));
+    expect(mockResolveOwner).not.toHaveBeenCalled();
     expect(mockCreateIntake).not.toHaveBeenCalled();
   });
 });

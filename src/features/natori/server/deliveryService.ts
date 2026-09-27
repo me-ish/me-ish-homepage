@@ -12,7 +12,7 @@ import "server-only";
 import { createHash, randomUUID } from "crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendNatoriNoticeMail } from "@/features/natori/server/orderMailService";
-import { resolveNatoriActingUserId } from "@/features/natori/server/natoriOwner";
+import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 
 const BUCKET = "natori-deliveries";
 const TOKEN_RE = /^[A-Za-z0-9_-]{20,64}$/;
@@ -63,7 +63,7 @@ function toFileView(row: FileRow): NatoriDeliveryFile {
 export async function listNatoriDeliveryFiles(
   projectId: string
 ): Promise<NatoriDeliveryFile[] | null> {
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return null;
   const admin = supabaseAdmin();
   const { data: ownedProject, error: ownerError } = await admin
@@ -106,7 +106,7 @@ export async function signNatoriDeliveryUpload(input: {
 }): Promise<SignDeliveryUploadResult> {
   if (input.sizeBytes > DELIVERY_MAX_FILE_BYTES) return { kind: "too-large" };
 
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
   const admin = supabaseAdmin();
   const { data: project, error: projectError } = await admin
@@ -164,7 +164,7 @@ export async function signNatoriDeliveryUpload(input: {
 }
 
 export async function deleteNatoriDeliveryFile(fileId: string): Promise<boolean> {
-  const ownerId = await resolveNatoriActingUserId();
+  const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return false;
   const admin = supabaseAdmin();
   const { data, error } = await admin

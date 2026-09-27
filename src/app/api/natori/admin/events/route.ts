@@ -1,3 +1,4 @@
+import { withNatoriManagement } from "@/features/natori/server/natoriManagementRoute";
 import { NextResponse } from "next/server";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
@@ -8,8 +9,7 @@ import {
   updateNatoriAdminEvent,
 } from "@/features/natori/server/eventsService";
 import {
-  NATORI_OWNER_UNRESOLVED_MESSAGE,
-  resolveNatoriActingUserId,
+  resolveNatoriOwnerId,
 } from "@/features/natori/server/natoriOwner";
 
 export const runtime = "nodejs";
@@ -23,7 +23,7 @@ function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
-export async function GET() {
+export const GET = withNatoriManagement("events.GET", false, async function GET() {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -33,9 +33,9 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 });
   }
   return NextResponse.json({ events: result.events });
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withNatoriManagement("events.POST", true, async function POST(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -52,10 +52,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "title and date are required" }, { status: 400 });
   }
 
-  const userId = await resolveNatoriActingUserId();
-  if (!userId) {
-    return NextResponse.json({ error: NATORI_OWNER_UNRESOLVED_MESSAGE }, { status: 500 });
-  }
+  const userId = await resolveNatoriOwnerId();
 
   const result = await createNatoriAdminEvent({
     userId,
@@ -67,9 +64,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to create event" }, { status: 500 });
   }
   return NextResponse.json({ event: result.event });
-}
+});
 
-export async function PATCH(request: Request) {
+export const PATCH = withNatoriManagement("events.PATCH", true, async function PATCH(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -108,9 +105,9 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
   return NextResponse.json({ ok: true });
-}
+});
 
-export async function DELETE(request: Request) {
+export const DELETE = withNatoriManagement("events.DELETE", true, async function DELETE(request: Request) {
   if (!(await canUseNatoriManagement())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -130,4 +127,4 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
   return NextResponse.json({ ok: true });
-}
+});
