@@ -213,18 +213,45 @@ for (const bucket of privateBuckets) {
     await content(bucket, key, original);
   });
 }
-await test('signed-tus-consultation', async () => {
+// Preserve the original failing route as a policy-dependency regression.
+// This is anon JWT + x-signature; production UI sends x-signature alone.
+await test('unsigned-route-tus-policy-dependence', async () => {
   const bucket = 'natori-consultations', key = `${mode}/tus-${randomUUID()}.png`;
   const issued = await responseJson(await success(await request(`/storage/v1/object/upload/sign/${bucket}/${key}`, { method: 'POST', headers: json(service), body: '{}' }), 'TUS_SIGN'));
   const signature = new URL(issued.url, origin).searchParams.get('token');
   check(!!signature, 'TUS_SIGNATURE_MISSING');
   const metadata = Object.entries({ bucketName: bucket, objectName: key, contentType: 'image/png', cacheControl: '3600' }).map(([k, v]) => `${k} ${Buffer.from(v).toString('base64')}`).join(',');
   const h = headers(anon, { 'x-signature': signature, 'Tus-Resumable': '1.0.0', 'Upload-Length': String(original.length), 'Upload-Metadata': metadata });
-  const created = await success(await request('/storage/v1/upload/resumable', { method: 'POST', headers: h }), 'TUS_CREATE');
+  const response = await request('/storage/v1/upload/resumable', { method: 'POST', headers: h });
+  if (mode === 'candidate') {
+    const message = await response.text();
+    check(response.status === 403 && /row.level security|permission denied/i.test(message), 'TUS_EXPECTED_RLS_DENIAL');
+    await absent(bucket, key);
+    return;
+  }
+  const created = await success(response, 'TUS_CREATE');
   const location = new URL(created.headers.get('location'), origin);
   // Local Storage advertises a localhost URL; use only the returned path on our fixed origin.
   check(location.pathname.startsWith('/storage/v1/upload/resumable/'), 'TUS_LOCATION_INVALID');
   await success(await request(location.pathname, { method: 'PATCH', headers: headers(anon, { 'x-signature': signature, 'Tus-Resumable': '1.0.0', 'Upload-Offset': '0', 'content-type': 'application/offset+octet-stream' }), body: original }), 'TUS_PATCH');
+  await content(bucket, key, original);
+});
+// Storage v1.77.0 explicitly registers signed TUS under /sign. No user/service
+// Authorization is sent by the uploader. The service only issues the signature.
+await test('signed-tus-consultation', async () => {
+  const bucket = 'natori-consultations', key = `${mode}/signed-tus-${randomUUID()}.png`;
+  const issued = await responseJson(await success(await request(`/storage/v1/object/upload/sign/${bucket}/${key}`, { method: 'POST', headers: json(service), body: '{}' }), 'TUS_SIGN'));
+  const signature = new URL(issued.url, origin).searchParams.get('token');
+  check(!!signature, 'TUS_SIGNATURE_MISSING');
+  const metadata = Object.entries({ bucketName: bucket, objectName: key, contentType: 'image/png' }).map(([k, v]) => `${k} ${Buffer.from(v).toString('base64')}`).join(',');
+  const h = { 'x-signature': signature, 'Tus-Resumable': '1.0.0', 'Upload-Length': String(original.length), 'Upload-Metadata': metadata };
+  const denied = await request('/storage/v1/upload/resumable/sign', { method: 'POST', headers: { ...h, 'x-signature': 'invalid-disposable-signature' } });
+  check(!denied.ok && [400, 401, 403].includes(denied.status), 'INVALID_TUS_SIGNATURE_ALLOWED');
+  await absent(bucket, key);
+  const created = await success(await request('/storage/v1/upload/resumable/sign', { method: 'POST', headers: h }), 'SIGNED_TUS_CREATE');
+  const location = new URL(created.headers.get('location'), origin);
+  check(location.pathname.startsWith('/storage/v1/upload/resumable/sign/'), 'SIGNED_TUS_LOCATION_INVALID');
+  await success(await request(location.pathname, { method: 'PATCH', headers: { 'x-signature': signature, 'Tus-Resumable': '1.0.0', 'Upload-Offset': '0', 'content-type': 'application/offset+octet-stream' }, body: original }), 'SIGNED_TUS_PATCH');
   await content(bucket, key, original);
 });
 await test('controls-invalid-auth-and-missing-bucket', async () => {

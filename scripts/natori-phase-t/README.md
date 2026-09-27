@@ -67,12 +67,15 @@ EXIT trapは当該project IDのstack、当該test container/network/firewall cha
 |---|---|---|
 | `src/features/natori/server/portfolioSiteService.ts` | private資料へのservice upload/read/delete | 応募フォーム、画像変換、管理認可 |
 | `server/deliveryService.ts`, `data/supabaseDeliveryFiles.ts` | createSignedUploadUrl→uploadToSignedUrl相当、実体readback、署名読取 | 納品台帳/ready/受取、署名前の管理認可 |
-| `server/consultationFilesService.ts`, `components/consultation/ConsultationThread.tsx` | signed uploadとTUS POST/PATCH、小ファイルreadback | token認可、finish/メッセージ、分割再開/大容量/UI |
+| `server/consultationFilesService.ts`, `components/consultation/ConsultationThread.tsx` | signed uploadとlocal `/resumable/sign` TUS POST/PATCH、小ファイルreadback | **現行UIのURL/本番gatewayとの互換性**、token認可、finish/メッセージ、分割再開/大容量/UI |
 | avatar/banner owner path | Authで発行したuser JWTで自身CRUD、他人の更新/削除拒否 | プロフィールUI |
 | `src/app/admin/api/entries/[id]/approve/route.ts` | artworks copy、processing-meta upload | 承認API/Stripe/メール |
 | `scripts/colab_stegano_batch.py` | service artworks CRUD、公開読取 | Colab runtime/実際のSecret設定 |
 | `scripts/colab_wm_batch.py` | 読取primitive | `SUPABASE_KEY`の実際のrole（未読） |
 | `src/app/[locale]/entry/FormWrapper.tsx:273` | 現行anon upload成功→候補で拒否 | **既存作品応募は候補をそのまま本番適用すると停止する** |
+
+Storage v1.77.0の[署名route実装](https://github.com/supabase/storage/blob/v1.77.0/src/http/routes/tus/index.ts)と[署名検証](https://github.com/supabase/storage/blob/v1.77.0/src/http/routes/tus/lifecycle.ts)は `/upload/resumable/sign` を使用する。試験の正規TUSはこのrouteへ `x-signature` のみでPOST/PATCHし、無効署名の拒否も検証する。現行製品UIは `/upload/resumable` + `x-signature` を使う。本番gatewayによる書換えや稼働Storage版は未確認であり、同一経路の成功とは主張しない。
+元のanon JWT + x-signatureによる非sign routeも消さず、現行では成功、候補ではRLS拒否・実体なしとなる比較試験を残した。これはpolicy依存の再現であり、Auth失敗を認可拒否に数えない。Phase 0A前に署名だけで通る本番相当gateway経路を確定し、相談UIを回帰すること。
 
 0Aでは作品応募の署名/認可adapterの設計とブラウザ回帰を先に行う必要がある。匿名応募者を単にauthenticated owner扱いにしない。サービスでの作品操作が通ることを、この匿名writer互換性の代替にしない。
 候補は比較実験であり、本番SQLではない。既存file path、token、URL、quote、payment、案件statusの変更はゼロ。
