@@ -173,7 +173,7 @@ node "$root/build-fixture.mjs" "$work/current.sql"
 # Local fixture provisioning needs the Storage table owner's administrative role.
 # This is a Unix-socket connection inside the verified disposable DB container only.
 # HTTP authorization tests below still use anon/user/service JWTs, never this role.
-dbsql() { docker exec -i -e PGOPTIONS='-c phase_t.sandbox=ephemeral' "$db" psql -X -U supabase_admin -d postgres -v ON_ERROR_STOP=1 "$@"; }
+dbsql() { docker exec -i -e PGOPTIONS='-c phase_t.sandbox=ephemeral -c search_path=pg_catalog,public' "$db" psql -X -U supabase_admin -d postgres -v ON_ERROR_STOP=1 "$@"; }
 dbsql <"$work/current.sql" >/dev/null
 dbsql -At <"$root/catalog.sql" >"$work/results/catalog-current.json"
 node "$root/verify-catalog.mjs" "$work/results/catalog-current.json" current
