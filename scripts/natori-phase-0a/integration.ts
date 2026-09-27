@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Upload } from "tus-js-client";
 import { consultationUploadEndpoint } from "../../src/features/natori/lib/consultationUploadEndpoint";
 import { ENTRY_UPLOAD_BUCKET } from "../../src/lib/entryUpload";
+import { observeStorage } from "./observe-storage";
 
 let setupStage = "runtime-config";
 async function main() {
@@ -23,6 +24,7 @@ async function main() {
   process.env.SUPABASE_SERVICE_ROLE_KEY = keys.service;
   setupStage = "load-server-module";
   const { POST } = await import("../../src/app/api/entry/upload/route");
+  const observer = observeStorage(origin, ENTRY_UPLOAD_BUCKET);
   const { issueEntryUploadGrant } = await import(
     "../../src/lib/server/entryUploadGrant"
   );
@@ -340,9 +342,34 @@ async function main() {
   await test("concurrent-finish", async () => {
     const s = await sign();
     await put(s);
-    const [one, two] = await Promise.all([finished(s), finished(s)]);
-    check(one.fileName === two.fileName, "CONCURRENT_TARGETS");
+    const observed = await observer.pair(() => finished(s), false);
+    if (observed.results.some((r) => r.status === "rejected"))
+      console.log(`DIAGNOSTIC phase0a/${mode}/concurrent-finish ${JSON.stringify(observed.events)}`);
+    const [one, two] = observed.results;
+    if (one.status === "rejected") throw one.reason;
+    if (two.status === "rejected") throw two.reason;
+    check(one.value.fileName === two.value.fileName, "CONCURRENT_TARGETS");
   });
+  // A fixed, bounded sample, never "retry until green". Each pair uses a new
+  // synthetic reservation. Preserve the first failure and wait for both actors.
+  for (const synchronized of [false, true]) {
+    await test(synchronized ? "concurrent-observed-synchronized" : "concurrent-observed-natural", async () => {
+      const count = synchronized ? 12 : 24;
+      for (let sample = 1; sample <= count; sample++) {
+        const s = await sign();
+        await put(s);
+        const observed = await observer.pair(() => finished(s), synchronized);
+        const failed = observed.results.find((r) => r.status === "rejected");
+        if (failed) {
+          console.log(`DIAGNOSTIC phase0a/${mode}/${synchronized ? "synchronized" : "natural"}/sample-${sample} ${JSON.stringify(observed.events)}`);
+          if (failed.status === "rejected") throw failed.reason;
+        }
+        await content("artworks", s.path.slice("pending/".length), png);
+        await absent(ENTRY_UPLOAD_BUCKET, s.path);
+      }
+      console.log(`SAMPLES phase0a/${mode}/${synchronized ? "synchronized" : "natural"}: ${count} pairs, both actors 200, bytes verified`);
+    });
+  }
   for (const bucket of ["aura-assets", "card-assets", "natori-portfolio"]) {
     await test(`remaining-bucket/${bucket}`, async () => {
       const path = `phase0a/${mode}-${randomUUID()}.png`;
@@ -519,6 +546,7 @@ async function main() {
     skipped: 0,
     results,
   };
+  observer.restore();
   writeFileSync(
     `/results/phase0a-${mode}.json`,
     JSON.stringify(summary, null, 2),
