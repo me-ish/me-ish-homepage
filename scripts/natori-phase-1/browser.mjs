@@ -8,7 +8,7 @@ const require = createRequire('/app/package.json');
 const { createClient } = require('@supabase/supabase-js');
 const { chromium, expect } = require('@playwright/test');
 setDefaultResultOrder('ipv4first');
-const appOrigin = 'http://localhost:3000', results = [], browserProblems = new Set(), browserErrorDiagnostics = [], resourceFailures = [];
+const appOrigin = 'http://localhost:3000', results = [], browserProblems = new Set(), browserErrorDiagnostics = [], resourceFailures = [], rejectedResources = [], stylesheetResponses = [];
 const check = (ok, code) => { if (!ok) throw new Error(code); };
 let stage = 'preflight', checkpoint = 'START', server, browser, capture;
 async function test(name, fn) {
@@ -83,25 +83,39 @@ async function main() {
   browser = await chromium.launch({ headless: true, args: ['--host-resolver-rules=MAP localhost 127.0.0.1'] });
   async function context() {
     const c = await browser.newContext({ baseURL: appOrigin, serviceWorkers: 'block' }); c.setDefaultTimeout(15000); c.setDefaultNavigationTimeout(60000);
+    await c.exposeBinding('__phase1RecordRejectedResource', (_source, record) => {
+      rejectedResources.push({ stage, ...record });
+    });
     await c.addInitScript(() => {
-      window.__phase1RejectedResources = [];
       window.addEventListener('unhandledrejection', event => {
         const reason = event.reason, target = reason?.target;
         const url = target?.src || target?.href;
-        let category = 'none';
+        let category = 'none', asset = 'none';
         if (typeof url === 'string') {
           try { const u = new URL(url, location.origin);
             category = u.origin !== location.origin ? 'other-origin' : u.pathname.startsWith('/_next/') ? 'next-asset' : 'app';
+            asset = u.pathname.endsWith('/app/layout.css') ? 'root-layout-css'
+              : u.pathname.startsWith('/_next/static/css/') ? 'next-css' : 'other';
           } catch { category = 'invalid'; }
         }
-        window.__phase1RejectedResources.push({ type: typeof reason?.type === 'string' && /^[a-z]+$/.test(reason.type) ? reason.type : 'unknown',
-          targetTag: typeof target?.tagName === 'string' && /^[A-Z]+$/.test(target.tagName) ? target.tagName : 'none', category });
+        const record = { type: typeof reason?.type === 'string' && /^[a-z]+$/.test(reason.type) ? reason.type : 'unknown',
+          targetTag: typeof target?.tagName === 'string' && /^[A-Z]+$/.test(target.tagName) ? target.tagName : 'none', category, asset };
+        // Keep diagnostics across navigation; never suppress the original rejection.
+        window.__phase1RecordRejectedResource(record).catch(() => {});
       });
+    });
+    c.on('response', response => {
+      const u = new URL(response.url());
+      if (response.request().resourceType() === 'stylesheet' && u.origin === appOrigin) {
+        stylesheetResponses.push({ stage, status: response.status(),
+          asset: u.pathname.endsWith('/app/layout.css') ? 'root-layout-css' : 'other-css' });
+      }
     });
     c.on('requestfailed', req => {
       const u = new URL(req.url()), text = req.failure()?.errorText ?? '';
       resourceFailures.push({ stage, resourceType: req.resourceType(), appOrigin: u.origin === appOrigin,
-        category: u.pathname.startsWith('/_next/') ? 'next-asset' : u.pathname.startsWith('/storage/') ? 'storage' : 'app',
+        category: u.hostname === 'fonts.googleapis.com' ? 'google-font-stylesheet'
+          : u.pathname.startsWith('/_next/') ? 'next-asset' : u.pathname.startsWith('/storage/') ? 'storage' : 'app',
         errorCode: text.match(/net::ERR_[A-Z_]+/)?.[0] ?? 'request-failed' });
     });
     c.on('page', page => {
@@ -250,11 +264,10 @@ async function main() {
     check(records.filter(j => j.purpose === 'delivery_issue_client').every(j => !JSON.stringify(j).includes(primaryToken) && j.payload.format === 'natori-delivery-aes256gcm-v1'), 'PLAIN_TOKEN_STORED');
     check(browserProblems.size === 0, [...browserProblems].join('_') || 'BROWSER_ERROR');
   });
-  const rejectedResources = (await Promise.all([page, clientPage].map(p => p.evaluate(() => window.__phase1RejectedResources ?? [])))).flat();
   await manager.close(); await client.close();
   writeFileSync('/results/phase1-browser.json', JSON.stringify({ tests: results, passed: results.filter(r => r.status === 'passed').length,
     failed: results.filter(r => r.status === 'failed').length, skipped: 0, providerRequests: providerCalls,
-    engine: 'Chromium 1.58.2; mobile viewport only, not iPhone Safari', browserProblems: [...browserProblems], browserErrorDiagnostics, rejectedResources, resourceFailures }, null, 2));
+    engine: 'Chromium 1.58.2; mobile viewport only, not iPhone Safari', browserProblems: [...browserProblems], browserErrorDiagnostics, rejectedResources, resourceFailures, stylesheetResponses }, null, 2));
   console.log(`PHASE 1 BROWSER ${results.filter(r => r.status === 'passed').length} passed / ${results.filter(r => r.status === 'failed').length} failed / 0 skipped`);
   check(results.length === 11 && results.every(r => r.status === 'passed'), 'BROWSER_FAILED');
 }
