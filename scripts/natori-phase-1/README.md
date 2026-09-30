@@ -26,6 +26,12 @@ Order:
    after the sealed network move. No client URL rewriting or broader egress rule is used.
    `fixture.sql` matches the previously read production delivery table constraints; only the
    Phase 1 migration is added. No full migration history or production seed is executed.
+   The disposable browser shell uses system fonts: `prepare-browser.mjs` replaces only the
+   reviewed Google Fonts `@import` in its copied `globals.css`. All application CSS rules,
+   management/customer components, refreshes and API calls remain intact. Original and fixture
+   CSS checksums are recorded separately. The browser gate still rejects every page/DOM error
+   and resource rejection, and now also requires successful local stylesheet responses.
+   No external font response is mocked and no network allowlist is widened.
 4. `integration.ts`: 28 real DB/Auth/Storage scenarios including absent/mismatched files,
    replay, delete/publish and accept/resend races, commit/response loss, legacy compatibility,
    ciphertext expiry, and an actual 200MiB signed TUS upload plus full download digest.
@@ -52,3 +58,32 @@ limits must be checked separately before activation. A mobile Chromium viewport 
 iPhone Safari or home-screen-app test. Provider capture proves application ordering and
 idempotency, not actual mailbox delivery. Artifacts contain counts, safe classifications,
 versions, fixture-only screenshots and checksums, never passwords, signed URLs or mail bodies.
+
+## PR #101 failure investigation (2026-10-01 JST)
+
+Baseline head: `67cc3d91ca3916445d9963fbd164c59a258b40fa`.
+
+- **CI / Security Audit:** the unchanged main lockfile contained dev-only `brace-expansion`
+  1.1.18, 2.1.4 and 5.0.9. Update only these three resolved packages to 1.1.21, 2.1.7 and
+  5.0.12 with `npm update brace-expansion --package-lock-only --ignore-scripts --no-audit --no-fund`.
+  Keep the high-severity gate. Run the full **CI**, including lint/type/unit/E2E coverage for
+  the changed toolchain dependency graph. Do not use a broad `npm audit fix --force`.
+- **Phase 0A:** before=26/26, after=25/26. Natural concurrent finish sample 20 recorded
+  published download HTTP 500 / `InternalError`; the unchanged gallery adapter returned 503.
+  Re-run the same head once in a fresh isolated stack; attempt 2 passed before/after 26/26,
+  including all 24 natural and 12 synchronized pairs in each mode. Keep the original failure
+  evidence and strict assertions. No product retry or Storage-policy change is justified here.
+- **Phase 1 browser:** real DB/Storage 28/28, browser operation scenarios 10/10; the final
+  page-error gate failed. The original shared stylesheet still imported external Google Fonts
+  inside a sealed network. Diagnostic head `865aff1992f5c8f631350f497889c2f12315c760` preserves
+  every rejection across navigation and records local stylesheet status without URLs/tokens.
+  Fix the disposable CSS import, then repeat **Natori Phase 1** in full: existing T/N regressions,
+  real Storage/TUS 28 scenarios, and all 11 browser scenarios. A filtered error, skipped test or
+  relaxed egress rule is not a pass. Production font availability is outside this fixture test.
+
+Minimal order: unchanged-head **0A** retry and evidence capture → scoped lockfile patch/full
+**CI** → diagnose and remove the fixture's remote font import → full **Phase 1** → inspect
+**T/0A/0B/N/4** on the final implementation head because the lockfile/shared runner is used
+by those workflows too. Push to `codex/natori-phase-1`; keep the PR Draft and never merge to
+trigger a test. Exact final head, run links and results are maintained in the
+[PR #101 description](https://github.com/me-ish/me-ish-homepage/pull/101).

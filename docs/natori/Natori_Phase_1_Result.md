@@ -98,6 +98,34 @@ StorageとDBを単一transactionにはできない。発行済みpathを通常�
 隔離実Storage/ブラウザ：Draft PRの専用Actionsで実行する。最終run/SHA/件数は実行完了後に更新する。
 スクリプト作成やモック成功だけでPhase 1完了とは判定しない。
 
+### 2026-10-01 JST 追加調査・最小修正
+
+調査基準：`67cc3d91ca3916445d9963fbd164c59a258b40fa`。PR #101はDraft、main未反映。
+
+| 失敗 | 切り分けと再現条件 | 必要な修正・検証 |
+| --- | --- | --- |
+| CI Security Audit | mainと同一のdev依存`brace-expansion` 1.1.18/2.1.4/5.0.9。`npm audit --audit-level=high`で再現。Phase 1による追加ではない | lockfileの3パッケージだけを1.1.21/2.1.7/5.0.12へ更新。通常CIの全ジョブで検証 |
+| Phase 0A after 25/26 | natural同時finish sample 20でpublished downloadが一時500 `InternalError`、既存APIは503。Storage内部の詳細原因は採取されていない。今回の差分でこのギャラリー経路・policy・試験は変更していない | 元の失敗を保持して同一headを1回再実行。attempt 2はbefore/after 26/26、各24自然競合+12同期競合成功。製品コード・retry・assertionの変更なし |
+| Phase 1 browser 10/11 | 既存`globals.css`のGoogle Fonts importが隔離環境でDNS失敗。更新/HMRに伴うroot stylesheetのpreloadが`Event`をreject。今回追加した試験fixtureの外部CSS依存が原因で、納品DB/APIの整合性失敗ではない | 試験用CSSだけでこのimport 1行を除外。全CSSルールと実画面/APIを維持。全page/DOM error検知を維持し、正常なlocal CSS responseとresource rejectionゼロも要求 |
+
+同一headの0A再実行：[run 36715938260 / attempt 2](https://github.com/me-ish/me-ish-homepage/actions/runs/36715938260/attempts/2)。
+依存修正+診断head：`865aff1992f5c8f631350f497889c2f12315c760`。
+[通常CI 36774112435](https://github.com/me-ish/me-ish-homepage/actions/runs/36774112435)は全ジョブ成功。
+[Phase 1 36774112570](https://github.com/me-ish/me-ish-homepage/actions/runs/36774112570)は28+10成功、
+最終error gateだけ失敗。artifactの3件の`Event`はすべて`LINK / root-layout-css`で、
+local CSS自体は全13応答200、外部font CSSが`ERR_NAME_NOT_RESOLVED`だった。
+秘密値/URLを公開せず、画面遷移で診断が失われないよう記録を追加した。
+
+修正順は、元headの0A再実行→依存3箇所の更新/通常CI→上記CSS診断→fixture import修正→
+Phase 1全試験と共有lockfileを使うT/0A/0B/N/4の確認。
+source/fixture CSSのchecksumを別々に記録し、ローカルでも変更がimport 1行だけと確認した。
+本番`globals.css`・Next/Reactのバージョン・通信allowlist・納品製品コードは変更していない。
+本番の外部フォント可用性はこの隔離試験で保証しない。
+
+修正後の確定head、各workflowのrunリンク、最終件数は
+[PR #101本文](https://github.com/me-ish/me-ish-homepage/pull/101)に記録する。
+失敗試験の除外、page errorの無視、Storage失敗の成功扱い、mergeによる試験起動は行わない。
+
 予定する必須試験：Phase Tのkernel隔離・Storage正負試験、Phase Nの既存DB/ブラウザ回帰、
 Phase 1 DB/Auth/Storage 28件、実API/画面Chromium 11件。失敗・起動不能・認証不足はskip扱いにしない。
 主なfailure injection：DB commit前拒否とcommit後応答消失の区別、provider受付後中断、通知finish失敗、
@@ -133,7 +161,8 @@ Phase 1実Storageが26成功/2失敗/0 skip、ブラウザ試験は未到達だ�
 旧受取日時の比較をDB表現へ合わせ、TUS継続先の安全な診断と通信前origin拒否を追加して再試験する。
 独立したブラウザ試験も証跡を採取し、いずれか失敗ならjobを失敗にする。
 既存CIのSecurity Auditはmainと同じlockfileのdev依存`brace-expansion`に対するhigh警告で失敗。
-製品依存・lockfileの無断更新や検証の弱体化は行わず、実装試験の成否と分けて記録する。
+初回は実装試験の成否と分けて記録した。追加調査では上記のdev依存3箇所だけを更新し、
+high severity gateや通常CI/既存Phaseの検証条件は維持した。
 
 未実施：実メール箱での納品通知/再案内/受取通知、iPhone Safari実機・ホーム画面版、
 本番Storage上限の確認、本番flag/暗号鍵設定、実顧客案件の納品操作。

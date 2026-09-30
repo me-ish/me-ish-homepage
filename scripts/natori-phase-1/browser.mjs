@@ -262,6 +262,9 @@ async function main() {
   await test('ciphertext-only-history-and-no-browser-dom-errors', async () => {
     const records = await jobs(primary.id); check(records.filter(j => j.purpose === 'delivery_issue_client').length === 2, 'RESEND_COUNT');
     check(records.filter(j => j.purpose === 'delivery_issue_client').every(j => !JSON.stringify(j).includes(primaryToken) && j.payload.format === 'natori-delivery-aes256gcm-v1'), 'PLAIN_TOKEN_STORED');
+    check(stylesheetResponses.some(r => r.asset === 'root-layout-css')
+      && stylesheetResponses.every(r => r.status >= 200 && r.status < 400), 'APPLICATION_CSS_NOT_LOADED');
+    check(rejectedResources.length === 0, 'UNHANDLED_RESOURCE_REJECTION');
     check(browserProblems.size === 0, [...browserProblems].join('_') || 'BROWSER_ERROR');
   });
   await manager.close(); await client.close();
