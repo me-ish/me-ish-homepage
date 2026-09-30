@@ -67,7 +67,7 @@ async function main() {
           "content-type": "application/json",
           "x-requested-with": "me-ish",
           origin: "http://localhost:3000",
-          "x-forwarded-for": ip ?? `192.0.2.${++requestId}`,
+          "x-forwarded-for": ip ?? `198.18.${Math.floor(++requestId / 254)}.${(requestId % 254) + 1}`,
           ...extra,
         },
         body: JSON.stringify(body),
@@ -354,7 +354,7 @@ async function main() {
   // synthetic reservation. Preserve the first failure and wait for both actors.
   for (const synchronized of [false, true]) {
     await test(synchronized ? "concurrent-observed-synchronized" : "concurrent-observed-natural", async () => {
-      const count = synchronized ? 12 : 24;
+      const count = synchronized ? 48 : 96;
       for (let sample = 1; sample <= count; sample++) {
         const s = await sign();
         await put(s);

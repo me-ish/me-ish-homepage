@@ -59,6 +59,8 @@ receiptは既存server専用service keyをdomain separation付きHMACに使う�
 - 元の17 isolation + 35 current + 35 candidate実Storage試験を維持。
 - Phase 0Aの実API/service試験をpolicy変更前後で各24ケース。認証不足や起動失敗をskip扱いにしない。Storageレスポンスだけでなくbytes/不存在/残存を確認する。
 - cutover未承認・同名policy driftを否定試験。失敗時に部分削除されていないことをカタログで確認する。
+- 2026-10-01追加診断: 同時finishをpolicy切替前後それぞれ自然競合96組・upload直前同期48組の固定サンプルで検証する。最初の失敗を保持し、両actorの終了を待ってから失敗を報告する。成功するまでの再実行や503の成功扱いは行わない。テスト用IPはbenchmark用予約範囲を使い、rate-limit否定試験と分離する。
+- 終了・失敗時、専用Storage containerを削除する前に`phase0a-storage.json`へbackend種別、HTTP状態、許可した内部エラー分類、旧版削除と欠落版の対応だけを保存する。object/version/request IDは診断用fingerprint。rawログ・message・stack・URL・header・payload・鍵はartifactに含めない。`node --test scripts/natori-phase-0a/collect-storage.test.mjs`で漏洩防止と対応付けを検査する。
 - TUSは実tus-js-clientを使用。6MiBを超えるファイルとHEAD offsetを伴う中断再開を確認。CLIのLocationがlocalhostを指すため、試験側だけ返却pathを固定内部originへ置換する。製品には試験用例外を入れない。本番CORS/gateway/Safariの証明とは区別する。
 - unit/component: receipt改ざん/期限/鍵境界、相談UIの成功と失敗。Playwright: 実応募画面の署名→upload→finish→登録順と、mobile viewportのfinish失敗時に登録しないこと（通信mock）。
 - Stripe/メール送信、既存案件の全フロー再現は対象外。既存4 E2E skipは変更しない。
