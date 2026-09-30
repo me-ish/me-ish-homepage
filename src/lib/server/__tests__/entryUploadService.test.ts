@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { createClient } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const storage = vi.hoisted(() => ({
@@ -29,6 +30,41 @@ describe("gallery publication readback during a version switch", () => {
     storage.getPublicUrl.mockReturnValue({data: {publicUrl: "https://synthetic.invalid/image.png"}});
   });
   afterEach(() => vi.unstubAllEnvs());
+
+  for (const [name, status, body] of [
+    ["HTTP 500", 500, {statusCode: "500", code: "InternalError", message: "InternalError"}],
+    ["S3 HTTP 400 / semantic 404", 400, {statusCode: "404", code: "S3Error", message: "NoSuchKey"}],
+  ] as const) {
+    it(`recovers the actual SDK download error envelope for ${name}`, async () => {
+      const sdk = createClient("https://synthetic.invalid", key, {
+        auth: {persistSession: false, autoRefreshToken: false},
+        global: {fetch: async () => new Response(JSON.stringify(body), {status})},
+      });
+      const {error} = await sdk.storage.from("artworks").download("synthetic.png");
+      expect(error?.name).toBe("StorageUnknownError");
+      storage.download.mockResolvedValueOnce({data: null, error});
+      expect(await finishEntryUpload(issueEntryUploadGrant(input, key).receipt)).toMatchObject({kind: "ok"});
+      expect(storage.download).toHaveBeenCalledTimes(2);
+      expect(storage.upload).not.toHaveBeenCalled();
+    });
+  }
+  for (const [name, status, body] of [
+    ["authorization rejection", 403, {statusCode: "403", code: "AccessDenied", message: "Access denied"}],
+    ["missing bucket", 400, {statusCode: "404", code: "NoSuchBucket", message: "Bucket not found"}],
+  ] as const) {
+    it(`does not retry the actual SDK envelope for ${name}`, async () => {
+      const sdk = createClient("https://synthetic.invalid", key, {
+        auth: {persistSession: false, autoRefreshToken: false},
+        global: {fetch: async () => new Response(JSON.stringify(body), {status})},
+      });
+      const {error} = await sdk.storage.from("artworks").download("synthetic.png");
+      storage.download.mockResolvedValue({data: null, error});
+      expect(await finishEntryUpload(issueEntryUploadGrant(input, key).receipt)).toEqual({kind: "storage-error"});
+      expect(storage.download).toHaveBeenCalledTimes(1);
+      expect(storage.upload).not.toHaveBeenCalled();
+      expect(storage.remove).not.toHaveBeenCalled();
+    });
+  }
 
   for (const [name, error] of [
     ["local backend 500", transient],

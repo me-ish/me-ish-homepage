@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const codes = new Set(['ENOENT', 'ENODATA', 'EIO', 'EACCES', 'ECONNRESET',
@@ -86,21 +86,10 @@ function main() {
   if (records.length > 10000) throw new Error('DIAGNOSTIC_LIMIT');
   const summary = { backend: ['file', 's3'].includes(backend.stdout?.trim())
     ? backend.stdout.trim() : 'unclassified', records };
-  const controls = ['race-baseline', 'race-recovery'];
-  const proof = {};
-  for (const mode of controls) {
-    const path = `${output}/phase0a-${mode}.json`;
-    if (!existsSync(path)) continue;
-    const trace = JSON.parse(readFileSync(path, 'utf8'));
-    const failed = trace.events.find(e => e.operation === 'published-download' && e.status === 500);
-    const internal = failed && records.find(r => r.object === failed.object && r.status === 500
-      && r.time >= failed.startedEpochMs && r.errors.includes('ENOENT') && r.missingVersions.length);
-    if (!internal || !records.some(r => r.operation === 'version-delete' && r.object === internal.object
-      && r.time <= internal.time && internal.missingVersions.includes(r.deletedVersion)))
-      throw new Error('CONTROLLED_MISSING_VERSION_NOT_PROVEN');
-    proof[mode] = {missingOldVersionMatched: true};
-  }
-  summary.controlledCause = proof;
+  summary.versionReadRaces = records.filter(r => r.status === 500 && r.errors.includes('ENOENT'))
+    .map(r => ({time: r.time, object: r.object,
+      missingVersionWasDeleted: records.some(d => d.operation === 'version-delete' && d.object === r.object
+        && d.time <= r.time && r.missingVersions.includes(d.deletedVersion))}));
   writeFileSync(`${output}/phase0a-storage.json`, JSON.stringify(summary, null, 2), {mode: 0o600});
   console.log(`Storage internal classifications saved: records=${records.length}, errors=${records.filter(r => r.errors.length).length}`);
 }

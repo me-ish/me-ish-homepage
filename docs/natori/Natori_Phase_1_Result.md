@@ -215,12 +215,21 @@ Storageの実backendはfileで、59件の同一公開先への複数200 upload�
 [run 36779194764](https://github.com/me-ish/me-ish-homepage/actions/runs/36779194764)もbefore/after 26/26で、自然な500は捕捉できなかった。
 これらの成功だけで、過去の失敗解消や隔離環境固有と判断しない。
 
+head `1f147c1ec21042138cbf8cd96280a207d567269f`の[run 36781501860](https://github.com/me-ish/me-ish-homepage/actions/runs/36781501860)で、
+順序制御fixtureを入れる前の通常before/synchronized sample 47に自然な失敗を捕捉した。
+両upload 200後のdownload 500の内部原因は`ENOENT / FileBackend.getObject`。
+欠落した内部版のfingerprint `abc39108cb25d278`と、その5ms前の同じobjectの`ObjectAdminDelete`削除版が一致した。
+これはcutover前でも起きる既存Storage/旧版削除の競合であり、Phase 1の納品処理やpolicy切替を原因としない。
+初期修正候補はstorage-js downloadがHTTP Responseを`StorageUnknownError.originalError`へ包む形に未対応だった。
+実SDKを固定レスポンスで動かす回帰testで失敗を再現し、このenvelopeとS3のHTTP400/semantic404を識別する読取復旧を追加した。
+
 公式Storage v1.77.0のpermission checkは試行insertをrollbackし、completeUploadは同じ公開先をlock後にupsertする。
 両writerが先にpermission checkを通過すると、upsert=falseでも2つのuploadが200となり、2番目が旧内部版の削除を予約できる。
-downloadが旧DB版を参照してからbackend実体を読む間に削除される競合を、独立した順序制御fixtureで検査する。
-通常before/afterは元Storageを使い、順序制御部分だけDB/backend間とwriter commit順を遅延する。
-旧製品serviceの503、新serviceの同じ実500からの復旧、内部ENOENTと旧版削除の一致が必須条件。
-正確な試験範囲・checksum・最終結果は[0A runbook](../../scripts/natori-phase-0a/README.md)とPR #101本文に記録する。
+downloadが旧DB版を参照してからbackend実体を読む間に旧版が削除される競合を、上記の未変更Storageのログで確認した。
+自然な競合で内部原因を採取できたため、一時的な順序制御fixtureは最終構成から除去した。
+最終検証はStorage内部コード・レスポンスを変更せず、before/afterそれぞれ26ケース、固定自然96組・同期48組で行う。
+実SDKの500/semantic404 envelope、認可拒否、継続障害を別のunit testで確認する。
+正確な試験範囲・最終結果は[0A runbook](../../scripts/natori-phase-0a/README.md)とPR #101本文に記録する。
 
 gallery serviceの最小修正は公開先の読取を最大3回へ限定し、metadata・容量・MIME・全bytesのSHA256を読み直すこと。
 追加待機は50ms/100ms。内容不一致、認可拒否、継続障害はfail closedを維持し、読取失敗から再uploadへ戻らない。

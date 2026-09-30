@@ -50,9 +50,17 @@ function published(grant: EntryUploadGrant): Published {
     .getPublicUrl(grant.fileName);
   return { kind: "ok", fileName: grant.fileName, publicUrl: data.publicUrl };
 }
-function retryablePublishedRead(error: unknown): boolean {
+async function retryablePublishedRead(error: unknown): Promise<boolean> {
   if (!error || typeof error !== "object") return false;
-  const e = error as { status?: number; statusCode?: string | number };
+  const e = error as { status?: number; statusCode?: string | number; originalError?: unknown };
+  // storage-js download uses noResolveJson and wraps the HTTP Response in a
+  // StorageUnknownError, rather than exposing StorageApiError.status directly.
+  if (e.originalError instanceof Response) {
+    if ([500, 502, 503, 504].includes(e.originalError.status)) return true;
+    if (![400, 404].includes(e.originalError.status)) return false;
+    const body: unknown = await e.originalError.clone().json().catch(() => null);
+    return missingObject(body);
+  }
   if (e.status === 401 || e.status === 403) return false;
   return (
     missingObject(error) ||
@@ -80,7 +88,7 @@ async function readPublished(
       return matches(Buffer.from(await result.data.arrayBuffer()), grant)
         ? published(grant)
         : { kind: "invalid" };
-    if (attempt === 2 || !retryablePublishedRead(result.error))
+    if (attempt === 2 || !(await retryablePublishedRead(result.error)))
       return { kind: "storage-error" };
     // Concurrent identical uploads can replace the internal Storage version
     // between metadata lookup and backend read. Retry only the read, with a

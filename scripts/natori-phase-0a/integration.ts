@@ -10,7 +10,7 @@ import { observeStorage } from "./observe-storage";
 let setupStage = "runtime-config";
 async function main() {
   const mode = process.argv[2];
-  if (!["before", "after", "race-baseline", "race-recovery"].includes(mode))
+  if (!["before", "after"].includes(mode))
     throw new Error("PHASE_0A_MODE_REQUIRED");
   const { origin } = JSON.parse(
     readFileSync("/runtime/network.json", "utf8"),
@@ -137,38 +137,6 @@ async function main() {
     check(d.fileName === s.path.slice("pending/".length), "FINISH_PATH");
     await content("artworks", d.fileName, bytes);
     return d;
-  }
-  if (mode === "race-baseline" || mode === "race-recovery") {
-    setupStage = "controlled-race";
-    // Run only after normal before/after tests, with the disposable FileBackend
-    // paused for 600ms between the real DB lookup and filesystem stat. Both
-    // writers finish Storage's permission check before writer 2 commits 200ms
-    // later, so the selected old version is genuinely deleted.
-    const s = await sign();
-    await put(s);
-    const observed = await observer.pair(() => finished(s), true);
-    check(observed.events.filter(e => e.operation === "published-upload" && e.status === 200).length === 2,
-      "RACE_BOTH_UPLOADS_NOT_PROVEN");
-    const failedRead = observed.events.find(e => e.operation === "published-download" && e.status === 500);
-    check(failedRead, "RACE_INTERNAL_500_NOT_REPRODUCED");
-    if (mode === "race-baseline") {
-      check(observed.results.filter(r => r.status === "rejected" && r.reason instanceof Error
-        && r.reason.message === "FINISH_HTTP_503").length === 1
-        && observed.results.filter(r => r.status === "fulfilled").length === 1,
-        "RACE_BASELINE_503_NOT_REPRODUCED");
-    } else {
-      check(observed.results.every(r => r.status === "fulfilled"), "RACE_RECOVERY_FAILED");
-      check(observed.events.some(e => e.actor === failedRead.actor && e.operation === "published-download" && e.status === 200
-        && e.startedEpochMs > failedRead.startedEpochMs), "RACE_FRESH_READ_NOT_PROVEN");
-    }
-    await content("artworks", s.path.slice("pending/".length), png);
-    await absent(ENTRY_UPLOAD_BUCKET, s.path);
-    observer.restore();
-    writeFileSync(`/results/phase0a-${mode}.json`, JSON.stringify({mode,
-      baseline503Reproduced: mode === "race-baseline", recoveredActors: mode === "race-recovery" ? 2 : 1,
-      bytesVerified: true, events: observed.events}, null, 2));
-    console.log(`PASS phase0a/${mode}: internal 500 proven, ${mode === "race-baseline" ? "baseline 503 reproduced" : "both actors 200 with fresh byte proof"}`);
-    return;
   }
   await test("origin-and-csrf", async () => {
     const body = {
@@ -594,7 +562,7 @@ main().catch((error: unknown) => {
   console.error("PHASE_0A_SETUP_FAILED", setupStage, {
     type: /^[A-Za-z]+Error$/.test(e?.name ?? "") ? e.name : "Error",
     code: /^[A-Z_0-9]+$/.test(e?.code ?? "") ? e.code :
-      /^(?:SIGN_HTTP_\d{3}|FINISH_HTTP_\d{3}|RACE_[A-Z_]+|SIGNED_UPLOAD_FAILED|READBACK_FAILED|READBACK_BYTES|EXPECTED_OBJECT_ABSENT)$/.test(e?.message ?? "")
+      /^(?:SIGN_HTTP_\d{3}|FINISH_HTTP_\d{3}|SIGNED_UPLOAD_FAILED|READBACK_FAILED|READBACK_BYTES|EXPECTED_OBJECT_ABSENT)$/.test(e?.message ?? "")
         ? e.message : "UNCLASSIFIED",
     locations: e?.stack?.match(/integration\.cjs:\d+:\d+/g)?.slice(0, 4),
   });

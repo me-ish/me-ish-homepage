@@ -61,8 +61,8 @@ receiptは既存server専用service keyをdomain separation付きHMACに使う�
 - cutover未承認・同名policy driftを否定試験。失敗時に部分削除されていないことをカタログで確認する。
 - 2026-10-01追加診断: 同時finishをpolicy切替前後それぞれ自然競合96組・upload直前同期48組の固定サンプルで検証する。最初の失敗を保持し、両actorの終了を待ってから失敗を報告する。成功するまでの再実行や503の成功扱いは行わない。テスト用IPはbenchmark用予約範囲を使い、rate-limit否定試験と分離する。
 - 終了・失敗時、専用Storage containerを削除する前に`phase0a-storage.json`へbackend種別、HTTP状態、許可した内部エラー分類、旧版削除と欠落版の対応だけを保存する。object/version/request IDは診断用fingerprint。rawログ・message・stack・URL・header・payload・鍵はartifactに含めない。`node --test scripts/natori-phase-0a/collect-storage.test.mjs`で漏洩防止と対応付けを検査する。
-- 通常行列は未変更のStorageで実施する。その後の独立した順序制御試験だけ、使い捨てStorage v1.77.0のDB版参照→backend stat間を600ms遅延し、両writerの権限確認後に2番目のcommitを200ms遅らせる。認可・policy・レスポンス・ファイル本体は変更しない。backend/uploader双方の元・fixture checksumを保存する。
-- 順序制御のnegative controlはhead `55302499e252fbb983887908cd086f9dbe6d920d`の旧gallery serviceをそのまま別bundleに使用する。旧版では実500→API 503、新版では同じ実500後に新しいmetadata/実bytesを読み直して両actor 200となることを要求する。内部`ENOENT`の欠落版fingerprintと、それ以前の`ObjectAdminDelete`の削除版が一致しなければgate失敗。自然競合での元の発生率とは区別する。
+- 内部原因は未変更Storageの通常before/synchronized sample 47（head `1f147c1` / run `36781501860`）で採取した。`ENOENT / FileBackend.getObject`の欠落版と、その5ms前の同一objectの旧版削除が一致した。最終構成はStorage内部コード・応答・認可・policyを変更しない。
+- storage-js downloadの失敗は`StorageUnknownError.originalError`にHTTP Responseを包む。製品は実HTTP 500系、またはHTTP400/404のStorage `NoSuchKey`を識別する。実SDKを固定応答で動かすunit testで500/S3 semantic404からの復旧と、403/NoSuchBucketの即時拒否を確認する。
 - 製品側の最小修正は`readPublished`の読取のみ最大3回（追加待機50ms/100ms）。実体の容量・MIME・SHA256を各回検証し、不一致・認可拒否・継続障害は成功にしない。一度確認した公開先が再取得時に欠落した場合も再uploadへ戻らない。cloud backend/version・本番発生実績の確認は別途必要であり、隔離環境固有と断定しない。
 - TUSは実tus-js-clientを使用。6MiBを超えるファイルとHEAD offsetを伴う中断再開を確認。CLIのLocationがlocalhostを指すため、試験側だけ返却pathを固定内部originへ置換する。製品には試験用例外を入れない。本番CORS/gateway/Safariの証明とは区別する。
 - unit/component: receipt改ざん/期限/鍵境界、相談UIの成功と失敗。Playwright: 実応募画面の署名→upload→finish→登録順と、mobile viewportのfinish失敗時に登録しないこと（通信mock）。
