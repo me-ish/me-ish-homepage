@@ -149,6 +149,18 @@ async function main() {
     await clientPage.getByRole('button', { name: 'ファイルと受取状況を更新' }).click(); await expect(acceptButton()).toBeEnabled();
     check(JSON.stringify(before) === JSON.stringify(await projectRow(primary.id)) && JSON.stringify(beforeJobs) === JSON.stringify(await jobs(primary.id)), 'GET_WROTE_STATE');
   });
+  await test('real-browser-signed-tus-upload-over-six-mib-and-finalize', async () => {
+    const p = await project('Phase 1 browser resumable upload'); await page.reload();
+    const card = page.getByRole('article').filter({ hasText: p.title }); await expect(card).toBeVisible({ timeout: 30000 });
+    await card.getByRole('button', { name: '納品メール', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: '納品メールを送る' }), bytes = Buffer.alloc(7 * 1024 * 1024, 0x4b);
+    await dialog.locator('input[type="file"]').setInputFiles({ name: 'browser-resumable.bin', mimeType: 'application/octet-stream', buffer: bytes });
+    await expect(dialog.getByText('保存確認済み', { exact: true })).toBeVisible({ timeout: 30000 });
+    const files = await admin.from('natori_delivery_files').select('*').eq('project_id', p.id); check(!files.error && files.data.length === 1 && files.data[0].state === 'ready', 'BROWSER_TUS_READY');
+    const signed = await admin.storage.from('natori-deliveries').createSignedUrl(files.data[0].storage_path, 60); check(signed.data, 'BROWSER_TUS_READ_SIGN');
+    const downloaded = await client.request.get(signed.data.signedUrl); check(downloaded.ok() && (await downloaded.body()).equals(bytes), 'BROWSER_TUS_BYTES');
+    await dialog.getByRole('button', { name: 'キャンセル', exact: true }).click();
+  });
   await test('accepted-focus-and-reload-survive-both-receipt-mail-failures', async () => {
     rejectReceipts = true; await acceptButton().focus(); await clientPage.keyboard.press('Enter');
     await expect(clientPage.getByRole('status')).toContainText('受け取りを確認しました。', { timeout: 30000 });
@@ -213,7 +225,7 @@ async function main() {
     failed: results.filter(r => r.status === 'failed').length, skipped: 0, providerRequests: providerCalls,
     engine: 'Chromium 1.58.2; mobile viewport only, not iPhone Safari', browserProblems: [...browserProblems] }, null, 2));
   console.log(`PHASE 1 BROWSER ${results.filter(r => r.status === 'passed').length} passed / ${results.filter(r => r.status === 'failed').length} failed / 0 skipped`);
-  check(results.length === 10 && results.every(r => r.status === 'passed'), 'BROWSER_FAILED');
+  check(results.length === 11 && results.every(r => r.status === 'passed'), 'BROWSER_FAILED');
 }
 main().catch(() => { console.error(`Phase 1 browser failed at ${stage}; raw URLs, credentials and logs withheld`); process.exitCode = 1; })
   .finally(async () => {

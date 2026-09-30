@@ -258,6 +258,17 @@ node "$root/verify-catalog.mjs" "$work/results/catalog-current.json" current
   python3 --version
   sudo iptables --version
   dbsql -Atqc 'SHOW server_version;'
+  if [[ $phase1 == 1 ]]; then
+    # Record only non-secret size/protocol settings; never print container Env.
+    docker inspect "supabase_storage_$project" | python3 -c '
+import json,sys
+allowed={"NODE_ENV","FILE_SIZE_LIMIT","UPLOAD_FILE_SIZE_LIMIT","UPLOAD_FILE_SIZE_LIMIT_STANDARD"}
+for entry in json.load(sys.stdin)[0]["Config"]["Env"]:
+    key,_,value=entry.partition("=")
+    if key in allowed: print("storage_"+key+"="+value)
+'
+    printf 'phase1_fixture_bucket_limit=262144000\n'
+  fi
   docker ps --filter "label=com.supabase.cli.project=$project" --format '{{.Names}} {{.Image}}'
   for img in $(docker ps --filter "label=com.supabase.cli.project=$project" --format '{{.Image}}') "$node_image"; do
     docker image inspect --format '{{json .RepoDigests}}' "$img"
@@ -350,8 +361,11 @@ if [[ $phase1 == 1 ]]; then
   # Existing Phase N scenarios run first with their original semantics. Then expand
   # only this disposable database and switch on Phase 1 for its own mandatory tests.
   dbsql <"$work/phase1.sql" >/dev/null
-  timeout 360 docker exec "$runner" node /phase1/integration.cjs
-  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase1-browser/browser.mjs
+  phase1_status=0
+  if ! timeout 360 docker exec "$runner" node /phase1/integration.cjs; then phase1_status=1; fi
+  if ! timeout 600 docker exec "$project-browser" /runtime-bin/node /phase1-browser/browser.mjs; then phase1_status=1; fi
+  # Collect independent evidence after a failed assertion, while still failing the mandatory gate.
+  [[ $phase1_status == 0 ]] || { echo 'Phase 1 mandatory tests failed'; exit 1; }
 fi
 sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/egress-counters.txt"
 sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/egress-counters.txt"

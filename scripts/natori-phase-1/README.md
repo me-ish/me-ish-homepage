@@ -25,8 +25,9 @@ Order:
 4. `integration.ts`: 28 real DB/Auth/Storage scenarios including absent/mismatched files,
    replay, delete/publish and accept/resend races, commit/response loss, legacy compatibility,
    ciphertext expiry, and an actual 200MiB signed TUS upload plus full download digest.
-5. `browser.mjs`: 10 Chromium scenarios through actual management/customer routes, actual
-   shared-key authentication, real file upload, missing-file CTA, receipt failures and recovery.
+5. `browser.mjs`: 11 Chromium scenarios through actual management/customer routes, actual
+   shared-key authentication, real small/signed-TUS file uploads, missing-file CTA, receipt
+   failures and recovery.
 
 The local cloud Work has no Docker daemon. Safe local preflight:
 
@@ -38,8 +39,10 @@ node --check scripts/natori-phase-1/browser.mjs
 bash -n scripts/natori-phase-t/run.sh scripts/natori-phase-n/run-browser.sh
 ```
 
-The runner's test-only Storage limit is 250MiB so the existing 200MiB product limit can be
-exercised. **This is not evidence of the production global Storage limit.** Global and bucket
+The fixture-only delivery bucket cap is 250MiB so the existing 200MiB product limit can be
+exercised. The CLI config also requests 250MiB; the pinned Storage image may prioritize its
+`UPLOAD_FILE_SIZE_LIMIT` environment value instead. Non-secret effective settings are recorded
+in `versions.txt`. **This is not evidence of the production global Storage limit.** Global and bucket
 limits must be checked separately before activation. A mobile Chromium viewport is not an
 iPhone Safari or home-screen-app test. Provider capture proves application ordering and
 idempotency, not actual mailbox delivery. Artifacts contain counts, safe classifications,

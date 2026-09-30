@@ -47,6 +47,8 @@
 
 `20260930101753_natori_delivery_integrity.sql` はCLIで生成した新しいmigration。
 DB適用は隔離試験のみ。既存行のstatus/hash/期限/受取/入金を一括更新しない。
+既存baseline manifestのactive/required migration一覧・件数・checksumへ新規ファイルだけを追加。
+frozen baselineやmigration履歴の再配置は行わない。
 
 - 既存filesへstate、content_type、storage_version、verified_at、deleted_atを追加。
   既存行は`legacy_unverified`。証明のない一括ready backfillを行わない。
@@ -91,15 +93,26 @@ StorageとDBを単一transactionにはできない。発行済みpathを通常�
 
 ## 検証結果
 
-ローカル：変更に関連するunit/component 47件成功、型チェック成功、変更箇所lint成功。
+ローカル：変更に関連するunit/component 69件成功、型チェック成功、変更箇所lint成功。
+新規migrationのmanifest登録を確認する既存schema artifact試験12件も成功。
 隔離実Storage/ブラウザ：Draft PRの専用Actionsで実行する。最終run/SHA/件数は実行完了後に更新する。
 スクリプト作成やモック成功だけでPhase 1完了とは判定しない。
 
 予定する必須試験：Phase Tのkernel隔離・Storage正負試験、Phase Nの既存DB/ブラウザ回帰、
-Phase 1 DB/Auth/Storage 28件、実API/画面Chromium 10件。失敗・起動不能・認証不足はskip扱いにしない。
+Phase 1 DB/Auth/Storage 28件、実API/画面Chromium 11件。失敗・起動不能・認証不足はskip扱いにしない。
 主なfailure injection：DB commit前拒否とcommit後応答消失の区別、provider受付後中断、通知finish失敗、
 署名/実読取の503、ファイル部分欠落、版変更、publish/delete・accept/resend競合、旧RPC迂回拒否。
-200MiB署名TUSは全bytes download digestまで照合する。試験専用global limitは250MiB。
+200MiB署名TUSは全bytes download digestまで照合する。試験専用bucket capは250MiB。
+CLIのsize設定も250MiBだが、固定Storage imageは新しいUPLOAD_FILE_SIZE_LIMITを優先する。
+実効する非秘密のsize/protocol環境値をversions artifactへ記録し、本番設定とは区別する。
+
+初回Actions（head `2ed143d5d0522ab075ed1f6a0f0dde3a4e143da2`、
+[run 36709511224](https://github.com/me-ish/me-ish-homepage/actions/runs/36709511224)）では
+Phase 1実Storageが26成功/2失敗/0 skip、ブラウザ試験は未到達だった。
+旧受取日時の比較をDB表現へ合わせ、TUS継続先の安全な診断と通信前origin拒否を追加して再試験する。
+独立したブラウザ試験も証跡を採取し、いずれか失敗ならjobを失敗にする。
+既存CIのSecurity Auditはmainと同じlockfileのdev依存`brace-expansion`に対するhigh警告で失敗。
+製品依存・lockfileの無断更新や検証の弱体化は行わず、実装試験の成否と分けて記録する。
 
 未実施：実メール箱での納品通知/再案内/受取通知、iPhone Safari実機・ホーム画面版、
 本番Storage上限の確認、本番flag/暗号鍵設定、実顧客案件の納品操作。

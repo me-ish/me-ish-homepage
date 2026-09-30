@@ -8,6 +8,7 @@ import { cookieScope } from "../natori-phase-0b/cookies";
 
 const check: (value: unknown, code: string) => asserts value = (value, code) => { if (!value) throw new Error(code); };
 const results: { name: string; status: string; code?: string }[] = [];
+const tusDiagnostics: { status: number; originAllowed: boolean; protocol: string; hostMatches: boolean }[] = [];
 async function test(name: string, fn: () => Promise<void>) {
   try { await fn(); results.push({ name, status: "passed" }); console.log(`PASS phase1/${name}`); }
   catch (e) { const code = e instanceof Error && /^[A-Z_0-9]+$/.test(e.message) ? e.message : "ASSERTION_FAILED";
@@ -293,7 +294,7 @@ async function main() {
       check(await manage(() => ready.finalizeDeliveryFile(id)) === "ready", "LEGACY_VERIFICATION");
       const before = await row(p.id); check((await issue(input(p.id, [id]))).kind === "ok", "LEGACY_IMPORT");
       const after = await row(p.id); check(JSON.stringify(before) === JSON.stringify(after), "LEGACY_FACTS_CHANGED");
-      const view = await files.getNatoriDeliveryByToken(t); check(view.kind === "ok" && view.delivery.acceptedAt === date, "LEGACY_URL_LOST");
+      const view = await files.getNatoriDeliveryByToken(t); check(view.kind === "ok" && view.delivery.acceptedAt === before.delivery_accepted_at, "LEGACY_URL_LOST");
     });
     await test("foreign-owner-and-closed-unpaid-guards-preserve-rows", async () => {
       for (const patch of [{ user_id: stranger.data.user.id }, { status: "closed" }, { payment_confirmed_at: null }]) {
@@ -324,7 +325,16 @@ async function main() {
       await new Promise<void>((resolve, reject) => new Upload(Readable.from(stream()), { endpoint: `${origin}/storage/v1/upload/resumable/sign`,
         headers: { "x-signature": f.token }, uploadSize: size, chunkSize: chunk.length, retryDelays: [], uploadDataDuringCreation: true,
         metadata: { bucketName: "natori-deliveries", objectName: f.path, contentType: "application/octet-stream" },
-        onError: () => reject(new Error("TUS_UPLOAD_FAILED")), onSuccess: () => resolve(), }).start());
+        onBeforeRequest: req => { check(new URL(req.getURL()).origin === origin, "TUS_DESTINATION_REJECTED"); },
+        onAfterResponse: (_req, res) => {
+          const location = res.getHeader("Location"); if (!location) return;
+          const target = new URL(location, origin), base = new URL(origin);
+          tusDiagnostics.push({ status: res.getStatus(), originAllowed: target.origin === origin, protocol: target.protocol, hostMatches: target.host === base.host });
+        },
+        onError: error => {
+          const status = "originalResponse" in error ? error.originalResponse?.getStatus() : undefined;
+          reject(new Error(status ? `TUS_HTTP_${status}` : error.message.includes("TUS_DESTINATION_REJECTED") ? "TUS_DESTINATION_REJECTED" : "TUS_UPLOAD_FAILED"));
+        }, onSuccess: () => resolve(), }).start());
       check(await manage(() => ready.finalizeDeliveryFile(f.fileId)) === "ready", "LARGE_FINALIZE");
       const signed = await admin.storage.from("natori-deliveries").createSignedUrl(f.path, 60); check(signed.data, "LARGE_READ_SIGN");
       const response = await fetch(signed.data.signedUrl); check(response.ok && response.body, "LARGE_READ");
@@ -336,7 +346,8 @@ async function main() {
     });
     writeFileSync("/results/phase1-integration.json", JSON.stringify({ tests: results, passed: results.filter(r => r.status === "passed").length,
       failed: results.filter(r => r.status === "failed").length, skipped: 0, providerRequests: calls, distinctAcceptedMessages: accepted.size,
-      storage: "Real isolated DB/Auth/Storage; includes 200MiB signed TUS and complete bytes digest" }, null, 2));
+      storage: "Real isolated DB/Auth/Storage; includes 200MiB signed TUS and complete bytes digest", tusDiagnostics }, null, 2));
+    console.log(`TUS routing classifications: ${JSON.stringify(tusDiagnostics)}`);
     check(results.length === 28 && results.every(r => r.status === "passed"), "REQUIRED_TESTS_FAILED");
     console.log(`PHASE 1 ${results.length} passed / 0 failed / 0 skipped`);
   } finally { globalThis.fetch = direct; await new Promise<void>(resolve => capture.close(() => resolve())); }

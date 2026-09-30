@@ -1,6 +1,10 @@
 do $$ begin
   if current_setting('phase_t.sandbox',true) is distinct from 'ephemeral' then raise exception 'Sandbox required'; end if;
 end $$;
+-- A disposable bucket cap makes the 200MiB test explicit even when the pinned
+-- Storage image prioritizes UPLOAD_FILE_SIZE_LIMIT over the CLI's legacy setting.
+-- This fixture is never a production migration or a cloud configuration change.
+update storage.buckets set file_size_limit=262144000 where id='natori-deliveries';
 -- Match the production catalogue's existing delivery constraints before applying Phase 1.
 alter table public.natori_delivery_files alter column project_id set not null,
   alter column folder set not null,alter column storage_path set not null,

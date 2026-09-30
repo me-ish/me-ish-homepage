@@ -104,6 +104,8 @@ export default function ProjectCard({
 
   return (
     <Card
+      role="article"
+      aria-label={project.title}
       className={cn(
         "min-w-0 overflow-hidden rounded-2xl border-gray-200 bg-white shadow-sm",
         overdue && "border-red-400"
