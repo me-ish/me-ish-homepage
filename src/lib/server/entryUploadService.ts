@@ -34,12 +34,14 @@ function missingObject(error: unknown): boolean {
   const e = error as {
     message?: string;
     code?: string;
+    status?: number;
     statusCode?: string | number;
   };
   if (/bucket/i.test(e.message ?? "")) return false;
   return (
     e.code === "NoSuchKey" ||
-    (String(e.statusCode) === "404" && /not found/i.test(e.message ?? ""))
+    (String(e.statusCode ?? e.status) === "404" &&
+      /not found|^NoSuchKey$|specified key does not exist/i.test(e.message ?? ""))
   );
 }
 function published(grant: EntryUploadGrant): Published {
@@ -48,24 +50,44 @@ function published(grant: EntryUploadGrant): Published {
     .getPublicUrl(grant.fileName);
   return { kind: "ok", fileName: grant.fileName, publicUrl: data.publicUrl };
 }
+function retryablePublishedRead(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { status?: number; statusCode?: string | number };
+  if (e.status === 401 || e.status === 403) return false;
+  return (
+    missingObject(error) ||
+    [500, 502, 503, 504].includes(Number(e.statusCode ?? e.status))
+  );
+}
 async function readPublished(
   grant: EntryUploadGrant,
 ): Promise<Published | Failure | { kind: "missing" }> {
   const bucket = supabaseAdmin().storage.from("artworks");
-  const info = await bucket.info(grant.fileName);
-  if (info.error)
-    return { kind: missingObject(info.error) ? "missing" : "storage-error" };
-  if (
-    !info.data ||
-    info.data.size !== grant.sizeBytes ||
-    info.data.contentType !== grant.mimeType
-  )
-    return { kind: "invalid" };
-  const result = await bucket.download(grant.fileName);
-  if (result.error || !result.data) return { kind: "storage-error" };
-  return matches(Buffer.from(await result.data.arrayBuffer()), grant)
-    ? published(grant)
-    : { kind: "invalid" };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const info = await bucket.info(grant.fileName);
+    if (info.error)
+      return {
+        kind: attempt === 0 && missingObject(info.error) ? "missing" : "storage-error",
+      };
+    if (
+      !info.data ||
+      info.data.size !== grant.sizeBytes ||
+      info.data.contentType !== grant.mimeType
+    )
+      return { kind: "invalid" };
+    const result = await bucket.download(grant.fileName);
+    if (!result.error && result.data)
+      return matches(Buffer.from(await result.data.arrayBuffer()), grant)
+        ? published(grant)
+        : { kind: "invalid" };
+    if (attempt === 2 || !retryablePublishedRead(result.error))
+      return { kind: "storage-error" };
+    // Concurrent identical uploads can replace the internal Storage version
+    // between metadata lookup and backend read. Retry only the read, with a
+    // fresh metadata/bytes/hash proof. Never re-upload after a failed read.
+    await new Promise((resolve) => setTimeout(resolve, 50 * (attempt + 1)));
+  }
+  return { kind: "storage-error" };
 }
 async function cleanup(grant: EntryUploadGrant) {
   // Only this signed reservation; never enumerate or remove artwork objects.

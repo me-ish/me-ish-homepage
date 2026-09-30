@@ -207,6 +207,26 @@ DB drop/down、一括status変換、既存file削除、暗号鍵の即時破棄�
 
 ## 再実行・次の判断
 
+### 2026-10-01 JST 0Aの追加診断と復旧
+
+診断head `d7a8fd1a988b4a3ce2fac78455726ff8608698b4`の[run 36778520351](https://github.com/me-ish/me-ish-homepage/actions/runs/36778520351)はbefore/after 26/26。
+Storageの実backendはfileで、59件の同一公開先への複数200 uploadと旧版削除を確認したが、このrunでは500は発生しなかった。
+固定サンプルを各mode自然96組・同期48組へ増やしたhead `55302499e252fbb983887908cd086f9dbe6d920d`の
+[run 36779194764](https://github.com/me-ish/me-ish-homepage/actions/runs/36779194764)もbefore/after 26/26で、自然な500は捕捉できなかった。
+これらの成功だけで、過去の失敗解消や隔離環境固有と判断しない。
+
+公式Storage v1.77.0のpermission checkは試行insertをrollbackし、completeUploadは同じ公開先をlock後にupsertする。
+両writerが先にpermission checkを通過すると、upsert=falseでも2つのuploadが200となり、2番目が旧内部版の削除を予約できる。
+downloadが旧DB版を参照してからbackend実体を読む間に削除される競合を、独立した順序制御fixtureで検査する。
+通常before/afterは元Storageを使い、順序制御部分だけDB/backend間とwriter commit順を遅延する。
+旧製品serviceの503、新serviceの同じ実500からの復旧、内部ENOENTと旧版削除の一致が必須条件。
+正確な試験範囲・checksum・最終結果は[0A runbook](../../scripts/natori-phase-0a/README.md)とPR #101本文に記録する。
+
+gallery serviceの最小修正は公開先の読取を最大3回へ限定し、metadata・容量・MIME・全bytesのSHA256を読み直すこと。
+追加待機は50ms/100ms。内容不一致、認可拒否、継続障害はfail closedを維持し、読取失敗から再uploadへ戻らない。
+unit testは旧実装で失敗を確認してから復旧・容量/MIME/hash不一致・認可拒否・継続障害・公開先消失を検証した。
+今回のPhase 1納品処理を原因とするものではない。本番のStorage版/backendおよび実際の発生有無は未確認。
+
 `scripts/natori-phase-1/README.md`の手順とPRのNatori Phase 1 workflowを使う。
 初回専用workflowはpull_requestで起動し、mainへの先行mergeや本番Secretsを必要としない。
 既存CI、Phase N/4のassertion・skip・continue-on-errorは弱めない。

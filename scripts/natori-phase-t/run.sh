@@ -86,7 +86,15 @@ extra_mounts=()
 test_memory=256m
 if [[ $phase0a == 1 ]]; then
   mkdir -p "$work/phase0a"
+  node --test "$repo/scripts/natori-phase-0a/collect-storage.test.mjs" "$repo/scripts/natori-phase-0a/control-read-timing.test.mjs"
   node "$repo/scripts/natori-phase-0a/build.mjs" "$work/phase0a/integration.cjs"
+  # Pin the negative control to the reviewed pre-fix gallery service, not main
+  # and not an invented mock. Fetch only during construction, before sealing.
+  baseline_sha='55302499e252fbb983887908cd086f9dbe6d920d'
+  git fetch --no-tags --depth=1 origin "$baseline_sha" >"$work/baseline-fetch.private" 2>&1
+  git show "$baseline_sha:src/lib/server/entryUploadService.ts" >"$work/phase0a/entryUploadService.baseline.ts"
+  node "$repo/scripts/natori-phase-0a/build.mjs" "$work/phase0a/baseline.cjs" "$work/phase0a/entryUploadService.baseline.ts"
+  { printf 'baseline_head=%s\n' "$baseline_sha"; sha256sum "$work/phase0a/entryUploadService.baseline.ts"; } >"$work/results/phase0a-baseline-source.txt"
   extra_mounts+=(--mount "type=bind,source=$work/phase0a,target=/phase0a,readonly")
   extra_mounts+=(--mount "type=bind,source=$repo/node_modules,target=/app/node_modules,readonly")
   extra_mounts+=(-e NODE_PATH=/app/node_modules)
@@ -354,6 +362,13 @@ else
 fi
 timeout 180 docker exec "$runner" node /tests/storage.mjs candidate
 if [[ $phase0a == 1 ]]; then timeout 240 docker exec "$runner" node /phase0a/integration.cjs after; fi
+if [[ $phase0a == 1 ]]; then
+  # Keep the normal mandatory tests on the unmodified Storage backend. Only this
+  # separate proof widens its version/read window, while using real DB/API/bytes.
+  timeout 40 node "$repo/scripts/natori-phase-0a/control-read-timing.mjs" "$project" "$work/results"
+  timeout 60 docker exec "$runner" node /phase0a/baseline.cjs race-baseline
+  timeout 60 docker exec "$runner" node /phase0a/integration.cjs race-recovery
+fi
 if [[ $phase0b == 1 ]]; then
   dbsql <"$work/phase0b.sql" >/dev/null
   timeout 240 docker exec "$runner" node /phase0b/integration.cjs
