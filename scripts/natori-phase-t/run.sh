@@ -49,6 +49,10 @@ cleanup() {
     docker rm -f "$runner" >/dev/null
   fi
   if (( stack_started )); then
+    local bootstrap="supabase_storage_$project-bootstrap"
+    if [[ $(docker inspect -f '{{index .Config.Labels "com.supabase.cli.project"}}' "$bootstrap" 2>/dev/null) == "$project" ]]; then
+      docker rm -f "$bootstrap" >/dev/null || status=1
+    fi
     # Exact project ID; never --all or prune. No shared stack is touched.
     timeout 90 "$work/bin/supabase" stop --workdir "$work/stack" --project-id "$project" --no-backup >"$work/stop.private" 2>&1
     if (( $? != 0 )); then echo 'Dedicated stack cleanup failed'; status=1; fi
@@ -231,6 +235,9 @@ done
 for service_name in auth rest storage kong; do docker restart "supabase_${service_name}_$project" >/dev/null; done
 api_ip=$(docker inspect -f "{{(index .NetworkSettings.Networks \"$network\").IPAddress}}" "supabase_kong_$project")
 [[ $api_ip =~ ^172\.30\.250\.[0-9]+$ ]]
+if [[ $phase1 == 1 ]]; then
+  timeout 60 node "$repo/scripts/natori-phase-1/configure-storage.mjs" "$project" "$network" "http://$api_ip:8000"
+fi
 WORK="$work" API_IP="$api_ip" node --input-type=module <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 const s=JSON.parse(readFileSync(`${process.env.WORK}/status.private`));

@@ -20,7 +20,11 @@ Order:
 1. Existing Phase T: isolation and real Storage current/candidate policy assertions.
 2. Existing Phase N: minimal reviewed fixture, DB/notification scenarios and 9 browser scenarios,
    with Phase 1 disabled. These regression scenarios keep their original assertions.
-3. `fixture.sql` matches the previously read production delivery table constraints; only the
+3. Phase 1 construction replaces only its labelled disposable Storage container with the same
+   image, auth settings and named volume, an explicit internal `STORAGE_PUBLIC_URL`, local
+   HTTP mode, and 250MiB size caps. The pinned CLI otherwise returns an upstream TUS host
+   after the sealed network move. No client URL rewriting or broader egress rule is used.
+   `fixture.sql` matches the previously read production delivery table constraints; only the
    Phase 1 migration is added. No full migration history or production seed is executed.
 4. `integration.ts`: 28 real DB/Auth/Storage scenarios including absent/mismatched files,
    replay, delete/publish and accept/resend races, commit/response loss, legacy compatibility,
@@ -39,10 +43,11 @@ node --check scripts/natori-phase-1/browser.mjs
 bash -n scripts/natori-phase-t/run.sh scripts/natori-phase-n/run-browser.sh
 ```
 
-The fixture-only delivery bucket cap is 250MiB so the existing 200MiB product limit can be
-exercised. The CLI config also requests 250MiB; the pinned Storage image may prioritize its
-`UPLOAD_FILE_SIZE_LIMIT` environment value instead. Non-secret effective settings are recorded
-in `versions.txt`. **This is not evidence of the production global Storage limit.** Global and bucket
+The fixture-only delivery bucket and disposable Storage caps are 250MiB so the existing 200MiB
+product limit can be exercised. Both legacy and current size environment keys are set explicitly
+because the pinned image prioritizes `UPLOAD_FILE_SIZE_LIMIT` over the CLI's legacy setting.
+Non-secret effective settings are recorded in `versions.txt`.
+**This is not evidence of the production global Storage limit.** Global and bucket
 limits must be checked separately before activation. A mobile Chromium viewport is not an
 iPhone Safari or home-screen-app test. Provider capture proves application ordering and
 idempotency, not actual mailbox delivery. Artifacts contain counts, safe classifications,

@@ -102,9 +102,17 @@ StorageとDBを単一transactionにはできない。発行済みpathを通常�
 Phase 1 DB/Auth/Storage 28件、実API/画面Chromium 11件。失敗・起動不能・認証不足はskip扱いにしない。
 主なfailure injection：DB commit前拒否とcommit後応答消失の区別、provider受付後中断、通知finish失敗、
 署名/実読取の503、ファイル部分欠落、版変更、publish/delete・accept/resend競合、旧RPC迂回拒否。
-200MiB署名TUSは全bytes download digestまで照合する。試験専用bucket capは250MiB。
-CLIのsize設定も250MiBだが、固定Storage imageは新しいUPLOAD_FILE_SIZE_LIMITを優先する。
-実効する非秘密のsize/protocol環境値をversions artifactへ記録し、本番設定とは区別する。
+200MiB署名TUSは全bytes download digestまで照合する。試験専用bucket/Storage capは250MiB。
+固定CLIのStorageが隔離network移動後に別hostのTUS継続URLを返したため、このrunのStorageだけを
+同一image/Auth設定/専用volumeで再作成し、STORAGE_PUBLIC_URLを許可済みinternal originへ設定。
+local HTTP modeと新旧size環境keyを明示する。クライアントの継続URLを書き換えたり、通信許可先を
+広げたりしない。実効する非秘密のsize/protocol環境値をversions artifactへ記録する。
+
+2回目（head `088fdbfdf7e6e7e2045f310f6456abf6b3a4d921`、
+[run 36712295359](https://github.com/me-ish/me-ish-homepage/actions/runs/36712295359)）は実Storage
+27成功/1失敗/0 skip、ブラウザ4成功/7失敗/0 skip。継続URLのorigin拒否が通信前に作動した。
+実画面では保存・発行・受取・再送のDB事実も確認できたが、閉じるボタン/alertの重複locatorと
+期限切れ文言の試験側不一致を修正。未処理page errorは消さずに分類して再確認する。
 
 初回Actions（head `2ed143d5d0522ab075ed1f6a0f0dde3a4e143da2`、
 [run 36709511224](https://github.com/me-ish/me-ish-homepage/actions/runs/36709511224)）では

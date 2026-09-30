@@ -8,7 +8,7 @@ const require = createRequire('/app/package.json');
 const { createClient } = require('@supabase/supabase-js');
 const { chromium, expect } = require('@playwright/test');
 setDefaultResultOrder('ipv4first');
-const appOrigin = 'http://localhost:3000', results = [], browserProblems = new Set();
+const appOrigin = 'http://localhost:3000', results = [], browserProblems = new Set(), browserErrorDiagnostics = [];
 const check = (ok, code) => { if (!ok) throw new Error(code); };
 let stage = 'preflight', checkpoint = 'START', server, browser, capture;
 async function test(name, fn) {
@@ -84,7 +84,13 @@ async function main() {
   async function context() {
     const c = await browser.newContext({ baseURL: appOrigin, serviceWorkers: 'block' }); c.setDefaultTimeout(15000); c.setDefaultNavigationTimeout(60000);
     c.on('page', page => {
-      page.on('pageerror', () => browserProblems.add('UNHANDLED_PAGE_ERROR'));
+      page.on('pageerror', error => {
+        browserProblems.add('UNHANDLED_PAGE_ERROR');
+        const message = error.message ?? '';
+        const known = ['Failed to fetch', 'Invalid URL', 'removeChild', 'NotFoundError', 'hydration', 'Cannot read properties', 'ReferenceError'];
+        browserErrorDiagnostics.push({ stage, name: /^[A-Za-z]+$/.test(error.name) ? error.name : 'Error',
+          classifications: known.filter(label => message.includes(label)) });
+      });
       page.on('console', message => {
         if (!['warning', 'error'].includes(message.type())) return;
         if (/hydrat|cannot be a descendant|cannot contain a nested/i.test(message.text())) browserProblems.add('DOM_OR_HYDRATION');
@@ -137,7 +143,7 @@ async function main() {
     await expect(dialog.getByRole('status')).toContainText('送信しました。', { timeout: 30000 });
     primaryToken = await token(primary.id); first = await projectRow(primary.id);
     check(first.status === 'delivered' && first.delivered_mail_at && first.delivery_accepted_at === null, 'PUBLICATION_STATE');
-    await dialog.getByRole('button', { name: '閉じる', exact: true }).click();
+    await dialog.getByRole('button', { name: '閉じる', exact: true }).first().click();
   });
   await test('public-get-is-readonly-download-has-real-bytes-and-refresh-resigns', async () => {
     check(primaryToken, 'PRIMARY_NOT_READY'); const before = await projectRow(primary.id), beforeJobs = await jobs(primary.id);
@@ -180,13 +186,13 @@ async function main() {
     await dialog.getByRole('button', { name: '納品メールを送信', exact: true }).click(); await expect(dialog.getByRole('status')).toContainText('送信しました。', { timeout: 30000 });
     const after = await projectRow(primary.id); check(JSON.stringify(before) === JSON.stringify(after), 'RESEND_MUTATED_FACTS');
     await clientPage.goto(`/natori/delivery/${primaryToken}`); await expect(clientPage.getByRole('status')).toContainText('受け取りを確認しました。');
-    await dialog.getByRole('button', { name: '閉じる', exact: true }).click();
+    await dialog.getByRole('button', { name: '閉じる', exact: true }).first().click();
   });
   await test('stale-enabled-page-rejects-acceptance-after-file-disappears', async () => {
     partial = await project('Partial browser delivery'); partialFiles = [await upload(partial.id, 'remaining.bin'), await upload(partial.id, 'missing.bin')];
     partialToken = await publish(partial.id, partialFiles); await clientPage.goto(`/natori/delivery/${partialToken}`); await expect(acceptButton()).toBeEnabled();
     check(!(await admin.storage.from('natori-deliveries').remove([partialFiles[1].path])).error, 'REMOVE_FIXTURE');
-    await acceptButton().click(); await expect(clientPage.getByRole('alert')).toContainText('受取は完了していません。');
+    await acceptButton().click(); await expect(clientPage.getByRole('alert').filter({ hasText: '受取は完了していません。' })).toBeVisible();
     check((await projectRow(partial.id)).delivery_accepted_at === null && (await projectRow(partial.id)).status === 'delivered', 'STALE_ACCEPTED');
   });
   await test('partial-file-is-not-hidden-and-mobile-cta-is-disabled', async () => {
@@ -201,7 +207,7 @@ async function main() {
   await test('expired-legacy-link-shows-contact-and-does-not-extend', async () => {
     const t = randomBytes(24).toString('base64url'), p = await project('Expired browser delivery', { status: 'delivered', delivery_token_hash: hash(t), delivery_token_expires_at: past, delivered_mail_at: past });
     const before = await projectRow(p.id); await clientPage.goto(`/natori/delivery/${t}`);
-    await expect(clientPage.getByText('納品ページの有効期限が切れています。', { exact: false })).toBeVisible();
+    await expect(clientPage.getByText('納品ページの有効期限が過ぎています', { exact: true })).toBeVisible();
     await expect(acceptButton()).toHaveCount(0); check(JSON.stringify(before) === JSON.stringify(await projectRow(p.id)) && (await jobs(p.id)).length === 0, 'EXPIRY_REISSUED');
   });
   await test('acceptance-response-loss-shows-unconfirmed-and-refresh-recovers', async () => {
@@ -209,7 +215,7 @@ async function main() {
     const p = await project('Response loss browser delivery'), f = await upload(p.id); const t = await publish(p.id, [f]);
     await clientPage.goto(`/natori/delivery/${t}`); await expect(acceptButton()).toBeEnabled();
     await clientPage.route('**/api/natori/delivery/accept', async route => { await route.fetch(); await route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }); });
-    await acceptButton().click(); await expect(clientPage.getByRole('alert')).toContainText('受取結果を確認できませんでした。');
+    await acceptButton().click(); await expect(clientPage.getByRole('alert').filter({ hasText: '受取結果を確認できませんでした。' })).toBeVisible();
     const confirmed = await projectRow(p.id); check(confirmed.delivery_accepted_at && confirmed.status === 'completed', 'RESPONSE_LOSS_NOT_COMMITTED');
     await clientPage.unroute('**/api/natori/delivery/accept'); await clientPage.getByRole('button', { name: 'ファイルと受取状況を更新' }).click();
     await expect(clientPage.getByRole('status')).toContainText('受け取りを確認しました。');
@@ -223,7 +229,7 @@ async function main() {
   await manager.close(); await client.close();
   writeFileSync('/results/phase1-browser.json', JSON.stringify({ tests: results, passed: results.filter(r => r.status === 'passed').length,
     failed: results.filter(r => r.status === 'failed').length, skipped: 0, providerRequests: providerCalls,
-    engine: 'Chromium 1.58.2; mobile viewport only, not iPhone Safari', browserProblems: [...browserProblems] }, null, 2));
+    engine: 'Chromium 1.58.2; mobile viewport only, not iPhone Safari', browserProblems: [...browserProblems], browserErrorDiagnostics }, null, 2));
   console.log(`PHASE 1 BROWSER ${results.filter(r => r.status === 'passed').length} passed / ${results.filter(r => r.status === 'failed').length} failed / 0 skipped`);
   check(results.length === 11 && results.every(r => r.status === 'passed'), 'BROWSER_FAILED');
 }
