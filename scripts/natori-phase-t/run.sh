@@ -42,6 +42,11 @@ cleanup() {
   local status=$?
   trap - EXIT
   set +e
+  if [[ $phase0a == 1 ]] && (( stack_started )); then
+    # Capture allowlisted classifications before this run's disposable Storage
+    # disappears. No raw logs or temporary credentials enter the artifact.
+    timeout 40 node "$repo/scripts/natori-phase-0a/collect-storage.mjs" "$project" "$work/results" || status=1
+  fi
   if [[ $(docker inspect -f '{{index .Config.Labels "natori.phase-t"}}' "$project-browser" 2>/dev/null) == "$project" ]]; then
     docker rm -f "$project-browser" >/dev/null
   fi
