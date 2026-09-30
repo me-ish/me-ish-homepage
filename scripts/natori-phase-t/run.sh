@@ -366,6 +366,18 @@ if [[ $phase0a == 1 ]]; then
   # Keep the normal mandatory tests on the unmodified Storage backend. Only this
   # separate proof widens its version/read window, while using real DB/API/bytes.
   timeout 40 node "$repo/scripts/natori-phase-0a/control-read-timing.mjs" "$project" "$work/results"
+  timeout 25 docker exec "$runner" node --input-type=module -e '
+    import {readFileSync} from "node:fs";
+    const {origin}=JSON.parse(readFileSync("/runtime/network.json"));
+    const {anon}=JSON.parse(readFileSync("/runtime/credentials.json"));
+    if(!/^http:\/\/172\.30\.250\.\d+:8000$/.test(origin))throw Error("GUARD");
+    let ready=false;
+    for(let n=0;n<40;n++) {
+      try {const r=await fetch(`${origin}/storage/v1/status`,{headers:{apikey:anon},signal:AbortSignal.timeout(500),redirect:"error"});if(r.ok){ready=true;break;}}catch{}
+      await new Promise(resolve=>setTimeout(resolve,250));
+    }
+    if(!ready)throw Error("CONTROLLED_STORAGE_NOT_READY");
+  '
   timeout 60 docker exec "$runner" node /phase0a/baseline.cjs race-baseline
   timeout 60 docker exec "$runner" node /phase0a/integration.cjs race-recovery
 fi

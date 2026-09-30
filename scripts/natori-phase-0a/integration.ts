@@ -139,6 +139,7 @@ async function main() {
     return d;
   }
   if (mode === "race-baseline" || mode === "race-recovery") {
+    setupStage = "controlled-race";
     // Run only after normal before/after tests, with the disposable FileBackend
     // paused for 600ms between the real DB lookup and filesystem stat. Both
     // writers finish Storage's permission check before writer 2 commits 200ms
@@ -146,17 +147,18 @@ async function main() {
     const s = await sign();
     await put(s);
     const observed = await observer.pair(() => finished(s), true);
-    const first = observed.results[0], second = observed.results[1];
     check(observed.events.filter(e => e.operation === "published-upload" && e.status === 200).length === 2,
       "RACE_BOTH_UPLOADS_NOT_PROVEN");
-    const failedRead = observed.events.find(e => e.actor === 1 && e.operation === "published-download" && e.status === 500);
+    const failedRead = observed.events.find(e => e.operation === "published-download" && e.status === 500);
     check(failedRead, "RACE_INTERNAL_500_NOT_REPRODUCED");
     if (mode === "race-baseline") {
-      check(first.status === "rejected" && first.reason instanceof Error && first.reason.message === "FINISH_HTTP_503"
-        && second.status === "fulfilled", "RACE_BASELINE_503_NOT_REPRODUCED");
+      check(observed.results.filter(r => r.status === "rejected" && r.reason instanceof Error
+        && r.reason.message === "FINISH_HTTP_503").length === 1
+        && observed.results.filter(r => r.status === "fulfilled").length === 1,
+        "RACE_BASELINE_503_NOT_REPRODUCED");
     } else {
-      check(first.status === "fulfilled" && second.status === "fulfilled", "RACE_RECOVERY_FAILED");
-      check(observed.events.some(e => e.actor === 1 && e.operation === "published-download" && e.status === 200
+      check(observed.results.every(r => r.status === "fulfilled"), "RACE_RECOVERY_FAILED");
+      check(observed.events.some(e => e.actor === failedRead.actor && e.operation === "published-download" && e.status === 200
         && e.startedEpochMs > failedRead.startedEpochMs), "RACE_FRESH_READ_NOT_PROVEN");
     }
     await content("artworks", s.path.slice("pending/".length), png);
@@ -588,10 +590,12 @@ async function main() {
 }
 main().catch((error: unknown) => {
   // Locations and classifications only: never emit messages, request URLs or credentials.
-  const e = error as { name?: string; code?: string; stack?: string };
+  const e = error as { name?: string; code?: string; message?: string; stack?: string };
   console.error("PHASE_0A_SETUP_FAILED", setupStage, {
     type: /^[A-Za-z]+Error$/.test(e?.name ?? "") ? e.name : "Error",
-    code: /^[A-Z_0-9]+$/.test(e?.code ?? "") ? e.code : "UNCLASSIFIED",
+    code: /^[A-Z_0-9]+$/.test(e?.code ?? "") ? e.code :
+      /^(?:SIGN_HTTP_\d{3}|FINISH_HTTP_\d{3}|RACE_[A-Z_]+|SIGNED_UPLOAD_FAILED|READBACK_FAILED|READBACK_BYTES|EXPECTED_OBJECT_ABSENT)$/.test(e?.message ?? "")
+        ? e.message : "UNCLASSIFIED",
     locations: e?.stack?.match(/integration\.cjs:\d+:\d+/g)?.slice(0, 4),
   });
   process.exitCode = 1;

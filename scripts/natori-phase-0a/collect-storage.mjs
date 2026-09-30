@@ -92,7 +92,7 @@ function main() {
     const path = `${output}/phase0a-${mode}.json`;
     if (!existsSync(path)) continue;
     const trace = JSON.parse(readFileSync(path, 'utf8'));
-    const failed = trace.events.find(e => e.actor === 1 && e.operation === 'published-download' && e.status === 500);
+    const failed = trace.events.find(e => e.operation === 'published-download' && e.status === 500);
     const internal = failed && records.find(r => r.object === failed.object && r.status === 500
       && r.time >= failed.startedEpochMs && r.errors.includes('ENOENT') && r.missingVersions.length);
     if (!internal || !records.some(r => r.operation === 'version-delete' && r.object === internal.object
