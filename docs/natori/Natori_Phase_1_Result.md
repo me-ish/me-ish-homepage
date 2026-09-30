@@ -122,6 +122,10 @@ local HTTP modeと新旧size環境keyを明示する。クライアントの継�
 同headの既存Phase 0Aでは、ギャラリー受付の同時finish試験2件がStorageの一時500で失敗
 （[run 36713652064](https://github.com/me-ish/me-ish-homepage/actions/runs/36713652064)）。
 同経路は今回変更しておらず、先の2 runは成功している。失敗証跡を保持し、検証条件は弱めない。
+4回目（head `c9f4d9a2d997548dc66ef6693d7fb35d79ecf9ef`、
+[run 36714644852](https://github.com/me-ish/me-ish-homepage/actions/runs/36714644852)）も
+28+10件成功、未処理エラー検知1件失敗。秘密値を除いたエラーは`Event`で、業務操作の失敗とは
+判別できない。N/1の試験用Nextコンパイルcacheを分離し、resource失敗の分類も採取して切り分ける。
 
 初回Actions（head `2ed143d5d0522ab075ed1f6a0f0dde3a4e143da2`、
 [run 36709511224](https://github.com/me-ish/me-ish-homepage/actions/runs/36709511224)）では

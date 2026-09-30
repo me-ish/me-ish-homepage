@@ -10,7 +10,9 @@ for (const path of ['src/app/api/natori/admin/delivery-files/route.ts', 'src/app
 }
 copyFileSync('next.config.mjs', resolve(output, 'phase1-source-config.mjs'));
 checksums['phase1-source-config.mjs'] = checksums['next.config.mjs'];
-const wrapper = "import original from './phase1-source-config.mjs';\nexport default {...original, devIndicators: false};\n";
+// Independent dev build caches: Phase N stops before Phase 1 starts in this app.
+// Never reuse stylesheet/chunk state across processes with different feature flags.
+const wrapper = "import original from './phase1-source-config.mjs';\nexport default {...original, devIndicators: false, distDir: process.env.NATORI_DELIVERY_INTEGRITY_ENABLED === '1' ? 'phase1-next' : 'phase-n-next'};\n";
 writeFileSync(resolve(output, 'next.config.mjs'), wrapper);
 checksums['next.config.mjs'] = createHash('sha256').update(wrapper).digest('hex');
 writeFileSync(resolve(output, 'source-checksums.json'), JSON.stringify(checksums, null, 2));
