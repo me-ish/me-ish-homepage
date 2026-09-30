@@ -25,6 +25,7 @@ import { formatYen } from "@/features/natori/lib/pricing";
 import { formatQuoteDate, isValidQuoteDate } from "@/features/natori/lib/quoteTerms";
 import type { NatoriProject } from "@/features/natori/types/projects";
 import DeliveryFilesManager from "./DeliveryFilesManager";
+import type { NatoriDeliveryFileView } from "@/features/natori/data/supabaseDeliveryFiles";
 
 export type OrderMailKind = "estimate" | "payment" | "rough" | "delivery";
 
@@ -55,7 +56,7 @@ const KIND_META: Record<
   },
   delivery: {
     title: "納品メールを送る",
-    hint: `送信時に納品ページ（30日間有効）が発行され、本文の ${DELIVERY_LINK_PLACEHOLDER} の位置にURLが差し込まれます。依頼者がページで「受け取りました」を押すと、案件は自動で「対応完了」になり実績に入ります。`,
+    hint: `保存・取得を確認したファイルを固定して納品ページを発行します。初回の保存期限は30日です。再送では同じ納品を案内し、古いリンクや受取記録、保存期限は維持されます。本文の ${DELIVERY_LINK_PLACEHOLDER} の位置にURLが差し込まれます。`,
     sendLabel: "納品メールを送信",
     logLabel: "納品メール送信",
     sentNote:
@@ -150,6 +151,8 @@ export default function OrderMailPanel({
   const [warning, setWarning] = useState<string | null>(null);
   const [sentLinkUrl, setSentLinkUrl] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [deliveryFiles, setDeliveryFiles] = useState<NatoriDeliveryFileView[] | null>(null);
+  const [operationConflict, setOperationConflict] = useState(false);
 
   // 同種メールの送信履歴（案件メモの送信ログから）。二重送信の気づき用
   const lastSent = useMemo(() => {
@@ -165,6 +168,7 @@ export default function OrderMailPanel({
     (!isMoneyKind(kind) || amount >= (kind === "payment" ? 50 : 0));
   const canSend =
     emailValid && amountValid && draft.subject.trim() && draft.body.trim() && !sending &&
+    (kind !== "delivery" || (deliveryFiles && deliveryFiles.length > 0 && deliveryFiles.every(file => !file.state || file.state === "ready"))) &&
     (kind !== "estimate" || (
       quoteTitle.trim().length > 0 && quoteTitle.length <= 200 &&
       deliverables.trim().length > 0 && deliverables.length <= 1000 &&
@@ -210,6 +214,12 @@ export default function OrderMailPanel({
     setError(null);
     setWarning(null);
     try {
+      let operationId: string | undefined;
+      if (kind === "delivery") {
+        const key = `natori-delivery-operation/${project.id}`;
+        operationId = sessionStorage.getItem(key) ?? crypto.randomUUID();
+        sessionStorage.setItem(key, operationId);
+      }
       const res = await fetch("/api/natori/admin/order-mail", {
         method: "POST",
         headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
@@ -220,6 +230,7 @@ export default function OrderMailPanel({
           subject: draft.subject.trim(),
           body: draft.body,
           amount: Math.round(amount),
+          ...(kind === "delivery" ? { operationId, fileIds: deliveryFiles?.map(file => file.id) } : {}),
           ...(kind === "estimate" ? {
             quoteTitle: quoteTitle.trim(),
             deliverables: deliverables.trim(),
@@ -232,13 +243,16 @@ export default function OrderMailPanel({
         error?: string;
         warning?: string;
         paymentLinkUrl?: string | null;
+        code?: string;
       } | null;
       if (!res.ok || !json?.ok) {
+        if (json?.code === "delivery_conflict") setOperationConflict(true);
         throw new Error(json?.error ?? `send failed: ${res.status}`);
       }
       setSentLinkUrl(json.paymentLinkUrl ?? null);
       setWarning(json.warning ?? null);
       setSent(true);
+      if (kind === "delivery") sessionStorage.removeItem(`natori-delivery-operation/${project.id}`);
       onSent();
     } catch (err) {
       console.error("[OrderMailPanel] send failed", err);
@@ -368,8 +382,13 @@ export default function OrderMailPanel({
                 projectId={project.id}
                 folder={kind === "rough" ? "rough" : "final"}
                 demoMode={demoMode}
+                onFilesChange={setDeliveryFiles}
               />
             ) : null}
+            {kind === "delivery" && !canSend && <p className="text-xs text-gray-600">納品案内の送信前に、すべてのファイルが「保存確認済み」であることを確認してください。</p>}
+            {operationConflict && <button type="button" className="rounded-lg border px-3 py-2 text-sm" onClick={() => {
+              sessionStorage.removeItem(`natori-delivery-operation/${project.id}`); setOperationConflict(false); setError(null);
+            }}>前回の結果を確認したので、新しい案内として送る</button>}
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div>

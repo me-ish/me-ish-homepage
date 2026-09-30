@@ -6,6 +6,7 @@ const names: Record<string, string> = {
   quote_accept_artist: "見積もり承諾のお知らせ",
   delivery_accept_artist: "受取完了のお知らせ",
   delivery_accept_client: "依頼者への受取控え",
+  delivery_issue_client: "納品のご案内",
 };
 const statuses: Record<string, string> = {
   pending: "送信待ち", sending: "送信処理中", sent: "送信サービス受付済み", failed: "送信できませんでした", unknown: "送信結果を確認できません",

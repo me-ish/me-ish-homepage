@@ -30,6 +30,8 @@ export const POST = withNatoriManagement("order-mail.POST", true, async function
     quoteTitle?: unknown;
     deliverables?: unknown;
     dueDate?: unknown;
+    operationId?: unknown;
+    fileIds?: unknown;
   } | null;
   if (!payload) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -82,8 +84,16 @@ export const POST = withNatoriManagement("order-mail.POST", true, async function
   const result = await sendNatoriOrderMail({
     kind, projectId, to, subject, body, amount,
     ...(kind === "estimate" ? { quoteTitle, deliverables, dueDate } : {}),
+    ...(kind === "delivery" ? {
+      operationId: typeof payload.operationId === "string" ? payload.operationId : undefined,
+      fileIds: Array.isArray(payload.fileIds) && payload.fileIds.every((id): id is string => typeof id === "string") ? payload.fileIds : undefined,
+    } : {}),
   });
   switch (result.kind) {
+    case "delivery-conflict":
+      return NextResponse.json({ error: "前回と送信内容が異なります。前回の結果を確認してから、新しい案内として送信してください。", code: "delivery_conflict" }, { status: 409 });
+    case "delivery-expired":
+      return NextResponse.json({ error: "納品ページの保存期限が過ぎています。期限延長は再送と分けて確認してください。" }, { status: 409 });
     case "not-found":
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     case "no-files":
@@ -92,7 +102,7 @@ export const POST = withNatoriManagement("order-mail.POST", true, async function
           error:
             kind === "rough"
               ? "ラフ確認用のファイルが未アップロードです"
-              : "納品ファイルが未アップロードです",
+              : "すべての納品ファイルの保存・取得を確認してください。未確認や取得できないファイルがあります。",
         },
         { status: 400 }
       );
@@ -134,6 +144,9 @@ export const POST = withNatoriManagement("order-mail.POST", true, async function
         { status: 409 }
       );
     case "ok":
-      return NextResponse.json({ ok: true, paymentLinkUrl: result.paymentLinkUrl ?? null });
+      return NextResponse.json({ ok: true, paymentLinkUrl: result.paymentLinkUrl ?? null,
+        ...(result.releaseId ? { releaseId: result.releaseId, notificationStatus: result.notificationStatus,
+          warning: result.notificationStatus !== "sent" ? "納品内容は保存されています。メールの送信状況は管理ホームの通知欄で確認・再試行してください。納品や受取の記録は維持されています。" : undefined } : {}),
+      });
   }
 });

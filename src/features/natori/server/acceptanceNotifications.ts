@@ -6,6 +6,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { formatYen } from "@/features/natori/lib/pricing";
 import { buildDeliveryCompletionMail } from "@/features/natori/server/deliveryCompletionMailService";
 import type { NatoriNotificationRow } from "@/types/supabase";
+import { openDeliveryNotification } from "./deliveryNotificationPayload";
 
 export const acceptanceOutboxEnabled = () => process.env.NATORI_ACCEPTANCE_OUTBOX_ENABLED === "1";
 export const notificationSendingEnabled = () => process.env.NATORI_NOTIFICATION_SENDING_ENABLED === "1";
@@ -27,6 +28,10 @@ export type NotificationSendResult =
 export type NotificationTransport = (payload: NotificationPayload, key: string) => Promise<NotificationSendResult>;
 
 export function buildAcceptanceNotificationPayload(job: Pick<NatoriNotificationRow, "payload" | "snapshot" | "purpose">): NotificationPayload {
+  if (job.purpose === "delivery_issue_client") {
+    if (!job.payload) throw new Error("mail_configuration");
+    return payloadSchema.parse(openDeliveryNotification(job.payload));
+  }
   // A retry never renders from current project values or current mail settings.
   if (job.payload) return payloadSchema.parse(job.payload);
   const snapshot = z.object({
@@ -103,7 +108,8 @@ export async function dispatchAcceptanceNotification(
         p_status: job.send_started_at ? "unknown" : "failed", p_error_code: "mail_configuration" });
       return;
     }
-    const started = await admin.rpc("natori_notification_start_v1", { p_id: id, p_claim_token: claimToken, p_payload: payload });
+    const started = await admin.rpc("natori_notification_start_v1", { p_id: id, p_claim_token: claimToken,
+      p_payload: job.purpose === "delivery_issue_client" ? job.payload! : payload });
     const active = started.data?.[0];
     if (started.error || !active?.lease_expires_at || !active.send_started_at) return;
     if (Date.parse(active.lease_expires_at) <= Date.now() + 15000 || Date.parse(active.send_started_at) <= Date.now() - 23 * 3600000) return;

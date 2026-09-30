@@ -32,6 +32,8 @@ export async function POST(req: Request) {
   const result = await acceptNatoriDelivery(token);
   if ("notificationIds" in result) scheduleAcceptanceNotifications(result.notificationIds ?? []);
   switch (result.kind) {
+    case "files-unavailable":
+      return NextResponse.json({ error: "delivery_files_unavailable" }, { status: 409 });
     case "not-found":
       return NextResponse.json({ error: "delivery_not_found" }, { status: 404 });
     case "expired":
@@ -39,9 +41,9 @@ export async function POST(req: Request) {
     case "db-error":
       return NextResponse.json({ error: "internal_error" }, { status: 500 });
     case "already-accepted":
-      return NextResponse.json({ ok: true, already: true });
+      return NextResponse.json({ ok: true, already: true, acceptedAt: result.acceptedAt });
     case "ok": {
-      if (result.notificationIds !== undefined) return NextResponse.json({ ok: true });
+      if (result.notificationIds !== undefined) return NextResponse.json({ ok: true, acceptedAt: result.acceptedAt });
       const mailed = await sendNatoriDeliveryCompletionMail(token).catch(() => false);
       if (!mailed) {
         console.error("[natori-delivery] completion mail failed (ignored)");

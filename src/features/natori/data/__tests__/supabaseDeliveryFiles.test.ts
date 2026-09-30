@@ -11,7 +11,7 @@ vi.mock("@/lib/supabase/client", () => ({
   createClient: mockCreateClient,
 }));
 
-import { uploadNatoriDeliveryFile } from "@/features/natori/data/supabaseDeliveryFiles";
+import { uploadNatoriDeliveryFile, verifyNatoriDeliveryFile } from "@/features/natori/data/supabaseDeliveryFiles";
 
 function response(
   body: Record<string, unknown>,
@@ -68,10 +68,11 @@ describe("browser delivery upload", () => {
       "project-1/final/file.pdf",
       "signed-token",
       file,
+      { contentType: "application/octet-stream" },
     );
   });
 
-  it("cleans up the server ledger when the direct signed upload fails", async () => {
+  it("keeps the reservation when the upload result is unconfirmed", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -90,15 +91,19 @@ describe("browser delivery upload", () => {
 
     await expect(
       uploadNatoriDeliveryFile("project-1", "final", file),
-    ).rejects.toThrow("upload failed");
+    ).rejects.toThrow("アップロードの完了を確認できません");
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      "/api/natori/admin/delivery-files",
-      expect.objectContaining({
-        method: "DELETE",
-        body: JSON.stringify({ fileId: "file-1" }),
-      }),
-    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries only finalization after a lost finalize response", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(response({ ok: true, fileId: "file-1",
+      path: "project-1/final/file.pdf", token: "signed-token", requiresFinalize: true }))
+      .mockResolvedValueOnce(response({}, 503)).mockResolvedValueOnce(response({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(uploadNatoriDeliveryFile("project-1", "final", file)).rejects.toThrow("保存を確認できません");
+    await verifyNatoriDeliveryFile("file-1");
+    expect(mockUploadToSignedUrl).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls.slice(1).every(([, init]) => init.method === "PATCH")).toBe(true);
   });
 });

@@ -30,6 +30,8 @@ import { formatYen } from "@/features/natori/lib/pricing";
 import { isValidQuoteDate } from "@/features/natori/lib/quoteTerms";
 import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 import type { NatoriProjectStatus } from "@/features/natori/types/projects";
+import { deliveryIntegrityEnabled } from "./deliveryFilesService";
+import { issueReadyDelivery } from "./deliveryReleaseService";
 
 /* ---------- Env ---------- */
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
@@ -131,10 +133,13 @@ export type SendNatoriOrderMailInput = {
   quoteTitle?: string;
   deliverables?: string;
   dueDate?: string;
+  operationId?: string;
+  fileIds?: string[];
 };
 
 export type SendNatoriOrderMailResult =
-  | { kind: "ok"; paymentLinkUrl?: string }
+  | { kind: "ok"; paymentLinkUrl?: string; releaseId?: string; notificationStatus?: string }
+  | { kind: "delivery-conflict" | "delivery-expired" }
   | { kind: "not-found" }
   | { kind: "not-configured" }
   | { kind: "no-files" }
@@ -196,6 +201,7 @@ async function fetchAcceptedQuote(project: ProjectRow): Promise<QuotePaymentRow 
 export async function sendNatoriOrderMail(
   input: SendNatoriOrderMailInput
 ): Promise<SendNatoriOrderMailResult> {
+  if (input.kind === "delivery" && deliveryIntegrityEnabled()) return issueReadyDelivery(input);
   if (!isNatoriOrderMailConfigured()) return { kind: "not-configured" };
 
   const ownerId = await resolveNatoriOwnerId();

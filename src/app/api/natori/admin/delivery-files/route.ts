@@ -13,6 +13,8 @@ import {
   listNatoriDeliveryFiles,
   signNatoriDeliveryUpload,
 } from "@/features/natori/server/deliveryService";
+import { deliveryIntegrityEnabled, finalizeDeliveryFile } from "@/features/natori/server/deliveryFilesService";
+import { DELIVERY_UUID_RE } from "@/features/natori/lib/deliveryIntegrity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,11 +45,15 @@ export const POST = withNatoriManagement("delivery-files.POST", true, async func
     folder?: unknown;
     fileName?: unknown;
     sizeBytes?: unknown;
+    fileId?: unknown;
+    contentType?: unknown;
   } | null;
   const projectId = typeof payload?.projectId === "string" ? payload.projectId.trim() : "";
   const folder = payload?.folder;
   const fileName = typeof payload?.fileName === "string" ? payload.fileName.trim() : "";
   const sizeBytes = Number(payload?.sizeBytes);
+  const fileId = typeof payload?.fileId === "string" ? payload.fileId : undefined;
+  const contentType = typeof payload?.contentType === "string" ? payload.contentType : "application/octet-stream";
 
   if (!projectId) return NextResponse.json({ error: "projectId is required" }, { status: 400 });
   if (folder !== "rough" && folder !== "final") {
@@ -59,9 +65,14 @@ export const POST = withNatoriManagement("delivery-files.POST", true, async func
   if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
     return NextResponse.json({ error: "sizeBytes must be positive" }, { status: 400 });
   }
+  if ((fileId && !DELIVERY_UUID_RE.test(fileId)) || contentType.length > 200 || /[\r\n]/.test(contentType)) {
+    return NextResponse.json({ error: "Invalid file metadata" }, { status: 400 });
+  }
 
-  const result = await signNatoriDeliveryUpload({ projectId, folder, fileName, sizeBytes });
+  const result = await signNatoriDeliveryUpload({ projectId, folder, fileName, sizeBytes, fileId, contentType });
   switch (result.kind) {
+    case "invalid-state":
+      return NextResponse.json({ error: "納品発行後のファイルは変更できません。画面を更新してください。" }, { status: 409 });
     case "not-found":
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     case "too-large":
@@ -80,8 +91,22 @@ export const POST = withNatoriManagement("delivery-files.POST", true, async func
         fileId: result.fileId,
         path: result.path,
         token: result.token,
+        requiresFinalize: result.requiresFinalize ?? false,
       });
   }
+});
+
+export const PATCH = withNatoriManagement("delivery-files.PATCH", true, async function PATCH(request: Request) {
+  const csrfError = checkCsrf(request);
+  if (csrfError) return csrfError;
+  if (!deliveryIntegrityEnabled()) return NextResponse.json({ error: "Verification is not enabled" }, { status: 409 });
+  const payload: unknown = await request.json().catch(() => null);
+  const id = payload && typeof payload === "object" && "fileId" in payload && typeof payload.fileId === "string" ? payload.fileId : "";
+  if (!DELIVERY_UUID_RE.test(id)) return NextResponse.json({ error: "Invalid fileId" }, { status: 400 });
+  const result = await finalizeDeliveryFile(id);
+  if (result === "ready") return NextResponse.json({ ok: true, state: "ready" });
+  return NextResponse.json({ error: result === "unavailable" ? "ファイルの保存を確認できません。再確認または再アップロードしてください。" : "ファイルの確認に失敗しました。" },
+    { status: result === "not-found" ? 404 : result === "unavailable" ? 409 : 503 });
 });
 
 export const DELETE = withNatoriManagement("delivery-files.DELETE", true, async function DELETE(request: Request) {

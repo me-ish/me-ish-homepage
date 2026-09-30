@@ -16,6 +16,8 @@ phase0a=${PHASE_0A:-0}
 phase0b=${PHASE_0B:-0}
 phasen=${PHASE_N:-0}
 phase4=${PHASE_4:-0}
+phase1=${PHASE_1:-0}
+[[ $phase1 == 0 || ( $phase1 == 1 && $phasen == 1 && $phase4 == 0 ) ]] || exit 1
 [[ $phase4 == 0 || ( $phase4 == 1 && $phasen == 1 ) ]] || exit 1
 [[ $phasen == 0 || $phasen == 1 ]] || exit 1
 [[ $phasen == 0 || ( $phase0a == 0 && $phase0b == 0 ) ]] || exit 1
@@ -82,6 +84,14 @@ if [[ $phase0a == 1 ]]; then
   test_memory=512m
 fi
 
+if [[ $phase1 == 1 ]]; then
+  mkdir -p "$work/phase1"
+  node "$repo/scripts/natori-phase-1/build.mjs" "$work/phase1/integration.cjs"
+  node "$repo/scripts/natori-phase-1/build-fixture.mjs" "$work/phase1.sql"
+  extra_mounts+=(--mount "type=bind,source=$work/phase1,target=/phase1,readonly")
+  test_memory=1g
+fi
+
 if [[ $phase0b == 1 ]]; then
   mkdir -p "$work/phase0b"
   node "$repo/scripts/natori-phase-0b/build.mjs" "$work/phase0b/integration.cjs"
@@ -104,6 +114,7 @@ if [[ $phasen == 1 ]]; then
   extra_mounts+=(-e NODE_PATH=/app/node_modules)
   test_memory=512m
 fi
+if [[ $phase1 == 1 ]]; then test_memory=1g; fi
 
 echo 'BUILD: download tools/images; production credentials are absent'
 curl --fail --silent --show-error --location --connect-timeout 15 --max-time 120 --retry 1 \
@@ -124,15 +135,18 @@ if [[ $phasen == 1 ]]; then
   bash "$repo/scripts/natori-phase-0b/prepare-browser.sh" "$repo" "$work" "$node_image" "$project"
   node "$repo/scripts/natori-phase-n/prepare-browser.mjs" "$work/browser-app"
   if [[ $phase4 == 1 ]]; then node "$repo/scripts/natori-phase-4/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase1 == 1 ]]; then node "$repo/scripts/natori-phase-1/prepare-browser.mjs" "$work/browser-app"; fi
   cp "$work/browser-app/source-checksums.json" "$work/results/browser-source-checksums.json"
 fi
-ROOT="$root" WORK="$work" PROJECT="$project" node --input-type=module <<'JS'
+ROOT="$root" WORK="$work" PROJECT="$project" PHASE_1="$phase1" node --input-type=module <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 let config = readFileSync(`${process.env.ROOT}/supabase/config.toml`, 'utf8');
 config = config.replace('natori-phase-t-placeholder', process.env.PROJECT);
 config = config.replace('[db]', `[db]\npassword = "${randomBytes(32).toString('hex')}"`);
 config = config.replace('[auth]', `[auth]\njwt_secret = "${randomBytes(48).toString('hex')}"\npublishable_key = "sb_publishable_${randomBytes(24).toString('base64url')}"\nsecret_key = "sb_secret_${randomBytes(24).toString('base64url')}"`);
+// Test-only size allowance for the existing product limit. Never changes a cloud project.
+if (process.env.PHASE_1 === '1') config = config.replace('file_size_limit = "50MiB"', 'file_size_limit = "250MiB"');
 writeFileSync(`${process.env.WORK}/stack/supabase/config.toml`, config, { mode: 0o600 });
 JS
 
@@ -259,7 +273,7 @@ docker run -d --name "$runner" --label "natori.phase-t=$project" --network "$net
   --mount "type=bind,source=$work/runtime,target=/runtime,readonly" \
   --mount "type=bind,source=$work/results,target=/results" \
   "${extra_mounts[@]}" \
-  "$node_image" node -e 'setTimeout(() => {}, 900000)' >/dev/null
+  "$node_image" node -e 'setTimeout(() => {}, 1800000)' >/dev/null
 pid=$(docker inspect -f '{{.State.Pid}}' "$runner")
 [[ $pid =~ ^[1-9][0-9]*$ ]]
 # All descendants inherit this network namespace; they have no NET_ADMIN capability,
@@ -331,6 +345,13 @@ if [[ $phasen == 1 ]]; then
   timeout 45 docker exec "$runner" node /tests/isolation.mjs
   timeout 240 docker exec "$runner" node /phasen/integration.cjs
   bash "$repo/scripts/natori-phase-n/run-browser.sh" "$repo" "$work" "$runner" "$project" "$pid"
+fi
+if [[ $phase1 == 1 ]]; then
+  # Existing Phase N scenarios run first with their original semantics. Then expand
+  # only this disposable database and switch on Phase 1 for its own mandatory tests.
+  dbsql <"$work/phase1.sql" >/dev/null
+  timeout 360 docker exec "$runner" node /phase1/integration.cjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase1-browser/browser.mjs
 fi
 sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/egress-counters.txt"
 sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/egress-counters.txt"
