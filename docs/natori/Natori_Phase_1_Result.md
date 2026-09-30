@@ -114,6 +114,15 @@ local HTTP modeと新旧size環境keyを明示する。クライアントの継�
 実画面では保存・発行・受取・再送のDB事実も確認できたが、閉じるボタン/alertの重複locatorと
 期限切れ文言の試験側不一致を修正。未処理page errorは消さずに分類して再確認する。
 
+3回目（head `5fde0cb27b3e873ad7e45ab1a8dddaaa5da260d6`、
+[run 36713652568](https://github.com/me-ish/me-ish-homepage/actions/runs/36713652568)）では
+実Storage **28成功/0失敗/0 skip**。200MiBの署名TUS・全bytes digestも成功。
+画面の業務シナリオ10件は成功したが、未処理page errorを検出する1件は失敗。
+更新操作で発生するエラーを秘密値/URLを消した診断で特定し、成功扱いにせず修正を続ける。
+同headの既存Phase 0Aでは、ギャラリー受付の同時finish試験2件がStorageの一時500で失敗
+（[run 36713652064](https://github.com/me-ish/me-ish-homepage/actions/runs/36713652064)）。
+同経路は今回変更しておらず、先の2 runは成功している。失敗証跡を保持し、検証条件は弱めない。
+
 初回Actions（head `2ed143d5d0522ab075ed1f6a0f0dde3a4e143da2`、
 [run 36709511224](https://github.com/me-ish/me-ish-homepage/actions/runs/36709511224)）では
 Phase 1実Storageが26成功/2失敗/0 skip、ブラウザ試験は未到達だった。

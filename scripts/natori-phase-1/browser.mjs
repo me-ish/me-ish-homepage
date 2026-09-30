@@ -88,8 +88,11 @@ async function main() {
         browserProblems.add('UNHANDLED_PAGE_ERROR');
         const message = error.message ?? '';
         const known = ['Failed to fetch', 'Invalid URL', 'removeChild', 'NotFoundError', 'hydration', 'Cannot read properties', 'ReferenceError'];
+        const redacted = message.replace(/(?:https?|postgres(?:ql)?):\/\/[^\s"'`<>]+/gi, '[url]')
+          .replace(/eyJ[\w-]+\.[\w-]+\.[\w-]+|[A-Za-z0-9_+/.=-]{24,}/g, '[opaque]')
+          .replace(/\b(token|password|secret|authorization|key)\s*[=:]\s*[^\s,;]+/gi, '$1=[redacted]');
         browserErrorDiagnostics.push({ stage, name: /^[A-Za-z]+$/.test(error.name) ? error.name : 'Error',
-          classifications: known.filter(label => message.includes(label)) });
+          classifications: known.filter(label => message.includes(label)), message: redacted.slice(0, 240) });
       });
       page.on('console', message => {
         if (!['warning', 'error'].includes(message.type())) return;
