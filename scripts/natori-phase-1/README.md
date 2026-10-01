@@ -22,7 +22,7 @@ Order:
    with Phase 1 disabled. These regression scenarios keep their original assertions.
 3. Phase 1 construction replaces only its labelled disposable Storage container with the same
    image, auth settings and named volume, an explicit internal `STORAGE_PUBLIC_URL`, local
-   HTTP mode, and 250MiB size caps. The pinned CLI otherwise returns an upstream TUS host
+   HTTP mode, and 50MB (50,000,000 bytes) size caps. The pinned CLI otherwise returns an upstream TUS host
    after the sealed network move. No client URL rewriting or broader egress rule is used.
    `fixture.sql` matches the previously read production delivery table constraints; only the
    Phase 1 migration is added. No full migration history or production seed is executed.
@@ -34,7 +34,7 @@ Order:
    No external font response is mocked and no network allowlist is widened.
 4. `integration.ts`: 28 real DB/Auth/Storage scenarios including absent/mismatched files,
    replay, delete/publish and accept/resend races, commit/response loss, legacy compatibility,
-   ciphertext expiry, and an actual 200MiB signed TUS upload plus full download digest.
+   ciphertext expiry, and an actual 50MB (50,000,000 bytes) signed TUS upload plus full download digest.
 5. `browser.mjs`: 11 Chromium scenarios through actual management/customer routes, actual
    shared-key authentication, real small/signed-TUS file uploads, missing-file CTA, receipt
    failures and recovery.
@@ -49,8 +49,10 @@ node --check scripts/natori-phase-1/browser.mjs
 bash -n scripts/natori-phase-t/run.sh scripts/natori-phase-n/run-browser.sh
 ```
 
-The fixture-only delivery bucket and disposable Storage caps are 250MiB so the existing 200MiB
-product limit can be exercised. Both legacy and current size environment keys are set explicitly
+The fixture-only delivery bucket and disposable Storage caps are exactly 50,000,000 bytes,
+matching the conservative decimal 50MB application limit. The test requires a successful boundary upload;
+50,000,001 bytes must be rejected by the application and the direct reservation RPC.
+Both legacy and current size environment keys are set explicitly
 because the pinned image prioritizes `UPLOAD_FILE_SIZE_LIMIT` over the CLI's legacy setting.
 Non-secret effective settings are recorded in `versions.txt`.
 **This is not evidence of the production global Storage limit.** Global and bucket
@@ -87,3 +89,16 @@ Minimal order: unchanged-head **0A** retry and evidence capture → scoped lockf
 by those workflows too. Push to `codex/natori-phase-1`; keep the PR Draft and never merge to
 trigger a test. Exact final head, run links and results are maintained in the
 [PR #101 description](https://github.com/me-ish/me-ish-homepage/pull/101).
+
+## Local Free-plan alignment (2026-10-01)
+
+The production Settings screenshot confirms a Free-plan fixed 50 MB global cap, with no
+bucket override. Supabase's [Limits documentation](https://supabase.com/docs/guides/storage/uploads/file-limits)
+uses MB without specifying the production byte value. The application conservatively uses
+50,000,000 bytes (decimal 50MB), not 50MiB (52,428,800 bytes). No cloud setting change is required.
+
+Local verification: 45 tests passed across browser upload/API/server/receipt/encryption/schema
+regression suites; typecheck, changed-file lint, baseline static check, integration bundle and
+runner/configuration syntax passed. Browser upload and service boundary tests use mocks.
+The updated real DB/Auth/Storage and Chromium workflows have not run for these local changes.
+The prior PR head's 200MiB pass remains historical evidence, not a pass for the changed 50MB limit.

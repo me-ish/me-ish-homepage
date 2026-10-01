@@ -17,12 +17,13 @@ import { acceptanceOutboxEnabled } from "./acceptanceNotifications";
 import { deliveryIntegrityEnabled, listReadyDeliveryFiles, reserveDeliveryUpload, removeDraftDeliveryFile } from "./deliveryFilesService";
 import { getReadyDelivery, acceptReadyDelivery } from "./deliveryReleaseService";
 import type { DeliveryFileState } from "../types/delivery";
+import { DELIVERY_MAX_BYTES } from "../lib/deliveryIntegrity";
 
 const BUCKET = "natori-deliveries";
 const TOKEN_RE = /^[A-Za-z0-9_-]{20,64}$/;
 
 export const DELIVERY_MAX_FILES_PER_FOLDER = 10;
-export const DELIVERY_MAX_FILE_BYTES = 200 * 1024 * 1024; // 200MB
+export const DELIVERY_MAX_FILE_BYTES = DELIVERY_MAX_BYTES;
 /** 納品ページを開くたびに発行するダウンロードURLの有効秒数（1時間） */
 const DOWNLOAD_URL_TTL_SECONDS = 60 * 60;
 

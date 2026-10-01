@@ -15,6 +15,8 @@ import {
   type NatoriDeliveryFolder,
 } from "@/features/natori/data/supabaseDeliveryFiles";
 
+import { DELIVERY_MAX_SIZE_LABEL } from "@/features/natori/lib/deliveryIntegrity";
+
 const FOLDER_LABELS: Record<NatoriDeliveryFolder, string> = {
   rough: "ラフ確認ファイル",
   final: "納品ファイル",
@@ -43,15 +45,15 @@ const DEMO_FILES: Record<NatoriDeliveryFolder, NatoriDeliveryFileView[]> = {
       id: "demo-final-2",
       folder: "final",
       fileName: "納品_全身立ち絵.psd",
-      sizeBytes: 94_000_000,
+      sizeBytes: 44_000_000,
       createdAt: "",
     },
   ],
 };
 
 function formatBytes(bytes: number): string {
-  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
-  if (bytes >= 1024) return `${Math.round(bytes / 1024)}KB`;
+  if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)}MB`;
+  if (bytes >= 1_000) return `${Math.round(bytes / 1_000)}KB`;
   return `${bytes}B`;
 }
 
@@ -178,11 +180,13 @@ export default function DeliveryFilesManager({
         />
       </div>
 
+      <p className="mt-2 text-xs text-gray-500">ファイルは1つ{DELIVERY_MAX_SIZE_LABEL}までです。</p>
+
       {files === null ? (
         <p className="mt-2 text-xs text-gray-500">読み込み中…</p>
       ) : files.length === 0 ? (
         <p className="mt-2 text-xs text-gray-600">
-          まだファイルがありません。「ファイルを追加」からアップロードしてください（1つ200MBまで）。
+          まだファイルがありません。「ファイルを追加」からアップロードしてください。
         </p>
       ) : (
         <ul className="mt-2 space-y-1.5">

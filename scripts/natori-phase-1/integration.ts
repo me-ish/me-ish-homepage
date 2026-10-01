@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import { Readable } from "node:stream";
 import { createClient } from "@supabase/supabase-js";
 import { Upload } from "tus-js-client";
+import { DELIVERY_MAX_BYTES } from "../../src/features/natori/lib/deliveryIntegrity";
 import { cookieScope } from "../natori-phase-0b/cookies";
 
 const check: (value: unknown, code: string) => asserts value = (value, code) => { if (!value) throw new Error(code); };
@@ -318,8 +319,8 @@ async function main() {
       const after = (await jobs(p.id))[0]; check((after.payload as { ciphertext: string }).ciphertext === "" && after.sent_at === before.sent_at
         && JSON.stringify(after.snapshot) === JSON.stringify(before.snapshot), "PURGE_DESTROYED_EVIDENCE");
     });
-    await test("real-200mib-signed-tus-upload-range-read-and-size-boundary", async () => {
-      const p = await project(), size = 200 * 1024 * 1024, f = await reserve(p.id, size);
+    await test("real-50mb-signed-tus-upload-range-read-and-size-boundary", async () => {
+      const p = await project(), size = DELIVERY_MAX_BYTES, f = await reserve(p.id, size);
       const chunk = Buffer.alloc(6 * 1024 * 1024, 0x5a);
       async function* stream() { for (let sent = 0; sent < size; sent += chunk.length) yield chunk.subarray(0, Math.min(chunk.length, size - sent)); }
       await new Promise<void>((resolve, reject) => new Upload(Readable.from(stream()), { endpoint: `${origin}/storage/v1/upload/resumable/sign`,
@@ -343,10 +344,15 @@ async function main() {
       const expected = createHash("sha256"); for await (const data of stream()) expected.update(data);
       check(length === size && digest.digest("hex") === expected.digest("hex"), "LARGE_BYTES");
       check((await manage(() => files.signNatoriDeliveryUpload({ projectId: p.id, folder: "final", fileName: "oversize.bin", sizeBytes: size + 1 }))).kind === "too-large", "SIZE_BOUNDARY");
+      const oversizeId = randomUUID();
+      const directOversize = await admin.rpc("natori_delivery_reserve_v1", { p_owner_id: owner, p_project_id: p.id,
+        p_file_id: oversizeId, p_folder: "final", p_path: `${p.id}/final/${oversizeId}.bin`, p_file_name: "oversize.bin",
+        p_size_bytes: size + 1, p_content_type: "application/octet-stream" });
+      check(directOversize.data?.[0]?.result === "invalid-input", "DB_SIZE_BOUNDARY");
     });
     writeFileSync("/results/phase1-integration.json", JSON.stringify({ tests: results, passed: results.filter(r => r.status === "passed").length,
       failed: results.filter(r => r.status === "failed").length, skipped: 0, providerRequests: calls, distinctAcceptedMessages: accepted.size,
-      storage: "Real isolated DB/Auth/Storage; includes 200MiB signed TUS and complete bytes digest", tusDiagnostics }, null, 2));
+      storage: "Real isolated DB/Auth/Storage; includes 50MB (50,000,000 bytes) signed TUS and complete bytes digest", tusDiagnostics }, null, 2));
     console.log(`TUS routing classifications: ${JSON.stringify(tusDiagnostics)}`);
     check(results.length === 28 && results.every(r => r.status === "passed"), "REQUIRED_TESTS_FAILED");
     console.log(`PHASE 1 ${results.length} passed / 0 failed / 0 skipped`);

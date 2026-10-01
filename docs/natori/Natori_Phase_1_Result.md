@@ -37,7 +37,7 @@
 - Phase Nの受取通知予約・lease・provider idempotency・送信証跡は再利用する。
 - 既存のdelivery activity triggerを維持。通知成功日時の更新は一度だけで、statusを巻き戻さない。
 - `natori-deliveries` はprivate、bucket側のsize/MIME制限はNULL。
-  **プロジェクト全体のStorage上限は未確認。200MiB本番送信の可否はこの情報から判断できない。**
+  **追記：本人提供の本番Storage SettingsでFree固定50 MBを確認。bucket上限NULLはglobal上限を継承する。現行のアプリ上限は安全側の50,000,000 bytes（十進50MB）。200MiB送信は対象外。**
 - 読取時の集計：納品ファイル0件、delivery hashあり0件、受取済み0件、未受取旧納品0件。
   正式案件・入金を変更しない。移行直前にもこの集計を読み直す必要がある。
 
@@ -61,7 +61,7 @@ frozen baselineやmigration履歴の再配置は行わない。
   発行と通知予約は単一DB transaction。中間processing行は不要。応答消失時は同じIDでresult replay。
 - reserve/finalize/delete/issue/acceptはproject→関連rowの順でlock。
   削除はStorage操作より前にdeletingを確保し、失敗時は削除だけを再試行する。
-  10件/200MiBの境界とfresh proof（60秒、未来許容5秒）をDBでも確認する。
+  10件/50,000,000 bytes（十進50MB）の境界とfresh proof（60秒、未来許容5秒）をDBでも確認する。
 - 新table/RPCはservice_roleのみ。ブラウザはowner認可・CSRFのある管理APIを経由する。
   old RPC署名は残すが、未受取は新しい実読取proofなしでは確定できない。
 
@@ -130,7 +130,7 @@ source/fixture CSSのchecksumを別々に記録し、ローカルでも変更が
 Phase 1 DB/Auth/Storage 28件、実API/画面Chromium 11件。失敗・起動不能・認証不足はskip扱いにしない。
 主なfailure injection：DB commit前拒否とcommit後応答消失の区別、provider受付後中断、通知finish失敗、
 署名/実読取の503、ファイル部分欠落、版変更、publish/delete・accept/resend競合、旧RPC迂回拒否。
-200MiB署名TUSは全bytes download digestまで照合する。試験専用bucket/Storage capは250MiB。
+現行の署名TUS境界試験は50,000,000 bytesを全bytes download digestまで照合し、+1 byteを拒否する。試験専用bucket/Storage capも50,000,000 bytes。以下の200MiB成功記録は変更前の履歴であり、現行上限の実Storage検証成功を示さない。
 固定CLIのStorageが隔離network移動後に別hostのTUS継続URLを返したため、このrunのStorageだけを
 同一image/Auth設定/専用volumeで再作成し、STORAGE_PUBLIC_URLを許可済みinternal originへ設定。
 local HTTP modeと新旧size環境keyを明示する。クライアントの継続URLを書き換えたり、通信許可先を
@@ -165,7 +165,7 @@ Phase 1実Storageが26成功/2失敗/0 skip、ブラウザ試験は未到達だ�
 high severity gateや通常CI/既存Phaseの検証条件は維持した。
 
 未実施：実メール箱での納品通知/再案内/受取通知、iPhone Safari実機・ホーム画面版、
-本番Storage上限の確認、本番flag/暗号鍵設定、実顧客案件の納品操作。
+本番flag/暗号鍵設定、許可された架空案件での納品操作。StorageのFree固定50 MBは本人提供画面で確認済みだが、50,000,000 bytes境界の実送信は未実施。
 以前のホーム画面版から相談添付を開く白画面は、ユーザーが軽微として次へ進むと判断した事項。
 今回のモバイル幅試験をその実機問題の解消根拠として扱わない。
 
@@ -174,7 +174,7 @@ high severity gateや通常CI/既存Phaseの検証条件は維持した。
 この節は次の承認対象であり、このWorkでは実行しない。
 
 1. **Verify**：main/配信SHA、対象table/RPC/trigger定義と件数、private bucket、global/bucketの
-   200MiB上限、N outbox、メール設定、既存hash/expiry/accepted/paidの維持条件を再確認。
+   50,000,000 bytes以上を許容するglobal/bucket上限（Free固定50 MB、設定変更不要）、N outbox、メール設定、既存hash/expiry/accepted/paidの維持条件を再確認。
    定義が異なる場合や既存納品が増えている場合は、対象だけ読み取り確認して順序を見直す。
 2. **Application expand**：Phase 1コードを有効flagなしで先に配信。旧コードが新tableを要求しないことを確認。
    新UIの完了後再案内はflag切替まで旧APIが拒否する。旧APIのcompleted拒否は維持する。
@@ -241,3 +241,23 @@ unit testは旧実装で失敗を確認してから復旧・容量/MIME/hash不�
 既存CI、Phase N/4のassertion・skip・continue-on-errorは弱めない。
 
 最終的にDraft PR、実際の試験SHA、run URL、成功/失敗/skip件数を確認してから本番移行の判断へ進む。
+
+## 2026-10-01 本番Free上限に合わせるローカル修正
+
+本人提供のStorage SettingsはFree固定50 MB、`natori-deliveries`はprivate・bucket上限NULL。
+本人は現在の納品に50MB超がないと回答。公式[Limits](https://supabase.com/docs/guides/storage/uploads/file-limits)もFree最大50 MBを明記するが、本番の正確なバイト値をこの画面だけで断定しない。
+アプリは保守的に **50,000,000 bytes（十進50MB）**、+1 byte拒否とする。50MiB（52,428,800 bytes）とは異なる。
+フロント・API・新旧server経路・未適用Phase 1 migration・隔離Storage/bucket試験を同じ上限に揃える。
+既存の本番DB/Storage/設定/ファイルを変更せず、適用済みmigrationは変更しない。既存行の変換・削除もない。
+
+変更前head `87ee50a`の全CI成功・200MiB試験は履歴として保持する。
+以下のローカル検証後、本人が既存PR #101へのcommit/pushと変更後CI・隔離検証を承認した。
+変更後のhead・各run・実Storage境界検証の成否はPR #101本文の最新記録を参照する。merge・本番反映はこの承認に含まれない。
+本番判断前に変更後の通常CIとPhase 1実DB/Auth/Storage/Chromiumを実行し、50,000,000 bytes upload・全bytes取得・50,000,001 bytes拒否を確認する。
+メール・iPhoneのPhase N確認済み事項は繰り返さず、Phase 1納品→取得→受取→再案内を許可された架空案件で別途確認する。
+移行順・操作保留・旧RPCのfail closed・新release後のPhase 1互換コード復帰条件は上記のまま。
+
+ローカル検証：関連6ファイル45テスト成功（フロント通常/TUS・API・新旧serverの50,000,000 bytes許可と50,000,001 bytes拒否、受取・暗号化・schema回帰）。
+型検査、変更箇所lint、baseline静的検査（0 failures）、integration bundle、runner/configure-storage構文確認成功。
+境界テストのStorage/RPCはmockであり、実50MBの転送・DB RPC検証・Chromium workflowはこの変更では未実行。
+本番DB・Storage設定・環境変数・メール・顧客データを操作していない。

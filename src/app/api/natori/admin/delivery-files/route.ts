@@ -8,13 +8,12 @@ import { NextResponse } from "next/server";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import {
-  DELIVERY_MAX_FILE_BYTES,
   deleteNatoriDeliveryFile,
   listNatoriDeliveryFiles,
   signNatoriDeliveryUpload,
 } from "@/features/natori/server/deliveryService";
 import { deliveryIntegrityEnabled, finalizeDeliveryFile } from "@/features/natori/server/deliveryFilesService";
-import { DELIVERY_UUID_RE } from "@/features/natori/lib/deliveryIntegrity";
+import { DELIVERY_MAX_BYTES, DELIVERY_MAX_SIZE_LABEL, DELIVERY_UUID_RE } from "@/features/natori/lib/deliveryIntegrity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,11 +61,15 @@ export const POST = withNatoriManagement("delivery-files.POST", true, async func
   if (!fileName || fileName.length > 200) {
     return NextResponse.json({ error: "fileName is required (max 200)" }, { status: 400 });
   }
-  if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+  if (!Number.isSafeInteger(sizeBytes) || sizeBytes <= 0) {
     return NextResponse.json({ error: "sizeBytes must be positive" }, { status: 400 });
   }
   if ((fileId && !DELIVERY_UUID_RE.test(fileId)) || contentType.length > 200 || /[\r\n]/.test(contentType)) {
     return NextResponse.json({ error: "Invalid file metadata" }, { status: 400 });
+  }
+
+  if (sizeBytes > DELIVERY_MAX_BYTES) {
+    return NextResponse.json({ error: `ファイルは1つ${DELIVERY_MAX_SIZE_LABEL}までです` }, { status: 400 });
   }
 
   const result = await signNatoriDeliveryUpload({ projectId, folder, fileName, sizeBytes, fileId, contentType });
@@ -77,7 +80,7 @@ export const POST = withNatoriManagement("delivery-files.POST", true, async func
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     case "too-large":
       return NextResponse.json(
-        { error: `ファイルは1つ${Math.round(DELIVERY_MAX_FILE_BYTES / 1024 / 1024)}MBまでです` },
+        { error: `ファイルは1つ${DELIVERY_MAX_SIZE_LABEL}までです` },
         { status: 400 }
       );
     case "too-many-files":

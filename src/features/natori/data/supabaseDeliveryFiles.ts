@@ -5,6 +5,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import type { DeliveryFileState } from "../types/delivery";
+import { DELIVERY_MAX_BYTES, DELIVERY_MAX_SIZE_LABEL } from "../lib/deliveryIntegrity";
 import { consultationUploadEndpoint } from "../lib/consultationUploadEndpoint";
 
 const BUCKET = "natori-deliveries";
@@ -38,6 +39,9 @@ export async function uploadNatoriDeliveryFile(
   folder: NatoriDeliveryFolder,
   file: File
 ): Promise<void> {
+  if (file.size > DELIVERY_MAX_BYTES) {
+    throw new Error(`ファイルは1つ${DELIVERY_MAX_SIZE_LABEL}までです`);
+  }
   // 1) 署名URLの発行（台帳への行追加もここで行われる）
   const signRes = await fetch("/api/natori/admin/delivery-files", {
     method: "POST",

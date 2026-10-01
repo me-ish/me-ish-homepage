@@ -155,8 +155,7 @@ let config = readFileSync(`${process.env.ROOT}/supabase/config.toml`, 'utf8');
 config = config.replace('natori-phase-t-placeholder', process.env.PROJECT);
 config = config.replace('[db]', `[db]\npassword = "${randomBytes(32).toString('hex')}"`);
 config = config.replace('[auth]', `[auth]\njwt_secret = "${randomBytes(48).toString('hex')}"\npublishable_key = "sb_publishable_${randomBytes(24).toString('base64url')}"\nsecret_key = "sb_secret_${randomBytes(24).toString('base64url')}"`);
-// Test-only size allowance for the existing product limit. Never changes a cloud project.
-if (process.env.PHASE_1 === '1') config = config.replace('file_size_limit = "50MiB"', 'file_size_limit = "250MiB"');
+// Phase 1 applies its exact decimal 50 MB cap to the disposable Storage container and bucket below.
 writeFileSync(`${process.env.WORK}/stack/supabase/config.toml`, config, { mode: 0o600 });
 JS
 
@@ -280,7 +279,7 @@ for entry in json.load(sys.stdin)[0]["Config"]["Env"]:
     key,_,value=entry.partition("=")
     if key in allowed: print("storage_"+key+"="+value)
 '
-    printf 'phase1_fixture_bucket_limit=262144000\n'
+    printf 'phase1_fixture_bucket_limit=50000000\n'
   fi
   docker ps --filter "label=com.supabase.cli.project=$project" --format '{{.Names}} {{.Image}}'
   for img in $(docker ps --filter "label=com.supabase.cli.project=$project" --format '{{.Image}}') "$node_image"; do

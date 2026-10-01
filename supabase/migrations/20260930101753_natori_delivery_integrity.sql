@@ -156,7 +156,7 @@ begin
   if not found then return query select 'not-found',null::uuid,null::text; return; end if;
   if p.deleted_at is not null or p.status in ('closed','completed') then
     return query select 'invalid-state',null::uuid,null::text; return; end if;
-  if p_folder not in ('rough','final') or p_size_bytes not between 1 and 209715200
+  if p_folder not in ('rough','final') or p_size_bytes not between 1 and 50000000
     or length(p_file_name) not between 1 and 200 or length(p_content_type) not between 1 and 200
     or p_path not like p_project_id::text||'/'||p_folder||'/'||p_file_id::text||'%' then
     return query select 'invalid-input',null::uuid,null::text; return; end if;
