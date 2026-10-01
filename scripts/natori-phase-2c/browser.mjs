@@ -5,8 +5,8 @@ import {createRequire} from 'node:module';
 import {setDefaultResultOrder} from 'node:dns';
 const require=createRequire('/app/package.json'),{createClient}=require('@supabase/supabase-js'),{chromium,expect}=require('@playwright/test');
 setDefaultResultOrder('ipv4first');
-const results=[],apiObservations=[],check=(ok,code)=>{if(!ok)throw new Error(code);};let stage='preflight',server,browser;
-async function test(name,fn){stage=name;try{await fn();results.push({name,status:'passed'});console.log(`PASS phase2c-browser/${name}`);}catch(e){results.push({name,status:'failed',code:/^[A-Z_0-9]+$/.test(e?.message??'')?e.message:'ASSERTION_FAILED'});console.log(`FAIL phase2c-browser/${name}`);}}
+const results=[],apiObservations=[],check=(ok,code)=>{if(!ok)throw new Error(code);};let stage='preflight',server,browser,persistEvidence=()=>{};
+async function test(name,fn){stage=name;try{await fn();results.push({name,status:'passed'});console.log(`PASS phase2c-browser/${name}`);}catch(e){results.push({name,status:'failed',code:/^[A-Z_0-9]+$/.test(e?.message??'')?e.message:'ASSERTION_FAILED'});console.log(`FAIL phase2c-browser/${name}`);}persistEvidence();}
 async function main(){
  check(process.env.PHASE_N_BROWSER==='ephemeral','EPHEMERAL_REQUIRED');const {origin}=JSON.parse(readFileSync('/runtime/network.json','utf8'));
  check(/^http:\/\/172\.30\.250\.\d+:8000$/.test(origin),'DESTINATION_REJECTED');const keys=JSON.parse(readFileSync('/runtime/credentials.json','utf8'));
@@ -18,6 +18,7 @@ async function main(){
  check(!(await admin.from('natori_projects').update({status:'awaiting_payment',payment_quote_id:quote.data.id,active_quote_id:quote.data.id,quote_accepted_at:new Date().toISOString(),quote_accepted_amount:12000,quoted_amount:12000}).eq('id',id)).error,'ACCEPTED_FIXTURE');
  const app='http://localhost:3000';server=spawn(process.execPath,['--require','/phase2c-browser/provider-preload.cjs','/app/node_modules/next/dist/bin/next','dev','--hostname','localhost','--port','3000'],{cwd:'/app',env:{PATH:'/runtime-bin:/usr/local/bin:/usr/bin:/bin',HOME:'/tmp',TMPDIR:'/tmp',NODE_ENV:'development',NODE_OPTIONS:'--dns-result-order=ipv4first',NEXT_TELEMETRY_DISABLED:'1',PHASE_N_BROWSER:'ephemeral',PHASE_0B_BROWSER:'ephemeral',PHASE_2A_BROWSER:'ephemeral',PHASE_2C_BROWSER:'ephemeral',NATORI_PAYMENT_LINK_INTEGRITY_ENABLED:'1',NATORI_PAYMENT_INTEGRITY_ENABLED:'1',NATORI_STRIPE_MODE:'test',STRIPE_SECRET_KEY:'sk_test_'+randomBytes(32).toString('hex'),NEXT_PUBLIC_SUPABASE_URL:origin,NEXT_PUBLIC_SUPABASE_ANON_KEY:keys.anon,SUPABASE_SERVICE_ROLE_KEY:keys.service,NATORI_DASHBOARD_KEY:randomBytes(32).toString('hex'),NATORI_OWNER_USER_ID:owner,NATORI_OWNER_EMAILS:email,NEXT_PUBLIC_SITE_URL:app,NATORI_ACCEPTANCE_OUTBOX_ENABLED:'1',NATORI_NOTIFICATION_SENDING_ENABLED:'0',NATORI_QUOTE_INTEGRITY_ENABLED:'1',NATORI_DELIVERY_NOTIFICATION_KEY:randomBytes(32).toString('hex'),RESEND_API_KEY:randomBytes(32).toString('hex'),NATORI_ORDER_MAIL_FROM:'Phase 2A <sender@phase2a.invalid>',NATORI_PORTFOLIO_CONTACT_TO:'artist@phase2a.invalid',NATORI_MAIL_BCC:''},stdio:['ignore','pipe','pipe']});
  let fixtureAdapterApplied=false;const errors=new Set();for(const stream of [server.stdout,server.stderr])stream.on('data',b=>{if(b.toString().includes('PHASE2C_FIXTURE_ADAPTER'))fixtureAdapterApplied=true;for(const code of ['Module not found','Failed to compile','SyntaxError','EADDRINUSE'])if(b.toString().includes(code))errors.add(code);});
+ persistEvidence=()=>writeFileSync('/results/phase2c-browser.json',JSON.stringify({tests:results,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,engine:'Chromium 1.58.2; 390px viewport, not iPhone Safari',compileErrors:[...errors],fixtureAdapterApplied,apiObservations},null,2));
  let ready=false;const deadline=Date.now()+120000;while(Date.now()<deadline&&server.exitCode===null){try{const response=await fetch(`${app}/ja/fixture-session`,{signal:AbortSignal.timeout(2000)});if(response.ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,400));}check(ready,'NEXT_READY');
  browser=await chromium.launch({headless:true});const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();
  await context.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin!==app)return route.abort('blockedbyclient');return route.continue();});
@@ -27,7 +28,7 @@ async function main(){
  const publicDeadline=()=>quotePage.getByText('現在の支払期限',{exact:true}).locator('..').locator('dd');
  const formattedDeadline=iso=>new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',dateStyle:'medium',timeStyle:'short'}).format(new Date(iso))+'（日本時間）';
  const rejectedOperations=[];
- const observeApi=(response,data,request)=>{const codes=['completed','invalid_request','invalid_deadline','invalid_state','busy','retry_same_operation','temporarily_unavailable','not_configured','conflict','needs_review'];apiObservations.push({stage,status:response.status(),result:codes.includes(data.result)?data.result:'other',rejected:data.operationState==='rejected',operationMatches:data.operationId===request.operationId});};
+ const observeApi=(response,data,request)=>{const codes=['completed','invalid_request','invalid_deadline','invalid_state','busy','retry_same_operation','temporarily_unavailable','not_configured','conflict','needs_review'];apiObservations.push({stage,status:response.status(),result:codes.includes(data.result)?data.result:'other',rejected:data.operationState==='rejected',operationMatches:data.operationId===request.operationId});persistEvidence();};
  await test('definitive-expired-deadline-409-unfreezes-edits',async()=>{
   await page.goto(app+'/ja/fixture-payment-link/'+id);await expect(page.getByText('案内未発行',{exact:true})).toBeVisible();
   await page.getByLabel('新しい支払期限').fill('2000-01-01T12:00');await page.getByLabel('支払案内の本文').fill('Rejected individual comment KEEP');
@@ -42,9 +43,9 @@ async function main(){
  });
  await test('lost-rejection-reload-reconciles-and-preserves-editable-draft',async()=>{
   await page.getByLabel('新しい支払期限').fill('2000-01-02T12:00');await page.getByLabel('支払案内の件名').fill('Saved rejected subject');await page.getByLabel('支払案内の本文').fill('Saved rejected comment KEEP');
-  let rejected;
-  await page.route('**/api/natori/admin/payment-link',async r=>{if(r.request().method()!=='POST')return r.continue();rejected=r.request().postDataJSON();const response=await r.fetch(),data=await response.json();check(response.status()===409&&data.operationState==='rejected'&&data.operationId===rejected.operationId,'LOST_DEFINITIVE_REJECTION');await r.abort('failed');});
-  await page.getByRole('button',{name:'選んだ操作を実行'}).click();await expect(page.getByRole('alert')).toBeVisible();await expect(page.getByLabel('支払案内の本文')).toBeDisabled();await page.unroute('**/api/natori/admin/payment-link');
+  let rejected,interceptionError,finishInterception;const intercepted=new Promise(resolve=>{finishInterception=resolve;});
+  await page.route('**/api/natori/admin/payment-link',async r=>{if(r.request().method()!=='POST')return r.continue();try{rejected=r.request().postDataJSON();const response=await r.fetch(),data=await response.json();observeApi(response,data,rejected);check(response.status()===409&&data.operationState==='rejected'&&data.operationId===rejected.operationId,'LOST_DEFINITIVE_REJECTION');await r.abort('failed');}catch(e){interceptionError=e;await r.abort('failed').catch(()=>{});}finally{finishInterception();}});
+  await page.getByRole('button',{name:'選んだ操作を実行'}).click();await intercepted;if(interceptionError)throw interceptionError;await expect(page.getByRole('alert')).toBeVisible();await expect(page.getByLabel('支払案内の本文')).toBeDisabled();await page.unroute('**/api/natori/admin/payment-link');
   rejectedOperations.push(rejected.operationId);let lookup;
   await page.route('**/api/natori/admin/payment-link?*',r=>{lookup=new URL(r.request().url()).searchParams.get('operationId');return r.continue();});
   await page.reload();await expect(page.getByRole('alert')).toBeVisible();check(lookup===rejected.operationId,'RESTORED_OPERATION_LOOKUP');await page.unroute('**/api/natori/admin/payment-link?*');
@@ -57,8 +58,9 @@ async function main(){
   await page.goto(`${app}/ja/fixture-payment-link/${id}`);await expect(page.getByText('案内未発行',{exact:true})).toBeVisible();
   await page.getByLabel('新しい支払期限').fill(new Date(Date.now()+5*86400000+12600000).toISOString().slice(0,16));
   await page.getByLabel('支払案内の本文').fill('Individual comment KEEP {支払いリンク}');
-  await page.route('**/api/natori/admin/payment-link',async r=>{if(r.request().method()!=='POST')return r.continue();frozen=r.request().postDataJSON();const response=await r.fetch();check(response.ok(),'REAL_ISSUE');await r.abort('failed');});
-  await page.getByRole('button',{name:'選んだ操作を実行'}).click();await expect(page.getByRole('alert')).toBeVisible();await page.unroute('**/api/natori/admin/payment-link');
+  let interceptionError,finishInterception;const intercepted=new Promise(resolve=>{finishInterception=resolve;});
+  await page.route('**/api/natori/admin/payment-link',async r=>{if(r.request().method()!=='POST')return r.continue();try{frozen=r.request().postDataJSON();const response=await r.fetch(),data=await response.json();observeApi(response,data,frozen);check(response.ok(),'REAL_ISSUE');await r.abort('failed');}catch(e){interceptionError=e;await r.abort('failed').catch(()=>{});}finally{finishInterception();}});
+  await page.getByRole('button',{name:'選んだ操作を実行'}).click();await intercepted;if(interceptionError)throw interceptionError;await expect(page.getByRole('alert')).toBeVisible();await page.unroute('**/api/natori/admin/payment-link');
   await page.reload();await expect(page.getByLabel('支払案内の本文')).toHaveValue('Individual comment KEEP {支払いリンク}');await expect(page.getByLabel('支払案内の本文')).toBeDisabled();
   let replay;await page.route('**/api/natori/admin/payment-link',async r=>{if(r.request().method()==='POST')replay=r.request().postDataJSON();return r.continue();});
   await page.getByRole('button',{name:'同じ操作で再試行'}).click();await expect(page.getByText('リンク有効',{exact:true})).toBeVisible();
