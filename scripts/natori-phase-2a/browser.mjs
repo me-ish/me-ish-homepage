@@ -28,12 +28,12 @@ async function main(){
   await page.getByRole('button',{name:/金額を修正/}).click();
   await page.getByRole('spinbutton',{name:/の単価/}).first().fill('12500');
   await page.getByRole('button',{name:/明細を保存して送信確認へ/}).click();
-  await expect(page.getByRole('button',{name:'本文全体をこの案に更新'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'本文全体をこの候補へ更新'})).toBeVisible();
   await page.locator('input[type=checkbox]').last().check();
   await page.route('**/api/natori/admin/structured-quote',async r=>{pendingRequest=JSON.parse(r.request().postData());await r.abort('failed');});
   await page.getByRole('button',{name:/正式見積り.*を発行/}).click();
   await expect(page.getByRole('button',{name:'同じ内容で送信を再試行'})).toBeEnabled();
-  await expect(page.getByRole('button',{name:'本文全体をこの案に更新'})).toBeDisabled();
+  await expect(page.getByRole('button',{name:'本文全体をこの候補へ更新'})).toBeDisabled();
   await expect(page.getByRole('button',{name:'個別編集を保持'})).toBeDisabled();
   await expect(page.locator('#estimate-body')).toHaveValue(pendingRequest.bodySnapshot);
   await page.unroute('**/api/natori/admin/structured-quote');await page.reload();
