@@ -41,6 +41,14 @@ function formatDate(iso: string): string {
   return `${value("year")}年${value("month")}月${value("day")}日`;
 }
 
+function formatPaymentDeadline(iso: string): string {
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return "期限を確認できません。担当者にお問い合わせください。";
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo", dateStyle: "medium", timeStyle: "short",
+  }).format(date) + "（日本時間）";
+}
+
 export default function QuoteAcceptCard({
   token,
   title,
@@ -130,11 +138,23 @@ export default function QuoteAcceptCard({
             </dd>
           </div>
           <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
-            <dt style={{ color: c.inkSoft }}>お支払い期限</dt>
+            <dt style={{ color: c.inkSoft }}>{payment?.linkState ? status === "accepted" ? "承諾時のお支払条件" : "お見積りの支払条件" : "お支払い期限"}</dt>
             <dd className="font-bold sm:text-right">
               {terms ? "お支払いのご案内メールをお送りしてから7日以内" : "支払い案内メール送信日から7日以内"}
             </dd>
           </div>
+          {payment?.linkState ? (
+            <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
+              <dt style={{ color: c.inkSoft }}>現在の支払期限</dt>
+              <dd className="font-bold sm:text-right">
+                {payment.linkDeadline ? formatPaymentDeadline(payment.linkDeadline) : "お支払案内の発行後に確定します"}
+                <span className="mt-1 block text-xs font-normal">
+                  上記はお見積り発行時の条件です。現在の期限はこの欄でご確認ください。
+                  再通知では期限は延長されません。担当者が期限を延長した場合は、この欄に反映します。
+                </span>
+              </dd>
+            </div>
+          ) : null}
           {terms ? (
             <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
               <dt style={{ color: c.inkSoft }}>納品日</dt>

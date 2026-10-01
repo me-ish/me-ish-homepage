@@ -1,2 +1,11 @@
 import {readFileSync,writeFileSync} from 'node:fs';
-writeFileSync(process.argv[2],`alter table public.natori_projects add column if not exists payment_link_id text, add column if not exists payment_link_url text;\n`+readFileSync('supabase/migrations/20261001161401_natori_payment_link_generations.sql','utf8')+"\nNOTIFY pgrst, 'reload schema';\n");
+const baseline=readFileSync('supabase/migrations/20260723111730_etorie_baseline.sql','utf8');
+const start=baseline.indexOf('create table public.natori_order_mail_logs ('),end=baseline.indexOf('create table public.natori_inquiry_reference_files',start);
+if(start<0||end<=start)throw new Error('Reviewed legacy mail fixture boundary changed');
+const mail=baseline.slice(start,end)+`alter table public.natori_order_mail_logs enable row level security;
+revoke all on public.natori_order_mail_logs from public,anon,authenticated,service_role;
+grant select,insert,update on public.natori_order_mail_logs to service_role;
+grant usage,select on sequence public.natori_order_mail_logs_id_seq to service_role;
+`;
+writeFileSync(process.argv[2],`alter table public.natori_projects add column if not exists payment_link_id text, add column if not exists payment_link_url text;
+`+mail+readFileSync('supabase/migrations/20261001161401_natori_payment_link_generations.sql','utf8')+"\nNOTIFY pgrst, 'reload schema';\n");

@@ -175,6 +175,7 @@ if [[ $phasen == 1 ]]; then
   if [[ $phase4 == 1 ]]; then node "$repo/scripts/natori-phase-4/prepare-browser.mjs" "$work/browser-app"; fi
   if [[ $phase1 == 1 ]]; then node "$repo/scripts/natori-phase-1/prepare-browser.mjs" "$work/browser-app"; fi
   if [[ $phase2a == 1 ]]; then node "$repo/scripts/natori-phase-2a/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase2c == 1 ]]; then node "$repo/scripts/natori-phase-2c/prepare-browser.mjs" "$work/browser-app"; fi
   cp "$work/browser-app/source-checksums.json" "$work/results/browser-source-checksums.json"
 fi
 ROOT="$root" WORK="$work" PROJECT="$project" PHASE_1="$phase1" node --input-type=module <<'JS'
@@ -424,6 +425,7 @@ fi
 if [[ $phase2c == 1 ]]; then
   dbsql <"$work/phase2c.sql" >/dev/null
   timeout 300 docker exec "$runner" node /phase2c/integration.cjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase2c-browser/browser.mjs
 fi
 
 echo 'Required real Storage tests completed; production remains unchanged'

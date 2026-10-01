@@ -13,15 +13,21 @@ export default function PaymentLinkPanel({project,onClose,onSent}:{project:Nator
  const [to,setTo]=useState(resolveClientEmail(project)??""),[subject,setSubject]=useState(""),[body,setBody]=useState("");
  const [pending,setPending]=useState<PaymentLinkRequest|null>(null),[cacheReady,setCacheReady]=useState(false);
  const key=`natori-payment-link-operation/${project.id}`;
- const load=async()=>{const res=await fetch(`/api/natori/admin/payment-link?projectId=${encodeURIComponent(project.id)}`,{cache:"no-store"});
+ const clearRejected=(value:unknown,request:PaymentLinkRequest|null)=>{
+  if(!request||!value||typeof value!=="object"||!("operationState" in value)||value.operationState!=="rejected"
+   ||!("operationId" in value)||value.operationId!==request.operationId)return false;
+  sessionStorage.removeItem(key);setPending(null);return true;
+ };
+ const rejectionMessage="この操作は実行されていません。入力内容を修正して再実行してください。";
+ const load=async(request:PaymentLinkRequest|null=pending)=>{const res=await fetch(`/api/natori/admin/payment-link?projectId=${encodeURIComponent(project.id)}`+(request?"&operationId="+encodeURIComponent(request.operationId):""),{cache:"no-store"});
   const json:unknown=await res.json();if(!res.ok||!json||typeof json!=="object"||!("state" in json))throw new Error("支払状態を確認できません。再読込してください。");
-  const view=paymentLinkStateSchema.parse(json.state);setState(view);return view;};
- useEffect(()=>{let active=true;
+  const view=paymentLinkStateSchema.parse(json.state);setState(view);if(clearRejected(json,request))setError(rejectionMessage);return view;};
+ useEffect(()=>{let active=true;let restored:PaymentLinkRequest|null=null;
   const restore=(request:PaymentLinkRequest)=>{setPending(request);setAction(request.action);setTo(request.to??"");setSubject(request.subject??"");setBody(request.body??"");setDeadline(request.deadline?toLocal(request.deadline):"");setConfirmed(request.confirmed??false);};
-  try{const raw=sessionStorage.getItem(key);if(raw){const saved=paymentLinkRequestSchema.safeParse(JSON.parse(raw));if(!saved.success||saved.data.projectId!==project.id)throw new Error();restore(saved.data);}setCacheReady(true);}
+  try{const raw=sessionStorage.getItem(key);if(raw){const saved=paymentLinkRequestSchema.safeParse(JSON.parse(raw));if(!saved.success||saved.data.projectId!==project.id)throw new Error();restored=saved.data;restore(saved.data);}setCacheReady(true);}
   catch{setError("前回の操作記録を読み取れません。管理者に確認してください。");return;}
-  void load().then(view=>{if(!active)return;const draft=buildGenerationPaymentMail(project.clientName,project.title,view.amount??0);
-   if(!sessionStorage.getItem(key)){setSubject(draft.subject);setBody(draft.body);setAction(view.state==="active"?"renotify":view.state==="inactive"?"reissue":view.state==="legacy_review"?"adopt":"issue");}}
+  void load(restored).then(view=>{if(!active)return;const draft=buildGenerationPaymentMail(project.clientName,project.title,view.amount??0);
+   if(!restored){setSubject(draft.subject);setBody(draft.body);setAction(view.state==="active"?"renotify":view.state==="inactive"?"reissue":view.state==="legacy_review"?"adopt":"issue");}}
   ).catch(e=>{if(active)setError(e instanceof Error?e.message:"読込に失敗しました。");});return()=>{active=false;};
   // The dialog is bound to a single project; request restoration must precede any editing.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -37,8 +43,8 @@ export default function PaymentLinkPanel({project,onClose,onSent}:{project:Nator
    const parsed=paymentLinkRequestSchema.safeParse(candidate);if(!parsed.success)throw new Error("送信先・件名・本文・期限と確認チェックを見直してください。");const request=parsed.data;
    sessionStorage.setItem(key,JSON.stringify(request));setPending(request);
    const res=await fetch("/api/natori/admin/payment-link",{method:"POST",headers:{...CSRF_HEADERS,"Content-Type":"application/json"},body:JSON.stringify(request)});
-   const data=await res.json() as {ok?:boolean;error?:string;state?:unknown};
-   if(!res.ok||!data.ok)throw new Error(data.error??"結果を確認できません。同じ操作で再試行してください。");
+   const data=await res.json() as {ok?:boolean;error?:string;state?:unknown;operationState?:string;operationId?:string;reason?:string};
+   if(!res.ok||!data.ok){if(clearRejected(data,request))throw new Error(rejectionMessage);throw new Error(data.error??"結果を確認できません。同じ操作で再試行してください。");}
    const view=paymentLinkStateSchema.parse(data.state);setState(view);sessionStorage.removeItem(key);setPending(null);setConfirmed(false);onSent();
    setAction(view.state==="active"?"renotify":view.state==="inactive"?"reissue":"issue");
   }catch(e){setError(e instanceof Error?e.message:"同じ操作で再試行してください。");}finally{setBusy(false);}

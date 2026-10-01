@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { withNatoriManagement } from "@/features/natori/server/natoriManagementRoute";
-import { paymentLinkIntegrityEnabled, getPaymentLinkState, executePaymentLinkOperation } from "@/features/natori/server/paymentLinkService";
+import { paymentLinkIntegrityEnabled, getPaymentLinkState, getRejectedPaymentLinkOperation, executePaymentLinkOperation } from "@/features/natori/server/paymentLinkService";
 import { z } from "zod";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const GET=withNatoriManagement("payment-link.GET",false,async(request:Request)=>{
  if(!paymentLinkIntegrityEnabled())return NextResponse.json({enabled:false},{headers:{"Cache-Control":"no-store"}});
- const projectId=new URL(request.url).searchParams.get("projectId");if(!z.uuid().safeParse(projectId).success)return NextResponse.json({error:"invalid_request"},{status:400});
- try{return NextResponse.json({enabled:true,state:await getPaymentLinkState(projectId!)},{headers:{"Cache-Control":"no-store"}});}
+ const params=new URL(request.url).searchParams,projectId=params.get("projectId");if(!z.uuid().safeParse(projectId).success)return NextResponse.json({error:"invalid_request"},{status:400});
+ const operationId=params.get("operationId");
+ if(operationId!==null&&!z.uuid().safeParse(operationId).success)return NextResponse.json({error:"invalid_request"},{status:400});
+ try{return NextResponse.json({enabled:true,state:await getPaymentLinkState(projectId!),...(operationId?await getRejectedPaymentLinkOperation(projectId!,operationId):{})},{headers:{"Cache-Control":"no-store"}});}
  catch{return NextResponse.json({error:"支払状態を確認できません。再読込してください。"},{status:503});}
 });
 export const POST=withNatoriManagement("payment-link.POST",true,async(request:Request)=>{
