@@ -147,6 +147,8 @@ begin
  select * into p from public.natori_projects where id=p_project_id and user_id=p_owner_id for update;
  if not found then return jsonb_build_object('result','not_found'); end if;
  select * into a from public.natori_payment_link_attempts where project_id=p.id order by generation desc limit 1 for update;
+ -- Evaluate deadlines and leases after both project and latest-attempt lock waits.
+ t:=clock_timestamp();
  if p_command='rejection' then
   select reason into act from public.natori_payment_link_rejections where project_id=p.id and operation_id=(p_input->>'operationId')::uuid;
   return jsonb_build_object('result',case when act is null then 'unknown' else 'rejected' end,'reason',act,'operationId',p_input->>'operationId');
@@ -227,9 +229,11 @@ begin
   if p_command='claim_stop' then
    select * into s from public.natori_payment_link_stops where project_id=p.id and status in ('pending','processing') order by created_at,id limit 1 for update;
    if s.id is null then return jsonb_build_object('result','absent'); end if;
+   t:=clock_timestamp();
    if s.status='processing' and s.lease_until>t then return jsonb_build_object('result','busy'); end if;
    if s.attempt_id is not null then
     select * into a from public.natori_payment_link_attempts where id=s.attempt_id for update;
+    t:=clock_timestamp();
     if a.mail_until>t or a.lease_until>t then return jsonb_build_object('result','busy'); end if;
     if a.state='inactive' then update public.natori_payment_link_stops set status='completed',updated_at=t where id=s.id; return jsonb_build_object('result','completed'); end if;
     if s.reason='deadline' and a.deadline_revision is distinct from s.deadline_revision then return jsonb_build_object('result','needs_review'); end if;
@@ -241,6 +245,7 @@ begin
     'legacyLinkId',p.payment_link_id,'legacyUrl',p.payment_link_url,'quoteId',p.payment_quote_id,'legacyAmount',p.quoted_amount);
   end if;
   select * into s from public.natori_payment_link_stops where id=(p_input->>'jobId')::uuid and project_id=p.id for update;
+  t:=clock_timestamp();
   if s.id is null or s.status<>'processing' or s.claim_token is distinct from tok or s.claim_generation is distinct from (p_input->>'generation')::integer or s.lease_until is null or s.lease_until<=t then return jsonb_build_object('result','stale'); end if;
   if p_command='stop_renew' then
    update public.natori_payment_link_stops set lease_until=t+interval '60 seconds',updated_at=t where id=s.id;
@@ -260,6 +265,7 @@ begin
  if p_command='mail_gate' then
   select * into j from public.natori_notification_jobs where id=(p_input->>'jobId')::uuid and project_id=p.id;
   select * into a from public.natori_payment_link_attempts where id=(j.snapshot->>'attemptId')::uuid and project_id=p.id for update;
+  t:=clock_timestamp();
   tok=(p_input->>'token')::uuid;
   if p_input->>'action'='release' then update public.natori_payment_link_attempts set mail_token=null,mail_until=null where id=a.id and mail_token=tok; return jsonb_build_object('result','released'); end if;
   if p_input->>'action'='review' then update public.natori_payment_link_attempts set state='needs_review',review_reason='provider_mail_link_unverified',mail_token=null,mail_until=null where id=a.id and mail_token=tok; return jsonb_build_object('result','blocked'); end if;
@@ -281,6 +287,7 @@ begin
   if o.operation_id is not null then
    if o.request_hash<>v_hash or o.action<>act then return jsonb_build_object('result','conflict'); end if;
    select * into a from public.natori_payment_link_attempts where id=o.attempt_id for update;
+   t:=clock_timestamp();
    if o.status='completed' then return jsonb_build_object('result','completed','attempt',to_jsonb(a),'notificationId',o.notification_id); end if;
   else
    if p.payment_confirmed_at is not null or p.deleted_at is not null or p.status not in ('quoted','awaiting_payment') then return public.natori_payment_link_reject_v1(p.id,op,v_hash,'invalid_state'); end if;
@@ -328,6 +335,7 @@ begin
  end if;
  if o.operation_id is null then return jsonb_build_object('result','not_found'); end if;
  select * into a from public.natori_payment_link_attempts where id=o.attempt_id for update;
+ t:=clock_timestamp();
  if a.claim_token is distinct from tok or a.claim_generation is distinct from (p_input->>'generation')::integer or a.lease_until is null or a.lease_until<=t then return jsonb_build_object('result','stale'); end if;
  if p_command='stage' then
   v_stage=p_input->>'stage'; v_value=p_input->'value';

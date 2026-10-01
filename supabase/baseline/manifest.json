@@ -192,7 +192,7 @@
                       "sha256:supabase/migrations/20260930101753_natori_delivery_integrity.sql": "513133826ae01464f9d12c5dd7859fae6f295a3cb28d0c613bd1c1ef5664216b",
                       "sha256:supabase/migrations/20261001133920_natori_quote_issue_integrity.sql":  "1bba838fe0deeb6b10915d1e77bf4bd4bd34100b7f7b3ea0d21413562b2e8440",
                       "sha256:supabase/migrations/20261001150445_natori_payment_event_inbox.sql":  "a04b528d4c5da09216b78ba23f8b089a8ac425cd268c27ed92c7da49817474d5",
-                      "sha256:supabase/migrations/20261001161401_natori_payment_link_generations.sql": "a5d921134205c904dd6de2e6ad2589da098a0bf3df8fdd2680285ba96afaa24c",
+                      "sha256:supabase/migrations/20261001161401_natori_payment_link_generations.sql": "f27393653666c8d4b590f49b951ef5d6bca71926c76e7b812e389b0c7fbe504f",
                       "sha256:supabase/migrations/20260927073530_natori_acceptance_notifications.sql":  "c519b9eae8bf2867fdd6c00127339f22bff692c0f2e381d0a4ec421ae2e36c7b",
                       "sha256:supabase/migrations/20260927102757_natori_consultation_overview.sql": "b2884531c639307d645547c454dd5c35df0bfa5cd0ff7393fdd8273dd5cca290",
                       "sha256:supabase/migrations/20260923122157_natori_estimate_drafts_and_issuance.sql":  "62f7be6ac9c9f899f763b69b2bf8ecbbc4404b44839ee0ba6b0d401b8d0a29e0",

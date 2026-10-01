@@ -106,9 +106,35 @@ async function main(){
   await test('known-generation-metadata-mismatch-blocks-provider-stop',async()=>{const i=await setup(),f=provider();await run(request(i.projectId),f.ext);const before=await view(i.projectId),link=links.get(before.url!.split('/').at(-1)!)!;link.generation='wrong';await expireCreation(i.projectId);await stopDuePaymentLinks(f.ext);check(link.active&&(await view(i.projectId)).state==='needs_review','UNVERIFIED_PROVIDER_NOT_STOPPED');});
   await test('provider-resource-missing-remains-unresolved-and-cannot-archive',async()=>{const i=await setup(),f=provider();await run(request(i.projectId),f.ext);await call(i.projectId,'close');f.ext.readLink=async()=>{throw Object.assign(new Error('FIXTURE_WRONG_ACCOUNT'),{code:'resource_missing'});};await stopDuePaymentLinks(f.ext);check((await view(i.projectId)).state==='needs_review'&&(await call(i.projectId,'archive')).result==='unresolved','MISSING_NOT_INACTIVE');const s=await db.from('natori_payment_link_stops').select('status').eq('project_id',i.projectId).single();check(s.data?.status==='needs_review','STOP_NOT_FALSE_COMPLETED');});
   await test('provider-account-is-pinned-and-same-mode-switch-cannot-resume-create-or-stop',async()=>{const i=await setup(),f=provider(),req=request(i.projectId);f.fail('price');await run(req,f.ext);await expireLease(i.projectId);f.ext.accountId=async()=>'acct_otherfixture';check((await run(req,f.ext)).result==='needs_review'&&f.prices.size===1&&f.keys.size===0,'OTHER_ACCOUNT_NO_CREATE');const a=await db.from('natori_payment_link_attempts').select('provider_account_id').eq('project_id',i.projectId).single();check(a.data?.provider_account_id==='acct_phase2cfixture','SOURCE_PINNED');check((await db.from('natori_payment_link_attempts').update({provider_account_id:'acct_otherfixture'}).eq('project_id',i.projectId)).error,'ACCOUNT_PIN_IMMUTABLE');const active=await setup(),g=provider();await run(request(active.projectId),g.ext);const v=await view(active.projectId),link=links.get(v.url!.split('/').at(-1)!)!;g.ext.accountId=async()=>'acct_otherfixture';await expireCreation(active.projectId);await stopDuePaymentLinks(g.ext);check(link.active&&(await view(active.projectId)).state==='needs_review','ACCOUNT_SWITCH_NO_FALSE_STOP');});
+
+  const holdProject=async(id:string)=>{
+   const holding=peer.rpc('phase2c_hold_project_v1',{p_project:id,p_seconds:2});
+   const active=Promise.resolve(holding);
+   let acquired=false;for(let tries=0;tries<100;tries++){const probe=await db.rpc('phase2c_project_is_held_v1',{p_project:id});check(!probe.error,'HOLD_PROBE');if(probe.data===true){acquired=true;break;}await new Promise(resolve=>setTimeout(resolve,10));}
+   check(acquired,'HOLD_ACQUIRED');return {active};
+  };
+  await test('stage-lease-expiring-during-project-lock-wait-is-fenced-without-successor',async()=>{
+   const i=await setup(),req=request(i.projectId),token=randomUUID(),first=await call(i.projectId,'begin',beginInput(req,token));
+   const exp=new Date(Date.now()+1000).toISOString();check(!(await db.from('natori_payment_link_attempts').update({lease_until:exp}).eq('project_id',i.projectId)).error,'SHORT_LEASE');
+   const hold=await holdProject(i.projectId);check(Date.now()<Date.parse(exp),'WORKER_STARTED_BEFORE_EXPIRY');
+   const waiting=call(i.projectId,'stage',{operationId:req.operationId,token,generation:first.attempt.claim_generation,stage:'price',value:{id:'price_lockwait'}});
+   check(!(await hold.active).error,'HOLD_FINISHED');check((await waiting).result==='stale','POST_LOCK_LEASE_CLOCK');
+   const row=await db.from('natori_payment_link_attempts').select('price_id,claim_generation').eq('project_id',i.projectId).single();
+   check(row.data?.price_id===null&&row.data.claim_generation===first.attempt.claim_generation,'NO_SUCCESSOR_OR_STALE_EFFECT');
+  });
+  await test('stop-renew-expiring-during-project-lock-wait-is-fenced-without-successor',async()=>{
+   const i=await setup(),f=provider();await run(request(i.projectId),f.ext);await expireCreation(i.projectId);await call(i.projectId,'queue_stop');
+   const token=randomUUID(),first=await call(i.projectId,'claim_stop',{token}),exp=new Date(Date.now()+1000).toISOString();
+   check(!(await db.from('natori_payment_link_stops').update({lease_until:exp}).eq('id',first.job.id)).error,'SHORT_STOP_LEASE');
+   const hold=await holdProject(i.projectId);check(Date.now()<Date.parse(exp),'STOP_STARTED_BEFORE_EXPIRY');
+   const waiting=call(i.projectId,'stop_renew',{jobId:first.job.id,token,generation:first.job.claim_generation,providerAccountId:'acct_phase2cfixture'});
+   check(!(await hold.active).error,'STOP_HOLD_FINISHED');check((await waiting).result==='stale','POST_LOCK_STOP_CLOCK');
+   const row=await db.from('natori_payment_link_stops').select('lease_until,claim_generation').eq('id',first.job.id).single();
+   check(Date.parse(row.data!.lease_until!)===Date.parse(exp)&&row.data?.claim_generation===first.job.claim_generation,'STOP_NOT_RENEWED');
+  });
   await test('owner-and-anonymous-boundaries-remain-private',async()=>{const i=await setup(),wrong=randomUUID();check((await peer.rpc('natori_payment_links_v1',{p_owner_id:wrong,p_project_id:i.projectId,p_command:'read'})).data?.result==='not_found','OWNER');const anon=createClient(origin,keys.anon,{auth:{persistSession:false}});check((await anon.rpc('natori_payment_links_v1',{p_owner_id:owner,p_project_id:i.projectId,p_command:'read'})).error,'ANON_RPC');});
   writeFileSync('/results/phase2c-integration.json',JSON.stringify({tests:results,passed:results.filter(t=>t.status==='passed').length,failed:results.filter(t=>t.status==='failed').length,skipped:0,provider:'injected synthetic provider transport only; real Stripe test mode pending'},null,2));
-  check(results.length===33&&results.every(t=>t.status==='passed'),'REQUIRED_TESTS_FAILED');console.log('PHASE 2C DB 33 passed / 0 failed / 0 skipped; actual Stripe pending');
+  check(results.length===35&&results.every(t=>t.status==='passed'),'REQUIRED_TESTS_FAILED');console.log('PHASE 2C DB 35 passed / 0 failed / 0 skipped; actual Stripe pending');
  }finally{globalThis.fetch=direct;}
 }
 main().catch(()=>{console.error('Phase2C integration failed; raw payloads and credentials withheld');process.exitCode=1;});

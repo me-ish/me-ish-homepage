@@ -29,6 +29,6 @@ export default function Fixture({project}:{project:NatoriProject}){return <Payme
 // supply a synthetic transport. Production config and application sources are unchanged.
 const config=resolve(output,'next.config.mjs');const text=readFileSync(config,'utf8');
 if(!text.includes('export default withNextIntl(nextConfig);'))throw new Error('CONFIG_BOUNDARY_CHANGED');
-writeFileSync(config,text.replace('export default withNextIntl(nextConfig);',"nextConfig.serverExternalPackages=[...(nextConfig.serverExternalPackages??[]),'stripe'];\nexport default withNextIntl(nextConfig);"));
+writeFileSync(config,text.replace('export default withNextIntl(nextConfig);',"nextConfig.serverExternalPackages=[...(nextConfig.serverExternalPackages??[]),'stripe'];\n// The fixture preload hooks CommonJS; Stripe also exports native ESM.\nnextConfig.experimental={...nextConfig.experimental,esmExternals:false};\nexport default withNextIntl(nextConfig);"));
 checksums['fixtureStripeTransport']='test-only externalized SDK adapter, not a real Stripe provider';
 writeFileSync(resolve(output,'source-checksums.json'),JSON.stringify(checksums,null,2));

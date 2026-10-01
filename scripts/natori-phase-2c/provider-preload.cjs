@@ -8,7 +8,7 @@ Module._load=function(request,parent,isMain){
  const Actual=load.apply(this,arguments);if(request!=='stripe')return Actual;
  class FixtureStripe extends Actual{
   constructor(key,options){if(typeof key!=='string'||!key.startsWith('sk_test_'))throw new Error('FIXTURE_TEST_MODE_REQUIRED');super(key,options);
-   this.accounts.retrieve=async()=>({id:'acct_phase2cfixture'});
+   this.accounts.retrieve=async()=>{console.log('PHASE2C_FIXTURE_ADAPTER');return {id:'acct_phase2cfixture'};};
    this.prices.create=async(body,opts)=>{let object=keys.get(opts.idempotencyKey);if(!object){object={id:id('price_'),unit_amount:body.unit_amount,currency:body.currency};keys.set(opts.idempotencyKey,object);prices.set(object.id,object);}return {...object};};
    this.paymentLinks.create=async(body,opts)=>{let link=keys.get(opts.idempotencyKey);if(!link){const linkId=id('plink_');link={id:linkId,url:'https://buy.stripe.com/'+linkId,active:true,livemode:false,metadata:body.metadata,price:body.line_items[0].price};keys.set(opts.idempotencyKey,link);links.set(link.id,link);}return {...link};};
    this.paymentLinks.list=async(params={})=>{const all=[...links.values()],after=params.starting_after;

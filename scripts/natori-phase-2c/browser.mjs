@@ -5,7 +5,7 @@ import {createRequire} from 'node:module';
 import {setDefaultResultOrder} from 'node:dns';
 const require=createRequire('/app/package.json'),{createClient}=require('@supabase/supabase-js'),{chromium,expect}=require('@playwright/test');
 setDefaultResultOrder('ipv4first');
-const results=[],check=(ok,code)=>{if(!ok)throw new Error(code);};let stage='preflight',server,browser;
+const results=[],apiObservations=[],check=(ok,code)=>{if(!ok)throw new Error(code);};let stage='preflight',server,browser;
 async function test(name,fn){stage=name;try{await fn();results.push({name,status:'passed'});console.log(`PASS phase2c-browser/${name}`);}catch(e){results.push({name,status:'failed',code:/^[A-Z_0-9]+$/.test(e?.message??'')?e.message:'ASSERTION_FAILED'});console.log(`FAIL phase2c-browser/${name}`);}}
 async function main(){
  check(process.env.PHASE_N_BROWSER==='ephemeral','EPHEMERAL_REQUIRED');const {origin}=JSON.parse(readFileSync('/runtime/network.json','utf8'));
@@ -17,7 +17,7 @@ async function main(){
  const quote=await admin.from('natori_quotes').insert({project_id:id,user_id:owner,version:1,title:'Browser payment',client_name:'Synthetic',to_email:'client@phase2c.invalid',amount:12000,subject:'Quote',body_snapshot:'Synthetic',token_hash:createHash('sha256').update(quoteToken).digest('hex'),expires_at:new Date(Date.now()+86400000).toISOString(),accepted_at:new Date().toISOString()}).select('id').single();check(!quote.error&&quote.data,'QUOTE_FIXTURE');
  check(!(await admin.from('natori_projects').update({status:'awaiting_payment',payment_quote_id:quote.data.id,active_quote_id:quote.data.id,quote_accepted_at:new Date().toISOString(),quote_accepted_amount:12000,quoted_amount:12000}).eq('id',id)).error,'ACCEPTED_FIXTURE');
  const app='http://localhost:3000';server=spawn(process.execPath,['--require','/phase2c-browser/provider-preload.cjs','/app/node_modules/next/dist/bin/next','dev','--hostname','localhost','--port','3000'],{cwd:'/app',env:{PATH:'/runtime-bin:/usr/local/bin:/usr/bin:/bin',HOME:'/tmp',TMPDIR:'/tmp',NODE_ENV:'development',NODE_OPTIONS:'--dns-result-order=ipv4first',NEXT_TELEMETRY_DISABLED:'1',PHASE_N_BROWSER:'ephemeral',PHASE_0B_BROWSER:'ephemeral',PHASE_2A_BROWSER:'ephemeral',PHASE_2C_BROWSER:'ephemeral',NATORI_PAYMENT_LINK_INTEGRITY_ENABLED:'1',NATORI_PAYMENT_INTEGRITY_ENABLED:'1',NATORI_STRIPE_MODE:'test',STRIPE_SECRET_KEY:'sk_test_'+randomBytes(32).toString('hex'),NEXT_PUBLIC_SUPABASE_URL:origin,NEXT_PUBLIC_SUPABASE_ANON_KEY:keys.anon,SUPABASE_SERVICE_ROLE_KEY:keys.service,NATORI_DASHBOARD_KEY:randomBytes(32).toString('hex'),NATORI_OWNER_USER_ID:owner,NATORI_OWNER_EMAILS:email,NEXT_PUBLIC_SITE_URL:app,NATORI_ACCEPTANCE_OUTBOX_ENABLED:'1',NATORI_NOTIFICATION_SENDING_ENABLED:'0',NATORI_QUOTE_INTEGRITY_ENABLED:'1',NATORI_DELIVERY_NOTIFICATION_KEY:randomBytes(32).toString('hex'),RESEND_API_KEY:randomBytes(32).toString('hex'),NATORI_ORDER_MAIL_FROM:'Phase 2A <sender@phase2a.invalid>',NATORI_PORTFOLIO_CONTACT_TO:'artist@phase2a.invalid',NATORI_MAIL_BCC:''},stdio:['ignore','pipe','pipe']});
- const errors=new Set();for(const stream of [server.stdout,server.stderr])stream.on('data',b=>{for(const code of ['Module not found','Failed to compile','SyntaxError','EADDRINUSE'])if(b.toString().includes(code))errors.add(code);});
+ let fixtureAdapterApplied=false;const errors=new Set();for(const stream of [server.stdout,server.stderr])stream.on('data',b=>{if(b.toString().includes('PHASE2C_FIXTURE_ADAPTER'))fixtureAdapterApplied=true;for(const code of ['Module not found','Failed to compile','SyntaxError','EADDRINUSE'])if(b.toString().includes(code))errors.add(code);});
  let ready=false;const deadline=Date.now()+120000;while(Date.now()<deadline&&server.exitCode===null){try{const response=await fetch(`${app}/ja/fixture-session`,{signal:AbortSignal.timeout(2000)});if(response.ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,400));}check(ready,'NEXT_READY');
  browser=await chromium.launch({headless:true});const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();
  await context.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin!==app)return route.abort('blockedbyclient');return route.continue();});
@@ -27,12 +27,13 @@ async function main(){
  const publicDeadline=()=>quotePage.getByText('現在の支払期限',{exact:true}).locator('..').locator('dd');
  const formattedDeadline=iso=>new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',dateStyle:'medium',timeStyle:'short'}).format(new Date(iso))+'（日本時間）';
  const rejectedOperations=[];
+ const observeApi=(response,data,request)=>{const codes=['completed','invalid_request','invalid_deadline','invalid_state','busy','retry_same_operation','temporarily_unavailable','not_configured','conflict','needs_review'];apiObservations.push({stage,status:response.status(),result:codes.includes(data.result)?data.result:'other',rejected:data.operationState==='rejected',operationMatches:data.operationId===request.operationId});};
  await test('definitive-expired-deadline-409-unfreezes-edits',async()=>{
   await page.goto(app+'/ja/fixture-payment-link/'+id);await expect(page.getByText('案内未発行',{exact:true})).toBeVisible();
   await page.getByLabel('新しい支払期限').fill('2000-01-01T12:00');await page.getByLabel('支払案内の本文').fill('Rejected individual comment KEEP');
   const responsePromise=page.waitForResponse(r=>r.url()===app+'/api/natori/admin/payment-link'&&r.request().method()==='POST');
   await page.getByRole('button',{name:'選んだ操作を実行'}).click();const response=await responsePromise,data=await response.json(),request=response.request().postDataJSON();
-  check(response.status()===409&&data.operationState==='rejected'&&data.operationId===request.operationId,'DEFINITIVE_REJECTION');
+  observeApi(response,data,request);check(response.status()===409&&data.operationState==='rejected'&&data.operationId===request.operationId,'DEFINITIVE_REJECTION');
   rejectedOperations.push(request.operationId);await expect(page.getByRole('alert')).toBeVisible();
   await expect(page.getByLabel('新しい支払期限')).toBeEnabled();await expect(page.getByLabel('支払案内の本文')).toBeEnabled();
   await expect(page.getByLabel('支払案内の本文')).toHaveValue('Rejected individual comment KEEP');
@@ -92,6 +93,6 @@ async function main(){
   const closed=await context.request.patch(`${app}/api/natori/admin/projects`,{data:{kind:'close',projectId:id,reason:'Synthetic terminal'},headers:{'x-requested-with':'me-ish'}});check(closed.status()===200,'CLOSED');await page.reload();await expect(page.getByText('終了済み',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'選んだ操作を実行'})).toBeDisabled();
   check((await admin.from('natori_payment_link_stops').select('status').eq('project_id',id)).data?.some(j=>j.status==='pending'),'STOP_TASK');
  });
- await context.close();writeFileSync('/results/phase2c-browser.json',JSON.stringify({tests:results,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,engine:'Chromium 1.58.2; 390px viewport, not iPhone Safari',compileErrors:[...errors]},null,2));check(results.length===9&&results.every(r=>r.status==='passed')&&errors.size===0,'BROWSER_FAILED');
+ await context.close();writeFileSync('/results/phase2c-browser.json',JSON.stringify({tests:results,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,engine:'Chromium 1.58.2; 390px viewport, not iPhone Safari',compileErrors:[...errors],fixtureAdapterApplied,apiObservations},null,2));check(results.length===9&&results.every(r=>r.status==='passed')&&errors.size===0&&fixtureAdapterApplied,'BROWSER_FAILED');
 }
 main().catch(()=>{console.error(`Phase 2C browser failed at ${stage}; raw logs withheld`);process.exitCode=1;}).finally(async()=>{await browser?.close();if(server?.exitCode===null){server.kill('SIGTERM');await Promise.race([new Promise(r=>server.once('exit',r)),new Promise(r=>setTimeout(()=>{server.kill('SIGKILL');r();},5000))]);}});
