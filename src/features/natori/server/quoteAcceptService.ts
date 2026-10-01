@@ -1,4 +1,6 @@
 import "server-only";
+import { getQuotePaymentOverview } from "./paymentReadModelService";
+import type { NatoriPaymentOverview } from "../types/payment";
 
 // features/natori/server/quoteAcceptService.ts
 // 見積もりのワンクリック承諾。見積もりメール内の承諾ページURL（トークン付き）
@@ -25,6 +27,7 @@ function hashToken(token: string): string {
 }
 
 export type NatoriQuoteView = {
+  payment?: NatoriPaymentOverview;
   projectId: string;
   title: string;
   clientName: string;
@@ -118,7 +121,7 @@ export async function getNatoriQuoteByToken(token: string): Promise<GetNatoriQuo
     if (project.error || !project.data || project.data.status === "closed" || project.data.deleted_at
       || project.data.active_quote_id !== row.id) return { kind: "not-found" };
   }
-  return { kind: "ok", quote: toView(row) };
+  return { kind: "ok", quote: { ...toView(row), payment: await getQuotePaymentOverview(row.project_id) } };
 }
 
 export type AcceptNatoriQuoteResult =

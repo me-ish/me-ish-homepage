@@ -35,7 +35,7 @@ export function buildAcceptanceNotificationPayload(job: Pick<NatoriNotificationR
   // A retry never renders from current project values or current mail settings.
   if (job.payload) return payloadSchema.parse(job.payload);
   const snapshot = z.object({
-    title: z.string(), clientName: z.string(), amount: z.number().optional(), clientEmail: z.string().nullable().optional(),
+    title: z.string(), clientName: z.string(), reviewReason: z.string().optional(), sessionId: z.string().optional(), amount: z.number().optional(), clientEmail: z.string().nullable().optional(),
   }).parse(job.snapshot);
   const recipient = process.env.NATORI_PORTFOLIO_CONTACT_TO?.trim();
   const from = process.env.NATORI_ORDER_MAIL_FROM?.trim();
@@ -60,6 +60,18 @@ export function buildAcceptanceNotificationPayload(job: Pick<NatoriNotificationR
     subject = mail.subject;
     text = mail.body;
     to = snapshot.clientEmail ?? "";
+  } else if (job.purpose === "payment_received_artist" || job.purpose === "payment_received_client") {
+    if (!Number.isSafeInteger(snapshot.amount)) throw new Error("mail_configuration");
+    subject = `【入金確認】${snapshot.clientName} 様 / ${snapshot.title}`;
+    text = ["入金を確認しました。", "", `案件: ${snapshot.title}`, `金額: ${formatYen(snapshot.amount!)}`,
+      job.purpose === "payment_received_client" ? "次の確認事項は担当者からご案内します。ご不明な点はこのメールへご返信ください。" : "案件管理で次の作業と合意済みの予定を確認してください。"].join("\n");
+    if (job.purpose === "payment_received_client") to = snapshot.clientEmail ?? "";
+  } else if (job.purpose === "payment_review_artist") {
+    subject = `【入金の要確認】${snapshot.clientName} 様 / ${snapshot.title}`;
+    text = ["入金イベントを要確認として保存しました。自動で制作を再開したり返金したりはしていません。", "",
+      `案件: ${snapshot.title}`, `確認項目: ${snapshot.reviewReason ?? "payment_review"}`,
+      Number.isSafeInteger(snapshot.amount) ? `金額: ${formatYen(snapshot.amount!)}` : "金額は要照合です。",
+      "Stripeの取引と案件管理の記録を照合してください。"].join("\n");
   } else throw new Error("mail_configuration");
   return payloadSchema.parse({ from, to: [to], ...(bcc ? { bcc: [bcc] } : {}), reply_to: recipient,
     subject, text, headers: { "X-Meish-Template": `natori-${job.purpose}` } });

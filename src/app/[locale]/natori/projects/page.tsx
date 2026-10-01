@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import PaymentAttentionPanel from "@/features/natori/components/dashboard/PaymentAttentionPanel";
 import ProjectsBoard from "@/features/natori/components/dashboard/ProjectsBoard";
 import Footer from "@/features/natori/components/Footer";
 import { requireNatoriAccess } from "@/features/natori/server/requireNatoriAdmin";
@@ -42,6 +43,7 @@ export default async function NatoriProjectsPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-3 py-3 sm:px-6 sm:py-4">
+        <PaymentAttentionPanel />
         <ProjectsBoard />
       </section>
 
