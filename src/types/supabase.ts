@@ -2548,6 +2548,10 @@ export type Database = {
     Functions: {
       natori_quote_payment_state_v1: { Args: { p_owner_id: string; p_project_id: string }; Returns: Json }
       natori_payment_attention_v1: { Args: { p_owner_id: string }; Returns: Json }
+      natori_payment_links_v1: {
+        Args: { p_owner_id: string; p_project_id: string | null; p_command: string; p_input?: Json }
+        Returns: Json
+      }
       natori_stripe_event_claim_v1: {
         Args: { p_owner_id: string; p_account: string; p_live: boolean; p_event_id: string; p_type: string; p_request: Json; p_claim_token: string }
         Returns: { result: string; generation: number; notification_ids: string[] }[]

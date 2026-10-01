@@ -1,4 +1,5 @@
 import "server-only";
+import {paymentLinkIntegrityEnabled,closeOrArchiveWithPaymentGuard} from "./paymentLinkService";
 import { loadConsultationOverviews } from "./consultationOverviewService";
 import type { ConsultationOverview } from "@/features/natori/types/consultation";
 import { createTasksForType } from "@/features/natori/lib/projects";
@@ -754,6 +755,12 @@ export async function closeNatoriProject(
   projectId: string,
   reason: string
 ): Promise<NatoriProjectTransitionResult> {
+  if(paymentLinkIntegrityEnabled()){
+    const outcome=await closeOrArchiveWithPaymentGuard(projectId,"close",reason);
+    if(outcome==="completed")return {kind:"ok"};
+    if(outcome==="invalid_state")return {kind:"invalid-transition",from:"current",to:"closed"};
+    return {kind:outcome==="not_found"?"not-found":"db-error"};
+  }
   const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
   const admin = supabaseAdmin();
@@ -808,7 +815,13 @@ export async function closeNatoriProject(
 /** 案件を復元可能なアーカイブへ移動する。行とStorageオブジェクトは保持する。 */
 export async function deleteNatoriAdminProject(
   projectId: string
-): Promise<NatoriProjectMutationResult> {
+): Promise<NatoriProjectMutationResult | {kind:"unresolved-payment-link"}> {
+  if(paymentLinkIntegrityEnabled()){
+    const outcome=await closeOrArchiveWithPaymentGuard(projectId,"archive");
+    if(outcome==="completed")return {kind:"ok"};
+    if(outcome==="unresolved")return {kind:"unresolved-payment-link"};
+    return {kind:outcome==="not_found"?"not-found":"db-error"};
+  }
   const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
   const { data, error } = await supabaseAdmin()

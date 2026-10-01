@@ -106,4 +106,34 @@ describe("QuoteAcceptCard", () => {
     });
     await screen.findByText("ご依頼の確定ありがとうございます!");
   });
+  it("separates historical accepted terms from the current custom deadline across renotify and extension", () => {
+    const props={token:"token-12345678901234567890",title:"Synthetic quote",clientName:"Fixture",amount:12000,
+      acceptedAt:"2026-10-01T00:00:00.000Z",expiresAt:"2026-10-02T00:00:00.000Z",
+      terms:{deliverables:"Illustration",dueDate:"2026-11-30"}};
+    const payment={available:true,confirmedAt:null,requiresReview:false,processing:false,linkState:"active",linkDeadline:"2026-10-06T03:45:00.000Z"};
+    const {rerender}=render(<QuoteAcceptCard {...props} payment={payment}/>);
+    const current=()=>screen.getByText("現在の支払期限").parentElement!.querySelector("dd")!;
+    expect(screen.getByText("承諾時のお支払条件")).toBeTruthy();
+    expect(screen.getByText("お支払いのご案内メールをお送りしてから7日以内")).toBeTruthy();
+    expect(current().textContent).toContain("2026/10/06 12:45（日本時間）");
+    expect(current().textContent).not.toContain("7日以内");
+    const before=current().textContent;
+    rerender(<QuoteAcceptCard {...props} payment={{...payment}}/>);
+    expect(current().textContent).toBe(before);
+    rerender(<QuoteAcceptCard {...props} payment={{...payment,linkDeadline:"2026-10-10T09:15:00.000Z"}}/>);
+    expect(current().textContent).toContain("2026/10/10 18:15（日本時間）");
+    expect(current().textContent).not.toBe(before);
+    expect(screen.getByText(/再通知では期限は延長されません/)).toBeTruthy();
+  });
+
+  it("shows an unissued generation deadline without treating historical seven days as its deadline", () => {
+    render(<QuoteAcceptCard token="token-12345678901234567890" title="Synthetic" clientName="Fixture" amount={12000}
+      acceptedAt="2026-10-01T00:00:00.000Z" expiresAt="2026-10-02T00:00:00.000Z"
+      payment={{available:true,confirmedAt:null,requiresReview:false,processing:false,linkState:"absent",linkDeadline:null}}/>);
+    expect(screen.getByText("承諾時のお支払条件")).toBeTruthy();
+    expect(screen.getByText("お支払案内の発行後に確定します")).toBeTruthy();
+    const current=screen.getByText("現在の支払期限").parentElement!.querySelector("dd")!;
+    expect(current.textContent).not.toContain("7日以内");
+  });
+
 });

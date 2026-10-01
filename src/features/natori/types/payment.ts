@@ -3,6 +3,8 @@ export type NatoriPaymentOverview = {
   confirmedAt: string | null;
   requiresReview: boolean;
   processing: boolean;
+  linkState?: string;
+  linkDeadline?: string | null;
 };
 export type NatoriPaymentAttention = {
   projectId: string | null;
