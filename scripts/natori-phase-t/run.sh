@@ -17,6 +17,8 @@ phase0b=${PHASE_0B:-0}
 phasen=${PHASE_N:-0}
 phase4=${PHASE_4:-0}
 phase1=${PHASE_1:-0}
+phase2a=${PHASE_2A:-0}
+[[ $phase2a == 0 || ( $phase2a == 1 && $phasen == 1 && $phase1 == 0 && $phase4 == 0 ) ]] || exit 1
 [[ $phase1 == 0 || ( $phase1 == 1 && $phasen == 1 && $phase4 == 0 ) ]] || exit 1
 [[ $phase4 == 0 || ( $phase4 == 1 && $phasen == 1 ) ]] || exit 1
 [[ $phasen == 0 || $phasen == 1 ]] || exit 1
@@ -102,6 +104,14 @@ if [[ $phase1 == 1 ]]; then
   test_memory=1g
 fi
 
+if [[ $phase2a == 1 ]]; then
+  mkdir -p "$work/phase2a"
+  node "$repo/scripts/natori-phase-2a/build.mjs" "$work/phase2a/integration.cjs"
+  node "$repo/scripts/natori-phase-2a/build-fixture.mjs" "$work/phase2a.sql"
+  extra_mounts+=(--mount "type=bind,source=$work/phase2a,target=/phase2a,readonly")
+  test_memory=1g
+fi
+
 if [[ $phase0b == 1 ]]; then
   mkdir -p "$work/phase0b"
   node "$repo/scripts/natori-phase-0b/build.mjs" "$work/phase0b/integration.cjs"
@@ -146,6 +156,7 @@ if [[ $phasen == 1 ]]; then
   node "$repo/scripts/natori-phase-n/prepare-browser.mjs" "$work/browser-app"
   if [[ $phase4 == 1 ]]; then node "$repo/scripts/natori-phase-4/prepare-browser.mjs" "$work/browser-app"; fi
   if [[ $phase1 == 1 ]]; then node "$repo/scripts/natori-phase-1/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase2a == 1 ]]; then node "$repo/scripts/natori-phase-2a/prepare-browser.mjs" "$work/browser-app"; fi
   cp "$work/browser-app/source-checksums.json" "$work/results/browser-source-checksums.json"
 fi
 ROOT="$root" WORK="$work" PROJECT="$project" PHASE_1="$phase1" node --input-type=module <<'JS'
@@ -381,4 +392,10 @@ if [[ $phase1 == 1 ]]; then
 fi
 sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/egress-counters.txt"
 sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/egress-counters.txt"
+if [[ $phase2a == 1 ]]; then
+  dbsql <"$work/phase2a.sql" >/dev/null
+  timeout 300 docker exec "$runner" node /phase2a/integration.cjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase2a-browser/browser.mjs
+fi
+
 echo 'Required real Storage tests completed; production remains unchanged'

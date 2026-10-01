@@ -18,8 +18,8 @@ describe("estimate draft owner scope", () => {
   it("reads only an active project belonging to the acting owner", async () => {
     const projectQuery = { select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: { id: projectId, status: "inquiry", deleted_at: null }, error: null }) };
     projectQuery.select.mockReturnValue(projectQuery); projectQuery.eq.mockReturnValue(projectQuery);
-    const draftQuery = { select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) };
-    draftQuery.select.mockReturnValue(draftQuery); draftQuery.eq.mockReturnValue(draftQuery);
+    const draftQuery = { select: vi.fn(), eq: vi.fn(), returns: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) };
+    draftQuery.returns.mockReturnValue(draftQuery); draftQuery.select.mockReturnValue(draftQuery); draftQuery.eq.mockReturnValue(draftQuery);
     from.mockImplementation((table: string) => table === "natori_projects" ? projectQuery : draftQuery);
     expect(await getEstimateDraft(projectId)).toEqual({ kind: "ok", draft: null });
     expect(projectQuery.eq).toHaveBeenCalledWith("user_id", userId);

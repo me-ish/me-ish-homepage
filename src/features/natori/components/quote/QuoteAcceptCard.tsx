@@ -19,6 +19,7 @@ type Props = {
   expiresAt: string;
   terms?: NatoriQuoteTerms | null;
   preview?: boolean;
+  version?: number;
   items?: { label: string; quantity: number; amount: number }[];
 };
 
@@ -48,6 +49,7 @@ export default function QuoteAcceptCard({
   terms,
   preview = false,
   items = [],
+  version,
 }: Props) {
   const [status, setStatus] = useState<Status>(acceptedAt ? "accepted" : "idle");
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -74,6 +76,7 @@ export default function QuoteAcceptCard({
       className="rounded-2xl p-6 md:p-8"
       style={{ background: c.card, boxShadow: "0 10px 22px rgba(45,42,61,0.10)" }}
     >
+      {version ? <p className="mb-2 text-xs font-bold">正式見積り 第{version}版</p> : null}
       <p className="mb-4 text-sm" style={{ color: c.inkSoft }}>
         {clientName} 様
       </p>

@@ -52,6 +52,7 @@ function quoteTable(row: unknown) {
   const calls: string[] = [];
   const api = { select: vi.fn(() => chainResult({ data: row, error: null }, calls)) };
   mockAdminFrom.mockImplementation((table: string) => {
+    if (table === "natori_quote_access") return { select: () => chainResult({ data: null, error: null }) };
     if (table !== "natori_quotes") throw new Error(`unexpected table: ${table}`);
     return api;
   });

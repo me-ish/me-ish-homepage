@@ -1,0 +1,75 @@
+import { createClient } from '@supabase/supabase-js';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { createServer } from 'node:http';
+const check=(value: unknown, code:string)=>{if(!value)throw new Error(code);};
+const results:{name:string;status:string;code?:string}[]=[];
+async function test(name:string,fn:()=>Promise<void>){try{await fn();results.push({name,status:'passed'});console.log(`PASS phase2a/${name}`);}catch(e){const code=e instanceof Error&&/^[A-Z_0-9]+$/.test(e.message)?e.message:'ASSERTION_FAILED';results.push({name,status:'failed',code});console.log(`FAIL phase2a/${name} ${code}`);}}
+const hash=(value:string)=>createHash('sha256').update(value).digest('hex');
+let stage='preflight';
+async function main(){
+ const {origin}=JSON.parse(readFileSync('/runtime/network.json','utf8'));
+ check(/^http:\/\/172\.30\.250\.\d+:8000$/.test(origin),'DESTINATION_REJECTED');
+ const keys=JSON.parse(readFileSync('/runtime/credentials.json','utf8'));
+ const admin=createClient(origin,keys.service,{auth:{persistSession:false,autoRefreshToken:false}});
+ const peer=createClient(origin,keys.service,{auth:{persistSession:false,autoRefreshToken:false}});
+ let mode='accept',onMail:(()=>Promise<void>)|undefined,loseIssue=false;
+ const accepted=new Map<string,{body:string;id:string}>();let calls=0,blocked=0;
+ const apiKey=randomBytes(32).toString('hex');
+ const capture=createServer(async(req,res)=>{let body='';for await(const chunk of req)body+=String(chunk);
+  try{const p=JSON.parse(body),key=String(req.headers['idempotency-key']??'');
+   check(req.url==='/emails'&&req.headers.authorization===`Bearer ${apiKey}`&&p.from==='Phase 2A <sender@phase2a.invalid>'
+    &&[...p.to,...(p.bcc??[]),p.reply_to].every(a=>['client@phase2a.invalid','artist@phase2a.invalid'].includes(a)),'CAPTURE_ALLOWLIST');
+   calls++;if(onMail){const fn=onMail;onMail=undefined;await fn();}
+   if(mode==='reject'){res.writeHead(422);res.end('{}');return;}
+   const previous=accepted.get(key);check(!previous||previous.body===body,'PAYLOAD_CHANGED');
+   const id=previous?.id??randomUUID();accepted.set(key,{body,id});
+   if(mode==='drop'){mode='accept';res.destroy();return;}
+   res.setHeader('content-type','application/json');res.end(JSON.stringify({id}));
+  }catch{res.writeHead(400);res.end('{}');}});
+ await new Promise<void>(resolve=>capture.listen(3101,'127.0.0.1',resolve));
+ const direct=globalThis.fetch;
+ globalThis.fetch=async(input,init)=>{const url=new URL(typeof input==='string'?input:input instanceof URL?input.href:input.url);
+  if(url.href==='https://api.resend.com/emails')return direct('http://127.0.0.1:3101/emails',init);
+  if(url.origin!==origin||url.username||url.password){blocked++;throw new Error('DESTINATION_REJECTED');}
+  const response=await direct(input,init);
+  if(loseIssue&&url.pathname.endsWith('/rpc/natori_issue_quote_with_notification_v1')){loseIssue=false;check(response.ok,'COMMIT_BEFORE_RESPONSE_LOSS');return new Response('{}',{status:503});}
+  return response;
+ };
+ try{
+  Object.assign(process.env,{NEXT_PUBLIC_SUPABASE_URL:origin,NEXT_PUBLIC_SUPABASE_ANON_KEY:keys.anon,SUPABASE_SERVICE_ROLE_KEY:keys.service,
+   RESEND_API_KEY:apiKey,NATORI_ORDER_MAIL_FROM:'Phase 2A <sender@phase2a.invalid>',NATORI_PORTFOLIO_CONTACT_TO:'artist@phase2a.invalid',
+   NATORI_MAIL_BCC:'',NATORI_ACCEPTANCE_OUTBOX_ENABLED:'1',NATORI_NOTIFICATION_SENDING_ENABLED:'1',NATORI_QUOTE_INTEGRITY_ENABLED:'1',
+   NATORI_DELIVERY_NOTIFICATION_KEY:randomBytes(32).toString('hex'),NATORI_DASHBOARD_KEY:randomBytes(32).toString('hex'),ADMIN_EMAILS:''});
+  stage='auth';const auth=await admin.auth.admin.createUser({email:'owner@phase2a.invalid',password:randomBytes(32).toString('hex'),email_confirm:true});
+  check(!auth.error&&auth.data.user,'AUTH_FIXTURE');const owner=auth.data.user!.id;process.env.NATORI_OWNER_USER_ID=owner;process.env.NATORI_OWNER_EMAILS='owner@phase2a.invalid';
+  const {natoriManagementScope}=await import('../../src/features/natori/server/natoriManagementScope');
+  const manage=<T>(fn:()=>Promise<T>)=>natoriManagementScope.run({ownerId:owner,operator:{kind:'shared-key',userId:null}},fn);
+  const service=await import('../../src/features/natori/server/structuredQuoteService');
+  const drafts=await import('../../src/features/natori/server/estimateDraftService');
+  const quotes=await import('../../src/features/natori/server/quoteAcceptService');
+  const notices=await import('../../src/features/natori/server/acceptanceNotifications');
+  const item={id:'manual',presetItemId:null,kind:'manual' as const,labelSnapshot:'Drawing',quantity:1,unitAmount:12000,amount:12000,automatic:false,sourceFields:[],ruleId:null,note:null};
+  const terms={scope:'bust_up' as const,scopeNote:'',deliverables:'PNG',usage:'Personal',commercialUse:'no' as const,publication:'Allowed',dueDate:'2099-10-01',memo:''};
+  const draft={agreedTerms:terms,items:[item],mailDraft:{subject:'Quote',body:'Personal note',templateBody:'Template'}};
+  async function setup(){const p=await admin.from('natori_projects').insert({user_id:owner,title:'Synthetic quote',client_name:'Synthetic',client_email:'client@phase2a.invalid',type:'illustration',status:'inquiry',request_data:null}).select('id').single();check(!p.error&&p.data,'PROJECT_FIXTURE');
+   const saved=await manage(()=>drafts.saveEstimateDraft(p.data!.id,0,draft));check(saved.kind==='ok','DRAFT_FIXTURE');
+   const token=randomBytes(32).toString('base64url');return {projectId:p.data!.id,toEmail:'client@phase2a.invalid',subject:'Quote',bodySnapshot:'Personal note',idempotencyKey:`quote:${p.data!.id}:${randomUUID()}`,acceptToken:token,expiresAt:new Date(Date.now()+86400000).toISOString(),draftRevision:1,requestSnapshot:null,
+    pricingSnapshot:{schemaVersion:1 as const,mappingVersion:'natori-agreed-estimate-v1',pricingConfigVersion:1,pricingPresetId:null,pricingPresetNameSnapshot:'Agreed estimate',projectTypeSnapshot:'illustration' as const,items:[item],agreedTerms:terms,reviewItems:[],reviewResolutions:[],subtotalBeforePercentage:12000,total:12000,currency:'JPY' as const,issuedAt:new Date().toISOString()}};}
+  await test('atomic-state-and-notice-survive-mail-rejection',async()=>{const input=await setup();mode='reject';const issued=await manage(()=>service.issueStructuredQuoteAndSend(input));mode='accept';check(issued.kind==='ok'&&issued.notificationStatus==='failed','ISSUE_DURABLE');const p=await admin.from('natori_projects').select('status,active_quote_id').eq('id',input.projectId).single();check(p.data?.status==='quoted'&&p.data.active_quote_id===(issued.kind==='ok'?issued.quoteId:''),'PROJECT_ATOMIC');const recovered=await manage(()=>service.getStructuredQuoteRecovery(input.projectId));check(recovered.issue?.quoteId===(issued.kind==='ok'?issued.quoteId:''),'RELOAD_RECOVERY');});
+  await test('lost-response-replays-one-version-and-one-notice',async()=>{const input=await setup();loseIssue=true;check((await manage(()=>service.issueStructuredQuoteAndSend(input))).kind==='db-error','LOST_RESPONSE');const retry=await manage(()=>service.issueStructuredQuoteAndSend(input));check(retry.kind==='ok'&&retry.reused,'REPLAY');const rows=await admin.from('natori_quotes').select('id').eq('project_id',input.projectId);check(rows.data?.length===1,'ONE_VERSION');});
+  await test('concurrent-identical-issue-serializes',async()=>{const input=await setup();const both=await Promise.all([manage(()=>service.issueStructuredQuoteAndSend(input)),manage(()=>service.issueStructuredQuoteAndSend(input))]);check(both.every(r=>r.kind==='ok'),'CONCURRENT_ISSUE');check(both[0].kind==='ok'&&both[1].kind==='ok'&&both[0].quoteId===both[1].quoteId,'SAME_VERSION');});
+  await test('same-operation-different-content-rejected',async()=>{const input=await setup();check((await manage(()=>service.issueStructuredQuoteAndSend(input))).kind==='ok','FIRST_ISSUE');const changed=await manage(()=>service.issueStructuredQuoteAndSend({...input,bodySnapshot:'Changed'}));check(changed.kind==='rejected'&&changed.reason==='idempotency_conflict','HASH_CONFLICT');});
+  await test('acceptance-during-mail-is-never-rolled-back',async()=>{const input=await setup();onMail=async()=>{const accepted=await quotes.acceptNatoriQuote(input.acceptToken);check(accepted.kind==='ok','ACCEPT_DURING_MAIL');};check((await manage(()=>service.issueStructuredQuoteAndSend(input))).kind==='ok','ISSUE');const p=await admin.from('natori_projects').select('quote_accepted_at,next_action').eq('id',input.projectId).single();check(p.data?.quote_accepted_at&&p.data.next_action?.includes('支払'),'ACCEPTANCE_PRESERVED');const blockedSave=await manage(()=>drafts.saveEstimateDraft(input.projectId,1,{...draft,items:[{...item,unitAmount:1,amount:1}]}));check(blockedSave.kind==='invalid-state','ACCEPTED_DRAFT_LOCKED');});
+  await test('payment-and-progress-during-mail-are-preserved',async()=>{const input=await setup();onMail=async()=>{check(!(await peer.from('natori_projects').update({payment_confirmed_at:new Date().toISOString(),status:'rough',next_action:'Keep progress',note:'Keep administrator note'}).eq('id',input.projectId)).error,'PAYMENT_FIXTURE');};check((await manage(()=>service.issueStructuredQuoteAndSend(input))).kind==='ok','ISSUE');const p=await admin.from('natori_projects').select('status,next_action,note,payment_confirmed_at').eq('id',input.projectId).single();check(p.data?.status==='rough'&&p.data.next_action==='Keep progress'&&p.data.note==='Keep administrator note'&&p.data.payment_confirmed_at,'PROGRESS_PRESERVED');});
+  await test('close-and-archive-refuse-new-acceptance',async()=>{for(const archived of [false,true]){const input=await setup();check((await manage(()=>service.issueStructuredQuoteAndSend(input))).kind==='ok','ISSUE');check(!(await admin.from('natori_projects').update(archived?{deleted_at:new Date().toISOString()}:{status:'closed'}).eq('id',input.projectId)).error,'CLOSE_FIXTURE');check((await quotes.acceptNatoriQuote(input.acceptToken)).kind==='not-found','CLOSED_ACCEPTANCE');const q=await admin.from('natori_quotes').select('accepted_at').eq('project_id',input.projectId).single();check(q.data?.accepted_at===null,'NO_NEW_ACCEPTANCE');}});
+  await test('close-v-accept-race-serializes-without-lost-facts',async()=>{const input=await setup();check((await manage(()=>service.issueStructuredQuoteAndSend(input))).kind==='ok','ISSUE');const both=await Promise.all([peer.from('natori_projects').update({status:'closed'}).eq('id',input.projectId),quotes.acceptNatoriQuote(input.acceptToken)]);check(!both[0].error,'CLOSE');check(['ok','not-found'].includes(both[1].kind),'RACE_OUTCOME');const p=await admin.from('natori_projects').select('status,quote_accepted_at').eq('id',input.projectId).single();const q=await admin.from('natori_quotes').select('accepted_at').eq('project_id',input.projectId).single();check(p.data?.status==='closed'&&p.data.quote_accepted_at===q.data?.accepted_at,'FACTS_MATCH');});
+  await test('draft-revision-conflict-and-custom-message-roundtrip',async()=>{const input=await setup();const saved=await manage(()=>drafts.getEstimateDraft(input.projectId));check(saved.kind==='ok'&&saved.draft?.mailDraft?.body==='Personal note','COMMENT_ROUNDTRIP');check((await manage(()=>drafts.saveEstimateDraft(input.projectId,1,draft))).kind==='ok','REVISION_UPDATE');const stale=await manage(()=>service.issueStructuredQuoteAndSend(input));check(stale.kind==='rejected'&&stale.reason==='estimate_draft_changed','REVISION_CONFLICT');});
+  await test('same-version-renotify-preserves-original-url-and-acceptance',async()=>{const input=await setup();const issued=await manage(()=>service.issueStructuredQuoteAndSend(input));check(issued.kind==='ok','ISSUE');if(issued.kind!=='ok')return;const op=randomUUID();const a=await manage(()=>service.renotifyStructuredQuote(issued.quoteId,op));const b=await manage(()=>service.renotifyStructuredQuote(issued.quoteId,op));check(a.kind==='ok'&&b.kind==='ok'&&a.notificationId===b.notificationId,'REN_NOTIFY_REPLAY');check((await quotes.getNatoriQuoteByToken(input.acceptToken)).kind==='ok','OLD_URL_VALID');const payload=accepted.get(`natori-notice/${a.kind==='ok'?a.notificationId:''}`);const token=payload?JSON.parse(payload.body).text.match(/\/natori\/quote\/([A-Za-z0-9_-]+)/)?.[1]:null;check(token,'NEW_ACCESS');check((await quotes.acceptNatoriQuote(token)).kind==='ok','NEW_ACCESS_ACCEPT');check((await quotes.acceptNatoriQuote(input.acceptToken)).kind==='already-accepted','OLD_ACCESS_SAME_FACT');const q=await admin.from('natori_quotes').select('id').eq('project_id',input.projectId);check(q.data?.length===1,'NO_EXTRA_QUOTE');});
+  await test('unknown-send-recovers-same-payload-and-provider-key',async()=>{const input=await setup();mode='drop';const issued=await manage(()=>service.issueStructuredQuoteAndSend(input));check(issued.kind==='ok'&&issued.notificationStatus==='unknown','UNKNOWN_SEND');if(issued.kind!=='ok')return;const before=accepted.size;await admin.from('natori_notification_jobs').update({retry_after:new Date(Date.now()-1000).toISOString()}).eq('id',issued.notificationId!);await notices.dispatchAcceptanceNotification(issued.notificationId!,true);check(accepted.size===before,'SAME_PROVIDER_KEY');});
+  await test('anonymous-new-rpc-and-cross-owner-are-denied',async()=>{const input=await setup();const anon=createClient(origin,keys.anon,{auth:{persistSession:false}});check((await anon.rpc('natori_save_estimate_draft_v1',{p_owner_id:owner,p_project_id:input.projectId,p_revision:1,p_draft:draft})).error,'ANON_DENIED');const stranger=await admin.auth.admin.createUser({email:'stranger@phase2a.invalid',password:randomBytes(32).toString('hex'),email_confirm:true});check(stranger.data.user,'STRANGER');const result=await admin.rpc('natori_save_estimate_draft_v1',{p_owner_id:stranger.data.user!.id,p_project_id:input.projectId,p_revision:1,p_draft:draft});check(result.data?.[0]?.result==='not-found','OWNER_DENIED');});
+  writeFileSync('/results/phase2a-integration.json',JSON.stringify({tests:results,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,providerRequests:calls,distinctAcceptedMessages:accepted.size,blockedDestinations:blocked},null,2));
+  check(results.length===12&&results.every(r=>r.status==='passed'),'REQUIRED_TESTS_FAILED');console.log('PHASE 2A 12 passed / 0 failed / 0 skipped');
+ }finally{globalThis.fetch=direct;await new Promise<void>(resolve=>capture.close(()=>resolve()));}
+}
+main().catch(()=>{console.error(`Phase 2A failed at ${stage}; credentials, URLs and bodies withheld`);process.exitCode=1;});

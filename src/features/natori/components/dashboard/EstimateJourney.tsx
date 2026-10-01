@@ -40,27 +40,30 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
   const [draft, setDraft] = useState<NatoriEstimateDraftData>({ agreedTerms: defaultEstimateTerms(project), items: [] });
   const [saved, setSaved] = useState<NatoriEstimateDraft | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recoveryReady, setRecoveryReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [typeSelection, setTypeSelection] = useState<NatoriConcreteProjectType | "">("");
   const [to, setTo] = useState(resolveClientEmail(project) ?? "");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [templateBody, setTemplateBody] = useState("");
+  const [replacementBody, setReplacementBody] = useState<string | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
-  const [issued, setIssued] = useState<{ quoteId: string; version: number } | null>(null);
+  const [issued, setIssued] = useState<{ quoteId: string; version: number; notificationId?: string; notificationStatus?: string } | null>(null);
   const attemptRef = useRef<Record<string, unknown> | null>(null);
 
   const original = useMemo(() => buildNatoriInquiryRequestView(project.requestData), [project.requestData]);
   const request = useMemo(() => readNatoriRequestData(project.requestData), [project.requestData]);
   const pricingConfig = useMemo(() => portfolioContent ? createPortfolioStructuredPricingConfig(portfolioContent) : null, [portfolioContent]);
-  const dirty = saved ? JSON.stringify({ agreedTerms: saved.agreedTerms, items: saved.items }) !== JSON.stringify(draft) : true;
+  const dirty = saved ? JSON.stringify({ agreedTerms: saved.agreedTerms, items: saved.items }) !== JSON.stringify({ agreedTerms: draft.agreedTerms, items: draft.items }) : true;
   const total = estimateTotal(draft.items);
   const missing = validateEstimateTermsForIssue(draft.agreedTerms);
   if (currentProject.type === "undecided") missing.unshift("案件種別");
   if (draft.items.length === 0 || total <= 0 || !Number.isSafeInteger(total) || total > 2147483647) missing.push("見積明細・合計金額");
   if (project.requestData != null && !request.success) missing.push("原依頼の読み取り");
   if (request.success && request.data.options.some((option) => option.id === "copyright_transfer")) missing.push("著作権譲渡の個別確認");
-  const ready = missing.length === 0 && !dirty && saved !== null;
+  const ready = recoveryReady && missing.length === 0 && !dirty && saved !== null;
 
   useEffect(() => {
     let cancelled = false;
@@ -73,9 +76,19 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
         if (cancelled || !existing) return;
         setSaved(existing);
         setDraft({ agreedTerms: existing.agreedTerms, items: existing.items });
+        if (existing.mailDraft) { setSubject(existing.mailDraft.subject); setBody(existing.mailDraft.body); setTemplateBody(existing.mailDraft.templateBody); }
       })
       .catch((cause: unknown) => { if (!cancelled) setError(cause instanceof Error ? cause.message : "読み込みに失敗しました"); })
       .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [project.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/natori/admin/structured-quote?projectId=${encodeURIComponent(project.id)}`, { cache: "no-store" })
+      .then(async response => { if (!response.ok) throw new Error("発行結果を確認できませんでした。再読込してください。"); return response.json(); })
+      .then(result => { if (!cancelled) { setRecoveryReady(true); if (result.issue) setIssued(result.issue); } })
+      .catch(cause => { if (!cancelled) setError(cause instanceof Error ? cause.message : "発行結果の確認に失敗しました。"); });
     return () => { cancelled = true; };
   }, [project.id]);
 
@@ -89,7 +102,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
     try {
       const response = await fetch("/api/natori/admin/estimate-draft", {
         method: "PUT", headers: { "Content-Type": "application/json", ...CSRF_HEADERS },
-        body: JSON.stringify({ projectId: project.id, revision: saved?.revision ?? 0, ...draft }),
+        body: JSON.stringify({ projectId: project.id, revision: saved?.revision ?? 0, ...draft, mailDraft: { subject, body, templateBody } }),
       });
       const result = await response.json() as { draft?: NatoriEstimateDraft; error?: string };
       if (!response.ok || !result.draft) throw new Error(response.status === 409
@@ -115,7 +128,10 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
       scope: scopeText(terms), usage: terms.usage,
       commercialUse: terms.commercialUse === "yes" ? "あり" : "なし", publication: terms.publication,
     });
-    setSubject(mail.subject); setBody(mail.body); setAcknowledged(false);
+    if (!subject) setSubject(mail.subject);
+    if (!body || body === templateBody) { setBody(mail.body); setTemplateBody(mail.body); }
+    else if (mail.body !== templateBody) setReplacementBody(mail.body);
+    setAcknowledged(false);
     setStep(3); window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -175,6 +191,10 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
     if (!ready || !acknowledged || busy || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || !subject.trim() || !body.trim()) return;
     setBusy(true); setError("");
     try {
+      const stored = sessionStorage.getItem(`natori-quote-issue/${project.id}`);
+      if (!attemptRef.current && stored) {
+        try { attemptRef.current=JSON.parse(stored); } catch { throw new Error("前の発行情報を確認できませんでした。通知管理で保存結果を確認してください。"); }
+      }
       const attempt = createStructuredQuoteOperationAttempt(project.id);
       const requestBody = attemptRef.current ?? {
         projectId: project.id, toEmail: to.trim(), subject: subject.trim(), bodySnapshot: body,
@@ -190,15 +210,17 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
         },
       };
       attemptRef.current = requestBody;
+      sessionStorage.setItem(`natori-quote-issue/${project.id}`,JSON.stringify(requestBody));
       const response = await fetch("/api/natori/admin/structured-quote", {
         method: "POST", headers: { "Content-Type": "application/json", ...CSRF_HEADERS }, body: JSON.stringify(requestBody),
       });
-      const result = await response.json() as { ok?: boolean; error?: string; quoteId?: string; version?: number; retryable?: boolean };
+      const result = await response.json() as { ok?: boolean; error?: string; quoteId?: string; version?: number; retryable?: boolean; notificationId?: string; notificationStatus?: string };
       if (!response.ok || !result.ok || !result.quoteId || !result.version) {
-        if (response.status < 500 && !result.retryable) attemptRef.current = null;
+        if (response.status < 500 && !result.retryable) { attemptRef.current = null; sessionStorage.removeItem(`natori-quote-issue/${project.id}`); }
         throw new Error(result.error ?? "送信できませんでした。内容をご確認ください。");
       }
-      setIssued({ quoteId: result.quoteId, version: result.version });
+      sessionStorage.removeItem(`natori-quote-issue/${project.id}`);
+      setIssued({ quoteId: result.quoteId, version: result.version, notificationId: result.notificationId, notificationStatus: result.notificationStatus });
     } catch (cause) { setError(cause instanceof Error ? cause.message : "送信できませんでした"); }
     finally { setBusy(false); }
   };
@@ -279,7 +301,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
 
       {step === 3 ? (
         <section className="space-y-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
-          {issued ? <div className="rounded-xl bg-emerald-50 p-5 text-emerald-900"><CheckCircle2 className="mb-2 h-6 w-6" /><h2 className="font-black">正式見積りを発行しました</h2><p className="text-sm">第{issued.version}版の見積りとメールを送信しました。</p></div> : <>
+          {issued ? <div className="rounded-xl bg-emerald-50 p-5 text-emerald-900"><CheckCircle2 className="mb-2 h-6 w-6" /><h2 className="font-black">正式見積りを発行しました</h2><p className="text-sm">第{issued.version}版の見積りは保存済みです。通知結果は下の表示で確認してください。</p></div> : <>
             <div><h2 className="text-lg font-black">相手に見える内容を確認</h2><p className="mt-1 text-sm text-gray-600">送信前のプレビューです。金額・制作内容・納品日・メールを確認してください。</p></div>
             {missing.length ? <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"><p className="flex items-center gap-2 font-bold"><AlertTriangle className="h-4 w-4" />送信前に決める項目</p><p className="mt-1">{missing.join("、")}</p></div> : null}
             {dirty ? <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">編集中の変更があります。戻って保存してから送信してください。</p> : null}
@@ -300,6 +322,45 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
           </>}
         </section>
       ) : null}
+      {replacementBody ? <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+        <p className="font-bold">条件が変わりました。個別編集は保持しています。</p>
+        <p className="mt-1 text-sm">以下は本文全体の置換候補です。必要な補足を控えてから更新するか、現在の本文を編集して条件を確認してください。</p>
+        <pre className="mt-3 whitespace-pre-wrap text-sm">{replacementBody}</pre>
+        <button type="button" className="mt-3 min-h-11 rounded-xl bg-amber-100 px-4 font-bold text-amber-950" onClick={() => { setBody(replacementBody); setTemplateBody(replacementBody); setReplacementBody(null); setAcknowledged(false); }}>本文全体をこの候補へ更新</button>
+        <button type="button" className="ml-3 min-h-11 px-3 underline" onClick={() => setReplacementBody(null)}>個別編集を保持</button>
+      </section> : null}
+      {step === 3 && !issued ? <button type="button" disabled={busy} className="min-h-11 rounded-xl border border-gray-300 bg-white px-4 font-bold" onClick={() => void save()}>個別メールの編集を保存</button> : null}
+      {issued ? <section className="rounded-2xl border border-pink-200 bg-pink-50 p-4">
+        <button type="button" disabled={busy} className="min-h-11 rounded-xl bg-pink-100 px-4 font-bold text-pink-950" onClick={async () => {
+          if (!window.confirm(`第${issued.version}版の保存済み本文と宛先で再通知します。見積りの版・金額・承諾は変えません。送信しますか？`)) return;
+          const key = `natori-quote-notification/${issued.quoteId}`;
+          const operationId = sessionStorage.getItem(key) ?? crypto.randomUUID(); sessionStorage.setItem(key,operationId);
+          setBusy(true); setError("");
+          try {
+            const response = await fetch("/api/natori/admin/quote-notification", { method: "POST", headers: { "Content-Type": "application/json", ...CSRF_HEADERS }, body: JSON.stringify({ quoteId: issued.quoteId, operationId }) });
+            const result = await response.json();
+            if (!response.ok || !result.ok) { if (response.status<500 && !result.retryable) sessionStorage.removeItem(key); throw new Error(result.reason === "notification_recovery_required" ? "前の通知結果を先に確認してください。下の通知再試行から回復できます。" : "同じ版の再通知結果を確認できませんでした。"); }
+            sessionStorage.removeItem(key); setIssued(result);
+          } catch (cause) { setError(cause instanceof Error ? cause.message : "再通知結果を確認できませんでした。"); }
+          finally { setBusy(false); }
+        }}>第{issued.version}版を同じ内容で再通知</button>
+        <p className="mt-2 text-xs">条件を変更する新しい版の発行は別の操作です。承諾後・入金後は新しい版を発行できません。</p>
+        {!currentProject.paymentConfirmedAt ? <button type="button" disabled={busy} className="mt-2 min-h-11 px-3 underline" onClick={() => { if (window.confirm("新しい版の条件と金額を確認します。承諾済みの見積りは変更できません。")) { setIssued(null); attemptRef.current=null; setStep(1); setAcknowledged(false); } }}>新しい版の作成を確認</button> : null}
+      </section> : null}
+      {issued?.notificationId ? <section className="rounded-2xl border border-gray-200 bg-white p-4">
+        <p>第{issued.version}版は保存済みです。通知: {issued.notificationStatus === "sent" ? "送信済み" : "未送信・確認待ち"}</p>
+        {issued.notificationStatus !== "sent" ? <button type="button" disabled={busy} className="mt-2 min-h-11 rounded-xl bg-pink-100 px-4 font-bold text-pink-950" onClick={async () => {
+          setBusy(true); setError("");
+          try {
+            const retry = await fetch("/api/natori/admin/notifications", { method: "POST", headers: { "Content-Type": "application/json", ...CSRF_HEADERS }, body: JSON.stringify({ id: issued.notificationId }) });
+            if (!retry.ok) throw new Error("同じ版の再通知を開始できませんでした。通知管理で状態を確認してください。");
+            const recovery = await fetch(`/api/natori/admin/structured-quote?projectId=${encodeURIComponent(project.id)}`, { cache: "no-store" });
+            if (!recovery.ok) throw new Error("再通知結果の表示を更新できませんでした。新しい版は作成していません。");
+            const result = await recovery.json(); if (result.issue) setIssued(result.issue);
+          } catch (cause) { setError(cause instanceof Error ? cause.message : "再通知結果を確認できませんでした。"); }
+          finally { setBusy(false); }
+        }}>第{issued.version}版の通知だけを再試行</button> : null}
+      </section> : null}
       <p className="text-xs leading-5 text-gray-500">発行後の見積りは上書きされません。変更する場合は新しい版を発行します。</p>
     </div>
   );

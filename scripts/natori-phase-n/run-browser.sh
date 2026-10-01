@@ -10,6 +10,8 @@ timeout 45 docker exec "$runner" node /tests/isolation.mjs
 phase4_mount=()
 if [[ ${PHASE_4:-0} == 1 ]]; then phase4_mount+=(--mount "type=bind,source=$repo/scripts/natori-phase-4,target=/phase4-browser,readonly"); fi
 if [[ ${PHASE_1:-0} == 1 ]]; then phase4_mount+=(--mount "type=bind,source=$repo/scripts/natori-phase-1,target=/phase1-browser,readonly"); fi
+if [[ ${PHASE_2A:-0} == 1 ]]; then phase4_mount+=(--mount "type=bind,source=$repo/scripts/natori-phase-2a,target=/phase2a-browser,readonly"); fi
+
 docker run -d --name "$project-browser" --label "natori.phase-t=$project" --network "container:$runner" \
   --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges:true --read-only \
   --pids-limit 256 --memory 4g --cpus 2 --shm-size 256m --log-driver none \

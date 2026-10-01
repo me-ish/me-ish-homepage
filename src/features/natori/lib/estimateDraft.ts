@@ -34,11 +34,13 @@ export const estimateDraftItemSchema = z.strictObject({
 export const estimateDraftSchema = z.strictObject({
   agreedTerms: agreedTermsSchema,
   items: z.array(estimateDraftItemSchema).max(30),
+  mailDraft: z.strictObject({ subject: z.string().max(200), body: z.string().max(20000), templateBody: z.string().max(20000) }).optional(),
 });
 
 export type NatoriEstimateDraftData = {
   agreedTerms: NatoriAgreedTerms;
   items: NatoriQuoteSnapshotItemV1[];
+  mailDraft?: { subject: string; body: string; templateBody: string };
 };
 export type NatoriEstimateDraft = NatoriEstimateDraftData & { revision: number };
 

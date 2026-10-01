@@ -5,6 +5,7 @@
 // 定型文を下書きとして生成し、編集してから /api/natori/admin/order-mail で送信する。
 // 支払い依頼は送信時にサーバーで Stripe 支払いリンクが生成され、
 // 本文の {支払いリンク} の位置に差し込まれる。
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Loader2, Mail, RotateCcw, X } from "lucide-react";
@@ -261,6 +262,17 @@ export default function OrderMailPanel({
       setSending(false);
     }
   };
+
+  if (kind === "estimate" && !demoMode) return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-gray-900/60 p-4" role="dialog" aria-modal="true" aria-label="見積りを作成・確認">
+      <section className="w-full max-w-lg rounded-2xl bg-white p-6">
+        <h2 className="font-bold">見積りを作成・確認</h2>
+        <p className="mt-3 text-sm">条件と金額を確認して正式な版を保存します。保存済みの版の再通知も同じ画面から行います。</p>
+        <Link href={`/natori/estimate?inquiry=${encodeURIComponent(project.id)}`} className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-pink-100 px-4 font-bold text-pink-950">この案件の見積りを開く</Link>
+        <button type="button" onClick={onClose} className="ml-3 min-h-11 px-3 underline">閉じる</button>
+      </section>
+    </div>
+  );
 
   return (
     <div

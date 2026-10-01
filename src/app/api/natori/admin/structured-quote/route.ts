@@ -4,7 +4,7 @@ import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import { validateNatoriQuoteIssuePayloadV1 } from "@/features/natori/lib/quoteSnapshot";
 import { validateStructuredQuoteDeliveryAttempt } from "@/features/natori/lib/structuredQuoteAttempt";
-import { issueStructuredQuoteAndSend } from "@/features/natori/server/structuredQuoteService";
+import { getStructuredQuoteRecovery, issueStructuredQuoteAndSend } from "@/features/natori/server/structuredQuoteService";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,6 +82,18 @@ export const POST = withNatoriManagement("structured-quote.POST", true, async fu
         quoteId: result.quoteId,
         version: result.version,
         reused: result.reused,
+        notificationId: result.notificationId,
+        notificationStatus: result.notificationStatus,
       });
   }
+});
+
+export const GET = withNatoriManagement("structured-quote.GET", false, async function GET(request: Request) {
+  if (!(await canUseNatoriManagement())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const projectId = new URL(request.url).searchParams.get("projectId") ?? "";
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(projectId)) {
+    return NextResponse.json({ error: "Invalid project" }, { status: 400 });
+  }
+  try { return NextResponse.json(await getStructuredQuoteRecovery(projectId)); }
+  catch { return NextResponse.json({ error: "Quote recovery unavailable" }, { status: 503 }); }
 });

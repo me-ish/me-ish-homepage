@@ -37,7 +37,7 @@ export const PUT = withNatoriManagement("estimate-draft.PUT", true, async functi
   if (typeof input.projectId !== "string" || !Number.isSafeInteger(input.revision) || Number(input.revision) < 0) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
   }
-  const parsed = estimateDraftSchema.safeParse({ agreedTerms: input.agreedTerms, items: input.items });
+  const parsed = estimateDraftSchema.safeParse({ agreedTerms: input.agreedTerms, items: input.items, mailDraft: input.mailDraft });
   if (!parsed.success) return NextResponse.json({ error: "invalid_draft" }, { status: 400 });
   return response(await saveEstimateDraft(input.projectId, Number(input.revision), parsed.data));
 });

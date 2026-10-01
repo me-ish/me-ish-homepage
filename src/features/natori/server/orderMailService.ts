@@ -1,4 +1,5 @@
 import "server-only";
+import { quoteIntegrityEnabled, renotifyStructuredQuote } from "./structuredQuoteService";
 
 // features/natori/server/orderMailService.ts
 // 依頼者向けの見積もりメール・支払い依頼メールの送信と、Stripe 入金の案件反映。
@@ -201,6 +202,22 @@ async function fetchAcceptedQuote(project: ProjectRow): Promise<QuotePaymentRow 
 export async function sendNatoriOrderMail(
   input: SendNatoriOrderMailInput
 ): Promise<SendNatoriOrderMailResult> {
+  if (input.kind === "estimate" && quoteIntegrityEnabled()) {
+    // Compatibility entry is notification-only. New formal versions use EstimateJourney.
+    const ownerId = await resolveNatoriOwnerId();
+    if (!ownerId) return { kind: "not-found" };
+    const project = await fetchProjectRow(input.projectId, ownerId);
+    if (!project?.active_quote_id || !input.operationId || !/^[0-9a-f-]{36}$/i.test(input.operationId)) return { kind: "invalid-state" };
+    const quote = await supabaseAdmin().from("natori_quotes").select("to_email, subject, body_snapshot, amount")
+      .eq("id",project.active_quote_id).eq("user_id",ownerId).maybeSingle();
+    if (quote.error) return { kind: "db-error" };
+    if (!quote.data || quote.data.amount!==input.amount || quote.data.to_email!==input.to
+      || quote.data.subject!==input.subject || quote.data.body_snapshot!==input.body) return { kind: "invalid-state" };
+    const result = await renotifyStructuredQuote(project.active_quote_id,input.operationId);
+    if (result.kind === "ok") return { kind: "ok", notificationStatus: result.notificationStatus };
+    if (result.kind === "not-found" || result.kind === "not-configured" || result.kind === "db-error") return { kind: result.kind };
+    return { kind: "invalid-state" };
+  }
   if (input.kind === "delivery" && deliveryIntegrityEnabled()) return issueReadyDelivery(input);
   if (!isNatoriOrderMailConfigured()) return { kind: "not-configured" };
 
@@ -366,6 +383,9 @@ export async function sendNatoriOrderMail(
             await supabaseAdmin()
               .from("natori_projects")
               .update({ payment_link_status: "send_failed" })
+              .is("payment_confirmed_at", null)
+              .is("deleted_at", null)
+              .eq("payment_link_status", "issuing")
               .eq("id", project.id)
               .eq("user_id", ownerId);
             console.error("[natori-order-mail] old payment link deactivation failed", err);
@@ -436,6 +456,9 @@ export async function sendNatoriOrderMail(
           await supabaseAdmin()
             .from("natori_projects")
             .update({ payment_link_status: "send_failed" })
+            .is("payment_confirmed_at", null)
+            .is("deleted_at", null)
+            .eq("payment_link_status", "issuing")
             .eq("id", project.id)
             .eq("user_id", ownerId)
             .eq("payment_link_status", "issuing");
@@ -445,6 +468,9 @@ export async function sendNatoriOrderMail(
         await supabaseAdmin()
           .from("natori_projects")
           .update({ payment_link_status: "send_failed" })
+          .is("payment_confirmed_at", null)
+          .is("deleted_at", null)
+          .eq("payment_link_status", "issuing")
           .eq("id", project.id)
           .eq("user_id", ownerId);
         console.error("[natori-order-mail] payment link creation failed", err);
@@ -469,11 +495,16 @@ export async function sendNatoriOrderMail(
   if (input.kind === "payment") {
     preSendProjectUpdate.payment_link_status = "ready";
   }
-  const { error: preSendError } = await admin
+  let preSendQuery = admin
     .from("natori_projects")
     .update(preSendProjectUpdate)
     .eq("id", project.id)
     .eq("user_id", ownerId);
+  if (input.kind === "payment") {
+    preSendQuery = preSendQuery.is("payment_confirmed_at", null)
+      .is("deleted_at", null).eq("payment_link_id", paymentLinkId ?? "");
+  }
+  const { error: preSendError } = await preSendQuery;
   if (preSendError) {
     console.error("[natori-order-mail] pre-send project persistence failed", preSendError);
     return { kind: "db-error" };
@@ -501,6 +532,9 @@ export async function sendNatoriOrderMail(
       await admin
         .from("natori_projects")
         .update({ payment_link_status: "send_failed" })
+        .is("payment_confirmed_at", null)
+        .is("deleted_at", null)
+        .eq("payment_link_id", paymentLinkId ?? "")
         .eq("id", project.id)
         .eq("user_id", ownerId);
     }
@@ -517,6 +551,9 @@ export async function sendNatoriOrderMail(
       await admin
         .from("natori_projects")
         .update({ payment_link_status: "send_failed" })
+        .is("payment_confirmed_at", null)
+        .is("deleted_at", null)
+        .eq("payment_link_id", paymentLinkId ?? "")
         .eq("id", project.id)
         .eq("user_id", ownerId);
     }
@@ -555,11 +592,19 @@ export async function sendNatoriOrderMail(
     update.delivered_mail_at = new Date().toISOString();
   }
 
-  const { error } = await admin
+  let finalUpdate = admin
     .from("natori_projects")
     .update(update)
     .eq("id", project.id)
-    .eq("user_id", ownerId);
+    .eq("user_id", ownerId)
+    .eq("status", project.status)
+    .is("deleted_at", null);
+  if (input.kind === "estimate" || input.kind === "payment") {
+    finalUpdate = finalUpdate.is("payment_confirmed_at", null).eq("active_quote_id", quoteId ?? "");
+  }
+  if (input.kind === "estimate") finalUpdate = finalUpdate.is("quote_accepted_at", null);
+  if (input.kind === "payment") finalUpdate = finalUpdate.eq("payment_link_id", paymentLinkId ?? "");
+  const { error } = await finalUpdate;
   if (error) {
     console.error("[natori-order-mail] project update after send failed", error);
     await admin

@@ -1485,10 +1485,16 @@ export type Database = {
         Update: { id?: string; project_id?: string; sender?: string; storage_path?: string; file_name?: string; mime_type?: string; size_bytes?: number; created_at?: string; finalized_at?: string | null }
         Relationships: [{ foreignKeyName: "natori_consultation_uploads_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "natori_projects"; referencedColumns: ["id"] }]
       }
+      natori_quote_access: {
+        Row: { token_hash: string; quote_id: string; expires_at: string; created_at: string }
+        Insert: { token_hash: string; quote_id: string; expires_at: string; created_at?: string }
+        Update: never
+        Relationships: []
+      }
       natori_estimate_drafts: {
-        Row: { project_id: string; user_id: string; agreed_terms: Json; items: Json; revision: number; updated_at: string }
-        Insert: { project_id: string; user_id: string; agreed_terms: Json; items: Json; revision?: number; updated_at?: string }
-        Update: { project_id?: string; user_id?: string; agreed_terms?: Json; items?: Json; revision?: number; updated_at?: string }
+        Row: { project_id: string; user_id: string; agreed_terms: Json; items: Json; mail_draft: Json | null; revision: number; updated_at: string }
+        Insert: { project_id: string; user_id: string; agreed_terms: Json; items: Json; mail_draft?: Json | null; revision?: number; updated_at?: string }
+        Update: { project_id?: string; user_id?: string; agreed_terms?: Json; items?: Json; mail_draft?: Json | null; revision?: number; updated_at?: string }
         Relationships: [{ foreignKeyName: "natori_estimate_drafts_project_id_fkey"; columns: ["project_id"]; isOneToOne: true; referencedRelation: "natori_projects"; referencedColumns: ["id"] }]
       }
       natori_project_activity: {
@@ -2769,6 +2775,22 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      natori_save_estimate_draft_v1: {
+        Args: { p_owner_id: string; p_project_id: string; p_revision: number; p_draft: Json }
+        Returns: { result: string; revision: number }[]
+      }
+      natori_renotify_quote_v1: {
+        Args: { p_owner_id: string; p_quote_id: string; p_operation_id: string; p_request: Json; p_token_hash: string; p_expires_at: string; p_payload: Json }
+        Returns: { notification_id: string }[]
+      }
+      natori_issue_quote_with_notification_v1: {
+        Args: { p_owner_id: string; p_input: Json; p_payload: Json }
+        Returns: { quote_id: string; version: number; reused: boolean; notification_id: string }[]
+      }
+      natori_quote_issue_recovery_v1: {
+        Args: { p_owner_id: string; p_project_id: string }
+        Returns: { quote_id: string; version: number; notification_id: string | null; notification_status: string }[]
       }
       natori_issue_quote_from_draft_v1: {
         Args: {
