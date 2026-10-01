@@ -357,12 +357,12 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
         </section>
       ) : null}
       {editingLocked ? <p className="rounded-xl bg-gray-50 p-4 text-sm">承諾・入金・進行後の見積りは控えとして確認できます。保存済みの版の通知は下の操作から行えます。条件と金額は変更できません。</p> : null}
-      {replacementBody ? <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+      {replacementBody && !issued && !editingLocked ? <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
         <p className="font-bold">条件が変わりました。個別編集は保持しています。</p>
         <p className="mt-1 text-sm">以下は本文全体の置換候補です。必要な補足を控えてから更新するか、現在の本文を編集して条件を確認してください。</p>
         <pre className="mt-3 whitespace-pre-wrap text-sm">{replacementBody}</pre>
-        <button type="button" className="mt-3 min-h-11 rounded-xl bg-amber-100 px-4 font-bold text-amber-950" onClick={() => { setBody(replacementBody); setTemplateBody(replacementBody); setReplacementBody(null); setAcknowledged(false); }}>本文全体をこの候補へ更新</button>
-        <button type="button" className="ml-3 min-h-11 px-3 underline" onClick={() => setReplacementBody(null)}>個別編集を保持</button>
+        <button type="button" disabled={busy || Boolean(attemptRef.current)} className="mt-3 min-h-11 rounded-xl bg-amber-100 px-4 font-bold text-amber-950" onClick={() => { if (busy || attemptRef.current) return; setBody(replacementBody); setTemplateBody(replacementBody); setReplacementBody(null); setAcknowledged(false); }}>本文全体をこの候補へ更新</button>
+        <button type="button" disabled={busy || Boolean(attemptRef.current)} className="ml-3 min-h-11 px-3 underline" onClick={() => { if (busy || attemptRef.current) return; setReplacementBody(null); }}>個別編集を保持</button>
       </section> : null}
       {step === 3 && !issued && !editingLocked ? <button type="button" disabled={busy || Boolean(attemptRef.current)} className="min-h-11 rounded-xl border border-gray-300 bg-white px-4 font-bold" onClick={() => void save()}>個別メールの編集を保存</button> : null}
       {issued ? <section className="rounded-2xl border border-pink-200 bg-pink-50 p-4">
