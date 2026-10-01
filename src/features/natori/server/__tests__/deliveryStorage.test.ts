@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHash } from "crypto";
 
 vi.mock("server-only", () => ({}));
@@ -74,8 +74,10 @@ function query(result: QueryResult) {
   return chain;
 }
 
+afterEach(() => vi.unstubAllEnvs());
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv("NATORI_DELIVERY_INTEGRITY_ENABLED", "0");
   mockStorageFrom.mockReturnValue({
     createSignedUploadUrl: mockCreateSignedUploadUrl,
     createSignedUrl: mockCreateSignedUrl,
@@ -181,7 +183,7 @@ describe("acceptNatoriDelivery", () => {
 });
 
 describe("Natori delivery Storage", () => {
-  it("uses the server admin client to issue a path-scoped signed upload", async () => {
+  it.each([1234, 50_000_000])("issues a legacy signed upload at %i bytes", async sizeBytes => {
     mockAdminFrom.mockImplementation((table: string) => {
       if (table === "natori_projects") {
         return {
@@ -212,7 +214,7 @@ describe("Natori delivery Storage", () => {
       projectId: "project-1",
       folder: "final",
       fileName: "final.PDF",
-      sizeBytes: 1234,
+      sizeBytes,
     });
 
     expect(result).toEqual({
@@ -232,7 +234,7 @@ describe("Natori delivery Storage", () => {
         project_id: "project-1",
         folder: "final",
         file_name: "final.PDF",
-        size_bytes: 1234,
+        size_bytes: sizeBytes,
       }),
     );
   });
@@ -373,5 +375,25 @@ describe("Natori delivery acceptance concurrency", () => {
     ).resolves.toEqual([{ kind: "ok" }, { kind: "already-accepted" }]);
     expect(mockRpc).toHaveBeenCalledTimes(2);
     expect(mockNotice).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("50MB server upload boundary", () => {
+  it("accepts exactly 50,000,000 bytes through the Phase 1 reservation RPC", async () => {
+    vi.stubEnv("NATORI_DELIVERY_INTEGRITY_ENABLED", "1");
+    mockRpc.mockResolvedValueOnce({ data: [{ result: "reserved" }], error: null });
+    const result = await signNatoriDeliveryUpload({ projectId: "project-1", folder: "final",
+      fileName: "boundary.bin", sizeBytes: 50_000_000 });
+    expect(result.kind).toBe("ok");
+    expect(mockRpc).toHaveBeenCalledWith("natori_delivery_reserve_v1", expect.objectContaining({ p_size_bytes: 50_000_000 }));
+    expect(mockCreateSignedUploadUrl).toHaveBeenCalledWith(expect.any(String), { upsert: false });
+  });
+  it.each(["0", "1"])("rejects +1 byte before DB or Storage access (integrity=%s)", async enabled => {
+    vi.stubEnv("NATORI_DELIVERY_INTEGRITY_ENABLED", enabled);
+    await expect(signNatoriDeliveryUpload({ projectId: "project-1", folder: "final",
+      fileName: "oversize.bin", sizeBytes: 50_000_001 })).resolves.toEqual({ kind: "too-large" });
+    expect(mockAdminFrom).not.toHaveBeenCalled();
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockStorageFrom).not.toHaveBeenCalled();
   });
 });

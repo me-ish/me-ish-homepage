@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveNatoriOwnerId } from "./natoriOwner";
 import { acceptanceOutboxEnabled, notificationSendingEnabled, dispatchAcceptanceNotification } from "./acceptanceNotifications";
 import type { NatoriNotificationList, NatoriNotificationSummary } from "../types/notifications";
+import { deliveryIntegrityEnabled } from "./deliveryFilesService";
 
 export async function listAcceptanceNotifications(offset = 0): Promise<NatoriNotificationList> {
   if (!acceptanceOutboxEnabled()) return { enabled: false, sendingEnabled: false, notifications: [], truncated: false, offset: 0 };
@@ -30,6 +31,10 @@ export async function listAcceptanceNotifications(offset = 0): Promise<NatoriNot
 export async function retryAcceptanceNotification(id: string): Promise<boolean> {
   if (!acceptanceOutboxEnabled() || !notificationSendingEnabled()) return false;
   const ownerId = await resolveNatoriOwnerId();
+  if (deliveryIntegrityEnabled()) {
+    const purge = await supabaseAdmin().rpc("natori_delivery_purge_payloads_v1", { p_owner_id: ownerId });
+    if (purge.error) throw new Error("notification_retry_failed");
+  }
   const { data, error } = await supabaseAdmin().rpc("natori_notification_retry_v1", { p_id: id, p_owner_id: ownerId });
   if (error) throw new Error("notification_retry_failed");
   if (!data) return false;

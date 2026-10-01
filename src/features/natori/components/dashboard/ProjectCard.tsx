@@ -48,7 +48,7 @@ type ProjectCardProps = {
   advanceBusy?: boolean;
 };
 
-/** ラフ提出・納品メールを出せるステータス（制作工程。完了後は出さない） */
+/** ラフ提出メールを出せる制作工程。完了後は同じ納品の再案内だけを許可する。 */
 const WORK_MAIL_STATUSES = new Set<NatoriProject["status"]>([
   "rough",
   "lineart",
@@ -104,6 +104,8 @@ export default function ProjectCard({
 
   return (
     <Card
+      role="article"
+      aria-label={project.title}
       className={cn(
         "min-w-0 overflow-hidden rounded-2xl border-gray-200 bg-white shadow-sm",
         overdue && "border-red-400"
@@ -292,9 +294,9 @@ export default function ProjectCard({
 
         <ProjectTaskChecklist project={project} onToggle={onToggleTask} />
 
-        {onOpenMail && WORK_MAIL_STATUSES.has(project.status) ? (
+        {onOpenMail && (WORK_MAIL_STATUSES.has(project.status) || project.status === "completed") ? (
           <div className="flex flex-wrap justify-end gap-2">
-            <button
+            {WORK_MAIL_STATUSES.has(project.status) && <button
               type="button"
               onClick={() => onOpenMail(project, "rough")}
               className="inline-flex h-8 items-center gap-1 rounded-full border border-amber-300 bg-white px-3 text-[11px] font-bold text-amber-700 hover:bg-amber-50"
@@ -302,7 +304,7 @@ export default function ProjectCard({
             >
               <Mail className="h-3 w-3" aria-hidden />
               ラフ提出メール
-            </button>
+            </button>}
             <button
               type="button"
               onClick={() => onOpenMail(project, "delivery")}
@@ -310,7 +312,7 @@ export default function ProjectCard({
               title="納品ページ（ダウンロード+受け取り確認）のリンク入りメールを送ります"
             >
               <Mail className="h-3 w-3" aria-hidden />
-              納品メール
+              {project.status === "completed" ? "納品メールを再送" : "納品メール"}
             </button>
           </div>
         ) : null}

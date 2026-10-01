@@ -16,6 +16,8 @@ phase0a=${PHASE_0A:-0}
 phase0b=${PHASE_0B:-0}
 phasen=${PHASE_N:-0}
 phase4=${PHASE_4:-0}
+phase1=${PHASE_1:-0}
+[[ $phase1 == 0 || ( $phase1 == 1 && $phasen == 1 && $phase4 == 0 ) ]] || exit 1
 [[ $phase4 == 0 || ( $phase4 == 1 && $phasen == 1 ) ]] || exit 1
 [[ $phasen == 0 || $phasen == 1 ]] || exit 1
 [[ $phasen == 0 || ( $phase0a == 0 && $phase0b == 0 ) ]] || exit 1
@@ -40,6 +42,11 @@ cleanup() {
   local status=$?
   trap - EXIT
   set +e
+  if [[ $phase0a == 1 ]] && (( stack_started )); then
+    # Capture allowlisted classifications before this run's disposable Storage
+    # disappears. No raw logs or temporary credentials enter the artifact.
+    timeout 40 node "$repo/scripts/natori-phase-0a/collect-storage.mjs" "$project" "$work/results" || status=1
+  fi
   if [[ $(docker inspect -f '{{index .Config.Labels "natori.phase-t"}}' "$project-browser" 2>/dev/null) == "$project" ]]; then
     docker rm -f "$project-browser" >/dev/null
   fi
@@ -47,6 +54,10 @@ cleanup() {
     docker rm -f "$runner" >/dev/null
   fi
   if (( stack_started )); then
+    local bootstrap="supabase_storage_$project-bootstrap"
+    if [[ $(docker inspect -f '{{index .Config.Labels "com.supabase.cli.project"}}' "$bootstrap" 2>/dev/null) == "$project" ]]; then
+      docker rm -f "$bootstrap" >/dev/null || status=1
+    fi
     # Exact project ID; never --all or prune. No shared stack is touched.
     timeout 90 "$work/bin/supabase" stop --workdir "$work/stack" --project-id "$project" --no-backup >"$work/stop.private" 2>&1
     if (( $? != 0 )); then echo 'Dedicated stack cleanup failed'; status=1; fi
@@ -75,11 +86,20 @@ extra_mounts=()
 test_memory=256m
 if [[ $phase0a == 1 ]]; then
   mkdir -p "$work/phase0a"
+  node --test "$repo/scripts/natori-phase-0a/collect-storage.test.mjs"
   node "$repo/scripts/natori-phase-0a/build.mjs" "$work/phase0a/integration.cjs"
   extra_mounts+=(--mount "type=bind,source=$work/phase0a,target=/phase0a,readonly")
   extra_mounts+=(--mount "type=bind,source=$repo/node_modules,target=/app/node_modules,readonly")
   extra_mounts+=(-e NODE_PATH=/app/node_modules)
   test_memory=512m
+fi
+
+if [[ $phase1 == 1 ]]; then
+  mkdir -p "$work/phase1"
+  node "$repo/scripts/natori-phase-1/build.mjs" "$work/phase1/integration.cjs"
+  node "$repo/scripts/natori-phase-1/build-fixture.mjs" "$work/phase1.sql"
+  extra_mounts+=(--mount "type=bind,source=$work/phase1,target=/phase1,readonly")
+  test_memory=1g
 fi
 
 if [[ $phase0b == 1 ]]; then
@@ -104,6 +124,7 @@ if [[ $phasen == 1 ]]; then
   extra_mounts+=(-e NODE_PATH=/app/node_modules)
   test_memory=512m
 fi
+if [[ $phase1 == 1 ]]; then test_memory=1g; fi
 
 echo 'BUILD: download tools/images; production credentials are absent'
 curl --fail --silent --show-error --location --connect-timeout 15 --max-time 120 --retry 1 \
@@ -124,15 +145,17 @@ if [[ $phasen == 1 ]]; then
   bash "$repo/scripts/natori-phase-0b/prepare-browser.sh" "$repo" "$work" "$node_image" "$project"
   node "$repo/scripts/natori-phase-n/prepare-browser.mjs" "$work/browser-app"
   if [[ $phase4 == 1 ]]; then node "$repo/scripts/natori-phase-4/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase1 == 1 ]]; then node "$repo/scripts/natori-phase-1/prepare-browser.mjs" "$work/browser-app"; fi
   cp "$work/browser-app/source-checksums.json" "$work/results/browser-source-checksums.json"
 fi
-ROOT="$root" WORK="$work" PROJECT="$project" node --input-type=module <<'JS'
+ROOT="$root" WORK="$work" PROJECT="$project" PHASE_1="$phase1" node --input-type=module <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 let config = readFileSync(`${process.env.ROOT}/supabase/config.toml`, 'utf8');
 config = config.replace('natori-phase-t-placeholder', process.env.PROJECT);
 config = config.replace('[db]', `[db]\npassword = "${randomBytes(32).toString('hex')}"`);
 config = config.replace('[auth]', `[auth]\njwt_secret = "${randomBytes(48).toString('hex')}"\npublishable_key = "sb_publishable_${randomBytes(24).toString('base64url')}"\nsecret_key = "sb_secret_${randomBytes(24).toString('base64url')}"`);
+// Phase 1 applies its exact decimal 50 MB cap to the disposable Storage container and bucket below.
 writeFileSync(`${process.env.WORK}/stack/supabase/config.toml`, config, { mode: 0o600 });
 JS
 
@@ -217,6 +240,9 @@ done
 for service_name in auth rest storage kong; do docker restart "supabase_${service_name}_$project" >/dev/null; done
 api_ip=$(docker inspect -f "{{(index .NetworkSettings.Networks \"$network\").IPAddress}}" "supabase_kong_$project")
 [[ $api_ip =~ ^172\.30\.250\.[0-9]+$ ]]
+if [[ $phase1 == 1 ]]; then
+  timeout 60 node "$repo/scripts/natori-phase-1/configure-storage.mjs" "$project" "$network" "http://$api_ip:8000"
+fi
 WORK="$work" API_IP="$api_ip" node --input-type=module <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 const s=JSON.parse(readFileSync(`${process.env.WORK}/status.private`));
@@ -244,6 +270,17 @@ node "$root/verify-catalog.mjs" "$work/results/catalog-current.json" current
   python3 --version
   sudo iptables --version
   dbsql -Atqc 'SHOW server_version;'
+  if [[ $phase1 == 1 ]]; then
+    # Record only non-secret size/protocol settings; never print container Env.
+    docker inspect "supabase_storage_$project" | python3 -c '
+import json,sys
+allowed={"NODE_ENV","FILE_SIZE_LIMIT","UPLOAD_FILE_SIZE_LIMIT","UPLOAD_FILE_SIZE_LIMIT_STANDARD"}
+for entry in json.load(sys.stdin)[0]["Config"]["Env"]:
+    key,_,value=entry.partition("=")
+    if key in allowed: print("storage_"+key+"="+value)
+'
+    printf 'phase1_fixture_bucket_limit=50000000\n'
+  fi
   docker ps --filter "label=com.supabase.cli.project=$project" --format '{{.Names}} {{.Image}}'
   for img in $(docker ps --filter "label=com.supabase.cli.project=$project" --format '{{.Image}}') "$node_image"; do
     docker image inspect --format '{{json .RepoDigests}}' "$img"
@@ -259,7 +296,7 @@ docker run -d --name "$runner" --label "natori.phase-t=$project" --network "$net
   --mount "type=bind,source=$work/runtime,target=/runtime,readonly" \
   --mount "type=bind,source=$work/results,target=/results" \
   "${extra_mounts[@]}" \
-  "$node_image" node -e 'setTimeout(() => {}, 900000)' >/dev/null
+  "$node_image" node -e 'setTimeout(() => {}, 1800000)' >/dev/null
 pid=$(docker inspect -f '{{.State.Pid}}' "$runner")
 [[ $pid =~ ^[1-9][0-9]*$ ]]
 # All descendants inherit this network namespace; they have no NET_ADMIN capability,
@@ -331,6 +368,16 @@ if [[ $phasen == 1 ]]; then
   timeout 45 docker exec "$runner" node /tests/isolation.mjs
   timeout 240 docker exec "$runner" node /phasen/integration.cjs
   bash "$repo/scripts/natori-phase-n/run-browser.sh" "$repo" "$work" "$runner" "$project" "$pid"
+fi
+if [[ $phase1 == 1 ]]; then
+  # Existing Phase N scenarios run first with their original semantics. Then expand
+  # only this disposable database and switch on Phase 1 for its own mandatory tests.
+  dbsql <"$work/phase1.sql" >/dev/null
+  phase1_status=0
+  if ! timeout 360 docker exec "$runner" node /phase1/integration.cjs; then phase1_status=1; fi
+  if ! timeout 600 docker exec "$project-browser" /runtime-bin/node /phase1-browser/browser.mjs; then phase1_status=1; fi
+  # Collect independent evidence after a failed assertion, while still failing the mandatory gate.
+  [[ $phase1_status == 0 ]] || { echo 'Phase 1 mandatory tests failed'; exit 1; }
 fi
 sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/egress-counters.txt"
 sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/egress-counters.txt"

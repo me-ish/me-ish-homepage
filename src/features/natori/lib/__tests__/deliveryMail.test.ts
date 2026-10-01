@@ -34,7 +34,8 @@ describe("buildRoughMailDraft / buildDeliveryMailDraft", () => {
   it("納品メールに納品ページのプレースホルダと受け取り確認の案内が入る", () => {
     const draft = buildDeliveryMailDraft({ clientName: "A", title: "B" });
     expect(draft.body).toContain(DELIVERY_LINK_PLACEHOLDER);
-    expect(draft.body).toContain("受け取りました");
+    expect(draft.body).toContain("受け取り確認ボタン");
+    expect(draft.body).toContain("納品ページに表示している期限");
   });
 });
 

@@ -14,12 +14,16 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendNatoriNoticeMail } from "@/features/natori/server/orderMailService";
 import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 import { acceptanceOutboxEnabled } from "./acceptanceNotifications";
+import { deliveryIntegrityEnabled, listReadyDeliveryFiles, reserveDeliveryUpload, removeDraftDeliveryFile } from "./deliveryFilesService";
+import { getReadyDelivery, acceptReadyDelivery } from "./deliveryReleaseService";
+import type { DeliveryFileState } from "../types/delivery";
+import { DELIVERY_MAX_BYTES } from "../lib/deliveryIntegrity";
 
 const BUCKET = "natori-deliveries";
 const TOKEN_RE = /^[A-Za-z0-9_-]{20,64}$/;
 
 export const DELIVERY_MAX_FILES_PER_FOLDER = 10;
-export const DELIVERY_MAX_FILE_BYTES = 200 * 1024 * 1024; // 200MB
+export const DELIVERY_MAX_FILE_BYTES = DELIVERY_MAX_BYTES;
 /** 納品ページを開くたびに発行するダウンロードURLの有効秒数（1時間） */
 const DOWNLOAD_URL_TTL_SECONDS = 60 * 60;
 
@@ -39,6 +43,8 @@ export type NatoriDeliveryFile = {
   fileName: string;
   sizeBytes: number;
   createdAt: string;
+  state?: DeliveryFileState;
+  published?: boolean;
 };
 
 type FileRow = {
@@ -64,6 +70,7 @@ function toFileView(row: FileRow): NatoriDeliveryFile {
 export async function listNatoriDeliveryFiles(
   projectId: string
 ): Promise<NatoriDeliveryFile[] | null> {
+  if (deliveryIntegrityEnabled()) return listReadyDeliveryFiles(projectId);
   const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return null;
   const admin = supabaseAdmin();
@@ -87,7 +94,8 @@ export async function listNatoriDeliveryFiles(
 }
 
 export type SignDeliveryUploadResult =
-  | { kind: "ok"; fileId: string; path: string; token: string }
+  | { kind: "ok"; fileId: string; path: string; token: string; requiresFinalize?: boolean }
+  | { kind: "invalid-state" }
   | { kind: "not-found" }
   | { kind: "too-many-files" }
   | { kind: "too-large" }
@@ -104,7 +112,10 @@ export async function signNatoriDeliveryUpload(input: {
   folder: NatoriDeliveryFolder;
   fileName: string;
   sizeBytes: number;
+  fileId?: string;
+  contentType?: string;
 }): Promise<SignDeliveryUploadResult> {
+  if (deliveryIntegrityEnabled()) return reserveDeliveryUpload(input);
   if (input.sizeBytes > DELIVERY_MAX_FILE_BYTES) return { kind: "too-large" };
 
   const ownerId = await resolveNatoriOwnerId();
@@ -165,6 +176,7 @@ export async function signNatoriDeliveryUpload(input: {
 }
 
 export async function deleteNatoriDeliveryFile(fileId: string): Promise<boolean> {
+  if (deliveryIntegrityEnabled()) return removeDraftDeliveryFile(fileId);
   const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return false;
   const admin = supabaseAdmin();
@@ -251,12 +263,16 @@ export type NatoriDeliveryView = {
   title: string;
   clientName: string;
   acceptedAt: string | null;
-  files: Array<{ fileName: string; sizeBytes: number; url: string }>;
+  files: Array<{ id?: string; fileName: string; sizeBytes: number; url: string | null; available?: boolean }>;
+  canAccept?: boolean;
+  expiresAt?: string;
+  blockedReason?: string | null;
 };
 
 export type GetNatoriDeliveryResult =
   | { kind: "ok"; delivery: NatoriDeliveryView }
   | { kind: "expired" }
+  | { kind: "db-error" }
   | { kind: "not-found" };
 
 type DeliveryProjectRow = {
@@ -296,6 +312,7 @@ function isExpired(row: DeliveryProjectRow): boolean {
 export async function getNatoriDeliveryByToken(
   token: string
 ): Promise<GetNatoriDeliveryResult> {
+  if (deliveryIntegrityEnabled()) return getReadyDelivery(token);
   const row = await fetchDeliveryRow(token);
   if (!row) return { kind: "not-found" };
   if (!row.payment_confirmed_at) return { kind: "not-found" };
@@ -348,8 +365,9 @@ export async function getNatoriDeliveryByToken(
 }
 
 export type AcceptNatoriDeliveryResult =
-  | { kind: "ok"; notificationIds?: string[] }
-  | { kind: "already-accepted"; notificationIds?: string[] }
+  | { kind: "ok"; notificationIds?: string[]; acceptedAt?: string }
+  | { kind: "already-accepted"; notificationIds?: string[]; acceptedAt?: string }
+  | { kind: "files-unavailable" }
   | { kind: "expired" }
   | { kind: "not-found" }
   | { kind: "db-error" };
@@ -358,6 +376,7 @@ export type AcceptNatoriDeliveryResult =
 export async function acceptNatoriDelivery(
   token: string,
 ): Promise<AcceptNatoriDeliveryResult> {
+  if (deliveryIntegrityEnabled()) return acceptReadyDelivery(token);
   if (!TOKEN_RE.test(token)) return { kind: "not-found" };
 
   const admin = supabaseAdmin();

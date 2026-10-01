@@ -53,11 +53,13 @@ export default async function DeliveryPage(props: Props) {
       <Shell>
         <Notice
           title="このリンクは無効です"
-          body="納品メールが再送された場合、古いリンクはご利用いただけません。最新の納品メールのリンクをご確認いただくか、メールにご返信ください。"
+          body="納品メールのリンクをご確認いただくか、メールにご返信ください。"
         />
       </Shell>
     );
   }
+
+  if (result.kind === "db-error") return <Shell><Notice title="納品内容を取得できませんでした" body="時間をおいてこのページを再読み込みしてください。改善しない場合は、納品メールにご返信ください。" /></Shell>;
 
   if (result.kind === "expired") {
     return (
@@ -79,6 +81,9 @@ export default async function DeliveryPage(props: Props) {
         clientName={delivery.clientName}
         files={delivery.files}
         acceptedAt={delivery.acceptedAt}
+        canAccept={delivery.canAccept}
+        expiresAt={delivery.expiresAt}
+        blockedReason={delivery.blockedReason}
       />
     </Shell>
   );

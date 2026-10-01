@@ -9,6 +9,7 @@ sudo nsenter -t "$pid" -n iptables -I OUTPUT 2 -s 127.0.0.1 -d 127.0.0.1 -p tcp 
 timeout 45 docker exec "$runner" node /tests/isolation.mjs
 phase4_mount=()
 if [[ ${PHASE_4:-0} == 1 ]]; then phase4_mount+=(--mount "type=bind,source=$repo/scripts/natori-phase-4,target=/phase4-browser,readonly"); fi
+if [[ ${PHASE_1:-0} == 1 ]]; then phase4_mount+=(--mount "type=bind,source=$repo/scripts/natori-phase-1,target=/phase1-browser,readonly"); fi
 docker run -d --name "$project-browser" --label "natori.phase-t=$project" --network "container:$runner" \
   --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges:true --read-only \
   --pids-limit 256 --memory 4g --cpus 2 --shm-size 256m --log-driver none \
@@ -21,7 +22,7 @@ docker run -d --name "$project-browser" --label "natori.phase-t=$project" --netw
   --mount "type=bind,source=$work/runtime,target=/runtime,readonly" \
   --mount "type=bind,source=$work/results,target=/results" \
   -e PHASE_N_BROWSER=ephemeral -e HOME=/tmp -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
-  mcr.microsoft.com/playwright:v1.58.2-noble /runtime-bin/node -e 'setTimeout(()=>{},720000)' >/dev/null
+  mcr.microsoft.com/playwright:v1.58.2-noble /runtime-bin/node -e 'setTimeout(()=>{},1800000)' >/dev/null
 timeout 600 docker exec "$project-browser" /runtime-bin/node /browser-test/browser.mjs
 
 if [[ ${PHASE_4:-0} == 1 ]]; then timeout 480 docker exec "$project-browser" /runtime-bin/node /phase4-browser/browser.mjs; fi

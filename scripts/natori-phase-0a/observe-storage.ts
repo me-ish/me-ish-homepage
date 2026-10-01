@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash } from "node:crypto";
 
 type Event = {
   actor: number;
@@ -6,6 +7,8 @@ type Event = {
   startedMs: number;
   elapsedMs: number;
   status: number;
+  object?: string;
+  startedEpochMs: number;
   error?: string;
 };
 type Trace = { started: number; events: Event[]; barrier?: () => Promise<void> };
@@ -30,8 +33,11 @@ export function observeStorage(origin: string, stagingBucket: string) {
       method === "POST" ? "upload" : method === "DELETE" ? "delete" : "download"}`;
     if (operation === "published-upload") await active.trace.barrier?.();
     const start = performance.now();
+    const object = p.match(/entry_[0-9a-f-]{36}\.(?:png|jpg)/)?.[0];
     const event: Event = {actor: active.actor, operation,
-      startedMs: Math.round(start - active.trace.started), elapsedMs: 0, status: 0};
+      startedMs: Math.round(start - active.trace.started), elapsedMs: 0, status: 0,
+      startedEpochMs: Date.now(),
+      object: object ? createHash("md5").update(object).digest("hex").slice(0, 16) : undefined};
     active.trace.events.push(event);
     try {
       const response = await original(input, init);

@@ -10,9 +10,12 @@ import {
   deleteNatoriDeliveryFileById,
   fetchNatoriDeliveryFiles,
   uploadNatoriDeliveryFile,
+  verifyNatoriDeliveryFile,
   type NatoriDeliveryFileView,
   type NatoriDeliveryFolder,
 } from "@/features/natori/data/supabaseDeliveryFiles";
+
+import { DELIVERY_MAX_SIZE_LABEL } from "@/features/natori/lib/deliveryIntegrity";
 
 const FOLDER_LABELS: Record<NatoriDeliveryFolder, string> = {
   rough: "ラフ確認ファイル",
@@ -42,15 +45,15 @@ const DEMO_FILES: Record<NatoriDeliveryFolder, NatoriDeliveryFileView[]> = {
       id: "demo-final-2",
       folder: "final",
       fileName: "納品_全身立ち絵.psd",
-      sizeBytes: 94_000_000,
+      sizeBytes: 44_000_000,
       createdAt: "",
     },
   ],
 };
 
 function formatBytes(bytes: number): string {
-  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
-  if (bytes >= 1024) return `${Math.round(bytes / 1024)}KB`;
+  if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)}MB`;
+  if (bytes >= 1_000) return `${Math.round(bytes / 1_000)}KB`;
   return `${bytes}B`;
 }
 
@@ -58,11 +61,13 @@ export default function DeliveryFilesManager({
   projectId,
   folder,
   demoMode,
+  onFilesChange,
 }: {
   projectId: string;
   folder: NatoriDeliveryFolder;
   /** デモ環境用: ダミー一覧を表示し、アップロード・削除は無効化する */
   demoMode?: boolean;
+  onFilesChange?: (files: NatoriDeliveryFileView[] | null) => void;
 }) {
   const [files, setFiles] = useState<NatoriDeliveryFileView[] | null>(
     demoMode ? DEMO_FILES[folder] : null
@@ -75,6 +80,7 @@ export default function DeliveryFilesManager({
     const all = await fetchNatoriDeliveryFiles(projectId);
     setFiles(all.filter((file) => file.folder === folder));
   }, [projectId, folder]);
+  useEffect(() => { onFilesChange?.(files); }, [files, onFilesChange]);
 
   useEffect(() => {
     if (demoMode) return;
@@ -107,12 +113,19 @@ export default function DeliveryFilesManager({
       }
       await reload();
     } catch (err) {
-      console.error("[delivery-files] upload failed", err);
+      await reload().catch(() => { onFilesChange?.(null); });
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";
     }
+  };
+
+  const handleVerify = async (id: string) => {
+    setBusy(true); setError(null);
+    try { await verifyNatoriDeliveryFile(id); await reload(); }
+    catch { setError("保存を確認できません。時間をおいて再確認するか、ファイルをアップロードし直してください。"); }
+    finally { setBusy(false); }
   };
 
   const handleDelete = async (file: NatoriDeliveryFileView) => {
@@ -148,7 +161,7 @@ export default function DeliveryFilesManager({
             }
             inputRef.current?.click();
           }}
-          disabled={busy}
+          disabled={busy || (folder === "final" && !!files?.some(file => file.published))}
           className="inline-flex h-8 items-center gap-1.5 rounded-full bg-pink-500 px-3 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60"
         >
           {busy ? (
@@ -167,27 +180,36 @@ export default function DeliveryFilesManager({
         />
       </div>
 
+      <p className="mt-2 text-xs text-gray-500">ファイルは1つ{DELIVERY_MAX_SIZE_LABEL}までです。</p>
+
       {files === null ? (
         <p className="mt-2 text-xs text-gray-500">読み込み中…</p>
       ) : files.length === 0 ? (
         <p className="mt-2 text-xs text-gray-600">
-          まだファイルがありません。「ファイルを追加」からアップロードしてください（1つ200MBまで）。
+          まだファイルがありません。「ファイルを追加」からアップロードしてください。
         </p>
       ) : (
         <ul className="mt-2 space-y-1.5">
           {files.map((file) => (
             <li
               key={file.id}
-              className="flex items-center gap-2 rounded-lg border border-pink-100 bg-white px-2.5 py-1.5 text-xs"
+              className="flex flex-wrap items-center gap-2 rounded-lg border border-pink-100 bg-white px-2.5 py-1.5 text-xs"
             >
               <span className="min-w-0 flex-1 break-all font-bold text-gray-900">
                 {file.fileName}
               </span>
               <span className="shrink-0 text-gray-500">{formatBytes(file.sizeBytes)}</span>
+              <span className="shrink-0 text-gray-600">
+                {file.published ? "納品発行済み" : file.state === "ready" || !file.state ? "保存確認済み"
+                  : file.state === "deleting" ? "削除待ち" : "保存を確認してください"}
+              </span>
+              {!!file.state && file.state !== "ready" && file.state !== "deleting" && !file.published &&
+                <button type="button" disabled={busy} onClick={() => void handleVerify(file.id)}
+                  className="shrink-0 rounded-lg border px-2 py-2 font-bold disabled:opacity-50">再確認</button>}
               <button
                 type="button"
                 onClick={() => void handleDelete(file)}
-                disabled={busy || demoMode}
+                disabled={busy || demoMode || file.published}
                 className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-red-200 bg-white text-red-500 hover:bg-red-50 disabled:opacity-50"
                 aria-label={`${file.fileName} を削除`}
               >
@@ -198,7 +220,8 @@ export default function DeliveryFilesManager({
         </ul>
       )}
 
-      {error ? <p className="mt-2 text-xs font-bold text-red-600">{error}</p> : null}
+      {files?.some(file => file.published) && <p className="mt-2 text-xs text-gray-600">発行済みの納品内容は固定されています。再送しても以前のリンクと受取記録は維持されます。</p>}
+      {error ? <p role="alert" className="mt-2 text-xs font-bold text-red-600">{error}</p> : null}
     </div>
   );
 }

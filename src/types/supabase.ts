@@ -29,6 +29,18 @@ export type NatoriNotificationRow = {
   updated_at: string
 }
 
+export type NatoriDeliveryReleaseRow = {
+  id: string; project_id: string; revision: number; manifest: Json; snapshot: Json;
+  published_at: string; expires_at: string; accepted_at: string | null; legacy: boolean;
+}
+export type NatoriDeliveryAccessRow = {
+  token_hash: string; release_id: string; expires_at: string; created_at: string;
+}
+export type NatoriDeliveryOperationRow = {
+  project_id: string; operation_id: string; request_hash: string; release_id: string;
+  notification_id: string; created_at: string;
+}
+
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -37,6 +49,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      natori_delivery_releases: {
+        Row: NatoriDeliveryReleaseRow
+        Insert: Pick<NatoriDeliveryReleaseRow, "project_id" | "manifest" | "snapshot" | "expires_at"> & Partial<NatoriDeliveryReleaseRow>
+        Update: Partial<NatoriDeliveryReleaseRow>
+        Relationships: []
+      }
+      natori_delivery_access: {
+        Row: NatoriDeliveryAccessRow
+        Insert: Pick<NatoriDeliveryAccessRow, "token_hash" | "release_id" | "expires_at"> & Partial<NatoriDeliveryAccessRow>
+        Update: Partial<NatoriDeliveryAccessRow>
+        Relationships: []
+      }
+      natori_delivery_operations: {
+        Row: NatoriDeliveryOperationRow
+        Insert: Omit<NatoriDeliveryOperationRow, "created_at"> & Partial<NatoriDeliveryOperationRow>
+        Update: Partial<NatoriDeliveryOperationRow>
+        Relationships: []
+      }
       natori_notification_jobs: {
         Row: NatoriNotificationRow
         Insert: Pick<NatoriNotificationRow, "notification_key" | "project_id" | "purpose" | "snapshot"> & Partial<NatoriNotificationRow>
@@ -1105,6 +1135,11 @@ export type Database = {
       }
       natori_delivery_files: {
         Row: {
+          state: string
+          content_type: string | null
+          storage_version: string | null
+          verified_at: string | null
+          deleted_at: string | null
           created_at: string
           file_name: string
           folder: string
@@ -1114,6 +1149,11 @@ export type Database = {
           storage_path: string
         }
         Insert: {
+          state?: string
+          content_type?: string | null
+          storage_version?: string | null
+          verified_at?: string | null
+          deleted_at?: string | null
           created_at?: string
           file_name: string
           folder: string
@@ -1123,6 +1163,11 @@ export type Database = {
           storage_path: string
         }
         Update: {
+          state?: string
+          content_type?: string | null
+          storage_version?: string | null
+          verified_at?: string | null
+          deleted_at?: string | null
           created_at?: string
           file_name?: string
           folder?: string
@@ -2495,6 +2540,27 @@ export type Database = {
       }
     }
     Functions: {
+      natori_delivery_purge_payloads_v1: { Args: { p_owner_id: string }; Returns: number }
+      natori_delivery_reserve_v1: {
+        Args: { p_owner_id: string; p_project_id: string; p_file_id: string; p_folder: string; p_path: string; p_file_name: string; p_size_bytes: number; p_content_type: string }
+        Returns: { result: string; file_id: string | null; storage_path: string | null }[]
+      }
+      natori_delivery_finalize_v1: {
+        Args: { p_owner_id: string; p_file_id: string; p_size_bytes: number; p_content_type: string; p_storage_version: string; p_verified_at: string }
+        Returns: string
+      }
+      natori_delivery_delete_v1: {
+        Args: { p_owner_id: string; p_file_id: string; p_finish?: boolean }
+        Returns: string
+      }
+      natori_delivery_issue_v1: {
+        Args: { p_owner_id: string; p_project_id: string; p_operation_id: string; p_to_email: string; p_request_hash: string; p_manifest: Json; p_verified_at: string; p_token_hash: string; p_expires_at: string; p_payload: Json }
+        Returns: { result: string; release_id: string | null; notification_id: string | null }[]
+      }
+      natori_accept_delivery_ready_v1: {
+        Args: { p_token_hash: string; p_release_id: string; p_manifest: Json; p_verified_at: string }
+        Returns: { result: string; project_id: string; project_title: string; client_name: string; accepted_at: string | null; notification_ids: string[] }[]
+      }
       natori_consultation_overview_v1: {
         Args: { p_owner_id: string; p_project_ids: string[] }
         Returns: { project_id: string; latest_message_id: string | null; latest_sender: string | null; latest_message_at: string | null; notification_failed: number; notification_pending: number }[]

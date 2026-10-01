@@ -67,7 +67,7 @@ async function main() {
           "content-type": "application/json",
           "x-requested-with": "me-ish",
           origin: "http://localhost:3000",
-          "x-forwarded-for": ip ?? `192.0.2.${++requestId}`,
+          "x-forwarded-for": ip ?? `198.18.${Math.floor(++requestId / 254)}.${(requestId % 254) + 1}`,
           ...extra,
         },
         body: JSON.stringify(body),
@@ -354,7 +354,7 @@ async function main() {
   // synthetic reservation. Preserve the first failure and wait for both actors.
   for (const synchronized of [false, true]) {
     await test(synchronized ? "concurrent-observed-synchronized" : "concurrent-observed-natural", async () => {
-      const count = synchronized ? 12 : 24;
+      const count = synchronized ? 48 : 96;
       for (let sample = 1; sample <= count; sample++) {
         const s = await sign();
         await put(s);
@@ -558,10 +558,12 @@ async function main() {
 }
 main().catch((error: unknown) => {
   // Locations and classifications only: never emit messages, request URLs or credentials.
-  const e = error as { name?: string; code?: string; stack?: string };
+  const e = error as { name?: string; code?: string; message?: string; stack?: string };
   console.error("PHASE_0A_SETUP_FAILED", setupStage, {
     type: /^[A-Za-z]+Error$/.test(e?.name ?? "") ? e.name : "Error",
-    code: /^[A-Z_0-9]+$/.test(e?.code ?? "") ? e.code : "UNCLASSIFIED",
+    code: /^[A-Z_0-9]+$/.test(e?.code ?? "") ? e.code :
+      /^(?:SIGN_HTTP_\d{3}|FINISH_HTTP_\d{3}|SIGNED_UPLOAD_FAILED|READBACK_FAILED|READBACK_BYTES|EXPECTED_OBJECT_ABSENT)$/.test(e?.message ?? "")
+        ? e.message : "UNCLASSIFIED",
     locations: e?.stack?.match(/integration\.cjs:\d+:\d+/g)?.slice(0, 4),
   });
   process.exitCode = 1;
