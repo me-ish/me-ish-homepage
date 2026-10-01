@@ -19,7 +19,7 @@ create table public.natori_stripe_event_inbox (
 create index natori_stripe_inbox_attention_idx on public.natori_stripe_event_inbox(project_id,status,lease_until)
   where status in ('processing','needs_review');
 alter table public.natori_stripe_event_inbox enable row level security;
-revoke all on public.natori_stripe_event_inbox from public,anon,authenticated;
+revoke all on public.natori_stripe_event_inbox from public,anon,authenticated,service_role;
 grant select,insert,update on public.natori_stripe_event_inbox to service_role;
 
 alter table public.natori_payment_transactions add column stripe_account_scope text,
@@ -71,7 +71,7 @@ returns table(result text,notification_ids uuid[])
 language plpgsql security invoker set search_path='' as $$
 declare e public.natori_stripe_event_inbox%rowtype; p public.natori_projects%rowtype;
   q public.natori_quotes%rowtype; prior public.natori_payment_transactions%rowtype;
-  outcome record; reason text; ids uuid[]:='{}'; notice uuid; purpose text; snap jsonb;
+  outcome record; reason text; ids uuid[]:='{}'; notice uuid; v_purpose text; snap jsonb;
   session_id text; amount integer; quote_id uuid; payment_intent text; notice_session text;
 begin
   -- Project first, then inbox. Waiting for a project never grants an expired worker authority.
@@ -135,14 +135,14 @@ begin
     notice_session:=coalesce(session_id,'event-'||p_event_id);
     snap:=jsonb_strip_nulls(jsonb_build_object('title',p.title,'clientName',p.client_name,'clientEmail',p.client_email,
       'amount',amount,'reviewReason',reason,'sessionId',session_id));
-    foreach purpose in array case when reason is null then array['payment_received_artist','payment_received_client']
+    foreach v_purpose in array case when reason is null then array['payment_received_artist','payment_received_client']
       else array['payment_review_artist'] end loop
       insert into public.natori_notification_jobs(notification_key,project_id,quote_id,purpose,snapshot)
-        values('payment/'||p_account||'/'||p_live::text||'/'||notice_session||'/'||purpose,p.id,
-          case when q.project_id=p.id then q.id else null end,purpose,snap)
+        values('payment/'||p_account||'/'||p_live::text||'/'||notice_session||'/'||v_purpose,p.id,
+          case when q.project_id=p.id then q.id else null end,v_purpose,snap)
         on conflict(notification_key,attempt_no) do nothing returning id into notice;
       if notice is null then select j.id into notice from public.natori_notification_jobs j
-        where j.notification_key='payment/'||p_account||'/'||p_live::text||'/'||notice_session||'/'||purpose order by j.attempt_no desc limit 1; end if;
+        where j.notification_key='payment/'||p_account||'/'||p_live::text||'/'||notice_session||'/'||v_purpose order by j.attempt_no desc limit 1; end if;
       ids:=array_append(ids,notice);
     end loop;
   end if;

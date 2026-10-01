@@ -143,7 +143,7 @@ if [[ $phasen == 1 ]]; then
   extra_mounts+=(-e NODE_PATH=/app/node_modules)
   test_memory=512m
 fi
-if [[ $phase1 == 1 ]]; then test_memory=1g; fi
+if [[ $phase1 == 1 || $phase2a == 1 || $phase2b == 1 ]]; then test_memory=1g; fi
 
 echo 'BUILD: download tools/images; production credentials are absent'
 curl --fail --silent --show-error --location --connect-timeout 15 --max-time 120 --retry 1 \
