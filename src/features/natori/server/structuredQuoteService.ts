@@ -1,6 +1,6 @@
 import "server-only";
 
-import { dispatchAcceptanceNotification } from "./acceptanceNotifications";
+import { buildAcceptanceNotificationPayload, dispatchAcceptanceNotification } from "./acceptanceNotifications";
 import { sealDeliveryNotification } from "./deliveryNotificationPayload";
 import type { Json } from "@/types/supabase";
 import { createHash, randomBytes } from "crypto";
@@ -181,7 +181,7 @@ async function issueAtomicQuote(input: IssueStructuredQuoteInput, ownerId: strin
     headers: { "X-Meish-Template": "natori-structured-quote" },
   };
   let sealed: Json;
-  try { sealed = sealDeliveryNotification(payload, input.expiresAt); }
+  try { sealed = sealDeliveryNotification(payload, input.expiresAt); buildAcceptanceNotificationPayload({ purpose: "quote_issue_client", payload: sealed, snapshot: {} }); }
   catch { return { kind: "not-configured" }; }
   // Token hash participates in replay identity; plaintext only enters encrypted payload.
   const request: Json = JSON.parse(JSON.stringify({
@@ -229,7 +229,7 @@ export async function renotifyStructuredQuote(quoteId: string, operationId: stri
   try { payload = sealDeliveryNotification({ from: FROM, to: [quote.to_email], ...(BCC ? { bcc: [BCC] } : {}),
     reply_to: REPLY_TO, subject: quote.subject.replace(/[\r\n]+/g," ").slice(0,200),
     text: injectAcceptLink(quote.body_snapshot,`${getSiteUrl()}/natori/quote/${token}`),
-    headers: { "X-Meish-Template": "natori-structured-quote" } }, expiresAt); }
+    headers: { "X-Meish-Template": "natori-structured-quote" } }, expiresAt); buildAcceptanceNotificationPayload({ purpose: "quote_issue_client", payload, snapshot: {} }); }
   catch { return { kind: "not-configured" }; }
   const { data, error: noticeError } = await db.rpc("natori_renotify_quote_v1", {
     p_owner_id: ownerId, p_quote_id: quoteId, p_operation_id: operationId,

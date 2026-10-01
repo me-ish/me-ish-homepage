@@ -54,3 +54,9 @@ Previous exact-head CI: CI, Phase T, N, 0A, 0B, 4 and 1 passed at ddd6227. Phase
 Resume by checking branch/status/head/remote and existing CI runs first. Keep existing stash and independent color branch. Run local type/lint/checksum/regression/bundle checks, commit this checkpoint, then run the added browser regressions in isolated CI and push normally to PR102. Require exact-head Phase 2A and regression workflows before advancing to 2B. Remaining phases are 2B, 2C, 2D, 3A, 3B, 5, 6A, 6B and 7 as listed above; actual Stripe test-mode evidence and final mail/iPhone acceptance remain outstanding. No production changes, merge or real mail are authorized by this checkpoint.
 
 Current review checkpoint: local typecheck, lint, migration checksum and 29 service/component tests passed. Integration bundle and six Chromium cases are queued for exact-head CI; no real DB/browser success is claimed until that run completes.
+
+## Verified review checkpoint
+
+At exact head 33737845d37a400ecbedc57ad34e98651328df19, Phase 2A run 36879662409 / job 110427892653 passed 13 real isolated DB/Auth/service cases and all 6 Chromium cases, failed=0/skipped=0, dedicated cleanup exit=0. This includes response-loss replay, manual notification retry latest-attempt recovery, frozen uncommitted request, lost-response reload followed by a new version, accepted/paid read-only display, and owner/CSRF denial. CI, Phase T/N/0A/0B also passed at this head; Phase1/4 were still running at this checkpoint.
+
+Additional guard: validate sealed quote notification against the existing transport payload schema before committing a quote or re-notification. A body beyond the mail transport limit must not create an unsendable quote. Added mandatory real DB case (14 total); this new head requires its own CI, and the preceding head's success must not be substituted.
