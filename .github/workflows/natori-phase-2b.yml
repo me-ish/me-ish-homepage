@@ -2,7 +2,7 @@ name: Natori Phase 2B
 
 on:
   pull_request:
-    branches: [main, codex/natori-phase-2a]
+    branches: [main, codex/natori-phase-2a, codex/natori-phase-2b]
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - '.github/workflows/natori-phase-2b.yml'
