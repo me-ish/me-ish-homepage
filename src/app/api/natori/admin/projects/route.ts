@@ -310,6 +310,8 @@ export const DELETE = withNatoriManagement("projects.DELETE", true, async functi
 
   const result = await deleteNatoriAdminProject(id);
   switch (result.kind) {
+    case "unresolved-payment-link":
+      return NextResponse.json({error:"未解決の支払リンクがあるか、案件が終了していません。終了と停止確認後にアーカイブしてください。"},{status:409});
     case "db-error":
       return NextResponse.json({ error: "Failed to delete project" }, { status: 500 });
     case "not-found":

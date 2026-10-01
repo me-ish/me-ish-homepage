@@ -2,6 +2,7 @@ import "server-only";
 import {supabaseAdmin} from "@/lib/supabaseAdmin";
 import {resolveNatoriOwnerId} from "./natoriOwner";
 import {resolveTrustedNatoriOwnerId} from "./trustedNatoriOwner";
+import {paymentLinkIntegrityEnabled} from "./paymentLinkService";
 import {paymentIntegrityEnabled} from "./paymentEventService";
 import type {NatoriPaymentOverview,NatoriPaymentAttention} from "../types/payment";
 
@@ -14,7 +15,15 @@ export async function getQuotePaymentOverview(projectId:string):Promise<NatoriPa
  if(error||!data||typeof data!=="object"||Array.isArray(data))return unavailable;
  if(data.available!==true||typeof data.requiresReview!=="boolean"||typeof data.processing!=="boolean"
   ||(data.confirmedAt!==null&&typeof data.confirmedAt!=="string"))return unavailable;
- return {available:true,confirmedAt:data.confirmedAt,requiresReview:data.requiresReview,processing:data.processing};
+ const overview:NatoriPaymentOverview={available:true,confirmedAt:data.confirmedAt,requiresReview:data.requiresReview,processing:data.processing};
+ if(paymentLinkIntegrityEnabled()){
+  const link=await supabaseAdmin().rpc("natori_payment_links_v1",{p_owner_id:owner.ownerId,p_project_id:projectId,p_command:"read"});
+  if(link.error||!link.data||typeof link.data!=="object"||Array.isArray(link.data)||typeof link.data.state!=="string")return unavailable;
+  overview.linkState=link.data.terminal===true?"terminal":link.data.state;
+  overview.linkDeadline=typeof link.data.deadline==="string"?link.data.deadline:null;
+  if(["needs_review","legacy_review"].includes(overview.linkState))overview.requiresReview=true;
+ }
+ return overview;
 }
 
 export async function getPaymentAttention():Promise<{available:boolean;items:NatoriPaymentAttention[]}|null>{

@@ -19,6 +19,8 @@ phase4=${PHASE_4:-0}
 phase1=${PHASE_1:-0}
 phase2a=${PHASE_2A:-0}
 phase2b=${PHASE_2B:-0}
+phase2c=${PHASE_2C:-0}
+[[ $phase2c == 0 || ( $phase2c == 1 && $phase2b == 1 ) ]] || exit 1
 [[ $phase2b == 0 || ( $phase2b == 1 && $phase2a == 1 ) ]] || exit 1
 [[ $phase2a == 0 || ( $phase2a == 1 && $phasen == 1 && $phase1 == 0 && $phase4 == 0 ) ]] || exit 1
 [[ $phase1 == 0 || ( $phase1 == 1 && $phasen == 1 && $phase4 == 0 ) ]] || exit 1
@@ -104,6 +106,13 @@ if [[ $phase1 == 1 ]]; then
   node "$repo/scripts/natori-phase-1/build-fixture.mjs" "$work/phase1.sql"
   extra_mounts+=(--mount "type=bind,source=$work/phase1,target=/phase1,readonly")
   test_memory=1g
+fi
+
+if [[ $phase2c == 1 ]]; then
+  mkdir -p "$work/phase2c"
+  node "$repo/scripts/natori-phase-2c/build.mjs" "$work/phase2c/integration.cjs"
+  node "$repo/scripts/natori-phase-2c/build-fixture.mjs" "$work/phase2c.sql"
+  extra_mounts+=(--mount "type=bind,source=$work/phase2c,target=/phase2c,readonly")
 fi
 
 if [[ $phase2b == 1 ]]; then
@@ -410,6 +419,11 @@ fi
 if [[ $phase2b == 1 ]]; then
   dbsql <"$work/phase2b.sql" >/dev/null
   timeout 300 docker exec "$runner" node /phase2b/integration.cjs
+fi
+
+if [[ $phase2c == 1 ]]; then
+  dbsql <"$work/phase2c.sql" >/dev/null
+  timeout 300 docker exec "$runner" node /phase2c/integration.cjs
 fi
 
 echo 'Required real Storage tests completed; production remains unchanged'

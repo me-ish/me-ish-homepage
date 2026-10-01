@@ -28,7 +28,7 @@ export type NotificationSendResult =
 export type NotificationTransport = (payload: NotificationPayload, key: string) => Promise<NotificationSendResult>;
 
 export function buildAcceptanceNotificationPayload(job: Pick<NatoriNotificationRow, "payload" | "snapshot" | "purpose">): NotificationPayload {
-  if ((job.purpose === "delivery_issue_client" || job.purpose === "quote_issue_client")) {
+  if ((job.purpose === "delivery_issue_client" || job.purpose === "quote_issue_client" || job.purpose === "payment_link_client")) {
     if (!job.payload) throw new Error("mail_configuration");
     return payloadSchema.parse(openDeliveryNotification(job.payload));
   }
@@ -108,10 +108,16 @@ export async function dispatchAcceptanceNotification(
   if (!notificationSendingEnabled()) return;
   const admin = supabaseAdmin();
   const claimToken = randomUUID();
+  let paymentMailProject: string | null = null;
   try {
     const claim = await admin.rpc("natori_notification_claim_v1", { p_id: id, p_claim_token: claimToken, p_manual: manual });
     const job = claim.data?.[0];
     if (claim.error || !job) return;
+    if(job.purpose === "payment_link_client"){
+      paymentMailProject=job.project_id;
+      const {paymentLinkMailGate}=await import("./paymentLinkService");
+      if(!await paymentLinkMailGate(paymentMailProject,id,claimToken))return;
+    }
     let payload: NotificationPayload;
     try { payload = buildAcceptanceNotificationPayload(job); }
     catch {
@@ -121,7 +127,7 @@ export async function dispatchAcceptanceNotification(
       return;
     }
     const started = await admin.rpc("natori_notification_start_v1", { p_id: id, p_claim_token: claimToken,
-      p_payload: (job.purpose === "delivery_issue_client" || job.purpose === "quote_issue_client") ? job.payload! : payload });
+      p_payload: (job.purpose === "delivery_issue_client" || job.purpose === "quote_issue_client" || job.purpose === "payment_link_client") ? job.payload! : payload });
     const active = started.data?.[0];
     if (started.error || !active?.lease_expires_at || !active.send_started_at) return;
     if (Date.parse(active.lease_expires_at) <= Date.now() + 15000 || Date.parse(active.send_started_at) <= Date.now() - 23 * 3600000) return;
@@ -137,6 +143,8 @@ export async function dispatchAcceptanceNotification(
   } catch {
     // Lease expiry permits SAME key/payload recovery. No raw error contains an address, body or token.
     console.error("[natori-notification] attempt_interrupted");
+  } finally {
+    if(paymentMailProject)try{const {paymentLinkMailGate}=await import("./paymentLinkService");await paymentLinkMailGate(paymentMailProject,id,claimToken,true);}catch{/* Lease expiry retains recovery without sending invalid links. */}
   }
 }
 

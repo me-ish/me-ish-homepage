@@ -1,4 +1,5 @@
 import "server-only";
+import {paymentLinkIntegrityEnabled} from "./paymentLinkService";
 import { quoteIntegrityEnabled, renotifyStructuredQuote } from "./structuredQuoteService";
 
 // features/natori/server/orderMailService.ts
@@ -218,6 +219,7 @@ export async function sendNatoriOrderMail(
     if (result.kind === "not-found" || result.kind === "not-configured" || result.kind === "db-error") return { kind: result.kind };
     return { kind: "invalid-state" };
   }
+  if (input.kind === "payment" && paymentLinkIntegrityEnabled()) return {kind:"invalid-state"};
   if (input.kind === "delivery" && deliveryIntegrityEnabled()) return issueReadyDelivery(input);
   if (!isNatoriOrderMailConfigured()) return { kind: "not-configured" };
 

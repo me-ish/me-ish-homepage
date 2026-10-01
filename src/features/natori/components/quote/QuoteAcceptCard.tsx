@@ -177,6 +177,10 @@ export default function QuoteAcceptCard({
             {payment?.available === false ? "入金状況を確認できませんでした。再読み込みするか、担当者へメールでお問い合わせください。"
               : payment?.confirmedAt ? "入金確認済みです。支払案内をお待ちいただく必要はありません。次の確認事項は担当者からご案内します。"
               : payment?.requiresReview ? "お支払いの記録を担当者が照合しています。追加のお支払いはせず、メールでお問い合わせください。"
+              : payment?.linkState === "terminal" ? "この案件は終了しています。新しいお支払いはせず、元のメールへの返信で担当者にお問い合わせください。"
+              : ["inactive","stop_required","deactivating"].includes(payment?.linkState ?? "") ? "お支払いリンクは停止済み、または停止確認中です。新しいご案内が必要な場合は元のメールへご返信ください。"
+              : payment?.linkState === "active" ? "お支払い案内をご確認ください。再通知で支払期限は延長されません。すでにお支払い済みの場合は追加のお支払いをせず、担当者へお問い合わせください。"
+              : payment?.linkState === "creating" ? "お支払い案内の発行結果を確認中です。案内が届くまでお待ちください。お問い合わせは元のメールへの返信でご連絡ください。"
               : payment?.processing ? "入金の確認処理中です。追加のお支払いはせず、再読み込みして状況をご確認ください。"
               : "お支払いのご案内をメールでお送りしますので、今しばらくお待ちください。"}
             {payment?.confirmedAt && payment.requiresReview ? <span className="mt-2 block font-bold">お支払いの記録に確認が必要な項目があります。追加のお支払いはせず、担当者へメールでお問い合わせください。</span> : null}
