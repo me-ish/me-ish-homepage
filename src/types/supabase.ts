@@ -2789,7 +2789,7 @@ export type Database = {
         Returns: { quote_id: string; version: number; reused: boolean; notification_id: string }[]
       }
       natori_quote_issue_recovery_v1: {
-        Args: { p_owner_id: string; p_project_id: string }
+        Args: { p_owner_id: string; p_project_id: string; p_operation_id?: string }
         Returns: { quote_id: string; version: number; notification_id: string | null; notification_status: string }[]
       }
       natori_issue_quote_from_draft_v1: {

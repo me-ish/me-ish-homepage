@@ -36,3 +36,21 @@ Local typecheck/lint/static migration checksum/service and component regression/
 Manual email and iPhone are deferred to final acceptance. Chromium mobile viewport is not iPhone Safari. CI results must be recorded before Phase 2A is declared complete.
 
 Remaining dependency sequence: 2B Natori-only Stripe inbox/lease/fencing; 2C payment-link generations/deadlines/terminal handling; 2D refund ledger and gross/refunded/net/CSV; 3A intake idempotency; 3B atomic consultation with local attachment draft; 5 canonical confirmation/integer/step validation; 6A locked latest-task aggregation; 6B public wording/contrast/full short answers/HERO pause; 7 U20–U23 adoption/retain/decision record. Stripe test mode evidence is mandatory for 2B–2D. U20/U22/U23 remain Deferred for reassessment; no automatic decoration removal or works-page sales CTA.
+
+## Resume checkpoint: review fixes (2026-10-01)
+
+PR: https://github.com/me-ish/me-ish-homepage/pull/102 (Draft). Last tested remote head before these fixes: ddd6227b08058b0a104e7cd7c57ef81588236e9f. This checkpoint is not Phase 2A completion or permission to deploy.
+
+| Review finding | Current change | Evidence / next gate |
+| --- | --- | --- |
+| Synthetic acceptance token violated production validator | Fixture uses existing 64-hex token contract | Fixed in ddd6227; production validation unchanged |
+| Lost response retained stale request / edited retry could send old body | Exact-operation recovery, clear only confirmed operation, restore and freeze pending request before editing; disable draft save during unresolved attempt | Browser lost-response/new-version and frozen-request regressions added; CI pending |
+| Manual notice retry displayed first failed attempt | Recover and dispatch latest attempt for the same logical notification key | Added real DB reject/retry/sent/recovery test; CI pending |
+| Accepted/paid project blocked notification-only display | Owner-protected read-only draft/recovery display with unchanged write guards | Local service regression passed; accepted/paid browser coverage added; CI pending |
+| Committed result returned HTTP 503 with no error.message | Guard unknown error messages and recover durable operation | Previously 11/12 DB cases passed; rerun response-loss case |
+
+Previous exact-head CI: CI, Phase T, N, 0A, 0B, 4 and 1 passed at ddd6227. Phase 2A run 36876566633 / job 110417405007 applied SQL and passed 11/12 integration cases; response-loss failed, so browser did not run. Earlier 0A transient parallel gallery failure passed on the next head without gallery code changes.
+
+Resume by checking branch/status/head/remote and existing CI runs first. Keep existing stash and independent color branch. Run local type/lint/checksum/regression/bundle checks, commit this checkpoint, then run the added browser regressions in isolated CI and push normally to PR102. Require exact-head Phase 2A and regression workflows before advancing to 2B. Remaining phases are 2B, 2C, 2D, 3A, 3B, 5, 6A, 6B and 7 as listed above; actual Stripe test-mode evidence and final mail/iPhone acceptance remain outstanding. No production changes, merge or real mail are authorized by this checkpoint.
+
+Current review checkpoint: local typecheck, lint, migration checksum and 29 service/component tests passed. Integration bundle and six Chromium cases are queued for exact-head CI; no real DB/browser success is claimed until that run completes.

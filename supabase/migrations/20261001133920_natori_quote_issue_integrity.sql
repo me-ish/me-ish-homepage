@@ -207,18 +207,26 @@ $$;
 revoke all on function public.natori_issue_quote_with_notification_v1(uuid,jsonb,jsonb) from public,anon,authenticated;
 grant execute on function public.natori_issue_quote_with_notification_v1(uuid,jsonb,jsonb) to service_role;
 
-create function public.natori_quote_issue_recovery_v1(p_owner_id uuid,p_project_id uuid)
+create function public.natori_quote_issue_recovery_v1(p_owner_id uuid,p_project_id uuid,p_operation_id text default null)
 returns table(quote_id uuid,version integer,notification_id uuid,notification_status text)
 language sql stable security invoker set search_path='' as $$
   select q.id,q.version,j.id,coalesce(j.status,'legacy_unknown') from public.natori_projects p
   join public.natori_quotes q on q.id=p.active_quote_id
   left join lateral (select n.notification_id from public.natori_quote_issue_operations n
     where n.project_id=p.id and n.quote_id=q.id order by n.created_at desc limit 1) op on true
-  left join public.natori_notification_jobs j on j.id=op.notification_id
-  where p.id=p_project_id and p.user_id=p_owner_id;
+  left join public.natori_notification_jobs original on original.id=op.notification_id
+  left join lateral (select n.* from public.natori_notification_jobs n where n.notification_key=original.notification_key order by n.attempt_no desc limit 1) j on true
+  where p.id=p_project_id and p.user_id=p_owner_id and p_operation_id is null
+  union all
+  select q.id,q.version,j.id,j.status from public.natori_quote_issue_operations op
+  join public.natori_projects p on p.id=op.project_id and p.user_id=p_owner_id
+  join public.natori_quotes q on q.id=op.quote_id
+  join public.natori_notification_jobs original on original.id=op.notification_id
+  join lateral (select n.* from public.natori_notification_jobs n where n.notification_key=original.notification_key order by n.attempt_no desc limit 1) j on true
+  where p.id=p_project_id and op.operation_id=p_operation_id;
 $$;
-revoke all on function public.natori_quote_issue_recovery_v1(uuid,uuid) from public,anon,authenticated;
-grant execute on function public.natori_quote_issue_recovery_v1(uuid,uuid) to service_role;
+revoke all on function public.natori_quote_issue_recovery_v1(uuid,uuid,text) from public,anon,authenticated;
+grant execute on function public.natori_quote_issue_recovery_v1(uuid,uuid,text) to service_role;
 
 alter table public.natori_estimate_drafts add column mail_draft jsonb
   check (mail_draft is null or jsonb_typeof(mail_draft)='object');

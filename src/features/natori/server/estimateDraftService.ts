@@ -6,7 +6,7 @@ import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type Result =
-  | { kind: "ok"; draft: NatoriEstimateDraft | null }
+  | { kind: "ok"; draft: NatoriEstimateDraft | null; editable?: boolean }
   | { kind: "not-found" | "invalid-state" | "conflict" | "db-error" };
 
 const editableStatuses = ["inquiry", "consulting", "estimating", "quoted"];
@@ -18,13 +18,13 @@ export async function getEstimateDraft(projectId: string): Promise<Result> {
   if (!userId) return { kind: "not-found" };
   const db = supabaseAdmin();
   const { data: project, error: projectError } = await db.from("natori_projects")
-    .select("id, status, deleted_at").eq("id", projectId).eq("user_id", userId).maybeSingle();
+    .select("id, status, deleted_at, quote_accepted_at, payment_confirmed_at").eq("id", projectId).eq("user_id", userId).maybeSingle();
   if (projectError) {
     console.error("[natori-estimate-draft] project read failed", projectError);
     return { kind: "db-error" };
   }
   if (!project || project.deleted_at) return { kind: "not-found" };
-  if (!editableStatuses.includes(project.status)) return { kind: "invalid-state" };
+  const editable=editableStatuses.includes(project.status) && !project.quote_accepted_at && !project.payment_confirmed_at;
   const { data, error } = await db.from("natori_estimate_drafts")
     .select(quoteIntegrityEnabled() ? "agreed_terms, items, revision, mail_draft" : "agreed_terms, items, revision").eq("project_id", projectId).eq("user_id", userId)
     .returns<{ agreed_terms: unknown; items: unknown; revision: number; mail_draft?: unknown }[]>().maybeSingle();
@@ -32,10 +32,10 @@ export async function getEstimateDraft(projectId: string): Promise<Result> {
     console.error("[natori-estimate-draft] draft read failed", error);
     return { kind: "db-error" };
   }
-  if (!data) return { kind: "ok", draft: null };
+  if (!data) return { kind: "ok", draft: null, ...(editable ? {} : { editable: false }) };
   const parsed = estimateDraftSchema.safeParse({ agreedTerms: data.agreed_terms, items: data.items, mailDraft: "mail_draft" in data ? data.mail_draft ?? undefined : undefined });
   if (!parsed.success || !Number.isSafeInteger(data.revision)) return { kind: "db-error" };
-  return { kind: "ok", draft: { ...parsed.data, revision: data.revision } };
+  return { kind: "ok", draft: { ...parsed.data, revision: data.revision }, ...(editable ? {} : { editable: false }) };
 }
 
 export async function saveEstimateDraft(projectId: string, expectedRevision: number, input: NatoriEstimateDraftData): Promise<Result> {
@@ -55,6 +55,7 @@ export async function saveEstimateDraft(projectId: string, expectedRevision: num
   }
   const existing = await getEstimateDraft(projectId);
   if (existing.kind !== "ok") return existing;
+  if (existing.editable === false) return { kind: "invalid-state" };
   if ((existing.draft?.revision ?? 0) !== expectedRevision) return { kind: "conflict" };
   const userId = await resolveNatoriOwnerId();
   if (!userId) return { kind: "not-found" };

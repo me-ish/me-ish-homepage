@@ -160,12 +160,12 @@ export async function issueStructuredQuoteAndSend(
 
 export const quoteIntegrityEnabled = () => process.env.NATORI_QUOTE_INTEGRITY_ENABLED === "1";
 
-export async function getStructuredQuoteRecovery(projectId: string) {
+export async function getStructuredQuoteRecovery(projectId: string, operationId?: string) {
   if (!quoteIntegrityEnabled()) return { enabled: false, issue: null };
   const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { enabled: true, issue: null };
   const { data, error } = await supabaseAdmin().rpc("natori_quote_issue_recovery_v1", {
-    p_owner_id: ownerId, p_project_id: projectId,
+    p_owner_id: ownerId, p_project_id: projectId, ...(operationId ? { p_operation_id: operationId } : {}),
   });
   if (error) throw new Error("quote_recovery_failed");
   const row = data?.[0];
@@ -199,15 +199,17 @@ async function issueAtomicQuote(input: IssueStructuredQuoteInput, ownerId: strin
     const reasons = ["project_not_found", "project_archived", "project_already_paid", "quote_already_accepted",
       "invalid_quote_state", "idempotency_conflict", "estimate_draft_changed", "estimate_draft_mismatch",
       "estimate_terms_incomplete", "estimate_due_date_past", "quote_terms_conflict"];
-    const reason = reasons.find(value => error.message.includes(value));
+    const message=typeof error.message === "string" ? error.message : "";
+    const reason = reasons.find(value => message.includes(value));
     return reason ? { kind: "rejected", reason } : { kind: "db-error" };
   }
   const row = data?.[0];
   if (!row || !row.quote_id || !Number.isSafeInteger(row.version) || !row.notification_id) return { kind: "db-error" };
-  await dispatchAcceptanceNotification(row.notification_id);
-  const notice = await db.from("natori_notification_jobs").select("status").eq("id", row.notification_id).maybeSingle();
+  const activeNotice=await latestQuoteNotification(row.notification_id);
+  await dispatchAcceptanceNotification(activeNotice.id);
+  const notice=await latestQuoteNotification(activeNotice.id);
   return { kind: "ok", quoteId: row.quote_id, version: row.version, reused: row.reused,
-    notificationId: row.notification_id, notificationStatus: notice.error ? "unknown" : notice.data?.status ?? "unknown" };
+    notificationId: notice.id, notificationStatus: notice.status };
 }
 
 export async function renotifyStructuredQuote(quoteId: string, operationId: string): Promise<IssueStructuredQuoteResult> {
@@ -235,13 +237,25 @@ export async function renotifyStructuredQuote(quoteId: string, operationId: stri
     p_token_hash: createHash("sha256").update(token).digest("hex"), p_expires_at: expiresAt, p_payload: payload,
   });
   if (noticeError) {
-    const reason = ["invalid_quote_state","invalid_quote_expiry","idempotency_conflict","notification_recovery_required"].find(v=>noticeError.message.includes(v));
+    const message=typeof noticeError.message === "string" ? noticeError.message : "";
+    const reason = ["invalid_quote_state","invalid_quote_expiry","idempotency_conflict","notification_recovery_required"].find(v=>message.includes(v));
     return reason ? { kind: "rejected", reason } : { kind: "db-error" };
   }
   const noticeId = data?.[0]?.notification_id;
   if (!noticeId) return { kind: "db-error" };
-  await dispatchAcceptanceNotification(noticeId);
-  const notice = await db.from("natori_notification_jobs").select("status").eq("id",noticeId).maybeSingle();
-  return { kind: "ok", quoteId, version: quote.version, reused: true, notificationId: noticeId,
-    notificationStatus: notice.error ? "unknown" : notice.data?.status ?? "unknown" };
+  const activeNotice=await latestQuoteNotification(noticeId);
+  await dispatchAcceptanceNotification(activeNotice.id);
+  const notice=await latestQuoteNotification(activeNotice.id);
+  return { kind: "ok", quoteId, version: quote.version, reused: true, notificationId: notice.id,
+    notificationStatus: notice.status };
+}
+
+async function latestQuoteNotification(id: string): Promise<{ id: string; status: string }> {
+  try {
+    const db=supabaseAdmin();
+    const original=await db.from("natori_notification_jobs").select("notification_key").eq("id",id).maybeSingle();
+    if (original.error || !original.data) return { id, status: "unknown" };
+    const latest=await db.from("natori_notification_jobs").select("id,status").eq("notification_key",original.data.notification_key).order("attempt_no",{ascending:false}).limit(1).maybeSingle();
+    return latest.error || !latest.data ? { id, status: "unknown" } : latest.data;
+  } catch { return { id, status: "unknown" }; }
 }

@@ -29,8 +29,12 @@ describe("estimate draft owner scope", () => {
   it("rejects writes once the project is in production", async () => {
     const query = { select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: { id: projectId, status: "rough", deleted_at: null }, error: null }) };
     query.select.mockReturnValue(query); query.eq.mockReturnValue(query);
-    from.mockReturnValue(query);
+    const draftQuery = { select: vi.fn(), eq: vi.fn(), returns: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) };
+    draftQuery.select.mockReturnValue(draftQuery); draftQuery.eq.mockReturnValue(draftQuery); draftQuery.returns.mockReturnValue(draftQuery);
+    from.mockImplementation((table: string) => table === "natori_projects" ? query : draftQuery);
+    expect(await getEstimateDraft(projectId)).toEqual({ kind: "ok", draft: null, editable: false });
+    from.mockClear();
     expect(await saveEstimateDraft(projectId, 0, { agreedTerms: {} as never, items: [] })).toEqual({ kind: "invalid-state" });
-    expect(from).toHaveBeenCalledTimes(1);
+    expect(from).toHaveBeenCalledTimes(2);
   });
 });
