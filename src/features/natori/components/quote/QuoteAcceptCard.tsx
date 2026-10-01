@@ -4,6 +4,7 @@
 // 見積もり承諾ページの本体。最終確認事項と規約確認を表示し、
 // 「この内容で依頼を確定する」の POST で契約承諾を確定する。
 import Link from "next/link";
+import type { NatoriPaymentOverview } from "@/features/natori/types/payment";
 import { useState } from "react";
 import { formatYen } from "@/features/natori/lib/pricing";
 import { legacyNatoriTransactionColors as c } from "@/features/natori/constants/portfolioContent";
@@ -11,6 +12,7 @@ import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { formatQuoteDate, type NatoriQuoteTerms } from "@/features/natori/lib/quoteTerms";
 
 type Props = {
+  payment?: NatoriPaymentOverview;
   token: string;
   title: string;
   clientName: string;
@@ -50,6 +52,7 @@ export default function QuoteAcceptCard({
   preview = false,
   items = [],
   version,
+  payment,
 }: Props) {
   const [status, setStatus] = useState<Status>(acceptedAt ? "accepted" : "idle");
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -171,7 +174,12 @@ export default function QuoteAcceptCard({
           <p className="mb-1 font-bold">ご依頼の確定ありがとうございます!</p>
           <p className="text-sm" style={{ color: c.inkSoft }}>
             {acceptedAt ? `${formatDate(acceptedAt)}にご承諾いただいています。` : ""}
-            お支払いのご案内をメールでお送りしますので、今しばらくお待ちください。
+            {payment?.available === false ? "入金状況を確認できませんでした。再読み込みするか、担当者へメールでお問い合わせください。"
+              : payment?.confirmedAt ? "入金確認済みです。支払案内をお待ちいただく必要はありません。次の確認事項は担当者からご案内します。"
+              : payment?.requiresReview ? "お支払いの記録を担当者が照合しています。追加のお支払いはせず、メールでお問い合わせください。"
+              : payment?.processing ? "入金の確認処理中です。追加のお支払いはせず、再読み込みして状況をご確認ください。"
+              : "お支払いのご案内をメールでお送りしますので、今しばらくお待ちください。"}
+            {payment?.confirmedAt && payment.requiresReview ? <span className="mt-2 block font-bold">お支払いの記録に確認が必要な項目があります。追加のお支払いはせず、担当者へメールでお問い合わせください。</span> : null}
           </p>
         </div>
       ) : (

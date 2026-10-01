@@ -1,0 +1,64 @@
+name: Natori Phase 2B
+
+on:
+  pull_request:
+    branches: [main, codex/natori-phase-2a]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/natori-phase-2b.yml'
+      - 'scripts/natori-phase-2b/**'
+      - 'scripts/natori-phase-t/**'
+      - 'scripts/natori-phase-0b/**'
+      - 'scripts/natori-phase-n/**'
+      - 'src/features/natori/**'
+      - 'scripts/natori-phase-2a/**'
+      - 'src/app/api/webhook/stripe/**'
+      - 'src/app/**/natori/**'
+      - 'src/types/supabase.ts'
+      - 'supabase/migrations/**'
+      - 'docs/natori/Natori_Phase_2B*'
+      - '.node-version'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: natori-phase-2b-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  delivery:
+    name: Natori inbox with real isolated DB and synthetic signed events
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PHASE_T_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PHASE_N: '1'
+      PHASE_2A: '1'
+      PHASE_2B: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.node-version'
+          cache: npm
+      - name: Install locked test dependencies during construction
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify types, frozen baseline and product unit regressions
+        run: |
+          npx --no-install tsc --noEmit --incremental false
+          node scripts/etorie-baseline-static-check.mjs
+          npx --no-install vitest run
+      - name: Verify inbox leases, payment replay and prior quote/browser regressions
+        run: bash scripts/natori-phase-t/run.sh
+      - name: Publish non-secret evidence only
+        if: always() && env.PHASE_T_RESULTS != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: natori-phase-2b-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.PHASE_T_RESULTS }}/*
+          if-no-files-found: error
+          retention-days: 7

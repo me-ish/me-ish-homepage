@@ -13,6 +13,7 @@ import {
   claimStripeEvent,
   releaseStripeEvent,
 } from "@/lib/stripe/processedEvents";
+import { paymentIntegrityEnabled, receiveNatoriPaymentEvent } from "@/features/natori/server/paymentEventService";
 import { markNatoriCommissionPaid } from "@/features/natori/server/orderMailService";
 
 export const runtime = "nodejs";
@@ -116,6 +117,13 @@ export async function POST(req: NextRequest) {
   // イベント単位の dedup。同一 event.id の再送・同時配送は最初の1リクエスト
   // だけが処理権を得る。処理が一時エラーで失敗した経路では releaseStripeEvent で
   // 行を消してから 500 を返し、Stripe の再送でリトライさせる。
+  // Natori's durable inbox runs before the legacy shared claim; other products keep their existing dispatch.
+  if (paymentIntegrityEnabled() && session.metadata?.kind === "natori_commission") {
+    const result = await receiveNatoriPaymentEvent(event);
+    return NextResponse.json({ ok: result.status === 200, received: result.status === 200, result: result.result },
+      { status: result.status, ...(result.status === 503 ? { headers: { "Retry-After": "60" } } : {}) });
+  }
+
   const claim = await claimStripeEvent(event.id);
   if (claim === "duplicate") {
     return NextResponse.json(
