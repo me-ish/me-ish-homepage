@@ -25,6 +25,10 @@ phase3a=${PHASE_3A:-0}
 phase3b=${PHASE_3B:-0}
 phase5=${PHASE_5:-0}
 phase6a=${PHASE_6A:-0}
+phase6b=${PHASE_6B:-0}
+phase7=${PHASE_7:-0}
+[[ $phase6b == 0 || ( $phase6b == 1 && $phase6a == 1 && $phasen == 1 && $phase2c == 1 ) ]] || exit 1
+[[ $phase7 == 0 || ( $phase7 == 1 && $phase6b == 1 ) ]] || exit 1
 [[ $phase6a == 0 || ( $phase6a == 1 && $phasen == 1 && $phase2a == 1 && $phase2b == 1 && $phase2c == 1 && $phase2d == 1 && $phase3a == 1 && $phase3b == 1 && $phase5 == 1 ) ]] || exit 1
 phase6a_schema=0
 phase6a_schema_installed=0
@@ -144,6 +148,11 @@ if [[ $phase3a == 1 ]]; then
   extra_mounts+=(--mount "type=bind,source=$work/phase3a,target=/phase3a,readonly")
 fi
 
+if [[ $phase7 == 1 ]]; then
+  mkdir -p "$work/phase7"
+  node "$repo/scripts/natori-phase-7/build.mjs" "$work/phase7/fixtures.cjs"
+fi
+
 if [[ $phase2d == 1 ]]; then
   mkdir -p "$work/phase2d"
   node "$repo/scripts/natori-phase-2d/build.mjs" "$work/phase2d/integration.cjs"
@@ -233,9 +242,18 @@ if [[ $phasen == 1 ]]; then
   if [[ $phase3b == 1 ]]; then node "$repo/scripts/natori-phase-3b/prepare-browser.mjs" "$work/browser-app"; fi
   if [[ $phase5 == 1 ]]; then node "$repo/scripts/natori-phase-5/prepare-browser.mjs" "$work/browser-app"; fi
   if [[ $phase6a == 1 ]]; then node "$repo/scripts/natori-phase-6a/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase6b == 1 ]]; then
+    PHASE_6B_BROWSER=ephemeral node "$repo/scripts/natori-phase-6b/prepare-browser.mjs" "$work/browser-app"
+  fi
+  if [[ $phase7 == 1 ]]; then
+    PHASE_7_BROWSER=ephemeral node "$repo/scripts/natori-phase-7/prepare-browser.mjs" "$work/browser-app"
+  fi
   # One shared pinned font construction after every current source-copy builder.
-  if [[ $phase5 == 1 || $phase6a == 1 ]]; then
+  if [[ $phase5 == 1 || $phase6a == 1 || $phase6b == 1 || $phase7 == 1 ]]; then
     node "$repo/scripts/natori-phase-7/prepare-fonts.mjs" "$work/browser-app" --construction
+  fi
+  if [[ $phase7 == 1 ]]; then
+    node "$repo/scripts/natori-phase-7/collect-execution.mjs" "$work/browser-app" "${PHASE7_BASE_SHA:-}"
   fi
   cp "$work/browser-app/source-checksums.json" "$work/results/browser-source-checksums.json"
 fi
@@ -550,6 +568,14 @@ fi
 if [[ $phase6a == 1 ]]; then
   timeout 300 docker exec "$runner" node /phase6a/integration.cjs
   timeout 600 docker exec "$project-browser" /runtime-bin/node /phase6a-browser/browser.mjs
+fi
+
+# Each visual mode starts and stops its own Next process in the same sealed namespace.
+if [[ $phase6b == 1 ]]; then
+  timeout 900 docker exec "$project-browser" /runtime-bin/node /phase7-browser/visual-server.mjs 6b
+fi
+if [[ $phase7 == 1 ]]; then
+  timeout 900 docker exec "$project-browser" /runtime-bin/node /phase7-browser/visual-server.mjs 7
 fi
 
 echo 'Required real Storage tests completed; production remains unchanged'

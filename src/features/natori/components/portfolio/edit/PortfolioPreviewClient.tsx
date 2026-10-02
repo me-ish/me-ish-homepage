@@ -9,15 +9,15 @@ import Link from "next/link";
 import { Eye } from "lucide-react";
 import {
   PORTFOLIO_PREVIEW_STORAGE_KEY,
-  parsePortfolioContent,
 } from "@/features/natori/lib/portfolioContent";
-import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import { parsePortfolioDisplayContent } from "@/features/natori/lib/portfolioDisplay";
+import type { PortfolioDisplayContent } from "@/features/natori/types/portfolioDisplay";
 import PortfolioLanding from "../PortfolioLanding";
 
 type PreviewState =
   | { kind: "loading" }
   | { kind: "missing" }
-  | { kind: "ready"; content: PortfolioContent };
+  | { kind: "ready"; content: PortfolioDisplayContent };
 
 export default function PortfolioPreviewClient() {
   const [state, setState] = useState<PreviewState>({ kind: "loading" });
@@ -25,7 +25,7 @@ export default function PortfolioPreviewClient() {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(PORTFOLIO_PREVIEW_STORAGE_KEY);
-      const content = raw ? parsePortfolioContent(JSON.parse(raw)) : null;
+      const content = raw ? parsePortfolioDisplayContent(JSON.parse(raw)) : null;
       setState(content ? { kind: "ready", content } : { kind: "missing" });
     } catch (err) {
       console.error("[portfolio-preview] load failed", err);

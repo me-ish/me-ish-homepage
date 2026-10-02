@@ -288,11 +288,11 @@ describe("portfolio choice controls", () => {
 
   it("keeps both request-form submit buttons large, bold, and on the action colors", () => {
     const submitClass =
-      'className="pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black hover:brightness-95 disabled:opacity-50"';
+      'className={`${natoriPrimaryActionClassName} pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black`}';
 
     expect(structuredFormSource).toContain(submitClass);
-    expect(structuredFormSource).toContain("borderColor: c.actionDisplay");
+    expect(structuredFormSource).toContain("constants/natoriPrimaryAction");
     expect(legacyFormSource).toContain(submitClass);
-    expect(legacyFormSource).toContain("borderColor: c.actionDisplay");
+    expect(legacyFormSource).toContain("constants/natoriPrimaryAction");
   });
 });

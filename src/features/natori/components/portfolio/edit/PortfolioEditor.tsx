@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Eye, ImagePlus, Loader2, Save } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
+import { preparePortfolioDisplayPreview } from "@/features/natori/lib/portfolioDisplay";
 import {
   PORTFOLIO_PREVIEW_STORAGE_KEY,
   preparePortfolioContentForSave,
@@ -132,7 +133,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
   const handlePreview = () => {
     if (!content) return;
     try {
-      const prepared = preparePortfolioContentForSave(content);
+      const prepared = preparePortfolioDisplayPreview(content);
       if (!prepared) throw new Error("portfolio content validation failed");
       window.localStorage.setItem(
         PORTFOLIO_PREVIEW_STORAGE_KEY,

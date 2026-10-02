@@ -4,6 +4,7 @@
 // 納品ページの本体。納品ファイルのダウンロードと「受け取りました」ボタンを表示し、
 // 押下で /api/natori/delivery/accept へ POST して検収を確定する。
 // リンクを開いただけでは何も確定しない（確定は必ずこのボタンの POST）。
+import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { legacyNatoriTransactionColors as c } from "@/features/natori/constants/portfolioContent";
@@ -111,8 +112,7 @@ export default function DeliveryAcceptCard({
                 >
                   <span className="min-w-0 break-all">{file.fileName}</span>
                   <span
-                    className="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold text-white"
-                    style={{ background: c.pink }}
+                    className={`${natoriPrimaryActionClassName} shrink-0 rounded-full px-2.5 py-1 text-xs font-bold`}
                   >
                     保存 {file.sizeBytes > 0 ? `(${formatBytes(file.sizeBytes)})` : ""}
                   </span>
@@ -151,8 +151,7 @@ export default function DeliveryAcceptCard({
             type="button"
             onClick={handleAccept}
             disabled={status === "sending" || canAccept === false}
-            className="w-full rounded-full py-3 font-bold text-white shadow-md hover:brightness-105 disabled:opacity-60"
-            style={{ background: c.pink }}
+            className={`${natoriPrimaryActionClassName} w-full rounded-full py-3 font-bold shadow-md`}
           >
             {status === "sending" ? "確認中…" : canAccept === undefined ? "受け取りました" : "内容を確認し、受け取りを完了する"}
           </button>

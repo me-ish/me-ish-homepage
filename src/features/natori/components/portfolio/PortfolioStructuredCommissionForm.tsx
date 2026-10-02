@@ -4,6 +4,7 @@
 // P1-06 の構造化ご依頼フォーム本体。入力 state → RequestData V1 の変換は
 // features/natori/lib/portfolioRequestForm.ts（共有純関数）に集約し、
 // UI 独自の payload 形は作らない。client / server は同じ共有 schema で検証する。
+import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   PLAN_SELECT_EVENT,
@@ -1618,12 +1619,11 @@ export default function PortfolioStructuredCommissionForm({
         <FormSection title="確認して送信">
           <PortfolioLegalNotice />
           <button type="submit" disabled={!commissionOpen || sending || retrySeconds > 0} aria-busy={sending}
-            className="pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black hover:brightness-95 disabled:opacity-50"
-            style={{ background: c.action, borderColor: c.actionDisplay, color: c.onAction }}>
+            className={`${natoriPrimaryActionClassName} pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black`}>
             {!commissionOpen ? "現在受付停止中です" : sending ? "送信中…" : retrySeconds > 0 ? `再送まで ${retrySeconds}秒` : state.inquiryMode === "quote" ? "見積もりを依頼する" : "相談内容を送信する"}
           </button>
         </FormSection>
-      ) : <button type="button" onClick={nextStep} className="pf-cute-focus w-full min-h-[48px] rounded-full border-2 px-4 py-3 font-black" style={{ background: c.action, borderColor: c.actionDisplay, color: c.onAction }}>
+      ) : <button type="button" onClick={nextStep} className={`${natoriPrimaryActionClassName} pf-cute-focus w-full min-h-[48px] rounded-full border-2 px-4 py-3 font-black`}>
         {step === 0 && state.inquiryMode === "quote" ? "条件・連絡先へ" : "内容を確認する"}
       </button>}
       </fieldset>

@@ -848,8 +848,9 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     const submitButton = screen.getByRole("button", { name: "内容を確認する" });
     expect(submitButton.className).toContain("font-black");
     expect(submitButton.className).toContain("border-2");
-    expect(submitButton.style.background).toBe("rgb(236, 72, 153)");
-    expect(submitButton.style.borderColor).toBe("rgb(201, 75, 137)");
-    expect(submitButton.style.color).toBe("rgb(255, 255, 255)");
+    expect(submitButton.style.background).toBe("");
+    expect(submitButton.className).toContain("bg-[#BE185D]");
+    expect(submitButton.className).toContain("disabled:opacity-100");
+    expect(submitButton.className).toContain("focus-visible:outline-[#831843]");
   });
 });

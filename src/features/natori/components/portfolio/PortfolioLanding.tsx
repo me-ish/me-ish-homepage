@@ -2,6 +2,7 @@
 // /natori/portfolio の全セクションを束ねるルートコンポーネント。
 // 掲載内容 (content) は DB から読み込んだものが page.tsx 経由で渡ってくる。
 // 既存の /natori (VGen向け) とは完全に独立したページ。
+import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
 import PortfolioAbout from "./PortfolioAbout";
@@ -71,7 +72,7 @@ export default function PortfolioLanding({
             </p>
             {content.commissionOpen && <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
               <a href={`${contactPath}?mode=consultation${demoStructuredQuery}`} className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-full border-2 px-6 py-2 font-bold" style={{ borderColor: c.action, background: c.surface, color: c.text }}>まず相談したい</a>
-              <a href={`${contactPath}?mode=quote${demoStructuredQuery}`} className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-full border-2 px-6 py-2 font-bold" style={{ borderColor: c.action, background: c.action, color: c.onAction }}>見積もりをお願いしたい</a>
+              <a href={`${contactPath}?mode=quote${demoStructuredQuery}`} className={`${natoriPrimaryActionClassName} pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-full border-2 px-6 py-2 font-bold`}>見積もりをお願いしたい</a>
             </div>}
           </section>
           {content.commissionOpen ? <PortfolioMobileCta href={directContactPath} /> : null}

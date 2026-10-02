@@ -1,4 +1,5 @@
 // features/natori/components/portfolio/PortfolioHero.tsx
+import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
 import { fontEnStyle } from "./portfolioFonts";
@@ -85,12 +86,8 @@ export default function PortfolioHero({
               {variant === "showcase" ? null : (
                 <PortfolioHeroPrimaryCta
                   href={contactPath}
-                  className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-full border-2 px-6 py-3 text-base font-black hover:brightness-95"
-                  style={{
-                    background: c.action,
-                    borderColor: c.action,
-                    color: c.onAction,
-                  }}
+                  className={`${natoriPrimaryActionClassName} pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-full border-2 px-6 py-3 text-base font-black`}
+                  style={{}}
                 />
               )}
               <a
