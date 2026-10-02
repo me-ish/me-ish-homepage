@@ -75,7 +75,7 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
     await page.getByLabel(/ご依頼の種類（その他の内容）/).fill("イベント表紙");
     await page.getByRole("checkbox", { name: /表情を追加する（表情差分）/ }).check();
     await page.getByLabel("追加する表情の数").fill("2");
-    await page.getByLabel("補足（任意）").fill("笑顔・泣き顔");
+    await page.getByLabel("補足（任意）", { exact: true }).fill("笑顔・泣き顔");
     const details = page.locator("summary").filter({ hasText: /^キャラクター・イメージの詳細を入力する/ }).locator("..");
     await details.locator("summary").first().click();
     await page.getByLabel("キャラクターの特徴").fill("水色の髪");
