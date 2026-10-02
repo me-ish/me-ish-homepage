@@ -82,7 +82,17 @@ async function ownedDescendant(pid, rootPid) {
   return false;
 }
 
-export async function waitOwnedReady(child, { app, nonce, timeoutMs = 120000, pollMs = 400, requestTimeoutMs = 2000 }) {
+function readinessDiagnosticCode(error) {
+  // Compare only known literals. Never return arbitrary error/cause text.
+  try {
+    if (error?.cause?.message === 'unexpected redirect') return 'REDIRECT_REJECTED';
+    if (error?.name === 'TimeoutError' || error?.name === 'AbortError') return 'REQUEST_TIMEOUT';
+    if (error?.cause?.code === 'ECONNREFUSED') return 'CONNECTION_REFUSED';
+  } catch { /* Accessors cannot turn diagnostics into a raw error path. */ }
+  return 'FETCH_FAILED';
+}
+
+export async function waitOwnedReady(child, { app, nonce, timeoutMs = 120000, pollMs = 400, requestTimeoutMs = 2000, onDiagnostic = null }) {
   portOf(app);
   if (!/^[a-f0-9]{64}$/.test(nonce)) fail('VISUAL_OWNER_NONCE_INVALID');
   const witness = witnesses.get(child);
@@ -92,11 +102,17 @@ export async function waitOwnedReady(child, { app, nonce, timeoutMs = 120000, po
     if (witness.spawnFailed) fail('VISUAL_SPAWN_FAILED');
     if (exited(child) || witness.exitObserved) fail('VISUAL_EXITED_BEFORE_READY');
     if (witness.spawnObserved && positivePid(witness.pid)) {
-      let response, data;
+      let response, data, code = 'FETCH_FAILED', httpStatus = null;
       try {
-        response = await fetch(app + '/ja/fixture-visual-owner', { redirect: 'error', signal: AbortSignal.timeout(requestTimeoutMs) });
-        if (response.ok) data = await response.json();
-      } catch { /* No response, timeout and malformed JSON never establish ownership. */ }
+        response = await fetch(app + '/api/fixture-visual-owner', { redirect: 'error', signal: AbortSignal.timeout(requestTimeoutMs) });
+        httpStatus = Number.isInteger(response.status) && response.status >= 0 && response.status <= 599 ? response.status : null;
+        if (response.ok) {
+          try { data = await response.json(); code = 'OWNER_JSON_RECEIVED'; }
+          catch { code = 'JSON_INVALID'; }
+        } else code = 'HTTP_NOT_OK';
+      } catch (error) { code = readinessDiagnosticCode(error); }
+      if (typeof onDiagnostic === 'function') onDiagnostic({ code, httpStatus });
+      // No response, redirect, timeout or malformed JSON establishes ownership.
       if (data) {
         if (data.kind !== 'natori-visual-owner-v1' || data.nonce !== nonce || !positivePid(data.pid)) fail('VISUAL_READY_OWNER_MISMATCH');
         if (!await ownedDescendant(data.pid, witness.pid)) fail('VISUAL_READY_PID_NOT_OWNED');

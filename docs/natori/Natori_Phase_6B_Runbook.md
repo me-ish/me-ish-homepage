@@ -27,6 +27,10 @@ Initial Phase6B head `cdf51f76a8130c94f0b7414343980a7baa865341`, CI37014805707/a
 
 The correction explicitly binds Next to `127.0.0.1` and probes the same IPv4 loopback address. A timeout remains a failed probe. Firewall rules and destination restrictions stay unchanged. Require actual free/occupied/timeout/owned-cleanup control evidence in the same sealed namespace, followed by the existing nonce/PID/ancestry, exit, port-closure and compilation checks. IPv6 refusal is not claimed. Full Phase6B runtime and all twelve-image visual acceptance remain pending until the new actual CI completes.
 
+Successor head `c3b5ac91709e8d1d2f1ea8d0295638d1ab0ec47c`, CI37020656638/artifact11233907529, actually passed all four IPv4 controls, including the 501ms port3001 TCP timeout, UNKNOWN rejection and owned cleanup. The later Next process timed out during owner readiness and closed cleanly; the new browser cases and PNGs were absent. The source-only terminal-REJECT prediction was contradicted by this actual runtime and does not justify changing those controls.
+
+The synthetic owner endpoint is moved consistently to `/api/fixture-visual-owner`, outside locale middleware matching. Default-ja as-needed locale canonicalization can redirect the old `/ja/` path, while readiness intentionally keeps `redirect:error`. The nonce/PID/ancestry and observed exit/refusal checks remain strict. Readiness diagnostics contain only seven finite codes, numeric HTTP status or null, first/last records and bounded counters; no error text, URL, response body, nonce or credentials. No redirect following, timeout increase, firewall rule, product route or business authorization change is introduced. Fresh actual native/source/visual acceptance is still required.
+
 Proposal CRLF normalization is limited to source preparation after the approved raw proposal SHA is verified. Git stores LF with `core.autocrlf=true`. Actual committed source models, runtime source receipts, reports, artifact ZIP and PNG hashes use exact raw bytes. The three original raw-to-Git transitions are recorded separately; they are outside the 79 copied Phase6B ordinary runtime sources.
 
 ## Quick manual check

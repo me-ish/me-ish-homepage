@@ -11,6 +11,18 @@ let server, child, stage = 'preflight', browserExit = null, fontEvidence, portCo
 const lifecycle = { freePort: null, ready: null, browserExit: null, browserClosed: null, serverClosed: null };
 const listener = Object.freeze({ bindHost: '127.0.0.1', probeHost: '127.0.0.1', browserOrigin: 'http://localhost:3000', dnsResultOrder: 'ipv4first', ipv6Probed: false });
 const failures = [];
+const readinessDiagnostics = { attempts: 0, first: null, last: null, counts: {} };
+const readinessDiagnosticCodes = new Set(['OWNER_JSON_RECEIVED', 'HTTP_NOT_OK', 'JSON_INVALID', 'REDIRECT_REJECTED', 'REQUEST_TIMEOUT', 'CONNECTION_REFUSED', 'FETCH_FAILED']);
+function recordReadinessDiagnostic(value) {
+  check(readinessDiagnosticCodes.has(value.code) && (value.httpStatus === null
+    || Number.isInteger(value.httpStatus) && value.httpStatus >= 0 && value.httpStatus <= 599), 'VISUAL_SETUP_FAILED');
+  const entry = { code: value.code, httpStatus: value.httpStatus };
+  readinessDiagnostics.attempts++;
+  if (readinessDiagnostics.first === null) readinessDiagnostics.first = entry;
+  readinessDiagnostics.last = entry;
+  readinessDiagnostics.counts[value.code] = (readinessDiagnostics.counts[value.code] ?? 0) + 1;
+}
+
 const ownerRoute = `export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export async function GET() {
@@ -48,7 +60,7 @@ async function main() {
   const { runIPv4PortControls } = await import('./ipv4-port-controls.mjs');
   portControls = await runIPv4PortControls();
   stage = 'preflight';
-  const routeDirectory = '/app/src/app/[locale]/fixture-visual-owner';
+  const routeDirectory = '/app/src/app/api/fixture-visual-owner';
   const routeFile = routeDirectory + '/route.ts';
   if (existsSync(routeFile)) check(readFileSync(routeFile, 'utf8') === ownerRoute, 'VISUAL_OWNER_ROUTE_DRIFT');
   else { mkdirSync(routeDirectory, { recursive: true }); writeFileSync(routeFile, ownerRoute); }
@@ -76,7 +88,7 @@ async function main() {
     const text = buffer.toString();
     for (const code of ['Module not found', 'Failed to compile', 'SyntaxError', 'EADDRINUSE', 'Missing mocked response']) if (text.includes(code)) compileErrors.add(code);
   });
-  lifecycle.ready = await waitOwnedReady(server, { app, nonce: ownerNonce });
+  lifecycle.ready = await waitOwnedReady(server, { app, nonce: ownerNonce, onDiagnostic: recordReadinessDiagnostic });
   check((await fetch(app + '/ja/fixture-session', { signal: AbortSignal.timeout(2000) })).ok, 'NEXT_READY');
   stage = 'visual-browser';
   child = spawn(process.execPath, [mode === '6b' ? '/phase6b-browser/browser.mjs' : '/phase7-browser/browser.mjs'], {
@@ -115,7 +127,7 @@ main().catch(error => {
   if (!ownServer && failures.length === 0) { failures.push({ stage: 'lifecycle', code: 'VISUAL_OWNERSHIP_UNPROVEN' }); process.exitCode = 1; }
   try {
     writeFileSync(mode === '6b' ? '/results/phase6b-visual-server.json' : mode === '7' ? '/results/phase7-visual-server.json' : '/results/phase-visual-preflight.json', JSON.stringify({ mode, status: failures.length === 0 ? 'passed' : 'failed', browserExit, compileErrors: [...compileErrors],
-      ownServer, listener, lifecycle, portControls, failures, syntheticOwnerRouteSha256: ownerRouteSha256, sendingEnabled: false, providerCallsConfigured: false, fonts: fontEvidence,
+      ownServer, listener, lifecycle, portControls, readinessDiagnostics, failures, syntheticOwnerRouteSha256: ownerRouteSha256, sendingEnabled: false, providerCallsConfigured: false, fonts: fontEvidence,
       interpretation: mode === '6b' ? 'Phase 6B browser only; no Phase 7 adoption or screen acceptance' : 'Phase 7 synthetic isolated screen evidence; human evaluation remains distinct' }, null, 2));
   } catch { console.error('VISUAL_RESULT_WRITE_FAILED; raw logs withheld'); process.exitCode = 1; }
 });

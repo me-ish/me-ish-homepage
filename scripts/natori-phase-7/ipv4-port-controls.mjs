@@ -12,7 +12,7 @@ const http = require('node:http');
 const nonce = process.argv[1];
 if (!/^[a-f0-9]{64}$/.test(nonce ?? '')) process.exit(1);
 const server = http.createServer((request, response) => {
-  if (request.url !== '/ja/fixture-visual-owner') { response.writeHead(404); response.end(); return; }
+  if (request.url !== '/api/fixture-visual-owner') { response.writeHead(404); response.end(); return; }
   response.setHeader('Content-Type', 'application/json'); response.setHeader('Cache-Control', 'no-store');
   response.end(JSON.stringify({ kind: 'natori-visual-owner-v1', nonce, pid: process.pid }));
 });
