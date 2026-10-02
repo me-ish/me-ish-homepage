@@ -63,10 +63,18 @@ function submit() {
   fireEvent.submit(formElement());
 }
 
+
+// The frozen recovery panel appears before hashing and HTTP completion.
+async function waitForIntakePostSettled(): Promise<void> {
+  await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init.body instanceof FormData)).toBe(true));
+  await waitFor(() => expect((screen.getByRole("button", { name: "受付結果を確認する" }) as HTMLButtonElement).disabled).toBe(false));
+}
+
 let objectUrlCounter = 0;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fetchMock.mockReset();
   sessionStorage.clear();
   vi.stubGlobal("crypto", webcrypto);
   Object.defineProperty(File.prototype, "arrayBuffer", { configurable: true, value() {
@@ -556,6 +564,7 @@ describe("server error の表示", () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: "invalid_request" }), { status: 400 }));
     renderForm(); await fillMinimum(); submit();
     await screen.findByRole("button", { name: "受付結果を確認する" });
+    await waitForIntakePostSettled();
     expect((screen.getByLabelText(/お名前/) as HTMLInputElement).closest("fieldset")?.disabled).toBe(true);
     await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init.body instanceof FormData)).toBe(true));
     const operationId = submittedForm().get("operationId"); submit();
@@ -568,6 +577,7 @@ describe("server error の表示", () => {
     fetchMock.mockResolvedValueOnce(new Response("{}", { status: 503 }));
     renderForm(); await fillMinimum(); submit();
     await screen.findByRole("button", { name: "受付結果を確認する" });
+    await waitForIntakePostSettled();
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ operationState: "not_found" }), { status: 409 }));
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ operationState: "failed" }), { status: 409 }));
     await userEvent.click(screen.getByRole("button", { name: "受付結果を確認する" }));
@@ -582,6 +592,7 @@ describe("server error の表示", () => {
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: "rate_limited" }), { status: 429, headers: { "Retry-After": "2" } }));
     renderForm(); await fillMinimum(); submit();
     await screen.findByRole("button", { name: "同じ内容で再試行する" });
+    await waitForIntakePostSettled();
     const first = submittedForm();
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ operationState: "processing" }), { status: 202 }));
     fetchMock.mockResolvedValueOnce(okResponse());
@@ -597,6 +608,7 @@ describe("server error の表示", () => {
     fetchMock.mockRejectedValueOnce(new Error("response lost"));
     const view = renderForm(); await fillMinimum(); submit();
     await screen.findByRole("button", { name: "受付結果を確認する" });
+    await waitForIntakePostSettled();
     await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init.body instanceof FormData)).toBe(true));
     const operationId = submittedForm().get("operationId"); view.unmount(); fetchMock.mockClear();
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ accepted: true, operationState: "completed", receipt: operationId }), { status: 200 }));
@@ -610,6 +622,7 @@ describe("server error の表示", () => {
     fetchMock.mockRejectedValue(new Error("network down"));
     renderForm(); await fillMinimum(); submit();
     await screen.findByRole("button", { name: "未保存を確認して編集に戻る" });
+    await waitForIntakePostSettled();
     expect(screen.queryByText("送信ありがとうございます!")).toBeNull();
     expect(trackNatoriPageEvent.mock.calls.some(([event]) => event === "portfolio_form_submit")).toBe(false);
     expect((screen.getByLabelText(/ご相談・ご依頼の内容/) as HTMLTextAreaElement).closest("fieldset")?.disabled).toBe(true);

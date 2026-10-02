@@ -1,4 +1,5 @@
 "use client";
+import { useId } from "react";
 import type { useIntakeOperation } from "./useIntakeOperation";
 import { portfolioFormColors as c } from "./PortfolioFormStyles";
 import { buildNatoriInquiryRequestView } from "@/features/natori/lib/inquiryRequestView";
@@ -40,11 +41,11 @@ function originalAnswerText(fields: FrozenIntakeOperation["fields"]): string {
 }
 
 export default function IntakeRecoveryPanel({ intake }: { intake: ReturnType<typeof useIntakeOperation> }) {
+  const originalAnswersId = useId();
   const originals = intake.originalAnswers.map(draft => <section key={draft.operationId} className="mt-4 space-y-3 rounded-xl border-2 p-4 text-sm" style={{ borderColor: c.formBorder }}>
     <p>前回送信した入力をそのまま保管しています。フォームが変わっても、この内容をコピーして確認できます。</p>
-    <label className="block font-bold">保存した入力内容
-      <textarea readOnly value={originalAnswerText(draft.fields)} className="mt-2 min-h-40 w-full whitespace-pre-wrap break-all rounded-lg border px-3 py-2" />
-    </label>
+    <label htmlFor={`${originalAnswersId}-${draft.operationId}`} className="block font-bold">保存した入力内容</label>
+    <textarea id={`${originalAnswersId}-${draft.operationId}`} readOnly value={originalAnswerText(draft.fields)} className="mt-2 min-h-40 w-full whitespace-pre-wrap break-all rounded-lg border px-3 py-2" />
     <details>
       <summary className="cursor-pointer underline">元の保存情報をコピーする</summary>
       <p className="mt-2">表示できない項目も含め、保存した情報をそのままコピーできます。</p>
