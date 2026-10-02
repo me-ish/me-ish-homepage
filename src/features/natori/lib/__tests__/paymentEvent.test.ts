@@ -10,5 +10,15 @@ describe("Natori payment event identity",()=>{
   expect(JSON.stringify(normalized)).not.toContain("private@");expect(JSON.stringify(normalized)).not.toContain("DO NOT PERSIST");
  });
  it("keeps expanded and scalar payment-intent identities equal",()=>{expect(normalizeNatoriPaymentEvent(event({payment_intent:{id:"pi_test_fixture"}}))).toEqual(normalizeNatoriPaymentEvent(event()));});
+ it("preserves the frozen Phase 2B request even when an expanded intent has a charge",()=>{
+  const expanded=event({payment_intent:{id:"pi_test_fixture",latest_charge:"ch_test_fixture"}});
+  expect(normalizeNatoriPaymentEvent(expanded)).toEqual(normalizeNatoriPaymentEvent(event()));
+  expect(normalizeNatoriPaymentEvent(expanded,{includeRefundMapping:false})).toEqual(normalizeNatoriPaymentEvent(event()));
+  expect(normalizeNatoriPaymentEvent(expanded,{includeRefundMapping:true}).request).toMatchObject({paymentIntentId:"pi_test_fixture",chargeId:"ch_test_fixture"});
+ });
+ it("keeps old rejected currency identity stable with refund writes off",()=>{
+  expect(normalizeNatoriPaymentEvent(event({currency:"INVALID"})).request).toMatchObject({currency:"invalid"});
+  expect(normalizeNatoriPaymentEvent(event({currency:"INVALID"}),{includeRefundMapping:true}).request).toMatchObject({currency:null});
+ });
  it("does not clamp invalid money or accept malformed project IDs",()=>{const normalized=normalizeNatoriPaymentEvent(event({amount_total:1.5,metadata:{projectId:"invalid",quoteId:"invalid"}}));expect(normalized.request).toMatchObject({amount:null,projectId:null,quoteId:null});});
 });

@@ -9,6 +9,6 @@ export type NatoriPaymentOverview = {
 export type NatoriPaymentAttention = {
   projectId: string | null;
   title: string;
-  status: "processing" | "needs_review";
+  status: "processing" | "needs_review" | "pending";
   reason: string | null;
 };

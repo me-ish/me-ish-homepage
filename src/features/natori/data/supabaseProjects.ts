@@ -1,3 +1,4 @@
+import type { NatoriRefundSummary } from "@/features/natori/types/refunds";
 import type { ConsultationOverview } from "@/features/natori/types/consultation";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import type {
@@ -18,6 +19,7 @@ import {
 import { sortNatoriReferenceLinks } from "@/features/natori/lib/projectReferenceLinks";
 
 export type ProjectRow = {
+  refunds?: NatoriRefundSummary | null;
   consultation?: ConsultationOverview | null;
   id: string;
   user_id: string;
@@ -103,6 +105,7 @@ export function rowToProject(
   return {
     id: row.id,
     consultation: row.consultation ?? null,
+    refunds: row.refunds,
     title: row.title,
     clientName: row.client_name,
     clientEmail: row.client_email ?? undefined,

@@ -100,7 +100,7 @@ describe("summarizeNatoriResults", () => {
     expect(summary.totalAmount).toBe(12000);
     expect(summary.undecidedAmountCount).toBe(1);
     expect(summary.averageAmount).toBe(6000);
-    expect(summary.byType).toEqual([{ type: "icon", count: 2, amount: 12000 }]);
+    expect(summary.byType).toEqual([{ type: "icon", count: 2, amount: 12000, refundedAmount: null, netAmount: null }]);
   });
 
   it("excludes archived projects from all result aggregates", () => {

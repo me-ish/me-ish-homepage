@@ -13,7 +13,8 @@ import {
   claimStripeEvent,
   releaseStripeEvent,
 } from "@/lib/stripe/processedEvents";
-import { paymentIntegrityEnabled, receiveNatoriPaymentEvent } from "@/features/natori/server/paymentEventService";
+import { paymentIntegrityEnabled, refundLedgerEnabled, refundLedgerReadEnabled, receiveNatoriPaymentEvent } from "@/features/natori/server/paymentEventService";
+import { isNatoriRefundEventType, isExplicitOtherProductRefund } from "@/features/natori/lib/paymentEvent";
 import { markNatoriCommissionPaid } from "@/features/natori/server/orderMailService";
 
 export const runtime = "nodejs";
@@ -95,6 +96,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "invalid_signature" }, { status: 400 });
   }
 
+
+  // Refund objects are not Checkout Sessions. Dispatch before the checkout-only early return.
+  if (isNatoriRefundEventType(event.type) && refundLedgerReadEnabled()
+    && !isExplicitOtherProductRefund(event)) {
+    // A paused consumer must not acknowledge an unrecorded refund. Preserve Stripe
+    // redelivery; missing metadata remains unclassified until original-payment lookup.
+    if (!paymentIntegrityEnabled() || !refundLedgerEnabled()) {
+      return NextResponse.json({ ok: false, received: false, result: "refund_consumer_paused" },
+        { status: 503, headers: { "Retry-After": "60" } });
+    }
+    const result = await receiveNatoriPaymentEvent(event);
+    return NextResponse.json({ ok: result.status === 200, received: result.status === 200, result: result.result },
+      { status: result.status, ...(result.status === 503 ? { headers: { "Retry-After": "60" } } : {}) });
+  }
 
   const isTarget =
     event.type === "checkout.session.completed" ||

@@ -31,6 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import ProjectNoteSummary from "./ProjectNoteSummary";
 import ProjectTaskChecklist from "./ProjectTaskChecklist";
+import { RefundResultDetails } from "./RefundResultFigures";
 import type { NatoriProject } from "@/features/natori/types/projects";
 
 type ProjectCardProps = {
@@ -215,6 +216,8 @@ export default function ProjectCard({
             </span>
           </div>
         </div>
+
+        {project.paidAt != null || project.paymentConfirmedAt != null || project.paidAmount != null ? <RefundResultDetails project={project} /> : null}
 
         <div
           className={cn(
