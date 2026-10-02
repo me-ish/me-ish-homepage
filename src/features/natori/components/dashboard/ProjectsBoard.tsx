@@ -1,11 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarClock, Inbox } from "lucide-react";
 import {
-  deriveNextActionFromTasks,
-  deriveStatusFromTasks,
   getNextActionForStatus,
   getNextStatus,
   getPrioritySuggestions,
@@ -18,6 +16,7 @@ import {
   fetchNatoriProjectCollection,
   restoreNatoriProject,
   toggleNatoriTaskDone,
+  NatoriTaskConflictError,
   updateNatoriProjectDetails,
   updateNatoriProjectStatus,
   type UpdateNatoriProjectDetailsInput,
@@ -30,6 +29,7 @@ import {
   type NatoriEvent,
 } from "@/features/natori/data/supabaseEvents";
 import type { NatoriPriorityCandidate, NatoriProject } from "@/features/natori/types/projects";
+import {applyTaskProjection,overlayTaskIntents,mergeProjectCollection,previewProductionTasks,type TaskIntent} from "../../lib/taskProjection";
 import ProjectMonthCalendar from "./ProjectMonthCalendar";
 import ProjectDayDetail from "./ProjectDayDetail";
 import ProjectPriorityList from "./ProjectPriorityList";
@@ -81,16 +81,33 @@ export default function ProjectsBoard({
   const [eventsBusy, setEventsBusy] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [advanceBusyId, setAdvanceBusyId] = useState<string | null>(null);
+  const loadSequence = useRef(0);
+  const taskSequence = useRef(0);
+  const taskIntents = useRef(new Map<string, Map<string, TaskIntent>>());
+  // Store confirmed rows separately from local checkbox intents.
+  const canonicalProjects = useRef(new Map<string, NatoriProject>());
+  const publishCanonicalProjects = useCallback(() => {
+    const all = [...canonicalProjects.current.values()];
+    setProjects(all.filter(project => !project.deletedAt)
+      .map(project => overlayTaskIntents(project, taskIntents.current.get(project.id))));
+    setArchivedProjects(all.filter(project => Boolean(project.deletedAt)));
+  }, []);
 
   const loadFromSupabase = useCallback(async () => {
+    const sequence = ++loadSequence.current;
+    const startedRevisions = new Map([...canonicalProjects.current].map(([id, project]) => [id, project.mutationRevision ?? -1]));
     const [projectData, eventResult] = await Promise.all([
       fetchNatoriProjectCollection(),
       fetchNatoriEvents()
         .then((data) => ({ ok: true as const, data }))
         .catch((error: unknown) => ({ ok: false as const, error })),
     ]);
-    setProjects(projectData.projects);
-    setArchivedProjects(projectData.archivedProjects);
+    if (sequence !== loadSequence.current) return;
+    const incoming = [...projectData.projects, ...projectData.archivedProjects];
+    const merged = mergeProjectCollection([...canonicalProjects.current.values()], incoming,
+      startedRevisions, new Set(taskIntents.current.keys()));
+    canonicalProjects.current = new Map(merged.map(project => [project.id, project]));
+    publishCanonicalProjects();
     if (eventResult.ok) {
       setEvents(eventResult.data);
       setEventsError(null);
@@ -99,7 +116,7 @@ export default function ProjectsBoard({
       setEventsError("予定だけ読み込めませんでした。案件データは最新です。");
     }
     setDataSource("supabase");
-  }, []);
+  }, [publishCanonicalProjects]);
 
   const retryEvents = useCallback(async () => {
     setEventsBusy(true);
@@ -253,34 +270,43 @@ export default function ProjectsBoard({
   };
 
   const handleToggleTask = (projectId: string, taskId: string) => {
-    const project = projects.find((entry) => entry.id === projectId);
-    const task = project?.tasks.find((entry) => entry.id === taskId);
-    if (!project || !task) return;
-
+    const project = projects.find(entry => entry.id === projectId);
+    const task = project?.tasks.find(entry => entry.id === taskId);
+    if (!project || !task || advanceBusyId === projectId ||
+        project.deletedAt || ["completed", "closed", "delivered"].includes(project.status)) return;
     setError(null);
-    const nextDone = !task.done;
-    const nextTasks = project.tasks.map((entry) =>
-      entry.id === taskId ? { ...entry, done: nextDone } : entry
-    );
-    const nextStatus = deriveStatusFromTasks(nextTasks, project.status);
-    const nextAction = deriveNextActionFromTasks(nextTasks, project.nextAction);
-    setProjects((current) =>
-      current.map((entry) =>
-        entry.id === projectId
-          ? { ...entry, tasks: nextTasks, status: nextStatus, nextAction }
-          : entry
-      )
-    );
-
-    if (dataSource === "supabase") {
-      (async () => {
-        try {
-          await toggleNatoriTaskDone(projectId, taskId, nextDone, nextStatus, nextAction);
-        } catch (err) {
-          await recoverFromMutationFailure("task update", err);
-        }
-      })();
+    const pending = taskIntents.current.get(projectId) ?? new Map<string, TaskIntent>();
+    const nextDone = !(pending.get(taskId)?.done ?? task.done);
+    if (dataSource !== "supabase") {
+      setProjects(current => current.map(entry => entry.id === projectId
+        ? previewProductionTasks(entry, entry.tasks.map(item => item.id === taskId ? { ...item, done: nextDone } : item)) : entry));
+      return;
     }
+    const sequence = ++taskSequence.current;
+    pending.set(taskId, { sequence, done: nextDone });
+    taskIntents.current.set(projectId, pending);
+    setProjects(current => current.map(entry => entry.id === projectId ? overlayTaskIntents(entry, pending) : entry));
+    void (async () => {
+      const releaseIntent = () => {
+        if (pending.get(taskId)?.sequence === sequence) pending.delete(taskId);
+        if (!pending.size && taskIntents.current.get(projectId) === pending) taskIntents.current.delete(projectId);
+      };
+      try {
+        const projection = await toggleNatoriTaskDone(projectId, taskId, nextDone);
+        releaseIntent();
+        const confirmed = canonicalProjects.current.get(projectId);
+        if (confirmed) canonicalProjects.current.set(projectId, applyTaskProjection(confirmed, projection));
+        publishCanonicalProjects();
+      } catch (err) {
+        releaseIntent();
+        if (err instanceof NatoriTaskConflictError) {
+          const confirmed = canonicalProjects.current.get(projectId);
+          if (confirmed) canonicalProjects.current.set(projectId, applyTaskProjection(confirmed, err.project));
+        }
+        publishCanonicalProjects();
+        await recoverFromMutationFailure("task update", err);
+      }
+    })();
   };
 
   const handleAdvanceStatus = (project: NatoriProject) => {
@@ -289,7 +315,7 @@ export default function ProjectsBoard({
     const nextAction = getNextActionForStatus(nextStatus);
     setError(null);
     setAdvanceBusyId(project.id);
-    setProjects((current) =>
+    if (dataSource !== "supabase") setProjects((current) =>
       current.map((entry) =>
         entry.id === project.id
           ? { ...entry, status: nextStatus, nextAction }
@@ -300,6 +326,7 @@ export default function ProjectsBoard({
       (async () => {
         try {
           await updateNatoriProjectStatus(project.id, nextStatus, nextAction);
+          await loadFromSupabase();
         } catch (err) {
           await recoverFromMutationFailure("status update", err);
         } finally {
@@ -317,7 +344,7 @@ export default function ProjectsBoard({
     const stampedAt = new Date().toISOString();
     setError(null);
     setAdvanceBusyId(project.id);
-    setProjects((current) =>
+    if (dataSource !== "supabase") setProjects((current) =>
       current.map((entry) =>
         entry.id === project.id
           ? {
@@ -333,6 +360,7 @@ export default function ProjectsBoard({
       (async () => {
         try {
           await confirmNatoriProjectPayment(project.id, nextAction);
+          await loadFromSupabase();
         } catch (err) {
           await recoverFromMutationFailure("payment confirmation", err);
         } finally {
@@ -348,7 +376,7 @@ export default function ProjectsBoard({
     const nextAction = getNextActionForStatus("inquiry");
     setError(null);
     setAdvanceBusyId(project.id);
-    setProjects((current) =>
+    if (dataSource !== "supabase") setProjects((current) =>
       current.map((entry) =>
         entry.id === project.id ? { ...entry, status: "inquiry", nextAction } : entry
       )
@@ -357,6 +385,7 @@ export default function ProjectsBoard({
       (async () => {
         try {
           await updateNatoriProjectStatus(project.id, "inquiry", nextAction);
+          await loadFromSupabase();
         } catch (err) {
           await recoverFromMutationFailure("project reopen", err);
         } finally {
@@ -379,10 +408,7 @@ export default function ProjectsBoard({
       (async () => {
         try {
           await deleteNatoriProject(project.id);
-          setArchivedProjects((current) => [
-            { ...project, deletedAt: new Date().toISOString() },
-            ...current.filter((entry) => entry.id !== project.id),
-          ]);
+          await loadFromSupabase();
         } catch (err) {
           console.error("[ProjectsBoard] delete closed project failed", err);
           setError(err instanceof Error ? err.message : String(err));
@@ -450,6 +476,7 @@ export default function ProjectsBoard({
     if (dataSource !== "supabase") return;
     try {
       await updateNatoriProjectDetails(project.id, patch);
+      await loadFromSupabase();
     } catch (err) {
       console.error("[ProjectsBoard] edit details failed", err);
       // Re-sync from the server so the optimistic state doesn't drift.

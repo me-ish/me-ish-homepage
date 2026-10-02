@@ -1,4 +1,5 @@
 import "server-only";
+import {loadCoherentTaskSnapshot,setTaskFromLatestDb,type NatoriTaskMutationResult} from "./taskIntegrityService";
 import {paymentLinkIntegrityEnabled,closeOrArchiveWithPaymentGuard} from "./paymentLinkService";
 import { loadNatoriRefundSummaries } from "./refundSummaryService";
 import type { NatoriRefundSummary } from "../types/refunds";
@@ -23,6 +24,7 @@ import type {
 export type NatoriAdminProjectRow = {
   refunds?: NatoriRefundSummary | null;
   consultation?: ConsultationOverview | null;
+  mutation_revision?: number;
   id: string;
   user_id: string;
   title: string;
@@ -124,6 +126,7 @@ export const NATORI_PROJECT_DETAILS_ALLOWED_FIELDS: ReadonlySet<string> = new Se
  */
 export const NATORI_PROJECT_IMMUTABLE_FIELDS: ReadonlySet<string> = new Set([
   "request_data",
+  "mutation_revision",
   "id",
   "user_id",
   "created_at",
@@ -301,19 +304,11 @@ export async function listNatoriAdminProjects(projectId?: string): Promise<ListN
   const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "fetch-projects-error" };
   const admin = supabaseAdmin();
-  let activeQuery = admin.from("natori_projects").select("*").eq("user_id", ownerId).is("deleted_at", null).order("created_at", { ascending: true });
-  let archivedQuery = admin.from("natori_projects").select("*").eq("user_id", ownerId).not("deleted_at", "is", null).order("deleted_at", { ascending: false });
-  // Direct lookup is owner-scoped and independent of list/status filters.
-  if (projectId) { activeQuery = activeQuery.eq("id", projectId); archivedQuery = archivedQuery.eq("id", projectId); }
-  const [{ data: projects, error: projectError }, { data: archivedProjects, error: archivedProjectError }] = await Promise.all([activeQuery, archivedQuery]);
-
-  if (projectError || archivedProjectError) {
-    console.error(
-      "[natori-admin-projects] project fetch failed",
-      projectError ?? archivedProjectError
-    );
-    return { kind: "fetch-projects-error" };
-  }
+  const snapshot = await loadCoherentTaskSnapshot(ownerId, projectId);
+  if (!snapshot) return { kind: "fetch-projects-error" };
+  const projects = snapshot.projects.filter(project => !project.deleted_at);
+  const archivedProjects = snapshot.projects.filter(project => Boolean(project.deleted_at))
+    .sort((a,b) => (b.deleted_at ?? "").localeCompare(a.deleted_at ?? ""));
 
   // Keep application-side guards as defense in depth in case a mock, proxy, or
   // future query change returns rows outside the requested deleted_at lane.
@@ -338,11 +333,7 @@ export async function listNatoriAdminProjects(projectId?: string): Promise<ListN
 
   const [{ data: tasks, error: taskError }, { data: references, error: referenceError }, overviews, refunds] =
     await Promise.all([
-      admin
-        .from("natori_project_tasks")
-        .select("*")
-        .in("project_id", projectIds)
-        .order("sort_order", { ascending: true }),
+      Promise.resolve({ data: snapshot.tasks, error: null }),
       admin
         .from("natori_inquiry_reference_files")
         .select("project_id, storage_path")
@@ -358,7 +349,7 @@ export async function listNatoriAdminProjects(projectId?: string): Promise<ListN
   }
 
   const taskRows = (tasks ?? []) as NatoriAdminTaskRow[];
-  const normalizedTasks = normalizeProjectTasksForRead(allRows, taskRows);
+  const normalizedTasks = taskRows; // Coherent DB rows are authoritative; no synthetic completion.
   if (referenceError) {
     console.error("[natori-admin-projects] reference fetch failed", referenceError);
   }
@@ -555,27 +546,11 @@ export async function setNatoriProjectTaskDone(
   projectId: string,
   taskKey: string,
   done: boolean,
-  status: string,
-  nextAction: string
-): Promise<NatoriProjectMutationResult> {
-  if (!NATORI_PROJECT_STATUSES.has(status)) return { kind: "db-error" };
-  const ownerId = await resolveNatoriOwnerId();
-  if (!ownerId) return { kind: "not-found" };
-  const { data, error } = await supabaseAdmin().rpc("natori_update_task_and_status", {
-    p_user_id: ownerId,
-    p_project_id: projectId,
-    p_task_key: taskKey,
-    p_done: done,
-    p_status: status,
-    p_next_action: nextAction,
-  });
-
-  if (error) {
-    console.error("[natori-admin-projects] task update failed", error);
-    return { kind: "db-error" };
-  }
-  if (data !== true) return { kind: "not-found" };
-  return { kind: "ok" };
+  _legacyStatus?: string,
+  _legacyNextAction?: string
+): Promise<NatoriTaskMutationResult> {
+  // Legacy status/nextAction parameters deliberately never reach the database.
+  return setTaskFromLatestDb(projectId, taskKey, done);
 }
 
 export async function setNatoriProjectStatus(

@@ -82,6 +82,10 @@ export type NatoriProject = {
   nextAction: string;
   type: NatoriProjectType;
   tasks: NatoriProjectTask[];
+  /** Monotonic across every DB project writer, including task/payment/receipt/close. */
+  mutationRevision?: number;
+  deliveryAcceptedAt?: string;
+  deliveredMailAt?: string;
   priority?: NatoriProjectPriority;
   note?: string;
   paymentConfirmedAt?: string;

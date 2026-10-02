@@ -24,6 +24,18 @@ phase2d=${PHASE_2D:-0}
 phase3a=${PHASE_3A:-0}
 phase3b=${PHASE_3B:-0}
 phase5=${PHASE_5:-0}
+phase6a=${PHASE_6A:-0}
+[[ $phase6a == 0 || ( $phase6a == 1 && $phasen == 1 && $phase2a == 1 && $phase2b == 1 && $phase2c == 1 && $phase2d == 1 && $phase3a == 1 && $phase3b == 1 && $phase5 == 1 ) ]] || exit 1
+phase6a_schema=0
+phase6a_schema_installed=0
+# Latest management GET needs the real coherent schema in every N or standalone 0B reader profile.
+# Its source prerequisite is independent of enabling additional 6A business cases.
+if [[ ( $phasen == 1 || $phase0b == 1 ) && ( -f "$repo/supabase/migrations/20261001223805_natori_task_integrity.sql" || -f "$repo/src/features/natori/server/taskIntegrityService.ts" ) ]]; then
+  [[ -f "$repo/scripts/natori-phase-6a/schema-preflight.mjs" ]] || exit 1
+  node "$repo/scripts/natori-phase-6a/schema-preflight.mjs" "$repo"
+  phase6a_schema=1
+fi
+[[ $phase6a == 0 || $phase6a_schema == 1 ]] || exit 1
 [[ $phase5 == 0 || ( $phase5 == 1 && $phase3b == 1 ) ]] || exit 1
 [[ $phase3b == 0 || ( $phase3b == 1 && $phase3a == 1 ) ]] || exit 1
 [[ $phase3a == 0 || ( $phase3a == 1 && $phase2d == 1 ) ]] || exit 1
@@ -139,6 +151,15 @@ if [[ $phase2d == 1 ]]; then
   extra_mounts+=(--mount "type=bind,source=$work/phase2d,target=/phase2d,readonly")
 fi
 
+if [[ $phase6a_schema == 1 ]]; then
+  node "$repo/scripts/natori-phase-6a/build-fixture.mjs" "$work/phase6a.sql"
+fi
+if [[ $phase6a == 1 ]]; then
+  mkdir -p "$work/phase6a"
+  node "$repo/scripts/natori-phase-6a/build.mjs" "$work/phase6a/integration.cjs"
+  extra_mounts+=(--mount "type=bind,source=$work/phase6a,target=/phase6a,readonly")
+fi
+
 if [[ $phase2c == 1 ]]; then
   mkdir -p "$work/phase2c"
   node "$repo/scripts/natori-phase-2c/build.mjs" "$work/phase2c/integration.cjs"
@@ -210,8 +231,10 @@ if [[ $phasen == 1 ]]; then
   if [[ $phase2d == 1 ]]; then node "$repo/scripts/natori-phase-2d/prepare-browser.mjs" "$work/browser-app"; fi
   if [[ $phase3a == 1 ]]; then node "$repo/scripts/natori-phase-3a/prepare-browser.mjs" "$work/browser-app"; fi
   if [[ $phase3b == 1 ]]; then node "$repo/scripts/natori-phase-3b/prepare-browser.mjs" "$work/browser-app"; fi
-  if [[ $phase5 == 1 ]]; then
-    node "$repo/scripts/natori-phase-5/prepare-browser.mjs" "$work/browser-app"
+  if [[ $phase5 == 1 ]]; then node "$repo/scripts/natori-phase-5/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase6a == 1 ]]; then node "$repo/scripts/natori-phase-6a/prepare-browser.mjs" "$work/browser-app"; fi
+  # One shared pinned font construction after every current source-copy builder.
+  if [[ $phase5 == 1 || $phase6a == 1 ]]; then
     node "$repo/scripts/natori-phase-7/prepare-fonts.mjs" "$work/browser-app" --construction
   fi
   cp "$work/browser-app/source-checksums.json" "$work/results/browser-source-checksums.json"
@@ -323,6 +346,13 @@ node "$root/build-fixture.mjs" "$work/current.sql"
 # This is a Unix-socket connection inside the verified disposable DB container only.
 # HTTP authorization tests below still use anon/user/service JWTs, never this role.
 dbsql() { docker exec -i -e PGOPTIONS='-c phase_t.sandbox=ephemeral -c search_path=pg_catalog,public' "$db" psql -X -U supabase_admin -d postgres -v ON_ERROR_STOP=1 "$@"; }
+install_coherent_schema_once() {
+  [[ $phase6a_schema == 1 ]] || return 0
+  [[ $phase6a_schema_installed == 0 ]] || { echo "Coherent schema already installed"; return 1; }
+  dbsql <"$work/phase6a.sql" >/dev/null
+  phase6a_schema_installed=1
+}
+
 dbsql <"$work/current.sql" >/dev/null
 dbsql -At <"$root/catalog.sql" >"$work/results/catalog-current.json"
 node "$root/verify-catalog.mjs" "$work/results/catalog-current.json" current
@@ -424,11 +454,19 @@ timeout 180 docker exec "$runner" node /tests/storage.mjs candidate
 if [[ $phase0a == 1 ]]; then timeout 240 docker exec "$runner" node /phase0a/integration.cjs after; fi
 if [[ $phase0b == 1 ]]; then
   dbsql <"$work/phase0b.sql" >/dev/null
+  if [[ $phase6a_schema == 1 ]]; then
+    # Standalone 0B keeps its original cases; only genuine GET prerequisites are added.
+    dbsql <"$repo/scripts/natori-phase-6a/standalone-read-prerequisites.sql" >/dev/null
+    install_coherent_schema_once
+  fi
   timeout 240 docker exec "$runner" node /phase0b/integration.cjs
   bash "$repo/scripts/natori-phase-0b/run-browser.sh" "$repo" "$work" "$runner" "$project" "$pid"
 fi
 if [[ $phasen == 1 ]]; then
   dbsql <"$work/phasen.sql" >/dev/null
+  # The actual management reader now uses the coherent RPC. Install its schema
+  # before any previous browser regression consumes the new application source.
+  if [[ $phase6a_schema == 1 ]]; then install_coherent_schema_once; fi
   if [[ $phase4 == 1 ]]; then dbsql <"$work/phase4.sql" >/dev/null; fi
   # Only a capture server in the same sealed namespace; no internet mail provider.
   sudo nsenter -t "$pid" -n iptables -I OUTPUT 1 -d 127.0.0.1 -p tcp --dport 3101 -j ACCEPT
@@ -507,6 +545,11 @@ if [[ $phase5 == 1 ]]; then
   timeout 600 docker exec "$project-browser" /runtime-bin/node /phase5-browser/browser.mjs
   sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/phase5-egress-counters.txt"
   sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/phase5-egress-counters.txt"
+fi
+
+if [[ $phase6a == 1 ]]; then
+  timeout 300 docker exec "$runner" node /phase6a/integration.cjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase6a-browser/browser.mjs
 fi
 
 echo 'Required real Storage tests completed; production remains unchanged'

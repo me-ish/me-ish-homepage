@@ -1,5 +1,6 @@
 import type { NatoriRefundSummary } from "@/features/natori/types/refunds";
 import type { ConsultationOverview } from "@/features/natori/types/consultation";
+import {taskProjectionSchema,type NatoriTaskProjection} from "../lib/taskProjection";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import type {
   NatoriDeliveryPlan,
@@ -21,6 +22,9 @@ import { sortNatoriReferenceLinks } from "@/features/natori/lib/projectReference
 export type ProjectRow = {
   refunds?: NatoriRefundSummary | null;
   consultation?: ConsultationOverview | null;
+  mutation_revision?: number;
+  delivery_accepted_at?: string | null;
+  delivered_mail_at?: string | null;
   id: string;
   user_id: string;
   title: string;
@@ -131,6 +135,9 @@ export function rowToProject(
     referenceLinks: extras.referenceLinks ?? [],
     requestData: row.request_data ?? undefined,
     tasks,
+    mutationRevision: row.mutation_revision,
+    deliveryAcceptedAt: row.delivery_accepted_at ?? undefined,
+    deliveredMailAt: row.delivered_mail_at ?? undefined,
   };
 }
 
@@ -221,21 +228,31 @@ export async function fetchNatoriProjects(): Promise<NatoriProject[]> {
   return (await fetchNatoriProjectCollection()).projects;
 }
 
+export class NatoriTaskConflictError extends Error {
+  constructor(readonly project: NatoriTaskProjection) {
+    super("案件が進行したため、最新の状態を読み直しました。");
+    this.name = "NatoriTaskConflictError";
+  }
+}
+
 export async function toggleNatoriTaskDone(
   projectId: string,
   taskKey: string,
   done: boolean,
-  status: NatoriProjectStatus,
-  nextAction: string
-): Promise<void> {
-  await patchNatoriAdminProject({
-    kind: "task",
-    projectId,
-    taskKey,
-    done,
-    status,
-    nextAction,
+  _legacyStatus?: NatoriProjectStatus,
+  _legacyNextAction?: string
+): Promise<NatoriTaskProjection> {
+  const response = await fetch("/api/natori/admin/projects", {
+    method: "PATCH",
+    headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
+    body: JSON.stringify({ kind: "task", projectId, taskKey, done }),
   });
+  const body: unknown = await response.json().catch(() => null);
+  const projectValue = body && typeof body === "object" && "project" in body ? body.project : null;
+  const parsed = taskProjectionSchema.safeParse(projectValue);
+  if (response.status === 409 && parsed.success) throw new NatoriTaskConflictError(parsed.data);
+  if (!response.ok || !parsed.success || parsed.data.id !== projectId) throw new Error("タスクの保存結果を確認できません。最新状態を再読み込みしてください。");
+  return parsed.data;
 }
 
 export async function updateNatoriProjectStatus(

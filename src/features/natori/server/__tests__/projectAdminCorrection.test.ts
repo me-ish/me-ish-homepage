@@ -5,17 +5,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { mockAdminFrom, mockResolveOwner, mockConfirmRpc, mockSign, mockBulkLinks } =
+const { mockAdminFrom, mockResolveOwner, mockConfirmRpc, mockSign, mockBulkLinks, mockSnapshot } =
   vi.hoisted(() => ({
     mockAdminFrom: vi.fn(),
     mockResolveOwner: vi.fn(),
     mockConfirmRpc: vi.fn(),
     mockSign: vi.fn(),
     mockBulkLinks: vi.fn(),
+    mockSnapshot: vi.fn(),
   }));
 
 vi.mock("@/lib/supabaseAdmin", () => ({
   supabaseAdmin: vi.fn(() => ({ from: (...args: unknown[]) => mockAdminFrom(...args) })),
+}));
+
+vi.mock("@/features/natori/server/taskIntegrityService", () => ({
+  loadCoherentTaskSnapshot: (...args: unknown[]) => mockSnapshot(...args),
+  setTaskFromLatestDb: vi.fn(),
 }));
 
 vi.mock("@/features/natori/server/natoriOwner", () => ({
@@ -267,6 +273,7 @@ describe("list / archive", () => {
     tasks?: unknown[];
     references?: unknown[];
   }) {
+    mockSnapshot.mockResolvedValue({projects:[...rows.active,...rows.archived],tasks:rows.tasks??[]});
     const table = (result: Result): unknown =>
       new Proxy(
         {},
