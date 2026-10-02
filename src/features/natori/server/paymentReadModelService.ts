@@ -34,7 +34,7 @@ export async function getPaymentAttention():Promise<{available:boolean;items:Nat
  const items:NatoriPaymentAttention[]=[];
  for(const value of data){
   if(!value||typeof value!=="object"||Array.isArray(value)||(value.projectId!==null&&typeof value.projectId!=="string")||typeof value.title!=="string"
-   ||(value.status!=="processing"&&value.status!=="needs_review")||(value.reason!==null&&typeof value.reason!=="string"))return {available:false,items:[]};
+   ||(value.status!=="processing"&&value.status!=="needs_review"&&value.status!=="pending")||(value.reason!==null&&typeof value.reason!=="string"))return {available:false,items:[]};
   items.push({projectId:value.projectId,title:value.title,status:value.status,reason:value.reason});
  }
  return {available:true,items};

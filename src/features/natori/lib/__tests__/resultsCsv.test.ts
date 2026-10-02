@@ -17,6 +17,7 @@ function makeProject(overrides: Partial<NatoriProject>): NatoriProject {
     nextAction: "-",
     type: "standing",
     tasks: [],
+    refunds: { available: true, originalMapped: true, confirmedAmount: 0, pendingCount: 0, reviewCount: 0 },
     ...overrides,
   };
 }
@@ -26,8 +27,8 @@ describe("buildNatoriResultsCsv", () => {
     const csv = buildNatoriResultsCsv([makeProject({})]);
     expect(csv.startsWith("﻿")).toBe(true);
     const lines = csv.slice(1).split("\r\n");
-    expect(lines[0]).toBe("完了日,依頼者,件名,種類,入金額(円),ステータス");
-    expect(lines[1]).toBe("2026-07-01,ゆきうさぎ,全身立ち絵,立ち絵,24000,対応完了");
+    expect(lines[0]).toBe("完了日,依頼者,件名,種類,入金額(円),ステータス,確定返金額(円),純入金額(円),返金状況（未確定・要確認は返金額に含まない）");
+    expect(lines[1]).toBe("2026-07-01,ゆきうさぎ,全身立ち絵,立ち絵,24000,対応完了,0,24000,確定返金なし");
   });
 
   it("完了日の新しい順に並ぶ", () => {

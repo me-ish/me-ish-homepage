@@ -1,3 +1,18 @@
+export type NatoriRefundLedgerRow = {
+  id: string; owner_id: string; account_scope: string; livemode: boolean; refund_id: string;
+  transaction_id: string | null; project_id: string | null; claimed_project_id: string | null;
+  payment_intent_id: string | null; charge_id: string | null; amount: number | null; currency: string | null;
+  provider_status: string; confirmed_at: string | null; source: string; resolution: string; review_reason: string | null;
+  first_event_id: string; latest_event_id: string; provider_event_created: number; created_at: string; updated_at: string;
+}
+
+export type NatoriStripeInboxRow = {
+  event_id: string; account_scope: string; livemode: boolean; event_type: string; request: Json;
+  owner_id: string; project_id: string | null; status: string; claim_token: string | null; claim_generation: number;
+  lease_until: string | null; processed_at: string | null; result: string | null; error_code: string | null;
+  notification_ids: string[]; created_at: string; updated_at: string;
+}
+
 export type Json =
   | string
   | number
@@ -1356,6 +1371,18 @@ export type Database = {
         }
         Relationships: []
       }
+      natori_stripe_event_inbox: {
+        Row: NatoriStripeInboxRow
+        Insert: Partial<NatoriStripeInboxRow> & Pick<NatoriStripeInboxRow, "event_id" | "account_scope" | "livemode" | "event_type" | "request" | "owner_id">
+        Update: Partial<NatoriStripeInboxRow>
+        Relationships: []
+      }
+      natori_refund_ledger: {
+        Row: NatoriRefundLedgerRow
+        Insert: Partial<NatoriRefundLedgerRow> & Pick<NatoriRefundLedgerRow, "owner_id" | "account_scope" | "livemode" | "refund_id" | "provider_status" | "first_event_id" | "latest_event_id" | "provider_event_created">
+        Update: Partial<NatoriRefundLedgerRow>
+        Relationships: []
+      }
       natori_payment_transactions: {
         Row: {
           amount: number
@@ -1365,6 +1392,11 @@ export type Database = {
           quote_id: string | null
           received_at: string
           status: string
+          stripe_account_scope: string | null
+          stripe_livemode: boolean | null
+          stripe_payment_intent_id: string | null
+          stripe_charge_id: string | null
+          stripe_currency: string | null
           stripe_session_id: string | null
         }
         Insert: {
@@ -1375,6 +1407,11 @@ export type Database = {
           quote_id?: string | null
           received_at?: string
           status: string
+          stripe_account_scope?: string | null
+          stripe_livemode?: boolean | null
+          stripe_payment_intent_id?: string | null
+          stripe_charge_id?: string | null
+          stripe_currency?: string | null
           stripe_session_id?: string | null
         }
         Update: {
@@ -1385,6 +1422,11 @@ export type Database = {
           quote_id?: string | null
           received_at?: string
           status?: string
+          stripe_account_scope?: string | null
+          stripe_livemode?: boolean | null
+          stripe_payment_intent_id?: string | null
+          stripe_charge_id?: string | null
+          stripe_currency?: string | null
           stripe_session_id?: string | null
         }
         Relationships: [
@@ -2559,6 +2601,18 @@ export type Database = {
       natori_stripe_event_complete_v1: {
         Args: { p_owner_id: string; p_account: string; p_live: boolean; p_event_id: string; p_claim_token: string; p_generation: number }
         Returns: { result: string; notification_ids: string[] }[]
+      }
+      natori_stripe_event_complete_v2: {
+        Args: { p_owner_id: string; p_account: string; p_live: boolean; p_event_id: string; p_claim_token: string; p_generation: number }
+        Returns: { result: string; notification_ids: string[] }[]
+      }
+      natori_refund_reconcile_v1: {
+        Args: { p_owner_id: string; p_account: string; p_live: boolean; p_refund_id: string }
+        Returns: string[]
+      }
+      natori_refund_summaries_v1: {
+        Args: { p_owner_id: string; p_project_ids: string[] }
+        Returns: { project_id: string; summary: Json }[]
       }
       natori_delivery_purge_payloads_v1: { Args: { p_owner_id: string }; Returns: number }
       natori_delivery_reserve_v1: {

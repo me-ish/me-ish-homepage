@@ -20,6 +20,8 @@ phase1=${PHASE_1:-0}
 phase2a=${PHASE_2A:-0}
 phase2b=${PHASE_2B:-0}
 phase2c=${PHASE_2C:-0}
+phase2d=${PHASE_2D:-0}
+[[ $phase2d == 0 || ( $phase2d == 1 && $phase2c == 1 ) ]] || exit 1
 [[ $phase2c == 0 || ( $phase2c == 1 && $phase2b == 1 ) ]] || exit 1
 [[ $phase2b == 0 || ( $phase2b == 1 && $phase2a == 1 ) ]] || exit 1
 [[ $phase2a == 0 || ( $phase2a == 1 && $phasen == 1 && $phase1 == 0 && $phase4 == 0 ) ]] || exit 1
@@ -108,6 +110,13 @@ if [[ $phase1 == 1 ]]; then
   test_memory=1g
 fi
 
+if [[ $phase2d == 1 ]]; then
+  mkdir -p "$work/phase2d"
+  node "$repo/scripts/natori-phase-2d/build.mjs" "$work/phase2d/integration.cjs"
+  node "$repo/scripts/natori-phase-2d/build-fixture.mjs" "$work/phase2d.sql"
+  extra_mounts+=(--mount "type=bind,source=$work/phase2d,target=/phase2d,readonly")
+fi
+
 if [[ $phase2c == 1 ]]; then
   mkdir -p "$work/phase2c"
   node "$repo/scripts/natori-phase-2c/build.mjs" "$work/phase2c/integration.cjs"
@@ -176,6 +185,7 @@ if [[ $phasen == 1 ]]; then
   if [[ $phase1 == 1 ]]; then node "$repo/scripts/natori-phase-1/prepare-browser.mjs" "$work/browser-app"; fi
   if [[ $phase2a == 1 ]]; then node "$repo/scripts/natori-phase-2a/prepare-browser.mjs" "$work/browser-app"; fi
   if [[ $phase2c == 1 ]]; then node "$repo/scripts/natori-phase-2c/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase2d == 1 ]]; then node "$repo/scripts/natori-phase-2d/prepare-browser.mjs" "$work/browser-app"; fi
   cp "$work/browser-app/source-checksums.json" "$work/results/browser-source-checksums.json"
 fi
 ROOT="$root" WORK="$work" PROJECT="$project" PHASE_1="$phase1" node --input-type=module <<'JS'
@@ -426,6 +436,13 @@ if [[ $phase2c == 1 ]]; then
   dbsql <"$work/phase2c.sql" >/dev/null
   timeout 300 docker exec "$runner" node /phase2c/integration.cjs
   timeout 600 docker exec "$project-browser" /runtime-bin/node /phase2c-browser/browser.mjs
+fi
+
+if [[ $phase2d == 1 ]]; then
+  dbsql <"$work/phase2d.sql" >/dev/null
+  timeout 300 docker exec "$runner" node /phase2d/phase2b-compatibility.cjs
+  timeout 300 docker exec "$runner" node /phase2d/integration.cjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase2d-browser/browser.mjs
 fi
 
 echo 'Required real Storage tests completed; production remains unchanged'

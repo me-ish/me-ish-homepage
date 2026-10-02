@@ -1,5 +1,7 @@
 import "server-only";
 import {paymentLinkIntegrityEnabled,closeOrArchiveWithPaymentGuard} from "./paymentLinkService";
+import { loadNatoriRefundSummaries } from "./refundSummaryService";
+import type { NatoriRefundSummary } from "../types/refunds";
 import { loadConsultationOverviews } from "./consultationOverviewService";
 import type { ConsultationOverview } from "@/features/natori/types/consultation";
 import { createTasksForType } from "@/features/natori/lib/projects";
@@ -19,6 +21,7 @@ import type {
 } from "@/features/natori/types/projects";
 
 export type NatoriAdminProjectRow = {
+  refunds?: NatoriRefundSummary | null;
   consultation?: ConsultationOverview | null;
   id: string;
   user_id: string;
@@ -330,7 +333,7 @@ export async function listNatoriAdminProjects(projectId?: string): Promise<ListN
     };
   }
 
-  const [{ data: tasks, error: taskError }, { data: references, error: referenceError }, overviews] =
+  const [{ data: tasks, error: taskError }, { data: references, error: referenceError }, overviews, refunds] =
     await Promise.all([
       admin
         .from("natori_project_tasks")
@@ -343,6 +346,7 @@ export async function listNatoriAdminProjects(projectId?: string): Promise<ListN
         .in("project_id", projectIds)
         .order("created_at", { ascending: true }),
       loadConsultationOverviews(ownerId, projectIds),
+      loadNatoriRefundSummaries(ownerId, projectIds),
     ]);
 
   if (taskError) {
@@ -386,7 +390,8 @@ export async function listNatoriAdminProjects(projectId?: string): Promise<ListN
         }))
       : [];
 
-  const withOverview = (row: NatoriAdminProjectRow): NatoriAdminProjectRow => ({ ...row, consultation: overviews?.get(row.id) ?? null });
+  const withOverview = (row: NatoriAdminProjectRow): NatoriAdminProjectRow => ({ ...row, consultation: overviews?.get(row.id) ?? null,
+    refunds: refunds === undefined ? undefined : refunds?.get(row.id) ?? null });
   return {
     kind: "ok",
     projects: projectRows.map(withOverview),

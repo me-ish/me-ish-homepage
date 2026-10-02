@@ -42,6 +42,7 @@ import {
   type NatoriResultsSummary,
 } from "@/features/natori/lib/results";
 import ProjectEditForm from "./ProjectEditForm";
+import { RefundResultDetails, RefundResultsSummary } from "./RefundResultFigures";
 import { NatoriLoadError } from "./NatoriLoadError";
 import type {
   NatoriConcreteProjectType,
@@ -468,6 +469,7 @@ function CompletedProjectRow({
           </span>
           <span className="ml-auto">完了 {formatDate(getNatoriResultDateISO(project))}</span>
         </div>
+        <RefundResultDetails project={project} />
         {project.note ? (
           <p className="mt-1 line-clamp-2 break-words text-xs leading-5 text-gray-500">
             {project.note}
@@ -870,6 +872,8 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
           sub={`${monthsInScope}ヶ月分`}
         />
       </div>
+
+      {cardSummary.completed.some(project => project.refunds !== undefined) ? <RefundResultsSummary summary={cardSummary} /> : null}
 
       {isDemo ? null : <ResultAddForm onAdded={reload} />}
 

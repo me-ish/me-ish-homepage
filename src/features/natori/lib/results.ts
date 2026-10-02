@@ -21,23 +21,33 @@ export type NatoriMonthlyResult = {
   label: string;
   count: number;
   amount: number;
+  refundedAmount: number | null;
+  netAmount: number | null;
 };
 
 export type NatoriTypeResult = {
   type: NatoriConcreteProjectType;
   count: number;
   amount: number;
+  refundedAmount: number | null;
+  netAmount: number | null;
 };
 
 export type NatoriResultsSummary = {
   totalCount: number;
   totalAmount: number;
+  totalRefundedAmount: number | null;
+  totalNetAmount: number | null;
+  refundPendingCount: number;
+  refundReviewCount: number;
   /** 金額未定の実績件数。0円案件とは区別する。 */
   undecidedAmountCount: number;
   /** 実績0件のときは 0 */
   averageAmount: number;
   thisYearCount: number;
   thisYearAmount: number;
+  thisYearRefundedAmount: number | null;
+  thisYearNetAmount: number | null;
   /** 新しい月が先頭。実績のある月のみ */
   monthly: NatoriMonthlyResult[];
   /** 金額の大きい順。実績のあるタイプのみ */
@@ -68,6 +78,39 @@ export function getNatoriResultAmount(project: NatoriProject): number | null {
   return project.paidAmount ?? project.amount;
 }
 
+/** Original gross remains immutable. Unavailable enabled ledger never masquerades as zero. */
+export function getNatoriResultFinancials(project: NatoriProject): {
+  gross: number | null; refunded: number | null; net: number | null;
+  state: "none" | "partial" | "full" | "unavailable" | "unverified"; pendingCount: number; reviewCount: number;
+} {
+  const gross = getNatoriResultAmount(project);
+  const refunded = project.refunds?.confirmedAmount ?? null;
+  return { gross, refunded, net: gross === null || refunded === null ? null : gross - refunded,
+    state: refunded === null ? (project.refunds ? "unverified" : "unavailable") : refunded === 0 ? "none" : gross !== null && refunded === gross ? "full" : "partial",
+    pendingCount: project.refunds?.pendingCount ?? 0, reviewCount: project.refunds?.reviewCount ?? 0 };
+}
+
+export function getNatoriRefundStatusText(project: NatoriProject): string {
+  const value = getNatoriResultFinancials(project);
+  const status = value.gross === null && value.refunded !== null && value.refunded > 0
+    ? "確定返金あり（元の入金額は未確認）" : value.state === "unavailable" ? "返金記録未取得" : value.state === "unverified" ? "過去の返金履歴未確認" : value.state === "full" ? "全額返金" : value.state === "partial" ? "一部返金" : "確定返金なし";
+  return [status, ...(value.pendingCount ? [`返金処理中 ${value.pendingCount}件`] : []),
+    ...(value.reviewCount ? [`返金要確認 ${value.reviewCount}件`] : [])].join(" / ");
+}
+
+function summarizeFinancials(projects: NatoriProject[]): { refunded: number | null; net: number | null } {
+  if (projects.some(project => project.refunds?.confirmedAmount == null)) return { refunded: null, net: null };
+  let refunded = 0;
+  let net: number | null = 0;
+  for (const project of projects) {
+    const value = getNatoriResultFinancials(project);
+    refunded += value.refunded ?? 0;
+    // Confirmed refunds remain known; an unknown original makes the full net unknown.
+    net = net === null || value.net === null ? null : net + value.net;
+  }
+  return { refunded, net };
+}
+
 /* ------------------------------------------------------------------
    CSV 出力（確定申告・売上管理用）
 ------------------------------------------------------------------- */
@@ -92,7 +135,7 @@ function csvCell(value: string | number): string {
  * 対象は呼び出し側が絞り込んだ一覧（画面に表示中の実績と同じもの）。
  */
 export function buildNatoriResultsCsv(projects: NatoriProject[]): string {
-  const header = ["完了日", "依頼者", "件名", "種類", "入金額(円)", "ステータス"];
+  const header = ["完了日", "依頼者", "件名", "種類", "入金額(円)", "ステータス", "確定返金額(円)", "純入金額(円)", "返金状況（未確定・要確認は返金額に含まない）"];
   const rows = projects
     .filter(isNatoriCompletedProject)
     .sort((a, b) => getNatoriResultDateISO(b).localeCompare(getNatoriResultDateISO(a)))
@@ -104,6 +147,9 @@ export function buildNatoriResultsCsv(projects: NatoriProject[]): string {
         NATORI_PROJECT_TYPE_LABELS[project.type],
         getNatoriResultAmount(project) ?? "未定",
         CSV_STATUS_LABELS[project.status] ?? project.status,
+        getNatoriResultFinancials(project).refunded ?? "",
+        getNatoriResultFinancials(project).net ?? "",
+        getNatoriRefundStatusText(project),
       ]
         .map(csvCell)
         .join(",")
@@ -197,10 +243,15 @@ export function summarizeNatoriResults(
       label: toMonthLabel(ym),
       count: 0,
       amount: 0,
+      refundedAmount: 0,
+      netAmount: 0,
     };
     entry.count += 1;
     const amount = getNatoriResultAmount(project);
     if (amount !== null) entry.amount += amount;
+    const financials = getNatoriResultFinancials(project);
+    entry.refundedAmount = entry.refundedAmount === null || financials.refunded === null ? null : entry.refundedAmount + financials.refunded;
+    entry.netAmount = entry.netAmount === null || financials.net === null ? null : entry.netAmount + financials.net;
     monthlyMap.set(ym, entry);
   }
   const monthly = Array.from(monthlyMap.values()).sort((a, b) =>
@@ -214,10 +265,15 @@ export function summarizeNatoriResults(
       type: project.type,
       count: 0,
       amount: 0,
+      refundedAmount: 0,
+      netAmount: 0,
     };
     entry.count += 1;
     const amount = getNatoriResultAmount(project);
     if (amount !== null) entry.amount += amount;
+    const financials = getNatoriResultFinancials(project);
+    entry.refundedAmount = entry.refundedAmount === null || financials.refunded === null ? null : entry.refundedAmount + financials.refunded;
+    entry.netAmount = entry.netAmount === null || financials.net === null ? null : entry.netAmount + financials.net;
     typeMap.set(project.type, entry);
   }
   const byType = Array.from(typeMap.values()).sort((a, b) => b.amount - a.amount);
@@ -225,10 +281,16 @@ export function summarizeNatoriResults(
   return {
     totalCount,
     totalAmount,
+    totalRefundedAmount: summarizeFinancials(completed).refunded,
+    totalNetAmount: summarizeFinancials(completed).net,
+    refundPendingCount: completed.reduce((sum, project) => sum + (project.refunds?.pendingCount ?? 0), 0),
+    refundReviewCount: completed.reduce((sum, project) => sum + (project.refunds?.reviewCount ?? 0), 0),
     undecidedAmountCount,
     averageAmount,
     thisYearCount,
     thisYearAmount,
+    thisYearRefundedAmount: summarizeFinancials(thisYear).refunded,
+    thisYearNetAmount: summarizeFinancials(thisYear).net,
     monthly,
     byType,
     completed,
