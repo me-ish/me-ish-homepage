@@ -8,7 +8,21 @@ const { createClient } = require('@supabase/supabase-js'), { chromium, expect } 
 const Stripe = require('stripe');
 setDefaultResultOrder('ipv4first');
 const tests = [], check = (value, code) => { if (!value) throw new Error(code); };
-let stage = 'preflight', server, browser;
+let stage = 'preflight', server, browser, fixtureSignInStatus = null;
+const errors = new Set();
+const diagnosticStages = new Set(['preflight', 'auth-fixture', 'completed-project-fixture', 'completed-transaction-fixture',
+  'active-project-fixture', 'active-transaction-fixture', 'active-task-fixture', 'server-start', 'server-ready', 'chromium-start', 'owner-sign-in', 'complete']);
+const diagnosticCodes = new Set(['EPHEMERAL_REQUIRED', 'DESTINATION_REJECTED', 'AUTH_FIXTURE', 'PROJECT_FIXTURE', 'TRANSACTION_FIXTURE',
+  'ACTIVE_PROJECT_FIXTURE', 'ACTIVE_TRANSACTION_FIXTURE', 'ACTIVE_TASK_FIXTURE', 'NEXT_READY', 'OWNER_SIGN_IN', 'BROWSER_FAILED']);
+function writeReport(failure) {
+  writeFileSync('/results/phase2d-browser.json', JSON.stringify({ tests, passed: tests.filter(test => test.status === 'passed').length,
+    failed: tests.filter(test => test.status === 'failed').length, skipped: 0, expectedTests: 5, reachedTests: tests.length,
+    status: failure ? 'failed' : 'passed', engine: 'Chromium 1.58.2 at 390px; not iPhone Safari', provider: 'synthetic SDK-signed Stripe only', compileErrors: [...errors],
+    diagnostic: { stage: diagnosticStages.has(stage) ? stage : 'browser-assertions',
+      code: failure ? (diagnosticCodes.has(failure.message) ? failure.message : 'BROWSER_PREFLIGHT_FAILED') : null,
+      fixtureSignInStatus: Number.isInteger(fixtureSignInStatus) && fixtureSignInStatus >= 100 && fixtureSignInStatus <= 599 ? fixtureSignInStatus : null },
+  }, null, 2));
+}
 async function test(name, run) { stage = name; try { await run(); tests.push({ name, status: 'passed' }); console.log(`PASS phase2d-browser/${name}`); }
   catch (error) { tests.push({ name, status: 'failed', code: /^[A-Z_0-9]+$/.test(error?.message ?? '') ? error.message : 'ASSERTION_FAILED' }); console.log(`FAIL phase2d-browser/${name}`); } }
 
@@ -18,26 +32,33 @@ async function main() {
   check(/^http:\/\/172\.30\.250\.\d+:8000$/.test(origin), 'DESTINATION_REJECTED');
   const keys = JSON.parse(readFileSync('/runtime/credentials.json', 'utf8'));
   const db = createClient(origin, keys.service, { auth: { persistSession: false, autoRefreshToken: false } });
-  const password = randomBytes(32).toString('hex'), email = 'owner@phase2d-browser.invalid';
+  stage = 'auth-fixture';
+  const password = randomBytes(32).toString('hex'), email = 'phase2d-owner@phase0b-browser.invalid';
   const auth = await db.auth.admin.createUser({ email, password, email_confirm: true }); check(!auth.error && auth.data.user, 'AUTH_FIXTURE'); const owner = auth.data.user.id;
   const when = new Date().toISOString(), session = 'cs_test_' + randomUUID(), intent = 'pi_test_' + randomUUID(), charge = 'ch_test_' + randomUUID();
+  stage = 'completed-project-fixture';
   const project = await db.from('natori_projects').insert({ user_id: owner, title: 'Browser refund fixture', client_name: 'Synthetic', client_email: 'client@phase2d.invalid',
     type: 'illustration', status: 'completed', amount: 12000, paid_amount: 12000, paid_at: when, payment_confirmed_at: when, completed_at: when,
     stripe_payment_session_id: session, next_action: 'Keep completed' }).select('id').single(); check(!project.error && project.data, 'PROJECT_FIXTURE'); const id = project.data.id;
+  stage = 'completed-transaction-fixture';
   check(!(await db.from('natori_payment_transactions').insert({ project_id: id, stripe_session_id: session, amount: 12000, status: 'received', received_at: when,
     stripe_account_scope: 'platform', stripe_livemode: false, stripe_payment_intent_id: intent, stripe_charge_id: charge, stripe_currency: 'jpy' })).error, 'TRANSACTION_FIXTURE');
   const activeSession = 'cs_test_' + randomUUID(), activeIntent = 'pi_test_' + randomUUID(), activeCharge = 'ch_test_' + randomUUID();
+  stage = 'active-project-fixture';
   const activeProject = await db.from('natori_projects').insert({ user_id: owner, title: 'Browser active refund fixture', client_name: 'Synthetic', client_email: 'active@phase2d.invalid',
     type: 'illustration', status: 'rough', amount: 12000, paid_amount: 12000, paid_at: when, payment_confirmed_at: when,
     stripe_payment_session_id: activeSession, next_action: 'Keep rough production' }).select('id').single();
   check(!activeProject.error && activeProject.data, 'ACTIVE_PROJECT_FIXTURE'); const activeId = activeProject.data.id;
+  stage = 'active-transaction-fixture';
   check(!(await db.from('natori_payment_transactions').insert({ project_id: activeId, stripe_session_id: activeSession, amount: 12000, status: 'received', received_at: when,
     stripe_account_scope: 'platform', stripe_livemode: false, stripe_payment_intent_id: activeIntent, stripe_charge_id: activeCharge, stripe_currency: 'jpy' })).error, 'ACTIVE_TRANSACTION_FIXTURE');
+  stage = 'active-task-fixture';
   check(!(await db.from('natori_project_tasks').insert({ project_id: activeId, task_key: 'active-rough-task', label: 'Browser rough task', stage: 'rough', done: false,
     estimated_hours: 1, sort_order: 0 })).error, 'ACTIVE_TASK_FIXTURE');
   const activeTarget = { projectId: activeId, intent: activeIntent, charge: activeCharge };
   const app = 'http://localhost:3000', secret = 'whsec_' + randomBytes(32).toString('hex'), key = 'sk_test_' + randomBytes(32).toString('hex');
   const stripe = new Stripe(key);
+  stage = 'server-start';
   server = spawn(process.execPath, ['/app/node_modules/next/dist/bin/next', 'dev', '--hostname', 'localhost', '--port', '3000'], { cwd: '/app',
     env: { PATH: '/runtime-bin:/usr/local/bin:/usr/bin:/bin', TMPDIR: '/tmp', NODE_ENV: 'development', NODE_OPTIONS: '--dns-result-order=ipv4first',
       NEXT_TELEMETRY_DISABLED: '1', PHASE_N_BROWSER: 'ephemeral', PHASE_0B_BROWSER: 'ephemeral', PHASE_2D_BROWSER: 'ephemeral',
@@ -46,16 +67,21 @@ async function main() {
       NATORI_PAYMENT_INTEGRITY_ENABLED: '1', NATORI_REFUND_LEDGER_ENABLED: '1', NATORI_STRIPE_MODE: 'test', STRIPE_SECRET_KEY: key, STRIPE_WEBHOOK_SECRET: secret,
       NATORI_ACCEPTANCE_OUTBOX_ENABLED: '1', NATORI_NOTIFICATION_SENDING_ENABLED: '0', RESEND_API_KEY: '', ADMIN_API_TOKEN: '' },
     stdio: ['ignore', 'pipe', 'pipe'] });
-  const errors = new Set(); for (const stream of [server.stdout, server.stderr]) stream.on('data', buffer => {
+  for (const stream of [server.stdout, server.stderr]) stream.on('data', buffer => {
     for (const code of ['Module not found', 'Failed to compile', 'SyntaxError', 'EADDRINUSE']) if (buffer.toString().includes(code)) errors.add(code);
   });
+  stage = 'server-ready';
   let ready = false; const until = Date.now() + 120000;
   while (Date.now() < until && server.exitCode === null) { try { if ((await fetch(`${app}/ja/fixture-session`, { signal: AbortSignal.timeout(2000) })).ok) { ready = true; break; } } catch {}
     await new Promise(resolve => setTimeout(resolve, 400)); } check(ready, 'NEXT_READY');
+  stage = 'chromium-start';
   browser = await chromium.launch({ headless: true }); const context = await browser.newContext({ viewport: { width: 390, height: 844 }, acceptDownloads: true }), page = await context.newPage();
   await context.route('**/*', route => { const url = new URL(route.request().url()); return url.origin === app ? route.continue() : route.abort('blockedbyclient'); });
+  stage = 'owner-sign-in';
   await page.goto(`${app}/ja/fixture-session`); await page.getByLabel('Email').fill(email); await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Sign in' }).click(); await expect(page.getByText('Session ready')).toBeVisible();
+  const signInResponse = page.waitForResponse(response => response.url() === `${app}/api/fixture-session` && response.request().method() === 'POST');
+  await page.getByRole('button', { name: 'Sign in' }).click(); fixtureSignInStatus = (await signInResponse).status();
+  check(fixtureSignInStatus === 200, 'OWNER_SIGN_IN'); await expect(page.getByText('Session ready')).toBeVisible();
   let eventCreated = Math.floor(Date.now() / 1000) - 100;
   async function post(amount, status = 'succeeded', options = {}) {
     const target = options.target ?? { projectId: id, intent, charge };
@@ -126,11 +152,11 @@ async function main() {
     await expect(card().getByText('全額返金', { exact: true })).toBeVisible(); await controlsRemainAvailable();
     check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'ACTIVE_MOBILE_NO_OVERFLOW');
   });
-  await context.close(); writeFileSync('/results/phase2d-browser.json', JSON.stringify({ tests, passed: tests.filter(test => test.status === 'passed').length,
-    failed: tests.filter(test => test.status === 'failed').length, skipped: 0, engine: 'Chromium 1.58.2 at 390px; not iPhone Safari', provider: 'synthetic SDK-signed Stripe only', compileErrors: [...errors] }, null, 2));
+  await context.close();
   check(tests.length === 5 && tests.every(test => test.status === 'passed') && errors.size === 0, 'BROWSER_FAILED');
+  stage = 'complete'; writeReport();
 }
-main().catch(() => { console.error(`Phase 2D browser failed at ${stage}; raw logs withheld`); process.exitCode = 1; }).finally(async () => {
+main().catch(error => { writeReport(error); console.error(`Phase 2D browser failed at ${stage}; raw logs withheld`); process.exitCode = 1; }).finally(async () => {
   await browser?.close(); if (server?.exitCode === null) { server.kill('SIGTERM'); await Promise.race([new Promise(resolve => server.once('exit', resolve)),
     new Promise(resolve => setTimeout(() => { server.kill('SIGKILL'); resolve(); }, 5000))]); }
 });
