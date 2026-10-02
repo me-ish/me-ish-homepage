@@ -28,7 +28,7 @@ export type NotificationSendResult =
 export type NotificationTransport = (payload: NotificationPayload, key: string) => Promise<NotificationSendResult>;
 
 export function buildAcceptanceNotificationPayload(job: Pick<NatoriNotificationRow, "payload" | "snapshot" | "purpose">): NotificationPayload {
-  if ((job.purpose === "delivery_issue_client" || job.purpose === "quote_issue_client" || job.purpose === "payment_link_client")) {
+  if ((job.purpose === "delivery_issue_client" || job.purpose === "quote_issue_client" || job.purpose === "payment_link_client" || job.purpose === "consultation_staff" || job.purpose === "consultation_client")) {
     if (!job.payload) throw new Error("mail_configuration");
     return payloadSchema.parse(openDeliveryNotification(job.payload));
   }
@@ -149,7 +149,7 @@ export async function dispatchAcceptanceNotification(
       return;
     }
     const started = await admin.rpc("natori_notification_start_v1", { p_id: id, p_claim_token: claimToken,
-      p_payload: (job.purpose === "delivery_issue_client" || job.purpose === "quote_issue_client" || job.purpose === "payment_link_client") ? job.payload! : payload });
+      p_payload: (job.purpose === "delivery_issue_client" || job.purpose === "quote_issue_client" || job.purpose === "payment_link_client" || job.purpose === "consultation_staff" || job.purpose === "consultation_client") ? job.payload! : payload });
     const active = started.data?.[0];
     if (started.error || !active?.lease_expires_at || !active.send_started_at) return;
     if (Date.parse(active.lease_expires_at) <= Date.now() + 15000 || Date.parse(active.send_started_at) <= Date.now() - 23 * 3600000) return;
