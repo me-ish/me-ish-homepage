@@ -44,7 +44,7 @@ function connectionState(host, port, timeoutMs) {
 
 function portOf(app) {
   const url = new URL(app);
-  if (url.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+  if (url.protocol !== 'http:' || !['localhost', '127.0.0.1'].includes(url.hostname)
       || url.username || url.password || url.pathname !== '/' || url.search || url.hash) fail('VISUAL_APP_NOT_LOOPBACK');
   const port = Number(url.port || 80);
   if (!Number.isInteger(port) || port < 1 || port > 65535) fail('VISUAL_PORT_INVALID');
@@ -52,7 +52,7 @@ function portOf(app) {
 }
 
 async function quietPort(port, timeoutMs) {
-  const states = await Promise.all(['127.0.0.1', '::1'].map(host => connectionState(host, port, timeoutMs)));
+  const states = [await connectionState('127.0.0.1', port, timeoutMs)];
   return { closed: states.every(state => state === 'closed'), occupied: states.some(state => state === 'open'), states };
 }
 
@@ -61,7 +61,7 @@ export async function assertQuietPort({ port, timeoutMs = 500 }) {
   const result = await quietPort(port, timeoutMs);
   if (result.occupied) fail('VISUAL_PORT_OCCUPIED');
   if (!result.closed) fail('VISUAL_PORT_PROBE_UNKNOWN');
-  return { freePortBeforeSpawn: true, ipv4Refused: true, ipv6Refused: true };
+  return { freePortBeforeSpawn: true, probeHost: '127.0.0.1', ipv4Refused: true, ipv6Probed: false };
 }
 
 async function ownedDescendant(pid, rootPid) {
@@ -118,7 +118,7 @@ export async function waitProcessExit(child, timeoutMs) {
   return snapshot(witness);
 }
 
-/** Exit event AND literal-loopback ECONNREFUSED are required. Timeouts are failure. */
+/** Exit event AND literal IPv4-loopback ECONNREFUSED are required. Timeouts are failure. */
 export async function stopOwned(child, { app = null, termTimeoutMs = 5000, killTimeoutMs = 5000, portTimeoutMs = 15000, pollMs = 200 } = {}) {
   const witness = witnesses.get(child);
   if (!witness) fail('VISUAL_PROCESS_NOT_TRACKED');
@@ -137,7 +137,7 @@ export async function stopOwned(child, { app = null, termTimeoutMs = 5000, killT
   const port = portOf(app), deadline = Date.now() + portTimeoutMs;
   while (Date.now() < deadline) {
     const result = await quietPort(port, Math.min(500, Math.max(1, deadline - Date.now())));
-    if (result.closed) return { ...snapshot(witness), forcedKill, portClosed: true, ipv4Refused: true, ipv6Refused: true };
+    if (result.closed) return { ...snapshot(witness), forcedKill, portClosed: true, probeHost: '127.0.0.1', ipv4Refused: true, ipv6Probed: false };
     await pause(Math.min(pollMs, Math.max(1, deadline - Date.now())));
   }
   fail('VISUAL_PORT_NOT_CLOSED');

@@ -5,6 +5,8 @@ This phase implements F/U items U09, U13, U15 and U19 from the retained improvem
 ## Changes
 
 - Public workflow wording uses the reviewed raw-shape eligibility rules. Saved custom or later conditions are retained, and saving disables the compatibility projection through a false-only flag. The minor-revision condition remains explicit: `色味などの軽微な修正のみ対応可能です。`.
+The compatibility wording is a display projection selected from the raw saved published revision's exact workflow shape. Public reads and save/reload guards evaluate that revision. This phase does not rewrite stored public copy; custom and later workflow conditions retain their saved wording.
+
 - Shared primary CTA styling supplies readable light/dark states to request, consultation, quote and delivery actions while preserving their handlers and accepted request/operation behavior.
 - Long inquiry and request text displays in full with its existing line breaks. No request data is changed by the display adjustment.
 - HERO has explicit persistent pause/resume. Reduced motion suppresses automatic movement while manual navigation remains available. Existing horizontal drag, vertical-scroll and touch-cancel behavior and the artwork layout are retained.
@@ -18,6 +20,14 @@ Before commit, run strict types, scoped lint, full meaningful unit regression te
 Exact-head native acceptance requires the entire preceding chain plus eight Phase 6B browser cases: 21 reports / 374 cases, 106 checksum keys / 79 ordinary sources. Check the actual CTA observations and ratios, full short/long text, persisted/custom conditions, pause/resume, touch cancellation and reduced motion. Require owned-process lifecycle and compilation proof from the isolated visual server.
 
 The raw artifact must include all eight retained Phase 6A/5 PNGs plus four Phase 6B desktop/mobile light/dark images. Verify PNG bytes/CRC/dimensions/hashes and visually review all twelve. A source-only, constructor-only or synthetic predicate receipt is insufficient for runtime acceptance.
+
+## Isolated visual bootstrap correction
+
+Initial Phase6B head `cdf51f76a8130c94f0b7414343980a7baa865341`, CI37014805707/artifact11230335840, stopped before either visual process spawned: the dual IPv4/IPv6 port check returned `VISUAL_PORT_PROBE_UNKNOWN`. The sealed namespace drops IPv6 output and permits only the established IPv4 loopback port3000 rules. All preceding 20 reports / 366 cases passed; the eight new Phase6B cases and four new PNGs were absent. The original failed artifact and strict refusal are preserved.
+
+The correction explicitly binds Next to `127.0.0.1` and probes the same IPv4 loopback address. A timeout remains a failed probe. Firewall rules and destination restrictions stay unchanged. Require actual free/occupied/timeout/owned-cleanup control evidence in the same sealed namespace, followed by the existing nonce/PID/ancestry, exit, port-closure and compilation checks. IPv6 refusal is not claimed. Full Phase6B runtime and all twelve-image visual acceptance remain pending until the new actual CI completes.
+
+Proposal CRLF normalization is limited to source preparation after the approved raw proposal SHA is verified. Git stores LF with `core.autocrlf=true`. Actual committed source models, runtime source receipts, reports, artifact ZIP and PNG hashes use exact raw bytes. The three original raw-to-Git transitions are recorded separately; they are outside the 79 copied Phase6B ordinary runtime sources.
 
 ## Quick manual check
 

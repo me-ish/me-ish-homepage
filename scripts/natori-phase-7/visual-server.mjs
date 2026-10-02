@@ -7,8 +7,9 @@ import { randomBytes } from 'node:crypto';
 import { setDefaultResultOrder } from 'node:dns';
 let mode = null, assertQuietPort, trackProcess, waitOwnedReady, waitProcessExit, stopOwned;
 const check = (value, code) => { if (!value) throw new Error(code); };
-let server, child, stage = 'preflight', browserExit = null, fontEvidence; const compileErrors = new Set();
+let server, child, stage = 'preflight', browserExit = null, fontEvidence, portControls = null; const compileErrors = new Set();
 const lifecycle = { freePort: null, ready: null, browserExit: null, browserClosed: null, serverClosed: null };
+const listener = Object.freeze({ bindHost: '127.0.0.1', probeHost: '127.0.0.1', browserOrigin: 'http://localhost:3000', dnsResultOrder: 'ipv4first', ipv6Probed: false });
 const failures = [];
 const ownerRoute = `export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -19,7 +20,7 @@ export async function GET() {
 }
 `;
 const ownerRouteSha256 = createHash('sha256').update(ownerRoute).digest('hex');
-const knownCodes = new Set(["ACCEPTED_FIXTURE", "AUTH_FIXTURE", "CONTENT_FIXTURE", "DESTINATION_REJECTED", "DRAFT_FIXTURE", "EPHEMERAL_REQUIRED", "LINK_FIXTURE", "NEXT_READY", "PINNED_OFFLINE_FONTS_REQUIRED", "PROJECT_FIXTURE", "QUOTE_FIXTURE", "TASK_FIXTURE", "UNKNOWN_FAILURE", "VISUAL_APP_NOT_LOOPBACK", "VISUAL_BROWSER_FAILED", "VISUAL_BROWSER_STOP_FAILED", "VISUAL_CHILD_OUTPUT_FAILED", "VISUAL_EXITED_AFTER_READY", "VISUAL_EXITED_BEFORE_READY", "VISUAL_MODE_REQUIRED", "VISUAL_OWNERSHIP_UNPROVEN", "VISUAL_OWNER_NONCE_INVALID", "VISUAL_OWNER_ROUTE_DRIFT", "VISUAL_PORT_INVALID", "VISUAL_PORT_NOT_CLOSED", "VISUAL_PORT_OCCUPIED", "VISUAL_PORT_PROBE_UNKNOWN", "VISUAL_PROCESS_DID_NOT_EXIT", "VISUAL_PROCESS_EXIT_TIMEOUT", "VISUAL_PROCESS_NOT_TRACKED", "VISUAL_READY_OWNER_MISMATCH", "VISUAL_READY_PID_NOT_OWNED", "VISUAL_READY_TIMEOUT", "VISUAL_RESULT_WRITE_FAILED", "VISUAL_SERVER_OUTPUT_FAILED", "VISUAL_SERVER_STOP_FAILED", "VISUAL_SETUP_FAILED", "VISUAL_SPAWN_FAILED"]);
+const knownCodes = new Set(["ACCEPTED_FIXTURE", "AUTH_FIXTURE", "CONTENT_FIXTURE", "DESTINATION_REJECTED", "DRAFT_FIXTURE", "EPHEMERAL_REQUIRED", "LINK_FIXTURE", "NEXT_READY", "PINNED_OFFLINE_FONTS_REQUIRED", "PROJECT_FIXTURE", "QUOTE_FIXTURE", "TASK_FIXTURE", "UNKNOWN_FAILURE", "VISUAL_APP_NOT_LOOPBACK", "VISUAL_BROWSER_FAILED", "VISUAL_BROWSER_STOP_FAILED", "VISUAL_CHILD_OUTPUT_FAILED", "VISUAL_EXITED_AFTER_READY", "VISUAL_EXITED_BEFORE_READY", "VISUAL_MODE_REQUIRED", "VISUAL_OWNERSHIP_UNPROVEN", "VISUAL_OWNER_NONCE_INVALID", "VISUAL_OWNER_ROUTE_DRIFT", "VISUAL_PORT_CONTROL_FAILED", "VISUAL_PORT_INVALID", "VISUAL_PORT_NOT_CLOSED", "VISUAL_PORT_OCCUPIED", "VISUAL_PORT_PROBE_UNKNOWN", "VISUAL_PROCESS_DID_NOT_EXIT", "VISUAL_PROCESS_EXIT_TIMEOUT", "VISUAL_PROCESS_NOT_TRACKED", "VISUAL_READY_OWNER_MISMATCH", "VISUAL_READY_PID_NOT_OWNED", "VISUAL_READY_TIMEOUT", "VISUAL_RESULT_WRITE_FAILED", "VISUAL_SERVER_OUTPUT_FAILED", "VISUAL_SERVER_STOP_FAILED", "VISUAL_SETUP_FAILED", "VISUAL_SPAWN_FAILED"]);
 function diagnosticMessage(error) {
   try { const message = error?.message; return typeof message === 'string' ? message : ''; }
   catch { return ''; }
@@ -40,9 +41,13 @@ async function main() {
   const keys = JSON.parse(readFileSync('/runtime/credentials.json', 'utf8'));
   const source = JSON.parse(readFileSync('/app/source-checksums.json', 'utf8'));
   check(source.phase7Fonts?.productFontSourceUnchanged === true, 'PINNED_OFFLINE_FONTS_REQUIRED');
-  const app = 'http://localhost:3000'; let fixture;
+  const app = listener.browserOrigin; let fixture;
   fontEvidence = source.phase7Fonts;
   lifecycle.freePort = await assertQuietPort({ port: 3000 });
+  stage = 'port-controls';
+  const { runIPv4PortControls } = await import('./ipv4-port-controls.mjs');
+  portControls = await runIPv4PortControls();
+  stage = 'preflight';
   const routeDirectory = '/app/src/app/[locale]/fixture-visual-owner';
   const routeFile = routeDirectory + '/route.ts';
   if (existsSync(routeFile)) check(readFileSync(routeFile, 'utf8') === ownerRoute, 'VISUAL_OWNER_ROUTE_DRIFT');
@@ -64,7 +69,7 @@ async function main() {
     NATORI_ACCEPTANCE_OUTBOX_ENABLED: '1', NATORI_NOTIFICATION_SENDING_ENABLED: '0', NATORI_MAIL_BCC: '',
   };
   stage = 'next-server';
-  server = spawn(process.execPath, ['/app/node_modules/next/dist/bin/next', 'dev', '--hostname', 'localhost', '--port', '3000'], { cwd: '/app', env, stdio: ['ignore', 'pipe', 'pipe'] });
+  server = spawn(process.execPath, ['/app/node_modules/next/dist/bin/next', 'dev', '--hostname', '127.0.0.1', '--port', '3000'], { cwd: '/app', env, stdio: ['ignore', 'pipe', 'pipe'] });
   trackProcess(server);
   for (const stream of [server.stdout, server.stderr]) stream.on('error', () => { failures.push({ stage: 'server-output', code: 'VISUAL_SERVER_OUTPUT_FAILED' }); process.exitCode = 1; });
   for (const stream of [server.stdout, server.stderr]) stream.on('data', buffer => {
@@ -75,7 +80,7 @@ async function main() {
   check((await fetch(app + '/ja/fixture-session', { signal: AbortSignal.timeout(2000) })).ok, 'NEXT_READY');
   stage = 'visual-browser';
   child = spawn(process.execPath, [mode === '6b' ? '/phase6b-browser/browser.mjs' : '/phase7-browser/browser.mjs'], {
-    cwd: '/app', env: { PATH: env.PATH, HOME: '/tmp', TMPDIR: '/tmp', PLAYWRIGHT_BROWSERS_PATH: '/ms-playwright', PHASE_N_BROWSER: 'ephemeral',
+    cwd: '/app', env: { PATH: env.PATH, HOME: '/tmp', TMPDIR: '/tmp', NODE_OPTIONS: env.NODE_OPTIONS, PLAYWRIGHT_BROWSERS_PATH: '/ms-playwright', PHASE_N_BROWSER: 'ephemeral',
       PHASE_6B_BROWSER: 'ephemeral', PHASE_6B_APP_URL: app, PHASE_6B_RESULTS: '/results/phase6b-visual',
       ...(mode === '7' ? { PHASE_7_BROWSER: 'ephemeral', PHASE_7_FIXTURE_STATE: JSON.stringify(fixture) } : {}) }, stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -102,12 +107,15 @@ main().catch(error => {
     try { lifecycle.serverClosed = await stopOwned(server, { app: 'http://localhost:3000' }); }
     catch (error) { failures.push({ stage: 'server-stop', code: safeFailure(error, 'VISUAL_SERVER_STOP_FAILED') }); process.exitCode = 1; }
   }
-  const ownServer = lifecycle.freePort?.freePortBeforeSpawn === true && lifecycle.ready?.ownerNonceMatched === true
-    && lifecycle.ready?.ownedAncestryVerified === true && lifecycle.serverClosed?.exitObserved === true && lifecycle.serverClosed?.portClosed === true;
+  const ownServer = portControls?.status === 'passed' && portControls?.cleanup?.exitObserved === true && portControls?.cleanup?.portClosed === true
+    && lifecycle.freePort?.freePortBeforeSpawn === true && lifecycle.freePort?.probeHost === listener.probeHost
+    && lifecycle.freePort?.ipv4Refused === true && lifecycle.freePort?.ipv6Probed === false && lifecycle.ready?.ownerNonceMatched === true
+    && lifecycle.ready?.ownedAncestryVerified === true && lifecycle.serverClosed?.exitObserved === true && lifecycle.serverClosed?.portClosed === true
+    && lifecycle.serverClosed?.probeHost === listener.probeHost && lifecycle.serverClosed?.ipv4Refused === true && lifecycle.serverClosed?.ipv6Probed === false;
   if (!ownServer && failures.length === 0) { failures.push({ stage: 'lifecycle', code: 'VISUAL_OWNERSHIP_UNPROVEN' }); process.exitCode = 1; }
   try {
     writeFileSync(mode === '6b' ? '/results/phase6b-visual-server.json' : mode === '7' ? '/results/phase7-visual-server.json' : '/results/phase-visual-preflight.json', JSON.stringify({ mode, status: failures.length === 0 ? 'passed' : 'failed', browserExit, compileErrors: [...compileErrors],
-      ownServer, lifecycle, failures, syntheticOwnerRouteSha256: ownerRouteSha256, sendingEnabled: false, providerCallsConfigured: false, fonts: fontEvidence,
+      ownServer, listener, lifecycle, portControls, failures, syntheticOwnerRouteSha256: ownerRouteSha256, sendingEnabled: false, providerCallsConfigured: false, fonts: fontEvidence,
       interpretation: mode === '6b' ? 'Phase 6B browser only; no Phase 7 adoption or screen acceptance' : 'Phase 7 synthetic isolated screen evidence; human evaluation remains distinct' }, null, 2));
   } catch { console.error('VISUAL_RESULT_WRITE_FAILED; raw logs withheld'); process.exitCode = 1; }
 });
