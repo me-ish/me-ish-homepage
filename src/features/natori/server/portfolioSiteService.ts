@@ -8,7 +8,8 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sniffImageFormat } from "@/lib/imageSniff";
 import { canUseNatoriManagement } from "./requireNatoriAdmin";
 import { parsePortfolioContent } from "@/features/natori/lib/portfolioContent";
-import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
+import { defaultPortfolioDisplayContent, parsePortfolioDisplayContent } from "@/features/natori/lib/portfolioDisplay";
+import type { PortfolioDisplayContent } from "@/features/natori/types/portfolioDisplay";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
 const TABLE = "natori_portfolio_content";
@@ -34,7 +35,7 @@ export async function canEditNatoriPortfolio(): Promise<boolean> {
 }
 
 /** 掲載内容を読み込む。DB行が無い/壊れている/テーブル未作成ならデフォルトを返す */
-export async function loadPortfolioContent(): Promise<PortfolioContent> {
+export async function loadPortfolioContent(): Promise<PortfolioDisplayContent> {
   try {
     const admin = adminClient();
     const { data, error } = await admin
@@ -44,13 +45,13 @@ export async function loadPortfolioContent(): Promise<PortfolioContent> {
       .maybeSingle();
     if (error) {
       console.error("[natori-portfolio] content load failed:", error);
-      return defaultPortfolioContent;
+      return defaultPortfolioDisplayContent();
     }
-    if (!data) return defaultPortfolioContent;
-    return parsePortfolioContent(data.content) ?? defaultPortfolioContent;
+    if (!data) return defaultPortfolioDisplayContent();
+    return parsePortfolioDisplayContent(data.content) ?? defaultPortfolioDisplayContent();
   } catch (err) {
     console.error("[natori-portfolio] content load threw:", err);
-    return defaultPortfolioContent;
+    return defaultPortfolioDisplayContent();
   }
 }
 

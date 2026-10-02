@@ -4,6 +4,8 @@
 // ご依頼フォーム。送信すると /api/natori/portfolio/contact 経由でナトリ宛に
 // メールが飛び、案件（依頼受付）として自動起票される。
 // 料金カードの「このプランで相談」からの遷移でプランが自動選択される。
+import { NATORI_INTAKE_COPY } from "@/features/natori/constants/portfolioContactCopy";
+import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   PLAN_SELECT_EVENT,
@@ -281,7 +283,7 @@ function PortfolioCommissionFormSession({
           style={{ color: c.textSoft }}
         >
           {commissionOpen
-            ? "まずはお気軽にご相談ください。"
+            ? `まずはお気軽にご相談ください。${NATORI_INTAKE_COPY.notConfirmed}`
             : "現在コミッションは停止中です。再開まで今しばらくお待ちください。"}
         </p>
         {tsunaguLink ? (
@@ -310,13 +312,14 @@ function PortfolioCommissionFormSession({
               送信ありがとうございます!
             </h3>
             <p className="text-sm" style={{ color: c.textSoft }}>
-              内容を確認のうえ、2〜3日以内にご連絡いたします。
+              {NATORI_INTAKE_COPY.reply}{NATORI_INTAKE_COPY.next}
             </p>
             <p className="mt-2 text-xs" style={{ color: c.textSoft }}>
               {completed ? "受付確認メールは別にお送りします。メールが届かない場合も、再応募は不要です。" : autoReplied
                 ? "ご入力のメールアドレス宛に受付確認メールをお送りしました。届かない場合は迷惑メールフォルダをご確認ください。"
                 : "受付は完了しましたが、確認メールを送信できませんでした。2〜3日以内のご連絡をお待ちください。"}
             </p>
+            <p className="mt-2 text-sm" style={{ color: c.textSoft }}>{NATORI_INTAKE_COPY.notConfirmed}</p>
             {completed && <div className="mt-4 space-y-2 text-sm">
               <p className="break-all">ご連絡先：{completed.clientEmail}</p>
               <p className="break-all">受付確認用：{completed.receipt}</p>
@@ -613,19 +616,14 @@ function PortfolioCommissionFormSession({
               key="legacy-submit"
               type="submit"
               disabled={!commissionOpen || status === "sending"}
-              className="pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black hover:brightness-95 disabled:opacity-50"
-              style={{
-                background: c.action,
-                borderColor: c.actionDisplay,
-                color: c.onAction,
-              }}
+              className={`${natoriPrimaryActionClassName} pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black`}
             >
               {!commissionOpen
                 ? "現在受付停止中です"
                 : status === "sending"
                   ? "送信中…"
                   : "この内容で送信する"}
-            </button> : <button key="legacy-next" type="button" onClick={(event) => { event.preventDefault(); nextLegacyStep(); }} disabled={!commissionOpen} className="pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black disabled:opacity-50" style={{ background: c.action, borderColor: c.actionDisplay, color: c.onAction }}>次へ進む</button>}
+            </button> : <button key="legacy-next" type="button" onClick={(event) => { event.preventDefault(); nextLegacyStep(); }} disabled={!commissionOpen} className={`${natoriPrimaryActionClassName} pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black`}>次へ進む</button>}
 
             </fieldset>
             <IntakeRecoveryPanel intake={intake} />

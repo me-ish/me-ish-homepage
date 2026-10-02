@@ -1,5 +1,6 @@
 "use client";
 
+import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { Paperclip } from "lucide-react";
@@ -353,7 +354,7 @@ export default function ConsultationThread(props: Props) {
           {progress !== null ? <p role="status" className="text-xs text-pink-700">アップロード中 {progress}%</p> : null}
           <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || loading || historyUnavailable} className="mr-2 rounded-full border border-pink-300 px-4 py-2 text-sm font-bold text-pink-800 disabled:opacity-50">添付を選ぶ</button>
           <button type="button" onClick={() => void send()} disabled={(!pending&&!body.trim()&&!draftFiles.length)||busy||loading||historyUnavailable||!cacheReady||noticeExpired}
-            className="rounded-full bg-pink-500 px-5 py-2 text-sm font-bold text-white disabled:opacity-50">{busy?"送信中…":pending?"同じ送信を確認・再試行":"メッセージを送信"}</button>
+            className={`${natoriPrimaryActionClassName} rounded-full px-5 py-2 text-sm font-bold`}>{busy?"送信中…":pending?"同じ送信を確認・再試行":"メッセージを送信"}</button>
         </div>
       ) : closed ? <p className="text-xs text-gray-600">この相談は終了しています。履歴のみ確認できます。</p> : null}
       {notice ? <p role="status" className="text-xs text-green-700">{notice}</p> : null}

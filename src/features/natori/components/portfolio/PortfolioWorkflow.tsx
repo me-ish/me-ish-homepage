@@ -1,15 +1,15 @@
 // 制作の流れと納期。購入者へのお願いとは意思決定順に合わせて分離する。
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import { resolvePortfolioWorkflow } from "@/features/natori/lib/portfolioWorkflow";
-import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import type { PortfolioDisplayContent } from "@/features/natori/types/portfolioDisplay";
 
 const cardStyle = {
   background: c.surface,
   boxShadow: `0 10px 22px ${c.shadowSoft}`,
 } as const;
 
-export default function PortfolioWorkflow({ content }: { content: PortfolioContent }) {
-  const workflow = resolvePortfolioWorkflow(content.workflow);
+export default function PortfolioWorkflow({ content }: { content: PortfolioDisplayContent }) {
+  const workflow = resolvePortfolioWorkflow(content.workflow, content.workflowProjectionAllowed !== false);
 
   return (
     <section id="flow" className="pb-6 pt-16 md:py-16" style={{ background: c.surfaceSubtle }}>

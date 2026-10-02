@@ -20,6 +20,7 @@ vi.mock("next/image", () => ({
 }));
 
 import PortfolioHero from "@/features/natori/components/portfolio/PortfolioHero";
+import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
 
 afterEach(() => {
@@ -70,9 +71,10 @@ describe("PF-03 portfolio hero", () => {
 
     const primaryLink = screen.getByRole("link", { name: "相談・見積もり" });
     expect(primaryLink.getAttribute("href")).toBe("/natori/portfolio/contact");
-    expect((primaryLink as HTMLElement).style.background).toBe("rgb(236, 72, 153)");
-    expect((primaryLink as HTMLElement).style.borderColor).toBe("rgb(236, 72, 153)");
-    expect((primaryLink as HTMLElement).style.color).toBe("rgb(255, 255, 255)");
+    expect(primaryLink.className).toContain(natoriPrimaryActionClassName);
+    expect((primaryLink as HTMLElement).style.background).toBe("");
+    expect((primaryLink as HTMLElement).style.borderColor).toBe("");
+    expect((primaryLink as HTMLElement).style.color).toBe("");
     expect(primaryLink.className).toContain("border-2");
     expect(primaryLink.className).toContain("rounded-full");
     expect(primaryLink.className).toContain("text-base font-black");

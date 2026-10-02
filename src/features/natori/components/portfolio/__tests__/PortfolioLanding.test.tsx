@@ -81,8 +81,9 @@ describe("PF-01 portfolio information architecture", () => {
     const quote = screen.getByRole("link", { name: "見積もりをお願いしたい" }) as HTMLElement;
     expect(consult.style.borderColor).toBe("rgb(236, 72, 153)");
     expect(consult.style.backgroundColor).toBe("rgb(255, 255, 255)");
-    expect(quote.style.borderColor).toBe("rgb(236, 72, 153)");
-    expect(quote.style.backgroundColor).toBe("rgb(236, 72, 153)");
+    expect(quote.style.backgroundColor).toBe(""); // The shared CTA owns every interaction state.
+    expect(quote.className).toContain("bg-[#BE185D]");
+    expect(quote.className).toContain("disabled:opacity-100");
     for (const { href } of uniqueNavLinks()) {
       if (href.startsWith("#")) expect(document.querySelector(href)).not.toBeNull();
     }

@@ -1,5 +1,6 @@
 "use client";
 
+import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
@@ -118,7 +119,7 @@ export default function PortfolioInquiryDialog({
         </p>
         {content.commissionOpen && (
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-            <button type="button" onClick={(event) => { triggerRef.current = event.currentTarget; show({ mode: "consultation" }); }} className="pf-cute-focus min-h-[48px] rounded-full border-2 px-6 py-2 font-bold" style={{ borderColor: c.actionDisplay, background: c.action, color: c.onAction }}>
+            <button type="button" onClick={(event) => { triggerRef.current = event.currentTarget; show({ mode: "consultation" }); }} className={`${natoriPrimaryActionClassName} pf-cute-focus min-h-[48px] rounded-full border-2 px-6 py-2 font-bold`}>
               まず相談したい
             </button>
             <button type="button" onClick={(event) => { triggerRef.current = event.currentTarget; show({ mode: "quote" }); }} className="pf-cute-focus min-h-[48px] rounded-full border-2 px-6 py-2 font-bold" style={{ borderColor: c.borderStrong, background: c.surface, color: c.text }}>

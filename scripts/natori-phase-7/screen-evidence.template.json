@@ -1,0 +1,22 @@
+{
+  "status": "pending_actual_improved_screen_evaluation",
+  "integrated_head_sha": null,
+  "base_sha": null,
+  "ci_run_url": null,
+  "source_checksum_artifact": null,
+  "captures": [
+    { "screen": "gallery-list-and-modal", "issues": ["U20", "U22"], "viewport_widths": [1280, 360, 390], "artifacts": [], "observed_findings": [], "status": "not_run" },
+    { "screen": "works-showcase-index", "issues": ["U22"], "viewport_widths": [1280, 360, 390], "artifacts": [], "observed_findings": [], "status": "not_run" },
+    { "screen": "intake-confirmation-and-edit", "issues": ["U21", "U23"], "viewport_widths": [1280, 360, 390], "artifacts": [], "observed_findings": [], "status": "not_run" },
+    { "screen": "estimate-return-link-and-review", "issues": ["U21"], "viewport_widths": [1280, 360, 390], "artifacts": [], "observed_findings": [], "status": "not_run" },
+    { "screen": "client-quote-full-conditions", "issues": ["U21", "U23"], "viewport_widths": [1280, 360, 390], "artifacts": [], "observed_findings": [], "status": "not_run" },
+    { "screen": "latest-management-card", "issues": ["U23"], "viewport_widths": [1280, 360, 390], "artifacts": [], "observed_findings": [], "status": "not_run" }
+  ],
+  "limits": [
+    "Source review and prepared tests do not establish rendered-screen acceptance.",
+    "Chromium mobile viewport does not establish iPhone Safari acceptance.",
+    "Rendered screenshots and automated assertions do not measure first-time-user comprehension, conversion, revenue or drop-off.",
+    "Real mail and iPhone joint acceptance remain after Phase 7; real Stripe test profile remains a separate gate."
+  ],
+  "user_observation": { "status": "not_run", "fictional_task_results": [], "needs_owner_decision": ["U20 individual decorative simplification", "U22 classification and reference-consultation need", "U22 legacy work-detail route purpose", "U23 supplementary timing collapse and quote text emphasis"] }
+}

@@ -3,6 +3,7 @@
 // features/natori/components/quote/QuoteAcceptCard.tsx
 // 見積もり承諾ページの本体。最終確認事項と規約確認を表示し、
 // 「この内容で依頼を確定する」の POST で契約承諾を確定する。
+import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import Link from "next/link";
 import type { NatoriPaymentOverview } from "@/features/natori/types/payment";
 import { useState } from "react";
@@ -250,8 +251,7 @@ export default function QuoteAcceptCard({
             type="button"
             onClick={handleAccept}
             disabled={status === "sending" || !termsAccepted}
-            className="w-full rounded-full py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ background: c.pink }}
+            className={`${natoriPrimaryActionClassName} w-full rounded-full py-3 font-bold`}
           >
             {status === "sending" ? "送信中…" : "この内容で依頼を確定する"}
           </button>

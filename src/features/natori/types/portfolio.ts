@@ -143,6 +143,8 @@ export type PortfolioContent = {
   deliveryNotes: PortfolioDeliveryNote[];
   /** 制作の流れ */
   workflow: PortfolioWorkflowStep[];
+  /** Durable opt-out from legacy display compatibility. Only false is stored; never an eligibility grant. */
+  workflowCompatibilityProjection?: false;
   /** 購入者へのお願い */
   requests: string[];
   /** フッターのSNSリンク */

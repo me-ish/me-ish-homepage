@@ -3,7 +3,6 @@
 // 原依頼内容（request_data）の field 単位表示。
 // structured / legacy / 表示不能 の3系統は lib/inquiryRequestView.ts が判別し、
 // ここは描画だけを持つ。raw JSON は表示しない。
-import { useState } from "react";
 import { FileWarning } from "lucide-react";
 import type { NatoriInquiryRequestView } from "@/features/natori/lib/inquiryRequestView";
 
@@ -12,7 +11,6 @@ export default function InquiryRequestSummary({
 }: {
   view: NatoriInquiryRequestView;
 }) {
-  const [messageExpanded, setMessageExpanded] = useState(false);
   if (view.kind === "legacy") return null;
 
   if (view.kind === "unsupported") {
@@ -71,19 +69,11 @@ export default function InquiryRequestSummary({
           </p>
           <p
             data-field="message"
-            className={`whitespace-pre-wrap break-words text-sm leading-6 text-gray-900 ${messageExpanded ? "" : "line-clamp-5"}`}
+            className="whitespace-pre-wrap break-words text-sm leading-6 text-gray-900"
           >
             {message.value}
           </p>
-          {message.value.length > 140 ? (
-            <button
-              type="button"
-              onClick={() => setMessageExpanded((current) => !current)}
-              className="mt-2 text-xs font-bold text-pink-700 underline underline-offset-2"
-            >
-              {messageExpanded ? "閉じる" : "全文を見る"}
-            </button>
-          ) : null}
+
         </div>
       ) : null}
       <div className="space-y-3">
