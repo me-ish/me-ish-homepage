@@ -60,3 +60,14 @@ U20／U22／U23のDeferredは問題解消の宣言ではない。初回依頼者
 実メールとiPhone Safari実機の手動受入はPhase7後に利用者とまとめて実施する。実Stripe test専用profileは未構成で、mock／隔離DB成功を実provider検証済みとしない。新規credential設定、本番DB／実顧客操作、実メール送信は含めない。
 
 rollbackは採用したcaption・workflow・新runbookの個別revert。ID・URL/token・原回答・合意・quote／payment／delivery／consultation／status・公開revisionの書換えを前提にしない。
+
+
+## Phase N の初回通知読み取り証跡を追加（Phase7受入は未完了）
+
+修正前の Phase7 head `0706488db6b89b9386f28e96f772dbcb358c6afc` / CI `37048793525` / artifact `11245339298` は、隔離基盤と Phase N DB 23件が成功し、Phase N browser が8件成功・1件失敗しました。失敗は `shared-key-home-shows-failed-notices-without-email-data` の `ASSERTION_FAILED` だけで、元の記録には goto・見出し・再試行ボタン件数のどこで失敗したかがありません。後続の管理者再試行とモバイル表示は成功しました。過去の a8b attempt1 でも同名ケースが失敗し、ソース変更のない attempt2 では成功していますが、これを原因特定や今回の受入とは扱いません。
+
+見出しは取得成功時にも取得エラー時にも表示されます。取得成功時の見出しと行は同じ React commit で表示されるため、単純な「見出しが先、行が後」の原因は確認されていません。failed 通知の lease と retry_after は SQL で解除されるので、unknown の1分待機も今回の原因と断定できません。
+
+今回の変更は Phase N の隔離ブラウザ fixture とこの追記だけです。画面遷移前に、実際の同一 origin・GET・`/api/natori/admin/notifications?offset=0` の初回 response を監視し、HTTP200、機密項目の不在、同じ synthetic 案件の3件の failed・再試行可能な通知を確認します。初回 response/body の待機は従来の見出し待機と同じ60秒上限で、listener・timer と途中失敗時の promise を処理します。既存の見出し60秒、再試行ボタン3件の既定待機、独立API privacy確認、後続の管理者再試行と全9件のケース名・assertionを維持します。待機時間を増やした修正や product の変更ではありません。
+
+追加の `sharedKeyHomeReadiness` は固定 stage、HTTP status、件数、真偽値だけです。URL、鍵、token、通知ID、顧客本文、DOM、error message、response body は出力しません。元の失敗原因は未確定のまま保存し、新しい exact-head CI の結果を確認するまで Phase7 の受入を宣言しません。実メール・iPhone・Stripe 検証と Deferred の判断は既存の記録を維持します。
