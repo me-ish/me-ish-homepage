@@ -35,7 +35,7 @@ create function public.natori_consultation_operation_v1(
 returns jsonb language plpgsql security invoker set search_path='' as $$
 declare p public.natori_projects%rowtype;o public.natori_consultation_operations%rowtype;f jsonb;
  t timestamptz;mid uuid;nid uuid;cnt integer;recent integer;path text;ext text;limit_bytes bigint;unread jsonb;
- upload_row public.natori_consultation_uploads%rowtype;credential_expiry timestamptz;
+ upload_row public.natori_consultation_uploads%rowtype;credential_expiry timestamptz;notice_deadline timestamptz;
 begin
  if p_sender not in('staff','client') or p_operation_id is null or p_request_hash!~'^[a-f0-9]{64}$' then return jsonb_build_object('result','invalid');end if;
  -- One project lock serializes reservation quota and finalize, while preserving production status.
@@ -66,7 +66,14 @@ begin
    'expose',o.status='reserved' and credential_expiry>t and p.deleted_at is null and p.status<>'closed');
  end if;
  if o.operation_id is not null and o.status='committed' then return jsonb_build_object('result','committed','messageId',o.message_id,'notificationId',o.notification_id,'operationId',p_operation_id,'requestHash',p_request_hash);end if;
+ -- Preserve committed receipts above, and never decrypt or reconstruct an expired snapshot.
+ -- Cancel, release, cleanup and completing a private issuer remain independent of this deadline.
+ if o.status in('reserved','verifying') then
+  begin notice_deadline:=(o.notice_payload->>'expiresAt')::timestamptz;
+  exception when invalid_datetime_format or datetime_field_overflow then notice_deadline:=null;end;
+ end if;
  if p_command='lookup' then
+  if o.status in('reserved','verifying') and (notice_deadline is null or not isfinite(notice_deadline) or notice_deadline<=t or(o.access_hash is not null and(o.access_expires_at is null or not isfinite(o.access_expires_at) or o.access_expires_at<=t))) then return jsonb_build_object('result','notice_expired');end if;
   return jsonb_build_object('result',coalesce(o.status,'not_found'));
  end if;
  if p_command='cancel' then
@@ -106,11 +113,15 @@ begin
   if not found or upload_row.finalized_at is not null or upload_row.message_id is not null then return jsonb_build_object('result','invalid');end if;
   if p_sender='client' and not exists(select 1 from public.natori_consultation_access where project_id=p.id and token_hash=p_access_hash and expires_at>t) then return jsonb_build_object('result','not_found');end if;
   if upload_row.credential_issuer is not null then return jsonb_build_object('result','busy');end if;
+  if notice_deadline is null or not isfinite(notice_deadline) or notice_deadline<=t or(o.access_hash is not null and(o.access_expires_at is null or not isfinite(o.access_expires_at) or o.access_expires_at<=t)) then return jsonb_build_object('result','notice_expired');end if;
   update public.natori_consultation_uploads set credential_issuer=p_claim_token,credential_started_at=t where id=upload_row.id;
   return jsonb_build_object('result','credential_started','fileId',upload_row.file_id,'issuer',p_claim_token);
  end if;
  if p_command='reserve' then
   if o.status='verifying' and o.lease_expires_at>t then return jsonb_build_object('result','busy');end if;
+  if o.operation_id is not null then
+  if notice_deadline is null or not isfinite(notice_deadline) or notice_deadline<=t or(o.access_hash is not null and(o.access_expires_at is null or not isfinite(o.access_expires_at) or o.access_expires_at<=t)) then return jsonb_build_object('result','notice_expired');end if;
+  end if;
   if o.operation_id is null then
    if jsonb_typeof(p_input->'files')<>'array' or jsonb_array_length(p_input->'files')>10 or char_length(p_input->>'body')>4000
     or(char_length(trim(p_input->>'body'))=0 and jsonb_array_length(p_input->'files')=0)
@@ -129,6 +140,15 @@ begin
     then return jsonb_build_object('result','invalid');end if;
     perform(f->>'id')::uuid;
    end loop;
+   begin notice_deadline:=(p_input->'noticePayload'->>'expiresAt')::timestamptz;
+   exception when invalid_datetime_format or datetime_field_overflow then notice_deadline:=null;end;
+   t:=clock_timestamp();
+   if notice_deadline is null or not isfinite(notice_deadline) or notice_deadline<=t then return jsonb_build_object('result','notice_expired');end if;
+   if p_input->>'noticeAccessHash' is not null then
+    begin credential_expiry:=(p_input->>'noticeExpiresAt')::timestamptz;
+    exception when invalid_datetime_format or datetime_field_overflow then credential_expiry:=null;end;
+    if credential_expiry is null or not isfinite(credential_expiry) or credential_expiry<=t then return jsonb_build_object('result','notice_expired');end if;
+   end if;
    insert into public.natori_consultation_operations(project_id,sender,operation_id,request_hash,body,manifest,status,notice_payload,access_hash,access_expires_at)
     values(p.id,p_sender,p_operation_id,p_request_hash,trim(p_input->>'body'),p_input->'files','reserved',p_input->'noticePayload',p_input->>'noticeAccessHash',(p_input->>'noticeExpiresAt')::timestamptz);
    for f in select value from jsonb_array_elements(p_input->'files') loop
@@ -147,12 +167,14 @@ begin
  if p_command='claim' then
   if exists(select 1 from public.natori_consultation_uploads where project_id=p.id and sender=p_sender and operation_id=p_operation_id and credential_issuer is not null) then return jsonb_build_object('result','busy');end if;
   if p_claim_token is null or(o.status='verifying' and o.lease_expires_at>t) then return jsonb_build_object('result','busy');end if;
+  if notice_deadline is null or not isfinite(notice_deadline) or notice_deadline<=t or(o.access_hash is not null and(o.access_expires_at is null or not isfinite(o.access_expires_at) or o.access_expires_at<=t)) then return jsonb_build_object('result','notice_expired');end if;
   update public.natori_consultation_operations set status='verifying',claim_token=p_claim_token,lease_expires_at=t+interval '3 minutes' where project_id=p.id and sender=p_sender and operation_id=p_operation_id;
   select coalesce(jsonb_agg(jsonb_build_object('id',file_id,'path',storage_path,'fileName',file_name,'mimeType',mime_type,'sizeBytes',size_bytes,'sha256',content_sha256)),'[]') into unread from public.natori_consultation_uploads where project_id=p.id and sender=p_sender and operation_id=p_operation_id;
   return jsonb_build_object('result','claimed','files',unread);
  end if;
  if o.status<>'verifying' or o.claim_token is distinct from p_claim_token or o.lease_expires_at<=t then return jsonb_build_object('result','stale');end if;
  if p_command='renew' then
+  if notice_deadline is null or not isfinite(notice_deadline) or notice_deadline<=t or(o.access_hash is not null and(o.access_expires_at is null or not isfinite(o.access_expires_at) or o.access_expires_at<=t)) then return jsonb_build_object('result','notice_expired');end if;
   update public.natori_consultation_operations set lease_expires_at=t+interval '3 minutes' where project_id=p.id and sender=p_sender and operation_id=p_operation_id;
   return jsonb_build_object('result','renewed');
  end if;
@@ -168,6 +190,7 @@ begin
  t:=clock_timestamp();
  if o.lease_expires_at<=t then return jsonb_build_object('result','stale');end if;
  if p_sender='client' and not exists(select 1 from public.natori_consultation_access where project_id=p.id and token_hash=p_access_hash and expires_at>t) then return jsonb_build_object('result','not_found');end if;
+ if notice_deadline is null or not isfinite(notice_deadline) or notice_deadline<=t or(o.access_hash is not null and(o.access_expires_at is null or not isfinite(o.access_expires_at) or o.access_expires_at<=t)) then return jsonb_build_object('result','notice_expired');end if;
  if exists(select 1 from public.natori_consultation_uploads where project_id=p.id and sender=p_sender and operation_id=p_operation_id and(finalized_at is not null or message_id is not null)) then return jsonb_build_object('result','conflict');end if;
  insert into public.natori_consultation_messages(project_id,sender,body,operation_id,request_hash,attachment_count)
   values(p.id,p_sender,coalesce(nullif(o.body,''),'ファイルを共有しました'),p_operation_id,p_request_hash,jsonb_array_length(o.manifest)) returning id into mid;
@@ -181,7 +204,7 @@ begin
  update public.natori_consultation_messages set notification_id=nid where id=mid;
  update public.natori_consultation_operations set status='committed',message_id=mid,notification_id=nid where project_id=p.id and sender=p_sender and operation_id=p_operation_id;
  t:=clock_timestamp();
- if o.lease_expires_at<=t or(p_sender='client' and not exists(select 1 from public.natori_consultation_access where project_id=p.id and token_hash=p_access_hash and expires_at>t)) then raise exception 'consultation_finalize_fence_expired' using errcode='40001';end if;
+ if o.lease_expires_at<=t or(notice_deadline is null or not isfinite(notice_deadline) or notice_deadline<=t or(o.access_hash is not null and(o.access_expires_at is null or not isfinite(o.access_expires_at) or o.access_expires_at<=t))) or(p_sender='client' and not exists(select 1 from public.natori_consultation_access where project_id=p.id and token_hash=p_access_hash and expires_at>t)) then raise exception 'consultation_finalize_fence_expired' using errcode='40001';end if;
  -- This final update touches an already-owned row and no FK identity or business field.
  update public.natori_consultation_operations set claim_token=null,lease_expires_at=null where project_id=p.id and sender=p_sender and operation_id=p_operation_id and claim_token=p_claim_token;
  return jsonb_build_object('result','committed','messageId',mid,'notificationId',nid,'operationId',p_operation_id,'requestHash',p_request_hash);
@@ -198,12 +221,21 @@ declare mid uuid;begin
 end$$;
 create function public.natori_consultation_notice_projection_v1() returns trigger language plpgsql security invoker set search_path='' as $$
 begin
- if new.purpose in('consultation_staff','consultation_client') and new.status in('sent','failed') then
-  update public.natori_consultation_messages set notification_status=new.status where id=(new.snapshot->>'messageId')::uuid and project_id=new.project_id
-   and not exists(select 1 from public.natori_notification_jobs j where j.notification_key=new.notification_key and j.attempt_no>new.attempt_no);
+ if new.purpose in('consultation_staff','consultation_client') and new.status in('pending','sending','unknown','sent','failed') then
+  -- The linked message mirrors the latest logical notice. Unknown stays review/failed,
+  -- while a new queued/sending attempt clears the older failure without changing its receipt ID.
+  -- Serialize on the message first. The following separate statement takes a fresh
+  -- READ COMMITTED snapshot after any row-lock wait, before checking newer attempts.
+  perform id from public.natori_consultation_messages where id=(new.snapshot->>'messageId')::uuid and project_id=new.project_id for update;
+  if not found then return new;end if;
+  update public.natori_consultation_messages set notification_status=case new.status
+    when 'pending' then 'pending' when 'sending' then 'pending'
+    when 'unknown' then 'failed' when 'sent' then 'sent' when 'failed' then 'failed' end
+   where id=(new.snapshot->>'messageId')::uuid and project_id=new.project_id
+    and not exists(select 1 from public.natori_notification_jobs j where j.notification_key=new.notification_key and j.attempt_no>new.attempt_no);
  end if;return new;
 end$$;
-create trigger natori_consultation_notice_projection after update on public.natori_notification_jobs for each row execute function public.natori_consultation_notice_projection_v1();
+create trigger natori_consultation_notice_projection after insert or update on public.natori_notification_jobs for each row execute function public.natori_consultation_notice_projection_v1();
 create function public.natori_consultation_legacy_notice_v1(p_owner_id uuid,p_project_id uuid,p_message_id uuid,p_payload jsonb,p_access_hash text,p_expires_at timestamptz)
 returns uuid language plpgsql security invoker set search_path='' as $$
 declare p public.natori_projects%rowtype;m public.natori_consultation_messages%rowtype;nid uuid;begin

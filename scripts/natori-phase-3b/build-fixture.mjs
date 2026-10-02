@@ -24,5 +24,6 @@ create function public.phase3b_final_update_is_waiting_v1(p_project uuid) return
 revoke all on function public.phase3b_final_update_is_waiting_v1(uuid) from public,anon,authenticated;
 grant execute on function public.phase3b_final_update_is_waiting_v1(uuid) to service_role;
 
+${readFileSync('scripts/natori-phase-3b/notice-concurrency-fixture.sql','utf8')}
 NOTIFY pgrst,'reload schema';
 `);

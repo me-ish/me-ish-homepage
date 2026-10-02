@@ -42,7 +42,7 @@ Phase 4の画面、返信待ち表示、返信窓口を再実装しない。新m
 6. notice-count SQL/fixture（2paths / 4blocks）
 7. 最終runner（6paths）
 
-Canonical 3B migration `20261001225106_natori_consultation_operations.sql` LF SHA256は `33d42306360dfff141b50f7ab21740ed90334dbb01ab5d77fb8ffddc137d7586`、Git blobは `8a48f81ad86ac80390c10a106b83d4f5739be900`。最終integration LF SHA256は `934cab274465ae4da992e6479c6e771b6ea5ca70bc975a11ae5427a8d2d3927b`。3A SQLは `b933138814adbd86f8e9fb9658a76e3de3dab808d07f5dfa96432c6fa6189d14` を維持する。baseline checksum、binder、dependency guardはこの最終3B SHAを使う。
+初回f179時点の Canonical 3B migration `20261001225106_natori_consultation_operations.sql` LF SHA256は `33d42306360dfff141b50f7ab21740ed90334dbb01ab5d77fb8ffddc137d7586`、Git blobは `8a48f81ad86ac80390c10a106b83d4f5739be900`。最終integration LF SHA256は `934cab274465ae4da992e6479c6e771b6ea5ca70bc975a11ae5427a8d2d3927b`。3A SQLは `b933138814adbd86f8e9fb9658a76e3de3dab808d07f5dfa96432c6fa6189d14` を維持する。baseline checksum、binder、dependency guardはこの最終3B SHAを使う。
 
 ## 実検証・静的確認・未検証
 
@@ -75,3 +75,19 @@ codex/natori-phase-3bへ7層37対象を適用し、全37ファイルがレビュ
 統合済みコードのlocal unitは162ファイル／1,382件、全成功・失敗0・skip0。strict TypeScript、31対象lint、baseline29 active／55 archived、3B bundleとSQL fixture、4 Node／2 Bash構文、canonical SQL／whitespace確認が成功した。最初のfull unitで検出した見出し一件の失敗証跡はtaskに保持する。
 
 3Bの実隔離DB30／ブラウザ13と全前Phase回帰は、これから作成するDraft PRのexact headで実行する。実CIのhead/tested tree／artifact／source digestの照合と親の独立レビューを受入条件とする。commit/hash/PR/実CI結果の確定記録はDraft PRとtask checkpointに保存する。Phase5以降の準備テストは3Bまたは後続統合の受入へ読み替えない。
+
+## 独立レビュー修正と再検証
+
+初回head `f179af91ff8c0d554581893ffbd7fb638814efd8` のCI36967084931は、過去15レポート300件が成功し、3B DB29/30、ブラウザ10成功・1失敗・11/13実行で失敗した。失敗artifact11209699845とv4診断を保持し、初回実行を3B成功と扱わない。
+
+復元lookupの古い結果は、現在のactor/mode・operation世代・pending ID/hash・durable cacheの一致を満たす場合だけ本文・添付・送信記録を退役させる。新しい入力や操作への遅延応答は無効化する。全GET経路がactor/read versionに応じてloading/error/historyを所有し、保存済みlookup後のGETが古い初回GETを待たずに操作を解放する。cancel/再試行/新しいfreezeも別のdurable記録を上書きしない。
+
+通知projectionは最新attemptのINSERT/UPDATEを反映し、pending/sendingはpending、unknown/failedはfailed、sentはsentにする。unknownの既存契約は維持する。messageを先にロックしてから別statementで最新attemptを再確認し、待機した古いcallbackによる上書きを防ぐ。送信停止設定は維持し、fixtureは停止中サービスの拒否・事実不変を確認した後、owner-scoped retry RPCを独立に検証する。実メール送信を有効化しない。
+
+未commitの通知snapshotまたは必要accessが期限切れならnotice_expiredを返し、古いsnapshotを復号・再生成して宛先を変えない。同じ本文・manifest・operation ID/hashと予約証拠を保持し、確認済み取消後にだけ新IDへ移る。本文と選択済みFileは下書きに残す。再読込で復元できないFile bytesは再選択を案内する。committed receipt、cancel/cleanup/private issuer完了とmatching claim releaseは維持する。claim後の期限切れは対応claimをreleaseし、commit postlockと最終business更新後のfresh server clockで期限切れを書込拒否・40001 rollbackする。
+
+今回のcanonical SQL LF SHA256は `124e7c46c0a8831b9b9346d4c5cd57adbc84ec2847f79fe07623001113b5d2c5`、Git blobは `767373dc433f089a8d52367842f8581afa837e49`。integration LF SHA256は `9eec10847359564d8c21da6b2925e5e07c9b123a50c1c60750506953d2ca5b3c`。baselineは3B checksum一件だけを更新し、3A SQL b9331388および他28 active/55 archived登録は維持する。原175 DBチェック式・全30 DB case identityと、ブラウザ21チェック・17 assertion・全13 case identityを保持して追加回帰を重ねる。
+
+統合後の型・全unit・lint・baseline・bundle/fixture・構文をrootが検証し、通常commit/pushしたPR107のexact headで実隔離DB30/ブラウザ13と全過去300ケースを再実行する。成功artifactのCI/head/tested同一tree・source digestをv4で照合し、親の独立再レビュー修正を反映してから3Bを受入とする。新CIは本commit前には未実行であり、完了・未検証・exact headはPRとtask checkpointに記録する。
+
+本番merge/deploy/DB/顧客操作と実メールを実施しない。実provider profile検証とiPhone/実メールの手動受入は未実施で、後者はPhase7後にユーザーと実施する。3B成功後は新しい受入head/source receiptに結合して5→6A→6B→7へ継続する。

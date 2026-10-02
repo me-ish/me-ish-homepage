@@ -19,7 +19,7 @@ type Outcome=z.infer<typeof outcome>;
 export type ConsultationOperationResult=
  |{kind:"committed";messageId:string;notificationId:string;operationId:string;requestHash:string}
  |{kind:"prepared";files:{id:string;path:string;uploaded:boolean;uploadToken?:string}[]}
- |{kind:"reserved"|"verifying"|"cancelled"|"busy"|"not_found"|"invalid"|"conflict"|"too_many"|"storage_error"|"unavailable"|"configuration"|"protected"|"cleanup"};
+ |{kind:"reserved"|"verifying"|"cancelled"|"busy"|"not_found"|"invalid"|"conflict"|"too_many"|"storage_error"|"unavailable"|"configuration"|"protected"|"cleanup"|"notice_expired"};
 export function hashConsultationOperation(request:ConsultationOperation):string{return createHash("sha256").update(canonicalConsultationOperation(request),"utf8").digest("hex");}
 async function context(actor:ConsultationActor):Promise<Context|null>{
  if("token" in actor&&actor.token){const project=await getClientProject(actor.token);return project?{project,sender:"client",ownerId:null,accessHash:createHash("sha256").update(actor.token).digest("hex")}:null;}
@@ -35,7 +35,7 @@ async function rpc(ctx:Context,request:ConsultationOperation,command:string,inpu
 function result(row:Outcome|null):ConsultationOperationResult{
  if(!row)return{kind:"unavailable"};
  if(row.result==="committed")return row.messageId&&row.notificationId&&row.operationId&&row.requestHash?{kind:"committed",messageId:row.messageId,notificationId:row.notificationId,operationId:row.operationId,requestHash:row.requestHash}:{kind:"unavailable"};
- if(["reserved","verifying","cancelled","busy","not_found","invalid","conflict","too_many","protected","cleanup"].includes(row.result))return{kind:row.result as Exclude<ConsultationOperationResult["kind"],"prepared"|"committed"|"storage_error"|"unavailable"|"configuration">};
+ if(["reserved","verifying","cancelled","busy","not_found","invalid","conflict","too_many","protected","cleanup","notice_expired"].includes(row.result))return{kind:row.result as Exclude<ConsultationOperationResult["kind"],"prepared"|"committed"|"storage_error"|"unavailable"|"configuration">};
  return{kind:"unavailable"};
 }
 function notice(ctx:Context){
@@ -68,7 +68,7 @@ export async function consultationOperation(actor:ConsultationActor,input:unknow
   if(known.kind==="committed"){scheduleAcceptanceNotifications([known.notificationId]);return known;}
   if(action==="lookup")return known;
   if(action==="cancel")return result(await rpc(ctx,request,"cancel"));
-  if(known.kind==="cancelled"||known.kind==="conflict"||known.kind==="unavailable")return known;
+  if(known.kind==="cancelled"||known.kind==="conflict"||known.kind==="unavailable"||known.kind==="notice_expired")return known;
   if(action==="prepare"){
    let evidence:ReturnType<typeof notice>|null=null;
    if(known.kind==="not_found"){try{evidence=notice(ctx);}catch{return{kind:"configuration"};}}
@@ -103,7 +103,9 @@ export async function consultationOperation(actor:ConsultationActor,input:unknow
    for(const reserved of claimed.files){
     const descriptor=request.files.find(file=>file.id===reserved.id);
     if(!descriptor||descriptor.fileName!==reserved.fileName||descriptor.mimeType!==reserved.mimeType||descriptor.sizeBytes!==reserved.sizeBytes||descriptor.sha256!==reserved.sha256)throw new Error("manifest_mismatch");
-    if((await rpc(ctx,request,"renew",{},token))?.result!=="renewed")throw new Error("stale");
+    const renewed=await rpc(ctx,request,"renew",{},token);
+    if(renewed?.result==="notice_expired"){await rpc(ctx,request,"release",{},token);return{kind:"notice_expired"};}
+    if(renewed?.result!=="renewed")throw new Error("stale");
     const object=await supabaseAdmin().storage.from("natori-consultations").info(reserved.path);
     if(object.error||object.data?.size!==descriptor.sizeBytes||object.data?.contentType!==descriptor.mimeType)throw new Error("storage_verification");
     const bytes=await supabaseAdmin().storage.from("natori-consultations").download(reserved.path);
@@ -111,9 +113,13 @@ export async function consultationOperation(actor:ConsultationActor,input:unknow
     const digest=createHash("sha256").update(Buffer.from(await bytes.data.arrayBuffer())).digest("hex");
     if(digest!==descriptor.sha256)throw new Error("storage_verification");
    }
-   if((await rpc(ctx,request,"renew",{},token))?.result!=="renewed")throw new Error("stale");
+   const renewed=await rpc(ctx,request,"renew",{},token);
+   if(renewed?.result==="notice_expired"){await rpc(ctx,request,"release",{},token);return{kind:"notice_expired"};}
+   if(renewed?.result!=="renewed")throw new Error("stale");
    const committed=result(await rpc(ctx,request,"commit",{verified:true},token));
-   if(committed.kind==="committed")scheduleAcceptanceNotifications([committed.notificationId]);return committed;
+   if(committed.kind==="committed")scheduleAcceptanceNotifications([committed.notificationId]);
+   else await rpc(ctx,request,"release",{},token);
+   return committed;
   }catch{await rpc(ctx,request,"release",{},token);return{kind:"storage_error"};}
  }catch{console.error("[natori-consultation-operation] request_unconfirmed");return{kind:"unavailable"};}
 }
