@@ -154,7 +154,9 @@ export function describeNatoriDeadline(deadline: NatoriDeadlineV1): string {
       case "preferred_date":
         return `${formatNatoriRequestDate(deadline.date)} 希望`;
       case "rush_consultation":
-        return deadline.date ? `お急ぎ希望（${formatNatoriRequestDate(deadline.date)}）` : "お急ぎ希望";
+        return deadline.date
+          ? `${NATORI_DEADLINE_KIND_LABELS_V1.rush_consultation}（${formatNatoriRequestDate(deadline.date)} 希望）`
+          : NATORI_DEADLINE_KIND_LABELS_V1.rush_consultation;
     }
   })();
   return deadline.note ? `${base} / ${deadline.note}` : base;

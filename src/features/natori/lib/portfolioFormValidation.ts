@@ -11,6 +11,7 @@ import {
 } from "./portfolioRequestForm";
 import { natoriRequestSubmissionV1Schema, type NatoriRequestFieldError } from "./requestSchema";
 import { portfolioValidationMessage } from "./portfolioFormFeedback";
+import { normalizeNatoriReferenceUrl } from "./referenceLinks";
 import { buildNatoriInquiryRequestView, type NatoriInquiryRequestSection } from "./inquiryRequestView";
 import type { NatoriRequestDataV1, NatoriRequestSubmissionV1 } from "../types/request";
 
@@ -37,7 +38,9 @@ export function validatePortfolioForm(
     path: `referenceLinks.${error.index}.url`, message: error.message,
   })));
   return parsed.success && errors.length === 0
-    ? { success: true, data: parsed.data, referenceLinks: submittedPortfolioReferenceLinks(state.referenceLinks) }
+    ? { success: true, data: parsed.data, referenceLinks: submittedPortfolioReferenceLinks(state.referenceLinks).map((row) => ({
+        ...row, url: normalizeNatoriReferenceUrl(row.url) ?? row.url,
+      })) }
     : { success: false, errors };
 }
 

@@ -7,7 +7,7 @@ import {setDefaultResultOrder} from 'node:dns';
 import {registerPhase5Cases} from './browser-cases.mjs';
 const require=createRequire('/app/package.json'),{createClient}=require('@supabase/supabase-js'),{chromium,expect}=require('@playwright/test');
 setDefaultResultOrder('ipv4first');
-const results=[],checks=[],check=(value,code)=>{if(!value)throw new Error(code);};let server,browser,stage='preflight';
+const results=[],checks=[],check=(value,code)=>{if(!value)throw new Error(code);};let server,browser,stage='preflight',caseCheckpoint='CASE_START';
 const compileErrors=new Set();
 function persist(){writeFileSync('/results/phase5-browser.json',JSON.stringify({tests:results,prerequisites:checks,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,engine:'Chromium1280/360/390px; real ephemeral Next/DB; pinned official fonts; sending disabled; not iPhone Safari',runtimeExecuted:true},null,2));}
 async function main(){
@@ -36,8 +36,8 @@ async function main(){
   await page.getByLabel('補足（任意）',{exact:true}).fill('笑顔・泣き顔');
   const details=page.locator('summary').filter({hasText:/^キャラクター・イメージの詳細を入力する/}).locator('..');await details.locator('summary').first().click();
   for(const [label,value]of[['キャラクターの特徴','水色の髪'],['希望する表情・雰囲気','笑顔'],['構図のイメージ','二人並び'],['色のイメージ','青'],['資料についての補足','画像の服装']])await page.getByLabel(label,{exact:true}).fill(value);
-  const materials=page.locator('summary').filter({hasText:/^資料/}).locator('..');await materials.locator('summary').first().click();await page.getByLabel('参考URL 1',{exact:true}).fill('https://example.com/phase5-reference');await page.getByLabel('このURLの内容（任意）',{exact:true}).fill('衣装の設定資料');
-  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aqlsAAAAASUVORK5CYII=','base64');await page.getByLabel('キャラクター資料の画像を選択',{exact:true}).setInputFiles({name:'costume.png',mimeType:'image/png',buffer:png});await page.getByLabel(/ご相談・ご依頼の内容/).fill('Synthetic complete quote request');
+  const materials=page.locator('summary').filter({hasText:/^資料/}).locator('..');await materials.locator('summary').first().click();await page.getByLabel('参考URL 1',{exact:true}).fill('https://EXAMPLE.com:443/phase5-reference#pose');await page.getByLabel('このURLの内容（任意）',{exact:true}).fill('衣装の設定資料');
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAYAAACddGYaAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWN44zHzPwwzIHMA2KQQyVXgEtIAAAAASUVORK5CYII=','base64');await page.getByLabel('キャラクター資料の画像を選択',{exact:true}).setInputFiles({name:'costume.png',mimeType:'image/png',buffer:png});await page.getByLabel(/ご相談・ご依頼の内容/).fill('Synthetic complete quote request');
  }
  async function assertActualEnvelope(page){
   await page.getByRole('checkbox',{name:'オリジナルキャラクター',exact:true}).check();await page.getByLabel(/作品の公開可否/).selectOption('delayed');await page.getByLabel('公開可能日必須',{exact:true}).fill('2026-11-15');
@@ -48,7 +48,7 @@ async function main(){
   const reviewText=await page.getByRole('region',{name:'送信前の確認',exact:true}).innerText();
   const responsePromise=page.waitForResponse(r=>r.url()===endpoint&&r.request().method()==='POST'&&r.request().headers()['content-type']?.startsWith('multipart/'));responsePromise.catch(()=>{});
   await page.getByRole('button',{name:'見積もりを依頼する'}).click();const response=await responsePromise;
-  check(response.status()===200,'REAL_SUBMIT_STATUS');const accepted=await response.json();check(accepted.accepted&&typeof accepted.receipt==='string','REAL_ACCEPTANCE');
+  check(response.status()===200,'REAL_SUBMIT_STATUS_'+response.status());const accepted=await response.json();check(accepted.accepted&&typeof accepted.receipt==='string','REAL_ACCEPTANCE');
   const request=response.request(),form=await new Request(endpoint,{method:'POST',headers:{'content-type':request.headers()['content-type']},body:request.postDataBuffer()}).formData();const requestData=JSON.parse(String(form.get('requestData')));
   const expected={schemaVersion:1,formVersion:'etorie-request-v1',inquiryMode:'quote',requestType:'illustration',requestTypeOther:null,commissionScope:'full_body',commissionScopeOther:null,options:[{id:'expression_variation',label:'表情差分',quantity:2,notes:'笑顔・泣き顔'}],usageTypes:['original_character'],usageTypeOther:null,commercialUse:'yes',publicationPolicy:'delayed',publicationAllowedFrom:'2026-11-15',budget:{kind:'range',min:10000,max:15000,currency:'JPY'},deadline:{kind:'preferred_date',date:'2026-12-01',note:'イベント前まで'},characterFeatures:'水色の髪',expressionMood:'笑顔',composition:'二人並び',colorDirection:'青',referenceNotes:'画像の服装',message:'Synthetic complete quote request',legacySource:null};
   expect(requestData).toEqual(expected);expect(JSON.parse(String(form.get('referenceLinks')))).toEqual([{url:'https://example.com/phase5-reference',label:'衣装の設定資料'}]);check(form.getAll('refImages').length===1&&form.getAll('refImages')[0].name==='costume.png','ACTUAL_REFERENCE_IMAGE');
@@ -60,12 +60,12 @@ async function main(){
   for(const purpose of['intake_artist','intake_client']){const notice=notices.data.find(row=>row.purpose===purpose);check(notice,'NOTICE_PURPOSE');expect(notice.snapshot.requestData).toEqual(requestData);}
   await expect(page.getByText('送信ありがとうございます!',{exact:true})).toBeVisible();checks.push({name:'reviewed-390px-envelope-actual-POST-and-two-atomic-notices',status:'passed'});
  }
- registerPhase5Cases({test,expect,prepareActualEnvelope,DEMO_PATH:app+'/ja/fixture-phase5',assertActualEnvelope,
+ registerPhase5Cases({test,expect,checkpoint:code=>{check(/^[A-Z_0-9]+$/.test(code),'UNSAFE_CHECKPOINT');caseCheckpoint=code;},prepareActualEnvelope,DEMO_PATH:app+'/ja/fixture-phase5',assertActualEnvelope,
   openInquiry:async(page,label)=>{await page.locator('#form').getByRole('link',{name:label}).click();await expect(page).toHaveURL(/\/fixture-phase5\/contact\?/);await expect(page.getByRole('heading',{name:'ご相談・ご依頼',exact:true})).toBeVisible();},
   fillContact:async(page,suffix)=>{await page.getByLabel(/お名前/).fill('Synthetic '+suffix);await page.getByLabel(/メールアドレス/).fill('client-'+suffix+'@phase5.invalid');}});
  check(cases.length===6,'EXACT_SIX_CASES');
- for(const item of cases){stage=item.name;const context=await browser.newContext({viewport:{width:390,height:844}});const page=await context.newPage();const pageErrors=[];page.on('pageerror',()=>pageErrors.push('PAGE_ERROR'));await context.route('**/*',r=>new URL(r.request().url()).origin===app?r.continue():r.abort('blockedbyclient'));
-  try{await item.fn({page});check(pageErrors.length===0,'PAGE_ERROR');results.push({name:item.name,status:'passed'});console.log('PASS phase5-browser/'+item.name);}catch(error){results.push({name:item.name,status:'failed',code:/^[A-Z_0-9]+$/.test(error?.message??'')?error.message:'ASSERTION_FAILED'});console.log('FAIL phase5-browser/'+item.name);}finally{await context.close();persist();}
+ for(const item of cases){stage=item.name;caseCheckpoint='CASE_START';const context=await browser.newContext({viewport:{width:390,height:844}});const page=await context.newPage();const pageErrors=[];page.on('pageerror',()=>pageErrors.push('PAGE_ERROR'));await context.route('**/*',r=>new URL(r.request().url()).origin===app?r.continue():r.abort('blockedbyclient'));
+  try{await item.fn({page});check(pageErrors.length===0,'PAGE_ERROR');results.push({name:item.name,status:'passed'});console.log('PASS phase5-browser/'+item.name);}catch(error){results.push({name:item.name,status:'failed',code:/^[A-Z_0-9]+$/.test(error?.message??'')?error.message:'ASSERTION_FAILED_'+caseCheckpoint});console.log('FAIL phase5-browser/'+item.name);}finally{await context.close();persist();}
  }
  check(results.length===6&&results.every(row=>row.status==='passed')&&compileErrors.size===0,'BROWSER_FAILED');
 }

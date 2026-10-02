@@ -103,8 +103,19 @@ function buildSections(request: NatoriRequestDataV1): NatoriInquiryRequestSectio
         {
           key: "usageTypes",
           label: "使用目的",
-          value: describeNatoriUsageTypes(request),
+          value: describeNatoriUsageTypes({
+            ...request,
+            usageTypes: request.usageTypes.filter((usage) => usage !== "original_character"),
+          }),
         },
+        ...(request.usageTypes.includes("original_character") ? [{
+          key: "subjectTypes",
+          label: "題材",
+          value: describeNatoriUsageTypes({
+            ...request,
+            usageTypes: request.usageTypes.filter((usage) => usage === "original_character"),
+          }),
+        }] : []),
         {
           key: "commercialUse",
           label: "商用利用",

@@ -1,5 +1,5 @@
 // Derived from the exact guarded Phase 5 e2e addition; six logical UI cases retained.
-export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillContact,assertActualEnvelope,prepareActualEnvelope}){
+export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillContact,assertActualEnvelope,prepareActualEnvelope,checkpoint=()=>{}}){
   for (const width of [1280, 360, 390]) {
     test(`Phase 5 padded option and named editing at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });
@@ -55,7 +55,7 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
     await openInquiry(page, "見積もりをお願いしたい");
     const materials = page.locator("summary").filter({ hasText: /^資料/ }).locator("..");
     await materials.locator("summary").first().click();
-    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aqlsAAAAASUVORK5CYII=", "base64");
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAYAAACddGYaAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWN44zHzPwwzIHMA2KQQyVXgEtIAAAAASUVORK5CYII=", "base64");
     await page.getByLabel("キャラクター資料の画像を選択").setInputFiles(Array.from({ length: 6 }, (_, index) => ({ name: `reference-${index + 1}.png`, mimeType: "image/png", buffer: png })));
     await expect(page.getByText(/5枚を追加しました。枚数制限のため1枚は追加していません/)).toBeVisible();
     await expect(page.getByText(/参考URLに共有リンクを貼ってください/)).toBeVisible();
@@ -70,6 +70,7 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
     await page.setViewportSize({ width: 360, height: 844 });
     await page.goto(`${DEMO_PATH}?structured=1`);
     await openInquiry(page, "見積もりをお願いしたい");
+    checkpoint('EDIT_INPUTS');
     await page.getByLabel("ご依頼の種類", { exact: true }).selectOption("other");
     await page.getByLabel(/ご依頼の種類（その他の内容）/).fill("イベント表紙");
     await page.getByRole("checkbox", { name: /表情を追加する（表情差分）/ }).check();
@@ -82,34 +83,43 @@ export function registerPhase5Cases({test,expect,DEMO_PATH,openInquiry,fillConta
     await materials.locator("summary").first().click();
     await page.getByLabel("参考URL 1", { exact: true }).fill("https://example.com/reference");
     await page.getByLabel("このURLの内容（任意）").fill("衣装の設定資料");
-    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aqlsAAAAASUVORK5CYII=", "base64");
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAYAAACddGYaAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWN44zHzPwwzIHMA2KQQyVXgEtIAAAAASUVORK5CYII=", "base64");
     await page.getByLabel("キャラクター資料の画像を選択").setInputFiles({ name: "costume.png", mimeType: "image/png", buffer: png });
     await page.getByRole("button", { name: "条件・連絡先へ" }).click();
+    checkpoint('EDIT_CONDITIONS');
     await fillContact(page, "phase5-edit");
     await page.getByLabel("商用利用", { exact: true }).selectOption("yes");
     await page.getByLabel(/作品の公開可否/).selectOption("delayed");
     await page.getByLabel(/公開可能日/).fill("2026-11-15");
     await page.getByRole("button", { name: "内容を確認する" }).click();
     const confirmation = page.getByRole("region", { name: "送信前の確認" });
+    checkpoint('EDIT_REVIEW_VALUES');
     for (const text of ["イベント表紙", "表情差分 ×2（笑顔・泣き顔）", "水色の髪", "商用利用する", "2026年11月15日", "衣装の設定資料", "example.com", "costume.png"]) await expect(confirmation).toContainText(text);
+    checkpoint('EDIT_REVIEW_IMAGE');
     await expect(confirmation.getByRole("img", { name: "確認用の添付画像 1" })).toBeVisible();
+    checkpoint('EDIT_TARGET_COUNT');
     const edits = confirmation.getByRole("button", { name: /を修正する$/ });
     expect(await edits.count()).toBeGreaterThanOrEqual(5);
+    checkpoint('EDIT_TARGET_GEOMETRY');
     for (const edit of await edits.all()) {
       const box = await edit.boundingBox();
       if (!box) throw new Error("named edit target is missing");
       expect(box.width).toBeGreaterThanOrEqual(44);
       expect(box.height).toBeGreaterThanOrEqual(44);
     }
+    checkpoint('EDIT_MATERIALS');
     await confirmation.getByRole("button", { name: "資料を修正する" }).click();
     await expect(page.getByLabel("参考URL 1", { exact: true })).toBeVisible();
     await expect(page.getByLabel("参考URL 1", { exact: true })).toHaveValue("https://example.com/reference");
+    checkpoint('EDIT_CHANGE_OTHER');
     await page.getByLabel("ご依頼の種類", { exact: true }).selectOption("icon");
     await expect(page.getByLabel(/ご依頼の種類（その他の内容）/)).toHaveCount(0);
     await page.getByRole("button", { name: "条件・連絡先へ" }).click();
     await page.getByRole("button", { name: "内容を確認する" }).click();
+    checkpoint('EDIT_FINAL_REVIEW');
     await expect(confirmation).not.toContainText("イベント表紙");
     await expect(confirmation).toContainText("SNSアイコン");
+    checkpoint('EDIT_OVERFLOW');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: test.info().outputPath("phase5-review-360.png"), fullPage: true });
   });

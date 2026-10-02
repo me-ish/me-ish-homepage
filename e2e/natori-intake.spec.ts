@@ -129,7 +129,7 @@ test.describe("Natori public intake rollout", () => {
     await openInquiry(page, "見積もりをお願いしたい");
     const materials = page.locator("summary").filter({ hasText: /^資料/ }).locator("..");
     await materials.locator("summary").first().click();
-    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aqlsAAAAASUVORK5CYII=", "base64");
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAYAAACddGYaAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWN44zHzPwwzIHMA2KQQyVXgEtIAAAAASUVORK5CYII=", "base64");
     await page.getByLabel("キャラクター資料の画像を選択").setInputFiles(Array.from({ length: 6 }, (_, index) => ({ name: `reference-${index + 1}.png`, mimeType: "image/png", buffer: png })));
     await expect(page.getByText(/5枚を追加しました。枚数制限のため1枚は追加していません/)).toBeVisible();
     await expect(page.getByText(/参考URLに共有リンクを貼ってください/)).toBeVisible();
@@ -156,7 +156,7 @@ test.describe("Natori public intake rollout", () => {
     await materials.locator("summary").first().click();
     await page.getByLabel("参考URL 1", { exact: true }).fill("https://example.com/reference");
     await page.getByLabel("このURLの内容（任意）").fill("衣装の設定資料");
-    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aqlsAAAAASUVORK5CYII=", "base64");
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAYAAACddGYaAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWN44zHzPwwzIHMA2KQQyVXgEtIAAAAASUVORK5CYII=", "base64");
     await page.getByLabel("キャラクター資料の画像を選択").setInputFiles({ name: "costume.png", mimeType: "image/png", buffer: png });
     await page.getByRole("button", { name: "条件・連絡先へ" }).click();
     await fillContact(page, "phase5-edit");

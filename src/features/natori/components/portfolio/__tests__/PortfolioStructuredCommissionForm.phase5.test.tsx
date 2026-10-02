@@ -314,6 +314,11 @@ describe("Phase 5 option and image access", () => {
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
     const confirmation = await screen.findByRole("region", { name: "送信前の確認" });
     expect(confirmation.textContent).toContain("オリジナルキャラクター");
+    const subjectRow = within(confirmation).getByText("題材", { selector: "dt" }).parentElement;
+    const purposeRow = within(confirmation).getByText("使用目的", { selector: "dt" }).parentElement;
+    expect(subjectRow?.querySelector("dd")?.textContent).toBe("オリジナルキャラクター");
+    expect(purposeRow?.querySelector("dd")?.textContent).toBe("未定");
+    expect(purposeRow?.textContent).not.toContain("オリジナルキャラクター");
     expect(fetchMock).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "相談内容を送信する" }));
     await waitFor(() => phase5ContactPost());
@@ -328,9 +333,13 @@ describe("Phase 5 option and image access", () => {
     expect(admin.kind).toBe("structured");
     if (admin.kind !== "structured") throw new Error("admin reader cannot show actual original-character submission");
     expect(admin.request.usageTypes).toEqual(["original_character"]);
-    const adminUsage = admin.sections.flatMap((section) => section.fields).find((field) => field.key === "usageTypes");
-    expect(adminUsage?.value).toBe("オリジナルキャラクター");
-    expect(confirmation.textContent).toContain(adminUsage!.value);
+    const adminFields = admin.sections.flatMap((section) => section.fields);
+    const adminSubject = adminFields.find((field) => field.key === "subjectTypes");
+    const adminPurpose = adminFields.find((field) => field.key === "usageTypes");
+    expect(adminSubject).toEqual({ key: "subjectTypes", label: "題材", value: "オリジナルキャラクター" });
+    expect(adminPurpose).toEqual({ key: "usageTypes", label: "使用目的", value: "未定" });
+    expect(subjectRow?.querySelector("dd")?.textContent).toBe(adminSubject?.value);
+    expect(purposeRow?.querySelector("dd")?.textContent).toBe(adminPurpose?.value);
     expect(form.getAll("refImages")).toHaveLength(0);
   });
 });

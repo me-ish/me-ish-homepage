@@ -8,7 +8,7 @@ const checksumPath=resolve(output,'source-checksums.json'),checksums=JSON.parse(
 for(const path of [
  'src/app/api/natori/portfolio/contact/route.ts',
  ...['PortfolioPricing','PortfolioContactPage','PortfolioCommissionForm','PortfolioStructuredCommissionForm','PortfolioStyles','PortfolioFormStyles','PortfolioLegalNotice','portfolioFonts','useIntakeOperation','IntakeRecoveryPanel'].map(name=>'src/features/natori/components/portfolio/'+name+(name==='portfolioFonts'||name==='useIntakeOperation'?'.ts':'.tsx')),
- ...['portfolioRequestForm','portfolioFormFeedback','portfolioFormValidation','requestPresentation','restoreIntakeForm','inquiryRequestView','requestSchema'].map(name=>'src/features/natori/lib/'+name+'.ts'),
+ ...['portfolioRequestForm','portfolioFormFeedback','portfolioFormValidation','requestPresentation','restoreIntakeForm','inquiryRequestView','requestSchema','referenceLinks'].map(name=>'src/features/natori/lib/'+name+'.ts'),
  'src/features/natori/constants/portfolioContent.ts',
 ]){
  mkdirSync(dirname(resolve(output,path)),{recursive:true});copyFileSync(path,resolve(output,path));checksums[path]=createHash('sha256').update(readFileSync(path)).digest('hex');
