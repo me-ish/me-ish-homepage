@@ -20,7 +20,8 @@ export default async function NatoriConsultationPage({ params }: Props) {
         </div>
         {conversation ? <>
           {conversation.initialInquiry ? <div className="rounded-xl bg-gray-50 p-3 text-sm"><p className="mb-1 font-bold">最初のご相談</p><p className="whitespace-pre-wrap break-words">{conversation.initialInquiry}</p></div> : null}
-          {conversation.initialFiles.length ? <div className="space-y-1 rounded-xl bg-gray-50 p-3 text-sm"><p className="font-bold">受付時の資料</p>{conversation.initialFiles.map((file) => <a key={file.id} href={file.url} target="_blank" rel="noopener noreferrer" className="block text-pink-700 underline">{file.name}</a>)}</div> : null}
+          {conversation.initialFilesState==="unavailable"?<p role="status" className="text-sm text-amber-800">受付時の資料一覧を取得できません。提出状況は、ページを再読み込みして確認してください。</p>:null}
+          {conversation.initialFiles.length?<div className="space-y-1 rounded-xl bg-gray-50 p-3 text-sm"><p className="font-bold">受付時の資料</p>{conversation.initialFiles.map(file=>file.url?<a key={file.id} href={file.url} target="_blank" rel="noopener noreferrer" className="block text-pink-700 underline">{file.name}</a>:<p key={file.id} role="status">{file.name} — 提出済みです。リンクを取得できません。再読み込みしてください。</p>)}</div>:null}
           <ConsultationThread mode="client" token={token} initialMessages={conversation.messages} closed={conversation.closed} />
         </>
           : <RenewConsultationLink token={token} />}

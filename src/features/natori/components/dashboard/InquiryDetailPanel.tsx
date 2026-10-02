@@ -125,7 +125,7 @@ export default function InquiryDetailPanel({
   const referenceFiles = project.referenceFiles ?? [];
   const referenceLinks = project.referenceLinks ?? [];
   const hasReferences =
-    referenceFiles.length > 0 ||
+    project.referenceFilesState==="unavailable" || referenceFiles.length > 0 ||
     legacyReferenceImages.length > 0 ||
     Boolean(view.refText) ||
     referenceLinks.length > 0;
@@ -260,7 +260,7 @@ export default function InquiryDetailPanel({
               <h3 className="text-xs font-bold uppercase tracking-wide text-pink-700">
                 参考資料
               </h3>
-              <InquiryReferenceFiles files={referenceFiles} />
+              <InquiryReferenceFiles files={referenceFiles} acquisitionState={project.referenceFilesState} />
               {legacyReferenceImages.length > 0 || view.refText ? (
                 <section>
                   {legacyReferenceImages.length > 0 ? (

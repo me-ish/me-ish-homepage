@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { webcrypto } from "node:crypto";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import ConsultationThread from "../ConsultationThread";
 import type { ConsultationMessage } from "../../../types/consultation";
 const message = (id: string): ConsultationMessage => ({ id, sender: "staff", body: id, createdAt: "2026-09-26T00:00:00Z", notificationStatus: "sent", files: [] });
 const mount = () => render(<ConsultationThread mode="client" token="synthetic" initialMessages={[message("original")]} closed={false} />);
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+beforeEach(() => { sessionStorage.clear(); vi.stubGlobal("crypto",{subtle:webcrypto.subtle,randomUUID:()=>"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"}); });
+afterEach(() => { cleanup(); sessionStorage.clear(); vi.unstubAllGlobals(); });
 describe("consultation history refresh", () => {
   it("does not label existing staff history as a new arrival on first open", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({ messages: [message("existing history")] })));
@@ -30,14 +32,14 @@ describe("consultation history refresh", () => {
   it("shows a saved-send/history-error distinction without offering a blind resend", async () => {
     let reads = 0; const post = vi.fn();
     vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
-      if (init?.method === "POST") { post(); return Response.json({ ok: true }); }
+      if (init?.method === "POST") { post(); const raw=JSON.parse(String(init.body)); return Response.json(raw.action==="prepare"?{kind:"prepared",files:[]}:{kind:"committed",messageId:"66666666-7777-4888-8999-aaaaaaaaaaaa",operationId:raw.operation.operationId,requestHash:raw.operation.requestHash}); }
       return ++reads === 1 ? Response.json({ messages: [message("original")] }) : Response.json({}, { status: 503 });
     }));
     mount(); await waitFor(() => expect(screen.queryByText("履歴を確認中…")).toBeNull());
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "saved" } });
     fireEvent.click(screen.getByRole("button", { name: "メッセージを送信" }));
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("送信は保存済み"));
-    expect(post).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledTimes(2);
     expect(screen.getByText("original")).toBeTruthy();
     expect((screen.getByRole("button", { name: "メッセージを送信" }) as HTMLButtonElement).disabled).toBe(true);
   });

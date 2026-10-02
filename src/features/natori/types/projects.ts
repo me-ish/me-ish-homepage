@@ -93,6 +93,7 @@ export type NatoriProject = {
   referenceImageUrls?: string[];
   /** 表示名付きの参考画像。Storage path は含めない。 */
   referenceFiles?: NatoriProjectReferenceFileView[];
+  referenceFilesState?: "ready" | "unavailable";
   /** 外部参照リンク（sort_order 昇順） */
   referenceLinks?: NatoriProjectReferenceLinkView[];
   /**
@@ -104,7 +105,9 @@ export type NatoriProject = {
 
 export type NatoriProjectReferenceFileView = {
   /** 短時間署名URL。保存も log 出力もしない。 */
-  url: string;
+  url: string | null;
+  exists?: true;
+  acquisitionState?: "ready" | "unavailable";
   /** Storage path を露出しない表示名 */
   name: string;
 };

@@ -60,7 +60,9 @@ export type NatoriAdminTaskRow = {
 export type NatoriAdminReferenceFile = {
   project_id: string;
   /** 非公開バケットの短時間署名URL。DB へも log へも保存しない。 */
-  url: string;
+  url: string | null;
+  exists: true;
+  acquisitionState: "ready" | "unavailable";
   /**
    * 画面表示用の安全なラベル。Storage path をそのまま出さず、
    * object UUID の先頭だけを識別子として見せる。
@@ -289,6 +291,7 @@ export type ListNatoriAdminProjectsResult =
       archivedProjects: NatoriAdminProjectRow[];
       tasks: NatoriAdminTaskRow[];
       referenceFiles: NatoriAdminReferenceFile[];
+      referenceFilesState?: "ready" | "unavailable";
       referenceLinks: NatoriAdminReferenceLink[];
     }
   | { kind: "fetch-projects-error" }
@@ -366,14 +369,10 @@ export async function listNatoriAdminProjects(projectId?: string): Promise<ListN
     const index = perProjectIndex.get(row.project_id) ?? 0;
     perProjectIndex.set(row.project_id, index + 1);
     // 署名の失敗は資料1件が見えなくなるだけで、案件表示自体は続行する。
-    const url = await signPortfolioReferenceImage(row.storage_path, 60 * 60);
-    if (url) {
-      referenceFiles.push({
-        project_id: row.project_id,
-        url,
-        name: referenceFileDisplayName(row.storage_path, index),
-      });
-    }
+    let url:string|null=null;
+    try{url=await signPortfolioReferenceImage(row.storage_path,60*60);}
+    catch{console.error("[natori-admin-projects] reference_link_unavailable");}
+    referenceFiles.push({project_id:row.project_id,url,name:referenceFileDisplayName(row.storage_path,index),exists:true,acquisitionState:url?"ready":"unavailable"});
   }
 
   // 外部参照リンクの取得失敗は詳細表示の一部が欠けるだけなので、案件一覧は返す。
@@ -398,6 +397,7 @@ export async function listNatoriAdminProjects(projectId?: string): Promise<ListN
     archivedProjects: archivedProjectRows.map(withOverview),
     tasks: normalizedTasks,
     referenceFiles,
+    referenceFilesState:referenceError?"unavailable":"ready",
     referenceLinks,
   };
 }

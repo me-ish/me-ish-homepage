@@ -69,6 +69,7 @@ export type Database = {
   }
   public: {
     Tables: {
+      natori_consultation_operations: {Row:{project_id:string;sender:string;operation_id:string;request_hash:string;body:string;manifest:Json;status:string;claim_token:string|null;lease_expires_at:string|null;signed_expires_at:string|null;message_id:string|null;notification_id:string|null;notice_payload:Json|null;access_hash:string|null;access_expires_at:string|null;created_at:string};Insert:{project_id:string;sender:string;operation_id:string;request_hash:string;body:string;manifest:Json;status:string;claim_token?:string|null;lease_expires_at?:string|null;signed_expires_at?:string|null;message_id?:string|null;notification_id?:string|null;notice_payload?:Json|null;access_hash?:string|null;access_expires_at?:string|null;created_at?:string};Update:{status?:string;claim_token?:string|null;lease_expires_at?:string|null;signed_expires_at?:string|null;message_id?:string|null;notification_id?:string|null};Relationships:[]}
       natori_intake_operations: {
         Row: {
           owner_id: string; operation_id: string; request_hash: string; project_id: string;
@@ -1540,15 +1541,15 @@ export type Database = {
         ]
       }
       natori_consultation_messages: {
-        Row: { id: string; project_id: string; sender: string; body: string; notification_status: string; created_at: string }
-        Insert: { id?: string; project_id: string; sender: string; body: string; notification_status?: string; created_at?: string }
-        Update: { id?: string; project_id?: string; sender?: string; body?: string; notification_status?: string; created_at?: string }
+        Row: { id: string; project_id: string; sender: string; body: string; notification_status: string; created_at: string; operation_id: string | null; request_hash: string | null; attachment_count: number | null; notification_id: string | null }
+        Insert: { id?: string; project_id: string; sender: string; body: string; notification_status?: string; created_at?: string; operation_id?: string | null; request_hash?: string | null; attachment_count?: number | null; notification_id?: string | null }
+        Update: { id?: string; project_id?: string; sender?: string; body?: string; notification_status?: string; created_at?: string; operation_id?: string | null; request_hash?: string | null; attachment_count?: number | null; notification_id?: string | null }
         Relationships: [{ foreignKeyName: "natori_consultation_messages_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "natori_projects"; referencedColumns: ["id"] }]
       }
       natori_consultation_uploads: {
-        Row: { id: string; project_id: string; sender: string; storage_path: string; file_name: string; mime_type: string; size_bytes: number; created_at: string; finalized_at: string | null }
-        Insert: { id?: string; project_id: string; sender: string; storage_path: string; file_name: string; mime_type: string; size_bytes: number; created_at?: string; finalized_at?: string | null }
-        Update: { id?: string; project_id?: string; sender?: string; storage_path?: string; file_name?: string; mime_type?: string; size_bytes?: number; created_at?: string; finalized_at?: string | null }
+        Row: { id: string; project_id: string; sender: string; storage_path: string; file_name: string; mime_type: string; size_bytes: number; created_at: string; finalized_at: string | null; operation_id: string | null; file_id: string | null; content_sha256: string | null; message_id: string | null; credential_issuer: string | null; credential_started_at: string | null; credential_expires_at: string | null }
+        Insert: { id?: string; project_id: string; sender: string; storage_path: string; file_name: string; mime_type: string; size_bytes: number; created_at?: string; finalized_at?: string | null; operation_id?: string | null; file_id?: string | null; content_sha256?: string | null; message_id?: string | null; credential_issuer?: string | null; credential_started_at?: string | null; credential_expires_at?: string | null }
+        Update: { id?: string; project_id?: string; sender?: string; storage_path?: string; file_name?: string; mime_type?: string; size_bytes?: number; created_at?: string; finalized_at?: string | null; operation_id?: string | null; file_id?: string | null; content_sha256?: string | null; message_id?: string | null; credential_issuer?: string | null; credential_started_at?: string | null; credential_expires_at?: string | null }
         Relationships: [{ foreignKeyName: "natori_consultation_uploads_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "natori_projects"; referencedColumns: ["id"] }]
       }
       natori_quote_access: {
@@ -2612,6 +2613,8 @@ export type Database = {
       }
     }
     Functions: {
+      natori_consultation_operation_v1: {Args:{p_project_id:string;p_sender:string;p_operation_id:string;p_request_hash:string;p_command:string;p_owner_id?:string|null;p_access_hash?:string|null;p_input?:Json;p_claim_token?:string|null};Returns:Json}
+      natori_consultation_legacy_notice_v1: {Args:{p_owner_id:string;p_project_id:string;p_message_id:string;p_payload:Json;p_access_hash:string|null;p_expires_at:string|null};Returns:string|null}
       natori_intake_lookup_v1: { Args: { p_owner_id: string; p_operation_id: string; p_request_hash: string }; Returns: NatoriIntakeOperationRpcRow[] }
       natori_intake_settle_v1: { Args: { p_owner_id: string; p_operation_id: string; p_request_hash: string }; Returns: NatoriIntakeOperationRpcRow[] }
       natori_intake_begin_v1: { Args: { p_owner_id: string; p_operation_id: string; p_request_hash: string; p_manifest: Json; p_file_ids: Json; p_claim_token: string; p_mass_production: boolean }; Returns: NatoriIntakeOperationRpcRow[] }

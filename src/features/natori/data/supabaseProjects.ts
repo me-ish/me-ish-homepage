@@ -48,7 +48,7 @@ export type ProjectRow = {
   request_data?: unknown;
 };
 
-export type ReferenceFileRow = { project_id: string; url: string; name?: string };
+export type ReferenceFileRow = { project_id: string; url: string | null; name?: string };
 
 export type ReferenceLinkRow = {
   project_id: string;
@@ -88,6 +88,7 @@ export function rowToProject(
   referenceImageUrls: string[],
   extras: {
     referenceFiles?: NatoriProjectReferenceFileView[];
+    referenceFilesState?: "ready" | "unavailable";
     referenceLinks?: NatoriProjectReferenceLinkView[];
   } = {}
 ): NatoriProject {
@@ -126,6 +127,7 @@ export function rowToProject(
     deletedAt: row.deleted_at ?? undefined,
     referenceImageUrls,
     referenceFiles: extras.referenceFiles ?? [],
+    referenceFilesState:extras.referenceFilesState??"ready",
     referenceLinks: extras.referenceLinks ?? [],
     requestData: row.request_data ?? undefined,
     tasks,
@@ -154,6 +156,7 @@ export async function fetchNatoriProjectCollection(projectId?: string): Promise<
     archivedProjects?: ProjectRow[];
     tasks?: TaskRow[];
     referenceFiles?: ReferenceFileRow[];
+    referenceFilesState?: "ready" | "unavailable";
     referenceLinks?: ReferenceLinkRow[];
   };
 
@@ -170,11 +173,11 @@ export async function fetchNatoriProjectCollection(projectId?: string): Promise<
   }
   for (const [index, reference] of (payload.referenceFiles ?? []).entries()) {
     const urls = referencesByProject.get(reference.project_id) ?? [];
-    urls.push(reference.url);
+    if(reference.url)urls.push(reference.url);
     referencesByProject.set(reference.project_id, urls);
 
     const files = referenceFilesByProject.get(reference.project_id) ?? [];
-    files.push({ url: reference.url, name: reference.name ?? `資料${index + 1}` });
+    files.push({url:reference.url,name:reference.name??"資料"+(index+1),exists:true,acquisitionState:reference.url?"ready":"unavailable"});
     referenceFilesByProject.set(reference.project_id, files);
   }
   for (const link of payload.referenceLinks ?? []) {
@@ -195,6 +198,7 @@ export async function fetchNatoriProjectCollection(projectId?: string): Promise<
       referencesByProject.get(row.id) ?? [],
       {
         referenceFiles: referenceFilesByProject.get(row.id) ?? [],
+        referenceFilesState:payload.referenceFilesState??"ready",
         referenceLinks: sortNatoriReferenceLinks(
           referenceLinksByProject.get(row.id) ?? []
         ),
