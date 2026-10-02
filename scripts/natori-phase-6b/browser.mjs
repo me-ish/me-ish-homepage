@@ -5,9 +5,9 @@ import { resolve } from 'node:path';
 // The parent runner supplies an already-running disposable app. No DB/client
 // credentials or real tokens are needed, and every network mutation is blocked.
 let app, output, chromium, expect, browser, stage = 'preflight';
-const observations = [], results = [], blocked = [], harnessFailures = [];
+const observations = [], results = [], blocked = [], harnessFailures = [], motionObservations = [];
 const check = (value, code) => { if (!value) throw new Error(code); };
-const knownCodes = new Set(["ASSERTION_FAILED", "AUTOPLAY_NOT_RUNNING", "BROWSER_CLOSE_FAILED", "BROWSER_SETUP_FAILED", "CTA_COMPOSITING_REQUIRES_REVIEW", "DRAG_CLEARED_PAUSE", "DRAG_NOT_TRACKING", "EPHEMERAL_REQUIRED", "LOCAL_APP_REQUIRED", "LONG_FINAL_CONDITION", "LONG_REPLY_TRUNCATED", "MANUAL_PAUSE_LOST", "MANUAL_RESUME_FAILED", "PAUSED_DRAG_BLOCKED", "PUBLIC_CONFIRMATION_FLOW", "PUBLIC_IMMEDIATE_QUOTE_PROMISE", "PUBLIC_IMPORTANT_TERMS_PRESERVED", "PUBLIC_NOT_CONFIRMED", "PUBLIC_REPLY_PROMISE", "REDUCED_MOTION_AUTOPLAY", "REDUCED_MOTION_MANUAL_BLOCKED", "RESULT_WRITE_FAILED", "SHORT_MULTILINE_FIXTURE", "SHORT_REPLY_TRUNCATED", "UNKNOWN_FAILURE", "UNSUPPORTED_COMPUTED_COLOR", "VERTICAL_TOUCH_CHANGED_IMAGE", "VERTICAL_TOUCH_MOVED_SLIDE"]);
+const knownCodes = new Set(["ASSERTION_FAILED", "AUTOPLAY_NOT_RUNNING", "INITIAL_AUTOPLAY_NOT_RUNNING", "AUTOPLAY_BEFORE_INTERVAL", "AUTOPLAY_PRECONDITION_NOT_READY", "CLOCK_NOT_FROZEN", "BROWSER_CLOSE_FAILED", "BROWSER_SETUP_FAILED", "CTA_COMPOSITING_REQUIRES_REVIEW", "DRAG_CLEARED_PAUSE", "DRAG_NOT_TRACKING", "EPHEMERAL_REQUIRED", "LOCAL_APP_REQUIRED", "LONG_FINAL_CONDITION", "LONG_REPLY_TRUNCATED", "MANUAL_PAUSE_LOST", "MANUAL_RESUME_FAILED", "PAUSED_DRAG_BLOCKED", "PUBLIC_CONFIRMATION_FLOW", "PUBLIC_IMMEDIATE_QUOTE_PROMISE", "PUBLIC_IMPORTANT_TERMS_PRESERVED", "PUBLIC_NOT_CONFIRMED", "PUBLIC_REPLY_PROMISE", "REDUCED_MOTION_AUTOPLAY", "REDUCED_MOTION_MANUAL_BLOCKED", "RESULT_WRITE_FAILED", "SHORT_MULTILINE_FIXTURE", "SHORT_REPLY_TRUNCATED", "UNKNOWN_FAILURE", "UNSUPPORTED_COMPUTED_COLOR", "VERTICAL_TOUCH_CHANGED_IMAGE", "VERTICAL_TOUCH_MOVED_SLIDE"]);
 const ctaIds = ['hero', 'quote', 'consultation', 'delivery', 'delivery-disabled', 'download', 'mass-production', 'form-next', 'form-submit', 'mobile'];
 for (const name of ctaIds) {
   knownCodes.add(`CTA_FOCUS_${name}`);
@@ -99,6 +99,35 @@ async function touch(page, locator, points) {
 async function endTouch(locator, point) {
   await locator.evaluate((element, value) => element.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], changedTouches: [new Touch({ identifier: 42, target: element, clientX: value[0], clientY: value[1] })] })), point);
 }
+const motionCheckpoints = ['INITIAL_AUTOPLAY_BASELINE', 'INITIAL_AUTOPLAY_OBSERVED', 'HYDRATED_PAUSE', 'FROZEN_PAUSE', 'AUTOPLAY_BASELINE', 'AUTOPLAY_BEFORE_INTERVAL', 'AUTOPLAY_PENDING', 'AUTOPLAY_SETTLED', 'MANUAL_PAUSE_BASELINE', 'MANUAL_PAUSE_RETAINED', 'DRAG_TRACKING', 'PAUSED_DRAG_SETTLED', 'DRAG_PAUSE_RETAINED', 'VERTICAL_TOUCH_RETAINED', 'RESUME_BASELINE', 'RESUME_SETTLED'];
+async function recordMotion(hero, checkpoint, clockOrigin = null) {
+  check(motionCheckpoints.includes(checkpoint), 'AUTOPLAY_PRECONDITION_NOT_READY');
+  const value = await hero.evaluate((element, origin) => {
+    const region = element.querySelector('[role="region"][aria-label="代表作品"]');
+    const track = element.querySelector('[data-testid="hero-slide-track"]');
+    const button = region?.querySelector('button[aria-pressed]');
+    const dots = Array.from(region?.querySelectorAll('button[aria-current],button[aria-label$="枚目を表示"]') ?? []);
+    const index = dots.findIndex(dot => dot.getAttribute('aria-current') === 'true');
+    const transitionActive = (track?.style.transition ?? 'none') !== 'none';
+    const rawOffset = track ? new DOMMatrixReadOnly(getComputedStyle(track).transform).m41 + track.parentElement.clientWidth : null;
+    const trackOffsetPx = rawOffset !== null && Number.isFinite(rawOffset) && Math.abs(rawOffset) <= 4096 ? Math.round(rawOffset * 1000) / 1000 : null;
+    const trackState = trackOffsetPx === null ? 'unknown' : trackOffsetPx === 0 ? 'center' : transitionActive ? (trackOffsetPx < 0 ? 'next' : 'previous') : 'drag';
+    return {
+      virtualElapsedMs: origin === null ? null : Date.now() - origin,
+      manualPausePressed: button?.getAttribute('aria-pressed') === 'true',
+      pauseControlDisabled: button?.disabled === true,
+      reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      hoverWithin: region?.matches(':hover') ?? false,
+      focusWithin: region?.contains(document.activeElement) ?? false,
+      activeIndex: index === 0 || index === 1 ? index : null,
+      trackState,
+      trackOffsetPx,
+      transitionActive,
+    };
+  }, clockOrigin);
+  motionObservations.push({ checkpoint, ...value });
+  return value;
+}
 try {
   check(process.env.PHASE_6B_BROWSER === 'ephemeral', 'EPHEMERAL_REQUIRED');
   app = process.env.PHASE_6B_APP_URL ?? 'http://localhost:3000';
@@ -179,21 +208,57 @@ try {
   }
   await test('manual-pause-resume-touch-and-vertical-scroll', async () => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, reducedMotion: 'no-preference' });
-    await isolate(context); const page = await context.newPage(); await page.clock.install(); await page.goto(`${app}/ja/fixture-phase6b`);
+    await isolate(context); const page = await context.newPage();
+    await page.clock.install({ time: new Date('2026-01-01T00:00:00.000Z') });
+    await page.goto(`${app}/ja/fixture-phase6b`);
     const hero = page.getByTestId('hero'), surface = hero.getByTestId('hero-slide-surface'), track = hero.getByTestId('hero-slide-track');
     const active = () => hero.locator('[aria-hidden="false"] img').getAttribute('alt');
-    const first = await active(); await page.mouse.move(1, 1); await page.getByTestId('outside-focus').focus();
-    await page.clock.runFor(5600); check(await active() !== first, 'AUTOPLAY_NOT_RUNNING');
+    // Observe untouched default autoplay before any manual control, sampling the
+    // actual image instead of a single full-cycle endpoint on the natural clock.
+    await page.mouse.move(1, 1); await page.getByTestId('outside-focus').focus();
+    const initial = await active(); await recordMotion(hero, 'INITIAL_AUTOPLAY_BASELINE');
+    try { await expect.poll(active, { timeout: 10000, intervals: [100] }).not.toBe(initial); }
+    catch { throw new Error('INITIAL_AUTOPLAY_NOT_RUNNING'); }
+    await recordMotion(hero, 'INITIAL_AUTOPLAY_OBSERVED');
+    // A successful actual React handler and settled manual pause establish hydration.
+    await hero.getByRole('button', { name: '自動送りを停止', exact: true }).click();
+    await expect(hero.getByRole('button', { name: '自動送りを再開', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => track.evaluate(element => element.style.transition)).toBe('none');
+    await recordMotion(hero, 'HYDRATED_PAUSE');
+    // Freeze while paused, so the jump cannot advance the two-image carousel.
+    const clockOrigin = new Date('2026-01-02T00:00:00.000Z').getTime();
+    await page.clock.pauseAt(clockOrigin);
+    check(await page.evaluate(() => Date.now()) === clockOrigin, 'CLOCK_NOT_FROZEN');
+    await recordMotion(hero, 'FROZEN_PAUSE', clockOrigin);
+    await hero.getByRole('button', { name: '自動送りを再開', exact: true }).click();
+    await expect(hero.getByRole('button', { name: '自動送りを停止', exact: true })).toHaveAttribute('aria-pressed', 'false');
+    await page.mouse.move(1, 1); await page.getByTestId('outside-focus').focus();
+    const baseline = await recordMotion(hero, 'AUTOPLAY_BASELINE', clockOrigin);
+    check(!baseline.manualPausePressed && !baseline.pauseControlDisabled && !baseline.reducedMotion && !baseline.hoverWithin && !baseline.focusWithin && !baseline.transitionActive, 'AUTOPLAY_PRECONDITION_NOT_READY');
+    const first = await active();
+    await page.clock.runFor(4999); await recordMotion(hero, 'AUTOPLAY_BEFORE_INTERVAL', clockOrigin);
+    check(await active() === first, 'AUTOPLAY_BEFORE_INTERVAL');
+    await page.clock.runFor(1); await recordMotion(hero, 'AUTOPLAY_PENDING', clockOrigin);
+    await page.clock.runFor(600); await recordMotion(hero, 'AUTOPLAY_SETTLED', clockOrigin);
+    check(await active() !== first, 'AUTOPLAY_NOT_RUNNING');
     await hero.getByRole('button', { name: '自動送りを停止', exact: true }).click();
     await page.mouse.move(1, 1); await page.getByTestId('outside-focus').focus(); const paused = await active();
-    await page.clock.runFor(16000); check(await active() === paused, 'MANUAL_PAUSE_LOST');
-    await touch(page, surface, [[250, 150], [170, 152]]); check((await track.getAttribute('style')).includes('-80px'), 'DRAG_NOT_TRACKING');
-    await endTouch(surface, [120, 152]); await page.clock.runFor(600); check(await active() !== paused, 'PAUSED_DRAG_BLOCKED');
-    const swiped = await active(); await page.clock.runFor(16000); check(await active() === swiped, 'DRAG_CLEARED_PAUSE');
+    await recordMotion(hero, 'MANUAL_PAUSE_BASELINE', clockOrigin);
+    await page.clock.runFor(16000); await recordMotion(hero, 'MANUAL_PAUSE_RETAINED', clockOrigin); check(await active() === paused, 'MANUAL_PAUSE_LOST');
+    await touch(page, surface, [[250, 150], [170, 152]]);
+    const dragging = await recordMotion(hero, 'DRAG_TRACKING', clockOrigin);
+    // CSSOM may serialize '+ -80px' as '- 80px'; measure the actual displacement.
+    check(dragging.trackOffsetPx === -80, 'DRAG_NOT_TRACKING');
+    await endTouch(surface, [120, 152]); await page.clock.runFor(600); await recordMotion(hero, 'PAUSED_DRAG_SETTLED', clockOrigin); check(await active() !== paused, 'PAUSED_DRAG_BLOCKED');
+    const swiped = await active(); await page.clock.runFor(16000); await recordMotion(hero, 'DRAG_PAUSE_RETAINED', clockOrigin); check(await active() === swiped, 'DRAG_CLEARED_PAUSE');
     await touch(page, surface, [[170, 150], [175, 260]]); check(!(await track.getAttribute('style')).includes('105px'), 'VERTICAL_TOUCH_MOVED_SLIDE');
+    // Sample during the touchmove, before touchend can snap a wrong drag back.
+    const vertical = await recordMotion(hero, 'VERTICAL_TOUCH_RETAINED', clockOrigin);
+    check(vertical.trackOffsetPx === 0, 'VERTICAL_TOUCH_MOVED_SLIDE');
     await endTouch(surface, [175, 260]); check(await active() === swiped, 'VERTICAL_TOUCH_CHANGED_IMAGE');
     await hero.getByRole('button', { name: '自動送りを再開', exact: true }).click(); await page.mouse.move(1, 1); await page.getByTestId('outside-focus').focus();
-    await page.clock.runFor(5600); check(await active() !== swiped, 'MANUAL_RESUME_FAILED');
+    await recordMotion(hero, 'RESUME_BASELINE', clockOrigin);
+    await page.clock.runFor(5600); await recordMotion(hero, 'RESUME_SETTLED', clockOrigin); check(await active() !== swiped, 'MANUAL_RESUME_FAILED');
     // Chromium touch event arbitration is evidence for axis handling only.
     // Real iPhone vertical scroll/back-button acceptance remains a Phase 7 step.
     await context.close();
@@ -216,7 +281,7 @@ try {
   }
   if (output) {
     try {
-      writeFileSync(resolve(output, 'result.json'), JSON.stringify({ results, observations, blocked, harnessFailures, realProvider: false, productionContentWrite: false, realEmail: false, iPhoneAcceptance: 'pending' }, null, 2));
+      writeFileSync(resolve(output, 'result.json'), JSON.stringify({ results, observations, blocked, harnessFailures, motionObservations, realProvider: false, productionContentWrite: false, realEmail: false, iPhoneAcceptance: 'pending' }, null, 2));
     } catch (error) { recordHarnessFailure('result-write', safeFailure(error, 'RESULT_WRITE_FAILED')); }
   }
 }
