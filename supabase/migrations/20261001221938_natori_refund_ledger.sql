@@ -94,7 +94,7 @@ create function public.natori_refund_reconcile_v1(p_owner_id uuid,p_account text
 returns uuid[] language plpgsql security invoker set search_path='' as $$
 declare r public.natori_refund_ledger%rowtype; t public.natori_payment_transactions%rowtype;
   p public.natori_projects%rowtype; candidates integer; reason text; notice uuid;
-  ids uuid[]:='{}'; purpose text; total bigint; prior_intent text; prior_charge text;
+  ids uuid[]:='{}'; v_purpose text; total bigint; prior_intent text; prior_charge text;
 begin
   select * into r from public.natori_refund_ledger
     where account_scope=p_account and livemode=p_live and refund_id=p_refund_id and owner_id=p_owner_id;
@@ -163,16 +163,16 @@ begin
   end if;
   -- One owner notification per refund and purpose, only for an owner-verified project.
   if p.id is not null and (r.claimed_project_id is null or r.claimed_project_id=p.id) then
-    purpose:=case when reason is not null or r.provider_status in ('failed','canceled') then 'refund_review_artist'
+    v_purpose:=case when reason is not null or r.provider_status in ('failed','canceled') then 'refund_review_artist'
       when r.provider_status='succeeded' then 'refund_confirmed_artist' else null end;
-    if purpose is not null then
+    if v_purpose is not null then
       insert into public.natori_notification_jobs(notification_key,project_id,quote_id,purpose,snapshot)
-        values('refund/'||p_account||'/'||p_live::text||'/'||p_refund_id||'/'||purpose,p.id,t.quote_id,purpose,
+        values('refund/'||p_account||'/'||p_live::text||'/'||p_refund_id||'/'||v_purpose,p.id,t.quote_id,v_purpose,
           jsonb_strip_nulls(jsonb_build_object('title',p.title,'clientName',p.client_name,'amount',r.amount,
             'currency',r.currency,'refundId',r.refund_id,'providerStatus',r.provider_status,'reviewReason',coalesce(reason,r.provider_status))))
         on conflict(notification_key,attempt_no) do nothing returning id into notice;
       if notice is null then select j.id into notice from public.natori_notification_jobs j
-        where j.notification_key='refund/'||p_account||'/'||p_live::text||'/'||p_refund_id||'/'||purpose order by j.attempt_no desc limit 1; end if;
+        where j.notification_key='refund/'||p_account||'/'||p_live::text||'/'||p_refund_id||'/'||v_purpose order by j.attempt_no desc limit 1; end if;
       ids:=array_append(ids,notice);
     end if;
   end if;
@@ -277,12 +277,12 @@ begin
             or t0.stripe_charge_id in (i->>'chargeId',l.charge_id))))
     order by p0.id for update;
   -- Transaction rows follow projects and precede refund rows, including charge-only events.
-  perform t.id from public.natori_payment_transactions t
-    where t.stripe_account_scope=p_account and t.stripe_livemode=p_live and exists
+  perform t0.id from public.natori_payment_transactions t0
+    where t0.stripe_account_scope=p_account and t0.stripe_livemode=p_live and exists
       (select 1 from jsonb_array_elements(e.request->'refunds') i left join public.natori_refund_ledger l
         on l.owner_id=p_owner_id and l.account_scope=p_account and l.livemode=p_live and l.refund_id=i->>'refundId'
-       where t.stripe_payment_intent_id in (i->>'paymentIntentId',l.payment_intent_id)
-         or t.stripe_charge_id in (i->>'chargeId',l.charge_id)) order by t.id for update;
+       where t0.stripe_payment_intent_id in (i->>'paymentIntentId',l.payment_intent_id)
+         or t0.stripe_charge_id in (i->>'chargeId',l.charge_id)) order by t0.id for update;
   select * into e from public.natori_stripe_event_inbox where account_scope=p_account and livemode=p_live and event_id=p_event_id for update;
   if e.owner_id is distinct from p_owner_id then return query select 'stale'::text,ids; return; end if;
   if e.status in ('completed','needs_review') then return query select e.status,e.notification_ids; return; end if;
@@ -296,7 +296,7 @@ begin
     v_refund_id:=item->>'refundId';
     if v_refund_id is null then reason:='refund_id_missing'; continue; end if;
     pid:=null;
-    select p.id into pid from public.natori_projects p where p.id=(item->>'projectId')::uuid and p.user_id=p_owner_id;
+    select p0.id into pid from public.natori_projects p0 where p0.id=(item->>'projectId')::uuid and p0.user_id=p_owner_id;
     new_status:=case when item->>'providerStatus' in ('pending','requires_action','succeeded','failed','canceled') then item->>'providerStatus' else 'unknown' end;
     insert into public.natori_refund_ledger(owner_id,account_scope,livemode,refund_id,project_id,claimed_project_id,
       payment_intent_id,charge_id,amount,currency,provider_status,confirmed_at,first_event_id,latest_event_id,provider_event_created)

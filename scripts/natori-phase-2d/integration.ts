@@ -29,6 +29,9 @@ async function main() {
   const keys = JSON.parse(readFileSync('/runtime/credentials.json', 'utf8')) as { service: string; anon: string };
   const db = createClient<Database>(origin, keys.service, { auth: { persistSession: false } });
   const direct = globalThis.fetch; let blockCount = 0, loseComplete = false, refundSummaryCalls = 0, attentionV1Calls = 0, attentionV2Calls = 0;
+  const diagnosticRpcs = new Set(['natori_stripe_event_claim_v1', 'natori_stripe_event_complete_v2', 'natori_refund_reconcile_v1']);
+  const diagnosticCodes = new Set(['42702', '23503', '23505', '23514', '42501', '40001', '40P01', '57014', 'P0001', '42P01', '42883']);
+  const rpcFailureCounts = new Map<string, number>();
   globalThis.fetch = async (input, init) => {
     const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
     if (url.origin !== origin) { blockCount++; throw new Error('DESTINATION_REJECTED'); }
@@ -36,6 +39,18 @@ async function main() {
     if (url.pathname.endsWith('/rpc/natori_payment_attention_v1')) attentionV1Calls++;
     if (url.pathname.endsWith('/rpc/natori_payment_attention_v2')) attentionV2Calls++;
     const response = await direct(input, init);
+    // Diagnostic codes only: never print error text, payloads, identities or credentials.
+    const diagnosticRpc = url.pathname.split('/').at(-1);
+    if (!response.ok && diagnosticRpc && diagnosticRpcs.has(diagnosticRpc)) {
+      let diagnosticCode = 'UNCLASSIFIED';
+      try {
+        const body: unknown = await response.clone().json();
+        const candidate = body !== null && typeof body === 'object' && 'code' in body ? body.code : null;
+        if (typeof candidate === 'string' && diagnosticCodes.has(candidate)) diagnosticCode = candidate;
+      } catch { /* Retain the original response and bounded generic diagnostic. */ }
+      const diagnosticKey = diagnosticRpc + '/' + diagnosticCode;
+      rpcFailureCounts.set(diagnosticKey, (rpcFailureCounts.get(diagnosticKey) ?? 0) + 1);
+    }
     if (loseComplete && url.pathname.endsWith('/rpc/natori_stripe_event_complete_v2')) {
       loseComplete = false; check(response.ok, 'COMMITTED_BEFORE_LOSS'); return new Response('{}', { status: 503 });
     }
@@ -570,7 +585,7 @@ async function main() {
     });
 
     writeFileSync('/results/phase2d-integration.json', JSON.stringify({ tests, passed: tests.filter(test => test.status === 'passed').length,
-      failed: tests.filter(test => test.status === 'failed').length, skipped: 0, provider: 'synthetic Stripe SDK-signed payloads only; actual Stripe test-mode delivery pending', blockedDestinations: blockCount }, null, 2));
+      failed: tests.filter(test => test.status === 'failed').length, skipped: 0, provider: 'synthetic Stripe SDK-signed payloads only; actual Stripe test-mode delivery pending', blockedDestinations: blockCount, rpcFailureCodes: Object.fromEntries([...rpcFailureCounts].sort(([a], [b]) => a.localeCompare(b))) }, null, 2));
     check(tests.length === 41 && tests.every(test => test.status === 'passed'), 'PHASE_2D_REQUIRED_TESTS_FAILED');
     console.log('PHASE 2D 41 passed / 0 failed / 0 skipped; actual Stripe pending');
   } finally { globalThis.fetch = direct; }
