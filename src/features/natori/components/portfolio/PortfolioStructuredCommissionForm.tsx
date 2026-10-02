@@ -38,7 +38,6 @@ import {
 import { natoriRequestSubmissionV1Schema } from "@/features/natori/lib/requestSchema";
 import {
   portfolioErrorTarget,
-  portfolioRetryAfterSeconds,
   portfolioValidationMessage,
 } from "@/features/natori/lib/portfolioFormFeedback";
 import {
@@ -62,7 +61,9 @@ import {
   type NatoriUsageTypeV1,
 } from "@/features/natori/types/request";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
-import { CSRF_HEADERS } from "@/lib/auth/csrf";
+import { useIntakeOperation } from "./useIntakeOperation";
+import IntakeRecoveryPanel from "./IntakeRecoveryPanel";
+import { restoreStructuredIntakeFields } from "../../lib/restoreIntakeForm";
 import PortfolioLegalNotice from "./PortfolioLegalNotice";
 import PortfolioFormStyles, { portfolioFormColors as c } from "./PortfolioFormStyles";
 
@@ -73,7 +74,7 @@ const optionalBadgeClass = "ml-2 rounded-full px-2 py-0.5 text-[11px] font-bold"
 type RefImageEntry = { file: File; previewUrl: string };
 type ServerFieldError = { path: string; message: string };
 
-export type StructuredSubmitOutcome = { autoReplied: boolean };
+export type StructuredSubmitOutcome = { autoReplied: boolean; receipt?: string; clientEmail?: string };
 
 function OptionalBadge() {
   return (
@@ -198,6 +199,15 @@ export default function PortfolioStructuredCommissionForm({
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [sending, setSending] = useState(false);
+  const intake = useIntakeOperation(({ receipt, clientEmail }) => {
+    releasePreviews();
+    trackNatoriPageEvent("portfolio_form_submit", "completed");
+    onSuccess({ autoReplied: false, receipt, clientEmail });
+  }, !demoMode, fields => {
+    const restored = restoreStructuredIntakeFields(fields, content);
+    setClientName(restored.clientName); setClientEmail(restored.clientEmail); setState(restored.state);
+    setStep(restored.state.inquiryMode === "quote" ? 2 : 1);
+  });
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [serverFieldErrors, setServerFieldErrors] = useState<ServerFieldError[]>([]);
   const [refImages, setRefImages] = useState<RefImageEntry[]>([]);
@@ -490,7 +500,7 @@ export default function PortfolioStructuredCommissionForm({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     // 二重 submit 防止。state 更新前の連打も ref で塞ぐ。
-    if (sendingRef.current || retrySeconds > 0) return;
+    if (sendingRef.current || retrySeconds > 0 || intake.frozen || !commissionOpen) return;
     const form = event.currentTarget;
     const payload = new FormData(form);
     const parsed = natoriRequestSubmissionV1Schema.safeParse({
@@ -530,54 +540,7 @@ export default function PortfolioStructuredCommissionForm({
     for (const entry of refImages) payload.append("refImages", entry.file);
 
     try {
-      const res = await fetch("/api/natori/portfolio/contact", {
-        method: "POST",
-        headers: { ...CSRF_HEADERS },
-        body: payload,
-      });
-      const response = (await res.json().catch(() => null)) as
-        | { autoReplied?: boolean; fields?: ServerFieldError[]; error?: string }
-        | null;
-
-      if (!res.ok) {
-        if (res.status === 429) {
-          const seconds = portfolioRetryAfterSeconds(res.headers?.get("Retry-After") ?? null);
-          retryUntilRef.current = Date.now() + (seconds ?? 0) * 1000;
-          setRetrySeconds(seconds ?? 0);
-          setSubmitError(seconds !== null && seconds > 0
-            ? `送信回数の上限に達しました。約${Math.ceil(seconds / 60)}分後に再送できます。入力内容は保持しています。`
-            : "送信回数の上限に達しました。時間をおいて再度お試しください。入力内容は保持しています。");
-          setFocusTarget({ id: "pf-submit-errors" });
-          return;
-        }
-        if (Array.isArray(response?.fields) && response.fields.length > 0) {
-          // API の参照URLの添字は空行を除いた送信配列に対応する。
-          const rowIndices = state.referenceLinks.flatMap((row, index) => row.url.trim() ? [index] : []);
-          showFieldErrors(response.fields.map((error) => ({
-            ...error,
-            path: error.path.replace(/^referenceLinks\.(\d+)/, (_, index: string) =>
-              `referenceLinks.${rowIndices[Number(index)] ?? index}`),
-          })));
-          return;
-        }
-        setSubmitError(
-          response?.error === "invalid_request"
-            ? "入力内容をご確認ください。"
-            : "送信に失敗しました。時間をおいて再度お試しいただくか、SNSのDMからご連絡ください。"
-        );
-        setFocusTarget({ id: "pf-submit-errors" });
-        return;
-      }
-
-      trackNatoriPageEvent("portfolio_form_submit", requestData.requestType);
-      releasePreviews();
-      onSuccess({ autoReplied: response?.autoReplied === true });
-    } catch (err) {
-      console.error("[portfolio-form] submit failed", err);
-      setSubmitError(
-        "送信に失敗しました。時間をおいて再度お試しいただくか、SNSのDMからご連絡ください。"
-      );
-      setFocusTarget({ id: "pf-submit-errors" });
+      await intake.submit(payload, refImages.map(entry => entry.file));
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -1517,6 +1480,7 @@ export default function PortfolioStructuredCommissionForm({
       className="pf-commission-form space-y-4 rounded-2xl p-5 md:p-8"
       style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
     >
+      <fieldset className="contents" disabled={intake.frozen || sending}>
       <PortfolioFormStyles />
       {/* honeypot: 人間には見えない。ボット対策 */}
       <input
@@ -1616,6 +1580,8 @@ export default function PortfolioStructuredCommissionForm({
       ) : <button type="button" onClick={nextStep} className="pf-cute-focus w-full min-h-[48px] rounded-full border-2 px-4 py-3 font-black" style={{ background: c.action, borderColor: c.actionDisplay, color: c.onAction }}>
         {step === 0 && state.inquiryMode === "quote" ? "条件・連絡先へ" : "内容を確認する"}
       </button>}
+      </fieldset>
+      <IntakeRecoveryPanel intake={intake} />
     </form>
   );
 }

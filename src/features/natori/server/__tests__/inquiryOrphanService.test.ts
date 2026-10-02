@@ -4,15 +4,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { mockList, mockRemove, mockFrom, mockFindLinked } = vi.hoisted(() => ({
+const { mockList, mockRemove, mockFrom, mockFindLinked, mockOperations, mockCleanupScope } = vi.hoisted(() => ({
   mockList: vi.fn(),
   mockRemove: vi.fn(),
   mockFrom: vi.fn(),
   mockFindLinked: vi.fn(),
+  mockOperations: vi.fn(),
+  mockCleanupScope: vi.fn(),
 }));
 
 vi.mock("@/lib/supabaseAdmin", () => ({
   supabaseAdmin: () => ({
+    from: () => ({ select: () => ({ in: mockOperations }) }),
+    rpc: (...args: unknown[]) => mockCleanupScope(...args),
     storage: { from: (...args: unknown[]) => mockFrom(...args) },
   }),
 }));
@@ -68,6 +72,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockRemove.mockResolvedValue({ error: null });
   mockFindLinked.mockResolvedValue({ kind: "ok", linkedPaths: [] });
+  mockOperations.mockResolvedValue({ data: [], error: null });
+  mockCleanupScope.mockResolvedValue({ data: [], error: null });
 });
 
 describe("scanNatoriInquiryReferenceOrphans", () => {
@@ -301,4 +307,60 @@ describe("prefix pagination", () => {
       nextOffset: 3,
     });
   });
+});
+
+describe("intake operation orphan fence",()=>{
+ it("preserves processing prefixes while existing legacy orphan handling remains unchanged",async()=>{
+  stubStorage({"": [{name:PROJECT_A},{name:PROJECT_B}],[PROJECT_A]:[{name:FILE_A,created_at:OLD}],[PROJECT_B]:[{name:FILE_B,created_at:OLD}]});
+  mockOperations.mockResolvedValue({data:[{project_id:PROJECT_A,status:"processing"}],error:null});
+  const result=await scanNatoriInquiryReferenceOrphans({dryRun:false});expect(result).toMatchObject({deletedCount:1});
+  expect(mockRemove).toHaveBeenCalledWith([`${PROJECT_B}/${FILE_B}`]);
+ });
+ it("refuses broad cleanup when operation ledger lookup fails",async()=>{
+  stubStorage({"": [{name:PROJECT_A}],[PROJECT_A]:[{name:FILE_A,created_at:OLD}]});mockOperations.mockResolvedValue({data:null,error:{code:"unknown"}});
+  expect(await scanNatoriInquiryReferenceOrphans({dryRun:false})).toEqual({kind:"unavailable"});expect(mockRemove).not.toHaveBeenCalled();
+ });
+});
+
+describe("durable failed intake cleanup retry",()=>{
+ const failed={owner_id:"4e6b1562-4d57-4c11-a4cb-38164cb6a5c3",operation_id:"2a51e8b4-7944-4e4f-8c81-3bd18168d037",request_hash:"a".repeat(64),project_id:PROJECT_A,status:"failed"};
+ const path=`${PROJECT_A}/${FILE_A}`;
+ function failedListing(){stubStorage({"": [{name:PROJECT_A}],[PROJECT_A]:[{name:FILE_A,created_at:OLD},{name:FILE_B,created_at:OLD}]});mockOperations.mockResolvedValue({data:[failed],error:null});mockCleanupScope.mockResolvedValue({data:[path],error:null});}
+ it("retries an exact failed path after Storage removal failure without releasing the tombstone",async()=>{
+  failedListing();mockRemove.mockResolvedValueOnce({error:{code:"retry"}}).mockResolvedValueOnce({error:null});
+  expect(await scanNatoriInquiryReferenceOrphans({dryRun:false})).toEqual({kind:"unavailable"});
+  expect(await scanNatoriInquiryReferenceOrphans({dryRun:false})).toMatchObject({deletedCount:1});
+  expect(mockRemove.mock.calls.map(call=>call[0])).toEqual([[path],[path]]);
+  expect(mockCleanupScope).toHaveBeenCalledTimes(2);
+  expect(mockCleanupScope).toHaveBeenLastCalledWith("natori_intake_cleanup_scope_v1",{p_owner_id:failed.owner_id,p_operation_id:failed.operation_id,p_request_hash:failed.request_hash});
+ });
+ it("catches a failed object's late arrival on the next eligible scan",async()=>{
+  stubStorage({"": [{name:PROJECT_A}],[PROJECT_A]:[]});mockOperations.mockResolvedValue({data:[failed],error:null});mockCleanupScope.mockResolvedValue({data:[path],error:null});
+  expect(await scanNatoriInquiryReferenceOrphans({dryRun:false})).toMatchObject({deletedCount:0});
+  stubStorage({"": [{name:PROJECT_A}],[PROJECT_A]:[{name:FILE_A,created_at:OLD}]});
+  expect(await scanNatoriInquiryReferenceOrphans({dryRun:false})).toMatchObject({deletedCount:1});expect(mockRemove).toHaveBeenCalledWith([path]);
+ });
+ it("preserves unknown and completed operation prefixes irrespective of age",async()=>{
+  for(const status of ["processing","needs_review","completed"]){failedListing();mockOperations.mockResolvedValue({data:[{...failed,status}],error:null});
+   expect(await scanNatoriInquiryReferenceOrphans({dryRun:false})).toMatchObject({deletedCount:0});}
+  expect(mockCleanupScope).not.toHaveBeenCalled();expect(mockRemove).not.toHaveBeenCalled();
+ });
+ it("never removes a committed reference or an unlisted path from the failed prefix",async()=>{
+  failedListing();mockFindLinked.mockResolvedValue({kind:"ok",linkedPaths:[path]});
+  expect(await scanNatoriInquiryReferenceOrphans({dryRun:false})).toMatchObject({deletedCount:0});expect(mockRemove).not.toHaveBeenCalled();
+ });
+ it("fails closed if exact cleanup scope cannot be checked",async()=>{
+  failedListing();mockCleanupScope.mockResolvedValue({data:null,error:{code:"unknown"}});
+  expect(await scanNatoriInquiryReferenceOrphans({dryRun:false})).toEqual({kind:"unavailable"});expect(mockRemove).not.toHaveBeenCalled();
+ });
+ it("fails closed on a cleanup path outside that operation project",async()=>{
+  failedListing();mockCleanupScope.mockResolvedValue({data:[`${PROJECT_B}/${FILE_A}`],error:null});
+  expect(await scanNatoriInquiryReferenceOrphans({dryRun:false})).toEqual({kind:"unavailable"});expect(mockRemove).not.toHaveBeenCalled();
+ });
+ it("honors dry-run, age and deletion bounds for failed operation paths",async()=>{
+  failedListing();expect(await scanNatoriInquiryReferenceOrphans({dryRun:true,maxDeletions:1})).toMatchObject({candidateCount:1,deletedCount:0,truncated:true});expect(mockRemove).not.toHaveBeenCalled();
+  expect(await scanNatoriInquiryReferenceOrphans({dryRun:false,maxDeletions:1})).toMatchObject({deletedCount:1,truncated:true});expect(mockRemove).toHaveBeenCalledWith([path]);
+  mockRemove.mockClear();stubStorage({"": [{name:PROJECT_A}],[PROJECT_A]:[{name:FILE_A,created_at:RECENT}]});
+  expect(await scanNatoriInquiryReferenceOrphans({dryRun:false})).toMatchObject({deletedCount:0});expect(mockRemove).not.toHaveBeenCalled();
+ });
 });

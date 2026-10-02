@@ -35,9 +35,10 @@
     "supabase/migrations/20261001133920_natori_quote_issue_integrity.sql",
     "supabase/migrations/20261001150445_natori_payment_event_inbox.sql",
     "supabase/migrations/20261001161401_natori_payment_link_generations.sql",
-    "supabase/migrations/20261001221938_natori_refund_ledger.sql"
+    "supabase/migrations/20261001221938_natori_refund_ledger.sql",
+    "supabase/migrations/20261001222233_natori_intake_operations.sql"
   ],
-  "activeMigrationCount": 27,
+  "activeMigrationCount": 28,
   "legacyMigrationCount": 55,
   "remoteOnlyEvidenceCount": 3,
   "sourceProjectRef": "lvnfspyainrxtztjytbo",
@@ -82,7 +83,8 @@
     "20261001133920_natori_quote_issue_integrity.sql",
     "20261001150445_natori_payment_event_inbox.sql",
     "20261001161401_natori_payment_link_generations.sql",
-    "20261001221938_natori_refund_ledger.sql"
+    "20261001221938_natori_refund_ledger.sql",
+    "20261001222233_natori_intake_operations.sql"
   ],
   "archiveVerification": {
     "status": "verified",
@@ -196,6 +198,7 @@
     "sha256:supabase/migrations/20261001150445_natori_payment_event_inbox.sql": "a04b528d4c5da09216b78ba23f8b089a8ac425cd268c27ed92c7da49817474d5",
     "sha256:supabase/migrations/20261001161401_natori_payment_link_generations.sql": "f27393653666c8d4b590f49b951ef5d6bca71926c76e7b812e389b0c7fbe504f",
     "sha256:supabase/migrations/20261001221938_natori_refund_ledger.sql": "a3e43179e1cc50d62c1e781d1b42a5502b325ae061268a1a48de78d3632f7579",
+    "sha256:supabase/migrations/20261001222233_natori_intake_operations.sql": "b933138814adbd86f8e9fb9658a76e3de3dab808d07f5dfa96432c6fa6189d14",
     "sha256:supabase/migrations/20260927073530_natori_acceptance_notifications.sql": "c519b9eae8bf2867fdd6c00127339f22bff692c0f2e381d0a4ec421ae2e36c7b",
     "sha256:supabase/migrations/20260927102757_natori_consultation_overview.sql": "b2884531c639307d645547c454dd5c35df0bfa5cd0ff7393fdd8273dd5cca290",
     "sha256:supabase/migrations/20260923122157_natori_estimate_drafts_and_issuance.sql": "62f7be6ac9c9f899f763b69b2bf8ecbbc4404b44839ee0ba6b0d401b8d0a29e0",

@@ -214,7 +214,34 @@ export async function scanNatoriInquiryReferenceOrphans(
   const linked = await findLinkedNatoriIntakeReferencePaths(candidates);
   if (linked.kind === "unknown") return { kind: "unavailable" };
   const linkedPaths = new Set(linked.linkedPaths);
-  const orphans = candidates.filter((path) => !linkedPaths.has(path));
+  // Every operation prefix stays protected from broad legacy orphan deletion.
+  // Definitive failed operations are retry-eligible only through their exact DB fence.
+  // This also catches a late private upload or a previous failed Storage removal.
+  const prefixes = [...new Set(candidates.map(path => path.split("/")[0]))];
+  const protectedOperations = await admin.from("natori_intake_operations")
+    .select("owner_id,operation_id,request_hash,project_id,status").in("project_id", prefixes);
+  if (protectedOperations.error || !protectedOperations.data) return { kind: "unavailable" };
+  const protectedPrefixes = new Set(protectedOperations.data.map(row => row.project_id));
+  const candidatePaths = new Set(candidates);
+  const failedPaths = new Set<string>();
+  for (const operation of protectedOperations.data) {
+    if (operation.status !== "failed") continue;
+    const scope = await admin.rpc("natori_intake_cleanup_scope_v1", {
+      p_owner_id: operation.owner_id, p_operation_id: operation.operation_id,
+      p_request_hash: operation.request_hash,
+    });
+    if (scope.error || !Array.isArray(scope.data)) return { kind: "unavailable" };
+    for (const path of scope.data) {
+      if (typeof path !== "string" || path.split("/").length !== 2
+        || path.split("/")[0] !== operation.project_id || !OBJECT_NAME_PATTERN.test(path.split("/")[1])) {
+        return { kind: "unavailable" };
+      }
+      // Keep the existing age/deletion bound and a second independent linked-reference fence.
+      if (candidatePaths.has(path) && !linkedPaths.has(path)) failedPaths.add(path);
+    }
+  }
+  const orphans = candidates.filter(path => !linkedPaths.has(path)
+    && (!protectedPrefixes.has(path.split("/")[0]) || failedPaths.has(path)));
 
   if (options.dryRun || orphans.length === 0) return summarize(orphans.length, 0);
 

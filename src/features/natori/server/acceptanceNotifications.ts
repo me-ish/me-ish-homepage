@@ -32,8 +32,23 @@ export function buildAcceptanceNotificationPayload(job: Pick<NatoriNotificationR
     if (!job.payload) throw new Error("mail_configuration");
     return payloadSchema.parse(openDeliveryNotification(job.payload));
   }
-  // A retry never renders from current project values or current mail settings.
+  // A retry always uses the payload frozen by Phase N, including intake mail settings.
   if (job.payload) return payloadSchema.parse(job.payload);
+  if (job.purpose === "intake_artist" || job.purpose === "intake_client") {
+    const snapshot = z.object({ title: z.string(), clientName: z.string(), clientEmail: z.email(), receipt: z.uuid() }).parse(job.snapshot);
+    const recipient = process.env.NATORI_PORTFOLIO_CONTACT_TO?.trim();
+    const from = process.env.NATORI_ORDER_MAIL_FROM?.trim();
+    if (!recipient || !from) throw new Error("mail_configuration");
+    const client = job.purpose === "intake_client";
+    return payloadSchema.parse({ from, to: [client ? snapshot.clientEmail : recipient], reply_to: client ? recipient : snapshot.clientEmail,
+      subject: client ? "【受付完了】ご依頼を受け付けました" : `【ご依頼受付】${snapshot.clientName} 様 / ${snapshot.title}`,
+      text: [client ? `${snapshot.clientName} 様、ご依頼を受け付けました。` : "新しいご依頼を案件管理へ保存しました。",
+        `受付確認用: ${snapshot.receipt}`, `案件: ${snapshot.title}`, "",
+        client ? "内容を確認のうえ、2〜3日以内にご連絡いたします。確認メールが届かなくても再応募は不要です。" : "原回答と参考資料は案件管理でご確認ください。",
+        client ? `2〜3日を過ぎても連絡がない場合は ${recipient} へお問い合わせください。` : "https://www.me-ish.art/natori/projects",
+        client ? "このメールに返信してご連絡いただくこともできます。" : ""].join("\n"),
+      headers: { "X-Meish-Template": `natori-${job.purpose}` } });
+  }
   const snapshot = z.object({
     title: z.string(), clientName: z.string(), refundId: z.string().optional(), providerStatus: z.string().optional(), currency: z.string().optional(), reviewReason: z.string().optional(), sessionId: z.string().optional(), amount: z.number().optional(), clientEmail: z.string().nullable().optional(),
   }).parse(job.snapshot);

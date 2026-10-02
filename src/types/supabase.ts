@@ -56,6 +56,11 @@ export type NatoriDeliveryOperationRow = {
   notification_id: string; created_at: string;
 }
 
+export type NatoriIntakeOperationRpcRow = {
+  result: string; replay_result: Json | null; project_id: string | null;
+  reference_paths: Json | null; notification_ids: string[];
+}
+
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -64,6 +69,25 @@ export type Database = {
   }
   public: {
     Tables: {
+      natori_intake_operations: {
+        Row: {
+          owner_id: string; operation_id: string; request_hash: string; project_id: string;
+          manifest: Json; reference_paths: Json; status: string; claim_token: string | null;
+          lease_expires_at: string | null; replay_result: Json | null; notification_ids: string[];
+          created_at: string; updated_at: string;
+        }
+        Insert: {
+          owner_id: string; operation_id: string; request_hash: string; project_id?: string;
+          manifest: Json; reference_paths: Json; status?: string; claim_token?: string | null;
+          lease_expires_at?: string | null; replay_result?: Json | null; notification_ids?: string[];
+          created_at?: string; updated_at?: string;
+        }
+        Update: {
+          status?: string; claim_token?: string | null; lease_expires_at?: string | null;
+          replay_result?: Json | null; notification_ids?: string[]; updated_at?: string;
+        }
+        Relationships: []
+      }
       natori_delivery_releases: {
         Row: NatoriDeliveryReleaseRow
         Insert: Pick<NatoriDeliveryReleaseRow, "project_id" | "manifest" | "snapshot" | "expires_at"> & Partial<NatoriDeliveryReleaseRow>
@@ -2588,6 +2612,15 @@ export type Database = {
       }
     }
     Functions: {
+      natori_intake_lookup_v1: { Args: { p_owner_id: string; p_operation_id: string; p_request_hash: string }; Returns: NatoriIntakeOperationRpcRow[] }
+      natori_intake_settle_v1: { Args: { p_owner_id: string; p_operation_id: string; p_request_hash: string }; Returns: NatoriIntakeOperationRpcRow[] }
+      natori_intake_begin_v1: { Args: { p_owner_id: string; p_operation_id: string; p_request_hash: string; p_manifest: Json; p_file_ids: Json; p_claim_token: string; p_mass_production: boolean }; Returns: NatoriIntakeOperationRpcRow[] }
+      natori_intake_touch_v1: { Args: { p_owner_id: string; p_operation_id: string; p_request_hash: string; p_claim_token: string }; Returns: boolean }
+      natori_intake_finish_v1: { Args: { p_owner_id: string; p_operation_id: string; p_request_hash: string; p_claim_token: string; p_client_name: string; p_client_email: string; p_request_data: Json; p_reference_links: Json; p_mass_production: boolean }; Returns: NatoriIntakeOperationRpcRow[] }
+      natori_intake_fail_v1: { Args: { p_owner_id: string; p_operation_id: string; p_request_hash: string; p_claim_token: string }; Returns: boolean }
+      natori_intake_review_v1: { Args: { p_owner_id: string; p_operation_id: string; p_request_hash: string; p_claim_token: string }; Returns: boolean }
+      natori_intake_cleanup_scope_v1: { Args: { p_owner_id: string; p_operation_id: string; p_request_hash: string }; Returns: Json }
+      natori_intake_admitted_v1: { Args: { p_mass_production: boolean }; Returns: boolean }
       natori_quote_payment_state_v1: { Args: { p_owner_id: string; p_project_id: string }; Returns: Json }
       natori_payment_attention_v1: { Args: { p_owner_id: string }; Returns: Json }
       natori_payment_attention_v2: { Args: { p_owner_id: string }; Returns: Json }
