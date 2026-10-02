@@ -25,6 +25,8 @@ export async function seedPhase7(origin, keys) {
       paid_at: now, payment_confirmed_at: now, due_date: '2026-11-15', next_action: 'Synthetic rough: preserve original conditions' },
   ];
   check(!(await db.from('natori_projects').insert(projects)).error, 'PROJECT_FIXTURE');
+  check(!(await db.from('natori_estimate_drafts').insert({ project_id: estimateId, user_id: owner, revision: 1, agreed_terms: agreedTerms,
+    items, mail_draft: { subject: 'Synthetic historical quote', body: 'Synthetic saved mail; not sent', templateBody: 'Synthetic saved mail; not sent' } })).error, 'DRAFT_FIXTURE');
   for (const [projectId, token] of [[estimateId, randomBytes(24).toString('base64url')], [quoteProjectId, quoteToken]]) {
     const quoteId = randomUUID();
     check(!(await db.from('natori_quotes').insert({ id: quoteId, project_id: projectId, user_id: owner, version: 1,
@@ -40,8 +42,6 @@ export async function seedPhase7(origin, keys) {
         price_id: 'price_phase7fixture', link_id: linkId, link_url: 'https://buy.stripe.com/test_phase7synthetic', deadline, deadline_revision: 2 })).error, 'LINK_FIXTURE');
     }
   }
-  check(!(await db.from('natori_estimate_drafts').insert({ project_id: estimateId, user_id: owner, revision: 1, agreed_terms: agreedTerms,
-    items, mail_draft: { subject: 'Synthetic historical quote', body: 'Synthetic saved mail; not sent', templateBody: 'Synthetic saved mail; not sent' } })).error, 'DRAFT_FIXTURE');
   check(!(await db.from('natori_project_tasks').insert([{ project_id: managementId, task_key: 'phase7-rough-task', label: 'Synthetic rough task',
     stage: 'rough', done: false, estimated_hours: 2, sort_order: 0 }])).error, 'TASK_FIXTURE');
   return { owner, email, password, estimateId, quoteProjectId, managementId, quoteToken, deadline };

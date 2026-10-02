@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { staffConsultationHref } from "@/features/natori/lib/consultationOverview";
 import ConsultationStatus from "./ConsultationStatus";
 import { useState } from "react";
@@ -371,10 +372,8 @@ function ProjectAdvanceButton({
       onClick={() => handler(project)}
       disabled={busy}
       className={cn(
-        "mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full px-4 text-xs font-bold text-white shadow-sm transition disabled:opacity-60 sm:w-auto",
-        isConfirmPayment
-          ? "bg-orange-500 hover:bg-orange-600"
-          : "bg-pink-500 hover:bg-pink-600"
+        "mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full px-4 text-xs font-bold shadow-sm transition sm:w-auto",
+        natoriPrimaryActionClassName
       )}
     >
       {isConfirmPayment ? (

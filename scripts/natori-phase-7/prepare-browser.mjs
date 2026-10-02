@@ -196,8 +196,8 @@ import { readPhase7Content, readPhase7OwnerProjectId } from '../fixtureReads';
 export const dynamic = 'force-dynamic';
 export default async function Page() {
   const projectId = await readPhase7OwnerProjectId('${surface}');
-  const content = await readPhase7Content();
-  return <main aria-label="Phase 7 ${surface}" data-phase7-surface="${surface}" className="min-h-screen bg-gray-50 px-4 py-6"><div className="mx-auto max-w-3xl"><OwnerScreen surface="${surface}" projectId={projectId} portfolioContent={content} /></div></main>;
+  const content = await readPhase7Content();${surface === 'management' ? "\n  const paymentProjectId = await readPhase7OwnerProjectId('estimate');" : ''}
+  return <main aria-label="Phase 7 ${surface}" data-phase7-surface="${surface}" className="min-h-screen bg-gray-50 px-4 py-6"><div className="mx-auto max-w-3xl"><OwnerScreen surface="${surface}" projectId={projectId} portfolioContent={content} />${surface === 'management' ? '<div className="mt-6"><OwnerScreen surface="management" projectId={paymentProjectId} portfolioContent={content} /></div>' : ''}</div></main>;
 }
 `);
 }

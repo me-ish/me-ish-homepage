@@ -1,10 +1,10 @@
 # Natori Phase 7 Runbook（適用前の手順案）
 
-この文書は原本Plan Phase 7・UX U20–23に基づく再評価台帳。過去のHEAD `a8b5efeda97b8a3e0af503fefe60b34d06ed9106` / CI37032465563では、attempt1が既存Phase N browserの8成功・1失敗で終了し、attempt2は新6B bootstrap通過後の8ケース中7成功・1失敗（`AUTOPLAY_NOT_RUNNING`）だった。修正前の照合済みHEAD `563cddf018cb335782aa915fbb6d7cc00f9b85ae` / CI37039528065 / artifact11242356951は、21 reports・374件実行で373成功・1失敗（`MANUAL_RESUME_FAILED`）、必須原本PNG12枚を確認済みだが6B未受入。失敗照合receipt SHA `21e709881dc8b53f27a66a564d65c0c1a7c20a360ddd7d932f8605900b49b4ec` を保持する。再開後の時刻進行を分割したbrowser SHA `4f5dfb49045fad5496f34e387acfb0e4bf3c4b16192f90797a09d2de14caf394` は当時の独立レビュー済み修正sourceであり、sourceレビューだけでは成功CIや6B受入を意味しなかった。実受入6BのHEAD `dc27b4387ba119cbaa73193d989dcc8cff60c594`、CI `37042404421`、strict受入receipt SHA `75f0e45f81b66c413afd866872b287cb70c9f2a0f9bc1f512a204c2ca6c4279a`、親の受入binding SHA `74de32e8ad874738e177e5ec67f4dc06da10e1e310a69e1a4085971f0f84bd16`を原本と照合した。全374件と必須原本PNG12枚が成功し、親の独立レビューによって6Bは受け入れられた。Phase7 HEAD／CI／artifact／画像の証拠はまだない。成功後は新しい実受入記録を追加する。
+この文書は原本Plan Phase 7・UX U20–23に基づく再評価台帳。過去のHEAD `a8b5efeda97b8a3e0af503fefe60b34d06ed9106` / CI37032465563では、attempt1が既存Phase N browserの8成功・1失敗で終了し、attempt2は新6B bootstrap通過後の8ケース中7成功・1失敗（`AUTOPLAY_NOT_RUNNING`）だった。修正前の照合済みHEAD `563cddf018cb335782aa915fbb6d7cc00f9b85ae` / CI37039528065 / artifact11242356951は、21 reports・374件実行で373成功・1失敗（`MANUAL_RESUME_FAILED`）、必須原本PNG12枚を確認済みだが6B未受入。失敗照合receipt SHA `21e709881dc8b53f27a66a564d65c0c1a7c20a360ddd7d932f8605900b49b4ec` を保持する。再開後の時刻進行を分割したbrowser SHA `4f5dfb49045fad5496f34e387acfb0e4bf3c4b16192f90797a09d2de14caf394` は当時の独立レビュー済み修正sourceであり、sourceレビューだけでは成功CIや6B受入を意味しなかった。実受入6BのHEAD `dc27b4387ba119cbaa73193d989dcc8cff60c594`、CI `37042404421`、strict受入receipt SHA `75f0e45f81b66c413afd866872b287cb70c9f2a0f9bc1f512a204c2ca6c4279a`、親の受入binding SHA `74de32e8ad874738e177e5ec67f4dc06da10e1e310a69e1a4085971f0f84bd16`を原本と照合した。全374件と必須原本PNG12枚が成功し、親の独立レビューによって6Bは受け入れられた。この冒頭は初回 `0706488db6b89b9386f28e96f772dbcb358c6afc` 適用前の計画を記録したものです。当時はPhase7のHEAD／CI／artifact／画像の証拠がありませんでした。現在までの070／252の失敗記録と追加差分は下の追記を参照します。Phase7の実受入と画像確認は未完了で、成功後に新しい実受入記録を追加します。
 
 ## 変更と採否
 
-アプリの採用差分は EstimateJourney の `← 案件管理へ戻る` → `← ダッシュボードへ戻る` の1箇所。href `/natori/dashboard` は維持する。専用workflowを追加し、本書を保存する。対象は次の5パスだけで、採用captionと検証fixture・workflow・手順書に限定する。DB migration・業務API・公開contentの変更を含めない。
+初回070のアプリ採用差分は EstimateJourney の `← 案件管理へ戻る` → `← ダッシュボードへ戻る` の1箇所で、href `/natori/dashboard` を維持し、専用workflowと本書を追加しました。当初の対象は以下の5パスで、この一覧は初回差分の履歴です。252までのPhase N browser追記を含む既存PR6パスに、今回のProjectCardとPhase7 prepare-browser追加を統合したPR全体の対象は8パスです。今回の追加差分自身は末尾に示す5パスで、管理主操作の共有CTA色と隔離検証fixture・手順書に限定します。DB migration・業務API・公開contentの変更を含めません。
 
 - `src/features/natori/components/dashboard/EstimateJourney.tsx`：U21の戻り先caption。
 - `scripts/natori-phase-7/browser.mjs`：タスク展開の実responsive初期状態を待ち、閉じている時だけ開いて既存assertion・画像を維持する。
@@ -17,7 +17,7 @@
 | U20 | 回転・影・テープと作品主役の作家性を維持する。 | 要素別の弱化はDeferred。合成作品だけで好みを決めず、所有者の意図と同一作品の比較を待つ。 |
 | U21 | 戻り先captionを採用。先行Phaseで直した意味・金額・日付の区別を維持する。 | 全域の字体置換は据置。過去snapshot・原回答・送信履歴・合意本文を書き換えない。 |
 | U22 | 分類・作品順・ID・URL・拡大導線を維持。`/natori/works`へ営業・相談CTAを増設しない。 | 分類再編・新参照payloadはDeferred。旧 `/natori/works/[slug]` の既存VGen／メール導線は別目的のため、追加・削除は所有者判断を待つ。 |
-| U23 | 誰／状態→次作業→納期→主操作、全文と重要条件を維持。 | 補助時間の折りたたみ・本文の太字削減はDeferred。実画面と利用者観察で採否・残る影響を記録する。 |
+| U23 | 誰／状態→次作業→主操作→納期という実表示、全文と重要条件を維持。 | 補助時間の折りたたみ・本文の太字削減はDeferred。実画面と利用者観察で採否・残る影響を記録する。 |
 
 希望予算／見積り総額／入金額、希望納期／確定納品日、用途／題材、未定／未確認、制作状態／相談返信待ちは別の事実として保持する。「ナトリの返信待ち」「依頼者の返信待ち」「返信状況を取得できません」を区別し、未知を「やり取りなし」へ置き換えない。
 
@@ -71,3 +71,16 @@ rollbackは採用したcaption・workflow・新runbookの個別revert。ID・URL
 今回の変更は Phase N の隔離ブラウザ fixture とこの追記だけです。画面遷移前に、実際の同一 origin・GET・`/api/natori/admin/notifications?offset=0` の初回 response を監視し、HTTP200、機密項目の不在、同じ synthetic 案件の3件の failed・再試行可能な通知を確認します。初回 response/body の待機は従来の見出し待機と同じ60秒上限で、listener・timer と途中失敗時の promise を処理します。既存の見出し60秒、再試行ボタン3件の既定待機、独立API privacy確認、後続の管理者再試行と全9件のケース名・assertionを維持します。待機時間を増やした修正や product の変更ではありません。
 
 追加の `sharedKeyHomeReadiness` は固定 stage、HTTP status、件数、真偽値だけです。URL、鍵、token、通知ID、顧客本文、DOM、error message、response body は出力しません。元の失敗原因は未確定のまま保存し、新しい exact-head CI の結果を確認するまで Phase7 の受入を宣言しません。実メール・iPhone・Stripe 検証と Deferred の判断は既存の記録を維持します。
+
+
+## Phase7 の下書き作成順・実表示検証・管理主操作のcontrastを修正（受入は未完了）
+
+head `252cf3d166edb1f7723eb7ee015413dd36d4ca61` / CI `37052325824` / artifact `11247591214` は、全先行21report・374件が成功した後、Phase7 の架空データ作成で `DRAFT_FIXTURE` となり、専用 Next と18ケースの実ブラウザは開始していません。元の記録には DB の SQLSTATE・message がないため、実行時に `23514` が記録されたとは扱いません。
+
+source では、架空見積り案件を `awaiting_payment`・承諾日時ありへ更新した後で revision1 の下書きを INSERT していました。既存 Phase2B の BEFORE INSERT／UPDATE guard はこの両条件で拒否します。同じ下書き INSERT を案件作成直後の `inquiry`・未承諾・未入金へ移し、下書き・合意条件・items・保存メール本文の値と、その後の quote／承諾／支払リンク作成・最終承諾済み状態を保持します。guard・migration・業務APIを変更しません。
+
+accepted active quote の実復元後は、EstimateJourney が発行済みの要約と編集不可の表示へ落ち着きます。旧 fixture の一時的な送信前プレビュー・発行済み見出し0件という期待を、実認証による案件別 draft／structured-quote GET、保存された合意条件・明細・合計12,000円・メール本文の全値照合、revision1／editable:false、実復元version1と発行済み・編集不可の表示に置き換えます。この画面で合意全文を描画したとは主張せず、依頼者向け見積り全文の別ケースと既存重要条件assertionを維持します。戻り先caption／href、送信・新版作成の不在、横はみ出しと同じ画像採取を確認します。
+
+管理カードの納期は実componentと同じ ja-JP の数値月日・曜日・ローカル日付構築で照合します。親の追加指示により、ProjectCard の進行／入金確認主操作の色だけを既存の共有CTAclassへ合わせ、ラベル・icon・handler・disabled意味・寸法と配置を維持します。実表示順は依頼者／状態→次作業→主操作→納期です。通常・hover・keyboard focus の実描画contrast4.5以上を、同じ所有者の実管理readerで読んだ制作中と入金待ちの2架空案件について各3幅で確認し、固定寸法／action／state・RGBA・contrast・真偽値だけの18観測を保存します。クリックによる進行・入金操作を行わず、同じ管理画面の既存画像に両カードを含めます。TASK_FIXTURE の必須項目と正当な rough stage を保持し、coherent task の実読み取りを使用します。
+
+この追加差分は ProjectCard、Phase7 browser、管理fixtureを構築する prepare-browser、seed-fixtures、本書の5パスです。全18ケースのID・33新required PNGのID・45aggregate required PNGを維持します。source／構文／独立レビューに加え、product差分の型・lint・既存全unitをrootで実施し、新しいexact-head隔離CI・原本画像とwhole verifierで検証するまでPhase7を受け入れません。実メール・iPhone・StripeとDeferredの判断は既存の記録を維持します。

@@ -4,9 +4,9 @@ import { createRequire } from 'node:module';
 let createClient, chromium, expect, fixture, execution, contract, evidence, browser, activePage, stage = 'preflight';
 const check = (value, code) => { if (!value) throw new Error(code); };
 const app = 'http://localhost:3000', output = '/results/phase7-screens';
-const results = [], blocked = [], harnessFailures = [];
+const results = [], blocked = [], harnessFailures = [], managementContrast = [];
 const ids = ['gallery-list-and-modal', 'works-showcase-index', 'intake-confirmation-and-edit', 'estimate-return-link-and-review', 'client-quote-full-conditions', 'latest-management-card'];
-const knownCodes = new Set(["ACTUAL_DRAFT_READ", "ACTUAL_SOURCE_CHANGED", "ASSERTION_FAILED", "BROWSER_CLOSE_FAILED", "BROWSER_FAILED", "BROWSER_RESULT_WRITE_FAILED", "BROWSER_SETUP_FAILED", "BUSINESS_FACTS_PRESERVED", "BUSINESS_FACTS_READ", "DECORATION_PRESERVED", "DESTINATION_REJECTED", "EDIT_TARGET_SIZE", "EPHEMERAL_REQUIRED", "FIELD_DISCLOSURE_LOOP", "HISTORICAL_DRAFT_LOCK", "HORIZONTAL_OVERFLOW", "MODAL_CLOSE_TARGET", "NAMED_EDIT_TARGETS", "RESULT_WRITE_FAILED", "SCREEN_EVIDENCE_WRITE_FAILED", "SCREEN_TEMPLATE_REQUIRED", "SHOWCASE_NO_SALES_CTA", "SNAPSHOT_CHANGED", "SURFACE_WRAPPER_REQUIRED", "SYNTHETIC_FIXTURE_REQUIRED", "UNEXPECTED_MUTATION", "UNKNOWN_FAILURE"]);
+const knownCodes = new Set(["ACTUAL_DRAFT_READ", "ACTUAL_SOURCE_CHANGED", "ASSERTION_FAILED", "BROWSER_CLOSE_FAILED", "BROWSER_FAILED", "BROWSER_RESULT_WRITE_FAILED", "BROWSER_SETUP_FAILED", "BUSINESS_FACTS_PRESERVED", "BUSINESS_FACTS_READ", "DECORATION_PRESERVED", "DESTINATION_REJECTED", "EDIT_TARGET_SIZE", "EPHEMERAL_REQUIRED", "FIELD_DISCLOSURE_LOOP", "HISTORICAL_DRAFT_LOCK", "HORIZONTAL_OVERFLOW", "MANAGEMENT_CTA_COLOR_REQUIRED", "MANAGEMENT_CTA_CONTRAST", "MANAGEMENT_CTA_FOCUS", "MODAL_CLOSE_TARGET", "NAMED_EDIT_TARGETS", "RESULT_WRITE_FAILED", "SCREEN_EVIDENCE_WRITE_FAILED", "SCREEN_TEMPLATE_REQUIRED", "SHOWCASE_NO_SALES_CTA", "SNAPSHOT_CHANGED", "SURFACE_WRAPPER_REQUIRED", "SYNTHETIC_FIXTURE_REQUIRED", "UNEXPECTED_MUTATION", "UNKNOWN_FAILURE"]);
 function diagnosticMessage(error) {
   try { const message = error?.message; return typeof message === 'string' ? message : ''; }
   catch { return ''; }
@@ -34,7 +34,7 @@ function persist() {
   }
   try {
     writeFileSync('/results/phase7-browser.json', JSON.stringify({ tests: results, passed: results.filter(result => result.status === 'passed').length,
-      failed: results.filter(result => result.status === 'failed').length, skipped: 0, blocked, harnessFailures,
+      failed: results.filter(result => result.status === 'failed').length, skipped: 0, blocked, harnessFailures, managementContrast,
       engine: 'Playwright Chromium 1.58.2; PC1280/360/390px; not physical iPhone Safari', provider: 'No Stripe provider mutation or financial operation configured',
       human_evaluation: 'Actual captures must still be reviewed; no comprehension or conversion claim' }, null, 2));
   } catch { writeFailed = true; recordHarnessFailure('result-write', 'BROWSER_RESULT_WRITE_FAILED'); }
@@ -78,6 +78,55 @@ async function screenshot(page, screen, width, state, fullPage = true) {
   capture.artifacts.push({ path: relative, viewport_width: width, state, sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length,
     synthetic_art: true, actual_product_source: true, human_review: 'pending' });
   persist();
+}
+async function managementColors(locator) {
+  return locator.evaluate(element => {
+    const fail = () => { throw new Error('MANAGEMENT_CTA_COLOR_REQUIRED'); };
+    const rgba = text => {
+      const match = /^rgba?\(\s*(\d+(?:\.\d+)?)[, ]+\s*(\d+(?:\.\d+)?)[, ]+\s*(\d+(?:\.\d+)?)(?:\s*[,/]\s*(\d+(?:\.\d+)?))?\s*\)$/.exec(text);
+      if (!match) return fail();
+      const value = [Number(match[1]), Number(match[2]), Number(match[3]), match[4] === undefined ? 1 : Number(match[4])];
+      if (!value.every(Number.isFinite) || value.slice(0, 3).some(channel => channel < 0 || channel > 255) || value[3] < 0 || value[3] > 1) return fail();
+      return value;
+    };
+    const over = (front, back) => {
+      const alpha = front[3] + back[3] * (1 - front[3]);
+      if (!(alpha > 0)) return fail();
+      return [...front.slice(0, 3).map((channel, index) => (channel * front[3] + back[index] * back[3] * (1 - front[3])) / alpha), alpha];
+    };
+    const chain = []; for (let node = element; node; node = node.parentElement) chain.unshift(node);
+    let background = [255, 255, 255, 1];
+    for (const node of chain) {
+      const style = getComputedStyle(node);
+      if (Number(style.opacity) !== 1 || style.filter !== 'none') return fail();
+      background = over(rgba(style.backgroundColor), background);
+    }
+    const style = getComputedStyle(element), foreground = over(rgba(style.color), background);
+    const luminance = value => value.slice(0, 3).map(channel => channel / 255)
+      .map(channel => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
+      .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+    const levels = [luminance(foreground), luminance(background)].sort((a, b) => a - b);
+    const contrast = (levels[1] + 0.05) / (levels[0] + 0.05);
+    if (!Number.isFinite(contrast) || contrast < 1 || contrast > 21) return fail();
+    return { foreground, background, contrast, hovered: element.matches(':hover'), focused: document.activeElement === element,
+      focusVisible: element.matches(':focus-visible'), outlineVisible: !['none', 'hidden'].includes(style.outlineStyle) && parseFloat(style.outlineWidth) > 0 };
+  });
+}
+async function managementContrastStates(page, width, action, locator) {
+  await expect(locator).toBeVisible(); await expect(locator).toBeEnabled(); await locator.scrollIntoViewIfNeeded();
+  for (const state of ['normal', 'hover', 'focus']) {
+    await page.mouse.move(1, 1); await locator.evaluate(element => element.ownerDocument.activeElement?.blur());
+    if (state === 'hover') await locator.hover();
+    if (state === 'focus') { await page.keyboard.press('Tab'); await locator.focus(); }
+    // Observe the settled shared CTA state; a transition's intermediate color is not a hover measurement.
+    await expect.poll(() => locator.evaluate(element => getComputedStyle(element).backgroundColor)).toBe(state === 'hover' ? 'rgb(157, 23, 77)' : 'rgb(190, 24, 93)');
+    const value = await managementColors(locator);
+    managementContrast.push({ width, action, state, ...value });
+    check(value.contrast >= 4.5, 'MANAGEMENT_CTA_CONTRAST');
+    check(state === 'hover' ? value.hovered : !value.hovered, 'MANAGEMENT_CTA_COLOR_REQUIRED');
+    check(state === 'focus' ? value.focused && value.focusVisible && value.outlineVisible : !value.focused, 'MANAGEMENT_CTA_FOCUS');
+  }
+  await page.mouse.move(1, 1); await locator.evaluate(element => element.ownerDocument.activeElement?.blur());
 }
 async function revealField(page, selector) {
   const field = page.locator(selector);
@@ -183,20 +232,57 @@ async function main() {
       await page.goto(app + '/ja/fixture-session'); await page.getByLabel('Email').fill(fixture.email); await page.getByLabel('Password').fill(fixture.password);
       await page.getByRole('button', { name: 'Sign in', exact: true }).click(); await expect(page.getByText('Session ready', { exact: true })).toBeVisible();
       await test(ids[3], width, async () => {
-        const draftResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/api/natori/admin/estimate-draft' && response.request().method() === 'GET');
-        void draftResponse.catch(() => {}); // Observe an orphaned wait; the original promise remains awaited and asserted below.
-        await page.goto(app + '/ja/fixture-phase7/estimate'); const response = await draftResponse; check(response.ok(), 'ACTUAL_DRAFT_READ');
+        const isProjectRead = (response, pathname) => {
+          const url = new URL(response.url());
+          return url.pathname === pathname && url.searchParams.get('projectId') === fixture.estimateId && response.request().method() === 'GET';
+        };
+        const draftResponse = page.waitForResponse(response => isProjectRead(response, '/api/natori/admin/estimate-draft'));
+        const recoveryResponse = page.waitForResponse(response => isProjectRead(response, '/api/natori/admin/structured-quote'));
+        void draftResponse.catch(() => {}); void recoveryResponse.catch(() => {}); // Observe orphaned waits; both original promises remain awaited and asserted below.
+        await page.goto(app + '/ja/fixture-phase7/estimate');
+        const [response, recovered] = await Promise.all([draftResponse, recoveryResponse]);
+        check(response.ok() && recovered.ok(), 'ACTUAL_DRAFT_READ');
         const data = await response.json(); check(data.editable === false && data.draft?.revision === 1, 'HISTORICAL_DRAFT_LOCK');
+        await expect(data.draft.agreedTerms).toEqual({
+          scope: 'full_body', scopeNote: '', deliverables: '全身イラスト1点・表情差分1点、PNGで納品',
+          usage: '動画サムネイル・SNS告知', commercialUse: 'yes', publication: '2026年11月15日以降に公開可。AI学習は禁止',
+          dueDate: '2026-11-15', memo: 'Synthetic internal memo',
+        });
+        await expect(data.draft.items).toEqual([{
+          id: 'phase7-base', presetItemId: null, kind: 'manual', labelSnapshot: '全身イラスト・表情差分', quantity: 1,
+          unitAmount: 12000, amount: 12000, automatic: false, sourceFields: [], ruleId: null, note: 'Synthetic saved item',
+        }]);
+        await expect(data.draft.items.reduce((total, item) => total + item.amount, 0)).toBe(12000);
+        await expect(data.draft.mailDraft).toEqual({
+          subject: 'Synthetic historical quote', body: 'Synthetic saved mail; not sent', templateBody: 'Synthetic saved mail; not sent',
+        });
+        const recovery = await recovered.json();
+        check(recovery.enabled === true && recovery.issue?.version === 1 && recovery.issue.notificationStatus === 'legacy_unknown'
+          && typeof recovery.issue.quoteId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(recovery.issue.quoteId), 'HISTORICAL_DRAFT_LOCK');
         const root = page.locator('[data-phase7-surface=estimate]'), back = root.getByRole('link', { name: '← ダッシュボードへ戻る', exact: true });
-        await expect(back).toHaveAttribute('href', '/natori/dashboard'); await expect(root.getByRole('heading', { name: '相手に見える内容を確認', exact: true })).toBeVisible();
-        for (const text of ['全身イラスト1点・表情差分1点、PNGで納品', 'AI学習は禁止', '12,000', '2026年11月15日']) await expect(root).toContainText(text);
-        await expect(root.getByText('正式見積りを発行しました', { exact: true })).toHaveCount(0);
+        await expect(back).toHaveAttribute('href', '/natori/dashboard');
+        await expect(root.getByRole('heading', { name: '正式見積りを発行しました', exact: true })).toBeVisible();
+        await expect(root).toContainText('第1版の見積りは保存済みです');
+        await expect(root).toContainText('条件と金額は変更できません');
+        await expect(root.getByRole('heading', { name: '相手に見える内容を確認', exact: true })).toHaveCount(0);
+        await expect(root.locator('#estimate-to, #estimate-subject, #estimate-body')).toHaveCount(0);
+        await expect(root.getByRole('button', { name: '新しい版の作成を確認', exact: true })).toHaveCount(0);
+        await expect(root.getByRole('button', { name: /^正式見積り .* を発行$/ })).toHaveCount(0);
         await screenshot(page, ids[3], width, 'return-and-review'); await noOverflow(page);
       });
       await test(ids[5], width, async () => {
         await page.goto(app + '/ja/fixture-phase7/management'); const card = page.getByRole('article', { name: 'Phase 7 active production', exact: true }); await expect(card).toBeVisible();
-        for (const text of ['Synthetic Phase 7 client', 'ラフ', 'Synthetic rough: preserve original conditions', '11月15日']) await expect(card).toContainText(text);
-        await expect(card.getByRole('button', { name: '線画へ進む', exact: true })).toBeEnabled();
+        for (const text of ['Synthetic Phase 7 client', 'ラフ', 'Synthetic rough: preserve original conditions']) await expect(card).toContainText(text);
+        const expectedDueDate = new Intl.DateTimeFormat('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' }).format(new Date(2026, 10, 15));
+        await expect(card.getByText('納期', { exact: true }).locator('..')).toContainText(expectedDueDate);
+        const advance = card.getByRole('button', { name: '線画へ進む', exact: true }); await expect(advance).toBeEnabled();
+        const paymentCard = page.getByRole('article', { name: 'Phase 7 historical estimate', exact: true }); await expect(paymentCard).toBeVisible();
+        await expect(paymentCard).toContainText('Synthetic Phase 7 client');
+        await expect(paymentCard).toContainText('入金待ち');
+        await expect(paymentCard).toContainText('Synthetic historical quote review');
+        const payment = paymentCard.getByRole('button', { name: '入金確認してラフ開始', exact: true }); await expect(payment).toBeEnabled();
+        await managementContrastStates(page, width, 'advance', advance);
+        await managementContrastStates(page, width, 'payment', payment);
         await screenshot(page, ids[5], width, 'latest-card'); await noOverflow(page);
         const taskDisclosure = card.getByRole('button', { name: /タスク/ });
         await expect(taskDisclosure).toHaveCount(1);
