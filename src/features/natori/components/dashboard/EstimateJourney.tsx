@@ -265,7 +265,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
   return (
     <div className="mx-auto max-w-3xl space-y-5 pb-16">
       <header className="rounded-2xl border border-pink-100 bg-white p-5 shadow-sm">
-        <Link href="/natori/dashboard" className="text-sm font-bold text-pink-700 underline underline-offset-4">← 案件管理へ戻る</Link>
+        <Link href="/natori/dashboard" className="text-sm font-bold text-pink-700 underline underline-offset-4">← ダッシュボードへ戻る</Link>
         <p className="mt-4 text-xs font-bold text-pink-700">{project.clientName} 様の見積り</p>
         <h1 className="mt-1 break-words text-xl font-black text-gray-950">{project.title}</h1>
         <p className="mt-2 text-sm text-gray-600">相談で決まった内容から見積りを作り、相手に見える内容を確かめて送信します。</p>

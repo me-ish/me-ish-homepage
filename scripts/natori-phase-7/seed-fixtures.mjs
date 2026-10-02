@@ -16,7 +16,7 @@ export async function seedPhase7(origin, keys) {
   const deadline = new Date(Date.now() + 5 * 86400000).toISOString();
   const estimateId = randomUUID(), quoteProjectId = randomUUID(), managementId = randomUUID();
   const quoteToken = randomBytes(24).toString('base64url'), linkId = 'plink_phase7' + randomUUID().replaceAll('-', '');
-  const base = { user_id: owner, client_name: 'Synthetic Phase 7 client', client_email: 'client@phase7.invalid', type: 'illustration', request_data: requestData };
+  const base = { user_id: owner, client_name: 'Synthetic Phase 7 client', client_email: 'client@phase7.invalid', type: 'illustration', delivery_plan: 'normal', request_data: requestData };
   const projects = [
     { ...base, id: estimateId, title: 'Phase 7 historical estimate', status: 'inquiry', next_action: 'Synthetic historical quote review' },
     { ...base, id: quoteProjectId, title: 'Phase 7 full saved quote', status: 'inquiry', next_action: 'Synthetic awaiting payment', payment_link_id: linkId,

@@ -198,7 +198,13 @@ async function main() {
         for (const text of ['Synthetic Phase 7 client', 'ラフ', 'Synthetic rough: preserve original conditions', '11月15日']) await expect(card).toContainText(text);
         await expect(card.getByRole('button', { name: '線画へ進む', exact: true })).toBeEnabled();
         await screenshot(page, ids[5], width, 'latest-card'); await noOverflow(page);
-        await card.getByRole('button', { name: /タスク/ }).click(); await expect(card.getByRole('button', { name: /Synthetic rough task/ })).toBeEnabled();
+        const taskDisclosure = card.getByRole('button', { name: /タスク/ });
+        await expect(taskDisclosure).toHaveCount(1);
+        // Observe the actual responsive default after its mounted effect.
+        await expect(taskDisclosure).toHaveAttribute('aria-expanded', width >= 640 ? 'true' : 'false');
+        if (await taskDisclosure.getAttribute('aria-expanded') === 'false') await taskDisclosure.click();
+        await expect(taskDisclosure).toHaveAttribute('aria-expanded', 'true');
+        await expect(card.getByRole('button', { name: /Synthetic rough task/ })).toBeEnabled();
         await screenshot(page, ids[5], width, 'tasks-visible'); await noOverflow(page);
       });
     } finally { await context.close(); }
