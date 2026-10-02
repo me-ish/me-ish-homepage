@@ -220,8 +220,9 @@ curl --fail --silent --show-error --location --connect-timeout 15 --max-time 120
   https://github.com/supabase/cli/releases/download/v2.118.0/supabase_2.118.0_linux_amd64.tar.gz -o "$work/cli.tar.gz"
 printf 'f6089a86fb9d9221c958193a277338daddd6822f706929943812fa32e106c86d  %s\n' "$work/cli.tar.gz" | sha256sum -c -
 tar --no-same-owner -xzf "$work/cli.tar.gz" -C "$work/bin" supabase
+# --version and --help also check releases and can rewrite the tracked CLI cache.
+export SUPABASE_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1 SUPABASE_NO_UPDATE_NOTIFIER=1
 [[ $("$work/bin/supabase" --version) == 2.118.0 ]]
-export SUPABASE_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1
 "$work/bin/supabase" start --help >"$work/results/cli-start-help.txt"
 "$work/bin/supabase" stop --help >"$work/results/cli-stop-help.txt"
 

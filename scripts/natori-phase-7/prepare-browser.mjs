@@ -123,10 +123,11 @@ export async function readPhase7Content(): Promise<PortfolioDisplayContent> {
   if (!seeded || content.workflowProjectionAllowed !== true) throw new Error('Phase 7 seeded display read required');
   return content;
 }
-export async function readPhase7OwnerProjectId(surface: 'estimate' | 'management'): Promise<string> {
+export async function readPhase7OwnerProjectId(surface: 'estimate' | 'management' | 'editable-estimate'): Promise<string> {
   assertPhase7Fixture();
   await resolveNatoriManagementContext();
-  const id = surface === 'estimate' ? process.env.PHASE_7_ESTIMATE_PROJECT_ID : process.env.PHASE_7_MANAGEMENT_PROJECT_ID;
+  const id = surface === 'estimate' ? process.env.PHASE_7_ESTIMATE_PROJECT_ID
+    : surface === 'management' ? process.env.PHASE_7_MANAGEMENT_PROJECT_ID : process.env.PHASE_7_EDITABLE_ESTIMATE_PROJECT_ID;
   if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
     throw new Error('Phase 7 synthetic project id required');
   }
@@ -201,6 +202,15 @@ export default async function Page() {
 }
 `);
 }
+fixture(`${fixtureRoot}/editable-estimate/page.tsx`, `import OwnerScreen from '../OwnerScreen';
+import { readPhase7Content, readPhase7OwnerProjectId } from '../fixtureReads';
+export const dynamic = 'force-dynamic';
+export default async function Page() {
+  const projectId = await readPhase7OwnerProjectId('editable-estimate');
+  const content = await readPhase7Content();
+  return <main aria-label="Phase 7 editable estimate" data-phase7-surface="estimate" className="min-h-screen bg-gray-50 px-4 py-6"><div className="mx-auto max-w-3xl"><OwnerScreen surface="estimate" projectId={projectId} portfolioContent={content} /></div></main>;
+}
+`);
 fixture(`${fixtureRoot}/quote/[token]/page.tsx`, `import QuoteAcceptPage from '../../../natori/quote/[token]/page';
 import { assertPhase7Fixture } from '../../fixtureReads';
 export const dynamic = 'force-dynamic';
@@ -223,8 +233,9 @@ const contract = {
   actual_source_sha256: actualSourceSignatures,
   routes: ['gallery', 'showcase', 'intake', 'estimate', 'management'].map((surface) => ({ surface, path: `/ja/fixture-phase7/${surface}`, label: `Phase 7 ${surface}` })),
   quote: { path: '/ja/fixture-phase7/quote/<synthetic-token>', label: 'Phase 7 quote', reader: 'unchanged actual QuoteAcceptPage -> getNatoriQuoteByToken' },
+  editable_estimate: { path: '/ja/fixture-phase7/editable-estimate', label: 'Phase 7 editable estimate', surface: 'estimate', reader: 'unchanged actual OwnerScreen -> fetchNatoriProjectCollection -> EstimateJourney', mutations: 'none; saved pristine draft and local navigation/acknowledgement only' },
   capture_widths: [1280, 360, 390],
-  project_id_variables: ['PHASE_7_ESTIMATE_PROJECT_ID', 'PHASE_7_MANAGEMENT_PROJECT_ID'],
+  project_id_variables: ['PHASE_7_ESTIMATE_PROJECT_ID', 'PHASE_7_MANAGEMENT_PROJECT_ID', 'PHASE_7_EDITABLE_ESTIMATE_PROJECT_ID'],
   management_today: '2026-10-02T03:00:00Z',
   limitations: ['Synthetic art does not establish artist preference.', 'Management callback feedback verifies display only.', 'Offline font transport is configured by the runner and must be disclosed in screen evidence.'],
 };

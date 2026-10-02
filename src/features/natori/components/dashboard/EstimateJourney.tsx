@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { AlertTriangle, CheckCircle2, Loader2, Plus, Trash2 } from "lucide-react";
 import QuoteAcceptCard from "@/features/natori/components/quote/QuoteAcceptCard";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
@@ -275,7 +276,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
         {(["① 条件を整理", "② 金額を決める", "③ 確認して送る"] as const).map((label, index) => (
           <button key={label} type="button" disabled={Boolean(attemptRef.current)} onClick={() => { if (index + 1 < step) setStep((index + 1) as Step); }}
             aria-current={step === index + 1 ? "step" : undefined}
-            className={`min-h-12 rounded-xl px-2 text-center text-xs font-bold sm:text-sm ${step === index + 1 ? "bg-pink-500 text-white" : index + 1 < step ? "bg-pink-50 text-pink-700" : "bg-gray-100 text-gray-500"}`}>
+            className={`min-h-12 rounded-xl px-2 text-center text-xs font-bold sm:text-sm ${step === index + 1 ? natoriPrimaryActionClassName : index + 1 < step ? "bg-pink-50 text-pink-700" : "bg-gray-100 text-gray-500"}`}>
             {label}
           </button>
         ))}
@@ -314,7 +315,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
           <div><label htmlFor="estimate-publication" className="mb-1 block text-sm font-bold">実績公開の条件</label><input id="estimate-publication" className={field} placeholder="例：2026年11月23日以降に公開可／公開不可" value={draft.agreedTerms.publication} onChange={(event) => changeTerms("publication", event.target.value)} /></div>
           <div><label htmlFor="estimate-due" className="mb-1 block text-sm font-bold">納品日</label><input id="estimate-due" type="date" className={field} value={draft.agreedTerms.dueDate} onChange={(event) => changeTerms("dueDate", event.target.value)} /><p className="mt-1 text-xs text-gray-600">正式見積りを送ると案件のカレンダーにも反映します。</p></div>
           <div><label htmlFor="estimate-memo" className="mb-1 block text-sm font-bold">内部メモ（依頼者には表示しません）</label><textarea id="estimate-memo" className={`${field} min-h-20`} value={draft.agreedTerms.memo} onChange={(event) => changeTerms("memo", event.target.value)} /></div>
-          <button type="button" onClick={nextFromTerms} disabled={busy} className="min-h-12 w-full rounded-full bg-pink-500 px-5 font-bold text-white disabled:opacity-50">{busy ? "保存中…" : "条件を保存して金額へ →"}</button>
+          <button type="button" onClick={nextFromTerms} disabled={busy} className={`min-h-12 w-full rounded-full px-5 font-bold ${natoriPrimaryActionClassName}`}>{busy ? "保存中…" : "条件を保存して金額へ →"}</button>
         </section>
       ) : null}
 
@@ -329,7 +330,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
           </div>)}
           <button type="button" onClick={() => setDraft((previous) => ({ ...previous, items: [...previous.items, { id: crypto.randomUUID(), presetItemId: null, kind: "manual", labelSnapshot: "追加作業", quantity: 1, unitAmount: 0, amount: 0, automatic: false, sourceFields: [], ruleId: null, note: null }] }))} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gray-300 px-4 text-sm font-bold"><Plus className="h-4 w-4" />明細を追加</button>
           <div className="flex items-center justify-between rounded-xl bg-pink-50 p-4 font-bold"><span>今回の見積り合計</span><span className="text-xl">{draft.items.length ? formatYen(total) : "未入力"}</span></div>
-          <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => setStep(1)} className="min-h-12 rounded-full border border-gray-300 px-5 font-bold">← 条件へ戻る</button><button type="button" disabled={busy} onClick={nextFromPrice} className="min-h-12 flex-1 rounded-full bg-pink-500 px-5 font-bold text-white disabled:opacity-50">{busy ? "保存中…" : "明細を保存して送信確認へ →"}</button></div>
+          <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => setStep(1)} className="min-h-12 rounded-full border border-gray-300 px-5 font-bold">← 条件へ戻る</button><button type="button" disabled={busy} onClick={nextFromPrice} className={`min-h-12 flex-1 rounded-full px-5 font-bold ${natoriPrimaryActionClassName}`}>{busy ? "保存中…" : "明細を保存して送信確認へ →"}</button></div>
         </section>
       ) : null}
 
@@ -352,7 +353,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
               <div><label htmlFor="estimate-body" className="mb-1 block text-sm font-bold">本文</label><textarea id="estimate-body" className={`${field} min-h-80`} value={body} onChange={(event) => setBody(event.target.value)} disabled={Boolean(attemptRef.current)} /></div>
             </div>
             <label className="flex items-start gap-3 rounded-xl bg-pink-50 p-4 text-sm"><input type="checkbox" className="mt-1" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} /><span>依頼者に見える内容と宛先を確認しました。</span></label>
-            <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => setStep(2)} disabled={Boolean(attemptRef.current)} className="min-h-12 rounded-full border border-gray-300 px-5 font-bold disabled:opacity-50">← 金額を修正</button><button type="button" onClick={issue} disabled={busy || !recoveryReady || (!attemptRef.current && (!ready || !acknowledged || !to.trim() || !subject.trim() || !body.trim()))} className="min-h-12 flex-1 rounded-full bg-pink-500 px-5 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{busy ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : attemptRef.current ? "同じ内容で送信を再試行" : `正式見積り ${formatYen(total)} を発行`}</button></div>
+            <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => setStep(2)} disabled={Boolean(attemptRef.current)} className="min-h-12 rounded-full border border-gray-300 px-5 font-bold disabled:opacity-50">← 金額を修正</button><button type="button" onClick={issue} disabled={busy || !recoveryReady || (!attemptRef.current && (!ready || !acknowledged || !to.trim() || !subject.trim() || !body.trim()))} className={`min-h-12 flex-1 rounded-full px-5 font-bold ${natoriPrimaryActionClassName}`}>{busy ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : attemptRef.current ? "同じ内容で送信を再試行" : `正式見積り ${formatYen(total)} を発行`}</button></div>
           </>}
         </section>
       ) : null}

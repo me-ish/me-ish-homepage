@@ -14,10 +14,11 @@ export async function seedPhase7(origin, keys) {
   check(!(await db.from('natori_portfolio_content').upsert({ id: 'main', content: seedContent })).error, 'CONTENT_FIXTURE');
   const now = new Date().toISOString(), expires = new Date(Date.now() + 10 * 86400000).toISOString();
   const deadline = new Date(Date.now() + 5 * 86400000).toISOString();
-  const estimateId = randomUUID(), quoteProjectId = randomUUID(), managementId = randomUUID();
+  const estimateId = randomUUID(), quoteProjectId = randomUUID(), managementId = randomUUID(), editableEstimateId = randomUUID();
   const quoteToken = randomBytes(24).toString('base64url'), linkId = 'plink_phase7' + randomUUID().replaceAll('-', '');
   const base = { user_id: owner, client_name: 'Synthetic Phase 7 client', client_email: 'client@phase7.invalid', type: 'illustration', delivery_plan: 'normal', request_data: requestData };
   const projects = [
+    { ...base, id: editableEstimateId, title: 'Phase 7 editable estimate', status: 'estimating', next_action: 'Synthetic editable estimate review' },
     { ...base, id: estimateId, title: 'Phase 7 historical estimate', status: 'inquiry', next_action: 'Synthetic historical quote review' },
     { ...base, id: quoteProjectId, title: 'Phase 7 full saved quote', status: 'inquiry', next_action: 'Synthetic awaiting payment', payment_link_id: linkId,
       payment_link_url: 'https://buy.stripe.com/test_phase7synthetic', payment_link_status: 'ready' },
@@ -27,6 +28,8 @@ export async function seedPhase7(origin, keys) {
   check(!(await db.from('natori_projects').insert(projects)).error, 'PROJECT_FIXTURE');
   check(!(await db.from('natori_estimate_drafts').insert({ project_id: estimateId, user_id: owner, revision: 1, agreed_terms: agreedTerms,
     items, mail_draft: { subject: 'Synthetic historical quote', body: 'Synthetic saved mail; not sent', templateBody: 'Synthetic saved mail; not sent' } })).error, 'DRAFT_FIXTURE');
+  check(!(await db.from('natori_estimate_drafts').insert({ project_id: editableEstimateId, user_id: owner, revision: 1,
+    agreed_terms: agreedTerms, items, mail_draft: null })).error, 'DRAFT_FIXTURE');
   for (const [projectId, token] of [[estimateId, randomBytes(24).toString('base64url')], [quoteProjectId, quoteToken]]) {
     const quoteId = randomUUID();
     check(!(await db.from('natori_quotes').insert({ id: quoteId, project_id: projectId, user_id: owner, version: 1,
@@ -44,5 +47,5 @@ export async function seedPhase7(origin, keys) {
   }
   check(!(await db.from('natori_project_tasks').insert([{ project_id: managementId, task_key: 'phase7-rough-task', label: 'Synthetic rough task',
     stage: 'rough', done: false, estimated_hours: 2, sort_order: 0 }])).error, 'TASK_FIXTURE');
-  return { owner, email, password, estimateId, quoteProjectId, managementId, quoteToken, deadline };
+  return { owner, email, password, estimateId, quoteProjectId, managementId, editableEstimateId, quoteToken, deadline };
 }

@@ -88,7 +88,7 @@ async function main() {
     NEXT_TELEMETRY_DISABLED: '1', NODE_OPTIONS: '--dns-result-order=ipv4first', PHASE_N_BROWSER: 'ephemeral', PHASE_0B_BROWSER: 'ephemeral',
     PHASE_7_VISUAL_OWNER_NONCE: ownerNonce,
     PHASE_6B_BROWSER: 'ephemeral', ...(mode === '7' ? { PHASE_7_BROWSER: 'ephemeral', PHASE_7_ESTIMATE_PROJECT_ID: fixture.estimateId,
-      PHASE_7_MANAGEMENT_PROJECT_ID: fixture.managementId } : {}),
+      PHASE_7_MANAGEMENT_PROJECT_ID: fixture.managementId, PHASE_7_EDITABLE_ESTIMATE_PROJECT_ID: fixture.editableEstimateId } : {}),
     NEXT_FONT_GOOGLE_MOCKED_RESPONSES: '/app/phase7-font-responses.cjs',
     NEXT_PUBLIC_SUPABASE_URL: origin, NEXT_PUBLIC_SUPABASE_ANON_KEY: keys.anon, SUPABASE_SERVICE_ROLE_KEY: keys.service,
     ...(fixture ? { NATORI_OWNER_USER_ID: fixture.owner, NATORI_OWNER_EMAILS: fixture.email } : {}),

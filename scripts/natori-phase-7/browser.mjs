@@ -4,9 +4,9 @@ import { createRequire } from 'node:module';
 let createClient, chromium, expect, fixture, execution, contract, evidence, browser, activePage, stage = 'preflight';
 const check = (value, code) => { if (!value) throw new Error(code); };
 const app = 'http://localhost:3000', output = '/results/phase7-screens';
-const results = [], blocked = [], harnessFailures = [], managementContrast = [];
+const results = [], blocked = [], harnessFailures = [], managementContrast = [], estimateContrast = [];
 const ids = ['gallery-list-and-modal', 'works-showcase-index', 'intake-confirmation-and-edit', 'estimate-return-link-and-review', 'client-quote-full-conditions', 'latest-management-card'];
-const knownCodes = new Set(["ACTUAL_DRAFT_READ", "ACTUAL_SOURCE_CHANGED", "ASSERTION_FAILED", "BROWSER_CLOSE_FAILED", "BROWSER_FAILED", "BROWSER_RESULT_WRITE_FAILED", "BROWSER_SETUP_FAILED", "BUSINESS_FACTS_PRESERVED", "BUSINESS_FACTS_READ", "DECORATION_PRESERVED", "DESTINATION_REJECTED", "EDIT_TARGET_SIZE", "EPHEMERAL_REQUIRED", "FIELD_DISCLOSURE_LOOP", "HISTORICAL_DRAFT_LOCK", "HORIZONTAL_OVERFLOW", "MANAGEMENT_CTA_COLOR_REQUIRED", "MANAGEMENT_CTA_CONTRAST", "MANAGEMENT_CTA_FOCUS", "MODAL_CLOSE_TARGET", "NAMED_EDIT_TARGETS", "RESULT_WRITE_FAILED", "SCREEN_EVIDENCE_WRITE_FAILED", "SCREEN_TEMPLATE_REQUIRED", "SHOWCASE_NO_SALES_CTA", "SNAPSHOT_CHANGED", "SURFACE_WRAPPER_REQUIRED", "SYNTHETIC_FIXTURE_REQUIRED", "UNEXPECTED_MUTATION", "UNKNOWN_FAILURE"]);
+const knownCodes = new Set(["ACTUAL_DRAFT_READ", "ACTUAL_SOURCE_CHANGED", "ASSERTION_FAILED", "BROWSER_CLOSE_FAILED", "BROWSER_FAILED", "BROWSER_RESULT_WRITE_FAILED", "BROWSER_SETUP_FAILED", "BUSINESS_FACTS_PRESERVED", "BUSINESS_FACTS_READ", "DECORATION_PRESERVED", "DESTINATION_REJECTED", "EDIT_TARGET_SIZE", "EPHEMERAL_REQUIRED", "ESTIMATE_CTA_COLOR_REQUIRED", "ESTIMATE_CTA_CONTRAST", "ESTIMATE_CTA_FOCUS", "FIELD_DISCLOSURE_LOOP", "HISTORICAL_DRAFT_LOCK", "HORIZONTAL_OVERFLOW", "MANAGEMENT_CTA_COLOR_REQUIRED", "MANAGEMENT_CTA_CONTRAST", "MANAGEMENT_CTA_FOCUS", "MODAL_CLOSE_TARGET", "NAMED_EDIT_TARGETS", "RESULT_WRITE_FAILED", "SCREEN_EVIDENCE_WRITE_FAILED", "SCREEN_TEMPLATE_REQUIRED", "SHOWCASE_NO_SALES_CTA", "SNAPSHOT_CHANGED", "SURFACE_WRAPPER_REQUIRED", "SYNTHETIC_FIXTURE_REQUIRED", "UNEXPECTED_MUTATION", "UNKNOWN_FAILURE"]);
 function diagnosticMessage(error) {
   try { const message = error?.message; return typeof message === 'string' ? message : ''; }
   catch { return ''; }
@@ -34,7 +34,7 @@ function persist() {
   }
   try {
     writeFileSync('/results/phase7-browser.json', JSON.stringify({ tests: results, passed: results.filter(result => result.status === 'passed').length,
-      failed: results.filter(result => result.status === 'failed').length, skipped: 0, blocked, harnessFailures, managementContrast,
+      failed: results.filter(result => result.status === 'failed').length, skipped: 0, blocked, harnessFailures, managementContrast, estimateContrast,
       engine: 'Playwright Chromium 1.58.2; PC1280/360/390px; not physical iPhone Safari', provider: 'No Stripe provider mutation or financial operation configured',
       human_evaluation: 'Actual captures must still be reviewed; no comprehension or conversion claim' }, null, 2));
   } catch { writeFailed = true; recordHarnessFailure('result-write', 'BROWSER_RESULT_WRITE_FAILED'); }
@@ -128,6 +128,22 @@ async function managementContrastStates(page, width, action, locator) {
   }
   await page.mouse.move(1, 1); await locator.evaluate(element => element.ownerDocument.activeElement?.blur());
 }
+async function estimateContrastStates(page, width, step, control, locator) {
+  await expect(locator).toHaveCount(1); await expect(locator).toBeVisible(); await expect(locator).toBeEnabled(); await locator.scrollIntoViewIfNeeded();
+  for (const state of ['normal', 'hover', 'focus']) {
+    await page.mouse.move(1, 1); await locator.evaluate(element => element.ownerDocument.activeElement?.blur());
+    if (state === 'hover') await locator.hover();
+    if (state === 'focus') { await page.keyboard.press('Tab'); await locator.focus(); }
+    await expect.poll(() => locator.evaluate(element => getComputedStyle(element).backgroundColor)).toBe(state === 'hover' ? 'rgb(157, 23, 77)' : 'rgb(190, 24, 93)');
+    let value;
+    try { value = await managementColors(locator); } catch { throw new Error('ESTIMATE_CTA_COLOR_REQUIRED'); }
+    estimateContrast.push({ width, step, control, state, ...value });
+    check(value.contrast >= 4.5, 'ESTIMATE_CTA_CONTRAST');
+    check(state === 'hover' ? value.hovered : !value.hovered, 'ESTIMATE_CTA_COLOR_REQUIRED');
+    check(state === 'focus' ? value.focused && value.focusVisible && value.outlineVisible : !value.focused, 'ESTIMATE_CTA_FOCUS');
+  }
+  await page.mouse.move(1, 1); await locator.evaluate(element => element.ownerDocument.activeElement?.blur());
+}
 async function revealField(page, selector) {
   const field = page.locator(selector);
   const closed = () => field.locator('xpath=ancestor::details[not(@open)]');
@@ -154,14 +170,15 @@ async function main() {
   const { origin } = JSON.parse(readFileSync('/runtime/network.json', 'utf8')); check(/^http:\/\/172\.30\.250\.\d+:8000$/.test(origin), 'DESTINATION_REJECTED');
   const keys = JSON.parse(readFileSync('/runtime/credentials.json', 'utf8')), db = createClient(origin, keys.service, { auth: { persistSession: false, autoRefreshToken: false } });
   async function facts() {
-    const [projects, quotes, tasks, content] = await Promise.all([
+    const [projects, quotes, tasks, content, drafts] = await Promise.all([
       db.from('natori_projects').select('*').eq('user_id', fixture.owner).order('id'),
       db.from('natori_quotes').select('*').eq('user_id', fixture.owner).order('id'),
       db.from('natori_project_tasks').select('*').eq('project_id', fixture.managementId).order('task_key'),
       db.from('natori_portfolio_content').select('content').eq('id', 'main').single(),
+      db.from('natori_estimate_drafts').select('*').eq('user_id', fixture.owner).order('project_id'),
     ]);
-    check(!projects.error && !quotes.error && !tasks.error && !content.error, 'BUSINESS_FACTS_READ');
-    return createHash('sha256').update(JSON.stringify([projects.data, quotes.data, tasks.data, content.data])).digest('hex');
+    check(!projects.error && !quotes.error && !tasks.error && !content.error && !drafts.error, 'BUSINESS_FACTS_READ');
+    return createHash('sha256').update(JSON.stringify([projects.data, quotes.data, tasks.data, content.data, drafts.data])).digest('hex');
   }
   const before = await facts(); browser = await chromium.launch({ headless: true });
   for (const viewport of [{ width: 1280, height: 900 }, { width: 360, height: 800 }, { width: 390, height: 844 }]) {
@@ -269,6 +286,65 @@ async function main() {
         await expect(root.getByRole('button', { name: '新しい版の作成を確認', exact: true })).toHaveCount(0);
         await expect(root.getByRole('button', { name: /^正式見積り .* を発行$/ })).toHaveCount(0);
         await screenshot(page, ids[3], width, 'return-and-review'); await noOverflow(page);
+
+        // A separate unaccepted saved draft reaches the real editable controls without saving or issuing.
+        const editableProjectRead = (response, pathname) => {
+          const url = new URL(response.url());
+          return url.pathname === pathname && url.searchParams.get('projectId') === fixture.editableEstimateId && response.request().method() === 'GET';
+        };
+        const editableDraftResponse = page.waitForResponse(response => editableProjectRead(response, '/api/natori/admin/estimate-draft'));
+        const editableRecoveryResponse = page.waitForResponse(response => editableProjectRead(response, '/api/natori/admin/structured-quote'));
+        void editableDraftResponse.catch(() => {}); void editableRecoveryResponse.catch(() => {});
+        await page.goto(app + '/ja/fixture-phase7/editable-estimate');
+        const [editableDraftRead, editableRecoveryRead] = await Promise.all([editableDraftResponse, editableRecoveryResponse]);
+        check(editableDraftRead.ok() && editableRecoveryRead.ok(), 'ACTUAL_DRAFT_READ');
+        const editableData = await editableDraftRead.json(), editableRecovery = await editableRecoveryRead.json();
+        await expect(editableData.ok).toBe(true); await expect(editableData.editable).toBe(true);
+        await expect(editableData.draft?.revision).toBe(1);
+        await expect(editableData.draft.agreedTerms).toEqual(data.draft.agreedTerms);
+        await expect(editableData.draft.items).toEqual(data.draft.items);
+        await expect(editableData.draft.mailDraft).toBeUndefined();
+        await expect(editableRecovery.enabled).toBe(true); await expect(editableRecovery.issue).toBeNull();
+        const editable = page.locator('[data-phase7-surface=estimate]');
+        await expect(editable.getByRole('heading', { name: '今回決まった条件', exact: true })).toBeVisible();
+        await expect(editable.getByRole('link', { name: '← ダッシュボードへ戻る', exact: true })).toHaveAttribute('href', '/natori/dashboard');
+        await expect(editable.locator('#estimate-scope')).toHaveValue('full_body');
+        for (const [selector, value] of [['#estimate-deliverables', data.draft.agreedTerms.deliverables], ['#estimate-usage', data.draft.agreedTerms.usage],
+          ['#estimate-commercial', 'yes'], ['#estimate-publication', data.draft.agreedTerms.publication], ['#estimate-due', '2026-11-15'], ['#estimate-memo', data.draft.agreedTerms.memo]]) {
+          await expect(editable.locator(selector)).toHaveValue(value);
+        }
+        const navigation = editable.getByRole('navigation', { name: '見積りの手順', exact: true });
+        const nav1 = navigation.getByRole('button', { name: '① 条件を整理', exact: true });
+        const termsNext = editable.getByRole('button', { name: '条件を保存して金額へ →', exact: true });
+        await expect(nav1).toHaveAttribute('aria-current', 'step');
+        await estimateContrastStates(page, width, 1, 'navigation', nav1); await estimateContrastStates(page, width, 1, 'primary', termsNext);
+        await screenshot(page, ids[3], width, 'editable-conditions'); await noOverflow(page);
+        await termsNext.click();
+        await expect(editable.getByRole('heading', { name: '今回の金額を決める', exact: true })).toBeVisible();
+        await expect(editable.getByRole('textbox', { name: '明細名', exact: true })).toHaveValue(data.draft.items[0].labelSnapshot);
+        await expect(editable.getByRole('spinbutton', { name: data.draft.items[0].labelSnapshot + 'の数量', exact: true })).toHaveValue('1');
+        await expect(editable.getByRole('spinbutton', { name: data.draft.items[0].labelSnapshot + 'の単価', exact: true })).toHaveValue('12000');
+        await expect(editable.getByText('今回の見積り合計', { exact: true }).locator('..')).toContainText('12,000');
+        const nav2 = navigation.getByRole('button', { name: '② 金額を決める', exact: true });
+        const priceNext = editable.getByRole('button', { name: '明細を保存して送信確認へ →', exact: true });
+        await expect(nav2).toHaveAttribute('aria-current', 'step');
+        await estimateContrastStates(page, width, 2, 'navigation', nav2); await estimateContrastStates(page, width, 2, 'primary', priceNext);
+        await screenshot(page, ids[3], width, 'editable-price'); await noOverflow(page);
+        await priceNext.click();
+        await expect(editable.getByRole('heading', { name: '相手に見える内容を確認', exact: true })).toBeVisible();
+        await expect(editable.getByRole('heading', { name: '正式見積りを発行しました', exact: true })).toHaveCount(0);
+        for (const text of [data.draft.agreedTerms.deliverables, data.draft.agreedTerms.usage, data.draft.agreedTerms.publication, '12,000', '2026年11月15日']) await expect(editable).toContainText(text);
+        await expect(editable.locator('#estimate-to')).toHaveValue('client@phase7.invalid');
+        await expect(editable.locator('#estimate-subject')).not.toHaveValue(''); await expect(editable.locator('#estimate-body')).not.toHaveValue('');
+        const acknowledge = editable.getByRole('checkbox', { name: '依頼者に見える内容と宛先を確認しました。', exact: true });
+        await acknowledge.check();
+        const nav3 = navigation.getByRole('button', { name: '③ 確認して送る', exact: true });
+        const issue = editable.getByRole('button', { name: /^正式見積り .* を発行$/ });
+        await expect(nav3).toHaveAttribute('aria-current', 'step');
+        await estimateContrastStates(page, width, 3, 'navigation', nav3); await estimateContrastStates(page, width, 3, 'primary', issue);
+        // Do not click issue or change any saved field. The same owner-scoped DB facts are compared after all cases.
+        await screenshot(page, ids[3], width, 'editable-review'); await noOverflow(page);
+        check(!blocked.some(item => item.kind === 'unexpected-local-mutation'), 'UNEXPECTED_MUTATION');
       });
       await test(ids[5], width, async () => {
         await page.goto(app + '/ja/fixture-phase7/management'); const card = page.getByRole('article', { name: 'Phase 7 active production', exact: true }); await expect(card).toBeVisible();
@@ -279,7 +355,7 @@ async function main() {
         const paymentCard = page.getByRole('article', { name: 'Phase 7 historical estimate', exact: true }); await expect(paymentCard).toBeVisible();
         await expect(paymentCard).toContainText('Synthetic Phase 7 client');
         await expect(paymentCard).toContainText('入金待ち');
-        await expect(paymentCard).toContainText('Synthetic historical quote review');
+        await expect(paymentCard).toContainText('見積りの承諾待ち');
         const payment = paymentCard.getByRole('button', { name: '入金確認してラフ開始', exact: true }); await expect(payment).toBeEnabled();
         await managementContrastStates(page, width, 'advance', advance);
         await managementContrastStates(page, width, 'payment', payment);
