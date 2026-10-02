@@ -2590,6 +2590,7 @@ export type Database = {
     Functions: {
       natori_quote_payment_state_v1: { Args: { p_owner_id: string; p_project_id: string }; Returns: Json }
       natori_payment_attention_v1: { Args: { p_owner_id: string }; Returns: Json }
+      natori_payment_attention_v2: { Args: { p_owner_id: string }; Returns: Json }
       natori_payment_links_v1: {
         Args: { p_owner_id: string; p_project_id: string | null; p_command: string; p_input?: Json }
         Returns: Json

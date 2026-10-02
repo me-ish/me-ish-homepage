@@ -432,6 +432,12 @@ if [[ $phase2b == 1 ]]; then
   timeout 300 docker exec "$runner" node /phase2b/integration.cjs
 fi
 
+# Provision only the disposable historical terminal fixture while the pre-2C
+# archive rules still apply. The final 2D compatibility run retains its old assertions.
+if [[ $phase2d == 1 ]]; then
+  timeout 120 docker exec "$runner" node /phase2d/phase2b-compatibility.cjs --prepare-terminal-legacy-fixture
+fi
+
 if [[ $phase2c == 1 ]]; then
   dbsql <"$work/phase2c.sql" >/dev/null
   timeout 300 docker exec "$runner" node /phase2c/integration.cjs

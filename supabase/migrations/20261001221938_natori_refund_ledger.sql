@@ -328,7 +328,11 @@ begin
       -- and a bank return can require action after success. Same-second differing
       -- known states have no trustworthy order; a strictly later observation can
       -- resolve review without erasing the prior confirmation audit timestamp.
-      update public.natori_refund_ledger set resolution='needs_review',review_reason='refund_state_order_uncertain',updated_at=now() where id=r.id;
+      -- Contradictory refund identity is permanent quarantine; later status evidence
+      -- can resolve chronological uncertainty but cannot verify the disputed identity.
+      update public.natori_refund_ledger set resolution='needs_review',
+        review_reason=case when review_reason='refund_identity_conflict' then review_reason else 'refund_state_order_uncertain' end,
+        updated_at=now() where id=r.id;
     elsif event_created>r.provider_event_created or (event_created=r.provider_event_created and new_rank>old_rank) then
       update public.natori_refund_ledger set provider_status=new_status,latest_event_id=p_event_id,provider_event_created=event_created,
         confirmed_at=case when new_status='succeeded' then coalesce(confirmed_at,to_timestamp(event_created)) else confirmed_at end,
@@ -366,7 +370,9 @@ language sql stable security invoker set search_path='' as $$
   group by p.id,p.known_paid,p.original_mapped;
 $$;
 
-create or replace function public.natori_payment_attention_v1(p_owner_id uuid) returns jsonb
+-- Keep Phase 2B's inbox-only attention v1 definition and ACL frozen. The server
+-- selects this separate refund-aware read model only when refund reading is enabled.
+create function public.natori_payment_attention_v2(p_owner_id uuid) returns jsonb
 language sql stable security invoker set search_path='' as $$
  select coalesce(jsonb_agg(to_jsonb(attention)),'[]'::jsonb) from (
    select e.project_id as "projectId",coalesce(p.title,'案件との対応を確認') as title,e.status,e.error_code as "reason",e.updated_at as "updatedAt"
@@ -395,7 +401,9 @@ $$;
 revoke all on function public.natori_refund_reconcile_v1(uuid,text,boolean,text) from public,anon,authenticated;
 revoke all on function public.natori_stripe_event_complete_v2(uuid,text,boolean,text,uuid,integer) from public,anon,authenticated;
 revoke all on function public.natori_refund_summaries_v1(uuid,uuid[]) from public,anon,authenticated;
+revoke all on function public.natori_payment_attention_v2(uuid) from public,anon,authenticated;
 grant execute on function public.natori_refund_reconcile_v1(uuid,text,boolean,text) to service_role;
 grant execute on function public.natori_stripe_event_complete_v2(uuid,text,boolean,text,uuid,integer) to service_role;
 grant execute on function public.natori_refund_summaries_v1(uuid,uuid[]) to service_role;
+grant execute on function public.natori_payment_attention_v2(uuid) to service_role;
 commit;

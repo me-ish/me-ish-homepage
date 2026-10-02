@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveTrustedNatoriOwnerId } from "./trustedNatoriOwner";
 import { dispatchAcceptanceNotifications } from "./acceptanceNotifications";
-import { normalizeNatoriPaymentEvent } from "../lib/paymentEvent";
+import { isNatoriRefundEventType, normalizeNatoriPaymentEvent } from "../lib/paymentEvent";
 
 export const paymentIntegrityEnabled = () => process.env.NATORI_PAYMENT_INTEGRITY_ENABLED === "1";
 export const refundLedgerEnabled = () => process.env.NATORI_REFUND_LEDGER_ENABLED === "1";
@@ -13,6 +13,10 @@ export const refundLedgerReadEnabled = () => refundLedgerEnabled() || process.en
 
 /** Called only after the shared route has verified Stripe's raw-body signature. */
 export async function receiveNatoriPaymentEvent(event: Stripe.Event): Promise<{ status: 200 | 503; result: string }> {
+  // Direct callers also must not send refund objects through the checkout v1 consumer.
+  if (isNatoriRefundEventType(event.type) && (!paymentIntegrityEnabled() || !refundLedgerEnabled())) {
+    return { status: 503, result: "refund_consumer_paused" };
+  }
   const owner = resolveTrustedNatoriOwnerId();
   const mode = process.env.NATORI_STRIPE_MODE;
   if (owner.kind !== "ok" || (mode !== "test" && mode !== "live")) return { status: 503, result: "payment_configuration" };

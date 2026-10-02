@@ -3,7 +3,7 @@ import {supabaseAdmin} from "@/lib/supabaseAdmin";
 import {resolveNatoriOwnerId} from "./natoriOwner";
 import {resolveTrustedNatoriOwnerId} from "./trustedNatoriOwner";
 import {paymentLinkIntegrityEnabled} from "./paymentLinkService";
-import {paymentIntegrityEnabled} from "./paymentEventService";
+import {paymentIntegrityEnabled,refundLedgerReadEnabled} from "./paymentEventService";
 import type {NatoriPaymentOverview,NatoriPaymentAttention} from "../types/payment";
 
 const unavailable: NatoriPaymentOverview = {available:false,confirmedAt:null,requiresReview:false,processing:false};
@@ -29,7 +29,8 @@ export async function getQuotePaymentOverview(projectId:string):Promise<NatoriPa
 export async function getPaymentAttention():Promise<{available:boolean;items:NatoriPaymentAttention[]}|null>{
  if(!paymentIntegrityEnabled())return null;
  const owner=await resolveNatoriOwnerId();
- const {data,error}=await supabaseAdmin().rpc("natori_payment_attention_v1",{p_owner_id:owner});
+ const rpc=refundLedgerReadEnabled()?"natori_payment_attention_v2":"natori_payment_attention_v1";
+ const {data,error}=await supabaseAdmin().rpc(rpc,{p_owner_id:owner});
  if(error||!Array.isArray(data))return {available:false,items:[]};
  const items:NatoriPaymentAttention[]=[];
  for(const value of data){

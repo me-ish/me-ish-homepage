@@ -28,11 +28,13 @@ async function main() {
   check(/^http:\/\/172\.30\.250\.\d+:8000$/.test(origin), 'DESTINATION_REJECTED');
   const keys = JSON.parse(readFileSync('/runtime/credentials.json', 'utf8')) as { service: string; anon: string };
   const db = createClient<Database>(origin, keys.service, { auth: { persistSession: false } });
-  const direct = globalThis.fetch; let blockCount = 0, loseComplete = false, refundSummaryCalls = 0;
+  const direct = globalThis.fetch; let blockCount = 0, loseComplete = false, refundSummaryCalls = 0, attentionV1Calls = 0, attentionV2Calls = 0;
   globalThis.fetch = async (input, init) => {
     const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
     if (url.origin !== origin) { blockCount++; throw new Error('DESTINATION_REJECTED'); }
     if (url.pathname.endsWith('/rpc/natori_refund_summaries_v1')) refundSummaryCalls++;
+    if (url.pathname.endsWith('/rpc/natori_payment_attention_v1')) attentionV1Calls++;
+    if (url.pathname.endsWith('/rpc/natori_payment_attention_v2')) attentionV2Calls++;
     const response = await direct(input, init);
     if (loseComplete && url.pathname.endsWith('/rpc/natori_stripe_event_complete_v2')) {
       loseComplete = false; check(response.ok, 'COMMITTED_BEFORE_LOSS'); return new Response('{}', { status: 503 });
@@ -53,6 +55,8 @@ async function main() {
     const results = await import('../../src/features/natori/lib/results');
     const { rowToProject } = await import('../../src/features/natori/data/supabaseProjects');
     const { loadNatoriRefundSummaries } = await import('../../src/features/natori/server/refundSummaryService');
+    const { getPaymentAttention } = await import('../../src/features/natori/server/paymentReadModelService');
+    const { natoriManagementScope } = await import('../../src/features/natori/server/natoriManagementScope');
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
     let created = Math.floor(Date.now() / 1000) - 2000;
     async function setup(paid = true) {
@@ -131,7 +135,7 @@ async function main() {
       const fixture = await setup(false), event = refund(fixture);
       check((await post(event)).status === 200, 'EARLY_ACK'); check((await summary(fixture.projectId)).confirmedAmount === 0, 'EARLY_NOT_COUNTED');
       check((await ledger(fixture.projectId))[0]?.resolution === 'unmatched', 'UNMATCHED_SAVED');
-      const attention = await db.rpc('natori_payment_attention_v1', { p_owner_id: owner });
+      const attention = await db.rpc('natori_payment_attention_v2', { p_owner_id: owner });
       check(!attention.error && Array.isArray(attention.data) && attention.data.some(item => item !== null && typeof item === 'object'
         && !Array.isArray(item) && item.projectId === fixture.projectId && item.reason === 'original_payment_unmatched'), 'EARLY_VISIBLE');
       check((await post(payment(fixture))).status === 200 && (await post(event)).status === 200, 'PAYMENT_RECONCILES');
@@ -309,7 +313,7 @@ async function main() {
     await test('unknown-original-remains-unresolved-and-visible', async () => {
       const fixture = await setup(), event = refund(fixture, { intentId: 'pi_unknown', chargeId: 'ch_unknown' }); await post(event);
       check((await summary(fixture.projectId)).confirmedAmount === 0 && (await ledger(fixture.projectId))[0].resolution === 'unmatched', 'UNMATCHED_EXCLUDED');
-      const attention = await db.rpc('natori_payment_attention_v1', { p_owner_id: owner });
+      const attention = await db.rpc('natori_payment_attention_v2', { p_owner_id: owner });
       check(Array.isArray(attention.data) && attention.data.some(item => item !== null && typeof item === 'object' && !Array.isArray(item) && item.reason === 'original_payment_unmatched'), 'UNMATCHED_VISIBLE');
     });
     await test('explicit-other-product-refunds-do-not-enter-natori-ledger', async () => {
@@ -336,13 +340,46 @@ async function main() {
       const row = (await ledger(fixture.projectId))[0]; check(row.amount === 3000 && row.confirmed_at && row.review_reason === 'refund_identity_conflict', 'ORIGINAL_FACTS_RETAINED');
       check((await summary(fixture.projectId)).confirmedAmount === 0, 'QUARANTINE_VISIBLE');
     });
+    await test('identity-conflict-stays-quarantined-through-same-second-and-later-status-evidence', async () => {
+      const fixture = await setup(), event = refund(fixture); check((await post(event)).status === 200, 'STICKY_FIRST_ACK');
+      const original = (await ledger(fixture.projectId))[0], before = await facts(fixture.projectId), id = (event.data.object as Stripe.Refund).id;
+      const contradiction = refund(fixture, { id, amount: 4000, eventCreated: event.created + 1 });
+      check((await post(contradiction)).status === 200, 'STICKY_CONFLICT_ACK');
+      check((await ledger(fixture.projectId))[0].review_reason === 'refund_identity_conflict'
+        && (await summary(fixture.projectId)).confirmedAmount === 0, 'STICKY_CONFLICT_QUARANTINED');
+      const sameSecond = refund(fixture, { id, status: 'pending', eventCreated: event.created });
+      check((await post(sameSecond)).status === 200, 'STICKY_SAME_SECOND_ACK');
+      check((await ledger(fixture.projectId))[0].review_reason === 'refund_identity_conflict'
+        && (await summary(fixture.projectId)).confirmedAmount === 0, 'IDENTITY_NOT_REPLACED_BY_ORDER_REVIEW');
+      const later = refund(fixture, { id, status: 'succeeded', eventCreated: event.created + 2 });
+      check((await post(later)).status === 200, 'STICKY_LATER_ACK');
+      const reconciled = await db.rpc('natori_refund_reconcile_v1', { p_owner_id: owner, p_account: 'platform', p_live: false, p_refund_id: id });
+      check(!reconciled.error, 'STICKY_DIRECT_RECONCILE');
+      const after = (await ledger(fixture.projectId))[0], financial = await summary(fixture.projectId);
+      check(after.resolution === 'needs_review' && after.review_reason === 'refund_identity_conflict'
+        && financial.confirmedAmount === 0 && financial.reviewCount === 1, 'LATER_EVIDENCE_CANNOT_VERIFY_DISPUTED_IDENTITY');
+      check(after.amount === original.amount && after.currency === original.currency && after.payment_intent_id === original.payment_intent_id
+        && after.charge_id === original.charge_id && after.confirmed_at === original.confirmed_at, 'STICKY_ORIGINAL_FACTS_RETAINED');
+      check(JSON.stringify(before) === JSON.stringify(await facts(fixture.projectId)), 'STICKY_BUSINESS_FACTS_UNCHANGED');
+      const observations = await db.from('natori_stripe_event_inbox').select('event_id,request,status,error_code')
+        .in('event_id', [event.id, contradiction.id, sameSecond.id, later.id]);
+      check(!observations.error && observations.data?.length === 4, 'ALL_STICKY_OBSERVATIONS_RETAINED');
+      const disputed = observations.data!.find(row => row.event_id === contradiction.id)?.request as { refunds?: { amount?: number }[] } | undefined;
+      const unordered = observations.data!.find(row => row.event_id === sameSecond.id)?.request as { refunds?: { providerStatus?: string }[] } | undefined;
+      check(disputed?.refunds?.[0]?.amount === 4000 && unordered?.refunds?.[0]?.providerStatus === 'pending', 'SIGNED_CONFLICT_SNAPSHOTS_RETAINED');
+      check(observations.data!.filter(row => row.event_id !== event.id)
+        .every(row => row.status === 'needs_review' && row.error_code === 'refund_identity_conflict'), 'STICKY_REVIEW_EVENTS_NOT_ACKNOWLEDGED_AS_RESOLVED');
+      const jobs = await notices(fixture.projectId);
+      check(jobs.filter(job => job.purpose === 'refund_confirmed_artist').length === 1
+        && jobs.filter(job => job.purpose === 'refund_review_artist').length === 1, 'STICKY_NOTICE_ONCE');
+    });
     await test('charge-snapshot-deduplicates-refund-events-and-flags-incomplete-list', async () => {
       const fixture = await setup(), event = refund(fixture); await post(event);
       const charge = { ...event, id: 'evt_' + randomUUID(), type: 'charge.refunded', created: ++created, data: { object: { id: fixture.chargeId,
         payment_intent: fixture.intentId, metadata: { kind: 'natori_commission', projectId: fixture.projectId }, amount_refunded: 9000,
         refunds: { has_more: true, data: [event.data.object] } } } } as unknown as Stripe.Event;
       check((await post(charge)).status === 200 && (await ledger(fixture.projectId)).length === 1 && (await summary(fixture.projectId)).confirmedAmount === 3000, 'SNAPSHOT_DEDUP');
-      const attention = await db.rpc('natori_payment_attention_v1', { p_owner_id: owner });
+      const attention = await db.rpc('natori_payment_attention_v2', { p_owner_id: owner });
       check(Array.isArray(attention.data) && attention.data.some(item => item !== null && typeof item === 'object' && !Array.isArray(item) && item.reason === 'refund_snapshot_incomplete'), 'INCOMPLETE_VISIBLE');
     });
     await test('concurrent-partials-cannot-exceed-original-and-replay-is-once', async () => {
@@ -406,7 +443,7 @@ async function main() {
       check(!(await db.from('natori_payment_transactions').update({ stripe_account_scope: null, stripe_livemode: null, stripe_currency: null }).eq('stripe_session_id', fixture.sessionId)).error, 'LEGACY_UNKNOWN_SOURCE');
       const before = await facts(fixture.projectId), financial = await summary(fixture.projectId);
       check(financial.originalMapped === false && financial.confirmedAmount === null && financial.reviewCount === 1, 'LEGACY_NOT_ZERO');
-      const attention = await db.rpc('natori_payment_attention_v1', { p_owner_id: owner });
+      const attention = await db.rpc('natori_payment_attention_v2', { p_owner_id: owner });
       check(Array.isArray(attention.data) && attention.data.some(item => item !== null && typeof item === 'object' && !Array.isArray(item)
         && item.projectId === fixture.projectId && item.reason === 'refund_history_unverified'), 'LEGACY_REVIEW_VISIBLE');
       const view: NatoriProject = { id: fixture.projectId, title: 'Legacy synthetic', clientName: 'Synthetic', type: 'illustration', status: 'completed', amount: 12000,
@@ -467,10 +504,75 @@ async function main() {
         if (reader === undefined) delete process.env.NATORI_REFUND_LEDGER_READ_ENABLED; else process.env.NATORI_REFUND_LEDGER_READ_ENABLED = reader;
       }
     });
+    await test('both-refund-gates-off-attention-uses-frozen-v1-with-payment-failure-visible', async () => {
+      const legacy = await setup(), pending = await setup(), failure = await setup(false), expired = await setup(false);
+      check(!(await db.from('natori_payment_transactions').update({ stripe_currency: null }).eq('stripe_session_id', legacy.sessionId)).error, 'ATTENTION_LEGACY_SOURCE');
+      check((await post(refund(pending, { status: 'pending' }))).status === 200, 'ATTENTION_PENDING_ACK');
+      const base = payment(failure), invalid = { ...base, data: { object: { ...base.data.object, currency: 'usd' } } } as unknown as Stripe.Event;
+      check((await post(invalid)).status === 200, 'ATTENTION_PAYMENT_REVIEW_ACK');
+      const expiredEvent = payment(expired), expiredClaim = await claim(expiredEvent, randomUUID());
+      check(!expiredClaim.error && expiredClaim.data?.[0]?.result === 'claimed', 'ATTENTION_EXPIRED_CLAIM');
+      check(!(await db.from('natori_stripe_event_inbox').update({ lease_until: new Date(Date.now() - 2000).toISOString() }).eq('event_id', expiredEvent.id)).error, 'ATTENTION_EXPIRED_LEASE');
+      const historicalRefund = { id: 'evt_' + randomUUID(), type: 'charge.refunded', livemode: false, created: ++created,
+        data: { object: { id: pending.chargeId, payment_intent: pending.intentId, metadata: { kind: 'natori_commission', projectId: pending.projectId },
+          refunds: { has_more: false, data: [] } } } } as unknown as Stripe.Event;
+      check((await post(historicalRefund)).status === 200, 'ATTENTION_HISTORICAL_REFUND_REVIEW');
+      const before = { facts: await facts(pending.projectId), ledger: await ledger(pending.projectId), notices: await notices(pending.projectId) };
+      const writer = process.env.NATORI_REFUND_LEDGER_ENABLED, reader = process.env.NATORI_REFUND_LEDGER_READ_ENABLED;
+      const readAttention = () => natoriManagementScope.run({ ownerId: owner, operator: { kind: 'shared-key', userId: null } }, getPaymentAttention);
+      try {
+        process.env.NATORI_REFUND_LEDGER_ENABLED = '0'; process.env.NATORI_REFUND_LEDGER_READ_ENABLED = '0';
+        const priorV1 = attentionV1Calls, priorV2 = attentionV2Calls, classic = await readAttention();
+        check(classic?.available && attentionV1Calls === priorV1 + 1 && attentionV2Calls === priorV2, 'BOTH_OFF_ATTENTION_RPC_V1_ONLY');
+        check(classic!.items.some(item => item.projectId === failure.projectId && item.reason === 'currency_mismatch'), 'PAYMENT_FAILURE_NOT_DISPLACED');
+        check(classic!.items.some(item => item.projectId === expired.projectId && item.status === 'processing')
+          && classic!.items.some(item => item.projectId === null && item.reason === 'refund_snapshot_missing'), 'ORIGINAL_INBOX_ATTENTION_RETAINED');
+        check(!classic!.items.some(item => (item.projectId === legacy.projectId && item.reason === 'refund_history_unverified')
+          || (item.projectId === pending.projectId && item.reason === 'refund_pending')), 'BOTH_OFF_NO_REFUND_UNION');
+        process.env.NATORI_REFUND_LEDGER_READ_ENABLED = '1';
+        const readV1 = attentionV1Calls, readV2 = attentionV2Calls, enabled = await readAttention();
+        check(enabled?.available && attentionV1Calls === readV1 && attentionV2Calls === readV2 + 1, 'READ_ONLY_ATTENTION_RPC_V2_ONLY');
+        check(enabled!.items.some(item => item.projectId === legacy.projectId && item.reason === 'refund_history_unverified')
+          && enabled!.items.some(item => item.projectId === pending.projectId && item.reason === 'refund_pending'), 'READ_ONLY_REFUND_ATTENTION_RETAINED');
+        const anon = createClient<Database>(origin, keys.anon, { auth: { persistSession: false } });
+        check((await anon.rpc('natori_payment_attention_v2', { p_owner_id: owner })).error, 'ATTENTION_V2_ANON_DENIED');
+        check(JSON.stringify(before) === JSON.stringify({ facts: await facts(pending.projectId), ledger: await ledger(pending.projectId), notices: await notices(pending.projectId) }), 'ATTENTION_READ_HAS_NO_EFFECT');
+      } finally {
+        if (writer === undefined) delete process.env.NATORI_REFUND_LEDGER_ENABLED; else process.env.NATORI_REFUND_LEDGER_ENABLED = writer;
+        if (reader === undefined) delete process.env.NATORI_REFUND_LEDGER_READ_ENABLED; else process.env.NATORI_REFUND_LEDGER_READ_ENABLED = reader;
+      }
+    });
+    for (const metadataFree of [false, true]) await test('writer-off-new-' + (metadataFree ? 'metadata-free' : 'natori') + '-refund-retries-and-restored-writer-records-once', async () => {
+      const fixture = await setup(), event = refund(fixture, { amount: 3000, ...(metadataFree ? { projectId: null } : {}) });
+      const before = { facts: await facts(fixture.projectId), ledger: await ledger(fixture.projectId), notices: await notices(fixture.projectId) };
+      const writer = process.env.NATORI_REFUND_LEDGER_ENABLED, reader = process.env.NATORI_REFUND_LEDGER_READ_ENABLED;
+      try {
+        process.env.NATORI_REFUND_LEDGER_ENABLED = '0'; process.env.NATORI_REFUND_LEDGER_READ_ENABLED = '1';
+        const paused = await post(event), pausedBody = await paused.json() as { received?: boolean; result?: string };
+        check(paused.status === 503 && paused.headers.get('Retry-After') === '60' && pausedBody.received === false
+          && pausedBody.result === 'refund_consumer_paused', 'ROLLBACK_RETRY_REQUIRED');
+        const inboxBefore = await db.from('natori_stripe_event_inbox').select('event_id').eq('event_id', event.id);
+        check(!inboxBefore.error && inboxBefore.data?.length === 0, 'PAUSED_NO_FALSE_COMPLETED_INBOX');
+        const rollbackView = await loadNatoriRefundSummaries(owner, [fixture.projectId]);
+        check(rollbackView?.get(fixture.projectId)?.confirmedAmount === 0, 'PAUSED_READ_UNCHANGED');
+        check(JSON.stringify(before) === JSON.stringify({ facts: await facts(fixture.projectId), ledger: await ledger(fixture.projectId), notices: await notices(fixture.projectId) }), 'PAUSED_NO_FINANCIAL_OR_MAIL_EFFECT');
+        process.env.NATORI_REFUND_LEDGER_ENABLED = '1';
+        check((await post(event)).status === 200 && (await post(event)).status === 200, 'RESTORED_SAME_EVENT_REDELIVERED');
+        check((await ledger(fixture.projectId)).length === 1 && (await summary(fixture.projectId)).confirmedAmount === 3000
+          && (await notices(fixture.projectId)).length === 1, 'RESTORED_EXACTLY_ONCE');
+        const inboxAfter = await db.from('natori_stripe_event_inbox').select('event_id,status').eq('event_id', event.id);
+        check(!inboxAfter.error && inboxAfter.data?.length === 1 && inboxAfter.data[0].status === 'completed', 'RESTORED_DURABLE_RECEIPT');
+        check(JSON.stringify(before.facts) === JSON.stringify(await facts(fixture.projectId)), 'ORIGINAL_BUSINESS_FACTS_UNCHANGED');
+      } finally {
+        if (writer === undefined) delete process.env.NATORI_REFUND_LEDGER_ENABLED; else process.env.NATORI_REFUND_LEDGER_ENABLED = writer;
+        if (reader === undefined) delete process.env.NATORI_REFUND_LEDGER_READ_ENABLED; else process.env.NATORI_REFUND_LEDGER_READ_ENABLED = reader;
+      }
+    });
+
     writeFileSync('/results/phase2d-integration.json', JSON.stringify({ tests, passed: tests.filter(test => test.status === 'passed').length,
       failed: tests.filter(test => test.status === 'failed').length, skipped: 0, provider: 'synthetic Stripe SDK-signed payloads only; actual Stripe test-mode delivery pending', blockedDestinations: blockCount }, null, 2));
-    check(tests.length === 37 && tests.every(test => test.status === 'passed'), 'PHASE_2D_REQUIRED_TESTS_FAILED');
-    console.log('PHASE 2D 37 passed / 0 failed / 0 skipped; actual Stripe pending');
+    check(tests.length === 41 && tests.every(test => test.status === 'passed'), 'PHASE_2D_REQUIRED_TESTS_FAILED');
+    console.log('PHASE 2D 41 passed / 0 failed / 0 skipped; actual Stripe pending');
   } finally { globalThis.fetch = direct; }
 }
 main().catch(() => { console.error('Phase 2D integration failed; raw payloads and credentials withheld'); process.exitCode = 1; });
