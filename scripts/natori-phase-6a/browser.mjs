@@ -6,7 +6,7 @@ import {setDefaultResultOrder} from 'node:dns';
 const require=createRequire('/app/package.json'),{createClient}=require('@supabase/supabase-js'),{chromium,expect}=require('@playwright/test');
 setDefaultResultOrder('ipv4first');
 const results=[],observations=[],check=(value,code)=>{if(!value)throw new Error(code);};
-const phase6aFailureCodes = new Set(["ANON_DENIED","ASSERTION_FAILED","AUTH_FIXTURE","BROWSER_FAILED","CANONICAL_CARD_STATUS","COMMIT_ORDER","CSRF_DENIED","DESTINATION_REJECTED","EPHEMERAL_REQUIRED","LATEST_VISIBLE_COMMITTED_REVISION","NEXT_READY","NO_AUTO_RECEIPT","OLDER_GET_LATEST_PROJECTION","OLDER_GET_NO_AUTO_RECEIPT","PROJECT_FIXTURE","REAL_TASK_RESPONSE","SAME_TASK_LATEST_REVISION","SAME_TASK_PROJECTION","STORED_UNCHECK","TASK_FIXTURE","TERMINAL_CONFLICT","TERMINAL_FIXTURE","TERMINAL_NO_TASK_WRITE","TERMINAL_RETAINED","VALID_READ"]);
+const phase6aFailureCodes = new Set(["ANON_DENIED","ASSERTION_FAILED","AUTH_FIXTURE","BROWSER_FAILED","CANONICAL_CARD_STATUS","COMMIT_ORDER","CSRF_DENIED","DESTINATION_REJECTED","DETAILS_DB_COMMITTED","DETAILS_PATCH_COMMITTED","DETAILS_TASK_RESPONSE","EPHEMERAL_REQUIRED","HELD_GET_DETAILS_ROW","LATEST_TASK_DETAILS_RESPONSE","LATEST_TASK_PRESERVES_DETAILS_AND_RAW_PAYMENT","LATEST_VISIBLE_COMMITTED_REVISION","LEGACY_PAYMENT_FIXTURE","NEXT_READY","NO_AUTO_RECEIPT","OLDER_GET_LATEST_PROJECTION","OLDER_GET_NO_AUTO_RECEIPT","PROJECT_FIXTURE","REAL_TASK_RESPONSE","SAME_TASK_LATEST_REVISION","SAME_TASK_PROJECTION","STORED_UNCHECK","TASK_FIXTURE","TERMINAL_CONFLICT","TERMINAL_FIXTURE","TERMINAL_NO_TASK_WRITE","TERMINAL_RETAINED","VALID_READ"]);
 function safePhase6aFailureCode(error) {
  const message=typeof error?.message==='string'?error.message:'';
  return phase6aFailureCodes.has(message)?message:'ASSERTION_FAILED';
@@ -32,7 +32,7 @@ async function main(){
  await context.route('**/*',route=>new URL(route.request().url()).origin===app?route.continue():route.abort('blockedbyclient'));
  await page.goto(app+'/ja/fixture-session');await page.getByLabel('Email').fill(email);await page.getByLabel('Password').fill(password);await page.getByRole('button',{name:'Sign in'}).click();await expect(page.getByText('Session ready')).toBeVisible();
  let fixtureNumber=0;
- async function setup(){const title='Task browser '+(++fixtureNumber),p=await admin.from('natori_projects').insert({user_id:owner,title,client_name:'Synthetic',client_email:'client@phase6a.invalid',type:'illustration',amount:12000,status:'rough',next_action:'FIRST_TASK',payment_confirmed_at:stamp,paid_at:stamp,paid_amount:12000}).select('id').single();check(!p.error&&p.data,'PROJECT_FIXTURE');const id=p.data.id;
+ async function setup(){const title='Task browser '+(++fixtureNumber),p=await admin.from('natori_projects').insert({user_id:owner,title,client_name:'Synthetic',client_email:'client@phase6a.invalid',type:'illustration',amount:12000,status:'rough',next_action:'FIRST_TASK',payment_confirmed_at:stamp,paid_at:null,paid_amount:12000}).select('id,payment_confirmed_at,paid_at,paid_amount').single();check(!p.error&&p.data,'PROJECT_FIXTURE');check(p.data.paid_at===null&&p.data.paid_amount===12000&&new Date(p.data.payment_confirmed_at).toISOString()===stamp,'LEGACY_PAYMENT_FIXTURE');const id=p.data.id;
   check(!(await admin.from('natori_project_tasks').insert([{project_id:id,task_key:'one',label:'FIRST_TASK',stage:'rough',done:false,sort_order:1},{project_id:id,task_key:'two',label:'SECOND_TASK',stage:'lineart',done:false,sort_order:2}])).error,'TASK_FIXTURE');
   await page.goto(app+'/ja/fixture-task-board');const card=page.getByRole('article',{name:title,exact:true});await expect(card).toBeVisible();await expect(card.locator('button[aria-pressed]').filter({hasText:'FIRST_TASK'})).toBeVisible();return {id,title,card,one:card.locator('button[aria-pressed]').filter({hasText:'FIRST_TASK'}),two:card.locator('button[aria-pressed]').filter({hasText:'SECOND_TASK'})};
  }
@@ -71,18 +71,35 @@ async function main(){
   check(projection.data.mutation_revision===held.responses[1].mutationRevision,'SAME_TASK_LATEST_REVISION');await expectCanonicalCard(f,projection.data);
  });
  await test('older-get-released-after-newer-task-result-keeps-latest-checkbox-and-action',async()=>{const f=await setup(),readReady=deferred(),readRelease=deferred();let fail=true,heldRead=false;
-  await page.route('**/api/natori/admin/projects',async route=>{const request=route.request();if(request.method()==='PATCH'){const input=request.postDataJSON();if(input.kind==='task'&&input.projectId===f.id&&fail){fail=false;return route.fulfill({status:503,contentType:'application/json',body:'{"error":"synthetic unavailable"}'});}return route.continue();}
-   if(request.method()==='GET'&&!heldRead){heldRead=true;const response=await route.fetch();readReady.resolve();await readRelease.promise;return route.fulfill({response});}return route.continue();
-  });await f.one.click();await readReady.promise;await f.two.click();await expect(f.two).toHaveAttribute('aria-pressed','true');
+  const selectedDay=page.locator('button[aria-pressed="true"][aria-label$=" の案件を表示"]');
+  await expect(selectedDay).toHaveCount(1);const selectedDateLabel=await selectedDay.getAttribute('aria-label');
+  const selectedDate=/^(\d{4}-\d{2})-(\d{2}) の案件を表示$/.exec(selectedDateLabel??'');check(selectedDate,'ASSERTION_FAILED');
+  const detailMonth=selectedDate[1],detailDueDay=selectedDate[2]==='26'?'27':'26';
+  const details={title:f.title+' details B',client_name:'Synthetic details B',amount:12000,start_date:detailMonth+'-05',due_date:detailMonth+'-'+detailDueDay,note:'Synthetic details B note'};
+  const detailsResponse=await context.request.patch(taskApi,{data:{kind:'project-details',projectId:f.id,patch:details},headers:{'x-requested-with':'me-ish'}});check(detailsResponse.ok(),'DETAILS_PATCH_COMMITTED');
+  const beforeTask=await admin.from('natori_projects').select('title,client_name,amount,start_date,due_date,note,mutation_revision,payment_confirmed_at,paid_at,paid_amount').eq('id',f.id).single();
+  check(!beforeTask.error&&beforeTask.data&&Object.entries(details).every(([key,value])=>beforeTask.data[key]===value)&&beforeTask.data.paid_at===null&&beforeTask.data.paid_amount===12000,'DETAILS_DB_COMMITTED');const taskReplies=[];
+  await page.route('**/api/natori/admin/projects',async route=>{const request=route.request();if(request.method()==='PATCH'){const input=request.postDataJSON();if(input.kind==='task'&&input.projectId===f.id&&fail){fail=false;return route.fulfill({status:503,contentType:'application/json',body:'{"error":"synthetic unavailable"}'});}if(input.kind==='task'&&input.projectId===f.id){const response=await route.fetch(),data=await response.json();check(response.ok()&&data.project,'DETAILS_TASK_RESPONSE');taskReplies.push(data.project);return route.fulfill({response});}return route.continue();}
+   if(request.method()==='GET'&&!heldRead){heldRead=true;const response=await route.fetch(),data=await response.json(),project=data.projects?.find(p=>p.id===f.id);check(response.ok()&&project?.mutation_revision===beforeTask.data.mutation_revision&&Object.entries(details).every(([key,value])=>project[key]===value),'HELD_GET_DETAILS_ROW');readReady.resolve();await readRelease.promise;return route.fulfill({response});}return route.continue();
+  });await f.one.click();await readReady.promise;await f.two.click();
+  await expect.poll(()=>taskReplies.length).toBe(1);
+  await expect(page.getByRole('article',{name:f.title,exact:true})).toHaveCount(0);
+  const dueDay=page.getByRole('button',{name:details.due_date+' の案件を表示',exact:true});
+  await expect(dueDay).toHaveCount(1);await dueDay.click();await expect(dueDay).toHaveAttribute('aria-pressed','true');
+  f.title=details.title;f.card=page.getByRole('article',{name:f.title,exact:true});f.one=f.card.locator('button[aria-pressed]').filter({hasText:'FIRST_TASK'});f.two=f.card.locator('button[aria-pressed]').filter({hasText:'SECOND_TASK'});
+  await expect(f.two).toHaveAttribute('aria-pressed','true');
   const persisted=await admin.from('natori_project_tasks').select('done').eq('project_id',f.id).eq('task_key','two').single();
   await expect.poll(async()=>((await admin.from('natori_project_tasks').select('done').eq('project_id',f.id).eq('task_key','two').single()).data?.done)).toBe(true);
   // Commit a newer action/status before releasing the older GET snapshot.
   await f.one.click();await expect.poll(async()=>((await admin.from('natori_project_tasks').select('done').eq('project_id',f.id).eq('task_key','one').single()).data?.done)).toBe(true);
-  const fresh=await admin.from('natori_projects').select('status,next_action,mutation_revision,completed_at,delivery_accepted_at').eq('id',f.id).single();check(!fresh.error&&fresh.data,'OLDER_GET_LATEST_PROJECTION');
+  const fresh=await admin.from('natori_projects').select('status,next_action,mutation_revision,completed_at,delivery_accepted_at,title,client_name,amount,start_date,due_date,note,payment_confirmed_at,paid_at,paid_amount').eq('id',f.id).single();check(!fresh.error&&fresh.data,'OLDER_GET_LATEST_PROJECTION');
+  check(Object.entries(details).every(([key,value])=>fresh.data[key]===value)&&fresh.data.paid_at===null&&fresh.data.paid_amount===12000&&fresh.data.payment_confirmed_at===beforeTask.data.payment_confirmed_at,'LATEST_TASK_PRESERVES_DETAILS_AND_RAW_PAYMENT');
   check(fresh.data.status==='delivery_prep'&&!fresh.data.completed_at&&!fresh.data.delivery_accepted_at,'OLDER_GET_NO_AUTO_RECEIPT');
   readRelease.resolve();await expect(page.getByRole('alert')).toBeVisible();await page.unroute('**/api/natori/admin/projects');
   await expect(f.two).toHaveAttribute('aria-pressed','true');check(!persisted.error,'VALID_READ');
   await expect(f.one).toHaveAttribute('aria-pressed','true');await expectCanonicalCard(f,fresh.data);
+  await expect(f.card.getByText(details.title,{exact:true})).toHaveCount(1);await expect(f.card.getByText(details.title,{exact:true})).toBeVisible();
+  const latestReply=taskReplies.at(-1);check(latestReply&&latestReply.mutationRevision===fresh.data.mutation_revision&&latestReply.title===details.title&&latestReply.clientName===details.client_name&&latestReply.amount===details.amount&&latestReply.startDate===details.start_date&&latestReply.dueDate===details.due_date&&latestReply.note===details.note&&latestReply.paidAt===null&&latestReply.paidAmount===12000&&latestReply.paymentConfirmedAt===fresh.data.payment_confirmed_at,'LATEST_TASK_DETAILS_RESPONSE');
  });
  await test('terminal-response-reloads-confirmed-state-and-task-does-not-reopen',async()=>{const f=await setup();
   check(!(await admin.from('natori_projects').update({status:'completed',completed_at:stamp,delivery_accepted_at:stamp,delivered_mail_at:stamp}).eq('id',f.id)).error,'TERMINAL_FIXTURE');

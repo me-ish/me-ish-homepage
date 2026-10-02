@@ -5,7 +5,7 @@ const output=process.argv[2];
 if(!output?.includes('/natori-phase-t.')||!output.endsWith('/browser-app'))throw new Error('DEDICATED_DIRECTORY_REQUIRED');
 const checksums=JSON.parse(readFileSync(resolve(output,'source-checksums.json'),'utf8'));
 for(const path of ['src/app/api/natori/admin/projects/route.ts','src/features/natori/components/dashboard/ProjectsBoard.tsx',
- 'src/features/natori/lib/taskProjection.ts','src/features/natori/server/taskIntegrityService.ts']){
+ 'src/features/natori/lib/taskProjection.ts','src/features/natori/lib/projectReadModel.ts','src/features/natori/server/taskIntegrityService.ts']){
  mkdirSync(dirname(resolve(output,path)),{recursive:true});copyFileSync(path,resolve(output,path));
  checksums[path]=createHash('sha256').update(readFileSync(path)).digest('hex');
 }

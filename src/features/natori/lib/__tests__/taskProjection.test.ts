@@ -4,7 +4,7 @@ import type {NatoriProject} from "../../types/projects";
 const id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",stamp="2026-10-01T12:00:00.000Z";
 const task=(id:string,done=false)=>({id,label:id,stage:"rough" as const,done});
 const project=(extra:Partial<NatoriProject>={}):NatoriProject=>({id,title:"Synthetic",clientName:"Synthetic",amount:12000,type:"illustration",status:"rough",nextAction:"one",dueDate:null,tasks:[task("one"),task("two")],paymentConfirmedAt:stamp,mutationRevision:1,...extra});
-const projection=(revision:number,extra:Partial<NatoriTaskProjection>={}):NatoriTaskProjection=>({id,status:"rough",nextAction:"two",mutationRevision:revision,tasks:[task("one",true),task("two")],paymentConfirmedAt:stamp,paidAt:stamp,paidAmount:12000,completedAt:null,deliveryAcceptedAt:null,deliveredMailAt:null,deletedAt:null,...extra});
+const projection=(revision:number,extra:Partial<NatoriTaskProjection>={}):NatoriTaskProjection=>({id,title:"Synthetic",clientName:"Synthetic",clientEmail:null,amount:12000,type:"illustration",deliveryPlan:"normal",priority:null,startDate:null,dueDate:null,createdAt:stamp,note:null,requestData:null,status:"rough",nextAction:"two",mutationRevision:revision,tasks:[task("one",true),task("two")],paymentConfirmedAt:stamp,paidAt:stamp,paidAmount:12000,completedAt:null,deliveryAcceptedAt:null,deliveredMailAt:null,deletedAt:null,...extra});
 describe("canonical task response fencing",()=>{
  it("retains two independent task commits when network replies arrive backwards",()=>{
   const latest=applyTaskProjection(project(),projection(3,{tasks:[task("one",true),task("two",true)],status:"delivery_prep",nextAction:"Notify delivery"}));

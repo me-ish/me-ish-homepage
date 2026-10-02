@@ -5,7 +5,7 @@ vi.mock("@/lib/supabaseAdmin",()=>({supabaseAdmin:()=>({rpc:fake.rpc})}));
 vi.mock("@/features/natori/server/natoriOwner",()=>({resolveNatoriOwnerId:fake.owner}));
 import {loadCoherentTaskSnapshot,setTaskFromLatestDb} from "@/features/natori/server/taskIntegrityService";
 const owner="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",id="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",taskId="cccccccc-cccc-4ccc-8ccc-cccccccccccc";
-const projection={id,status:"lineart",nextAction:"SECOND_TASK",mutationRevision:4,
+const projection={id,title:"Synthetic",clientName:"Synthetic",clientEmail:null,amount:12000,type:"illustration",deliveryPlan:"normal",priority:null,startDate:null,dueDate:null,createdAt:"2026-10-01T12:00:00Z",note:null,requestData:null,status:"lineart",nextAction:"SECOND_TASK",mutationRevision:4,
  tasks:[{id:"one",label:"FIRST_TASK",stage:"rough",done:true},{id:"two",label:"SECOND_TASK",stage:"lineart",done:false}],
  paymentConfirmedAt:"2026-10-01T12:00:00Z",paidAt:"2026-10-01T12:00:00Z",paidAmount:12000,
  completedAt:null,deliveryAcceptedAt:null,deliveredMailAt:null,deletedAt:null};

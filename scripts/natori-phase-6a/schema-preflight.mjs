@@ -6,7 +6,7 @@ if(process.argv.length!==3)throw Error('SCHEMA_SOURCE_ROOT_REQUIRED');
 const root=realpathSync(process.argv[2]);
 const expected={
   "supabase/migrations/20261001223805_natori_task_integrity.sql": {
-    "sha256": "643df4fbfb7373b3fdbb70d902f5d60a631e13cdfa0e9d4d11ecbfb8a58bc1dc",
+    "sha256": "b17ac3a116d7c3b01e2a3e2eea5c8409bcfa06f7b73f4aa718f79532895ef015",
     "raw": true
   },
   "src/features/natori/server/taskIntegrityService.ts": {

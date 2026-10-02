@@ -18,6 +18,12 @@ language sql stable security invoker set search_path='' as $$
  select jsonb_build_object(
   'id',(p_project).id,'status',(p_project).status,'nextAction',(p_project).next_action,
   'mutationRevision',(p_project).mutation_revision,
+  -- A whole-row revision must carry all row-backed display metadata from this locked row.
+  -- Enumerate owner-only administration fields; never expose token/hash/lease columns.
+  'title',(p_project).title,'clientName',(p_project).client_name,'clientEmail',(p_project).client_email,
+  'amount',(p_project).amount,'type',(p_project).type,'deliveryPlan',(p_project).delivery_plan,
+  'priority',(p_project).priority,'startDate',(p_project).start_date,'dueDate',(p_project).due_date,
+  'createdAt',(p_project).created_at,'note',(p_project).note,'requestData',(p_project).request_data,
   'paymentConfirmedAt',(p_project).payment_confirmed_at,'paidAt',(p_project).paid_at,
   'paidAmount',(p_project).paid_amount,'completedAt',(p_project).completed_at,
   'deliveryAcceptedAt',(p_project).delivery_accepted_at,'deliveredMailAt',(p_project).delivered_mail_at,

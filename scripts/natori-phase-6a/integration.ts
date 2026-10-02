@@ -5,7 +5,7 @@ import Stripe from "stripe";
 import { NextRequest } from "next/server";
 
 const check = (value: unknown, code: string): void => { if (!value) throw new Error(code); };
-const phase6aFailureCodes = new Set(["ANON_DENIED","ASSERTION_FAILED","AUTH_FIXTURE","BOTH_APPLIED","CLIENT_PROJECTION_IGNORED","CLOSE_CONFLICT","CLOSE_FACTS","DESTINATION_REJECTED","DISTINCT_COMMITTED_REVISIONS","HIDDEN_DOES_NOT_PIN","HIDDEN_HISTORY_RETAINED","HOLD_NOT_ACQUIRED","HOLD_QUERY","HOLD_TRANSACTION","LATEST_AGGREGATE","LATEST_LOCKED_TASKS","LATEST_RPC_NEXT_ACTION","LATEST_STORED_NEXT_ACTION","LATEST_STORED_PROJECTION","LEGACY_APPLIED","LIFECYCLE_REVISION","NO_AUTO_RECEIPT","NO_TASK_ON_CLOSED","ONE_PAYMENT_LEDGER","OWNER_FENCE","PAYMENT_FACTS_RETAINED","PAYMENT_QUOTE","PAYMENT_TASK_RACE","PHASE_6A_FAILED","PROJECT_FIXTURE","QUOTE_ACCEPTANCE_FACTS_RETAINED","QUOTE_FIXTURE","READ_PROJECT","RECEIPT_FACTS","RECEIPT_RACE","SAME_TASK_LAST_COMMIT","SAME_TASK_NEXT_ACTION_MATCHES_COMMIT","SNAPSHOT_AFTER_COMMIT","SNAPSHOT_BEFORE_COMMIT","SNAPSHOT_HOLD","SNAPSHOT_OWNER","SNAPSHOT_RPC","STAGE_FINAL_FACTS","STAGE_RACE_FINISHED","STATUS_MATCHES_COMMIT","TASK_DOES_NOT_ENQUEUE_NOTIFICATION","TASK_FIXTURE","TASK_NOTICE_COUNT_BEFORE","TASK_NOT_LOST","TASK_RECALC_PRESERVES_FACTS","TASK_RPC","TERMINAL_CONFLICT","TERMINAL_FIXTURE","TERMINAL_TASK_UNCHANGED"]);
+const phase6aFailureCodes = new Set(["ANON_DENIED","ASSERTION_FAILED","AUTH_FIXTURE","BOTH_APPLIED","CLIENT_PROJECTION_IGNORED","CLOSE_CONFLICT","CLOSE_FACTS","DESTINATION_REJECTED","DISTINCT_COMMITTED_REVISIONS","HIDDEN_DOES_NOT_PIN","HIDDEN_HISTORY_RETAINED","HOLD_NOT_ACQUIRED","HOLD_QUERY","HOLD_TRANSACTION","LATEST_AGGREGATE","LATEST_LOCKED_TASKS","LATEST_RPC_NEXT_ACTION","LATEST_STORED_NEXT_ACTION","LATEST_STORED_PROJECTION","LEGACY_APPLIED","LEGACY_PAYMENT_FACTS_RETAINED","LEGACY_PAYMENT_FIXTURE","LIFECYCLE_REVISION","NO_AUTO_RECEIPT","NO_TASK_ON_CLOSED","ONE_PAYMENT_LEDGER","OWNER_FENCE","PAYMENT_FACTS_RETAINED","PAYMENT_QUOTE","PAYMENT_TASK_RACE","PHASE_6A_FAILED","PROJECT_FIXTURE","QUOTE_ACCEPTANCE_FACTS_RETAINED","QUOTE_FIXTURE","READ_PROJECT","RECEIPT_FACTS","RECEIPT_RACE","SAME_TASK_LAST_COMMIT","SAME_TASK_NEXT_ACTION_MATCHES_COMMIT","SNAPSHOT_AFTER_COMMIT","SNAPSHOT_BEFORE_COMMIT","SNAPSHOT_HOLD","SNAPSHOT_OWNER","SNAPSHOT_RPC","STAGE_FINAL_FACTS","STAGE_RACE_FINISHED","STATUS_MATCHES_COMMIT","TASK_DOES_NOT_ENQUEUE_NOTIFICATION","TASK_FIXTURE","TASK_NOTICE_COUNT_BEFORE","TASK_NOT_LOST","TASK_RECALC_PRESERVES_FACTS","TASK_RPC","TERMINAL_CONFLICT","TERMINAL_FIXTURE","TERMINAL_TASK_UNCHANGED"]);
 function safePhase6aFailureCode(error: unknown): string {
   const message = error instanceof Error ? error.message : "";
   return phase6aFailureCodes.has(message) ? message : "ASSERTION_FAILED";
@@ -20,7 +20,7 @@ async function test(name: string, fn: () => Promise<void>) {
 }
 type Projection = { id: string; status: string; nextAction: string; mutationRevision: number;
   tasks: { id: string; done: boolean; stage: string }[]; completedAt: string | null;
-  deliveryAcceptedAt: string | null; deliveredMailAt: string | null; paymentConfirmedAt: string | null };
+  deliveryAcceptedAt: string | null; deliveredMailAt: string | null; paymentConfirmedAt: string | null; paidAt: string | null };
 type Outcome = { result: string; project: Projection };
 async function main() {
   const { origin } = JSON.parse(readFileSync("/runtime/network.json", "utf8"));
@@ -80,7 +80,9 @@ async function main() {
     }
     const taskDone = (p: Projection, key: string) => p.tasks.find(t => t.id === key)?.done;
     await test("two-clients-different-tasks-have-fresh-aggregate-and-increasing-revision", async () => {
-      const p = await setup(); const responses = await Promise.all([mutate(p.id, "one", true), mutate(p.id, "two", true, peer)]);
+      const p = await setup();
+      check(!(await db.from("natori_projects").update({ paid_at: null }).eq("id", p.id)).error, "LEGACY_PAYMENT_FIXTURE");
+      const responses = await Promise.all([mutate(p.id, "one", true), mutate(p.id, "two", true, peer)]);
       check(responses.every(r => r.result === "applied"), "BOTH_APPLIED");
       check(new Set(responses.map(r => r.project.mutationRevision)).size === 2
         && responses.every(r => r.project.mutationRevision > p.mutation_revision), "DISTINCT_COMMITTED_REVISIONS");
@@ -88,6 +90,8 @@ async function main() {
       check(latest.tasks.every(t => t.done) && latest.status === "delivery_prep", "LATEST_AGGREGATE");
       const stored = await row(p.id); check(stored.mutation_revision === latest.mutationRevision && stored.completed_at === null && stored.delivery_accepted_at === null, "NO_AUTO_RECEIPT");
       check(stored.status === latest.status && stored.next_action === latest.nextAction, "LATEST_STORED_PROJECTION");
+      check(latest.paidAt === null && stored.paid_at === null && Date.parse(stored.payment_confirmed_at) === Date.parse(stamp)
+        && stored.paid_amount === 12000, "LEGACY_PAYMENT_FACTS_RETAINED");
     });
     await test("two-clients-same-task-final-value-matches-highest-committed-revision", async () => {
       const p = await setup(); await mutate(p.id, "one", true);
@@ -124,11 +128,11 @@ async function main() {
       check(task.project.tasks.every(t => t.done), "TASK_NOT_LOST");
     });
     await test("task-and-signed-payment-webhook-retain-money-and-never-reopen-terminal", async () => {
-      const p = await setup({ status: "awaiting_payment", paid: false });
+      const p = await setup({ status: "inquiry", paid: false });
       const quote = await db.from("natori_quotes").insert({ project_id: p.id, user_id: owner, version: 1, title: "Task fixture", client_name: "Synthetic", to_email: "client@phase6a.invalid",
         amount: 12000, subject: "Synthetic", body_snapshot: "Synthetic", token_hash: createHash("sha256").update(randomUUID()).digest("hex"), expires_at: new Date(Date.now() + 86400000).toISOString(), accepted_at: stamp }).select("id").single();
       check(!quote.error && quote.data, "QUOTE_FIXTURE");
-      check(!(await db.from("natori_projects").update({ payment_quote_id: quote.data!.id, active_quote_id: quote.data!.id, quote_accepted_at: stamp, quote_accepted_amount: 12000, quoted_amount: 12000 }).eq("id", p.id)).error, "PAYMENT_QUOTE");
+      check(!(await db.from("natori_projects").update({ status: "awaiting_payment", payment_quote_id: quote.data!.id, active_quote_id: quote.data!.id, quote_accepted_at: stamp, quote_accepted_amount: 12000, quoted_amount: 12000 }).eq("id", p.id)).error, "PAYMENT_QUOTE");
       const event = { id: "evt_" + randomUUID().replaceAll("-", ""), object: "event", type: "checkout.session.completed", livemode: false,
         created: Math.floor(Date.now() / 1000), data: { object: { id: "cs_test_" + randomUUID().replaceAll("-", ""), object: "checkout.session", payment_status: "paid", status: "complete",
           amount_total: 12000, currency: "jpy", payment_intent: "pi_test_" + randomUUID().replaceAll("-", ""), metadata: { kind: "natori_commission", projectId: p.id, quoteId: quote.data!.id } } } };

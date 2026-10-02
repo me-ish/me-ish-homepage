@@ -25,7 +25,7 @@ import ProjectsBoard from "../ProjectsBoard";
 const id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",stamp="2026-10-01T12:00:00.000Z";
 const task=(id:string,done=false)=>({id,label:id,stage:"rough" as const,done});
 const base:NatoriProject={id,title:"Synthetic",clientName:"Synthetic",amount:12000,type:"illustration",status:"rough",nextAction:"one",dueDate:null,tasks:[task("one"),task("two")],paymentConfirmedAt:stamp,mutationRevision:1};
-const projection=(revision:number,tasks=base.tasks,status:NatoriTaskProjection["status"]="rough"):NatoriTaskProjection=>({id,status,nextAction:tasks.find(t=>!t.done)?.label??"Notify delivery",mutationRevision:revision,tasks,paymentConfirmedAt:stamp,paidAt:stamp,paidAmount:12000,completedAt:null,deliveryAcceptedAt:null,deliveredMailAt:null,deletedAt:null});
+const projection=(revision:number,tasks=base.tasks,status:NatoriTaskProjection["status"]="rough"):NatoriTaskProjection=>({id,title:"Synthetic",clientName:"Synthetic",clientEmail:null,amount:12000,type:"illustration",deliveryPlan:"normal",priority:null,startDate:null,dueDate:null,createdAt:stamp,note:null,requestData:null,status,nextAction:tasks.find(t=>!t.done)?.label??"Notify delivery",mutationRevision:revision,tasks,paymentConfirmedAt:stamp,paidAt:stamp,paidAmount:12000,completedAt:null,deliveryAcceptedAt:null,deliveredMailAt:null,deletedAt:null});
 function deferred<T>(){let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>{resolve=r;});return{promise,resolve};}
 afterEach(()=>{cleanup();vi.clearAllMocks();});
 async function board(){api.fetch.mockResolvedValue({projects:[base],archivedProjects:[]});api.events.mockResolvedValue([]);render(<ProjectsBoard/>);await screen.findByRole("button",{name:"one"});}

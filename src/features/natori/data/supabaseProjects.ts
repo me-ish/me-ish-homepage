@@ -1,6 +1,6 @@
 import type { NatoriRefundSummary } from "@/features/natori/types/refunds";
 import type { ConsultationOverview } from "@/features/natori/types/consultation";
-import {taskProjectionSchema,type NatoriTaskProjection} from "../lib/taskProjection";
+import {effectivePaidAt,taskProjectionSchema,type NatoriTaskProjection} from "../lib/taskProjection";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import type {
   NatoriDeliveryPlan,
@@ -125,7 +125,7 @@ export function rowToProject(
     nextAction: row.next_action,
     note: row.note ?? undefined,
     paymentConfirmedAt: row.payment_confirmed_at ?? undefined,
-    paidAt: row.paid_at ?? row.payment_confirmed_at ?? undefined,
+    paidAt: effectivePaidAt(row.paid_at, row.payment_confirmed_at),
     paidAmount: row.paid_amount ?? undefined,
     completedAt: row.completed_at ?? undefined,
     deletedAt: row.deleted_at ?? undefined,

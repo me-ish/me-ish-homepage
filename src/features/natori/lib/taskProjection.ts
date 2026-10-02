@@ -1,9 +1,14 @@
 import { z } from "zod";
-import type { NatoriProject, NatoriProjectTask } from "../types/projects";
+import type { NatoriDeliveryPlan, NatoriProject, NatoriProjectPriority, NatoriProjectTask } from "../types/projects";
+import { readNatoriProjectType } from "./projectReadModel";
 
 const statuses = z.enum(["inquiry", "estimating", "consulting", "quoted", "awaiting_payment", "rough", "lineart", "coloring", "waiting", "delivery_prep", "delivered", "completed", "closed"]);
 export const taskProjectionSchema = z.object({
   id: z.uuid(), status: statuses, nextAction: z.string(),
+  title: z.string(), clientName: z.string(), clientEmail: z.string().nullable(),
+  amount: z.number().nullable(), type: z.string(), deliveryPlan: z.string(),
+  priority: z.string().nullable(), startDate: z.string().nullable(), dueDate: z.string().nullable(),
+  createdAt: z.string(), note: z.string().nullable(), requestData: z.json().nullable(),
   mutationRevision: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
   tasks: z.array(z.object({ id: z.string(), label: z.string(),
     stage: z.enum(["material", "rough", "lineart", "coloring", "finish", "delivery"]),
@@ -16,6 +21,11 @@ export const taskProjectionSchema = z.object({
 export type NatoriTaskProjection = z.infer<typeof taskProjectionSchema>;
 export type TaskIntent = { sequence: number; done: boolean };
 
+/** Match the existing GET read model without inventing or writing a paid_at fact. */
+export function effectivePaidAt(paidAt: string | null | undefined, paymentConfirmedAt: string | null | undefined): string | undefined {
+  return paidAt ?? paymentConfirmedAt ?? undefined;
+}
+
 /** A task response can never undo independently confirmed lifecycle facts. */
 export function applyTaskProjection(current: NatoriProject, incoming: NatoriTaskProjection): NatoriProject {
   if (incoming.id !== current.id || incoming.mutationRevision <= (current.mutationRevision ?? -1)) return current;
@@ -25,13 +35,19 @@ export function applyTaskProjection(current: NatoriProject, incoming: NatoriTask
       (incoming.status !== "completed" || incoming.completedAt !== (current.completedAt ?? incoming.completedAt) ||
        incoming.deliveryAcceptedAt !== (current.deliveryAcceptedAt ?? incoming.deliveryAcceptedAt))) return current;
   if (current.paymentConfirmedAt && incoming.paymentConfirmedAt !== current.paymentConfirmedAt) return current;
-  if (current.paidAt && incoming.paidAt !== current.paidAt) return current;
+  const incomingPaidAt = effectivePaidAt(incoming.paidAt, incoming.paymentConfirmedAt);
+  if (current.paidAt && incomingPaidAt !== current.paidAt) return current;
   if (current.paidAmount !== undefined && incoming.paidAmount !== current.paidAmount) return current;
   if (current.deliveredMailAt && incoming.deliveredMailAt !== current.deliveredMailAt) return current;
   if (current.deletedAt && incoming.deletedAt !== current.deletedAt) return current;
   return { ...current, status: incoming.status, nextAction: incoming.nextAction, mutationRevision: incoming.mutationRevision,
+    title: incoming.title, clientName: incoming.clientName, clientEmail: incoming.clientEmail ?? undefined,
+    amount: incoming.amount, type: readNatoriProjectType(incoming.type), deliveryPlan: incoming.deliveryPlan as NatoriDeliveryPlan,
+    priority: (incoming.priority ?? undefined) as NatoriProjectPriority | undefined,
+    startDate: incoming.startDate ?? undefined, dueDate: incoming.dueDate, createdAt: incoming.createdAt,
+    note: incoming.note ?? undefined, requestData: incoming.requestData ?? undefined,
     tasks: incoming.tasks.filter(task => task.stage !== "material").map(task => ({ ...task, estimatedHours: task.estimatedHours ?? undefined })),
-    paymentConfirmedAt: incoming.paymentConfirmedAt ?? undefined, paidAt: incoming.paidAt ?? undefined,
+    paymentConfirmedAt: incoming.paymentConfirmedAt ?? undefined, paidAt: incomingPaidAt,
     paidAmount: incoming.paidAmount ?? undefined, completedAt: incoming.completedAt ?? undefined,
     deliveryAcceptedAt: incoming.deliveryAcceptedAt ?? undefined, deliveredMailAt: incoming.deliveredMailAt ?? undefined,
     deletedAt: incoming.deletedAt ?? undefined };
