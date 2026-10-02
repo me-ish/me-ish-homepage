@@ -2,7 +2,7 @@
 // 構造化ご依頼フォームの DOM テスト。label 関連付け、条件付き表示、
 // 二重 submit 防止、server field error 表示、送信 payload の形を固定する。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { webcrypto } from "node:crypto";
 
@@ -430,11 +430,12 @@ describe("オプション", () => {
     const detailedBackground = screen.getByRole("checkbox", { name: /しっかり背景/ });
     await userEvent.click(detailedBackground);
     expect(screen.queryByLabelText("数量")).toBeNull();
+    expect(screen.queryByLabelText("追加する表情の数")).toBeNull();
     expect(screen.getByLabelText("補足（任意）")).toBeTruthy();
 
     await userEvent.click(detailedBackground);
     await userEvent.click(screen.getByLabelText(/表情差分/));
-    expect(screen.getByLabelText("数量")).toBeTruthy();
+    expect(screen.getByLabelText("追加する表情の数")).toBeTruthy();
   });
 
   it("商用利用と公開可否は専用項目だけに表示する", () => {
@@ -449,7 +450,7 @@ describe("オプション", () => {
   it("stable ID・label snapshot・数量・補足を送る", async () => {
     renderForm();
     await userEvent.click(screen.getByLabelText(/表情差分/));
-    fireEvent.change(screen.getByLabelText("数量"), { target: { value: "3" } });
+    fireEvent.change(screen.getByLabelText("追加する表情の数"), { target: { value: "3" } });
     await userEvent.type(screen.getByLabelText("補足（任意）"), "笑顔と泣き顔");
 
     await fillMinimum();
@@ -518,7 +519,8 @@ describe("資料", () => {
     const big = new File([new Uint8Array(11 * 1024 * 1024)], "big.png", { type: "image/png" });
     fireEvent.change(input, { target: { files: [big] } });
 
-    expect(screen.getByText("1枚4MBまで（png / jpg / webp / gif）です。")).toBeTruthy();
+    expect(screen.getByText("1枚4MBまで（png / jpg / webp / gif）です。選択した1枚は追加していません。画像を減らすか、参考URLに共有リンクを貼ってください。")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "参考URL欄へ移動する" })).toBeTruthy();
     expect(screen.queryAllByRole("img")).toHaveLength(0);
   });
 });
@@ -646,8 +648,9 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     await userEvent.selectOptions(screen.getByLabelText(/作品の公開可否/), "fully_private");
     expect(screen.getByText(/ご依頼内容も非公開で対応します/)).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
-    expect(screen.getByText("商用利用：商用利用する")).toBeTruthy();
-    expect(screen.getByText("実績掲載：完全非公開")).toBeTruthy();
+    const confirmation = screen.getByRole("region", { name: "送信前の確認" });
+    expect(within(confirmation).getByText("商用利用する", { exact: true })).toBeTruthy();
+    expect(within(confirmation).getByText("完全非公開", { exact: true })).toBeTruthy();
   });
 
   it("相談と見積もりで残りの段階を示し、選択欄をコンパクトに表示する", async () => {
@@ -667,20 +670,23 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     expect(screen.getByRole("list", { name: "進行状況 2 / 3" }).querySelector('[aria-current="step"]')?.textContent).toBe("条件・連絡先");
   });
 
-  it("見積もりの条件を2画面目に表示し、別画面のエラーへ移動できる", async () => {
+  it("現在の資料エラーを次の画面へ持ち越さず、修正後は条件・連絡先のエラーへ移動する", async () => {
     renderForm();
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
     fireEvent.change(screen.getByLabelText("参考URL 1"), { target: { value: "ftp://invalid.example" } });
-    expect(screen.getByLabelText("ご予算").closest("div[hidden]")).not.toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
+    await waitFor(() => expect(document.activeElement?.id).toBe("pf-ref-url-0"));
+    expect(screen.getByLabelText("参考URL 1").getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByRole("list", { name: "進行状況 1 / 3" })).toBeTruthy();
+    expect(screen.getByLabelText("ご予算").closest("div[hidden]")).not.toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("参考URL 1"), { target: { value: "https://example.com/reference" } });
+    await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
+    await waitFor(() => expect(document.activeElement?.textContent).toBe("ご希望の条件と連絡先"));
     expect(screen.getByLabelText("ご予算").closest("div[hidden]")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
     await waitFor(() => expect(document.activeElement?.id).toBe("pf-name"));
-    await userEvent.click(screen.getByRole("button", { name: /https:\/\/ で始まる URL を入力してください/ }));
-    await waitFor(() => expect(document.activeElement?.id).toBe("pf-ref-url-0"));
-    expect(document.getElementById("pf-ref-url-0")?.closest("div[hidden]")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: /お名前を1〜100文字で入力してください/ }));
-    await waitFor(() => expect(document.activeElement?.id).toBe("pf-name"));
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("ラジオを同じグループにし、法務案内は送信ボタンの前に置く", async () => {

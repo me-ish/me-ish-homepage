@@ -47,7 +47,6 @@ export type PortfolioRequestTypeChoiceValue =
 export const NATORI_OTHER_OPTION_ID = "other";
 const OTHER_OPTION_LABEL = "その他のオプション";
 const OPTION_LABEL_MAX_LENGTH = 100;
-const OPTION_NOTES_MAX_LENGTH = 300;
 const QUANTITY_OPTION_IDS = new Set<string>([
   PORTFOLIO_OPTION_IDS.complexProp,
   PORTFOLIO_OPTION_IDS.mascotProp,
@@ -76,7 +75,8 @@ export type PortfolioOptionChoice = {
 
 export type PortfolioOptionSelection = {
   selected: boolean;
-  quantity: number;
+  /** Preserve a blank or fractional raw input until validation. */
+  quantity: number | string;
   notes: string;
 };
 
@@ -353,14 +353,16 @@ export function buildSelectedOptions(
     const selection = state.optionSelections[choice.key];
     if (!selection?.selected) continue;
     if (choice.stableId === null) {
-      unmappedLabels.push(choice.label);
+      const quantity = Number(selection.quantity);
+      const notes = selection.notes.trim();
+      unmappedLabels.push(`${choice.label}${quantity > 1 ? ` ×${quantity}` : ""}${notes ? `（${notes}）` : ""}`);
       continue;
     }
     options.push({
       id: choice.stableId,
       label: choice.label,
-      quantity: Number.isInteger(selection.quantity) ? selection.quantity : 1,
-      notes: selection.notes.trim().slice(0, OPTION_NOTES_MAX_LENGTH),
+      quantity: Number(selection.quantity),
+      notes: selection.notes.trim(),
     });
   }
 
@@ -371,15 +373,14 @@ export function buildSelectedOptions(
   if (existing) {
     existing.notes = [existing.notes, aggregated]
       .filter((part) => part.length > 0)
-      .join(" / ")
-      .slice(0, OPTION_NOTES_MAX_LENGTH);
+      .join(" / ");
     return options;
   }
   options.push({
     id: NATORI_OTHER_OPTION_ID,
     label: OTHER_OPTION_LABEL,
     quantity: 1,
-    notes: aggregated.slice(0, OPTION_NOTES_MAX_LENGTH),
+    notes: aggregated,
   });
   return options;
 }
@@ -423,6 +424,22 @@ export function buildNatoriRequestDataV1(
     message: state.message.trim(),
     legacySource: null,
   };
+}
+
+export function collectPortfolioQuantityErrors(
+  state: PortfolioRequestFormState,
+  choices: PortfolioOptionChoice[],
+): Array<{ path: string; message: string }> {
+  return choices.flatMap((choice) => {
+    const selection = state.optionSelections[choice.key];
+    if (!selection?.selected) return [];
+    const raw = selection.quantity;
+    const empty = typeof raw === "string" && raw.trim() === "";
+    const quantity = Number(raw);
+    return !empty && Number.isFinite(quantity) && Number.isInteger(quantity) && quantity >= 1 && quantity <= 10
+      ? []
+      : [{ path: `optionSelections.${choice.key}.quantity`, message: "数量は1〜10の整数で入力してください。" }];
+  });
 }
 
 export type PortfolioReferenceLinkError = {

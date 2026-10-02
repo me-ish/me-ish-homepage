@@ -23,6 +23,8 @@ phase2c=${PHASE_2C:-0}
 phase2d=${PHASE_2D:-0}
 phase3a=${PHASE_3A:-0}
 phase3b=${PHASE_3B:-0}
+phase5=${PHASE_5:-0}
+[[ $phase5 == 0 || ( $phase5 == 1 && $phase3b == 1 ) ]] || exit 1
 [[ $phase3b == 0 || ( $phase3b == 1 && $phase3a == 1 ) ]] || exit 1
 [[ $phase3a == 0 || ( $phase3a == 1 && $phase2d == 1 ) ]] || exit 1
 [[ $phase2d == 0 || ( $phase2d == 1 && $phase2c == 1 ) ]] || exit 1
@@ -208,6 +210,10 @@ if [[ $phasen == 1 ]]; then
   if [[ $phase2d == 1 ]]; then node "$repo/scripts/natori-phase-2d/prepare-browser.mjs" "$work/browser-app"; fi
   if [[ $phase3a == 1 ]]; then node "$repo/scripts/natori-phase-3a/prepare-browser.mjs" "$work/browser-app"; fi
   if [[ $phase3b == 1 ]]; then node "$repo/scripts/natori-phase-3b/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase5 == 1 ]]; then
+    node "$repo/scripts/natori-phase-5/prepare-browser.mjs" "$work/browser-app"
+    node "$repo/scripts/natori-phase-7/prepare-fonts.mjs" "$work/browser-app" --construction
+  fi
   cp "$work/browser-app/source-checksums.json" "$work/results/browser-source-checksums.json"
 fi
 ROOT="$root" WORK="$work" PROJECT="$project" PHASE_1="$phase1" node --input-type=module <<'JS'
@@ -494,6 +500,13 @@ if [[ $phase3b == 1 ]]; then
   sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/phase3b-egress-counters.txt"
   sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/phase3b-egress-counters.txt"
   [[ $phase3b_status == 0 ]] || { echo "Phase 3B mandatory tests failed"; exit 1; }
+fi
+
+if [[ $phase5 == 1 ]]; then
+  # Independent sealed Next lifecycle; retain all prior DB/browser cases and reports.
+  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase5-browser/browser.mjs
+  sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/phase5-egress-counters.txt"
+  sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/phase5-egress-counters.txt"
 fi
 
 echo 'Required real Storage tests completed; production remains unchanged'

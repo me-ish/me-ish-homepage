@@ -1,0 +1,88 @@
+name: Natori Phase 5
+
+on:
+  pull_request:
+    branches: [main, codex/natori-phase-2a, codex/natori-phase-2b, codex/natori-phase-2c, codex/natori-phase-2d, codex/natori-phase-3a, codex/natori-phase-3b]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/natori-phase-2b.yml'
+      - 'scripts/natori-phase-2b/**'
+      - 'scripts/natori-phase-2c/**'
+      - 'scripts/natori-phase-2d/**'
+      - 'scripts/natori-phase-3a/**'
+      - 'scripts/natori-phase-3b/**'
+      - 'scripts/natori-phase-5/**'
+      - 'scripts/natori-phase-7/prepare-fonts.mjs'
+      - 'scripts/natori-phase-7/font-assets.json'
+      - 'scripts/natori-phase-7/font-responses.cjs'
+      - 'e2e/natori-intake.spec.ts'
+      - '.github/workflows/natori-phase-2c.yml'
+      - '.github/workflows/natori-phase-2d.yml'
+      - '.github/workflows/natori-phase-3a.yml'
+      - '.github/workflows/natori-phase-3b.yml'
+      - '.github/workflows/natori-phase-5.yml'
+      - 'scripts/natori-phase-t/**'
+      - 'scripts/natori-phase-0b/**'
+      - 'scripts/natori-phase-n/**'
+      - 'src/features/natori/**'
+      - 'scripts/natori-phase-2a/**'
+      - 'src/app/api/webhook/stripe/**'
+      - 'src/app/**/natori/**'
+      - 'src/types/supabase.ts'
+      - 'supabase/migrations/**'
+      - 'docs/natori/Natori_Phase_2B*'
+      - 'docs/natori/Natori_Phase_2C*'
+      - 'docs/natori/Natori_Phase_2D*'
+      - 'docs/natori/Natori_Phase_3A*'
+      - 'docs/natori/Natori_Phase_3B*'
+      - 'docs/natori/Natori_Phase_5*'
+      - '.node-version'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: natori-phase-5-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  delivery:
+    name: Natori form review with real isolated admission and browser
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PHASE_T_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PHASE_N: '1'
+      PHASE_2A: '1'
+      PHASE_2B: '1'
+      PHASE_2C: '1'
+      PHASE_2D: '1'
+      PHASE_3A: '1'
+      PHASE_3B: '1'
+      PHASE_5: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.node-version'
+          cache: npm
+      - name: Install locked test dependencies during construction
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify types, frozen baseline and product unit regressions
+        run: |
+          npx --no-install tsc --noEmit --incremental false
+          node scripts/etorie-baseline-static-check.mjs
+          npx --no-install vitest run
+      - name: Verify form review, raw validation, actual intake envelope and all prior regressions
+        run: bash scripts/natori-phase-t/run.sh
+      - name: Publish non-secret evidence only
+        if: always() && env.PHASE_T_RESULTS != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: natori-phase-5-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.PHASE_T_RESULTS }}/*
+          if-no-files-found: error
+          retention-days: 7
