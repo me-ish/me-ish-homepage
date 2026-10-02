@@ -178,12 +178,12 @@ test.describe("Natori public intake rollout", () => {
     await confirmation.getByRole("button", { name: "資料を修正する" }).click();
     await expect(page.getByLabel("参考URL 1", { exact: true })).toBeVisible();
     await expect(page.getByLabel("参考URL 1", { exact: true })).toHaveValue("https://example.com/reference");
-    await page.getByLabel("ご依頼の種類", { exact: true }).selectOption("icon");
+    await page.getByLabel("ご依頼の種類", { exact: true }).selectOption("illustration", { timeout: 5000 });
     await expect(page.getByLabel(/ご依頼の種類（その他の内容）/)).toHaveCount(0);
     await page.getByRole("button", { name: "条件・連絡先へ" }).click();
     await page.getByRole("button", { name: "内容を確認する" }).click();
     await expect(confirmation).not.toContainText("イベント表紙");
-    await expect(confirmation).toContainText("SNSアイコン");
+    await expect(confirmation).toContainText("一枚絵");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: test.info().outputPath("phase5-review-360.png"), fullPage: true });
   });

@@ -7,8 +7,34 @@ import {setDefaultResultOrder} from 'node:dns';
 import {registerPhase5Cases} from './browser-cases.mjs';
 const require=createRequire('/app/package.json'),{createClient}=require('@supabase/supabase-js'),{chromium,expect}=require('@playwright/test');
 setDefaultResultOrder('ipv4first');
-const results=[],checks=[],check=(value,code)=>{if(!value)throw new Error(code);};let server,browser,stage='preflight',caseCheckpoint='CASE_START';
+const results=[],checks=[],check=(value,code)=>{if(!value)throw new Error(code);};let server,browser,stage='preflight',caseCheckpoint='CASE_START',caseTargetState=null,caseTargetStates=[];
 const compileErrors=new Set();
+const phase5FailureCodes=new Set(['PAGE_ERROR','RAW_INTEGER_AND_OPTION','ACTUAL_REFERENCE_IMAGE','REAL_ACCEPTANCE','ATOMIC_OPERATION','SAVED_PROJECT_OWNER','PROJECT_SCOPED_SHARED_VIEW','SAVED_REFERENCE_IMAGE_COUNT','ATOMIC_TWO_NOTICES','NOTICE_PURPOSE','DIAGNOSTIC_LIMIT']);
+function safePhase5FailureCode(error,checkpoint){
+ const message=typeof error?.message==='string'?error.message:'';
+ return phase5FailureCodes.has(message)||/^(REAL_SUBMIT_STATUS|ANONYMOUS_MANAGEMENT_PROJECTION|SAVED_MANAGEMENT_PROJECTION)_[1-5][0-9]{2}$/.test(message)?message:'ASSERTION_FAILED_'+checkpoint;
+}
+function safePhase5FailureKind(error){
+ const message=typeof error?.message==='string'?error.message:'';
+ if(error?.name==='TimeoutError')return 'Timeout';
+ if(error?.name==='AssertionError'||error?.matcherResult||message.includes('expect('))return 'Assertion';
+ if(phase5FailureCodes.has(message)||/^(REAL_SUBMIT_STATUS|ANONYMOUS_MANAGEMENT_PROJECTION|SAVED_MANAGEMENT_PROJECTION)_[1-5][0-9]{2}$/.test(message))return 'Coded';
+ return 'Unknown';
+}
+async function capturePhase5Target(code,locator){
+ const count=await locator.count().catch(()=>0);
+ const state={checkpoint:code,unique:count===1,visible:false,enabled:null,sectionOpen:null,legacyIconPresent:null,illustrationOffered:null};
+ if(count===1){
+  state.visible=await locator.isVisible().catch(()=>false);
+  state.enabled=await locator.isEnabled({timeout:2000}).catch(()=>null);
+  state.sectionOpen=await locator.evaluate(node=>{const section=node.closest('details');return section?section.open:null;},undefined,{timeout:2000}).catch(()=>null);
+  if(code==='SELECT_TYPE'){
+   state.legacyIconPresent=(await locator.locator('option[value="icon"]').count())>0;
+   state.illustrationOffered=(await locator.locator('option[value="illustration"]').count())===1;
+  }
+ }
+ return state;
+}
 function persist(){writeFileSync('/results/phase5-browser.json',JSON.stringify({tests:results,prerequisites:checks,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,engine:'Chromium1280/360/390px; real ephemeral Next/DB; pinned official fonts; sending disabled; not iPhone Safari',runtimeExecuted:true},null,2));}
 async function main(){
  check(process.env.PHASE_N_BROWSER==='ephemeral','EPHEMERAL_REQUIRED');
@@ -60,12 +86,12 @@ async function main(){
   for(const purpose of['intake_artist','intake_client']){const notice=notices.data.find(row=>row.purpose===purpose);check(notice,'NOTICE_PURPOSE');expect(notice.snapshot.requestData).toEqual(requestData);}
   await expect(page.getByText('送信ありがとうございます!',{exact:true})).toBeVisible();checks.push({name:'reviewed-390px-envelope-actual-POST-and-two-atomic-notices',status:'passed'});
  }
- registerPhase5Cases({test,expect,checkpoint:code=>{check(/^[A-Z_0-9]+$/.test(code),'UNSAFE_CHECKPOINT');caseCheckpoint=code;},prepareActualEnvelope,DEMO_PATH:app+'/ja/fixture-phase5',assertActualEnvelope,
+ registerPhase5Cases({test,expect,checkpoint:(code,locator)=>{check(/^[A-Z_0-9]+$/.test(code),'UNSAFE_CHECKPOINT');caseCheckpoint=code;return locator?capturePhase5Target(code,locator).then(state=>{check(caseTargetStates.length<4,'DIAGNOSTIC_LIMIT');caseTargetState=state;caseTargetStates.push(state);}):undefined;},prepareActualEnvelope,DEMO_PATH:app+'/ja/fixture-phase5',assertActualEnvelope,
   openInquiry:async(page,label)=>{await page.locator('#form').getByRole('link',{name:label}).click();await expect(page).toHaveURL(/\/fixture-phase5\/contact\?/);await expect(page.getByRole('heading',{name:'ご相談・ご依頼',exact:true})).toBeVisible();},
   fillContact:async(page,suffix)=>{await page.getByLabel(/お名前/).fill('Synthetic '+suffix);await page.getByLabel(/メールアドレス/).fill('client-'+suffix+'@phase5.invalid');}});
  check(cases.length===6,'EXACT_SIX_CASES');
- for(const item of cases){stage=item.name;caseCheckpoint='CASE_START';const context=await browser.newContext({viewport:{width:390,height:844}});const page=await context.newPage();const pageErrors=[];page.on('pageerror',()=>pageErrors.push('PAGE_ERROR'));await context.route('**/*',r=>new URL(r.request().url()).origin===app?r.continue():r.abort('blockedbyclient'));
-  try{await item.fn({page});check(pageErrors.length===0,'PAGE_ERROR');results.push({name:item.name,status:'passed'});console.log('PASS phase5-browser/'+item.name);}catch(error){results.push({name:item.name,status:'failed',code:/^[A-Z_0-9]+$/.test(error?.message??'')?error.message:'ASSERTION_FAILED_'+caseCheckpoint});console.log('FAIL phase5-browser/'+item.name);}finally{await context.close();persist();}
+ for(const item of cases){stage=item.name;caseCheckpoint='CASE_START';caseTargetState=null;caseTargetStates=[];const context=await browser.newContext({viewport:{width:390,height:844}});const page=await context.newPage();const pageErrors=[];page.on('pageerror',()=>pageErrors.push('PAGE_ERROR'));await context.route('**/*',r=>new URL(r.request().url()).origin===app?r.continue():r.abort('blockedbyclient'));
+  try{await item.fn({page});check(pageErrors.length===0,'PAGE_ERROR');results.push({name:item.name,status:'passed',...(caseTargetStates.length?{diagnostics:{targets:caseTargetStates}}:{})});console.log('PASS phase5-browser/'+item.name);}catch(error){const syntheticScreenshotCaptured=item.name==='Phase 5 all named edit targets preserve reviewed values and hidden Other answers are pruned'?await page.screenshot({path:'/results/phase5-failure-review-360.png',fullPage:true,timeout:5000}).then(()=>true,()=>false):false;results.push({name:item.name,status:'failed',code:safePhase5FailureCode(error,caseCheckpoint),diagnostics:{exceptionKind:safePhase5FailureKind(error),target:caseTargetState,targets:caseTargetStates,syntheticScreenshotCaptured}});console.log('FAIL phase5-browser/'+item.name);}finally{await context.close();persist();}
  }
  check(results.length===6&&results.every(row=>row.status==='passed')&&compileErrors.size===0,'BROWSER_FAILED');
 }
