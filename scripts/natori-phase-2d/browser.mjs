@@ -24,7 +24,12 @@ function writeReport(failure) {
   }, null, 2));
 }
 async function test(name, run) { stage = name; try { await run(); tests.push({ name, status: 'passed' }); console.log(`PASS phase2d-browser/${name}`); }
-  catch (error) { tests.push({ name, status: 'failed', code: /^[A-Z_0-9]+$/.test(error?.message ?? '') ? error.message : 'ASSERTION_FAILED' }); console.log(`FAIL phase2d-browser/${name}`); } }
+  catch (error) {
+    const code = new Set(['SIGNED_REFUND_ACK', 'ANON_DENIED', 'BUSINESS_FACTS_PRESERVED', 'CSV_STREAM', 'CSV_BOUND', 'CSV_MATCHES_UI',
+      'COMPLETED_RETAINED', 'MOBILE_NO_OVERFLOW', 'NO_REFUND_ACTION', 'ACTIVE_FACTS_READ', 'ACTIVE_BASELINE', 'ACTIVE_NO_REFUND_ACTION',
+      'ACTIVE_BUSINESS_FACTS_PRESERVED', 'ACTIVE_MOBILE_NO_OVERFLOW']).has(error?.message) ? error.message : 'ASSERTION_FAILED';
+    tests.push({ name, status: 'failed', code }); console.log(`FAIL phase2d-browser/${name}`);
+  } }
 
 async function main() {
   check(process.env.PHASE_N_BROWSER === 'ephemeral', 'EPHEMERAL_REQUIRED');
