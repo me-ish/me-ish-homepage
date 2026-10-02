@@ -5,11 +5,12 @@ import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { setDefaultResultOrder } from 'node:dns';
-let mode = null, assertQuietPort, trackProcess, waitOwnedReady, waitProcessExit, stopOwned;
+import { lookup } from 'node:dns/promises';
+let mode = null, assertQuietPort, trackProcess, waitOwnedReady, waitOwnedSessionReady, waitProcessExit, stopOwned;
 const check = (value, code) => { if (!value) throw new Error(code); };
-let server, child, stage = 'preflight', browserExit = null, fontEvidence, portControls = null; const compileErrors = new Set();
+let server, child, stage = 'preflight', browserExit = null, fontEvidence, portControls = null, hostnameResolution = null; const compileErrors = new Set();
 const lifecycle = { freePort: null, ready: null, browserExit: null, browserClosed: null, serverClosed: null };
-const listener = Object.freeze({ bindHost: '127.0.0.1', probeHost: '127.0.0.1', browserOrigin: 'http://localhost:3000', dnsResultOrder: 'ipv4first', ipv6Probed: false });
+const listener = Object.freeze({ configuredHost: 'localhost', ownerProbeHost: '127.0.0.1', probeHost: '127.0.0.1', browserOrigin: 'http://localhost:3000', dnsResultOrder: 'ipv4first', ipv6Probed: false });
 const failures = [];
 const readinessDiagnostics = { attempts: 0, first: null, last: null, counts: {} };
 const readinessDiagnosticCodes = new Set(['OWNER_JSON_RECEIVED', 'HTTP_NOT_OK', 'JSON_INVALID', 'REDIRECT_REJECTED', 'REQUEST_TIMEOUT', 'CONNECTION_REFUSED', 'FETCH_FAILED']);
@@ -23,6 +24,20 @@ function recordReadinessDiagnostic(value) {
   readinessDiagnostics.counts[value.code] = (readinessDiagnostics.counts[value.code] ?? 0) + 1;
 }
 
+const sessionReadiness = { path: '/fixture-session', acceptLanguage: 'ja', sharedStartupDeadline: true,
+  startupLimitMs: 120000, requestTimeoutMs: 2000, elapsedMs: null, formMarkerMatched: false, ownerRevalidated: false,
+  attempts: 0, first: null, last: null, counts: {} };
+const sessionDiagnosticCodes = new Set(['SESSION_FORM_RECEIVED', 'HTTP_NOT_OK', 'FORM_INVALID', 'REDIRECT_REJECTED', 'REQUEST_TIMEOUT', 'CONNECTION_REFUSED', 'FETCH_FAILED']);
+function recordSessionDiagnostic(value) {
+  check(sessionDiagnosticCodes.has(value.code) && (value.httpStatus === null
+    || Number.isInteger(value.httpStatus) && value.httpStatus >= 0 && value.httpStatus <= 599), 'VISUAL_SETUP_FAILED');
+  const entry = { code: value.code, httpStatus: value.httpStatus };
+  sessionReadiness.attempts++;
+  if (sessionReadiness.first === null) sessionReadiness.first = entry;
+  sessionReadiness.last = entry;
+  sessionReadiness.counts[value.code] = (sessionReadiness.counts[value.code] ?? 0) + 1;
+}
+
 const ownerRoute = `export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export async function GET() {
@@ -32,7 +47,7 @@ export async function GET() {
 }
 `;
 const ownerRouteSha256 = createHash('sha256').update(ownerRoute).digest('hex');
-const knownCodes = new Set(["ACCEPTED_FIXTURE", "AUTH_FIXTURE", "CONTENT_FIXTURE", "DESTINATION_REJECTED", "DRAFT_FIXTURE", "EPHEMERAL_REQUIRED", "LINK_FIXTURE", "NEXT_READY", "PINNED_OFFLINE_FONTS_REQUIRED", "PROJECT_FIXTURE", "QUOTE_FIXTURE", "TASK_FIXTURE", "UNKNOWN_FAILURE", "VISUAL_APP_NOT_LOOPBACK", "VISUAL_BROWSER_FAILED", "VISUAL_BROWSER_STOP_FAILED", "VISUAL_CHILD_OUTPUT_FAILED", "VISUAL_EXITED_AFTER_READY", "VISUAL_EXITED_BEFORE_READY", "VISUAL_MODE_REQUIRED", "VISUAL_OWNERSHIP_UNPROVEN", "VISUAL_OWNER_NONCE_INVALID", "VISUAL_OWNER_ROUTE_DRIFT", "VISUAL_PORT_CONTROL_FAILED", "VISUAL_PORT_INVALID", "VISUAL_PORT_NOT_CLOSED", "VISUAL_PORT_OCCUPIED", "VISUAL_PORT_PROBE_UNKNOWN", "VISUAL_PROCESS_DID_NOT_EXIT", "VISUAL_PROCESS_EXIT_TIMEOUT", "VISUAL_PROCESS_NOT_TRACKED", "VISUAL_READY_OWNER_MISMATCH", "VISUAL_READY_PID_NOT_OWNED", "VISUAL_READY_TIMEOUT", "VISUAL_RESULT_WRITE_FAILED", "VISUAL_SERVER_OUTPUT_FAILED", "VISUAL_SERVER_STOP_FAILED", "VISUAL_SETUP_FAILED", "VISUAL_SPAWN_FAILED"]);
+const knownCodes = new Set(["ACCEPTED_FIXTURE", "AUTH_FIXTURE", "CONTENT_FIXTURE", "DESTINATION_REJECTED", "DRAFT_FIXTURE", "EPHEMERAL_REQUIRED", "LINK_FIXTURE", "NEXT_READY", "PINNED_OFFLINE_FONTS_REQUIRED", "PROJECT_FIXTURE", "QUOTE_FIXTURE", "TASK_FIXTURE", "UNKNOWN_FAILURE", "VISUAL_APP_NOT_LOOPBACK", "VISUAL_BROWSER_FAILED", "VISUAL_BROWSER_STOP_FAILED", "VISUAL_CHILD_OUTPUT_FAILED", "VISUAL_EXITED_AFTER_READY", "VISUAL_EXITED_BEFORE_READY", "VISUAL_MODE_REQUIRED", "VISUAL_OWNERSHIP_UNPROVEN", "VISUAL_OWNER_NONCE_INVALID", "VISUAL_OWNER_ROUTE_DRIFT", "VISUAL_PORT_CONTROL_FAILED", "VISUAL_PORT_INVALID", "VISUAL_PORT_NOT_CLOSED", "VISUAL_PORT_OCCUPIED", "VISUAL_PORT_PROBE_UNKNOWN", "VISUAL_PROCESS_DID_NOT_EXIT", "VISUAL_PROCESS_EXIT_TIMEOUT", "VISUAL_PROCESS_NOT_TRACKED", "VISUAL_READY_OWNER_MISMATCH", "VISUAL_READY_PID_NOT_OWNED", "VISUAL_READY_TIMEOUT", "VISUAL_READY_DEADLINE_INVALID", "VISUAL_HOSTNAME_NOT_IPV4_LOOPBACK", "VISUAL_SESSION_READY_TIMEOUT", "VISUAL_SESSION_HTTP_NOT_OK", "VISUAL_SESSION_FORM_INVALID", "VISUAL_SESSION_REDIRECT_REJECTED", "VISUAL_SESSION_FETCH_FAILED", "VISUAL_RESULT_WRITE_FAILED", "VISUAL_SERVER_OUTPUT_FAILED", "VISUAL_SERVER_STOP_FAILED", "VISUAL_SETUP_FAILED", "VISUAL_SPAWN_FAILED"]);
 function diagnosticMessage(error) {
   try { const message = error?.message; return typeof message === 'string' ? message : ''; }
   catch { return ''; }
@@ -47,7 +62,10 @@ async function main() {
   mode = process.argv[2];
   check(process.env.PHASE_N_BROWSER === 'ephemeral', 'EPHEMERAL_REQUIRED');
   setDefaultResultOrder('ipv4first');
-  ({ assertQuietPort, trackProcess, waitOwnedReady, waitProcessExit, stopOwned } = await import('./visual-lifecycle.mjs'));
+  const resolvedHostname = await lookup(listener.configuredHost);
+  check(resolvedHostname.address === listener.ownerProbeHost && resolvedHostname.family === 4, 'VISUAL_HOSTNAME_NOT_IPV4_LOOPBACK');
+  hostnameResolution = { address: resolvedHostname.address, family: resolvedHostname.family };
+  ({ assertQuietPort, trackProcess, waitOwnedReady, waitOwnedSessionReady, waitProcessExit, stopOwned } = await import('./visual-lifecycle.mjs'));
   const { origin } = JSON.parse(readFileSync('/runtime/network.json', 'utf8'));
   check(/^http:\/\/172\.30\.250\.\d+:8000$/.test(origin), 'DESTINATION_REJECTED');
   const keys = JSON.parse(readFileSync('/runtime/credentials.json', 'utf8'));
@@ -81,15 +99,22 @@ async function main() {
     NATORI_ACCEPTANCE_OUTBOX_ENABLED: '1', NATORI_NOTIFICATION_SENDING_ENABLED: '0', NATORI_MAIL_BCC: '',
   };
   stage = 'next-server';
-  server = spawn(process.execPath, ['/app/node_modules/next/dist/bin/next', 'dev', '--hostname', '127.0.0.1', '--port', '3000'], { cwd: '/app', env, stdio: ['ignore', 'pipe', 'pipe'] });
+  const startupStartedAt = Date.now(), startupDeadline = startupStartedAt + sessionReadiness.startupLimitMs;
+  server = spawn(process.execPath, ['/app/node_modules/next/dist/bin/next', 'dev', '--hostname', 'localhost', '--port', '3000'], { cwd: '/app', env, stdio: ['ignore', 'pipe', 'pipe'] });
   trackProcess(server);
   for (const stream of [server.stdout, server.stderr]) stream.on('error', () => { failures.push({ stage: 'server-output', code: 'VISUAL_SERVER_OUTPUT_FAILED' }); process.exitCode = 1; });
   for (const stream of [server.stdout, server.stderr]) stream.on('data', buffer => {
     const text = buffer.toString();
     for (const code of ['Module not found', 'Failed to compile', 'SyntaxError', 'EADDRINUSE', 'Missing mocked response']) if (text.includes(code)) compileErrors.add(code);
   });
-  lifecycle.ready = await waitOwnedReady(server, { app, nonce: ownerNonce, onDiagnostic: recordReadinessDiagnostic });
-  check((await fetch(app + '/ja/fixture-session', { signal: AbortSignal.timeout(2000) })).ok, 'NEXT_READY');
+  try {
+    lifecycle.ready = await waitOwnedReady(server, { app, nonce: ownerNonce, deadlineMs: startupDeadline, onDiagnostic: recordReadinessDiagnostic });
+    stage = 'session-ready';
+    const ready = await waitOwnedSessionReady(server, { app, nonce: ownerNonce, deadlineMs: startupDeadline,
+      requestTimeoutMs: sessionReadiness.requestTimeoutMs, onDiagnostic: recordSessionDiagnostic, onOwnerDiagnostic: recordReadinessDiagnostic });
+    lifecycle.ready = ready.owner;
+    sessionReadiness.formMarkerMatched = ready.formMarkerMatched; sessionReadiness.ownerRevalidated = ready.ownerRevalidated;
+  } finally { sessionReadiness.elapsedMs = Math.max(0, Date.now() - startupStartedAt); }
   stage = 'visual-browser';
   child = spawn(process.execPath, [mode === '6b' ? '/phase6b-browser/browser.mjs' : '/phase7-browser/browser.mjs'], {
     cwd: '/app', env: { PATH: env.PATH, HOME: '/tmp', TMPDIR: '/tmp', NODE_OPTIONS: env.NODE_OPTIONS, PLAYWRIGHT_BROWSERS_PATH: '/ms-playwright', PHASE_N_BROWSER: 'ephemeral',
@@ -119,7 +144,8 @@ main().catch(error => {
     try { lifecycle.serverClosed = await stopOwned(server, { app: 'http://localhost:3000' }); }
     catch (error) { failures.push({ stage: 'server-stop', code: safeFailure(error, 'VISUAL_SERVER_STOP_FAILED') }); process.exitCode = 1; }
   }
-  const ownServer = portControls?.status === 'passed' && portControls?.cleanup?.exitObserved === true && portControls?.cleanup?.portClosed === true
+  const ownServer = hostnameResolution?.address === listener.ownerProbeHost && hostnameResolution?.family === 4
+    && portControls?.status === 'passed' && portControls?.cleanup?.exitObserved === true && portControls?.cleanup?.portClosed === true
     && lifecycle.freePort?.freePortBeforeSpawn === true && lifecycle.freePort?.probeHost === listener.probeHost
     && lifecycle.freePort?.ipv4Refused === true && lifecycle.freePort?.ipv6Probed === false && lifecycle.ready?.ownerNonceMatched === true
     && lifecycle.ready?.ownedAncestryVerified === true && lifecycle.serverClosed?.exitObserved === true && lifecycle.serverClosed?.portClosed === true
@@ -127,7 +153,7 @@ main().catch(error => {
   if (!ownServer && failures.length === 0) { failures.push({ stage: 'lifecycle', code: 'VISUAL_OWNERSHIP_UNPROVEN' }); process.exitCode = 1; }
   try {
     writeFileSync(mode === '6b' ? '/results/phase6b-visual-server.json' : mode === '7' ? '/results/phase7-visual-server.json' : '/results/phase-visual-preflight.json', JSON.stringify({ mode, status: failures.length === 0 ? 'passed' : 'failed', browserExit, compileErrors: [...compileErrors],
-      ownServer, listener, lifecycle, portControls, readinessDiagnostics, failures, syntheticOwnerRouteSha256: ownerRouteSha256, sendingEnabled: false, providerCallsConfigured: false, fonts: fontEvidence,
+      ownServer, listener, hostnameResolution, lifecycle, portControls, readinessDiagnostics, sessionReadiness, failures, syntheticOwnerRouteSha256: ownerRouteSha256, sendingEnabled: false, providerCallsConfigured: false, fonts: fontEvidence,
       interpretation: mode === '6b' ? 'Phase 6B browser only; no Phase 7 adoption or screen acceptance' : 'Phase 7 synthetic isolated screen evidence; human evaluation remains distinct' }, null, 2));
   } catch { console.error('VISUAL_RESULT_WRITE_FAILED; raw logs withheld'); process.exitCode = 1; }
 });

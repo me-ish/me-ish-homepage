@@ -92,19 +92,20 @@ function readinessDiagnosticCode(error) {
   return 'FETCH_FAILED';
 }
 
-export async function waitOwnedReady(child, { app, nonce, timeoutMs = 120000, pollMs = 400, requestTimeoutMs = 2000, onDiagnostic = null }) {
+export async function waitOwnedReady(child, { app, nonce, timeoutMs = 120000, deadlineMs = null, pollMs = 400, requestTimeoutMs = 2000, onDiagnostic = null }) {
   portOf(app);
   if (!/^[a-f0-9]{64}$/.test(nonce)) fail('VISUAL_OWNER_NONCE_INVALID');
   const witness = witnesses.get(child);
   if (!witness) fail('VISUAL_PROCESS_NOT_TRACKED');
-  const deadline = Date.now() + timeoutMs;
+  const deadline = deadlineMs === null ? Date.now() + timeoutMs : deadlineMs;
+  if (!Number.isSafeInteger(deadline) || !Number.isSafeInteger(requestTimeoutMs) || requestTimeoutMs <= 0) fail('VISUAL_READY_DEADLINE_INVALID');
   while (Date.now() < deadline) {
     if (witness.spawnFailed) fail('VISUAL_SPAWN_FAILED');
     if (exited(child) || witness.exitObserved) fail('VISUAL_EXITED_BEFORE_READY');
     if (witness.spawnObserved && positivePid(witness.pid)) {
       let response, data, code = 'FETCH_FAILED', httpStatus = null;
       try {
-        response = await fetch(app + '/api/fixture-visual-owner', { redirect: 'error', signal: AbortSignal.timeout(requestTimeoutMs) });
+        response = await fetch(`http://127.0.0.1:${portOf(app)}/api/fixture-visual-owner`, { redirect: 'error', signal: AbortSignal.timeout(Math.min(requestTimeoutMs, Math.max(1, deadline - Date.now()))) });
         httpStatus = Number.isInteger(response.status) && response.status >= 0 && response.status <= 599 ? response.status : null;
         if (response.ok) {
           try { data = await response.json(); code = 'OWNER_JSON_RECEIVED'; }
@@ -117,12 +118,70 @@ export async function waitOwnedReady(child, { app, nonce, timeoutMs = 120000, po
         if (data.kind !== 'natori-visual-owner-v1' || data.nonce !== nonce || !positivePid(data.pid)) fail('VISUAL_READY_OWNER_MISMATCH');
         if (!await ownedDescendant(data.pid, witness.pid)) fail('VISUAL_READY_PID_NOT_OWNED');
         if (exited(child) || witness.exitObserved) fail('VISUAL_EXITED_AFTER_READY');
+        if (Date.now() >= deadline) fail('VISUAL_READY_TIMEOUT');
         return { ...snapshot(witness), ownerNonceMatched: true, readyWorkerPid: data.pid, ownedAncestryVerified: true };
       }
     }
     await pause(Math.min(pollMs, Math.max(1, deadline - Date.now())));
   }
   fail('VISUAL_READY_TIMEOUT');
+}
+
+// This marker is the actual static SSR form emitted by the unchanged 0B builder.
+// Require a real form subtree, not a 200 status or a script string containing its text.
+function hasSessionSignInForm(html) {
+  if (typeof html !== 'string') return false;
+  const markup = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<!--[\s\S]*?-->/g, '');
+  const form = markup.match(/<form\b[^>]*\smethod="post"(?=\s|>)[^>]*>[\s\S]*?<\/form>/i)?.[0];
+  if (!form) return false;
+  const inputs = form.match(/<input\b[^>]*>/gi) ?? [];
+  const input = (name, type) => inputs.some(tag => new RegExp(`\\sname="${name}"(?=\\s|/?>)`).test(tag) && new RegExp(`\\stype="${type}"(?=\\s|/?>)`).test(tag));
+  return input('email', 'email') && input('password', 'password') && /<button\b[^>]*>Sign in<\/button>/.test(form);
+}
+
+/** Canonical session page + final owner recheck share the initial owner deadline. */
+export async function waitOwnedSessionReady(child, { app, nonce, deadlineMs, pollMs = 400, requestTimeoutMs = 2000, onDiagnostic = null, onOwnerDiagnostic = null }) {
+  portOf(app);
+  if (!/^[a-f0-9]{64}$/.test(nonce)) fail('VISUAL_OWNER_NONCE_INVALID');
+  if (!Number.isSafeInteger(deadlineMs) || !Number.isSafeInteger(requestTimeoutMs) || requestTimeoutMs <= 0) fail('VISUAL_READY_DEADLINE_INVALID');
+  const witness = witnesses.get(child);
+  if (!witness) fail('VISUAL_PROCESS_NOT_TRACKED');
+  const alive = after => {
+    if (witness.spawnFailed) fail('VISUAL_SPAWN_FAILED');
+    if (exited(child) || witness.exitObserved) fail(after ? 'VISUAL_EXITED_AFTER_READY' : 'VISUAL_EXITED_BEFORE_READY');
+    if (!witness.spawnObserved || !positivePid(witness.pid)) fail('VISUAL_PROCESS_NOT_TRACKED');
+  };
+  while (Date.now() < deadlineMs) {
+    alive(false);
+    let response, html, code = 'FETCH_FAILED', httpStatus = null;
+    try {
+      response = await fetch(app + '/fixture-session', { redirect: 'error', headers: { 'Accept-Language': 'ja' },
+        signal: AbortSignal.timeout(Math.min(requestTimeoutMs, Math.max(1, deadlineMs - Date.now()))) });
+      httpStatus = Number.isInteger(response.status) && response.status >= 0 && response.status <= 599 ? response.status : null;
+      if (response.status === 200 && /^text\/html(?:;|$)/i.test(response.headers.get('content-type') ?? '')) {
+        html = await response.text();
+        code = hasSessionSignInForm(html) ? 'SESSION_FORM_RECEIVED' : 'FORM_INVALID';
+      } else {
+        code = response.status === 200 ? 'FORM_INVALID' : 'HTTP_NOT_OK';
+        try { await response.body?.cancel(); } catch { /* Failure still rejects the session. */ }
+      }
+    } catch (error) { code = readinessDiagnosticCode(error); }
+    alive(true);
+    if (typeof onDiagnostic === 'function') onDiagnostic({ code, httpStatus });
+    if (code === 'SESSION_FORM_RECEIVED') {
+      const owner = await waitOwnedReady(child, { app, nonce, deadlineMs, pollMs, requestTimeoutMs, onDiagnostic: onOwnerDiagnostic });
+      alive(true);
+      if (Date.now() >= deadlineMs) fail('VISUAL_SESSION_READY_TIMEOUT');
+      return { formMarkerMatched: true, ownerRevalidated: true, owner };
+    }
+    if (code === 'HTTP_NOT_OK') fail('VISUAL_SESSION_HTTP_NOT_OK');
+    if (code === 'FORM_INVALID') fail('VISUAL_SESSION_FORM_INVALID');
+    if (code === 'REDIRECT_REJECTED') fail('VISUAL_SESSION_REDIRECT_REJECTED');
+    // Only refusal and bounded timeout are cold-start transients. No broad retry.
+    if (!['REQUEST_TIMEOUT', 'CONNECTION_REFUSED'].includes(code)) fail('VISUAL_SESSION_FETCH_FAILED');
+    await pause(Math.min(pollMs, Math.max(1, deadlineMs - Date.now())));
+  }
+  fail('VISUAL_SESSION_READY_TIMEOUT');
 }
 
 export async function waitProcessExit(child, timeoutMs) {
