@@ -15,6 +15,7 @@ async function main(){
   Object.assign(process.env,{NEXT_PUBLIC_SUPABASE_URL:origin,NEXT_PUBLIC_SUPABASE_ANON_KEY:keys.anon,SUPABASE_SERVICE_ROLE_KEY:keys.service,NATORI_OWNER_USER_ID:owner,NATORI_DELIVERY_NOTIFICATION_KEY:randomBytes(32).toString('hex'),NATORI_ORDER_MAIL_FROM:'Fixture <sender@phase3b.invalid>',NATORI_PORTFOLIO_CONTACT_TO:'artist@phase3b.invalid',NATORI_NOTIFICATION_SENDING_ENABLED:'0',NATORI_ACCEPTANCE_OUTBOX_ENABLED:'1',RESEND_API_KEY:'',NEXT_PUBLIC_SITE_URL:'http://localhost:3000'});
   const {consultationOperation,cleanupConsultationOperation,hashConsultationOperation}=await import('../../src/features/natori/server/consultationOperationService');
   const {natoriManagementScope}=await import('../../src/features/natori/server/natoriManagementScope');
+  const {consultationOperationSchema,canonicalConsultationOperation}=await import('../../src/features/natori/lib/consultationOperation');
   const {openDeliveryNotification,sealDeliveryNotification}=await import('../../src/features/natori/server/deliveryNotificationPayload');
   const {getClientConsultation,retryStaffConsultationNotification}=await import('../../src/features/natori/server/consultationService');
   const scoped=<T>(fn:()=>Promise<T>)=>natoriManagementScope.run({ownerId:owner,operator:{kind:'auth-user',userId:owner}},fn);
@@ -94,7 +95,13 @@ async function main(){
     check((await rpc(aged,original,'renew',claim,{},staff?'staff':'client')).result==='notice_expired','NOTICE_EXPIRED_RENEW_REFUSED');
     check((await rpc(aged,original,'release',claim,{},staff?'staff':'client')).result==='reserved','NOTICE_EXPIRED_MATCHING_RELEASE_ALLOWED');
     check((await run(aged,original,'cancel',staff)).kind==='cancelled','NOTICE_EXPIRED_CONFIRMED_CANCEL_ALLOWED');
-    const cancelled=await noticeOperation(aged,original,staff);check(cancelled.status==='cancelled'&&cancelled.body===original.body&&cancelled.request_hash===original.requestHash&&JSON.stringify(cancelled.manifest)===JSON.stringify(original.files)&&JSON.stringify(cancelled.notice_payload)===JSON.stringify(frozen.notice_payload),'NOTICE_CANCEL_RETAINS_FROZEN_ORIGINAL');
+    const cancelled=await noticeOperation(aged,original,staff);
+    // JSONB preserves every field and array item, but its object-key order differs
+    // from the submitted JS descriptors. Check the strict original semantics and
+    // independently require the stored frozen manifest/snapshot to remain exact.
+    const cancelledInput=consultationOperationSchema.safeParse({operationId:cancelled.operation_id,requestHash:cancelled.request_hash,body:cancelled.body,files:cancelled.manifest});
+    check(cancelledInput.success&&cancelledInput.data.operationId===original.operationId&&cancelledInput.data.requestHash===original.requestHash&&canonicalConsultationOperation(cancelledInput.data)===canonicalConsultationOperation(original)&&hashConsultationOperation(cancelledInput.data)===original.requestHash,'NOTICE_CANCEL_ORIGINAL_SEMANTIC_INPUT');
+    check(cancelled.status==='cancelled'&&cancelled.body===original.body&&cancelled.request_hash===original.requestHash&&JSON.stringify(cancelled.manifest)===JSON.stringify(frozen.manifest)&&JSON.stringify(cancelled.notice_payload)===JSON.stringify(frozen.notice_payload),'NOTICE_CANCEL_RETAINS_FROZEN_ORIGINAL');
     const fresh={...original,operationId:randomUUID()};check(fresh.operationId!==original.operationId&&fresh.requestHash===original.requestHash,'NOTICE_EXPLICIT_NEW_OPERATION_SAME_CONTENT');await upload(aged,fresh,staff);
     const resumed=await run(aged,fresh,'commit',staff),after=await facts(aged);check(resumed.kind==='committed'&&after[0].length===1&&after[0][0].body===original.body&&after[1].length===original.files.length&&after[3].length===1,'NOTICE_CONFIRMED_CANCEL_THEN_NEW_OPERATION_COMMITTED_ONCE');
     check((await run(aged,original,'prepare',staff)).kind==='cancelled','NOTICE_OLD_EXPIRED_OPERATION_STAYS_CANCELLED');

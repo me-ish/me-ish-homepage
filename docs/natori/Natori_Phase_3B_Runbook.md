@@ -91,3 +91,12 @@ codex/natori-phase-3bへ7層37対象を適用し、全37ファイルがレビュ
 統合後の型・全unit・lint・baseline・bundle/fixture・構文をrootが検証し、通常commit/pushしたPR107のexact headで実隔離DB30/ブラウザ13と全過去300ケースを再実行する。成功artifactのCI/head/tested同一tree・source digestをv4で照合し、親の独立再レビュー修正を反映してから3Bを受入とする。新CIは本commit前には未実行であり、完了・未検証・exact headはPRとtask checkpointに記録する。
 
 本番merge/deploy/DB/顧客操作と実メールを実施しない。実provider profile検証とiPhone/実メールの手動受入は未実施で、後者はPhase7後にユーザーと実施する。3B成功後は新しい受入head/source receiptに結合して5→6A→6B→7へ継続する。
+
+
+### Follow-up isolated fixture verification after CI36972608297
+
+The four product review repairs were committed normally in `abb23a9d7d5f6579f9b50fb3e9fe28a881526f30`. That exact CI executed all 343 cases: all 300 prior cases and 13 browser cases passed; 28 of 30 DB cases passed. The client/staff text cases both failed `NOTICE_CANCEL_RETAINS_FROZEN_ORIGINAL`. The original artifact and strict failure receipt remain preserved; this result does not establish Phase3B acceptance.
+
+Cancellation only changes status, claim and lease. The new assertion had compared PostgreSQL JSONB object-key serialization against submitted JS object-key order. The scoped fixture correction separately checks the strict complete original request, canonical body/file values and full request hash, and the exact previously persisted frozen manifest and encrypted snapshot. All original 175 assertions and 30 DB/13 browser case identities remain; the reviewed expiry fixture assertion count increases from 224 to 225. Product SQL, UI, service, baseline and unit sources remain identical to the product repair commit.
+
+The task-only reconstructed DB-shaped key-order proof reproduces the old assertion failure and passes the corrected checks. Mutation controls reject changed or missing file properties, extra properties, descriptor count/order, IDs, body, request hash, status and encrypted snapshot. These controls, scoped strict types, lint and real integration bundle passed. Actual DB/browser acceptance still requires a fresh completed exact-head CI artifact, all 343 cases passing with no skip, strict source/tree verification and independent review. No actual mail/provider/customer action is part of this fixture change.
