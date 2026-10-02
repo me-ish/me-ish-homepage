@@ -32,7 +32,7 @@ export default function ActiveRefundProject(){
  if(!project)return <p role="status">Loading active project</p>;
  return <section aria-label="Active refund project">
   <ProjectCard project={project} today={new Date()}
-   onToggleTask={(projectId,taskId)=>setNotice(projectId===project.id&&taskId==='active-rough-task'?'Task control active':'Unexpected task callback')}
+   onToggleTask={(projectId,taskId)=>setNotice(projectId===project.id&&taskId==='rough'?'Task control active':'Unexpected task callback')}
    onAdvanceStatus={()=>setNotice('Advance control active')}
    onOpenMail={(_,kind)=>setNotice(kind==='rough'?'Rough mail control active':'Delivery mail control active')}/>
   <p role="status">{notice}</p>

@@ -58,7 +58,7 @@ async function main() {
   check(!(await db.from('natori_payment_transactions').insert({ project_id: activeId, stripe_session_id: activeSession, amount: 12000, status: 'received', received_at: when,
     stripe_account_scope: 'platform', stripe_livemode: false, stripe_payment_intent_id: activeIntent, stripe_charge_id: activeCharge, stripe_currency: 'jpy' })).error, 'ACTIVE_TRANSACTION_FIXTURE');
   stage = 'active-task-fixture';
-  check(!(await db.from('natori_project_tasks').insert({ project_id: activeId, task_key: 'active-rough-task', label: 'Browser rough task', stage: 'rough', done: false,
+  check(!(await db.from('natori_project_tasks').insert({ project_id: activeId, task_key: 'rough', label: 'ラフ', stage: 'rough', done: false,
     estimated_hours: 1, sort_order: 0 })).error, 'ACTIVE_TASK_FIXTURE');
   const activeTarget = { projectId: activeId, intent: activeIntent, charge: activeCharge };
   const app = 'http://localhost:3000', secret = 'whsec_' + randomBytes(32).toString('hex'), key = 'sk_test_' + randomBytes(32).toString('hex');
@@ -141,7 +141,7 @@ async function main() {
       await expect(card().getByText('Keep rough production', { exact: true })).toBeVisible();
       await expect(card().getByRole('button', { name: '線画へ進む' })).toBeEnabled();
       await card().getByRole('button', { name: /タスク/ }).click();
-      const task = card().getByRole('button', { name: /Browser rough task/ });
+      const task = card().getByRole('button', { name: 'ラフ ラフ', exact: true });
       await expect(task).toBeEnabled(); await expect(task).toHaveAttribute('aria-pressed', 'false');
       await task.click(); await expect(activeRegion().getByRole('status')).toHaveText('Task control active');
       await card().getByRole('button', { name: 'ラフ提出メール' }).click();
