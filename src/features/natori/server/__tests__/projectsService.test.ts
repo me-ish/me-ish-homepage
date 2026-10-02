@@ -7,16 +7,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { mockAdminFrom, mockResolveOwner, mockRpc } = vi.hoisted(() => ({
+const { mockAdminFrom, mockResolveOwner, mockRpc, mockSnapshot } = vi.hoisted(() => ({
   mockAdminFrom: vi.fn(),
   mockResolveOwner: vi.fn(),
   mockRpc: vi.fn(),
+  mockSnapshot: vi.fn(),
 }));
 vi.mock("@/lib/supabaseAdmin", () => ({
   supabaseAdmin: vi.fn(() => ({
     from: (...args: unknown[]) => mockAdminFrom(...args),
     rpc: (...args: unknown[]) => mockRpc(...args),
   })),
+}));
+
+vi.mock("@/features/natori/server/taskIntegrityService", () => ({
+  loadCoherentTaskSnapshot: (...args: unknown[]) => mockSnapshot(...args),
+  setTaskFromLatestDb: vi.fn(),
 }));
 
 vi.mock("@/features/natori/server/natoriOwner", () => ({
@@ -459,54 +465,31 @@ describe("patchNatoriProjectDetails type delegation", () => {
 describe("listNatoriAdminProjects", () => {
   it("reads active/archive lanes without performing any database write", async () => {
     const calls: string[] = [];
-    let projectQueryIndex = 0;
+    mockSnapshot.mockResolvedValue({projects: [
+      {id: "active-1", deleted_at: null, mutation_revision: 4},
+      {id: "archive-1", deleted_at: "2026-07-02T00:00:00Z", mutation_revision: 5},
+    ], tasks: [{id: "existing", project_id: "active-1", task_key: "rough", label: "raw", stage: "rough", done: false, sort_order: 0}]});
     mockAdminFrom.mockImplementation((table: string) => {
-      if (table === "natori_projects") {
-        const result =
-          projectQueryIndex++ === 0
-            ? {
-                data: [
-                  { id: "active-1", deleted_at: null },
-                  // Application guard must reject this even if the query mock leaks it.
-                  { id: "leaked-archive", deleted_at: "2026-07-01T00:00:00Z" },
-                ],
-                error: null,
-              }
-            : {
-                data: [
-                  { id: "archive-1", deleted_at: "2026-07-02T00:00:00Z" },
-                  // Application guard must reject this from the archive lane.
-                  { id: "leaked-active", deleted_at: null },
-                ],
-                error: null,
-              };
-        return chainResult(result, calls);
-      }
-      if (table === "natori_project_tasks") {
-        return chainResult({ data: [], error: null }, calls);
-      }
-      if (table === "natori_inquiry_reference_files") {
-        return chainResult({ data: [], error: null }, calls);
-      }
-      throw new Error(`unexpected table access: ${table}`);
+      if (table === "natori_inquiry_reference_files") return chainResult({data: [],error: null}, calls);
+      throw new Error(`unexpected split snapshot table access: ${table}`);
     });
-
     const result = await listNatoriAdminProjects();
-
     expect(result.kind).toBe("ok");
     if (result.kind !== "ok") throw new Error("expected successful project list");
-    expect(result.projects.map((project) => project.id)).toEqual(["active-1"]);
-    expect(result.archivedProjects.map((project) => project.id)).toEqual([
-      "archive-1",
-    ]);
-    expect(calls).toContain('is("deleted_at",null)');
-    expect(calls).toContain('not("deleted_at","is",null)');
-    expect(calls.some((call) => /^(update|upsert|delete|insert)\(/.test(call))).toBe(
-      false
-    );
+    expect(result.projects.map(project => project.id)).toEqual(["active-1"]);
+    expect(result.archivedProjects.map(project => project.id)).toEqual(["archive-1"]);
+    expect(result.tasks).toHaveLength(1);
+    expect(result.tasks[0]).toMatchObject({id:"existing",done:false});
+    expect(mockSnapshot).toHaveBeenCalledExactlyOnceWith("owner-1",undefined);
+    expect(calls.some(call => /^(update|upsert|delete|insert)\(/.test(call))).toBe(false);
     expect(mockRpc).toHaveBeenCalledExactlyOnceWith("natori_consultation_overview_v1", {
-      p_owner_id: "owner-1", p_project_ids: ["active-1", "archive-1"],
+      p_owner_id:"owner-1",p_project_ids:["active-1","archive-1"],
     });
+  });
+  it("unavailable coherent snapshot fails closed without falling back to inconsistent split reads", async () => {
+    mockSnapshot.mockResolvedValue(null);
+    expect(await listNatoriAdminProjects()).toEqual({kind:"fetch-projects-error"});
+    expect(mockAdminFrom).not.toHaveBeenCalled();
   });
 });
 

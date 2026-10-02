@@ -37,9 +37,10 @@
     "supabase/migrations/20261001161401_natori_payment_link_generations.sql",
     "supabase/migrations/20261001221938_natori_refund_ledger.sql",
     "supabase/migrations/20261001222233_natori_intake_operations.sql",
+    "supabase/migrations/20261001223805_natori_task_integrity.sql",
     "supabase/migrations/20261001225106_natori_consultation_operations.sql"
   ],
-  "activeMigrationCount": 29,
+  "activeMigrationCount": 30,
   "legacyMigrationCount": 55,
   "remoteOnlyEvidenceCount": 3,
   "sourceProjectRef": "lvnfspyainrxtztjytbo",
@@ -86,6 +87,7 @@
     "20261001161401_natori_payment_link_generations.sql",
     "20261001221938_natori_refund_ledger.sql",
     "20261001222233_natori_intake_operations.sql",
+    "20261001223805_natori_task_integrity.sql",
     "20261001225106_natori_consultation_operations.sql"
   ],
   "archiveVerification": {
@@ -232,7 +234,8 @@
     "sha256:artifacts/legacy-migration-archive/before.json": "11f85bb9f1e1a265c803b0b756add08a97767786af8b0b065641079f602a832e",
     "sha256:artifacts/legacy-migration-archive/after.json": "44dc21dac31100e9e3a7a685139c410ab6b3b65f11aab616d306695d960ef096",
     "sha256:artifacts/legacy-migration-archive/verification.json": "090f3f98f958f5b6d08431541e156187ca8e89507fb0f3a49b41431fb8a8591f",
-    "expectedNormalizedSchema": "operator_confirmation_required_after_pattern_b"
+    "expectedNormalizedSchema": "operator_confirmation_required_after_pattern_b",
+    "sha256:supabase/migrations/20261001223805_natori_task_integrity.sql": "b17ac3a116d7c3b01e2a3e2eea5c8409bcfa06f7b73f4aa718f79532895ef015"
   },
   "operatorConfirmationRequired": [
     "target project ref is non-production and not lvnfspyainrxtztjytbo",

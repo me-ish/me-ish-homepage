@@ -1713,6 +1713,7 @@ export type Database = {
           due_date: string | null
           id: string
           next_action: string
+          mutation_revision: number
           note: string | null
           paid_amount: number | null
           paid_at: string | null
@@ -1752,6 +1753,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           next_action?: string
+          mutation_revision?: number
           note?: string | null
           paid_amount?: number | null
           paid_at?: string | null
@@ -1791,6 +1793,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           next_action?: string
+          mutation_revision?: number
           note?: string | null
           paid_amount?: number | null
           paid_at?: string | null
@@ -2964,6 +2967,14 @@ export type Database = {
       natori_request_text_is_valid_v1: {
         Args: { p_max_length: number; p_min_length: number; p_value: string }
         Returns: boolean
+      }
+      natori_update_task_v1: {
+        Args: {p_owner:string;p_project:string;p_task_key:string;p_done:boolean}
+        Returns: Json
+      }
+      natori_project_task_snapshot_v1: {
+        Args: {p_owner:string;p_project_ids?:string[]}
+        Returns: Json
       }
       natori_update_task_and_status: {
         Args: {
