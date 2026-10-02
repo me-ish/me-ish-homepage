@@ -1,16 +1,17 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { clearFrozenIntakeOperation, frozenIntakeFromForm, loadFrozenIntakeOperation, recoverFrozenIntakeOperation, saveFrozenIntakeOperation, sendFrozenIntakeOperation, checkFrozenIntakeOperation, type FrozenIntakeOperation, type IntakeClientResult } from "../../data/intakeOperationClient";
+import { loadIntakeOriginalAnswers, preserveIntakeOriginalAnswers, confirmIntakeOriginalAnswers, clearFrozenIntakeOperation, frozenIntakeFromForm, loadFrozenIntakeOperation, recoverFrozenIntakeOperation, saveFrozenIntakeOperation, sendFrozenIntakeOperation, checkFrozenIntakeOperation, type FrozenIntakeOperation, type IntakeClientResult } from "../../data/intakeOperationClient";
 
 const STORAGE_KEY = "natori-intake-operation-v1";
 export type IntakeCompleted = { receipt: string; clientEmail: string };
-export function useIntakeOperation(onCompleted: (result: IntakeCompleted) => void, enabled = true, onRestore?: (fields: FrozenIntakeOperation["fields"]) => void) {
+export function useIntakeOperation(onCompleted: (result: IntakeCompleted) => void, enabled = true, onRestore?: (fields: FrozenIntakeOperation["fields"]) => void, restoreOriginals = true) {
   const [operation, setOperation] = useState<FrozenIntakeOperation | null>(null);
   const [busy, setBusy] = useState(false);
   const [hydrated, setHydrated] = useState(!enabled);
   const [recoveryBlocked, setRecoveryBlocked] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [selectedNames, setSelectedNames] = useState<string[]>([]);
+  const [originalAnswers, setOriginalAnswers] = useState<FrozenIntakeOperation[]>([]);
   const lifecycleRef = useRef({ active: enabled });
   const busyRef = useRef(false), operationRef = useRef<FrozenIntakeOperation | null>(null);
   const filesRef = useRef<File[]>([]), completedRef = useRef(onCompleted);
@@ -33,7 +34,13 @@ export function useIntakeOperation(onCompleted: (result: IntakeCompleted) => voi
       return;
     }
     if (result.kind === "failed") {
-      clearFrozenIntakeOperation(STORAGE_KEY); operationRef.current = null; setOperation(null);
+      // Preserve every frozen answer set separately before releasing an authoritatively failed operation.
+      try {
+        setOriginalAnswers(preserveIntakeOriginalAnswers(current));
+        clearFrozenIntakeOperation(STORAGE_KEY);
+      } catch { setRecoveryBlocked(true); setMessage("入力内容を保管できませんでした。元の送信情報を残したまま、内容をコピーできます。"); return; }
+      setRecoveryBlocked(false);
+      operationRef.current = null; setOperation(null);
       setMessage("受付が保存されていないことを確認できました。入力内容を修正して送信できます。");
       return;
     }
@@ -50,13 +57,19 @@ export function useIntakeOperation(onCompleted: (result: IntakeCompleted) => voi
     if (!enabled) return;
     let active = true;
     try {
+      const drafts = loadIntakeOriginalAnswers(); setOriginalAnswers(drafts);
       const saved = loadFrozenIntakeOperation(STORAGE_KEY);
       if (saved) {
+        // Different deployed selectors may not restore these fields. Keep a durable copy first.
+        setOriginalAnswers([...drafts.filter(draft => draft.operationId !== saved.operationId), saved]);
         operationRef.current = saved; setOperation(saved);
+        setOriginalAnswers(preserveIntakeOriginalAnswers(saved));
         // A rollout can display a different form version; recovery must still remain available.
         try { restoreRef.current?.(saved.fields); } catch { /* Frozen receipt recovery remains authoritative. */ }
         setMessage("前回の送信結果を確認中です。新しく応募する必要はありません。");
         void recoverFrozenIntakeOperation(saved).then(result => { if (active) acceptResult(result, saved); });
+      } else if (restoreOriginals && drafts.length) {
+        try { restoreRef.current?.(drafts[drafts.length - 1].fields); } catch { /* The readable original remains available while editing. */ }
       }
     } catch { setRecoveryBlocked(true); setMessage("前回の送信情報を読み取れませんでした。新しく応募せず、公開連絡先へ保存状況をご確認ください。"); }
     setHydrated(true);
@@ -120,5 +133,11 @@ export function useIntakeOperation(onCompleted: (result: IntakeCompleted) => voi
     if (isCurrent()) acceptResult(result, current);
   });
   const selectFiles = (files: File[]) => { filesRef.current = files; setSelectedNames(files.map(file => file.name)); };
-  return { operation, busy, frozen: !!operation || !hydrated || recoveryBlocked, message, selectedNames, submit, check, retry, settle, selectFiles };
+  const confirmOriginalAnswers = (operationId: string) => {
+    if (!lifecycleRef.current.active || busyRef.current || operationRef.current || recoveryBlocked) return;
+    try { setOriginalAnswers(confirmIntakeOriginalAnswers(operationId)); }
+    catch { setMessage("保存した入力内容を更新できませんでした。内容をコピーして保管してください。"); }
+  };
+  return { operation, busy, frozen: !!operation || !hydrated || recoveryBlocked, message, selectedNames,
+    originalAnswers, confirmOriginalAnswers, submit, check, retry, settle, selectFiles };
 }

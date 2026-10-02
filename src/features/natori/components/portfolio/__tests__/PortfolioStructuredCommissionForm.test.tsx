@@ -597,6 +597,7 @@ describe("server error の表示", () => {
     fetchMock.mockRejectedValueOnce(new Error("response lost"));
     const view = renderForm(); await fillMinimum(); submit();
     await screen.findByRole("button", { name: "受付結果を確認する" });
+    await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init.body instanceof FormData)).toBe(true));
     const operationId = submittedForm().get("operationId"); view.unmount(); fetchMock.mockClear();
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ accepted: true, operationState: "completed", receipt: operationId }), { status: 200 }));
     renderForm(); await screen.findByText("送信ありがとうございます!");

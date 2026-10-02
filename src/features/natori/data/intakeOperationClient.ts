@@ -44,6 +44,48 @@ export function loadFrozenIntakeOperation(key: string): FrozenIntakeOperation | 
 }
 export function clearFrozenIntakeOperation(key: string): void { sessionStorage.removeItem(key); }
 
+const DRAFTS_KEY = "natori-intake-original-answers-v1";
+const RECEIPTS_KEY = "natori-intake-receipts-v1";
+const receiptSchema = z.strictObject({ receipt: intakeOperationIdSchema, clientEmail: z.string() });
+export type IntakeReceipt = z.infer<typeof receiptSchema>;
+export function loadIntakeOriginalAnswers(): FrozenIntakeOperation[] {
+  const encoded = sessionStorage.getItem(DRAFTS_KEY);
+  return encoded ? z.array(savedSchema).parse(JSON.parse(encoded)) : [];
+}
+export function preserveIntakeOriginalAnswers(operation: FrozenIntakeOperation): FrozenIntakeOperation[] {
+  const drafts = loadIntakeOriginalAnswers();
+  if (!drafts.some(draft => draft.operationId === operation.operationId)) drafts.push(savedSchema.parse(operation));
+  sessionStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
+  return drafts;
+}
+export function confirmIntakeOriginalAnswers(operationId: string): FrozenIntakeOperation[] {
+  const drafts = loadIntakeOriginalAnswers().filter(draft => draft.operationId !== operationId);
+  sessionStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
+  return drafts;
+}
+export function loadIntakeReceipts(): IntakeReceipt[] {
+  const encoded = sessionStorage.getItem(RECEIPTS_KEY);
+  return encoded ? z.array(receiptSchema).parse(JSON.parse(encoded)) : [];
+}
+/** Explicit new-request action: recheck completion and durably retain A before releasing its active slot. */
+export async function retireCompletedIntakeOperation(key: string, receipt: string, isCurrent: () => boolean = () => true): Promise<IntakeReceipt[] | null> {
+  const operation = loadFrozenIntakeOperation(key);
+  if (!isCurrent() || !operation || operation.operationId !== receipt) return null;
+  const checked = await recoverFrozenIntakeOperation(operation);
+  if (!isCurrent() || checked.kind !== "completed" || checked.receipt !== receipt) return null;
+  const current = loadFrozenIntakeOperation(key);
+  if (!current || current.operationId !== operation.operationId || current.requestHash !== operation.requestHash) return null;
+  const receipts = loadIntakeReceipts();
+  if (!receipts.some(item => item.receipt === receipt)) receipts.push(receiptSchema.parse({ receipt,
+    clientEmail: typeof operation.fields.email === "string" ? operation.fields.email : "" }));
+  // Storage failure keeps the original active record; never reset a form without the receipt saved.
+  sessionStorage.setItem(RECEIPTS_KEY, JSON.stringify(receipts));
+  confirmIntakeOriginalAnswers(receipt);
+  clearFrozenIntakeOperation(key);
+  return receipts;
+}
+
+
 async function parseResult(response: Response, operationId: string): Promise<IntakeClientResult> {
   const decoded: unknown = await response.json().catch(() => null);
   const parsed = z.object({ operationState: z.string().optional(), accepted: z.boolean().optional(), receipt: z.uuid().optional() }).safeParse(decoded);

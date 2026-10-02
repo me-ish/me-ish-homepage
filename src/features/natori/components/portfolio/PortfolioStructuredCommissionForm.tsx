@@ -179,6 +179,7 @@ export default function PortfolioStructuredCommissionForm({
   opening,
   fromPlan,
   initialPlan,
+  restoreOriginals = true,
 }: {
   content: PortfolioContent;
   demoMode?: boolean;
@@ -188,6 +189,7 @@ export default function PortfolioStructuredCommissionForm({
   opening?: number;
   fromPlan?: boolean;
   initialPlan?: string;
+  restoreOriginals?: boolean;
 }) {
   const [state, setState] = useState<PortfolioRequestFormState>(
     () => {
@@ -207,7 +209,7 @@ export default function PortfolioStructuredCommissionForm({
     const restored = restoreStructuredIntakeFields(fields, content);
     setClientName(restored.clientName); setClientEmail(restored.clientEmail); setState(restored.state);
     setStep(restored.state.inquiryMode === "quote" ? 2 : 1);
-  });
+  }, restoreOriginals);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [serverFieldErrors, setServerFieldErrors] = useState<ServerFieldError[]>([]);
   const [refImages, setRefImages] = useState<RefImageEntry[]>([]);
