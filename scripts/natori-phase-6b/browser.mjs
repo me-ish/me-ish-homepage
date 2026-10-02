@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 let app, output, chromium, expect, browser, stage = 'preflight';
 const observations = [], results = [], blocked = [], harnessFailures = [], motionObservations = [];
 const check = (value, code) => { if (!value) throw new Error(code); };
-const knownCodes = new Set(["ASSERTION_FAILED", "AUTOPLAY_NOT_RUNNING", "INITIAL_AUTOPLAY_NOT_RUNNING", "AUTOPLAY_BEFORE_INTERVAL", "AUTOPLAY_PRECONDITION_NOT_READY", "CLOCK_NOT_FROZEN", "BROWSER_CLOSE_FAILED", "BROWSER_SETUP_FAILED", "CTA_COMPOSITING_REQUIRES_REVIEW", "DRAG_CLEARED_PAUSE", "DRAG_NOT_TRACKING", "EPHEMERAL_REQUIRED", "LOCAL_APP_REQUIRED", "LONG_FINAL_CONDITION", "LONG_REPLY_TRUNCATED", "MANUAL_PAUSE_LOST", "MANUAL_RESUME_FAILED", "PAUSED_DRAG_BLOCKED", "PUBLIC_CONFIRMATION_FLOW", "PUBLIC_IMMEDIATE_QUOTE_PROMISE", "PUBLIC_IMPORTANT_TERMS_PRESERVED", "PUBLIC_NOT_CONFIRMED", "PUBLIC_REPLY_PROMISE", "REDUCED_MOTION_AUTOPLAY", "REDUCED_MOTION_MANUAL_BLOCKED", "RESULT_WRITE_FAILED", "SHORT_MULTILINE_FIXTURE", "SHORT_REPLY_TRUNCATED", "UNKNOWN_FAILURE", "UNSUPPORTED_COMPUTED_COLOR", "VERTICAL_TOUCH_CHANGED_IMAGE", "VERTICAL_TOUCH_MOVED_SLIDE"]);
+const knownCodes = new Set(["ASSERTION_FAILED", "AUTOPLAY_NOT_RUNNING", "INITIAL_AUTOPLAY_NOT_RUNNING", "AUTOPLAY_BEFORE_INTERVAL", "AUTOPLAY_PRECONDITION_NOT_READY", "CLOCK_NOT_FROZEN", "BROWSER_CLOSE_FAILED", "BROWSER_SETUP_FAILED", "CTA_COMPOSITING_REQUIRES_REVIEW", "DRAG_CLEARED_PAUSE", "DRAG_NOT_TRACKING", "EPHEMERAL_REQUIRED", "LOCAL_APP_REQUIRED", "LONG_FINAL_CONDITION", "LONG_REPLY_TRUNCATED", "MANUAL_PAUSE_LOST", "MANUAL_RESUME_FAILED", "MANUAL_RESUME_BEFORE_INTERVAL", "PAUSED_DRAG_BLOCKED", "PUBLIC_CONFIRMATION_FLOW", "PUBLIC_IMMEDIATE_QUOTE_PROMISE", "PUBLIC_IMPORTANT_TERMS_PRESERVED", "PUBLIC_NOT_CONFIRMED", "PUBLIC_REPLY_PROMISE", "REDUCED_MOTION_AUTOPLAY", "REDUCED_MOTION_MANUAL_BLOCKED", "RESULT_WRITE_FAILED", "SHORT_MULTILINE_FIXTURE", "SHORT_REPLY_TRUNCATED", "UNKNOWN_FAILURE", "UNSUPPORTED_COMPUTED_COLOR", "VERTICAL_TOUCH_CHANGED_IMAGE", "VERTICAL_TOUCH_MOVED_SLIDE"]);
 const ctaIds = ['hero', 'quote', 'consultation', 'delivery', 'delivery-disabled', 'download', 'mass-production', 'form-next', 'form-submit', 'mobile'];
 for (const name of ctaIds) {
   knownCodes.add(`CTA_FOCUS_${name}`);
@@ -99,7 +99,7 @@ async function touch(page, locator, points) {
 async function endTouch(locator, point) {
   await locator.evaluate((element, value) => element.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], changedTouches: [new Touch({ identifier: 42, target: element, clientX: value[0], clientY: value[1] })] })), point);
 }
-const motionCheckpoints = ['INITIAL_AUTOPLAY_BASELINE', 'INITIAL_AUTOPLAY_OBSERVED', 'HYDRATED_PAUSE', 'FROZEN_PAUSE', 'AUTOPLAY_BASELINE', 'AUTOPLAY_BEFORE_INTERVAL', 'AUTOPLAY_PENDING', 'AUTOPLAY_SETTLED', 'MANUAL_PAUSE_BASELINE', 'MANUAL_PAUSE_RETAINED', 'DRAG_TRACKING', 'PAUSED_DRAG_SETTLED', 'DRAG_PAUSE_RETAINED', 'VERTICAL_TOUCH_RETAINED', 'RESUME_BASELINE', 'RESUME_SETTLED'];
+const motionCheckpoints = ['INITIAL_AUTOPLAY_BASELINE', 'INITIAL_AUTOPLAY_OBSERVED', 'HYDRATED_PAUSE', 'FROZEN_PAUSE', 'AUTOPLAY_BASELINE', 'AUTOPLAY_BEFORE_INTERVAL', 'AUTOPLAY_PENDING', 'AUTOPLAY_SETTLED', 'MANUAL_PAUSE_BASELINE', 'MANUAL_PAUSE_RETAINED', 'DRAG_TRACKING', 'PAUSED_DRAG_SETTLED', 'DRAG_PAUSE_RETAINED', 'VERTICAL_TOUCH_RETAINED', 'RESUME_BASELINE', 'RESUME_BEFORE_INTERVAL', 'RESUME_PENDING', 'RESUME_SETTLED'];
 async function recordMotion(hero, checkpoint, clockOrigin = null) {
   check(motionCheckpoints.includes(checkpoint), 'AUTOPLAY_PRECONDITION_NOT_READY');
   const value = await hero.evaluate((element, origin) => {
@@ -238,7 +238,9 @@ try {
     const first = await active();
     await page.clock.runFor(4999); await recordMotion(hero, 'AUTOPLAY_BEFORE_INTERVAL', clockOrigin);
     check(await active() === first, 'AUTOPLAY_BEFORE_INTERVAL');
-    await page.clock.runFor(1); await recordMotion(hero, 'AUTOPLAY_PENDING', clockOrigin);
+    await page.clock.runFor(1);
+    await expect.poll(async () => await track.evaluate(element => element.style.transition !== 'none') || await active() !== first).toBe(true);
+    await recordMotion(hero, 'AUTOPLAY_PENDING', clockOrigin);
     await page.clock.runFor(600); await recordMotion(hero, 'AUTOPLAY_SETTLED', clockOrigin);
     check(await active() !== first, 'AUTOPLAY_NOT_RUNNING');
     await hero.getByRole('button', { name: '自動送りを停止', exact: true }).click();
@@ -258,7 +260,14 @@ try {
     await endTouch(surface, [175, 260]); check(await active() === swiped, 'VERTICAL_TOUCH_CHANGED_IMAGE');
     await hero.getByRole('button', { name: '自動送りを再開', exact: true }).click(); await page.mouse.move(1, 1); await page.getByTestId('outside-focus').focus();
     await recordMotion(hero, 'RESUME_BASELINE', clockOrigin);
-    await page.clock.runFor(5600); await recordMotion(hero, 'RESUME_SETTLED', clockOrigin); check(await active() !== swiped, 'MANUAL_RESUME_FAILED');
+    await page.clock.runFor(4999); await recordMotion(hero, 'RESUME_BEFORE_INTERVAL', clockOrigin);
+    check(await active() === swiped, 'MANUAL_RESUME_BEFORE_INTERVAL');
+    await page.clock.runFor(1);
+    // Let the actual React transition commit before advancing its settle budget.
+    // A slow transport may already observe a completed CSS transition.
+    await expect.poll(async () => await track.evaluate(element => element.style.transition !== 'none') || await active() !== swiped).toBe(true);
+    await recordMotion(hero, 'RESUME_PENDING', clockOrigin);
+    await page.clock.runFor(600); await recordMotion(hero, 'RESUME_SETTLED', clockOrigin); check(await active() !== swiped, 'MANUAL_RESUME_FAILED');
     // Chromium touch event arbitration is evidence for axis handling only.
     // Real iPhone vertical scroll/back-button acceptance remains a Phase 7 step.
     await context.close();
