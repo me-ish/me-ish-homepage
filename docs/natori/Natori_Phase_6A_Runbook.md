@@ -20,7 +20,7 @@ Prepared DB scenarios include two clients on different/same tasks, a blocked wor
 
 ## Deferred evidence and manual acceptance
 
-The preparation's source graph types, lint, unit/component tests and bundle compile pass locally. DB and Chromium scripts are prepared for the sealed GitHub Linux job and have not been executed for Phase 6A at this checkpoint. Windows has no callable Docker/psql test stack. Passing an earlier phase's CI does not count as Phase 6A DB/browser success.
+Strict types, scoped lint, all 1,531 unit tests and bundle/fixture checks passed locally. Actual isolated run 37001696029 at head 408a5dd99250438f9cdf8bfa7962336d8ad99f33 passed all prior 349 serialized cases and all 12 Phase 6A DB cases. Its browser authentication/CSRF case passed according to the run log, then an asynchronous task-response callback stopped execution before a browser summary was saved. Browser acceptance remains pending. Windows has no callable Docker/psql test stack; local source checks do not substitute for the isolated browser run.
 
 `scripts/natori-phase-6a/dry-run-corrections.sql` is a read-only candidate report requiring an explicitly supplied owner. It is not executed here and contains no update/delete statement. Existing row repair requires a separate reviewed plan and authorization. Completed/closed reopen behavior remains separately deferred.
 
@@ -33,3 +33,11 @@ The shared read-model payment-date normalization also applies to task projection
 Two new unit files add nine regression cases. The previous source reproduces six behavioral failures; corrected source passes all 1,531 unit cases in 177 files with zero skips, strict types, scoped lint and baseline/schema/fixture checks. Every prior 1,522 and Phase 5 1,488 test identity is retained.
 
 The original run 36995588116 at head 35f7495749a140711e7294c5cbab660deed1f4d5 remains a failed diagnostic: prior 349 cases passed, Phase 6A DB ran 11 passing and one QUOTE_FIXTURE failure, and the five Phase 6A browser cases did not execute. Quote setup now follows the actual lifecycle trigger: create its quote during inquiry, then enter awaiting payment. Legacy-null payment and a real details PATCH followed by held GET/task responses are asserted by the renewed fixtures. Acceptance still requires a new exact-head isolated run with all 12 DB and five browser cases and all preceding gates passing.
+
+## Renewed browser persistence and visual gate
+
+The isolated Phase 0B table omits the production delivery_plan default. The synthetic browser project now explicitly supplies normal; the production adapter's required string validation remains strict. Task callbacks record only bounded HTTP status and a fixed known-error classification, release their held controls, and report failure inside the case boundary. Raw responses and exception text are withheld.
+
+Three successful mutation scenarios must confirm the same project after an actual authenticated page reload: all scoped row metadata, lifecycle/revision/payment facts and complete task rows match the DB snapshot, rendered flags/status/action/details match it, and the reload makes no DB changes. The delayed-GET case also captures the same synthetic board before saving and after reloading at 1280x900 and 390x844. All four dedicated Phase 6A PNG buffers, dimensions and hashes must match the artifact and be visually reviewed. Existing five case identities and all earlier assertions remain required.
+
+Acceptance requires a new exact-head successful primary CI: all 366 cases in 20 reports, zero skips, all 79 checksum keys / 57 ordinary source paths, three reload proofs, four dedicated Phase 6A images plus four retained Phase 5 images, and independent review. Run 37001696029 and its original artifact 11224590925 remain failed diagnostic evidence with 361 serialized passes; its five browser results are unavailable, with partial execution explicitly acknowledged. No missing browser results or images are fabricated.
