@@ -49,10 +49,15 @@ export function portfolioErrorTarget(
     if (path === "requestData.expressionMood") return { id: "pf-mass-expression", section: "requestType" };
     if (path === "requestData.commercialUse") return { id: "pf-mass-commercial", section: "requestType" };
   }
+  const rawQuantity = /^optionSelections\.([a-z0-9_-]+)\.quantity$/.exec(path);
+  if (rawQuantity && choices.some((choice) => choice.key === rawQuantity[1])) {
+    return { id: `pf-option-${rawQuantity[1]}-quantity`, section: "requestType" };
+  }
   const option = /^requestData\.options\.(\d+)(?:\.(\w+))?$/.exec(path);
   if (option) {
     const selected = buildSelectedOptions(state, choices)[Number(option[1])];
-    const choice = choices.find((item) => item.stableId === selected?.id);
+    const choice = choices.find((item) => item.stableId === selected?.id) ??
+      (selected?.id === "other" ? choices.find((item) => item.stableId === null && state.optionSelections[item.key]?.selected) : undefined);
     if (choice) {
       const suffix = option[2] === "quantity" || option[2] === "notes" ? `-${option[2]}` : "";
       return { id: `pf-option-${choice.key}${suffix}`, section: "requestType" };

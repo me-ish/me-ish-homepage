@@ -8,6 +8,7 @@ sudo nsenter -t "$pid" -n iptables -I OUTPUT 1 -d 127.0.0.1 -p tcp --dport 3000 
 sudo nsenter -t "$pid" -n iptables -I OUTPUT 2 -s 127.0.0.1 -d 127.0.0.1 -p tcp --sport 3000 -m conntrack --ctstate ESTABLISHED -j ACCEPT
 timeout 45 docker exec "$runner" node /tests/isolation.mjs
 phase4_mount=()
+if [[ ${PHASE_5:-0} == 1 ]]; then phase4_mount+=(--mount "type=bind,source=$repo/scripts/natori-phase-5,target=/phase5-browser,readonly"); fi
 if [[ ${PHASE_3B:-0} == 1 ]]; then phase4_mount+=(--mount "type=bind,source=$repo/scripts/natori-phase-3b,target=/phase3b-browser,readonly"); fi
 if [[ ${PHASE_3A:-0} == 1 ]]; then
   phase4_mount+=(--mount "type=bind,source=$repo/scripts/natori-phase-3a,target=/phase3a-browser,readonly")
