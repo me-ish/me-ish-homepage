@@ -21,7 +21,9 @@ import {
   NATORI_REFERENCE_IMAGE_MAX_BYTES,
 } from "@/features/natori/lib/portfolioRequestForm";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
-import { CSRF_HEADERS } from "@/lib/auth/csrf";
+import { useIntakeOperation, type IntakeCompleted } from "./useIntakeOperation";
+import IntakeRecoveryPanel from "./IntakeRecoveryPanel";
+import { loadIntakeReceipts, retireCompletedIntakeOperation, type IntakeReceipt } from "../../data/intakeOperationClient";
 import PortfolioLegalNotice from "./PortfolioLegalNotice";
 import PortfolioStructuredCommissionForm from "./PortfolioStructuredCommissionForm";
 
@@ -54,7 +56,7 @@ const DETAILS_TEMPLATE = [
   "（例: 淡いピンク系でふんわり）",
 ].join("\n");
 
-export default function PortfolioCommissionForm({
+function PortfolioCommissionFormSession({
   content,
   demoMode,
   structuredIntake,
@@ -64,6 +66,8 @@ export default function PortfolioCommissionForm({
   initialPlan,
   initialPlanLabel,
   hideHeading = false,
+  onNewRequest,
+  restoreOriginals,
 }: {
   content: PortfolioContent;
   demoMode?: boolean;
@@ -74,9 +78,29 @@ export default function PortfolioCommissionForm({
   initialPlan?: string;
   initialPlanLabel?: string;
   hideHeading?: boolean;
+  onNewRequest: (receipts: IntakeReceipt[]) => void;
+  restoreOriginals: boolean;
 }) {
   const [status, setStatus] = useState<Status>("idle");
   const [autoReplied, setAutoReplied] = useState(true);
+  const [completed, setCompleted] = useState<IntakeCompleted | null>(null);
+  const intake = useIntakeOperation(result => {
+    setCompleted(result);
+    setAutoReplied(false);
+    setRefImages(current => { current.forEach(entry => URL.revokeObjectURL(entry.previewUrl)); return []; });
+    trackNatoriPageEvent("portfolio_form_submit", "completed");
+    setStatus("success");
+  }, !structuredIntake && !demoMode, fields => {
+    if (fields.formVersion === "etorie-request-v1") throw new Error("saved_operation_form_changed");
+    const form = legacyFormRef.current; if (!form) throw new Error("saved_operation_invalid");
+    for (const field of Array.from(form.elements)) {
+      if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement) || field.type === "file") continue;
+      const saved = fields[field.name];
+      if (field instanceof HTMLInputElement && (field.type === "checkbox" || field.type === "radio")) field.checked = Array.isArray(saved) ? saved.includes(field.value) : saved === field.value;
+      else if (typeof saved === "string") field.value = saved;
+    }
+    if (typeof fields.plan === "string") setSelectedPlan(fields.plan);
+  }, restoreOriginals);
   const [selectedPlan, setSelectedPlan] = useState<string>(() => {
     const plan = content.plans.find((entry) => entry.id === initialPlan);
     return plan ? planChoiceLabel(plan) : initialPlanLabel ?? PLAN_UNDECIDED;
@@ -90,6 +114,27 @@ export default function PortfolioCommissionForm({
   const [legacyMode, setLegacyMode] = useState<"consultation" | "quote">(initialMode ?? "consultation");
   const [legacyStep, setLegacyStep] = useState(0);
   const commissionOpen = content.commissionOpen;
+  const [startingNewRequest, setStartingNewRequest] = useState(false);
+  const [newRequestError, setNewRequestError] = useState<string | null>(null);
+  const startingNewRequestRef = useRef(false);
+  const newRequestLifecycleRef = useRef({ active: false, revision: 0 });
+  useEffect(() => {
+    const lifecycle = newRequestLifecycleRef.current; lifecycle.active = true;
+    return () => { lifecycle.active = false; lifecycle.revision++; };
+  }, []);
+  const startNewRequest = async () => {
+    if (!completed || startingNewRequestRef.current) return;
+    const lifecycle = newRequestLifecycleRef.current, revision = ++lifecycle.revision;
+    const isCurrent = () => lifecycle.active && lifecycle.revision === revision;
+    startingNewRequestRef.current = true; setStartingNewRequest(true); setNewRequestError(null);
+    try {
+      const receipts = await retireCompletedIntakeOperation("natori-intake-operation-v1", completed.receipt, isCurrent);
+      if (!isCurrent()) return;
+      if (receipts) onNewRequest(receipts);
+      else setNewRequestError("前回の受付結果を確認できませんでした。新しい依頼を始めず、受付状況を再確認してください。");
+    } catch { if (!isCurrent()) return; setNewRequestError("受付番号を保管できませんでした。前回の受付情報は残しています。"); }
+    finally { if (isCurrent()) { startingNewRequestRef.current = false; setStartingNewRequest(false); } }
+  };
 
   useEffect(() => {
     if (status === "success") successHeadingRef.current?.focus();
@@ -189,7 +234,7 @@ export default function PortfolioCommissionForm({
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (status === "sending") return;
+    if (status === "sending" || intake.frozen || !commissionOpen) return;
     if (legacyStep !== legacyLastStep) return;
     for (const name of ["name", "email", "details"]) {
       const field = e.currentTarget.elements.namedItem(name);
@@ -213,29 +258,12 @@ export default function PortfolioCommissionForm({
 
     const form = e.currentTarget;
     const data = new FormData(form);
-    const requestType = String(data.get("requestType") ?? "");
     for (const entry of refImages) data.append("refImages", entry.file);
 
     try {
-      const res = await fetch("/api/natori/portfolio/contact", {
-        method: "POST",
-        headers: { ...CSRF_HEADERS },
-        body: data,
-      });
-      const response = (await res.json().catch(() => null)) as
-        | { autoReplied?: boolean }
-        | null;
-      if (!res.ok) throw new Error(`request failed: ${res.status}`);
-      setAutoReplied(response?.autoReplied === true);
-      trackNatoriPageEvent("portfolio_form_submit", requestType);
-      setRefImages((current) => {
-        current.forEach((entry) => URL.revokeObjectURL(entry.previewUrl));
-        return [];
-      });
-      setStatus("success");
-    } catch (err) {
-      console.error("[portfolio-form] submit failed", err);
-      setStatus("error");
+      await intake.submit(data, refImages.map(entry => entry.file));
+    } finally {
+      setStatus(current => current === "success" ? current : "idle");
     }
   };
 
@@ -285,15 +313,25 @@ export default function PortfolioCommissionForm({
               内容を確認のうえ、2〜3日以内にご連絡いたします。
             </p>
             <p className="mt-2 text-xs" style={{ color: c.textSoft }}>
-              {autoReplied
+              {completed ? "受付確認メールは別にお送りします。メールが届かない場合も、再応募は不要です。" : autoReplied
                 ? "ご入力のメールアドレス宛に受付確認メールをお送りしました。届かない場合は迷惑メールフォルダをご確認ください。"
                 : "受付は完了しましたが、確認メールを送信できませんでした。2〜3日以内のご連絡をお待ちください。"}
             </p>
+            {completed && <div className="mt-4 space-y-2 text-sm">
+              <p className="break-all">ご連絡先：{completed.clientEmail}</p>
+              <p className="break-all">受付確認用：{completed.receipt}</p>
+              <button type="button" disabled={startingNewRequest || !commissionOpen} onClick={() => void startNewRequest()} className="pf-cute-focus min-h-11 rounded-full border-2 px-4 font-bold">新しい依頼を始める</button>
+              {newRequestError && <p role="alert">{newRequestError}</p>}
+              <p>迷惑メールフォルダもご確認ください。2〜3日を過ぎても連絡がない場合は、公開連絡先へお問い合わせください。</p>
+              <p>保存済みの依頼として確認できます。新しく応募し直す必要はありません。</p>
+              {content.socialLinks.find(link => link.label === "X") && <a className="pf-cute-focus min-h-11 inline-flex items-center underline" href={content.socialLinks.find(link => link.label === "X")?.href} target="_blank" rel="noopener noreferrer">公開連絡先（X）</a>}
+            </div>}
           </div>
         ) : structuredIntake ? (
           <div className="space-y-4">
           <PortfolioStructuredCommissionForm
               content={content}
+              restoreOriginals={restoreOriginals}
               demoMode={demoMode}
               commissionOpen={commissionOpen}
               initialMode={initialMode}
@@ -301,6 +339,7 @@ export default function PortfolioCommissionForm({
               fromPlan={fromPlan}
               initialPlan={initialPlan}
               onSuccess={(outcome) => {
+                if (outcome.receipt) setCompleted({ receipt: outcome.receipt, clientEmail: outcome.clientEmail ?? "" });
                 setAutoReplied(outcome.autoReplied);
                 setStatus("success");
               }}
@@ -314,6 +353,7 @@ export default function PortfolioCommissionForm({
             className="space-y-5 rounded-2xl p-6 md:p-8"
             style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
           >
+            <fieldset className="contents" disabled={intake.frozen || status === "sending"}>
             <input
               type="text"
               name="website"
@@ -563,7 +603,7 @@ export default function PortfolioCommissionForm({
                 style={{ borderColor: c.error, color: c.error, background: c.errorSoft }}
                 role="alert"
               >
-                送信に失敗しました。時間をおいて再度お試しいただくか、SNSのDMからご連絡ください。
+                送信結果を確認できませんでした。下の確認ボタンで同じ送信の結果を確認できます。
               </p>
             ) : null}
 
@@ -587,9 +627,28 @@ export default function PortfolioCommissionForm({
                   : "この内容で送信する"}
             </button> : <button key="legacy-next" type="button" onClick={(event) => { event.preventDefault(); nextLegacyStep(); }} disabled={!commissionOpen} className="pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black disabled:opacity-50" style={{ background: c.action, borderColor: c.actionDisplay, color: c.onAction }}>次へ進む</button>}
 
+            </fieldset>
+            <IntakeRecoveryPanel intake={intake} />
           </form>
         )}
       </div>
     </section>
   );
+}
+
+
+/** A confirmed explicit new request remounts both form variants, including controlled fields and File objects. */
+export default function PortfolioCommissionForm(props: Omit<Parameters<typeof PortfolioCommissionFormSession>[0], "onNewRequest" | "restoreOriginals">) {
+  const [session, setSession] = useState(0);
+  const [receipts, setReceipts] = useState<IntakeReceipt[]>([]);
+  useEffect(() => { try { setReceipts(loadIntakeReceipts()); } catch { /* Existing active recovery stays authoritative. */ } }, []);
+  return <>
+    <PortfolioCommissionFormSession key={session} {...props} restoreOriginals={session === 0} onNewRequest={history => {
+      setReceipts(history); setSession(current => current + 1);
+    }} />
+    {receipts.length > 0 && <aside aria-label="これまでの受付確認" className="mx-auto max-w-2xl space-y-2 px-5 pb-5 text-sm">
+      <p className="font-bold">これまでの受付確認</p>
+      {receipts.map(receipt => <p key={receipt.receipt} className="break-all">受付番号：{receipt.receipt}　連絡先：{receipt.clientEmail}</p>)}
+    </aside>}
+  </>;
 }

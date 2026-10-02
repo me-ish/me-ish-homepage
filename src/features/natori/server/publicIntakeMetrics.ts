@@ -15,7 +15,10 @@ export type PublicIntakeMetricCode =
   | "structured_auto_reply_sent"
   | "structured_auto_reply_failed"
   | "structured_auto_reply_skipped"
-  | "structured_accepted";
+  | "structured_accepted"
+  | "legacy_operation_id_missing"
+  | "structured_operation_attempt"
+  | "legacy_operation_attempt";
 
 /**
  * Log-drain aggregation用の固定形式。自由入力、ID、path、メールアドレスは受け取らない。

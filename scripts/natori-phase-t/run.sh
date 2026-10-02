@@ -21,6 +21,8 @@ phase2a=${PHASE_2A:-0}
 phase2b=${PHASE_2B:-0}
 phase2c=${PHASE_2C:-0}
 phase2d=${PHASE_2D:-0}
+phase3a=${PHASE_3A:-0}
+[[ $phase3a == 0 || ( $phase3a == 1 && $phase2d == 1 ) ]] || exit 1
 [[ $phase2d == 0 || ( $phase2d == 1 && $phase2c == 1 ) ]] || exit 1
 [[ $phase2c == 0 || ( $phase2c == 1 && $phase2b == 1 ) ]] || exit 1
 [[ $phase2b == 0 || ( $phase2b == 1 && $phase2a == 1 ) ]] || exit 1
@@ -110,6 +112,14 @@ if [[ $phase1 == 1 ]]; then
   test_memory=1g
 fi
 
+if [[ $phase3a == 1 ]]; then
+  mkdir -p "$work/phase3a"
+  node "$repo/scripts/natori-phase-3a/build.mjs" "$work/phase3a/integration.cjs"
+  node "$repo/scripts/natori-phase-3a/build-fixture.mjs" "$work/phase3a.sql"
+  [[ -s "$work/phase3a/claim-worker.cjs" && -s "$work/phase3a/browser-helpers.cjs" ]]
+  extra_mounts+=(--mount "type=bind,source=$work/phase3a,target=/phase3a,readonly")
+fi
+
 if [[ $phase2d == 1 ]]; then
   mkdir -p "$work/phase2d"
   node "$repo/scripts/natori-phase-2d/build.mjs" "$work/phase2d/integration.cjs"
@@ -186,6 +196,7 @@ if [[ $phasen == 1 ]]; then
   if [[ $phase2a == 1 ]]; then node "$repo/scripts/natori-phase-2a/prepare-browser.mjs" "$work/browser-app"; fi
   if [[ $phase2c == 1 ]]; then node "$repo/scripts/natori-phase-2c/prepare-browser.mjs" "$work/browser-app"; fi
   if [[ $phase2d == 1 ]]; then node "$repo/scripts/natori-phase-2d/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase3a == 1 ]]; then node "$repo/scripts/natori-phase-3a/prepare-browser.mjs" "$work/browser-app"; fi
   cp "$work/browser-app/source-checksums.json" "$work/results/browser-source-checksums.json"
 fi
 ROOT="$root" WORK="$work" PROJECT="$project" PHASE_1="$phase1" node --input-type=module <<'JS'
@@ -449,6 +460,17 @@ if [[ $phase2d == 1 ]]; then
   timeout 300 docker exec "$runner" node /phase2d/phase2b-compatibility.cjs
   timeout 300 docker exec "$runner" node /phase2d/integration.cjs
   timeout 600 docker exec "$project-browser" /runtime-bin/node /phase2d-browser/browser.mjs
+fi
+
+if [[ $phase3a == 1 ]]; then
+  # Install only after the refund migration and its post-migration compatibility gate.
+  # Both helper bundles are mounted read-only in this same sealed namespace.
+  dbsql <"$work/phase3a.sql" >/dev/null
+  timeout 360 docker exec "$runner" node /phase3a/integration.cjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase3a-browser/browser.mjs
+  # Separate final evidence; retain every earlier phase report and egress snapshot.
+  sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/phase3a-egress-counters.txt"
+  sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/phase3a-egress-counters.txt"
 fi
 
 echo 'Required real Storage tests completed; production remains unchanged'
