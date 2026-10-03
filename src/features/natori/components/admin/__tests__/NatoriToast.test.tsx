@@ -43,4 +43,14 @@ describe("NatoriToast", () => {
     fireEvent.click(screen.getByText("go"));
     expect(screen.queryByText("保存しました")).toBeNull();
   });
+
+  it("re-inserts the message when the same text is shown again so it is announced twice", () => {
+    render(<NatoriToastProvider><Trigger /></NatoriToastProvider>);
+    fireEvent.click(screen.getByText("go"));
+    const first = screen.getByText("保存しました");
+    fireEvent.click(screen.getByText("go"));
+    const second = screen.getByText("保存しました");
+    expect(second).not.toBe(first);
+    expect(first.isConnected).toBe(false);
+  });
 });
