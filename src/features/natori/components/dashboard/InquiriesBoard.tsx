@@ -11,7 +11,7 @@ import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleto
 import { useOptionalNatoriToast } from "@/features/natori/components/admin/NatoriToast";
 import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Inbox } from "lucide-react";
+import { Inbox, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
 import {
@@ -79,11 +79,25 @@ const STATUS_FILTERS: Array<{ key: string; label: string; statuses: NatoriProjec
   { key: "awaiting_payment", label: "入金待ち", statuses: ["awaiting_payment"] },
 ];
 
+/** 上段チップ＝返信状況、下段セレクト＝工程。key は STATUS_FILTERS のものをそのまま使う。 */
+const REPLY_FILTER_KEYS = ["all", "attention", "staff", "client", "ended"];
+const STAGE_FILTER_KEYS = ["all", "inquiry", "estimating", "quoted", "awaiting_payment"];
+
 function formatDate(iso: string | undefined): string {
   if (!iso) return "-";
   const [year, month, day] = iso.split("-").map(Number);
   if (!year || !month || !day) return iso;
   return `${year}/${month}/${day}`;
+}
+
+/** 完了・見送り・アーカイブ済みは経過日数を警告色で出さない（INQ-04）。 */
+function isFinishedProject(project: NatoriProject): boolean {
+  return (
+    Boolean(project.deletedAt) ||
+    project.status === "completed" ||
+    project.status === "delivered" ||
+    project.status === "closed"
+  );
 }
 
 /** 経過日数バッジ。7日で注意、14日で警告 */
@@ -95,8 +109,14 @@ function ElapsedBadge({ days }: { days: number }) {
         ? "border-amber-200 bg-amber-50 text-amber-800"
         : "border-gray-200 bg-gray-50 text-gray-600";
   return (
-    <span className={cn("inline-block rounded-full border px-2 py-0.5 text-xs font-bold", tone)}>
-      {days === 0 ? "今日" : `${days}日`}
+    <span
+      className={cn("inline-block rounded-full border px-2 py-0.5 text-xs font-bold", tone)}
+      title={days === 0 ? "最終やり取りは今日" : `最終やり取りから${days}日`}
+    >
+      <span aria-hidden>{days === 0 ? "今日" : `${days}日前`}</span>
+      <span className="sr-only">
+        {days === 0 ? "最終やり取りは今日" : `最終やり取りから${days}日`}
+      </span>
     </span>
   );
 }
@@ -135,6 +155,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   const [initialScreen, setInitialScreen] = useState<"overview" | "conversation">("overview");
   const [mailKind, setMailKind] = useState<OrderMailKind | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (isDemo) return;
@@ -394,36 +415,88 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   return (
     <div className="space-y-3">
       {confirmDialog}
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-gray-600">制作の進捗と返信待ちは別に表示します。既読の判定ではありません。</p>
-        {!isDemo ? <button type="button" onClick={() => void reload().catch(() => setError("最新の状況を取得できませんでした。"))} className="shrink-0 rounded-full border px-3 py-2 text-xs font-bold">状態を更新</button> : null}
+      <div className="flex items-start justify-between gap-3">
+        <details className="group min-w-0">
+          <summary className={`${natoriAdminUi.btnLink} cursor-pointer list-none marker:hidden [&::-webkit-details-marker]:hidden`}>
+            表示のルール
+          </summary>
+          <div className={`mt-1 space-y-1 ${natoriAdminUi.caption}`}>
+            <p>制作の進捗と返信待ちは別に表示します。既読の判定ではありません。</p>
+            <p>
+              相談の最終発言が古い順（会話がなければ受付順）です。経過はその日からの日数で、7日で黄色・14日で赤になります。
+            </p>
+          </div>
+        </details>
+        {!isDemo ? (
+          <button
+            type="button"
+            disabled={refreshing}
+            onClick={() => {
+              setRefreshing(true);
+              void reload()
+                .catch(() => setError("最新の状況を取得できませんでした。"))
+                .finally(() => setRefreshing(false));
+            }}
+            className={`${natoriAdminUi.btnSecondary} shrink-0`}
+          >
+            {refreshing ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : null}
+            状態を更新
+          </button>
+        ) : null}
       </div>
       {selectedId && !selectedProject ? <div role={selectedError ? "alert" : "status"} className="rounded-xl border p-3 text-sm">
         {selectedError || "案件詳細を読み込み中…"}
         {selectedError ? <button type="button" onClick={() => setDetailVersion(n => n + 1)} className="ml-3 underline">詳細を再試行</button> : null}
         <button type="button" onClick={closeDetail} className="ml-3 underline">閉じる</button>
       </div> : null}
-      {/* 状態フィルタ */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        {STATUS_FILTERS.map((entry) => (
-          <button
-            key={entry.key}
-            type="button"
-            onClick={() => setFilter(entry.key)}
-            aria-pressed={filter === entry.key}
-            className={cn(
-              "h-8 rounded-full border px-3 text-xs font-bold transition",
-              filter === entry.key
-                ? "border-[#BE185D] bg-[#BE185D] text-white"
-                : "border-pink-200 bg-white text-gray-700 hover:bg-pink-50"
-            )}
+      {/* 状態フィルタ（返信状況＝チップ / 工程＝セレクト。どちらも同じ filter を更新する） */}
+      <div className="space-y-2">
+        <div>
+          <p className={`mb-1 ${natoriAdminUi.groupLabel}`}>返信状況</p>
+          <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+            {REPLY_FILTER_KEYS.map((key) => {
+              const entry = STATUS_FILTERS.find((item) => item.key === key);
+              if (!entry) return null;
+              const on = filter === entry.key;
+              return (
+                <button
+                  key={entry.key}
+                  type="button"
+                  onClick={() => setFilter(entry.key)}
+                  aria-pressed={on}
+                  className={cn(natoriAdminUi.chip, on ? natoriAdminUi.chipOn : natoriAdminUi.chipOff)}
+                >
+                  {entry.key === "all" ? "すべて" : entry.label}
+                  <span className={cn("ml-1 tabular-nums", on ? "opacity-90" : "text-gray-600")}>
+                    {rows.filter((row) => matchesFilter(row, entry.key)).length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="inquiries-stage-filter" className={natoriAdminUi.groupLabel}>
+            工程
+          </label>
+          <select
+            id="inquiries-stage-filter"
+            value={STAGE_FILTER_KEYS.includes(filter) ? filter : "all"}
+            onChange={(event) => setFilter(event.target.value)}
+            className={`${natoriAdminUi.input} !w-auto min-w-[10rem]`}
           >
-            {entry.label}
-            <span className={cn("ml-1", filter === entry.key ? "opacity-90" : "text-gray-400")}>
-              {rows.filter(row => matchesFilter(row, entry.key)).length}
-            </span>
-          </button>
-        ))}
+            {STAGE_FILTER_KEYS.map((key) => {
+              const entry = STATUS_FILTERS.find((item) => item.key === key);
+              if (!entry) return null;
+              const label = key === "all" ? "すべて" : key === "quoted" ? "見積もり提示済み" : entry.label;
+              return (
+                <option key={key} value={key}>
+                  {label}（{rows.filter((row) => matchesFilter(row, key)).length}）
+                </option>
+              );
+            })}
+          </select>
+        </div>
       </div>
 
       {error ? (
@@ -462,7 +535,11 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
                       <p className="min-w-0 break-words text-sm font-black text-gray-900">
                         {row.project.clientName}
                       </p>
-                      <ElapsedBadge days={elapsed} />
+                      {isFinishedProject(row.project) ? (
+                        <span className="text-xs text-gray-500">—</span>
+                      ) : (
+                        <ElapsedBadge days={elapsed} />
+                      )}
                     </div>
                     <p className="mt-0.5 break-words text-xs text-gray-600">{row.project.title}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-600">
@@ -489,16 +566,16 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
           </ul>
 
           {/* PC: テーブル表示 */}
-          <div className="hidden overflow-x-auto rounded-2xl border border-pink-100 bg-white shadow-sm sm:block">
+          <div className={`hidden sm:block ${natoriAdminUi.tableWrap}`}>
           <table className="w-full min-w-[720px] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-pink-100 text-xs font-bold text-gray-600">
-                <th className="px-3 py-2.5">受付日</th>
-                <th className="px-3 py-2.5">依頼者・内容</th>
-                <th className="px-3 py-2.5 text-right">金額</th>
-                <th className="px-3 py-2.5">ステータス</th>
-                <th className="px-3 py-2.5">最終アクション</th>
-                <th className="px-3 py-2.5 text-right">経過</th>
+              <tr>
+                <th scope="col" className={natoriAdminUi.th}>受付日</th>
+                <th scope="col" className={natoriAdminUi.th}>依頼者・内容</th>
+                <th scope="col" className={`${natoriAdminUi.th} text-right`}>金額</th>
+                <th scope="col" className={natoriAdminUi.th}>ステータス</th>
+                <th scope="col" className={natoriAdminUi.th}>最終アクション</th>
+                <th scope="col" className={`${natoriAdminUi.th} text-right`}>経過</th>
               </tr>
             </thead>
             <tbody>
@@ -508,22 +585,22 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
                 return (
                   <tr
                     key={row.project.id}
-                    className="border-b border-pink-50 transition last:border-b-0 hover:bg-pink-50/50"
+                    className={`relative cursor-pointer transition ${natoriAdminUi.tr}`}
                   >
-                    <td className="whitespace-nowrap px-3 py-2.5 text-xs text-gray-600">
+                    <td className={`whitespace-nowrap ${natoriAdminUi.td} text-xs text-gray-600`}>
                       {formatDate(row.receivedISO)}
                     </td>
-                    <td className="max-w-[260px] px-3 py-2.5">
-                      <button type="button" onClick={() => openProject(row.project.id)} className="max-w-full text-left underline decoration-pink-200 underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-500">
+                    <td className={`max-w-[260px] ${natoriAdminUi.td}`}>
+                      <button type="button" onClick={() => openProject(row.project.id)} className="max-w-full text-left underline decoration-pink-200 underline-offset-4 after:absolute after:inset-0 after:content-[''] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#831843]">
                         <span className="block truncate font-bold text-gray-900">{row.project.clientName}</span>
                         <span className="block truncate text-xs text-gray-600">{row.project.title}</span>
                       </button>
                       <ConsultationStatus project={row.project} />
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-right font-bold text-gray-900">
+                    <td className={`whitespace-nowrap text-right font-bold text-gray-900 ${natoriAdminUi.td}`}>
                       {formatNatoriProjectAmount(row.project.amount)}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2.5">
+                    <td className={`whitespace-nowrap ${natoriAdminUi.td}`}>
                       <span
                         className={cn(
                           "inline-block rounded-full border px-2 py-0.5 text-xs font-bold",
@@ -533,12 +610,16 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
                         {meta.label}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-xs text-gray-600">
+                    <td className={`whitespace-nowrap ${natoriAdminUi.td} text-xs text-gray-600`}>
                       {row.lastActionLabel}
-                      <span className="ml-1 text-gray-400">{formatDate(row.lastActivityISO)}</span>
+                      <span className="ml-1 text-gray-500">{formatDate(row.lastActivityISO)}</span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-right">
-                      <ElapsedBadge days={elapsed} />
+                    <td className={`whitespace-nowrap text-right ${natoriAdminUi.td}`}>
+                      {isFinishedProject(row.project) ? (
+                        <span className="text-xs text-gray-500">—</span>
+                      ) : (
+                        <ElapsedBadge days={elapsed} />
+                      )}
                     </td>
                   </tr>
                 );
@@ -548,10 +629,6 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
           </div>
         </>
       )}
-
-      <p className="text-xs text-gray-500">
-        相談の最終発言が古い順（会話がなければ受付順）です。経過はその日からの日数で、7日で黄色・14日で赤になります。
-      </p>
 
       {/* 詳細パネル */}
       {selectedRow && !mailKind ? (

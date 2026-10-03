@@ -7,6 +7,7 @@
 // 本文の {支払いリンク} の位置に差し込まれる。
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import Link from "next/link";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Loader2, Mail, RotateCcw, X } from "lucide-react";
@@ -272,33 +273,42 @@ export default function OrderMailPanel({
   };
 
   if(kind==="payment"&&!demoMode&&paymentFlow==="enabled")return <PaymentLinkPanel project={project} onClose={onClose} onSent={onSent}/>;
-  if(kind==="payment"&&!demoMode&&paymentFlow!=="legacy")return <div className="fixed inset-0 z-50 grid place-items-center bg-gray-900/60 p-4" role="dialog" aria-modal="true" aria-label="支払状態の確認">
-    <section className="rounded-2xl bg-white p-6"><p role="status">{paymentFlow==="error"?"支払状態を確認できません。再読込してください。":"支払状態を確認中です。"}</p><button type="button" onClick={onClose} className="mt-4 min-h-11 underline">閉じる</button></section></div>;
+  if(kind==="payment"&&!demoMode&&paymentFlow!=="legacy")return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent hideCloseButton aria-describedby={undefined} className="w-full max-w-lg rounded-2xl bg-white p-6">
+        <DialogTitle className="sr-only">支払状態の確認</DialogTitle>
+        <p role="status">{paymentFlow==="error"?"支払状態を確認できません。再読込してください。":"支払状態を確認中です。"}</p>
+        <button type="button" onClick={onClose} className="mt-4 min-h-11 justify-self-start underline">閉じる</button>
+      </DialogContent>
+    </Dialog>
+  );
   if (kind === "estimate" && !demoMode) return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-gray-900/60 p-4" role="dialog" aria-modal="true" aria-label="見積りを作成・確認">
-      <section className="w-full max-w-lg rounded-2xl bg-white p-6">
-        <h2 className="font-bold">見積りを作成・確認</h2>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent hideCloseButton aria-describedby={undefined} className="w-full max-w-lg gap-0 rounded-2xl bg-white p-6">
+        <DialogTitle className="font-bold">見積りを作成・確認</DialogTitle>
         <p className="mt-3 text-sm">条件と金額を確認して正式な版を保存します。保存済みの版の再通知も同じ画面から行います。</p>
-        <Link href={`/natori/estimate?inquiry=${encodeURIComponent(project.id)}`} className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-pink-100 px-4 font-bold text-pink-950">この案件の見積りを開く</Link>
-        <button type="button" onClick={onClose} className="ml-3 min-h-11 px-3 underline">閉じる</button>
-      </section>
-    </div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Link href={`/natori/estimate?inquiry=${encodeURIComponent(project.id)}`} className="inline-flex min-h-11 items-center rounded-xl bg-pink-100 px-4 font-bold text-pink-950">この案件の見積りを開く</Link>
+          <button type="button" onClick={onClose} className="min-h-11 px-3 underline">閉じる</button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-gray-900/60 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label={meta.title}
-    >
-      <div className="w-full max-w-2xl rounded-2xl border border-pink-100 bg-white p-4 shadow-xl sm:p-5">
+    <Dialog open onOpenChange={(open) => { if (!open && !sending) onClose(); }}>
+      <DialogContent
+        hideCloseButton
+        aria-describedby={undefined}
+        onInteractOutside={(event) => event.preventDefault()}
+        className="block max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-pink-100 bg-white p-4 shadow-xl sm:rounded-2xl sm:p-5"
+      >
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="flex items-center gap-2 text-base font-black text-gray-900">
+            <DialogTitle className="flex items-center gap-2 text-base font-black text-gray-900">
               <Mail className="h-4 w-4 text-pink-500" aria-hidden />
               {meta.title}
-            </h2>
+            </DialogTitle>
             <p className="mt-0.5 break-words text-xs text-gray-600">
               {project.clientName}｜{project.title}
             </p>
@@ -577,7 +587,7 @@ export default function OrderMailPanel({
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
