@@ -86,12 +86,12 @@ export default function ClosedProjectsSection({
                   ) : null}
                 </div>
                 {project.consultation !== undefined ? <div className="space-y-1"><ConsultationStatus project={project} /><Link href={staffConsultationHref(project.id)} className="inline-flex min-h-10 items-center text-sm font-bold text-pink-700 underline">相談履歴</Link></div> : null}
-                <div className="flex shrink-0 items-center gap-1.5">
+                <div className="flex shrink-0 flex-wrap items-center gap-3">
                   <button
                     type="button"
                     onClick={() => onReopen(project)}
                     disabled={busy}
-                    className="inline-flex h-9 items-center justify-center gap-1 rounded-full border border-pink-300 bg-white px-3 text-xs font-bold text-pink-700 shadow-sm transition hover:bg-pink-50 disabled:opacity-60"
+                    className={natoriAdminUi.btnSecondary}
                   >
                     <RotateCcw className="h-3.5 w-3.5" aria-hidden />
                     依頼受付に戻す
@@ -100,11 +100,12 @@ export default function ClosedProjectsSection({
                     type="button"
                     onClick={() => onDelete(project)}
                     disabled={busy}
-                    className={natoriAdminUi.btnIcon}
+                    className={natoriAdminUi.btnDanger}
                     aria-label={`「${project.title}」を案件一覧から削除`}
                     title="案件一覧から削除（あとで復元できます）"
                   >
-                    <Trash2 className="h-4 w-4 text-red-700" aria-hidden />
+                    <Trash2 className="h-4 w-4" aria-hidden />
+                    一覧から削除
                   </button>
                 </div>
               </li>

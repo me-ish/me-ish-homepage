@@ -1,6 +1,7 @@
 "use client";
 
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
+import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { useState } from "react";
 import { CalendarPlus, Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,18 @@ export default function PersonalEventsSection({
   const [draftTitle, setDraftTitle] = useState("");
   const [draftNote, setDraftNote] = useState("");
   const [adding, setAdding] = useState(false);
+  const { confirm, confirmDialog } = useNatoriConfirm();
+
+  const handleDelete = async (event: NatoriEvent) => {
+    const confirmed = await confirm({
+      title: "予定を削除しますか？",
+      description: `予定「${event.title}」を削除します。よろしいですか？`,
+      confirmLabel: "予定を削除",
+      tone: "danger",
+    });
+    if (!confirmed) return;
+    await onDelete(event.id);
+  };
 
   const dayEvents = events
     .filter((event) => event.date === selectedISO)
@@ -78,6 +91,7 @@ export default function PersonalEventsSection({
 
   return (
     <section className="mt-4 rounded-2xl border border-pink-100 bg-white p-3 shadow-sm sm:p-4">
+      {confirmDialog}
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-bold text-gray-600">この日の予定</p>
         {authed && !draftActive ? (
@@ -134,7 +148,7 @@ export default function PersonalEventsSection({
                     </button>
                     <button
                       type="button"
-                      onClick={() => onDelete(event.id)}
+                      onClick={() => void handleDelete(event)}
                       className={`${natoriAdminUi.btnIcon} disabled:opacity-50`}
                       aria-label={`予定「${event.title}」を削除`}
                       disabled={busy}
