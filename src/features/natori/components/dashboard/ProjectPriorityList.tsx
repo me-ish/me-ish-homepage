@@ -13,7 +13,7 @@ type ProjectPriorityListProps = {
   onSelect: (project: NatoriPriorityCandidate) => void;
 };
 
-const rankClassMap = ["bg-pink-500", "bg-gray-700", "bg-gray-500"];
+const rankClassMap = ["bg-[#BE185D]", "bg-gray-700", "bg-gray-500"];
 
 export default function ProjectPriorityList({ suggestions, today, onSelect }: ProjectPriorityListProps) {
   const [open, setOpen] = useState(false);
@@ -94,7 +94,7 @@ export default function ProjectPriorityList({ suggestions, today, onSelect }: Pr
                         </p>
                         <span
                           className={cn(
-                            "shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold",
+                            "shrink-0 rounded-full border px-2 py-0.5 text-xs font-bold",
                             meta.chipClassName
                           )}
                         >
@@ -117,7 +117,7 @@ export default function ProjectPriorityList({ suggestions, today, onSelect }: Pr
                         {stageMeta ? (
                           <span
                             className={cn(
-                              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-bold",
                               stageMeta.chipClassName
                             )}
                           >

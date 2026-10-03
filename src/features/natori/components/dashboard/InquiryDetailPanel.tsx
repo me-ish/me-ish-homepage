@@ -3,6 +3,7 @@
 // features/natori/components/dashboard/InquiryDetailPanel.tsx
 // 問い合わせ管理画面の詳細パネル。フォームの依頼内容を整形表示し、
 // その場で見積もり / 支払い依頼メールの送信・入金確認・見送りができる。
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import Link from "next/link";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import ConsultationStatus from "./ConsultationStatus";
@@ -167,7 +168,7 @@ export default function InquiryDetailPanel({
               </DialogTitle>
               <span
                 className={cn(
-                  "inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                  "inline-block rounded-full border px-2 py-0.5 text-xs font-bold",
                   meta.chipClassName,
                 )}
               >
@@ -200,7 +201,7 @@ export default function InquiryDetailPanel({
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+            className={natoriAdminUi.btnIcon}
             aria-label="閉じる"
           >
             <X className="h-4 w-4" aria-hidden />
@@ -236,7 +237,7 @@ export default function InquiryDetailPanel({
           {/* legacy: フォームの項目（note 由来） */}
           {requestView.kind !== "structured" && view.fields.length > 0 ? (
             <section>
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700">
+              <h3 className="mb-2 text-xs font-bold text-gray-600">
                 ご依頼内容
               </h3>
               <dl className="grid grid-cols-1 gap-x-4 gap-y-1.5 rounded-xl border border-pink-100 bg-pink-50/40 p-3 text-sm sm:grid-cols-2">
@@ -257,7 +258,7 @@ export default function InquiryDetailPanel({
           {/* 資料がある案件だけ表示する。空のURL欄は案件設定へ。 */}
           {hasReferences ? (
             <section className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wide text-pink-700">
+              <h3 className="text-xs font-bold text-gray-600">
                 参考資料
               </h3>
               <InquiryReferenceFiles files={referenceFiles} acquisitionState={project.referenceFilesState} />
@@ -320,7 +321,7 @@ export default function InquiryDetailPanel({
           {/* 依頼の詳細・その他 */}
           {view.details ? (
             <section>
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700">
+              <h3 className="mb-2 text-xs font-bold text-gray-600">
                 ご依頼の詳細
               </h3>
               <p className="whitespace-pre-wrap break-words rounded-xl border border-pink-100 bg-white p-3 text-sm leading-6 text-gray-900 shadow-sm">
@@ -330,7 +331,7 @@ export default function InquiryDetailPanel({
           ) : null}
           {view.message ? (
             <section>
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700">
+              <h3 className="mb-2 text-xs font-bold text-gray-600">
                 その他・ご質問
               </h3>
               <p className="whitespace-pre-wrap break-words rounded-xl border border-pink-100 bg-white p-3 text-sm leading-6 text-gray-900 shadow-sm">
@@ -342,7 +343,7 @@ export default function InquiryDetailPanel({
           {/* 手入力案件のメモ */}
           {!view.isAutoInquiry && view.plainNote ? (
             <section>
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700">
+              <h3 className="mb-2 text-xs font-bold text-gray-600">
                 メモ
               </h3>
               <p className="whitespace-pre-wrap break-words rounded-xl border border-pink-100 bg-white p-3 text-sm leading-6 text-gray-900 shadow-sm">
@@ -362,7 +363,7 @@ export default function InquiryDetailPanel({
               <button
                 type="button"
                 onClick={() => setScreen("conversation")}
-                className="mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-pink-500 px-4 text-sm font-bold text-white hover:bg-pink-600"
+                className={`${natoriAdminUi.btnPrimary} mt-3`}
               >
                 <MessageCircle className="h-4 w-4" aria-hidden />
                 相談を開く
@@ -423,7 +424,7 @@ export default function InquiryDetailPanel({
             <button
               type="button"
               onClick={() => setScreen("conversation")}
-              className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-pink-500 px-2 text-[11px] font-bold text-white hover:bg-pink-600 sm:flex-none sm:px-4 sm:text-xs"
+              className={`${natoriAdminUi.btnPrimary} min-w-0 flex-1 whitespace-nowrap sm:flex-none`}
             >
               <MessageCircle className="h-3.5 w-3.5" aria-hidden />
               {readOnly ? "相談履歴を開く" : "相談に返信"}
@@ -432,7 +433,7 @@ export default function InquiryDetailPanel({
           {!readOnly && ESTIMATE_MAIL_STATUSES.has(project.status) && estimateHref ? (
             <Link
               href={estimateHref}
-              className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-rose-300 bg-white px-2 text-[11px] font-bold text-rose-700 shadow-sm hover:bg-rose-50 sm:flex-none sm:px-4 sm:text-xs"
+              className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-rose-300 bg-white px-2 text-xs font-bold text-rose-700 shadow-sm hover:bg-rose-50 sm:flex-none sm:px-4 sm:text-xs"
               title="依頼内容を見積もりツールに貼り付けた状態で開きます（概算とメール下書きが自動で出ます）"
             >
               <Calculator className="h-3.5 w-3.5" aria-hidden />
@@ -440,7 +441,7 @@ export default function InquiryDetailPanel({
             </Link>
           ) : null}
           <details className="group relative ml-auto shrink-0">
-            <summary className="flex h-10 cursor-pointer list-none items-center rounded-full border border-gray-300 bg-white px-3 text-[11px] font-bold text-gray-700 marker:hidden [&::-webkit-details-marker]:hidden sm:px-4 sm:text-xs">
+            <summary className="flex h-10 cursor-pointer list-none items-center rounded-full border border-gray-300 bg-white px-3 text-xs font-bold text-gray-700 marker:hidden [&::-webkit-details-marker]:hidden sm:px-4 sm:text-xs">
               その他 ↑
             </summary>
             <div className="absolute bottom-full right-0 z-10 mb-2 flex max-h-[50dvh] w-[min(88vw,24rem)] flex-wrap gap-2 overflow-y-auto rounded-xl border border-gray-200 bg-white p-3 shadow-xl">
@@ -449,7 +450,7 @@ export default function InquiryDetailPanel({
                   type="button"
                   onClick={() => onOpenMail("estimate")}
                   disabled={busy}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-pink-500 px-4 text-xs font-bold text-white shadow-sm hover:bg-pink-600 disabled:opacity-60"
+                  className={natoriAdminUi.btnPrimary}
                 >
                   <Mail className="h-3.5 w-3.5" aria-hidden />
                   見積もりメール
@@ -461,7 +462,7 @@ export default function InquiryDetailPanel({
                   type="button"
                   onClick={() => onOpenMail("payment")}
                   disabled={busy}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-orange-500 px-4 text-xs font-bold text-white shadow-sm hover:bg-orange-600 disabled:opacity-60"
+                  className={natoriAdminUi.btnSecondary}
                 >
                   <Mail className="h-3.5 w-3.5" aria-hidden />
                   支払い依頼メール

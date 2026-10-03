@@ -5,6 +5,7 @@
 // 定型文を下書きとして生成し、編集してから /api/natori/admin/order-mail で送信する。
 // 支払い依頼は送信時にサーバーで Stripe 支払いリンクが生成され、
 // 本文の {支払いリンク} の位置に差し込まれる。
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -109,7 +110,7 @@ function isMoneyKind(kind: OrderMailKind): boolean {
 }
 
 const inputClass =
-  "w-full rounded-lg border border-pink-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300";
+  natoriAdminUi.input;
 const labelClass = "mb-1 block text-xs font-bold text-pink-700";
 
 type OrderMailPanelProps = {
@@ -305,7 +306,7 @@ export default function OrderMailPanel({
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+            className={natoriAdminUi.btnIcon}
             aria-label="閉じる"
           >
             <X className="h-4 w-4" aria-hidden />
@@ -346,7 +347,7 @@ export default function OrderMailPanel({
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex h-10 items-center rounded-full bg-pink-500 px-5 text-sm font-bold text-white hover:bg-pink-600"
+                className={natoriAdminUi.btnPrimary}
               >
                 閉じる
               </button>
@@ -426,7 +427,7 @@ export default function OrderMailPanel({
                   className={inputClass}
                 />
                 {!to ? (
-                  <p className="mt-1 text-[11px] text-gray-500">
+                  <p className="mt-1 text-xs text-gray-500">
                     案件メモから自動で拾えなかった場合は手入力してください。
                   </p>
                 ) : null}
@@ -464,7 +465,7 @@ export default function OrderMailPanel({
                   typeof amount === "number" &&
                   Number.isFinite(amount) &&
                   amount < 50 ? (
-                    <p className="mt-1 text-[11px] font-bold text-red-600">
+                    <p className="mt-1 text-xs font-bold text-red-600">
                       カード決済は50円以上から利用できます。
                     </p>
                   ) : null}
@@ -481,7 +482,7 @@ export default function OrderMailPanel({
                     定型文を再生成
                   </button>
                   {amount === "" ? (
-                    <p className="text-[11px] font-bold text-amber-700">
+                    <p className="text-xs font-bold text-amber-700">
                       金額未定の案件は送信できません。先に案件情報で金額を確定してください。
                     </p>
                   ) : null}
@@ -516,17 +517,17 @@ export default function OrderMailPanel({
                 className={`${inputClass} leading-6`}
               />
               {kind === "payment" && !draft.body.includes(PAYMENT_LINK_PLACEHOLDER) ? (
-                <p className="mt-1 text-[11px] font-bold text-amber-600">
+                <p className="mt-1 text-xs font-bold text-amber-600">
                   本文に {PAYMENT_LINK_PLACEHOLDER} がありません。この場合、支払いリンクは本文の末尾に追記されます。
                 </p>
               ) : null}
               {kind === "rough" && !draft.body.includes(FILES_LINK_PLACEHOLDER) ? (
-                <p className="mt-1 text-[11px] font-bold text-amber-600">
+                <p className="mt-1 text-xs font-bold text-amber-600">
                   本文に {FILES_LINK_PLACEHOLDER} がありません。この場合、確認リンクは本文の末尾に追記されます。
                 </p>
               ) : null}
               {kind === "delivery" && !draft.body.includes(DELIVERY_LINK_PLACEHOLDER) ? (
-                <p className="mt-1 text-[11px] font-bold text-amber-600">
+                <p className="mt-1 text-xs font-bold text-amber-600">
                   本文に {DELIVERY_LINK_PLACEHOLDER} がありません。この場合、納品ページのURLは本文の末尾に追記されます。
                 </p>
               ) : null}
@@ -543,7 +544,7 @@ export default function OrderMailPanel({
 
             <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
               {isMoneyKind(kind) ? (
-                <p className="mr-auto text-[11px] text-gray-500">
+                <p className="mr-auto text-xs text-gray-500">
                   送信金額:{" "}
                   {typeof amount === "number" && Number.isFinite(amount)
                     ? formatYen(Math.round(amount))
@@ -564,7 +565,7 @@ export default function OrderMailPanel({
                 type="button"
                 onClick={handleSend}
                 disabled={!canSend}
-                className="inline-flex h-10 items-center gap-2 rounded-full bg-pink-500 px-5 text-sm font-bold text-white hover:bg-pink-600 disabled:opacity-50"
+                className={natoriAdminUi.btnPrimary}
               >
                 {sending ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden />

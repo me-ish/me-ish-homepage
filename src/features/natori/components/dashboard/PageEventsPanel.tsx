@@ -108,7 +108,7 @@ export default function PageEventsPanel() {
                 if (rows.length === 0) return null;
                 return (
                   <div key={meta.event}>
-                    <p className="text-xs font-bold uppercase tracking-wide text-pink-700">
+                    <p className="text-xs font-bold text-gray-600">
                       {meta.title}
                       {meta.hint ? (
                         <span className="ml-1.5 font-medium normal-case text-gray-400">
@@ -118,7 +118,7 @@ export default function PageEventsPanel() {
                     </p>
                     <table className="mt-1.5 w-full border-collapse text-sm">
                       <thead>
-                        <tr className="text-left text-[11px] font-bold text-gray-500">
+                        <tr className="text-left text-xs font-bold text-gray-500">
                           <th className="py-1 pr-2 font-bold"> </th>
                           <th className="w-20 py-1 pr-2 text-right">30日</th>
                           <th className="w-20 py-1 text-right">90日</th>
@@ -145,7 +145,7 @@ export default function PageEventsPanel() {
                 );
               })}
               {summary.truncated ? (
-                <p className="text-[11px] text-gray-500">
+                <p className="text-xs text-gray-500">
                   ※件数が多いため一部のみ集計しています。
                 </p>
               ) : null}
@@ -155,7 +155,7 @@ export default function PageEventsPanel() {
               まだ計測データがありません。リンク集やコミッションページがクリックされると、ここに集計が表示されます。
             </p>
           )}
-          <p className="text-[11px] leading-4 text-gray-400">
+          <p className="text-xs leading-4 text-gray-400">
             同じイベントは GA4 にも送信しています。ページ全体のアクセス数（表示回数・流入元など）は
             Google アナリティクスまたは Vercel Analytics で確認できます。
           </p>

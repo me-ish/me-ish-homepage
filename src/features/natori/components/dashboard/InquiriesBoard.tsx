@@ -6,6 +6,10 @@
 // 受付日・最終アクション・経過日数付きの一覧で見て、詳細パネルから
 // 見積もり / 支払い依頼メールの送信・入金確認・見送りまで行える。
 // データソースは案件管理と同じ natori_projects（別テーブルは持たない）。
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
+import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
+import { useOptionalNatoriToast } from "@/features/natori/components/admin/NatoriToast";
+import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -91,7 +95,7 @@ function ElapsedBadge({ days }: { days: number }) {
         ? "border-amber-200 bg-amber-50 text-amber-800"
         : "border-gray-200 bg-gray-50 text-gray-600";
   return (
-    <span className={cn("inline-block rounded-full border px-2 py-0.5 text-[11px] font-bold", tone)}>
+    <span className={cn("inline-block rounded-full border px-2 py-0.5 text-xs font-bold", tone)}>
       {days === 0 ? "今日" : `${days}日`}
     </span>
   );
@@ -117,6 +121,8 @@ type InquiriesBoardProps = {
 };
 
 export default function InquiriesBoard({ demoProjects, demoArtistName }: InquiriesBoardProps) {
+  const { confirm, confirmDialog } = useNatoriConfirm();
+  const { showToast } = useOptionalNatoriToast();
   const isDemo = Boolean(demoProjects);
   const [projects, setProjects] = useState<NatoriProject[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -236,11 +242,15 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   const selectedRow = selectedProject ? { project: selectedProject, view: parseInquiryNote(selectedProject.note) } : null;
 
   const handleCloseInquiry = async (project: NatoriProject) => {
-    const reason = window.prompt(
-      `「${project.clientName}｜${project.title}」を見送りにします。理由があれば入力してください（履歴として残ります）。`,
-      ""
-    );
-    if (reason === null) return;
+    const answer = await confirm({
+      title: "見送りにしますか？",
+      description: `「${project.clientName}｜${project.title}」を見送りにします。理由があれば入力してください（履歴として残ります）。`,
+      confirmLabel: "見送りにする",
+      tone: "danger",
+      withReason: { label: "理由（任意・履歴に残ります）" },
+    });
+    if (answer === null) return;
+    const reason = answer.reason;
     if (isDemo) {
       // デモ: ローカル状態にだけ反映（履歴の見送りログも本物と同じ形式で追記）
       const stamp = new Date().toISOString().slice(0, 10);
@@ -257,6 +267,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
         )
       );
       closeDetail();
+      showToast("見送りにしました。");
       return;
     }
     setBusyId(project.id);
@@ -265,6 +276,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
       await closeNatoriProject(project.id, reason.trim());
       await reload();
       closeDetail();
+      showToast("見送りにしました。");
     } catch (err) {
       console.error("[InquiriesBoard] close failed", err);
       setError(err instanceof Error ? err.message : String(err));
@@ -318,9 +330,12 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   };
 
   const handleConfirmPayment = async (project: NatoriProject) => {
-    const confirmed = window.confirm(
-      `「${project.clientName}｜${project.title}」の入金を確認済みにして、ラフ開始に進めます。よろしいですか？`
-    );
+    const confirmed = await confirm({
+      title: "入金を確認しますか？",
+      description: `「${project.clientName}｜${project.title}」の入金を確認済みにして、ラフ開始に進めます。よろしいですか？`,
+      confirmLabel: "入金確認してラフ開始",
+      tone: "primary",
+    });
     if (!confirmed) return;
     if (isDemo) {
       setProjects((current) =>
@@ -336,6 +351,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
         )
       );
       closeDetail();
+      showToast("入金確認しました。ラフ工程に進みました。");
       return;
     }
     setBusyId(project.id);
@@ -344,6 +360,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
       await confirmNatoriProjectPayment(project.id, getNextActionForStatus("rough"));
       await reload();
       closeDetail();
+      showToast("入金確認しました。ラフ工程に進みました。");
     } catch (err) {
       console.error("[InquiriesBoard] confirm payment failed", err);
       setError(err instanceof Error ? err.message : String(err));
@@ -365,14 +382,18 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   if ((!projects && !selectedId) || !today) {
     return (
       <div className="space-y-3">
-        <div className="h-12 animate-pulse rounded-2xl bg-pink-50/60" />
-        <div className="h-64 animate-pulse rounded-2xl bg-pink-50/60" />
+        <p role="status" className={natoriAdminUi.caption}>
+          問い合わせを読み込んでいます
+        </p>
+        <NatoriSkeleton heightClassName="h-12" />
+        <NatoriSkeleton heightClassName="h-64" />
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
+      {confirmDialog}
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-gray-600">制作の進捗と返信待ちは別に表示します。既読の判定ではありません。</p>
         {!isDemo ? <button type="button" onClick={() => void reload().catch(() => setError("最新の状況を取得できませんでした。"))} className="shrink-0 rounded-full border px-3 py-2 text-xs font-bold">状態を更新</button> : null}
@@ -393,7 +414,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
             className={cn(
               "h-8 rounded-full border px-3 text-xs font-bold transition",
               filter === entry.key
-                ? "border-pink-500 bg-pink-500 text-white"
+                ? "border-[#BE185D] bg-[#BE185D] text-white"
                 : "border-pink-200 bg-white text-gray-700 hover:bg-pink-50"
             )}
           >
@@ -447,7 +468,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
                     <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-600">
                       <span
                         className={cn(
-                          "inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                          "inline-block rounded-full border px-2 py-0.5 text-xs font-bold",
                           meta.chipClassName
                         )}
                       >
@@ -471,7 +492,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
           <div className="hidden overflow-x-auto rounded-2xl border border-pink-100 bg-white shadow-sm sm:block">
           <table className="w-full min-w-[720px] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-pink-100 text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <tr className="border-b border-pink-100 text-xs font-bold text-gray-600">
                 <th className="px-3 py-2.5">受付日</th>
                 <th className="px-3 py-2.5">依頼者・内容</th>
                 <th className="px-3 py-2.5 text-right">金額</th>
@@ -505,7 +526,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
                     <td className="whitespace-nowrap px-3 py-2.5">
                       <span
                         className={cn(
-                          "inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                          "inline-block rounded-full border px-2 py-0.5 text-xs font-bold",
                           meta.chipClassName
                         )}
                       >
@@ -528,7 +549,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
         </>
       )}
 
-      <p className="text-[11px] text-gray-500">
+      <p className="text-xs text-gray-500">
         相談の最終発言が古い順（会話がなければ受付順）です。経過はその日からの日数で、7日で黄色・14日で赤になります。
       </p>
 

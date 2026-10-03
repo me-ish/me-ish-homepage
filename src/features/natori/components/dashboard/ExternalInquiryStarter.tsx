@@ -1,9 +1,10 @@
 "use client";
 
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useState } from "react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 
-const inputClass = "w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-100";
+const inputClass = natoriAdminUi.input;
 
 export default function ExternalInquiryStarter() {
   const [clientName, setClientName] = useState("");
@@ -43,7 +44,7 @@ export default function ExternalInquiryStarter() {
       </div>
       <label className="mt-3 block text-sm font-bold">最初の相談メモ（任意）<textarea className={`${inputClass} mt-1 min-h-20`} value={note} onChange={(event) => setNote(event.target.value)} maxLength={4000} placeholder="DMなどの内容を貼り付けられます" /></label>
       {error ? <p role="alert" className="mt-2 text-sm text-red-700">{error}</p> : null}
-      <button type="button" disabled={!clientName.trim() || !title.trim() || busy} onClick={submit} className="mt-4 min-h-11 w-full rounded-full bg-pink-500 px-5 text-sm font-bold text-white disabled:opacity-50">{busy ? "登録しています…" : "案件を作って条件整理へ →"}</button>
+      <button type="button" disabled={!clientName.trim() || !title.trim() || busy} onClick={submit} className={`${natoriAdminUi.btnPrimary} mt-4 w-full`}>{busy ? "登録しています…" : "案件を作って条件整理へ →"}</button>
     </section>
   );
 }

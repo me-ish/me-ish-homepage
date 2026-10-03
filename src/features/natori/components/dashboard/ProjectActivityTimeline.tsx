@@ -67,7 +67,7 @@ export default function ProjectActivityTimeline({
 
   return (
     <section>
-      <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700">
+      <h3 className="mb-2 text-xs font-bold text-gray-600">
         対応履歴
       </h3>
 
@@ -91,7 +91,7 @@ export default function ProjectActivityTimeline({
         </ol>
       ) : legacyLogs.length > 0 ? (
         <div className="space-y-2">
-          <p className="text-[11px] text-gray-500">
+          <p className="text-xs text-gray-500">
             新しい履歴台帳にはまだ記録がないため、過去のメモ内履歴を表示しています。
           </p>
           <ol className="space-y-1.5">

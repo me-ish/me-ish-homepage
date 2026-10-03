@@ -1,5 +1,9 @@
 "use client";
 
+import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
+import { useOptionalNatoriToast } from "@/features/natori/components/admin/NatoriToast";
+import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarClock, Inbox } from "lucide-react";
@@ -64,6 +68,8 @@ export default function ProjectsBoard({
   demoEvents,
   demoArtistName,
 }: ProjectsBoardProps) {
+  const { confirm, confirmDialog } = useNatoriConfirm();
+  const { showToast } = useOptionalNatoriToast();
   const isDemo = Boolean(demoProjects);
   const [today, setToday] = useState<Date | null>(null);
   const [mailTarget, setMailTarget] = useState<{
@@ -221,8 +227,11 @@ export default function ProjectsBoard({
   if (!today || !selectedISO || !viewMonth || dataSource === "loading") {
     return (
       <div className="space-y-3">
-        <div className="h-28 animate-pulse rounded-2xl bg-pink-50/60" />
-        <div className="h-72 animate-pulse rounded-2xl bg-pink-50/60" />
+        <p role="status" className={natoriAdminUi.caption}>
+          案件を読み込んでいます
+        </p>
+        <NatoriSkeleton heightClassName="h-12" />
+        <NatoriSkeleton heightClassName="h-64" />
       </div>
     );
   }
@@ -361,6 +370,7 @@ export default function ProjectsBoard({
         try {
           await confirmNatoriProjectPayment(project.id, nextAction);
           await loadFromSupabase();
+          showToast("入金確認しました。ラフ工程に進みました。");
         } catch (err) {
           await recoverFromMutationFailure("payment confirmation", err);
         } finally {
@@ -369,6 +379,7 @@ export default function ProjectsBoard({
       })();
     } else {
       setAdvanceBusyId((current) => (current === project.id ? null : current));
+      showToast("入金確認しました。ラフ工程に進みました。");
     }
   };
 
@@ -397,10 +408,13 @@ export default function ProjectsBoard({
     }
   };
 
-  const handleDeleteClosedProject = (project: NatoriProject) => {
-    const confirmed = window.confirm(
-      `「${project.clientName}｜${project.title}」を案件一覧から削除します。データと画像は保持され、あとで復元できます。よろしいですか？`
-    );
+  const handleDeleteClosedProject = async (project: NatoriProject) => {
+    const confirmed = await confirm({
+      title: "一覧から削除しますか？",
+      description: `「${project.clientName}｜${project.title}」を案件一覧から削除します。データと画像は保持され、あとで復元できます。よろしいですか？`,
+      confirmLabel: "一覧から削除",
+      tone: "danger",
+    });
     if (!confirmed) return;
     setAdvanceBusyId(project.id);
     setProjects((current) => current.filter((entry) => entry.id !== project.id));
@@ -409,6 +423,7 @@ export default function ProjectsBoard({
         try {
           await deleteNatoriProject(project.id);
           await loadFromSupabase();
+          showToast("一覧から削除しました。");
         } catch (err) {
           console.error("[ProjectsBoard] delete closed project failed", err);
           setError(err instanceof Error ? err.message : String(err));
@@ -423,6 +438,7 @@ export default function ProjectsBoard({
       })();
     } else {
       setAdvanceBusyId((current) => (current === project.id ? null : current));
+      showToast("一覧から削除しました。");
     }
   };
 
@@ -435,6 +451,7 @@ export default function ProjectsBoard({
         try {
           await restoreNatoriProject(project.id);
           await loadFromSupabase();
+          showToast("案件を復元しました。");
         } catch (err) {
           await recoverFromMutationFailure("project restore", err);
         } finally {
@@ -443,6 +460,7 @@ export default function ProjectsBoard({
       })();
     } else {
       setAdvanceBusyId((current) => (current === project.id ? null : current));
+      showToast("案件を復元しました。");
     }
   };
 
@@ -473,10 +491,14 @@ export default function ProjectsBoard({
       })
     );
 
-    if (dataSource !== "supabase") return;
+    if (dataSource !== "supabase") {
+      showToast("案件の変更を保存しました。");
+      return;
+    }
     try {
       await updateNatoriProjectDetails(project.id, patch);
       await loadFromSupabase();
+      showToast("案件の変更を保存しました。");
     } catch (err) {
       console.error("[ProjectsBoard] edit details failed", err);
       // Re-sync from the server so the optimistic state doesn't drift.
@@ -553,6 +575,7 @@ export default function ProjectsBoard({
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {confirmDialog}
       {error ? (
         <div
           role="alert"

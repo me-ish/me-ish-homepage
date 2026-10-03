@@ -1,5 +1,6 @@
 "use client";
 
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { AlertTriangle, Calculator, CheckCircle2, ChevronDown, ChevronUp, Clipboard, Mail, RotateCcw, Save, Zap } from "lucide-react";
@@ -274,7 +275,7 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
           <Button
             onClick={handleSubmit}
             disabled={!requestText.trim()}
-            className="h-12 w-full rounded-full bg-pink-500 px-6 text-base text-white hover:bg-pink-600 sm:w-auto sm:text-sm"
+            className={`${natoriAdminUi.btnPrimary} w-full sm:w-auto`}
           >
             <Calculator className="h-4 w-4" aria-hidden />
             見積もり作成
@@ -364,7 +365,7 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
                   <select
                     value={selectedInquiryId}
                     onChange={(event) => setSelectedInquiryId(event.target.value)}
-                    className="h-11 w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300 sm:h-10"
+                    className={`${natoriAdminUi.input} min-w-0`}
                     aria-label="見積もりメールを送る問い合わせ"
                   >
                     <option value="">問い合わせを選択…</option>
@@ -377,7 +378,7 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
                   <Button
                     onClick={() => setMailPanelOpen(true)}
                     disabled={!selectedInquiry}
-                    className="h-11 shrink-0 rounded-full bg-pink-500 px-4 text-sm text-white hover:bg-pink-600 disabled:opacity-50 sm:h-10 sm:text-xs"
+                    className={`${natoriAdminUi.btnPrimary} shrink-0`}
                   >
                     <Mail className="h-4 w-4" aria-hidden />
                     見積もりメールを作成
@@ -529,7 +530,7 @@ function PresetSwitcher({
           <Button
             onClick={() => void onSave()}
             disabled={saving}
-            className="h-9 rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60"
+            className={natoriAdminUi.btnPrimary}
           >
             <Save className="h-3.5 w-3.5" aria-hidden />
             {saving ? "保存中…" : "このプリセットを保存"}
@@ -548,12 +549,12 @@ function PresetSwitcher({
               className={cn(
                 "rounded-full border px-3 py-1.5 text-xs font-bold transition",
                 active
-                  ? "border-pink-500 bg-pink-500 text-white shadow"
+                  ? "border-[#BE185D] bg-[#BE185D] text-white shadow"
                   : "border-pink-200 bg-white text-pink-800 hover:border-pink-400"
               )}
             >
               {preset.name}
-              {active && dirty ? <span className="ml-1 text-[10px] opacity-80">（未保存）</span> : null}
+              {active && dirty ? <span className="ml-1 text-xs opacity-80">（未保存）</span> : null}
             </button>
           );
         })}
@@ -612,7 +613,7 @@ function DeliveryPlanPicker({
               )}
             >
               <p className="text-sm font-black leading-5">{meta.label}</p>
-              <p className="mt-0.5 text-[11px] leading-4 opacity-80">
+              <p className="mt-0.5 text-xs leading-4 opacity-80">
                 {meta.description}・追加 {meta.extraFee > 0 ? `+${formatYen(meta.extraFee)}` : "なし"}
               </p>
             </button>
@@ -622,16 +623,16 @@ function DeliveryPlanPicker({
 
       <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <label className="flex flex-col gap-1 rounded-xl border border-pink-200 bg-white px-3 py-2 text-sm">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-pink-700">開始日</span>
+          <span className="text-xs font-bold text-gray-600">開始日</span>
           <input
             type="date"
             value={startDateISO}
             onChange={(event) => onChangeStartDate(event.target.value)}
-            className="h-9 rounded-md border border-pink-200 bg-white px-2 text-sm text-pink-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+            className={`${natoriAdminUi.input} sm:w-auto`}
           />
         </label>
         <div className="flex flex-col gap-1 rounded-xl border border-pink-200 bg-white px-3 py-2 text-sm">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-pink-700">納期目安（自動計算）</span>
+          <span className="text-xs font-bold text-gray-600">納期目安（自動計算）</span>
           <span className="text-base font-black text-pink-900">{dueLabel || "—"}</span>
         </div>
       </div>
@@ -855,7 +856,7 @@ function EditablePriceRow({
           min={0}
           value={value}
           onChange={(event) => onChange(Number(event.target.value))}
-          className="h-10 min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-2 text-right text-base font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 sm:h-8 sm:w-24 sm:flex-none sm:text-sm"
+          className={`${natoriAdminUi.input} min-w-0 flex-1 text-right font-bold`}
         />
         <span className="w-5 text-xs text-gray-500">{suffix}</span>
       </span>

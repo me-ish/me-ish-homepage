@@ -4,6 +4,8 @@
 // ラフ確認・納品ファイルのアップロード/一覧/削除。OrderMailPanel の
 // ラフ提出・納品メールから使う。実体は非公開バケットに直アップロードされ、
 // メール送信時にサーバーがリンク（署名URL / 納品ページ）を本文へ差し込む。
+import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FileUp, Loader2, Paperclip, Trash2 } from "lucide-react";
 import {
@@ -69,6 +71,7 @@ export default function DeliveryFilesManager({
   demoMode?: boolean;
   onFilesChange?: (files: NatoriDeliveryFileView[] | null) => void;
 }) {
+  const { confirm, confirmDialog } = useNatoriConfirm();
   const [files, setFiles] = useState<NatoriDeliveryFileView[] | null>(
     demoMode ? DEMO_FILES[folder] : null
   );
@@ -130,7 +133,13 @@ export default function DeliveryFilesManager({
 
   const handleDelete = async (file: NatoriDeliveryFileView) => {
     if (demoMode) return;
-    if (!window.confirm(`「${file.fileName}」を削除しますか？`)) return;
+    const confirmed = await confirm({
+      title: "ファイルを削除しますか？",
+      description: `「${file.fileName}」を削除しますか？`,
+      confirmLabel: "削除する",
+      tone: "danger",
+    });
+    if (!confirmed) return;
     setBusy(true);
     setError(null);
     try {
@@ -146,6 +155,7 @@ export default function DeliveryFilesManager({
 
   return (
     <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+      {confirmDialog}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 text-xs font-bold text-pink-700">
           <Paperclip className="h-3.5 w-3.5" aria-hidden />
@@ -162,7 +172,7 @@ export default function DeliveryFilesManager({
             inputRef.current?.click();
           }}
           disabled={busy || (folder === "final" && !!files?.some(file => file.published))}
-          className="inline-flex h-8 items-center gap-1.5 rounded-full bg-pink-500 px-3 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60"
+          className={natoriAdminUi.btnPrimary}
         >
           {busy ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
@@ -210,10 +220,10 @@ export default function DeliveryFilesManager({
                 type="button"
                 onClick={() => void handleDelete(file)}
                 disabled={busy || demoMode || file.published}
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-red-200 bg-white text-red-500 hover:bg-red-50 disabled:opacity-50"
+                className={`${natoriAdminUi.btnIcon} disabled:opacity-50`}
                 aria-label={`${file.fileName} を削除`}
               >
-                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                <Trash2 className="h-4 w-4 text-red-700" aria-hidden />
               </button>
             </li>
           ))}

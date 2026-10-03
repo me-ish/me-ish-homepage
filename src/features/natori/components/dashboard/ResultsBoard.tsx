@@ -1,5 +1,9 @@
 "use client";
 
+import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
+import { useOptionalNatoriToast } from "@/features/natori/components/admin/NatoriToast";
+import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
@@ -77,7 +81,7 @@ function formatMetric(metric: ResultMetric, count: number, amount: number): stri
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-2xl border border-pink-100 bg-white p-3 shadow-sm sm:p-4">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-pink-700">{label}</p>
+      <p className="text-xs font-bold text-gray-600">{label}</p>
       <p className="mt-1 break-words text-lg font-black text-gray-900 sm:text-2xl">{value}</p>
       {sub ? <p className="mt-0.5 text-xs text-gray-500">{sub}</p> : null}
     </div>
@@ -235,7 +239,7 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
         <div className="border-t border-pink-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 依頼者名（必須）
               </span>
               <input
@@ -243,11 +247,11 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
                 value={clientName}
                 onChange={(event) => setClientName(event.target.value)}
                 placeholder="例: 〇〇様"
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 案件タイトル（必須）
               </span>
               <input
@@ -255,11 +259,11 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="例: 立ち絵一式"
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 案件タイプ
               </span>
               <select
@@ -267,7 +271,7 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
                 onChange={(event) =>
                   setType(event.target.value as NatoriConcreteProjectType)
                 }
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               >
                 {NATORI_CONCRETE_PROJECT_TYPES.map((value) => (
                   <option key={value} value={value}>
@@ -277,13 +281,13 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
               </select>
             </label>
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 ステータス
               </span>
               <select
                 value={status}
                 onChange={(event) => setStatus(event.target.value as NatoriProjectStatus)}
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               >
                 {RESULT_STATUS_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -293,7 +297,7 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
               </select>
             </label>
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 金額（円）
               </span>
               <input
@@ -301,24 +305,24 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
                 min={0}
                 value={Number.isFinite(amount) ? amount : 0}
                 onChange={(event) => setAmount(Number(event.target.value))}
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-right text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 完了日（必須）
               </span>
               <input
                 type="date"
                 value={dateISO}
                 onChange={(event) => setDateISO(event.target.value)}
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
           </div>
 
           <label className="mt-3 block text-sm">
-            <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+            <span className="block text-xs font-bold text-gray-600">
               メモ（任意）
             </span>
             <Textarea
@@ -344,7 +348,7 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
             <Button
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className="h-10 rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60"
+              className={natoriAdminUi.btnPrimary}
             >
               {submitting ? "追加中…" : "実績に追加"}
             </Button>
@@ -416,7 +420,7 @@ function CompletedProjectRow({
           </span>
         )}
         {uploading ? (
-          <span className="absolute inset-0 grid place-items-center bg-white/70 text-[10px] font-bold text-pink-700">
+          <span className="absolute inset-0 grid place-items-center bg-white/70 text-xs font-bold text-pink-700">
             送信中
           </span>
         ) : null}
@@ -433,7 +437,7 @@ function CompletedProjectRow({
               type="button"
               onClick={onPickImage}
               disabled={busy || uploading}
-              className="grid h-7 w-7 place-items-center rounded-full border border-pink-200 bg-white text-pink-700 hover:bg-pink-50 disabled:opacity-50"
+              className={`${natoriAdminUi.btnIcon} disabled:opacity-50`}
               aria-label={`「${project.title}」の画像を${thumbUrl ? "差し替え" : "登録"}`}
               title={thumbUrl ? "画像を差し替え" : "画像を登録"}
             >
@@ -443,7 +447,7 @@ function CompletedProjectRow({
               type="button"
               onClick={onBeginEdit}
               disabled={busy}
-              className="grid h-7 w-7 place-items-center rounded-full border border-pink-200 bg-white text-pink-700 hover:bg-pink-50 disabled:opacity-50"
+              className={`${natoriAdminUi.btnIcon} disabled:opacity-50`}
               aria-label={`「${project.title}」を編集`}
             >
               <Pencil className="h-3.5 w-3.5" aria-hidden />
@@ -452,10 +456,10 @@ function CompletedProjectRow({
               type="button"
               onClick={onDelete}
               disabled={busy}
-              className="grid h-7 w-7 place-items-center rounded-full border border-red-200 bg-white text-red-600 hover:bg-red-50 disabled:opacity-50"
+              className={`${natoriAdminUi.btnIcon} disabled:opacity-50`}
               aria-label={`「${project.title}」を削除`}
             >
-              <Trash2 className="h-3.5 w-3.5" aria-hidden />
+              <Trash2 className="h-4 w-4 text-red-700" aria-hidden />
             </button>
           </div>
         </div>
@@ -492,6 +496,8 @@ type ResultsBoardProps = {
 };
 
 export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
+  const { confirm, confirmDialog } = useNatoriConfirm();
+  const { showToast } = useOptionalNatoriToast();
   const isDemo = Boolean(demoProjects);
   const [projects, setProjects] = useState<NatoriProject[] | null>(null);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
@@ -600,20 +606,26 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
         })
       );
       setEditingId(null);
+      showToast("実績の変更を保存しました。");
       return;
     }
     await updateNatoriProjectDetails(projectId, patch);
     await reload();
     setEditingId(null);
+    showToast("実績の変更を保存しました。");
   };
 
   const handleDelete = async (project: NatoriProject) => {
-    const confirmed = window.confirm(
-      `「${project.title}」（${project.clientName} / ${formatNatoriProjectAmount(getNatoriResultAmount(project))}）を実績から削除します。データと画像は保持され、案件管理画面から復元できます。よろしいですか？`
-    );
+    const confirmed = await confirm({
+      title: "実績から削除しますか？",
+      description: `「${project.title}」（${project.clientName} / ${formatNatoriProjectAmount(getNatoriResultAmount(project))}）を実績から削除します。データと画像は保持され、案件管理画面から復元できます。よろしいですか？`,
+      confirmLabel: "実績から削除",
+      tone: "danger",
+    });
     if (!confirmed) return;
     if (isDemo) {
       setProjects((current) => (current ?? []).filter((entry) => entry.id !== project.id));
+      showToast("実績から削除しました。");
       return;
     }
     setDeletingId(project.id);
@@ -621,6 +633,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
     try {
       await deleteNatoriProject(project.id);
       await reload();
+      showToast("実績から削除しました。");
     } catch (err) {
       console.error("[ResultsBoard] delete failed", err);
       setListError(err instanceof Error ? err.message : String(err));
@@ -668,9 +681,11 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
   if (!summary || !cardSummary || !now) {
     return (
       <div className="space-y-3">
-        <div className="h-24 animate-pulse rounded-2xl bg-pink-50/60" />
-        <div className="h-48 animate-pulse rounded-2xl bg-pink-50/60" />
-        <div className="h-64 animate-pulse rounded-2xl bg-pink-50/60" />
+        <p role="status" className={natoriAdminUi.caption}>
+          実績を読み込んでいます
+        </p>
+        <NatoriSkeleton heightClassName="h-12" />
+        <NatoriSkeleton heightClassName="h-64" />
       </div>
     );
   }
@@ -734,6 +749,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {confirmDialog}
       {/* 隠しファイル入力（一覧のどの行からも共有で使う） */}
       <input
         ref={fileInputRef}
@@ -751,7 +767,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
       <section className="rounded-2xl border border-pink-100 bg-white p-3 shadow-sm sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-[11px] font-bold uppercase tracking-wide text-pink-700">
+            <span className="mr-1 text-xs font-bold text-gray-600">
               期間
             </span>
             <button
@@ -760,7 +776,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
               aria-pressed={yearFilter === null}
               className={`h-8 rounded-full border px-3 text-xs font-bold transition ${
                 yearFilter === null
-                  ? "border-pink-500 bg-pink-500 text-white"
+                  ? "border-[#BE185D] bg-[#BE185D] text-white"
                   : "border-pink-200 bg-white text-gray-700 hover:bg-pink-50"
               }`}
             >
@@ -774,7 +790,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
                 aria-pressed={yearFilter === year}
                 className={`h-8 rounded-full border px-3 text-xs font-bold transition ${
                   yearFilter === year
-                    ? "border-pink-500 bg-pink-500 text-white"
+                    ? "border-[#BE185D] bg-[#BE185D] text-white"
                     : "border-pink-200 bg-white text-gray-700 hover:bg-pink-50"
                 }`}
               >
@@ -783,7 +799,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
             ))}
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-pink-700">表示</span>
+            <span className="text-xs font-bold text-gray-600">表示</span>
             <div className="flex rounded-full border border-pink-200 bg-white p-0.5">
               {(
                 [
@@ -798,7 +814,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
                   aria-pressed={metric === option.value}
                   className={`h-7 rounded-full px-3 text-xs font-bold transition ${
                     metric === option.value
-                      ? "bg-pink-500 text-white"
+                      ? "bg-[#BE185D] text-white"
                       : "text-gray-600 hover:bg-pink-50"
                   }`}
                 >
@@ -812,7 +828,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
         {/* 年を選ぶと、その年の実績がある月をさらに絞り込める */}
         {monthChips.length > 0 ? (
           <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-pink-50 pt-2">
-            <span className="mr-1 text-[11px] font-bold uppercase tracking-wide text-pink-700">
+            <span className="mr-1 text-xs font-bold text-gray-600">
               月別
             </span>
             <button
@@ -821,7 +837,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
               aria-pressed={monthFilter === null}
               className={`h-8 rounded-full border px-3 text-xs font-bold transition ${
                 monthFilter === null
-                  ? "border-pink-500 bg-pink-500 text-white"
+                  ? "border-[#BE185D] bg-[#BE185D] text-white"
                   : "border-pink-200 bg-white text-gray-700 hover:bg-pink-50"
               }`}
             >
@@ -835,7 +851,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
                 aria-pressed={monthFilter === month.ym}
                 className={`h-8 rounded-full border px-3 text-xs font-bold transition ${
                   monthFilter === month.ym
-                    ? "border-pink-500 bg-pink-500 text-white"
+                    ? "border-[#BE185D] bg-[#BE185D] text-white"
                     : "border-pink-200 bg-white text-gray-700 hover:bg-pink-50"
                 }`}
               >
@@ -936,6 +952,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
               anchor.download = `実績_${new Date().toISOString().slice(0, 10)}.csv`;
               anchor.click();
               URL.revokeObjectURL(url);
+              showToast(`${listItems.length}件をCSVで保存しました。`);
             }}
             disabled={listItems.length === 0}
             className="inline-flex h-8 items-center gap-1.5 rounded-full border border-pink-200 bg-white px-3 text-xs font-bold text-pink-700 hover:bg-pink-50 disabled:opacity-50"

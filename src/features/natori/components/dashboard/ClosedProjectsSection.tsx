@@ -1,5 +1,6 @@
 "use client";
 
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import Link from "next/link";
 import { staffConsultationHref } from "@/features/natori/lib/consultationOverview";
 import ConsultationStatus from "./ConsultationStatus";
@@ -99,11 +100,11 @@ export default function ClosedProjectsSection({
                     type="button"
                     onClick={() => onDelete(project)}
                     disabled={busy}
-                    className="grid h-9 w-9 place-items-center rounded-full border border-red-200 bg-white text-red-600 shadow-sm transition hover:bg-red-50 disabled:opacity-60"
+                    className={natoriAdminUi.btnIcon}
                     aria-label={`「${project.title}」を案件一覧から削除`}
                     title="案件一覧から削除（あとで復元できます）"
                   >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    <Trash2 className="h-4 w-4 text-red-700" aria-hidden />
                   </button>
                 </div>
               </li>

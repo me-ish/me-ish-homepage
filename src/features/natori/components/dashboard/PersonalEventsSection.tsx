@@ -1,5 +1,6 @@
 "use client";
 
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useState } from "react";
 import { CalendarPlus, Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -78,7 +79,7 @@ export default function PersonalEventsSection({
   return (
     <section className="mt-4 rounded-2xl border border-pink-100 bg-white p-3 shadow-sm sm:p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-bold uppercase tracking-wide text-pink-700">この日の予定</p>
+        <p className="text-xs font-bold text-gray-600">この日の予定</p>
         {authed && !draftActive ? (
           <Button
             onClick={beginAdd}
@@ -126,19 +127,19 @@ export default function PersonalEventsSection({
                     <button
                       type="button"
                       onClick={() => beginEdit(event)}
-                      className="grid h-7 w-7 place-items-center rounded-full border border-pink-200 bg-white text-pink-700 hover:bg-pink-50"
-                      aria-label="編集"
+                      className={natoriAdminUi.btnIcon}
+                      aria-label={`予定「${event.title}」を編集`}
                     >
                       <Pencil className="h-3.5 w-3.5" aria-hidden />
                     </button>
                     <button
                       type="button"
                       onClick={() => onDelete(event.id)}
-                      className="grid h-7 w-7 place-items-center rounded-full border border-red-200 bg-white text-red-600 hover:bg-red-50 disabled:opacity-50"
-                      aria-label="削除"
+                      className={`${natoriAdminUi.btnIcon} disabled:opacity-50`}
+                      aria-label={`予定「${event.title}」を削除`}
                       disabled={busy}
                     >
-                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                      <Trash2 className="h-4 w-4 text-red-700" aria-hidden />
                     </button>
                   </div>
                 ) : null}
@@ -154,36 +155,36 @@ export default function PersonalEventsSection({
       {draftActive ? (
         <div className="mt-3 rounded-xl border border-pink-200 bg-pink-50/60 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-pink-700">
+            <p className="text-xs font-bold text-gray-600">
               {editingId ? "予定を編集" : "予定を追加"}
             </p>
             <button
               type="button"
               onClick={cancel}
-              className="grid h-7 w-7 place-items-center rounded-full text-gray-500 hover:bg-white"
+              className={natoriAdminUi.btnIcon}
               aria-label="閉じる"
             >
               <X className="h-4 w-4" aria-hidden />
             </button>
           </div>
           <label className="block">
-            <span className="block text-[11px] font-bold text-pink-700">タイトル</span>
+            <span className="block text-xs font-bold text-pink-700">タイトル</span>
             <input
               type="text"
               value={draftTitle}
               onChange={(event) => setDraftTitle(event.target.value)}
               placeholder="例: 病院、打ち合わせ、旅行..."
-              className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className={`${natoriAdminUi.input} mt-1`}
               autoFocus
             />
           </label>
           <label className="mt-2 block">
-            <span className="block text-[11px] font-bold text-pink-700">メモ（任意）</span>
+            <span className="block text-xs font-bold text-pink-700">メモ（任意）</span>
             <textarea
               value={draftNote}
               onChange={(event) => setDraftNote(event.target.value)}
               rows={2}
-              className="mt-1 w-full resize-y rounded-lg border border-pink-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className={`${natoriAdminUi.input} mt-1`}
             />
           </label>
           <div className="mt-3 flex flex-wrap justify-end gap-2">
@@ -197,7 +198,7 @@ export default function PersonalEventsSection({
             <Button
               onClick={submit}
               disabled={busy || !draftTitle.trim()}
-              className="h-9 rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60"
+              className={natoriAdminUi.btnPrimary}
             >
               {busy ? "保存中…" : editingId ? "更新" : "追加"}
             </Button>
