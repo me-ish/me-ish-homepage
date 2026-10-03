@@ -18,7 +18,7 @@ export default function InquiryRequestSummary({
       <section aria-labelledby="inquiry-request-heading">
         <h3
           id="inquiry-request-heading"
-          className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700"
+          className="mb-2 text-xs font-bold text-gray-600"
         >
           原依頼内容
         </h3>
@@ -43,7 +43,7 @@ export default function InquiryRequestSummary({
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <h3
           id="inquiry-request-heading"
-          className="text-xs font-bold uppercase tracking-wide text-pink-700"
+          className="text-xs font-bold text-gray-600"
         >
           原依頼内容
         </h3>

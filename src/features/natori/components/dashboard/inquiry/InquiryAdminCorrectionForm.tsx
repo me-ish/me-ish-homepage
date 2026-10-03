@@ -115,7 +115,7 @@ export default function InquiryAdminCorrectionForm({
     <section aria-labelledby="inquiry-correction-heading">
       <h3
         id="inquiry-correction-heading"
-        className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700"
+        className="mb-2 text-xs font-bold text-gray-600"
       >
         管理確定項目
       </h3>
@@ -135,7 +135,7 @@ export default function InquiryAdminCorrectionForm({
               onChange={(event) => setAmount(event.target.value)}
               disabled={disabled || saving}
               placeholder="未確定は空欄"
-              className="h-9 w-full rounded-lg border border-gray-300 px-2 text-sm"
+              className={natoriAdminUi.input}
               aria-describedby="inquiry-amount-hint"
             />
             <p id="inquiry-amount-hint" className="mt-1 text-[11px] text-gray-500">
@@ -155,7 +155,7 @@ export default function InquiryAdminCorrectionForm({
               value={dueDate}
               onChange={(event) => setDueDate(event.target.value)}
               disabled={disabled || saving}
-              className="h-9 w-full rounded-lg border border-gray-300 px-2 text-sm"
+              className={natoriAdminUi.input}
               aria-describedby="inquiry-due-date-hint"
             />
             <p id="inquiry-due-date-hint" className="mt-1 text-[11px] text-gray-500">
@@ -179,7 +179,7 @@ export default function InquiryAdminCorrectionForm({
                 setDeliveryPlan(event.target.value as NatoriDeliveryPlan)
               }
               disabled={disabled || saving}
-              className="h-9 w-full rounded-lg border border-gray-300 bg-white px-2 text-sm"
+              className={natoriAdminUi.input}
             >
               {NATORI_DELIVERY_PLAN_ORDER.map((id) => (
                 <option key={id} value={id}>
@@ -201,7 +201,7 @@ export default function InquiryAdminCorrectionForm({
               onChange={(event) => setNextAction(event.target.value)}
               disabled={disabled || saving}
               maxLength={120}
-              className="h-9 w-full rounded-lg border border-gray-300 px-2 text-sm"
+              className={natoriAdminUi.input}
             />
           </div>
         </div>

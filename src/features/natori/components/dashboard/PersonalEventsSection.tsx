@@ -79,7 +79,7 @@ export default function PersonalEventsSection({
   return (
     <section className="mt-4 rounded-2xl border border-pink-100 bg-white p-3 shadow-sm sm:p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-bold uppercase tracking-wide text-pink-700">この日の予定</p>
+        <p className="text-xs font-bold text-gray-600">この日の予定</p>
         {authed && !draftActive ? (
           <Button
             onClick={beginAdd}
@@ -155,7 +155,7 @@ export default function PersonalEventsSection({
       {draftActive ? (
         <div className="mt-3 rounded-xl border border-pink-200 bg-pink-50/60 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-pink-700">
+            <p className="text-xs font-bold text-gray-600">
               {editingId ? "予定を編集" : "予定を追加"}
             </p>
             <button
@@ -174,7 +174,7 @@ export default function PersonalEventsSection({
               value={draftTitle}
               onChange={(event) => setDraftTitle(event.target.value)}
               placeholder="例: 病院、打ち合わせ、旅行..."
-              className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className={`${natoriAdminUi.input} mt-1`}
               autoFocus
             />
           </label>
@@ -184,7 +184,7 @@ export default function PersonalEventsSection({
               value={draftNote}
               onChange={(event) => setDraftNote(event.target.value)}
               rows={2}
-              className="mt-1 w-full resize-y rounded-lg border border-pink-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className={`${natoriAdminUi.input} mt-1`}
             />
           </label>
           <div className="mt-3 flex flex-wrap justify-end gap-2">

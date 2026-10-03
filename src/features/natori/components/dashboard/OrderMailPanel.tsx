@@ -110,7 +110,7 @@ function isMoneyKind(kind: OrderMailKind): boolean {
 }
 
 const inputClass =
-  "w-full rounded-lg border border-pink-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300";
+  natoriAdminUi.input;
 const labelClass = "mb-1 block text-xs font-bold text-pink-700";
 
 type OrderMailPanelProps = {

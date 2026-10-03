@@ -45,7 +45,7 @@ export function SectionCard({
 /* ---------- 入力欄 ---------- */
 
 const inputClass =
-  "w-full rounded-lg border border-pink-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300";
+  natoriAdminUi.input;
 
 export function TextInput({
   label,

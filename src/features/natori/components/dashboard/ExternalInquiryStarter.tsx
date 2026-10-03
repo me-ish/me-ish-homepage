@@ -4,7 +4,7 @@ import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useState } from "react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 
-const inputClass = "w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-100";
+const inputClass = natoriAdminUi.input;
 
 export default function ExternalInquiryStarter() {
   const [clientName, setClientName] = useState("");

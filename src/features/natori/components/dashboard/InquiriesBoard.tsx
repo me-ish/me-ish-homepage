@@ -471,7 +471,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
           <div className="hidden overflow-x-auto rounded-2xl border border-pink-100 bg-white shadow-sm sm:block">
           <table className="w-full min-w-[720px] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-pink-100 text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <tr className="border-b border-pink-100 text-xs font-bold text-gray-600">
                 <th className="px-3 py-2.5">受付日</th>
                 <th className="px-3 py-2.5">依頼者・内容</th>
                 <th className="px-3 py-2.5 text-right">金額</th>

@@ -237,7 +237,7 @@ export default function InquiryDetailPanel({
           {/* legacy: フォームの項目（note 由来） */}
           {requestView.kind !== "structured" && view.fields.length > 0 ? (
             <section>
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700">
+              <h3 className="mb-2 text-xs font-bold text-gray-600">
                 ご依頼内容
               </h3>
               <dl className="grid grid-cols-1 gap-x-4 gap-y-1.5 rounded-xl border border-pink-100 bg-pink-50/40 p-3 text-sm sm:grid-cols-2">
@@ -258,7 +258,7 @@ export default function InquiryDetailPanel({
           {/* 資料がある案件だけ表示する。空のURL欄は案件設定へ。 */}
           {hasReferences ? (
             <section className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wide text-pink-700">
+              <h3 className="text-xs font-bold text-gray-600">
                 参考資料
               </h3>
               <InquiryReferenceFiles files={referenceFiles} acquisitionState={project.referenceFilesState} />
@@ -321,7 +321,7 @@ export default function InquiryDetailPanel({
           {/* 依頼の詳細・その他 */}
           {view.details ? (
             <section>
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700">
+              <h3 className="mb-2 text-xs font-bold text-gray-600">
                 ご依頼の詳細
               </h3>
               <p className="whitespace-pre-wrap break-words rounded-xl border border-pink-100 bg-white p-3 text-sm leading-6 text-gray-900 shadow-sm">
@@ -331,7 +331,7 @@ export default function InquiryDetailPanel({
           ) : null}
           {view.message ? (
             <section>
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700">
+              <h3 className="mb-2 text-xs font-bold text-gray-600">
                 その他・ご質問
               </h3>
               <p className="whitespace-pre-wrap break-words rounded-xl border border-pink-100 bg-white p-3 text-sm leading-6 text-gray-900 shadow-sm">
@@ -343,7 +343,7 @@ export default function InquiryDetailPanel({
           {/* 手入力案件のメモ */}
           {!view.isAutoInquiry && view.plainNote ? (
             <section>
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700">
+              <h3 className="mb-2 text-xs font-bold text-gray-600">
                 メモ
               </h3>
               <p className="whitespace-pre-wrap break-words rounded-xl border border-pink-100 bg-white p-3 text-sm leading-6 text-gray-900 shadow-sm">

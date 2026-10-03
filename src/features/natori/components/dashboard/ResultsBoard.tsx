@@ -78,7 +78,7 @@ function formatMetric(metric: ResultMetric, count: number, amount: number): stri
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-2xl border border-pink-100 bg-white p-3 shadow-sm sm:p-4">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-pink-700">{label}</p>
+      <p className="text-xs font-bold text-gray-600">{label}</p>
       <p className="mt-1 break-words text-lg font-black text-gray-900 sm:text-2xl">{value}</p>
       {sub ? <p className="mt-0.5 text-xs text-gray-500">{sub}</p> : null}
     </div>
@@ -236,7 +236,7 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
         <div className="border-t border-pink-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 依頼者名（必須）
               </span>
               <input
@@ -244,11 +244,11 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
                 value={clientName}
                 onChange={(event) => setClientName(event.target.value)}
                 placeholder="例: 〇〇様"
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 案件タイトル（必須）
               </span>
               <input
@@ -256,11 +256,11 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="例: 立ち絵一式"
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 案件タイプ
               </span>
               <select
@@ -268,7 +268,7 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
                 onChange={(event) =>
                   setType(event.target.value as NatoriConcreteProjectType)
                 }
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               >
                 {NATORI_CONCRETE_PROJECT_TYPES.map((value) => (
                   <option key={value} value={value}>
@@ -278,13 +278,13 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
               </select>
             </label>
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 ステータス
               </span>
               <select
                 value={status}
                 onChange={(event) => setStatus(event.target.value as NatoriProjectStatus)}
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               >
                 {RESULT_STATUS_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -294,7 +294,7 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
               </select>
             </label>
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 金額（円）
               </span>
               <input
@@ -302,24 +302,24 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
                 min={0}
                 value={Number.isFinite(amount) ? amount : 0}
                 onChange={(event) => setAmount(Number(event.target.value))}
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-right text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 完了日（必須）
               </span>
               <input
                 type="date"
                 value={dateISO}
                 onChange={(event) => setDateISO(event.target.value)}
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
           </div>
 
           <label className="mt-3 block text-sm">
-            <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+            <span className="block text-xs font-bold text-gray-600">
               メモ（任意）
             </span>
             <Textarea
@@ -752,7 +752,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
       <section className="rounded-2xl border border-pink-100 bg-white p-3 shadow-sm sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-[11px] font-bold uppercase tracking-wide text-pink-700">
+            <span className="mr-1 text-xs font-bold text-gray-600">
               期間
             </span>
             <button
@@ -784,7 +784,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
             ))}
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-pink-700">表示</span>
+            <span className="text-xs font-bold text-gray-600">表示</span>
             <div className="flex rounded-full border border-pink-200 bg-white p-0.5">
               {(
                 [
@@ -813,7 +813,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
         {/* 年を選ぶと、その年の実績がある月をさらに絞り込める */}
         {monthChips.length > 0 ? (
           <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-pink-50 pt-2">
-            <span className="mr-1 text-[11px] font-bold uppercase tracking-wide text-pink-700">
+            <span className="mr-1 text-xs font-bold text-gray-600">
               月別
             </span>
             <button

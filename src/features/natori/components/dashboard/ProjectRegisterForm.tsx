@@ -271,7 +271,7 @@ export default function ProjectRegisterForm({
   ) : (
     <div className="mt-4 space-y-3">
       <label className="block text-sm">
-        <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+        <span className="block text-xs font-bold text-gray-600">
           依頼者名（必須）
         </span>
         <input
@@ -279,11 +279,11 @@ export default function ProjectRegisterForm({
           value={clientName}
           onChange={(event) => setClientName(event.target.value)}
           placeholder="例: 月乃さん"
-          className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+          className={`${natoriAdminUi.input} mt-1`}
         />
       </label>
       <label className="block text-sm">
-        <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+        <span className="block text-xs font-bold text-gray-600">
           案件タイトル
         </span>
         <input
@@ -291,12 +291,12 @@ export default function ProjectRegisterForm({
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder={mode === "manual" ? "例: 配信用立ち絵" : "例: バストアップアイコン"}
-          className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+          className={`${natoriAdminUi.input} mt-1`}
         />
       </label>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="block text-sm">
-          <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+          <span className="block text-xs font-bold text-gray-600">
             案件タイプ
           </span>
           <select
@@ -304,7 +304,7 @@ export default function ProjectRegisterForm({
             onChange={(event) =>
               setType(event.target.value as NatoriConcreteProjectType)
             }
-            className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+            className={`${natoriAdminUi.input} mt-1`}
           >
             {(Object.keys(PROJECT_TYPE_LABELS) as NatoriConcreteProjectType[]).map((value) => (
               <option key={value} value={value}>
@@ -314,13 +314,13 @@ export default function ProjectRegisterForm({
           </select>
         </label>
         <label className="block text-sm">
-          <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+          <span className="block text-xs font-bold text-gray-600">
             初期ステータス
           </span>
           <select
             value={status}
             onChange={(event) => setStatus(event.target.value as NatoriProjectStatus)}
-            className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+            className={`${natoriAdminUi.input} mt-1`}
           >
             {NATORI_REGISTER_STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -348,7 +348,7 @@ export default function ProjectRegisterForm({
         <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 金額（円）
               </span>
               <input
@@ -356,26 +356,26 @@ export default function ProjectRegisterForm({
                 min={0}
                 value={Number.isFinite(amount) ? amount : 0}
                 onChange={(event) => setAmount(Number(event.target.value))}
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-right text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
               <span className="mt-1 block text-[11px] text-pink-700/80">
                 未確定なら 0 で保存できます。
               </span>
             </label>
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 開始日
               </span>
               <input
                 type="date"
                 value={startDateISO}
                 onChange={(event) => setStartDateISO(event.target.value)}
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
           </div>
           <div className="rounded-2xl border border-pink-200 bg-pink-50/60 p-3">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-pink-700">
+            <p className="text-xs font-bold text-gray-600">
               納期プラン
             </p>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -404,14 +404,14 @@ export default function ProjectRegisterForm({
               })}
             </div>
             <div className="mt-2 flex flex-col gap-1 rounded-xl border border-pink-200 bg-white px-3 py-2 text-sm sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-pink-700 sm:w-24">
+              <span className="text-xs font-bold text-gray-600 sm:w-24">
                 納期
               </span>
               <input
                 type="date"
                 value={dueDateISO}
                 onChange={(event) => setDueDateISO(event.target.value)}
-                className="h-9 flex-1 rounded-md border border-pink-200 bg-white px-2 text-sm text-pink-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} min-w-0 flex-1`}
               />
             </div>
           </div>
@@ -419,7 +419,7 @@ export default function ProjectRegisterForm({
       )}
 
       <label className="block text-sm">
-        <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+        <span className="block text-xs font-bold text-gray-600">
           依頼内容・確認事項メモ
         </span>
         <Textarea

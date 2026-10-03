@@ -23,7 +23,7 @@ import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
 type Step = 1 | 2 | 3;
 type Props = { project: NatoriProject; portfolioContent: PortfolioContent | null };
-const field = "w-full rounded-xl border border-gray-300 bg-white px-3 py-3 text-base text-gray-900 focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-100";
+const field = "w-full rounded-xl border border-[#878287] bg-white px-3 py-3 text-base text-gray-900 placeholder:text-gray-500 focus:border-[#BE185D] focus:outline-none focus:ring-2 focus:ring-[#BE185D]/25";
 const scopeLabels: Record<NatoriAgreedTerms["scope"], string> = {
   undecided: "相談して決める", bust_up: "胸上", waist_up: "膝〜腰上", full_body: "全身", sd: "SD", other: "その他",
 };

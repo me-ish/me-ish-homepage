@@ -365,7 +365,7 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
                   <select
                     value={selectedInquiryId}
                     onChange={(event) => setSelectedInquiryId(event.target.value)}
-                    className="h-11 w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300 sm:h-10"
+                    className={`${natoriAdminUi.input} min-w-0`}
                     aria-label="見積もりメールを送る問い合わせ"
                   >
                     <option value="">問い合わせを選択…</option>
@@ -623,16 +623,16 @@ function DeliveryPlanPicker({
 
       <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <label className="flex flex-col gap-1 rounded-xl border border-pink-200 bg-white px-3 py-2 text-sm">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-pink-700">開始日</span>
+          <span className="text-xs font-bold text-gray-600">開始日</span>
           <input
             type="date"
             value={startDateISO}
             onChange={(event) => onChangeStartDate(event.target.value)}
-            className="h-9 rounded-md border border-pink-200 bg-white px-2 text-sm text-pink-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+            className={`${natoriAdminUi.input} sm:w-auto`}
           />
         </label>
         <div className="flex flex-col gap-1 rounded-xl border border-pink-200 bg-white px-3 py-2 text-sm">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-pink-700">納期目安（自動計算）</span>
+          <span className="text-xs font-bold text-gray-600">納期目安（自動計算）</span>
           <span className="text-base font-black text-pink-900">{dueLabel || "—"}</span>
         </div>
       </div>
@@ -856,7 +856,7 @@ function EditablePriceRow({
           min={0}
           value={value}
           onChange={(event) => onChange(Number(event.target.value))}
-          className="h-10 min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-2 text-right text-base font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 sm:h-8 sm:w-24 sm:flex-none sm:text-sm"
+          className={`${natoriAdminUi.input} min-w-0 flex-1 text-right font-bold`}
         />
         <span className="w-5 text-xs text-gray-500">{suffix}</span>
       </span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { Plus, Trash2 } from "lucide-react";
 import type {
   PortfolioWorkLink,
@@ -56,7 +57,7 @@ export default function PortfolioWorkLinksEditor({
                           kind: event.target.value as PortfolioWorkLinkKind,
                         })
                       }
-                      className="mt-1 w-full rounded-lg border border-pink-200 bg-white px-2.5 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                      className={`${natoriAdminUi.input} mt-1`}
                     >
                       {KIND_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -73,7 +74,7 @@ export default function PortfolioWorkLinksEditor({
                       value={link.label}
                       onChange={(event) => updateLink(linkIndex, { label: event.target.value })}
                       placeholder="例: YouTubeチャンネル"
-                      className="mt-1 w-full rounded-lg border border-pink-200 bg-white px-2.5 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                      className={`${natoriAdminUi.input} mt-1`}
                     />
                   </label>
                   <label className="block text-[11px] font-bold text-gray-600 sm:col-span-2">
@@ -84,7 +85,7 @@ export default function PortfolioWorkLinksEditor({
                       value={link.href}
                       onChange={(event) => updateLink(linkIndex, { href: event.target.value })}
                       placeholder="https://..."
-                      className="mt-1 w-full rounded-lg border border-pink-200 bg-white px-2.5 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                      className={`${natoriAdminUi.input} mt-1`}
                     />
                   </label>
                 </div>

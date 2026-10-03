@@ -133,38 +133,38 @@ export default function ProjectEditForm({
 
       <div className="mt-3 space-y-3">
         <label className="block text-sm">
-          <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+          <span className="block text-xs font-bold text-gray-600">
             依頼者名（必須）
           </span>
           <input
             type="text"
             value={clientName}
             onChange={(event) => setClientName(event.target.value)}
-            className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+            className={`${natoriAdminUi.input} mt-1`}
           />
         </label>
 
         <label className="block text-sm">
-          <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+          <span className="block text-xs font-bold text-gray-600">
             案件タイトル（必須）
           </span>
           <input
             type="text"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+            className={`${natoriAdminUi.input} mt-1`}
           />
         </label>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block text-sm">
-            <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+            <span className="block text-xs font-bold text-gray-600">
               案件タイプ
             </span>
             <select
               value={type}
               onChange={(event) => setType(event.target.value as NatoriProjectType)}
-              className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className={`${natoriAdminUi.input} mt-1`}
             >
               {type === "undecided" ? (
                 <option value="undecided" disabled>
@@ -179,7 +179,7 @@ export default function ProjectEditForm({
             </select>
           </label>
           <label className="block text-sm">
-            <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+            <span className="block text-xs font-bold text-gray-600">
               金額（円）
             </span>
             <input
@@ -188,7 +188,7 @@ export default function ProjectEditForm({
               value={amount}
               placeholder="未定"
               onChange={(event) => setAmount(event.target.value)}
-              className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-right text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className={`${natoriAdminUi.input} mt-1`}
             />
             {project.amount === null && !amount ? (
               <span className="mt-1 block text-[11px] text-gray-500">
@@ -199,7 +199,7 @@ export default function ProjectEditForm({
         </div>
 
         <div className="rounded-2xl border border-pink-200 bg-white p-3">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-pink-700">納期プラン</p>
+          <p className="text-xs font-bold text-gray-600">納期プラン</p>
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
             {NATORI_DELIVERY_PLAN_ORDER.map((id) => {
               const meta = NATORI_DELIVERY_PLANS[id];
@@ -227,25 +227,25 @@ export default function ProjectEditForm({
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block text-sm">
-            <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+            <span className="block text-xs font-bold text-gray-600">
               開始日
             </span>
             <input
               type="date"
               value={startDate}
               onChange={(event) => setStartDate(event.target.value)}
-              className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className={`${natoriAdminUi.input} mt-1`}
             />
           </label>
           <label className="block text-sm">
-            <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+            <span className="block text-xs font-bold text-gray-600">
               納期
             </span>
             <input
               type="date"
               value={dueDate}
               onChange={(event) => setDueDate(event.target.value)}
-              className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className={`${natoriAdminUi.input} mt-1`}
             />
             {project.dueDate === null && !dueDate ? (
               <span className="mt-1 block text-[11px] text-gray-500">
@@ -256,7 +256,7 @@ export default function ProjectEditForm({
         </div>
 
         <label className="block text-sm">
-          <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+          <span className="block text-xs font-bold text-gray-600">
             依頼内容・確認事項メモ
           </span>
           <Textarea

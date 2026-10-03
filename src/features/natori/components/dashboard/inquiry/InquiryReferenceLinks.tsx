@@ -65,7 +65,7 @@ export default function InquiryReferenceLinks({
     <section aria-labelledby="inquiry-links-heading">
       <h3
         id="inquiry-links-heading"
-        className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700"
+        className="mb-2 text-xs font-bold text-gray-600"
       >
         外部リンク（{links.length}/{NATORI_PROJECT_REFERENCE_LINK_MAX}件）
       </h3>
@@ -95,7 +95,7 @@ export default function InquiryReferenceLinks({
                       id={`link-url-${link.id}`}
                       value={editUrl}
                       onChange={(event) => setEditUrl(event.target.value)}
-                      className="h-9 w-full rounded-lg border border-gray-300 px-2 text-sm"
+                      className={natoriAdminUi.input}
                     />
                   </div>
                   <div>
@@ -110,7 +110,7 @@ export default function InquiryReferenceLinks({
                       value={editLabel}
                       onChange={(event) => setEditLabel(event.target.value)}
                       maxLength={100}
-                      className="h-9 w-full rounded-lg border border-gray-300 px-2 text-sm"
+                      className={natoriAdminUi.input}
                     />
                   </div>
                   <div className="flex gap-2">
@@ -215,7 +215,7 @@ export default function InquiryReferenceLinks({
                 value={newUrl}
                 onChange={(event) => setNewUrl(event.target.value)}
                 placeholder="https://"
-                className="h-9 w-full rounded-lg border border-gray-300 px-2 text-sm"
+                className={natoriAdminUi.input}
               />
             </div>
             <div>
@@ -230,7 +230,7 @@ export default function InquiryReferenceLinks({
                 value={newLabel}
                 onChange={(event) => setNewLabel(event.target.value)}
                 maxLength={100}
-                className="h-9 w-full rounded-lg border border-gray-300 px-2 text-sm"
+                className={natoriAdminUi.input}
               />
             </div>
           </div>

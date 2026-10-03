@@ -67,7 +67,7 @@ export default function ProjectActivityTimeline({
 
   return (
     <section>
-      <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700">
+      <h3 className="mb-2 text-xs font-bold text-gray-600">
         対応履歴
       </h3>
 

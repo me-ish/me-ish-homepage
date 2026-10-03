@@ -59,7 +59,7 @@ export default function InquiryTypeConfirmation({
     <section aria-labelledby="inquiry-type-heading">
       <h3
         id="inquiry-type-heading"
-        className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700"
+        className="mb-2 text-xs font-bold text-gray-600"
       >
         案件種別・制作タスク
       </h3>
@@ -100,7 +100,7 @@ export default function InquiryTypeConfirmation({
                   setSelected(event.target.value as NatoriConcreteProjectType | "")
                 }
                 disabled={disabled || saving}
-                className="h-9 rounded-lg border border-gray-300 bg-white px-2 text-sm"
+                className={`${natoriAdminUi.input} sm:w-auto`}
               >
                 <option value="">選択してください</option>
                 {NATORI_CONCRETE_PROJECT_TYPES.map((type) => (

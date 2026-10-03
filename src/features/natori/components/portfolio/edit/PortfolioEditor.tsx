@@ -720,7 +720,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
                             }),
                           })
                         }
-                        className="mt-1 w-full rounded-lg border border-pink-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                        className={`${natoriAdminUi.input} mt-1`}
                       />
                     </label>
                     <label className="block text-xs font-bold text-pink-700">
@@ -743,7 +743,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
                             }),
                           });
                         }}
-                        className="mt-1 w-full rounded-lg border border-pink-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                        className={`${natoriAdminUi.input} mt-1`}
                       >
                         <option value="">未分類</option>
                         {content.collections.map((collection) => (
@@ -765,7 +765,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
                               }),
                             })
                           }
-                          className="h-4 w-4 accent-pink-500"
+                          className={natoriAdminUi.checkbox}
                         />
                         公開する
                       </label>
@@ -781,7 +781,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
                               }),
                             })
                           }
-                          className="h-4 w-4 accent-pink-500 disabled:opacity-40"
+                          className={`${natoriAdminUi.checkbox} disabled:opacity-40`}
                         />
                         代表作品として優先（{featuredCount}/3）
                       </label>

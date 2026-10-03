@@ -76,7 +76,7 @@ export default function StructuredPricingEditor({ presetId, legacyConfig, onSave
                 step={100}
                 value={values[id]}
                 onChange={(event) => setValues((current) => ({ ...current, [id]: event.target.value }))}
-                className="h-10 min-w-0 flex-1 rounded-lg border border-gray-300 px-2 text-right font-bold"
+                className={`${natoriAdminUi.input} min-w-0 flex-1 text-right font-bold`}
                 placeholder="未設定"
               />
               <span className="text-xs text-gray-500">円</span>

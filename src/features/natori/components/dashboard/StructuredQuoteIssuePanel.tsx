@@ -12,7 +12,7 @@ import { formatYen } from "@/features/natori/lib/pricing";
 import type { NatoriPricingConfigV1 } from "@/features/natori/types/pricingSuggestion";
 import type { NatoriProject } from "@/features/natori/types/projects";
 
-const inputClass = "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-600";
+const inputClass = natoriAdminUi.input;
 
 type Props = {
   project: NatoriProject;
@@ -236,7 +236,7 @@ export default function StructuredQuoteIssuePanel({
         <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950">
           <input
             type="checkbox"
-            className="mt-1"
+            className={`${natoriAdminUi.checkbox} mt-0.5`}
             disabled={attemptLocked}
             checked={acknowledged}
             onChange={(event) => setAcknowledged(event.target.checked)}

@@ -108,7 +108,7 @@ export default function PageEventsPanel() {
                 if (rows.length === 0) return null;
                 return (
                   <div key={meta.event}>
-                    <p className="text-xs font-bold uppercase tracking-wide text-pink-700">
+                    <p className="text-xs font-bold text-gray-600">
                       {meta.title}
                       {meta.hint ? (
                         <span className="ml-1.5 font-medium normal-case text-gray-400">

@@ -363,17 +363,17 @@ function ProfileSettingsPanel({
         <div className="border-t border-pink-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">表示名</span>
+              <span className="block text-xs font-bold text-gray-600">表示名</span>
               <input
                 type="text"
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
                 placeholder="例: ナトリ"
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 ハンドル（任意 / 将来のURL用）
               </span>
               <input
@@ -381,11 +381,11 @@ function ProfileSettingsPanel({
                 value={handle}
                 onChange={(event) => setHandle(event.target.value)}
                 placeholder="例: natori"
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
             <label className="block text-sm sm:col-span-2">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 ポートフォリオのリンク先
               </span>
               <input
@@ -393,11 +393,11 @@ function ProfileSettingsPanel({
                 value={portfolioUrl}
                 onChange={(event) => setPortfolioUrl(event.target.value)}
                 placeholder="/natori または https://..."
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
             <label className="block text-sm sm:col-span-2">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 リンク集のリンク先
               </span>
               <input
@@ -405,11 +405,11 @@ function ProfileSettingsPanel({
                 value={linksUrl}
                 onChange={(event) => setLinksUrl(event.target.value)}
                 placeholder="/natori/links または https://..."
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className="block text-xs font-bold text-gray-600">
                 1日の作業時間（h）
               </span>
               <input
@@ -420,7 +420,7 @@ function ProfileSettingsPanel({
                 value={dailyCapacity}
                 onChange={(event) => setDailyCapacity(event.target.value)}
                 placeholder="例: 5"
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
           </div>

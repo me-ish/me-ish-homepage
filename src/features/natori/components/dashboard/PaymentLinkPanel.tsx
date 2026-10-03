@@ -1,4 +1,5 @@
 "use client";
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import {useEffect,useState} from "react";
 import {CSRF_HEADERS} from "@/lib/auth/csrf";
 import {paymentLinkRequestSchema,paymentLinkStateSchema,buildGenerationPaymentMail,type PaymentLinkRequest,type PaymentLinkState} from "../../lib/paymentLinkRequest";
@@ -57,16 +58,16 @@ export default function PaymentLinkPanel({project,onClose,onSent}:{project:Nator
    {state?.notificationStatus&&<p>通知: {state.notificationStatus==="sent"?"送信済み":state.notificationStatus==="failed"?"送信失敗":state.notificationStatus==="unknown"?"送信結果の確認が必要":"送信待ち・処理中"}</p>}
    <p className="text-sm">再通知で期限は延長されません。延長と再発行は別の操作です。停止確認が終わるまで新しいリンクは発行しません。</p>
    {pending&&<p className="rounded bg-amber-50 p-3 text-amber-950">前回の結果を確認中です。保存した同じ内容で再試行します。</p>}
-   <label className="block">操作<select aria-label="支払リンク操作" value={action} disabled={frozen||!state} onChange={e=>{setAction(e.target.value as PaymentLinkRequest["action"]);setConfirmed(false);}} className="ml-2 rounded border p-2">
+   <label className="block">操作<select aria-label="支払リンク操作" value={action} disabled={frozen||!state} onChange={e=>{setAction(e.target.value as PaymentLinkRequest["action"]);setConfirmed(false);}} className={natoriAdminUi.input}>
     <option value="issue">初回発行と案内</option><option value="renotify">同じリンクを再通知</option><option value="extend">現在の期限を延長</option><option value="reissue">停止済みリンクを新世代へ再発行</option><option value="adopt">既存リンクのURL・旧期限を照合して引継ぎ</option>
    </select></label>
-   {needsDeadline&&<label className="block">新しい支払期限（端末の時刻）<input aria-label="新しい支払期限" type="datetime-local" value={deadline} disabled={frozen} onChange={e=>setDeadline(e.target.value)} className="mt-1 block w-full rounded border p-2"/></label>}
+   {needsDeadline&&<label className="block">新しい支払期限（端末の時刻）<input aria-label="新しい支払期限" type="datetime-local" value={deadline} disabled={frozen} onChange={e=>setDeadline(e.target.value)} className={`${natoriAdminUi.input} mt-1`}/></label>}
    {needsMail&&<fieldset disabled={frozen} className="space-y-3">
-    <label className="block">送信先<input aria-label="支払案内の送信先" type="email" value={to} onChange={e=>setTo(e.target.value)} className="block w-full rounded border p-2"/></label>
-    <label className="block">件名<input aria-label="支払案内の件名" value={subject} onChange={e=>setSubject(e.target.value)} className="block w-full rounded border p-2"/></label>
-    <label className="block">本文<textarea aria-label="支払案内の本文" rows={6} value={body} onChange={e=>setBody(e.target.value)} className="block w-full rounded border p-2"/></label>
+    <label className="block">送信先<input aria-label="支払案内の送信先" type="email" value={to} onChange={e=>setTo(e.target.value)} className={natoriAdminUi.input}/></label>
+    <label className="block">件名<input aria-label="支払案内の件名" value={subject} onChange={e=>setSubject(e.target.value)} className={natoriAdminUi.input}/></label>
+    <label className="block">本文<textarea aria-label="支払案内の本文" rows={6} value={body} onChange={e=>setBody(e.target.value)} className={natoriAdminUi.input}/></label>
    </fieldset>}
-   {["extend","reissue","adopt"].includes(action)&&<label className="flex gap-2"><input type="checkbox" checked={confirmed} disabled={frozen} onChange={e=>setConfirmed(e.target.checked)}/>{action==="extend"?"現在の期限を延長することを確認しました":action==="reissue"?"旧リンクの停止を確認し、新しいリンクを発行します":"既存のURLと旧期限を保持して引き継ぐことを確認しました"}</label>}
+   {["extend","reissue","adopt"].includes(action)&&<label className="flex gap-2"><input type="checkbox" className={natoriAdminUi.checkbox} checked={confirmed} disabled={frozen} onChange={e=>setConfirmed(e.target.checked)}/>{action==="extend"?"現在の期限を延長することを確認しました":action==="reissue"?"旧リンクの停止を確認し、新しいリンクを発行します":"既存のURLと旧期限を保持して引き継ぐことを確認しました"}</label>}
    {error&&<p role="alert" className="break-words rounded bg-red-50 p-3 text-red-900">{error}</p>}
    <div className="flex flex-wrap gap-3"><button type="button" onClick={()=>{void load().catch(()=>setError("状態を確認できません。再読込してください。"));}} disabled={busy} className="min-h-11 rounded border px-3">状態を再読込</button>
     <button type="button" onClick={()=>void send()} disabled={busy||!cacheReady||(!pending&&!allowed)} className="min-h-11 rounded bg-pink-100 px-4 font-bold text-pink-950">{busy?"処理結果を確認中":pending?"同じ操作で再試行":"選んだ操作を実行"}</button>
