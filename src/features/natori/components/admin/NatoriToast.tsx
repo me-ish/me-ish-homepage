@@ -11,19 +11,22 @@ const NatoriToastContext = createContext<NatoriToastContextValue | null>(null);
 
 /** Mount once per page. The live region stays in the DOM so screen readers announce changes. */
 export function NatoriToastProvider({ children }: { children: React.ReactNode }) {
-  const [message, setMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
+  const nextId = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dismiss = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
-    setMessage(null);
+    setToast(null);
   }, []);
 
   const showToast = useCallback(
     (next: string) => {
       if (timer.current) clearTimeout(timer.current);
-      setMessage(next);
+      // 同じ文言が続いても別の通知として扱う（key が変わり、ライブ領域に再挿入される）
+      nextId.current += 1;
+      setToast({ id: nextId.current, message: next });
       timer.current = setTimeout(dismiss, NATORI_TOAST_DURATION_MS);
     },
     [dismiss],
@@ -40,11 +43,11 @@ export function NatoriToastProvider({ children }: { children: React.ReactNode })
       {children}
       <div
         aria-live="polite"
-        className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4 md:bottom-6"
+        className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4 lg:bottom-6"
       >
-        {message ? (
-          <div className="pointer-events-auto flex max-w-sm items-start gap-3 rounded-xl bg-gray-900 px-4 py-3 text-sm text-white shadow-xl">
-            <p className="leading-6">{message}</p>
+        {toast ? (
+          <div key={toast.id} className="pointer-events-auto flex max-w-sm items-start gap-3 rounded-xl bg-gray-900 px-4 py-3 text-sm text-white shadow-xl">
+            <p className="leading-6">{toast.message}</p>
             <button
               type="button"
               onClick={dismiss}
