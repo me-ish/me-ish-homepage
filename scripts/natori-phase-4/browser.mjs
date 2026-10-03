@@ -119,7 +119,10 @@ async function main() {
         const kind = ['TypeError', 'ReferenceError', 'RangeError', 'SyntaxError', 'Error'].includes(error.name) ? error.name : 'other';
         const category = /Cannot read properties/.test(error.message) ? 'property_read' : /is not a function/.test(error.message) ? 'not_callable' : /Server Components render/.test(error.message) ? 'server_render' : 'other';
         const source = error.stack?.match(/(?:ConsultationThread|RenewConsultationLink|ProjectsBoard|InquiryConversation)\.tsx:\d+:\d+/)?.[0] ?? null;
-        if (browserErrorDiagnostics.length < 20) browserErrorDiagnostics.push({ stage, kind, category, source });
+        const redacted = error.message.replace(/(?:https?|postgres(?:ql)?):\/\/[^\s"'`<>]+/gi, '[url]')
+          .replace(/eyJ[\w-]+\.[\w-]+\.[\w-]+|[A-Za-z0-9_+/.=-]{24,}/g, '[opaque]')
+          .replace(/\b(token|password|secret|authorization|key)\s*[=:]\s*[^\s,;]+/gi, '$1=[redacted]');
+        if (browserErrorDiagnostics.length < 20) browserErrorDiagnostics.push({ stage, kind, category, source, message: redacted.slice(0, 240) });
       });
       page.on('console', msg => {
         if (!['warning', 'error'].includes(msg.type())) return;
@@ -211,7 +214,9 @@ async function main() {
     await clientPage.getByRole('textbox', { name: 'メッセージ', exact: true }).fill('Client reply despite mail rejection');
     await clientPage.getByRole('button', { name: 'メッセージを送信', exact: true }).click();
     await expect(clientPage.getByText('Client reply despite mail rejection', { exact: true })).toBeVisible();
-    await expect(clientPage.getByText('相談内容は保存されましたが、メール通知に失敗しました。別の方法でもご連絡ください。', { exact: true })).toBeVisible();
+    await expect.poll(async () => (await rpc([rough.id])).data?.[0]?.notification_failed, { timeout: 30000 }).toBe(1);
+    await clientPage.getByRole('button', { name: '履歴を更新', exact: true }).click();
+    await expect(clientPage.getByText('メール通知に失敗 · 相談内容は保存済み', { exact: true })).toBeVisible();
     const r = await rpc([rough.id]); check(r.data[0].latest_sender === 'client' && r.data[0].notification_failed === 1, 'REPLY_AND_MAIL_MIXED');
     check(mails.some(m => m.text?.includes(`/natori/inquiries?project=${rough.id}&view=conversation`)), 'MAIL_DEEP_LINK');
     rejectMail = false;

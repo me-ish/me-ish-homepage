@@ -9,6 +9,27 @@ const mount = () => render(<ConsultationThread mode="client" token="synthetic" i
 beforeEach(() => { sessionStorage.clear(); vi.stubGlobal("crypto",{subtle:webcrypto.subtle,randomUUID:()=>"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"}); });
 afterEach(() => { cleanup(); sessionStorage.clear(); vi.unstubAllGlobals(); });
 describe("consultation history refresh", () => {
+  it.each([
+    ["failed", "メール通知に失敗 · 相談内容は保存済み"],
+    ["pending", "通知未送信・処理中 · 相談内容は保存済み"],
+  ])("shows the client's own %s notice separately from its saved message", async (status, label) => {
+    const messages: ConsultationMessage[] = [
+      { ...message("saved client reply"), sender: "client", notificationStatus: status },
+      { ...message("staff reply"), notificationStatus: status },
+    ];
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ messages })));
+    render(<ConsultationThread mode="client" token="synthetic" initialMessages={messages} closed={false} />);
+    await waitFor(() => expect(screen.queryByText("履歴を確認中…")).toBeNull());
+    expect(screen.getAllByText(label)).toHaveLength(1);
+    expect(screen.getByText("saved client reply")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /再送する/ })).toBeNull();
+  });
+  it("keeps failed staff notification retry available only to staff", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ messages: [{ ...message("saved staff reply"), notificationStatus: "failed" }] })));
+    render(<ConsultationThread mode="staff" projectId="synthetic" clientEmail="fixture@example.invalid" />);
+    await screen.findByText("saved staff reply");
+    expect(screen.getByRole("button", { name: "メール通知に失敗 · 再送する" })).toBeTruthy();
+  });
   it("does not label existing staff history as a new arrival on first open", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({ messages: [message("existing history")] })));
     render(<ConsultationThread mode="staff" projectId="synthetic" clientEmail="fixture@example.invalid" />);

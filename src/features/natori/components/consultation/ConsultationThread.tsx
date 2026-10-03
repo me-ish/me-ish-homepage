@@ -326,8 +326,8 @@ export default function ConsultationThread(props: Props) {
                   <Paperclip className="h-4 w-4 shrink-0" aria-hidden/>{file.name} ({(file.sizeBytes/1024/1024).toFixed(1)}MB)
                 </a>
               ):<p key={file.id} role="status" className="mt-2 break-all rounded-lg border p-3 text-xs">{file.name} — 提出済みの添付です。リンクの取得に失敗しました。履歴を更新してください。</p>)}
-              {props.mode === "staff" && message.notificationStatus === "failed" && (message.sender !== "staff" || closed) ? <p className="mt-1 text-xs font-bold text-amber-700">メール通知に失敗 · 相談内容は保存済み</p> : null}
-              {props.mode === "staff" && message.notificationStatus === "pending" ? <p className="mt-1 text-xs text-amber-700">通知未送信・処理中 · 相談内容は保存済み</p> : null}
+              {message.notificationStatus === "failed" && (props.mode === "client" ? message.sender === "client" : message.sender !== "staff" || closed) ? <p className="mt-1 text-xs font-bold text-amber-700">メール通知に失敗 · 相談内容は保存済み</p> : null}
+              {message.notificationStatus === "pending" && (props.mode === "staff" || message.sender === "client") ? <p className="mt-1 text-xs text-amber-700">通知未送信・処理中 · 相談内容は保存済み</p> : null}
               {props.mode === "staff" && !closed && message.sender === "staff" && message.notificationStatus === "failed" ? (
                 <button type="button" disabled={busy} onClick={() => void retry(message.id)} className="mt-1 text-xs font-bold text-amber-700 underline disabled:opacity-50">メール通知に失敗 · 再送する</button>
               ) : null}
