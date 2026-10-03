@@ -84,29 +84,29 @@ export const natoriStageMeta: Record<NatoriTaskStage, NatoriStageMeta> = {
 export const natoriProjectStatusMeta: Record<NatoriProjectStatus, NatoriProjectStatusMeta> = {
   inquiry: {
     label: "依頼受付",
-    chipClassName: "border-amber-300 bg-amber-50 text-amber-800",
+    chipClassName: "border-rose-400 bg-white text-rose-800",
     cellClassName: "bg-amber-50 text-amber-900",
   },
   estimating: {
     label: "見積もり中",
-    chipClassName: "border-amber-300 bg-amber-50 text-amber-900",
+    chipClassName: "border-amber-500 bg-white text-amber-900",
     cellClassName: "bg-amber-50 text-amber-900",
   },
   // Legacy "相談中" rows. Kept for back-compat with existing data; rendered as
   // "依頼受付（旧）" so it's obvious these should be migrated to `inquiry`.
   consulting: {
     label: "依頼受付（旧）",
-    chipClassName: "border-amber-300 bg-amber-50 text-amber-800",
+    chipClassName: "border-rose-400 bg-white text-rose-800",
     cellClassName: "bg-amber-50 text-amber-900",
   },
   quoted: {
     label: "見積もり提示済み",
-    chipClassName: "border-yellow-300 bg-yellow-50 text-yellow-800",
+    chipClassName: "border-yellow-500 bg-white text-yellow-900",
     cellClassName: "bg-yellow-50 text-yellow-900",
   },
   awaiting_payment: {
     label: "入金待ち",
-    chipClassName: "border-orange-300 bg-orange-50 text-orange-800",
+    chipClassName: "border-orange-500 bg-orange-50 text-orange-900",
     cellClassName: "bg-orange-50 text-orange-900",
   },
   rough: {
@@ -135,12 +135,12 @@ export const natoriProjectStatusMeta: Record<NatoriProjectStatus, NatoriProjectS
     cellClassName: "bg-violet-100 text-violet-900",
   },
   delivered: {
-    label: "納品済",
+    label: "納品済み",
     chipClassName: "border-emerald-400 bg-emerald-100 text-emerald-900",
     cellClassName: "bg-emerald-100 text-emerald-900",
   },
   completed: {
-    label: "完了",
+    label: "対応完了",
     chipClassName: "border-emerald-500 bg-emerald-200 text-emerald-900",
     cellClassName: "bg-emerald-200 text-emerald-900",
   },
