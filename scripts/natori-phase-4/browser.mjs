@@ -8,7 +8,8 @@ const require = createRequire('/app/package.json');
 const { createClient } = require('@supabase/supabase-js');
 const { chromium, expect } = require('@playwright/test');
 setDefaultResultOrder('ipv4first');
-const appOrigin = 'http://localhost:3000', results = [], browserProblems = new Set();
+const appOrigin = 'http://localhost:3000', results = [], browserProblems = new Set(), browserErrorDiagnostics = [];
+const textOperation = body => ({ operationId: randomUUID(), requestHash: createHash('sha256').update(JSON.stringify({ body: body.trim(), files: [] })).digest('hex'), body: body.trim(), files: [] });
 const check = (ok, code) => { if (!ok) throw new Error(code); };
 let stage = 'preflight', checkpoint = 'START', server, browser, capture;
 async function test(name, fn) {
@@ -92,6 +93,7 @@ async function main() {
   server = spawn(process.execPath, ['--require', '/browser-test/provider-preload.cjs', '/app/node_modules/next/dist/bin/next', 'dev', '--hostname', 'localhost', '--port', '3000'], { cwd: '/app', env: {
     PATH: '/runtime-bin:/usr/local/bin:/usr/bin:/bin', HOME: '/tmp', TMPDIR: '/tmp', NODE_ENV: 'development', NODE_OPTIONS: '--dns-result-order=ipv4first', NEXT_TELEMETRY_DISABLED: '1', PHASE_N_BROWSER: 'ephemeral', PHASE_0B_BROWSER: 'ephemeral',
     NEXT_PUBLIC_SUPABASE_URL: origin, NEXT_PUBLIC_SUPABASE_ANON_KEY: keys.anon, SUPABASE_SERVICE_ROLE_KEY: keys.service, NATORI_DASHBOARD_KEY: sharedKey, NATORI_OWNER_USER_ID: owner.id, NATORI_OWNER_EMAILS: owner.email, NATORI_STAFF_EMAILS: `${staffA.email},${staffB.email}`, NEXT_PUBLIC_SITE_URL: appOrigin,
+    NATORI_DELIVERY_NOTIFICATION_KEY: randomBytes(32).toString('hex'),
     NATORI_ACCEPTANCE_OUTBOX_ENABLED: '1', NATORI_NOTIFICATION_SENDING_ENABLED: '1', RESEND_API_KEY: apiKey, NATORI_ORDER_MAIL_FROM: 'Phase N <sender@phase-n.invalid>', NATORI_PORTFOLIO_CONTACT_TO: 'artist@phase-n.invalid', NATORI_MAIL_BCC: 'bcc@phase-n.invalid',
   }, stdio: ['ignore', 'pipe', 'pipe'] });
   const classifications = new Set();
@@ -112,7 +114,13 @@ async function main() {
   browser = await chromium.launch({ headless: true, args: ['--host-resolver-rules=MAP localhost 127.0.0.1'] });
   const context = async () => { const c = await browser.newContext({ baseURL: appOrigin, serviceWorkers: 'block' }); c.setDefaultTimeout(15000); c.setDefaultNavigationTimeout(60000);
     c.on('page', page => {
-      page.on('pageerror', () => browserProblems.add('UNHANDLED_PAGE_ERROR'));
+      page.on('pageerror', error => {
+        browserProblems.add('UNHANDLED_PAGE_ERROR');
+        const kind = ['TypeError', 'ReferenceError', 'RangeError', 'SyntaxError', 'Error'].includes(error.name) ? error.name : 'other';
+        const category = /Cannot read properties/.test(error.message) ? 'property_read' : /is not a function/.test(error.message) ? 'not_callable' : /Server Components render/.test(error.message) ? 'server_render' : 'other';
+        const source = error.stack?.match(/(?:ConsultationThread|RenewConsultationLink|ProjectsBoard|InquiryConversation)\.tsx:\d+:\d+/)?.[0] ?? null;
+        if (browserErrorDiagnostics.length < 20) browserErrorDiagnostics.push({ stage, kind, category, source });
+      });
       page.on('console', msg => {
         if (!['warning', 'error'].includes(msg.type())) return;
         const text = msg.text();
@@ -166,8 +174,8 @@ async function main() {
       await page.goto(`/natori/inquiries?project=${p.id}&view=conversation`);
       await expect(page.getByText(`History ${p.title}`, { exact: true })).toBeVisible();
       await expect(page.getByRole('textbox', { name: 'メッセージ', exact: true })).toHaveCount(0);
-      const sent = await manager.request.post('/api/natori/admin/consultation', { headers: { 'x-requested-with': 'me-ish' }, data: { projectId: p.id, body: 'Must not write' } }); check(sent.status() === 404, 'CLOSED_WRITE');
-      const clientSent = await client.request.post(`/api/natori/consult/${p.token}`, { headers: { 'x-requested-with': 'me-ish' }, data: { body: 'Must not write' } }); check(clientSent.status() === 404, 'CLOSED_CLIENT_WRITE');
+      const sent = await manager.request.post('/api/natori/admin/consultation', { headers: { 'x-requested-with': 'me-ish' }, data: { projectId: p.id, operation: textOperation('Must not write') } }); check(sent.status() === 404, 'CLOSED_WRITE');
+      const clientSent = await client.request.post(`/api/natori/consult/${p.token}`, { headers: { 'x-requested-with': 'me-ish' }, data: { operation: textOperation('Must not write') } }); check(clientSent.status() === 404, 'CLOSED_CLIENT_WRITE');
     }
   });
   await test('keyboard-button-dialog-escape-and-focus-restoration', async () => {
@@ -282,7 +290,7 @@ async function main() {
   });
   console.log(`Phase 4 browser diagnostics: ${[...browserProblems].join(',') || 'none'}`);
   await client.close(); await manager.close();
-  const summary = { tests: results, passed: results.filter(r => r.status === 'passed').length, failed: results.filter(r => r.status === 'failed').length, skipped: 0, engine: 'Chromium 1.58.2; mobile viewport only, not iPhone Safari', providerRequests: providerCalls, browserProblems: [...browserProblems] };
+  const summary = { tests: results, passed: results.filter(r => r.status === 'passed').length, failed: results.filter(r => r.status === 'failed').length, skipped: 0, engine: 'Chromium 1.58.2; mobile viewport only, not iPhone Safari', providerRequests: providerCalls, browserProblems: [...browserProblems], browserErrorDiagnostics };
   writeFileSync('/results/phase4-browser.json', JSON.stringify(summary, null, 2));
   console.log(`PHASE 4 ${summary.passed} passed / ${summary.failed} failed / 0 skipped`);
   check(results.length === 17 && summary.failed === 0, 'PHASE4_FAILED');

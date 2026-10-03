@@ -10,6 +10,7 @@ for (const path of [
   'src/app/api/natori/consult/[token]/route.ts',
   'src/app/api/natori/consult/[token]/renew/route.ts',
   'src/app/api/natori/admin/consultation/route.ts',
+  'src/app/api/natori/consultation-file/route.ts',
   'src/app/api/natori/admin/project-activity/route.ts',
 ]) {
   mkdirSync(dirname(resolve(output, path)), { recursive: true });
