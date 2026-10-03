@@ -119,7 +119,9 @@ export default function PageEventsPanel() {
                     <table className="mt-1.5 w-full border-collapse text-sm">
                       <thead>
                         <tr className="text-left text-xs font-bold text-gray-500">
-                          <th className="py-1 pr-2 font-bold"> </th>
+                          <th className="py-1 pr-2 font-bold">
+                            <span className="sr-only">項目</span>
+                          </th>
                           <th className="w-20 py-1 pr-2 text-right">30日</th>
                           <th className="w-20 py-1 text-right">90日</th>
                         </tr>
@@ -130,7 +132,10 @@ export default function PageEventsPanel() {
                             key={`${entry.event}-${entry.label}`}
                             className="border-t border-pink-50"
                           >
-                            <td className="max-w-0 truncate py-1.5 pr-2 text-gray-900">
+                            <td
+                              className="max-w-0 truncate py-1.5 pr-2 text-gray-900"
+                              title={entry.label || undefined}
+                            >
                               {entry.label || "（ラベルなし）"}
                             </td>
                             <td className="py-1.5 pr-2 text-right font-bold text-gray-900">

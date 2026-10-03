@@ -18,7 +18,7 @@ export default function ConsultationAttentionPanel({ projects, loading, onRefres
     <section aria-label="相談の確認" className="mt-4 space-y-3 rounded-2xl border border-pink-200 bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-bold text-pink-900">相談の確認</h2>
-        <button type="button" onClick={onRefresh} disabled={loading} className="min-h-10 rounded-full border px-3 text-xs font-bold">相談状況を更新</button>
+        <button type="button" onClick={onRefresh} disabled={loading} className={natoriAdminUi.btnSecondary}>相談状況を更新</button>
       </div>
       {loading ? <>
         <p role="status" className={natoriAdminUi.caption}>相談状況を確認しています</p>
