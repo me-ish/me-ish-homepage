@@ -6,7 +6,8 @@ import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriCo
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CalendarClock, Inbox } from "lucide-react";
+import { ArrowRight, CalendarClock, Inbox, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   getNextActionForStatus,
   getNextStatus,
@@ -38,13 +39,18 @@ import ProjectMonthCalendar from "./ProjectMonthCalendar";
 import ProjectDayDetail from "./ProjectDayDetail";
 import ProjectPriorityList from "./ProjectPriorityList";
 import ProjectCard from "./ProjectCard";
+import ProjectListView from "./ProjectListView";
 import ClosedProjectsSection from "./ClosedProjectsSection";
 import ArchivedProjectsSection from "./ArchivedProjectsSection";
 import ProjectRegisterForm from "./ProjectRegisterForm";
 import OrderMailPanel, { type OrderMailKind } from "./OrderMailPanel";
 import { NatoriLoadError } from "./NatoriLoadError";
+import { cn } from "@/lib/utils";
 
 type ViewMonth = { year: number; monthIndex: number };
+
+type BoardView = "calendar" | "list";
+const VIEW_STORAGE_KEY = "natori-projects-view";
 
 type DataSource = "loading" | "supabase" | "mock" | "error";
 
@@ -87,6 +93,8 @@ export default function ProjectsBoard({
   const [eventsBusy, setEventsBusy] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [advanceBusyId, setAdvanceBusyId] = useState<string | null>(null);
+  const [view, setView] = useState<BoardView>("calendar");
+  const [registerOpen, setRegisterOpen] = useState(false);
   const loadSequence = useRef(0);
   const taskSequence = useRef(0);
   const taskIntents = useRef(new Map<string, Map<string, TaskIntent>>());
@@ -158,6 +166,22 @@ export default function ProjectsBoard({
     setToday(now);
     setSelectedISO(toISODate(now));
     setViewMonth(getMonthFromDate(now));
+    // 表示切替は端末ごとの好みなので localStorage に残す。読めなければ既定（カレンダー）のまま。
+    try {
+      const saved = window.localStorage.getItem(VIEW_STORAGE_KEY);
+      if (saved === "calendar" || saved === "list") setView(saved);
+    } catch {
+      /* private mode などで使えない場合は既定のまま */
+    }
+  }, []);
+
+  const changeView = useCallback((next: BoardView) => {
+    setView(next);
+    try {
+      window.localStorage.setItem(VIEW_STORAGE_KEY, next);
+    } catch {
+      /* 保存できなくても表示は切り替わる */
+    }
   }, []);
 
   useEffect(() => {
@@ -591,19 +615,6 @@ export default function ProjectsBoard({
           </button>
         </div>
       ) : null}
-      {authed ? (
-        <ProjectRegisterForm
-          mode="manual"
-          onCreated={() => {
-            if (dataSource === "supabase") {
-              loadFromSupabase().catch((err) => {
-                console.error("[ProjectsBoard] reload after register failed", err);
-              });
-            }
-          }}
-        />
-      ) : null}
-
       {/* 依頼受付〜入金待ちの対応（メール送信・入金確認・見送り）は問い合わせ管理へ集約 */}
       {preworkCount > 0 ? (
         <Link
@@ -650,7 +661,97 @@ export default function ProjectsBoard({
         </div>
       ) : null}
 
-      {undatedProjects.length > 0 ? (
+      {/* 表示切替と案件登録 */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div role="tablist" aria-label="案件の表示切替" className="flex gap-1.5">
+          {([
+            ["calendar", "カレンダー"],
+            ["list", "一覧"],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              id={`projects-view-tab-${key}`}
+              aria-selected={view === key}
+              aria-controls="projects-view-panel"
+              onClick={() => changeView(key)}
+              className={cn(
+                natoriAdminUi.chip,
+                view === key ? natoriAdminUi.chipOn : natoriAdminUi.chipOff
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {authed ? (
+          <button
+            type="button"
+            onClick={() => setRegisterOpen(true)}
+            className={natoriAdminUi.btnSecondary}
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            案件を登録
+          </button>
+        ) : null}
+      </div>
+
+      <div
+        id="projects-view-panel"
+        role="tabpanel"
+        aria-labelledby={`projects-view-tab-${view}`}
+        className="space-y-4 md:space-y-6"
+      >
+        {view === "calendar" ? (
+          <>
+      <ProjectMonthCalendar
+        year={viewMonth.year}
+        monthIndex={viewMonth.monthIndex}
+        projects={activeProjects}
+        events={events}
+        today={today}
+        selectedISO={selectedISO}
+        showReminders={!isDemo}
+        onSelect={handleSelectDate}
+        onPrevMonth={handlePrevMonth}
+        onNextMonth={handleNextMonth}
+      />
+
+      <ProjectDayDetail
+        selectedISO={selectedISO}
+        allProjects={activeProjects}
+        today={today}
+        onToggleTask={handleToggleTask}
+        onAdvanceStatus={handleAdvanceStatus}
+        onConfirmPayment={handleConfirmPayment}
+        onOpenMail={(project, kind) => setMailTarget({ project, kind })}
+        onEditDetails={handleEditDetails}
+        advanceBusyId={advanceBusyId}
+        events={events}
+        authed={authed}
+        eventsBusy={eventsBusy}
+        eventsError={eventsError}
+        onCreateEvent={handleCreateEvent}
+        onUpdateEvent={handleUpdateEvent}
+        onDeleteEvent={handleDeleteEvent}
+      />
+          </>
+        ) : (
+          <ProjectListView
+            projects={activeProjects}
+            today={today}
+            onToggleTask={handleToggleTask}
+            onAdvanceStatus={handleAdvanceStatus}
+            onConfirmPayment={handleConfirmPayment}
+            onOpenMail={(project, kind) => setMailTarget({ project, kind })}
+            onEditDetails={handleEditDetails}
+            advanceBusyId={advanceBusyId}
+          />
+        )}
+      </div>
+
+      {view === "calendar" && undatedProjects.length > 0 ? (
         <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex items-start gap-3">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gray-700 text-white">
@@ -685,38 +786,6 @@ export default function ProjectsBoard({
         </section>
       ) : null}
 
-      <ProjectMonthCalendar
-        year={viewMonth.year}
-        monthIndex={viewMonth.monthIndex}
-        projects={activeProjects}
-        events={events}
-        today={today}
-        selectedISO={selectedISO}
-        showReminders={!isDemo}
-        onSelect={handleSelectDate}
-        onPrevMonth={handlePrevMonth}
-        onNextMonth={handleNextMonth}
-      />
-
-      <ProjectDayDetail
-        selectedISO={selectedISO}
-        allProjects={activeProjects}
-        today={today}
-        onToggleTask={handleToggleTask}
-        onAdvanceStatus={handleAdvanceStatus}
-        onConfirmPayment={handleConfirmPayment}
-        onOpenMail={(project, kind) => setMailTarget({ project, kind })}
-        onEditDetails={handleEditDetails}
-        advanceBusyId={advanceBusyId}
-        events={events}
-        authed={authed}
-        eventsBusy={eventsBusy}
-        eventsError={eventsError}
-        onCreateEvent={handleCreateEvent}
-        onUpdateEvent={handleUpdateEvent}
-        onDeleteEvent={handleDeleteEvent}
-      />
-
       <ClosedProjectsSection
         projects={closedProjects}
         busyId={advanceBusyId}
@@ -729,6 +798,28 @@ export default function ProjectsBoard({
         busyId={advanceBusyId}
         onRestore={handleRestoreArchivedProject}
       />
+
+      {/* 案件登録（手入力）。フォーム本体は従来のまま、ダイアログ内に表示する */}
+      <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
+        <DialogContent
+          aria-describedby={undefined}
+          onInteractOutside={(event) => event.preventDefault()}
+          className="block max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-2xl p-0 sm:rounded-2xl"
+        >
+          <DialogTitle className="sr-only">案件を登録</DialogTitle>
+          <ProjectRegisterForm
+            mode="manual"
+            collapsible={false}
+            onCreated={() => {
+              if (dataSource === "supabase") {
+                loadFromSupabase().catch((err) => {
+                  console.error("[ProjectsBoard] reload after register failed", err);
+                });
+              }
+            }}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* ラフ提出・納品メール送信パネル */}
       {mailTarget ? (
