@@ -5,6 +5,7 @@
 // 定型文を下書きとして生成し、編集してから /api/natori/admin/order-mail で送信する。
 // 支払い依頼は送信時にサーバーで Stripe 支払いリンクが生成され、
 // 本文の {支払いリンク} の位置に差し込まれる。
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -346,7 +347,7 @@ export default function OrderMailPanel({
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex h-10 items-center rounded-full bg-pink-500 px-5 text-sm font-bold text-white hover:bg-pink-600"
+                className={natoriAdminUi.btnPrimary}
               >
                 閉じる
               </button>
@@ -564,7 +565,7 @@ export default function OrderMailPanel({
                 type="button"
                 onClick={handleSend}
                 disabled={!canSend}
-                className="inline-flex h-10 items-center gap-2 rounded-full bg-pink-500 px-5 text-sm font-bold text-white hover:bg-pink-600 disabled:opacity-50"
+                className={natoriAdminUi.btnPrimary}
               >
                 {sending ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden />

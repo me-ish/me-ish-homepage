@@ -9,6 +9,7 @@
 // sort_order ASC / created_at ASC の順をそのまま使い、数値は利用者へ見せない。
 //
 // URL へは一切アクセスしない（プレビュー・favicon・OGP を取得しない）。
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useState } from "react";
 import { ExternalLink, Pencil, Plus, Trash2, X } from "lucide-react";
 import { NATORI_PROJECT_REFERENCE_LINK_MAX } from "@/features/natori/lib/projectReferenceLinks";
@@ -122,7 +123,7 @@ export default function InquiryReferenceLinks({
                           setEditingId(null);
                         })
                       }
-                      className="inline-flex h-8 items-center rounded-full bg-pink-500 px-3 text-xs font-bold text-white disabled:opacity-60"
+                      className={natoriAdminUi.btnPrimary}
                     >
                       {busy ? "保存中…" : "保存"}
                     </button>
@@ -243,7 +244,7 @@ export default function InquiryReferenceLinks({
                 setNewLabel("");
               })
             }
-            className="inline-flex h-8 items-center gap-1 rounded-full bg-pink-500 px-3 text-xs font-bold text-white disabled:opacity-60"
+            className={natoriAdminUi.btnPrimary}
           >
             <Plus className="h-3.5 w-3.5" aria-hidden />
             {busy ? "追加中…" : "リンクを追加"}

@@ -1,5 +1,6 @@
 "use client";
 
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useEffect, useState } from "react";
 import { Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -287,7 +288,7 @@ export default function ProjectEditForm({
             type="button"
             onClick={handleSave}
             disabled={!canSave}
-            className="h-10 rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60"
+            className={natoriAdminUi.btnPrimary}
           >
             {saving ? "保存中…" : "保存"}
           </Button>

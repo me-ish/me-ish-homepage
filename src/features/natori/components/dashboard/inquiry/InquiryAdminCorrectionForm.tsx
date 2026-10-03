@@ -6,6 +6,7 @@
 // UpdateNatoriProjectDetailsInput / normalizeNatoriProjectDetailsPatch 契約を
 // 使い、フォームを増やしても保存契約が二重化しないようにする。
 // 案件種別は InquiryTypeConfirmation の責務なのでここでは扱わない。
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useEffect, useState } from "react";
 import {
   DEFAULT_NATORI_DELIVERY_PLAN,
@@ -221,7 +222,7 @@ export default function InquiryAdminCorrectionForm({
           onClick={handleSave}
           disabled={disabled || saving}
           aria-busy={saving}
-          className="inline-flex h-9 items-center rounded-full bg-pink-500 px-4 text-xs font-bold text-white shadow-sm hover:bg-pink-600 disabled:opacity-60"
+          className={natoriAdminUi.btnPrimary}
         >
           {saving ? "保存中…" : "確定内容を保存"}
         </button>

@@ -1,5 +1,6 @@
 "use client";
 
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -439,7 +440,7 @@ function ProfileSettingsPanel({
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="h-10 rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60"
+              className={natoriAdminUi.btnPrimary}
             >
               {saving ? "保存中…" : "保存"}
             </Button>

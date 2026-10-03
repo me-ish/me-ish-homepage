@@ -4,6 +4,7 @@
 // 編集画面の「プレビュー」ボタンから開く、未保存内容のプレビュー表示。
 // 内容は localStorage 経由で受け取り、公開ページと同じ PortfolioLanding で描画する。
 // 公開データには一切触れないので、何度開いても安全。
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Eye } from "lucide-react";
@@ -51,7 +52,7 @@ export default function PortfolioPreviewClient() {
           </p>
           <Link
             href="/natori/portfolio/edit"
-            className="mt-3 inline-flex h-9 items-center rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600"
+            className={`${natoriAdminUi.btnPrimary} mt-3`}
           >
             編集画面へ戻る
           </Link>

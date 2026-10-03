@@ -1,5 +1,6 @@
 "use client";
 
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useMemo, useState } from "react";
 import { Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -84,7 +85,7 @@ export default function StructuredPricingEditor({ presetId, legacyConfig, onSave
         ))}
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <Button onClick={() => void save()} disabled={!complete || saving} className="rounded-full bg-pink-500 text-white hover:bg-pink-600">
+        <Button onClick={() => void save()} disabled={!complete || saving} className={natoriAdminUi.btnPrimary}>
           <Save className="h-4 w-4" aria-hidden />
           {saving ? "保存中…" : "商品別料金を保存"}
         </Button>

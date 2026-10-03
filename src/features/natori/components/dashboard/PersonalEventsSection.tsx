@@ -1,5 +1,6 @@
 "use client";
 
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useState } from "react";
 import { CalendarPlus, Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -197,7 +198,7 @@ export default function PersonalEventsSection({
             <Button
               onClick={submit}
               disabled={busy || !draftTitle.trim()}
-              className="h-9 rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60"
+              className={natoriAdminUi.btnPrimary}
             >
               {busy ? "保存中…" : editingId ? "更新" : "追加"}
             </Button>

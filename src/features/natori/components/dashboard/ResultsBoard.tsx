@@ -1,5 +1,6 @@
 "use client";
 
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
@@ -344,7 +345,7 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
             <Button
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className="h-10 rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60"
+              className={natoriAdminUi.btnPrimary}
             >
               {submitting ? "追加中…" : "実績に追加"}
             </Button>
@@ -760,7 +761,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
               aria-pressed={yearFilter === null}
               className={`h-8 rounded-full border px-3 text-xs font-bold transition ${
                 yearFilter === null
-                  ? "border-pink-500 bg-pink-500 text-white"
+                  ? "border-[#BE185D] bg-[#BE185D] text-white"
                   : "border-pink-200 bg-white text-gray-700 hover:bg-pink-50"
               }`}
             >
@@ -774,7 +775,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
                 aria-pressed={yearFilter === year}
                 className={`h-8 rounded-full border px-3 text-xs font-bold transition ${
                   yearFilter === year
-                    ? "border-pink-500 bg-pink-500 text-white"
+                    ? "border-[#BE185D] bg-[#BE185D] text-white"
                     : "border-pink-200 bg-white text-gray-700 hover:bg-pink-50"
                 }`}
               >
@@ -798,7 +799,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
                   aria-pressed={metric === option.value}
                   className={`h-7 rounded-full px-3 text-xs font-bold transition ${
                     metric === option.value
-                      ? "bg-pink-500 text-white"
+                      ? "bg-[#BE185D] text-white"
                       : "text-gray-600 hover:bg-pink-50"
                   }`}
                 >
@@ -821,7 +822,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
               aria-pressed={monthFilter === null}
               className={`h-8 rounded-full border px-3 text-xs font-bold transition ${
                 monthFilter === null
-                  ? "border-pink-500 bg-pink-500 text-white"
+                  ? "border-[#BE185D] bg-[#BE185D] text-white"
                   : "border-pink-200 bg-white text-gray-700 hover:bg-pink-50"
               }`}
             >
@@ -835,7 +836,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
                 aria-pressed={monthFilter === month.ym}
                 className={`h-8 rounded-full border px-3 text-xs font-bold transition ${
                   monthFilter === month.ym
-                    ? "border-pink-500 bg-pink-500 text-white"
+                    ? "border-[#BE185D] bg-[#BE185D] text-white"
                     : "border-pink-200 bg-white text-gray-700 hover:bg-pink-50"
                 }`}
               >

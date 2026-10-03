@@ -4,6 +4,7 @@
 // ラフ確認・納品ファイルのアップロード/一覧/削除。OrderMailPanel の
 // ラフ提出・納品メールから使う。実体は非公開バケットに直アップロードされ、
 // メール送信時にサーバーがリンク（署名URL / 納品ページ）を本文へ差し込む。
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FileUp, Loader2, Paperclip, Trash2 } from "lucide-react";
 import {
@@ -162,7 +163,7 @@ export default function DeliveryFilesManager({
             inputRef.current?.click();
           }}
           disabled={busy || (folder === "final" && !!files?.some(file => file.published))}
-          className="inline-flex h-8 items-center gap-1.5 rounded-full bg-pink-500 px-3 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60"
+          className={natoriAdminUi.btnPrimary}
         >
           {busy ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />

@@ -2,6 +2,7 @@
 
 // features/natori/components/portfolio/edit/editorFields.tsx
 // ポートフォリオ編集画面の汎用パーツ（入力欄・画像アップロード・並び替えボタン等）
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ImagePlus, Loader2, Plus, Trash2 } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
@@ -262,7 +263,7 @@ export function ImageUploadField({
               inputRef.current?.click();
             }}
             disabled={uploading}
-            className="inline-flex items-center gap-1.5 rounded-full bg-pink-500 px-4 py-2 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-pink-300"
+            className={natoriAdminUi.btnPrimary}
           >
             {uploading ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />

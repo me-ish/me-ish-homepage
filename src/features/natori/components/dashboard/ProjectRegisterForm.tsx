@@ -1,5 +1,6 @@
 "use client";
 
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -249,7 +250,7 @@ export default function ProjectRegisterForm({
       <div className="mt-2 flex flex-wrap gap-2">
         <Link
           href="/natori/projects"
-          className="inline-flex h-9 items-center rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600"
+          className={natoriAdminUi.btnPrimary}
         >
           案件カレンダーを開く
         </Link>
@@ -445,7 +446,7 @@ export default function ProjectRegisterForm({
       <Button
         onClick={handleSubmit}
         disabled={submitting || !clientName.trim() || !title.trim()}
-        className="h-11 w-full rounded-full bg-pink-500 px-5 text-sm font-bold text-white hover:bg-pink-600 disabled:opacity-60 sm:w-auto"
+        className={`${natoriAdminUi.btnPrimary} w-full sm:w-auto`}
       >
         {submitting ? "追加中…" : "案件管理に追加"}
       </Button>

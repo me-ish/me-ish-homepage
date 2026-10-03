@@ -1,5 +1,6 @@
 "use client";
 
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { AlertTriangle, Calculator, CheckCircle2, ChevronDown, ChevronUp, Clipboard, Mail, RotateCcw, Save, Zap } from "lucide-react";
@@ -274,7 +275,7 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
           <Button
             onClick={handleSubmit}
             disabled={!requestText.trim()}
-            className="h-12 w-full rounded-full bg-pink-500 px-6 text-base text-white hover:bg-pink-600 sm:w-auto sm:text-sm"
+            className={`${natoriAdminUi.btnPrimary} w-full sm:w-auto`}
           >
             <Calculator className="h-4 w-4" aria-hidden />
             見積もり作成
@@ -377,7 +378,7 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
                   <Button
                     onClick={() => setMailPanelOpen(true)}
                     disabled={!selectedInquiry}
-                    className="h-11 shrink-0 rounded-full bg-pink-500 px-4 text-sm text-white hover:bg-pink-600 disabled:opacity-50 sm:h-10 sm:text-xs"
+                    className={`${natoriAdminUi.btnPrimary} shrink-0`}
                   >
                     <Mail className="h-4 w-4" aria-hidden />
                     見積もりメールを作成
@@ -529,7 +530,7 @@ function PresetSwitcher({
           <Button
             onClick={() => void onSave()}
             disabled={saving}
-            className="h-9 rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60"
+            className={natoriAdminUi.btnPrimary}
           >
             <Save className="h-3.5 w-3.5" aria-hidden />
             {saving ? "保存中…" : "このプリセットを保存"}
@@ -548,7 +549,7 @@ function PresetSwitcher({
               className={cn(
                 "rounded-full border px-3 py-1.5 text-xs font-bold transition",
                 active
-                  ? "border-pink-500 bg-pink-500 text-white shadow"
+                  ? "border-[#BE185D] bg-[#BE185D] text-white shadow"
                   : "border-pink-200 bg-white text-pink-800 hover:border-pink-400"
               )}
             >

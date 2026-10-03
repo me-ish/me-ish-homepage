@@ -3,6 +3,7 @@
 // features/natori/components/links/LinksEditor.tsx
 // /natori/links の掲載リンクをブラウザから編集する画面。
 // 追加・削除・ドラッグ並び替え・表示名/サブテキスト/URL の編集ができる。
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Loader2, Save } from "lucide-react";
@@ -246,7 +247,7 @@ export default function LinksEditor({ demoContent, publicHref }: LinksEditorProp
             type="button"
             onClick={handleSave}
             disabled={saveState === "saving" || !dirty}
-            className="ml-auto inline-flex items-center gap-2 rounded-full bg-pink-500 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-pink-600 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-pink-300"
+            className={`${natoriAdminUi.btnPrimary} ml-auto`}
           >
             {saveState === "saving" ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />

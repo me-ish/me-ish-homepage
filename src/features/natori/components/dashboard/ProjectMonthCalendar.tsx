@@ -178,7 +178,7 @@ export default function ProjectMonthCalendar({
                     cell.inMonth ? "text-gray-900" : "text-gray-300",
                     weekday === 0 && cell.inMonth && "text-rose-500",
                     weekday === 6 && cell.inMonth && "text-sky-500",
-                    cell.iso === todayISO && "rounded-full bg-pink-500 px-1.5 py-0.5 text-white"
+                    cell.iso === todayISO && "rounded-full bg-[#BE185D] px-1.5 py-0.5 text-white"
                   )}
                 >
                   {cell.date.getDate()}

@@ -3,6 +3,7 @@
 // features/natori/components/dashboard/InquiryDetailPanel.tsx
 // 問い合わせ管理画面の詳細パネル。フォームの依頼内容を整形表示し、
 // その場で見積もり / 支払い依頼メールの送信・入金確認・見送りができる。
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import Link from "next/link";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import ConsultationStatus from "./ConsultationStatus";
@@ -362,7 +363,7 @@ export default function InquiryDetailPanel({
               <button
                 type="button"
                 onClick={() => setScreen("conversation")}
-                className="mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-pink-500 px-4 text-sm font-bold text-white hover:bg-pink-600"
+                className={`${natoriAdminUi.btnPrimary} mt-3`}
               >
                 <MessageCircle className="h-4 w-4" aria-hidden />
                 相談を開く
@@ -423,7 +424,7 @@ export default function InquiryDetailPanel({
             <button
               type="button"
               onClick={() => setScreen("conversation")}
-              className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-pink-500 px-2 text-[11px] font-bold text-white hover:bg-pink-600 sm:flex-none sm:px-4 sm:text-xs"
+              className={`${natoriAdminUi.btnPrimary} min-w-0 flex-1 whitespace-nowrap sm:flex-none`}
             >
               <MessageCircle className="h-3.5 w-3.5" aria-hidden />
               {readOnly ? "相談履歴を開く" : "相談に返信"}
@@ -449,7 +450,7 @@ export default function InquiryDetailPanel({
                   type="button"
                   onClick={() => onOpenMail("estimate")}
                   disabled={busy}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-pink-500 px-4 text-xs font-bold text-white shadow-sm hover:bg-pink-600 disabled:opacity-60"
+                  className={natoriAdminUi.btnPrimary}
                 >
                   <Mail className="h-3.5 w-3.5" aria-hidden />
                   見積もりメール
@@ -461,7 +462,7 @@ export default function InquiryDetailPanel({
                   type="button"
                   onClick={() => onOpenMail("payment")}
                   disabled={busy}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-orange-500 px-4 text-xs font-bold text-white shadow-sm hover:bg-orange-600 disabled:opacity-60"
+                  className={natoriAdminUi.btnSecondary}
                 >
                   <Mail className="h-3.5 w-3.5" aria-hidden />
                   支払い依頼メール

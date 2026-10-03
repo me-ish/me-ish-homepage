@@ -1,5 +1,6 @@
 "use client";
 
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, Mail } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
@@ -253,7 +254,7 @@ export default function StructuredQuoteIssuePanel({
           type="button"
           disabled={!canSend}
           onClick={handleIssue}
-          className="inline-flex h-11 items-center gap-2 rounded-full bg-pink-500 px-5 text-sm font-bold text-white hover:bg-pink-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className={natoriAdminUi.btnPrimary}
         >
           {sending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Mail className="h-4 w-4" aria-hidden />}
           {sending

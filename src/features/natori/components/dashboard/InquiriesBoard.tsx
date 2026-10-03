@@ -393,7 +393,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
             className={cn(
               "h-8 rounded-full border px-3 text-xs font-bold transition",
               filter === entry.key
-                ? "border-pink-500 bg-pink-500 text-white"
+                ? "border-[#BE185D] bg-[#BE185D] text-white"
                 : "border-pink-200 bg-white text-gray-700 hover:bg-pink-50"
             )}
           >
