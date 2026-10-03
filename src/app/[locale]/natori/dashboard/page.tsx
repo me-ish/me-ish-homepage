@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import DashboardTodaySummary from "@/features/natori/components/dashboard/DashboardTodaySummary";
 import NotificationStatusPanel from "@/features/natori/components/dashboard/NotificationStatusPanel";
 import PageEventsPanel from "@/features/natori/components/dashboard/PageEventsPanel";
-import Footer from "@/features/natori/components/Footer";
+import { NatoriPageShell } from "@/features/natori/components/admin/NatoriPageShell";
 import type { NatoriProject } from "@/features/natori/types/projects";
 
 type DashboardCard = {
@@ -197,42 +197,40 @@ export default function NatoriDashboardPage() {
   );
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-pink-50/70 via-white to-white">
-      <section className="border-b border-pink-100 bg-white/70 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-pink-600">Dashboard</p>
-          <p className="hidden text-sm font-bold text-gray-900 sm:inline">仕事用ダッシュボード</p>
-          <div className="ml-auto flex items-center gap-2">
-            {loading ? (
-              <span className="text-xs text-gray-500">確認中…</span>
-            ) : email ? (
-              <>
-                <span className="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 sm:inline-flex">
-                  <User2 className="h-3.5 w-3.5" aria-hidden />
-                  {displayName ?? email}
-                </span>
-                <Button
-                  onClick={handleLogout}
-                  disabled={signingOut}
-                  variant="outline"
-                  className="h-9 rounded-full border-gray-300 bg-white px-3 text-xs font-bold text-gray-800 hover:bg-gray-50"
-                >
-                  <LogOut className="h-3.5 w-3.5" aria-hidden />
-                  {signingOut ? "ログアウト中…" : "ログアウト"}
-                </Button>
-              </>
-            ) : (
-              // ここまで表示できている時点で認可済みなので、email が無い = 合言葉キー
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-bold text-gray-600">
-                <KeyRound className="h-3.5 w-3.5" aria-hidden />
-                合言葉キーでアクセス中
+    <NatoriPageShell
+      current="dashboard"
+      title="ダッシュボード"
+      headerRight={
+        <>
+          {loading ? (
+            <span className="text-xs text-gray-500">確認中…</span>
+          ) : email ? (
+            <>
+              <span className="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 sm:inline-flex">
+                <User2 className="h-3.5 w-3.5" aria-hidden />
+                {displayName ?? email}
               </span>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
+              <Button
+                onClick={handleLogout}
+                disabled={signingOut}
+                variant="outline"
+                className="h-9 rounded-full border-gray-300 bg-white px-3 text-xs font-bold text-gray-800 hover:bg-gray-50"
+              >
+                <LogOut className="h-3.5 w-3.5" aria-hidden />
+                {signingOut ? "ログアウト中…" : "ログアウト"}
+              </Button>
+            </>
+          ) : (
+            // ここまで表示できている時点で認可済みなので、email が無い = 合言葉キー
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-bold text-gray-600">
+              <KeyRound className="h-3.5 w-3.5" aria-hidden />
+              合言葉キーでアクセス中
+            </span>
+          )}
+        </>
+      }
+    >
+      <div>
         {error ? (
           <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 sm:text-sm">
             {error}
@@ -277,11 +275,8 @@ export default function NatoriDashboardPage() {
           profile={profile}
           onSaved={(next) => setProfile(next)}
         />
-
-      </section>
-
-      <Footer />
-    </main>
+      </div>
+    </NatoriPageShell>
   );
 }
 
