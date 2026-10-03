@@ -52,6 +52,10 @@ export default function ProjectListView({
   const sorted = useMemo(
     () =>
       [...projects].sort((a, b) => {
+        // 対応完了は末尾へ（納期が古くても、これから手を動かす案件より前に出さない）
+        const aDone = a.status === "completed";
+        const bDone = b.status === "completed";
+        if (aDone !== bDone) return aDone ? 1 : -1;
         if (a.dueDate === b.dueDate) return 0;
         if (a.dueDate === null) return 1;
         if (b.dueDate === null) return -1;
@@ -79,7 +83,7 @@ export default function ProjectListView({
   return (
     <section aria-label="進行中の案件一覧" className={natoriAdminUi.card}>
       <p className={`mb-3 ${natoriAdminUi.caption}`}>
-        進行中 {sorted.length} 件を納期の近い順に表示しています。行をタップすると詳細が開きます。
+        {sorted.length} 件を納期の近い順に表示しています（対応完了は末尾）。行をタップすると詳細が開きます。
       </p>
       <ul className="space-y-2">
         {sorted.map((project) => {
