@@ -221,23 +221,29 @@ export default function ProjectCard({
           </div>
         ) : null}
 
-        <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-gray-700">
-          <span className="inline-flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-700">
+          <span className="inline-flex items-center gap-1.5">
             <CalendarDays className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
-            納期{" "}
+            <span className="shrink-0 text-gray-500">納期</span>
             <span className="font-bold text-gray-900">
               {formatNatoriProjectDueDate(project.dueDate, formatDueDate)}
             </span>
           </span>
-          <span aria-hidden>·</span>
-          <span className="font-bold text-gray-900">
-            {formatNatoriProjectAmount(project.amount)}
+          <span className="inline-flex items-center gap-1.5">
+            <CircleDollarSign className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
+            <span className="shrink-0 text-gray-500">金額</span>
+            <span className="font-bold text-gray-900">
+              {formatNatoriProjectAmount(project.amount)}
+            </span>
           </span>
-          <span aria-hidden>·</span>
-          <span className="font-bold text-gray-900">
-            {NATORI_PROJECT_TYPE_LABELS[project.type]}
+          <span className="inline-flex items-center gap-1.5">
+            <Tag className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
+            <span className="shrink-0 text-gray-500">種別</span>
+            <span className="font-bold text-gray-900">
+              {NATORI_PROJECT_TYPE_LABELS[project.type]}
+            </span>
           </span>
-        </p>
+        </div>
 
         {project.paidAt != null || project.paymentConfirmedAt != null || project.paidAmount != null ? <RefundResultDetails project={project} /> : null}
 

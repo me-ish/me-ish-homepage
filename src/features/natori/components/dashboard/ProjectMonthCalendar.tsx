@@ -201,7 +201,8 @@ export default function ProjectMonthCalendar({
                 cell.isToday && cell.inMonth && "bg-pink-50",
                 selected && "ring-1 ring-inset ring-gray-900"
               )}
-              aria-label={`${cell.iso} 稼働${activeLaneCount}件 納期${deliveryEndCount}件 予定${cellEvents.length}件`}
+              aria-label={`${cell.iso} の案件を表示`}
+              title={`稼働${activeLaneCount}件 納期${deliveryEndCount}件 予定${cellEvents.length}件`}
               aria-pressed={selected}
             >
               {/* 日付とバッジの行。高さを固定して、今日の丸やバッジの有無で

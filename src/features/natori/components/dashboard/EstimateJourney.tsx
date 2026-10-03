@@ -290,7 +290,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
     <div className="mx-auto max-w-3xl space-y-5 pb-16">
       {confirmDialog}
       <header className="rounded-2xl border border-pink-100 bg-white p-5 shadow-sm">
-        <Link href={`/natori/inquiries?project=${project.id}`} className="text-sm font-bold text-[#BE185D] underline underline-offset-4">← この問い合わせに戻る</Link>
+        <Link href="/natori/dashboard" className="text-sm font-bold text-[#BE185D] underline underline-offset-4">← ダッシュボードへ戻る</Link>
         <p className="mt-4 text-xs font-bold text-pink-700">{project.clientName} 様の見積り</p>
         <h1 className="mt-1 break-words text-xl font-black text-gray-950">{project.title}</h1>
         <p className="mt-2 text-sm text-gray-600">相談で決まった内容から見積りを作り、相手に見える内容を確かめて送信します。</p>
@@ -302,22 +302,16 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
             const number = index + 1;
             const state = number === step ? "current" : number < step ? "done" : "upcoming";
             const stepClassName = `flex min-h-12 w-full items-center justify-center gap-1 rounded-xl px-2 text-center text-xs font-bold sm:text-sm ${
-              state === "current" ? "bg-[#BE185D] text-white" : state === "done" ? "bg-pink-50 text-[#9D174D]" : "bg-gray-100 text-gray-600"
+              state === "current" ? natoriPrimaryActionClassName : state === "done" ? "bg-pink-50 text-[#9D174D] hover:bg-pink-100" : "bg-gray-100 text-gray-600"
             }`;
             return (
               <li key={label} className="flex">
-                {state === "done" ? (
-                  <button type="button" disabled={Boolean(attemptRef.current)} onClick={() => setStep(number as Step)}
-                    className={`${stepClassName} hover:bg-pink-100 disabled:cursor-not-allowed disabled:opacity-60`}>
-                    <Check className="h-4 w-4 shrink-0" aria-hidden />
-                    {label}
-                    <span className="sr-only">（完了済み。押すと戻れます）</span>
-                  </button>
-                ) : (
-                  <span aria-current={state === "current" ? "step" : undefined} aria-disabled={state === "upcoming" ? true : undefined} className={stepClassName}>
-                    {label}
-                  </span>
-                )}
+                <button type="button" disabled={Boolean(attemptRef.current)} onClick={() => { if (number < step) setStep(number as Step); }}
+                  aria-current={state === "current" ? "step" : undefined}
+                  className={`${stepClassName}${state === "current" ? "" : " disabled:cursor-not-allowed disabled:opacity-60"}`}>
+                  {state === "done" ? <Check className="h-4 w-4 shrink-0" aria-hidden /> : null}
+                  {label}
+                </button>
               </li>
             );
           })}
@@ -429,7 +423,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
           finally { setBusy(false); }
         }}>第{issued.version}版を同じ内容で再通知</button>
         <p className="mt-2 text-xs">条件を変更する新しい版の発行は別の操作です。承諾後・入金後は新しい版を発行できません。</p>
-        {!editingLocked && !currentProject.paymentConfirmedAt ? <button type="button" disabled={busy} className="mt-2 min-h-11 px-3 underline" onClick={async () => { if (await confirm({ title: "新しい版を作りますか？", description: "新しい版の条件と金額を確認します。承諾済みの見積りは変更できません。", confirmLabel: "新しい版を作る", tone: "primary" })) { sessionStorage.removeItem(`natori-quote-issue/${project.id}`); setIssued(null); attemptRef.current=null; setStep(1); setAcknowledged(false); } }}>新しい版の作成を確認</button> : null}
+        {!editingLocked && !currentProject.paymentConfirmedAt ? <button type="button" disabled={busy} className="mt-2 min-h-11 px-3 underline" onClick={() => { if (window.confirm("新しい版の条件と金額を確認します。承諾済みの見積りは変更できません。")) { sessionStorage.removeItem(`natori-quote-issue/${project.id}`); setIssued(null); attemptRef.current=null; setStep(1); setAcknowledged(false); } }}>新しい版の作成を確認</button> : null}
       </section> : null}
       {issued?.notificationId ? <section className="rounded-2xl border border-gray-200 bg-white p-4">
         <p>第{issued.version}版は保存済みです。通知: {issued.notificationStatus === "sent" ? "送信済み" : "未送信・確認待ち"}</p>

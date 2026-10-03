@@ -235,22 +235,27 @@ export default function NatoriDashboardPage() {
             管理ツール
           </h2>
           <ul className="mt-2 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-            {TOOL_CARDS.map((card) => {
+            {TOOL_CARDS.map((card, index) => {
               const Icon = card.icon;
+              // リンク名はタイトルだけにし、説明は補足（aria-describedby）として読ませる
+              const titleId = `dashboard-tool-title-${index}`;
+              const descriptionId = `dashboard-tool-description-${index}`;
               return (
                 <li key={card.title}>
                   <Link
                     href={card.href}
+                    aria-labelledby={titleId}
+                    aria-describedby={descriptionId}
                     className={`${natoriAdminUi.card} flex h-full min-h-20 items-center gap-3 !p-3 transition hover:border-pink-200 hover:shadow-md sm:!p-4`}
                   >
                     <span className={ICON_FRAME_CLASS}>
                       <Icon className="h-5 w-5" aria-hidden />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-sm font-black leading-5 text-gray-900">
+                      <span id={titleId} className="block text-sm font-black leading-5 text-gray-900">
                         {card.title}
                       </span>
-                      <span className={`${natoriAdminUi.caption} block`}>{card.description}</span>
+                      <span id={descriptionId} className={`${natoriAdminUi.caption} block`}>{card.description}</span>
                     </span>
                   </Link>
                 </li>
