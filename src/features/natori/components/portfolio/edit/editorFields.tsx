@@ -54,12 +54,17 @@ export function TextInput({
   onChange,
   placeholder,
   hint,
+  inputMode,
+  error,
 }: {
   label?: string;
   value: string;
   onChange: (next: string) => void;
   placeholder?: string;
   hint?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  /** 入力の形式に関する注意（表示のみ。保存は止めない） */
+  error?: string;
 }) {
   const id = useId();
   return (
@@ -75,9 +80,17 @@ export function TextInput({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
+        inputMode={inputMode}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
         className={inputClass}
       />
       {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
+      {error ? (
+        <p id={`${id}-error`} className={natoriAdminUi.fieldError}>
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

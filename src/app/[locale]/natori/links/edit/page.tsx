@@ -12,5 +12,5 @@ export const metadata: Metadata = {
 
 export default async function NatoriLinksEditPage() {
   await requireNatoriAccess("/natori/links/edit");
-  return <LinksEditor />;
+  return <LinksEditor dashboardHref="/natori/dashboard" />;
 }
