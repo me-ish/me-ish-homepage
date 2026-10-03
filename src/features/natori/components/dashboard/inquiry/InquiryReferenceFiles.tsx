@@ -14,7 +14,7 @@ export default function InquiryReferenceFiles({files,expectedCount,acquisitionSt
      // eslint-disable-next-line @next/next/no-img-element
      <img src={file.url} alt={file.name} onError={()=>setBroken(current=>({...current,[file.url!]:true}))} className="h-24 w-24 rounded-lg border border-pink-200 object-cover transition hover:opacity-80"/>}
    </a>:<p role="status" className="rounded border border-amber-200 p-2 text-xs text-amber-900">提出済みの資料です。リンクを取得できません。再読み込みしてください。</p>}
-   <p className="mt-1 truncate text-[11px] text-gray-600" title={file.name}>{file.name}</p>
+   <p className="mt-1 truncate text-xs text-gray-600" title={file.name}>{file.name}</p>
   </li>)}</ul>
   {total>files.length?<p role="status" className="mt-2 text-xs text-amber-900">一部の提出済み資料を表示できません。再読み込みしてください。</p>:null}
  </section>;

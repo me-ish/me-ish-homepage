@@ -92,7 +92,7 @@ export default function DashboardTodaySummary({
                   </span>
                   <span
                     className={cn(
-                      "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                      "shrink-0 rounded-full border px-2 py-0.5 text-xs font-bold",
                       natoriProjectStatusMeta[top.project.status].chipClassName
                     )}
                   >

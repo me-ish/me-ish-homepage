@@ -211,10 +211,10 @@ export default function DeliveryFilesManager({
                 type="button"
                 onClick={() => void handleDelete(file)}
                 disabled={busy || demoMode || file.published}
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-red-200 bg-white text-red-500 hover:bg-red-50 disabled:opacity-50"
+                className={`${natoriAdminUi.btnIcon} disabled:opacity-50`}
                 aria-label={`${file.fileName} を削除`}
               >
-                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                <Trash2 className="h-4 w-4 text-red-700" aria-hidden />
               </button>
             </li>
           ))}

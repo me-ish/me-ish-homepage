@@ -358,7 +358,7 @@ export default function ProjectRegisterForm({
                 onChange={(event) => setAmount(Number(event.target.value))}
                 className={`${natoriAdminUi.input} mt-1`}
               />
-              <span className="mt-1 block text-[11px] text-pink-700/80">
+              <span className="mt-1 block text-xs text-pink-700/80">
                 未確定なら 0 で保存できます。
               </span>
             </label>
@@ -396,7 +396,7 @@ export default function ProjectRegisterForm({
                     )}
                   >
                     <p className="text-sm font-black leading-5">{meta.shortLabel}</p>
-                    <p className="mt-0.5 text-[11px] leading-4 opacity-80">
+                    <p className="mt-0.5 text-xs leading-4 opacity-80">
                       {meta.description}
                     </p>
                   </button>

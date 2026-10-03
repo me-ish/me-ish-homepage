@@ -87,7 +87,7 @@ export default function InquiryReferenceLinks({
                   <div>
                     <label
                       htmlFor={`link-url-${link.id}`}
-                      className="mb-1 block text-[11px] font-bold text-gray-600"
+                      className="mb-1 block text-xs font-bold text-gray-600"
                     >
                       URL
                     </label>
@@ -101,7 +101,7 @@ export default function InquiryReferenceLinks({
                   <div>
                     <label
                       htmlFor={`link-label-${link.id}`}
-                      className="mb-1 block text-[11px] font-bold text-gray-600"
+                      className="mb-1 block text-xs font-bold text-gray-600"
                     >
                       ラベル（任意）
                     </label>
@@ -143,7 +143,7 @@ export default function InquiryReferenceLinks({
                     <p className="truncate text-sm font-bold text-gray-900">
                       {link.label ?? "（ラベルなし）"}
                     </p>
-                    <p className="truncate text-[11px] text-gray-600" title={link.url}>
+                    <p className="truncate text-xs text-gray-600" title={link.url}>
                       {link.url}
                     </p>
                   </div>
@@ -164,7 +164,7 @@ export default function InquiryReferenceLinks({
                           onClick={() => startEdit(link)}
                           disabled={busy}
                           aria-label={`${index + 1}番目のリンクを編集`}
-                          className="grid h-8 w-8 place-items-center rounded-full border border-gray-300 text-gray-600 disabled:opacity-40"
+                          className={natoriAdminUi.btnIcon}
                         >
                           <Pencil className="h-3.5 w-3.5" aria-hidden />
                         </button>
@@ -182,9 +182,9 @@ export default function InquiryReferenceLinks({
                           }}
                           disabled={busy}
                           aria-label={`${index + 1}番目のリンクを削除`}
-                          className="grid h-8 w-8 place-items-center rounded-full border border-rose-300 text-rose-600 disabled:opacity-40"
+                          className={natoriAdminUi.btnIcon}
                         >
-                          <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                          <Trash2 className="h-4 w-4 text-red-700" aria-hidden />
                         </button>
                       </>
                     )}
@@ -196,7 +196,7 @@ export default function InquiryReferenceLinks({
         </ul>
       )}
 
-      <p className="mt-2 text-[11px] text-gray-500">
+      <p className="mt-2 text-xs text-gray-500">
         リンク先が開けない場合はURLを確認してください。この画面からリンク先の内容は取得していません。
       </p>
 
@@ -206,7 +206,7 @@ export default function InquiryReferenceLinks({
             <div>
               <label
                 htmlFor="inquiry-new-link-url"
-                className="mb-1 block text-[11px] font-bold text-gray-600"
+                className="mb-1 block text-xs font-bold text-gray-600"
               >
                 URLを追加（https:// のみ）
               </label>
@@ -221,7 +221,7 @@ export default function InquiryReferenceLinks({
             <div>
               <label
                 htmlFor="inquiry-new-link-label"
-                className="mb-1 block text-[11px] font-bold text-gray-600"
+                className="mb-1 block text-xs font-bold text-gray-600"
               >
                 ラベル（任意）
               </label>

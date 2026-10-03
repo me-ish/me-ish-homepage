@@ -228,7 +228,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
               <button
                 type="button"
                 onClick={handlePreview}
-                className="inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-pink-50 px-4 py-2 text-xs font-bold text-pink-700 hover:bg-pink-100 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-pink-50 px-4 py-2 text-xs font-bold text-pink-700 hover:bg-pink-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
                 title="いまの編集内容を保存せずに別タブで確認します"
               >
                 <Eye className="h-3.5 w-3.5" aria-hidden />
@@ -238,7 +238,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
             <Link
               href={publicHref ?? "/natori/portfolio"}
               target="_blank"
-              className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
             >
               <ExternalLink className="h-3.5 w-3.5" aria-hidden />
               公開ページを見る
@@ -251,7 +251,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
             <a
               key={section.id}
               href={`#${section.id}`}
-              className="shrink-0 whitespace-nowrap rounded-full border border-pink-200 bg-white px-3 py-1 text-[11px] font-bold text-pink-700 hover:bg-pink-50 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="shrink-0 whitespace-nowrap rounded-full border border-pink-200 bg-white px-3 py-1 text-xs font-bold text-pink-700 hover:bg-pink-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
             >
               {section.label}
             </a>
@@ -288,7 +288,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
                     key={String(choice.value)}
                     type="button"
                     onClick={() => patch({ commissionOpen: choice.value })}
-                    className={`rounded-full border px-5 py-2 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-pink-300 ${
+                    className={`rounded-full border px-5 py-2 text-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] ${
                       content.commissionOpen === choice.value
                         ? choice.active
                         : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
@@ -324,7 +324,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
                     onClick={() =>
                       patch({ massProductionIllustrationOpen: choice.value })
                     }
-                    className={`rounded-full border px-5 py-2 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-pink-300 ${
+                    className={`rounded-full border px-5 py-2 text-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] ${
                       content.massProductionIllustrationOpen === choice.value
                         ? choice.active
                         : "border-pink-200 bg-white text-gray-600 hover:bg-pink-50"
@@ -1236,7 +1236,7 @@ function BulkWorkImageAdd({
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={progress !== null}
-        className="inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-white px-4 py-2 text-xs font-bold text-pink-700 hover:bg-pink-50 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-pink-300"
+        className="inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-white px-4 py-2 text-xs font-bold text-pink-700 hover:bg-pink-50 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
       >
         {progress ? (
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />

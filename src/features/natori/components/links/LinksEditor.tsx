@@ -154,7 +154,7 @@ export default function LinksEditor({ demoContent, publicHref }: LinksEditorProp
             <Link
               href={publicHref ?? "/natori/links"}
               target="_blank"
-              className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
             >
               <ExternalLink className="h-3.5 w-3.5" aria-hidden />
               公開ページを見る

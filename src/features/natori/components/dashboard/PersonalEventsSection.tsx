@@ -127,19 +127,19 @@ export default function PersonalEventsSection({
                     <button
                       type="button"
                       onClick={() => beginEdit(event)}
-                      className="grid h-7 w-7 place-items-center rounded-full border border-pink-200 bg-white text-pink-700 hover:bg-pink-50"
-                      aria-label="編集"
+                      className={natoriAdminUi.btnIcon}
+                      aria-label={`予定「${event.title}」を編集`}
                     >
                       <Pencil className="h-3.5 w-3.5" aria-hidden />
                     </button>
                     <button
                       type="button"
                       onClick={() => onDelete(event.id)}
-                      className="grid h-7 w-7 place-items-center rounded-full border border-red-200 bg-white text-red-600 hover:bg-red-50 disabled:opacity-50"
-                      aria-label="削除"
+                      className={`${natoriAdminUi.btnIcon} disabled:opacity-50`}
+                      aria-label={`予定「${event.title}」を削除`}
                       disabled={busy}
                     >
-                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                      <Trash2 className="h-4 w-4 text-red-700" aria-hidden />
                     </button>
                   </div>
                 ) : null}
@@ -161,14 +161,14 @@ export default function PersonalEventsSection({
             <button
               type="button"
               onClick={cancel}
-              className="grid h-7 w-7 place-items-center rounded-full text-gray-500 hover:bg-white"
+              className={natoriAdminUi.btnIcon}
               aria-label="閉じる"
             >
               <X className="h-4 w-4" aria-hidden />
             </button>
           </div>
           <label className="block">
-            <span className="block text-[11px] font-bold text-pink-700">タイトル</span>
+            <span className="block text-xs font-bold text-pink-700">タイトル</span>
             <input
               type="text"
               value={draftTitle}
@@ -179,7 +179,7 @@ export default function PersonalEventsSection({
             />
           </label>
           <label className="mt-2 block">
-            <span className="block text-[11px] font-bold text-pink-700">メモ（任意）</span>
+            <span className="block text-xs font-bold text-pink-700">メモ（任意）</span>
             <textarea
               value={draftNote}
               onChange={(event) => setDraftNote(event.target.value)}

@@ -191,7 +191,7 @@ export default function ProjectEditForm({
               className={`${natoriAdminUi.input} mt-1`}
             />
             {project.amount === null && !amount ? (
-              <span className="mt-1 block text-[11px] text-gray-500">
+              <span className="mt-1 block text-xs text-gray-500">
                 金額未定のまま保存する場合、この欄は空欄にしてください。
               </span>
             ) : null}
@@ -218,7 +218,7 @@ export default function ProjectEditForm({
                   )}
                 >
                   <p className="text-sm font-black leading-5">{meta.shortLabel}</p>
-                  <p className="mt-0.5 text-[11px] leading-4 opacity-80">{meta.description}</p>
+                  <p className="mt-0.5 text-xs leading-4 opacity-80">{meta.description}</p>
                 </button>
               );
             })}
@@ -248,7 +248,7 @@ export default function ProjectEditForm({
               className={`${natoriAdminUi.input} mt-1`}
             />
             {project.dueDate === null && !dueDate ? (
-              <span className="mt-1 block text-[11px] text-gray-500">
+              <span className="mt-1 block text-xs text-gray-500">
                 納期未定のまま保存する場合、この欄は空欄にしてください。
               </span>
             ) : null}

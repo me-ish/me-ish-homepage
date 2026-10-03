@@ -417,7 +417,7 @@ function CompletedProjectRow({
           </span>
         )}
         {uploading ? (
-          <span className="absolute inset-0 grid place-items-center bg-white/70 text-[10px] font-bold text-pink-700">
+          <span className="absolute inset-0 grid place-items-center bg-white/70 text-xs font-bold text-pink-700">
             送信中
           </span>
         ) : null}
@@ -434,7 +434,7 @@ function CompletedProjectRow({
               type="button"
               onClick={onPickImage}
               disabled={busy || uploading}
-              className="grid h-7 w-7 place-items-center rounded-full border border-pink-200 bg-white text-pink-700 hover:bg-pink-50 disabled:opacity-50"
+              className={`${natoriAdminUi.btnIcon} disabled:opacity-50`}
               aria-label={`「${project.title}」の画像を${thumbUrl ? "差し替え" : "登録"}`}
               title={thumbUrl ? "画像を差し替え" : "画像を登録"}
             >
@@ -444,7 +444,7 @@ function CompletedProjectRow({
               type="button"
               onClick={onBeginEdit}
               disabled={busy}
-              className="grid h-7 w-7 place-items-center rounded-full border border-pink-200 bg-white text-pink-700 hover:bg-pink-50 disabled:opacity-50"
+              className={`${natoriAdminUi.btnIcon} disabled:opacity-50`}
               aria-label={`「${project.title}」を編集`}
             >
               <Pencil className="h-3.5 w-3.5" aria-hidden />
@@ -453,10 +453,10 @@ function CompletedProjectRow({
               type="button"
               onClick={onDelete}
               disabled={busy}
-              className="grid h-7 w-7 place-items-center rounded-full border border-red-200 bg-white text-red-600 hover:bg-red-50 disabled:opacity-50"
+              className={`${natoriAdminUi.btnIcon} disabled:opacity-50`}
               aria-label={`「${project.title}」を削除`}
             >
-              <Trash2 className="h-3.5 w-3.5" aria-hidden />
+              <Trash2 className="h-4 w-4 text-red-700" aria-hidden />
             </button>
           </div>
         </div>

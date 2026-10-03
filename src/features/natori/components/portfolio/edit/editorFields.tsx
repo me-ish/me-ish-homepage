@@ -76,7 +76,7 @@ export function TextInput({
         placeholder={placeholder}
         className={inputClass}
       />
-      {hint ? <p className="mt-1 text-[11px] text-gray-500">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
     </div>
   );
 }
@@ -112,7 +112,7 @@ export function TextArea({
         placeholder={placeholder}
         className={inputClass}
       />
-      {hint ? <p className="mt-1 text-[11px] text-gray-500">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
     </div>
   );
 }
@@ -139,11 +139,11 @@ export function RowControls({
           if (confirmMessage && !window.confirm(confirmMessage)) return;
           onRemove();
         }}
-        className="grid h-8 w-8 place-items-center rounded-lg border border-red-200 bg-white text-red-500 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-pink-300"
+        className={natoriAdminUi.btnIcon}
         aria-label="削除"
         title="削除"
       >
-        <Trash2 className="h-4 w-4" aria-hidden />
+        <Trash2 className="h-4 w-4 text-red-700" aria-hidden />
       </button>
     </div>
   );
@@ -154,7 +154,7 @@ export function AddButton({ label, onClick }: { label: string; onClick: () => vo
     <button
       type="button"
       onClick={onClick}
-      className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-pink-50 px-4 py-2 text-xs font-bold text-pink-700 hover:bg-pink-100 focus:outline-none focus:ring-2 focus:ring-pink-300"
+      className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-pink-50 px-4 py-2 text-xs font-bold text-pink-700 hover:bg-pink-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
     >
       <Plus className="h-4 w-4" aria-hidden />
       {label}
@@ -247,7 +247,7 @@ export function ImageUploadField({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={value} alt="" className="h-full w-full object-cover" />
           ) : (
-            <span className="px-2 text-center text-[10px] font-bold text-pink-300">
+            <span className="px-2 text-center text-xs font-bold text-pink-300">
               画像なし
             </span>
           )}
@@ -276,7 +276,7 @@ export function ImageUploadField({
             <button
               type="button"
               onClick={() => onChange(null)}
-              className="text-left text-xs font-bold text-red-500 hover:underline focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="text-left text-xs font-bold text-red-500 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
             >
               画像を外す
             </button>
@@ -290,7 +290,7 @@ export function ImageUploadField({
           onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
         />
       </div>
-      {hint ? <p className="mt-1 text-[11px] text-gray-500">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
       {error ? <p className="mt-1 text-xs font-bold text-red-600">{error}</p> : null}
     </div>
   );

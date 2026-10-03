@@ -30,11 +30,11 @@ export default function PortfolioWorkLinksEditor({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-black text-pink-700">関連リンク（任意）</p>
-          <p className="mt-1 text-[11px] leading-4 text-gray-500">
+          <p className="mt-1 text-xs leading-4 text-gray-500">
             ご依頼者様のSNSや、イラストが実際に使われている動画・グッズページなど。公開ポートフォリオの拡大画面だけに表示します。
           </p>
         </div>
-        <span className="shrink-0 text-[11px] font-bold text-gray-400">
+        <span className="shrink-0 text-xs font-bold text-gray-400">
           {links.length}/{MAX_LINKS}
         </span>
       </div>
@@ -48,7 +48,7 @@ export default function PortfolioWorkLinksEditor({
             >
               <div className="flex items-start gap-2">
                 <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
-                  <label className="block text-[11px] font-bold text-gray-600">
+                  <label className="block text-xs font-bold text-gray-600">
                     種別
                     <select
                       value={link.kind}
@@ -66,7 +66,7 @@ export default function PortfolioWorkLinksEditor({
                       ))}
                     </select>
                   </label>
-                  <label className="block text-[11px] font-bold text-gray-600">
+                  <label className="block text-xs font-bold text-gray-600">
                     表示名（任意）
                     <input
                       type="text"
@@ -77,7 +77,7 @@ export default function PortfolioWorkLinksEditor({
                       className={`${natoriAdminUi.input} mt-1`}
                     />
                   </label>
-                  <label className="block text-[11px] font-bold text-gray-600 sm:col-span-2">
+                  <label className="block text-xs font-bold text-gray-600 sm:col-span-2">
                     URL
                     <input
                       type="url"
@@ -93,9 +93,9 @@ export default function PortfolioWorkLinksEditor({
                   type="button"
                   aria-label={`関連リンク${linkIndex + 1}を削除`}
                   onClick={() => onChange(links.filter((_, i) => i !== linkIndex))}
-                  className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-red-100 bg-white text-red-500 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                  className={`${natoriAdminUi.btnIcon} mt-0.5`}
                 >
-                  <Trash2 className="h-4 w-4" aria-hidden />
+                  <Trash2 className="h-4 w-4 text-red-700" aria-hidden />
                 </button>
               </div>
             </div>
@@ -117,12 +117,12 @@ export default function PortfolioWorkLinksEditor({
             },
           ])
         }
-        className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-white px-3.5 py-2 text-xs font-bold text-pink-700 hover:bg-pink-50 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-pink-300"
+        className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-white px-3.5 py-2 text-xs font-bold text-pink-700 hover:bg-pink-50 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
       >
         <Plus className="h-3.5 w-3.5" aria-hidden />
         リンクを追加
       </button>
-      <p className="mt-2 text-[11px] leading-4 text-gray-400">
+      <p className="mt-2 text-xs leading-4 text-gray-400">
         関連リンクを保存・公開するには作品画像が必要です。URLは http:// または https:// で始まる公開ページを入力してください。
       </p>
     </div>

@@ -91,7 +91,7 @@ function ElapsedBadge({ days }: { days: number }) {
         ? "border-amber-200 bg-amber-50 text-amber-800"
         : "border-gray-200 bg-gray-50 text-gray-600";
   return (
-    <span className={cn("inline-block rounded-full border px-2 py-0.5 text-[11px] font-bold", tone)}>
+    <span className={cn("inline-block rounded-full border px-2 py-0.5 text-xs font-bold", tone)}>
       {days === 0 ? "今日" : `${days}日`}
     </span>
   );
@@ -447,7 +447,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
                     <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-600">
                       <span
                         className={cn(
-                          "inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                          "inline-block rounded-full border px-2 py-0.5 text-xs font-bold",
                           meta.chipClassName
                         )}
                       >
@@ -505,7 +505,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
                     <td className="whitespace-nowrap px-3 py-2.5">
                       <span
                         className={cn(
-                          "inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                          "inline-block rounded-full border px-2 py-0.5 text-xs font-bold",
                           meta.chipClassName
                         )}
                       >
@@ -528,7 +528,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
         </>
       )}
 
-      <p className="text-[11px] text-gray-500">
+      <p className="text-xs text-gray-500">
         相談の最終発言が古い順（会話がなければ受付順）です。経過はその日からの日数で、7日で黄色・14日で赤になります。
       </p>
 

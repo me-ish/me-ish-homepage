@@ -168,7 +168,7 @@ export default function InquiryDetailPanel({
               </DialogTitle>
               <span
                 className={cn(
-                  "inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                  "inline-block rounded-full border px-2 py-0.5 text-xs font-bold",
                   meta.chipClassName,
                 )}
               >
@@ -201,7 +201,7 @@ export default function InquiryDetailPanel({
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+            className={natoriAdminUi.btnIcon}
             aria-label="閉じる"
           >
             <X className="h-4 w-4" aria-hidden />
@@ -433,7 +433,7 @@ export default function InquiryDetailPanel({
           {!readOnly && ESTIMATE_MAIL_STATUSES.has(project.status) && estimateHref ? (
             <Link
               href={estimateHref}
-              className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-rose-300 bg-white px-2 text-[11px] font-bold text-rose-700 shadow-sm hover:bg-rose-50 sm:flex-none sm:px-4 sm:text-xs"
+              className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-rose-300 bg-white px-2 text-xs font-bold text-rose-700 shadow-sm hover:bg-rose-50 sm:flex-none sm:px-4 sm:text-xs"
               title="依頼内容を見積もりツールに貼り付けた状態で開きます（概算とメール下書きが自動で出ます）"
             >
               <Calculator className="h-3.5 w-3.5" aria-hidden />
@@ -441,7 +441,7 @@ export default function InquiryDetailPanel({
             </Link>
           ) : null}
           <details className="group relative ml-auto shrink-0">
-            <summary className="flex h-10 cursor-pointer list-none items-center rounded-full border border-gray-300 bg-white px-3 text-[11px] font-bold text-gray-700 marker:hidden [&::-webkit-details-marker]:hidden sm:px-4 sm:text-xs">
+            <summary className="flex h-10 cursor-pointer list-none items-center rounded-full border border-gray-300 bg-white px-3 text-xs font-bold text-gray-700 marker:hidden [&::-webkit-details-marker]:hidden sm:px-4 sm:text-xs">
               その他 ↑
             </summary>
             <div className="absolute bottom-full right-0 z-10 mb-2 flex max-h-[50dvh] w-[min(88vw,24rem)] flex-wrap gap-2 overflow-y-auto rounded-xl border border-gray-200 bg-white p-3 shadow-xl">

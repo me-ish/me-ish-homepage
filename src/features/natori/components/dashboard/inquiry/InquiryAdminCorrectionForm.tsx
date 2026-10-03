@@ -138,7 +138,7 @@ export default function InquiryAdminCorrectionForm({
               className={natoriAdminUi.input}
               aria-describedby="inquiry-amount-hint"
             />
-            <p id="inquiry-amount-hint" className="mt-1 text-[11px] text-gray-500">
+            <p id="inquiry-amount-hint" className="mt-1 text-xs text-gray-500">
               現在: {formatNatoriProjectAmount(project.amount)}／空欄=未確定、0=無料
             </p>
           </div>
@@ -158,7 +158,7 @@ export default function InquiryAdminCorrectionForm({
               className={natoriAdminUi.input}
               aria-describedby="inquiry-due-date-hint"
             />
-            <p id="inquiry-due-date-hint" className="mt-1 text-[11px] text-gray-500">
+            <p id="inquiry-due-date-hint" className="mt-1 text-xs text-gray-500">
               空欄のままなら未確定として扱います。
             </p>
           </div>

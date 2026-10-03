@@ -133,7 +133,7 @@ export default function ProjectCard({
             {isRush ? (
               <span
                 className={cn(
-                  "inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                  "inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-xs font-bold",
                   deliveryPlanMeta.chipClassName
                 )}
                 title={deliveryPlanMeta.label}
@@ -145,7 +145,7 @@ export default function ProjectCard({
             {priority ? (
               <span
                 className={cn(
-                  "rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                  "rounded-full border px-2 py-0.5 text-xs font-bold",
                   priority.className
                 )}
               >
@@ -257,11 +257,11 @@ export default function ProjectCard({
                 : cn("border-transparent", natoriStageMeta[stagePlan.stage].softClassName)
             )}
           >
-            <div className="flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wide opacity-80">
+            <div className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-wide opacity-80">
               <span>現在のステージ</span>
               <span
                 className={cn(
-                  "rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                  "rounded-full border px-2 py-0.5 text-xs font-bold",
                   natoriStageMeta[stagePlan.stage].chipClassName
                 )}
               >
@@ -270,19 +270,19 @@ export default function ProjectCard({
             </div>
             <div className="mt-1 grid grid-cols-3 gap-2 text-center">
               <div>
-                <p className="text-[10px] opacity-70">残</p>
+                <p className="text-xs opacity-70">残</p>
                 <p className="text-sm font-black">{formatHours(stagePlan.remainingHours)}</p>
               </div>
               <div>
-                <p className="text-[10px] opacity-70">平日1日</p>
+                <p className="text-xs opacity-70">平日1日</p>
                 <p className="text-sm font-black">{formatHours(stagePlan.requiredPerDay)}</p>
               </div>
               <div>
-                <p className="text-[10px] opacity-70">今週の枠</p>
+                <p className="text-xs opacity-70">今週の枠</p>
                 <p className="text-sm font-black">{formatHours(stagePlan.requiredThisWeek)}</p>
               </div>
             </div>
-            <p className="mt-1 text-[10px] opacity-80">
+            <p className="mt-1 text-xs opacity-80">
               目安: {formatStageMilestone(stagePlan.milestoneDateISO)}
               {stagePlan.isOverdueMilestone ? "（過ぎてます）" : ""}
             </p>
@@ -303,7 +303,7 @@ export default function ProjectCard({
             {WORK_MAIL_STATUSES.has(project.status) && <button
               type="button"
               onClick={() => onOpenMail(project, "rough")}
-              className="inline-flex h-8 items-center gap-1 rounded-full border border-amber-300 bg-white px-3 text-[11px] font-bold text-amber-700 hover:bg-amber-50"
+              className="inline-flex h-8 items-center gap-1 rounded-full border border-amber-300 bg-white px-3 text-xs font-bold text-amber-700 hover:bg-amber-50"
               title="ラフ確認ファイルのリンク入りメールを送ります"
             >
               <Mail className="h-3 w-3" aria-hidden />
@@ -312,7 +312,7 @@ export default function ProjectCard({
             <button
               type="button"
               onClick={() => onOpenMail(project, "delivery")}
-              className="inline-flex h-8 items-center gap-1 rounded-full border border-emerald-300 bg-white px-3 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50"
+              className="inline-flex h-8 items-center gap-1 rounded-full border border-emerald-300 bg-white px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-50"
               title="納品ページ（ダウンロード+受け取り確認）のリンク入りメールを送ります"
             >
               <Mail className="h-3 w-3" aria-hidden />
@@ -336,7 +336,7 @@ export default function ProjectCard({
               <button
                 type="button"
                 onClick={() => setEditing(true)}
-                className="inline-flex h-8 items-center gap-1 rounded-full border border-pink-200 bg-white px-3 text-[11px] font-bold text-pink-700 hover:bg-pink-50"
+                className="inline-flex h-8 items-center gap-1 rounded-full border border-pink-200 bg-white px-3 text-xs font-bold text-pink-700 hover:bg-pink-50"
               >
                 <Pencil className="h-3 w-3" aria-hidden />
                 編集

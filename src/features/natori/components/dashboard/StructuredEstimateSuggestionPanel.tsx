@@ -151,7 +151,7 @@ export default function StructuredEstimateSuggestionPanel({
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-gray-900">{item.title}</p>
                     <p className="mt-1 text-xs leading-5 text-gray-700">{item.action}</p>
-                    <p className="mt-1 text-[11px] text-gray-500">
+                    <p className="mt-1 text-xs text-gray-500">
                       {item.sourceField} / {item.ruleId}
                     </p>
                   </div>

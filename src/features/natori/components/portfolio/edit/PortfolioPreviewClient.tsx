@@ -77,7 +77,7 @@ export default function PortfolioPreviewClient() {
           <button
             type="button"
             onClick={() => window.close()}
-            className="ml-auto rounded-full border border-amber-400 bg-white px-3 py-1 text-[11px] hover:bg-amber-50"
+            className="ml-auto rounded-full border border-amber-400 bg-white px-3 py-1 text-xs hover:bg-amber-50"
           >
             このタブを閉じる
           </button>

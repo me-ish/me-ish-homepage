@@ -554,7 +554,7 @@ function PresetSwitcher({
               )}
             >
               {preset.name}
-              {active && dirty ? <span className="ml-1 text-[10px] opacity-80">（未保存）</span> : null}
+              {active && dirty ? <span className="ml-1 text-xs opacity-80">（未保存）</span> : null}
             </button>
           );
         })}
@@ -613,7 +613,7 @@ function DeliveryPlanPicker({
               )}
             >
               <p className="text-sm font-black leading-5">{meta.label}</p>
-              <p className="mt-0.5 text-[11px] leading-4 opacity-80">
+              <p className="mt-0.5 text-xs leading-4 opacity-80">
                 {meta.description}・追加 {meta.extraFee > 0 ? `+${formatYen(meta.extraFee)}` : "なし"}
               </p>
             </button>

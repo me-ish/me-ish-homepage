@@ -24,7 +24,7 @@ export function NatoriLoadError({
       <button type="button" onClick={onRetry} className={`${natoriAdminUi.btnSecondary} mt-3`}>
         再試行する
       </button>
-      <details className="mt-3 text-[11px] text-amber-800">
+      <details className="mt-3 text-xs text-amber-800">
         <summary className="cursor-pointer font-bold">エラー詳細</summary>
         <p className="mt-1 break-words">{error}</p>
       </details>

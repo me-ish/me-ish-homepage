@@ -44,7 +44,7 @@ function BarSegment({ cellBar }: { cellBar: NatoriCalendarCellBar | null }) {
   return (
     <span
       className={cn(
-        "flex h-3 min-w-0 items-center overflow-hidden text-[9px] font-bold leading-3 sm:h-4 sm:text-[10px] sm:leading-4",
+        "flex h-3 min-w-0 items-center overflow-hidden text-xs font-bold leading-3 sm:h-4 sm:text-xs sm:leading-4",
         isOverdue ? "bg-red-300 text-red-950" : stage.barClassName,
         isDelivery && "ring-1 ring-inset ring-emerald-700/40",
         rush && !isOverdue && cn("ring-1 ring-inset", deliveryPlanMeta.barAccentClassName),
@@ -115,7 +115,7 @@ export default function ProjectMonthCalendar({
           <div
             key={label}
             className={cn(
-              "text-[10px] font-bold text-gray-500 sm:text-xs",
+              "text-xs font-bold text-gray-500 sm:text-xs",
               idx === 0 && "text-rose-500",
               idx === 6 && "text-sky-500"
             )}
@@ -188,7 +188,7 @@ export default function ProjectMonthCalendar({
                     <span
                       key={reminder.id}
                       className={cn(
-                        "flex items-center gap-0.5 rounded px-1 text-[9px] font-black uppercase tracking-wide shadow-sm",
+                        "flex items-center gap-0.5 rounded px-1 text-xs font-black uppercase tracking-wide shadow-sm",
                         reminder.cellBadgeClassName
                       )}
                       title={reminder.label}
@@ -200,7 +200,7 @@ export default function ProjectMonthCalendar({
                   {topRushPlan ? (
                     <span
                       className={cn(
-                        "flex items-center gap-0.5 rounded px-1 text-[9px] font-black uppercase tracking-wide shadow-sm",
+                        "flex items-center gap-0.5 rounded px-1 text-xs font-black uppercase tracking-wide shadow-sm",
                         topRushPlan.chipClassName
                       )}
                       title={topRushPlan.label}
@@ -210,19 +210,19 @@ export default function ProjectMonthCalendar({
                     </span>
                   ) : null}
                   {deliveryEndCount > 0 ? (
-                    <span className="flex items-center gap-0.5 rounded bg-emerald-600 px-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm">
+                    <span className="flex items-center gap-0.5 rounded bg-emerald-600 px-1 text-xs font-black uppercase tracking-wide text-white shadow-sm">
                       <span aria-hidden>★</span>
                       納品{deliveryEndCount > 1 ? `×${deliveryEndCount}` : ""}
                     </span>
                   ) : null}
                   {overdueCount > 0 ? (
-                    <span className="rounded-full bg-red-500 px-1.5 text-[9px] font-bold text-white">
+                    <span className="rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
                       !
                     </span>
                   ) : null}
                   {cellEvents.length > 0 ? (
                     <span
-                      className="flex items-center gap-0.5 rounded bg-purple-500 px-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm"
+                      className="flex items-center gap-0.5 rounded bg-purple-500 px-1 text-xs font-black uppercase tracking-wide text-white shadow-sm"
                       title={cellEvents.map((event) => event.title).join(" / ")}
                     >
                       <span aria-hidden>●</span>
@@ -237,7 +237,7 @@ export default function ProjectMonthCalendar({
                   <BarSegment key={laneIdx} cellBar={cellBar} />
                 ))}
                 {totalLanes > mobileLaneLimit ? (
-                  <span className="px-1 text-[9px] text-gray-500">+{totalLanes - mobileLaneLimit}</span>
+                  <span className="px-1 text-xs text-gray-500">+{totalLanes - mobileLaneLimit}</span>
                 ) : null}
               </div>
 
@@ -246,7 +246,7 @@ export default function ProjectMonthCalendar({
                   <BarSegment key={laneIdx} cellBar={cellBar} />
                 ))}
                 {totalLanes > desktopLaneLimit ? (
-                  <span className="px-1 text-[9px] text-gray-500">+{totalLanes - desktopLaneLimit}</span>
+                  <span className="px-1 text-xs text-gray-500">+{totalLanes - desktopLaneLimit}</span>
                 ) : null}
               </div>
             </button>
@@ -254,7 +254,7 @@ export default function ProjectMonthCalendar({
         })}
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-600 sm:text-xs">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 sm:text-xs">
         <span className="inline-flex items-center gap-1">
           <span className="inline-block h-2 w-2 rounded-full bg-pink-500" />
           今日
