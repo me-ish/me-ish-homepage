@@ -4,7 +4,7 @@ import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriCo
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
-import { AlertTriangle, CheckCircle2, Loader2, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Loader2, Plus, Trash2 } from "lucide-react";
 import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { NatoriLoadError } from "@/features/natori/components/dashboard/NatoriLoadError";
@@ -290,20 +290,38 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
     <div className="mx-auto max-w-3xl space-y-5 pb-16">
       {confirmDialog}
       <header className="rounded-2xl border border-pink-100 bg-white p-5 shadow-sm">
-        <Link href="/natori/dashboard" className="text-sm font-bold text-pink-700 underline underline-offset-4">← ダッシュボードへ戻る</Link>
+        <Link href={`/natori/inquiries?project=${project.id}`} className="text-sm font-bold text-[#BE185D] underline underline-offset-4">← この問い合わせに戻る</Link>
         <p className="mt-4 text-xs font-bold text-pink-700">{project.clientName} 様の見積り</p>
         <h1 className="mt-1 break-words text-xl font-black text-gray-950">{project.title}</h1>
         <p className="mt-2 text-sm text-gray-600">相談で決まった内容から見積りを作り、相手に見える内容を確かめて送信します。</p>
       </header>
 
-      <nav aria-label="見積りの手順" className="grid grid-cols-3 gap-2">
-        {(["① 条件を整理", "② 金額を決める", "③ 確認して送る"] as const).map((label, index) => (
-          <button key={label} type="button" disabled={Boolean(attemptRef.current)} onClick={() => { if (index + 1 < step) setStep((index + 1) as Step); }}
-            aria-current={step === index + 1 ? "step" : undefined}
-            className={`min-h-12 rounded-xl px-2 text-center text-xs font-bold sm:text-sm ${step === index + 1 ? natoriPrimaryActionClassName : index + 1 < step ? "bg-pink-50 text-pink-700" : "bg-gray-100 text-gray-500"}`}>
-            {label}
-          </button>
-        ))}
+      <nav aria-label="見積りの手順">
+        <ol className="grid grid-cols-3 gap-2">
+          {(["① 条件を整理", "② 金額を決める", "③ 確認して送る"] as const).map((label, index) => {
+            const number = index + 1;
+            const state = number === step ? "current" : number < step ? "done" : "upcoming";
+            const stepClassName = `flex min-h-12 w-full items-center justify-center gap-1 rounded-xl px-2 text-center text-xs font-bold sm:text-sm ${
+              state === "current" ? "bg-[#BE185D] text-white" : state === "done" ? "bg-pink-50 text-[#9D174D]" : "bg-gray-100 text-gray-600"
+            }`;
+            return (
+              <li key={label} className="flex">
+                {state === "done" ? (
+                  <button type="button" disabled={Boolean(attemptRef.current)} onClick={() => setStep(number as Step)}
+                    className={`${stepClassName} hover:bg-pink-100 disabled:cursor-not-allowed disabled:opacity-60`}>
+                    <Check className="h-4 w-4 shrink-0" aria-hidden />
+                    {label}
+                    <span className="sr-only">（完了済み。押すと戻れます）</span>
+                  </button>
+                ) : (
+                  <span aria-current={state === "current" ? "step" : undefined} aria-disabled={state === "upcoming" ? true : undefined} className={stepClassName}>
+                    {label}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ol>
       </nav>
       {error ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p> : null}
 
@@ -375,8 +393,9 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
               <div><label htmlFor="estimate-to" className="mb-1 block text-sm font-bold">宛先</label><input id="estimate-to" type="email" className={field} value={to} onChange={(event) => setTo(event.target.value)} disabled={Boolean(attemptRef.current)} /></div>
               <div><label htmlFor="estimate-subject" className="mb-1 block text-sm font-bold">件名</label><input id="estimate-subject" className={field} value={subject} onChange={(event) => setSubject(event.target.value)} disabled={Boolean(attemptRef.current)} /></div>
               <div><label htmlFor="estimate-body" className="mb-1 block text-sm font-bold">本文</label><textarea id="estimate-body" className={`${field} min-h-80`} value={body} onChange={(event) => setBody(event.target.value)} disabled={Boolean(attemptRef.current)} /></div>
+              {!issued && !editingLocked ? <div><button type="button" disabled={busy || Boolean(attemptRef.current)} className={natoriAdminUi.btnSecondary} onClick={() => void save()}>個別メールの編集を保存</button></div> : null}
             </div>
-            <label className="flex items-start gap-3 rounded-xl bg-pink-50 p-4 text-sm"><input type="checkbox" className="mt-1" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} /><span>依頼者に見える内容と宛先を確認しました。</span></label>
+            <label className="flex items-start gap-3 rounded-xl bg-pink-50 p-4 text-sm"><input type="checkbox" className={`${natoriAdminUi.checkbox} mt-0.5`} checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} /><span>依頼者に見える内容と宛先を確認しました。</span></label>
             <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => setStep(2)} disabled={Boolean(attemptRef.current)} className="min-h-12 rounded-full border border-gray-300 px-5 font-bold disabled:opacity-50">← 金額を修正</button><button type="button" onClick={issue} disabled={busy || !recoveryReady || (!attemptRef.current && (!ready || !acknowledged || !to.trim() || !subject.trim() || !body.trim()))} className={`min-h-12 flex-1 rounded-full px-5 font-bold ${natoriPrimaryActionClassName}`}>{busy ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : attemptRef.current ? "同じ内容で送信を再試行" : `正式見積り ${formatYen(total)} を発行`}</button></div>
           </>}
         </section>
@@ -389,7 +408,6 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
         <button type="button" disabled={busy || Boolean(attemptRef.current)} className="mt-3 min-h-11 rounded-xl bg-amber-100 px-4 font-bold text-amber-950" onClick={() => { if (busy || attemptRef.current) return; setBody(replacementBody); setTemplateBody(replacementBody); setReplacementBody(null); setAcknowledged(false); }}>本文全体をこの候補へ更新</button>
         <button type="button" disabled={busy || Boolean(attemptRef.current)} className="ml-3 min-h-11 px-3 underline" onClick={() => { if (busy || attemptRef.current) return; setReplacementBody(null); }}>個別編集を保持</button>
       </section> : null}
-      {step === 3 && !issued && !editingLocked ? <button type="button" disabled={busy || Boolean(attemptRef.current)} className="min-h-11 rounded-xl border border-gray-300 bg-white px-4 font-bold" onClick={() => void save()}>個別メールの編集を保存</button> : null}
       {issued ? <section className="rounded-2xl border border-pink-200 bg-pink-50 p-4">
         <button type="button" disabled={busy} className="min-h-11 rounded-xl bg-pink-100 px-4 font-bold text-pink-950" onClick={async () => {
           const confirmed = await confirm({

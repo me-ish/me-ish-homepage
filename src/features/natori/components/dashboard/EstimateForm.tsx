@@ -742,7 +742,10 @@ function PricingTable({
     <div className="mt-6 min-w-0 rounded-2xl border border-gray-200 bg-gray-50 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-sm font-bold text-gray-900">料金表</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-bold text-gray-900">料金表</h3>
+            <span className={`${natoriAdminUi.badge} ${natoriAdminUi.badgeTone.warning}`}>この画面だけの一時変更</span>
+          </div>
           <p className="mt-1 text-xs leading-5 text-gray-600">
             この画面内だけで一時編集できます。変更後に見積もりを作成すると、編集後の金額で計算します。
           </p>

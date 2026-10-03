@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import EstimateForm from "@/features/natori/components/dashboard/EstimateForm";
@@ -89,7 +90,32 @@ export default function EstimateWorkspace() {
     hasRequestData: Boolean(project?.requestData),
   });
 
-  if (mode === "manual") return <div className="space-y-6"><ExternalInquiryStarter /><EstimateForm /></div>;
+  if (mode === "manual") {
+    return (
+      <Tabs defaultValue="formal" className="space-y-4">
+        <TabsList className="grid h-auto w-full grid-cols-1 gap-1 bg-pink-50 p-1 sm:inline-flex sm:w-auto">
+          <TabsTrigger
+            value="formal"
+            className="h-auto min-h-11 whitespace-normal px-4 py-2 text-sm font-bold text-gray-800 data-[state=active]:bg-white data-[state=active]:text-[#9D174D]"
+          >
+            相談を登録して正式見積り
+          </TabsTrigger>
+          <TabsTrigger
+            value="draft"
+            className="h-auto min-h-11 whitespace-normal px-4 py-2 text-sm font-bold text-gray-800 data-[state=active]:bg-white data-[state=active]:text-[#9D174D]"
+          >
+            依頼文から概算を出す（下書き）
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="formal" forceMount className="mt-0 data-[state=inactive]:hidden">
+          <ExternalInquiryStarter />
+        </TabsContent>
+        <TabsContent value="draft" forceMount className="mt-0 data-[state=inactive]:hidden">
+          <EstimateForm />
+        </TabsContent>
+      </Tabs>
+    );
+  }
 
   if (mode === "not-found" || !project) {
     return (
