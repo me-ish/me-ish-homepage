@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 
 type NatoriLoadErrorProps = {
   resourceLabel: string;
@@ -21,12 +21,9 @@ export function NatoriLoadError({
         実データと区別できない表示を避けるため、デモデータには切り替えていません。
         合言葉付きのブックマークから開き直すか、下のボタンで再試行してください。
       </p>
-      <Button
-        onClick={onRetry}
-        className="mt-3 h-9 rounded-full bg-amber-700 px-4 text-xs font-bold hover:bg-amber-800"
-      >
+      <button type="button" onClick={onRetry} className={`${natoriAdminUi.btnSecondary} mt-3`}>
         再試行する
-      </Button>
+      </button>
       <details className="mt-3 text-[11px] text-amber-800">
         <summary className="cursor-pointer font-bold">エラー詳細</summary>
         <p className="mt-1 break-words">{error}</p>
