@@ -13,5 +13,5 @@ export const metadata: Metadata = {
 
 export default async function Page() {
   await requireNatoriAccess("/natori/portfolio/edit");
-  return <PortfolioEditor />;
+  return <PortfolioEditor dashboardHref="/natori/dashboard" />;
 }

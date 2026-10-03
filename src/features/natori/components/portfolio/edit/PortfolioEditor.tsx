@@ -73,14 +73,26 @@ type PortfolioEditorProps = {
   demoContent?: PortfolioContent;
   /** 「公開ページを見る」のリンク先（デモではデモ用公開ページへ） */
   publicHref?: string;
+  /** タイトル左の「← ダッシュボード」のリンク先。未指定なら表示しない */
+  dashboardHref?: string;
 };
 
-export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEditorProps) {
+type SaveErrorKind = "validation" | "network";
+
+export default function PortfolioEditor({
+  demoContent,
+  publicHref,
+  dashboardHref,
+}: PortfolioEditorProps) {
   const isDemo = Boolean(demoContent);
   const [content, setContent] = useState<PortfolioContent | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [saveErrorKind, setSaveErrorKind] = useState<SaveErrorKind>("network");
+  const [previewError, setPreviewError] = useState(false);
+  const [activeSectionId, setActiveSectionId] = useState<string>(SECTION_NAV[0].id);
   const [dirty, setDirty] = useState(false);
+  const contentReady = content !== null;
 
   useEffect(() => {
     if (demoContent) {
@@ -115,10 +127,54 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
 
+  // 画面に出ているセクションを目次で強調する（表示のみ）
+  useEffect(() => {
+    if (!contentReady || typeof IntersectionObserver === "undefined") return;
+    const visible = new Set<string>();
+    // 上部バーの下に細い帯を作り、その帯に掛かっているセクションを現在地とする
+    const bandTop = 112;
+    const bandHeight = 24;
+    const bottomMargin = Math.max(0, window.innerHeight - bandTop - bandHeight);
+    const lastId = SECTION_NAV[SECTION_NAV.length - 1].id;
+    // 最後のセクションは帯まで届かないことがあるので、ページ末尾まで来たら最後を現在地にする
+    const isAtPageBottom = () =>
+      window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) visible.add(entry.target.id);
+          else visible.delete(entry.target.id);
+        }
+        if (isAtPageBottom()) {
+          setActiveSectionId(lastId);
+          return;
+        }
+        const current = SECTION_NAV.find((section) => visible.has(section.id));
+        if (current) setActiveSectionId(current.id);
+        else if (window.scrollY < 8) setActiveSectionId(SECTION_NAV[0].id);
+      },
+      { rootMargin: `-${bandTop}px 0px -${bottomMargin}px 0px` }
+    );
+    for (const section of SECTION_NAV) {
+      const element = document.getElementById(section.id);
+      if (element) observer.observe(element);
+    }
+    const handleScroll = () => {
+      if (isAtPageBottom()) setActiveSectionId(lastId);
+      else if (window.scrollY < 8) setActiveSectionId(SECTION_NAV[0].id);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [contentReady]);
+
   const patch = useCallback((update: Partial<PortfolioContent>) => {
     setContent((current) => (current ? { ...current, ...update } : current));
     setDirty(true);
     setSaveState("idle");
+    setPreviewError(false);
   }, []);
 
   // まとめてアップロード中に他の編集が入っても取りこぼさないよう、
@@ -130,6 +186,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
     );
     setDirty(true);
     setSaveState("idle");
+    setPreviewError(false);
   }, []);
 
   // 未保存の内容を localStorage 経由でプレビュータブに渡す（公開データには触れない）
@@ -143,8 +200,10 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
         JSON.stringify(prepared)
       );
       window.open("/natori/portfolio/edit/preview", "_blank");
+      setPreviewError(false);
     } catch (err) {
       console.error("[portfolio-edit] preview failed", err);
+      setPreviewError(true);
     }
   };
 
@@ -154,6 +213,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
       // デモ: 実保存せず成功表示だけする
       const prepared = preparePortfolioContentForSave(content);
       if (!prepared) {
+        setSaveErrorKind("validation");
         setSaveState("error");
         return;
       }
@@ -177,6 +237,11 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
       setSaveState("saved");
     } catch (err) {
       console.error("[portfolio-edit] save failed", err);
+      setSaveErrorKind(
+        err instanceof Error && err.message === "portfolio content validation failed"
+          ? "validation"
+          : "network"
+      );
       setSaveState("error");
     }
   };
@@ -225,13 +290,13 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
     <main className="min-h-screen bg-gradient-to-b from-pink-50/70 via-white to-white pb-28">
       {/* 上部バー */}
       <div className="sticky top-0 z-40 border-b border-pink-100 bg-white/85 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-2 px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-pink-600">
-              Portfolio Editor
-            </p>
-            <h1 className="text-lg font-black text-gray-900">ポートフォリオ編集</h1>
-          </div>
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 sm:px-6 lg:px-8">
+          {dashboardHref ? (
+            <Link href={dashboardHref} className={natoriAdminUi.btnLink}>
+              ← ダッシュボード
+            </Link>
+          ) : null}
+          <h1 className="min-w-0 text-lg font-black text-gray-900">ポートフォリオ編集</h1>
           <div className="ml-auto flex items-center gap-2">
             {isDemo ? null : (
               <button
@@ -254,21 +319,61 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
             </Link>
           </div>
         </div>
-        {/* 目次ジャンプ。ページが縦に長いので、直したいセクションへ一足で飛べるようにする */}
-        <nav className="mx-auto flex max-w-3xl gap-1.5 overflow-x-auto px-4 pb-2.5">
-          {SECTION_NAV.map((section) => (
-            <a
-              key={section.id}
-              href={`#${section.id}`}
-              className="shrink-0 whitespace-nowrap rounded-full border border-pink-200 bg-white px-3 py-1 text-xs font-bold text-pink-700 hover:bg-pink-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
-            >
-              {section.label}
-            </a>
-          ))}
+        {/* 目次ジャンプ（lg 未満）。ページが縦に長いので、直したいセクションへ一足で飛べるようにする */}
+        <nav
+          aria-label="セクション目次"
+          className="mx-auto flex max-w-6xl gap-1.5 overflow-x-auto px-4 pb-2.5 sm:px-6 lg:hidden"
+        >
+          {SECTION_NAV.map((section) => {
+            const active = activeSectionId === section.id;
+            return (
+              <a
+                key={section.id}
+                href={`#${section.id}`}
+                onClick={() => setActiveSectionId(section.id)}
+                aria-current={active ? "true" : undefined}
+                className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] ${
+                  active
+                    ? "border-[#BE185D] bg-[#BE185D] text-white"
+                    : "border-pink-200 bg-white text-pink-700 hover:bg-pink-50"
+                }`}
+              >
+                {section.label}
+              </a>
+            );
+          })}
         </nav>
       </div>
 
-      <div className="mx-auto max-w-3xl space-y-5 px-4 pt-5">
+      <div className="mx-auto max-w-6xl px-4 pt-5 sm:px-6 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-8 lg:px-8">
+        {/* 目次（lg 以上は左に固定） */}
+        <aside className="hidden lg:block">
+          <nav aria-label="セクション目次" className="sticky top-20 space-y-0.5">
+            {SECTION_NAV.map((section) => {
+              const active = activeSectionId === section.id;
+              return (
+                <a
+                  key={section.id}
+                  href={`#${section.id}`}
+                  onClick={() => setActiveSectionId(section.id)}
+                  aria-current={active ? "true" : undefined}
+                  className={`block rounded-lg px-3 py-2 text-sm font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] ${
+                    active ? "bg-[#BE185D] text-white" : "text-gray-700 hover:bg-pink-50"
+                  }`}
+                >
+                  {section.label}
+                </a>
+              );
+            })}
+          </nav>
+        </aside>
+
+      <div className="mx-auto w-full min-w-0 max-w-3xl space-y-5 lg:mx-0 lg:max-w-none">
+        {previewError ? (
+          <p role="alert" className={natoriAdminUi.alert.warning}>
+            プレビューを開けませんでした。入力内容を確認してください。
+          </p>
+        ) : null}
         <p className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-xs leading-5 text-sky-900">
           ここで編集した内容は、下の「保存する」ボタンを押すとすぐに公開ページ（
           /natori/portfolio ）に反映されます。保存するまでは公開されないので、安心して
@@ -280,7 +385,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
           id="section-status"
           emoji="🚪"
           title="受付状態"
-          description="コミッション全体と、量産イラストだけの受付状態をそれぞれ切り替えます。"
+          description="コミッション全体と、量産イラストだけの受付状態をそれぞれ切り替えます。切り替えたあと、下の「保存する」で公開ページに反映されます。"
         >
           <div className="space-y-5">
             <div>
@@ -290,7 +395,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
               </p>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { value: true, label: "● 受付中", active: "bg-emerald-500 text-white border-emerald-500" },
+                  { value: true, label: "● 受付中", active: "bg-emerald-700 text-white border-emerald-700" },
                   { value: false, label: "受付停止中", active: "bg-gray-700 text-white border-gray-700" },
                 ].map((choice) => (
                   <button
@@ -319,7 +424,7 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
                   {
                     value: true,
                     label: "● 量産イラスト受付中",
-                    active: "border-[#BE185D] bg-[#BE185D] text-white",
+                    active: "border-emerald-700 bg-emerald-700 text-white",
                   },
                   {
                     value: false,
@@ -1143,11 +1248,12 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
           />
         </SectionCard>
       </div>
+      </div>
 
       {/* 保存バー（画面下に固定） */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-pink-100 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-3 px-4 py-3">
-          <div className="min-w-0 text-xs font-bold">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
+          <div className="min-w-0 text-xs font-bold" aria-live="polite">
             {saveState === "saved" ? (
               <span className="text-emerald-600">
                 {isDemo
@@ -1155,11 +1261,15 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
                   : "保存しました！公開ページに反映されています。"}
               </span>
             ) : saveState === "error" ? (
-              <span className="text-red-600">保存に失敗しました。もう一度お試しください。</span>
+              <span className="text-red-600">
+                {saveErrorKind === "validation"
+                  ? "入力内容に保存できない値があります。空欄や形式を確認してください。"
+                  : "保存に失敗しました。もう一度お試しください。"}
+              </span>
             ) : dirty ? (
               <span className="text-amber-600">未保存の変更があります</span>
             ) : (
-              <span className="text-gray-400">変更はありません</span>
+              <span className="text-gray-600">変更はありません</span>
             )}
           </div>
           <button
