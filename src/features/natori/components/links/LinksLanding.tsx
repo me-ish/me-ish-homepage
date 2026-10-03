@@ -12,7 +12,7 @@ import type { NatoriLinkItem } from "@/features/natori/types/links";
 /* ------------------------------------------------------------------ */
 /*  アイコン（URLから既知サービスを判定）                                 */
 /* ------------------------------------------------------------------ */
-function LinkIcon({ link }: { link: NatoriLinkItem }) {
+export function LinkIcon({ link }: { link: NatoriLinkItem }) {
   const href = link.href.toLowerCase();
 
   if (href.includes("x.com") || href.includes("twitter.com")) {
