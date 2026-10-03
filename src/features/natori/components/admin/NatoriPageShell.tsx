@@ -25,7 +25,7 @@ export function NatoriPageShell({
   return (
     <div className={natoriAdminUi.page}>
       <NatoriAdminHeader current={current} right={headerRight} />
-      <main className={`${natoriAdminUi.container} ${natoriAdminUi.pageBody} pb-24 md:pb-6`}>
+      <main className={`${natoriAdminUi.container} ${natoriAdminUi.pageBody} pb-24 lg:pb-6`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className={natoriAdminUi.pageTitle}>{title}</h1>
@@ -35,7 +35,7 @@ export function NatoriPageShell({
         </div>
         {children}
       </main>
-      <footer className="border-t border-gray-200 pb-20 md:pb-0">
+      <footer className="border-t border-gray-200 pb-20 lg:pb-0">
         <p className={`${natoriAdminUi.container} py-4 text-xs text-gray-600`}>
           © {new Date().getFullYear()} Natori / me-ish. All rights reserved.
         </p>

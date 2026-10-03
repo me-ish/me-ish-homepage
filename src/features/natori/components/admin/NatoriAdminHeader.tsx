@@ -18,7 +18,7 @@ export function NatoriAdminHeader({ current, right }: NatoriAdminHeaderProps) {
         >
           Natori 管理
         </Link>
-        <nav aria-label="管理メニュー" className="hidden h-full items-stretch gap-1 md:flex">
+        <nav aria-label="管理メニュー" className="hidden h-full items-stretch gap-1 lg:flex">
           {NATORI_ADMIN_NAV.map((item) => {
             const active = item.key === current;
             return (
