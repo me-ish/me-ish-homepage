@@ -5,6 +5,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { AlertTriangle, CheckCircle2, Loader2, Plus, Trash2 } from "lucide-react";
+import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
+import { NatoriLoadError } from "@/features/natori/components/dashboard/NatoriLoadError";
 import QuoteAcceptCard from "@/features/natori/components/quote/QuoteAcceptCard";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { buildNatoriInquiryRequestView } from "@/features/natori/lib/inquiryRequestView";
@@ -270,8 +273,18 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
     finally { setBusy(false); }
   };
 
-  if (loading) return <p className="rounded-2xl bg-white p-6 text-sm">見積りの下書きを読み込んでいます…</p>;
-  if (error && !saved && !issued && /読み込めませんでした/.test(error)) return <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-800">{error}</p>;
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-3">
+        <p role="status" className={natoriAdminUi.caption}>見積りの下書きを読み込んでいます</p>
+        <NatoriSkeleton heightClassName="h-12" />
+        <NatoriSkeleton heightClassName="h-64" />
+      </div>
+    );
+  }
+  if (error && !saved && !issued && /読み込めませんでした/.test(error)) {
+    return <NatoriLoadError resourceLabel="見積りの下書き" error={error} onRetry={() => window.location.reload()} />;
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 pb-16">

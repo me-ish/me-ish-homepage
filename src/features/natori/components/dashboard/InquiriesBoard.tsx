@@ -6,6 +6,9 @@
 // 受付日・最終アクション・経過日数付きの一覧で見て、詳細パネルから
 // 見積もり / 支払い依頼メールの送信・入金確認・見送りまで行える。
 // データソースは案件管理と同じ natori_projects（別テーブルは持たない）。
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
+import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
+import { useOptionalNatoriToast } from "@/features/natori/components/admin/NatoriToast";
 import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Inbox } from "lucide-react";
@@ -119,6 +122,7 @@ type InquiriesBoardProps = {
 
 export default function InquiriesBoard({ demoProjects, demoArtistName }: InquiriesBoardProps) {
   const { confirm, confirmDialog } = useNatoriConfirm();
+  const { showToast } = useOptionalNatoriToast();
   const isDemo = Boolean(demoProjects);
   const [projects, setProjects] = useState<NatoriProject[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -263,6 +267,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
         )
       );
       closeDetail();
+      showToast("見送りにしました。");
       return;
     }
     setBusyId(project.id);
@@ -271,6 +276,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
       await closeNatoriProject(project.id, reason.trim());
       await reload();
       closeDetail();
+      showToast("見送りにしました。");
     } catch (err) {
       console.error("[InquiriesBoard] close failed", err);
       setError(err instanceof Error ? err.message : String(err));
@@ -345,6 +351,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
         )
       );
       closeDetail();
+      showToast("入金確認しました。ラフ工程に進みました。");
       return;
     }
     setBusyId(project.id);
@@ -353,6 +360,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
       await confirmNatoriProjectPayment(project.id, getNextActionForStatus("rough"));
       await reload();
       closeDetail();
+      showToast("入金確認しました。ラフ工程に進みました。");
     } catch (err) {
       console.error("[InquiriesBoard] confirm payment failed", err);
       setError(err instanceof Error ? err.message : String(err));
@@ -374,8 +382,11 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   if ((!projects && !selectedId) || !today) {
     return (
       <div className="space-y-3">
-        <div className="h-12 animate-pulse rounded-2xl bg-pink-50/60" />
-        <div className="h-64 animate-pulse rounded-2xl bg-pink-50/60" />
+        <p role="status" className={natoriAdminUi.caption}>
+          問い合わせを読み込んでいます
+        </p>
+        <NatoriSkeleton heightClassName="h-12" />
+        <NatoriSkeleton heightClassName="h-64" />
       </div>
     );
   }

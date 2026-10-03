@@ -4,6 +4,8 @@
 // /natori/portfolio の掲載内容をブラウザから編集する画面。
 // コードを触らずに、文章・料金・作品画像・SNSリンクをすべて変更できる。
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
+import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
+import { NatoriLoadError } from "@/features/natori/components/dashboard/NatoriLoadError";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Eye, ImagePlus, Loader2, Save } from "lucide-react";
@@ -182,20 +184,27 @@ export default function PortfolioEditor({ demoContent, publicHref }: PortfolioEd
   if (loadError) {
     return (
       <main className="grid min-h-screen place-items-center bg-pink-50/50 px-4">
-        <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
-          読み込みに失敗しました。ページを再読み込みしてください。
-        </p>
+        <div className="w-full max-w-md">
+          <NatoriLoadError
+            resourceLabel="ページ内容"
+            error="サーバーから内容を取得できませんでした。"
+            onRetry={() => window.location.reload()}
+          />
+        </div>
       </main>
     );
   }
 
   if (!content) {
     return (
-      <main className="grid min-h-screen place-items-center bg-pink-50/50">
-        <p className="flex items-center gap-2 text-sm font-bold text-gray-600">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          読み込み中…
-        </p>
+      <main className="grid min-h-screen place-items-center bg-pink-50/50 px-4">
+        <div className="w-full max-w-md space-y-3">
+          <p role="status" className={natoriAdminUi.caption}>
+            読み込んでいます
+          </p>
+          <NatoriSkeleton heightClassName="h-12" />
+          <NatoriSkeleton heightClassName="h-64" />
+        </div>
       </main>
     );
   }

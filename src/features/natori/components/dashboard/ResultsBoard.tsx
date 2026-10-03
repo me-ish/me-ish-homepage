@@ -1,5 +1,7 @@
 "use client";
 
+import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
+import { useOptionalNatoriToast } from "@/features/natori/components/admin/NatoriToast";
 import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -495,6 +497,7 @@ type ResultsBoardProps = {
 
 export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
   const { confirm, confirmDialog } = useNatoriConfirm();
+  const { showToast } = useOptionalNatoriToast();
   const isDemo = Boolean(demoProjects);
   const [projects, setProjects] = useState<NatoriProject[] | null>(null);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
@@ -603,11 +606,13 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
         })
       );
       setEditingId(null);
+      showToast("実績の変更を保存しました。");
       return;
     }
     await updateNatoriProjectDetails(projectId, patch);
     await reload();
     setEditingId(null);
+    showToast("実績の変更を保存しました。");
   };
 
   const handleDelete = async (project: NatoriProject) => {
@@ -620,6 +625,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
     if (!confirmed) return;
     if (isDemo) {
       setProjects((current) => (current ?? []).filter((entry) => entry.id !== project.id));
+      showToast("実績から削除しました。");
       return;
     }
     setDeletingId(project.id);
@@ -627,6 +633,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
     try {
       await deleteNatoriProject(project.id);
       await reload();
+      showToast("実績から削除しました。");
     } catch (err) {
       console.error("[ResultsBoard] delete failed", err);
       setListError(err instanceof Error ? err.message : String(err));
@@ -674,9 +681,11 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
   if (!summary || !cardSummary || !now) {
     return (
       <div className="space-y-3">
-        <div className="h-24 animate-pulse rounded-2xl bg-pink-50/60" />
-        <div className="h-48 animate-pulse rounded-2xl bg-pink-50/60" />
-        <div className="h-64 animate-pulse rounded-2xl bg-pink-50/60" />
+        <p role="status" className={natoriAdminUi.caption}>
+          実績を読み込んでいます
+        </p>
+        <NatoriSkeleton heightClassName="h-12" />
+        <NatoriSkeleton heightClassName="h-64" />
       </div>
     );
   }
@@ -943,6 +952,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
               anchor.download = `実績_${new Date().toISOString().slice(0, 10)}.csv`;
               anchor.click();
               URL.revokeObjectURL(url);
+              showToast(`${listItems.length}件をCSVで保存しました。`);
             }}
             disabled={listItems.length === 0}
             className="inline-flex h-8 items-center gap-1.5 rounded-full border border-pink-200 bg-white px-3 text-xs font-bold text-pink-700 hover:bg-pink-50 disabled:opacity-50"

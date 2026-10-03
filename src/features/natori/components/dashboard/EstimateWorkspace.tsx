@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import EstimateForm from "@/features/natori/components/dashboard/EstimateForm";
 import EstimateJourney from "@/features/natori/components/dashboard/EstimateJourney";
 import ExternalInquiryStarter from "@/features/natori/components/dashboard/ExternalInquiryStarter";
+import { NatoriLoadError } from "@/features/natori/components/dashboard/NatoriLoadError";
 import { fetchNatoriProjects } from "@/features/natori/data/supabaseProjects";
 import { resolveEstimateWorkspaceMode } from "@/features/natori/lib/estimateWorkspaceMode";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
@@ -61,26 +63,23 @@ export default function EstimateWorkspace() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-gray-200 bg-white">
-        <div className="flex items-center gap-2 text-sm font-bold text-gray-700">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          問い合わせを確認しています
-        </div>
+      <div className="space-y-3">
+        <p role="status" className={natoriAdminUi.caption}>
+          問い合わせを読み込んでいます
+        </p>
+        <NatoriSkeleton heightClassName="h-12" />
+        <NatoriSkeleton heightClassName="h-64" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
-        <div className="flex gap-3">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-700" aria-hidden />
-          <div>
-            <h2 className="font-bold text-red-900">問い合わせを読み込めませんでした</h2>
-            <p className="mt-1 text-sm text-red-800">{error}</p>
-          </div>
-        </div>
-      </div>
+      <NatoriLoadError
+        resourceLabel="問い合わせ"
+        error={error}
+        onRetry={() => window.location.reload()}
+      />
     );
   }
 
