@@ -17,6 +17,22 @@ for (const path of [
   copyFileSync(path, resolve(output, path));
   checksums[path] = createHash('sha256').update(readFileSync(path)).digest('hex');
 }
+// The isolated browser shell already excludes remote fonts. The shared source
+// CSS still imports Google Fonts, whose blocked child request rejects React's
+// local stylesheet preload with a raw Event during router.refresh/HMR.
+// Remove only this reviewed import from the disposable copy, retaining every
+// application CSS rule and recording both source and fixture checksums.
+const cssPath = 'src/app/globals.css';
+const sourceCss = readFileSync(resolve(output, cssPath), 'utf8');
+const fontImport = /^@import url\("https:\/\/fonts\.googleapis\.com\/css2\?[^"\r\n]+"\);[ \t]*\r?$/gm;
+if ([...sourceCss.matchAll(fontImport)].length !== 1) throw new Error('REVIEW_FONT_IMPORT_REQUIRED');
+const fixtureCss = sourceCss.replace(fontImport, '/* Isolated browser shell uses system fonts. */');
+if (/@import[^;]*https?:\/\//i.test(fixtureCss)) throw new Error('UNREVIEWED_REMOTE_CSS_IMPORT');
+writeFileSync(resolve(output, 'phase4-source-globals.css'), sourceCss);
+checksums['phase4-source-globals.css'] = createHash('sha256').update(sourceCss).digest('hex');
+writeFileSync(resolve(output, cssPath), fixtureCss);
+checksums[cssPath] = createHash('sha256').update(fixtureCss).digest('hex');
+console.log('Phase 4 browser shell: one remote font import excluded; application CSS preserved');
 // Keep Next development badges away from mobile controls during failure injection.
 // Production has no dev badge. Keep runtime/hydration checks; disable only the
 // development indicator in this disposable test shell, never in product config.

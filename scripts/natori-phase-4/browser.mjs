@@ -8,7 +8,7 @@ const require = createRequire('/app/package.json');
 const { createClient } = require('@supabase/supabase-js');
 const { chromium, expect } = require('@playwright/test');
 setDefaultResultOrder('ipv4first');
-const appOrigin = 'http://localhost:3000', results = [], browserProblems = new Set(), browserErrorDiagnostics = [];
+const appOrigin = 'http://localhost:3000', results = [], browserProblems = new Set(), browserErrorDiagnostics = [], resourceFailures = [], stylesheetResponses = [];
 const textOperation = body => ({ operationId: randomUUID(), requestHash: createHash('sha256').update(JSON.stringify({ body: body.trim(), files: [] })).digest('hex'), body: body.trim(), files: [] });
 const check = (ok, code) => { if (!ok) throw new Error(code); };
 let stage = 'preflight', checkpoint = 'START', server, browser, capture;
@@ -113,6 +113,18 @@ async function main() {
   if (!ready) { console.log(`Next startup: ${[...classifications].join(',')}`); throw new Error('NEXT_NOT_READY'); }
   browser = await chromium.launch({ headless: true, args: ['--host-resolver-rules=MAP localhost 127.0.0.1'] });
   const context = async () => { const c = await browser.newContext({ baseURL: appOrigin, serviceWorkers: 'block' }); c.setDefaultTimeout(15000); c.setDefaultNavigationTimeout(60000);
+    c.on('response', response => {
+      const u = new URL(response.url());
+      if (response.request().resourceType() === 'stylesheet' && u.origin === appOrigin) {
+        stylesheetResponses.push({ stage, status: response.status(), asset: u.pathname.endsWith('/app/layout.css') ? 'root-layout-css' : 'other-css' });
+      }
+    });
+    c.on('requestfailed', req => {
+      const u = new URL(req.url()), text = req.failure()?.errorText ?? '';
+      resourceFailures.push({ stage, resourceType: req.resourceType(), appOrigin: u.origin === appOrigin,
+        category: u.hostname === 'fonts.googleapis.com' ? 'google-font-stylesheet' : u.pathname.startsWith('/_next/') ? 'next-asset' : 'app',
+        errorCode: text.match(/net::ERR_[A-Z_]+/)?.[0] ?? 'request-failed' });
+    });
     c.on('page', page => {
       page.on('pageerror', error => {
         browserProblems.add('UNHANDLED_PAGE_ERROR');
@@ -291,11 +303,12 @@ async function main() {
     await expect(page.getByRole('button', { name: '案件情報を再取得', exact: true })).toHaveCount(0);
   });
   await test('no-unhandled-browser-or-hydration-errors', async () => {
+    check(stylesheetResponses.some(r => r.asset === 'root-layout-css') && stylesheetResponses.every(r => r.status >= 200 && r.status < 400), 'APPLICATION_CSS_NOT_LOADED');
     check(browserProblems.size === 0, 'BROWSER_RUNTIME_ERRORS');
   });
   console.log(`Phase 4 browser diagnostics: ${[...browserProblems].join(',') || 'none'}`);
   await client.close(); await manager.close();
-  const summary = { tests: results, passed: results.filter(r => r.status === 'passed').length, failed: results.filter(r => r.status === 'failed').length, skipped: 0, engine: 'Chromium 1.58.2; mobile viewport only, not iPhone Safari', providerRequests: providerCalls, browserProblems: [...browserProblems], browserErrorDiagnostics };
+  const summary = { tests: results, passed: results.filter(r => r.status === 'passed').length, failed: results.filter(r => r.status === 'failed').length, skipped: 0, engine: 'Chromium 1.58.2; mobile viewport only, not iPhone Safari', providerRequests: providerCalls, browserProblems: [...browserProblems], browserErrorDiagnostics, resourceFailures, stylesheetResponses };
   writeFileSync('/results/phase4-browser.json', JSON.stringify(summary, null, 2));
   console.log(`PHASE 4 ${summary.passed} passed / ${summary.failed} failed / 0 skipped`);
   check(results.length === 17 && summary.failed === 0, 'PHASE4_FAILED');
