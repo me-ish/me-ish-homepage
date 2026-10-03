@@ -4,12 +4,14 @@ import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types
 import PortfolioMobileNav from "./PortfolioMobileNav";
 import { fontEnStyle } from "./portfolioFonts";
 
+const CONTACT_NAV_LABEL = "相談・見積もり";
+
 const NAV_LINKS = [
   { href: "#gallery", label: "作品" },
   { href: "#pricing", label: "料金・ご依頼" },
   { href: "#flow", label: "制作の流れ" },
   { href: "#about", label: "プロフィール" },
-  { href: "/natori/portfolio/contact", label: "相談・見積もり" },
+  { href: "/natori/portfolio/contact", label: CONTACT_NAV_LABEL },
 ];
 
 const MOBILE_NAV_LINKS = [
@@ -54,7 +56,16 @@ export default function PortfolioHeader({
           style={{ color: c.textSoft }}
         >
           {navLinks.map((link) => (
-            <a key={link.href} href={link.href} className="pf-cute-focus hover:opacity-70">
+            <a
+              key={link.href}
+              href={link.href}
+              className={
+                link.label === CONTACT_NAV_LABEL
+                  ? "pf-cute-focus -my-1.5 rounded-full border-2 px-4 py-1.5 font-bold hover:opacity-70"
+                  : "pf-cute-focus hover:opacity-70"
+              }
+              style={link.label === CONTACT_NAV_LABEL ? { borderColor: c.action, color: c.text } : undefined}
+            >
               {link.label}
             </a>
           ))}
