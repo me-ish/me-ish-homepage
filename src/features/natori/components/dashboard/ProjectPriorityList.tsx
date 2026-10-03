@@ -13,7 +13,7 @@ type ProjectPriorityListProps = {
   onSelect: (project: NatoriPriorityCandidate) => void;
 };
 
-const rankClassMap = ["bg-pink-500", "bg-gray-700", "bg-gray-500"];
+const rankClassMap = ["bg-[#BE185D]", "bg-gray-700", "bg-gray-500"];
 
 export default function ProjectPriorityList({ suggestions, today, onSelect }: ProjectPriorityListProps) {
   const [open, setOpen] = useState(false);
