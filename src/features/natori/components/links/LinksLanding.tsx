@@ -5,7 +5,6 @@
 // page.tsx 経由で渡される。アイコンはリンク先URLから自動で決まり、
 // 判定できないものは表示名の頭文字を使う。
 import Image from "next/image";
-import { useEffect, useState } from "react";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import type { NatoriLinkItem } from "@/features/natori/types/links";
 
@@ -74,15 +73,6 @@ export default function LinksLanding({
   links: NatoriLinkItem[];
   profile?: LinksLandingProfile;
 }) {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const delay = mq.matches ? 0 : 80;
-    const t = setTimeout(() => setVisible(true), delay);
-    return () => clearTimeout(t);
-  }, []);
-
   return (
     <main
       className="relative min-h-svh overflow-x-hidden"
@@ -90,6 +80,18 @@ export default function LinksLanding({
         background: "linear-gradient(160deg, #fce4ec 0%, #f8bbd0 30%, #ffd6e7 60%, #ffe0f0 100%)",
       }}
     >
+      {/* 初期表示のフェードイン。JS に依存せず、SSR の時点で要素は表示される */}
+      <style>{`
+        @keyframes lnk-fade-up {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: none; }
+        }
+        .lnk-fade-up { animation: lnk-fade-up .5s ease-out both; }
+        @media (prefers-reduced-motion: reduce) {
+          .lnk-fade-up { animation: none; }
+        }
+      `}</style>
+
       {/* 背景の装飾円 */}
       <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
         <div
@@ -109,10 +111,7 @@ export default function LinksLanding({
       {/* コンテンツ */}
       <div className="relative z-10 mx-auto flex max-w-sm flex-col items-center px-5 py-14 pb-20">
         {/* ── アイコン ── */}
-        <div
-          className="transition-all duration-700"
-          style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(-16px)" }}
-        >
+        <div className="lnk-fade-up">
           <div
             className="relative h-28 w-28 overflow-hidden rounded-full shadow-xl ring-4 ring-white"
             style={{ boxShadow: "0 0 0 4px #ffffff, 0 8px 32px rgba(236,64,122,0.25)" }}
@@ -137,12 +136,9 @@ export default function LinksLanding({
         </div>
 
         {/* ── 名前 ── */}
-        <div
-          className="mt-4 text-center transition-all duration-700 delay-100"
-          style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(-10px)" }}
-        >
+        <div className="lnk-fade-up mt-4 text-center" style={{ animationDelay: "100ms" }}>
           <h1 className="text-2xl font-black tracking-wider text-pink-900/90">{profile.name}</h1>
-          <p className="mt-1 text-sm text-pink-700/70">{profile.role}</p>
+          <p className="mt-1 text-sm text-[#9D174D]">{profile.role}</p>
         </div>
 
         {/* ── リンク一覧 ── */}
@@ -150,20 +146,17 @@ export default function LinksLanding({
           {links.map((lk, i) => (
             <li
               key={lk.id}
-              className="transition-all duration-500"
-              style={{
-                opacity: visible ? 1 : 0,
-                transform: visible ? "translateY(0)" : "translateY(20px)",
-                transitionDelay: `${200 + i * 80}ms`,
-              }}
+              className="lnk-fade-up"
+              style={{ animationDelay: `${200 + i * 80}ms` }}
             >
               <a
                 href={lk.href}
                 target={lk.href.startsWith("/") ? undefined : "_blank"}
                 rel={lk.href.startsWith("/") ? undefined : "noopener noreferrer"}
                 onClick={() => trackNatoriPageEvent("links_click", lk.label)}
-                aria-label={`${lk.label} へ移動`}
-                className="group flex items-center gap-4 rounded-2xl px-5 py-4 shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+                className={`group flex items-center gap-4 rounded-2xl px-5 py-4 shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400${
+                  i === 0 ? " ring-2 ring-[#BE185D]" : ""
+                }`}
                 style={{
                   background: "#ffffff",
                   border: "1px solid #ffffff",
@@ -181,8 +174,16 @@ export default function LinksLanding({
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-bold text-pink-900/90">{lk.label}</div>
                   {lk.sub ? (
-                    <div className="truncate text-xs text-pink-500/80">{lk.sub}</div>
+                    <div className="truncate text-xs text-[#9D174D]">{lk.sub}</div>
                   ) : null}
+                  {i === 0 ? (
+                    <span className="mt-1 inline-block rounded-full bg-[#BE185D] px-2 text-xs font-bold text-white">
+                      おすすめ
+                    </span>
+                  ) : null}
+                  {lk.href.startsWith("/") ? null : (
+                    <span className="sr-only">（新しいタブで開きます）</span>
+                  )}
                 </div>
 
                 {/* 矢印 */}
@@ -205,8 +206,8 @@ export default function LinksLanding({
 
         {/* フッター */}
         <footer
-          className="mt-12 text-center text-xs text-pink-400/70 transition-all duration-700 delay-[800ms]"
-          style={{ opacity: visible ? 1 : 0 }}
+          className="lnk-fade-up mt-12 text-center text-xs text-[#9D174D]"
+          style={{ animationDelay: "800ms" }}
         >
           © {new Date().getFullYear()} {profile.copyright}. All rights reserved.
         </footer>
