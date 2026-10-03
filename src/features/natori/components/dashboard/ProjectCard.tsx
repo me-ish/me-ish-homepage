@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { staffConsultationHref } from "@/features/natori/lib/consultationOverview";
 import ConsultationStatus from "./ConsultationStatus";
 import { useState } from "react";
@@ -15,6 +15,7 @@ import {
   daysUntilDue,
   getAdvanceButtonLabel,
   getNextActionForStatus,
+  getNextStatus,
   getStageForStatus,
   isProjectOverdue,
 } from "@/features/natori/lib/projects";
@@ -103,6 +104,32 @@ export default function ProjectCard({
   const isRush = deliveryPlanMeta.isRush;
   const scheduling = computeProjectScheduling(project, today);
   const stagePlan = getCurrentStagePlan(project, today);
+
+  const remainingLine = (
+    <div className="flex items-center gap-2 text-xs sm:text-sm">
+      <Clock4 className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+      {project.dueDate === null ? (
+        <span className="min-w-0 font-bold">
+          納期未定。スケジュール負荷には含めません。
+        </span>
+      ) : scheduling.isBlocked ? (
+        <span className="min-w-0 font-bold">
+          着金・確認待ち中。残 {formatHours(scheduling.remainingHours)}
+        </span>
+      ) : (
+        <span className="min-w-0">
+          残り作業 <span className="font-black">{formatHours(scheduling.remainingHours)}</span>
+        </span>
+      )}
+    </div>
+  );
+  const remainingTone = scheduling.isBlocked
+    ? "border-gray-200 bg-gray-50 text-gray-700"
+    : scheduling.isOverdue
+      ? "border-red-200 bg-red-50 text-red-900"
+      : isRush
+        ? cn("border-transparent", deliveryPlanMeta.softClassName)
+        : "border-pink-100 bg-pink-50/50 text-pink-900";
 
   return (
     <Card
@@ -194,59 +221,25 @@ export default function ProjectCard({
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-2 text-sm text-gray-700 sm:grid-cols-3">
-          <div className="flex min-w-0 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
+        <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-gray-700">
+          <span className="inline-flex items-center gap-1">
             <CalendarDays className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
-            <span className="shrink-0 text-gray-500">納期</span>
-            <span className="min-w-0 break-words font-bold text-gray-900">
+            納期{" "}
+            <span className="font-bold text-gray-900">
               {formatNatoriProjectDueDate(project.dueDate, formatDueDate)}
             </span>
-          </div>
-          <div className="flex min-w-0 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
-            <CircleDollarSign className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
-            <span className="shrink-0 text-gray-500">金額</span>
-            <span className="min-w-0 break-words font-bold text-gray-900">
-              {formatNatoriProjectAmount(project.amount)}
-            </span>
-          </div>
-          <div className="flex min-w-0 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
-            <Tag className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
-            <span className="shrink-0 text-gray-500">種別</span>
-            <span className="min-w-0 break-words font-bold text-gray-900">
-              {NATORI_PROJECT_TYPE_LABELS[project.type]}
-            </span>
-          </div>
-        </div>
+          </span>
+          <span aria-hidden>·</span>
+          <span className="font-bold text-gray-900">
+            {formatNatoriProjectAmount(project.amount)}
+          </span>
+          <span aria-hidden>·</span>
+          <span className="font-bold text-gray-900">
+            {NATORI_PROJECT_TYPE_LABELS[project.type]}
+          </span>
+        </p>
 
         {project.paidAt != null || project.paymentConfirmedAt != null || project.paidAmount != null ? <RefundResultDetails project={project} /> : null}
-
-        <div
-          className={cn(
-            "flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs sm:text-sm",
-            scheduling.isBlocked
-              ? "border-gray-200 bg-gray-50 text-gray-700"
-              : scheduling.isOverdue
-              ? "border-red-200 bg-red-50 text-red-900"
-              : isRush
-              ? cn("border-transparent", deliveryPlanMeta.softClassName)
-              : "border-pink-100 bg-pink-50/50 text-pink-900"
-          )}
-        >
-          <Clock4 className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
-          {project.dueDate === null ? (
-            <span className="min-w-0 font-bold">
-              納期未定。スケジュール負荷には含めません。
-            </span>
-          ) : scheduling.isBlocked ? (
-            <span className="min-w-0 font-bold">
-              着金・確認待ち中。残 {formatHours(scheduling.remainingHours)}
-            </span>
-          ) : (
-            <span className="min-w-0">
-              残り作業 <span className="font-black">{formatHours(scheduling.remainingHours)}</span>
-            </span>
-          )}
-        </div>
 
         {stagePlan ? (
           <div
@@ -257,6 +250,7 @@ export default function ProjectCard({
                 : cn("border-transparent", natoriStageMeta[stagePlan.stage].softClassName)
             )}
           >
+            <div className="mb-2 border-b border-black/10 pb-2">{remainingLine}</div>
             <div className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-wide opacity-80">
               <span>現在のステージ</span>
               <span
@@ -287,7 +281,9 @@ export default function ProjectCard({
               {stagePlan.isOverdueMilestone ? "（過ぎてます）" : ""}
             </p>
           </div>
-        ) : null}
+        ) : (
+          <div className={cn("rounded-2xl border px-3 py-2", remainingTone)}>{remainingLine}</div>
+        )}
 
         {project.consultation !== undefined ? <div className="space-y-2 rounded-xl border border-pink-200 p-3">
           <ConsultationStatus project={project} />
@@ -298,51 +294,53 @@ export default function ProjectCard({
 
         <ProjectTaskChecklist project={project} onToggle={onToggleTask} />
 
-        {onOpenMail && (WORK_MAIL_STATUSES.has(project.status) || project.status === "completed") ? (
-          <div className="flex flex-wrap justify-end gap-2">
-            {WORK_MAIL_STATUSES.has(project.status) && <button
-              type="button"
-              onClick={() => onOpenMail(project, "rough")}
-              className="inline-flex h-8 items-center gap-1 rounded-full border border-amber-300 bg-white px-3 text-xs font-bold text-amber-700 hover:bg-amber-50"
-              title="ラフ確認ファイルのリンク入りメールを送ります"
-            >
-              <Mail className="h-3 w-3" aria-hidden />
-              ラフ提出メール
-            </button>}
-            <button
-              type="button"
-              onClick={() => onOpenMail(project, "delivery")}
-              className="inline-flex h-8 items-center gap-1 rounded-full border border-emerald-300 bg-white px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-50"
-              title="納品ページ（ダウンロード+受け取り確認）のリンク入りメールを送ります"
-            >
-              <Mail className="h-3 w-3" aria-hidden />
-              {project.status === "completed" ? "納品メールを再送" : "納品メール"}
-            </button>
-          </div>
-        ) : null}
-
-        {onEditDetails ? (
-          editing ? (
-            <ProjectEditForm
-              project={project}
-              onCancel={() => setEditing(false)}
-              onSave={async (patch) => {
-                await onEditDetails(project, patch);
-                setEditing(false);
-              }}
-            />
-          ) : (
-            <div className="flex justify-end">
+        {(onOpenMail && (WORK_MAIL_STATUSES.has(project.status) || project.status === "completed")) ||
+        (onEditDetails && !editing) ? (
+          <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-3">
+            {onOpenMail && WORK_MAIL_STATUSES.has(project.status) ? (
+              <button
+                type="button"
+                onClick={() => onOpenMail(project, "rough")}
+                className={natoriAdminUi.btnSecondary}
+                title="ラフ確認ファイルのリンク入りメールを送ります"
+              >
+                <Mail className="h-3.5 w-3.5" aria-hidden />
+                ラフ提出メール
+              </button>
+            ) : null}
+            {onOpenMail && (WORK_MAIL_STATUSES.has(project.status) || project.status === "completed") ? (
+              <button
+                type="button"
+                onClick={() => onOpenMail(project, "delivery")}
+                className={natoriAdminUi.btnSecondary}
+                title="納品ページ（ダウンロード+受け取り確認）のリンク入りメールを送ります"
+              >
+                <Mail className="h-3.5 w-3.5" aria-hidden />
+                {project.status === "completed" ? "納品メールを再送" : "納品メール"}
+              </button>
+            ) : null}
+            {onEditDetails && !editing ? (
               <button
                 type="button"
                 onClick={() => setEditing(true)}
-                className="inline-flex h-8 items-center gap-1 rounded-full border border-pink-200 bg-white px-3 text-xs font-bold text-pink-700 hover:bg-pink-50"
+                className={`${natoriAdminUi.btnSecondary} ml-auto`}
               >
-                <Pencil className="h-3 w-3" aria-hidden />
+                <Pencil className="h-3.5 w-3.5" aria-hidden />
                 編集
               </button>
-            </div>
-          )
+            ) : null}
+          </div>
+        ) : null}
+
+        {onEditDetails && editing ? (
+          <ProjectEditForm
+            project={project}
+            onCancel={() => setEditing(false)}
+            onSave={async (patch) => {
+              await onEditDetails(project, patch);
+              setEditing(false);
+            }}
+          />
         ) : null}
       </CardContent>
     </Card>
@@ -366,22 +364,27 @@ function ProjectAdvanceButton({
   const handler = isConfirmPayment ? onConfirmPayment : onAdvanceStatus;
   if (!handler) return null;
 
+  const nextStatus = getNextStatus(project.status);
+  const nextLabel = nextStatus !== project.status ? natoriProjectStatusMeta[nextStatus]?.label : null;
+
   return (
-    <button
-      type="button"
-      onClick={() => handler(project)}
-      disabled={busy}
-      className={cn(
-        "mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full px-4 text-xs font-bold shadow-sm transition sm:w-auto",
-        natoriPrimaryActionClassName
-      )}
-    >
-      {isConfirmPayment ? (
-        <Wallet className="h-3.5 w-3.5" aria-hidden />
-      ) : (
-        <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-      )}
-      {busy ? "更新中…" : label}
-    </button>
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={() => handler(project)}
+        disabled={busy}
+        className={`${natoriAdminUi.btnPrimary} w-full sm:w-auto`}
+      >
+        {isConfirmPayment ? (
+          <Wallet className="h-3.5 w-3.5" aria-hidden />
+        ) : (
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+        )}
+        {busy ? "更新中…" : label}
+      </button>
+      {nextLabel ? (
+        <p className={`mt-1 ${natoriAdminUi.caption}`}>押すと「{nextLabel}」になります</p>
+      ) : null}
+    </div>
   );
 }

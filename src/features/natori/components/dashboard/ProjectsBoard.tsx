@@ -38,13 +38,18 @@ import ProjectMonthCalendar from "./ProjectMonthCalendar";
 import ProjectDayDetail from "./ProjectDayDetail";
 import ProjectPriorityList from "./ProjectPriorityList";
 import ProjectCard from "./ProjectCard";
+import ProjectListView from "./ProjectListView";
 import ClosedProjectsSection from "./ClosedProjectsSection";
 import ArchivedProjectsSection from "./ArchivedProjectsSection";
 import ProjectRegisterForm from "./ProjectRegisterForm";
 import OrderMailPanel, { type OrderMailKind } from "./OrderMailPanel";
 import { NatoriLoadError } from "./NatoriLoadError";
+import { cn } from "@/lib/utils";
 
 type ViewMonth = { year: number; monthIndex: number };
+
+type BoardView = "calendar" | "list";
+const VIEW_STORAGE_KEY = "natori-projects-view";
 
 type DataSource = "loading" | "supabase" | "mock" | "error";
 
@@ -87,6 +92,7 @@ export default function ProjectsBoard({
   const [eventsBusy, setEventsBusy] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [advanceBusyId, setAdvanceBusyId] = useState<string | null>(null);
+  const [view, setView] = useState<BoardView>("calendar");
   const loadSequence = useRef(0);
   const taskSequence = useRef(0);
   const taskIntents = useRef(new Map<string, Map<string, TaskIntent>>());
@@ -158,6 +164,22 @@ export default function ProjectsBoard({
     setToday(now);
     setSelectedISO(toISODate(now));
     setViewMonth(getMonthFromDate(now));
+    // 表示切替は端末ごとの好みなので localStorage に残す。読めなければ既定（カレンダー）のまま。
+    try {
+      const saved = window.localStorage.getItem(VIEW_STORAGE_KEY);
+      if (saved === "calendar" || saved === "list") setView(saved);
+    } catch {
+      /* private mode などで使えない場合は既定のまま */
+    }
+  }, []);
+
+  const changeView = useCallback((next: BoardView) => {
+    setView(next);
+    try {
+      window.localStorage.setItem(VIEW_STORAGE_KEY, next);
+    } catch {
+      /* 保存できなくても表示は切り替わる */
+    }
   }, []);
 
   useEffect(() => {
@@ -650,7 +672,87 @@ export default function ProjectsBoard({
         </div>
       ) : null}
 
-      {undatedProjects.length > 0 ? (
+      {/* 表示切替（カレンダー / 一覧） */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div role="tablist" aria-label="案件の表示切替" className="flex gap-1.5">
+          {([
+            ["calendar", "カレンダー"],
+            ["list", "一覧"],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              id={`projects-view-tab-${key}`}
+              aria-selected={view === key}
+              aria-controls="projects-view-panel"
+              onClick={() => changeView(key)}
+              className={cn(
+                natoriAdminUi.chip,
+                view === key ? natoriAdminUi.chipOn : natoriAdminUi.chipOff
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div
+        id="projects-view-panel"
+        role="tabpanel"
+        aria-labelledby={`projects-view-tab-${view}`}
+        className="space-y-4 md:space-y-6"
+      >
+        {view === "calendar" ? (
+          <>
+      <ProjectMonthCalendar
+        year={viewMonth.year}
+        monthIndex={viewMonth.monthIndex}
+        projects={activeProjects}
+        events={events}
+        today={today}
+        selectedISO={selectedISO}
+        showReminders={!isDemo}
+        onSelect={handleSelectDate}
+        onPrevMonth={handlePrevMonth}
+        onNextMonth={handleNextMonth}
+      />
+
+      <ProjectDayDetail
+        selectedISO={selectedISO}
+        allProjects={activeProjects}
+        today={today}
+        onToggleTask={handleToggleTask}
+        onAdvanceStatus={handleAdvanceStatus}
+        onConfirmPayment={handleConfirmPayment}
+        onOpenMail={(project, kind) => setMailTarget({ project, kind })}
+        onEditDetails={handleEditDetails}
+        advanceBusyId={advanceBusyId}
+        events={events}
+        authed={authed}
+        eventsBusy={eventsBusy}
+        eventsError={eventsError}
+        onCreateEvent={handleCreateEvent}
+        onUpdateEvent={handleUpdateEvent}
+        onDeleteEvent={handleDeleteEvent}
+      />
+          </>
+        ) : (
+          <ProjectListView
+            projects={activeProjects}
+            today={today}
+            onToggleTask={handleToggleTask}
+            onAdvanceStatus={handleAdvanceStatus}
+            onConfirmPayment={handleConfirmPayment}
+            onOpenMail={(project, kind) => setMailTarget({ project, kind })}
+            onEditDetails={handleEditDetails}
+            advanceBusyId={advanceBusyId}
+          />
+        )}
+      </div>
+
+      {view === "calendar" && undatedProjects.length > 0 ? (
         <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex items-start gap-3">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gray-700 text-white">
@@ -684,38 +786,6 @@ export default function ProjectsBoard({
           </div>
         </section>
       ) : null}
-
-      <ProjectMonthCalendar
-        year={viewMonth.year}
-        monthIndex={viewMonth.monthIndex}
-        projects={activeProjects}
-        events={events}
-        today={today}
-        selectedISO={selectedISO}
-        showReminders={!isDemo}
-        onSelect={handleSelectDate}
-        onPrevMonth={handlePrevMonth}
-        onNextMonth={handleNextMonth}
-      />
-
-      <ProjectDayDetail
-        selectedISO={selectedISO}
-        allProjects={activeProjects}
-        today={today}
-        onToggleTask={handleToggleTask}
-        onAdvanceStatus={handleAdvanceStatus}
-        onConfirmPayment={handleConfirmPayment}
-        onOpenMail={(project, kind) => setMailTarget({ project, kind })}
-        onEditDetails={handleEditDetails}
-        advanceBusyId={advanceBusyId}
-        events={events}
-        authed={authed}
-        eventsBusy={eventsBusy}
-        eventsError={eventsError}
-        onCreateEvent={handleCreateEvent}
-        onUpdateEvent={handleUpdateEvent}
-        onDeleteEvent={handleDeleteEvent}
-      />
 
       <ClosedProjectsSection
         projects={closedProjects}

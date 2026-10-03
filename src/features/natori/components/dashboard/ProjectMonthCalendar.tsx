@@ -31,6 +31,26 @@ type ProjectMonthCalendarProps = {
   onNextMonth: () => void;
 };
 
+/** スマホ用: ラベルなしの高さ4pxの色線。長さと色だけで工程の流れを読む。 */
+function CompactBar({ cellBar }: { cellBar: NatoriCalendarCellBar | null }) {
+  if (!cellBar) {
+    return <span className="block h-1" aria-hidden />;
+  }
+  const stage = natoriStageMeta[cellBar.bar.stage];
+  const { isStart, isEnd, isOverdue } = cellBar;
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "block h-1",
+        isOverdue ? "bg-red-300" : stage.barClassName,
+        isStart && "rounded-l-full",
+        isEnd && "rounded-r-full"
+      )}
+    />
+  );
+}
+
 function BarSegment({ cellBar }: { cellBar: NatoriCalendarCellBar | null }) {
   if (!cellBar) {
     return <span className="block h-3 sm:h-4" aria-hidden />;
@@ -148,6 +168,21 @@ export default function ProjectMonthCalendar({
               : null;
           const cellReminders = showReminders && cell.inMonth ? getRemindersForDate(cell.iso) : [];
           const cellEvents = cell.inMonth ? eventsByDate.get(cell.iso) ?? [] : [];
+          const activeLaneCount = cell.lanes.filter(Boolean).length;
+          // スマホでは文字バッジの代わりに種類別の色ドット（最大4個）にする
+          const dotClassNames = [
+            ...cellReminders.map(() => "bg-amber-500"),
+            ...(topRushPlan
+              ? [
+                  rushDueProjects.some((project) => project.deliveryPlan === "rush_7_days")
+                    ? "bg-red-500"
+                    : "bg-orange-500",
+                ]
+              : []),
+            ...(deliveryEndCount > 0 ? ["bg-emerald-600"] : []),
+            ...(overdueCount > 0 ? ["bg-red-700"] : []),
+            ...(cellEvents.length > 0 ? ["bg-purple-500"] : []),
+          ].slice(0, 4);
 
           return (
             <button
@@ -155,7 +190,7 @@ export default function ProjectMonthCalendar({
               type="button"
               onClick={() => onSelect(cell.iso)}
               className={cn(
-                "relative flex min-h-[72px] flex-col items-stretch text-left transition sm:min-h-[104px]",
+                "relative flex min-h-[56px] flex-col items-stretch text-left transition sm:min-h-[104px]",
                 idx % 7 !== 0 && "border-l border-gray-200",
                 idx >= 7 && "border-t border-gray-200",
                 cell.inMonth ? "bg-white hover:bg-gray-50" : "bg-gray-50 text-gray-300",
@@ -166,7 +201,7 @@ export default function ProjectMonthCalendar({
                 cell.isToday && cell.inMonth && "bg-pink-50",
                 selected && "ring-1 ring-inset ring-gray-900"
               )}
-              aria-label={`${cell.iso} の案件を表示`}
+              aria-label={`${cell.iso} 稼働${activeLaneCount}件 納期${deliveryEndCount}件 予定${cellEvents.length}件`}
               aria-pressed={selected}
             >
               {/* 日付とバッジの行。高さを固定して、今日の丸やバッジの有無で
@@ -183,7 +218,12 @@ export default function ProjectMonthCalendar({
                 >
                   {cell.date.getDate()}
                 </span>
-                <span className="ml-1 flex items-center gap-1">
+                <span className="ml-1 flex items-center gap-0.5 sm:hidden" aria-hidden>
+                  {dotClassNames.map((className, dotIdx) => (
+                    <span key={dotIdx} className={cn("h-1.5 w-1.5 rounded-full", className)} />
+                  ))}
+                </span>
+                <span className="ml-1 hidden items-center gap-1 sm:flex">
                   {cellReminders.map((reminder) => (
                     <span
                       key={reminder.id}
@@ -234,7 +274,7 @@ export default function ProjectMonthCalendar({
 
               <div className="mt-0.5 flex flex-col gap-0.5 pb-0.5 sm:hidden">
                 {cell.lanes.slice(0, mobileLaneLimit).map((cellBar, laneIdx) => (
-                  <BarSegment key={laneIdx} cellBar={cellBar} />
+                  <CompactBar key={laneIdx} cellBar={cellBar} />
                 ))}
                 {totalLanes > mobileLaneLimit ? (
                   <span className="px-1 text-xs text-gray-500">+{totalLanes - mobileLaneLimit}</span>
