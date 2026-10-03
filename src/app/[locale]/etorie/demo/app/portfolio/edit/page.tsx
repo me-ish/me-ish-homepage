@@ -16,6 +16,7 @@ export default function Page() {
       <PortfolioEditor
         demoContent={demoPortfolioContent}
         publicHref="/etorie/demo/app/portfolio"
+        dashboardHref="/etorie/demo/app"
       />
     </DemoAppShell>
   );
