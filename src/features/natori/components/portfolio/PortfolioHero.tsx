@@ -47,10 +47,14 @@ export default function PortfolioHero({
         className={`grid items-center gap-6 md:gap-14 ${
           slides.length > 0
             ? "md:grid-cols-[minmax(0,0.9fr)_minmax(20rem,1.1fr)]"
-            : "max-w-2xl"
+            : "mx-auto max-w-2xl"
         }`}
       >
-        <div className="contents md:block md:min-w-0 md:max-w-xl">
+        <div
+          className={`contents md:block md:min-w-0 ${
+            slides.length > 0 ? "md:max-w-xl" : "md:col-span-2 md:text-center"
+          }`}
+        >
           <div className="order-1 min-w-0 md:order-none">
             <p
               className="mb-4 text-sm font-semibold uppercase tracking-[0.18em]"
@@ -77,12 +81,12 @@ export default function PortfolioHero({
 
           <div className="order-3 min-w-0 md:order-none">
             <p
-              className="mb-5 max-w-lg text-base leading-relaxed md:text-lg"
+              className={`mb-5 max-w-lg text-base leading-relaxed md:text-lg ${slides.length > 0 ? "" : "md:mx-auto"}`}
               style={{ color: c.textSoft }}
             >
               {content.heroDescription}
             </p>
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <div className={`flex flex-col gap-3 sm:flex-row sm:flex-wrap ${slides.length > 0 ? "" : "md:justify-center"}`}>
               {variant === "showcase" ? null : (
                 <PortfolioHeroPrimaryCta
                   href={contactPath}
