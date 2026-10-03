@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 function response(result: Awaited<ReturnType<typeof getEstimateDraft>>) {
   switch (result.kind) {
-    case "ok": return NextResponse.json({ ok: true, draft: result.draft });
+    case "ok": return NextResponse.json({ ok: true, draft: result.draft, editable: result.editable !== false });
     case "not-found": return NextResponse.json({ error: "not_found" }, { status: 404 });
     case "invalid-state": return NextResponse.json({ error: "invalid_state" }, { status: 409 });
     case "conflict": return NextResponse.json({ error: "draft_changed" }, { status: 409 });
@@ -37,7 +37,7 @@ export const PUT = withNatoriManagement("estimate-draft.PUT", true, async functi
   if (typeof input.projectId !== "string" || !Number.isSafeInteger(input.revision) || Number(input.revision) < 0) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
   }
-  const parsed = estimateDraftSchema.safeParse({ agreedTerms: input.agreedTerms, items: input.items });
+  const parsed = estimateDraftSchema.safeParse({ agreedTerms: input.agreedTerms, items: input.items, mailDraft: input.mailDraft });
   if (!parsed.success) return NextResponse.json({ error: "invalid_draft" }, { status: 400 });
   return response(await saveEstimateDraft(input.projectId, Number(input.revision), parsed.data));
 });

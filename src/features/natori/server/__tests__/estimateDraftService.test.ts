@@ -18,8 +18,8 @@ describe("estimate draft owner scope", () => {
   it("reads only an active project belonging to the acting owner", async () => {
     const projectQuery = { select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: { id: projectId, status: "inquiry", deleted_at: null }, error: null }) };
     projectQuery.select.mockReturnValue(projectQuery); projectQuery.eq.mockReturnValue(projectQuery);
-    const draftQuery = { select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) };
-    draftQuery.select.mockReturnValue(draftQuery); draftQuery.eq.mockReturnValue(draftQuery);
+    const draftQuery = { select: vi.fn(), eq: vi.fn(), returns: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) };
+    draftQuery.returns.mockReturnValue(draftQuery); draftQuery.select.mockReturnValue(draftQuery); draftQuery.eq.mockReturnValue(draftQuery);
     from.mockImplementation((table: string) => table === "natori_projects" ? projectQuery : draftQuery);
     expect(await getEstimateDraft(projectId)).toEqual({ kind: "ok", draft: null });
     expect(projectQuery.eq).toHaveBeenCalledWith("user_id", userId);
@@ -29,8 +29,12 @@ describe("estimate draft owner scope", () => {
   it("rejects writes once the project is in production", async () => {
     const query = { select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: { id: projectId, status: "rough", deleted_at: null }, error: null }) };
     query.select.mockReturnValue(query); query.eq.mockReturnValue(query);
-    from.mockReturnValue(query);
+    const draftQuery = { select: vi.fn(), eq: vi.fn(), returns: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) };
+    draftQuery.select.mockReturnValue(draftQuery); draftQuery.eq.mockReturnValue(draftQuery); draftQuery.returns.mockReturnValue(draftQuery);
+    from.mockImplementation((table: string) => table === "natori_projects" ? query : draftQuery);
+    expect(await getEstimateDraft(projectId)).toEqual({ kind: "ok", draft: null, editable: false });
+    from.mockClear();
     expect(await saveEstimateDraft(projectId, 0, { agreedTerms: {} as never, items: [] })).toEqual({ kind: "invalid-state" });
-    expect(from).toHaveBeenCalledTimes(1);
+    expect(from).toHaveBeenCalledTimes(2);
   });
 });

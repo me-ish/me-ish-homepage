@@ -1,3 +1,4 @@
+import { NATORI_INTAKE_COPY } from "@/features/natori/constants/portfolioContactCopy";
 import "server-only";
 
 // features/natori/server/portfolioContactService.ts
@@ -180,7 +181,9 @@ export async function sendPortfolioContactAutoReply(
     "イラストレーターのナトリです。",
     "",
     "以下の内容でご依頼を受け付けました。",
-    "内容を確認のうえ、2〜3日以内にお見積もりをご連絡いたします。",
+    NATORI_INTAKE_COPY.reply,
+    NATORI_INTAKE_COPY.next,
+    NATORI_INTAKE_COPY.notConfirmed,
     "",
     "──────────────",
     ...summaryRows.map(([label, value]) => `■ ${label}: ${value}`),
@@ -350,10 +353,7 @@ export async function sendStructuredPortfolioContactAutoReply(
 ): Promise<{ mailed: boolean }> {
   const request = input.requestData;
   const details = structuredDetailRows(request);
-  const nextStep =
-    request.inquiryMode === "quote"
-      ? "内容を確認のうえ、2〜3日以内にお見積もりをご連絡いたします。"
-      : "内容を確認のうえ、2〜3日以内にご相談のお返事をいたします。";
+  const nextStep = `${NATORI_INTAKE_COPY.reply}${NATORI_INTAKE_COPY.next}`;
 
   const text = [
     `${input.clientName} 様`,
@@ -363,6 +363,7 @@ export async function sendStructuredPortfolioContactAutoReply(
     "",
     "以下の内容で受け付けました。",
     nextStep,
+    NATORI_INTAKE_COPY.notConfirmed,
     "",
     "──────────────",
     ...structuredSummaryRows(input).map(([label, value]) => `■ ${label}: ${value}`),

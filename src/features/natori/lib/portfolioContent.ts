@@ -6,6 +6,7 @@ import {
   LEGACY_PORTFOLIO_PLAN_ID_BY_EXACT_NAME,
 } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import { isPortfolioWorkflowProjectionEligible } from "./portfolioWorkflow";
 
 const shortText = z.string().max(200);
 const longText = z.string().max(4000);
@@ -173,6 +174,8 @@ const portfolioContentBaseSchema = z.object({
   deliveryLead: longText,
   deliveryNotes: z.array(titleBodySchema).max(20),
   workflow: z.array(titleBodySchema).max(20),
+  // Retain only an explicit negative preference; supplied true/invalid values never grant projection.
+  workflowCompatibilityProjection: z.literal(false).optional().catch(undefined),
   requests: z.array(longText).max(20),
   socialLinks: z.array(socialLinkSchema).max(10),
   copyright: shortText,
@@ -271,9 +274,20 @@ function withCanonicalHeroImages(content: PortfolioContent): PortfolioContent {
 /** unknown な値（DB由来など）を検証して PortfolioContent に。失敗時は null */
 export function parsePortfolioContent(value: unknown): PortfolioContent | null {
   const result = portfolioContentSchema.safeParse(value);
-  return result.success
-    ? withCanonicalHeroImages(withNaturalNatoriHeroTitle(result.data))
-    : null;
+  if (!result.success) return null;
+  // Preserve an explicit negative preference, or raw ineligibility that normalization
+  // would otherwise erase. Distinct custom workflows keep their original shape.
+  const { workflowCompatibilityProjection, ...content } = result.data;
+  const rawContent = value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown> : null;
+  const suppressCompatibilityProjection = workflowCompatibilityProjection === false
+    || rawContent?.workflowProjectionAllowed === false
+    || (!isPortfolioWorkflowProjectionEligible(rawContent?.workflow)
+      && isPortfolioWorkflowProjectionEligible(content.workflow));
+  return withCanonicalHeroImages(withNaturalNatoriHeroTitle({
+    ...content,
+    ...(suppressCompatibilityProjection ? { workflowCompatibilityProjection: false as const } : {}),
+  }));
 }
 
 /**

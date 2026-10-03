@@ -2,8 +2,9 @@
 // 構造化ご依頼フォームの DOM テスト。label 関連付け、条件付き表示、
 // 二重 submit 防止、server field error 表示、送信 payload の形を固定する。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { webcrypto } from "node:crypto";
 
 const trackNatoriPageEvent = vi.hoisted(() => vi.fn());
 vi.mock("@/features/natori/data/pageEvents", () => ({ trackNatoriPageEvent }));
@@ -22,7 +23,7 @@ function renderForm(content: PortfolioContent = defaultPortfolioContent) {
 }
 
 function submittedForm(): FormData {
-  const init = fetchMock.mock.calls[0][1] as RequestInit;
+  const init = fetchMock.mock.calls.find(([, init]) => init.body instanceof FormData)![1] as RequestInit;
   return init.body as FormData;
 }
 
@@ -34,8 +35,10 @@ function submittedLinks(): Array<{ url: string; label: string }> {
   return JSON.parse(submittedForm().get("referenceLinks") as string);
 }
 
-function okResponse(body: Record<string, unknown> = { ok: true, autoReplied: true }) {
-  return { ok: true, status: 201, json: async () => body } as Response;
+function okResponse(body?: Record<string, unknown>) {
+  return { ok: true, status: 200, headers: new Headers(), json: async () => body ?? {
+    ok: true, accepted: true, operationState: "completed", receipt: submittedForm().get("operationId"),
+  } } as Response;
 }
 
 async function fillMinimum(message = "ご相談させてください。") {
@@ -60,10 +63,24 @@ function submit() {
   fireEvent.submit(formElement());
 }
 
+
+// The frozen recovery panel appears before hashing and HTTP completion.
+async function waitForIntakePostSettled(): Promise<void> {
+  await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init.body instanceof FormData)).toBe(true));
+  await waitFor(() => expect((screen.getByRole("button", { name: "受付結果を確認する" }) as HTMLButtonElement).disabled).toBe(false));
+}
+
 let objectUrlCounter = 0;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fetchMock.mockReset();
+  sessionStorage.clear();
+  vi.stubGlobal("crypto", webcrypto);
+  Object.defineProperty(File.prototype, "arrayBuffer", { configurable: true, value() {
+    return new Promise<ArrayBuffer>((resolve, reject) => { const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer); reader.onerror = () => reject(reader.error); reader.readAsArrayBuffer(this); });
+  } });
   objectUrlCounter = 0;
   fetchMock.mockResolvedValue(okResponse());
   vi.stubGlobal("fetch", fetchMock);
@@ -168,7 +185,7 @@ describe("最低入力と送信", () => {
     submit();
     submit();
     submit();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const button = screen.getByRole("button", { name: "送信中…" }) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
 
@@ -413,11 +430,12 @@ describe("オプション", () => {
     const detailedBackground = screen.getByRole("checkbox", { name: /しっかり背景/ });
     await userEvent.click(detailedBackground);
     expect(screen.queryByLabelText("数量")).toBeNull();
+    expect(screen.queryByLabelText("追加する表情の数")).toBeNull();
     expect(screen.getByLabelText("補足（任意）")).toBeTruthy();
 
     await userEvent.click(detailedBackground);
     await userEvent.click(screen.getByLabelText(/表情差分/));
-    expect(screen.getByLabelText("数量")).toBeTruthy();
+    expect(screen.getByLabelText("追加する表情の数")).toBeTruthy();
   });
 
   it("商用利用と公開可否は専用項目だけに表示する", () => {
@@ -432,7 +450,7 @@ describe("オプション", () => {
   it("stable ID・label snapshot・数量・補足を送る", async () => {
     renderForm();
     await userEvent.click(screen.getByLabelText(/表情差分/));
-    fireEvent.change(screen.getByLabelText("数量"), { target: { value: "3" } });
+    fireEvent.change(screen.getByLabelText("追加する表情の数"), { target: { value: "3" } });
     await userEvent.type(screen.getByLabelText("補足（任意）"), "笑顔と泣き顔");
 
     await fillMinimum();
@@ -501,7 +519,8 @@ describe("資料", () => {
     const big = new File([new Uint8Array(11 * 1024 * 1024)], "big.png", { type: "image/png" });
     fireEvent.change(input, { target: { files: [big] } });
 
-    expect(screen.getByText("1枚4MBまで（png / jpg / webp / gif）です。")).toBeTruthy();
+    expect(screen.getByText("1枚4MBまで（png / jpg / webp / gif）です。選択した1枚は追加していません。画像を減らすか、参考URLに共有リンクを貼ってください。")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "参考URL欄へ移動する" })).toBeTruthy();
     expect(screen.queryAllByRole("img")).toHaveLength(0);
   });
 });
@@ -543,111 +562,74 @@ describe("server error の表示", () => {
     expect((document.getElementById(targetId) as HTMLInputElement).required).toBe(true);
   });
 
-  it("サーバーのエラー一覧から閉じた該当欄へ戻れる", async () => {
-    fetchMock.mockResolvedValue({ ok: false, status: 400, json: async () => ({
-      error: "invalid_request", fields: [{ path: "requestData.deadline.note", message: "納期の補足をご確認ください" }],
-    }) } as Response);
-    renderForm();
-    await fillMinimum();
-    submit();
-    await waitFor(() => expect(document.activeElement?.id).toBe("pf-deadline-note"));
-    expect(detailsBySummary("資料").open).toBe(false);
-    await userEvent.click(detailsBySummary("予算・納期").querySelector("summary")!);
-    await userEvent.click(screen.getByRole("button", { name: "納期の補足をご確認ください" }));
-    expect(detailsBySummary("予算・納期").open).toBe(true);
-    expect(document.activeElement?.id).toBe("pf-deadline-note");
-  });
-
-  it("参考URLの空行を除いたサーバー添字を元の入力行へ戻す", async () => {
-    fetchMock.mockResolvedValue({ ok: false, status: 400, json: async () => ({
-      error: "invalid_request", fields: [{ path: "referenceLinks.0.url", message: "参考資料のURLをご確認ください" }],
-    }) } as Response);
-    renderForm();
-    await fillMinimum();
-    await userEvent.click(screen.getByRole("button", { name: "＋ 参考URLを追加" }));
-    fireEvent.change(screen.getByLabelText("参考URL 2"), { target: { value: "https://example.com/reference" } });
-    submit();
-    await waitFor(() => expect(document.activeElement?.id).toBe("pf-ref-url-1"));
-    expect(screen.getByLabelText("参考URL 2").getAttribute("aria-invalid")).toBe("true");
-  });
-
-  it("429のRetry-Afterが過ぎたら入力を保って再送できる", async () => {
-    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: "rate_limited" }), {
-      status: 429, headers: { "Retry-After": "2" },
-    }));
-    renderForm();
-    await fillMinimum();
-    await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
-    vi.useFakeTimers();
-    try {
-      await act(async () => submit());
-      expect(document.activeElement?.id).toBe("pf-submit-errors");
-      expect((screen.getByRole("button", { name: "再送まで 2秒" }) as HTMLButtonElement).disabled).toBe(true);
-      submit();
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      await act(async () => vi.advanceTimersByTime(2000));
-      expect((screen.getByRole("button", { name: "相談内容を送信する" }) as HTMLButtonElement).disabled).toBe(false);
-      expect((screen.getByLabelText(/ご相談・ご依頼の内容/) as HTMLTextAreaElement).value).toBe("ご相談させてください。");
-      await act(async () => submit());
-      expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(document.activeElement?.textContent).toBe("送信ありがとうございます!");
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("field error を該当項目のそばに出す", async () => {
-    fetchMock.mockResolvedValue({
-      ok: false,
-      status: 400,
-      json: async () => ({
-        ok: false,
-        error: "invalid_request",
-        fields: [
-          { path: "requestData.message", message: "依頼内容を入力してください" },
-          { path: "clientEmail", message: "メールアドレスの形式が不正です" },
-        ],
-      }),
-    } as Response);
-
-    renderForm();
-    await fillMinimum();
-    submit();
-
-    // field 直下の inline error と、最終セクションの一覧の両方に出る
-    await waitFor(() =>
-      expect(document.getElementById("pf-message-error")?.textContent).toBe(
-        "依頼内容を入力してください"
-      )
-    );
-    expect(document.getElementById("pf-email-error")?.textContent).toBe(
-      "メールアドレスの形式が不正です"
-    );
-    expect(screen.getAllByText("依頼内容を入力してください").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByLabelText(/ご相談・ご依頼の内容/).getAttribute("aria-describedby")).toBe(
-      "pf-message-error"
-    );
+  it("HTTPエラーだけでは未保存と決めず入力と受付IDを固定する", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: "invalid_request" }), { status: 400 }));
+    renderForm(); await fillMinimum(); submit();
+    await screen.findByRole("button", { name: "受付結果を確認する" });
+    await waitForIntakePostSettled();
+    expect((screen.getByLabelText(/お名前/) as HTMLInputElement).closest("fieldset")?.disabled).toBe(true);
+    await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init.body instanceof FormData)).toBe(true));
+    const operationId = submittedForm().get("operationId"); submit();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(sessionStorage.getItem("natori-intake-operation-v1")!).operationId).toBe(operationId);
     expect(screen.queryByText("送信ありがとうございます!")).toBeNull();
   });
 
-  it("通信失敗では一般的な error を出し、成功表示にしない", async () => {
+  it("照合・失敗fenceの確定後だけ入力を保持して編集へ戻る", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("{}", { status: 503 }));
+    renderForm(); await fillMinimum(); submit();
+    await screen.findByRole("button", { name: "受付結果を確認する" });
+    await waitForIntakePostSettled();
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ operationState: "not_found" }), { status: 409 }));
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ operationState: "failed" }), { status: 409 }));
+    await userEvent.click(screen.getByRole("button", { name: "受付結果を確認する" }));
+    await waitFor(() => expect(sessionStorage.getItem("natori-intake-operation-v1")).toBeNull());
+    await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => typeof init.body === "string" && JSON.parse(init.body).action === "settle")).toBe(true));
+    expect(JSON.parse(fetchMock.mock.calls[2][1].body).action).toBe("settle");
+    expect((screen.getByLabelText(/お名前/) as HTMLInputElement).closest("fieldset")?.disabled).toBe(false);
+    expect((screen.getByLabelText(/ご相談・ご依頼の内容/) as HTMLTextAreaElement).value).toBe("ご相談させてください。");
+  });
+
+  it("429と結果不明の再試行は新しいIDを作らず同じ内容を送る", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: "rate_limited" }), { status: 429, headers: { "Retry-After": "2" } }));
+    renderForm(); await fillMinimum(); submit();
+    await screen.findByRole("button", { name: "同じ内容で再試行する" });
+    await waitForIntakePostSettled();
+    const first = submittedForm();
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ operationState: "processing" }), { status: 202 }));
+    fetchMock.mockResolvedValueOnce(okResponse());
+    await userEvent.click(screen.getByRole("button", { name: "同じ内容で再試行する" }));
+    await screen.findByText("送信ありがとうございます!");
+    const retry = fetchMock.mock.calls.filter(([, init]) => init.body instanceof FormData)[1][1].body as FormData;
+    expect(retry.get("operationId")).toBe(first.get("operationId"));
+    expect(retry.get("requestHash")).toBe(first.get("requestHash"));
+    expect(retry.get("requestData")).toBe(first.get("requestData"));
+  });
+
+  it("再読み込みは保存した受付の照合だけで完了表示を復元する", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("response lost"));
+    const view = renderForm(); await fillMinimum(); submit();
+    await screen.findByRole("button", { name: "受付結果を確認する" });
+    await waitForIntakePostSettled();
+    await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init.body instanceof FormData)).toBe(true));
+    const operationId = submittedForm().get("operationId"); view.unmount(); fetchMock.mockClear();
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ accepted: true, operationState: "completed", receipt: operationId }), { status: 200 }));
+    renderForm(); await screen.findByText("送信ありがとうございます!");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ action: "reconcile", operationId });
+    expect(screen.getByText(/client@example.com/)).toBeTruthy();
+  });
+
+  it("通信失敗では受付を未保存扱いせず成功表示も出さない", async () => {
     fetchMock.mockRejectedValue(new Error("network down"));
-    renderForm();
-    await fillMinimum();
-    submit();
-
-    expect(
-      await screen.findByText(
-        "送信に失敗しました。時間をおいて再度お試しいただくか、SNSのDMからご連絡ください。"
-      )
-    ).toBeTruthy();
+    renderForm(); await fillMinimum(); submit();
+    await screen.findByRole("button", { name: "未保存を確認して編集に戻る" });
+    await waitForIntakePostSettled();
     expect(screen.queryByText("送信ありがとうございます!")).toBeNull();
-    expect(
-      trackNatoriPageEvent.mock.calls.some(
-        ([event]) => event === "portfolio_form_submit"
-      )
-    ).toBe(false);
+    expect(trackNatoriPageEvent.mock.calls.some(([event]) => event === "portfolio_form_submit")).toBe(false);
+    expect((screen.getByLabelText(/ご相談・ご依頼の内容/) as HTMLTextAreaElement).closest("fieldset")?.disabled).toBe(true);
   });
+
 });
 
 describe("アクセシビリティ / モバイル想定 DOM", () => {
@@ -666,8 +648,9 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     await userEvent.selectOptions(screen.getByLabelText(/作品の公開可否/), "fully_private");
     expect(screen.getByText(/ご依頼内容も非公開で対応します/)).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
-    expect(screen.getByText("商用利用：商用利用する")).toBeTruthy();
-    expect(screen.getByText("実績掲載：完全非公開")).toBeTruthy();
+    const confirmation = screen.getByRole("region", { name: "送信前の確認" });
+    expect(within(confirmation).getByText("商用利用する", { exact: true })).toBeTruthy();
+    expect(within(confirmation).getByText("完全非公開", { exact: true })).toBeTruthy();
   });
 
   it("相談と見積もりで残りの段階を示し、選択欄をコンパクトに表示する", async () => {
@@ -687,20 +670,23 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     expect(screen.getByRole("list", { name: "進行状況 2 / 3" }).querySelector('[aria-current="step"]')?.textContent).toBe("条件・連絡先");
   });
 
-  it("見積もりの条件を2画面目に表示し、別画面のエラーへ移動できる", async () => {
+  it("現在の資料エラーを次の画面へ持ち越さず、修正後は条件・連絡先のエラーへ移動する", async () => {
     renderForm();
     await userEvent.click(screen.getByLabelText("見積もりを希望"));
     fireEvent.change(screen.getByLabelText("参考URL 1"), { target: { value: "ftp://invalid.example" } });
-    expect(screen.getByLabelText("ご予算").closest("div[hidden]")).not.toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
+    await waitFor(() => expect(document.activeElement?.id).toBe("pf-ref-url-0"));
+    expect(screen.getByLabelText("参考URL 1").getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByRole("list", { name: "進行状況 1 / 3" })).toBeTruthy();
+    expect(screen.getByLabelText("ご予算").closest("div[hidden]")).not.toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("参考URL 1"), { target: { value: "https://example.com/reference" } });
+    await userEvent.click(screen.getByRole("button", { name: "条件・連絡先へ" }));
+    await waitFor(() => expect(document.activeElement?.textContent).toBe("ご希望の条件と連絡先"));
     expect(screen.getByLabelText("ご予算").closest("div[hidden]")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "内容を確認する" }));
     await waitFor(() => expect(document.activeElement?.id).toBe("pf-name"));
-    await userEvent.click(screen.getByRole("button", { name: /https:\/\/ で始まる URL を入力してください/ }));
-    await waitFor(() => expect(document.activeElement?.id).toBe("pf-ref-url-0"));
-    expect(document.getElementById("pf-ref-url-0")?.closest("div[hidden]")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: /お名前を1〜100文字で入力してください/ }));
-    await waitFor(() => expect(document.activeElement?.id).toBe("pf-name"));
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("ラジオを同じグループにし、法務案内は送信ボタンの前に置く", async () => {
@@ -862,8 +848,9 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     const submitButton = screen.getByRole("button", { name: "内容を確認する" });
     expect(submitButton.className).toContain("font-black");
     expect(submitButton.className).toContain("border-2");
-    expect(submitButton.style.background).toBe("rgb(236, 72, 153)");
-    expect(submitButton.style.borderColor).toBe("rgb(201, 75, 137)");
-    expect(submitButton.style.color).toBe("rgb(255, 255, 255)");
+    expect(submitButton.style.background).toBe("");
+    expect(submitButton.className).toContain("bg-[#BE185D]");
+    expect(submitButton.className).toContain("disabled:opacity-100");
+    expect(submitButton.className).toContain("focus-visible:outline-[#831843]");
   });
 });

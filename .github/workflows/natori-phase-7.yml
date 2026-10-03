@@ -1,0 +1,78 @@
+name: Natori Phase 7
+on:
+  pull_request:
+    branches: [main, 'codex/natori-phase-*']
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/natori-phase-7.yml'
+      - '.github/workflows/natori-phase-6b.yml'
+      - '.github/workflows/natori-phase-6a.yml'
+      - 'scripts/natori-phase-6a/**'
+      - 'scripts/natori-phase-6b/**'
+      - 'scripts/natori-phase-7/**'
+      - 'scripts/natori-phase-7/prepare-fonts.mjs'
+      - 'scripts/natori-phase-7/font-assets.json'
+      - 'scripts/natori-phase-7/font-responses.cjs'
+      - 'scripts/natori-phase-t/**'
+      - 'scripts/natori-phase-n/**'
+      - 'src/features/natori/**'
+      - 'src/app/api/natori/admin/projects/**'
+      - 'src/app/**/natori/**'
+      - 'src/app/api/webhook/stripe/**'
+      - 'src/types/supabase.ts'
+      - 'supabase/migrations/**'
+      - 'supabase/baseline/manifest.json'
+      - 'docs/natori/Natori_Phase_6A*'
+      - 'docs/natori/Natori_Phase_6B*'
+      - 'docs/natori/Natori_Phase_7*'
+      - '.node-version'
+      - 'package-lock.json'
+permissions:
+  contents: read
+concurrency:
+  group: natori-phase-7-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  tasks:
+    name: Improved screen captures and preserved original conditions with all prior regressions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      PHASE_T_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PHASE_N: '1'
+      PHASE_2A: '1'
+      PHASE_2B: '1'
+      PHASE_2C: '1'
+      PHASE_2D: '1'
+      PHASE_3A: '1'
+      PHASE_3B: '1'
+      PHASE_5: '1'
+      PHASE_6A: '1'
+      PHASE_6B: '1'
+      PHASE_7: '1'
+      PHASE7_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.node-version'
+          cache: npm
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify types, frozen baseline and product unit regressions
+        run: |
+          npx --no-install tsc --noEmit --incremental false
+          node scripts/etorie-baseline-static-check.mjs
+          npx --no-install vitest run
+      - name: Run mandatory isolated DB and browser races
+        run: bash scripts/natori-phase-t/run.sh
+      - name: Publish non-secret evidence only
+        if: always() && env.PHASE_T_RESULTS != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: natori-phase-7-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.PHASE_T_RESULTS }}/*
+          if-no-files-found: error
+          retention-days: 7

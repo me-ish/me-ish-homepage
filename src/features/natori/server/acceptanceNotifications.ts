@@ -28,14 +28,29 @@ export type NotificationSendResult =
 export type NotificationTransport = (payload: NotificationPayload, key: string) => Promise<NotificationSendResult>;
 
 export function buildAcceptanceNotificationPayload(job: Pick<NatoriNotificationRow, "payload" | "snapshot" | "purpose">): NotificationPayload {
-  if (job.purpose === "delivery_issue_client") {
+  if ((job.purpose === "delivery_issue_client" || job.purpose === "quote_issue_client" || job.purpose === "payment_link_client" || job.purpose === "consultation_staff" || job.purpose === "consultation_client")) {
     if (!job.payload) throw new Error("mail_configuration");
     return payloadSchema.parse(openDeliveryNotification(job.payload));
   }
-  // A retry never renders from current project values or current mail settings.
+  // A retry always uses the payload frozen by Phase N, including intake mail settings.
   if (job.payload) return payloadSchema.parse(job.payload);
+  if (job.purpose === "intake_artist" || job.purpose === "intake_client") {
+    const snapshot = z.object({ title: z.string(), clientName: z.string(), clientEmail: z.email(), receipt: z.uuid() }).parse(job.snapshot);
+    const recipient = process.env.NATORI_PORTFOLIO_CONTACT_TO?.trim();
+    const from = process.env.NATORI_ORDER_MAIL_FROM?.trim();
+    if (!recipient || !from) throw new Error("mail_configuration");
+    const client = job.purpose === "intake_client";
+    return payloadSchema.parse({ from, to: [client ? snapshot.clientEmail : recipient], reply_to: client ? recipient : snapshot.clientEmail,
+      subject: client ? "【受付完了】ご依頼を受け付けました" : `【ご依頼受付】${snapshot.clientName} 様 / ${snapshot.title}`,
+      text: [client ? `${snapshot.clientName} 様、ご依頼を受け付けました。` : "新しいご依頼を案件管理へ保存しました。",
+        `受付確認用: ${snapshot.receipt}`, `案件: ${snapshot.title}`, "",
+        client ? "内容を確認のうえ、2〜3日以内にご連絡いたします。確認メールが届かなくても再応募は不要です。" : "原回答と参考資料は案件管理でご確認ください。",
+        client ? `2〜3日を過ぎても連絡がない場合は ${recipient} へお問い合わせください。` : "https://www.me-ish.art/natori/projects",
+        client ? "このメールに返信してご連絡いただくこともできます。" : ""].join("\n"),
+      headers: { "X-Meish-Template": `natori-${job.purpose}` } });
+  }
   const snapshot = z.object({
-    title: z.string(), clientName: z.string(), amount: z.number().optional(), clientEmail: z.string().nullable().optional(),
+    title: z.string(), clientName: z.string(), refundId: z.string().optional(), providerStatus: z.string().optional(), currency: z.string().optional(), reviewReason: z.string().optional(), sessionId: z.string().optional(), amount: z.number().optional(), clientEmail: z.string().nullable().optional(),
   }).parse(job.snapshot);
   const recipient = process.env.NATORI_PORTFOLIO_CONTACT_TO?.trim();
   const from = process.env.NATORI_ORDER_MAIL_FROM?.trim();
@@ -60,6 +75,25 @@ export function buildAcceptanceNotificationPayload(job: Pick<NatoriNotificationR
     subject = mail.subject;
     text = mail.body;
     to = snapshot.clientEmail ?? "";
+  } else if (job.purpose === "payment_received_artist" || job.purpose === "payment_received_client") {
+    if (!Number.isSafeInteger(snapshot.amount)) throw new Error("mail_configuration");
+    subject = `【入金確認】${snapshot.clientName} 様 / ${snapshot.title}`;
+    text = ["入金を確認しました。", "", `案件: ${snapshot.title}`, `金額: ${formatYen(snapshot.amount!)}`,
+      job.purpose === "payment_received_client" ? "次の確認事項は担当者からご案内します。ご不明な点はこのメールへご返信ください。" : "案件管理で次の作業と合意済みの予定を確認してください。"].join("\n");
+    if (job.purpose === "payment_received_client") to = snapshot.clientEmail ?? "";
+  } else if (job.purpose === "refund_confirmed_artist" || job.purpose === "refund_review_artist") {
+    subject = `【返金${job.purpose === "refund_confirmed_artist" ? "記録" : "の要確認"}】${snapshot.clientName} 様 / ${snapshot.title}`;
+    text = ["Stripeの返金記録を保存しました。案件の進行状態と納品承認は保持されています。", "",
+      `案件: ${snapshot.title}`, `返金ID: ${snapshot.refundId ?? "要照合"}`, `状態: ${snapshot.providerStatus ?? "要確認"}`,
+      Number.isSafeInteger(snapshot.amount) ? `返金額: ${snapshot.currency?.toUpperCase() ?? "通貨要確認"} ${snapshot.amount}` : "返金額は要照合です。",
+      job.purpose === "refund_review_artist" ? `確認理由: ${snapshot.reviewReason ?? "refund_review"}` : "確定返金額を純入金額に反映しています。",
+      "必要な対応はStripeの記録と元の入金を確認して判断してください。"].join("\n");
+  } else if (job.purpose === "payment_review_artist") {
+    subject = `【入金の要確認】${snapshot.clientName} 様 / ${snapshot.title}`;
+    text = ["入金イベントを要確認として保存しました。自動で制作を再開したり返金したりはしていません。", "",
+      `案件: ${snapshot.title}`, `確認項目: ${snapshot.reviewReason ?? "payment_review"}`,
+      Number.isSafeInteger(snapshot.amount) ? `金額: ${formatYen(snapshot.amount!)}` : "金額は要照合です。",
+      "Stripeの取引と案件管理の記録を照合してください。"].join("\n");
   } else throw new Error("mail_configuration");
   return payloadSchema.parse({ from, to: [to], ...(bcc ? { bcc: [bcc] } : {}), reply_to: recipient,
     subject, text, headers: { "X-Meish-Template": `natori-${job.purpose}` } });
@@ -96,10 +130,16 @@ export async function dispatchAcceptanceNotification(
   if (!notificationSendingEnabled()) return;
   const admin = supabaseAdmin();
   const claimToken = randomUUID();
+  let paymentMailProject: string | null = null;
   try {
     const claim = await admin.rpc("natori_notification_claim_v1", { p_id: id, p_claim_token: claimToken, p_manual: manual });
     const job = claim.data?.[0];
     if (claim.error || !job) return;
+    if(job.purpose === "payment_link_client"){
+      paymentMailProject=job.project_id;
+      const {paymentLinkMailGate}=await import("./paymentLinkService");
+      if(!await paymentLinkMailGate(paymentMailProject,id,claimToken))return;
+    }
     let payload: NotificationPayload;
     try { payload = buildAcceptanceNotificationPayload(job); }
     catch {
@@ -109,7 +149,7 @@ export async function dispatchAcceptanceNotification(
       return;
     }
     const started = await admin.rpc("natori_notification_start_v1", { p_id: id, p_claim_token: claimToken,
-      p_payload: job.purpose === "delivery_issue_client" ? job.payload! : payload });
+      p_payload: (job.purpose === "delivery_issue_client" || job.purpose === "quote_issue_client" || job.purpose === "payment_link_client" || job.purpose === "consultation_staff" || job.purpose === "consultation_client") ? job.payload! : payload });
     const active = started.data?.[0];
     if (started.error || !active?.lease_expires_at || !active.send_started_at) return;
     if (Date.parse(active.lease_expires_at) <= Date.now() + 15000 || Date.parse(active.send_started_at) <= Date.now() - 23 * 3600000) return;
@@ -125,6 +165,8 @@ export async function dispatchAcceptanceNotification(
   } catch {
     // Lease expiry permits SAME key/payload recovery. No raw error contains an address, body or token.
     console.error("[natori-notification] attempt_interrupted");
+  } finally {
+    if(paymentMailProject)try{const {paymentLinkMailGate}=await import("./paymentLinkService");await paymentLinkMailGate(paymentMailProject,id,claimToken,true);}catch{/* Lease expiry retains recovery without sending invalid links. */}
   }
 }
 

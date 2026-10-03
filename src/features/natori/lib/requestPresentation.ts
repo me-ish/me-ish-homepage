@@ -76,8 +76,7 @@ export const NATORI_PUBLICATION_POLICY_LABELS_V1: Readonly<
 export function describeNatoriPublicationPolicy(data: NatoriRequestDataV1): string {
   const label = NATORI_PUBLICATION_POLICY_LABELS_V1[data.publicationPolicy];
   if (data.publicationPolicy !== "delayed" || !data.publicationAllowedFrom) return label;
-  const [year, month, day] = data.publicationAllowedFrom.split("-").map(Number);
-  return `${label}（${year}年${month}月${day}日から）`;
+  return `${label}（${formatNatoriRequestDate(data.publicationAllowedFrom)}から）`;
 }
 
 export const NATORI_INQUIRY_MODE_LABELS_V1: Readonly<
@@ -139,6 +138,12 @@ export function describeNatoriBudget(budget: NatoriBudgetV1): string {
   }
 }
 
+/** Format a date without converting its day through the device timezone. */
+export function formatNatoriRequestDate(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(value);
+  return match ? `${Number(match[1])}年${Number(match[2])}月${Number(match[3])}日` : value;
+}
+
 export function describeNatoriDeadline(deadline: NatoriDeadlineV1): string {
   const base = (() => {
     switch (deadline.kind) {
@@ -147,9 +152,11 @@ export function describeNatoriDeadline(deadline: NatoriDeadlineV1): string {
       case "standard":
         return "通常納期";
       case "preferred_date":
-        return `${deadline.date} 希望`;
+        return `${formatNatoriRequestDate(deadline.date)} 希望`;
       case "rush_consultation":
-        return deadline.date ? `お急ぎ希望（${deadline.date}）` : "お急ぎ希望";
+        return deadline.date
+          ? `${NATORI_DEADLINE_KIND_LABELS_V1.rush_consultation}（${formatNatoriRequestDate(deadline.date)} 希望）`
+          : NATORI_DEADLINE_KIND_LABELS_V1.rush_consultation;
     }
   })();
   return deadline.note ? `${base} / ${deadline.note}` : base;

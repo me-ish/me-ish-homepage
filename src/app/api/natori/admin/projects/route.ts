@@ -134,29 +134,21 @@ export const PATCH = withNatoriManagement("projects.PATCH", true, async function
 
   if (kind === "task") {
     const taskKey = readString(payload.taskKey);
-    const done = payload.done;
-    const status = readString(payload.status);
-    const nextAction = readString(payload.nextAction) ?? "";
-    if (!taskKey || typeof done !== "boolean" || !status || !NATORI_PROJECT_STATUSES.has(status)) {
-      return NextResponse.json(
-        { error: "taskKey, done and a valid status are required" },
-        { status: 400 }
-      );
+    if (!taskKey || taskKey.length > 200 || typeof payload.done !== "boolean" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
+      return NextResponse.json({ error: "taskKey, projectId and done are required" }, { status: 400 });
     }
-    const result = await setNatoriProjectTaskDone(
-      projectId,
-      taskKey,
-      done,
-      status,
-      nextAction
-    );
+    // Old clients may include status/nextAction. They are ignored, never trusted.
+    const result = await setNatoriProjectTaskDone(projectId, taskKey, payload.done);
     switch (result.kind) {
       case "db-error":
-        return NextResponse.json({ error: "Failed to update task" }, { status: 500 });
+        return NextResponse.json({ error: "Task update is unavailable" }, { status: 503 });
       case "not-found":
         return NextResponse.json({ error: "Task not found" }, { status: 404 });
+      case "conflict":
+        return NextResponse.json({ error: "task_conflict", project: result.project }, { status: 409 });
       case "ok":
-        return NextResponse.json({ ok: true });
+        return NextResponse.json({ ok: true, project: result.project }, { headers: { "Cache-Control": "no-store" } });
     }
   }
 
@@ -310,6 +302,8 @@ export const DELETE = withNatoriManagement("projects.DELETE", true, async functi
 
   const result = await deleteNatoriAdminProject(id);
   switch (result.kind) {
+    case "unresolved-payment-link":
+      return NextResponse.json({error:"未解決の支払リンクがあるか、案件が終了していません。終了と停止確認後にアーカイブしてください。"},{status:409});
     case "db-error":
       return NextResponse.json({ error: "Failed to delete project" }, { status: 500 });
     case "not-found":

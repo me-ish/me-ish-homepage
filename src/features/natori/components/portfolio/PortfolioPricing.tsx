@@ -4,6 +4,7 @@
 // コミッション料金。通常プランはスマホでも説明を確認しつつ比較しやすい密度で表示し、
 // CTA からフォームへスクロールしつつ依頼種別 / 制作範囲を自動で合わせる。
 import { PORTFOLIO_OPTION_IDS, planChoiceLabel, portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import { natoriPrimaryActionColors } from "@/features/natori/constants/natoriPrimaryAction";
 import { NATORI_MASS_PRODUCTION_BASE_AMOUNT } from "@/features/natori/constants/portfolioPricing";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import { NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE } from "@/features/natori/lib/portfolioRequestForm";
@@ -232,7 +233,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
             href={`${contactPath}?mode=quote&plan=${NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE}${structuredIntake ? "&structured=1" : ""}`}
             onClick={() => trackPlan("量産イラスト")}
             className="pf-cute-focus mt-3 block shrink-0 rounded-full border-2 px-5 py-2.5 text-center text-sm font-bold sm:mt-0"
-            style={{ borderColor: c.actionDisplay, color: c.actionDisplay }}
+            style={{ borderColor: c.actionDisplay, color: natoriPrimaryActionColors.normal.background }}
           >
             このプランで相談
           </a>

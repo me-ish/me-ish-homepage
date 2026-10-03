@@ -3,7 +3,9 @@
 // features/natori/components/quote/QuoteAcceptCard.tsx
 // 見積もり承諾ページの本体。最終確認事項と規約確認を表示し、
 // 「この内容で依頼を確定する」の POST で契約承諾を確定する。
+import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import Link from "next/link";
+import type { NatoriPaymentOverview } from "@/features/natori/types/payment";
 import { useState } from "react";
 import { formatYen } from "@/features/natori/lib/pricing";
 import { legacyNatoriTransactionColors as c } from "@/features/natori/constants/portfolioContent";
@@ -11,6 +13,7 @@ import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { formatQuoteDate, type NatoriQuoteTerms } from "@/features/natori/lib/quoteTerms";
 
 type Props = {
+  payment?: NatoriPaymentOverview;
   token: string;
   title: string;
   clientName: string;
@@ -19,6 +22,7 @@ type Props = {
   expiresAt: string;
   terms?: NatoriQuoteTerms | null;
   preview?: boolean;
+  version?: number;
   items?: { label: string; quantity: number; amount: number }[];
 };
 
@@ -38,6 +42,14 @@ function formatDate(iso: string): string {
   return `${value("year")}年${value("month")}月${value("day")}日`;
 }
 
+function formatPaymentDeadline(iso: string): string {
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return "期限を確認できません。担当者にお問い合わせください。";
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo", dateStyle: "medium", timeStyle: "short",
+  }).format(date) + "（日本時間）";
+}
+
 export default function QuoteAcceptCard({
   token,
   title,
@@ -48,6 +60,8 @@ export default function QuoteAcceptCard({
   terms,
   preview = false,
   items = [],
+  version,
+  payment,
 }: Props) {
   const [status, setStatus] = useState<Status>(acceptedAt ? "accepted" : "idle");
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -74,6 +88,7 @@ export default function QuoteAcceptCard({
       className="rounded-2xl p-6 md:p-8"
       style={{ background: c.card, boxShadow: "0 10px 22px rgba(45,42,61,0.10)" }}
     >
+      {version ? <p className="mb-2 text-xs font-bold">正式見積り 第{version}版</p> : null}
       <p className="mb-4 text-sm" style={{ color: c.inkSoft }}>
         {clientName} 様
       </p>
@@ -124,11 +139,23 @@ export default function QuoteAcceptCard({
             </dd>
           </div>
           <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
-            <dt style={{ color: c.inkSoft }}>お支払い期限</dt>
+            <dt style={{ color: c.inkSoft }}>{payment?.linkState ? status === "accepted" ? "承諾時のお支払条件" : "お見積りの支払条件" : "お支払い期限"}</dt>
             <dd className="font-bold sm:text-right">
               {terms ? "お支払いのご案内メールをお送りしてから7日以内" : "支払い案内メール送信日から7日以内"}
             </dd>
           </div>
+          {payment?.linkState ? (
+            <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
+              <dt style={{ color: c.inkSoft }}>現在の支払期限</dt>
+              <dd className="font-bold sm:text-right">
+                {payment.linkDeadline ? formatPaymentDeadline(payment.linkDeadline) : "お支払案内の発行後に確定します"}
+                <span className="mt-1 block text-xs font-normal">
+                  上記はお見積り発行時の条件です。現在の期限はこの欄でご確認ください。
+                  再通知では期限は延長されません。担当者が期限を延長した場合は、この欄に反映します。
+                </span>
+              </dd>
+            </div>
+          ) : null}
           {terms ? (
             <div className="grid gap-1 sm:grid-cols-[7rem_1fr] sm:gap-4">
               <dt style={{ color: c.inkSoft }}>納品日</dt>
@@ -168,7 +195,16 @@ export default function QuoteAcceptCard({
           <p className="mb-1 font-bold">ご依頼の確定ありがとうございます!</p>
           <p className="text-sm" style={{ color: c.inkSoft }}>
             {acceptedAt ? `${formatDate(acceptedAt)}にご承諾いただいています。` : ""}
-            お支払いのご案内をメールでお送りしますので、今しばらくお待ちください。
+            {payment?.available === false ? "入金状況を確認できませんでした。再読み込みするか、担当者へメールでお問い合わせください。"
+              : payment?.confirmedAt ? "入金確認済みです。支払案内をお待ちいただく必要はありません。次の確認事項は担当者からご案内します。"
+              : payment?.requiresReview ? "お支払いの記録を担当者が照合しています。追加のお支払いはせず、メールでお問い合わせください。"
+              : payment?.linkState === "terminal" ? "この案件は終了しています。新しいお支払いはせず、元のメールへの返信で担当者にお問い合わせください。"
+              : ["inactive","stop_required","deactivating"].includes(payment?.linkState ?? "") ? "お支払いリンクは停止済み、または停止確認中です。新しいご案内が必要な場合は元のメールへご返信ください。"
+              : payment?.linkState === "active" ? "お支払い案内をご確認ください。再通知で支払期限は延長されません。すでにお支払い済みの場合は追加のお支払いをせず、担当者へお問い合わせください。"
+              : payment?.linkState === "creating" ? "お支払い案内の発行結果を確認中です。案内が届くまでお待ちください。お問い合わせは元のメールへの返信でご連絡ください。"
+              : payment?.processing ? "入金の確認処理中です。追加のお支払いはせず、再読み込みして状況をご確認ください。"
+              : "お支払いのご案内をメールでお送りしますので、今しばらくお待ちください。"}
+            {payment?.confirmedAt && payment.requiresReview ? <span className="mt-2 block font-bold">お支払いの記録に確認が必要な項目があります。追加のお支払いはせず、担当者へメールでお問い合わせください。</span> : null}
           </p>
         </div>
       ) : (
@@ -215,8 +251,7 @@ export default function QuoteAcceptCard({
             type="button"
             onClick={handleAccept}
             disabled={status === "sending" || !termsAccepted}
-            className="w-full rounded-full py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ background: c.pink }}
+            className={`${natoriPrimaryActionClassName} w-full rounded-full py-3 font-bold`}
           >
             {status === "sending" ? "送信中…" : "この内容で依頼を確定する"}
           </button>

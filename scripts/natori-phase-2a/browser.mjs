@@ -1,0 +1,79 @@
+import {readFileSync,writeFileSync} from 'node:fs';
+import {randomBytes,randomUUID} from 'node:crypto';
+import {spawn} from 'node:child_process';
+import {createRequire} from 'node:module';
+import {setDefaultResultOrder} from 'node:dns';
+const require=createRequire('/app/package.json'),{createClient}=require('@supabase/supabase-js'),{chromium,expect}=require('@playwright/test');
+setDefaultResultOrder('ipv4first');
+const results=[],check=(ok,code)=>{if(!ok)throw new Error(code);};let stage='preflight',server,browser;
+async function test(name,fn){stage=name;try{await fn();results.push({name,status:'passed'});console.log(`PASS phase2a-browser/${name}`);}catch(e){results.push({name,status:'failed',code:/^[A-Z_0-9]+$/.test(e?.message??'')?e.message:'ASSERTION_FAILED'});console.log(`FAIL phase2a-browser/${name}`);}}
+async function main(){
+ check(process.env.PHASE_N_BROWSER==='ephemeral','EPHEMERAL_REQUIRED');const {origin}=JSON.parse(readFileSync('/runtime/network.json','utf8'));
+ check(/^http:\/\/172\.30\.250\.\d+:8000$/.test(origin),'DESTINATION_REJECTED');const keys=JSON.parse(readFileSync('/runtime/credentials.json','utf8'));
+ const admin=createClient(origin,keys.service,{auth:{persistSession:false,autoRefreshToken:false}}),password=randomBytes(32).toString('hex'),email='phase2a-owner@phase0b-browser.invalid';
+ const auth=await admin.auth.admin.createUser({email,password,email_confirm:true});check(!auth.error&&auth.data.user,'AUTH_FIXTURE');const owner=auth.data.user.id;
+ const project=await admin.from('natori_projects').insert({user_id:owner,title:'Browser quote',client_name:'Synthetic',client_email:'client@phase2a.invalid',type:'illustration',status:'inquiry',request_data:null}).select('id').single();check(!project.error&&project.data,'PROJECT_FIXTURE');const id=project.data.id;
+ const terms={scope:'bust_up',scopeNote:'',deliverables:'PNG',usage:'Personal',commercialUse:'no',publication:'Allowed',dueDate:'2099-10-01',memo:''};
+ const item={id:'manual',presetItemId:null,kind:'manual',labelSnapshot:'Drawing',quantity:1,unitAmount:12000,amount:12000,automatic:false,sourceFields:[],ruleId:null,note:null};
+ check(!(await admin.rpc('natori_save_estimate_draft_v1',{p_owner_id:owner,p_project_id:id,p_revision:0,p_draft:{agreedTerms:terms,items:[item],mailDraft:{subject:'Custom subject',body:'Individual comment KEEP ME',templateBody:'Original template'}}})).error,'DRAFT_FIXTURE');
+ const app='http://localhost:3000';server=spawn(process.execPath,['--require','/browser-test/provider-preload.cjs','/app/node_modules/next/dist/bin/next','dev','--hostname','localhost','--port','3000'],{cwd:'/app',env:{PATH:'/runtime-bin:/usr/local/bin:/usr/bin:/bin',HOME:'/tmp',TMPDIR:'/tmp',NODE_ENV:'development',NODE_OPTIONS:'--dns-result-order=ipv4first',NEXT_TELEMETRY_DISABLED:'1',PHASE_N_BROWSER:'ephemeral',PHASE_0B_BROWSER:'ephemeral',PHASE_2A_BROWSER:'ephemeral',NEXT_PUBLIC_SUPABASE_URL:origin,NEXT_PUBLIC_SUPABASE_ANON_KEY:keys.anon,SUPABASE_SERVICE_ROLE_KEY:keys.service,NATORI_DASHBOARD_KEY:randomBytes(32).toString('hex'),NATORI_OWNER_USER_ID:owner,NATORI_OWNER_EMAILS:email,NEXT_PUBLIC_SITE_URL:app,NATORI_ACCEPTANCE_OUTBOX_ENABLED:'1',NATORI_NOTIFICATION_SENDING_ENABLED:'0',NATORI_QUOTE_INTEGRITY_ENABLED:'1',NATORI_DELIVERY_NOTIFICATION_KEY:randomBytes(32).toString('hex'),RESEND_API_KEY:randomBytes(32).toString('hex'),NATORI_ORDER_MAIL_FROM:'Phase 2A <sender@phase2a.invalid>',NATORI_PORTFOLIO_CONTACT_TO:'artist@phase2a.invalid',NATORI_MAIL_BCC:''},stdio:['ignore','pipe','pipe']});
+ const errors=new Set();for(const stream of [server.stdout,server.stderr])stream.on('data',b=>{for(const code of ['Module not found','Failed to compile','SyntaxError','EADDRINUSE'])if(b.toString().includes(code))errors.add(code);});
+ let ready=false;const deadline=Date.now()+120000;while(Date.now()<deadline&&server.exitCode===null){try{const response=await fetch(`${app}/ja/fixture-session`,{signal:AbortSignal.timeout(2000)});if(response.ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,400));}check(ready,'NEXT_READY');
+ browser=await chromium.launch({headless:true});const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();
+ await context.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin!==app)return route.abort('blockedbyclient');return route.continue();});
+ await page.goto(`${app}/ja/fixture-session`);await page.getByLabel('Email').fill(email);await page.getByLabel('Password').fill(password);await page.getByRole('button',{name:'Sign in'}).click();await expect(page.getByText('Session ready')).toBeVisible();
+ await test('custom-comment-survives-price-back-and-reload',async()=>{await page.goto(`${app}/ja/fixture-estimate/${id}`);await page.getByRole('button',{name:/条件を保存して金額へ/}).click();await page.getByRole('button',{name:/明細を保存して送信確認へ/}).click();await expect(page.locator('#estimate-body')).toHaveValue('Individual comment KEEP ME');if(await page.getByRole('button',{name:'個別編集を保持'}).isVisible())await page.getByRole('button',{name:'個別編集を保持'}).click();await page.getByRole('button',{name:'個別メールの編集を保存'}).click();await page.getByRole('button',{name:/金額を決める/}).first().click();await page.getByRole('button',{name:/明細を保存して送信確認へ/}).click();await expect(page.locator('#estimate-body')).toHaveValue('Individual comment KEEP ME');await page.reload();await page.getByRole('button',{name:/条件を保存して金額へ/}).click();await page.getByRole('button',{name:/明細を保存して送信確認へ/}).click();await expect(page.locator('#estimate-body')).toHaveValue('Individual comment KEEP ME');});
+ let pendingRequest;
+ await test('uncommitted-pending-request-restores-frozen-mail-before-retry',async()=>{
+  await page.getByRole('button',{name:/金額を修正/}).click();
+  await page.getByRole('spinbutton',{name:/の単価/}).first().fill('12500');
+  await page.getByRole('button',{name:/明細を保存して送信確認へ/}).click();
+  await expect(page.getByRole('button',{name:'本文全体をこの候補へ更新'})).toBeVisible();
+  await page.locator('input[type=checkbox]').last().check();
+  await page.route('**/api/natori/admin/structured-quote',async r=>{pendingRequest=JSON.parse(r.request().postData());await r.abort('failed');});
+  await page.getByRole('button',{name:/正式見積り.*を発行/}).click();
+  await expect(page.getByRole('button',{name:'同じ内容で送信を再試行'})).toBeEnabled();
+  await expect(page.getByRole('button',{name:'本文全体をこの候補へ更新'})).toBeDisabled();
+  await expect(page.getByRole('button',{name:'個別編集を保持'})).toBeDisabled();
+  await expect(page.locator('#estimate-body')).toHaveValue(pendingRequest.bodySnapshot);
+  await page.unroute('**/api/natori/admin/structured-quote');await page.reload();
+  await expect(page.locator('#estimate-body')).toHaveValue(pendingRequest.bodySnapshot);
+  await expect(page.locator('#estimate-body')).toBeDisabled();
+  await expect(page.locator('#estimate-subject')).toHaveValue(pendingRequest.subject);
+  await expect(page.locator('#estimate-subject')).toBeDisabled();
+  await expect(page.getByRole('button',{name:'個別メールの編集を保存'})).toBeDisabled();
+  check((await admin.from('natori_quotes').select('id').eq('project_id',id)).data?.length===0,'NOT_COMMITTED');
+ });
+ await test('lost-response-reload-clears-confirmed-operation-and-new-version-does-not-replay',async()=>{
+  await page.route('**/api/natori/admin/structured-quote',async r=>{await r.fetch();await r.abort('failed');});
+  await page.getByRole('button',{name:'同じ内容で送信を再試行'}).click();
+  await expect(page.getByRole('button',{name:'同じ内容で送信を再試行'})).toBeEnabled();
+  check((await admin.from('natori_quotes').select('id').eq('project_id',id)).data?.length===1,'ONE_VERSION');
+  await page.unroute('**/api/natori/admin/structured-quote');await page.reload();
+  await expect(page.getByText(/第1版は保存済み/)).toBeVisible();
+  check(await page.evaluate(k=>sessionStorage.getItem(k),`natori-quote-issue/${id}`)===null,'CONFIRMED_CACHE_CLEARED');
+  page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'新しい版の作成を確認'}).click();
+  await page.getByRole('button',{name:/条件を保存して金額へ/}).click();
+  await page.getByRole('spinbutton',{name:/の単価/}).first().fill('13000');
+  await page.getByRole('button',{name:/明細を保存して送信確認へ/}).click();
+  if(await page.getByRole('button',{name:'個別編集を保持'}).isVisible())await page.getByRole('button',{name:'個別編集を保持'}).click();
+  await page.locator('input[type=checkbox]').last().check();await page.getByRole('button',{name:/正式見積り.*を発行/}).click();
+  await expect(page.getByText(/第2版は保存済み/)).toBeVisible();
+  const q=await admin.from('natori_quotes').select('id,version').eq('project_id',id).order('version');
+  check(q.data?.length===2&&q.data[1].version===2,'NEW_VERSION_NOT_REPLAY');
+ });
+ await test('read-recovery-failure-blocks-new-issue',async()=>{await page.route('**/api/natori/admin/structured-quote?*',r=>r.fulfill({status:503,contentType:'application/json',body:'{"error":"synthetic"}'}));await page.reload();await expect(page.getByText('発行結果を確認できませんでした。再読込してください。')).toBeVisible();await page.getByRole('button',{name:/条件を保存して金額へ/}).click();await page.getByRole('button',{name:/明細を保存して送信確認へ/}).click();await expect(page.getByRole('button',{name:/正式見積り.*を発行/})).toBeDisabled();await page.unroute('**/api/natori/admin/structured-quote?*');});
+ await test('accepted-and-paid-stages-show-readonly-version-and-notification',async()=>{
+  for(const paid of [false,true]){
+   const changed=await admin.from('natori_projects').update({status:paid?'rough':'awaiting_payment',quote_accepted_at:new Date().toISOString(),payment_confirmed_at:paid?new Date().toISOString():null}).eq('id',id);
+   check(!changed.error,'STAGE_FIXTURE');await page.goto(`${app}/ja/fixture-estimate/${id}`);
+   await expect(page.getByText(/第2版は保存済み/)).toBeVisible();
+   await expect(page.getByRole('button',{name:'新しい版の作成を確認'})).toHaveCount(0);
+   await expect(page.locator('#estimate-body')).toHaveCount(0);
+   await expect(page.getByRole('button',{name:/同じ内容で再通知/})).toBeVisible();
+  }
+ });
+ await test('anonymous-and-cross-origin-write-remain-blocked',async()=>{const anon=await browser.newContext();const request=await anon.request.post(`${app}/api/natori/admin/quote-notification`,{data:{quoteId:randomUUID(),operationId:randomUUID()},headers:{'x-requested-with':'me-ish'}});check(request.status()===401,'ANON_DENIED');const denied=await context.request.post(`${app}/api/natori/admin/quote-notification`,{data:{quoteId:randomUUID(),operationId:randomUUID()}});check(denied.status()===403,'CSRF_DENIED');await anon.close();});
+ await context.close();writeFileSync('/results/phase2a-browser.json',JSON.stringify({tests:results,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,engine:'Chromium 1.58.2; 390px viewport, not iPhone Safari',compileErrors:[...errors]},null,2));check(results.length===6&&results.every(r=>r.status==='passed')&&errors.size===0,'BROWSER_FAILED');
+}
+main().catch(()=>{console.error(`Phase 2A browser failed at ${stage}; raw logs withheld`);process.exitCode=1;}).finally(async()=>{await browser?.close();if(server?.exitCode===null){server.kill('SIGTERM');await Promise.race([new Promise(r=>server.once('exit',r)),new Promise(r=>setTimeout(()=>{server.kill('SIGKILL');r();},5000))]);}});

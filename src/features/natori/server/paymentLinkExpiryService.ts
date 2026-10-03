@@ -1,4 +1,5 @@
 import "server-only";
+import {paymentLinkIntegrityEnabled,stopDuePaymentLinks} from "./paymentLinkService";
 
 import Stripe from "stripe";
 import { PAYMENT_DUE_DAYS } from "@/features/natori/lib/orderMail";
@@ -42,6 +43,7 @@ function isStripeResourceMissing(error: unknown): boolean {
 export async function expireNatoriPaymentLinks(
   now: Date = new Date()
 ): Promise<ExpireNatoriPaymentLinksResult> {
+  if(paymentLinkIntegrityEnabled())return stopDuePaymentLinks();
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) return { kind: "not-configured" };
 

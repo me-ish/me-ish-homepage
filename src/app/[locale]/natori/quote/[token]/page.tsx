@@ -82,7 +82,9 @@ export default async function QuoteAcceptPage(props: Props) {
         acceptedAt={quote.acceptedAt}
         expiresAt={quote.expiresAt}
         terms={quote.terms}
+        version={quote.version}
         items={quote.items}
+        payment={quote.payment}
       />
     </Shell>
   );

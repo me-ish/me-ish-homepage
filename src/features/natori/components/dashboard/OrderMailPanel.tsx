@@ -5,7 +5,8 @@
 // 定型文を下書きとして生成し、編集してから /api/natori/admin/order-mail で送信する。
 // 支払い依頼は送信時にサーバーで Stripe 支払いリンクが生成され、
 // 本文の {支払いリンク} の位置に差し込まれる。
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Loader2, Mail, RotateCcw, X } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
@@ -25,6 +26,7 @@ import { formatYen } from "@/features/natori/lib/pricing";
 import { formatQuoteDate, isValidQuoteDate } from "@/features/natori/lib/quoteTerms";
 import type { NatoriProject } from "@/features/natori/types/projects";
 import DeliveryFilesManager from "./DeliveryFilesManager";
+import PaymentLinkPanel from "./PaymentLinkPanel";
 import type { NatoriDeliveryFileView } from "@/features/natori/data/supabaseDeliveryFiles";
 
 export type OrderMailKind = "estimate" | "payment" | "rough" | "delivery";
@@ -154,6 +156,12 @@ export default function OrderMailPanel({
   const [deliveryFiles, setDeliveryFiles] = useState<NatoriDeliveryFileView[] | null>(null);
   const [operationConflict, setOperationConflict] = useState(false);
 
+  const [paymentFlow,setPaymentFlow]=useState<"loading"|"enabled"|"legacy"|"error">("loading");
+  useEffect(()=>{if(kind!=="payment"||demoMode)return;let alive=true;
+    void fetch(`/api/natori/admin/payment-link?projectId=${encodeURIComponent(project.id)}`,{cache:"no-store"})
+      .then(async response=>{const data=await response.json();if(!response.ok||typeof data.enabled!=="boolean")throw new Error();if(alive)setPaymentFlow(data.enabled?"enabled":"legacy");})
+      .catch(()=>{if(alive)setPaymentFlow("error");});return()=>{alive=false;};
+  },[kind,demoMode,project.id]);
   // 同種メールの送信履歴（案件メモの送信ログから）。二重送信の気づき用
   const lastSent = useMemo(() => {
     const label = KIND_META[kind].logLabel;
@@ -261,6 +269,20 @@ export default function OrderMailPanel({
       setSending(false);
     }
   };
+
+  if(kind==="payment"&&!demoMode&&paymentFlow==="enabled")return <PaymentLinkPanel project={project} onClose={onClose} onSent={onSent}/>;
+  if(kind==="payment"&&!demoMode&&paymentFlow!=="legacy")return <div className="fixed inset-0 z-50 grid place-items-center bg-gray-900/60 p-4" role="dialog" aria-modal="true" aria-label="支払状態の確認">
+    <section className="rounded-2xl bg-white p-6"><p role="status">{paymentFlow==="error"?"支払状態を確認できません。再読込してください。":"支払状態を確認中です。"}</p><button type="button" onClick={onClose} className="mt-4 min-h-11 underline">閉じる</button></section></div>;
+  if (kind === "estimate" && !demoMode) return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-gray-900/60 p-4" role="dialog" aria-modal="true" aria-label="見積りを作成・確認">
+      <section className="w-full max-w-lg rounded-2xl bg-white p-6">
+        <h2 className="font-bold">見積りを作成・確認</h2>
+        <p className="mt-3 text-sm">条件と金額を確認して正式な版を保存します。保存済みの版の再通知も同じ画面から行います。</p>
+        <Link href={`/natori/estimate?inquiry=${encodeURIComponent(project.id)}`} className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-pink-100 px-4 font-bold text-pink-950">この案件の見積りを開く</Link>
+        <button type="button" onClick={onClose} className="ml-3 min-h-11 px-3 underline">閉じる</button>
+      </section>
+    </div>
+  );
 
   return (
     <div

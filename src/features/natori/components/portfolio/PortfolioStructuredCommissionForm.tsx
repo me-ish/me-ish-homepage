@@ -4,6 +4,7 @@
 // P1-06 の構造化ご依頼フォーム本体。入力 state → RequestData V1 の変換は
 // features/natori/lib/portfolioRequestForm.ts（共有純関数）に集約し、
 // UI 独自の payload 形は作らない。client / server は同じ共有 schema で検証する。
+import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   PLAN_SELECT_EVENT,
@@ -22,7 +23,6 @@ import {
   NATORI_STRUCTURED_FORM_VERSION,
   applyPortfolioRequestTypeSelection,
   applyPortfolioPlanSelection,
-  buildNatoriRequestDataV1,
   collectPortfolioReferenceLinkErrors,
   createInitialPortfolioRequestFormState,
   isMassProductionIllustrationSelection,
@@ -31,15 +31,11 @@ import {
   portfolioOptionChoices,
   portfolioRequestTypeChoiceValue,
   pruneHiddenPortfolioRequestFields,
-  submittedPortfolioReferenceLinks,
   type PortfolioRequestTypeChoiceValue,
   type PortfolioRequestFormState,
 } from "@/features/natori/lib/portfolioRequestForm";
-import { natoriRequestSubmissionV1Schema } from "@/features/natori/lib/requestSchema";
 import {
   portfolioErrorTarget,
-  portfolioRetryAfterSeconds,
-  portfolioValidationMessage,
 } from "@/features/natori/lib/portfolioFormFeedback";
 import {
   NATORI_BUDGET_KIND_LABELS_V1,
@@ -62,7 +58,10 @@ import {
   type NatoriUsageTypeV1,
 } from "@/features/natori/types/request";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
-import { CSRF_HEADERS } from "@/lib/auth/csrf";
+import { useIntakeOperation } from "./useIntakeOperation";
+import IntakeRecoveryPanel from "./IntakeRecoveryPanel";
+import { restoreStructuredIntakeFields } from "../../lib/restoreIntakeForm";
+import { portfolioConfirmationSections, readFrozenPortfolioSubmission, validatePortfolioForm, validatePortfolioStep } from "@/features/natori/lib/portfolioFormValidation";
 import PortfolioLegalNotice from "./PortfolioLegalNotice";
 import PortfolioFormStyles, { portfolioFormColors as c } from "./PortfolioFormStyles";
 
@@ -73,7 +72,7 @@ const optionalBadgeClass = "ml-2 rounded-full px-2 py-0.5 text-[11px] font-bold"
 type RefImageEntry = { file: File; previewUrl: string };
 type ServerFieldError = { path: string; message: string };
 
-export type StructuredSubmitOutcome = { autoReplied: boolean };
+export type StructuredSubmitOutcome = { autoReplied: boolean; receipt?: string; clientEmail?: string };
 
 function OptionalBadge() {
   return (
@@ -178,6 +177,7 @@ export default function PortfolioStructuredCommissionForm({
   opening,
   fromPlan,
   initialPlan,
+  restoreOriginals = true,
 }: {
   content: PortfolioContent;
   demoMode?: boolean;
@@ -187,6 +187,7 @@ export default function PortfolioStructuredCommissionForm({
   opening?: number;
   fromPlan?: boolean;
   initialPlan?: string;
+  restoreOriginals?: boolean;
 }) {
   const [state, setState] = useState<PortfolioRequestFormState>(
     () => {
@@ -195,9 +196,19 @@ export default function PortfolioStructuredCommissionForm({
     }
   );
   const [step, setStep] = useState(0);
+  const [planOrigin, setPlanOrigin] = useState<string | null>(initialPlan ?? null);
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [sending, setSending] = useState(false);
+  const intake = useIntakeOperation(({ receipt, clientEmail }) => {
+    releasePreviews();
+    trackNatoriPageEvent("portfolio_form_submit", "completed");
+    onSuccess({ autoReplied: false, receipt, clientEmail });
+  }, !demoMode, fields => {
+    const restored = restoreStructuredIntakeFields(fields, content);
+    setClientName(restored.clientName); setClientEmail(restored.clientEmail); setState(restored.state);
+    setStep(restored.state.inquiryMode === "quote" ? 2 : 1);
+  }, restoreOriginals);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [serverFieldErrors, setServerFieldErrors] = useState<ServerFieldError[]>([]);
   const [refImages, setRefImages] = useState<RefImageEntry[]>([]);
@@ -269,6 +280,15 @@ export default function PortfolioStructuredCommissionForm({
     [content, massProductionSelected],
   );
   const requestTypeChoice = portfolioRequestTypeChoiceValue(state);
+  const validatedSubmission = useMemo(
+    () => validatePortfolioForm(state, optionChoices, clientName, clientEmail),
+    [state, optionChoices, clientName, clientEmail],
+  );
+  const frozenSubmission = useMemo(() => intake.operation
+    ? readFrozenPortfolioSubmission(intake.operation.fields) : null, [intake.operation]);
+  const confirmationSubmission = frozenSubmission ?? validatedSubmission;
+  const confirmationSections = confirmationSubmission.success
+    ? portfolioConfirmationSections(confirmationSubmission.data.requestData) : [];
   const xLink = content.socialLinks.find(isPortfolioXLink);
   const hasOtherDetails = [state.characterFeatures, state.expressionMood, state.composition,
     state.colorDirection, state.referenceNotes].some((value) => value.trim().length > 0);
@@ -280,8 +300,22 @@ export default function PortfolioStructuredCommissionForm({
   const publicationPrice = (id: string) => publicationOptions.find((option) => option.id === id)?.price;
 
   const goToStep = (next: number) => {
+    // A corrected error must not steal focus from the newly opened screen.
+    setFocusTarget(null);
     focusStepOnChangeRef.current = true;
     setStep(next);
+  };
+
+  const editConfirmationSection = (key: string) => {
+    setOptionalOpen(true);
+    if (key === "details") setDetailsOpen(true);
+    setOpenSections((current) => ({
+      requestType: current.requestType || key === "request",
+      usage: current.usage || key === "usage",
+      budget: current.budget || key === "conditions",
+      materials: current.materials || key === "materials",
+    }));
+    goToStep(state.inquiryMode === "quote" && (key === "usage" || key === "conditions") ? 1 : 0);
   };
 
   const openErrorSections = (errors: ServerFieldError[]) => {
@@ -358,6 +392,7 @@ export default function PortfolioStructuredCommissionForm({
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<PortfolioPlanSelectDetail>).detail;
       if (!detail) return;
+      setPlanOrigin(detail.id);
       setState((current) => applyPortfolioPlanSelection(current, detail.id));
       setOptionalOpen(true);
       setOpenSections((current) => ({ ...current, requestType: true }));
@@ -367,18 +402,8 @@ export default function PortfolioStructuredCommissionForm({
   }, []);
 
   const nextStep = () => {
-    // The shared schema validates the complete request once all input screens are filled.
-    if (step === (state.inquiryMode === "quote" ? 1 : 0)) {
-      const parsed = natoriRequestSubmissionV1Schema.safeParse({
-        clientName, clientEmail,
-        requestData: buildNatoriRequestDataV1(state, optionChoices),
-      });
-      const errors: ServerFieldError[] = parsed.success ? [] : parsed.error.issues.map((issue) => ({
-        path: issue.path.join("."), message: portfolioValidationMessage(issue),
-      }));
-      errors.push(...linkErrors.map((error) => ({ path: `referenceLinks.${error.index}.url`, message: error.message })));
-      if (errors.length) { showFieldErrors(errors); return; }
-    }
+    const errors = validatePortfolioStep(state, optionChoices, clientName, clientEmail, step);
+    if (errors.length > 0) { showFieldErrors(errors); return; }
     setServerFieldErrors([]);
     setSubmitError(null);
     if (state.inquiryMode === "quote" && step === 0) {
@@ -401,7 +426,7 @@ export default function PortfolioStructuredCommissionForm({
 
   const setOptionSelection = (
     key: string,
-    patch: Partial<{ selected: boolean; quantity: number; notes: string }>
+    patch: Partial<{ selected: boolean; quantity: number | string; notes: string }>
   ) => {
     setState((current) => {
       const previous = current.optionSelections[key] ?? {
@@ -446,30 +471,30 @@ export default function PortfolioStructuredCommissionForm({
   const handleRefFiles = (files: File[]) => {
     if (files.length === 0) return;
     const remaining = NATORI_MAX_REFERENCE_IMAGES - refImages.length;
+    const alternative = "画像を減らすか、参考URLに共有リンクを貼ってください。";
     if (remaining <= 0) {
-      setRefImageError(`画像は最大${NATORI_MAX_REFERENCE_IMAGES}枚までです。`);
+      setRefImageError(`画像は最大${NATORI_MAX_REFERENCE_IMAGES}枚までです。選択した${files.length}枚は追加していません。${alternative}`);
       return;
     }
     if (files.some((file) => file.size > NATORI_REFERENCE_IMAGE_MAX_BYTES)) {
-      setRefImageError("1枚4MBまで（png / jpg / webp / gif）です。");
+      setRefImageError(`1枚4MBまで（png / jpg / webp / gif）です。選択した${files.length}枚は追加していません。${alternative}`);
       return;
     }
     const selected = files.slice(0, remaining);
     const nextTotal = [...refImages.map((entry) => entry.file), ...selected].reduce(
-      (sum, file) => sum + file.size,
-      0
+      (sum, file) => sum + file.size, 0,
     );
     if (nextTotal > NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES) {
-      setRefImageError("画像の合計サイズは4MBまでです。");
+      setRefImageError(`画像の合計サイズは4MBまでです。選択した${files.length}枚は追加していません。${alternative}`);
       return;
     }
-    setRefImageError(null);
-    setRefImages((current) =>
-      [
-        ...current,
-        ...selected.map((file) => ({ file, previewUrl: URL.createObjectURL(file) })),
-      ].slice(0, NATORI_MAX_REFERENCE_IMAGES)
-    );
+    const omitted = files.length - selected.length;
+    setRefImageError(omitted > 0
+      ? `${selected.length}枚を追加しました。枚数制限のため${omitted}枚は追加していません。${alternative}` : null);
+    setRefImages((current) => [
+      ...current,
+      ...selected.map((file) => ({ file, previewUrl: URL.createObjectURL(file) })),
+    ].slice(0, NATORI_MAX_REFERENCE_IMAGES));
   };
 
   const removeRefImage = (index: number) => {
@@ -490,24 +515,18 @@ export default function PortfolioStructuredCommissionForm({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     // 二重 submit 防止。state 更新前の連打も ref で塞ぐ。
-    if (sendingRef.current || retrySeconds > 0) return;
+    if (sendingRef.current || retrySeconds > 0 || intake.frozen || !commissionOpen) return;
     const form = event.currentTarget;
     const payload = new FormData(form);
-    const parsed = natoriRequestSubmissionV1Schema.safeParse({
-      clientName: String(payload.get("name") ?? ""),
-      clientEmail: String(payload.get("email") ?? ""),
-      requestData: buildNatoriRequestDataV1(state, optionChoices),
-    });
-    const errors: ServerFieldError[] = parsed.success ? [] : parsed.error.issues.map((issue) => ({
-      path: issue.path.join("."), message: portfolioValidationMessage(issue),
-    }));
-    errors.push(...linkErrors.map((error) => ({ path: `referenceLinks.${error.index}.url`, message: error.message })));
-    if (errors.length > 0) {
-      showFieldErrors(errors);
+    // Reuse exactly the validated envelope shown on the confirmation screen.
+    // Same-operation replay remains exclusively in IntakeRecoveryPanel.
+    if (!validatedSubmission.success) {
+      showFieldErrors(validatedSubmission.errors);
       return;
     }
-    if (!parsed.success) return;
-    const requestData = parsed.data.requestData;
+    const requestData = validatedSubmission.data.requestData;
+    payload.set("name", validatedSubmission.data.clientName);
+    payload.set("email", validatedSubmission.data.clientEmail);
 
     if (demoMode) {
       releasePreviews();
@@ -525,59 +544,12 @@ export default function PortfolioStructuredCommissionForm({
     payload.set("requestData", JSON.stringify(requestData));
     payload.set(
       "referenceLinks",
-      JSON.stringify(submittedPortfolioReferenceLinks(state.referenceLinks))
+      JSON.stringify(validatedSubmission.referenceLinks)
     );
     for (const entry of refImages) payload.append("refImages", entry.file);
 
     try {
-      const res = await fetch("/api/natori/portfolio/contact", {
-        method: "POST",
-        headers: { ...CSRF_HEADERS },
-        body: payload,
-      });
-      const response = (await res.json().catch(() => null)) as
-        | { autoReplied?: boolean; fields?: ServerFieldError[]; error?: string }
-        | null;
-
-      if (!res.ok) {
-        if (res.status === 429) {
-          const seconds = portfolioRetryAfterSeconds(res.headers?.get("Retry-After") ?? null);
-          retryUntilRef.current = Date.now() + (seconds ?? 0) * 1000;
-          setRetrySeconds(seconds ?? 0);
-          setSubmitError(seconds !== null && seconds > 0
-            ? `送信回数の上限に達しました。約${Math.ceil(seconds / 60)}分後に再送できます。入力内容は保持しています。`
-            : "送信回数の上限に達しました。時間をおいて再度お試しください。入力内容は保持しています。");
-          setFocusTarget({ id: "pf-submit-errors" });
-          return;
-        }
-        if (Array.isArray(response?.fields) && response.fields.length > 0) {
-          // API の参照URLの添字は空行を除いた送信配列に対応する。
-          const rowIndices = state.referenceLinks.flatMap((row, index) => row.url.trim() ? [index] : []);
-          showFieldErrors(response.fields.map((error) => ({
-            ...error,
-            path: error.path.replace(/^referenceLinks\.(\d+)/, (_, index: string) =>
-              `referenceLinks.${rowIndices[Number(index)] ?? index}`),
-          })));
-          return;
-        }
-        setSubmitError(
-          response?.error === "invalid_request"
-            ? "入力内容をご確認ください。"
-            : "送信に失敗しました。時間をおいて再度お試しいただくか、SNSのDMからご連絡ください。"
-        );
-        setFocusTarget({ id: "pf-submit-errors" });
-        return;
-      }
-
-      trackNatoriPageEvent("portfolio_form_submit", requestData.requestType);
-      releasePreviews();
-      onSuccess({ autoReplied: response?.autoReplied === true });
-    } catch (err) {
-      console.error("[portfolio-form] submit failed", err);
-      setSubmitError(
-        "送信に失敗しました。時間をおいて再度お試しいただくか、SNSのDMからご連絡ください。"
-      );
-      setFocusTarget({ id: "pf-submit-errors" });
+      await intake.submit(payload, refImages.map(entry => entry.file));
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -660,7 +632,7 @@ export default function PortfolioStructuredCommissionForm({
                 >
                   {NATORI_REQUEST_TYPES_V1.filter((type) => type !== "other").map((type) => (
                     <option key={type} value={type}>
-                      {NATORI_REQUEST_TYPE_LABELS_V1[type]}
+                      {type === "sd" ? "SDキャラクター（ちびキャラ）" : NATORI_REQUEST_TYPE_LABELS_V1[type]}
                     </option>
                   ))}
                   <option value={NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE}>
@@ -816,12 +788,12 @@ export default function PortfolioStructuredCommissionForm({
                   return (
                     <div
                       key={choice.key}
-                      className="rounded-lg border-2 p-2"
+                      className="rounded-lg border-2"
                       style={{
                         borderColor: checked ? c.formBorderActive : c.formBorder,
                       }}
                     >
-                      <label className="flex cursor-pointer items-center gap-2 text-[13px]">
+                      <label className="flex min-h-[44px] cursor-pointer items-center gap-2 p-3 text-[13px]">
                         <input
                           id={`pf-option-${choice.key}`}
                           {...errorAttributes(`pf-option-${choice.key}`)}
@@ -833,16 +805,21 @@ export default function PortfolioStructuredCommissionForm({
                           className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0"
                         />
                         <span style={{ color: c.textSoft }}>
-                          {choice.label}
+                          {choice.stableId === PORTFOLIO_OPTION_IDS.expressionVariation ? "表情を追加する（表情差分）" : choice.label}
                           <span className="ml-1 text-xs font-bold" style={{ color: c.accentText }}>
                             {choice.price}
                           </span>
                         </span>
                       </label>
+                      {checked && choice.stableId === PORTFOLIO_OPTION_IDS.expressionVariation ? (
+                        <p className="px-3 pb-2 text-xs leading-relaxed" style={{ color: c.textSoft }}>
+                          同じイラストで笑顔・泣き顔などを追加します。基本の表情とは別に追加する数を1〜10で入力してください。
+                        </p>
+                      ) : null}
                       {/* 数量と補足は同じ追加オプションに属するため、desktopのみ横並びにする。 */}
                       {checked && !massProductionSelected ? (
                         <div
-                          className={`mt-2 grid gap-2 ${
+                          className={`grid gap-2 px-3 pb-3 ${
                             allowsQuantity ? "sm:grid-cols-[7rem_1fr]" : ""
                           }`}
                         >
@@ -853,7 +830,7 @@ export default function PortfolioStructuredCommissionForm({
                                 className="mb-1 block text-xs font-bold"
                                 style={{ color: c.textSoft }}
                               >
-                                数量
+                                {choice.stableId === PORTFOLIO_OPTION_IDS.expressionVariation ? "追加する表情の数" : "数量"}
                               </label>
                               <input
                                 id={`pf-option-${choice.key}-quantity`}
@@ -861,10 +838,12 @@ export default function PortfolioStructuredCommissionForm({
                                 type="number"
                                 min={1}
                                 max={10}
+                                step={1}
+                                inputMode="numeric"
                                 value={selection?.quantity ?? 1}
                                 onChange={(event) =>
                                   setOptionSelection(choice.key, {
-                                    quantity: Number(event.target.value),
+                                    quantity: event.target.value,
                                   })
                                 }
                                 className={inputClass}
@@ -935,22 +914,20 @@ export default function PortfolioStructuredCommissionForm({
             <fieldset id="pf-usage-types" tabIndex={-1} {...errorAttributes("pf-usage-types")}>
               <legend className={labelClass}>使用目的（複数選択可）</legend>
               <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
-                {NATORI_USAGE_TYPES_V1.map((usage) => (
-                  <label
-                    key={usage}
-                    className="flex cursor-pointer items-center gap-2 text-[13px]"
-                    style={{ color: c.textSoft }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={state.usageTypes.includes(usage)}
-                      onChange={() => toggleUsageType(usage)}
-                      className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0"
-                    />
+                {NATORI_USAGE_TYPES_V1.filter((usage) => usage !== "original_character").map((usage) => (
+                  <label key={usage} className="flex min-h-[44px] cursor-pointer items-center gap-2 text-[13px]" style={{ color: c.textSoft }}>
+                    <input type="checkbox" checked={state.usageTypes.includes(usage)} onChange={() => toggleUsageType(usage)} className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0" />
                     {NATORI_USAGE_TYPE_LABELS_V1[usage]}
                   </label>
                 ))}
               </div>
+            </fieldset>
+            <fieldset>
+              <legend className={labelClass}>題材<OptionalBadge /></legend>
+              <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-[13px]" style={{ color: c.textSoft }}>
+                <input type="checkbox" checked={state.usageTypes.includes("original_character")} onChange={() => toggleUsageType("original_character")} className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0" />
+                {NATORI_USAGE_TYPE_LABELS_V1.original_character}
+              </label>
             </fieldset>
 
             {state.usageTypes.includes("other") ? (
@@ -1395,6 +1372,10 @@ export default function PortfolioStructuredCommissionForm({
                 </button>
               ) : null}
               <FieldError id="pf-ref-image-error" message={refImageError ?? undefined} />
+              {refImageError ? <button type="button" className="pf-cute-focus mt-1 min-h-[44px] text-sm font-bold underline"
+                onClick={() => { setOpenSections((current) => ({ ...current, materials: true })); setFocusTarget({ id: "pf-ref-url-0" }); }}>
+                参考URL欄へ移動する
+              </button> : null}
               <input
                 ref={refFileInputRef}
                 type="file"
@@ -1517,6 +1498,7 @@ export default function PortfolioStructuredCommissionForm({
       className="pf-commission-form space-y-4 rounded-2xl p-5 md:p-8"
       style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
     >
+      <fieldset className="contents" disabled={intake.frozen || sending}>
       <PortfolioFormStyles />
       {/* honeypot: 人間には見えない。ボット対策 */}
       <input
@@ -1537,6 +1519,9 @@ export default function PortfolioStructuredCommissionForm({
         </div>
         {step > 0 && <button type="button" onClick={() => goToStep(step - 1)} className="pf-cute-focus min-h-[44px] text-sm font-bold underline">戻る</button>}
       </div>
+      {(fromPlan || planOrigin) ? <p className="rounded-lg px-3 py-2 text-sm" style={{ background: c.surfaceSubtle, color: c.textSoft }}>
+        料金から選んだ内容：{massProductionSelected ? NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL : NATORI_REQUEST_TYPE_LABELS_V1[state.requestType]}／{massProductionSelected ? state.commissionScopeOther || "デザインは未選択" : NATORI_COMMISSION_SCOPE_LABELS_V1[state.commissionScope]}。入力画面で変更できます。
+      </p> : null}
       <ol className="flex gap-2" aria-label={`進行状況 ${step + 1} / ${stepLabels.length}`}>
         {stepLabels.map((label, index) => (
           <li key={label} className="min-w-0 flex-1" aria-current={index === step ? "step" : undefined}>
@@ -1579,27 +1564,53 @@ export default function PortfolioStructuredCommissionForm({
       </div>
       <div hidden={step === lastStep || (state.inquiryMode === "quote" && step !== 0)}>{messageSection}</div>
       <div hidden={step === lastStep}>{optionalSection}</div>
-      {step === lastStep && (
-        <section className="space-y-4">
-          <p className="text-sm" style={{ color: c.textSoft }}>内容をご確認ください。各項目は「修正する」から戻れます。</p>
+      {step === lastStep && confirmationSubmission.success && (
+        <section aria-label="送信前の確認" className="space-y-4">
+          <p className="text-sm" style={{ color: c.textSoft }}>内容をご確認ください。各項目の修正ボタンから入力画面へ戻れます。</p>
+          {confirmationSections.map((section) => <div key={section.key} className="border-b pb-3" style={{ borderColor: c.borderSubtle }}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="font-bold">{section.title}</h4>
+              <button type="button" className="pf-cute-focus min-h-[44px] rounded-lg px-3 py-2 text-sm font-bold underline"
+                onClick={() => editConfirmationSection(section.key)}>{section.title}を修正する</button>
+            </div>
+            <dl className="mt-2 space-y-2 text-sm">
+              {section.fields.map((field) => <div key={field.key}>
+                <dt className="font-bold" style={{ color: c.textSoft }}>{field.label}</dt>
+                <dd className="mt-1 whitespace-pre-wrap break-words">{field.value}</dd>
+              </div>)}
+            </dl>
+          </div>)}
+          {(refImages.length > 0 || confirmationSubmission.referenceLinks.length > 0 || (intake.operation?.manifest.length ?? 0) > 0) ? <div className="border-b pb-3" style={{ borderColor: c.borderSubtle }}>
+            <div className="flex flex-wrap items-center justify-between gap-2"><h4 className="font-bold">資料</h4>
+              <button type="button" className="pf-cute-focus min-h-[44px] rounded-lg px-3 py-2 text-sm font-bold underline"
+                onClick={() => editConfirmationSection("materials")}>資料を修正する</button></div>
+            {refImages.length > 0 ? <ul className="mt-2 space-y-2">
+              {refImages.map((entry, index) => <li key={entry.previewUrl} className="flex min-w-0 items-center gap-3 text-sm">
+                {/* ローカル選択ファイルの objectURL プレビュー */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={entry.previewUrl} alt={`確認用の添付画像 ${index + 1}`} className="h-16 w-16 shrink-0 rounded-lg border object-cover" style={{ borderColor: c.borderSubtle }} />
+                <span className="min-w-0 break-all">{entry.file.name}<span className="block text-xs" style={{ color: c.textSoft }}>{Math.ceil(entry.file.size / 1024).toLocaleString("ja-JP")}KB</span></span>
+              </li>)}
+            </ul> : null}
+            {refImages.length === 0 && intake.operation && intake.operation.manifest.length > 0 ? <p className="mt-2 text-sm" style={{ color: c.textSoft }}>
+              前回選択した画像：{intake.operation.manifest.length}枚。再読込後の再試行には、下の欄で前回と同じ画像を選択してください。
+            </p> : null}
+            {confirmationSubmission.referenceLinks.length > 0 ? <ul className="mt-3 space-y-2 text-sm">
+              {confirmationSubmission.referenceLinks.map((row, index) => <li key={`${index}:${row.url}`} className="min-w-0 break-all">
+                <p className="font-bold">{row.label || `参考URL ${index + 1}`}（{new URL(row.url).hostname}）</p>
+                <a href={row.url} target="_blank" rel="noopener noreferrer" className="pf-cute-focus block min-h-[44px] py-2 underline">{row.url}</a>
+              </li>)}
+            </ul> : null}
+          </div> : null}
           <div className="border-b pb-3" style={{ borderColor: c.borderSubtle }}>
-            <div className="flex justify-between gap-3"><b>ご相談・制作内容</b><button type="button" className="pf-cute-focus text-sm underline" onClick={() => goToStep(0)}>修正する</button></div>
-            <p className="mt-2 whitespace-pre-wrap break-words text-sm">{state.message || "相談内容なし"}</p>
-            {state.inquiryMode === "quote" && <p className="mt-2 text-sm">{massProductionSelected ? NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL : NATORI_REQUEST_TYPE_LABELS_V1[state.requestType]}／{massProductionSelected ? state.commissionScopeOther : NATORI_COMMISSION_SCOPE_LABELS_V1[state.commissionScope]}</p>}
-            {refImages.length > 0 && <p className="mt-2 text-sm">参考画像：{refImages.length}枚</p>}
-            {state.referenceLinks.some((row) => row.url.trim()) && <p className="mt-2 text-sm">参考URL：{state.referenceLinks.filter((row) => row.url.trim()).length}件</p>}
+            <div className="flex flex-wrap items-center justify-between gap-2"><h4 className="font-bold">ご連絡先</h4>
+              <button type="button" className="pf-cute-focus min-h-[44px] rounded-lg px-3 py-2 text-sm font-bold underline" onClick={() => goToStep(state.inquiryMode === "quote" ? 1 : 0)}>ご連絡先を修正する</button></div>
+            <p className="mt-2 break-words text-sm">{confirmationSubmission.data.clientName}<br />{confirmationSubmission.data.clientEmail}</p>
           </div>
-          {state.inquiryMode === "quote" && <div className="border-b pb-3" style={{ borderColor: c.borderSubtle }}>
-            <div className="flex justify-between gap-3"><b>用途・条件</b><button type="button" className="pf-cute-focus text-sm underline" onClick={() => goToStep(1)}>修正する</button></div>
-            <p className="mt-2 text-sm">用途：{state.usageTypes.length ? state.usageTypes.map((item) => NATORI_USAGE_TYPE_LABELS_V1[item]).join("、") : "相談して決めたい"}</p>
-            {!massProductionSelected && <p className="mt-1 text-sm">商用利用：{NATORI_COMMERCIAL_USE_LABELS_V1[state.commercialUse]}</p>}
-            <p className="mt-1 text-sm">実績掲載：{NATORI_PUBLICATION_POLICY_LABELS_V1[state.publicationPolicy]}{state.publicationAllowedFrom ? `（${state.publicationAllowedFrom}から）` : ""}</p>
-            <p className="mt-1 text-sm">予算：{NATORI_BUDGET_KIND_LABELS_V1[state.budgetKind]}{state.budgetKind !== "undecided" ? ` ${state.budgetMin}${state.budgetMax ? `〜${state.budgetMax}` : ""}円` : ""}</p>
-            <p className="mt-1 text-sm">納期：{NATORI_DEADLINE_KIND_LABELS_V1[state.deadlineKind]}{state.deadlineDate ? ` ${state.deadlineDate}` : ""}</p>
-          </div>}
-          <div className="flex justify-between gap-3"><div><b>ご連絡先</b><p className="mt-2 text-sm">{clientName}<br />{clientEmail}</p></div><button type="button" className="pf-cute-focus self-start text-sm underline" onClick={() => goToStep(state.inquiryMode === "quote" ? 1 : 0)}>修正する</button></div>
         </section>
       )}
+      {step === lastStep && frozenSubmission && !frozenSubmission.success ? <p role="alert" className="text-sm" style={{ color: c.error }}>{frozenSubmission.errors[0]?.message}</p> : null}
+
       {submitError && <p id="pf-submit-errors" tabIndex={-1} role="alert" className="rounded-xl border-2 px-3 py-2 text-sm font-bold" style={{ borderColor: c.error, color: c.error, background: c.errorSoft }}>{submitError}</p>}
       {serverFieldErrors.length > 0 && <ul className="space-y-1 text-sm" style={{ color: c.error }}>
         {serverFieldErrors.map((error, index) => <li key={`${error.path}:${index}`} id={`pf-submit-error-${index}`}><button type="button" className="pf-cute-focus min-h-[44px] text-left underline" onClick={() => focusError(error)}>{error.message}</button></li>)}
@@ -1608,14 +1619,15 @@ export default function PortfolioStructuredCommissionForm({
         <FormSection title="確認して送信">
           <PortfolioLegalNotice />
           <button type="submit" disabled={!commissionOpen || sending || retrySeconds > 0} aria-busy={sending}
-            className="pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black hover:brightness-95 disabled:opacity-50"
-            style={{ background: c.action, borderColor: c.actionDisplay, color: c.onAction }}>
+            className={`${natoriPrimaryActionClassName} pf-cute-focus w-full rounded-full border-2 py-3.5 text-base font-black`}>
             {!commissionOpen ? "現在受付停止中です" : sending ? "送信中…" : retrySeconds > 0 ? `再送まで ${retrySeconds}秒` : state.inquiryMode === "quote" ? "見積もりを依頼する" : "相談内容を送信する"}
           </button>
         </FormSection>
-      ) : <button type="button" onClick={nextStep} className="pf-cute-focus w-full min-h-[48px] rounded-full border-2 px-4 py-3 font-black" style={{ background: c.action, borderColor: c.actionDisplay, color: c.onAction }}>
+      ) : <button type="button" onClick={nextStep} className={`${natoriPrimaryActionClassName} pf-cute-focus w-full min-h-[48px] rounded-full border-2 px-4 py-3 font-black`}>
         {step === 0 && state.inquiryMode === "quote" ? "条件・連絡先へ" : "内容を確認する"}
       </button>}
+      </fieldset>
+      <IntakeRecoveryPanel intake={intake} />
     </form>
   );
 }

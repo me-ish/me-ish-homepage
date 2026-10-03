@@ -5,17 +5,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { mockAdminFrom, mockResolveOwner, mockConfirmRpc, mockSign, mockBulkLinks } =
+const { mockAdminFrom, mockResolveOwner, mockConfirmRpc, mockSign, mockBulkLinks, mockSnapshot } =
   vi.hoisted(() => ({
     mockAdminFrom: vi.fn(),
     mockResolveOwner: vi.fn(),
     mockConfirmRpc: vi.fn(),
     mockSign: vi.fn(),
     mockBulkLinks: vi.fn(),
+    mockSnapshot: vi.fn(),
   }));
 
 vi.mock("@/lib/supabaseAdmin", () => ({
   supabaseAdmin: vi.fn(() => ({ from: (...args: unknown[]) => mockAdminFrom(...args) })),
+}));
+
+vi.mock("@/features/natori/server/taskIntegrityService", () => ({
+  loadCoherentTaskSnapshot: (...args: unknown[]) => mockSnapshot(...args),
+  setTaskFromLatestDb: vi.fn(),
 }));
 
 vi.mock("@/features/natori/server/natoriOwner", () => ({
@@ -267,6 +273,7 @@ describe("list / archive", () => {
     tasks?: unknown[];
     references?: unknown[];
   }) {
+    mockSnapshot.mockResolvedValue({projects:[...rows.active,...rows.archived],tasks:rows.tasks??[]});
     const table = (result: Result): unknown =>
       new Proxy(
         {},
@@ -365,7 +372,7 @@ describe("list / archive", () => {
     expect(file.name).not.toContain(PROJECT_ID);
   });
 
-  it("署名に失敗した画像は一覧から外れるが、案件表示は続行する", async () => {
+  it("署名に失敗した画像も提出済みの行を保ち、案件表示は続行する", async () => {
     mockSign.mockResolvedValue(null);
     mockAdminFrom.mockImplementation(
       listTables({
@@ -377,7 +384,9 @@ describe("list / archive", () => {
     const result = await listNatoriAdminProjects();
     expect(result.kind).toBe("ok");
     if (result.kind !== "ok") return;
-    expect(result.referenceFiles).toEqual([]);
+    expect(result.referenceFiles).toHaveLength(1);
+    expect(result.referenceFiles[0]).toMatchObject({url:null,exists:true,acquisitionState:"unavailable"});
+    expect(result.referenceFilesState).toBe("ready");
     expect(result.projects).toHaveLength(1);
   });
 

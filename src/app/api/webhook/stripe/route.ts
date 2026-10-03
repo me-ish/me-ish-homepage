@@ -13,6 +13,8 @@ import {
   claimStripeEvent,
   releaseStripeEvent,
 } from "@/lib/stripe/processedEvents";
+import { paymentIntegrityEnabled, refundLedgerEnabled, refundLedgerReadEnabled, receiveNatoriPaymentEvent } from "@/features/natori/server/paymentEventService";
+import { isNatoriRefundEventType, isExplicitOtherProductRefund } from "@/features/natori/lib/paymentEvent";
 import { markNatoriCommissionPaid } from "@/features/natori/server/orderMailService";
 
 export const runtime = "nodejs";
@@ -95,6 +97,20 @@ export async function POST(req: NextRequest) {
   }
 
 
+  // Refund objects are not Checkout Sessions. Dispatch before the checkout-only early return.
+  if (isNatoriRefundEventType(event.type) && refundLedgerReadEnabled()
+    && !isExplicitOtherProductRefund(event)) {
+    // A paused consumer must not acknowledge an unrecorded refund. Preserve Stripe
+    // redelivery; missing metadata remains unclassified until original-payment lookup.
+    if (!paymentIntegrityEnabled() || !refundLedgerEnabled()) {
+      return NextResponse.json({ ok: false, received: false, result: "refund_consumer_paused" },
+        { status: 503, headers: { "Retry-After": "60" } });
+    }
+    const result = await receiveNatoriPaymentEvent(event);
+    return NextResponse.json({ ok: result.status === 200, received: result.status === 200, result: result.result },
+      { status: result.status, ...(result.status === 503 ? { headers: { "Retry-After": "60" } } : {}) });
+  }
+
   const isTarget =
     event.type === "checkout.session.completed" ||
     event.type === "checkout.session.async_payment_succeeded";
@@ -116,6 +132,13 @@ export async function POST(req: NextRequest) {
   // イベント単位の dedup。同一 event.id の再送・同時配送は最初の1リクエスト
   // だけが処理権を得る。処理が一時エラーで失敗した経路では releaseStripeEvent で
   // 行を消してから 500 を返し、Stripe の再送でリトライさせる。
+  // Natori's durable inbox runs before the legacy shared claim; other products keep their existing dispatch.
+  if (paymentIntegrityEnabled() && session.metadata?.kind === "natori_commission") {
+    const result = await receiveNatoriPaymentEvent(event);
+    return NextResponse.json({ ok: result.status === 200, received: result.status === 200, result: result.result },
+      { status: result.status, ...(result.status === 503 ? { headers: { "Retry-After": "60" } } : {}) });
+  }
+
   const claim = await claimStripeEvent(event.id);
   if (claim === "duplicate") {
     return NextResponse.json(

@@ -222,7 +222,9 @@ async function main() {
     await expect(dialog.getByText('納品発行済み', { exact: true })).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'ファイルを追加', exact: true })).toBeDisabled();
     await dialog.getByRole('button', { name: '納品メールを送信', exact: true }).click(); await expect(dialog.getByRole('status')).toContainText('送信しました。', { timeout: 30000 });
-    const after = await projectRow(primary.id); check(JSON.stringify(before) === JSON.stringify(after), 'RESEND_MUTATED_FACTS');
+    const after = await projectRow(primary.id);
+    check(JSON.stringify({ ...before, mutation_revision: after.mutation_revision }) === JSON.stringify(after), 'RESEND_MUTATED_FACTS');
+    check(Number.isSafeInteger(before.mutation_revision) && after.mutation_revision === before.mutation_revision + 1, 'RESEND_REVISION_FENCE');
     await clientPage.goto(`/natori/delivery/${primaryToken}`); await expect(clientPage.getByRole('status')).toContainText('受け取りを確認しました。');
     await dialog.getByRole('button', { name: '閉じる', exact: true }).first().click();
   });

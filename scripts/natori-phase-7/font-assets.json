@@ -1,0 +1,65 @@
+[
+  {
+    "family": "fredoka",
+    "commit": "a60a77e14f28abd4ef243a1b5dfc48df0cec5205",
+    "name": "Fredoka[wdth,wght].ttf",
+    "url": "https://raw.githubusercontent.com/google/fonts/a60a77e14f28abd4ef243a1b5dfc48df0cec5205/ofl/fredoka/Fredoka%5Bwdth%2Cwght%5D.ttf",
+    "git_blob_sha1": "349b6ecef8a358ede29b7bf74a08196be5d71b25",
+    "sha256": "2ba02e68b152868aef9ba28e24b3648c7d457fe6f25c761f2c2c53fb61a73fc8",
+    "bytes": 159184
+  },
+  {
+    "family": "fredoka",
+    "commit": "a60a77e14f28abd4ef243a1b5dfc48df0cec5205",
+    "name": "OFL.txt",
+    "url": "https://raw.githubusercontent.com/google/fonts/a60a77e14f28abd4ef243a1b5dfc48df0cec5205/ofl/fredoka/OFL.txt",
+    "git_blob_sha1": "791a98de7893b9bb62d06729745d00655e791a40",
+    "sha256": "5c9e7eee5c6b25f4b05b8d53b2e470ea4962f9ced742d044a98f7d95d1375bab",
+    "bytes": 4388
+  },
+  {
+    "family": "zenmarugothic",
+    "commit": "92503f07b74eab956c1abf4956fbf46170716caa",
+    "name": "ZenMaruGothic-Regular.ttf",
+    "url": "https://raw.githubusercontent.com/google/fonts/92503f07b74eab956c1abf4956fbf46170716caa/ofl/zenmarugothic/ZenMaruGothic-Regular.ttf",
+    "git_blob_sha1": "c622402a1acf00c3481334de56439b3703cdcbb6",
+    "sha256": "a0c0b53543e0993ae2225e629c833f3d51495ad31720694ff112ce4ce11111ef",
+    "bytes": 3832756
+  },
+  {
+    "family": "zenmarugothic",
+    "commit": "92503f07b74eab956c1abf4956fbf46170716caa",
+    "name": "ZenMaruGothic-Medium.ttf",
+    "url": "https://raw.githubusercontent.com/google/fonts/92503f07b74eab956c1abf4956fbf46170716caa/ofl/zenmarugothic/ZenMaruGothic-Medium.ttf",
+    "git_blob_sha1": "25ff26c6fc549e2dfe57d7e92524a5c1158720e6",
+    "sha256": "3cfdb98a13571ede17fcc769f5093a97c38b80a7b9b2ab754a26b4d822092b3b",
+    "bytes": 3810988
+  },
+  {
+    "family": "zenmarugothic",
+    "commit": "92503f07b74eab956c1abf4956fbf46170716caa",
+    "name": "ZenMaruGothic-Bold.ttf",
+    "url": "https://raw.githubusercontent.com/google/fonts/92503f07b74eab956c1abf4956fbf46170716caa/ofl/zenmarugothic/ZenMaruGothic-Bold.ttf",
+    "git_blob_sha1": "aeaf890a35366fc7d08781886d2a04b85b5bec8c",
+    "sha256": "fe24426b9c8b5523a0146a8235c8674eccf0493af354a53ec895c3596d9eb745",
+    "bytes": 3779008
+  },
+  {
+    "family": "zenmarugothic",
+    "commit": "92503f07b74eab956c1abf4956fbf46170716caa",
+    "name": "ZenMaruGothic-Black.ttf",
+    "url": "https://raw.githubusercontent.com/google/fonts/92503f07b74eab956c1abf4956fbf46170716caa/ofl/zenmarugothic/ZenMaruGothic-Black.ttf",
+    "git_blob_sha1": "01755515fd938d1b76eccf0e16c0ba970c9bb678",
+    "sha256": "6bd74fe76cd39ee0ec18775c3661d845343fb3f6f8fa09a3076638417baf741f",
+    "bytes": 3710324
+  },
+  {
+    "family": "zenmarugothic",
+    "commit": "92503f07b74eab956c1abf4956fbf46170716caa",
+    "name": "OFL.txt",
+    "url": "https://raw.githubusercontent.com/google/fonts/92503f07b74eab956c1abf4956fbf46170716caa/ofl/zenmarugothic/OFL.txt",
+    "git_blob_sha1": "7dc44f8017161dc4e1346b24cfd6e195c402633a",
+    "sha256": "2a20cf7ce1909d8ee1e949095d340f7d7656705f7c810a2d6faf56800ad0cb3d",
+    "bytes": 4402
+  }
+]

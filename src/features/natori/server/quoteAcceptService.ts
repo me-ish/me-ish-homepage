@@ -1,4 +1,6 @@
 import "server-only";
+import { getQuotePaymentOverview } from "./paymentReadModelService";
+import type { NatoriPaymentOverview } from "../types/payment";
 
 // features/natori/server/quoteAcceptService.ts
 // 見積もりのワンクリック承諾。見積もりメール内の承諾ページURL（トークン付き）
@@ -15,6 +17,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { formatYen } from "@/features/natori/lib/pricing";
 import { sendNatoriNoticeMail } from "@/features/natori/server/orderMailService";
 import { readNatoriQuoteTerms, type NatoriQuoteTerms } from "@/features/natori/lib/quoteTerms";
+import { quoteIntegrityEnabled } from "./structuredQuoteService";
 import { acceptanceOutboxEnabled } from "./acceptanceNotifications";
 
 const TOKEN_RE = /^[A-Za-z0-9_-]{20,64}$/;
@@ -24,6 +27,7 @@ function hashToken(token: string): string {
 }
 
 export type NatoriQuoteView = {
+  payment?: NatoriPaymentOverview;
   projectId: string;
   title: string;
   clientName: string;
@@ -31,6 +35,7 @@ export type NatoriQuoteView = {
   acceptedAt: string | null;
   expiresAt: string;
   terms: NatoriQuoteTerms | null;
+  version?: number;
   items: { label: string; quantity: number; amount: number }[];
 };
 
@@ -41,6 +46,7 @@ export type GetNatoriQuoteResult =
 
 type QuoteRow = {
   id: string;
+  version?: number;
   project_id: string;
   title: string;
   client_name: string;
@@ -55,14 +61,23 @@ type QuoteRow = {
 async function fetchQuoteRow(token: string): Promise<QuoteRow | null> {
   if (!TOKEN_RE.test(token)) return null;
   const admin = supabaseAdmin();
-  const { data, error } = await admin
+  let { data, error } = await admin
     .from("natori_quotes")
-    .select("id, project_id, title, client_name, amount, accepted_at, expires_at, superseded_at, quote_terms, pricing_snapshot")
+    .select("id, version, project_id, title, client_name, amount, accepted_at, expires_at, superseded_at, quote_terms, pricing_snapshot")
     .eq("token_hash", hashToken(token))
     .maybeSingle();
   if (error) {
     console.error("[natori-quote] quote fetch failed", error);
     return null;
+  }
+  if (!data) {
+    const access = await admin.from("natori_quote_access").select("quote_id, expires_at").eq("token_hash",hashToken(token)).maybeSingle();
+    if (access.error || !access.data || Date.parse(access.data.expires_at)<=Date.now()) return null;
+    const result = await admin.from("natori_quotes")
+      .select("id, version, project_id, title, client_name, amount, accepted_at, expires_at, superseded_at, quote_terms, pricing_snapshot")
+      .eq("id",access.data.quote_id).maybeSingle();
+    data=result.data; error=result.error;
+    if (error) return null;
   }
   return (data as QuoteRow | null) ?? null;
 }
@@ -85,6 +100,7 @@ function toView(row: QuoteRow): NatoriQuoteView {
   }).slice(0, 30) : [];
   return {
     projectId: row.project_id,
+    version: row.version,
     title: row.title,
     clientName: row.client_name,
     amount: row.amount,
@@ -100,7 +116,12 @@ export async function getNatoriQuoteByToken(token: string): Promise<GetNatoriQuo
   if (!row) return { kind: "not-found" };
   if (row.superseded_at) return { kind: "not-found" };
   if (isExpired(row)) return { kind: "expired" };
-  return { kind: "ok", quote: toView(row) };
+  if (quoteIntegrityEnabled() && !row.accepted_at) {
+    const project=await supabaseAdmin().from("natori_projects").select("status, deleted_at, active_quote_id").eq("id",row.project_id).maybeSingle();
+    if (project.error || !project.data || project.data.status === "closed" || project.data.deleted_at
+      || project.data.active_quote_id !== row.id) return { kind: "not-found" };
+  }
+  return { kind: "ok", quote: { ...toView(row), payment: await getQuotePaymentOverview(row.project_id) } };
 }
 
 export type AcceptNatoriQuoteResult =

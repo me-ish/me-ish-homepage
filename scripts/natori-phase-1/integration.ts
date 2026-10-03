@@ -294,7 +294,9 @@ async function main() {
       check(!(await admin.storage.from("natori-deliveries").upload(path, bytes)).error, "LEGACY_STORAGE");
       check(await manage(() => ready.finalizeDeliveryFile(id)) === "ready", "LEGACY_VERIFICATION");
       const before = await row(p.id); check((await issue(input(p.id, [id]))).kind === "ok", "LEGACY_IMPORT");
-      const after = await row(p.id); check(JSON.stringify(before) === JSON.stringify(after), "LEGACY_FACTS_CHANGED");
+      const after = await row(p.id);
+      check(JSON.stringify({ ...before, mutation_revision: after.mutation_revision }) === JSON.stringify(after), "LEGACY_FACTS_CHANGED");
+      check(Number.isSafeInteger(before.mutation_revision) && after.mutation_revision === before.mutation_revision + 1, "LEGACY_REVISION_FENCE");
       const view = await files.getNatoriDeliveryByToken(t); check(view.kind === "ok" && view.delivery.acceptedAt === before.delivery_accepted_at, "LEGACY_URL_LOST");
     });
     await test("foreign-owner-and-closed-unpaid-guards-preserve-rows", async () => {

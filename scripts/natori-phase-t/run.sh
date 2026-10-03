@@ -17,6 +17,36 @@ phase0b=${PHASE_0B:-0}
 phasen=${PHASE_N:-0}
 phase4=${PHASE_4:-0}
 phase1=${PHASE_1:-0}
+phase2a=${PHASE_2A:-0}
+phase2b=${PHASE_2B:-0}
+phase2c=${PHASE_2C:-0}
+phase2d=${PHASE_2D:-0}
+phase3a=${PHASE_3A:-0}
+phase3b=${PHASE_3B:-0}
+phase5=${PHASE_5:-0}
+phase6a=${PHASE_6A:-0}
+phase6b=${PHASE_6B:-0}
+phase7=${PHASE_7:-0}
+[[ $phase6b == 0 || ( $phase6b == 1 && $phase6a == 1 && $phasen == 1 && $phase2c == 1 ) ]] || exit 1
+[[ $phase7 == 0 || ( $phase7 == 1 && $phase6b == 1 ) ]] || exit 1
+[[ $phase6a == 0 || ( $phase6a == 1 && $phasen == 1 && $phase2a == 1 && $phase2b == 1 && $phase2c == 1 && $phase2d == 1 && $phase3a == 1 && $phase3b == 1 && $phase5 == 1 ) ]] || exit 1
+phase6a_schema=0
+phase6a_schema_installed=0
+# Latest management GET needs the real coherent schema in every N or standalone 0B reader profile.
+# Its source prerequisite is independent of enabling additional 6A business cases.
+if [[ ( $phasen == 1 || $phase0b == 1 ) && ( -f "$repo/supabase/migrations/20261001223805_natori_task_integrity.sql" || -f "$repo/src/features/natori/server/taskIntegrityService.ts" ) ]]; then
+  [[ -f "$repo/scripts/natori-phase-6a/schema-preflight.mjs" ]] || exit 1
+  node "$repo/scripts/natori-phase-6a/schema-preflight.mjs" "$repo"
+  phase6a_schema=1
+fi
+[[ $phase6a == 0 || $phase6a_schema == 1 ]] || exit 1
+[[ $phase5 == 0 || ( $phase5 == 1 && $phase3b == 1 ) ]] || exit 1
+[[ $phase3b == 0 || ( $phase3b == 1 && $phase3a == 1 ) ]] || exit 1
+[[ $phase3a == 0 || ( $phase3a == 1 && $phase2d == 1 ) ]] || exit 1
+[[ $phase2d == 0 || ( $phase2d == 1 && $phase2c == 1 ) ]] || exit 1
+[[ $phase2c == 0 || ( $phase2c == 1 && $phase2b == 1 ) ]] || exit 1
+[[ $phase2b == 0 || ( $phase2b == 1 && $phase2a == 1 ) ]] || exit 1
+[[ $phase2a == 0 || ( $phase2a == 1 && $phasen == 1 && $phase1 == 0 && $phase4 == 0 ) ]] || exit 1
 [[ $phase1 == 0 || ( $phase1 == 1 && $phasen == 1 && $phase4 == 0 ) ]] || exit 1
 [[ $phase4 == 0 || ( $phase4 == 1 && $phasen == 1 ) ]] || exit 1
 [[ $phasen == 0 || $phasen == 1 ]] || exit 1
@@ -102,6 +132,65 @@ if [[ $phase1 == 1 ]]; then
   test_memory=1g
 fi
 
+if [[ $phase3b == 1 ]]; then
+  mkdir -p "$work/phase3b"
+  node "$repo/scripts/natori-phase-3b/build.mjs" "$work/phase3b/integration.cjs"
+  node "$repo/scripts/natori-phase-3b/build-fixture.mjs" "$work/phase3b.sql"
+  [[ -s "$work/phase3b/integration.cjs" && -s "$work/phase3b.sql" ]]
+  extra_mounts+=(--mount "type=bind,source=$work/phase3b,target=/phase3b,readonly")
+fi
+
+if [[ $phase3a == 1 ]]; then
+  mkdir -p "$work/phase3a"
+  node "$repo/scripts/natori-phase-3a/build.mjs" "$work/phase3a/integration.cjs"
+  node "$repo/scripts/natori-phase-3a/build-fixture.mjs" "$work/phase3a.sql"
+  [[ -s "$work/phase3a/claim-worker.cjs" && -s "$work/phase3a/browser-helpers.cjs" ]]
+  extra_mounts+=(--mount "type=bind,source=$work/phase3a,target=/phase3a,readonly")
+fi
+
+if [[ $phase7 == 1 ]]; then
+  mkdir -p "$work/phase7"
+  node "$repo/scripts/natori-phase-7/build.mjs" "$work/phase7/fixtures.cjs"
+fi
+
+if [[ $phase2d == 1 ]]; then
+  mkdir -p "$work/phase2d"
+  node "$repo/scripts/natori-phase-2d/build.mjs" "$work/phase2d/integration.cjs"
+  node "$repo/scripts/natori-phase-2d/build-fixture.mjs" "$work/phase2d.sql"
+  extra_mounts+=(--mount "type=bind,source=$work/phase2d,target=/phase2d,readonly")
+fi
+
+if [[ $phase6a_schema == 1 ]]; then
+  node "$repo/scripts/natori-phase-6a/build-fixture.mjs" "$work/phase6a.sql"
+fi
+if [[ $phase6a == 1 ]]; then
+  mkdir -p "$work/phase6a"
+  node "$repo/scripts/natori-phase-6a/build.mjs" "$work/phase6a/integration.cjs"
+  extra_mounts+=(--mount "type=bind,source=$work/phase6a,target=/phase6a,readonly")
+fi
+
+if [[ $phase2c == 1 ]]; then
+  mkdir -p "$work/phase2c"
+  node "$repo/scripts/natori-phase-2c/build.mjs" "$work/phase2c/integration.cjs"
+  node "$repo/scripts/natori-phase-2c/build-fixture.mjs" "$work/phase2c.sql"
+  extra_mounts+=(--mount "type=bind,source=$work/phase2c,target=/phase2c,readonly")
+fi
+
+if [[ $phase2b == 1 ]]; then
+  mkdir -p "$work/phase2b"
+  node "$repo/scripts/natori-phase-2b/build.mjs" "$work/phase2b/integration.cjs"
+  node "$repo/scripts/natori-phase-2b/build-fixture.mjs" "$work/phase2b.sql"
+  extra_mounts+=(--mount "type=bind,source=$work/phase2b,target=/phase2b,readonly")
+fi
+
+if [[ $phase2a == 1 ]]; then
+  mkdir -p "$work/phase2a"
+  node "$repo/scripts/natori-phase-2a/build.mjs" "$work/phase2a/integration.cjs"
+  node "$repo/scripts/natori-phase-2a/build-fixture.mjs" "$work/phase2a.sql"
+  extra_mounts+=(--mount "type=bind,source=$work/phase2a,target=/phase2a,readonly")
+  test_memory=1g
+fi
+
 if [[ $phase0b == 1 ]]; then
   mkdir -p "$work/phase0b"
   node "$repo/scripts/natori-phase-0b/build.mjs" "$work/phase0b/integration.cjs"
@@ -124,15 +213,16 @@ if [[ $phasen == 1 ]]; then
   extra_mounts+=(-e NODE_PATH=/app/node_modules)
   test_memory=512m
 fi
-if [[ $phase1 == 1 ]]; then test_memory=1g; fi
+if [[ $phase1 == 1 || $phase2a == 1 || $phase2b == 1 ]]; then test_memory=1g; fi
 
 echo 'BUILD: download tools/images; production credentials are absent'
 curl --fail --silent --show-error --location --connect-timeout 15 --max-time 120 --retry 1 \
   https://github.com/supabase/cli/releases/download/v2.118.0/supabase_2.118.0_linux_amd64.tar.gz -o "$work/cli.tar.gz"
 printf 'f6089a86fb9d9221c958193a277338daddd6822f706929943812fa32e106c86d  %s\n' "$work/cli.tar.gz" | sha256sum -c -
 tar --no-same-owner -xzf "$work/cli.tar.gz" -C "$work/bin" supabase
+# --version and --help also check releases and can rewrite the tracked CLI cache.
+export SUPABASE_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1 SUPABASE_NO_UPDATE_NOTIFIER=1
 [[ $("$work/bin/supabase" --version) == 2.118.0 ]]
-export SUPABASE_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1
 "$work/bin/supabase" start --help >"$work/results/cli-start-help.txt"
 "$work/bin/supabase" stop --help >"$work/results/cli-stop-help.txt"
 
@@ -146,6 +236,26 @@ if [[ $phasen == 1 ]]; then
   node "$repo/scripts/natori-phase-n/prepare-browser.mjs" "$work/browser-app"
   if [[ $phase4 == 1 ]]; then node "$repo/scripts/natori-phase-4/prepare-browser.mjs" "$work/browser-app"; fi
   if [[ $phase1 == 1 ]]; then node "$repo/scripts/natori-phase-1/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase2a == 1 ]]; then node "$repo/scripts/natori-phase-2a/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase2c == 1 ]]; then node "$repo/scripts/natori-phase-2c/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase2d == 1 ]]; then node "$repo/scripts/natori-phase-2d/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase3a == 1 ]]; then node "$repo/scripts/natori-phase-3a/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase3b == 1 ]]; then node "$repo/scripts/natori-phase-3b/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase5 == 1 ]]; then node "$repo/scripts/natori-phase-5/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase6a == 1 ]]; then node "$repo/scripts/natori-phase-6a/prepare-browser.mjs" "$work/browser-app"; fi
+  if [[ $phase6b == 1 ]]; then
+    PHASE_6B_BROWSER=ephemeral node "$repo/scripts/natori-phase-6b/prepare-browser.mjs" "$work/browser-app"
+  fi
+  if [[ $phase7 == 1 ]]; then
+    PHASE_7_BROWSER=ephemeral node "$repo/scripts/natori-phase-7/prepare-browser.mjs" "$work/browser-app"
+  fi
+  # One shared pinned font construction after every current source-copy builder.
+  if [[ $phase5 == 1 || $phase6a == 1 || $phase6b == 1 || $phase7 == 1 ]]; then
+    node "$repo/scripts/natori-phase-7/prepare-fonts.mjs" "$work/browser-app" --construction
+  fi
+  if [[ $phase7 == 1 ]]; then
+    node "$repo/scripts/natori-phase-7/collect-execution.mjs" "$work/browser-app" "${PHASE7_BASE_SHA:-}"
+  fi
   cp "$work/browser-app/source-checksums.json" "$work/results/browser-source-checksums.json"
 fi
 ROOT="$root" WORK="$work" PROJECT="$project" PHASE_1="$phase1" node --input-type=module <<'JS'
@@ -255,6 +365,13 @@ node "$root/build-fixture.mjs" "$work/current.sql"
 # This is a Unix-socket connection inside the verified disposable DB container only.
 # HTTP authorization tests below still use anon/user/service JWTs, never this role.
 dbsql() { docker exec -i -e PGOPTIONS='-c phase_t.sandbox=ephemeral -c search_path=pg_catalog,public' "$db" psql -X -U supabase_admin -d postgres -v ON_ERROR_STOP=1 "$@"; }
+install_coherent_schema_once() {
+  [[ $phase6a_schema == 1 ]] || return 0
+  [[ $phase6a_schema_installed == 0 ]] || { echo "Coherent schema already installed"; return 1; }
+  dbsql <"$work/phase6a.sql" >/dev/null
+  phase6a_schema_installed=1
+}
+
 dbsql <"$work/current.sql" >/dev/null
 dbsql -At <"$root/catalog.sql" >"$work/results/catalog-current.json"
 node "$root/verify-catalog.mjs" "$work/results/catalog-current.json" current
@@ -356,11 +473,19 @@ timeout 180 docker exec "$runner" node /tests/storage.mjs candidate
 if [[ $phase0a == 1 ]]; then timeout 240 docker exec "$runner" node /phase0a/integration.cjs after; fi
 if [[ $phase0b == 1 ]]; then
   dbsql <"$work/phase0b.sql" >/dev/null
+  if [[ $phase6a_schema == 1 ]]; then
+    # Standalone 0B keeps its original cases; only genuine GET prerequisites are added.
+    dbsql <"$repo/scripts/natori-phase-6a/standalone-read-prerequisites.sql" >/dev/null
+    install_coherent_schema_once
+  fi
   timeout 240 docker exec "$runner" node /phase0b/integration.cjs
   bash "$repo/scripts/natori-phase-0b/run-browser.sh" "$repo" "$work" "$runner" "$project" "$pid"
 fi
 if [[ $phasen == 1 ]]; then
   dbsql <"$work/phasen.sql" >/dev/null
+  # The actual management reader now uses the coherent RPC. Install its schema
+  # before any previous browser regression consumes the new application source.
+  if [[ $phase6a_schema == 1 ]]; then install_coherent_schema_once; fi
   if [[ $phase4 == 1 ]]; then dbsql <"$work/phase4.sql" >/dev/null; fi
   # Only a capture server in the same sealed namespace; no internet mail provider.
   sudo nsenter -t "$pid" -n iptables -I OUTPUT 1 -d 127.0.0.1 -p tcp --dport 3101 -j ACCEPT
@@ -381,4 +506,77 @@ if [[ $phase1 == 1 ]]; then
 fi
 sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/egress-counters.txt"
 sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/egress-counters.txt"
+if [[ $phase2a == 1 ]]; then
+  dbsql <"$work/phase2a.sql" >/dev/null
+  timeout 300 docker exec "$runner" node /phase2a/integration.cjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase2a-browser/browser.mjs
+fi
+
+if [[ $phase2b == 1 ]]; then
+  dbsql <"$work/phase2b.sql" >/dev/null
+  timeout 300 docker exec "$runner" node /phase2b/integration.cjs
+fi
+
+# Provision only the disposable historical terminal fixture while the pre-2C
+# archive rules still apply. The final 2D compatibility run retains its old assertions.
+if [[ $phase2d == 1 ]]; then
+  timeout 120 docker exec "$runner" node /phase2d/phase2b-compatibility.cjs --prepare-terminal-legacy-fixture
+fi
+
+if [[ $phase2c == 1 ]]; then
+  dbsql <"$work/phase2c.sql" >/dev/null
+  timeout 300 docker exec "$runner" node /phase2c/integration.cjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase2c-browser/browser.mjs
+fi
+
+if [[ $phase2d == 1 ]]; then
+  dbsql <"$work/phase2d.sql" >/dev/null
+  timeout 300 docker exec "$runner" node /phase2d/phase2b-compatibility.cjs
+  timeout 300 docker exec "$runner" node /phase2d/integration.cjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase2d-browser/browser.mjs
+fi
+
+if [[ $phase3a == 1 ]]; then
+  # Install only after the refund migration and its post-migration compatibility gate.
+  # Both helper bundles are mounted read-only in this same sealed namespace.
+  dbsql <"$work/phase3a.sql" >/dev/null
+  timeout 360 docker exec "$runner" node /phase3a/integration.cjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase3a-browser/browser.mjs
+  # Separate final evidence; retain every earlier phase report and egress snapshot.
+  sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/phase3a-egress-counters.txt"
+  sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/phase3a-egress-counters.txt"
+fi
+
+if [[ $phase3b == 1 ]]; then
+  # Preserve intake/refund purposes: install only after every prior migration/test.
+  dbsql <"$work/phase3b.sql" >/dev/null
+  dbsql <"$repo/scripts/natori-phase-3b/purpose-compatibility.sql" >/dev/null
+  phase3b_status=0
+  if ! timeout 360 docker exec "$runner" node /phase3b/integration.cjs; then phase3b_status=1; fi
+  if ! timeout 600 docker exec "$project-browser" /runtime-bin/node /phase3b-browser/browser.mjs; then phase3b_status=1; fi
+  sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/phase3b-egress-counters.txt"
+  sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/phase3b-egress-counters.txt"
+  [[ $phase3b_status == 0 ]] || { echo "Phase 3B mandatory tests failed"; exit 1; }
+fi
+
+if [[ $phase5 == 1 ]]; then
+  # Independent sealed Next lifecycle; retain all prior DB/browser cases and reports.
+  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase5-browser/browser.mjs
+  sudo nsenter -t "$pid" -n iptables -nvL OUTPUT >"$work/results/phase5-egress-counters.txt"
+  sudo nsenter -t "$pid" -n ip6tables -S OUTPUT >>"$work/results/phase5-egress-counters.txt"
+fi
+
+if [[ $phase6a == 1 ]]; then
+  timeout 300 docker exec "$runner" node /phase6a/integration.cjs
+  timeout 600 docker exec "$project-browser" /runtime-bin/node /phase6a-browser/browser.mjs
+fi
+
+# Each visual mode starts and stops its own Next process in the same sealed namespace.
+if [[ $phase6b == 1 ]]; then
+  timeout 900 docker exec "$project-browser" /runtime-bin/node /phase7-browser/visual-server.mjs 6b
+fi
+if [[ $phase7 == 1 ]]; then
+  timeout 900 docker exec "$project-browser" /runtime-bin/node /phase7-browser/visual-server.mjs 7
+fi
+
 echo 'Required real Storage tests completed; production remains unchanged'

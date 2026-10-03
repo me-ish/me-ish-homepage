@@ -1,241 +1,48 @@
-// ご依頼フォーム (POST /api/natori/portfolio/contact) のテスト。
-// CSRF・honeypot・レート制限と、multipart でのファイル同梱アップロード
-// （旧 contact/upload の廃止に伴う新フロー）を固定する。
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { _resetRateLimitStore } from "@/lib/rateLimit";
-
-/* ---------- Mocks ---------- */
-
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
+import { canonicalIntakeJson, canonicalizeIntake } from "@/features/natori/lib/intakeOperation";
+const mocks = vi.hoisted(() => ({ lookup: vi.fn(), settle: vi.fn(), submit: vi.fn(), rate: vi.fn(), availability: vi.fn(), enabled: vi.fn() }));
 vi.mock("server-only", () => ({}));
-
-const { mockSendContact, mockAutoReply, mockCreateInquiry, mockUpload, mockSign, mockDelete } = vi.hoisted(
-  () => ({
-    mockSendContact: vi.fn(),
-    mockAutoReply: vi.fn(),
-    mockCreateInquiry: vi.fn(),
-    mockUpload: vi.fn(),
-    mockSign: vi.fn(),
-    mockDelete: vi.fn(),
-  })
-);
-
-vi.mock("@/features/natori/server/portfolioContactService", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@/features/natori/server/portfolioContactService")>();
-  return {
-    ...actual,
-    isPortfolioContactConfigured: () => true,
-    sendPortfolioContactEmail: (...args: unknown[]) => mockSendContact(...args),
-    sendPortfolioContactAutoReply: (...args: unknown[]) => mockAutoReply(...args),
-  };
-});
-
-vi.mock("@/features/natori/server/inquiryProjectService", () => ({
-  createInquiryProject: (...args: unknown[]) => mockCreateInquiry(...args),
-}));
-
-vi.mock("@/features/natori/server/portfolioSiteService", () => ({
-  uploadPortfolioReferenceImage: (...args: unknown[]) => mockUpload(...args),
-  signPortfolioReferenceImage: (...args: unknown[]) => mockSign(...args),
-  deletePortfolioReferenceImages: (...args: unknown[]) => mockDelete(...args),
-}));
-
+vi.mock("@/lib/rateLimit", () => ({ checkRateLimit: mocks.rate, getIpFromRequest: () => "synthetic", rateLimitExceeded: () => new Response("{}", { status: 429 }) }));
+vi.mock("@/features/natori/server/publicIntakeMetrics", () => ({ recordPublicIntakeMetric: () => {} }));
+vi.mock("@/features/natori/server/publicCommissionAvailability", () => ({ loadPublicCommissionAvailability: mocks.availability }));
+vi.mock("@/features/natori/server/publicIntakeRollout", () => ({ isPublicStructuredIntakeEnabled: mocks.enabled }));
+vi.mock("@/features/natori/server/publicIntakeOperationService", () => ({ lookupPublicIntakeOperation: mocks.lookup, settlePublicIntakeOperation: mocks.settle, submitPublicIntakeOperation: mocks.submit,
+  hashCanonicalIntake: (input: unknown) => createHash("sha256").update(canonicalIntakeJson(input)).digest("hex") }));
 import { POST } from "../route";
-
-/* ---------- Helpers ---------- */
-
-const URL_ = "https://example.com/api/natori/portfolio/contact";
-const CSRF = { "x-requested-with": "me-ish" };
-
-const VALID_FIELDS = {
-  name: "テスト太郎",
-  email: "client@example.com",
-  requestType: "SNSアイコン",
-  details: "淡いピンクでふんわりお願いします。",
-};
-
-function makeJsonReq(
-  body: Record<string, unknown>,
-  headers: Record<string, string> = CSRF
-) {
-  return new Request(URL_, {
-    method: "POST",
-    headers: { "content-type": "application/json", ...headers },
-    body: JSON.stringify(body),
-  });
-}
-
-function makeMultipartReq(
-  fields: Record<string, string>,
-  files: File[] = [],
-  headers: Record<string, string> = CSRF
-) {
-  const form = new FormData();
-  for (const [key, value] of Object.entries(fields)) {
-    form.append(key, value);
-  }
-  for (const file of files) {
-    form.append("refImages", file);
-  }
-  // content-type は FormData から boundary 付きで自動設定される
-  return new Request(URL_, { method: "POST", headers, body: form });
-}
-
-function makePngFile(name = "ref.png") {
-  const pngSig = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  return new File([pngSig], name, { type: "image/png" });
-}
-
+const operationId = "c1a855ca-9478-4a8d-baa1-123456789abc";
+const fields = { name: "Legacy", email: "client@example.invalid", requestType: "以前の種類", details: "Original full legacy detail" };
+const hash = createHash("sha256").update(canonicalIntakeJson(canonicalizeIntake(fields, []))).digest("hex");
+const req = (body: object, headers = {}) => new Request("http://localhost/api/natori/portfolio/contact", { method: "POST", headers: { "Content-Type": "application/json", "x-requested-with": "me-ish", ...headers }, body: JSON.stringify(body) });
 beforeEach(() => {
-  vi.stubEnv("NATORI_OWNER_USER_ID", "a2823bd4-9b9a-4ae0-b408-e2d131c2ba09");
-  vi.clearAllMocks();
-  _resetRateLimitStore();
-  mockSendContact.mockResolvedValue({ mailed: true });
-  mockAutoReply.mockResolvedValue({ mailed: true });
-  mockCreateInquiry.mockResolvedValue({ kind: "ok", projectId: "proj-1" });
-  mockUpload.mockResolvedValue({ kind: "ok", path: "submission/a.webp" });
-  mockSign.mockResolvedValue("https://signed.example.com/refs/a.webp");
-  mockDelete.mockResolvedValue(undefined);
+  for (const mock of Object.values(mocks)) mock.mockReset();
+  mocks.lookup.mockResolvedValue({ kind: "not_found" }); mocks.submit.mockResolvedValue({ kind: "processing" });
+  mocks.rate.mockResolvedValue({ allowed: true }); mocks.availability.mockResolvedValue({ kind: "ok", commissionOpen: true, massProductionIllustrationOpen: true }); mocks.enabled.mockReturnValue(true);
 });
-
-afterEach(() => {
-  vi.unstubAllEnvs();
-});
-
-/* ---------- Tests ---------- */
-
-describe("guards", () => {
-  it("owner 未設定なら画像・案件・メールの処理前に停止する", async () => {
-    vi.stubEnv("NATORI_OWNER_USER_ID", "");
-    const res = await POST(makeMultipartReq(VALID_FIELDS, [makePngFile()]));
-    expect(res.status).toBe(503);
-    for (const mock of [mockUpload, mockCreateInquiry, mockSendContact, mockAutoReply]) {
-      expect(mock).not.toHaveBeenCalled();
-    }
-  });
-
-  it("CSRF ヘッダーが無ければ 403（フォーム本体にも CSRF を適用）", async () => {
-    const res = await POST(makeJsonReq(VALID_FIELDS, {}));
-    expect(res.status).toBe(403);
-    expect(mockCreateInquiry).not.toHaveBeenCalled();
-  });
-
-  it("honeypot が埋まっていたら成功風レスポンスで終了し、画像も保存しない", async () => {
-    const res = await POST(
-      makeMultipartReq({ ...VALID_FIELDS, website: "http://spam.example" }, [makePngFile()])
-    );
-    expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json.spam).toBe(true);
-    expect(mockUpload).not.toHaveBeenCalled();
-    expect(mockCreateInquiry).not.toHaveBeenCalled();
-    expect(mockSendContact).not.toHaveBeenCalled();
-  });
-
-  it("レート制限（3回/10分）を超えたら 429", async () => {
-    for (let i = 0; i < 3; i++) {
-      await POST(makeJsonReq(VALID_FIELDS));
-    }
-    const res = await POST(makeJsonReq(VALID_FIELDS));
-    expect(res.status).toBe(429);
-  });
-
-  it("必須項目が欠けていたら 400", async () => {
-    const res = await POST(makeJsonReq({ ...VALID_FIELDS, name: "" }));
-    expect(res.status).toBe(400);
-    expect(mockCreateInquiry).not.toHaveBeenCalled();
-  });
-});
-
-describe("multipart（ファイル同梱）", () => {
-  it("正規のフォーム添付フロー: 非公開パスを案件へ、署名URLをメールだけへ引き継ぐ", async () => {
-    const res = await POST(makeMultipartReq(VALID_FIELDS, [makePngFile()]));
-    expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json).toMatchObject({ success: true, mailed: true, caseCreated: true });
-
-    expect(mockUpload).toHaveBeenCalledTimes(1);
-    expect(mockCreateInquiry.mock.calls[0][1]).toEqual(["submission/a.webp"]);
-    const inquiryInput = mockCreateInquiry.mock.calls[0][0] as { refImages: string[] };
-    expect(inquiryInput.refImages).toEqual([]);
-    const mailInput = mockSendContact.mock.calls[0][0] as { refImages: string[] };
-    expect(mailInput.refImages).toEqual(["https://signed.example.com/refs/a.webp"]);
-  });
-
-  it("ファイル無しの multipart 送信も通る", async () => {
-    const res = await POST(makeMultipartReq(VALID_FIELDS));
-    expect(res.status).toBe(200);
-    expect(mockUpload).not.toHaveBeenCalled();
-    const inquiryInput = mockCreateInquiry.mock.calls[0][0] as { refImages: string[] };
-    expect(inquiryInput.refImages).toEqual([]);
-  });
-
-  it("画像が実バイト判定で弾かれたら 400 で、案件もメールも作らない", async () => {
-    mockUpload.mockResolvedValue({ kind: "invalid-type" });
-    const res = await POST(makeMultipartReq(VALID_FIELDS, [makePngFile()]));
-    expect(res.status).toBe(400);
-    expect((await res.json()).error).toBe("invalid_mime");
-    expect(mockCreateInquiry).not.toHaveBeenCalled();
-    expect(mockSendContact).not.toHaveBeenCalled();
-  });
-
-  it("サイズ超過は 400 file_too_large", async () => {
-    mockUpload.mockResolvedValue({ kind: "too-large" });
-    const res = await POST(makeMultipartReq(VALID_FIELDS, [makePngFile()]));
-    expect(res.status).toBe(400);
-    expect((await res.json()).error).toBe("file_too_large");
-  });
-
-  it("6枚以上は 400 too_many_files（保存前に弾く）", async () => {
-    const files = Array.from({ length: 6 }, (_, i) => makePngFile(`ref-${i}.png`));
-    const res = await POST(makeMultipartReq(VALID_FIELDS, files));
-    expect(res.status).toBe(400);
-    expect((await res.json()).error).toBe("too_many_files");
-    expect(mockUpload).not.toHaveBeenCalled();
-  });
-
-  it("途中のuploadが失敗したら、それまでに保存した同一submissionのpathをcleanupする", async () => {
-    mockUpload
-      .mockResolvedValueOnce({
-        kind: "ok",
-        path: "submission/first.webp",
-      })
-      .mockResolvedValueOnce({ kind: "upload-error" });
-
-    const res = await POST(
-      makeMultipartReq(VALID_FIELDS, [
-        makePngFile("first.png"),
-        makePngFile("second.png"),
-      ])
-    );
-
-    expect(res.status).toBe(500);
-    expect((await res.json()).error).toBe("upload_failed");
-    expect(mockDelete).toHaveBeenCalledWith(["submission/first.webp"]);
-    expect(mockCreateInquiry).not.toHaveBeenCalled();
-  });
-
-  it("案件作成が失敗したら、保存済みの非公開pathをcleanupする", async () => {
-    mockCreateInquiry.mockResolvedValueOnce({ kind: "db-error" });
-
-    const res = await POST(makeMultipartReq(VALID_FIELDS, [makePngFile()]));
-
-    expect(res.status).toBe(500);
-    expect((await res.json()).error).toBe("inquiry not recorded");
-    expect(mockDelete).toHaveBeenCalledWith(["submission/a.webp"]);
-    expect(mockSendContact).not.toHaveBeenCalled();
-  });
-});
-
-describe("JSON 経路", () => {
-  it("refImages の URL 直接指定は受け付けない（外部URLをメールに流し込ませない）", async () => {
-    const res = await POST(
-      makeJsonReq({ ...VALID_FIELDS, refImages: ["https://evil.example.com/x.png"] })
-    );
-    expect(res.status).toBe(200);
-    const inquiryInput = mockCreateInquiry.mock.calls[0][0] as { refImages: string[] };
-    expect(inquiryInput.refImages).toEqual([]);
-    const mailInput = mockSendContact.mock.calls[0][0] as { refImages: string[] };
-    expect(mailInput.refImages).toEqual([]);
-  });
+describe("legacy operation validation and public request security", () => {
+ it("enforces actual CSRF and origin guards before parsing and ledger access",async()=>{
+  expect((await POST(req(fields,{"x-requested-with":"wrong"}))).status).toBe(403);
+  expect((await POST(req(fields,{origin:"https://attacker.invalid"}))).status).toBe(403);
+  expect(mocks.lookup).not.toHaveBeenCalled();expect(mocks.submit).not.toHaveBeenCalled();
+ });
+ it("old no-ID clients get explicit update guidance without silent mail-only success",async()=>{
+  const response=await POST(req(fields));expect(response.status).toBe(409);
+  expect(await response.json()).toMatchObject({ok:false,error:"client_update_required"});
+  expect(mocks.submit).not.toHaveBeenCalled();expect(mocks.lookup).not.toHaveBeenCalled();
+ });
+ it("honeypot does not allocate an operation or expose accepted receipt",async()=>{
+  const response=await POST(req({...fields,operationId,requestHash:hash,website:"spam"}));expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({accepted:false});expect(mocks.submit).not.toHaveBeenCalled();expect(mocks.lookup).not.toHaveBeenCalled();
+ });
+ it.each(["name","email","requestType","details"])("rejects invalid required legacy %s before any ledger side effect",async key=>{
+  expect((await POST(req({...fields,[key]:"",operationId,requestHash:hash}))).status).toBe(400);expect(mocks.lookup).not.toHaveBeenCalled();expect(mocks.submit).not.toHaveBeenCalled();
+ });
+ it("rejects duplicate multipart fields and unexpected upload keys",async()=>{
+  const form=new FormData();for(const[k,v]of Object.entries(fields))form.set(k,v);form.set("operationId",operationId);form.set("requestHash",hash);form.append("name","Second name");
+  expect((await POST(new Request("http://localhost/api/natori/portfolio/contact",{method:"POST",headers:{"x-requested-with":"me-ish"},body:form}))).status).toBe(400);expect(mocks.submit).not.toHaveBeenCalled();
+ });
+ it("ordinary quota is enforced only for a new operation",async()=>{
+  mocks.rate.mockResolvedValueOnce({allowed:true}).mockResolvedValueOnce({allowed:false});
+  expect((await POST(req({...fields,operationId,requestHash:hash}))).status).toBe(429);expect(mocks.submit).not.toHaveBeenCalled();expect(mocks.rate.mock.calls[1][1].limit).toBe(3);
+ });
 });

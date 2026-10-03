@@ -1,3 +1,4 @@
+import type { NatoriRefundSummary } from "./refunds";
 import type { ConsultationOverview } from "./consultation";
 
 export type NatoriProjectStatus =
@@ -61,6 +62,7 @@ export type NatoriDeliveryPlanMeta = {
 };
 
 export type NatoriProject = {
+  refunds?: NatoriRefundSummary | null;
   /** null means unavailable; undefined is reserved for legacy/demo data without a projection. */
   consultation?: ConsultationOverview | null;
   id: string;
@@ -80,6 +82,10 @@ export type NatoriProject = {
   nextAction: string;
   type: NatoriProjectType;
   tasks: NatoriProjectTask[];
+  /** Monotonic across every DB project writer, including task/payment/receipt/close. */
+  mutationRevision?: number;
+  deliveryAcceptedAt?: string;
+  deliveredMailAt?: string;
   priority?: NatoriProjectPriority;
   note?: string;
   paymentConfirmedAt?: string;
@@ -91,6 +97,7 @@ export type NatoriProject = {
   referenceImageUrls?: string[];
   /** 表示名付きの参考画像。Storage path は含めない。 */
   referenceFiles?: NatoriProjectReferenceFileView[];
+  referenceFilesState?: "ready" | "unavailable";
   /** 外部参照リンク（sort_order 昇順） */
   referenceLinks?: NatoriProjectReferenceLinkView[];
   /**
@@ -102,7 +109,9 @@ export type NatoriProject = {
 
 export type NatoriProjectReferenceFileView = {
   /** 短時間署名URL。保存も log 出力もしない。 */
-  url: string;
+  url: string | null;
+  exists?: true;
+  acquisitionState?: "ready" | "unavailable";
   /** Storage path を露出しない表示名 */
   name: string;
 };

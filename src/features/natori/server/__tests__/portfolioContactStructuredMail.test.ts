@@ -97,7 +97,7 @@ describe("管理者向け structured メール", () => {
       "商用利用する",
       "一定期間後なら公開してよい（2026年10月15日から）",
       "5,000円〜12,000円",
-      "2026-09-01 希望",
+      "2026年9月1日 希望",
       "添付画像: 2件",
       "参考URL: 1件",
     ]) {
@@ -182,7 +182,10 @@ describe("依頼者向け structured 自動返信", () => {
     const payload = sentPayload();
     expect(payload.to).toEqual(["client@example.com"]);
     expect(payload.text).toContain("テスト太郎 様");
-    expect(payload.text).toContain("お見積もりをご連絡いたします");
+    expect(payload.text).toContain("2〜3日以内にお返事します");
+    expect(payload.text).toContain("内容が決まったら、金額・納期");
+    expect(payload.text).toContain("フォームの送信だけでご依頼は確定しません");
+    expect(payload.text).not.toContain("以内にお見積もり");
     expect(payload.text).not.toContain(".webp");
     expect(payload.text).not.toContain("schemaVersion");
     expect(payload.text).not.toMatch(
@@ -194,6 +197,8 @@ describe("依頼者向け structured 自動返信", () => {
     await sendStructuredPortfolioContactAutoReply(
       input({ requestData: requestData({ inquiryMode: "consultation" }) })
     );
-    expect(sentPayload().text).toContain("ご相談のお返事をいたします");
+    expect(sentPayload().text).toContain("2〜3日以内にお返事します");
+    expect(sentPayload().text).toContain("内容が決まったら、金額・納期");
+    expect(sentPayload().text).toContain("フォームの送信だけでご依頼は確定しません");
   });
 });

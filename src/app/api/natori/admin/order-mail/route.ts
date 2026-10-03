@@ -84,7 +84,7 @@ export const POST = withNatoriManagement("order-mail.POST", true, async function
   const result = await sendNatoriOrderMail({
     kind, projectId, to, subject, body, amount,
     ...(kind === "estimate" ? { quoteTitle, deliverables, dueDate } : {}),
-    ...(kind === "delivery" ? {
+    ...((kind === "delivery" || kind === "estimate") ? {
       operationId: typeof payload.operationId === "string" ? payload.operationId : undefined,
       fileIds: Array.isArray(payload.fileIds) && payload.fileIds.every((id): id is string => typeof id === "string") ? payload.fileIds : undefined,
     } : {}),

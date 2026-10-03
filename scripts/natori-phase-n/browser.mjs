@@ -11,6 +11,33 @@ setDefaultResultOrder('ipv4first');
 const appOrigin='http://localhost:3000',results=[];
 const check=(ok,code)=>{if(!ok)throw new Error(code);};
 let stage='preflight',server,browser,capture;
+const sharedKeyHomeReadiness={stage:'not_started',responseStatus:null,notificationCount:null,retryAvailableCount:null,initialPrivateDataAbsent:null,allFailedAndRetryable:null,exactFixtureMatch:null,headingCount:null,retryButtonCount:null,alertCount:null};
+// This observes the first actual initial dashboard GET, including non-200 outcomes.
+// Its listener and timer are removed on resolution, rejection, or navigation failure.
+function observeInitialNotices(page){
+  let settled=false,timer,onResponse,rejectPending;
+  const cleanup=()=>{clearTimeout(timer);page.off('response',onResponse);};
+  const promise=new Promise((resolve,reject)=>{
+    rejectPending=reject;
+    onResponse=response=>{
+      let url;try{url=new URL(response.url());}catch{return;}
+      if(response.request().method()!=='GET'||url.origin!==appOrigin||url.pathname!=='/api/natori/admin/notifications'||url.search!=='?offset=0')return;
+      if(settled)return;settled=true;cleanup();resolve(response);
+    };
+    page.on('response',onResponse);
+    timer=setTimeout(()=>{if(settled)return;settled=true;cleanup();reject(new Error('INITIAL_NOTICES_WAIT_TIMEOUT'));},60000);
+  });
+  // A navigation failure must not leave an unobserved rejected waiter.
+  void promise.catch(()=>{});
+  return{promise,cancel(){if(settled)return;settled=true;cleanup();rejectPending(new Error('INITIAL_NOTICES_WAIT_CANCELLED'));}};
+}
+async function initialNoticeTextWithin(response,deadline){
+  const remaining=deadline-Date.now();check(remaining>0,'INITIAL_NOTICES_BODY_TIMEOUT');
+  const body=response.text();void body.catch(()=>{});let timer;
+  try{return await Promise.race([body,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('INITIAL_NOTICES_BODY_TIMEOUT')),remaining);})]);}
+  finally{clearTimeout(timer);}
+}
+const finiteCount=value=>Number.isInteger(value)&&value>=0&&value<=100?value:null;
 async function test(name,fn){try{await fn();results.push({name,status:'passed'});console.log(`PASS phasen-browser/${name}`);}catch(error){const code=/^[A-Z_0-9]+$/.test(error?.message??'')?error.message:'ASSERTION_FAILED';results.push({name,status:'failed',code});console.log(`FAIL phasen-browser/${name} ${code}`);}}
 async function main(){
   check(process.env.PHASE_N_BROWSER==='ephemeral','EPHEMERAL_REQUIRED');
@@ -77,11 +104,46 @@ async function main(){
   });
   const manager=await browser.newContext({baseURL:appOrigin,serviceWorkers:'block'}),management=await manager.newPage();
   await test('shared-key-home-shows-failed-notices-without-email-data',async()=>{
+    const deadline=Date.now()+60000,initialRead=observeInitialNotices(management);
+    const failureCodes={navigation:'SHARED_HOME_NAVIGATION_FAILED',initial_read:'SHARED_HOME_INITIAL_READ_FAILED',initial_body:'SHARED_HOME_INITIAL_BODY_FAILED',heading:'SHARED_HOME_HEADING_FAILED',retry_buttons:'SHARED_HOME_RETRY_COUNT_FAILED',privacy_read:'SHARED_HOME_PRIVACY_READ_FAILED'};
+    const explicitCodes=new Set(['INITIAL_NOTICES_WAIT_TIMEOUT','INITIAL_NOTICES_BODY_TIMEOUT','INITIAL_NOTICES_HTTP','INITIAL_NOTICES_PRIVATE_DATA','INITIAL_NOTICES_JSON','INITIAL_NOTICES_SHAPE','INITIAL_NOTICES_COUNT','INITIAL_NOTICES_FAILED_RETRY','INITIAL_NOTICES_FIXTURE_MATCH','UI_PRIVATE_DATA']);
+    try{
+      sharedKeyHomeReadiness.stage='navigation';
     await management.goto(`/natori/dashboard?natori-key=${sharedKey}`);
+      sharedKeyHomeReadiness.stage='initial_read';
+      const initialResponse=await initialRead.promise;
+      sharedKeyHomeReadiness.responseStatus=initialResponse.status();
+      check(initialResponse.status()===200,'INITIAL_NOTICES_HTTP');
+      sharedKeyHomeReadiness.stage='initial_body';
+      const initialText=await initialNoticeTextWithin(initialResponse,deadline);
+      sharedKeyHomeReadiness.initialPrivateDataAbsent=!/@phase-n.invalid|snapshot|payload|provider_id|token_hash/.test(initialText);
+      check(sharedKeyHomeReadiness.initialPrivateDataAbsent,'INITIAL_NOTICES_PRIVATE_DATA');
+      let initialData;try{initialData=JSON.parse(initialText);}catch{throw new Error('INITIAL_NOTICES_JSON');}
+      check(initialData&&initialData.enabled===true&&initialData.sendingEnabled===true&&Array.isArray(initialData.notifications),'INITIAL_NOTICES_SHAPE');
+      const initialRows=initialData.notifications;
+      sharedKeyHomeReadiness.notificationCount=finiteCount(initialRows.length);
+      sharedKeyHomeReadiness.retryAvailableCount=finiteCount(initialRows.filter(row=>row&&row.retryAvailable===true).length);
+      check(initialRows.length===3,'INITIAL_NOTICES_COUNT');
+      sharedKeyHomeReadiness.allFailedAndRetryable=initialRows.every(row=>row&&row.status==='failed'&&row.retryAvailable===true&&row.reviewRequired===false);
+      check(sharedKeyHomeReadiness.allFailedAndRetryable,'INITIAL_NOTICES_FAILED_RETRY');
+      sharedKeyHomeReadiness.exactFixtureMatch=initialRows.filter(row=>row.projectId===quote.id&&row.purpose==='quote_accept_artist').length===1&&initialRows.filter(row=>row.projectId===delivery.id&&row.purpose==='delivery_accept_artist').length===1&&initialRows.filter(row=>row.projectId===delivery.id&&row.purpose==='delivery_accept_client').length===1;
+      check(sharedKeyHomeReadiness.exactFixtureMatch,'INITIAL_NOTICES_FIXTURE_MATCH');
+      sharedKeyHomeReadiness.stage='heading';
     await expect(management.getByRole('heading',{name:'承諾・受取のメール通知'})).toBeVisible({timeout:60000});
+      sharedKeyHomeReadiness.stage='retry_buttons';
     await expect(management.getByRole('button',{name:'メールだけ再試行'})).toHaveCount(3);
+      sharedKeyHomeReadiness.stage='privacy_read';
     const response=await manager.request.get('/api/natori/admin/notifications');const text=await response.text();
     check(response.status()===200&&!/@phase-n.invalid|snapshot|payload|provider_id|token_hash/.test(text),'UI_PRIVATE_DATA');
+      sharedKeyHomeReadiness.stage='passed';
+    }catch(error){
+      if(explicitCodes.has(error?.message))throw error;
+      throw new Error(failureCodes[sharedKeyHomeReadiness.stage]??'SHARED_HOME_INITIAL_READ_FAILED');
+    }finally{
+      initialRead.cancel();
+      const observed=await Promise.allSettled([management.getByRole('heading',{name:'承諾・受取のメール通知'}).count(),management.getByRole('button',{name:'メールだけ再試行'}).count(),management.getByRole('alert').count()]);
+      for(const[index,key]of['headingCount','retryButtonCount','alertCount'].entries())sharedKeyHomeReadiness[key]=observed[index].status==='fulfilled'?finiteCount(observed[index].value):null;
+    }
   });
   await test('admin-retry-sends-only-one-mail-without-changing-acceptance',async()=>{
     const before=(await admin.from('natori_quotes').select('*').eq('id',q.data.id).single()).data;
@@ -113,7 +175,7 @@ async function main(){
     await expect(management.getByText('新しい通知はありません。',{exact:false})).toHaveCount(0);
   });
   await client.close();await manager.close();
-  writeFileSync('/results/phasen-browser.json',JSON.stringify({tests:results,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,engine:'Chromium 1.58.2; mobile viewport only, not iPhone Safari',providerRequests:providerCalls,distinctAcceptedMessages:messages.size},null,2));
+  writeFileSync('/results/phasen-browser.json',JSON.stringify({tests:results,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,engine:'Chromium 1.58.2; mobile viewport only, not iPhone Safari',providerRequests:providerCalls,distinctAcceptedMessages:messages.size,sharedKeyHomeReadiness},null,2));
   console.log(`PHASE N BROWSER ${results.filter(r=>r.status==='passed').length} passed / ${results.filter(r=>r.status==='failed').length} failed / 0 skipped`);
   check(results.length===9&&results.every(r=>r.status==='passed'),'BROWSER_FAILED');
 }

@@ -24,6 +24,7 @@ type TouchOrigin = {
 export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
+  const [manualPaused, setManualPaused] = useState(false);
   const [focusWithin, setFocusWithin] = useState(false);
   const [touching, setTouching] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -35,7 +36,7 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
   const rootRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const touchOriginRef = useRef<TouchOrigin | null>(null);
-  const paused = hovered || focusWithin || touching || dragging || animating;
+  const paused = manualPaused || hovered || focusWithin || touching || dragging || animating;
 
   useEffect(() => {
     if (typeof window.matchMedia !== "function") return;
@@ -274,6 +275,22 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
           </>
         ) : null}
       </div>
+
+      {hasMultiple ? (
+        <div className="mt-3 flex flex-col items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setManualPaused((current) => !current)}
+            disabled={reducedMotion}
+            aria-pressed={manualPaused || reducedMotion}
+            className="pf-cute-focus min-h-11 rounded-full border px-4 py-2 text-xs font-bold disabled:cursor-default"
+            style={{ background: c.surface, borderColor: c.borderStrong, color: c.text }}
+          >
+            {reducedMotion ? "自動送り停止中" : manualPaused ? "自動送りを再開" : "自動送りを停止"}
+          </button>
+          {reducedMotion ? <p className="text-xs" style={{ color: c.textSoft }}>動きを減らす設定により、自動送りは停止しています。</p> : null}
+        </div>
+      ) : null}
 
       {hasMultiple ? (
         <div className="mt-3 flex items-center justify-center gap-2" aria-label="表示する作品を選択">
