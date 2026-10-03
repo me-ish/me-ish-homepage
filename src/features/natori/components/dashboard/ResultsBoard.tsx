@@ -11,6 +11,7 @@ import {
   ChevronUp,
   Download,
   ImagePlus,
+  MoreHorizontal,
   Pencil,
   Plus,
   Trash2,
@@ -18,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createNatoriProject,
@@ -81,8 +83,8 @@ function formatMetric(metric: ResultMetric, count: number, amount: number): stri
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-2xl border border-pink-100 bg-white p-3 shadow-sm sm:p-4">
-      <p className="text-xs font-bold text-gray-600">{label}</p>
-      <p className="mt-1 break-words text-lg font-black text-gray-900 sm:text-2xl">{value}</p>
+      <p className={natoriAdminUi.groupLabel}>{label}</p>
+      <p className="mt-1 break-words text-xl font-black tabular-nums text-gray-900">{value}</p>
       {sub ? <p className="mt-0.5 text-xs text-gray-500">{sub}</p> : null}
     </div>
   );
@@ -161,7 +163,14 @@ function SectionCard({
 
 /* ---------------- 手入力追加フォーム ---------------- */
 
-function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
+function ResultAddForm({
+  onAdded,
+  embedded = false,
+}: {
+  onAdded: () => Promise<void>;
+  /** ダイアログ内で使う。開閉ヘッダーを出さず、フォーム本体だけを表示する。 */
+  embedded?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [clientName, setClientName] = useState("");
   const [title, setTitle] = useState("");
@@ -211,9 +220,11 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
     }
   };
 
+  const formOpen = embedded || open;
+
   return (
-    <section className="rounded-2xl border border-pink-100 bg-white shadow-sm">
-      <button
+    <section className={embedded ? undefined : "rounded-2xl border border-pink-100 bg-white shadow-sm"}>
+      {embedded ? null : <button
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
@@ -233,10 +244,10 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
         <span className="shrink-0 text-gray-500">
           {open ? <ChevronUp className="h-5 w-5" aria-hidden /> : <ChevronDown className="h-5 w-5" aria-hidden />}
         </span>
-      </button>
+      </button>}
 
-      {open ? (
-        <div className="border-t border-pink-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
+      {formOpen ? (
+        <div className={embedded ? undefined : "border-t border-pink-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4"}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm">
               <span className="block text-xs font-bold text-gray-600">
@@ -359,6 +370,77 @@ function ResultAddForm({ onAdded }: { onAdded: () => Promise<void> }) {
   );
 }
 
+/* ---------------- 実績行の「…」メニュー ---------------- */
+
+function RowMoreMenu({
+  projectTitle,
+  disabled,
+  onDelete,
+}: {
+  projectTitle: string;
+  disabled: boolean;
+  onDelete: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        disabled={disabled}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className={`${natoriAdminUi.btnIcon} disabled:opacity-50`}
+        aria-label={`「${projectTitle}」のその他の操作`}
+        title="その他の操作"
+      >
+        <MoreHorizontal className="h-4 w-4" aria-hidden />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-20 mt-1 w-44 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onDelete();
+            }}
+            className={`${natoriAdminUi.btnDanger} w-full justify-center`}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+            実績から削除
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 /* ---------------- 実績一覧の行 ---------------- */
 
 function CompletedProjectRow({
@@ -430,7 +512,7 @@ function CompletedProjectRow({
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
           <p className="min-w-0 break-words text-sm font-bold text-gray-900">{project.title}</p>
           <div className="flex shrink-0 items-center gap-1.5">
-            <p className="text-sm font-bold text-gray-900">
+            <p className="mr-1 text-sm font-bold text-gray-900">
               {formatNatoriProjectAmount(getNatoriResultAmount(project))}
             </p>
             <button
@@ -452,15 +534,7 @@ function CompletedProjectRow({
             >
               <Pencil className="h-3.5 w-3.5" aria-hidden />
             </button>
-            <button
-              type="button"
-              onClick={onDelete}
-              disabled={busy}
-              className={`${natoriAdminUi.btnIcon} disabled:opacity-50`}
-              aria-label={`「${project.title}」を削除`}
-            >
-              <Trash2 className="h-4 w-4 text-red-700" aria-hidden />
-            </button>
+            <RowMoreMenu projectTitle={project.title} disabled={busy} onDelete={onDelete} />
           </div>
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-600">
@@ -508,6 +582,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
 
   // 絞り込み・表示指標
   const [yearFilter, setYearFilter] = useState<number | null>(null);
@@ -763,6 +838,15 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
         }}
       />
 
+      {isDemo ? null : (
+        <div className="flex justify-end">
+          <button type="button" onClick={() => setAddOpen(true)} className={natoriAdminUi.btnSecondary}>
+            <Plus className="h-4 w-4" aria-hidden />
+            過去の実績を追加
+          </button>
+        </div>
+      )}
+
       {/* 期間と表示指標の切り替え */}
       <section className="rounded-2xl border border-pink-100 bg-white p-3 shadow-sm sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -862,8 +946,13 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
         ) : null}
       </section>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <StatTile label={`実績件数（${cardScopeLabel}）`} value={`${cardSummary.totalCount}件`} />
+      <div>
+        <p className={natoriAdminUi.caption}>
+          <span className="font-bold text-gray-800">集計対象: {cardScopeLabel}</span>
+          <span className="ml-2">タイプの絞り込みは実績一覧にだけ適用されます。</span>
+        </p>
+      <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        <StatTile label="実績件数" value={`${cardSummary.totalCount}件`} />
         <StatTile
           label="総入金額"
           value={formatYen(cardSummary.totalAmount)}
@@ -888,10 +977,9 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
           sub={`${monthsInScope}ヶ月分`}
         />
       </div>
+      </div>
 
       {cardSummary.completed.some(project => project.refunds !== undefined) ? <RefundResultsSummary summary={cardSummary} /> : null}
-
-      {isDemo ? null : <ResultAddForm onAdded={reload} />}
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         <SectionCard
@@ -1011,34 +1099,47 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
       </SectionCard>
 
       {/* 画像の拡大表示 */}
-      {previewUrl ? (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-gray-900/70 p-4"
-          role="dialog"
-          aria-label="作品画像の拡大表示"
-          onClick={() => setPreviewUrl(null)}
+      <Dialog open={previewUrl !== null} onOpenChange={(open) => { if (!open) setPreviewUrl(null); }}>
+        <DialogContent
+          hideCloseButton
+          aria-describedby={undefined}
+          className="w-auto max-w-[92vw] border-0 bg-transparent p-0 shadow-none sm:rounded-xl"
         >
-          <div className="relative max-h-[85vh] max-w-[92vw]">
-            {/* 公開バケットの画像。クリックで閉じる */}
-            <Image
-              src={previewUrl}
-              alt="作品画像"
-              width={1200}
-              height={1200}
-              unoptimized
-              className="h-auto max-h-[85vh] w-auto max-w-[92vw] rounded-xl object-contain shadow-2xl"
-            />
+          <DialogTitle className="sr-only">作品画像の拡大表示</DialogTitle>
+          <div className="relative">
+            {/* 公開バケットの画像 */}
+            {previewUrl ? (
+              <Image
+                src={previewUrl}
+                alt="作品画像"
+                width={1200}
+                height={1200}
+                unoptimized
+                className="h-auto max-h-[85vh] w-auto max-w-[92vw] rounded-xl object-contain shadow-2xl"
+              />
+            ) : null}
             <button
               type="button"
               onClick={() => setPreviewUrl(null)}
-              className="absolute -right-2 -top-2 grid h-8 w-8 place-items-center rounded-full bg-white text-gray-700 shadow"
+              className="absolute -right-2 -top-2 grid h-11 w-11 place-items-center rounded-full bg-white text-gray-700 shadow hover:bg-gray-50 sm:h-9 sm:w-9"
               aria-label="閉じる"
             >
               <X className="h-4 w-4" aria-hidden />
             </button>
           </div>
-        </div>
-      ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* 過去の実績を追加 */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-h-[90vh] w-full max-w-lg gap-0 overflow-y-auto rounded-2xl bg-white p-5 sm:p-6">
+          <DialogTitle className="text-base font-black text-gray-900">実績を手入力で追加</DialogTitle>
+          <DialogDescription className={`${natoriAdminUi.caption} mb-4 mt-1`}>
+            ツール導入前の過去案件などを、完了済みの実績として登録できます。
+          </DialogDescription>
+          <ResultAddForm embedded onAdded={reload} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
