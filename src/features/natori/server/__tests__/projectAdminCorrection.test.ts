@@ -4,6 +4,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+vi.mock("@/features/natori/server/requireNatoriAdmin", () => ({ canUseNatoriManagement: vi.fn(async () => true) }));
+vi.mock("@/features/natori/server/natoriManagementRoute", () => ({
+  withNatoriManagement: <Args extends unknown[]>(_operation: string, _mutation: boolean, handler: (...args: Args) => Promise<Response>) => handler,
+}));
+import { GET } from "@/app/api/natori/admin/projects/route";
+import { fetchNatoriProjectCollection } from "@/features/natori/data/supabaseProjects";
 
 const { mockAdminFrom, mockResolveOwner, mockConfirmRpc, mockSign, mockBulkLinks, mockSnapshot } =
   vi.hoisted(() => ({
@@ -272,6 +278,7 @@ describe("list / archive", () => {
     archived: unknown[];
     tasks?: unknown[];
     references?: unknown[];
+    referenceError?: unknown;
   }) {
     mockSnapshot.mockResolvedValue({projects:[...rows.active,...rows.archived],tasks:rows.tasks??[]});
     const table = (result: Result): unknown =>
@@ -299,7 +306,7 @@ describe("list / archive", () => {
       if (name === "natori_project_tasks") {
         return { select: () => table({ data: rows.tasks ?? [], error: null }) };
       }
-      return { select: () => table({ data: rows.references ?? [], error: null }) };
+      return { select: () => table({ data: rows.references ?? [], error: rows.referenceError ?? null }) };
     };
   }
 
@@ -332,6 +339,22 @@ describe("list / archive", () => {
     if (result.kind !== "ok") return;
     expect(result.projects.map((p) => p.id)).toEqual([PROJECT_ID]);
     expect(result.archivedProjects.map((p) => p.id)).toEqual(["archived-1"]);
+  });
+
+  it.each(["unavailable", "ready"] as const)("preserves %s reference acquisition through service, GET and client mapping", async state => {
+    mockAdminFrom.mockImplementation(listTables({ active: [activeRow], archived: [], referenceError: state === "unavailable" ? { code: "FIXTURE_REFERENCE_FAILURE" } : null }));
+    const response = await GET(new Request(`https://fixture.invalid/api/natori/admin/projects?projectId=${PROJECT_ID}`));
+    expect(response.status).toBe(200);
+    const payload = await response.json() as { referenceFilesState?: "ready" | "unavailable"; referenceFiles: unknown[]; projects: unknown[] };
+    expect(payload.referenceFilesState).toBe(state);
+    expect(payload.referenceFiles).toEqual([]);
+    expect(payload.projects).toHaveLength(1);
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json(payload)));
+    try {
+      const collection = await fetchNatoriProjectCollection(PROJECT_ID);
+      expect(collection.projects).toHaveLength(1);
+      expect(collection.projects[0].referenceFilesState).toBe(state);
+    } finally { vi.unstubAllGlobals(); }
   });
 
   it("structured 案件の request_data を一覧に載せる", async () => {

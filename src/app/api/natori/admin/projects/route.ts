@@ -53,6 +53,7 @@ export const GET = withNatoriManagement("projects.GET", false, async function GE
         archivedProjects: result.archivedProjects,
         tasks: result.tasks,
         referenceFiles: result.referenceFiles,
+        referenceFilesState: result.referenceFilesState,
         referenceLinks: result.referenceLinks,
       }, { headers: { "Cache-Control": "no-store" } });
   }
