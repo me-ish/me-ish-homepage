@@ -9,6 +9,7 @@
 // sort_order ASC / created_at ASC の順をそのまま使い、数値は利用者へ見せない。
 //
 // URL へは一切アクセスしない（プレビュー・favicon・OGP を取得しない）。
+import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useState } from "react";
 import { ExternalLink, Pencil, Plus, Trash2, X } from "lucide-react";
@@ -31,6 +32,7 @@ export default function InquiryReferenceLinks({
   onUpdate,
   onDelete,
 }: InquiryReferenceLinksProps) {
+  const { confirm, confirmDialog } = useNatoriConfirm();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -63,6 +65,7 @@ export default function InquiryReferenceLinks({
 
   return (
     <section aria-labelledby="inquiry-links-heading">
+      {confirmDialog}
       <h3
         id="inquiry-links-heading"
         className="mb-2 text-xs font-bold text-gray-600"
@@ -170,14 +173,14 @@ export default function InquiryReferenceLinks({
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            if (
-                              !window.confirm(
-                                `このリンクを削除します。よろしいですか？\n${link.label ?? link.url}`
-                              )
-                            ) {
-                              return;
-                            }
+                          onClick={async () => {
+                            const confirmed = await confirm({
+                              title: "リンクを削除しますか？",
+                              description: `このリンクを削除します。よろしいですか？\n${link.label ?? link.url}`,
+                              confirmLabel: "削除する",
+                              tone: "danger",
+                            });
+                            if (!confirmed) return;
                             void run(() => onDelete(link.id));
                           }}
                           disabled={busy}

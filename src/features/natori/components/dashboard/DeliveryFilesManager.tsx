@@ -4,6 +4,7 @@
 // ラフ確認・納品ファイルのアップロード/一覧/削除。OrderMailPanel の
 // ラフ提出・納品メールから使う。実体は非公開バケットに直アップロードされ、
 // メール送信時にサーバーがリンク（署名URL / 納品ページ）を本文へ差し込む。
+import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FileUp, Loader2, Paperclip, Trash2 } from "lucide-react";
@@ -70,6 +71,7 @@ export default function DeliveryFilesManager({
   demoMode?: boolean;
   onFilesChange?: (files: NatoriDeliveryFileView[] | null) => void;
 }) {
+  const { confirm, confirmDialog } = useNatoriConfirm();
   const [files, setFiles] = useState<NatoriDeliveryFileView[] | null>(
     demoMode ? DEMO_FILES[folder] : null
   );
@@ -131,7 +133,13 @@ export default function DeliveryFilesManager({
 
   const handleDelete = async (file: NatoriDeliveryFileView) => {
     if (demoMode) return;
-    if (!window.confirm(`「${file.fileName}」を削除しますか？`)) return;
+    const confirmed = await confirm({
+      title: "ファイルを削除しますか？",
+      description: `「${file.fileName}」を削除しますか？`,
+      confirmLabel: "削除する",
+      tone: "danger",
+    });
+    if (!confirmed) return;
     setBusy(true);
     setError(null);
     try {
@@ -147,6 +155,7 @@ export default function DeliveryFilesManager({
 
   return (
     <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+      {confirmDialog}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 text-xs font-bold text-pink-700">
           <Paperclip className="h-3.5 w-3.5" aria-hidden />

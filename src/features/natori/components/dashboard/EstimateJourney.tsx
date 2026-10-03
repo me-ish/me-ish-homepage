@@ -1,5 +1,6 @@
 "use client";
 
+import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
@@ -37,6 +38,7 @@ function editableItem(item: NatoriQuoteSnapshotItemV1): NatoriQuoteSnapshotItemV
 }
 
 export default function EstimateJourney({ project, portfolioContent }: Props) {
+  const { confirm, confirmDialog } = useNatoriConfirm();
   const [currentProject, setCurrentProject] = useState(project);
   const [step, setStep] = useState<Step>(1);
   const [draft, setDraft] = useState<NatoriEstimateDraftData>({ agreedTerms: defaultEstimateTerms(project), items: [] });
@@ -169,9 +171,17 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
     setStep(3); window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const suggest = () => {
+  const suggest = async () => {
     if (!request.success || !pricingConfig || currentProject.type === "undecided") return;
-    if (draft.items.length > 0 && !window.confirm("編集中の明細を公開料金の候補で置き換えますか？")) return;
+    if (draft.items.length > 0) {
+      const confirmed = await confirm({
+        title: "料金候補で置き換えますか？",
+        description: "編集中の明細を公開料金の候補で置き換えますか？",
+        confirmLabel: "置き換える",
+        tone: "primary",
+      });
+      if (!confirmed) return;
+    }
     const terms = draft.agreedTerms;
     const scope = terms.scope;
     if (scope === "undecided" || scope === "other") {
@@ -265,6 +275,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 pb-16">
+      {confirmDialog}
       <header className="rounded-2xl border border-pink-100 bg-white p-5 shadow-sm">
         <Link href="/natori/dashboard" className="text-sm font-bold text-pink-700 underline underline-offset-4">← ダッシュボードへ戻る</Link>
         <p className="mt-4 text-xs font-bold text-pink-700">{project.clientName} 様の見積り</p>
@@ -368,7 +379,13 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
       {step === 3 && !issued && !editingLocked ? <button type="button" disabled={busy || Boolean(attemptRef.current)} className="min-h-11 rounded-xl border border-gray-300 bg-white px-4 font-bold" onClick={() => void save()}>個別メールの編集を保存</button> : null}
       {issued ? <section className="rounded-2xl border border-pink-200 bg-pink-50 p-4">
         <button type="button" disabled={busy} className="min-h-11 rounded-xl bg-pink-100 px-4 font-bold text-pink-950" onClick={async () => {
-          if (!window.confirm(`第${issued.version}版の保存済み本文と宛先で再通知します。見積りの版・金額・承諾は変えません。送信しますか？`)) return;
+          const confirmed = await confirm({
+            title: "再通知しますか？",
+            description: `第${issued.version}版の保存済み本文と宛先で再通知します。見積りの版・金額・承諾は変えません。送信しますか？`,
+            confirmLabel: "再通知する",
+            tone: "primary",
+          });
+          if (!confirmed) return;
           const key = `natori-quote-notification/${issued.quoteId}`;
           const operationId = sessionStorage.getItem(key) ?? crypto.randomUUID(); sessionStorage.setItem(key,operationId);
           setBusy(true); setError("");
@@ -381,7 +398,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
           finally { setBusy(false); }
         }}>第{issued.version}版を同じ内容で再通知</button>
         <p className="mt-2 text-xs">条件を変更する新しい版の発行は別の操作です。承諾後・入金後は新しい版を発行できません。</p>
-        {!editingLocked && !currentProject.paymentConfirmedAt ? <button type="button" disabled={busy} className="mt-2 min-h-11 px-3 underline" onClick={() => { if (window.confirm("新しい版の条件と金額を確認します。承諾済みの見積りは変更できません。")) { sessionStorage.removeItem(`natori-quote-issue/${project.id}`); setIssued(null); attemptRef.current=null; setStep(1); setAcknowledged(false); } }}>新しい版の作成を確認</button> : null}
+        {!editingLocked && !currentProject.paymentConfirmedAt ? <button type="button" disabled={busy} className="mt-2 min-h-11 px-3 underline" onClick={async () => { if (await confirm({ title: "新しい版を作りますか？", description: "新しい版の条件と金額を確認します。承諾済みの見積りは変更できません。", confirmLabel: "新しい版を作る", tone: "primary" })) { sessionStorage.removeItem(`natori-quote-issue/${project.id}`); setIssued(null); attemptRef.current=null; setStep(1); setAcknowledged(false); } }}>新しい版の作成を確認</button> : null}
       </section> : null}
       {issued?.notificationId ? <section className="rounded-2xl border border-gray-200 bg-white p-4">
         <p>第{issued.version}版は保存済みです。通知: {issued.notificationStatus === "sent" ? "送信済み" : "未送信・確認待ち"}</p>

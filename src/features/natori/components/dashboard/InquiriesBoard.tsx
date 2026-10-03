@@ -6,6 +6,7 @@
 // 受付日・最終アクション・経過日数付きの一覧で見て、詳細パネルから
 // 見積もり / 支払い依頼メールの送信・入金確認・見送りまで行える。
 // データソースは案件管理と同じ natori_projects（別テーブルは持たない）。
+import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -117,6 +118,7 @@ type InquiriesBoardProps = {
 };
 
 export default function InquiriesBoard({ demoProjects, demoArtistName }: InquiriesBoardProps) {
+  const { confirm, confirmDialog } = useNatoriConfirm();
   const isDemo = Boolean(demoProjects);
   const [projects, setProjects] = useState<NatoriProject[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -236,11 +238,15 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   const selectedRow = selectedProject ? { project: selectedProject, view: parseInquiryNote(selectedProject.note) } : null;
 
   const handleCloseInquiry = async (project: NatoriProject) => {
-    const reason = window.prompt(
-      `「${project.clientName}｜${project.title}」を見送りにします。理由があれば入力してください（履歴として残ります）。`,
-      ""
-    );
-    if (reason === null) return;
+    const answer = await confirm({
+      title: "見送りにしますか？",
+      description: `「${project.clientName}｜${project.title}」を見送りにします。理由があれば入力してください（履歴として残ります）。`,
+      confirmLabel: "見送りにする",
+      tone: "danger",
+      withReason: { label: "理由（任意・履歴に残ります）" },
+    });
+    if (answer === null) return;
+    const reason = answer.reason;
     if (isDemo) {
       // デモ: ローカル状態にだけ反映（履歴の見送りログも本物と同じ形式で追記）
       const stamp = new Date().toISOString().slice(0, 10);
@@ -318,9 +324,12 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   };
 
   const handleConfirmPayment = async (project: NatoriProject) => {
-    const confirmed = window.confirm(
-      `「${project.clientName}｜${project.title}」の入金を確認済みにして、ラフ開始に進めます。よろしいですか？`
-    );
+    const confirmed = await confirm({
+      title: "入金を確認しますか？",
+      description: `「${project.clientName}｜${project.title}」の入金を確認済みにして、ラフ開始に進めます。よろしいですか？`,
+      confirmLabel: "入金確認してラフ開始",
+      tone: "primary",
+    });
     if (!confirmed) return;
     if (isDemo) {
       setProjects((current) =>
@@ -373,6 +382,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
 
   return (
     <div className="space-y-3">
+      {confirmDialog}
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-gray-600">制作の進捗と返信待ちは別に表示します。既読の判定ではありません。</p>
         {!isDemo ? <button type="button" onClick={() => void reload().catch(() => setError("最新の状況を取得できませんでした。"))} className="shrink-0 rounded-full border px-3 py-2 text-xs font-bold">状態を更新</button> : null}

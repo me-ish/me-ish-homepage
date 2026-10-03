@@ -1,5 +1,6 @@
 "use client";
 
+import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarClock, Inbox } from "lucide-react";
@@ -64,6 +65,7 @@ export default function ProjectsBoard({
   demoEvents,
   demoArtistName,
 }: ProjectsBoardProps) {
+  const { confirm, confirmDialog } = useNatoriConfirm();
   const isDemo = Boolean(demoProjects);
   const [today, setToday] = useState<Date | null>(null);
   const [mailTarget, setMailTarget] = useState<{
@@ -397,10 +399,13 @@ export default function ProjectsBoard({
     }
   };
 
-  const handleDeleteClosedProject = (project: NatoriProject) => {
-    const confirmed = window.confirm(
-      `「${project.clientName}｜${project.title}」を案件一覧から削除します。データと画像は保持され、あとで復元できます。よろしいですか？`
-    );
+  const handleDeleteClosedProject = async (project: NatoriProject) => {
+    const confirmed = await confirm({
+      title: "一覧から削除しますか？",
+      description: `「${project.clientName}｜${project.title}」を案件一覧から削除します。データと画像は保持され、あとで復元できます。よろしいですか？`,
+      confirmLabel: "一覧から削除",
+      tone: "danger",
+    });
     if (!confirmed) return;
     setAdvanceBusyId(project.id);
     setProjects((current) => current.filter((entry) => entry.id !== project.id));
@@ -553,6 +558,7 @@ export default function ProjectsBoard({
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {confirmDialog}
       {error ? (
         <div
           role="alert"

@@ -2,6 +2,7 @@
 
 // features/natori/components/portfolio/edit/editorFields.tsx
 // ポートフォリオ編集画面の汎用パーツ（入力欄・画像アップロード・並び替えボタン等）
+import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ImagePlus, Loader2, Plus, Trash2 } from "lucide-react";
@@ -130,13 +131,23 @@ export function RowControls({
   /** 指定すると削除前に確認ダイアログを出す（空行など失うものが無い行では省略する） */
   confirmMessage?: string;
 }) {
+  const { confirm, confirmDialog } = useNatoriConfirm();
   return (
     <div className="flex shrink-0 items-center gap-1">
+      {confirmDialog}
       {handle}
       <button
         type="button"
-        onClick={() => {
-          if (confirmMessage && !window.confirm(confirmMessage)) return;
+        onClick={async () => {
+          if (confirmMessage) {
+            const confirmed = await confirm({
+              title: "削除しますか？",
+              description: confirmMessage,
+              confirmLabel: "削除する",
+              tone: "danger",
+            });
+            if (!confirmed) return;
+          }
           onRemove();
         }}
         className={natoriAdminUi.btnIcon}

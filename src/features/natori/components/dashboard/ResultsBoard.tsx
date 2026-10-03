@@ -1,5 +1,6 @@
 "use client";
 
+import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
@@ -493,6 +494,7 @@ type ResultsBoardProps = {
 };
 
 export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
+  const { confirm, confirmDialog } = useNatoriConfirm();
   const isDemo = Boolean(demoProjects);
   const [projects, setProjects] = useState<NatoriProject[] | null>(null);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
@@ -609,9 +611,12 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
   };
 
   const handleDelete = async (project: NatoriProject) => {
-    const confirmed = window.confirm(
-      `「${project.title}」（${project.clientName} / ${formatNatoriProjectAmount(getNatoriResultAmount(project))}）を実績から削除します。データと画像は保持され、案件管理画面から復元できます。よろしいですか？`
-    );
+    const confirmed = await confirm({
+      title: "実績から削除しますか？",
+      description: `「${project.title}」（${project.clientName} / ${formatNatoriProjectAmount(getNatoriResultAmount(project))}）を実績から削除します。データと画像は保持され、案件管理画面から復元できます。よろしいですか？`,
+      confirmLabel: "実績から削除",
+      tone: "danger",
+    });
     if (!confirmed) return;
     if (isDemo) {
       setProjects((current) => (current ?? []).filter((entry) => entry.id !== project.id));
@@ -735,6 +740,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {confirmDialog}
       {/* 隠しファイル入力（一覧のどの行からも共有で使う） */}
       <input
         ref={fileInputRef}
