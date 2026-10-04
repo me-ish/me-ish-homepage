@@ -57,6 +57,12 @@ export default function PortfolioLanding({
         collections={content.collections}
         variant={variant}
         flatPlaceholders={flatPlaceholders}
+        // 拡大表示の「この雰囲気で相談する」。作品集（showcase）と受付停止中は出さない。
+        consultation={
+          !showcase && content.commissionOpen
+            ? { contactPath, query: demoStructuredQuery }
+            : undefined
+        }
       />
       {showcase ? (
         <PortfolioAbout content={content} variant={variant} flatPlaceholders={flatPlaceholders} />

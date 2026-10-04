@@ -11,8 +11,12 @@ vi.mock("../PortfolioFaq", () => ({
 vi.mock("../PortfolioFooter", () => ({
   default: () => <footer data-section="footer" />,
 }));
+const galleryProps = vi.hoisted(() => [] as Array<Record<string, unknown>>);
 vi.mock("../PortfolioGallery", () => ({
-  default: () => <section id="gallery" data-section="gallery"><h2>作品</h2></section>,
+  default: (props: Record<string, unknown>) => {
+    galleryProps.push(props);
+    return <section id="gallery" data-section="gallery"><h2>作品</h2></section>;
+  },
 }));
 vi.mock("../PortfolioGuidelines", () => ({
   default: () => <section id="requests" data-section="guidelines"><h2>購入者へのお願い</h2></section>,
@@ -39,7 +43,10 @@ vi.mock("../portfolioFonts", () => ({
 import PortfolioLanding from "@/features/natori/components/portfolio/PortfolioLanding";
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  galleryProps.length = 0;
+});
 
 function sectionOrder(): string[] {
   return Array.from(document.querySelectorAll("[data-section]"), (element) =>
@@ -113,5 +120,25 @@ describe("PF-01 portfolio information architecture", () => {
     expect(document.querySelector("#flow")).toBeNull();
     expect(document.querySelector("#form")).toBeNull();
     expect(document.querySelector("#faq")).toBeNull();
+  });
+
+  it("offers the lightbox consultation link only on the open full page", () => {
+    render(<PortfolioLanding content={defaultPortfolioContent} />);
+    expect(galleryProps.at(-1)?.consultation).toEqual({ contactPath: "/natori/portfolio/contact", query: "" });
+    cleanup();
+
+    render(<PortfolioLanding content={defaultPortfolioContent} demoContact structuredIntake />);
+    expect(galleryProps.at(-1)?.consultation).toEqual({
+      contactPath: "/etorie/demo/app/portfolio/contact",
+      query: "&structured=1",
+    });
+    cleanup();
+
+    render(<PortfolioLanding content={defaultPortfolioContent} variant="showcase" />);
+    expect(galleryProps.at(-1)?.consultation).toBeUndefined();
+    cleanup();
+
+    render(<PortfolioLanding content={{ ...defaultPortfolioContent, commissionOpen: false }} />);
+    expect(galleryProps.at(-1)?.consultation).toBeUndefined();
   });
 });

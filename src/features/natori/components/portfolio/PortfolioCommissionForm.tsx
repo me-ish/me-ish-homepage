@@ -22,6 +22,10 @@ import {
   NATORI_REFERENCE_IMAGES_TOTAL_MAX_BYTES,
   NATORI_REFERENCE_IMAGE_MAX_BYTES,
 } from "@/features/natori/lib/portfolioRequestForm";
+import {
+  portfolioWorkConsultationMessage,
+  withPortfolioConsultationWork,
+} from "@/features/natori/lib/portfolioWorkConsultation";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 import { useIntakeOperation, type IntakeCompleted } from "./useIntakeOperation";
 import IntakeRecoveryPanel from "./IntakeRecoveryPanel";
@@ -67,6 +71,7 @@ function PortfolioCommissionFormSession({
   fromPlan,
   initialPlan,
   initialPlanLabel,
+  referenceWorkTitle,
   hideHeading = false,
   onNewRequest,
   restoreOriginals,
@@ -79,11 +84,15 @@ function PortfolioCommissionFormSession({
   fromPlan?: boolean;
   initialPlan?: string;
   initialPlanLabel?: string;
+  /** 「この雰囲気で相談する」から来たときの作品名。最初のフォームにだけ文面として入れておく */
+  referenceWorkTitle?: string;
   hideHeading?: boolean;
   onNewRequest: (receipts: IntakeReceipt[]) => void;
   restoreOriginals: boolean;
 }) {
   const [status, setStatus] = useState<Status>("idle");
+  // 送信後に「新しく依頼する」で開き直したフォームには引き継がない。
+  const referenceTitle = restoreOriginals ? referenceWorkTitle : undefined;
   const [autoReplied, setAutoReplied] = useState(true);
   const [completed, setCompleted] = useState<IntakeCompleted | null>(null);
   const intake = useIntakeOperation(result => {
@@ -341,6 +350,9 @@ function PortfolioCommissionFormSession({
               opening={opening}
               fromPlan={fromPlan}
               initialPlan={initialPlan}
+              initialMessage={
+                referenceTitle !== undefined ? portfolioWorkConsultationMessage(referenceTitle) : undefined
+              }
               onSuccess={(outcome) => {
                 if (outcome.receipt) setCompleted({ receipt: outcome.receipt, clientEmail: outcome.clientEmail ?? "" });
                 setAutoReplied(outcome.autoReplied);
@@ -573,7 +585,11 @@ function PortfolioCommissionFormSession({
                 rows={16}
                 required
                 maxLength={4000}
-                defaultValue={DETAILS_TEMPLATE}
+                defaultValue={
+                  referenceTitle !== undefined
+                    ? withPortfolioConsultationWork(DETAILS_TEMPLATE, referenceTitle)
+                    : DETAILS_TEMPLATE
+                }
                 className={inputClass}
                 style={{ borderColor: c.formBorder }}
               />
