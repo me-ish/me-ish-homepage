@@ -6,6 +6,7 @@
 import { PORTFOLIO_OPTION_IDS, planChoiceLabel, portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import { NATORI_MASS_PRODUCTION_BASE_AMOUNT } from "@/features/natori/constants/portfolioPricing";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
+import { portfolioPlanSample } from "@/features/natori/lib/portfolioPlanSamples";
 import { NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE } from "@/features/natori/lib/portfolioRequestForm";
 import type { PortfolioContent, PortfolioPlan } from "@/features/natori/types/portfolio";
 
@@ -40,6 +41,9 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
   const massProductionSamples = (content.massProductionSamples ?? []).filter(
     (sample) => Boolean(sample.image)
   );
+  // 作例は編集画面でプランごとに選んだ作品。1つでもあれば、PC のカードは全プランに同じ高さの枠を取る。
+  const planSamples = content.plans.map((plan) => portfolioPlanSample(plan, content.works));
+  const hasPlanSamples = planSamples.some((sample) => sample !== null);
 
   const trackPlan = (name: string) => {
     trackNatoriPageEvent("portfolio_primary_cta_click", "pricing");
@@ -54,6 +58,34 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
       </h2>
 
       <p className="mb-2 text-sm font-black sm:mb-3">通常イラスト</p>
+
+      {/* スマホ: 作例は一覧の上に並べ、描く範囲の違いを見比べられるようにする */}
+      {hasPlanSamples ? (
+        <div role="group" aria-label="通常イラストの作例" className="mb-3 flex flex-wrap justify-center gap-2 sm:hidden">
+          {content.plans.map((plan, index) => {
+            const sample = planSamples[index];
+            return sample ? (
+              <figure key={plan.id ?? `legacy-sample-${index}`} className="w-[calc(25%-0.375rem)] min-w-0">
+                {/* アップロード画像は公開Storage URLなので next/image のhost設定に依存させない */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={sample.image}
+                  alt={`${plan.name}の作例「${sample.title}」`}
+                  loading="lazy"
+                  className="aspect-[4/5] w-full rounded-lg border object-contain"
+                  style={{ borderColor: c.borderSubtle, background: c.surfaceSubtle }}
+                />
+                <figcaption
+                  className="mt-1 text-center text-[13px] font-bold leading-tight [overflow-wrap:anywhere]"
+                  style={{ color: c.textSoft }}
+                >
+                  {plan.name}
+                </figcaption>
+              </figure>
+            ) : null;
+          })}
+        </div>
+      ) : null}
 
       {/* スマホ: 2段構成で説明を残しつつ、複数プランを比較しやすい密度にする */}
       <ul
@@ -118,45 +150,67 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
 
       {/* タブレット / PC: 従来のカード表示を維持 */}
       <div className={`hidden gap-6 sm:grid ${gridCols}`}>
-        {content.plans.map((plan, index) => (
-          <div
-            key={plan.id ?? `legacy-plan-${index}`}
-            className="relative flex flex-col rounded-2xl p-6"
-            style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
-          >
-            <h3 className="mb-1 text-lg font-bold">{plan.name}</h3>
-            <p className="mb-2 text-2xl font-bold" style={{ color: c.text }}>
-              {startingPriceLabel(plan.price)}
-            </p>
-            <div className="mb-6 flex-1">
-              <p className="text-sm" style={{ color: c.textSoft }}>
-                {planDescription(plan.desc)}
-              </p>
-              {plan.features.some((feature) => !commonFeatures.includes(feature)) && (
-                <ul className="mt-4 space-y-1.5 text-sm">
-                  {plan.features
-                    .filter((feature) => !commonFeatures.includes(feature))
-                    .map((feature) => (
-                      <li key={feature} className="flex items-start gap-2">
-                        <span style={{ color: c.actionText }} aria-hidden="true">
-                          ✓
-                        </span>
-                        <span style={{ color: c.textSoft }}>{feature}</span>
-                      </li>
-                    ))}
-                </ul>
-              )}
-            </div>
-            <a
-              href={planHref(plan)}
-              onClick={() => trackPlan(plan.name)}
-              className="pf-cute-focus rounded-full border-2 py-2.5 text-center font-bold"
-              style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
+        {content.plans.map((plan, index) => {
+          const sample = planSamples[index];
+          return (
+            <div
+              key={plan.id ?? `legacy-plan-${index}`}
+              className="relative flex flex-col rounded-2xl p-6"
+              style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
             >
-              このプランで相談
-            </a>
-          </div>
-        ))}
+              {hasPlanSamples ? (
+                sample ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={sample.image}
+                    alt={`${plan.name}の作例「${sample.title}」`}
+                    loading="lazy"
+                    className="mb-4 aspect-[4/5] w-full rounded-xl object-contain"
+                    style={{ background: c.surfaceSubtle }}
+                  />
+                ) : (
+                  <div
+                    className="mb-4 flex aspect-[4/5] w-full items-center justify-center rounded-xl text-[13px] font-bold"
+                    style={{ background: c.surfaceSubtle, color: c.textSoft }}
+                  >
+                    作例は準備中です
+                  </div>
+                )
+              ) : null}
+              <h3 className="mb-1 text-lg font-bold">{plan.name}</h3>
+              <p className="mb-2 text-2xl font-bold" style={{ color: c.text }}>
+                {startingPriceLabel(plan.price)}
+              </p>
+              <div className="mb-6 flex-1">
+                <p className="text-sm" style={{ color: c.textSoft }}>
+                  {planDescription(plan.desc)}
+                </p>
+                {plan.features.some((feature) => !commonFeatures.includes(feature)) && (
+                  <ul className="mt-4 space-y-1.5 text-sm">
+                    {plan.features
+                      .filter((feature) => !commonFeatures.includes(feature))
+                      .map((feature) => (
+                        <li key={feature} className="flex items-start gap-2">
+                          <span style={{ color: c.actionText }} aria-hidden="true">
+                            ✓
+                          </span>
+                          <span style={{ color: c.textSoft }}>{feature}</span>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </div>
+              <a
+                href={planHref(plan)}
+                onClick={() => trackPlan(plan.name)}
+                className="pf-cute-focus rounded-full border-2 py-2.5 text-center font-bold"
+                style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
+              >
+                このプランで相談
+              </a>
+            </div>
+          );
+        })}
       </div>
 
       {commonFeatures.length > 0 && (

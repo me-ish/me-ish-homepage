@@ -33,6 +33,7 @@ import {
   uploadImageFile,
 } from "./editorFields";
 import PortfolioHeroImagesEditor from "./PortfolioHeroImagesEditor";
+import PortfolioPlanSampleField from "./PortfolioPlanSampleField";
 import PortfolioWorkLinksEditor from "./PortfolioWorkLinksEditor";
 import SortableList from "./SortableList";
 
@@ -52,6 +53,7 @@ const SECTION_NAV = [
   { id: "section-delivery", label: "納期" },
   { id: "section-workflow", label: "制作の流れ" },
   { id: "section-requests", label: "お願い" },
+  { id: "section-faqs", label: "よくある質問" },
   { id: "section-sns", label: "SNS" },
 ] as const;
 
@@ -285,6 +287,7 @@ export default function PortfolioEditor({
     const normalized = next.filter((image) => image.length > 0).slice(0, 5);
     patch({ heroImages: normalized, heroImage: normalized[0] ?? null });
   };
+  const faqs = content.faqs ?? [];
 
   return (
     <main data-natori-admin className="min-h-screen bg-[#F7F7F8] pb-28">
@@ -958,7 +961,7 @@ export default function PortfolioEditor({
           id="section-plans"
           emoji="💰"
           title="基本料金"
-          description="料金カードとして表示されます。「含まれるもの」は1行に1つずつ書いてください。"
+          description="料金カードとして表示されます。「含まれるもの」は1行に1つずつ書いてください。作例はご依頼実績の作品から選べます。"
         >
           <SortableList
             items={content.plans}
@@ -1004,6 +1007,14 @@ export default function PortfolioEditor({
                       patch({ plans: updateItem(content.plans, index, { features: v.split("\n") }) })
                     }
                     rows={3}
+                  />
+                  <PortfolioPlanSampleField
+                    works={content.works}
+                    collections={content.collections}
+                    value={plan.sampleWorkId ?? null}
+                    onChange={(sampleWorkId) =>
+                      patch({ plans: updateItem(content.plans, index, { sampleWorkId }) })
+                    }
                   />
                 </div>
               </div>
@@ -1208,6 +1219,53 @@ export default function PortfolioEditor({
             )}
           />
           <AddButton label="項目を追加" onClick={() => patch({ requests: [...content.requests, ""] })} />
+        </SectionCard>
+
+        {/* よくある質問 */}
+        <SectionCard
+          id="section-faqs"
+          emoji="💬"
+          title="よくある質問"
+          description="ご依頼フォームの手前に、上から順に表示されます。質問と答えの両方を書いた項目だけが公開ページに出ます。"
+        >
+          <SortableList
+            items={faqs}
+            onReorder={(next) => patch({ faqs: next })}
+            className="space-y-3"
+            renderRow={(faq, index, handle) => (
+              <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-zinc-600">質問 {index + 1}</p>
+                  <RowControls
+                    handle={handle}
+                    confirmMessage={
+                      faq.question.trim() || faq.answer.trim()
+                        ? `質問「${faq.question.trim() || "無題"}」を削除しますか？`
+                        : undefined
+                    }
+                    onRemove={() => patch({ faqs: removeItem(faqs, index) })}
+                  />
+                </div>
+                <div className="space-y-3">
+                  <TextInput
+                    label="質問"
+                    value={faq.question}
+                    onChange={(v) => patch({ faqs: updateItem(faqs, index, { question: v }) })}
+                  />
+                  <TextArea
+                    label="答え"
+                    value={faq.answer}
+                    onChange={(v) => patch({ faqs: updateItem(faqs, index, { answer: v }) })}
+                    rows={3}
+                  />
+                </div>
+              </div>
+            )}
+          />
+          <AddButton
+            label="質問を追加"
+            onClick={() => patch({ faqs: [...faqs, { question: "", answer: "" }] })}
+          />
         </SectionCard>
 
         {/* SNSリンク */}

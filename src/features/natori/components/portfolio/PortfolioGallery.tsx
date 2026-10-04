@@ -92,12 +92,18 @@ export default function PortfolioGallery({
   collections,
   variant = "full",
   flatPlaceholders,
+  consultation,
 }: {
   works: PortfolioWork[];
   collections: PortfolioCollection[];
   variant?: PortfolioVariant;
   /** 画像なし作品のプレースホルダーをキャラSVGではなくベタ塗りにする（デモ用） */
   flatPlaceholders?: boolean;
+  /**
+   * 拡大表示に「この雰囲気で相談する」を出すときの相談フォーム。query は「&structured=1」のような追加分。
+   * 作品集（showcase）では渡されても出さない。
+   */
+  consultation?: { contactPath: string; query: string };
 }) {
   const [selected, setSelected] = useState<PortfolioWork | null>(null);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
@@ -255,6 +261,11 @@ export default function PortfolioGallery({
     event.preventDefault();
     showAdjacentWork(event.key === "ArrowRight" ? 1 : -1);
   };
+
+  const consultationHref =
+    variant === "full" && consultation && selected
+      ? `${consultation.contactPath}?mode=consultation&work=${encodeURIComponent(selected.id)}${consultation.query}`
+      : null;
 
   const navButtonClassName =
     "pf-cute-focus absolute top-[calc(0.75rem+35dvh)] z-10 flex h-[44px] w-[44px] -translate-y-1/2 items-center justify-center rounded-full md:top-[calc(0.75rem+38dvh)]";
@@ -454,10 +465,24 @@ export default function PortfolioGallery({
                     {selected.title}（{selectedPosition + 1}/{viewableWorks.length}作品目）
                   </p>
                 ) : null}
-                <h3 className="font-bold">{selected.title}</h3>
-                <WorkMetaLine
-                  items={workMeta(selected, selectedEntry?.collection ?? unassignedCollection)}
-                />
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <h3 className="font-bold">{selected.title}</h3>
+                    <WorkMetaLine
+                      items={workMeta(selected, selectedEntry?.collection ?? unassignedCollection)}
+                    />
+                  </div>
+                  {consultationHref ? (
+                    <a
+                      href={consultationHref}
+                      onClick={() => trackNatoriPageEvent("portfolio_primary_cta_click", "gallery")}
+                      className="pf-cute-focus inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-full border-2 px-5 py-2 text-[13px] font-bold sm:text-sm"
+                      style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
+                    >
+                      この雰囲気で相談する
+                    </a>
+                  ) : null}
+                </div>
               </div>
               {variant === "full" && selected.relatedLinks ? (
                 <div className="px-1">

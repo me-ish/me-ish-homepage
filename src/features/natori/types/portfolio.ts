@@ -65,6 +65,11 @@ export type PortfolioPlan = {
   price: string;
   desc: string;
   features: string[];
+  /**
+   * 料金表に添える作例（works[].id）。公開中で画像のある作品だけを表示し、
+   * 未設定・非公開・削除済みなら出さない。旧データ互換のため未設定を許容する。
+   */
+  sampleWorkId?: string | null;
 };
 
 export type PortfolioOption = {
@@ -96,6 +101,12 @@ export type PortfolioWorkflowStep = {
 export type PortfolioSocialLink = {
   label: string;
   href: string;
+};
+
+export type PortfolioFaq = {
+  question: string;
+  /** 改行はそのまま表示する */
+  answer: string;
 };
 
 export type PortfolioContent = {
@@ -147,6 +158,8 @@ export type PortfolioContent = {
   workflowCompatibilityProjection?: false;
   /** 購入者へのお願い */
   requests: string[];
+  /** よくある質問。旧データ互換のため未設定を許容し、読込時に既定の質問で補完する */
+  faqs?: PortfolioFaq[];
   /** フッターのSNSリンク */
   socialLinks: PortfolioSocialLink[];
   /** フッターのコピーライト表記 */

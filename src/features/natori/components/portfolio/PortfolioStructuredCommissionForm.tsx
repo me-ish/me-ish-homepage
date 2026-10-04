@@ -177,6 +177,7 @@ export default function PortfolioStructuredCommissionForm({
   opening,
   fromPlan,
   initialPlan,
+  initialMessage,
   restoreOriginals = true,
 }: {
   content: PortfolioContent;
@@ -187,12 +188,15 @@ export default function PortfolioStructuredCommissionForm({
   opening?: number;
   fromPlan?: boolean;
   initialPlan?: string;
+  /** 「内容」欄に最初から入れておく文面（作品の「この雰囲気で相談する」から来たとき）。送信前に書き換えられる */
+  initialMessage?: string;
   restoreOriginals?: boolean;
 }) {
   const [state, setState] = useState<PortfolioRequestFormState>(
     () => {
       const initial = createInitialPortfolioRequestFormState();
-      return initialPlan ? applyPortfolioPlanSelection(initial, initialPlan) : initial;
+      const withPlan = initialPlan ? applyPortfolioPlanSelection(initial, initialPlan) : initial;
+      return initialMessage ? { ...withPlan, message: initialMessage } : withPlan;
     }
   );
   const [step, setStep] = useState(0);

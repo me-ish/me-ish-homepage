@@ -6,6 +6,7 @@ import { natoriPrimaryActionClassName } from "@/features/natori/constants/natori
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
 import PortfolioAbout from "./PortfolioAbout";
+import PortfolioFaq from "./PortfolioFaq";
 import PortfolioFooter from "./PortfolioFooter";
 import PortfolioGallery from "./PortfolioGallery";
 import PortfolioGuidelines from "./PortfolioGuidelines";
@@ -56,6 +57,12 @@ export default function PortfolioLanding({
         collections={content.collections}
         variant={variant}
         flatPlaceholders={flatPlaceholders}
+        // 拡大表示の「この雰囲気で相談する」。作品集（showcase）と受付停止中は出さない。
+        consultation={
+          !showcase && content.commissionOpen
+            ? { contactPath, query: demoStructuredQuery }
+            : undefined
+        }
       />
       {showcase ? (
         <PortfolioAbout content={content} variant={variant} flatPlaceholders={flatPlaceholders} />
@@ -65,6 +72,7 @@ export default function PortfolioLanding({
           <PortfolioWorkflow content={content} />
           <PortfolioAbout content={content} variant={variant} flatPlaceholders={flatPlaceholders} />
           <PortfolioGuidelines content={content} />
+          <PortfolioFaq content={content} />
           <section id="form" className="mx-auto max-w-3xl px-5 py-14 text-center md:py-20">
             <h2 className="text-2xl font-black md:text-3xl">ご相談・ご依頼</h2>
             <p className="mt-3 leading-relaxed" style={{ color: c.textSoft }}>

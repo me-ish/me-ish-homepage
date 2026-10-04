@@ -119,6 +119,34 @@ describe("PortfolioPricing", () => {
     expect(within(samples).queryByText("魔女")).toBeNull();
   });
 
+  it("shows a plan sample only for published works with images and keeps the PC cards aligned", () => {
+    const works = [
+      { ...defaultPortfolioContent.works[0], id: "w-sd", title: "SDの作品", image: "https://example.com/sd.webp" },
+      { ...defaultPortfolioContent.works[1], id: "w-hidden", title: "非公開の作品", image: "https://example.com/hidden.webp", published: false },
+      { ...defaultPortfolioContent.works[2], id: "w-noimage", title: "画像なし", image: null },
+    ];
+    const plans = defaultPortfolioContent.plans.map((plan, index) => ({
+      ...plan,
+      sampleWorkId: ["w-sd", "w-hidden", "w-noimage", "w-deleted"][index],
+    }));
+    render(<PortfolioPricing content={{ ...defaultPortfolioContent, works, plans }} />);
+
+    // スマホの見比べ用と PC のカードで1枚ずつ
+    expect(screen.getAllByRole("img", { name: "SDキャラの作例「SDの作品」" })).toHaveLength(2);
+    expect(screen.queryByRole("img", { name: /非公開の作品|画像なし/ })).toBeNull();
+    const strip = screen.getByRole("group", { name: "通常イラストの作例" });
+    expect(strip.className).toContain("sm:hidden");
+    expect(within(strip).getAllByRole("img")).toHaveLength(1);
+    // 作例のないプランも PC では同じ高さの枠を取る
+    expect(screen.getAllByText("作例は準備中です")).toHaveLength(3);
+  });
+
+  it("adds no plan sample area until a sample is chosen", () => {
+    render(<PortfolioPricing content={defaultPortfolioContent} />);
+    expect(screen.queryByRole("group", { name: "通常イラストの作例" })).toBeNull();
+    expect(screen.queryByText("作例は準備中です")).toBeNull();
+  });
+
   it("hides the sample area while no sample image is uploaded", () => {
     render(<PortfolioPricing content={defaultPortfolioContent} />);
     expect(screen.queryByRole("group", { name: "量産イラスト作例" })).toBeNull();
