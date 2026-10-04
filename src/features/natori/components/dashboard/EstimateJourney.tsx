@@ -27,7 +27,7 @@ import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
 type Step = 1 | 2 | 3;
 type Props = { project: NatoriProject; portfolioContent: PortfolioContent | null };
-const field = "w-full rounded-xl border border-[#878287] bg-white px-3 py-3 text-base text-zinc-900 placeholder:text-zinc-500 focus:border-[#BE185D] focus:outline-none focus:ring-2 focus:ring-[#BE185D]/25";
+const field = natoriAdminUi.input;
 const scopeLabels: Record<NatoriAgreedTerms["scope"], string> = {
   undecided: "相談して決める", bust_up: "胸上", waist_up: "膝〜腰上", full_body: "全身", sd: "SD", other: "その他",
 };
@@ -289,11 +289,11 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
   return (
     <div className="mx-auto max-w-3xl space-y-5 pb-16">
       {confirmDialog}
-      <header className="rounded-2xl border border-pink-100 bg-white p-5 shadow-sm">
-        <Link href="/natori/dashboard" className="text-sm font-bold text-[#BE185D] underline underline-offset-4">← ダッシュボードへ戻る</Link>
-        <p className="mt-4 text-xs font-bold text-pink-700">{project.clientName} 様の見積り</p>
-        <h1 className="mt-1 break-words text-xl font-bold text-zinc-950">{project.title}</h1>
-        <p className="mt-2 text-sm text-zinc-600">相談で決まった内容から見積りを作り、相手に見える内容を確かめて送信します。</p>
+      <header className={`rounded-2xl ${natoriAdminUi.surface} p-5 sm:p-6`}>
+        <Link href="/natori/dashboard" className="text-sm font-semibold text-[#BE185D] underline-offset-4 hover:underline">← ダッシュボードへ戻る</Link>
+        <p className="mt-4 text-xs font-semibold text-[#BE185D]">{project.clientName} 様の見積り</p>
+        <h1 className="mt-1 break-words text-xl font-bold tracking-tight text-zinc-950">{project.title}</h1>
+        <p className="mt-2 text-sm leading-6 text-zinc-600">相談で決まった内容から見積りを作り、相手に見える内容を確かめて送信します。</p>
       </header>
 
       <nav aria-label="見積りの手順">
@@ -301,8 +301,8 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
           {(["① 条件を整理", "② 金額を決める", "③ 確認して送る"] as const).map((label, index) => {
             const number = index + 1;
             const state = number === step ? "current" : number < step ? "done" : "upcoming";
-            const stepClassName = `flex min-h-12 w-full items-center justify-center gap-1 rounded-xl px-2 text-center text-xs font-bold sm:text-sm ${
-              state === "current" ? natoriPrimaryActionClassName : state === "done" ? "bg-pink-50 text-[#9D174D] hover:bg-pink-100" : "bg-zinc-100 text-zinc-600"
+            const stepClassName = `flex min-h-12 w-full items-center justify-center gap-1 rounded-full px-2 text-center text-xs font-semibold transition-colors sm:text-sm ${
+              state === "current" ? natoriPrimaryActionClassName : state === "done" ? "bg-pink-50 text-[#9D174D] ring-1 ring-inset ring-pink-500/15 hover:bg-pink-100" : "bg-white text-zinc-500 ring-1 ring-inset ring-zinc-200"
             }`;
             return (
               <li key={label} className="flex">
@@ -317,14 +317,14 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
           })}
         </ol>
       </nav>
-      {error ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p> : null}
+      {error ? <p role="alert" className={natoriAdminUi.alert.error}>{error}</p> : null}
 
       {step === 1 && !editingLocked ? (
-        <section className="space-y-5 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
-          <div><h2 className="text-lg font-bold">今回決まった条件</h2><p className="mt-1 text-sm text-zinc-600">依頼者の最初の回答は残したまま、相談後の内容をここに記録します。</p></div>
+        <section className={`space-y-5 rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-6`}>
+          <div><h2 className="text-lg font-bold tracking-tight">今回決まった条件</h2><p className="mt-1 text-sm text-zinc-600">依頼者の最初の回答は残したまま、相談後の内容をここに記録します。</p></div>
           {original.kind === "structured" ? (
-            <details className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm">
-              <summary className="cursor-pointer font-bold">最初に届いた依頼を見る</summary>
+            <details className="rounded-xl border border-zinc-200/80 bg-zinc-50 p-3 text-sm">
+              <summary className="cursor-pointer font-semibold text-zinc-800">最初に届いた依頼を見る</summary>
               <div className="mt-3 space-y-3">{original.sections.map((section) => (
                 <div key={section.key}><h3 className="font-bold text-zinc-800">{section.title}</h3>
                   {section.fields.map((entry) => <p key={entry.key} className="mt-1 text-zinc-600">{entry.label}：{entry.value}</p>)}
@@ -332,48 +332,48 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
               ))}</div>
             </details>
           ) : original.kind === "unsupported"
-            ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">原依頼を読み取れません。内容を確認するまで正式見積りは発行できません。</p>
+            ? <p role="alert" className={natoriAdminUi.alert.error}>原依頼を読み取れません。内容を確認するまで正式見積りは発行できません。</p>
             : <p className="rounded-xl bg-zinc-50 p-3 text-sm text-zinc-600">ポートフォリオ以外からのご相談も、ここに決まった条件を記録できます。</p>}
 
-          <div><label htmlFor="estimate-type" className="mb-1 block text-sm font-bold">案件種別（制作タスク）</label>
-            {currentProject.type !== "undecided" ? <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-900">{NATORI_PROJECT_TYPE_LABELS[currentProject.type]} · 確定済み</p> : (
+          <div><label htmlFor="estimate-type" className="mb-1.5 block text-sm font-semibold text-zinc-800">案件種別（制作タスク）</label>
+            {currentProject.type !== "undecided" ? <p className="rounded-xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-900 ring-1 ring-inset ring-emerald-600/15">{NATORI_PROJECT_TYPE_LABELS[currentProject.type]} · 確定済み</p> : (
               <div className="flex flex-wrap gap-2"><select id="estimate-type" value={typeSelection} onChange={(event) => setTypeSelection(event.target.value as NatoriConcreteProjectType | "")} className={`${field} flex-1`}>
                 <option value="">選択してください</option>{NATORI_CONCRETE_PROJECT_TYPES.map((type) => <option key={type} value={type}>{NATORI_PROJECT_TYPE_LABELS[type]}</option>)}
-              </select><button type="button" disabled={!typeSelection || busy} onClick={confirmType} className="rounded-xl bg-zinc-900 px-4 text-sm font-bold text-white disabled:opacity-50">種別を確定</button></div>
+              </select><button type="button" disabled={!typeSelection || busy} onClick={confirmType} className="rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:opacity-50">種別を確定</button></div>
             )}<p className="mt-1 text-xs text-zinc-600">確定すると制作タスクが作られます。変更が必要な場合は案件ボードで確認してください。</p>
           </div>
-          <div><label htmlFor="estimate-scope" className="mb-1 block text-sm font-bold">制作範囲</label><select id="estimate-scope" className={field} value={draft.agreedTerms.scope} onChange={(event) => changeTerms("scope", event.target.value)}>
+          <div><label htmlFor="estimate-scope" className="mb-1.5 block text-sm font-semibold text-zinc-800">制作範囲</label><select id="estimate-scope" className={field} value={draft.agreedTerms.scope} onChange={(event) => changeTerms("scope", event.target.value)}>
             {Object.entries(scopeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>{draft.agreedTerms.scope === "other" ? <input className={`${field} mt-2`} aria-label="その他の制作範囲" placeholder="制作範囲を具体的に記入" value={draft.agreedTerms.scopeNote} onChange={(event) => changeTerms("scopeNote", event.target.value)} /> : null}</div>
-          <div><label htmlFor="estimate-deliverables" className="mb-1 block text-sm font-bold">制作するもの</label><textarea id="estimate-deliverables" className={`${field} min-h-24`} placeholder="例：動画サムネイル用の一枚絵1点、表情差分1点、PNGで納品" value={draft.agreedTerms.deliverables} onChange={(event) => changeTerms("deliverables", event.target.value)} /></div>
-          <div><label htmlFor="estimate-usage" className="mb-1 block text-sm font-bold">用途</label><input id="estimate-usage" className={field} placeholder="例：動画サムネイル、SNS告知" value={draft.agreedTerms.usage} onChange={(event) => changeTerms("usage", event.target.value)} /></div>
-          <div><label htmlFor="estimate-commercial" className="mb-1 block text-sm font-bold">商用利用</label><select id="estimate-commercial" className={field} value={draft.agreedTerms.commercialUse} onChange={(event) => changeTerms("commercialUse", event.target.value)}><option value="unknown">相談して決める</option><option value="yes">あり</option><option value="no">なし</option></select></div>
-          <div><label htmlFor="estimate-publication" className="mb-1 block text-sm font-bold">実績公開の条件</label><input id="estimate-publication" className={field} placeholder="例：2026年11月23日以降に公開可／公開不可" value={draft.agreedTerms.publication} onChange={(event) => changeTerms("publication", event.target.value)} /></div>
-          <div><label htmlFor="estimate-due" className="mb-1 block text-sm font-bold">納品日</label><input id="estimate-due" type="date" className={field} value={draft.agreedTerms.dueDate} onChange={(event) => changeTerms("dueDate", event.target.value)} /><p className="mt-1 text-xs text-zinc-600">正式見積りを送ると案件のカレンダーにも反映します。</p></div>
-          <div><label htmlFor="estimate-memo" className="mb-1 block text-sm font-bold">内部メモ（依頼者には表示しません）</label><textarea id="estimate-memo" className={`${field} min-h-20`} value={draft.agreedTerms.memo} onChange={(event) => changeTerms("memo", event.target.value)} /></div>
+          <div><label htmlFor="estimate-deliverables" className="mb-1.5 block text-sm font-semibold text-zinc-800">制作するもの</label><textarea id="estimate-deliverables" className={`${field} min-h-24`} placeholder="例：動画サムネイル用の一枚絵1点、表情差分1点、PNGで納品" value={draft.agreedTerms.deliverables} onChange={(event) => changeTerms("deliverables", event.target.value)} /></div>
+          <div><label htmlFor="estimate-usage" className="mb-1.5 block text-sm font-semibold text-zinc-800">用途</label><input id="estimate-usage" className={field} placeholder="例：動画サムネイル、SNS告知" value={draft.agreedTerms.usage} onChange={(event) => changeTerms("usage", event.target.value)} /></div>
+          <div><label htmlFor="estimate-commercial" className="mb-1.5 block text-sm font-semibold text-zinc-800">商用利用</label><select id="estimate-commercial" className={field} value={draft.agreedTerms.commercialUse} onChange={(event) => changeTerms("commercialUse", event.target.value)}><option value="unknown">相談して決める</option><option value="yes">あり</option><option value="no">なし</option></select></div>
+          <div><label htmlFor="estimate-publication" className="mb-1.5 block text-sm font-semibold text-zinc-800">実績公開の条件</label><input id="estimate-publication" className={field} placeholder="例：2026年11月23日以降に公開可／公開不可" value={draft.agreedTerms.publication} onChange={(event) => changeTerms("publication", event.target.value)} /></div>
+          <div><label htmlFor="estimate-due" className="mb-1.5 block text-sm font-semibold text-zinc-800">納品日</label><input id="estimate-due" type="date" className={field} value={draft.agreedTerms.dueDate} onChange={(event) => changeTerms("dueDate", event.target.value)} /><p className="mt-1 text-xs text-zinc-600">正式見積りを送ると案件のカレンダーにも反映します。</p></div>
+          <div><label htmlFor="estimate-memo" className="mb-1.5 block text-sm font-semibold text-zinc-800">内部メモ（依頼者には表示しません）</label><textarea id="estimate-memo" className={`${field} min-h-20`} value={draft.agreedTerms.memo} onChange={(event) => changeTerms("memo", event.target.value)} /></div>
           <button type="button" onClick={nextFromTerms} disabled={busy} className={`min-h-12 w-full rounded-full px-5 font-bold ${natoriPrimaryActionClassName}`}>{busy ? "保存中…" : "条件を保存して金額へ →"}</button>
         </section>
       ) : null}
 
       {step === 2 && !editingLocked ? (
-        <section className="space-y-5 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
-          <div><h2 className="text-lg font-bold">今回の金額を決める</h2><p className="mt-1 text-sm text-zinc-600">この案件だけの金額です。公開ポートフォリオの料金は変更されません。</p></div>
-          {request.success && pricingConfig ? <button type="button" onClick={suggest} className="min-h-11 w-full rounded-xl border border-violet-200 bg-violet-50 px-4 text-sm font-bold text-violet-900">公開料金から参考明細を入れる</button> : <p className="rounded-xl bg-zinc-50 p-3 text-sm text-zinc-600">明細を手動で追加できます。</p>}
-          {draft.items.map((item) => <div key={item.id} className="space-y-2 rounded-xl border border-zinc-200 p-3">
-            <div className="flex gap-2"><input aria-label="明細名" className={field} value={item.labelSnapshot} onChange={(event) => updateItem(item.id, "labelSnapshot", event.target.value)} /><button type="button" aria-label={`${item.labelSnapshot}を削除`} onClick={() => setDraft((previous) => ({ ...previous, items: previous.items.filter((entry) => entry.id !== item.id) }))} className="rounded-lg p-2 text-red-600"><Trash2 className="h-5 w-5" /></button></div>
-            <div className="grid grid-cols-2 gap-2"><label className="text-xs font-bold text-zinc-600">数量<input aria-label={`${item.labelSnapshot}の数量`} type="number" min={1} max={100} className={`${field} mt-1`} value={item.quantity} onChange={(event) => updateItem(item.id, "quantity", event.target.value)} /></label><label className="text-xs font-bold text-zinc-600">単価（円）<input aria-label={`${item.labelSnapshot}の単価`} type="number" min={0} className={`${field} mt-1`} value={item.unitAmount} onChange={(event) => updateItem(item.id, "unitAmount", event.target.value)} /></label></div>
-            <p className="text-right text-sm font-bold">小計 {Number.isFinite(item.amount) ? formatYen(item.amount) : "入力を確認"}</p>
+        <section className={`space-y-5 rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-6`}>
+          <div><h2 className="text-lg font-bold tracking-tight">今回の金額を決める</h2><p className="mt-1 text-sm text-zinc-600">この案件だけの金額です。公開ポートフォリオの料金は変更されません。</p></div>
+          {request.success && pricingConfig ? <button type="button" onClick={suggest} className={`${natoriAdminUi.btnSecondary} w-full`}>公開料金から参考明細を入れる</button> : <p className="rounded-xl bg-zinc-50 p-3 text-sm text-zinc-600">明細を手動で追加できます。</p>}
+          {draft.items.map((item) => <div key={item.id} className="space-y-2 rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-3">
+            <div className="flex gap-2"><input aria-label="明細名" className={field} value={item.labelSnapshot} onChange={(event) => updateItem(item.id, "labelSnapshot", event.target.value)} /><button type="button" aria-label={`${item.labelSnapshot}を削除`} onClick={() => setDraft((previous) => ({ ...previous, items: previous.items.filter((entry) => entry.id !== item.id) }))} className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-red-600 transition-colors hover:bg-red-50"><Trash2 className="h-5 w-5" /></button></div>
+            <div className="grid grid-cols-2 gap-2"><label className="text-xs font-semibold text-zinc-600">数量<input aria-label={`${item.labelSnapshot}の数量`} type="number" min={1} max={100} className={`${field} mt-1`} value={item.quantity} onChange={(event) => updateItem(item.id, "quantity", event.target.value)} /></label><label className="text-xs font-semibold text-zinc-600">単価（円）<input aria-label={`${item.labelSnapshot}の単価`} type="number" min={0} className={`${field} mt-1`} value={item.unitAmount} onChange={(event) => updateItem(item.id, "unitAmount", event.target.value)} /></label></div>
+            <p className="text-right text-sm font-semibold tabular-nums text-zinc-800">小計 {Number.isFinite(item.amount) ? formatYen(item.amount) : "入力を確認"}</p>
           </div>)}
-          <button type="button" onClick={() => setDraft((previous) => ({ ...previous, items: [...previous.items, { id: crypto.randomUUID(), presetItemId: null, kind: "manual", labelSnapshot: "追加作業", quantity: 1, unitAmount: 0, amount: 0, automatic: false, sourceFields: [], ruleId: null, note: null }] }))} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-zinc-300 px-4 text-sm font-bold"><Plus className="h-4 w-4" />明細を追加</button>
-          <div className="flex items-center justify-between rounded-xl bg-pink-50 p-4 font-bold"><span>今回の見積り合計</span><span className="text-xl">{draft.items.length ? formatYen(total) : "未入力"}</span></div>
-          <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => setStep(1)} className="min-h-12 rounded-full border border-zinc-300 px-5 font-bold">← 条件へ戻る</button><button type="button" disabled={busy} onClick={nextFromPrice} className={`min-h-12 flex-1 rounded-full px-5 font-bold ${natoriPrimaryActionClassName}`}>{busy ? "保存中…" : "明細を保存して送信確認へ →"}</button></div>
+          <button type="button" onClick={() => setDraft((previous) => ({ ...previous, items: [...previous.items, { id: crypto.randomUUID(), presetItemId: null, kind: "manual", labelSnapshot: "追加作業", quantity: 1, unitAmount: 0, amount: 0, automatic: false, sourceFields: [], ruleId: null, note: null }] }))} className={natoriAdminUi.btnSecondary}><Plus className="h-4 w-4" />明細を追加</button>
+          <div className="flex items-center justify-between rounded-xl bg-zinc-50 p-4 ring-1 ring-inset ring-zinc-200/80"><span className="text-sm font-semibold text-zinc-700">今回の見積り合計</span><span className="text-xl font-bold tabular-nums tracking-tight text-zinc-950">{draft.items.length ? formatYen(total) : "未入力"}</span></div>
+          <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => setStep(1)} className="min-h-12 rounded-full border border-zinc-200 bg-white px-5 font-semibold text-zinc-800 shadow-[0_1px_2px_rgba(24,24,27,0.05)] transition-colors hover:bg-zinc-50">← 条件へ戻る</button><button type="button" disabled={busy} onClick={nextFromPrice} className={`min-h-12 flex-1 rounded-full px-5 font-bold ${natoriPrimaryActionClassName}`}>{busy ? "保存中…" : "明細を保存して送信確認へ →"}</button></div>
         </section>
       ) : null}
 
       {step === 3 ? (
-        <section className="space-y-5 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
-          {issued ? <div className="rounded-xl bg-emerald-50 p-5 text-emerald-900"><CheckCircle2 className="mb-2 h-6 w-6" /><h2 className="font-bold">正式見積りを発行しました</h2><p className="text-sm">第{issued.version}版の見積りは保存済みです。通知結果は下の表示で確認してください。</p></div> : <>
-            <div><h2 className="text-lg font-bold">相手に見える内容を確認</h2><p className="mt-1 text-sm text-zinc-600">送信前のプレビューです。金額・制作内容・納品日・メールを確認してください。</p></div>
+        <section className={`space-y-5 rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-6`}>
+          {issued ? <div className="rounded-xl bg-emerald-50 p-5 text-emerald-900 ring-1 ring-inset ring-emerald-600/15"><CheckCircle2 className="mb-2 h-6 w-6" /><h2 className="font-bold">正式見積りを発行しました</h2><p className="text-sm">第{issued.version}版の見積りは保存済みです。通知結果は下の表示で確認してください。</p></div> : <>
+            <div><h2 className="text-lg font-bold tracking-tight">相手に見える内容を確認</h2><p className="mt-1 text-sm text-zinc-600">送信前のプレビューです。金額・制作内容・納品日・メールを確認してください。</p></div>
             {missing.length ? <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"><p className="flex items-center gap-2 font-bold"><AlertTriangle className="h-4 w-4" />送信前に決める項目</p><p className="mt-1">{missing.join("、")}</p></div> : null}
             {dirty ? <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">編集中の変更があります。戻って保存してから送信してください。</p> : null}
             <QuoteAcceptCard preview token="" title={project.title} clientName={project.clientName} amount={total} acceptedAt={null} expiresAt={new Date(Date.now() + 30 * 86400000).toISOString()}
@@ -383,18 +383,18 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
                 scope: scopeText(draft.agreedTerms), usage: draft.agreedTerms.usage,
                 commercialUse: draft.agreedTerms.commercialUse === "yes" ? "あり" : "なし", publication: draft.agreedTerms.publication,
               } : null} />
-            <div className="space-y-3 rounded-xl border border-zinc-200 p-4"><h3 className="font-bold">送信するメール</h3>
-              <div><label htmlFor="estimate-to" className="mb-1 block text-sm font-bold">宛先</label><input id="estimate-to" type="email" className={field} value={to} onChange={(event) => setTo(event.target.value)} disabled={Boolean(attemptRef.current)} /></div>
-              <div><label htmlFor="estimate-subject" className="mb-1 block text-sm font-bold">件名</label><input id="estimate-subject" className={field} value={subject} onChange={(event) => setSubject(event.target.value)} disabled={Boolean(attemptRef.current)} /></div>
-              <div><label htmlFor="estimate-body" className="mb-1 block text-sm font-bold">本文</label><textarea id="estimate-body" className={`${field} min-h-80`} value={body} onChange={(event) => setBody(event.target.value)} disabled={Boolean(attemptRef.current)} /></div>
+            <div className="space-y-3 rounded-xl border border-zinc-200/80 p-4"><h3 className="font-semibold text-zinc-900">送信するメール</h3>
+              <div><label htmlFor="estimate-to" className="mb-1.5 block text-sm font-semibold text-zinc-800">宛先</label><input id="estimate-to" type="email" className={field} value={to} onChange={(event) => setTo(event.target.value)} disabled={Boolean(attemptRef.current)} /></div>
+              <div><label htmlFor="estimate-subject" className="mb-1.5 block text-sm font-semibold text-zinc-800">件名</label><input id="estimate-subject" className={field} value={subject} onChange={(event) => setSubject(event.target.value)} disabled={Boolean(attemptRef.current)} /></div>
+              <div><label htmlFor="estimate-body" className="mb-1.5 block text-sm font-semibold text-zinc-800">本文</label><textarea id="estimate-body" className={`${field} min-h-80`} value={body} onChange={(event) => setBody(event.target.value)} disabled={Boolean(attemptRef.current)} /></div>
               {!issued && !editingLocked ? <div><button type="button" disabled={busy || Boolean(attemptRef.current)} className={natoriAdminUi.btnSecondary} onClick={() => void save()}>個別メールの編集を保存</button></div> : null}
             </div>
-            <label className="flex items-start gap-3 rounded-xl bg-pink-50 p-4 text-sm"><input type="checkbox" className={`${natoriAdminUi.checkbox} mt-0.5`} checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} /><span>依頼者に見える内容と宛先を確認しました。</span></label>
-            <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => setStep(2)} disabled={Boolean(attemptRef.current)} className="min-h-12 rounded-full border border-zinc-300 px-5 font-bold disabled:opacity-50">← 金額を修正</button><button type="button" onClick={issue} disabled={busy || !recoveryReady || (!attemptRef.current && (!ready || !acknowledged || !to.trim() || !subject.trim() || !body.trim()))} className={`min-h-12 flex-1 rounded-full px-5 font-bold ${natoriPrimaryActionClassName}`}>{busy ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : attemptRef.current ? "同じ内容で送信を再試行" : `正式見積り ${formatYen(total)} を発行`}</button></div>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-pink-50/70 p-4 text-sm ring-1 ring-inset ring-pink-500/15"><input type="checkbox" className={`${natoriAdminUi.checkbox} mt-0.5`} checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} /><span>依頼者に見える内容と宛先を確認しました。</span></label>
+            <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => setStep(2)} disabled={Boolean(attemptRef.current)} className="min-h-12 rounded-full border border-zinc-200 bg-white px-5 font-semibold text-zinc-800 shadow-[0_1px_2px_rgba(24,24,27,0.05)] transition-colors hover:bg-zinc-50 disabled:opacity-50">← 金額を修正</button><button type="button" onClick={issue} disabled={busy || !recoveryReady || (!attemptRef.current && (!ready || !acknowledged || !to.trim() || !subject.trim() || !body.trim()))} className={`min-h-12 flex-1 rounded-full px-5 font-bold ${natoriPrimaryActionClassName}`}>{busy ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : attemptRef.current ? "同じ内容で送信を再試行" : `正式見積り ${formatYen(total)} を発行`}</button></div>
           </>}
         </section>
       ) : null}
-      {editingLocked ? <p className="rounded-xl bg-zinc-50 p-4 text-sm">承諾・入金・進行後の見積りは控えとして確認できます。保存済みの版の通知は下の操作から行えます。条件と金額は変更できません。</p> : null}
+      {editingLocked ? <p className="rounded-xl bg-zinc-100/70 p-4 text-sm text-zinc-700">承諾・入金・進行後の見積りは控えとして確認できます。保存済みの版の通知は下の操作から行えます。条件と金額は変更できません。</p> : null}
       {replacementBody && !issued && !editingLocked ? <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
         <p className="font-bold">条件が変わりました。個別編集は保持しています。</p>
         <p className="mt-1 text-sm">以下は本文全体の置換候補です。必要な補足を控えてから更新するか、現在の本文を編集して条件を確認してください。</p>
@@ -402,8 +402,8 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
         <button type="button" disabled={busy || Boolean(attemptRef.current)} className="mt-3 min-h-11 rounded-xl bg-amber-100 px-4 font-bold text-amber-950" onClick={() => { if (busy || attemptRef.current) return; setBody(replacementBody); setTemplateBody(replacementBody); setReplacementBody(null); setAcknowledged(false); }}>本文全体をこの候補へ更新</button>
         <button type="button" disabled={busy || Boolean(attemptRef.current)} className="ml-3 min-h-11 px-3 underline" onClick={() => { if (busy || attemptRef.current) return; setReplacementBody(null); }}>個別編集を保持</button>
       </section> : null}
-      {issued ? <section className="rounded-2xl border border-pink-200 bg-pink-50 p-4">
-        <button type="button" disabled={busy} className="min-h-11 rounded-xl bg-pink-100 px-4 font-bold text-pink-950" onClick={async () => {
+      {issued ? <section className={`rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-5`}>
+        <button type="button" disabled={busy} className={natoriAdminUi.btnSecondary} onClick={async () => {
           const confirmed = await confirm({
             title: "再通知しますか？",
             description: `第${issued.version}版の保存済み本文と宛先で再通知します。見積りの版・金額・承諾は変えません。送信しますか？`,
@@ -422,12 +422,12 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
           } catch (cause) { setError(cause instanceof Error ? cause.message : "再通知結果を確認できませんでした。"); }
           finally { setBusy(false); }
         }}>第{issued.version}版を同じ内容で再通知</button>
-        <p className="mt-2 text-xs">条件を変更する新しい版の発行は別の操作です。承諾後・入金後は新しい版を発行できません。</p>
+        <p className="mt-2 text-xs leading-5 text-zinc-600">条件を変更する新しい版の発行は別の操作です。承諾後・入金後は新しい版を発行できません。</p>
         {!editingLocked && !currentProject.paymentConfirmedAt ? <button type="button" disabled={busy} className="mt-2 min-h-11 px-3 underline" onClick={() => { if (window.confirm("新しい版の条件と金額を確認します。承諾済みの見積りは変更できません。")) { sessionStorage.removeItem(`natori-quote-issue/${project.id}`); setIssued(null); attemptRef.current=null; setStep(1); setAcknowledged(false); } }}>新しい版の作成を確認</button> : null}
       </section> : null}
-      {issued?.notificationId ? <section className="rounded-2xl border border-zinc-200 bg-white p-4">
-        <p>第{issued.version}版は保存済みです。通知: {issued.notificationStatus === "sent" ? "送信済み" : "未送信・確認待ち"}</p>
-        {issued.notificationStatus !== "sent" ? <button type="button" disabled={busy} className="mt-2 min-h-11 rounded-xl bg-pink-100 px-4 font-bold text-pink-950" onClick={async () => {
+      {issued?.notificationId ? <section className={`rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-5`}>
+        <p className="text-sm text-zinc-800">第{issued.version}版は保存済みです。通知: {issued.notificationStatus === "sent" ? "送信済み" : "未送信・確認待ち"}</p>
+        {issued.notificationStatus !== "sent" ? <button type="button" disabled={busy} className={`${natoriAdminUi.btnSecondary} mt-2`} onClick={async () => {
           setBusy(true); setError("");
           try {
             const retry = await fetch("/api/natori/admin/notifications", { method: "POST", headers: { "Content-Type": "application/json", ...CSRF_HEADERS }, body: JSON.stringify({ id: issued.notificationId }) });

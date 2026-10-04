@@ -1,6 +1,4 @@
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
-import { natoriAdminFont } from "./adminFont";
-import { NatoriAdminFontScope } from "./NatoriAdminFontScope";
 import { NatoriAdminHeader } from "./NatoriAdminHeader";
 import { NatoriAdminTabBar } from "./NatoriAdminTabBar";
 import { NatoriToastProvider } from "./NatoriToast";
@@ -28,8 +26,7 @@ export function NatoriPageShell({
   return (
     <NatoriToastProvider>
       {/* data-natori-admin: globals.css switches the font for the admin screens */}
-      <div data-natori-admin className={`${natoriAdminFont.variable} ${natoriAdminUi.page}`}>
-        <NatoriAdminFontScope />
+      <div data-natori-admin className={natoriAdminUi.page}>
         <NatoriAdminHeader current={current} right={headerRight} />
         <main
           className={`${natoriAdminUi.container} ${natoriAdminUi.pageBody} pb-24 lg:pb-8`}

@@ -8,7 +8,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   ChevronDown,
-  ChevronUp,
   Download,
   ImagePlus,
   MoreHorizontal,
@@ -82,9 +81,9 @@ function formatMetric(metric: ResultMetric, count: number, amount: number): stri
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-2xl border border-pink-100 bg-white p-3 shadow-sm sm:p-4">
+    <div className={`rounded-2xl ${natoriAdminUi.surface} p-3.5 sm:p-4`}>
       <p className={natoriAdminUi.groupLabel}>{label}</p>
-      <p className="mt-1 break-words text-xl font-bold tabular-nums text-zinc-900">{value}</p>
+      <p className="mt-1.5 break-words text-xl font-bold leading-8 tracking-tight tabular-nums text-zinc-900">{value}</p>
       {sub ? <p className="mt-0.5 text-xs text-zinc-500">{sub}</p> : null}
     </div>
   );
@@ -119,21 +118,21 @@ function MeterRow({
         type="button"
         onClick={onClick}
         aria-pressed={selected}
-        className={`w-full rounded-xl px-2 py-1.5 text-left transition ${
-          selected ? "bg-pink-50 ring-2 ring-pink-300" : "hover:bg-pink-50/50"
+        className={`w-full rounded-xl px-2.5 py-2 text-left transition-colors ${natoriAdminUi.focusRing} ${
+          selected ? "bg-pink-50/70 ring-1 ring-inset ring-[#BE185D]/35" : "hover:bg-zinc-50"
         }`}
         title={selected ? "絞り込みを解除" : "この行で実績一覧を絞り込む"}
       >
         <div className="flex items-baseline justify-between gap-2">
-          <p className="min-w-0 truncate text-xs font-bold text-zinc-900 sm:text-sm">
+          <p className="min-w-0 truncate text-xs font-semibold text-zinc-900 sm:text-sm">
             {label}
-            <span className="ml-1.5 font-medium text-zinc-500">{secondary}</span>
+            <span className="ml-1.5 font-normal tabular-nums text-zinc-500">{secondary}</span>
           </p>
-          <p className="shrink-0 text-xs font-bold text-zinc-900 sm:text-sm">{primary}</p>
+          <p className="shrink-0 text-xs font-bold tabular-nums text-zinc-900 sm:text-sm">{primary}</p>
         </div>
-        <div className="mt-1 h-2 overflow-hidden rounded-full bg-pink-50">
+        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-zinc-100">
           <div
-            className="h-full rounded-full bg-pink-500"
+            className="h-full rounded-full bg-gradient-to-r from-[#F472B6] to-[#BE185D]"
             style={{ width: `${Math.max(ratio * 100, value > 0 ? 2 : 0)}%` }}
             aria-hidden="true"
           />
@@ -146,16 +145,24 @@ function MeterRow({
 function SectionCard({
   title,
   description,
+  action,
   children,
 }: {
   title: string;
   description?: string;
+  /** 見出しの右側に置く操作（CSV保存など）。 */
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-pink-100 bg-white p-3 shadow-sm sm:p-4">
-      <h2 className="text-sm font-bold text-zinc-900">{title}</h2>
-      {description ? <p className="mt-0.5 text-xs text-zinc-500">{description}</p> : null}
+    <section className={natoriAdminUi.card}>
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+        <div className="min-w-0">
+          <h2 className={natoriAdminUi.sectionTitle}>{title}</h2>
+          {description ? <p className={`mt-0.5 ${natoriAdminUi.caption}`}>{description}</p> : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
       {children}
     </section>
   );
@@ -223,34 +230,35 @@ function ResultAddForm({
   const formOpen = embedded || open;
 
   return (
-    <section className={embedded ? undefined : "rounded-2xl border border-pink-100 bg-white shadow-sm"}>
+    <section className={embedded ? undefined : `rounded-2xl ${natoriAdminUi.surface}`}>
       {embedded ? null : <button
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl p-3 text-left hover:bg-pink-50/40 sm:p-4"
+        className={`flex w-full items-center justify-between gap-3 rounded-2xl p-4 text-left transition-colors hover:bg-zinc-50 sm:p-5 ${natoriAdminUi.focusRing}`}
       >
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-pink-500 text-white">
-            <Plus className="h-4 w-4" aria-hidden />
+          <span className={natoriAdminUi.iconTile}>
+            <Plus className="h-5 w-5" aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-zinc-900">実績を手入力で追加</p>
+            <p className="text-sm font-semibold text-zinc-900">実績を手入力で追加</p>
             <p className="mt-0.5 text-xs text-zinc-600">
               ツール導入前の過去案件などを、完了済みの実績として登録できます。
             </p>
           </div>
         </div>
-        <span className="shrink-0 text-zinc-500">
-          {open ? <ChevronUp className="h-5 w-5" aria-hidden /> : <ChevronDown className="h-5 w-5" aria-hidden />}
-        </span>
+        <ChevronDown
+          className={`h-5 w-5 shrink-0 text-zinc-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          aria-hidden
+        />
       </button>}
 
       {formOpen ? (
-        <div className={embedded ? undefined : "border-t border-pink-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4"}>
+        <div className={embedded ? undefined : "border-t border-zinc-100 px-4 pb-4 pt-4 sm:px-5 sm:pb-5"}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm">
-              <span className="block text-xs font-bold text-zinc-600">
+              <span className="block text-xs font-semibold text-zinc-700">
                 依頼者名（必須）
               </span>
               <input
@@ -262,7 +270,7 @@ function ResultAddForm({
               />
             </label>
             <label className="block text-sm">
-              <span className="block text-xs font-bold text-zinc-600">
+              <span className="block text-xs font-semibold text-zinc-700">
                 案件タイトル（必須）
               </span>
               <input
@@ -274,7 +282,7 @@ function ResultAddForm({
               />
             </label>
             <label className="block text-sm">
-              <span className="block text-xs font-bold text-zinc-600">
+              <span className="block text-xs font-semibold text-zinc-700">
                 案件タイプ
               </span>
               <select
@@ -292,7 +300,7 @@ function ResultAddForm({
               </select>
             </label>
             <label className="block text-sm">
-              <span className="block text-xs font-bold text-zinc-600">
+              <span className="block text-xs font-semibold text-zinc-700">
                 ステータス
               </span>
               <select
@@ -308,7 +316,7 @@ function ResultAddForm({
               </select>
             </label>
             <label className="block text-sm">
-              <span className="block text-xs font-bold text-zinc-600">
+              <span className="block text-xs font-semibold text-zinc-700">
                 金額（円）
               </span>
               <input
@@ -320,7 +328,7 @@ function ResultAddForm({
               />
             </label>
             <label className="block text-sm">
-              <span className="block text-xs font-bold text-zinc-600">
+              <span className="block text-xs font-semibold text-zinc-700">
                 完了日（必須）
               </span>
               <input
@@ -333,24 +341,24 @@ function ResultAddForm({
           </div>
 
           <label className="mt-3 block text-sm">
-            <span className="block text-xs font-bold text-zinc-600">
+            <span className="block text-xs font-semibold text-zinc-700">
               メモ（任意）
             </span>
             <Textarea
               value={note}
               onChange={(event) => setNote(event.target.value)}
               placeholder="依頼内容や納品物のメモなど。"
-              className="mt-1 min-h-[80px] resize-y border-pink-200 bg-white text-sm leading-6 text-zinc-900 focus-visible:ring-pink-300"
+              className="mt-1 min-h-[80px] resize-y rounded-xl border-[#878287] bg-white text-[16px] leading-6 text-zinc-900 placeholder:text-zinc-500 focus-visible:border-[#BE185D] focus-visible:ring-4 focus-visible:ring-[#BE185D]/15 focus-visible:ring-offset-0"
             />
           </label>
 
           {error ? (
-            <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+            <p className={`mt-3 ${natoriAdminUi.alert.error}`}>
               {error}
             </p>
           ) : null}
           {savedTitle ? (
-            <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
+            <p className={`mt-3 ${natoriAdminUi.alert.success}`}>
               「{savedTitle}」を実績に追加しました。一覧の画像ボタンからサムネイルも登録できます。
             </p>
           ) : null}
@@ -470,20 +478,20 @@ function CompletedProjectRow({
 }) {
   if (editing) {
     return (
-      <li>
+      <li className="p-2">
         <ProjectEditForm project={project} onCancel={onCancelEdit} onSave={onSaveEdit} />
       </li>
     );
   }
 
   return (
-    <li className="flex gap-3 rounded-xl border border-pink-100 bg-pink-50/40 px-3 py-2.5">
+    <li className="flex gap-3 px-3 py-3 transition-colors first:rounded-t-xl last:rounded-b-xl hover:bg-zinc-50/70 sm:px-4">
       {/* サムネイル。画像があれば拡大、無ければアップロード */}
       <button
         type="button"
         onClick={thumbUrl ? onPreview : onPickImage}
         disabled={uploading}
-        className="relative h-16 w-16 shrink-0 self-center overflow-hidden rounded-lg border border-pink-200 bg-white disabled:opacity-60"
+        className={`relative h-16 w-16 shrink-0 self-center overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-50 transition hover:border-zinc-300 disabled:opacity-60 ${natoriAdminUi.focusRing}`}
         aria-label={thumbUrl ? `「${project.title}」の画像を拡大` : `「${project.title}」の画像を登録`}
         title={thumbUrl ? "クリックで拡大" : "クリックで作品画像を登録"}
       >
@@ -497,12 +505,12 @@ function CompletedProjectRow({
             className="object-cover"
           />
         ) : (
-          <span className="grid h-full w-full place-items-center text-pink-300">
+          <span className="grid h-full w-full place-items-center text-zinc-400">
             <ImagePlus className="h-6 w-6" aria-hidden />
           </span>
         )}
         {uploading ? (
-          <span className="absolute inset-0 grid place-items-center bg-white/70 text-xs font-bold text-pink-700">
+          <span className="absolute inset-0 grid place-items-center bg-white/75 text-xs font-semibold text-[#BE185D]">
             送信中
           </span>
         ) : null}
@@ -510,9 +518,9 @@ function CompletedProjectRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-          <p className="min-w-0 break-words text-sm font-bold text-zinc-900">{project.title}</p>
+          <p className="min-w-0 break-words text-sm font-semibold text-zinc-900">{project.title}</p>
           <div className="flex shrink-0 items-center gap-1.5">
-            <p className="mr-1 text-sm font-bold text-zinc-900">
+            <p className="mr-1 text-sm font-bold tabular-nums text-zinc-900">
               {formatNatoriProjectAmount(getNatoriResultAmount(project))}
             </p>
             <button
@@ -539,13 +547,13 @@ function CompletedProjectRow({
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-600">
           <span>{project.clientName}</span>
-          <span className="rounded-full bg-white px-2 py-0.5 font-bold text-pink-700">
+          <span className={`${natoriAdminUi.badge} ${natoriAdminUi.badgeTone.neutral}`}>
             {NATORI_PROJECT_TYPE_LABELS[project.type]}
           </span>
-          <span className="rounded-full bg-white px-2 py-0.5 font-bold text-emerald-700">
+          <span className={`${natoriAdminUi.badge} ${natoriAdminUi.badgeTone.success}`}>
             {RESULT_STATUS_LABELS[project.status] ?? project.status}
           </span>
-          <span className="ml-auto">完了 {formatDate(getNatoriResultDateISO(project))}</span>
+          <span className="ml-auto tabular-nums">完了 {formatDate(getNatoriResultDateISO(project))}</span>
         </div>
         <RefundResultDetails project={project} />
         {project.note ? (
@@ -768,12 +776,12 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
   if (summary.totalCount === 0 && yearFilter === null) {
     return (
       <div className="space-y-4">
-        <div className="rounded-2xl border border-pink-100 bg-white p-6 text-center shadow-sm">
-          <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-pink-50 text-pink-500">
-            <Trophy className="h-6 w-6" aria-hidden />
+        <div className={`rounded-2xl ${natoriAdminUi.surface} px-6 py-10 text-center`}>
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-pink-50 text-[#DB2777] ring-1 ring-inset ring-pink-500/10">
+            <Trophy className="h-7 w-7" aria-hidden />
           </span>
-          <p className="mt-3 text-sm font-bold text-zinc-900">まだ実績がありません</p>
-          <p className="mt-1 text-xs leading-5 text-zinc-600">
+          <p className="mt-4 text-[16px] font-semibold text-zinc-900">まだ実績がありません</p>
+          <p className="mx-auto mt-1.5 max-w-md text-xs leading-5 text-zinc-600">
             入金確認済みの案件が「対応完了」になると、ここに件数と入金額が表示されます。過去の案件は下のフォームから手入力でも追加できます。
           </p>
         </div>
@@ -848,20 +856,18 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
       )}
 
       {/* 期間と表示指標の切り替え */}
-      <section className="rounded-2xl border border-pink-100 bg-white p-3 shadow-sm sm:p-4">
+      <section className={`rounded-2xl ${natoriAdminUi.surface} p-3 sm:p-4`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-xs font-bold text-zinc-600">
+            <span className="mr-1 text-xs font-semibold text-zinc-500">
               期間
             </span>
             <button
               type="button"
               onClick={() => handleSelectYear(null)}
               aria-pressed={yearFilter === null}
-              className={`h-8 rounded-full border px-3 text-xs font-bold transition ${
-                yearFilter === null
-                  ? "border-[#BE185D] bg-[#BE185D] text-white"
-                  : "border-pink-200 bg-white text-zinc-700 hover:bg-pink-50"
+              className={`${natoriAdminUi.chip} ${
+                yearFilter === null ? natoriAdminUi.chipOn : natoriAdminUi.chipOff
               }`}
             >
               全期間
@@ -872,19 +878,17 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
                 type="button"
                 onClick={() => handleSelectYear(yearFilter === year ? null : year)}
                 aria-pressed={yearFilter === year}
-                className={`h-8 rounded-full border px-3 text-xs font-bold transition ${
-                  yearFilter === year
-                    ? "border-[#BE185D] bg-[#BE185D] text-white"
-                    : "border-pink-200 bg-white text-zinc-700 hover:bg-pink-50"
+                className={`${natoriAdminUi.chip} ${
+                  yearFilter === year ? natoriAdminUi.chipOn : natoriAdminUi.chipOff
                 }`}
               >
                 {year}年
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-zinc-600">表示</span>
-            <div className="flex rounded-full border border-pink-200 bg-white p-0.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-zinc-500">表示</span>
+            <div className={natoriAdminUi.segment}>
               {(
                 [
                   { value: "amount", label: "入金額" },
@@ -896,10 +900,8 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
                   type="button"
                   onClick={() => setMetric(option.value)}
                   aria-pressed={metric === option.value}
-                  className={`h-7 rounded-full px-3 text-xs font-bold transition ${
-                    metric === option.value
-                      ? "bg-[#BE185D] text-white"
-                      : "text-zinc-600 hover:bg-pink-50"
+                  className={`${natoriAdminUi.segmentItem} ${
+                    metric === option.value ? natoriAdminUi.segmentOn : natoriAdminUi.segmentOff
                   }`}
                 >
                   {option.label}
@@ -911,18 +913,16 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
 
         {/* 年を選ぶと、その年の実績がある月をさらに絞り込める */}
         {monthChips.length > 0 ? (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-pink-50 pt-2">
-            <span className="mr-1 text-xs font-bold text-zinc-600">
+          <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-zinc-100 pt-3">
+            <span className="mr-1 text-xs font-semibold text-zinc-500">
               月別
             </span>
             <button
               type="button"
               onClick={() => setMonthFilter(null)}
               aria-pressed={monthFilter === null}
-              className={`h-8 rounded-full border px-3 text-xs font-bold transition ${
-                monthFilter === null
-                  ? "border-[#BE185D] bg-[#BE185D] text-white"
-                  : "border-pink-200 bg-white text-zinc-700 hover:bg-pink-50"
+              className={`${natoriAdminUi.chip} ${
+                monthFilter === null ? natoriAdminUi.chipOn : natoriAdminUi.chipOff
               }`}
             >
               通年
@@ -933,10 +933,8 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
                 type="button"
                 onClick={() => setMonthFilter(monthFilter === month.ym ? null : month.ym)}
                 aria-pressed={monthFilter === month.ym}
-                className={`h-8 rounded-full border px-3 text-xs font-bold transition ${
-                  monthFilter === month.ym
-                    ? "border-[#BE185D] bg-[#BE185D] text-white"
-                    : "border-pink-200 bg-white text-zinc-700 hover:bg-pink-50"
+                className={`${natoriAdminUi.chip} ${
+                  monthFilter === month.ym ? natoriAdminUi.chipOn : natoriAdminUi.chipOff
                 }`}
               >
                 {Number(month.ym.slice(5))}月
@@ -948,7 +946,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
 
       <div>
         <p className={natoriAdminUi.caption}>
-          <span className="font-bold text-zinc-800">集計対象: {cardScopeLabel}</span>
+          <span className="font-semibold text-zinc-800">集計対象: {cardScopeLabel}</span>
           <span className="ml-2">タイプの絞り込みは実績一覧にだけ適用されます。</span>
         </p>
       <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
@@ -1026,8 +1024,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
       <SectionCard
         title={`実績一覧（${listItems.length}件）`}
         description="サムネイルをタップで拡大、画像ボタンで作品画像の登録・差し替えができます。"
-      >
-        <div className="mt-2 flex justify-end">
+        action={
           <button
             type="button"
             onClick={() => {
@@ -1043,22 +1040,23 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
               showToast(`${listItems.length}件をCSVで保存しました。`);
             }}
             disabled={listItems.length === 0}
-            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-pink-200 bg-white px-3 text-xs font-bold text-pink-700 hover:bg-pink-50 disabled:opacity-50"
+            className={natoriAdminUi.btnSecondary}
             title="表示中の実績一覧をCSVで保存します（確定申告・売上管理用）"
           >
-            <Download className="h-3.5 w-3.5" aria-hidden />
+            <Download className="h-4 w-4" aria-hidden />
             CSVダウンロード
           </button>
-        </div>
+        }
+      >
         {activeFilterChips.length > 0 ? (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
             <span className="text-xs text-zinc-500">絞り込み:</span>
             {activeFilterChips.map((chip) => (
               <button
                 key={chip.key}
                 type="button"
                 onClick={chip.onClear}
-                className="inline-flex h-7 items-center gap-1 rounded-full border border-pink-300 bg-pink-50 px-2.5 text-xs font-bold text-pink-700 hover:bg-pink-100"
+                className={`inline-flex h-8 items-center gap-1 rounded-full bg-pink-50 px-3 text-xs font-semibold text-[#9D174D] ring-1 ring-inset ring-pink-500/20 transition-colors hover:bg-pink-100 ${natoriAdminUi.focusRing}`}
                 title="この絞り込みを解除"
               >
                 {chip.label}
@@ -1068,16 +1066,16 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
           </div>
         ) : null}
         {listError ? (
-          <p className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+          <p className={`mt-3 ${natoriAdminUi.alert.error}`}>
             {listError}
           </p>
         ) : null}
         {listItems.length === 0 ? (
-          <p className="mt-3 py-4 text-center text-xs text-zinc-500">
+          <p className="mt-3 rounded-xl bg-zinc-50 py-6 text-center text-xs text-zinc-500">
             この条件の実績はありません。
           </p>
         ) : (
-          <ul className="mt-3 space-y-2">
+          <ul className="mt-3 divide-y divide-zinc-100 rounded-xl border border-zinc-200/80">
             {listItems.map((project) => (
               <CompletedProjectRow
                 key={project.id}

@@ -87,12 +87,12 @@ img {
 }
 
 /* Natori 管理画面: すっきりしたゴシック体と詰め組み（palt）。
- * Apple 端末は端末のヒラギノ、それ以外は Noto Sans JP（adminFont.ts で読込）。
+ * Apple 端末は端末のヒラギノ、それ以外は Noto Sans JP（このファイル冒頭の @import で読込）。
  * ダイアログなど body 直下に出る要素にも効くよう body にも掛ける。 */
 [data-natori-admin],
 body:has([data-natori-admin]) {
   font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans",
-    "Hiragino Kaku Gothic ProN", var(--font-natori-admin, "Noto Sans JP"),
+    "Hiragino Kaku Gothic ProN", "Noto Sans JP",
     "Yu Gothic UI", Meiryo, sans-serif;
   font-feature-settings: "palt";
   letter-spacing: 0.02em;

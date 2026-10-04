@@ -60,15 +60,15 @@ export default function StructuredPricingEditor({ presetId, legacyConfig, onSave
   };
 
   return (
-    <section className="rounded-2xl border border-pink-200 bg-pink-50/50 p-4 shadow-sm">
-      <h2 className="text-sm font-bold text-pink-950">商品別基本料金</h2>
-      <p className="mt-1 text-xs leading-5 text-pink-800">
+    <section className={natoriAdminUi.card}>
+      <h2 className={natoriAdminUi.sectionTitle}>商品別基本料金</h2>
+      <p className="mt-1 text-xs leading-5 text-zinc-600">
         structured見積の基本料金です。胸上・腰上・全身の料金とは別に保存し、既存料金表は変更しません。
       </p>
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {BASES.map(([id, label]) => (
-          <label key={id} className="rounded-xl border border-pink-200 bg-white p-3">
-            <span className="text-xs font-bold text-zinc-700">{label}</span>
+          <label key={id} className="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3">
+            <span className="text-xs font-semibold text-zinc-700">{label}</span>
             <div className="mt-1 flex items-center gap-2">
               <input
                 type="number"

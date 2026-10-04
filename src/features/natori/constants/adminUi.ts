@@ -31,6 +31,8 @@ export const natoriAdminUi = {
   body: "text-sm leading-6 text-zinc-700",
   caption: "text-xs leading-5 text-zinc-600",
   surface,
+  /** Keyboard focus outline shared by custom buttons. */
+  focusRing: focus,
   card: `rounded-2xl ${surface} p-4 sm:p-5`,
   cardInset: "rounded-xl border border-zinc-200/80 bg-zinc-50 p-3",
   /** Clickable card: lifts slightly on hover. */

@@ -111,8 +111,8 @@ function CompactWorkRow({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex min-h-11 items-center gap-2 rounded-lg border bg-white px-2 py-1.5 shadow-sm ${
-        isDragging ? "relative z-10 border-pink-300 opacity-80" : "border-pink-100"
+      className={`flex min-h-11 items-center gap-2 rounded-xl border bg-white px-2 py-1.5 ${
+        isDragging ? "relative z-10 border-zinc-300 opacity-90 shadow-lg" : "border-zinc-200/80 shadow-[0_1px_2px_rgba(24,24,27,0.04)]"
       }`}
     >
       <button
@@ -126,10 +126,10 @@ function CompactWorkRow({
       >
         <GripVertical className="h-4 w-4" aria-hidden />
       </button>
-      <span className="w-6 shrink-0 text-center text-xs font-bold text-pink-500">
+      <span className="w-6 shrink-0 text-center text-xs font-semibold tabular-nums text-zinc-400">
         {index + 1}
       </span>
-      <span className="min-w-0 flex-1 truncate text-sm font-bold text-zinc-800">
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-800">
         {title.trim() || "無題"}
       </span>
       {!published ? (
@@ -181,9 +181,9 @@ export default function SortableList<T>({
   if (compactWorkMode) {
     return (
       <div className="space-y-4">
-        <div className="rounded-xl border border-pink-200 bg-pink-50/50 p-3">
+        <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3">
           <div className="mb-2">
-            <p className="text-xs font-bold text-pink-700">公開ページの並び順</p>
+            <p className="text-xs font-semibold text-zinc-700">公開ページの並び順</p>
             <p className="mt-0.5 text-xs leading-4 text-zinc-600">
               上から順に表示されます。並び替えはこのコンパクトな一覧で行ってください。
             </p>

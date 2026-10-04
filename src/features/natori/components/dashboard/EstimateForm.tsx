@@ -518,11 +518,11 @@ function PresetSwitcher({
   onSave: () => Promise<void>;
 }) {
   return (
-    <div className="mt-5 rounded-2xl border border-pink-200 bg-pink-50/50 p-3 sm:p-4">
+    <div className="mt-5 rounded-2xl border border-zinc-200/80 bg-zinc-50/70 p-3 sm:p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-bold text-pink-900">料金プリセット</p>
-          <p className="mt-0.5 text-xs text-pink-800/80">
+          <p className="text-sm font-semibold text-zinc-900">料金プリセット</p>
+          <p className="mt-0.5 text-xs leading-5 text-zinc-600">
             依頼元（つなぐ / VGen）ごとの料金表に切り替えられます。料金表を編集すると保存ボタンが表示され、押すと自分のアカウントに残ります。
           </p>
         </div>
@@ -546,12 +546,7 @@ function PresetSwitcher({
               key={preset.id}
               type="button"
               onClick={() => onSelect(preset)}
-              className={cn(
-                "rounded-full border px-3 py-1.5 text-xs font-bold transition",
-                active
-                  ? "border-[#BE185D] bg-[#BE185D] text-white shadow"
-                  : "border-pink-200 bg-white text-pink-800 hover:border-pink-400"
-              )}
+              className={cn(natoriAdminUi.chip, active ? natoriAdminUi.chipOn : natoriAdminUi.chipOff)}
             >
               {preset.name}
               {active && dirty ? <span className="ml-1 text-xs opacity-80">（未保存）</span> : null}
@@ -561,7 +556,7 @@ function PresetSwitcher({
       </div>
 
       {error ? (
-        <p className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+        <p className={cn("mt-3", natoriAdminUi.alert.error)}>
           {error}
         </p>
       ) : null}
@@ -584,14 +579,14 @@ function DeliveryPlanPicker({
 }) {
   const dueLabel = dueDateISO ? formatHumanDate(dueDateISO) : "";
   return (
-    <div className="mt-5 rounded-2xl border border-pink-200 bg-pink-50/60 p-4">
-      <div className="flex items-center gap-2">
-        <span className="grid h-8 w-8 place-items-center rounded-xl bg-pink-500 text-white">
-          <Zap className="h-4 w-4" aria-hidden />
+    <div className="mt-5 rounded-2xl border border-zinc-200/80 bg-zinc-50/70 p-3 sm:p-4">
+      <div className="flex items-center gap-3">
+        <span className={natoriAdminUi.iconTile}>
+          <Zap className="h-5 w-5" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-bold text-pink-900">納期プラン</p>
-          <p className="text-xs text-pink-800/80">通常は約1ヶ月。お急ぎ納品を選ぶと見積もりへ追加料金が自動加算されます。</p>
+          <p className="text-sm font-semibold text-zinc-900">納期プラン</p>
+          <p className="text-xs leading-5 text-zinc-600">通常は約1ヶ月。お急ぎ納品を選ぶと見積もりへ追加料金が自動加算されます。</p>
         </div>
       </div>
 
@@ -606,13 +601,13 @@ function DeliveryPlanPicker({
               onClick={() => onChange(id)}
               aria-pressed={selected}
               className={cn(
-                "min-w-0 rounded-2xl border px-3 py-2 text-left transition",
+                "min-w-0 rounded-2xl border px-3 py-2.5 text-left transition",
                 selected
                   ? cn(meta.chipClassName, "ring-2 ring-offset-1", meta.barAccentClassName)
-                  : "border-pink-200 bg-white text-pink-900 hover:border-pink-300"
+                  : "border-zinc-200 bg-white text-zinc-900 shadow-[0_1px_2px_rgba(24,24,27,0.04)] hover:border-zinc-300"
               )}
             >
-              <p className="text-sm font-bold leading-5">{meta.label}</p>
+              <p className="text-sm font-semibold leading-5">{meta.label}</p>
               <p className="mt-0.5 text-xs leading-4 opacity-80">
                 {meta.description}・追加 {meta.extraFee > 0 ? `+${formatYen(meta.extraFee)}` : "なし"}
               </p>
@@ -622,8 +617,8 @@ function DeliveryPlanPicker({
       </div>
 
       <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 rounded-xl border border-pink-200 bg-white px-3 py-2 text-sm">
-          <span className="text-xs font-bold text-zinc-600">開始日</span>
+        <label className="flex flex-col gap-1 rounded-xl border border-zinc-200/80 bg-white px-3 py-2.5 text-sm">
+          <span className="text-xs font-semibold text-zinc-600">開始日</span>
           <input
             type="date"
             value={startDateISO}
@@ -631,9 +626,9 @@ function DeliveryPlanPicker({
             className={`${natoriAdminUi.input} sm:w-auto`}
           />
         </label>
-        <div className="flex flex-col gap-1 rounded-xl border border-pink-200 bg-white px-3 py-2 text-sm">
-          <span className="text-xs font-bold text-zinc-600">納期目安（自動計算）</span>
-          <span className="text-base font-bold text-pink-900">{dueLabel || "—"}</span>
+        <div className="flex flex-col gap-1 rounded-xl border border-zinc-200/80 bg-white px-3 py-2.5 text-sm">
+          <span className="text-xs font-semibold text-zinc-600">納期目安（自動計算）</span>
+          <span className="text-base font-bold tabular-nums text-zinc-900">{dueLabel || "—"}</span>
         </div>
       </div>
     </div>

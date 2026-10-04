@@ -197,9 +197,11 @@ export default function StructuredQuoteIssuePanel({
   }
 
   return (
-    <section className="space-y-4 rounded-2xl border border-pink-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="flex items-center gap-2">
-        <Mail className="h-5 w-5 text-pink-600" aria-hidden />
+    <section className={`space-y-4 ${natoriAdminUi.card}`}>
+      <div className="flex items-center gap-3">
+        <span className={natoriAdminUi.iconTile}>
+          <Mail className="h-5 w-5" aria-hidden />
+        </span>
         <div>
           <h2 className="font-bold text-zinc-950">正式見積を発行する</h2>
           <p className="text-xs text-zinc-600">{pricingSourceName}をsnapshot固定してからメールを送信します。</p>

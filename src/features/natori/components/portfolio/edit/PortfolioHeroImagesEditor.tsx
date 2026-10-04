@@ -42,7 +42,7 @@ export default function PortfolioHeroImagesEditor({
           onReorder={onChange}
           className="mt-4 space-y-3"
           renderRow={(image, index, handle) => (
-            <div className="flex items-start gap-2 rounded-xl border border-pink-100 bg-pink-50/30 p-3">
+            <div className="flex items-start gap-2 rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-3">
               <div className="pt-6">{handle}</div>
               <div className="min-w-0 flex-1">
                 <ImageUploadField
@@ -58,13 +58,13 @@ export default function PortfolioHeroImagesEditor({
           )}
         />
       ) : (
-        <p className="mt-3 rounded-lg border border-dashed border-pink-200 bg-pink-50/30 px-3 py-3 text-xs text-zinc-500">
+        <p className="mt-3 rounded-xl border border-dashed border-zinc-300 bg-zinc-50/60 px-3 py-3 text-xs text-zinc-500">
           Hero画像は未設定です。下から1枚目を追加できます。
         </p>
       )}
 
       {normalized.length < MAX_HERO_IMAGES ? (
-        <div className="mt-4 rounded-xl border border-pink-100 bg-white p-3">
+        <div className="mt-4 rounded-xl border border-zinc-200/80 bg-white p-3">
           <ImageUploadField
             label={`Hero画像を追加（${normalized.length}/${MAX_HERO_IMAGES}）`}
             value={null}
@@ -77,7 +77,7 @@ export default function PortfolioHeroImagesEditor({
           />
         </div>
       ) : (
-        <p className="mt-3 text-xs font-bold text-pink-700">Hero画像は最大5枚まで設定できます。</p>
+        <p className="mt-3 text-xs font-semibold text-zinc-600">Hero画像は最大5枚まで設定できます。</p>
       )}
     </div>
   );
