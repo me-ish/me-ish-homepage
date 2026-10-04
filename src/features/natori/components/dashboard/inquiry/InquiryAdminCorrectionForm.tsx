@@ -6,6 +6,7 @@
 // UpdateNatoriProjectDetailsInput / normalizeNatoriProjectDetailsPatch 契約を
 // 使い、フォームを増やしても保存契約が二重化しないようにする。
 // 案件種別は InquiryTypeConfirmation の責務なのでここでは扱わない。
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useEffect, useState } from "react";
 import {
   DEFAULT_NATORI_DELIVERY_PLAN,
@@ -114,7 +115,7 @@ export default function InquiryAdminCorrectionForm({
     <section aria-labelledby="inquiry-correction-heading">
       <h3
         id="inquiry-correction-heading"
-        className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700"
+        className="mb-2 text-xs font-bold text-gray-600"
       >
         管理確定項目
       </h3>
@@ -134,10 +135,10 @@ export default function InquiryAdminCorrectionForm({
               onChange={(event) => setAmount(event.target.value)}
               disabled={disabled || saving}
               placeholder="未確定は空欄"
-              className="h-9 w-full rounded-lg border border-gray-300 px-2 text-sm"
+              className={natoriAdminUi.input}
               aria-describedby="inquiry-amount-hint"
             />
-            <p id="inquiry-amount-hint" className="mt-1 text-[11px] text-gray-500">
+            <p id="inquiry-amount-hint" className="mt-1 text-xs text-gray-500">
               現在: {formatNatoriProjectAmount(project.amount)}／空欄=未確定、0=無料
             </p>
           </div>
@@ -154,10 +155,10 @@ export default function InquiryAdminCorrectionForm({
               value={dueDate}
               onChange={(event) => setDueDate(event.target.value)}
               disabled={disabled || saving}
-              className="h-9 w-full rounded-lg border border-gray-300 px-2 text-sm"
+              className={natoriAdminUi.input}
               aria-describedby="inquiry-due-date-hint"
             />
-            <p id="inquiry-due-date-hint" className="mt-1 text-[11px] text-gray-500">
+            <p id="inquiry-due-date-hint" className="mt-1 text-xs text-gray-500">
               空欄のままなら未確定として扱います。
             </p>
           </div>
@@ -178,7 +179,7 @@ export default function InquiryAdminCorrectionForm({
                 setDeliveryPlan(event.target.value as NatoriDeliveryPlan)
               }
               disabled={disabled || saving}
-              className="h-9 w-full rounded-lg border border-gray-300 bg-white px-2 text-sm"
+              className={natoriAdminUi.input}
             >
               {NATORI_DELIVERY_PLAN_ORDER.map((id) => (
                 <option key={id} value={id}>
@@ -200,7 +201,7 @@ export default function InquiryAdminCorrectionForm({
               onChange={(event) => setNextAction(event.target.value)}
               disabled={disabled || saving}
               maxLength={120}
-              className="h-9 w-full rounded-lg border border-gray-300 px-2 text-sm"
+              className={natoriAdminUi.input}
             />
           </div>
         </div>
@@ -221,7 +222,7 @@ export default function InquiryAdminCorrectionForm({
           onClick={handleSave}
           disabled={disabled || saving}
           aria-busy={saving}
-          className="inline-flex h-9 items-center rounded-full bg-pink-500 px-4 text-xs font-bold text-white shadow-sm hover:bg-pink-600 disabled:opacity-60"
+          className={natoriAdminUi.btnPrimary}
         >
           {saving ? "保存中…" : "確定内容を保存"}
         </button>

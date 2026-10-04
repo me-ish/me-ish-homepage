@@ -141,7 +141,7 @@ export default function ProjectNoteSummary({ note }: { note: string | null | und
 
           {view.details ? (
             <div>
-              <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <p className="mb-1 text-xs font-bold text-gray-600">
                 ご依頼の詳細
               </p>
               <p className="whitespace-pre-wrap break-words rounded-lg border border-pink-100 bg-white p-2.5 text-xs leading-5 text-gray-900">
@@ -151,7 +151,7 @@ export default function ProjectNoteSummary({ note }: { note: string | null | und
           ) : null}
           {view.message ? (
             <div>
-              <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <p className="mb-1 text-xs font-bold text-gray-600">
                 その他・ご質問
               </p>
               <p className="whitespace-pre-wrap break-words rounded-lg border border-pink-100 bg-white p-2.5 text-xs leading-5 text-gray-900">
@@ -168,7 +168,7 @@ export default function ProjectNoteSummary({ note }: { note: string | null | und
 
           {view.logs.length > 0 ? (
             <div>
-              <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <p className="mb-1 text-xs font-bold text-gray-600">
                 対応履歴
               </p>
               <ol className="space-y-1">

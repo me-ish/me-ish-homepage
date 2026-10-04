@@ -68,3 +68,13 @@ export function useNatoriToast(): NatoriToastContextValue {
   if (!context) throw new Error("useNatoriToast must be used inside NatoriToastProvider");
   return context;
 }
+
+const noopToast: NatoriToastContextValue = { showToast: () => undefined };
+
+/**
+ * Boards shared with the Etorie demo (which has no provider) use this: without a
+ * provider it silently does nothing instead of throwing.
+ */
+export function useOptionalNatoriToast(): NatoriToastContextValue {
+  return useContext(NatoriToastContext) ?? noopToast;
+}

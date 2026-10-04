@@ -1,5 +1,6 @@
 "use client";
 
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -12,7 +13,6 @@ import {
   Link2,
   LogOut,
   Palette,
-  PenLine,
   Settings,
   Trophy,
   User2,
@@ -30,83 +30,74 @@ import { Button } from "@/components/ui/button";
 import DashboardTodaySummary from "@/features/natori/components/dashboard/DashboardTodaySummary";
 import NotificationStatusPanel from "@/features/natori/components/dashboard/NotificationStatusPanel";
 import PageEventsPanel from "@/features/natori/components/dashboard/PageEventsPanel";
-import Footer from "@/features/natori/components/Footer";
+import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
+import { NatoriPageShell } from "@/features/natori/components/admin/NatoriPageShell";
 import type { NatoriProject } from "@/features/natori/types/projects";
 
-type DashboardCard = {
+type ToolCard = {
   href: string;
   title: string;
+  description: string;
   icon: LucideIcon;
-  accent: string;
-  hrefKey?: "portfolio" | "links";
 };
 
-type DashboardCardGroup = {
-  heading: string;
-  cards: DashboardCard[];
+type PublicPageCard = {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  viewHref: string;
+  viewHrefKey: "portfolio" | "links";
+  editHref: string;
 };
 
-const CARD_GROUPS: DashboardCardGroup[] = [
+const TOOL_CARDS: ToolCard[] = [
   {
-    heading: "管理ツール",
-    cards: [
-      {
-        href: "/natori/inquiries",
-        title: "問い合わせ",
-        icon: Inbox,
-        accent: "from-orange-100 to-orange-50 text-orange-700",
-      },
-      {
-        href: "/natori/projects",
-        title: "案件管理",
-        icon: FolderOpen,
-        accent: "from-pink-100 to-pink-50 text-pink-700",
-      },
-      {
-        href: "/natori/estimate",
-        title: "見積もり",
-        icon: Calculator,
-        accent: "from-rose-100 to-rose-50 text-rose-700",
-      },
-      {
-        href: "/natori/results",
-        title: "売上・実績",
-        icon: Trophy,
-        accent: "from-emerald-100 to-emerald-50 text-emerald-700",
-      },
-    ],
+    href: "/natori/inquiries",
+    title: "問い合わせ",
+    description: "受付〜入金待ちの対応",
+    icon: Inbox,
   },
   {
-    heading: "公開ページ・編集",
-    cards: [
-      {
-        href: "/natori/portfolio",
-        title: "ポートフォリオ",
-        icon: Palette,
-        accent: "from-violet-100 to-violet-50 text-violet-700",
-      },
-      {
-        href: "/natori/portfolio/edit",
-        title: "ポートフォリオ編集",
-        icon: PenLine,
-        accent: "from-sky-100 to-sky-50 text-sky-700",
-      },
-      {
-        href: "/natori/links",
-        title: "リンク集",
-        icon: Link2,
-        accent: "from-amber-100 to-amber-50 text-amber-700",
-        hrefKey: "links",
-      },
-      {
-        href: "/natori/links/edit",
-        title: "リンク集編集",
-        icon: PenLine,
-        accent: "from-teal-100 to-teal-50 text-teal-700",
-      },
-    ],
+    href: "/natori/projects",
+    title: "案件管理",
+    description: "制作スケジュールと工程",
+    icon: FolderOpen,
+  },
+  {
+    href: "/natori/estimate",
+    title: "見積もり",
+    description: "正式見積りと概算",
+    icon: Calculator,
+  },
+  {
+    href: "/natori/results",
+    title: "売上・実績",
+    description: "売上・CSV",
+    icon: Trophy,
   },
 ];
+
+const PUBLIC_PAGE_CARDS: PublicPageCard[] = [
+  {
+    title: "ポートフォリオ",
+    description: "依頼者が最初に見るページ",
+    icon: Palette,
+    viewHref: "/natori/portfolio",
+    viewHrefKey: "portfolio",
+    editHref: "/natori/portfolio/edit",
+  },
+  {
+    title: "リンク集",
+    description: "SNSや各ページへの入口",
+    icon: Link2,
+    viewHref: "/natori/links",
+    viewHrefKey: "links",
+    editHref: "/natori/links/edit",
+  },
+];
+
+const ICON_FRAME_CLASS =
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FFF8FA] text-[#BE185D]";
 
 export default function NatoriDashboardPage() {
   const [email, setEmail] = useState<string | null>(null);
@@ -179,97 +170,141 @@ export default function NatoriDashboardPage() {
 
   const displayName = profile?.displayName?.trim() || email || null;
 
-  const resolvedGroups = useMemo(
+  const publicPages = useMemo(
     () =>
-      CARD_GROUPS.map((group) => ({
-        ...group,
-        cards: group.cards.map((card) => {
-          if (card.hrefKey === "portfolio" && profile?.portfolioUrl) {
-            return { ...card, href: profile.portfolioUrl };
-          }
-          if (card.hrefKey === "links" && profile?.linksUrl) {
-            return { ...card, href: profile.linksUrl };
-          }
-          return card;
-        }),
-      })),
+      PUBLIC_PAGE_CARDS.map((card) => {
+        const override =
+          card.viewHrefKey === "portfolio" ? profile?.portfolioUrl : profile?.linksUrl;
+        return { ...card, viewHref: override || card.viewHref };
+      }),
     [profile]
   );
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-pink-50/70 via-white to-white">
-      <section className="border-b border-pink-100 bg-white/70 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-pink-600">Dashboard</p>
-          <p className="hidden text-sm font-bold text-gray-900 sm:inline">仕事用ダッシュボード</p>
-          <div className="ml-auto flex items-center gap-2">
-            {loading ? (
-              <span className="text-xs text-gray-500">確認中…</span>
-            ) : email ? (
-              <>
-                <span className="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 sm:inline-flex">
-                  <User2 className="h-3.5 w-3.5" aria-hidden />
-                  {displayName ?? email}
-                </span>
-                <Button
-                  onClick={handleLogout}
-                  disabled={signingOut}
-                  variant="outline"
-                  className="h-9 rounded-full border-gray-300 bg-white px-3 text-xs font-bold text-gray-800 hover:bg-gray-50"
-                >
-                  <LogOut className="h-3.5 w-3.5" aria-hidden />
-                  {signingOut ? "ログアウト中…" : "ログアウト"}
-                </Button>
-              </>
-            ) : (
-              // ここまで表示できている時点で認可済みなので、email が無い = 合言葉キー
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-bold text-gray-600">
-                <KeyRound className="h-3.5 w-3.5" aria-hidden />
-                合言葉キーでアクセス中
+    <NatoriPageShell
+      current="dashboard"
+      title="ダッシュボード"
+      headerRight={
+        <>
+          {loading ? (
+            <span className="text-xs text-gray-500">確認中…</span>
+          ) : email ? (
+            <>
+              <span className="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 sm:inline-flex">
+                <User2 className="h-3.5 w-3.5" aria-hidden />
+                {displayName ?? email}
               </span>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
+              <Button
+                onClick={handleLogout}
+                disabled={signingOut}
+                variant="outline"
+                className="h-9 rounded-full border-gray-300 bg-white px-3 text-xs font-bold text-gray-800 hover:bg-gray-50"
+              >
+                <LogOut className="h-3.5 w-3.5" aria-hidden />
+                {signingOut ? "ログアウト中…" : "ログアウト"}
+              </Button>
+            </>
+          ) : (
+            // ここまで表示できている時点で認可済みなので、email が無い = 合言葉キー
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-bold text-gray-600">
+              <KeyRound className="h-3.5 w-3.5" aria-hidden />
+              合言葉キーでアクセス中
+            </span>
+          )}
+        </>
+      }
+    >
+      <div>
         {error ? (
           <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 sm:text-sm">
             {error}
           </div>
         ) : null}
 
-        {projects ? <DashboardTodaySummary projects={projects} today={new Date()} /> : null}
-        <ConsultationAttentionPanel projects={allProjects} loading={loading} onRefresh={() => void refresh()} />
-        <NotificationStatusPanel />
-
-        {resolvedGroups.map((group) => (
-          <div key={group.heading} className="mt-6">
-            <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-pink-600">
-              {group.heading}
-            </h2>
-            <ul className="mt-2 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-              {group.cards.map((card) => {
-                const Icon = card.icon;
-                return (
-                  <li key={card.title}>
-                    <Link
-                      href={card.href}
-                      className={`group flex h-full items-center gap-3 rounded-2xl border border-pink-100 bg-gradient-to-br ${card.accent} bg-white/80 p-3 shadow-sm transition hover:shadow-md`}
-                    >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm">
-                        <Icon className="h-5 w-5" aria-hidden />
-                      </div>
-                      <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm font-black leading-5 text-gray-900">
-                        {card.title}
-                      </p>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+        {projects ? (
+          <DashboardTodaySummary projects={projects} today={new Date()} />
+        ) : loading ? (
+          <div className="mt-4">
+            <NatoriSkeleton heightClassName="h-24" />
           </div>
-        ))}
+        ) : null}
+        <ConsultationAttentionPanel projects={allProjects} loading={loading} onRefresh={() => void refresh()} />
+
+        <section aria-labelledby="dashboard-tools-heading" className="mt-6">
+          <h2 id="dashboard-tools-heading" className={natoriAdminUi.sectionTitle}>
+            管理ツール
+          </h2>
+          <ul className="mt-2 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+            {TOOL_CARDS.map((card, index) => {
+              const Icon = card.icon;
+              // リンク名はタイトルだけにし、説明は補足（aria-describedby）として読ませる
+              const titleId = `dashboard-tool-title-${index}`;
+              const descriptionId = `dashboard-tool-description-${index}`;
+              return (
+                <li key={card.title}>
+                  <Link
+                    href={card.href}
+                    aria-labelledby={titleId}
+                    aria-describedby={descriptionId}
+                    className={`${natoriAdminUi.card} flex h-full min-h-20 items-center gap-3 !p-3 transition hover:border-pink-200 hover:shadow-md sm:!p-4`}
+                  >
+                    <span className={ICON_FRAME_CLASS}>
+                      <Icon className="h-5 w-5" aria-hidden />
+                    </span>
+                    <span className="min-w-0">
+                      <span id={titleId} className="block text-sm font-black leading-5 text-gray-900">
+                        {card.title}
+                      </span>
+                      <span id={descriptionId} className={`${natoriAdminUi.caption} block`}>{card.description}</span>
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        <section aria-labelledby="dashboard-public-heading" className="mt-6">
+          <h2 id="dashboard-public-heading" className={natoriAdminUi.sectionTitle}>
+            公開ページ
+          </h2>
+          <ul className="mt-2 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            {publicPages.map((card) => {
+              const Icon = card.icon;
+              return (
+                <li key={card.title} className={`${natoriAdminUi.card} flex flex-col gap-3`}>
+                  <div className="flex items-center gap-3">
+                    <span className={ICON_FRAME_CLASS}>
+                      <Icon className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-black leading-5 text-gray-900">{card.title}</p>
+                      <p className={natoriAdminUi.caption}>{card.description}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Link
+                      href={card.viewHref}
+                      aria-label={`${card.title}の公開ページを見る`}
+                      className={natoriAdminUi.btnLink}
+                    >
+                      公開ページを見る
+                    </Link>
+                    <Link
+                      href={card.editHref}
+                      aria-label={`${card.title}を編集する`}
+                      className={natoriAdminUi.btnSecondary}
+                    >
+                      編集する
+                    </Link>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        <NotificationStatusPanel />
 
         <PageEventsPanel />
 
@@ -277,11 +312,8 @@ export default function NatoriDashboardPage() {
           profile={profile}
           onSaved={(next) => setProfile(next)}
         />
-
-      </section>
-
-      <Footer />
-    </main>
+      </div>
+    </NatoriPageShell>
   );
 }
 
@@ -367,53 +399,69 @@ function ProfileSettingsPanel({
         <div className="border-t border-pink-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">表示名</span>
+              <span className={natoriAdminUi.label}>表示名</span>
               <input
                 type="text"
                 value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
+                onChange={(event) => {
+                  setDisplayName(event.target.value);
+                  setSaved(false);
+                }}
                 placeholder="例: ナトリ"
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className={natoriAdminUi.label}>
                 ハンドル（任意 / 将来のURL用）
               </span>
               <input
                 type="text"
                 value={handle}
-                onChange={(event) => setHandle(event.target.value)}
+                onChange={(event) => {
+                  setHandle(event.target.value);
+                  setSaved(false);
+                }}
                 placeholder="例: natori"
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
             <label className="block text-sm sm:col-span-2">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className={natoriAdminUi.label}>
                 ポートフォリオのリンク先
               </span>
               <input
                 type="text"
                 value={portfolioUrl}
-                onChange={(event) => setPortfolioUrl(event.target.value)}
+                onChange={(event) => {
+                  setPortfolioUrl(event.target.value);
+                  setSaved(false);
+                }}
+                inputMode="url"
+                autoComplete="off"
                 placeholder="/natori または https://..."
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
             <label className="block text-sm sm:col-span-2">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className={natoriAdminUi.label}>
                 リンク集のリンク先
               </span>
               <input
                 type="text"
                 value={linksUrl}
-                onChange={(event) => setLinksUrl(event.target.value)}
+                onChange={(event) => {
+                  setLinksUrl(event.target.value);
+                  setSaved(false);
+                }}
+                inputMode="url"
+                autoComplete="off"
                 placeholder="/natori/links または https://..."
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className={`${natoriAdminUi.input} mt-1`}
               />
             </label>
             <label className="block text-sm">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-pink-700">
+              <span className={natoriAdminUi.label}>
                 1日の作業時間（h）
               </span>
               <input
@@ -422,10 +470,17 @@ function ProfileSettingsPanel({
                 max={24}
                 step="0.5"
                 value={dailyCapacity}
-                onChange={(event) => setDailyCapacity(event.target.value)}
+                onChange={(event) => {
+                  setDailyCapacity(event.target.value);
+                  setSaved(false);
+                }}
                 placeholder="例: 5"
-                className="mt-1 h-10 w-full rounded-lg border border-pink-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                aria-describedby="profile-daily-capacity-hint"
+                className={`${natoriAdminUi.input} mt-1`}
               />
+              <span id="profile-daily-capacity-hint" className={natoriAdminUi.hint}>
+                0〜24の範囲、0.5刻み
+              </span>
             </label>
           </div>
 
@@ -444,7 +499,7 @@ function ProfileSettingsPanel({
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="h-10 rounded-full bg-pink-500 px-4 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60"
+              className={natoriAdminUi.btnPrimary}
             >
               {saving ? "保存中…" : "保存"}
             </Button>

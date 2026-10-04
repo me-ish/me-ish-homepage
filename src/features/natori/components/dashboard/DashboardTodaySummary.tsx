@@ -82,7 +82,7 @@ export default function DashboardTodaySummary({
               href="/natori/projects"
               className="flex min-w-0 items-start gap-2 rounded-xl border border-pink-100 bg-pink-50/40 p-2.5 transition hover:bg-pink-50"
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-pink-500 text-xs font-black text-white">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#BE185D] text-xs font-black text-white">
                 1
               </span>
               <span className="min-w-0">
@@ -92,7 +92,7 @@ export default function DashboardTodaySummary({
                   </span>
                   <span
                     className={cn(
-                      "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                      "shrink-0 rounded-full border px-2 py-0.5 text-xs font-bold",
                       natoriProjectStatusMeta[top.project.status].chipClassName
                     )}
                   >

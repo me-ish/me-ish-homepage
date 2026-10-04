@@ -31,6 +31,26 @@ type ProjectMonthCalendarProps = {
   onNextMonth: () => void;
 };
 
+/** スマホ用: ラベルなしの高さ4pxの色線。長さと色だけで工程の流れを読む。 */
+function CompactBar({ cellBar }: { cellBar: NatoriCalendarCellBar | null }) {
+  if (!cellBar) {
+    return <span className="block h-1" aria-hidden />;
+  }
+  const stage = natoriStageMeta[cellBar.bar.stage];
+  const { isStart, isEnd, isOverdue } = cellBar;
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "block h-1",
+        isOverdue ? "bg-red-300" : stage.barClassName,
+        isStart && "rounded-l-full",
+        isEnd && "rounded-r-full"
+      )}
+    />
+  );
+}
+
 function BarSegment({ cellBar }: { cellBar: NatoriCalendarCellBar | null }) {
   if (!cellBar) {
     return <span className="block h-3 sm:h-4" aria-hidden />;
@@ -44,7 +64,7 @@ function BarSegment({ cellBar }: { cellBar: NatoriCalendarCellBar | null }) {
   return (
     <span
       className={cn(
-        "flex h-3 min-w-0 items-center overflow-hidden text-[9px] font-bold leading-3 sm:h-4 sm:text-[10px] sm:leading-4",
+        "flex h-3 min-w-0 items-center overflow-hidden text-xs font-bold leading-3 sm:h-4 sm:text-xs sm:leading-4",
         isOverdue ? "bg-red-300 text-red-950" : stage.barClassName,
         isDelivery && "ring-1 ring-inset ring-emerald-700/40",
         rush && !isOverdue && cn("ring-1 ring-inset", deliveryPlanMeta.barAccentClassName),
@@ -115,7 +135,7 @@ export default function ProjectMonthCalendar({
           <div
             key={label}
             className={cn(
-              "text-[10px] font-bold text-gray-500 sm:text-xs",
+              "text-xs font-bold text-gray-500 sm:text-xs",
               idx === 0 && "text-rose-500",
               idx === 6 && "text-sky-500"
             )}
@@ -148,6 +168,21 @@ export default function ProjectMonthCalendar({
               : null;
           const cellReminders = showReminders && cell.inMonth ? getRemindersForDate(cell.iso) : [];
           const cellEvents = cell.inMonth ? eventsByDate.get(cell.iso) ?? [] : [];
+          const activeLaneCount = cell.lanes.filter(Boolean).length;
+          // スマホでは文字バッジの代わりに種類別の色ドット（最大4個）にする
+          const dotClassNames = [
+            ...cellReminders.map(() => "bg-amber-500"),
+            ...(topRushPlan
+              ? [
+                  rushDueProjects.some((project) => project.deliveryPlan === "rush_7_days")
+                    ? "bg-red-500"
+                    : "bg-orange-500",
+                ]
+              : []),
+            ...(deliveryEndCount > 0 ? ["bg-emerald-600"] : []),
+            ...(overdueCount > 0 ? ["bg-red-700"] : []),
+            ...(cellEvents.length > 0 ? ["bg-purple-500"] : []),
+          ].slice(0, 4);
 
           return (
             <button
@@ -155,7 +190,7 @@ export default function ProjectMonthCalendar({
               type="button"
               onClick={() => onSelect(cell.iso)}
               className={cn(
-                "relative flex min-h-[72px] flex-col items-stretch text-left transition sm:min-h-[104px]",
+                "relative flex min-h-[56px] flex-col items-stretch text-left transition sm:min-h-[104px]",
                 idx % 7 !== 0 && "border-l border-gray-200",
                 idx >= 7 && "border-t border-gray-200",
                 cell.inMonth ? "bg-white hover:bg-gray-50" : "bg-gray-50 text-gray-300",
@@ -167,6 +202,7 @@ export default function ProjectMonthCalendar({
                 selected && "ring-1 ring-inset ring-gray-900"
               )}
               aria-label={`${cell.iso} の案件を表示`}
+              title={`稼働${activeLaneCount}件 納期${deliveryEndCount}件 予定${cellEvents.length}件`}
               aria-pressed={selected}
             >
               {/* 日付とバッジの行。高さを固定して、今日の丸やバッジの有無で
@@ -178,17 +214,22 @@ export default function ProjectMonthCalendar({
                     cell.inMonth ? "text-gray-900" : "text-gray-300",
                     weekday === 0 && cell.inMonth && "text-rose-500",
                     weekday === 6 && cell.inMonth && "text-sky-500",
-                    cell.iso === todayISO && "rounded-full bg-pink-500 px-1.5 py-0.5 text-white"
+                    cell.iso === todayISO && "rounded-full bg-[#BE185D] px-1.5 py-0.5 text-white"
                   )}
                 >
                   {cell.date.getDate()}
                 </span>
-                <span className="ml-1 flex items-center gap-1">
+                <span className="ml-1 flex items-center gap-0.5 sm:hidden" aria-hidden>
+                  {dotClassNames.map((className, dotIdx) => (
+                    <span key={dotIdx} className={cn("h-1.5 w-1.5 rounded-full", className)} />
+                  ))}
+                </span>
+                <span className="ml-1 hidden items-center gap-1 sm:flex">
                   {cellReminders.map((reminder) => (
                     <span
                       key={reminder.id}
                       className={cn(
-                        "flex items-center gap-0.5 rounded px-1 text-[9px] font-black uppercase tracking-wide shadow-sm",
+                        "flex items-center gap-0.5 rounded px-1 text-xs font-black uppercase tracking-wide shadow-sm",
                         reminder.cellBadgeClassName
                       )}
                       title={reminder.label}
@@ -200,7 +241,7 @@ export default function ProjectMonthCalendar({
                   {topRushPlan ? (
                     <span
                       className={cn(
-                        "flex items-center gap-0.5 rounded px-1 text-[9px] font-black uppercase tracking-wide shadow-sm",
+                        "flex items-center gap-0.5 rounded px-1 text-xs font-black uppercase tracking-wide shadow-sm",
                         topRushPlan.chipClassName
                       )}
                       title={topRushPlan.label}
@@ -210,19 +251,19 @@ export default function ProjectMonthCalendar({
                     </span>
                   ) : null}
                   {deliveryEndCount > 0 ? (
-                    <span className="flex items-center gap-0.5 rounded bg-emerald-600 px-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm">
+                    <span className="flex items-center gap-0.5 rounded bg-emerald-600 px-1 text-xs font-black uppercase tracking-wide text-white shadow-sm">
                       <span aria-hidden>★</span>
                       納品{deliveryEndCount > 1 ? `×${deliveryEndCount}` : ""}
                     </span>
                   ) : null}
                   {overdueCount > 0 ? (
-                    <span className="rounded-full bg-red-500 px-1.5 text-[9px] font-bold text-white">
+                    <span className="rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
                       !
                     </span>
                   ) : null}
                   {cellEvents.length > 0 ? (
                     <span
-                      className="flex items-center gap-0.5 rounded bg-purple-500 px-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm"
+                      className="flex items-center gap-0.5 rounded bg-purple-500 px-1 text-xs font-black uppercase tracking-wide text-white shadow-sm"
                       title={cellEvents.map((event) => event.title).join(" / ")}
                     >
                       <span aria-hidden>●</span>
@@ -234,10 +275,10 @@ export default function ProjectMonthCalendar({
 
               <div className="mt-0.5 flex flex-col gap-0.5 pb-0.5 sm:hidden">
                 {cell.lanes.slice(0, mobileLaneLimit).map((cellBar, laneIdx) => (
-                  <BarSegment key={laneIdx} cellBar={cellBar} />
+                  <CompactBar key={laneIdx} cellBar={cellBar} />
                 ))}
                 {totalLanes > mobileLaneLimit ? (
-                  <span className="px-1 text-[9px] text-gray-500">+{totalLanes - mobileLaneLimit}</span>
+                  <span className="px-1 text-xs text-gray-500">+{totalLanes - mobileLaneLimit}</span>
                 ) : null}
               </div>
 
@@ -246,7 +287,7 @@ export default function ProjectMonthCalendar({
                   <BarSegment key={laneIdx} cellBar={cellBar} />
                 ))}
                 {totalLanes > desktopLaneLimit ? (
-                  <span className="px-1 text-[9px] text-gray-500">+{totalLanes - desktopLaneLimit}</span>
+                  <span className="px-1 text-xs text-gray-500">+{totalLanes - desktopLaneLimit}</span>
                 ) : null}
               </div>
             </button>
@@ -254,7 +295,7 @@ export default function ProjectMonthCalendar({
         })}
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-600 sm:text-xs">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 sm:text-xs">
         <span className="inline-flex items-center gap-1">
           <span className="inline-block h-2 w-2 rounded-full bg-pink-500" />
           今日

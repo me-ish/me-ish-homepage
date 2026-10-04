@@ -2,6 +2,8 @@
 
 // features/natori/components/portfolio/edit/editorFields.tsx
 // ポートフォリオ編集画面の汎用パーツ（入力欄・画像アップロード・並び替えボタン等）
+import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ImagePlus, Loader2, Plus, Trash2 } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
@@ -44,7 +46,7 @@ export function SectionCard({
 /* ---------- 入力欄 ---------- */
 
 const inputClass =
-  "w-full rounded-lg border border-pink-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300";
+  natoriAdminUi.input;
 
 export function TextInput({
   label,
@@ -52,12 +54,17 @@ export function TextInput({
   onChange,
   placeholder,
   hint,
+  inputMode,
+  error,
 }: {
   label?: string;
   value: string;
   onChange: (next: string) => void;
   placeholder?: string;
   hint?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  /** 入力の形式に関する注意（表示のみ。保存は止めない） */
+  error?: string;
 }) {
   const id = useId();
   return (
@@ -73,9 +80,17 @@ export function TextInput({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
+        inputMode={inputMode}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
         className={inputClass}
       />
-      {hint ? <p className="mt-1 text-[11px] text-gray-500">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
+      {error ? (
+        <p id={`${id}-error`} className={natoriAdminUi.fieldError}>
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -111,7 +126,7 @@ export function TextArea({
         placeholder={placeholder}
         className={inputClass}
       />
-      {hint ? <p className="mt-1 text-[11px] text-gray-500">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
     </div>
   );
 }
@@ -129,20 +144,30 @@ export function RowControls({
   /** 指定すると削除前に確認ダイアログを出す（空行など失うものが無い行では省略する） */
   confirmMessage?: string;
 }) {
+  const { confirm, confirmDialog } = useNatoriConfirm();
   return (
     <div className="flex shrink-0 items-center gap-1">
+      {confirmDialog}
       {handle}
       <button
         type="button"
-        onClick={() => {
-          if (confirmMessage && !window.confirm(confirmMessage)) return;
+        onClick={async () => {
+          if (confirmMessage) {
+            const confirmed = await confirm({
+              title: "削除しますか？",
+              description: confirmMessage,
+              confirmLabel: "削除する",
+              tone: "danger",
+            });
+            if (!confirmed) return;
+          }
           onRemove();
         }}
-        className="grid h-8 w-8 place-items-center rounded-lg border border-red-200 bg-white text-red-500 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-pink-300"
+        className={natoriAdminUi.btnIcon}
         aria-label="削除"
         title="削除"
       >
-        <Trash2 className="h-4 w-4" aria-hidden />
+        <Trash2 className="h-4 w-4 text-red-700" aria-hidden />
       </button>
     </div>
   );
@@ -153,7 +178,7 @@ export function AddButton({ label, onClick }: { label: string; onClick: () => vo
     <button
       type="button"
       onClick={onClick}
-      className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-pink-50 px-4 py-2 text-xs font-bold text-pink-700 hover:bg-pink-100 focus:outline-none focus:ring-2 focus:ring-pink-300"
+      className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-pink-50 px-4 py-2 text-xs font-bold text-pink-700 hover:bg-pink-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
     >
       <Plus className="h-4 w-4" aria-hidden />
       {label}
@@ -246,7 +271,7 @@ export function ImageUploadField({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={value} alt="" className="h-full w-full object-cover" />
           ) : (
-            <span className="px-2 text-center text-[10px] font-bold text-pink-300">
+            <span className="px-2 text-center text-xs font-bold text-pink-300">
               画像なし
             </span>
           )}
@@ -262,7 +287,7 @@ export function ImageUploadField({
               inputRef.current?.click();
             }}
             disabled={uploading}
-            className="inline-flex items-center gap-1.5 rounded-full bg-pink-500 px-4 py-2 text-xs font-bold text-white hover:bg-pink-600 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-pink-300"
+            className={natoriAdminUi.btnPrimary}
           >
             {uploading ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -275,7 +300,7 @@ export function ImageUploadField({
             <button
               type="button"
               onClick={() => onChange(null)}
-              className="text-left text-xs font-bold text-red-500 hover:underline focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="text-left text-xs font-bold text-red-500 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
             >
               画像を外す
             </button>
@@ -289,7 +314,7 @@ export function ImageUploadField({
           onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
         />
       </div>
-      {hint ? <p className="mt-1 text-[11px] text-gray-500">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
       {error ? <p className="mt-1 text-xs font-bold text-red-600">{error}</p> : null}
     </div>
   );

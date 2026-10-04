@@ -5,6 +5,7 @@ import { Banknote, CalendarRange, Star } from "lucide-react";
 import { getActiveBarsForDate, parseISODate } from "@/features/natori/lib/projects";
 import { getRemindersForDate } from "@/features/natori/lib/reminders";
 import { cn } from "@/lib/utils";
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import ProjectCard from "./ProjectCard";
 import PersonalEventsSection from "./PersonalEventsSection";
 import type { NatoriEvent } from "@/features/natori/data/supabaseEvents";
@@ -204,9 +205,14 @@ export default function ProjectDayDetail({
           </div>
           {activeOnlyProjects.length > 0 ? (
             <>
-              <p className="pt-2 text-xs font-bold uppercase tracking-wide text-gray-600">
-                この日に手を動かす案件
-              </p>
+              <div className="pt-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-600">
+                  この日に手を動かす案件
+                </p>
+                <p className={natoriAdminUi.caption}>
+                  工程の更新・編集は納期日のカード、または一覧表示から行えます。
+                </p>
+              </div>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {activeOnlyProjects.map((project) => (
                   <ProjectCard

@@ -3,6 +3,7 @@
 // 案件種別の確定と制作タスク生成。
 // 確定は natori_confirm_project_type_v1 RPC が担い、application からは
 // task を INSERT しない。通常の project 更新とは経路を分ける。
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useEffect, useState } from "react";
 import { CheckCircle2, ListChecks } from "lucide-react";
 import {
@@ -58,7 +59,7 @@ export default function InquiryTypeConfirmation({
     <section aria-labelledby="inquiry-type-heading">
       <h3
         id="inquiry-type-heading"
-        className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700"
+        className="mb-2 text-xs font-bold text-gray-600"
       >
         案件種別・制作タスク
       </h3>
@@ -99,7 +100,7 @@ export default function InquiryTypeConfirmation({
                   setSelected(event.target.value as NatoriConcreteProjectType | "")
                 }
                 disabled={disabled || saving}
-                className="h-9 rounded-lg border border-gray-300 bg-white px-2 text-sm"
+                className={`${natoriAdminUi.input} sm:w-auto`}
               >
                 <option value="">選択してください</option>
                 {NATORI_CONCRETE_PROJECT_TYPES.map((type) => (
@@ -114,7 +115,7 @@ export default function InquiryTypeConfirmation({
               onClick={handleConfirm}
               disabled={disabled || saving || !selected}
               aria-busy={saving}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-pink-500 px-4 text-xs font-bold text-white shadow-sm hover:bg-pink-600 disabled:opacity-60"
+              className={natoriAdminUi.btnPrimary}
             >
               {saving ? "確定中…" : "案件種別を確定する"}
             </button>

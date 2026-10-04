@@ -18,7 +18,7 @@ export default function InquiryRequestSummary({
       <section aria-labelledby="inquiry-request-heading">
         <h3
           id="inquiry-request-heading"
-          className="mb-2 text-xs font-bold uppercase tracking-wide text-pink-700"
+          className="mb-2 text-xs font-bold text-gray-600"
         >
           原依頼内容
         </h3>
@@ -43,7 +43,7 @@ export default function InquiryRequestSummary({
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <h3
           id="inquiry-request-heading"
-          className="text-xs font-bold uppercase tracking-wide text-pink-700"
+          className="text-xs font-bold text-gray-600"
         >
           原依頼内容
         </h3>
@@ -51,13 +51,13 @@ export default function InquiryRequestSummary({
           data-inquiry-mode={view.inquiryMode}
           className={
             view.inquiryMode === "quote"
-              ? "inline-block rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700"
-              : "inline-block rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700"
+              ? "inline-block rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-700"
+              : "inline-block rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 text-xs font-bold text-sky-700"
           }
         >
           {view.modeLabel}
         </span>
-        <span className="text-[10px] text-gray-500">
+        <span className="text-xs text-gray-500">
           依頼者の原回答です（管理画面からは編集できません）
         </span>
       </div>
@@ -82,7 +82,7 @@ export default function InquiryRequestSummary({
             key={section.key}
             className="rounded-xl border border-pink-100 bg-pink-50/40 p-3"
           >
-            <p className="mb-1.5 text-[11px] font-bold text-pink-700">
+            <p className="mb-1.5 text-xs font-bold text-pink-700">
               {section.title}
             </p>
             <dl className="grid grid-cols-1 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-2">

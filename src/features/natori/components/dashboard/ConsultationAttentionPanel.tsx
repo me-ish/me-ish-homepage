@@ -1,5 +1,8 @@
 "use client";
 
+import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
+import { NatoriLoadError } from "./NatoriLoadError";
 import Link from "next/link";
 import type { NatoriProject } from "@/features/natori/types/projects";
 import { compareConsultationActivity, consultationNeedsAttention, consultationReplyState, staffConsultationHref } from "@/features/natori/lib/consultationOverview";
@@ -15,9 +18,12 @@ export default function ConsultationAttentionPanel({ projects, loading, onRefres
     <section aria-label="相談の確認" className="mt-4 space-y-3 rounded-2xl border border-pink-200 bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-bold text-pink-900">相談の確認</h2>
-        <button type="button" onClick={onRefresh} disabled={loading} className="min-h-10 rounded-full border px-3 text-xs font-bold">相談状況を更新</button>
+        <button type="button" onClick={onRefresh} disabled={loading} className={natoriAdminUi.btnSecondary}>相談状況を更新</button>
       </div>
-      {loading ? <p role="status">確認中…</p> : !projects ? <p role="alert">相談状況を取得できませんでした。もう一度更新してください。</p> : <>
+      {loading ? <>
+        <p role="status" className={natoriAdminUi.caption}>相談状況を確認しています</p>
+        <NatoriSkeleton heightClassName="h-24" />
+      </> : !projects ? <NatoriLoadError resourceLabel="相談状況" error="相談状況を取得できませんでした。" onRetry={onRefresh} /> : <>
         {projects.some(project => !project.consultation) ? <p role="alert" className="text-sm text-amber-800">返信状況を取得できない案件があります。件数は確認できた分のみです。</p> : null}
         <p className="text-sm">新規 {count("new")}件 · ナトリの返信待ち {count("staff")}件 · 依頼者の返信待ち {count("client")}件</p>
         <p className="text-xs text-gray-600">最新の相談メッセージから判定します。既読や、メールへの直接返信は反映されません。古い相談から表示しています。</p>

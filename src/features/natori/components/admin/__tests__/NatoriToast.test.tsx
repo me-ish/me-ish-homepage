@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { NATORI_TOAST_DURATION_MS, NatoriToastProvider, useNatoriToast } from "../NatoriToast";
+import { NATORI_TOAST_DURATION_MS, NatoriToastProvider, useNatoriToast, useOptionalNatoriToast } from "../NatoriToast";
 
 function Trigger() {
   const { showToast } = useNatoriToast();
@@ -31,6 +31,16 @@ describe("NatoriToast", () => {
     render(<NatoriToastProvider><Trigger /></NatoriToastProvider>);
     fireEvent.click(screen.getByText("go"));
     fireEvent.click(screen.getByRole("button", { name: "通知を閉じる" }));
+    expect(screen.queryByText("保存しました")).toBeNull();
+  });
+
+  it("useOptionalNatoriToast does nothing instead of throwing without a provider", () => {
+    function OptionalTrigger() {
+      const { showToast } = useOptionalNatoriToast();
+      return <button onClick={() => showToast("保存しました")}>go</button>;
+    }
+    render(<OptionalTrigger />);
+    fireEvent.click(screen.getByText("go"));
     expect(screen.queryByText("保存しました")).toBeNull();
   });
 

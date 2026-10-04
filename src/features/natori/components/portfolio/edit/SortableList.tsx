@@ -67,7 +67,7 @@ function SortableRow({
       ref={setActivatorNodeRef}
       {...attributes}
       {...listeners}
-      className="grid h-8 w-8 shrink-0 cursor-grab touch-none place-items-center rounded-lg border border-gray-200 bg-white text-gray-400 hover:bg-gray-50 hover:text-gray-600 active:cursor-grabbing focus:outline-none focus:ring-2 focus:ring-pink-300"
+      className="grid h-8 w-8 shrink-0 cursor-grab touch-none place-items-center rounded-lg border border-gray-200 bg-white text-gray-400 hover:bg-gray-50 hover:text-gray-600 active:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
       aria-label="ドラッグして並び替え"
       title="ドラッグして並び替え"
     >
@@ -120,7 +120,7 @@ function CompactWorkRow({
         ref={setActivatorNodeRef}
         {...attributes}
         {...listeners}
-        className="grid h-8 w-8 shrink-0 cursor-grab touch-none place-items-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-700 active:cursor-grabbing focus:outline-none focus:ring-2 focus:ring-pink-300"
+        className="grid h-8 w-8 shrink-0 cursor-grab touch-none place-items-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-700 active:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
         aria-label={`${title || `作品${index + 1}`}をドラッグして並び替え`}
         title="ドラッグして並び替え"
       >
@@ -133,7 +133,7 @@ function CompactWorkRow({
         {title.trim() || "無題"}
       </span>
       {!published ? (
-        <span className="shrink-0 rounded-full bg-gray-100 px-2 py-1 text-[10px] font-bold text-gray-500">
+        <span className="shrink-0 rounded-full bg-gray-100 px-2 py-1 text-xs font-bold text-gray-500">
           非公開
         </span>
       ) : null}
@@ -184,7 +184,7 @@ export default function SortableList<T>({
         <div className="rounded-xl border border-pink-200 bg-pink-50/50 p-3">
           <div className="mb-2">
             <p className="text-xs font-black text-pink-700">公開ページの並び順</p>
-            <p className="mt-0.5 text-[11px] leading-4 text-gray-600">
+            <p className="mt-0.5 text-xs leading-4 text-gray-600">
               上から順に表示されます。並び替えはこのコンパクトな一覧で行ってください。
             </p>
           </div>

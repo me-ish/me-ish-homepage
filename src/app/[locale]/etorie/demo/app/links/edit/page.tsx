@@ -13,7 +13,11 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <DemoAppShell bare>
-      <LinksEditor demoContent={demoLinksContent} publicHref="/etorie/demo/app/links" />
+      <LinksEditor
+        demoContent={demoLinksContent}
+        publicHref="/etorie/demo/app/links"
+        dashboardHref="/etorie/demo/app"
+      />
     </DemoAppShell>
   );
 }

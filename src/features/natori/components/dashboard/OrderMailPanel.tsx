@@ -5,7 +5,9 @@
 // 定型文を下書きとして生成し、編集してから /api/natori/admin/order-mail で送信する。
 // 支払い依頼は送信時にサーバーで Stripe 支払いリンクが生成され、
 // 本文の {支払いリンク} の位置に差し込まれる。
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import Link from "next/link";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Loader2, Mail, RotateCcw, X } from "lucide-react";
@@ -109,7 +111,7 @@ function isMoneyKind(kind: OrderMailKind): boolean {
 }
 
 const inputClass =
-  "w-full rounded-lg border border-pink-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-300";
+  natoriAdminUi.input;
 const labelClass = "mb-1 block text-xs font-bold text-pink-700";
 
 type OrderMailPanelProps = {
@@ -271,33 +273,42 @@ export default function OrderMailPanel({
   };
 
   if(kind==="payment"&&!demoMode&&paymentFlow==="enabled")return <PaymentLinkPanel project={project} onClose={onClose} onSent={onSent}/>;
-  if(kind==="payment"&&!demoMode&&paymentFlow!=="legacy")return <div className="fixed inset-0 z-50 grid place-items-center bg-gray-900/60 p-4" role="dialog" aria-modal="true" aria-label="支払状態の確認">
-    <section className="rounded-2xl bg-white p-6"><p role="status">{paymentFlow==="error"?"支払状態を確認できません。再読込してください。":"支払状態を確認中です。"}</p><button type="button" onClick={onClose} className="mt-4 min-h-11 underline">閉じる</button></section></div>;
+  if(kind==="payment"&&!demoMode&&paymentFlow!=="legacy")return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent hideCloseButton aria-describedby={undefined} className="w-full max-w-lg rounded-2xl bg-white p-6">
+        <DialogTitle className="sr-only">支払状態の確認</DialogTitle>
+        <p role="status">{paymentFlow==="error"?"支払状態を確認できません。再読込してください。":"支払状態を確認中です。"}</p>
+        <button type="button" onClick={onClose} className="mt-4 min-h-11 justify-self-start underline">閉じる</button>
+      </DialogContent>
+    </Dialog>
+  );
   if (kind === "estimate" && !demoMode) return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-gray-900/60 p-4" role="dialog" aria-modal="true" aria-label="見積りを作成・確認">
-      <section className="w-full max-w-lg rounded-2xl bg-white p-6">
-        <h2 className="font-bold">見積りを作成・確認</h2>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent hideCloseButton aria-describedby={undefined} className="w-full max-w-lg gap-0 rounded-2xl bg-white p-6">
+        <DialogTitle className="font-bold">見積りを作成・確認</DialogTitle>
         <p className="mt-3 text-sm">条件と金額を確認して正式な版を保存します。保存済みの版の再通知も同じ画面から行います。</p>
-        <Link href={`/natori/estimate?inquiry=${encodeURIComponent(project.id)}`} className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-pink-100 px-4 font-bold text-pink-950">この案件の見積りを開く</Link>
-        <button type="button" onClick={onClose} className="ml-3 min-h-11 px-3 underline">閉じる</button>
-      </section>
-    </div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Link href={`/natori/estimate?inquiry=${encodeURIComponent(project.id)}`} className="inline-flex min-h-11 items-center rounded-xl bg-pink-100 px-4 font-bold text-pink-950">この案件の見積りを開く</Link>
+          <button type="button" onClick={onClose} className="min-h-11 px-3 underline">閉じる</button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-gray-900/60 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label={meta.title}
-    >
-      <div className="w-full max-w-2xl rounded-2xl border border-pink-100 bg-white p-4 shadow-xl sm:p-5">
+    <Dialog open onOpenChange={(open) => { if (!open && !sending) onClose(); }}>
+      <DialogContent
+        hideCloseButton
+        aria-describedby={undefined}
+        onInteractOutside={(event) => event.preventDefault()}
+        className="block max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-pink-100 bg-white p-4 shadow-xl sm:rounded-2xl sm:p-5"
+      >
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="flex items-center gap-2 text-base font-black text-gray-900">
+            <DialogTitle className="flex items-center gap-2 text-base font-black text-gray-900">
               <Mail className="h-4 w-4 text-pink-500" aria-hidden />
               {meta.title}
-            </h2>
+            </DialogTitle>
             <p className="mt-0.5 break-words text-xs text-gray-600">
               {project.clientName}｜{project.title}
             </p>
@@ -305,7 +316,7 @@ export default function OrderMailPanel({
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+            className={natoriAdminUi.btnIcon}
             aria-label="閉じる"
           >
             <X className="h-4 w-4" aria-hidden />
@@ -346,7 +357,7 @@ export default function OrderMailPanel({
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex h-10 items-center rounded-full bg-pink-500 px-5 text-sm font-bold text-white hover:bg-pink-600"
+                className={natoriAdminUi.btnPrimary}
               >
                 閉じる
               </button>
@@ -426,7 +437,7 @@ export default function OrderMailPanel({
                   className={inputClass}
                 />
                 {!to ? (
-                  <p className="mt-1 text-[11px] text-gray-500">
+                  <p className="mt-1 text-xs text-gray-500">
                     案件メモから自動で拾えなかった場合は手入力してください。
                   </p>
                 ) : null}
@@ -464,7 +475,7 @@ export default function OrderMailPanel({
                   typeof amount === "number" &&
                   Number.isFinite(amount) &&
                   amount < 50 ? (
-                    <p className="mt-1 text-[11px] font-bold text-red-600">
+                    <p className="mt-1 text-xs font-bold text-red-600">
                       カード決済は50円以上から利用できます。
                     </p>
                   ) : null}
@@ -481,7 +492,7 @@ export default function OrderMailPanel({
                     定型文を再生成
                   </button>
                   {amount === "" ? (
-                    <p className="text-[11px] font-bold text-amber-700">
+                    <p className="text-xs font-bold text-amber-700">
                       金額未定の案件は送信できません。先に案件情報で金額を確定してください。
                     </p>
                   ) : null}
@@ -516,17 +527,17 @@ export default function OrderMailPanel({
                 className={`${inputClass} leading-6`}
               />
               {kind === "payment" && !draft.body.includes(PAYMENT_LINK_PLACEHOLDER) ? (
-                <p className="mt-1 text-[11px] font-bold text-amber-600">
+                <p className="mt-1 text-xs font-bold text-amber-600">
                   本文に {PAYMENT_LINK_PLACEHOLDER} がありません。この場合、支払いリンクは本文の末尾に追記されます。
                 </p>
               ) : null}
               {kind === "rough" && !draft.body.includes(FILES_LINK_PLACEHOLDER) ? (
-                <p className="mt-1 text-[11px] font-bold text-amber-600">
+                <p className="mt-1 text-xs font-bold text-amber-600">
                   本文に {FILES_LINK_PLACEHOLDER} がありません。この場合、確認リンクは本文の末尾に追記されます。
                 </p>
               ) : null}
               {kind === "delivery" && !draft.body.includes(DELIVERY_LINK_PLACEHOLDER) ? (
-                <p className="mt-1 text-[11px] font-bold text-amber-600">
+                <p className="mt-1 text-xs font-bold text-amber-600">
                   本文に {DELIVERY_LINK_PLACEHOLDER} がありません。この場合、納品ページのURLは本文の末尾に追記されます。
                 </p>
               ) : null}
@@ -543,7 +554,7 @@ export default function OrderMailPanel({
 
             <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
               {isMoneyKind(kind) ? (
-                <p className="mr-auto text-[11px] text-gray-500">
+                <p className="mr-auto text-xs text-gray-500">
                   送信金額:{" "}
                   {typeof amount === "number" && Number.isFinite(amount)
                     ? formatYen(Math.round(amount))
@@ -564,7 +575,7 @@ export default function OrderMailPanel({
                 type="button"
                 onClick={handleSend}
                 disabled={!canSend}
-                className="inline-flex h-10 items-center gap-2 rounded-full bg-pink-500 px-5 text-sm font-bold text-white hover:bg-pink-600 disabled:opacity-50"
+                className={natoriAdminUi.btnPrimary}
               >
                 {sending ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -576,7 +587,7 @@ export default function OrderMailPanel({
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
