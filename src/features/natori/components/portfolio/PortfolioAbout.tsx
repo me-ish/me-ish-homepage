@@ -48,7 +48,7 @@ export default function PortfolioAbout({
   // プロフィール欄の名前はヘッダー/ヒーローとは独立に設定できる。
   // 未設定（旧データ）のときは従来どおりサイト名を表示する
   const profileName = content.profileName.trim() || content.artistName;
-  // 短いラベルを先にまとめ、スマホでは4件+3件の2段に収める。
+  // 短いラベルを先に並べ、折り返したときに行の長さがそろうようにする。
   // 未知の追加項目は既存順を保ったまま後ろに回す。
   const orderedServices = content.services
     .map((service, index) => ({ service, index }))
@@ -58,9 +58,6 @@ export default function PortfolioAbout({
       return aPriority - bPriority;
     })
     .map(({ service }) => service);
-  const serviceRows = [orderedServices.slice(0, 4), orderedServices.slice(4)].filter(
-    (row) => row.length > 0
-  );
 
   return (
     <section id="about" className="pb-6 pt-6 md:py-16" style={{ background: c.surfaceSubtle }}>
@@ -120,25 +117,22 @@ export default function PortfolioAbout({
           ))}
           <div className="rounded-xl p-3 md:p-5" style={{ background: c.surface }}>
             <p className="mb-2 font-bold md:mb-3">対応内容</p>
-            <div className="space-y-1.5 md:space-y-2">
-              {serviceRows.map((row, rowIndex) => (
-                <ul key={rowIndex} className="flex flex-wrap justify-center gap-1 md:gap-2">
-                  {row.map((service) => (
-                    <li
-                      key={service}
-                      className="whitespace-nowrap rounded-full border px-1.5 py-1 text-[11px] font-bold leading-none md:px-3 md:py-1.5 md:text-xs"
-                      style={{
-                        borderColor: c.borderSubtle,
-                        color: c.textSoft,
-                        background: c.accentSoft,
-                      }}
-                    >
-                      {service}
-                    </li>
-                  ))}
-                </ul>
+            {/* スマホでも 13px。収まらない分は自然に折り返す */}
+            <ul className="flex flex-wrap justify-center gap-1.5 md:gap-2">
+              {orderedServices.map((service) => (
+                <li
+                  key={service}
+                  className="whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[13px] font-bold leading-none md:px-3"
+                  style={{
+                    borderColor: c.borderSubtle,
+                    color: c.textSoft,
+                    background: c.surfaceSubtle,
+                  }}
+                >
+                  {service}
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         </div>
       </div>
