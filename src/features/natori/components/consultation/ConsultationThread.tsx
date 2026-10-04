@@ -1,9 +1,11 @@
 "use client";
 
 import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
+import { natoriClientUi } from "@/features/natori/constants/clientUi";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
-import { Paperclip } from "lucide-react";
+import { ArrowDown, MessageCircle, Paperclip, RefreshCw, Send } from "lucide-react";
 import { consultationOperationSchema, freezeConsultationOperation, consultationDigest, type ConsultationOperation } from "@/features/natori/lib/consultationOperation";
 import { validConsultationFile } from "@/features/natori/lib/consultationFileRules";
 import { consultationUploadEndpoint } from "@/features/natori/lib/consultationUploadEndpoint";
@@ -14,6 +16,57 @@ type Props =
   | { mode: "client"; token: string; initialMessages: ConsultationMessage[]; closed: boolean; projectId?: never; clientEmail?: never };
 
 type ComposerJob = { actor: string; generation: number };
+
+// Client mode follows the public look (natoriClientUi); staff mode keeps the
+// admin neutrals. Both read as a chat: your own messages on the right.
+const threadTone = {
+  client: {
+    section: "rounded-3xl border border-[#F2D9E0] bg-white shadow-[0_10px_22px_rgba(0,0,0,0.06)]",
+    pad: "px-4 sm:px-6",
+    rule: "border-[#F6E3E9]",
+    title: "text-[16px] font-bold leading-6 text-[#242027]",
+    titleIcon: "text-[#EC4899]",
+    caption: "text-[13px] leading-6 text-[#6B6470]",
+    meta: "text-[12px] font-bold leading-5 text-[#6B6470]",
+    body: "text-[15px] leading-7 text-[#242027]",
+    own: "rounded-2xl rounded-br-md bg-[#FFF0F6]",
+    other: "rounded-2xl rounded-bl-md border border-[#F2D9E0] bg-white",
+    file: "border-[#F2D9E0] bg-white text-[#BE185D] hover:bg-[#FFF8FA]",
+    warning: "text-[13px] font-bold leading-6 text-[#8A4800]",
+    label: "text-[13px] font-bold leading-6 text-[#242027]",
+    textarea: "w-full rounded-2xl border border-[#878287] bg-white p-3 text-[16px] leading-7 text-[#242027] transition-colors placeholder:text-[#6B6470] focus:border-[#BE185D] focus:outline-none focus:ring-4 focus:ring-[#BE185D]/15 disabled:bg-[#F6F4F5]",
+    draft: "rounded-xl border border-[#F2D9E0] bg-[#FFF8FA] text-[13px] leading-5",
+    textButton: `text-[13px] font-bold text-[#BE185D] underline underline-offset-4 ${natoriClientUi.focus}`,
+    retry: `text-[13px] font-bold text-[#8A4800] underline underline-offset-4 ${natoriClientUi.focus}`,
+    secondary: natoriClientUi.btnSecondary,
+    primary: `${natoriPrimaryActionClassName} inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-[15px] font-bold leading-snug`,
+    alertError: natoriClientUi.alertError,
+    alertSuccess: "rounded-2xl border border-[#BCE8DA] bg-[#E8FFF8] px-4 py-3 text-[14px] font-bold leading-6 text-[#00664F]",
+  },
+  staff: {
+    section: `rounded-2xl ${natoriAdminUi.surface}`,
+    pad: "px-3 sm:px-4",
+    rule: "border-zinc-100",
+    title: "text-sm font-semibold leading-6 text-zinc-900",
+    titleIcon: "text-[#DB2777]",
+    caption: "text-xs leading-5 text-zinc-600",
+    meta: "text-xs font-semibold leading-5 text-zinc-600",
+    body: "text-sm leading-6 text-zinc-900",
+    own: "rounded-2xl rounded-br-md bg-pink-50 ring-1 ring-inset ring-pink-500/10",
+    other: "rounded-2xl rounded-bl-md bg-zinc-50 ring-1 ring-inset ring-zinc-200",
+    file: "border-zinc-200 bg-white text-[#BE185D] hover:bg-zinc-50",
+    warning: "text-xs font-semibold leading-5 text-amber-800",
+    label: "text-xs font-semibold leading-5 text-zinc-700",
+    textarea: natoriAdminUi.input,
+    draft: "rounded-xl border border-zinc-200 bg-zinc-50 text-xs leading-5",
+    textButton: `text-xs font-semibold text-[#BE185D] underline underline-offset-4 ${natoriAdminUi.focusRing}`,
+    retry: `text-xs font-semibold text-amber-800 underline underline-offset-4 ${natoriAdminUi.focusRing}`,
+    secondary: natoriAdminUi.btnSecondary,
+    primary: natoriAdminUi.btnPrimary,
+    alertError: natoriAdminUi.alert.error,
+    alertSuccess: natoriAdminUi.alert.success,
+  },
+} as const;
 
 function dateTime(value: string): string {
   return new Intl.DateTimeFormat("ja-JP", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Tokyo" }).format(new Date(value));
@@ -301,64 +354,77 @@ export default function ConsultationThread(props: Props) {
   };
 
   const cannotSend = closed || (props.mode === "staff" && !props.clientEmail);
+  const t = threadTone[props.mode];
   return (
-    <section className="space-y-3 rounded-xl border border-pink-200 bg-white p-3" aria-label="相談のやり取り">
-      <div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-bold text-pink-800">相談のやり取り</h3>
-          <button type="button" disabled={loading || busy} onClick={() => void refresh()} className="rounded-full border px-3 py-2 text-xs font-bold disabled:opacity-50">履歴を更新</button>
-        </div>
-        <p className="mt-1 text-xs text-gray-600">{props.mode === "client" ? "ナトリからの返事はメールでもお知らせします。ご返信はこの相談ページからお願いします。" : "相談内容とメール通知の状態は別に記録されます。"} メールへの直接返信は、この履歴には自動で入りません。</p>
-        {newMessages && !loading ? <button type="button" onClick={showLatest} className="mt-2 text-xs font-bold text-pink-700 underline">新しいやり取りを見る</button> : null}
-        {props.mode === "staff" && !props.clientEmail ? <p className="text-xs text-amber-700">依頼者のメールアドレスがないため返信できません。</p> : null}
+    <section className={t.section} aria-label="相談のやり取り">
+      <div className={`flex items-center justify-between gap-3 border-b ${t.rule} ${t.pad} py-3`}>
+        <h3 className={`flex min-w-0 items-center gap-2 ${t.title}`}><MessageCircle className={`h-4 w-4 shrink-0 ${t.titleIcon}`} aria-hidden />相談のやり取り</h3>
+        <button type="button" disabled={loading || busy} onClick={() => void refresh()} className={`${t.secondary} shrink-0`}><RefreshCw className={`h-4 w-4 ${loading ? "motion-safe:animate-spin" : ""}`} aria-hidden />履歴を更新</button>
       </div>
-      {loading ? <p role="status" className="text-xs text-gray-500">履歴を確認中…</p> : null}
-      {!loading && !historyUnavailable && messages.length === 0 ? <p className="text-xs text-gray-500">{closed ? "相談履歴はありません。" : "返信はまだありません。最初のメッセージを送れます。"}</p> : null}
+      <div className={`space-y-2 ${t.pad} pt-3`}>
+        <p className={t.caption}>{props.mode === "client" ? "ナトリからの返事はメールでもお知らせします。ご返信はこの相談ページからお願いします。" : "相談内容とメール通知の状態は別に記録されます。"} メールへの直接返信は、この履歴には自動で入りません。</p>
+        {newMessages && !loading ? <button type="button" onClick={showLatest} className={`inline-flex items-center gap-1 ${t.textButton}`}><ArrowDown className="h-3.5 w-3.5" aria-hidden />新しいやり取りを見る</button> : null}
+        {props.mode === "staff" && !props.clientEmail ? <p className={t.warning}>依頼者のメールアドレスがないため返信できません。</p> : null}
+        {loading ? <p role="status" className={t.caption}>履歴を確認中…</p> : null}
+      </div>
+      {!loading && !historyUnavailable && messages.length === 0 ? <p className={`${t.pad} py-6 text-center ${t.caption}`}>{closed ? "相談履歴はありません。" : "返信はまだありません。最初のメッセージを送れます。"}</p> : null}
       {messages.length > 0 ? (
-        <ol className="space-y-2">
-          {messages.map((message, index) => (
-            <li key={message.id} ref={index === messages.length - 1 ? lastMessageRef : undefined} tabIndex={-1} className={`rounded-xl px-3 py-2 text-sm ${message.sender === "staff" ? "bg-pink-50" : "bg-gray-100"}`}>
-              <p className="mb-1 text-xs font-semibold text-gray-600">{message.sender === "staff" ? "ナトリ" : "依頼者"} · {dateTime(message.createdAt)}</p>
-              <p className="whitespace-pre-wrap break-words text-gray-900">{renderText(message.body)}</p>
-              {message.filesState==="unavailable"?<p role="status" className="mt-2 text-xs text-amber-700">添付一覧を取得できません。資料の提出状況は、履歴を更新して確認してください。</p>:null}
-              {message.files?.map(file=>file.url?(
-                <a key={file.id} href={file.url} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-center gap-1 break-all rounded-lg border border-pink-200 bg-white px-3 py-2 text-xs font-bold text-pink-800 underline">
-                  <Paperclip className="h-4 w-4 shrink-0" aria-hidden/>{file.name} ({(file.sizeBytes/1024/1024).toFixed(1)}MB)
-                </a>
-              ):<p key={file.id} role="status" className="mt-2 break-all rounded-lg border p-3 text-xs">{file.name} — 提出済みの添付です。リンクの取得に失敗しました。履歴を更新してください。</p>)}
-              {message.notificationStatus === "failed" && (props.mode === "client" ? message.sender === "client" : message.sender !== "staff" || closed) ? <p className="mt-1 text-xs font-bold text-amber-700">メール通知に失敗 · 相談内容は保存済み</p> : null}
-              {message.notificationStatus === "pending" && (props.mode === "staff" || message.sender === "client") ? <p className="mt-1 text-xs text-amber-700">通知未送信・処理中 · 相談内容は保存済み</p> : null}
-              {props.mode === "staff" && !closed && message.sender === "staff" && message.notificationStatus === "failed" ? (
-                <button type="button" disabled={busy} onClick={() => void retry(message.id)} className="mt-1 text-xs font-bold text-amber-700 underline disabled:opacity-50">メール通知に失敗 · 再送する</button>
-              ) : null}
-            </li>
-          ))}
+        <ol className={`space-y-4 ${t.pad} py-4`}>
+          {messages.map((message, index) => {
+            const own = props.mode === "client" ? message.sender === "client" : message.sender === "staff";
+            return (
+              <li key={message.id} ref={index === messages.length - 1 ? lastMessageRef : undefined} tabIndex={-1} className={`flex flex-col rounded-2xl ${natoriClientUi.focus} ${own ? "items-end" : "items-start"}`}>
+                <p className={`mb-1 px-1 ${t.meta}`}>{message.sender === "staff" ? "ナトリ" : "依頼者"} · {dateTime(message.createdAt)}</p>
+                <div className={`min-w-0 max-w-[88%] px-4 py-3 sm:max-w-[80%] ${own ? t.own : t.other}`}>
+                  <p className={`whitespace-pre-wrap break-words ${t.body}`}>{renderText(message.body)}</p>
+                  {message.filesState==="unavailable"?<p role="status" className={`mt-2 ${t.warning}`}>添付一覧を取得できません。資料の提出状況は、履歴を更新して確認してください。</p>:null}
+                  {message.files?.map(file=>file.url?(
+                    <a key={file.id} href={file.url} target="_blank" rel="noopener noreferrer" className={`mt-2 flex items-center gap-2 break-all rounded-xl border px-3 py-2 text-[13px] font-bold leading-5 underline underline-offset-2 transition-colors ${t.file} ${natoriClientUi.focus}`}>
+                      <Paperclip className="h-4 w-4 shrink-0" aria-hidden/>{file.name} ({(file.sizeBytes/1024/1024).toFixed(1)}MB)
+                    </a>
+                  ):<p key={file.id} role="status" className={`mt-2 break-all rounded-xl border border-dashed p-3 ${t.caption}`}>{file.name} — 提出済みの添付です。リンクの取得に失敗しました。履歴を更新してください。</p>)}
+                </div>
+                {message.notificationStatus === "failed" && (props.mode === "client" ? message.sender === "client" : message.sender !== "staff" || closed) ? <p className={`mt-1 px-1 ${t.warning}`}>メール通知に失敗 · 相談内容は保存済み</p> : null}
+                {message.notificationStatus === "pending" && (props.mode === "staff" || message.sender === "client") ? <p className={`mt-1 px-1 ${t.caption}`}>通知未送信・処理中 · 相談内容は保存済み</p> : null}
+                {props.mode === "staff" && !closed && message.sender === "staff" && message.notificationStatus === "failed" ? (
+                  <button type="button" disabled={busy} onClick={() => void retry(message.id)} className={`mt-1 px-1 ${t.retry} disabled:cursor-not-allowed disabled:text-zinc-500`}>メール通知に失敗 · 再送する</button>
+                ) : null}
+              </li>
+            );
+          })}
         </ol>
       ) : null}
-      {messages.some((message) => message.files?.length) ? <p className="text-[11px] text-gray-500">添付が開けない場合は、ページを再読み込みしてください。</p> : null}
+      {messages.some((message) => message.files?.length) ? <p className={`${t.pad} pb-3 ${t.caption}`}>添付が開けない場合は、ページを再読み込みしてください。</p> : null}
       {!cannotSend ? (
-        <div className="space-y-2">
-          <label className="block text-xs font-bold text-gray-700" htmlFor="consultation-reply">メッセージ</label>
+        <div className={`space-y-3 border-t ${t.rule} ${t.pad} py-4`}>
+          <label className={`block ${t.label}`} htmlFor="consultation-reply">メッセージ</label>
           <textarea id="consultation-reply" autoFocus={props.mode === "staff" && props.standalone} value={body} disabled={busy||Boolean(pending)||!cacheReady} onChange={(event) => setBody(event.target.value)} maxLength={4000} rows={4}
-            placeholder="相談への返信や共有URLを入力してください" className="w-full rounded-lg border border-gray-300 p-3 text-sm text-gray-900 focus:border-pink-400 focus:outline-none" />
+            placeholder="相談への返信や共有URLを入力してください" className={`${t.textarea} block`} />
           <input ref={fileRef} type="file" multiple accept=".jpg,.jpeg,.png,.webp,.pdf,.mp3,.m4a,.wav" className="hidden" aria-label="相談ファイルを選ぶ" onChange={(event)=>{const files=Array.from(event.target.files??[]);void chooseFiles(files);if(fileRef.current)fileRef.current.value="";}} />
-          <p className="text-xs text-gray-500">選んだファイルは送信前の下書きです。取り消しや本文の編集後、送信ボタンでまとめて送れます。画像・PDFは10MB、音声は50MBまで。大きな楽曲は共有URLを貼ってください。</p>
+          <p className={t.caption}>選んだファイルは送信前の下書きです。取り消しや本文の編集後、送信ボタンでまとめて送れます。画像・PDFは10MB、音声は50MBまで。大きな楽曲は共有URLを貼ってください。</p>
           {(pending?pending.files.map(file=>({id:file.id,name:file.fileName,size:file.sizeBytes})):draftFiles.map(({id,file})=>({id,name:file.name,size:file.size}))).map(file=>(
-            <div key={file.id} className="flex items-center justify-between gap-2 rounded border p-2 text-xs">
-              <span className="break-all">{file.name} ({(file.size/1024/1024).toFixed(1)}MB)</span>
-              {!pending?<button type="button" disabled={busy} onClick={()=>setDraftFiles(current=>current.filter(draft=>draft.id!==file.id))} aria-label={file.name+"の添付を取り消す"} className="shrink-0 underline">取消</button>:null}
+            <div key={file.id} className={`flex items-center justify-between gap-2 px-3 py-2 ${t.draft}`}>
+              <Paperclip className="h-4 w-4 shrink-0 text-[#BE185D]" aria-hidden />
+              <span className="min-w-0 flex-1 break-all">{file.name} ({(file.size/1024/1024).toFixed(1)}MB)</span>
+              {!pending?<button type="button" disabled={busy} onClick={()=>setDraftFiles(current=>current.filter(draft=>draft.id!==file.id))} aria-label={file.name+"の添付を取り消す"} className={`shrink-0 ${t.textButton}`}>取消</button>:null}
             </div>
           ))}
-          {pending?<p role="status" className="text-xs text-amber-700">{noticeExpired?"この送信の通知期限が過ぎています。本文と添付の記録は保持しています。"+(pending.files.length>draftFiles.length?"添付は同じファイルを選び直してください。":"")+"送信の取消を確認してから、同じ内容を新しく送信してください。":"前回の送信結果を確認中です。同じ内容で確認・再試行します。変更する場合は先に取消を確認してください。"}</p>:null}
-          {pending?<button type="button" disabled={busy} onClick={()=>void cancelPending()} className="text-xs underline">送信の取消を確認</button>:null}
-          {progress !== null ? <p role="status" className="text-xs text-pink-700">アップロード中 {progress}%</p> : null}
-          <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || loading || historyUnavailable} className="mr-2 rounded-full border border-pink-300 px-4 py-2 text-sm font-bold text-pink-800 disabled:opacity-50">添付を選ぶ</button>
-          <button type="button" onClick={() => void send()} disabled={(!pending&&!body.trim()&&!draftFiles.length)||busy||loading||historyUnavailable||!cacheReady||noticeExpired}
-            className={`${natoriPrimaryActionClassName} rounded-full px-5 py-2 text-sm font-bold`}>{busy?"送信中…":pending?"同じ送信を確認・再試行":"メッセージを送信"}</button>
+          {pending?<p role="status" className={t.warning}>{noticeExpired?"この送信の通知期限が過ぎています。本文と添付の記録は保持しています。"+(pending.files.length>draftFiles.length?"添付は同じファイルを選び直してください。":"")+"送信の取消を確認してから、同じ内容を新しく送信してください。":"前回の送信結果を確認中です。同じ内容で確認・再試行します。変更する場合は先に取消を確認してください。"}</p>:null}
+          {pending?<button type="button" disabled={busy} onClick={()=>void cancelPending()} className={t.textButton}>送信の取消を確認</button>:null}
+          {progress !== null ? <p role="status" className={`${t.caption} font-bold text-[#BE185D]`}>アップロード中 {progress}%</p> : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || loading || historyUnavailable} className={t.secondary}><Paperclip className="h-4 w-4" aria-hidden />添付を選ぶ</button>
+            <button type="button" onClick={() => void send()} disabled={(!pending&&!body.trim()&&!draftFiles.length)||busy||loading||historyUnavailable||!cacheReady||noticeExpired}
+              className={`ml-auto ${t.primary}`}><Send className="h-4 w-4" aria-hidden />{busy?"送信中…":pending?"同じ送信を確認・再試行":"メッセージを送信"}</button>
+          </div>
         </div>
-      ) : closed ? <p className="text-xs text-gray-600">この相談は終了しています。履歴のみ確認できます。</p> : null}
-      {notice ? <p role="status" className="text-xs text-green-700">{notice}</p> : null}
-      {error ? <p role="alert" className="text-xs text-red-700">{error}</p> : null}
+      ) : closed ? <p className={`border-t ${t.rule} ${t.pad} py-4 ${t.caption}`}>この相談は終了しています。履歴のみ確認できます。</p> : null}
+      {notice || error ? (
+        <div className={`space-y-2 ${t.pad} pb-4`}>
+          {notice ? <p role="status" className={t.alertSuccess}>{notice}</p> : null}
+          {error ? <p role="alert" className={t.alertError}>{error}</p> : null}
+        </div>
+      ) : null}
     </section>
   );
 }
