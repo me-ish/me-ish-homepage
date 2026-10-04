@@ -29,7 +29,7 @@ afterEach(() => {
 });
 
 describe("PF-03 portfolio hero", () => {
-  it("shows artwork before description on mobile while keeping the full-variant actions", () => {
+  it("shows artwork first on mobile with the key facts and the full-variant actions", () => {
     render(
       <PortfolioHero
         content={{
@@ -40,17 +40,27 @@ describe("PF-03 portfolio hero", () => {
     );
 
     const hero = document.getElementById("hero") as HTMLElement;
-    expect(hero.className).toContain("pb-8");
-    expect(hero.className).toContain("pt-12");
+    expect(hero.className).toContain("pb-10");
+    expect(hero.className).toContain("pt-4");
     expect(hero.className).toContain("md:pb-20");
     expect(screen.queryByText(defaultPortfolioContent.artistName)).toBeNull();
     expect(screen.getByText(defaultPortfolioContent.roleEn)).toBeTruthy();
     const description = screen.getByText(defaultPortfolioContent.heroDescription);
     expect(description).toBeTruthy();
-    expect(screen.queryByText("3,000円～")).toBeNull();
+    // 料金・お返事・納期は掲載内容と受付文面から短く言い直したものだけを出す。
+    const facts = hero.querySelector("dl") as HTMLElement;
+    expect(Array.from(facts.querySelectorAll("dt, dd"), (node) => node.textContent)).toEqual([
+      "SDキャラ",
+      "3,000円～",
+      "お返事",
+      "2〜3日以内",
+      "納期",
+      "約1か月",
+    ]);
     expect(screen.queryByRole("link", { name: "料金・追加オプションを確認" })).toBeNull();
     expect(screen.queryByText(defaultPortfolioContent.deliveryLead.split("。")[0] + "。")).toBeNull();
     expect(screen.queryByText(/2〜3日以内にメールで/)).toBeNull();
+    expect(screen.queryByText(/以内にお見積もり/)).toBeNull();
     const heroTitle = screen.getByRole("heading", { level: 1, name: "ナトリのあとりえ" });
     const titleTail = heroTitle.querySelector("span.break-words") as HTMLElement;
     expect(titleTail.textContent).toBe(defaultPortfolioContent.heroTitleTail);
@@ -62,12 +72,15 @@ describe("PF-03 portfolio hero", () => {
     expect(representativeImage).toBeTruthy();
     expect(representativeImage.getAttribute("data-priority")).toBe("true");
 
+    // スマホは「作品 → 呼び名 → 目安と相談ボタン → 紹介文」の順。
     const titleBlock = heroTitle.parentElement as HTMLElement;
     const figure = hero.querySelector("figure") as HTMLElement;
+    const factsBlock = facts.parentElement as HTMLElement;
     const descriptionBlock = description.parentElement as HTMLElement;
-    expect(titleBlock.className).toContain("order-1");
-    expect(figure.className).toContain("order-2");
-    expect(descriptionBlock.className).toContain("order-3");
+    expect(figure.className).toContain("order-1");
+    expect(titleBlock.className).toContain("order-2");
+    expect(factsBlock.className).toContain("order-3");
+    expect(descriptionBlock.className).toContain("order-4");
 
     const primaryLink = screen.getByRole("link", { name: "相談・見積もり" });
     expect(primaryLink.getAttribute("href")).toBe("/natori/portfolio/contact");
@@ -152,6 +165,21 @@ describe("PF-03 portfolio hero", () => {
     expect(document.querySelector("svg")).toBeNull();
   });
 
+  it("leaves out the facts while commissions are closed", () => {
+    render(
+      <PortfolioHero
+        content={{
+          ...defaultPortfolioContent,
+          commissionOpen: false,
+          heroImage: "https://example.com/hero.webp",
+        }}
+      />
+    );
+
+    expect(document.querySelector("#hero dl")).toBeNull();
+    expect(screen.queryByText("3,000円～")).toBeNull();
+  });
+
   it("keeps the showcase hero free of direct transaction actions", () => {
     render(
       <PortfolioHero
@@ -166,6 +194,8 @@ describe("PF-03 portfolio hero", () => {
     expect(screen.queryByRole("link", { name: "相談・見積もり" })).toBeNull();
     expect(screen.queryByText("納期の目安")).toBeNull();
     expect(screen.queryByText("3,000円～")).toBeNull();
+    expect(screen.queryByText("2〜3日以内")).toBeNull();
+    expect(screen.queryByText("約1か月")).toBeNull();
     expect(screen.getByRole("link", { name: "作品を見る" }).getAttribute("href")).toBe(
       "#gallery"
     );
