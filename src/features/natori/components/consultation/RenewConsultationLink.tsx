@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { MailCheck } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
+import { natoriClientUi as ui } from "@/features/natori/constants/clientUi";
 
 export default function RenewConsultationLink({ token }: { token: string }) {
   const [busy, setBusy] = useState(false);
@@ -22,13 +24,16 @@ export default function RenewConsultationLink({ token }: { token: string }) {
   };
 
   return (
-    <div className="space-y-2">
-      <p className="text-sm text-gray-700">リンクの期限が切れている場合は、元の問い合わせ先メールアドレスに新しいリンクを送れます。</p>
-      <button type="button" onClick={() => void renew()} disabled={busy || done} className="rounded-full bg-pink-500 px-5 py-2 text-sm font-bold text-white disabled:opacity-50">
+    <div className={`${ui.card} mx-auto max-w-lg space-y-4 text-center`}>
+      <span aria-hidden="true" className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#FFF0F6] text-[#BE185D]">
+        <MailCheck className="h-6 w-6" />
+      </span>
+      <p className={`${ui.phrase} ${ui.body} ${ui.muted}`}>リンクの期限が切れている場合は、元の問い合わせ先メールアドレスに新しいリンクを送れます。</p>
+      <button type="button" onClick={() => void renew()} disabled={busy || done} className={ui.btnPrimary}>
         {busy ? "送信中…" : done ? "送信しました" : "新しいリンクをメールで受け取る"}
       </button>
-      {done ? <p role="status" className="text-sm text-green-700">メールをご確認ください。</p> : null}
-      {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
+      {done ? <p role="status" className={ui.alertSuccess}>メールをご確認ください。</p> : null}
+      {error ? <p role="alert" className={ui.alertError}>{error}</p> : null}
     </div>
   );
 }
