@@ -33,6 +33,7 @@ import {
   uploadImageFile,
 } from "./editorFields";
 import PortfolioHeroImagesEditor from "./PortfolioHeroImagesEditor";
+import PortfolioPlanSampleField from "./PortfolioPlanSampleField";
 import PortfolioWorkLinksEditor from "./PortfolioWorkLinksEditor";
 import SortableList from "./SortableList";
 
@@ -958,7 +959,7 @@ export default function PortfolioEditor({
           id="section-plans"
           emoji="💰"
           title="基本料金"
-          description="料金カードとして表示されます。「含まれるもの」は1行に1つずつ書いてください。"
+          description="料金カードとして表示されます。「含まれるもの」は1行に1つずつ書いてください。作例はご依頼実績の作品から選べます。"
         >
           <SortableList
             items={content.plans}
@@ -1004,6 +1005,14 @@ export default function PortfolioEditor({
                       patch({ plans: updateItem(content.plans, index, { features: v.split("\n") }) })
                     }
                     rows={3}
+                  />
+                  <PortfolioPlanSampleField
+                    works={content.works}
+                    collections={content.collections}
+                    value={plan.sampleWorkId ?? null}
+                    onChange={(sampleWorkId) =>
+                      patch({ plans: updateItem(content.plans, index, { sampleWorkId }) })
+                    }
                   />
                 </div>
               </div>
