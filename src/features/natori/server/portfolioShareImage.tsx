@@ -13,8 +13,11 @@ import {
   PORTFOLIO_PAGE_PURPOSE,
   portfolioBrandSubName,
   portfolioShareArtwork,
+  portfolioShareTitle,
+  resolvePortfolioShareImageUrl,
 } from "@/features/natori/lib/portfolioShare";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import { getSiteUrl } from "@/lib/constants";
 
 export const PORTFOLIO_SHARE_IMAGE_SIZE = { width: 1200, height: 630 } as const;
 
@@ -44,16 +47,10 @@ function loadBrandFont(): Promise<Buffer | null> {
   return brandFont;
 }
 
-/** 編集画面で登録された公開画像だけを取りに行く。開発中はローカルの http も許可する。 */
+/** 編集画面で登録された公開画像だけを取りに行く。「/」で始まる値はこのサイトの画像として解決し、開発中はローカルの http も許可する。 */
 async function fetchImageBytes(url: string): Promise<Buffer | null> {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return null;
-  }
-  const allowHttp = process.env.NODE_ENV !== "production";
-  if (parsed.protocol !== "https:" && !(allowHttp && parsed.protocol === "http:")) return null;
+  const parsed = resolvePortfolioShareImageUrl(url, getSiteUrl(), process.env.NODE_ENV !== "production");
+  if (!parsed) return null;
   try {
     const response = await fetch(parsed, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
     if (!response.ok) return null;
@@ -81,8 +78,7 @@ async function pngDataUrl(url: string | null, width: number, height: number): Pr
 }
 
 export async function renderPortfolioShareImage(content: ShareContent): Promise<ImageResponse> {
-  const accent = content.heroTitleAccent.trim();
-  const tail = content.heroTitleTail.trim();
+  const { accent, tail } = portfolioShareTitle(content);
   const subName = portfolioBrandSubName(content);
   const open = content.commissionOpen;
 

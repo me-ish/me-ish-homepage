@@ -22,6 +22,34 @@ export function portfolioBrandSubName(
   return sub && sub !== portfolioBrandName(content) ? sub : null;
 }
 
+/** 共有カードの大見出し。分けて登録された呼び名は2色で出し、どちらも空ならサイト名（artistName）をそのまま出す。 */
+export function portfolioShareTitle(
+  content: Pick<PortfolioContent, "heroTitleAccent" | "heroTitleTail" | "artistName">,
+): { accent: string; tail: string } {
+  const accent = content.heroTitleAccent.trim();
+  const tail = content.heroTitleTail.trim();
+  if (accent || tail) return { accent, tail };
+  return { accent: content.artistName.trim(), tail: "" };
+}
+
+/**
+ * 共有カードに使う画像の取得先。https の URL のほか、「/」で始まる同じサイト内のパスは siteUrl を基準に解決する。
+ * http は開発中（allowHttp）だけ許可し、それ以外のスキームや解釈できない値は null。
+ */
+export function resolvePortfolioShareImageUrl(url: string, siteUrl: string, allowHttp: boolean): URL | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    try {
+      parsed = new URL(url, siteUrl);
+    } catch {
+      return null;
+    }
+  }
+  return parsed.protocol === "https:" || (allowHttp && parsed.protocol === "http:") ? parsed : null;
+}
+
 /** 共有カードに出す作品。スライドの1枚目、なければ公開中で画像のある最初の作品。 */
 export function portfolioShareArtwork(
   content: Pick<PortfolioContent, "heroImages" | "heroImage" | "works">,
