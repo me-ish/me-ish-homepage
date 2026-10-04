@@ -40,6 +40,10 @@ export const portfolioColors = {
   actionText: "#EC4899",
   /** ピンク面の枠に使う一段濃いピンク。 */
   actionDisplay: "#C94B89",
+  /** 白地の小さなピンク文字（英字の小見出し・ラベル）。actionText は大きな文字と装飾だけに使う。 */
+  actionTextSmall: "#BE185D",
+  /** テープや選択中でない点など、淡いピンクの装飾。 */
+  actionSoft: "#FFD3E2",
   onAction: "#FFFFFF",
   /** 小さな装飾にだけ使うパステルオレンジ。 */
   highlight: "#FFD7A3",
