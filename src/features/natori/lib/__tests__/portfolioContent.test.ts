@@ -5,6 +5,7 @@ import {
   publicPortfolioWorkTags,
   withPortfolioEditorStableIds,
 } from "../portfolioContent";
+import { DEFAULT_PORTFOLIO_FAQS } from "@/features/natori/constants/portfolioContent";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
 const validContent: PortfolioContent = {
@@ -48,6 +49,7 @@ const validContent: PortfolioContent = {
   deliveryNotes: [{ title: "お急ぎ納品", body: "最短7日" }],
   workflow: [{ title: "ご相談", body: "内容確認" }],
   requests: ["自作発言・AI学習は禁止しております"],
+  faqs: [{ question: "予算が未定でも大丈夫？", answer: "はい。" }],
   socialLinks: [{ label: "X (Twitter)", href: "https://x.com/natonato_o" }],
   copyright: "© 2026 Natori* illust.",
 };
@@ -194,6 +196,21 @@ describe("parsePortfolioContent", () => {
       { id: "obake", name: "おばけ", image: null },
       { id: "majo", name: "魔女", image: null },
     ]);
+  });
+
+  it("よくある質問が無い旧データは既定の質問で補完し、保存済みの空配列は空のまま", () => {
+    const { faqs: _faqs, ...legacy } = validContent;
+    expect(parsePortfolioContent(legacy)?.faqs).toEqual(DEFAULT_PORTFOLIO_FAQS);
+    expect(parsePortfolioContent({ ...validContent, faqs: [] })?.faqs).toEqual([]);
+  });
+
+  it("料金プランの作例（作品ID）を保持し、未設定の旧データには足さない", () => {
+    const withSample = {
+      ...validContent,
+      plans: validContent.plans.map((plan) => ({ ...plan, sampleWorkId: "w2" })),
+    };
+    expect(parsePortfolioContent(withSample)?.plans[0]?.sampleWorkId).toBe("w2");
+    expect(parsePortfolioContent(validContent)?.plans[0]).not.toHaveProperty("sampleWorkId");
   });
 
   it("壊れた値は null を返す（デフォルトへのフォールバック用）", () => {

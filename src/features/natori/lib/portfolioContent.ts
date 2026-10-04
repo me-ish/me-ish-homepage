@@ -2,6 +2,7 @@
 // PortfolioContent の検証・正規化（DB非依存の純関数）。
 import { z } from "zod";
 import {
+  DEFAULT_PORTFOLIO_FAQS,
   LEGACY_PORTFOLIO_OPTION_ID_BY_EXACT_NAME,
   LEGACY_PORTFOLIO_PLAN_ID_BY_EXACT_NAME,
 } from "@/features/natori/constants/portfolioContent";
@@ -103,6 +104,8 @@ const planSchema = z
     price: shortText,
     desc: z.string().max(500),
     features: z.array(shortText).max(20),
+    // 後から追加したフィールド。料金表に添える作例（works[].id）
+    sampleWorkId: z.string().min(1).max(64).nullable().optional(),
   })
   .transform(({ id, ...plan }) => ({
     id: id ?? LEGACY_PORTFOLIO_PLAN_ID_BY_EXACT_NAME[plan.name] ?? null,
@@ -123,6 +126,11 @@ const optionSchema = z
 const titleBodySchema = z.object({
   title: shortText,
   body: longText,
+});
+
+const faqSchema = z.object({
+  question: shortText,
+  answer: longText,
 });
 
 const socialLinkSchema = z.object({
@@ -177,6 +185,12 @@ const portfolioContentBaseSchema = z.object({
   // Retain only an explicit negative preference; supplied true/invalid values never grant projection.
   workflowCompatibilityProjection: z.literal(false).optional().catch(undefined),
   requests: z.array(longText).max(20),
+  // 後から追加したフィールド。既存のDB行には無いので既定の質問で補う（保存済みの空配列はそのまま）
+  faqs: z
+    .array(faqSchema)
+    .max(20)
+    .optional()
+    .default(() => DEFAULT_PORTFOLIO_FAQS.map((faq) => ({ ...faq }))),
   socialLinks: z.array(socialLinkSchema).max(10),
   copyright: shortText,
 });
@@ -355,6 +369,14 @@ export function preparePortfolioContentForSave(content: PortfolioContent): Portf
       ...plan,
       features: cleanList(plan.features),
     })),
+    // 書きかけの質問は残し、質問・答えの両方が空の行だけ落とす（公開側は両方そろった行だけ表示）
+    ...(content.faqs !== undefined
+      ? {
+          faqs: content.faqs
+            .map((faq) => ({ question: faq.question.trim(), answer: faq.answer.trim() }))
+            .filter((faq) => faq.question.length > 0 || faq.answer.length > 0),
+        }
+      : {}),
     socialLinks: content.socialLinks.filter(
       (link) => link.label.trim().length > 0 && link.href.trim().length > 0
     ),

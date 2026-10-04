@@ -143,6 +143,33 @@ export const DEFAULT_MASS_PRODUCTION_SAMPLES = [
   { id: "majo", name: "魔女", image: null },
 ] satisfies NonNullable<PortfolioContent["massProductionSamples"]>;
 
+/**
+ * よくある質問の初期値。料金表・ご依頼フォーム・お願い・制作の流れに書いてあることだけで答え、
+ * 新しい約束は足さない。旧DB行にも読込時にこの内容を補い、編集画面で書き換えられる。
+ */
+export const DEFAULT_PORTFOLIO_FAQS = [
+  {
+    question: "予算が決まっていなくても相談できますか？",
+    answer:
+      "はい。ご依頼フォームのご予算で「未定・相談して決めたい」を選んでお送りください。内容を確認したうえで、お返事します。",
+  },
+  {
+    question: "キャラクターの資料がなくても大丈夫ですか？",
+    answer:
+      "資料がまだそろっていなくても、まずはお気軽にご相談ください。ご依頼の際は、できるだけ詳細な資料・イメージをご提示いただけると助かります。",
+  },
+  {
+    question: "商用利用はできますか？",
+    answer:
+      "できます。追加オプションの「商用利用」をお選びください。ご依頼の際に、商用利用の有無を事前にお知らせください。",
+  },
+  {
+    question: "「サンプル使用不可」と「完全非公開」はどう違いますか？",
+    answer:
+      "サンプル使用不可は、完成イラストをポートフォリオ・SNS・サンプル画像などに掲載しないオプションです。完全非公開は、制作内容・完成イラストを含めて一切公開せず、ご依頼内容も非公開で対応します。",
+  },
+] satisfies NonNullable<PortfolioContent["faqs"]>;
+
 export const defaultPortfolioContent: PortfolioContent = {
   commissionOpen: true,
   massProductionIllustrationOpen: true,
@@ -280,6 +307,7 @@ export const defaultPortfolioContent: PortfolioContent = {
     "大幅な修正はラフ段階でお願いいたします",
     "制作した作品は実績として掲載する場合があります（不可の場合は事前にご相談ください）",
   ],
+  faqs: DEFAULT_PORTFOLIO_FAQS.map((faq) => ({ ...faq })),
   socialLinks: [
     { label: "X (Twitter)", href: "https://x.com/natonato_o" },
     { label: "つなぐ", href: "https://tsunagu.cloud/users/natonato_o" },
