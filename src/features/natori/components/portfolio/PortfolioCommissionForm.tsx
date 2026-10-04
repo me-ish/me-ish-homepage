@@ -356,7 +356,8 @@ function PortfolioCommissionFormSession({
             className="space-y-5 rounded-2xl p-6 md:p-8"
             style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
           >
-            <fieldset className="contents" disabled={intake.frozen || status === "sending"}>
+            {/* form の space-y-5 は display:contents の fieldset の中まで届かないので、行の間隔はここで付ける */}
+            <fieldset className="contents space-y-5" disabled={intake.frozen || status === "sending"}>
             <input
               type="text"
               name="website"
@@ -390,7 +391,8 @@ function PortfolioCommissionFormSession({
               ))}
             </ol>
 
-            <div hidden={legacyReview || (legacyMode === "quote" && legacyStep === 0)} className="grid gap-5 sm:grid-cols-2">
+            {/* Tailwind の .grid は hidden 属性より強いので、grid は表示中の行だけに付ける */}
+            <div hidden={legacyReview || (legacyMode === "quote" && legacyStep === 0)} className="gap-5 sm:grid-cols-2 [&:not([hidden])]:grid">
               <div>
                 <label htmlFor="pf-name" className={labelClass}>
                   お名前（活動名でOK）<span style={{ color: c.error }}>＊</span>
@@ -420,7 +422,7 @@ function PortfolioCommissionFormSession({
               </div>
             </div>
 
-            <div hidden={legacyMode !== "quote" || legacyStep !== 0} className="grid gap-5 sm:grid-cols-2">
+            <div hidden={legacyMode !== "quote" || legacyStep !== 0} className="gap-5 sm:grid-cols-2 [&:not([hidden])]:grid">
               <div>
                 <label htmlFor="pf-type" className={labelClass}>ご依頼の種類</label>
                 <select
@@ -475,7 +477,7 @@ function PortfolioCommissionFormSession({
               </div>
             </fieldset>
 
-            <div hidden={legacyMode !== "quote" || legacyStep !== 1} className="grid gap-5 sm:grid-cols-2">
+            <div hidden={legacyMode !== "quote" || legacyStep !== 1} className="gap-5 sm:grid-cols-2 [&:not([hidden])]:grid">
               <div>
                 <label htmlFor="pf-budget" className={labelClass}>ご予算</label>
                 <select
