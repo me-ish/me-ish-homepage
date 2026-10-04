@@ -5,6 +5,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("../PortfolioAbout", () => ({
   default: () => <section id="about" data-section="about"><h2>プロフィール</h2></section>,
 }));
+vi.mock("../PortfolioFaq", () => ({
+  default: () => <section id="faq" data-section="faq"><h2>よくある質問</h2></section>,
+}));
 vi.mock("../PortfolioFooter", () => ({
   default: () => <footer data-section="footer" />,
 }));
@@ -65,6 +68,7 @@ describe("PF-01 portfolio information architecture", () => {
       "workflow",
       "about",
       "guidelines",
+      "faq",
       "mobile-cta",
       "footer",
     ]);
@@ -91,7 +95,7 @@ describe("PF-01 portfolio information architecture", () => {
     const headingLevels = screen
       .getAllByRole("heading")
       .map((heading) => Number(heading.tagName.slice(1)));
-    expect(headingLevels).toEqual([1, 2, 2, 2, 2, 2, 2]);
+    expect(headingLevels).toEqual([1, 2, 2, 2, 2, 2, 2, 2]);
   });
 
   it("keeps showcase limited to works and profile", () => {
@@ -108,5 +112,6 @@ describe("PF-01 portfolio information architecture", () => {
     expect(document.querySelector("#pricing")).toBeNull();
     expect(document.querySelector("#flow")).toBeNull();
     expect(document.querySelector("#form")).toBeNull();
+    expect(document.querySelector("#faq")).toBeNull();
   });
 });

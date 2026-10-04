@@ -25,8 +25,8 @@ export default function PortfolioStyles() {
       @media (min-width: 768px) { .pf-hero-frame { width: min(42vw, calc(70vh * 0.8 + 1rem)); width: round(down, min(42vw, calc(70vh * 0.8 + 1rem)), 1px); max-width: none; } }
       @media (min-width: 1024px) { .pf-hero-frame { width: min(34rem, calc(70vh * 0.8 + 1rem)); width: round(down, min(34rem, calc(70vh * 0.8 + 1rem)), 1px); } }
       /* 見出しの上に添える英字の小見出し（飾り）。content の「/ ""」で読み上げには含めない。
-         制作の流れ（PortfolioWorkflow.tsx）は CI が中身を固定しているため、4つともここで付ける。 */
-      .pf-portfolio-root :is(#gallery, #pricing, #about) h2::before,
+         制作の流れ（PortfolioWorkflow.tsx）は CI が中身を固定しているため、すべてここで付ける。 */
+      .pf-portfolio-root :is(#gallery, #pricing, #about, #faq) h2::before,
       .pf-portfolio-root #flow > div > div:first-child > h2::before {
         display: block;
         margin-bottom: 0.5rem;
@@ -41,6 +41,7 @@ export default function PortfolioStyles() {
       .pf-portfolio-root #pricing h2::before { content: "PRICE" / ""; }
       .pf-portfolio-root #flow > div > div:first-child > h2::before { content: "FLOW" / ""; }
       .pf-portfolio-root #about h2::before { content: "PROFILE" / ""; }
+      .pf-portfolio-root #faq h2::before { content: "FAQ" / ""; }
       .pf-form-control { border-color: ${c.formBorder}; }
       .pf-form-control::placeholder { font-size: 0.875rem; }
       .pf-choice-control {
