@@ -9,10 +9,13 @@ import { isPublicStructuredIntakeEnabled } from "@/features/natori/server/public
 
 export const dynamic = "force-dynamic";
 
-const title = "Natori* illust – Commission Portfolio";
+// 呼び名はヘッダー・見出し・共有画像と同じ「ナトリのあとりえ」にそろえる。
+// 共有画像は /og/natori-portfolio.png（app/og/natori-portfolio.png/route.ts）が掲載内容から作る。
+const title = "ナトリのあとりえ｜イラストのご依頼";
 const description =
-  "淡いピンクや水色を基調とした、やわらかく可愛い女の子のイラストのコミッションポートフォリオ。ご依頼実績・料金・ご依頼フォーム。";
+  "イラストレーター・ナトリのご依頼ページ。淡いピンクや水色を基調とした、表情ゆたかな女の子のイラストのご依頼実績・料金・ご相談フォーム。";
 const siteUrl = "https://www.me-ish.art/natori/portfolio";
+const shareImage = { url: "/og/natori-portfolio.png", width: 1200, height: 630, alt: title, type: "image/png" };
 
 export const metadata: Metadata = {
   title,
@@ -21,11 +24,15 @@ export const metadata: Metadata = {
     title,
     description,
     url: siteUrl,
+    siteName: "ナトリのあとりえ",
+    type: "website",
+    images: [shareImage],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title,
     description,
+    images: [shareImage],
   },
 };
 

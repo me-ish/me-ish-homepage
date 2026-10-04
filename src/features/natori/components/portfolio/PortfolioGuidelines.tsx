@@ -82,7 +82,7 @@ export default function PortfolioGuidelines({ content }: { content: PortfolioCon
                 <h3
                   id={headingId}
                   className="mb-3 text-base font-black md:text-lg"
-                  style={{ color: c.accentDisplay }}
+                  style={{ color: c.text }}
                 >
                   {group.title}
                 </h3>
@@ -91,7 +91,7 @@ export default function PortfolioGuidelines({ content }: { content: PortfolioCon
                     <li key={`${request}-${index}`} className="flex items-start gap-2.5">
                       <span
                         className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ background: c.accent }}
+                        style={{ background: c.action }}
                         aria-hidden="true"
                       />
                       <span style={{ color: c.textSoft }}>{request}</span>

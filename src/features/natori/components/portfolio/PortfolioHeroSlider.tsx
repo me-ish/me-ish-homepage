@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 
@@ -200,6 +200,10 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
     ? direction === 1 ? "-66.666667%" : "0%"
     : `calc(-33.333333% + ${dragX}px)`;
 
+  const pauseLabel = reducedMotion ? "自動送り停止中" : manualPaused ? "自動送りを再開" : "自動送りを停止";
+  const controlButtonClassName =
+    "pf-cute-focus grid h-9 w-9 shrink-0 place-items-center rounded-full disabled:cursor-default";
+
   return (
     <div
       ref={rootRef}
@@ -217,104 +221,123 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
         }
       }}
     >
+      {/* 作品を額のように白い余白で囲み、テープで留める。枠は縦長（4:5）で、絵は切らずに収める。 */}
       <div
-        ref={surfaceRef}
-        data-testid="hero-slide-surface"
-        className="relative aspect-square touch-pan-y select-none overflow-hidden rounded-2xl border"
-        style={{ background: c.surfaceSubtle, borderColor: c.borderSubtle }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={cancelTouch}
+        className="pf-hero-frame relative rounded-[1.25rem] p-2"
+        style={{ background: c.surface, boxShadow: `0 18px 40px ${c.shadowSoft}, 0 2px 8px ${c.shadowSoft}` }}
       >
-        <div
-          data-testid="hero-slide-track"
-          className="absolute inset-y-0 left-0 flex w-[300%]"
+        <span
+          className="absolute -top-3 left-1/2 z-10 h-6 w-24 -translate-x-1/2 -rotate-3 rounded-[2px] md:w-28"
+          aria-hidden="true"
           style={{
-            transform: `translate3d(${trackPosition}, 0, 0)`,
-            transition: animating ? "transform 420ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
+            background: `linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0) 50%), ${c.actionSoft}`,
+            opacity: 0.92,
+            boxShadow: `0 1px 2px ${c.shadowHover}`,
           }}
-          onTransitionEnd={settleTransition}
+        />
+        <div
+          ref={surfaceRef}
+          data-testid="hero-slide-surface"
+          className="relative aspect-[4/5] w-full touch-pan-y select-none overflow-hidden rounded-xl"
+          style={{ background: c.surfaceSubtle }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={cancelTouch}
         >
-          {[previousSlide, activeSlide, nextSlide].map((slide, slot) => (
-            <div key={`${slot}-${slide.src}`} className="relative h-full w-1/3 shrink-0" aria-hidden={slot !== 1}>
-              <Image
-                src={slide.src}
-                alt={slot === 1 ? slide.alt : ""}
-                fill
-                priority={slot === 1 && activeIndex === 0}
-                loading={slot === 1 && activeIndex === 0 ? undefined : "eager"}
-                sizes="(min-width: 1024px) 512px, (min-width: 768px) 46vw, calc(100vw - 40px)"
-                className="pointer-events-none object-contain"
-                draggable={false}
-              />
-            </div>
-          ))}
+          <div
+            data-testid="hero-slide-track"
+            className="absolute inset-y-0 left-0 flex w-[300%]"
+            style={{
+              transform: `translate3d(${trackPosition}, 0, 0)`,
+              transition: animating ? "transform 420ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
+            }}
+            onTransitionEnd={settleTransition}
+          >
+            {[previousSlide, activeSlide, nextSlide].map((slide, slot) => (
+              <div key={`${slot}-${slide.src}`} className="relative h-full w-1/3 shrink-0" aria-hidden={slot !== 1}>
+                <Image
+                  src={slide.src}
+                  alt={slot === 1 ? slide.alt : ""}
+                  fill
+                  priority={slot === 1 && activeIndex === 0}
+                  loading={slot === 1 && activeIndex === 0 ? undefined : "eager"}
+                  sizes="(min-width: 1024px) 528px, (min-width: 768px) 42vw, calc(100vw - 56px)"
+                  className="pointer-events-none object-contain"
+                  draggable={false}
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
+        {/* 操作は絵の顔まわりにかからないよう、右下の1つの部品にまとめる。 */}
         {hasMultiple ? (
-          <>
+          <div
+            className="absolute bottom-4 right-4 flex items-center rounded-full p-0.5 shadow-sm backdrop-blur"
+            style={{ background: c.pageTranslucent, color: c.text, boxShadow: `0 4px 12px ${c.shadowHover}` }}
+          >
             <button
               type="button"
               onClick={() => startTransition(activeIndex - 1, -1)}
-              className="pf-cute-focus absolute left-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border bg-white/90 shadow-sm backdrop-blur hover:bg-white"
-              style={{ borderColor: c.borderSubtle, color: c.text }}
+              className={controlButtonClassName}
               aria-label="前の作品"
             >
-              <ChevronLeft className="h-5 w-5" aria-hidden />
+              <ChevronLeft className="h-4 w-4" aria-hidden />
             </button>
+            <div role="group" className="flex items-center" aria-label="表示する作品を選択">
+              {slides.map((slide, index) => (
+                <button
+                  key={`${slide.src}-${index}`}
+                  type="button"
+                  onClick={() => startTransition(index, index > activeIndex ? 1 : -1)}
+                  className="pf-cute-focus grid h-9 w-6 place-items-center rounded-full"
+                  aria-label={`${index + 1}枚目を表示`}
+                  aria-current={index === activeIndex ? "true" : undefined}
+                >
+                  <span
+                    className="block h-2 rounded-full"
+                    style={{
+                      width: index === activeIndex ? "1rem" : "0.5rem",
+                      background: index === activeIndex ? c.action : c.formBorder,
+                    }}
+                    aria-hidden="true"
+                  />
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               onClick={() => startTransition(activeIndex + 1, 1)}
-              className="pf-cute-focus absolute right-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border bg-white/90 shadow-sm backdrop-blur hover:bg-white"
-              style={{ borderColor: c.borderSubtle, color: c.text }}
+              className={controlButtonClassName}
               aria-label="次の作品"
             >
-              <ChevronRight className="h-5 w-5" aria-hidden />
+              <ChevronRight className="h-4 w-4" aria-hidden />
             </button>
-          </>
+            <span className="mx-0.5 h-5 w-px" style={{ background: c.borderSubtle }} aria-hidden="true" />
+            <button
+              type="button"
+              onClick={() => setManualPaused((current) => !current)}
+              disabled={reducedMotion}
+              aria-pressed={manualPaused || reducedMotion}
+              aria-label={pauseLabel}
+              title={pauseLabel}
+              className={controlButtonClassName}
+            >
+              {/* 押すと絵柄が入れ替わるので、カーソルの下の要素が消えて「離れた」ことを取りこぼさないよう、アイコンはクリック対象にしない。 */}
+              {manualPaused || reducedMotion ? (
+                <Play className="pointer-events-none h-3.5 w-3.5" fill="currentColor" aria-hidden />
+              ) : (
+                <Pause className="pointer-events-none h-3.5 w-3.5" fill="currentColor" aria-hidden />
+              )}
+            </button>
+          </div>
         ) : null}
       </div>
-
-      {hasMultiple ? (
-        <div className="mt-3 flex flex-col items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setManualPaused((current) => !current)}
-            disabled={reducedMotion}
-            aria-pressed={manualPaused || reducedMotion}
-            className="pf-cute-focus min-h-11 rounded-full border px-4 py-2 text-xs font-bold disabled:cursor-default"
-            style={{ background: c.surface, borderColor: c.borderStrong, color: c.text }}
-          >
-            {reducedMotion ? "自動送り停止中" : manualPaused ? "自動送りを再開" : "自動送りを停止"}
-          </button>
-          {reducedMotion ? <p className="text-xs" style={{ color: c.textSoft }}>動きを減らす設定により、自動送りは停止しています。</p> : null}
-        </div>
-      ) : null}
-
-      {hasMultiple ? (
-        <div className="mt-3 flex items-center justify-center gap-2" aria-label="表示する作品を選択">
-          {slides.map((slide, index) => (
-            <button
-              key={`${slide.src}-${index}`}
-              type="button"
-              onClick={() => startTransition(index, index > activeIndex ? 1 : -1)}
-              className="pf-cute-focus grid h-8 w-8 place-items-center rounded-full"
-              aria-label={`${index + 1}枚目を表示`}
-              aria-current={index === activeIndex ? "true" : undefined}
-            >
-              <span
-                className="block h-2.5 w-2.5 rounded-full transition-transform"
-                style={{
-                  background: c.action,
-                  opacity: index === activeIndex ? 1 : 0.25,
-                  transform: index === activeIndex ? "scale(1.2)" : undefined,
-                }}
-                aria-hidden="true"
-              />
-            </button>
-          ))}
-        </div>
+      {hasMultiple && reducedMotion ? (
+        <p className="mt-2 text-center text-[13px]" style={{ color: c.textSoft }}>
+          動きを減らす設定により、自動送りは停止しています。
+        </p>
       ) : null}
     </div>
   );

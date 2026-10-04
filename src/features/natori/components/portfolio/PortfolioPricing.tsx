@@ -74,24 +74,25 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
             >
               <div className="flex items-baseline justify-between gap-3">
                 <h3 className="min-w-0 font-bold">{plan.name}</h3>
-                <span className="shrink-0 font-bold" style={{ color: c.accentDisplay }}>
+                <span className="shrink-0 font-bold" style={{ color: c.text }}>
                   {startingPriceLabel(plan.price)}
                 </span>
               </div>
 
               <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-xs leading-5" style={{ color: c.textSoft }}>
+                  {/* スマホでも 13px。切らずに折り返して、説明を最後まで読めるようにする */}
+                  <p className="text-[13px] leading-5" style={{ color: c.textSoft }}>
                     {planDescription(plan.desc)}
                   </p>
                   {planSpecificFeatures.length > 0 ? (
-                    <ul className="mt-0.5 space-y-0.5 text-[11px] leading-4">
+                    <ul className="mt-0.5 space-y-0.5 text-[13px] leading-5">
                       {planSpecificFeatures.map((feature) => (
                         <li key={feature} className="flex items-start gap-1.5">
-                          <span style={{ color: c.success }} aria-hidden="true">
+                          <span style={{ color: c.actionText }} aria-hidden="true">
                             ✓
                           </span>
-                          <span className="truncate" style={{ color: c.textSoft }}>
+                          <span style={{ color: c.textSoft }}>
                             {feature}
                           </span>
                         </li>
@@ -103,7 +104,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                 <a
                   href={planHref(plan)}
                   onClick={() => trackPlan(plan.name)}
-                  className="pf-cute-focus inline-flex min-h-[32px] shrink-0 items-center justify-center rounded-full border-2 px-3 py-1 text-[11px] font-bold"
+                  className="pf-cute-focus inline-flex min-h-[32px] shrink-0 items-center justify-center rounded-full border-2 px-3 py-1 text-[13px] font-bold"
                   style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
                   aria-label={`${plan.name}を選ぶ`}
                 >
@@ -124,7 +125,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
             style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
           >
             <h3 className="mb-1 text-lg font-bold">{plan.name}</h3>
-            <p className="mb-2 text-2xl font-bold" style={{ color: c.accentDisplay }}>
+            <p className="mb-2 text-2xl font-bold" style={{ color: c.text }}>
               {startingPriceLabel(plan.price)}
             </p>
             <div className="mb-6 flex-1">
@@ -137,7 +138,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                     .filter((feature) => !commonFeatures.includes(feature))
                     .map((feature) => (
                       <li key={feature} className="flex items-start gap-2">
-                        <span style={{ color: c.success }} aria-hidden="true">
+                        <span style={{ color: c.actionText }} aria-hidden="true">
                           ✓
                         </span>
                         <span style={{ color: c.textSoft }}>{feature}</span>
@@ -161,15 +162,15 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
       {commonFeatures.length > 0 && (
         <div
           className="mx-auto mt-3 flex max-w-3xl items-start gap-2 rounded-xl px-3 py-2 sm:mt-6 sm:items-center sm:gap-3 sm:px-4 sm:py-3"
-          style={{ background: c.accentSoft }}
+          style={{ background: c.surfaceSubtle }}
         >
           <span
-            className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold sm:px-2.5 sm:py-1 sm:text-xs"
-            style={{ background: c.surface, color: c.accentText }}
+            className="shrink-0 rounded-full px-2 py-0.5 text-[13px] font-bold sm:px-2.5 sm:py-1"
+            style={{ background: c.surface, color: c.actionTextSmall }}
           >
             通常イラスト共通
           </span>
-          <p className="text-[11px] font-medium leading-5 sm:text-sm sm:leading-relaxed" style={{ color: c.textSoft }}>
+          <p className="text-[13px] font-medium leading-5 sm:text-sm sm:leading-relaxed" style={{ color: c.textSoft }}>
             表示価格には、{includedFeatures}が含まれます。
           </p>
         </div>
@@ -178,19 +179,19 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
       {/* 量産イラストは通常プランと条件が違うため、独立したコンパクト枠で案内する */}
       <div
         className="mx-auto mt-6 max-w-3xl rounded-2xl border-2 px-4 py-4 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-5 sm:px-5"
-        style={{ background: c.surface, borderColor: c.accent }}
+        style={{ background: c.surface, borderColor: c.actionSoft }}
       >
         <div className="min-w-0">
           <div className="flex items-baseline justify-between gap-3">
             <h3 className="font-black">量産イラスト</h3>
-            <p className="shrink-0 text-xl font-black" style={{ color: c.accentDisplay }}>
+            <p className="shrink-0 text-xl font-black" style={{ color: c.text }}>
               {startingPriceLabel(massProductionPrice)}
             </p>
           </div>
           <p className="mt-1 text-sm" style={{ color: c.textSoft }}>
             用意されたデザインから制作する、量産向けのイラストプランです。
           </p>
-          <p className="mt-1 text-xs leading-relaxed" style={{ color: c.textSoft }}>
+          <p className="mt-1 text-[13px] leading-relaxed" style={{ color: c.textSoft }}>
             ※量産イラストのため、原則としてリテイクはお受けしておりません。
           </p>
 
@@ -216,7 +217,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                     style={{ borderColor: c.borderSubtle }}
                   />
                   <figcaption
-                    className="mt-1 text-center text-[11px] font-bold"
+                    className="mt-1 text-center text-[13px] font-bold"
                     style={{ color: c.textSoft }}
                   >
                     {sample.name}
@@ -238,7 +239,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
           </a>
         ) : (
           <span
-            className="mt-3 block shrink-0 rounded-full px-4 py-2 text-center text-xs font-bold sm:mt-0"
+            className="mt-3 block shrink-0 rounded-full px-4 py-2 text-center text-[13px] font-bold sm:mt-0"
             style={{ background: c.surfaceSubtle, color: c.textSoft }}
           >
             現在受付停止中
@@ -260,7 +261,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
               style={{ borderColor: c.borderSubtle }}
             >
               <span style={{ color: c.textSoft }}>{option.name}</span>
-              <span className="shrink-0 font-bold" style={{ color: c.accentText }}>
+              <span className="shrink-0 font-bold" style={{ color: c.text }}>
                 {option.price}
               </span>
             </li>

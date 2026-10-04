@@ -19,6 +19,28 @@ export default function PortfolioStyles() {
           radial-gradient(circle at 22% 18%, ${c.accentSoft} 0%, transparent 42%),
           linear-gradient(145deg, ${c.surfaceSubtle}, ${c.surface});
       }
+      /* 1画面目の作品の額。スマホは相談ボタンまで1画面に入る高さ、PC は右列いっぱいの縦長（4:5）。
+         幅は整数pxに切り捨てる（端数があるとスライドの位置が1px未満ずれる）。round() 非対応の環境は1つ前の指定を使う。 */
+      .pf-hero-frame { margin-inline: auto; width: 100%; max-width: calc(48vh * 0.8 + 1rem); max-width: round(down, calc(48svh * 0.8 + 1rem), 1px); }
+      @media (min-width: 768px) { .pf-hero-frame { width: min(42vw, calc(70vh * 0.8 + 1rem)); width: round(down, min(42vw, calc(70vh * 0.8 + 1rem)), 1px); max-width: none; } }
+      @media (min-width: 1024px) { .pf-hero-frame { width: min(34rem, calc(70vh * 0.8 + 1rem)); width: round(down, min(34rem, calc(70vh * 0.8 + 1rem)), 1px); } }
+      /* 見出しの上に添える英字の小見出し（飾り）。content の「/ ""」で読み上げには含めない。
+         制作の流れ（PortfolioWorkflow.tsx）は CI が中身を固定しているため、4つともここで付ける。 */
+      .pf-portfolio-root :is(#gallery, #pricing, #about) h2::before,
+      .pf-portfolio-root #flow > div > div:first-child > h2::before {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-family: var(--pf-font-en);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.2em;
+        line-height: 1.2;
+        color: ${c.actionTextSmall};
+      }
+      .pf-portfolio-root #gallery h2::before { content: "WORKS" / ""; }
+      .pf-portfolio-root #pricing h2::before { content: "PRICE" / ""; }
+      .pf-portfolio-root #flow > div > div:first-child > h2::before { content: "FLOW" / ""; }
+      .pf-portfolio-root #about h2::before { content: "PROFILE" / ""; }
       .pf-form-control { border-color: ${c.formBorder}; }
       .pf-form-control::placeholder { font-size: 0.875rem; }
       .pf-choice-control {

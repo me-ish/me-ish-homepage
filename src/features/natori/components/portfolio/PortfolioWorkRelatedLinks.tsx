@@ -44,7 +44,7 @@ export default function PortfolioWorkRelatedLinks({
         if (groupLinks.length === 0) return null;
         return (
           <div key={group.kind}>
-            <p className="text-xs font-bold" style={{ color: c.textSoft }}>
+            <p className="text-[13px] font-bold" style={{ color: c.textSoft }}>
               {group.title}
             </p>
             <div className="mt-1.5 flex flex-wrap gap-2">
@@ -62,10 +62,10 @@ export default function PortfolioWorkRelatedLinks({
                         portfolioWorkLinkEventLabel(workTitle, link.kind, label),
                       )
                     }
-                    className="pf-cute-focus inline-flex min-h-[40px] items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-bold transition hover:-translate-y-0.5 hover:shadow-sm"
+                    className="pf-cute-focus inline-flex min-h-[40px] items-center gap-1.5 rounded-full border px-3 py-2 text-[13px] font-bold transition hover:-translate-y-0.5 hover:shadow-sm"
                     style={{
                       background: c.surface,
-                      borderColor: c.borderStrong,
+                      borderColor: c.action,
                       color: c.text,
                     }}
                   >

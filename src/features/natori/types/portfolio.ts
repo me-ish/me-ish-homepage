@@ -105,7 +105,7 @@ export type PortfolioContent = {
   massProductionIllustrationOpen: boolean;
   /** 量産イラスト作例。旧データ互換のため未設定を許容し、読込時に補完する */
   massProductionSamples?: PortfolioMassProductionSample[];
-  /** ヘッダーのサイト名 */
+  /** サイト名。ヘッダーでは呼び名（Heroタイトル）の下に小さく出し、Heroタイトルが空ならこれを呼び名にする */
   artistName: string;
   /** ヒーローの英字肩書き */
   roleEn: string;
