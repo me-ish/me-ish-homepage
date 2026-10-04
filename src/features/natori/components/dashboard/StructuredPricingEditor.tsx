@@ -61,14 +61,14 @@ export default function StructuredPricingEditor({ presetId, legacyConfig, onSave
 
   return (
     <section className="rounded-2xl border border-pink-200 bg-pink-50/50 p-4 shadow-sm">
-      <h2 className="text-sm font-black text-pink-950">商品別基本料金</h2>
+      <h2 className="text-sm font-bold text-pink-950">商品別基本料金</h2>
       <p className="mt-1 text-xs leading-5 text-pink-800">
         structured見積の基本料金です。胸上・腰上・全身の料金とは別に保存し、既存料金表は変更しません。
       </p>
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {BASES.map(([id, label]) => (
           <label key={id} className="rounded-xl border border-pink-200 bg-white p-3">
-            <span className="text-xs font-bold text-gray-700">{label}</span>
+            <span className="text-xs font-bold text-zinc-700">{label}</span>
             <div className="mt-1 flex items-center gap-2">
               <input
                 type="number"
@@ -79,7 +79,7 @@ export default function StructuredPricingEditor({ presetId, legacyConfig, onSave
                 className={`${natoriAdminUi.input} min-w-0 flex-1 text-right font-bold`}
                 placeholder="未設定"
               />
-              <span className="text-xs text-gray-500">円</span>
+              <span className="text-xs text-zinc-500">円</span>
             </div>
           </label>
         ))}
@@ -90,7 +90,7 @@ export default function StructuredPricingEditor({ presetId, legacyConfig, onSave
           {saving ? "保存中…" : "商品別料金を保存"}
         </Button>
         {!complete ? <p className="text-xs font-bold text-amber-700">4種類すべて入力してください。</p> : null}
-        {message ? <p className="text-xs text-gray-700">{message}</p> : null}
+        {message ? <p className="text-xs text-zinc-700">{message}</p> : null}
       </div>
     </section>
   );

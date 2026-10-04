@@ -118,14 +118,14 @@ export default function ProjectEditForm({
   const canSave = clientName.trim().length > 0 && title.trim().length > 0 && !saving;
 
   return (
-    <div className="rounded-2xl border border-pink-200 bg-pink-50/60 p-3 sm:p-4">
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 sm:p-4">
       <div className="flex items-center gap-2">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-pink-500 text-white">
-          <Pencil className="h-3.5 w-3.5" aria-hidden />
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-pink-50 text-[#DB2777] ring-1 ring-inset ring-pink-500/10">
+          <Pencil className="h-4 w-4" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-black text-pink-900">案件情報を編集</p>
-          <p className="text-xs text-pink-800/80">
+          <p className="text-sm font-bold text-zinc-900">案件情報を編集</p>
+          <p className="text-xs text-zinc-600">
             ステータスは変更されません。状態の進行は案件カードのボタンから行ってください。
           </p>
         </div>
@@ -133,7 +133,7 @@ export default function ProjectEditForm({
 
       <div className="mt-3 space-y-3">
         <label className="block text-sm">
-          <span className="block text-xs font-bold text-gray-600">
+          <span className="block text-xs font-bold text-zinc-600">
             依頼者名（必須）
           </span>
           <input
@@ -145,7 +145,7 @@ export default function ProjectEditForm({
         </label>
 
         <label className="block text-sm">
-          <span className="block text-xs font-bold text-gray-600">
+          <span className="block text-xs font-bold text-zinc-600">
             案件タイトル（必須）
           </span>
           <input
@@ -158,7 +158,7 @@ export default function ProjectEditForm({
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block text-sm">
-            <span className="block text-xs font-bold text-gray-600">
+            <span className="block text-xs font-bold text-zinc-600">
               案件タイプ
             </span>
             <select
@@ -179,7 +179,7 @@ export default function ProjectEditForm({
             </select>
           </label>
           <label className="block text-sm">
-            <span className="block text-xs font-bold text-gray-600">
+            <span className="block text-xs font-bold text-zinc-600">
               金額（円）
             </span>
             <input
@@ -191,15 +191,15 @@ export default function ProjectEditForm({
               className={`${natoriAdminUi.input} mt-1`}
             />
             {project.amount === null && !amount ? (
-              <span className="mt-1 block text-xs text-gray-500">
+              <span className="mt-1 block text-xs text-zinc-500">
                 金額未定のまま保存する場合、この欄は空欄にしてください。
               </span>
             ) : null}
           </label>
         </div>
 
-        <div className="rounded-2xl border border-pink-200 bg-white p-3">
-          <p className="text-xs font-bold text-gray-600">納期プラン</p>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-3">
+          <p className="text-xs font-bold text-zinc-600">納期プラン</p>
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
             {NATORI_DELIVERY_PLAN_ORDER.map((id) => {
               const meta = NATORI_DELIVERY_PLANS[id];
@@ -214,10 +214,10 @@ export default function ProjectEditForm({
                     "min-w-0 rounded-xl border px-3 py-2 text-left transition",
                     selected
                       ? cn(meta.chipClassName, "ring-2 ring-offset-1", meta.barAccentClassName)
-                      : "border-pink-200 bg-white text-pink-900 hover:border-pink-300"
+                      : "border-zinc-200 bg-white text-zinc-900 hover:border-zinc-300"
                   )}
                 >
-                  <p className="text-sm font-black leading-5">{meta.shortLabel}</p>
+                  <p className="text-sm font-bold leading-5">{meta.shortLabel}</p>
                   <p className="mt-0.5 text-xs leading-4 opacity-80">{meta.description}</p>
                 </button>
               );
@@ -227,7 +227,7 @@ export default function ProjectEditForm({
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block text-sm">
-            <span className="block text-xs font-bold text-gray-600">
+            <span className="block text-xs font-bold text-zinc-600">
               開始日
             </span>
             <input
@@ -238,7 +238,7 @@ export default function ProjectEditForm({
             />
           </label>
           <label className="block text-sm">
-            <span className="block text-xs font-bold text-gray-600">
+            <span className="block text-xs font-bold text-zinc-600">
               納期
             </span>
             <input
@@ -248,7 +248,7 @@ export default function ProjectEditForm({
               className={`${natoriAdminUi.input} mt-1`}
             />
             {project.dueDate === null && !dueDate ? (
-              <span className="mt-1 block text-xs text-gray-500">
+              <span className="mt-1 block text-xs text-zinc-500">
                 納期未定のまま保存する場合、この欄は空欄にしてください。
               </span>
             ) : null}
@@ -256,14 +256,14 @@ export default function ProjectEditForm({
         </div>
 
         <label className="block text-sm">
-          <span className="block text-xs font-bold text-gray-600">
+          <span className="block text-xs font-bold text-zinc-600">
             依頼内容・確認事項メモ
           </span>
           <Textarea
             value={note}
             onChange={(event) => setNote(event.target.value)}
             placeholder="依頼文、用途、サイズ、表情差分、商用利用、希望納期、確認事項、やり取りメモ等。"
-            className="mt-1 min-h-[120px] resize-y border-pink-200 bg-white text-sm leading-6 text-gray-900 focus-visible:ring-pink-300"
+            className="mt-1 min-h-[120px] resize-y border-zinc-200 bg-white text-sm leading-6 text-zinc-900 focus-visible:ring-[#BE185D]/30"
           />
         </label>
 
@@ -279,7 +279,7 @@ export default function ProjectEditForm({
             onClick={onCancel}
             disabled={saving}
             variant="outline"
-            className="h-10 rounded-full border-pink-300 bg-white px-4 text-xs font-bold text-pink-700 hover:bg-pink-50 disabled:opacity-60"
+            className="h-10 rounded-full border-zinc-200 bg-white px-4 text-xs font-bold text-[#BE185D] hover:bg-zinc-50 disabled:opacity-60"
           >
             <X className="h-3.5 w-3.5" aria-hidden />
             キャンセル

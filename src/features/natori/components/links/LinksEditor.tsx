@@ -204,12 +204,12 @@ export default function LinksEditor({ demoContent, publicHref, dashboardHref }: 
               ← ダッシュボード
             </Link>
           ) : null}
-          <h1 className="min-w-0 text-lg font-black text-gray-900">リンク集編集</h1>
+          <h1 className="min-w-0 text-lg font-bold text-zinc-900">リンク集編集</h1>
           <div className="ml-auto flex items-center gap-2">
             <Link
               href={publicHref ?? "/natori/links"}
               target="_blank"
-              className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
+              className="inline-flex items-center gap-1.5 rounded-full border border-zinc-300 bg-white px-4 py-2 text-xs font-bold text-zinc-800 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
             >
               <ExternalLink className="h-3.5 w-3.5" aria-hidden />
               公開ページを見る
@@ -318,7 +318,7 @@ export default function LinksEditor({ demoContent, publicHref, dashboardHref }: 
             ) : dirty ? (
               <span className="text-amber-600">未保存の変更があります</span>
             ) : (
-              <span className="text-gray-600">変更はありません</span>
+              <span className="text-zinc-600">変更はありません</span>
             )}
             {incompleteCount > 0 ? (
               <span className="ml-3 text-amber-700">

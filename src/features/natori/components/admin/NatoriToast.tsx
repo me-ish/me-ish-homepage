@@ -46,13 +46,13 @@ export function NatoriToastProvider({ children }: { children: React.ReactNode })
         className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4 lg:bottom-6"
       >
         {toast ? (
-          <div key={toast.id} className="pointer-events-auto flex max-w-sm items-start gap-3 rounded-xl bg-gray-900 px-4 py-3 text-sm text-white shadow-xl">
+          <div key={toast.id} className="pointer-events-auto flex max-w-sm items-start gap-3 rounded-xl bg-zinc-900 px-4 py-3 text-sm text-white shadow-xl">
             <p className="leading-6">{toast.message}</p>
             <button
               type="button"
               onClick={dismiss}
               aria-label="通知を閉じる"
-              className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-gray-300 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+              className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-zinc-300 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
             >
               <X className="h-4 w-4" aria-hidden />
             </button>

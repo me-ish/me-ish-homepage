@@ -59,7 +59,7 @@ export default function InquiryTypeConfirmation({
     <section aria-labelledby="inquiry-type-heading">
       <h3
         id="inquiry-type-heading"
-        className="mb-2 text-xs font-bold text-gray-600"
+        className="mb-2 text-xs font-bold text-zinc-600"
       >
         案件種別・制作タスク
       </h3>
@@ -74,14 +74,14 @@ export default function InquiryTypeConfirmation({
             <ListChecks className="h-3.5 w-3.5 shrink-0" aria-hidden />
             制作タスク {taskCount} 件を作成済み
           </p>
-          <p className="mt-2 text-xs leading-5 text-gray-700">
+          <p className="mt-2 text-xs leading-5 text-zinc-700">
             種別の変更は既存タスクの作り直しを伴うため、この画面からは行えません。
             変更が必要な場合は案件ボードで個別に対応してください。
           </p>
         </div>
       ) : (
-        <div className="rounded-xl border border-pink-100 bg-white p-3 shadow-sm">
-          <p className="mb-2 text-xs leading-5 text-gray-700">
+        <div className="rounded-xl border border-zinc-200/80 bg-white p-3 shadow-sm">
+          <p className="mb-2 text-xs leading-5 text-zinc-700">
             依頼内容から候補が分かる場合だけ初期選択します。内容を確認してから確定してください。
             確定すると制作タスクが自動で作成され、ここからは変更できません。
           </p>
@@ -89,7 +89,7 @@ export default function InquiryTypeConfirmation({
             <div>
               <label
                 htmlFor="inquiry-type-select"
-                className="mb-1 block text-xs font-bold text-gray-600"
+                className="mb-1 block text-xs font-bold text-zinc-600"
               >
                 案件種別
               </label>

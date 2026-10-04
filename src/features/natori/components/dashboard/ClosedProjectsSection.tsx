@@ -38,27 +38,27 @@ export default function ClosedProjectsSection({
   if (projects.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl p-3 text-left hover:bg-gray-50 sm:p-4"
+        className="flex w-full items-center justify-between gap-3 rounded-2xl p-3 text-left hover:bg-zinc-50 sm:p-4"
       >
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-500 text-white">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-zinc-500 text-white">
             <Archive className="h-4 w-4" aria-hidden />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-gray-900">
+            <p className="text-sm font-bold text-zinc-900">
               見送りした相談 {projects.length}件
             </p>
-            <p className="mt-0.5 text-xs text-gray-600">
+            <p className="mt-0.5 text-xs text-zinc-600">
               条件がまとまらなかった相談の記録です。再依頼が来たら「依頼受付に戻す」で復帰できます。
             </p>
           </div>
         </div>
-        <span className="shrink-0 text-gray-500">
+        <span className="shrink-0 text-zinc-500">
           {open ? (
             <ChevronUp className="h-5 w-5" aria-hidden />
           ) : (
@@ -68,24 +68,24 @@ export default function ClosedProjectsSection({
       </button>
 
       {open ? (
-        <ul className="flex flex-col gap-2 border-t border-gray-200 px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
+        <ul className="flex flex-col gap-2 border-t border-zinc-200 px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
           {projects.map((project) => {
             const busy = busyId === project.id;
             const reason = extractCloseReason(project.note);
             return (
               <li
                 key={project.id}
-                className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-gray-50/60 p-3 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-2 rounded-2xl border border-zinc-200 bg-zinc-50/60 p-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
-                  <p className="min-w-0 break-words text-sm font-bold text-gray-700">
+                  <p className="min-w-0 break-words text-sm font-bold text-zinc-700">
                     {project.clientName}｜{project.title}
                   </p>
                   {reason ? (
-                    <p className="mt-0.5 break-words text-xs text-gray-500">見送り {reason}</p>
+                    <p className="mt-0.5 break-words text-xs text-zinc-500">見送り {reason}</p>
                   ) : null}
                 </div>
-                {project.consultation !== undefined ? <div className="space-y-1"><ConsultationStatus project={project} /><Link href={staffConsultationHref(project.id)} className="inline-flex min-h-10 items-center text-sm font-bold text-pink-700 underline">相談履歴</Link></div> : null}
+                {project.consultation !== undefined ? <div className="space-y-1"><ConsultationStatus project={project} /><Link href={staffConsultationHref(project.id)} className="inline-flex min-h-10 items-center text-sm font-bold text-[#BE185D] underline">相談履歴</Link></div> : null}
                 <div className="flex shrink-0 flex-wrap items-center gap-3">
                   <button
                     type="button"

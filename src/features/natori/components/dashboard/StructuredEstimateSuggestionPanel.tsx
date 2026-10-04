@@ -92,8 +92,8 @@ export default function StructuredEstimateSuggestionPanel({
           Stable ID 見積候補
         </p>
         <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-          <h3 className="text-lg font-black text-violet-950">公開料金からの自動候補</h3>
-          <span className="text-2xl font-black text-violet-950">
+          <h3 className="text-lg font-bold text-violet-950">公開料金からの自動候補</h3>
+          <span className="text-2xl font-bold text-violet-950">
             {formatYen(suggestion.total)}
           </span>
         </div>
@@ -103,31 +103,31 @@ export default function StructuredEstimateSuggestionPanel({
       </div>
 
       <div>
-        <h4 className="text-sm font-bold text-gray-900">自動候補明細</h4>
+        <h4 className="text-sm font-bold text-zinc-900">自動候補明細</h4>
         {suggestion.automaticItems.length > 0 ? (
           <ul className="mt-2 divide-y divide-violet-100 rounded-xl border border-violet-200 bg-white">
             {suggestion.automaticItems.map((item) => (
               <li key={item.id} className="flex flex-col gap-1 px-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <p className="font-bold text-gray-900">{item.labelSnapshot}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="font-bold text-zinc-900">{item.labelSnapshot}</p>
+                  <p className="text-xs text-zinc-500">
                     {item.ruleId} / {item.sourceFields.join("・")}
                     {item.quantity > 1 ? ` / 数量 ${item.quantity}` : ""}
                   </p>
                 </div>
-                <span className="shrink-0 font-black text-gray-900">{formatYen(item.amount)}</span>
+                <span className="shrink-0 font-bold text-zinc-900">{formatYen(item.amount)}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="mt-2 rounded-xl border border-violet-200 bg-white px-3 py-3 text-sm text-gray-600">
+          <p className="mt-2 rounded-xl border border-violet-200 bg-white px-3 py-3 text-sm text-zinc-600">
             自動採用できる明細はありません。
           </p>
         )}
       </div>
 
       <div>
-        <h4 className="text-sm font-bold text-gray-900">確認が必要な項目</h4>
+        <h4 className="text-sm font-bold text-zinc-900">確認が必要な項目</h4>
         {suggestion.reviewItems.length > 0 ? (
           <ul className="mt-2 space-y-2">
             {suggestion.reviewItems.map((item) => (
@@ -149,9 +149,9 @@ export default function StructuredEstimateSuggestionPanel({
                     aria-hidden
                   />
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-gray-900">{item.title}</p>
-                    <p className="mt-1 text-xs leading-5 text-gray-700">{item.action}</p>
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="text-sm font-bold text-zinc-900">{item.title}</p>
+                    <p className="mt-1 text-xs leading-5 text-zinc-700">{item.action}</p>
+                    <p className="mt-1 text-xs text-zinc-500">
                       {item.sourceField} / {item.ruleId}
                     </p>
                   </div>
@@ -167,13 +167,13 @@ export default function StructuredEstimateSuggestionPanel({
         )}
       </div>
 
-      <details className="rounded-xl border border-gray-200 bg-white px-3 py-2">
-        <summary className="cursor-pointer text-sm font-bold text-gray-800">
+      <details className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+        <summary className="cursor-pointer text-sm font-bold text-zinc-800">
           自動料金化しない入力
         </summary>
         <ul className="mt-2 space-y-2">
           {suggestion.ignoredFields.map((field) => (
-            <li key={field.sourceField} className="flex gap-2 text-xs leading-5 text-gray-600">
+            <li key={field.sourceField} className="flex gap-2 text-xs leading-5 text-zinc-600">
               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
               <span>
                 <strong>{field.sourceField}</strong>：{field.reason}

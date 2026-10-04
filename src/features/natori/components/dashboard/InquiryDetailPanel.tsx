@@ -161,21 +161,21 @@ export default function InquiryDetailPanel({
     <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
       <DialogContent hideCloseButton aria-describedby={undefined} aria-label="問い合わせの詳細"
         onCloseAutoFocus={event => { event.preventDefault(); returnFocus.current?.focus(); }}
-        className="flex h-[100dvh] w-full max-w-2xl flex-col gap-0 border border-pink-100 bg-white p-0 shadow-xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl">
+        className="flex h-[100dvh] w-full max-w-2xl flex-col gap-0 border border-zinc-200/80 bg-white p-0 shadow-xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl">
         {/* ヘッダー */}
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-pink-100 p-4 sm:p-5">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-zinc-200/80 p-4 sm:p-5">
           <div className="min-w-0">
             {screen === "conversation" ? (
               <button
                 type="button"
                 onClick={() => setScreen("overview")}
-                className="mb-2 inline-flex items-center gap-1 text-sm font-bold text-pink-700"
+                className="mb-2 inline-flex items-center gap-1 text-sm font-bold text-[#BE185D]"
               >
                 <ArrowLeft className="h-4 w-4" aria-hidden /> 案件詳細へ戻る
               </button>
             ) : null}
             <div className="flex flex-wrap items-center gap-2">
-              <DialogTitle className="break-words text-base font-black text-gray-900">
+              <DialogTitle className="break-words text-base font-bold text-zinc-900">
                 {screen === "conversation"
                   ? `${project.clientName}さんとの相談`
                   : `${project.clientName}｜${project.title}`}
@@ -195,15 +195,15 @@ export default function InquiryDetailPanel({
               {onRetryRefresh ? <button type="button" onClick={onRetryRefresh} className="ml-2 min-h-8 font-bold underline">案件情報を再取得</button> : null}
             </div> : null}
             {screen === "overview" ? (
-              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
+              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-600">
                 <span className="inline-flex items-center gap-1">
                   <CalendarDays className="h-3.5 w-3.5" aria-hidden />
                   受付 {formatDate(receivedISO)}
                 </span>
-                <span className="font-bold text-gray-900">
+                <span className="font-bold text-zinc-900">
                   {formatNatoriProjectAmount(project.amount)}
                 </span>
-                <span className="font-bold text-gray-900">
+                <span className="font-bold text-zinc-900">
                   種別 {NATORI_PROJECT_TYPE_LABELS[project.type]}
                 </span>
                 {view.email ? (
@@ -243,7 +243,7 @@ export default function InquiryDetailPanel({
           <InquiryRequestSummary view={requestView} />
 
           {archived ? (
-            <p className="rounded-xl border border-gray-300 bg-gray-50 p-3 text-xs text-gray-600">
+            <p className="rounded-xl border border-zinc-300 bg-zinc-50 p-3 text-xs text-zinc-600">
               アーカイブ済みの案件です。内容の閲覧のみ可能で、確定・編集はできません。
             </p>
           ) : null}
@@ -254,13 +254,13 @@ export default function InquiryDetailPanel({
               <h3 className={`mb-2 ${natoriAdminUi.groupLabel}`}>
                 ご依頼内容
               </h3>
-              <dl className="grid grid-cols-1 gap-x-4 gap-y-1.5 rounded-xl border border-pink-100 bg-pink-50/40 p-3 text-sm sm:grid-cols-2">
+              <dl className="grid grid-cols-1 gap-x-4 gap-y-1.5 rounded-xl border border-zinc-200/80 bg-zinc-50 p-3 text-sm sm:grid-cols-2">
                 {view.fields.map((field) => (
                   <div key={field.label} className="flex min-w-0 gap-2">
-                    <dt className="shrink-0 font-bold text-gray-600">
+                    <dt className="shrink-0 font-bold text-zinc-600">
                       {field.label}:
                     </dt>
-                    <dd className="min-w-0 break-words text-gray-900">
+                    <dd className="min-w-0 break-words text-zinc-900">
                       {field.value}
                     </dd>
                   </div>
@@ -293,7 +293,7 @@ export default function InquiryDetailPanel({
                             <img
                               src={url}
                               alt={`添付画像 ${index + 1}`}
-                              className="h-24 w-24 rounded-lg border border-pink-200 object-cover transition hover:opacity-80"
+                              className="h-24 w-24 rounded-lg border border-zinc-200 object-cover transition hover:opacity-80"
                             />
                           </a>
                         </li>
@@ -301,7 +301,7 @@ export default function InquiryDetailPanel({
                     </ul>
                   ) : null}
                   {view.refText ? (
-                    <p className="mt-2 whitespace-pre-wrap break-words rounded-xl border border-pink-100 bg-pink-50/40 p-3 text-sm text-gray-900">
+                    <p className="mt-2 whitespace-pre-wrap break-words rounded-xl border border-zinc-200/80 bg-zinc-50 p-3 text-sm text-zinc-900">
                       {view.refText}
                     </p>
                   ) : null}
@@ -315,13 +315,13 @@ export default function InquiryDetailPanel({
                   {referenceLinks.map((link) => (
                     <li
                       key={link.id}
-                      className="rounded-xl border border-pink-100 bg-white p-3 text-sm"
+                      className="rounded-xl border border-zinc-200/80 bg-white p-3 text-sm"
                     >
                       <a
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer nofollow"
-                        className="block break-all font-bold text-pink-800 underline underline-offset-2"
+                        className="block break-all font-bold text-[#9D174D] underline underline-offset-2"
                       >
                         {link.label || link.url}
                       </a>
@@ -338,7 +338,7 @@ export default function InquiryDetailPanel({
               <h3 className={`mb-2 ${natoriAdminUi.groupLabel}`}>
                 ご依頼の詳細
               </h3>
-              <p className="whitespace-pre-wrap break-words rounded-xl border border-pink-100 bg-white p-3 text-sm leading-6 text-gray-900 shadow-sm">
+              <p className="whitespace-pre-wrap break-words rounded-xl border border-zinc-200/80 bg-white p-3 text-sm leading-6 text-zinc-900 shadow-sm">
                 {view.details}
               </p>
             </section>
@@ -348,7 +348,7 @@ export default function InquiryDetailPanel({
               <h3 className={`mb-2 ${natoriAdminUi.groupLabel}`}>
                 その他・ご質問
               </h3>
-              <p className="whitespace-pre-wrap break-words rounded-xl border border-pink-100 bg-white p-3 text-sm leading-6 text-gray-900 shadow-sm">
+              <p className="whitespace-pre-wrap break-words rounded-xl border border-zinc-200/80 bg-white p-3 text-sm leading-6 text-zinc-900 shadow-sm">
                 {view.message}
               </p>
             </section>
@@ -360,18 +360,18 @@ export default function InquiryDetailPanel({
               <h3 className={`mb-2 ${natoriAdminUi.groupLabel}`}>
                 メモ
               </h3>
-              <p className="whitespace-pre-wrap break-words rounded-xl border border-pink-100 bg-white p-3 text-sm leading-6 text-gray-900 shadow-sm">
+              <p className="whitespace-pre-wrap break-words rounded-xl border border-zinc-200/80 bg-white p-3 text-sm leading-6 text-zinc-900 shadow-sm">
                 {view.plainNote}
               </p>
             </section>
           ) : null}
 
           {!demoMode ? (
-            <section className="rounded-xl border border-pink-200 bg-pink-50/40 p-4">
-              <h3 className="text-sm font-bold text-gray-900">
+            <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+              <h3 className="text-sm font-bold text-zinc-900">
                 相談のやり取り
               </h3>
-              <p className="mt-1 text-xs text-gray-600">
+              <p className="mt-1 text-xs text-zinc-600">
                 依頼者との会話と添付ファイルを確認できます。
               </p>
               <button
@@ -386,15 +386,15 @@ export default function InquiryDetailPanel({
           ) : null}
           <InquiryReviewWarnings warnings={reviewWarnings} />
 
-          <details className="group rounded-xl border border-pink-100 bg-white">
-            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-bold text-pink-800 marker:hidden [&::-webkit-details-marker]:hidden">
+          <details className="group rounded-xl border border-zinc-200/80 bg-white">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-bold text-[#9D174D] marker:hidden [&::-webkit-details-marker]:hidden">
               案件の設定
               <ChevronDown
                 className="h-4 w-4 transition-transform group-open:rotate-180 motion-reduce:transition-none"
                 aria-hidden
               />
             </summary>
-            <div className="space-y-4 border-t border-pink-100 p-3">
+            <div className="space-y-4 border-t border-zinc-200/80 p-3">
               {onSaveCorrection && onSaveNextAction && !readOnly ? (
                 <InquiryAdminCorrectionForm
                   project={project}
@@ -430,7 +430,7 @@ export default function InquiryDetailPanel({
 
         {/* アクション */}
         <div
-          className={`${screen === "conversation" ? "hidden" : "flex shrink-0 flex-wrap items-center gap-2 border-t border-pink-100 bg-white px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 sm:p-5"}`}
+          className={`${screen === "conversation" ? "hidden" : "flex shrink-0 flex-wrap items-center gap-2 border-t border-zinc-200/80 bg-white px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 sm:p-5"}`}
         >
           {primaryAction === "estimate" && estimateHref ? (
             <Link
@@ -481,7 +481,7 @@ export default function InquiryDetailPanel({
             >
               その他 ↑
             </summary>
-            <div className="absolute bottom-full right-0 z-10 mb-2 flex max-h-[50dvh] w-[min(88vw,20rem)] flex-col gap-2 overflow-y-auto rounded-xl border border-gray-200 bg-white p-3 shadow-xl">
+            <div className="absolute bottom-full right-0 z-10 mb-2 flex max-h-[50dvh] w-[min(88vw,20rem)] flex-col gap-2 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-3 shadow-xl">
               {!readOnly && ESTIMATE_MAIL_STATUSES.has(project.status) && primaryAction !== "estimate" && estimateHref ? (
                 <Link
                   href={estimateHref}
@@ -523,7 +523,7 @@ export default function InquiryDetailPanel({
                 案件ボードへ
               </Link>
               {!readOnly && isPreworkStatus(project.status) ? (
-                <div className="border-t border-gray-200 pt-2">
+                <div className="border-t border-zinc-200 pt-2">
                   <button
                     type="button"
                     onClick={onCloseInquiry}

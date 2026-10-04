@@ -67,7 +67,7 @@ function SortableRow({
       ref={setActivatorNodeRef}
       {...attributes}
       {...listeners}
-      className="grid h-8 w-8 shrink-0 cursor-grab touch-none place-items-center rounded-lg border border-gray-200 bg-white text-gray-400 hover:bg-gray-50 hover:text-gray-600 active:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
+      className="grid h-8 w-8 shrink-0 cursor-grab touch-none place-items-center rounded-lg border border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600 active:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
       aria-label="ドラッグして並び替え"
       title="ドラッグして並び替え"
     >
@@ -120,20 +120,20 @@ function CompactWorkRow({
         ref={setActivatorNodeRef}
         {...attributes}
         {...listeners}
-        className="grid h-8 w-8 shrink-0 cursor-grab touch-none place-items-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-700 active:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
+        className="grid h-8 w-8 shrink-0 cursor-grab touch-none place-items-center rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700 active:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
         aria-label={`${title || `作品${index + 1}`}をドラッグして並び替え`}
         title="ドラッグして並び替え"
       >
         <GripVertical className="h-4 w-4" aria-hidden />
       </button>
-      <span className="w-6 shrink-0 text-center text-xs font-black text-pink-500">
+      <span className="w-6 shrink-0 text-center text-xs font-bold text-pink-500">
         {index + 1}
       </span>
-      <span className="min-w-0 flex-1 truncate text-sm font-bold text-gray-800">
+      <span className="min-w-0 flex-1 truncate text-sm font-bold text-zinc-800">
         {title.trim() || "無題"}
       </span>
       {!published ? (
-        <span className="shrink-0 rounded-full bg-gray-100 px-2 py-1 text-xs font-bold text-gray-500">
+        <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-1 text-xs font-bold text-zinc-500">
           非公開
         </span>
       ) : null}
@@ -183,8 +183,8 @@ export default function SortableList<T>({
       <div className="space-y-4">
         <div className="rounded-xl border border-pink-200 bg-pink-50/50 p-3">
           <div className="mb-2">
-            <p className="text-xs font-black text-pink-700">公開ページの並び順</p>
-            <p className="mt-0.5 text-xs leading-4 text-gray-600">
+            <p className="text-xs font-bold text-pink-700">公開ページの並び順</p>
+            <p className="mt-0.5 text-xs leading-4 text-zinc-600">
               上から順に表示されます。並び替えはこのコンパクトな一覧で行ってください。
             </p>
           </div>

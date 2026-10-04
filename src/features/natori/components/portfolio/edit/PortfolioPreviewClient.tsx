@@ -37,7 +37,7 @@ export default function PortfolioPreviewClient() {
   if (state.kind === "loading") {
     return (
       <main className="grid min-h-screen place-items-center bg-pink-50/50">
-        <p className="text-sm font-bold text-gray-600">プレビューを読み込み中…</p>
+        <p className="text-sm font-bold text-zinc-600">プレビューを読み込み中…</p>
       </main>
     );
   }
@@ -46,8 +46,8 @@ export default function PortfolioPreviewClient() {
     return (
       <main className="grid min-h-screen place-items-center bg-pink-50/50 px-4">
         <div className="rounded-2xl border border-pink-100 bg-white px-6 py-5 text-center shadow-sm">
-          <p className="text-sm font-bold text-gray-900">プレビューする内容が見つかりません</p>
-          <p className="mt-1 text-xs leading-5 text-gray-600">
+          <p className="text-sm font-bold text-zinc-900">プレビューする内容が見つかりません</p>
+          <p className="mt-1 text-xs leading-5 text-zinc-600">
             編集画面の「プレビュー」ボタンから開き直してください。
           </p>
           <Link

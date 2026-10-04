@@ -29,8 +29,8 @@ export default function PortfolioHeroImagesEditor({
 
   return (
     <div>
-      <p className="text-sm font-black text-gray-900">Heroスライダー</p>
-      <p className="mt-1 text-xs leading-5 text-gray-600">
+      <p className="text-sm font-bold text-zinc-900">Heroスライダー</p>
+      <p className="mt-1 text-xs leading-5 text-zinc-600">
         最大5枚。先頭の画像が最初に表示され、公開ページでは自動・手動で切り替えられます。
         ドラッグすると表示順を変更できます。
       </p>
@@ -58,7 +58,7 @@ export default function PortfolioHeroImagesEditor({
           )}
         />
       ) : (
-        <p className="mt-3 rounded-lg border border-dashed border-pink-200 bg-pink-50/30 px-3 py-3 text-xs text-gray-500">
+        <p className="mt-3 rounded-lg border border-dashed border-pink-200 bg-pink-50/30 px-3 py-3 text-xs text-zinc-500">
           Hero画像は未設定です。下から1枚目を追加できます。
         </p>
       )}

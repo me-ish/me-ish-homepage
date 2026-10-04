@@ -186,7 +186,7 @@ export default function StructuredQuoteIssuePanel({
         <div className="flex gap-3">
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" aria-hidden />
           <div>
-            <h2 className="font-black text-emerald-950">正式見積を発行しました</h2>
+            <h2 className="font-bold text-emerald-950">正式見積を発行しました</h2>
             <p className="mt-1 text-sm text-emerald-800">
               version {issued.version} / quote ID {issued.quoteId}
             </p>
@@ -201,8 +201,8 @@ export default function StructuredQuoteIssuePanel({
       <div className="flex items-center gap-2">
         <Mail className="h-5 w-5 text-pink-600" aria-hidden />
         <div>
-          <h2 className="font-black text-gray-950">正式見積を発行する</h2>
-          <p className="text-xs text-gray-600">{pricingSourceName}をsnapshot固定してからメールを送信します。</p>
+          <h2 className="font-bold text-zinc-950">正式見積を発行する</h2>
+          <p className="text-xs text-zinc-600">{pricingSourceName}をsnapshot固定してからメールを送信します。</p>
         </div>
       </div>
 
@@ -220,15 +220,15 @@ export default function StructuredQuoteIssuePanel({
       ) : null}
 
       <div>
-        <label className="mb-1 block text-xs font-bold text-gray-700">宛先</label>
+        <label className="mb-1 block text-xs font-bold text-zinc-700">宛先</label>
         <input className={inputClass} disabled={attemptLocked} type="email" value={to} onChange={(event) => setTo(event.target.value)} />
       </div>
       <div>
-        <label className="mb-1 block text-xs font-bold text-gray-700">件名</label>
+        <label className="mb-1 block text-xs font-bold text-zinc-700">件名</label>
         <input className={inputClass} disabled={attemptLocked} value={subject} onChange={(event) => setSubject(event.target.value)} />
       </div>
       <div>
-        <label className="mb-1 block text-xs font-bold text-gray-700">本文</label>
+        <label className="mb-1 block text-xs font-bold text-zinc-700">本文</label>
         <textarea className={`${inputClass} min-h-64 resize-y`} disabled={attemptLocked} value={body} onChange={(event) => setBody(event.target.value)} />
       </div>
 

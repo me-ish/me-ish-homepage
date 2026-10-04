@@ -50,8 +50,8 @@ export default function PaymentLinkPanel({project,onClose,onSent}:{project:Nator
    setAction(view.state==="active"?"renotify":view.state==="inactive"?"reissue":"issue");
   }catch(e){setError(e instanceof Error?e.message:"同じ操作で再試行してください。");}finally{setBusy(false);}
  };
- return <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-gray-900/60 p-4" role="dialog" aria-modal="true" aria-label="支払リンクの管理">
-  <section className="w-full max-w-2xl space-y-4 rounded-2xl bg-white p-5 text-gray-900">
+ return <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-zinc-900/60 p-4" role="dialog" aria-modal="true" aria-label="支払リンクの管理">
+  <section className="w-full max-w-2xl space-y-4 rounded-2xl bg-white p-5 text-zinc-900">
    <h2 className="font-bold">支払リンクの管理</h2><p className="break-words text-sm">{project.title}</p>
    <p role="status">{state?.confirmedAt?"入金確認済み":state?.terminal?"終了済み":state?labels[state.state]??"照合が必要":"状態を読込中"}</p>
    {state?.deadline&&<p>現在の支払期限: {new Date(state.deadline).toLocaleString("ja-JP")}</p>}
@@ -70,7 +70,7 @@ export default function PaymentLinkPanel({project,onClose,onSent}:{project:Nator
    {["extend","reissue","adopt"].includes(action)&&<label className="flex gap-2"><input type="checkbox" className={natoriAdminUi.checkbox} checked={confirmed} disabled={frozen} onChange={e=>setConfirmed(e.target.checked)}/>{action==="extend"?"現在の期限を延長することを確認しました":action==="reissue"?"旧リンクの停止を確認し、新しいリンクを発行します":"既存のURLと旧期限を保持して引き継ぐことを確認しました"}</label>}
    {error&&<p role="alert" className="break-words rounded bg-red-50 p-3 text-red-900">{error}</p>}
    <div className="flex flex-wrap gap-3"><button type="button" onClick={()=>{void load().catch(()=>setError("状態を確認できません。再読込してください。"));}} disabled={busy} className="min-h-11 rounded border px-3">状態を再読込</button>
-    <button type="button" onClick={()=>void send()} disabled={busy||!cacheReady||(!pending&&!allowed)} className="min-h-11 rounded bg-pink-100 px-4 font-bold text-pink-950">{busy?"処理結果を確認中":pending?"同じ操作で再試行":"選んだ操作を実行"}</button>
+    <button type="button" onClick={()=>void send()} disabled={busy||!cacheReady||(!pending&&!allowed)} className={natoriAdminUi.btnPrimary}>{busy?"処理結果を確認中":pending?"同じ操作で再試行":"選んだ操作を実行"}</button>
     <button type="button" onClick={onClose} disabled={busy} className="min-h-11 px-3 underline">閉じる</button></div>
   </section></div>;
 }

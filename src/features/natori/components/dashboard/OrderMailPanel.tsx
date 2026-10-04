@@ -112,7 +112,7 @@ function isMoneyKind(kind: OrderMailKind): boolean {
 
 const inputClass =
   natoriAdminUi.input;
-const labelClass = "mb-1 block text-xs font-bold text-pink-700";
+const labelClass = "mb-1 block text-xs font-bold text-[#BE185D]";
 
 type OrderMailPanelProps = {
   project: NatoriProject;
@@ -288,7 +288,7 @@ export default function OrderMailPanel({
         <DialogTitle className="font-bold">見積りを作成・確認</DialogTitle>
         <p className="mt-3 text-sm">条件と金額を確認して正式な版を保存します。保存済みの版の再通知も同じ画面から行います。</p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Link href={`/natori/estimate?inquiry=${encodeURIComponent(project.id)}`} className="inline-flex min-h-11 items-center rounded-xl bg-pink-100 px-4 font-bold text-pink-950">この案件の見積りを開く</Link>
+          <Link href={`/natori/estimate?inquiry=${encodeURIComponent(project.id)}`} className={natoriAdminUi.btnPrimary}>この案件の見積りを開く</Link>
           <button type="button" onClick={onClose} className="min-h-11 px-3 underline">閉じる</button>
         </div>
       </DialogContent>
@@ -301,15 +301,15 @@ export default function OrderMailPanel({
         hideCloseButton
         aria-describedby={undefined}
         onInteractOutside={(event) => event.preventDefault()}
-        className="block max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-pink-100 bg-white p-4 shadow-xl sm:rounded-2xl sm:p-5"
+        className="block max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xl sm:rounded-2xl sm:p-5"
       >
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <DialogTitle className="flex items-center gap-2 text-base font-black text-gray-900">
-              <Mail className="h-4 w-4 text-pink-500" aria-hidden />
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-zinc-900">
+              <Mail className="h-4 w-4 text-[#EC4899]" aria-hidden />
               {meta.title}
             </DialogTitle>
-            <p className="mt-0.5 break-words text-xs text-gray-600">
+            <p className="mt-0.5 break-words text-xs text-zinc-600">
               {project.clientName}｜{project.title}
             </p>
           </div>
@@ -340,17 +340,17 @@ export default function OrderMailPanel({
                   : `送信しました。${meta.sentNote}`)}
             </div>
             {sentLinkUrl ? (
-              <div className="rounded-xl border border-pink-100 bg-pink-50/50 px-4 py-3 text-xs">
-                <p className="font-bold text-pink-700">発行した支払いリンク</p>
+              <div className="rounded-xl border border-zinc-200/80 bg-zinc-50 px-4 py-3 text-xs">
+                <p className="font-bold text-[#BE185D]">発行した支払いリンク</p>
                 <a
                   href={sentLinkUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 block break-all text-pink-600 underline"
+                  className="mt-1 block break-all text-[#BE185D] underline"
                 >
                   {sentLinkUrl}
                 </a>
-                <p className="mt-1 text-gray-500">案件メモにも記録済みです。</p>
+                <p className="mt-1 text-zinc-500">案件メモにも記録済みです。</p>
               </div>
             ) : null}
             <div className="flex justify-end">
@@ -380,8 +380,8 @@ export default function OrderMailPanel({
             </p>
 
             {kind === "estimate" ? (
-              <div className="space-y-3 rounded-xl border border-pink-100 bg-pink-50/40 p-3">
-                <p className="text-xs font-bold text-pink-800">
+              <div className="space-y-3 rounded-xl border border-zinc-200/80 bg-zinc-50 p-3">
+                <p className="text-xs font-bold text-[#9D174D]">
                   依頼者に表示する内容（送信後はこの見積もりの記録として固定されます）
                 </p>
                 <div>
@@ -396,12 +396,12 @@ export default function OrderMailPanel({
                     onChange={(event) => updateQuoteDescription(quoteTitle, event.target.value)}
                     placeholder="例：全身イラスト1点。アクリルスタンド用、背景透過PNGで納品" className={inputClass} />
                 </div>
-                <p className="text-xs text-gray-700">
+                <p className="text-xs text-zinc-700">
                   納品日：{project.dueDate && isValidQuoteDate(project.dueDate)
                     ? `${formatQuoteDate(project.dueDate)}まで`
                     : "未設定"}（案件情報のカレンダーで設定した日付）
                 </p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-zinc-600">
                   ご依頼内容と制作するものを変更すると、メールの下書きも更新されます。
                 </p>
                 {!isValidQuoteDate(project.dueDate ?? "") ? (
@@ -418,7 +418,7 @@ export default function OrderMailPanel({
                 onFilesChange={setDeliveryFiles}
               />
             ) : null}
-            {kind === "delivery" && !canSend && <p className="text-xs text-gray-600">納品案内の送信前に、すべてのファイルが「保存確認済み」であることを確認してください。</p>}
+            {kind === "delivery" && !canSend && <p className="text-xs text-zinc-600">納品案内の送信前に、すべてのファイルが「保存確認済み」であることを確認してください。</p>}
             {operationConflict && <button type="button" className="rounded-lg border px-3 py-2 text-sm" onClick={() => {
               sessionStorage.removeItem(`natori-delivery-operation/${project.id}`); setOperationConflict(false); setError(null);
             }}>前回の結果を確認したので、新しい案内として送る</button>}
@@ -437,7 +437,7 @@ export default function OrderMailPanel({
                   className={inputClass}
                 />
                 {!to ? (
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-zinc-500">
                     案件メモから自動で拾えなかった場合は手入力してください。
                   </p>
                 ) : null}
@@ -464,7 +464,7 @@ export default function OrderMailPanel({
                     <button
                       type="button"
                       onClick={regenerate}
-                      className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-pink-200 bg-white px-3 text-xs font-bold text-pink-700 hover:bg-pink-50"
+                      className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold text-[#BE185D] hover:bg-zinc-50"
                       title="この金額で件名・本文を作り直します（編集内容は上書きされます）"
                     >
                       <RotateCcw className="h-3.5 w-3.5" aria-hidden />
@@ -485,7 +485,7 @@ export default function OrderMailPanel({
                   <button
                     type="button"
                     onClick={regenerate}
-                    className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-pink-200 bg-white px-3 text-xs font-bold text-pink-700 hover:bg-pink-50"
+                    className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold text-[#BE185D] hover:bg-zinc-50"
                     title="件名・本文を作り直します（編集内容は上書きされます）"
                   >
                     <RotateCcw className="h-3.5 w-3.5" aria-hidden />
@@ -554,7 +554,7 @@ export default function OrderMailPanel({
 
             <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
               {isMoneyKind(kind) ? (
-                <p className="mr-auto text-xs text-gray-500">
+                <p className="mr-auto text-xs text-zinc-500">
                   送信金額:{" "}
                   {typeof amount === "number" && Number.isFinite(amount)
                     ? formatYen(Math.round(amount))
@@ -567,7 +567,7 @@ export default function OrderMailPanel({
                 type="button"
                 onClick={onClose}
                 disabled={sending}
-                className="inline-flex h-10 items-center rounded-full border border-gray-300 bg-white px-4 text-sm font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                className="inline-flex h-10 items-center rounded-full border border-zinc-300 bg-white px-4 text-sm font-bold text-zinc-700 hover:bg-zinc-50 disabled:opacity-60"
               >
                 キャンセル
               </button>

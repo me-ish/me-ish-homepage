@@ -90,15 +90,15 @@ export default function PersonalEventsSection({
   const draftActive = adding || editingId !== null;
 
   return (
-    <section className="mt-4 rounded-2xl border border-pink-100 bg-white p-3 shadow-sm sm:p-4">
+    <section className="mt-4 rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-3 sm:p-4">
       {confirmDialog}
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-bold text-gray-600">この日の予定</p>
+        <p className="text-xs font-semibold text-zinc-700">この日の予定</p>
         {authed && !draftActive ? (
           <Button
             onClick={beginAdd}
             variant="outline"
-            className="h-8 rounded-full border-pink-300 bg-white px-3 text-xs font-bold text-pink-700 hover:bg-pink-50"
+            className="h-8 rounded-full border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-800 shadow-[0_1px_2px_rgba(24,24,27,0.05)] hover:border-zinc-300 hover:bg-zinc-50"
           >
             <CalendarPlus className="h-3.5 w-3.5" aria-hidden />
             予定を追加
@@ -107,19 +107,19 @@ export default function PersonalEventsSection({
       </div>
 
       {!authed ? (
-        <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+        <p className={`${natoriAdminUi.alert.warning} mt-2 text-xs leading-5`}>
           サーバーに接続できると個人の予定を追加・編集できます。
         </p>
       ) : null}
 
       {error ? (
-        <p className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+        <p className={`${natoriAdminUi.alert.error} mt-2 text-xs font-semibold`}>
           {error}
         </p>
       ) : null}
 
       {dayEvents.length === 0 && !draftActive ? (
-        <p className="mt-2 text-xs text-gray-500">この日に予定はありません。</p>
+        <p className="mt-2 text-xs text-zinc-500">この日に予定はありません。</p>
       ) : null}
 
       {dayEvents.length > 0 ? (
@@ -128,12 +128,13 @@ export default function PersonalEventsSection({
             <li
               key={event.id}
               className={cn(
-                "flex flex-col gap-1 rounded-xl border border-pink-100 bg-pink-50/40 px-3 py-2",
-                editingId === event.id && "border-pink-300 bg-pink-50"
+                "flex flex-col gap-1 rounded-lg border border-zinc-200/80 bg-white px-3 py-2",
+                editingId === event.id && "border-[#BE185D]/40 ring-2 ring-[#BE185D]/10"
               )}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="min-w-0 break-words text-sm font-bold text-gray-900">
+                <p className="flex min-w-0 items-center gap-2 break-words text-sm font-semibold text-zinc-900">
+                  <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-purple-500" />
                   {event.title}
                 </p>
                 {authed ? (
@@ -159,7 +160,7 @@ export default function PersonalEventsSection({
                 ) : null}
               </div>
               {event.note ? (
-                <p className="break-words text-xs leading-5 text-gray-700">{event.note}</p>
+                <p className="break-words pl-4 text-xs leading-5 text-zinc-600">{event.note}</p>
               ) : null}
             </li>
           ))}
@@ -167,9 +168,9 @@ export default function PersonalEventsSection({
       ) : null}
 
       {draftActive ? (
-        <div className="mt-3 rounded-xl border border-pink-200 bg-pink-50/60 p-3">
+        <div className="mt-3 rounded-xl border border-zinc-200/80 bg-white p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs font-bold text-gray-600">
+            <p className="text-xs font-semibold text-zinc-700">
               {editingId ? "予定を編集" : "予定を追加"}
             </p>
             <button
@@ -182,7 +183,7 @@ export default function PersonalEventsSection({
             </button>
           </div>
           <label className="block">
-            <span className="block text-xs font-bold text-pink-700">タイトル</span>
+            <span className="block text-xs font-semibold text-zinc-700">タイトル</span>
             <input
               type="text"
               value={draftTitle}
@@ -193,7 +194,7 @@ export default function PersonalEventsSection({
             />
           </label>
           <label className="mt-2 block">
-            <span className="block text-xs font-bold text-pink-700">メモ（任意）</span>
+            <span className="block text-xs font-semibold text-zinc-700">メモ（任意）</span>
             <textarea
               value={draftNote}
               onChange={(event) => setDraftNote(event.target.value)}
@@ -205,7 +206,7 @@ export default function PersonalEventsSection({
             <Button
               onClick={cancel}
               variant="outline"
-              className="h-9 rounded-full border-gray-300 bg-white px-4 text-xs font-bold text-gray-800 hover:bg-gray-50"
+              className={natoriAdminUi.btnSecondary}
             >
               キャンセル
             </Button>

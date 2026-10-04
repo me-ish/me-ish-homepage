@@ -36,7 +36,7 @@ export default function ProjectNoteSummary({ note }: { note: string | null | und
   // 手入力の短いメモ（ログなし）は従来どおりそのまま表示
   if (!view.isAutoInquiry && view.logs.length === 0 && view.plainNote.length <= PLAIN_NOTE_INLINE_LIMIT) {
     return (
-      <p className="whitespace-pre-wrap break-words text-sm leading-6 text-gray-700">
+      <p className="whitespace-pre-wrap break-words text-sm leading-6 text-zinc-700">
         {view.plainNote}
       </p>
     );
@@ -47,24 +47,24 @@ export default function ProjectNoteSummary({ note }: { note: string | null | und
   ).filter((field): field is { label: string; value: string } => Boolean(field));
 
   return (
-    <div className="rounded-xl border border-pink-100 bg-pink-50/40">
+    <div className="rounded-xl border border-zinc-200/80 bg-zinc-50">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left hover:bg-pink-50"
+        className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left hover:bg-zinc-50"
       >
-        <span className="flex min-w-0 items-center gap-1.5 text-xs font-bold text-pink-700">
+        <span className="flex min-w-0 items-center gap-1.5 text-xs font-bold text-[#BE185D]">
           <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
           {view.isAutoInquiry ? "依頼内容メモ" : "メモ"}
           {view.refImages.length > 0 ? (
-            <span className="font-normal text-pink-600/80">画像{view.refImages.length}枚</span>
+            <span className="font-normal text-zinc-500">画像{view.refImages.length}枚</span>
           ) : null}
           {view.logs.length > 0 ? (
-            <span className="font-normal text-pink-600/80">履歴{view.logs.length}件</span>
+            <span className="font-normal text-zinc-500">履歴{view.logs.length}件</span>
           ) : null}
         </span>
-        <span className="shrink-0 text-pink-400">
+        <span className="shrink-0 text-zinc-400">
           {open ? (
             <ChevronUp className="h-4 w-4" aria-hidden />
           ) : (
@@ -76,40 +76,40 @@ export default function ProjectNoteSummary({ note }: { note: string | null | und
       {!open ? (
         <div className="px-3 pb-2.5">
           {view.isAutoInquiry ? (
-            <dl className="space-y-0.5 text-xs leading-5 text-gray-700">
+            <dl className="space-y-0.5 text-xs leading-5 text-zinc-700">
               {view.email ? (
                 <div className="flex min-w-0 items-center gap-1">
-                  <Mail className="h-3 w-3 shrink-0 text-gray-400" aria-hidden />
+                  <Mail className="h-3 w-3 shrink-0 text-zinc-400" aria-hidden />
                   <dd className="truncate">{view.email}</dd>
                 </div>
               ) : null}
               {summaryFields.map((field) => (
                 <div key={field.label} className="flex min-w-0 gap-1">
-                  <dt className="shrink-0 text-gray-500">{field.label}:</dt>
+                  <dt className="shrink-0 text-zinc-500">{field.label}:</dt>
                   <dd className="truncate">{field.value}</dd>
                 </div>
               ))}
             </dl>
           ) : (
-            <p className="line-clamp-2 break-words text-xs leading-5 text-gray-700">
+            <p className="line-clamp-2 break-words text-xs leading-5 text-zinc-700">
               {view.plainNote}
             </p>
           )}
         </div>
       ) : (
-        <div className="space-y-3 border-t border-pink-100 px-3 py-3">
+        <div className="space-y-3 border-t border-zinc-200/80 px-3 py-3">
           {view.email ? (
-            <p className="flex min-w-0 items-center gap-1.5 text-xs text-gray-700">
-              <Mail className="h-3 w-3 shrink-0 text-gray-400" aria-hidden />
+            <p className="flex min-w-0 items-center gap-1.5 text-xs text-zinc-700">
+              <Mail className="h-3 w-3 shrink-0 text-zinc-400" aria-hidden />
               <span className="break-all">{view.email}</span>
             </p>
           ) : null}
 
           {view.fields.length > 0 ? (
-            <dl className="space-y-0.5 text-xs leading-5 text-gray-700">
+            <dl className="space-y-0.5 text-xs leading-5 text-zinc-700">
               {view.fields.map((field) => (
                 <div key={field.label} className="flex min-w-0 gap-1">
-                  <dt className="shrink-0 text-gray-500">{field.label}:</dt>
+                  <dt className="shrink-0 text-zinc-500">{field.label}:</dt>
                   <dd className="break-words">{field.value}</dd>
                 </div>
               ))}
@@ -126,7 +126,7 @@ export default function ProjectNoteSummary({ note }: { note: string | null | und
                     <img
                       src={url}
                       alt={`添付画像 ${index + 1}`}
-                      className="h-16 w-16 rounded-lg border border-pink-200 object-cover transition hover:opacity-80"
+                      className="h-16 w-16 rounded-lg border border-zinc-200 object-cover transition hover:opacity-80"
                     />
                   </a>
                 </li>
@@ -134,54 +134,54 @@ export default function ProjectNoteSummary({ note }: { note: string | null | und
             </ul>
           ) : null}
           {view.refText ? (
-            <p className="whitespace-pre-wrap break-words text-xs leading-5 text-gray-700">
+            <p className="whitespace-pre-wrap break-words text-xs leading-5 text-zinc-700">
               {view.refText}
             </p>
           ) : null}
 
           {view.details ? (
             <div>
-              <p className="mb-1 text-xs font-bold text-gray-600">
+              <p className="mb-1 text-xs font-bold text-zinc-600">
                 ご依頼の詳細
               </p>
-              <p className="whitespace-pre-wrap break-words rounded-lg border border-pink-100 bg-white p-2.5 text-xs leading-5 text-gray-900">
+              <p className="whitespace-pre-wrap break-words rounded-lg border border-zinc-200/80 bg-white p-2.5 text-xs leading-5 text-zinc-900">
                 {view.details}
               </p>
             </div>
           ) : null}
           {view.message ? (
             <div>
-              <p className="mb-1 text-xs font-bold text-gray-600">
+              <p className="mb-1 text-xs font-bold text-zinc-600">
                 その他・ご質問
               </p>
-              <p className="whitespace-pre-wrap break-words rounded-lg border border-pink-100 bg-white p-2.5 text-xs leading-5 text-gray-900">
+              <p className="whitespace-pre-wrap break-words rounded-lg border border-zinc-200/80 bg-white p-2.5 text-xs leading-5 text-zinc-900">
                 {view.message}
               </p>
             </div>
           ) : null}
 
           {!view.isAutoInquiry && view.plainNote ? (
-            <p className="whitespace-pre-wrap break-words text-xs leading-5 text-gray-700">
+            <p className="whitespace-pre-wrap break-words text-xs leading-5 text-zinc-700">
               {view.plainNote}
             </p>
           ) : null}
 
           {view.logs.length > 0 ? (
             <div>
-              <p className="mb-1 text-xs font-bold text-gray-600">
+              <p className="mb-1 text-xs font-bold text-zinc-600">
                 対応履歴
               </p>
               <ol className="space-y-1">
                 {view.logs.map((log, index) => (
                   <li
                     key={`${log.dateISO}-${index}`}
-                    className="rounded-lg border border-pink-100 bg-white px-2.5 py-1.5 text-xs"
+                    className="rounded-lg border border-zinc-200/80 bg-white px-2.5 py-1.5 text-xs"
                   >
-                    <p className="font-bold text-gray-900">
+                    <p className="font-bold text-zinc-900">
                       {formatLogDate(log.dateISO)}｜{log.label}
                     </p>
                     {log.body ? (
-                      <p className="mt-0.5 whitespace-pre-wrap break-all leading-5 text-gray-600">
+                      <p className="mt-0.5 whitespace-pre-wrap break-all leading-5 text-zinc-600">
                         {log.body}
                       </p>
                     ) : null}

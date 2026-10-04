@@ -68,13 +68,13 @@ export default function InquiryReferenceLinks({
       {confirmDialog}
       <h3
         id="inquiry-links-heading"
-        className="mb-2 text-xs font-bold text-gray-600"
+        className="mb-2 text-xs font-bold text-zinc-600"
       >
         外部リンク（{links.length}/{NATORI_PROJECT_REFERENCE_LINK_MAX}件）
       </h3>
 
       {links.length === 0 ? (
-        <p className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-500">
+        <p className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-500">
           外部リンクは登録されていません。
         </p>
       ) : (
@@ -83,14 +83,14 @@ export default function InquiryReferenceLinks({
             <li
               key={link.id}
               data-link-id={link.id}
-              className="rounded-xl border border-pink-100 bg-white p-2 shadow-sm"
+              className="rounded-xl border border-zinc-200/80 bg-white p-2 shadow-sm"
             >
               {editingId === link.id ? (
                 <div className="space-y-2">
                   <div>
                     <label
                       htmlFor={`link-url-${link.id}`}
-                      className="mb-1 block text-xs font-bold text-gray-600"
+                      className="mb-1 block text-xs font-bold text-zinc-600"
                     >
                       URL
                     </label>
@@ -104,7 +104,7 @@ export default function InquiryReferenceLinks({
                   <div>
                     <label
                       htmlFor={`link-label-${link.id}`}
-                      className="mb-1 block text-xs font-bold text-gray-600"
+                      className="mb-1 block text-xs font-bold text-zinc-600"
                     >
                       ラベル（任意）
                     </label>
@@ -133,7 +133,7 @@ export default function InquiryReferenceLinks({
                     <button
                       type="button"
                       onClick={() => setEditingId(null)}
-                      className="inline-flex h-8 items-center gap-1 rounded-full border border-gray-300 px-3 text-xs font-bold text-gray-600"
+                      className="inline-flex h-8 items-center gap-1 rounded-full border border-zinc-300 px-3 text-xs font-bold text-zinc-600"
                     >
                       <X className="h-3.5 w-3.5" aria-hidden />
                       キャンセル
@@ -143,10 +143,10 @@ export default function InquiryReferenceLinks({
               ) : (
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-gray-900">
+                    <p className="truncate text-sm font-bold text-zinc-900">
                       {link.label ?? "（ラベルなし）"}
                     </p>
-                    <p className="truncate text-xs text-gray-600" title={link.url}>
+                    <p className="truncate text-xs text-zinc-600" title={link.url}>
                       {link.url}
                     </p>
                   </div>
@@ -155,7 +155,7 @@ export default function InquiryReferenceLinks({
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer nofollow"
-                      className="inline-flex h-8 items-center gap-1 rounded-full border border-gray-300 px-2.5 text-xs font-bold text-gray-700 hover:bg-gray-50"
+                      className="inline-flex h-8 items-center gap-1 rounded-full border border-zinc-300 px-2.5 text-xs font-bold text-zinc-700 hover:bg-zinc-50"
                     >
                       <ExternalLink className="h-3.5 w-3.5" aria-hidden />
                       開く
@@ -199,17 +199,17 @@ export default function InquiryReferenceLinks({
         </ul>
       )}
 
-      <p className="mt-2 text-xs text-gray-500">
+      <p className="mt-2 text-xs text-zinc-500">
         リンク先が開けない場合はURLを確認してください。この画面からリンク先の内容は取得していません。
       </p>
 
       {canAdd ? (
-        <div className="mt-3 space-y-2 rounded-xl border border-pink-100 bg-pink-50/40 p-2">
+        <div className="mt-3 space-y-2 rounded-xl border border-zinc-200/80 bg-zinc-50 p-2">
           <div className="grid gap-2 sm:grid-cols-2">
             <div>
               <label
                 htmlFor="inquiry-new-link-url"
-                className="mb-1 block text-xs font-bold text-gray-600"
+                className="mb-1 block text-xs font-bold text-zinc-600"
               >
                 URLを追加（https:// のみ）
               </label>
@@ -224,7 +224,7 @@ export default function InquiryReferenceLinks({
             <div>
               <label
                 htmlFor="inquiry-new-link-label"
-                className="mb-1 block text-xs font-bold text-gray-600"
+                className="mb-1 block text-xs font-bold text-zinc-600"
               >
                 ラベル（任意）
               </label>

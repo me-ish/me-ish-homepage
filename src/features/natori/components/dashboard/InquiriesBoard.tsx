@@ -11,7 +11,7 @@ import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleto
 import { useOptionalNatoriToast } from "@/features/natori/components/admin/NatoriToast";
 import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Inbox, Loader2 } from "lucide-react";
+import { ChevronDown, Inbox, Info, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
 import {
@@ -100,6 +100,18 @@ function isFinishedProject(project: NatoriProject): boolean {
   );
 }
 
+/** 依頼者名の頭文字アイコン（飾り。読み上げは名前の本文で行う） */
+function ClientInitial({ name }: { name: string }) {
+  return (
+    <span
+      aria-hidden
+      className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-pink-100 to-pink-50 text-xs font-semibold text-[#9D174D] ring-1 ring-inset ring-pink-500/10"
+    >
+      {Array.from(name.trim())[0] ?? "?"}
+    </span>
+  );
+}
+
 /** 経過日数バッジ。7日で注意、14日で警告 */
 function ElapsedBadge({ days }: { days: number }) {
   const tone =
@@ -107,10 +119,10 @@ function ElapsedBadge({ days }: { days: number }) {
       ? "border-red-200 bg-red-50 text-red-700"
       : days >= 7
         ? "border-amber-200 bg-amber-50 text-amber-800"
-        : "border-gray-200 bg-gray-50 text-gray-600";
+        : "border-zinc-200 bg-zinc-50 text-zinc-600";
   return (
     <span
-      className={cn("inline-block rounded-full border px-2 py-0.5 text-xs font-bold", tone)}
+      className={cn("inline-block rounded-full border px-2 py-0.5 text-xs font-semibold tabular-nums", tone)}
       title={days === 0 ? "最終やり取りは今日" : `最終やり取りから${days}日`}
     >
       <span aria-hidden>{days === 0 ? "今日" : `${days}日前`}</span>
@@ -418,9 +430,11 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
       <div className="flex items-start justify-between gap-3">
         <details className="group min-w-0">
           <summary className={`${natoriAdminUi.btnLink} cursor-pointer list-none marker:hidden [&::-webkit-details-marker]:hidden`}>
+            <Info className="h-4 w-4" aria-hidden />
             表示のルール
+            <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden />
           </summary>
-          <div className={`mt-1 space-y-1 ${natoriAdminUi.caption}`}>
+          <div className={`mt-1 max-w-2xl space-y-1 rounded-xl bg-white p-3 ring-1 ring-inset ring-zinc-200/80 ${natoriAdminUi.caption}`}>
             <p>制作の進捗と返信待ちは別に表示します。既読の判定ではありません。</p>
             <p>
               相談の最終発言が古い順（会話がなければ受付順）です。経過はその日からの日数で、7日で黄色・14日で赤になります。
@@ -439,21 +453,21 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
             }}
             className={`${natoriAdminUi.btnSecondary} shrink-0`}
           >
-            {refreshing ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : null}
+            {refreshing ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <RefreshCw className="h-4 w-4 text-zinc-500" aria-hidden />}
             状態を更新
           </button>
         ) : null}
       </div>
-      {selectedId && !selectedProject ? <div role={selectedError ? "alert" : "status"} className="rounded-xl border p-3 text-sm">
+      {selectedId && !selectedProject ? <div role={selectedError ? "alert" : "status"} className="rounded-xl border border-zinc-200/80 bg-white p-3 text-sm">
         {selectedError || "案件詳細を読み込み中…"}
         {selectedError ? <button type="button" onClick={() => setDetailVersion(n => n + 1)} className="ml-3 underline">詳細を再試行</button> : null}
         <button type="button" onClick={closeDetail} className="ml-3 underline">閉じる</button>
       </div> : null}
       {/* 状態フィルタ（返信状況＝チップ / 工程＝セレクト。どちらも同じ filter を更新する） */}
-      <div className="space-y-2">
-        <div>
-          <p className={`mb-1 ${natoriAdminUi.groupLabel}`}>返信状況</p>
-          <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+      <div className={`space-y-3 rounded-2xl ${natoriAdminUi.surface} p-3 sm:flex sm:flex-wrap sm:items-end sm:justify-between sm:gap-x-6 sm:space-y-0 sm:p-4`}>
+        <div className="min-w-0">
+          <p className={`mb-1.5 ${natoriAdminUi.groupLabel}`}>返信状況</p>
+          <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0">
             {REPLY_FILTER_KEYS.map((key) => {
               const entry = STATUS_FILTERS.find((item) => item.key === key);
               if (!entry) return null;
@@ -467,7 +481,12 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
                   className={cn(natoriAdminUi.chip, on ? natoriAdminUi.chipOn : natoriAdminUi.chipOff)}
                 >
                   {entry.key === "all" ? "すべて" : entry.label}
-                  <span className={cn("ml-1 tabular-nums", on ? "opacity-90" : "text-gray-600")}>
+                  <span
+                    className={cn(
+                      "ml-0.5 inline-grid min-w-5 place-items-center rounded-full px-1.5 text-[11px] leading-[18px] tabular-nums",
+                      on ? "bg-white/20 text-white" : "bg-zinc-100 text-zinc-700"
+                    )}
+                  >
                     {rows.filter((row) => matchesFilter(row, entry.key)).length}
                   </span>
                 </button>
@@ -483,7 +502,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
             id="inquiries-stage-filter"
             value={STAGE_FILTER_KEYS.includes(filter) ? filter : "all"}
             onChange={(event) => setFilter(event.target.value)}
-            className={`${natoriAdminUi.input} !w-auto min-w-[10rem]`}
+            className={`${natoriAdminUi.input} !w-auto min-w-[10rem] sm:py-1.5 sm:text-sm`}
           >
             {STAGE_FILTER_KEYS.map((key) => {
               const entry = STATUS_FILTERS.find((item) => item.key === key);
@@ -500,20 +519,20 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
       </div>
 
       {error ? (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+        <p className={`${natoriAdminUi.alert.error} text-xs font-semibold`}>
           {error}
         </p>
       ) : null}
 
       {!projects ? <p role="status" className="text-sm">一覧を取得できていません。案件詳細は個別に確認します。</p> : filteredRows.length === 0 ? (
-        <div className="rounded-2xl border border-pink-100 bg-white p-8 text-center shadow-sm">
-          <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-pink-50 text-pink-500">
+        <div className={`rounded-2xl ${natoriAdminUi.surface} p-8 text-center`}>
+          <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-zinc-100 text-zinc-500">
             <Inbox className="h-6 w-6" aria-hidden />
           </span>
-          <p className="mt-3 text-sm font-bold text-gray-900">
+          <p className="mt-3 text-sm font-semibold text-zinc-900">
             {rows.length === 0 ? "対応中の問い合わせはありません" : "この条件の問い合わせはありません"}
           </p>
-          <p className="mt-1 text-xs leading-5 text-gray-600">
+          <p className="mt-1 text-xs leading-5 text-zinc-600">
             制作中・納品後の相談も、ここから開けます。終了した案件は「終了・アーカイブ」で確認できます。
           </p>
         </div>
@@ -529,32 +548,33 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
                   <button
                     type="button"
                     onClick={() => openProject(row.project.id)}
-                    className="w-full rounded-2xl border border-pink-100 bg-white p-3 text-left shadow-sm transition hover:bg-pink-50/50"
+                    className={`w-full rounded-2xl ${natoriAdminUi.surface} p-3.5 text-left transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]`}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="min-w-0 break-words text-sm font-black text-gray-900">
+                      <p className="flex min-w-0 items-center gap-2 break-words text-sm font-semibold text-zinc-900">
+                        <ClientInitial name={row.project.clientName} />
                         {row.project.clientName}
                       </p>
                       {isFinishedProject(row.project) ? (
-                        <span className="text-xs text-gray-500">—</span>
+                        <span className="text-xs text-zinc-500">—</span>
                       ) : (
                         <ElapsedBadge days={elapsed} />
                       )}
                     </div>
-                    <p className="mt-0.5 break-words text-xs text-gray-600">{row.project.title}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-600">
+                    <p className="mt-1 break-words text-xs text-zinc-600">{row.project.title}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-600">
                       <span
                         className={cn(
-                          "inline-block rounded-full border px-2 py-0.5 text-xs font-bold",
+                          "inline-block rounded-full border px-2 py-0.5 text-xs font-semibold",
                           meta.chipClassName
                         )}
                       >
                         {meta.label}
                       </span>
-                      <span className="font-bold text-gray-900">
+                      <span className="font-semibold tabular-nums text-zinc-900">
                         {formatNatoriProjectAmount(row.project.amount)}
                       </span>
-                      <span className="ml-auto text-gray-500">
+                      <span className="ml-auto text-zinc-500">
                         {row.lastActionLabel}・{formatDate(row.lastActivityISO)}
                       </span>
                     </div>
@@ -587,36 +607,41 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
                     key={row.project.id}
                     className={`relative cursor-pointer transition ${natoriAdminUi.tr}`}
                   >
-                    <td className={`whitespace-nowrap ${natoriAdminUi.td} text-xs text-gray-600`}>
+                    <td className={`whitespace-nowrap ${natoriAdminUi.td} text-xs text-zinc-600`}>
                       {formatDate(row.receivedISO)}
                     </td>
-                    <td className={`max-w-[260px] ${natoriAdminUi.td}`}>
-                      <button type="button" onClick={() => openProject(row.project.id)} className="max-w-full text-left underline decoration-pink-200 underline-offset-4 after:absolute after:inset-0 after:content-[''] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#831843]">
-                        <span className="block truncate font-bold text-gray-900">{row.project.clientName}</span>
-                        <span className="block truncate text-xs text-gray-600">{row.project.title}</span>
-                      </button>
-                      <ConsultationStatus project={row.project} />
+                    <td className={`max-w-[300px] ${natoriAdminUi.td}`}>
+                      <div className="flex min-w-0 items-start gap-3">
+                        <ClientInitial name={row.project.clientName} />
+                        <div className="min-w-0">
+                          <button type="button" onClick={() => openProject(row.project.id)} className="max-w-full text-left decoration-zinc-300 underline-offset-4 after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#831843]">
+                            <span className="block truncate font-semibold text-zinc-900">{row.project.clientName}</span>
+                            <span className="block truncate text-xs text-zinc-600">{row.project.title}</span>
+                          </button>
+                          <ConsultationStatus project={row.project} />
+                        </div>
+                      </div>
                     </td>
-                    <td className={`whitespace-nowrap text-right font-bold text-gray-900 ${natoriAdminUi.td}`}>
+                    <td className={`whitespace-nowrap text-right font-semibold tabular-nums text-zinc-900 ${natoriAdminUi.td}`}>
                       {formatNatoriProjectAmount(row.project.amount)}
                     </td>
                     <td className={`whitespace-nowrap ${natoriAdminUi.td}`}>
                       <span
                         className={cn(
-                          "inline-block rounded-full border px-2 py-0.5 text-xs font-bold",
+                          "inline-block rounded-full border px-2 py-0.5 text-xs font-semibold",
                           meta.chipClassName
                         )}
                       >
                         {meta.label}
                       </span>
                     </td>
-                    <td className={`whitespace-nowrap ${natoriAdminUi.td} text-xs text-gray-600`}>
+                    <td className={`whitespace-nowrap ${natoriAdminUi.td} text-xs text-zinc-600`}>
                       {row.lastActionLabel}
-                      <span className="ml-1 text-gray-500">{formatDate(row.lastActivityISO)}</span>
+                      <span className="ml-1 text-zinc-500">{formatDate(row.lastActivityISO)}</span>
                     </td>
                     <td className={`whitespace-nowrap text-right ${natoriAdminUi.td}`}>
                       {isFinishedProject(row.project) ? (
-                        <span className="text-xs text-gray-500">—</span>
+                        <span className="text-xs text-zinc-500">—</span>
                       ) : (
                         <ElapsedBadge days={elapsed} />
                       )}

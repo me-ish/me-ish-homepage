@@ -30,12 +30,12 @@ export function SectionCard({
       className="scroll-mt-28 rounded-2xl border border-pink-100 bg-white p-4 shadow-sm sm:p-5"
     >
       <div className="mb-4">
-        <h2 className="flex items-center gap-2 text-base font-black text-gray-900 sm:text-lg">
+        <h2 className="flex items-center gap-2 text-base font-bold text-zinc-900 sm:text-lg">
           <span aria-hidden="true">{emoji}</span>
           {title}
         </h2>
         {description ? (
-          <p className="mt-1 text-xs leading-5 text-gray-600">{description}</p>
+          <p className="mt-1 text-xs leading-5 text-zinc-600">{description}</p>
         ) : null}
       </div>
       {children}
@@ -85,7 +85,7 @@ export function TextInput({
         aria-describedby={error ? `${id}-error` : undefined}
         className={inputClass}
       />
-      {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
       {error ? (
         <p id={`${id}-error`} className={natoriAdminUi.fieldError}>
           {error}
@@ -126,7 +126,7 @@ export function TextArea({
         placeholder={placeholder}
         className={inputClass}
       />
-      {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
     </div>
   );
 }
@@ -314,7 +314,7 @@ export function ImageUploadField({
           onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
         />
       </div>
-      {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
       {error ? <p className="mt-1 text-xs font-bold text-red-600">{error}</p> : null}
     </div>
   );

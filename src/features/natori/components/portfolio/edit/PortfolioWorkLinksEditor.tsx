@@ -29,12 +29,12 @@ export default function PortfolioWorkLinksEditor({
     <div className="rounded-xl border border-pink-100 bg-white p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-black text-pink-700">関連リンク（任意）</p>
-          <p className="mt-1 text-xs leading-4 text-gray-500">
+          <p className="text-xs font-bold text-pink-700">関連リンク（任意）</p>
+          <p className="mt-1 text-xs leading-4 text-zinc-500">
             ご依頼者様のSNSや、イラストが実際に使われている動画・グッズページなど。公開ポートフォリオの拡大画面だけに表示します。
           </p>
         </div>
-        <span className="shrink-0 text-xs font-bold text-gray-400">
+        <span className="shrink-0 text-xs font-bold text-zinc-400">
           {links.length}/{MAX_LINKS}
         </span>
       </div>
@@ -48,7 +48,7 @@ export default function PortfolioWorkLinksEditor({
             >
               <div className="flex items-start gap-2">
                 <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
-                  <label className="block text-xs font-bold text-gray-600">
+                  <label className="block text-xs font-bold text-zinc-600">
                     種別
                     <select
                       value={link.kind}
@@ -66,7 +66,7 @@ export default function PortfolioWorkLinksEditor({
                       ))}
                     </select>
                   </label>
-                  <label className="block text-xs font-bold text-gray-600">
+                  <label className="block text-xs font-bold text-zinc-600">
                     表示名（任意）
                     <input
                       type="text"
@@ -77,7 +77,7 @@ export default function PortfolioWorkLinksEditor({
                       className={`${natoriAdminUi.input} mt-1`}
                     />
                   </label>
-                  <label className="block text-xs font-bold text-gray-600 sm:col-span-2">
+                  <label className="block text-xs font-bold text-zinc-600 sm:col-span-2">
                     URL
                     <input
                       type="url"
@@ -122,7 +122,7 @@ export default function PortfolioWorkLinksEditor({
         <Plus className="h-3.5 w-3.5" aria-hidden />
         リンクを追加
       </button>
-      <p className="mt-2 text-xs leading-4 text-gray-400">
+      <p className="mt-2 text-xs leading-4 text-zinc-400">
         関連リンクを保存・公開するには作品画像が必要です。URLは http:// または https:// で始まる公開ページを入力してください。
       </p>
     </div>

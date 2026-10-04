@@ -4,15 +4,17 @@ import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  ArrowUpRight,
   Calculator,
   ChevronDown,
-  ChevronUp,
+  ChevronRight,
   FolderOpen,
   Inbox,
   KeyRound,
   Link2,
   LogOut,
   Palette,
+  PenLine,
   Settings,
   Trophy,
   User2,
@@ -96,8 +98,6 @@ const PUBLIC_PAGE_CARDS: PublicPageCard[] = [
   },
 ];
 
-const ICON_FRAME_CLASS =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FFF8FA] text-[#BE185D]";
 
 export default function NatoriDashboardPage() {
   const [email, setEmail] = useState<string | null>(null);
@@ -187,18 +187,20 @@ export default function NatoriDashboardPage() {
       headerRight={
         <>
           {loading ? (
-            <span className="text-xs text-gray-500">確認中…</span>
+            <span className="text-xs text-zinc-500">確認中…</span>
           ) : email ? (
             <>
-              <span className="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 sm:inline-flex">
-                <User2 className="h-3.5 w-3.5" aria-hidden />
+              <span className="hidden items-center gap-1.5 rounded-full bg-zinc-100 py-1 pl-1 pr-3 text-xs font-semibold text-zinc-700 sm:inline-flex">
+                <span className="grid h-6 w-6 place-items-center rounded-full bg-white text-[#DB2777] shadow-[0_1px_2px_rgba(24,24,27,0.08)]">
+                  <User2 className="h-3.5 w-3.5" aria-hidden />
+                </span>
                 {displayName ?? email}
               </span>
               <Button
                 onClick={handleLogout}
                 disabled={signingOut}
                 variant="outline"
-                className="h-9 rounded-full border-gray-300 bg-white px-3 text-xs font-bold text-gray-800 hover:bg-gray-50"
+                className="h-9 rounded-full border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-700 shadow-[0_1px_2px_rgba(24,24,27,0.05)] hover:border-zinc-300 hover:bg-zinc-50"
               >
                 <LogOut className="h-3.5 w-3.5" aria-hidden />
                 {signingOut ? "ログアウト中…" : "ログアウト"}
@@ -206,20 +208,16 @@ export default function NatoriDashboardPage() {
             </>
           ) : (
             // ここまで表示できている時点で認可済みなので、email が無い = 合言葉キー
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-bold text-gray-600">
-              <KeyRound className="h-3.5 w-3.5" aria-hidden />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-700">
+              <KeyRound className="h-3.5 w-3.5 text-zinc-500" aria-hidden />
               合言葉キーでアクセス中
             </span>
           )}
         </>
       }
     >
-      <div>
-        {error ? (
-          <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 sm:text-sm">
-            {error}
-          </div>
-        ) : null}
+      <>
+        {error ? <div className={natoriAdminUi.alert.error}>{error}</div> : null}
 
         {projects ? (
           <DashboardTodaySummary projects={projects} today={new Date()} />
@@ -230,11 +228,11 @@ export default function NatoriDashboardPage() {
         ) : null}
         <ConsultationAttentionPanel projects={allProjects} loading={loading} onRefresh={() => void refresh()} />
 
-        <section aria-labelledby="dashboard-tools-heading" className="mt-6">
+        <section aria-labelledby="dashboard-tools-heading">
           <h2 id="dashboard-tools-heading" className={natoriAdminUi.sectionTitle}>
             管理ツール
           </h2>
-          <ul className="mt-2 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          <ul className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {TOOL_CARDS.map((card, index) => {
               const Icon = card.icon;
               // リンク名はタイトルだけにし、説明は補足（aria-describedby）として読ませる
@@ -246,17 +244,21 @@ export default function NatoriDashboardPage() {
                     href={card.href}
                     aria-labelledby={titleId}
                     aria-describedby={descriptionId}
-                    className={`${natoriAdminUi.card} flex h-full min-h-20 items-center gap-3 !p-3 transition hover:border-pink-200 hover:shadow-md sm:!p-4`}
+                    className={`group relative flex h-full min-h-20 flex-col gap-3 rounded-2xl ${natoriAdminUi.surface} p-3.5 ${natoriAdminUi.cardInteractive} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] sm:flex-row sm:items-center sm:p-4`}
                   >
-                    <span className={ICON_FRAME_CLASS}>
+                    <span className={natoriAdminUi.iconTile}>
                       <Icon className="h-5 w-5" aria-hidden />
                     </span>
-                    <span className="min-w-0">
-                      <span id={titleId} className="block text-sm font-black leading-5 text-gray-900">
+                    <span className="min-w-0 flex-1">
+                      <span id={titleId} className="block text-sm font-semibold leading-5 text-zinc-900">
                         {card.title}
                       </span>
-                      <span id={descriptionId} className={`${natoriAdminUi.caption} block`}>{card.description}</span>
+                      <span id={descriptionId} className={`${natoriAdminUi.caption} mt-0.5 block`}>{card.description}</span>
                     </span>
+                    <ChevronRight
+                      className="absolute right-3 top-3.5 h-4 w-4 text-zinc-300 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-zinc-500 sm:static"
+                      aria-hidden
+                    />
                   </Link>
                 </li>
               );
@@ -264,37 +266,42 @@ export default function NatoriDashboardPage() {
           </ul>
         </section>
 
-        <section aria-labelledby="dashboard-public-heading" className="mt-6">
+        <section aria-labelledby="dashboard-public-heading">
           <h2 id="dashboard-public-heading" className={natoriAdminUi.sectionTitle}>
             公開ページ
           </h2>
-          <ul className="mt-2 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {publicPages.map((card) => {
               const Icon = card.icon;
               return (
-                <li key={card.title} className={`${natoriAdminUi.card} flex flex-col gap-3`}>
-                  <div className="flex items-center gap-3">
-                    <span className={ICON_FRAME_CLASS}>
+                <li
+                  key={card.title}
+                  className={`rounded-2xl ${natoriAdminUi.surface} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:p-5`}
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className={natoriAdminUi.iconTile}>
                       <Icon className="h-5 w-5" aria-hidden />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-sm font-black leading-5 text-gray-900">{card.title}</p>
-                      <p className={natoriAdminUi.caption}>{card.description}</p>
+                      <p className="text-sm font-semibold leading-5 text-zinc-900">{card.title}</p>
+                      <p className={`${natoriAdminUi.caption} mt-0.5`}>{card.description}</p>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
                     <Link
                       href={card.viewHref}
                       aria-label={`${card.title}の公開ページを見る`}
-                      className={natoriAdminUi.btnLink}
+                      className={`${natoriAdminUi.btnLink} px-1`}
                     >
                       公開ページを見る
+                      <ArrowUpRight className="h-4 w-4" aria-hidden />
                     </Link>
                     <Link
                       href={card.editHref}
                       aria-label={`${card.title}を編集する`}
                       className={natoriAdminUi.btnSecondary}
                     >
+                      <PenLine className="h-4 w-4 text-zinc-500" aria-hidden />
                       編集する
                     </Link>
                   </div>
@@ -312,7 +319,7 @@ export default function NatoriDashboardPage() {
           profile={profile}
           onSaved={(next) => setProfile(next)}
         />
-      </div>
+      </>
     </NatoriPageShell>
   );
 }
@@ -372,31 +379,34 @@ function ProfileSettingsPanel({
   };
 
   return (
-    <section className="mt-6 rounded-2xl border border-pink-100 bg-white shadow-sm">
+    <section className={`mt-6 rounded-2xl ${natoriAdminUi.surface}`}>
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl p-3 text-left hover:bg-pink-50/40 sm:p-4"
+        className="group flex w-full items-center justify-between gap-3 rounded-2xl p-4 text-left transition-colors hover:bg-zinc-50/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] sm:px-5"
       >
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gray-900 text-white">
-            <Settings className="h-4 w-4" aria-hidden />
+          <span className={natoriAdminUi.iconTileNeutral}>
+            <Settings className="h-5 w-5" aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-gray-900">プロフィール設定</p>
-            <p className="mt-0.5 text-xs text-gray-600">
+            <p className="text-sm font-semibold text-zinc-900">プロフィール設定</p>
+            <p className="mt-0.5 text-xs leading-5 text-zinc-600">
               表示名・ポートフォリオ・リンク集のリンク先・1日の作業時間など、自分の情報を保存します。
             </p>
           </div>
         </div>
-        <span className="shrink-0 text-gray-500">
-          {open ? <ChevronUp className="h-5 w-5" aria-hidden /> : <ChevronDown className="h-5 w-5" aria-hidden />}
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-zinc-500 transition-colors group-hover:bg-zinc-100">
+          <ChevronDown
+            className={`h-5 w-5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+            aria-hidden
+          />
         </span>
       </button>
 
       {open ? (
-        <div className="border-t border-pink-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
+        <div className="border-t border-zinc-100 px-4 pb-4 pt-4 sm:px-5 sm:pb-5">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm">
               <span className={natoriAdminUi.label}>表示名</span>
@@ -484,16 +494,8 @@ function ProfileSettingsPanel({
             </label>
           </div>
 
-          {error ? (
-            <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
-              {error}
-            </p>
-          ) : null}
-          {saved ? (
-            <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
-              保存しました。
-            </p>
-          ) : null}
+          {error ? <p className={`${natoriAdminUi.alert.error} mt-3`}>{error}</p> : null}
+          {saved ? <p className={`${natoriAdminUi.alert.success} mt-3`}>保存しました。</p> : null}
 
           <div className="mt-4 flex flex-wrap justify-end gap-2">
             <Button

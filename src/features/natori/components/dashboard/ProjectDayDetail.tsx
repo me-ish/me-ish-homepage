@@ -109,16 +109,21 @@ export default function ProjectDayDetail({
   const activeOnlyProjects = cardProjects.filter((project) => project.dueDate !== selectedISO);
 
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5 md:p-6">
+    <section className={`rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-5 md:p-6`}>
       <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-gray-900 text-white">
-          <CalendarRange className="h-4 w-4" aria-hidden />
-        </div>
+        <span className={natoriAdminUi.iconTile}>
+          <CalendarRange className="h-5 w-5" aria-hidden />
+        </span>
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Selected day</p>
-          <p className="break-words text-lg font-black text-gray-900 sm:text-xl">{dateLabel}</p>
-          <p className="mt-1 text-xs text-gray-700">
-            稼働中のタスク {activeBars.length} 件 / 納期 {dueProjects.length} 件
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#BE185D]">Selected day</p>
+          <p className="break-words text-lg font-semibold tracking-tight text-zinc-900 sm:text-xl">{dateLabel}</p>
+          <p className="mt-1.5 flex flex-wrap gap-1.5 text-xs text-zinc-700">
+            <span className={`${natoriAdminUi.badge} ${natoriAdminUi.badgeTone.neutral} font-medium`}>
+              稼働中のタスク {activeBars.length} 件
+            </span>
+            <span className={`${natoriAdminUi.badge} ${natoriAdminUi.badgeTone.neutral} font-medium`}>
+              納期 {dueProjects.length} 件
+            </span>
           </p>
         </div>
       </div>
@@ -140,13 +145,13 @@ export default function ProjectDayDetail({
             <li
               key={reminder.id}
               className={cn(
-                "flex items-start gap-2 rounded-2xl border p-3 text-sm sm:p-4",
+                "flex items-start gap-2 rounded-xl border p-3 text-sm sm:p-4",
                 reminder.bannerClassName
               )}
             >
               <Banknote className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               <div className="min-w-0">
-                <p className="font-black">{reminder.label}</p>
+                <p className="font-semibold">{reminder.label}</p>
                 {reminder.detail ? (
                   <p className="mt-0.5 break-words text-xs leading-5 opacity-90">
                     {reminder.detail}
@@ -159,15 +164,15 @@ export default function ProjectDayDetail({
       ) : null}
 
       {deliveryEndBars.length > 0 ? (
-        <div className="mt-4 flex items-start gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900 sm:p-4">
+        <div className={`${natoriAdminUi.alert.success} mt-4 flex items-start gap-2 sm:p-4`}>
           <Star className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
           <div className="min-w-0">
-            <p className="font-black">この日の納品 {deliveryEndBars.length} 件</p>
-            <ul className="mt-1 flex flex-wrap gap-1.5">
+            <p className="font-semibold">この日の納品 {deliveryEndBars.length} 件</p>
+            <ul className="mt-1.5 flex flex-wrap gap-1.5">
               {deliveryEndBars.map((entry) => (
                 <li
                   key={entry.bar.id}
-                  className="rounded-full border border-emerald-500 bg-white px-2 py-0.5 text-xs font-bold text-emerald-800"
+                  className="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-600/25"
                 >
                   {entry.bar.project.clientName}｜{entry.bar.project.title}
                 </li>
@@ -178,13 +183,13 @@ export default function ProjectDayDetail({
       ) : null}
 
       {cardProjects.length === 0 ? (
-        <p className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm leading-6 text-gray-800">
+        <p className="mt-4 rounded-xl bg-zinc-50 p-4 text-sm leading-6 text-zinc-700">
           この日に予定はありません。ゆっくり手を動かせます。
         </p>
       ) : (
         <div className="mt-4 space-y-3">
           {dueProjects.length > 0 ? (
-            <p className="text-xs font-bold uppercase tracking-wide text-gray-600">
+            <p className="text-xs font-semibold text-zinc-600">
               この日が納期の案件
             </p>
           ) : null}
@@ -206,7 +211,7 @@ export default function ProjectDayDetail({
           {activeOnlyProjects.length > 0 ? (
             <>
               <div className="pt-2">
-                <p className="text-xs font-bold uppercase tracking-wide text-gray-600">
+                <p className="text-xs font-semibold text-zinc-600">
                   この日に手を動かす案件
                 </p>
                 <p className={natoriAdminUi.caption}>

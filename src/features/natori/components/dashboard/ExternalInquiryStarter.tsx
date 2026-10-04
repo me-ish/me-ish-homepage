@@ -33,18 +33,18 @@ export default function ExternalInquiryStarter() {
   };
 
   return (
-    <section className="rounded-2xl border border-pink-200 bg-white p-4 shadow-sm sm:p-5">
-      <h2 className="text-lg font-black">DM・メールなどからのご相談を登録</h2>
-      <p className="mt-1 text-sm text-gray-600">最初は依頼者と案件名だけで大丈夫です。相談で決まった条件・金額は次の画面で入力します。</p>
+    <section className={natoriAdminUi.card}>
+      <h2 className="text-[16px] font-semibold leading-6 text-zinc-900">DM・メールなどからのご相談を登録</h2>
+      <p className="mt-1 text-sm leading-6 text-zinc-600">最初は依頼者と案件名だけで大丈夫です。相談で決まった条件・金額は次の画面で入力します。</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label className="text-sm font-bold">依頼者名 <span className="text-pink-700">必須</span><input className={`${inputClass} mt-1`} value={clientName} onChange={(event) => setClientName(event.target.value)} maxLength={100} /></label>
-        <label className="text-sm font-bold">案件名 <span className="text-pink-700">必須</span><input className={`${inputClass} mt-1`} value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} placeholder="例：動画サムネイル用イラスト" /></label>
-        <label className="text-sm font-bold">相談が来た場所<select className={`${inputClass} mt-1`} value={source} onChange={(event) => setSource(event.target.value)}><option>DM</option><option>Gmail・メール</option><option>他プラットフォーム</option><option>その他</option></select></label>
-        <label className="text-sm font-bold">依頼者のメール（分かれば）<input type="email" className={`${inputClass} mt-1`} value={clientEmail} onChange={(event) => setClientEmail(event.target.value)} /></label>
+        <label className="text-xs font-semibold text-zinc-700">依頼者名 <span className={natoriAdminUi.required}>必須</span><input className={`${inputClass} mt-1`} value={clientName} onChange={(event) => setClientName(event.target.value)} maxLength={100} /></label>
+        <label className="text-xs font-semibold text-zinc-700">案件名 <span className={natoriAdminUi.required}>必須</span><input className={`${inputClass} mt-1`} value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} placeholder="例：動画サムネイル用イラスト" /></label>
+        <label className="text-xs font-semibold text-zinc-700">相談が来た場所<select className={`${inputClass} mt-1`} value={source} onChange={(event) => setSource(event.target.value)}><option>DM</option><option>Gmail・メール</option><option>他プラットフォーム</option><option>その他</option></select></label>
+        <label className="text-xs font-semibold text-zinc-700">依頼者のメール（分かれば）<input type="email" className={`${inputClass} mt-1`} value={clientEmail} onChange={(event) => setClientEmail(event.target.value)} /></label>
       </div>
-      <label className="mt-3 block text-sm font-bold">最初の相談メモ（任意）<textarea className={`${inputClass} mt-1 min-h-20`} value={note} onChange={(event) => setNote(event.target.value)} maxLength={4000} placeholder="DMなどの内容を貼り付けられます" /></label>
-      {error ? <p role="alert" className="mt-2 text-sm text-red-700">{error}</p> : null}
-      <button type="button" disabled={!clientName.trim() || !title.trim() || busy} onClick={submit} className={`${natoriAdminUi.btnPrimary} mt-4 w-full`}>{busy ? "登録しています…" : "案件を作って条件整理へ →"}</button>
+      <label className="mt-3 block text-xs font-semibold text-zinc-700">最初の相談メモ（任意）<textarea className={`${inputClass} mt-1 min-h-20`} value={note} onChange={(event) => setNote(event.target.value)} maxLength={4000} placeholder="DMなどの内容を貼り付けられます" /></label>
+      {error ? <p role="alert" className={`${natoriAdminUi.alert.error} mt-3`}>{error}</p> : null}
+      <button type="button" disabled={!clientName.trim() || !title.trim() || busy} onClick={submit} className={`${natoriAdminUi.btnPrimary} mt-5 w-full sm:w-auto`}>{busy ? "登録しています…" : "案件を作って条件整理へ →"}</button>
     </section>
   );
 }

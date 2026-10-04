@@ -86,6 +86,22 @@ img {
     "Yu Gothic", "游ゴシック体", sans-serif;
 }
 
+/* Natori 管理画面: すっきりしたゴシック体と詰め組み（palt）。
+ * Apple 端末は端末のヒラギノ、それ以外は Noto Sans JP（adminFont.ts で読込）。
+ * ダイアログなど body 直下に出る要素にも効くよう body にも掛ける。 */
+[data-natori-admin],
+body:has([data-natori-admin]) {
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans",
+    "Hiragino Kaku Gothic ProN", var(--font-natori-admin, "Noto Sans JP"),
+    "Yu Gothic UI", Meiryo, sans-serif;
+  font-feature-settings: "palt";
+  letter-spacing: 0.02em;
+}
+
+body:has([data-natori-admin]) {
+  background-color: #f7f7f8;
+}
+
 .fade-in-start {
   opacity: 0;
   transform: translateY(30px);

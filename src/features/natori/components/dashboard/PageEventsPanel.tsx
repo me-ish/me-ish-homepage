@@ -4,7 +4,8 @@
 // ダッシュボードのクリック解析パネル。リンク集・コミッションポートフォリオの
 // クリック/送信イベント（自前計測）を 30日/90日 で集計表示する。
 import { useEffect, useState } from "react";
-import { BarChart3, ChevronDown, ChevronUp } from "lucide-react";
+import { BarChart3, ChevronDown } from "lucide-react";
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import {
   fetchNatoriPageEventSummary,
   type NatoriPageEventSummary,
@@ -67,40 +68,43 @@ export default function PageEventsPanel() {
   const total30 = summary?.counts.reduce((sum, entry) => sum + entry.last30Days, 0) ?? 0;
 
   return (
-    <section className="mt-6 rounded-2xl border border-pink-100 bg-white shadow-sm">
+    <section className={`mt-6 rounded-2xl ${natoriAdminUi.surface}`}>
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl p-3 text-left hover:bg-pink-50/40 sm:p-4"
+        className="group flex w-full items-center justify-between gap-3 rounded-2xl p-4 text-left transition-colors hover:bg-zinc-50/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] sm:px-5"
       >
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-indigo-500 text-white">
-            <BarChart3 className="h-4 w-4" aria-hidden />
+          <span className={natoriAdminUi.iconTileNeutral}>
+            <BarChart3 className="h-5 w-5" aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-gray-900">
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-zinc-900">
               クリック解析
               {state === "ready" ? (
-                <span className="ml-2 text-xs font-medium text-gray-500">
+                <span className={`${natoriAdminUi.badge} ${natoriAdminUi.badgeTone.neutral} font-medium`}>
                   直近30日 {total30}件
                 </span>
               ) : null}
             </p>
-            <p className="mt-0.5 text-xs text-gray-600">
+            <p className="mt-0.5 text-xs leading-5 text-zinc-600">
               リンク集・コミッションページのクリックと依頼フォーム送信の回数です。
             </p>
           </div>
         </div>
-        <span className="shrink-0 text-gray-500">
-          {open ? <ChevronUp className="h-5 w-5" aria-hidden /> : <ChevronDown className="h-5 w-5" aria-hidden />}
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-zinc-500 transition-colors group-hover:bg-zinc-100">
+          <ChevronDown
+            className={`h-5 w-5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+            aria-hidden
+          />
         </span>
       </button>
 
       {open ? (
-        <div className="space-y-4 border-t border-pink-100 px-3 pb-4 pt-3 sm:px-4">
+        <div className="space-y-5 border-t border-zinc-100 px-4 pb-5 pt-4 sm:px-5">
           {state === "loading" ? (
-            <div className="h-24 animate-pulse rounded-xl bg-pink-50/60" />
+            <div className="h-24 animate-pulse rounded-xl bg-zinc-100" />
           ) : summary && summary.counts.length > 0 ? (
             <>
               {EVENT_META.map((meta) => {
@@ -108,18 +112,18 @@ export default function PageEventsPanel() {
                 if (rows.length === 0) return null;
                 return (
                   <div key={meta.event}>
-                    <p className="text-xs font-bold text-gray-600">
+                    <p className="text-xs font-semibold text-zinc-700">
                       {meta.title}
                       {meta.hint ? (
-                        <span className="ml-1.5 font-medium normal-case text-gray-400">
+                        <span className="ml-1.5 font-medium normal-case text-zinc-500">
                           {meta.hint}
                         </span>
                       ) : null}
                     </p>
                     <table className="mt-1.5 w-full border-collapse text-sm">
                       <thead>
-                        <tr className="text-left text-xs font-bold text-gray-500">
-                          <th className="py-1 pr-2 font-bold">
+                        <tr className="text-left text-xs font-semibold text-zinc-500">
+                          <th className="py-1 pr-2 font-semibold">
                             <span className="sr-only">項目</span>
                           </th>
                           <th className="w-20 py-1 pr-2 text-right">30日</th>
@@ -130,18 +134,18 @@ export default function PageEventsPanel() {
                         {rows.map((entry) => (
                           <tr
                             key={`${entry.event}-${entry.label}`}
-                            className="border-t border-pink-50"
+                            className="border-t border-zinc-100"
                           >
                             <td
-                              className="max-w-0 truncate py-1.5 pr-2 text-gray-900"
+                              className="max-w-0 truncate py-2 pr-2 text-zinc-900"
                               title={entry.label || undefined}
                             >
                               {entry.label || "（ラベルなし）"}
                             </td>
-                            <td className="py-1.5 pr-2 text-right font-bold text-gray-900">
+                            <td className="py-2 pr-2 text-right font-semibold tabular-nums text-zinc-900">
                               {entry.last30Days}
                             </td>
-                            <td className="py-1.5 text-right text-gray-500">{entry.last90Days}</td>
+                            <td className="py-2 text-right tabular-nums text-zinc-500">{entry.last90Days}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -150,17 +154,17 @@ export default function PageEventsPanel() {
                 );
               })}
               {summary.truncated ? (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-zinc-500">
                   ※件数が多いため一部のみ集計しています。
                 </p>
               ) : null}
             </>
           ) : (
-            <p className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
+            <p className="rounded-xl bg-zinc-50 p-3 text-xs leading-5 text-zinc-600">
               まだ計測データがありません。リンク集やコミッションページがクリックされると、ここに集計が表示されます。
             </p>
           )}
-          <p className="text-xs leading-4 text-gray-400">
+          <p className="text-xs leading-5 text-zinc-500">
             同じイベントは GA4 にも送信しています。ページ全体のアクセス数（表示回数・流入元など）は
             Google アナリティクスまたは Vercel Analytics で確認できます。
           </p>

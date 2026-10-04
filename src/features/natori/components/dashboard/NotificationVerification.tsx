@@ -51,7 +51,7 @@ export default function NotificationVerification() {
     <p className="mt-2 text-sm leading-relaxed">同じ確認を押し直しても、新しいメールを追加しない設定です。結果はこの画面を開いている間の記録です。再読み込み後の再確認も同じ3通を使います。</p>
     <button disabled={busy} onClick={() => void send("all")} className="mt-5 rounded-xl bg-[#EC4899] px-5 py-3 font-bold text-white disabled:opacity-50">確認メール3通を送る</button>
     {message && <p role="status" className="mt-3 text-sm">{message}</p>}
-    <p className="mt-6 text-sm text-gray-600">以下は新しい通知欄と同じ表示です。iPhoneで文字・ボタンが切れず、「状態を更新」を押せることも確認してください。</p>
+    <p className="mt-6 text-sm text-zinc-600">以下は新しい通知欄と同じ表示です。iPhoneで文字・ボタンが切れず、「状態を更新」を押せることも確認してください。</p>
     <NotificationStatusView data={data} error={error} busy={busy} run={run} />
   </main>;
 }

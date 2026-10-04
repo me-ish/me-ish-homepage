@@ -296,7 +296,7 @@ export default function PortfolioEditor({
               ← ダッシュボード
             </Link>
           ) : null}
-          <h1 className="min-w-0 text-lg font-black text-gray-900">ポートフォリオ編集</h1>
+          <h1 className="min-w-0 text-lg font-bold text-zinc-900">ポートフォリオ編集</h1>
           <div className="ml-auto flex items-center gap-2">
             {isDemo ? null : (
               <button
@@ -312,7 +312,7 @@ export default function PortfolioEditor({
             <Link
               href={publicHref ?? "/natori/portfolio"}
               target="_blank"
-              className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
+              className="inline-flex items-center gap-1.5 rounded-full border border-zinc-300 bg-white px-4 py-2 text-xs font-bold text-zinc-800 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
             >
               <ExternalLink className="h-3.5 w-3.5" aria-hidden />
               公開ページを見る
@@ -358,7 +358,7 @@ export default function PortfolioEditor({
                   onClick={() => setActiveSectionId(section.id)}
                   aria-current={active ? "true" : undefined}
                   className={`block rounded-lg px-3 py-2 text-sm font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] ${
-                    active ? "bg-[#BE185D] text-white" : "text-gray-700 hover:bg-pink-50"
+                    active ? "bg-[#BE185D] text-white" : "text-zinc-700 hover:bg-pink-50"
                   }`}
                 >
                   {section.label}
@@ -389,14 +389,14 @@ export default function PortfolioEditor({
         >
           <div className="space-y-5">
             <div>
-              <p className="mb-2 text-sm font-black text-gray-900">コミッション全体</p>
-              <p className="mb-3 text-xs leading-5 text-gray-600">
+              <p className="mb-2 text-sm font-bold text-zinc-900">コミッション全体</p>
+              <p className="mb-3 text-xs leading-5 text-zinc-600">
                 停止中はご依頼フォーム全体から送信できなくなります。
               </p>
               <div className="flex flex-wrap gap-2">
                 {[
                   { value: true, label: "● 受付中", active: "bg-emerald-700 text-white border-emerald-700" },
-                  { value: false, label: "受付停止中", active: "bg-gray-700 text-white border-gray-700" },
+                  { value: false, label: "受付停止中", active: "bg-zinc-700 text-white border-zinc-700" },
                 ].map((choice) => (
                   <button
                     key={String(choice.value)}
@@ -405,7 +405,7 @@ export default function PortfolioEditor({
                     className={`rounded-full border px-5 py-2 text-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] ${
                       content.commissionOpen === choice.value
                         ? choice.active
-                        : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+                        : "border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
                     }`}
                   >
                     {choice.label}
@@ -415,8 +415,8 @@ export default function PortfolioEditor({
             </div>
 
             <div className="border-t border-pink-100 pt-5">
-              <p className="mb-2 text-sm font-black text-gray-900">量産イラスト</p>
-              <p className="mb-3 text-xs leading-5 text-gray-600">
+              <p className="mb-2 text-sm font-bold text-zinc-900">量産イラスト</p>
+              <p className="mb-3 text-xs leading-5 text-zinc-600">
                 停止中もフォームの選択肢には表示され、選んだ方へXの確認案内を表示します。
               </p>
               <div className="flex flex-wrap gap-2">
@@ -429,7 +429,7 @@ export default function PortfolioEditor({
                   {
                     value: false,
                     label: "量産イラスト受付停止中",
-                    active: "border-gray-700 bg-gray-700 text-white",
+                    active: "border-zinc-700 bg-zinc-700 text-white",
                   },
                 ].map((choice) => (
                   <button
@@ -441,7 +441,7 @@ export default function PortfolioEditor({
                     className={`rounded-full border px-5 py-2 text-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] ${
                       content.massProductionIllustrationOpen === choice.value
                         ? choice.active
-                        : "border-pink-200 bg-white text-gray-600 hover:bg-pink-50"
+                        : "border-pink-200 bg-white text-zinc-600 hover:bg-pink-50"
                     }`}
                   >
                     {choice.label}
@@ -524,8 +524,8 @@ export default function PortfolioEditor({
           </div>
 
           <div className="mt-5 border-t border-pink-100 pt-5">
-            <p className="text-sm font-black text-gray-900">量産イラスト作例</p>
-            <p className="mt-1 text-xs leading-5 text-gray-600">
+            <p className="text-sm font-bold text-zinc-900">量産イラスト作例</p>
+            <p className="mt-1 text-xs leading-5 text-zinc-600">
               画像を設定した作例だけ公開ページに表示されます。正方形の画像がおすすめです。
             </p>
 
@@ -867,7 +867,7 @@ export default function PortfolioEditor({
                         ))}
                       </select>
                     </label>
-                    <div className="flex flex-wrap gap-x-5 gap-y-2 rounded-lg border border-pink-100 bg-white px-3 py-2.5 text-xs font-bold text-gray-700">
+                    <div className="flex flex-wrap gap-x-5 gap-y-2 rounded-lg border border-pink-100 bg-white px-3 py-2.5 text-xs font-bold text-zinc-700">
                       <label className="flex cursor-pointer items-center gap-2">
                         <input
                           type="checkbox"
@@ -1269,7 +1269,7 @@ export default function PortfolioEditor({
             ) : dirty ? (
               <span className="text-amber-600">未保存の変更があります</span>
             ) : (
-              <span className="text-gray-600">変更はありません</span>
+              <span className="text-zinc-600">変更はありません</span>
             )}
           </div>
           <button

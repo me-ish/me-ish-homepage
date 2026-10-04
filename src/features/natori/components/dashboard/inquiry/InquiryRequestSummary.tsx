@@ -18,7 +18,7 @@ export default function InquiryRequestSummary({
       <section aria-labelledby="inquiry-request-heading">
         <h3
           id="inquiry-request-heading"
-          className="mb-2 text-xs font-bold text-gray-600"
+          className="mb-2 text-xs font-bold text-zinc-600"
         >
           原依頼内容
         </h3>
@@ -43,7 +43,7 @@ export default function InquiryRequestSummary({
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <h3
           id="inquiry-request-heading"
-          className="text-xs font-bold text-gray-600"
+          className="text-xs font-bold text-zinc-600"
         >
           原依頼内容
         </h3>
@@ -57,19 +57,19 @@ export default function InquiryRequestSummary({
         >
           {view.modeLabel}
         </span>
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-zinc-500">
           依頼者の原回答です（管理画面からは編集できません）
         </span>
       </div>
 
       {message && message.value !== "未記入" ? (
-        <div className="mb-3 rounded-xl border border-pink-100 bg-white p-3">
-          <p className="mb-2 text-xs font-bold text-pink-700">
+        <div className="mb-3 rounded-xl border border-zinc-200/80 bg-white p-3">
+          <p className="mb-2 text-xs font-bold text-[#BE185D]">
             依頼者からのメッセージ
           </p>
           <p
             data-field="message"
-            className="whitespace-pre-wrap break-words text-sm leading-6 text-gray-900"
+            className="whitespace-pre-wrap break-words text-sm leading-6 text-zinc-900"
           >
             {message.value}
           </p>
@@ -80,9 +80,9 @@ export default function InquiryRequestSummary({
         {view.sections.map((section) => (
           <div
             key={section.key}
-            className="rounded-xl border border-pink-100 bg-pink-50/40 p-3"
+            className="rounded-xl border border-zinc-200/80 bg-zinc-50 p-3"
           >
-            <p className="mb-1.5 text-xs font-bold text-pink-700">
+            <p className="mb-1.5 text-xs font-bold text-[#BE185D]">
               {section.title}
             </p>
             <dl className="grid grid-cols-1 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-2">
@@ -93,12 +93,12 @@ export default function InquiryRequestSummary({
                 )
                 .map((field) => (
                   <div key={field.key} className="flex min-w-0 gap-2">
-                    <dt className="shrink-0 font-bold text-gray-600">
+                    <dt className="shrink-0 font-bold text-zinc-600">
                       {field.label}:
                     </dt>
                     <dd
                       data-field={field.key}
-                      className="min-w-0 whitespace-pre-wrap break-words text-gray-900"
+                      className="min-w-0 whitespace-pre-wrap break-words text-zinc-900"
                     >
                       {field.value}
                     </dd>

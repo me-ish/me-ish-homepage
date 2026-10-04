@@ -18,7 +18,7 @@ export const NATORI_MONTHLY_REMINDERS: NatoriMonthlyReminder[] = [
     shortLabel: "送金",
     detail: "つなぐのサイトから事業用口座への送金手続きを行う日（毎月月末）。",
     chipClassName: "border-amber-400 bg-amber-100 text-amber-900",
-    cellBadgeClassName: "bg-amber-500 text-white",
+    cellBadgeClassName: "bg-amber-100 text-amber-900",
     bannerClassName: "border-amber-300 bg-amber-50 text-amber-900",
   },
 ];
