@@ -9,7 +9,8 @@ import { loadPortfolioContent } from "@/features/natori/server/portfolioSiteServ
 
 export const dynamic = "force-dynamic";
 
-const title = "Natori* illust – Works";
+// 呼び名は /natori/portfolio と同じ「ナトリのあとりえ」にそろえる。
+const title = "ナトリのあとりえ｜作品集";
 const description =
   "淡いピンクや水色を基調とした、やわらかく可愛い女の子のイラストの作品集。";
 
