@@ -5,7 +5,7 @@ import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { staffConsultationHref } from "@/features/natori/lib/consultationOverview";
 import ConsultationStatus from "./ConsultationStatus";
 import { useState } from "react";
-import { ArrowRight, CalendarDays, CircleDollarSign, Clock4, Mail, Pencil, Sparkles, AlertTriangle, Tag, Wallet, Zap } from "lucide-react";
+import { ArrowRight, CalendarDays, CircleDollarSign, Clock4, Mail, MessageSquare, Pencil, Sparkles, AlertTriangle, Tag, Wallet, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import ProjectEditForm from "./ProjectEditForm";
@@ -78,9 +78,9 @@ function formatStageMilestone(value: string) {
 }
 
 const priorityChipMap: Record<NonNullable<NatoriProject["priority"]>, { label: string; className: string }> = {
-  high: { label: "優先度：高", className: "border-red-300 bg-red-50 text-red-800" },
-  normal: { label: "優先度：中", className: "border-gray-300 bg-gray-50 text-gray-700" },
-  low: { label: "優先度：低", className: "border-gray-200 bg-gray-50 text-gray-500" },
+  high: { label: "優先度：高", className: "border-red-200 bg-red-50 text-red-800" },
+  normal: { label: "優先度：中", className: "border-zinc-200 bg-zinc-50 text-zinc-700" },
+  low: { label: "優先度：低", className: "border-zinc-200 bg-white text-zinc-600" },
 };
 
 export default function ProjectCard({
@@ -118,40 +118,41 @@ export default function ProjectCard({
         </span>
       ) : (
         <span className="min-w-0">
-          残り作業 <span className="font-black">{formatHours(scheduling.remainingHours)}</span>
+          残り作業 <span className="font-bold">{formatHours(scheduling.remainingHours)}</span>
         </span>
       )}
     </div>
   );
   const remainingTone = scheduling.isBlocked
-    ? "border-gray-200 bg-gray-50 text-gray-700"
+    ? "border-zinc-200/80 bg-zinc-50 text-zinc-700"
     : scheduling.isOverdue
       ? "border-red-200 bg-red-50 text-red-900"
       : isRush
         ? cn("border-transparent", deliveryPlanMeta.softClassName)
-        : "border-pink-100 bg-pink-50/50 text-pink-900";
+        : "border-zinc-200/80 bg-zinc-50 text-zinc-800";
 
   return (
     <Card
       role="article"
       aria-label={project.title}
       className={cn(
-        "min-w-0 overflow-hidden rounded-2xl border-gray-200 bg-white shadow-sm",
-        overdue && "border-red-400"
+        "min-w-0 overflow-hidden rounded-2xl border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(24,24,27,0.04)]",
+        overdue && "border-red-300 shadow-[0_0_0_1px_rgba(252,165,165,0.6)]"
       )}
     >
       <CardContent className="space-y-3 p-4 sm:space-y-4 sm:p-5">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="break-words text-base font-black leading-6 text-gray-900 sm:text-lg">
+            <p className="break-words text-base font-semibold leading-6 tracking-tight text-zinc-900 sm:text-lg sm:leading-7">
               {project.title}
             </p>
-            <p className="mt-1 break-words text-sm text-gray-600">{project.clientName}</p>
+            <p className="mt-0.5 break-words text-sm text-zinc-600">{project.clientName}</p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
             <Badge
+              variant="outline"
               className={cn(
-                "rounded-full border px-3 py-1 text-xs font-bold shadow-none",
+                "rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-none",
                 status.chipClassName
               )}
             >
@@ -160,7 +161,7 @@ export default function ProjectCard({
             {isRush ? (
               <span
                 className={cn(
-                  "inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-xs font-bold",
+                  "inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-xs font-semibold",
                   deliveryPlanMeta.chipClassName
                 )}
                 title={deliveryPlanMeta.label}
@@ -172,7 +173,7 @@ export default function ProjectCard({
             {priority ? (
               <span
                 className={cn(
-                  "rounded-full border px-2 py-0.5 text-xs font-bold",
+                  "rounded-full border px-2 py-0.5 text-xs font-medium",
                   priority.className
                 )}
               >
@@ -183,9 +184,9 @@ export default function ProjectCard({
         </div>
 
         {overdue ? (
-          <div className="flex items-start gap-2 rounded-2xl border border-red-300 bg-red-50 p-3 text-sm text-red-800">
-            <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="font-bold">
+          <div className={`${natoriAdminUi.alert.error} flex items-start gap-2`}>
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span className="font-semibold">
               納期を {Math.abs(days ?? 0)} 日過ぎています。優先して進めましょう。
             </span>
           </div>
@@ -193,17 +194,17 @@ export default function ProjectCard({
 
         <div
           className={cn(
-            "rounded-2xl border p-3",
+            "rounded-xl border p-3.5",
             stageMeta
-              ? cn("border-transparent", stageMeta.softClassName)
-              : "border-gray-200 bg-gray-50 text-gray-900"
+              ? cn("border-black/[0.04]", stageMeta.softClassName)
+              : "border-zinc-200/80 bg-zinc-50 text-zinc-900"
           )}
         >
-          <div className="flex items-center gap-2 text-xs font-bold opacity-80">
-            <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+          <div className="flex items-center gap-1.5 text-xs font-semibold opacity-80">
+            <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
             次やること
           </div>
-          <p className="mt-1 break-words text-lg font-black leading-7">
+          <p className="mt-1 break-words text-lg font-semibold leading-7 tracking-tight">
             {project.nextAction || getNextActionForStatus(project.status)}
           </p>
           <ProjectAdvanceButton
@@ -215,31 +216,38 @@ export default function ProjectCard({
         </div>
 
         {project.status === "awaiting_payment" ? (
-          <div className="flex items-start gap-2 rounded-2xl border border-orange-300 bg-orange-50 p-3 text-xs text-orange-900 sm:text-sm">
+          <div className={`${natoriAdminUi.alert.warning} flex items-start gap-2 text-xs sm:text-sm`}>
             <Wallet className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <span>入金確認後に制作スケジュールへ反映されます。</span>
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-700">
-          <span className="inline-flex items-center gap-1.5">
-            <CalendarDays className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
-            <span className="shrink-0 text-gray-500">納期</span>
-            <span className="font-bold text-gray-900">
+        {/* 各項目は「ラベル span」と「値 span.font-bold」の兄弟で組む（回帰スクリプトがこの組を読む） */}
+        <div className="grid grid-cols-3 gap-2 text-sm text-zinc-700">
+          <span className="flex min-w-0 flex-col gap-0.5 rounded-xl bg-zinc-50 px-3 py-2">
+            <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
+              <CalendarDays className="h-3.5 w-3.5 shrink-0 text-zinc-400" aria-hidden />
+              納期
+            </span>
+            <span className="break-words font-bold tabular-nums text-zinc-900">
               {formatNatoriProjectDueDate(project.dueDate, formatDueDate)}
             </span>
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <CircleDollarSign className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
-            <span className="shrink-0 text-gray-500">金額</span>
-            <span className="font-bold text-gray-900">
+          <span className="flex min-w-0 flex-col gap-0.5 rounded-xl bg-zinc-50 px-3 py-2">
+            <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
+              <CircleDollarSign className="h-3.5 w-3.5 shrink-0 text-zinc-400" aria-hidden />
+              金額
+            </span>
+            <span className="break-words font-bold tabular-nums text-zinc-900">
               {formatNatoriProjectAmount(project.amount)}
             </span>
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Tag className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
-            <span className="shrink-0 text-gray-500">種別</span>
-            <span className="font-bold text-gray-900">
+          <span className="flex min-w-0 flex-col gap-0.5 rounded-xl bg-zinc-50 px-3 py-2">
+            <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
+              <Tag className="h-3.5 w-3.5 shrink-0 text-zinc-400" aria-hidden />
+              種別
+            </span>
+            <span className="break-words font-bold text-zinc-900">
               {NATORI_PROJECT_TYPE_LABELS[project.type]}
             </span>
           </span>
@@ -250,50 +258,53 @@ export default function ProjectCard({
         {stagePlan ? (
           <div
             className={cn(
-              "rounded-2xl border p-3 text-xs sm:text-sm",
+              "rounded-xl border p-3 text-xs sm:p-3.5 sm:text-sm",
               stagePlan.isOverdueMilestone
                 ? "border-red-200 bg-red-50 text-red-900"
-                : cn("border-transparent", natoriStageMeta[stagePlan.stage].softClassName)
+                : "border-zinc-200/80 bg-white text-zinc-800"
             )}
           >
-            <div className="mb-2 border-b border-black/10 pb-2">{remainingLine}</div>
-            <div className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-wide opacity-80">
+            <div className="mb-2.5 border-b border-black/[0.06] pb-2.5">{remainingLine}</div>
+            <div className="flex items-center justify-between gap-2 text-xs font-semibold opacity-80">
               <span>現在のステージ</span>
               <span
                 className={cn(
-                  "rounded-full border px-2 py-0.5 text-xs font-bold",
+                  "rounded-full border px-2 py-0.5 text-xs font-semibold",
                   natoriStageMeta[stagePlan.stage].chipClassName
                 )}
               >
                 {natoriStageMeta[stagePlan.stage].label}
               </span>
             </div>
-            <div className="mt-1 grid grid-cols-3 gap-2 text-center">
+            <div className="mt-2 grid grid-cols-3 divide-x divide-black/[0.06] text-center">
               <div>
                 <p className="text-xs opacity-70">残</p>
-                <p className="text-sm font-black">{formatHours(stagePlan.remainingHours)}</p>
+                <p className="text-sm font-semibold tabular-nums">{formatHours(stagePlan.remainingHours)}</p>
               </div>
               <div>
                 <p className="text-xs opacity-70">平日1日</p>
-                <p className="text-sm font-black">{formatHours(stagePlan.requiredPerDay)}</p>
+                <p className="text-sm font-semibold tabular-nums">{formatHours(stagePlan.requiredPerDay)}</p>
               </div>
               <div>
                 <p className="text-xs opacity-70">今週の枠</p>
-                <p className="text-sm font-black">{formatHours(stagePlan.requiredThisWeek)}</p>
+                <p className="text-sm font-semibold tabular-nums">{formatHours(stagePlan.requiredThisWeek)}</p>
               </div>
             </div>
-            <p className="mt-1 text-xs opacity-80">
+            <p className="mt-2 text-xs opacity-80">
               目安: {formatStageMilestone(stagePlan.milestoneDateISO)}
               {stagePlan.isOverdueMilestone ? "（過ぎてます）" : ""}
             </p>
           </div>
         ) : (
-          <div className={cn("rounded-2xl border px-3 py-2", remainingTone)}>{remainingLine}</div>
+          <div className={cn("rounded-xl border px-3 py-2.5", remainingTone)}>{remainingLine}</div>
         )}
 
-        {project.consultation !== undefined ? <div className="space-y-2 rounded-xl border border-pink-200 p-3">
+        {project.consultation !== undefined ? <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-200/80 p-3">
           <ConsultationStatus project={project} />
-          <Link href={staffConsultationHref(project.id)} className="inline-flex min-h-10 items-center rounded-full border border-pink-300 px-4 text-sm font-bold text-pink-800">相談を開く</Link>
+          <Link href={staffConsultationHref(project.id)} className={natoriAdminUi.btnSecondary}>
+            <MessageSquare className="h-4 w-4 text-[#DB2777]" aria-hidden />
+            相談を開く
+          </Link>
         </div> : null}
 
         <ProjectNoteSummary note={project.note} />
@@ -302,7 +313,7 @@ export default function ProjectCard({
 
         {(onOpenMail && (WORK_MAIL_STATUSES.has(project.status) || project.status === "completed")) ||
         (onEditDetails && !editing) ? (
-          <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-3">
+          <div className="flex flex-wrap gap-2 border-t border-zinc-100 pt-3 sm:pt-4">
             {onOpenMail && WORK_MAIL_STATUSES.has(project.status) ? (
               <button
                 type="button"

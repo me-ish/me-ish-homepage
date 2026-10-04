@@ -1,4 +1,15 @@
+import { BarChart3, CalendarDays, Calculator, Inbox, LayoutDashboard, type LucideIcon } from "lucide-react";
+
 export type NatoriAdminSection = "dashboard" | "inquiries" | "projects" | "estimate" | "results";
+
+/** Icons shared by the header nav and the mobile tab bar. */
+export const NATORI_ADMIN_NAV_ICONS: Record<NatoriAdminSection, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  inquiries: Inbox,
+  projects: CalendarDays,
+  estimate: Calculator,
+  results: BarChart3,
+};
 
 export const NATORI_ADMIN_NAV: ReadonlyArray<{
   key: NatoriAdminSection;

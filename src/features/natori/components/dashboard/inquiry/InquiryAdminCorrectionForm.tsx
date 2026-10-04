@@ -115,16 +115,16 @@ export default function InquiryAdminCorrectionForm({
     <section aria-labelledby="inquiry-correction-heading">
       <h3
         id="inquiry-correction-heading"
-        className="mb-2 text-xs font-bold text-gray-600"
+        className="mb-2 text-xs font-bold text-zinc-600"
       >
         管理確定項目
       </h3>
-      <div className="space-y-3 rounded-xl border border-pink-100 bg-white p-3 shadow-sm">
+      <div className="space-y-3 rounded-xl border border-zinc-200/80 bg-white p-3 shadow-sm">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label
               htmlFor="inquiry-amount"
-              className="mb-1 block text-xs font-bold text-gray-600"
+              className="mb-1 block text-xs font-bold text-zinc-600"
             >
               金額（円）
             </label>
@@ -138,14 +138,14 @@ export default function InquiryAdminCorrectionForm({
               className={natoriAdminUi.input}
               aria-describedby="inquiry-amount-hint"
             />
-            <p id="inquiry-amount-hint" className="mt-1 text-xs text-gray-500">
+            <p id="inquiry-amount-hint" className="mt-1 text-xs text-zinc-500">
               現在: {formatNatoriProjectAmount(project.amount)}／空欄=未確定、0=無料
             </p>
           </div>
           <div>
             <label
               htmlFor="inquiry-due-date"
-              className="mb-1 block text-xs font-bold text-gray-600"
+              className="mb-1 block text-xs font-bold text-zinc-600"
             >
               納品予定日
             </label>
@@ -158,7 +158,7 @@ export default function InquiryAdminCorrectionForm({
               className={natoriAdminUi.input}
               aria-describedby="inquiry-due-date-hint"
             />
-            <p id="inquiry-due-date-hint" className="mt-1 text-xs text-gray-500">
+            <p id="inquiry-due-date-hint" className="mt-1 text-xs text-zinc-500">
               空欄のままなら未確定として扱います。
             </p>
           </div>
@@ -168,7 +168,7 @@ export default function InquiryAdminCorrectionForm({
           <div>
             <label
               htmlFor="inquiry-delivery-plan"
-              className="mb-1 block text-xs font-bold text-gray-600"
+              className="mb-1 block text-xs font-bold text-zinc-600"
             >
               納期プラン
             </label>
@@ -191,7 +191,7 @@ export default function InquiryAdminCorrectionForm({
           <div>
             <label
               htmlFor="inquiry-next-action"
-              className="mb-1 block text-xs font-bold text-gray-600"
+              className="mb-1 block text-xs font-bold text-zinc-600"
             >
               次のアクション
             </label>

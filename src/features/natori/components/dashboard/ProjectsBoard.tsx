@@ -6,7 +6,7 @@ import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriCo
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CalendarClock, Inbox } from "lucide-react";
+import { ArrowRight, CalendarClock, CalendarDays, Inbox, List } from "lucide-react";
 import {
   getNextActionForStatus,
   getNextStatus,
@@ -601,18 +601,20 @@ export default function ProjectsBoard({
       {error ? (
         <div
           role="alert"
-          className="flex items-start justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-xs text-red-800 sm:p-4 sm:text-sm"
+          className={`${natoriAdminUi.alert.error} flex items-start justify-between gap-3 text-xs sm:p-4 sm:text-sm`}
         >
           <p>{error}</p>
           <button
             type="button"
             onClick={() => setError(null)}
-            className="shrink-0 font-bold underline underline-offset-2"
+            className="shrink-0 font-semibold underline underline-offset-2"
           >
             閉じる
           </button>
         </div>
       ) : null}
+      {/* 登録・問い合わせへの導線・おすすめ順は1つのまとまりとして詰めて並べる */}
+      <div className="space-y-3">
       {authed ? (
         <ProjectRegisterForm
           mode="manual"
@@ -630,22 +632,25 @@ export default function ProjectsBoard({
       {preworkCount > 0 ? (
         <Link
           href={isDemo ? "/etorie/demo/app/inquiries" : "/natori/inquiries"}
-          className="flex items-center justify-between gap-3 rounded-2xl border border-orange-200 bg-orange-50/60 p-3 shadow-sm transition hover:bg-orange-50 sm:p-4"
+          className={`group flex items-center justify-between gap-3 rounded-2xl ${natoriAdminUi.surface} p-4 ${natoriAdminUi.cardInteractive} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] sm:px-5`}
         >
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-orange-500 text-white">
-              <Inbox className="h-4 w-4" aria-hidden />
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/15">
+              <Inbox className="h-5 w-5" aria-hidden />
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-gray-900">
+              <p className="text-sm font-semibold text-zinc-900">
                 問い合わせ・入金待ち {preworkCount}件
               </p>
-              <p className="mt-0.5 text-xs text-gray-600">
+              <p className="mt-0.5 text-xs leading-5 text-zinc-600">
                 見積もり・支払い依頼メール・入金確認は問い合わせ管理ページで対応します。
               </p>
             </div>
           </div>
-          <ArrowRight className="h-5 w-5 shrink-0 text-orange-500" aria-hidden />
+          <ArrowRight
+            className="h-5 w-5 shrink-0 text-zinc-400 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-zinc-600"
+            aria-hidden
+          />
         </Link>
       ) : null}
 
@@ -654,18 +659,19 @@ export default function ProjectsBoard({
         today={today}
         onSelect={handleSelectFromPriority}
       />
+      </div>
 
       {eventsError ? (
         <div
           role="alert"
-          className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 sm:p-4 sm:text-sm"
+          className={`${natoriAdminUi.alert.warning} flex items-center justify-between gap-3 text-xs sm:p-4 sm:text-sm`}
         >
           <p>{eventsError}</p>
           <button
             type="button"
             onClick={() => void retryEvents()}
             disabled={eventsBusy}
-            className="shrink-0 rounded-full border border-amber-300 bg-white px-3 py-1.5 font-bold hover:bg-amber-100 disabled:opacity-60"
+            className="shrink-0 rounded-full border border-amber-300 bg-white px-3 py-1.5 font-semibold hover:bg-amber-100 disabled:opacity-60"
           >
             {eventsBusy ? "再読込中…" : "予定を再読込"}
           </button>
@@ -674,11 +680,11 @@ export default function ProjectsBoard({
 
       {/* 表示切替（カレンダー / 一覧） */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div role="tablist" aria-label="案件の表示切替" className="flex gap-1.5">
+        <div role="tablist" aria-label="案件の表示切替" className={natoriAdminUi.segment}>
           {([
-            ["calendar", "カレンダー"],
-            ["list", "一覧"],
-          ] as const).map(([key, label]) => (
+            ["calendar", "カレンダー", CalendarDays],
+            ["list", "一覧", List],
+          ] as const).map(([key, label, Icon]) => (
             <button
               key={key}
               type="button"
@@ -688,10 +694,14 @@ export default function ProjectsBoard({
               aria-controls="projects-view-panel"
               onClick={() => changeView(key)}
               className={cn(
-                natoriAdminUi.chip,
-                view === key ? natoriAdminUi.chipOn : natoriAdminUi.chipOff
+                natoriAdminUi.segmentItem,
+                view === key ? natoriAdminUi.segmentOn : natoriAdminUi.segmentOff
               )}
             >
+              <Icon
+                className={cn("h-4 w-4", view === key ? "text-[#DB2777]" : "text-zinc-500")}
+                aria-hidden
+              />
               {label}
             </button>
           ))}
@@ -753,16 +763,16 @@ export default function ProjectsBoard({
       </div>
 
       {view === "calendar" && undatedProjects.length > 0 ? (
-        <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+        <section className={natoriAdminUi.card}>
           <div className="flex items-start gap-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gray-700 text-white">
-              <CalendarClock className="h-4 w-4" aria-hidden />
+            <span className={natoriAdminUi.iconTileNeutral}>
+              <CalendarClock className="h-5 w-5" aria-hidden />
             </span>
             <div>
-              <h2 className="text-sm font-black text-gray-900">
+              <h2 className="text-sm font-semibold text-zinc-900">
                 納期未定の案件 {undatedProjects.length}件
               </h2>
-              <p className="mt-0.5 text-xs text-gray-600">
+              <p className="mt-0.5 text-xs leading-5 text-zinc-600">
                 一覧には保持し、納期が決まるまでカレンダーと負荷計算から除外します。
               </p>
             </div>

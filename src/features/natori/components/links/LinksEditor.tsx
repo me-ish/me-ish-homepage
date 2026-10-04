@@ -165,7 +165,7 @@ export default function LinksEditor({ demoContent, publicHref, dashboardHref }: 
 
   if (loadError) {
     return (
-      <main className="grid min-h-screen place-items-center bg-pink-50/50 px-4">
+      <main data-natori-admin className="grid min-h-screen place-items-center bg-[#F7F7F8] px-4">
         <div className="w-full max-w-md">
           <NatoriLoadError
             resourceLabel="リンク内容"
@@ -179,7 +179,7 @@ export default function LinksEditor({ demoContent, publicHref, dashboardHref }: 
 
   if (!content) {
     return (
-      <main className="grid min-h-screen place-items-center bg-pink-50/50 px-4">
+      <main data-natori-admin className="grid min-h-screen place-items-center bg-[#F7F7F8] px-4">
         <div className="w-full max-w-md space-y-3">
           <p role="status" className={natoriAdminUi.caption}>
             読み込んでいます
@@ -194,24 +194,24 @@ export default function LinksEditor({ demoContent, publicHref, dashboardHref }: 
   const incompleteCount = content.links.filter(isIncompleteLink).length;
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-pink-50/70 via-white to-white pb-28">
+    <main data-natori-admin className="min-h-screen bg-[#F7F7F8] pb-28">
       {confirmDialog}
       {/* 上部バー */}
-      <div className="sticky top-0 z-40 border-b border-pink-100 bg-white/85 backdrop-blur">
+      <div className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
           {dashboardHref ? (
             <Link href={dashboardHref} className={natoriAdminUi.btnLink}>
               ← ダッシュボード
             </Link>
           ) : null}
-          <h1 className="min-w-0 text-lg font-black text-gray-900">リンク集編集</h1>
+          <h1 className="min-w-0 text-lg font-bold tracking-tight text-zinc-900">リンク集編集</h1>
           <div className="ml-auto flex items-center gap-2">
             <Link
               href={publicHref ?? "/natori/links"}
               target="_blank"
-              className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
+              className={natoriAdminUi.btnSecondary}
             >
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+              <ExternalLink className="h-4 w-4" aria-hidden />
               公開ページを見る
             </Link>
           </div>
@@ -219,7 +219,7 @@ export default function LinksEditor({ demoContent, publicHref, dashboardHref }: 
       </div>
 
       <div className="mx-auto max-w-3xl space-y-5 px-4 pt-5">
-        <p className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-xs leading-5 text-sky-900">
+        <p className="rounded-xl bg-sky-50 px-4 py-3 text-xs leading-5 text-sky-900 ring-1 ring-inset ring-sky-600/15">
           ここで編集した内容は、下の「保存する」ボタンを押すとすぐに公開ページ（ /natori/links ）に反映されます。
           アイコンはリンク先のURLから自動で決まり、判定できないサービスは表示名の頭文字が使われます。
         </p>
@@ -237,7 +237,7 @@ export default function LinksEditor({ demoContent, publicHref, dashboardHref }: 
             renderRow={(link, index, handle) => {
               const hasContent = link.label.trim().length > 0 || link.href.trim().length > 0;
               return (
-                <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+                <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-3 sm:p-4">
                   {isIncompleteLink(link) ? (
                     <p className={`${natoriAdminUi.alert.warning} mb-3`}>
                       表示名とURLの両方が入っていない行は、保存時に削除されます
@@ -245,13 +245,10 @@ export default function LinksEditor({ demoContent, publicHref, dashboardHref }: 
                   ) : null}
                   <div className="mb-3 flex items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-3">
-                      <span
-                        className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-pink-500 shadow-sm"
-                        style={{ background: "linear-gradient(135deg, #fce4ec, #ffd6e7)" }}
-                      >
+                      <span className={natoriAdminUi.iconTile}>
                         <LinkIcon link={link} />
                       </span>
-                      <p className="text-xs font-bold text-pink-700">リンク {index + 1}</p>
+                      <p className="text-xs font-semibold text-zinc-600">リンク {index + 1}</p>
                     </div>
                     <RowControls
                       handle={handle}
@@ -304,21 +301,21 @@ export default function LinksEditor({ demoContent, publicHref, dashboardHref }: 
       </div>
 
       {/* 保存バー（画面下に固定） */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-pink-100 bg-white/95 backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200/80 bg-white/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-3 px-4 py-3">
-          <div className="min-w-0 text-xs font-bold" aria-live="polite">
+          <div className="min-w-0 text-xs font-semibold" aria-live="polite">
             {saveState === "saved" ? (
-              <span className="text-emerald-600">
+              <span className="text-emerald-700">
                 {isDemo
                   ? "保存しました（デモのため実際には反映されません）。"
                   : "保存しました！公開ページに反映されています。"}
               </span>
             ) : saveState === "error" ? (
-              <span className="text-red-600">保存に失敗しました。もう一度お試しください。</span>
+              <span className="text-red-700">保存に失敗しました。もう一度お試しください。</span>
             ) : dirty ? (
-              <span className="text-amber-600">未保存の変更があります</span>
+              <span className="text-amber-700">未保存の変更があります</span>
             ) : (
-              <span className="text-gray-600">変更はありません</span>
+              <span className="text-zinc-600">変更はありません</span>
             )}
             {incompleteCount > 0 ? (
               <span className="ml-3 text-amber-700">

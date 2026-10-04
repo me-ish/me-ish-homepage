@@ -1,5 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { Mail, RefreshCw } from "lucide-react";
+import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import type { NatoriNotificationList } from "@/features/natori/types/notifications";
 
 const names: Record<string, string> = {
@@ -44,26 +46,34 @@ export function NotificationStatusView({ data, error, busy, run }: {
 }) {
   if (data?.enabled === false) return null;
   if (!data && !error) return null;
-  return <section aria-labelledby="notification-heading" aria-busy={busy} className="mt-6 rounded-2xl border border-pink-100 bg-white p-4">
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <h2 id="notification-heading" className="font-bold">承諾・受取のメール通知</h2>
-      <button className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50" disabled={busy} onClick={() => void run()}>状態を更新</button>
+  return <section aria-labelledby="notification-heading" aria-busy={busy} className={`mt-6 rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-5`}>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className={natoriAdminUi.iconTileNeutral}>
+          <Mail className="h-5 w-5" aria-hidden />
+        </span>
+        <h2 id="notification-heading" className="text-sm font-semibold text-zinc-900">承諾・受取のメール通知</h2>
+      </div>
+      <button type="button" className={natoriAdminUi.btnSecondary} disabled={busy} onClick={() => void run()}>
+        <RefreshCw className={`h-4 w-4 text-zinc-500 ${busy ? "motion-safe:animate-spin" : ""}`} aria-hidden />
+        状態を更新
+      </button>
     </div>
-    <p className="mt-2 text-sm text-gray-600">メールだけを再試行できます。承諾や受取完了の記録は変更されません。「受付済み」は送信サービスの受付を示し、相手の受信を保証する表示ではありません。</p>
-    {error && <p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}
-    {data && !data.sendingEnabled && <p className="mt-2 text-sm text-amber-800">通知送信を一時停止しています。</p>}
-    {data?.notifications.length === 0 && <p className="mt-3 text-sm">新しい通知はありません。導入前のメール履歴はここには表示されません。</p>}
-    <ul aria-live="polite" className="mt-3 space-y-3">
-      {data?.notifications.map(item => <li key={item.id} className="rounded-xl border p-3 text-sm">
-        <p className="break-words font-bold">{item.projectTitle}：{names[item.purpose] ?? "通知"}</p>
-        <p>{item.reviewRequired ? "送信状況の確認が必要です。自動の再送は停止しています。" : statuses[item.status] ?? "確認が必要です"}</p>
-        <p className="text-xs text-gray-500">最終受付：{item.lastSentAt ? new Date(item.lastSentAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }) : "まだありません"}</p>
-        {item.retryAvailable && <button className="mt-2 rounded-lg border border-pink-300 px-3 py-2 disabled:opacity-50" disabled={busy || !data.sendingEnabled} onClick={() => void run(item.id)}>メールだけ再試行</button>}
+    <p className="mt-3 text-xs leading-5 text-zinc-600">メールだけを再試行できます。承諾や受取完了の記録は変更されません。「受付済み」は送信サービスの受付を示し、相手の受信を保証する表示ではありません。</p>
+    {error && <p role="alert" className={`${natoriAdminUi.alert.error} mt-3`}>{error}</p>}
+    {data && !data.sendingEnabled && <p className={`${natoriAdminUi.alert.warning} mt-3`}>通知送信を一時停止しています。</p>}
+    {data?.notifications.length === 0 && <p className="mt-3 rounded-xl bg-zinc-50 px-3 py-3 text-sm text-zinc-600">新しい通知はありません。導入前のメール履歴はここには表示されません。</p>}
+    <ul aria-live="polite" className="mt-3 space-y-2">
+      {data?.notifications.map(item => <li key={item.id} className="rounded-xl border border-zinc-200/80 p-3 text-sm text-zinc-800">
+        <p className="break-words font-semibold text-zinc-900">{item.projectTitle}：{names[item.purpose] ?? "通知"}</p>
+        <p className="mt-0.5">{item.reviewRequired ? "送信状況の確認が必要です。自動の再送は停止しています。" : statuses[item.status] ?? "確認が必要です"}</p>
+        <p className="mt-0.5 text-xs text-zinc-500">最終受付：{item.lastSentAt ? new Date(item.lastSentAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }) : "まだありません"}</p>
+        {item.retryAvailable && <button type="button" className={`${natoriAdminUi.btnSecondary} mt-2`} disabled={busy || !data.sendingEnabled} onClick={() => void run(item.id)}>メールだけ再試行</button>}
       </li>)}
     </ul>
-    {data && (data.offset > 0 || data.truncated) && <div className="mt-3 flex gap-3 text-sm">
-      <button disabled={busy || data.offset === 0} className="rounded-lg border px-3 py-2 disabled:opacity-50" onClick={() => void run(undefined, Math.max(0, data.offset - 50))}>前の通知</button>
-      <button disabled={busy || !data.truncated} className="rounded-lg border px-3 py-2 disabled:opacity-50" onClick={() => void run(undefined, data.offset + 50)}>次の通知</button>
+    {data && (data.offset > 0 || data.truncated) && <div className="mt-3 flex gap-2 text-sm">
+      <button type="button" disabled={busy || data.offset === 0} className={natoriAdminUi.btnSecondary} onClick={() => void run(undefined, Math.max(0, data.offset - 50))}>前の通知</button>
+      <button type="button" disabled={busy || !data.truncated} className={natoriAdminUi.btnSecondary} onClick={() => void run(undefined, data.offset + 50)}>次の通知</button>
     </div>}
   </section>;
 }

@@ -33,42 +33,42 @@ export default function ArchivedProjectsSection({
   if (projects.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl p-3 text-left hover:bg-gray-50 sm:p-4"
+        className="flex w-full items-center justify-between gap-3 rounded-2xl p-3 text-left hover:bg-zinc-50 sm:p-4"
       >
         <span className="flex min-w-0 items-center gap-3">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-slate-600 text-white">
             <ArchiveRestore className="h-4 w-4" aria-hidden />
           </span>
           <span>
-            <span className="block text-sm font-bold text-gray-900">最近削除した案件 {projects.length}件</span>
-            <span className="mt-0.5 block text-xs text-gray-600">データと画像は保持されています。ここから復元できます。</span>
+            <span className="block text-sm font-bold text-zinc-900">最近削除した案件 {projects.length}件</span>
+            <span className="mt-0.5 block text-xs text-zinc-600">データと画像は保持されています。ここから復元できます。</span>
           </span>
         </span>
         {open ? <ChevronUp className="h-5 w-5" aria-hidden /> : <ChevronDown className="h-5 w-5" aria-hidden />}
       </button>
 
       {open ? (
-        <ul className="space-y-2 border-t border-gray-200 p-3 sm:p-4">
+        <ul className="space-y-2 border-t border-zinc-200 p-3 sm:p-4">
           {projects.map((project) => {
             const archivedAt = formatArchivedAt(project.deletedAt);
             const busy = busyId === project.id;
             return (
-              <li key={project.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-gray-50/60 p-3">
+              <li key={project.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-zinc-50/60 p-3">
                 <span className="min-w-0">
-                  <span className="block break-words text-sm font-bold text-gray-700">{project.clientName}・{project.title}</span>
-                  {archivedAt ? <span className="mt-0.5 block text-xs text-gray-500">{archivedAt}に削除</span> : null}
+                  <span className="block break-words text-sm font-bold text-zinc-700">{project.clientName}・{project.title}</span>
+                  {archivedAt ? <span className="mt-0.5 block text-xs text-zinc-500">{archivedAt}に削除</span> : null}
                 </span>
-                {project.consultation !== undefined ? <div className="space-y-1"><ConsultationStatus project={project} /><Link href={staffConsultationHref(project.id)} className="inline-flex min-h-10 items-center text-sm font-bold text-pink-700 underline">相談履歴</Link></div> : null}
+                {project.consultation !== undefined ? <div className="space-y-1"><ConsultationStatus project={project} /><Link href={staffConsultationHref(project.id)} className="inline-flex min-h-10 items-center text-sm font-bold text-[#BE185D] underline">相談履歴</Link></div> : null}
                 <button
                   type="button"
                   onClick={() => onRestore(project)}
                   disabled={busy}
-                  className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-pink-300 bg-white px-3 text-xs font-bold text-pink-700 hover:bg-pink-50 disabled:opacity-60"
+                  className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold text-[#BE185D] hover:bg-zinc-50 disabled:opacity-60"
                 >
                   <RotateCcw className="h-3.5 w-3.5" aria-hidden />
                   復元

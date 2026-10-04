@@ -46,7 +46,7 @@ export default function InquiryReviewWarnings({
                   : "rounded-xl border border-amber-200 bg-amber-50 p-3"
               }
             >
-              <p className="flex items-center gap-2 text-sm font-bold text-gray-900">
+              <p className="flex items-center gap-2 text-sm font-bold text-zinc-900">
                 {isBlocker ? (
                   <AlertTriangle
                     className="h-4 w-4 shrink-0 text-rose-600"
@@ -63,7 +63,7 @@ export default function InquiryReviewWarnings({
                 </span>
                 {warning.title}
               </p>
-              <p className="mt-1 text-xs leading-5 text-gray-700">
+              <p className="mt-1 text-xs leading-5 text-zinc-700">
                 {warning.action}
               </p>
             </li>

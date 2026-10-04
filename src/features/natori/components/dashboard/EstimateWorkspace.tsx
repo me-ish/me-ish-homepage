@@ -93,16 +93,16 @@ export default function EstimateWorkspace() {
   if (mode === "manual") {
     return (
       <Tabs defaultValue="formal" className="space-y-4">
-        <TabsList className="grid h-auto w-full grid-cols-1 gap-1 bg-pink-50 p-1 sm:inline-flex sm:w-auto">
+        <TabsList className="grid h-auto w-full grid-cols-1 gap-1 rounded-2xl bg-zinc-200/60 p-1 sm:inline-flex sm:w-auto sm:rounded-full">
           <TabsTrigger
             value="formal"
-            className="h-auto min-h-11 whitespace-normal px-4 py-2 text-sm font-bold text-gray-800 data-[state=active]:bg-white data-[state=active]:text-[#9D174D]"
+            className="h-auto min-h-11 whitespace-normal rounded-xl px-4 py-2 text-sm font-semibold text-zinc-600 hover:text-zinc-900 data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-[0_1px_3px_rgba(24,24,27,0.12)] sm:min-h-9 sm:rounded-full"
           >
             相談を登録して正式見積り
           </TabsTrigger>
           <TabsTrigger
             value="draft"
-            className="h-auto min-h-11 whitespace-normal px-4 py-2 text-sm font-bold text-gray-800 data-[state=active]:bg-white data-[state=active]:text-[#9D174D]"
+            className="h-auto min-h-11 whitespace-normal rounded-xl px-4 py-2 text-sm font-semibold text-zinc-600 hover:text-zinc-900 data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-[0_1px_3px_rgba(24,24,27,0.12)] sm:min-h-9 sm:rounded-full"
           >
             依頼文から概算を出す（下書き）
           </TabsTrigger>
@@ -119,8 +119,8 @@ export default function EstimateWorkspace() {
 
   if (mode === "not-found" || !project) {
     return (
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-        <h2 className="font-bold text-amber-900">問い合わせが見つかりません</h2>
+      <div className="rounded-2xl bg-amber-50 p-5 ring-1 ring-inset ring-amber-600/20">
+        <h2 className="font-semibold text-amber-900">問い合わせが見つかりません</h2>
         <p className="mt-1 text-sm text-amber-800">
           削除済み、アーカイブ済み、またはアクセス対象外の可能性があります。
         </p>

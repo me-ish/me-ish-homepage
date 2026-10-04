@@ -154,13 +154,13 @@ export default function DeliveryFilesManager({
   };
 
   return (
-    <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+    <div className="rounded-xl border border-zinc-200/80 bg-zinc-50 p-3">
       {confirmDialog}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-xs font-bold text-pink-700">
+        <p className="flex items-center gap-1.5 text-xs font-bold text-[#BE185D]">
           <Paperclip className="h-3.5 w-3.5" aria-hidden />
           {FOLDER_LABELS[folder]}
-          {files ? <span className="font-normal text-pink-600/80">{files.length}件</span> : null}
+          {files ? <span className="font-normal text-zinc-500">{files.length}件</span> : null}
         </p>
         <button
           type="button"
@@ -190,12 +190,12 @@ export default function DeliveryFilesManager({
         />
       </div>
 
-      <p className="mt-2 text-xs text-gray-500">ファイルは1つ{DELIVERY_MAX_SIZE_LABEL}までです。</p>
+      <p className="mt-2 text-xs text-zinc-500">ファイルは1つ{DELIVERY_MAX_SIZE_LABEL}までです。</p>
 
       {files === null ? (
-        <p className="mt-2 text-xs text-gray-500">読み込み中…</p>
+        <p className="mt-2 text-xs text-zinc-500">読み込み中…</p>
       ) : files.length === 0 ? (
-        <p className="mt-2 text-xs text-gray-600">
+        <p className="mt-2 text-xs text-zinc-600">
           まだファイルがありません。「ファイルを追加」からアップロードしてください。
         </p>
       ) : (
@@ -203,13 +203,13 @@ export default function DeliveryFilesManager({
           {files.map((file) => (
             <li
               key={file.id}
-              className="flex flex-wrap items-center gap-2 rounded-lg border border-pink-100 bg-white px-2.5 py-1.5 text-xs"
+              className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-200/80 bg-white px-2.5 py-1.5 text-xs"
             >
-              <span className="min-w-0 flex-1 break-all font-bold text-gray-900">
+              <span className="min-w-0 flex-1 break-all font-bold text-zinc-900">
                 {file.fileName}
               </span>
-              <span className="shrink-0 text-gray-500">{formatBytes(file.sizeBytes)}</span>
-              <span className="shrink-0 text-gray-600">
+              <span className="shrink-0 text-zinc-500">{formatBytes(file.sizeBytes)}</span>
+              <span className="shrink-0 text-zinc-600">
                 {file.published ? "納品発行済み" : file.state === "ready" || !file.state ? "保存確認済み"
                   : file.state === "deleting" ? "削除待ち" : "保存を確認してください"}
               </span>
@@ -230,7 +230,7 @@ export default function DeliveryFilesManager({
         </ul>
       )}
 
-      {files?.some(file => file.published) && <p className="mt-2 text-xs text-gray-600">発行済みの納品内容は固定されています。再送しても以前のリンクと受取記録は維持されます。</p>}
+      {files?.some(file => file.published) && <p className="mt-2 text-xs text-zinc-600">発行済みの納品内容は固定されています。再送しても以前のリンクと受取記録は維持されます。</p>}
       {error ? <p role="alert" className="mt-2 text-xs font-bold text-red-600">{error}</p> : null}
     </div>
   );

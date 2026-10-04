@@ -8,7 +8,7 @@ export function NatoriSkeleton({ heightClassName = "h-24", className = "" }: Nat
   return (
     <div
       aria-hidden
-      className={`animate-pulse rounded-2xl bg-gray-100 motion-reduce:animate-none ${heightClassName} ${className}`.trim()}
+      className={`animate-pulse rounded-2xl bg-zinc-100 motion-reduce:animate-none ${heightClassName} ${className}`.trim()}
     />
   );
 }

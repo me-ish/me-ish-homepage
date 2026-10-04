@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ChevronDown,
-  ChevronUp,
   FolderPlus,
   type LucideIcon,
 } from "lucide-react";
@@ -218,32 +217,31 @@ export default function ProjectRegisterForm({
       type="button"
       onClick={() => setOpen((current) => !current)}
       aria-expanded={open}
-      className="flex w-full items-center justify-between gap-3 text-left"
+      className="group flex w-full items-center justify-between gap-3 rounded-xl text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#831843]"
     >
       <div className="flex min-w-0 items-center gap-3">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-pink-500 text-white">
-          <HeadingIcon className="h-4 w-4" aria-hidden />
+        <span className={natoriAdminUi.iconTile}>
+          <HeadingIcon className="h-5 w-5" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-black text-pink-900">{resolvedHeading}</p>
-          <p className="text-xs text-pink-800/80">{resolvedDescription}</p>
+          <p className="text-sm font-semibold text-zinc-900">{resolvedHeading}</p>
+          <p className="mt-0.5 text-xs leading-5 text-zinc-600">{resolvedDescription}</p>
         </div>
       </div>
       {collapsible ? (
-        <span className="shrink-0 text-pink-700">
-          {open ? (
-            <ChevronUp className="h-5 w-5" aria-hidden />
-          ) : (
-            <ChevronDown className="h-5 w-5" aria-hidden />
-          )}
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-zinc-500 transition-colors group-hover:bg-zinc-100">
+          <ChevronDown
+            className={`h-5 w-5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+            aria-hidden
+          />
         </span>
       ) : null}
     </button>
   );
 
   const body = createdId ? (
-    <div className="mt-4 rounded-xl border border-emerald-300 bg-white p-3 text-sm text-emerald-900 sm:p-4">
-      <p className="font-black">案件管理に追加しました。</p>
+    <div className={`${natoriAdminUi.alert.success} mt-4 sm:p-4`}>
+      <p className="font-semibold">案件管理に追加しました。</p>
       <p className="mt-1 text-xs leading-5">
         案件カレンダーから内容を確認できます。
       </p>
@@ -262,7 +260,7 @@ export default function ProjectRegisterForm({
             setTitle(defaults?.title ?? "");
             setNote(defaults?.note ?? "");
           }}
-          className="inline-flex h-9 items-center rounded-full border border-pink-300 bg-white px-4 text-xs font-bold text-pink-700 hover:bg-pink-50"
+          className={natoriAdminUi.btnSecondary}
         >
           続けて登録
         </button>
@@ -271,7 +269,7 @@ export default function ProjectRegisterForm({
   ) : (
     <div className="mt-4 space-y-3">
       <label className="block text-sm">
-        <span className="block text-xs font-bold text-gray-600">
+        <span className="block text-xs font-semibold text-zinc-700">
           依頼者名（必須）
         </span>
         <input
@@ -283,7 +281,7 @@ export default function ProjectRegisterForm({
         />
       </label>
       <label className="block text-sm">
-        <span className="block text-xs font-bold text-gray-600">
+        <span className="block text-xs font-semibold text-zinc-700">
           案件タイトル
         </span>
         <input
@@ -296,7 +294,7 @@ export default function ProjectRegisterForm({
       </label>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="block text-sm">
-          <span className="block text-xs font-bold text-gray-600">
+          <span className="block text-xs font-semibold text-zinc-700">
             案件タイプ
           </span>
           <select
@@ -314,7 +312,7 @@ export default function ProjectRegisterForm({
           </select>
         </label>
         <label className="block text-sm">
-          <span className="block text-xs font-bold text-gray-600">
+          <span className="block text-xs font-semibold text-zinc-700">
             初期ステータス
           </span>
           <select
@@ -332,7 +330,7 @@ export default function ProjectRegisterForm({
       </div>
 
       {fixedAmount ? (
-        <div className="rounded-xl border border-pink-100 bg-white p-3 text-xs leading-5 text-pink-900">
+        <div className="rounded-xl border border-zinc-200/80 bg-zinc-50 p-3 text-xs leading-5 text-zinc-800">
           <p>
             <span className="font-bold">金額:</span> {formatYen(amount)}
           </p>
@@ -348,7 +346,7 @@ export default function ProjectRegisterForm({
         <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm">
-              <span className="block text-xs font-bold text-gray-600">
+              <span className="block text-xs font-semibold text-zinc-700">
                 金額（円）
               </span>
               <input
@@ -358,12 +356,12 @@ export default function ProjectRegisterForm({
                 onChange={(event) => setAmount(Number(event.target.value))}
                 className={`${natoriAdminUi.input} mt-1`}
               />
-              <span className="mt-1 block text-xs text-pink-700/80">
+              <span className={natoriAdminUi.hint}>
                 未確定なら 0 で保存できます。
               </span>
             </label>
             <label className="block text-sm">
-              <span className="block text-xs font-bold text-gray-600">
+              <span className="block text-xs font-semibold text-zinc-700">
                 開始日
               </span>
               <input
@@ -374,8 +372,8 @@ export default function ProjectRegisterForm({
               />
             </label>
           </div>
-          <div className="rounded-2xl border border-pink-200 bg-pink-50/60 p-3">
-            <p className="text-xs font-bold text-gray-600">
+          <div className="rounded-xl border border-zinc-200/80 bg-zinc-50 p-3">
+            <p className="text-xs font-semibold text-zinc-700">
               納期プラン
             </p>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -392,10 +390,10 @@ export default function ProjectRegisterForm({
                       "min-w-0 rounded-xl border px-3 py-2 text-left transition",
                       selected
                         ? cn(meta.chipClassName, "ring-2 ring-offset-1", meta.barAccentClassName)
-                        : "border-pink-200 bg-white text-pink-900 hover:border-pink-300"
+                        : "border-zinc-200 bg-white text-zinc-800 hover:border-zinc-300"
                     )}
                   >
-                    <p className="text-sm font-black leading-5">{meta.shortLabel}</p>
+                    <p className="text-sm font-semibold leading-5">{meta.shortLabel}</p>
                     <p className="mt-0.5 text-xs leading-4 opacity-80">
                       {meta.description}
                     </p>
@@ -403,8 +401,8 @@ export default function ProjectRegisterForm({
                 );
               })}
             </div>
-            <div className="mt-2 flex flex-col gap-1 rounded-xl border border-pink-200 bg-white px-3 py-2 text-sm sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-xs font-bold text-gray-600 sm:w-24">
+            <div className="mt-2 flex flex-col gap-1 rounded-xl border border-zinc-200/80 bg-white px-3 py-2 text-sm sm:flex-row sm:items-center sm:gap-3">
+              <span className="text-xs font-semibold text-zinc-700 sm:w-24">
                 納期
               </span>
               <input
@@ -419,26 +417,26 @@ export default function ProjectRegisterForm({
       )}
 
       <label className="block text-sm">
-        <span className="block text-xs font-bold text-gray-600">
+        <span className="block text-xs font-semibold text-zinc-700">
           依頼内容・確認事項メモ
         </span>
         <Textarea
           value={note}
           onChange={(event) => setNote(event.target.value)}
           placeholder="依頼文、用途、サイズ、人数、表情差分、商用利用、希望納期、確認事項、やり取りメモ等。"
-          className="mt-1 min-h-[120px] resize-y border-pink-200 bg-white text-sm leading-6 text-gray-900 focus-visible:ring-pink-300"
+          className="mt-1 min-h-[120px] resize-y rounded-xl border-[#878287] bg-white text-[16px] leading-6 text-zinc-900 placeholder:text-zinc-500 focus-visible:border-[#BE185D] focus-visible:ring-4 focus-visible:ring-[#BE185D]/15 focus-visible:ring-offset-0"
         />
       </label>
 
       {status === "awaiting_payment" ? (
-        <p className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs leading-5 text-orange-900">
+        <p className={`${natoriAdminUi.alert.warning} text-xs leading-5`}>
           入金待ちとして登録します。制作スケジュールに反映されるのは
           「入金確認してラフ開始」を押してからです。
         </p>
       ) : null}
 
       {error ? (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+        <p className={`${natoriAdminUi.alert.error} text-xs font-semibold`}>
           {error}
         </p>
       ) : null}
@@ -454,15 +452,15 @@ export default function ProjectRegisterForm({
   );
 
   return (
-    <div className="rounded-2xl border border-pink-200 bg-pink-50/60 p-4 sm:p-5">
+    <div className={natoriAdminUi.card}>
       {collapsible ? headingButton : (
         <div className="flex w-full items-center gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-pink-500 text-white">
-            <HeadingIcon className="h-4 w-4" aria-hidden />
+          <span className={natoriAdminUi.iconTile}>
+            <HeadingIcon className="h-5 w-5" aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-black text-pink-900">{resolvedHeading}</p>
-            <p className="text-xs text-pink-800/80">{resolvedDescription}</p>
+            <p className="text-sm font-semibold text-zinc-900">{resolvedHeading}</p>
+            <p className="mt-0.5 text-xs leading-5 text-zinc-600">{resolvedDescription}</p>
           </div>
         </div>
       )}

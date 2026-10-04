@@ -7,14 +7,14 @@ const money = (value: number | null) => value === null ? "未確認" : formatYen
 export function RefundResultDetails({ project }: { project: NatoriProject }) {
   if (project.refunds === undefined) return null;
   const financials = getNatoriResultFinancials(project);
-  return <div className="mt-2 rounded-lg border border-pink-100 bg-white px-2 py-1.5 text-xs text-gray-700">
+  return <div className="mt-2 rounded-lg border border-zinc-200/80 bg-white px-2.5 py-2 text-xs text-zinc-700">
     <p>元の入金 {money(financials.gross)} / 確定返金 {money(financials.refunded)} / 純入金 {money(financials.net)}</p>
     <p className="mt-0.5 font-semibold">{getNatoriRefundStatusText(project)}</p>
   </div>;
 }
 
 export function RefundResultsSummary({ summary }: { summary: NatoriResultsSummary }) {
-  return <section aria-label="返金と純入金" className="rounded-2xl border border-pink-100 bg-white p-3 text-sm text-gray-700 sm:p-4">
+  return <section aria-label="返金と純入金" className="rounded-2xl border border-zinc-200/80 bg-white p-3 text-sm text-zinc-700 sm:p-4">
     <dl className="flex flex-wrap gap-x-6 gap-y-2">
       <div><dt>元の入金</dt><dd className="font-bold">{formatYen(summary.totalAmount)}</dd></div>
       <div><dt>確定返金</dt><dd className="font-bold">{money(summary.totalRefundedAmount)}</dd></div>

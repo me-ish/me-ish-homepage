@@ -248,7 +248,7 @@ export default function PortfolioEditor({
 
   if (loadError) {
     return (
-      <main className="grid min-h-screen place-items-center bg-pink-50/50 px-4">
+      <main data-natori-admin className="grid min-h-screen place-items-center bg-[#F7F7F8] px-4">
         <div className="w-full max-w-md">
           <NatoriLoadError
             resourceLabel="ページ内容"
@@ -262,7 +262,7 @@ export default function PortfolioEditor({
 
   if (!content) {
     return (
-      <main className="grid min-h-screen place-items-center bg-pink-50/50 px-4">
+      <main data-natori-admin className="grid min-h-screen place-items-center bg-[#F7F7F8] px-4">
         <div className="w-full max-w-md space-y-3">
           <p role="status" className={natoriAdminUi.caption}>
             読み込んでいます
@@ -287,34 +287,34 @@ export default function PortfolioEditor({
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-pink-50/70 via-white to-white pb-28">
+    <main data-natori-admin className="min-h-screen bg-[#F7F7F8] pb-28">
       {/* 上部バー */}
-      <div className="sticky top-0 z-40 border-b border-pink-100 bg-white/85 backdrop-blur">
+      <div className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 sm:px-6 lg:px-8">
           {dashboardHref ? (
             <Link href={dashboardHref} className={natoriAdminUi.btnLink}>
               ← ダッシュボード
             </Link>
           ) : null}
-          <h1 className="min-w-0 text-lg font-black text-gray-900">ポートフォリオ編集</h1>
+          <h1 className="min-w-0 text-lg font-bold tracking-tight text-zinc-900">ポートフォリオ編集</h1>
           <div className="ml-auto flex items-center gap-2">
             {isDemo ? null : (
               <button
                 type="button"
                 onClick={handlePreview}
-                className="inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-pink-50 px-4 py-2 text-xs font-bold text-pink-700 hover:bg-pink-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
+                className={natoriAdminUi.btnSecondary}
                 title="いまの編集内容を保存せずに別タブで確認します"
               >
-                <Eye className="h-3.5 w-3.5" aria-hidden />
+                <Eye className="h-4 w-4" aria-hidden />
                 プレビュー
               </button>
             )}
             <Link
               href={publicHref ?? "/natori/portfolio"}
               target="_blank"
-              className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
+              className={natoriAdminUi.btnSecondary}
             >
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+              <ExternalLink className="h-4 w-4" aria-hidden />
               公開ページを見る
             </Link>
           </div>
@@ -332,10 +332,10 @@ export default function PortfolioEditor({
                 href={`#${section.id}`}
                 onClick={() => setActiveSectionId(section.id)}
                 aria-current={active ? "true" : undefined}
-                className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] ${
+                className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] ${
                   active
                     ? "border-[#BE185D] bg-[#BE185D] text-white"
-                    : "border-pink-200 bg-white text-pink-700 hover:bg-pink-50"
+                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
                 }`}
               >
                 {section.label}
@@ -357,8 +357,8 @@ export default function PortfolioEditor({
                   href={`#${section.id}`}
                   onClick={() => setActiveSectionId(section.id)}
                   aria-current={active ? "true" : undefined}
-                  className={`block rounded-lg px-3 py-2 text-sm font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] ${
-                    active ? "bg-[#BE185D] text-white" : "text-gray-700 hover:bg-pink-50"
+                  className={`block rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] ${
+                    active ? "bg-pink-50 text-[#9D174D] ring-1 ring-inset ring-pink-500/15" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
                   }`}
                 >
                   {section.label}
@@ -374,7 +374,7 @@ export default function PortfolioEditor({
             プレビューを開けませんでした。入力内容を確認してください。
           </p>
         ) : null}
-        <p className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-xs leading-5 text-sky-900">
+        <p className="rounded-xl bg-sky-50 px-4 py-3 text-xs leading-5 text-sky-900 ring-1 ring-inset ring-sky-600/15">
           ここで編集した内容は、下の「保存する」ボタンを押すとすぐに公開ページ（
           /natori/portfolio ）に反映されます。保存するまでは公開されないので、安心して
           書き換えてOKです。書きかけの内容は右上の「プレビュー」で保存せずに確認できます。
@@ -389,23 +389,23 @@ export default function PortfolioEditor({
         >
           <div className="space-y-5">
             <div>
-              <p className="mb-2 text-sm font-black text-gray-900">コミッション全体</p>
-              <p className="mb-3 text-xs leading-5 text-gray-600">
+              <p className="mb-2 text-sm font-bold text-zinc-900">コミッション全体</p>
+              <p className="mb-3 text-xs leading-5 text-zinc-600">
                 停止中はご依頼フォーム全体から送信できなくなります。
               </p>
               <div className="flex flex-wrap gap-2">
                 {[
                   { value: true, label: "● 受付中", active: "bg-emerald-700 text-white border-emerald-700" },
-                  { value: false, label: "受付停止中", active: "bg-gray-700 text-white border-gray-700" },
+                  { value: false, label: "受付停止中", active: "bg-zinc-700 text-white border-zinc-700" },
                 ].map((choice) => (
                   <button
                     key={String(choice.value)}
                     type="button"
                     onClick={() => patch({ commissionOpen: choice.value })}
-                    className={`rounded-full border px-5 py-2 text-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] ${
+                    className={`rounded-full border px-5 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] ${
                       content.commissionOpen === choice.value
                         ? choice.active
-                        : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+                        : "border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
                     }`}
                   >
                     {choice.label}
@@ -414,9 +414,9 @@ export default function PortfolioEditor({
               </div>
             </div>
 
-            <div className="border-t border-pink-100 pt-5">
-              <p className="mb-2 text-sm font-black text-gray-900">量産イラスト</p>
-              <p className="mb-3 text-xs leading-5 text-gray-600">
+            <div className="border-t border-zinc-100 pt-5">
+              <p className="mb-2 text-sm font-bold text-zinc-900">量産イラスト</p>
+              <p className="mb-3 text-xs leading-5 text-zinc-600">
                 停止中もフォームの選択肢には表示され、選んだ方へXの確認案内を表示します。
               </p>
               <div className="flex flex-wrap gap-2">
@@ -429,7 +429,7 @@ export default function PortfolioEditor({
                   {
                     value: false,
                     label: "量産イラスト受付停止中",
-                    active: "border-gray-700 bg-gray-700 text-white",
+                    active: "border-zinc-700 bg-zinc-700 text-white",
                   },
                 ].map((choice) => (
                   <button
@@ -438,10 +438,10 @@ export default function PortfolioEditor({
                     onClick={() =>
                       patch({ massProductionIllustrationOpen: choice.value })
                     }
-                    className={`rounded-full border px-5 py-2 text-sm font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] ${
+                    className={`rounded-full border px-5 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] ${
                       content.massProductionIllustrationOpen === choice.value
                         ? choice.active
-                        : "border-pink-200 bg-white text-gray-600 hover:bg-pink-50"
+                        : "border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
                     }`}
                   >
                     {choice.label}
@@ -511,7 +511,7 @@ export default function PortfolioEditor({
               onChange={updateHeroImages}
               uploadDisabled={isDemo}
             />
-            <div className="border-t border-pink-100 pt-5">
+            <div className="border-t border-zinc-100 pt-5">
               <ImageUploadField
                 label="プロフィールのアイコン"
                 value={content.aboutImage}
@@ -523,9 +523,9 @@ export default function PortfolioEditor({
             </div>
           </div>
 
-          <div className="mt-5 border-t border-pink-100 pt-5">
-            <p className="text-sm font-black text-gray-900">量産イラスト作例</p>
-            <p className="mt-1 text-xs leading-5 text-gray-600">
+          <div className="mt-5 border-t border-zinc-100 pt-5">
+            <p className="text-sm font-bold text-zinc-900">量産イラスト作例</p>
+            <p className="mt-1 text-xs leading-5 text-zinc-600">
               画像を設定した作例だけ公開ページに表示されます。正方形の画像がおすすめです。
             </p>
 
@@ -533,7 +533,7 @@ export default function PortfolioEditor({
               {(content.massProductionSamples ?? []).map((sample, index) => (
                 <div
                   key={sample.id}
-                  className="rounded-xl border border-pink-100 bg-pink-50/30 p-3"
+                  className="rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-3"
                 >
                   <div className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">
@@ -705,9 +705,9 @@ export default function PortfolioEditor({
                 (work) => work.collectionId === collection.id
               ).length;
               return (
-                <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+                <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-3">
                   <div className="mb-3 flex items-center justify-between gap-2">
-                    <p className="text-xs font-bold text-pink-700">
+                    <p className="text-xs font-semibold text-zinc-600">
                       コレクション {index + 1} ・ {memberCount}作品
                     </p>
                     <RowControls
@@ -746,7 +746,7 @@ export default function PortfolioEditor({
                         })
                       }
                     />
-                    <label className="block text-xs font-bold text-pink-700">
+                    <label className="block text-xs font-semibold text-zinc-700">
                       テーマ色
                       <input
                         type="color"
@@ -758,7 +758,7 @@ export default function PortfolioEditor({
                             }),
                           })
                         }
-                        className="mt-1 block h-10 w-16 cursor-pointer rounded-lg border border-pink-200 bg-white p-1"
+                        className="mt-1 block h-10 w-16 cursor-pointer rounded-lg border border-zinc-200 bg-white p-1"
                       />
                     </label>
                   </div>
@@ -799,9 +799,9 @@ export default function PortfolioEditor({
                   candidate.collectionId === work.collectionId && candidate.featured
               ).length;
               return (
-              <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+              <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <p className="text-xs font-bold text-pink-700">作品 {index + 1}</p>
+                  <p className="text-xs font-semibold text-zinc-600">作品 {index + 1}</p>
                   <RowControls
                     handle={handle}
                     confirmMessage={`作品「${work.title.trim() || "無題"}」を削除しますか？`}
@@ -822,7 +822,7 @@ export default function PortfolioEditor({
                       value={work.title}
                       onChange={(v) => patch({ works: updateItem(content.works, index, { title: v }) })}
                     />
-                    <label className="block text-xs font-bold text-pink-700">
+                    <label className="block text-xs font-semibold text-zinc-700">
                       制作年月
                       <input
                         type="month"
@@ -837,7 +837,7 @@ export default function PortfolioEditor({
                         className={`${natoriAdminUi.input} mt-1`}
                       />
                     </label>
-                    <label className="block text-xs font-bold text-pink-700">
+                    <label className="block text-xs font-semibold text-zinc-700">
                       所属コレクション
                       <select
                         value={work.collectionId ?? ""}
@@ -867,7 +867,7 @@ export default function PortfolioEditor({
                         ))}
                       </select>
                     </label>
-                    <div className="flex flex-wrap gap-x-5 gap-y-2 rounded-lg border border-pink-100 bg-white px-3 py-2.5 text-xs font-bold text-gray-700">
+                    <div className="flex flex-wrap gap-x-5 gap-y-2 rounded-xl border border-zinc-200/80 bg-white px-3 py-2.5 text-xs font-semibold text-zinc-700">
                       <label className="flex cursor-pointer items-center gap-2">
                         <input
                           type="checkbox"
@@ -969,9 +969,9 @@ export default function PortfolioEditor({
             onReorder={(next) => patch({ plans: next })}
             className="space-y-4"
             renderRow={(plan, index, handle) => (
-              <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+              <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <p className="text-xs font-bold text-pink-700">プラン {index + 1}</p>
+                  <p className="text-xs font-semibold text-zinc-600">プラン {index + 1}</p>
                   <RowControls
                     handle={handle}
                     confirmMessage={`プラン「${plan.name.trim() || "無題"}」を削除しますか？`}
@@ -1096,9 +1096,9 @@ export default function PortfolioEditor({
               onReorder={(next) => patch({ deliveryNotes: next })}
               className="space-y-3"
               renderRow={(note, index, handle) => (
-                <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+                <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="text-xs font-bold text-pink-700">補足 {index + 1}</p>
+                    <p className="text-xs font-semibold text-zinc-600">補足 {index + 1}</p>
                     <RowControls
                       handle={handle}
                       confirmMessage={
@@ -1144,9 +1144,9 @@ export default function PortfolioEditor({
             onReorder={(next) => patch({ workflow: next })}
             className="space-y-3"
             renderRow={(step, index, handle) => (
-              <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+              <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-3">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-xs font-bold text-pink-700">ステップ {index + 1}</p>
+                  <p className="text-xs font-semibold text-zinc-600">ステップ {index + 1}</p>
                   <RowControls
                     handle={handle}
                     confirmMessage={
@@ -1251,25 +1251,25 @@ export default function PortfolioEditor({
       </div>
 
       {/* 保存バー（画面下に固定） */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-pink-100 bg-white/95 backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200/80 bg-white/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <div className="min-w-0 text-xs font-bold" aria-live="polite">
+          <div className="min-w-0 text-xs font-semibold" aria-live="polite">
             {saveState === "saved" ? (
-              <span className="text-emerald-600">
+              <span className="text-emerald-700">
                 {isDemo
                   ? "保存しました（デモのため実際には反映されません）。"
                   : "保存しました！公開ページに反映されています。"}
               </span>
             ) : saveState === "error" ? (
-              <span className="text-red-600">
+              <span className="text-red-700">
                 {saveErrorKind === "validation"
                   ? "入力内容に保存できない値があります。空欄や形式を確認してください。"
                   : "保存に失敗しました。もう一度お試しください。"}
               </span>
             ) : dirty ? (
-              <span className="text-amber-600">未保存の変更があります</span>
+              <span className="text-amber-700">未保存の変更があります</span>
             ) : (
-              <span className="text-gray-600">変更はありません</span>
+              <span className="text-zinc-600">変更はありません</span>
             )}
           </div>
           <button
@@ -1355,7 +1355,7 @@ function BulkWorkImageAdd({
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={progress !== null}
-        className="inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-white px-4 py-2 text-xs font-bold text-pink-700 hover:bg-pink-50 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
+        className={natoriAdminUi.btnSecondary}
       >
         {progress ? (
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -1374,7 +1374,7 @@ function BulkWorkImageAdd({
         className="hidden"
         onChange={(event) => handleFiles(event.target.files)}
       />
-      {error ? <p className="mt-1 text-xs font-bold text-red-600">{error}</p> : null}
+      {error ? <p className={natoriAdminUi.fieldError}>{error}</p> : null}
     </div>
   );
 }

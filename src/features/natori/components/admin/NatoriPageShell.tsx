@@ -25,16 +25,17 @@ export function NatoriPageShell({
 }: NatoriPageShellProps) {
   return (
     <NatoriToastProvider>
-      <div className={natoriAdminUi.page}>
+      {/* data-natori-admin: globals.css switches the font for the admin screens */}
+      <div data-natori-admin className={natoriAdminUi.page}>
         <NatoriAdminHeader current={current} right={headerRight} />
         <main
-          className={`${natoriAdminUi.container} ${natoriAdminUi.pageBody} pb-24 lg:pb-6`}
+          className={`${natoriAdminUi.container} ${natoriAdminUi.pageBody} pb-24 lg:pb-8`}
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
               <h1 className={natoriAdminUi.pageTitle}>{title}</h1>
               {description ? (
-                <p className={natoriAdminUi.caption}>{description}</p>
+                <p className="mt-1 text-sm leading-6 text-zinc-600">{description}</p>
               ) : null}
             </div>
             {actions ? (
@@ -43,9 +44,9 @@ export function NatoriPageShell({
           </div>
           {children}
         </main>
-        <footer className="border-t border-gray-200 pb-20 lg:pb-0">
+        <footer className="border-t border-zinc-200/80 pb-20 lg:pb-0">
           <p
-            className={`${natoriAdminUi.container} py-4 text-xs text-gray-600`}
+            className={`${natoriAdminUi.container} py-5 text-xs text-zinc-600`}
           >
             © {new Date().getFullYear()} Natori / me-ish. All rights reserved.
           </p>

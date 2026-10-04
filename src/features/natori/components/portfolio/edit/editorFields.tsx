@@ -27,16 +27,21 @@ export function SectionCard({
   return (
     <section
       id={id}
-      className="scroll-mt-28 rounded-2xl border border-pink-100 bg-white p-4 shadow-sm sm:p-5"
+      className={`scroll-mt-28 rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-6`}
     >
-      <div className="mb-4">
-        <h2 className="flex items-center gap-2 text-base font-black text-gray-900 sm:text-lg">
-          <span aria-hidden="true">{emoji}</span>
-          {title}
-        </h2>
-        {description ? (
-          <p className="mt-1 text-xs leading-5 text-gray-600">{description}</p>
-        ) : null}
+      <div className="mb-5 flex items-start gap-3">
+        <span
+          aria-hidden="true"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-zinc-100 text-lg ring-1 ring-inset ring-zinc-500/10"
+        >
+          {emoji}
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-[16px] font-semibold leading-6 text-zinc-900 sm:text-lg">{title}</h2>
+          {description ? (
+            <p className="mt-0.5 text-xs leading-5 text-zinc-600">{description}</p>
+          ) : null}
+        </div>
       </div>
       {children}
     </section>
@@ -70,7 +75,7 @@ export function TextInput({
   return (
     <div className="w-full">
       {label ? (
-        <label htmlFor={id} className="mb-1 block text-xs font-bold text-pink-700">
+        <label htmlFor={id} className="mb-1.5 block text-xs font-semibold text-zinc-700">
           {label}
         </label>
       ) : null}
@@ -85,7 +90,7 @@ export function TextInput({
         aria-describedby={error ? `${id}-error` : undefined}
         className={inputClass}
       />
-      {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
       {error ? (
         <p id={`${id}-error`} className={natoriAdminUi.fieldError}>
           {error}
@@ -114,7 +119,7 @@ export function TextArea({
   return (
     <div className="w-full">
       {label ? (
-        <label htmlFor={id} className="mb-1 block text-xs font-bold text-pink-700">
+        <label htmlFor={id} className="mb-1.5 block text-xs font-semibold text-zinc-700">
           {label}
         </label>
       ) : null}
@@ -126,7 +131,7 @@ export function TextArea({
         placeholder={placeholder}
         className={inputClass}
       />
-      {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
     </div>
   );
 }
@@ -178,7 +183,7 @@ export function AddButton({ label, onClick }: { label: string; onClick: () => vo
     <button
       type="button"
       onClick={onClick}
-      className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-pink-300 bg-pink-50 px-4 py-2 text-xs font-bold text-pink-700 hover:bg-pink-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
+      className={`mt-3 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-zinc-50 ${natoriAdminUi.focusRing}`}
     >
       <Plus className="h-4 w-4" aria-hidden />
       {label}
@@ -258,20 +263,20 @@ export function ImageUploadField({
   const previewClass =
     shape === "circle"
       ? "h-24 w-24 rounded-full"
-      : "h-24 w-32 rounded-lg";
+      : "h-24 w-32 rounded-xl";
 
   return (
     <div>
-      <p className="mb-1 text-xs font-bold text-pink-700">{label}</p>
+      <p className="mb-1.5 text-xs font-semibold text-zinc-700">{label}</p>
       <div className="flex flex-wrap items-center gap-3">
         <div
-          className={`${previewClass} grid shrink-0 place-items-center overflow-hidden border border-pink-100 bg-pink-50/60`}
+          className={`${previewClass} grid shrink-0 place-items-center overflow-hidden border border-zinc-200/80 bg-zinc-50`}
         >
           {value ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={value} alt="" className="h-full w-full object-cover" />
           ) : (
-            <span className="px-2 text-center text-xs font-bold text-pink-300">
+            <span className="px-2 text-center text-xs font-semibold text-zinc-400">
               画像なし
             </span>
           )}
@@ -287,7 +292,7 @@ export function ImageUploadField({
               inputRef.current?.click();
             }}
             disabled={uploading}
-            className={natoriAdminUi.btnPrimary}
+            className={natoriAdminUi.btnSecondary}
           >
             {uploading ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -300,7 +305,7 @@ export function ImageUploadField({
             <button
               type="button"
               onClick={() => onChange(null)}
-              className="text-left text-xs font-bold text-red-500 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
+              className="text-left text-xs font-semibold text-red-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
             >
               画像を外す
             </button>
@@ -314,8 +319,8 @@ export function ImageUploadField({
           onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
         />
       </div>
-      {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
-      {error ? <p className="mt-1 text-xs font-bold text-red-600">{error}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
+      {error ? <p className={natoriAdminUi.fieldError}>{error}</p> : null}
     </div>
   );
 }
