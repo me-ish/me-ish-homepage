@@ -1,10 +1,12 @@
 "use client";
 
 // features/natori/components/portfolio/PortfolioGallery.tsx
-// ご依頼実績。マスキングテープで貼ったポラロイド風のカードを並べる。
-// 画像はX(Twitter)の縦長表示に近い 3:4 で見せ、クリックでモーダル拡大表示。
+// ご依頼実績。マスキングテープで貼ったポラロイド風のカードを並べ、先頭の1枚は「ピックアップ」として大きく見せる。
+// 画像はX(Twitter)の縦長表示に近い 3:4 で見せ、クリックでモーダル拡大表示（前後の作品にも移れる）。
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import Image from "next/image";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   placeholderPalettes,
   portfolioColors as c,
@@ -19,6 +21,7 @@ import type {
   PortfolioWork,
 } from "@/features/natori/types/portfolio";
 import ChibiFace from "./ChibiFace";
+import { fontEnStyle } from "./portfolioFonts";
 import PortfolioWorkRelatedLinks from "./PortfolioWorkRelatedLinks";
 
 const GALLERY_PREVIEW_LIMIT = 6;
@@ -35,10 +38,38 @@ function formatProductionMonth(value?: string | null): string | null {
   return `${year}年${monthNumber}月制作`;
 }
 
-function MaskingTape({ color, angle }: { color: string; angle: number }) {
+/** 制作月・カテゴリ・公開タグを「・」区切りの1行にする（色の付いた札は使わず、絵より目立たせない）。 */
+function workMeta(work: PortfolioWork, collection: PortfolioCollection): string[] {
+  return [
+    formatProductionMonth(work.productionMonth),
+    collectionLabel(collection.name),
+    ...publicPortfolioWorkTags(work.tags),
+  ].filter((item): item is string => Boolean(item));
+}
+
+function WorkMetaLine({ items }: { items: string[] }) {
+  if (items.length === 0) return null;
+  return (
+    <p className="mt-0.5 text-[13px] leading-snug" style={{ color: c.textSoft }}>
+      {items.map((item, index) => (
+        <span key={`${item}-${index}`}>
+          {index > 0 ? " " : null}
+          <span className="whitespace-nowrap">
+            {index > 0 ? <span aria-hidden="true">· </span> : null}
+            <span>{item}</span>
+          </span>
+        </span>
+      ))}
+    </p>
+  );
+}
+
+function MaskingTape({ color, angle, large }: { color: string; angle: number; large?: boolean }) {
   return (
     <span
-      className="absolute -top-3 left-1/2 z-10 h-5 w-12 rounded-[2px] sm:h-6 sm:w-20"
+      className={`absolute left-1/2 z-10 rounded-[2px] ${
+        large ? "-top-3.5 h-6 w-20 sm:h-7 sm:w-28" : "-top-3 h-5 w-12 sm:w-16"
+      }`}
       aria-hidden="true"
       style={{
         // テープの半透明感と光沢。両端をわずかにギザギザに見せる
@@ -71,7 +102,9 @@ export default function PortfolioGallery({
   const [selected, setSelected] = useState<PortfolioWork | null>(null);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const resultsRef = useRef<HTMLDivElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const detailsRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const modalTriggerRef = useRef<HTMLButtonElement | null>(null);
 
@@ -112,6 +145,10 @@ export default function PortfolioGallery({
           },
         ]
       : collectionGroups;
+  const workCountByCollectionId = new Map<string | null, number>([
+    [null, publishedWorks.length],
+    ...groups.map((group): [string, number] => [group.collection.id, group.works.length]),
+  ]);
 
   const closeModal = useCallback(() => setSelected(null), []);
 
@@ -128,11 +165,12 @@ export default function PortfolioGallery({
     setSelected(work);
   };
 
+  const modalOpen = Boolean(selected?.image);
+
   // モーダル表示中はフォーカスを内部に保ち、Esc で閉じ、背景のスクロールを止める。
-  // close 後は作品カードへフォーカスを戻す。
+  // close 後は作品カードへフォーカスを戻す（前後に移った場合は、最後に見ていた作品のカード）。
   useEffect(() => {
-    if (!selected) return;
-    const trigger = modalTriggerRef.current;
+    if (!modalOpen) return;
     closeButtonRef.current?.focus();
 
     const onKey = (e: KeyboardEvent) => {
@@ -175,9 +213,14 @@ export default function PortfolioGallery({
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
-      trigger?.focus();
+      modalTriggerRef.current?.focus();
     };
-  }, [closeModal, selected]);
+  }, [closeModal, modalOpen]);
+
+  // 前後の作品に移ったら、詳細を先頭から読めるようにする。
+  useEffect(() => {
+    if (detailsRef.current) detailsRef.current.scrollTop = 0;
+  }, [selected?.id]);
 
   const activeCollection = groups.find((group) => group.collection.id === activeCollectionId);
   const filteredWorks = activeCollection
@@ -187,11 +230,34 @@ export default function PortfolioGallery({
     : orderedWorks;
   const shownWorks = expanded ? filteredWorks : filteredWorks.slice(0, GALLERY_PREVIEW_LIMIT);
 
-  const selectedCollection = selected
-    ? (collections.find(
-        (collection) => collection.id === selected.collectionId,
-      ) ?? null)
-    : null;
+  // 拡大表示の前後移動は、いま選んでいるカテゴリの画像付き作品を表示順に巡る（一覧に未表示の作品も含む）。
+  const viewableWorks = filteredWorks.filter(({ work }) => Boolean(work.image));
+  const selectedPosition = selected
+    ? viewableWorks.findIndex(({ work }) => work.id === selected.id)
+    : -1;
+  const selectedEntry = selectedPosition >= 0 ? viewableWorks[selectedPosition] : null;
+  const canBrowse = selectedPosition >= 0 && viewableWorks.length > 1;
+
+  const showAdjacentWork = (offset: 1 | -1) => {
+    if (!canBrowse) return;
+    const next =
+      viewableWorks[(selectedPosition + offset + viewableWorks.length) % viewableWorks.length].work;
+    // 一覧に出ている作品なら、閉じたときにそのカードへフォーカスを戻す。
+    const card = Array.from(
+      resultsRef.current?.querySelectorAll<HTMLButtonElement>("button[data-work-id]") ?? [],
+    ).find((button) => button.dataset.workId === next.id);
+    if (card) modalTriggerRef.current = card;
+    setSelected(next);
+  };
+
+  const onDialogKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (!canBrowse || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
+    event.preventDefault();
+    showAdjacentWork(event.key === "ArrowRight" ? 1 : -1);
+  };
+
+  const navButtonClassName =
+    "pf-cute-focus absolute top-[calc(0.75rem+35dvh)] z-10 flex h-[44px] w-[44px] -translate-y-1/2 items-center justify-center rounded-full md:top-[calc(0.75rem+38dvh)]";
 
   return (
     <section id="gallery" className="mx-auto max-w-6xl px-5 py-16">
@@ -215,34 +281,40 @@ export default function PortfolioGallery({
                   setExpanded(false);
                 }}
                 className="pf-cute-focus min-h-[44px] rounded-full border-2 px-4 py-2 text-sm font-bold"
-                style={{
-                  background: collection.id === (activeCollection?.collection.id ?? null) ? c.accentSoft : c.surface,
-                  borderColor: collection.id === (activeCollection?.collection.id ?? null) ? c.accentDisplay : c.borderSubtle,
-                  color: c.text,
-                }}
+                style={
+                  collection.id === (activeCollection?.collection.id ?? null)
+                    ? { background: c.text, borderColor: c.text, color: c.onAction }
+                    : { background: c.surface, borderColor: c.borderSubtle, color: c.text }
+                }
               >
                   {collectionLabel(collection.name)}
+                  {/* 件数は見た目の補足。読み上げは下の状況表示で伝える。 */}
+                  <span aria-hidden="true" className="ml-1.5 text-[13px] font-semibold opacity-75" style={fontEnStyle}>
+                    {workCountByCollectionId.get(collection.id) ?? 0}
+                  </span>
               </button>
             ))}
           </div>
-          <div className="mb-6" style={{ color: c.textSoft }}>
-            <p role="status" className="text-sm">
+          {/* 表示件数と拡大の案内は読み上げ用に残し、見た目は件数入りのカテゴリとボタンに任せる。 */}
+          <div className="sr-only">
+            <p role="status">
               {activeCollection ? collectionLabel(activeCollection.collection.name) : "すべての作品"}：{filteredWorks.length}作品中{shownWorks.length}作品を表示
             </p>
             {shownWorks.some(({ work }) => work.image) ? (
-              <p className="mt-1 text-xs">画像をタップ・クリックで拡大できます。</p>
+              <p>画像をタップ・クリックで拡大できます。</p>
             ) : null}
           </div>
           {activeCollection?.collection.description ? (
             <p className="mb-6 text-sm" style={{ color: c.textSoft }}>{activeCollection.collection.description}</p>
           ) : null}
-          <div id="portfolio-gallery-results" className="grid grid-cols-2 gap-x-4 gap-y-8 pt-2 sm:gap-x-8 sm:gap-y-10 lg:grid-cols-6">
+          <div ref={resultsRef} id="portfolio-gallery-results" className="grid grid-cols-2 gap-x-4 gap-y-8 pt-2 sm:gap-x-8 sm:gap-y-10 lg:grid-cols-6">
             {shownWorks.map(({ work, collection }, index) => (
               <PortfolioWorkCard
                 key={work.id}
                 work={work}
                 index={index}
                 collection={collection}
+                pickup={index === 0}
                 flatPlaceholder={flatPlaceholders}
                 onSelect={openModal}
               />
@@ -256,7 +328,7 @@ export default function PortfolioGallery({
                 aria-controls="portfolio-gallery-results"
                 onClick={() => setExpanded((current) => !current)}
                 className="pf-cute-focus min-h-[44px] rounded-full border-2 px-5 py-2.5 text-sm font-bold"
-                style={{ borderColor: c.accentDisplay, background: c.surface, color: c.text }}
+                style={{ borderColor: c.action, background: c.surface, color: c.text }}
               >
                 {expanded ? "最初の6作品だけ表示" : "全" + filteredWorks.length + "作品を見る"}
               </button>
@@ -273,7 +345,7 @@ export default function PortfolioGallery({
         </p>
       ) : null}
 
-      {/* 拡大表示モーダル。背景クリック / ×ボタン / Esc で閉じる */}
+      {/* 拡大表示モーダル。背景クリック / ×ボタン / Esc で閉じる。←→ と左右のボタンで前後の作品へ */}
       {selected?.image ? (
         <div
           ref={dialogRef}
@@ -284,6 +356,7 @@ export default function PortfolioGallery({
           className="fixed inset-0 z-50 flex h-[100dvh] items-center justify-center pb-[calc(1.5rem+env(safe-area-inset-bottom))] pl-[calc(1.5rem+env(safe-area-inset-left))] pr-[calc(1.5rem+env(safe-area-inset-right))] pt-[calc(1.5rem+env(safe-area-inset-top))]"
           style={{ background: c.overlay }}
           onClick={closeModal}
+          onKeyDown={onDialogKeyDown}
         >
           <div
             className="relative flex max-h-full min-h-0 w-full max-w-3xl flex-col rounded-xl p-3 pb-4"
@@ -312,8 +385,42 @@ export default function PortfolioGallery({
                 ✕
               </span>
             </button>
+            {/* 前後の作品。絵の左右の縁にかけ、顔まわりにはかからない位置に置く。 */}
+            {canBrowse ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => showAdjacentWork(-1)}
+                  aria-label="前の作品を表示"
+                  className={`${navButtonClassName} -left-[12px] sm:-left-[20px]`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border shadow-md"
+                    style={{ background: c.surface, borderColor: c.borderSubtle, color: c.text }}
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => showAdjacentWork(1)}
+                  aria-label="次の作品を表示"
+                  className={`${navButtonClassName} -right-[12px] sm:-right-[20px]`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border shadow-md"
+                    style={{ background: c.surface, borderColor: c.borderSubtle, color: c.text }}
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </span>
+                </button>
+              </>
+            ) : null}
             {/* 閉じる操作は固定し、低い画面でも画像・詳細を最後まで読めるようにする。 */}
             <div
+              ref={detailsRef}
               role="region"
               aria-label="作品画像と詳細"
               tabIndex={0}
@@ -330,41 +437,27 @@ export default function PortfolioGallery({
                   sizes="(min-width: 816px) 744px, calc(100vw - 72px)"
                   className="object-contain"
                 />
-              </div>
-              <div className="mt-3 flex flex-col items-start gap-2 px-1 sm:flex-row sm:justify-between">
-                <div className="min-w-0 sm:flex-1">
-                  <h3 className="font-bold">{selected.title}</h3>
-                  {formatProductionMonth(selected.productionMonth) ? (
-                    <p className="mt-0.5 text-xs" style={{ color: c.textSoft }}>
-                      {formatProductionMonth(selected.productionMonth)}
-                    </p>
-                  ) : null}
-                </div>
-                {selectedCollection ||
-                publicPortfolioWorkTags(selected.tags).length > 0 ? (
-                  <span className="flex max-w-full flex-wrap gap-1 sm:max-w-[50%] sm:justify-end">
-                    {selectedCollection ? (
-                      <span
-                        className="min-w-0 rounded-full px-2 py-1 text-xs font-bold"
-                        style={{
-                          background: selectedCollection.color,
-                          color: c.text,
-                        }}
-                      >
-                        {selectedCollection.name}
-                      </span>
-                    ) : null}
-                    {publicPortfolioWorkTags(selected.tags).map((tag) => (
-                      <span
-                        key={tag}
-                        className="min-w-0 rounded-full px-2 py-1 text-xs font-bold"
-                        style={{ background: c.surfaceSubtle, color: c.text }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                {canBrowse ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-2 top-2 rounded-full px-2.5 py-1 text-[13px] font-semibold"
+                    style={{ ...fontEnStyle, background: c.pageTranslucent, color: c.text }}
+                  >
+                    {selectedPosition + 1} / {viewableWorks.length}
                   </span>
                 ) : null}
+              </div>
+              <div className="mt-3 px-1">
+                {/* 前後に移ったときに、新しい作品名と位置を読み上げる（開いた時点の内容は読み上げない）。 */}
+                {canBrowse ? (
+                  <p className="sr-only" aria-live="polite">
+                    {selected.title}（{selectedPosition + 1}/{viewableWorks.length}作品目）
+                  </p>
+                ) : null}
+                <h3 className="font-bold">{selected.title}</h3>
+                <WorkMetaLine
+                  items={workMeta(selected, selectedEntry?.collection ?? unassignedCollection)}
+                />
               </div>
               {variant === "full" && selected.relatedLinks ? (
                 <div className="px-1">
@@ -386,41 +479,65 @@ function PortfolioWorkCard({
   work,
   index,
   collection,
+  pickup,
   flatPlaceholder,
   onSelect,
 }: {
   work: PortfolioWork;
   index: number;
   collection: PortfolioCollection;
+  /** 一覧の先頭。大きく見せて「PICK UP」を添える */
+  pickup: boolean;
   flatPlaceholder?: boolean;
   onSelect: (work: PortfolioWork, collectionName: string, trigger: HTMLButtonElement) => void;
 }) {
   const [landscape, setLandscape] = useState(false);
   const palette = placeholderPalettes[index % placeholderPalettes.length];
   const rotate = workRotations[index % workRotations.length];
-  const tapeAngle = index % 2 === 0 ? -4 : 3;
-  const publicTags = publicPortfolioWorkTags(work.tags);
+  const tapeAngle = index % 2 === 0 ? -2 : 2;
+  // 横長の作品はもともと幅広のカードなので、先頭でも大きさは変えない。
+  const featured = pickup && !landscape;
 
   return (
     <div
-      className={`pf-pin-card ${rotate} relative min-w-0 rounded-xl p-2 pb-3 pt-4 sm:p-3 sm:pb-4 sm:pt-5 ${landscape ? "col-span-2 lg:col-span-3" : "lg:col-span-2"}`}
+      className={`pf-pin-card ${rotate} relative min-w-0 rounded-xl p-1.5 pb-2.5 pt-3.5 sm:p-2.5 sm:pb-3 sm:pt-4 ${
+        landscape
+          ? "col-span-2 lg:col-span-3"
+          : featured
+            ? "col-span-2 lg:col-span-4 lg:row-span-2 lg:flex lg:flex-col"
+            : "lg:col-span-2"
+      }`}
       style={{
         background: c.surface,
         boxShadow: `0 10px 20px ${c.shadowSoft}`,
       }}
     >
-      <MaskingTape color={collection.color} angle={tapeAngle} />
+      <MaskingTape color={collection.color} angle={tapeAngle} large={pickup} />
+      {pickup ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-4 top-6 z-10 rounded-full px-3 py-1 text-[13px] font-semibold tracking-[0.16em] sm:left-5 sm:top-7"
+          style={{ ...fontEnStyle, background: c.pageTranslucent, color: c.actionTextSmall }}
+        >
+          PICK UP
+        </span>
+      ) : null}
       <button
         type="button"
+        data-work-id={work.id}
         onClick={
           work.image
             ? (event) => onSelect(work, collection.name, event.currentTarget)
             : undefined
         }
         aria-label={work.image ? `${work.title} を拡大表示` : undefined}
-        className={`pf-cute-focus relative mb-3 flex w-full items-center justify-center overflow-hidden rounded-lg ${landscape ? "aspect-video lg:max-h-[32rem]" : "aspect-[3/4]"} ${
-          work.image ? "cursor-zoom-in" : "cursor-default"
-        }`}
+        className={`pf-cute-focus relative mb-2 flex w-full items-center justify-center overflow-hidden rounded-lg ${
+          landscape
+            ? "aspect-video lg:max-h-[32rem]"
+            : featured
+              ? "aspect-[4/5] sm:aspect-auto sm:h-[30rem] lg:h-auto lg:min-h-[30rem] lg:flex-1"
+              : "aspect-[3/4]"
+        } ${work.image ? "cursor-zoom-in" : "cursor-default"}`}
         style={{ background: c.surfaceSubtle }}
       >
         {work.image ? (
@@ -430,7 +547,9 @@ function PortfolioWorkCard({
             fill
             sizes={landscape
               ? "(min-width: 1024px) 540px, calc(100vw - 40px)"
-              : "(min-width: 1024px) 352px, (min-width: 640px) calc(50vw - 36px), calc(50vw - 44px)"}
+              : featured
+                ? "(min-width: 1024px) 730px, calc(100vw - 40px)"
+                : "(min-width: 1024px) 352px, (min-width: 640px) calc(50vw - 36px), calc(50vw - 44px)"}
             className="object-cover"
             onLoad={(event) => setLandscape(event.currentTarget.naturalWidth > event.currentTarget.naturalHeight)}
           />
@@ -442,39 +561,18 @@ function PortfolioWorkCard({
           />
         ) : (
           <ChibiFace
-            size={110}
+            size={featured ? 160 : 110}
             skin={palette.skin}
             hair={palette.hair}
             accent={palette.accent}
           />
         )}
       </button>
-      <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="w-full min-w-0 sm:w-auto">
-          <p className="truncate text-sm font-bold sm:text-base">{work.title}</p>
-          {formatProductionMonth(work.productionMonth) ? (
-            <p className="mt-0.5 text-xs" style={{ color: c.textSoft }}>
-              {formatProductionMonth(work.productionMonth)}
-            </p>
-          ) : null}
-        </div>
-        <span className="flex shrink-0 flex-wrap justify-end gap-1">
-          <span
-            className="rounded-full px-2 py-1 text-xs font-bold"
-            style={{ background: collection.color, color: c.text }}
-          >
-              {collectionLabel(collection.name)}
-          </span>
-          {publicTags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full px-2 py-1 text-xs font-bold"
-              style={{ background: c.surfaceSubtle, color: c.textSoft }}
-            >
-              {tag}
-            </span>
-          ))}
-        </span>
+      <div className="min-w-0 px-0.5">
+        <p className={`truncate font-bold ${featured ? "text-base sm:text-lg" : "text-sm sm:text-base"}`}>
+          {work.title}
+        </p>
+        <WorkMetaLine items={workMeta(work, collection)} />
       </div>
     </div>
   );

@@ -316,13 +316,14 @@ export const placeholderPalettes = [
   { skin: "#FDE0D0", hair: "#E893B0", accent: portfolioDecorativeColors.placeholderRose },
 ] as const;
 
+/** カードの傾き。絵を小さく見せないよう ±1° 以内にとどめる（0° は使わず、貼った感じは残す）。 */
 export const workRotations = [
-  "-rotate-3",
-  "rotate-2",
-  "rotate-1",
-  "-rotate-2",
-  "rotate-3",
   "-rotate-1",
+  "rotate-[0.6deg]",
+  "rotate-1",
+  "-rotate-[0.6deg]",
+  "rotate-[0.8deg]",
+  "-rotate-[0.8deg]",
 ] as const;
 
 /** 作品カードの既存装飾。作品を主役にするPF-04でtape自体を含めて削減予定。 */

@@ -14,6 +14,7 @@ vi.mock("next/image", () => ({
 
 const trackNatoriPageEvent = vi.hoisted(() => vi.fn());
 vi.mock("@/features/natori/data/pageEvents", () => ({ trackNatoriPageEvent }));
+vi.mock("../portfolioFonts", () => ({ fontEnStyle: {} }));
 
 import PortfolioGallery from "@/features/natori/components/portfolio/PortfolioGallery";
 import type { PortfolioWork } from "@/features/natori/types/portfolio";
@@ -322,5 +323,129 @@ describe("PortfolioGallery collections", () => {
     expect(screen.getByRole("img", { name: "作品1" }).getAttribute("fetchpriority")).not.toBe(
       "high",
     );
+  });
+});
+
+describe("PortfolioGallery pick-up and lightbox browsing", () => {
+  const withImage = (id: string, options: Partial<PortfolioWork> = {}) =>
+    work(id, { image: `https://example.com/${id}.webp`, ...options });
+
+  it("先頭の1枚をピックアップとして大きく見せ、2枚目以降は通常の大きさのまま少しだけ傾ける", () => {
+    render(
+      <PortfolioGallery
+        collections={collections}
+        works={[withImage("1"), withImage("2"), withImage("3")]}
+      />,
+    );
+
+    const cards = Array.from(document.querySelectorAll("#portfolio-gallery-results .pf-pin-card"));
+    expect(cards).toHaveLength(3);
+    expect(cards[0].className).toContain("col-span-2 lg:col-span-4 lg:row-span-2");
+    expect(cards[0].textContent).toContain("PICK UP");
+    expect(cards[1].className).toContain("lg:col-span-2");
+    expect(cards[1].className).not.toContain("lg:row-span-2");
+    expect(cards[1].textContent).not.toContain("PICK UP");
+    for (const card of cards) {
+      expect(card.className).toMatch(/(?:^|\s)-?rotate-(?:1|\[0\.\d+deg\])(?:\s|$)/u);
+    }
+  });
+
+  it("カテゴリの件数は見た目の補足にとどめ、ボタン名は変えない", () => {
+    render(
+      <PortfolioGallery
+        collections={collections}
+        works={[withImage("1"), withImage("2"), work("3")]}
+      />,
+    );
+
+    const all = screen.getByRole("button", { name: "すべて" });
+    expect(all.textContent).toBe("すべて3");
+    expect(screen.getByRole("button", { name: "SDキャラ" }).textContent).toBe("SDキャラ3");
+    expect(screen.getByRole("status").textContent).toBe("すべての作品：3作品中3作品を表示");
+  });
+
+  it("拡大表示から前後の作品へ移れ、端では反対側へ回り、閉じると最後に見た作品のカードへ戻る", () => {
+    render(
+      <PortfolioGallery
+        collections={collections}
+        works={[withImage("1"), withImage("2"), withImage("3")]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "作品1 を拡大表示" }));
+    let dialog = screen.getByRole("dialog", { name: "作品1" });
+    expect(within(dialog).getAllByRole("button", { name: "閉じる" })).toHaveLength(1);
+    expect(dialog.textContent).toContain("1 / 3");
+
+    const next = within(dialog).getByRole("button", { name: "次の作品を表示" });
+    fireEvent.click(next);
+    dialog = screen.getByRole("dialog", { name: "作品2" });
+    expect(dialog.textContent).toContain("2 / 3");
+
+    fireEvent.keyDown(dialog, { key: "ArrowRight" });
+    expect(screen.getByRole("dialog", { name: "作品3" })).toBeTruthy();
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "ArrowRight" });
+    expect(screen.getByRole("dialog", { name: "作品1" })).toBeTruthy();
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "ArrowLeft" });
+    dialog = screen.getByRole("dialog", { name: "作品3" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "前の作品を表示" }));
+    expect(screen.getByRole("dialog", { name: "作品2" })).toBeTruthy();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "作品2 を拡大表示" }));
+  });
+
+  it("一覧に未表示の作品も前後移動で見られ、閉じると開いたカードへ戻る", () => {
+    render(
+      <PortfolioGallery
+        collections={collections}
+        works={["1", "2", "3", "4", "5", "6", "7", "8"].map((id) => withImage(id))}
+      />,
+    );
+
+    const sixth = screen.getByRole("button", { name: "作品6 を拡大表示" });
+    fireEvent.click(sixth);
+    fireEvent.click(screen.getByRole("button", { name: "次の作品を表示" }));
+    const dialog = screen.getByRole("dialog", { name: "作品7" });
+    expect(dialog.textContent).toContain("7 / 8");
+    expect(screen.queryByRole("button", { name: "作品7 を拡大表示" })).toBeNull();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(document.activeElement).toBe(sixth);
+  });
+
+  it("画像のない作品と、選んでいないカテゴリの作品は前後移動に含めない", () => {
+    render(
+      <PortfolioGallery
+        collections={[...collections, { id: "single", name: "一枚絵", description: "", color: "#F2D9E0" }]}
+        works={[
+          withImage("1"),
+          work("2"),
+          withImage("3", { collectionId: "single" }),
+          withImage("4"),
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "SDキャラ" }));
+    fireEvent.click(screen.getByRole("button", { name: "作品1 を拡大表示" }));
+    expect(screen.getByRole("dialog", { name: "作品1" }).textContent).toContain("1 / 2");
+    fireEvent.click(screen.getByRole("button", { name: "次の作品を表示" }));
+    expect(screen.getByRole("dialog", { name: "作品4" }).textContent).toContain("2 / 2");
+  });
+
+  it("画像付きの作品が1つだけなら前後のボタンと位置を出さない", () => {
+    render(
+      <PortfolioGallery collections={collections} works={[withImage("1"), work("2")]} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "作品1 を拡大表示" }));
+    const dialog = screen.getByRole("dialog", { name: "作品1" });
+    expect(within(dialog).queryByRole("button", { name: "次の作品を表示" })).toBeNull();
+    expect(within(dialog).queryByRole("button", { name: "前の作品を表示" })).toBeNull();
+    expect(dialog.textContent).not.toContain("1 / 1");
+    fireEvent.keyDown(dialog, { key: "ArrowRight" });
+    expect(screen.getByRole("dialog", { name: "作品1" })).toBeTruthy();
   });
 });
