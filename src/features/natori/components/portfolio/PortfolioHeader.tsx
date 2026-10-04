@@ -1,5 +1,6 @@
 // features/natori/components/portfolio/PortfolioHeader.tsx
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import { portfolioBrandSubName } from "@/features/natori/lib/portfolioShare";
 import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
 import PortfolioMobileNav from "./PortfolioMobileNav";
 import { fontEnStyle } from "./portfolioFonts";
@@ -38,21 +39,39 @@ export default function PortfolioHeader({
     ? NAV_LINKS.filter((link) => SHOWCASE_NAV_HREFS.has(link.href))
     : NAV_LINKS.map((link) => link.href === "/natori/portfolio/contact" ? { ...link, href: contactPath } : link);
   const mobileLinks = showcase ? navLinks : MOBILE_NAV_LINKS.map((link) => link.href === "/natori/portfolio/contact" ? { ...link, href: contactPath } : link);
+  const titleAccent = content.heroTitleAccent.trim();
+  const titleTail = content.heroTitleTail.trim();
+  const subName = portfolioBrandSubName(content);
   return (
     <header
       className="sticky top-0 z-50 border-b backdrop-blur"
       style={{ background: c.pageTranslucent, borderColor: c.borderSubtle }}
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">
-        <span
-          className="min-w-0 max-w-[58vw] truncate text-xl font-semibold tracking-wide sm:max-w-none"
-          style={{ ...fontEnStyle, color: c.accentDisplay }}
-        >
-          {content.artistName}
+        {/* 呼び名は見出し・共有画像と同じ「ナトリのあとりえ」。英字のサイト名は小さく添える。 */}
+        <span className="flex min-w-0 max-w-[58vw] flex-col sm:max-w-none">
+          <span className="truncate text-xl font-black leading-tight tracking-wide">
+            {titleAccent || titleTail ? (
+              <>
+                <span style={{ color: c.text }}>{titleAccent}</span>
+                <span style={{ color: c.actionText }}>{titleTail}</span>
+              </>
+            ) : (
+              <span style={{ color: c.text }}>{content.artistName}</span>
+            )}
+          </span>
+          {subName ? (
+            <span
+              className="hidden truncate text-xs font-semibold uppercase tracking-[0.2em] sm:block"
+              style={{ ...fontEnStyle, color: c.textSoft }}
+            >
+              {subName}
+            </span>
+          ) : null}
         </span>
         <nav
           aria-label="メインナビゲーション"
-          className="hidden gap-6 text-sm font-medium md:flex"
+          className="hidden shrink-0 items-center gap-4 whitespace-nowrap text-[13px] font-medium md:flex lg:gap-6 lg:text-sm"
           style={{ color: c.textSoft }}
         >
           {navLinks.map((link) => (
@@ -61,7 +80,7 @@ export default function PortfolioHeader({
               href={link.href}
               className={
                 link.label === CONTACT_NAV_LABEL
-                  ? "pf-cute-focus -my-1.5 rounded-full border-2 px-4 py-1.5 font-bold hover:opacity-70"
+                  ? "pf-cute-focus -my-1.5 rounded-full border-2 px-3 py-1.5 font-bold hover:opacity-70 lg:px-4"
                   : "pf-cute-focus hover:opacity-70"
               }
               style={link.label === CONTACT_NAV_LABEL ? { borderColor: c.action, color: c.text } : undefined}
@@ -72,11 +91,11 @@ export default function PortfolioHeader({
         </nav>
         {showcase ? null : (
           <span
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold"
+            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-bold md:text-xs"
             style={{
               background: content.commissionOpen ? c.successSoft : c.surfaceSubtle,
               color: content.commissionOpen ? c.success : c.textSoft,
-              border: `1px solid ${content.commissionOpen ? c.success : c.borderStrong}`,
+              border: `1px solid ${content.commissionOpen ? c.success : c.formBorder}`,
             }}
           >
             {content.commissionOpen ? (

@@ -462,7 +462,7 @@ export default function PortfolioEditor({
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <TextInput
-                label="サイト名（ヘッダーのロゴ部分）"
+                label="サイト名（ヘッダーの呼び名の下・共有画像に小さく表示）"
                 value={content.artistName}
                 onChange={(v) => patch({ artistName: v })}
               />
@@ -474,12 +474,12 @@ export default function PortfolioEditor({
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <TextInput
-                label="トップタイトル前半（濃い文字色）"
+                label="トップタイトル前半（濃い文字色・ヘッダーの呼び名にも使用）"
                 value={content.heroTitleAccent}
                 onChange={(v) => patch({ heroTitleAccent: v })}
               />
               <TextInput
-                label="トップタイトル後半（画材のような色付き文字）"
+                label="トップタイトル後半（画材のような色付き文字・ヘッダーの呼び名にも使用）"
                 value={content.heroTitleTail}
                 onChange={(v) => patch({ heroTitleTail: v })}
               />
