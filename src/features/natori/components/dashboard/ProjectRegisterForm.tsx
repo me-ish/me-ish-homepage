@@ -93,6 +93,12 @@ type ProjectRegisterFormProps = {
   collapsible?: boolean;
   /** Fired after successful registration. */
   onCreated?: (id: string) => void;
+  /**
+   * ダイアログの中に置くときの表示。カード枠と見出しを出さず（見出しはダイアログ側）、
+   * 登録後の主ボタンは onClose があれば「閉じる」にする。
+   */
+  embedded?: boolean;
+  onClose?: () => void;
 };
 
 export default function ProjectRegisterForm({
@@ -107,6 +113,8 @@ export default function ProjectRegisterForm({
   initialOpen = false,
   collapsible = true,
   onCreated,
+  embedded = false,
+  onClose,
 }: ProjectRegisterFormProps) {
   const HeadingIcon = icon ?? FolderPlus;
   const resolvedHeading =
@@ -246,12 +254,18 @@ export default function ProjectRegisterForm({
         案件カレンダーから内容を確認できます。
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
-        <Link
-          href="/natori/projects"
-          className={natoriAdminUi.btnPrimary}
-        >
-          案件カレンダーを開く
-        </Link>
+        {onClose ? (
+          <button type="button" onClick={onClose} className={natoriAdminUi.btnPrimary}>
+            閉じる
+          </button>
+        ) : (
+          <Link
+            href="/natori/projects"
+            className={natoriAdminUi.btnPrimary}
+          >
+            案件カレンダーを開く
+          </Link>
+        )}
         <button
           type="button"
           onClick={() => {
@@ -450,6 +464,11 @@ export default function ProjectRegisterForm({
       </Button>
     </div>
   );
+
+  if (embedded) {
+    // 見出しはダイアログ側。mt-4 は見出しと本文の間隔なので、ここでは詰める。
+    return <div className="[&>*:first-child]:mt-0">{body}</div>;
+  }
 
   return (
     <div className={natoriAdminUi.card}>

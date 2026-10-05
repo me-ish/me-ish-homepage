@@ -6,7 +6,8 @@ import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriCo
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CalendarClock, CalendarDays, Inbox, List } from "lucide-react";
+import { ArrowRight, CalendarClock, CalendarDays, Inbox, List, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import {
   getNextActionForStatus,
   getNextStatus,
@@ -93,6 +94,7 @@ export default function ProjectsBoard({
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [advanceBusyId, setAdvanceBusyId] = useState<string | null>(null);
   const [view, setView] = useState<BoardView>("calendar");
+  const [registerOpen, setRegisterOpen] = useState(false);
   const loadSequence = useRef(0);
   const taskSequence = useRef(0);
   const taskIntents = useRef(new Map<string, Map<string, TaskIntent>>());
@@ -613,21 +615,22 @@ export default function ProjectsBoard({
           </button>
         </div>
       ) : null}
-      {/* 登録・問い合わせへの導線・おすすめ順は1つのまとまりとして詰めて並べる */}
-      <div className="space-y-3">
+      {/* 案件の手入力登録はダイアログ。主役のカレンダーを上に保つため、フォームは常設しない */}
       {authed ? (
-        <ProjectRegisterForm
-          mode="manual"
-          onCreated={() => {
-            if (dataSource === "supabase") {
-              loadFromSupabase().catch((err) => {
-                console.error("[ProjectsBoard] reload after register failed", err);
-              });
-            }
-          }}
-        />
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setRegisterOpen(true)}
+            className={natoriAdminUi.btnSecondary}
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            案件を登録
+          </button>
+        </div>
       ) : null}
 
+      {/* 問い合わせへの導線・おすすめ順は1つのまとまりとして詰めて並べる */}
+      <div className="space-y-3">
       {/* 依頼受付〜入金待ちの対応（メール送信・入金確認・見送り）は問い合わせ管理へ集約 */}
       {preworkCount > 0 ? (
         <Link
@@ -809,6 +812,32 @@ export default function ProjectsBoard({
         busyId={advanceBusyId}
         onRestore={handleRestoreArchivedProject}
       />
+
+      {/* 案件を登録（手入力） */}
+      <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
+        <DialogContent
+          className="max-h-[90vh] w-full max-w-lg gap-0 overflow-y-auto rounded-2xl bg-white p-5 sm:p-6"
+          // 入力途中で外側をクリックして消えないよう、閉じるのは×・Esc・登録後の「閉じる」だけにする
+          onPointerDownOutside={(event) => event.preventDefault()}
+        >
+          <DialogTitle className="text-base font-bold text-zinc-900">案件を登録</DialogTitle>
+          <DialogDescription className={`${natoriAdminUi.caption} mb-4 mt-1`}>
+            依頼が来た段階の案件でも、見積もり済の案件でも登録できます。
+          </DialogDescription>
+          <ProjectRegisterForm
+            mode="manual"
+            embedded
+            onClose={() => setRegisterOpen(false)}
+            onCreated={() => {
+              if (dataSource === "supabase") {
+                loadFromSupabase().catch((err) => {
+                  console.error("[ProjectsBoard] reload after register failed", err);
+                });
+              }
+            }}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* ラフ提出・納品メール送信パネル */}
       {mailTarget ? (
