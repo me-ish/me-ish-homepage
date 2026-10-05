@@ -16,15 +16,15 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioDispl
       <div className="mx-auto max-w-4xl space-y-10 px-5">
         <div>
           <h2 className="mb-6 text-center text-2xl font-black md:text-3xl">制作の流れ</h2>
-          <ol className="space-y-4">
+          {/* 番号の丸を縦の線でつないだ時系列。各 li の線は次の丸まで伸ばし、最後の項目だけ線を引かない */}
+          <ol>
             {workflow.map((step, index) => (
               <li
                 key={`${step.title}-${index}`}
-                className="flex items-start gap-4 rounded-2xl p-5"
-                style={cardStyle}
+                className="relative flex items-start gap-4 pb-8 last:pb-0 md:gap-5"
               >
                 <span
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-base font-black"
+                  className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-base font-black"
                   style={{
                     background: c.action,
                     borderColor: c.action,
@@ -34,7 +34,14 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioDispl
                 >
                   {index + 1}
                 </span>
-                <div>
+                {index < workflow.length - 1 ? (
+                  <span
+                    className="absolute bottom-0 left-5 top-10 w-0.5 -translate-x-1/2 rounded-full"
+                    style={{ background: c.formBorder }}
+                    aria-hidden="true"
+                  />
+                ) : null}
+                <div className="min-w-0 flex-1 rounded-2xl p-4 md:p-5" style={cardStyle}>
                   <p className="mb-1 font-bold">{step.title}</p>
                   <p className="text-sm leading-relaxed" style={{ color: c.textSoft }}>
                     {step.body}
