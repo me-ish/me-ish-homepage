@@ -1,7 +1,7 @@
 "use client";
 
 // features/natori/components/portfolio/PortfolioGallery.tsx
-// ご依頼実績。マスキングテープで貼ったポラロイド風のカードを並べ、先頭の1枚は「ピックアップ」として大きく見せる。
+// ご依頼実績。マスキングテープで貼ったポラロイド風のカードをまっすぐに並べ、先頭の1枚は「ピックアップ」として大きく見せる。
 // 画像はX(Twitter)の縦長表示に近い 3:4 で見せ、クリックでモーダル拡大表示（前後の作品にも移れる）。
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
@@ -10,7 +10,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   placeholderPalettes,
   portfolioColors as c,
-  workRotations,
 } from "@/features/natori/constants/portfolioContent";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
 import { publicPortfolioWorkTags } from "@/features/natori/lib/portfolioContent";
@@ -93,10 +92,13 @@ export default function PortfolioGallery({
   variant = "full",
   flatPlaceholders,
   consultation,
+  intro,
 }: {
   works: PortfolioWork[];
   collections: PortfolioCollection[];
   variant?: PortfolioVariant;
+  /** 見出しの下に出す紹介文（編集画面の「ギャラリーの紹介文」）。空なら出さない */
+  intro?: string;
   /** 画像なし作品のプレースホルダーをキャラSVGではなくベタ塗りにする（デモ用） */
   flatPlaceholders?: boolean;
   /**
@@ -276,6 +278,14 @@ export default function PortfolioGallery({
         <h2 className="text-2xl font-black md:text-3xl">
           ご依頼実績 <span style={{ color: c.highlight }}>°˖✧</span>
         </h2>
+        {intro?.trim() ? (
+          <p
+            className="mt-3 max-w-2xl whitespace-pre-line text-sm leading-relaxed md:text-base"
+            style={{ color: c.textSoft }}
+          >
+            {intro.trim()}
+          </p>
+        ) : null}
       </div>
 
       {groups.length > 0 ? (
@@ -518,14 +528,13 @@ function PortfolioWorkCard({
 }) {
   const [landscape, setLandscape] = useState(false);
   const palette = placeholderPalettes[index % placeholderPalettes.length];
-  const rotate = workRotations[index % workRotations.length];
   const tapeAngle = index % 2 === 0 ? -2 : 2;
   // 横長の作品はもともと幅広のカードなので、先頭でも大きさは変えない。
   const featured = pickup && !landscape;
 
   return (
     <div
-      className={`pf-pin-card ${rotate} relative min-w-0 rounded-xl p-1.5 pb-2.5 pt-3.5 sm:p-2.5 sm:pb-3 sm:pt-4 ${
+      className={`pf-pin-card relative min-w-0 rounded-xl p-1.5 pb-2.5 pt-3.5 sm:p-2.5 sm:pb-3 sm:pt-4 ${
         landscape
           ? "col-span-2 lg:col-span-3"
           : featured

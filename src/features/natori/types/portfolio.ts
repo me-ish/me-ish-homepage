@@ -140,6 +140,8 @@ export type PortfolioContent = {
   aboutParagraphs: string[];
   /** 対応内容のバッジ */
   services: string[];
+  /** ご依頼実績の見出しの下に出す短い紹介文。空なら表示しない。旧データには無いので未設定を許容する */
+  galleryIntro?: string;
   /** ご依頼実績 */
   works: PortfolioWork[];
   /** 作品をまとめる公開コレクション。配列順が公開ページの表示順 */

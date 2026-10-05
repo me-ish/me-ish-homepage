@@ -175,6 +175,8 @@ const portfolioContentBaseSchema = z.object({
   aboutImage: imageUrl,
   aboutParagraphs: z.array(longText).max(20),
   services: z.array(shortText).max(30),
+  // 後から追加したフィールド。既存のDB行には無いので空（非表示）で補う
+  galleryIntro: longText.optional().default(""),
   works: z.array(workSchema).max(300),
   collections: z.array(collectionSchema).max(20).optional(),
   plans: z.array(planSchema).max(12),
@@ -339,6 +341,7 @@ export function preparePortfolioContentForSave(content: PortfolioContent): Portf
     heroImage: heroImages[0] ?? null,
     aboutParagraphs: cleanList(content.aboutParagraphs),
     services: cleanList(content.services),
+    ...(content.galleryIntro !== undefined ? { galleryIntro: content.galleryIntro.trim() } : {}),
     requests: cleanList(content.requests),
     massProductionSamples: (content.massProductionSamples ?? []).map((sample) => ({
       ...sample,

@@ -1137,7 +1137,7 @@ PF-04 の非対象までリファクタしないでください。
 | D-03 | form は single primary column | A | 採用 |
 | D-04 | Warm neutral + muted rose を初期 palette とする | C | 不採用。visual review により lavender + vivid pink を採用 |
 | D-05 | semantic UI color と Gallery の装飾色を分離する | B/C | 採用。collection/tape の装飾色は維持 |
-| D-06 | Gallery の tape/rotation/tag を現行デザインの個性として維持する | C | visual review 後に採用 |
+| D-06 | Gallery の tape/rotation/tag を現行デザインの個性として維持する | C | visual review 後に採用。2026-10-05 にカードの傾き（rotation）だけ廃止（運営者の判断。tape・影・タグは維持。ホバー時の持ち上がりも維持） |
 | D-07 | Hero に代表 artwork を戻す | B | 採用 |
 | D-08 | About を作品・依頼条件より後ろへ置く | B | 仮採用、analytics 対象 |
 | D-09 | consultation / quote domain contract は維持 | existing architecture | 採用 |

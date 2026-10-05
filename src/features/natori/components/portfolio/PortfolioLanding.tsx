@@ -55,6 +55,7 @@ export default function PortfolioLanding({
       <PortfolioGallery
         works={galleryWorks}
         collections={content.collections}
+        intro={content.galleryIntro}
         variant={variant}
         flatPlaceholders={flatPlaceholders}
         // 拡大表示の「この雰囲気で相談する」。作品集（showcase）と受付停止中は出さない。

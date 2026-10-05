@@ -791,6 +791,16 @@ export default function PortfolioEditor({
           title="ご依頼実績"
           description="ご依頼実績の制作年月、所属コレクション、代表表示、公開状態を設定できます。補助タグは受注経路などの管理用です。"
         >
+          <div className="mb-4">
+            <TextArea
+              label="ギャラリーの紹介文"
+              value={content.galleryIntro ?? ""}
+              onChange={(v) => patch({ galleryIntro: v })}
+              rows={3}
+              placeholder="例: これまでにご依頼いただいたイラストの一部です。"
+              hint="公開ページの「ご依頼実績」の見出しの下に表示されます。空欄なら何も表示しません。"
+            />
+          </div>
           <SortableList
             items={content.works}
             getId={(work) => work.id}
