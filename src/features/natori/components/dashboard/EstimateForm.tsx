@@ -1,6 +1,7 @@
 "use client";
 
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { AlertTriangle, Calculator, CheckCircle2, ChevronDown, ChevronUp, Clipboard, Mail, RotateCcw, Save, Zap } from "lucide-react";
@@ -375,14 +376,25 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
                       </option>
                     ))}
                   </select>
-                  <Button
-                    onClick={() => setMailPanelOpen(true)}
-                    disabled={!selectedInquiry}
-                    className={`${natoriAdminUi.btnPrimary} shrink-0`}
-                  >
-                    <Mail className="h-4 w-4" aria-hidden />
-                    見積もりメールを作成
-                  </Button>
+                  {demo || !selectedInquiry ? (
+                    <Button
+                      onClick={() => setMailPanelOpen(true)}
+                      disabled={!selectedInquiry}
+                      className={`${natoriAdminUi.btnPrimary} shrink-0`}
+                    >
+                      <Mail className="h-4 w-4" aria-hidden />
+                      見積もりメールを作成
+                    </Button>
+                  ) : (
+                    // 本番は確認モーダルを挟まず、その案件の見積りページへ直接進む
+                    <Link
+                      href={`/natori/estimate?inquiry=${encodeURIComponent(selectedInquiry.id)}`}
+                      className={`${natoriAdminUi.btnPrimary} shrink-0`}
+                    >
+                      <Mail className="h-4 w-4" aria-hidden />
+                      見積もりメールを作成
+                    </Link>
+                  )}
                 </div>
               </ResultBlock>
             ) : null}
