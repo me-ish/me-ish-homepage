@@ -159,7 +159,8 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   const [projects, setProjects] = useState<NatoriProject[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [today, setToday] = useState<Date | null>(null);
-  const [filter, setFilter] = useState<string>("all");
+  // 開いたときは「対応・確認が必要」から。URL の ?filter= があればそちらを優先する（下の sync）。
+  const [filter, setFilter] = useState<string>("attention");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<NatoriProject | null>(null);
   const [selectedError, setSelectedError] = useState("");
@@ -264,8 +265,9 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   const matchesFilter = (row: InquiryRow, key: string) => {
     const ended = Boolean(row.project.deletedAt) || row.project.status === "closed";
     if (key === "ended") return ended;
-    if (key === "attention") return consultationNeedsAttention(row.project);
+    // 終了・アーカイブ済みは「対応・確認が必要」にも数えない（数えると「すべて」より多くなる）。
     if (ended) return false;
+    if (key === "attention") return consultationNeedsAttention(row.project);
     if (key === "staff") return ["staff", "new"].includes(consultationReplyState(row.project));
     if (key === "client") return consultationReplyState(row.project) === "client";
     const entry = STATUS_FILTERS.find(item => item.key === key);
@@ -530,11 +532,20 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
             <Inbox className="h-6 w-6" aria-hidden />
           </span>
           <p className="mt-3 text-sm font-semibold text-zinc-900">
-            {rows.length === 0 ? "対応中の問い合わせはありません" : "この条件の問い合わせはありません"}
+            {rows.length === 0
+              ? "対応中の問い合わせはありません"
+              : filter === "attention"
+                ? "今、対応・確認が必要な問い合わせはありません"
+                : "この条件の問い合わせはありません"}
           </p>
           <p className="mt-1 text-xs leading-5 text-zinc-600">
             制作中・納品後の相談も、ここから開けます。終了した案件は「終了・アーカイブ」で確認できます。
           </p>
+          {rows.length > 0 && filter !== "all" ? (
+            <button type="button" onClick={() => setFilter("all")} className={`${natoriAdminUi.btnSecondary} mt-3`}>
+              すべての問い合わせを表示
+            </button>
+          ) : null}
         </div>
       ) : (
         <>
