@@ -64,7 +64,7 @@ export default function NatoriLegalPage({
             className="inline-flex min-h-11 items-center text-sm font-bold underline decoration-2 underline-offset-4 hover:opacity-70"
             style={{ color: c.accentText, textDecorationColor: c.accentSoft }}
           >
-            ← Atelier Natori に戻る
+            ← ナトリのあとりえに戻る
           </Link>
         </div>
 

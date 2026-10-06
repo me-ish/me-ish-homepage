@@ -329,6 +329,11 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
           </details>
         ) : null}
       </div>
+
+      {/* 特定商取引法に基づく表記の「販売価格」と同じ内容。免税事業者のため消費税を上乗せしない */}
+      <p className="mx-auto mt-4 max-w-3xl text-center text-[13px] leading-6 sm:text-sm" style={{ color: c.textSoft }}>
+        ※当方は消費税の免税事業者のため、表示価格に消費税はかかりません。
+      </p>
     </section>
   );
 }

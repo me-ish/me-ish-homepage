@@ -4,18 +4,18 @@ import NatoriLegalPage, {
 } from "@/features/natori/components/legal/NatoriLegalPage";
 
 export const metadata: Metadata = {
-  title: "特定商取引法に基づく表記 | Atelier Natori",
-  description: "Atelier Natori のイラスト制作依頼に関する特定商取引法に基づく表記です。",
+  title: "特定商取引法に基づく表記｜ナトリのあとりえ",
+  description: "ナトリのあとりえ（Atelier Natori）のイラスト制作依頼に関する特定商取引法に基づく表記です。",
 };
 
 export default function NatoriTokushohoPage() {
   return (
     <NatoriLegalPage
       title="特定商取引法に基づく表記"
-      lead="Atelier Natori を通じて直接お受けするイラスト制作依頼について、取引条件を以下のとおり表示します。"
+      lead="ナトリのあとりえ（Atelier Natori）を通じて直接お受けするイラスト制作依頼について、取引条件を以下のとおり表示します。"
     >
       <dl>
-        <LegalDefinition term="サイト名">Atelier Natori</LegalDefinition>
+        <LegalDefinition term="サイト名">ナトリのあとりえ（Atelier Natori）</LegalDefinition>
         <LegalDefinition term="屋号">me-ish</LegalDefinition>
         <LegalDefinition term="活動名">ナトリ</LegalDefinition>
         <LegalDefinition term="販売事業者の氏名">
@@ -29,14 +29,15 @@ export default function NatoriTokushohoPage() {
         </LegalDefinition>
         <LegalDefinition term="事業者情報の開示">
           <p>
-            販売事業者の氏名、所在地および電話番号の開示をご希望の場合は、当サイトのご依頼フォームまたは当方からご案内するメールアドレスよりご連絡ください。
+            販売事業者の氏名、所在地および電話番号の開示をご希望の場合は、下記「お問い合わせ先」のメールアドレスまでご連絡ください。
           </p>
           <p>
             契約のお申込みを判断する前に確認いただけるよう、ご請求を確認後、電子メール等により遅滞なく開示いたします。
           </p>
         </LegalDefinition>
         <LegalDefinition term="お問い合わせ先">
-          <p>当サイトのご依頼フォーム、または当方からご案内するメールアドレスよりお問い合わせください。</p>
+          <p>メールアドレス：<a href="mailto:info@me-ish.art" className="underline underline-offset-4">info@me-ish.art</a></p>
+          <p>ご依頼・お見積もりのご相談は、当サイトのご依頼フォームからお送りください。</p>
         </LegalDefinition>
         <LegalDefinition term="提供するサービス">
           <p>オーダーメイドによるイラスト制作およびこれに付随するサービス。</p>
@@ -52,6 +53,8 @@ export default function NatoriTokushohoPage() {
           <p>
             当サイトに表示された基本料金と個別のお見積もり内容が異なる場合は、依頼者が承諾した最新のお見積もり内容を適用します。
           </p>
+          <p>当方は消費税の免税事業者のため、表示価格およびお見積もり金額に消費税はかかりません。</p>
+          <p>お急ぎ納品をご希望の場合は、お急ぎ料金として2,000円が加わります。対応できるかどうかは、内容とスケジュールを確認したうえでお見積もりにてご案内します。</p>
         </LegalDefinition>
         <LegalDefinition term="販売価格以外に必要となる費用">
           <p>
@@ -89,14 +92,16 @@ export default function NatoriTokushohoPage() {
         <LegalDefinition term="納品時期">
           <p>通常は、ご入金確認後から約1か月での納品を目安としています。</p>
           <p>ご依頼内容、修正状況、制作スケジュールその他の事情により前後する場合があります。</p>
-          <p>お急ぎの場合は、制作内容およびスケジュールに応じ、7〜14日程度で対応できる場合があります。</p>
+          <p>お急ぎの場合は、制作内容およびスケジュールに応じ、7〜14日程度で対応できる場合があります（お急ぎ料金が加わります）。</p>
           <p>具体的な納期について個別のお見積もりまたは電子メール等で合意した場合は、その内容を優先します。</p>
         </LegalDefinition>
         <LegalDefinition term="納品方法">
-          <p>完成したイラストデータを、当方が指定するオンライン上の方法により納品します。</p>
+          <p>完成後、納品ページのリンクを電子メールでお送りします。納品ページから完成データをダウンロードしてください。</p>
+          <p>納品ページの保存期限は、最初のご案内メールの送信日から30日間です。ご案内メールを再送しても期限は延長されません。期限を過ぎた場合は、納品メールへご返信ください。改めてご案内します。</p>
         </LegalDefinition>
         <LegalDefinition term="修正について">
           <p>通常プランでは、カラーラフ段階におけるリテイクを2回まで無料としています。</p>
+          <p>量産イラストは、原則としてリテイクをお受けしておりません。</p>
           <p>構図、ポーズ、表情、配色等の大幅な変更は、原則としてカラーラフ確認時までにお申し出ください。</p>
           <p>清書後は、色味等の軽微な修正を中心に対応します。</p>
           <p>
@@ -127,6 +132,7 @@ export default function NatoriTokushohoPage() {
           <p>本表記のうち当サイトにおける直接取引に関する事項は、原則として当サイトから直接成立する取引を対象とします。</p>
         </LegalDefinition>
         <LegalDefinition term="制定日">2026年9月13日</LegalDefinition>
+        <LegalDefinition term="最終改定日">2026年10月6日</LegalDefinition>
       </dl>
     </NatoriLegalPage>
   );
