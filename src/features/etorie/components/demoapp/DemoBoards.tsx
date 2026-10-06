@@ -4,6 +4,7 @@
 // デモ環境用の薄いラッパー群。サンプルデータを生成して natori の実ボードに
 // そのまま渡す（ボード側は demo prop でサーバーアクセスを行わない）。
 import { useMemo, useState } from "react";
+import { NatoriToastProvider } from "@/features/natori/components/admin/NatoriToast";
 import EstimateForm from "@/features/natori/components/dashboard/EstimateForm";
 import InquiriesBoard from "@/features/natori/components/dashboard/InquiriesBoard";
 import ProjectsBoard from "@/features/natori/components/dashboard/ProjectsBoard";
@@ -28,12 +29,15 @@ export function DemoInquiries() {
 
 export function DemoProjects() {
   const { projects, events } = useDemoWorkspace();
+  // 案件ボードの「元に戻す」などの通知はプロバイダーがないと出ない（実画面は NatoriPageShell が持つ）
   return (
-    <ProjectsBoard
-      demoProjects={projects}
-      demoEvents={events}
-      demoArtistName={demoCreator.name}
-    />
+    <NatoriToastProvider>
+      <ProjectsBoard
+        demoProjects={projects}
+        demoEvents={events}
+        demoArtistName={demoCreator.name}
+      />
+    </NatoriToastProvider>
   );
 }
 
