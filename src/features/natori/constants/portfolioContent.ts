@@ -333,7 +333,7 @@ export function isPortfolioTsunaguLink(link: PortfolioSocialLink): boolean {
 }
 
 /* ------------------------------------------------------------------
-   プレースホルダーSVGの配色・カードの傾き（作品画像が未設定のとき用）
+   プレースホルダーSVGの配色（作品画像が未設定のとき用）
 ------------------------------------------------------------------- */
 export const placeholderPalettes = [
   { skin: "#FFE3D1", hair: "#B98BD8", accent: portfolioDecorativeColors.placeholderRose },
@@ -342,16 +342,6 @@ export const placeholderPalettes = [
   { skin: "#FFE3D1", hair: "#FFC15E", accent: portfolioDecorativeColors.placeholderGold },
   { skin: "#FFE9DA", hair: "#9AB8F0", accent: portfolioDecorativeColors.placeholderMint },
   { skin: "#FDE0D0", hair: "#E893B0", accent: portfolioDecorativeColors.placeholderRose },
-] as const;
-
-/** カードの傾き。絵を小さく見せないよう ±1° 以内にとどめる（0° は使わず、貼った感じは残す）。 */
-export const workRotations = [
-  "-rotate-1",
-  "rotate-[0.6deg]",
-  "rotate-1",
-  "-rotate-[0.6deg]",
-  "rotate-[0.8deg]",
-  "-rotate-[0.8deg]",
 ] as const;
 
 /** 作品カードの既存装飾。作品を主役にするPF-04でtape自体を含めて削減予定。 */

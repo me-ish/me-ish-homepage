@@ -39,6 +39,7 @@ import {
 import {
   buildNatoriResultsCsv,
   filterProjectsByMonth,
+  filterProjectsByType,
   filterProjectsByYear,
   getNatoriResultAmount,
   getNatoriResultDateISO,
@@ -645,15 +646,17 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
     [projects, now, yearFilter]
   );
 
-  // 集計カード用。月が選択されているときはその月だけで集計し直す
-  // （月別メーターの一覧は年スコープのまま残したいので summary とは別に持つ）
-  const cardSummary = useMemo<NatoriResultsSummary | null>(
-    () =>
-      projects && now && monthFilter !== null
-        ? summarizeNatoriResults(filterProjectsByMonth(projects, monthFilter), now)
-        : summary,
-    [projects, now, monthFilter, summary]
-  );
+  // 集計カード用。月・タイプが選択されているときはその範囲だけで集計し直す
+  // （月別・タイプ別メーターの一覧は年スコープのまま残したいので summary とは別に持つ）
+  const cardSummary = useMemo<NatoriResultsSummary | null>(() => {
+    if (!projects || !now) return null;
+    if (monthFilter === null && typeFilter === null) return summary;
+    const inPeriod =
+      monthFilter !== null
+        ? filterProjectsByMonth(projects, monthFilter)
+        : filterProjectsByYear(projects, yearFilter);
+    return summarizeNatoriResults(filterProjectsByType(inPeriod, typeFilter), now);
+  }, [projects, now, monthFilter, typeFilter, yearFilter, summary]);
 
   const listItems = useMemo(() => {
     if (!summary) return [];
@@ -803,7 +806,9 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
   const selectedMonth =
     monthFilter === null ? null : summary.monthly.find((month) => month.ym === monthFilter);
   // 集計カードの対象期間。月選択中はその月を表示する
-  const cardScopeLabel = selectedMonth?.label ?? monthFilter ?? scopeLabel;
+  const periodLabel = selectedMonth?.label ?? monthFilter ?? scopeLabel;
+  const cardScopeLabel =
+    typeFilter === null ? periodLabel : `${periodLabel}・${NATORI_PROJECT_TYPE_LABELS[typeFilter]}`;
   // 期間チップに出す月の並びは古い月が先頭（summary.monthly は新しい月が先頭）
   const monthChips = yearFilter === null ? [] : summary.monthly.slice().reverse();
   const activeFilterChips: Array<{ key: string; label: string; onClear: () => void }> = [];
@@ -947,7 +952,6 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
       <div>
         <p className={natoriAdminUi.caption}>
           <span className="font-semibold text-zinc-800">集計対象: {cardScopeLabel}</span>
-          <span className="ml-2">タイプの絞り込みは実績一覧にだけ適用されます。</span>
         </p>
       <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <StatTile label="実績件数" value={`${cardSummary.totalCount}件`} />
@@ -1002,7 +1006,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
 
         <SectionCard
           title="タイプ別の実績"
-          description="行をタップすると実績一覧をそのタイプに絞り込めます。"
+          description="行をタップすると集計カードと実績一覧をそのタイプに絞り込めます。"
         >
           <ul className="mt-2 space-y-1.5">
             {summary.byType.map((entry) => (

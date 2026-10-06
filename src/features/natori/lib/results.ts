@@ -189,6 +189,15 @@ export function filterProjectsByMonth(
   return completed.filter((project) => getNatoriResultDateISO(project).startsWith(ym));
 }
 
+/** 案件タイプで実績を絞り込む（type が null なら絞り込まない） */
+export function filterProjectsByType(
+  projects: NatoriProject[],
+  type: NatoriConcreteProjectType | null
+): NatoriProject[] {
+  if (type === null) return projects;
+  return projects.filter((project) => project.type === type);
+}
+
 function toMonthLabel(ym: string): string {
   const [year, month] = ym.split("-");
   const monthNumber = Number(month);

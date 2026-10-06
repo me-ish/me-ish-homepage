@@ -330,7 +330,7 @@ describe("PortfolioGallery pick-up and lightbox browsing", () => {
   const withImage = (id: string, options: Partial<PortfolioWork> = {}) =>
     work(id, { image: `https://example.com/${id}.webp`, ...options });
 
-  it("先頭の1枚をピックアップとして大きく見せ、2枚目以降は通常の大きさのまま少しだけ傾ける", () => {
+  it("先頭の1枚をピックアップとして大きく見せ、2枚目以降は通常の大きさにして、どのカードも傾けない", () => {
     render(
       <PortfolioGallery
         collections={collections}
@@ -346,8 +346,31 @@ describe("PortfolioGallery pick-up and lightbox browsing", () => {
     expect(cards[1].className).not.toContain("lg:row-span-2");
     expect(cards[1].textContent).not.toContain("PICK UP");
     for (const card of cards) {
-      expect(card.className).toMatch(/(?:^|\s)-?rotate-(?:1|\[0\.\d+deg\])(?:\s|$)/u);
+      expect(card.className).not.toMatch(/(?:^|\s)-?rotate-/u);
     }
+  });
+
+  it("紹介文が入っているときだけ見出しの下に出し、空や空白だけなら何も出さない", () => {
+    const { rerender } = render(
+      <PortfolioGallery
+        collections={collections}
+        works={[withImage("1")]}
+        intro={"  これまでのご依頼の一部です。\n2行目です。  "}
+      />,
+    );
+    const gallery = document.getElementById("gallery") as HTMLElement;
+    const heading = gallery.querySelector("h2") as HTMLElement;
+    const intro = heading.parentElement?.querySelector("p") as HTMLElement;
+    expect(intro.textContent).toBe("これまでのご依頼の一部です。\n2行目です。");
+    expect(intro.className).toContain("whitespace-pre-line");
+    expect(gallery.querySelectorAll("h2")).toHaveLength(1);
+
+    rerender(
+      <PortfolioGallery collections={collections} works={[withImage("1")]} intro={"   "} />,
+    );
+    expect(heading.parentElement?.querySelector("p")).toBeNull();
+    rerender(<PortfolioGallery collections={collections} works={[withImage("1")]} />);
+    expect(heading.parentElement?.querySelector("p")).toBeNull();
   });
 
   it("カテゴリの件数は見た目の補足にとどめ、ボタン名は変えない", () => {

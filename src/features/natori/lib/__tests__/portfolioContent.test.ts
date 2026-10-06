@@ -49,6 +49,7 @@ const validContent: PortfolioContent = {
   deliveryNotes: [{ title: "お急ぎ納品", body: "最短7日" }],
   workflow: [{ title: "ご相談", body: "内容確認" }],
   requests: ["自作発言・AI学習は禁止しております"],
+  galleryIntro: "",
   faqs: [{ question: "予算が未定でも大丈夫？", answer: "はい。" }],
   socialLinks: [{ label: "X (Twitter)", href: "https://x.com/natonato_o" }],
   copyright: "© 2026 Natori* illust.",
@@ -202,6 +203,19 @@ describe("parsePortfolioContent", () => {
     const { faqs: _faqs, ...legacy } = validContent;
     expect(parsePortfolioContent(legacy)?.faqs).toEqual(DEFAULT_PORTFOLIO_FAQS);
     expect(parsePortfolioContent({ ...validContent, faqs: [] })?.faqs).toEqual([]);
+  });
+
+  it("ギャラリーの紹介文は旧データでは空（非表示）で補い、保存時に前後の空白を落とす", () => {
+    const { galleryIntro: _intro, ...legacy } = validContent;
+    expect(parsePortfolioContent(legacy)?.galleryIntro).toBe("");
+    expect(
+      parsePortfolioContent({ ...validContent, galleryIntro: "ご依頼の一部です。" })?.galleryIntro
+    ).toBe("ご依頼の一部です。");
+    const prepared = preparePortfolioContentForSave({
+      ...(parsePortfolioContent(validContent) as PortfolioContent),
+      galleryIntro: "  ご依頼の一部です。  \n",
+    });
+    expect(prepared?.galleryIntro).toBe("ご依頼の一部です。");
   });
 
   it("料金プランの作例（作品ID）を保持し、未設定の旧データには足さない", () => {

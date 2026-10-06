@@ -489,10 +489,11 @@ export default function InquiryDetailPanel({
                   title="依頼内容を見積もりツールに貼り付けた状態で開きます（概算とメール下書きが自動で出ます）"
                 >
                   <Calculator className="h-3.5 w-3.5" aria-hidden />
-                  見積りを作る
+                  {/* 見積もりメールの送信・再送も見積りページで行う（確認モーダルは挟まない） */}
+                  {!demoMode && project.status === "quoted" ? "見積りを開く・再送" : "見積りを作る"}
                 </Link>
               ) : null}
-              {!readOnly && ESTIMATE_MAIL_STATUSES.has(project.status) ? (
+              {!readOnly && ESTIMATE_MAIL_STATUSES.has(project.status) && (demoMode || !estimateHref) ? (
                 <button
                   type="button"
                   onClick={() => onOpenMail("estimate")}

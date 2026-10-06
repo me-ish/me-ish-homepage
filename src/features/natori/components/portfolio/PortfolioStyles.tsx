@@ -11,7 +11,7 @@ export default function PortfolioStyles() {
       .pf-floaty { animation: pf-floaty 4s ease-in-out infinite; }
       .pf-wobble { animation: pf-wobble 2.4s ease-in-out infinite; }
       .pf-pin-card { transition: transform 0.25s ease, box-shadow 0.25s ease; }
-      .pf-pin-card:hover, .pf-pin-card:focus-within { transform: rotate(0deg) translateY(-6px) !important; box-shadow: 0 18px 30px ${c.shadowHover}; }
+      .pf-pin-card:hover, .pf-pin-card:focus-within { transform: translateY(-6px) !important; box-shadow: 0 18px 30px ${c.shadowHover}; }
       .pf-portfolio-root #gallery .pf-pin-card > button > img[alt] {
         object-fit: contain !important;
         padding: clamp(0.25rem, 1.5vw, 0.5rem);

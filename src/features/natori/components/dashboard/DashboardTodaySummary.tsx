@@ -96,7 +96,7 @@ export default function DashboardTodaySummary({
         <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
           {top ? (
             <Link
-              href="/natori/projects"
+              href={`/natori/projects?project=${encodeURIComponent(top.project.id)}`}
               className="group col-span-2 flex min-w-0 items-start gap-3 rounded-xl border border-pink-200/70 bg-gradient-to-br from-pink-50 via-white to-white p-3.5 transition-colors hover:border-pink-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] lg:col-span-1"
             >
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#BE185D] text-xs font-bold text-white shadow-[0_1px_2px_rgba(131,24,67,0.25)]">

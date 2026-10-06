@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   filterProjectsByMonth,
+  filterProjectsByType,
   filterProjectsByYear,
   isNatoriCompletedProject,
   listNatoriResultYears,
@@ -142,5 +143,24 @@ describe("listNatoriResultYears / filterProjectsByYear", () => {
     expect(filterProjectsByMonth(projects, "2026-05").map((p) => p.id)).toEqual(["a"]);
     expect(filterProjectsByMonth(projects, "2025-12").map((p) => p.id)).toEqual(["b"]);
     expect(filterProjectsByMonth(projects, null)).toHaveLength(2);
+  });
+});
+
+describe("filterProjectsByType", () => {
+  const icon = makeProject({ id: "icon", type: "icon" });
+  const illustration = makeProject({ id: "illust", type: "illustration" });
+
+  it("returns every project when no type is chosen", () => {
+    expect(filterProjectsByType([icon, illustration], null)).toEqual([icon, illustration]);
+  });
+
+  it("keeps only the chosen type", () => {
+    expect(filterProjectsByType([icon, illustration], "icon").map((project) => project.id)).toEqual(["icon"]);
+  });
+
+  it("composes with the period filters", () => {
+    const earlier = makeProject({ id: "earlier", type: "icon", dueDate: "2026-04-10" });
+    const scoped = filterProjectsByType(filterProjectsByMonth([icon, illustration, earlier], "2026-05"), "icon");
+    expect(scoped.map((project) => project.id)).toEqual(["icon"]);
   });
 });

@@ -4,9 +4,12 @@ import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleto
 import { useOptionalNatoriToast } from "@/features/natori/components/admin/NatoriToast";
 import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
+import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
+import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CalendarClock, CalendarDays, Inbox, List } from "lucide-react";
+import { ArrowRight, CalendarClock, CalendarDays, Inbox, List, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import {
   getNextActionForStatus,
   getNextStatus,
@@ -32,7 +35,7 @@ import {
   updateNatoriEvent,
   type NatoriEvent,
 } from "@/features/natori/data/supabaseEvents";
-import type { NatoriPriorityCandidate, NatoriProject } from "@/features/natori/types/projects";
+import type { NatoriPriorityCandidate, NatoriProject, NatoriProjectStatus } from "@/features/natori/types/projects";
 import {applyTaskProjection,overlayTaskIntents,mergeProjectCollection,previewProductionTasks,type TaskIntent} from "../../lib/taskProjection";
 import ProjectMonthCalendar from "./ProjectMonthCalendar";
 import ProjectDayDetail from "./ProjectDayDetail";
@@ -50,6 +53,8 @@ type ViewMonth = { year: number; monthIndex: number };
 
 type BoardView = "calendar" | "list";
 const VIEW_STORAGE_KEY = "natori-projects-view";
+/** 直リンク（?project=）で開いた案件を枠で示しておく時間 */
+const HIGHLIGHT_MS = 6000;
 
 type DataSource = "loading" | "supabase" | "mock" | "error";
 
@@ -93,6 +98,10 @@ export default function ProjectsBoard({
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [advanceBusyId, setAdvanceBusyId] = useState<string | null>(null);
   const [view, setView] = useState<BoardView>("calendar");
+  const [registerOpen, setRegisterOpen] = useState(false);
+  // ?project={id} の直リンク: 読み込み後に一度だけ該当案件へ寄せ、数秒だけ枠で示す
+  const pendingFocusId = useRef<string | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   const loadSequence = useRef(0);
   const taskSequence = useRef(0);
   const taskIntents = useRef(new Map<string, Map<string, TaskIntent>>());
@@ -173,6 +182,14 @@ export default function ProjectsBoard({
     }
   }, []);
 
+  useEffect(() => {
+    try {
+      pendingFocusId.current = new URLSearchParams(window.location.search).get("project");
+    } catch {
+      pendingFocusId.current = null;
+    }
+  }, []);
+
   const changeView = useCallback((next: BoardView) => {
     setView(next);
     try {
@@ -245,6 +262,31 @@ export default function ProjectsBoard({
     () => activeProjects.filter((project) => project.dueDate === null),
     [activeProjects]
   );
+
+  useEffect(() => {
+    const id = pendingFocusId.current;
+    if (!id || !today || (dataSource !== "supabase" && dataSource !== "mock")) return;
+    pendingFocusId.current = null;
+    const target = activeProjects.find((project) => project.id === id);
+    if (!target) {
+      showToast("リンク先の案件が見つかりませんでした。見送り・削除された可能性があります。");
+      return;
+    }
+    // 一覧表示は折りたたみなので、カードが直接見えるカレンダー表示に寄せる（好みの保存はしない）
+    setView("calendar");
+    if (target.dueDate) {
+      setSelectedISO(target.dueDate);
+      const [year, month] = target.dueDate.split("-").map(Number);
+      setViewMonth({ year, monthIndex: month - 1 });
+    }
+    setHighlightId(id);
+  }, [activeProjects, dataSource, showToast, today]);
+
+  useEffect(() => {
+    if (!highlightId) return;
+    const timer = setTimeout(() => setHighlightId(null), HIGHLIGHT_MS);
+    return () => clearTimeout(timer);
+  }, [highlightId]);
 
   if (!today || !selectedISO || !viewMonth || dataSource === "loading") {
     return (
@@ -340,6 +382,59 @@ export default function ProjectsBoard({
     })();
   };
 
+  // 「元に戻す」: 進めた直後の数秒だけ出す。制作工程どうしの移動だけが逆向きに戻せる
+  // （受注前は前進のみ、制作工程→受注前は不可という既存の遷移ルールに従う）。
+  const handleUndoAdvance = (
+    projectId: string,
+    advancedTo: NatoriProjectStatus,
+    restoreStatus: NatoriProjectStatus,
+    restoreAction: string,
+  ) => {
+    const restoredLabel = natoriProjectStatusMeta[restoreStatus]?.label ?? "前の工程";
+    setError(null);
+    if (dataSource !== "supabase") {
+      setProjects((current) =>
+        current.map((entry) =>
+          entry.id === projectId && entry.status === advancedTo
+            ? { ...entry, status: restoreStatus, nextAction: restoreAction }
+            : entry
+        )
+      );
+      showToast(`「${restoredLabel}」に戻しました`);
+      return;
+    }
+    // 待っている間にタスク操作などで工程が変わっていたら、上書きしない
+    if (canonicalProjects.current.get(projectId)?.status !== advancedTo) {
+      showToast("工程が変わっていたため、元に戻しませんでした");
+      return;
+    }
+    setAdvanceBusyId(projectId);
+    (async () => {
+      try {
+        await updateNatoriProjectStatus(projectId, restoreStatus, restoreAction);
+        await loadFromSupabase();
+        showToast(`「${restoredLabel}」に戻しました`);
+      } catch (err) {
+        await recoverFromMutationFailure("status undo", err);
+      } finally {
+        setAdvanceBusyId((current) => (current === projectId ? null : current));
+      }
+    })();
+  };
+
+  const offerUndoAdvance = (project: NatoriProject, nextStatus: NatoriProjectStatus) => {
+    if (!canTransitionNatoriStatus(nextStatus, project.status)) return;
+    const nextLabel = natoriProjectStatusMeta[nextStatus]?.label ?? "次の工程";
+    const restoreStatus = project.status;
+    const restoreAction = project.nextAction;
+    showToast(`「${nextLabel}」にしました`, {
+      action: {
+        label: "元に戻す",
+        onAction: () => handleUndoAdvance(project.id, nextStatus, restoreStatus, restoreAction),
+      },
+    });
+  };
+
   const handleAdvanceStatus = (project: NatoriProject) => {
     const nextStatus = getNextStatus(project.status);
     if (nextStatus === project.status) return;
@@ -358,6 +453,7 @@ export default function ProjectsBoard({
         try {
           await updateNatoriProjectStatus(project.id, nextStatus, nextAction);
           await loadFromSupabase();
+          offerUndoAdvance(project, nextStatus);
         } catch (err) {
           await recoverFromMutationFailure("status update", err);
         } finally {
@@ -366,6 +462,7 @@ export default function ProjectsBoard({
       })();
     } else {
       setAdvanceBusyId((current) => (current === project.id ? null : current));
+      offerUndoAdvance(project, nextStatus);
     }
   };
 
@@ -613,21 +710,22 @@ export default function ProjectsBoard({
           </button>
         </div>
       ) : null}
-      {/* 登録・問い合わせへの導線・おすすめ順は1つのまとまりとして詰めて並べる */}
-      <div className="space-y-3">
+      {/* 案件の手入力登録はダイアログ。主役のカレンダーを上に保つため、フォームは常設しない */}
       {authed ? (
-        <ProjectRegisterForm
-          mode="manual"
-          onCreated={() => {
-            if (dataSource === "supabase") {
-              loadFromSupabase().catch((err) => {
-                console.error("[ProjectsBoard] reload after register failed", err);
-              });
-            }
-          }}
-        />
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setRegisterOpen(true)}
+            className={natoriAdminUi.btnSecondary}
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            案件を登録
+          </button>
+        </div>
       ) : null}
 
+      {/* 問い合わせへの導線・おすすめ順は1つのまとまりとして詰めて並べる */}
+      <div className="space-y-3">
       {/* 依頼受付〜入金待ちの対応（メール送信・入金確認・見送り）は問い合わせ管理へ集約 */}
       {preworkCount > 0 ? (
         <Link
@@ -739,6 +837,7 @@ export default function ProjectsBoard({
         onOpenMail={(project, kind) => setMailTarget({ project, kind })}
         onEditDetails={handleEditDetails}
         advanceBusyId={advanceBusyId}
+        highlightProjectId={highlightId}
         events={events}
         authed={authed}
         eventsBusy={eventsBusy}
@@ -791,6 +890,7 @@ export default function ProjectsBoard({
                 }
                 onEditDetails={handleEditDetails}
                 advanceBusy={advanceBusyId === project.id}
+                highlighted={highlightId === project.id}
               />
             ))}
           </div>
@@ -809,6 +909,32 @@ export default function ProjectsBoard({
         busyId={advanceBusyId}
         onRestore={handleRestoreArchivedProject}
       />
+
+      {/* 案件を登録（手入力） */}
+      <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
+        <DialogContent
+          className="max-h-[90vh] w-full max-w-lg gap-0 overflow-y-auto rounded-2xl bg-white p-5 sm:p-6"
+          // 入力途中で外側をクリックして消えないよう、閉じるのは×・Esc・登録後の「閉じる」だけにする
+          onPointerDownOutside={(event) => event.preventDefault()}
+        >
+          <DialogTitle className="text-base font-bold text-zinc-900">案件を登録</DialogTitle>
+          <DialogDescription className={`${natoriAdminUi.caption} mb-4 mt-1`}>
+            依頼が来た段階の案件でも、見積もり済の案件でも登録できます。
+          </DialogDescription>
+          <ProjectRegisterForm
+            mode="manual"
+            embedded
+            onClose={() => setRegisterOpen(false)}
+            onCreated={() => {
+              if (dataSource === "supabase") {
+                loadFromSupabase().catch((err) => {
+                  console.error("[ProjectsBoard] reload after register failed", err);
+                });
+              }
+            }}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* ラフ提出・納品メール送信パネル */}
       {mailTarget ? (

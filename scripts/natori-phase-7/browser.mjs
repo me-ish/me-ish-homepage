@@ -191,8 +191,8 @@ async function main() {
         const categories = page.getByRole('group', { name: '作品のカテゴリ' }); await expect(categories).toBeVisible();
         await expect(page.locator('#portfolio-gallery-results .pf-pin-card')).toHaveCount(6);
         const decoration = await first.locator('..').evaluate(element => ({ rotation: getComputedStyle(element).transform, shadow: getComputedStyle(element).boxShadow }));
-        evidence.captures[0].observed_findings.push({ width, decoration, interpretation: 'Decoration retained; synthetic work does not decide artist preference' });
-        check(decoration.rotation !== 'none' && decoration.shadow !== 'none', 'DECORATION_PRESERVED');
+        evidence.captures[0].observed_findings.push({ width, decoration, interpretation: 'Card shadow retained; per-card rotation was removed with the artist approval of 2026-10-05; synthetic work does not decide artist preference' });
+        check(decoration.shadow !== 'none', 'DECORATION_PRESERVED');
         await screenshot(page, ids[0], width, 'list'); await noOverflow(page);
         await page.getByRole('button', { name: '全8作品を見る', exact: true }).click(); await expect(page.locator('#portfolio-gallery-results .pf-pin-card')).toHaveCount(8);
         await first.click(); const modal = page.getByRole('dialog', { name: 'Phase 7 synthetic work 1', exact: true }); await expect(modal).toBeVisible();

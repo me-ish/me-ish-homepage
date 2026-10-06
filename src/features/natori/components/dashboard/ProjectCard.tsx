@@ -4,7 +4,7 @@ import Link from "next/link";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { staffConsultationHref } from "@/features/natori/lib/consultationOverview";
 import ConsultationStatus from "./ConsultationStatus";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, CalendarDays, CircleDollarSign, Clock4, Mail, MessageSquare, Pencil, Sparkles, AlertTriangle, Tag, Wallet, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -49,6 +49,8 @@ type ProjectCardProps = {
     patch: UpdateNatoriProjectDetailsInput
   ) => Promise<void>;
   advanceBusy?: boolean;
+  /** 「案件へ直接ジャンプ」で開いた案件。少しの間だけ枠で示し、画面内へスクロールする */
+  highlighted?: boolean;
 };
 
 /** ラフ提出メールを出せる制作工程。完了後は同じ納品の再案内だけを許可する。 */
@@ -92,8 +94,15 @@ export default function ProjectCard({
   onOpenMail,
   onEditDetails,
   advanceBusy,
+  highlighted = false,
 }: ProjectCardProps) {
   const [editing, setEditing] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!highlighted) return;
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    cardRef.current?.scrollIntoView?.({ block: "start", behavior: reduceMotion ? "auto" : "smooth" });
+  }, [highlighted]);
   const status = natoriProjectStatusMeta[project.status];
   const overdue = isProjectOverdue(project, today);
   const days = project.dueDate === null ? null : daysUntilDue(project.dueDate, today);
@@ -133,11 +142,14 @@ export default function ProjectCard({
 
   return (
     <Card
+      ref={cardRef}
       role="article"
       aria-label={project.title}
+      data-highlighted={highlighted ? "true" : undefined}
       className={cn(
-        "min-w-0 overflow-hidden rounded-2xl border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(24,24,27,0.04)]",
-        overdue && "border-red-300 shadow-[0_0_0_1px_rgba(252,165,165,0.6)]"
+        "min-w-0 scroll-mt-24 overflow-hidden rounded-2xl border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(24,24,27,0.04)]",
+        overdue && "border-red-300 shadow-[0_0_0_1px_rgba(252,165,165,0.6)]",
+        highlighted && "ring-2 ring-[#BE185D] ring-offset-2 transition-shadow motion-reduce:transition-none"
       )}
     >
       <CardContent className="space-y-3 p-4 sm:space-y-4 sm:p-5">

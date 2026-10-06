@@ -19,7 +19,7 @@ vi.mock("@/features/natori/components/dashboard/ProjectDayDetail",()=>({default:
 vi.mock("@/features/natori/components/dashboard/ProjectPriorityList",()=>({default:()=>null}));
 vi.mock("@/features/natori/components/dashboard/ClosedProjectsSection",()=>({default:()=>null}));
 vi.mock("@/features/natori/components/dashboard/ArchivedProjectsSection",()=>({default:()=>null}));
-vi.mock("@/features/natori/components/dashboard/ProjectRegisterForm",()=>({default:({onCreated}:{onCreated:()=>void})=><button onClick={onCreated}>Reload fixture</button>}));
+vi.mock("@/features/natori/components/dashboard/ProjectRegisterForm",()=>({default:({onCreated,onClose}:{onCreated:()=>void;onClose?:()=>void})=><button onClick={()=>{onCreated();onClose?.();}}>Reload fixture</button>}));
 vi.mock("@/features/natori/components/dashboard/OrderMailPanel",()=>({default:()=>null}));
 import ProjectsBoard from "../ProjectsBoard";
 const id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",stamp="2026-10-01T12:00:00.000Z";
@@ -56,7 +56,7 @@ describe("ProjectsBoard authoritative task results",()=>{
  it("older GET omitting a project cannot erase its task response committed while loading",async()=>{
   const oldRead=deferred<{projects:NatoriProject[];archivedProjects:NatoriProject[]}>(),update=deferred<NatoriTaskProjection>();
   await board();api.fetch.mockReturnValueOnce(oldRead.promise);api.toggle.mockReturnValueOnce(update.promise);
-  fireEvent.click(screen.getByRole("button",{name:"Reload fixture"}));fireEvent.click(screen.getByRole("button",{name:"one"}));
+  fireEvent.click(await screen.findByRole("button",{name:"案件を登録"}));fireEvent.click(await screen.findByRole("button",{name:"Reload fixture"}));fireEvent.click(await screen.findByRole("button",{name:"one"}));
   await act(async()=>update.resolve(projection(2,[task("one",true),task("two")])));
   await act(async()=>oldRead.resolve({projects:[],archivedProjects:[]}));
   expect(screen.getByTestId("canonical").textContent).toBe("rough/two/2");
@@ -108,5 +108,12 @@ describe("ProjectsBoard authoritative task results",()=>{
   expect(screen.getByRole("button",{name:"two"}).getAttribute("aria-pressed")).toBe("true");
   await act(async()=>latest.resolve(projection(4,[task("one"),task("two",true)])));
   expect(screen.getByRole("button",{name:"two"}).getAttribute("aria-pressed")).toBe("true");
+ });
+ it("keeps the register form behind the 案件を登録 dialog instead of leaving it on the page",async()=>{
+  await board();
+  expect(screen.queryByRole("button",{name:"Reload fixture"})).toBeNull();
+  fireEvent.click(await screen.findByRole("button",{name:"案件を登録"}));
+  expect(await screen.findByRole("dialog",{name:"案件を登録"})).toBeTruthy();
+  expect(screen.getByRole("button",{name:"Reload fixture"})).toBeTruthy();
  });
 });
