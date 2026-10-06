@@ -56,4 +56,9 @@ describe("PortfolioPricing mobile details", () => {
       screen.getByText(/表示価格には、リテイク2回まで、簡単な小物・簡易背景が含まれます/)
     ).toBeTruthy();
   });
+
+  it("says that no consumption tax is added to the listed prices", () => {
+    render(<PortfolioPricing content={defaultPortfolioContent} />);
+    expect(screen.getByText("※当方は消費税の免税事業者のため、表示価格に消費税はかかりません。")).toBeTruthy();
+  });
 });

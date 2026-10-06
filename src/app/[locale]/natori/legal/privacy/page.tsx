@@ -113,7 +113,8 @@ export default function NatoriPrivacyPage() {
       </LegalSection>
 
       <LegalSection title="10. お問い合わせ">
-        <p>個人情報の取扱いに関するお問い合わせは、当サイトのご依頼フォームまたは当方からご案内するメールアドレスよりお願いいたします。</p>
+        <p>個人情報の取扱いに関するお問い合わせ、および開示等のご請求は、次のメールアドレスまでお願いいたします。</p>
+        <p>メールアドレス：<a href="mailto:info@me-ish.art" className="underline underline-offset-4">info@me-ish.art</a></p>
       </LegalSection>
 
       <LegalSection title="11. プライバシーポリシーの変更">

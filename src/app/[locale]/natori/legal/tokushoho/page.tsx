@@ -29,14 +29,15 @@ export default function NatoriTokushohoPage() {
         </LegalDefinition>
         <LegalDefinition term="事業者情報の開示">
           <p>
-            販売事業者の氏名、所在地および電話番号の開示をご希望の場合は、当サイトのご依頼フォームまたは当方からご案内するメールアドレスよりご連絡ください。
+            販売事業者の氏名、所在地および電話番号の開示をご希望の場合は、下記「お問い合わせ先」のメールアドレスまでご連絡ください。
           </p>
           <p>
             契約のお申込みを判断する前に確認いただけるよう、ご請求を確認後、電子メール等により遅滞なく開示いたします。
           </p>
         </LegalDefinition>
         <LegalDefinition term="お問い合わせ先">
-          <p>当サイトのご依頼フォーム、または当方からご案内するメールアドレスよりお問い合わせください。</p>
+          <p>メールアドレス：<a href="mailto:info@me-ish.art" className="underline underline-offset-4">info@me-ish.art</a></p>
+          <p>ご依頼・お見積もりのご相談は、当サイトのご依頼フォームからお送りください。</p>
         </LegalDefinition>
         <LegalDefinition term="提供するサービス">
           <p>オーダーメイドによるイラスト制作およびこれに付随するサービス。</p>
@@ -52,6 +53,7 @@ export default function NatoriTokushohoPage() {
           <p>
             当サイトに表示された基本料金と個別のお見積もり内容が異なる場合は、依頼者が承諾した最新のお見積もり内容を適用します。
           </p>
+          <p>当方は消費税の免税事業者のため、表示価格およびお見積もり金額に消費税はかかりません。</p>
           <p>お急ぎ納品をご希望の場合は、お急ぎ料金として2,000円が加わります。対応できるかどうかは、内容とスケジュールを確認したうえでお見積もりにてご案内します。</p>
         </LegalDefinition>
         <LegalDefinition term="販売価格以外に必要となる費用">
