@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { NATORI_TOAST_DURATION_MS, NatoriToastProvider, useNatoriToast, useOptionalNatoriToast } from "../NatoriToast";
+import { NATORI_TOAST_ACTION_DURATION_MS, NATORI_TOAST_DURATION_MS, NatoriToastProvider, useNatoriToast, useOptionalNatoriToast } from "../NatoriToast";
 
 function Trigger() {
   const { showToast } = useNatoriToast();
@@ -52,5 +52,51 @@ describe("NatoriToast", () => {
     const second = screen.getByText("保存しました");
     expect(second).not.toBe(first);
     expect(first.isConnected).toBe(false);
+  });
+
+  it("shows an action button that runs the action once, closes the toast, and stays longer", () => {
+    vi.useFakeTimers();
+    const onAction = vi.fn();
+    function ActionTrigger() {
+      const { showToast } = useNatoriToast();
+      return <button onClick={() => showToast("完了にしました", { action: { label: "元に戻す", onAction } })}>go</button>;
+    }
+    render(<NatoriToastProvider><ActionTrigger /></NatoriToastProvider>);
+    fireEvent.click(screen.getByText("go"));
+    act(() => { vi.advanceTimersByTime(NATORI_TOAST_DURATION_MS + 1); });
+    // 操作ボタン付きは通常の4秒では消えない
+    expect(screen.queryByText("完了にしました")).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "元に戻す" }));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("完了にしました")).toBeNull();
+  });
+
+  it("clears an action toast after its longer duration", () => {
+    vi.useFakeTimers();
+    function ActionTrigger() {
+      const { showToast } = useNatoriToast();
+      return <button onClick={() => showToast("完了にしました", { action: { label: "元に戻す", onAction: () => undefined } })}>go</button>;
+    }
+    render(<NatoriToastProvider><ActionTrigger /></NatoriToastProvider>);
+    fireEvent.click(screen.getByText("go"));
+    act(() => { vi.advanceTimersByTime(NATORI_TOAST_ACTION_DURATION_MS); });
+    expect(screen.queryByText("完了にしました")).toBeNull();
+  });
+
+  it("a plain toast after an action toast has no action button", () => {
+    function Both() {
+      const { showToast } = useNatoriToast();
+      return (
+        <>
+          <button onClick={() => showToast("A", { action: { label: "元に戻す", onAction: () => undefined } })}>a</button>
+          <button onClick={() => showToast("B")}>b</button>
+        </>
+      );
+    }
+    render(<NatoriToastProvider><Both /></NatoriToastProvider>);
+    fireEvent.click(screen.getByText("a"));
+    expect(screen.queryByRole("button", { name: "元に戻す" })).not.toBeNull();
+    fireEvent.click(screen.getByText("b"));
+    expect(screen.queryByRole("button", { name: "元に戻す" })).toBeNull();
   });
 });

@@ -4,6 +4,8 @@ import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleto
 import { useOptionalNatoriToast } from "@/features/natori/components/admin/NatoriToast";
 import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
+import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
+import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarClock, CalendarDays, Inbox, List, Plus } from "lucide-react";
@@ -33,7 +35,7 @@ import {
   updateNatoriEvent,
   type NatoriEvent,
 } from "@/features/natori/data/supabaseEvents";
-import type { NatoriPriorityCandidate, NatoriProject } from "@/features/natori/types/projects";
+import type { NatoriPriorityCandidate, NatoriProject, NatoriProjectStatus } from "@/features/natori/types/projects";
 import {applyTaskProjection,overlayTaskIntents,mergeProjectCollection,previewProductionTasks,type TaskIntent} from "../../lib/taskProjection";
 import ProjectMonthCalendar from "./ProjectMonthCalendar";
 import ProjectDayDetail from "./ProjectDayDetail";
@@ -342,6 +344,59 @@ export default function ProjectsBoard({
     })();
   };
 
+  // 「元に戻す」: 進めた直後の数秒だけ出す。制作工程どうしの移動だけが逆向きに戻せる
+  // （受注前は前進のみ、制作工程→受注前は不可という既存の遷移ルールに従う）。
+  const handleUndoAdvance = (
+    projectId: string,
+    advancedTo: NatoriProjectStatus,
+    restoreStatus: NatoriProjectStatus,
+    restoreAction: string,
+  ) => {
+    const restoredLabel = natoriProjectStatusMeta[restoreStatus]?.label ?? "前の工程";
+    setError(null);
+    if (dataSource !== "supabase") {
+      setProjects((current) =>
+        current.map((entry) =>
+          entry.id === projectId && entry.status === advancedTo
+            ? { ...entry, status: restoreStatus, nextAction: restoreAction }
+            : entry
+        )
+      );
+      showToast(`「${restoredLabel}」に戻しました`);
+      return;
+    }
+    // 待っている間にタスク操作などで工程が変わっていたら、上書きしない
+    if (canonicalProjects.current.get(projectId)?.status !== advancedTo) {
+      showToast("工程が変わっていたため、元に戻しませんでした");
+      return;
+    }
+    setAdvanceBusyId(projectId);
+    (async () => {
+      try {
+        await updateNatoriProjectStatus(projectId, restoreStatus, restoreAction);
+        await loadFromSupabase();
+        showToast(`「${restoredLabel}」に戻しました`);
+      } catch (err) {
+        await recoverFromMutationFailure("status undo", err);
+      } finally {
+        setAdvanceBusyId((current) => (current === projectId ? null : current));
+      }
+    })();
+  };
+
+  const offerUndoAdvance = (project: NatoriProject, nextStatus: NatoriProjectStatus) => {
+    if (!canTransitionNatoriStatus(nextStatus, project.status)) return;
+    const nextLabel = natoriProjectStatusMeta[nextStatus]?.label ?? "次の工程";
+    const restoreStatus = project.status;
+    const restoreAction = project.nextAction;
+    showToast(`「${nextLabel}」にしました`, {
+      action: {
+        label: "元に戻す",
+        onAction: () => handleUndoAdvance(project.id, nextStatus, restoreStatus, restoreAction),
+      },
+    });
+  };
+
   const handleAdvanceStatus = (project: NatoriProject) => {
     const nextStatus = getNextStatus(project.status);
     if (nextStatus === project.status) return;
@@ -360,6 +415,7 @@ export default function ProjectsBoard({
         try {
           await updateNatoriProjectStatus(project.id, nextStatus, nextAction);
           await loadFromSupabase();
+          offerUndoAdvance(project, nextStatus);
         } catch (err) {
           await recoverFromMutationFailure("status update", err);
         } finally {
@@ -368,6 +424,7 @@ export default function ProjectsBoard({
       })();
     } else {
       setAdvanceBusyId((current) => (current === project.id ? null : current));
+      offerUndoAdvance(project, nextStatus);
     }
   };
 
