@@ -33,7 +33,8 @@ export function SectionCard({
     <section
       id={id}
       data-save-problem={flagged ? "true" : undefined}
-      className={`scroll-mt-28 rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-6${
+      // lg 未満は上部バーに目次の段が加わって背が高いので、見出しが隠れないよう余白を多めに取る
+      className={`scroll-mt-40 lg:scroll-mt-28 rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-6${
         flagged ? " ring-2 ring-red-500 ring-offset-2" : ""
       }`}
     >

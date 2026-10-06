@@ -109,7 +109,7 @@ describe("ProjectsBoard ?project= deep link (Q-02)", () => {
     window.history.replaceState({}, "", `/natori/projects?project=${undated.id}`);
     mount();
     await waitFor(() => expect(screen.getByRole("article", { name: "Undated" }).getAttribute("data-highlighted")).toBe("true"));
-    act(() => { vi.advanceTimersByTime(4000); });
+    act(() => { vi.advanceTimersByTime(6000); });
     expect(screen.getByRole("article", { name: "Undated" }).getAttribute("data-highlighted")).toBe("false");
   });
 

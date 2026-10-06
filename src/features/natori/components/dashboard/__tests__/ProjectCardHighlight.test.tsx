@@ -46,11 +46,11 @@ describe("ProjectCard highlighted (deep link)", () => {
     expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
-  it("marks the card and scrolls it into the middle of the screen once", () => {
+  it("marks the card and scrolls it to the top of the screen once", () => {
     const { rerender } = render(<ProjectCard project={project} today={today} onToggleTask={vi.fn()} highlighted />);
     expect(screen.getByRole("article", { name: "Highlight fixture" }).getAttribute("data-highlighted")).toBe("true");
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: "center", behavior: "smooth" });
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "start", behavior: "smooth" });
     rerender(<ProjectCard project={project} today={today} onToggleTask={vi.fn()} highlighted={false} />);
     expect(screen.getByRole("article", { name: "Highlight fixture" }).getAttribute("data-highlighted")).toBeNull();
     expect(scrollIntoView).toHaveBeenCalledTimes(1);

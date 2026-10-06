@@ -53,6 +53,8 @@ type ViewMonth = { year: number; monthIndex: number };
 
 type BoardView = "calendar" | "list";
 const VIEW_STORAGE_KEY = "natori-projects-view";
+/** 直リンク（?project=）で開いた案件を枠で示しておく時間 */
+const HIGHLIGHT_MS = 6000;
 
 type DataSource = "loading" | "supabase" | "mock" | "error";
 
@@ -282,7 +284,7 @@ export default function ProjectsBoard({
 
   useEffect(() => {
     if (!highlightId) return;
-    const timer = setTimeout(() => setHighlightId(null), 4000);
+    const timer = setTimeout(() => setHighlightId(null), HIGHLIGHT_MS);
     return () => clearTimeout(timer);
   }, [highlightId]);
 
