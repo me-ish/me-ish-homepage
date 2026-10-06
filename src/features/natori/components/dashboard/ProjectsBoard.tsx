@@ -97,6 +97,9 @@ export default function ProjectsBoard({
   const [advanceBusyId, setAdvanceBusyId] = useState<string | null>(null);
   const [view, setView] = useState<BoardView>("calendar");
   const [registerOpen, setRegisterOpen] = useState(false);
+  // ?project={id} の直リンク: 読み込み後に一度だけ該当案件へ寄せ、数秒だけ枠で示す
+  const pendingFocusId = useRef<string | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   const loadSequence = useRef(0);
   const taskSequence = useRef(0);
   const taskIntents = useRef(new Map<string, Map<string, TaskIntent>>());
@@ -177,6 +180,14 @@ export default function ProjectsBoard({
     }
   }, []);
 
+  useEffect(() => {
+    try {
+      pendingFocusId.current = new URLSearchParams(window.location.search).get("project");
+    } catch {
+      pendingFocusId.current = null;
+    }
+  }, []);
+
   const changeView = useCallback((next: BoardView) => {
     setView(next);
     try {
@@ -249,6 +260,31 @@ export default function ProjectsBoard({
     () => activeProjects.filter((project) => project.dueDate === null),
     [activeProjects]
   );
+
+  useEffect(() => {
+    const id = pendingFocusId.current;
+    if (!id || !today || (dataSource !== "supabase" && dataSource !== "mock")) return;
+    pendingFocusId.current = null;
+    const target = activeProjects.find((project) => project.id === id);
+    if (!target) {
+      showToast("リンク先の案件が見つかりませんでした。見送り・削除された可能性があります。");
+      return;
+    }
+    // 一覧表示は折りたたみなので、カードが直接見えるカレンダー表示に寄せる（好みの保存はしない）
+    setView("calendar");
+    if (target.dueDate) {
+      setSelectedISO(target.dueDate);
+      const [year, month] = target.dueDate.split("-").map(Number);
+      setViewMonth({ year, monthIndex: month - 1 });
+    }
+    setHighlightId(id);
+  }, [activeProjects, dataSource, showToast, today]);
+
+  useEffect(() => {
+    if (!highlightId) return;
+    const timer = setTimeout(() => setHighlightId(null), 4000);
+    return () => clearTimeout(timer);
+  }, [highlightId]);
 
   if (!today || !selectedISO || !viewMonth || dataSource === "loading") {
     return (
@@ -799,6 +835,7 @@ export default function ProjectsBoard({
         onOpenMail={(project, kind) => setMailTarget({ project, kind })}
         onEditDetails={handleEditDetails}
         advanceBusyId={advanceBusyId}
+        highlightProjectId={highlightId}
         events={events}
         authed={authed}
         eventsBusy={eventsBusy}
@@ -851,6 +888,7 @@ export default function ProjectsBoard({
                 }
                 onEditDetails={handleEditDetails}
                 advanceBusy={advanceBusyId === project.id}
+                highlighted={highlightId === project.id}
               />
             ))}
           </div>

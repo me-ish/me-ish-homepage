@@ -46,6 +46,8 @@ type ProjectDayDetailProps = {
     patch: UpdateNatoriProjectDetailsInput
   ) => Promise<void>;
   advanceBusyId?: string | null;
+  /** 直リンク（?project=）で開いた案件。納期日のカードを枠で示す */
+  highlightProjectId?: string | null;
   events: NatoriEvent[];
   authed: boolean;
   eventsBusy: boolean;
@@ -68,6 +70,7 @@ export default function ProjectDayDetail({
   onOpenMail,
   onEditDetails,
   advanceBusyId,
+  highlightProjectId,
   events,
   authed,
   eventsBusy,
@@ -205,6 +208,7 @@ export default function ProjectDayDetail({
                 onOpenMail={onOpenMail}
                 onEditDetails={onEditDetails}
                 advanceBusy={advanceBusyId === project.id}
+                highlighted={highlightProjectId === project.id}
               />
             ))}
           </div>

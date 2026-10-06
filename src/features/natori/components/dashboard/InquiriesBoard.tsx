@@ -727,7 +727,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
               ? `/etorie/demo/app/estimate?inquiry=${selectedRow.project.id}`
               : `/natori/estimate?inquiry=${selectedRow.project.id}`
           }
-          projectsHref={isDemo ? "/etorie/demo/app/projects" : "/natori/projects"}
+          projectsHref={`${isDemo ? "/etorie/demo/app/projects" : "/natori/projects"}?project=${encodeURIComponent(selectedRow.project.id)}`}
         />
       ) : null}
 
