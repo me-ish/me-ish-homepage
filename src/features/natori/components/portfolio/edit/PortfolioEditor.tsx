@@ -16,6 +16,7 @@ import {
   preparePortfolioContentForSave,
   withPortfolioEditorStableIds,
 } from "@/features/natori/lib/portfolioContent";
+import { findPortfolioSaveProblem, type PortfolioSaveProblem } from "@/features/natori/lib/portfolioSaveProblem";
 import type {
   PortfolioCollection,
   PortfolioContent,
@@ -23,6 +24,7 @@ import type {
 } from "@/features/natori/types/portfolio";
 import {
   AddButton,
+  FlaggedSectionContext,
   ImageUploadField,
   RowControls,
   SectionCard,
@@ -33,6 +35,7 @@ import {
   uploadImageFile,
 } from "./editorFields";
 import PortfolioHeroImagesEditor from "./PortfolioHeroImagesEditor";
+import { describePortfolioSaveProblem } from "./portfolioSaveProblemMessage";
 import PortfolioPlanSampleField from "./PortfolioPlanSampleField";
 import PortfolioWorkLinksEditor from "./PortfolioWorkLinksEditor";
 import SortableList from "./SortableList";
@@ -91,6 +94,8 @@ export default function PortfolioEditor({
   const [loadError, setLoadError] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveErrorKind, setSaveErrorKind] = useState<SaveErrorKind>("network");
+  // 入力不備で保存できなかったとき、どこが原因か（次の編集・保存で消える）
+  const [saveProblem, setSaveProblem] = useState<PortfolioSaveProblem | null>(null);
   const [previewError, setPreviewError] = useState(false);
   const [activeSectionId, setActiveSectionId] = useState<string>(SECTION_NAV[0].id);
   const [dirty, setDirty] = useState(false);
@@ -209,14 +214,32 @@ export default function PortfolioEditor({
     }
   };
 
+  // 保存できない値のあるセクションまで画面を動かす（目次ジャンプと同じ scroll-mt が効く）
+  const scrollToSection = useCallback((sectionId: string) => {
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    document.getElementById(sectionId)?.scrollIntoView?.({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "start",
+    });
+    setActiveSectionId(sectionId);
+  }, []);
+
+  const reportValidationFailure = (current: PortfolioContent) => {
+    const problem = findPortfolioSaveProblem(current);
+    setSaveProblem(problem);
+    if (problem?.sectionId) scrollToSection(problem.sectionId);
+  };
+
   const handleSave = async () => {
     if (!content || saveState === "saving") return;
+    setSaveProblem(null);
     if (isDemo) {
       // デモ: 実保存せず成功表示だけする
       const prepared = preparePortfolioContentForSave(content);
       if (!prepared) {
         setSaveErrorKind("validation");
         setSaveState("error");
+        reportValidationFailure(content);
         return;
       }
       setContent(prepared);
@@ -227,7 +250,10 @@ export default function PortfolioEditor({
     setSaveState("saving");
     try {
       const sanitized = preparePortfolioContentForSave(content);
-      if (!sanitized) throw new Error("portfolio content validation failed");
+      if (!sanitized) {
+        reportValidationFailure(content);
+        throw new Error("portfolio content validation failed");
+      }
       const res = await fetch("/api/natori/portfolio/content", {
         method: "PUT",
         headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
@@ -289,7 +315,11 @@ export default function PortfolioEditor({
   };
   const faqs = content.faqs ?? [];
 
+  const flaggedSectionId = saveState === "error" && saveErrorKind === "validation" ? saveProblem?.sectionId ?? null : null;
+  const flaggedSectionLabel = SECTION_NAV.find((section) => section.id === flaggedSectionId)?.label ?? null;
+
   return (
+    <FlaggedSectionContext.Provider value={flaggedSectionId}>
     <main data-natori-admin className="min-h-screen bg-[#F7F7F8] pb-28">
       {/* 上部バー */}
       <div className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md">
@@ -1330,9 +1360,24 @@ export default function PortfolioEditor({
               </span>
             ) : saveState === "error" ? (
               <span className="text-red-700">
-                {saveErrorKind === "validation"
-                  ? "入力内容に保存できない値があります。空欄や形式を確認してください。"
-                  : "保存に失敗しました。もう一度お試しください。"}
+                {saveErrorKind === "validation" ? (
+                  <>
+                    {saveProblem
+                      ? `入力内容に保存できない値があります。${describePortfolioSaveProblem(saveProblem, flaggedSectionLabel)}`
+                      : "入力内容に保存できない値があります。空欄や形式を確認してください。"}
+                    {flaggedSectionId ? (
+                      <button
+                        type="button"
+                        onClick={() => scrollToSection(flaggedSectionId)}
+                        className="ml-2 whitespace-nowrap font-bold underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843]"
+                      >
+                        該当箇所へ移動
+                      </button>
+                    ) : null}
+                  </>
+                ) : (
+                  "保存に失敗しました。もう一度お試しください。"
+                )}
               </span>
             ) : dirty ? (
               <span className="text-amber-700">未保存の変更があります</span>
@@ -1356,6 +1401,7 @@ export default function PortfolioEditor({
         </div>
       </div>
     </main>
+    </FlaggedSectionContext.Provider>
   );
 }
 

@@ -326,16 +326,16 @@ export function withPortfolioEditorStableIds(
 }
 
 /**
- * editorのpreview/save共通入口。軽い正規化後もserverと同じschemaで再検証する。
- * 不正な入力は送信せず null を返す。
+ * 保存前の軽い正規化（trim・空行の除去など）。検証はしない。
+ * preparePortfolioContentForSave と、検証失敗の場所を調べる findPortfolioSaveProblem が同じ入力を使う。
  */
-export function preparePortfolioContentForSave(content: PortfolioContent): PortfolioContent | null {
+export function normalizePortfolioContentForSave(content: PortfolioContent): unknown {
   const cleanList = (items: string[]) =>
     items.map((item) => item.trim()).filter((item) => item.length > 0);
   const heroImages = (content.heroImages ?? (content.heroImage ? [content.heroImage] : []))
     .filter((image) => image.length > 0)
     .slice(0, 5);
-  return parsePortfolioContent({
+  return {
     ...content,
     heroImages,
     heroImage: heroImages[0] ?? null,
@@ -383,7 +383,15 @@ export function preparePortfolioContentForSave(content: PortfolioContent): Portf
     socialLinks: content.socialLinks.filter(
       (link) => link.label.trim().length > 0 && link.href.trim().length > 0
     ),
-  });
+  };
+}
+
+/**
+ * editorのpreview/save共通入口。軽い正規化後もserverと同じschemaで再検証する。
+ * 不正な入力は送信せず null を返す。
+ */
+export function preparePortfolioContentForSave(content: PortfolioContent): PortfolioContent | null {
+  return parsePortfolioContent(normalizePortfolioContentForSave(content));
 }
 
 /**

@@ -4,11 +4,14 @@
 // ポートフォリオ編集画面の汎用パーツ（入力欄・画像アップロード・並び替えボタン等）
 import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ImagePlus, Loader2, Plus, Trash2 } from "lucide-react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 
 /* ---------- レイアウト ---------- */
+
+/** 保存できなかった値があるセクションの id。該当する SectionCard を枠で示す */
+export const FlaggedSectionContext = createContext<string | null>(null);
 
 export function SectionCard({
   id,
@@ -24,10 +27,15 @@ export function SectionCard({
   description?: string;
   children: ReactNode;
 }) {
+  const flaggedId = useContext(FlaggedSectionContext);
+  const flagged = id !== undefined && flaggedId === id;
   return (
     <section
       id={id}
-      className={`scroll-mt-28 rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-6`}
+      data-save-problem={flagged ? "true" : undefined}
+      className={`scroll-mt-28 rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-6${
+        flagged ? " ring-2 ring-red-500 ring-offset-2" : ""
+      }`}
     >
       <div className="mb-5 flex items-start gap-3">
         <span
