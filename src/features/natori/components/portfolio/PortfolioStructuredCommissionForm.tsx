@@ -13,6 +13,7 @@ import {
   type PortfolioPlanSelectDetail,
 } from "@/features/natori/constants/portfolioContent";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
+import { NATORI_INTAKE_COPY } from "@/features/natori/constants/portfolioContactCopy";
 import { MASS_PRODUCTION_COMMERCIAL_AMOUNT, MASS_PRODUCTION_VARIANTS } from "@/features/natori/constants/massProductionIllustration";
 import {
   NATORI_MAX_REFERENCE_IMAGES,
@@ -1551,7 +1552,7 @@ export default function PortfolioStructuredCommissionForm({
         </fieldset>
       )}
       <div hidden={step === lastStep || (state.inquiryMode === "quote" && step !== 1)}>
-        <FormSection title="ご連絡先">
+        <FormSection title="ご連絡先" description={NATORI_INTAKE_COPY.noAccount}>
           <div className="grid gap-4">
             <div>
               <label htmlFor="pf-name" className={labelClass}>お名前（活動名でOK）<RequiredBadge /></label>
