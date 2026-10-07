@@ -194,7 +194,7 @@ export default function LinksEditor({ demoContent, publicHref, dashboardHref }: 
   const incompleteCount = content.links.filter(isIncompleteLink).length;
 
   return (
-    <main data-natori-admin className="min-h-screen bg-[#F7F7F8] pb-28">
+    <main data-natori-admin className="min-h-screen bg-[#F7F7F8] pb-[calc(7rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       {confirmDialog}
       {/* 上部バー */}
       <div className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md">
@@ -301,7 +301,7 @@ export default function LinksEditor({ demoContent, publicHref, dashboardHref }: 
       </div>
 
       {/* 保存バー（画面下に固定） */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200/80 bg-white/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200/80 bg-white/85 pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-3 px-4 py-3">
           <div className="min-w-0 text-xs font-semibold" aria-live="polite">
             {saveState === "saved" ? (
