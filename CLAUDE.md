@@ -23,6 +23,8 @@
 ## Collaboration workflow (important)
 - If asked to implement changes to a component, request the latest code of that component first, unless already provided.
 - For partial edits, clearly specify where to replace (e.g., function name / surrounding snippet).
+- バグ修正（原因と正解がほぼ一つに決まるもの）は、原因を説明したうえでそのまま実装してよい。
+- 見た目・文言・運用ルールなど好みが分かれる変更は、実装前に案を2〜3個出して選んでもらう。
 
 ## Repo conventions
 - App Router: src/app
