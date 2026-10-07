@@ -67,7 +67,7 @@ export default function ConsultationAttentionPanel({ projects, loading, onRefres
               <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400 transition-transform group-hover:translate-x-0.5" aria-hidden />
             </Link>
           </li>)}
-        </ul> : <p className="rounded-xl bg-zinc-50 px-3 py-3 text-sm text-zinc-600">新規・ナトリの返信待ち・通知の要確認はありません。</p>}
+        </ul> : <p className="rounded-xl bg-zinc-50 px-3 py-3 text-sm text-zinc-600">新規・ナトリの返信待ち・見積もり作成待ち・通知の要確認はありません。</p>}
         <Link href="/natori/inquiries?filter=attention" className={`${natoriAdminUi.btnLink} sm:min-h-10`}>要確認の相談をすべて見る{attention?.length ? `（${attention.length}件）` : ""}<ArrowRight className="h-4 w-4" aria-hidden /></Link>
       </>}
     </section>

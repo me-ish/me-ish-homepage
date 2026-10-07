@@ -1,7 +1,7 @@
 // features/natori/components/portfolio/PortfolioHero.tsx
 // 1画面目。作品を縦長の額で大きく見せ、呼び名・紹介文・料金などの目安・相談ボタンを添える。
 // スマホは「作品 → 呼び名 → 目安と相談ボタン → 紹介文」の順にして、相談ボタンを1画面目に入れる。
-import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
+import { natoriSoftActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import { portfolioHeroFacts } from "@/features/natori/lib/portfolioHeroFacts";
 import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
@@ -123,7 +123,7 @@ export default function PortfolioHero({
               {showcase ? null : (
                 <PortfolioHeroPrimaryCta
                   href={contactPath}
-                  className={`${natoriPrimaryActionClassName} pf-cute-focus inline-flex min-h-12 flex-1 items-center justify-center rounded-full border-2 px-6 py-3 text-base font-black sm:flex-none`}
+                  className={`${natoriSoftActionClassName} pf-cute-focus inline-flex min-h-12 flex-1 items-center justify-center rounded-full border-2 px-6 py-3 text-base font-black sm:flex-none`}
                   style={{}}
                 />
               )}

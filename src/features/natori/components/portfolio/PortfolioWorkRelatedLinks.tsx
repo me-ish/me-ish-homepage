@@ -27,6 +27,15 @@ function serviceLabel(href: string): string {
   return "関連ページ";
 }
 
+/** 表示されるリンクのグループ名（例: 「ご依頼者様・制作物の使用例」）。表示するリンクがなければ null。 */
+export function relatedLinksHeading(links: PortfolioWorkLink[] | undefined): string | null {
+  const visible = (links ?? []).filter((link) => link.href.trim().length > 0);
+  const titles = GROUPS.filter((group) => visible.some((link) => link.kind === group.kind)).map(
+    (group) => group.title,
+  );
+  return titles.length ? titles.join("・") : null;
+}
+
 export default function PortfolioWorkRelatedLinks({
   workTitle,
   links,

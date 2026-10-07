@@ -7,7 +7,7 @@ const trackNatoriPageEvent = vi.hoisted(() => vi.fn());
 vi.mock("@/features/natori/data/pageEvents", () => ({ trackNatoriPageEvent }));
 
 import PortfolioMobileCta from "@/features/natori/components/portfolio/PortfolioMobileCta";
-import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
+import { natoriSoftActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 
 beforeEach(() => vi.stubGlobal("IntersectionObserver", undefined));
 
@@ -28,7 +28,7 @@ describe("PortfolioMobileCta analytics", () => {
     expect(cta.className).toContain("text-sm font-black");
     expect(cta.className).toContain("shadow-md");
     expect(cta.className).toContain("border-2");
-    expect(cta.className).toContain(natoriPrimaryActionClassName);
+    expect(cta.className).toContain(natoriSoftActionClassName);
     expect(cta.style.background).toBe("");
     expect(cta.style.borderColor).toBe("");
     expect(cta.style.color).toBe("");

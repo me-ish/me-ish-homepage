@@ -198,6 +198,36 @@ describe("PortfolioGallery collections", () => {
     expect(screen.queryByRole("link", { name: /YouTubeチャンネル/u })).toBeNull();
   });
 
+  it("関連リンクがある作品は絵を低くし、スクロールするまで下への案内を出す", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const linkedWork = work("1", {
+      image: "https://example.com/work.webp",
+      relatedLinks: [
+        { id: "client", kind: "client", label: "X", href: "https://x.com/example" },
+        { id: "usage", kind: "usage", label: "グッズページ", href: "https://example.com/goods" },
+      ],
+    });
+    const plainWork = work("2", { image: "https://example.com/plain.webp" });
+    render(<PortfolioGallery collections={collections} works={[linkedWork, plainWork]} variant="full" />);
+    fireEvent.click(screen.getByRole("button", { name: "作品1 を拡大表示" }));
+
+    const dialog = within(screen.getByRole("dialog"));
+    const hint = dialog.getByRole("button", { name: /ご依頼者様・制作物の使用例を見る/u });
+    expect(dialog.getByAltText("作品1").parentElement?.className).toContain("h-[50dvh]");
+    fireEvent.click(hint);
+    expect(scrollIntoView).toHaveBeenCalled();
+
+    const details = screen.getByRole("region", { name: "作品画像と詳細" });
+    details.scrollTop = 100;
+    fireEvent.scroll(details);
+    expect(screen.queryByRole("button", { name: /を見る/u })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "次の作品を表示" }));
+    expect(screen.queryByRole("button", { name: /を見る/u })).toBeNull();
+    expect(within(screen.getByRole("dialog")).getByAltText("作品2").parentElement?.className).toContain("h-[70dvh]");
+  });
+
   it("表示名が空ならURLからサービス名を補う", () => {
     render(
       <PortfolioGallery

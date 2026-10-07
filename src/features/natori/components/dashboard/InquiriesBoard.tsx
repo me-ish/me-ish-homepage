@@ -438,6 +438,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
           </summary>
           <div className={`mt-1 max-w-2xl space-y-1 rounded-xl bg-white p-3 ring-1 ring-inset ring-zinc-200/80 ${natoriAdminUi.caption}`}>
             <p>制作の進捗と返信待ちは別に表示します。既読の判定ではありません。</p>
+            <p>見積もり中で相談の会話がまだない案件は「見積もり作成待ち」として「対応・確認が必要」に入ります。</p>
             <p>
               相談の最終発言が古い順（会話がなければ受付順）です。経過はその日からの日数で、7日で黄色・14日で赤になります。
             </p>

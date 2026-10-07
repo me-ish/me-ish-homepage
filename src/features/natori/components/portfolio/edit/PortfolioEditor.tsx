@@ -1349,7 +1349,7 @@ export default function PortfolioEditor({
       </div>
 
       {/* 保存バー（画面下に固定） */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200/80 bg-white/85 backdrop-blur-md">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200/80 bg-white/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <div className="min-w-0 text-xs font-semibold" aria-live="polite">
             {saveState === "saved" ? (

@@ -5,7 +5,7 @@
 // ヘッダーのナビは md 未満だと簡易表示になり、ページも縦に長いため、
 // 常時見える「相談・見積もり」ボタンでフォームまで一足で飛べるようにする。
 // Heroとフォーム自体が画面内にある間は既存導線や入力を覆わないよう自動で隠す。
-import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
+import { natoriSoftActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { useEffect, useState } from "react";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
@@ -49,7 +49,7 @@ export default function PortfolioMobileCta({ href = "/natori/portfolio/contact" 
     <a
       href={href}
       onClick={() => trackNatoriPageEvent("portfolio_primary_cta_click", "mobile_sticky")}
-      className={`${natoriPrimaryActionClassName} pf-cute-focus fixed right-5 z-40 inline-flex min-h-[44px] items-center rounded-full border-2 px-4 py-2 text-sm font-black shadow-md md:hidden`}
+      className={`${natoriSoftActionClassName} pf-cute-focus fixed right-5 z-40 inline-flex min-h-[44px] items-center rounded-full border-2 px-4 py-2 text-sm font-black shadow-md md:hidden`}
       style={{
         bottom: "calc(1.25rem + env(safe-area-inset-bottom))",
         boxShadow: `0 6px 16px ${c.shadowFloating}`,

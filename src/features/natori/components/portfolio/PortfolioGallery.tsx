@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   placeholderPalettes,
   portfolioColors as c,
@@ -21,7 +21,7 @@ import type {
 } from "@/features/natori/types/portfolio";
 import ChibiFace from "./ChibiFace";
 import { fontEnStyle } from "./portfolioFonts";
-import PortfolioWorkRelatedLinks from "./PortfolioWorkRelatedLinks";
+import PortfolioWorkRelatedLinks, { relatedLinksHeading } from "./PortfolioWorkRelatedLinks";
 
 const GALLERY_PREVIEW_LIMIT = 6;
 
@@ -113,6 +113,9 @@ export default function PortfolioGallery({
   const resultsRef = useRef<HTMLDivElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const detailsRef = useRef<HTMLDivElement | null>(null);
+  const relatedRef = useRef<HTMLDivElement | null>(null);
+  // 拡大表示で詳細までスクロールした作品。ご依頼者様・使用例への案内はその作品では出さない。
+  const [scrolledWorkId, setScrolledWorkId] = useState<string | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const modalTriggerRef = useRef<HTMLButtonElement | null>(null);
 
@@ -245,6 +248,13 @@ export default function PortfolioGallery({
     : -1;
   const selectedEntry = selectedPosition >= 0 ? viewableWorks[selectedPosition] : null;
   const canBrowse = selectedPosition >= 0 && viewableWorks.length > 1;
+  // ご依頼者様・使用例があると絵の下に隠れて気付きにくいので、絵を少し低くして案内も出す。
+  const relatedHeading = variant === "full" && selected ? relatedLinksHeading(selected.relatedLinks) : null;
+  const showRelatedHint = Boolean(relatedHeading) && scrolledWorkId !== selected?.id;
+  const scrollToRelated = () => {
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    relatedRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
+  };
 
   const showAdjacentWork = (offset: 1 | -1) => {
     if (!canBrowse) return;
@@ -446,9 +456,14 @@ export default function PortfolioGallery({
               aria-label="作品画像と詳細"
               tabIndex={0}
               className="pf-cute-focus min-h-0 overflow-y-auto overscroll-contain rounded-lg [overflow-wrap:anywhere]"
+              onScroll={(event) => {
+                if (selected && event.currentTarget.scrollTop > 24) setScrolledWorkId(selected.id);
+              }}
             >
               <div
-                className="relative h-[70dvh] w-full overflow-hidden rounded-lg md:h-[76dvh]"
+                className={`relative w-full overflow-hidden rounded-lg ${
+                  relatedHeading ? "h-[50dvh] sm:h-[60dvh] md:h-[66dvh]" : "h-[70dvh] md:h-[76dvh]"
+                }`}
                 style={{ background: c.surfaceSubtle }}
               >
                 <Image
@@ -466,6 +481,17 @@ export default function PortfolioGallery({
                   >
                     {selectedPosition + 1} / {viewableWorks.length}
                   </span>
+                ) : null}
+                {showRelatedHint ? (
+                  <button
+                    type="button"
+                    onClick={scrollToRelated}
+                    className="pf-cute-focus absolute bottom-2 left-1/2 inline-flex min-h-[40px] max-w-[calc(100%-1rem)] -translate-x-1/2 items-center gap-1 rounded-full border px-3.5 py-1.5 text-[13px] font-bold shadow-md"
+                    style={{ background: c.pageTranslucent, borderColor: c.action, color: c.text }}
+                  >
+                    <span className="truncate">{relatedHeading}を見る</span>
+                    <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
+                  </button>
                 ) : null}
               </div>
               <div className="mt-3 px-1">
@@ -495,7 +521,7 @@ export default function PortfolioGallery({
                 </div>
               </div>
               {variant === "full" && selected.relatedLinks ? (
-                <div className="px-1">
+                <div ref={relatedRef} className="px-1">
                   <PortfolioWorkRelatedLinks
                     workTitle={selected.title}
                     links={selected.relatedLinks}

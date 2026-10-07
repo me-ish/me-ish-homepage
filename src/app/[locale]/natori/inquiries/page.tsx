@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { natoriAdminViewport } from "@/features/natori/constants/adminViewport";
 import InquiriesBoard from "@/features/natori/components/dashboard/InquiriesBoard";
 import { NatoriPageShell } from "@/features/natori/components/admin/NatoriPageShell";
 import { requireNatoriAccess } from "@/features/natori/server/requireNatoriAdmin";
 
 export const dynamic = "force-dynamic";
+
+export const viewport = natoriAdminViewport;
 
 export const metadata: Metadata = {
   title: "Natori Inquiries | me-ish",

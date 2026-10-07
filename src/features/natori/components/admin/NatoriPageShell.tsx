@@ -29,7 +29,7 @@ export function NatoriPageShell({
       <div data-natori-admin className={natoriAdminUi.page}>
         <NatoriAdminHeader current={current} right={headerRight} />
         <main
-          className={`${natoriAdminUi.container} ${natoriAdminUi.pageBody} pb-24 lg:pb-8`}
+          className={`${natoriAdminUi.container} ${natoriAdminUi.pageBody} pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-8`}
         >
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-0">
@@ -44,7 +44,7 @@ export function NatoriPageShell({
           </div>
           {children}
         </main>
-        <footer className="border-t border-zinc-200/80 pb-20 lg:pb-0">
+        <footer className="border-t border-zinc-200/80 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
           <p
             className={`${natoriAdminUi.container} py-5 text-xs text-zinc-600`}
           >
