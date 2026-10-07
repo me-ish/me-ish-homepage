@@ -198,9 +198,7 @@ describe("PortfolioGallery collections", () => {
     expect(screen.queryByRole("link", { name: /YouTubeチャンネル/u })).toBeNull();
   });
 
-  it("関連リンクがある作品は絵を低くし、スクロールするまで下への案内を出す", () => {
-    const scrollIntoView = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoView;
+  it("関連リンクは絵の下部に帯で重ね、畳むとその作品だけ小さな案内に変わる", () => {
     const linkedWork = work("1", {
       image: "https://example.com/work.webp",
       relatedLinks: [
@@ -213,19 +211,21 @@ describe("PortfolioGallery collections", () => {
     fireEvent.click(screen.getByRole("button", { name: "作品1 を拡大表示" }));
 
     const dialog = within(screen.getByRole("dialog"));
-    const hint = dialog.getByRole("button", { name: /ご依頼者様・制作物の使用例を見る/u });
-    expect(dialog.getByAltText("作品1").parentElement?.className).toContain("h-[50dvh]");
-    fireEvent.click(hint);
-    expect(scrollIntoView).toHaveBeenCalled();
+    const image = dialog.getByAltText("作品1");
+    // 絵の大きさは変えず、帯は絵と同じ枠の中に重ねる。
+    expect(image.parentElement?.className).toContain("h-[70dvh]");
+    expect(image.parentElement?.contains(dialog.getByRole("link", { name: /グッズページ/u }))).toBe(true);
 
-    const details = screen.getByRole("region", { name: "作品画像と詳細" });
-    details.scrollTop = 100;
-    fireEvent.scroll(details);
-    expect(screen.queryByRole("button", { name: /を見る/u })).toBeNull();
+    fireEvent.click(dialog.getByRole("button", { name: "ご依頼者様・制作物の使用例を畳んで絵を全部見る" }));
+    expect(dialog.queryByRole("link", { name: /グッズページ/u })).toBeNull();
+    const reopen = dialog.getByRole("button", { name: "ご依頼者様・制作物の使用例" });
 
-    fireEvent.click(screen.getByRole("button", { name: "次の作品を表示" }));
-    expect(screen.queryByRole("button", { name: /を見る/u })).toBeNull();
-    expect(within(screen.getByRole("dialog")).getByAltText("作品2").parentElement?.className).toContain("h-[70dvh]");
+    fireEvent.click(dialog.getByRole("button", { name: "次の作品を表示" }));
+    expect(dialog.queryByRole("button", { name: "ご依頼者様・制作物の使用例" })).toBeNull();
+    fireEvent.click(dialog.getByRole("button", { name: "前の作品を表示" }));
+    fireEvent.click(dialog.getByRole("button", { name: "ご依頼者様・制作物の使用例" }));
+    expect(dialog.getByRole("link", { name: /グッズページ/u })).toBeTruthy();
+    expect(reopen.isConnected).toBe(false);
   });
 
   it("表示名が空ならURLからサービス名を補う", () => {

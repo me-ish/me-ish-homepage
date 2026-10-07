@@ -112,20 +112,7 @@ export default function PortfolioHeader({
                 style={{ background: content.commissionOpen ? c.success : c.formBorder }}
               />
             </span>
-            {content.commissionOpen ? (
-              <>
-                <span
-                  className="hidden text-[11px] font-semibold tracking-[0.14em] sm:inline"
-                  style={{ ...fontEnStyle, color: c.success }}
-                  aria-hidden="true"
-                >
-                  OPEN
-                </span>
-                受付中
-              </>
-            ) : (
-              "受付停止中"
-            )}
+            {content.commissionOpen ? "受付中" : "受付停止中"}
           </span>
         )}
       </div>
