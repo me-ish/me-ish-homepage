@@ -109,6 +109,20 @@ export type PortfolioFaq = {
   answer: string;
 };
 
+/** 制作過程の動画の縦横比。スマホで縦に撮った動画は portrait */
+export type PortfolioProcessVideoShape = "landscape" | "square" | "portrait";
+
+export type PortfolioProcessVideo = {
+  /** YouTube の動画URL（限定公開でよい）。空なら公開ページに何も出さない */
+  url: string;
+  /** 見出しの下に出す短い説明。空なら既定の一文を出す */
+  caption?: string;
+  /** 再生前に見せる画像にする作品（works[].id）。未設定・非公開・画像なし・削除済みなら無地の背景 */
+  posterWorkId?: string | null;
+  /** 動画の縦横比。未設定は横長 */
+  shape?: PortfolioProcessVideoShape;
+};
+
 export type PortfolioContent = {
   /** コミッション受付中かどうか */
   commissionOpen: boolean;
@@ -146,6 +160,8 @@ export type PortfolioContent = {
   works: PortfolioWork[];
   /** 作品をまとめる公開コレクション。配列順が公開ページの表示順 */
   collections: PortfolioCollection[];
+  /** 制作過程の動画（タイムラプス）。ご依頼実績のすぐ下に出す。旧データには無いので未設定を許容する */
+  processVideo?: PortfolioProcessVideo;
   /** 基本料金プラン */
   plans: PortfolioPlan[];
   /** 追加オプション */

@@ -64,6 +64,17 @@ export default function NatoriPrivacyPage() {
             <h3 className="font-black" style={{ color: "inherit" }}>Google アナリティクス、Vercel Web Analytics</h3>
             <p>本ウェブサイトのアクセス解析に利用します（「5. アクセス解析」をご覧ください）。</p>
           </div>
+          <div>
+            <h3 className="font-black" style={{ color: "inherit" }}>YouTube（埋め込みプレーヤー）</h3>
+            <p>本ウェブサイトに制作過程の動画を掲載する場合に、Google LLC が提供する YouTube の埋め込みプレーヤーを利用します。再生ボタンを押すまで、YouTube には接続しません。</p>
+            <p>
+              再生ボタンを押すと、閲覧しているページ、ブラウザや端末の種類、IPアドレス、再生の状況などの情報が YouTube に送信され、Cookie などが利用される場合があります。Google によるデータの取扱いは、
+              <a href="https://policies.google.com/privacy?hl=ja" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
+                Google のプライバシー ポリシー
+              </a>
+              をご確認ください。
+            </p>
+          </div>
         </div>
         <p>これらの外部事業者には、それぞれのサービス提供に必要な範囲で情報が送信または保存される場合があります。</p>
         <p>これらの外部事業者には、米国の事業者が含まれます。外国にある事業者のサービスを利用するにあたっては、当該国における個人情報の保護に関する制度を把握したうえで、必要かつ適切な安全管理措置を講じます。</p>
@@ -122,7 +133,7 @@ export default function NatoriPrivacyPage() {
         <p>重要な変更を行う場合は、本ウェブサイト上への掲載その他適切な方法でお知らせします。</p>
       </LegalSection>
 
-      <p className="text-xs font-bold">制定日：2026年9月13日<br />最終改定日：2026年10月6日</p>
+      <p className="text-xs font-bold">制定日：2026年9月13日<br />最終改定日：2026年10月7日</p>
     </NatoriLegalPage>
   );
 }

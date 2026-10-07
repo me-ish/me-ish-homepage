@@ -44,6 +44,23 @@ describe("findPortfolioSaveProblem (Q-12)", () => {
     });
   });
 
+  it("points at the process video section, keeping the schema's own Japanese reason", () => {
+    const content = { ...base, processVideo: { url: "https://example.com/movie.mp4" } };
+    expect(preparePortfolioContentForSave(content)).toBeNull();
+    expect(findPortfolioSaveProblem(content)).toEqual({
+      sectionId: "section-process",
+      itemIndex: null,
+      reason: "format",
+      limit: null,
+      detail: "YouTubeの動画URL（https://www.youtube.com/watch?v=… や https://youtu.be/…）を指定してください",
+    });
+    expect(
+      findPortfolioSaveProblem({ ...base, processVideo: { url: "https://youtu.be/dQw4w9WgXcQ", caption: "あ".repeat(201) } })
+    ).toMatchObject({ sectionId: "section-process", reason: "too-long", limit: 200 });
+    // URLが空の動画は保存時に外れるので、問題にしない
+    expect(findPortfolioSaveProblem({ ...base, processVideo: { url: "" } })).toBeNull();
+  });
+
   it("reports an over-long list as too many items, without an item index", () => {
     const content = { ...base, services: Array.from({ length: 31 }, (_, index) => `バッジ${index}`) };
     expect(findPortfolioSaveProblem(content)).toEqual({
@@ -86,6 +103,6 @@ describe("findPortfolioSaveProblem (Q-12)", () => {
     const unmapped = Object.keys(base).filter((key) => !(key in PORTFOLIO_SECTION_ID_BY_CONTENT_KEY));
     // 編集画面に欄がなく、保存時にそのまま持ち回るだけの項目
     expect(unmapped.sort()).toEqual(["workflowCompatibilityProjection"].filter((key) => key in base).sort());
-    expect(sectionIds.size).toBe(14);
+    expect(sectionIds.size).toBe(15);
   });
 });

@@ -14,6 +14,7 @@ import PortfolioHeader from "./PortfolioHeader";
 import PortfolioHero from "./PortfolioHero";
 import PortfolioMobileCta from "./PortfolioMobileCta";
 import PortfolioPricing from "./PortfolioPricing";
+import PortfolioProcessVideo from "./PortfolioProcessVideo";
 import PortfolioStyles from "./PortfolioStyles";
 import PortfolioWorkflow from "./PortfolioWorkflow";
 import { portfolioFontEn, portfolioFontJp } from "./portfolioFonts";
@@ -69,6 +70,7 @@ export default function PortfolioLanding({
         <PortfolioAbout content={content} variant={variant} flatPlaceholders={flatPlaceholders} />
       ) : (
         <>
+          <PortfolioProcessVideo content={content} />
           <PortfolioPricing content={content} contactPath={contactPath} structuredIntake={Boolean(demoStructuredQuery)} />
           <PortfolioWorkflow content={content} />
           <PortfolioAbout content={content} variant={variant} flatPlaceholders={flatPlaceholders} />

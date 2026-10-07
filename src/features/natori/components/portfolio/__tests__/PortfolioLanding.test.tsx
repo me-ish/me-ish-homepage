@@ -30,6 +30,10 @@ vi.mock("../PortfolioMobileCta", () => ({
 vi.mock("../PortfolioPricing", () => ({
   default: () => <section id="pricing" data-section="pricing"><h2>料金・ご依頼</h2></section>,
 }));
+vi.mock("../PortfolioProcessVideo", () => ({
+  default: ({ content }: { content: { processVideo?: unknown } }) =>
+    content.processVideo ? <section id="process" data-section="process-video"><h2>制作過程</h2></section> : null,
+}));
 vi.mock("../PortfolioStyles", () => ({ default: () => null }));
 vi.mock("../PortfolioWorkflow", () => ({
   default: () => <section id="flow" data-section="workflow"><h2>制作の流れ</h2></section>,
@@ -119,6 +123,29 @@ describe("PF-01 portfolio information architecture", () => {
     expect(document.querySelector("#flow")).toBeNull();
     expect(document.querySelector("#form")).toBeNull();
     expect(document.querySelector("#faq")).toBeNull();
+  });
+
+  it("places the process video right under the gallery, on the full variant only", () => {
+    const content = { ...defaultPortfolioContent, processVideo: { url: "https://youtu.be/dQw4w9WgXcQ" } };
+    render(<PortfolioLanding content={content} structuredIntake />);
+    expect(sectionOrder()).toEqual([
+      "hero",
+      "gallery",
+      "process-video",
+      "pricing",
+      "workflow",
+      "about",
+      "guidelines",
+      "faq",
+      "mobile-cta",
+      "footer",
+    ]);
+    cleanup();
+
+    // 作品集（showcase）は営業先に出すため、動画セクションも出さない
+    render(<PortfolioLanding content={content} variant="showcase" />);
+    expect(sectionOrder()).toEqual(["hero", "gallery", "about", "footer"]);
+    expect(document.querySelector("#process")).toBeNull();
   });
 
   it("offers the lightbox consultation link only on the open full page", () => {

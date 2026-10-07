@@ -6,7 +6,9 @@ import {
   LEGACY_PORTFOLIO_OPTION_ID_BY_EXACT_NAME,
   LEGACY_PORTFOLIO_PLAN_ID_BY_EXACT_NAME,
 } from "@/features/natori/constants/portfolioContent";
+import { PROCESS_VIDEO_SHAPES } from "@/features/natori/constants/portfolioProcessVideo";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import { normalizeProcessVideoForSave, parseYoutubeVideoId } from "./portfolioProcessVideo";
 import { isPortfolioWorkflowProjectionEligible } from "./portfolioWorkflow";
 
 const shortText = z.string().max(200);
@@ -97,6 +99,17 @@ const workSchema = z
     }),
   );
 
+// 制作過程の動画。URL は空（動画なし）か、YouTube の動画URLとして読めるものだけ許す。
+const processVideoSchema = z.object({
+  url: z.string().max(300).refine(
+    (value) => value.trim().length === 0 || parseYoutubeVideoId(value) !== null,
+    "YouTubeの動画URL（https://www.youtube.com/watch?v=… や https://youtu.be/…）を指定してください"
+  ),
+  caption: shortText.optional(),
+  posterWorkId: z.string().min(1).max(64).nullable().optional(),
+  shape: z.enum(PROCESS_VIDEO_SHAPES).optional(),
+});
+
 const planSchema = z
   .object({
     id: stableContentId.nullable().optional(),
@@ -179,6 +192,8 @@ const portfolioContentBaseSchema = z.object({
   galleryIntro: longText.optional().default(""),
   works: z.array(workSchema).max(300),
   collections: z.array(collectionSchema).max(20).optional(),
+  // 後から追加したフィールド。既存のDB行には無いので未設定（セクションを出さない）のまま
+  processVideo: processVideoSchema.optional(),
   plans: z.array(planSchema).max(12),
   options: z.array(optionSchema).max(30),
   deliveryLead: longText,
@@ -335,8 +350,11 @@ export function normalizePortfolioContentForSave(content: PortfolioContent): unk
   const heroImages = (content.heroImages ?? (content.heroImage ? [content.heroImage] : []))
     .filter((image) => image.length > 0)
     .slice(0, 5);
+  // 動画URLが空なら、動画の設定ごと保存しない
+  const { processVideo, ...contentWithoutProcessVideo } = content;
+  const normalizedProcessVideo = normalizeProcessVideoForSave(processVideo);
   return {
-    ...content,
+    ...contentWithoutProcessVideo,
     heroImages,
     heroImage: heroImages[0] ?? null,
     aboutParagraphs: cleanList(content.aboutParagraphs),
@@ -368,6 +386,7 @@ export function normalizePortfolioContentForSave(content: PortfolioContent): unk
       name: collection.name.trim(),
       description: collection.description.trim(),
     })),
+    ...(normalizedProcessVideo !== undefined ? { processVideo: normalizedProcessVideo } : {}),
     plans: content.plans.map((plan) => ({
       ...plan,
       features: cleanList(plan.features),

@@ -227,6 +227,61 @@ describe("parsePortfolioContent", () => {
     expect(parsePortfolioContent(validContent)?.plans[0]).not.toHaveProperty("sampleWorkId");
   });
 
+  it("制作過程の動画は旧データには足さず、設定があればそのまま保持する", () => {
+    expect(parsePortfolioContent(validContent)).not.toHaveProperty("processVideo");
+    const processVideo = {
+      url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      caption: "早送りです",
+      posterWorkId: "w2",
+      shape: "portrait" as const,
+    };
+    expect(parsePortfolioContent({ ...validContent, processVideo })?.processVideo).toEqual(processVideo);
+    // 形や作例を決めていない動画も、URLだけで読める
+    expect(
+      parsePortfolioContent({ ...validContent, processVideo: { url: "https://youtu.be/dQw4w9WgXcQ" } })?.processVideo
+    ).toEqual({ url: "https://youtu.be/dQw4w9WgXcQ" });
+  });
+
+  it("制作過程の動画のURLは、空か YouTube の動画URLだけ保存できる", () => {
+    const withUrl = (url: string): PortfolioContent => ({ ...validContent, processVideo: { url } });
+    expect(parsePortfolioContent(withUrl(""))).not.toBeNull();
+    expect(parsePortfolioContent(withUrl("https://youtu.be/dQw4w9WgXcQ"))).not.toBeNull();
+    expect(parsePortfolioContent(withUrl("https://example.com/movie.mp4"))).toBeNull();
+    expect(parsePortfolioContent(withUrl("https://www.youtube.com/watch?v=short"))).toBeNull();
+    expect(parsePortfolioContent(withUrl("javascript:alert(1)"))).toBeNull();
+    expect(parsePortfolioContent(withUrl(`https://youtu.be/${"a".repeat(300)}`))).toBeNull();
+    expect(
+      parsePortfolioContent({
+        ...validContent,
+        processVideo: { url: "https://youtu.be/dQw4w9WgXcQ", shape: "wide" },
+      })
+    ).toBeNull();
+  });
+
+  it("制作過程の動画は保存時に標準のURLへ整え、URLが空なら設定ごと保存しない", () => {
+    const base = parsePortfolioContent(validContent) as PortfolioContent;
+    const prepared = preparePortfolioContentForSave({
+      ...base,
+      processVideo: { url: " https://youtu.be/dQw4w9WgXcQ?si=abc ", caption: "  説明  ", shape: "square" },
+    });
+    expect(prepared?.processVideo).toEqual({
+      url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      caption: "説明",
+      posterWorkId: null,
+      shape: "square",
+    });
+
+    const cleared = preparePortfolioContentForSave({
+      ...base,
+      processVideo: { url: "   ", caption: "残らない", posterWorkId: "w2", shape: "portrait" },
+    });
+    expect(cleared).not.toBeNull();
+    expect(cleared).not.toHaveProperty("processVideo");
+    expect(
+      preparePortfolioContentForSave({ ...base, processVideo: { url: "https://example.com/movie.mp4" } })
+    ).toBeNull();
+  });
+
   it("壊れた値は null を返す（デフォルトへのフォールバック用）", () => {
     expect(parsePortfolioContent(null)).toBeNull();
     expect(parsePortfolioContent({})).toBeNull();
