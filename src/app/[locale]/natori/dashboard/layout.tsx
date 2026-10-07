@@ -3,8 +3,11 @@ import Link from "next/link";
 import { requireNatoriAccess } from "@/features/natori/server/requireNatoriAdmin";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { notificationVerificationAvailable } from "@/features/natori/server/notificationVerification";
+import { natoriAdminViewport } from "@/features/natori/constants/adminViewport";
 
 export const dynamic = "force-dynamic";
+
+export const viewport = natoriAdminViewport;
 
 // Override the site-wide manifest so that "Add to Home Screen" from the
 // Natori dashboard lands back on the dashboard (and not the site root).

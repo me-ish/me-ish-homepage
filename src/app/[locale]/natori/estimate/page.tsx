@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { natoriAdminViewport } from "@/features/natori/constants/adminViewport";
 import EstimateWorkspace from "@/features/natori/components/dashboard/EstimateWorkspace";
 import { NatoriPageShell } from "@/features/natori/components/admin/NatoriPageShell";
 import { requireNatoriAccess } from "@/features/natori/server/requireNatoriAdmin";
 
 export const dynamic = "force-dynamic";
+
+export const viewport = natoriAdminViewport;
 
 export const metadata: Metadata = {
   title: "Natori Estimate | me-ish",

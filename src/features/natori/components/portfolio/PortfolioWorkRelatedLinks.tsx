@@ -27,18 +27,33 @@ function serviceLabel(href: string): string {
   return "関連ページ";
 }
 
+/** 表示されるリンクのグループ名（例: 「ご依頼者様・制作物の使用例」）。表示するリンクがなければ null。 */
+export function relatedLinksHeading(links: PortfolioWorkLink[] | undefined): string | null {
+  const visible = (links ?? []).filter((link) => link.href.trim().length > 0);
+  const titles = GROUPS.filter((group) => visible.some((link) => link.kind === group.kind)).map(
+    (group) => group.title,
+  );
+  return titles.length ? titles.join("・") : null;
+}
+
 export default function PortfolioWorkRelatedLinks({
   workTitle,
   links,
+  overlay = false,
 }: {
   workTitle: string;
   links: PortfolioWorkLink[];
+  /** 拡大表示で絵の上の帯に重ねるとき。区切り線と上の余白を付けない */
+  overlay?: boolean;
 }) {
   const visibleLinks = links.filter((link) => link.href.trim().length > 0);
   if (visibleLinks.length === 0) return null;
 
   return (
-    <div className="mt-3 space-y-3 border-t pt-3" style={{ borderColor: c.borderSubtle }}>
+    <div
+      className={overlay ? "space-y-2" : "mt-3 space-y-3 border-t pt-3"}
+      style={overlay ? undefined : { borderColor: c.borderSubtle }}
+    >
       {GROUPS.map((group) => {
         const groupLinks = visibleLinks.filter((link) => link.kind === group.kind);
         if (groupLinks.length === 0) return null;

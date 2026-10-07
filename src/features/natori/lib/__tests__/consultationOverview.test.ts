@@ -23,6 +23,16 @@ describe("consultation business read model", () => {
     expect(consultationReplyState(p)).toBe("client");
     expect(consultationNeedsAttention(p)).toBe(true);
   });
+  it("an estimate with no conversation yet needs Natori's action", () => {
+    const p = project({ status: "estimating" });
+    expect(consultationNeedsAttention(p)).toBe(true);
+    expect(consultationReplyLabel(p)).toBe("見積もり作成待ち");
+    p.consultation!.latestSender = "staff";
+    expect(consultationNeedsAttention(p)).toBe(false);
+    expect(consultationReplyLabel(p)).toBe("依頼者の返信待ち");
+    expect(consultationNeedsAttention(project({ status: "estimating", deletedAt: "2026-01-01" }))).toBe(false);
+    expect(consultationNeedsAttention(project({ status: "quoted" }))).toBe(false);
+  });
   it("closed and archived history does not request a new reply", () => {
     const p = project({ status: "closed" }); p.consultation!.latestSender = "client";
     expect(consultationReplyLabel(p)).toBe("相談終了・履歴のみ");

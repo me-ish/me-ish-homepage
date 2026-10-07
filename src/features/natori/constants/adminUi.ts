@@ -22,7 +22,7 @@ const btnBase = `inline-flex h-11 items-center justify-center gap-1.5 rounded-fu
 const surface = "border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(24,24,27,0.04)]";
 
 export const natoriAdminUi = {
-  page: "min-h-screen bg-[#F7F7F8] text-zinc-900",
+  page: "min-h-screen bg-[#F7F7F8] text-zinc-900 pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]",
   container: "mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8",
   pageBody: "py-5 sm:py-8 space-y-4 sm:space-y-6",
   pageTitle: "text-xl font-bold leading-8 tracking-tight text-zinc-900", // 24px

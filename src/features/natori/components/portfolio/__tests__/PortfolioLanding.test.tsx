@@ -93,8 +93,7 @@ describe("PF-01 portfolio information architecture", () => {
     expect(consult.style.borderColor).toBe("rgb(236, 72, 153)");
     expect(consult.style.backgroundColor).toBe("rgb(255, 255, 255)");
     expect(quote.style.backgroundColor).toBe(""); // The shared CTA owns every interaction state.
-    expect(quote.className).toContain("bg-[#BE185D]");
-    expect(quote.className).toContain("disabled:opacity-100");
+    expect(quote.className).toContain("bg-[#FFE4EF]");
     for (const { href } of uniqueNavLinks()) {
       if (href.startsWith("#")) expect(document.querySelector(href)).not.toBeNull();
     }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { natoriPrimaryActionColors } from "@/features/natori/constants/natoriPrimaryAction";
+import { natoriPrimaryActionColors, natoriSoftActionColors } from "@/features/natori/constants/natoriPrimaryAction";
 import { portfolioColors, legacyNatoriTransactionColors } from "@/features/natori/constants/portfolioContent";
 import { portfolioFormColors } from "@/features/natori/components/portfolio/PortfolioFormStyles";
 function luminance(hex:string) {
@@ -10,6 +10,10 @@ function contrast(a:string,b:string) {const values=[luminance(a),luminance(b)].s
 describe("important CTA contrast",()=>{
   it.each(["normal","hover","focus","disabled"] as const)("keeps normal-size text AA in %s, independent of surrounding theme",state=>{
     const colors=natoriPrimaryActionColors[state];
+    expect(contrast(colors.foreground,colors.background)).toBeGreaterThanOrEqual(4.5);
+  });
+  it.each(["normal","hover"] as const)("keeps the softer portfolio CTA text AA in %s",state=>{
+    const colors=natoriSoftActionColors[state];
     expect(contrast(colors.foreground,colors.background)).toBeGreaterThanOrEqual(4.5);
   });
   it("preserves brand decoration, transaction art, and form input state colors",()=>{

@@ -198,6 +198,36 @@ describe("PortfolioGallery collections", () => {
     expect(screen.queryByRole("link", { name: /YouTubeチャンネル/u })).toBeNull();
   });
 
+  it("関連リンクは絵の下部に帯で重ね、畳むとその作品だけ小さな案内に変わる", () => {
+    const linkedWork = work("1", {
+      image: "https://example.com/work.webp",
+      relatedLinks: [
+        { id: "client", kind: "client", label: "X", href: "https://x.com/example" },
+        { id: "usage", kind: "usage", label: "グッズページ", href: "https://example.com/goods" },
+      ],
+    });
+    const plainWork = work("2", { image: "https://example.com/plain.webp" });
+    render(<PortfolioGallery collections={collections} works={[linkedWork, plainWork]} variant="full" />);
+    fireEvent.click(screen.getByRole("button", { name: "作品1 を拡大表示" }));
+
+    const dialog = within(screen.getByRole("dialog"));
+    const image = dialog.getByAltText("作品1");
+    // 絵の大きさは変えず、帯は絵と同じ枠の中に重ねる。
+    expect(image.parentElement?.className).toContain("h-[70dvh]");
+    expect(image.parentElement?.contains(dialog.getByRole("link", { name: /グッズページ/u }))).toBe(true);
+
+    fireEvent.click(dialog.getByRole("button", { name: "ご依頼者様・制作物の使用例を畳んで絵を全部見る" }));
+    expect(dialog.queryByRole("link", { name: /グッズページ/u })).toBeNull();
+    const reopen = dialog.getByRole("button", { name: "ご依頼者様・制作物の使用例" });
+
+    fireEvent.click(dialog.getByRole("button", { name: "次の作品を表示" }));
+    expect(dialog.queryByRole("button", { name: "ご依頼者様・制作物の使用例" })).toBeNull();
+    fireEvent.click(dialog.getByRole("button", { name: "前の作品を表示" }));
+    fireEvent.click(dialog.getByRole("button", { name: "ご依頼者様・制作物の使用例" }));
+    expect(dialog.getByRole("link", { name: /グッズページ/u })).toBeTruthy();
+    expect(reopen.isConnected).toBe(false);
+  });
+
   it("表示名が空ならURLからサービス名を補う", () => {
     render(
       <PortfolioGallery

@@ -90,34 +90,29 @@ export default function PortfolioHeader({
           ))}
         </nav>
         {showcase ? null : (
+          // 受付状況の札。緑の枠で目立たせるより、白い札に小さな灯りを置いてサイトの淡い配色になじませる。
           <span
-            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-bold md:text-xs"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full py-1.5 pl-2.5 pr-3 text-[13px] font-bold md:text-xs"
             style={{
-              background: content.commissionOpen ? c.successSoft : c.surfaceSubtle,
-              color: content.commissionOpen ? c.success : c.textSoft,
-              border: `1px solid ${content.commissionOpen ? c.success : c.formBorder}`,
+              background: c.surface,
+              color: content.commissionOpen ? c.text : c.textSoft,
+              border: `1px solid ${c.borderSubtle}`,
+              boxShadow: `0 4px 12px ${c.shadowSoft}`,
             }}
           >
-            {content.commissionOpen ? (
-              <>
-                <span className="relative flex h-2.5 w-2.5 shrink-0" aria-hidden="true">
-                  <span
-                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 motion-reduce:animate-none"
-                    style={{ background: c.success }}
-                  />
-                  <span
-                    className="relative inline-flex h-2.5 w-2.5 rounded-full"
-                    style={{
-                      background: c.success,
-                      boxShadow: `0 0 0 2px ${c.successSoft}, 0 0 8px ${c.success}`,
-                    }}
-                  />
-                </span>
-                受付中
-              </>
-            ) : (
-              "受付停止中"
-            )}
+            <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
+              {content.commissionOpen ? (
+                <span
+                  className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-40 [animation-duration:2.4s] motion-reduce:animate-none"
+                  style={{ background: c.success }}
+                />
+              ) : null}
+              <span
+                className="relative inline-flex h-2 w-2 rounded-full"
+                style={{ background: content.commissionOpen ? c.success : c.formBorder }}
+              />
+            </span>
+            {content.commissionOpen ? "受付中" : "受付停止中"}
           </span>
         )}
       </div>

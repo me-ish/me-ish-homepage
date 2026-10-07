@@ -221,20 +221,11 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
         }
       }}
     >
-      {/* 作品を額のように白い余白で囲み、テープで留める。枠は縦長（4:5）で、絵は切らずに収める。 */}
+      {/* 作品を額のように白い余白で囲む（マステは実績カードだけ）。枠は縦長（4:5）で、絵は切らずに収める。 */}
       <div
         className="pf-hero-frame relative rounded-[1.25rem] p-2"
         style={{ background: c.surface, boxShadow: `0 18px 40px ${c.shadowSoft}, 0 2px 8px ${c.shadowSoft}` }}
       >
-        <span
-          className="absolute -top-3 left-1/2 z-10 h-6 w-24 -translate-x-1/2 -rotate-3 rounded-[2px] md:w-28"
-          aria-hidden="true"
-          style={{
-            background: `linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0) 50%), ${c.actionSoft}`,
-            opacity: 0.92,
-            boxShadow: `0 1px 2px ${c.shadowHover}`,
-          }}
-        />
         <div
           ref={surfaceRef}
           data-testid="hero-slide-surface"
