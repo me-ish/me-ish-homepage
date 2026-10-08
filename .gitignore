@@ -52,3 +52,11 @@ next-env.d.ts
 .eslintcache
 .stylelintcache
 .tailwindcache/
+
+# Archived local outputs (restore instructions: docs/archive/meish-cleanup-20261008.md)
+/.tmp-production-deploy/
+/.tmp-natori-*.png
+/.tmp-production-verify.cjs
+/glaze_out/
+/send-test.js
+/test-openai.js
