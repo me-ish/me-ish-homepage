@@ -1,5 +1,7 @@
 # Phase 0A — Storage認可の切替準備と隔離試験
 
+2026-10-08の試験依存分離：現在の全26ケース/モードを、ギャラリー21・旧assets2・ナトリ3の独立bundleへ移設。実行順・assertion・結果形式を維持し、Phase Tのナトリ権限検査も継続する。製品・SQL・11bucket fixture・workflow・共有runnerは変更しない。対応表と検証状態は [Phase_0A_Cleanup_Separation_2026-10-08.md](../../docs/natori/Phase_0A_Cleanup_Separation_2026-10-08.md) を参照。以下の実績は過去時点の記録であり、変更後CIの成功を意味しない。
+
 対象: F01 / NEW-01。Phase Tで露呈した正常アップロードの互換性を先に確保し、Storageの公開書込policyを閉じる。本番適用は別承認。PRをマージするだけで下記cutover SQLを自動実行しない。
 
 2026-09-27の運用確認: ユーザーが本番移行を条件付き承認済み。Colab画像加工は「現在使っておらず、今後も使う予定がない」と明示されたため、Colab credential role確認は本移行の必須条件から除外する。これは権限確認に成功したという意味ではない。Colabコード・既存画像・鍵は変更せず、将来再開する場合は限定policy下で別途確認する。cloud正規経路・iPhone Safariなど、他の確認条件は維持する。
