@@ -91,6 +91,20 @@
       "blob": "cd105e3a74369919bb0830589b54d4387252cdcc",
       "sha256": "01a2e2a80d11f6d8a89609f919eab2b04f4f280d1de17805010dbaad8bc5625e",
       "bytes": 1382
+    },
+    {
+      "path": "package.json",
+      "action": "remove unused isomorphic-dompurify dependency closure",
+      "blob": "1a51c4bcc4221fa21a1210d266d919a9e313a71d",
+      "sha256": "15ccbc734b83af0bccadb1d7d1147015b24557f9399f2a4673d4bd2af8596ea4",
+      "bytes": 3438
+    },
+    {
+      "path": "package-lock.json",
+      "action": "remove unused isomorphic-dompurify dependency closure",
+      "blob": "22365074019f99c703aa5aeed859895daf007e69",
+      "sha256": "a2d508bece35ff7e8a086b3bae413cb1724fe63e2c135481e25186bd261eaaef",
+      "bytes": 558065
     }
   ]
 }

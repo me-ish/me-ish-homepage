@@ -51,3 +51,12 @@ CardBase.tsx / SectionContainer.tsx の2件を除く。外部import/re-export/�
 参照先のapplyVariantStyleとaura.designSystemは公開描画でも使われるので保持。
 2部品を除いたTailwind生成CSSは全追跡srcを入力した比較でbyte単位で一致。
 残るコンポーネントのDOM、hooks、イベント、ARIAには変更を加えない。
+
+## 未使用sanitizerの依存
+
+唯一の呼出元aura.sanitize.tsを除いた後、isomorphic-dompurifyをpackage/lockから除く。
+その専用の推移依存を含め30個のlock entryが消える。残るパッケージはversion・
+resolved・integrityに変更なし。11件がdev専用となり、jspdfの任意依存として残る
+dompurifyにはoptionalフラグが付く。テスト用jsdom26.1.0は維持。
+PR #142の2つの依存削除はこのブランチに含めず、組合せも別途確認する。
+package/lockを戻す際は同一基準の両方を扱い、他のPRの正当な依存変更を維持する。
