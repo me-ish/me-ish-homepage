@@ -21,6 +21,62 @@
       "blob": "90ca89b33ffafc99c1fe7e30a3d9b200819bb158",
       "sha256": "0d932946bc0b78fd63ba2a897c10b642dbb6584515e2565bf255bf4702ae87ad",
       "bytes": 821
+    },
+    {
+      "path": "src/lib/aura/aura.renderTypes.ts",
+      "action": "delete unreferenced helper",
+      "blob": "1005b9c3697b45a40afa115f4f5bded47b3805e9",
+      "sha256": "cbaf207b5e64fc1db184a1e180de311648904f3cd105f12efca6f9ad7282ba76",
+      "bytes": 1446
+    },
+    {
+      "path": "src/lib/aura/aura.sanitize.ts",
+      "action": "delete unreferenced helper",
+      "blob": "da0579a5dbbf09a7d1037710eabcb569dc4af90f",
+      "sha256": "c8f70801de70aeb0c7e7bfeaa22a31d1a77ba9da5ab8a72caea402a44d1ed348",
+      "bytes": 280
+    },
+    {
+      "path": "src/lib/aura/aura.strength.ts",
+      "action": "delete unreferenced helper",
+      "blob": "fe9faa150a7f90fd32fafb5eca6e43cce0f4515b",
+      "sha256": "b042cddf300cfecf8684dcb52e35baf2fa09d12edcae3c943614fe001ef457e6",
+      "bytes": 7164
+    },
+    {
+      "path": "src/lib/aura/supabaseAdmin.ts",
+      "action": "delete unreferenced helper",
+      "blob": "50c1fa3afce3cf16e806c037a452a2e801735903",
+      "sha256": "9b0731026d12c078eba9b1fe04a9bcc3be7c5478bd9a8b4148a56d3cb4082d0f",
+      "bytes": 165
+    },
+    {
+      "path": "src/lib/aura/storage/auraAssets.server.ts",
+      "action": "delete unreferenced helper",
+      "blob": "52b9b63ce652df06b081dec5f022994e1e79b277",
+      "sha256": "8bba726e336353e32ca9354ad32074ae2e25e03ad25c72fa10ac26df408f65f5",
+      "bytes": 1466
+    },
+    {
+      "path": "src/lib/card/card.colorUtils.ts",
+      "action": "delete unreferenced helper",
+      "blob": "90c673d82d02625f286675cec5bd9bb6b1ddab16",
+      "sha256": "be374d7154daf8cd3f528cf623584e930aa677f34ecb1463626500d0a2f137fa",
+      "bytes": 1792
+    },
+    {
+      "path": "src/lib/card/card.tierGate.ts",
+      "action": "delete unreferenced helper",
+      "blob": "735bdcfe95d24f04c129173c86c7ce237d6bff3d",
+      "sha256": "0fee0df57d33511edec651893945dc4df4ef5f64a10deda13fe302cfa303caf2",
+      "bytes": 794
+    },
+    {
+      "path": "src/lib/card/storage/cardAssets.server.ts",
+      "action": "delete unreferenced helper",
+      "blob": "0fcc79037a9e6970a78b74c6eb9ac6568cd46bee",
+      "sha256": "59e3ad2596ee91202cf1ff2e0236cbdd1301555ec239408371b51d2ac1d7a226",
+      "bytes": 1349
     }
   ]
 }
