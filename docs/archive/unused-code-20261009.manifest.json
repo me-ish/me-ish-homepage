@@ -1,0 +1,26 @@
+{
+  "sourceCommit": "4bec943c722e0d9c6257e855ec258bacfbc05379",
+  "files": [
+    {
+      "path": "thirdweb-defaultTokens-shim.ts",
+      "action": "delete unreferenced shim",
+      "blob": "447be48d7de544e166db4811b4bdd7f0b84ca8a0",
+      "sha256": "08ed0d1a3a6811982f79c181ef34d8739502136e1f6a0575aadc0bbe34f10df5",
+      "bytes": 138
+    },
+    {
+      "path": "thirdweb-shims.d.ts",
+      "action": "delete unreferenced shim",
+      "blob": "8b79f985d09a87c2275fea9825c40fef7c385f0a",
+      "sha256": "7f7d4bd95b5ab6345cd834bd26c98b2410d494751759cc2715f6c74e4f5487e7",
+      "bytes": 572
+    },
+    {
+      "path": "tsconfig.json",
+      "action": "remove obsolete thirdweb path and explicit include",
+      "blob": "90ca89b33ffafc99c1fe7e30a3d9b200819bb158",
+      "sha256": "0d932946bc0b78fd63ba2a897c10b642dbb6584515e2565bf255bf4702ae87ad",
+      "bytes": 821
+    }
+  ]
+}
