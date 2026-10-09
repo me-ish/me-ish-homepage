@@ -60,3 +60,17 @@ resolved・integrityに変更なし。11件がdev専用となり、jspdfの任�
 dompurifyにはoptionalフラグが付く。テスト用jsdom26.1.0は維持。
 PR #142の2つの依存削除はこのブランチに含めず、組合せも別途確認する。
 package/lockを戻す際は同一基準の両方を扱い、他のPRの正当な依存変更を維持する。
+
+## 前回のローカルブラウザ失敗の切り分け
+
+- 英語口座管理→ログイン: 基準mainの初回login compileは5.5秒、GET応答は5047ms。
+  URLの5秒assertion失敗直後に200が記録された。元ソースを使った隔離診断で
+  login GETだけ6秒遅延させると元assertionは5012msで失敗し、navigationの30秒待機は
+  同じURL・英語文言の確認まで成功した。該当1行をwaitForURLへ変更する。
+  期待URL・表示のassertion、外部通信遮断、テスト件数は維持する。
+- 旧デモ受付のNext→review: 前回ローカルのみ1回失敗。基準5回、変更後3回、
+  追加診断（基準の通常3回・CPU4倍遅延3回）は成功。追加診断でinvalidイベント・
+  ステップ巻戻り・pageerrorは0。元失敗時のtraceがなく、原因は確定できない。
+  再試行の成功を理由にフレーク認定せず、アプリや当該assertionは変更しない。
+- 前回のlocal設定はretries=0とtrace=on-first-retryの組合せだった。最終ローカル
+  E2Eは一時設定とretain-on-failure、実行ごとの別出力先を使い、失敗証拠を保存する。
