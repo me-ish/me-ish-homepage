@@ -71,6 +71,38 @@ package/lockを戻す際は同一基準の両方を扱い、他のPRの正当な
 - 旧デモ受付のNext→review: 前回ローカルのみ1回失敗。基準5回、変更後3回、
   追加診断（基準の通常3回・CPU4倍遅延3回）は成功。追加診断でinvalidイベント・
   ステップ巻戻り・pageerrorは0。元失敗時のtraceがなく、原因は確定できない。
-  再試行の成功を理由にフレーク認定せず、アプリや当該assertionは変更しない。
+  再試行の成功を理由にフレーク認定せず、アプリやreviewのassertionは変更しない。
 - 前回のlocal設定はretries=0とtrace=on-first-retryの組合せだった。最終ローカル
   E2Eは一時設定とretain-on-failure、実行ごとの別出力先を使い、失敗証拠を保存する。
+
+## 追加の補助コードとexport入口
+
+getDisplayPlanStats.ts、i18n/navigation.ts、design/gallery2d/home/themeGalleries/testの
+index.tsの計6件も呼出元0。集計関数を実行せずコードだけを除く。next-intlの
+request.ts/routing.ts/config.ts、各gallery/homeの実部品は維持する。design/tokens.tsは
+実行参照がなくなってもTailwindの22 selectorの入力なので保持する。
+
+entryUploadClient.tsは#140で削除済みのentry/FormWrapperだけが呼んでいた。
+トップレベルにuploadの副作用はなく、現行のAPI・テスト・Phaseスクリプトも参照しない。
+旧Phase結果資料は当時の実装記録として残す。clientだけを退役し、entryUpload、
+entryUploadGrant、entryUploadService、実API、Phase0A/0B/7を維持・検証する。
+この7件は計4,817 bytes。19件すべての削除後も実globals.cssを全設定対象から生成し、
+基準mainと208,297 bytes、SHA256
+`f1f3f292dd3ec2083731796247d971832fe9b8e9ceb909995d4c3c5b7fa6cc31`が一致した。
+
+manifestの削除/変更元24件（604,479 bytes）は固定SHAからgit archiveで隔離フォルダへ
+実際に取り出し、全件のGit blob・SHA256・bytes一致を確認した。削除する19ファイル自体は
+23,375 bytesである。これはコードの復元確認であり、DB/Storageの実復元とは区別する。
+
+## 画像容量E2Eの診断と修正
+
+途中head `6b060d7b`のlocal E2Eは48 pass / 2既存skip / 1 fail。
+添付合計4MiBの検査が失敗したtraceでは、contactのSSR見出しとURLのassertionが先に通り、
+setInputFiles完了がReact初期化より前だった。onChangeが必ず空にするinput.valueも
+失敗後に残っていたため、容量計算ではなくイベントの取り逃しと判定した。
+
+基準mainでcontactのmain-app.jsだけ3秒遅延させた対照試験でも、旧helperは同じ失敗を再現。
+waitForURLのload待機では同条件で容量エラー表示とinput.valueのクリアを確認できた。
+openInquiryのURL待機だけを変更し、同じURL・見出し・容量検査・通信遮断を維持する。
+アプリの受付コードは変更しない。loadは一般的な全非同期hydrationの完了保証とは扱わない。
+traceのなかった前回Next→review失敗まで同原因と断定しない。

@@ -112,6 +112,62 @@
       "blob": "12635cdcd328af607a185fbd95cac807dc3874b5",
       "sha256": "85a52acb766f1a9ef8c32105394522825dd503b1681012e663453a593d930484",
       "bytes": 2838
+    },
+    {
+      "path": "e2e/natori-intake.spec.ts",
+      "action": "wait for contact document load; same intake assertions",
+      "blob": "4fd8753d7d53badc8ffbee3953920bead1b44930",
+      "sha256": "afb5f8c456a171be6332472b35e0e38128c022dea00119078443056950d7a91b",
+      "bytes": 15942
+    },
+    {
+      "path": "src/components/gallery2d/index.ts",
+      "action": "delete unreferenced helper or barrel",
+      "blob": "9de13c5924af86054284c88e92a309b01dd80e6b",
+      "sha256": "b7ad2d5ef7e4dedd6fdec929dd606b81b4e8ea89996d395aabdc6509fc034ad8",
+      "bytes": 142
+    },
+    {
+      "path": "src/components/home/index.ts",
+      "action": "delete unreferenced helper or barrel",
+      "blob": "630f7138683bbc62017c946434526ae75aae0d0d",
+      "sha256": "c739a74877e2e1d9ca0fff926d9c25025a80097488e19a3ca01c848475a17a08",
+      "bytes": 255
+    },
+    {
+      "path": "src/components/themeGalleries/test/index.ts",
+      "action": "delete unreferenced helper or barrel",
+      "blob": "ecec5aab88b4b0eb4747dc6265adc9ad84f40727",
+      "sha256": "c0bc9c4a7b209f11fac305b2a9cb90cbb78eeca01f04ae45c071523c5f8f1455",
+      "bytes": 467
+    },
+    {
+      "path": "src/i18n/navigation.ts",
+      "action": "delete unreferenced helper or barrel",
+      "blob": "90e06544c672a348c4e019ba900d19dab92b7def",
+      "sha256": "a784c0793e1df71c8eb75f04b02b793ac38f82fd9763506dccf732cc84d63c77",
+      "bytes": 195
+    },
+    {
+      "path": "src/lib/design/index.ts",
+      "action": "delete unreferenced helper or barrel",
+      "blob": "9712234489e690c667b897c883dbdb4683373432",
+      "sha256": "0b07fdb2981f4679ae03f3836029ab8df94abc929f22f6bdc945fedb16fb7ac5",
+      "bytes": 462
+    },
+    {
+      "path": "src/lib/entryUploadClient.ts",
+      "action": "delete unreferenced helper or barrel",
+      "blob": "016db5e922eca6873bc9fca71fa4d138626ac719",
+      "sha256": "92a05bc76886d2b23d889460be6f28b071fca3ed1fd5380c7ea5b4fed3734d84",
+      "bytes": 2475
+    },
+    {
+      "path": "src/lib/getDisplayPlanStats.ts",
+      "action": "delete unreferenced helper or barrel",
+      "blob": "f9232707f36ee4c9739607e12ce5be158341837c",
+      "sha256": "9ab7642131ed87d64ba29b271be612c0e7a00aeceb7a7a3227ad57744351c8f2",
+      "bytes": 821
     }
   ]
 }

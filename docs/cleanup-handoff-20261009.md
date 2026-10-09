@@ -8,8 +8,9 @@ Vercel `dpl_23zbE42S624NbGTwH1m8YGSbZzuj` のproduction/READYと公開domain割�
 
 - [draft PR #142](https://github.com/me-ish/me-ish-homepage/pull/142): 未使用フォーム・dropdown依存2件。
   保存済みhead `3317c31427f33910f232ab4fe46e8d62e4557a21`。このコード整理とは独立。
-- `codex/cleanup-unused-code-20261009`: thirdweb型補助2件と設定、AURA/CARDの
-  未参照helper8件、共通表示部品2件、不要sanitizer依存、銀行ログインE2Eの待機を整理。
+- [draft PR #143](https://github.com/me-ish/me-ish-homepage/pull/143): thirdweb型補助2件と設定、AURA/CARDの
+  未参照helper8件、共通表示部品2件、その他のhelper/export入口6件、旧upload client1件、
+  不要sanitizer依存、銀行ログインと受付画面のE2E待機を整理。削除ソースは計19件。
   適用単位をコミットで分け、最終head/CI/previewの結果はdraft PR本文に記録する。
 - これで整理全体の完了とはしない。残りの判断条件は下記に列挙する。
 
@@ -36,11 +37,13 @@ publicの全111追跡ファイル、Supabase全体、PhaseスクリプトとCI�
 #142は最終コミットとCIのsynthetic merge `d004ce4c40b26d247fde398170dc713443bd10b5`
 のGit treeが一致する。型・lint、210 files/1895 unit tests、通常E2E49 pass/2既存skipが成功。
 auditは既知のbraces chain 9 highで失敗し、強制的なmajor更新は行わない。
-追加Phase CIの最終状態はPR本文で確認する。
+追加Phase CI15件も成功。最終headのCIリンク・previewはPR本文で確認する。
 
 旧デモ受付の初回ローカル失敗は原因未確定。再試行成功だけで成功扱いに置き換えない。
 銀行→ログインの基準main失敗はcold compileが5秒assertionを超えた記録と遅延対照試験が
-一致し、この1箇所のみnavigation待機に変更する。詳細はarchive資料に記載。
+一致し、navigation待機に変更する。今回の画像容量失敗はtraceからJS読込前のイベント取り逃しと
+診断し、基準mainで3秒遅延の対照試験を行って受付のload待機を修正した。
+これで過去のNext→review失敗まで解明済みとは扱わない。詳細はarchive資料に記載。
 
 localはNode24/system Chromium151、CIは指定Node22/Playwright Chromiumで区別する。
 初回ローカルのnpm cache書込とChromium CDN取得失敗は環境設定/HTTP制限であり、
@@ -76,9 +79,11 @@ localはNode24/system Chromium151、CIは指定Node22/Playwright Chromiumで区�
 
 | 残る対象 | 保留理由と次の条件 |
 | --- | --- |
-| AuraDegreeSlider/IntroOverlay/WorldviewSelector/HeroCentered | 実行参照はないがまとめて除くとTailwindの39 selectorが消える。動的classと公開表示の照合後に別単位 |
+| AuraDegreeSlider/IntroOverlay/WorldviewSelector/HeroCentered | 実行参照はないがまとめて除くとTailwindの39 selectorが消える。AuraHeroMinimalは保存fontPreset文字列をclassとして通すため、既存公開データ/DOMの照合後に別単位 |
 | galleryの孤立部品・旧home・CookieConsent | 公開表示・root/privacy(#133)と切り分け、生成CSSとブラウザを照合 |
-| entryUploadClientや旧画面/API/Server Action | 停止ガード、Phase0A、既存利用者の銀行/精算、支払済みsave/戻り先との対応を先に確定 |
+| 旧画面/API/Server Action | 停止ガード、Phase0A、既存利用者の銀行/精算、支払済みsave/戻り先との対応を先に確定。呼出元を失ったentryUploadClientだけは今回除く |
+| design/tokens.ts | index.ts削除後も22 selectorを生成するため保持。実行参照0だけで削除しない |
+| separatorと残りの小部品 | 元の未参照候補41件中7件を今回整理。残りの分類は[台帳](archive/remaining-cleanup-20261009.md)を参照 |
 | public画像・フォント・保存成果物 | DB由来の動的参照や手動利用がある。ファイル名検索だけで削除しない |
 | root/Analytics・動画 | #133/#135の採否と競合処理は別担当の判断。勝手に取り込まない |
 | DB/Storage永久削除 | 参照解消・保存判断・実復元未完了につき保留 |
