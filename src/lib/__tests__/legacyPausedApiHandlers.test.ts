@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import { LEGACY_SERVICE_PAUSED_MESSAGE, type LegacyService } from '@/lib/legacyServiceSuspension';
+import { getSuspendedLegacyApi, LEGACY_SERVICE_PAUSED_MESSAGE, type LegacyService } from '@/lib/legacyServiceSuspension';
 
 const { forbiddenDependency, forbiddenFetch } = vi.hoisted(() => ({
   forbiddenDependency: vi.fn((name: string): never => {
@@ -31,6 +31,34 @@ type HandlerCase = {
 // Import and call the real route exports, without middleware. These methods
 // must remain stopped even if routing changes or a caller bypasses middleware.
 const handlers: HandlerCase[] = [
+  { path: '/api/aura/draft', method: 'POST', service: 'aura',
+    load: () => import('@/app/api/aura/draft/route').then((route) => route.POST) },
+  { path: '/api/aura/studio/draft', method: 'POST', service: 'aura',
+    load: () => import('@/app/api/aura/studio/draft/route').then((route) => route.POST) },
+  { path: '/api/aura/studio/save/synthetic-id', method: 'POST', service: 'aura',
+    load: () => import('@/app/api/aura/studio/save/[id]/route').then((route) => route.POST) },
+  { path: '/api/aura/studio/publish/synthetic-id', method: 'POST', service: 'aura',
+    load: () => import('@/app/api/aura/studio/publish/[id]/route').then((route) => route.POST) },
+  { path: '/api/aura/upload/avatar/synthetic-id', method: 'POST', service: 'aura',
+    load: () => import('@/app/api/aura/upload/avatar/[id]/route').then((route) => route.POST) },
+  { path: '/api/aura/upload/works/synthetic-id', method: 'POST', service: 'aura',
+    load: () => import('@/app/api/aura/upload/works/[id]/route').then((route) => route.POST) },
+  { path: '/api/aura/studio/upload/avatar/synthetic-id', method: 'POST', service: 'aura',
+    load: () => import('@/app/api/aura/studio/upload/avatar/[id]/route').then((route) => route.POST) },
+  { path: '/api/aura/studio/upload/works/synthetic-id', method: 'POST', service: 'aura',
+    load: () => import('@/app/api/aura/studio/upload/works/[id]/route').then((route) => route.POST) },
+  { path: '/api/aura/request/synthetic-id/email', method: 'POST', service: 'aura',
+    load: () => import('@/app/api/aura/request/[id]/email/route').then((route) => route.POST) },
+  { path: '/api/card/draft', method: 'POST', service: 'card',
+    load: () => import('@/app/api/card/draft/route').then((route) => route.POST) },
+  { path: '/api/card/public-slug', method: 'POST', service: 'card',
+    load: () => import('@/app/api/card/public-slug/route').then((route) => route.POST) },
+  { path: '/api/card/upload/avatar/synthetic-id', method: 'POST', service: 'card',
+    load: () => import('@/app/api/card/upload/avatar/[id]/route').then((route) => route.POST) },
+  { path: '/api/card/upload/works/synthetic-id', method: 'POST', service: 'card',
+    load: () => import('@/app/api/card/upload/works/[id]/route').then((route) => route.POST) },
+  { path: '/api/purchase/stripe', method: 'POST', service: 'gallery',
+    load: () => import('@/app/api/purchase/stripe/route').then((route) => route.POST) },
   { path: '/api/ai-guide', method: 'POST', service: 'gallery',
     load: () => import('@/app/api/ai-guide/route').then((route) => route.POST) },
   { path: '/api/aura/form/submit', method: 'GET', service: 'aura',
@@ -81,6 +109,7 @@ describe('paused API handlers independently of middleware', () => {
     it.each(['valid JSON', 'malformed JSON'] as const)(
       'returns the stable pause response without effects for %s input',
       async (input) => {
+        expect(getSuspendedLegacyApi(path, method)).toBe(service);
         const payload = input === 'valid JSON'
           ? JSON.stringify({ requestId: 'synthetic-request', entryId: 1, message: 'synthetic' })
           : '{invalid-json';

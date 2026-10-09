@@ -1,0 +1,118 @@
+{
+  "sourceCommit": "4bec943c722e0d9c6257e855ec258bacfbc05379",
+  "archiveBranch": "archive/legacy-write-api-before-20261010",
+  "files": [
+    {
+      "path": "src/app/api/aura/draft/__tests__/route.test.ts",
+      "blob": "2d7af17f6aa5aeaccd8e97ce26ab9f6815f68640",
+      "sha256": "0e32d75624556232001a99abf4262468c20dd6b29c484ad9d330beeeb35ff4e2",
+      "bytes": 2887,
+      "lines": 96
+    },
+    {
+      "path": "src/app/api/aura/draft/route.ts",
+      "blob": "db3985ee8ee7de822e4a14f44240754012335acc",
+      "sha256": "52ea710427c313ce382e57cb66b734b7b8be74c39e07d9df9fca02562884f416",
+      "bytes": 1819,
+      "lines": 49
+    },
+    {
+      "path": "src/app/api/aura/request/[id]/email/route.ts",
+      "blob": "e8f0dedadff77bd0a026d2af43447ad3e27ad9ab",
+      "sha256": "5d6dc73d45bd339732b62085f7f291e04e977a7470ba55030c9237a4c836af57",
+      "bytes": 3115,
+      "lines": 99
+    },
+    {
+      "path": "src/app/api/aura/studio/draft/route.ts",
+      "blob": "29f463639fcce7f3c25fa004582d14fea34b3c11",
+      "sha256": "624db5a6d96b5ab4b6551c625afa94bfa168f85a74ffa9bfbe30c182fcb0be83",
+      "bytes": 1238,
+      "lines": 36
+    },
+    {
+      "path": "src/app/api/aura/studio/publish/[id]/route.ts",
+      "blob": "4157a7266d87fd2273f9384aa571ab853ef98171",
+      "sha256": "0b7b97df250c637ed4d68785497d440b022220cb75d7b34957591d4f10e93f14",
+      "bytes": 1143,
+      "lines": 38
+    },
+    {
+      "path": "src/app/api/aura/studio/save/[id]/route.ts",
+      "blob": "c7b130eb61a92d497ebbfbe92b4a1cfbe0ed8b70",
+      "sha256": "948275ef69476ac30e63cf6dd9d2ba2e86300640b780bf73185e7e401bd24249",
+      "bytes": 1717,
+      "lines": 53
+    },
+    {
+      "path": "src/app/api/aura/studio/upload/avatar/[id]/route.ts",
+      "blob": "a09619f4374060036c9f45e556ddfdfe40bda99b",
+      "sha256": "48b00852824613e7ac9b2698f973cb0934a779184e3864029bd8cf51eb5459db",
+      "bytes": 2232,
+      "lines": 67
+    },
+    {
+      "path": "src/app/api/aura/studio/upload/works/[id]/route.ts",
+      "blob": "2cfef8019cfddd5e70138d7feb6c1bd4770b20a0",
+      "sha256": "40add29448d66bb3455e272f7ecbef797948ab2045c236fe5eff9a5a040ba344",
+      "bytes": 2264,
+      "lines": 66
+    },
+    {
+      "path": "src/app/api/aura/upload/avatar/[id]/route.ts",
+      "blob": "df00991b382433eff8875ef28f45055b08ad5b72",
+      "sha256": "4c79c624a2314273a124e8dc87da71b626d179853e697cef2f02f8ecc32aeed6",
+      "bytes": 3034,
+      "lines": 82
+    },
+    {
+      "path": "src/app/api/aura/upload/works/[id]/route.ts",
+      "blob": "e70c52f756dde84b81ffadbe743616580d45a9a5",
+      "sha256": "add2d1108f726c9a2bd996ff5efa88cab482ef414936cdc544ab149f26900f14",
+      "bytes": 2837,
+      "lines": 85
+    },
+    {
+      "path": "src/app/api/card/draft/route.ts",
+      "blob": "ba6b842288258f7436a9fad3da307de554489429",
+      "sha256": "1d8ee143e79584f1f779c3e0bf6b54b30da38f30be5cbe5141b6fbc4e25b1167",
+      "bytes": 1652,
+      "lines": 58
+    },
+    {
+      "path": "src/app/api/card/public-slug/route.ts",
+      "blob": "c1467944d2d5cbd19860fa9dc2dfc7155ac2275d",
+      "sha256": "5eda9e473ae21e1a600442a4e1b3392e35deb44c1b5637bed116457f722fc481",
+      "bytes": 2818,
+      "lines": 110
+    },
+    {
+      "path": "src/app/api/card/upload/avatar/[id]/route.ts",
+      "blob": "09f6e4091d510f3c1ed4b095fd7f29ce75fe7aa2",
+      "sha256": "291ec67b922e20f72bab3d83985a7cff39d50a06289e76373b509591902a57fa",
+      "bytes": 2400,
+      "lines": 77
+    },
+    {
+      "path": "src/app/api/card/upload/works/[id]/route.ts",
+      "blob": "f1402b3ea19f1ff899d1e6212e0e51ff3609c885",
+      "sha256": "ca4c8a8d4fda653cc584f35e8c31627f314c46c5ea1d1fe458d5732c0a0f7c0d",
+      "bytes": 2428,
+      "lines": 79
+    },
+    {
+      "path": "src/app/api/purchase/stripe/route.ts",
+      "blob": "4d39969d018e79203fdc5690cbebd8edf1a423f9",
+      "sha256": "cc94f1ef69833a3aeb9e0471695f6d49639b0f68ef41be85949ea6a0d4641e4d",
+      "bytes": 4124,
+      "lines": 117
+    },
+    {
+      "path": "src/lib/__tests__/legacyPausedApiHandlers.test.ts",
+      "blob": "b52359ded7c5747d3df6a0e1c394194d63003845",
+      "sha256": "f4e7c631d2bd57b0c813d89c6a642d4b36a0c08dd0187c75a142ff330d3c9420",
+      "bytes": 6324,
+      "lines": 121
+    }
+  ]
+}
