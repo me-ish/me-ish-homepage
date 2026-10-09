@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
 import type { Entry } from '../../types/types';
+import { LEGACY_SERVICES_PAUSED } from '@/lib/legacyServiceSuspension';
 
 interface Props {
   artwork: Entry;
@@ -106,7 +107,7 @@ const isEditionSoldOut = isLimited && (editionRemainingForDisplay ?? 0) <= 0;
   }, [(a as any).id]);
 
   const handleLike = async () => {
-    if (liked) return;
+    if (LEGACY_SERVICES_PAUSED || liked) return;
     setIsAnimating(true);
     try {
       const res = await fetch(`/api/entries/${(a as any).id}/like`, { method: 'POST', headers: { 'x-requested-with': 'me-ish' } });
@@ -122,6 +123,7 @@ const isEditionSoldOut = isLimited && (editionRemainingForDisplay ?? 0) <= 0;
   };
 
 const handlePurchase = async () => {
+  if (LEGACY_SERVICES_PAUSED) return;
   if (!id || !title || !price) {
     alert('購入情報が不足しています');
     return;
@@ -265,6 +267,8 @@ const handlePurchase = async () => {
           <div className="absolute bottom-0 right-3 z-10 mb-2">
             <button
               onClick={handleLike}
+              disabled={LEGACY_SERVICES_PAUSED}
+              title={LEGACY_SERVICES_PAUSED ? 'いいねの受付は休止中です' : undefined}
               className="relative flex items-center gap-1 px-3 py-2 bg-white/10 hover:bg-white/15 text-white backdrop-blur-sm rounded-full transition-all duration-300"
             >
               {isAnimating && <span className="absolute inset-0 rounded-full bg-pink-400 opacity-40 animate-ping" />}
@@ -420,6 +424,14 @@ function DesktopPurchaseBar({
   onPurchase,
 }: PurchaseBarProps) {
   const disabled = isSold || isEditionSoldOut || price == null;
+
+  if (LEGACY_SERVICES_PAUSED) {
+    return (
+      <div className="fixed bottom-0 left-0 right-0 z-[10020] border-t border-white/10 bg-black/90 px-6 py-4 text-center text-sm text-white">
+        作品の新規購入は休止中です。
+      </div>
+    );
+  }
 
   return (
     <div className="fixed left-0 right-0 bottom-0 z-[10020] bg-black/90 backdrop-blur border-t border-white/10">

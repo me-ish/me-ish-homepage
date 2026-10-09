@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { LEGACY_SERVICES_PAUSED } from '@/lib/legacyServiceSuspension';
 
 interface NormalPurchaseButtonProps {
   entryId: string;
@@ -10,6 +11,7 @@ interface NormalPurchaseButtonProps {
 
 const NormalPurchaseButton: React.FC<NormalPurchaseButtonProps> = ({ entryId, title, price }) => {
   const handleClick = async () => {
+    if (LEGACY_SERVICES_PAUSED) return;
     try {
       const res = await fetch('/api/purchase/stripe', {
         method: 'POST',
@@ -38,9 +40,10 @@ const NormalPurchaseButton: React.FC<NormalPurchaseButtonProps> = ({ entryId, ti
   return (
     <button
       onClick={handleClick}
-      className="bg-[#00a1e9] hover:bg-[#008ec4] text-white font-bold py-2 px-6 rounded-lg transition"
+      disabled={LEGACY_SERVICES_PAUSED}
+      className="bg-[#00a1e9] hover:bg-[#008ec4] text-white font-bold py-2 px-6 rounded-lg transition disabled:opacity-60"
     >
-      購入する（¥{price.toLocaleString()}）
+      {LEGACY_SERVICES_PAUSED ? '購入受付休止中' : `購入する（¥${price.toLocaleString()}）`}
     </button>
   );
 };

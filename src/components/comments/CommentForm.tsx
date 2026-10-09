@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { LEGACY_SERVICES_PAUSED } from '@/lib/legacyServiceSuspension';
 
 type Props = {
   entryId: number;
@@ -33,7 +34,7 @@ export function CommentForm({ entryId, onSubmit, isAuthenticated }: Props) {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!isValid || submitting) return;
+    if (LEGACY_SERVICES_PAUSED || !isValid || submitting) return;
 
     setSubmitting(true);
     setError(null);
@@ -63,6 +64,10 @@ export function CommentForm({ entryId, onSubmit, isAuthenticated }: Props) {
       setSubmitting(false);
     }
   };
+
+  if (LEGACY_SERVICES_PAUSED) {
+    return <p className="rounded-lg border bg-gray-50 p-4 text-center text-sm text-gray-500">コメントの新規投稿は休止中です。</p>;
+  }
 
   if (!isAuthenticated) {
     return (

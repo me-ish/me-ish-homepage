@@ -15,6 +15,7 @@ import {
   type EntryRow,
 } from '@/lib/gallery/galleryUtils';
 import { isPlaceholder } from '@/lib/gallery/placeholder';
+import { LEGACY_SERVICES_PAUSED } from '@/lib/legacyServiceSuspension';
 
 export interface ArtworkCardProps {
   entry: EntryRow;
@@ -77,7 +78,7 @@ export function ArtworkCard({
   const handleLike = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    if (liked || likeBusy) return;
+    if (LEGACY_SERVICES_PAUSED || liked || likeBusy) return;
 
     setLikeBusy(true);
     setLiked(true);
@@ -103,7 +104,7 @@ export function ArtworkCard({
   const handlePurchase = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!entry.is_for_sale || sold || purchaseBusy) return;
+    if (LEGACY_SERVICES_PAUSED || !entry.is_for_sale || sold || purchaseBusy) return;
 
     setPurchaseBusy(true);
     try {
@@ -231,7 +232,8 @@ export function ArtworkCard({
               onClick={handleLike}
               className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-pink-600"
               aria-pressed={liked}
-              disabled={likeBusy}
+              disabled={LEGACY_SERVICES_PAUSED || likeBusy}
+              title={LEGACY_SERVICES_PAUSED ? 'いいねの受付は休止中です' : undefined}
             >
               <Heart
                 className={cn(
@@ -247,10 +249,10 @@ export function ArtworkCard({
                 type="button"
                 onClick={handlePurchase}
                 className="inline-flex items-center gap-1 rounded-full bg-[#00a1e9] px-3 py-1 text-xs font-medium text-white hover:brightness-105 disabled:opacity-60"
-                disabled={purchaseBusy}
+                disabled={LEGACY_SERVICES_PAUSED || purchaseBusy}
               >
                 <ShoppingCart className="h-3.5 w-3.5" />
-                {purchaseBusy ? '処理中...' : '購入する'}
+                {LEGACY_SERVICES_PAUSED ? '購入受付休止中' : purchaseBusy ? '処理中...' : '購入する'}
               </button>
             )}
           </div>

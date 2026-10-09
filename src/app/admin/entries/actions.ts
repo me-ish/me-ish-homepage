@@ -9,6 +9,7 @@
  */
 
 import { getSiteUrl } from '@/lib/constants';
+import { LEGACY_SERVICES_PAUSED, LEGACY_SERVICE_PAUSED_MESSAGE } from '@/lib/legacyServiceSuspension';
 
 export type ProcessingJob = {
   id: string;
@@ -40,6 +41,7 @@ export type ApproveResult = {
 };
 
 export async function approveEntryAction(entryId: number): Promise<ApproveResult> {
+  if (LEGACY_SERVICES_PAUSED) throw new Error(LEGACY_SERVICE_PAUSED_MESSAGE);
   const token = process.env.ADMIN_API_TOKEN;
   if (!token) {
     throw new Error('Server configuration error: missing ADMIN_API_TOKEN');
@@ -74,6 +76,7 @@ export type RejectResult = {
 };
 
 export async function rejectEntryAction(entryId: number, reason: string | null): Promise<RejectResult> {
+  if (LEGACY_SERVICES_PAUSED) throw new Error(LEGACY_SERVICE_PAUSED_MESSAGE);
   const token = process.env.ADMIN_API_TOKEN;
   if (!token) {
     throw new Error('Server configuration error: missing ADMIN_API_TOKEN');
@@ -106,6 +109,7 @@ export type ResetResult = {
 };
 
 export async function resetEntryAction(entryId: number): Promise<ResetResult> {
+  if (LEGACY_SERVICES_PAUSED) throw new Error(LEGACY_SERVICE_PAUSED_MESSAGE);
   const token = process.env.ADMIN_API_TOKEN;
   if (!token) {
     throw new Error('Server configuration error: missing ADMIN_API_TOKEN');

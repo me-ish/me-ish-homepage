@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useZoomArtwork } from './ZoomArtworkContext';
 import { supabase } from '@/lib/supabaseClient';
+import { LEGACY_SERVICES_PAUSED } from '@/lib/legacyServiceSuspension';
 
 const ZoomArtworkMobileDisplay = dynamic(() => import('./ZoomArtworkMobileDisplay'), { ssr: false });
 const ZoomArtworkDesktopDisplay = dynamic(() => import('./ZoomArtworkDesktopDisplay'), { ssr: false });
@@ -38,7 +39,7 @@ export default function ZoomArtworkDisplay() {
 
   // 作品が開かれたときにビューを記録
   useEffect(() => {
-    if (!zoomedArtwork?.id) return;
+    if (LEGACY_SERVICES_PAUSED || !zoomedArtwork?.id) return;
 
     const recordView = async () => {
       try {

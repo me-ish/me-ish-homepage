@@ -4,6 +4,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Send, X, Mic, MicOff, Sparkles, Loader2, ExternalLink, RotateCcw } from 'lucide-react';
 import { useZoomArtworkOptional } from './ZoomArtworkContext';
+import { LEGACY_SERVICES_PAUSED } from '@/lib/legacyServiceSuspension';
 
 /* ===== 最小の SpeechRecognition 型定義 ===== */
 type ISpeechRecognition = {
@@ -178,6 +179,7 @@ export default function AIGuideChat({
    * 送信処理
    * ----------------------------- */
   const handleSubmit = async (text: string) => {
+    if (LEGACY_SERVICES_PAUSED) return;
     const q = text?.trim();
     if (!q) return;
 
@@ -253,7 +255,7 @@ export default function AIGuideChat({
   /* -------------------------------
    * Render
    * ----------------------------- */
-  if (isArtworkZoomed) return null;
+  if (LEGACY_SERVICES_PAUSED || isArtworkZoomed) return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-[9999]">

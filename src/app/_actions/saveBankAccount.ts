@@ -1,6 +1,7 @@
 'use server';
 
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { LEGACY_SERVICES_PAUSED, LEGACY_SERVICE_PAUSED_MESSAGE } from '@/lib/legacyServiceSuspension';
 
 type BankAccountInput = {
   external_user_id: string;
@@ -22,6 +23,7 @@ type BankAccountInput = {
  * 存在することを確認してから upsert する。
  */
 export async function saveBankAccount(input: BankAccountInput): Promise<{ error: string | null }> {
+  if (LEGACY_SERVICES_PAUSED) return { error: LEGACY_SERVICE_PAUSED_MESSAGE };
   const { external_user_id, bank_code, branch_code, account_type, account_number, account_name_kana } = input;
 
   // external_user_id が entries に存在し、未審査であることを確認

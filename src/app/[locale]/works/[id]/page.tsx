@@ -20,6 +20,7 @@ import {
 } from '@/lib/gallery/galleryUtils';
 import { CommentSection } from '@/components/comments';
 import { useTranslations } from 'next-intl';
+import { LEGACY_SERVICES_PAUSED } from '@/lib/legacyServiceSuspension';
 
 /** 作品詳細に必要なカラム */
 const WORK_DETAIL_COLUMNS = `
@@ -52,7 +53,7 @@ export default function WorkDetailPage() {
 
   // 閲覧イベントを記録
   useEffect(() => {
-    if (!id || isNaN(Number(id)) || viewRecorded.current) return;
+    if (LEGACY_SERVICES_PAUSED || !id || isNaN(Number(id)) || viewRecorded.current) return;
 
     const recordView = async () => {
       viewRecorded.current = true;
