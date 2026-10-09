@@ -105,6 +105,13 @@
       "blob": "22365074019f99c703aa5aeed859895daf007e69",
       "sha256": "a2d508bece35ff7e8a086b3bae413cb1724fe63e2c135481e25186bd261eaaef",
       "bytes": 558065
+    },
+    {
+      "path": "e2e/legacy-service-stop.spec.ts",
+      "action": "wait for cold login navigation; same expected URL and copy",
+      "blob": "12635cdcd328af607a185fbd95cac807dc3874b5",
+      "sha256": "85a52acb766f1a9ef8c32105394522825dd503b1681012e663453a593d930484",
+      "bytes": 2838
     }
   ]
 }
