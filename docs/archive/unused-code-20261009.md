@@ -44,3 +44,10 @@ API内の実Storage処理と既存のsanitize/markdown処理は保持する。�
 
 Phase 0Bと7はsrcの共通ディレクトリを試験appへ再帰コピーする。固定参照はないが、
 通常CIに加えて該当Phase gateを最終コミットで確認する。
+
+## 未参照の共通表示部品
+
+CardBase.tsx / SectionContainer.tsx の2件を除く。外部import/re-export/動的参照は0。
+参照先のapplyVariantStyleとaura.designSystemは公開描画でも使われるので保持。
+2部品を除いたTailwind生成CSSは全追跡srcを入力した比較でbyte単位で一致。
+残るコンポーネントのDOM、hooks、イベント、ARIAには変更を加えない。

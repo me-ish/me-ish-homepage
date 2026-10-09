@@ -77,6 +77,20 @@
       "blob": "0fcc79037a9e6970a78b74c6eb9ac6568cd46bee",
       "sha256": "59e3ad2596ee91202cf1ff2e0236cbdd1301555ec239408371b51d2ac1d7a226",
       "bytes": 1349
+    },
+    {
+      "path": "src/components/aura/sections/_shared/CardBase.tsx",
+      "action": "delete unreferenced shared component",
+      "blob": "654a94b67f8b019fe4450451ebfcfcfd8bddac7d",
+      "sha256": "395670ebff72c277b96e5eb1beae8d6fee7ca923010cc4e04e8c8b3eb913d6be",
+      "bytes": 2010
+    },
+    {
+      "path": "src/components/aura/sections/_shared/SectionContainer.tsx",
+      "action": "delete unreferenced shared component",
+      "blob": "cd105e3a74369919bb0830589b54d4387252cdcc",
+      "sha256": "01a2e2a80d11f6d8a89609f919eab2b04f4f280d1de17805010dbaad8bc5625e",
+      "bytes": 1382
     }
   ]
 }
