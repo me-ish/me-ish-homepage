@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom';
 import { Heart, ShoppingCart, Globe, Instagram, Infinity, Hash, Ban } from 'lucide-react';
 import { FaXTwitter } from 'react-icons/fa6';
 import type { Entry } from '../../types/types';
+import { LEGACY_SERVICES_PAUSED } from '@/lib/legacyServiceSuspension';
 
 interface Props {
   artwork: Entry;
@@ -50,7 +51,7 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
   }, [(a as any).id]);
 
   const handleLike = async () => {
-    if (liked) return;
+    if (LEGACY_SERVICES_PAUSED || liked) return;
     setIsAnimating(true);
     try {
       const res = await fetch(`/api/entries/${(a as any).id}/like`, { method: 'POST', headers: { 'x-requested-with': 'me-ish' } });
@@ -97,6 +98,7 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
     : '登録日不明';
 
   const handlePurchase = async () => {
+    if (LEGACY_SERVICES_PAUSED) return;
     if (!id || !title || price == null) {
       alert('購入情報が不足しています');
       return;
@@ -202,15 +204,16 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
                 )}
 
                 {/* ⚖️ 特商法注記（販売する時だけ） */}
-                <LegalNotices />
+                {!LEGACY_SERVICES_PAUSED && <LegalNotices />}
 
                 {/* 🛒 購入ボタン */}
                 <button
                   onClick={handlePurchase}
-                  className="flex items-center gap-2 bg-[#00a1e9] hover:bg-[#0090cc] text-white font-semibold py-2 px-5 rounded-xl shadow transition-all"
+                  disabled={LEGACY_SERVICES_PAUSED}
+                  className="flex items-center gap-2 bg-[#00a1e9] hover:bg-[#0090cc] text-white font-semibold py-2 px-5 rounded-xl shadow transition-all disabled:opacity-60"
                 >
                   <ShoppingCart size={20} />
-                  購入する
+                  {LEGACY_SERVICES_PAUSED ? '購入受付休止中' : '購入する'}
                 </button>
               </>
             ) : (
@@ -270,6 +273,8 @@ export default function ZoomArtworkMobileDisplay({ artwork, onClose }: Props) {
         <div className="fixed bottom-5 right-5 z-50">
           <button
             onClick={handleLike}
+            disabled={LEGACY_SERVICES_PAUSED}
+            title={LEGACY_SERVICES_PAUSED ? 'いいねの受付は休止中です' : undefined}
             className="relative flex items-center gap-1 px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full transition-all duration-300"
           >
             {isAnimating && <span className="absolute inset-0 rounded-full bg-pink-400 opacity-40 animate-ping" />}

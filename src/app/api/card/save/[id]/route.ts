@@ -1,10 +1,11 @@
 // src/app/api/card/save/[id]/route.ts
 import { NextResponse } from "next/server";
 import { CardContentSchema } from "@/lib/card/card.schema";
-import { publishCard, findCardRequest } from "@/lib/card/card.db";
+import { publishCard } from "@/lib/card/card.db";
 import { requireCardRequestAccess } from "@/lib/card/requireCardAccess";
 import { checkCsrf } from "@/lib/auth/csrf";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { canContinueLegacyPublication } from "@/lib/legacyPublicationContinuation";
+import { LEGACY_SERVICES_PAUSED, LEGACY_SERVICE_PAUSED_MESSAGE } from "@/lib/legacyServiceSuspension";
 
 type Params = { id: string };
 
@@ -22,6 +23,15 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
     const access = await requireCardRequestAccess(id, req);
     if (!access.ok) return access.response;
     const rec = access.rec;
+
+    // Existing free published cards remain editable; unpublished free drafts
+    // cannot create a new public page while intake is paused.
+    if (LEGACY_SERVICES_PAUSED && !canContinueLegacyPublication(rec)) {
+      return NextResponse.json(
+        { ok: false, error: "legacy_service_paused", message: LEGACY_SERVICE_PAUSED_MESSAGE, service: "card" },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
+      );
+    }
 
     // 2) Parse request body
     const json = await req.json().catch(() => null);

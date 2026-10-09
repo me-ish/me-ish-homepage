@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { supabase } from '@/lib/supabaseClient';
 import { ArrowLeft, Loader2, CheckCircle2, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,8 @@ function matchBranch(br: Branch, q: string) {
 export default function BankSettingsPage() {
   const router = useRouter();
   const t = useTranslations('pages.bank');
+  const locale = useLocale();
+  const bankPath = `${locale === 'en' ? '/en' : ''}/settings/bank`;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -70,13 +72,13 @@ export default function BankSettingsPage() {
     (async () => {
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
-        router.push('/');
+        router.replace(`${locale === 'en' ? '/en' : ''}/login?redirect=${encodeURIComponent(bankPath)}`);
         return;
       }
       setUid(data.user.id);
       setUserEmail(data.user.email ?? null);
     })();
-  }, [router]);
+  }, [router, locale, bankPath]);
 
   // マスタ読み込み
   useEffect(() => {

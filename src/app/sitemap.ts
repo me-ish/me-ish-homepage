@@ -30,12 +30,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { ...withAlternates('white'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
     { ...withAlternates('white/2d'), lastModified: now, changeFrequency: 'daily', priority: 0.8 },
 
-    // AURA
-    { ...withAlternates('aura'), lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
-
     // 情報ページ
     { ...withAlternates('contact'), lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
-    { ...withAlternates('entry'), lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     { ...withAlternates('news'), lastModified: now, changeFrequency: 'weekly', priority: 0.6 },
 
     // フッター（法的文書）

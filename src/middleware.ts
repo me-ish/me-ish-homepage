@@ -10,10 +10,35 @@ import {
   constantTimeEquals,
   deriveNatoriDashboardCookieToken,
 } from '@/features/natori/lib/dashboardKeyToken';
+import {
+  getLegacyPauseDestination,
+  getSuspendedLegacyApi,
+  getSuspendedLegacyPage,
+  LEGACY_SERVICE_PAUSED_MESSAGE,
+} from '@/lib/legacyServiceSuspension';
 
 const intlMiddleware = createMiddleware(routing);
 
 export default async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const apiService = getSuspendedLegacyApi(pathname, request.method);
+  if (apiService) {
+    return NextResponse.json(
+      { error: 'legacy_service_paused', message: LEGACY_SERVICE_PAUSED_MESSAGE, service: apiService },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
+  const pageService = getSuspendedLegacyPage(pathname);
+  if (pageService) {
+    const destination = new URL(getLegacyPauseDestination(pathname, pageService), request.url);
+    const response = NextResponse.redirect(destination, 307);
+    response.headers.set('Cache-Control', 'no-store');
+    return response;
+  }
+  // Explicit API/auth matchers below must never send these routes through intl
+  // or the dashboard-key redirect flow.
+  if (/^\/(?:api|admin|auth)(?:\/|$)/.test(pathname)) return NextResponse.next();
+
   // natori 管理画面の合言葉キー: `?natori-key=<NATORI_DASHBOARD_KEY>` 付きで
   // 開くと 8 時間有効の Cookie をセットし、キーを消した URL にリダイレクトする。
   // Cookie 値はキー平文ではなく HMAC トークン（漏洩してもキーは復元不可）。
@@ -61,5 +86,14 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|admin|admin-login|auth|counts|_next|_vercel|.*\\..*).*)'],
+  matcher: [
+    '/((?!api|admin|admin-login|auth|counts|_next|_vercel|.*\\..*).*)',
+    '/api/:path*',
+    '/admin/api/:path*',
+    '/auth/link/:path*',
+    // The default locale matcher excludes dots. Explicit entries also cover
+    // old URLs whose ids/slugs contain dots, including localized URLs.
+    '/:service(entry|renew|login|mypage|aura|card)/:path*',
+    '/:locale(ja|en)/:service(entry|renew|login|mypage|aura|card)/:path*',
+  ],
 };

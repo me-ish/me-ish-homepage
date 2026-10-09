@@ -9,6 +9,8 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAuraRequestAccess } from "@/lib/aura/requireAuraAccess";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { isAdminEmailAsync } from "@/lib/isAdmin";
+import { canContinueLegacyPublication } from "@/lib/legacyPublicationContinuation";
+import { LEGACY_SERVICES_PAUSED, LEGACY_SERVICE_PAUSED_MESSAGE } from "@/lib/legacyServiceSuspension";
 
 async function getSessionUserEmail(): Promise<string | null> {
   try {
@@ -43,6 +45,15 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
     const access = await requireAuraRequestAccess(id, req);
     if (!access.ok) return access.response;
     const rec = access.rec;
+
+    // Keep existing paid fulfillment and published-page updates available.
+    // Run before free claims/admin exemptions and never trust body entitlement.
+    if (LEGACY_SERVICES_PAUSED && !canContinueLegacyPublication(rec)) {
+      return NextResponse.json(
+        { ok: false, error: "legacy_service_paused", message: LEGACY_SERVICE_PAUSED_MESSAGE, service: "aura" },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
+      );
+    }
 
     // 2) JSON 読み取り
     const json = await req.json().catch(() => null);
