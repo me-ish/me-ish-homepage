@@ -50,7 +50,9 @@ test('signed-out artists can reach settlement login in their locale', async ({ p
       : route.abort();
   });
   await page.goto('/en/settings/bank');
-  await expect(page).toHaveURL(/\/en\/login\?redirect=%2Fen%2Fsettings%2Fbank/);
+  // The client redirect can compile /login on its first visit in the dev server.
+  // Wait as a navigation rather than using the 5-second assertion timeout.
+  await page.waitForURL(/\/en\/login\?redirect=%2Fen%2Fsettings%2Fbank/, { timeout: 30_000 });
   await expect(page.getByText('Existing artists can sign in to manage payout details. New service requests are paused.')).toBeVisible();
 });
 
