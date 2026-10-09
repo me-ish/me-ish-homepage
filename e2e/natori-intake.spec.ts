@@ -6,7 +6,8 @@ const TWO_MIB_PLUS_ONE = 2 * 1024 * 1024 + 1;
 
 async function openInquiry(page: Page, label = "まず相談したい") {
   await page.locator("#form").getByRole("link", { name: label }).click();
-  await expect(page).toHaveURL(/\/portfolio\/contact\?/);
+  // The SSR heading can appear before the contact page's scripts load.
+  await page.waitForURL(/\/portfolio\/contact\?/, { waitUntil: "load" });
   await expect(page.getByRole("heading", { name: "ご相談・ご依頼", exact: true })).toBeVisible();
 }
 
