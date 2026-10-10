@@ -82,7 +82,7 @@ export function getSuspendedLegacyApi(
   }
 
   if (['/api/entry/upload', '/api/purchase/stripe', '/api/ai-guide',
-    '/api/internal/send-submit-email'].some((p) => isPath(path, p))) return 'gallery';
+    '/api/internal/send-submit-email', '/api/cert/download', '/api/files/download'].some((p) => isPath(path, p))) return 'gallery';
 
   // Payout closing/reminders remain active pending review of existing balances.
   if (['exhibit-ending-soon', 'exhibit-end', 'exhibit-delete', 'float-daily-slots']
