@@ -66,3 +66,11 @@ root body、Google Fonts import、auraFonts CSSは変更しない。
 
 旧3DのReactCurrentBatchConfigエラーは、廃止した表示経路自体を終了案内に置き換えることで解消する。
 3D rendererを修復したという意味ではない。ナトリ表示・依頼の変更とは分離する。
+
+## CIで見つかったフォルダ依存
+
+package-lock変更で再起動した専用Phaseが、PR #150後に追跡ファイルのなくなった
+`src/hooks`をコピーしようとしてENOENTになった。Phase 0Bのprepare-browserが
+lib/components/hooks/types/featuresの各ディレクトリをコピーし、後続Phaseもこれを再利用する。
+`src/hooks/README.md`でフォルダをGitに保持することで修正。旧hooksを復活させず、
+試験スクリプト・条件は変更しない。失敗した初回runと修正後のrunは区別して記録する。
