@@ -2,7 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 
 const GA_FLAG = 'ga-disable-G-EZR21G5Q2T';
 const PUBLIC_PATH = '/ja/service-paused?service=aura';
-const PRIVATE_PATH = '/ja/natori/quote/analytics-synthetic-token';
+// Intentionally shorter than the service token minimum: no DB lookup is needed.
+const PRIVATE_PATH = '/ja/natori/quote/synthetic-token';
 
 // Small vendor models exercise synchronous history collection. Every script and
 // collection request is intercepted: no test telemetry reaches either vendor.
@@ -65,7 +66,7 @@ for (const locale of ['', '/ja', '/en']) {
   for (const surface of ['consult', 'quote', 'delivery']) {
     test(`no analytics loads on ${locale || 'default'}/${surface}`, async ({ page }) => {
       const observed = await interceptAnalytics(page);
-      await page.goto(`${locale}/natori/${surface}/analytics-synthetic-token`);
+      await page.goto(`${locale}/natori/${surface}/synthetic-token`);
       await expect(page.locator('body')).toHaveClass(/font-zen/);
       // Proves that the root client gate hydrated; an error shell is insufficient.
       await expect.poll(() => page.evaluate((flag) => Reflect.get(window, flag), GA_FLAG)).toBe(true);
@@ -88,7 +89,7 @@ test('public analytics works, then private navigation stops synchronous and late
   await expect(page.getByRole('heading', { name: '新規受付を休止しています' })).toBeVisible();
   await page.waitForLoadState('networkidle');
   expect(observed.events).toHaveLength(before);
-  expect(observed.events.some((event) => event.includes('analytics-synthetic-token'))).toBe(false);
+  expect(observed.events.some((event) => event.includes('synthetic-token'))).toBe(false);
   expect(observed.writes).toEqual([]);
 });
 
