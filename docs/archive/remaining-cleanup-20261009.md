@@ -75,3 +75,11 @@ AuraHeroMinimalは`ai-portfolio-font-`で始まるfontPreset全体をclassとし
 対象・復元元・検証方法は[unused-home-20261010.md](unused-home-20261010.md)を参照。
 上表の残る28候補は今回の削除対象ではない。#133は#147で統合済みだが、
 CookieConsent・Footerの保持判断はこの整理で変更しない。
+
+### 同日: 旧管理の判断更新
+
+上表3・4の未使用UIは、旧管理の読取・問い合わせ・精算・出展者詳細を保持したまま退避。
+すでにmiddlewareで休止している管理書込6 APIの内部処理も退避し、URLと503応答を保持した。
+API専用のguarantee capacity helperと未使用schemaを整理し、生成CSSは3クラスの保持で完全一致。
+対象・復元元・既存顧客対応の境界は[legacy-admin-20261010.md](legacy-admin-20261010.md)を参照。
+残る26候補の判断は変更しない。既存の`/admin/users`一覧ページ欠落は同資料へ別件として記録した。
