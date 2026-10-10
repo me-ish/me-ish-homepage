@@ -1,137 +1,85 @@
-import { isValidElement } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({
-  from: vi.fn(), row: vi.fn(), auraRequest: vi.fn(), cardRequest: vi.fn(),
-}));
-vi.mock('@/lib/supabaseAdmin', () => ({ supabaseAdmin: () => ({ from: mocks.from }) }));
-vi.mock('@/lib/aura/aura.db', () => ({ findRequest: mocks.auraRequest }));
-vi.mock('@/lib/card/card.db', () => ({ findCardRequest: mocks.cardRequest }));
-vi.mock('@/components/aura/renderer/RendererRouter', () => ({ RendererRouter: () => null }));
-vi.mock('@/components/card/renderer/CardRenderer', () => ({ default: () => null }));
-vi.mock('@/components/aura/AuraPreviewShellClient', () => ({ default: () => null }));
-vi.mock('@/components/card/CardPreviewShellClient', () => ({ default: () => null }));
-vi.mock('@/app/[locale]/aura/preview/[id]/PreviewWaitClient', () => ({ default: () => null }));
-vi.mock('@/components/card/CardPreviewWaitClient', () => ({ default: () => null }));
+vi.mock('@/lib/supabaseAdmin', () => { throw new Error('retired page must not load DB code'); });
+vi.mock('@/lib/supabaseServer', () => { throw new Error('retired page must not load DB code'); });
+vi.mock('@/lib/supabaseClient', () => { throw new Error('retired page must not load DB code'); });
+vi.mock('@/lib/aura/aura.db', () => { throw new Error('retired page must not load DB code'); });
+vi.mock('@/lib/card/card.db', () => { throw new Error('retired page must not load DB code'); });
+vi.mock('@/lib/aura/studio/studioDb', () => { throw new Error('retired page must not load DB code'); });
 
-import AuraPage, { generateMetadata as auraMetadata } from '@/app/[locale]/aura/p/[public_id]/page';
-import CardPage, { generateMetadata as cardMetadata } from '@/app/[locale]/card/p/[public_id]/page';
-import AuraSlug from '@/app/[locale]/aura/u/[slug]/page';
-import AuraPreview from '@/app/[locale]/aura/preview/[id]/page';
-import CardPreview from '@/app/[locale]/card/preview/[id]/page';
 import sitemap from '@/app/sitemap';
-import { isRetiredLegacyPublication } from '@/lib/legacyPublicationRetirement';
+import HomePage from '@/app/[locale]/(marketing)/page';
+import NatoriArtistPage from '@/app/[locale]/artists/natori/page';
+import * as Page0 from '@/app/[locale]/float/page';
+import * as Page1 from '@/app/[locale]/float/2d/page';
+import * as Page2 from '@/app/[locale]/white/page';
+import * as Page3 from '@/app/[locale]/white/2d/page';
+import * as Page4 from '@/app/[locale]/galleries/forest/page';
+import * as Page5 from '@/app/[locale]/white-install/page';
+import * as Page6 from '@/app/[locale]/works/[id]/page';
+import * as Page7 from '@/app/[locale]/artists/[id]/page';
+import * as Page8 from '@/app/[locale]/modal/about/page';
+import * as Page9 from '@/app/[locale]/modal/creators/page';
+import * as Page10 from '@/app/[locale]/modal/buyers/page';
+import * as Page11 from '@/app/[locale]/modal/pricing/page';
+import * as Page12 from '@/app/[locale]/special-thanks/page';
+import * as Page13 from '@/app/[locale]/aura/p/[public_id]/page';
+import * as Page14 from '@/app/[locale]/aura/u/[slug]/page';
+import * as Page15 from '@/app/[locale]/aura/preview/[id]/page';
+import * as Page16 from '@/app/[locale]/aura/studio/p/[id]/page';
+import * as Page17 from '@/app/[locale]/card/p/[public_id]/page';
+import * as Page18 from '@/app/[locale]/card/preview/[id]/page';
 
-const publications = [
-  { service: 'aura', id: '4d6395d7-1e01-4ae5-9d28-15dd51cd8643', slug: 'portfolio',
-    page: AuraPage, metadata: auraMetadata, preview: AuraPreview, request: mocks.auraRequest },
-  { service: 'aura', id: 'ed4567ef-877b-4bd2-ae4e-32cdca68bf37', slug: 'portfolio-2',
-    page: AuraPage, metadata: auraMetadata, preview: AuraPreview, request: mocks.auraRequest },
-  { service: 'card', id: '070a68ba-11a5-48f9-9672-5f1f563b78e1', slug: 'me-ish',
-    page: CardPage, metadata: cardMetadata, preview: CardPreview, request: mocks.cardRequest },
+const retiredPages = [
+  ['float', Page0],
+  ['float/2d', Page1],
+  ['white', Page2],
+  ['white/2d', Page3],
+  ['galleries/forest', Page4],
+  ['white-install', Page5],
+  ['works/[id]', Page6],
+  ['artists/[id]', Page7],
+  ['modal/about', Page8],
+  ['modal/creators', Page9],
+  ['modal/buyers', Page10],
+  ['modal/pricing', Page11],
+  ['special-thanks', Page12],
+  ['aura/p/[public_id]', Page13],
+  ['aura/u/[slug]', Page14],
+  ['aura/preview/[id]', Page15],
+  ['aura/studio/p/[id]', Page16],
+  ['card/p/[public_id]', Page17],
+  ['card/preview/[id]', Page18],
 ] as const;
-const retainedId = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
-const notFoundError = 'NEXT_HTTP_ERROR_FALLBACK;404';
 
-function publishedRow(publicId: string) {
-  return {
-    public_id: publicId, public_slug: 'renamed-slug', slug: 'legacy-alias',
-    visibility: 'public', status: 'published', published_at: '2026-10-01T00:00:00Z',
-    design: { sections: [], theme: {} },
-    content: {
-      sections: [{ type: 'hero', headings: ['Synthetic portfolio title'], paragraphs: ['Synthetic description'] }],
-      profile: { name: 'Synthetic card name', title: 'Artist', tagline: 'Synthetic description' },
-    },
-  };
-}
-
-beforeEach(() => {
-  vi.resetAllMocks();
-  mocks.from.mockImplementation(() => {
-    const query = {
-      select: vi.fn(() => query), eq: vi.fn(() => query), limit: vi.fn(() => query),
-      maybeSingle: mocks.row,
-    };
-    return query;
+describe.each(retiredPages)('ended publication %s', (_route, page) => {
+  it.each(['ja', 'en'])('shows the %s notice and support links without loading legacy data', async (locale) => {
+    const html = renderToStaticMarkup(await page.default({ params: Promise.resolve({ locale }) }));
+    expect(html).toContain(locale === 'en' ? 'Publication has ended' : '公開を終了しました');
+    expect(html).toContain(`href="${locale === 'en' ? '/en' : ''}/natori/portfolio"`);
+    expect(html).toContain(`href="${locale === 'en' ? '/en' : ''}/contact"`);
+    expect(html).not.toMatch(/<canvas|<form|<img/);
+    expect(page.metadata.robots).toEqual({ index: false, follow: true });
+    expect(page.metadata).not.toHaveProperty('openGraph');
   });
 });
 
-describe.each(publications)('$service / $slug publication ending', ({ service, id, slug, page, metadata, preview, request }) => {
-  it.each(['slug', 'UUID', 'uppercase UUID', 'renamed slug'])('blocks %s before rendering, redirecting or returning content metadata', async (kind) => {
-    const key = kind === 'slug' ? slug : kind === 'UUID' ? id : kind === 'uppercase UUID' ? id.toUpperCase() : 'renamed-slug';
-    mocks.row.mockResolvedValue({ data: publishedRow(id), error: null });
-    const props = { params: Promise.resolve({ public_id: key }) };
-    await expect(page(props)).rejects.toThrow(notFoundError);
-    const meta = await metadata(props);
-    expect(meta.title).toMatch(/^Not Found/);
-    expect(meta.description).toBeUndefined();
-    expect(meta.openGraph).toBeUndefined();
-  });
-
-  it.each([true, false])('blocks the same record in preview, including incomplete content (%s)', async (complete) => {
-    request.mockResolvedValue({ ...publishedRow(id), publicId: id, content: complete ? publishedRow(id).content : null });
-    await expect(preview({ params: Promise.resolve({ id: 'synthetic-request-id' }) })).rejects.toThrow(notFoundError);
-  });
-
-  it('normalizes the public UUID without applying the decision to another service', () => {
-    expect(isRetiredLegacyPublication(service, ` ${id.toUpperCase()} `)).toBe(true);
-    expect(isRetiredLegacyPublication(service === 'aura' ? 'card' : 'aura', id)).toBe(false);
-  });
+it.each(['ja', 'en'])('home and old Natori artist URLs lead to the current portfolio (%s)', async (locale) => {
+  const props = { params: Promise.resolve({ locale }) };
+  const digest = `NEXT_REDIRECT;replace;${locale === 'en' ? '/en' : ''}/natori/portfolio;307;`;
+  await expect(HomePage(props)).rejects.toMatchObject({ digest });
+  await expect(NatoriArtistPage(props)).rejects.toMatchObject({ digest });
 });
 
-describe('AURA legacy aliases', () => {
-  it.each(publications.filter((p) => p.service === 'aura'))('blocks the old and renamed /u alias for $slug', async ({ id }) => {
-    mocks.row.mockResolvedValue({ data: publishedRow(id), error: null });
-    await expect(AuraSlug({ params: Promise.resolve({ slug: 'renamed-legacy-alias' }) })).rejects.toThrow(notFoundError);
-  });
-
-  it('retains the redirect for another published record', async () => {
-    mocks.row.mockResolvedValue({ data: publishedRow(retainedId), error: null });
-    await expect(AuraSlug({ params: Promise.resolve({ slug: 'retained' }) })).rejects.toMatchObject({ digest: `NEXT_REDIRECT;replace;/aura/p/${retainedId};307;` });
-  });
-});
-
-describe.each([publications[0], publications[2]])('$service publications outside the decision', ({ page, metadata, preview, request, service }) => {
-  it('still renders another published page and its metadata', async () => {
-    mocks.row.mockResolvedValue({ data: publishedRow(retainedId), error: null });
-    const props = { params: Promise.resolve({ public_id: 'retained' }) };
-    expect(isValidElement(await page(props))).toBe(true);
-    expect((await metadata(props)).description).toBe('Synthetic description');
-  });
-
-  it('still canonicalizes another UUID to its public slug', async () => {
-    mocks.row.mockResolvedValue({ data: publishedRow(retainedId), error: null });
-    await expect(page({ params: Promise.resolve({ public_id: retainedId }) })).rejects.toMatchObject({ digest: `NEXT_REDIRECT;replace;/${service}/p/renamed-slug;308;` });
-  });
-
-  it('preserves the existing visibility gate', async () => {
-    mocks.row.mockResolvedValue({ data: { ...publishedRow(retainedId), visibility: 'private' }, error: null });
-    await expect(page({ params: Promise.resolve({ public_id: 'retained' }) })).rejects.toThrow(notFoundError);
-  });
-
-  it.each([retainedId, null])('retains other previews, including drafts without a public ID (%s)', async (publicId) => {
-    request.mockResolvedValue({ ...publishedRow(retainedId), publicId });
-    expect(isValidElement(await preview({ params: Promise.resolve({ id: 'retained-request' }) }))).toBe(true);
-  });
-});
-
-it('removes retired AURA rows from the sitemap even after a rename, and keeps unrelated entries', async () => {
-  const records: Record<string, unknown[]> = {
-    entries: [{ id: 123, created_at: '2026-10-01' }],
-    aura_requests: [
-      ...publications.filter((p) => p.service === 'aura').map((p, i) => ({ ...publishedRow(p.id), public_slug: `renamed-retired-${i}` })),
-      { ...publishedRow(retainedId), public_slug: 'retained-aura' },
-    ],
-    portfolio_settings: [{ user_id: 'retained-artist', updated_at: '2026-10-01' }],
-  };
-  mocks.from.mockImplementation((table: string) => {
-    const query = {
-      select: vi.fn(() => query), eq: vi.fn(() => query), not: vi.fn(() => query), order: vi.fn(() => query),
-      limit: vi.fn().mockResolvedValue({ data: records[table], error: null }),
-    };
-    return query;
-  });
-  const paths = (await sitemap()).map((entry) => new URL(entry.url).pathname);
-  expect(paths.filter((path) => path.startsWith('/aura/'))).toEqual(['/aura/u/retained-aura']);
-  expect(paths).toEqual(expect.arrayContaining(['/works/123', '/artists/retained-artist', '/footer/privacy']));
+it('indexes the current portfolio and support pages without reading any retired table', async () => {
+  const entries = await sitemap();
+  const paths = entries.map((entry) => new URL(entry.url).pathname);
+  expect(paths).toHaveLength(13);
+  expect(paths).toContain('/natori/portfolio');
+  expect(paths).toContain('/natori/portfolio/contact');
+  expect(paths).toContain('/footer/privacy');
+  expect(paths).toContain('/contact');
+  expect(paths.some((path) => /^\/(float|white|works|artists|aura|card)(\/|$)/.test(path))).toBe(false);
+  expect(entries.every((entry) => entry.alternates?.languages?.en)).toBe(true);
 });
