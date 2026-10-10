@@ -25,7 +25,7 @@ export default function PortfolioContactPage({ content, mode, plan, planLabel, w
     <PortfolioStyles />
     <header className="border-b px-5 py-4" style={{ borderColor: c.borderSubtle }}>
       <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
-        <a className="pf-cute-focus inline-flex min-h-11 items-center text-sm font-bold" href={backHref}>← 作品と料金に戻る</a>
+        <a className="pf-cute-focus inline-flex min-h-11 items-center rounded-full border-2 px-4 text-sm font-bold" style={{ borderColor: c.action, color: c.text }} href={backHref}>← 作品と料金に戻る</a>
         <span className="text-sm font-bold"><span style={{ color: c.text }}>ナトリの</span><span style={{ color: c.actionText }}>あとりえ</span></span>
       </div>
     </header>

@@ -303,7 +303,7 @@ function PortfolioCommissionFormSession({
               rel="noopener noreferrer"
               onClick={() => trackNatoriPageEvent("portfolio_sns_click", "つなぐ")}
               className="pf-cute-focus font-bold underline decoration-2 underline-offset-4 hover:opacity-70"
-              style={{ color: c.accentText, textDecorationColor: c.accentSoft }}
+              style={{ color: c.actionTextSmall, textDecorationColor: c.actionSoft }}
             >
               つなぐ
             </a>
@@ -385,7 +385,7 @@ function PortfolioCommissionFormSession({
                 <button key={choice} type="button" aria-pressed={legacyMode === choice}
                   onClick={() => { setLegacyMode(choice); setLegacyStep(0); }}
                   className="pf-cute-focus min-h-11 border-b-2 px-1 text-sm font-bold"
-                  style={{ borderColor: legacyMode === choice ? c.accentText : "transparent", color: legacyMode === choice ? c.accentText : c.textSoft }}>
+                  style={{ borderColor: legacyMode === choice ? c.actionTextSmall : "transparent", color: legacyMode === choice ? c.actionTextSmall : c.textSoft }}>
                   {choice === "consultation" ? "まず相談したい" : "見積もりを希望"}
                 </button>
               ))}
@@ -397,8 +397,8 @@ function PortfolioCommissionFormSession({
             <ol className="flex gap-2" aria-label={`進行状況 ${legacyStep + 1} / ${legacyStepLabels.length}`}>
               {legacyStepLabels.map((label, index) => (
                 <li key={label} className="min-w-0 flex-1" aria-current={index === legacyStep ? "step" : undefined}>
-                  <span className="block h-1 rounded-full" style={{ background: index <= legacyStep ? c.accentText : c.borderSubtle }} />
-                  <span className="mt-2 block text-center text-[11px] font-bold leading-tight sm:text-xs" style={{ color: index === legacyStep ? c.accentText : c.textSoft }}>{label}</span>
+                  <span className="block h-1 rounded-full" style={{ background: index <= legacyStep ? c.actionTextSmall : c.borderSubtle }} />
+                  <span className="mt-2 block text-center text-[11px] font-bold leading-tight sm:text-xs" style={{ color: index === legacyStep ? c.actionTextSmall : c.textSoft }}>{label}</span>
                 </li>
               ))}
             </ol>
@@ -481,7 +481,7 @@ function PortfolioCommissionFormSession({
                     />
                     <span>
                       {option.name}
-                      <span className="ml-1 text-xs font-bold" style={{ color: c.accentText }}>
+                      <span className="ml-1 text-xs font-bold" style={{ color: c.actionTextSmall }}>
                         {option.price}
                       </span>
                     </span>
