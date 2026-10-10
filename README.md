@@ -4,7 +4,8 @@ Next.js App Router + TypeScript + Tailwind + Supabase + Stripe。
 
 現役の開発・運用対象は、ナトリのポートフォリオと依頼受付・案件管理です。
 ギャラリー、AURA（ホームページ作成）、CARD（名刺作成）の新規受付・作成・購入は休止中です。
-既存の公開ページ、画像、購入済みデータの保存、問い合わせ・精算対応は保持しています。
+公開終了を承認されたAURA / CARDの3ページを除き、既存公開と顧客対応を保持しています。
+画像・保存データ・決済記録は維持しています。
 
 ## まず読む資料
 
@@ -32,7 +33,7 @@ Next.js App Router + TypeScript + Tailwind + Supabase + Stripe。
 - `/natori/portfolio/contact` — ご相談・ご依頼
 - `/etorie/demo/app/portfolio` — 受付試験にも使うデモ
 - `/`、`/white/2d`、`/float/2d` — 既存の公開トップ・ギャラリー
-- 既存AURA / CARDの公開URL — 維持。新規作成とは別の経路
+- AURA / CARDの承認済み3ページ — [公開終了](docs/archive/legacy-publications-20261010.md)。保存データは維持
 - `/entry`、`/mypage`、AURA / CARDの新規作成画面 — 休止案内へ移動
 
 ## 開発環境

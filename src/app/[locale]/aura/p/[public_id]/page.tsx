@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { isRetiredLegacyPublication } from "@/lib/legacyPublicationRetirement";
 import { RendererRouter } from "@/components/aura/renderer/RendererRouter";
 import { fontFamilyFromPreset } from "@/styles/auraFonts";
 
@@ -59,6 +60,7 @@ const { data, error } = await (isUuid
 
 
   if (error || !data) return null;
+  if (isRetiredLegacyPublication("aura", data.public_id)) return null;
 
   // 公開ゲート
   if (data.visibility !== "public") return null;
