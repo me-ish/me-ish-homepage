@@ -9,8 +9,7 @@ import QueryProvider from "@/components/providers/QueryProvider";
 import { ZoomArtworkProvider } from "@/components/shared/ZoomArtworkContext";
 import ClientWrapper from "@/components/shared/ClientWrapper";
 import ZoomArtworkDisplay from "@/components/shared/ZoomArtworkDisplay";
-import { Analytics } from "@/components/Analytics";
-import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
+import { Analytics, SiteVercelAnalytics } from "@/components/Analytics";
 import "@/styles/auraFonts.css";
 
 // フォントを事前読み込み（レンダリングブロッキングを回避）
@@ -84,7 +83,7 @@ export default async function RootLayout({
                 {children}
                 <ZoomArtworkDisplay />
                 <Analytics />
-                <VercelAnalytics />
+                <SiteVercelAnalytics />
               </ClientWrapper>
             </ZoomArtworkProvider>
           </QueryProvider>

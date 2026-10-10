@@ -432,6 +432,7 @@ function PortfolioCommissionFormSession({
                   style={{ borderColor: c.formBorder }}
                 />
               </div>
+              <p className="text-sm leading-relaxed sm:col-span-2" style={{ color: c.textSoft }}>{NATORI_INTAKE_COPY.noAccount}</p>
             </div>
 
             <div hidden={legacyMode !== "quote" || legacyStep !== 0} className="gap-5 sm:grid-cols-2 [&:not([hidden])]:grid">
