@@ -1,8 +1,5 @@
 // Stripe Webhook (POST /api/webhook/stripe) のテスト。
-// 署名検証まわりのガード、metadata による分岐（gallery / entry_plan / aura /
-// card / natori_commission）のルーティング、イベント単位の dedup
-// (processed_stripe_events) と条件付き UPDATE による二重配送への冪等性、
-// 一時 DB エラー時の 500（claim 解放つき）を固定する。
+// 署名・ナトリの冪等性/再送・旧テスト商品の無副作用終了を検証する。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
@@ -21,10 +18,6 @@ vi.mock("stripe", () => ({
 const mockMarkPaid = vi.fn();
 vi.mock("@/features/natori/server/orderMailService", () => ({
   markNatoriCommissionPaid: (...args: unknown[]) => mockMarkPaid(...args),
-}));
-
-vi.mock("@/lib/coa/server", () => ({
-  issueReissueLink: vi.fn().mockResolvedValue("https://example.com/coa"),
 }));
 
 const mockAdminFrom = vi.fn();
@@ -156,7 +149,7 @@ const NATORI_PROJECT_ID = "11111111-2222-3333-4444-555555555555";
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
-  vi.stubEnv("ADMIN_API_TOKEN", ""); // メール送信の内部API呼び出しを無効化
+  vi.stubEnv("NATORI_PAYMENT_INTEGRITY_ENABLED", "0");
   mockMarkPaid.mockResolvedValue({ kind: "ok" });
   mockAdminFrom.mockImplementation((table: string) => {
     throw new Error(`unexpected table access: ${table}`);
@@ -339,167 +332,36 @@ describe("natori_commission routing", () => {
   });
 });
 
-describe("aura routing", () => {
-  const AURA_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
-
-  it("未払いレコードを条件付き UPDATE で paid にする（存在しない stripe_session_id 列は書かない）", async () => {
-    const aura = makeTable({ data: null, error: null });
-    useTables({ aura_requests: aura, processed_stripe_events: dedupTable() });
-    stubEvent(makeSession({ metadata: { kind: "aura", requestId: AURA_ID } }));
-
-    const res = await POST(makeReq());
-    expect(res.status).toBe(200);
-    expect(aura.updates).toHaveLength(1);
-    expect(aura.updates[0].payment_status).toBe("paid");
-    expect(aura.updates[0].paid_at).toBeTruthy();
-    // 回帰テスト: aura_requests に存在しない列を書くと update 全体が失敗する
-    expect(aura.updates[0]).not.toHaveProperty("stripe_session_id");
-    // select で事前判定せず、未払い行だけを対象にする条件が UPDATE に付いている
-    expect(aura.api.select).not.toHaveBeenCalled();
-    expect(aura.updateCalls).toContain('neq("payment_status","paid")');
-  });
-
-  it("冪等: 条件付き UPDATE が 0 行（既に paid）でも 200 ACK", async () => {
-    const aura = makeTable(
-      { data: null, error: null },
-      { updateResult: { data: [], error: null } }
-    );
-    useTables({ aura_requests: aura, processed_stripe_events: dedupTable() });
-    stubEvent(makeSession({ metadata: { kind: "aura", requestId: AURA_ID } }));
-
-    const res = await POST(makeReq());
-    expect(res.status).toBe(200);
-  });
-
-  it("update が DB エラーなら claim を解放して 500", async () => {
-    const aura = makeTable(
-      { data: null, error: null },
-      { updateResult: { data: null, error: { message: "db down" } } }
-    );
-    const dedup = dedupTable();
-    useTables({ aura_requests: aura, processed_stripe_events: dedup });
-    stubEvent(makeSession({ metadata: { kind: "aura", requestId: AURA_ID } }));
-
-    const res = await POST(makeReq());
-    expect(res.status).toBe(500);
-    expect(dedup.api.delete).toHaveBeenCalledTimes(1);
+describe.each(["0", "1"])("retired products with payment integrity=%s", integrity => {
+  it.each([
+    ["aura", { kind: "aura", requestId: NATORI_PROJECT_ID }],
+    ["card", { kind: "card", requestId: NATORI_PROJECT_ID }],
+    ["entry plan", { kind: "entry_plan", entryId: "42" }],
+    ["gallery", { kind: "gallery", entryId: "42" }],
+    ["old gallery metadata", { entryId: "42", quantity: "2" }],
+  ])("acknowledges %s without writes, claims or notifications", async (_name, metadata) => {
+    vi.stubEnv("NATORI_PAYMENT_INTEGRITY_ENABLED", integrity);
+    const network = vi.fn(() => { throw new Error("unexpected network effect"); });
+    vi.stubGlobal("fetch", network);
+    try {
+      for (const type of ["checkout.session.completed", "checkout.session.async_payment_succeeded"]) {
+        stubEvent(makeSession({ metadata }), type);
+        const response = await POST(makeReq());
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual({ ok: true, received: true, result: "legacy_product_retired" });
+      }
+      expect(mockAdminFrom).not.toHaveBeenCalled();
+      expect(mockRpc).not.toHaveBeenCalled();
+      expect(mockMarkPaid).not.toHaveBeenCalled();
+      expect(mockGetUserById).not.toHaveBeenCalled();
+      expect(network).not.toHaveBeenCalled();
+    } finally { vi.unstubAllGlobals(); }
   });
 });
 
-describe("card routing", () => {
-  const CARD_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
-
-  it("未払いレコードを条件付き UPDATE で paid にし、session id を記録する", async () => {
-    const card = makeTable({ data: null, error: null });
-    useTables({ card_requests: card, processed_stripe_events: dedupTable() });
-    stubEvent(makeSession({ metadata: { kind: "card", requestId: CARD_ID } }));
-
-    const res = await POST(makeReq());
-    expect(res.status).toBe(200);
-    expect(card.updates).toHaveLength(1);
-    expect(card.updates[0].payment_status).toBe("paid");
-    expect(card.updates[0].stripe_session_id).toBe("cs_test_1");
-    // payment_status が nullable なので is.null も未払い扱いに含める
-    expect(card.updateCalls).toContain(
-      'or("payment_status.is.null,payment_status.neq.paid")'
-    );
-  });
-
-  it("冪等: 条件付き UPDATE が 0 行（既に paid）でも 200 ACK", async () => {
-    const card = makeTable(
-      { data: null, error: null },
-      { updateResult: { data: [], error: null } }
-    );
-    useTables({ card_requests: card, processed_stripe_events: dedupTable() });
-    stubEvent(makeSession({ metadata: { kind: "card", requestId: CARD_ID } }));
-
-    const res = await POST(makeReq());
-    expect(res.status).toBe(200);
-  });
-});
-
-describe("entry plan routing", () => {
-  it("kind=entry_plan + 数値 entryId でプラン支払いを条件付き UPDATE で paid にする", async () => {
-    const entries = makeTable({ data: null, error: null });
-    useTables({ entries, processed_stripe_events: dedupTable() });
-    stubEvent(makeSession({ metadata: { kind: "entry_plan", entryId: "42" } }));
-
-    const res = await POST(makeReq());
-    expect(res.status).toBe(200);
-    expect(entries.updates).toHaveLength(1);
-    expect(entries.updates[0].plan_payment_status).toBe("paid");
-    expect(entries.updates[0].plan_payment_session_id).toBe("cs_test_1");
-    expect(entries.updateCalls).toContain(
-      'or("plan_payment_status.is.null,plan_payment_status.neq.paid")'
-    );
-  });
-
-  it("冪等: 条件付き UPDATE が 0 行（既に paid）でも 200 ACK", async () => {
-    const entries = makeTable(
-      { data: null, error: null },
-      { updateResult: { data: [], error: null } }
-    );
-    useTables({ entries, processed_stripe_events: dedupTable() });
-    stubEvent(makeSession({ metadata: { kind: "entry_plan", entryId: "42" } }));
-
-    const res = await POST(makeReq());
-    expect(res.status).toBe(200);
-  });
-
-  it("update が DB エラーなら claim を解放して 500", async () => {
-    const entries = makeTable(
-      { data: null, error: null },
-      { updateResult: { data: null, error: { message: "db down" } } }
-    );
-    const dedup = dedupTable();
-    useTables({ entries, processed_stripe_events: dedup });
-    stubEvent(makeSession({ metadata: { kind: "entry_plan", entryId: "42" } }));
-
-    const res = await POST(makeReq());
-    expect(res.status).toBe(500);
-    expect(dedup.api.delete).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("gallery routing", () => {
-  it("冪等: 同じ session の sales 行が既にあれば finalize_sale を呼ばない", async () => {
-    const sales = makeTable({ data: { id: "sale-1" }, error: null });
-    useTables({ sales, processed_stripe_events: dedupTable() });
-    stubEvent(makeSession({ metadata: { entryId: "42" } }));
-
-    const res = await POST(makeReq());
-    expect(res.status).toBe(200);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it("新規購入は finalize_sale RPC を数量・金額つきで呼ぶ", async () => {
-    const sales = makeTable({ data: null, error: null });
-    const entries = makeTable({
-      data: { title: "作品", user_id: "artist-1", edition_total: 5 },
-      error: null,
-    });
-    const profiles = makeTable({ data: { display_name: "アーティスト" }, error: null });
-    useTables({ sales, entries, profiles, processed_stripe_events: dedupTable() });
-    mockRpc.mockResolvedValue({
-      data: [{ new_edition_sold: 1, sold_out: false }],
-      error: null,
-    });
-    mockGetUserById.mockResolvedValue({ data: { user: { email: null } } });
-
-    stubEvent(makeSession({ metadata: { entryId: "42", quantity: "2" } }));
-
-    const res = await POST(makeReq());
-    expect(res.status).toBe(200);
-    expect(mockRpc).toHaveBeenCalledWith("finalize_sale", {
-      p_entry_id: 42,
-      p_quantity: 2,
-      p_session_id: "cs_test_1",
-      p_price: 8000,
-    });
-    // sales 行に金額・手数料・報酬が記録される（fee=800, reward=7200）
-    expect(sales.updates).toHaveLength(1);
-    expect(sales.updates[0].price).toBe(8000);
-    expect(sales.updates[0].meish_fee_yen).toBe(800);
-    expect(sales.updates[0].artist_reward_yen).toBe(7200);
-  });
+it("Natori rollback dispatch takes precedence over stray old entry metadata", async () => {
+  useTables({ processed_stripe_events: dedupTable() });
+  stubEvent(makeSession({ metadata: { kind: "natori_commission", projectId: NATORI_PROJECT_ID, entryId: "42" } }));
+  expect((await POST(makeReq())).status).toBe(200);
+  expect(mockMarkPaid).toHaveBeenCalledWith(NATORI_PROJECT_ID, "cs_test_1", 8000, null);
 });

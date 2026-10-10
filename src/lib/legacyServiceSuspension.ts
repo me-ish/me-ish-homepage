@@ -49,7 +49,7 @@ export function getSuspendedLegacyPage(pathname: string): LegacyService | null {
   // /login remains available for existing bank-account maintenance and support;
   // it does not reopen the paused gallery intake or profile workspace.
   if (isPath(path, '/aura')) {
-    // Published pages and already-issued Checkout return destinations stay live.
+    // Route handlers render the static ending notice for former publications.
     if (['/aura/p', '/aura/u', '/aura/studio/p', '/aura/preview'].some((p) => isPath(path, p))) {
       return null;
     }
@@ -77,16 +77,7 @@ export function getSuspendedLegacyApi(
   for (const service of ['aura', 'card'] as const) {
     const prefix = `/api/${service}`;
     if (!isPath(path, prefix)) continue;
-    // Only these exact read shapes are retained. Checkout and the OpenAI GET
-    // diagnostic are deliberately not treated as reads.
-    if (readOnlyMethod && (path === `${prefix}/assets` ||
-      new RegExp(`^${prefix}/request/[^/]+$`).test(path))) return null;
-    // The handler verifies ownership and a paid/already-published DB record.
-    // Existing customer fulfillment must remain possible after intake closes.
-    if (method.toUpperCase() === 'POST' && new RegExp(`^${prefix}/save/[^/]+$`).test(path)) return null;
-    // AURA slug maintenance independently requires ownership and all existing
-    // publication fields in its handler. It cannot publish an unpublished page.
-    if (service === 'aura' && method.toUpperCase() === 'POST' && path === '/api/aura/public-slug') return null;
+    // All AURA/CARD publications and owner-test purchases have ended.
     return service;
   }
 

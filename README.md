@@ -5,8 +5,8 @@ Next.js App Router + TypeScript + Tailwind + Supabase + Stripe。
 現役の開発・運用対象は、ナトリのポートフォリオと依頼受付・案件管理です。
 ギャラリー、AURA（ホームページ作成）、CARD（名刺作成）の新規受付・作成・購入は休止中です。
 旧3D/2Dギャラリー、作品・作家ページ、AURA / CARDの公開・プレビューは終了案内へ統一しました。
-既存購入の問い合わせ・履行・返金・精算は保持しています。
-画像・保存データ・決済記録は維持しています。
+旧支払いは所有者のテストと確認され、AURA/CARDの保存・画像APIと旧商品のWebhook書込も終了しました。
+ナトリの決済・返金・通知は保持しています。画像とDBの実体は復元条件を満たすまで維持します。
 
 ## まず読む資料
 
@@ -25,7 +25,7 @@ Next.js App Router + TypeScript + Tailwind + Supabase + Stripe。
 | `src/app/[locale]/natori/` / `src/app/api/natori/` | ナトリの画面とAPI |
 | `src/features/etorie/` / `src/app/[locale]/etorie/` | ナトリ受付のデモ・試験にも使用。削除対象ではない |
 | `src/lib/supabase*` / `src/lib/auth/` / `src/components/ui/` / `src/i18n/` | 現役機能でも使う共通基盤 |
-| `src/app/` / `src/components/` / `src/lib/` の旧サービス部分 | 終了案内・休止入口と既存購入対応。保持理由は整理索引を参照 |
+| `src/app/` / `src/components/` / `src/lib/` の旧サービス部分 | 終了案内・休止入口と記録確認。保持理由は整理索引を参照 |
 | `supabase/` / `scripts/natori-phase-*/` | DB定義・運用・隔離検証。SQL履歴と検証fixtureを保持 |
 | `public/` | 公開素材。ページや保存データの参照先を保護 |
 | `docs/archive/` | 整理対象の台帳・復元方法。旧コード本体はGitの固定コミットに保管 |

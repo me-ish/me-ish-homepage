@@ -9,6 +9,28 @@ module.exports = {
   ],
 
   safelist: [
+    // Preserve shared CSS after retiring AURA/CARD payment support.
+    "active:translate-y-0",
+    "font-extrabold",
+    "hover:-translate-y-[1px]",
+    "hover:-translate-y-[2px]",
+    "hover:scale-[1.02]",
+    "leading-[1.08]",
+    "leading-[1.85]",
+    "leading-[1.8]",
+    "lg:py-16",
+    "lg:py-24",
+    "max-w-7xl",
+    "max-w-prose",
+    "md:px-6",
+    "md:py-14",
+    "md:py-6",
+    "md:scroll-mt-24",
+    "md:text-sm",
+    "scroll-mt-20",
+    "text-[clamp(1rem,1.5vw,1.25rem)]",
+    "text-[clamp(2.25rem,5.5vw,4rem)]",
+    "tracking-[0.28em]",
     // Preserve current CSS while archiving legacy support controls.
     "bg-amber-500/10",
     "bg-blue-500",

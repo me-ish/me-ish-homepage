@@ -31,6 +31,20 @@ type HandlerCase = {
 // Import and call the real route exports, without middleware. These methods
 // must remain stopped even if routing changes or a caller bypasses middleware.
 const handlers: HandlerCase[] = [
+  { path: '/api/aura/assets', method: 'GET', service: 'aura',
+    load: () => import('@/app/api/aura/assets/route').then((route) => route.GET) },
+  { path: '/api/aura/request/synthetic-id', method: 'GET', service: 'aura',
+    load: () => import('@/app/api/aura/request/[id]/route').then((route) => route.GET) },
+  { path: '/api/aura/save/synthetic-id', method: 'POST', service: 'aura',
+    load: () => import('@/app/api/aura/save/[id]/route').then((route) => route.POST) },
+  { path: '/api/aura/public-slug', method: 'POST', service: 'aura',
+    load: () => import('@/app/api/aura/public-slug/route').then((route) => route.POST) },
+  { path: '/api/card/assets', method: 'GET', service: 'card',
+    load: () => import('@/app/api/card/assets/route').then((route) => route.GET) },
+  { path: '/api/card/request/synthetic-id', method: 'GET', service: 'card',
+    load: () => import('@/app/api/card/request/[id]/route').then((route) => route.GET) },
+  { path: '/api/card/save/synthetic-id', method: 'POST', service: 'card',
+    load: () => import('@/app/api/card/save/[id]/route').then((route) => route.POST) },
   { path: '/api/entries/1/comments', method: 'GET', service: 'gallery',
     load: () => import('@/app/api/entries/[id]/comments/route').then((route) => route.GET) },
   { path: '/api/entries/1/comments', method: 'POST', service: 'gallery',
