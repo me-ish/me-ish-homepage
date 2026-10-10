@@ -15,7 +15,7 @@ export default function PortfolioLegalNotice() {
         <Link
           href="/natori/legal/privacy"
           className="pf-cute-focus font-bold underline decoration-2 underline-offset-4 hover:opacity-70"
-          style={{ color: c.accentText, textDecorationColor: c.accentSoft }}
+          style={{ color: c.actionTextSmall, textDecorationColor: c.actionSoft }}
         >
           プライバシーポリシー
         </Link>

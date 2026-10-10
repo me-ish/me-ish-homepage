@@ -21,7 +21,7 @@ describe("important CTA contrast",()=>{
     expect(portfolioColors.actionText).toBe("#EC4899");
     expect(legacyNatoriTransactionColors.pink).toBe("#FF6FA5");
     expect(portfolioFormColors.formBorder).toBe("#878287");
-    expect(portfolioFormColors.formBorderActive).toBe(portfolioColors.accentText);
+    expect(portfolioFormColors.formBorderActive).toBe(portfolioColors.actionTextSmall);
     expect(portfolioFormColors.error).toBe("#B42318");
   });
 });
