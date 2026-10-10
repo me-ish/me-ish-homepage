@@ -52,7 +52,17 @@ jobs:
           node-version-file: '.node-version'
           cache: npm
 
-      - run: npm audit --audit-level=high
+      # 本番に載る依存だけで合否を決める。開発用依存の braces は修正版がなく
+      # （docs/natori/Security_Dependency_Update_2026-10-08.md）、全体で判定すると常に赤になる。
+      - run: npm audit --omit=dev --audit-level=high
+
+      # 開発用も含めた全体の結果は失敗扱いにせず、ログと注釈で見えるように残す。
+      - name: Full audit (report only)
+        if: always()
+        run: |
+          if ! npm audit --audit-level=high; then
+            echo "::warning title=Security Audit::開発用を含む依存に high 以上の脆弱性があります。合否は本番用の依存だけで判定しています。"
+          fi
 
   test:
     name: Test
