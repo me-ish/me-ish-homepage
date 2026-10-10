@@ -25,3 +25,13 @@ The Phase 6A runner now records only fixed server-error classifications and nume
 Local regression checks: six locale tests cover production params, supported development locales and unsupported-locale rejection; four diagnostic tests cover split streams, disclosure protection and bounded output. Type check, final GitHub checks and preview-build results are recorded below when complete.
 
 Production rollout requires owner confirmation. No DB, Storage, business operation or dependency change is part of this PR. Real card payments, delivery emails and real requests are not exercised by these isolated tests.
+
+## Diagnostic-only CI and a second harness race
+
+Diagnostic-only head `e7ace582ef2dc9c31c92d214db157f80ef729d9a` completed Phase 6A (38058258170) and Phase 7 (38058258189) successfully; the old SyntaxError did not recur in those runs. Standard CI 38058258178 passed, with 1,984 unit tests and 111 first-pass browser cases, one successful retry (Phase 5's 360px navigation timeout), and two existing skips.
+
+Phase 6B run 38058258176 failed `important-cta-all-states-light`, with seven other cases successful and no server compile errors. Artifact 11671254695 records all light-theme mobile contrast samples through `hover`, but no `focus` sample. The test reset focus to a button at the top of the document and then pressed Tab, which could scroll the Hero into view. The real mobile CTA correctly disappears when the Hero is visible, so the test could lose its target before its programmatic focus sample.
+
+The contrast harness now prevents scroll while resetting/focusing controls. Tab still establishes keyboard modality, but its default movement is suppressed in this color/focus-style sampling helper; neither the old nor new helper tests tab order. Color contrast (4.5), focus-visible and outline requirements are unchanged. A mandatory isolated Chromium control first proves that the old reset hides a synthetic IntersectionObserver-controlled CTA, then requires the corrected path to retain its visibility, scroll position and keyboard focus ring. Its booleans are saved in `focusControls`. The real CTA component and its hiding behavior are unchanged.
+
+The local Chromium control could not run because the browser binary download returned an invalid archive. The mandatory control and all actual eight Phase 6B cases must pass in the pinned CI browser before acceptance; this is not treated as locally verified.
