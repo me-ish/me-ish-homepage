@@ -1,5 +1,7 @@
 // src/app/aura/preview/[id]/page.tsx
 
+import { notFound } from "next/navigation";
+import { isRetiredLegacyPublication } from "@/lib/legacyPublicationRetirement";
 import { findRequest } from "@/lib/aura/aura.db";
 import type { Design, Content } from "@/lib/aura/aura.schema";
 import PreviewWaitClient from "./PreviewWaitClient";
@@ -16,6 +18,7 @@ export default async function AuraPreviewPage(
 ) {
   const params = await props.params;
   const rec = await findRequest(params.id);
+  if (isRetiredLegacyPublication("aura", rec?.publicId)) notFound();
 
   if (!rec || !rec.design || !rec.content) {
     return <PreviewWaitClient id={params.id} />;

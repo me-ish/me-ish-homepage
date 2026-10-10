@@ -1,6 +1,7 @@
 // src/app/aura/u/[slug]/page.tsx
 import { notFound, redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { isRetiredLegacyPublication } from "@/lib/legacyPublicationRetirement";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ async function getPublicIdBySlug(slug: string): Promise<string | null> {
     .maybeSingle();
 
   if (error || !data) return null;
+  if (isRetiredLegacyPublication("aura", data.public_id)) return null;
 
   if (data.visibility !== "public") return null;
   if (!data.published_at) return null;

@@ -1,4 +1,6 @@
 // src/app/[locale]/card/preview/[id]/page.tsx
+import { notFound } from "next/navigation";
+import { isRetiredLegacyPublication } from "@/lib/legacyPublicationRetirement";
 import { findCardRequest } from "@/lib/card/card.db";
 import type { CardDesign, CardContent } from "@/lib/card/card.schema";
 import CardPreviewWaitClient from "@/components/card/CardPreviewWaitClient";
@@ -13,6 +15,7 @@ export default async function CardPreviewPage(
 ) {
   const params = await props.params;
   const rec = await findCardRequest(params.id);
+  if (isRetiredLegacyPublication("card", rec?.publicId)) notFound();
 
   if (!rec || !rec.design || !rec.content) {
     return <CardPreviewWaitClient requestId={params.id} />;

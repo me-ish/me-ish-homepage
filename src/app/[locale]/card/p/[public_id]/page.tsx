@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { isRetiredLegacyPublication } from "@/lib/legacyPublicationRetirement";
 import { getSiteUrl } from "@/lib/constants";
 import CardRenderer from "@/components/card/renderer/CardRenderer";
 
@@ -47,6 +48,7 @@ async function getPublicCard(key: string): Promise<CardRow | null> {
     .maybeSingle();
 
   if (error || !data) return null;
+  if (isRetiredLegacyPublication("card", data.public_id)) return null;
   if (data.visibility !== "public") return null;
   if (!data.published_at) return null;
   if (data.status !== "published") return null;

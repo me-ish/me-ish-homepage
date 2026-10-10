@@ -1,6 +1,7 @@
 // src/app/sitemap.ts
 import { MetadataRoute } from 'next';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { isRetiredLegacyPublication } from '@/lib/legacyPublicationRetirement';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.me-ish.art';
 
@@ -81,7 +82,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       // 公開AURAポートフォリオ
       const { data: auraRequests } = await admin
         .from('aura_requests')
-        .select('public_slug, published_at')
+        .select('public_id, public_slug, published_at')
         .eq('visibility', 'public')
         .eq('payment_status', 'paid')
         .not('public_slug', 'is', null)
@@ -90,7 +91,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
       if (auraRequests) {
         for (const aura of auraRequests) {
-          if (aura.public_slug) {
+          if (aura.public_slug && !isRetiredLegacyPublication('aura', aura.public_id)) {
             dynamicPages.push({
               ...withAlternates(`aura/u/${aura.public_slug}`),
               lastModified: aura.published_at || now,
