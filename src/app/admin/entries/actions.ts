@@ -1,15 +1,8 @@
-// src/app/admin/entries/actions.ts
 'use server';
 
-/**
- * Admin Entries Server Actions
- *
- * クライアントから直接 ADMIN_API_TOKEN を送らず、
- * サーバーサイドで安全にトークンを付与して内部APIを呼び出す。
- */
+// Old action IDs remain inert for already-open browser tabs.
 
-import { getSiteUrl } from '@/lib/constants';
-import { LEGACY_SERVICES_PAUSED, LEGACY_SERVICE_PAUSED_MESSAGE } from '@/lib/legacyServiceSuspension';
+import { LEGACY_SERVICE_PAUSED_MESSAGE } from '@/lib/legacyServiceSuspension';
 
 export type ProcessingJob = {
   id: string;
@@ -40,29 +33,8 @@ export type ApproveResult = {
   job: ProcessingJob;
 };
 
-export async function approveEntryAction(entryId: number): Promise<ApproveResult> {
-  if (LEGACY_SERVICES_PAUSED) throw new Error(LEGACY_SERVICE_PAUSED_MESSAGE);
-  const token = process.env.ADMIN_API_TOKEN;
-  if (!token) {
-    throw new Error('Server configuration error: missing ADMIN_API_TOKEN');
-  }
-
-  const response = await fetch(`${getSiteUrl()}/admin/api/entries/${entryId}/approve`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-meish-admin-token': token,
-    },
-    body: JSON.stringify({}),
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'unknown' }));
-    throw new Error(errorData.error || `approve_failed (${response.status})`);
-  }
-
-  return response.json();
+export async function approveEntryAction(_entryId: number): Promise<ApproveResult> {
+  throw new Error(LEGACY_SERVICE_PAUSED_MESSAGE);
 }
 
 export type RejectResult = {
@@ -75,29 +47,8 @@ export type RejectResult = {
   };
 };
 
-export async function rejectEntryAction(entryId: number, reason: string | null): Promise<RejectResult> {
-  if (LEGACY_SERVICES_PAUSED) throw new Error(LEGACY_SERVICE_PAUSED_MESSAGE);
-  const token = process.env.ADMIN_API_TOKEN;
-  if (!token) {
-    throw new Error('Server configuration error: missing ADMIN_API_TOKEN');
-  }
-
-  const response = await fetch(`${getSiteUrl()}/admin/api/entries/${entryId}/reject`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-meish-admin-token': token,
-    },
-    body: JSON.stringify({ reason }),
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'unknown' }));
-    throw new Error(errorData.error || 'reject_failed');
-  }
-
-  return response.json();
+export async function rejectEntryAction(_entryId: number, _reason: string | null): Promise<RejectResult> {
+  throw new Error(LEGACY_SERVICE_PAUSED_MESSAGE);
 }
 
 export type ResetResult = {
@@ -108,27 +59,6 @@ export type ResetResult = {
   };
 };
 
-export async function resetEntryAction(entryId: number): Promise<ResetResult> {
-  if (LEGACY_SERVICES_PAUSED) throw new Error(LEGACY_SERVICE_PAUSED_MESSAGE);
-  const token = process.env.ADMIN_API_TOKEN;
-  if (!token) {
-    throw new Error('Server configuration error: missing ADMIN_API_TOKEN');
-  }
-
-  const response = await fetch(`${getSiteUrl()}/admin/api/entries/${entryId}/reset`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-meish-admin-token': token,
-    },
-    body: JSON.stringify({}),
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'unknown' }));
-    throw new Error(errorData.error || 'reset_failed');
-  }
-
-  return response.json();
+export async function resetEntryAction(_entryId: number): Promise<ResetResult> {
+  throw new Error(LEGACY_SERVICE_PAUSED_MESSAGE);
 }

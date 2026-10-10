@@ -83,3 +83,13 @@ CookieConsent・Footerの保持判断はこの整理で変更しない。
 API専用のguarantee capacity helperと未使用schemaを整理し、生成CSSは3クラスの保持で完全一致。
 対象・復元元・既存顧客対応の境界は[legacy-admin-20261010.md](legacy-admin-20261010.md)を参照。
 残る26候補の判断は変更しない。既存の`/admin/users`一覧ページ欠落は同資料へ別件として記録した。
+
+### 同日: 旧公開サービス全体の終了承認後
+
+上表1・2、11〜16、17〜24、34を整理した。3D/2D・AURA/CARD公開終了の
+閉じた依存群と、旧法的表示/購入UI・未使用Cookie/Footer/separatorを保全して退避。
+現役の法的文書、解析設定、購入後対応は維持する。radio-groupと旧design tokensも整理し、
+消えるクラスを互換safelistへ移して生成CSSの完全一致を確認した。
+これで上表の残り9件は25〜31のナトリ7件と32・33のframework/test entryで、すべて保持対象。
+詳細・原本・静的素材・依存削除は[legacy-public-20261010.md](legacy-public-20261010.md)を参照。
+旧公開終了後のAPI/DB・顧客対応用のコードは別の保持境界であり、未参照台帳の完了と同一視しない。

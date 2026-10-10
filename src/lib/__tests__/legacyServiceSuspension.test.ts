@@ -32,6 +32,11 @@ describe('legacy service suspension boundary', () => {
   });
 
   it.each([
+    ['/api/aura/assets?path=works/id/file.png', 'GET', 'aura'],
+    ['/api/card/assets', 'HEAD', 'card'], ['/api/aura/request/id', 'GET', 'aura'],
+    ['/api/card/request/dotted.id', 'GET', 'card'],
+    ['/api/aura/save/id', 'POST', 'aura'], ['/api/card/save/id', 'POST', 'card'],
+    ['/api/aura/public-slug', 'POST', 'aura'],
     ['/api/aura/checkout', 'GET', 'aura'],
     ['/api/card/checkout', 'HEAD', 'card'],
     ['/api/aura/form/submit?test_openai=1', 'GET', 'aura'],
@@ -65,16 +70,13 @@ describe('legacy service suspension boundary', () => {
     ['/api/aura/assets/nested', 'GET', 'aura'],
     ['/api/aura/assets', 'POST', 'aura'],
     ['/api/card/request/dotted.id', 'POST', 'card'],
+    ['/api/entries/1/comments', 'GET', 'gallery'],
+    ['/api/entries/1/like', 'GET', 'gallery'],
   ])('blocks %s %s', (path, method, service) => {
     expect(getSuspendedLegacyApi(path, method)).toBe(service);
   });
 
   it.each([
-    ['/api/aura/assets?path=works/id/file.png', 'GET'],
-    ['/api/card/assets', 'HEAD'], ['/api/aura/request/id', 'GET'],
-    ['/api/card/request/dotted.id', 'GET'],
-    ['/api/aura/save/id', 'POST'], ['/api/card/save/id', 'POST'],
-    ['/api/aura/public-slug', 'POST'],
     ['/api/webhook/stripe', 'POST'], ['/api/account/delete', 'POST'],
     ['/api/purchase/success', 'GET'], ['/api/cert/reissue', 'GET'],
     ['/api/cert/download', 'GET'], ['/api/files/download', 'GET'],
@@ -88,7 +90,7 @@ describe('legacy service suspension boundary', () => {
     ['/api/natori/delivery/accept', 'POST'], ['/api/natori/admin/projects', 'DELETE'],
     ['/api/cron/natori-payment-expiry', 'GET'],
     ['/api/natori/maintenance/inquiry-orphans', 'POST'],
-    ['/api/entries/1/comments', 'GET'], ['/admin/api/entries', 'GET'],
+    ['/admin/api/entries', 'GET'],
     ['/admin/api/inquiries/1', 'PATCH'], ['/admin/api/announcements', 'POST'],
     ['/api/natori/portfolio/content?path=/api/aura/draft', 'GET'],
   ])('preserves %s %s', (path, method) => {
