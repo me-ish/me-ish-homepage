@@ -65,3 +65,13 @@ AuraHeroMinimalは`ai-portfolio-font-`で始まるfontPreset全体をclassとし
 正確な対象、固定SHA、原本ハッシュ、CSS検証は
 [legacy-display-20261010.md](legacy-display-20261010.md)を参照。
 この更新はほかの30候補の削除判断を変更しない。
+
+### 同日: 旧トップページの判断更新
+
+上表5・6は、現在のmarketingページから呼ばれていないことを再確認し、
+専用部品・フック・型と未使用FAQ定数を合わせた12ファイルとして退避した。
+生成CSSは111クラスの互換safelistにより変更前と完全一致。
+現在のトップ、問い合わせ・法的表示・newsの実ページ、翻訳、画像、DBは保持する。
+対象・復元元・検証方法は[unused-home-20261010.md](unused-home-20261010.md)を参照。
+上表の残る28候補は今回の削除対象ではない。#133は#147で統合済みだが、
+CookieConsent・Footerの保持判断はこの整理で変更しない。
