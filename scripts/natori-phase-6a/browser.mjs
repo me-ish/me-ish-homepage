@@ -3,6 +3,7 @@ import {randomBytes,createHash} from 'node:crypto';
 import {spawn} from 'node:child_process';
 import {createRequire} from 'node:module';
 import {setDefaultResultOrder} from 'node:dns';
+import {createServerDiagnostics} from './server-diagnostics.mjs';
 const require=createRequire('/app/package.json'),{createClient}=require('@supabase/supabase-js'),{chromium,expect}=require('@playwright/test');
 setDefaultResultOrder('ipv4first');
 const results=[],observations=[],check=(value,code)=>{if(!value)throw new Error(code);};
@@ -20,6 +21,8 @@ function safePhase6aFailureCode(error) {
  return phase6aFailureCodes.has(message)?message:'ASSERTION_FAILED';
 }
 let stage='preflight',server,browser;
+const diagnostics=createServerDiagnostics({getCaseIndex:()=>stage==='preflight'?0:results.length+1,
+ onUpdate:evidence=>writeFileSync('/results/phase6a-server-diagnostics.json',JSON.stringify(evidence,null,2))});
 async function test(name,fn){stage=name;const failuresBefore=routeFailures.length;let failureCode=null;
  try{await fn();}catch(error){failureCode=safePhase6aFailureCode(error);}
  for(const unblock of routeUnblocks)unblock();routeUnblocks.clear();
@@ -45,7 +48,7 @@ async function main(){
  server=spawn(process.execPath,['/app/node_modules/next/dist/bin/next','dev','--hostname','localhost','--port','3000'],{cwd:'/app',env:{PATH:'/runtime-bin:/usr/local/bin:/usr/bin:/bin',TMPDIR:'/tmp',NODE_ENV:'development',NODE_OPTIONS:'--dns-result-order=ipv4first',NEXT_TELEMETRY_DISABLED:'1',
   PHASE_N_BROWSER:'ephemeral',PHASE_0B_BROWSER:'ephemeral',PHASE_6A_BROWSER:'ephemeral',NEXT_PUBLIC_SUPABASE_URL:origin,NEXT_PUBLIC_SUPABASE_ANON_KEY:keys.anon,SUPABASE_SERVICE_ROLE_KEY:keys.service,
   NATORI_DASHBOARD_KEY:randomBytes(32).toString('hex'),NATORI_OWNER_USER_ID:owner,NATORI_OWNER_EMAILS:email,NEXT_PUBLIC_SITE_URL:app,NATORI_NOTIFICATION_SENDING_ENABLED:'0',RESEND_API_KEY:'',STRIPE_SECRET_KEY:''},stdio:['ignore','pipe','pipe']});
- const compileErrors=new Set();for(const stream of [server.stdout,server.stderr])stream.on('data',buffer=>{for(const code of ['Module not found','Failed to compile','SyntaxError','EADDRINUSE'])if(buffer.toString().includes(code))compileErrors.add(code);});
+ const compileErrors=diagnostics.codes;for(const name of ['stdout','stderr'])server[name].on('data',buffer=>diagnostics.write(name,buffer));
  let ready=false;const until=Date.now()+120000;while(Date.now()<until&&server.exitCode===null){try{if((await fetch(app+'/ja/fixture-session',{signal:AbortSignal.timeout(2000)})).ok){ready=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,400));}check(ready,'NEXT_READY');
  browser=await chromium.launch({headless:true});const context=await browser.newContext({viewport:{width:1280,height:900}}),page=await context.newPage();
  cleanupPageRoutes=()=>page.unrouteAll({behavior:'wait'});
@@ -186,11 +189,11 @@ async function main(){
   const p=(await admin.from('natori_projects').select('status,completed_at,delivery_accepted_at').eq('id',f.id).single()).data;check(p?.status==='completed'&&p.completed_at&&p.delivery_accepted_at,'TERMINAL_RETAINED');
   check((await admin.from('natori_project_tasks').select('done').eq('project_id',f.id).eq('task_key','one').single()).data?.done===false,'TERMINAL_NO_TASK_WRITE');
  });
- await context.close();writeFileSync('/results/phase6a-browser.json',JSON.stringify({tests:results,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,
+ await context.close();diagnostics.flush();writeFileSync('/results/phase6a-browser.json',JSON.stringify({tests:results,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,
   engine:'Chromium 1.58.2; real Supabase sessions; no iPhone Safari acceptance',compileErrors:[...compileErrors],observations,routeFailures,reloadPersistence,screenshots},null,2));
  check(results.length===5&&results.every(r=>r.status==='passed')&&compileErrors.size===0,'BROWSER_FAILED');
  check(reloadPersistence.length===3&&reloadPersistence.every(proof=>proof.status==='passed'),'RELOAD_PERSISTENCE_FAILED');
  check(screenshots.length===4&&screenshots.every(proof=>proof.fullPage&&proof.sameProject&&proof.canonicalRendered),'SCREENSHOTS_FAILED');
  check(routeFailures.length===0,'REAL_TASK_RESPONSE');
 }
-main().catch(()=>{console.error(`Phase 6A browser failed at ${stage}; raw logs withheld`);process.exitCode=1;}).finally(async()=>{await browser?.close();if(server?.exitCode===null){server.kill('SIGTERM');await Promise.race([new Promise(resolve=>server.once('exit',resolve)),new Promise(resolve=>setTimeout(()=>{server.kill('SIGKILL');resolve();},5000))]);}});
+main().catch(error=>{console.error(`Phase 6A browser failed: ${safePhase6aFailureCode(error)} at ${stage}; raw logs withheld`);console.error('Phase 6A server classifications: '+JSON.stringify(diagnostics.flush()));process.exitCode=1;}).finally(async()=>{await browser?.close();if(server?.exitCode===null){server.kill('SIGTERM');await Promise.race([new Promise(resolve=>server.once('exit',resolve)),new Promise(resolve=>setTimeout(()=>{server.kill('SIGKILL');resolve();},5000))]);}});
