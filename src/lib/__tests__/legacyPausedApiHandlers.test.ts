@@ -23,7 +23,7 @@ vi.mock('@/app/_actions/sendEmail', () => forbiddenDependency('mail action'));
 type Handler = (request: NextRequest) => Promise<Response>;
 type HandlerCase = {
   path: string;
-  method: 'GET' | 'POST' | 'PATCH';
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   service: LegacyService;
   load: () => Promise<Handler>;
 };
@@ -31,6 +31,14 @@ type HandlerCase = {
 // Import and call the real route exports, without middleware. These methods
 // must remain stopped even if routing changes or a caller bypasses middleware.
 const handlers: HandlerCase[] = [
+  { path: '/api/entry/upload', method: 'POST', service: 'gallery',
+    load: () => import('@/app/api/entry/upload/route').then((route) => route.POST) },
+  { path: '/api/entries/1/comments/2', method: 'DELETE', service: 'gallery',
+    load: () => import('@/app/api/entries/[id]/comments/[commentId]/route').then((route) => route.DELETE) },
+  { path: '/api/cert/download', method: 'GET', service: 'gallery',
+    load: () => import('@/app/api/cert/download/route').then((route) => route.GET) },
+  { path: '/api/files/download', method: 'GET', service: 'gallery',
+    load: () => import('@/app/api/files/download/route').then((route) => route.GET) },
   { path: '/api/aura/assets', method: 'GET', service: 'aura',
     load: () => import('@/app/api/aura/assets/route').then((route) => route.GET) },
   { path: '/api/aura/request/synthetic-id', method: 'GET', service: 'aura',

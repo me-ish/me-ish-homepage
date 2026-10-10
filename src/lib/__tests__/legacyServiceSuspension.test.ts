@@ -49,6 +49,7 @@ describe('legacy service suspension boundary', () => {
     ['/api/card/public-slug', 'POST', 'card'],
     ['/api/aura/studio/publish/id', 'POST', 'aura'],
     ['/api/entry/upload', 'POST', 'gallery'],
+    ['/api/cert/download', 'GET', 'gallery'], ['/api/files/download', 'GET', 'gallery'],
     ['/api/purchase/stripe', 'POST', 'gallery'],
     ['/api/ai-guide', 'POST', 'gallery'],
     ['/api/internal/send-submit-email', 'POST', 'gallery'],
@@ -79,7 +80,6 @@ describe('legacy service suspension boundary', () => {
   it.each([
     ['/api/webhook/stripe', 'POST'], ['/api/account/delete', 'POST'],
     ['/api/purchase/success', 'GET'], ['/api/cert/reissue', 'GET'],
-    ['/api/cert/download', 'GET'], ['/api/files/download', 'GET'],
     ['/api/send-email/purchaseBuyer', 'POST'],
     ['/api/send-email/purchaseArtist', 'POST'],
     ['/api/send-email/payoutComplete', 'POST'],

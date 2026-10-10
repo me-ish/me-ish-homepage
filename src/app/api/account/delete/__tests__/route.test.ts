@@ -113,16 +113,21 @@ describe("POST /api/account/delete", () => {
       error: null,
     });
 
-    // All admin.from() calls succeed with empty results
-    mockAdminFrom.mockReturnValue(
-      chainReturning({ data: [], error: null }),
-    );
+    // The retired AURA relation can already be absent from production.
+    mockAdminFrom.mockImplementation((table: string) => {
+      if (table === "aura_requests") throw new Error("relation does not exist");
+      return chainReturning({ data: [], error: null });
+    });
     mockAdminDeleteUser.mockResolvedValue({ error: null });
 
     const res = await POST(makeReq());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
+    expect(mockAdminFrom.mock.calls.map(([table]) => table)).toEqual([
+      "entries", "entries", "profiles",
+    ]);
+    expect(mockAdminDeleteUser).toHaveBeenCalledWith("user-1");
   });
 
   it("returns 500 when auth delete fails", async () => {

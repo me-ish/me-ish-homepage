@@ -9,7 +9,7 @@ async function main() {
   // build.mjs maps these imports to sibling .cjs files in the same read-only mount.
   setupStage = "load-server-module";
   const { createGallerySuite } = await import("./gallery-suite");
-  const gallery = await createGallerySuite(runtime.origin);
+  const gallery = await createGallerySuite();
   try {
     const context = await createTestContext(runtime, (stage) => { setupStage = stage; });
     const { mode, results } = context;
