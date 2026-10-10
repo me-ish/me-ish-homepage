@@ -10,7 +10,7 @@
 | Natoriの画面・API・feature・全natori_*テーブル・関連Storage | ポートフォリオ、依頼受付、見積、相談、決済、納品に必要 |
 | EtorieデモとPhaseスクリプト・fixtures | ナトリの受付と権限・業務フローの検査に使用 |
 | Auth、Supabase接続、管理者判定、Stripe、Resend、i18n、共通UI | ナトリでも使用。旧サービスと共有 |
-| root layout、Provider、Analytics、フォント | 全ページへの影響がある。PR #133との調整前に整理しない |
+| root layout、QueryProvider、Analytics、フォント | #133を#147で統合済み。共通基盤を維持し、ギャラリー専用Providerはfloat/white内に配置 |
 | migration、legacy-migrations、baseline、検証成果物 | 過去DBの再現とハッシュ検証。整理目的で移動・改名・再適用しない |
 
 ## 新規利用を停止し、既存利用を保持するもの
@@ -41,6 +41,7 @@
 | 停止済み下書き・画像書込・新規購入の内部処理 | [legacy-write-api-20261010.md](archive/legacy-write-api-20261010.md) |
 | 休止済みAURA・CARDの紹介・Studio作成画面と未使用部品 | [legacy-display-20261010.md](archive/legacy-display-20261010.md)。生成CSSを互換safelistで保持 |
 | 依頼者ページの解析除外・PR #133の統合 | [analytics-privacy-20261010.md](archive/analytics-privacy-20261010.md)。共通layout整理の前提として別PRで統合 |
+| 共通layoutのギャラリー依存と重複解析 | [common-layout-20261010.md](archive/common-layout-20261010.md)。専用Providerはギャラリー内で維持 |
 
 `_archive/`へTypeScript本体を移すと型検査へ混入します。旧実装は台帳の固定SHAと
 保存ブランチから必要なファイルだけを別worktreeへ取り出します。通常の復旧はrevert PRを
