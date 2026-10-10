@@ -56,3 +56,12 @@ AuraHeroMinimalは`ai-portfolio-font-`で始まるfontPreset全体をclassとし
 
 画像・フォント・DB・Storageはこのimport解析の削除候補に含めない。#133のprivacy/root、
 #135の動画、Natoriの現役導線・料金・見積・案件管理は別担当/別単位の判断を維持する。
+
+## 2026-10-10の判断更新
+
+上表7〜10のAURA4部品は、休止済みStudio画面の整理と合わせて削除した。
+削除で失われるCSS入力は`tailwind.config.js`の互換safelistへ残し、同条件で生成した
+変更前後のCSSがバイト単位で完全一致することを確認した。保存済みテーマのclassも保護する。
+正確な対象、固定SHA、原本ハッシュ、CSS検証は
+[legacy-display-20261010.md](legacy-display-20261010.md)を参照。
+この更新はほかの30候補の削除判断を変更しない。
