@@ -52,7 +52,8 @@ describe("findPortfolioSaveProblem (Q-12)", () => {
       itemIndex: null,
       reason: "format",
       limit: null,
-      detail: "YouTubeの動画URL（https://www.youtube.com/watch?v=… や https://youtu.be/…）を指定してください",
+      detail:
+        "YouTubeの動画URL（https://www.youtube.com/watch?v=… や https://youtu.be/…）か、アップロードした動画ファイルを指定してください",
     });
     expect(
       findPortfolioSaveProblem({ ...base, processVideo: { url: "https://youtu.be/dQw4w9WgXcQ", caption: "あ".repeat(201) } })

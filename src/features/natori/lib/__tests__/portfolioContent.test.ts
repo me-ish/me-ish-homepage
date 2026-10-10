@@ -242,10 +242,17 @@ describe("parsePortfolioContent", () => {
     ).toEqual({ url: "https://youtu.be/dQw4w9WgXcQ" });
   });
 
-  it("制作過程の動画のURLは、空か YouTube の動画URLだけ保存できる", () => {
+  it("制作過程の動画のURLは、空か YouTube の動画URL、アップロードした動画ファイルのURLだけ保存できる", () => {
     const withUrl = (url: string): PortfolioContent => ({ ...validContent, processVideo: { url } });
+    const fileUrl =
+      "https://abcdefgh.supabase.co/storage/v1/object/public/natori-portfolio/videos/3f2b8c1e-9d4a-4b7e-8a1f-0c5d6e7f8a9b.mp4";
     expect(parsePortfolioContent(withUrl(""))).not.toBeNull();
     expect(parsePortfolioContent(withUrl("https://youtu.be/dQw4w9WgXcQ"))).not.toBeNull();
+    expect(parsePortfolioContent(withUrl(fileUrl))?.processVideo?.url).toBe(fileUrl);
+    // 動画用のフォルダの外や、他のサイトの動画ファイルは保存できない
+    expect(parsePortfolioContent(withUrl(fileUrl.replace("/videos/", "/images/")))).toBeNull();
+    expect(parsePortfolioContent(withUrl(fileUrl.replace(".mp4", ".mov")))).toBeNull();
+    expect(parsePortfolioContent(withUrl(`${fileUrl}?download=1`))).toBeNull();
     expect(parsePortfolioContent(withUrl("https://example.com/movie.mp4"))).toBeNull();
     expect(parsePortfolioContent(withUrl("https://www.youtube.com/watch?v=short"))).toBeNull();
     expect(parsePortfolioContent(withUrl("javascript:alert(1)"))).toBeNull();
@@ -277,6 +284,13 @@ describe("parsePortfolioContent", () => {
     });
     expect(cleared).not.toBeNull();
     expect(cleared).not.toHaveProperty("processVideo");
+
+    // 動画ファイルのURLは、前後の空白を取って残す
+    const fileUrl =
+      "https://abcdefgh.supabase.co/storage/v1/object/public/natori-portfolio/videos/3f2b8c1e-9d4a-4b7e-8a1f-0c5d6e7f8a9b.mp4";
+    expect(
+      preparePortfolioContentForSave({ ...base, processVideo: { url: ` ${fileUrl}\n`, shape: "portrait" } })?.processVideo
+    ).toEqual({ url: fileUrl, posterWorkId: null, shape: "portrait" });
     expect(
       preparePortfolioContentForSave({ ...base, processVideo: { url: "https://example.com/movie.mp4" } })
     ).toBeNull();

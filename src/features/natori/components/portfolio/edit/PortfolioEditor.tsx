@@ -1003,12 +1003,13 @@ export default function PortfolioEditor({
           id="section-process"
           emoji="🎬"
           title="制作過程の動画"
-          description="タイムラプスなどの動画を、公開ページの「ご依頼実績」のすぐ下に表示します。YouTubeにアップロードした動画のURLを貼ってください。"
+          description="タイムラプスなどの動画を、公開ページの「ご依頼実績」のすぐ下に表示します。YouTubeの動画URLを貼るか、動画ファイル（MP4）をアップロードしてください。"
         >
           <PortfolioProcessVideoEditor
             value={content.processVideo}
             works={content.works}
             onChange={(next) => patch({ processVideo: next })}
+            uploadDisabled={isDemo}
           />
         </SectionCard>
 

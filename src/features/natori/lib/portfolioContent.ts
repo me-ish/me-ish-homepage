@@ -8,7 +8,7 @@ import {
 } from "@/features/natori/constants/portfolioContent";
 import { PROCESS_VIDEO_SHAPES } from "@/features/natori/constants/portfolioProcessVideo";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
-import { normalizeProcessVideoForSave, parseYoutubeVideoId } from "./portfolioProcessVideo";
+import { normalizeProcessVideoForSave, parseProcessVideoSource } from "./portfolioProcessVideo";
 import { isPortfolioWorkflowProjectionEligible } from "./portfolioWorkflow";
 
 const shortText = z.string().max(200);
@@ -99,11 +99,11 @@ const workSchema = z
     }),
   );
 
-// 制作過程の動画。URL は空（動画なし）か、YouTube の動画URLとして読めるものだけ許す。
+// 制作過程の動画。URL は空（動画なし）か、YouTube の動画URL、またはアップロードした動画ファイルのURLだけ許す。
 const processVideoSchema = z.object({
   url: z.string().max(300).refine(
-    (value) => value.trim().length === 0 || parseYoutubeVideoId(value) !== null,
-    "YouTubeの動画URL（https://www.youtube.com/watch?v=… や https://youtu.be/…）を指定してください"
+    (value) => value.trim().length === 0 || parseProcessVideoSource(value) !== null,
+    "YouTubeの動画URL（https://www.youtube.com/watch?v=… や https://youtu.be/…）か、アップロードした動画ファイルを指定してください"
   ),
   caption: shortText.optional(),
   posterWorkId: z.string().min(1).max(64).nullable().optional(),

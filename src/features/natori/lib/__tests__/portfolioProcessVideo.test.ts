@@ -3,7 +3,12 @@ import { defaultPortfolioContent } from "@/features/natori/constants/portfolioCo
 import { PROCESS_VIDEO_DEFAULT_CAPTION } from "@/features/natori/constants/portfolioProcessVideo";
 import type { PortfolioWork } from "@/features/natori/types/portfolio";
 import {
+  checkProcessVideoFile,
+  describeProcessVideoFileProblem,
+  formatProcessVideoSize,
   normalizeProcessVideoForSave,
+  parseProcessVideoFileUrl,
+  parseProcessVideoSource,
   parseYoutubeVideoId,
   resolveProcessVideoView,
   youtubeEmbedSrc,
@@ -11,6 +16,7 @@ import {
 } from "../portfolioProcessVideo";
 
 const ID = "dQw4w9WgXcQ";
+const FILE_URL = "https://abcdefgh.supabase.co/storage/v1/object/public/natori-portfolio/videos/3f2b8c1e-9d4a-4b7e-8a1f-0c5d6e7f8a9b.mp4";
 
 describe("parseYoutubeVideoId", () => {
   it.each([
@@ -131,7 +137,7 @@ describe("resolveProcessVideoView", () => {
 
   it("説明・形が未設定なら既定（既定の一文・横長）で補う", () => {
     expect(view({ url: `https://youtu.be/${ID}` })).toEqual({
-      videoId: ID,
+      source: { kind: "youtube", videoId: ID },
       caption: PROCESS_VIDEO_DEFAULT_CAPTION,
       shape: "landscape",
       posterImage: null,
@@ -153,5 +159,134 @@ describe("resolveProcessVideoView", () => {
     expect(view({ url, posterWorkId: "w3" })?.posterImage).toBeNull();
     expect(view({ url, posterWorkId: "deleted" })?.posterImage).toBeNull();
     expect(view({ url, posterWorkId: null })?.posterImage).toBeNull();
+  });
+});
+
+describe("parseProcessVideoFileUrl", () => {
+  it("動画用のフォルダにある .mp4 の公開URLを、標準の形で返す", () => {
+    expect(parseProcessVideoFileUrl(FILE_URL)).toBe(FILE_URL);
+    expect(parseProcessVideoFileUrl(`  ${FILE_URL}  `)).toBe(FILE_URL);
+    expect(parseProcessVideoFileUrl(FILE_URL.replace("https://abcdefgh.supabase.co", "HTTPS://ABCDEFGH.supabase.co"))).toBe(FILE_URL);
+  });
+
+  it("ローカルの Supabase（http・ポート付き）の公開URLも通す", () => {
+    const local = "http://127.0.0.1:54321/storage/v1/object/public/natori-portfolio/videos/a-b_c1.mp4";
+    expect(parseProcessVideoFileUrl(local)).toBe(local);
+  });
+
+  it.each([
+    ["空", ""],
+    ["空白だけ", "   "],
+    ["URLではない", "videos/a.mp4"],
+    ["拡張子が違う", FILE_URL.replace(".mp4", ".mov")],
+    ["拡張子の大文字", FILE_URL.replace(".mp4", ".MP4")],
+    ["別のフォルダ", FILE_URL.replace("/videos/", "/images/")],
+    ["別のバケット", FILE_URL.replace("/natori-portfolio/", "/natori-deliveries/")],
+    ["公開URLではない（非公開の取得口）", FILE_URL.replace("/object/public/", "/object/sign/")],
+    ["フォルダの入れ子", FILE_URL.replace("/videos/", "/videos/nested/")],
+    ["フォルダの外へ出る", FILE_URL.replace("/videos/", "/videos/%2e%2e/")],
+    ["クエリ付き", `${FILE_URL}?t=1`],
+    ["フラグメント付き", `${FILE_URL}#t=10`],
+    ["認証情報付き", FILE_URL.replace("https://", "https://user:pass@")],
+    ["ftp", FILE_URL.replace("https://", "ftp://")],
+    ["javascript", `javascript:alert(1)//${FILE_URL}`],
+    ["ファイル名に記号", FILE_URL.replace("3f2b8c1e-9d4a-4b7e-8a1f-0c5d6e7f8a9b", "a%20b")],
+    ["ファイル名が長すぎる", FILE_URL.replace("3f2b8c1e-9d4a-4b7e-8a1f-0c5d6e7f8a9b", "a".repeat(81))],
+    ["YouTube の動画", `https://youtu.be/${ID}`],
+  ])("%s は動画ファイルのURLとして読まない", (_label, url) => {
+    expect(parseProcessVideoFileUrl(url)).toBeNull();
+  });
+});
+
+describe("parseProcessVideoSource", () => {
+  it("YouTube と動画ファイルを見分ける", () => {
+    expect(parseProcessVideoSource(`https://youtu.be/${ID}`)).toEqual({ kind: "youtube", videoId: ID });
+    expect(parseProcessVideoSource(FILE_URL)).toEqual({ kind: "file", url: FILE_URL });
+  });
+
+  it("どちらでもないURLは null", () => {
+    expect(parseProcessVideoSource("")).toBeNull();
+    expect(parseProcessVideoSource("https://example.com/video.mp4")).toBeNull();
+  });
+});
+
+describe("checkProcessVideoFile", () => {
+  const mp4 = { name: "timelapse.mp4", type: "video/mp4", size: 30_000_000 };
+
+  it("MP4 で上限以内なら問題なし", () => {
+    expect(checkProcessVideoFile(mp4)).toBeNull();
+    expect(checkProcessVideoFile({ ...mp4, size: 50_000_000 })).toBeNull();
+    expect(checkProcessVideoFile({ type: " Video/MP4 ", size: 1 })).toBeNull();
+  });
+
+  it("種類が空のブラウザでは、拡張子が .mp4 のときだけ通す", () => {
+    expect(checkProcessVideoFile({ name: "A.MP4", type: "", size: 10 })).toBeNull();
+    expect(checkProcessVideoFile({ name: "a.mov", type: "", size: 10 })).toBe("not-mp4");
+    expect(checkProcessVideoFile({ type: "", size: 10 })).toBe("not-mp4");
+  });
+
+  it("MP4 以外は not-mp4（名前が .mp4 でも種類が違えば通さない）", () => {
+    expect(checkProcessVideoFile({ ...mp4, type: "video/quicktime" })).toBe("not-mp4");
+    expect(checkProcessVideoFile({ ...mp4, type: "video/webm" })).toBe("not-mp4");
+    expect(checkProcessVideoFile({ ...mp4, type: "image/png" })).toBe("not-mp4");
+  });
+
+  it("空のファイルは empty、上限を1バイトでも超えたら too-large", () => {
+    expect(checkProcessVideoFile({ ...mp4, size: 0 })).toBe("empty");
+    expect(checkProcessVideoFile({ ...mp4, size: Number.NaN })).toBe("empty");
+    expect(checkProcessVideoFile({ ...mp4, size: 50_000_001 })).toBe("too-large");
+  });
+});
+
+describe("動画ファイルの案内文", () => {
+  it("バイト数は 1MB = 1,000,000 バイトで数える", () => {
+    expect(formatProcessVideoSize(63_200_000)).toBe("63.2MB");
+    expect(formatProcessVideoSize(50_000_000)).toBe("50.0MB");
+  });
+
+  it("理由ごとに、直し方のわかる日本語を返す", () => {
+    expect(describeProcessVideoFileProblem("not-mp4")).toBe("MP4形式（.mp4）の動画を選んでください。");
+    expect(describeProcessVideoFileProblem("empty")).toContain("空");
+    expect(describeProcessVideoFileProblem("too-large", 63_200_000)).toBe(
+      "動画は50MBまでです（選んだ動画は63.2MB）。書き出しの画質やサイズを下げてから、もう一度選んでください。"
+    );
+    expect(describeProcessVideoFileProblem("too-large")).toBe(
+      "動画は50MBまでです。書き出しの画質やサイズを下げてから、もう一度選んでください。"
+    );
+  });
+});
+
+describe("動画ファイルの保存前整形と表示内容", () => {
+  const work = defaultPortfolioContent.works[0];
+  const works: PortfolioWork[] = [
+    { ...work, id: "w1", title: "作品1", image: "https://example.com/w1.webp", published: true },
+  ];
+
+  it("動画ファイルのURLは空白を取った標準の形にして残す", () => {
+    expect(normalizeProcessVideoForSave({ url: ` ${FILE_URL} `, shape: "portrait" })).toEqual({
+      url: FILE_URL,
+      posterWorkId: null,
+      shape: "portrait",
+    });
+  });
+
+  it("動画ファイルのURLは file として表示内容に出し、再生前の画像・説明・形も使う", () => {
+    expect(
+      resolveProcessVideoView({
+        processVideo: { url: FILE_URL, caption: "仕上げまで", posterWorkId: "w1", shape: "square" },
+        works,
+      })
+    ).toEqual({
+      source: { kind: "file", url: FILE_URL },
+      caption: "仕上げまで",
+      shape: "square",
+      posterImage: "https://example.com/w1.webp",
+    });
+  });
+
+  it("他のサイトの .mp4 は動画として読まない（セクションごと出さない）", () => {
+    expect(
+      resolveProcessVideoView({ processVideo: { url: "https://example.com/video.mp4" }, works })
+    ).toBeNull();
   });
 });

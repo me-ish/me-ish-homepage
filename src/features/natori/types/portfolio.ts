@@ -113,7 +113,10 @@ export type PortfolioFaq = {
 export type PortfolioProcessVideoShape = "landscape" | "square" | "portrait";
 
 export type PortfolioProcessVideo = {
-  /** YouTube の動画URL（限定公開でよい）。空なら公開ページに何も出さない */
+  /**
+   * YouTube の動画URL（限定公開でよい）か、編集画面からアップロードした動画ファイルの公開URL。
+   * どちらかはURLの形で決まる。空なら公開ページに何も出さない
+   */
   url: string;
   /** 見出しの下に出す短い説明。空なら既定の一文を出す */
   caption?: string;

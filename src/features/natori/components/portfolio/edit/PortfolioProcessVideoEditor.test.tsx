@@ -1,14 +1,29 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
 import { PROCESS_VIDEO_DEFAULT_CAPTION } from "@/features/natori/constants/portfolioProcessVideo";
 import type { PortfolioProcessVideo, PortfolioWork } from "@/features/natori/types/portfolio";
 import PortfolioProcessVideoEditor from "./PortfolioProcessVideoEditor";
 
+const { uploadMock } = vi.hoisted(() => ({ uploadMock: vi.fn() }));
+vi.mock("@/features/natori/data/supabaseProcessVideo", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/natori/data/supabaseProcessVideo")>();
+  return { ...actual, uploadProcessVideoFile: (...args: unknown[]) => uploadMock(...args) };
+});
+
+import { ProcessVideoUploadError } from "@/features/natori/data/supabaseProcessVideo";
+
+beforeEach(() => {
+  uploadMock.mockReset();
+});
+
 afterEach(cleanup);
 
 const ID = "dQw4w9WgXcQ";
+const FILE_URL =
+  "https://abcdefgh.supabase.co/storage/v1/object/public/natori-portfolio/videos/3f2b8c1e-9d4a-4b7e-8a1f-0c5d6e7f8a9b.mp4";
 const base = defaultPortfolioContent.works[0];
 const works: PortfolioWork[] = [
   { ...base, id: "w1", title: "作品1", image: "https://example.com/w1.webp", published: true },
@@ -116,5 +131,210 @@ describe("PortfolioProcessVideoEditor", () => {
     fireEvent.change(caption, { target: { value: "新しい説明" } });
     expect(onChange).toHaveBeenLastCalledWith({ url: `https://youtu.be/${ID}`, caption: "新しい説明" });
     expect(screen.getByText(`空欄なら「${PROCESS_VIDEO_DEFAULT_CAPTION}」と表示します。`)).toBeTruthy();
+  });
+});
+
+/** 親が値を持つ実際の使い方に近づけるための入れ物 */
+function Harness({
+  initial,
+  onChange,
+  uploadDisabled,
+}: {
+  initial: PortfolioProcessVideo | undefined;
+  onChange: (next: PortfolioProcessVideo) => void;
+  uploadDisabled?: boolean;
+}) {
+  const [value, setValue] = useState(initial);
+  return (
+    <PortfolioProcessVideoEditor
+      value={value}
+      works={works}
+      uploadDisabled={uploadDisabled}
+      onChange={(next) => {
+        onChange(next);
+        setValue(next);
+      }}
+    />
+  );
+}
+
+const sourceButton = (name: "YouTubeのURL" | "動画ファイル") => screen.getByRole("button", { name });
+const fileInput = () => document.querySelector('input[type="file"]') as HTMLInputElement;
+const mp4 = () => new File([new Uint8Array(8)], "timelapse.mp4", { type: "video/mp4" });
+
+describe("PortfolioProcessVideoEditor 動画ファイル", () => {
+  it("動画の入れ方は、保存されているURLの種類に合わせて開く", () => {
+    render(<Harness initial={undefined} onChange={vi.fn()} />);
+    expect(sourceButton("YouTubeのURL").getAttribute("aria-pressed")).toBe("true");
+    expect(sourceButton("動画ファイル").getAttribute("aria-pressed")).toBe("false");
+    cleanup();
+
+    render(<Harness initial={{ url: `https://youtu.be/${ID}` }} onChange={vi.fn()} />);
+    expect(sourceButton("YouTubeのURL").getAttribute("aria-pressed")).toBe("true");
+    cleanup();
+
+    render(<Harness initial={{ url: FILE_URL }} onChange={vi.fn()} />);
+    expect(sourceButton("動画ファイル").getAttribute("aria-pressed")).toBe("true");
+    expect(screen.queryByLabelText("YouTubeの動画URL")).toBeNull();
+    const preview = screen.getByLabelText("アップロードした動画の確認") as HTMLVideoElement;
+    expect(preview.getAttribute("src")).toBe(FILE_URL);
+    expect(screen.getByRole("button", { name: "別のファイルに差し替える" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "動画を外す" })).toBeTruthy();
+  });
+
+  it("動画ファイルがまだないときは、選ぶボタンと形式・大きさの案内を出す", () => {
+    render(<Harness initial={undefined} onChange={vi.fn()} />);
+    fireEvent.click(sourceButton("動画ファイル"));
+    expect(screen.getByRole("button", { name: "動画ファイルを選ぶ" })).toBeTruthy();
+    expect(screen.queryByLabelText("アップロードした動画の確認")).toBeNull();
+    expect(screen.getByText(/MP4（H.264）形式、50MBまでです/u)).toBeTruthy();
+    expect(fileInput().accept).toBe("video/mp4");
+  });
+
+  it("切り替えると公開されるURLも切り替わり、外したほうの入力は戻すと元に戻る", () => {
+    const onChange = vi.fn();
+    render(<Harness initial={{ url: `https://youtu.be/${ID}`, caption: "説明" }} onChange={onChange} />);
+
+    fireEvent.click(sourceButton("動画ファイル"));
+    expect(onChange).toHaveBeenLastCalledWith({ url: "", caption: "説明" });
+    expect(screen.queryByLabelText("YouTubeの動画URL")).toBeNull();
+
+    fireEvent.click(sourceButton("YouTubeのURL"));
+    expect(onChange).toHaveBeenLastCalledWith({ url: `https://youtu.be/${ID}`, caption: "説明" });
+    expect((screen.getByLabelText("YouTubeの動画URL") as HTMLInputElement).value).toBe(`https://youtu.be/${ID}`);
+  });
+
+  it("同じ側をもう一度押しても、設定を変えない", () => {
+    const onChange = vi.fn();
+    render(<Harness initial={{ url: `https://youtu.be/${ID}` }} onChange={onChange} />);
+    fireEvent.click(sourceButton("YouTubeのURL"));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("何も設定していないときに切り替えただけでは、設定を作らない", () => {
+    const onChange = vi.fn();
+    render(<Harness initial={undefined} onChange={onChange} />);
+    fireEvent.click(sourceButton("動画ファイル"));
+    fireEvent.click(sourceButton("YouTubeのURL"));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("選んだファイルをアップロードし、できたURLを他の設定を残したまま渡す", async () => {
+    uploadMock.mockResolvedValue(FILE_URL);
+    const onChange = vi.fn();
+    render(<Harness initial={{ url: "", caption: "説明", shape: "portrait" }} onChange={onChange} />);
+    fireEvent.click(sourceButton("動画ファイル"));
+
+    const file = mp4();
+    fireEvent.change(fileInput(), { target: { files: [file] } });
+
+    await waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith({ url: FILE_URL, caption: "説明", shape: "portrait" })
+    );
+    expect(uploadMock).toHaveBeenCalledWith(file, expect.objectContaining({ onProgress: expect.any(Function) }));
+    expect((screen.getByLabelText("アップロードした動画の確認") as HTMLVideoElement).getAttribute("src")).toBe(FILE_URL);
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("アップロード中は進み具合を出し、切り替えと再選択を止める", async () => {
+    let finish: (url: string) => void = () => {};
+    let report: (ratio: number) => void = () => {};
+    uploadMock.mockImplementation(
+      (_file: File, options: { onProgress: (ratio: number) => void }) =>
+        new Promise<string>((resolve) => {
+          report = options.onProgress;
+          finish = resolve;
+        })
+    );
+    render(<Harness initial={undefined} onChange={vi.fn()} />);
+    fireEvent.click(sourceButton("動画ファイル"));
+    fireEvent.change(fileInput(), { target: { files: [mp4()] } });
+
+    const bar = await screen.findByRole("progressbar", { name: "動画のアップロードの進み具合" });
+    act(() => report(0.4));
+    expect(bar.getAttribute("aria-valuenow")).toBe("40");
+    expect(screen.getByRole("status").textContent).toContain("アップロード中です（40%）");
+    expect((screen.getByRole("button", { name: "アップロード中…" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((sourceButton("YouTubeのURL") as HTMLButtonElement).disabled).toBe(true);
+    expect((sourceButton("動画ファイル") as HTMLButtonElement).disabled).toBe(true);
+
+    await act(async () => {
+      finish(FILE_URL);
+    });
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect((sourceButton("YouTubeのURL") as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByRole("button", { name: "別のファイルに差し替える" })).toBeTruthy();
+  });
+
+  it("アップロード中に直した他の欄を、終わったときに巻き戻さない", async () => {
+    let finish: (url: string) => void = () => {};
+    uploadMock.mockImplementation(
+      () =>
+        new Promise<string>((resolve) => {
+          finish = resolve;
+        })
+    );
+    const onChange = vi.fn();
+    render(<Harness initial={undefined} onChange={onChange} />);
+    fireEvent.click(sourceButton("動画ファイル"));
+    fireEvent.change(fileInput(), { target: { files: [mp4()] } });
+    await screen.findByRole("progressbar");
+
+    fireEvent.change(screen.getByLabelText("見出しの下の説明（任意）"), { target: { value: "待っている間に書いた説明" } });
+    await act(async () => {
+      finish(FILE_URL);
+    });
+
+    expect(onChange).toHaveBeenLastCalledWith({ url: FILE_URL, caption: "待っている間に書いた説明" });
+  });
+
+  it("アップロードに失敗したら理由を出し、いまの設定は変えない", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    uploadMock.mockRejectedValue(new ProcessVideoUploadError("動画は50MBまでです（選んだ動画は63.2MB）。"));
+    const onChange = vi.fn();
+    render(<Harness initial={undefined} onChange={onChange} />);
+    fireEvent.click(sourceButton("動画ファイル"));
+    fireEvent.change(fileInput(), { target: { files: [mp4()] } });
+
+    expect((await screen.findByRole("alert")).textContent).toBe("動画は50MBまでです（選んだ動画は63.2MB）。");
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "動画ファイルを選ぶ" })).toBeTruthy();
+
+    // 想定外のエラーでも、画面には日本語の案内だけを出す
+    uploadMock.mockRejectedValue(new Error("TypeError: Failed to fetch"));
+    fireEvent.change(fileInput(), { target: { files: [mp4()] } });
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toBe(
+        "アップロードに失敗しました。通信状況を確認して、もう一度お試しください。"
+      )
+    );
+    consoleError.mockRestore();
+  });
+
+  it("動画を外すと、動画ファイルの側のまま空にする", () => {
+    const onChange = vi.fn();
+    render(<Harness initial={{ url: FILE_URL, caption: "説明" }} onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: "動画を外す" }));
+
+    expect(onChange).toHaveBeenLastCalledWith({ url: "", caption: "説明" });
+    expect(sourceButton("動画ファイル").getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "動画ファイルを選ぶ" })).toBeTruthy();
+  });
+
+  it("アップロードした動画をブラウザで再生できなかったときは、形式の確認を促す", () => {
+    render(<Harness initial={{ url: FILE_URL }} onChange={vi.fn()} />);
+    expect(screen.queryByText(/再生できませんでした/u)).toBeNull();
+    fireEvent.error(screen.getByLabelText("アップロードした動画の確認"));
+    expect(screen.getByText(/この動画をブラウザで再生できませんでした。MP4（H.264）で書き出した動画か確認してください/u)).toBeTruthy();
+  });
+
+  it("デモ環境ではアップロードせず、案内だけを出す", () => {
+    render(<Harness initial={undefined} onChange={vi.fn()} uploadDisabled />);
+    fireEvent.click(sourceButton("動画ファイル"));
+    fireEvent.click(screen.getByRole("button", { name: "動画ファイルを選ぶ" }));
+
+    expect(screen.getByRole("alert").textContent).toBe("デモ環境のため、動画のアップロードはできません。");
+    expect(uploadMock).not.toHaveBeenCalled();
   });
 });

@@ -1,8 +1,13 @@
 // features/natori/lib/portfolioProcessVideo.ts
-// 制作過程の動画（YouTube）の純関数。URLの判定・プレイヤーURLの組み立て・保存前の整形・公開側の表示内容。
+// 制作過程の動画の純関数。YouTube のURL判定、動画ファイル（Storage の公開URL）の判定、
+// アップロード前のファイル検査、保存前の整形、公開側の表示内容。
 import {
+  PROCESS_VIDEO_BUCKET,
   PROCESS_VIDEO_DEFAULT_CAPTION,
   PROCESS_VIDEO_DEFAULT_SHAPE,
+  PROCESS_VIDEO_FILE_MAX_BYTES,
+  PROCESS_VIDEO_FILE_MAX_LABEL,
+  PROCESS_VIDEO_FOLDER,
 } from "@/features/natori/constants/portfolioProcessVideo";
 import type {
   PortfolioContent,
@@ -58,10 +63,92 @@ export function youtubeWatchUrl(videoId: string): string {
   return `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
 }
 
+/* ---------- 動画ファイル（Supabase Storage の公開URL） ---------- */
+
+/** 公開URLのパスのうち、ファイル名より前の部分（/storage/v1/object/public/<バケット>/<フォルダ>/） */
+const FILE_PATH_PREFIX = `/storage/v1/object/public/${PROCESS_VIDEO_BUCKET}/${PROCESS_VIDEO_FOLDER}/`;
+/** アップロードで付けるファイル名（UUID + .mp4）を含む、英数字・ハイフン・アンダースコアだけの名前 */
+const FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}\.mp4$/u;
+
+/**
+ * アップロードした動画ファイルの公開URLかどうかを判定し、標準の形（クエリ・フラグメントなし）で返す。
+ * 動画用のバケットとフォルダにある .mp4 だけを受け付け、それ以外（他のサイトの動画など）は null。
+ * ホスト名は見ない（Supabase のドメインは環境ごとに違うため）。URLを組み立てるのはサーバー側だけ。
+ */
+export function parseProcessVideoFileUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+  if (url.username || url.password || url.search || url.hash) return null;
+  if (!url.pathname.startsWith(FILE_PATH_PREFIX)) return null;
+  if (!FILE_NAME.test(url.pathname.slice(FILE_PATH_PREFIX.length))) return null;
+  return `${url.origin}${url.pathname}`;
+}
+
+/** 制作過程の動画のもと。YouTube の動画か、アップロードした動画ファイルのどちらか */
+export type ProcessVideoSource =
+  | { kind: "youtube"; videoId: string }
+  | { kind: "file"; url: string };
+
+/** 保存されているURLが何の動画かを読み取る。どちらにも読めなければ null。 */
+export function parseProcessVideoSource(value: string): ProcessVideoSource | null {
+  const videoId = parseYoutubeVideoId(value);
+  if (videoId) return { kind: "youtube", videoId };
+  const fileUrl = parseProcessVideoFileUrl(value);
+  return fileUrl ? { kind: "file", url: fileUrl } : null;
+}
+
+export type ProcessVideoFileProblem = "empty" | "not-mp4" | "too-large";
+
+/**
+ * アップロード前のファイル検査。問題がなければ null。
+ * 形式は種類（video/mp4）で見る。種類が空のブラウザもあるので、そのときだけ拡張子で補う。
+ */
+export function checkProcessVideoFile(file: {
+  name?: string;
+  type: string;
+  size: number;
+}): ProcessVideoFileProblem | null {
+  const type = file.type.trim().toLowerCase();
+  const isMp4 = type === "video/mp4" || (type === "" && (file.name ?? "").toLowerCase().endsWith(".mp4"));
+  if (!isMp4) return "not-mp4";
+  if (!Number.isFinite(file.size) || file.size <= 0) return "empty";
+  if (file.size > PROCESS_VIDEO_FILE_MAX_BYTES) return "too-large";
+  return null;
+}
+
+/** バイト数を「63.2MB」の形にする（上限の「50MB」と同じ 1MB = 1,000,000 バイトで数える） */
+export function formatProcessVideoSize(bytes: number): string {
+  return `${(bytes / 1_000_000).toFixed(1)}MB`;
+}
+
+/** アップロードできない理由を、編集画面にそのまま出せる日本語にする */
+export function describeProcessVideoFileProblem(problem: ProcessVideoFileProblem, size?: number): string {
+  switch (problem) {
+    case "not-mp4":
+      return "MP4形式（.mp4）の動画を選んでください。";
+    case "empty":
+      return "中身が空のファイルです。別の動画を選んでください。";
+    case "too-large":
+      return `動画は${PROCESS_VIDEO_FILE_MAX_LABEL}までです${
+        size !== undefined ? `（選んだ動画は${formatProcessVideoSize(size)}）` : ""
+      }。書き出しの画質やサイズを下げてから、もう一度選んでください。`;
+  }
+}
+
+/* ---------- 保存前の整形・公開側の表示内容 ---------- */
+
 /**
  * 保存前の整形。URLが空なら動画なし（undefined）として設定ごと保存しない。
  * YouTube のURLとして読めたものは、追跡用のパラメータなどを落として標準の形に直す。
- * 読めないURLはそのまま残し、保存前検証（portfolioContentSchema）で弾く。
+ * 動画ファイルのURLとして読めたものも、標準の形（クエリなし）にそろえる。
+ * どちらにも読めないURLはそのまま残し、保存前検証（portfolioContentSchema）で弾く。
  */
 export function normalizeProcessVideoForSave(
   video: PortfolioProcessVideo | undefined
@@ -69,9 +156,10 @@ export function normalizeProcessVideoForSave(
   if (!video) return undefined;
   const url = video.url.trim();
   if (url.length === 0) return undefined;
-  const videoId = parseYoutubeVideoId(url);
+  const source = parseProcessVideoSource(url);
+  const normalizedUrl = !source ? url : source.kind === "youtube" ? youtubeWatchUrl(source.videoId) : source.url;
   return {
-    url: videoId ? youtubeWatchUrl(videoId) : url,
+    url: normalizedUrl,
     ...(video.caption !== undefined ? { caption: video.caption.trim() } : {}),
     posterWorkId: video.posterWorkId ?? null,
     ...(video.shape !== undefined ? { shape: video.shape } : {}),
@@ -89,7 +177,7 @@ function processVideoPosterImage(
 }
 
 export type PortfolioProcessVideoView = {
-  videoId: string;
+  source: ProcessVideoSource;
   /** 空にならない（書いていなければ既定の一文） */
   caption: string;
   shape: PortfolioProcessVideoShape;
@@ -102,10 +190,10 @@ export function resolveProcessVideoView(
 ): PortfolioProcessVideoView | null {
   const video = content.processVideo;
   if (!video) return null;
-  const videoId = parseYoutubeVideoId(video.url);
-  if (!videoId) return null;
+  const source = parseProcessVideoSource(video.url);
+  if (!source) return null;
   return {
-    videoId,
+    source,
     caption: video.caption?.trim() || PROCESS_VIDEO_DEFAULT_CAPTION,
     shape: video.shape ?? PROCESS_VIDEO_DEFAULT_SHAPE,
     posterImage: processVideoPosterImage(video, content.works),

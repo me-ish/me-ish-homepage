@@ -55,14 +55,14 @@ describe("PortfolioEditor process video section", () => {
     expect(processSection().queryByText(/読み取れません/u)).toBeNull();
   });
 
-  it("flags the section and says why when the URL is not a YouTube video URL", () => {
+  it("flags the section and says why when the URL is neither a YouTube video nor an uploaded file", () => {
     render(<PortfolioEditor demoContent={defaultPortfolioContent} />);
     fireEvent.change(urlInput(), { target: { value: "https://example.com/movie.mp4" } });
     fireEvent.click(saveButton());
 
     expect(status().textContent).toContain("入力内容に保存できない値があります。");
     expect(status().textContent).toContain(
-      "「制作過程」：YouTubeの動画URL（https://www.youtube.com/watch?v=… や https://youtu.be/…）を指定してください。"
+      "「制作過程」：YouTubeの動画URL（https://www.youtube.com/watch?v=… や https://youtu.be/…）か、アップロードした動画ファイルを指定してください。"
     );
     expect(document.getElementById("section-process")?.getAttribute("data-save-problem")).toBe("true");
     expect(document.querySelectorAll('[data-save-problem="true"]')).toHaveLength(1);
@@ -76,6 +76,14 @@ describe("PortfolioEditor process video section", () => {
     expect(status().textContent).toContain("保存しました");
     expect(document.querySelectorAll('[data-save-problem="true"]')).toHaveLength(0);
     expect(urlInput().value).toBe("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+  });
+
+  it("offers the video file upload, but says it is unavailable in the demo", () => {
+    render(<PortfolioEditor demoContent={defaultPortfolioContent} />);
+    fireEvent.click(processSection().getByRole("button", { name: "動画ファイル" }));
+    fireEvent.click(processSection().getByRole("button", { name: "動画ファイルを選ぶ" }));
+
+    expect(processSection().getByRole("alert").textContent).toBe("デモ環境のため、動画のアップロードはできません。");
   });
 
   it("drops the video, with its other settings, when the URL is left empty", () => {

@@ -50,6 +50,7 @@ export default function NatoriPrivacyPage() {
           <div>
             <h3 className="font-black" style={{ color: "inherit" }}>Supabase</h3>
             <p>案件情報、制作に必要となる情報およびアップロードされた資料等の保存・管理に利用します。</p>
+            <p>本ウェブサイトに掲載する制作過程の動画ファイルの保存・配信にも利用します。動画は、再生ボタンを押すまで読み込みません。</p>
           </div>
           <div>
             <h3 className="font-black" style={{ color: "inherit" }}>Resend</h3>
@@ -66,7 +67,7 @@ export default function NatoriPrivacyPage() {
           </div>
           <div>
             <h3 className="font-black" style={{ color: "inherit" }}>YouTube（埋め込みプレーヤー）</h3>
-            <p>本ウェブサイトに制作過程の動画を掲載する場合に、Google LLC が提供する YouTube の埋め込みプレーヤーを利用します。再生ボタンを押すまで、YouTube には接続しません。</p>
+            <p>本ウェブサイトに制作過程の動画を YouTube の動画として掲載する場合に、Google LLC が提供する YouTube の埋め込みプレーヤーを利用します。再生ボタンを押すまで、YouTube には接続しません。</p>
             <p>
               再生ボタンを押すと、閲覧しているページ、ブラウザや端末の種類、IPアドレス、再生の状況などの情報が YouTube に送信され、Cookie などが利用される場合があります。Google によるデータの取扱いは、
               <a href="https://policies.google.com/privacy?hl=ja" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
@@ -136,7 +137,7 @@ export default function NatoriPrivacyPage() {
         <p>重要な変更を行う場合は、本ウェブサイト上への掲載その他適切な方法でお知らせします。</p>
       </LegalSection>
 
-      <p className="text-xs font-bold">制定日：2026年9月13日<br />最終改定日：2026年10月7日</p>
+      <p className="text-xs font-bold">制定日：2026年9月13日<br />最終改定日：2026年10月11日</p>
     </NatoriLegalPage>
   );
 }
