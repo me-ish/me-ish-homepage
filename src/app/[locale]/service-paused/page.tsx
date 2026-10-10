@@ -27,8 +27,8 @@ export default async function ServicePausedPage({
         </h1>
         <p className="text-base leading-relaxed text-gray-600">
           {english
-            ? 'New submissions, creation and purchases for this service are currently unavailable. Existing public pages remain available.'
-            : 'このサービスの新規応募・作成・購入は現在受け付けていません。既存の公開ページは引き続きご覧いただけます。'}
+            ? 'New submissions, creation and purchases for this service are currently unavailable.'
+            : 'このサービスの新規応募・作成・購入は現在受け付けていません。'}
         </p>
         <p className="text-sm leading-relaxed text-gray-600">
           {english

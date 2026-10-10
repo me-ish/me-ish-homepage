@@ -1,7 +1,7 @@
 import { test } from '@playwright/test';
 import { observePausedPage } from './helpers/legacy-pause';
 
-for (const path of ['/aura', '/aura/form', '/aura/form?natori-key=invalid', '/aura/studio/new', '/card', '/card/form']) {
+for (const path of ['/aura', '/aura/form', '/aura/form?natori-key=invalid', '/aura/studio', '/aura/studio/new', '/card', '/card/form']) {
   test(`creation is paused without DB or Storage writes: ${path}`, async ({ page }) => {
     await observePausedPage(page, path);
   });

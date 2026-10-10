@@ -39,6 +39,7 @@
 | 生成・Checkout・展示cronの内部処理 | [legacy-api-internals-20261010.md](archive/legacy-api-internals-20261010.md) |
 | 未使用依存・補助コード | [PR #142](https://github.com/me-ish/me-ish-homepage/pull/142)、[PR #143](https://github.com/me-ish/me-ish-homepage/pull/143)。マージ状況は各PRで確認 |
 | 停止済み下書き・画像書込・新規購入の内部処理 | [legacy-write-api-20261010.md](archive/legacy-write-api-20261010.md) |
+| 休止済みAURA・CARDの紹介・Studio作成画面と未使用部品 | [legacy-display-20261010.md](archive/legacy-display-20261010.md)。生成CSSを互換safelistで保持 |
 
 `_archive/`へTypeScript本体を移すと型検査へ混入します。旧実装は台帳の固定SHAと
 保存ブランチから必要なファイルだけを別worktreeへ取り出します。通常の復旧はrevert PRを
