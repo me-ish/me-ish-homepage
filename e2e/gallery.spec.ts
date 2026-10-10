@@ -9,6 +9,9 @@ const retiredRoutes = [
 ];
 
 test.describe('Ended legacy publications', () => {
+  // Unprefixed routes negotiate Accept-Language. Chromium otherwise defaults
+  // to en-US, so a Japanese expectation must use a Japanese browser context.
+  test.use({ locale: 'ja-JP' });
   for (const locale of ['', '/en']) {
     for (const path of retiredRoutes) {
       test(`shows the ending notice without legacy rendering: ${locale}${path}`, async ({ page }) => {

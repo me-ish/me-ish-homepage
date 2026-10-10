@@ -45,7 +45,6 @@
     "lucide-react": "^0.511.0",
     "next": "15.5.27",
     "next-intl": "^4.8.1",
-    "openai": "^6.9.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-icons": "^5.5.0",

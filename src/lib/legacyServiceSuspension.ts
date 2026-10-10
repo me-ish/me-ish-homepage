@@ -102,6 +102,10 @@ export function getSuspendedLegacyApi(
     return isLegacyEmailAllowedDuringSuspension(kind) ? null : 'gallery';
   }
 
+  // Public engagement readers ended with the old publications; support readers
+  // under /admin/api/entries retain their existing authentication.
+  if (/^\/api\/entries\/[^/]+\/(?:comments|like)$/.test(path)) return 'gallery';
+
   if (!readOnlyMethod && (isPath(path, '/api/entries') || isPath(path, '/admin/api/entries'))) {
     return 'gallery';
   }

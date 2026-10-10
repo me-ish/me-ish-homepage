@@ -12,7 +12,6 @@ const { forbiddenDependency, forbiddenFetch } = vi.hoisted(() => ({
 }));
 
 vi.mock('server-only', () => ({}));
-vi.mock('openai', () => forbiddenDependency('OpenAI'));
 vi.mock('stripe', () => forbiddenDependency('Stripe'));
 vi.mock('resend', () => forbiddenDependency('mail'));
 vi.mock('@supabase/supabase-js', () => forbiddenDependency('Supabase SDK'));
@@ -32,6 +31,16 @@ type HandlerCase = {
 // Import and call the real route exports, without middleware. These methods
 // must remain stopped even if routing changes or a caller bypasses middleware.
 const handlers: HandlerCase[] = [
+  { path: '/api/entries/1/comments', method: 'GET', service: 'gallery',
+    load: () => import('@/app/api/entries/[id]/comments/route').then((route) => route.GET) },
+  { path: '/api/entries/1/comments', method: 'POST', service: 'gallery',
+    load: () => import('@/app/api/entries/[id]/comments/route').then((route) => route.POST) },
+  { path: '/api/entries/1/like', method: 'GET', service: 'gallery',
+    load: () => import('@/app/api/entries/[id]/like/route').then((route) => route.GET) },
+  { path: '/api/entries/1/like', method: 'POST', service: 'gallery',
+    load: () => import('@/app/api/entries/[id]/like/route').then((route) => route.POST) },
+  { path: '/api/entries/1/view', method: 'POST', service: 'gallery',
+    load: () => import('@/app/api/entries/[id]/view/route').then((route) => route.POST) },
   { path: '/admin/api/entries/1/approve', method: 'POST', service: 'gallery',
     load: () => import('@/app/admin/api/entries/[id]/approve/route').then((route) => route.POST) },
   { path: '/admin/api/entries/1/reject', method: 'POST', service: 'gallery',

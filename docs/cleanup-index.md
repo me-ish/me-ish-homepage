@@ -10,7 +10,7 @@
 | Natoriの画面・API・feature・全natori_*テーブル・関連Storage | ポートフォリオ、依頼受付、見積、相談、決済、納品に必要 |
 | EtorieデモとPhaseスクリプト・fixtures | ナトリの受付と権限・業務フローの検査に使用 |
 | Auth、Supabase接続、管理者判定、Stripe、Resend、i18n、共通UI | ナトリでも使用。旧サービスと共有 |
-| root layout、QueryProvider、Analytics、フォント | #133を#147で統合済み。共通基盤を維持し、ギャラリー専用Providerはfloat/white内に配置 |
+| root layout、QueryProvider、Analytics、フォント | #133を#147で統合済み。共通基盤を維持。旧ギャラリー専用Providerは公開終了とともに退避済み |
 | migration、legacy-migrations、baseline、検証成果物 | 過去DBの再現とハッシュ検証。整理目的で移動・改名・再適用しない |
 
 ## 新規利用を停止し、既存利用を保持するもの
@@ -66,3 +66,11 @@
 [旧公開サービス終了の台帳](archive/legacy-public-20261010.md)に対象・復元元・保持境界を記録する。
 サイト入口と旧ナトリ作家URLは現在のポートフォリオへ接続する。
 DB/Storageの永久削除・購入後対応終了・追加課金は、この公開終了とは別に扱う。
+
+## 引き継ぎ後の最終整理
+
+[PR #152](https://github.com/me-ish/me-ish-homepage/pull/152)はdraft・未反映。本番mainは#151のまま。
+[管理画面・残る旧処理・検証失敗の修正](archive/legacy-support-20261010.md)、
+[DB/Storageの保持対象と削除候補・復元状況](archive/cleanup-data-retention-20261010.md)を参照。
+終了案内と無副作用の停止APIは旧URLを閉じたままにするため残す。
+保存した旧コード本体はGitから復元でき、現役ソースに複製しない。

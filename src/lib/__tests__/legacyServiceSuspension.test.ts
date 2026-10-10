@@ -65,6 +65,8 @@ describe('legacy service suspension boundary', () => {
     ['/api/aura/assets/nested', 'GET', 'aura'],
     ['/api/aura/assets', 'POST', 'aura'],
     ['/api/card/request/dotted.id', 'POST', 'card'],
+    ['/api/entries/1/comments', 'GET', 'gallery'],
+    ['/api/entries/1/like', 'GET', 'gallery'],
   ])('blocks %s %s', (path, method, service) => {
     expect(getSuspendedLegacyApi(path, method)).toBe(service);
   });
@@ -88,7 +90,7 @@ describe('legacy service suspension boundary', () => {
     ['/api/natori/delivery/accept', 'POST'], ['/api/natori/admin/projects', 'DELETE'],
     ['/api/cron/natori-payment-expiry', 'GET'],
     ['/api/natori/maintenance/inquiry-orphans', 'POST'],
-    ['/api/entries/1/comments', 'GET'], ['/admin/api/entries', 'GET'],
+    ['/admin/api/entries', 'GET'],
     ['/admin/api/inquiries/1', 'PATCH'], ['/admin/api/announcements', 'POST'],
     ['/api/natori/portfolio/content?path=/api/aura/draft', 'GET'],
   ])('preserves %s %s', (path, method) => {
