@@ -37,6 +37,7 @@ import {
 import PortfolioHeroImagesEditor from "./PortfolioHeroImagesEditor";
 import { describePortfolioSaveProblem } from "./portfolioSaveProblemMessage";
 import PortfolioPlanSampleField from "./PortfolioPlanSampleField";
+import PortfolioProcessVideoEditor from "./PortfolioProcessVideoEditor";
 import PortfolioWorkLinksEditor from "./PortfolioWorkLinksEditor";
 import SortableList from "./SortableList";
 
@@ -51,6 +52,7 @@ const SECTION_NAV = [
   { id: "section-services", label: "対応内容" },
   { id: "section-collections", label: "コレクション" },
   { id: "section-works", label: "作品" },
+  { id: "section-process", label: "制作過程" },
   { id: "section-plans", label: "料金" },
   { id: "section-options", label: "オプション" },
   { id: "section-delivery", label: "納期" },
@@ -994,6 +996,20 @@ export default function PortfolioEditor({
               />
             )}
           </div>
+        </SectionCard>
+
+        {/* 制作過程の動画 */}
+        <SectionCard
+          id="section-process"
+          emoji="🎬"
+          title="制作過程の動画"
+          description="タイムラプスなどの動画を、公開ページの「ご依頼実績」のすぐ下に表示します。YouTubeにアップロードした動画のURLを貼ってください。"
+        >
+          <PortfolioProcessVideoEditor
+            value={content.processVideo}
+            works={content.works}
+            onChange={(next) => patch({ processVideo: next })}
+          />
         </SectionCard>
 
         {/* 基本料金 */}

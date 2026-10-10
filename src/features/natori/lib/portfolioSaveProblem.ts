@@ -28,6 +28,7 @@ export const PORTFOLIO_SECTION_ID_BY_CONTENT_KEY: Readonly<Record<string, string
   collections: "section-collections",
   galleryIntro: "section-works",
   works: "section-works",
+  processVideo: "section-process",
   plans: "section-plans",
   options: "section-options",
   deliveryLead: "section-delivery",
