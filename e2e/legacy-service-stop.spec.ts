@@ -14,6 +14,11 @@ const blockedRequests = [
   ['POST', '/api/entries/1/like'],
   ['POST', '/api/entries/1/comments'],
   ['POST', '/admin/api/entries/1/approve'],
+  ['POST', '/admin/api/entries/1/reject'],
+  ['POST', '/admin/api/entries/1/reset'],
+  ['POST', '/admin/api/entries/1/plan-checkout'],
+  ['PATCH', '/admin/api/entries/1'],
+  ['POST', '/admin/api/entries/sync-display-ready'],
   ['GET', '/api/cron/exhibit-end'],
   ['GET', '/api/cron/float-daily-slots'],
 ] as const;
@@ -23,7 +28,7 @@ for (const [method, path] of blockedRequests) {
     expect(new URL(baseURL!).hostname).toMatch(/^(localhost|127\.0\.0\.1)$/);
     const response = await request.fetch(path, {
       method,
-      ...(method === 'POST' ? { data: { synthetic: true } } : {}),
+      ...(method !== 'GET' ? { data: { synthetic: true } } : {}),
     });
     expect(response.status()).toBe(503);
     expect(await response.json()).toMatchObject({ error: 'legacy_service_paused' });

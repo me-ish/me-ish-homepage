@@ -17,13 +17,14 @@ vi.mock('stripe', () => forbiddenDependency('Stripe'));
 vi.mock('resend', () => forbiddenDependency('mail'));
 vi.mock('@supabase/supabase-js', () => forbiddenDependency('Supabase SDK'));
 vi.mock('@/lib/supabaseAdmin', () => forbiddenDependency('Supabase admin'));
+vi.mock('@/lib/auth/requireAdminAuth', () => forbiddenDependency('admin authorization'));
 vi.mock('@/lib/supabase/server', () => forbiddenDependency('Supabase server'));
 vi.mock('@/app/_actions/sendEmail', () => forbiddenDependency('mail action'));
 
 type Handler = (request: NextRequest) => Promise<Response>;
 type HandlerCase = {
   path: string;
-  method: 'GET' | 'POST';
+  method: 'GET' | 'POST' | 'PATCH';
   service: LegacyService;
   load: () => Promise<Handler>;
 };
@@ -31,6 +32,18 @@ type HandlerCase = {
 // Import and call the real route exports, without middleware. These methods
 // must remain stopped even if routing changes or a caller bypasses middleware.
 const handlers: HandlerCase[] = [
+  { path: '/admin/api/entries/1/approve', method: 'POST', service: 'gallery',
+    load: () => import('@/app/admin/api/entries/[id]/approve/route').then((route) => route.POST) },
+  { path: '/admin/api/entries/1/reject', method: 'POST', service: 'gallery',
+    load: () => import('@/app/admin/api/entries/[id]/reject/route').then((route) => route.POST) },
+  { path: '/admin/api/entries/1/reset', method: 'POST', service: 'gallery',
+    load: () => import('@/app/admin/api/entries/[id]/reset/route').then((route) => route.POST) },
+  { path: '/admin/api/entries/1/plan-checkout', method: 'POST', service: 'gallery',
+    load: () => import('@/app/admin/api/entries/[id]/plan-checkout/route').then((route) => route.POST) },
+  { path: '/admin/api/entries/1', method: 'PATCH', service: 'gallery',
+    load: () => import('@/app/admin/api/entries/[id]/route').then((route) => route.PATCH) },
+  { path: '/admin/api/entries/sync-display-ready', method: 'POST', service: 'gallery',
+    load: () => import('@/app/admin/api/entries/sync-display-ready/route').then((route) => route.POST) },
   { path: '/api/aura/draft', method: 'POST', service: 'aura',
     load: () => import('@/app/api/aura/draft/route').then((route) => route.POST) },
   { path: '/api/aura/studio/draft', method: 'POST', service: 'aura',
@@ -118,7 +131,7 @@ describe('paused API handlers independently of middleware', () => {
           {
             method,
             headers: { 'content-type': 'application/json' },
-            ...(method === 'POST' ? { body: payload } : {}),
+            ...(method !== 'GET' ? { body: payload } : {}),
           },
         );
         const forbiddenBodyRead = vi.fn((): never => {

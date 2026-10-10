@@ -38,6 +38,12 @@ module.exports = {
     "ai-portfolio-font-serifJa",
     "ai-portfolio-font-retroPop",
 
+    // 未使用の旧管理UIを退避しても表示CSSを保持する。
+    // 根拠: docs/archive/legacy-admin-20261010.md
+    "bg-[#111]/90",
+    "hover:bg-emerald-100",
+    "w-[260px]",
+
     // 未使用の旧トップページ専用部品を退避しても表示CSSを保持する。
     // 根拠: docs/archive/unused-home-20261010.md
     "-left-24",
