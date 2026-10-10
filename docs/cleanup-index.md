@@ -43,6 +43,7 @@
 | 依頼者ページの解析除外・PR #133の統合 | [analytics-privacy-20261010.md](archive/analytics-privacy-20261010.md)。共通layout整理の前提として別PRで統合 |
 | 共通layoutのギャラリー依存と重複解析 | [common-layout-20261010.md](archive/common-layout-20261010.md)。専用Providerはギャラリー内で維持 |
 | 休止済みギャラリーマイページ・展示更新・所有者ひも付け | [gallery-workspace-20261010.md](archive/gallery-workspace-20261010.md)。専用UI・DB操作補助を退避し、生成CSSを保持 |
+| 未使用の旧トップページと専用部品 | [unused-home-20261010.md](archive/unused-home-20261010.md)。12ファイルを退避し、現在のトップと生成CSSを保持 |
 
 `_archive/`へTypeScript本体を移すと型検査へ混入します。旧実装は台帳の固定SHAと
 保存ブランチから必要なファイルだけを別worktreeへ取り出します。通常の復旧はrevert PRを
