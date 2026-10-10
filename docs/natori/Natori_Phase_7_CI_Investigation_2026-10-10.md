@@ -22,7 +22,7 @@ The installed Next implementation in `server/dev/next-dev-server.js` reads/parse
 
 The Phase 6A runner now records only fixed server-error classifications and numeric case indexes, handles errors split across output chunks, and bounds diagnostic noise. It exports no raw messages, request bodies, URLs, credentials or arbitrary stack paths. Server errors still fail the job. The result distinguishes successful individual cases from a failed overall server-output gate (`SERVER_OUTPUT_ERRORS`), rather than implying that five successful cases mean the suite passed.
 
-Local regression checks: six locale tests cover production params, supported development locales and unsupported-locale rejection; four diagnostic tests cover split streams, disclosure protection and bounded output. Type check, final GitHub checks and preview-build results are recorded below when complete.
+Local regression checks: six locale tests cover production params, supported development locales and unsupported-locale rejection; four diagnostic tests cover split streams, disclosure protection and bounded output. Type check passed locally. Final GitHub checks, their exact tested SHA and preview-build results are maintained in [PR #155](https://github.com/me-ish/me-ish-homepage/pull/155) and the cleanup plan, so later documentation does not blur which code was tested.
 
 Production rollout requires owner confirmation. No DB, Storage, business operation or dependency change is part of this PR. Real card payments, delivery emails and real requests are not exercised by these isolated tests.
 

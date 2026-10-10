@@ -27,6 +27,9 @@ export async function verifyContrastFocus(browser, expect) {
     await page.evaluate(() => scrollTo(0, 900)); await expect(target).toBeVisible();
     await page.getByTestId('outside-focus').focus(); await expect(target).toBeHidden();
     await page.evaluate(() => scrollTo(0, 900)); await expect(target).toBeVisible();
+    // Start the corrected probe in pointer modality with focus off the reset
+    // control, so a retained keyboard state cannot make it pass accidentally.
+    await page.mouse.click(200, 400);
     await resetContrastFocus(page); await focusForContrast(page, target);
     await expect(target).toBeVisible();
     await expect(target).toBeFocused();
