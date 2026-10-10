@@ -1,0 +1,173 @@
+{
+  "sourceCommit": "4bec943c722e0d9c6257e855ec258bacfbc05379",
+  "files": [
+    {
+      "path": "thirdweb-defaultTokens-shim.ts",
+      "action": "delete unreferenced shim",
+      "blob": "447be48d7de544e166db4811b4bdd7f0b84ca8a0",
+      "sha256": "08ed0d1a3a6811982f79c181ef34d8739502136e1f6a0575aadc0bbe34f10df5",
+      "bytes": 138
+    },
+    {
+      "path": "thirdweb-shims.d.ts",
+      "action": "delete unreferenced shim",
+      "blob": "8b79f985d09a87c2275fea9825c40fef7c385f0a",
+      "sha256": "7f7d4bd95b5ab6345cd834bd26c98b2410d494751759cc2715f6c74e4f5487e7",
+      "bytes": 572
+    },
+    {
+      "path": "tsconfig.json",
+      "action": "remove obsolete thirdweb path and explicit include",
+      "blob": "90ca89b33ffafc99c1fe7e30a3d9b200819bb158",
+      "sha256": "0d932946bc0b78fd63ba2a897c10b642dbb6584515e2565bf255bf4702ae87ad",
+      "bytes": 821
+    },
+    {
+      "path": "src/lib/aura/aura.renderTypes.ts",
+      "action": "delete unreferenced helper",
+      "blob": "1005b9c3697b45a40afa115f4f5bded47b3805e9",
+      "sha256": "cbaf207b5e64fc1db184a1e180de311648904f3cd105f12efca6f9ad7282ba76",
+      "bytes": 1446
+    },
+    {
+      "path": "src/lib/aura/aura.sanitize.ts",
+      "action": "delete unreferenced helper",
+      "blob": "da0579a5dbbf09a7d1037710eabcb569dc4af90f",
+      "sha256": "c8f70801de70aeb0c7e7bfeaa22a31d1a77ba9da5ab8a72caea402a44d1ed348",
+      "bytes": 280
+    },
+    {
+      "path": "src/lib/aura/aura.strength.ts",
+      "action": "delete unreferenced helper",
+      "blob": "fe9faa150a7f90fd32fafb5eca6e43cce0f4515b",
+      "sha256": "b042cddf300cfecf8684dcb52e35baf2fa09d12edcae3c943614fe001ef457e6",
+      "bytes": 7164
+    },
+    {
+      "path": "src/lib/aura/supabaseAdmin.ts",
+      "action": "delete unreferenced helper",
+      "blob": "50c1fa3afce3cf16e806c037a452a2e801735903",
+      "sha256": "9b0731026d12c078eba9b1fe04a9bcc3be7c5478bd9a8b4148a56d3cb4082d0f",
+      "bytes": 165
+    },
+    {
+      "path": "src/lib/aura/storage/auraAssets.server.ts",
+      "action": "delete unreferenced helper",
+      "blob": "52b9b63ce652df06b081dec5f022994e1e79b277",
+      "sha256": "8bba726e336353e32ca9354ad32074ae2e25e03ad25c72fa10ac26df408f65f5",
+      "bytes": 1466
+    },
+    {
+      "path": "src/lib/card/card.colorUtils.ts",
+      "action": "delete unreferenced helper",
+      "blob": "90c673d82d02625f286675cec5bd9bb6b1ddab16",
+      "sha256": "be374d7154daf8cd3f528cf623584e930aa677f34ecb1463626500d0a2f137fa",
+      "bytes": 1792
+    },
+    {
+      "path": "src/lib/card/card.tierGate.ts",
+      "action": "delete unreferenced helper",
+      "blob": "735bdcfe95d24f04c129173c86c7ce237d6bff3d",
+      "sha256": "0fee0df57d33511edec651893945dc4df4ef5f64a10deda13fe302cfa303caf2",
+      "bytes": 794
+    },
+    {
+      "path": "src/lib/card/storage/cardAssets.server.ts",
+      "action": "delete unreferenced helper",
+      "blob": "0fcc79037a9e6970a78b74c6eb9ac6568cd46bee",
+      "sha256": "59e3ad2596ee91202cf1ff2e0236cbdd1301555ec239408371b51d2ac1d7a226",
+      "bytes": 1349
+    },
+    {
+      "path": "src/components/aura/sections/_shared/CardBase.tsx",
+      "action": "delete unreferenced shared component",
+      "blob": "654a94b67f8b019fe4450451ebfcfcfd8bddac7d",
+      "sha256": "395670ebff72c277b96e5eb1beae8d6fee7ca923010cc4e04e8c8b3eb913d6be",
+      "bytes": 2010
+    },
+    {
+      "path": "src/components/aura/sections/_shared/SectionContainer.tsx",
+      "action": "delete unreferenced shared component",
+      "blob": "cd105e3a74369919bb0830589b54d4387252cdcc",
+      "sha256": "01a2e2a80d11f6d8a89609f919eab2b04f4f280d1de17805010dbaad8bc5625e",
+      "bytes": 1382
+    },
+    {
+      "path": "package.json",
+      "action": "remove unused isomorphic-dompurify dependency closure",
+      "blob": "1a51c4bcc4221fa21a1210d266d919a9e313a71d",
+      "sha256": "15ccbc734b83af0bccadb1d7d1147015b24557f9399f2a4673d4bd2af8596ea4",
+      "bytes": 3438
+    },
+    {
+      "path": "package-lock.json",
+      "action": "remove unused isomorphic-dompurify dependency closure",
+      "blob": "22365074019f99c703aa5aeed859895daf007e69",
+      "sha256": "a2d508bece35ff7e8a086b3bae413cb1724fe63e2c135481e25186bd261eaaef",
+      "bytes": 558065
+    },
+    {
+      "path": "e2e/legacy-service-stop.spec.ts",
+      "action": "wait for cold login navigation; same expected URL and copy",
+      "blob": "12635cdcd328af607a185fbd95cac807dc3874b5",
+      "sha256": "85a52acb766f1a9ef8c32105394522825dd503b1681012e663453a593d930484",
+      "bytes": 2838
+    },
+    {
+      "path": "e2e/natori-intake.spec.ts",
+      "action": "wait for contact document load; same intake assertions",
+      "blob": "4fd8753d7d53badc8ffbee3953920bead1b44930",
+      "sha256": "afb5f8c456a171be6332472b35e0e38128c022dea00119078443056950d7a91b",
+      "bytes": 15942
+    },
+    {
+      "path": "src/components/gallery2d/index.ts",
+      "action": "delete unreferenced helper or barrel",
+      "blob": "9de13c5924af86054284c88e92a309b01dd80e6b",
+      "sha256": "b7ad2d5ef7e4dedd6fdec929dd606b81b4e8ea89996d395aabdc6509fc034ad8",
+      "bytes": 142
+    },
+    {
+      "path": "src/components/home/index.ts",
+      "action": "delete unreferenced helper or barrel",
+      "blob": "630f7138683bbc62017c946434526ae75aae0d0d",
+      "sha256": "c739a74877e2e1d9ca0fff926d9c25025a80097488e19a3ca01c848475a17a08",
+      "bytes": 255
+    },
+    {
+      "path": "src/components/themeGalleries/test/index.ts",
+      "action": "delete unreferenced helper or barrel",
+      "blob": "ecec5aab88b4b0eb4747dc6265adc9ad84f40727",
+      "sha256": "c0bc9c4a7b209f11fac305b2a9cb90cbb78eeca01f04ae45c071523c5f8f1455",
+      "bytes": 467
+    },
+    {
+      "path": "src/i18n/navigation.ts",
+      "action": "delete unreferenced helper or barrel",
+      "blob": "90e06544c672a348c4e019ba900d19dab92b7def",
+      "sha256": "a784c0793e1df71c8eb75f04b02b793ac38f82fd9763506dccf732cc84d63c77",
+      "bytes": 195
+    },
+    {
+      "path": "src/lib/design/index.ts",
+      "action": "delete unreferenced helper or barrel",
+      "blob": "9712234489e690c667b897c883dbdb4683373432",
+      "sha256": "0b07fdb2981f4679ae03f3836029ab8df94abc929f22f6bdc945fedb16fb7ac5",
+      "bytes": 462
+    },
+    {
+      "path": "src/lib/entryUploadClient.ts",
+      "action": "delete unreferenced helper or barrel",
+      "blob": "016db5e922eca6873bc9fca71fa4d138626ac719",
+      "sha256": "92a05bc76886d2b23d889460be6f28b071fca3ed1fd5380c7ea5b4fed3734d84",
+      "bytes": 2475
+    },
+    {
+      "path": "src/lib/getDisplayPlanStats.ts",
+      "action": "delete unreferenced helper or barrel",
+      "blob": "f9232707f36ee4c9739607e12ce5be158341837c",
+      "sha256": "9ab7642131ed87d64ba29b271be612c0e7a00aeceb7a7a3227ad57744351c8f2",
+      "bytes": 821
+    }
+  ]
+}

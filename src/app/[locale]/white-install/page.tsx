@@ -1,16 +1,4 @@
-// app/white-install/page.tsx
-export const dynamic = 'force-static'; // 静的ページとして生成されるようにする
+import { createLegacyPublicationEndedPage, legacyPublicationEndedMetadata } from '@/components/legacy/LegacyPublicationEndedPage';
 
-export default function WhiteInstallRedirect() {
-  return (
-    <html>
-      <head>
-        <meta httpEquiv="refresh" content="0; url=/white" />
-        <title>me-ish ホワイトギャラリー</title>
-      </head>
-      <body>
-        <p>White Gallery に移動中です...</p>
-      </body>
-    </html>
-  );
-}
+export const metadata = legacyPublicationEndedMetadata;
+export default createLegacyPublicationEndedPage('gallery');

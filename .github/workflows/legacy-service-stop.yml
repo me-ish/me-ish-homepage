@@ -1,0 +1,38 @@
+name: Legacy service stop
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/legacy-service-stop.yml'
+      - 'scripts/legacy-service-stop/**'
+      - 'supabase/operations/legacy-service-stop/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legacy-service-stop-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  postgres:
+    name: Isolated stop and rollback authorization
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Test PostgreSQL policies and rollback without network access
+        run: bash scripts/legacy-service-stop/run.sh
+      - name: Publish synthetic catalog and results
+        if: always() && env.LEGACY_STOP_RESULTS != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: legacy-service-stop-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.LEGACY_STOP_RESULTS }}/*
+          if-no-files-found: error
+          retention-days: 7

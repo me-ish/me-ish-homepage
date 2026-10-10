@@ -229,7 +229,30 @@ export SUPABASE_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1 SUPABASE_NO_UPDATE_NOTIFIER=
 # Same resolved Node version as setup-node(.node-version). Phase 0A additionally
 # mounts only locked dependencies installed during construction, never .env files.
 node_image="node:$(node -p 'process.versions.node')-bookworm-slim"
-timeout 180 docker pull "$node_image" >"$work/pull.private" 2>&1
+echo 'BUILD: pull public Node image'
+if timeout 180 docker pull "$node_image" >"$work/pull.private" 2>&1; then
+  echo 'BUILD: public Node image ready'
+else
+  pull_status=$?
+  # Publish only fixed classifications. Registry responses, URLs and Docker
+  # configuration remain private; an infrastructure failure still fails the job.
+  pull_reason=unclassified
+  if [[ $pull_status == 124 ]]; then
+    pull_reason=timeout
+  elif grep -Eqi 'toomanyrequests|too many requests|rate.?limit' "$work/pull.private"; then
+    pull_reason=rate_limit
+  elif grep -Eqi 'manifest unknown|manifest.*not found|no matching manifest' "$work/pull.private"; then
+    pull_reason=manifest_unavailable
+  elif grep -Eqi 'unauthorized|authentication required|pull access denied|forbidden' "$work/pull.private"; then
+    pull_reason=access_denied
+  elif grep -Eqi 'x509|certificate|tls handshake' "$work/pull.private"; then
+    pull_reason=tls
+  elif grep -Eqi 'no such host|connection refused|connection reset|network is unreachable|i/o timeout|unexpected EOF' "$work/pull.private"; then
+    pull_reason=network
+  fi
+  printf 'BUILD_FAILED: NODE_IMAGE_PULL exit=%s reason=%s\n' "$pull_status" "$pull_reason" >&2
+  exit "$pull_status"
+fi
 if [[ $phase0b == 1 ]]; then bash "$repo/scripts/natori-phase-0b/prepare-browser.sh" "$repo" "$work" "$node_image" "$project"; fi
 if [[ $phasen == 1 ]]; then
   bash "$repo/scripts/natori-phase-0b/prepare-browser.sh" "$repo" "$work" "$node_image" "$project"

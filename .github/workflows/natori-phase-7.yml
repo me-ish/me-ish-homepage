@@ -63,6 +63,7 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify types, frozen baseline and product unit regressions
         run: |
+          node --test scripts/natori-phase-6a/server-diagnostics.test.mjs
           npx --no-install tsc --noEmit --incremental false
           node scripts/etorie-baseline-static-check.mjs
           npx --no-install vitest run

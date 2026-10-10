@@ -1,0 +1,39 @@
+name: Retire empty legacy schema
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/retire-empty-legacy-schema.yml'
+      - 'scripts/retire-empty-legacy-schema/**'
+      - 'supabase/operations/retire-empty-legacy-schema/**'
+      - 'scripts/legacy-service-stop/catalog.sql'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: retire-empty-legacy-schema-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  postgres:
+    name: Isolated schema deletion and protected-data checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Test empty-only removal and rollback without network access
+        run: bash scripts/retire-empty-legacy-schema/run.sh
+      - name: Publish synthetic catalog and results
+        if: always() && env.LEGACY_SCHEMA_RESULTS != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: retire-empty-legacy-schema-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.LEGACY_SCHEMA_RESULTS }}/*
+          if-no-files-found: error
+          retention-days: 7

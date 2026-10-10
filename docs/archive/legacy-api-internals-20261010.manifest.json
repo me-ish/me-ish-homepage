@@ -1,0 +1,134 @@
+{
+  "baseline_commit": "3bb19000bfec71959299cc0678ef5c97eca42f8e",
+  "archive_branch": "archive/legacy-api-internals-before-20261010",
+  "files": [
+    {
+      "path": "src/app/api/ai-guide/route.ts",
+      "action": "replace_with_pause",
+      "git_blob": "baa24ac73cefe75f1459ab36ced82b4f6e87e065",
+      "sha256": "d0bc4f54df1d79f8738eed940e43efeff25b436788bcdad5097af773a3057379",
+      "bytes": 12041,
+      "lines": 331
+    },
+    {
+      "path": "src/app/api/aura/form/submit/route.ts",
+      "action": "replace_with_pause",
+      "git_blob": "faa260295a1a0ca9f229aef71387d739f4ddebe9",
+      "sha256": "9ed8a7db2d4fcddf0ed8b2e6f5ea9d3954a35d09ebccf54488bc3f1ab4404bc4",
+      "bytes": 13666,
+      "lines": 452
+    },
+    {
+      "path": "src/app/api/aura/form/ai-suggest/route.ts",
+      "action": "replace_with_pause",
+      "git_blob": "8476937df1eb5df2361646aaa9bb8983181adebb",
+      "sha256": "7df9b998709088dd5b6a2b5beeaed508926b5f089c2c99753ac3483d55c255f5",
+      "bytes": 4043,
+      "lines": 95
+    },
+    {
+      "path": "src/app/api/aura/studio/ai/polish/route.ts",
+      "action": "replace_with_pause",
+      "git_blob": "071d382813290a739ca71d80c69dcc80dca50ccf",
+      "sha256": "9f398b9beb88c241001bfc348aa5a6c2bfe0c3958f4c5a872337dbdf8434fdb4",
+      "bytes": 3513,
+      "lines": 95
+    },
+    {
+      "path": "src/app/api/card/form/submit/route.ts",
+      "action": "replace_with_pause",
+      "git_blob": "714acca05535d303e5e215caf436b0cb09a78362",
+      "sha256": "69cf940e26eec4e4567d725000585341b7fc4cea6b39aa2ec64d4b3a5817f932",
+      "bytes": 2740,
+      "lines": 99
+    },
+    {
+      "path": "src/app/api/aura/checkout/route.ts",
+      "action": "replace_with_pause",
+      "git_blob": "74728e6953fd70223e90293256d4cc9cba37d9a4",
+      "sha256": "189b875dfa8cbc5af2e91a671c4cf73f889afa3fa181e9c786f7c8a4adc9f997",
+      "bytes": 2926,
+      "lines": 81
+    },
+    {
+      "path": "src/app/api/card/checkout/route.ts",
+      "action": "replace_with_pause",
+      "git_blob": "cceb32fb3a4b33aa3fd94b3559911c454d1871f6",
+      "sha256": "b50d9ab35e4423fdf9fbff35d02332e926e15670be83b754e210d032389d8e27",
+      "bytes": 2400,
+      "lines": 88
+    },
+    {
+      "path": "src/app/api/cron/exhibit-ending-soon/route.ts",
+      "action": "replace_with_pause",
+      "git_blob": "5fdc343e83aa268d6c11ef1ddc7aaca7880d8d7d",
+      "sha256": "767f2cb7d2c889b3def85459c95544e77215dfb29374d8d84145a08655481361",
+      "bytes": 5548,
+      "lines": 165
+    },
+    {
+      "path": "src/app/api/cron/exhibit-end/route.ts",
+      "action": "replace_with_pause",
+      "git_blob": "5d5259408a669ec2f9abd7c5116af3babe4ecb52",
+      "sha256": "683b4359cddb208dcc670e1459941b6e8579404fcdce365c401ece05c23d9961",
+      "bytes": 4526,
+      "lines": 143
+    },
+    {
+      "path": "src/app/api/cron/exhibit-delete/route.ts",
+      "action": "replace_with_pause",
+      "git_blob": "980ef8c5e578a31b1bcb9cc53b3d6d80b4b35305",
+      "sha256": "699d36cc82e8dfcd96305a55e532a39545ccbe8342930ea85617b0896b0a9482",
+      "bytes": 3699,
+      "lines": 120
+    },
+    {
+      "path": "src/app/api/cron/float-daily-slots/route.ts",
+      "action": "replace_with_pause",
+      "git_blob": "df867a708b13bf124a7f5eba40f9f78a6a1cf34a",
+      "sha256": "24422333be0bdd9bee175d14ab94fc3b32952aba30632e141317d023697b8fc9",
+      "bytes": 7881,
+      "lines": 239
+    },
+    {
+      "path": "src/app/api/internal/send-submit-email/route.ts",
+      "action": "replace_with_pause",
+      "git_blob": "9ca46ab4c32479dbf195e3c90d0e36b06cd32af9",
+      "sha256": "3eb8ae23db1d0403cb39742fb602a7fb1257c42a999be12204b831db35c913f9",
+      "bytes": 1140,
+      "lines": 33
+    },
+    {
+      "path": "src/lib/aura/aura.generate.ts",
+      "action": "delete",
+      "git_blob": "049df449e85f77e96e1a26745ed9e8b1ab6fdcc7",
+      "sha256": "e94fff7d2de9da0dd6e991a8d1a3ba4abcab87781bf863c50f8bec8e25ca7d0c",
+      "bytes": 50260,
+      "lines": 1464
+    },
+    {
+      "path": "src/lib/aura/aura.variant.ts",
+      "action": "delete",
+      "git_blob": "917ab1eb2bedfe1f13207bfb9a357c5d9140ce7f",
+      "sha256": "2dc9e6d63f14c1d5632b19ce6b394585c7989c91b863a7a98d0f4f9c9ea8cb03",
+      "bytes": 12961,
+      "lines": 444
+    },
+    {
+      "path": "src/lib/card/card.generate.ts",
+      "action": "delete",
+      "git_blob": "bf2f4d990246cebca5d92fac7575d40ca009271f",
+      "sha256": "9157c6540b78f4a8fd641a239a5326403de9aa1de43225cea3663297f5bd6b16",
+      "bytes": 2864,
+      "lines": 94
+    },
+    {
+      "path": "src/lib/aiGuide/prompt.ts",
+      "action": "delete",
+      "git_blob": "928c9888a73f9d5376061dbdfef45f9a3bd59525",
+      "sha256": "65976bbe9c8951044be764815dfd52d9c2baebe2b77d80041b9744762cc9cd68",
+      "bytes": 2499,
+      "lines": 48
+    }
+  ]
+}

@@ -1,14 +1,14 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from '@playwright/test';
 
-test.describe("Home page", () => {
-  test("loads and shows the me-ish brand", async ({ page }) => {
-    await page.goto("/");
-    await expect(page).toHaveTitle(/me-ish/i);
-    await expect(page.getByText("me-ish", { exact: true })).toBeVisible();
-  });
-
-  test("shows the current gallery pause notice", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByText("me-ish gallery は現在休止中です", { exact: true })).toBeVisible();
-  });
+test.describe('Home entry', () => {
+  test.use({ locale: 'ja-JP' });
+  for (const locale of ['', '/ja', '/en']) {
+    test(`opens the current Natori portfolio from ${locale || '/'}`, async ({ page }) => {
+      await page.goto(locale || '/');
+      // Wait for the server redirect and cold compilation before asserting.
+      await page.waitForURL(`**${locale === '/en' ? '/en' : ''}/natori/portfolio`);
+      await expect(page).toHaveURL(`http://localhost:3000${locale === '/en' ? '/en' : ''}/natori/portfolio`);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    });
+  }
 });

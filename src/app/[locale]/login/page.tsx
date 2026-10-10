@@ -3,13 +3,15 @@
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { supabase } from '@/lib/supabaseClient';
 import { FcGoogle } from 'react-icons/fc';
 import {
   ShieldCheck, Bell, CreditCard, Image as Img, User, LogIn, Loader2, Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { galleryLoginDestination } from '@/lib/galleryLoginDestination';
+import { LEGACY_SERVICES_PAUSED } from '@/lib/legacyServiceSuspension';
 
 /** 外側は Suspense でラップ（← これが重要） */
 export default function LoginPage() {
@@ -27,14 +29,16 @@ function LoginInner() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const t = useTranslations('pages.login');
+  const locale = useLocale();
+  const destination = galleryLoginDestination(search.get('redirect'), locale);
 
-  // すでにログイン済みなら /mypage へ
+  // 休止中も既存出展者の振込先管理は利用できる。
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
-      if (data.user) router.replace('/mypage');
+      if (data.user) router.replace(destination);
     })();
-  }, [router]);
+  }, [router, destination]);
 
   const handleGoogleLogin = async () => {
     try {
@@ -42,9 +46,7 @@ function LoginInner() {
       setLoading(true);
       const origin = window.location.origin;
 
-      // リダイレクト先（クエリ優先・未指定なら /mypage）
-      const redirect = decodeURIComponent(search.get('redirect') || '/mypage');
-      const redirectTo = `${origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`;
+      const redirectTo = `${origin}/auth/callback?redirect=${encodeURIComponent(destination)}`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -80,7 +82,7 @@ function LoginInner() {
           me-ish
         </span>
         <span className="text-xs bg-gradient-to-r from-[#e60039] to-[#ff1a53] text-white px-2.5 py-1 rounded-full font-semibold shadow-sm">
-          β
+          {LEGACY_SERVICES_PAUSED ? locale === 'en' ? 'Support' : 'サポート' : 'β'}
         </span>
       </Link>
 
@@ -93,8 +95,9 @@ function LoginInner() {
           {t('title')}
         </h1>
         <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-          {t('subtitle')}
-          <span className="text-gray-500">{t('subtitleNote')}</span>
+          {LEGACY_SERVICES_PAUSED
+            ? locale === 'en' ? 'Existing artists can sign in to manage payout details. New service requests are paused.' : '既存の出展者は、振込先の確認・変更のためにログインできます。サービスの新規受付は休止中です。'
+            : <>{t('subtitle')}<span className="text-gray-500">{t('subtitleNote')}</span></>}
         </p>
 
         {/* Google ログイン */}
@@ -151,7 +154,7 @@ function LoginInner() {
       </div>
 
       {/* 機能のハイライト（2列 → モバイル1列） */}
-      <div className="relative z-10 w-full max-w-[920px] grid grid-cols-1 md:grid-cols-2 gap-5 mt-10">
+      {!LEGACY_SERVICES_PAUSED && <div className="relative z-10 w-full max-w-[920px] grid grid-cols-1 md:grid-cols-2 gap-5 mt-10">
         <FeatureCard
           title={t('canDoTitle')}
           icon={<Sparkles className="w-5 h-5 text-[#00a1e9]" />}
@@ -170,18 +173,18 @@ function LoginInner() {
           }))}
           accentColor="emerald"
         />
-      </div>
+      </div>}
 
       {/* フッターナビ */}
       <div className="relative z-10 mt-10 flex flex-wrap items-center justify-center gap-4 text-sm">
         <Link
-          href="/#gallery"
+          href={`${locale === 'en' ? '/en' : ''}/white/2d`}
           className="px-4 py-2 rounded-full bg-white ring-1 ring-gray-200 text-gray-600 hover:ring-[#00a1e9] hover:text-[#00a1e9] transition-all"
         >
           {t('browseWithoutLogin')}
         </Link>
         <Link
-          href="/#contact"
+          href={`${locale === 'en' ? '/en' : ''}/contact`}
           className="px-4 py-2 rounded-full bg-white ring-1 ring-gray-200 text-gray-600 hover:ring-[#00a1e9] hover:text-[#00a1e9] transition-all"
         >
           {t('loginHelp')}

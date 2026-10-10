@@ -1,10 +1,11 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
+import { resetContrastFocus, focusForContrast, verifyContrastFocus } from './contrast-focus.mjs';
 
 // The parent runner supplies an already-running disposable app. No DB/client
 // credentials or real tokens are needed, and every network mutation is blocked.
-let app, output, chromium, expect, browser, stage = 'preflight';
+let app, output, chromium, expect, browser, focusControls = null, stage = 'preflight';
 const observations = [], results = [], blocked = [], harnessFailures = [], motionObservations = [];
 const check = (value, code) => { if (!value) throw new Error(code); };
 const knownCodes = new Set(["ASSERTION_FAILED", "AUTOPLAY_NOT_RUNNING", "INITIAL_AUTOPLAY_NOT_RUNNING", "AUTOPLAY_BEFORE_INTERVAL", "AUTOPLAY_PRECONDITION_NOT_READY", "CLOCK_NOT_FROZEN", "BROWSER_CLOSE_FAILED", "BROWSER_SETUP_FAILED", "CTA_COMPOSITING_REQUIRES_REVIEW", "DRAG_CLEARED_PAUSE", "DRAG_NOT_TRACKING", "EPHEMERAL_REQUIRED", "LOCAL_APP_REQUIRED", "LONG_FINAL_CONDITION", "LONG_REPLY_TRUNCATED", "MANUAL_PAUSE_LOST", "MANUAL_RESUME_FAILED", "MANUAL_RESUME_BEFORE_INTERVAL", "PAUSED_DRAG_BLOCKED", "PUBLIC_CONFIRMATION_FLOW", "PUBLIC_IMMEDIATE_QUOTE_PROMISE", "PUBLIC_IMPORTANT_TERMS_PRESERVED", "PUBLIC_NOT_CONFIRMED", "PUBLIC_REPLY_PROMISE", "REDUCED_MOTION_AUTOPLAY", "REDUCED_MOTION_MANUAL_BLOCKED", "RESULT_WRITE_FAILED", "SHORT_MULTILINE_FIXTURE", "SHORT_REPLY_TRUNCATED", "UNKNOWN_FAILURE", "UNSUPPORTED_COMPUTED_COLOR", "VERTICAL_TOUCH_CHANGED_IMAGE", "VERTICAL_TOUCH_MOVED_SLIDE"]);
@@ -79,9 +80,9 @@ async function contrastStates(page, name, locator, theme, disabled = false) {
   await locator.scrollIntoViewIfNeeded();
   for (const state of disabled ? ['disabled', 'disabled-hover'] : ['normal', 'hover', 'focus']) {
     await page.mouse.move(1, 1);
-    await page.getByTestId('outside-focus').focus();
+    await resetContrastFocus(page);
     if (state.includes('hover')) await locator.hover({ force: true });
-    if (state === 'focus') { await page.keyboard.press('Tab'); await locator.evaluate(element => (element.closest('button,a') ?? element).focus()); }
+    if (state === 'focus') await focusForContrast(page, locator);
     const value = await colors(locator);
     observations.push({ name, theme, state, ...value });
     check(value.contrast >= 4.5, `CTA_CONTRAST_${name}_${theme}_${state}`);
@@ -138,6 +139,8 @@ try {
   mkdirSync(output, { recursive: true });
   stage = 'browser-setup';
   browser = await chromium.launch({ headless: true });
+  stage = 'focus-controls';
+  focusControls = await verifyContrastFocus(browser, expect);
   stage = 'cases';
   for (const theme of ['light', 'dark']) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: theme, hasTouch: true, reducedMotion: 'no-preference' });
@@ -290,7 +293,7 @@ try {
   }
   if (output) {
     try {
-      writeFileSync(resolve(output, 'result.json'), JSON.stringify({ results, observations, blocked, harnessFailures, motionObservations, realProvider: false, productionContentWrite: false, realEmail: false, iPhoneAcceptance: 'pending' }, null, 2));
+      writeFileSync(resolve(output, 'result.json'), JSON.stringify({ results, observations, blocked, harnessFailures, motionObservations, focusControls, realProvider: false, productionContentWrite: false, realEmail: false, iPhoneAcceptance: 'pending' }, null, 2));
     } catch (error) { recordHarnessFailure('result-write', safeFailure(error, 'RESULT_WRITE_FAILED')); }
   }
 }

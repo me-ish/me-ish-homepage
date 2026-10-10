@@ -5,7 +5,9 @@ export const portfolioFormColors = {
   ...portfolioColors,
   borderSubtle: "#E3E0E2",
   formBorder: "#878287",
-  formBorderActive: portfolioColors.accentText,
+  // 公開ポートフォリオのピンクに合わせる。白地の小さな文字でも読めるよう濃いほう（#BE185D）を使う。
+  accentText: portfolioColors.actionTextSmall,
+  formBorderActive: portfolioColors.actionTextSmall,
 };
 
 export default function PortfolioFormStyles() {

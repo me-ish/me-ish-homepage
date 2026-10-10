@@ -1,5 +1,4 @@
-import WhiteGalleryClient from '@/components/whiteGallery/WhiteGalleryClient';
+import { createLegacyPublicationEndedPage, legacyPublicationEndedMetadata } from '@/components/legacy/LegacyPublicationEndedPage';
 
-export default function WhitePage() {
-  return <WhiteGalleryClient />;
-}
+export const metadata = legacyPublicationEndedMetadata;
+export default createLegacyPublicationEndedPage('gallery');

@@ -20,9 +20,6 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      "thirdweb/dist/types/react/web/ui/ConnectWallet/defaultTokens.js": [
-        "./thirdweb-defaultTokens-shim"
       ]
     },
     "plugins": [
@@ -35,8 +32,7 @@
     "**/*.ts",
     "**/*.tsx",
     "next-env.d.ts",
-    ".next/types/**/*.ts",
-    "thirdweb-shims.d.ts"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

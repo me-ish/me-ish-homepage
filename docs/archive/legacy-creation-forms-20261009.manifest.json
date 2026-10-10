@@ -1,0 +1,306 @@
+{
+  "source_commit": "16e2546b40240dabfb1245de98d1d1f51e6767ed",
+  "scope": "Stopped creation forms only; no public or existing-customer code",
+  "files": [
+    {
+      "path": "src/app/[locale]/aura/form/page.tsx",
+      "change": "replace_with_pause_redirect",
+      "blob_sha": "616dde7daf7ccf0016ba354b50f1ae6656c607e8",
+      "bytes": 198,
+      "lines": 8,
+      "sha256": "721e1aef81ecd4e60c25fa460b8ca0da2d6d684984800fe9dac2b10f636623ea"
+    },
+    {
+      "path": "src/app/[locale]/card/form/page.tsx",
+      "change": "replace_with_pause_redirect",
+      "blob_sha": "5560d5a6cca13a9f07eeae7ec6d7ea8d7d74c1fc",
+      "bytes": 747,
+      "lines": 23,
+      "sha256": "47053b349e202bd8f06814342c40b9d15c482407f0760b2a18509b8364a36eab"
+    },
+    {
+      "path": "src/app/[locale]/entry/FormWrapper.tsx",
+      "change": "remove",
+      "blob_sha": "829a7d24458bb38e631fec045ffb5e31aa9420bb",
+      "bytes": 20600,
+      "lines": 574,
+      "sha256": "280c1f5ecb89d54fba14895c41ab8a8f35630bf600bf0bc828a3fee03053fd59"
+    },
+    {
+      "path": "src/app/[locale]/entry/layout.tsx",
+      "change": "remove",
+      "blob_sha": "b351aaa04d4686060e945f801ad05cd42ba1a1f3",
+      "bytes": 324,
+      "lines": 11,
+      "sha256": "63346bd5f1574981898a5d01f9b37d3eb13370273ecfe35aa5a4e7f472a7b3b3"
+    },
+    {
+      "path": "src/app/[locale]/entry/page.tsx",
+      "change": "replace_with_pause_redirect",
+      "blob_sha": "326fc44f2d9af58c4c01f600acd726c961c6d59c",
+      "bytes": 1361,
+      "lines": 39,
+      "sha256": "2b7e41a6b4861fea95a9bafac733b63125df70f73f7c73612d38fe117851b690"
+    },
+    {
+      "path": "src/components/aura/form/AuraFormNav.tsx",
+      "change": "remove",
+      "blob_sha": "2f07851bf646792e73c56c9c6ecb26388f7c1547",
+      "bytes": 5696,
+      "lines": 166,
+      "sha256": "b485ba665d055546b67526f026805c3824f86eaefe8cd9375fbb48d7171c0ed3"
+    },
+    {
+      "path": "src/components/aura/form/AuraFormPreview.tsx",
+      "change": "remove",
+      "blob_sha": "df559cc7feb2a2258bea8bc8a3356ca087155c1b",
+      "bytes": 3341,
+      "lines": 96,
+      "sha256": "13aafc93f0ac0e109c07bc5178c32c5ee24f16b1b6f37d257817d7e94fa927a7"
+    },
+    {
+      "path": "src/components/aura/form/AuraFormStepper.tsx",
+      "change": "remove",
+      "blob_sha": "97179a891cff7861c2895e28c764a93a0dec9786",
+      "bytes": 5401,
+      "lines": 143,
+      "sha256": "348a875201326cfac2cffe3450c044799136b1efc908e37f2fac9a2afce3d96f"
+    },
+    {
+      "path": "src/components/aura/form/AuraFormWizard.tsx",
+      "change": "remove",
+      "blob_sha": "fe316560e49964d468e405b1f437927ced0dfe90",
+      "bytes": 14091,
+      "lines": 373,
+      "sha256": "9b4f8a9d8963849e3c4dc9eb0bd0bcf68d23daf7fa8de0b24374842a687d92f2"
+    },
+    {
+      "path": "src/components/aura/form/auraFormSampleData.ts",
+      "change": "remove",
+      "blob_sha": "8f2ce29e0f8b18b338cfcc6c763d62a8eface77f",
+      "bytes": 2328,
+      "lines": 71,
+      "sha256": "5b0281acc5383b28478a525ef1bc472a09d726e792b5894e51f3e1f58ffbf25f"
+    },
+    {
+      "path": "src/components/aura/form/auraFormTypes.ts",
+      "change": "remove",
+      "blob_sha": "57aeef50c9ba16eb951a386fc2babb2129184a73",
+      "bytes": 4846,
+      "lines": 189,
+      "sha256": "4ae54c6ba4be8d7ca6c939984b383b7e7320a7362c32a987e4d2ca15d2e86a2f"
+    },
+    {
+      "path": "src/components/aura/form/auraPreviewMocks.ts",
+      "change": "remove",
+      "blob_sha": "ddb95b42d4b768f4ab875cc13ce11ba23262cc84",
+      "bytes": 10375,
+      "lines": 282,
+      "sha256": "2fd9ca4a5027fa0a67d9ab3bc45e5616fbcc2cf96888fa148c0f934b244e58d7"
+    },
+    {
+      "path": "src/components/aura/form/hooks/useAuraDraftServer.ts",
+      "change": "remove",
+      "blob_sha": "d4d26e73b2e579b921c943b1ebcf515df59c2da4",
+      "bytes": 4721,
+      "lines": 141,
+      "sha256": "131b77ed89470f19781533311e82484541da3096f4ecba8854b14f89e72f1bab"
+    },
+    {
+      "path": "src/components/aura/form/hooks/useStepNavigation.ts",
+      "change": "remove",
+      "blob_sha": "67b594dc68ecec252e5cc524662f01580d5e8007",
+      "bytes": 2649,
+      "lines": 76,
+      "sha256": "2850db7d9f3fb745a63b0e5494625896d0a48a2a701d74dd16f990d2ff89c1cd"
+    },
+    {
+      "path": "src/components/aura/form/hooks/useSyncedHeights.ts",
+      "change": "remove",
+      "blob_sha": "697026ca66e4f6e32e6ae7fe47c6db342a9c1d57",
+      "bytes": 1205,
+      "lines": 44,
+      "sha256": "e3fb15dc3192014aa37fff180b0b7499c022f7b697051a5b37af356d801ab006"
+    },
+    {
+      "path": "src/components/aura/form/steps/Step1Profile.tsx",
+      "change": "remove",
+      "blob_sha": "c585a09fa5577efd2f21f4566df4dfdc3b30fdfc",
+      "bytes": 16287,
+      "lines": 423,
+      "sha256": "f63657fc1829f0070a0e4ccef513ff29a3cb6b07a242d0e0478caa158b2112f6"
+    },
+    {
+      "path": "src/components/aura/form/steps/Step2Design.tsx",
+      "change": "remove",
+      "blob_sha": "cf06064a5b4ed4b9dbf5ad671850f7110b90cd0c",
+      "bytes": 26155,
+      "lines": 559,
+      "sha256": "40039519a5f9c251c874f3406a09f766e6b173c6cbf47dd98c1cf4440c624742"
+    },
+    {
+      "path": "src/components/aura/form/steps/Step3Works.tsx",
+      "change": "remove",
+      "blob_sha": "d0d2078a2bd6b6238a472068dbac890981798ff3",
+      "bytes": 3055,
+      "lines": 84,
+      "sha256": "38f8eea358146d6a428474da2d4c964256d213c939ecfac44211abb6907b098e"
+    },
+    {
+      "path": "src/components/aura/form/steps/Step4About.tsx",
+      "change": "remove",
+      "blob_sha": "a84ff764e20ce60aa08169de6ea6b8f94cc6a9bc",
+      "bytes": 7224,
+      "lines": 182,
+      "sha256": "d276be604e7b1965369d293b669e0ae04684d80cace7ff5aea050b52a53c5683"
+    },
+    {
+      "path": "src/components/aura/form/steps/Step5ServicesSkills.tsx",
+      "change": "remove",
+      "blob_sha": "4aeb9ae4f288d5b1a8ce5d37fa51024038c85f39",
+      "bytes": 7556,
+      "lines": 200,
+      "sha256": "1dbb1ad4f50fbb8205c48fb2d22e02f97fd7a392b8e28fe32e2ac813b9cebcb5"
+    },
+    {
+      "path": "src/components/aura/form/steps/Step6Contact.tsx",
+      "change": "remove",
+      "blob_sha": "c6e15ffc7e31697a23b87b970dee88bc63e13491",
+      "bytes": 6933,
+      "lines": 150,
+      "sha256": "4c0678d425b2ce25b9ed6bbd3acf6076c8eadd3ce7c0630b548eb714fa19e092"
+    },
+    {
+      "path": "src/components/aura/form/steps/Step7Review.tsx",
+      "change": "remove",
+      "blob_sha": "dddcfb45c595376cf26cc9cdd6a484e8b1ba43f5",
+      "bytes": 8024,
+      "lines": 237,
+      "sha256": "e493b3f4a9e3be9b02a6ca4f3bf3b69ba78b774b9443b420999f3f0a3f6e7a4e"
+    },
+    {
+      "path": "src/components/aura/form/useAuraFormDraft.ts",
+      "change": "remove",
+      "blob_sha": "072f11d1ed8b78b0d1d118b2f975b1e7ac780392",
+      "bytes": 3490,
+      "lines": 130,
+      "sha256": "db41ecabfec345b335b29ceabb85cfbb30addc71a0a3f9fde5da97bb110cdedb"
+    },
+    {
+      "path": "src/components/card/form/CardFormStepper.tsx",
+      "change": "remove",
+      "blob_sha": "284ee460dfc6d5f84da9efac39ba28419d9680b7",
+      "bytes": 3607,
+      "lines": 107,
+      "sha256": "099354c2af2cfc6a828cd0963636f2dbc9eb3639f6395032c69a2403573ace0d"
+    },
+    {
+      "path": "src/components/card/form/CardFormWizard.tsx",
+      "change": "remove",
+      "blob_sha": "a0102d9131dab08aff78643e8ec9162764ca0df6",
+      "bytes": 6827,
+      "lines": 234,
+      "sha256": "18ce90ec4c416c52d87457ac037036bd1c81c0d60a524b5324f7e5688a022105"
+    },
+    {
+      "path": "src/components/card/form/cardFormTypes.ts",
+      "change": "remove",
+      "blob_sha": "a4b8691e4b35e5cfa09947f777deaf1ad3be1239",
+      "bytes": 2194,
+      "lines": 82,
+      "sha256": "9b2ba024a46b55da538095d439fd99fb4f6a25a6806ac5f7c55db1e951fefca0"
+    },
+    {
+      "path": "src/components/card/form/steps/CardStep1Profile.tsx",
+      "change": "remove",
+      "blob_sha": "7f037f071711f4aad5ceed65104a67a9e05e406b",
+      "bytes": 7817,
+      "lines": 227,
+      "sha256": "da7366e1cedb710603fffb7c00f2d64ea4248d2c02e4e5e323d2aef59da788fd"
+    },
+    {
+      "path": "src/components/card/form/steps/CardStep2Works.tsx",
+      "change": "remove",
+      "blob_sha": "fed0fe9ad081318798ed7891248084a5103867ce",
+      "bytes": 7868,
+      "lines": 226,
+      "sha256": "554ecafd6469e0350efd4cdbbd16400f816d2051b4de8d821f7f0225106f598f"
+    },
+    {
+      "path": "src/components/card/form/steps/CardStep3Design.tsx",
+      "change": "remove",
+      "blob_sha": "ff3a9d469f17c0c1042eaef236defa9026b3defe",
+      "bytes": 5843,
+      "lines": 169,
+      "sha256": "2f567942073e018b1bd55f0dc133e1162c650c1d98a53cb45699d22d171a3f3b"
+    },
+    {
+      "path": "src/components/card/form/useCardFormDraft.ts",
+      "change": "remove",
+      "blob_sha": "dfd9b5cc8a02afa631f9c3e5ef473e576a1b87f1",
+      "bytes": 1526,
+      "lines": 58,
+      "sha256": "a99035a646ee06ce3a8c2edfb907fe3ee402a05c380880d84479062444874d90"
+    },
+    {
+      "path": "src/components/entryForm/BankBranchFields.tsx",
+      "change": "remove",
+      "blob_sha": "261de6033771345e6186b718c51317cf2e8b1840",
+      "bytes": 10540,
+      "lines": 253,
+      "sha256": "6669a37534f4c3ad432ef964d9aaa05011e9fe0c6cbd2a8c00ac2a79d0d07863"
+    },
+    {
+      "path": "src/components/entryForm/CompletePage.tsx",
+      "change": "remove",
+      "blob_sha": "a47ef7d0040df22d1ff31609fa0e098bfa9f1f21",
+      "bytes": 2623,
+      "lines": 70,
+      "sha256": "c9f5ef2f04ee2738787ff9f2e06e613d26dc1603e558e569131c9bdc73499013"
+    },
+    {
+      "path": "src/components/entryForm/ConfirmPage.tsx",
+      "change": "remove",
+      "blob_sha": "f297ab3f0cd7f69821baec63924050666367cf4a",
+      "bytes": 11447,
+      "lines": 282,
+      "sha256": "b03711984d5ded24574b955307d3986e742c0fc0eeccb34c03a14c0e3e02ecd3"
+    },
+    {
+      "path": "src/components/entryForm/SalesGuidelineLink.tsx",
+      "change": "remove",
+      "blob_sha": "aad440ce17be660be7f04a2477871a92d95bb460",
+      "bytes": 4735,
+      "lines": 151,
+      "sha256": "520fc1f147090fd628450fa1aa5570c673bc83c16ea3bbd8eea6ab75c5647608"
+    },
+    {
+      "path": "src/components/entryForm/Step1_ArtistInfo.tsx",
+      "change": "remove",
+      "blob_sha": "1874ede4458b78814e041edf3f451cd44f76b91e",
+      "bytes": 9455,
+      "lines": 263,
+      "sha256": "9c2bb97abdf868f9f92421cf44347b927649a88e9f66f93fc46983969aa869fb"
+    },
+    {
+      "path": "src/components/entryForm/Step2_WorkInfo.tsx",
+      "change": "remove",
+      "blob_sha": "ee625b0f4897302d8d419955dfa7f64b2c92c1a5",
+      "bytes": 29999,
+      "lines": 650,
+      "sha256": "462e9bc30d03e13abde383d3e763fdf59ab9362e9d3ee32b760e30878d7bd7e2"
+    },
+    {
+      "path": "src/components/entryForm/Step3_SalesAndAgreement.tsx",
+      "change": "remove",
+      "blob_sha": "4a7ace51a655f59a022132017443afecfa87bef5",
+      "bytes": 24148,
+      "lines": 569,
+      "sha256": "af7a74b05105c573bb000aa60a012d352618d3b66539613fb24071e3ff9f4e9c"
+    }
+  ],
+  "removed_files": 34,
+  "redirect_pages": 3,
+  "original_bytes": 285236,
+  "original_lines": 7542
+}

@@ -1,0 +1,63 @@
+{
+  "tables": [
+    "aura_first20_redemptions",
+    "aura_meish_free_claims",
+    "aura_projects",
+    "aura_promo_counters",
+    "aura_requests",
+    "card_requests",
+    "entry_comments",
+    "entry_daily_slots",
+    "entry_view_events",
+    "kpi_jobs",
+    "kpi_posts",
+    "likes",
+    "portfolio_settings",
+    "special_thanks",
+    "youtube_videos"
+  ],
+  "views": [
+    "aura_first20_stats",
+    "entry_comment_counts",
+    "entry_view_stats",
+    "v_artist_view_stats",
+    "v_viewer_stats"
+  ],
+  "functions": [
+    "public.aura_claim_first20_free(text, uuid)",
+    "public.aura_claim_meish_free(text, uuid)",
+    "public.get_public_portfolio(uuid)",
+    "public.increment_entry_likes(bigint)",
+    "public.toggle_like(anyelement)",
+    "public.get_gallery_stats()",
+    "public.get_my_artist_view_stats(uuid)",
+    "public.get_my_viewer_stats(uuid)",
+    "public.get_my_works_view_stats(uuid)"
+  ],
+  "buckets": [
+    "artworks",
+    "avatars",
+    "banners",
+    "aura-assets",
+    "card-assets",
+    "gallery-entry-intake",
+    "processing-meta"
+  ],
+  "storage_policies": [
+    "Allow public access 1exduyn_0",
+    "Allow public read access sudlkv_0",
+    "delete own avatar",
+    "delete own banner",
+    "gallery intake requires signed service access",
+    "legacy_stop_storage_insert",
+    "legacy_stop_storage_update",
+    "public read avatars & banners",
+    "update own avatar",
+    "update own banner",
+    "upload own avatar",
+    "upload own banner",
+    "user can delete own avatars & banners",
+    "user can update own avatars & banners",
+    "user can upload own avatars & banners"
+  ]
+}

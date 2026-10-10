@@ -35,7 +35,7 @@ describe("PF-02 portfolio semantic colors", () => {
     expect(portfolioFormColors.actionDisplay).toBe(portfolioColors.actionDisplay);
     expect(portfolioFormColors.formBorder).not.toBe(portfolioColors.formBorder);
     expect(portfolioFormColors.borderSubtle).not.toBe(portfolioColors.borderSubtle);
-    expect(portfolioFormColors.formBorderActive).toBe(portfolioColors.accentText);
+    expect(portfolioFormColors.formBorderActive).toBe(portfolioColors.actionTextSmall);
     expect(contrastRatio(portfolioFormColors.formBorder, portfolioColors.surface)).toBeGreaterThanOrEqual(3);
   });
 

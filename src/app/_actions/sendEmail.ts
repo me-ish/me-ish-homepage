@@ -11,8 +11,16 @@ export type EmailKind =
   | 'contact';
 
 import { getSiteUrl } from '@/lib/constants';
+import {
+  isLegacyEmailAllowedDuringSuspension,
+  LEGACY_SERVICES_PAUSED,
+  LEGACY_SERVICE_PAUSED_MESSAGE,
+} from '@/lib/legacyServiceSuspension';
 
 export async function sendEmail(kind: EmailKind, payload: any) {
+  if (LEGACY_SERVICES_PAUSED && !isLegacyEmailAllowedDuringSuspension(kind)) {
+    throw new Error(LEGACY_SERVICE_PAUSED_MESSAGE);
+  }
   const res = await fetch(`${getSiteUrl()}/api/send-email/${kind}`, {
     method: 'POST',
     headers: {

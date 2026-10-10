@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X, LogOut, UserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
+import { LEGACY_SERVICES_PAUSED } from '@/lib/legacyServiceSuspension';
 
 // shadcn/ui
 import {
@@ -58,13 +59,13 @@ export default function Header() {
           { label: 'Float Gallery', href: '/float' },
         ],
         CARD: [
-          { label: 'CARDとは（デジタル名刺）', href: '/card' },
+          { label: LEGACY_SERVICES_PAUSED ? 'CARD（新規受付休止中）' : 'CARDとは（デジタル名刺）', href: '/card' },
         ],
         知る: [
           { label: 'me-ishについて', href: '/modal/about' },
-          { label: '出展ガイド', href: '/modal/creators' },
-          { label: '購入ガイド', href: '/modal/buyers' },
-          { label: 'プランと料金', href: '/modal/pricing' },
+          { label: LEGACY_SERVICES_PAUSED ? '出展ガイド（新規受付休止中）' : '出展ガイド', href: '/modal/creators' },
+          { label: LEGACY_SERVICES_PAUSED ? '購入ガイド（新規購入休止中）' : '購入ガイド', href: '/modal/buyers' },
+          { label: LEGACY_SERVICES_PAUSED ? 'プランと料金（新規受付休止中）' : 'プランと料金', href: '/modal/pricing' },
           { label: 'よくある質問', href: '/footer/faq' },
         ],
         連絡: [
@@ -179,9 +180,9 @@ export default function Header() {
           <Link
             href="/news"
             className="ml-2 rounded-full bg-[#e60039] px-2 py-1 text-[11px] leading-none text-white transition-all duration-300 hover:brightness-125 hover:shadow-[0_0_12px_rgba(230,0,57,0.4)]"
-            aria-label="β公開中のお知らせを開く"
+            aria-label="お知らせを開く"
           >
-            β公開中
+            {LEGACY_SERVICES_PAUSED ? 'お知らせ' : 'β公開中'}
           </Link>
         </div>
 
@@ -194,11 +195,11 @@ export default function Header() {
     <Link
       href="/mypage"
       className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-gradient-to-r from-[#00a1e9] to-[#0080c0] px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-all duration-300 hover:from-[#0090d4] hover:to-[#0070a8] hover:shadow-lg hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
-      aria-label="マイページへ"
-      title="マイページへ"
+      aria-label={LEGACY_SERVICES_PAUSED ? 'マイページは休止中です' : 'マイページへ'}
+      title={LEGACY_SERVICES_PAUSED ? 'マイページは休止中です' : 'マイページへ'}
     >
       <UserRound className="mr-2 h-4 w-4" />
-      マイページへ
+      {LEGACY_SERVICES_PAUSED ? 'マイページ（休止中）' : 'マイページへ'}
     </Link>
 
     {/* ✅ ログイン中の表示名は"情報"として表示（リンクにしない） */}
@@ -282,12 +283,12 @@ export default function Header() {
   href="/mypage"
   onClick={() => setOpen(false)}
   className="min-w-0 flex-1 rounded-xl bg-gradient-to-r from-[#00a1e9]/10 to-[#0080c0]/10 px-3 py-2 text-sm font-semibold text-[#223] ring-1 ring-[#00a1e9]/20 transition-all duration-300 hover:from-[#00a1e9]/20 hover:to-[#0080c0]/20 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00a1e9]/60"
-  aria-label="マイページへ"
-  title="マイページへ"
+  aria-label={LEGACY_SERVICES_PAUSED ? 'マイページは休止中です' : 'マイページへ'}
+  title={LEGACY_SERVICES_PAUSED ? 'マイページは休止中です' : 'マイページへ'}
 >
   <div className="flex items-center gap-2">
     <UserRound className="h-4 w-4 text-[#00a1e9]" />
-    <span>マイページへ</span>
+    <span>{LEGACY_SERVICES_PAUSED ? 'マイページ（休止中）' : 'マイページへ'}</span>
   </div>
   <div className="mt-1 truncate text-xs font-medium text-[#667]" title={`ログイン中：${me.label}`}>
     ログイン中：{me.label}

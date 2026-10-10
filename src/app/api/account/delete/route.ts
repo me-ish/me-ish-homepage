@@ -103,20 +103,7 @@ export async function POST(req: NextRequest) {
       console.error('[account/delete] entries hide error:', entriesError);
     }
 
-    // 4. AURA非公開化
-    const userEmail = user.email;
-    if (userEmail) {
-      const { error: auraError } = await admin
-        .from('aura_requests')
-        .update({ visibility: 'private' })
-        .eq('email', userEmail);
-
-      if (auraError) {
-        console.error('[account/delete] aura privacy error:', auraError);
-      }
-    }
-
-    // 5. プロフィールを匿名化
+    // 4. プロフィールを匿名化
     const anonymizedName = '退会済みユーザー';
     const { error: profileError } = await admin
       .from('profiles')
@@ -133,8 +120,7 @@ export async function POST(req: NextRequest) {
       console.error('[account/delete] profile anonymization error:', profileError);
     }
 
-    // 6. Supabase Auth からユーザーを削除
-    // likes/commentsなど、auth.users参照の関連行はCASCADEされる。
+    // 5. Supabase Auth からユーザーを削除
     const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
 
     if (deleteError) {
