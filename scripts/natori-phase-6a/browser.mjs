@@ -18,6 +18,7 @@ const routeFailures=[],routeUnblocks=new Set();let cleanupPageRoutes;
 const phase6aFailureCodes = new Set(["ANON_DENIED","ASSERTION_FAILED","AUTH_FIXTURE","BROWSER_FAILED","CANONICAL_CARD_STATUS","COMMIT_ORDER","CSRF_DENIED","DESTINATION_REJECTED","DETAILS_DB_COMMITTED","DETAILS_PATCH_COMMITTED","DETAILS_TASK_RESPONSE","EPHEMERAL_REQUIRED","HELD_GET_DETAILS_ROW","LATEST_TASK_DETAILS_RESPONSE","LATEST_TASK_PRESERVES_DETAILS_AND_RAW_PAYMENT","LATEST_VISIBLE_COMMITTED_REVISION","LEGACY_PAYMENT_FIXTURE","NEXT_READY","NO_AUTO_RECEIPT","OLDER_GET_LATEST_PROJECTION","OLDER_GET_NO_AUTO_RECEIPT","PROJECT_FIXTURE","REAL_TASK_RESPONSE","SAME_TASK_LATEST_REVISION","SAME_TASK_PROJECTION","STORED_UNCHECK","TASK_FIXTURE","TERMINAL_CONFLICT","TERMINAL_FIXTURE","TERMINAL_NO_TASK_WRITE","TERMINAL_RETAINED","VALID_READ","ROUTE_CLEANUP_FAILED","RELOAD_FIXTURE","RELOAD_AUTHENTICATED_GET","RELOAD_PROJECT","RELOAD_TASKS","RELOAD_RAW_PAYMENT","RELOAD_READ_ONLY","RELOAD_PERSISTENCE_FAILED","SCREENSHOT_PNG","SCREENSHOT_DIMENSIONS","SCREENSHOTS_FAILED"]);
 function safePhase6aFailureCode(error) {
  const message=typeof error?.message==='string'?error.message:'';
+ if(message==='SERVER_OUTPUT_ERRORS')return message;
  return phase6aFailureCodes.has(message)?message:'ASSERTION_FAILED';
 }
 let stage='preflight',server,browser;
@@ -189,11 +190,12 @@ async function main(){
   const p=(await admin.from('natori_projects').select('status,completed_at,delivery_accepted_at').eq('id',f.id).single()).data;check(p?.status==='completed'&&p.completed_at&&p.delivery_accepted_at,'TERMINAL_RETAINED');
   check((await admin.from('natori_project_tasks').select('done').eq('project_id',f.id).eq('task_key','one').single()).data?.done===false,'TERMINAL_NO_TASK_WRITE');
  });
- await context.close();diagnostics.flush();writeFileSync('/results/phase6a-browser.json',JSON.stringify({tests:results,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,
+ await context.close();writeFileSync('/results/phase6a-server-diagnostics.json',JSON.stringify(diagnostics.flush(),null,2));
+ const failureCode=results.length!==5||results.some(r=>r.status!=='passed')?'BROWSER_FAILED':compileErrors.size?'SERVER_OUTPUT_ERRORS':
+  reloadPersistence.length!==3||reloadPersistence.some(proof=>proof.status!=='passed')?'RELOAD_PERSISTENCE_FAILED':
+  screenshots.length!==4||screenshots.some(proof=>!proof.fullPage||!proof.sameProject||!proof.canonicalRendered)?'SCREENSHOTS_FAILED':routeFailures.length?'REAL_TASK_RESPONSE':null;
+ writeFileSync('/results/phase6a-browser.json',JSON.stringify({status:failureCode?'failed':'passed',failureCode,tests:results,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,
   engine:'Chromium 1.58.2; real Supabase sessions; no iPhone Safari acceptance',compileErrors:[...compileErrors],observations,routeFailures,reloadPersistence,screenshots},null,2));
- check(results.length===5&&results.every(r=>r.status==='passed')&&compileErrors.size===0,'BROWSER_FAILED');
- check(reloadPersistence.length===3&&reloadPersistence.every(proof=>proof.status==='passed'),'RELOAD_PERSISTENCE_FAILED');
- check(screenshots.length===4&&screenshots.every(proof=>proof.fullPage&&proof.sameProject&&proof.canonicalRendered),'SCREENSHOTS_FAILED');
- check(routeFailures.length===0,'REAL_TASK_RESPONSE');
+ check(failureCode===null,failureCode);
 }
 main().catch(error=>{console.error(`Phase 6A browser failed: ${safePhase6aFailureCode(error)} at ${stage}; raw logs withheld`);console.error('Phase 6A server classifications: '+JSON.stringify(diagnostics.flush()));process.exitCode=1;}).finally(async()=>{await browser?.close();if(server?.exitCode===null){server.kill('SIGTERM');await Promise.race([new Promise(resolve=>server.once('exit',resolve)),new Promise(resolve=>setTimeout(()=>{server.kill('SIGKILL');resolve();},5000))]);}});

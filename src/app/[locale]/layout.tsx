@@ -11,6 +11,10 @@ type Props = {
 };
 
 export function generateStaticParams() {
+  // Next 15.5 dev rewrites one prerender manifest as routes resolve. Concurrent
+  // first requests can read it mid-write. Resolve locales on demand in dev;
+  // production builds still enumerate both locales below.
+  if (process.env.NODE_ENV === 'development') return [];
   return routing.locales.map((locale) => ({ locale }));
 }
 
