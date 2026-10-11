@@ -119,6 +119,7 @@ export default function InquiryDetailPanel({
   onDeleteLink,
 }: InquiryDetailPanelProps) {
   const [screen, setScreen] = useState<"overview" | "conversation">(initialScreen);
+  const [hasDraft, setHasDraft] = useState(false);
   const returnFocus = useRef<HTMLElement | null>(typeof document !== "undefined" && document.activeElement instanceof HTMLElement ? document.activeElement : null);
   const meta = natoriProjectStatusMeta[project.status];
   const receivedISO = getNatoriInquiryReceivedISO(project);
@@ -225,13 +226,14 @@ export default function InquiryDetailPanel({
 
         {screen === "conversation" ? (
           <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-            {!demoMode ? <InquiryTalkMenu project={project} readOnly={readOnly} busy={busy} estimateHref={estimateHref} projectsHref={projectsHref} onOpenMail={onOpenMail} /> : null}
+            {!demoMode ? <InquiryTalkMenu project={project} readOnly={readOnly} busy={busy} hasDraft={hasDraft} estimateHref={estimateHref} projectsHref={projectsHref} onOpenMail={onOpenMail} /> : null}
             {!demoMode ? (
               <ConsultationThread
                 mode="staff"
                 standalone
                 closed={readOnly}
                 onChanged={onConversationChanged}
+                onDraftChange={setHasDraft}
                 projectId={project.id}
                 clientEmail={project.clientEmail ?? view.email ?? undefined}
               />

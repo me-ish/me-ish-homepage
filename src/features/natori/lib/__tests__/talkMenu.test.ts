@@ -26,6 +26,17 @@ describe("staff talk menu", () => {
     expect(buildTalkMenu({ ...base, status: "quoted" }).recommended).toBeNull();
   });
 
+  it("locks the payment link until the client has accepted the quote, and recommends it afterwards", () => {
+    const notYet = item({ status: "quoted", quoteAcceptedAt: null }, "payment");
+    expect(notYet.reason).toBe("依頼者が見積もりを承認すると送れます。");
+    expect(buildTalkMenu({ ...base, status: "quoted", quoteAcceptedAt: null }).recommended).toBeNull();
+    const accepted = { status: "quoted" as const, quoteAcceptedAt: "2026-10-12T00:00:00Z" };
+    expect(item(accepted, "payment")).toMatchObject({ label: "支払いリンクを送る", reason: null, hint: null });
+    expect(buildTalkMenu({ ...base, ...accepted }).recommended).toBe("payment");
+    // A re-send while waiting for payment is never locked by a missing acceptance stamp.
+    expect(item({ status: "awaiting_payment", quoteAcceptedAt: null }, "payment").reason).toBeNull();
+  });
+
   it("recommends the payment link while waiting for payment and offers a re-send", () => {
     const menu = buildTalkMenu({ ...base, status: "awaiting_payment" });
     expect(menu.recommended).toBe("payment");

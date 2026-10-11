@@ -60,4 +60,41 @@ describe("InquiryTalkMenu", () => {
     fireEvent.click(toggle());
     expect(screen.queryByText(/添付からいつでも/)).toBeNull();
   });
+
+  it("asks before leaving the conversation while a reply draft is unsent, and goes on only when confirmed", () => {
+    const confirm = vi.spyOn(window, "confirm");
+    const onOpenMail = mount({ status: "quoted" }, { hasDraft: true });
+    fireEvent.click(toggle());
+    confirm.mockReturnValueOnce(false);
+    fireEvent.click(screen.getByRole("button", { name: "支払いリンクを送る" }));
+    expect(onOpenMail).not.toHaveBeenCalled();
+    expect(screen.getByRole("list")).toBeTruthy();
+    confirm.mockReturnValueOnce(true);
+    fireEvent.click(screen.getByRole("button", { name: "支払いリンクを送る" }));
+    expect(onOpenMail).toHaveBeenCalledWith("payment");
+    // A declined confirm keeps a link from navigating.
+    cleanup();
+    mount({ status: "quoted" }, { hasDraft: true });
+    fireEvent.click(toggle());
+    confirm.mockReturnValueOnce(false);
+    expect(fireEvent.click(screen.getByRole("link", { name: "見積りを開く・再送" }))).toBe(false);
+    confirm.mockRestore();
+  });
+
+  it("does not ask when there is no draft", () => {
+    const confirm = vi.spyOn(window, "confirm");
+    const onOpenMail = mount({ status: "quoted" });
+    fireEvent.click(toggle());
+    fireEvent.click(screen.getByRole("button", { name: "支払いリンクを送る" }));
+    expect(confirm).not.toHaveBeenCalled();
+    expect(onOpenMail).toHaveBeenCalledWith("payment");
+    confirm.mockRestore();
+  });
+
+  it("locks the payment link while the quote is not accepted yet", () => {
+    mount({ status: "quoted", quoteAcceptedAt: null });
+    fireEvent.click(toggle());
+    expect(screen.getByText("依頼者が見積もりを承認すると送れます。")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /支払いリンク/ })).toBeNull();
+  });
 });
