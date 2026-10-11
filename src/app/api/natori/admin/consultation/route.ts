@@ -2,13 +2,18 @@ import {withNatoriManagement} from "@/features/natori/server/natoriManagementRou
 import {NextResponse} from "next/server";
 import {checkCsrf} from "@/lib/auth/csrf";
 import {canUseNatoriManagement} from "@/features/natori/server/requireNatoriAdmin";
-import {getStaffConsultation,retryStaffConsultationNotification} from "@/features/natori/server/consultationService";
+import {getStaffConsultation,getStaffConsultationProbe,retryStaffConsultationNotification} from "@/features/natori/server/consultationService";
 import {consultationOperation} from "@/features/natori/server/consultationOperationService";
 import {consultationOperationResponse} from "@/features/natori/server/consultationOperationResponse";
 export const runtime="nodejs",dynamic="force-dynamic";
 export const GET=withNatoriManagement("consultation.GET",false,async(request:Request)=>{
  if(!await canUseNatoriManagement())return NextResponse.json({error:"Unauthorized"},{status:401});
- const result=await getStaffConsultation(new URL(request.url).searchParams.get("projectId")??"");
+ const params=new URL(request.url).searchParams,projectId=params.get("projectId")??"";
+ if(params.get("probe")==="1"){
+  const probe=await getStaffConsultationProbe(projectId);
+  return probe?NextResponse.json(probe,{headers:{"Cache-Control":"no-store"}}):NextResponse.json({error:"Not found"},{status:404});
+ }
+ const result=await getStaffConsultation(projectId);
  return result?NextResponse.json({messages:result.messages,closed:result.project.status==="closed"||Boolean(result.project.deleted_at)},{headers:{"Cache-Control":"no-store"}}):NextResponse.json({error:"Not found"},{status:404});
 });
 export const POST=withNatoriManagement("consultation.POST",true,async(request:Request)=>{

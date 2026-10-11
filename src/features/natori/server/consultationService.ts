@@ -77,6 +77,30 @@ async function getMessages(projectId: string): Promise<ConsultationMessage[] | n
   });
 }
 
+export type ConsultationProbe = { count: number; lastId: string | null; closed: boolean };
+
+/** Cheap change check for polling: no file links are signed and no bodies are read. */
+async function probeMessages(project: ProjectRow): Promise<ConsultationProbe | null> {
+  const { data, count, error } = await supabaseAdmin().from("natori_consultation_messages")
+    .select("id", { count: "exact" }).eq("project_id", project.id)
+    .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(1);
+  if (error) { console.error("[natori-consultation] probe_unavailable"); return null; }
+  return { count: count ?? 0, lastId: data?.[0]?.id ?? null, closed: project.status === "closed" || Boolean(project.deleted_at) };
+}
+
+export async function getStaffConsultationProbe(projectId: string): Promise<ConsultationProbe | null> {
+  if (!UUID_RE.test(projectId)) return null;
+  const ownerId = await resolveNatoriOwnerId();
+  if (!ownerId) return null;
+  const project = await getProject(projectId, ownerId);
+  return project ? probeMessages(project) : null;
+}
+
+export async function getClientConsultationProbe(token: string): Promise<ConsultationProbe | null> {
+  const project = await getClientProject(token);
+  return project ? probeMessages(project) : null;
+}
+
 export async function getStaffConsultation(projectId: string) {
   if (!UUID_RE.test(projectId)) return null;
   const ownerId = await resolveNatoriOwnerId();
