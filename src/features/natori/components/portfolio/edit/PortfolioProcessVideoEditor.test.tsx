@@ -138,10 +138,12 @@ describe("PortfolioProcessVideoEditor", () => {
 function Harness({
   initial,
   onChange,
+  onUploadingChange,
   uploadDisabled,
 }: {
   initial: PortfolioProcessVideo | undefined;
   onChange: (next: PortfolioProcessVideo) => void;
+  onUploadingChange?: (uploading: boolean) => void;
   uploadDisabled?: boolean;
 }) {
   const [value, setValue] = useState(initial);
@@ -150,6 +152,7 @@ function Harness({
       value={value}
       works={works}
       uploadDisabled={uploadDisabled}
+      onUploadingChange={onUploadingChange}
       onChange={(next) => {
         onChange(next);
         setValue(next);
@@ -287,6 +290,48 @@ describe("PortfolioProcessVideoEditor 動画ファイル", () => {
     });
 
     expect(onChange).toHaveBeenLastCalledWith({ url: FILE_URL, caption: "待っている間に書いた説明" });
+  });
+
+  it("アップロードの始まりと終わりを親に知らせる（成功しても失敗しても、終わったら false に戻す）", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    let finish: (url: string) => void = () => {};
+    uploadMock.mockImplementationOnce(
+      () =>
+        new Promise<string>((resolve) => {
+          finish = resolve;
+        })
+    );
+    const onUploadingChange = vi.fn();
+    render(<Harness initial={undefined} onChange={vi.fn()} onUploadingChange={onUploadingChange} />);
+    fireEvent.click(sourceButton("動画ファイル"));
+    expect(onUploadingChange).toHaveBeenLastCalledWith(false);
+
+    fireEvent.change(fileInput(), { target: { files: [mp4()] } });
+    await screen.findByRole("progressbar");
+    expect(onUploadingChange).toHaveBeenLastCalledWith(true);
+    await act(async () => {
+      finish(FILE_URL);
+    });
+    expect(onUploadingChange).toHaveBeenLastCalledWith(false);
+
+    uploadMock.mockRejectedValueOnce(new ProcessVideoUploadError("アップロードに失敗しました。"));
+    fireEvent.change(fileInput(), { target: { files: [mp4()] } });
+    await screen.findByRole("alert");
+    expect(onUploadingChange.mock.calls.map(([uploading]) => uploading)).toEqual([false, true, false, true, false]);
+    consoleError.mockRestore();
+  });
+
+  it("アップロードの途中でこの欄が消えても、親には終わったと知らせる", async () => {
+    uploadMock.mockImplementation(() => new Promise<string>(() => {}));
+    const onUploadingChange = vi.fn();
+    const { unmount } = render(<Harness initial={undefined} onChange={vi.fn()} onUploadingChange={onUploadingChange} />);
+    fireEvent.click(sourceButton("動画ファイル"));
+    fireEvent.change(fileInput(), { target: { files: [mp4()] } });
+    await screen.findByRole("progressbar");
+    expect(onUploadingChange).toHaveBeenLastCalledWith(true);
+
+    unmount();
+    expect(onUploadingChange).toHaveBeenLastCalledWith(false);
   });
 
   it("アップロードに失敗したら理由を出し、いまの設定は変えない", async () => {

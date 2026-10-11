@@ -31,12 +31,15 @@ export default function PortfolioProcessVideoEditor({
   value,
   works,
   onChange,
+  onUploadingChange,
   uploadDisabled,
 }: {
   /** 未設定（動画なし）のときは undefined */
   value: PortfolioProcessVideo | undefined;
   works: PortfolioWork[];
   onChange: (next: PortfolioProcessVideo) => void;
+  /** アップロードが始まった・終わったことを親に知らせる（親は、終わるまで「保存する」を止める） */
+  onUploadingChange?: (uploading: boolean) => void;
   /** デモ環境用: アップロードを無効化して案内だけ出す */
   uploadDisabled?: boolean;
 }) {
@@ -58,14 +61,21 @@ export default function PortfolioProcessVideoEditor({
   // アップロード中に他の欄を直されても巻き戻さないよう、終わったときは最新の内容にURLだけを重ねる
   const videoRef = useRef(video);
   const onChangeRef = useRef(onChange);
+  const onUploadingChangeRef = useRef(onUploadingChange);
   useEffect(() => {
     videoRef.current = video;
     onChangeRef.current = onChange;
+    onUploadingChangeRef.current = onUploadingChange;
   });
+  useEffect(() => {
+    onUploadingChangeRef.current?.(uploading);
+  }, [uploading]);
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      // この欄が途中で消えても、親の「保存する」を止めたままにしない
+      onUploadingChangeRef.current?.(false);
     };
   }, []);
 

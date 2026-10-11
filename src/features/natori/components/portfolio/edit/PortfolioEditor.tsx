@@ -101,6 +101,8 @@ export default function PortfolioEditor({
   const [previewError, setPreviewError] = useState(false);
   const [activeSectionId, setActiveSectionId] = useState<string>(SECTION_NAV[0].id);
   const [dirty, setDirty] = useState(false);
+  // 動画ファイルのアップロード中は保存を止める（途中で保存すると、できあがった動画のURLが保存に入らない）
+  const [videoUploading, setVideoUploading] = useState(false);
   const contentReady = content !== null;
 
   useEffect(() => {
@@ -233,7 +235,7 @@ export default function PortfolioEditor({
   };
 
   const handleSave = async () => {
-    if (!content || saveState === "saving") return;
+    if (!content || saveState === "saving" || videoUploading) return;
     setSaveProblem(null);
     if (isDemo) {
       // デモ: 実保存せず成功表示だけする
@@ -1009,6 +1011,7 @@ export default function PortfolioEditor({
             value={content.processVideo}
             works={content.works}
             onChange={(next) => patch({ processVideo: next })}
+            onUploadingChange={setVideoUploading}
             uploadDisabled={isDemo}
           />
         </SectionCard>
@@ -1369,7 +1372,9 @@ export default function PortfolioEditor({
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200/80 bg-white/85 pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <div className="min-w-0 text-xs font-semibold" aria-live="polite">
-            {saveState === "saved" ? (
+            {videoUploading ? (
+              <span className="text-amber-700">動画をアップロード中です。終わると保存できます。</span>
+            ) : saveState === "saved" ? (
               <span className="text-emerald-700">
                 {isDemo
                   ? "保存しました（デモのため実際には反映されません）。"
@@ -1405,7 +1410,7 @@ export default function PortfolioEditor({
           <button
             type="button"
             onClick={handleSave}
-            disabled={saveState === "saving" || !dirty}
+            disabled={saveState === "saving" || !dirty || videoUploading}
             className={`${natoriAdminUi.btnPrimary} ml-auto`}
           >
             {saveState === "saving" ? (
