@@ -13,20 +13,22 @@ export function isStripePaymentUrl(value: string | null): value is string {
   } catch { return false; }
 }
 
-function quoteCard(quote: TalkQuoteFact, latest: boolean, now: Date): TalkCard {
+function quoteCard(quote: TalkQuoteFact, latest: boolean, now: Date, linksAllowed: boolean): TalkCard {
   const base = { id: `quote-${quote.id}`, kind: "quote" as const, title: "お見積もり" };
   if (quote.acceptedAt) return { ...base, badge: { label: "承認済み", tone: "done" }, lines: [`${day(quote.acceptedAt)}に承認されました。`] };
   if (quote.supersededAt || !latest) return { ...base, badge: { label: "更新済み", tone: "muted" }, lines: ["新しいお見積もりが届いています。"] };
   const amount = `¥${quote.amount.toLocaleString("ja-JP")}`;
   if (past(quote.expiresAt, now)) return { ...base, amount, badge: { label: "期限切れ", tone: "muted" }, lines: ["有効期限が過ぎています。必要なときは下のトークでご連絡ください。"] };
-  return { ...base, amount, badge: { label: "確認待ち", tone: "action" }, lines: [`${day(quote.expiresAt)}まで有効です。`, "お見積もりのメールにあるリンクから、内容を確認して承認してください。"] };
+  const lines = [`${day(quote.expiresAt)}まで有効です。`];
+  if (!linksAllowed) return { ...base, amount, badge: { label: "確認待ち", tone: "action" }, lines: [...lines, "お見積もりのメールにあるリンクから、内容を確認して承認してください。"] };
+  return { ...base, amount, badge: { label: "確認待ち", tone: "action" }, lines, action: { label: "内容を確認して承認", open: "quote" } };
 }
 
 export function buildTalkTimeline(facts: TalkFacts, now: Date): TalkTimeline {
   const ordered = [...facts.quotes].sort((a, b) => a.version - b.version);
   const latest = ordered.at(-1);
   const accepted = ordered.filter(quote => quote.acceptedAt).at(-1);
-  const cards: TalkCard[] = ordered.map(quote => quoteCard(quote, quote === latest, now));
+  const cards: TalkCard[] = ordered.map(quote => quoteCard(quote, quote === latest, now, facts.linksAllowed));
 
   const { payment, delivery } = facts;
   if (accepted || payment.confirmedAt) {
@@ -46,11 +48,15 @@ export function buildTalkTimeline(facts: TalkFacts, now: Date): TalkTimeline {
     const base = { id: "delivery", kind: "delivery" as const, title: "納品" };
     const files = delivery.fileCount ? `ファイル ${delivery.fileCount}点` : null;
     const open = delivery.expiresAt !== null && !past(delivery.expiresAt, now);
+    const canOpen = open && delivery.openable && facts.linksAllowed && Boolean(payment.confirmedAt);
     if (delivery.acceptedAt) cards.push({ ...base, badge: { label: "受け取り済み", tone: "done" },
-      lines: [`${day(delivery.acceptedAt)}に受け取り確認がありました。`, ...(open && delivery.expiresAt ? [`ダウンロードは${day(delivery.expiresAt)}までできます。`] : [])] });
+      lines: [`${day(delivery.acceptedAt)}に受け取り確認がありました。`, ...(open && delivery.expiresAt ? [`ダウンロードは${day(delivery.expiresAt)}までできます。`] : [])],
+      ...(canOpen ? { action: { label: "ダウンロードを開く", open: "delivery" as const } } : {}) });
     else if (!open) cards.push({ ...base, badge: { label: "期限切れ", tone: "muted" }, lines: ["ダウンロードの期限が過ぎています。再送が必要なときは下のトークでご連絡ください。"] });
     else cards.push({ ...base, badge: { label: "受け取り待ち", tone: "action" },
-      lines: [...(files ? [files] : []), ...(delivery.expiresAt ? [`ダウンロードは${day(delivery.expiresAt)}までできます。`] : []), "納品メールにあるリンクから受け取ってください。"] });
+      lines: [...(files ? [files] : []), ...(delivery.expiresAt ? [`ダウンロードは${day(delivery.expiresAt)}までできます。`] : []),
+        ...(canOpen ? [] : ["納品メールにあるリンクから受け取ってください。"])],
+      ...(canOpen ? { action: { label: "ダウンロードして受け取る", open: "delivery" as const } } : {}) });
   }
 
   const steps: TalkStep[] = [

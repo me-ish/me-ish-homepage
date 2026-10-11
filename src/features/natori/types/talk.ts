@@ -25,13 +25,19 @@ export type TalkDeliveryFact = {
   expiresAt: string | null;
   acceptedAt: string | null;
   fileCount: number | null;
+  /** A delivery release exists, so a fresh download link can be minted. Legacy single-token deliveries cannot. */
+  openable: boolean;
 };
 
 export type TalkFacts = {
+  /** False when the project is closed or deleted: no card may open a quote or delivery page. */
+  linksAllowed: boolean;
   quotes: TalkQuoteFact[];
   payment: TalkPaymentFact;
   delivery: TalkDeliveryFact;
 };
+
+export type TalkOpenTarget = "quote" | "delivery";
 
 export type TalkBadgeTone = "action" | "done" | "wait" | "muted";
 
@@ -43,8 +49,8 @@ export type TalkCard = {
   /** Large figure line, e.g. the amount. */
   amount?: string;
   lines: string[];
-  /** Only the payment card has a button in this stage. */
-  action?: { label: string; href: string };
+  /** `href` goes straight to the stored Stripe page; `open` asks the server for a fresh quote / delivery link. */
+  action?: { label: string; href: string } | { label: string; open: TalkOpenTarget };
 };
 
 export type TalkStep = { key: "quote" | "payment" | "delivery"; label: string; done: boolean };

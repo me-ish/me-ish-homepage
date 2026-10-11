@@ -55,6 +55,7 @@ export async function getClientTalkTimeline(token: string): Promise<TalkTimeline
     const manifest = release && Array.isArray(release.manifest) ? release.manifest.length : null;
     const legacyDelivery = !release && Boolean(p.delivery_token_expires_at);
     const facts: TalkFacts = {
+      linksAllowed: project.status !== "closed",
       quotes,
       payment: { confirmedAt: p.payment_confirmed_at, linkUrl: link?.url ?? null, linkDeadline: link?.deadline ?? null, processing },
       delivery: {
@@ -62,6 +63,7 @@ export async function getClientTalkTimeline(token: string): Promise<TalkTimeline
         expiresAt: release?.expires_at ?? p.delivery_token_expires_at,
         acceptedAt: p.delivery_accepted_at ?? release?.accepted_at ?? null,
         fileCount: manifest,
+        openable: Boolean(release),
       },
     };
     const timeline = buildTalkTimeline(facts, new Date());

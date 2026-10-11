@@ -7,14 +7,15 @@ import { buildTalkTimeline } from "../../../lib/talkTimeline";
 afterEach(cleanup);
 const now = new Date("2026-10-12T03:00:00Z");
 const timeline = buildTalkTimeline({
+  linksAllowed: true,
   quotes: [{ id: "q1", version: 1, amount: 30000, issuedAt: "2026-10-10T00:00:00Z", expiresAt: "2099-01-01T00:00:00Z", acceptedAt: "2026-10-11T01:00:00Z", supersededAt: null }],
   payment: { confirmedAt: null, linkUrl: "https://buy.stripe.com/test_abc", linkDeadline: "2099-01-01T00:00:00Z", processing: false },
-  delivery: { exists: false, expiresAt: null, acceptedAt: null, fileCount: null },
+  delivery: { exists: false, expiresAt: null, acceptedAt: null, fileCount: null, openable: false },
 }, now);
 
 describe("TalkStatus", () => {
   it("lists the three steps and the cards", () => {
-    render(<TalkStatus timeline={timeline} />);
+    render(<TalkStatus timeline={timeline} token="synthetic" />);
     const steps = within(screen.getByRole("list", { name: "進み具合" })).getAllByRole("listitem").map(li => li.textContent);
     expect(steps).toEqual(["見積もり承認（済み）", "お支払い（まだ）", "納品（まだ）"]);
     expect(screen.getByText("承認済み")).toBeTruthy();
@@ -22,7 +23,7 @@ describe("TalkStatus", () => {
   });
 
   it("renders the only action as an external Stripe link and adds no other buttons", () => {
-    render(<TalkStatus timeline={timeline} />);
+    render(<TalkStatus timeline={timeline} token="synthetic" />);
     const link = screen.getByRole("link", { name: "お支払いへ進む" });
     expect(link.getAttribute("href")).toBe("https://buy.stripe.com/test_abc");
     expect(link.getAttribute("rel")).toContain("noopener");

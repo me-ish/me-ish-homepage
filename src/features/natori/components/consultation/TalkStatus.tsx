@@ -1,4 +1,5 @@
 import { Check, Circle } from "lucide-react";
+import TalkOpenButton from "./TalkOpenButton";
 import { natoriClientUi as ui } from "@/features/natori/constants/clientUi";
 import type { TalkBadgeTone, TalkTimeline } from "@/features/natori/types/talk";
 
@@ -9,8 +10,8 @@ const badgeTone: Record<TalkBadgeTone, string> = {
   muted: "bg-[#F5F3F4] text-[#5F5963]",
 };
 
-/** Read-only summary of the quote / payment / delivery state, shown above the thread. */
-export default function TalkStatus({ timeline }: { timeline: TalkTimeline }) {
+/** Quote / payment / delivery state shown above the thread; the cards' buttons open the existing pages. */
+export default function TalkStatus({ timeline, token }: { timeline: TalkTimeline; token: string }) {
   return (
     <section aria-labelledby="talk-status-title" className="space-y-3">
       <h2 id="talk-status-title" className={ui.heading}>ご依頼の進み具合</h2>
@@ -31,7 +32,8 @@ export default function TalkStatus({ timeline }: { timeline: TalkTimeline }) {
             </div>
             {card.amount ? <p className="mt-1 text-[22px] font-bold leading-8">{card.amount}</p> : null}
             {card.lines.map(line => <p key={line} className={`mt-1 ${ui.small} ${ui.muted}`}>{line}</p>)}
-            {card.action ? <a href={card.action.href} target="_blank" rel="noopener noreferrer" className={`${ui.btnPrimary} mt-3`}>{card.action.label}</a> : null}
+            {card.action && "href" in card.action ? <a href={card.action.href} target="_blank" rel="noopener noreferrer" className={`${ui.btnPrimary} mt-3`}>{card.action.label}</a> : null}
+            {card.action && "open" in card.action ? <TalkOpenButton token={token} target={card.action.open} label={card.action.label} /> : null}
           </li>
         ))}
       </ul>

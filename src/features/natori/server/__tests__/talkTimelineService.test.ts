@@ -41,7 +41,7 @@ describe("client talk timeline service", () => {
     rows.natori_payment_link_attempts = ok({ state: "active", link_url: "https://buy.stripe.com/test_abc", deadline: "2099-01-01T00:00:00Z" });
     const timeline = await getClientTalkTimeline(token);
     expect(timeline?.cards.map(c => c.kind)).toEqual(["quote", "payment"]);
-    expect(timeline?.cards[1].action?.href).toBe("https://buy.stripe.com/test_abc");
+    expect(timeline?.cards[1].action).toMatchObject({ href: "https://buy.stripe.com/test_abc" });
     expect(writes).not.toHaveBeenCalled(); expect(m.rpc).not.toHaveBeenCalled();
   });
 
@@ -53,7 +53,7 @@ describe("client talk timeline service", () => {
 
   it("falls back to the project link only while no generation row exists", async () => {
     rows.natori_projects = ok({ payment_confirmed_at: null, payment_link_url: "https://buy.stripe.com/legacy", payment_link_status: "sent", delivery_token_expires_at: null, delivery_accepted_at: null });
-    expect((await getClientTalkTimeline(token))?.cards[1].action?.href).toBe("https://buy.stripe.com/legacy");
+    expect((await getClientTalkTimeline(token))?.cards[1].action).toMatchObject({ href: "https://buy.stripe.com/legacy" });
     rows.natori_projects = ok({ payment_confirmed_at: null, payment_link_url: "https://buy.stripe.com/legacy", payment_link_status: "void", delivery_token_expires_at: null, delivery_accepted_at: null });
     expect((await getClientTalkTimeline(token))?.cards.map(c => c.kind)).toEqual(["quote"]);
   });
