@@ -21,6 +21,11 @@ DO $$ BEGIN
     RAISE EXCEPTION 'ANON_INVOKER_VIEW_ALLOWED';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
+  BEGIN
+    PERFORM * FROM public.v_my_external_user_ids_wrapper;
+    RAISE EXCEPTION 'ANON_INVOKER_WRAPPER_ALLOWED';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
   RAISE NOTICE 'PASS anonymous table, count, column and invoker-view reads denied';
 END $$;
 ROLLBACK;
@@ -45,6 +50,10 @@ DO $$ BEGIN
   IF (SELECT array_agg(id ORDER BY id) FROM public.v_my_external_user_ids)
       IS DISTINCT FROM ARRAY[1,3]::bigint[] THEN
     RAISE EXCEPTION 'INVOKER_VIEW_BYPASSED_OWNERSHIP';
+  END IF;
+  IF (SELECT array_agg(id ORDER BY id) FROM public.v_my_external_user_ids_wrapper)
+      IS DISTINCT FROM ARRAY[1,3]::bigint[] THEN
+    RAISE EXCEPTION 'INVOKER_WRAPPER_BYPASSED_OWNERSHIP';
   END IF;
   UPDATE public.entries SET title = 'must not change' WHERE id = 1;
   IF FOUND THEN RAISE EXCEPTION 'LEGACY_UPDATE_STOP_LOST'; END IF;

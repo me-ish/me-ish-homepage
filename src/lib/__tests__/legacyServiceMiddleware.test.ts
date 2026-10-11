@@ -72,4 +72,22 @@ describe('legacy suspension middleware', () => {
     expect(response.cookies.get(NATORI_KEY_COOKIE)?.value).toMatch(/^[a-f0-9]{64}$/);
     expect(intl).not.toHaveBeenCalled();
   });
+
+  it.each(['wrong-key', 'synthetic-key'])
+  ('protects certificate responses through the dashboard-key branch (%s)', async (key) => {
+    vi.stubEnv('NATORI_DASHBOARD_KEY', 'synthetic-key');
+    const response = await middleware(new NextRequest(`https://example.com/en/cert/12?t=synthetic-token&natori-key=${key}`));
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer');
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+  });
+
+  it.each(['', 'wrong-key', 'synthetic-key'])
+  ('protects certificate redirects with dashboard key %s', async (key) => {
+    vi.stubEnv('NATORI_DASHBOARD_KEY', 'synthetic-key');
+    intl.mockImplementation(() => NextResponse.redirect('https://example.com/ja/cert/12?t=synthetic-token'));
+    const response = await middleware(new NextRequest(`https://example.com/cert/12?t=synthetic-token${key ? `&natori-key=${key}` : ''}`));
+    expect(response.status).toBe(307);
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer');
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+  });
 });

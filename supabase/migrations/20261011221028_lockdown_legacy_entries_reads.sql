@@ -31,16 +31,25 @@ BEGIN
       AND policyname IN ('entries_deny_anon_select', 'entries_limit_authenticated_select')) THEN
     RAISE EXCEPTION 'ENTRY_READ_LOCKDOWN_POLICY_ALREADY_EXISTS';
   END IF;
-  -- Invoker views inherit this table boundary. A readable definer/materialized
-  -- view would need a separate reviewed fix, so refuse that catalog drift.
+  -- Traverse even private intermediate views: a public wrapper or materialized
+  -- copy can expose a private definer's rows. Pure invoker chains inherit RLS.
   IF EXISTS (
-    SELECT 1 FROM pg_depend d
-    JOIN pg_rewrite rw ON rw.oid = d.objid
-    JOIN pg_class v ON v.oid = rw.ev_class
-    WHERE d.refobjid = 'public.entries'::regclass AND v.relkind IN ('v', 'm')
-      AND (has_any_column_privilege('anon', v.oid, 'SELECT')
-        OR has_any_column_privilege('authenticated', v.oid, 'SELECT'))
-      AND (v.relkind = 'm' OR NOT coalesce(v.reloptions @> ARRAY['security_invoker=true'], false))
+    WITH RECURSIVE dependent_views(relation_id, unsafe) AS (
+      SELECT 'public.entries'::regclass::oid, false
+      UNION
+      SELECT v.oid, parent.unsafe OR v.relkind = 'm'
+        OR NOT coalesce(v.reloptions @> ARRAY['security_invoker=true'], false)
+      FROM dependent_views parent
+      JOIN pg_depend d ON d.refobjid = parent.relation_id
+        AND d.refclassid = 'pg_class'::regclass AND d.classid = 'pg_rewrite'::regclass
+      JOIN pg_rewrite rw ON rw.oid = d.objid
+      JOIN pg_class v ON v.oid = rw.ev_class
+      WHERE v.relkind IN ('v', 'm') AND v.oid <> parent.relation_id
+    )
+    SELECT 1 FROM dependent_views d
+    WHERE d.unsafe AND (
+      has_any_column_privilege('anon', d.relation_id, 'SELECT')
+      OR has_any_column_privilege('authenticated', d.relation_id, 'SELECT'))
   ) THEN
     RAISE EXCEPTION 'ENTRY_READ_LOCKDOWN_UNSAFE_DEPENDENT_VIEW';
   END IF;

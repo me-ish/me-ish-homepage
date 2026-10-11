@@ -82,6 +82,20 @@ catalog "$work/view-after.json"
 same "$work/view-before.json" "$work/view-after.json" 'definer-view guard'
 dbsql -c 'REVOKE SELECT ON public.v_server_entries FROM anon;'
 
+dbsql -c 'CREATE VIEW public.v_public_wrapper WITH (security_invoker = true) AS SELECT * FROM public.v_server_entries; GRANT SELECT ON public.v_public_wrapper TO anon;'
+catalog "$work/wrapper-before.json"
+reject ENTRY_READ_LOCKDOWN_UNSAFE_DEPENDENT_VIEW
+catalog "$work/wrapper-after.json"
+same "$work/wrapper-before.json" "$work/wrapper-after.json" 'private definer/public invoker wrapper guard'
+dbsql -c 'DROP VIEW public.v_public_wrapper;'
+
+dbsql -c 'CREATE MATERIALIZED VIEW public.v_public_materialized AS SELECT * FROM public.v_server_entries; GRANT SELECT ON public.v_public_materialized TO authenticated;'
+catalog "$work/materialized-before.json"
+reject ENTRY_READ_LOCKDOWN_UNSAFE_DEPENDENT_VIEW
+catalog "$work/materialized-after.json"
+same "$work/materialized-before.json" "$work/materialized-after.json" 'indirect materialized-copy guard'
+dbsql -c 'DROP MATERIALIZED VIEW public.v_public_materialized;'
+
 dbsql -c 'CREATE ROLE fixture_reader NOLOGIN; GRANT SELECT ON public.entries TO fixture_reader; GRANT fixture_reader TO anon;'
 catalog "$work/inherited-before.json"
 reject ENTRY_READ_LOCKDOWN_ANON_PRIVILEGE_REMAINS

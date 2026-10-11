@@ -20,6 +20,14 @@ import {
 
 const intlMiddleware = createMiddleware(routing);
 
+function protectPrivateResponse(response: NextResponse, pathname: string): NextResponse {
+  if (isAnalyticsExcludedPath(pathname)) {
+    response.headers.set('Referrer-Policy', 'no-referrer');
+    response.headers.set('Cache-Control', 'private, no-store');
+  }
+  return response;
+}
+
 export default async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const apiService = getSuspendedLegacyApi(pathname, request.method);
@@ -38,7 +46,9 @@ export default async function middleware(request: NextRequest) {
   }
   // Explicit API/auth matchers below must never send these routes through intl
   // or the dashboard-key redirect flow.
-  if (/^\/(?:api|admin|auth)(?:\/|$)/.test(pathname)) return NextResponse.next();
+  if (/^\/(?:api|admin|auth)(?:\/|$)/.test(pathname)) {
+    return protectPrivateResponse(NextResponse.next(), pathname);
+  }
 
   // natori 管理画面の合言葉キー: `?natori-key=<NATORI_DASHBOARD_KEY>` 付きで
   // 開くと 8 時間有効の Cookie をセットし、キーを消した URL にリダイレクトする。
@@ -61,7 +71,7 @@ export default async function middleware(request: NextRequest) {
       deriveNatoriDashboardCookieToken(providedKey),
     ]);
     if (!constantTimeEquals(expectedToken, providedToken)) {
-      return intlMiddleware(request);
+      return protectPrivateResponse(intlMiddleware(request), pathname);
     }
     const cleanUrl = request.nextUrl.clone();
     cleanUrl.searchParams.delete(NATORI_KEY_PARAM);
@@ -75,15 +85,10 @@ export default async function middleware(request: NextRequest) {
       path: '/',
       maxAge: 60 * 60 * 8,
     });
-    return response;
+    return protectPrivateResponse(response, pathname);
   }
 
-  const response = intlMiddleware(request);
-  if (isAnalyticsExcludedPath(pathname)) {
-    response.headers.set('Referrer-Policy', 'no-referrer');
-    response.headers.set('Cache-Control', 'private, no-store');
-  }
-  return response;
+  return protectPrivateResponse(intlMiddleware(request), pathname);
 }
 
 export const config = {

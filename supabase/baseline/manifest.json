@@ -241,7 +241,7 @@
     "sha256:artifacts/legacy-migration-archive/verification.json": "090f3f98f958f5b6d08431541e156187ca8e89507fb0f3a49b41431fb8a8591f",
     "expectedNormalizedSchema": "operator_confirmation_required_after_pattern_b",
     "sha256:supabase/migrations/20261001223805_natori_task_integrity.sql": "b17ac3a116d7c3b01e2a3e2eea5c8409bcfa06f7b73f4aa718f79532895ef015",
-    "sha256:supabase/migrations/20261011221028_lockdown_legacy_entries_reads.sql": "cf9ca4cd30830a83c8f63c0c14dd263a90efecd5aa1cd28b19d1d93e1591d018"
+    "sha256:supabase/migrations/20261011221028_lockdown_legacy_entries_reads.sql": "898a1b496b4ab8541f9eaf98dec6c416a56abef23cd348b81d3b315e1c0b86f4"
   },
   "operatorConfirmationRequired": [
     "target project ref is non-production and not lvnfspyainrxtztjytbo",

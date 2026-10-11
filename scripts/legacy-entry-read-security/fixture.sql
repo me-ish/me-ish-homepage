@@ -54,6 +54,9 @@ INSERT INTO public.entries VALUES
 CREATE VIEW public.v_my_external_user_ids WITH (security_invoker = true) AS
   SELECT id, external_user_id FROM public.entries;
 GRANT SELECT ON public.v_my_external_user_ids TO anon, authenticated, service_role;
+CREATE VIEW public.v_my_external_user_ids_wrapper WITH (security_invoker = true) AS
+  SELECT * FROM public.v_my_external_user_ids;
+GRANT SELECT ON public.v_my_external_user_ids_wrapper TO anon, authenticated, service_role;
 CREATE VIEW public.v_server_entries AS SELECT id, email FROM public.entries;
 REVOKE ALL ON public.v_server_entries FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.v_server_entries TO service_role;
