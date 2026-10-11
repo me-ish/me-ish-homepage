@@ -10,13 +10,14 @@ import { consultationOperationSchema, freezeConsultationOperation, consultationD
 import { validConsultationFile } from "@/features/natori/lib/consultationFileRules";
 import { consultationUploadEndpoint } from "@/features/natori/lib/consultationUploadEndpoint";
 import type { ConsultationMessage } from "@/features/natori/types/consultation";
+import { roughSignature } from "@/features/natori/lib/roughSignature";
 
 type Props =
   | { mode: "staff"; projectId: string; clientEmail?: string; standalone?: boolean; initialMessages?: never; token?: never; closed?: boolean; onChanged?: () => void; onDraftChange?: (hasDraft: boolean) => void }
   | { mode: "client"; token: string; initialMessages: ConsultationMessage[]; closed: boolean; projectId?: never; clientEmail?: never };
 
 type ComposerJob = { actor: string; generation: number };
-type Probe = { count: number; lastId: string | null; closed: boolean };
+type Probe = { count: number; lastId: string | null; closed: boolean; roughs?: string };
 
 /** How often an open, visible thread asks whether anything changed. */
 const POLL_MS = 15000;
@@ -78,6 +79,12 @@ function dateTime(value: string): string {
   return new Intl.DateTimeFormat("ja-JP", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Tokyo" }).format(new Date(value));
 }
 
+function roughNote(rough: NonNullable<ConsultationMessage["rough"]>, mode: "staff" | "client"): string {
+  const name = rough.beforeQuote ? (mode === "client" ? "参考ラフ（見積もり前）" : "参考ラフ") : "ラフ";
+  if (rough.okAt) return `${name} · ${mode === "client" ? "OKをお伝えしました" : "依頼者がOK"} ${dateTime(rough.okAt)}`;
+  return `${name} · ${mode === "client" ? "上のカードから「このラフでOK」を送れます" : "依頼者のOK待ち"}`;
+}
+
 function renderText(value: string) {
   return value.split(/(https:\/\/[^\s]+)/g).map((part, index) => {
     if (part.startsWith("https://")) {
@@ -116,6 +123,8 @@ export default function ConsultationThread(props: Props) {
   const [closed, setClosed] = useState(props.closed ?? false);
   const closedRef = useRef(closed);
   closedRef.current = closed;
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
   const [historyUnavailable, setHistoryUnavailable] = useState(false);
   const [newMessages, setNewMessages] = useState(false);
   const lastMessageRef = useRef<HTMLLIElement>(null);
@@ -206,7 +215,8 @@ export default function ConsultationThread(props: Props) {
         const known = knownMessages.current;
         const different = typeof probe.count === "number" && (probe.count !== known.size || (probe.lastId !== null && probe.lastId !== undefined && !known.has(probe.lastId)));
         const closedChanged = typeof probe.closed === "boolean" && probe.closed !== closedRef.current;
-        if (!different && !closedChanged) return;
+        const roughsChanged = typeof probe.roughs === "string" && probe.roughs !== roughSignature(messagesRef.current.flatMap(message => message.rough ? [{ id: message.rough.id, answered: Boolean(message.rough.okAt) }] : []));
+        if (!different && !closedChanged && !roughsChanged) return;
         const nearBottom = !last || last.getBoundingClientRect().bottom <= window.innerHeight + FOLLOW_SLACK_PX;
         await reload(false, nearBottom);
       } catch { /* Silent: the next tick or a manual refresh retries. */ } finally {
@@ -403,6 +413,28 @@ export default function ConsultationThread(props: Props) {
     } finally { releaseBusy(job); }
   };
 
+  /** Staff marks (or un-marks) one of their attachment messages as a rough. Only an annotation: nothing is sent to the client. */
+  const markRough = async (messageId: string, action: "mark" | "unmark") => {
+    if (props.mode !== "staff" || busyOwner.current || busy || !ownsActor()) return;
+    const job={actor:actorKey,generation:operationGeneration.current};
+    busyOwner.current=job;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/natori/admin/consultation/rough", {
+        method: "POST", headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: props.projectId, messageId, action }),
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!ownsBusy(job)) return;
+      if (!response.ok) throw new Error(result.error ?? "ラフの設定を変更できませんでした");
+      setNotice(action === "mark" ? "ラフとして提出しました。依頼者の相談ページに「このラフでOK」のカードが出ます。" : "ラフの指定を外しました。");
+      await refreshAfterSend();
+    } catch (err) {
+      if(ownsBusy(job))setError(err instanceof Error ? err.message : "ラフの設定を変更できませんでした");
+    } finally { releaseBusy(job); }
+  };
+
   const cannotSend = closed || (props.mode === "staff" && !props.clientEmail);
   const t = threadTone[props.mode];
   // On phones the client's input bar stays at the bottom of the screen (LINE-like);
@@ -439,6 +471,12 @@ export default function ConsultationThread(props: Props) {
                 </div>
                 {message.notificationStatus === "failed" && (props.mode === "client" ? message.sender === "client" : message.sender !== "staff" || closed) ? <p className={`mt-1 px-1 ${t.warning}`}>メール通知に失敗 · 相談内容は保存済み</p> : null}
                 {message.notificationStatus === "pending" && (props.mode === "staff" || message.sender === "client") ? <p className={`mt-1 px-1 ${t.caption}`}>通知未送信・処理中 · 相談内容は保存済み</p> : null}
+                {message.rough ? <p className={`mt-1 px-1 ${t.caption}`}>{roughNote(message.rough, props.mode)}</p> : null}
+                {props.mode === "staff" && !closed && message.sender === "staff" && ((message.files?.length ?? 0) > 0 || message.attachmentsExist === true) && !message.rough?.okAt ? (
+                  <button type="button" disabled={busy} onClick={() => void markRough(message.id, message.rough ? "unmark" : "mark")} className={`mt-1 px-1 ${t.textButton} disabled:cursor-not-allowed disabled:text-zinc-500`}>
+                    {message.rough ? "ラフの指定を外す" : "ラフとして提出"}
+                  </button>
+                ) : null}
                 {props.mode === "staff" && !closed && message.sender === "staff" && message.notificationStatus === "failed" ? (
                   <button type="button" disabled={busy} onClick={() => void retry(message.id)} className={`mt-1 px-1 ${t.retry} disabled:cursor-not-allowed disabled:text-zinc-500`}>メール通知に失敗 · 再送する</button>
                 ) : null}

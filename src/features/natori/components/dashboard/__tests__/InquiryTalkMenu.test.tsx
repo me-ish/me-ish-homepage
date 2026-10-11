@@ -58,7 +58,19 @@ describe("InquiryTalkMenu", () => {
     cleanup();
     mount({ status: "closed" }, { readOnly: true });
     fireEvent.click(toggle());
-    expect(screen.queryByText(/添付からいつでも/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "ラフを提出" })).toBeNull();
+    expect(screen.getByText("ラフ")).toBeTruthy();
+  });
+
+  it("takes staff to the message box to submit a rough, without leaving the screen", () => {
+    const box = document.createElement("textarea"); box.id = "consultation-reply"; document.body.append(box);
+    const onOpenMail = mount({ status: "inquiry" });
+    fireEvent.click(toggle());
+    fireEvent.click(screen.getByRole("button", { name: "ラフを提出" }));
+    expect(document.activeElement).toBe(box);
+    expect(screen.queryByRole("list")).toBeNull();
+    expect(onOpenMail).not.toHaveBeenCalled();
+    box.remove();
   });
 
   it("asks before leaving the conversation while a reply draft is unsent, and goes on only when confirmed", () => {

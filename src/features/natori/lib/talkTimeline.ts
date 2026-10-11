@@ -1,4 +1,4 @@
-import type { TalkCard, TalkFacts, TalkQuoteFact, TalkStep, TalkTimeline } from "../types/talk";
+import type { TalkCard, TalkFacts, TalkQuoteFact, TalkRoughFact, TalkStep, TalkTimeline } from "../types/talk";
 
 const DATE = new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", month: "long", day: "numeric" });
 const day = (iso: string) => DATE.format(new Date(iso));
@@ -24,11 +24,27 @@ function quoteCard(quote: TalkQuoteFact, latest: boolean, now: Date, linksAllowe
   return { ...base, amount, badge: { label: "確認待ち", tone: "action" }, lines, action: { label: "内容を確認して承認", open: "quote" } };
 }
 
+function roughCard(rough: TalkRoughFact, linksAllowed: boolean): TalkCard {
+  const base = { id: `rough-${rough.id}`, kind: "rough" as const, title: rough.beforeQuote ? "参考ラフ（見積もり前）" : "ラフ" };
+  const where = "ラフは、下のやり取りの添付から確認できます。";
+  if (rough.okAt) return { ...base, badge: { label: "OK済み", tone: "done" }, lines: [`${day(rough.okAt)}に「このラフでOK」をいただきました。`, where] };
+  const lines = [`${day(rough.createdAt)}にラフが届きました。`, where, "直したい点は、下のやり取りでお送りください。",
+    "「OK」は制作を進めるための連絡です。お見積もりの承認やお支払いの代わりにはなりません。"];
+  return { ...base, badge: { label: "確認待ち", tone: "action" }, lines, ...(linksAllowed ? { action: { label: "このラフでOK", roughOk: rough.id } } : {}) };
+}
+
 export function buildTalkTimeline(facts: TalkFacts, now: Date): TalkTimeline {
   const ordered = [...facts.quotes].sort((a, b) => a.version - b.version);
   const latest = ordered.at(-1);
   const accepted = ordered.filter(quote => quote.acceptedAt).at(-1);
-  const cards: TalkCard[] = ordered.map(quote => quoteCard(quote, quote === latest, now, facts.linksAllowed));
+  const roughs = [...(facts.roughs ?? [])].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
+    .map(rough => ({ rough, card: roughCard(rough, facts.linksAllowed) }));
+  // Roughs may come at any time: ones sent before a quote lead, the rest follow the quotes.
+  const cards: TalkCard[] = [
+    ...roughs.filter(({ rough }) => rough.beforeQuote).map(({ card }) => card),
+    ...ordered.map(quote => quoteCard(quote, quote === latest, now, facts.linksAllowed)),
+    ...roughs.filter(({ rough }) => !rough.beforeQuote).map(({ card }) => card),
+  ];
 
   const { payment, delivery } = facts;
   if (accepted || payment.confirmedAt) {

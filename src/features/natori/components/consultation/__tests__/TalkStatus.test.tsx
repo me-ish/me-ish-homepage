@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import TalkStatus from "../TalkStatus";
 import { buildTalkTimeline } from "../../../lib/talkTimeline";
@@ -13,7 +13,24 @@ const timeline = buildTalkTimeline({
   delivery: { exists: false, expiresAt: null, acceptedAt: null, fileCount: null, openable: false },
 }, now);
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+const roughFacts = (okAt: string | null) => buildTalkTimeline({
+  linksAllowed: true, quotes: [], payment: { confirmedAt: null, linkUrl: null, linkDeadline: null, processing: false },
+  delivery: { exists: false, expiresAt: null, acceptedAt: null, fileCount: null, openable: false },
+  roughs: [{ id: "r1", messageId: "m1", beforeQuote: true, createdAt: "2026-10-11T00:00:00Z", okAt }],
+}, now);
+
 describe("TalkStatus", () => {
+  it("shows a rough with its OK button, and the answered rough without one", () => {
+    render(<TalkStatus timeline={roughFacts(null)} token="synthetic" />);
+    expect(screen.getByText("参考ラフ（見積もり前）")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "このラフでOK" })).toBeTruthy();
+    cleanup();
+    render(<TalkStatus timeline={roughFacts("2026-10-12T01:00:00Z")} token="synthetic" />);
+    expect(screen.getByText("OK済み")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
   it("lists the three steps and the cards", () => {
     render(<TalkStatus timeline={timeline} token="synthetic" />);
     const steps = within(screen.getByRole("list", { name: "進み具合" })).getAllByRole("listitem").map(li => li.textContent);

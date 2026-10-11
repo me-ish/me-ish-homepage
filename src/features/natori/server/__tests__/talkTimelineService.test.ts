@@ -72,6 +72,18 @@ describe("client talk timeline service", () => {
     expect((await getClientTalkTimeline(token))?.cards[1]).toMatchObject({ badge: { label: "確認中" } });
   });
 
+  it("adds rough cards from stored rows, shows a rough even without quotes, and ignores an unreadable rough table", async () => {
+    rows.natori_talk_roughs = ok([{ id: "r1", message_id: "m1", before_quote: false, created_at: "2026-10-11T00:00:00Z", client_ok_at: null }]);
+    expect((await getClientTalkTimeline(token))?.cards.map(c => c.kind)).toEqual(["quote", "rough"]);
+    rows.natori_quotes = ok([]);
+    rows.natori_talk_roughs = ok([{ id: "r1", message_id: "m1", before_quote: true, created_at: "2026-10-11T00:00:00Z", client_ok_at: "2026-10-12T00:00:00Z" }]);
+    expect((await getClientTalkTimeline(token))?.cards[0]).toMatchObject({ kind: "rough", title: "参考ラフ（見積もり前）", badge: { label: "OK済み" } });
+    rows.natori_quotes = ok([{ id: "q1", version: 1, amount: 30000, created_at: "2026-10-10T00:00:00Z", issued_at: null, expires_at: "2099-01-01T00:00:00Z", accepted_at: "2026-10-11T00:00:00Z", superseded_at: null }]);
+    rows.natori_talk_roughs = { data: null, error: { code: "42P01" } };
+    expect((await getClientTalkTimeline(token))?.cards.map(c => c.kind)).toEqual(["quote"]);
+    expect(writes).not.toHaveBeenCalled();
+  });
+
   it("returns null for an unknown, deleted or empty project and survives read failures", async () => {
     m.project.mockResolvedValueOnce(null);
     expect(await getClientTalkTimeline(token)).toBeNull();

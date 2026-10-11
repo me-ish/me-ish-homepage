@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useId, useState } from "react";
-import { Calculator, Mail, PackageCheck, Paperclip, Plus } from "lucide-react";
+import { Calculator, Mail, PackageCheck, Palette, Plus } from "lucide-react";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { buildTalkMenu, type TalkMenuItem } from "@/features/natori/lib/talkMenu";
 import type { NatoriProject } from "@/features/natori/types/projects";
@@ -19,7 +19,7 @@ type Props = {
   onOpenMail: (kind: OrderMailKind) => void;
 };
 
-const icons = { estimate: Calculator, payment: Mail, delivery: PackageCheck } as const;
+const icons = { estimate: Calculator, rough: Palette, payment: Mail, delivery: PackageCheck } as const;
 
 /** "＋" menu on the staff talk screen: shortcuts to the existing quote / payment / delivery screens, with the reason when one is not available yet. */
 export default function InquiryTalkMenu({ project, readOnly, busy, hasDraft = false, estimateHref, projectsHref, onOpenMail }: Props) {
@@ -35,6 +35,7 @@ export default function InquiryTalkMenu({ project, readOnly, busy, hasDraft = fa
     const className = `${natoriAdminUi.btnSecondary} w-full justify-start ${menu.recommended === item.key ? "border-[#EC4899]" : ""}`;
     const body = <><Icon className="h-4 w-4 shrink-0" aria-hidden />{item.label}</>;
     if (item.key === "estimate" && estimateHref) return <Link href={estimateHref} className={className} onClick={event => { if (!confirmLeave()) event.preventDefault(); }}>{body}</Link>;
+    if (item.key === "rough") return <button type="button" className={className} onClick={() => { setOpen(false); document.getElementById("consultation-reply")?.focus(); }}>{body}</button>;
     if (item.key === "payment") return <button type="button" className={className} disabled={busy} onClick={() => { if (!confirmLeave()) return; setOpen(false); onOpenMail("payment"); }}>{body}</button>;
     return <Link href={projectsHref ?? "/natori/projects"} className={className} onClick={event => { if (!confirmLeave()) event.preventDefault(); }}>{body}</Link>;
   };
@@ -61,12 +62,6 @@ export default function InquiryTalkMenu({ project, readOnly, busy, hasDraft = fa
                 )}
               </li>
             ))}
-            {!readOnly ? (
-              <li className="flex items-start gap-2 rounded-xl bg-zinc-50 px-3 py-2">
-                <Paperclip className="mt-1 h-4 w-4 shrink-0 text-zinc-600" aria-hidden />
-                <p className={natoriAdminUi.caption}>ラフや資料は、下の入力欄の添付からいつでも送れます。ラフ専用の提出は次の段階で追加します。</p>
-              </li>
-            ) : null}
           </ul>
         </div>
       ) : null}
