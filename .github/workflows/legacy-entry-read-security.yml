@@ -1,0 +1,39 @@
+name: Legacy entry read security
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/legacy-entry-read-security.yml'
+      - 'scripts/legacy-entry-read-security/**'
+      - 'supabase/migrations/20261011221028_lockdown_legacy_entries_reads.sql'
+      - 'supabase/baseline/manifest.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: entry-read-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  postgres:
+    name: Isolated entry read authorization
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Verify PostgreSQL permissions with synthetic records
+        run: bash scripts/legacy-entry-read-security/run.sh
+      - name: Preserve synthetic results
+        if: always() && env.ENTRY_READ_RESULTS != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: legacy-entry-read-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.ENTRY_READ_RESULTS }}/*
+          if-no-files-found: error
+          retention-days: 7
