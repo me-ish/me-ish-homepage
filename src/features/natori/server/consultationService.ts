@@ -8,6 +8,7 @@ import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 import { extractClientEmailFromNote } from "@/features/natori/lib/orderMail";
 import { parseInquiryNote } from "@/features/natori/lib/inquiryNoteView";
 import type { Json } from "@/types/supabase";
+import { roughSignature } from "../lib/roughSignature";
 import { listProjectRoughs, toConsultationRough } from "./talkRoughStore";
 
 const TOKEN_RE = /^[A-Za-z0-9_-]{30,64}$/;
@@ -81,7 +82,8 @@ async function getMessages(projectId: string): Promise<ConsultationMessage[] | n
   });
 }
 
-export type ConsultationProbe = { count: number; lastId: string | null; closed: boolean };
+/** `roughs` fingerprints the rough marks and their OKs (see roughSignature) so the page also notices those. */
+export type ConsultationProbe = { count: number; lastId: string | null; closed: boolean; roughs: string };
 
 /** Cheap change check for polling: no file links are signed and no bodies are read. */
 async function probeMessages(project: ProjectRow): Promise<ConsultationProbe | null> {
@@ -89,7 +91,8 @@ async function probeMessages(project: ProjectRow): Promise<ConsultationProbe | n
     .select("id", { count: "exact" }).eq("project_id", project.id)
     .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(1);
   if (error) { console.error("[natori-consultation] probe_unavailable"); return null; }
-  return { count: count ?? 0, lastId: data?.[0]?.id ?? null, closed: project.status === "closed" || Boolean(project.deleted_at) };
+  const roughs = roughSignature((await listProjectRoughs(project.id) ?? []).map(row => ({ id: row.id, answered: Boolean(row.client_ok_at) })));
+  return { count: count ?? 0, lastId: data?.[0]?.id ?? null, closed: project.status === "closed" || Boolean(project.deleted_at), roughs };
 }
 
 export async function getStaffConsultationProbe(projectId: string): Promise<ConsultationProbe | null> {

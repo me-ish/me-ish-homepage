@@ -10,13 +10,14 @@ import { consultationOperationSchema, freezeConsultationOperation, consultationD
 import { validConsultationFile } from "@/features/natori/lib/consultationFileRules";
 import { consultationUploadEndpoint } from "@/features/natori/lib/consultationUploadEndpoint";
 import type { ConsultationMessage } from "@/features/natori/types/consultation";
+import { roughSignature } from "@/features/natori/lib/roughSignature";
 
 type Props =
   | { mode: "staff"; projectId: string; clientEmail?: string; standalone?: boolean; initialMessages?: never; token?: never; closed?: boolean; onChanged?: () => void; onDraftChange?: (hasDraft: boolean) => void }
   | { mode: "client"; token: string; initialMessages: ConsultationMessage[]; closed: boolean; projectId?: never; clientEmail?: never };
 
 type ComposerJob = { actor: string; generation: number };
-type Probe = { count: number; lastId: string | null; closed: boolean };
+type Probe = { count: number; lastId: string | null; closed: boolean; roughs?: string };
 
 /** How often an open, visible thread asks whether anything changed. */
 const POLL_MS = 15000;
@@ -122,6 +123,8 @@ export default function ConsultationThread(props: Props) {
   const [closed, setClosed] = useState(props.closed ?? false);
   const closedRef = useRef(closed);
   closedRef.current = closed;
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
   const [historyUnavailable, setHistoryUnavailable] = useState(false);
   const [newMessages, setNewMessages] = useState(false);
   const lastMessageRef = useRef<HTMLLIElement>(null);
@@ -212,7 +215,8 @@ export default function ConsultationThread(props: Props) {
         const known = knownMessages.current;
         const different = typeof probe.count === "number" && (probe.count !== known.size || (probe.lastId !== null && probe.lastId !== undefined && !known.has(probe.lastId)));
         const closedChanged = typeof probe.closed === "boolean" && probe.closed !== closedRef.current;
-        if (!different && !closedChanged) return;
+        const roughsChanged = typeof probe.roughs === "string" && probe.roughs !== roughSignature(messagesRef.current.flatMap(message => message.rough ? [{ id: message.rough.id, answered: Boolean(message.rough.okAt) }] : []));
+        if (!different && !closedChanged && !roughsChanged) return;
         const nearBottom = !last || last.getBoundingClientRect().bottom <= window.innerHeight + FOLLOW_SLACK_PX;
         await reload(false, nearBottom);
       } catch { /* Silent: the next tick or a manual refresh retries. */ } finally {
@@ -468,7 +472,7 @@ export default function ConsultationThread(props: Props) {
                 {message.notificationStatus === "failed" && (props.mode === "client" ? message.sender === "client" : message.sender !== "staff" || closed) ? <p className={`mt-1 px-1 ${t.warning}`}>メール通知に失敗 · 相談内容は保存済み</p> : null}
                 {message.notificationStatus === "pending" && (props.mode === "staff" || message.sender === "client") ? <p className={`mt-1 px-1 ${t.caption}`}>通知未送信・処理中 · 相談内容は保存済み</p> : null}
                 {message.rough ? <p className={`mt-1 px-1 ${t.caption}`}>{roughNote(message.rough, props.mode)}</p> : null}
-                {props.mode === "staff" && !closed && message.sender === "staff" && (message.files?.length ?? 0) > 0 && !message.rough?.okAt ? (
+                {props.mode === "staff" && !closed && message.sender === "staff" && ((message.files?.length ?? 0) > 0 || message.attachmentsExist === true) && !message.rough?.okAt ? (
                   <button type="button" disabled={busy} onClick={() => void markRough(message.id, message.rough ? "unmark" : "mark")} className={`mt-1 px-1 ${t.textButton} disabled:cursor-not-allowed disabled:text-zinc-500`}>
                     {message.rough ? "ラフの指定を外す" : "ラフとして提出"}
                   </button>

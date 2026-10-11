@@ -56,6 +56,32 @@ describe("marking a rough in the staff thread", () => {
     expect(screen.queryByRole("button", { name: /ラフ/ })).toBeNull();
   });
 
+  it("still offers the mark when the file list is unavailable but the message is known to have attachments", async () => {
+    history = [message("known", { files: [], filesState: "unavailable", attachmentsExist: true }), message("none", { files: [], attachmentsExist: false })];
+    staff(); await settle();
+    expect(screen.getAllByRole("button", { name: "ラフとして提出" })).toHaveLength(1);
+  });
+
+  it("reloads the history when the probe says a rough was answered, even though no message arrived", async () => {
+    vi.useFakeTimers();
+    try {
+      history = [message("with-file", { files: [file], rough: { id: "r1", beforeQuote: false, okAt: null } })];
+      let probeRoughs = "r1-";
+      const base = fetch as unknown as (url: string, init?: RequestInit) => Promise<Response>;
+      vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) =>
+        url.includes("probe=1") ? Response.json({ count: 1, lastId: "with-file", closed: false, roughs: probeRoughs }) : base(url, init)));
+      staff();
+      await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+      expect(screen.getByText("ラフ · 依頼者のOK待ち")).toBeTruthy();
+      history = [message("with-file", { files: [file], rough: { id: "r1", beforeQuote: false, okAt: "2026-10-12T01:00:00Z" } })];
+      await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
+      expect(screen.getByText("ラフ · 依頼者のOK待ち")).toBeTruthy();
+      probeRoughs = "r1+";
+      await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
+      expect(screen.getByText(/ラフ · 依頼者がOK/)).toBeTruthy();
+    } finally { vi.useRealTimers(); }
+  });
+
   it("offers nothing once the talk is closed", async () => {
     history = [message("with-file", { files: [file] })];
     closedNow = true;
