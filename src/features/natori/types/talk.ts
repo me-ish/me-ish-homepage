@@ -29,10 +29,22 @@ export type TalkDeliveryFact = {
   openable: boolean;
 };
 
+export type TalkRoughFact = {
+  id: string;
+  messageId: string;
+  /** No quote existed yet when the rough was marked ("参考ラフ（見積もり前）"). */
+  beforeQuote: boolean;
+  createdAt: string;
+  /** When the client pressed "このラフでOK"; null while unanswered. */
+  okAt: string | null;
+};
+
 export type TalkFacts = {
   /** False when the project is closed or deleted: no card may open a quote or delivery page. */
   linksAllowed: boolean;
   quotes: TalkQuoteFact[];
+  /** Absent while the rough table is unavailable; roughs never block the other cards. */
+  roughs?: TalkRoughFact[];
   payment: TalkPaymentFact;
   delivery: TalkDeliveryFact;
 };
@@ -43,14 +55,14 @@ export type TalkBadgeTone = "action" | "done" | "wait" | "muted";
 
 export type TalkCard = {
   id: string;
-  kind: "quote" | "payment" | "delivery";
+  kind: "quote" | "payment" | "delivery" | "rough";
   title: string;
   badge: { label: string; tone: TalkBadgeTone };
   /** Large figure line, e.g. the amount. */
   amount?: string;
   lines: string[];
-  /** `href` goes straight to the stored Stripe page; `open` asks the server for a fresh quote / delivery link. */
-  action?: { label: string; href: string } | { label: string; open: TalkOpenTarget };
+  /** `href` goes straight to the stored Stripe page; `open` asks the server for a fresh quote / delivery link; `roughOk` records the client's OK for that rough. */
+  action?: { label: string; href: string } | { label: string; open: TalkOpenTarget } | { label: string; roughOk: string };
 };
 
 export type TalkStep = { key: "quote" | "payment" | "delivery"; label: string; done: boolean };

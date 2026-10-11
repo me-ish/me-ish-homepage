@@ -5,6 +5,7 @@ import { buildTalkTimeline } from "../lib/talkTimeline";
 import type { TalkFacts, TalkQuoteFact, TalkTimeline } from "../types/talk";
 import { getClientProject } from "./consultationService";
 import { getQuotePaymentOverview } from "./paymentReadModelService";
+import { listProjectRoughs } from "./talkRoughStore";
 
 type AttemptRow = { state: string; link_url: string | null; deadline: string };
 type AttemptReader = { from(table: "natori_payment_link_attempts"): { select(columns: string): { eq(column: string, value: string): {
@@ -20,7 +21,7 @@ export async function getClientTalkTimeline(token: string): Promise<TalkTimeline
     const project = await getClientProject(token);
     if (!project || project.deleted_at) return null;
     const db = supabaseAdmin();
-    const [projectRow, quoteRows, releaseRow, attemptRow] = await Promise.all([
+    const [projectRow, quoteRows, releaseRow, attemptRow, roughRows] = await Promise.all([
       db.from("natori_projects")
         .select("payment_confirmed_at, payment_link_url, payment_link_status, delivery_token_expires_at, delivery_accepted_at")
         .eq("id", project.id).maybeSingle(),
@@ -31,6 +32,7 @@ export async function getClientTalkTimeline(token: string): Promise<TalkTimeline
       // The generation table is not in the generated Supabase types yet; this read is typed by hand.
       (db as unknown as AttemptReader).from("natori_payment_link_attempts").select("state, link_url, deadline")
         .eq("project_id", project.id).order("generation", { ascending: false }).limit(1).maybeSingle(),
+      listProjectRoughs(project.id),
     ]);
     if (projectRow.error || !projectRow.data) return null;
     const p = projectRow.data;
@@ -57,6 +59,7 @@ export async function getClientTalkTimeline(token: string): Promise<TalkTimeline
     const facts: TalkFacts = {
       linksAllowed: project.status !== "closed",
       quotes,
+      roughs: (roughRows ?? []).map(row => ({ id: row.id, messageId: row.message_id, beforeQuote: row.before_quote, createdAt: row.created_at, okAt: row.client_ok_at })),
       payment: { confirmedAt: p.payment_confirmed_at, linkUrl: link?.url ?? null, linkDeadline: link?.deadline ?? null, processing },
       delivery: {
         exists: Boolean(release) || legacyDelivery,

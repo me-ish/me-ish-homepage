@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildTalkMenu, type TalkMenuInput } from "../talkMenu";
 
 const base: TalkMenuInput = { status: "inquiry", paymentConfirmedAt: undefined, hasEstimateLink: true, readOnly: false };
-const item = (input: Partial<TalkMenuInput>, key: "estimate" | "payment" | "delivery") =>
+const item = (input: Partial<TalkMenuInput>, key: "estimate" | "rough" | "payment" | "delivery") =>
   buildTalkMenu({ ...base, ...input }).items.find(i => i.key === key)!;
 
 describe("staff talk menu", () => {
@@ -56,7 +56,15 @@ describe("staff talk menu", () => {
   it("locks everything for a closed or archived project", () => {
     const menu = buildTalkMenu({ ...base, status: "closed", readOnly: true });
     expect(menu.recommended).toBeNull();
-    expect(menu.items.map(i => i.reason)).toEqual(Array(3).fill("終了した案件のため、操作できません。"));
+    expect(menu.items.map(i => i.reason)).toEqual(Array(4).fill("終了した案件のため、操作できません。"));
+  });
+
+  it("lets staff submit a rough at any stage, even before a quote, and locks it only when closed", () => {
+    for (const status of ["inquiry", "quoted", "awaiting_payment", "rough", "delivered"] as const)
+      expect(item({ status }, "rough")).toMatchObject({ label: "ラフを提出", reason: null });
+    expect(item({}, "rough").hint).toContain("ラフとして提出");
+    expect(buildTalkMenu({ ...base, status: "rough" }).recommended).toBeNull();
+    expect(item({ status: "closed", readOnly: true }, "rough").reason).toBe("終了した案件のため、操作できません。");
   });
 
   it("explains a missing estimate link (demo)", () => {

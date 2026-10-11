@@ -1,5 +1,6 @@
 import { Check, Circle } from "lucide-react";
 import TalkOpenButton from "./TalkOpenButton";
+import TalkRoughOkButton from "./TalkRoughOkButton";
 import { natoriClientUi as ui } from "@/features/natori/constants/clientUi";
 import type { TalkBadgeTone, TalkTimeline } from "@/features/natori/types/talk";
 
@@ -34,6 +35,7 @@ export default function TalkStatus({ timeline, token }: { timeline: TalkTimeline
             {card.lines.map(line => <p key={line} className={`mt-1 ${ui.small} ${ui.muted}`}>{line}</p>)}
             {card.action && "href" in card.action ? <a href={card.action.href} target="_blank" rel="noopener noreferrer" className={`${ui.btnPrimary} mt-3`}>{card.action.label}</a> : null}
             {card.action && "open" in card.action ? <TalkOpenButton token={token} target={card.action.open} label={card.action.label} /> : null}
+            {card.action && "roughOk" in card.action ? <TalkRoughOkButton token={token} roughId={card.action.roughOk} label={card.action.label} /> : null}
           </li>
         ))}
       </ul>

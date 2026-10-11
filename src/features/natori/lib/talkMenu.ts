@@ -1,6 +1,6 @@
 import type { NatoriProjectStatus } from "../types/projects";
 
-export type TalkMenuKey = "estimate" | "payment" | "delivery";
+export type TalkMenuKey = "estimate" | "rough" | "payment" | "delivery";
 export type TalkMenuItem = {
   key: TalkMenuKey;
   label: string;
@@ -43,6 +43,11 @@ export function buildTalkMenu(input: TalkMenuInput): TalkMenu {
         : { key: "estimate", label: status === "quoted" ? "見積りを開く・再送" : "見積もりを作る", reason: null,
           hint: status === "quoted" ? "出し直しも見積りページから行えます。" : "依頼内容を見積りページに引き継ぎます。" };
 
+  // Roughs and files can go out at any time: staff attach them to a message and mark it as a rough.
+  const rough: TalkMenuItem = readOnly
+    ? { key: "rough", label: "ラフ", reason: closed, hint: null }
+    : { key: "rough", label: "ラフを提出", reason: null, hint: "ファイルを添付して送り、そのメッセージの「ラフとして提出」を押すと、依頼者に「このラフでOK」のカードが出ます。" };
+
   const payment: TalkMenuItem = readOnly
     ? { key: "payment", label: "支払いリンク", reason: closed, hint: null }
     : paymentConfirmedAt
@@ -73,6 +78,6 @@ export function buildTalkMenu(input: TalkMenuInput): TalkMenu {
         : status === "awaiting_payment" ? "おすすめ：支払いリンクを送る（送信済みなら、お支払いの確認待ちです）"
           : status === "delivery_prep" ? "おすすめ：納品する"
             : status === "delivered" ? "納品済みです。依頼者の受け取り確認を待っています。"
-              : "制作中です。ラフや資料はいつでも送れます。";
-  return { tip, recommended, items: [estimate, payment, delivery] };
+              : "制作中です。ラフができたら「ラフを提出」で依頼者に確認してもらえます。";
+  return { tip, recommended, items: [estimate, rough, payment, delivery] };
 }

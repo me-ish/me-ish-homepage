@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildTalkTimeline, isStripePaymentUrl } from "../talkTimeline";
-import type { TalkFacts, TalkQuoteFact } from "../../types/talk";
+import type { TalkFacts, TalkQuoteFact, TalkRoughFact } from "../../types/talk";
 
 const now = new Date("2026-10-12T03:00:00Z");
 const quote = (over: Partial<TalkQuoteFact> = {}): TalkQuoteFact => ({ id: "q1", version: 1, amount: 30000, issuedAt: "2026-10-10T00:00:00Z", expiresAt: "2026-10-18T14:59:59Z", acceptedAt: null, supersededAt: null, ...over });
@@ -8,6 +8,7 @@ const facts = (over: Partial<TalkFacts> = {}): TalkFacts => ({
   linksAllowed: true, quotes: [], payment: { confirmedAt: null, linkUrl: null, linkDeadline: null, processing: false },
   delivery: { exists: false, expiresAt: null, acceptedAt: null, fileCount: null, openable: true }, ...over,
 });
+const rough = (over: Partial<TalkRoughFact> = {}): TalkRoughFact => ({ id: "r1", messageId: "m1", beforeQuote: false, createdAt: "2026-10-11T03:00:00Z", okAt: null, ...over });
 const labels = (f: TalkFacts) => buildTalkTimeline(f, now).cards.map(card => `${card.kind}:${card.badge.label}`);
 
 describe("talk timeline", () => {
@@ -89,6 +90,30 @@ describe("talk timeline", () => {
     expect(steps(facts())).toEqual([false, false, false]);
     expect(steps(facts({ quotes: [quote({ acceptedAt: "2026-10-11T01:00:00Z" })], payment: { confirmedAt: "2026-10-12T01:00:00Z", linkUrl: null, linkDeadline: null, processing: false } }))).toEqual([true, true, false]);
     expect(steps(facts({ delivery: { exists: true, expiresAt: null, acceptedAt: null, fileCount: 1, openable: true } }))).toEqual([false, false, true]);
+  });
+
+  it("shows an unanswered rough with an OK button that is not a formal consent, and an answered one as done", () => {
+    const [waiting] = buildTalkTimeline(facts({ roughs: [rough()] }), now).cards;
+    expect(waiting).toMatchObject({ kind: "rough", title: "ラフ", badge: { label: "確認待ち", tone: "action" }, action: { label: "このラフでOK", roughOk: "r1" } });
+    expect(waiting.lines.join("")).toContain("お見積もりの承認やお支払いの代わりにはなりません");
+    expect(waiting.lines.join("")).toContain("下のやり取りでお送りください");
+    const [done] = buildTalkTimeline(facts({ roughs: [rough({ okAt: "2026-10-12T01:00:00Z" })] }), now).cards;
+    expect(done).toMatchObject({ badge: { label: "OK済み", tone: "done" } });
+    expect(done.action).toBeUndefined();
+  });
+
+  it("labels a rough sent before any quote as a reference rough and puts it first; later roughs follow the quote", () => {
+    const cards = buildTalkTimeline(facts({
+      quotes: [quote()],
+      roughs: [rough({ id: "late", createdAt: "2026-10-12T00:00:00Z" }), rough({ id: "early", beforeQuote: true, createdAt: "2026-10-09T00:00:00Z" })],
+    }), now).cards;
+    expect(cards.map(card => `${card.kind}:${card.title}`)).toEqual(["rough:参考ラフ（見積もり前）", "quote:お見積もり", "rough:ラフ"]);
+  });
+
+  it("keeps roughs out of the progress steps and offers no OK button once the project is closed", () => {
+    const timeline = buildTalkTimeline(facts({ linksAllowed: false, roughs: [rough()] }), now);
+    expect(timeline.steps.map(step => step.done)).toEqual([false, false, false]);
+    expect(timeline.cards[0].action).toBeUndefined();
   });
 
   it("validates payment hosts", () => {
