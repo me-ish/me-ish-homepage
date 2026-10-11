@@ -42,6 +42,7 @@ export type ProjectRow = {
   // Optional — added by 20260524_natori_project_flow.sql. Missing on older
   // backends; treat as undefined.
   payment_confirmed_at?: string | null;
+  quote_accepted_at?: string | null;
   paid_at?: string | null;
   paid_amount?: number | null;
   completed_at?: string | null;
@@ -125,6 +126,7 @@ export function rowToProject(
     nextAction: row.next_action,
     note: row.note ?? undefined,
     paymentConfirmedAt: row.payment_confirmed_at ?? undefined,
+    quoteAcceptedAt: row.quote_accepted_at,
     paidAt: effectivePaidAt(row.paid_at, row.payment_confirmed_at),
     paidAmount: row.paid_amount ?? undefined,
     completedAt: row.completed_at ?? undefined,

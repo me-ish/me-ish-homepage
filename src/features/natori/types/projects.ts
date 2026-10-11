@@ -89,6 +89,8 @@ export type NatoriProject = {
   priority?: NatoriProjectPriority;
   note?: string;
   paymentConfirmedAt?: string;
+  /** null = the client has not accepted the quote yet; undefined = unknown (legacy/demo data). */
+  quoteAcceptedAt?: string | null;
   paidAt?: string;
   paidAmount?: number;
   completedAt?: string;

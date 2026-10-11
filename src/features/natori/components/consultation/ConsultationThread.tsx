@@ -12,7 +12,7 @@ import { consultationUploadEndpoint } from "@/features/natori/lib/consultationUp
 import type { ConsultationMessage } from "@/features/natori/types/consultation";
 
 type Props =
-  | { mode: "staff"; projectId: string; clientEmail?: string; standalone?: boolean; initialMessages?: never; token?: never; closed?: boolean; onChanged?: () => void }
+  | { mode: "staff"; projectId: string; clientEmail?: string; standalone?: boolean; initialMessages?: never; token?: never; closed?: boolean; onChanged?: () => void; onDraftChange?: (hasDraft: boolean) => void }
   | { mode: "client"; token: string; initialMessages: ConsultationMessage[]; closed: boolean; projectId?: never; clientEmail?: never };
 
 type ComposerJob = { actor: string; generation: number };
@@ -126,6 +126,7 @@ export default function ConsultationThread(props: Props) {
   const followAfterRender = useRef(false);
   const polling = useRef(false);
   const changed = props.mode === "staff" ? props.onChanged : undefined;
+  const onDraftChange = props.mode === "staff" ? props.onDraftChange : undefined;
   const fileRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
 
@@ -237,6 +238,8 @@ export default function ConsultationThread(props: Props) {
   const cacheKey="natori-consultation-operation/"+(props.mode==="staff"?props.projectId:props.token);
   const actor=props.mode==="staff"?{projectId:props.projectId}:{token:props.token};
   const [draftFiles,setDraftFiles]=useState<{id:string;file:File}[]>([]);
+  const hasDraft = body.trim() !== "" || draftFiles.length > 0;
+  useEffect(() => { onDraftChange?.(hasDraft); }, [hasDraft, onDraftChange]);
   const [pending,setPending]=useState<ConsultationOperation|null>(null);
   const [cacheReady,setCacheReady]=useState(false);
   const [noticeExpired,setNoticeExpired]=useState(false);
