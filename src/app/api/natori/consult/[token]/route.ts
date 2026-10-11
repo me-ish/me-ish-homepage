@@ -1,12 +1,13 @@
 import {NextResponse} from "next/server";
 import {checkCsrf} from "@/lib/auth/csrf";
-import {getClientConsultation} from "@/features/natori/server/consultationService";
+import {getClientConsultation,getClientConsultationProbe} from "@/features/natori/server/consultationService";
 import {consultationOperation} from "@/features/natori/server/consultationOperationService";
 import {consultationOperationResponse} from "@/features/natori/server/consultationOperationResponse";
 export const runtime="nodejs",dynamic="force-dynamic";
 type Context={params:Promise<{token:string}>};
-export async function GET(_request:Request,context:Context){
- const {token}=await context.params,result=await getClientConsultation(token);
+export async function GET(request:Request,context:Context){
+ const {token}=await context.params,probe=new URL(request.url).searchParams.get("probe")==="1";
+ const result=probe?await getClientConsultationProbe(token):await getClientConsultation(token);
  return result?NextResponse.json(result,{headers:{"Cache-Control":"no-store","Referrer-Policy":"no-referrer"}}):NextResponse.json({error:"Not found"},{status:404});
 }
 export async function POST(request:Request,context:Context){

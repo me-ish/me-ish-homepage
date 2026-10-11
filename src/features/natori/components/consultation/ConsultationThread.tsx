@@ -16,6 +16,12 @@ type Props =
   | { mode: "client"; token: string; initialMessages: ConsultationMessage[]; closed: boolean; projectId?: never; clientEmail?: never };
 
 type ComposerJob = { actor: string; generation: number };
+type Probe = { count: number; lastId: string | null; closed: boolean };
+
+/** How often an open, visible thread asks whether anything changed. */
+const POLL_MS = 15000;
+/** Within this many px of the viewport bottom counts as "reading the latest". */
+const FOLLOW_SLACK_PX = 120;
 
 // Client mode follows the public look (natoriClientUi); staff mode keeps the
 // admin neutrals. Both read as a chat: your own messages on the right.
@@ -108,6 +114,8 @@ export default function ConsultationThread(props: Props) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [closed, setClosed] = useState(props.closed ?? false);
+  const closedRef = useRef(closed);
+  closedRef.current = closed;
   const [historyUnavailable, setHistoryUnavailable] = useState(false);
   const [newMessages, setNewMessages] = useState(false);
   const lastMessageRef = useRef<HTMLLIElement>(null);
@@ -115,11 +123,13 @@ export default function ConsultationThread(props: Props) {
   const historyLoaded = useRef(props.mode === "client");
   const requestVersion = useRef({ value: 0 });
   const lastRefresh = useRef(0);
+  const followAfterRender = useRef(false);
+  const polling = useRef(false);
   const changed = props.mode === "staff" ? props.onChanged : undefined;
   const fileRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
 
-  const reload = useCallback(async (afterSaved = false) => {
+  const reload = useCallback(async (afterSaved = false, follow = false) => {
     if (!mounted.current || currentActor.current !== actorKey) return false;
     const version = ++requestVersion.current.value;
     const ownsRead = () => mounted.current && currentActor.current === actorKey && version === requestVersion.current.value;
@@ -132,7 +142,9 @@ export default function ConsultationThread(props: Props) {
       const data = await response.json() as { messages: ConsultationMessage[]; closed?: boolean };
       if (!ownsRead()) return false;
       if (!Array.isArray(data.messages)) throw new Error("相談履歴を読み込めませんでした");
-      if (historyLoaded.current && data.messages.some(message => !knownMessages.current.has(message.id))) setNewMessages(true);
+      const arrived = historyLoaded.current && data.messages.some(message => !knownMessages.current.has(message.id));
+      if (arrived && follow) { followAfterRender.current = true; setNewMessages(false); }
+      else if (arrived) setNewMessages(true);
       historyLoaded.current = true;
       knownMessages.current = new Set(data.messages.map(message => message.id));
       setMessages(data.messages);
@@ -151,6 +163,7 @@ export default function ConsultationThread(props: Props) {
   }, [endpoint, actorKey]);
 
   const refresh = useCallback(() => reload(), [reload]);
+  const probeEndpoint = endpoint + (props.mode === "staff" ? "&probe=1" : "?probe=1");
 
   useEffect(() => {
     const requests = requestVersion.current;
@@ -174,6 +187,40 @@ export default function ConsultationThread(props: Props) {
       document.removeEventListener("visibilitychange", resume);
     };
   }, [refresh]);
+
+
+  // Open, visible threads ask a cheap "what changed" endpoint and reload only on a
+  // difference. Failures here stay silent: the manual button and the focus refresh
+  // remain the places where a load problem is shown.
+  useEffect(() => {
+    const tick = async () => {
+      if (document.visibilityState !== "visible" || polling.current) return;
+      if (busyOwner.current || currentPending.current || !historyLoaded.current) return;
+      polling.current = true;
+      try {
+        const response = await fetch(probeEndpoint, { cache: "no-store" });
+        if (!response.ok || !mounted.current || currentActor.current !== actorKey || busyOwner.current || currentPending.current) return;
+        const probe = await response.json() as Partial<Probe>;
+        const last = lastMessageRef.current;
+        const known = knownMessages.current;
+        const different = typeof probe.count === "number" && (probe.count !== known.size || (probe.lastId !== null && probe.lastId !== undefined && !known.has(probe.lastId)));
+        const closedChanged = typeof probe.closed === "boolean" && probe.closed !== closedRef.current;
+        if (!different && !closedChanged) return;
+        const nearBottom = !last || last.getBoundingClientRect().bottom <= window.innerHeight + FOLLOW_SLACK_PX;
+        await reload(false, nearBottom);
+      } catch { /* Silent: the next tick or a manual refresh retries. */ } finally {
+        polling.current = false;
+      }
+    };
+    const timer = window.setInterval(() => void tick(), POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [probeEndpoint, actorKey, reload]);
+
+  useEffect(() => {
+    if (!followAfterRender.current) return;
+    followAfterRender.current = false;
+    lastMessageRef.current?.scrollIntoView({ block: "nearest" });
+  }, [messages]);
 
   const showLatest = () => {
     lastMessageRef.current?.scrollIntoView({ block: "nearest" });
@@ -355,6 +402,9 @@ export default function ConsultationThread(props: Props) {
 
   const cannotSend = closed || (props.mode === "staff" && !props.clientEmail);
   const t = threadTone[props.mode];
+  // On phones the client's input bar stays at the bottom of the screen (LINE-like);
+  // staff mode lives inside the admin panel's own scroll area and keeps its layout.
+  const sticky = props.mode === "client";
   return (
     <section className={t.section} aria-label="相談のやり取り">
       <div className={`flex items-center justify-between gap-3 border-b ${t.rule} ${t.pad} py-3`}>
@@ -397,9 +447,6 @@ export default function ConsultationThread(props: Props) {
       {messages.some((message) => message.files?.length) ? <p className={`${t.pad} pb-3 ${t.caption}`}>添付が開けない場合は、ページを再読み込みしてください。</p> : null}
       {!cannotSend ? (
         <div className={`space-y-3 border-t ${t.rule} ${t.pad} py-4`}>
-          <label className={`block ${t.label}`} htmlFor="consultation-reply">メッセージ</label>
-          <textarea id="consultation-reply" autoFocus={props.mode === "staff" && props.standalone} value={body} disabled={busy||Boolean(pending)||!cacheReady} onChange={(event) => setBody(event.target.value)} maxLength={4000} rows={4}
-            placeholder="相談への返信や共有URLを入力してください" className={`${t.textarea} block`} />
           <input ref={fileRef} type="file" multiple accept=".jpg,.jpeg,.png,.webp,.pdf,.mp3,.m4a,.wav" className="hidden" aria-label="相談ファイルを選ぶ" onChange={(event)=>{const files=Array.from(event.target.files??[]);void chooseFiles(files);if(fileRef.current)fileRef.current.value="";}} />
           <p className={t.caption}>選んだファイルは送信前の下書きです。取り消しや本文の編集後、送信ボタンでまとめて送れます。画像・PDFは10MB、音声は50MBまで。大きな楽曲は共有URLを貼ってください。</p>
           {(pending?pending.files.map(file=>({id:file.id,name:file.fileName,size:file.sizeBytes})):draftFiles.map(({id,file})=>({id,name:file.name,size:file.size}))).map(file=>(
@@ -412,10 +459,15 @@ export default function ConsultationThread(props: Props) {
           {pending?<p role="status" className={t.warning}>{noticeExpired?"この送信の通知期限が過ぎています。本文と添付の記録は保持しています。"+(pending.files.length>draftFiles.length?"添付は同じファイルを選び直してください。":"")+"送信の取消を確認してから、同じ内容を新しく送信してください。":"前回の送信結果を確認中です。同じ内容で確認・再試行します。変更する場合は先に取消を確認してください。"}</p>:null}
           {pending?<button type="button" disabled={busy} onClick={()=>void cancelPending()} className={t.textButton}>送信の取消を確認</button>:null}
           {progress !== null ? <p role="status" className={`${t.caption} font-bold text-[#BE185D]`}>アップロード中 {progress}%</p> : null}
+          <div className={sticky ? "max-sm:sticky max-sm:bottom-0 max-sm:z-10 max-sm:-mx-4 max-sm:space-y-2 max-sm:border-t max-sm:border-[#F6E3E9] max-sm:bg-white max-sm:px-4 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:pt-2" : "space-y-3"}>
+          <label className={`block ${sticky ? "max-sm:sr-only " : ""}${t.label}`} htmlFor="consultation-reply">メッセージ</label>
+          <textarea id="consultation-reply" autoFocus={props.mode === "staff" && props.standalone} value={body} disabled={busy||Boolean(pending)||!cacheReady} onChange={(event) => setBody(event.target.value)} maxLength={4000} rows={sticky ? 3 : 4}
+            placeholder="相談への返信や共有URLを入力してください" className={`${t.textarea} block`} />
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || loading || historyUnavailable} className={t.secondary}><Paperclip className="h-4 w-4" aria-hidden />添付を選ぶ</button>
             <button type="button" onClick={() => void send()} disabled={(!pending&&!body.trim()&&!draftFiles.length)||busy||loading||historyUnavailable||!cacheReady||noticeExpired}
               className={`ml-auto ${t.primary}`}><Send className="h-4 w-4" aria-hidden />{busy?"送信中…":pending?"同じ送信を確認・再試行":"メッセージを送信"}</button>
+          </div>
           </div>
         </div>
       ) : closed ? <p className={`border-t ${t.rule} ${t.pad} py-4 ${t.caption}`}>この相談は終了しています。履歴のみ確認できます。</p> : null}
