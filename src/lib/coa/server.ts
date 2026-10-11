@@ -1,10 +1,12 @@
-// src/lib/coa/server.ts
+import 'server-only';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { requireCertAdmin } from '@/lib/coa/reissueAuth';
+import type { CoACertificateEntry } from '@/lib/coa/types';
 
 const ONE_TIME = process.env.CERT_ONE_TIME === '1';
-const REQUIRE_TOKEN = process.env.CERT_REQUIRE_TOKEN !== '0';
 const LINK_TTL_DAYS = Number(process.env.CERT_LINK_TTL_DAYS || 7);
+// CERT_REQUIRE_TOKEN=0 must never bypass proof of access.
 
 type VerifyResult =
   | { ok: true; entryId: number }
@@ -12,83 +14,70 @@ type VerifyResult =
 
 const sha256hex = (s: string) => crypto.createHash('sha256').update(s).digest('hex');
 const sha256b64 = (s: string) => crypto.createHash('sha256').update(s).digest('base64');
-const genToken   = () => crypto.randomBytes(32).toString('base64url');
+const genToken = () => crypto.randomBytes(32).toString('base64url');
 
-/** CoAリンク（平文トークン）を発行して /cert/:id?t=... を返す */
-export async function issueReissueLink(entryId: number, _lang?: string) {
+/** Issue only after explicit admin authentication, including direct helper calls. */
+export async function issueReissueLink(entryId: number, request: Pick<Request, 'headers'>) {
+  requireCertAdmin(request);
+  if (!Number.isSafeInteger(entryId) || entryId <= 0) throw new Error('Invalid certificate ID');
+  if (!Number.isFinite(LINK_TTL_DAYS) || LINK_TTL_DAYS <= 0) throw new Error('Invalid certificate link lifetime');
   const sb = supabaseAdmin();
   const token = genToken();
   const tokenHashHex = sha256hex(token);
   const expiresAt = new Date(Date.now() + LINK_TTL_DAYS * 86400_000).toISOString();
 
-  const { error } = await sb
-    .from('cert_links')
-    .insert({ entry_id: entryId, token_hash: tokenHashHex, expires_at: expiresAt })
-    .single();
-  if (error) throw error;
+  const { error } = await sb.from('cert_links')
+    .insert({ entry_id: entryId, token_hash: tokenHashHex, expires_at: expiresAt }).single();
+  if (error) throw new Error('Certificate link issuance failed');
 
   const site = process.env.NEXT_PUBLIC_SITE_URL || '';
-  return `${site ? site : ''}/cert/${entryId}?t=${encodeURIComponent(token)}`;
+  return `${site}/cert/${entryId}?t=${encodeURIComponent(token)}`;
 }
 
-/** トークン検証（hex と base64 の両方を後方互換で許容） */
-export async function verifyCertToken(token?: string | null): Promise<VerifyResult> {
-  if (!REQUIRE_TOKEN) return { ok: true, entryId: 0 };
+/** Validate both the legacy token hash format and its exact URL entry ID. */
+export async function verifyCertToken(token: string | null | undefined, expectedEntryId: number): Promise<VerifyResult> {
   if (!token) return { ok: false, reason: 'missing' };
-
-  const sb = supabaseAdmin();
-  const hex = sha256hex(token);
-  const b64 = sha256b64(token);
-
-  // v_cert_links_active ビューを使用（有効なリンクのみ返す）
-  const { data, error } = await sb
-    .from('v_cert_links_active')
-    .select('id, entry_id, used_at, created_at')
-    .in('token_hash', [hex, b64])
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!data || !data.entry_id) return { ok: false, reason: 'notfound' };
-  // ビューで既に revoked=false, expires_at > now() のフィルタ済み
-
-  if (ONE_TIME && !data.used_at && data.id) {
-    // used_at の更新は cert_links テーブルに対して行う
-    await sb.from('cert_links').update({ used_at: new Date().toISOString() }).eq('id', data.id);
+  if (token.length > 512 || !Number.isSafeInteger(expectedEntryId) || expectedEntryId <= 0) {
+    return { ok: false, reason: 'notfound' };
   }
-  return { ok: true, entryId: data.entry_id };
+  const sb = supabaseAdmin();
+  const { data, error } = await sb.from('v_cert_links_active')
+    .select('id, entry_id, used_at, created_at')
+    .in('token_hash', [sha256hex(token), sha256b64(token)])
+    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (error) throw new Error('Certificate token verification unavailable');
+  // The existing active view must enforce expiry/revocation; do not fall back
+  // to cert_links or recreate a missing view when verification fails.
+  if (!data || data.entry_id !== expectedEntryId) return { ok: false, reason: 'notfound' };
+
+  if (ONE_TIME) {
+    if (data.used_at || !data.id) return { ok: false, reason: 'notfound' };
+    const { data: claimed, error: claimError } = await sb.from('cert_links')
+      .update({ used_at: new Date().toISOString() }).eq('id', data.id)
+      .is('used_at', null).select('id').maybeSingle();
+    if (claimError) throw new Error('Certificate token claim unavailable');
+    if (!claimed) return { ok: false, reason: 'notfound' };
+  }
+  return { ok: true, entryId: expectedEntryId };
 }
 
-/** entries の列名ゆらぎを吸収して返す（* で取り列を補完） */
-export async function getEntryForCoA(entryId: number) {
+/** Privileged read: query and return an explicit certificate-only DTO. */
+export async function getEntryForCoA(entryId: number): Promise<CoACertificateEntry | null> {
+  if (!Number.isSafeInteger(entryId) || entryId <= 0) throw new Error('Invalid certificate ID');
   const sb = supabaseAdmin();
-  const { data, error } = await sb
-    .from('entries')
-    .select('*')
-    .eq('id', entryId)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!data) return null;
-
-  const salesType =
-    (data as any).sales_type ??
-    (data as any).sale_type ??
-    null;
-
-  const purchaserDisplayName =
-    (data as any).purchaser_display_name ??
-    (data as any).buyer_display_name ??
-    (data as any).buyer_name ??
-    (data as any).customer_name ??
-    null;
-
+  const { data, error } = await sb.from('entries')
+    .select('id,title,artist_name,edition_total,created_at,confirmed_at')
+    .eq('id', entryId).maybeSingle();
+  if (error) throw new Error('Certificate lookup unavailable');
+  if (!data || data.id !== entryId) return null;
   return {
-    ...data,
-    sales_type: salesType,
-    purchaser_display_name: purchaserDisplayName,
-  } as typeof data & { sales_type: string | null; purchaser_display_name: string | null };
+    id: data.id,
+    title: data.title,
+    artist_name: data.artist_name,
+    edition_total: data.edition_total,
+    created_at: data.created_at,
+    confirmed_at: data.confirmed_at,
+  };
 }
 
 export async function resolveLangFromRequest(_sp: URLSearchParams) {

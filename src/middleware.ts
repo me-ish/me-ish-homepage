@@ -2,6 +2,7 @@
 import createMiddleware from 'next-intl/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 import { routing } from './i18n/routing';
+import { isAnalyticsExcludedPath } from '@/lib/analyticsPrivacy';
 import {
   NATORI_KEY_COOKIE,
   NATORI_KEY_PARAM,
@@ -78,7 +79,7 @@ export default async function middleware(request: NextRequest) {
   }
 
   const response = intlMiddleware(request);
-  if (/\/natori\/consult\/[A-Za-z0-9_-]+\/?$/.test(request.nextUrl.pathname)) {
+  if (isAnalyticsExcludedPath(pathname)) {
     response.headers.set('Referrer-Policy', 'no-referrer');
     response.headers.set('Cache-Control', 'private, no-store');
   }
@@ -91,6 +92,8 @@ export const config = {
     '/api/:path*',
     '/admin/api/:path*',
     '/auth/link/:path*',
+    '/cert/:path*',
+    '/:locale(ja|en)/cert/:path*',
     // The default locale matcher excludes dots. Explicit entries also cover
     // old URLs whose ids/slugs contain dots, including localized URLs.
     '/:service(entry|renew|login|mypage|aura|card)/:path*',

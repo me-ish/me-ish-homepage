@@ -1,9 +1,10 @@
 // src/lib/analyticsPrivacy.ts
 // Natori client pages carry their access token in the URL path
 // (/natori/consult/[token], /natori/quote/[token], /natori/delivery/[token]).
+// Legacy certificate pages carry their token in ?t=; exclude the whole route.
 // Analytics must never record those URLs.
 
-const PRIVATE_CLIENT_PATH = /(?:^|\/)natori\/(?:consult|quote|delivery)(?:\/|$)/u;
+const PRIVATE_CLIENT_PATH = /(?:^|\/)(?:natori\/(?:consult|quote|delivery)|cert)(?:\/|$)/u;
 
 /** True for a path or absolute URL whose path is a token-bearing client page. */
 export function isAnalyticsExcludedPath(pathOrUrl: string | null | undefined): boolean {

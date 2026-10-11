@@ -1,7 +1,7 @@
 // /src/app/cert/[id]/page.tsx
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertCircle, ArrowLeft, RefreshCw, FileX } from "lucide-react";
+import { AlertCircle, ArrowLeft, Mail } from "lucide-react";
 import CoAInfoPanel from "@/components/cert/CoAInfoPanel";
 import CoAPdfActions from "@/components/cert/CoAPdfActions";
 import AssetsReceiveSection from "@/components/cert/AssetsReceiveSection";
@@ -10,7 +10,6 @@ import {
   getEntryForCoA,
   resolveLangFromRequest,
   verifyCertToken,
-  issueReissueLink,
 } from "@/lib/coa/server";
 
 export const runtime = "nodejs";
@@ -20,6 +19,7 @@ export const revalidate = 0;
 export const metadata: Metadata = {
   title: "Certificate | me-ish",
   description: "Certificate of Authenticity (CoA)",
+  robots: { index: false, follow: false },
 };
 
 // Brand constants
@@ -76,7 +76,7 @@ export default async function CertPage(
   const idNum = Number(params.id);
 
   // Invalid URL check
-  if (!Number.isInteger(idNum) || idNum <= 0) {
+  if (!Number.isSafeInteger(idNum) || idNum <= 0) {
     return (
       <ErrorCard
         title="Invalid URL"
@@ -105,21 +105,21 @@ export default async function CertPage(
   const token = search.get("t") || "";
 
   try {
-    const ver = await verifyCertToken(token);
+    const ver = await verifyCertToken(token, idNum);
 
     // Token verification failed
-    if (!ver.ok) {
+    if (!ver.ok || ver.entryId !== idNum) {
       return (
         <ErrorCard
           title="Link Expired"
           description={t.expiredNote}
         >
           <a
-            href={await issueReissueLink(idNum, undefined)}
+            href="mailto:info@me-ish.art"
             className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#00a1e9] text-white text-sm font-medium transition-all hover:bg-[#0090d4]"
           >
-            <RefreshCw className="w-4 h-4" />
-            {t.reissueBtn}
+            <Mail className="w-4 h-4" />
+            {t.reissueContactBtn}
           </a>
           <Link
             href="/"
@@ -135,7 +135,7 @@ export default async function CertPage(
     const entry = await getEntryForCoA(ver.entryId);
 
     // Entry not found
-    if (!entry) {
+    if (!entry || entry.id !== idNum) {
       return (
         <ErrorCard
           title="Not Found"
@@ -153,8 +153,12 @@ export default async function CertPage(
     }
 
     const normalizedEntry = {
-      ...entry,
+      id: entry.id,
       title: entry.title ?? "(Untitled)",
+      artist_name: entry.artist_name,
+      edition_total: entry.edition_total,
+      created_at: entry.created_at,
+      confirmed_at: entry.confirmed_at,
     };
 
     const artworkHref = `/api/files/download?certToken=${encodeURIComponent(token)}`;
@@ -219,14 +223,13 @@ export default async function CertPage(
         </div>
       </main>
     );
-  } catch (e: unknown) {
-    const errorMessage = e instanceof Error ? e.message : String(e);
-    console.error("[CoA] server error:", e);
+  } catch {
+    console.error("[CoA] certificate display unavailable");
 
     return (
       <ErrorCard
         title="Server Error"
-        description={errorMessage}
+        description={t.unavailableNote}
       >
         <Link
           href="/"

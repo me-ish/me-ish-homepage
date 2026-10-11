@@ -1,33 +1,23 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { CertAdminError, requireCertAdmin } from '@/lib/coa/reissueAuth';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const sb = supabaseAdmin();
-    // 軽い読み取りで権限/テーブル存在を確認
-    const { data, error } = await sb
-      .from('cert_links')
-      .select('id, entry_id')
-      .limit(1);
-
-    if (error) throw error;
-
-    return NextResponse.json({
-      ok: true,
-      hasRow: !!data?.length,
-      env: {
-        NEXT_PUBLIC_SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-        CERT_REQUIRE_TOKEN: process.env.CERT_REQUIRE_TOKEN ?? '(unset)',
-      },
+    requireCertAdmin(request);
+    const { data, error } = await supabaseAdmin().from('cert_links').select('id, entry_id').limit(1);
+    if (error) throw new Error('Certificate diagnostics unavailable');
+    return NextResponse.json({ ok: true, hasRow: !!data?.length }, {
+      headers: { 'Cache-Control': 'private, no-store' },
     });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : String(e);
-    return NextResponse.json(
-      { ok: false, error: message },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    if (error instanceof CertAdminError) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: error.status });
+    }
+    console.error('[CoA] certificate diagnostics unavailable');
+    return NextResponse.json({ ok: false, error: 'certificate diagnostics unavailable' }, { status: 500 });
   }
 }

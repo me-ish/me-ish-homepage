@@ -57,6 +57,14 @@ describe('legacy suspension middleware', () => {
     expect(response.headers.get('cache-control')).toBe('private, no-store');
   });
 
+  it.each(['/cert/12', '/ja/cert/12', '/en/cert/invalid.id', '/ja/%63ert/12'])
+  ('protects certificate route %s without issuing anything', async (path) => {
+    expect(unstable_doesMiddlewareMatch({ config, url: path })).toBe(true);
+    const response = await middleware(new NextRequest(`https://example.com${path}?t=synthetic-token`));
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer');
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+  });
+
   it('retains the existing Natori dashboard-key cookie flow', async () => {
     vi.stubEnv('NATORI_DASHBOARD_KEY', 'synthetic-key');
     const response = await middleware(new NextRequest('https://example.com/natori/dashboard?natori-key=synthetic-key'));
