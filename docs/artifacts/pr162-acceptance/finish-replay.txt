@@ -1,0 +1,15 @@
+REPRODUCED old DB-01 preflight rejects valid empty Natori baseline
+PASS revised DB-01 on empty Natori baseline changes no relation ACL/RLS or legacy schema
+PASS normal definer wrapper rejected atomically
+PASS invoker wrapper over private definer rejected atomically
+PASS indirect materialized copy rejected atomically
+NOTICE:  PASS anonymous table, count, column and invoker-view reads denied
+NOTICE:  PASS owner and email fallback, ID authority, bank lookup, view and existing write stop
+NOTICE:  PASS second owner; editable user_metadata grants no extra access
+NOTICE:  PASS unrelated authenticated user sees no entry
+NOTICE:  PASS email alone without authenticated subject grants no access
+NOTICE:  PASS linked owner without email
+NOTICE:  PASS service-role certificate, receipt, financial and admin reads
+NOTICE:  PASS restrictive anonymous policy survives accidental broad grant
+NOTICE:  PASS effective ACL, exact business rows and protected catalogs unchanged
+

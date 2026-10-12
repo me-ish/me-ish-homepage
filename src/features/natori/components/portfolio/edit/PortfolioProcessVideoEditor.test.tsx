@@ -232,7 +232,7 @@ describe("PortfolioProcessVideoEditor 動画ファイル", () => {
     fireEvent.change(fileInput(), { target: { files: [file] } });
 
     await waitFor(() =>
-      expect(onChange).toHaveBeenLastCalledWith({ url: FILE_URL, caption: "説明", shape: "portrait" })
+      expect(onChange).toHaveBeenLastCalledWith({ url: FILE_URL, caption: "説明", shape: "portrait",published:false })
     );
     expect(uploadMock).toHaveBeenCalledWith(file, expect.objectContaining({ onProgress: expect.any(Function) }));
     expect((screen.getByLabelText("アップロードした動画の確認") as HTMLVideoElement).getAttribute("src")).toBe(FILE_URL);
@@ -289,7 +289,7 @@ describe("PortfolioProcessVideoEditor 動画ファイル", () => {
       finish(FILE_URL);
     });
 
-    expect(onChange).toHaveBeenLastCalledWith({ url: FILE_URL, caption: "待っている間に書いた説明" });
+    expect(onChange).toHaveBeenLastCalledWith({ url: FILE_URL, caption: "待っている間に書いた説明",published:false });
   });
 
   it("アップロードの始まりと終わりを親に知らせる（成功しても失敗しても、終わったら false に戻す）", async () => {

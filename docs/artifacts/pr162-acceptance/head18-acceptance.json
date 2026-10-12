@@ -1,0 +1,120 @@
+{
+  "source": {
+    "nodeVersion": "v24.19.0",
+    "head": "18ee47b48ddab2cb72d5409ca95ccc7aa550ec45",
+    "diffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "fileSha256": {
+      "src/lib/coa/server.ts": "457928682dd5a2a8e107aca7d7bcb73570fe962fe71ced0d191598fba5a2e810",
+      "src/lib/coa/reissueAuth.ts": "0e1a178cce6c68082bd0151eb6477d07a45eb3e8893fca5df1ef1864a1612e04",
+      "src/middleware.ts": "ac747f26d5149401d1cde5474121b6b2acf4babef379e0c21294a74a2d5f036b",
+      "supabase/migrations/20261011221028_lockdown_legacy_entries_reads.sql": "bd4226784fc86e9b6f2bb7708f6895c15a9f5720fa344b587c9cfe15f15547ae",
+      "scripts/legacy-entry-read-security/fixture.sql": "da5598e6000967a0bee1affb7e5e1d2723d6de49d82f7490eec1f61c49ffffd6",
+      "scripts/legacy-entry-read-security/acceptance/README.md": "9befa644c205e706f17e49507757861a22c12d7af092419f045761c35212b5b5",
+      "scripts/legacy-entry-read-security/acceptance/api.mjs": "0663fc12dd985331864523a681faf829fcf8037b9f00e53c12add6cb142073db",
+      "scripts/legacy-entry-read-security/acceptance/certificate.test.ts": "8bf1cbd78ab690d57a8e50d0da433db50ebe00844c5a63f584f161b1cae4afb0",
+      "scripts/legacy-entry-read-security/acceptance/common.mjs": "2f42e9c28b4b475ccde9a87f4e2be5a20693ce3990f3e7154ab58187ca21eed1",
+      "scripts/legacy-entry-read-security/acceptance/font-responses.cjs": "a986241fca81f9101929376669f48bba514608e47d667272a9c3012f54e8cc47",
+      "scripts/legacy-entry-read-security/acceptance/gateway.mjs": "b376305e8efcda6badf97109066b95d113b18d71eb626e39e3599b7f41f5453c",
+      "scripts/legacy-entry-read-security/acceptance/http.mjs": "27e3e59846bfdc9c976d8516991db13da5796ab81555f8adcfc721c54bcb49de",
+      "scripts/legacy-entry-read-security/acceptance/run.mjs": "14552a37d2197d7745e3455e0e0465a2a2f42db55bcf043c69ca4410ee10db60",
+      "scripts/legacy-entry-read-security/acceptance/start-app.mjs": "0bf77d17657fa1891b8e089b7f31b03b24807662589a24a64b346fbbed7ac4ac",
+      "scripts/legacy-entry-read-security/acceptance/vitest.config.mts": "5a8954d98f7e781eaf8f9db2631e1e5347065a0371e7679f884ed3e20a3a7863"
+    },
+    "imageDigests": {
+      "postgres:17.6-bookworm@sha256:f3bd19c606e442c3d7bdfa8002e03fe260a1023351e0ea4598032022b68dd6e3": "postgres@sha256:f3bd19c606e442c3d7bdfa8002e03fe260a1023351e0ea4598032022b68dd6e3",
+      "supabase/gotrue:v2.196.0@sha256:c0c25187a6b835e65a6f6e6c6b39d090e832d40e6de5186f2c038e0411944232": "supabase/gotrue@sha256:c0c25187a6b835e65a6f6e6c6b39d090e832d40e6de5186f2c038e0411944232",
+      "postgrest/postgrest:v14.17@sha256:c9dc201e555f5d8e37e7f39cdd4df0229774996e213bfd7de8d10ac609030f2c": "postgrest/postgrest@sha256:c9dc201e555f5d8e37e7f39cdd4df0229774996e213bfd7de8d10ac609030f2c"
+    }
+  },
+  "api": {
+    "postgres": "17.6",
+    "auth": "2.196.0",
+    "postgrest": "14.17",
+    "pg_graphql": "1.6.2",
+    "results": [
+      {
+        "name": "unverified email cannot obtain an Auth session",
+        "status": "pass"
+      },
+      {
+        "name": "real GoTrue password sessions for two owners and unrelated user",
+        "status": "pass"
+      },
+      {
+        "name": "before migration anonymous REST and real pg_graphql expose synthetic entries",
+        "status": "pass"
+      },
+      {
+        "name": "intermediate server-only bank fixture rejects direct read/save",
+        "status": "pass"
+      },
+      {
+        "name": "before archived owner-policy bank read/update/unlinked insert; other owner denied; server read preserved",
+        "status": "pass"
+      },
+      {
+        "name": "after migration anonymous REST denied and GraphQL collection inaccessible",
+        "status": "pass"
+      },
+      {
+        "name": "alice actual Auth JWT: REST/GraphQL owner scope",
+        "status": "pass"
+      },
+      {
+        "name": "bob actual Auth JWT: REST/GraphQL owner scope",
+        "status": "pass"
+      },
+      {
+        "name": "stranger actual Auth JWT: REST/GraphQL owner scope",
+        "status": "pass"
+      },
+      {
+        "name": "real user_metadata changes do not grant owner/service privileges",
+        "status": "pass"
+      },
+      {
+        "name": "bank external ID lookup by linked UID and unlinked email preserved",
+        "status": "pass"
+      },
+      {
+        "name": "after archived owner-policy bank read/update/unlinked insert; other owner denied; server read preserved",
+        "status": "pass"
+      },
+      {
+        "name": "bank scope/provenance",
+        "status": "qualified-pass",
+        "details": "Retained legacy settings/bank; not used by Natori intake/payment. Owner policy from archived SQL, compatible text owner invoker view fixture; current production definition/application history not fetched."
+      }
+    ]
+  },
+  "http": {
+    "results": [
+      {
+        "name": "missing/invalid token pages do not issue links or display an entry",
+        "status": "pass"
+      },
+      {
+        "name": "locale redirects and absent/wrong/correct dashboard-key branches protect privacy",
+        "status": "pass"
+      },
+      {
+        "name": "HTTP anonymous/wrong-admin reissue rejected without writes",
+        "status": "pass"
+      },
+      {
+        "name": "legitimate admin issue -> active view -> HTTP HTML/RSC; internal markers absent",
+        "status": "pass"
+      },
+      {
+        "name": "HTTP token/URL entry ID mismatch never displays other entry",
+        "status": "pass"
+      },
+      {
+        "name": "HTTP expired/revoked/used tokens rejected through actual active view",
+        "status": "pass"
+      }
+    ]
+  },
+  "certificateAssertions": "passed",
+  "syntheticOnly": true
+}

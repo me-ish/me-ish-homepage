@@ -1,0 +1,59 @@
+name: Natori SEC01 private assets
+on:
+  pull_request:
+    branches: [main, 'codex/audit-db01-lockdown']
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/natori-private-assets.yml'
+      - 'scripts/natori-private-assets/**'
+      - 'src/features/natori/**'
+      - 'src/app/**/natori/**'
+      - 'src/app/og/natori-portfolio.png/**'
+      - 'src/middleware.ts'
+      - 'supabase/migrations/**'
+      - 'supabase/baseline/manifest.json'
+      - 'package-lock.json'
+      - 'next.config.mjs'
+      - '.node-version'
+permissions:
+  contents: read
+concurrency:
+  group: natori-sec01-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  isolated-http:
+    name: Real isolated Auth Storage and Next publication matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.node-version'
+          cache: npm
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install video fixture generator
+        run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends ffmpeg
+      - name: Verify isolated harness, units, types, lint and immutable baseline
+        run: |
+          node --test scripts/natori-private-assets/*.test.mjs
+          npx --no-install vitest run
+          npx --no-install tsc --noEmit --incremental false
+          npm run lint
+          node scripts/etorie-baseline-static-check.mjs
+      - name: Run synthetic disposable database and actual HTTP matrix
+        env:
+          SEC01_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          SEC01_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/natori-private-assets/run.mjs
+      - name: Publish only sanitized result and source provenance
+        if: always() && env.SEC01_RESULTS != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: natori-sec01-${{ github.event.pull_request.head.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.SEC01_RESULTS }}/*.json
+          if-no-files-found: error
+          retention-days: 7

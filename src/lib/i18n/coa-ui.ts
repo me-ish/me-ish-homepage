@@ -7,8 +7,9 @@ assetsSectionTitle: "作品データの受け取り",
 normalNote: "作品データは安全なリンクからダウンロードできます（期限あり）。",
 normalDownloadBtn: "作品をダウンロード",
 expiredNote:
-"このページは有効なリンクが必要です。期限切れの場合は『リンク再発行』から新しいリンクを取得してください。",
-reissueBtn: "リンク再発行",
+"このページには有効な閲覧リンクが必要です。期限切れやリンク紛失の場合は運営にお問い合わせください。本人確認後に再発行します。",
+reissueContactBtn: "再発行について問い合わせる",
+unavailableNote: "現在、証明書を表示できません。時間をおいて再度お試しください。",
 backToGallery: "ギャラリーに戻る",
 },
 en: {
@@ -20,8 +21,9 @@ normalNote:
 "You can download the artwork via a secure link (expires).",
 normalDownloadBtn: "Download artwork",
 expiredNote:
-"This page may require a valid token. If it has expired, use 'Reissue link' to obtain a new one.",
-reissueBtn: "Reissue link",
+"A valid viewing link is required. If your link has expired or is lost, contact support. Reissue requires identity verification.",
+reissueContactBtn: "Contact support for reissue",
+unavailableNote: "The certificate is temporarily unavailable. Please try again later.",
 backToGallery: "Back to Gallery",
 },
 } as const;

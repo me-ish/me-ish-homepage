@@ -6,7 +6,7 @@ import type { NatoriRefundSummary } from "../types/refunds";
 import { loadConsultationOverviews } from "./consultationOverviewService";
 import type { ConsultationOverview } from "@/features/natori/types/consultation";
 import { createTasksForType } from "@/features/natori/lib/projects";
-import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
+import { canManuallyTransitionNatoriStatus, canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { calculateDueDate } from "@/features/natori/lib/deliveryPlans";
 import { isNatoriConcreteProjectType } from "@/features/natori/lib/projectReadModel";
 import { confirmNatoriProjectTypeViaRpc } from "@/features/natori/server/intakeRpcAdapter";
@@ -413,6 +413,7 @@ export type CreateNatoriAdminProjectInput = {
 
 export type CreateNatoriAdminProjectResult =
   | { kind: "ok"; projectId: string }
+  | { kind: "invalid-status" }
   | { kind: "db-error" };
 
 /**
@@ -429,10 +430,15 @@ export async function createNatoriAdminProject(
 export async function createNatoriProjectForOwner(
   input: CreateNatoriAdminProjectInput
 ): Promise<CreateNatoriAdminProjectResult> {
+  // Historical completed records are a supported manual registration; an
+  // outstanding delivery must instead be published with its release evidence.
+  const status = input.status ?? "inquiry";
+  if (!NATORI_PROJECT_STATUSES.has(status) || status === "delivered") {
+    return { kind: "invalid-status" };
+  }
   const deliveryPlan = input.deliveryPlan ?? "normal";
   const startDateISO = input.startDateISO ?? new Date().toISOString().slice(0, 10);
   const dueDateISO = input.dueDateISO ?? calculateDueDate(startDateISO, deliveryPlan);
-  const status = input.status ?? "inquiry";
   const manualCompletedAt =
     status === "completed" ? `${dueDateISO}T12:00:00+09:00` : "";
 
@@ -577,8 +583,16 @@ export async function setNatoriProjectStatus(
 
   const fromStatus = (current as { status: string }).status;
   const currentType = (current as { type?: string }).type;
+  if (
+    !canManuallyTransitionNatoriStatus(
+      fromStatus as NatoriProjectStatus,
+      status as NatoriProjectStatus
+    )
+  ) {
+    return { kind: "invalid-transition", from: fromStatus, to: status };
+  }
   const workStatuses = new Set([
-    "rough", "lineart", "coloring", "waiting", "delivery_prep", "delivered", "completed",
+    "rough", "lineart", "coloring", "waiting", "delivery_prep",
   ]);
   if (workStatuses.has(status) && currentType === "undecided") {
     return { kind: "invalid-transition", from: fromStatus, to: status };
@@ -595,19 +609,9 @@ export async function setNatoriProjectStatus(
     if (paidError) return { kind: "db-error" };
     if (!paidProject) return { kind: "invalid-transition", from: fromStatus, to: status };
   }
-  if (
-    !canTransitionNatoriStatus(
-      fromStatus as NatoriProjectStatus,
-      status as NatoriProjectStatus
-    )
-  ) {
-    return { kind: "invalid-transition", from: fromStatus, to: status };
-  }
-
   // 読み取り時のステータスを条件に含め、並行更新とレースしたら書かない
   // （0行なら状態が変わっているので invalid-transition として弾く）
   const statusUpdate: Record<string, unknown> = { status, next_action: nextAction };
-  if (status === "completed") statusUpdate.completed_at = new Date().toISOString();
   const { data, error } = await admin
     .from("natori_projects")
     .update(statusUpdate)

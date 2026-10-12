@@ -10,6 +10,7 @@ import { formatYen } from "@/features/natori/lib/pricing";
 import { natoriClientUi as ui } from "@/features/natori/constants/clientUi";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { formatQuoteDate, type NatoriQuoteTerms } from "@/features/natori/lib/quoteTerms";
+import { resolveClientPayment } from "@/features/natori/lib/clientPayment";
 
 type Props = {
   payment?: NatoriPaymentOverview;
@@ -68,6 +69,7 @@ export default function QuoteAcceptCard({
 }: Props) {
   const [status, setStatus] = useState<Status>(acceptedAt ? "accepted" : "idle");
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const paymentState = resolveClientPayment({ overview: payment }, new Date());
 
   const handleAccept = async () => {
     if (status === "sending" || status === "accepted" || !termsAccepted) return;
@@ -201,16 +203,17 @@ export default function QuoteAcceptCard({
           <p className="mb-2 text-[17px] font-bold leading-7">ご依頼の確定ありがとうございます!</p>
           <p className={`${ui.phrase} ${ui.small} ${ui.muted}`}>
             {acceptedAt ? `${formatDate(acceptedAt)}にご承諾いただいています。` : ""}
-            {payment?.available === false ? "入金状況を確認できませんでした。再読み込みするか、担当者へメールでお問い合わせください。"
-              : payment?.confirmedAt ? "入金確認済みです。支払案内をお待ちいただく必要はありません。次の確認事項は担当者からご案内します。"
-              : payment?.requiresReview ? "お支払いの記録を担当者が照合しています。追加のお支払いはせず、メールでお問い合わせください。"
-              : payment?.linkState === "terminal" ? "この案件は終了しています。新しいお支払いはせず、元のメールへの返信で担当者にお問い合わせください。"
-              : ["inactive","stop_required","deactivating"].includes(payment?.linkState ?? "") ? "お支払いリンクは停止済み、または停止確認中です。新しいご案内が必要な場合は元のメールへご返信ください。"
-              : payment?.linkState === "active" ? "お支払い案内をご確認ください。再通知で支払期限は延長されません。すでにお支払い済みの場合は追加のお支払いをせず、担当者へお問い合わせください。"
-              : payment?.linkState === "creating" ? "お支払い案内の発行結果を確認中です。案内が届くまでお待ちください。お問い合わせは元のメールへの返信でご連絡ください。"
-              : payment?.processing ? "入金の確認処理中です。追加のお支払いはせず、再読み込みして状況をご確認ください。"
+            {paymentState.status === "paid" ? "入金確認済みです。支払案内をお待ちいただく必要はありません。次の確認事項は担当者からご案内します。"
+              : paymentState.status === "unavailable" ? "入金状況を確認できませんでした。追加のお支払いはせず、再読み込みするか、担当者へメールでお問い合わせください。"
+              : paymentState.status === "review" ? "お支払いの記録を担当者が照合しています。追加のお支払いはせず、メールでお問い合わせください。"
+              : paymentState.status === "processing" ? "入金の確認処理中です。追加のお支払いはせず、再読み込みして状況をご確認ください。"
+              : paymentState.status === "terminal" ? "この案件は終了しています。新しいお支払いはせず、元のメールへの返信で担当者にお問い合わせください。"
+              : paymentState.status === "stopped" ? "お支払いリンクは停止済み、または停止確認中です。新しいご案内が必要な場合は元のメールへご返信ください。"
+              : paymentState.status === "expired" ? "お支払いの期限が過ぎています。追加のお支払いはせず、元のメールへの返信で担当者にお問い合わせください。"
+              : paymentState.status === "active" ? "お支払い案内をご確認ください。再通知で支払期限は延長されません。すでにお支払い済みの場合は追加のお支払いをせず、担当者へお問い合わせください。"
+              : paymentState.status === "creating" ? "お支払い案内の発行結果を確認中です。案内が届くまでお待ちください。お問い合わせは元のメールへの返信でご連絡ください。"
               : "お支払いのご案内をメールでお送りしますので、今しばらくお待ちください。"}
-            {payment?.confirmedAt && payment.requiresReview ? <span className="mt-2 block font-bold text-[#8A4800]">お支払いの記録に確認が必要な項目があります。追加のお支払いはせず、担当者へメールでお問い合わせください。</span> : null}
+            {paymentState.status === "paid" && paymentState.requiresReview ? <span className="mt-2 block font-bold text-[#8A4800]">お支払いの記録に確認が必要な項目があります。追加のお支払いはせず、担当者へメールでお問い合わせください。</span> : null}
           </p>
         </div>
       ) : (

@@ -19,7 +19,7 @@ export const GET = withNatoriManagement("project-thumbs.GET", false, async funct
   if (result.kind === "storage-error") {
     return NextResponse.json({ error: "Failed to list thumbnails" }, { status: 500 });
   }
-  return NextResponse.json({ thumbs: result.thumbs });
+  return NextResponse.json({ thumbs: result.thumbs },{headers:{"Cache-Control":"private, no-store","Referrer-Policy":"no-referrer"}});
 });
 
 export const POST = withNatoriManagement("project-thumbs.POST", true, async function POST(req: Request) {

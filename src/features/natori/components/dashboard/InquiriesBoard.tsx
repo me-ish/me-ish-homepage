@@ -48,7 +48,7 @@ import type {
 import InquiryDetailPanel from "./InquiryDetailPanel";
 import OrderMailPanel, { type OrderMailKind } from "./OrderMailPanel";
 import ConsultationStatus from "./ConsultationStatus";
-import { consultationActivityDay, compareConsultationActivity, consultationNeedsAttention, consultationReplyState } from "@/features/natori/lib/consultationOverview";
+import { consultationActivityDay, compareConsultationActivity, consultationIsActive, consultationNeedsAttention, consultationReplyState } from "@/features/natori/lib/consultationOverview";
 import { NatoriLoadError } from "./NatoriLoadError";
 
 /** 種別確定の失敗を、DB 内部情報を含まない案内文へ写す。 */
@@ -71,6 +71,7 @@ const STATUS_FILTERS: Array<{ key: string; label: string; statuses: NatoriProjec
   { key: "all", label: "すべての工程", statuses: [] },
   { key: "attention", label: "対応・確認が必要", statuses: [] },
   { key: "staff", label: "ナトリの返信待ち", statuses: [] },
+  { key: "rough-ok", label: "ラフOK・次の対応待ち", statuses: [] },
   { key: "client", label: "依頼者の返信待ち", statuses: [] },
   { key: "ended", label: "終了・アーカイブ", statuses: [] },
   { key: "inquiry", label: "依頼受付", statuses: ["inquiry", "consulting"] },
@@ -80,7 +81,7 @@ const STATUS_FILTERS: Array<{ key: string; label: string; statuses: NatoriProjec
 ];
 
 /** 上段チップ＝返信状況、下段セレクト＝工程。key は STATUS_FILTERS のものをそのまま使う。 */
-const REPLY_FILTER_KEYS = ["all", "attention", "staff", "client", "ended"];
+const REPLY_FILTER_KEYS = ["all", "attention", "rough-ok", "staff", "client", "ended"];
 const STAGE_FILTER_KEYS = ["all", "inquiry", "estimating", "quoted", "awaiting_payment"];
 
 function formatDate(iso: string | undefined): string {
@@ -253,7 +254,8 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
           view,
           receivedISO,
           lastActivityISO,
-          lastActionLabel: project.consultation?.latestSender === "client" ? "依頼者から" : project.consultation?.latestSender === "staff" ? "ナトリから" : project.consultation ? "会話なし" : "取得できません",
+          lastActionLabel: project.consultation?.latestRoughOkAt && (!project.consultation.latestMessageAt || Date.parse(project.consultation.latestRoughOkAt) > Date.parse(project.consultation.latestMessageAt))
+            ? "ラフOK" : project.consultation?.latestSender === "client" ? "依頼者から" : project.consultation?.latestSender === "staff" ? "ナトリから" : project.consultation ? "会話なし" : "取得できません",
         };
       })
       // 最終相談日時（会話なしは受付日時）が古い順。メモのメール日付は使わない。
@@ -265,10 +267,11 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   const matchesFilter = (row: InquiryRow, key: string) => {
     const ended = Boolean(row.project.deletedAt) || row.project.status === "closed";
     if (key === "ended") return ended;
-    // 終了・アーカイブ済みは「対応・確認が必要」にも数えない（数えると「すべて」より多くなる）。
-    if (ended) return false;
+    // 未確認のラフOKがある終了案件は、確認済みにするまで「すべて」「要確認」に残る。
+    if (!consultationIsActive(row.project)) return false;
     if (key === "attention") return consultationNeedsAttention(row.project);
     if (key === "staff") return ["staff", "new"].includes(consultationReplyState(row.project));
+    if (key === "rough-ok") return consultationReplyState(row.project) === "rough-ok";
     if (key === "client") return consultationReplyState(row.project) === "client";
     const entry = STATUS_FILTERS.find(item => item.key === key);
     return !entry?.statuses.length || entry.statuses.includes(row.project.status);
@@ -440,7 +443,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
             <p>制作の進捗と返信待ちは別に表示します。既読の判定ではありません。</p>
             <p>見積もり中で相談の会話がまだない案件は「見積もり作成待ち」として「対応・確認が必要」に入ります。</p>
             <p>
-              相談の最終発言が古い順（会話がなければ受付順）です。経過はその日からの日数で、7日で黄色・14日で赤になります。
+              最終発言・未確認のラフOKが古い順（どちらもなければ受付順）です。経過はその日からの日数で、7日で黄色・14日で赤になります。
             </p>
           </div>
         </details>

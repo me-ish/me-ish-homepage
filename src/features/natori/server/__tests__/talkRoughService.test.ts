@@ -1,7 +1,9 @@
+import { createHash } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-const m = vi.hoisted(() => ({ from: vi.fn(), owner: vi.fn(), client: vi.fn(), send: vi.fn() }));
-vi.mock("@/lib/supabaseAdmin", () => ({ supabaseAdmin: () => ({ from: m.from }) }));
+const m = vi.hoisted(() => ({ from: vi.fn(), rpc: vi.fn(), owner: vi.fn(), client: vi.fn(), send: vi.fn(), schedule: vi.fn() }));
+vi.mock("@/lib/supabaseAdmin", () => ({ supabaseAdmin: () => ({ from: m.from, rpc: m.rpc }) }));
+vi.mock("../scheduleAcceptanceNotifications", () => ({ scheduleAcceptanceNotifications: m.schedule }));
 vi.mock("@/features/natori/server/natoriOwner", () => ({ resolveNatoriOwnerId: m.owner }));
 vi.mock("../consultationService", () => ({ getClientProject: m.client }));
 vi.mock("resend", () => ({ Resend: class { emails = { send: m.send }; } }));
@@ -92,44 +94,81 @@ describe("marking a rough (staff)", () => {
 });
 
 describe("recording the client's OK", () => {
-  beforeEach(() => {
-    results["natori_talk_roughs:update"] = ok({ id: rid, message_id: mid, before_quote: false, created_at: "x", client_ok_at: "2026-10-12T00:00:00Z" });
-  });
+  const token = "a".repeat(32);
+  const notice = "88888888-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+  const stamp = "2026-10-12T00:00:00Z";
+  const row = (patch: Record<string, unknown> = {}) => ({ result: "ok", project_id: pid, rough_id: rid, client_ok_at: stamp, notification_ids: [notice], ...patch });
+  beforeEach(() => { m.rpc.mockResolvedValue({ data: [row()], error: null }); m.schedule.mockReset(); });
 
-  it("stamps the first OK of that project's rough and tells the staff inbox", async () => {
-    expect(await recordClientRoughOk("tok", rid)).toBe("ok");
-    const update = ops.find(o => o.op === "update");
-    expect(Object.keys(update?.args[0] as object)).toEqual(["client_ok_at"]);
-    expect(ops.filter(o => o.op === "eq").map(o => o.args)).toEqual([["id", rid], ["project_id", pid]]);
-    expect(ops.find(o => o.op === "is")?.args).toEqual(["client_ok_at", null]);
-    expect(m.send).toHaveBeenCalledTimes(1);
-    const mail = m.send.mock.calls[0][0] as { to: string[]; subject: string; text: string };
-    expect(mail.to).toEqual(["staff@example.test"]);
-    expect(mail.subject).toContain("ラフ");
-    expect(mail.text).toContain("見積もりの承認やお支払いではありません");
-  });
-
-  it("keeps the record when the notice mail fails, and sends it only once", async () => {
-    m.send.mockRejectedValue(new Error("down"));
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
-    expect(await recordClientRoughOk("tok", rid)).toBe("ok");
-    m.send.mockClear();
-    results["natori_talk_roughs:update"] = ok(null);
-    results["natori_talk_roughs:select"] = ok({ id: rid, message_id: mid, before_quote: false, created_at: "x", client_ok_at: "2026-10-12T00:00:00Z" });
-    expect(await recordClientRoughOk("tok", rid)).toBe("already");
+  it("commits the OK with a durable job and schedules the saved notification instead of sending directly", async () => {
+    expect(await recordClientRoughOk(token, rid)).toBe("ok");
+    expect(m.rpc).toHaveBeenCalledWith("natori_record_rough_ok_v1", { p_project_id: pid, p_rough_id: rid, p_token_hash: createHash("sha256").update(token).digest("hex") });
+    expect(JSON.stringify(m.rpc.mock.calls)).not.toContain(token);
+    expect(m.schedule).toHaveBeenCalledWith([notice]);
     expect(m.send).not.toHaveBeenCalled();
+    expect(ops).toEqual([]);
   });
 
-  it("refuses unknown links, another project's rough, closed projects and an unreadable table", async () => {
-    expect(await recordClientRoughOk("tok", "nope")).toBe("not-found");
+  it("replays the same unresolved job, while sent and historical OKs do not schedule a job", async () => {
+    m.rpc.mockResolvedValue({ data: [row({ result: "already_ok" })], error: null });
+    expect(await recordClientRoughOk(token, rid)).toBe("already");
+    expect(m.schedule).toHaveBeenLastCalledWith([notice]);
+    m.rpc.mockResolvedValue({ data: [row({ result: "already_ok", notification_ids: [] })], error: null });
+    expect(await recordClientRoughOk(token, rid)).toBe("already");
+    expect(m.schedule).toHaveBeenLastCalledWith([]);
+    expect(m.send).not.toHaveBeenCalled();
+    expect(ops).toEqual([]);
+  });
+
+  it("concurrent responses schedule the same logical job and survive missing mail configuration or scheduling failure", async () => {
+    vi.stubEnv("RESEND_API_KEY", ""); vi.stubEnv("NATORI_ORDER_MAIL_FROM", "");
+    expect(await Promise.all([recordClientRoughOk(token, rid), recordClientRoughOk(token, rid)])).toEqual(["ok", "ok"]);
+    expect(m.schedule.mock.calls).toEqual([[[notice]], [[notice]]]);
+    m.schedule.mockImplementation(() => { throw new Error("worker stopped"); });
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(await recordClientRoughOk(token, rid)).toBe("ok");
+    expect(m.send).not.toHaveBeenCalled(); spy.mockRestore();
+  });
+
+  it("rejects malformed token/rough, absent or deleted project without any write", async () => {
+    expect(await recordClientRoughOk(token, "nope")).toBe("not-found");
+    expect(await recordClientRoughOk("short", rid)).toBe("not-found");
+    expect(m.client).not.toHaveBeenCalled();
     m.client.mockResolvedValueOnce(null);
-    expect(await recordClientRoughOk("tok", rid)).toBe("not-found");
-    m.client.mockResolvedValueOnce({ id: pid, title: "t", client_name: "c", status: "closed", deleted_at: null });
-    expect(await recordClientRoughOk("tok", rid)).toBe("closed");
-    results["natori_talk_roughs:update"] = ok(null);
-    results["natori_talk_roughs:select"] = ok(null);
-    expect(await recordClientRoughOk("tok", rid)).toBe("not-found");
-    results["natori_talk_roughs:update"] = { data: null, error: { code: "42P01" } };
-    expect(await recordClientRoughOk("tok", rid)).toBe("unavailable");
+    expect(await recordClientRoughOk(token, rid)).toBe("not-found");
+    m.client.mockResolvedValueOnce({ id: pid, deleted_at: stamp });
+    expect(await recordClientRoughOk(token, rid)).toBe("not-found");
+    expect(m.rpc).not.toHaveBeenCalled();
+  });
+
+  it("trusts only the transaction's current capability/binding checks, including expiry and closure after a project read", async () => {
+    m.rpc.mockResolvedValue({ data: [row({ result: "not_found", rough_id: null, project_id: null, client_ok_at: null, notification_ids: [] })], error: null });
+    expect(await recordClientRoughOk(token, rid)).toBe("not-found");
+    m.rpc.mockResolvedValue({ data: [row({ result: "closed", notification_ids: [] })], error: null });
+    expect(await recordClientRoughOk(token, rid)).toBe("closed");
+    expect(m.schedule).not.toHaveBeenCalled(); expect(ops).toEqual([]);
+  });
+
+  it.each([null, [], [row(), row()], [row({ result: "invented" })], [row({ rough_id: mid })], [row({ project_id: mid })],
+    [row({ client_ok_at: null })], [row({ client_ok_at: "bad" })], [row({ notification_ids: [] })], [row({ notification_ids: [notice, notice] })],
+    [row({ notification_ids: ["bad"] })], [row({ notification_ids: null })], [row({ result: "not_found" })]])("fails closed on a malformed RPC response %#", async data => {
+    m.rpc.mockResolvedValue({ data, error: null });
+    expect(await recordClientRoughOk(token, rid)).toBe("unavailable");
+    expect(m.schedule).not.toHaveBeenCalled(); expect(m.send).not.toHaveBeenCalled(); expect(ops).toEqual([]);
+  });
+
+  it("missing RPC and unexpected errors never fall back to a direct write/send", async () => {
+    m.rpc.mockResolvedValueOnce({ data: null, error: { code: "PGRST202" } });
+    expect(await recordClientRoughOk(token, rid)).toBe("unavailable");
+    m.rpc.mockRejectedValueOnce(new Error("private"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(await recordClientRoughOk(token, rid)).toBe("unavailable");
+    expect(spy).toHaveBeenCalledWith("[natori-talk] rough ok unavailable");
+    spy.mockRestore(); expect(m.send).not.toHaveBeenCalled(); expect(ops).toEqual([]);
+  });
+  it.each([null, undefined, {}, { data: [row()] }, { data: [row()], error: false }, { data: [row()], error: undefined }])("fails closed on malformed response envelope %#", async response => {
+    m.rpc.mockResolvedValue(response);
+    expect(await recordClientRoughOk(token, rid)).toBe("unavailable");
+    expect(m.schedule).not.toHaveBeenCalled(); expect(m.send).not.toHaveBeenCalled(); expect(ops).toEqual([]);
   });
 });

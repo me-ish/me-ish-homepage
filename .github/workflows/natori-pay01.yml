@@ -1,0 +1,73 @@
+name: Natori PAY-01
+
+on:
+  push:
+    branches: [main, 'codex/**']
+    paths:
+      - '.github/workflows/natori-pay01.yml'
+      - 'scripts/natori-pay01/**'
+      - 'src/features/natori/**'
+      - 'src/app/api/natori/**'
+      - 'supabase/migrations/**'
+      - 'supabase/baseline/manifest.json'
+      - 'package-lock.json'
+      - '.node-version'
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/natori-pay01.yml'
+      - 'scripts/natori-pay01/**'
+      - 'src/features/natori/**'
+      - 'src/app/api/natori/**'
+      - 'supabase/migrations/**'
+      - 'supabase/baseline/manifest.json'
+      - 'package-lock.json'
+      - '.node-version'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: natori-pay01-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-postgres:
+    name: PAY-01 native PostgreSQL acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Execute exact forward SQL and real issue/acceptance races without networking
+        run: bash scripts/natori-pay01/run.sh
+      - name: Publish allowlisted synthetic evidence
+        if: always() && env.PAY01_RESULTS != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: natori-pay01-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.PAY01_RESULTS }}/*
+          if-no-files-found: error
+          retention-days: 7
+  product-regression:
+    name: PAY-01 product and type regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.node-version'
+          cache: npm
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Validate frozen baseline inventory, strict types, and product regressions
+        run: |
+          node scripts/etorie-baseline-static-check.mjs
+          npx --no-install tsc --noEmit --incremental false
+          npx --no-install vitest run

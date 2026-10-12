@@ -1,0 +1,61 @@
+{
+  "postgres": "17.6",
+  "auth": "2.196.0",
+  "postgrest": "14.17",
+  "pg_graphql": "1.6.2",
+  "results": [
+    {
+      "name": "unverified email cannot obtain an Auth session",
+      "status": "pass"
+    },
+    {
+      "name": "real GoTrue password sessions for two owners and unrelated user",
+      "status": "pass"
+    },
+    {
+      "name": "before migration anonymous REST and real pg_graphql expose synthetic entries",
+      "status": "pass"
+    },
+    {
+      "name": "intermediate server-only bank fixture rejects direct read/save",
+      "status": "pass"
+    },
+    {
+      "name": "before archived owner-policy bank read/update/unlinked insert; other owner denied; server read preserved",
+      "status": "pass"
+    },
+    {
+      "name": "after migration anonymous REST denied and GraphQL collection inaccessible",
+      "status": "pass"
+    },
+    {
+      "name": "alice actual Auth JWT: REST/GraphQL owner scope",
+      "status": "pass"
+    },
+    {
+      "name": "bob actual Auth JWT: REST/GraphQL owner scope",
+      "status": "pass"
+    },
+    {
+      "name": "stranger actual Auth JWT: REST/GraphQL owner scope",
+      "status": "pass"
+    },
+    {
+      "name": "real user_metadata changes do not grant owner/service privileges",
+      "status": "pass"
+    },
+    {
+      "name": "bank external ID lookup by linked UID and unlinked email preserved",
+      "status": "pass"
+    },
+    {
+      "name": "after archived owner-policy bank read/update/unlinked insert; other owner denied; server read preserved",
+      "status": "pass"
+    },
+    {
+      "name": "bank scope/provenance",
+      "status": "qualified-pass",
+      "details": "Retained legacy settings/bank; not used by Natori intake/payment. Owner policy from archived SQL, compatible text owner invoker view fixture; current production definition/application history not fetched."
+    }
+  ]
+}

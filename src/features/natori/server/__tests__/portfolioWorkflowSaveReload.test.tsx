@@ -7,11 +7,12 @@ import { parsePortfolioDisplayContent, preparePortfolioDisplayPreview } from "@/
 import PortfolioWorkflow from "@/features/natori/components/portfolio/PortfolioWorkflow";
 import snapshot from "../../lib/__tests__/fixtures/portfolioWorkflow.public-20261001.json";
 
-const state = vi.hoisted(() => ({ stored: null as unknown, upserts: 0 }));
+const state = vi.hoisted(() => ({ stored: null as unknown, upserts: 0, revision:0 }));
 vi.mock("server-only", () => ({}));
 vi.mock("sharp", () => ({ default: vi.fn() }));
 vi.mock("@/features/natori/server/requireNatoriAdmin", () => ({ canUseNatoriManagement: vi.fn().mockResolvedValue(false) }));
-vi.mock("@/lib/supabaseAdmin", () => ({ supabaseAdmin: vi.fn(() => ({ from: vi.fn(() => ({
+vi.mock("@/features/natori/server/natoriOwner",()=>({resolveNatoriOwnerId:async()=>"00000000-0000-4000-8000-000000000011"}));
+vi.mock("@/lib/supabaseAdmin", () => ({ supabaseAdmin: vi.fn(() => ({ rpc:async (_name:string,{expected_revision,next_content}:{expected_revision:number;next_content:unknown})=>{if(expected_revision!==state.revision)return {data:[],error:null};state.stored=JSON.parse(JSON.stringify(next_content));state.upserts++;return {data:[{saved_revision:++state.revision}],error:null};}, from: vi.fn(() => ({
   select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: async () => ({ data: { content: state.stored }, error: null }) })) })),
   upsert: async ({ content }: { content: unknown }) => { state.stored = JSON.parse(JSON.stringify(content)); state.upserts++; return { error: null }; },
 })) })) }));
@@ -21,7 +22,7 @@ function rawContent() { return { ...defaultPortfolioContent, workflow: snapshot.
 function render(content: Awaited<ReturnType<typeof loadPortfolioContent>>) {
   return renderToStaticMarkup(<PortfolioWorkflow content={content} />);
 }
-beforeEach(() => { state.upserts = 0; });
+beforeEach(() => { state.upserts = 0;state.revision=0; });
 
 it.each([0, 1, 2, 3, 4])("preserves custom raw row %s after unrelated editor save and actual reader reload", async index => {
   const raw = rawContent();
@@ -33,7 +34,7 @@ it.each([0, 1, 2, 3, 4])("preserves custom raw row %s after unrelated editor sav
   expect(prepared?.workflowCompatibilityProjection).toBe(false);
   expect(Object.hasOwn(prepared!, "workflowProjectionAllowed")).toBe(false);
   expect(JSON.stringify(prepared)).not.toContain("SYNTHETIC_PRIVATE_EXTRA_NEVER_SERIALIZED");
-  expect((await savePortfolioContent(prepared)).kind).toBe("ok"); expect(state.upserts).toBe(1);
+  expect((await savePortfolioContent(prepared,state.revision)).kind).toBe("ok"); expect(state.upserts).toBe(1);
   const reloaded = await loadPortfolioContent();
   expect(reloaded.artistName).toBe("Synthetic unrelated title edit");
   expect(reloaded.workflowProjectionAllowed).toBe(false);
@@ -50,7 +51,7 @@ it("keeps a false-only saved preference across repeated ordinary saves without s
   for (const artistName of ["Synthetic edit one", "Synthetic edit two"]) {
     const loaded = await loadPortfolioContent(); expect(loaded.workflowProjectionAllowed).toBe(false);
     const prepared = preparePortfolioContentForSave({ ...loaded, artistName });
-    expect((await savePortfolioContent(prepared)).kind).toBe("ok");
+    expect((await savePortfolioContent(prepared,state.revision)).kind).toBe("ok");
     expect(state.stored).toMatchObject({ artistName, workflowCompatibilityProjection: false });
     expect(Object.hasOwn(state.stored as object, "workflowProjectionAllowed")).toBe(false);
   }
@@ -60,7 +61,7 @@ it("keeps a false-only saved preference across repeated ordinary saves without s
 it("does not let caller true fields grant raw custom shape eligibility through save normalization", async () => {
   const raw = { ...rawContent(), workflowCompatibilityProjection: true, workflowProjectionAllowed: true };
   Object.assign(raw.workflow[2], { customTerms: "SYNTHETIC_PRIVATE_EXTRA_NEVER_SERIALIZED" });
-  expect((await savePortfolioContent(raw)).kind).toBe("ok");
+  expect((await savePortfolioContent(raw,state.revision)).kind).toBe("ok");
   expect(state.stored).toMatchObject({ workflowCompatibilityProjection: false });
   expect(JSON.stringify(state.stored)).not.toContain("SYNTHETIC_PRIVATE_EXTRA_NEVER_SERIALIZED");
   expect(Object.hasOwn(state.stored as object, "workflowProjectionAllowed")).toBe(false);
@@ -69,7 +70,7 @@ it("does not let caller true fields grant raw custom shape eligibility through s
 
 it("strips an unsupported positive saved setting while still independently checking exact baseline eligibility", async () => {
   const raw = { ...rawContent(), workflowCompatibilityProjection: true, workflowProjectionAllowed: true };
-  expect((await savePortfolioContent(raw)).kind).toBe("ok");
+  expect((await savePortfolioContent(raw,state.revision)).kind).toBe("ok");
   expect(Object.hasOwn(state.stored as object, "workflowCompatibilityProjection")).toBe(false);
   expect(Object.hasOwn(state.stored as object, "workflowProjectionAllowed")).toBe(false);
   expect((await loadPortfolioContent()).workflowProjectionAllowed).toBe(true);
@@ -79,7 +80,7 @@ it("keeps an exact observed baseline eligible after unrelated normal save withou
   const raw = rawContent(); state.stored = raw;
   const loaded = await loadPortfolioContent(); expect(loaded.workflowProjectionAllowed).toBe(true);
   const prepared = preparePortfolioContentForSave({ ...loaded, artistName: "Synthetic baseline edit" });
-  expect((await savePortfolioContent(prepared)).kind).toBe("ok");
+  expect((await savePortfolioContent(prepared,state.revision)).kind).toBe("ok");
   const reloaded = await loadPortfolioContent(); expect(reloaded.workflowProjectionAllowed).toBe(true);
   expect(reloaded.workflow).toEqual(raw.workflow);
   expect(render(reloaded)).toContain(NATORI_INTAKE_COPY.reply);
@@ -90,7 +91,7 @@ it("keeps custom important text and unrelated sections unchanged through the sam
   const raw = rawContent(); raw.workflow[3].body += " Synthetic important condition: restricted usage remains.";
   state.stored = raw;
   const loaded = await loadPortfolioContent();
-  expect((await savePortfolioContent(preparePortfolioContentForSave(loaded))).kind).toBe("ok");
+  expect((await savePortfolioContent(preparePortfolioContentForSave(loaded),state.revision)).kind).toBe("ok");
   const reloaded = await loadPortfolioContent();
   expect(reloaded.workflowProjectionAllowed).toBe(false);
   expect(reloaded.workflow).toEqual(raw.workflow);

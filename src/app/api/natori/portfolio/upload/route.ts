@@ -19,7 +19,12 @@ export async function POST(req: Request) {
   }
 
   try {
-    const form = await req.formData();
+    // Middleware can truncate an over-limit multipart body before this route.
+    // Malformed input is a client error and must never reach image processing.
+    const form = await req.formData().catch(() => null);
+    if (!form) {
+      return NextResponse.json({ error: "invalid_multipart" }, { status: 400 });
+    }
     const file = form.get("file");
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "file_missing" }, { status: 400 });

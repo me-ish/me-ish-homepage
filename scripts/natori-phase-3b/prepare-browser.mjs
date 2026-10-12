@@ -3,7 +3,7 @@ import {dirname,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 const output=process.argv[2];if(!output?.includes('/natori-phase-t.')||!output.endsWith('/browser-app'))throw new Error('DEDICATED_DIRECTORY_REQUIRED');
 const checksums=JSON.parse(readFileSync(resolve(output,'source-checksums.json'),'utf8'));
-for(const path of ['src/app/api/natori/admin/consultation/route.ts','src/app/api/natori/consult/[token]/route.ts','src/app/api/natori/consultation-file/route.ts','src/app/[locale]/natori/consult/[token]/page.tsx']){mkdirSync(dirname(resolve(output,path)),{recursive:true});copyFileSync(path,resolve(output,path));checksums[path]=createHash('sha256').update(readFileSync(path)).digest('hex');}
+for(const path of ['src/app/api/natori/admin/consultation/route.ts','src/app/api/natori/admin/consultation/rough-ok/route.ts','src/app/api/natori/consult/[token]/route.ts','src/app/api/natori/consultation-file/route.ts','src/app/[locale]/natori/consult/[token]/page.tsx']){mkdirSync(dirname(resolve(output,path)),{recursive:true});copyFileSync(path,resolve(output,path));checksums[path]=createHash('sha256').update(readFileSync(path)).digest('hex');}
 const fixture='src/app/[locale]/fixture-consultation/[id]/page.tsx';mkdirSync(dirname(resolve(output,fixture)),{recursive:true});
 writeFileSync(resolve(output,fixture),`import ConsultationThread from '@/features/natori/components/consultation/ConsultationThread';
 import {getStaffConsultation} from '@/features/natori/server/consultationService';

@@ -17,7 +17,7 @@ workflow_dispatch / main先行マージ / pull_request_target / 本番Secretsは
 - `PHASE_N=1 PHASE_4=1` でPhase Tの専用ディレクトリ・DB/Auth/Storage・乱数資格情報・kernel egress許可リストをそのまま使用する。
 - build/downloadとtestの通信を分離。試験は専用内部ネットワークのSupabase API、同namespaceのNext:3000・メールcapture:3101だけ。子プロセスも同namespace、NET_ADMINなし、Docker socketなし、DNS/IPv6/他送信先を拒否。許可ポート追加後も隔離の否定試験を再実行。
 - Phase Nの既存試験23件とブラウザ9件はそのまま実行。その後、同じ限定コンテナにPhase 4の読み取り専用スクリプトを追加mountして実行する。
-- `build-fixture.mjs` はPhase N fixtureに、明示的に確認した相談3migrationと新しい集計RPCだけを追加する。全migration/seed/.temp/本番行のコピーなし。
+- 現在の管理readerに必要な相談・rough・WF01の指定migrationをPhase N fixtureへ一度だけ先行適用する。`build-fixture.mjs` はその存在を検証する。exact inventoryとhashは`wf01-reader-source-sha256.json`へ記録し、全migration/seed/.temp/本番行をコピーしない。
 - 試験専用Authログインページを用い、owner・staff2名・strangerの実Supabaseセッションを取得。Google認証は再現しない。合言葉キーの正規管理入口も実行する。
 - 案件履歴APIも実ソースをコピーする。Next devのエラーバッジがモバイル操作に重なることを防ぐため、試験用config wrapperだけで `devIndicators: false` とする。製品configは変更せず、ブラウザの未処理例外・hydration/DOM・Dialog警告の検査は継続する。元configとwrapperのchecksumを別々に残す。
 - 正規相談API→実DB→HTTPメールcapture→実画面を確認。captureへ向けるpreloadはテストコンテナ専用、製品コードには読み込ませない。
@@ -33,5 +33,6 @@ workflow_dispatch / main先行マージ / pull_request_target / 本番Secretsは
 - キーボードで開閉、Dialogフォーカス、返信後の状態表示、制作status不変、旧リンク保持。
 - client復帰/手動更新で新着取得、下書き保持、通知失敗でも保存済み、通知メールの共通detail URL。
 - 360/390px、二重スクロールを増やさない、取得失敗と空履歴の区別、保存後の履歴更新失敗、再試行回復。
+- WF01追加6件: 実HTTPのmark/OKとowner/CSRF/capability境界、同時OK→単一event/job、OKだけの要確認、失敗通知の明示再試行、別ラフ/普通の返信/メール成功で確認待ちを消さないこと、下書き保持、closedの未対応OKと読取障害、案件を再開しない個別確認、削除済み操作の拒否。既存17件を保持し、合計23件を必須とする。
 
 Chromiumのmobile viewportはiPhone Safari実機の代替ではない。実メール配達、新規添付アップロードの冪等性、ホーム画面版の添付別ウィンドウ問題、Google OAuthはこの試験の完了根拠に含めない。既存の添付取得方式・署名URLは変更していない。

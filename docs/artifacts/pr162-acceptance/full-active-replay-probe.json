@@ -1,0 +1,17 @@
+{
+  "scope": "Full active replay probe; does not claim completion",
+  "results": [
+    {
+      "label": "before",
+      "reference": "9abcd1310aba049d512221c2786119af06b12e35",
+      "migration": "supabase/migrations/20260801234935_etorie_quote_snapshots_retry.sql",
+      "error": "NOTICE:  column \"request_snapshot\" of relation \"natori_quotes\" already exists, skipping\nNOTICE:  column \"pricing_snapshot\" of relation \"natori_quotes\" already exists, skipping\nERROR:  constraint \"natori_quotes_request_snapshot_object_check\" for relation \"natori_quotes\" already exists\n"
+    },
+    {
+      "label": "after",
+      "reference": "working tree",
+      "migration": "supabase/migrations/20260801234935_etorie_quote_snapshots_retry.sql",
+      "error": "NOTICE:  column \"request_snapshot\" of relation \"natori_quotes\" already exists, skipping\nNOTICE:  column \"pricing_snapshot\" of relation \"natori_quotes\" already exists, skipping\nERROR:  constraint \"natori_quotes_request_snapshot_object_check\" for relation \"natori_quotes\" already exists\n"
+    }
+  ]
+}

@@ -34,6 +34,21 @@ export function buildAcceptanceNotificationPayload(job: Pick<NatoriNotificationR
   }
   // A retry always uses the payload frozen by Phase N, including intake mail settings.
   if (job.payload) return payloadSchema.parse(job.payload);
+  if (job.purpose === "rough_ok_artist") {
+    const snapshot = z.object({ title: z.string(), clientName: z.string(), roughId: z.uuid(),
+      projectId: z.uuid(), beforeQuote: z.boolean(), clientOkAt: z.string().refine(value => Number.isFinite(Date.parse(value))) }).parse(job.snapshot);
+    const recipient = process.env.NATORI_PORTFOLIO_CONTACT_TO?.trim();
+    const from = process.env.NATORI_ORDER_MAIL_FROM?.trim();
+    const bcc = process.env.NATORI_MAIL_BCC?.trim();
+    if (!recipient || !from) throw new Error("mail_configuration");
+    return payloadSchema.parse({ from, to: [recipient], ...(bcc ? { bcc: [bcc] } : {}), reply_to: recipient,
+      subject: `【ナトリ】${snapshot.beforeQuote ? "参考ラフ" : "ラフ"}に「OK」がありました`,
+      text: [`${snapshot.clientName} 様の案件「${snapshot.title}」で、${snapshot.beforeQuote ? "見積もり前の参考ラフ" : "ラフ"}に「このラフでOK」の連絡がありました。`,
+        `ラフID: ${snapshot.roughId}`, `OK記録: ${snapshot.clientOkAt}`, "",
+        "相談のやり取りでラフと次の対応を確認してください。", `https://www.me-ish.art/natori/inquiries?project=${snapshot.projectId}&view=conversation`, "",
+        "※これは制作を進めるための連絡で、見積もりの承認やお支払いではありません。"].join("\n"),
+      headers: { "X-Meish-Template": "natori-rough_ok_artist" } });
+  }
   if (job.purpose === "intake_artist" || job.purpose === "intake_client") {
     const snapshot = z.object({ title: z.string(), clientName: z.string(), clientEmail: z.email(), receipt: z.uuid() }).parse(job.snapshot);
     const recipient = process.env.NATORI_PORTFOLIO_CONTACT_TO?.trim();

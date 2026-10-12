@@ -1,0 +1,50 @@
+
+ RUN  v4.1.11 /workspace/pr162-acceptance
+
+ ❯ scripts/legacy-entry-read-security/acceptance/certificate.test.ts (13 tests | 2 failed) 1737ms
+     ✓ accepts valid hex token with exact URL ID 172ms
+     ✓ accepts valid base64 token with exact URL ID 66ms
+     ✓ rejects inactive or different-entry link 0 256ms
+     ✓ rejects inactive or different-entry link 1 93ms
+     ✓ rejects inactive or different-entry link 2 27ms
+     ✓ rejects inactive or different-entry link 3 44ms
+     ✓ accepts a null expiry as specified by the actual archived view 24ms
+     ✓ rejects exact database expiry boundary 24ms
+     ✓ allows exactly one concurrent ONE_TIME claimant 168ms
+     ✓ does not consume a token requested with a different URL entry ID 63ms
+     ✓ requires explicit admin authentication and supports a legitimate issuance/read chain 206ms
+     × rejects a real state change after active lookup but before ONE_TIME claim 0 324ms
+     × rejects a real state change after active lookup but before ONE_TIME claim 1 265ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  scripts/legacy-entry-read-security/acceptance/certificate.test.ts > real PostgreSQL active view and PostgREST certificate boundary > rejects a real state change after active lookup but before ONE_TIME claim 0
+ FAIL  scripts/legacy-entry-read-security/acceptance/certificate.test.ts > real PostgreSQL active view and PostgREST certificate boundary > rejects a real state change after active lookup but before ONE_TIME claim 1
+AssertionError: expected { ok: true, entryId: 1 } to deeply equal { ok: false, reason: 'notfound' }
+
+- Expected
++ Received
+
+  {
+-   "ok": false,
+-   "reason": "notfound",
++   "entryId": 1,
++   "ok": true,
+  }
+
+ ❯ scripts/legacy-entry-read-security/acceptance/certificate.test.ts:78:42
+     76|   });
+     77|   const {verifyCertToken}=await import('@/lib/coa/server');
+     78|   expect(await verifyCertToken(token,1)).toEqual({ok:false,reason:'not…
+       |                                          ^
+     79|   expect(changed).toBe(true);
+     80|   const record=await admin.from('cert_links').select('used_at').single…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 11 passed (13)
+   Start at  23:53:14
+   Duration  2.67s (transform 240ms, setup 0ms, import 442ms, tests 1.74s, environment 0ms)
+

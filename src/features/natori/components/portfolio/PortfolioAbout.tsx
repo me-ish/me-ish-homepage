@@ -1,5 +1,5 @@
 // features/natori/components/portfolio/PortfolioAbout.tsx
-import Image from "next/image";
+import Image from "./PortfolioImage";
 import {
   isPortfolioXLink,
   portfolioColors as c,
