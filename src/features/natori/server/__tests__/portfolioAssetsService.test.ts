@@ -11,12 +11,17 @@ const mocks = vi.hoisted(() => ({
   saved: vi.fn(),
   fetch: vi.fn(),
   eq: vi.fn(),
+  copy: vi.fn(),
+  signed: vi.fn(),
+  insert: vi.fn(),
+  update: vi.fn(),
+  remove: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabaseAdmin", () => ({
   supabaseAdmin: () => ({
     from: mocks.from,
-    storage: { from: () => ({ info: mocks.info }) },
+    storage: { from: () => ({ info: mocks.info, copy: mocks.copy, createSignedUploadUrl: mocks.signed, remove: mocks.remove }) },
   }),
 }));
 vi.mock("../natoriOwner", () => ({
@@ -33,6 +38,7 @@ vi.mock("../portfolioContentStore", () => ({
 }));
 import {
   finalizePrivatePortfolioVideo,
+  preparePrivatePortfolioVideo,
   readPortfolioAsset,
   validatePortfolioAssetReferences,
 } from "../portfolioAssetsService";
@@ -54,6 +60,7 @@ let row: {
   id?: string;
 };
 let updateError: unknown;
+let updateData: { id: string } | null;
 function query() {
   let updating = false;
   const chain = {
@@ -63,12 +70,14 @@ function query() {
       return chain;
     },
     in: async () => ({ data: row ? [row] : [], error: null }),
-    update: () => {
+    insert: mocks.insert,
+    update: (value: unknown) => {
+      mocks.update(value);
       updating = true;
       return chain;
     },
     maybeSingle: async () => ({
-      data: updating ? { id } : row,
+      data: updating ? updateData : row,
       error: updating ? updateError : null,
     }),
   };
@@ -77,6 +86,10 @@ function query() {
 beforeEach(() => {
   vi.clearAllMocks();
   updateError = null;
+  updateData = { id };
+  mocks.copy.mockResolvedValue({ error: null });
+  mocks.signed.mockResolvedValue({ data: { token: "synthetic-unit-upload" }, error: null });
+  mocks.insert.mockResolvedValue({ error: null });
   row = {
     id,
     kind: "image",
@@ -247,24 +260,43 @@ describe("private asset authorization and streaming", () => {
       ),
     ).toBe(false);
   });
+  it("reads and commits only canonical never-signed ready video paths", async () => {
+    row.kind = "video";
+    row.path = `portfolio/${owner}/${id}/00000000-0000-4000-8000-000000000033.mp4`;
+    const videoContent = { ...content, processVideo: { url: portfolioAssetUrl(id, "video", true), published: true } };
+    videoContent.works = [];
+    expect(await validatePortfolioAssetReferences(videoContent, owner)).toBe(true);
+    mocks.fetch.mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3, 4]), { headers: { "Content-Type": "video/mp4", "Content-Length": "4" } }));
+    expect((await readPortfolioAsset(new Request("http://local.invalid"), id, "video", true))?.status).toBe(200);
+    for (const path of [
+      `portfolio/${owner}/${id}.mp4`,
+      `portfolio-staging/${owner}/${id}.mp4`,
+      `portfolio/foreign/${id}/00000000-0000-4000-8000-000000000033.mp4`,
+      row.path + "/extra",
+    ]) {
+      row.path = path;
+      expect(await validatePortfolioAssetReferences(videoContent, owner)).toBe(false);
+      expect(await readPortfolioAsset(new Request("http://local.invalid"), id, "video", true)).toBeNull();
+    }
+  });
 });
 
 describe("bounded video verification", () => {
   beforeEach(() => {
     row = {
-      path: `portfolio/${owner}/${id}.mp4`,
+      path: `portfolio-staging/${owner}/${id}.mp4`,
       byte_size: 50_000_000,
       ready: false,
     };
-    mocks.info.mockResolvedValue({
+    mocks.info.mockImplementation(async (path: string) => ({
       error: null,
       data: {
-        name: row.path,
+        name: path,
         bucketId: NATORI_MANAGEMENT_ASSET_BUCKET,
         size: row.byte_size,
         contentType: "video/mp4",
       },
-    });
+    }));
     const header = new Uint8Array(24);
     header.set([0, 0, 0, 32]);
     header.set(new TextEncoder().encode("ftypisom"), 4);
@@ -282,6 +314,14 @@ describe("bounded video verification", () => {
     expect(await finalizePrivatePortfolioVideo(id)).toBe(true);
     expect(mocks.fetch.mock.calls[0][1].headers.Range).toBe("bytes=0-23");
     expect(mocks.eq).toHaveBeenCalledWith("byte_size", 50_000_000);
+    expect(mocks.eq).toHaveBeenCalledWith("ready", false);
+    expect(mocks.eq).toHaveBeenCalledWith("kind", "video");
+    const [staging, final] = mocks.copy.mock.calls[0];
+    expect(staging).toBe(row.path);
+    expect(final).toMatch(new RegExp(`^portfolio/${owner}/${id}/[0-9a-f-]{36}\\.mp4$`));
+    expect(mocks.info).toHaveBeenCalledWith(final);
+    expect(mocks.fetch.mock.calls[0][0].pathname).toContain(final);
+    expect(mocks.update).toHaveBeenCalledWith({ path: final, ready: true });
   });
   it("does not fetch content when metadata size or MIME fails", async () => {
     mocks.info.mockResolvedValue({
@@ -295,6 +335,7 @@ describe("bounded video verification", () => {
     });
     expect(await finalizePrivatePortfolioVideo(id)).toBe(false);
     expect(mocks.fetch).not.toHaveBeenCalled();
+    expect(mocks.update).not.toHaveBeenCalled();
   });
   it("refuses full-body range fallback and never marks an invalid prefix ready", async () => {
     mocks.fetch.mockResolvedValueOnce(new Response("bad", { status: 200 }));
@@ -309,6 +350,57 @@ describe("bounded video verification", () => {
       }),
     );
     expect(await finalizePrivatePortfolioVideo(id)).toBe(false);
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+  it("issues only an owner/asset staging bearer and pending metadata", async () => {
+    const prepared = await preparePrivatePortfolioVideo(24);
+    expect(prepared?.path).toBe(`portfolio-staging/${owner}/${prepared?.id}.mp4`);
+    expect(mocks.signed).toHaveBeenCalledWith(prepared?.path, { upsert: false });
+    expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ path: prepared?.path, ready: false, owner_id: owner, kind: "video", byte_size: 24 }));
+    expect(mocks.copy).not.toHaveBeenCalled();
+  });
+  it("never recopies an already-ready snapshot or accepts old signed paths", async () => {
+    row.ready = true;
+    row.path = `portfolio/${owner}/${id}/00000000-0000-4000-8000-000000000033.mp4`;
+    expect(await finalizePrivatePortfolioVideo(id)).toBe(true);
+    row.path = `portfolio/${owner}/${id}.mp4`;
+    expect(await finalizePrivatePortfolioVideo(id)).toBe(false);
+    row.ready = false;
+    expect(await finalizePrivatePortfolioVideo(id)).toBe(false);
+    expect(mocks.copy).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+  it("keeps copy failures pending without verification or metadata writes", async () => {
+    mocks.copy.mockResolvedValueOnce({ error: { status: 503 } });
+    expect(await finalizePrivatePortfolioVideo(id)).toBe(false);
+    expect(mocks.info).not.toHaveBeenCalled();
+    expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.remove).not.toHaveBeenCalled();
+  });
+  it("retains private candidates when CAS fails and rejects a still-pending reread", async () => {
+    updateError = { status: 503 };
+    updateData = null;
+    expect(await finalizePrivatePortfolioVideo(id)).toBe(false);
+    expect(mocks.remove).not.toHaveBeenCalled();
+  });
+  it.each([false, true])("accepts only the ready winner after a lost response or concurrent CAS loss (%s)", async (lost) => {
+    updateError = lost ? { status: 503 } : null;
+    updateData = null;
+    mocks.update.mockImplementationOnce(() => {
+      row = { ...row, ready: true, path: `portfolio/${owner}/${id}/00000000-0000-4000-8000-000000000033.mp4` };
+    });
+    expect(await finalizePrivatePortfolioVideo(id)).toBe(true);
+    expect(mocks.copy).toHaveBeenCalledOnce();
+    expect(mocks.remove).not.toHaveBeenCalled();
+    expect(await finalizePrivatePortfolioVideo(id)).toBe(true);
+    expect(mocks.copy).toHaveBeenCalledOnce();
+  });
+  it("creates a fresh immutable candidate on each pending retry", async () => {
+    mocks.copy.mockResolvedValue({ error: { status: 503 } });
+    expect(await finalizePrivatePortfolioVideo(id)).toBe(false);
+    expect(await finalizePrivatePortfolioVideo(id)).toBe(false);
+    expect(mocks.copy.mock.calls[0][1]).not.toBe(mocks.copy.mock.calls[1][1]);
+    expect(mocks.signed).not.toHaveBeenCalled();
   });
 });
 

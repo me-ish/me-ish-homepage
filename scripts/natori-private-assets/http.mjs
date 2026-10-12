@@ -152,9 +152,10 @@ try {
   );
   const control = (value) =>
     writeFileSync(resultPath("control.json"), JSON.stringify(value));
-  const waitHeld = async () => {
+  const waitHeld = async (minimum = 1) => {
     for (let n = 0; n < 160; n++) {
-      if (existsSync(resultPath("held.json"))) return;
+      if (existsSync(resultPath("held.json")) &&
+          JSON.parse(readFileSync(resultPath("held.json"))).count >= minimum) return;
       await new Promise((r) => setTimeout(r, 25));
     }
     throw Error("Synthetic hold was not observed");
@@ -721,6 +722,33 @@ try {
     "OG uses public projection and cannot be retained by the application optimizer",
   );
   const video = readFileSync(resultPath("video.mp4"));
+  const changedBytes = Buffer.from(video);
+  changedBytes[changedBytes.length - 1] ^= 1;
+  const finalize = (assetId, headers = manager) =>
+    json("/api/natori/portfolio/video-upload/finalize", {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ assetId }),
+    });
+  const prepare = (sizeBytes) =>
+    json("/api/natori/portfolio/video-upload", {
+      method: "POST",
+      headers: { ...manager, "Content-Type": "application/json" },
+      body: JSON.stringify({ sizeBytes, contentType: "video/mp4" }),
+    });
+  const assetMetadata = async (assetId) => {
+    const row = await admin.from("natori_portfolio_assets")
+      .select("path,ready,byte_size").eq("id", assetId).single();
+    assert.ok(!row.error);
+    return row.data;
+  };
+  const storedBytes = async (prepared, path = prepared.path) => {
+    const stored = await admin.storage.from(prepared.bucket).download(path);
+    assert.ok(!stored.error);
+    return Buffer.from(await stored.data.arrayBuffer());
+  };
+  const copyCount = () => existsSync(resultPath("copy-count.json"))
+    ? JSON.parse(readFileSync(resultPath("copy-count.json"))).count : 0;
   const prep = await json("/api/natori/portfolio/video-upload", {
     method: "POST",
     headers: { ...manager, "Content-Type": "application/json" },
@@ -728,6 +756,7 @@ try {
   });
   assert.equal(prep.status, 200);
   assert.equal(prep.data.bucket, "natori-management-assets");
+  assert.equal(prep.data.path, `portfolio-staging/${config.users[0].id}/${prep.data.assetId}.mp4`);
   const videoUpload = await uploadClient.storage
     .from(prep.data.bucket)
     .uploadToSignedUrl(prep.data.path, prep.data.token, video, {
@@ -795,7 +824,8 @@ try {
       "Upload-Metadata": tusMetadata,
     },
   });
-  if (tus.ok) {
+  assert.equal(tus.status, 201);
+  {
     const location = new URL(tus.headers.get("location"), config.api);
     assert.equal(location.origin, config.api, "External TUS redirect refused");
     const patch = await fixtureFetch(location, {
@@ -808,10 +838,13 @@ try {
         "Upload-Offset": "0",
         "Content-Type": "application/offset+octet-stream",
       },
-      body: video,
+      body: changedBytes,
     });
-    assert.ok(!patch.ok);
-  } else assert.ok([400, 401, 403, 404, 409, 501].includes(tus.status));
+    // v1.74.0 ignores upsert:false on signed TUS. This mutation must stay
+    // confined to private staging, rather than being mistaken for immutable bytes.
+    assert.equal(patch.status, 204);
+    assert.ok((await storedBytes(prep.data)).equals(changedBytes));
+  }
   const tusAttempt = async (
     prepared,
     bytes,
@@ -874,6 +907,8 @@ try {
   assert.ok(
     (await admin.storage.from("natori-portfolio").info(prep.data.path)).error,
   );
+  assert.equal(await tusAttempt(prep.data, video, { upsert: true }), true);
+  assert.ok((await storedBytes(prep.data)).equals(video));
   const freshForgery = await json("/api/natori/portfolio/video-upload", {
     method: "POST",
     headers: { ...manager, "Content-Type": "application/json" },
@@ -896,17 +931,15 @@ try {
           )
       ).error,
     );
-  const changedBytes = Buffer.from(video);
-  changedBytes[changedBytes.length - 1] ^= 1;
   assert.equal(
     await tusAttempt(freshForgery.data, changedBytes, { upsert: true }),
-    false,
+    true,
   );
   const immutable = await admin.storage
     .from(freshForgery.data.bucket)
     .download(freshForgery.data.path);
   assert.ok(!immutable.error);
-  assert.ok(Buffer.from(await immutable.data.arrayBuffer()).equals(video));
+  assert.ok(Buffer.from(await immutable.data.arrayBuffer()).equals(changedBytes));
   let latest = await json("/api/natori/admin/portfolio-content", {
     headers: manager,
   });
@@ -943,6 +976,29 @@ try {
   assert.equal(ranged.status, 206);
   assert.equal((await ranged.arrayBuffer()).byteLength, 16);
   assert.ok(ranged.headers.get("cache-control").includes("no-store"));
+  const finalizedMetadata = await assetMetadata(prep.data.assetId);
+  assert.equal(finalizedMetadata.ready, true);
+  assert.match(finalizedMetadata.path, new RegExp(`^portfolio/${config.users[0].id}/${prep.data.assetId}/[0-9a-f-]{36}\\.mp4$`));
+  assert.notEqual(finalizedMetadata.path, prep.data.path);
+  assert.ok((await storedBytes(prep.data, finalizedMetadata.path)).equals(video));
+  // Reuse only the issued staging bearer: finalized paths are never signed.
+  for (const upsert of [false, true]) {
+    assert.ok((await uploadClient.storage.from(prep.data.bucket).uploadToSignedUrl(
+      finalizedMetadata.path, prep.data.token, changedBytes, { contentType: "video/mp4", upsert },
+    )).error);
+    assert.equal(await tusAttempt(prep.data, changedBytes, { path: finalizedMetadata.path, upsert }), false);
+  }
+  assert.equal(await tusAttempt(prep.data, changedBytes, { upsert: true }), true);
+  assert.ok((await storedBytes(prep.data)).equals(changedBytes));
+  assert.ok((await storedBytes(prep.data, finalizedMetadata.path)).equals(video));
+  const copiesBeforeRetry = copyCount();
+  assert.equal((await finalize(prep.data.assetId)).status, 200);
+  assert.equal(copyCount(), copiesBeforeRetry);
+  assert.deepEqual(await assetMetadata(prep.data.assetId), finalizedMetadata);
+  const immutablePublic = await api(videoURL);
+  assert.equal(immutablePublic.status, 200);
+  assert.equal(createHash("sha256").update(Buffer.from(await immutablePublic.arrayBuffer())).digest("hex"), createHash("sha256").update(video).digest("hex"));
+  record("signed TUS replay changes private staging but cannot name or mutate finalized stored/public bytes; second finalization is immutable");
   record(
     "signed video upload stays private until verified; published video supports authorized streaming/ranges",
   );
@@ -1027,11 +1083,84 @@ try {
   inputCase = null;
   // Confinement requires this same signed endpoint's positive capability proof.
   record(
-    "anonymous signed bearer is exact-path and exact-bucket scoped and cannot overwrite through normal or forged/TUS upsert",
+    "anonymous signed bearer is exact-path and exact-bucket scoped; normal replay denied and signed TUS confined to private staging",
   );
   record(
     "real anonymous signed TUS upload resumes across chunks and finalizes private media",
   );
+  const pendingVideo = async () => {
+    const prepared = await prepare(video.length);
+    assert.equal(prepared.status, 200);
+    assert.ok(!(await uploadClient.storage.from(prepared.data.bucket).uploadToSignedUrl(
+      prepared.data.path, prepared.data.token, video, { contentType: "video/mp4" },
+    )).error);
+    assert.equal((await api(prepared.data.url, { headers: manager })).status, 404);
+    assert.ok(!(await fixtureFetch(config.api + "/storage/v1/object/public/" + prepared.data.bucket + "/" + prepared.data.path)).ok);
+    assert.ok((await uploadClient.storage.from(prepared.data.bucket).download(prepared.data.path)).error);
+    return prepared.data;
+  };
+  inputCase = "finalize_copy_snapshot_race";
+  const copyRace = await pendingVideo();
+  control({ holdPath: "/storage/v1/object/copy" });
+  const heldFinalize = finalize(copyRace.assetId);
+  await waitHeld();
+  assert.equal(await tusAttempt(copyRace, changedBytes, { upsert: true }), true);
+  assert.ok((await storedBytes(copyRace)).equals(changedBytes));
+  control({ release: true });
+  assert.equal((await heldFinalize).status, 200);
+  clearHold();
+  const copiedMetadata = await assetMetadata(copyRace.assetId);
+  assert.equal(copiedMetadata.ready, true);
+  assert.ok((await storedBytes(copyRace, copiedMetadata.path)).equals(video));
+  inputCase = "finalize_concurrent_cas";
+  const concurrent = await pendingVideo();
+  const beforeConcurrent = copyCount();
+  control({ holdPath: "/storage/v1/object/copy" });
+  const contenders = [finalize(concurrent.assetId), finalize(concurrent.assetId)];
+  await waitHeld(2);
+  control({ release: true });
+  const contenderResponses = await Promise.all(contenders);
+  assert.deepEqual(contenderResponses.map((response) => response.status), [200, 200]);
+  clearHold();
+  assert.equal(copyCount(), beforeConcurrent + 2);
+  const winner = await assetMetadata(concurrent.assetId);
+  assert.equal(winner.ready, true);
+  assert.ok((await storedBytes(concurrent, winner.path)).equals(video));
+  assert.equal(await tusAttempt(concurrent, changedBytes, { upsert: true }), true);
+  assert.equal((await finalize(concurrent.assetId)).status, 200);
+  assert.equal(copyCount(), beforeConcurrent + 2);
+  assert.deepEqual(await assetMetadata(concurrent.assetId), winner);
+  assert.ok((await storedBytes(concurrent, winner.path)).equals(video));
+  record("source mutation after server copy and concurrent finalization preserve one immutable verified CAS snapshot");
+  for (const failureMode of ["failCopy", "failFinalDownload", "failAssetUpdate"]) {
+    inputCase = "finalize_" + failureMode;
+    const candidate = await pendingVideo();
+    const beforeFailure = await assetMetadata(candidate.assetId);
+    control({ [failureMode]: true });
+    assert.equal((await finalize(candidate.assetId)).status, 400);
+    clearHold();
+    assert.deepEqual(await assetMetadata(candidate.assetId), beforeFailure);
+    assert.equal((await api(candidate.url, { headers: manager })).status, 404);
+    assert.equal((await api(candidate.url.replace("/admin/portfolio-assets/", "/portfolio/assets/"))).status, 404);
+    assert.equal((await finalize(candidate.assetId)).status, 200);
+    const recovered = await assetMetadata(candidate.assetId);
+    assert.equal(recovered.ready, true);
+    assert.ok((await storedBytes(candidate, recovered.path)).equals(video));
+  }
+  inputCase = "finalize_lost_commit_response";
+  const lostResponse = await pendingVideo();
+  const beforeLost = copyCount();
+  control({ loseAssetUpdateResponse: true });
+  assert.equal((await finalize(lostResponse.assetId)).status, 200);
+  clearHold();
+  const committedSnapshot = await assetMetadata(lostResponse.assetId);
+  assert.equal(committedSnapshot.ready, true);
+  assert.ok((await storedBytes(lostResponse, committedSnapshot.path)).equals(video));
+  assert.equal((await finalize(lostResponse.assetId)).status, 200);
+  assert.equal(copyCount(), beforeLost + 1);
+  assert.deepEqual(await assetMetadata(lostResponse.assetId), committedSnapshot);
+  inputCase = null;
+  record("copy, destination read and metadata failures stay private; lost committed response preserves snapshot and immutable retries");
   const suffix = await api(videoURL, { headers: { Range: "bytes=-16" } });
   assert.equal(suffix.status, 206);
   assert.equal((await suffix.arrayBuffer()).byteLength, 16);
@@ -1042,19 +1171,7 @@ try {
   const beyond = await api(videoURL, { headers: { Range: "bytes=99999999-" } });
   assert.equal(beyond.status, 416);
   assert.equal(beyond.headers.get("content-range"), "bytes */" + video.length);
-  const finalize = (assetId, headers = manager) =>
-    json("/api/natori/portfolio/video-upload/finalize", {
-      method: "POST",
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify({ assetId }),
-    });
   assert.equal((await finalize(prep.data.assetId, other)).status, 401);
-  const prepare = (sizeBytes) =>
-    json("/api/natori/portfolio/video-upload", {
-      method: "POST",
-      headers: { ...manager, "Content-Type": "application/json" },
-      body: JSON.stringify({ sizeBytes, contentType: "video/mp4" }),
-    });
   for (const size of [0, -1, 1.5, 50_000_001])
     assert.equal((await prepare(size)).status, 400);
   const mismatch = await prepare(video.length + 1);

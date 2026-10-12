@@ -23,8 +23,18 @@ http
         ? JSON.parse(readFileSync(resultPath("control.json"), "utf8"))
         : {};
     const mode = controls();
+    const isCopy = req.method === "POST" && path === "/storage/v1/object/copy";
+    const isAssetUpdate = req.method === "PATCH" && path.startsWith("/rest/v1/natori_portfolio_assets");
+    if (isCopy) {
+      const countPath = resultPath("copy-count.json");
+      const count = existsSync(countPath) ? JSON.parse(readFileSync(countPath)).count : 0;
+      writeFileSync(countPath, JSON.stringify({ count: count + 1 }));
+    }
     if (
       (mode.failStorage && path.startsWith("/storage/v1/object/")) ||
+      (mode.failCopy && isCopy) ||
+      (mode.failAssetUpdate && isAssetUpdate) ||
+      (mode.failFinalDownload && path.startsWith("/storage/v1/object/authenticated/natori-management-assets/portfolio/")) ||
       (mode.failContentRead &&
         req.method === "GET" &&
         path.startsWith("/rest/v1/natori_portfolio_content"))
@@ -62,11 +72,18 @@ http
       u,
       { method: req.method, headers },
       async (response) => {
+        if (mode.loseAssetUpdateResponse && isAssetUpdate) {
+          // Let real PostgREST commit, then replace only its response. A reread
+          // must preserve the committed snapshot after this ambiguous failure.
+          response.resume();
+          res.writeHead(503, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ error: "Synthetic lost response" }));
+        }
         if (mode.holdPath && path.includes(mode.holdPath)) {
           response.pause();
           writeFileSync(
             resultPath("held.json"),
-            JSON.stringify({ held: true }),
+            JSON.stringify({ held: true, count: existsSync(resultPath("held.json")) ? JSON.parse(readFileSync(resultPath("held.json"))).count + 1 : 1 }),
           );
           for (let count = 0; count < 200 && !controls().release; count++)
             await new Promise((resolve) => setTimeout(resolve, 25));

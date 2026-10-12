@@ -37,20 +37,20 @@ beforeEach(() => {
 });
 
 describe("prepareProcessVideoUpload", () => {
-  it("privateの所有者パスに、上書き不可の署名付きアップロードを発行する", async () => {
+  it("private stagingの所有者パスだけに署名付きアップロードを発行する", async () => {
     const result = await prepareProcessVideoUpload({ sizeBytes: 30_000_000, contentType: "video/mp4" });
 
     expect(result).toEqual({
       kind: "ok",
       assetId:expect.any(String),
-      path: expect.stringMatching(/^portfolio\/00000000-0000-4000-8000-000000000011\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.mp4$/u),
+      path: expect.stringMatching(/^portfolio-staging\/00000000-0000-4000-8000-000000000011\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.mp4$/u),
       token: "upload-token",
       url: expect.stringMatching(/^\/api\/natori\/admin\/portfolio-assets\//u),
     });
     expect(mockStorageFrom).toHaveBeenCalledWith("natori-management-assets");
-    // 同じ名前での上書きは許さない
+    // 標準uploadの上書きを無効化し、TUS replayもstagingに閉じ込める
     expect(mockCreateSignedUploadUrl).toHaveBeenCalledWith(
-      expect.stringMatching(/^portfolio\/00000000-0000-4000-8000-000000000011\/.+\.mp4$/u),
+      expect.stringMatching(/^portfolio-staging\/00000000-0000-4000-8000-000000000011\/.+\.mp4$/u),
       { upsert: false }
     );
     if (result.kind === "ok") {

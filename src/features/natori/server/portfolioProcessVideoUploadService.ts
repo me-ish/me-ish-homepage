@@ -16,7 +16,8 @@ export type PrepareProcessVideoUploadResult =
 
 /**
  * 動画ファイルを置く場所（推測できないファイル名）を決め、その場所にだけ書き込める署名付きアップロードを発行する。
- * 同じ名前では上書きできないので、動画を差し替えると別のファイルになる（古いファイルは自動では消さない）。
+ * 署名はprivate stagingだけを許可する。検証時にserverが別の署名されないpathへcopyし、
+ * 検証済みsnapshotだけを公開可能にする（古いファイルは自動では消さない）。
  */
 export async function prepareProcessVideoUpload(input: {
   sizeBytes: number;

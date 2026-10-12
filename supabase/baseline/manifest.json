@@ -244,7 +244,7 @@
     "expectedNormalizedSchema": "operator_confirmation_required_after_pattern_b",
     "sha256:supabase/migrations/20261001223805_natori_task_integrity.sql": "b17ac3a116d7c3b01e2a3e2eea5c8409bcfa06f7b73f4aa718f79532895ef015",
     "sha256:supabase/migrations/20261011221028_lockdown_legacy_entries_reads.sql": "bd4226784fc86e9b6f2bb7708f6895c15a9f5720fa344b587c9cfe15f15547ae",
-    "sha256:supabase/migrations/20261012013126_secure_natori_portfolio_assets.sql": "1cb8e032751a3b95c10bde4bec5bc3aae55e5e115681cf5a220d84f7dbc040a9"
+    "sha256:supabase/migrations/20261012013126_secure_natori_portfolio_assets.sql": "56c90f27e56150cb9909c3456d6b8f7f59226949bfab78bf7cf898c3677c57c1"
   },
   "operatorConfirmationRequired": [
     "target project ref is non-production and not lvnfspyainrxtztjytbo",

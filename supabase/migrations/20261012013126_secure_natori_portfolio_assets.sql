@@ -39,7 +39,12 @@ CREATE TABLE public.natori_portfolio_assets(
   byte_size bigint NOT NULL CHECK(byte_size>0 AND byte_size<=50000000),
   ready boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
-  CHECK(path=('portfolio/'||owner_id::text||'/'||id::text||CASE kind WHEN 'image' THEN '.webp' ELSE '.mp4' END))
+  -- Upload bearers name staging only. Ready videos are independent server copies.
+  CHECK(
+    (kind='image' AND ready AND path='portfolio/'||owner_id::text||'/'||id::text||'.webp')
+    OR (kind='video' AND NOT ready AND path='portfolio-staging/'||owner_id::text||'/'||id::text||'.mp4')
+    OR (kind='video' AND ready AND path ~ ('^portfolio/'||owner_id::text||'/'||id::text||'/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.mp4$'))
+  )
 );
 CREATE INDEX natori_portfolio_assets_owner_idx ON public.natori_portfolio_assets(owner_id);
 ALTER TABLE public.natori_portfolio_assets ENABLE ROW LEVEL SECURITY;

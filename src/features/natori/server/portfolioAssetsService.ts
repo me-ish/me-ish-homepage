@@ -19,6 +19,17 @@ const bucket = () =>
   supabaseAdmin().storage.from(NATORI_MANAGEMENT_ASSET_BUCKET);
 const pathFor = (ownerId: string, id: string, kind: Kind) =>
   `portfolio/${ownerId}/${id}.${kind === "image" ? "webp" : "mp4"}`;
+const videoStagingPath = (ownerId: string, id: string) =>
+  `portfolio-staging/${ownerId}/${id}.mp4`;
+const finalVideoPrefix = (ownerId: string, id: string) =>
+  `portfolio/${ownerId}/${id}/`;
+const isReadyPath = (path: string, ownerId: string, id: string, kind: Kind) =>
+  kind === "image"
+    ? path === pathFor(ownerId, id, kind)
+    : path.startsWith(finalVideoPrefix(ownerId, id)) &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.mp4$/.test(
+        path.slice(finalVideoPrefix(ownerId, id).length),
+      );
 
 export function portfolioContentAssetReferences(
   content: PortfolioContent,
@@ -95,7 +106,7 @@ export async function validatePortfolioAssetReferences(
       row &&
       kind &&
       row.kind === kind &&
-      row.path === pathFor(ownerId, id, kind)
+      isReadyPath(row.path, ownerId, id, kind)
     );
   });
 }
@@ -132,7 +143,7 @@ export async function preparePrivatePortfolioVideo(
 ): Promise<{ id: string; path: string; token: string; url: string } | null> {
   const ownerId = await resolveNatoriOwnerId(),
     id = randomUUID(),
-    path = pathFor(ownerId, id, "video");
+    path = videoStagingPath(ownerId, id);
   const signed = await bucket().createSignedUploadUrl(path, { upsert: false });
   if (signed.error || !signed.data) return null;
   const { error } = await supabaseAdmin().from(TABLE).insert({
@@ -185,38 +196,29 @@ function storageDownload(
   });
 }
 
-/** Check immutable Storage metadata and only the first 24 bytes, never a full video. */
-export async function finalizePrivatePortfolioVideo(
-  id: string,
+/** Verify the copied snapshot, never mutable browser staging or a full video. */
+async function verifyVideoSnapshot(
+  path: string,
+  byteSize: number,
 ): Promise<boolean> {
-  const ownerId = await resolveNatoriOwnerId();
-  const { data, error } = await supabaseAdmin()
-    .from(TABLE)
-    .select("path,byte_size,ready")
-    .eq("id", id)
-    .eq("owner_id", ownerId)
-    .eq("kind", "video")
-    .maybeSingle();
-  if (error || !data || data.path !== pathFor(ownerId, id, "video"))
-    return false;
-  const info = await bucket().info(data.path);
+  const info = await bucket().info(path);
   if (
     info.error ||
     !info.data ||
-    info.data.name !== data.path ||
+    info.data.name !== path ||
     info.data.bucketId !== NATORI_MANAGEMENT_ASSET_BUCKET ||
-    info.data.size !== data.byte_size ||
+    info.data.size !== byteSize ||
     info.data.contentType !== "video/mp4"
   )
     return false;
-  const downloaded = await storageDownload(data.path, "bytes=0-23");
-  const expectedLength = Math.min(24, data.byte_size);
+  const downloaded = await storageDownload(path, "bytes=0-23");
+  const expectedLength = Math.min(24, byteSize);
   if (
     downloaded.status !== 206 ||
     !downloaded.body ||
     downloaded.headers.get("content-type")?.split(";")[0] !== "video/mp4" ||
     downloaded.headers.get("content-range") !==
-      `bytes 0-${expectedLength - 1}/${data.byte_size}`
+      `bytes 0-${expectedLength - 1}/${byteSize}`
   ) {
     await downloaded.body?.cancel();
     return false;
@@ -243,16 +245,59 @@ export async function finalizePrivatePortfolioVideo(
     !/^(?:isom|iso[2-9]|mp4[12]|avc1|M4V )$/.test(brand)
   )
     return false;
-  const updated = await supabaseAdmin()
+  return true;
+}
+
+/** Browser bearer tokens may replay staging; they never name finalized bytes. */
+export async function finalizePrivatePortfolioVideo(id: string): Promise<boolean> {
+  const ownerId = await resolveNatoriOwnerId();
+  const { data, error } = await supabaseAdmin()
     .from(TABLE)
-    .update({ ready: true })
+    .select("path,byte_size,ready")
     .eq("id", id)
     .eq("owner_id", ownerId)
+    .eq("kind", "video")
+    .maybeSingle();
+  if (error || !data) return false;
+  // A retry cannot refresh or replace a committed snapshot from mutable staging.
+  if (data.ready) return isReadyPath(data.path, ownerId, id, "video");
+  if (data.path !== videoStagingPath(ownerId, id)) return false;
+  const path = finalVideoPrefix(ownerId, id) + randomUUID() + ".mp4";
+  const copied = await bucket().copy(data.path, path);
+  if (copied.error) return false;
+  if (!(await verifyVideoSnapshot(path, data.byte_size))) return false;
+  const updated = await supabaseAdmin()
+    .from(TABLE)
+    .update({ path, ready: true })
+    .eq("id", id)
+    .eq("owner_id", ownerId)
+    .eq("kind", "video")
+    .eq("ready", false)
     .eq("path", data.path)
     .eq("byte_size", data.byte_size)
     .select("id")
     .maybeSingle();
-  return !updated.error && Boolean(updated.data);
+  if (!updated.error && updated.data) return true;
+  // A concurrent winner or lost response may already have committed. Recheck
+  // ownership and the canonical ready snapshot; never retry the copy in place.
+  const committed = await supabaseAdmin()
+    .from(TABLE)
+    .select("path,byte_size,ready")
+    .eq("id", id)
+    .eq("owner_id", ownerId)
+    .eq("kind", "video")
+    .maybeSingle();
+  // Keep failed/losing copies private. An error can follow a committed update;
+  // deleting that candidate could destroy the winner's published bytes. Scoped
+  // orphan/staging retention is handled by a separately reviewed cleanup.
+  return (
+    !committed.error &&
+    Boolean(
+      committed.data?.ready &&
+        committed.data.byte_size === data.byte_size &&
+        isReadyPath(committed.data.path, ownerId, id, "video"),
+    )
+  );
 }
 
 function isPublished(
@@ -291,7 +336,7 @@ export async function readPortfolioAsset(
     .eq("owner_id", ownerId)
     .maybeSingle();
   if (error) throw new Error("Portfolio asset unavailable");
-  if (!data || data.path !== pathFor(ownerId, id, kind) || !data.ready)
+  if (!data || !isReadyPath(data.path, ownerId, id, kind) || !data.ready)
     return null;
   const range = request.headers.get("range");
   if (range && (range.length > 96 || !/^bytes=(?:\d+-\d*|-\d+)$/.test(range)))
