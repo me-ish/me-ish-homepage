@@ -14,3 +14,5 @@
 [Standalone local runner and assertions](../../../scripts/legacy-entry-read-security/acceptance/README.md) rebuild fresh, synthetic-only services and execute Auth/REST/GraphQL/bank/claim/HTTP checks. `repro-acceptance.json` and `repro-source.json` identify the tested HEAD-plus-diff/source hashes and exact image digests. `race-before.txt`/`race-after.txt` preserve the real state-change regression. The original summary-only bank denial is superseded by the qualified owner-contract test in `repro-api-results.json`. No current production bank failure is asserted.
 
 [Application conditions](apply-conditions.md) distinguish inherited production-view reports from verified fixtures. `full-active-replay-probe.json` records the unchanged pre-existing upstream replay blocker; `finish-replay.txt` records the revised fresh no-op and legacy authorization checks.
+
+`head18-acceptance.json` is the clean committed-HEAD 18ee47b4 run, including exact source/image hashes. Subsequent evidence-only commits do not change its tested runtime source.
