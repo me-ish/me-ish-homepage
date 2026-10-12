@@ -39,6 +39,8 @@ Phase4は既存17件を保持し、実Next API→PostgREST→DB→隔離メー�
 
 最初のPhase4 CIは20件成功/3件失敗。追加した普通の返信fixtureがtext-onlyでも必要なprepareを省略して直接commitしたため拒否され、後続の個別確認試験も前提不足で失敗した。実composerのprepare→commitを使うよう試験を修正した。製品コード/SQLを変更せず、元17件と追加6件のassertionsを保持して最終HEADで再検証する。最初の失敗を未知エラーの再実行だけで解消とは扱わない。
 
+その修正HEADのnative86件・Phase4の23件は成功し、artifact digest/source/checkoutをroot・Astraが独立照合した。既存Phase6BはPhase3A browserの9件がすべて成功した後、最終終了guardで失敗した。旧artifactにcompileErrorsの内容が記録されておらず原因は未確定。元の4種類の検出・全assertions・終了guardを保持し、有限分類の診断だけを追加して再検証する。再実行が成功してもこの初回の原因解消とは扱わない。
+
 ## 本番適用の条件と残作業
 
 [Deployment Runbook](./Natori_Audit_WF01_Deployment_Runbook.md)にmetadata確認、停止条件、影響、事後検証と障害時の扱いを記載した。旧OK endpoint/workerと通知送信をquiesceしてschema→対応アプリ→受付/通知再開の順とする。旧直接Resend版と新outboxの同時稼働は重複送信につながる。
