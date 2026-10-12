@@ -54,6 +54,10 @@ export async function verifyCertToken(token: string | null | undefined, expected
     if (data.used_at || !data.id) return { ok: false, reason: 'notfound' };
     const { data: claimed, error: claimError } = await sb.from('cert_links')
       .update({ used_at: new Date().toISOString() }).eq('id', data.id)
+      .eq('entry_id', expectedEntryId).eq('revoked', false)
+      // PostgreSQL's timestamptz input "now" is evaluated by this UPDATE,
+      // so a revoke/expiry after the active-view read cannot win a claim.
+      .or('expires_at.is.null,expires_at.gt.now')
       .is('used_at', null).select('id').maybeSingle();
     if (claimError) throw new Error('Certificate token claim unavailable');
     if (!claimed) return { ok: false, reason: 'notfound' };

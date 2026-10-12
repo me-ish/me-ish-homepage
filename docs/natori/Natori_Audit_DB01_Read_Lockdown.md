@@ -18,7 +18,7 @@
 
 証明書のDB取得列とブラウザへ渡すDTOを`id,title,artist_name,edition_total,created_at,confirmed_at`の6列に限定した。取得関数とページの両方で明示的に投影し、メール・user ID・external user ID・原画像URLなどを除外する。`server-only`境界を付け、関連診断APIも同じ管理認証で保護し、生のDBエラーや環境設定を返さない。証明書URLは解析除外・noindex・no-referrer・private/no-storeの対象にする。
 
-実顧客の証明書・トークン・作品内容は取得していない。読み取り専用の本番メタデータ確認では`cert_links`は存在し、`v_cert_links_active`は存在しなかった。このため、本番で全列取得まで到達したとは断定しない。存在しないviewの作成、検証失敗時の元表へのfallback、旧ダウンロード機能の再開は行わない。正規リンクの通し確認は、viewの期限・失効条件を確認できる隔離環境へ引き継ぐ。
+実顧客の証明書・トークン・作品内容は取得していない。元Workの報告では、読み取り専用メタデータ確認時に`cert_links`は存在し、`v_cert_links_active`は存在しなかったとされる。本Workでは元のカタログ出力を受領しておらず、現在の本番状態は未確認。このため、本番で全列取得まで到達したとは断定しない。存在しないviewの作成、検証失敗時の元表へのfallback、旧ダウンロード機能の再開は行わない。正規リンクの通し確認は、viewの期限・失効条件を確認できる隔離環境へ引き継ぐ。
 
 ## 残存機能の確認
 
@@ -106,3 +106,15 @@ AstraのP2指摘を架空データで再現し、次を追加修正した。
 修正後のローカル全unitは237ファイル/2,295件成功（maxWorkers=2）。初回の既定並列では既存PortfolioEditorの2件が5秒timeoutとなったが、単独2件成功と低並列全体成功を確認した。関連6ファイル108件、TypeScript noEmit、変更範囲ESLint、baseline静的検証（32 active/55 archived）、diff checkも成功。型・Lintの実行後に製品コードの追加変更はない。架空の隔離コンテナ/networkとNext devを片付け、元checkoutのbranch/HEAD/差分を保持した。
 
 [受入の記録](../artifacts/pr162-acceptance/README.md)に秘密値を含まない結果と実行viewを保存した。監査原文Libraryの全文564行と引き継ぎPageは読取可能だった。Libraryの正規ファイル転送は通信拒否となり、このexecutorに保存したのは全文読取の記録（原本bytesの取得成功とは扱わない）。
+
+## 受入仕上げと再実行可能な証拠（2026年10月12日）
+
+`26dbfc2e`の最終CIは16 workflow全成功。Astra追加レビューで、PR差分に関連する未解決threadはfresh active replayの1件を確認した。legacy entriesが無い場合だけ無変更で通過する契約へ修正し、既存表のRLS・identity・view・ACL拒否は維持した。通常definer wrapperの回帰も専用CIへ追加。
+
+以前の口座fixtureは途中段階のdeny policyだけを使っていた。別の本人用archive policyと、明示した互換invoker viewで実ブラウザ相当のread/upsertを再検証し、変更前後とも本人保存・未紐付け記録・service-role参照が成功、他ownerは拒否された。本番障害や退役済み機能とは断定しない。旧利用者の口座設定は維持対象であり、ナトリ現行の入金RPCとは別経路。
+
+view確認とONE_TIME claimの間で失効/期限変更を入れる実DB試験は旧実装で2件失敗を確認した。claimのUPDATEへentry ID・revoked・DB時刻のexpiry条件を追加し、実DB13件と実HTTP HTML/RSCが成功した。既に完了したclaimを後から取り消す仕様ではない。
+
+[再実行ハーネス](../../scripts/legacy-entry-read-security/acceptance/README.md)、assertion、HEADと実行source hash、秘密値のない結果を保存した。保存前のworking-tree実行はHEAD+差分として記録し、別のSHAの成功と偽らない。[適用条件と未確認事項](../artifacts/pr162-acceptance/apply-conditions.md)にview根拠、口座分類、単独DB適用順序と承認を整理した。
+
+全active replayはmainと修正後の両方で、先行する7本目の既存CHECK重複により停止した。32本成功とは扱わず、凍結済み旧migrationの変更・旧gallery復元は行わない。空のNatori baselineへDB-01を追加する試験と、既存legacyへの遮断試験は成功。SEC-01/01B設計は維持し、実装していない。

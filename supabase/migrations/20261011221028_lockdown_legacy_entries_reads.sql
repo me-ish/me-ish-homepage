@@ -5,10 +5,17 @@ BEGIN;
 SET LOCAL lock_timeout = '3s';
 SET LOCAL statement_timeout = '30s';
 
-DO $preflight$
+DO $lockdown$
+DECLARE columns_sql text;
 BEGIN
   IF current_user <> 'postgres' THEN
     RAISE EXCEPTION 'ENTRY_READ_LOCKDOWN_POSTGRES_REQUIRED';
+  END IF;
+  -- Fresh Etorie/Natori replay intentionally contains no legacy gallery table.
+  -- Skip only a missing relation; an existing but unsafe/drifted table still fails.
+  IF to_regclass('public.entries') IS NULL THEN
+    RAISE NOTICE 'ENTRY_READ_LOCKDOWN_LEGACY_TABLE_ABSENT';
+    RETURN;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_class WHERE oid = to_regclass('public.entries')
       AND relkind = 'r' AND relrowsecurity) THEN
@@ -53,21 +60,12 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'ENTRY_READ_LOCKDOWN_UNSAFE_DEPENDENT_VIEW';
   END IF;
-END
-$preflight$;
-
 REVOKE SELECT ON TABLE public.entries FROM PUBLIC, anon;
 -- A table REVOKE does not remove separately granted column privileges.
-DO $columns$
-DECLARE columns_sql text;
-BEGIN
   SELECT string_agg(quote_ident(attname), ', ' ORDER BY attnum) INTO columns_sql
   FROM pg_attribute WHERE attrelid = 'public.entries'::regclass
     AND attnum > 0 AND NOT attisdropped;
   EXECUTE format('REVOKE SELECT (%s) ON TABLE public.entries FROM PUBLIC, anon', columns_sql);
-END
-$columns$;
-
 -- Defense in depth if a later migration accidentally restores an anon grant.
 CREATE POLICY entries_deny_anon_select ON public.entries
   AS RESTRICTIVE FOR SELECT TO anon USING (false);
@@ -85,8 +83,6 @@ CREATE POLICY entries_limit_authenticated_select ON public.entries
     )
   );
 
-DO $verify$
-BEGIN
   IF has_any_column_privilege('anon', 'public.entries', 'SELECT') THEN
     RAISE EXCEPTION 'ENTRY_READ_LOCKDOWN_ANON_PRIVILEGE_REMAINS';
   END IF;
@@ -95,5 +91,5 @@ BEGIN
     RAISE EXCEPTION 'ENTRY_READ_LOCKDOWN_OWNER_OR_SERVER_READ_LOST';
   END IF;
 END
-$verify$;
+$lockdown$;
 COMMIT;

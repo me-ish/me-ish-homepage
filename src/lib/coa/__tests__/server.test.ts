@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const db = vi.hoisted(() => {
   const chain = {
     select: vi.fn(), in: vi.fn(), order: vi.fn(), limit: vi.fn(), eq: vi.fn(),
-    is: vi.fn(), insert: vi.fn(), update: vi.fn(),
+    is: vi.fn(), or: vi.fn(), insert: vi.fn(), update: vi.fn(),
     maybeSingle: vi.fn(), single: vi.fn(),
   };
   return { chain, from: vi.fn(), admin: vi.fn() };
@@ -33,7 +33,7 @@ beforeEach(() => {
   vi.stubEnv('CERT_LINK_TTL_DAYS', '7');
   db.admin.mockReturnValue({ from: db.from });
   db.from.mockReturnValue(db.chain);
-  for (const key of ['select', 'in', 'order', 'limit', 'eq', 'is', 'insert', 'update'] as const) {
+  for (const key of ['select', 'in', 'order', 'limit', 'eq', 'is', 'or', 'insert', 'update'] as const) {
     db.chain[key].mockReturnValue(db.chain);
   }
   db.chain.maybeSingle.mockResolvedValue({ data: null, error: null });
@@ -101,6 +101,9 @@ describe('certificate privileged read boundary', () => {
     const { verifyCertToken } = await import('@/lib/coa/server');
     expect(await verifyCertToken('synthetic-token', 12)).toEqual({ ok: false, reason: 'notfound' });
     expect(db.chain.is).toHaveBeenCalledWith('used_at', null);
+    expect(db.chain.eq).toHaveBeenCalledWith('revoked', false);
+    expect(db.chain.eq).toHaveBeenCalledWith('entry_id', 12);
+    expect(db.chain.or).toHaveBeenCalledWith('expires_at.is.null,expires_at.gt.now');
   });
 
   it('accepts a successful one-time claim and refuses an already used token', async () => {

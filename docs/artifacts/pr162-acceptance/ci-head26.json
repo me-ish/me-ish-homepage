@@ -1,0 +1,6 @@
+{
+  "head": "26dbfc2e8aa6ab675ec52490809fbf8bf10876f8",
+  "total": 16,
+  "success": 16,
+  "note": "GitHub workflow conclusions fetched 2026-10-11; normal CI includes Test/Type/Lint/Audit/E2E. This is not a result for subsequent commits."
+}

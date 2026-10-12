@@ -68,6 +68,22 @@ reject() {
 dbsql < "$root/fixture.sql" >/dev/null
 dbsql < "$root/before.sql" 2>&1 | tee -a "$results/checks.txt"
 
+# The Natori baseline deliberately omits legacy gallery tables. The complete
+# active replay has a separate, pre-existing duplicate CHECK at migration 7;
+# do not claim it succeeds or rewrite frozen migrations in this test.
+dbsql -c 'CREATE DATABASE entry_read_fresh;'
+freshsql() { docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -h /var/run/postgresql -U postgres -d entry_read_fresh "$@"; }
+freshsql < "$root/fresh-bootstrap.sql" >/dev/null
+for active_migration in \
+  "$repo/supabase/migrations/20260723111730_etorie_baseline.sql" \
+  "$repo/supabase/migrations/20260723111741_baseline_security_hardening.sql" \
+  "$migration"; do
+  printf 'Replay %s\n' "${active_migration##*/}" >> "$results/fresh-replay.txt"
+  freshsql < "$active_migration" >> "$results/fresh-replay.txt" 2>&1
+done
+[[ $(freshsql -Atc "SELECT to_regclass('public.entries') IS NULL") == t ]] || { echo 'Fresh replay unexpectedly restored legacy entries'; exit 1; }
+echo 'PASS Natori baseline without legacy entries; lockdown safely skipped' | tee -a "$results/checks.txt"
+
 dbsql -c 'ALTER TABLE public.entries DISABLE ROW LEVEL SECURITY;'
 catalog "$work/rls-before.json"
 reject ENTRY_READ_LOCKDOWN_RLS_REQUIRED
@@ -81,6 +97,13 @@ reject ENTRY_READ_LOCKDOWN_UNSAFE_DEPENDENT_VIEW
 catalog "$work/view-after.json"
 same "$work/view-before.json" "$work/view-after.json" 'definer-view guard'
 dbsql -c 'REVOKE SELECT ON public.v_server_entries FROM anon;'
+
+dbsql -c 'CREATE VIEW public.v_public_definer_wrapper AS SELECT * FROM public.v_server_entries; GRANT SELECT ON public.v_public_definer_wrapper TO anon;'
+catalog "$work/definer-wrapper-before.json"
+reject ENTRY_READ_LOCKDOWN_UNSAFE_DEPENDENT_VIEW
+catalog "$work/definer-wrapper-after.json"
+same "$work/definer-wrapper-before.json" "$work/definer-wrapper-after.json" 'private definer/public definer wrapper guard'
+dbsql -c 'DROP VIEW public.v_public_definer_wrapper;'
 
 dbsql -c 'CREATE VIEW public.v_public_wrapper WITH (security_invoker = true) AS SELECT * FROM public.v_server_entries; GRANT SELECT ON public.v_public_wrapper TO anon;'
 catalog "$work/wrapper-before.json"
