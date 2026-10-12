@@ -268,7 +268,6 @@ function withLegacyCollections(
       tags: work.tags.filter((tag) => tag !== collectionName),
       collectionId,
       featured: featuredCount < 3,
-      published: true,
     };
   });
 

@@ -40,21 +40,29 @@ export async function listNatoriProjectThumbs(): Promise<ListProjectThumbsResult
     .select("id")
     .eq("user_id", ownerId);
   if (projectError) return { kind: "storage-error" };
-  const allowedIds = new Set((projects ?? []).map((project) => String(project.id)));
-  const [privateFiles,legacyFiles]=await Promise.all([
-    admin.storage.from(BUCKET).list(`${FOLDER}/${ownerId}`,{limit:1000}),
-    admin.storage.from(LEGACY_BUCKET).list(FOLDER,{limit:1000}),
+  const allowedIds = new Set(
+    (projects ?? []).map((project) => String(project.id)),
+  );
+  const [privateFiles, legacyFiles] = await Promise.all([
+    admin.storage.from(BUCKET).list(`${FOLDER}/${ownerId}`, { limit: 1000 }),
+    admin.storage.from(LEGACY_BUCKET).list(FOLDER, { limit: 1000 }),
   ]);
   if (privateFiles.error || legacyFiles.error) {
     console.error("[natori-project-thumbs] list unavailable");
     return { kind: "storage-error" };
   }
   const thumbs: Record<string, string> = {};
-  for (const item of [...(legacyFiles.data??[]),...(privateFiles.data??[])]) {
+  for (const item of [
+    ...(legacyFiles.data ?? []),
+    ...(privateFiles.data ?? []),
+  ]) {
     if (!item.name.endsWith(".webp")) continue;
     const projectId = item.name.slice(0, -".webp".length);
     if (!allowedIds.has(projectId)) continue;
-    thumbs[projectId] = versionedManagementUrl(projectId, item.updated_at ?? "");
+    thumbs[projectId] = versionedManagementUrl(
+      projectId,
+      item.updated_at ?? "",
+    );
   }
   return { kind: "ok", thumbs };
 }
@@ -68,7 +76,7 @@ export type UploadProjectThumbResult =
 /** 画像を webp に変換して案件サムネイルとして保存（既存は上書き） */
 export async function uploadNatoriProjectThumb(
   projectId: string,
-  file: File
+  file: File,
 ): Promise<UploadProjectThumbResult> {
   if (!ALLOWED_IMAGE_MIMES.has(file.type)) return { kind: "invalid-type" };
   if (file.size > IMAGE_MAX_BYTES) return { kind: "too-large" };
@@ -90,23 +98,32 @@ export async function uploadNatoriProjectThumb(
     .eq("user_id", ownerId)
     .maybeSingle();
   if (projectError || !project) return { kind: "upload-error" };
-  const { error } = await admin.storage.from(BUCKET).upload(thumbPath(ownerId,projectId), webp, {
-    contentType: "image/webp",
-    cacheControl: "0",
-    upsert: true,
-  });
+  const { error } = await admin.storage
+    .from(BUCKET)
+    .upload(thumbPath(ownerId, projectId), webp, {
+      contentType: "image/webp",
+      cacheControl: "0",
+      upsert: true,
+    });
   if (error) {
     console.error("[natori-project-thumbs] upload failed", error);
     return { kind: "upload-error" };
   }
-  return { kind: "ok", url: versionedManagementUrl(projectId, String(Date.now())) };
+  return {
+    kind: "ok",
+    url: versionedManagementUrl(projectId, String(Date.now())),
+  };
 }
 
 /** サムネイルを削除する（案件削除時のクリーンアップ用。無ければ何もしない） */
-export async function deleteNatoriProjectThumb(projectId: string): Promise<void> {
+export async function deleteNatoriProjectThumb(
+  projectId: string,
+): Promise<void> {
   const ownerId = await resolveNatoriOwnerId();
   const admin = supabaseAdmin();
-  const { error } = await admin.storage.from(BUCKET).remove([thumbPath(ownerId,projectId)]);
+  const { error } = await admin.storage
+    .from(BUCKET)
+    .remove([thumbPath(ownerId, projectId)]);
   if (error) {
     // 存在しない場合も含めてベストエフォート。失敗しても呼び出し元は止めない
     console.error("[natori-project-thumbs] delete failed", error);
@@ -114,25 +131,59 @@ export async function deleteNatoriProjectThumb(projectId: string): Promise<void>
 }
 
 /** Re-authorize the owned project on every image GET; no signed URL/CDN bearer. */
-export async function readNatoriProjectThumb(projectId: string): Promise<Blob | null> {
+export async function readNatoriProjectThumb(
+  projectId: string,
+): Promise<Blob | null> {
   const ownerId = await resolveNatoriOwnerId();
   const admin = supabaseAdmin();
-  const {data:project,error} = await admin.from("natori_projects").select("id")
-    .eq("id",projectId).eq("user_id",ownerId).maybeSingle();
+  const { data: project, error } = await admin
+    .from("natori_projects")
+    .select("id")
+    .eq("id", projectId)
+    .eq("user_id", ownerId)
+    .maybeSingle();
   if (error) throw new Error("Project thumbnail authorization unavailable");
   if (!project) return null;
-  const downloaded = await admin.storage.from(BUCKET).download(thumbPath(ownerId,projectId));
+  const downloaded = await admin.storage
+    .from(BUCKET)
+    .download(thumbPath(ownerId, projectId));
   if (downloaded.error) {
-    if (!("statusCode" in downloaded.error) || String(downloaded.error.statusCode)!=="404") throw new Error("Thumbnail download unavailable");
+    if (
+      !("statusCode" in downloaded.error) ||
+      String(downloaded.error.statusCode) !== "404"
+    )
+      throw new Error("Thumbnail download unavailable");
     // Read compatibility is authenticated and owner-scoped. Direct legacy URLs
     // remain a separate migration/CDN gate; no URL is returned and no object moved.
-    const legacy=await admin.storage.from(LEGACY_BUCKET).download(`${FOLDER}/${projectId}.webp`);
+    const legacy = await admin.storage
+      .from(LEGACY_BUCKET)
+      .download(`${FOLDER}/${projectId}.webp`);
     if (legacy.error) {
-      if ("statusCode" in legacy.error && String(legacy.error.statusCode)==="404") return null;
+      if (
+        "statusCode" in legacy.error &&
+        String(legacy.error.statusCode) === "404"
+      )
+        return null;
       throw new Error("Thumbnail download unavailable");
     }
-    return legacy.data;
+    const rechecked = await admin
+      .from("natori_projects")
+      .select("id")
+      .eq("id", projectId)
+      .eq("user_id", ownerId)
+      .maybeSingle();
+    if (rechecked.error)
+      throw new Error("Project thumbnail authorization unavailable");
+    return rechecked.data ? legacy.data : null;
   }
   if (!downloaded.data) return null;
-  return downloaded.data;
+  const rechecked = await admin
+    .from("natori_projects")
+    .select("id")
+    .eq("id", projectId)
+    .eq("user_id", ownerId)
+    .maybeSingle();
+  if (rechecked.error)
+    throw new Error("Project thumbnail authorization unavailable");
+  return rechecked.data ? downloaded.data : null;
 }

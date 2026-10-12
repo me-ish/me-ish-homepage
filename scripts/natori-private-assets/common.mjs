@@ -1,13 +1,19 @@
-import assert from 'node:assert/strict';
-import { readFileSync, realpathSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { join } from 'node:path';
-export const root = fileURLToPath(new URL('../../', import.meta.url));
+import assert from "node:assert/strict";
+import { readFileSync, realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+export const root = fileURLToPath(new URL("../../", import.meta.url));
 export const directory = process.env.SEC01_ACCEPTANCE_DIR;
-assert.ok(directory?.startsWith('/tmp/sec01-acceptance-'), 'Dedicated acceptance directory required');
+assert.ok(
+  directory?.startsWith("/tmp/sec01-acceptance-"),
+  "Dedicated acceptance directory required",
+);
 assert.equal(realpathSync(directory), directory);
-export const resultPath = name => join(directory, name);
-export const config = JSON.parse(readFileSync(resultPath('runtime.json'), 'utf8'));
+export const resultPath = (name) => join(directory, name);
+export const config = JSON.parse(
+  readFileSync(resultPath("runtime.json"), "utf8"),
+);
 assert.equal(config.syntheticOnly, true);
-for (const url of [config.api, config.app]) assert.equal(new URL(url).hostname, '127.0.0.1');
+for (const url of [config.api, config.app])
+  assert.equal(new URL(url).hostname, "127.0.0.1");
 assert.match(config.container, /^sec01-acceptance-[a-f0-9]+-db$/);

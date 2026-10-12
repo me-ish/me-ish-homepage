@@ -34,7 +34,7 @@ export default async function middleware(request: NextRequest) {
     const source=request.nextUrl.searchParams.get('url');
     if (source) {
       try {
-        const imagePath=decodeURIComponent(new URL(source,request.url).pathname);
+        const imagePath=decodeURIComponent(new URL(source,request.url).pathname).replace(/\/{2,}/g, "/").replace(/\/$/, "");
         if (/^\/api\/natori\/(?:admin\/(?:portfolio-assets|project-thumbs)|portfolio\/assets)(?:\/|$)/.test(imagePath)
           || imagePath==='/og/natori-portfolio.png') {
           return NextResponse.json({error:'image_optimization_disabled'},{status:400,headers:{'Cache-Control':'no-store'}});

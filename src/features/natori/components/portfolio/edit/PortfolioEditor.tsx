@@ -95,6 +95,7 @@ export default function PortfolioEditor({
   const [content, setContent] = useState<PortfolioContent | null>(null);
   const [revision,setRevision]=useState(0);
   const editVersion=useRef(0);
+  const saveInFlight = useRef(false);
   const [loadError, setLoadError] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveErrorKind, setSaveErrorKind] = useState<SaveErrorKind>("network");
@@ -187,7 +188,7 @@ export default function PortfolioEditor({
     editVersion.current++;
     setContent((current) => (current ? { ...current, ...update } : current));
     setDirty(true);
-    setSaveState("idle");
+    setSaveState(current => current === "saving" ? current : "idle");
     setPreviewError(false);
   }, []);
 
@@ -200,7 +201,7 @@ export default function PortfolioEditor({
       current ? { ...current, works: [...current.works, ...added] } : current
     );
     setDirty(true);
-    setSaveState("idle");
+    setSaveState(current => current === "saving" ? current : "idle");
     setPreviewError(false);
   }, []);
 
@@ -239,7 +240,7 @@ export default function PortfolioEditor({
   };
 
   const handleSave = async () => {
-    if (!content || saveState === "saving" || videoUploading) return;
+    if (!content || saveInFlight.current || videoUploading) return;
     setSaveProblem(null);
     if (isDemo) {
       // デモ: 実保存せず成功表示だけする
@@ -255,6 +256,7 @@ export default function PortfolioEditor({
       setSaveState("saved");
       return;
     }
+    saveInFlight.current = true;
     setSaveState("saving");
     const submittedVersion=editVersion.current;
     try {
@@ -276,7 +278,7 @@ export default function PortfolioEditor({
         setContent(saved.content??sanitized);
         setDirty(false);
       }
-      setSaveState("saved");
+      setSaveState(editVersion.current === submittedVersion ? "saved" : "idle");
     } catch (err) {
       console.error("[portfolio-edit] save failed", err);
       setSaveErrorKind(
@@ -285,6 +287,8 @@ export default function PortfolioEditor({
           : "network"
       );
       setSaveState("error");
+    } finally {
+      saveInFlight.current = false;
     }
   };
 

@@ -90,4 +90,25 @@ describe('legacy suspension middleware', () => {
     expect(response.headers.get('referrer-policy')).toBe('no-referrer');
     expect(response.headers.get('cache-control')).toBe('private, no-store');
   });
+  it.each([
+    '/api/natori/portfolio/assets/00000000-0000-4000-8000-000000000011.webp',
+    '/api/natori/admin/portfolio-assets/00000000-0000-4000-8000-000000000011.webp?v=alias',
+    '/%61pi/natori/admin/project-thumbs/fixture?v=alias',
+    'https://example.com/api/natori/portfolio/assets/00000000-0000-4000-8000-000000000011.webp',
+    '/og/natori-portfolio.png',
+    '/api//natori//portfolio/assets/00000000-0000-4000-8000-000000000011.webp',
+    '/og//natori-portfolio.png/',
+  ])('blocks optimizer cache paths for protected media %s',async source=>{
+    const request=new NextRequest('https://example.com/_next/image?url='+encodeURIComponent(source)+'&w=640&q=75');
+    expect(unstable_doesMiddlewareMatch({config,url:request.url})).toBe(true);
+    const response=await middleware(request);expect(response.status).toBe(400);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(intl).not.toHaveBeenCalled();
+  });
+  it('preserves the existing public gallery optimizer path',async()=>{
+    const response=await middleware(new NextRequest('https://example.com/_next/image?url=%2Fordinary.webp&w=640&q=75'));
+    expect(response.headers.get('x-middleware-next')).toBe('1');
+    expect(intl).not.toHaveBeenCalled();
+  });
+
 });

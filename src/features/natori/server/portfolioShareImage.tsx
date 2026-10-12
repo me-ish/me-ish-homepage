@@ -52,7 +52,7 @@ async function fetchImageBytes(url: string): Promise<Buffer | null> {
   const parsed = resolvePortfolioShareImageUrl(url, getSiteUrl(), process.env.NODE_ENV !== "production");
   if (!parsed) return null;
   try {
-    const response = await fetch(parsed, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+    const response = await fetch(parsed, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), cache: "no-store" });
     if (!response.ok) return null;
     const bytes = Buffer.from(await response.arrayBuffer());
     return bytes.byteLength > MAX_IMAGE_BYTES ? null : bytes;

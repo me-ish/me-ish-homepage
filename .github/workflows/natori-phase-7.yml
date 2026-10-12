@@ -1,7 +1,7 @@
 name: Natori Phase 7
 on:
   pull_request:
-    branches: [main, 'codex/natori-phase-*']
+    branches: [main, 'codex/natori-phase-*', 'codex/audit-db01-lockdown']
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - '.github/workflows/natori-phase-7.yml'

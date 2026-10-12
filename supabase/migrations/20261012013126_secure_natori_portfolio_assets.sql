@@ -6,14 +6,27 @@ DO $guard$
 BEGIN
   IF current_user <> 'postgres' THEN RAISE EXCEPTION 'SEC01_POSTGRES_REQUIRED'; END IF;
   IF to_regclass('public.natori_portfolio_content') IS NULL THEN RAISE EXCEPTION 'SEC01_PORTFOLIO_TABLE_REQUIRED'; END IF;
-  IF EXISTS (SELECT 1 FROM storage.buckets WHERE id='natori-management-assets' AND public) THEN
-    RAISE EXCEPTION 'SEC01_EXISTING_PUBLIC_BUCKET_REQUIRES_REVIEW';
+  IF EXISTS (
+    SELECT 1 FROM storage.buckets WHERE id='natori-management-assets'
+    AND (public OR file_size_limit IS DISTINCT FROM 50000000
+      OR allowed_mime_types IS DISTINCT FROM ARRAY['image/webp','video/mp4']::text[])
+  ) THEN
+    RAISE EXCEPTION 'SEC01_EXISTING_BUCKET_CONFIGURATION_REQUIRES_REVIEW';
   END IF;
 END
 $guard$;
 INSERT INTO storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
 VALUES('natori-management-assets','natori-management-assets',false,50000000,ARRAY['image/webp','video/mp4'])
 ON CONFLICT(id) DO NOTHING;
+DO $postcheck$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM storage.buckets WHERE id='natori-management-assets'
+    AND NOT public AND file_size_limit=50000000
+    AND allowed_mime_types=ARRAY['image/webp','video/mp4']::text[]
+  ) THEN RAISE EXCEPTION 'SEC01_BUCKET_POSTCONDITION_FAILED'; END IF;
+END
+$postcheck$;
 CREATE POLICY sec01_private_assets_browser_deny ON storage.objects
 AS RESTRICTIVE FOR ALL TO anon,authenticated
 USING(bucket_id <> 'natori-management-assets')

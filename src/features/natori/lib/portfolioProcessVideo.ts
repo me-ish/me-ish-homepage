@@ -163,6 +163,7 @@ export function normalizeProcessVideoForSave(
   const normalizedUrl = !source ? url : source.kind === "youtube" ? youtubeWatchUrl(source.videoId) : source.url;
   return {
     url: normalizedUrl,
+    ...(video.published !== undefined ? { published: video.published } : {}),
     ...(video.caption !== undefined ? { caption: video.caption.trim() } : {}),
     posterWorkId: video.posterWorkId ?? null,
     ...(video.shape !== undefined ? { shape: video.shape } : {}),
