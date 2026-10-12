@@ -17,6 +17,7 @@ import {
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { postgresReady } from "./postgres-ready.mjs";
 import { commandFailure } from "./command-error.mjs";
 import { assertNoEnvFiles } from "./env-guard.mjs";
 const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -86,6 +87,10 @@ const sql = (text) =>
       "-q",
       "-v",
       "ON_ERROR_STOP=1",
+      "-h",
+      "127.0.0.1",
+      "-p",
+      "5432",
       "-U",
       "postgres",
     ],
@@ -226,16 +231,32 @@ try {
     "POSTGRES_HOST_AUTH_METHOD=trust",
     images.db,
   ]);
-  await wait(
-    () =>
-      call("docker", [
-        "exec",
-        names.db,
-        "pg_isready",
-        "-U",
-        "postgres",
-      ]).includes("accepting connections"),
-    "Postgres",
+  const entrypoint = call("docker", [
+    "exec",
+    names.db,
+    "cat",
+    "/usr/local/bin/docker-entrypoint.sh",
+  ]);
+  const socketOnlyInit = /set -- "\$@" -c listen_addresses=''/.test(entrypoint);
+  assert.ok(
+    socketOnlyInit,
+    "Pinned Postgres initialization transport assumption must be reviewed",
+  );
+  await wait(() => postgresReady(call, names.db), "Postgres TCP and SQL");
+  writeFileSync(
+    join(sanitized, "postgres-readiness.json"),
+    JSON.stringify(
+      {
+        syntheticOnly: true,
+        entrypointSha256: hash(entrypoint),
+        socketOnlyInit,
+        tcpReady: true,
+        sqlProbe: 1,
+        image: images.db,
+      },
+      null,
+      2,
+    ),
   );
   sql(`CREATE ROLE supabase_auth_admin LOGIN SUPERUSER PASSWORD 'synthetic-sec01'; ALTER ROLE supabase_auth_admin SET search_path=auth,public;
     CREATE ROLE supabase_storage_admin LOGIN SUPERUSER PASSWORD 'synthetic-sec01';

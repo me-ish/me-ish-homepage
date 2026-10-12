@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
+import { postgresReady } from "./postgres-ready.mjs";
 import { commandFailure } from "./command-error.mjs";
 import { localApplicationURL } from "./local-redirect.mjs";
 import { assertNoEnvFiles } from "./env-guard.mjs";
@@ -91,4 +92,25 @@ test("command failure diagnostics cannot disclose token-bearing argv or stderr",
     String(safe),
     /SEC01_EXISTING_BUCKET_CONFIGURATION_REQUIRES_REVIEW/,
   );
+});
+
+test("database readiness rejects socket-only startup and requires a successful TCP SQL probe", () => {
+  const calls = [];
+  const socketOnly = (_command, args) => {
+    calls.push(args);
+    throw Error("Synthetic TCP connection refused");
+  };
+  assert.equal(postgresReady(socketOnly, "sec01-acceptance-fixture-db"), false);
+  assert.equal(calls.length, 1);
+  assert.ok(calls[0].includes("-h"));
+  assert.ok(calls[0].includes("127.0.0.1"));
+  const failedSql = (_command, args) => {
+    if (args.includes("psql")) throw Error("Synthetic SQL probe failed");
+    return "";
+  };
+  assert.equal(postgresReady(failedSql, "sec01-acceptance-fixture-db"), false);
+  const wrongSql = (_command, args) => (args.includes("psql") ? "0\n" : "");
+  assert.equal(postgresReady(wrongSql, "sec01-acceptance-fixture-db"), false);
+  const ready = (_command, args) => (args.includes("psql") ? "1\n" : "");
+  assert.equal(postgresReady(ready, "sec01-acceptance-fixture-db"), true);
 });
