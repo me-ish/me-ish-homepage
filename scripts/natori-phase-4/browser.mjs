@@ -302,6 +302,141 @@ async function main() {
     await expect(page.getByRole('dialog').getByText('依頼者の返信待ち', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: '案件情報を再取得', exact: true })).toHaveCount(0);
   });
+  // WF01 exercises the actual HTTP boundaries, PostgREST transaction and owner
+  // UI in the existing disposable stack. Provider traffic stays in this capture.
+  let wfProject, wfFirst, wfSecond, wfBefore, wfProviderBefore;
+  const roughOkPath = p => `/api/natori/consult/${p.token}/rough-ok`;
+  const actionPath = '/api/natori/admin/consultation/rough-ok';
+  const action = (p, r, kind, c = manager, headers = { 'x-requested-with': 'me-ish' }) => c.request.post(actionPath, {
+    headers, data: { projectId: p.id, roughId: r.id, action: kind },
+  });
+  const clientOk = (p, r, c = client) => c.request.post(roughOkPath(p), {
+    headers: { 'x-requested-with': 'me-ish' }, data: { roughId: r.id },
+  });
+  const wfOverview = async p => (await collection(manager, p.id)).projects.find(row => row.id === p.id)?.consultation;
+  const wfFacts = async p => {
+    const r = await admin.from('natori_projects').select('status,paid_at,paid_amount,agreed_terms,delivery_token_hash,delivery_token_expires_at').eq('id', p.id).single();
+    check(!r.error, 'WF01_FACTS_READ'); return r.data;
+  };
+  async function wfRough(p, label) {
+    const message = await admin.from('natori_consultation_messages').insert({ project_id: p.id, sender: 'staff', body: label, notification_status: 'sent' }).select('id').single();
+    check(!message.error, 'WF01_MESSAGE');
+    const bytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP40DD7PwAHegMLe6mEsQAAAABJRU5ErkJggg==', 'base64');
+    const path = `${p.id}/${message.data.id}.png`;
+    check(!(await admin.storage.from('natori-consultations').upload(path, bytes, { contentType: 'image/png' })).error, 'WF01_STORAGE');
+    check(!(await admin.from('natori_consultation_files').insert({ project_id: p.id, message_id: message.data.id, storage_path: path, file_name: `${label}.png`, mime_type: 'image/png', size_bytes: bytes.length })).error, 'WF01_FILE');
+    const marked = await manager.request.post('/api/natori/admin/consultation/rough', {
+      headers: { 'x-requested-with': 'me-ish' }, data: { projectId: p.id, messageId: message.data.id, action: 'mark' },
+    });
+    check(marked.ok(), 'WF01_MARK_HTTP');
+    const r = await admin.from('natori_talk_roughs').select('id,message_id,client_ok_at').eq('project_id', p.id).eq('message_id', message.data.id).single();
+    check(!r.error && r.data.client_ok_at === null, 'WF01_MARK_RECORD'); return r.data;
+  }
+  const wfJobs = async r => {
+    const read = await admin.from('natori_notification_jobs').select('id,notification_key,attempt_no,status').eq('notification_key', `rough-ok/${r.id}`).order('attempt_no');
+    check(!read.error, 'WF01_JOBS_READ'); return read.data;
+  };
+  const wfMailCount = r => mails.filter(mail => mail.headers?.['X-Meish-Template'] === 'natori-rough_ok_artist' && mail.text?.includes(`ラフID: ${r.id}`)).length;
+  await test('wf01-real-mark-and-owner-capability-csrf-boundaries', async () => {
+    wfProject = await project('rough', { title: 'WF01 rough OK only' });
+    wfFirst = await wfRough(wfProject, 'WF01 first rough'); wfBefore = await wfFacts(wfProject);
+    check((await client.request.post(roughOkPath(wfProject), { data: { roughId: wfFirst.id } })).status() === 403, 'WF01_CLIENT_CSRF');
+    check((await clientOk(foreign, wfFirst)).status() === 404, 'WF01_FOREIGN_CAPABILITY');
+    check((await action(wfProject, wfFirst, 'acknowledge', client)).status() === 401, 'WF01_ANON_ACK');
+    check((await action(wfProject, wfFirst, 'acknowledge', manager, {})).status() === 403, 'WF01_OWNER_CSRF');
+    check((await action(foreign, wfFirst, 'acknowledge')).status() === 404, 'WF01_FOREIGN_ACK');
+    check((await wfJobs(wfFirst)).length === 0, 'WF01_DENIED_NO_JOB');
+  });
+  await test('wf01-concurrent-ok-only-creates-one-event-and-visible-failed-notice', async () => {
+    rejectMail = true; wfProviderBefore = wfMailCount(wfFirst);
+    try {
+      const responses = await Promise.all([clientOk(wfProject, wfFirst), clientOk(wfProject, wfFirst)]);
+      check(responses.every(response => response.ok()), 'WF01_CONCURRENT_HTTP');
+      const receipts = await Promise.all(responses.map(response => response.json()));
+      check(receipts.filter(receipt => receipt.already === true).length === 1, 'WF01_ONE_FIRST_OK');
+      await expect.poll(async () => (await wfJobs(wfFirst))[0]?.status, { timeout: 30000 }).toBe('failed');
+      check((await wfJobs(wfFirst)).length === 1 && wfMailCount(wfFirst) === wfProviderBefore + 1, 'WF01_ONE_LOGICAL_NOTICE');
+      const event = await admin.from('natori_rough_ok_events').select('rough_id,message_id,notification_id').eq('rough_id', wfFirst.id);
+      check(!event.error && event.data.length === 1 && event.data[0].message_id === wfFirst.message_id, 'WF01_ATOMIC_EVENT');
+      const overview = await wfOverview(wfProject);
+      check(overview.latestSender === 'staff' && overview.roughOkPending === 1 && overview.notificationFailed === 1, 'WF01_OK_ONLY_ATTENTION');
+      check(JSON.stringify(await wfFacts(wfProject)) === JSON.stringify(wfBefore), 'WF01_NO_STATUS_PAYMENT_ADVANCE');
+      await page.goto(`/natori/inquiries?project=${wfProject.id}&view=conversation`);
+      const section = page.getByRole('region', { name: 'ラフOKの確認' });
+      await expect(section.getByText('ラフOK・次の対応待ち', { exact: true })).toBeVisible();
+      await expect(section.getByText('通知を送信できませんでした', { exact: true })).toBeVisible();
+      await expect(section.getByRole('link', { name: 'このラフの提出内容を見る' })).toHaveAttribute('href', `#consultation-message-${wfFirst.message_id}`);
+    } finally { rejectMail = false; }
+  });
+  await test('wf01-repost-and-explicit-mail-retry-keep-business-attention', async () => {
+    const count = wfMailCount(wfFirst);
+    check((await clientOk(wfProject, wfFirst)).ok(), 'WF01_REPOST_HTTP');
+    check((await wfJobs(wfFirst)).length === 1 && wfMailCount(wfFirst) === count, 'WF01_REPOST_NOT_AUTO_RETRY');
+    check((await action(wfProject, wfFirst, 'retry-notification')).ok(), 'WF01_RETRY_HTTP');
+    await expect.poll(async () => (await wfJobs(wfFirst)).at(-1)?.status, { timeout: 30000 }).toBe('sent');
+    const jobs = await wfJobs(wfFirst);
+    check(jobs.length === 2 && jobs[0].notification_key === jobs[1].notification_key && jobs[1].attempt_no === 2 && wfMailCount(wfFirst) === count + 1, 'WF01_RETRY_ONE_KEY_NEW_ATTEMPT');
+    check((await wfOverview(wfProject)).roughOkPending === 1, 'WF01_DELIVERY_NOT_ACK');
+    const acknowledgements = await admin.from('natori_rough_ok_acknowledgements').select('rough_id').eq('rough_id', wfFirst.id);
+    check(!acknowledgements.error && acknowledgements.data.length === 0, 'WF01_RETRY_NO_ACK');
+  });
+  await test('wf01-second-ok-and-reply-do-not-clear-another-pending-rough', async () => {
+    wfSecond = await wfRough(wfProject, 'WF01 second rough');
+    check((await clientOk(wfProject, wfSecond)).ok(), 'WF01_SECOND_OK');
+    await expect.poll(async () => (await wfOverview(wfProject))?.roughOkPending).toBe(2);
+    await page.goto(`/natori/inquiries?project=${wfProject.id}&view=conversation`);
+    const composer = page.getByRole('textbox', { name: 'メッセージ', exact: true });
+    // The real composer reserves the keyed operation before committing it,
+    // including a text-only reply. An unprepared raw POST is correctly denied.
+    await composer.fill('WF01 ordinary reply');
+    await page.getByRole('button', { name: 'メッセージを送信', exact: true }).click();
+    await expect(page.getByText('WF01 ordinary reply', { exact: true })).toBeVisible();
+    check((await wfOverview(wfProject)).roughOkPending === 2, 'WF01_REPLY_NOT_ACK');
+    await composer.fill('WF01 unsent draft survives acknowledgement');
+    const first = page.locator(`[data-rough-ok="${wfFirst.id}"]`);
+    await first.getByRole('button', { name: 'このラフの次の対応を確認', exact: true }).click();
+    await first.getByRole('button', { name: 'このラフOKを確認済みにする', exact: true }).click();
+    await expect(first.getByText(/次の対応は確認済み/)).toBeVisible();
+    await expect(composer).toHaveValue('WF01 unsent draft survives acknowledgement');
+    await expect(page.locator(`[data-rough-ok="${wfSecond.id}"]`).getByText('ラフOK・次の対応待ち', { exact: true })).toBeVisible();
+    check((await wfOverview(wfProject)).roughOkPending === 1, 'WF01_PER_ROUGH_ACK_ONLY');
+    const replay = await action(wfProject, wfFirst, 'acknowledge');
+    check(replay.ok() && (await replay.json()).already === true, 'WF01_ACK_REPLAY');
+    check(JSON.stringify(await wfFacts(wfProject)) === JSON.stringify(wfBefore), 'WF01_ACK_NO_PRODUCTION_CHANGE');
+    check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'WF01_MOBILE_OVERFLOW');
+  });
+  await test('wf01-pending-history-outage-and-closed-ack-never-reopen', async () => {
+    check(!(await admin.from('natori_projects').update({ status: 'closed' }).eq('id', wfProject.id)).error, 'WF01_CLOSE_FIXTURE');
+    check((await wfOverview(wfProject)).roughOkPending === 1, 'WF01_CLOSED_PENDING_VISIBLE');
+    await page.goto(`/natori/inquiries?project=${wfProject.id}&view=conversation`);
+    const second = page.locator(`[data-rough-ok="${wfSecond.id}"]`);
+    await expect(second.getByText('終了案件・ラフOK確認待ち', { exact: true })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'メッセージ', exact: true })).toHaveCount(0);
+    await expect(second.getByRole('button', { name: 'このラフの次の対応を確認', exact: true })).toBeVisible();
+    await page.route('**/api/natori/admin/consultation?projectId=*', route => route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
+    await page.getByRole('button', { name: '履歴を更新', exact: true }).click();
+    await expect(page.getByRole('alert').filter({ hasText: /取得できません|読み込めません/ }).first()).toBeVisible();
+    await expect(page.getByRole('region', { name: 'ラフOKの確認' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'このラフの次の対応を確認', exact: true })).toHaveCount(0);
+    check((await wfOverview(wfProject)).roughOkPending === 1, 'WF01_OUTAGE_NOT_ALL_CLEAR');
+    await page.unroute('**/api/natori/admin/consultation?projectId=*');
+    await page.getByRole('button', { name: '履歴を更新', exact: true }).click();
+    await expect(second.getByText('終了案件・ラフOK確認待ち', { exact: true })).toBeVisible();
+    await second.getByRole('button', { name: 'このラフの次の対応を確認', exact: true }).click();
+    await second.getByRole('button', { name: 'このラフOKを確認済みにする', exact: true }).click();
+    await expect(second.getByText(/次の対応は確認済み/)).toBeVisible();
+    check((await wfOverview(wfProject)).roughOkPending === 0, 'WF01_CLOSED_ACK_CLEARS_ONLY_ATTENTION');
+    const facts = await wfFacts(wfProject);
+    check(facts.status === 'closed' && JSON.stringify({ ...facts, status: 'rough' }) === JSON.stringify(wfBefore), 'WF01_NEVER_REOPEN');
+    check([404, 409].includes((await clientOk(wfProject, wfSecond)).status()), 'WF01_CLOSED_CLIENT_DENIED');
+  });
+  await test('wf01-deleted-actions-are-denied-and-business-history-retained', async () => {
+    check(!(await admin.from('natori_projects').update({ deleted_at: past }).eq('id', wfProject.id)).error, 'WF01_DELETE_FIXTURE');
+    check((await action(wfProject, wfSecond, 'acknowledge')).status() === 404, 'WF01_DELETED_ACK_DENIED');
+    check((await action(wfProject, wfSecond, 'retry-notification')).status() === 409, 'WF01_DELETED_RETRY_DENIED');
+    const receipt = await admin.from('natori_rough_ok_acknowledgements').select('rough_id').eq('project_id', wfProject.id);
+    check(!receipt.error && receipt.data.length === 2, 'WF01_HISTORY_RETAINED');
+  });
   await test('no-unhandled-browser-or-hydration-errors', async () => {
     check(stylesheetResponses.some(r => r.asset === 'root-layout-css') && stylesheetResponses.every(r => r.status >= 200 && r.status < 400), 'APPLICATION_CSS_NOT_LOADED');
     check(browserProblems.size === 0, 'BROWSER_RUNTIME_ERRORS');
@@ -311,7 +446,7 @@ async function main() {
   const summary = { tests: results, passed: results.filter(r => r.status === 'passed').length, failed: results.filter(r => r.status === 'failed').length, skipped: 0, engine: 'Chromium 1.58.2; mobile viewport only, not iPhone Safari', providerRequests: providerCalls, browserProblems: [...browserProblems], browserErrorDiagnostics, resourceFailures, stylesheetResponses };
   writeFileSync('/results/phase4-browser.json', JSON.stringify(summary, null, 2));
   console.log(`PHASE 4 ${summary.passed} passed / ${summary.failed} failed / 0 skipped`);
-  check(results.length === 17 && summary.failed === 0, 'PHASE4_FAILED');
+  check(results.length === 23 && summary.failed === 0, 'PHASE4_FAILED');
 }
 main().catch(() => { console.error(`Phase 4 failed at ${stage}; raw URLs and credentials withheld`); process.exitCode = 1; }).finally(async () => {
   await browser?.close();

@@ -51,7 +51,7 @@ export async function createInquiryProject(
     referencePaths,
   });
 
-  if (result.kind === "db-error") return { kind: "db-error" };
+  if (result.kind !== "ok") return { kind: "db-error" };
   return { kind: "ok", projectId: result.projectId };
 }
 

@@ -118,7 +118,7 @@ export default function PortfolioProcessVideoEditor({
       });
       if (mountedRef.current) {
         setChosenMode("file");
-        onChangeRef.current({ ...videoRef.current, url });
+        onChangeRef.current({ ...videoRef.current, url,published:false });
       }
     } catch (err) {
       console.error("[portfolio-edit] process video upload failed", err);
@@ -139,6 +139,11 @@ export default function PortfolioProcessVideoEditor({
 
   return (
     <div className="space-y-4">
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={video.published!==false} disabled={uploading}
+          onChange={event=>onChange({...video,published:event.target.checked})} />
+        動画を公開する
+      </label>
       <div>
         <p id={`${shapeId}-source`} className={natoriAdminUi.label}>
           動画の入れ方

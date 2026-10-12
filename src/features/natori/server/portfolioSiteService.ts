@@ -11,9 +11,12 @@ import { parsePortfolioContent } from "@/features/natori/lib/portfolioContent";
 import { defaultPortfolioDisplayContent, parsePortfolioDisplayContent } from "@/features/natori/lib/portfolioDisplay";
 import type { PortfolioDisplayContent } from "@/features/natori/types/portfolioDisplay";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
+import { projectPortfolioPublicContent } from "@/features/natori/lib/portfolioPublicContent";
+import {normalizePortfolioAssetReferences,storePrivatePortfolioImage,validatePortfolioAssetReferences} from "./portfolioAssetsService";
+import {resolveNatoriOwnerId} from "./natoriOwner";
+import {readPortfolioSavedState} from "./portfolioContentStore";
 
 const TABLE = "natori_portfolio_content";
-const BUCKET = "natori-portfolio";
 const REFERENCE_BUCKET = "natori-inquiry-refs";
 const ROW_ID = "main";
 
@@ -35,7 +38,7 @@ export async function canEditNatoriPortfolio(): Promise<boolean> {
 }
 
 /** 掲載内容を読み込む。DB行が無い/壊れている/テーブル未作成ならデフォルトを返す */
-export async function loadPortfolioContent(): Promise<PortfolioDisplayContent> {
+async function readPortfolioContent(): Promise<PortfolioDisplayContent> {
   try {
     const admin = adminClient();
     const { data, error } = await admin
@@ -55,26 +58,46 @@ export async function loadPortfolioContent(): Promise<PortfolioDisplayContent> {
   }
 }
 
+/** Public callers receive the same filtered projection, including fallback content. */
+export async function loadPortfolioContent(): Promise<PortfolioDisplayContent> {
+  return projectPortfolioPublicContent(await readPortfolioContent());
+}
+
+/** Guarded editor reads fail on errors so a fallback cannot overwrite saved drafts. */
+export async function loadPortfolioEditorContent(): Promise<PortfolioDisplayContent> {
+  if (!(await canEditNatoriPortfolio())) throw new Error("Unauthorized");
+  return (await readPortfolioSavedState()).content;
+}
+
+export async function loadPortfolioEditorState() {
+  if (!(await canEditNatoriPortfolio())) throw new Error("Unauthorized");
+  return readPortfolioSavedState();
+}
+
 export type SavePortfolioContentResult =
-  | { kind: "ok"; content: PortfolioContent }
+  | { kind: "ok"; content: PortfolioContent; revision:number }
+  | { kind: "conflict" }
+  | { kind: "invalid-asset" }
   | { kind: "invalid" }
   | { kind: "db-error" };
 
 export async function savePortfolioContent(
-  value: unknown
+  value: unknown, expectedRevision:number
 ): Promise<SavePortfolioContentResult> {
   const content = parsePortfolioContent(value);
   if (!content) return { kind: "invalid" };
-
-  const admin = adminClient();
-  const { error } = await admin
-    .from(TABLE)
-    .upsert({ id: ROW_ID, content }, { onConflict: "id" });
+  if (!Number.isSafeInteger(expectedRevision) || expectedRevision<0) return {kind:"conflict"};
+  const ownerId=await resolveNatoriOwnerId();
+  if (!(await validatePortfolioAssetReferences(content,ownerId))) return {kind:"invalid-asset"};
+  const normalized=normalizePortfolioAssetReferences(content);
+  const {data,error} = await adminClient().rpc("natori_save_portfolio_content",{expected_revision:expectedRevision,next_content:normalized});
   if (error) {
     console.error("[natori-portfolio] content save failed:", error);
     return { kind: "db-error" };
   }
-  return { kind: "ok", content };
+  const revision=data?.[0]?.saved_revision;
+  if (!Number.isSafeInteger(revision)) return {kind:"conflict"};
+  return { kind: "ok", content:normalized,revision:revision! };
 }
 
 export type UploadPortfolioImageResult =
@@ -108,33 +131,14 @@ async function prepareImageAsWebp(file: File): Promise<
   return { kind: "ok", webp };
 }
 
-/** 画像を webp に変換して公開バケットの指定フォルダへアップロードし、公開URLを返す */
-async function uploadImageAsWebp(
-  file: File,
-  folder: string
-): Promise<UploadPortfolioImageResult> {
-  const prepared = await prepareImageAsWebp(file);
-  if (prepared.kind !== "ok") return prepared;
-
-  const path = `${folder}/${crypto.randomUUID()}.webp`;
-  const admin = supabaseAdmin();
-  const { error } = await admin.storage.from(BUCKET).upload(path, prepared.webp, {
-    contentType: "image/webp",
-    upsert: false,
-  });
-  if (error) {
-    console.error("[natori-portfolio] image upload failed:", error);
-    return { kind: "upload-error" };
-  }
-  const { data } = admin.storage.from(BUCKET).getPublicUrl(path);
-  return { kind: "ok", url: data.publicUrl };
-}
-
 /** 編集画面からの掲載用画像アップロード */
 export async function uploadPortfolioImage(
   file: File
 ): Promise<UploadPortfolioImageResult> {
-  return uploadImageAsWebp(file, "images");
+  const prepared=await prepareImageAsWebp(file);
+  if (prepared.kind!=="ok") return prepared;
+  const url=await storePrivatePortfolioImage(prepared.webp);
+  return url ? {kind:"ok",url} : {kind:"upload-error"};
 }
 
 /** ご依頼フォームの資料を専用の非公開バケットへ保存する。 */

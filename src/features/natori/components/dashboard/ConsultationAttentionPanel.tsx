@@ -6,18 +6,19 @@ import { NatoriLoadError } from "./NatoriLoadError";
 import Link from "next/link";
 import { ArrowRight, ChevronRight, MessagesSquare } from "lucide-react";
 import type { NatoriProject } from "@/features/natori/types/projects";
-import { compareConsultationActivity, consultationNeedsAttention, consultationReplyState, staffConsultationHref } from "@/features/natori/lib/consultationOverview";
+import { compareConsultationActivity, consultationIsActive, consultationNeedsAttention, consultationReplyState, staffConsultationHref } from "@/features/natori/lib/consultationOverview";
 import ConsultationStatus from "./ConsultationStatus";
 
 export default function ConsultationAttentionPanel({ projects, loading, onRefresh }: {
   projects: NatoriProject[] | null; loading: boolean; onRefresh: () => void;
 }) {
-  const attention = projects?.filter(consultationNeedsAttention).sort(compareConsultationActivity);
-  const active = projects?.filter(project => !project.deletedAt && project.status !== "closed");
+  const active = projects?.filter(consultationIsActive);
+  const attention = active?.filter(consultationNeedsAttention).sort(compareConsultationActivity);
   const count = (state: ReturnType<typeof consultationReplyState>) => active?.filter(project => consultationReplyState(project) === state).length ?? 0;
   const counts = [
     { label: "新規", value: count("new"), emphasis: false },
     { label: "ナトリの返信待ち", value: count("staff"), emphasis: true },
+    { label: "ラフOK・次の対応待ち", value: count("rough-ok"), emphasis: true },
     { label: "依頼者の返信待ち", value: count("client"), emphasis: false },
   ];
   return (
@@ -52,7 +53,7 @@ export default function ConsultationAttentionPanel({ projects, loading, onRefres
               </span>
             ))}
           </p>
-          <p className="mt-2 text-xs leading-5 text-zinc-600">最新の相談メッセージから判定します。既読や、メールへの直接返信は反映されません。古い相談から表示しています。</p>
+          <p className="mt-2 text-xs leading-5 text-zinc-600">最新の相談メッセージと未確認のラフOKから判定します。ラフOKは相談画面で次の対応を確認するまで残ります。既読や、メールへの直接返信は反映されません。</p>
         </div>
         {attention?.length ? <ul className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200/80">
           {attention.slice(0, 5).map(project => <li key={project.id}>
@@ -67,7 +68,7 @@ export default function ConsultationAttentionPanel({ projects, loading, onRefres
               <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400 transition-transform group-hover:translate-x-0.5" aria-hidden />
             </Link>
           </li>)}
-        </ul> : <p className="rounded-xl bg-zinc-50 px-3 py-3 text-sm text-zinc-600">新規・ナトリの返信待ち・見積もり作成待ち・通知の要確認はありません。</p>}
+        </ul> : <p className="rounded-xl bg-zinc-50 px-3 py-3 text-sm text-zinc-600">新規・ナトリの返信待ち・ラフOK・見積もり作成待ち・通知の要確認はありません。</p>}
         <Link href="/natori/inquiries?filter=attention" className={`${natoriAdminUi.btnLink} sm:min-h-10`}>要確認の相談をすべて見る{attention?.length ? `（${attention.length}件）` : ""}<ArrowRight className="h-4 w-4" aria-hidden /></Link>
       </>}
     </section>

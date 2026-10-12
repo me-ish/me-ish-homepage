@@ -25,6 +25,15 @@ describe('analytics privacy at the vendor send boundary', () => {
     expect(Reflect.get(browser, flag)).toBe(true);
   });
 
+  it('blocks certificate URLs and certificate referrers at the vendor boundary', () => {
+    const certUrl = 'https://www.me-ish.art/ja/cert/12?t=synthetic-token';
+    const privateBrowser = browserAt(certUrl);
+    expect(getAnalyticsPrivacyGuard(privateBrowser)()).toBe(true);
+    expect(Reflect.get(privateBrowser, flag)).toBe(true);
+    const publicBrowser = browserAt(publicUrl, certUrl);
+    expect(getAnalyticsPrivacyGuard(publicBrowser)(publicUrl)).toBe(true);
+  });
+
   it('blocks GA synchronously after history changes, without a React effect', () => {
     const browser = browserAt();
     const guard = getAnalyticsPrivacyGuard(browser);

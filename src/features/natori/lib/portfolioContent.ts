@@ -101,6 +101,7 @@ const workSchema = z
 
 // 制作過程の動画。URL は空（動画なし）か、YouTube の動画URL、またはアップロードした動画ファイルのURLだけ許す。
 const processVideoSchema = z.object({
+  published: z.boolean().optional(),
   url: z.string().max(300).refine(
     (value) => value.trim().length === 0 || parseProcessVideoSource(value) !== null,
     "YouTubeの動画URL（https://www.youtube.com/watch?v=… や https://youtu.be/…）か、アップロードした動画ファイルを指定してください"
@@ -267,7 +268,6 @@ function withLegacyCollections(
       tags: work.tags.filter((tag) => tag !== collectionName),
       collectionId,
       featured: featuredCount < 3,
-      published: true,
     };
   });
 

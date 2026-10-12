@@ -1,0 +1,28 @@
+{
+  "results": [
+    {
+      "name": "missing/invalid token pages do not issue links or display an entry",
+      "status": "pass"
+    },
+    {
+      "name": "locale redirects and absent/wrong/correct dashboard-key branches protect privacy",
+      "status": "pass"
+    },
+    {
+      "name": "HTTP anonymous/wrong-admin reissue rejected without writes",
+      "status": "pass"
+    },
+    {
+      "name": "legitimate admin issue -> active view -> HTTP HTML/RSC; internal markers absent",
+      "status": "pass"
+    },
+    {
+      "name": "HTTP token/URL entry ID mismatch never displays other entry",
+      "status": "pass"
+    },
+    {
+      "name": "HTTP expired/revoked/used tokens rejected through actual active view",
+      "status": "pass"
+    }
+  ]
+}

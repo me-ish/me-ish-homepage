@@ -57,6 +57,14 @@ describe('legacy suspension middleware', () => {
     expect(response.headers.get('cache-control')).toBe('private, no-store');
   });
 
+  it.each(['/cert/12', '/ja/cert/12', '/en/cert/invalid.id', '/ja/%63ert/12'])
+  ('protects certificate route %s without issuing anything', async (path) => {
+    expect(unstable_doesMiddlewareMatch({ config, url: path })).toBe(true);
+    const response = await middleware(new NextRequest(`https://example.com${path}?t=synthetic-token`));
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer');
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+  });
+
   it('retains the existing Natori dashboard-key cookie flow', async () => {
     vi.stubEnv('NATORI_DASHBOARD_KEY', 'synthetic-key');
     const response = await middleware(new NextRequest('https://example.com/natori/dashboard?natori-key=synthetic-key'));
@@ -64,4 +72,43 @@ describe('legacy suspension middleware', () => {
     expect(response.cookies.get(NATORI_KEY_COOKIE)?.value).toMatch(/^[a-f0-9]{64}$/);
     expect(intl).not.toHaveBeenCalled();
   });
+
+  it.each(['wrong-key', 'synthetic-key'])
+  ('protects certificate responses through the dashboard-key branch (%s)', async (key) => {
+    vi.stubEnv('NATORI_DASHBOARD_KEY', 'synthetic-key');
+    const response = await middleware(new NextRequest(`https://example.com/en/cert/12?t=synthetic-token&natori-key=${key}`));
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer');
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+  });
+
+  it.each(['', 'wrong-key', 'synthetic-key'])
+  ('protects certificate redirects with dashboard key %s', async (key) => {
+    vi.stubEnv('NATORI_DASHBOARD_KEY', 'synthetic-key');
+    intl.mockImplementation(() => NextResponse.redirect('https://example.com/ja/cert/12?t=synthetic-token'));
+    const response = await middleware(new NextRequest(`https://example.com/cert/12?t=synthetic-token${key ? `&natori-key=${key}` : ''}`));
+    expect(response.status).toBe(307);
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer');
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+  });
+  it.each([
+    '/api/natori/portfolio/assets/00000000-0000-4000-8000-000000000011.webp',
+    '/api/natori/admin/portfolio-assets/00000000-0000-4000-8000-000000000011.webp?v=alias',
+    '/%61pi/natori/admin/project-thumbs/fixture?v=alias',
+    'https://example.com/api/natori/portfolio/assets/00000000-0000-4000-8000-000000000011.webp',
+    '/og/natori-portfolio.png',
+    '/api//natori//portfolio/assets/00000000-0000-4000-8000-000000000011.webp',
+    '/og//natori-portfolio.png/',
+  ])('blocks optimizer cache paths for protected media %s',async source=>{
+    const request=new NextRequest('https://example.com/_next/image?url='+encodeURIComponent(source)+'&w=640&q=75');
+    expect(unstable_doesMiddlewareMatch({config,url:request.url})).toBe(true);
+    const response=await middleware(request);expect(response.status).toBe(400);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(intl).not.toHaveBeenCalled();
+  });
+  it('preserves the existing public gallery optimizer path',async()=>{
+    const response=await middleware(new NextRequest('https://example.com/_next/image?url=%2Fordinary.webp&w=640&q=75'));
+    expect(response.headers.get('x-middleware-next')).toBe('1');
+    expect(intl).not.toHaveBeenCalled();
+  });
+
 });

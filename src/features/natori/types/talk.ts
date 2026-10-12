@@ -1,4 +1,5 @@
 /** Display-only types for the status cards shown above the consultation thread. */
+import type { NatoriClientPaymentFacts } from "./payment";
 
 export type TalkQuoteFact = {
   id: string;
@@ -10,14 +11,7 @@ export type TalkQuoteFact = {
   supersededAt: string | null;
 };
 
-export type TalkPaymentFact = {
-  confirmedAt: string | null;
-  /** Stripe Payment Link currently usable according to the stored link rows; null when none. */
-  linkUrl: string | null;
-  linkDeadline: string | null;
-  /** A payment is being confirmed; the client must not pay twice. */
-  processing: boolean;
-};
+export type TalkPaymentFact = NatoriClientPaymentFacts;
 
 export type TalkDeliveryFact = {
   /** A delivery release (or a legacy delivery token) exists. */
@@ -40,7 +34,7 @@ export type TalkRoughFact = {
 };
 
 export type TalkFacts = {
-  /** False when the project is closed or deleted: no card may open a quote or delivery page. */
+  /** False when the project is closed or deleted: no card may offer an action. */
   linksAllowed: boolean;
   quotes: TalkQuoteFact[];
   /** Absent while the rough table is unavailable; roughs never block the other cards. */

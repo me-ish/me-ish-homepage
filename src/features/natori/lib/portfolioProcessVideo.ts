@@ -9,6 +9,7 @@ import {
   PROCESS_VIDEO_FILE_MAX_LABEL,
   PROCESS_VIDEO_FOLDER,
 } from "@/features/natori/constants/portfolioProcessVideo";
+import {parsePortfolioAssetUrl,portfolioAssetUrl} from "./portfolioAssetUrl";
 import type {
   PortfolioContent,
   PortfolioProcessVideo,
@@ -78,6 +79,8 @@ const FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}\.mp4$/u;
 export function parseProcessVideoFileUrl(value: string): string | null {
   const trimmed = value.trim();
   if (trimmed.length === 0) return null;
+  const managed=parsePortfolioAssetUrl(trimmed);
+  if (managed?.kind==="video") return portfolioAssetUrl(managed.id,managed.kind,managed.management);
   let url: URL;
   try {
     url = new URL(trimmed);
@@ -160,6 +163,7 @@ export function normalizeProcessVideoForSave(
   const normalizedUrl = !source ? url : source.kind === "youtube" ? youtubeWatchUrl(source.videoId) : source.url;
   return {
     url: normalizedUrl,
+    ...(video.published !== undefined ? { published: video.published } : {}),
     ...(video.caption !== undefined ? { caption: video.caption.trim() } : {}),
     posterWorkId: video.posterWorkId ?? null,
     ...(video.shape !== undefined ? { shape: video.shape } : {}),

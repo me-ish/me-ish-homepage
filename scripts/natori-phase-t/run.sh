@@ -112,6 +112,13 @@ PY
 }
 trap cleanup EXIT
 
+# Exact named reader prerequisites for current management source. No full history.
+if [[ $phasen == 1 ]]; then
+  node "$repo/scripts/natori-wf01/build-reader-fixture.mjs" "$work/wf01-reader.sql" initial "$work/results/wf01-reader-source-sha256.json"
+elif [[ $phase0b == 1 ]]; then
+  node "$repo/scripts/natori-wf01/build-reader-fixture.mjs" "$work/wf01-reader.sql" standalone-0b "$work/results/wf01-reader-source-sha256.json"
+fi
+
 extra_mounts=()
 test_memory=256m
 if [[ $phase0a == 1 ]]; then
@@ -498,7 +505,7 @@ if [[ $phase0b == 1 ]]; then
   dbsql <"$work/phase0b.sql" >/dev/null
   if [[ $phase6a_schema == 1 ]]; then
     # Standalone 0B keeps its original cases; only genuine GET prerequisites are added.
-    dbsql <"$repo/scripts/natori-phase-6a/standalone-read-prerequisites.sql" >/dev/null
+    dbsql <"$work/wf01-reader.sql" >/dev/null
     install_coherent_schema_once
   fi
   timeout 240 docker exec "$runner" node /phase0b/integration.cjs
@@ -506,6 +513,7 @@ if [[ $phase0b == 1 ]]; then
 fi
 if [[ $phasen == 1 ]]; then
   dbsql <"$work/phasen.sql" >/dev/null
+  dbsql <"$work/wf01-reader.sql" >/dev/null
   # The actual management reader now uses the coherent RPC. Install its schema
   # before any previous browser regression consumes the new application source.
   if [[ $phase6a_schema == 1 ]]; then install_coherent_schema_once; fi

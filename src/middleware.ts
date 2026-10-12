@@ -2,6 +2,7 @@
 import createMiddleware from 'next-intl/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 import { routing } from './i18n/routing';
+import { isAnalyticsExcludedPath } from '@/lib/analyticsPrivacy';
 import {
   NATORI_KEY_COOKIE,
   NATORI_KEY_PARAM,
@@ -19,8 +20,29 @@ import {
 
 const intlMiddleware = createMiddleware(routing);
 
+function protectPrivateResponse(response: NextResponse, pathname: string): NextResponse {
+  if (isAnalyticsExcludedPath(pathname)) {
+    response.headers.set('Referrer-Policy', 'no-referrer');
+    response.headers.set('Cache-Control', 'private, no-store');
+  }
+  return response;
+}
+
 export default async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  if (pathname === '/_next/image') {
+    const source=request.nextUrl.searchParams.get('url');
+    if (source) {
+      try {
+        const imagePath=decodeURIComponent(new URL(source,request.url).pathname).replace(/\/{2,}/g, "/").replace(/\/$/, "");
+        if (/^\/api\/natori\/(?:admin\/(?:portfolio-assets|project-thumbs)|portfolio\/assets)(?:\/|$)/.test(imagePath)
+          || imagePath==='/og/natori-portfolio.png') {
+          return NextResponse.json({error:'image_optimization_disabled'},{status:400,headers:{'Cache-Control':'no-store'}});
+        }
+      } catch { return NextResponse.json({error:'invalid_image_url'},{status:400,headers:{'Cache-Control':'no-store'}}); }
+    }
+    return NextResponse.next();
+  }
   const apiService = getSuspendedLegacyApi(pathname, request.method);
   if (apiService) {
     return NextResponse.json(
@@ -37,7 +59,9 @@ export default async function middleware(request: NextRequest) {
   }
   // Explicit API/auth matchers below must never send these routes through intl
   // or the dashboard-key redirect flow.
-  if (/^\/(?:api|admin|auth)(?:\/|$)/.test(pathname)) return NextResponse.next();
+  if (/^\/(?:api|admin|auth)(?:\/|$)/.test(pathname)) {
+    return protectPrivateResponse(NextResponse.next(), pathname);
+  }
 
   // natori 管理画面の合言葉キー: `?natori-key=<NATORI_DASHBOARD_KEY>` 付きで
   // 開くと 8 時間有効の Cookie をセットし、キーを消した URL にリダイレクトする。
@@ -60,7 +84,7 @@ export default async function middleware(request: NextRequest) {
       deriveNatoriDashboardCookieToken(providedKey),
     ]);
     if (!constantTimeEquals(expectedToken, providedToken)) {
-      return intlMiddleware(request);
+      return protectPrivateResponse(intlMiddleware(request), pathname);
     }
     const cleanUrl = request.nextUrl.clone();
     cleanUrl.searchParams.delete(NATORI_KEY_PARAM);
@@ -74,23 +98,21 @@ export default async function middleware(request: NextRequest) {
       path: '/',
       maxAge: 60 * 60 * 8,
     });
-    return response;
+    return protectPrivateResponse(response, pathname);
   }
 
-  const response = intlMiddleware(request);
-  if (/\/natori\/consult\/[A-Za-z0-9_-]+\/?$/.test(request.nextUrl.pathname)) {
-    response.headers.set('Referrer-Policy', 'no-referrer');
-    response.headers.set('Cache-Control', 'private, no-store');
-  }
-  return response;
+  return protectPrivateResponse(intlMiddleware(request), pathname);
 }
 
 export const config = {
   matcher: [
+    '/_next/image',
     '/((?!api|admin|admin-login|auth|counts|_next|_vercel|.*\\..*).*)',
     '/api/:path*',
     '/admin/api/:path*',
     '/auth/link/:path*',
+    '/cert/:path*',
+    '/:locale(ja|en)/cert/:path*',
     // The default locale matcher excludes dots. Explicit entries also cover
     // old URLs whose ids/slugs contain dots, including localized URLs.
     '/:service(entry|renew|login|mypage|aura|card)/:path*',

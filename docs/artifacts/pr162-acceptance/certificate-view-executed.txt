@@ -1,0 +1,11 @@
+ SELECT id,
+    entry_id,
+    token_hash,
+    expires_at,
+    revoked,
+    used_at,
+    created_at,
+    updated_at
+   FROM cert_links
+  WHERE revoked = false AND (expires_at IS NULL OR expires_at > now()) AND used_at IS NULL;
+{security_invoker=true}

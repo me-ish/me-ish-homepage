@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-const m = vi.hoisted(() => ({ from: vi.fn(), signed: vi.fn() }));
+const m = vi.hoisted(() => ({ from: vi.fn(), signed: vi.fn(), roughOks: vi.fn() }));
 vi.mock("@/lib/supabaseAdmin", () => ({ supabaseAdmin: () => ({ from: m.from, storage: { from: () => ({ createSignedUrl: m.signed }) } }) }));
 vi.mock("../natoriOwner", () => ({ resolveNatoriOwnerId: async () => "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee" }));
+vi.mock("../roughFollowupService", () => ({ loadStaffRoughOks: m.roughOks }));
 import { getClientConsultationProbe, getStaffConsultationProbe } from "../consultationService";
 
 const pid = "11111111-2222-4333-8444-555555555555";
@@ -22,6 +23,7 @@ function chain(result: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  m.roughOks.mockResolvedValue([]);
   project = { id: pid, user_id: owner, title: "T", client_name: "C", client_email: null, note: null, request_data: null, status: "open", deleted_at: null };
   probeResult = { data: [{ id: "last" }], count: 3, error: null };
   roughResult = { data: [], error: null };
@@ -35,7 +37,7 @@ beforeEach(() => {
 
 describe("consultation change probe", () => {
   it("returns only the count, newest id and closed flag for staff and client, and signs no file links", async () => {
-    expect(await getStaffConsultationProbe(pid)).toEqual({ count: 3, lastId: "last", closed: false, roughs: "" });
+    expect(await getStaffConsultationProbe(pid)).toEqual({ count: 3, lastId: "last", closed: false, roughs: "", roughOks: "" });
     expect(await getClientConsultationProbe("x".repeat(32))).toEqual({ count: 3, lastId: "last", closed: false, roughs: "" });
     expect(m.signed).not.toHaveBeenCalled();
   });
@@ -47,7 +49,7 @@ describe("consultation change probe", () => {
   });
   it("handles an empty thread and hides a read failure as unavailable", async () => {
     probeResult = { data: [], count: 0, error: null };
-    expect(await getStaffConsultationProbe(pid)).toEqual({ count: 0, lastId: null, closed: false, roughs: "" });
+    expect(await getStaffConsultationProbe(pid)).toEqual({ count: 0, lastId: null, closed: false, roughs: "", roughOks: "" });
     probeResult = { data: null, count: null, error: { message: "x" } };
     expect(await getStaffConsultationProbe(pid)).toBeNull();
   });
@@ -60,5 +62,14 @@ describe("consultation change probe", () => {
   it("rejects malformed project ids and tokens before any read", async () => {
     expect(await getStaffConsultationProbe("not-a-uuid")).toBeNull();
     expect(await getClientConsultationProbe("short")).toBeNull();
+  });
+  it("changes the staff-only fingerprint when another tab acknowledges a rough and preserves unavailable reads", async () => {
+    m.roughOks.mockResolvedValueOnce([{ id: "rough", acknowledgedAt: null }]);
+    expect((await getStaffConsultationProbe(pid))?.roughOks).toBe("rough/pending");
+    m.roughOks.mockResolvedValueOnce([{ id: "rough", acknowledgedAt: "2026-10-12T00:00:00Z" }]);
+    expect((await getStaffConsultationProbe(pid))?.roughOks).toBe("rough/2026-10-12T00:00:00Z");
+    m.roughOks.mockResolvedValueOnce(null);
+    expect((await getStaffConsultationProbe(pid))?.roughOks).toBeNull();
+    expect(await getClientConsultationProbe("x".repeat(32))).not.toHaveProperty("roughOks");
   });
 });

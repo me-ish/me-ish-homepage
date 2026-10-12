@@ -14,7 +14,7 @@ const expected={
     "raw": false
   },
   "src/features/natori/server/projectsService.ts": {
-    "sha256": "8f90f8f620af4e5ec0c59c0063f3a3e1709a9d445cb4f36be557ad00c7155f68",
+    "sha256": "2f976af81b93dc0e0ebcc86cfd452f502b86b7e84bab13ed644235ef51bd24b0",
     "raw": false
   },
   "scripts/natori-phase-6a/build-fixture.mjs": {

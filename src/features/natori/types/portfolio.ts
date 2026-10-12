@@ -113,6 +113,8 @@ export type PortfolioFaq = {
 export type PortfolioProcessVideoShape = "landscape" | "square" | "portrait";
 
 export type PortfolioProcessVideo = {
+  /** Existing records without this flag retain their published state. */
+  published?: boolean;
   /**
    * YouTube の動画URL（限定公開でよい）か、編集画面からアップロードした動画ファイルの公開URL。
    * どちらかはURLの形で決まる。空なら公開ページに何も出さない

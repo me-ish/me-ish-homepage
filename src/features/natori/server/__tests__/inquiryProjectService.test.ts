@@ -399,4 +399,17 @@ describe("createStructuredInquiryProject", () => {
     expect(mockResolveOwner).not.toHaveBeenCalled();
     expect(mockCreateIntake).not.toHaveBeenCalled();
   });
+
+  it.each(["db-error", "invalid-status"])("does not report a saved inquiry when project creation returns %s", async kind => {
+    mockCreateAdminProject.mockResolvedValue({ kind });
+    const result = await createInquiryProject({
+      name: "Synthetic client", email: "synthetic@example.com", requestType: "アイコン", plan: "胸上",
+      options: [], budget: "相談", deadline: "相談", details: "Synthetic", message: "Synthetic", refUrls: "",
+    });
+    expect(result).toEqual({ kind: "db-error" });
+    expect(result).not.toHaveProperty("projectId");
+    expect(mockCreateAdminProject).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      userId: OWNER_ID, status: "inquiry",
+    }));
+  });
 });

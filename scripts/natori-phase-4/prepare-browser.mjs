@@ -9,7 +9,10 @@ for (const path of [
   'src/app/[locale]/natori/consult/[token]/page.tsx',
   'src/app/api/natori/consult/[token]/route.ts',
   'src/app/api/natori/consult/[token]/renew/route.ts',
+  'src/app/api/natori/consult/[token]/rough-ok/route.ts',
+  'src/app/api/natori/admin/consultation/rough/route.ts',
   'src/app/api/natori/admin/consultation/route.ts',
+  'src/app/api/natori/admin/consultation/rough-ok/route.ts',
   'src/app/api/natori/consultation-file/route.ts',
   'src/app/api/natori/admin/project-activity/route.ts',
 ]) {

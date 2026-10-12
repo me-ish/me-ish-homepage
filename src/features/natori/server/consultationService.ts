@@ -10,6 +10,8 @@ import { parseInquiryNote } from "@/features/natori/lib/inquiryNoteView";
 import type { Json } from "@/types/supabase";
 import { roughSignature } from "../lib/roughSignature";
 import { listProjectRoughs, toConsultationRough } from "./talkRoughStore";
+import { loadStaffRoughOks } from "./roughFollowupService";
+import { roughOkSignature } from "../lib/roughFollowup";
 
 const TOKEN_RE = /^[A-Za-z0-9_-]{30,64}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -83,7 +85,7 @@ async function getMessages(projectId: string): Promise<ConsultationMessage[] | n
 }
 
 /** `roughs` fingerprints the rough marks and their OKs (see roughSignature) so the page also notices those. */
-export type ConsultationProbe = { count: number; lastId: string | null; closed: boolean; roughs: string };
+export type ConsultationProbe = { count: number; lastId: string | null; closed: boolean; roughs: string; roughOks?: string | null };
 
 /** Cheap change check for polling: no file links are signed and no bodies are read. */
 async function probeMessages(project: ProjectRow): Promise<ConsultationProbe | null> {
@@ -100,7 +102,9 @@ export async function getStaffConsultationProbe(projectId: string): Promise<Cons
   const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return null;
   const project = await getProject(projectId, ownerId);
-  return project ? probeMessages(project) : null;
+  if (!project) return null;
+  const [probe, roughOks] = await Promise.all([probeMessages(project), loadStaffRoughOks(ownerId, projectId)]);
+  return probe ? { ...probe, roughOks: roughOks === null ? null : roughOkSignature(roughOks) } : null;
 }
 
 export async function getClientConsultationProbe(token: string): Promise<ConsultationProbe | null> {
@@ -114,8 +118,8 @@ export async function getStaffConsultation(projectId: string) {
   if (!ownerId) return null;
   const project = await getProject(projectId, ownerId);
   if (!project) return null;
-  const messages = await getMessages(projectId);
-  return messages === null ? null : { project, messages };
+  const [messages, roughOks] = await Promise.all([getMessages(projectId), loadStaffRoughOks(ownerId, projectId)]);
+  return messages === null ? null : { project, messages, roughOks };
 }
 
 export async function getClientConsultation(token: string) {

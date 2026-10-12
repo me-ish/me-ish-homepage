@@ -4,9 +4,41 @@ import type { NatoriProject } from "../../types/projects";
 const project = (patch: Partial<NatoriProject> = {}): NatoriProject => ({
   id: "a", title: "Synthetic", clientName: "Client", type: "icon", status: "rough", amount: 1000,
   dueDate: null, tasks: [], nextAction: "Continue", createdAt: "2026-01-01T00:00:00Z",
-  consultation: { latestMessageId: null, latestMessageAt: null, latestSender: null, notificationFailed: 0, notificationPending: 0 }, ...patch,
+  consultation: { latestMessageId: null, latestMessageAt: null, latestSender: null, notificationFailed: 0, notificationPending: 0, roughOkPending: 0, latestRoughOkId: null, latestRoughOkAt: null }, ...patch,
 });
 describe("consultation business read model", () => {
+  it("keeps a rough OK-only action visible despite the latest message still being staff", () => {
+    const p = project();
+    Object.assign(p.consultation!, { latestSender: "staff", roughOkPending: 1, latestRoughOkId: "rough-1", latestRoughOkAt: "2026-10-12T00:00:00Z" });
+    expect(consultationReplyLabel(p)).toBe("ラフOK・次の対応待ち");
+    expect(consultationNeedsAttention(p)).toBe(true);
+  });
+  it("only per-rough acknowledgement clears rough attention, including after ordinary replies and closure", () => {
+    const p = project();
+    Object.assign(p.consultation!, { roughOkPending: 2, latestRoughOkId: "r2", latestRoughOkAt: "2026-10-12T00:00:00Z" });
+    for (const sender of ["staff", "client"] as const) {
+      p.consultation!.latestSender = sender;
+      expect(consultationReplyLabel(p)).toBe("ラフOK・次の対応待ち");
+    }
+    p.status = "closed";
+    expect(consultationReplyLabel(p)).toBe("終了案件・ラフOK確認待ち");
+    expect(consultationNeedsAttention(p)).toBe(true);
+    p.consultation!.roughOkPending = 1;
+    expect(consultationNeedsAttention(p)).toBe(true);
+    p.consultation!.roughOkPending = 0;
+    expect(consultationNeedsAttention(p)).toBe(false);
+    p.consultation = null;
+    expect(consultationNeedsAttention(p)).toBe(true);
+    p.deletedAt = "2026-10-12T00:00:00Z";
+    expect(consultationNeedsAttention(p)).toBe(false);
+  });
+  it("uses the later OK-only activity without replacing a newer message time", () => {
+    const p = project();
+    Object.assign(p.consultation!, { roughOkPending: 1, latestRoughOkId: "r1", latestRoughOkAt: "2026-10-12T00:00:00Z", latestMessageAt: "2026-10-01T00:00:00Z" });
+    expect(consultationActivityDay(p)).toBe("2026-10-12");
+    p.consultation!.latestMessageAt = "2026-10-13T00:00:00Z";
+    expect(consultationActivityDay(p)).toBe("2026-10-13");
+  });
   it("does not equate a fetch failure with no conversations", () => {
     expect(consultationReplyState(project({ consultation: null }))).toBe("unknown");
     expect(consultationNeedsAttention(project({ consultation: null }))).toBe(true);

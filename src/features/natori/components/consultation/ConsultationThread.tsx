@@ -9,15 +9,17 @@ import { ArrowDown, MessageCircle, Paperclip, RefreshCw, Send } from "lucide-rea
 import { consultationOperationSchema, freezeConsultationOperation, consultationDigest, type ConsultationOperation } from "@/features/natori/lib/consultationOperation";
 import { validConsultationFile } from "@/features/natori/lib/consultationFileRules";
 import { consultationUploadEndpoint } from "@/features/natori/lib/consultationUploadEndpoint";
-import type { ConsultationMessage } from "@/features/natori/types/consultation";
+import type { ConsultationMessage, StaffRoughOk } from "@/features/natori/types/consultation";
 import { roughSignature } from "@/features/natori/lib/roughSignature";
+import { roughOkSignature, staffRoughOkListSchema } from "@/features/natori/lib/roughFollowup";
+import RoughOkFollowups from "./RoughOkFollowups";
 
 type Props =
   | { mode: "staff"; projectId: string; clientEmail?: string; standalone?: boolean; initialMessages?: never; token?: never; closed?: boolean; onChanged?: () => void; onDraftChange?: (hasDraft: boolean) => void }
   | { mode: "client"; token: string; initialMessages: ConsultationMessage[]; closed: boolean; projectId?: never; clientEmail?: never };
 
 type ComposerJob = { actor: string; generation: number };
-type Probe = { count: number; lastId: string | null; closed: boolean; roughs?: string };
+type Probe = { count: number; lastId: string | null; closed: boolean; roughs?: string; roughOks?: string | null };
 
 /** How often an open, visible thread asks whether anything changed. */
 const POLL_MS = 15000;
@@ -115,6 +117,11 @@ export default function ConsultationThread(props: Props) {
     && currentPending.current?.operationId === operation.operationId && currentPending.current.requestHash === operation.requestHash;
   const ownsBusy = (job: ComposerJob) => ownsActor() && job.actor === actorKey && busyOwner.current === job;
   const [messages, setMessages] = useState<ConsultationMessage[]>(props.mode === "client" ? props.initialMessages : []);
+  const [roughOks, setRoughOks] = useState<StaffRoughOk[] | null>(null);
+  const roughOksRef = useRef(roughOks);
+  roughOksRef.current = roughOks;
+  const [roughOkSendingEnabled, setRoughOkSendingEnabled] = useState(false);
+  const [roughOkActionsAllowed, setRoughOkActionsAllowed] = useState(false);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(props.mode === "staff");
@@ -149,7 +156,7 @@ export default function ConsultationThread(props: Props) {
       const response = await fetch(endpoint, { cache: "no-store" });
       if (!ownsRead()) return false;
       if (!response.ok) throw new Error("相談履歴を読み込めませんでした。リンクが有効か確認して、もう一度更新してください。");
-      const data = await response.json() as { messages: ConsultationMessage[]; closed?: boolean };
+      const data = await response.json() as { messages: ConsultationMessage[]; closed?: boolean; roughOks?: unknown; roughOkSendingEnabled?: unknown; roughOkActionsAllowed?: unknown };
       if (!ownsRead()) return false;
       if (!Array.isArray(data.messages)) throw new Error("相談履歴を読み込めませんでした");
       const arrived = historyLoaded.current && data.messages.some(message => !knownMessages.current.has(message.id));
@@ -158,6 +165,12 @@ export default function ConsultationThread(props: Props) {
       historyLoaded.current = true;
       knownMessages.current = new Set(data.messages.map(message => message.id));
       setMessages(data.messages);
+      if (props.mode === "staff") {
+        const parsed = staffRoughOkListSchema.safeParse(data.roughOks);
+        setRoughOks(parsed.success ? parsed.data : null);
+        setRoughOkSendingEnabled(data.roughOkSendingEnabled === true);
+        setRoughOkActionsAllowed(parsed.success && data.roughOkActionsAllowed === true);
+      }
       if (typeof data.closed === "boolean") setClosed(data.closed);
       setHistoryUnavailable(false);
       setError("");
@@ -165,12 +178,13 @@ export default function ConsultationThread(props: Props) {
     } catch (error) {
       if (!ownsRead()) return false;
       setHistoryUnavailable(true);
+      setRoughOkActionsAllowed(false);
       setError(afterSaved ? "送信は保存済みですが、履歴を更新できませんでした。「履歴を更新」で確認してください。本文を送り直す必要はありません。" : error instanceof Error ? error.message : "相談履歴を読み込めませんでした");
       return false;
     } finally {
       if (ownsRead()) setLoading(false);
     }
-  }, [endpoint, actorKey]);
+  }, [endpoint, actorKey, props.mode]);
 
   const refresh = useCallback(() => reload(), [reload]);
   const probeEndpoint = endpoint + (props.mode === "staff" ? "&probe=1" : "?probe=1");
@@ -216,16 +230,17 @@ export default function ConsultationThread(props: Props) {
         const different = typeof probe.count === "number" && (probe.count !== known.size || (probe.lastId !== null && probe.lastId !== undefined && !known.has(probe.lastId)));
         const closedChanged = typeof probe.closed === "boolean" && probe.closed !== closedRef.current;
         const roughsChanged = typeof probe.roughs === "string" && probe.roughs !== roughSignature(messagesRef.current.flatMap(message => message.rough ? [{ id: message.rough.id, answered: Boolean(message.rough.okAt) }] : []));
-        if (!different && !closedChanged && !roughsChanged) return;
+        const roughOksChanged = props.mode === "staff" && (probe.roughOks === null || (typeof probe.roughOks === "string" && probe.roughOks !== (roughOksRef.current === null ? null : roughOkSignature(roughOksRef.current))));
+        if (!different && !closedChanged && !roughsChanged && !roughOksChanged) return;
         const nearBottom = !last || last.getBoundingClientRect().bottom <= window.innerHeight + FOLLOW_SLACK_PX;
-        await reload(false, nearBottom);
+        if (await reload(false, nearBottom) && roughOksChanged) changed?.();
       } catch { /* Silent: the next tick or a manual refresh retries. */ } finally {
         polling.current = false;
       }
     };
     const timer = window.setInterval(() => void tick(), POLL_MS);
     return () => window.clearInterval(timer);
-  }, [probeEndpoint, actorKey, reload]);
+  }, [probeEndpoint, actorKey, reload, props.mode, changed]);
 
   useEffect(() => {
     if (!followAfterRender.current) return;
@@ -296,7 +311,7 @@ export default function ConsultationThread(props: Props) {
     const initial = props.mode === "client" ? props.initialMessages : [];
     knownMessages.current = new Set(initial.map(message => message.id));
     historyLoaded.current = props.mode === "client";
-    setMessages(initial);setClosed(props.closed ?? false);
+    setMessages(initial);setClosed(props.closed ?? false);setRoughOks(null);setRoughOkSendingEnabled(false);setRoughOkActionsAllowed(false);
     if (fileRef.current) fileRef.current.value = "";
     try{
       const raw=sessionStorage.getItem(cacheKey),restored=raw?consultationOperationSchema.parse(JSON.parse(raw)):null;
@@ -435,6 +450,24 @@ export default function ConsultationThread(props: Props) {
     } finally { releaseBusy(job); }
   };
 
+  const roughOkAction = async (roughId: string, action: "acknowledge" | "retry-notification") => {
+    if (props.mode !== "staff" || busyOwner.current || busy || !ownsActor() || !roughOkActionsAllowed) return;
+    const job = { actor: actorKey, generation: operationGeneration.current };
+    busyOwner.current = job; setBusy(true); setError("");
+    try {
+      const response = await fetch("/api/natori/admin/consultation/rough-ok", { method: "POST",
+        headers: { ...CSRF_HEADERS, "Content-Type": "application/json" }, body: JSON.stringify({ projectId: props.projectId, roughId, action }) });
+      const result: unknown = await response.json().catch(() => null);
+      if (!ownsBusy(job)) return;
+      if (!response.ok || !result || typeof result !== "object" || !("ok" in result) || result.ok !== true || !("roughId" in result) || result.roughId !== roughId) throw new Error("ラフOKの操作結果を確認できません。履歴を更新して確認してください。");
+      setNotice(action === "acknowledge" ? "このラフOKの次の対応を確認済みにしました。依頼者のOK記録は保持されています。" : "このラフOKのメールを再試行しました。通知の状態を確認してください。");
+      changed?.();
+      await reload();
+    } catch (err) {
+      if (ownsBusy(job)) setError(err instanceof Error ? err.message : "ラフOKの操作結果を確認できません。");
+    } finally { releaseBusy(job); }
+  };
+
   const cannotSend = closed || (props.mode === "staff" && !props.clientEmail);
   const t = threadTone[props.mode];
   // On phones the client's input bar stays at the bottom of the screen (LINE-like);
@@ -451,6 +484,7 @@ export default function ConsultationThread(props: Props) {
         {newMessages && !loading ? <button type="button" onClick={showLatest} className={`inline-flex items-center gap-1 ${t.textButton}`}><ArrowDown className="h-3.5 w-3.5" aria-hidden />新しいやり取りを見る</button> : null}
         {props.mode === "staff" && !props.clientEmail ? <p className={t.warning}>依頼者のメールアドレスがないため返信できません。</p> : null}
         {loading ? <p role="status" className={t.caption}>履歴を確認中…</p> : null}
+        {props.mode === "staff" && !loading && !historyUnavailable ? <RoughOkFollowups key={actorKey} rows={roughOks} messages={messages} closed={closed} actionsAllowed={roughOkActionsAllowed} busy={busy} sendingEnabled={roughOkSendingEnabled} onAction={roughOkAction} /> : null}
       </div>
       {!loading && !historyUnavailable && messages.length === 0 ? <p className={`${t.pad} py-6 text-center ${t.caption}`}>{closed ? "相談履歴はありません。" : "返信はまだありません。最初のメッセージを送れます。"}</p> : null}
       {messages.length > 0 ? (
@@ -458,7 +492,7 @@ export default function ConsultationThread(props: Props) {
           {messages.map((message, index) => {
             const own = props.mode === "client" ? message.sender === "client" : message.sender === "staff";
             return (
-              <li key={message.id} ref={index === messages.length - 1 ? lastMessageRef : undefined} tabIndex={-1} className={`flex flex-col rounded-2xl ${natoriClientUi.focus} ${own ? "items-end" : "items-start"}`}>
+              <li id={`consultation-message-${message.id}`} key={message.id} ref={index === messages.length - 1 ? lastMessageRef : undefined} tabIndex={-1} className={`flex flex-col rounded-2xl ${natoriClientUi.focus} ${own ? "items-end" : "items-start"}`}>
                 <p className={`mb-1 px-1 ${t.meta}`}>{message.sender === "staff" ? "ナトリ" : "依頼者"} · {dateTime(message.createdAt)}</p>
                 <div className={`min-w-0 max-w-[88%] px-4 py-3 sm:max-w-[80%] ${own ? t.own : t.other}`}>
                   <p className={`whitespace-pre-wrap break-words ${t.body}`}>{renderText(message.body)}</p>

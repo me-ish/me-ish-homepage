@@ -1,0 +1,10 @@
+
+ RUN  v4.1.11 /workspace/pr162-acceptance
+
+ ✓ scripts/legacy-entry-read-security/acceptance/certificate.test.ts (13 tests) 1243ms
+
+ Test Files  1 passed (1)
+      Tests  13 passed (13)
+   Start at  23:59:23
+   Duration  2.39s (transform 260ms, setup 0ms, import 419ms, tests 1.24s, environment 0ms)
+

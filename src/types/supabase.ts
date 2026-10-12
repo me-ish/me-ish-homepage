@@ -853,20 +853,29 @@ export type Database = {
       }
       natori_portfolio_content: {
         Row: {
+          revision: number
           content: Json
           id: string
           updated_at: string
         }
         Insert: {
+          revision?: number
           content: Json
           id?: string
           updated_at?: string
         }
         Update: {
+          revision?: number
           content?: Json
           id?: string
           updated_at?: string
         }
+        Relationships: []
+      }
+      natori_portfolio_assets: {
+        Row: { id: string; owner_id: string; kind: string; path: string; byte_size: number; ready: boolean; created_at: string }
+        Insert: { id: string; owner_id: string; kind: string; path: string; byte_size: number; ready?: boolean; created_at?: string }
+        Update: { ready?: boolean }
         Relationships: []
       }
       natori_pricing_configs: {
@@ -1764,6 +1773,7 @@ export type Database = {
       }
     }
     Functions: {
+      natori_save_portfolio_content: { Args: { expected_revision: number; next_content: Json }; Returns: { saved_revision: number }[] }
       natori_consultation_operation_v1: {Args:{p_project_id:string;p_sender:string;p_operation_id:string;p_request_hash:string;p_command:string;p_owner_id?:string|null;p_access_hash?:string|null;p_input?:Json;p_claim_token?:string|null};Returns:Json}
       natori_consultation_legacy_notice_v1: {Args:{p_owner_id:string;p_project_id:string;p_message_id:string;p_payload:Json;p_access_hash:string|null;p_expires_at:string|null};Returns:string|null}
       natori_intake_lookup_v1: { Args: { p_owner_id: string; p_operation_id: string; p_request_hash: string }; Returns: NatoriIntakeOperationRpcRow[] }
@@ -1826,6 +1836,26 @@ export type Database = {
       natori_consultation_overview_v1: {
         Args: { p_owner_id: string; p_project_ids: string[] }
         Returns: { project_id: string; latest_message_id: string | null; latest_sender: string | null; latest_message_at: string | null; notification_failed: number; notification_pending: number }[]
+      }
+      natori_consultation_overview_v2: {
+        Args: { p_owner_id: string; p_project_ids: string[] }
+        Returns: { project_id: string; latest_message_id: string | null; latest_sender: string | null; latest_message_at: string | null; notification_failed: number; notification_pending: number; rough_ok_pending: number; latest_rough_ok_id: string | null; latest_rough_ok_at: string | null }[]
+      }
+      natori_record_rough_ok_v1: {
+        Args: { p_project_id: string; p_rough_id: string; p_token_hash: string }
+        Returns: { result: string; project_id: string | null; rough_id: string | null; client_ok_at: string | null; notification_ids: string[] }[]
+      }
+      natori_acknowledge_rough_ok_v1: {
+        Args: { p_owner_id: string; p_project_id: string; p_rough_id: string }
+        Returns: { result: string; acknowledged_at: string | null }[]
+      }
+      natori_rough_ok_list_v1: {
+        Args: { p_owner_id: string; p_project_id: string }
+        Returns: { rough_id: string; message_id: string; before_quote: boolean; client_ok_at: string; acknowledged_at: string | null; notification_id: string | null; notification_status: string | null; notification_attempt_no: number | null; notification_sent_at: string | null; notification_claim_count: number | null; notification_lease_expires_at: string | null; notification_send_started_at: string | null; notification_retry_after: string | null }[]
+      }
+      natori_retry_rough_ok_notification_v1: {
+        Args: { p_owner_id: string; p_project_id: string; p_rough_id: string }
+        Returns: string
       }
       natori_notification_list_v1: {
         Args: { p_owner_id: string; p_offset?: number }

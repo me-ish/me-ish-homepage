@@ -5,7 +5,7 @@ import type { TalkFacts, TalkQuoteFact, TalkRoughFact } from "../../types/talk";
 const now = new Date("2026-10-12T03:00:00Z");
 const quote = (over: Partial<TalkQuoteFact> = {}): TalkQuoteFact => ({ id: "q1", version: 1, amount: 30000, issuedAt: "2026-10-10T00:00:00Z", expiresAt: "2026-10-18T14:59:59Z", acceptedAt: null, supersededAt: null, ...over });
 const facts = (over: Partial<TalkFacts> = {}): TalkFacts => ({
-  linksAllowed: true, quotes: [], payment: { confirmedAt: null, linkUrl: null, linkDeadline: null, processing: false },
+  linksAllowed: true, quotes: [], payment: { confirmedAt: null },
   delivery: { exists: false, expiresAt: null, acceptedAt: null, fileCount: null, openable: true }, ...over,
 });
 const rough = (over: Partial<TalkRoughFact> = {}): TalkRoughFact => ({ id: "r1", messageId: "m1", beforeQuote: false, createdAt: "2026-10-11T03:00:00Z", okAt: null, ...over });
@@ -36,30 +36,30 @@ describe("talk timeline", () => {
 
   it("offers the payment button only after approval, only for a Stripe URL and only before the deadline", () => {
     const accepted = quote({ acceptedAt: "2026-10-11T01:00:00Z" });
-    const link = { confirmedAt: null, linkUrl: "https://buy.stripe.com/test_abc", linkDeadline: "2026-10-20T00:00:00Z", processing: false };
+    const link = { confirmedAt: null, link: { kind: "generation" as const, state: "active", url: "https://buy.stripe.com/test_abc", deadline: "2026-10-20T00:00:00Z" } };
     const [, pay] = buildTalkTimeline(facts({ quotes: [accepted], payment: link }), now).cards;
     expect(pay).toMatchObject({ kind: "payment", amount: "¥30,000", badge: { label: "支払い待ち" }, action: { label: "お支払いへ進む", href: "https://buy.stripe.com/test_abc" } });
     // No approval, no payment card at all.
     expect(buildTalkTimeline(facts({ quotes: [quote()], payment: link }), now).cards.map(c => c.kind)).toEqual(["quote"]);
     // Foreign host or plain http never becomes a button.
     for (const linkUrl of ["https://evil.example/pay", "http://buy.stripe.com/x", "javascript:alert(1)", "https://stripe.com.evil.example/x"])
-      expect(buildTalkTimeline(facts({ quotes: [accepted], payment: { ...link, linkUrl } }), now).cards.map(c => c.kind)).toEqual(["quote"]);
+      expect(buildTalkTimeline(facts({ quotes: [accepted], payment: { ...link, link: { ...link.link, url: linkUrl } } }), now).cards[1].action).toBeUndefined();
     // Past deadline: no button, a plain notice.
-    const late = buildTalkTimeline(facts({ quotes: [accepted], payment: { ...link, linkDeadline: "2026-10-12T02:00:00Z" } }), now).cards[1];
+    const late = buildTalkTimeline(facts({ quotes: [accepted], payment: { ...link, link: { ...link.link, deadline: "2026-10-12T02:00:00Z" } } }), now).cards[1];
     expect(late.badge.label).toBe("期限切れ"); expect(late.action).toBeUndefined();
   });
 
   it("shows a processing payment without a button and a confirmed one as done", () => {
     const accepted = quote({ acceptedAt: "2026-10-11T01:00:00Z" });
-    const url = "https://buy.stripe.com/test_abc";
-    const processing = buildTalkTimeline(facts({ quotes: [accepted], payment: { confirmedAt: null, linkUrl: url, linkDeadline: null, processing: true } }), now).cards[1];
+
+    const processing = buildTalkTimeline(facts({ quotes: [accepted], payment: { overview: { available: true, confirmedAt: null, requiresReview: false, processing: true } } }), now).cards[1];
     expect(processing).toMatchObject({ badge: { label: "確認中", tone: "wait" } }); expect(processing.action).toBeUndefined();
-    const paid = buildTalkTimeline(facts({ quotes: [accepted], payment: { confirmedAt: "2026-10-12T01:00:00Z", linkUrl: url, linkDeadline: null, processing: false } }), now).cards[1];
+    const paid = buildTalkTimeline(facts({ quotes: [accepted], payment: { confirmedAt: "2026-10-12T01:00:00Z" } }), now).cards[1];
     expect(paid).toMatchObject({ badge: { label: "支払い完了", tone: "done" } }); expect(paid.action).toBeUndefined();
   });
 
   it("offers the delivery button only for a release that is paid, unexpired and openable", () => {
-    const paid = { confirmedAt: "2026-10-12T01:00:00Z", linkUrl: null, linkDeadline: null, processing: false };
+    const paid = { confirmedAt: "2026-10-12T01:00:00Z" };
     const delivery = { exists: true, fileCount: 2, acceptedAt: null as string | null, expiresAt: "2026-11-20T00:00:00Z", openable: true };
     const last = (f: TalkFacts) => buildTalkTimeline(f, now).cards.at(-1)!;
     const waiting = last(facts({ payment: paid, delivery }));
@@ -88,7 +88,7 @@ describe("talk timeline", () => {
   it("tracks the three steps without requiring any order", () => {
     const steps = (f: TalkFacts) => buildTalkTimeline(f, now).steps.map(step => step.done);
     expect(steps(facts())).toEqual([false, false, false]);
-    expect(steps(facts({ quotes: [quote({ acceptedAt: "2026-10-11T01:00:00Z" })], payment: { confirmedAt: "2026-10-12T01:00:00Z", linkUrl: null, linkDeadline: null, processing: false } }))).toEqual([true, true, false]);
+    expect(steps(facts({ quotes: [quote({ acceptedAt: "2026-10-11T01:00:00Z" })], payment: { confirmedAt: "2026-10-12T01:00:00Z" } }))).toEqual([true, true, false]);
     expect(steps(facts({ delivery: { exists: true, expiresAt: null, acceptedAt: null, fileCount: 1, openable: true } }))).toEqual([false, false, true]);
   });
 

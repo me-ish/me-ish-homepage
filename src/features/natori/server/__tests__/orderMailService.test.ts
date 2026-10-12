@@ -11,6 +11,7 @@ const {
   mockLinksUpdate,
   mockAdminFrom,
   mockRpc,
+  mockIssueDelivery,
 } = vi.hoisted(() => ({
   mockSend: vi.fn(),
   mockPricesCreate: vi.fn(),
@@ -18,6 +19,7 @@ const {
   mockLinksUpdate: vi.fn(),
   mockAdminFrom: vi.fn(),
   mockRpc: vi.fn(),
+  mockIssueDelivery: vi.fn(),
 }));
 
 vi.mock("resend", () => ({
@@ -47,6 +49,10 @@ vi.mock("@/lib/supabaseAdmin", () => ({
 
 vi.mock("@/features/natori/server/natoriOwner", () => ({
   resolveNatoriOwnerId: vi.fn().mockResolvedValue("owner-1"),
+}));
+
+vi.mock("@/features/natori/server/deliveryReleaseService", () => ({
+  issueReadyDelivery: (...args: unknown[]) => mockIssueDelivery(...args),
 }));
 
 type Result = { data: unknown; error: unknown; count?: number | null };
@@ -189,6 +195,53 @@ beforeEach(() => {
 });
 
 afterEach(() => vi.unstubAllEnvs());
+
+describe("sendNatoriOrderMail delivery publication boundary", () => {
+  const input = {
+    projectId: "11111111-2222-3333-4444-555555555555", kind: "delivery" as const,
+    to: "synthetic@example.com", subject: "Synthetic delivery", body: "Synthetic body", amount: 8000,
+    operationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", fileIds: ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
+  };
+
+  it.each(["delivery_prep", "delivered", "completed"])(
+    "with integrity disabled, %s never rotates tokens, resets acceptance or sends legacy mail",
+    async status => {
+      vi.stubEnv("NATORI_DELIVERY_INTEGRITY_ENABLED", "0");
+      const historical = { ...makeProjectRow({ status }),
+        delivery_accepted_at: "2026-10-01T12:00:00Z", completed_at: "2026-10-01T12:00:00Z" };
+      const db = installDb(historical);
+      const { sendNatoriOrderMail } = await loadService();
+      expect(await sendNatoriOrderMail(input)).toEqual({ kind: "not-configured" });
+      expect(mockAdminFrom).not.toHaveBeenCalled();
+      expect(mockRpc).not.toHaveBeenCalled();
+      expect(mockIssueDelivery).not.toHaveBeenCalled();
+      expect(mockSend).not.toHaveBeenCalled();
+      expect(db.projectUpdates).toEqual([]);
+      expect(db.mailLogInserts).toEqual([]);
+      expect(historical.delivery_accepted_at).toBe("2026-10-01T12:00:00Z");
+    },
+  );
+
+  it("uses the dedicated issue service when delivery integrity is enabled", async () => {
+    vi.stubEnv("NATORI_DELIVERY_INTEGRITY_ENABLED", "1");
+    const result = { kind: "ok", releaseId: "release-1", notificationStatus: "queued" };
+    mockIssueDelivery.mockResolvedValue(result);
+    const { sendNatoriOrderMail } = await loadService();
+    expect(await sendNatoriOrderMail(input)).toEqual(result);
+    expect(mockIssueDelivery).toHaveBeenCalledExactlyOnceWith(input);
+    expect(mockSend).not.toHaveBeenCalled();
+    expect(mockAdminFrom).not.toHaveBeenCalled();
+  });
+
+  it("does not report success or use legacy mail when the dedicated issue service fails", async () => {
+    vi.stubEnv("NATORI_DELIVERY_INTEGRITY_ENABLED", "1");
+    mockIssueDelivery.mockResolvedValue({ kind: "db-error" });
+    const { sendNatoriOrderMail } = await loadService();
+    expect(await sendNatoriOrderMail(input)).toEqual({ kind: "db-error" });
+    expect(mockSend).not.toHaveBeenCalled();
+    expect(mockAdminFrom).not.toHaveBeenCalled();
+  });
+});
 
 describe("markNatoriCommissionPaid", () => {
   it("does not advance an undecided project after a Stripe payment", async () => {

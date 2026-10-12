@@ -5,7 +5,7 @@
 // 画像はX(Twitter)の縦長表示に近い 3:4 で見せ、クリックでモーダル拡大表示（前後の作品にも移れる）。
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
-import Image from "next/image";
+import Image from "./PortfolioImage";
 import { ChevronLeft, ChevronRight, ChevronUp, X } from "lucide-react";
 import {
   placeholderPalettes,

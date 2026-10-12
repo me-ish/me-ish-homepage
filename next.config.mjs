@@ -10,6 +10,9 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_HOST = SUPABASE_URL ? new URL(SUPABASE_URL).hostname : '';
 
 const nextConfig = {
+  // The image ceiling remains 10 MiB; middleware also buffers multipart headers.
+  // A bounded extra MiB prevents truncating a valid file at that exact ceiling.
+  experimental: { middlewareClientMaxBodySize: '11mb' },
   images: {
     // Supabase Storage の公開URLを許可
     // 例) https://<project>.supabase.co/storage/v1/object/public/avatars/...

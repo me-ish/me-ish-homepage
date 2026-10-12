@@ -117,6 +117,27 @@ beforeEach(() => {
 /* ---------- Tests ---------- */
 
 describe("setNatoriProjectStatus", () => {
+  it.each([
+    ["delivery_prep", "delivered"],
+    ["rough", "completed"],
+    ["delivered", "completed"],
+    ["delivered", "delivery_prep"],
+    ["completed", "delivered"],
+    ["completed", "rough"],
+    ["delivered", "delivered"],
+    ["completed", "completed"],
+  ])("rejects generic %s → %s without writing delivery/completion state", async (from, to) => {
+    const { updates } = projectsTable([
+      { data: { id: "proj-1", status: from, type: "icon" }, error: null },
+      { data: { id: "proj-1" }, error: null },
+    ]);
+    expect(await setNatoriProjectStatus("proj-1", to, "manual bypass")).toEqual({
+      kind: "invalid-transition", from, to,
+    });
+    expect(updates).toEqual([]);
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
   it("許可された遷移は現在ステータスを条件に含めて更新する", async () => {
     const { updates, updateCalls } = projectsTable([
       { data: { id: "proj-1", status: "quoted" }, error: null },
@@ -482,7 +503,7 @@ describe("listNatoriAdminProjects", () => {
     expect(result.tasks[0]).toMatchObject({id:"existing",done:false});
     expect(mockSnapshot).toHaveBeenCalledExactlyOnceWith("owner-1",undefined);
     expect(calls.some(call => /^(update|upsert|delete|insert)\(/.test(call))).toBe(false);
-    expect(mockRpc).toHaveBeenCalledExactlyOnceWith("natori_consultation_overview_v1", {
+    expect(mockRpc).toHaveBeenCalledExactlyOnceWith("natori_consultation_overview_v2", {
       p_owner_id:"owner-1",p_project_ids:["active-1","archive-1"],
     });
   });
