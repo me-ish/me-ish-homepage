@@ -39,11 +39,13 @@ const phase6bRenderedSourcePaths = Object.freeze([
   "src/features/natori/constants/natoriPrimaryAction.ts",
   "src/features/natori/constants/portfolioContactCopy.ts",
   "src/features/natori/lib/__tests__/fixtures/portfolioWorkflow.public-20261001.json",
+  "src/features/natori/lib/clientPayment.ts",
   "src/features/natori/lib/portfolioContent.ts",
   "src/features/natori/lib/portfolioDisplay.ts",
   "src/features/natori/lib/portfolioWorkflow.ts",
   "src/features/natori/server/portfolioContactService.ts",
   "src/features/natori/server/portfolioSiteService.ts",
+  "src/features/natori/types/payment.ts",
   "src/features/natori/types/portfolio.ts",
   "src/features/natori/types/portfolioDisplay.ts"
 ]);

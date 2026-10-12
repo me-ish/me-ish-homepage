@@ -5,25 +5,42 @@ import {resolveTrustedNatoriOwnerId} from "./trustedNatoriOwner";
 import {paymentLinkIntegrityEnabled} from "./paymentLinkService";
 import {paymentIntegrityEnabled,refundLedgerReadEnabled} from "./paymentEventService";
 import type {NatoriPaymentOverview,NatoriPaymentAttention} from "../types/payment";
+import {isPaymentTimestamp,isStripePaymentUrl,PAYMENT_LINK_STATES} from "../lib/clientPayment";
 
 const unavailable: NatoriPaymentOverview = {available:false,confirmedAt:null,requiresReview:false,processing:false};
 /** Called after quote-capability validation; contains no Stripe ID, amount override or customer address. */
 export async function getQuotePaymentOverview(projectId:string):Promise<NatoriPaymentOverview|undefined>{
- if(!paymentIntegrityEnabled())return undefined;
- const owner=resolveTrustedNatoriOwnerId();if(owner.kind!=="ok")return unavailable;
- const {data,error}=await supabaseAdmin().rpc("natori_quote_payment_state_v1",{p_owner_id:owner.ownerId,p_project_id:projectId});
- if(error||!data||typeof data!=="object"||Array.isArray(data))return unavailable;
- if(data.available!==true||typeof data.requiresReview!=="boolean"||typeof data.processing!=="boolean"
-  ||(data.confirmedAt!==null&&typeof data.confirmedAt!=="string"))return unavailable;
- const overview:NatoriPaymentOverview={available:true,confirmedAt:data.confirmedAt,requiresReview:data.requiresReview,processing:data.processing};
- if(paymentLinkIntegrityEnabled()){
-  const link=await supabaseAdmin().rpc("natori_payment_links_v1",{p_owner_id:owner.ownerId,p_project_id:projectId,p_command:"read"});
-  if(link.error||!link.data||typeof link.data!=="object"||Array.isArray(link.data)||typeof link.data.state!=="string")return unavailable;
-  overview.linkState=link.data.terminal===true?"terminal":link.data.state;
-  overview.linkDeadline=typeof link.data.deadline==="string"?link.data.deadline:null;
-  if(["needs_review","legacy_review"].includes(overview.linkState))overview.requiresReview=true;
+ let overview:NatoriPaymentOverview|undefined;
+ try{
+  if(!paymentIntegrityEnabled())return undefined;
+  const owner=resolveTrustedNatoriOwnerId();if(owner.kind!=="ok")return unavailable;
+  const {data,error}=await supabaseAdmin().rpc("natori_quote_payment_state_v1",{p_owner_id:owner.ownerId,p_project_id:projectId});
+  if(error!==null||!data||typeof data!=="object"||Array.isArray(data))return unavailable;
+  if(data.available!==true||typeof data.requiresReview!=="boolean"||typeof data.processing!=="boolean"
+   ||(data.confirmedAt!==null&&!isPaymentTimestamp(data.confirmedAt)))return unavailable;
+  overview={available:true,confirmedAt:data.confirmedAt,requiresReview:data.requiresReview,processing:data.processing};
+  if(paymentLinkIntegrityEnabled()){
+   const link=await supabaseAdmin().rpc("natori_payment_links_v1",{p_owner_id:owner.ownerId,p_project_id:projectId,p_command:"read"});
+   const value=link.data;
+   if(link.error!==null||!value||typeof value!=="object"||Array.isArray(value)||value.result!=="ok"
+    ||typeof value.state!=="string"||!PAYMENT_LINK_STATES.includes(value.state as typeof PAYMENT_LINK_STATES[number])
+    ||typeof value.terminal!=="boolean"||(value.confirmedAt!==null&&!isPaymentTimestamp(value.confirmedAt)))return {...overview,available:false};
+   // The link RPC reads the project later: payment may arrive between the two reads.
+   overview.confirmedAt=value.confirmedAt??overview.confirmedAt;
+   overview.linkState=value.terminal?"terminal":value.state;
+   if(["needs_review","legacy_review"].includes(value.state))overview.requiresReview=true;
+   if((value.deadline!==null&&!isPaymentTimestamp(value.deadline))||(value.url!==null&&!isStripePaymentUrl(value.url))
+    ||(value.state==="active"&&(!isPaymentTimestamp(value.deadline)||!isStripePaymentUrl(value.url)
+     ||typeof value.attemptId!=="string"||!value.attemptId||!Number.isSafeInteger(value.generation)||Number(value.generation)<1
+     ||!Number.isSafeInteger(value.revision)||Number(value.revision)<1)))return {...overview,available:false};
+   overview.linkDeadline=value.deadline;
+   overview.linkUrl=value.url;
+  }
+  return overview;
+ }catch(error){
+  console.error("[natori-payment] overview unavailable",error instanceof Error?error.message:"unknown");
+  return overview?{...overview,available:false}:unavailable;
  }
- return overview;
 }
 
 export async function getPaymentAttention():Promise<{available:boolean;items:NatoriPaymentAttention[]}|null>{

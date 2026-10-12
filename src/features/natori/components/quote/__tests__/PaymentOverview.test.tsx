@@ -1,10 +1,19 @@
 // @vitest-environment jsdom
-import {afterEach,describe,it,expect} from "vitest";
+import {afterEach,beforeEach,describe,it,expect,vi} from "vitest";
 import {render,screen,cleanup} from "@testing-library/react";
 import QuoteAcceptCard from "../QuoteAcceptCard";
-afterEach(cleanup);
+import type {NatoriPaymentOverview} from "../../../types/payment";
+const fetchFixture=vi.fn();
+beforeEach(()=>{vi.useFakeTimers();vi.setSystemTime(new Date("2026-10-12T03:00:00Z"));vi.stubGlobal("fetch",fetchFixture);fetchFixture.mockClear();});
+afterEach(()=>{expect(fetchFixture).not.toHaveBeenCalled();cleanup();vi.unstubAllGlobals();vi.useRealTimers();});
 const props={token:"synthetic",title:"Fixture",clientName:"Synthetic",amount:12000,acceptedAt:"2026-10-01T00:00:00Z",expiresAt:"2099-10-01T00:00:00Z"};
 describe("quote payment facts",()=>{
+ it("prioritizes processing over an active link instead of prompting payment again",()=>{render(<QuoteAcceptCard {...props} payment={{available:true,confirmedAt:null,requiresReview:false,processing:true,linkState:"active",linkDeadline:"2099-10-01T00:00:00Z"}}/>);expect(screen.getByText(/入金の確認処理中/)).toBeTruthy();expect(screen.queryByText(/お支払い案内をご確認ください/)).toBeNull();});
  it("shows confirmed payment instead of perpetual guide waiting, retaining review warning",()=>{render(<QuoteAcceptCard {...props} payment={{available:true,confirmedAt:"2026-10-01T01:00:00Z",requiresReview:true,processing:false}}/>);expect(screen.getByText(/入金確認済みです/)).toBeTruthy();expect(screen.getByText(/お支払いの記録に確認が必要/)).toBeTruthy();expect(screen.queryByText(/今しばらくお待ち/)).toBeNull();});
  it("shows unavailable payment facts without asserting unpaid",()=>{render(<QuoteAcceptCard {...props} payment={{available:false,confirmedAt:null,requiresReview:false,processing:false}}/>);expect(screen.getByText(/入金状況を確認できませんでした/)).toBeTruthy();expect(screen.queryByText(/今しばらくお待ち/)).toBeNull();});
+ it("shows active guidance only for a valid unexpired projection",()=>{render(<QuoteAcceptCard {...props} payment={{available:true,confirmedAt:null,requiresReview:false,processing:false,linkState:"active",linkDeadline:"2099-01-01T00:00:00Z",linkUrl:"https://buy.stripe.com/synthetic"}}/>);expect(screen.getByText(/お支払い案内をご確認ください/)).toBeTruthy();});
+ it.each(["needs_review","legacy_review","terminal","inactive","stop_required","deactivating","creating","expired","unknown"])("does not show active payment instructions for %s",state=>{const {container}=render(<QuoteAcceptCard {...props} payment={{available:true,confirmedAt:null,requiresReview:false,processing:false,linkState:state,linkDeadline:"2099-01-01T00:00:00Z",linkUrl:"https://buy.stripe.com/synthetic"}}/>);expect(screen.queryByText(/お支払い案内をご確認ください/)).toBeNull();expect(container.querySelector("[href]")).toBeNull();});
+ it("expires at the exact current payment deadline",()=>{render(<QuoteAcceptCard {...props} payment={{available:true,confirmedAt:null,requiresReview:false,processing:false,linkState:"active",linkDeadline:"2026-10-12T03:00:00Z",linkUrl:"https://buy.stripe.com/synthetic"}}/>);expect(screen.getByText(/お支払いの期限が過ぎています/)).toBeTruthy();expect(screen.queryByText(/お支払い案内をご確認ください/)).toBeNull();});
+ it("preserves paid+review when the link-specific read is unavailable",()=>{render(<QuoteAcceptCard {...props} payment={{available:false,confirmedAt:"2026-10-12T01:00:00Z",requiresReview:true,processing:false}}/>);expect(screen.getByText(/入金確認済みです/)).toBeTruthy();expect(screen.getByText(/お支払いの記録に確認が必要/)).toBeTruthy();});
+ it("fails closed for malformed runtime payment data",()=>{render(<QuoteAcceptCard {...props} payment={{available:true,confirmedAt:"not-a-time",requiresReview:false,processing:false,linkState:"active",linkUrl:"https://buy.stripe.com/synthetic",linkDeadline:"2099-01-01T00:00:00Z"} as NatoriPaymentOverview}/>);expect(screen.getByText(/入金状況を確認できませんでした/)).toBeTruthy();expect(screen.queryByText(/入金確認済みです/)).toBeNull();expect(screen.queryByText(/お支払い案内をご確認ください/)).toBeNull();});
 });
