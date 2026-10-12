@@ -144,34 +144,58 @@ def lock_race(pid, statements, name):
     # Hold the actual project row until two independent RPC sessions are waiting.
     marker = 'PAY01_' + name
     holder = subprocess.Popen(COMMAND, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=ENV)
-    holder.stdin.write(f"begin; select id from public.natori_projects where id={literal(pid)} for update; select pg_advisory_xact_lock(12064005,1); select pg_sleep(3); commit;\n")
-    holder.stdin.close()
-    for _ in range(50):
-        if value('select pg_try_advisory_xact_lock(12064005,1)', role=None) == 'f':
-            break
-        time.sleep(.02)
-    else:
-        raise AssertionError('row lock rendezvous not observed')
-    def participant(item):
+    holder.stdin.write(f"begin; select id from public.natori_projects where id={literal(pid)} for update; select pg_advisory_xact_lock(12064005,1);\n")
+    holder.stdin.flush()
+    # The transaction stays open on stdin. Docker startup/polling latency cannot
+    # release the row before the coordinator observes the two genuine waiters.
+    def participant(item, index):
         statement, expected = item if isinstance(item, tuple) else (item, None)
-        output = sql('-- ' + marker + '\n' + statement, expected=expected)
+        output = sql(f"set application_name={literal(marker + '_' + str(index))};\n" + statement, expected=expected)
         return dict(result='rejected', sqlstate=expected) if expected else json.loads(output.splitlines()[-1])
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as workers:
-        pending = []
-        # Observe each queued waiter before starting the next participant. The
-        # two mixed races therefore test both arrival orders against a held row.
-        for index, statement in enumerate(statements):
-            pending.append(workers.submit(participant, statement))
-            waiters = 0
-            for _ in range(50):
-                waiters = int(value(f"select count(*) from pg_stat_activity where pid<>pg_backend_pid() and query like '%{marker}%' and wait_event_type='Lock'", role=None))
-                if waiters == index + 1:
-                    break
-                time.sleep(.02)
-            assert waiters == index + 1, 'both native sessions must contend on the project row'
-        result = [p.result() for p in pending]
-    assert holder.wait(timeout=8) == 0
+    try:
+        deadline = time.monotonic() + 8
+        while time.monotonic() < deadline:
+            if value('select pg_try_advisory_xact_lock(12064005,1)', role=None) == 'f':
+                break
+            assert holder.poll() is None, 'native holder exited before rendezvous'
+            time.sleep(.02)
+        else:
+            raise AssertionError('row lock rendezvous not observed')
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as workers:
+            pending = []
+            try:
+                # Use session metadata rather than SQL comments, which psql may
+                # strip. Observe the first queued waiter before starting second.
+                for index, statement in enumerate(statements):
+                    pending.append(workers.submit(participant, statement, index))
+                    deadline = time.monotonic() + 8
+                    waiters = 0
+                    while time.monotonic() < deadline:
+                        waiters = int(value(f"select count(*) from pg_stat_activity where application_name in ({literal(marker + '_0')},{literal(marker + '_1')}) and wait_event_type='Lock'", role=None))
+                        if waiters == index + 1:
+                            break
+                        if pending[-1].done():
+                            pending[-1].result()  # Surface a real SQL failure, not a timer failure.
+                            raise AssertionError('native race participant completed before held row released')
+                        time.sleep(.02)
+                    assert waiters == index + 1, 'both native sessions must contend on the project row'
+            finally:
+                # Always release before waiting on futures, even when rendezvous
+                # fails; no contender is stranded behind an open fixture lock.
+                holder.stdin.write('commit;\n')
+                holder.stdin.flush()
+                holder.stdin.close()
+            result = [p.result() for p in pending]
+    finally:
+        if not holder.stdin.closed:
+            try:
+                holder.stdin.write('rollback;\n')
+                holder.stdin.flush()
+            finally:
+                holder.stdin.close()
+        if holder.wait(timeout=8) != 0:
+            raise AssertionError('native holder failed to release dedicated transaction')
     check(name + '_two_real_row_lock_waiters')
     return result
 
