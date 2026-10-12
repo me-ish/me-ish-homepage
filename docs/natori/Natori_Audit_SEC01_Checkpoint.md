@@ -44,6 +44,8 @@ Critical reviewed source SHA-256:
 
 The independent static review found no remaining product-source blocker after the alias/filename/middleware corrections; its reviewed 30-file product fingerprint is `62f4df929d160ace16f26d63fa567ac56de5e07b22e7c5853853c24d98ee9371`. Native Storage/TUS/HTTP behavior remains subject to exact-commit CI. The final harness additionally checks hidden-only OG byte invariance, TUS wrong-path/bucket and fresh forged-upsert confinement; command diagnostics omit token-bearing argv/stdout/stderr and expose only safe operation/status/code fields.
 
+The first exact-remote-head native run (`38201242576`, job `114654917353`) passed units/types/lint/static and five helper checks, but stopped before HTTP while deleting an empty, synthetic bucket-drift fixture through SQL. Storage's delete guard correctly refused that operation. Cleanup now checks that owned fixture bucket is empty and uses the documented Storage `deleteBucket` API; schema/product guards remain intact. Runner failures record a bounded stage/index/category/line/status/code, excluding token-bearing command output. Native acceptance is still pending a successful subsequent exact-head run.
+
 ## Remaining acceptance gates
 
 1. Exact-head independent auth/database/security review and real native isolation CI artifacts must pass; this local runtime has no Docker executable, so no completed local native matrix is claimed.

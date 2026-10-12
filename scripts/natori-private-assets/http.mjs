@@ -303,13 +303,20 @@ try {
   const assetId = imageURL.split("/").at(-1).split(".")[0];
   const meta = await admin
     .from("natori_portfolio_assets")
-    .select("path")
+    .select("path,byte_size")
     .eq("id", assetId)
     .single();
   assert.ok(!meta.error);
+  const storedImage = await admin.storage
+    .from("natori-management-assets")
+    .download(meta.data.path);
+  assert.ok(!storedImage.error && storedImage.data);
+  const storedImageBytes = Buffer.from(await storedImage.data.arrayBuffer());
+  assert.equal(storedImageBytes.length, meta.data.byte_size);
+
   assert.notEqual(
     (
-      await fetch(
+      await fixtureFetch(
         config.api +
           "/storage/v1/object/public/natori-management-assets/" +
           meta.data.path,
@@ -400,11 +407,7 @@ try {
   let image = await api(publicURL);
   assert.equal(image.status, 200);
   assert.ok(image.headers.get("cache-control").includes("no-store"));
-  assert.ok(
-    Buffer.from(await image.arrayBuffer()).equals(
-      readFileSync(resultPath("image.webp")),
-    ),
-  );
+  assert.ok(Buffer.from(await image.arrayBuffer()).equals(storedImageBytes));
   assert.equal(
     (
       await api(
@@ -701,7 +704,7 @@ try {
       upsert: true,
     });
   assert.ok(replay.error);
-  const forged = await fetch(
+  const forged = await fixtureFetch(
     config.api +
       "/storage/v1/object/upload/sign/" +
       prep.data.bucket +

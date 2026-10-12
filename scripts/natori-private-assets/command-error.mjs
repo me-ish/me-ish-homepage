@@ -10,5 +10,6 @@ export function commandFailure(error, command, operation) {
     `Isolated command failed: ${command} ${operation}; status=${status}; signal=${signal}; code=${sqlCode}`,
   );
   result.name = "IsolatedCommandError";
+  result.diagnostic = { command, operation, status, signal, sqlCode };
   return result;
 }

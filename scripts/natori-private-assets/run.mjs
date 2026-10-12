@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createClient } from "@supabase/supabase-js";
 import { execFileSync, spawn } from "node:child_process";
 import { createHmac, randomBytes, createHash } from "node:crypto";
 import {
@@ -125,6 +126,8 @@ const containers = [],
   children = [];
 let network = false,
   fixturePath;
+let stage = "initialization",
+  driftIndex = null;
 function docker(name, args) {
   call("docker", [
     "run",
@@ -197,6 +200,7 @@ writeFileSync(
 );
 console.log("Dedicated synthetic acceptance: " + directory);
 try {
+  stage = "image-preflight";
   for (const image of Object.values(images)) {
     try {
       call("docker", ["image", "inspect", image]);
@@ -204,6 +208,7 @@ try {
       call("docker", ["pull", image]);
     }
   }
+  stage = "internal-network";
   call("docker", [
     "network",
     "create",
@@ -213,6 +218,7 @@ try {
     prefix,
   ]);
   network = true;
+  stage = "database-bootstrap";
   docker(names.db, [
     "--tmpfs",
     "/var/lib/postgresql/data:rw,nosuid,nodev,size=512m",
@@ -241,6 +247,7 @@ try {
     CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$SELECT coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb$$;
     CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $$SELECT auth.jwt()->>'role'$$;
     GRANT USAGE ON SCHEMA public,auth,extensions TO anon,authenticated,service_role;`);
+  stage = "auth-bootstrap";
   docker(names.auth, [
     "--env",
     "GOTRUE_API_HOST=0.0.0.0",
@@ -283,6 +290,7 @@ try {
   ]);
   const anon = jwt("anon"),
     service = jwt("service_role");
+  stage = "storage-bootstrap";
   docker(names.storage, [
     "--tmpfs",
     "/var/lib/storage:rw,nosuid,nodev,size=160m",
@@ -330,6 +338,7 @@ try {
     anon,
     service,
   };
+  stage = "gateway-readiness";
   writeFileSync(join(directory, "runtime.json"), JSON.stringify(config), {
     mode: 0o600,
   });
@@ -362,6 +371,23 @@ try {
       "utf8",
     ),
   );
+  const fixtureAdmin = createClient(config.api, config.service, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: (input, init = {}) => {
+        assert.equal(
+          new URL(input instanceof Request ? input.url : input).origin,
+          config.api,
+          "External fixture request refused",
+        );
+        return fetch(input, {
+          ...init,
+          redirect: "error",
+          signal: init.signal ?? AbortSignal.timeout(60_000),
+        });
+      },
+    },
+  });
   const secureMigration = readFileSync(
     join(
       root,
@@ -369,12 +395,14 @@ try {
     ),
     "utf8",
   );
-  for (const drift of [
+  for (const [index, drift] of [
     "true,50000000,ARRAY['image/webp','video/mp4']",
     "false,NULL,ARRAY['image/webp','video/mp4']",
     "false,50000001,ARRAY['image/webp','video/mp4']",
     "false,50000000,ARRAY['image/webp','video/mp4','text/html']",
-  ]) {
+  ].entries()) {
+    driftIndex = index;
+    stage = "bucket-drift.preflight";
     sql(
       `INSERT INTO storage.buckets(id,name,public,file_size_limit,allowed_mime_types) VALUES('natori-management-assets','natori-management-assets',${drift});`,
     );
@@ -398,8 +426,29 @@ try {
       ]).trim(),
       "t",
     );
-    sql("DELETE FROM storage.buckets WHERE id='natori-management-assets';");
+    stage = "bucket-drift.cleanup";
+    const empty = await fixtureAdmin.storage
+      .from("natori-management-assets")
+      .list("", { limit: 1 });
+    assert.ok(
+      !empty.error && Array.isArray(empty.data) && empty.data.length === 0,
+      "Owned drift fixture must be empty",
+    );
+    const removed = await fixtureAdmin.storage.deleteBucket(
+      "natori-management-assets",
+    );
+    if (removed.error) {
+      const error = new Error("Owned fixture bucket API cleanup failed");
+      error.name = "FixtureApiError";
+      error.diagnostic = {
+        operation: "deleteBucket",
+        status: Number(removed.error.statusCode) || null,
+      };
+      throw error;
+    }
   }
+  driftIndex = null;
+  stage = "secure-migration";
   sql(secureMigration);
   writeFileSync(
     join(sanitized, "schema.json"),
@@ -416,6 +465,7 @@ try {
     ),
   );
   sql("NOTIFY pgrst,'reload schema';");
+  stage = "synthetic-data-setup";
   const setup = child("setup.mjs", "setup.private.log");
   await new Promise((r, j) =>
     setup.once("exit", (code) =>
@@ -432,6 +482,7 @@ try {
     fixturePath,
     `import {readFileSync} from 'node:fs'; export const runtime='nodejs'; export const dynamic='force-dynamic'; export function GET(){const d=process.env.SEC01_ACCEPTANCE_DIR;if(!d?.startsWith('/tmp/sec01-acceptance-'))return new Response(null,{status:404});return new Response(readFileSync(d+'/image.webp'),{headers:{'Content-Type':'image/webp','Cache-Control':'public, max-age=60'}});}`,
   );
+  stage = "next-http-matrix";
   child("start-app.mjs", "app.private.log");
   const test = child("http.mjs", "http.private.log");
   await new Promise((r, j) =>
@@ -461,6 +512,13 @@ try {
         syntheticOnly: true,
         status: "failed",
         reason: "ISOLATED_RUNNER_FAILED",
+        stage,
+        driftIndex,
+        failure: {
+          category: error.name,
+          location: error.stack?.match(/run\.mjs:\d+:\d+/)?.[0] ?? null,
+          diagnostic: error.diagnostic ?? null,
+        },
         noProductionExecution: true,
       }),
     );
