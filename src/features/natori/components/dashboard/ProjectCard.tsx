@@ -32,6 +32,7 @@ import {
 } from "@/features/natori/lib/projectReadModel";
 import { cn } from "@/lib/utils";
 import ProjectNoteSummary from "./ProjectNoteSummary";
+import { canManuallyTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import ProjectTaskChecklist from "./ProjectTaskChecklist";
 import { RefundResultDetails } from "./RefundResultFigures";
 import type { NatoriProject } from "@/features/natori/types/projects";
@@ -394,6 +395,7 @@ function ProjectAdvanceButton({
   if (!handler) return null;
 
   const nextStatus = getNextStatus(project.status);
+  if (!isConfirmPayment && !canManuallyTransitionNatoriStatus(project.status, nextStatus)) return null;
   const nextLabel = nextStatus !== project.status ? natoriProjectStatusMeta[nextStatus]?.label : null;
 
   return (

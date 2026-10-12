@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertNatoriStatusTransition,
+  canManuallyTransitionNatoriStatus,
   canTransitionNatoriStatus,
 } from "@/features/natori/lib/statusTransitions";
 import type { NatoriProjectStatus } from "@/features/natori/types/projects";
@@ -79,6 +80,28 @@ describe("canTransitionNatoriStatus (manual)", () => {
       expect(canTransitionNatoriStatus(status, status), `${status} -> ${status}`).toBe(true);
     }
   });
+});
+
+describe("generic admin progress and undo boundary", () => {
+  const statuses: NatoriProjectStatus[] = [...PREWORK, ...WORK, "consulting", "closed"];
+
+  it("rejects entry, exit and same-status writes for delivered/completed", () => {
+    for (const boundary of ["delivered", "completed"] as const) {
+      for (const status of statuses) {
+        expect(canManuallyTransitionNatoriStatus(status, boundary), `${status} → ${boundary}`).toBe(false);
+        expect(canManuallyTransitionNatoriStatus(boundary, status), `${boundary} → ${status}`).toBe(false);
+      }
+    }
+  });
+
+  it("retains ordinary work progress, undo and next-action edits", () => {
+    expect(canManuallyTransitionNatoriStatus("rough", "lineart")).toBe(true);
+    expect(canManuallyTransitionNatoriStatus("lineart", "rough")).toBe(true);
+    expect(canManuallyTransitionNatoriStatus("waiting", "delivery_prep")).toBe(true);
+    expect(canManuallyTransitionNatoriStatus("rough", "rough")).toBe(true);
+    expect(canManuallyTransitionNatoriStatus("completed", "rough")).toBe(false);
+  });
+
 });
 
 describe("canTransitionNatoriStatus (payment-confirmed)", () => {

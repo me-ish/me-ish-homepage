@@ -63,7 +63,6 @@ const RESULT_STATUS_LABELS: Partial<Record<NatoriProjectStatus, string>> = {
 
 const RESULT_STATUS_OPTIONS: Array<{ value: NatoriProjectStatus; label: string }> = [
   { value: "completed", label: "対応完了" },
-  { value: "delivered", label: "納品済み" },
 ];
 
 type ResultMetric = "amount" | "count";

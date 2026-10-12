@@ -75,6 +75,18 @@ async function mountSupabase(initial: NatoriProject) {
 }
 
 describe("ProjectsBoard 「元に戻す」 after advancing a stage (Q-03)", () => {
+  it.each(["delivery_prep", "delivered", "completed"] as const)(
+    "ignores a generic advance callback at %s and offers no undo",
+    async (status) => {
+      await mountSupabase(project(status, "dedicated delivery flow"));
+      fireEvent.click(screen.getByRole("button", { name: "advance" }));
+      await act(async () => {});
+      expect(api.status).not.toHaveBeenCalled();
+      expect(screen.getByTestId("state").textContent).toBe(`${status}/dedicated delivery flow`);
+      expect(screen.queryByRole("button", { name: "元に戻す" })).toBeNull();
+    },
+  );
+
   it("offers undo for a production stage and restores both status and next action", async () => {
     await mountSupabase(project("rough", "ラフ提出"));
     api.fetch.mockResolvedValue({ projects: [project("lineart", "線画作業")], archivedProjects: [] });

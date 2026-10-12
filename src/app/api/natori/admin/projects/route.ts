@@ -109,6 +109,9 @@ export const POST = withNatoriManagement("projects.POST", true, async function P
     note: readString(payload.note) ?? undefined,
     priority: readString(payload.priority) ?? undefined,
   });
+  if (result.kind === "invalid-status") {
+    return NextResponse.json({ error: "Invalid initial status" }, { status: 400 });
+  }
   if (result.kind === "db-error") {
     return NextResponse.json({ error: "Failed to create project" }, { status: 500 });
   }

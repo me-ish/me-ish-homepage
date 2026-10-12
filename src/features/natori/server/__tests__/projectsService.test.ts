@@ -117,6 +117,27 @@ beforeEach(() => {
 /* ---------- Tests ---------- */
 
 describe("setNatoriProjectStatus", () => {
+  it.each([
+    ["delivery_prep", "delivered"],
+    ["rough", "completed"],
+    ["delivered", "completed"],
+    ["delivered", "delivery_prep"],
+    ["completed", "delivered"],
+    ["completed", "rough"],
+    ["delivered", "delivered"],
+    ["completed", "completed"],
+  ])("rejects generic %s → %s without writing delivery/completion state", async (from, to) => {
+    const { updates } = projectsTable([
+      { data: { id: "proj-1", status: from, type: "icon" }, error: null },
+      { data: { id: "proj-1" }, error: null },
+    ]);
+    expect(await setNatoriProjectStatus("proj-1", to, "manual bypass")).toEqual({
+      kind: "invalid-transition", from, to,
+    });
+    expect(updates).toEqual([]);
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
   it("許可された遷移は現在ステータスを条件に含めて更新する", async () => {
     const { updates, updateCalls } = projectsTable([
       { data: { id: "proj-1", status: "quoted" }, error: null },

@@ -5,7 +5,7 @@ import { useOptionalNatoriToast } from "@/features/natori/components/admin/Nator
 import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
-import { canTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
+import { canManuallyTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarClock, CalendarDays, Inbox, List, Plus } from "lucide-react";
@@ -390,6 +390,7 @@ export default function ProjectsBoard({
     restoreStatus: NatoriProjectStatus,
     restoreAction: string,
   ) => {
+    if (!canManuallyTransitionNatoriStatus(advancedTo, restoreStatus)) return;
     const restoredLabel = natoriProjectStatusMeta[restoreStatus]?.label ?? "前の工程";
     setError(null);
     if (dataSource !== "supabase") {
@@ -423,7 +424,7 @@ export default function ProjectsBoard({
   };
 
   const offerUndoAdvance = (project: NatoriProject, nextStatus: NatoriProjectStatus) => {
-    if (!canTransitionNatoriStatus(nextStatus, project.status)) return;
+    if (!canManuallyTransitionNatoriStatus(nextStatus, project.status)) return;
     const nextLabel = natoriProjectStatusMeta[nextStatus]?.label ?? "次の工程";
     const restoreStatus = project.status;
     const restoreAction = project.nextAction;
@@ -437,7 +438,7 @@ export default function ProjectsBoard({
 
   const handleAdvanceStatus = (project: NatoriProject) => {
     const nextStatus = getNextStatus(project.status);
-    if (nextStatus === project.status) return;
+    if (nextStatus === project.status || !canManuallyTransitionNatoriStatus(project.status, nextStatus)) return;
     const nextAction = getNextActionForStatus(nextStatus);
     setError(null);
     setAdvanceBusyId(project.id);

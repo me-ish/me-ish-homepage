@@ -6,8 +6,8 @@ import type { NatoriProjectStatus } from "@/features/natori/types/projects";
  * これまで遷移ルールが4箇所（setNatoriProjectStatus の任意遷移 /
  * orderMailService の advanceFrom / webhook の無条件 rough /
  * deriveStatusFromTasks）に分散していたのを、この純関数に統一する。
- * 全ての DB 書き込み経路（projectsService / orderMailService / webhook）は
- * canTransitionNatoriStatus を通してから status を更新すること。
+ * 一般的な工程の遷移表。管理画面の任意進行・Undo は追加の
+ * canManuallyTransitionNatoriStatus を使う。納品・検収の確定は専用 RPC の責務。
  *
  * モデル:
  * - 受注前（inquiry → estimating → quoted → awaiting_payment）: 前進のみ。
@@ -25,6 +25,21 @@ import type { NatoriProjectStatus } from "@/features/natori/types/projects";
  */
 
 export type NatoriStatusTransitionKind = "manual" | "payment-confirmed";
+
+/**
+ * Generic admin progress/undo must never enter or leave delivery/completion.
+ * Delivery issuance and requester acceptance have their own persistence paths;
+ * even a same-status PATCH here must not rewrite their next action or dates.
+ */
+export function canManuallyTransitionNatoriStatus(
+  from: NatoriProjectStatus,
+  to: NatoriProjectStatus
+): boolean {
+  if ([from, to].some(status => status === "delivered" || status === "completed")) {
+    return false;
+  }
+  return canTransitionNatoriStatus(from, to);
+}
 
 /** 受注前ステータス（canonical。consulting は inquiry 扱い） */
 const PREWORK: readonly NatoriProjectStatus[] = [
