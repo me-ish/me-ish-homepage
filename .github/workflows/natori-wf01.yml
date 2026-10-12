@@ -1,0 +1,46 @@
+name: Natori WF01
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/natori-wf01.yml'
+      - 'scripts/natori-wf01/**'
+      - 'scripts/natori-phase-*/**'
+      - 'supabase/migrations/**'
+      - 'supabase/baseline/manifest.json'
+      - 'src/features/natori/**'
+      - 'src/app/**/natori/**'
+      - 'src/types/supabase.ts'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: natori-wf01-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    name: Transactional rough OK and acknowledgement (PostgreSQL 17.11)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.node-version'
+      - name: Verify exact fixture inventory and build guards
+        run: |
+          node scripts/etorie-baseline-static-check.mjs
+          node --test scripts/natori-wf01/build-reader-fixture.test.mjs
+      - name: Execute pinned real PostgreSQL acceptance
+        run: bash scripts/natori-wf01/run.sh
+      - name: Publish sanitized checks and exact source provenance
+        if: always() && env.WF01_RESULTS != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: natori-wf01-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.WF01_RESULTS }}/*
+          if-no-files-found: error
+          retention-days: 7

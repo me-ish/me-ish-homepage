@@ -5,6 +5,7 @@ import {canUseNatoriManagement} from "@/features/natori/server/requireNatoriAdmi
 import {getStaffConsultation,getStaffConsultationProbe,retryStaffConsultationNotification} from "@/features/natori/server/consultationService";
 import {consultationOperation} from "@/features/natori/server/consultationOperationService";
 import {consultationOperationResponse} from "@/features/natori/server/consultationOperationResponse";
+import {notificationSendingEnabled} from "@/features/natori/server/acceptanceNotifications";
 export const runtime="nodejs",dynamic="force-dynamic";
 export const GET=withNatoriManagement("consultation.GET",false,async(request:Request)=>{
  if(!await canUseNatoriManagement())return NextResponse.json({error:"Unauthorized"},{status:401});
@@ -14,7 +15,7 @@ export const GET=withNatoriManagement("consultation.GET",false,async(request:Req
   return probe?NextResponse.json(probe,{headers:{"Cache-Control":"no-store"}}):NextResponse.json({error:"Not found"},{status:404});
  }
  const result=await getStaffConsultation(projectId);
- return result?NextResponse.json({messages:result.messages,closed:result.project.status==="closed"||Boolean(result.project.deleted_at)},{headers:{"Cache-Control":"no-store"}}):NextResponse.json({error:"Not found"},{status:404});
+ return result?NextResponse.json({messages:result.messages,roughOks:result.roughOks,roughOkActionsAllowed:!result.project.deleted_at,roughOkSendingEnabled:notificationSendingEnabled(),closed:result.project.status==="closed"||Boolean(result.project.deleted_at)},{headers:{"Cache-Control":"no-store"}}):NextResponse.json({error:"Not found"},{status:404});
 });
 export const POST=withNatoriManagement("consultation.POST",true,async(request:Request)=>{
  if(!await canUseNatoriManagement())return NextResponse.json({error:"Unauthorized"},{status:401});

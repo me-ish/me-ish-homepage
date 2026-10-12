@@ -482,7 +482,7 @@ describe("listNatoriAdminProjects", () => {
     expect(result.tasks[0]).toMatchObject({id:"existing",done:false});
     expect(mockSnapshot).toHaveBeenCalledExactlyOnceWith("owner-1",undefined);
     expect(calls.some(call => /^(update|upsert|delete|insert)\(/.test(call))).toBe(false);
-    expect(mockRpc).toHaveBeenCalledExactlyOnceWith("natori_consultation_overview_v1", {
+    expect(mockRpc).toHaveBeenCalledExactlyOnceWith("natori_consultation_overview_v2", {
       p_owner_id:"owner-1",p_project_ids:["active-1","archive-1"],
     });
   });

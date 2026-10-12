@@ -1,7 +1,7 @@
 import {readFileSync,writeFileSync} from 'node:fs';
-// Applied only after Phase N/2A/2B/2C and the dependent 2D/3A fixtures, inside the sealed Phase T DB.
-const paths=['20260923033156_natori_consultation_messages.sql','20260923033205_natori_consultation_files.sql','20260923033212_natori_consultation_link_renewal.sql','20260927102757_natori_consultation_overview.sql','20261001225106_natori_consultation_operations.sql'];
-writeFileSync(process.argv[2],`do $$begin if current_setting('phase_t.sandbox',true) is distinct from 'ephemeral' then raise exception 'Sandbox required';end if;end$$;\n`+paths.map(path=>readFileSync('supabase/migrations/'+path,'utf8')).join('\n')+`
+import {buildReaderFixture} from '../natori-wf01/build-reader-fixture.mjs';
+// Current reader schema installs once before earlier browser cases. Keep all Phase3B fault cases.
+writeFileSync(process.argv[2],buildReaderFixture('late-phase3b').sql+`
 grant update on public.natori_consultation_access to service_role;
 -- Disposable-only wait control: prove access/claim expiry during a held project lock.
 create function public.phase3b_hold_project_v1(p_project uuid) returns boolean language plpgsql security invoker set search_path='' as $$begin

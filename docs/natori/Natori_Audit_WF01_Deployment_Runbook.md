@@ -1,0 +1,63 @@
+# WF-01: ラフOKの対応と通知の適用条件
+
+## 承認対象と影響
+
+これは適用候補の手順であり、本番適用記録ではない。マージ、本番DB/権限変更、本番deploy、顧客行の調査・修復、実メール送信は個別の承認を得てから実施する。今回の作業では行っていない。
+
+対象は指定forward migration `20261012085748_natori_rough_ok_followup.sql` と、それに対応する同じPRのアプリである。新しいラフOKの初回記録・業務イベント・一つの論理通知を同じtransactionで保存し、次の対応を確認するまで管理画面の要確認に残す。
+
+DB変更は2つの事実テーブルとindexes、既存roughへの追加triggers、service専用の5つのRPC、既存通知purpose CHECKへの`rough_ok_artist`追加である。既存の有限purpose集合を保持し、v1 overviewと既存通知lifecycleのbodyは変更しない。新RPC/helpersはSECURITY INVOKER、空search_path。anon/authenticatedに新テーブル権限・RPC実行権限を与えない。
+
+アプリはv2 overviewを必須とする。未適用・読取エラー・不正応答は「状況を取得できない」表示と要確認になり、未対応のラフOKがないと仮定しない。ブラウザのOKリンクは現在のproject/rough/message/capabilityと有効期限をDB内で再検証する。
+
+対応の確認はownerが対象ラフを明示して行う操作である。メール成功・返信・支払案内・通常のstatus変更では確認済みにしない。新しいラフOKは別の未対応項目になる。終了案件も未対応OKを残し、確認済みにしても案件を再開しない。削除済み案件への新OK・確認・通知再試行は拒否し、過去の事実を保持する。
+
+導入前のOKも確認待ちとして表示するが、既存行へevent/notificationをbackfillせず、過去の通知成功も捏造しない。導入前の通知履歴なしはその旨表示し、再POST/再試行から新しいメールを作らない。初期表示で過去のOKが要確認として増えることを運用担当者へ伝える。
+
+## 適用前の停止条件
+
+全active migrationsを一括再実行しない。既存Phase7の重複CHECK障害はこの変更で解消したとは扱わない。必要な既存schemaが欠けていれば、その差分を別途レビューし、今回のforwardを欠損復元scriptとして使わない。#162〜#165のDraft差分を取り込んだとは扱わない。
+
+承認直前に必要なcatalog metadataだけで次を確認する。顧客行・メールアドレス・token・payload・snapshot・秘密値は取得しない。
+
+- 適用済みmigrationのversion/name、対象relation/column/type、RLSとeffective table/column ACL。
+- `natori_talk_roughs_guard`と`natori_talk_roughs_keep_ok`のtrigger identity/enabled/type、関数body MD5・invoker・search_pathがmigrationの固定契約と一致すること。未知のrough triggerがないこと。
+- consultation accessのrenewal prerequisite（`renewed_at`、serviceのSELECT/UPDATE権限）が存在すること。UPDATE権限は既存renewal migrationの契約であり、新しい権限昇格で補わない。
+- 既存overview v1のstable/invoker/空search_pathとservice専用EXECUTE。
+- 既存通知immutable triggerとclaim/start/finish/retry/listの関数signature・body MD5・invoker・search_path・EXECUTE権限。migrationにはレビュー済みPhaseN/Phase1のbodyのみを許可する。最新mainのdelivery-integrityが提供するencrypted payload対応を旧bodyで上書きしない。
+- purpose CHECKがvalidatedで、purpose列だけの有限literal membership/equalityをORで結合した契約であること。未知の有限purpose名は保持するが、`IS NOT NULL`・関数・否定・別列など未レビューの式を拒否する。
+- 新しいWFテーブル/RPC/triggersが未適用であること。既にある場合は再実行せず、適用履歴・hashを調べてforward整合方針を別途レビューする。
+
+migration自身のpreflightも同じ拒否条件をtransaction冒頭で検査する。成功したサンプルだけで権限やCHECKの正しさを推定しない。drift拒否はtransaction全体をrollbackし、手動で検査を削除して通さない。
+
+各MD5の期待値とsignatureは指定SQLの冒頭に固定されている。catalog照合は既存schemaの契約確認であり、production機能受入の代わりではない。backup/recovery、実施者、対象commit/migration hashと停止時間を承認資料に記録する。
+
+## 承認後の適用順序
+
+1. ラフOK endpointとその旧workerを停止・quiesceし、関連通知送信も停止する。旧アプリは直接Resendを呼ぶため、追加triggerだけを先に有効にして旧経路を継続すると、直接メールとoutboxが重複し得る。単に新しい送信flagを切っても旧直接送信を止めた証拠にはならない。
+2. 上記catalogと承認対象bytesを再照合する。指定WF forward SQLだけをtransactionで適用し、rollback/commit結果と新権限・trigger/RPC metadataを記録する。
+3. 同じ承認対象の互換アプリをdeployする。停止窓の間は旧rough OK endpoint/workerを再開しない。新v2のreadと専用確認/再試行APIを確認する。
+4. 承認された架空案件・宛先だけで事後確認する。実顧客のOKをテストとして再投稿せず、過去の通知を一括再送しない。読取・記録・停止中の通知表示を確認してから新経路の受付を再開する。
+5. 通知送信再開は別途承認された宛先/設定/停止解除の範囲で行う。架空案件で失敗→手動再試行を確認し、監視結果を記録する。
+
+`NATORI_NOTIFICATION_SENDING_ENABLED=0`でも新OKと通知予約は保存する。通知は送信待ちとして表示し、再試行ボタンを停止する。`NATORI_ACCEPTANCE_OUTBOX_ENABLED`の既存汎用通知UIの契約は保持し、rough専用一覧/再試行はそのflagに隠されない。
+
+## 事後検証と運用
+
+架空案件で、OKだけ（返信なし）の状態が「ラフOK・次の対応待ち」になり、案件status・入金・見積承諾・納品受取の事実を変更しないことを確認する。同時OKと同じPOSTの再送でも最初のOK時刻・event・論理通知が一つであること、別owner/別project/期限切れ/削除済み/終了後の新OKが拒否されることを確認する。
+
+通知停止・設定欠損・provider拒否・5xx/timeout・送信中断でOKを失わず、pending/failed/unknownを区別する。既存outboxのlease、claim上限8、attempt上限5、23時間のidempotency再送境界を引き継ぐ。unknownは同じjob/固定payload/provider keyを再利用し、確定失敗だけが同じ論理keyの新attemptになる。境界外は自動再送を止めて要照合と表示する。provider受付は到達・読了の証明ではない。
+
+中断後に未解決jobが残る設計であり、新しい自動worker巡回や定期再送は追加していない。有効なOKの再POSTで未解決jobのdispatchを再度予約でき、ownerの対象ラフだけの手動再試行でも既存jobを回復できる。送信の復旧と次の対応の確認を混同しない。
+
+別ラフのOKと確認済み操作の競合でも、新しい未対応OKが残ることを確認する。確認を再送しても同じ証拠を返す。通常の返信とメール成功では確認待ちが消えず、対象ラフの確認操作だけが消す。確認時に作成中の本文/添付を失わないこと、一覧・ホーム・終了案件の表示と件数が一致することも確認する。
+
+productionでこれらの操作をするには架空案件/宛先の承認が必要である。今回のCIは隔離・合成データの受入であり、その承認やproduction観測を代替しない。
+
+nativeの中断試験はCOMMIT後のpsql backendを終了し、pending jobがDBに残ることを検証する。Next workerを実際に終了する試験ではない。workerの例外/再開、同一payload/key、5xx/timeoutの扱いは注入transport/RPCのunit試験で検証し、HTTP経路は隔離Next/PostgRESTとメールcaptureで検証する。実provider受付・受信箱・production worker再起動を確認したとは扱わない。
+
+## 障害時
+
+SQL適用失敗時はtransaction rollbackを確認し、endpointを停止したまま原因をレビューする。成功後のアプリ障害では、WF互換版の再deploy/forward修正を優先する。旧直接Resend版への戻しは重複送信を起こし得るため、旧endpointを停止したまま計画する。
+
+既に保存されたOK/event/通知/確認証拠を削除して見た目だけ元に戻さない。新schemaを撤去するdown migrationや顧客行の修復はこの手順に含めない。調査は必要なmetadataから始め、顧客行を確認する必要が生じた場合は対象・目的・影響を提示して別途承認を得る。

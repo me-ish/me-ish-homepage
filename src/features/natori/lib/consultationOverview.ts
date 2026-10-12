@@ -1,7 +1,8 @@
 import type { NatoriProject } from "@/features/natori/types/projects";
 
-export function consultationReplyState(project: NatoriProject): "unknown" | "new" | "staff" | "client" | "none" {
+export function consultationReplyState(project: NatoriProject): "unknown" | "new" | "rough-ok" | "staff" | "client" | "none" {
   if (!project.consultation) return "unknown";
+  if (project.consultation.roughOkPending > 0) return "rough-ok";
   if (project.consultation.latestSender === "client") return "staff";
   if (project.consultation.latestSender === "staff") return "client";
   return ["inquiry", "consulting"].includes(project.status) && !project.deletedAt ? "new" : "none";
@@ -15,24 +16,35 @@ function awaitingEstimate(project: NatoriProject): boolean {
   return project.status === "estimating" && !project.deletedAt && consultationReplyState(project) === "none";
 }
 
+/** A closed project leaves active review only after a reliable read proves no rough follow-up remains. */
+export function consultationIsActive(project: NatoriProject): boolean {
+  return !project.deletedAt && (project.status !== "closed" || !project.consultation || project.consultation.roughOkPending > 0);
+}
+
 export function consultationReplyLabel(project: NatoriProject): string {
   const state = consultationReplyState(project);
   if (project.deletedAt || project.status === "closed") {
+    if (!project.deletedAt && state === "rough-ok") return "終了案件・ラフOK確認待ち";
     return state === "unknown" ? "返信状況を取得できません" : "相談終了・履歴のみ";
   }
   if (awaitingEstimate(project)) return "見積もり作成待ち";
-  return { unknown: "返信状況を取得できません", new: "新規・未対応", staff: "ナトリの返信待ち", client: "依頼者の返信待ち", none: "やり取りなし" }[state];
+  return { unknown: "返信状況を取得できません", new: "新規・未対応", "rough-ok": "ラフOK・次の対応待ち", staff: "ナトリの返信待ち", client: "依頼者の返信待ち", none: "やり取りなし" }[state];
 }
 
 export function consultationNeedsAttention(project: NatoriProject): boolean {
+  if (project.deletedAt) return false;
   const state = consultationReplyState(project);
-  return state === "unknown" || ((!project.deletedAt && project.status !== "closed") && (state === "new" || state === "staff"))
+  if (state === "rough-ok") return true;
+  return state === "unknown" || (project.status !== "closed" && (state === "new" || state === "staff"))
     || awaitingEstimate(project)
     || Boolean(project.consultation && (project.consultation.notificationFailed || project.consultation.notificationPending));
 }
 
 export function consultationActivityAt(project: NatoriProject): string {
-  return project.consultation?.latestMessageAt ?? project.createdAt ?? "";
+  const message = project.consultation?.latestMessageAt;
+  const rough = project.consultation?.latestRoughOkAt;
+  if (rough && (!message || Date.parse(rough) > Date.parse(message))) return rough;
+  return message ?? project.createdAt ?? "";
 }
 
 export function consultationActivityDay(project: NatoriProject): string {

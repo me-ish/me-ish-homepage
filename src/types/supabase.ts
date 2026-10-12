@@ -1827,6 +1827,26 @@ export type Database = {
         Args: { p_owner_id: string; p_project_ids: string[] }
         Returns: { project_id: string; latest_message_id: string | null; latest_sender: string | null; latest_message_at: string | null; notification_failed: number; notification_pending: number }[]
       }
+      natori_consultation_overview_v2: {
+        Args: { p_owner_id: string; p_project_ids: string[] }
+        Returns: { project_id: string; latest_message_id: string | null; latest_sender: string | null; latest_message_at: string | null; notification_failed: number; notification_pending: number; rough_ok_pending: number; latest_rough_ok_id: string | null; latest_rough_ok_at: string | null }[]
+      }
+      natori_record_rough_ok_v1: {
+        Args: { p_project_id: string; p_rough_id: string; p_token_hash: string }
+        Returns: { result: string; project_id: string | null; rough_id: string | null; client_ok_at: string | null; notification_ids: string[] }[]
+      }
+      natori_acknowledge_rough_ok_v1: {
+        Args: { p_owner_id: string; p_project_id: string; p_rough_id: string }
+        Returns: { result: string; acknowledged_at: string | null }[]
+      }
+      natori_rough_ok_list_v1: {
+        Args: { p_owner_id: string; p_project_id: string }
+        Returns: { rough_id: string; message_id: string; before_quote: boolean; client_ok_at: string; acknowledged_at: string | null; notification_id: string | null; notification_status: string | null; notification_attempt_no: number | null; notification_sent_at: string | null; notification_claim_count: number | null; notification_lease_expires_at: string | null; notification_send_started_at: string | null; notification_retry_after: string | null }[]
+      }
+      natori_retry_rough_ok_notification_v1: {
+        Args: { p_owner_id: string; p_project_id: string; p_rough_id: string }
+        Returns: string
+      }
       natori_notification_list_v1: {
         Args: { p_owner_id: string; p_offset?: number }
         Returns: { id: string; project_id: string; project_title: string; purpose: string; status: string; attempt_no: number; claim_count: number; lease_expires_at: string | null; send_started_at: string | null; retry_after: string | null; last_sent_at: string | null }[]
