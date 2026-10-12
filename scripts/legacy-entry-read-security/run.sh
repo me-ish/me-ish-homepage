@@ -14,6 +14,7 @@ done
 
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo=$(git -C "$root" rev-parse --show-toplevel)
+node --test "$root/acceptance/env-guard.test.mjs"
 migration="$repo/supabase/migrations/20261011221028_lockdown_legacy_entries_reads.sql"
 work=$(mktemp -d "${RUNNER_TEMP:?}/legacy-entry-read.XXXXXXXX")
 results="$work/results"

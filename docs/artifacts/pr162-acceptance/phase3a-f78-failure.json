@@ -1,0 +1,18 @@
+{
+  "head": "f78a3f891052850ca2ede2763ead551a3f5d6619",
+  "runId": 38187272240,
+  "jobId": 114612278383,
+  "artifactId": 11719663674,
+  "artifactDigest": "sha256:e1d5637c4df38021111fd45bc2972f5080621574bc8fd223ef0ca5dbb6db8274",
+  "actualBusinessCases": {
+    "passed": 26,
+    "failed": 0
+  },
+  "loggedBrowserCases": {
+    "passed": 9,
+    "failed": 0
+  },
+  "failureLocation": "after all browser PASS logs, final check or persistence",
+  "causeLimit": "The old catch suppressed error code and the artifact did not persist compilation enum codes; exact initial cause is not established. Artifact byte download was blocked in this executor. The business tests were not changed or relaxed.",
+  "action": "Add safe enum/expected-count diagnostics without changing the final gate, then verify new HEAD CI."
+}

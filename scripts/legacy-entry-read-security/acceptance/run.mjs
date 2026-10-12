@@ -7,7 +7,9 @@ import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import {assertNoEnvFiles} from './env-guard.mjs';
 const root=fileURLToPath(new URL('../../../',import.meta.url));
+assertNoEnvFiles(root);
 const scripts=join(root,'scripts/legacy-entry-read-security/acceptance');
 for(const name of ['DATABASE_URL','PGHOST','PGPORT','PGUSER','PGPASSWORD','SUPABASE_URL','NEXT_PUBLIC_SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_ACCESS_TOKEN','STRIPE_SECRET_KEY','RESEND_API_KEY']) {
   assert.ok(!Object.hasOwn(process.env,name),`Remove inherited configuration: ${name}`);

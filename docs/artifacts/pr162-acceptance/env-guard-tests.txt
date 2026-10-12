@@ -1,0 +1,12 @@
+✔ clean directory is accepted without file contents or network (4.475466ms)
+✔ unreadable env file is rejected by its name; no contents enter the error (2.424999ms)
+✔ dangling .env symlink is rejected without following it (0.656569ms)
+✔ actual runner refuses .env before dependency lookup, Docker, HTTP or checkout reads (211.616881ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 540.318717
