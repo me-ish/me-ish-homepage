@@ -149,3 +149,12 @@ describe("Natori portfolio and inquiry-reference Storage", () => {
     );
   });
 });
+
+it("accepts the exact image-file ceiling and rejects larger files before reading bytes",async()=>{
+  const exact=new File([new Uint8Array(10*1024*1024)],'exact.webp',{type:'image/webp'});
+  expect((await uploadPortfolioImage(exact)).kind).toBe('ok');
+  const over=new File([new Uint8Array(10*1024*1024+1)],'over.webp',{type:'image/webp'});
+  const read=vi.spyOn(over,'arrayBuffer');
+  expect(await uploadPortfolioImage(over)).toEqual({kind:'too-large'});
+  expect(read).not.toHaveBeenCalled();
+});

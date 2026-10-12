@@ -66,6 +66,7 @@ const api = async (path, init = {}) => {
     return { status: r.status, data: await r.json() };
   };
 const clone = (v) => JSON.parse(JSON.stringify(v));
+let inputCase = null;
 const body = (value) => ({
   method: "PUT",
   headers: { ...manager, "Content-Type": "application/json" },
@@ -268,11 +269,12 @@ try {
   record(
     "legacy public thumbnail URL remains a qualified migration/CDN gate; gallery bucket preserved",
   );
-  for (const [bytes, type] of [
-    [Buffer.from("invalid-image"), "image/png"],
-    [Buffer.alloc(10 * 1024 * 1024 + 1), "image/png"],
-    [Buffer.from("invalid-type"), "text/html"],
+  for (const [label, bytes, type] of [
+    ["invalid_bytes", Buffer.from("invalid-image"), "image/png"],
+    ["too_large", Buffer.alloc(10 * 1024 * 1024 + 1), "image/png"],
+    ["invalid_mime", Buffer.from("invalid-type"), "text/html"],
   ]) {
+    inputCase = label;
     const form = new FormData();
     form.set("file", new Blob([bytes], { type }), "invalid.fixture");
     assert.equal(
@@ -286,9 +288,45 @@ try {
       400,
     );
   }
+  inputCase = null;
   record(
     "invalid image bytes, MIME and over-limit upload inputs are rejected before publication",
   );
+  inputCase = "valid_exact_max_image";
+  const exactImage = Buffer.alloc(10 * 1024 * 1024);
+  readFileSync(resultPath("image.webp")).copy(exactImage);
+  const exactForm = new FormData();
+  exactForm.set(
+    "file",
+    new Blob([exactImage], { type: "image/webp" }),
+    "exact-max.webp",
+  );
+  const exactUploaded = await json("/api/natori/portfolio/upload", {
+    method: "POST",
+    headers: manager,
+    body: exactForm,
+  });
+  assert.equal(exactUploaded.status, 200);
+  assert.equal(
+    (await api(exactUploaded.data.url, { headers: manager })).status,
+    200,
+  );
+  assert.equal(
+    (
+      await api(
+        exactUploaded.data.url.replace(
+          "/admin/portfolio-assets/",
+          "/portfolio/assets/",
+        ),
+      )
+    ).status,
+    404,
+  );
+  inputCase = null;
+  record(
+    "valid exact10MiB image including multipart overhead uploads privately; file ceiling stays enforced",
+  );
+
   const uploaded = await upload();
   assert.equal(uploaded.status, 200);
   const imageURL = uploaded.data.url;
@@ -1164,6 +1202,15 @@ try {
   // session cookies, upload URLs, token-bearing requests or private logs.
   failure = {
     category: error.name,
+    inputCase,
+    actualNumeric:
+      typeof error.actual === "number" && Number.isFinite(error.actual)
+        ? error.actual
+        : null,
+    expectedNumeric:
+      typeof error.expected === "number" && Number.isFinite(error.expected)
+        ? error.expected
+        : null,
     location: error.stack?.match(/http\.mjs:\d+:\d+/)?.[0] ?? "unknown",
   };
   throw error;
