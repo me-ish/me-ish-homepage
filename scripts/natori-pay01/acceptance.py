@@ -94,9 +94,13 @@ def file(pid):
                  contentType='image/png', storageVersion='synthetic-version')]
 
 
-def issue_sql(pid, manifest, token, op, owner=OWNER, expires="clock_timestamp()+interval '1 day'", payload=None):
+def issue_sql(pid, manifest, token, op, owner=OWNER, expires="clock_timestamp()+interval '1 day'", payload=None, request_hash=None):
     payload = payload or dict(format='natori-delivery-aes256gcm-v1', ciphertext='synthetic', iv='synthetic', tag='synthetic', expiresAt='2027-01-01T00:00:00Z')
-    return f"select row_to_json(r)::text from public.natori_delivery_issue_v1({literal(owner)},{literal(pid)},{literal(op)},'client@pay01.invalid',{literal(hashlib.sha256(op.encode()).hexdigest())},{js(manifest)},clock_timestamp(),{literal(token)},{expires},{js(payload)}) r"
+    # Match deliveryReleaseService's stable business-request identity. The
+    # operation ID and newly generated access token are intentionally excluded.
+    request = dict(project=pid, files=sorted(f['id'] for f in manifest), to='client@pay01.invalid', subject='PAY01 synthetic', body='PAY01 synthetic')
+    request_hash = request_hash or hashlib.sha256(json.dumps(request,separators=(',', ':')).encode()).hexdigest()
+    return f"select row_to_json(r)::text from public.natori_delivery_issue_v1({literal(owner)},{literal(pid)},{literal(op)},'client@pay01.invalid',{literal(request_hash)},{js(manifest)},clock_timestamp(),{literal(token)},{expires},{js(payload)}) r"
 
 
 def issued(label, expires="clock_timestamp()+interval '1 day'"):
@@ -148,16 +152,25 @@ def lock_race(pid, statements, name):
         time.sleep(.02)
     else:
         raise AssertionError('row lock rendezvous not observed')
+    def participant(item):
+        statement, expected = item if isinstance(item, tuple) else (item, None)
+        output = sql('-- ' + marker + '\n' + statement, expected=expected)
+        return dict(result='rejected', sqlstate=expected) if expected else json.loads(output.splitlines()[-1])
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as workers:
-        pending = [workers.submit(value, '-- ' + marker + '\n' + statement) for statement in statements]
-        waiters = 0
-        for _ in range(50):
-            waiters = int(value(f"select count(*) from pg_stat_activity where pid<>pg_backend_pid() and query like '%{marker}%' and wait_event_type='Lock'", role=None))
-            if waiters == 2:
-                break
-            time.sleep(.02)
-        assert waiters == 2, 'both native sessions must contend on the project row'
-        result = [json.loads(p.result()) for p in pending]
+        pending = []
+        # Observe each queued waiter before starting the next participant. The
+        # two mixed races therefore test both arrival orders against a held row.
+        for index, statement in enumerate(statements):
+            pending.append(workers.submit(participant, statement))
+            waiters = 0
+            for _ in range(50):
+                waiters = int(value(f"select count(*) from pg_stat_activity where pid<>pg_backend_pid() and query like '%{marker}%' and wait_event_type='Lock'", role=None))
+                if waiters == index + 1:
+                    break
+                time.sleep(.02)
+            assert waiters == index + 1, 'both native sessions must contend on the project row'
+        result = [p.result() for p in pending]
     assert holder.wait(timeout=8) == 0
     check(name + '_two_real_row_lock_waiters')
     return result
@@ -200,11 +213,16 @@ def main():
     apply_new(expected='P0001')
     sql('alter table public.natori_projects enable trigger natori_delivery_project_guard', role=None)
     check('migration_rejects_disabled_delivery_guard')
-    sql('grant update(accepted_at) on public.natori_delivery_releases to service_role', role=None)
+    # PostgreSQL's REVOKE ALL on the table closes direct column grants too.
+    # An inherited column writer is the meaningful unresolved-drift case: this
+    # scoped migration must abort rather than changing role membership globally.
+    sql('create role pay01_release_writer nologin; grant update(accepted_at) on public.natori_delivery_releases to pay01_release_writer; grant pay01_release_writer to service_role', role=None)
     apply_new(expected='P0001')
     check('migration_acl_drift_rolls_back_authority_elevation', value(f"select not prosecdef from pg_proc where oid={literal(ACCEPT)}::regprocedure", role=None) == 't')
-    sql('revoke update(accepted_at) on public.natori_delivery_releases from service_role', role=None)
+    sql('revoke pay01_release_writer from service_role; revoke update(accepted_at) on public.natori_delivery_releases from pay01_release_writer', role=None)
+    sql('grant update(accepted_at) on public.natori_delivery_releases to service_role', role=None)
     apply_new()
+    check('migration_closes_direct_column_writer_grant', value("select not has_column_privilege('service_role','public.natori_delivery_releases','accepted_at','UPDATE')",role=None) == 't')
     assert_unchanged(poisoned, before, 'migration_does_not_repair_or_backfill_poisoned_history')
     assert_unchanged(legacy, legacy_before, 'migration_preserves_legacy_accepted_original_dates')
 
@@ -215,6 +233,7 @@ def main():
     # Reuse the original stored expiry exactly, as the RPC's idempotency contract requires.
     exp = literal(release(p)['expires_at']) + '::timestamptz'
     check('publication_operation_retry_idempotent', json.loads(value(issue_sql(p,m,t,op,expires=exp)))['release_id'] == r and notice_count(p) == 1)
+    check('publication_operation_request_conflict_rejected', json.loads(value(issue_sql(p,m,t,op,expires=exp,request_hash='0'*64)))['result'] == 'conflict' and notice_count(p) == 1)
     for label, stmt in [
         ('generic_first_completed_at_without_acceptance', f"update public.natori_projects set completed_at=clock_timestamp() where id={literal(p)}"),
         ('generic_completed_status_without_timestamp', f"update public.natori_projects set status='completed' where id={literal(p)}"),
@@ -239,6 +258,16 @@ def main():
     after = state(p)
     check('customer_acceptance_atomic_matching_dates', after['status'] == 'completed' and after['delivery_accepted_at'] == after['completed_at'] == release(p)['accepted_at'] and notice_count(p,True) == 2)
     check('repeat_customer_acceptance_idempotent', accept(t,r,m)['result'] == 'already-accepted' and notice_count(p,True) == 2)
+    for generic_first in (True, False):
+        race, rm, rt, _, rr = issued('generic-vs-accept-' + str(generic_first))
+        race_before = state(race)
+        generic = (f"update public.natori_projects set status='completed',completed_at=clock_timestamp() where id={literal(race)}", '23514')
+        genuine = accept_sql(rt,rr,rm)
+        order = [generic,genuine] if generic_first else [genuine,generic]
+        race_results = lock_race(race,order,'generic_vs_accept_' + str(generic_first))
+        check('generic_vs_accept_' + str(generic_first) + '_only_genuine_acceptance_commits', sorted(x['result'] for x in race_results) == ['accepted','rejected'])
+        race_after = state(race)
+        check('generic_vs_accept_' + str(generic_first) + '_no_poisoned_or_duplicate_evidence', race_after['status'] == 'completed' and race_after['completed_at'] == race_after['delivery_accepted_at'] == release(race)['accepted_at'] and race_after['mutation_revision'] == race_before['mutation_revision'] + 1 and notice_count(race,True) == 2)
     guarded_attempt(p, f"update public.natori_projects set status='delivered' where id={literal(p)}", 'status_undo_from_accepted_completion')
     guarded_attempt(p, f"update public.natori_projects set completed_at=null,delivery_accepted_at=null where id={literal(p)}", 'accepted_timestamps_cannot_be_cleared')
     sql(f"update public.natori_projects set title='PAY01 metadata',note='metadata',priority='high' where id={literal(p)}")
@@ -296,7 +325,10 @@ def main():
     sql(f"insert into public.natori_project_tasks(project_id,task_key,label,stage,done,sort_order) values({literal(task)},'rough','Rough','rough',false,1),({literal(task)},'final','Final','delivery',false,2)")
     check('real_task_rpc_production_transition_allowed', json.loads(value(f"select public.natori_update_task_v1({literal(OWNER)},{literal(task)},'rough',true)"))['result'] == 'applied' and state(task)['status'] == 'delivery_prep')
     check('real_task_rpc_never_writes_completion', state(task)['completed_at'] is None and state(task)['delivery_accepted_at'] is None)
-    check('real_task_rpc_delivery_lock_preserved', json.loads(value(f"select public.natori_update_task_v1({literal(OWNER)},{literal(p)},'missing',true)"))['result'] == 'not_found')
+    sql(f"insert into public.natori_project_tasks(project_id,task_key,label,stage,done,sort_order) values({literal(p)},'existing-terminal-task','Final','delivery',false,1)")
+    task_terminal_before = state(p)
+    check('real_task_rpc_delivery_lock_preserved', json.loads(value(f"select public.natori_update_task_v1({literal(OWNER)},{literal(p)},'existing-terminal-task',true)"))['result'] == 'conflict' and value(f"select not done from public.natori_project_tasks where project_id={literal(p)} and task_key='existing-terminal-task'") == 't')
+    assert_unchanged(p,task_terminal_before,'terminal_task_conflict_preserves_acceptance_dates_status')
 
     # Real refund reconciliation keeps formal completion dates/status untouched.
     sql(f"update public.natori_projects set stripe_payment_session_id='cs_pay01_synthetic' where id={literal(p)}")
