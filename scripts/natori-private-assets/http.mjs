@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { localApplicationURL } from "./local-redirect.mjs";
+import { fetchLocalApplication } from "./local-redirect.mjs";
 import { execFileSync } from "node:child_process";
 import { config, resultPath } from "./common.mjs";
 const fixtureFetch = (input, init = {}) => {
@@ -44,23 +44,11 @@ const manager = {
     "x-requested-with": "me-ish",
   },
   other = { Cookie: cookie(config.users[1]), "x-requested-with": "me-ish" };
-const api = async (path, init = {}) => {
-    let url = new URL(path, config.app);
-    for (let n = 0; n < 5; n++) {
-      url = localApplicationURL(url, config.app);
-      const r = await fetch(url, {
-        ...init,
-        redirect: "manual",
-        signal: init.signal ?? AbortSignal.timeout(60_000),
-      });
-      if (![301, 302, 303, 307, 308].includes(r.status)) return r;
-      assert.ok(r.headers.get("location"), "Missing redirect destination");
-      const next = new URL(r.headers.get("location"), url);
-      console.log("Local redirect", r.status, url.pathname, next.pathname);
-      url = localApplicationURL(next, config.app);
-    }
-    throw Error("Local application redirect loop");
-  },
+let requestDiagnostic = null;
+const api = (path, init = {}) =>
+    fetchLocalApplication(path, config.app, init, (value) => {
+      requestDiagnostic = value;
+    }),
   json = async (path, init = {}) => {
     const r = await api(path, init);
     return { status: r.status, data: await r.json() };
@@ -1198,11 +1186,12 @@ try {
     "real save RPC failure leaves content and publication state unchanged",
   );
 } catch (error) {
-  // Diagnostics expose only category and source line, never assertion values,
-  // session cookies, upload URLs, token-bearing requests or private logs.
+  // Diagnostics expose bounded enums and numeric statuses, never assertion
+  // strings, cookies, URLs/query values, token-bearing requests or private logs.
   failure = {
     category: error.name,
     inputCase,
+    request: requestDiagnostic,
     actualNumeric:
       typeof error.actual === "number" && Number.isFinite(error.actual)
         ? error.actual
@@ -1211,7 +1200,7 @@ try {
       typeof error.expected === "number" && Number.isFinite(error.expected)
         ? error.expected
         : null,
-    location: error.stack?.match(/http\.mjs:\d+:\d+/)?.[0] ?? "unknown",
+    location: error.stack?.match(/(?:http|local-redirect)\.mjs:\d+:\d+/)?.[0] ?? "unknown",
   };
   throw error;
 } finally {

@@ -5,10 +5,11 @@ assertNoEnvFiles(root);
 const child = spawn(
   process.execPath,
   [
+    "--dns-result-order=ipv4first",
     "node_modules/next/dist/bin/next",
     "dev",
     "--hostname",
-    "127.0.0.1",
+    "localhost",
     "--port",
     new URL(config.app).port,
   ],

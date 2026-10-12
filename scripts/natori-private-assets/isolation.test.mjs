@@ -5,19 +5,81 @@ import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
+import { createServer } from "node:http";
 import { postgresReady } from "./postgres-ready.mjs";
 import { commandFailure } from "./command-error.mjs";
-import { localApplicationURL } from "./local-redirect.mjs";
+import { fetchLocalApplication, localApplicationURL } from "./local-redirect.mjs";
 import { assertNoEnvFiles } from "./env-guard.mjs";
 const app = "http://127.0.0.1:43210";
-test("permits only the same-port localhost alias and preserves locale/search", () => {
+test("permits only the same-port localhost alias and preserves its host, locale and search", () => {
   assert.equal(
     localApplicationURL(
       "http://localhost:43210/en/natori/portfolio?_rsc=fixture",
       app,
     ).href,
-    app + "/en/natori/portfolio?_rsc=fixture",
+    "http://localhost:43210/en/natori/portfolio?_rsc=fixture",
   );
+});
+test("loopback host redirect reaches the owned IPv4 listener and preserves method, headers and body", async (t) => {
+  const received = [];
+  const server = createServer(async (request, response) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    received.push({
+      host: request.headers.host.split(":")[0],
+      path: request.url,
+      method: request.method,
+      cookie: request.headers.cookie,
+      body: Buffer.concat(chunks).toString(),
+    });
+    if (received.length === 1) {
+      response.writeHead(307, {
+        Location: `http://localhost:${server.address().port}/en/natori/portfolio?_rsc=fixture`,
+      });
+      response.end();
+    } else response.end("owned-loopback-response");
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const diagnostics = [];
+  const response = await fetchLocalApplication("/natori/portfolio", origin, {
+    method: "PUT",
+    headers: { Cookie: "sec01=SYNTHETIC_COOKIE" },
+    body: "SYNTHETIC_BODY",
+  }, (value) => diagnostics.push(value));
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), "owned-loopback-response");
+  assert.deepEqual(received.map((value) => value.host), ["127.0.0.1", "localhost"]);
+  assert.equal(received[1].path, "/en/natori/portfolio?_rsc=fixture");
+  for (const value of received) {
+    assert.equal(value.method, "PUT");
+    assert.equal(value.cookie, "sec01=SYNTHETIC_COOKIE");
+    assert.equal(value.body, "SYNTHETIC_BODY");
+  }
+  const safe = JSON.stringify(diagnostics);
+  assert.ok(!safe.includes("SYNTHETIC_") && !safe.includes("_rsc"));
+  assert.equal(diagnostics.at(-1).routeClass, "portfolio");
+  assert.equal(diagnostics.at(-1).redirects[0].toHost, "localhost");
+});
+test("actual HTTP redirect guard refuses an external destination and bounds a local loop", async (t) => {
+  let calls = 0;
+  const server = createServer((request, response) => {
+    calls++;
+    response.writeHead(307, {
+      Location: request.url === "/external"
+        ? "http://outside.invalid/DO_NOT_FETCH"
+        : "/loop",
+    });
+    response.end();
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  await assert.rejects(fetchLocalApplication("/external", origin), /External application redirect refused/);
+  assert.equal(calls, 1);
+  await assert.rejects(fetchLocalApplication("/loop", origin), /Local application redirect loop/);
+  assert.equal(calls, 6);
 });
 test("refuses external origins, lookalikes, credentials, alternate ports and schemes", () => {
   for (const input of [
