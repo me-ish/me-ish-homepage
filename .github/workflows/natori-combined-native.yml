@@ -1,0 +1,46 @@
+name: Natori combined native schema
+on:
+  push:
+    branches: [main, 'codex/**']
+    paths:
+      - '.github/workflows/natori-combined-native.yml'
+      - 'scripts/natori-combined-native/**'
+      - 'scripts/natori-pay01/**'
+      - 'scripts/natori-wf01/**'
+      - 'supabase/migrations/**'
+      - 'supabase/baseline/manifest.json'
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/natori-combined-native.yml'
+      - 'scripts/natori-combined-native/**'
+      - 'scripts/natori-pay01/**'
+      - 'scripts/natori-wf01/**'
+      - 'supabase/migrations/**'
+      - 'supabase/baseline/manifest.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: natori-combined-native-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  combined-schema:
+    name: SEC01 → WF01 → DB01 → PAY01 native acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Apply four unchanged SQL files and verify combined boundaries without networking
+        run: bash scripts/natori-combined-native/run.sh
+      - name: Publish source hashes and sanitized synthetic assertion evidence
+        if: always() && env.COMBINED_NATIVE_RESULTS != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: natori-combined-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.COMBINED_NATIVE_RESULTS }}/*
+          if-no-files-found: error
+          retention-days: 7
