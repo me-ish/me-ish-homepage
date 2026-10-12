@@ -7,10 +7,33 @@ import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { postgresReady } from "./postgres-ready.mjs";
+import { storageProxyHeaders } from "./storage-proxy.mjs";
 import { commandFailure } from "./command-error.mjs";
 import { fetchLocalApplication, localApplicationURL } from "./local-redirect.mjs";
 import { assertNoEnvFiles } from "./env-guard.mjs";
 const app = "http://127.0.0.1:43210";
+test("Storage forwarding replaces caller-controlled origin/prefix and preserves signed authorization", () => {
+  const headers = storageProxyHeaders({
+    "x-forwarded-host": "outside.invalid",
+    "x-forwarded-proto": "https",
+    "x-forwarded-port": "443",
+    "x-forwarded-prefix": "//outside.invalid/escape",
+    authorization: "Bearer SYNTHETIC_ANON",
+    "x-signature": "SYNTHETIC_SIGNATURE",
+    "x-upsert": "true",
+    "upload-offset": "6291456",
+  }, app);
+  assert.equal(headers["x-forwarded-host"], "127.0.0.1:43210");
+  assert.equal(headers["x-forwarded-port"], "43210");
+  assert.equal(headers["x-forwarded-proto"], "http");
+  assert.equal(headers["x-forwarded-prefix"], "/storage/v1");
+  assert.equal(headers.authorization, "Bearer SYNTHETIC_ANON");
+  assert.equal(headers["x-signature"], "SYNTHETIC_SIGNATURE");
+  assert.equal(headers["x-upsert"], "true");
+  assert.equal(headers["upload-offset"], "6291456");
+  for (const origin of ["https://127.0.0.1:43210", "http://outside.invalid:43210", "http://localhost:43210", "http://user:pass@127.0.0.1:43210"])
+    assert.throws(() => storageProxyHeaders({}, origin));
+});
 test("permits only the same-port localhost alias and preserves its host, locale and search", () => {
   assert.equal(
     localApplicationURL(

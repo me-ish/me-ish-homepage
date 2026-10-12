@@ -1,6 +1,7 @@
 import http from "node:http";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { config, resultPath } from "./common.mjs";
+import { storageProxyHeaders } from "./storage-proxy.mjs";
 const upstreams = {
   auth: config.authOrigin,
   rest: config.restOrigin,
@@ -32,7 +33,7 @@ http
       return res.end(JSON.stringify({ error: "Synthetic failure" }));
     }
     let target, rewritten;
-    const headers = { ...req.headers };
+    let headers = { ...req.headers };
     if (path.startsWith("/auth/v1/")) {
       target = upstreams.auth;
       rewritten = path.slice(8);
@@ -42,6 +43,7 @@ http
     } else if (path.startsWith("/storage/v1/")) {
       target = upstreams.storage;
       rewritten = path.slice(11);
+      headers = storageProxyHeaders(headers, config.api);
     } else if (path.startsWith("/graphql/v1")) {
       target = upstreams.rest;
       rewritten = "/rpc/graphql";

@@ -5,14 +5,41 @@ import { createHash } from "node:crypto";
 import { fetchLocalApplication } from "./local-redirect.mjs";
 import { execFileSync } from "node:child_process";
 import { config, resultPath } from "./common.mjs";
-const fixtureFetch = (input, init = {}) => {
+let fixtureDiagnostic = null;
+const fixtureFetch = async (input, init = {}) => {
   const url = new URL(input instanceof Request ? input.url : input);
   assert.equal(url.origin, config.api, "External fixture request refused");
-  return fetch(input, {
+  const method = String(init.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
+  const diagnostic = {
+    service: url.pathname.startsWith("/storage/v1/") ? "storage" :
+      url.pathname.startsWith("/auth/v1/") ? "auth" : "data-api",
+    routeClass: url.pathname.startsWith("/storage/v1/upload/resumable/sign") ? "signed-tus" :
+      url.pathname.startsWith("/storage/v1/upload/resumable") ? "unsigned-tus" : "other",
+    method: /^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)$/.test(method) ? method : "other",
+    status: null,
+    errorCode: null,
+  };
+  fixtureDiagnostic = diagnostic;
+  const response = await fetch(input, {
     ...init,
     redirect: "error",
     signal: init.signal ?? AbortSignal.timeout(60_000),
   });
+  diagnostic.status = response.status;
+  if (!response.ok && diagnostic.routeClass.endsWith("tus")) {
+    // Inspect only a bounded response to classify known protocol errors. Never
+    // expose returned message text, object paths, bearer tokens or request data.
+    const reader = response.body?.getReader();
+    if (reader) {
+      const chunk = await reader.read();
+      await reader.cancel();
+      const value = chunk.value?.byteLength <= 1024
+        ? Buffer.from(chunk.value).toString("utf8") : "";
+      for (const code of ["InvalidSignature", "InvalidUploadSignature", "AccessDenied", "ExpiredToken", "KeyAlreadyExists", "InvalidUploadId", "InvalidRequest"])
+        if (new RegExp(`\\b${code}\\b`).test(value)) { diagnostic.errorCode = code; break; }
+    }
+  }
+  return response;
 };
 const otherClient = createClient(config.api, config.anon, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -757,7 +784,7 @@ try {
   })
     .map(([key, value]) => key + " " + Buffer.from(value).toString("base64"))
     .join(",");
-  const tus = await fixtureFetch(config.api + "/storage/v1/upload/resumable", {
+  const tus = await fixtureFetch(config.api + "/storage/v1/upload/resumable/sign", {
     method: "POST",
     headers: {
       apikey: config.anon,
@@ -799,7 +826,7 @@ try {
       .map(([key, value]) => key + " " + Buffer.from(value).toString("base64"))
       .join(",");
     const created = await fixtureFetch(
-      config.api + "/storage/v1/upload/resumable",
+      config.api + "/storage/v1/upload/resumable/sign",
       {
         method: "POST",
         headers: {
@@ -828,6 +855,11 @@ try {
     return result.status === 204;
   };
   const wrongTusPath = prep.data.path.replace(".mp4", "-foreign.mp4");
+  assert.equal(await tusAttempt({ ...prep.data, token: "" }, video), false);
+  assert.equal(
+    await tusAttempt({ ...prep.data, token: "SYNTHETIC_INVALID_SIGNATURE" }, video),
+    false,
+  );
   assert.equal(
     await tusAttempt(prep.data, video, { path: wrongTusPath }),
     false,
@@ -875,10 +907,6 @@ try {
     .download(freshForgery.data.path);
   assert.ok(!immutable.error);
   assert.ok(Buffer.from(await immutable.data.arrayBuffer()).equals(video));
-  record(
-    "anonymous signed bearer is exact-path and exact-bucket scoped and cannot overwrite through normal or forged/TUS upsert",
-  );
-
   let latest = await json("/api/natori/admin/portfolio-content", {
     headers: manager,
   });
@@ -939,8 +967,9 @@ try {
   })
     .map(([key, value]) => key + " " + Buffer.from(value).toString("base64"))
     .join(",");
+  inputCase = "tus_resume_create";
   const createdTus = await fixtureFetch(
-    config.api + "/storage/v1/upload/resumable",
+    config.api + "/storage/v1/upload/resumable/sign",
     {
       method: "POST",
       headers: {
@@ -964,24 +993,28 @@ try {
     "Upload-Offset": String(offset),
     "Content-Type": "application/offset+octet-stream",
   });
+  inputCase = "tus_resume_first_chunk";
   const firstChunk = await fixtureFetch(resumedURL, {
     method: "PATCH",
     headers: chunkHeaders(0),
     body: resumedBytes.subarray(0, 6 * 1024 * 1024),
   });
   assert.equal(firstChunk.status, 204);
+  inputCase = "tus_resume_head";
   const headTus = await fixtureFetch(resumedURL, {
     method: "HEAD",
     headers: { "x-signature": resumed.data.token, "Tus-Resumable": "1.0.0" },
   });
   assert.equal(headTus.status, 200);
   assert.equal(Number(headTus.headers.get("upload-offset")), 6 * 1024 * 1024);
+  inputCase = "tus_resume_second_chunk";
   const secondChunk = await fixtureFetch(resumedURL, {
     method: "PATCH",
     headers: chunkHeaders(6 * 1024 * 1024),
     body: resumedBytes.subarray(6 * 1024 * 1024),
   });
   assert.equal(secondChunk.status, 204);
+  inputCase = "tus_resume_finalize";
   const resumedFinalize = await json(
     "/api/natori/portfolio/video-upload/finalize",
     {
@@ -991,6 +1024,11 @@ try {
     },
   );
   assert.equal(resumedFinalize.status, 200);
+  inputCase = null;
+  // Confinement requires this same signed endpoint's positive capability proof.
+  record(
+    "anonymous signed bearer is exact-path and exact-bucket scoped and cannot overwrite through normal or forged/TUS upsert",
+  );
   record(
     "real anonymous signed TUS upload resumes across chunks and finalizes private media",
   );
@@ -1191,7 +1229,8 @@ try {
   failure = {
     category: error.name,
     inputCase,
-    request: requestDiagnostic,
+    applicationRequest: requestDiagnostic,
+    fixtureRequest: fixtureDiagnostic,
     actualNumeric:
       typeof error.actual === "number" && Number.isFinite(error.actual)
         ? error.actual
