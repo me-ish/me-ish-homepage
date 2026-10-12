@@ -274,8 +274,24 @@ def main():
     check('accepted_metadata_update_preserves_dates', state(p)['delivery_accepted_at'] == after['delivery_accepted_at'] and state(p)['completed_at'] == after['completed_at'])
     state_before_resend = state(p)
     result = json.loads(value(issue_sql(p,m,'e'*64,str(uuid.uuid4()),expires=exp)))
-    check('accepted_release_reissue_retains_original_publication', result['release_id'] == r)
-    assert_unchanged(p,state_before_resend,'accepted_release_reissue_preserves_status_dates')
+    check('accepted_release_unresolved_notice_recovery_retains_publication', result['release_id'] == r)
+    assert_unchanged(p,state_before_resend,'accepted_release_notice_recovery_preserves_status_dates')
+    # Resolve the pending synthetic notice through the real lease/finish RPCs,
+    # without a provider call, then reach fresh resend/access creation as well.
+    claim = str(uuid.uuid4())
+    notice = result['notification_id']
+    check('accepted_notice_real_claim_succeeds', value(f"select count(*) from public.natori_notification_claim_v1({literal(notice)},{literal(claim)},false)") == '1')
+    check('accepted_notice_real_failure_finish_succeeds', value(f"select public.natori_notification_finish_v1({literal(notice)},{literal(claim)},'failed',null,'synthetic_failure')") == 't')
+    project_before_fresh_resend = state(p)
+    release_before_fresh_resend = release(p)
+    access_before = int(value(f"select count(*) from public.natori_delivery_access where release_id={literal(r)}"))
+    operations_before = int(value(f"select count(*) from public.natori_delivery_operations where project_id={literal(p)}"))
+    notices_before = notice_count(p)
+    fresh_token = hashlib.sha256(('fresh-resend/' + p).encode()).hexdigest()
+    fresh = json.loads(value(issue_sql(p,m,fresh_token,str(uuid.uuid4()),expires=exp)))
+    check('accepted_release_fresh_resend_adds_access_operation_notice', fresh['result'] == 'issued' and fresh['release_id'] == r and fresh['notification_id'] != notice and int(value(f"select count(*) from public.natori_delivery_access where release_id={literal(r)}")) == access_before + 1 and int(value(f"select count(*) from public.natori_delivery_operations where project_id={literal(p)}")) == operations_before + 1 and notice_count(p) == notices_before + 1)
+    assert_unchanged(p,project_before_fresh_resend,'accepted_release_fresh_resend_preserves_project_status_dates')
+    check('accepted_release_fresh_resend_preserves_release_dates', release(p) == release_before_fresh_resend)
 
     for paid in (False,True):
         no = project('no-release-'+str(paid),paid=paid)
