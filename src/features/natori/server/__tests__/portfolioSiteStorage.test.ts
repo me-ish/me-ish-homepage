@@ -34,8 +34,9 @@ vi.mock("@/lib/imageSniff", () => ({
   sniffImageFormat: vi.fn(() => "png"),
 }));
 
+vi.mock("@/features/natori/server/natoriOwner",()=>({resolveNatoriOwnerId:async()=>"00000000-0000-4000-8000-000000000011"}));
 vi.mock("@/lib/supabaseAdmin", () => ({
-  supabaseAdmin: vi.fn(() => ({
+  supabaseAdmin: vi.fn(() => ({from:vi.fn(()=>({insert:async()=>({error:null})})),
     storage: {
       from: (...args: unknown[]) => mockStorageFrom(...args),
     },
@@ -134,16 +135,17 @@ describe("Natori portfolio and inquiry-reference Storage", () => {
     ]);
   });
 
-  it("writes public portfolio images through the server admin client", async () => {
+  it("keeps portfolio uploads private until an authorized save publishes their reference", async () => {
     await expect(uploadPortfolioImage(imageFile())).resolves.toEqual({
       kind: "ok",
-      url: "https://public.invalid/image.webp",
+      url: expect.stringMatching(/^\/api\/natori\/admin\/portfolio-assets\/[0-9a-f-]+\.webp$/),
     });
-    expect(mockStorageFrom).toHaveBeenCalledWith("natori-portfolio");
+    expect(mockStorageFrom).toHaveBeenCalledWith("natori-management-assets");
+    expect(mockGetPublicUrl).not.toHaveBeenCalled();
     expect(mockUpload).toHaveBeenCalledWith(
-      expect.stringMatching(/^images\/[0-9a-f-]+\.webp$/i),
+      expect.stringMatching(/^portfolio\/00000000-0000-4000-8000-000000000011\/[0-9a-f-]+\.webp$/i),
       expect.any(Buffer),
-      { contentType: "image/webp", upsert: false },
+      { contentType: "image/webp",cacheControl:"0", upsert: false },
     );
   });
 });

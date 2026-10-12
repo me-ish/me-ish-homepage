@@ -40,9 +40,10 @@
     "supabase/migrations/20261001223805_natori_task_integrity.sql",
     "supabase/migrations/20261001225106_natori_consultation_operations.sql",
     "supabase/migrations/20261011140000_natori_talk_roughs.sql",
-    "supabase/migrations/20261011221028_lockdown_legacy_entries_reads.sql"
+    "supabase/migrations/20261011221028_lockdown_legacy_entries_reads.sql",
+    "supabase/migrations/20261012013126_secure_natori_portfolio_assets.sql"
   ],
-  "activeMigrationCount": 32,
+  "activeMigrationCount": 33,
   "legacyMigrationCount": 55,
   "remoteOnlyEvidenceCount": 3,
   "sourceProjectRef": "lvnfspyainrxtztjytbo",
@@ -92,7 +93,8 @@
     "20261001223805_natori_task_integrity.sql",
     "20261001225106_natori_consultation_operations.sql",
     "20261011140000_natori_talk_roughs.sql",
-    "20261011221028_lockdown_legacy_entries_reads.sql"
+    "20261011221028_lockdown_legacy_entries_reads.sql",
+    "20261012013126_secure_natori_portfolio_assets.sql"
   ],
   "archiveVerification": {
     "status": "verified",
@@ -241,7 +243,8 @@
     "sha256:artifacts/legacy-migration-archive/verification.json": "090f3f98f958f5b6d08431541e156187ca8e89507fb0f3a49b41431fb8a8591f",
     "expectedNormalizedSchema": "operator_confirmation_required_after_pattern_b",
     "sha256:supabase/migrations/20261001223805_natori_task_integrity.sql": "b17ac3a116d7c3b01e2a3e2eea5c8409bcfa06f7b73f4aa718f79532895ef015",
-    "sha256:supabase/migrations/20261011221028_lockdown_legacy_entries_reads.sql": "bd4226784fc86e9b6f2bb7708f6895c15a9f5720fa344b587c9cfe15f15547ae"
+    "sha256:supabase/migrations/20261011221028_lockdown_legacy_entries_reads.sql": "bd4226784fc86e9b6f2bb7708f6895c15a9f5720fa344b587c9cfe15f15547ae",
+    "sha256:supabase/migrations/20261012013126_secure_natori_portfolio_assets.sql": "f2ba958b61991bca02f1a64be080ffcb0d0d2c28b62a3dc1ebac309bea8dcb44"
   },
   "operatorConfirmationRequired": [
     "target project ref is non-production and not lvnfspyainrxtztjytbo",

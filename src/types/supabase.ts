@@ -853,20 +853,29 @@ export type Database = {
       }
       natori_portfolio_content: {
         Row: {
+          revision: number
           content: Json
           id: string
           updated_at: string
         }
         Insert: {
+          revision?: number
           content: Json
           id?: string
           updated_at?: string
         }
         Update: {
+          revision?: number
           content?: Json
           id?: string
           updated_at?: string
         }
+        Relationships: []
+      }
+      natori_portfolio_assets: {
+        Row: { id: string; owner_id: string; kind: string; path: string; byte_size: number; ready: boolean; created_at: string }
+        Insert: { id: string; owner_id: string; kind: string; path: string; byte_size: number; ready?: boolean; created_at?: string }
+        Update: { ready?: boolean }
         Relationships: []
       }
       natori_pricing_configs: {
@@ -1764,6 +1773,7 @@ export type Database = {
       }
     }
     Functions: {
+      natori_save_portfolio_content: { Args: { expected_revision: number; next_content: Json }; Returns: { saved_revision: number }[] }
       natori_consultation_operation_v1: {Args:{p_project_id:string;p_sender:string;p_operation_id:string;p_request_hash:string;p_command:string;p_owner_id?:string|null;p_access_hash?:string|null;p_input?:Json;p_claim_token?:string|null};Returns:Json}
       natori_consultation_legacy_notice_v1: {Args:{p_owner_id:string;p_project_id:string;p_message_id:string;p_payload:Json;p_access_hash:string|null;p_expires_at:string|null};Returns:string|null}
       natori_intake_lookup_v1: { Args: { p_owner_id: string; p_operation_id: string; p_request_hash: string }; Returns: NatoriIntakeOperationRpcRow[] }

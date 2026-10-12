@@ -194,7 +194,7 @@ export async function renderPortfolioShareImage(content: ShareContent): Promise<
     {
       ...PORTFOLIO_SHARE_IMAGE_SIZE,
       ...(font ? { fonts: [{ name: FONT_FAMILY, data: font, weight: 700 as const, style: "normal" as const }] } : {}),
-      headers: { "Cache-Control": "public, max-age=600, s-maxage=3600, stale-while-revalidate=86400" },
+      headers: { "Cache-Control": "no-store" },
     },
   );
 }

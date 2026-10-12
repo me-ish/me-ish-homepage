@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "./PortfolioImage";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";

@@ -41,7 +41,7 @@ import {
 } from "@/features/natori/data/supabaseProcessVideo";
 
 const PUBLIC_URL =
-  "https://abcdefgh.supabase.co/storage/v1/object/public/natori-portfolio/videos/3f2b8c1e-9d4a-4b7e-8a1f-0c5d6e7f8a9b.mp4";
+  "/api/natori/admin/portfolio-assets/3f2b8c1e-9d4a-4b7e-8a1f-0c5d6e7f8a9b.mp4";
 const PATH = "videos/3f2b8c1e-9d4a-4b7e-8a1f-0c5d6e7f8a9b.mp4";
 
 function response(body: Record<string, unknown> | null, status = 200): Response {
@@ -55,7 +55,7 @@ function response(body: Record<string, unknown> | null, status = 200): Response 
   } as Response;
 }
 
-const prepared = { ok: true, path: PATH, token: "signed-token", publicUrl: PUBLIC_URL };
+const prepared = { ok: true, path: PATH, token: "signed-token", url: PUBLIC_URL,assetId:"3f2b8c1e-9d4a-4b7e-8a1f-0c5d6e7f8a9b",bucket:"natori-management-assets" };
 const smallFile = { name: "small.mp4", type: "video/mp4", size: 3_000_000 } as File;
 const largeFile = { name: "large.mp4", type: "video/mp4", size: 30_000_000 } as File;
 
@@ -100,10 +100,10 @@ describe("uploadProcessVideoFile", () => {
         body: JSON.stringify({ sizeBytes: 3_000_000, contentType: "video/mp4" }),
       })
     );
-    expect(mockStorageFrom).toHaveBeenCalledWith("natori-portfolio");
+    expect(mockStorageFrom).toHaveBeenCalledWith("natori-management-assets");
     expect(mockUploadToSignedUrl).toHaveBeenCalledWith(PATH, "signed-token", smallFile, {
       contentType: "video/mp4",
-      cacheControl: "31536000",
+      cacheControl: "0",
     });
     expect(tus.construct).not.toHaveBeenCalled();
     expect(onProgress.mock.calls.map(([ratio]) => ratio)).toEqual([0, 1]);
@@ -126,10 +126,10 @@ describe("uploadProcessVideoFile", () => {
     expect(options.headers).toEqual({ "x-signature": "signed-token" });
     expect(options.chunkSize).toBe(6 * 1024 * 1024);
     expect(options.metadata).toEqual({
-      bucketName: "natori-portfolio",
+      bucketName: "natori-management-assets",
       objectName: PATH,
       contentType: "video/mp4",
-      cacheControl: "31536000",
+      cacheControl: "0",
     });
     expect(mockUploadToSignedUrl).not.toHaveBeenCalled();
     expect(onProgress.mock.calls.map(([ratio]) => ratio)).toEqual([0, 0.2, 1, 1]);
@@ -211,7 +211,7 @@ describe("uploadProcessVideoFile", () => {
 
   it("保存できない形の公開URLが返ってきたら、アップロードを始めない", async () => {
     fetchMock.mockResolvedValueOnce(
-      response({ ...prepared, publicUrl: "https://abcdefgh.supabase.co/storage/v1/object/public/other-bucket/videos/a.mp4" })
+      response({ ...prepared, url: "https://abcdefgh.supabase.co/storage/v1/object/public/other-bucket/videos/a.mp4" })
     );
 
     const error = await rejection(uploadProcessVideoFile(smallFile));

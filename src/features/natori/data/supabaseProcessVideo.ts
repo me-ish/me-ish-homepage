@@ -5,9 +5,9 @@
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { createClient } from "@/lib/supabase/client";
 import {
-  PROCESS_VIDEO_BUCKET,
   PROCESS_VIDEO_FILE_CONTENT_TYPE,
 } from "../constants/portfolioProcessVideo";
+import {NATORI_MANAGEMENT_ASSET_BUCKET,parsePortfolioAssetUrl} from "../lib/portfolioAssetUrl";
 import { consultationUploadEndpoint } from "../lib/consultationUploadEndpoint";
 import {
   checkProcessVideoFile,
@@ -18,7 +18,7 @@ import {
 /** これより大きいファイルは、途切れても続きから送れる再開可能アップロード（TUS）で送る */
 const RESUMABLE_THRESHOLD_BYTES = 6 * 1024 * 1024;
 /** ファイル名は毎回新しいので、ブラウザには長く覚えておいてもらってよい（1年） */
-const CACHE_CONTROL_SECONDS = "31536000";
+const CACHE_CONTROL_SECONDS = "0";
 
 /** 画面にそのまま出せる日本語の理由を持つエラー */
 export class ProcessVideoUploadError extends Error {
@@ -35,7 +35,9 @@ type PrepareResponse = {
   ok?: boolean;
   path?: string;
   token?: string;
-  publicUrl?: string;
+  url?: string;
+  assetId?:string;
+  bucket?:string;
   error?: string;
 } | null;
 
@@ -50,7 +52,7 @@ function prepareErrorMessage(status: number, error: string | undefined, file: Fi
 /** 署名付きURLでの通常のアップロード（1回で送る）。小さいファイルと、再開可能アップロードが使えないときの予備 */
 async function uploadWithSignedUrl(path: string, token: string, file: File): Promise<void> {
   const { error } = await createClient()
-    .storage.from(PROCESS_VIDEO_BUCKET)
+    .storage.from(NATORI_MANAGEMENT_ASSET_BUCKET)
     .uploadToSignedUrl(path, token, file, {
       contentType: PROCESS_VIDEO_FILE_CONTENT_TYPE,
       cacheControl: CACHE_CONTROL_SECONDS,
@@ -75,7 +77,7 @@ async function uploadWithResumable(
       uploadDataDuringCreation: true,
       removeFingerprintOnSuccess: true,
       metadata: {
-        bucketName: PROCESS_VIDEO_BUCKET,
+        bucketName: NATORI_MANAGEMENT_ASSET_BUCKET,
         objectName: path,
         contentType: PROCESS_VIDEO_FILE_CONTENT_TYPE,
         cacheControl: CACHE_CONTROL_SECONDS,
@@ -107,12 +109,13 @@ export async function uploadProcessVideoFile(
   }).catch(() => null);
   if (!response) throw new ProcessVideoUploadError(PREPARE_FAILED);
   const prepared = (await response.json().catch(() => null)) as PrepareResponse;
-  if (!response.ok || !prepared?.ok || !prepared.path || !prepared.token || !prepared.publicUrl) {
+  if (!response.ok || !prepared?.ok || !prepared.path || !prepared.token || !prepared.url || !prepared.assetId || prepared.bucket!==NATORI_MANAGEMENT_ASSET_BUCKET) {
     throw new ProcessVideoUploadError(prepareErrorMessage(response.status, prepared?.error, file));
   }
   // 保存できない形のURLなら、時間のかかるアップロードの前に止める
-  const publicUrl = parseProcessVideoFileUrl(prepared.publicUrl);
-  if (!publicUrl) throw new ProcessVideoUploadError(PREPARE_FAILED);
+  const publicUrl = parseProcessVideoFileUrl(prepared.url);
+  const asset=publicUrl ? parsePortfolioAssetUrl(publicUrl) : null;
+  if (!asset || asset.kind!=="video" || !asset.management || asset.id!==prepared.assetId) throw new ProcessVideoUploadError(PREPARE_FAILED);
 
   // 2) ブラウザから Storage へ直接アップロード
   options.onProgress?.(0);
@@ -128,5 +131,7 @@ export async function uploadProcessVideoFile(
     await uploadWithSignedUrl(prepared.path, prepared.token, file);
   }
   options.onProgress?.(1);
-  return publicUrl;
+  const finalized=await fetch("/api/natori/portfolio/video-upload/finalize",{method:"POST",headers:{...CSRF_HEADERS,"Content-Type":"application/json"},body:JSON.stringify({assetId:prepared.assetId})}).catch(()=>null);
+  if (!finalized?.ok) throw new ProcessVideoUploadError(UPLOAD_FAILED);
+  return publicUrl!;
 }

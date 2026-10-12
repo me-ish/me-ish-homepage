@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+vi.mock("@/features/natori/server/natoriManagementRoute",()=>({withNatoriManagement:(_operation:string,_mutation:boolean,handler:(request:Request)=>Promise<Response>)=>handler}));
 
 const mocks = vi.hoisted(() => ({ canEdit: vi.fn(), prepare: vi.fn() }));
 
@@ -31,9 +32,10 @@ beforeEach(() => {
   mocks.canEdit.mockResolvedValue(true);
   mocks.prepare.mockResolvedValue({
     kind: "ok",
+    assetId:"3f2b8c1e-9d4a-4b7e-8a1f-0c5d6e7f8a9b",
     path: "videos/3f2b8c1e-9d4a-4b7e-8a1f-0c5d6e7f8a9b.mp4",
     token: "upload-token",
-    publicUrl: PUBLIC_URL,
+    url: PUBLIC_URL,
   });
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -45,9 +47,11 @@ describe("POST /api/natori/portfolio/video-upload", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       ok: true,
+      assetId:"3f2b8c1e-9d4a-4b7e-8a1f-0c5d6e7f8a9b",
+      bucket:"natori-management-assets",
       path: "videos/3f2b8c1e-9d4a-4b7e-8a1f-0c5d6e7f8a9b.mp4",
       token: "upload-token",
-      publicUrl: PUBLIC_URL,
+      url: PUBLIC_URL,
     });
     expect(mocks.prepare).toHaveBeenCalledWith(validBody);
   });

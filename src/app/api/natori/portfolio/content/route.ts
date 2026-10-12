@@ -2,6 +2,7 @@
 // /natori/portfolio の掲載内容の取得・保存。業務ロジックは portfolioSiteService に集約。
 import { NextResponse } from "next/server";
 import { checkCsrf } from "@/lib/auth/csrf";
+import {withNatoriManagement} from "@/features/natori/server/natoriManagementRoute";
 import {
   canEditNatoriPortfolio,
   loadPortfolioContent,
@@ -17,12 +18,12 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 export async function GET() {
-  // 掲載内容は公開ページと同じものなので認可不要
+  // Only the shared public projection is available without management auth.
   const content = await loadPortfolioContent();
-  return NextResponse.json({ content });
+  return NextResponse.json({ content }, { headers: { "Cache-Control": "no-store" } });
 }
 
-export async function PUT(req: Request) {
+export const PUT=withNatoriManagement("portfolio-content.PUT",true,async (req: Request) => {
   const csrfErr = checkCsrf(req);
   if (csrfErr) return csrfErr;
 
@@ -30,18 +31,25 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = (await req.json().catch(() => null)) as { content?: unknown } | null;
+  const body = (await req.json().catch(() => null)) as { content?: unknown; expectedRevision?:unknown } | null;
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const result = await savePortfolioContent(body.content);
+  if (typeof body.expectedRevision!=="number" || !Number.isSafeInteger(body.expectedRevision) || body.expectedRevision<0) {
+    return NextResponse.json({error:"Reload the editor before saving",code:"revision_required"},{status:409,headers:{"Cache-Control":"private, no-store"}});
+  }
+  const result = await savePortfolioContent(body.content,body.expectedRevision);
   switch (result.kind) {
+    case "invalid-asset":
+      return NextResponse.json({error:"An image or video upload is unavailable"},{status:400});
+    case "conflict":
+      return NextResponse.json({error:"Content changed; keep your edits and check the latest version",code:"save_conflict"},{status:409});
     case "invalid":
       return NextResponse.json({ error: "Invalid content" }, { status: 400 });
     case "db-error":
       return NextResponse.json({ error: "Failed to save content" }, { status: 500 });
     case "ok":
-      return NextResponse.json({ ok: true, content: result.content });
+      return NextResponse.json({ ok: true, content: result.content,revision:result.revision },{headers:{"Cache-Control":"private, no-store"}});
   }
-}
+});

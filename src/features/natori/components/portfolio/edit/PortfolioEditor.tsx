@@ -84,7 +84,7 @@ type PortfolioEditorProps = {
   dashboardHref?: string;
 };
 
-type SaveErrorKind = "validation" | "network";
+type SaveErrorKind = "validation" | "network" | "conflict";
 
 export default function PortfolioEditor({
   demoContent,
@@ -93,6 +93,8 @@ export default function PortfolioEditor({
 }: PortfolioEditorProps) {
   const isDemo = Boolean(demoContent);
   const [content, setContent] = useState<PortfolioContent | null>(null);
+  const [revision,setRevision]=useState(0);
+  const editVersion=useRef(0);
   const [loadError, setLoadError] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveErrorKind, setSaveErrorKind] = useState<SaveErrorKind>("network");
@@ -113,10 +115,10 @@ export default function PortfolioEditor({
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/natori/portfolio/content");
+        const res = await fetch("/api/natori/admin/portfolio-content", {cache:"no-store"});
         if (!res.ok) throw new Error(`load failed: ${res.status}`);
-        const json = (await res.json()) as { content: PortfolioContent };
-        if (!cancelled) setContent(withPortfolioEditorStableIds(json.content));
+        const json = (await res.json()) as { content: PortfolioContent;revision:number };
+        if (!cancelled) {setContent(withPortfolioEditorStableIds(json.content));setRevision(json.revision??0);}
       } catch (err) {
         console.error("[portfolio-edit] load failed", err);
         if (!cancelled) setLoadError(true);
@@ -182,6 +184,7 @@ export default function PortfolioEditor({
   }, [contentReady]);
 
   const patch = useCallback((update: Partial<PortfolioContent>) => {
+    editVersion.current++;
     setContent((current) => (current ? { ...current, ...update } : current));
     setDirty(true);
     setSaveState("idle");
@@ -192,6 +195,7 @@ export default function PortfolioEditor({
   // works への追加は最新 state に対して行う
   const appendWorks = useCallback((added: PortfolioWork[]) => {
     if (added.length === 0) return;
+    editVersion.current++;
     setContent((current) =>
       current ? { ...current, works: [...current.works, ...added] } : current
     );
@@ -252,6 +256,7 @@ export default function PortfolioEditor({
       return;
     }
     setSaveState("saving");
+    const submittedVersion=editVersion.current;
     try {
       const sanitized = preparePortfolioContentForSave(content);
       if (!sanitized) {
@@ -261,16 +266,21 @@ export default function PortfolioEditor({
       const res = await fetch("/api/natori/portfolio/content", {
         method: "PUT",
         headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
-        body: JSON.stringify({ content: sanitized }),
+        body: JSON.stringify({ content: sanitized,expectedRevision:revision }),
       });
+      if (res.status===409) throw new Error("portfolio save conflict");
       if (!res.ok) throw new Error(`save failed: ${res.status}`);
-      setContent(sanitized);
-      setDirty(false);
+      const saved=await res.json() as {content?:PortfolioContent;revision?:number};
+      setRevision(saved.revision??revision+1);
+      if (editVersion.current===submittedVersion) {
+        setContent(saved.content??sanitized);
+        setDirty(false);
+      }
       setSaveState("saved");
     } catch (err) {
       console.error("[portfolio-edit] save failed", err);
       setSaveErrorKind(
-        err instanceof Error && err.message === "portfolio content validation failed"
+        err instanceof Error && err.message === "portfolio save conflict" ? "conflict" : err instanceof Error && err.message === "portfolio content validation failed"
           ? "validation"
           : "network"
       );
@@ -985,7 +995,7 @@ export default function PortfolioEditor({
                       image: null,
                       collectionId: content.collections[0]?.id ?? null,
                       featured: false,
-                      published: true,
+                      published: false,
                     },
                   ],
                 })
@@ -1397,6 +1407,8 @@ export default function PortfolioEditor({
                       </button>
                     ) : null}
                   </>
+                ) : saveErrorKind === "conflict" ? (
+                  "別の保存で内容が更新されました。入力は残しています。最新版を別タブで確認してください。"
                 ) : (
                   "保存に失敗しました。もう一度お試しください。"
                 )}
@@ -1467,7 +1479,7 @@ function BulkWorkImageAdd({
           image: url,
           collectionId: defaultCollectionId,
           featured: false,
-          published: true,
+          published: false,
         });
       } catch (err) {
         console.error("[portfolio-edit] bulk upload failed", file.name, err);

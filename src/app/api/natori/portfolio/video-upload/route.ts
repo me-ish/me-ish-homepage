@@ -6,6 +6,8 @@ import { z } from "zod";
 import { checkCsrf } from "@/lib/auth/csrf";
 import { canEditNatoriPortfolio } from "@/features/natori/server/portfolioSiteService";
 import { prepareProcessVideoUpload } from "@/features/natori/server/portfolioProcessVideoUploadService";
+import {NATORI_MANAGEMENT_ASSET_BUCKET} from "@/features/natori/lib/portfolioAssetUrl";
+import {withNatoriManagement} from "@/features/natori/server/natoriManagementRoute";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,7 +17,7 @@ const requestSchema = z.object({
   contentType: z.string().max(100),
 });
 
-export async function POST(req: Request) {
+export const POST=withNatoriManagement("portfolio-video.prepare",true,async (req: Request)=> {
   const csrfErr = checkCsrf(req);
   if (csrfErr) return csrfErr;
 
@@ -44,11 +46,13 @@ export async function POST(req: Request) {
           ok: true,
           path: result.path,
           token: result.token,
-          publicUrl: result.publicUrl,
+          assetId:result.assetId,
+          bucket:NATORI_MANAGEMENT_ASSET_BUCKET,
+          url: result.url,
         });
     }
   } catch (err) {
     console.error("[natori-portfolio/video-upload] error", err);
     return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
-}
+});

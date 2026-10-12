@@ -30,6 +30,19 @@ function protectPrivateResponse(response: NextResponse, pathname: string): NextR
 
 export default async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  if (pathname === '/_next/image') {
+    const source=request.nextUrl.searchParams.get('url');
+    if (source) {
+      try {
+        const imagePath=decodeURIComponent(new URL(source,request.url).pathname);
+        if (/^\/api\/natori\/(?:admin\/(?:portfolio-assets|project-thumbs)|portfolio\/assets)(?:\/|$)/.test(imagePath)
+          || imagePath==='/og/natori-portfolio.png') {
+          return NextResponse.json({error:'image_optimization_disabled'},{status:400,headers:{'Cache-Control':'no-store'}});
+        }
+      } catch { return NextResponse.json({error:'invalid_image_url'},{status:400,headers:{'Cache-Control':'no-store'}}); }
+    }
+    return NextResponse.next();
+  }
   const apiService = getSuspendedLegacyApi(pathname, request.method);
   if (apiService) {
     return NextResponse.json(
@@ -93,6 +106,7 @@ export default async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/_next/image',
     '/((?!api|admin|admin-login|auth|counts|_next|_vercel|.*\\..*).*)',
     '/api/:path*',
     '/admin/api/:path*',
