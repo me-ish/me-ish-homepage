@@ -37,6 +37,8 @@ Phase4は既存17件を保持し、実Next API→PostgREST→DB→隔離メー�
 
 現行管理sourceが早期のPhaseN/standalone0B試験でもv2を読むため、exact named reader schemaを一度だけ先行適用する。後の3Bでは既存fault helpersを保持してpurpose集合だけを復元する。歴史的migrationを書き換えず、存在を装うmock RPCを追加しない。Phase6Bのrendered inventoryに新しいcomponent/pure lib/consultation typeの3パスを追加し、既存の検査を保持した。
 
+最初のPhase4 CIは20件成功/3件失敗。追加した普通の返信fixtureがtext-onlyでも必要なprepareを省略して直接commitしたため拒否され、後続の個別確認試験も前提不足で失敗した。実composerのprepare→commitを使うよう試験を修正した。製品コード/SQLを変更せず、元17件と追加6件のassertionsを保持して最終HEADで再検証する。最初の失敗を未知エラーの再実行だけで解消とは扱わない。
+
 ## 本番適用の条件と残作業
 
 [Deployment Runbook](./Natori_Audit_WF01_Deployment_Runbook.md)にmetadata確認、停止条件、影響、事後検証と障害時の扱いを記載した。旧OK endpoint/workerと通知送信をquiesceしてschema→対応アプリ→受付/通知再開の順とする。旧直接Resend版と新outboxの同時稼働は重複送信につながる。

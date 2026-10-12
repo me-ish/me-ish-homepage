@@ -384,12 +384,14 @@ async function main() {
     wfSecond = await wfRough(wfProject, 'WF01 second rough');
     check((await clientOk(wfProject, wfSecond)).ok(), 'WF01_SECOND_OK');
     await expect.poll(async () => (await wfOverview(wfProject))?.roughOkPending).toBe(2);
-    const reply = await manager.request.post('/api/natori/admin/consultation', {
-      headers: { 'x-requested-with': 'me-ish' }, data: { projectId: wfProject.id, operation: textOperation('WF01 ordinary reply') },
-    });
-    check(reply.ok() && (await wfOverview(wfProject)).roughOkPending === 2, 'WF01_REPLY_NOT_ACK');
     await page.goto(`/natori/inquiries?project=${wfProject.id}&view=conversation`);
     const composer = page.getByRole('textbox', { name: 'メッセージ', exact: true });
+    // The real composer reserves the keyed operation before committing it,
+    // including a text-only reply. An unprepared raw POST is correctly denied.
+    await composer.fill('WF01 ordinary reply');
+    await page.getByRole('button', { name: 'メッセージを送信', exact: true }).click();
+    await expect(page.getByText('WF01 ordinary reply', { exact: true })).toBeVisible();
+    check((await wfOverview(wfProject)).roughOkPending === 2, 'WF01_REPLY_NOT_ACK');
     await composer.fill('WF01 unsent draft survives acknowledgement');
     const first = page.locator(`[data-rough-ok="${wfFirst.id}"]`);
     await first.getByRole('button', { name: 'このラフの次の対応を確認', exact: true }).click();
