@@ -27,6 +27,17 @@ const nextConfig = {
       : [],
   },
 
+  // The retired /natori page redirects in its page component too, but the
+  // global loading boundary streams that as a 200 with a meta refresh. A
+  // config redirect answers with a real 308 before rendering.
+  async redirects() {
+    return [
+      { source: '/natori', destination: '/natori/portfolio', permanent: true },
+      { source: '/ja/natori', destination: '/natori/portfolio', permanent: true },
+      { source: '/en/natori', destination: '/en/natori/portfolio', permanent: true },
+    ];
+  },
+
   async headers() {
     return [
       {
