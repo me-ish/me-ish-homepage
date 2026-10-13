@@ -6,6 +6,7 @@ import type { TalkFacts, TalkQuoteFact, TalkTimeline } from "../types/talk";
 import { getClientProject } from "./consultationService";
 import { getQuotePaymentOverview } from "./paymentReadModelService";
 import { listProjectRoughs } from "./talkRoughStore";
+import { effectiveDeliveryExpiry, readLatestDeliveryExtension } from "./deliveryExpiry";
 import type { NatoriPaymentLinkFact, NatoriPaymentOverview } from "../types/payment";
 
 type AttemptRow = { state: string; link_url: string | null; deadline: string };
@@ -22,7 +23,7 @@ export async function getClientTalkTimeline(token: string): Promise<TalkTimeline
     const project = await getClientProject(token);
     if (!project || project.deleted_at) return null;
     const db = supabaseAdmin();
-    const [projectRow, quoteRows, releaseRow, attemptRow, roughRows] = await Promise.all([
+    const [projectRow, quoteRows, releaseRow, attemptRow, roughRows, extensionExpiry] = await Promise.all([
       db.from("natori_projects")
         .select("status, deleted_at, payment_confirmed_at, payment_link_url, payment_link_status, delivery_token_expires_at, delivery_accepted_at")
         .eq("id", project.id).maybeSingle(),
@@ -38,6 +39,7 @@ export async function getClientTalkTimeline(token: string): Promise<TalkTimeline
           ? result : { data: null, error: "attempt_read_malformed" })
         .catch(() => ({ data: null, error: "attempt_read_failed" })),
       listProjectRoughs(project.id),
+      readLatestDeliveryExtension(db, project.id),
     ]);
     if (projectRow.error || !projectRow.data) return null;
     const p = projectRow.data;
@@ -74,7 +76,7 @@ export async function getClientTalkTimeline(token: string): Promise<TalkTimeline
       payment: { confirmedAt: p.payment_confirmed_at, link, overview },
       delivery: {
         exists: Boolean(release) || legacyDelivery,
-        expiresAt: release?.expires_at ?? p.delivery_token_expires_at,
+        expiresAt: release ? effectiveDeliveryExpiry(release.expires_at, extensionExpiry) : p.delivery_token_expires_at,
         acceptedAt: p.delivery_accepted_at ?? release?.accepted_at ?? null,
         fileCount: manifest,
         openable: Boolean(release),

@@ -4,6 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { TalkOpenTarget } from "../types/talk";
 import { getClientProject } from "./consultationService";
+import { effectiveDeliveryExpiry, readLatestDeliveryExtension } from "./deliveryExpiry";
 
 export type OpenTalkLinkResult =
   | { kind: "ok"; path: string }
@@ -54,11 +55,12 @@ export async function openTalkLink(consultToken: string, target: TalkOpenTarget)
     ]);
     if (release.error || paid.error) return { kind: "db-error" };
     const row = release.data;
-    if (!row || !paid.data?.payment_confirmed_at || Date.parse(row.expires_at) <= Date.now()) return { kind: "unavailable" };
+    const expiresAt = row ? effectiveDeliveryExpiry(row.expires_at, await readLatestDeliveryExtension(db, project.id)) : null;
+    if (!row || !expiresAt || !paid.data?.payment_confirmed_at || Date.parse(expiresAt) <= Date.now()) return { kind: "unavailable" };
     const recent = await db.from("natori_delivery_access").select("token_hash", { count: "exact", head: true }).eq("release_id", row.id).gte("created_at", since);
     if (recent.error) return { kind: "db-error" };
     if ((recent.count ?? 0) >= OPEN_LINKS_PER_HOUR) return { kind: "throttled" };
-    const inserted = await db.from("natori_delivery_access").insert({ token_hash: sha256(token), release_id: row.id, expires_at: row.expires_at });
+    const inserted = await db.from("natori_delivery_access").insert({ token_hash: sha256(token), release_id: row.id, expires_at: expiresAt });
     return inserted.error ? { kind: "db-error" } : { kind: "ok", path: `/natori/delivery/${token}` };
   } catch (error) {
     console.error("[natori-talk] open link failed", error instanceof Error ? error.message : "unknown");

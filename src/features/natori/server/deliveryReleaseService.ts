@@ -3,7 +3,7 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSiteUrl } from "@/lib/constants";
-import { DELIVERY_VALID_DAYS, injectDeliveryLink } from "../lib/orderMail";
+import { DELIVERY_EXTENSION_DAYS, DELIVERY_VALID_DAYS, injectDeliveryLink } from "../lib/orderMail";
 import { DELIVERY_TOKEN_RE, DELIVERY_UUID_RE, readDeliveryManifest } from "../lib/deliveryIntegrity";
 import { resolveNatoriOwnerId } from "./natoriOwner";
 import { verifyDeliveryObject } from "./deliveryStorageVerification";
@@ -103,10 +103,13 @@ export async function acceptReadyDelivery(token: string): Promise<AcceptNatoriDe
   } catch { return { kind: "db-error" }; }
 }
 
-export type IssueDeliveryInput = { projectId: string; operationId?: string; fileIds?: string[]; to: string; subject: string; body: string };
+/** Extends an already issued delivery's download period and resends it. Days are a fixed choice (DELIVERY_EXTENSION_DAYS), never free text. */
+export type DeliveryExtensionInput = { days: number; reason: string };
+export type IssueDeliveryInput = { projectId: string; operationId?: string; fileIds?: string[]; to: string; subject: string; body: string;
+  extension?: DeliveryExtensionInput };
 export type IssueDeliveryResult =
   | { kind: "ok"; releaseId: string; notificationStatus: string }
-  | { kind: "not-found" | "not-configured" | "no-files" | "db-error" | "invalid-state" | "delivery-conflict" | "delivery-expired" };
+  | { kind: "not-found" | "not-configured" | "no-files" | "db-error" | "invalid-state" | "delivery-conflict" | "delivery-expired" | "invalid-expiry" | "notice-pending" };
 
 async function issueResult(releaseId: string, noticeId: string): Promise<IssueDeliveryResult> {
   try {
@@ -124,6 +127,7 @@ export async function issueReadyDelivery(input: IssueDeliveryInput): Promise<Iss
   if (!input.operationId || !DELIVERY_UUID_RE.test(input.operationId) || !Array.isArray(input.fileIds)
     || input.fileIds.length === 0 || input.fileIds.length > 10 || input.fileIds.some(id => !DELIVERY_UUID_RE.test(id))
     || new Set(input.fileIds).size !== input.fileIds.length) return { kind: "invalid-state" };
+  if (input.extension) return extendReadyDelivery(input, input.extension);
   const owner = await resolveNatoriOwnerId();
   const admin = supabaseAdmin();
   const project = await admin.from("natori_projects").select("*").eq("id", input.projectId).eq("user_id", owner).maybeSingle();
@@ -180,6 +184,61 @@ export async function issueReadyDelivery(input: IssueDeliveryInput): Promise<Iss
   if (result?.result === "issued" && result.release_id && result.notification_id) return issueResult(result.release_id, result.notification_id);
   if (result?.result === "conflict") return { kind: "delivery-conflict" };
   if (result?.result === "expired") return { kind: "delivery-expired" };
+  if (result?.result === "unavailable") return { kind: "no-files" };
+  if (result?.result === "not-found") return { kind: "not-found" };
+  return { kind: "invalid-state" };
+}
+
+async function extendReadyDelivery(input: IssueDeliveryInput, extension: DeliveryExtensionInput): Promise<IssueDeliveryResult> {
+  const reason = extension.reason.trim();
+  if (!(DELIVERY_EXTENSION_DAYS as readonly number[]).includes(extension.days) || reason.length < 1 || reason.length > 200) return { kind: "invalid-state" };
+  const operationId = input.operationId!, fileIds = input.fileIds!;
+  const owner = await resolveNatoriOwnerId();
+  const admin = supabaseAdmin();
+  const purged = await admin.rpc("natori_delivery_purge_payloads_v1", { p_owner_id: owner });
+  if (purged.error) return { kind: "db-error" };
+  const requestHash = hash(JSON.stringify({ project: input.projectId, files: [...fileIds].sort(), to: input.to, subject: input.subject, body: input.body,
+    extendDays: extension.days, reason }));
+  const previous = await admin.from("natori_delivery_operations").select("*").eq("project_id", input.projectId).eq("operation_id", operationId).maybeSingle();
+  if (previous.error) return { kind: "db-error" };
+  if (previous.data) return previous.data.request_hash === requestHash
+    ? issueResult(previous.data.release_id, previous.data.notification_id) : { kind: "delivery-conflict" };
+  const release = await admin.from("natori_delivery_releases").select("*").eq("project_id", input.projectId).maybeSingle();
+  if (release.error) return { kind: "db-error" };
+  if (!release.data) return { kind: "invalid-state" };
+  // Only the immutable, already issued file set can be resent.
+  const manifest = readDeliveryManifest(release.data.manifest);
+  if (!manifest || JSON.stringify(manifest.map(file => file.id).sort()) !== JSON.stringify([...fileIds].sort())) return { kind: "no-files" };
+  const verifiedAt = new Date().toISOString();
+  const verified = await Promise.all(manifest.map(file => verifyDeliveryObject(file)));
+  if (verified.some(file => !file)) return { kind: "no-files" };
+  const expires = new Date(Date.now() + extension.days * 86400000).toISOString();
+  const token = randomBytes(32).toString("base64url");
+  let payload: Json;
+  try {
+    const from = process.env.NATORI_ORDER_MAIL_FROM?.trim();
+    const reply = process.env.NATORI_PORTFOLIO_CONTACT_TO?.trim();
+    if (!from || !reply) return { kind: "not-configured" };
+    const bcc = process.env.NATORI_MAIL_BCC?.trim();
+    payload = sealDeliveryNotification({ from, to: [input.to], ...(bcc ? { bcc: [bcc] } : {}), reply_to: reply,
+      subject: input.subject, text: injectDeliveryLink(input.body, `${getSiteUrl()}/natori/delivery/${token}`)
+        + `\n\n■ 保存期限: ${new Date(expires).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}まで（保存期限を延長しました。以前のリンクは使えません）`,
+      headers: { "X-Meish-Template": "natori-delivery" } }, new Date(Math.min(Date.parse(expires), Date.now() + 24 * 3600000)).toISOString());
+  } catch { return { kind: "not-configured" }; }
+  const extended = await admin.rpc("natori_delivery_extend_v1", { p_owner_id: owner, p_project_id: input.projectId,
+    p_operation_id: operationId, p_request_hash: requestHash, p_new_expires_at: expires, p_reason: reason, p_token_hash: hash(token),
+    p_manifest: manifest as unknown as Json, p_verified_at: verifiedAt, p_payload: payload,
+  }).then(value => value, () => ({ data: null, error: { code: "transport" } }));
+  if (extended.error) {
+    const confirmed = await admin.from("natori_delivery_operations").select("*").eq("project_id", input.projectId).eq("operation_id", operationId).maybeSingle();
+    if (!confirmed.error && confirmed.data?.request_hash === requestHash) return issueResult(confirmed.data.release_id, confirmed.data.notification_id);
+    return { kind: "db-error" };
+  }
+  const result = extended.data?.[0];
+  if (result?.result === "extended" && result.release_id && result.notification_id) return issueResult(result.release_id, result.notification_id);
+  if (result?.result === "conflict") return { kind: "delivery-conflict" };
+  if (result?.result === "invalid-expiry") return { kind: "invalid-expiry" };
+  if (result?.result === "notice-pending") return { kind: "notice-pending" };
   if (result?.result === "unavailable") return { kind: "no-files" };
   if (result?.result === "not-found") return { kind: "not-found" };
   return { kind: "invalid-state" };

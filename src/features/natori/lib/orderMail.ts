@@ -215,6 +215,8 @@ export const FILES_LINK_PLACEHOLDER = "{ファイルリンク}";
 export const DELIVERY_LINK_PLACEHOLDER = "{納品ページリンク}";
 export const ROUGH_LINK_VALID_DAYS = 14;
 export const DELIVERY_VALID_DAYS = 30;
+/** 発行済みの納品の保存期限を延ばすときに選べる日数（再送した時点から数える）。 */
+export const DELIVERY_EXTENSION_DAYS = [7, 14, 30] as const;
 
 export type NatoriWorkMailInput = {
   clientName: string;

@@ -7,6 +7,7 @@ import { checkCsrf } from "@/lib/auth/csrf";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import { sendNatoriOrderMail } from "@/features/natori/server/orderMailService";
 import { isValidQuoteDate } from "@/features/natori/lib/quoteTerms";
+import { DELIVERY_EXTENSION_DAYS } from "@/features/natori/lib/orderMail";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +33,7 @@ export const POST = withNatoriManagement("order-mail.POST", true, async function
     dueDate?: unknown;
     operationId?: unknown;
     fileIds?: unknown;
+    extension?: unknown;
   } | null;
   if (!payload) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -81,6 +83,14 @@ export const POST = withNatoriManagement("order-mail.POST", true, async function
     return NextResponse.json({ error: "ご依頼内容・制作するもの・納品日を確認してください。" }, { status: 400 });
   }
 
+  const extensionRaw = payload.extension as { days?: unknown; reason?: unknown } | undefined;
+  const extension = kind === "delivery" && extensionRaw && typeof extensionRaw === "object"
+    ? { days: Number(extensionRaw.days), reason: typeof extensionRaw.reason === "string" ? extensionRaw.reason.trim() : "" }
+    : undefined;
+  if (extension && (!(DELIVERY_EXTENSION_DAYS as readonly number[]).includes(extension.days) || extension.reason.length < 1 || extension.reason.length > 200)) {
+    return NextResponse.json({ error: "延長する日数と、200文字までの理由を入力してください。" }, { status: 400 });
+  }
+
   const result = await sendNatoriOrderMail({
     kind, projectId, to, subject, body, amount,
     ...(kind === "estimate" ? { quoteTitle, deliverables, dueDate } : {}),
@@ -88,12 +98,17 @@ export const POST = withNatoriManagement("order-mail.POST", true, async function
       operationId: typeof payload.operationId === "string" ? payload.operationId : undefined,
       fileIds: Array.isArray(payload.fileIds) && payload.fileIds.every((id): id is string => typeof id === "string") ? payload.fileIds : undefined,
     } : {}),
+    ...(extension ? { extension } : {}),
   });
   switch (result.kind) {
     case "delivery-conflict":
       return NextResponse.json({ error: "前回と送信内容が異なります。前回の結果を確認してから、新しい案内として送信してください。", code: "delivery_conflict" }, { status: 409 });
     case "delivery-expired":
-      return NextResponse.json({ error: "納品ページの保存期限が過ぎています。期限延長は再送と分けて確認してください。" }, { status: 409 });
+      return NextResponse.json({ error: "納品ページの保存期限が過ぎています。期限を延ばして再送できます。", code: "delivery_expired" }, { status: 409 });
+    case "invalid-expiry":
+      return NextResponse.json({ error: "その期限には延ばせません。現在の期限より先になる日数を選んでください。" }, { status: 409 });
+    case "notice-pending":
+      return NextResponse.json({ error: "前回の納品メールがまだ送信中です。送信結果を確認してから延長してください。" }, { status: 409 });
     case "not-found":
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     case "no-files":

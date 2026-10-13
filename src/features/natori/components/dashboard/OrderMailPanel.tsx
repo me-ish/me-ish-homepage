@@ -21,6 +21,7 @@ import {
   buildEstimateMailDraft,
   buildPaymentMailDraft,
   buildRoughMailDraft,
+  DELIVERY_EXTENSION_DAYS,
   resolveClientEmail,
   type NatoriOrderMailDraft,
 } from "@/features/natori/lib/orderMail";
@@ -157,6 +158,10 @@ export default function OrderMailPanel({
   const [sent, setSent] = useState(false);
   const [deliveryFiles, setDeliveryFiles] = useState<NatoriDeliveryFileView[] | null>(null);
   const [operationConflict, setOperationConflict] = useState(false);
+  // 保存期限が過ぎた納品だけ、期限を延ばして再送できる（サーバーが期限切れと返したときに出す）
+  const [extendOffered, setExtendOffered] = useState(false);
+  const [extendDays, setExtendDays] = useState<number>(DELIVERY_EXTENSION_DAYS[0]);
+  const [extendReason, setExtendReason] = useState("");
 
   const [paymentFlow,setPaymentFlow]=useState<"loading"|"enabled"|"legacy"|"error">("loading");
   useEffect(()=>{if(kind!=="payment"||demoMode)return;let alive=true;
@@ -179,6 +184,7 @@ export default function OrderMailPanel({
   const canSend =
     emailValid && amountValid && draft.subject.trim() && draft.body.trim() && !sending &&
     (kind !== "delivery" || (deliveryFiles && deliveryFiles.length > 0 && deliveryFiles.every(file => !file.state || file.state === "ready"))) &&
+    (!extendOffered || (extendReason.trim().length > 0 && extendReason.length <= 200)) &&
     (kind !== "estimate" || (
       quoteTitle.trim().length > 0 && quoteTitle.length <= 200 &&
       deliverables.trim().length > 0 && deliverables.length <= 1000 &&
@@ -241,6 +247,7 @@ export default function OrderMailPanel({
           body: draft.body,
           amount: Math.round(amount),
           ...(kind === "delivery" ? { operationId, fileIds: deliveryFiles?.map(file => file.id) } : {}),
+          ...(kind === "delivery" && extendOffered ? { extension: { days: extendDays, reason: extendReason.trim() } } : {}),
           ...(kind === "estimate" ? {
             quoteTitle: quoteTitle.trim(),
             deliverables: deliverables.trim(),
@@ -257,6 +264,7 @@ export default function OrderMailPanel({
       } | null;
       if (!res.ok || !json?.ok) {
         if (json?.code === "delivery_conflict") setOperationConflict(true);
+        if (json?.code === "delivery_expired") setExtendOffered(true);
         throw new Error(json?.error ?? `send failed: ${res.status}`);
       }
       setSentLinkUrl(json.paymentLinkUrl ?? null);
@@ -419,6 +427,23 @@ export default function OrderMailPanel({
               />
             ) : null}
             {kind === "delivery" && !canSend && <p className="text-xs text-zinc-600">納品案内の送信前に、すべてのファイルが「保存確認済み」であることを確認してください。</p>}
+            {kind === "delivery" && extendOffered && (
+              <fieldset className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+                <legend className="px-1 font-bold">保存期限を延ばして再送する</legend>
+                <p className="text-xs text-zinc-700">以前のリンクは使えないままで、新しいリンクをメールでお送りします。発行済みのファイルと受取の記録は変わりません。</p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label htmlFor="om-extend-days" className="font-bold">延長する期間</label>
+                  <select id="om-extend-days" value={extendDays} onChange={(event) => setExtendDays(Number(event.target.value))} className={inputClass}>
+                    {DELIVERY_EXTENSION_DAYS.map((days) => <option key={days} value={days}>{days}日（再送した日から）</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="om-extend-reason" className="font-bold">延長の理由（必須・200文字まで）</label>
+                  <input id="om-extend-reason" type="text" value={extendReason} maxLength={200}
+                    onChange={(event) => setExtendReason(event.target.value)} placeholder="例: ご依頼者から再送の希望があった" className={inputClass} />
+                </div>
+              </fieldset>
+            )}
             {operationConflict && <button type="button" className="rounded-lg border px-3 py-2 text-sm" onClick={() => {
               sessionStorage.removeItem(`natori-delivery-operation/${project.id}`); setOperationConflict(false); setError(null);
             }}>前回の結果を確認したので、新しい案内として送る</button>}
