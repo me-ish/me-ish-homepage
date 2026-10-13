@@ -1,0 +1,34 @@
+name: PAY-01 recovery proposal native proof
+on:
+  push:
+    branches: ['codex/pay01-release-recovery-20261013']
+    paths:
+      - '.github/workflows/natori-pay01-recovery.yml'
+      - 'scripts/natori-pay01-recovery/**'
+      - 'supabase/operations/pay01-recovery/**'
+      - 'scripts/natori-combined-native/acceptance.py'
+      - 'scripts/natori-combined-native/legacy-bootstrap.sql'
+permissions:
+  contents: read
+concurrency:
+  group: pay01-recovery-proposal-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-recovery:
+    name: Fence, quiescence, recovery and existing 54 contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Execute native ordinary transactions without network or production configuration
+        run: bash scripts/natori-pay01-recovery/run.sh
+      - name: Publish only source hashes and synthetic assertion names/counts
+        if: always() && env.PAY01_RECOVERY_RESULTS != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pay01-recovery-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.PAY01_RECOVERY_RESULTS }}/*
+          if-no-files-found: error
+          retention-days: 7
