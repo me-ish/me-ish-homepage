@@ -56,6 +56,11 @@ export type NatoriDeliveryOperationRow = {
   notification_id: string; created_at: string;
 }
 
+export type NatoriDeliveryExtensionRow = {
+  id: string; release_id: string; project_id: string; operation_id: string; request_hash: string;
+  previous_expires_at: string; new_expires_at: string; reason: string; created_at: string;
+}
+
 export type NatoriIntakeOperationRpcRow = {
   result: string; replay_result: Json | null; project_id: string | null;
   reference_paths: Json | null; notification_ids: string[];
@@ -105,6 +110,12 @@ export type Database = {
         Row: NatoriDeliveryOperationRow
         Insert: Omit<NatoriDeliveryOperationRow, "created_at"> & Partial<NatoriDeliveryOperationRow>
         Update: Partial<NatoriDeliveryOperationRow>
+        Relationships: []
+      }
+      natori_delivery_extensions: {
+        Row: NatoriDeliveryExtensionRow
+        Insert: Omit<NatoriDeliveryExtensionRow, "id" | "created_at"> & Partial<NatoriDeliveryExtensionRow>
+        Update: Partial<NatoriDeliveryExtensionRow>
         Relationships: []
       }
       natori_notification_jobs: {
@@ -1827,6 +1838,10 @@ export type Database = {
       }
       natori_delivery_issue_v1: {
         Args: { p_owner_id: string; p_project_id: string; p_operation_id: string; p_to_email: string; p_request_hash: string; p_manifest: Json; p_verified_at: string; p_token_hash: string; p_expires_at: string; p_payload: Json }
+        Returns: { result: string; release_id: string | null; notification_id: string | null }[]
+      }
+      natori_delivery_extend_v1: {
+        Args: { p_owner_id: string; p_project_id: string; p_operation_id: string; p_request_hash: string; p_new_expires_at: string; p_reason: string; p_token_hash: string; p_manifest: Json; p_verified_at: string; p_payload: Json }
         Returns: { result: string; release_id: string | null; notification_id: string | null }[]
       }
       natori_accept_delivery_ready_v1: {

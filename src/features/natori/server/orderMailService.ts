@@ -135,11 +135,13 @@ export type SendNatoriOrderMailInput = {
   dueDate?: string;
   operationId?: string;
   fileIds?: string[];
+  /** 納品の保存期限を延ばして再送する（発行済みの納品のみ）。 */
+  extension?: { days: number; reason: string };
 };
 
 export type SendNatoriOrderMailResult =
   | { kind: "ok"; paymentLinkUrl?: string; releaseId?: string; notificationStatus?: string }
-  | { kind: "delivery-conflict" | "delivery-expired" }
+  | { kind: "delivery-conflict" | "delivery-expired" | "invalid-expiry" | "notice-pending" }
   | { kind: "not-found" }
   | { kind: "not-configured" }
   | { kind: "no-files" }
