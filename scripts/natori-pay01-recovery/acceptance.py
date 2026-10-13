@@ -280,7 +280,7 @@ def main():
         assert waiting==1,'first observer DO must wait before its activity aggregate'
         check('observer_do_is_running_and_blocked_before_activity_sampling')
         release(held,ORIGINAL_SUFFIX+'\n'+ledger('natori_pay01_completion_evidence')+'\n')
-        release(barrier,'select pg_advisory_unlock(12064005,3);\n')
+        release(barrier,'')
         assert boundary.wait(timeout=20)==0,'fresh boundary observation failed'
         observation=json.loads(boundary.stdout.read().strip().splitlines()[-1])
         check('old_pay_commit_during_observer_do_before_stats_classifies_skip_not_ready',observation['decision']=='skip-pay-already-complete' and history_count('natori_pay01_completion_evidence')==1 and observation['guard'][0]['body_md5']=='5669d0837ba50a7f5a31de9b08208d22')
@@ -289,7 +289,7 @@ def main():
         if not held.stdin.closed:
             release(held)
         if not barrier.stdin.closed:
-            release(barrier,'select pg_advisory_unlock(12064005,3);\n')
+            release(barrier,'')
         if boundary.poll() is None:
             boundary.wait(timeout=20)
 
