@@ -11,3 +11,9 @@ test('old Natori artist address leads to the current portfolio', async ({ page }
   await expect(page).toHaveURL(/\/natori\/portfolio$/);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
+
+test('old Natori root address leads to the current portfolio', async ({ page }) => {
+  await page.goto('/natori');
+  await expect(page).toHaveURL(/\/natori\/portfolio$/);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+});

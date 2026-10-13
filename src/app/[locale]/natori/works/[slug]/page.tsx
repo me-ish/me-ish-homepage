@@ -34,7 +34,7 @@ export default async function WorkDetail(props: Props) {
   return (
     <main className="bg-white">
       <article className="mx-auto max-w-5xl px-6 py-12 md:py-16">
-        <Link href="/natori" className="text-sm text-[#00a1e9] hover:underline">← Back to Portfolio</Link>
+        <Link href="/natori/portfolio" className="text-sm text-[#00a1e9] hover:underline">← Back to Portfolio</Link>
         <h1 className="mt-4 text-3xl font-semibold">{work.title}</h1>
         <p className="mt-2 text-gray-600">{work.description}</p>
         <div className="relative mt-6 aspect-[4/3] overflow-hidden rounded-2xl border bg-white shadow">
