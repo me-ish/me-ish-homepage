@@ -9,6 +9,7 @@ import { resolveTrustedNatoriOwnerId } from "./trustedNatoriOwner";
 import { sealDeliveryNotification } from "./deliveryNotificationPayload";
 import { buildAcceptanceNotificationPayload, dispatchAcceptanceNotification } from "./acceptanceNotifications";
 import { injectPaymentLink } from "../lib/orderMail";
+import { alignPaymentDeadlineToStopRun } from "../lib/paymentDeadline";
 
 export const paymentLinkIntegrityEnabled = () => process.env.NATORI_PAYMENT_LINK_INTEGRITY_ENABLED === "1";
 const uuid = z.uuid();
@@ -125,7 +126,7 @@ export async function executePaymentLinkOperation(value:unknown,injectedProvider
    for(const session of sessions.filter(s=>s.status==="open"))await external.expireSession(session.id);
   }
   const beginInput:Record<string,Json>={operationId:input.operationId,token,hash:requestHash,action:input.action,livemode:live,providerAccountId,
-   deadline:input.deadline??null,revision:input.revision??null,confirmed:input.confirmed??false};
+   deadline:input.deadline&&Date.parse(input.deadline)>Date.now()?alignPaymentDeadlineToStopRun(input.deadline):input.deadline??null,revision:input.revision??null,confirmed:input.confirmed??false};
   if(input.action==="adopt"){
    if(!context.legacyLinkId||!context.legacyUrl||!context.quoteId)return {result:"legacy_review"};
    const old=await external.readLink(context.legacyLinkId),sessions=await external.sessions(old.id);
@@ -197,6 +198,9 @@ export async function stopDuePaymentLinks(injectedProvider?:PaymentLinkProvider)
      if(link.id!==job.link_id||link.projectId!==id||link.livemode!==live||(job.livemode!==null&&job.livemode!==live)
       ||!verified(link,claim.attempt,false))outcome="review";
      else{await heartbeat();await external.stopLink(job.link_id);await heartbeat();
+      // Stopping a link leaves already-opened Checkout Sessions payable for up to a day, so close them too.
+      const open=(await external.sessions(job.link_id)).filter(s=>s.status==="open");
+      await heartbeat();await Promise.all(open.map(session=>external.expireSession(session.id)));await heartbeat();
       const stopped=await external.readLink(job.link_id);
       outcome=verified(stopped,claim.attempt,false)&&!stopped.active?"inactive":"review";}}
    }catch(e){if((e as {code?:string}).code==="resource_missing")outcome="review";}

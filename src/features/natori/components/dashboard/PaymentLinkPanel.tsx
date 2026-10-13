@@ -62,6 +62,7 @@ export default function PaymentLinkPanel({project,onClose,onSent}:{project:Nator
     <option value="issue">初回発行と案内</option><option value="renotify">同じリンクを再通知</option><option value="extend">現在の期限を延長</option><option value="reissue">停止済みリンクを新世代へ再発行</option><option value="adopt">既存リンクのURL・旧期限を照合して引継ぎ</option>
    </select></label>
    {needsDeadline&&<label className="block">新しい支払期限（端末の時刻）<input aria-label="新しい支払期限" type="datetime-local" value={deadline} disabled={frozen} onChange={e=>setDeadline(e.target.value)} className={`${natoriAdminUi.input} mt-1`}/></label>}
+   {needsDeadline&&<p className="text-sm">リンクは毎朝9:20（日本時間）に止まるため、入力した時刻以後で最初の朝9:20に切り上げて、メールにもその時刻を書きます。</p>}
    {needsMail&&<fieldset disabled={frozen} className="space-y-3">
     <label className="block">送信先<input aria-label="支払案内の送信先" type="email" value={to} onChange={e=>setTo(e.target.value)} className={natoriAdminUi.input}/></label>
     <label className="block">件名<input aria-label="支払案内の件名" value={subject} onChange={e=>setSubject(e.target.value)} className={natoriAdminUi.input}/></label>
