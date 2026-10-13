@@ -199,8 +199,8 @@ export async function stopDuePaymentLinks(injectedProvider?:PaymentLinkProvider)
       ||!verified(link,claim.attempt,false))outcome="review";
      else{await heartbeat();await external.stopLink(job.link_id);await heartbeat();
       // Stopping a link leaves already-opened Checkout Sessions payable for up to a day, so close them too.
-      for(const session of (await external.sessions(job.link_id)).filter(s=>s.status==="open")){await heartbeat();await external.expireSession(session.id);}
-      await heartbeat();
+      const open=(await external.sessions(job.link_id)).filter(s=>s.status==="open");
+      await heartbeat();await Promise.all(open.map(session=>external.expireSession(session.id)));await heartbeat();
       const stopped=await external.readLink(job.link_id);
       outcome=verified(stopped,claim.attempt,false)&&!stopped.active?"inactive":"review";}}
    }catch(e){if((e as {code?:string}).code==="resource_missing")outcome="review";}
