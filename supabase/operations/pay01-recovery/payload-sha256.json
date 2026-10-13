@@ -1,0 +1,14 @@
+{
+  "fence.sql": {
+    "bytes": 3850,
+    "sha256": "9ac6c875359a6c019c8be4ebc9a7c48b2aaee1df23118eb77e0815c7f692b5a4"
+  },
+  "observe.sql": {
+    "bytes": 8704,
+    "sha256": "5016904103710409d23d6cd841848b34d9bb3a21c97f97c655e40efef0160ec7"
+  },
+  "recovery.sql": {
+    "bytes": 8422,
+    "sha256": "bcf20b05509084e4fa0027787773b93fb3527994742b1de41fe4724d4ac9e3c3"
+  }
+}
