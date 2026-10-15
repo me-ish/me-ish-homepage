@@ -167,6 +167,14 @@ async function handleNatoriCommissionPayment(
         amountTotal: session.amount_total,
       });
     }
+    if (result.kind === "needs-review") {
+      // 恒久エラー扱い（再送されても結果は同じ）。要確認として保存済みなので 200 ACK。
+      console.error("[webhook/stripe/natori-commission] unresolved payment recorded:", {
+        eventId,
+        sessionId: session.id,
+        projectId,
+      });
+    }
     if (result.kind === "quote-mismatch") {
       console.error("[webhook/stripe/natori-commission] quote mismatch:", {
         eventId,

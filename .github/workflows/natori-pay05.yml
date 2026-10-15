@@ -1,0 +1,39 @@
+name: Natori PAY-05
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/natori-pay05.yml'
+      - 'scripts/natori-pay05/**'
+      - 'scripts/natori-pay01/**'
+      - 'supabase/migrations/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: natori-pay05-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-postgres:
+    name: PAY-05 native PostgreSQL acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Execute the unresolved payment SQL on a disposable PostgreSQL without networking
+        run: bash scripts/natori-pay05/run.sh
+      - name: Publish allowlisted synthetic evidence
+        if: always() && env.PAY05_RESULTS != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: natori-pay05-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.PAY05_RESULTS }}/*
+          if-no-files-found: error
+          retention-days: 7

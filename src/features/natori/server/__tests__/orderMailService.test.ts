@@ -244,33 +244,64 @@ describe("sendNatoriOrderMail delivery publication boundary", () => {
 });
 
 describe("markNatoriCommissionPaid", () => {
-  it("does not advance an undecided project after a Stripe payment", async () => {
+  const unresolvedRpc = (newEvent: boolean) =>
+    mockRpc.mockResolvedValue({ data: [{ result: "recorded", new_event: newEvent }], error: null });
+
+  it("does not advance an undecided project; it records the payment for review and acknowledges", async () => {
     const { markNatoriCommissionPaid } = await loadService();
     installDb(makeProjectRow({ type: "undecided", status: "awaiting_payment" }));
+    unresolvedRpc(true);
     await expect(
-      markNatoriCommissionPaid("proj-1", "cs_test_undecided", 8000)
-    ).resolves.toEqual({ kind: "db-error" });
-    expect(mockRpc).not.toHaveBeenCalled();
+      markNatoriCommissionPaid("proj-1", "cs_test_undecided", 8000, "quote-1")
+    ).resolves.toEqual({ kind: "needs-review" });
+    expect(mockRpc).toHaveBeenCalledTimes(1);
+    expect(mockRpc).toHaveBeenCalledWith("natori_record_unresolved_stripe_payment_v1", expect.objectContaining({
+      p_session_id: "cs_test_undecided", p_amount: 8000, p_reason: "project_type_unconfirmed",
+    }));
+    expect(mockSend).toHaveBeenCalledTimes(1);
   });
 
-  it("does not record a Stripe payment without a confirmed amount", async () => {
+  it("records a Stripe payment without a confirmed amount for review instead of reporting a database error", async () => {
     const { markNatoriCommissionPaid } = await loadService();
     installDb(makeProjectRow());
-
+    unresolvedRpc(true);
     await expect(
       markNatoriCommissionPaid("proj-1", "cs_test_missing_amount", null, "quote-1")
-    ).resolves.toEqual({ kind: "db-error" });
-    expect(mockRpc).not.toHaveBeenCalled();
+    ).resolves.toEqual({ kind: "needs-review" });
+    expect(mockRpc).toHaveBeenCalledWith("natori_record_unresolved_stripe_payment_v1", expect.objectContaining({
+      p_amount: null, p_reason: "amount_unavailable",
+    }));
+    expect(mockRpc).not.toHaveBeenCalledWith("natori_record_stripe_payment", expect.anything());
   });
 
-  it("does not record a Stripe payment without its quote ID", async () => {
+  it("records a Stripe payment without its quote ID for review (legacy link) and never confirms it", async () => {
     const { markNatoriCommissionPaid } = await loadService();
     installDb(makeProjectRow());
-
+    unresolvedRpc(true);
     await expect(
       markNatoriCommissionPaid("proj-1", "cs_test_missing_quote", 8000)
-    ).resolves.toEqual({ kind: "db-error" });
-    expect(mockRpc).not.toHaveBeenCalled();
+    ).resolves.toEqual({ kind: "needs-review" });
+    expect(mockRpc).toHaveBeenCalledWith("natori_record_unresolved_stripe_payment_v1", expect.objectContaining({
+      p_reason: "quote_unavailable",
+    }));
+    expect(mockRpc).not.toHaveBeenCalledWith("natori_record_stripe_payment", expect.anything());
+    expect(mockSend).toHaveBeenCalledTimes(1);
+  });
+
+  it("a redelivered unresolved payment is acknowledged without a second notice", async () => {
+    const { markNatoriCommissionPaid } = await loadService();
+    installDb(makeProjectRow());
+    unresolvedRpc(false);
+    await expect(markNatoriCommissionPaid("proj-1", "cs_test_missing_quote", 8000)).resolves.toEqual({ kind: "needs-review" });
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it("keeps Stripe redelivering only when the review record itself cannot be saved", async () => {
+    const { markNatoriCommissionPaid } = await loadService();
+    installDb(makeProjectRow());
+    mockRpc.mockResolvedValue({ data: null, error: { message: "unavailable" } });
+    await expect(markNatoriCommissionPaid("proj-1", "cs_test_missing_quote", 8000)).resolves.toEqual({ kind: "db-error" });
+    expect(mockSend).not.toHaveBeenCalled();
   });
 
   it("入金を一度だけ確定し、受領額・session・台帳を残す", async () => {
