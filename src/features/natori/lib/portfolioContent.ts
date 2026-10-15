@@ -108,6 +108,7 @@ const processVideoSchema = z.object({
   ),
   caption: shortText.optional(),
   posterWorkId: z.string().min(1).max(64).nullable().optional(),
+  posterHeroImage: imageStringUrl.nullable().optional(),
   shape: z.enum(PROCESS_VIDEO_SHAPES).optional(),
 });
 

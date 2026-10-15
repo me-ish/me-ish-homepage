@@ -22,6 +22,9 @@ import { TextInput } from "./editorFields";
 
 type SourceMode = "youtube" | "file";
 
+/** 再生前の画像の選択肢のうち、HERO画像の値の前につける印（作品のidと取り違えないため） */
+const HERO_PREFIX = "hero:";
+
 const SOURCE_MODES: ReadonlyArray<{ mode: SourceMode; label: string }> = [
   { mode: "youtube", label: "YouTubeのURL" },
   { mode: "file", label: "動画ファイル" },
@@ -30,6 +33,7 @@ const SOURCE_MODES: ReadonlyArray<{ mode: SourceMode; label: string }> = [
 export default function PortfolioProcessVideoEditor({
   value,
   works,
+  heroImages = [],
   onChange,
   onUploadingChange,
   uploadDisabled,
@@ -37,6 +41,8 @@ export default function PortfolioProcessVideoEditor({
   /** 未設定（動画なし）のときは undefined */
   value: PortfolioProcessVideo | undefined;
   works: PortfolioWork[];
+  /** HERO画像（表示順）。再生前の画像として選べる */
+  heroImages?: string[];
   onChange: (next: PortfolioProcessVideo) => void;
   /** アップロードが始まった・終わったことを親に知らせる（親は、終わるまで「保存する」を止める） */
   onUploadingChange?: (uploading: boolean) => void;
@@ -87,8 +93,15 @@ export default function PortfolioProcessVideoEditor({
 
   const candidates = works.filter((work) => Boolean(work.image));
   const poster = video.posterWorkId ? (works.find((work) => work.id === video.posterWorkId) ?? null) : null;
-  const posterNote = !video.posterWorkId
-    ? "選ぶと、再生ボタンを押す前にこの作品の画像が出ます。選ばないときは無地の背景です。"
+  const heroIndex = video.posterHeroImage ? heroImages.indexOf(video.posterHeroImage) : -1;
+  const posterImage = video.posterHeroImage ? (heroIndex >= 0 ? video.posterHeroImage : null) : (poster?.image ?? null);
+  const posterValue = video.posterHeroImage ? `${HERO_PREFIX}${video.posterHeroImage}` : (video.posterWorkId ?? "");
+  const posterNote = video.posterHeroImage
+    ? heroIndex >= 0
+      ? `再生ボタンを押す前に、HERO画像${heroIndex + 1}が出ます。`
+      : "選んでいたHERO画像が、いまのHEROにありません。無地の背景になります。"
+    : !video.posterWorkId
+    ? "選ぶと、再生ボタンを押す前にこの画像が出ます。選ばないときは無地の背景です。"
     : !poster?.image
       ? "選んでいた作品が見つからないか、画像がありません。無地の背景になります。"
       : !poster.published
@@ -315,33 +328,54 @@ export default function PortfolioProcessVideoEditor({
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <label htmlFor={posterId} className={natoriAdminUi.label}>
-            再生前に見せる画像（ご依頼実績から1枚）
+            再生前に見せる画像（HERO画像かご依頼実績から1枚）
           </label>
           <select
             id={posterId}
-            value={video.posterWorkId ?? ""}
-            onChange={(event) => onChange({ ...video, posterWorkId: event.target.value || null })}
+            value={posterValue}
+            onChange={(event) => {
+              const next = event.target.value;
+              onChange(
+                next.startsWith(HERO_PREFIX)
+                  ? { ...video, posterWorkId: null, posterHeroImage: next.slice(HERO_PREFIX.length) }
+                  : { ...video, posterWorkId: next || null, ...(video.posterHeroImage ? { posterHeroImage: null } : {}) }
+              );
+            }}
             aria-describedby={`${posterId}-note`}
             className={natoriAdminUi.input}
           >
             <option value="">なし（無地の背景）</option>
-            {video.posterWorkId && !candidates.some((work) => work.id === video.posterWorkId) ? (
+            {video.posterHeroImage && heroIndex < 0 ? (
+              <option value={posterValue}>（HEROにない画像）</option>
+            ) : null}
+            {!video.posterHeroImage && video.posterWorkId && !candidates.some((work) => work.id === video.posterWorkId) ? (
               <option value={video.posterWorkId}>（見つからない作品）</option>
             ) : null}
-            {candidates.map((work) => (
-              <option key={work.id} value={work.id}>
-                {`${work.title.trim() || "無題"}${work.published ? "" : "（非公開）"}`}
-              </option>
-            ))}
+            {heroImages.length > 0 ? (
+              <optgroup label="HERO画像">
+                {heroImages.map((image, index) => (
+                  <option key={`${index}-${image}`} value={`${HERO_PREFIX}${image}`}>
+                    {`HERO画像${index + 1}`}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
+            <optgroup label="ご依頼実績">
+              {candidates.map((work) => (
+                <option key={work.id} value={work.id}>
+                  {`${work.title.trim() || "無題"}${work.published ? "" : "（非公開）"}`}
+                </option>
+              ))}
+            </optgroup>
           </select>
           <p id={`${posterId}-note`} className={natoriAdminUi.hint}>
             {posterNote}
           </p>
         </div>
-        {poster?.image ? (
+        {posterImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={poster.image}
+            src={posterImage}
             alt=""
             className="h-20 w-16 shrink-0 rounded-lg border border-zinc-200 bg-zinc-50 object-contain"
           />

@@ -284,6 +284,23 @@ describe("動画ファイルの保存前整形と表示内容", () => {
     });
   });
 
+  it("再生前の画像はHERO画像の指定を優先し、HEROから外れていたら出さない", () => {
+    const hero = "https://example.com/hero1.webp";
+    const video = { url: FILE_URL, posterWorkId: "w1", posterHeroImage: hero };
+    expect(resolveProcessVideoView({ processVideo: video, works, heroImages: [hero] })?.posterImage).toBe(hero);
+    expect(resolveProcessVideoView({ processVideo: video, works, heroImages: [] })?.posterImage).toBeNull();
+    expect(resolveProcessVideoView({ processVideo: video, works, heroImage: hero })?.posterImage).toBe(hero);
+  });
+
+  it("保存前整形はHERO画像の指定を残す", () => {
+    const hero = "https://example.com/hero1.webp";
+    expect(normalizeProcessVideoForSave({ url: FILE_URL, posterHeroImage: hero })).toEqual({
+      url: FILE_URL,
+      posterWorkId: null,
+      posterHeroImage: hero,
+    });
+  });
+
   it("他のサイトの .mp4 は動画として読まない（セクションごと出さない）", () => {
     expect(
       resolveProcessVideoView({ processVideo: { url: "https://example.com/video.mp4" }, works })

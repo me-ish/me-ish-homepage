@@ -166,15 +166,21 @@ export function normalizeProcessVideoForSave(
     ...(video.published !== undefined ? { published: video.published } : {}),
     ...(video.caption !== undefined ? { caption: video.caption.trim() } : {}),
     posterWorkId: video.posterWorkId ?? null,
+    ...(video.posterHeroImage ? { posterHeroImage: video.posterHeroImage } : {}),
     ...(video.shape !== undefined ? { shape: video.shape } : {}),
   };
 }
 
-/** 再生前に見せる画像のURL。公開中で画像のある作品だけを使い、未設定・非公開・削除済み・画像なしなら null。 */
+/**
+ * 再生前に見せる画像のURL。HERO画像の指定があり、いまもHEROに入っていればそれを使う。
+ * そうでなければ、公開中で画像のある作品だけを使い、未設定・非公開・削除済み・画像なしなら null。
+ */
 function processVideoPosterImage(
-  video: Pick<PortfolioProcessVideo, "posterWorkId">,
-  works: PortfolioWork[]
+  video: Pick<PortfolioProcessVideo, "posterWorkId" | "posterHeroImage">,
+  works: PortfolioWork[],
+  heroImages: readonly string[]
 ): string | null {
+  if (video.posterHeroImage) return heroImages.includes(video.posterHeroImage) ? video.posterHeroImage : null;
   if (!video.posterWorkId) return null;
   const work = works.find((candidate) => candidate.id === video.posterWorkId);
   return work && work.published && work.image ? work.image : null;
@@ -190,7 +196,7 @@ export type PortfolioProcessVideoView = {
 
 /** 公開ページに出す内容。動画が未設定、またはURLを動画として読めないときは null（セクションごと出さない）。 */
 export function resolveProcessVideoView(
-  content: Pick<PortfolioContent, "processVideo" | "works">
+  content: Pick<PortfolioContent, "processVideo" | "works"> & Partial<Pick<PortfolioContent, "heroImages" | "heroImage">>
 ): PortfolioProcessVideoView | null {
   const video = content.processVideo;
   if (!video) return null;
@@ -200,6 +206,10 @@ export function resolveProcessVideoView(
     source,
     caption: video.caption?.trim() || PROCESS_VIDEO_DEFAULT_CAPTION,
     shape: video.shape ?? PROCESS_VIDEO_DEFAULT_SHAPE,
-    posterImage: processVideoPosterImage(video, content.works),
+    posterImage: processVideoPosterImage(
+      video,
+      content.works,
+      content.heroImages ?? (content.heroImage ? [content.heroImage] : [])
+    ),
   };
 }
