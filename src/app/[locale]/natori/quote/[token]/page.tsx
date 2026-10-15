@@ -35,6 +35,18 @@ export default async function QuoteAcceptPage(props: Props) {
     );
   }
 
+  if (result.kind === "db-error") {
+    return (
+      <Shell>
+        <NatoriClientNotice
+          icon="alert"
+          title="お見積もりを取得できませんでした"
+          body="リンクは有効なままです。時間をおいてこのページを再読み込みしてください。改善しない場合は、お見積もりメールにご返信ください。"
+        />
+      </Shell>
+    );
+  }
+
   if (result.kind === "expired") {
     return (
       <Shell>
