@@ -5,7 +5,7 @@ let current: NotificationAttention | null = null;
 const listeners = new Set<() => void>();
 
 export function publishNotificationAttention(next: NotificationAttention | null) {
-  if (current?.unresolved === next?.unresolved && current?.reviewRequired === next?.reviewRequired) return;
+  if (current?.unresolved === next?.unresolved && current?.reviewRequired === next?.reviewRequired && current?.partial === next?.partial) return;
   current = next;
   listeners.forEach(listener => listener());
 }

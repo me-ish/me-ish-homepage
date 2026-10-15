@@ -19,7 +19,8 @@ export default function NotificationStatusPanel() {
     if (!response.ok) throw new Error("read");
     const next = (await response.json()) as NatoriNotificationList;
     setData(next);
-    publishNotificationAttention(summarizeNotificationAttention(next));
+    // 件数表示は新しい順の先頭ページだけを元にする。後ろのページを開いても上部の件数は変えない。
+    if (next.offset === 0) publishNotificationAttention(summarizeNotificationAttention(next));
   }, []);
   useEffect(() => { void refresh().catch(() => setError("メール通知の状態を取得できませんでした。")); }, [refresh]);
   const run = async (id?: string, offset = data?.offset ?? 0) => {

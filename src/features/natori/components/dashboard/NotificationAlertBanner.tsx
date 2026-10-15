@@ -11,7 +11,7 @@ export default function NotificationAlertBanner() {
   return <div role="status" className={`${natoriAdminUi.alert.warning} mt-4 flex flex-wrap items-center gap-x-3 gap-y-1`}>
     <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
     <span>
-      届いていないかもしれないメールが {attention.unresolved} 件あります
+      {attention.partial ? "新しい順の先頭50件のうち、" : ""}届いていないかもしれないメールが {attention.unresolved} 件{attention.partial ? "以上" : ""}あります
       {attention.reviewRequired > 0 ? `（うち送信状況の確認が必要 ${attention.reviewRequired} 件）` : ""}。
     </span>
     <a href="#notification-heading" className="font-bold underline">通知の一覧を見る</a>
