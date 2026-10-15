@@ -5,11 +5,13 @@ import { routing } from './i18n/routing';
 import { isAnalyticsExcludedPath } from '@/lib/analyticsPrivacy';
 import {
   NATORI_KEY_COOKIE,
+  NATORI_KEY_COOKIE_MAX_AGE_SECONDS,
   NATORI_KEY_PARAM,
 } from '@/features/natori/constants/dashboardKey';
 import {
   constantTimeEquals,
   deriveNatoriDashboardCookieToken,
+  deriveNatoriDashboardKeyProof,
 } from '@/features/natori/lib/dashboardKeyToken';
 import {
   getLegacyPauseDestination,
@@ -64,7 +66,7 @@ export default async function middleware(request: NextRequest) {
   }
 
   // natori 管理画面の合言葉キー: `?natori-key=<NATORI_DASHBOARD_KEY>` 付きで
-  // 開くと 8 時間有効の Cookie をセットし、キーを消した URL にリダイレクトする。
+  // 開くと 8 時間有効の Cookie をセットし（発行時刻を署名に含め、サーバー側でも 8 時間を検証する）、キーを消した URL にリダイレクトする。
   // Cookie 値はキー平文ではなく HMAC トークン（漏洩してもキーは復元不可）。
   // 判定本体は features/natori/server/requireNatoriAdmin.ts の
   // canUseNatoriManagement を参照。
@@ -79,11 +81,11 @@ export default async function middleware(request: NextRequest) {
   if (expectedKey && providedKey) {
     // 双方を HMAC に通してから比較することで、文字列比較のタイミング差から
     // キーを推測される余地を無くす（edge runtime に timingSafeEqual が無いため）。
-    const [expectedToken, providedToken] = await Promise.all([
-      deriveNatoriDashboardCookieToken(expectedKey),
-      deriveNatoriDashboardCookieToken(providedKey),
+    const [expectedProof, providedProof] = await Promise.all([
+      deriveNatoriDashboardKeyProof(expectedKey),
+      deriveNatoriDashboardKeyProof(providedKey),
     ]);
-    if (!constantTimeEquals(expectedToken, providedToken)) {
+    if (!constantTimeEquals(expectedProof, providedProof)) {
       return protectPrivateResponse(intlMiddleware(request), pathname);
     }
     const cleanUrl = request.nextUrl.clone();
@@ -91,12 +93,12 @@ export default async function middleware(request: NextRequest) {
     const response = NextResponse.redirect(cleanUrl);
     response.cookies.set({
       name: NATORI_KEY_COOKIE,
-      value: expectedToken,
+      value: await deriveNatoriDashboardCookieToken(expectedKey),
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 8,
+      maxAge: NATORI_KEY_COOKIE_MAX_AGE_SECONDS,
     });
     return protectPrivateResponse(response, pathname);
   }

@@ -4,8 +4,7 @@ import { redirect } from "next/navigation";
 import { isAdminEmailAsync } from "@/lib/isAdmin";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { NATORI_KEY_COOKIE } from "@/features/natori/constants/dashboardKey";
-import { deriveNatoriDashboardCookieToken } from "@/features/natori/lib/dashboardKeyToken";
-import { safeCompare } from "@/lib/auth/timingSafe";
+import { verifyNatoriDashboardCookieToken } from "@/features/natori/lib/dashboardKeyToken";
 import { natoriManagementScope, type NatoriOperator } from "@/features/natori/server/natoriManagementScope";
 
 function getNatoriStaffEmails(): Set<string> {
@@ -52,9 +51,9 @@ async function hasNatoriKeyCookie(): Promise<boolean> {
   if (!key) return false;
   const cookieValue = (await cookies()).get(NATORI_KEY_COOKIE)?.value;
   if (!cookieValue) return false;
-  // Cookie にはキー平文ではなく HMAC トークンを保存する（middleware.ts 参照）。
-  const expectedToken = await deriveNatoriDashboardCookieToken(key);
-  return safeCompare(cookieValue, expectedToken);
+  // Cookie にはキー平文ではなく、発行時刻つき HMAC トークンを保存する（middleware.ts 参照）。
+  // 8 時間の期限はブラウザの maxAge に任せず、ここでも検証する。
+  return verifyNatoriDashboardCookieToken(key, cookieValue);
 }
 
 /**

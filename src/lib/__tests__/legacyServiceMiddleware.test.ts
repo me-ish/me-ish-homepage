@@ -69,7 +69,7 @@ describe('legacy suspension middleware', () => {
     vi.stubEnv('NATORI_DASHBOARD_KEY', 'synthetic-key');
     const response = await middleware(new NextRequest('https://example.com/natori/dashboard?natori-key=synthetic-key'));
     expect(response.headers.get('location')).toBe('https://example.com/natori/dashboard');
-    expect(response.cookies.get(NATORI_KEY_COOKIE)?.value).toMatch(/^[a-f0-9]{64}$/);
+    expect(response.cookies.get(NATORI_KEY_COOKIE)?.value).toMatch(/^\d{10}\.[a-f0-9]{64}$/);
     expect(intl).not.toHaveBeenCalled();
   });
 
