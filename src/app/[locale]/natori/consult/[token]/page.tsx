@@ -6,7 +6,7 @@ import NatoriClientShell from "@/features/natori/components/client/NatoriClientS
 import { natoriClientUi as ui } from "@/features/natori/constants/clientUi";
 import TalkStatus from "@/features/natori/components/consultation/TalkStatus";
 import TalkRoughRefresh from "@/features/natori/components/consultation/TalkRoughRefresh";
-import { getClientConsultation } from "@/features/natori/server/consultationService";
+import { getClientConsultation, getClientTalkSignature } from "@/features/natori/server/consultationService";
 import { getClientTalkTimeline } from "@/features/natori/server/talkTimelineService";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ type Props = { params: Promise<{ token: string }> };
 export default async function NatoriConsultationPage({ params }: Props) {
   const { token } = await params;
   const conversation = await getClientConsultation(token);
-  const talk = conversation ? await getClientTalkTimeline(token) : null;
+  const [talk, talkSignature] = conversation ? await Promise.all([getClientTalkTimeline(token), getClientTalkSignature(token)]) : [null, null];
   const hasIntake = conversation ? Boolean(conversation.initialInquiry) || conversation.initialFilesState === "unavailable" || conversation.initialFiles.length > 0 : false;
   return (
     <NatoriClientShell title="ナトリとの相談" subtitle={conversation?.title}>
@@ -27,7 +27,7 @@ export default async function NatoriConsultationPage({ params }: Props) {
           {conversation.initialFilesState==="unavailable"?<p role="status" className={ui.alertWarning}>受付時の資料一覧を取得できません。提出状況は、ページを再読み込みして確認してください。</p>:null}
           {conversation.initialFiles.length?<div><p className={ui.label}>受付時の資料</p><div className="mt-2 flex flex-wrap gap-2">{conversation.initialFiles.map(file=>file.url?<a key={file.id} href={file.url} target="_blank" rel="noopener noreferrer" className={`inline-flex max-w-full items-center gap-2 break-all rounded-full border border-[#F2D9E0] bg-white px-4 py-2 text-[14px] font-bold leading-5 text-[#BE185D] underline underline-offset-2 transition-colors hover:bg-[#FFF8FA] ${ui.focus}`}><Paperclip className="h-4 w-4 shrink-0" aria-hidden />{file.name}</a>:<p key={file.id} role="status" className={`w-full ${ui.alertWarning}`}>{file.name} — 提出済みです。リンクを取得できません。再読み込みしてください。</p>)}</div></div>:null}
         </div> : null}
-        {conversation.closed ? null : <TalkRoughRefresh token={token} />}
+        {conversation.closed ? null : <TalkRoughRefresh token={token} initialTalk={talkSignature} />}
         {talk ? <TalkStatus timeline={talk} token={token} /> : null}
         <ConsultationThread mode="client" token={token} initialMessages={conversation.messages} closed={conversation.closed} />
       </div>
