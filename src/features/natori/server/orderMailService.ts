@@ -596,6 +596,7 @@ export type MarkNatoriCommissionPaidResult =
   | { kind: "not-found" }
   | { kind: "amount-mismatch" }
   | { kind: "quote-mismatch" }
+  | { kind: "needs-review" }
   | { kind: "db-error" };
 
 /** 金額不一致の入金: DB関数で記録後、新規イベントだけナトリへ通知する。 */
@@ -659,6 +660,52 @@ async function handleQuoteMismatch(
   return { kind: "quote-mismatch" };
 }
 
+type UnresolvedPaymentReason = "project_type_unconfirmed" | "amount_unavailable" | "quote_unavailable";
+
+/** 照合できない入金: DB関数で要確認として記録し、新規イベントだけナトリへ通知する。進行状態は変えない。 */
+async function recordUnresolvedPayment(
+  project: ProjectRow,
+  sessionId: string,
+  amountTotal: number | null,
+  reason: UnresolvedPaymentReason
+): Promise<MarkNatoriCommissionPaidResult> {
+  const { data, error } = await supabaseAdmin().rpc("natori_record_unresolved_stripe_payment_v1", {
+    p_project_id: project.id,
+    p_session_id: sessionId,
+    p_amount: amountTotal,
+    p_reason: reason,
+  });
+  if (error) {
+    console.error("[natori-order-mail] unresolved payment record failed", error);
+    return { kind: "db-error" };
+  }
+  const outcome = data?.[0] ?? null;
+  if (!outcome) return { kind: "db-error" };
+  if (outcome.result === "not-found") return { kind: "not-found" };
+  if (outcome.result !== "recorded") {
+    console.error("[natori-order-mail] unexpected unresolved payment outcome", outcome.result);
+    return { kind: "db-error" };
+  }
+  if (outcome.new_event) {
+    const why =
+      reason === "project_type_unconfirmed" ? "依頼種別が未確定のため、入金を反映していません。"
+      : reason === "amount_unavailable" ? "入金額を取得できなかったため、入金を反映していません。"
+      : "見積IDのない支払いリンク（旧リンク）からの入金のため、入金を反映していません。";
+    await sendNatoriNoticeMail(
+      `【至急確認】照合できない入金 / ${project.client_name} 様`,
+      [
+        why,
+        "案件のステータスは変更していません。Stripeで入金を確認し、案件に反映するか返金してください。",
+        "",
+        `案件: ${project.title}`,
+        `session: ${sessionId}`,
+        `金額: ${amountTotal === null ? "不明" : formatYen(amountTotal)}`,
+      ].join("\n")
+    );
+  }
+  return { kind: "needs-review" };
+}
+
 /**
  * Stripe Webhook からの入金反映。payment_confirmed_at を記録して rough
  * （作業開始）へ進め、ナトリ宛に入金通知メールを送る。
@@ -676,25 +723,20 @@ export async function markNatoriCommissionPaid(
   // note 追記とメール本文のための読み取り。冪等判定には使わない。
   const project = await fetchProjectRow(projectId);
   if (!project) return { kind: "not-found" };
-  if (project.type === "undecided") {
-    console.error("[natori-order-mail] payment received before type confirmation");
-    return { kind: "db-error" };
-  }
-  if (amountTotal === null) {
-    console.error("[natori-order-mail] Stripe payment amount is unavailable");
-    return { kind: "db-error" };
-  }
-  if (quoteId === null) {
-    console.error("[natori-order-mail] Stripe payment quote ID is unavailable");
-    return { kind: "db-error" };
-  }
+  // 恒久的に照合できない入金は DB 障害ではない。要確認として保存し、成功を返す（再送しても結果は同じ）。
+  const unresolved =
+    project.type === "undecided" ? "project_type_unconfirmed"
+    : amountTotal === null ? "amount_unavailable"
+    : quoteId === null ? "quote_unavailable"
+    : null;
+  if (unresolved) return recordUnresolvedPayment(project, sessionId, amountTotal, unresolved);
 
   const admin = supabaseAdmin();
   const { data, error } = await admin.rpc("natori_record_stripe_payment", {
     p_project_id: projectId,
     p_session_id: sessionId,
-    p_amount: amountTotal,
-    p_quote_id: quoteId,
+    p_amount: amountTotal as number,
+    p_quote_id: quoteId as string,
   });
   if (error) {
     console.error("[natori-order-mail] atomic payment record failed", error);

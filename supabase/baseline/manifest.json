@@ -44,9 +44,10 @@
     "supabase/migrations/20261012013126_secure_natori_portfolio_assets.sql",
     "supabase/migrations/20261012064005_natori_pay01_completion_evidence.sql",
     "supabase/migrations/20261012085748_natori_rough_ok_followup.sql",
-    "supabase/migrations/20261013130000_natori_delivery_extension.sql"
+    "supabase/migrations/20261013130000_natori_delivery_extension.sql",
+    "supabase/migrations/20261015100000_natori_unresolved_stripe_payment.sql"
   ],
-  "activeMigrationCount": 36,
+  "activeMigrationCount": 37,
   "legacyMigrationCount": 55,
   "remoteOnlyEvidenceCount": 3,
   "sourceProjectRef": "lvnfspyainrxtztjytbo",
@@ -100,7 +101,8 @@
     "20261012013126_secure_natori_portfolio_assets.sql",
     "20261012064005_natori_pay01_completion_evidence.sql",
     "20261012085748_natori_rough_ok_followup.sql",
-    "20261013130000_natori_delivery_extension.sql"
+    "20261013130000_natori_delivery_extension.sql",
+    "20261015100000_natori_unresolved_stripe_payment.sql"
   ],
   "archiveVerification": {
     "status": "verified",
@@ -187,7 +189,8 @@
     "function:public.natori_consultation_overview_v2(uuid,uuid[])",
     "function:public.natori_retry_rough_ok_notification_v1(uuid,uuid,uuid)",
     "table:public.natori_delivery_extensions",
-    "function:public.natori_delivery_extend_v1(uuid,uuid,uuid,text,timestamptz,text,text,jsonb,timestamptz,jsonb)"
+    "function:public.natori_delivery_extend_v1(uuid,uuid,uuid,text,timestamptz,text,text,jsonb,timestamptz,jsonb)",
+    "function:public.natori_record_unresolved_stripe_payment_v1(uuid,text,integer,text)"
   ],
   "storage": {
     "natori-inquiry-refs": {
@@ -262,7 +265,8 @@
     "sha256:supabase/migrations/20261012013126_secure_natori_portfolio_assets.sql": "56c90f27e56150cb9909c3456d6b8f7f59226949bfab78bf7cf898c3677c57c1",
     "sha256:supabase/migrations/20261012064005_natori_pay01_completion_evidence.sql": "2e32bbd971beaa51deec9dcc3dab639ac2aeed9cf42eb673086f8776eb8301c1",
     "sha256:supabase/migrations/20261012085748_natori_rough_ok_followup.sql": "e54f41607ad0241dd4ee66c89d4097a2f38172d762323637e4135ab757db6c97",
-    "sha256:supabase/migrations/20261013130000_natori_delivery_extension.sql": "ef257d79cd01d95b1a724e35488f9e1100ec7fed003ae7720dbc30222f700c27"
+    "sha256:supabase/migrations/20261013130000_natori_delivery_extension.sql": "ef257d79cd01d95b1a724e35488f9e1100ec7fed003ae7720dbc30222f700c27",
+    "sha256:supabase/migrations/20261015100000_natori_unresolved_stripe_payment.sql": "816e2729562ad8cd8636bb69211e298a1915d88a9df57b122896e5311039bc17"
   },
   "operatorConfirmationRequired": [
     "target project ref is non-production and not lvnfspyainrxtztjytbo",

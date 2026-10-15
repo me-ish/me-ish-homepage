@@ -2094,6 +2094,18 @@ export type Database = {
           task_key: string
         }[]
       }
+      natori_record_unresolved_stripe_payment_v1: {
+        Args: {
+          p_amount: number | null
+          p_project_id: string
+          p_reason: string
+          p_session_id: string
+        }
+        Returns: {
+          new_event: boolean
+          result: string
+        }[]
+      }
       natori_record_stripe_payment: {
         Args: {
           p_amount: number

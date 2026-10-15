@@ -270,6 +270,21 @@ describe("natori_commission routing", () => {
     expect(mockMarkPaid).not.toHaveBeenCalled();
   });
 
+  it("needs-review（照合できない入金を要確認として保存済み）は 200 で返し、claim を解放しない", async () => {
+    const dedup = dedupTable();
+    useTables({ processed_stripe_events: dedup });
+    mockMarkPaid.mockResolvedValue({ kind: "needs-review" });
+    stubEvent(
+      makeSession({
+        metadata: { kind: "natori_commission", projectId: NATORI_PROJECT_ID },
+      })
+    );
+
+    const res = await POST(makeReq());
+    expect(res.status).toBe(200);
+    expect(dedup.api.delete).not.toHaveBeenCalled();
+  });
+
   it("db-error（一時エラー）は claim を解放して 500（Stripe に再送させる）", async () => {
     const dedup = dedupTable();
     useTables({ processed_stripe_events: dedup });
