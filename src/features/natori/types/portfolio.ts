@@ -124,6 +124,8 @@ export type PortfolioProcessVideo = {
   caption?: string;
   /** 再生前に見せる画像にする作品（works[].id）。未設定・非公開・画像なし・削除済みなら無地の背景 */
   posterWorkId?: string | null;
+  /** 再生前に見せる画像にするHERO画像のURL（heroImages の要素）。あれば posterWorkId より優先。HEROから外れていたら無地の背景 */
+  posterHeroImage?: string | null;
   /** 動画の縦横比。未設定は横長 */
   shape?: PortfolioProcessVideoShape;
 };

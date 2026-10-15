@@ -62,6 +62,18 @@ describe("public portfolio boundary", () => {
     expect(result.processVideo?.posterWorkId).toBeNull();
     expect(JSON.stringify(stored)).toBe(before);
   });
+  it("keeps a hero poster only while it is still a visible hero image", () => {
+    const hero = "https://assets.invalid/hero.webp";
+    const stored = {
+      ...defaultPortfolioContent,
+      heroImage: hero,
+      heroImages: [hero],
+      processVideo: { url: "https://youtu.be/abcdefghijk", posterHeroImage: hero },
+    };
+    expect(projectPortfolioPublicContent(stored).processVideo?.posterHeroImage).toBe(hero);
+    const removed = { ...stored, heroImage: null, heroImages: [] };
+    expect(projectPortfolioPublicContent(removed).processVideo?.posterHeroImage).toBeNull();
+  });
   it("excludes disabled video URL and caption while keeping legacy published video", () => {
     const video = {
       url: "https://youtu.be/abcdefghijk",

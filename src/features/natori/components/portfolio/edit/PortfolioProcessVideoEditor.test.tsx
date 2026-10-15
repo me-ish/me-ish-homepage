@@ -31,13 +31,13 @@ const works: PortfolioWork[] = [
   { ...base, id: "w3", title: "画像なし", image: null, published: true },
 ];
 
-function renderEditor(value: PortfolioProcessVideo | undefined, onChange = vi.fn()) {
-  render(<PortfolioProcessVideoEditor value={value} works={works} onChange={onChange} />);
+function renderEditor(value: PortfolioProcessVideo | undefined, onChange = vi.fn(), heroImages: string[] = []) {
+  render(<PortfolioProcessVideoEditor value={value} works={works} heroImages={heroImages} onChange={onChange} />);
   return {
     onChange,
     url: screen.getByLabelText("YouTubeの動画URL") as HTMLInputElement,
     shape: screen.getByLabelText("動画の形") as HTMLSelectElement,
-    poster: screen.getByLabelText("再生前に見せる画像（ご依頼実績から1枚）") as HTMLSelectElement,
+    poster: screen.getByLabelText("再生前に見せる画像（HERO画像かご依頼実績から1枚）") as HTMLSelectElement,
     caption: screen.getByLabelText("見出しの下の説明（任意）") as HTMLInputElement,
   };
 }
@@ -123,6 +123,44 @@ describe("PortfolioProcessVideoEditor", () => {
     expect(screen.getByText("選んでいた作品が見つからないか、画像がありません。無地の背景になります。")).toBeTruthy();
     expect(Array.from(poster.options, (option) => option.textContent)).toContain("（見つからない作品）");
     expect(poster.value).toBe("deleted");
+  });
+
+  it("HERO画像も再生前の画像に選べ、選ぶと作品の指定は外れる", () => {
+    const heroes = ["https://example.com/h1.webp", "https://example.com/h2.webp"];
+    const { poster, onChange } = renderEditor({ url: `https://youtu.be/${ID}`, posterWorkId: "w1" }, vi.fn(), heroes);
+    expect(Array.from(poster.options, (option) => option.textContent)).toEqual([
+      "なし（無地の背景）",
+      "HERO画像1",
+      "HERO画像2",
+      "作品1",
+      "非公開の作品（非公開）",
+    ]);
+    fireEvent.change(poster, { target: { value: `hero:${heroes[0]}` } });
+    expect(onChange).toHaveBeenLastCalledWith({
+      url: `https://youtu.be/${ID}`,
+      posterWorkId: null,
+      posterHeroImage: heroes[0],
+    });
+    cleanup();
+
+    const again = renderEditor({ url: `https://youtu.be/${ID}`, posterHeroImage: heroes[0] }, vi.fn(), heroes);
+    fireEvent.change(again.poster, { target: { value: "w1" } });
+    expect(again.onChange).toHaveBeenLastCalledWith({
+      url: `https://youtu.be/${ID}`,
+      posterWorkId: "w1",
+      posterHeroImage: null,
+    });
+  });
+
+  it("選んだHERO画像の番号を伝え、HEROから外れていたら無地の背景になると伝える", () => {
+    const heroes = ["https://example.com/h1.webp", "https://example.com/h2.webp"];
+    renderEditor({ url: `https://youtu.be/${ID}`, posterHeroImage: heroes[1] }, vi.fn(), heroes);
+    expect(screen.getByText("再生ボタンを押す前に、HERO画像2が出ます。")).toBeTruthy();
+    cleanup();
+
+    const { poster } = renderEditor({ url: `https://youtu.be/${ID}`, posterHeroImage: "https://example.com/gone.webp" }, vi.fn(), heroes);
+    expect(screen.getByText("選んでいたHERO画像が、いまのHEROにありません。無地の背景になります。")).toBeTruthy();
+    expect(Array.from(poster.options, (option) => option.textContent)).toContain("（HEROにない画像）");
   });
 
   it("見出しの下の説明は、書いたとおりに渡す（空欄なら既定の一文が出る）", () => {

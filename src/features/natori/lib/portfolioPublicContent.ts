@@ -46,6 +46,11 @@ export function projectPortfolioPublicContent(
     const url = publicImage(image);
     return url ? [url] : [];
   });
+  const rawHeroImages =
+    content.heroImages ?? (content.heroImage ? [content.heroImage] : []);
+  const posterHero = content.processVideo?.posterHeroImage;
+  const posterHeroImage =
+    posterHero && rawHeroImages.includes(posterHero) ? publicImage(posterHero) : null;
   return {
     ...content,
     works,
@@ -73,6 +78,7 @@ export function projectPortfolioPublicContent(
               visibleIds.has(content.processVideo.posterWorkId)
                 ? content.processVideo.posterWorkId
                 : null,
+            posterHeroImage,
           }
         : undefined,
   };

@@ -1024,6 +1024,7 @@ export default function PortfolioEditor({
           <PortfolioProcessVideoEditor
             value={content.processVideo}
             works={content.works}
+            heroImages={heroImages}
             onChange={(next) => patch({ processVideo: next })}
             onUploadingChange={setVideoUploading}
             uploadDisabled={isDemo}
