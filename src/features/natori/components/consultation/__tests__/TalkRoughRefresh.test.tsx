@@ -7,6 +7,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 import TalkRoughRefresh from "../TalkRoughRefresh";
 
 let signature: unknown;
+let talk: unknown;
 let calls: string[];
 const tick = async (ms = 15000) => { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); };
 
@@ -14,8 +15,9 @@ beforeEach(() => {
   vi.useFakeTimers();
   refresh.mockClear();
   signature = "";
+  talk = undefined;
   calls = [];
-  vi.stubGlobal("fetch", vi.fn(async (url: string) => { calls.push(url); return Response.json({ count: 1, lastId: "m", closed: false, roughs: signature }); }));
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => { calls.push(url); return Response.json({ count: 1, lastId: "m", closed: false, roughs: signature, ...(talk === undefined ? {} : { talk }) }); }));
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
@@ -36,6 +38,28 @@ describe("TalkRoughRefresh", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
     signature = "r1+"; await tick();
     expect(refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it("re-renders once when the quote / payment / delivery fingerprint changes, and ignores a missing one", async () => {
+    talk = "t1";
+    render(<TalkRoughRefresh token="synthetic" />); await tick(0);
+    talk = undefined; await tick();
+    talk = "t1"; await tick();
+    expect(refresh).not.toHaveBeenCalled();
+    talk = "t2"; await tick();
+    expect(refresh).toHaveBeenCalledTimes(1);
+    await tick();
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("checks right away when the tab becomes visible again", async () => {
+    talk = "t1";
+    render(<TalkRoughRefresh token="synthetic" />); await tick(0);
+    const before = calls.length;
+    talk = "t2";
+    await act(async () => { document.dispatchEvent(new Event("visibilitychange")); await vi.advanceTimersByTimeAsync(0); });
+    expect(calls.length).toBe(before + 1);
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it("stays quiet on failures and on a probe without the rough field, and stops when unmounted", async () => {

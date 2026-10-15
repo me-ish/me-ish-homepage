@@ -12,6 +12,7 @@ import { roughSignature } from "../lib/roughSignature";
 import { listProjectRoughs, toConsultationRough } from "./talkRoughStore";
 import { loadStaffRoughOks } from "./roughFollowupService";
 import { roughOkSignature } from "../lib/roughFollowup";
+import { readTalkSignature } from "./talkSignatureService";
 
 const TOKEN_RE = /^[A-Za-z0-9_-]{30,64}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -85,7 +86,7 @@ async function getMessages(projectId: string): Promise<ConsultationMessage[] | n
 }
 
 /** `roughs` fingerprints the rough marks and their OKs (see roughSignature) so the page also notices those. */
-export type ConsultationProbe = { count: number; lastId: string | null; closed: boolean; roughs: string; roughOks?: string | null };
+export type ConsultationProbe = { count: number; lastId: string | null; closed: boolean; roughs: string; roughOks?: string | null; talk?: string };
 
 /** Cheap change check for polling: no file links are signed and no bodies are read. */
 async function probeMessages(project: ProjectRow): Promise<ConsultationProbe | null> {
@@ -109,7 +110,10 @@ export async function getStaffConsultationProbe(projectId: string): Promise<Cons
 
 export async function getClientConsultationProbe(token: string): Promise<ConsultationProbe | null> {
   const project = await getClientProject(token);
-  return project ? probeMessages(project) : null;
+  if (!project) return null;
+  // `talk` fingerprints the quote / payment / delivery state behind the status cards; omitted when unreadable.
+  const [probe, talk] = await Promise.all([probeMessages(project), readTalkSignature(project.id)]);
+  return probe ? { ...probe, ...(talk ? { talk } : {}) } : null;
 }
 
 export async function getStaffConsultation(projectId: string) {

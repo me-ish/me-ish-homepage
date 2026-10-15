@@ -4,6 +4,8 @@ const m = vi.hoisted(() => ({ from: vi.fn(), signed: vi.fn(), roughOks: vi.fn() 
 vi.mock("@/lib/supabaseAdmin", () => ({ supabaseAdmin: () => ({ from: m.from, storage: { from: () => ({ createSignedUrl: m.signed }) } }) }));
 vi.mock("../natoriOwner", () => ({ resolveNatoriOwnerId: async () => "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee" }));
 vi.mock("../roughFollowupService", () => ({ loadStaffRoughOks: m.roughOks }));
+const sig = vi.hoisted(() => ({ read: vi.fn() }));
+vi.mock("../talkSignatureService", () => ({ readTalkSignature: sig.read }));
 import { getClientConsultationProbe, getStaffConsultationProbe } from "../consultationService";
 
 const pid = "11111111-2222-4333-8444-555555555555";
@@ -24,6 +26,7 @@ function chain(result: unknown) {
 beforeEach(() => {
   vi.clearAllMocks();
   m.roughOks.mockResolvedValue([]);
+  sig.read.mockResolvedValue("sig1");
   project = { id: pid, user_id: owner, title: "T", client_name: "C", client_email: null, note: null, request_data: null, status: "open", deleted_at: null };
   probeResult = { data: [{ id: "last" }], count: 3, error: null };
   roughResult = { data: [], error: null };
@@ -38,6 +41,8 @@ beforeEach(() => {
 describe("consultation change probe", () => {
   it("returns only the count, newest id and closed flag for staff and client, and signs no file links", async () => {
     expect(await getStaffConsultationProbe(pid)).toEqual({ count: 3, lastId: "last", closed: false, roughs: "", roughOks: "" });
+    expect(await getClientConsultationProbe("x".repeat(32))).toEqual({ count: 3, lastId: "last", closed: false, roughs: "", talk: "sig1" });
+    sig.read.mockResolvedValue(null);
     expect(await getClientConsultationProbe("x".repeat(32))).toEqual({ count: 3, lastId: "last", closed: false, roughs: "" });
     expect(m.signed).not.toHaveBeenCalled();
   });
