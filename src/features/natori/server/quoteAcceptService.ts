@@ -42,7 +42,8 @@ export type NatoriQuoteView = {
 export type GetNatoriQuoteResult =
   | { kind: "ok"; quote: NatoriQuoteView }
   | { kind: "expired" }
-  | { kind: "not-found" };
+  | { kind: "not-found" }
+  | { kind: "db-error" };
 
 type QuoteRow = {
   id: string;
@@ -58,7 +59,10 @@ type QuoteRow = {
   pricing_snapshot: unknown;
 };
 
-async function fetchQuoteRow(token: string): Promise<QuoteRow | null> {
+/** DB の読み取りに失敗したこと（リンクが無効なこと = null とは区別する）。 */
+const FETCH_FAILED = Symbol("quote-fetch-failed");
+
+async function fetchQuoteRow(token: string): Promise<QuoteRow | null | typeof FETCH_FAILED> {
   if (!TOKEN_RE.test(token)) return null;
   const admin = supabaseAdmin();
   let { data, error } = await admin
@@ -68,16 +72,20 @@ async function fetchQuoteRow(token: string): Promise<QuoteRow | null> {
     .maybeSingle();
   if (error) {
     console.error("[natori-quote] quote fetch failed", error);
-    return null;
+    return FETCH_FAILED;
   }
   if (!data) {
     const access = await admin.from("natori_quote_access").select("quote_id, expires_at").eq("token_hash",hashToken(token)).maybeSingle();
-    if (access.error || !access.data || Date.parse(access.data.expires_at)<=Date.now()) return null;
+    if (access.error) {
+      console.error("[natori-quote] quote access fetch failed", access.error);
+      return FETCH_FAILED;
+    }
+    if (!access.data || Date.parse(access.data.expires_at)<=Date.now()) return null;
     const result = await admin.from("natori_quotes")
       .select("id, version, project_id, title, client_name, amount, accepted_at, expires_at, superseded_at, quote_terms, pricing_snapshot")
       .eq("id",access.data.quote_id).maybeSingle();
     data=result.data; error=result.error;
-    if (error) return null;
+    if (error) return FETCH_FAILED;
   }
   return (data as QuoteRow | null) ?? null;
 }
@@ -113,12 +121,17 @@ function toView(row: QuoteRow): NatoriQuoteView {
 
 export async function getNatoriQuoteByToken(token: string): Promise<GetNatoriQuoteResult> {
   const row = await fetchQuoteRow(token);
+  if (row === FETCH_FAILED) return { kind: "db-error" };
   if (!row) return { kind: "not-found" };
   if (row.superseded_at) return { kind: "not-found" };
   if (isExpired(row)) return { kind: "expired" };
   if (quoteIntegrityEnabled() && !row.accepted_at) {
     const project=await supabaseAdmin().from("natori_projects").select("status, deleted_at, active_quote_id").eq("id",row.project_id).maybeSingle();
-    if (project.error || !project.data || project.data.status === "closed" || project.data.deleted_at
+    if (project.error) {
+      console.error("[natori-quote] project fetch failed", project.error);
+      return { kind: "db-error" };
+    }
+    if (!project.data || project.data.status === "closed" || project.data.deleted_at
       || project.data.active_quote_id !== row.id) return { kind: "not-found" };
   }
   return { kind: "ok", quote: { ...toView(row), payment: await getQuotePaymentOverview(row.project_id) } };
@@ -133,6 +146,7 @@ export type AcceptNatoriQuoteResult =
 
 export async function acceptNatoriQuote(token: string): Promise<AcceptNatoriQuoteResult> {
   const row = await fetchQuoteRow(token);
+  if (row === FETCH_FAILED) return { kind: "db-error" };
   if (!row) return { kind: "not-found" };
   if (row.superseded_at) return { kind: "not-found" };
   if (isExpired(row)) return { kind: "expired" };
@@ -148,7 +162,7 @@ export async function acceptNatoriQuote(token: string): Promise<AcceptNatoriQuot
     // never fabricate an acceptance timestamp or fall back to the old sender.
     if (outbox) {
       const confirmed = await fetchQuoteRow(token);
-      if (confirmed?.accepted_at) {
+      if (confirmed && confirmed !== FETCH_FAILED && confirmed.accepted_at) {
         return { kind: "already-accepted", quote: toView(confirmed), notificationIds: [] };
       }
     }

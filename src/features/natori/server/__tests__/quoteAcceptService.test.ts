@@ -126,6 +126,21 @@ describe("getNatoriQuoteByToken", () => {
     await expect(getNatoriQuoteByToken(TOKEN)).resolves.toEqual({ kind: "not-found" });
   });
 
+  it("DB の読み取りに失敗したときは「無効」ではなく db-error を返す", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mockAdminFrom.mockImplementation(() => ({ select: () => chainResult({ data: null, error: { code: "08006" } }) }));
+    await expect(getNatoriQuoteByToken(TOKEN)).resolves.toEqual({ kind: "db-error" });
+    await expect(acceptNatoriQuote(TOKEN)).resolves.toEqual({ kind: "db-error" });
+    expect(mockRpc).not.toHaveBeenCalled();
+
+    // 別トークン経路（natori_quote_access）の読み取り失敗も同じ
+    mockAdminFrom.mockImplementation((table: string) => table === "natori_quote_access"
+      ? { select: () => chainResult({ data: null, error: { code: "08006" } }) }
+      : { select: () => chainResult({ data: null, error: null }) });
+    await expect(getNatoriQuoteByToken(TOKEN)).resolves.toEqual({ kind: "db-error" });
+    spy.mockRestore();
+  });
+
   it("承諾済みなら期限後も承諾内容を表示する", async () => {
     quoteTable(makeQuoteRow({
       accepted_at: "2026-07-01T00:00:00Z",
