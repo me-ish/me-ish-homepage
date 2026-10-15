@@ -3,14 +3,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Mail, RefreshCw } from "lucide-react";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import type { NatoriNotificationList } from "@/features/natori/types/notifications";
+import { notificationPurposeName } from "@/features/natori/lib/notificationLabels";
+import { summarizeNotificationAttention } from "@/features/natori/lib/notificationSummary";
+import { publishNotificationAttention } from "./notificationSummaryStore";
 
-const names: Record<string, string> = {
-  quote_accept_artist: "見積もり承諾のお知らせ",
-  delivery_accept_artist: "受取完了のお知らせ",
-  delivery_accept_client: "依頼者への受取控え",
-  delivery_issue_client: "納品のご案内",
-  rough_ok_artist: "ラフOKのお知らせ",
-};
 const statuses: Record<string, string> = {
   pending: "送信待ち", sending: "送信処理中", sent: "送信サービス受付済み", failed: "送信できませんでした", unknown: "送信結果を確認できません",
 };
@@ -21,7 +17,9 @@ export default function NotificationStatusPanel() {
   const refresh = useCallback(async (offset = 0) => {
     const response = await fetch(`/api/natori/admin/notifications?offset=${offset}`, { cache: "no-store" });
     if (!response.ok) throw new Error("read");
-    setData(await response.json());
+    const next = (await response.json()) as NatoriNotificationList;
+    setData(next);
+    publishNotificationAttention(summarizeNotificationAttention(next));
   }, []);
   useEffect(() => { void refresh().catch(() => setError("メール通知の状態を取得できませんでした。")); }, [refresh]);
   const run = async (id?: string, offset = data?.offset ?? 0) => {
@@ -53,7 +51,7 @@ export function NotificationStatusView({ data, error, busy, run }: {
         <span className={natoriAdminUi.iconTileNeutral}>
           <Mail className="h-5 w-5" aria-hidden />
         </span>
-        <h2 id="notification-heading" className="text-sm font-semibold text-zinc-900">承諾・受取のメール通知</h2>
+        <h2 id="notification-heading" className="scroll-mt-4 text-sm font-semibold text-zinc-900">承諾・受取のメール通知</h2>
       </div>
       <button type="button" className={natoriAdminUi.btnSecondary} disabled={busy} onClick={() => void run()}>
         <RefreshCw className={`h-4 w-4 text-zinc-500 ${busy ? "motion-safe:animate-spin" : ""}`} aria-hidden />
@@ -66,7 +64,7 @@ export function NotificationStatusView({ data, error, busy, run }: {
     {data?.notifications.length === 0 && <p className="mt-3 rounded-xl bg-zinc-50 px-3 py-3 text-sm text-zinc-600">新しい通知はありません。導入前のメール履歴はここには表示されません。</p>}
     <ul aria-live="polite" className="mt-3 space-y-2">
       {data?.notifications.map(item => <li key={item.id} className="rounded-xl border border-zinc-200/80 p-3 text-sm text-zinc-800">
-        <p className="break-words font-semibold text-zinc-900">{item.projectTitle}：{names[item.purpose] ?? "通知"}</p>
+        <p className="break-words font-semibold text-zinc-900">{item.projectTitle}：{notificationPurposeName(item.purpose)}</p>
         <p className="mt-0.5">{item.reviewRequired ? "送信状況の確認が必要です。自動の再送は停止しています。" : statuses[item.status] ?? "確認が必要です"}</p>
         <p className="mt-0.5 text-xs text-zinc-500">最終受付：{item.lastSentAt ? new Date(item.lastSentAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }) : "まだありません"}</p>
         {item.retryAvailable && <button type="button" className={`${natoriAdminUi.btnSecondary} mt-2`} disabled={busy || !data.sendingEnabled} onClick={() => void run(item.id)}>メールだけ再試行</button>}

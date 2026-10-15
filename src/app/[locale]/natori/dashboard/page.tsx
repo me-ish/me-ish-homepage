@@ -31,6 +31,7 @@ import ConsultationAttentionPanel from "@/features/natori/components/dashboard/C
 import { Button } from "@/components/ui/button";
 import DashboardTodaySummary from "@/features/natori/components/dashboard/DashboardTodaySummary";
 import NotificationStatusPanel from "@/features/natori/components/dashboard/NotificationStatusPanel";
+import NotificationAlertBanner from "@/features/natori/components/dashboard/NotificationAlertBanner";
 import PageEventsPanel from "@/features/natori/components/dashboard/PageEventsPanel";
 import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
 import { NatoriPageShell } from "@/features/natori/components/admin/NatoriPageShell";
@@ -218,6 +219,8 @@ export default function NatoriDashboardPage() {
     >
       <>
         {error ? <div className={natoriAdminUi.alert.error}>{error}</div> : null}
+
+        <NotificationAlertBanner />
 
         {projects ? (
           <DashboardTodaySummary projects={projects} today={new Date()} />
