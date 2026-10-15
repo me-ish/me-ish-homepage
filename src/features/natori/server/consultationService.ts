@@ -108,6 +108,12 @@ export async function getStaffConsultationProbe(projectId: string): Promise<Cons
   return probe ? { ...probe, roughOks: roughOks === null ? null : roughOkSignature(roughOks) } : null;
 }
 
+/** Fingerprint of the quote / payment / delivery state the page was rendered from (null when unreadable). */
+export async function getClientTalkSignature(token: string): Promise<string | null> {
+  const project = await getClientProject(token);
+  return project ? readTalkSignature(project.id) : null;
+}
+
 export async function getClientConsultationProbe(token: string): Promise<ConsultationProbe | null> {
   const project = await getClientProject(token);
   if (!project) return null;

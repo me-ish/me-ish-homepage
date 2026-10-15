@@ -12,11 +12,12 @@ const POLL_MS = 15000;
  * state changes, asks Next.js to re-render the page. It also checks right away when the tab becomes visible
  * again. Renders nothing; failures stay silent and the next tick retries.
  */
-export default function TalkRoughRefresh({ token }: { token: string }) {
+export default function TalkRoughRefresh({ token, initialTalk }: { token: string; initialTalk: string | null }) {
   const router = useRouter();
   useEffect(() => {
     let seen: string | null = null;
-    let seenTalk: string | null = null;
+    // The fingerprint the page was rendered from; null means it was unknown, so the first readable one refreshes.
+    let seenTalk: string | null = initialTalk;
     let busy = false;
     const tick = async () => {
       if (document.visibilityState !== "visible" || busy) return;
@@ -28,7 +29,7 @@ export default function TalkRoughRefresh({ token }: { token: string }) {
         if (typeof probe.roughs !== "string") return;
         // `talk` is absent when the server could not read it; that is "no news", not a change.
         const talk = typeof probe.talk === "string" ? probe.talk : null;
-        const changed = (seen !== null && probe.roughs !== seen) || (talk !== null && seenTalk !== null && talk !== seenTalk);
+        const changed = (seen !== null && probe.roughs !== seen) || (talk !== null && talk !== seenTalk);
         if (changed) router.refresh();
         seen = probe.roughs;
         if (talk !== null) seenTalk = talk;
@@ -44,6 +45,6 @@ export default function TalkRoughRefresh({ token }: { token: string }) {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("pageshow", onVisible);
     };
-  }, [token, router]);
+  }, [token, router, initialTalk]);
   return null;
 }
