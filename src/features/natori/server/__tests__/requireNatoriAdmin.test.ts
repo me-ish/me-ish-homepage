@@ -115,6 +115,15 @@ describe("canUseNatoriManagement", () => {
     await expect(resolveNatoriOperator()).resolves.toBeNull();
   });
 
+  it("8時間を過ぎた Cookie はサーバーが拒否する", async () => {
+    process.env.NATORI_DASHBOARD_KEY = "correct-key";
+    const token = await deriveNatoriDashboardCookieToken("correct-key", Date.now() - 9 * 60 * 60 * 1000);
+    mockGetCookie.mockImplementation((name) =>
+      name === NATORI_KEY_COOKIE ? { value: token } : undefined
+    );
+    await expect(canUseNatoriManagement()).resolves.toBe(false);
+  });
+
   it("誤ったキー由来のトークン Cookie は拒否する", async () => {
     process.env.NATORI_DASHBOARD_KEY = "correct-key";
     const token = await deriveNatoriDashboardCookieToken("wrong-key");
