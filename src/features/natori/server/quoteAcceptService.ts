@@ -85,7 +85,10 @@ async function fetchQuoteRow(token: string): Promise<QuoteRow | null | typeof FE
       .select("id, version, project_id, title, client_name, amount, accepted_at, expires_at, superseded_at, quote_terms, pricing_snapshot")
       .eq("id",access.data.quote_id).maybeSingle();
     data=result.data; error=result.error;
-    if (error) return FETCH_FAILED;
+    if (error) {
+      console.error("[natori-quote] quote fetch via access failed", error);
+      return FETCH_FAILED;
+    }
   }
   return (data as QuoteRow | null) ?? null;
 }
