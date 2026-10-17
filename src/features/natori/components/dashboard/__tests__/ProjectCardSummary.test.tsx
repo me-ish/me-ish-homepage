@@ -66,6 +66,12 @@ describe("project card summary", () => {
     expect(card.getByText(/返金処理中 1件/)).toBeTruthy();
   });
 
+  it("短い手入力メモは「詳細」に入れず、常に見える位置に出す", () => {
+    const card = renderCard(paidProject({ note: "納品前に色味を確認" }));
+    const note = card.getByText("納品前に色味を確認");
+    expect(note.closest("details")).toBeNull();
+  });
+
   it("対応が要らない相談と残り作業は「詳細」に畳み、タスクとメールは表に出したまま", () => {
     const project = paidProject();
     expect(consultationNeedsAttention(project)).toBe(false);

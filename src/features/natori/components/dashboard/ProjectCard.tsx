@@ -203,7 +203,6 @@ export default function ProjectCard({
   const detailParts = [
     ...(scheduleUrgent ? [] : ["残り作業"]),
     ...(consultationRow !== null && !consultationUrgent ? ["相談"] : []),
-    ...(project.note?.trim() ? ["メモ"] : []),
   ];
 
   return (
@@ -352,10 +351,12 @@ export default function ProjectCard({
             <div className="space-y-3 border-t border-zinc-100 p-3">
               {scheduleUrgent ? null : scheduleBox}
               {consultationUrgent ? null : consultationRow}
-              <ProjectNoteSummary note={project.note} />
             </div>
           </details>
         ) : null}
+
+        {/* メモは短く自分で畳む表示なので、詳細には入れず常に見える位置に置く */}
+        <ProjectNoteSummary note={project.note} />
 
         {(onOpenMail && (WORK_MAIL_STATUSES.has(project.status) || project.status === "completed")) ||
         (onEditDetails && !editing) ? (
