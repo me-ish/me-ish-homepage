@@ -127,10 +127,14 @@ describe("direct generic status PATCH (PAY-01)", () => {
   it.each(["delivered", "completed"])("permits metadata correction at %s without reopening or changing dates", async status => {
     const db = installProject(status);
     const before = structuredClone(db.row);
-    const response = await PATCH(request({ kind: "project-details", projectId: id, patch: { note: "corrected note" } }));
+    const project = { id, mutationRevision: 2, clientName: "Synthetic", title: "Title", type: "illustration", amount: 12000, deliveryPlan: "normal", startDate: null, dueDate: null, note: "corrected note", nextAction: "original next action", status, clientEmail: null, priority: null, createdAt: "2026-10-17", requestData: null, tasks: [], paymentConfirmedAt: paidAt, paidAt, paidAmount: 12000, completedAt: status === "completed" ? completedAt : null, deliveryAcceptedAt: null, deliveredMailAt: null, deletedAt: null };
+    mocks.rpc.mockResolvedValue({ data: { result: "applied", project }, error: null });
+    const response = await PATCH(request({ kind: "project-details", projectId: id, expectedRevision: 1, patch: { note: "corrected note" } }));
     expect(response.status).toBe(200);
-    expect(db.row).toEqual({ ...before, note: "corrected note" });
-    expect(db.updates).toEqual([{ note: "corrected note" }]);
+    expect(await response.json()).toEqual({ ok: true, project });
+    expect(db.row).toEqual(before);
+    expect(db.updates).toEqual([]);
+    expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("natori_edit_project_v1", expect.objectContaining({ p_expected_revision: 1, p_patch: { note: "corrected note" } }));
   });
 
   it("does not let an old task payload supply a completion status", async () => {

@@ -1,3 +1,4 @@
+import { NatoriEditConflictError } from "../lib/editConflict";
 import type { NatoriRefundSummary } from "@/features/natori/types/refunds";
 import type { ConsultationOverview } from "@/features/natori/types/consultation";
 import {effectivePaidAt,taskProjectionSchema,type NatoriTaskProjection} from "../lib/taskProjection";
@@ -424,15 +425,20 @@ export function normalizeNatoriProjectDetailsPatch(
 
 export async function updateNatoriProjectDetails(
   projectId: string,
-  input: UpdateNatoriProjectDetailsInput
-): Promise<void> {
-  const patch = normalizeNatoriProjectDetailsPatch(input);
-  if (Object.keys(patch).length === 0) return;
-  await patchNatoriAdminProject({
-    kind: "project-details",
-    projectId,
-    patch,
+  input: UpdateNatoriProjectDetailsInput,
+  expectedRevision?: number,
+  nextAction?: string
+): Promise<NatoriTaskProjection> {
+  if (!Number.isSafeInteger(expectedRevision) || (expectedRevision as number) < 0) throw new Error("最新の保存済み内容を取得してください。");
+  const response = await fetch("/api/natori/admin/projects", {
+    method: "PATCH", headers: { ...CSRF_HEADERS, "Content-Type": "application/json" },
+    body: JSON.stringify({ kind: "project-details", projectId, patch: normalizeNatoriProjectDetailsPatch(input), expectedRevision, ...(nextAction !== undefined ? { nextAction } : {}) }),
   });
+  const body = await response.json().catch(() => null) as { code?: string; error?: string; project?: unknown } | null;
+  if (response.status === 409 && body?.code === "natori_edit_conflict") throw new NatoriEditConflictError();
+  const parsed = taskProjectionSchema.safeParse(body?.project);
+  if (!response.ok || !parsed.success || parsed.data.id !== projectId) throw new Error(body?.error ?? "保存結果を確認できません。");
+  return parsed.data;
 }
 
 export type CreateNatoriProjectInput = {

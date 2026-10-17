@@ -263,9 +263,8 @@ describe("closeNatoriProject", () => {
 
     const result = await closeNatoriProject("proj-1", "予算が合わなかった");
     expect(result).toEqual({ kind: "ok" });
-    expect(updates).toHaveLength(1);
-    expect(updates[0].status).toBe("closed");
-    expect(String(updates[0].note)).toContain("予算が合わなかった");
+    expect(updates).toHaveLength(0);
+    expect(mockRpc).toHaveBeenCalledWith("natori_close_project_with_note_v1", { p_owner: "owner-1", p_project: "proj-1", p_from_status: "inquiry", p_entry: expect.stringContaining("予算が合わなかった") });
   });
 
   it("入金済みの制作中案件は見送りにできない", async () => {
@@ -408,78 +407,29 @@ describe("confirmNatoriProjectType", () => {
   });
 });
 
-describe("patchNatoriProjectDetails type delegation", () => {
+describe("patchNatoriProjectDetails atomic edit boundary", () => {
   const projectId = "2ef91cb1-e0a3-4f32-b846-a0d8c6bbf44c";
-
-  it("delegates an undecided type-only patch to the confirmation RPC", async () => {
-    const { updates } = projectsTable([
-      { data: { id: projectId, type: "undecided" }, error: null },
-    ]);
-    mockRpc.mockResolvedValue({
-      data: [
-        {
-          result: "confirmed",
-          project_id: projectId,
-          project_type: "icon",
-          task_count: 6,
-        },
-      ],
-      error: null,
-    });
-
-    await expect(
-      patchNatoriProjectDetails(projectId, { type: "icon" })
-    ).resolves.toEqual({ kind: "ok" });
-    expect(mockRpc).toHaveBeenCalledWith("natori_confirm_project_type_v1", {
-      p_user_id: "owner-1",
-      p_project_id: projectId,
-      p_type: "icon",
-    });
-    expect(updates).toHaveLength(0);
+  const project = { id: projectId, mutationRevision: 3, clientName: "Synthetic", title: "Title", type: "standing", amount: 12000, deliveryPlan: "normal", startDate: null, dueDate: null, note: null, nextAction: "Review", status: "inquiry", clientEmail: null, priority: null, createdAt: "2026-10-17", requestData: null, tasks: [], paymentConfirmedAt: null, paidAt: null, paidAmount: null, completedAt: null, deliveryAcceptedAt: null, deliveredMailAt: null, deletedAt: null };
+  it("sends type, details and inquiry action through one CAS without split table updates", async () => {
+    mockRpc.mockResolvedValue({ data: { result: "applied", project }, error: null });
+    expect(await patchNatoriProjectDetails(projectId, { type: "standing", amount: 12000 }, 1, "Review")).toEqual({ kind: "ok", project });
+    expect(mockRpc).toHaveBeenCalledExactlyOnceWith("natori_edit_project_v1", { p_owner: "owner-1", p_project: projectId, p_expected_revision: 1, p_patch: { type: "standing", amount: 12000 }, p_next_action: "Review" });
+    expect(mockAdminFrom).not.toHaveBeenCalled();
   });
-
-  it("confirms type but never writes it through a mixed generic patch", async () => {
-    const { updates } = projectsTable([
-      { data: { id: projectId, type: "undecided" }, error: null },
-    ]);
-    mockRpc.mockResolvedValue({
-      data: [
-        {
-          result: "confirmed",
-          project_id: projectId,
-          project_type: "standing",
-          task_count: 6,
-        },
-      ],
-      error: null,
-    });
-
-    await expect(
-      patchNatoriProjectDetails(projectId, { type: "standing", amount: 12000 })
-    ).resolves.toEqual({ kind: "ok" });
-    expect(updates).toEqual([{ amount: 12000 }]);
+  it.each([undefined, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])("rejects missing/invalid revision %s without writing", async revision => {
+    expect(await patchNatoriProjectDetails(projectId, { note: "draft" }, revision)).toEqual({ kind: "invalid-revision" });
+    expect(mockRpc).not.toHaveBeenCalled(); expect(mockAdminFrom).not.toHaveBeenCalled();
   });
-
-  it("rejects a direct rewrite from one concrete type to another", async () => {
-    const { updates } = projectsTable([
-      { data: { id: projectId, type: "icon" }, error: null },
-    ]);
-    await expect(
-      patchNatoriProjectDetails(projectId, { type: "sd", amount: 12000 })
-    ).resolves.toEqual({ kind: "invalid-type-change" });
-    expect(mockRpc).not.toHaveBeenCalled();
-    expect(updates).toHaveLength(0);
+  it.each([["edit_conflict", "edit-conflict"], ["not_found", "not-found"], ["invalid_type", "invalid-type-change"], ["invalid_next_action", "invalid-next-action"]])("maps %s without a fallback write", async (outcome, kind) => {
+    mockRpc.mockResolvedValue({ data: { result: outcome }, error: null });
+    expect(await patchNatoriProjectDetails(projectId, { title: "Draft" }, 1)).toEqual({ kind });
+    expect(mockAdminFrom).not.toHaveBeenCalled();
   });
-
-  it("treats the unchanged concrete type as a no-op and persists other fields", async () => {
-    const { updates } = projectsTable([
-      { data: { id: projectId, type: "icon" }, error: null },
-    ]);
-    await expect(
-      patchNatoriProjectDetails(projectId, { type: "icon", amount: 12000 })
-    ).resolves.toEqual({ kind: "ok" });
-    expect(mockRpc).not.toHaveBeenCalled();
-    expect(updates).toEqual([{ amount: 12000 }]);
+  it("missing RPC and malformed success fail closed", async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { code: "42883" } }).mockResolvedValueOnce({ data: { result: "applied", project: { id: projectId } }, error: null });
+    expect(await patchNatoriProjectDetails(projectId, { title: "Draft" }, 1)).toEqual({ kind: "db-error" });
+    expect(await patchNatoriProjectDetails(projectId, { title: "Draft" }, 1)).toEqual({ kind: "db-error" });
+    expect(mockAdminFrom).not.toHaveBeenCalled();
   });
 });
 

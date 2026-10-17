@@ -6,11 +6,12 @@
 // 受付日・最終アクション・経過日数付きの一覧で見て、詳細パネルから
 // 見積もり / 支払い依頼メールの送信・入金確認・見送りまで行える。
 // データソースは案件管理と同じ natori_projects（別テーブルは持たない）。
+import { applyTaskProjection, mergeProjectCollection } from "../../lib/taskProjection";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
 import { useOptionalNatoriToast } from "@/features/natori/components/admin/NatoriToast";
 import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Inbox, Info, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
@@ -31,7 +32,6 @@ import {
   fetchNatoriProjectCollection,
   fetchNatoriProject,
   updateNatoriProjectDetails,
-  updateNatoriProjectStatus,
   type UpdateNatoriProjectDetailsInput,
 } from "@/features/natori/data/supabaseProjects";
 import {
@@ -166,6 +166,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   const [selectedProject, setSelectedProject] = useState<NatoriProject | null>(null);
   const [selectedError, setSelectedError] = useState("");
   const [detailVersion, setDetailVersion] = useState(0);
+  const detailSession = useRef(0);
   const [initialScreen, setInitialScreen] = useState<"overview" | "conversation">("overview");
   const [mailKind, setMailKind] = useState<OrderMailKind | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -174,6 +175,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   useEffect(() => {
     if (isDemo) return;
     const sync = () => {
+      detailSession.current += 1;
       const params = new URLSearchParams(window.location.search);
       const projectId = params.get("project");
       const requestedFilter = params.get("filter");
@@ -188,7 +190,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
 
   const reload = useCallback(async () => {
     const data = await fetchNatoriProjectCollection();
-    setProjects([...data.projects, ...data.archivedProjects]);
+    setProjects(current => mergeProjectCollection(current ?? [], [...data.projects, ...data.archivedProjects]));
   }, []);
 
   useEffect(() => {
@@ -199,13 +201,14 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
     if (isDemo) { setSelectedProject(projects?.find(p => p.id === selectedId) ?? null); return; }
     void fetchNatoriProject(selectedId).then(project => {
       if (!active) return;
-      setSelectedProject(project);
+      setSelectedProject(current => current && project ? mergeProjectCollection([current], [project])[0] : current && !project ? current : project);
       if (!project) setSelectedError("案件が見つかりません。管理権限とリンクをご確認ください。");
     }).catch(() => { if (active) setSelectedError("案件の詳細を取得できませんでした。再試行してください。"); });
     return () => { active = false; };
   }, [selectedId, projects, isDemo, detailVersion]);
 
   const openProject = (id: string) => {
+    detailSession.current += 1;
     setInitialScreen("overview");
     setSelectedId(id);
     if (!isDemo) {
@@ -214,6 +217,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
     }
   };
   const closeDetail = () => {
+    detailSession.current += 1;
     setSelectedId(null);
     if (!isDemo) {
       const url = new URL(window.location.href); url.searchParams.delete("project"); url.searchParams.delete("view");
@@ -280,6 +284,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   const selectedRow = selectedProject ? { project: selectedProject, view: parseInquiryNote(selectedProject.note) } : null;
 
   const handleCloseInquiry = async (project: NatoriProject) => {
+    const closingSession = detailSession.current;
     const answer = await confirm({
       title: "見送りにしますか？",
       description: `「${project.clientName}｜${project.title}」を見送りにします。理由があれば入力してください（履歴として残ります）。`,
@@ -304,7 +309,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
             : entry
         )
       );
-      closeDetail();
+      if (detailSession.current === closingSession) closeDetail();
       showToast("見送りにしました。");
       return;
     }
@@ -313,13 +318,13 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
     try {
       await closeNatoriProject(project.id, reason.trim());
       await reload();
-      closeDetail();
+      if (detailSession.current === closingSession) closeDetail();
       showToast("見送りにしました。");
     } catch (err) {
       console.error("[InquiriesBoard] close failed", err);
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setBusyId(null);
+      setBusyId(current => current === project.id ? null : current);
     }
   };
 
@@ -339,20 +344,12 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   };
 
   /** 金額 / 納品予定日 / 納期プランの管理補正。request_data は送らない。 */
-  const handleSaveCorrection = async (
-    projectId: string,
-    patch: UpdateNatoriProjectDetailsInput
-  ) => {
+  const handleSaveCorrection = async (projectId: string, patch: UpdateNatoriProjectDetailsInput, expectedRevision?: number, nextAction?: string) => {
     setError(null);
-    await updateNatoriProjectDetails(projectId, patch);
-    await reload();
-  };
-
-  /** 次のアクションのみの更新。既存の status 遷移 API を同一 status で使う。 */
-  const handleSaveNextAction = async (project: NatoriProject, nextAction: string) => {
-    setError(null);
-    await updateNatoriProjectStatus(project.id, project.status, nextAction);
-    await reload();
+    const saved = await updateNatoriProjectDetails(projectId, patch, expectedRevision, nextAction);
+    setProjects(current => (current ?? []).map(entry => applyTaskProjection(entry, saved)));
+    setSelectedProject(current => current ? applyTaskProjection(current, saved) : current);
+    return saved;
   };
 
   /** link 変更は成功・失敗どちらでも一覧を再取得し、既存集合を失わない。 */
@@ -690,13 +687,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
             isDemo ? undefined : (type) => handleConfirmType(selectedRow.project.id, type)
           }
           onSaveCorrection={
-            isDemo ? undefined : (patch) => handleSaveCorrection(selectedRow.project.id, patch)
-          }
-          onSaveNextAction={
-            isDemo
-              ? undefined
-              : (nextAction) =>
-                  handleSaveNextAction(selectedRow.project, nextAction)
+            isDemo ? undefined : (patch, revision, nextAction) => handleSaveCorrection(selectedRow.project.id, patch, revision, nextAction)
           }
           onAddLink={
             isDemo

@@ -1313,6 +1313,7 @@ export type Database = {
       }
       natori_user_profiles: {
         Row: {
+          mutation_revision: number
           created_at: string
           daily_capacity_hours: number | null
           display_name: string | null
@@ -1323,6 +1324,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          mutation_revision?: number
           created_at?: string
           daily_capacity_hours?: number | null
           display_name?: string | null
@@ -1333,6 +1335,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          mutation_revision?: number
           created_at?: string
           daily_capacity_hours?: number | null
           display_name?: string | null
@@ -2126,6 +2129,18 @@ export type Database = {
       }
       natori_request_text_is_valid_v1: {
         Args: { p_max_length: number; p_min_length: number; p_value: string }
+        Returns: boolean
+      }
+      natori_edit_project_v1: {
+        Args: {p_owner:string;p_project:string;p_expected_revision:number;p_patch:Json;p_next_action?:string|null}
+        Returns: Json
+      }
+      natori_edit_profile_v1: {
+        Args: {p_owner:string;p_expected_revision:number|null;p_patch:Json}
+        Returns: Json
+      }
+      natori_close_project_with_note_v1: {
+        Args: {p_owner:string;p_project:string;p_from_status:string;p_entry:string}
         Returns: boolean
       }
       natori_update_task_v1: {

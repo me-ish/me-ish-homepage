@@ -74,7 +74,6 @@ function renderPanel(overrides: Partial<NatoriProject> = {}) {
       onConfirmPayment={() => undefined}
       onConfirmType={async () => undefined}
       onSaveCorrection={async () => undefined}
-      onSaveNextAction={async () => undefined}
       onAddLink={async () => undefined}
       onUpdateLink={async () => undefined}
       onDeleteLink={async () => undefined}
