@@ -175,6 +175,12 @@ describe("PortfolioPricing", () => {
     const first = defaultPortfolioContent.options[0];
     expect(within(details).getByText(first.name)).toBeTruthy();
     expect(details.querySelector("summary")?.textContent).toContain(`全${defaultPortfolioContent.options.length}件`);
+    // 非公開オプションの違いは、さらにその中に畳む
+    const note = screen.getByText("非公開オプションの違い").closest("details") as HTMLDetailsElement;
+    expect(note).toBeTruthy();
+    expect(note.open).toBe(false);
+    expect(details.contains(note)).toBe(true);
+    expect(screen.queryByText("料金について")).toBeNull();
   });
 
   it("shows paused state instead of a mass-production CTA when intake is closed", () => {

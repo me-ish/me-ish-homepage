@@ -323,7 +323,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
               style={{ color: c.textSoft }}
             />
           </summary>
-          <ul className="divide-y px-4 pb-3 sm:px-6 md:px-8 md:pb-5" style={{ borderColor: c.borderSubtle }}>
+          <ul className="divide-y px-4 pb-3 sm:px-6 md:px-8" style={{ borderColor: c.borderSubtle }}>
             {content.options.map((option, index) => (
               <li
                 key={option.id ?? `legacy-option-${index}`}
@@ -337,31 +337,23 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
               </li>
             ))}
           </ul>
-        </details>
-      ) : null}
-
-      {/* 料金の補足は表の下に畳んでおき、読みたい人だけ開く。補足が増えてもここにまとめる */}
-      {content.options.some((option) => option.id === PORTFOLIO_OPTION_IDS.sampleUsageDenied || option.id === PORTFOLIO_OPTION_IDS.privateWork) ? (
-        <details
-          className="group mx-auto mt-4 max-w-3xl rounded-2xl"
-          style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
-        >
-          <summary className="pf-cute-focus flex min-h-[48px] cursor-pointer list-none items-center gap-3 rounded-2xl px-4 py-2.5 md:px-6 [&::-webkit-details-marker]:hidden">
-            <span className="min-w-0 flex-1">
-              <span className="font-bold">料金について</span>
-              <span className="ml-2 text-[13px]" style={{ color: c.textSoft }}>非公開オプションの違い</span>
-            </span>
-            <ChevronDown
-              aria-hidden="true"
-              className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none"
-              style={{ color: c.textSoft }}
-            />
-          </summary>
-          <div className="px-4 pb-4 text-sm leading-relaxed md:px-6" style={{ color: c.textSoft }}>
-            <p className="font-bold" style={{ color: c.text }}>非公開オプションの違い</p>
-            <p className="mt-2"><b>サンプル使用不可：</b>完成イラストをポートフォリオ・SNS・サンプル画像等へ掲載しません。</p>
-            <p className="mt-2"><b>完全非公開：</b>制作内容・完成イラストを含め一切公開せず、ご依頼内容も非公開で対応します。</p>
-          </div>
+          {/* 料金の補足はオプションの中にさらに畳む。補足（将来の返金表など）が増えたらここに並べる */}
+          {content.options.some((option) => option.id === PORTFOLIO_OPTION_IDS.sampleUsageDenied || option.id === PORTFOLIO_OPTION_IDS.privateWork) ? (
+            <details className="group/note mx-4 mb-4 rounded-xl sm:mx-6 md:mx-8 md:mb-5" style={{ background: c.surfaceSubtle }}>
+              <summary className="pf-cute-focus flex min-h-[44px] cursor-pointer list-none items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0 flex-1">非公開オプションの違い</span>
+                <ChevronDown
+                  aria-hidden="true"
+                  className="h-4 w-4 shrink-0 transition-transform group-open/note:rotate-180 motion-reduce:transition-none"
+                  style={{ color: c.textSoft }}
+                />
+              </summary>
+              <div className="px-3 pb-3 text-sm leading-relaxed" style={{ color: c.textSoft }}>
+                <p><b>サンプル使用不可：</b>完成イラストをポートフォリオ・SNS・サンプル画像等へ掲載しません。</p>
+                <p className="mt-2"><b>完全非公開：</b>制作内容・完成イラストを含め一切公開せず、ご依頼内容も非公開で対応します。</p>
+              </div>
+            </details>
+          ) : null}
         </details>
       ) : null}
 
