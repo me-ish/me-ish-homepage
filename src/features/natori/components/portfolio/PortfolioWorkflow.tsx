@@ -1,5 +1,7 @@
 // 制作の流れと納期。購入者へのお願いとは意思決定順に合わせて分離する。
+import { ChevronDown } from "lucide-react";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import { workflowStepView } from "@/features/natori/lib/portfolioStepText";
 import { resolvePortfolioWorkflow } from "@/features/natori/lib/portfolioWorkflow";
 import type { PortfolioDisplayContent } from "@/features/natori/types/portfolioDisplay";
 
@@ -41,12 +43,7 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioDispl
                     aria-hidden="true"
                   />
                 ) : null}
-                <div className="min-w-0 flex-1 rounded-2xl p-4 md:p-5" style={cardStyle}>
-                  <p className="mb-1 font-bold">{step.title}</p>
-                  <p className="text-sm leading-relaxed" style={{ color: c.textSoft }}>
-                    {step.body}
-                  </p>
-                </div>
+                <WorkflowStepCard title={step.title} body={step.body} />
               </li>
             ))}
           </ol>
@@ -79,5 +76,30 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioDispl
         </div>
       </div>
     </section>
+  );
+}
+
+/** 各ステップは短い説明だけを見せ、全文は「くわしく」で開く。文面は削らない。 */
+function WorkflowStepCard({ title, body }: { title: string; body: string }) {
+  const { lead, detail } = workflowStepView({ title, body });
+  return (
+    <div className="min-w-0 flex-1 rounded-2xl p-4 md:p-5" style={cardStyle}>
+      <p className="mb-1 font-bold">{title}</p>
+      <p className="text-sm leading-relaxed" style={{ color: c.textSoft }}>
+        {lead}
+      </p>
+      {detail ? (
+        <details className="group mt-1 text-sm leading-relaxed" style={{ color: c.textSoft }}>
+          <summary
+            className="pf-cute-focus inline-flex min-h-[44px] cursor-pointer list-none items-center gap-1 rounded-md font-bold [&::-webkit-details-marker]:hidden"
+            style={{ color: c.actionTextSmall }}
+          >
+            くわしく
+            <ChevronDown aria-hidden="true" className="h-4 w-4 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
+          </summary>
+          <p>{detail}</p>
+        </details>
+      ) : null}
+    </div>
   );
 }

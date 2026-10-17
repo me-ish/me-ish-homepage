@@ -5,18 +5,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
-  Calculator,
   ChevronDown,
-  ChevronRight,
-  FolderOpen,
-  Inbox,
   KeyRound,
   Link2,
   LogOut,
   Palette,
   PenLine,
   Settings,
-  Trophy,
   User2,
   type LucideIcon,
 } from "lucide-react";
@@ -37,13 +32,6 @@ import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleto
 import { NatoriPageShell } from "@/features/natori/components/admin/NatoriPageShell";
 import type { NatoriProject } from "@/features/natori/types/projects";
 
-type ToolCard = {
-  href: string;
-  title: string;
-  description: string;
-  icon: LucideIcon;
-};
-
 type PublicPageCard = {
   title: string;
   description: string;
@@ -52,33 +40,6 @@ type PublicPageCard = {
   viewHrefKey: "portfolio" | "links";
   editHref: string;
 };
-
-const TOOL_CARDS: ToolCard[] = [
-  {
-    href: "/natori/inquiries",
-    title: "問い合わせ",
-    description: "受付〜入金待ちの対応",
-    icon: Inbox,
-  },
-  {
-    href: "/natori/projects",
-    title: "案件管理",
-    description: "制作スケジュールと工程",
-    icon: FolderOpen,
-  },
-  {
-    href: "/natori/estimate",
-    title: "見積もり",
-    description: "正式見積りと概算",
-    icon: Calculator,
-  },
-  {
-    href: "/natori/results",
-    title: "売上・実績",
-    description: "売上・CSV",
-    icon: Trophy,
-  },
-];
 
 const PUBLIC_PAGE_CARDS: PublicPageCard[] = [
   {
@@ -230,44 +191,6 @@ export default function NatoriDashboardPage() {
           </div>
         ) : null}
         <ConsultationAttentionPanel projects={allProjects} loading={loading} onRefresh={() => void refresh()} />
-
-        <section aria-labelledby="dashboard-tools-heading">
-          <h2 id="dashboard-tools-heading" className={natoriAdminUi.sectionTitle}>
-            管理ツール
-          </h2>
-          <ul className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {TOOL_CARDS.map((card, index) => {
-              const Icon = card.icon;
-              // リンク名はタイトルだけにし、説明は補足（aria-describedby）として読ませる
-              const titleId = `dashboard-tool-title-${index}`;
-              const descriptionId = `dashboard-tool-description-${index}`;
-              return (
-                <li key={card.title}>
-                  <Link
-                    href={card.href}
-                    aria-labelledby={titleId}
-                    aria-describedby={descriptionId}
-                    className={`group relative flex h-full min-h-20 flex-col gap-3 rounded-2xl ${natoriAdminUi.surface} p-3.5 ${natoriAdminUi.cardInteractive} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] sm:flex-row sm:items-center sm:p-4`}
-                  >
-                    <span className={natoriAdminUi.iconTile}>
-                      <Icon className="h-5 w-5" aria-hidden />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span id={titleId} className="block text-sm font-semibold leading-5 text-zinc-900">
-                        {card.title}
-                      </span>
-                      <span id={descriptionId} className={`${natoriAdminUi.caption} mt-0.5 block`}>{card.description}</span>
-                    </span>
-                    <ChevronRight
-                      className="absolute right-3 top-3.5 h-4 w-4 text-zinc-300 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-zinc-500 sm:static"
-                      aria-hidden
-                    />
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
 
         <section aria-labelledby="dashboard-public-heading">
           <h2 id="dashboard-public-heading" className={natoriAdminUi.sectionTitle}>

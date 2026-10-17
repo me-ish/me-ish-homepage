@@ -5,7 +5,11 @@ import { portfolioColors as c } from "@/features/natori/constants/portfolioConte
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 import { fontEnStyle } from "./portfolioFonts";
 
-export default function PortfolioFaq({ content }: { content: PortfolioContent }) {
+export default function PortfolioFaq({ content, embedded = false }: {
+  content: PortfolioContent;
+  /** 「ご依頼前にご確認ください」の区画の中に続けて置くとき。見出しを一段下げる */
+  embedded?: boolean;
+}) {
   // 書きかけの項目（質問か答えが空）は公開ページに出さない。
   const faqs = (content.faqs ?? []).filter(
     (faq) => faq.question.trim().length > 0 && faq.answer.trim().length > 0
@@ -13,9 +17,17 @@ export default function PortfolioFaq({ content }: { content: PortfolioContent })
   if (faqs.length === 0) return null;
 
   return (
-    <section id="faq" className="mx-auto max-w-3xl px-5 pt-14 md:pt-20">
-      <h2 className="text-center text-2xl font-black md:text-3xl">よくある質問</h2>
-      <div className="mt-6 space-y-3 md:mt-8">
+    <section
+      id="faq"
+      className={embedded ? "mt-10 md:mt-12" : "mx-auto max-w-3xl px-5 pt-14 md:pt-20"}
+      aria-labelledby="faq-heading"
+    >
+      {embedded ? (
+        <h3 id="faq-heading" className="text-center text-xl font-black md:text-2xl">よくある質問</h3>
+      ) : (
+        <h2 id="faq-heading" className="text-center text-2xl font-black md:text-3xl">よくある質問</h2>
+      )}
+      <div className={embedded ? "mt-4 space-y-3 md:mt-6" : "mt-6 space-y-3 md:mt-8"}>
         {faqs.map((faq, index) => (
           <details
             key={`${faq.question}-${index}`}

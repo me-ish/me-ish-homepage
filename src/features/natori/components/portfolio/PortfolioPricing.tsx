@@ -3,6 +3,7 @@
 // features/natori/components/portfolio/PortfolioPricing.tsx
 // コミッション料金。通常プランはスマホでも説明を確認しつつ比較しやすい密度で表示し、
 // CTA からフォームへスクロールしつつ依頼種別 / 制作範囲を自動で合わせる。
+import { ChevronDown } from "lucide-react";
 import { PORTFOLIO_OPTION_IDS, planChoiceLabel, portfolioColors as c } from "@/features/natori/constants/portfolioContent";
 import { NATORI_MASS_PRODUCTION_BASE_AMOUNT } from "@/features/natori/constants/portfolioPricing";
 import { trackNatoriPageEvent } from "@/features/natori/data/pageEvents";
@@ -230,59 +231,59 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
         </div>
       )}
 
-      {/* 量産イラストは通常プランと条件が違うため、独立したコンパクト枠で案内する */}
-      <div
-        className="mx-auto mt-6 max-w-3xl rounded-2xl border-2 px-4 py-4 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-5 sm:px-5"
-        style={{ background: c.surface, borderColor: c.actionSoft }}
-      >
-        <div className="min-w-0">
-          <div className="flex items-baseline justify-between gap-3">
-            <h3 className="font-black">量産イラスト</h3>
-            <p className="shrink-0 text-xl font-black" style={{ color: c.text }}>
-              {startingPriceLabel(massProductionPrice)}
-            </p>
-          </div>
-          <p className="mt-1 text-sm" style={{ color: c.textSoft }}>
-            用意されたデザインから制作する、量産向けのイラストプランです。
-          </p>
-          <p className="mt-1 text-[13px] leading-relaxed" style={{ color: c.textSoft }}>
-            ※量産イラストのため、原則としてリテイクはお受けしておりません。
-          </p>
-
-          {massProductionSamples.length > 0 ? (
-            <div
-              role="group"
-              aria-label="量産イラスト作例"
-              className={`mx-auto mt-3 grid gap-2 sm:mx-0 sm:gap-3 ${
-                massProductionSamples.length === 1
-                  ? "max-w-[9rem] grid-cols-1"
-                  : "max-w-[18rem] grid-cols-2 sm:max-w-xs"
-              }`}
-            >
-              {massProductionSamples.map((sample) => (
-                <figure key={sample.id}>
-                  {/* アップロード画像は公開Storage URLなので next/image のhost設定に依存させない */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={sample.image ?? ""}
-                    alt={`量産イラスト作例「${sample.name}」`}
-                    loading="lazy"
-                    className="aspect-square w-full rounded-xl border object-cover"
-                    style={{ borderColor: c.borderSubtle }}
-                  />
-                  <figcaption
-                    className="mt-1 text-center text-[13px] font-bold"
-                    style={{ color: c.textSoft }}
-                  >
-                    {sample.name}
-                  </figcaption>
-                </figure>
-              ))}
+      {/* 受付停止中は説明や作例を出さず、1行だけで知らせる */}
+      {content.massProductionIllustrationOpen ? (
+        <div
+          className="mx-auto mt-6 max-w-3xl rounded-2xl border-2 px-4 py-4 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-5 sm:px-5"
+          style={{ background: c.surface, borderColor: c.actionSoft }}
+        >
+          <div className="min-w-0">
+            <div className="flex items-baseline justify-between gap-3">
+              <h3 className="font-black">量産イラスト</h3>
+              <p className="shrink-0 text-xl font-black" style={{ color: c.text }}>
+                {startingPriceLabel(massProductionPrice)}
+              </p>
             </div>
-          ) : null}
-        </div>
+            <p className="mt-1 text-sm" style={{ color: c.textSoft }}>
+              用意されたデザインから制作する、量産向けのイラストプランです。
+            </p>
+            <p className="mt-1 text-[13px] leading-relaxed" style={{ color: c.textSoft }}>
+              ※量産イラストのため、原則としてリテイクはお受けしておりません。
+            </p>
 
-        {content.massProductionIllustrationOpen ? (
+            {massProductionSamples.length > 0 ? (
+              <div
+                role="group"
+                aria-label="量産イラスト作例"
+                className={`mx-auto mt-3 grid gap-2 sm:mx-0 sm:gap-3 ${
+                  massProductionSamples.length === 1
+                    ? "max-w-[9rem] grid-cols-1"
+                    : "max-w-[18rem] grid-cols-2 sm:max-w-xs"
+                }`}
+              >
+                {massProductionSamples.map((sample) => (
+                  <figure key={sample.id}>
+                    {/* アップロード画像は公開Storage URLなので next/image のhost設定に依存させない */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={sample.image ?? ""}
+                      alt={`量産イラスト作例「${sample.name}」`}
+                      loading="lazy"
+                      className="aspect-square w-full rounded-xl border object-cover"
+                      style={{ borderColor: c.borderSubtle }}
+                    />
+                    <figcaption
+                      className="mt-1 text-center text-[13px] font-bold"
+                      style={{ color: c.textSoft }}
+                    >
+                      {sample.name}
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
           <a
             href={`${contactPath}?mode=quote&plan=${NATORI_MASS_PRODUCTION_ILLUSTRATION_VALUE}${structuredIntake ? "&structured=1" : ""}`}
             onClick={() => trackPlan("量産イラスト")}
@@ -291,15 +292,19 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
           >
             このプランで相談
           </a>
-        ) : (
-          <span
-            className="mt-3 block shrink-0 rounded-full px-4 py-2 text-center text-[13px] font-bold sm:mt-0"
-            style={{ background: c.surfaceSubtle, color: c.textSoft }}
-          >
-            現在受付停止中
-          </span>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div
+          className="mx-auto mt-6 flex max-w-3xl flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-xl border px-4 py-2.5 sm:px-5"
+          style={{ background: c.surface, borderColor: c.borderSubtle }}
+        >
+          <h3 className="font-bold">量産イラスト</h3>
+          <p className="flex items-baseline gap-2 text-[13px] sm:text-sm" style={{ color: c.textSoft }}>
+            <span className="font-bold">{startingPriceLabel(massProductionPrice)}</span>
+            <span className="rounded-full px-2.5 py-0.5 font-bold" style={{ background: c.surfaceSubtle }}>現在受付停止中</span>
+          </p>
+        </div>
+      )}
 
       {/* 追加オプション */}
       <div
@@ -321,14 +326,32 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
             </li>
           ))}
         </ul>
-        {content.options.some((option) => option.id === PORTFOLIO_OPTION_IDS.sampleUsageDenied || option.id === PORTFOLIO_OPTION_IDS.privateWork) ? (
-          <details className="mt-3 text-sm leading-relaxed" style={{ color: c.textSoft }}>
-            <summary className="pf-cute-focus min-h-[44px] cursor-pointer py-2 font-bold underline">非公開オプションの違い</summary>
+      </div>
+
+      {/* 料金の補足は表の下に畳んでおき、読みたい人だけ開く。補足が増えてもここにまとめる */}
+      {content.options.some((option) => option.id === PORTFOLIO_OPTION_IDS.sampleUsageDenied || option.id === PORTFOLIO_OPTION_IDS.privateWork) ? (
+        <details
+          className="group mx-auto mt-4 max-w-3xl rounded-2xl"
+          style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
+        >
+          <summary className="pf-cute-focus flex min-h-[48px] cursor-pointer list-none items-center gap-3 rounded-2xl px-4 py-2.5 md:px-6 [&::-webkit-details-marker]:hidden">
+            <span className="min-w-0 flex-1">
+              <span className="font-bold">料金について</span>
+              <span className="ml-2 text-[13px]" style={{ color: c.textSoft }}>非公開オプションの違い</span>
+            </span>
+            <ChevronDown
+              aria-hidden="true"
+              className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none"
+              style={{ color: c.textSoft }}
+            />
+          </summary>
+          <div className="px-4 pb-4 text-sm leading-relaxed md:px-6" style={{ color: c.textSoft }}>
+            <p className="font-bold" style={{ color: c.text }}>非公開オプションの違い</p>
             <p className="mt-2"><b>サンプル使用不可：</b>完成イラストをポートフォリオ・SNS・サンプル画像等へ掲載しません。</p>
             <p className="mt-2"><b>完全非公開：</b>制作内容・完成イラストを含め一切公開せず、ご依頼内容も非公開で対応します。</p>
-          </details>
-        ) : null}
-      </div>
+          </div>
+        </details>
+      ) : null}
 
       {/* 特定商取引法に基づく表記の「販売価格」と同じ内容。免税事業者のため消費税を上乗せしない */}
       <p className="mx-auto mt-4 max-w-3xl text-center text-[13px] leading-6 sm:text-sm" style={{ color: c.textSoft }}>

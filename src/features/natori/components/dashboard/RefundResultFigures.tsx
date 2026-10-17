@@ -4,6 +4,13 @@ import { formatYen } from "../../lib/pricing";
 
 const money = (value: number | null) => value === null ? "未確認" : formatYen(value);
 
+/** 返金・返金処理中・要確認・取得できない状態のどれかがあるときだけ、案件カードに返金の行を出す。 */
+export function hasRefundActivity(project: NatoriProject): boolean {
+  if (project.refunds === undefined) return false;
+  const financials = getNatoriResultFinancials(project);
+  return financials.state !== "none" || financials.pendingCount > 0 || financials.reviewCount > 0;
+}
+
 export function RefundResultDetails({ project }: { project: NatoriProject }) {
   if (project.refunds === undefined) return null;
   const financials = getNatoriResultFinancials(project);

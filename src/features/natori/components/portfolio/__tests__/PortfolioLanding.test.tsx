@@ -6,7 +6,9 @@ vi.mock("../PortfolioAbout", () => ({
   default: () => <section id="about" data-section="about"><h2>プロフィール</h2></section>,
 }));
 vi.mock("../PortfolioFaq", () => ({
-  default: () => <section id="faq" data-section="faq"><h2>よくある質問</h2></section>,
+  default: ({ embedded }: { embedded?: boolean }) => (
+    <section id="faq" data-section="faq">{embedded ? <h3>よくある質問</h3> : <h2>よくある質問</h2>}</section>
+  ),
 }));
 vi.mock("../PortfolioFooter", () => ({
   default: () => <footer data-section="footer" />,
@@ -19,7 +21,9 @@ vi.mock("../PortfolioGallery", () => ({
   },
 }));
 vi.mock("../PortfolioGuidelines", () => ({
-  default: () => <section id="requests" data-section="guidelines"><h2>購入者へのお願い</h2></section>,
+  default: ({ children }: { children?: import("react").ReactNode }) => (
+    <section id="requests" data-section="guidelines"><h2>購入者へのお願い</h2>{children}</section>
+  ),
 }));
 vi.mock("../PortfolioHero", () => ({
   default: () => <section data-section="hero"><h1>ナトリのあとりえ</h1></section>,
@@ -105,7 +109,7 @@ describe("PF-01 portfolio information architecture", () => {
     const headingLevels = screen
       .getAllByRole("heading")
       .map((heading) => Number(heading.tagName.slice(1)));
-    expect(headingLevels).toEqual([1, 2, 2, 2, 2, 2, 2, 2]);
+    expect(headingLevels).toEqual([1, 2, 2, 2, 2, 2, 3, 2]);
   });
 
   it("keeps showcase limited to works and profile", () => {

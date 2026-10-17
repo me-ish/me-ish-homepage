@@ -74,8 +74,9 @@ export default function PortfolioLanding({
           <PortfolioPricing content={content} contactPath={contactPath} structuredIntake={Boolean(demoStructuredQuery)} />
           <PortfolioWorkflow content={content} />
           <PortfolioAbout content={content} variant={variant} flatPlaceholders={flatPlaceholders} />
-          <PortfolioGuidelines content={content} />
-          <PortfolioFaq content={content} />
+          <PortfolioGuidelines content={content}>
+            <PortfolioFaq content={content} embedded />
+          </PortfolioGuidelines>
           <section id="form" className="mx-auto max-w-3xl px-5 py-14 text-center md:py-20">
             <h2 className="text-2xl font-black md:text-3xl">ご相談・ご依頼</h2>
             <p className="mt-3 leading-relaxed" style={{ color: c.textSoft }}>

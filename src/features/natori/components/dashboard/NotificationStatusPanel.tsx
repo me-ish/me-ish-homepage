@@ -6,6 +6,7 @@ import type { NatoriNotificationList } from "@/features/natori/types/notificatio
 import { notificationPurposeName } from "@/features/natori/lib/notificationLabels";
 import { summarizeNotificationAttention } from "@/features/natori/lib/notificationSummary";
 import { publishNotificationAttention } from "./notificationSummaryStore";
+import { NatoriHelpDisclosure } from "@/features/natori/components/admin/NatoriHelpDisclosure";
 
 const statuses: Record<string, string> = {
   pending: "送信待ち", sending: "送信処理中", sent: "送信サービス受付済み", failed: "送信できませんでした", unknown: "送信結果を確認できません",
@@ -59,11 +60,14 @@ export function NotificationStatusView({ data, error, busy, run }: {
         状態を更新
       </button>
     </div>
-    <p className="mt-3 text-xs leading-5 text-zinc-600">メールだけを再試行できます。承諾や受取完了の記録は変更されません。「受付済み」は送信サービスの受付を示し、相手の受信を保証する表示ではありません。</p>
+    <NatoriHelpDisclosure label="この通知について" className="mt-2">
+      <p>メールだけを再試行できます。承諾や受取完了の記録は変更されません。「受付済み」は送信サービスの受付を示し、相手の受信を保証する表示ではありません。</p>
+      <p>導入前のメール履歴はここには表示されません。</p>
+    </NatoriHelpDisclosure>
     {error && <p role="alert" className={`${natoriAdminUi.alert.error} mt-3`}>{error}</p>}
     {data && !data.sendingEnabled && <p className={`${natoriAdminUi.alert.warning} mt-3`}>通知送信を一時停止しています。</p>}
-    {data?.notifications.length === 0 && <p className="mt-3 rounded-xl bg-zinc-50 px-3 py-3 text-sm text-zinc-600">新しい通知はありません。導入前のメール履歴はここには表示されません。</p>}
-    <ul aria-live="polite" className="mt-3 space-y-2">
+    {data?.notifications.length === 0 && <p className="mt-2 rounded-xl bg-zinc-50 px-3 py-2 text-sm text-zinc-600">新しい通知はありません。</p>}
+    <ul aria-live="polite" className={data?.notifications.length ? "mt-3 space-y-2" : "space-y-2"}>
       {data?.notifications.map(item => <li key={item.id} className="rounded-xl border border-zinc-200/80 p-3 text-sm text-zinc-800">
         <p className="break-words font-semibold text-zinc-900">{item.projectTitle}：{notificationPurposeName(item.purpose)}</p>
         <p className="mt-0.5">{item.reviewRequired ? "送信状況の確認が必要です。自動の再送は停止しています。" : statuses[item.status] ?? "確認が必要です"}</p>
