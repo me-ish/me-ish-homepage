@@ -6,6 +6,7 @@
 // 受付日・最終アクション・経過日数付きの一覧で見て、詳細パネルから
 // 見積もり / 支払い依頼メールの送信・入金確認・見送りまで行える。
 // データソースは案件管理と同じ natori_projects（別テーブルは持たない）。
+import { applyTaskProjection, mergeProjectCollection } from "../../lib/taskProjection";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
 import { useOptionalNatoriToast } from "@/features/natori/components/admin/NatoriToast";
@@ -32,7 +33,6 @@ import {
   fetchNatoriProjectCollection,
   fetchNatoriProject,
   updateNatoriProjectDetails,
-  updateNatoriProjectStatus,
   type UpdateNatoriProjectDetailsInput,
 } from "@/features/natori/data/supabaseProjects";
 import {
@@ -167,58 +167,70 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   const [selectedProject, setSelectedProject] = useState<NatoriProject | null>(null);
   const [selectedError, setSelectedError] = useState("");
   const [detailVersion, setDetailVersion] = useState(0);
+  const detailSession = useRef(0);
+  const collectionRequest = useRef(0);
+  const detailRequest = useRef(0);
   const [initialScreen, setInitialScreen] = useState<"overview" | "conversation">("overview");
   const [mailKind, setMailKind] = useState<OrderMailKind | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  const reload = useCallback(async (errorMessage?: string, errorSession = detailSession.current) => {
+    const request = ++collectionRequest.current;
+    const session = detailSession.current;
+    const isCurrent = () => request === collectionRequest.current && session === detailSession.current;
+    try {
+      const data = await fetchNatoriProjectCollection();
+      if (!isCurrent()) return;
+      setProjects(current => mergeProjectCollection(current ?? [], [...data.projects, ...data.archivedProjects]));
+      if (errorSession === detailSession.current) setError(null);
+    } catch (err) {
+      if (isCurrent() && errorSession === detailSession.current) setError(errorMessage ?? (err instanceof Error ? err.message : String(err)));
+    }
+  }, []);
+
   useEffect(() => {
     if (isDemo) return;
-    const sync = () => {
+    const sync = (event?: PopStateEvent) => {
+      detailSession.current += 1;
+      setDetailVersion(version => version + 1);
       const params = new URLSearchParams(window.location.search);
       const projectId = params.get("project");
+      const nextId = projectId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId) ? projectId : null;
       const requestedFilter = params.get("filter");
       if (requestedFilter && STATUS_FILTERS.some(entry => entry.key === requestedFilter)) setFilter(requestedFilter);
-      setSelectedId(projectId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId) ? projectId : null);
+      setSelectedId(nextId);
       setInitialScreen(params.get("view") === "conversation" ? "conversation" : "overview");
+      if (event && !nextId) void reload();
     };
     sync();
     window.addEventListener("popstate", sync);
     return () => window.removeEventListener("popstate", sync);
-  }, [isDemo]);
-
-  const reload = useCallback(async () => {
-    const data = await fetchNatoriProjectCollection();
-    setProjects([...data.projects, ...data.archivedProjects]);
-  }, []);
+  }, [isDemo, reload]);
 
   const resumeEnabled = !isDemo && selectedId === null && mailKind === null && busyId === null;
-  const resumeEnabledRef = useRef(resumeEnabled);
-  resumeEnabledRef.current = resumeEnabled;
-  useRefreshOnResume(async () => {
-    const data = await fetchNatoriProjectCollection();
-    // A slow resume read may finish after a detail/mail editor was opened.
-    // Do not replace that editor's inputs with a background collection result.
-    if (!resumeEnabledRef.current) return;
-    setProjects([...data.projects, ...data.archivedProjects]);
-    setError(null);
-  }, () => setError("返信状況を更新できませんでした。状態を更新してください。"), resumeEnabled);
+  useRefreshOnResume(() => reload("返信状況を更新できませんでした。状態を更新してください。"), () => {}, resumeEnabled);
 
   useEffect(() => {
     let active = true;
+    const request = ++detailRequest.current;
+    const session = detailSession.current;
+    const isCurrent = () => active && request === detailRequest.current && session === detailSession.current;
     setSelectedProject(current => current?.id === selectedId ? current : null);
     setSelectedError("");
     if (!selectedId) return;
     if (isDemo) { setSelectedProject(projects?.find(p => p.id === selectedId) ?? null); return; }
     void fetchNatoriProject(selectedId).then(project => {
-      if (!active) return;
-      setSelectedProject(project);
+      if (!isCurrent()) return;
+      setSelectedProject(current => current && project ? mergeProjectCollection([current], [project])[0] : current && !project ? current : project);
       if (!project) setSelectedError("案件が見つかりません。管理権限とリンクをご確認ください。");
-    }).catch(() => { if (active) setSelectedError("案件の詳細を取得できませんでした。再試行してください。"); });
+    }).catch(() => { if (isCurrent()) setSelectedError("案件の詳細を取得できませんでした。再試行してください。"); });
     return () => { active = false; };
-  }, [selectedId, projects, isDemo, detailVersion]);
+  }, [selectedId, projects, isDemo, detailVersion, mailKind]);
 
   const openProject = (id: string) => {
+    detailSession.current += 1;
+    setDetailVersion(version => version + 1);
     setInitialScreen("overview");
     setSelectedId(id);
     if (!isDemo) {
@@ -227,7 +239,11 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
     }
   };
   const closeDetail = () => {
+    detailSession.current += 1;
     setSelectedId(null);
+    // A deep-linked detail can close before its initial collection read ends.
+    // That retired read is fenced, so start the list read for this new session.
+    if (!isDemo && projects === null) void reload();
     if (!isDemo) {
       const url = new URL(window.location.href); url.searchParams.delete("project"); url.searchParams.delete("view");
       window.history.replaceState(null, "", url);
@@ -237,12 +253,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   const loadServerData = useCallback(async () => {
     setProjects(null);
     setError(null);
-    try {
-      await reload();
-    } catch (err) {
-      console.error("[InquiriesBoard] load failed", err);
-      setError(err instanceof Error ? err.message : String(err));
-    }
+    await reload();
   }, [reload]);
 
   useEffect(() => {
@@ -254,6 +265,11 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
     }
     void loadServerData();
   }, [loadServerData, demoProjects]);
+
+  useEffect(() => () => {
+    collectionRequest.current += 1;
+    detailRequest.current += 1;
+  }, []);
 
   const rows = useMemo<InquiryRow[]>(() => {
     if (!projects) return [];
@@ -291,8 +307,10 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   };
   const filteredRows = rows.filter(row => matchesFilter(row, filter));
   const selectedRow = selectedProject ? { project: selectedProject, view: parseInquiryNote(selectedProject.note) } : null;
+  const renderedDetailSession = detailSession.current;
 
   const handleCloseInquiry = async (project: NatoriProject) => {
+    const closingSession = detailSession.current;
     const answer = await confirm({
       title: "見送りにしますか？",
       description: `「${project.clientName}｜${project.title}」を見送りにします。理由があれば入力してください（履歴として残ります）。`,
@@ -317,22 +335,22 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
             : entry
         )
       );
-      closeDetail();
+      if (detailSession.current === closingSession) closeDetail();
       showToast("見送りにしました。");
       return;
     }
     setBusyId(project.id);
-    setError(null);
+    if (detailSession.current === closingSession) setError(null);
     try {
       await closeNatoriProject(project.id, reason.trim());
-      await reload();
-      closeDetail();
+      await reload(undefined, closingSession);
+      if (detailSession.current === closingSession) closeDetail();
       showToast("見送りにしました。");
     } catch (err) {
       console.error("[InquiriesBoard] close failed", err);
-      setError(err instanceof Error ? err.message : String(err));
+      if (detailSession.current === closingSession) setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setBusyId(null);
+      setBusyId(current => current === project.id ? null : current);
     }
   };
 
@@ -341,10 +359,11 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
     projectId: string,
     projectType: NatoriConcreteProjectType
   ) => {
+    const session = detailSession.current;
     setError(null);
     try {
       await confirmNatoriProjectType(projectId, projectType);
-      await reload();
+      if (session === detailSession.current) await reload();
     } catch (err) {
       console.error("[InquiriesBoard] confirm type failed");
       throw new Error(describeConfirmTypeError(err));
@@ -352,35 +371,38 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
   };
 
   /** 金額 / 納品予定日 / 納期プランの管理補正。request_data は送らない。 */
-  const handleSaveCorrection = async (
-    projectId: string,
-    patch: UpdateNatoriProjectDetailsInput
-  ) => {
+  const handleSaveCorrection = async (projectId: string, patch: UpdateNatoriProjectDetailsInput, expectedRevision?: number, nextAction?: string) => {
+    const session = detailSession.current;
+    collectionRequest.current += 1;
+    detailRequest.current += 1;
     setError(null);
-    await updateNatoriProjectDetails(projectId, patch);
-    await reload();
-  };
-
-  /** 次のアクションのみの更新。既存の status 遷移 API を同一 status で使う。 */
-  const handleSaveNextAction = async (project: NatoriProject, nextAction: string) => {
-    setError(null);
-    await updateNatoriProjectStatus(project.id, project.status, nextAction);
-    await reload();
+    const saved = await updateNatoriProjectDetails(projectId, patch, expectedRevision, nextAction).finally(() => {
+      collectionRequest.current += 1;
+      if (session === detailSession.current) detailRequest.current += 1;
+    });
+    setProjects(current => (current ?? []).map(entry => applyTaskProjection(entry, saved)));
+    if (session === detailSession.current) {
+      setSelectedError("");
+      setSelectedProject(current => current ? applyTaskProjection(current, saved) : current);
+    }
+    return saved;
   };
 
   /** link 変更は成功・失敗どちらでも一覧を再取得し、既存集合を失わない。 */
   const handleLinkMutation = async (action: () => Promise<unknown>) => {
+    const session = detailSession.current;
     setError(null);
     try {
       await action();
     } catch (err) {
       throw new Error(describeNatoriReferenceLinkError(err));
     } finally {
-      await reload();
+      if (session === detailSession.current) await reload();
     }
   };
 
   const handleConfirmPayment = async (project: NatoriProject) => {
+    const paymentSession = detailSession.current;
     const confirmed = await confirm({
       title: "入金を確認しますか？",
       description: `「${project.clientName}｜${project.title}」の入金を確認済みにして、ラフ開始に進めます。よろしいですか？`,
@@ -401,22 +423,22 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
             : entry
         )
       );
-      closeDetail();
+      if (detailSession.current === paymentSession) closeDetail();
       showToast("入金確認しました。ラフ工程に進みました。");
       return;
     }
     setBusyId(project.id);
-    setError(null);
+    if (detailSession.current === paymentSession) setError(null);
     try {
       await confirmNatoriProjectPayment(project.id, getNextActionForStatus("rough"));
-      await reload();
-      closeDetail();
+      await reload(undefined, paymentSession);
+      if (detailSession.current === paymentSession) closeDetail();
       showToast("入金確認しました。ラフ工程に進みました。");
     } catch (err) {
       console.error("[InquiriesBoard] confirm payment failed", err);
-      setError(err instanceof Error ? err.message : String(err));
+      if (detailSession.current === paymentSession) setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setBusyId(null);
+      setBusyId(current => current === project.id ? null : current);
     }
   };
 
@@ -466,8 +488,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
             disabled={refreshing}
             onClick={() => {
               setRefreshing(true);
-              void reload()
-                .catch(() => setError("最新の状況を取得できませんでした。"))
+              void reload("最新の状況を取得できませんでした。")
                 .finally(() => setRefreshing(false));
             }}
             className={`${natoriAdminUi.btnSecondary} shrink-0`}
@@ -689,27 +710,21 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
           key={selectedRow.project.id}
           initialScreen={initialScreen}
           refreshError={selectedError || error || undefined}
-          onRetryRefresh={() => { setError(null); setDetailVersion(n => n + 1); void reload().catch(() => setError("返信状況を更新できませんでした。")); }}
-          onConversationChanged={() => { void reload().catch(() => setError("返信状況を更新できませんでした。状態を更新してください。")); }}
+          onRetryRefresh={() => { setError(null); setDetailVersion(n => n + 1); void reload("返信状況を更新できませんでした。"); }}
+          onConversationChanged={() => { void reload("返信状況を更新できませんでした。状態を更新してください。"); }}
           project={selectedRow.project}
           view={selectedRow.view}
           busy={busyId === selectedRow.project.id}
           demoMode={isDemo}
           onClose={closeDetail}
-          onOpenMail={(kind) => setMailKind(kind)}
+          onOpenMail={(kind) => { detailSession.current += 1; setMailKind(kind); }}
           onCloseInquiry={() => void handleCloseInquiry(selectedRow.project)}
           onConfirmPayment={() => void handleConfirmPayment(selectedRow.project)}
           onConfirmType={
             isDemo ? undefined : (type) => handleConfirmType(selectedRow.project.id, type)
           }
           onSaveCorrection={
-            isDemo ? undefined : (patch) => handleSaveCorrection(selectedRow.project.id, patch)
-          }
-          onSaveNextAction={
-            isDemo
-              ? undefined
-              : (nextAction) =>
-                  handleSaveNextAction(selectedRow.project, nextAction)
+            isDemo ? undefined : (patch, revision, nextAction) => handleSaveCorrection(selectedRow.project.id, patch, revision, nextAction)
           }
           onAddLink={
             isDemo
@@ -755,8 +770,9 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
           kind={mailKind}
           demoMode={isDemo}
           artistName={demoArtistName}
-          onClose={() => setMailKind(null)}
+          onClose={() => { detailSession.current += 1; setMailKind(null); }}
           onSent={() => {
+            if (detailSession.current !== renderedDetailSession) return;
             if (isDemo) {
               // デモ: 本物と同じステータス遷移をローカルにだけ反映
               const nextStatus = mailKind === "estimate" ? "quoted" : "awaiting_payment";
@@ -773,9 +789,7 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
               );
               return;
             }
-            reload().catch((err) => {
-              console.error("[InquiriesBoard] reload after mail failed", err);
-            });
+            void reload("返信状況を更新できませんでした。状態を更新してください。");
           }}
         />
       ) : null}

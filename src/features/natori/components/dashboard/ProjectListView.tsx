@@ -6,6 +6,7 @@ import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
 import { isProjectOverdue } from "@/features/natori/lib/projects";
 import { formatNatoriProjectDueDate } from "@/features/natori/lib/projectReadModel";
+import type { ProjectEditSnapshot } from "../../lib/editConflict";
 import type { UpdateNatoriProjectDetailsInput } from "@/features/natori/data/supabaseProjects";
 import type { NatoriProject } from "@/features/natori/types/projects";
 import { cn } from "@/lib/utils";
@@ -21,8 +22,9 @@ type ProjectListViewProps = {
   onOpenMail?: (project: NatoriProject, kind: "rough" | "delivery") => void;
   onEditDetails?: (
     project: NatoriProject,
-    patch: UpdateNatoriProjectDetailsInput
-  ) => Promise<void>;
+    patch: UpdateNatoriProjectDetailsInput,
+    expectedRevision?: number
+  ) => Promise<ProjectEditSnapshot | void>;
   advanceBusyId?: string | null;
 };
 

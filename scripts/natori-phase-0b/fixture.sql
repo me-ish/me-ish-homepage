@@ -8,7 +8,8 @@ create table public.admin_emails (email text primary key);
 create table public.natori_projects (
   id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users,
   title text, client_name text, client_email text, amount integer, type text, status text,
-  delivery_plan text, priority text, start_date date, due_date date, next_action text, note text,
+  delivery_plan text not null default 'normal', priority text, start_date date, due_date date,
+  next_action text not null default '', note text,
   payment_confirmed_at timestamptz, paid_at timestamptz, paid_amount integer, completed_at timestamptz,
   deleted_at timestamptz, created_at timestamptz default now(), request_data jsonb, agreed_terms jsonb
 );

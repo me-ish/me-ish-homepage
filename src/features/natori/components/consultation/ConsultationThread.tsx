@@ -302,8 +302,8 @@ export default function ConsultationThread(props: Props) {
   const actor=props.mode==="staff"?{projectId:props.projectId}:{token:props.token};
   const [draftFiles,setDraftFiles]=useState<{id:string;file:File}[]>([]);
   const hasDraft = body.trim() !== "" || draftFiles.length > 0;
-  useEffect(() => { onDraftChange?.(hasDraft); }, [hasDraft, onDraftChange]);
   const [pending,setPending]=useState<ConsultationOperation|null>(null);
+  useEffect(() => { onDraftChange?.(hasDraft || Boolean(pending) || busy); }, [hasDraft, pending, busy, onDraftChange]);
   useEffect(() => {
     if (!hasDraft && !pending && !busy) return;
     const warnBeforeUnload = (event: BeforeUnloadEvent) => {

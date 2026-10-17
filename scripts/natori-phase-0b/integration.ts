@@ -105,12 +105,12 @@ async function main() {
   }
   await test("csrf-remains-required",async()=>{check((await run(a.jar,()=>projects.POST(req("POST",draft,false)))).status===403,"CSRF_BYPASS");});
   await test("foreign-project-update-denied-and-unchanged",async()=>{
-    const r=await run(a.jar,()=>projects.PATCH(req("PATCH",{kind:"project-details",projectId:foreignRow.id,patch:{title:"must-not-write"}})));
+    const r=await run(a.jar,()=>projects.PATCH(req("PATCH",{kind:"project-details",projectId:foreignRow.id,expectedRevision:foreignRow.mutation_revision,patch:{title:"must-not-write"}})));
     check(r.status===404,"FOREIGN_UPDATE_ALLOWED");
     const row=await admin.from("natori_projects").select("*").eq("id",foreignRow.id).single();check(!row.error&&JSON.stringify(row.data)===JSON.stringify(foreignRow),"FOREIGN_ROW_CHANGED");
   });
   await test("owner-update-preserves-established-facts",async()=>{
-    const r=await run(b.jar,()=>projects.PATCH(req("PATCH",{kind:"project-details",projectId:ownerRow.id,patch:{title:"renamed"}})));check(r.status===200,"OWNER_UPDATE");
+    const r=await run(b.jar,()=>projects.PATCH(req("PATCH",{kind:"project-details",projectId:ownerRow.id,expectedRevision:ownerRow.mutation_revision,patch:{title:"renamed"}})));check(r.status===200,"OWNER_UPDATE");
     const row=await admin.from("natori_projects").select("*").eq("id",ownerRow.id).single();check(!row.error&&row.data?.title==="renamed","UPDATE_READBACK");
     for(const key of ["user_id","status","paid_at","paid_amount","request_data","agreed_terms"]){check(JSON.stringify(row.data[key])===JSON.stringify(ownerRow[key]),"FACT_CHANGED");}
   });

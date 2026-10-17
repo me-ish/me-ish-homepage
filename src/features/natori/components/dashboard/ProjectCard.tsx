@@ -1,4 +1,5 @@
 "use client";
+import type { ProjectEditSnapshot } from "../../lib/editConflict";
 
 import Link from "next/link";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
@@ -47,8 +48,9 @@ type ProjectCardProps = {
   onOpenMail?: (project: NatoriProject, kind: "rough" | "delivery") => void;
   onEditDetails?: (
     project: NatoriProject,
-    patch: UpdateNatoriProjectDetailsInput
-  ) => Promise<void>;
+    patch: UpdateNatoriProjectDetailsInput,
+    expectedRevision?: number
+  ) => Promise<ProjectEditSnapshot | void>;
   advanceBusy?: boolean;
   /** 「案件へ直接ジャンプ」で開いた案件。少しの間だけ枠で示し、画面内へスクロールする */
   highlighted?: boolean;
@@ -400,9 +402,10 @@ export default function ProjectCard({
           <ProjectEditForm
             project={project}
             onCancel={() => setEditing(false)}
-            onSave={async (patch) => {
-              await onEditDetails(project, patch);
+            onSave={async (patch, revision) => {
+              const saved = await onEditDetails(project, patch, revision);
               setEditing(false);
+              return saved;
             }}
           />
         ) : null}

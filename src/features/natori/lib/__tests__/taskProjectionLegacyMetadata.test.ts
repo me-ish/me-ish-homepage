@@ -22,7 +22,7 @@ const taskRows: TaskRow[] = [
 function projection(source: ProjectRow, extra: Partial<NatoriTaskProjection> = {}): NatoriTaskProjection {
   return {
     id, title: source.title, clientName: source.client_name, clientEmail: source.client_email ?? null,
-    amount: source.amount, type: source.type, deliveryPlan: source.delivery_plan, priority: source.priority,
+    amount: source.amount, type: source.type, deliveryPlan: source.delivery_plan as NatoriTaskProjection["deliveryPlan"], priority: source.priority,
     startDate: source.start_date, dueDate: source.due_date, createdAt: source.created_at, note: source.note,
     requestData: originalAnswers, status: "lineart", nextAction: "SECOND_TASK", mutationRevision: 2,
     tasks: [

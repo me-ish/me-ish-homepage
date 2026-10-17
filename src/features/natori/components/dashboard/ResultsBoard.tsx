@@ -3,6 +3,8 @@
 import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
 import { useOptionalNatoriToast } from "@/features/natori/components/admin/NatoriToast";
 import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
+import { type ProjectEditSnapshot } from "../../lib/editConflict";
+import { applyTaskProjection, mergeProjectCollection } from "../../lib/taskProjection";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
@@ -471,7 +473,7 @@ function CompletedProjectRow({
   uploading: boolean;
   onBeginEdit: () => void;
   onCancelEdit: () => void;
-  onSaveEdit: (patch: UpdateNatoriProjectDetailsInput) => Promise<void>;
+  onSaveEdit: (patch: UpdateNatoriProjectDetailsInput, expectedRevision?: number) => Promise<ProjectEditSnapshot | void>;
   onDelete: () => void;
   onPickImage: () => void;
   onPreview: () => void;
@@ -581,6 +583,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
   const { confirm, confirmDialog } = useNatoriConfirm();
   const { showToast } = useOptionalNatoriToast();
   const isDemo = Boolean(demoProjects);
+  const editSession = useRef(0);
   const [projects, setProjects] = useState<NatoriProject[] | null>(null);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -609,7 +612,7 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
         return {} as Record<string, string>;
       }),
     ]);
-    setProjects(data);
+    setProjects(current => mergeProjectCollection(current ?? [], data));
     setThumbs(thumbMap);
   }, []);
 
@@ -671,7 +674,8 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
     setMonthFilter(null);
   };
 
-  const handleSaveEdit = async (projectId: string, patch: UpdateNatoriProjectDetailsInput) => {
+  const handleSaveEdit = async (projectId: string, patch: UpdateNatoriProjectDetailsInput, expectedRevision?: number) => {
+    const savingSession = editSession.current;
     if (isDemo) {
       // デモ: ローカル状態にだけ反映
       setProjects((current) =>
@@ -690,14 +694,15 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
           };
         })
       );
-      setEditingId(null);
+      if (editSession.current === savingSession) setEditingId(null);
       showToast("実績の変更を保存しました。");
       return;
     }
-    await updateNatoriProjectDetails(projectId, patch);
-    await reload();
-    setEditingId(null);
+    const saved = await updateNatoriProjectDetails(projectId, patch, expectedRevision);
+    setProjects(current => (current ?? []).map(entry => applyTaskProjection(entry, saved)));
+    if (editSession.current === savingSession) setEditingId(null);
     showToast("実績の変更を保存しました。");
+    return saved;
   };
 
   const handleDelete = async (project: NatoriProject) => {
@@ -1087,9 +1092,9 @@ export default function ResultsBoard({ demoProjects }: ResultsBoardProps) {
                 editing={editingId === project.id}
                 busy={deletingId === project.id}
                 uploading={uploadingId === project.id}
-                onBeginEdit={() => setEditingId(project.id)}
-                onCancelEdit={() => setEditingId(null)}
-                onSaveEdit={(patch) => handleSaveEdit(project.id, patch)}
+                onBeginEdit={() => { editSession.current += 1; setEditingId(project.id); }}
+                onCancelEdit={() => { editSession.current += 1; setEditingId(null); }}
+                onSaveEdit={(patch, revision) => handleSaveEdit(project.id, patch, revision)}
                 onDelete={() => handleDelete(project)}
                 onPickImage={() => handlePickImage(project.id)}
                 onPreview={() => setPreviewUrl(thumbs[project.id] ?? null)}
