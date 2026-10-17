@@ -55,7 +55,7 @@ export default function ProjectTaskChecklist({ project, onToggle }: ProjectTaskC
       </div>
 
       {open ? (
-      <ul className="mt-3 flex flex-col gap-1">
+      <ul className="mt-2 grid grid-cols-1 gap-0.5 sm:grid-cols-2 sm:gap-x-2">
         {project.tasks.map((task) => {
           const stage = natoriStageMeta[task.stage];
           return (
@@ -64,7 +64,7 @@ export default function ProjectTaskChecklist({ project, onToggle }: ProjectTaskC
                 type="button"
                 onClick={() => onToggle(project.id, task.id)}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-lg border px-2.5 py-2 text-left text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#831843]",
+                  "flex w-full items-center gap-2.5 rounded-lg border px-2 py-1.5 text-left text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#831843]",
                   task.done
                     ? "border-transparent bg-zinc-50 text-zinc-500 hover:bg-zinc-100"
                     : "border-transparent bg-white text-zinc-800 hover:border-zinc-200 hover:bg-zinc-50"
@@ -84,13 +84,6 @@ export default function ProjectTaskChecklist({ project, onToggle }: ProjectTaskC
                 </span>
                 <span
                   className={cn(
-                    "inline-block h-2 w-2 shrink-0 rounded-full",
-                    stage.dotClassName
-                  )}
-                  aria-hidden
-                />
-                <span
-                  className={cn(
                     "min-w-0 flex-1 break-words font-medium",
                     task.done && "line-through decoration-zinc-400"
                   )}
@@ -99,7 +92,7 @@ export default function ProjectTaskChecklist({ project, onToggle }: ProjectTaskC
                 </span>
                 <span
                   className={cn(
-                    "shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                    "shrink-0 rounded-full border px-1.5 py-0 text-[11px] font-semibold leading-5",
                     stage.chipClassName
                   )}
                 >

@@ -1,5 +1,7 @@
 // 制作の流れと納期。購入者へのお願いとは意思決定順に合わせて分離する。
+import { ChevronDown } from "lucide-react";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import { workflowStepView } from "@/features/natori/lib/portfolioStepText";
 import { resolvePortfolioWorkflow } from "@/features/natori/lib/portfolioWorkflow";
 import type { PortfolioDisplayContent } from "@/features/natori/types/portfolioDisplay";
 
@@ -41,12 +43,7 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioDispl
                     aria-hidden="true"
                   />
                 ) : null}
-                <div className="min-w-0 flex-1 rounded-2xl p-4 md:p-5" style={cardStyle}>
-                  <p className="mb-1 font-bold">{step.title}</p>
-                  <p className="text-sm leading-relaxed" style={{ color: c.textSoft }}>
-                    {step.body}
-                  </p>
-                </div>
+                <WorkflowStepCard title={step.title} body={step.body} />
               </li>
             ))}
           </ol>
@@ -79,5 +76,39 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioDispl
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * 各ステップは短い説明だけを見せ、全文はカードを押すと開く。文面は削らない。
+ * 開く合図は説明の最終行の末尾に↓だけ置き、専用の行を増やさない。
+ */
+function WorkflowStepCard({ title, body }: { title: string; body: string }) {
+  const { lead, detail } = workflowStepView({ title, body });
+  if (!detail) {
+    return (
+      <div className="min-w-0 flex-1 rounded-2xl p-4 md:p-5" style={cardStyle}>
+        <p className="mb-1 font-bold">{title}</p>
+        <p className="text-sm leading-relaxed" style={{ color: c.textSoft }}>
+          {lead}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <details className="group min-w-0 flex-1 rounded-2xl" style={cardStyle}>
+      <summary className="pf-cute-focus block cursor-pointer list-none rounded-2xl p-4 md:p-5 [&::-webkit-details-marker]:hidden">
+        <p className="mb-1 font-bold">{title}</p>
+        <p className="text-sm leading-relaxed" style={{ color: c.textSoft }}>
+          <span className="group-open:hidden">{lead}</span>
+          <span className="hidden group-open:inline">{detail}</span>
+          <ChevronDown
+            aria-hidden="true"
+            className="ml-1 inline-block h-4 w-4 align-[-3px] transition-transform group-open:rotate-180 motion-reduce:transition-none"
+            style={{ color: c.actionTextSmall }}
+          />
+        </p>
+      </summary>
+    </details>
   );
 }

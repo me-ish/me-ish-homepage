@@ -83,7 +83,8 @@ export default function DashboardTodaySummary({
           href="/natori/projects"
           className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[#BE185D] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#831843] sm:min-h-0"
         >
-          案件管理へ
+          {/* リンク名は「案件管理」ちょうど（Phase 0b がこの名前でダッシュボードから移動する） */}
+          案件管理
           <ArrowRight className="h-4 w-4" aria-hidden />
         </Link>
       </div>

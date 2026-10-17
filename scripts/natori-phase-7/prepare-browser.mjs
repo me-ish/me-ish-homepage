@@ -29,7 +29,7 @@ const accepted6B = {
   'src/features/natori/types/portfolioDisplay.ts': 'b090d1b28add14c7b1d7328f696398c2b10b9da3c8684e3e6833bfcbc82ab804',
   'src/features/natori/lib/portfolioDisplay.ts': 'd6e9bd67eeb43992256b1d82715aab52c7bc105daccade9f2a1277906e8d1504',
   'src/features/natori/lib/portfolioWorkflow.ts': '2d753da668722aa2288ee927acd1332d7e81da7566c38e48fa94b0cb4b46b742',
-  'src/features/natori/components/portfolio/PortfolioWorkflow.tsx': '6eaf52cecb68ad1795831fc97d82c967cf0ca9745c158151c23267299ea3cc43',
+  'src/features/natori/components/portfolio/PortfolioWorkflow.tsx': '2bc07d0730fa7f14595b851a11b2a5c63565cc85fcbab195f6b5e13428b19823',
 };
 for (const [path, expected] of Object.entries(accepted6B)) {
   if (normalizedHash(readFileSync(resolve(repo, path))) !== expected) throw new Error(`ACCEPTED_PHASE_6B_REQUIRED: ${path}`);

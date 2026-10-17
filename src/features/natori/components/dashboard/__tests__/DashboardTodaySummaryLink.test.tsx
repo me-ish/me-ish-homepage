@@ -29,6 +29,6 @@ describe("DashboardTodaySummary top-priority link (Q-02)", () => {
 
   it("keeps the plain board link in the header", () => {
     render(<DashboardTodaySummary projects={[project]} today={new Date("2026-10-02T00:00:00Z")} />);
-    expect(screen.getByRole("link", { name: /案件管理へ/ }).getAttribute("href")).toBe("/natori/projects");
+    expect(screen.getByRole("link", { name: "案件管理" }).getAttribute("href")).toBe("/natori/projects");
   });
 });

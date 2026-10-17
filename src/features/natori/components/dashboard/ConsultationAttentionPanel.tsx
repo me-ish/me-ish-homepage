@@ -8,6 +8,7 @@ import { ArrowRight, ChevronRight, MessagesSquare } from "lucide-react";
 import type { NatoriProject } from "@/features/natori/types/projects";
 import { compareConsultationActivity, consultationIsActive, consultationNeedsAttention, consultationReplyState, staffConsultationHref } from "@/features/natori/lib/consultationOverview";
 import ConsultationStatus from "./ConsultationStatus";
+import { NatoriHelpDisclosure } from "@/features/natori/components/admin/NatoriHelpDisclosure";
 
 export default function ConsultationAttentionPanel({ projects, loading, onRefresh }: {
   projects: NatoriProject[] | null; loading: boolean; onRefresh: () => void;
@@ -45,15 +46,19 @@ export default function ConsultationAttentionPanel({ projects, loading, onRefres
                 className={`inline-flex items-baseline gap-1.5 rounded-full px-3 py-1 ring-1 ring-inset ${
                   item.emphasis && item.value > 0
                     ? "bg-pink-50 text-[#9D174D] ring-pink-600/20"
-                    : "bg-zinc-50 text-zinc-700 ring-zinc-500/15"
+                    : item.value > 0
+                      ? "bg-zinc-50 text-zinc-700 ring-zinc-500/15"
+                      : "bg-transparent text-zinc-600 ring-zinc-500/10"
                 }`}
               >
                 {item.label}{" "}
-                <b className="font-semibold tabular-nums text-zinc-900">{item.value}件</b>
+                <b className={`font-semibold tabular-nums ${item.value > 0 ? "text-zinc-900" : "text-zinc-600"}`}>{item.value}件</b>
               </span>
             ))}
           </p>
-          <p className="mt-2 text-xs leading-5 text-zinc-600">最新の相談メッセージと未確認のラフOKから判定します。ラフOKは相談画面で次の対応を確認するまで残ります。既読や、メールへの直接返信は反映されません。</p>
+          <NatoriHelpDisclosure label="判定のしかた" className="mt-1">
+            <p>最新の相談メッセージと未確認のラフOKから判定します。ラフOKは相談画面で次の対応を確認するまで残ります。既読や、メールへの直接返信は反映されません。</p>
+          </NatoriHelpDisclosure>
         </div>
         {attention?.length ? <ul className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200/80">
           {attention.slice(0, 5).map(project => <li key={project.id}>

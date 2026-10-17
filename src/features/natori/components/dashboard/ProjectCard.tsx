@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
-import { staffConsultationHref } from "@/features/natori/lib/consultationOverview";
+import { consultationNeedsAttention, staffConsultationHref } from "@/features/natori/lib/consultationOverview";
 import ConsultationStatus from "./ConsultationStatus";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, CalendarDays, CircleDollarSign, Clock4, Mail, MessageSquare, Pencil, Sparkles, AlertTriangle, Tag, Wallet, Zap } from "lucide-react";
+import { ArrowRight, CalendarDays, ChevronDown, CircleDollarSign, Clock4, Mail, MessageSquare, Pencil, Sparkles, AlertTriangle, Tag, Wallet, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import ProjectEditForm from "./ProjectEditForm";
@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
 import ProjectNoteSummary from "./ProjectNoteSummary";
 import { canManuallyTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
 import ProjectTaskChecklist from "./ProjectTaskChecklist";
-import { RefundResultDetails } from "./RefundResultFigures";
+import { RefundResultDetails, hasRefundActivity } from "./RefundResultFigures";
 import type { NatoriProject } from "@/features/natori/types/projects";
 
 type ProjectCardProps = {
@@ -140,6 +140,70 @@ export default function ProjectCard({
       : isRush
         ? cn("border-transparent", deliveryPlanMeta.softClassName)
         : "border-zinc-200/80 bg-zinc-50 text-zinc-800";
+
+  const scheduleBox = stagePlan ? (
+    <div
+      className={cn(
+        "rounded-xl border p-3 text-xs sm:p-3.5 sm:text-sm",
+        stagePlan.isOverdueMilestone
+          ? "border-red-200 bg-red-50 text-red-900"
+          : "border-zinc-200/80 bg-white text-zinc-800"
+      )}
+    >
+      <div className="mb-2.5 border-b border-black/[0.06] pb-2.5">{remainingLine}</div>
+      <div className="flex items-center justify-between gap-2 text-xs font-semibold opacity-80">
+        <span>現在のステージ</span>
+        <span
+          className={cn(
+            "rounded-full border px-2 py-0.5 text-xs font-semibold",
+            natoriStageMeta[stagePlan.stage].chipClassName
+          )}
+        >
+          {natoriStageMeta[stagePlan.stage].label}
+        </span>
+      </div>
+      <div className="mt-2 grid grid-cols-3 divide-x divide-black/[0.06] text-center">
+        <div>
+          <p className="text-xs opacity-70">ステージ残り</p>
+          <p className="text-sm font-semibold tabular-nums">{formatHours(stagePlan.remainingHours)}</p>
+        </div>
+        <div>
+          <p className="text-xs opacity-70">1日あたり</p>
+          <p className="text-sm font-semibold tabular-nums">{formatHours(stagePlan.requiredPerDay)}</p>
+        </div>
+        <div>
+          <p className="text-xs opacity-70">今週必要</p>
+          <p className="text-sm font-semibold tabular-nums">{formatHours(stagePlan.requiredThisWeek)}</p>
+        </div>
+      </div>
+      <p className="mt-2 text-xs opacity-80">
+        このステージの目安: {formatStageMilestone(stagePlan.milestoneDateISO)}
+        {stagePlan.isOverdueMilestone ? "（過ぎてます）" : ""}
+      </p>
+    </div>
+  ) : (
+    <div className={cn("rounded-xl border px-3 py-2.5", remainingTone)}>{remainingLine}</div>
+  );
+  // 遅れているときだけ、作業時間の内訳を畳まずに見せる
+  const scheduleUrgent = Boolean(stagePlan?.isOverdueMilestone) || (scheduling.isOverdue && project.dueDate !== null);
+
+  const consultationRow = project.consultation !== undefined ? (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-200/80 p-3">
+      <ConsultationStatus project={project} />
+      <Link href={staffConsultationHref(project.id)} className={natoriAdminUi.btnSecondary}>
+        <MessageSquare className="h-4 w-4 text-[#DB2777]" aria-hidden />
+        相談を開く
+      </Link>
+    </div>
+  ) : null;
+  // 返信が要る・通知が失敗したなど、対応が必要なときだけ相談を表に出す
+  const consultationUrgent = consultationRow !== null &&
+    (consultationNeedsAttention(project) || (project.consultation?.notificationFailed ?? 0) > 0);
+
+  const detailParts = [
+    ...(scheduleUrgent ? [] : ["残り作業"]),
+    ...(consultationRow !== null && !consultationUrgent ? ["相談"] : []),
+  ];
 
   return (
     <Card
@@ -266,63 +330,33 @@ export default function ProjectCard({
           </span>
         </div>
 
-        {project.paidAt != null || project.paymentConfirmedAt != null || project.paidAmount != null ? <RefundResultDetails project={project} /> : null}
+        {(project.paidAt != null || project.paymentConfirmedAt != null || project.paidAmount != null) && hasRefundActivity(project) ? <RefundResultDetails project={project} /> : null}
 
-        {stagePlan ? (
-          <div
-            className={cn(
-              "rounded-xl border p-3 text-xs sm:p-3.5 sm:text-sm",
-              stagePlan.isOverdueMilestone
-                ? "border-red-200 bg-red-50 text-red-900"
-                : "border-zinc-200/80 bg-white text-zinc-800"
-            )}
-          >
-            <div className="mb-2.5 border-b border-black/[0.06] pb-2.5">{remainingLine}</div>
-            <div className="flex items-center justify-between gap-2 text-xs font-semibold opacity-80">
-              <span>現在のステージ</span>
-              <span
-                className={cn(
-                  "rounded-full border px-2 py-0.5 text-xs font-semibold",
-                  natoriStageMeta[stagePlan.stage].chipClassName
-                )}
-              >
-                {natoriStageMeta[stagePlan.stage].label}
-              </span>
-            </div>
-            <div className="mt-2 grid grid-cols-3 divide-x divide-black/[0.06] text-center">
-              <div>
-                <p className="text-xs opacity-70">残</p>
-                <p className="text-sm font-semibold tabular-nums">{formatHours(stagePlan.remainingHours)}</p>
-              </div>
-              <div>
-                <p className="text-xs opacity-70">平日1日</p>
-                <p className="text-sm font-semibold tabular-nums">{formatHours(stagePlan.requiredPerDay)}</p>
-              </div>
-              <div>
-                <p className="text-xs opacity-70">今週の枠</p>
-                <p className="text-sm font-semibold tabular-nums">{formatHours(stagePlan.requiredThisWeek)}</p>
-              </div>
-            </div>
-            <p className="mt-2 text-xs opacity-80">
-              目安: {formatStageMilestone(stagePlan.milestoneDateISO)}
-              {stagePlan.isOverdueMilestone ? "（過ぎてます）" : ""}
-            </p>
-          </div>
-        ) : (
-          <div className={cn("rounded-xl border px-3 py-2.5", remainingTone)}>{remainingLine}</div>
-        )}
+        {scheduleUrgent ? scheduleBox : null}
 
-        {project.consultation !== undefined ? <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-200/80 p-3">
-          <ConsultationStatus project={project} />
-          <Link href={staffConsultationHref(project.id)} className={natoriAdminUi.btnSecondary}>
-            <MessageSquare className="h-4 w-4 text-[#DB2777]" aria-hidden />
-            相談を開く
-          </Link>
-        </div> : null}
-
-        <ProjectNoteSummary note={project.note} />
+        {consultationUrgent ? consultationRow : null}
 
         <ProjectTaskChecklist project={project} onToggle={onToggleTask} />
+
+        {/* 毎日は見ない情報は「詳細」に畳み、カードを要点だけにする */}
+        {detailParts.length > 0 ? (
+          <details className="group rounded-xl border border-zinc-200/80 bg-white">
+            <summary className={`flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-3 text-sm marker:hidden hover:bg-zinc-50 [&::-webkit-details-marker]:hidden ${natoriAdminUi.focusRing}`}>
+              <span className="min-w-0">
+                <span className="font-semibold text-zinc-900">詳細</span>
+                <span className="ml-2 text-xs text-zinc-500">{detailParts.join("・")}</span>
+              </span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500 transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
+            </summary>
+            <div className="space-y-3 border-t border-zinc-100 p-3">
+              {scheduleUrgent ? null : scheduleBox}
+              {consultationUrgent ? null : consultationRow}
+            </div>
+          </details>
+        ) : null}
+
+        {/* メモは短く自分で畳む表示なので、詳細には入れず常に見える位置に置く */}
+        <ProjectNoteSummary note={project.note} />
 
         {(onOpenMail && (WORK_MAIL_STATUSES.has(project.status) || project.status === "completed")) ||
         (onEditDetails && !editing) ? (
