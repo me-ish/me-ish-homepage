@@ -9,7 +9,7 @@ The reduced dashboard and portfolio from PR #179 are retained.
 | Audit ID | Change | Verification |
 | --- | --- | --- |
 | U01 | Successful changed-history reads notify the staff parent for new messages, rough OKs, closed state and notification changes, whether found by polling, manual refresh or focus resume. Callback identity changes do not restart the reader. | Actual panel/thread with synthetic client reply updates the parent label; unchanged polls do not loop; failed reads keep the draft and do not publish a false projection. Existing operation/ownership/rough followup tests remain green. |
-| U01 | Inquiries and dashboard refresh when returning to the visible page. Related focus/pageshow/visibility events are coalesced; hidden/demo pages and already-running resume requests do not duplicate work. | Resume-hook tests cover visibility, enabled state, overlapping events/requests, latest callback, errors/retry and cleanup. |
+| U01 | Inquiries and dashboard refresh when returning to the visible page. Related focus/pageshow/visibility events are coalesced. Detail/mail/busy editors pause inquiry refresh, including late responses, and dashboard resume only reads project counts so profile inputs are not replaced. | Resume-hook tests cover visibility, enabled state, overlapping requests, latest callback, errors/retry and cleanup. Real management-form tests retain an edited profile and detail amount across resume and late responses. |
 | U02 | Once opened, the staff conversation remains mounted while showing project details, keeping the actual File objects and text. Hidden conversations stop polling. Closing or Escape asks before discarding a draft; reopening returns focus to the composer. | Round-trip with text and PNG, close/Escape cancellation, hidden polling, actor isolation and no unintended POST/session-storage write. |
 | U02 | Unsent text, selected files, pending send or in-flight action installs a browser beforeunload guard. | Client draft prevents a cancelable unload event; clearing the draft removes the guard. Browser/mobile support remains a manual gate. |
 | U03 | Rough cards carry the actual message ID, display submission order and Japan-time date/time, and link to the exact message and attachment. Approval confirmation identifies the selected submission. | Two same-day submissions link to their own actual message/file; confirmation and POST match the selected rough ID. Answered/terminal cards retain identification without reintroducing prohibited actions. |
@@ -49,7 +49,7 @@ GitHub, public logs and CI artifacts. S01 remains open.
 
 - TypeScript: `npx tsc --noEmit`, pass.
 - ESLint for all changed TypeScript/TSX product and test files, pass.
-- Focused Vitest suite: **21 files / 174 tests pass**, including **14 new cases**.
+- Focused Vitest suite: **22 files / 177 tests pass**, including **17 new cases**.
 - `git diff --check`, pass.
 - No full-suite, real-browser, Stripe, Resend, production-write, Storage-copy,
   migration, merge or release was performed locally.
@@ -67,7 +67,8 @@ npx vitest run \
   src/features/natori/lib/__tests__/talkTimeline.test.ts \
   src/features/natori/components/admin/__tests__/useRefreshOnResume.test.tsx \
   src/features/natori/components/dashboard/__tests__/InquiriesBoardFilter.test.tsx \
-  src/features/natori/components/dashboard/__tests__/DashboardTodaySummaryLink.test.tsx
+  src/features/natori/components/dashboard/__tests__/DashboardTodaySummaryLink.test.tsx \
+  src/features/natori/components/dashboard/__tests__/ManagementResumeDrafts.test.tsx
 ```
 
 ## Preview/manual acceptance

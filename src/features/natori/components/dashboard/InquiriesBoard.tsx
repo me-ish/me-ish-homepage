@@ -11,7 +11,7 @@ import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleto
 import { useOptionalNatoriToast } from "@/features/natori/components/admin/NatoriToast";
 import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { useRefreshOnResume } from "@/features/natori/components/admin/useRefreshOnResume";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Inbox, Info, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
@@ -192,10 +192,17 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
     setProjects([...data.projects, ...data.archivedProjects]);
   }, []);
 
+  const resumeEnabled = !isDemo && selectedId === null && mailKind === null && busyId === null;
+  const resumeEnabledRef = useRef(resumeEnabled);
+  resumeEnabledRef.current = resumeEnabled;
   useRefreshOnResume(async () => {
-    await reload();
+    const data = await fetchNatoriProjectCollection();
+    // A slow resume read may finish after a detail/mail editor was opened.
+    // Do not replace that editor's inputs with a background collection result.
+    if (!resumeEnabledRef.current) return;
+    setProjects([...data.projects, ...data.archivedProjects]);
     setError(null);
-  }, () => setError("返信状況を更新できませんでした。状態を更新してください。"), !isDemo);
+  }, () => setError("返信状況を更新できませんでした。状態を更新してください。"), resumeEnabled);
 
   useEffect(() => {
     let active = true;

@@ -71,6 +71,13 @@ export default function NatoriDashboardPage() {
   const [projects, setProjects] = useState<NatoriProject[] | null>(null);
   const [allProjects, setAllProjects] = useState<NatoriProject[] | null>(null);
 
+  const refreshProjectCollection = useCallback(async () => {
+    const collection = await fetchNatoriProjectCollection();
+    setProjects(collection.projects);
+    setAllProjects([...collection.projects, ...collection.archivedProjects]);
+    setError(null);
+  }, []);
+
   const refresh = useCallback(async () => {
     try {
       // セッションが無いのは正常系（合言葉キーでのアクセス）。エラー表示は
@@ -87,9 +94,7 @@ export default function NatoriDashboardPage() {
         console.error("[dashboard] profile fetch failed", err);
       }
       try {
-        const collection = await fetchNatoriProjectCollection();
-        setProjects(collection.projects);
-        setAllProjects([...collection.projects, ...collection.archivedProjects]);
+        await refreshProjectCollection();
       } catch (err) {
         console.error("[dashboard] inquiry count fetch failed", err);
         setAllProjects(null);
@@ -100,7 +105,7 @@ export default function NatoriDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [refreshProjectCollection]);
 
   useEffect(() => {
     refresh();
@@ -115,7 +120,9 @@ export default function NatoriDashboardPage() {
     };
   }, [refresh]);
 
-  useRefreshOnResume(refresh, () => setError("案件情報を更新できませんでした。もう一度更新してください。"));
+  // Profile settings can contain unsaved edits; resume refreshes only the
+  // project summaries, never the profile object that initializes those inputs.
+  useRefreshOnResume(refreshProjectCollection, () => setError("案件情報を更新できませんでした。もう一度更新してください。"));
 
   const handleLogout = async () => {
     setSigningOut(true);
