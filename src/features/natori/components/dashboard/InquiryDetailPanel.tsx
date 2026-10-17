@@ -7,7 +7,7 @@ import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import Link from "next/link";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import ConsultationStatus from "./ConsultationStatus";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Archive,
   ArrowLeft,
@@ -119,7 +119,19 @@ export default function InquiryDetailPanel({
   onDeleteLink,
 }: InquiryDetailPanelProps) {
   const [screen, setScreen] = useState<"overview" | "conversation">(initialScreen);
+  const [conversationOpened, setConversationOpened] = useState(initialScreen === "conversation");
   const [hasDraft, setHasDraft] = useState(false);
+  const openConversation = () => {
+    setConversationOpened(true);
+    setScreen("conversation");
+  };
+  const closePanel = () => {
+    if (hasDraft && !window.confirm("入力中または送信確認中の返信や添付があります。画面を閉じますか？")) return;
+    onClose();
+  };
+  useEffect(() => {
+    if (screen === "conversation") document.getElementById("consultation-reply")?.focus();
+  }, [screen]);
   const returnFocus = useRef<HTMLElement | null>(typeof document !== "undefined" && document.activeElement instanceof HTMLElement ? document.activeElement : null);
   const meta = natoriProjectStatusMeta[project.status];
   const receivedISO = getNatoriInquiryReceivedISO(project);
@@ -160,7 +172,7 @@ export default function InquiryDetailPanel({
   });
 
   return (
-    <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
+    <Dialog open onOpenChange={open => { if (!open) closePanel(); }}>
       <DialogContent hideCloseButton aria-describedby={undefined} aria-label="問い合わせの詳細"
         onCloseAutoFocus={event => { event.preventDefault(); returnFocus.current?.focus(); }}
         className="flex h-[100dvh] w-full max-w-2xl flex-col gap-0 border border-zinc-200/80 bg-white p-0 shadow-xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl">
@@ -216,7 +228,7 @@ export default function InquiryDetailPanel({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={closePanel}
             className={natoriAdminUi.btnIcon}
             aria-label="閉じる"
           >
@@ -224,13 +236,14 @@ export default function InquiryDetailPanel({
           </button>
         </div>
 
-        {screen === "conversation" ? (
-          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+        {conversationOpened ? (
+          <div hidden={screen !== "conversation"} className={screen === "conversation" ? "min-h-0 flex-1 overflow-y-auto p-4 sm:p-5" : "hidden"}>
             {!demoMode ? <InquiryTalkMenu project={project} readOnly={readOnly} busy={busy} hasDraft={hasDraft} estimateHref={estimateHref} projectsHref={projectsHref} onOpenMail={onOpenMail} /> : null}
             {!demoMode ? (
               <ConsultationThread
                 mode="staff"
                 standalone
+                active={screen === "conversation"}
                 closed={readOnly}
                 onChanged={onConversationChanged}
                 onDraftChange={setHasDraft}
@@ -380,7 +393,7 @@ export default function InquiryDetailPanel({
               </p>
               <button
                 type="button"
-                onClick={() => setScreen("conversation")}
+                onClick={openConversation}
                 className={`${natoriAdminUi.btnPrimary} mt-3`}
               >
                 <MessageCircle className="h-4 w-4" aria-hidden />
@@ -472,7 +485,7 @@ export default function InquiryDetailPanel({
           {!demoMode ? (
             <button
               type="button"
-              onClick={() => setScreen("conversation")}
+              onClick={openConversation}
               className={`${primaryAction === "reply" ? natoriAdminUi.btnPrimary : natoriAdminUi.btnSecondary} min-w-0 flex-1 whitespace-nowrap sm:flex-none`}
             >
               <MessageCircle className="h-3.5 w-3.5" aria-hidden />

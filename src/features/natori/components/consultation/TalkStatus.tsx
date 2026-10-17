@@ -3,6 +3,7 @@ import TalkOpenButton from "./TalkOpenButton";
 import TalkRoughOkButton from "./TalkRoughOkButton";
 import { natoriClientUi as ui } from "@/features/natori/constants/clientUi";
 import type { TalkBadgeTone, TalkTimeline } from "@/features/natori/types/talk";
+import { consultationMessageAnchor } from "@/features/natori/lib/consultationMessageAnchor";
 
 const badgeTone: Record<TalkBadgeTone, string> = {
   action: "bg-[#FFF0F6] text-[#BE185D]",
@@ -32,10 +33,14 @@ export default function TalkStatus({ timeline, token }: { timeline: TalkTimeline
               <span className={`rounded-full px-3 py-0.5 text-[12px] font-bold leading-5 ${badgeTone[card.badge.tone]}`}>{card.badge.label}</span>
             </div>
             {card.amount ? <p className="mt-1 text-[22px] font-bold leading-8">{card.amount}</p> : null}
+            {card.roughReference ? <p className={`mt-2 ${ui.small} font-bold`}>{card.roughReference.label}</p> : null}
             {card.lines.map(line => <p key={line} className={`mt-1 ${ui.small} ${ui.muted}`}>{line}</p>)}
+            {card.roughReference?.openable ? <a href={`#${encodeURIComponent(consultationMessageAnchor(card.roughReference.messageId))}`}
+              aria-label={`${card.roughReference.label}の添付を確認`}
+              className={`mt-2 inline-flex min-h-11 items-center text-[14px] font-bold text-[#BE185D] underline underline-offset-4 ${ui.focus}`}>このラフの添付を確認</a> : null}
             {card.action && "href" in card.action ? <a href={card.action.href} target="_blank" rel="noopener noreferrer" className={`${ui.btnPrimary} mt-3`}>{card.action.label}</a> : null}
             {card.action && "open" in card.action ? <TalkOpenButton token={token} target={card.action.open} label={card.action.label} /> : null}
-            {card.action && "roughOk" in card.action ? <TalkRoughOkButton token={token} roughId={card.action.roughOk} label={card.action.label} /> : null}
+            {card.action && "roughOk" in card.action ? <TalkRoughOkButton token={token} roughId={card.action.roughOk} label={card.action.label} roughLabel={card.roughReference?.label} /> : null}
           </li>
         ))}
       </ul>

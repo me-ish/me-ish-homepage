@@ -55,6 +55,8 @@ export type TalkCard = {
   /** Large figure line, e.g. the amount. */
   amount?: string;
   lines: string[];
+  /** Identifies the submitted rough and links to the message containing its files. */
+  roughReference?: { label: string; messageId: string; openable: boolean };
   /** `href` goes straight to the stored Stripe page; `open` asks the server for a fresh quote / delivery link; `roughOk` records the client's OK for that rough. */
   action?: { label: string; href: string } | { label: string; open: TalkOpenTarget } | { label: string; roughOk: string };
 };
