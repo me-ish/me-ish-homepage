@@ -162,6 +162,35 @@ describe("audit U02: unsent drafts", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("does not publish a late history read while project details are being edited", async () => {
+    vi.useFakeTimers();
+    const changed = vi.fn();
+    render(<InquiryDetailPanel {...panelProps()} onConversationChanged={changed} />); await flush();
+    let finish: (response: Response) => void = () => {};
+    fetchMock.mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve; }));
+    fireEvent.click(screen.getByRole("button", { name: "履歴を更新" })); await flush();
+    fireEvent.click(screen.getByRole("button", { name: "案件詳細へ戻る" }));
+    history = [staff, client];
+    await act(async () => finish(Response.json({ messages: history, closed: false, roughOks: [] })));
+    expect(changed).not.toHaveBeenCalled();
+    await flush(1100);
+    fireEvent.click(screen.getByRole("button", { name: "相談に返信" })); await flush();
+    expect(screen.getByText(client.body)).toBeTruthy();
+    expect(changed).toHaveBeenCalledTimes(1);
+  });
+
+  it("can reopen immediately when the initial history read finishes while hidden", async () => {
+    vi.useFakeTimers();
+    let finish: (response: Response) => void = () => {};
+    fetchMock.mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve; }));
+    render(<InquiryDetailPanel {...panelProps()} />); await flush();
+    fireEvent.click(screen.getByRole("button", { name: "案件詳細へ戻る" }));
+    await act(async () => finish(Response.json({ messages: [staff], closed: false, roughOks: [] })));
+    fireEvent.click(screen.getByRole("button", { name: "相談に返信" })); await flush();
+    expect(screen.getByText(staff.body)).toBeTruthy();
+    expect((screen.getByRole("textbox") as HTMLTextAreaElement).disabled).toBe(false);
+  });
+
   it("does not carry a draft or File across different project actors", async () => {
     const view = render(<ConsultationThread mode="staff" projectId={fixture.id} clientEmail={fixture.clientEmail} />);
     await waitFor(() => expect((screen.getByRole("textbox") as HTMLTextAreaElement).disabled).toBe(false));

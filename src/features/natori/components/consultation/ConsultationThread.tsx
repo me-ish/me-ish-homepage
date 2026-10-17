@@ -164,6 +164,13 @@ export default function ConsultationThread(props: Props) {
       if (!response.ok) throw new Error("相談履歴を読み込めませんでした。リンクが有効か確認して、もう一度更新してください。");
       const data = await response.json() as { messages: ConsultationMessage[]; closed?: boolean; roughOks?: unknown; roughOkSendingEnabled?: unknown; roughOkActionsAllowed?: unknown };
       if (!ownsRead()) return false;
+      // The retained thread may have been hidden while this read was in flight.
+      // Leave its baseline unchanged so reopening refreshes the parent then,
+      // rather than replacing the project-detail editor in the background.
+      if (!afterSaved && !activeRef.current) {
+        lastRefresh.current = 0;
+        return false;
+      }
       if (!Array.isArray(data.messages)) throw new Error("相談履歴を読み込めませんでした");
       const hadHistory = historyLoaded.current;
       const arrived = hadHistory && data.messages.some(message => !knownMessages.current.has(message.id));
@@ -253,8 +260,9 @@ export default function ConsultationThread(props: Props) {
       polling.current = true;
       try {
         const response = await fetch(probeEndpoint, { cache: "no-store" });
-        if (!response.ok || !mounted.current || currentActor.current !== actorKey || busyOwner.current || currentPending.current) return;
+        if (!response.ok || !activeRef.current || !mounted.current || currentActor.current !== actorKey || busyOwner.current || currentPending.current) return;
         const probe = await response.json() as Partial<Probe>;
+        if (!activeRef.current) return;
         const last = lastMessageRef.current;
         const known = knownMessages.current;
         const different = typeof probe.count === "number" && (probe.count !== known.size || (probe.lastId !== null && probe.lastId !== undefined && !known.has(probe.lastId)));
