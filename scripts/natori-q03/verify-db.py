@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 
@@ -24,8 +25,8 @@ def run(*args, input=None, check=True):
     if check and result.returncode: raise RuntimeError(result.stderr.strip() or result.stdout.strip())
     return result
 
-def sql(text, check=True):
-    return run("docker", "exec", "-i", NAME, "psql", "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-U", "postgres", input=text, check=check)
+def sql(text, check=True, database="postgres"):
+    return run("docker", "exec", "-i", NAME, "psql", "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", database, input=text, check=check)
 
 def value(text):
     raw = sql(text).stdout.strip().splitlines()[0]
@@ -165,6 +166,45 @@ def main():
             assert value(edit(pid,0,patch))["result"] == "invalid_request" and row(pid) == before
         assert value(edit(pid,"null",{"note":"missing revision"}))["result"] == "invalid_request" and row(pid) == before
     check("missing revisions and immutable fields fail closed without writes", immutable_guards)
+
+    def early_fixture_projection():
+        defaults_query = """select jsonb_object_agg(a.attname,jsonb_build_object(
+          'not_null',a.attnotnull,'default',pg_get_expr(d.adbin,d.adrelid)))
+          from pg_attribute a join pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum
+          where a.attrelid='public.natori_projects'::regclass and a.attname in ('delivery_plan','next_action');"""
+        baseline_defaults = value(defaults_query)
+        sql("create database q03_early_fixture;")
+        def early_sql(text):
+            return sql("set phase_t.sandbox='ephemeral';" + text, database="q03_early_fixture")
+        def early_value(text):
+            return json.loads(early_sql(text).stdout.strip().splitlines()[0])
+        early_sql("create schema auth;create table auth.users(id uuid primary key);")
+        early_sql((ROOT / "scripts/natori-phase-0b/fixture.sql").read_text())
+        early_sql((ROOT / "scripts/natori-phase-6a/standalone-read-prerequisites.sql").read_text())
+        early_sql((ROOT / "supabase/migrations/20261001223805_natori_task_integrity.sql").read_text())
+        early_sql(parts["prerequisites"])
+        early_sql((ROOT / "supabase/migrations/20261017123933_natori_edit_conflict_protection.sql").read_text())
+        # Compare actual PostgreSQL catalogue semantics with the real baseline,
+        # then use the same omitted-field actor seed that failed in Phase 0B.
+        assert early_value(defaults_query) == baseline_defaults
+        pid = str(uuid.uuid4())
+        early_sql(f"""insert into auth.users values('{OWNER}');
+          insert into public.natori_projects(id,user_id,title,client_name,type,status,amount,due_date,paid_at,paid_amount,request_data,agreed_terms)
+          values('{pid}','{OWNER}','fixture-owner','Synthetic','undecided','inquiry',1000,'2026-12-01','2026-09-01T00:00:00Z',1000,'{{"sentinel":0}}','{{"sentinel":0}}');""")
+        before = early_value(f"select to_jsonb(p) from public.natori_projects p where id='{pid}';")
+        result = early_value("set role service_role;" + edit(pid,0,{"title":"renamed"}))
+        assert result["result"] == "applied"
+        after = early_value(f"select to_jsonb(p) from public.natori_projects p where id='{pid}';")
+        for field in ["user_id","status","paid_at","paid_amount","request_data","agreed_terms"]:
+            assert after[field] == before[field]
+        assert after["title"] == "renamed" and after["mutation_revision"] == 1
+        # Compile and execute the product parser, with real RPC output as stdin.
+        # Existing local esbuild/Node only; no install, network or provider calls.
+        with tempfile.TemporaryDirectory(prefix="q03-early-fixture-") as directory:
+            parser = str(Path(directory) / "task-projection.cjs")
+            run("node", "-e", "require('esbuild').buildSync({entryPoints:[process.argv[1]],bundle:true,platform:'node',format:'cjs',outfile:process.argv[2],logLevel:'silent'});", str(ROOT / "src/features/natori/lib/taskProjection.ts"), parser)
+            run("node", "-e", "const input=JSON.parse(require('node:fs').readFileSync(0,'utf8'));require(process.argv[1]).taskProjectionSchema.parse(input);", parser, input=json.dumps(result["project"]))
+    check("early Phase 0B defaults match baseline; seeded owner CAS yields a valid real-parser full projection and preserves facts", early_fixture_projection)
 
 try:
     main()

@@ -36,6 +36,10 @@ const expected={
   "supabase/migrations/20261017123933_natori_edit_conflict_protection.sql": {
     "sha256": "6ad5a938df8435d3876b2a75e97554afb0700d1df5f1042df848430df5eecc33",
     "raw": true
+  },
+  "scripts/natori-phase-0b/fixture.sql": {
+    "sha256": "6e4a4cfb097eaa8c3c16795f894521201ac891041f2639069d5518eb781d378d",
+    "raw": true
   }
 };
 for(const [name,entry] of Object.entries(expected)){
