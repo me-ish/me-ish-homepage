@@ -8,6 +8,7 @@ import { DELIVERY_TOKEN_RE, DELIVERY_UUID_RE, readDeliveryManifest } from "../li
 import { resolveNatoriOwnerId } from "./natoriOwner";
 import { verifyDeliveryObject } from "./deliveryStorageVerification";
 import { sealDeliveryNotification } from "./deliveryNotificationPayload";
+import { effectiveDeliveryExpiry } from "./deliveryExpiry";
 import { acceptanceOutboxEnabled, dispatchAcceptanceNotification, notificationSendingEnabled } from "./acceptanceNotifications";
 import type { Database, Json, NatoriDeliveryReleaseRow } from "@/types/supabase";
 import type { DeliveryManifestFile } from "../types/delivery";
@@ -109,7 +110,7 @@ export type IssueDeliveryInput = { projectId: string; operationId?: string; file
   extension?: DeliveryExtensionInput };
 export type IssueDeliveryResult =
   | { kind: "ok"; releaseId: string; notificationStatus: string }
-  | { kind: "not-found" | "not-configured" | "no-files" | "db-error" | "invalid-state" | "delivery-conflict" | "delivery-expired" | "invalid-expiry" | "notice-pending" };
+  | { kind: "not-found" | "not-configured" | "no-files" | "db-error" | "invalid-state" | "delivery-conflict" | "delivery-expired" | "delivery-expiry-changed" | "invalid-expiry" | "notice-pending" };
 
 async function issueResult(releaseId: string, noticeId: string): Promise<IssueDeliveryResult> {
   try {
@@ -155,8 +156,17 @@ export async function issueReadyDelivery(input: IssueDeliveryInput): Promise<Iss
   const verifiedAt = new Date().toISOString();
   const verified = await Promise.all(manifest.map(file => verifyDeliveryObject(file)));
   if (verified.some(file => !file)) return { kind: "no-files" };
-  const expires = release.data?.expires_at ?? (project.data.delivery_token_hash ? project.data.delivery_token_expires_at
+  let expires = release.data?.expires_at ?? (project.data.delivery_token_hash ? project.data.delivery_token_expires_at
     : new Date(Date.now() + DELIVERY_VALID_DAYS * 86400000).toISOString());
+  if (release.data) {
+    // Issuance cannot use the display reader's fallback on a failed extension read:
+    // the email, new access and locked RPC comparison must all name the same expiry.
+    const extension = await admin.from("natori_delivery_extensions").select("new_expires_at")
+      .eq("release_id", release.data.id).order("new_expires_at", { ascending: false }).limit(1).maybeSingle()
+      .then(value => value, () => ({ data: null, error: { code: "transport" } }));
+    if (extension.error || (extension.data && !Number.isFinite(Date.parse(extension.data.new_expires_at)))) return { kind: "db-error" };
+    expires = effectiveDeliveryExpiry(release.data.expires_at, extension.data?.new_expires_at ?? null);
+  }
   if (!expires || Date.parse(expires) <= Date.now()) return { kind: "delivery-expired" };
   const token = randomBytes(32).toString("base64url");
   let payload: Json;
@@ -184,6 +194,7 @@ export async function issueReadyDelivery(input: IssueDeliveryInput): Promise<Iss
   if (result?.result === "issued" && result.release_id && result.notification_id) return issueResult(result.release_id, result.notification_id);
   if (result?.result === "conflict") return { kind: "delivery-conflict" };
   if (result?.result === "expired") return { kind: "delivery-expired" };
+  if (result?.result === "expiry-changed") return { kind: "delivery-expiry-changed" };
   if (result?.result === "unavailable") return { kind: "no-files" };
   if (result?.result === "not-found") return { kind: "not-found" };
   return { kind: "invalid-state" };

@@ -105,6 +105,8 @@ export const POST = withNatoriManagement("order-mail.POST", true, async function
       return NextResponse.json({ error: "前回と送信内容が異なります。前回の結果を確認してから、新しい案内として送信してください。", code: "delivery_conflict" }, { status: 409 });
     case "delivery-expired":
       return NextResponse.json({ error: "納品ページの保存期限が過ぎています。期限を延ばして再送できます。", code: "delivery_expired" }, { status: 409 });
+    case "delivery-expiry-changed":
+      return NextResponse.json({ error: "納品ページの保存期限が更新されました。最新の期限を確認してから、もう一度送信してください。", code: "delivery_expiry_changed" }, { status: 409 });
     case "invalid-expiry":
       return NextResponse.json({ error: "その期限には延ばせません。現在の期限より先になる日数を選んでください。" }, { status: 409 });
     case "notice-pending":

@@ -13,6 +13,7 @@ sys.dont_write_bytecode = True
 
 ROOT = Path(__file__).resolve().parents[2]
 MIGRATION = 'supabase/migrations/20261013130000_natori_delivery_extension.sql'
+RESEND_MIGRATION = 'supabase/migrations/20261017093231_natori_delivery_resend_effective_expiry.sql'
 EXTEND = 'public.natori_delivery_extend_v1(uuid,uuid,uuid,text,timestamptz,text,text,jsonb,timestamptz,jsonb)'
 CHECKS = []
 
@@ -38,8 +39,16 @@ def main(command, results):
     lit, js, sql, value = pay.literal, pay.js, pay.sql, pay.value
     assert value("select current_database()='natori_pay01' and current_setting('listen_addresses')=''", role=None) == 't'
     sql((ROOT / 'scripts/natori-pay01/bootstrap.sql').read_text(), role=None)
-    for path in pay.SOURCES + [pay.MIGRATION, MIGRATION]:
+    for path in pay.SOURCES + [pay.MIGRATION]:
         sql((ROOT / path).read_text(), role=None)
+    sql((ROOT / RESEND_MIGRATION).read_text(), role=None, expected='P0001')
+    check('q01_migration_requires_extension_prerequisite')
+    sql((ROOT / MIGRATION).read_text(), role=None)
+    sql(f'alter function {pay.ISSUE} security invoker', role=None)
+    sql((ROOT / RESEND_MIGRATION).read_text(), role=None, expected='P0001')
+    check('q01_migration_rejects_runtime_drift')
+    sql(f'alter function {pay.ISSUE} security definer', role=None)
+    sql((ROOT / RESEND_MIGRATION).read_text(), role=None)
 
     def request_hash(label):
         return hashlib.sha256(('pay04/' + label).encode()).hexdigest()
@@ -144,8 +153,17 @@ def main(command, results):
         f"select count(*)=2 and bool_or(previous_expires_at=(select min(new_expires_at) from public.natori_delivery_extensions where release_id={lit(rid2)})) "
         f"from public.natori_delivery_extensions where release_id={lit(rid2)}") == 't')
 
+    spec = importlib.util.spec_from_file_location('pay04_q01_resend', ROOT / 'scripts/natori-pay04/resend.py')
+    resend = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(resend)
+    resend.run(pay, send_notice, notice_of, extend_sql)
+
     Path(results).mkdir(parents=True, exist_ok=True)
     (Path(results) / 'checks.json').write_text(json.dumps(dict(count=len(CHECKS), checks=CHECKS)))
+    (Path(results) / 'q01-sources.json').write_text(json.dumps([
+        dict(path=path, sha256=hashlib.sha256((ROOT / path).read_bytes()).hexdigest())
+        for path in [RESEND_MIGRATION, 'scripts/natori-pay04/resend.py', 'scripts/natori-pay04/acceptance.py']
+    ]))
     print(f'{len(CHECKS)} PAY-04 native checks passed', flush=True)
 
 
