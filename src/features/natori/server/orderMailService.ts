@@ -141,7 +141,7 @@ export type SendNatoriOrderMailInput = {
 
 export type SendNatoriOrderMailResult =
   | { kind: "ok"; paymentLinkUrl?: string; releaseId?: string; notificationStatus?: string }
-  | { kind: "delivery-conflict" | "delivery-expired" | "invalid-expiry" | "notice-pending" }
+  | { kind: "delivery-conflict" | "delivery-expired" | "delivery-expiry-changed" | "invalid-expiry" | "notice-pending" }
   | { kind: "not-found" }
   | { kind: "not-configured" }
   | { kind: "no-files" }
