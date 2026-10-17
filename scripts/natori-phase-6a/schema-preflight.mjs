@@ -14,11 +14,11 @@ const expected={
     "raw": false
   },
   "src/features/natori/server/projectsService.ts": {
-    "sha256": "2f976af81b93dc0e0ebcc86cfd452f502b86b7e84bab13ed644235ef51bd24b0",
+    "sha256": "16231f733310bcbd569c6ba89c7ab8d0ff35cd6d5a64fe50c126079ec1abff2b",
     "raw": false
   },
   "scripts/natori-phase-6a/build-fixture.mjs": {
-    "sha256": "3179cdf1402306567b3651cc5a4785c3c16e7604c80993f899ea32ca7dc3386f",
+    "sha256": "150f4292bf8772b2b540d8f65144405654a87e681a00df0248689f84ce1e2390",
     "raw": true
   },
   "scripts/natori-phase-6a/alias-preflight.sql": {
@@ -27,6 +27,14 @@ const expected={
   },
   "scripts/natori-phase-6a/standalone-read-prerequisites.sql": {
     "sha256": "8338ebfa3ecaf452300585ff65af58e7fb5e8c575601468ff4645fa7e62b214c",
+    "raw": true
+  },
+  "scripts/natori-q03/fixture-prerequisites.mjs": {
+    "sha256": "656d82b671e7f381962634a956e6645dd3b16a3b17bbd7a0187151a27fcc36ee",
+    "raw": true
+  },
+  "supabase/migrations/20261017123933_natori_edit_conflict_protection.sql": {
+    "sha256": "6ad5a938df8435d3876b2a75e97554afb0700d1df5f1042df848430df5eecc33",
     "raw": true
   }
 };

@@ -1,4 +1,7 @@
 import "server-only";
+import { z } from "zod";
+import type { Json } from "@/types/supabase";
+import { taskProjectionSchema, type NatoriTaskProjection } from "../lib/taskProjection";
 import {loadCoherentTaskSnapshot,setTaskFromLatestDb,type NatoriTaskMutationResult} from "./taskIntegrityService";
 import {paymentLinkIntegrityEnabled,closeOrArchiveWithPaymentGuard} from "./paymentLinkService";
 import { loadNatoriRefundSummaries } from "./refundSummaryService";
@@ -540,7 +543,8 @@ export type NatoriProjectTransitionResult =
   | { kind: "invalid-transition"; from: string; to: string };
 
 export type PatchNatoriProjectDetailsResult =
-  | NatoriProjectMutationResult
+  | { kind: "ok"; project: NatoriTaskProjection }
+  | { kind: "not-found" | "db-error" | "edit-conflict" | "invalid-revision" | "invalid-next-action" }
   | { kind: "no-editable-fields" }
   | { kind: "invalid-type-change" }
   /** request_data など書き換え不可の列が payload に含まれていた。 */
@@ -632,13 +636,14 @@ export async function setNatoriProjectStatus(
 
 /**
  * Generic editor for the project's basic info (依頼者名・タイトル・金額・納期
- * など). An undecided -> concrete type request is delegated to the atomic type
- * confirmation RPC; direct concrete-type rewrites are rejected. Status /
- * next_action / payment_confirmed_at are stripped server-side.
+ * など). Revision comparison, type confirmation/tasks and all supplied edits
+ * share one database transaction. Lifecycle and original answers are immutable.
  */
 export async function patchNatoriProjectDetails(
   projectId: string,
-  patch: Record<string, unknown>
+  patch: Record<string, unknown>,
+  expectedRevision?: number,
+  nextAction?: string
 ): Promise<PatchNatoriProjectDetailsResult> {
   // 原回答や状態遷移列は、暗黙に無視せず明示的に拒否する。
   for (const key of Object.keys(patch)) {
@@ -654,80 +659,28 @@ export async function patchNatoriProjectDetails(
     }
   }
 
+  if (!Number.isSafeInteger(expectedRevision) || (expectedRevision as number) < 0) return { kind: "invalid-revision" };
+  if (nextAction !== undefined && (typeof nextAction !== "string" || nextAction.length > 120)) return { kind: "invalid-next-action" };
+  if (Object.keys(patch).some(key => key !== "type" && !NATORI_PROJECT_DETAILS_ALLOWED_FIELDS.has(key))) return { kind: "no-editable-fields" };
+  if ("type" in patch && (typeof patch.type !== "string" || !isNatoriConcreteProjectType(patch.type))) return { kind: "invalid-type-change" };
+  if (!Object.keys(patch).length && nextAction === undefined) return { kind: "no-editable-fields" };
   const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
-  const admin = supabaseAdmin();
-  let typeConfirmed = false;
-  if (Object.prototype.hasOwnProperty.call(patch, "type")) {
-    const requestedType = patch.type;
-    if (
-      typeof requestedType !== "string" ||
-      !isNatoriConcreteProjectType(requestedType)
-    ) {
-      return { kind: "invalid-type-change" };
-    }
-
-    const { data: currentProject, error: currentProjectError } = await admin
-      .from("natori_projects")
-      .select("id, type")
-      .eq("id", projectId)
-      .eq("user_id", ownerId)
-      .is("deleted_at", null)
-      .maybeSingle();
-    if (currentProjectError) return { kind: "db-error" };
-    if (!currentProject) return { kind: "not-found" };
-    const currentType = (currentProject as { type: string }).type;
-
-    if (currentType === requestedType) {
-      typeConfirmed = true;
-    } else if (currentType !== "undecided") {
-      return { kind: "invalid-type-change" };
-    } else {
-      const confirmation = await confirmNatoriProjectTypeViaRpc({
-        ownerId,
-        projectId,
-        projectType: requestedType,
-      });
-      switch (confirmation.kind) {
-        case "confirmed":
-        case "already-confirmed":
-          typeConfirmed = true;
-          break;
-        case "not-found":
-          return { kind: "not-found" };
-        case "conflict":
-        case "invalid-type":
-          return { kind: "invalid-type-change" };
-        case "db-error":
-          return { kind: "db-error" };
-      }
-    }
-  }
-
-  const update: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(patch)) {
-    if (NATORI_PROJECT_DETAILS_ALLOWED_FIELDS.has(key)) update[key] = value;
-  }
-  if (Object.keys(update).length === 0) {
-    if (typeConfirmed) return { kind: "ok" };
-    return { kind: "no-editable-fields" };
-  }
-
-  const { data, error } = await admin
-    .from("natori_projects")
-    .update(update)
-    .eq("id", projectId)
-    .eq("user_id", ownerId)
-    .is("deleted_at", null)
-    .select("id")
-    .maybeSingle();
-
-  if (error) {
-    console.error("[natori-admin-projects] details update failed", error);
-    return { kind: "db-error" };
-  }
-  if (!data) return { kind: "not-found" };
-  return { kind: "ok" };
+  const { data, error } = await supabaseAdmin().rpc("natori_edit_project_v1", {
+    p_owner: ownerId, p_project: projectId, p_expected_revision: expectedRevision as number,
+    p_patch: patch as Json, p_next_action: nextAction ?? null,
+  });
+  if (error) { console.error("[natori-admin-projects] atomic edit failed", error); return { kind: "db-error" }; }
+  const parsed = z.object({ result: z.string(), project: z.unknown().optional() }).safeParse(data);
+  if (!parsed.success) return { kind: "db-error" };
+  const result = parsed.data;
+  if (result.result === "not_found") return { kind: "not-found" };
+  if (result.result === "edit_conflict") return { kind: "edit-conflict" };
+  if (result.result === "invalid_type") return { kind: "invalid-type-change" };
+  if (result.result === "invalid_next_action") return { kind: "invalid-next-action" };
+  const project = taskProjectionSchema.safeParse(result.project);
+  if (result.result !== "applied" || !project.success || project.data.id !== projectId) return { kind: "db-error" };
+  return { kind: "ok", project: project.data };
 }
 
 /**
@@ -751,7 +704,7 @@ export async function closeNatoriProject(
 
   const { data: current, error: fetchErr } = await admin
     .from("natori_projects")
-    .select("id, note, status")
+    .select("id, status")
     .eq("id", projectId)
     .eq("user_id", ownerId)
     .is("deleted_at", null)
@@ -767,27 +720,11 @@ export async function closeNatoriProject(
     return { kind: "invalid-transition", from: fromStatus, to: "closed" };
   }
 
-  const update: Record<string, unknown> = {
-    status: "closed",
-    next_action: "",
-  };
   const trimmedReason = reason.trim();
-  if (trimmedReason) {
-    const today = new Date().toISOString().slice(0, 10);
-    const existingNote = (current as { note: string | null }).note ?? "";
-    const entry = `【見送り ${today}】${trimmedReason}`;
-    update.note = existingNote ? `${existingNote}\n\n${entry}` : entry;
-  }
-
-  const { data, error } = await admin
-    .from("natori_projects")
-    .update(update)
-    .eq("id", projectId)
-    .eq("user_id", ownerId)
-    .is("deleted_at", null)
-    .eq("status", fromStatus)
-    .select("id")
-    .maybeSingle();
+  const entry = trimmedReason ? `【見送り ${new Date().toISOString().slice(0, 10)}】${trimmedReason}` : "";
+  const { data, error } = await admin.rpc("natori_close_project_with_note_v1", {
+    p_owner: ownerId, p_project: projectId, p_from_status: fromStatus, p_entry: entry,
+  });
   if (error) {
     console.error("[natori-admin-projects] close failed", error);
     return { kind: "db-error" };

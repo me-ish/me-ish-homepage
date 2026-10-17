@@ -6,7 +6,7 @@ const statuses = z.enum(["inquiry", "estimating", "consulting", "quoted", "await
 export const taskProjectionSchema = z.object({
   id: z.uuid(), status: statuses, nextAction: z.string(),
   title: z.string(), clientName: z.string(), clientEmail: z.string().nullable(),
-  amount: z.number().nullable(), type: z.string(), deliveryPlan: z.string(),
+  amount: z.number().nullable(), type: z.string(), deliveryPlan: z.enum(["normal", "rush_14_days", "rush_7_days"]),
   priority: z.string().nullable(), startDate: z.string().nullable(), dueDate: z.string().nullable(),
   createdAt: z.string(), note: z.string().nullable(), requestData: z.json().nullable(),
   mutationRevision: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),

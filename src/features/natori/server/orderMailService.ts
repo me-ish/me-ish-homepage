@@ -17,7 +17,6 @@ import { getSiteUrl } from "@/lib/constants";
 import {
   QUOTE_VALID_DAYS,
   ROUGH_LINK_VALID_DAYS,
-  buildOrderMailLogEntry,
   buildPaidConfirmationMail,
   injectAcceptLink,
   injectFilesLinks,
@@ -90,9 +89,7 @@ async function fetchProjectRow(
   return (data as ProjectRow | null) ?? null;
 }
 
-function appendNote(note: string | null, entry: string): string {
-  return note ? `${note}\n\n${entry}` : entry;
-}
+
 
 async function sendPlainMail(to: string, subject: string, body: string): Promise<boolean> {
   const resend = new Resend(RESEND_API_KEY);
@@ -543,15 +540,12 @@ export async function sendNatoriOrderMail(
     .update({ status: "sent", sent_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("request_id", requestId);
 
-  // 送信後の案件更新（金額・宛先・ステータス・履歴メモ）。メールは送れて
+  // 送信後の案件更新（金額・宛先・ステータス）。履歴はactivity/logに残す。メールは送れて
   // いるので、ここで失敗しても呼び出し側には db-error として伝えるだけに留める。
-  const today = new Date().toISOString().slice(0, 10);
-  const logEntry = buildOrderMailLogEntry(input.kind, today, input.to, input.amount, paymentLinkUrl);
   const nextStatus = NEXT_STATUS[input.kind];
   const update: Record<string, unknown> = {
     // 実際に送った宛先を正とする（手入力案件や宛先修正もここで反映される）
     client_email: input.to,
-    note: appendNote(project.note, logEntry),
   };
   // 金額の更新は金額を連絡するメールのみ（ラフ提出・納品では触らない）
   if (input.kind === "estimate" || input.kind === "payment") {
