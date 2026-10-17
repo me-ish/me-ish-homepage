@@ -306,27 +306,39 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
         </div>
       )}
 
-      {/* 追加オプション */}
-      <div
-        className="mx-auto mt-8 max-w-3xl rounded-2xl p-4 sm:mt-12 sm:p-6 md:p-8"
-        style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
-      >
-        <h3 className="mb-3 text-lg font-black md:mb-4 md:text-xl">追加オプション</h3>
-        <ul className="divide-y" style={{ borderColor: c.borderSubtle }}>
-          {content.options.map((option, index) => (
-            <li
-              key={option.id ?? `legacy-option-${index}`}
-              className="flex items-baseline justify-between gap-4 py-2 text-sm md:py-2.5 md:text-base"
-              style={{ borderColor: c.borderSubtle }}
-            >
-              <span style={{ color: c.textSoft }}>{option.name}</span>
-              <span className="shrink-0 font-bold" style={{ color: c.text }}>
-                {option.price}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {/* 追加オプション。一覧は畳み、見出しに代表的な名前だけ出す */}
+      {content.options.length > 0 ? (
+        <details
+          className="group mx-auto mt-8 max-w-3xl rounded-2xl sm:mt-12"
+          style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
+        >
+          <summary className="pf-cute-focus flex min-h-[48px] cursor-pointer list-none items-center gap-3 rounded-2xl px-4 py-3 sm:px-6 md:px-8 md:py-4 [&::-webkit-details-marker]:hidden">
+            <div className="min-w-0 flex-1">
+              <h3 className="inline text-lg font-black md:text-xl">追加オプション</h3>
+              <span className="ml-2 text-[13px]" style={{ color: c.textSoft }}>{optionsHint(content.options)}</span>
+            </div>
+            <ChevronDown
+              aria-hidden="true"
+              className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none"
+              style={{ color: c.textSoft }}
+            />
+          </summary>
+          <ul className="divide-y px-4 pb-3 sm:px-6 md:px-8 md:pb-5" style={{ borderColor: c.borderSubtle }}>
+            {content.options.map((option, index) => (
+              <li
+                key={option.id ?? `legacy-option-${index}`}
+                className="flex items-baseline justify-between gap-4 py-2 text-sm md:py-2.5 md:text-base"
+                style={{ borderColor: c.borderSubtle }}
+              >
+                <span style={{ color: c.textSoft }}>{option.name}</span>
+                <span className="shrink-0 font-bold" style={{ color: c.text }}>
+                  {option.price}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
 
       {/* 料金の補足は表の下に畳んでおき、読みたい人だけ開く。補足が増えてもここにまとめる */}
       {content.options.some((option) => option.id === PORTFOLIO_OPTION_IDS.sampleUsageDenied || option.id === PORTFOLIO_OPTION_IDS.privateWork) ? (
@@ -359,4 +371,9 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
       </p>
     </section>
   );
+}
+
+/** 畳んだ追加オプションの見出し横に出す件数。名前は長いものがあるので出さない。 */
+function optionsHint(options: PortfolioContent["options"]): string {
+  return `全${options.length}件`;
 }

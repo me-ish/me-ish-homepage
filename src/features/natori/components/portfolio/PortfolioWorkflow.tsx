@@ -79,27 +79,36 @@ export default function PortfolioWorkflow({ content }: { content: PortfolioDispl
   );
 }
 
-/** 各ステップは短い説明だけを見せ、全文は「くわしく」で開く。文面は削らない。 */
+/**
+ * 各ステップは短い説明だけを見せ、全文はカードを押すと開く。文面は削らない。
+ * 開く合図は説明の最終行の末尾に↓だけ置き、専用の行を増やさない。
+ */
 function WorkflowStepCard({ title, body }: { title: string; body: string }) {
   const { lead, detail } = workflowStepView({ title, body });
+  if (!detail) {
+    return (
+      <div className="min-w-0 flex-1 rounded-2xl p-4 md:p-5" style={cardStyle}>
+        <p className="mb-1 font-bold">{title}</p>
+        <p className="text-sm leading-relaxed" style={{ color: c.textSoft }}>
+          {lead}
+        </p>
+      </div>
+    );
+  }
   return (
-    <div className="min-w-0 flex-1 rounded-2xl p-4 md:p-5" style={cardStyle}>
-      <p className="mb-1 font-bold">{title}</p>
-      <p className="text-sm leading-relaxed" style={{ color: c.textSoft }}>
-        {lead}
-      </p>
-      {detail ? (
-        <details className="group mt-1 text-sm leading-relaxed" style={{ color: c.textSoft }}>
-          <summary
-            className="pf-cute-focus inline-flex min-h-[44px] cursor-pointer list-none items-center gap-1 rounded-md font-bold [&::-webkit-details-marker]:hidden"
+    <details className="group min-w-0 flex-1 rounded-2xl" style={cardStyle}>
+      <summary className="pf-cute-focus block cursor-pointer list-none rounded-2xl p-4 md:p-5 [&::-webkit-details-marker]:hidden">
+        <p className="mb-1 font-bold">{title}</p>
+        <p className="text-sm leading-relaxed" style={{ color: c.textSoft }}>
+          <span className="group-open:hidden">{lead}</span>
+          <span className="hidden group-open:inline">{detail}</span>
+          <ChevronDown
+            aria-hidden="true"
+            className="ml-1 inline-block h-4 w-4 align-[-3px] transition-transform group-open:rotate-180 motion-reduce:transition-none"
             style={{ color: c.actionTextSmall }}
-          >
-            くわしく
-            <ChevronDown aria-hidden="true" className="h-4 w-4 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
-          </summary>
-          <p>{detail}</p>
-        </details>
-      ) : null}
-    </div>
+          />
+        </p>
+      </summary>
+    </details>
   );
 }
