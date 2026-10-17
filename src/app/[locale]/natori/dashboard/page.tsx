@@ -31,6 +31,7 @@ import PageEventsPanel from "@/features/natori/components/dashboard/PageEventsPa
 import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
 import { NatoriPageShell } from "@/features/natori/components/admin/NatoriPageShell";
 import type { NatoriProject } from "@/features/natori/types/projects";
+import { useRefreshOnResume } from "@/features/natori/components/admin/useRefreshOnResume";
 
 type PublicPageCard = {
   title: string;
@@ -113,6 +114,8 @@ export default function NatoriDashboardPage() {
       sub.subscription.unsubscribe();
     };
   }, [refresh]);
+
+  useRefreshOnResume(refresh, () => setError("案件情報を更新できませんでした。もう一度更新してください。"));
 
   const handleLogout = async () => {
     setSigningOut(true);

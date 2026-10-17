@@ -10,6 +10,7 @@ import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
 import { useOptionalNatoriToast } from "@/features/natori/components/admin/NatoriToast";
 import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
+import { useRefreshOnResume } from "@/features/natori/components/admin/useRefreshOnResume";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown, Inbox, Info, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -190,6 +191,11 @@ export default function InquiriesBoard({ demoProjects, demoArtistName }: Inquiri
     const data = await fetchNatoriProjectCollection();
     setProjects([...data.projects, ...data.archivedProjects]);
   }, []);
+
+  useRefreshOnResume(async () => {
+    await reload();
+    setError(null);
+  }, () => setError("返信状況を更新できませんでした。状態を更新してください。"), !isDemo);
 
   useEffect(() => {
     let active = true;
