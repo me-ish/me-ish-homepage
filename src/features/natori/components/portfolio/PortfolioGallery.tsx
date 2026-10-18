@@ -553,7 +553,7 @@ function PortfolioWorkCard({
   work: PortfolioWork;
   index: number;
   collection: PortfolioCollection;
-  /** 一覧の先頭。大きく見せて「PICK UP」を添える */
+  /** 一覧の先頭。大きく見せる */
   pickup: boolean;
   flatPlaceholder?: boolean;
   onSelect: (work: PortfolioWork, collectionName: string, trigger: HTMLButtonElement) => void;
@@ -579,15 +579,6 @@ function PortfolioWorkCard({
       }}
     >
       <MaskingTape color={collection.color} angle={tapeAngle} large={pickup} />
-      {pickup ? (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute left-4 top-6 z-10 rounded-full px-3 py-1 text-[13px] font-semibold tracking-[0.16em] sm:left-5 sm:top-7"
-          style={{ ...fontEnStyle, background: c.pageTranslucent, color: c.actionTextSmall }}
-        >
-          PICK UP
-        </span>
-      ) : null}
       <button
         type="button"
         data-work-id={work.id}

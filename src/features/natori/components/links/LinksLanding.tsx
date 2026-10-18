@@ -154,9 +154,7 @@ export default function LinksLanding({
                 target={lk.href.startsWith("/") ? undefined : "_blank"}
                 rel={lk.href.startsWith("/") ? undefined : "noopener noreferrer"}
                 onClick={() => trackNatoriPageEvent("links_click", lk.label)}
-                className={`group flex items-center gap-4 rounded-2xl px-5 py-4 shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400${
-                  i === 0 ? " ring-2 ring-[#BE185D]" : ""
-                }`}
+                className="group flex items-center gap-4 rounded-2xl px-5 py-4 shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
                 style={{
                   background: "#ffffff",
                   border: "1px solid #ffffff",
@@ -175,11 +173,6 @@ export default function LinksLanding({
                   <div className="truncate text-sm font-bold text-pink-900/90">{lk.label}</div>
                   {lk.sub ? (
                     <div className="truncate text-xs text-[#9D174D]">{lk.sub}</div>
-                  ) : null}
-                  {i === 0 ? (
-                    <span className="mt-1 inline-block rounded-full bg-[#BE185D] px-2 text-xs font-bold text-white">
-                      おすすめ
-                    </span>
                   ) : null}
                   {lk.href.startsWith("/") ? null : (
                     <span className="sr-only">（新しいタブで開きます）</span>

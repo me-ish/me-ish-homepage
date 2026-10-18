@@ -360,7 +360,7 @@ describe("PortfolioGallery pick-up and lightbox browsing", () => {
   const withImage = (id: string, options: Partial<PortfolioWork> = {}) =>
     work(id, { image: `https://example.com/${id}.webp`, ...options });
 
-  it("先頭の1枚をピックアップとして大きく見せ、2枚目以降は通常の大きさにして、どのカードも傾けない", () => {
+  it("先頭の大きさを保ちつつPICK UPラベルは表示せず、2枚目以降は通常の大きさでどのカードも傾けない", () => {
     render(
       <PortfolioGallery
         collections={collections}
@@ -371,7 +371,7 @@ describe("PortfolioGallery pick-up and lightbox browsing", () => {
     const cards = Array.from(document.querySelectorAll("#portfolio-gallery-results .pf-pin-card"));
     expect(cards).toHaveLength(3);
     expect(cards[0].className).toContain("col-span-2 lg:col-span-4 lg:row-span-2");
-    expect(cards[0].textContent).toContain("PICK UP");
+    expect(cards[0].textContent).not.toContain("PICK UP");
     expect(cards[1].className).toContain("lg:col-span-2");
     expect(cards[1].className).not.toContain("lg:row-span-2");
     expect(cards[1].textContent).not.toContain("PICK UP");
