@@ -25,7 +25,10 @@ Order:
    HTTP mode, and 50MB (50,000,000 bytes) size caps. The pinned CLI otherwise returns an upstream TUS host
    after the sealed network move. No client URL rewriting or broader egress rule is used.
    `fixture.sql` matches the previously read production delivery table constraints; only the
-   Phase 1 migration is added. No full migration history or production seed is executed.
+   Phase 1 migration and the PAY-04 extension dependency are added. The current resend service
+   must successfully read extension history even when it is empty. The legacy Phase 1 assertions
+   remain unchanged; Q01's latest locked RPC is covered separately by PAY-04 native acceptance.
+   No full migration history or production seed is executed.
    The disposable browser shell uses system fonts: `prepare-browser.mjs` replaces only the
    reviewed Google Fonts `@import` in its copied `globals.css`. All application CSS rules,
    management/customer components, refreshes and API calls remain intact. Original and fixture
