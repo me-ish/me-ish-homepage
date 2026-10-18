@@ -52,7 +52,13 @@ it("rechecks target ownership after Storage returns so a reassignment cannot rel
 });
 it("uses authenticated legacy compatibility only on an actual not-found, and rechecks its ownership", async () => {
   mocks.download.mockResolvedValueOnce({
-    error: { statusCode: "404" },
+    error: {
+      name: "StorageUnknownError",
+      originalError: new Response(
+        JSON.stringify({ statusCode: "404", code: "NoSuchKey" }),
+        { status: 400 },
+      ),
+    },
     data: null,
   });
   mocks.project
