@@ -13,9 +13,10 @@ import type { ConsultationMessage, StaffRoughOk } from "@/features/natori/types/
 import { roughSignature } from "@/features/natori/lib/roughSignature";
 import { roughOkSignature, staffRoughOkListSchema } from "@/features/natori/lib/roughFollowup";
 import RoughOkFollowups from "./RoughOkFollowups";
+import { consultationMessageAnchor } from "@/features/natori/lib/consultationMessageAnchor";
 
 type Props =
-  | { mode: "staff"; projectId: string; clientEmail?: string; standalone?: boolean; initialMessages?: never; token?: never; closed?: boolean; onChanged?: () => void; onDraftChange?: (hasDraft: boolean) => void }
+  | { mode: "staff"; projectId: string; clientEmail?: string; standalone?: boolean; active?: boolean; initialMessages?: never; token?: never; closed?: boolean; onChanged?: () => void; onDraftChange?: (hasDraft: boolean) => void }
   | { mode: "client"; token: string; initialMessages: ConsultationMessage[]; closed: boolean; projectId?: never; clientEmail?: never };
 
 type ComposerJob = { actor: string; generation: number };
@@ -142,6 +143,11 @@ export default function ConsultationThread(props: Props) {
   const followAfterRender = useRef(false);
   const polling = useRef(false);
   const changed = props.mode === "staff" ? props.onChanged : undefined;
+  const changedRef = useRef(changed);
+  changedRef.current = changed;
+  const active = props.mode === "client" || props.active !== false;
+  const activeRef = useRef(active);
+  activeRef.current = active;
   const onDraftChange = props.mode === "staff" ? props.onDraftChange : undefined;
   const fileRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
@@ -158,8 +164,28 @@ export default function ConsultationThread(props: Props) {
       if (!response.ok) throw new Error("相談履歴を読み込めませんでした。リンクが有効か確認して、もう一度更新してください。");
       const data = await response.json() as { messages: ConsultationMessage[]; closed?: boolean; roughOks?: unknown; roughOkSendingEnabled?: unknown; roughOkActionsAllowed?: unknown };
       if (!ownsRead()) return false;
+      // The retained thread may have been hidden while this read was in flight.
+      // Leave its baseline unchanged so reopening refreshes the parent then,
+      // rather than replacing the project-detail editor in the background.
+      if (!afterSaved && !activeRef.current) {
+        lastRefresh.current = 0;
+        return false;
+      }
       if (!Array.isArray(data.messages)) throw new Error("相談履歴を読み込めませんでした");
-      const arrived = historyLoaded.current && data.messages.some(message => !knownMessages.current.has(message.id));
+      const hadHistory = historyLoaded.current;
+      const arrived = hadHistory && data.messages.some(message => !knownMessages.current.has(message.id));
+      // Keep the parent reply-waiting projection in sync on timer, manual and
+      // focus refreshes. A callback identity change must not restart this reader.
+      let projectionChanged = hadHistory && (
+        data.messages.length !== messagesRef.current.length
+        || data.messages.some((message, index) => {
+          const previous = messagesRef.current[index];
+          return message.id !== previous?.id || message.sender !== previous.sender
+            || message.notificationStatus !== previous.notificationStatus
+            || message.rough?.id !== previous.rough?.id || message.rough?.okAt !== previous.rough?.okAt;
+        })
+        || (typeof data.closed === "boolean" && data.closed !== closedRef.current)
+      );
       if (arrived && follow) { followAfterRender.current = true; setNewMessages(false); }
       else if (arrived) setNewMessages(true);
       historyLoaded.current = true;
@@ -167,13 +193,20 @@ export default function ConsultationThread(props: Props) {
       setMessages(data.messages);
       if (props.mode === "staff") {
         const parsed = staffRoughOkListSchema.safeParse(data.roughOks);
-        setRoughOks(parsed.success ? parsed.data : null);
+        const nextRoughOks = parsed.success ? parsed.data : null;
+        projectionChanged ||= hadHistory && (
+          (nextRoughOks === null) !== (roughOksRef.current === null)
+          || (nextRoughOks !== null && roughOksRef.current !== null
+            && roughOkSignature(nextRoughOks) !== roughOkSignature(roughOksRef.current))
+        );
+        setRoughOks(nextRoughOks);
         setRoughOkSendingEnabled(data.roughOkSendingEnabled === true);
         setRoughOkActionsAllowed(parsed.success && data.roughOkActionsAllowed === true);
       }
       if (typeof data.closed === "boolean") setClosed(data.closed);
       setHistoryUnavailable(false);
       setError("");
+      if (projectionChanged && !afterSaved) changedRef.current?.();
       return true;
     } catch (error) {
       if (!ownsRead()) return false;
@@ -195,7 +228,7 @@ export default function ConsultationThread(props: Props) {
     mounted.current = true;
     void refresh();
     const resume = () => {
-      if (document.visibilityState === "visible" && Date.now() - lastRefresh.current > 1000) void refresh();
+      if (activeRef.current && document.visibilityState === "visible" && Date.now() - lastRefresh.current > 1000) void refresh();
     };
     window.addEventListener("focus", resume);
     window.addEventListener("pageshow", resume);
@@ -212,19 +245,24 @@ export default function ConsultationThread(props: Props) {
     };
   }, [refresh]);
 
+  useEffect(() => {
+    if (active && mounted.current && Date.now() - lastRefresh.current > 1000
+      && !busyOwner.current && !currentPending.current) void refresh();
+  }, [active, refresh]);
 
   // Open, visible threads ask a cheap "what changed" endpoint and reload only on a
   // difference. Failures here stay silent: the manual button and the focus refresh
   // remain the places where a load problem is shown.
   useEffect(() => {
     const tick = async () => {
-      if (document.visibilityState !== "visible" || polling.current) return;
+      if (!activeRef.current || document.visibilityState !== "visible" || polling.current) return;
       if (busyOwner.current || currentPending.current || !historyLoaded.current) return;
       polling.current = true;
       try {
         const response = await fetch(probeEndpoint, { cache: "no-store" });
-        if (!response.ok || !mounted.current || currentActor.current !== actorKey || busyOwner.current || currentPending.current) return;
+        if (!response.ok || !activeRef.current || !mounted.current || currentActor.current !== actorKey || busyOwner.current || currentPending.current) return;
         const probe = await response.json() as Partial<Probe>;
+        if (!activeRef.current) return;
         const last = lastMessageRef.current;
         const known = knownMessages.current;
         const different = typeof probe.count === "number" && (probe.count !== known.size || (probe.lastId !== null && probe.lastId !== undefined && !known.has(probe.lastId)));
@@ -233,14 +271,14 @@ export default function ConsultationThread(props: Props) {
         const roughOksChanged = props.mode === "staff" && (probe.roughOks === null || (typeof probe.roughOks === "string" && probe.roughOks !== (roughOksRef.current === null ? null : roughOkSignature(roughOksRef.current))));
         if (!different && !closedChanged && !roughsChanged && !roughOksChanged) return;
         const nearBottom = !last || last.getBoundingClientRect().bottom <= window.innerHeight + FOLLOW_SLACK_PX;
-        if (await reload(false, nearBottom) && roughOksChanged) changed?.();
+        await reload(false, nearBottom);
       } catch { /* Silent: the next tick or a manual refresh retries. */ } finally {
         polling.current = false;
       }
     };
     const timer = window.setInterval(() => void tick(), POLL_MS);
     return () => window.clearInterval(timer);
-  }, [probeEndpoint, actorKey, reload, props.mode, changed]);
+  }, [probeEndpoint, actorKey, reload, props.mode]);
 
   useEffect(() => {
     if (!followAfterRender.current) return;
@@ -264,8 +302,17 @@ export default function ConsultationThread(props: Props) {
   const actor=props.mode==="staff"?{projectId:props.projectId}:{token:props.token};
   const [draftFiles,setDraftFiles]=useState<{id:string;file:File}[]>([]);
   const hasDraft = body.trim() !== "" || draftFiles.length > 0;
-  useEffect(() => { onDraftChange?.(hasDraft); }, [hasDraft, onDraftChange]);
   const [pending,setPending]=useState<ConsultationOperation|null>(null);
+  useEffect(() => { onDraftChange?.(hasDraft || Boolean(pending) || busy); }, [hasDraft, pending, busy, onDraftChange]);
+  useEffect(() => {
+    if (!hasDraft && !pending && !busy) return;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [hasDraft, pending, busy]);
   const [cacheReady,setCacheReady]=useState(false);
   const [noticeExpired,setNoticeExpired]=useState(false);
   const cachedPendingMatches = (operation: ConsultationOperation) => {
@@ -462,7 +509,7 @@ export default function ConsultationThread(props: Props) {
       if (!response.ok || !result || typeof result !== "object" || !("ok" in result) || result.ok !== true || !("roughId" in result) || result.roughId !== roughId) throw new Error("ラフOKの操作結果を確認できません。履歴を更新して確認してください。");
       setNotice(action === "acknowledge" ? "このラフOKの次の対応を確認済みにしました。依頼者のOK記録は保持されています。" : "このラフOKのメールを再試行しました。通知の状態を確認してください。");
       changed?.();
-      await reload();
+      await reload(true);
     } catch (err) {
       if (ownsBusy(job)) setError(err instanceof Error ? err.message : "ラフOKの操作結果を確認できません。");
     } finally { releaseBusy(job); }
@@ -492,7 +539,7 @@ export default function ConsultationThread(props: Props) {
           {messages.map((message, index) => {
             const own = props.mode === "client" ? message.sender === "client" : message.sender === "staff";
             return (
-              <li id={`consultation-message-${message.id}`} key={message.id} ref={index === messages.length - 1 ? lastMessageRef : undefined} tabIndex={-1} className={`flex flex-col rounded-2xl ${natoriClientUi.focus} ${own ? "items-end" : "items-start"}`}>
+              <li id={consultationMessageAnchor(message.id)} key={message.id} ref={index === messages.length - 1 ? lastMessageRef : undefined} tabIndex={-1} className={`flex scroll-mt-24 flex-col rounded-2xl target:ring-2 target:ring-[#EC4899] ${natoriClientUi.focus} ${own ? "items-end" : "items-start"}`}>
                 <p className={`mb-1 px-1 ${t.meta}`}>{message.sender === "staff" ? "ナトリ" : "依頼者"} · {dateTime(message.createdAt)}</p>
                 <div className={`min-w-0 max-w-[88%] px-4 py-3 sm:max-w-[80%] ${own ? t.own : t.other}`}>
                   <p className={`whitespace-pre-wrap break-words ${t.body}`}>{renderText(message.body)}</p>

@@ -1,11 +1,12 @@
 import {readFileSync,writeFileSync} from 'node:fs';
+import {reviewedIntakeParts} from '../natori-q03/fixture-prerequisites.mjs';
 const migration='supabase/migrations/20261001223805_natori_task_integrity.sql';
 const aliasPreflight=readFileSync('scripts/natori-phase-6a/alias-preflight.sql','utf8');
 const guard=`do $$ begin
  if current_setting('phase_t.sandbox',true) is distinct from 'ephemeral' then raise exception 'Sandbox required'; end if;
 end $$;
 `;
-writeFileSync(process.argv[2],guard+readFileSync(migration,'utf8')+'\n'+aliasPreflight+`
+writeFileSync(process.argv[2],guard+readFileSync(migration,'utf8')+'\n'+reviewedIntakeParts().prerequisites+'\n'+readFileSync('supabase/migrations/20261017123933_natori_edit_conflict_protection.sql','utf8')+'\n'+aliasPreflight+`
 -- Synthetic-only deterministic transaction controls, never product SQL.
 create function public.phase6a_update_and_hold_v1(p_owner uuid,p_project uuid,p_task_key text,p_done boolean,p_seconds double precision) returns jsonb
 language plpgsql security invoker set search_path='' as $$

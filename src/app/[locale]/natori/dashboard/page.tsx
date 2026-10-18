@@ -1,7 +1,9 @@
 "use client";
 
+import { useRevisionedEdit } from "@/features/natori/components/dashboard/useRevisionedEdit";
+import EditConflictReview from "@/features/natori/components/dashboard/EditConflictReview";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -31,6 +33,8 @@ import PageEventsPanel from "@/features/natori/components/dashboard/PageEventsPa
 import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
 import { NatoriPageShell } from "@/features/natori/components/admin/NatoriPageShell";
 import type { NatoriProject } from "@/features/natori/types/projects";
+import { useRefreshOnResume } from "@/features/natori/components/admin/useRefreshOnResume";
+import { mergeProjectCollection } from "@/features/natori/lib/taskProjection";
 
 type PublicPageCard = {
   title: string;
@@ -62,15 +66,39 @@ const PUBLIC_PAGE_CARDS: PublicPageCard[] = [
 
 
 export default function NatoriDashboardPage() {
+  const generation = useRef(0);
+  const projectRequest = useRef(0);
+  const profileRequest = useRef(0);
+  const signingOutRef = useRef(false);
+  const renderedGeneration = generation.current;
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [profile, setProfile] = useState<NatoriUserProfile | null>(null);
-  const [projects, setProjects] = useState<NatoriProject[] | null>(null);
+  const [profile, setProfile] = useState<NatoriUserProfile | null | undefined>(undefined);
   const [allProjects, setAllProjects] = useState<NatoriProject[] | null>(null);
+  const projects = useMemo(() => allProjects?.filter(project => !project.deletedAt) ?? null, [allProjects]);
+
+  const refreshProjectCollection = useCallback(async () => {
+    if (signingOutRef.current) return;
+    const requestedGeneration = generation.current;
+    const request = ++projectRequest.current;
+    const isCurrent = () => requestedGeneration === generation.current && request === projectRequest.current;
+    try {
+      const collection = await fetchNatoriProjectCollection();
+      if (!isCurrent()) return;
+      setAllProjects(current => mergeProjectCollection(current ?? [], [...collection.projects, ...collection.archivedProjects]));
+      setError(null);
+    } catch {
+      if (isCurrent()) setError("案件情報を更新できませんでした。もう一度更新してください。");
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
+    if (signingOutRef.current) return;
+    const requestedGeneration = generation.current;
+    const request = ++profileRequest.current;
+    const isCurrent = () => requestedGeneration === generation.current && request === profileRequest.current;
     try {
       // セッションが無いのは正常系（合言葉キーでのアクセス）。エラー表示は
       // しない。プロフィールは認可込みのサーバー API から取得する。
@@ -78,54 +106,65 @@ export default function NatoriDashboardPage() {
       const { data } = await supabase.auth.getUser().catch(() => ({
         data: { user: null },
       }));
+      if (!isCurrent()) return;
       setEmail(data.user?.email ?? null);
       try {
         const p = await fetchOwnNatoriProfile();
-        setProfile(p);
+        if (!isCurrent()) return;
+        setProfile(current => current && (!p || current.mutationRevision > p.mutationRevision) ? current : p);
       } catch (err) {
+        if (!isCurrent()) return;
         console.error("[dashboard] profile fetch failed", err);
       }
-      try {
-        const collection = await fetchNatoriProjectCollection();
-        setProjects(collection.projects);
-        setAllProjects([...collection.projects, ...collection.archivedProjects]);
-      } catch (err) {
-        console.error("[dashboard] inquiry count fetch failed", err);
-        setAllProjects(null);
-        setProjects(null);
-      }
+      if (!isCurrent()) return;
+      await refreshProjectCollection();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (isCurrent()) setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, []);
+  }, [refreshProjectCollection]);
 
   useEffect(() => {
     refresh();
     const supabase = createClient();
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        generation.current += 1;
+        setProfile(undefined);
+        setError(null);
+        setLoading(false);
+      }
       // プロフィールはセッションの有無に依らずサーバー API から取れるので、
       // ここではログイン表示用の email だけ追従させる。
       setEmail(session?.user.email ?? null);
     });
     return () => {
+      generation.current += 1;
       sub.subscription.unsubscribe();
     };
   }, [refresh]);
 
+  // Profile settings can contain unsaved edits; resume refreshes only the
+  // project summaries, never the profile object that initializes those inputs.
+  useRefreshOnResume(refreshProjectCollection, () => {}, !signingOut);
+
   const handleLogout = async () => {
+    generation.current += 1;
+    signingOutRef.current = true;
     setSigningOut(true);
     setError(null);
     try {
       const supabase = createClient();
       const { error: signOutErr } = await supabase.auth.signOut();
       if (signOutErr) throw signOutErr;
+      generation.current += 1;
       setEmail(null);
-      setProfile(null);
+      setProfile(undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
+      signingOutRef.current = false;
       setSigningOut(false);
     }
   };
@@ -241,10 +280,10 @@ export default function NatoriDashboardPage() {
 
         <PageEventsPanel />
 
-        <ProfileSettingsPanel
+        {profile !== undefined ? <ProfileSettingsPanel
           profile={profile}
-          onSaved={(next) => setProfile(next)}
-        />
+          onSaved={(next) => { if (generation.current === renderedGeneration) setProfile(current => current && current.mutationRevision > next.mutationRevision ? current : next); }}
+        /> : <button type="button" className={natoriAdminUi.btnSecondary} onClick={() => void refresh()} disabled={loading}>{loading ? "プロフィールを読み込み中…" : "プロフィールを再取得"}</button>}
       </>
     </NatoriPageShell>
   );
@@ -258,50 +297,27 @@ function ProfileSettingsPanel({
   onSaved: (next: NatoriUserProfile) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [displayName, setDisplayName] = useState(profile?.displayName ?? "");
-  const [handle, setHandle] = useState(profile?.handle ?? "");
-  const [portfolioUrl, setPortfolioUrl] = useState(profile?.portfolioUrl ?? "");
-  const [linksUrl, setLinksUrl] = useState(profile?.linksUrl ?? "");
-  const [dailyCapacity, setDailyCapacity] = useState<string>(
-    profile?.dailyCapacityHours != null ? String(profile.dailyCapacityHours) : ""
-  );
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const profileValues = (value: NatoriUserProfile | null) => ({ displayName: value?.displayName ?? "", handle: value?.handle ?? "", portfolioUrl: value?.portfolioUrl ?? "", linksUrl: value?.linksUrl ?? "", dailyCapacity: value?.dailyCapacityHours != null ? String(value.dailyCapacityHours) : "" });
+  const session = useRevisionedEdit({ revision: profile?.mutationRevision ?? null, values: profileValues(profile) });
+  const { displayName, handle, portfolioUrl, linksUrl, dailyCapacity } = session.values;
+  const { saving, error } = session;
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    setDisplayName(profile?.displayName ?? "");
-    setHandle(profile?.handle ?? "");
-    setPortfolioUrl(profile?.portfolioUrl ?? "");
-    setLinksUrl(profile?.linksUrl ?? "");
-    setDailyCapacity(
-      profile?.dailyCapacityHours != null ? String(profile.dailyCapacityHours) : ""
-    );
-  }, [profile]);
-
   const handleSave = async () => {
-    setSaving(true);
-    setError(null);
+    const dailyNum = dailyCapacity.trim() === "" ? null : Number(dailyCapacity);
+    if (dailyNum !== null && (!Number.isFinite(dailyNum) || dailyNum < 0 || dailyNum > 24)) { session.setError("1日の作業時間は0〜24の範囲で入力してください。"); return; }
     setSaved(false);
-    try {
-      const dailyNum = dailyCapacity.trim() === "" ? null : Number(dailyCapacity);
-      if (dailyNum !== null && (!Number.isFinite(dailyNum) || dailyNum < 0 || dailyNum > 24)) {
-        throw new Error("1日の作業時間は0〜24の範囲で入力してください。");
-      }
-      const next = await upsertOwnNatoriProfile({
-        handle: handle.trim() || null,
-        displayName: displayName.trim() || null,
-        portfolioUrl: portfolioUrl.trim() || null,
-        linksUrl: linksUrl.trim() || null,
-        dailyCapacityHours: dailyNum,
-      });
+    const success = await session.save(async (changes, revision) => {
+      const patch: Parameters<typeof upsertOwnNatoriProfile>[0] = {};
+      if (changes.handle !== undefined) patch.handle = changes.handle.trim() || null;
+      if (changes.displayName !== undefined) patch.displayName = changes.displayName.trim() || null;
+      if (changes.portfolioUrl !== undefined) patch.portfolioUrl = changes.portfolioUrl.trim() || null;
+      if (changes.linksUrl !== undefined) patch.linksUrl = changes.linksUrl.trim() || null;
+      if (changes.dailyCapacity !== undefined) patch.dailyCapacityHours = dailyNum;
+      const next = await upsertOwnNatoriProfile(patch, revision);
       onSaved(next);
-      setSaved(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
-    }
+      return { revision: next.mutationRevision, values: profileValues(next) };
+    });
+    if (success) setSaved(true);
   };
 
   return (
@@ -333,14 +349,14 @@ function ProfileSettingsPanel({
 
       {open ? (
         <div className="border-t border-zinc-100 px-4 pb-4 pt-4 sm:px-5 sm:pb-5">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <fieldset disabled={saving || session.reading} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm">
               <span className={natoriAdminUi.label}>表示名</span>
               <input
                 type="text"
                 value={displayName}
                 onChange={(event) => {
-                  setDisplayName(event.target.value);
+                  session.setField("displayName", event.target.value);
                   setSaved(false);
                 }}
                 placeholder="例: ナトリ"
@@ -355,7 +371,7 @@ function ProfileSettingsPanel({
                 type="text"
                 value={handle}
                 onChange={(event) => {
-                  setHandle(event.target.value);
+                  session.setField("handle", event.target.value);
                   setSaved(false);
                 }}
                 placeholder="例: natori"
@@ -370,7 +386,7 @@ function ProfileSettingsPanel({
                 type="text"
                 value={portfolioUrl}
                 onChange={(event) => {
-                  setPortfolioUrl(event.target.value);
+                  session.setField("portfolioUrl", event.target.value);
                   setSaved(false);
                 }}
                 inputMode="url"
@@ -387,7 +403,7 @@ function ProfileSettingsPanel({
                 type="text"
                 value={linksUrl}
                 onChange={(event) => {
-                  setLinksUrl(event.target.value);
+                  session.setField("linksUrl", event.target.value);
                   setSaved(false);
                 }}
                 inputMode="url"
@@ -407,7 +423,7 @@ function ProfileSettingsPanel({
                 step="0.5"
                 value={dailyCapacity}
                 onChange={(event) => {
-                  setDailyCapacity(event.target.value);
+                  session.setField("dailyCapacity", event.target.value);
                   setSaved(false);
                 }}
                 placeholder="例: 5"
@@ -418,15 +434,16 @@ function ProfileSettingsPanel({
                 0〜24の範囲、0.5刻み
               </span>
             </label>
-          </div>
+          </fieldset>
 
+          {session.needsReview ? <EditConflictReview initial={session.initial.values} latest={session.latest?.values ?? null} current={session.values} labels={{ displayName: "表示名", handle: "ハンドル", portfolioUrl: "ポートフォリオのリンク先", linksUrl: "リンク集のリンク先", dailyCapacity: "1日の作業時間" }} reading={session.reading} onCompare={() => void session.compare(async () => { const latest = await fetchOwnNatoriProfile(); return { revision: latest?.mutationRevision ?? null, values: profileValues(latest) }; })} onAcknowledge={session.acknowledge} /> : null}
           {error ? <p className={`${natoriAdminUi.alert.error} mt-3`}>{error}</p> : null}
           {saved ? <p className={`${natoriAdminUi.alert.success} mt-3`}>保存しました。</p> : null}
 
           <div className="mt-4 flex flex-wrap justify-end gap-2">
             <Button
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || session.needsReview || session.reading}
               className={natoriAdminUi.btnPrimary}
             >
               {saving ? "保存中…" : "保存"}

@@ -3,6 +3,7 @@
 import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
 import { useOptionalNatoriToast } from "@/features/natori/components/admin/NatoriToast";
 import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
+import { type ProjectEditSnapshot } from "../../lib/editConflict";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { natoriProjectStatusMeta } from "@/features/natori/constants/mockProjects";
 import { canManuallyTransitionNatoriStatus } from "@/features/natori/lib/statusTransitions";
@@ -584,51 +585,18 @@ export default function ProjectsBoard({
     }
   };
 
-  const handleEditDetails = async (
-    project: NatoriProject,
-    patch: UpdateNatoriProjectDetailsInput
-  ) => {
-    // Apply optimistically so the card snaps to the new values; if the API
-    // rejects, the catch block below restores from Supabase by re-fetching.
-    setProjects((current) =>
-      current.map((entry) => {
-        if (entry.id !== project.id) return entry;
-        return {
-          ...entry,
-          ...(patch.clientName !== undefined ? { clientName: patch.clientName.trim() } : null),
-          ...(patch.title !== undefined ? { title: patch.title.trim() } : null),
-          ...(patch.type !== undefined ? { type: patch.type } : null),
-          ...(patch.amount !== undefined
-            ? { amount: patch.amount === null ? null : Math.max(0, patch.amount) }
-            : null),
-          ...(patch.deliveryPlan !== undefined ? { deliveryPlan: patch.deliveryPlan } : null),
-          ...(patch.startDate !== undefined
-            ? { startDate: patch.startDate ?? undefined }
-            : null),
-          ...(patch.dueDate !== undefined ? { dueDate: patch.dueDate } : null),
-          ...(patch.note !== undefined ? { note: patch.note ?? undefined } : null),
-        };
-      })
-    );
-
+  const handleEditDetails = async (project: NatoriProject, patch: UpdateNatoriProjectDetailsInput, expectedRevision?: number): Promise<ProjectEditSnapshot | void> => {
     if (dataSource !== "supabase") {
-      showToast("案件の変更を保存しました。");
-      return;
+      setProjects(current => current.map(entry => entry.id === project.id ? { ...entry, ...patch, startDate: patch.startDate === null ? undefined : patch.startDate ?? entry.startDate, note: patch.note === null ? undefined : patch.note ?? entry.note } : entry));
+      showToast("案件の変更を保存しました。"); return;
     }
-    try {
-      await updateNatoriProjectDetails(project.id, patch);
-      await loadFromSupabase();
-      showToast("案件の変更を保存しました。");
-    } catch (err) {
-      console.error("[ProjectsBoard] edit details failed", err);
-      // Re-sync from the server so the optimistic state doesn't drift.
-      try {
-        await loadFromSupabase();
-      } catch (reloadErr) {
-        console.error("[ProjectsBoard] reload after edit failure failed", reloadErr);
-      }
-      throw err;
-    }
+    const saved = await updateNatoriProjectDetails(project.id, patch, expectedRevision);
+    const current = canonicalProjects.current.get(project.id);
+    if (current) canonicalProjects.current.set(project.id, applyTaskProjection(current, saved));
+    publishCanonicalProjects();
+    if (patch.type !== undefined) void loadFromSupabase().catch(() => { /* The save already succeeded; preserve its snapshot. */ });
+    showToast("案件の変更を保存しました。");
+    return saved;
   };
 
   const handleCreateEvent = async (input: { title: string; date: string; note?: string }) => {

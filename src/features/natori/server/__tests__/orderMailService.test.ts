@@ -409,7 +409,9 @@ describe("sendNatoriOrderMail (estimate)", () => {
 
   it("不変な見積版とpendingログをメール前に保存し、成功後にsentへ進める", async () => {
     const { sendNatoriOrderMail } = await loadService();
-    const db = installDb(makeProjectRow());
+    const original = makeProjectRow();
+    const db = installDb(original);
+    mockSend.mockImplementationOnce(async () => { original.note = "Human note saved while mail was in flight"; return { error: null }; });
     const result = await sendNatoriOrderMail({
       projectId: "proj-1",
       kind: "estimate",
@@ -434,6 +436,8 @@ describe("sendNatoriOrderMail (estimate)", () => {
     expect(db.mailLogInserts[0]).toMatchObject({ status: "pending", quote_id: "quote-1", sent_at: null });
     expect(db.logsApi.insert.mock.invocationCallOrder[0]).toBeLessThan(mockSend.mock.invocationCallOrder[0]);
     expect(db.mailLogUpdates).toContainEqual(expect.objectContaining({ status: "sent" }));
+    expect(db.projectUpdates.every(update => !("note" in update))).toBe(true);
+    expect(original.note).toBe("Human note saved while mail was in flight");
     const mail = mockSend.mock.calls[0][0] as { text: string };
     expect(mail.text).toContain("/natori/quote/");
   });

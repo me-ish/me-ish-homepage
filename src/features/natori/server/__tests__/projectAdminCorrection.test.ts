@@ -11,18 +11,19 @@ vi.mock("@/features/natori/server/natoriManagementRoute", () => ({
 import { GET } from "@/app/api/natori/admin/projects/route";
 import { fetchNatoriProjectCollection } from "@/features/natori/data/supabaseProjects";
 
-const { mockAdminFrom, mockResolveOwner, mockConfirmRpc, mockSign, mockBulkLinks, mockSnapshot } =
+const { mockAdminFrom, mockResolveOwner, mockConfirmRpc, mockEditRpc, mockSign, mockBulkLinks, mockSnapshot } =
   vi.hoisted(() => ({
     mockAdminFrom: vi.fn(),
     mockResolveOwner: vi.fn(),
     mockConfirmRpc: vi.fn(),
+    mockEditRpc: vi.fn(),
     mockSign: vi.fn(),
     mockBulkLinks: vi.fn(),
     mockSnapshot: vi.fn(),
   }));
 
 vi.mock("@/lib/supabaseAdmin", () => ({
-  supabaseAdmin: vi.fn(() => ({ from: (...args: unknown[]) => mockAdminFrom(...args) })),
+  supabaseAdmin: vi.fn(() => ({ from: (...args: unknown[]) => mockAdminFrom(...args), rpc: (...args: unknown[]) => mockEditRpc(...args) })),
 }));
 
 vi.mock("@/features/natori/server/taskIntegrityService", () => ({
@@ -91,6 +92,7 @@ function projectsTable(options: {
 beforeEach(() => {
   vi.clearAllMocks();
   mockResolveOwner.mockResolvedValue(OWNER_ID);
+  mockEditRpc.mockResolvedValue({ data: { result: "applied", project: { id: PROJECT_ID, mutationRevision: 2, clientName: "Synthetic", title: "Synthetic", type: "icon", amount: 8000, deliveryPlan: "normal", startDate: null, dueDate: null, note: null, nextAction: "Review", status: "inquiry", clientEmail: null, priority: null, createdAt: "2026-10-17", requestData: null, tasks: [], paymentConfirmedAt: null, paidAt: null, paidAmount: null, completedAt: null, deliveryAcceptedAt: null, deliveredMailAt: null, deletedAt: null } }, error: null });
   mockSign.mockResolvedValue("https://signed.example.com/a.webp");
   mockBulkLinks.mockResolvedValue({ kind: "ok", value: [] });
 });
@@ -121,12 +123,13 @@ describe("request_data immutability", () => {
       amount: 8000,
       due_date: "2026-09-01",
       delivery_plan: "normal",
-    });
+    }, 1);
 
-    expect(updates).toHaveLength(1);
-    expect(updates[0]).not.toHaveProperty("request_data");
-    expect(updates[0]).not.toHaveProperty("note");
-    expect(updates[0]).toEqual({
+    expect(updates).toHaveLength(0);
+    const patch = mockEditRpc.mock.calls[0][1].p_patch;
+    expect(patch).not.toHaveProperty("request_data");
+    expect(patch).not.toHaveProperty("note");
+    expect(patch).toEqual({
       amount: 8000,
       due_date: "2026-09-01",
       delivery_plan: "normal",
@@ -220,8 +223,8 @@ describe("amount / due date の値契約", () => {
   it("timezone に関係なく同じ ISO 文字列を維持する", async () => {
     const updates: Record<string, unknown>[] = [];
     mockAdminFrom.mockReturnValue(projectsTable({ updates }));
-    await patchNatoriProjectDetails(PROJECT_ID, { due_date: "2026-01-01" });
-    expect(updates[0].due_date).toBe("2026-01-01");
+    await patchNatoriProjectDetails(PROJECT_ID, { due_date: "2026-01-01" }, 1);
+    expect(mockEditRpc.mock.calls[0][1].p_patch.due_date).toBe("2026-01-01");
   });
 
   it("不正な値は DB へ書かず invalid-value を返す", async () => {
@@ -243,9 +246,10 @@ describe("amount / due date の値契約", () => {
   it("amount null / 0 をそれぞれ保存できる", async () => {
     const updates: Record<string, unknown>[] = [];
     mockAdminFrom.mockReturnValue(projectsTable({ updates }));
-    await patchNatoriProjectDetails(PROJECT_ID, { amount: null });
-    await patchNatoriProjectDetails(PROJECT_ID, { amount: 0 });
-    expect(updates).toEqual([{ amount: null }, { amount: 0 }]);
+    await patchNatoriProjectDetails(PROJECT_ID, { amount: null }, 1);
+    await patchNatoriProjectDetails(PROJECT_ID, { amount: 0 }, 2);
+    expect(updates).toEqual([]);
+    expect(mockEditRpc.mock.calls.map(call => call[1].p_patch)).toEqual([{ amount: null }, { amount: 0 }]);
   });
 });
 
@@ -256,18 +260,19 @@ describe("owner scope / archive", () => {
     mockAdminFrom.mockReturnValue(projectsTable({ updates }));
 
     await expect(
-      patchNatoriProjectDetails(PROJECT_ID, { amount: 100 })
+      patchNatoriProjectDetails(PROJECT_ID, { amount: 100 }, 1)
     ).resolves.toEqual({ kind: "not-found" });
     expect(updates).toHaveLength(0);
   });
 
   it("archived / 他 owner の project は更新対象に一致せず not-found", async () => {
+    mockEditRpc.mockResolvedValue({ data: { result: "not_found" }, error: null });
     const updates: Record<string, unknown>[] = [];
     mockAdminFrom.mockReturnValue(
       projectsTable({ updates, updateResult: { data: null, error: null } })
     );
     await expect(
-      patchNatoriProjectDetails(PROJECT_ID, { amount: 100 })
+      patchNatoriProjectDetails(PROJECT_ID, { amount: 100 }, 1)
     ).resolves.toEqual({ kind: "not-found" });
   });
 });

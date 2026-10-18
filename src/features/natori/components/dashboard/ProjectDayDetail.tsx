@@ -9,6 +9,7 @@ import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import ProjectCard from "./ProjectCard";
 import PersonalEventsSection from "./PersonalEventsSection";
 import type { NatoriEvent } from "@/features/natori/data/supabaseEvents";
+import type { ProjectEditSnapshot } from "../../lib/editConflict";
 import type { UpdateNatoriProjectDetailsInput } from "@/features/natori/data/supabaseProjects";
 import type { NatoriProject } from "@/features/natori/types/projects";
 
@@ -43,8 +44,9 @@ type ProjectDayDetailProps = {
   onOpenMail?: (project: NatoriProject, kind: "rough" | "delivery") => void;
   onEditDetails?: (
     project: NatoriProject,
-    patch: UpdateNatoriProjectDetailsInput
-  ) => Promise<void>;
+    patch: UpdateNatoriProjectDetailsInput,
+    expectedRevision?: number
+  ) => Promise<ProjectEditSnapshot | void>;
   advanceBusyId?: string | null;
   /** 直リンク（?project=）で開いた案件。納期日のカードを枠で示す */
   highlightProjectId?: string | null;

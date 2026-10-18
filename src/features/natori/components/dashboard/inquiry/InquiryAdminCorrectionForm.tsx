@@ -7,29 +7,29 @@
 // 使い、フォームを増やしても保存契約が二重化しないようにする。
 // 案件種別は InquiryTypeConfirmation の責務なのでここでは扱わない。
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useRevisionedEdit } from "../useRevisionedEdit";
+import EditConflictReview from "../EditConflictReview";
+import { projectEditSnapshot, projectEditValues, type ProjectEditSnapshot } from "../../../lib/editConflict";
 import {
-  DEFAULT_NATORI_DELIVERY_PLAN,
   NATORI_DELIVERY_PLANS,
   NATORI_DELIVERY_PLAN_ORDER,
 } from "@/features/natori/lib/deliveryPlans";
 import {
+  fetchNatoriProject,
   NatoriProjectDetailsValidationError,
   normalizeNatoriProjectDetailsPatch,
   type UpdateNatoriProjectDetailsInput,
 } from "@/features/natori/data/supabaseProjects";
 import {
   formatNatoriProjectAmount,
-  toNatoriAmountInputValue,
-  toNatoriDueDateInputValue,
 } from "@/features/natori/lib/projectReadModel";
 import type { NatoriDeliveryPlan, NatoriProject } from "@/features/natori/types/projects";
 
 export type InquiryAdminCorrectionFormProps = {
   project: NatoriProject;
   disabled?: boolean;
-  onSave: (patch: UpdateNatoriProjectDetailsInput) => Promise<void>;
-  onSaveNextAction: (nextAction: string) => Promise<void>;
+  onSave: (patch: UpdateNatoriProjectDetailsInput, expectedRevision?: number, nextAction?: string) => Promise<ProjectEditSnapshot | void>;
 };
 
 /** 空欄は「未確定」。0 は「無料」として区別する。 */
@@ -45,70 +45,32 @@ export default function InquiryAdminCorrectionForm({
   project,
   disabled,
   onSave,
-  onSaveNextAction,
 }: InquiryAdminCorrectionFormProps) {
-  const [amount, setAmount] = useState(toNatoriAmountInputValue(project.amount));
-  const [dueDate, setDueDate] = useState(toNatoriDueDateInputValue(project.dueDate));
-  const [deliveryPlan, setDeliveryPlan] = useState<NatoriDeliveryPlan>(
-    project.deliveryPlan ?? DEFAULT_NATORI_DELIVERY_PLAN
-  );
-  const [nextAction, setNextAction] = useState(project.nextAction ?? "");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const correctionValues = (snapshot: ProjectEditSnapshot) => {
+    const values = projectEditValues(snapshot);
+    return { amount: values.amount, dueDate: values.dueDate, deliveryPlan: values.deliveryPlan, nextAction: values.nextAction };
+  };
+  const session = useRevisionedEdit({ revision: project.mutationRevision, values: correctionValues(projectEditSnapshot(project)) });
+  const { amount, dueDate, deliveryPlan, nextAction } = session.values;
+  const { saving, error } = session;
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    setAmount(toNatoriAmountInputValue(project.amount));
-    setDueDate(toNatoriDueDateInputValue(project.dueDate));
-    setDeliveryPlan(project.deliveryPlan ?? DEFAULT_NATORI_DELIVERY_PLAN);
-    setNextAction(project.nextAction ?? "");
-    setError(null);
-  }, [
-    project.id,
-    project.amount,
-    project.dueDate,
-    project.deliveryPlan,
-    project.nextAction,
-  ]);
-
   const handleSave = async () => {
-    if (saving) return;
-    setError(null);
+    if (disabled || saving) return;
     setSaved(false);
-
     const parsedAmount = parseAmountInput(amount);
-    if (parsedAmount === "invalid") {
-      setError("金額は0以上の整数で入力してください（未確定は空欄）。");
-      return;
-    }
-
-    const patch: UpdateNatoriProjectDetailsInput = {
-      amount: parsedAmount,
-      dueDate: dueDate.trim() === "" ? null : dueDate,
-      deliveryPlan,
-    };
-    try {
-      normalizeNatoriProjectDetailsPatch(patch);
-    } catch (err) {
-      if (err instanceof NatoriProjectDetailsValidationError) {
-        setError(err.message);
-        return;
-      }
-      throw err;
-    }
-
-    setSaving(true);
-    try {
-      await onSave(patch);
-      if (nextAction.trim() !== (project.nextAction ?? "").trim()) {
-        await onSaveNextAction(nextAction.trim());
-      }
-      setSaved(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "保存できませんでした。");
-    } finally {
-      setSaving(false);
-    }
+    if (parsedAmount === "invalid") { session.setError("金額は0以上の整数で入力してください（未確定は空欄）。"); return; }
+    const patch: UpdateNatoriProjectDetailsInput = {};
+    if (amount !== session.base.values.amount) patch.amount = parsedAmount;
+    if (dueDate !== session.base.values.dueDate) patch.dueDate = dueDate || null;
+    if (deliveryPlan !== session.base.values.deliveryPlan) patch.deliveryPlan = deliveryPlan;
+    try { normalizeNatoriProjectDetailsPatch(patch); }
+    catch (err) { session.setError(err instanceof NatoriProjectDetailsValidationError ? err.message : String(err)); return; }
+    const success = await session.save(async (_changes, revision) => {
+      const result = await onSave(patch, typeof revision === "number" ? revision : undefined,
+        nextAction !== session.base.values.nextAction ? nextAction.trim() : undefined);
+      if (result) return { revision: result.mutationRevision, values: correctionValues(result) };
+    });
+    if (success) setSaved(true);
   };
 
   return (
@@ -132,8 +94,8 @@ export default function InquiryAdminCorrectionForm({
               id="inquiry-amount"
               inputMode="numeric"
               value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              disabled={disabled || saving}
+              onChange={(event) => session.setField("amount", event.target.value)}
+              disabled={disabled || saving || session.reading}
               placeholder="未確定は空欄"
               className={natoriAdminUi.input}
               aria-describedby="inquiry-amount-hint"
@@ -153,8 +115,8 @@ export default function InquiryAdminCorrectionForm({
               id="inquiry-due-date"
               type="date"
               value={dueDate}
-              onChange={(event) => setDueDate(event.target.value)}
-              disabled={disabled || saving}
+              onChange={(event) => session.setField("dueDate", event.target.value)}
+              disabled={disabled || saving || session.reading}
               className={natoriAdminUi.input}
               aria-describedby="inquiry-due-date-hint"
             />
@@ -176,9 +138,9 @@ export default function InquiryAdminCorrectionForm({
               id="inquiry-delivery-plan"
               value={deliveryPlan}
               onChange={(event) =>
-                setDeliveryPlan(event.target.value as NatoriDeliveryPlan)
+                session.setField("deliveryPlan", event.target.value as NatoriDeliveryPlan)
               }
-              disabled={disabled || saving}
+              disabled={disabled || saving || session.reading}
               className={natoriAdminUi.input}
             >
               {NATORI_DELIVERY_PLAN_ORDER.map((id) => (
@@ -198,14 +160,17 @@ export default function InquiryAdminCorrectionForm({
             <input
               id="inquiry-next-action"
               value={nextAction}
-              onChange={(event) => setNextAction(event.target.value)}
-              disabled={disabled || saving}
+              onChange={(event) => session.setField("nextAction", event.target.value)}
+              disabled={disabled || saving || session.reading}
               maxLength={120}
               className={natoriAdminUi.input}
             />
           </div>
         </div>
 
+        {session.needsReview ? <EditConflictReview initial={session.initial.values} latest={session.latest?.values ?? null} current={session.values}
+          labels={{ amount: "金額", dueDate: "納品予定日", deliveryPlan: "納期プラン", nextAction: "次のアクション" }} reading={session.reading}
+          onCompare={() => void session.compare(async () => { const latest = await fetchNatoriProject(project.id); if (!latest || !Number.isSafeInteger(latest.mutationRevision)) throw new Error("unavailable"); return { revision: latest.mutationRevision, values: correctionValues(projectEditSnapshot(latest)) }; })} onAcknowledge={session.acknowledge} /> : null}
         {error ? (
           <p role="alert" className="text-xs font-bold text-rose-700">
             {error}
@@ -220,7 +185,7 @@ export default function InquiryAdminCorrectionForm({
         <button
           type="button"
           onClick={handleSave}
-          disabled={disabled || saving}
+          disabled={disabled || saving || session.reading || session.needsReview}
           aria-busy={saving}
           className={natoriAdminUi.btnPrimary}
         >

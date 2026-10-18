@@ -7,7 +7,7 @@ import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import Link from "next/link";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import ConsultationStatus from "./ConsultationStatus";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Archive,
   ArrowLeft,
@@ -34,6 +34,7 @@ import type {
   NatoriConcreteProjectType,
   NatoriProject,
 } from "@/features/natori/types/projects";
+import type { ProjectEditSnapshot } from "../../lib/editConflict";
 import type { UpdateNatoriProjectDetailsInput } from "@/features/natori/data/supabaseProjects";
 import InquiryAdminCorrectionForm from "./inquiry/InquiryAdminCorrectionForm";
 import InquiryReferenceFiles from "./inquiry/InquiryReferenceFiles";
@@ -84,9 +85,7 @@ type InquiryDetailPanelProps = {
   /** 案件種別の確定（task 生成を伴う専用 RPC 経路） */
   onConfirmType?: (projectType: NatoriConcreteProjectType) => Promise<void>;
   /** 金額 / 納品予定日 / 納期プランの管理補正 */
-  onSaveCorrection?: (patch: UpdateNatoriProjectDetailsInput) => Promise<void>;
-  /** 次のアクションの更新（既存の status 遷移 API を同一 status で使う） */
-  onSaveNextAction?: (nextAction: string) => Promise<void>;
+  onSaveCorrection?: (patch: UpdateNatoriProjectDetailsInput, expectedRevision?: number, nextAction?: string) => Promise<ProjectEditSnapshot | void>;
   onAddLink?: (url: string, label: string | null) => Promise<void>;
   onUpdateLink?: (
     linkId: string,
@@ -113,13 +112,26 @@ export default function InquiryDetailPanel({
   projectsHref,
   onConfirmType,
   onSaveCorrection,
-  onSaveNextAction,
   onAddLink,
   onUpdateLink,
   onDeleteLink,
 }: InquiryDetailPanelProps) {
   const [screen, setScreen] = useState<"overview" | "conversation">(initialScreen);
+  const [conversationOpened, setConversationOpened] = useState(initialScreen === "conversation");
   const [hasDraft, setHasDraft] = useState(false);
+  const confirmLeave = () => !hasDraft || window.confirm("入力中の返信や添付は、この画面を離れると消えます。移動しますか？");
+  const openMail = (kind: OrderMailKind) => { if (confirmLeave()) onOpenMail(kind); };
+  const openConversation = () => {
+    setConversationOpened(true);
+    setScreen("conversation");
+  };
+  const closePanel = () => {
+    if (hasDraft && !window.confirm("入力中または送信確認中の返信や添付があります。画面を閉じますか？")) return;
+    onClose();
+  };
+  useEffect(() => {
+    if (screen === "conversation") document.getElementById("consultation-reply")?.focus();
+  }, [screen]);
   const returnFocus = useRef<HTMLElement | null>(typeof document !== "undefined" && document.activeElement instanceof HTMLElement ? document.activeElement : null);
   const meta = natoriProjectStatusMeta[project.status];
   const receivedISO = getNatoriInquiryReceivedISO(project);
@@ -135,6 +147,9 @@ export default function InquiryDetailPanel({
     referenceLinks.length > 0;
   const archived = Boolean(project.deletedAt);
   const readOnly = archived || project.status === "closed";
+  // A later lifecycle response may disable this session, but must not unmount
+  // its human-entered draft. Initially read-only panels still have no editor.
+  const correctionSessionStarted = useRef(!readOnly);
 
   // 工程ごとに「いま一番やること」を主ボタンにする。表示条件は従来の集合をそのまま使う。
   const primaryAction: "estimate" | "payment-mail" | "confirm-payment" | "reply" =
@@ -160,7 +175,7 @@ export default function InquiryDetailPanel({
   });
 
   return (
-    <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
+    <Dialog open onOpenChange={open => { if (!open) closePanel(); }}>
       <DialogContent hideCloseButton aria-describedby={undefined} aria-label="問い合わせの詳細"
         onCloseAutoFocus={event => { event.preventDefault(); returnFocus.current?.focus(); }}
         className="flex h-[100dvh] w-full max-w-2xl flex-col gap-0 border border-zinc-200/80 bg-white p-0 shadow-xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl">
@@ -216,7 +231,7 @@ export default function InquiryDetailPanel({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={closePanel}
             className={natoriAdminUi.btnIcon}
             aria-label="閉じる"
           >
@@ -224,13 +239,14 @@ export default function InquiryDetailPanel({
           </button>
         </div>
 
-        {screen === "conversation" ? (
-          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+        {conversationOpened ? (
+          <div hidden={screen !== "conversation"} className={screen === "conversation" ? "min-h-0 flex-1 overflow-y-auto p-4 sm:p-5" : "hidden"}>
             {!demoMode ? <InquiryTalkMenu project={project} readOnly={readOnly} busy={busy} hasDraft={hasDraft} estimateHref={estimateHref} projectsHref={projectsHref} onOpenMail={onOpenMail} /> : null}
             {!demoMode ? (
               <ConsultationThread
                 mode="staff"
                 standalone
+                active={screen === "conversation"}
                 closed={readOnly}
                 onChanged={onConversationChanged}
                 onDraftChange={setHasDraft}
@@ -380,7 +396,7 @@ export default function InquiryDetailPanel({
               </p>
               <button
                 type="button"
-                onClick={() => setScreen("conversation")}
+                onClick={openConversation}
                 className={`${natoriAdminUi.btnPrimary} mt-3`}
               >
                 <MessageCircle className="h-4 w-4" aria-hidden />
@@ -399,13 +415,15 @@ export default function InquiryDetailPanel({
               />
             </summary>
             <div className="space-y-4 border-t border-zinc-200/80 p-3">
-              {onSaveCorrection && onSaveNextAction && !readOnly ? (
+              {onSaveCorrection && correctionSessionStarted.current ? (
+                <>
+                {readOnly ? <p role="status" className="text-xs text-zinc-600">案件が終了またはアーカイブされたため保存できません。入力内容は保持しています。</p> : null}
                 <InquiryAdminCorrectionForm
                   project={project}
-                  disabled={busy}
+                  disabled={busy || readOnly}
                   onSave={onSaveCorrection}
-                  onSaveNextAction={onSaveNextAction}
                 />
+                </>
               ) : null}
               {onConfirmType && !readOnly ? (
                 <InquiryTypeConfirmation
@@ -439,6 +457,7 @@ export default function InquiryDetailPanel({
           {primaryAction === "estimate" && estimateHref ? (
             <Link
               href={estimateHref}
+              onClick={event => { if (!confirmLeave()) event.preventDefault(); }}
               className={`${natoriAdminUi.btnPrimary} w-full whitespace-nowrap sm:w-auto`}
               title="依頼内容を見積もりツールに貼り付けた状態で開きます（概算とメール下書きが自動で出ます）"
             >
@@ -449,7 +468,7 @@ export default function InquiryDetailPanel({
           {primaryAction === "payment-mail" ? (
             <button
               type="button"
-              onClick={() => onOpenMail("payment")}
+              onClick={() => openMail("payment")}
               disabled={busy}
               className={`${natoriAdminUi.btnPrimary} w-full whitespace-nowrap sm:w-auto`}
             >
@@ -460,7 +479,7 @@ export default function InquiryDetailPanel({
           {primaryAction === "confirm-payment" ? (
             <button
               type="button"
-              onClick={onConfirmPayment}
+              onClick={() => { if (confirmLeave()) onConfirmPayment(); }}
               disabled={busy}
               className={`${natoriAdminUi.btnPrimary} w-full whitespace-nowrap sm:w-auto`}
               title="銀行振込などシステム外の入金を手動で確認したときに使います"
@@ -472,7 +491,7 @@ export default function InquiryDetailPanel({
           {!demoMode ? (
             <button
               type="button"
-              onClick={() => setScreen("conversation")}
+              onClick={openConversation}
               className={`${primaryAction === "reply" ? natoriAdminUi.btnPrimary : natoriAdminUi.btnSecondary} min-w-0 flex-1 whitespace-nowrap sm:flex-none`}
             >
               <MessageCircle className="h-3.5 w-3.5" aria-hidden />
@@ -489,6 +508,7 @@ export default function InquiryDetailPanel({
               {!readOnly && ESTIMATE_MAIL_STATUSES.has(project.status) && primaryAction !== "estimate" && estimateHref ? (
                 <Link
                   href={estimateHref}
+                  onClick={event => { if (!confirmLeave()) event.preventDefault(); }}
                   className={natoriAdminUi.btnSecondary}
                   title="依頼内容を見積もりツールに貼り付けた状態で開きます（概算とメール下書きが自動で出ます）"
                 >
@@ -500,7 +520,7 @@ export default function InquiryDetailPanel({
               {!readOnly && ESTIMATE_MAIL_STATUSES.has(project.status) && (demoMode || !estimateHref) ? (
                 <button
                   type="button"
-                  onClick={() => onOpenMail("estimate")}
+                  onClick={() => openMail("estimate")}
                   disabled={busy}
                   className={natoriAdminUi.btnSecondary}
                 >
@@ -512,7 +532,7 @@ export default function InquiryDetailPanel({
               {!readOnly && PAYMENT_MAIL_STATUSES.has(project.status) && primaryAction !== "payment-mail" ? (
                 <button
                   type="button"
-                  onClick={() => onOpenMail("payment")}
+                  onClick={() => openMail("payment")}
                   disabled={busy}
                   className={natoriAdminUi.btnSecondary}
                 >
@@ -523,6 +543,7 @@ export default function InquiryDetailPanel({
               ) : null}
               <Link
                 href={projectsHref ?? "/natori/projects"}
+                onClick={event => { if (!confirmLeave()) event.preventDefault(); }}
                 className={natoriAdminUi.btnSecondary}
               >
                 案件ボードへ
@@ -531,7 +552,7 @@ export default function InquiryDetailPanel({
                 <div className="border-t border-zinc-200 pt-2">
                   <button
                     type="button"
-                    onClick={onCloseInquiry}
+                  onClick={() => { if (confirmLeave()) onCloseInquiry(); }}
                     disabled={busy}
                     className={`${natoriAdminUi.btnDanger} w-full`}
                     title="条件がまとまらなかった相談を一覧から外します（履歴は残ります）"
