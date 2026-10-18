@@ -130,6 +130,28 @@ export async function deleteNatoriProjectThumb(
   }
 }
 
+async function isMissingThumbnail(error: unknown): Promise<boolean> {
+  // The pinned Storage SDK wraps download failures without parsing their JSON.
+  // HTTP 400 alone also covers authorization and backend failures.
+  if (
+    typeof error !== "object" || error === null ||
+    !("name" in error) || error.name !== "StorageUnknownError" ||
+    !("originalError" in error) || !(error.originalError instanceof Response)
+  ) return false;
+  const response = error.originalError;
+  if (response.status !== 400 && response.status !== 404) return false;
+  try {
+    const body: unknown = await response.clone().json();
+    return (
+      typeof body === "object" && body !== null &&
+      "statusCode" in body && (body.statusCode === "404" || body.statusCode === 404) &&
+      "code" in body && body.code === "NoSuchKey"
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Re-authorize the owned project on every image GET; no signed URL/CDN bearer. */
 export async function readNatoriProjectThumb(
   projectId: string,
@@ -148,10 +170,7 @@ export async function readNatoriProjectThumb(
     .from(BUCKET)
     .download(thumbPath(ownerId, projectId));
   if (downloaded.error) {
-    if (
-      !("statusCode" in downloaded.error) ||
-      String(downloaded.error.statusCode) !== "404"
-    )
+    if (!(await isMissingThumbnail(downloaded.error)))
       throw new Error("Thumbnail download unavailable");
     // Read compatibility is authenticated and owner-scoped. Direct legacy URLs
     // remain a separate migration/CDN gate; no URL is returned and no object moved.
@@ -159,11 +178,7 @@ export async function readNatoriProjectThumb(
       .from(LEGACY_BUCKET)
       .download(`${FOLDER}/${projectId}.webp`);
     if (legacy.error) {
-      if (
-        "statusCode" in legacy.error &&
-        String(legacy.error.statusCode) === "404"
-      )
-        return null;
+      if (await isMissingThumbnail(legacy.error)) return null;
       throw new Error("Thumbnail download unavailable");
     }
     const rechecked = await admin
