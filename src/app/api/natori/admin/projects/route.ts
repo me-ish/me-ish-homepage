@@ -183,8 +183,14 @@ export const PATCH = withNatoriManagement("projects.PATCH", true, async function
     if (!patch) {
       return NextResponse.json({ error: "patch is required" }, { status: 400 });
     }
-    const result = await patchNatoriProjectDetails(projectId, patch);
+    const result = await patchNatoriProjectDetails(projectId, patch, typeof payload.expectedRevision === "number" ? payload.expectedRevision : undefined, payload.nextAction as string | undefined);
     switch (result.kind) {
+      case "edit-conflict":
+        return NextResponse.json({ error: "edit_conflict", code: "natori_edit_conflict" }, { status: 409 });
+      case "invalid-revision":
+        return NextResponse.json({ error: "expectedRevision is required" }, { status: 400 });
+      case "invalid-next-action":
+        return NextResponse.json({ error: "invalid_next_action" }, { status: 400 });
       case "no-editable-fields":
         return NextResponse.json({ error: "No editable fields supplied" }, { status: 400 });
       case "db-error":
@@ -208,7 +214,7 @@ export const PATCH = withNatoriManagement("projects.PATCH", true, async function
           { status: 400 }
         );
       case "ok":
-        return NextResponse.json({ ok: true });
+        return NextResponse.json({ ok: true, project: result.project }, { headers: { "Cache-Control": "no-store" } });
     }
   }
 

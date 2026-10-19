@@ -34,6 +34,7 @@ import type {
   NatoriConcreteProjectType,
   NatoriProject,
 } from "@/features/natori/types/projects";
+import type { ProjectEditSnapshot } from "../../lib/editConflict";
 import type { UpdateNatoriProjectDetailsInput } from "@/features/natori/data/supabaseProjects";
 import InquiryAdminCorrectionForm from "./inquiry/InquiryAdminCorrectionForm";
 import InquiryReferenceFiles from "./inquiry/InquiryReferenceFiles";
@@ -84,9 +85,7 @@ type InquiryDetailPanelProps = {
   /** 案件種別の確定（task 生成を伴う専用 RPC 経路） */
   onConfirmType?: (projectType: NatoriConcreteProjectType) => Promise<void>;
   /** 金額 / 納品予定日 / 納期プランの管理補正 */
-  onSaveCorrection?: (patch: UpdateNatoriProjectDetailsInput) => Promise<void>;
-  /** 次のアクションの更新（既存の status 遷移 API を同一 status で使う） */
-  onSaveNextAction?: (nextAction: string) => Promise<void>;
+  onSaveCorrection?: (patch: UpdateNatoriProjectDetailsInput, expectedRevision?: number, nextAction?: string) => Promise<ProjectEditSnapshot | void>;
   onAddLink?: (url: string, label: string | null) => Promise<void>;
   onUpdateLink?: (
     linkId: string,
@@ -113,7 +112,6 @@ export default function InquiryDetailPanel({
   projectsHref,
   onConfirmType,
   onSaveCorrection,
-  onSaveNextAction,
   onAddLink,
   onUpdateLink,
   onDeleteLink,
@@ -135,6 +133,9 @@ export default function InquiryDetailPanel({
     referenceLinks.length > 0;
   const archived = Boolean(project.deletedAt);
   const readOnly = archived || project.status === "closed";
+  // A later lifecycle response may disable this session, but must not unmount
+  // its human-entered draft. Initially read-only panels still have no editor.
+  const correctionSessionStarted = useRef(!readOnly);
 
   // 工程ごとに「いま一番やること」を主ボタンにする。表示条件は従来の集合をそのまま使う。
   const primaryAction: "estimate" | "payment-mail" | "confirm-payment" | "reply" =
@@ -399,13 +400,15 @@ export default function InquiryDetailPanel({
               />
             </summary>
             <div className="space-y-4 border-t border-zinc-200/80 p-3">
-              {onSaveCorrection && onSaveNextAction && !readOnly ? (
+              {onSaveCorrection && correctionSessionStarted.current ? (
+                <>
+                {readOnly ? <p role="status" className="text-xs text-zinc-600">案件が終了またはアーカイブされたため保存できません。入力内容は保持しています。</p> : null}
                 <InquiryAdminCorrectionForm
                   project={project}
-                  disabled={busy}
+                  disabled={busy || readOnly}
                   onSave={onSaveCorrection}
-                  onSaveNextAction={onSaveNextAction}
                 />
+                </>
               ) : null}
               {onConfirmType && !readOnly ? (
                 <InquiryTypeConfirmation

@@ -155,7 +155,7 @@ async function main(){
   const selectedDate=/^(\d{4}-\d{2})-(\d{2}) の案件を表示$/.exec(selectedDateLabel??'');check(selectedDate,'ASSERTION_FAILED');
   const detailMonth=selectedDate[1],detailDueDay=selectedDate[2]==='26'?'27':'26';
   const details={title:f.title+' details B',client_name:'Synthetic details B',amount:12000,start_date:detailMonth+'-05',due_date:detailMonth+'-'+detailDueDay,note:'Synthetic details B note'};
-  const detailsResponse=await context.request.patch(taskApi,{data:{kind:'project-details',projectId:f.id,patch:details},headers:{'x-requested-with':'me-ish'}});check(detailsResponse.ok(),'DETAILS_PATCH_COMMITTED');
+  const detailsResponse=await context.request.patch(taskApi,{data:{kind:'project-details',projectId:f.id,expectedRevision:beforeSave.project.mutation_revision,patch:details},headers:{'x-requested-with':'me-ish'}});check(detailsResponse.ok(),'DETAILS_PATCH_COMMITTED');
   const beforeTask=await admin.from('natori_projects').select('title,client_name,amount,start_date,due_date,note,mutation_revision,payment_confirmed_at,paid_at,paid_amount').eq('id',f.id).single();
   check(!beforeTask.error&&beforeTask.data&&Object.entries(details).every(([key,value])=>beforeTask.data[key]===value)&&beforeTask.data.paid_at===null&&beforeTask.data.paid_amount===12000,'DETAILS_DB_COMMITTED');const taskReplies=[];
   const caseName=stage,unblockRead=()=>{readReady.resolve(false);readRelease.resolve(false);};routeUnblocks.add(unblockRead);
