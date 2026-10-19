@@ -4,34 +4,27 @@ import {spawn} from 'node:child_process';
 import {createRequire} from 'node:module';
 import {setDefaultResultOrder} from 'node:dns';
 import {runIntakeFrontendRegressions,stopIsolatedNext} from './browser-additions.mjs';
+import {classifyFailure,createCompileDiagnostics,diagnosticLine} from './browser-diagnostics.mjs';
 const require=createRequire('/app/package.json'),sharp=require('sharp'),{intakeReferenceFileId}=require('/phase3a/browser-helpers.cjs'),{createClient}=require('@supabase/supabase-js'),{chromium,expect}=require('@playwright/test');
 setDefaultResultOrder('ipv4first');
 const results=[],frontendEvidence=[],compileErrors=new Set(),compileErrorEvidence=[],check=(value,code)=>{if(!value)throw new Error(code);};let server,browser,stage='preflight',nextProcessNumber=0,terminalFailure=null;
 const compileErrorCodes={'Module not found':'module_not_found','Failed to compile':'failed_to_compile','SyntaxError':'syntax_error','EADDRINUSE':'address_in_use'};
+const serverDiagnostics=[];
 function observeCompileDiagnostics(fixture){
  const processNumber=nextProcessNumber++,scenario=['initial','completed_A_explicit_B','legacy_to_structured','structured_to_legacy'][processNumber]??'other';
- for(const [streamName,stream] of [['stdout',fixture.stdout],['stderr',fixture.stderr]])stream.on('data',buffer=>{
-  // Retain no server text: only the existing four fixed detector classifications.
-  for(const [detector,code] of Object.entries(compileErrorCodes))if(buffer.toString().includes(detector)){
-   const evidence={code,stream:streamName,process:Math.min(processNumber,4),scenario,stage:/^[a-z0-9-]{1,180}$/.test(stage)?stage:'other'};
-   if(compileErrorEvidence.length<64&&!compileErrorEvidence.some(item=>JSON.stringify(item)===JSON.stringify(evidence)))compileErrorEvidence.push(evidence);
-  }
- });
+ const diagnostics=createCompileDiagnostics({process:Math.min(processNumber,4),scenario,getStage:()=>stage,onUpdate:()=>{}});
+ serverDiagnostics.push(diagnostics);
+ for(const stream of ['stdout','stderr'])fixture[stream].on('data',buffer=>diagnostics.write(stream,buffer));
+ fixture.on('close',()=>diagnostics.flush());
  return fixture;
 }
-function classifyFailure(error){
- const codes=["ACTIVE_RELEASED_ONLY_AFTER_FAILED","ACTUAL_ACCEPTED_RESPONSE","ACTUAL_RATE_LIMIT_REACHED","ADDITIONAL_NEXT_READY","ASSERTION_FAILED","AUTH_FIXTURE","A_ATOMIC_EFFECTS","A_NOTICES_UNCHANGED","BROWSER_FAILED","B_RECEIPT_RELOAD","CHANGED_FILE_NO_POST","CLOSE","CLOSED_REPLAY","CORRECTED_ATOMIC_EFFECTS","CORRECTED_NEW_OPERATION","CORRECTED_NOTICE_SNAPSHOT","CSRF","DESTINATION_REJECTED","EFFECTS_READ","EPHEMERAL_REQUIRED","EXPECTED_REAL_SUBMISSIONS","EXPLICIT_CONFIRMED_RELEASES_ACTIVE","EXPLICIT_NEW_INTENT_SAME_ANSWERS_NEW_ID","FROZEN_OPERATION_REQUIRED","INTERRUPTION_NO_SERVER_EFFECTS","NEW_REQUEST_CHECKS_COMPLETED_CAPABILITY","NEXT_DID_NOT_EXIT","NEXT_EXITED_AFTER_READY","NEXT_PORT_NOT_CLOSED","NEXT_READY","NO_MOBILE_OVERFLOW","NO_SIDE_EFFECT","OLD_CLIENT","ONE_ATOMIC_INTAKE","ONLY_CORRECTED_REQUEST_EFFECTS","ONLY_TWO_NEW_REQUEST_EFFECTS","OP","OPERATION_READ","ORIGIN","ORIGINAL_FAILURE_PRESERVED","ORIGINAL_USER_LABELS","OWNER_NOTICES_READ","OWNER_PROJECTS_READ","PENDING_FIXTURE","REAL_COMMIT","RELOAD_NO_POST","REPLAY_NO_NOTICE","SAME_OPERATION_COMPLETES","SETTLED_CACHE","SWITCH_AUTHORITATIVE_FAILED_NO_EFFECTS","TOMBSTONE_NO_EFFECT","TWO_PROJECTS_EXACTLY_ONCE","VISIBLE_ORIGINAL_ANSWERS"];
- const message=typeof error?.message==='string'?error.message:'';
- const code=codes.includes(message)?message:'ASSERTION_FAILED';
- const kind=message.includes('strict mode violation')?'strict_locator':error?.name==='TimeoutError'||/\bTimeout\s+\d+ms\s+exceeded\b/i.test(message)?'timeout':error?.name==='AssertionError'||/^expect(?:\(|\.)/.test(message)||codes.includes(message)?'assertion':'other';
- const firstLabelLine=message.split(/\r?\n/).find(line=>line.includes('getByLabel('))??'';
- const expression=/getByLabel\(\s*(\/(?:\\.|[^\/\r\n])*\/[a-z]*|'(?:\\.|[^'\r\n])*'|"(?:\\.|[^"\r\n])*")/.exec(firstLabelLine)?.[1]??'';
- const label=expression.startsWith('/')?expression.slice(1,expression.lastIndexOf('/')).replace(/^\^|\$$/g,''):expression.slice(1,-1);
- const labels={'\u304a\u540d\u524d':'NAME','\u3054\u76f8\u8ac7\u30fb\u3054\u4f9d\u983c\u306e\u5185\u5bb9':'MESSAGE','\u3054\u4f9d\u983c\u306e\u8a73\u7d30':'MESSAGE','\u4fdd\u5b58\u3057\u305f\u5165\u529b\u5185\u5bb9':'SAVED_ANSWERS','\u5143\u306e\u4fdd\u5b58\u60c5\u5831':'RAW_ANSWERS','\u518d\u8a66\u884c\u7528\u306e\u753b\u50cf\u3092\u9078\u629e':'RETRY_FILE'};
- return {code,kind,locator:Object.hasOwn(labels,label)?labels[label]:'OTHER'};
+function printDiagnostics(){
+ for(const diagnostics of serverDiagnostics){const data=diagnostics.flush();for(const event of data.events)console.error(diagnosticLine('compile',event));}
+ console.error(diagnosticLine('summary',{tests:results.length,failed:results.filter(item=>item.status==='failed').length,compileErrors:[...compileErrors],omitted:serverDiagnostics.reduce((sum,item)=>sum+item.snapshot().omitted,0)}));
 }
-async function test(name,fn){stage=name;try{await fn();results.push({name,status:'passed'});console.log(`PASS phase3a-browser/${name}`);}catch(e){results.push({name,status:'failed',...classifyFailure(e)});console.log(`FAIL phase3a-browser/${name}`);}persist();}
-function persist(){writeFileSync('/results/phase3a-browser.json',JSON.stringify({tests:results,frontendEvidence,compileErrorCodes:[...compileErrors].sort(),expectedTestCount:9,compileErrors:[...compileErrors].map(code=>Object.hasOwn(compileErrorCodes,code)?compileErrorCodes[code]:'unclassified').sort(),compileErrorEvidence,finalGuard:{expectedTestCount:9,testCount:results.length,allTestsPassed:results.every(t=>t.status==='passed'),compileErrorsEmpty:compileErrors.size===0},terminalFailure,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,engine:'Chromium mobile390px; real ephemeral Next/DB/Storage; not iPhone Safari; sending disabled'},null,2));}
+
+async function test(name,fn){stage=name;try{await fn();results.push({name,status:'passed'});console.log(`PASS phase3a-browser/${name}`);}catch(e){results.push({name,status:'failed',...classifyFailure(e)});console.log(`FAIL phase3a-browser/${name}`);console.error(diagnosticLine('test_failure',{stage:name,error:e}));}persist();}
+function persist(){compileErrorEvidence.splice(0,compileErrorEvidence.length,...serverDiagnostics.flatMap(item=>item.snapshot().events));writeFileSync('/results/phase3a-browser.json',JSON.stringify({tests:results,frontendEvidence,compileErrorCodes:[...compileErrors].sort(),expectedTestCount:9,compileErrors:[...compileErrors].map(code=>Object.hasOwn(compileErrorCodes,code)?compileErrorCodes[code]:'unclassified').sort(),compileErrorEvidence,finalGuard:{expectedTestCount:9,testCount:results.length,allTestsPassed:results.every(t=>t.status==='passed'),compileErrorsEmpty:compileErrors.size===0},terminalFailure,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,engine:'Chromium mobile390px; real ephemeral Next/DB/Storage; not iPhone Safari; sending disabled'},null,2));}
 async function main(){
  check(process.env.PHASE_N_BROWSER==='ephemeral','EPHEMERAL_REQUIRED');const {origin}=JSON.parse(readFileSync('/runtime/network.json','utf8'));check(/^http:\/\/172\.30\.250\.\d+:8000$/.test(origin),'DESTINATION_REJECTED');const keys=JSON.parse(readFileSync('/runtime/credentials.json','utf8'));
  const admin=createClient(origin,keys.service,{auth:{persistSession:false,autoRefreshToken:false}}),password=randomBytes(32).toString('hex');
@@ -75,9 +68,13 @@ async function main(){
   await page.getByRole('button',{name:'同じ内容で再試行する'}).click();await expect(page.getByText('送信ありがとうございます!',{exact:true})).toBeVisible();const e=await count(saved.operationId);check(e.projects.length===1&&e.notices.length===2&&posts===1,'SAME_OPERATION_COMPLETES');page.off('request',observe);
  });
  await test('old-client-no-id-and-real-csrf-origin-boundaries-reject-before-sideeffects',async()=>{
-  const before=(await admin.from('natori_intake_operations').select('operation_id').eq('owner_id',owner)).data?.length??0;
+  const beforeRead=await admin.from('natori_intake_operations').select('operation_id').eq('owner_id',owner),before=beforeRead.data?.length??0;
   const old={name:'Old synthetic',email:'client@phase3a.invalid',requestType:'旧相談',details:'Old draft'};
-  check((await context.request.post(endpoint,{data:old,headers:{'x-requested-with':'me-ish'}})).status()===409,'OLD_CLIENT');check((await context.request.post(endpoint,{data:old})).status()===403,'CSRF');check((await context.request.post(endpoint,{data:old,headers:{'x-requested-with':'me-ish','origin':'https://attacker.invalid'}})).status()===403,'ORIGIN');check(((await admin.from('natori_intake_operations').select('operation_id').eq('owner_id',owner)).data?.length??0)===before,'NO_SIDE_EFFECT');
+  for(const [checkpoint,expected,headers]of [['OLD_CLIENT',409,{'x-requested-with':'me-ish'}],['CSRF',403,{}],['ORIGIN',403,{'x-requested-with':'me-ish','origin':'https://attacker.invalid'}]]){
+   const response=await context.request.post(endpoint,{data:old,headers});console.log(diagnosticLine('boundary',{checkpoint,status:response.status()}));check(response.status()===expected,checkpoint);
+  }
+  const afterRead=await admin.from('natori_intake_operations').select('operation_id').eq('owner_id',owner),after=afterRead.data?.length??0;
+  console.log(diagnosticLine('side_effects',{before,after,beforeReadOk:!beforeRead.error,afterReadOk:!afterRead.error}));check(after===before,'NO_SIDE_EFFECT');
  });
  await test('mobile-pending-controls-and-completed-confirmation-do-not-overflow',async()=>{
   await newForm();await fill('Mobile pending');await page.route('**/api/natori/portfolio/contact',r=>r.abort('failed'));await page.getByRole('button',{name:'相談内容を送信する'}).click();await expect(page.getByRole('button',{name:'受付結果を確認する'})).toBeEnabled();check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'NO_MOBILE_OVERFLOW');await page.unroute('**/api/natori/portfolio/contact');
@@ -86,4 +83,4 @@ async function main(){
  await runIntakeFrontendRegressions({test,check,expect,browser,app,endpoint,owner,admin,key,startNext,compileErrors,onEvidence:evidence=>{frontendEvidence.push(evidence);persist();}});
  persist();check(results.length===9&&results.every(t=>t.status==='passed')&&compileErrors.size===0,'BROWSER_FAILED');
 }
-main().catch(error=>{process.exitCode=1;terminalFailure=classifyFailure(error);try{persist();}catch{console.error('Phase3A browser diagnostic write failed');}const code=["ENOSPC","EACCES","ENOENT","EROFS"].includes(error?.code)?error.code:classifyFailure(error).code;console.error(`Phase3A browser failed: code=${code} compile_codes=${[...compileErrors].sort().join(",")||"none"} test_count=${results.length}; raw logs withheld`);}).finally(async()=>{await browser?.close();if(server?.exitCode===null){server.kill('SIGTERM');await Promise.race([new Promise(r=>server.once('exit',r)),new Promise(r=>setTimeout(()=>{server.kill('SIGKILL');r();},5000))]);}});
+main().catch(error=>{process.exitCode=1;terminalFailure=classifyFailure(error);try{persist();}catch{console.error('Phase3A browser diagnostic write failed');}printDiagnostics();const code=["ENOSPC","EACCES","ENOENT","EROFS"].includes(error?.code)?error.code:classifyFailure(error).code;console.error(`Phase3A browser failed: code=${code} compile_codes=${[...compileErrors].sort().join(",")||"none"} test_count=${results.length}; raw logs withheld`);}).finally(async()=>{await browser?.close();if(server?.exitCode===null){server.kill('SIGTERM');await Promise.race([new Promise(r=>server.once('exit',r)),new Promise(r=>setTimeout(()=>{server.kill('SIGKILL');r();},5000))]);}});
