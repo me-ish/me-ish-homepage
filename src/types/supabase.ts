@@ -1784,6 +1784,9 @@ export type Database = {
       }
     }
     Functions: {
+      natori_payment_stop_status_v1: { Args: { p_owner_id: string }; Returns: Json }
+      natori_payment_stop_run_v1: { Args: { p_owner_id: string; p_run_id: string; p_result?: Json }; Returns: boolean }
+      natori_payment_stop_claim_v1: { Args: { p_owner_id: string; p_project_id: string; p_job_id: string; p_token: string }; Returns: Json }
       natori_save_portfolio_content: { Args: { expected_revision: number; next_content: Json }; Returns: { saved_revision: number }[] }
       natori_consultation_operation_v1: {Args:{p_project_id:string;p_sender:string;p_operation_id:string;p_request_hash:string;p_command:string;p_owner_id?:string|null;p_access_hash?:string|null;p_input?:Json;p_claim_token?:string|null};Returns:Json}
       natori_consultation_legacy_notice_v1: {Args:{p_owner_id:string;p_project_id:string;p_message_id:string;p_payload:Json;p_access_hash:string|null;p_expires_at:string|null};Returns:string|null}

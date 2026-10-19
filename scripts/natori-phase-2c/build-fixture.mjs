@@ -8,7 +8,7 @@ grant select,insert,update on public.natori_order_mail_logs to service_role;
 grant usage,select on sequence public.natori_order_mail_logs_id_seq to service_role;
 `;
 writeFileSync(process.argv[2],`alter table public.natori_projects add column if not exists payment_link_id text, add column if not exists payment_link_url text;
-`+mail+readFileSync('supabase/migrations/20261001161401_natori_payment_link_generations.sql','utf8')+`
+`+mail+readFileSync('supabase/migrations/20261001161401_natori_payment_link_generations.sql','utf8')+readFileSync('supabase/migrations/20261019101057_natori_payment_stop_recovery.sql','utf8')+`
 -- Fixture-only deterministic wait control, never part of the product migration.
 create function public.phase2c_hold_project_v1(p_project uuid,p_seconds double precision) returns boolean
 language plpgsql security invoker set search_path='' as $$

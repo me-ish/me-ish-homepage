@@ -187,27 +187,51 @@ export async function stopDuePaymentLinks(injectedProvider?:PaymentLinkProvider)
     }catch{await rpc(owner.ownerId,id,"reconcile_review",fence);failed++;continue;}
    }
    await rpc(owner.ownerId,id,"queue_stop");const token=randomUUID(),claim=await rpc(owner.ownerId,id,"claim_stop",{token,providerAccountId});
-   if(claim.result!=="claimed"||!claim.job){skipped++;continue;}const job=claim.job;
-   const fence={token,jobId:job.id,generation:job.claim_generation,providerAccountId};
-   const heartbeat=async()=>{if((await rpc(owner.ownerId,id,"stop_renew",fence)).result!=="renewed")throw new Error("stop_stale");};
-   let outcome:"inactive"|"retry"|"review"="retry";
-   try{
-    // An old unpinned source or a switched account cannot prove provider inactivity.
-    if(!claim.attempt||claim.attempt.provider_account_id!==providerAccountId||claim.attempt.livemode!==live)outcome="review";
-    else{await heartbeat();const link=await external.readLink(job.link_id);
-     if(link.id!==job.link_id||link.projectId!==id||link.livemode!==live||(job.livemode!==null&&job.livemode!==live)
-      ||!verified(link,claim.attempt,false))outcome="review";
-     else{await heartbeat();await external.stopLink(job.link_id);await heartbeat();
-      // Stopping a link leaves already-opened Checkout Sessions payable for up to a day, so close them too.
-      const open=(await external.sessions(job.link_id)).filter(s=>s.status==="open");
-      await heartbeat();await Promise.all(open.map(session=>external.expireSession(session.id)));await heartbeat();
-      const stopped=await external.readLink(job.link_id);
-      outcome=verified(stopped,claim.attempt,false)&&!stopped.active?"inactive":"review";}}
-   }catch(e){if((e as {code?:string}).code==="resource_missing")outcome="review";}
-   const done=await rpc(owner.ownerId,id,"finish_stop",{...fence,outcome});
-   if(done.result==="completed")expired++;else failed++;
+   if(claim.result!=="claimed"||!claim.job){skipped++;continue;}
+   if(await finishClaimedPaymentStop(owner.ownerId,id,claim,token,external,providerAccountId,live)==="completed")expired++;else failed++;
   }return {kind:"ok" as const,scanned:scan.projects?.length??0,expired,skipped,failed};
  }catch{return {kind:"db-error" as const};}
+}
+
+/** Uses only the claimed job: provider reads and mutations remain fenced by PAY-03. */
+async function finishClaimedPaymentStop(owner:string,id:string,claim:z.infer<typeof resultSchema>,token:string,external:PaymentLinkProvider,providerAccountId:string,live:boolean){
+ const job=claim.job;if(!job)return "needs_review";
+ const fence={token,jobId:job.id,generation:job.claim_generation,providerAccountId};
+ const heartbeat=async()=>{if((await rpc(owner,id,"stop_renew",fence)).result!=="renewed")throw new Error("stop_stale");};
+ let outcome:"inactive"|"retry"|"review"="retry";
+ try{
+  if(!claim.attempt||claim.attempt.project_id!==id||claim.attempt.link_id!==job.link_id
+   ||claim.attempt.provider_account_id!==providerAccountId||claim.attempt.livemode!==live)outcome="review";
+  else{await heartbeat();const link=await external.readLink(job.link_id);
+   if(link.id!==job.link_id||link.projectId!==id||link.livemode!==live||(job.livemode!==null&&job.livemode!==live)
+    ||!verified(link,claim.attempt,false))outcome="review";
+   else{await heartbeat();await external.stopLink(job.link_id);await heartbeat();
+    // Existing Checkout Sessions must also be closed before claiming inactivity.
+    const open=(await external.sessions(job.link_id)).filter(s=>s.status==="open");
+    await heartbeat();await Promise.all(open.map(session=>external.expireSession(session.id)));await heartbeat();
+    const stopped=await external.readLink(job.link_id);
+    outcome=verified(stopped,claim.attempt,false)&&!stopped.active?"inactive":"review";}}
+ }catch(e){if((e as {code?:string}).code==="resource_missing")outcome="review";}
+ return (await rpc(owner,id,"finish_stop",{...fence,outcome})).result;
+}
+
+/** Management retries cannot enqueue, reconcile, create a link, or dispatch mail. */
+export async function retryPaymentStop(projectId:string,jobId:string,injectedProvider?:PaymentLinkProvider){
+ if(!paymentLinkIntegrityEnabled())return {result:"not_configured"};
+ const owner=await resolveNatoriOwnerId();
+ try{
+  const external=injectedProvider??provider(),live=mode(),account=await external.accountId();
+  if(!/^acct_[A-Za-z0-9]+$/.test(account))throw new Error("link_configuration");
+  const token=randomUUID();
+  const {data,error}=await supabaseAdmin().rpc("natori_payment_stop_claim_v1",{p_owner_id:owner,p_project_id:projectId,p_job_id:jobId,p_token:token});
+  if(error)throw new Error("link_db_unavailable");
+  const claim=resultSchema.parse(data);
+  if(claim.result!=="claimed")return {result:claim.result};
+  if(claim.job?.id!==jobId)return {result:"needs_review"};
+  const result=await finishClaimedPaymentStop(owner,projectId,claim,token,external,account,live);
+  console.info("[natori-payment-stop]",{source:"manual",result});
+  return {result};
+ }catch{console.warn("[natori-payment-stop]",{source:"manual",result:"unconfirmed"});return {result:"unconfirmed"};}
 }
 
 export async function paymentLinkMailGate(projectId:string,jobId:string,token:string,release=false){

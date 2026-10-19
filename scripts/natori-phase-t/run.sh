@@ -114,6 +114,7 @@ trap cleanup EXIT
 
 # Exact named reader prerequisites for current management source. No full history.
 if [[ $phasen == 1 ]]; then
+  node --test "$repo/scripts/natori-phase-n/browser-diagnostics.test.mjs"
   node "$repo/scripts/natori-wf01/build-reader-fixture.mjs" "$work/wf01-reader.sql" initial "$work/results/wf01-reader-source-sha256.json"
 elif [[ $phase0b == 1 ]]; then
   node "$repo/scripts/natori-wf01/build-reader-fixture.mjs" "$work/wf01-reader.sql" standalone-0b "$work/results/wf01-reader-source-sha256.json"
@@ -148,6 +149,7 @@ if [[ $phase3b == 1 ]]; then
 fi
 
 if [[ $phase3a == 1 ]]; then
+  node --test "$repo/scripts/natori-phase-3a/browser-diagnostics.test.mjs"
   mkdir -p "$work/phase3a"
   node "$repo/scripts/natori-phase-3a/build.mjs" "$work/phase3a/integration.cjs"
   node "$repo/scripts/natori-phase-3a/build-fixture.mjs" "$work/phase3a.sql"

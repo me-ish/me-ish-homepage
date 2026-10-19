@@ -4,6 +4,7 @@ import {spawn} from 'node:child_process';
 import {createServer} from 'node:http';
 import {setDefaultResultOrder} from 'node:dns';
 import {createRequire} from 'node:module';
+import {privacyReadFailureLine} from './browser-diagnostics.mjs';
 const require=createRequire('/app/package.json');
 const {createClient}=require('@supabase/supabase-js');
 const {chromium,expect}=require('@playwright/test');
@@ -133,8 +134,12 @@ async function main(){
       sharedKeyHomeReadiness.stage='retry_buttons';
     await expect(management.getByRole('button',{name:'メールだけ再試行'})).toHaveCount(3);
       sharedKeyHomeReadiness.stage='privacy_read';
-    const response=await manager.request.get('/api/natori/admin/notifications');const text=await response.text();
+    const privacyStarted=Date.now();let privacyCheckpoint='privacy_get',privacyStatus=null,privateDataAbsent=null,response,text;
+    try{
+      response=await manager.request.get('/api/natori/admin/notifications');privacyStatus=response.status();privacyCheckpoint='privacy_body';text=await response.text();
+      privacyCheckpoint='privacy_assert';privateDataAbsent=!/@phase-n.invalid|snapshot|payload|provider_id|token_hash/.test(text);
     check(response.status()===200&&!/@phase-n.invalid|snapshot|payload|provider_id|token_hash/.test(text),'UI_PRIVATE_DATA');
+    }catch(error){console.error(privacyReadFailureLine(error,{checkpoint:privacyCheckpoint,status:privacyStatus,privateDataAbsent,elapsedMs:Date.now()-privacyStarted,serverCodes:[...classifications],responseText:text}));throw error;}
       sharedKeyHomeReadiness.stage='passed';
     }catch(error){
       if(explicitCodes.has(error?.message))throw error;

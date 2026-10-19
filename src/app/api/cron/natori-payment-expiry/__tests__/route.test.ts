@@ -51,3 +51,9 @@ describe("GET /api/cron/natori-payment-expiry", () => {
     expect(mockExpire).toHaveBeenCalledTimes(1);
   });
 });
+
+it("部分失敗を全体成功として返さない",async()=>{
+ mockExpire.mockResolvedValue({kind:"ok",scanned:2,expired:1,skipped:0,failed:1});
+ const res=await GET(request({authorization:"Bearer cron-secret"}) as never);
+ expect(res.status).toBe(503);expect(res.headers.get("cache-control")).toBe("no-store");expect(await res.json()).toMatchObject({ok:false,failed:1,expired:1});
+});

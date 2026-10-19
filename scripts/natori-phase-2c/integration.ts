@@ -107,6 +107,30 @@ async function main(){
   await test('provider-resource-missing-remains-unresolved-and-cannot-archive',async()=>{const i=await setup(),f=provider();await run(request(i.projectId),f.ext);await call(i.projectId,'close');f.ext.readLink=async()=>{throw Object.assign(new Error('FIXTURE_WRONG_ACCOUNT'),{code:'resource_missing'});};await stopDuePaymentLinks(f.ext);check((await view(i.projectId)).state==='needs_review'&&(await call(i.projectId,'archive')).result==='unresolved','MISSING_NOT_INACTIVE');const s=await db.from('natori_payment_link_stops').select('status').eq('project_id',i.projectId).single();check(s.data?.status==='needs_review','STOP_NOT_FALSE_COMPLETED');});
   await test('provider-account-is-pinned-and-same-mode-switch-cannot-resume-create-or-stop',async()=>{const i=await setup(),f=provider(),req=request(i.projectId);f.fail('price');await run(req,f.ext);await expireLease(i.projectId);f.ext.accountId=async()=>'acct_otherfixture';check((await run(req,f.ext)).result==='needs_review'&&f.prices.size===1&&f.keys.size===0,'OTHER_ACCOUNT_NO_CREATE');const a=await db.from('natori_payment_link_attempts').select('provider_account_id').eq('project_id',i.projectId).single();check(a.data?.provider_account_id==='acct_phase2cfixture','SOURCE_PINNED');check((await db.from('natori_payment_link_attempts').update({provider_account_id:'acct_otherfixture'}).eq('project_id',i.projectId)).error,'ACCOUNT_PIN_IMMUTABLE');const active=await setup(),g=provider();await run(request(active.projectId),g.ext);const v=await view(active.projectId),link=links.get(v.url!.split('/').at(-1)!)!;g.ext.accountId=async()=>'acct_otherfixture';await expireCreation(active.projectId);await stopDuePaymentLinks(g.ext);check(link.active&&(await view(active.projectId)).state==='needs_review','ACCOUNT_SWITCH_NO_FALSE_STOP');});
 
+  await test('o01-stop-failure-visible-and-exact-manual-retry-completes-same-job',async()=>{
+   const {retryPaymentStop}=await import('../../src/features/natori/server/paymentLinkService');
+   const {getPaymentStopStatus}=await import('../../src/features/natori/server/paymentStopManagementService');
+   const i=await setup(),f=provider();await run(request(i.projectId),f.ext);await expireCreation(i.projectId);
+   f.ext.sessions=async()=>[{id:'cs_o01_open',status:'open',paymentStatus:'unpaid'}];
+   f.ext.expireSession=async()=>{throw new Error('FIXTURE_SESSION_UNAVAILABLE');};
+   const failed=await stopDuePaymentLinks(f.ext);check(failed.kind==='ok'&&failed.failed>0,'PARTIAL_VISIBLE');
+   const job=await db.from('natori_payment_link_stops').select('id,status').eq('project_id',i.projectId).single();check(job.data?.status==='pending','SAME_JOB_PENDING');
+   const attention=await scoped(()=>getPaymentStopStatus());check(attention.enabled&&attention.jobs.some(j=>j.id===job.data!.id),'ADMIN_STOP_VISIBLE');
+   let expired=0;f.ext.expireSession=async()=>{expired++;};
+   check((await scoped(()=>retryPaymentStop(i.projectId,job.data!.id,f.ext))).result==='completed','MANUAL_STOP_COMPLETE');
+   check(expired===1&&(await view(i.projectId)).state==='inactive','SAME_JOB_INACTIVE');
+   check((await scoped(()=>retryPaymentStop(i.projectId,job.data!.id,f.ext))).result==='completed'&&expired===1,'COMPLETED_RETRY_NO_PROVIDER_MUTATION');
+   check((await db.from('natori_payment_link_stops').select('id').eq('project_id',i.projectId)).data?.length===1&&f.keys.size===1&&f.prices.size===1,'NO_NEW_JOB_OR_GENERATION');
+  });
+  await test('o01-manual-stop-cannot-deactivate-current-future-link',async()=>{
+   const {retryPaymentStop}=await import('../../src/features/natori/server/paymentLinkService');
+   const i=await setup(),f=provider();await run(request(i.projectId),f.ext);const v=await view(i.projectId);
+   const a=await db.from('natori_payment_link_attempts').select('id,link_id,deadline_revision,owner_id,livemode').eq('project_id',i.projectId).single();check(a.data,'O01_ATTEMPT');
+   const job=await db.from('natori_payment_link_stops').insert({project_id:i.projectId,owner_id:owner,attempt_id:a.data!.id,link_id:a.data!.link_id!,livemode:a.data!.livemode,reason:'deadline',deadline_revision:a.data!.deadline_revision,status:'needs_review'}).select('id').single();check(job.data,'O01_FUTURE_JOB');
+   check((await scoped(()=>retryPaymentStop(i.projectId,job.data!.id,f.ext))).result==='not_due','FUTURE_MANUAL_DENIED');
+   check((await view(i.projectId)).state==='active'&&links.get(v.url!.split('/').at(-1)!)!.active,'CURRENT_LINK_UNCHANGED');
+  });
+
   const holdProject=async(id:string)=>{
    const holding=peer.rpc('phase2c_hold_project_v1',{p_project:id,p_seconds:2});
    const active=Promise.resolve(holding);
@@ -134,7 +158,7 @@ async function main(){
   });
   await test('owner-and-anonymous-boundaries-remain-private',async()=>{const i=await setup(),wrong=randomUUID();check((await peer.rpc('natori_payment_links_v1',{p_owner_id:wrong,p_project_id:i.projectId,p_command:'read'})).data?.result==='not_found','OWNER');const anon=createClient(origin,keys.anon,{auth:{persistSession:false}});check((await anon.rpc('natori_payment_links_v1',{p_owner_id:owner,p_project_id:i.projectId,p_command:'read'})).error,'ANON_RPC');});
   writeFileSync('/results/phase2c-integration.json',JSON.stringify({tests:results,passed:results.filter(t=>t.status==='passed').length,failed:results.filter(t=>t.status==='failed').length,skipped:0,provider:'injected synthetic provider transport only; real Stripe test mode pending'},null,2));
-  check(results.length===35&&results.every(t=>t.status==='passed'),'REQUIRED_TESTS_FAILED');console.log('PHASE 2C DB 35 passed / 0 failed / 0 skipped; actual Stripe pending');
+  check(results.length===37&&results.every(t=>t.status==='passed'),'REQUIRED_TESTS_FAILED');console.log('PHASE 2C DB 37 passed / 0 failed / 0 skipped; actual Stripe pending');
  }finally{globalThis.fetch=direct;}
 }
 main().catch(()=>{console.error('Phase2C integration failed; raw payloads and credentials withheld');process.exitCode=1;});

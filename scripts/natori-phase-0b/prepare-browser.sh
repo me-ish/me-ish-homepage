@@ -3,6 +3,7 @@ set -Eeuo pipefail
 repo=$1 work=$2 node_image=$3 project=$4
 [[ $work == "${RUNNER_TEMP:?}"/natori-phase-t.* && $project == natori-phase-t-* ]] || exit 1
 [[ $(node -p 'require("./node_modules/playwright/package.json").version') == 1.58.2 ]] || { echo 'Review the locked browser image version'; exit 1; }
+node --test "$repo/scripts/natori-phase-0b/prepare-browser.test.mjs"
 # Construction only. No credentials, test code or ports in this image retrieval.
 timeout 240 docker pull mcr.microsoft.com/playwright:v1.58.2-noble >"$work/browser-pull.private" 2>&1
 mkdir -p "$work/browser-bin"
