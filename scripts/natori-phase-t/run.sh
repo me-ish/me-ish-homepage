@@ -148,6 +148,7 @@ if [[ $phase3b == 1 ]]; then
 fi
 
 if [[ $phase3a == 1 ]]; then
+  node --test "$repo/scripts/natori-phase-3a/browser-diagnostics.test.mjs"
   mkdir -p "$work/phase3a"
   node "$repo/scripts/natori-phase-3a/build.mjs" "$work/phase3a/integration.cjs"
   node "$repo/scripts/natori-phase-3a/build-fixture.mjs" "$work/phase3a.sql"

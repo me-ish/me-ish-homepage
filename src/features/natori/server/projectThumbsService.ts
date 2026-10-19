@@ -142,11 +142,19 @@ async function isMissingThumbnail(error: unknown): Promise<boolean> {
   if (response.status !== 400 && response.status !== 404) return false;
   try {
     const body: unknown = await response.clone().json();
-    return (
-      typeof body === "object" && body !== null &&
-      "statusCode" in body && (body.statusCode === "404" || body.statusCode === 404) &&
-      "code" in body && body.code === "NoSuchKey"
-    );
+    if (
+      typeof body !== "object" || body === null ||
+      !("statusCode" in body) || (body.statusCode !== "404" && body.statusCode !== 404)
+    ) return false;
+    const code = "code" in body ? body.code : undefined;
+    const message = "message" in body ? body.message : undefined;
+    const errorName = "error" in body ? body.error : undefined;
+    // Keep the established code path and allow only known legacy envelopes.
+    // Generic S3Error / "not found" text can also mean a bucket or access failure.
+    return code === "NoSuchKey" ||
+      (code === "S3Error" && message === "NoSuchKey" && errorName === undefined) ||
+      (code === undefined && message === "Object not found" &&
+        (errorName === undefined || errorName === "not_found"));
   } catch {
     return false;
   }
