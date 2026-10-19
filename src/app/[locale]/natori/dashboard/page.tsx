@@ -25,6 +25,7 @@ import { fetchNatoriProjectCollection } from "@/features/natori/data/supabasePro
 import ConsultationAttentionPanel from "@/features/natori/components/dashboard/ConsultationAttentionPanel";
 import { Button } from "@/components/ui/button";
 import DashboardTodaySummary from "@/features/natori/components/dashboard/DashboardTodaySummary";
+import PaymentStopStatusPanel from "@/features/natori/components/dashboard/PaymentStopStatusPanel";
 import NotificationStatusPanel from "@/features/natori/components/dashboard/NotificationStatusPanel";
 import NotificationAlertBanner from "@/features/natori/components/dashboard/NotificationAlertBanner";
 import PageEventsPanel from "@/features/natori/components/dashboard/PageEventsPanel";
@@ -237,6 +238,7 @@ export default function NatoriDashboardPage() {
           </ul>
         </section>
 
+        <PaymentStopStatusPanel />
         <NotificationStatusPanel />
 
         <PageEventsPanel />

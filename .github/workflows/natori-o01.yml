@@ -1,0 +1,35 @@
+name: Natori O01
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/natori-o01.yml'
+      - 'scripts/natori-o01/**'
+      - 'scripts/natori-pay01/**'
+      - 'supabase/migrations/**'
+      - 'src/features/natori/server/payment*'
+      - 'src/app/api/natori/admin/payment-stops/**'
+permissions:
+  contents: read
+concurrency:
+  group: natori-o01-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  native-postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Verify exact-job recovery with no-network PostgreSQL
+        run: bash scripts/natori-o01/run.sh
+      - name: Publish synthetic checks and source hashes only
+        if: always() && env.O01_RESULTS != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: natori-o01-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.O01_RESULTS }}/*
+          if-no-files-found: error
+          retention-days: 7

@@ -31,7 +31,10 @@ async function handle(req: NextRequest) {
     return NextResponse.json({ error: "Failed to inspect payment links" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, ...result });
+  return NextResponse.json({ ok: result.failed === 0, ...result }, {
+    status: result.failed > 0 ? 503 : 200,
+    headers: { "Cache-Control": "no-store", ...(result.failed > 0 ? { "Retry-After": "5" } : {}) },
+  });
 }
 
 export async function GET(req: NextRequest) {
