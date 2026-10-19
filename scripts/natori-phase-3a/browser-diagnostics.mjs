@@ -6,6 +6,7 @@ const scenarios=new Set(['initial','completed_A_explicit_B','legacy_to_structure
 const detectors=['Module not found','Failed to compile','SyntaxError','EADDRINUSE'];
 // Markers identify nearby text only; co-occurrence alone does not establish a cause.
 const markers=[['json_truncated','Unexpected end of JSON input'],['unexpected_token','Unexpected token'],['json_expected_property','Expected property name'],['json_trailing_content','Unexpected non-whitespace character'],['json_parse','JSON.parse'],['request_json','parseJSONFromBytes'],['next_manifest','load-manifest'],['next_components','load-components'],['next_dev_server','next-dev-server'],['next_hot_reloader','hot-reloader'],['next_webpack_cache','webpack.cache'],['next_server_actions','server-reference-manifest'],['next_build_manifest','build-manifest'],['next_routes_manifest','routes-manifest'],['next_app_paths_manifest','app-paths-manifest'],['next_font_manifest','next-font-manifest'],['next_pages_manifest','pages-manifest'],['next_middleware_manifest','middleware-manifest']];
+markers.push(['package_manifest','package.json'],['next_generated_package','.next/package.json'],['webpack_pack_restore','Restoring pack failed'],['webpack_pack_write','Caching failed for pack']);
 const markerCodes=new Set(markers.map(([code])=>code));
 const safeStage=value=>stages.has(value)?value:'other';
 const finite=(value,max)=>Number.isSafeInteger(value)&&value>=0&&value<=max?value:null;

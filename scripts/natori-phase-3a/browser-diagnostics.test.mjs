@@ -46,6 +46,14 @@ test('context values are sanitized in stored evidence as well as job log output'
  assert.deepEqual(result.events[0],{process:null,scenario:'other',stage:'other',stream:'stdout',codes:['SyntaxError'],markers:['unexpected_token']});
 });
 
+test('webpack cache and generated package classifications retain no raw paths',()=>{
+ const d=createCompileDiagnostics({process:1,scenario:'completed_A_explicit_B',getStage:()=>stage,onUpdate:()=>{}});
+ d.write('stderr',Buffer.from('<w> [webpack.cache.PackFileCacheStrategy] Restoring pack failed: SyntaxError: Error parsing /app/.next/package.json: Unexpected end of JSON input '+privateText+'\n'));
+ const result=d.flush();
+ assert.deepEqual(result.events[0].markers,['json_truncated','next_webpack_cache','package_manifest','next_generated_package','webpack_pack_restore']);
+ assert.equal(JSON.stringify(result).includes('/app/'),false);assert.equal(JSON.stringify(result).includes('PRIVATE_CANARY'),false);
+});
+
 test('stdout/stderr cannot combine fragments to invent a diagnostic',()=>{
  const d=createCompileDiagnostics({process:0,scenario:'initial',getStage:()=>stage,onUpdate:()=>{}});
  d.write('stdout',Buffer.from('Syntax'));d.write('stderr',Buffer.from('Error\n'));assert.equal(d.snapshot().events.length,0);
