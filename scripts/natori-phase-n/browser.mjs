@@ -139,7 +139,7 @@ async function main(){
       response=await manager.request.get('/api/natori/admin/notifications');privacyStatus=response.status();privacyCheckpoint='privacy_body';text=await response.text();
       privacyCheckpoint='privacy_assert';privateDataAbsent=!/@phase-n.invalid|snapshot|payload|provider_id|token_hash/.test(text);
     check(response.status()===200&&!/@phase-n.invalid|snapshot|payload|provider_id|token_hash/.test(text),'UI_PRIVATE_DATA');
-    }catch(error){console.error(privacyReadFailureLine(error,{checkpoint:privacyCheckpoint,status:privacyStatus,privateDataAbsent,elapsedMs:Date.now()-privacyStarted}));throw error;}
+    }catch(error){console.error(privacyReadFailureLine(error,{checkpoint:privacyCheckpoint,status:privacyStatus,privateDataAbsent,elapsedMs:Date.now()-privacyStarted,serverCodes:[...classifications],responseText:text}));throw error;}
       sharedKeyHomeReadiness.stage='passed';
     }catch(error){
       if(explicitCodes.has(error?.message))throw error;
