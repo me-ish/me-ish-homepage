@@ -4,6 +4,9 @@ export { isStripePaymentUrl } from "./clientPayment";
 
 const DATE = new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", month: "long", day: "numeric" });
 const day = (iso: string) => DATE.format(new Date(iso));
+const ROUGH_DATE = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
+});
 const past = (iso: string | null, now: Date) => iso !== null && Date.parse(iso) <= now.getTime();
 
 function quoteCard(quote: TalkQuoteFact, latest: boolean, now: Date, linksAllowed: boolean): TalkCard {
@@ -17,9 +20,10 @@ function quoteCard(quote: TalkQuoteFact, latest: boolean, now: Date, linksAllowe
   return { ...base, amount, badge: { label: "確認待ち", tone: "action" }, lines, action: { label: "内容を確認して承認", open: "quote" } };
 }
 
-function roughCard(rough: TalkRoughFact, linksAllowed: boolean): TalkCard {
-  const base = { id: `rough-${rough.id}`, kind: "rough" as const, title: rough.beforeQuote ? "参考ラフ（見積もり前）" : "ラフ" };
-  const where = "ラフは、下のやり取りの添付から確認できます。";
+function roughCard(rough: TalkRoughFact, linksAllowed: boolean, index: number): TalkCard {
+  const base = { id: `rough-${rough.id}`, kind: "rough" as const, title: rough.beforeQuote ? "参考ラフ（見積もり前）" : "ラフ",
+    roughReference: { label: `ラフ${index + 1} · ${ROUGH_DATE.format(new Date(rough.createdAt))}提出`, messageId: rough.messageId, openable: linksAllowed } };
+  const where = linksAllowed ? "下の「このラフの添付を確認」から、対象のラフをご確認ください。" : "ラフは、下のやり取りの添付から確認できます。";
   if (rough.okAt) return { ...base, badge: { label: "OK済み", tone: "done" }, lines: [`${day(rough.okAt)}に「このラフでOK」をいただきました。`, where] };
   const lines = [`${day(rough.createdAt)}にラフが届きました。`, where, "直したい点は、下のやり取りでお送りください。",
     "「OK」は制作を進めるための連絡です。お見積もりの承認やお支払いの代わりにはなりません。"];
@@ -31,8 +35,8 @@ export function buildTalkTimeline(facts: TalkFacts, now: Date): TalkTimeline {
   const ordered = [...facts.quotes].sort((a, b) => a.version - b.version);
   const latest = ordered.at(-1);
   const accepted = ordered.filter(quote => quote.acceptedAt).at(-1);
-  const roughs = [...(facts.roughs ?? [])].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
-    .map(rough => ({ rough, card: roughCard(rough, linksAllowed) }));
+  const roughs = [...(facts.roughs ?? [])].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.id.localeCompare(b.id))
+    .map((rough, index) => ({ rough, card: roughCard(rough, linksAllowed, index) }));
   // Roughs may come at any time: ones sent before a quote lead, the rest follow the quotes.
   const cards: TalkCard[] = [
     ...roughs.filter(({ rough }) => rough.beforeQuote).map(({ card }) => card),

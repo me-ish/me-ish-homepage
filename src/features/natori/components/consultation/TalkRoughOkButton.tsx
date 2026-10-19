@@ -11,13 +11,13 @@ const problem: Record<number, string> = {
 };
 
 /** Records the client's "このラフでOK". It is only a progress note: quote approval and payment stay on their own pages. */
-export default function TalkRoughOkButton({ token, roughId, label }: { token: string; roughId: string; label: string }) {
+export default function TalkRoughOkButton({ token, roughId, label, roughLabel }: { token: string; roughId: string; label: string; roughLabel?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function send() {
-    if (!window.confirm("このラフで「OK」とお伝えします。直したい点がある場合は、OKを押さずに下のやり取りでお送りください。よろしいですか？")) return;
+    if (!window.confirm(`${roughLabel ? `${roughLabel}\n\n` : ""}このラフで「OK」とお伝えします。直したい点がある場合は、OKを押さずに下のやり取りでお送りください。よろしいですか？`)) return;
     setBusy(true); setError(null);
     try {
       const response = await fetch(`/api/natori/consult/${encodeURIComponent(token)}/rough-ok`, {
