@@ -158,7 +158,7 @@ async function main(){
   });
   await test('owner-and-anonymous-boundaries-remain-private',async()=>{const i=await setup(),wrong=randomUUID();check((await peer.rpc('natori_payment_links_v1',{p_owner_id:wrong,p_project_id:i.projectId,p_command:'read'})).data?.result==='not_found','OWNER');const anon=createClient(origin,keys.anon,{auth:{persistSession:false}});check((await anon.rpc('natori_payment_links_v1',{p_owner_id:owner,p_project_id:i.projectId,p_command:'read'})).error,'ANON_RPC');});
   writeFileSync('/results/phase2c-integration.json',JSON.stringify({tests:results,passed:results.filter(t=>t.status==='passed').length,failed:results.filter(t=>t.status==='failed').length,skipped:0,provider:'injected synthetic provider transport only; real Stripe test mode pending'},null,2));
-  check(results.length===35&&results.every(t=>t.status==='passed'),'REQUIRED_TESTS_FAILED');console.log('PHASE 2C DB 35 passed / 0 failed / 0 skipped; actual Stripe pending');
+  check(results.length===37&&results.every(t=>t.status==='passed'),'REQUIRED_TESTS_FAILED');console.log('PHASE 2C DB 37 passed / 0 failed / 0 skipped; actual Stripe pending');
  }finally{globalThis.fetch=direct;}
 }
 main().catch(()=>{console.error('Phase2C integration failed; raw payloads and credentials withheld');process.exitCode=1;});

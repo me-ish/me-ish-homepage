@@ -2,6 +2,7 @@
 import {afterEach,beforeEach,expect,it,vi} from "vitest";
 import {cleanup,fireEvent,render,screen,waitFor} from "@testing-library/react";
 import PaymentStopStatusPanel from "../PaymentStopStatusPanel";
+import NotificationStatusPanel from "../NotificationStatusPanel";
 const fetcher=vi.fn();
 const job={id:"44444444-4444-4444-8444-444444444444",projectId:"22222222-2222-4222-8222-222222222222",title:"合成案件",status:"needs_review",createdAt:"2026-10-01T00:00:00Z",leaseUntil:null};
 const data={enabled:true,checkedAt:"2026-10-19T01:00:00Z",unresolved:1,oldestAt:job.createdAt,jobs:[job],lastRun:{startedAt:"2026-10-19T00:20:00Z",finishedAt:"2026-10-19T00:20:30Z",outcome:"partial",failed:1},lastCompletedAt:"2026-10-19T00:20:30Z"};
@@ -23,3 +24,15 @@ it.each([null,{...data.lastRun,finishedAt:null,outcome:null},{...data.lastRun,st
 it("does not present a failed read as no pending jobs",async()=>{fetcher.mockResolvedValueOnce(response({},503));render(<PaymentStopStatusPanel/>);await screen.findByRole("alert");expect(screen.queryByText(/停止未完了：0件/)).toBeNull();});
 it("disables retry while a live lease is shown",async()=>{fetcher.mockResolvedValueOnce(response({...data,jobs:[{...job,status:"processing",leaseUntil:"2026-10-19T01:01:00Z"}]}));render(<PaymentStopStatusPanel/>);await screen.findByText("合成案件");expect((screen.getByRole("button",{name:"この停止ジョブを再試行"}) as HTMLButtonElement).disabled).toBe(true);});
 it("hides the feature when disabled",async()=>{fetcher.mockResolvedValueOnce(response({enabled:false}));const {container}=render(<PaymentStopStatusPanel/>);await waitFor(()=>expect(fetcher).toHaveBeenCalledOnce());expect(container.textContent).toBe("");});
+
+it("keeps the existing notification refresh uniquely named beside stop recovery",async()=>{
+ const notifications={enabled:true,sendingEnabled:true,notifications:[],offset:0,truncated:false};
+ fetcher.mockImplementation(async(url)=>response(String(url).includes("payment-stops")?data:notifications));
+ render(<><PaymentStopStatusPanel/><NotificationStatusPanel/></>);
+ await screen.findByRole("button",{name:"停止状況を更新"});
+ await screen.findByRole("button",{name:"状態を更新"});
+ expect(screen.getAllByRole("button",{name:"状態を更新"})).toHaveLength(1);
+ fireEvent.click(screen.getByRole("button",{name:"状態を更新"}));
+ await waitFor(()=>expect(fetcher.mock.calls.filter(([url])=>String(url).includes("notifications"))).toHaveLength(2));
+ expect(fetcher.mock.calls.filter(([url])=>String(url).includes("payment-stops"))).toHaveLength(1);
+});
