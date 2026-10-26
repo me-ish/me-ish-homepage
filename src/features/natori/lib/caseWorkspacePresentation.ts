@@ -2,7 +2,7 @@ import type { CaseAttention, CaseObservation } from "../types/caseReadModel";
 import type { CaseGuidance, CaseSection, CaseWorkspaceRecord } from "../types/caseWorkspace";
 
 export const CASE_SECTION_LABELS: Record<CaseSection, string> = {
-  overview: "概要", consultation: "相談", transaction: "取引", production: "制作・納品", history: "履歴",
+  overview: "その他", consultation: "相談", transaction: "見積・支払い", production: "制作・納品", history: "履歴",
 };
 export const CASE_WHO_LABELS = { staff: "あなた", client: "お客さん", system: "自動処理" } as const;
 export const CASE_TASK_STAGE_LABELS = { material: "資料", rough: "ラフ", lineart: "線画", coloring: "着彩", finish: "仕上げ", delivery: "納品" } as const;
@@ -104,7 +104,7 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
   // Missing quote evidence is not an earlier business stage. Preserve confirmed
   // downstream facts and the model's higher-priority operation checks.
   if (quoteUnconfirmed && !inactive && !receipt && !payment && !delivery) {
-    add("quote-unconfirmed", "staff", "見積の状態を読み込めませんでした。取引を開いて確認", "transaction");
+    add("quote-unconfirmed", "staff", "見積の状態を読み込めませんでした。見積・支払いを開いて確認", "transaction");
   }
   if (!inactive && !receipt) {
     if (conversation?.latestSender === "client") add("conversation", "staff", "お客さんの最新メッセージを確認", "consultation", "相談を開く");

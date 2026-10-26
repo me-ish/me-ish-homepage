@@ -12,6 +12,7 @@ import EstimateForm from "../dashboard/EstimateForm";
 import { createClient } from "@/lib/supabase/client";
 import { NATORI_PUBLIC_PAGE_LINKS } from "../admin/navItems";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
+import { CasePublicPages } from "./CasePublicPages";
 function publicPageHref(fallback: string, profile: NatoriUserProfile | null) {
   const raw = (fallback === "/natori/portfolio" ? profile?.portfolioUrl :
     fallback === "/natori/links" ? profile?.linksUrl : null)?.trim();
@@ -29,7 +30,7 @@ export function CaseWorkspaceUtilities({
   onDraftChange,
   onAccessRejected,
 }: {
-  mode: "settings" | "estimate";
+  mode: "settings" | "estimate" | "pages";
   readOnly: boolean;
   onDraftChange: (v: boolean) => void;
   onAccessRejected: () => void;
@@ -50,7 +51,7 @@ export function CaseWorkspaceUtilities({
   useEffect(() => {
     let live = true;
     const epoch = authEpoch.current;
-    if (mode === "settings")
+    if (mode === "settings" || mode === "pages")
       void fetchOwnNatoriProfile()
         .then((p) => {
           if (live && epoch === authEpoch.current) {
@@ -79,6 +80,18 @@ export function CaseWorkspaceUtilities({
       data.subscription.unsubscribe();
     };
   }, [mode, reject]);
+  if (mode === "pages")
+    return (
+      <section aria-label="公開ページ">
+        <h1 className="text-xl font-semibold">公開ページ</h1>
+        <p className="mb-4 mt-1 text-sm text-zinc-600">お客さんが見るページです。</p>
+        {error ? <p role="alert" className="mb-3 text-sm text-amber-900">{error}</p> : null}
+        <CasePublicPages
+          portfolioHref={publicPageHref("/natori/portfolio", profile)}
+          linksHref={publicPageHref("/natori/links", profile)}
+        />
+      </section>
+    );
   return (
     <section
       aria-label={
