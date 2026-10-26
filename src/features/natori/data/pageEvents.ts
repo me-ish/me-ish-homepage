@@ -45,10 +45,11 @@ export type NatoriPageEventSummary = {
 };
 
 /** ダッシュボード用の集計を取得（要ナトリ管理アクセス） */
+export class NatoriPageEventsLoadError extends Error {constructor(public readonly status:number){super(`Failed to fetch page events (${status})`);}}
 export async function fetchNatoriPageEventSummary(): Promise<NatoriPageEventSummary> {
   const response = await fetch("/api/natori/admin/page-events", { cache: "no-store" });
   if (!response.ok) {
-    throw new Error(`Failed to fetch page events (${response.status})`);
+    throw new NatoriPageEventsLoadError(response.status);
   }
   return (await response.json()) as NatoriPageEventSummary;
 }

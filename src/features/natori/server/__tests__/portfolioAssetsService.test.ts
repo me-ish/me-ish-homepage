@@ -17,6 +17,8 @@ const mocks = vi.hoisted(() => ({
   update: vi.fn(),
   remove: vi.fn(),
 }));
+// Domain tests use an unheld admission boundary; actual denial/SQL are covered separately.
+vi.mock("../caseSystemHold",()=>({assertCaseSystemAdmission:vi.fn(async()=>{})}));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabaseAdmin", () => ({
   supabaseAdmin: () => ({

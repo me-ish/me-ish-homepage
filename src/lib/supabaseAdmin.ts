@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/supabase';
+import { assertServerAcceptanceTarget } from './caseAcceptanceEnvironment';
 
 let cached: ReturnType<typeof createClient<Database>> | null = null;
 
 export function supabaseAdmin() {
+  assertServerAcceptanceTarget(true);
   if (cached) return cached;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

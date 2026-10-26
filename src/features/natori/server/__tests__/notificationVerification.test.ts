@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
+vi.mock("../caseSystemHold",async importOriginal=>({...await importOriginal<typeof import('../caseSystemHold')>(),assertCaseSystemAdmission:vi.fn(async()=>{})}));
 vi.mock("@/lib/supabaseAdmin", () => ({ supabaseAdmin: vi.fn(() => { throw new Error("BUSINESS_DB_FORBIDDEN"); }) }));
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { verifyNotificationMail, notificationVerificationAvailable } from "../notificationVerification";

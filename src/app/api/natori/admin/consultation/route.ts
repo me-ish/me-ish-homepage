@@ -27,6 +27,6 @@ export const POST=withNatoriManagement("consultation.POST",true,async(request:Re
   return NextResponse.json({ok:sent==="ok",notificationFailed:sent!=="ok"},{status:sent==="ok"?200:409});
  }
  if(!("operation" in raw))return NextResponse.json({error:"ページを再読み込みしてから送信してください",code:"client_update_required"},{status:426});
- const action="action" in raw&&raw.action==="lookup"?"lookup":"action" in raw&&raw.action==="cancel"?"cancel":"commit";
- return consultationOperationResponse(await consultationOperation({projectId:raw.projectId},raw.operation,action));
+ const action="action" in raw&&raw.action==="inspect"?"inspect":"action" in raw&&raw.action==="lookup"?"lookup":"action" in raw&&raw.action==="cancel"?"cancel":"commit";
+ return consultationOperationResponse(await consultationOperation({projectId:raw.projectId},raw.operation,action,"workspaceExpected" in raw?raw.workspaceExpected:undefined));
 });

@@ -1,0 +1,115 @@
+// Isolated evidence for the approved receipt policy and exact formal migrations.
+import {spawnSync,spawn} from 'node:child_process';
+import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
+import {randomBytes,createHash} from 'node:crypto';
+import {resolve} from 'node:path';
+import assert from 'node:assert/strict';
+import {schema,seed} from '../natori-case-payment/fixture.mjs';
+import {root} from '../natori-case-local-auth/prepare.mjs';
+const out=resolve(process.argv[2]??'');assert(out.startsWith('/workspace/')||out.startsWith('/tmp/'));mkdirSync(out);
+const run='meish-receipt-'+randomBytes(5).toString('hex');
+const pinned='sha256:589f742565e4f6d22149176b032974f55f8201a8a37b71ed587ec5c6902e689f';
+const report={run,scope:'native SQL replay stops at first error; separate reduced-schema recovery characterization',checks:[],containers:[],replay:null};
+const call=(args,input)=>spawnSync('/usr/local/bin/docker',['--host','unix:///var/run/docker.sock',...args],{input,encoding:'utf8',timeout:30000,maxBuffer:16*1024*1024,env:{PATH:process.env.PATH,LANG:'C.UTF-8'}});
+const docker=(args,input)=>{const r=call(args,input);if(r.status!==0)throw Error(r.stderr||r.error?.message||'docker failed');return r.stdout.trim();};
+const literal=v=>"'"+String(v).replaceAll("'","''")+"'",json=v=>literal(JSON.stringify(v))+'::jsonb';
+const check=(name,condition)=>{assert(condition,name);report.checks.push(name);console.log(name);};
+async function pg(label,work){
+ const name=run+'-'+label;docker(['run','--detach','--pull','never','--network','none','--name',name,'--label','meish.receipt='+run,'--memory','512m','--cpus','1','--tmpfs','/var/lib/postgresql/data:rw,nosuid,nodev,size=256m','--env','POSTGRES_HOST_AUTH_METHOD=trust',pinned,'postgres','-c','listen_addresses=127.0.0.1']);
+ report.containers.push({name,removed:false});
+ const raw=text=>call(['exec','-i',name,'psql','-X','-qAt','-v','ON_ERROR_STOP=1','-v','VERBOSITY=verbose','-h','127.0.0.1','-U','postgres'],text);
+ const sql=text=>{const r=raw(text);if(r.status!==0)throw Error(r.stderr);return r.stdout.trim();};
+ try{let ready=false;for(let n=0;n<80;n++){if(raw('select 1').status===0){ready=true;break;}await new Promise(r=>setTimeout(r,100));}assert(ready,'postgres startup');
+  const info=JSON.parse(docker(['inspect',name]))[0];assert.equal(info.HostConfig.NetworkMode,'none');assert.deepEqual(info.HostConfig.PortBindings??{},{});assert(info.Mounts.every(m=>m.Type==='tmpfs'));
+  await work(sql,raw,name);
+ }finally{const info=JSON.parse(docker(['inspect',name]))[0];assert.equal(info.Config.Labels['meish.receipt'],run);docker(['rm','--force',name]);report.containers.find(c=>c.name===name).removed=true;}
+}
+try{
+ docker(['image','inspect',pinned]);
+ await pg('replay',async(sql,raw)=>{
+  sql('create role anon nologin;create role authenticated nologin;create role service_role nologin bypassrls;');
+  sql(readFileSync(root+'/scripts/legacy-entry-read-security/fresh-bootstrap.sql','utf8'));
+  const manifest=JSON.parse(readFileSync(root+'/supabase/baseline/manifest.json','utf8')),applied=[];
+  for(const file of manifest.activeMigrations){const source=readFileSync(root+'/'+file,'utf8'),r=raw(source);if(r.status!==0){report.replay={status:'blocked',platform:'minimal auth/storage catalog fixtures, not real services',applied,failed:file,sqlstate:r.stderr.match(/ERROR:\s+([0-9A-Z]{5}):/)?.[1],error:r.stderr.trim(),remaining:manifest.activeMigrations.length-applied.length};writeFileSync(out+'/replay-error.log',r.stderr);break;}applied.push({file,sha256:createHash('sha256').update(source).digest('hex')});}
+  if(!report.replay)report.replay={status:'ddl_applied',platform:'minimal auth/storage catalog fixtures, not real services',applied,remaining:0};
+  check('approved migration 7 reuses equivalent earlier CHECKs and applies',report.replay.applied.some(x=>x.file.endsWith('20260801234935_etorie_quote_snapshots_retry.sql')));
+  const checks=sql("select conname||'|'||pg_get_constraintdef(oid)||'|'||convalidated from pg_constraint where conrelid='public.natori_quotes'::regclass and conname in ('natori_quotes_request_snapshot_object_check','natori_quotes_pricing_snapshot_object_check') order by conname");
+  writeFileSync(out+'/duplicate-constraints.txt',checks+'\n');
+  check('reused snapshot CHECKs retain their earlier validated state',checks.split('\n').length===2&&checks.split('\n').every(s=>s.endsWith('|true')));
+  check('migration 7 installs its unchanged idempotency column/check/index',sql("select exists(select 1 from information_schema.columns where table_schema='public' and table_name='natori_quotes' and column_name='idempotency_key') and exists(select 1 from pg_constraint where conname='natori_quotes_idempotency_key_check') and to_regclass('public.natori_quotes_project_idempotency_key_key') is not null")==='t');
+  const block=readFileSync(root+'/supabase/migrations/20260801234935_etorie_quote_snapshots_retry.sql','utf8').match(/do \$\$[\s\S]*?end \$\$;/)[0];
+  const drift=raw("begin;alter table public.natori_quotes drop constraint natori_quotes_request_snapshot_object_check;alter table public.natori_quotes add constraint natori_quotes_request_snapshot_object_check check(request_snapshot is null);"+block+'rollback;');
+  check('different existing CHECK definition stops rather than silently accepting drift',drift.status!==0&&drift.stderr.includes('snapshot_check_definition_mismatch'));
+  const recreated=sql("begin;alter table public.natori_quotes drop constraint natori_quotes_request_snapshot_object_check;alter table public.natori_quotes drop constraint natori_quotes_pricing_snapshot_object_check;"+block+"select count(*)=2 from pg_constraint where conrelid='public.natori_quotes'::regclass and conname in ('natori_quotes_request_snapshot_object_check','natori_quotes_pricing_snapshot_object_check');rollback;");
+  check('missing snapshot CHECKs are created by the approved guarded block',recreated==='t');
+ });
+ await pg('recovery',async(sql,raw,name)=>{
+  sql('create schema auth;create table auth.users(id uuid primary key);');sql(schema());
+  const owner='22222222-2222-4222-8222-222222222222',other='33333333-3333-4333-8333-333333333333';sql(`insert into auth.users values('${owner}'),('${other}');`);const fixtures=seed(owner,other);sql(fixtures.sql);
+  const snapshot=id=>JSON.parse(sql(`select public.natori_case_payment_snapshot_v1('${owner}','${id}')`));
+  const guard=v=>{const {status:_s,paidAt:_p,deletedAt:_d,legacyLink:_l,title,clientName,email,...identity}=v.project;void _s;void _p;void _d;void _l;const metadataHash=createHash('sha256').update([title,clientName,email??''].map(s=>Buffer.byteLength(s)+':'+s).join('')).digest('hex');return {quote:v.quote,identity:{...identity,metadataHash},link:v.link,notices:v.jobs.map(j=>({id:j.id,status:j.status})).sort((a,b)=>a.id.localeCompare(b.id)),legacyCount:0};};
+  const command=(id,cmd,input)=>JSON.parse(sql(`set role service_role;select public.natori_case_payment_command_v1('${owner}','${id}',${literal(cmd)},${json(input)});reset role;`));
+  const retire=(id,targetOwner=owner)=>JSON.parse(sql(`set role service_role;select public.natori_case_payment_receipts_retire_v1('${targetOwner}','${id}',100);reset role;`));
+  const prepare=(index)=>{const id=fixtures.ids[index],v=snapshot(id),op=`c0000000-0000-4000-8000-${String(index+1).padStart(12,'0')}`,token=`d0000000-0000-4000-8000-${String(index+1).padStart(12,'0')}`;const input={operationId:op,token,hash:'a'.repeat(64),action:'issue',livemode:false,providerAccountId:'acct_receiptfixture',deadline:new Date(Date.now()+2*86400000).toISOString(),guard:guard(v),receipt:{fixture:'opaque encrypted receipt boundary; no real PII'}};const claimed=command(id,'begin',input);assert.equal(claimed.result,'claimed');return {id,op,input,claimed};};
+  const old=prepare(0);sql(`update natori_payment_link_attempts set lease_until=now()-interval '1 second',price_started_at=now()-interval '23 hours 1 second' where project_id='${old.id}'`);
+  check('unknown Stripe price after 23h refuses old token before cleanup without a new generation',command(old.id,'begin',old.input).result==='receipt_retired'&&snapshot(old.id).operation.retirementReason==='price_creation_unresolved');
+  check('pure expired receipt lookup masks the token without writing or purging storage',snapshot(old.id).operation.request===null&&sql(`select workspace_request is not null from natori_payment_link_operations where project_id='${old.id}'`)==='t');
+  check('foreign-owner retirement cannot purge another owner receipt',retire(old.id,other).retired===0);
+  check('retirement purges body and preserves pending operation/provider identity for reconciliation',retire(old.id).retired===1&&sql(`select status||'/'||(workspace_request is null)::text||'/'||(workspace_guard->'receiptRetention'->>'state') from natori_payment_link_operations where project_id='${old.id}'`)==='pending/true/retired'&&sql(`select state||'/'||count(*) over() from natori_payment_link_attempts where project_id='${old.id}'`)==='needs_review/1');
+  check('retired receipt never becomes a confirmed failure or completed result',snapshot(old.id).operation.status==='pending'&&snapshot(old.id).operation.retirementReason==='price_creation_unresolved'&&command(old.id,'begin',old.input).result==='receipt_retired');
+  check('unresolved old operation still blocks another operation/key',command(old.id,'begin',{...old.input,operationId:'c0000000-0000-4000-8000-999999999999',guard:guard(snapshot(old.id))}).result==='confirmation_stale');
+  const removed=prepare(1);sql(`update natori_payment_link_operations set workspace_request=null where project_id='${removed.id}';update natori_payment_link_attempts set lease_until=null where project_id='${removed.id}'`);
+  check('NULL body alone is now fail-closed against an old browser token',command(removed.id,'begin',removed.input).result==='receipt_retired');
+  check('missing-body retirement records an unresolved marker and keeps duplicate protection',retire(removed.id).retired===1&&snapshot(removed.id).pending&&snapshot(removed.id).operation.retirementReason==='receipt_missing');
+  const done=prepare(2);let fence={operationId:done.op,token:done.input.token,generation:done.claimed.attempt.claim_generation,guard:done.input.guard};
+  for(const [stage,value] of [['price_start',{}],['price',{id:'price_receiptfixture'}],['link_start',{}],['link',{id:'plink_receiptfixture',url:'https://buy.stripe.com/receiptfixture'}]])assert.equal(command(done.id,'stage',{...fence,stage,value}).result,'saved');
+  sql(`update natori_payment_link_attempts set lease_until=null,price_started_at=now()-interval '23 hours 1 second',link_started_at=now()-interval '23 hours 1 second' where project_id='${done.id}'`);
+  const known=command(done.id,'begin',done.input);
+  check('known Stripe IDs remain recoverable after their started clocks exceed 23h',known.result==='claimed'&&known.attempt.price_id==='price_receiptfixture'&&known.attempt.link_id==='plink_receiptfixture'&&sql(`select count(*) from natori_payment_link_attempts where project_id='${done.id}'`)==='1');
+  check('known IDs are not purged merely because a started clock is old',retire(done.id).retired===0);
+  fence={...fence,generation:known.attempt.claim_generation};
+  assert.equal(command(done.id,'finish',{...fence,verified:true,payload:{format:'natori-delivery-aes256gcm-v1',fixture:'opaque mail boundary'}}).result,'completed');
+  const saved=snapshot(done.id);check('completed operation drops receipt but retains guard and result identity',saved.operation.status==='completed'&&saved.operation.request===null&&saved.operation.guard&&saved.operation.id===done.op);
+  const before=sql(`select md5(row_to_json(p)::text) from natori_projects p where id='${done.id}'`);for(let i=0;i<3;i++)snapshot(done.id);check('completed snapshot lookup neither changes project nor enqueues another notification',before===sql(`select md5(row_to_json(p)::text) from natori_projects p where id='${done.id}'`)&&sql(`select count(*) from natori_notification_jobs where project_id='${done.id}'`)==='1');
+  const noticeId='e0000000-0000-4000-8000-000000000001';sql(`insert into natori_notification_jobs(id,notification_key,project_id,purpose,snapshot,payload,status,send_started_at) values('${noticeId}','synthetic-unknown-23h','${fixtures.ids[3]}','payment_link_client','{}','{}','unknown',now()-interval '23 hours 1 second')`);
+  check('unknown mail after 23h cannot claim provider dispatch',sql(`select count(*) from natori_notification_claim_v1('${noticeId}','d0000000-0000-4000-8000-000000000001',true)`)==='0');
+  check('unknown mail retry retains logical key and existing job instead of new attempt',sql(`select natori_notification_retry_v1('${noticeId}','${owner}')` )===noticeId&&sql("select count(*)||'/'||max(status)||'/'||max(error_code) from natori_notification_jobs where notification_key='synthetic-unknown-23h'")==='1/unknown/review_required');
+  const partial=prepare(4),partialFence={operationId:partial.op,token:partial.input.token,generation:partial.claimed.attempt.claim_generation,guard:partial.input.guard};
+  for(const [stage,value] of [['price_start',{}],['price',{id:'price_partialfixture'}]])assert.equal(command(partial.id,'stage',{...partialFence,stage,value}).result,'saved');
+  sql(`update natori_payment_link_attempts set lease_until=null,price_started_at=now()-interval '23 hours 1 second' where project_id='${partial.id}'`);
+  const intermediate=command(partial.id,'begin',partial.input);
+  check('known price with link not yet started remains recoverable after old price clock',intermediate.result==='claimed'&&intermediate.attempt.price_id==='price_partialfixture'&&intermediate.attempt.link_id===null&&intermediate.attempt.link_started_at===null&&sql(`select count(*) from natori_payment_link_attempts where project_id='${partial.id}'`)==='1');
+  check('price known/link unstarted retains the recovery body until payment deadline',retire(partial.id).retired===0&&snapshot(partial.id).operation.request!==null);
+  const deadline=prepare(6),deadlineFence={operationId:deadline.op,token:deadline.input.token,generation:deadline.claimed.attempt.claim_generation,guard:deadline.input.guard};
+  sql(`update natori_payment_link_attempts set deadline=now()-interval '1 second' where project_id='${deadline.id}'`);
+  check('payment deadline closes execution before the physical purge',command(deadline.id,'begin',deadline.input).result==='receipt_retired'&&snapshot(deadline.id).operation.request===null);
+  check('active provider lease defers physical purge at the deadline',retire(deadline.id).deferred===1&&sql(`select workspace_request is not null from natori_payment_link_operations where project_id='${deadline.id}'`)==='t');
+  check('in-flight lease can still record a late known provider ID before retirement',command(deadline.id,'stage',{...deadlineFence,stage:'price',value:{id:'price_latefixture'}}).result==='saved');
+  sql(`update natori_payment_link_attempts set lease_until=null where project_id='${deadline.id}'`);
+  check('deadline purge retains late provider identity and repeat cleanup is idempotent',retire(deadline.id).retired===1&&retire(deadline.id).retired===0&&sql(`select price_id from natori_payment_link_attempts where project_id='${deadline.id}'`)==='price_latefixture');
+  const near=prepare(7);sql(`update natori_payment_link_attempts set lease_until=null,price_started_at=now()-interval '22 hours 59 minutes' where project_id='${near.id}'`);
+  check('before the stage-specific 23h boundary the same request remains available',retire(near.id).retired===0&&snapshot(near.id).operation.request!==null);
+  sql(`update natori_payment_link_attempts set price_started_at=now()-interval '23 hours 1 second' where project_id='${near.id}'`);
+  check('after the stage-specific boundary the old request cannot restart',command(near.id,'begin',near.input).result==='receipt_retired');
+  const locked=spawn('/usr/local/bin/docker',['--host','unix:///var/run/docker.sock','exec','-i',name,'psql','-X','-qAt','-h','127.0.0.1','-U','postgres'],{stdio:['pipe','pipe','pipe']});
+  const finished=new Promise((resolve,reject)=>{locked.on('error',reject);locked.on('close',code=>code===0?resolve():reject(Error('lock fixture failed')));});
+  const held=new Promise(resolve=>locked.stdout.once('data',resolve));locked.stderr.resume();locked.stdin.end(`begin;select id from natori_projects where id='${near.id}' for update;select pg_sleep(1);commit;`);await held;
+  check('concurrent project command causes maintenance to skip rather than purge under it',retire(near.id).retired===0);await finished;
+  check('after the concurrent lock releases cleanup retires exactly once',retire(near.id).retired===1&&retire(near.id).retired===0);
+  sql(`update natori_notification_jobs set status='sent',sent_at=now(),provider_id='synthetic',send_started_at=now() where project_id='${done.id}'`);
+  const renotify={...done.input,operationId:'c0000000-0000-4000-8000-888888888888',token:'d0000000-0000-4000-8000-888888888888',hash:'b'.repeat(64),action:'renotify',revision:1,guard:guard(snapshot(done.id)),receipt:{fixture:'opaque receipt',expiresAt:new Date(Date.now()+86400000).toISOString()}};
+  check('renotification begins against its exact saved link and deadline revision',command(done.id,'begin',renotify).result==='claimed');
+  sql(`update natori_payment_link_attempts set lease_until=null,deadline=deadline+interval '1 day',deadline_revision=deadline_revision+1 where project_id='${done.id}'`);
+  check('interrupted renotification cannot resume after an external deadline/revision change',command(done.id,'begin',renotify).result==='confirmation_stale');
+  sql(`update natori_payment_link_operations set workspace_request=jsonb_set(workspace_request,'{expiresAt}',to_jsonb((now()-interval '1 second')::text)) where operation_id='${renotify.operationId}'`);
+  check('original encrypted receipt deadline still closes recovery after attempt extension',snapshot(done.id).operation.retirementReason==='payment_deadline_elapsed'&&retire(done.id).retired===1);
+  const batch1=prepare(8),batch2=prepare(9);for(const row of [batch1,batch2])sql(`update natori_payment_link_attempts set lease_until=null,price_started_at=now()-interval '23 hours 1 second' where project_id='${row.id}'`);
+  const batch=JSON.parse(sql(`set role service_role;select natori_case_payment_receipts_retire_v1('${owner}',null,1);reset role;`));
+  check('bounded cleanup reports remaining backlog and its oldest eligible time',batch.retired===1&&batch.remaining===1&&Number.isFinite(Date.parse(batch.oldestEligibleAt)));
+  check('next maintenance batch drains the backlog without reopening retired operations',JSON.parse(sql(`set role service_role;select natori_case_payment_receipts_retire_v1('${owner}',null,100);reset role;`)).remaining===0);
+  check('all four workspace RPCs are invoker/search_path empty and service-role only',sql("select bool_and(not prosecdef and proconfig=ARRAY['search_path=\"\"']::text[] and has_function_privilege('service_role',oid,'EXECUTE') and not has_function_privilege('anon',oid,'EXECUTE') and not has_function_privilege('authenticated',oid,'EXECUTE') and not exists(select 1 from aclexplode(proacl) where grantee=0 and privilege_type='EXECUTE')) from pg_proc where proname in ('natori_case_payment_receipt_reason_v1','natori_case_payment_receipts_retire_v1','natori_case_payment_snapshot_v1','natori_case_payment_command_v1')")==='t');
+  report.recovery={schema:'reduced business dependencies; formal writer/outbox/workspace/retirement migrations; Auth/provider boundaries not exercised',policyImplemented:true};
+ });
+ report.success=true;
+}catch(error){report.success=false;report.error=error.message;process.exitCode=1;console.error(error.message.slice(0,1000));}
+finally{writeFileSync(out+'/results.json',JSON.stringify(report,null,2));console.log(JSON.stringify({success:report.success,checks:report.checks.length,allOwnedContainersRemoved:report.containers.every(c=>c.removed)}));}

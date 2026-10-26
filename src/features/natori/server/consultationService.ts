@@ -1,4 +1,8 @@
 import "server-only";
+import {assertCaseSystemAdmission} from "./caseSystemHold";
+import {acceptanceProjectAllowed} from "./caseAcceptance";
+import { assertAcceptanceLegacyMailDisabled } from "@/lib/caseAcceptanceEnvironment";
+
 
 import { createHash, randomBytes } from "crypto";
 import { Resend } from "resend";
@@ -33,6 +37,7 @@ function asMessage(row: MessageRow, files: ConsultationFile[]): ConsultationMess
 }
 
 async function getProject(projectId: string, ownerId?: string): Promise<ProjectRow | null> {
+  if(!await acceptanceProjectAllowed(projectId))return null;
   const admin = supabaseAdmin();
   let query = admin.from("natori_projects")
     .select("id, user_id, title, client_name, client_email, note, request_data, status, deleted_at")
@@ -183,10 +188,12 @@ export async function renewClientConsultationLink(token: string): Promise<"ok" |
   if (lookupError || !oldLink) return "not-found";
   if (new Date(oldLink.created_at).getTime() < Date.now() - 90 * 86400000) return "not-found";
   const project = await getProject(oldLink.project_id);
+  if(project&&!await acceptanceProjectAllowed(project.id,true))return "not-found";
   const clientEmail = project?.client_email ?? extractClientEmailFromNote(project?.note);
   if (!project || project.deleted_at || project.status === "closed" || !clientEmail) return "not-found";
   const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   if (oldLink.renewed_at && oldLink.renewed_at > cutoff) return "throttled";
+  try { await assertCaseSystemAdmission("command",project.user_id); } catch { return "mail-error"; }
   // The conditional update ensures concurrent requests for the same link do
   // not send multiple emails. No conversation content is returned here.
   let claim = admin.from("natori_consultation_access")
@@ -207,6 +214,8 @@ export async function renewClientConsultationLink(token: string): Promise<"ok" |
   const key = process.env.RESEND_API_KEY;
   if (!key) return "mail-error";
   try {
+    assertAcceptanceLegacyMailDisabled();
+    await assertCaseSystemAdmission("legacy-sender");
     const { error: mailError } = await new Resend(key).emails.send({
       from: FROM, to: [clientEmail], replyTo: REPLY_TO,
       subject: "【ナトリ】相談ページの新しいリンク",

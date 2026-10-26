@@ -25,6 +25,7 @@ type PresetRow = {
 };
 
 const API_PATH = "/api/natori/admin/pricing";
+export class NatoriPricingLoadError extends Error {constructor(public readonly status:number,message:string){super(message);}}
 
 export const DEFAULT_PRESET_SEEDS: Array<{ presetKey: string; name: string }> = [
   { presetKey: "tsunagu", name: "つなぐ用" },
@@ -56,7 +57,7 @@ function toVisiblePresets(rows: PresetRow[]): NatoriPricingPreset[] {
 export async function fetchOwnPricingPresets(): Promise<NatoriPricingPreset[]> {
   const response = await fetch(API_PATH, { cache: "no-store" });
   if (!response.ok) {
-    throw new Error(await readErrorMessage(response, "プリセットの読み込みに失敗しました"));
+    throw new NatoriPricingLoadError(response.status,await readErrorMessage(response, "プリセットの読み込みに失敗しました"));
   }
   const payload = (await response.json()) as { presets?: PresetRow[] };
   return toVisiblePresets(payload.presets ?? []);
@@ -76,7 +77,7 @@ export async function seedDefaultPricingPresets(): Promise<NatoriPricingPreset[]
     body: JSON.stringify({ seeds }),
   });
   if (!response.ok) {
-    throw new Error(await readErrorMessage(response, "プリセットの初期化に失敗しました"));
+    throw new NatoriPricingLoadError(response.status,await readErrorMessage(response, "プリセットの初期化に失敗しました"));
   }
   const payload = (await response.json()) as { presets?: PresetRow[] };
   return toVisiblePresets(payload.presets ?? []);
@@ -92,7 +93,7 @@ export async function updatePricingPresetConfig(
     body: JSON.stringify({ kind: "config", id, config }),
   });
   if (!response.ok) {
-    throw new Error(await readErrorMessage(response, "プリセットの保存に失敗しました"));
+    throw new NatoriPricingLoadError(response.status,await readErrorMessage(response, "プリセットの保存に失敗しました"));
   }
 }
 
@@ -103,6 +104,6 @@ export async function setDefaultPricingPreset(id: string): Promise<void> {
     body: JSON.stringify({ kind: "default", id }),
   });
   if (!response.ok) {
-    throw new Error(await readErrorMessage(response, "プリセットの更新に失敗しました"));
+    throw new NatoriPricingLoadError(response.status,await readErrorMessage(response, "プリセットの更新に失敗しました"));
   }
 }

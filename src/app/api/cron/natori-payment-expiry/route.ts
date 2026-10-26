@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { safeCompare } from "@/lib/auth/timingSafe";
 import { expireNatoriPaymentLinks } from "@/features/natori/server/paymentLinkExpiryService";
+import { retireCasePaymentReceipts } from "@/features/natori/server/casePaymentReceiptRetention";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,15 +24,17 @@ async function handle(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Keep receipt cleanup independent of Stripe availability and never suppress existing expiry work.
+  const receiptRetirement = await retireCasePaymentReceipts().catch(() => ({ error: "receipt_retirement_unavailable" }));
   const result = await expireNatoriPaymentLinks();
   if (result.kind === "not-configured") {
-    return NextResponse.json({ error: "Stripe is not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Stripe is not configured", receiptRetirement }, { status: 503 });
   }
   if (result.kind === "db-error") {
-    return NextResponse.json({ error: "Failed to inspect payment links" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to inspect payment links", receiptRetirement }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, ...result });
+  return NextResponse.json({ ok: !("error" in receiptRetirement), ...result, receiptRetirement }, { status: "error" in receiptRetirement ? 500 : 200 });
 }
 
 export async function GET(req: NextRequest) {

@@ -1,4 +1,6 @@
 import "server-only";
+import { assertCaseSystemAdmission } from "./caseSystemHold";
+import {acceptanceProjectAllowed} from "./caseAcceptance";
 
 import { createHash, randomBytes } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -27,8 +29,9 @@ const sha256 = (value: string) => createHash("sha256").update(value).digest("hex
 export async function openTalkLink(consultToken: string, target: TalkOpenTarget): Promise<OpenTalkLinkResult> {
   try {
     const project = await getClientProject(consultToken);
-    if (!project || project.deleted_at) return { kind: "not-found" };
+    if (!project || project.deleted_at || !await acceptanceProjectAllowed(project.id,true)) return { kind: "not-found" };
     if (project.status === "closed") return { kind: "unavailable" };
+    await assertCaseSystemAdmission("command",project.user_id);
     const db = supabaseAdmin();
     const since = new Date(Date.now() - 3600000).toISOString();
     const token = randomBytes(32).toString("base64url");
@@ -45,6 +48,7 @@ export async function openTalkLink(consultToken: string, target: TalkOpenTarget)
       const recent = await db.from("natori_quote_access").select("token_hash", { count: "exact", head: true }).eq("quote_id", row.id).gte("created_at", since);
       if (recent.error) return { kind: "db-error" };
       if ((recent.count ?? 0) >= OPEN_LINKS_PER_HOUR) return { kind: "throttled" };
+      await assertCaseSystemAdmission("command",project.user_id);
       const inserted = await db.from("natori_quote_access").insert({ token_hash: sha256(token), quote_id: row.id, expires_at: row.expires_at });
       return inserted.error ? { kind: "db-error" } : { kind: "ok", path: `/natori/quote/${token}` };
     }
@@ -60,6 +64,7 @@ export async function openTalkLink(consultToken: string, target: TalkOpenTarget)
     const recent = await db.from("natori_delivery_access").select("token_hash", { count: "exact", head: true }).eq("release_id", row.id).gte("created_at", since);
     if (recent.error) return { kind: "db-error" };
     if ((recent.count ?? 0) >= OPEN_LINKS_PER_HOUR) return { kind: "throttled" };
+    await assertCaseSystemAdmission("command",project.user_id);
     const inserted = await db.from("natori_delivery_access").insert({ token_hash: sha256(token), release_id: row.id, expires_at: expiresAt });
     return inserted.error ? { kind: "db-error" } : { kind: "ok", path: `/natori/delivery/${token}` };
   } catch (error) {

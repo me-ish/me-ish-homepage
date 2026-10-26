@@ -1,4 +1,5 @@
 import "server-only";
+import { assertCaseSystemAdmission } from "./caseSystemHold";
 
 // features/natori/server/portfolioSiteService.ts
 // /natori/portfolio の掲載内容の読み込み・保存と画像アップロード。
@@ -150,6 +151,7 @@ export async function uploadPortfolioReferenceImage(
   if (prepared.kind !== "ok") return prepared;
 
   const path = `${submissionId}/${crypto.randomUUID()}.webp`;
+  await assertCaseSystemAdmission("command");
   const { error } = await supabaseAdmin().storage
     .from(REFERENCE_BUCKET)
     .upload(path, prepared.webp, { contentType: "image/webp", upsert: false });
@@ -177,6 +179,7 @@ export async function signPortfolioReferenceImage(
 
 export async function deletePortfolioReferenceImages(paths: string[]): Promise<void> {
   if (paths.length === 0) return;
+  await assertCaseSystemAdmission("command");
   const { error } = await supabaseAdmin().storage.from(REFERENCE_BUCKET).remove(paths);
   if (error) console.error("[natori-portfolio] private reference cleanup failed:", error);
 }

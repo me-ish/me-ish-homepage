@@ -2,6 +2,7 @@
 // dry-run 既定、24時間の下限、台帳再確認、削除上限、読み取り失敗時の保持を固定する。
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("../caseSystemHold",()=>({assertCaseSystemAdmission:vi.fn(async()=>{})}));
 vi.mock("server-only", () => ({}));
 
 const { mockList, mockRemove, mockFrom, mockFindLinked, mockOperations, mockCleanupScope } = vi.hoisted(() => ({

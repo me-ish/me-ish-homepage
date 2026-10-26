@@ -13,10 +13,10 @@ function safeNext(url: URL): string {
     url.searchParams.get('redirect') ||
     '/';
   try {
-    // ルート相対 /path は許可。ただし //evil のようなプロトコル相対は拒否
-    if (raw.startsWith('/')) return raw.startsWith('//') ? '/' : raw;
-
-    // 絶対URLが来たら同一オリジンのみ許可
+    // Relative paths must pass the same normalized-origin check as absolute
+    // URLs. Browsers normalize backslashes into authority separators.
+    if (/[\\\u0000-\u0020\u007f]/.test(raw) || /%5c|%0[0-9a-f]|%1[0-9a-f]|%7f/i.test(raw)
+      || (!raw.startsWith('/') && !raw.startsWith(url.origin))) return '/';
     const u = new URL(raw, url.origin);
     if (u.origin === url.origin) {
       return u.pathname + u.search + u.hash;
@@ -47,7 +47,8 @@ export async function GET(req: Request) {
 
   try {
     const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) return NextResponse.redirect(new URL('/admin-login?err=oauth', url.origin));
   } catch (e) {
     console.error('[auth/callback] exchangeCodeForSession failed:', e);
     return NextResponse.redirect(new URL('/admin-login?err=oauth', url.origin));

@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { canonicalizeIntake } from "../../lib/intakeOperation";
 import { buildNatoriRequestDataV1, createInitialPortfolioRequestFormState } from "../../lib/portfolioRequestForm";
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), upload: vi.fn(), prepare: vi.fn(), remove: vi.fn(), schedule: vi.fn() }));
+// Domain tests use an unheld admission boundary; actual denial/SQL are covered separately.
+vi.mock("../caseSystemHold",()=>({assertCaseSystemAdmission:vi.fn(async()=>{})}));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabaseAdmin", () => ({ supabaseAdmin: () => ({ rpc: mocks.rpc, storage: { from: () => ({ remove: mocks.remove }) } }) }));
 vi.mock("../publicIntakeOwner", () => ({ resolvePublicIntakeOwnerId: () => ({ kind: "ok", ownerId: "d1a855ca-9478-4a8d-baa1-123456789abc" }) }));

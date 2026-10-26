@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 const mocks = vi.hoisted(() => ({ upload: vi.fn(), download: vi.fn() }));
+// Domain tests use an unheld admission boundary; actual denial/SQL are covered separately.
+vi.mock("../caseSystemHold",()=>({assertCaseSystemAdmission:vi.fn(async()=>{})}));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabaseAdmin", () => ({ supabaseAdmin: () => ({ storage: { from: () => mocks } }) }));
 import { prepareIntakeReferenceImage, uploadIntakeReferenceImage } from "../intakeReferenceStorage";

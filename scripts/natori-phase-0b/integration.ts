@@ -135,6 +135,17 @@ async function main() {
       const after=await admin.from("natori_projects").select("id",{count:"exact",head:true});check(!after.error&&after.count===before.count,"CONFIG_WROTE_ROW");
     });
   }
+  await test("real-admission-stop-denies-write-and-preserves-owner-read",async()=>{
+    const stopped=await admin.rpc("natori_case_system_control_v1",{p_owner:owner.id,p_action:"hold",p_generation:0,p_actor:{kind:"auth-user",userId:a.id}});
+    check(!stopped.error&&stopped.data?.result==="saved","STOP_NOT_SAVED");
+    const status=await admin.rpc("natori_case_system_status_v1",{p_owner:owner.id});
+    check(!status.error&&status.data?.armed&&status.data.commandsHeld&&status.data.sendersHeld,"STOP_NOT_HELD");
+    const before=await admin.from("natori_projects").select("id",{count:"exact",head:true});
+    check((await run(a.jar,()=>projects.POST(req("POST",draft)))).status===503,"STOP_WRITE_ALLOWED");
+    check((await run(a.jar,()=>projects.GET(new Request("http://localhost/api/natori/admin/projects")))).status===200,"STOP_READ_BLOCKED");
+    const after=await admin.from("natori_projects").select("id",{count:"exact",head:true});
+    check(!before.error&&!after.error&&before.count===after.count,"STOP_CHANGED_ROWS");
+  });
   const summary={passed:results.filter(r=>r.status==="passed").length,failed:results.filter(r=>r.status==="failed").length,skipped:0,results};
   writeFileSync("/results/phase0b.json",JSON.stringify(summary,null,2));
   console.log(`SUMMARY phase0b: passed=${summary.passed} failed=${summary.failed} skipped=0`);

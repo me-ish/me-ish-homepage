@@ -1,4 +1,5 @@
 import "server-only";
+import { assertCaseSystemAdmission } from "./caseSystemHold";
 
 // features/natori/server/inquiryOrphanService.ts
 // ご依頼フォームの資料 object のうち、案件へ紐付かないまま残ったもの
@@ -245,6 +246,7 @@ export async function scanNatoriInquiryReferenceOrphans(
 
   if (options.dryRun || orphans.length === 0) return summarize(orphans.length, 0);
 
+  try { await assertCaseSystemAdmission("command"); } catch { return { kind: "unavailable" }; }
   const { error: removeError } = await storage.remove(orphans);
   if (removeError) {
     console.error("[natori-inquiry-orphans] removal failed");

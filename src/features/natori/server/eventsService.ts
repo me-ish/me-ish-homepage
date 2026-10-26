@@ -1,4 +1,6 @@
 import "server-only";
+import {assertServerAcceptanceTarget} from "@/lib/caseAcceptanceEnvironment";
+import {acceptanceEventContext,acceptanceCreateFixture,sameEventContent} from "./caseAcceptanceEvents";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveNatoriOwnerId } from "@/features/natori/server/natoriOwner";
 
@@ -19,11 +21,9 @@ export type ListNatoriEventsResult =
 export async function listNatoriAdminEvents(): Promise<ListNatoriEventsResult> {
   const ownerId = await resolveNatoriOwnerId();
   const admin = supabaseAdmin();
-  const { data, error } = await admin
-    .from(EVENTS_TABLE)
-    .select("*")
-    .eq("user_id", ownerId)
-    .order("date", { ascending: true });
+  const query=admin.from(EVENTS_TABLE).select("*").eq("user_id",ownerId);
+  if(assertServerAcceptanceTarget(true)){const config=await acceptanceEventContext();if(ownerId!==config.owner)return{kind:"db-error"};query.in("id",config.fixtures.map(f=>f.id));}
+  const {data,error}=await query.order("date",{ascending:true});
   if (error) {
     console.error("[natori-admin-events] fetch failed", error);
     return { kind: "db-error" };
@@ -42,9 +42,19 @@ export async function createNatoriAdminEvent(input: {
   note?: string | null;
 }): Promise<CreateNatoriEventResult> {
   const admin = supabaseAdmin();
+  let fixtureId:string|undefined;
+  if(assertServerAcceptanceTarget(true)){
+    const config=await acceptanceEventContext(true),fixture=acceptanceCreateFixture(config,{title:input.title,date:input.date,note:input.note??null});
+    if(input.userId!==config.owner||!fixture)return{kind:"db-error"};
+    fixtureId=fixture.id;
+    const prior=await admin.from(EVENTS_TABLE).select("*").eq("id",fixtureId).eq("user_id",config.owner).maybeSingle();
+    if(prior.error)return{kind:"db-error"};
+    if(prior.data)return prior.data.user_id===config.owner&&sameEventContent(prior.data,{title:input.title,date:input.date,note:input.note??null})?{kind:"ok",event:prior.data}:{kind:"db-error"};
+  }
   const { data, error } = await admin
     .from(EVENTS_TABLE)
     .insert({
+      ...(fixtureId?{id:fixtureId}:{}),
       user_id: input.userId,
       title: input.title,
       date: input.date,
@@ -70,6 +80,10 @@ export async function updateNatoriAdminEvent(
 ): Promise<NatoriEventMutationResult> {
   const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
+  if(assertServerAcceptanceTarget(true)){
+    const c=await acceptanceEventContext(true);
+    if(ownerId!==c.owner||!c.operations.includes("update")||!c.fixtures.some(f=>f.id===id)||(input.date&&(input.date<c.firstDate||input.date>c.lastDate)))return{kind:"not-found"};
+  }
   const payload: Record<string, unknown> = {};
   if (input.title !== undefined) payload.title = input.title;
   if (input.date !== undefined) payload.date = input.date;
@@ -95,6 +109,9 @@ export async function updateNatoriAdminEvent(
 export async function deleteNatoriAdminEvent(id: string): Promise<NatoriEventMutationResult> {
   const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
+  if(assertServerAcceptanceTarget(true)){
+    const c=await acceptanceEventContext(true);if(ownerId!==c.owner||!c.operations.includes("delete")||!c.fixtures.some(f=>f.id===id))return{kind:"not-found"};
+  }
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from(EVENTS_TABLE)

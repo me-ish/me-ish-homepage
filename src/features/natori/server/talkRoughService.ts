@@ -1,4 +1,5 @@
 import "server-only";
+import {acceptanceProjectAllowed} from "./caseAcceptance";
 
 import { createHash } from "node:crypto";
 import { z } from "zod";
@@ -26,7 +27,7 @@ export async function markStaffRough(projectId: string, messageId: string): Prom
   if (!UUID_RE.test(projectId) || !UUID_RE.test(messageId)) return "invalid";
   try {
     const project = await ownedOpenProject(projectId);
-    if (!project || project.deleted_at) return "not-found";
+    if (!project || project.deleted_at || !await acceptanceProjectAllowed(project.id,true)) return "not-found";
     if (project.status === "closed") return "closed";
     const db = supabaseAdmin();
     const message = await db.from("natori_consultation_messages").select("id, sender")
@@ -53,7 +54,7 @@ export async function unmarkStaffRough(projectId: string, messageId: string): Pr
   if (!UUID_RE.test(projectId) || !UUID_RE.test(messageId)) return "invalid";
   try {
     const project = await ownedOpenProject(projectId);
-    if (!project || project.deleted_at) return "not-found";
+    if (!project || project.deleted_at || !await acceptanceProjectAllowed(project.id,true)) return "not-found";
     if (project.status === "closed") return "closed";
     const removed = await roughs().delete().eq("project_id", projectId).eq("message_id", messageId).is("client_ok_at", null).select("id");
     if (removed.error) return "unavailable";
@@ -78,7 +79,7 @@ export async function recordClientRoughOk(consultToken: string, roughId: string)
   if (!UUID_RE.test(roughId) || !TOKEN_RE.test(consultToken)) return "not-found";
   try {
     const project = await getClientProject(consultToken);
-    if (!project || project.deleted_at) return "not-found";
+    if (!project || project.deleted_at || !await acceptanceProjectAllowed(project.id,true)) return "not-found";
     // This transaction repeats the capability/project/rough checks and commits the OK with its job.
     const response: unknown = await supabaseAdmin().rpc("natori_record_rough_ok_v1", {
       p_project_id: project.id, p_rough_id: roughId, p_token_hash: createHash("sha256").update(consultToken).digest("hex"),

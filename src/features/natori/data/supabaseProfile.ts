@@ -22,6 +22,7 @@ type ProfileRow = {
 };
 
 const API_PATH = "/api/natori/admin/profile";
+export class NatoriProfileLoadError extends Error { constructor(public readonly status:number,message:string){super(message);} }
 
 function rowToProfile(row: ProfileRow): NatoriUserProfile {
   return {
@@ -42,7 +43,7 @@ async function readErrorMessage(response: Response, fallback: string): Promise<s
 export async function fetchOwnNatoriProfile(): Promise<NatoriUserProfile | null> {
   const response = await fetch(API_PATH, { cache: "no-store" });
   if (!response.ok) {
-    throw new Error(await readErrorMessage(response, "プロフィールの読み込みに失敗しました"));
+    throw new NatoriProfileLoadError(response.status,await readErrorMessage(response, "プロフィールの読み込みに失敗しました"));
   }
   const payload = (await response.json()) as { profile: ProfileRow | null };
   return payload.profile ? rowToProfile(payload.profile) : null;
@@ -65,7 +66,7 @@ export async function upsertOwnNatoriProfile(
     body: JSON.stringify(input),
   });
   if (!response.ok) {
-    throw new Error(await readErrorMessage(response, "プロフィールの保存に失敗しました"));
+    throw new NatoriProfileLoadError(response.status,await readErrorMessage(response, "プロフィールの保存に失敗しました"));
   }
   const payload = (await response.json()) as { profile: ProfileRow };
   return rowToProfile(payload.profile);

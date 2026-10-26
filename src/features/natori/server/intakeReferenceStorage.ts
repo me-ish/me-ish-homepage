@@ -1,4 +1,5 @@
 import "server-only";
+import { assertCaseSystemAdmission } from "./caseSystemHold";
 import { timingSafeEqual } from "node:crypto";
 import sharp from "sharp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -20,6 +21,7 @@ export async function uploadIntakeReferenceImage(path: string, webp: Buffer): Pr
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.webp$/u.test(path)) return { kind: "unknown" };
   try {
     const storage = supabaseAdmin().storage.from("natori-inquiry-refs");
+    await assertCaseSystemAdmission("command");
     const uploaded = await storage.upload(path, webp, { contentType: "image/webp", upsert: false });
     if (!uploaded.error) return { kind: "ok" };
     // Conflict, network response loss or previous partial upload: compare exact bytes, never overwrite/delete.
