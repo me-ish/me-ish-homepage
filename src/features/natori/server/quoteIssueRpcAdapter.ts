@@ -1,4 +1,5 @@
 import "server-only";
+import {hasCurrentFlowOperation,currentStep} from "./caseCurrentFlow";
 
 import { z } from "zod";
 import { validateNatoriQuoteIssuePayloadV1 } from "@/features/natori/lib/quoteSnapshot";
@@ -118,7 +119,9 @@ export async function issueNatoriQuoteViaRpc(
         p_pricing_snapshot: input.pricingSnapshot,
         p_idempotency_key: input.idempotencyKey,
       };
-    const { data, error, status } = input.draftRevision === undefined
+    const { data, error, status } = hasCurrentFlowOperation()
+      ? {data:await currentStep("issue_quote",{...params,p_expected_revision:input.draftRevision}),error:null,status:200}
+      : input.draftRevision === undefined
       ? await supabaseAdmin().rpc("natori_issue_quote_v1", params)
       : await supabaseAdmin().rpc("natori_issue_quote_from_draft_v1", {
           ...params,

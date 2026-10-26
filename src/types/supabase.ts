@@ -74,6 +74,22 @@ export type Database = {
   }
   public: {
     Tables: {
+      natori_case_acceptance_runs: {
+        Row: {
+          id: string; owner_id: string; project_ref: string; origin: string;
+          provider_scope: string; stripe_account: string; starts_at: string; ends_at: string;
+          enabled: boolean; allowed_to: string[]; human_to: string[]; sender: string; reply_to: string;
+          mail_limit: number; human_limit: number; used: number; human_used: number;
+        }
+        Insert: {
+          id: string; owner_id: string; project_ref: string; origin: string;
+          provider_scope: string; stripe_account: string; starts_at: string; ends_at: string;
+          enabled?: boolean; allowed_to: string[]; human_to?: string[]; sender: string; reply_to: string;
+          mail_limit: number; human_limit: number; used?: number; human_used?: number;
+        }
+        Update: Partial<Database["public"]["Tables"]["natori_case_acceptance_runs"]["Insert"]>
+        Relationships: []
+      }
       natori_consultation_operations: {Row:{project_id:string;sender:string;operation_id:string;request_hash:string;body:string;manifest:Json;status:string;claim_token:string|null;lease_expires_at:string|null;signed_expires_at:string|null;message_id:string|null;notification_id:string|null;notice_payload:Json|null;access_hash:string|null;access_expires_at:string|null;created_at:string};Insert:{project_id:string;sender:string;operation_id:string;request_hash:string;body:string;manifest:Json;status:string;claim_token?:string|null;lease_expires_at?:string|null;signed_expires_at?:string|null;message_id?:string|null;notification_id?:string|null;notice_payload?:Json|null;access_hash?:string|null;access_expires_at?:string|null;created_at?:string};Update:{status?:string;claim_token?:string|null;lease_expires_at?:string|null;signed_expires_at?:string|null;message_id?:string|null;notification_id?:string|null};Relationships:[]}
       natori_intake_operations: {
         Row: {
@@ -1784,6 +1800,20 @@ export type Database = {
       }
     }
     Functions: {
+      natori_case_context_read_v1: {Args:{p_owner:string;p_project:string};Returns:Json}
+      natori_case_snapshot_v1: {Args:{p_project_id:string;p_owner_id:string};Returns:Json[]}
+      natori_case_history_page_v1: {Args:{p_owner:string;p_project:string;p_offset?:number;p_revision?:string};Returns:Json}
+      natori_case_context_revision_v1: {Args:{p_project:string};Returns:string}
+      natori_case_planning_read_v1: {Args:{p_owner:string};Returns:Json}
+      natori_case_context_command_v1: {Args:{p_owner:string;p_operation:string;p_project:string|null;p_command:string;p_revision:string|null;p_input:Json;p_operator:Json};Returns:Json}
+      natori_case_admin_notice_read_v1: {Args:{p_owner:string;p_project:string;p_notice:string};Returns:Json}
+      natori_case_reconciliation_notice_read_v1: {Args:{p_owner:string;p_project:string;p_notice:string};Returns:Json}
+      natori_case_admin_read_v1: { Args: {p_owner:string;p_project:string}; Returns: Json }
+      natori_case_admin_replay_v1: { Args: { p_owner: string; p_operation: string; p_project: string | null; p_command: string; p_revision: string | null; p_input: Json }; Returns: Json };
+      natori_case_admin_lookup_v1: { Args: {p_owner:string;p_operation:string}; Returns: Json }
+      natori_case_admin_command_v1: { Args: {p_owner:string;p_operation:string;p_project:string|null;p_command:string;p_revision:string|null;p_input:Json;p_operator:Json}; Returns: Json }
+      natori_case_renotify_quote_v1: { Args: {p_owner_id:string;p_quote_id:string;p_operation_id:string;p_request:Json;p_token_hash:string;p_expires_at:string;p_payload:Json;p_revision:string}; Returns: {notification_id:string;replayed:boolean}[] }
+      natori_case_issue_quote_v1: { Args: {p_owner_id:string;p_input:Json;p_payload:Json;p_revision:string}; Returns: {quote_id:string;version:number;reused:boolean;notification_id:string}[] }
       natori_save_portfolio_content: { Args: { expected_revision: number; next_content: Json }; Returns: { saved_revision: number }[] }
       natori_consultation_operation_v1: {Args:{p_project_id:string;p_sender:string;p_operation_id:string;p_request_hash:string;p_command:string;p_owner_id?:string|null;p_access_hash?:string|null;p_input?:Json;p_claim_token?:string|null};Returns:Json}
       natori_consultation_legacy_notice_v1: {Args:{p_owner_id:string;p_project_id:string;p_message_id:string;p_payload:Json;p_access_hash:string|null;p_expires_at:string|null};Returns:string|null}
@@ -1799,6 +1829,17 @@ export type Database = {
       natori_quote_payment_state_v1: { Args: { p_owner_id: string; p_project_id: string }; Returns: Json }
       natori_payment_attention_v1: { Args: { p_owner_id: string }; Returns: Json }
       natori_payment_attention_v2: { Args: { p_owner_id: string }; Returns: Json }
+      natori_case_entry_page_v1: { Args: { p_owner_id:string; p_kind:string; p_offset?:number; p_revision?:string|null }; Returns: Json }
+      natori_case_acceptance_context_v1: { Args: { p_run: string; p_owner: string; p_project: string; p_mutation?: boolean }; Returns: Json }
+      natori_case_acceptance_mail_v1: { Args: { p_run: string; p_owner: string; p_project: string; p_job: string; p_claim: string; p_hash: string; p_to: string; p_sender: string; p_reply: string; p_origin: string; p_payload: Json }; Returns: Json }
+      natori_case_acceptance_send_v1: { Args: { p_run: string; p_job: string; p_claim: string; p_hash: string }; Returns: boolean }
+      natori_case_mail_event_v1: { Args: { p_run: string; p_scope: string; p_event: string; p_body_hash: string; p_job: string; p_request_hash: string; p_provider: string; p_type: string; p_occurred: string }; Returns: Json }
+      natori_case_mail_evidence_v1: { Args: { p_owner: string; p_project: string; p_job: string }; Returns: Json }
+      natori_case_reconciliation_v1: { Args: { p_owner_id: string; p_project_id: string; p_command: string; p_input?: Json }; Returns: Json }
+      natori_case_payment_snapshot_v1: { Args: { p_owner_id: string; p_project_id: string; p_operation_id?: string | null }; Returns: Json }
+      natori_case_payment_command_v1: { Args: { p_owner_id: string; p_project_id: string; p_command: string; p_input?: Json }; Returns: Json }
+      natori_case_payment_receipt_reason_v1: { Args: { p_owner_id: string; p_project_id: string; p_operation_id: string }; Returns: string | null }
+      natori_case_payment_receipts_retire_v1: { Args: { p_owner_id: string; p_project_id?: string | null; p_limit?: number }; Returns: Json }
       natori_payment_links_v1: {
         Args: { p_owner_id: string; p_project_id: string | null; p_command: string; p_input?: Json }
         Returns: Json

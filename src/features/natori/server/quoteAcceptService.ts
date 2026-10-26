@@ -1,4 +1,5 @@
 import "server-only";
+import {acceptanceProjectAllowed} from "./caseAcceptance";
 import { getQuotePaymentOverview } from "./paymentReadModelService";
 import type { NatoriPaymentOverview } from "../types/payment";
 
@@ -90,6 +91,7 @@ async function fetchQuoteRow(token: string): Promise<QuoteRow | null | typeof FE
       return FETCH_FAILED;
     }
   }
+  if(data&&!await acceptanceProjectAllowed(data.project_id))return null;
   return (data as QuoteRow | null) ?? null;
 }
 
@@ -151,6 +153,7 @@ export async function acceptNatoriQuote(token: string): Promise<AcceptNatoriQuot
   const row = await fetchQuoteRow(token);
   if (row === FETCH_FAILED) return { kind: "db-error" };
   if (!row) return { kind: "not-found" };
+  if (!await acceptanceProjectAllowed(row.project_id,true))return{kind:"not-found"};
   if (row.superseded_at) return { kind: "not-found" };
   if (isExpired(row)) return { kind: "expired" };
   const outbox = acceptanceOutboxEnabled();

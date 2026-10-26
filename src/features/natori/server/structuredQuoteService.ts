@@ -1,4 +1,8 @@
 import "server-only";
+import {assertCaseSystemAdmission} from "./caseSystemHold";
+import { assertAcceptanceLegacyMailDisabled } from "@/lib/caseAcceptanceEnvironment";
+import { currentNatoriFlow, runCurrentOperation, hasCurrentFlowOperation, currentEffectStart, currentEffectRecorded, currentMailStart, currentMailAccepted, readCurrentOperation, currentStep } from "./caseCurrentFlow";
+
 
 import { buildAcceptanceNotificationPayload, dispatchAcceptanceNotification } from "./acceptanceNotifications";
 import { sealDeliveryNotification } from "./deliveryNotificationPayload";
@@ -30,7 +34,7 @@ type ProjectRow = {
 };
 
 export type IssueStructuredQuoteInput = NatoriQuoteIssuePayloadV1 &
-  StructuredQuoteDeliveryAttempt & { draftRevision: number };
+  StructuredQuoteDeliveryAttempt & { draftRevision: number; workspaceRevision?:string };
 
 export type IssueStructuredQuoteResult =
   | { kind: "ok"; quoteId: string; version: number; reused: boolean; notificationId?: string; notificationStatus?: string }
@@ -44,7 +48,8 @@ export type IssueStructuredQuoteResult =
         | "db-error"
         | "mail-error";
       reason?: string;
-    };
+    }
+  | { kind: "result-unconfirmed" };
 
 export async function issueStructuredQuoteAndSend(
   input: IssueStructuredQuoteInput,
@@ -66,6 +71,12 @@ export async function issueStructuredQuoteAndSend(
   const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
 
+  if(input.workspaceRevision&&!quoteIntegrityEnabled()) {
+    if(!currentNatoriFlow())return {kind:"invalid-state"};
+    return runCurrentOperation({owner:ownerId,project:input.projectId,id:input.idempotencyKey,kind:"quote_issue",revision:input.workspaceRevision,
+      request:{...input,acceptToken:createHash("sha256").update(attempt.data.acceptToken).digest("hex")}},
+      ()=>issueStructuredQuoteAndSend({...input,workspaceRevision:undefined}));
+  }
   if (quoteIntegrityEnabled()) return issueAtomicQuote(input, ownerId, attempt.data.acceptToken);
 
   const { data, error } = await supabaseAdmin()
@@ -85,6 +96,7 @@ export async function issueStructuredQuoteAndSend(
     .update(attempt.data.acceptToken)
     .digest("hex");
 
+  if(hasCurrentFlowOperation())await currentEffectStart("quote");
   const issued = await issueNatoriQuoteViaRpc({
     projectId: input.projectId,
     toEmail: input.toEmail,
@@ -101,16 +113,21 @@ export async function issueStructuredQuoteAndSend(
     draftRevision: input.draftRevision,
   });
   if (issued.kind === "rejected") {
+    if(hasCurrentFlowOperation())await currentEffectRecorded("quote", {outcome:"rejected"});
     return { kind: "rejected", reason: issued.reason };
   }
   if (issued.kind === "db-error") return { kind: "db-error" };
+  if(hasCurrentFlowOperation())await currentEffectRecorded("quote");
 
   const body = injectAcceptLink(
     input.bodySnapshot,
     `${getSiteUrl()}/natori/quote/${attempt.data.acceptToken}`,
   );
+  assertAcceptanceLegacyMailDisabled();
+  if(hasCurrentFlowOperation())await currentMailStart({quoteId:issued.quoteId,to:input.toEmail,amount:input.pricingSnapshot.total,subject:input.subject,body:input.bodySnapshot,kind:"estimate"});
+  else await assertCaseSystemAdmission("legacy-sender");
   const resend = new Resend(RESEND_API_KEY);
-  const { error: mailError } = await resend.emails.send(
+  const { data: mailData, error: mailError } = await resend.emails.send(
     {
       from: FROM,
       to: [input.toEmail],
@@ -129,6 +146,10 @@ export async function issueStructuredQuoteAndSend(
   if (mailError) {
     console.error("[natori-structured-quote] mail send failed", mailError);
     return { kind: "mail-error" };
+  }
+  if(hasCurrentFlowOperation()) {
+    await currentMailAccepted(mailData?.id??"");
+    return {kind:"ok",quoteId:issued.quoteId,version:issued.version,reused:issued.kind==="reused",notificationStatus:"sent"};
   }
 
   // Lifecycle history is recorded in natori_project_activity by DB triggers.
@@ -161,7 +182,16 @@ export async function issueStructuredQuoteAndSend(
 export const quoteIntegrityEnabled = () => process.env.NATORI_QUOTE_INTEGRITY_ENABLED === "1";
 
 export async function getStructuredQuoteRecovery(projectId: string, operationId?: string) {
-  if (!quoteIntegrityEnabled()) return { enabled: false, issue: null };
+  if (!quoteIntegrityEnabled()) {
+    if(!currentNatoriFlow()||process.env.NATORI_CASE_DASHBOARD_PREVIEW_ENABLED!=="1")return {enabled:false,issue:null};
+    const owner=await resolveNatoriOwnerId();
+    const op=await readCurrentOperation(owner,projectId,operationId,operationId?undefined:"quote_issue");
+    if(!op)return {enabled:true,lookupOnly:true,issue:null};
+    if(!["quote_issue","quote_renotify"].includes(op.kind))throw Error("quote_operation_mismatch");
+    const response=op.response;
+    return {enabled:true,lookupOnly:true,issue:{quoteId:op.quote_id,version:op.version??(typeof response?.version==="number"?response.version:null),
+      notificationStatus:op.sent_at?"sent":op.status==="completed"?"failed":"unknown",operationId:op.id}};
+  }
   const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { enabled: true, issue: null };
   const { data, error } = await supabaseAdmin().rpc("natori_quote_issue_recovery_v1", {
@@ -192,13 +222,12 @@ async function issueAtomicQuote(input: IssueStructuredQuoteInput, ownerId: strin
     draftRevision: input.draftRevision,
   }));
   const db = supabaseAdmin();
-  const { data, error } = await db.rpc("natori_issue_quote_with_notification_v1", {
-    p_owner_id: ownerId, p_input: request, p_payload: sealed,
-  });
+  const args={p_owner_id:ownerId,p_input:request,p_payload:sealed};
+  const {data,error}=input.workspaceRevision?await db.rpc("natori_case_issue_quote_v1",{...args,p_revision:input.workspaceRevision}):await db.rpc("natori_issue_quote_with_notification_v1",args);
   if (error) {
     const reasons = ["project_not_found", "project_archived", "project_already_paid", "quote_already_accepted",
       "invalid_quote_state", "idempotency_conflict", "estimate_draft_changed", "estimate_draft_mismatch",
-      "estimate_terms_incomplete", "estimate_due_date_past", "quote_terms_conflict"];
+      "estimate_terms_incomplete", "estimate_due_date_past", "quote_terms_conflict", "workspace_confirmation_stale", "notification_recovery_required"];
     const message=typeof error.message === "string" ? error.message : "";
     const reason = reasons.find(value => message.includes(value));
     return reason ? { kind: "rejected", reason } : { kind: "db-error" };
@@ -206,14 +235,15 @@ async function issueAtomicQuote(input: IssueStructuredQuoteInput, ownerId: strin
   const row = data?.[0];
   if (!row || !row.quote_id || !Number.isSafeInteger(row.version) || !row.notification_id) return { kind: "db-error" };
   const activeNotice=await latestQuoteNotification(row.notification_id);
-  await dispatchAcceptanceNotification(activeNotice.id);
+  if(!input.workspaceRevision||!row.reused)await dispatchAcceptanceNotification(activeNotice.id);
   const notice=await latestQuoteNotification(activeNotice.id);
   return { kind: "ok", quoteId: row.quote_id, version: row.version, reused: row.reused,
     notificationId: notice.id, notificationStatus: notice.status };
 }
 
-export async function renotifyStructuredQuote(quoteId: string, operationId: string): Promise<IssueStructuredQuoteResult> {
-  if (!quoteIntegrityEnabled()) return { kind: "invalid-state" };
+export async function renotifyStructuredQuote(quoteId: string, operationId: string, workspaceRevision?:string): Promise<IssueStructuredQuoteResult> {
+  if (!quoteIntegrityEnabled()) return currentNatoriFlow()&&workspaceRevision
+    ? renotifyCurrentQuote(quoteId,operationId,workspaceRevision) : {kind:"invalid-state"};
   const ownerId = await resolveNatoriOwnerId();
   if (!ownerId) return { kind: "not-found" };
   const db = supabaseAdmin();
@@ -231,23 +261,45 @@ export async function renotifyStructuredQuote(quoteId: string, operationId: stri
     text: injectAcceptLink(quote.body_snapshot,`${getSiteUrl()}/natori/quote/${token}`),
     headers: { "X-Meish-Template": "natori-structured-quote" } }, expiresAt); buildAcceptanceNotificationPayload({ purpose: "quote_issue_client", payload, snapshot: {} }); }
   catch { return { kind: "not-configured" }; }
-  const { data, error: noticeError } = await db.rpc("natori_renotify_quote_v1", {
-    p_owner_id: ownerId, p_quote_id: quoteId, p_operation_id: operationId,
-    p_request: { quoteId, toEmail: quote.to_email, subject: quote.subject, bodySnapshot: quote.body_snapshot },
-    p_token_hash: createHash("sha256").update(token).digest("hex"), p_expires_at: expiresAt, p_payload: payload,
-  });
+  const args={p_owner_id:ownerId,p_quote_id:quoteId,p_operation_id:operationId,
+    p_request:{quoteId,toEmail:quote.to_email,subject:quote.subject,bodySnapshot:quote.body_snapshot},
+    p_token_hash:createHash("sha256").update(token).digest("hex"),p_expires_at:expiresAt,p_payload:payload};
+  const result=workspaceRevision?await db.rpc("natori_case_renotify_quote_v1",{...args,p_revision:workspaceRevision}):await db.rpc("natori_renotify_quote_v1",args);
+  const {data,error:noticeError}=result;
   if (noticeError) {
     const message=typeof noticeError.message === "string" ? noticeError.message : "";
-    const reason = ["invalid_quote_state","invalid_quote_expiry","idempotency_conflict","notification_recovery_required"].find(v=>message.includes(v));
+    const reason = ["invalid_quote_state","invalid_quote_expiry","idempotency_conflict","notification_recovery_required","workspace_confirmation_stale"].find(v=>message.includes(v));
     return reason ? { kind: "rejected", reason } : { kind: "db-error" };
   }
   const noticeId = data?.[0]?.notification_id;
   if (!noticeId) return { kind: "db-error" };
   const activeNotice=await latestQuoteNotification(noticeId);
-  await dispatchAcceptanceNotification(activeNotice.id);
+  if(!workspaceRevision||!(data?.[0] as {replayed?:boolean})?.replayed)await dispatchAcceptanceNotification(activeNotice.id);
   const notice=await latestQuoteNotification(activeNotice.id);
   return { kind: "ok", quoteId, version: quote.version, reused: true, notificationId: notice.id,
     notificationStatus: notice.status };
+}
+
+async function renotifyCurrentQuote(quoteId:string,id:string,revision:string):Promise<IssueStructuredQuoteResult>{
+  const owner=await resolveNatoriOwnerId();
+  const {data:q,error}=await supabaseAdmin().from("natori_quotes")
+    .select("id,project_id,version,amount,to_email,subject,body_snapshot,accepted_at,expires_at")
+    .eq("id",quoteId).eq("user_id",owner).maybeSingle();
+  if(error)return {kind:"db-error"};if(!q)return {kind:"not-found"};
+  return runCurrentOperation({owner,project:q.project_id,id,kind:"quote_renotify",revision,request:{quoteId,id,revision}},async()=>{
+    const token=randomBytes(32).toString("base64url");
+    const expiresAt=q.accepted_at?new Date(Date.now()+14*86400000).toISOString():q.expires_at;
+    if(Date.parse(expiresAt)<=Date.now())return {kind:"invalid-state"};
+    if(await currentStep("quote_access",{quoteId,tokenHash:createHash("sha256").update(token).digest("hex"),expiresAt})!==true)throw Error("quote_access_unconfirmed");
+    await currentMailStart({kind:"estimate",quoteId,to:q.to_email,amount:q.amount,subject:q.subject,body:q.body_snapshot});
+    assertAcceptanceLegacyMailDisabled();
+    const {data,error:sendError}=await new Resend(RESEND_API_KEY).emails.send({from:FROM,to:[q.to_email],...(BCC?{bcc:[BCC]}:{}),replyTo:REPLY_TO,
+      subject:q.subject.replace(/[\r\n]+/g," ").slice(0,200),text:injectAcceptLink(q.body_snapshot,`${getSiteUrl()}/natori/quote/${token}`),headers:{"X-Meish-Template":"natori-structured-quote"}},
+      {idempotencyKey:`natori-current-quote/${id}`});
+    if(sendError)return {kind:"mail-error"};
+    await currentMailAccepted(data?.id??"");
+    return {kind:"ok",quoteId,version:q.version,reused:true,notificationStatus:"sent"};
+  });
 }
 
 async function latestQuoteNotification(id: string): Promise<{ id: string; status: string }> {

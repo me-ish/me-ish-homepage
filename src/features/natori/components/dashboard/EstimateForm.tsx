@@ -25,6 +25,7 @@ import {
   seedDefaultPricingPresets,
   updatePricingPresetConfig,
   type NatoriPricingPreset,
+  NatoriPricingLoadError,
 } from "@/features/natori/data/supabasePricing";
 import { fetchNatoriProjects } from "@/features/natori/data/supabaseProjects";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,7 @@ import type {
 } from "@/features/natori/types/pricing";
 
 type EstimateFormProps = {
+  workspaceOnly?:boolean;readOnly?:boolean;onDraftChange?:(v:boolean)=>void;onAccessRejected?:()=>void;
   /**
    * エトリエのデモ環境用。プリセットの読み込みを行わず、既定の料金表による
    * 計算・メール下書きだけを提供する（案件登録は非表示・送信はシミュレーション）。
@@ -52,7 +54,7 @@ type EstimateFormProps = {
   demoArtistName?: string;
 };
 
-export default function EstimateForm({ demo, demoProjects, demoArtistName }: EstimateFormProps) {
+export default function EstimateForm({ demo, demoProjects, demoArtistName,workspaceOnly=false,readOnly=false,onDraftChange,onAccessRejected }: EstimateFormProps) {
   const [requestText, setRequestText] = useState("");
   const [submittedText, setSubmittedText] = useState("");
   const [pricingConfig, setPricingConfig] = useState<NatoriPricingConfig>(() => createDefaultNatoriPricingConfig());
@@ -67,11 +69,16 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
   const [presetDirty, setPresetDirty] = useState(false);
   const [presetSaving, setPresetSaving] = useState(false);
   const [presetError, setPresetError] = useState<string | null>(null);
+  const [pricingLoaded,setPricingLoaded]=useState(!workspaceOnly);
+  const rejection=useRef(onAccessRejected);rejection.current=onAccessRejected;
+  const rejectPricing=(err:unknown)=>{if(workspaceOnly&&err instanceof NatoriPricingLoadError&&err.status===401){setPresets([]);setAuthed(false);setPricingLoaded(false);setSubmittedText("");setPricingConfig(createDefaultNatoriPricingConfig());rejection.current?.();}};
+  const rejectPricingRef=useRef(rejectPricing);rejectPricingRef.current=rejectPricing;
   // 見積もりメール連携: 依頼受付〜入金待ちの案件（問い合わせ）一覧
   const [inquiryProjects, setInquiryProjects] = useState<NatoriProject[] | null>(null);
   const [selectedInquiryId, setSelectedInquiryId] = useState<string>("");
   const [mailPanelOpen, setMailPanelOpen] = useState(false);
   const resultSectionRef = useRef<HTMLElement | null>(null);
+  useEffect(()=>{onDraftChange?.(!!requestText||presetDirty);return()=>onDraftChange?.(false);},[requestText,presetDirty,onDraftChange]);
 
   const refreshInquiries = useCallback(async () => {
     try {
@@ -87,10 +94,11 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
   const loadPresets = useCallback(async () => {
     try {
       let list = await fetchOwnPricingPresets();
-      if (list.length === 0) {
+      if (list.length === 0&&!workspaceOnly) {
         list = await seedDefaultPricingPresets();
       }
       setPresets(list);
+      setPricingLoaded(true);
       const initial = list.find((preset) => preset.isDefault) ?? list[0];
       if (initial) {
         setActivePresetId(initial.id);
@@ -99,9 +107,10 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
       }
     } catch (err) {
       console.error("[EstimateForm] preset load failed", err);
+      rejectPricingRef.current(err);
       setPresetError(err instanceof Error ? err.message : String(err));
     }
-  }, []);
+  }, [workspaceOnly]);
 
   useEffect(() => {
     setStartDateISO(toISODate(new Date()));
@@ -118,9 +127,9 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
     (async () => {
       await loadPresets();
       setAuthed(true);
-      await refreshInquiries();
+      if(!workspaceOnly)await refreshInquiries();
     })();
-  }, [loadPresets, refreshInquiries, demo, demoProjects]);
+  }, [loadPresets, refreshInquiries, demo, demoProjects,workspaceOnly]);
 
   // 問い合わせ詳細の「この内容で見積もりを作る」からの深リンク
   // （?inquiry=<id>）。依頼文を自動で貼り付けて概算を出し、返信先も選択する。
@@ -171,6 +180,7 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
   }, []);
 
   const handleSubmit = () => {
+    if(workspaceOnly&&!pricingLoaded)return;
     const trimmed = requestText.trim();
     if (!trimmed) return;
     setSubmittedText(trimmed);
@@ -203,6 +213,7 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
   };
 
   const handleSavePreset = async () => {
+    if(readOnly)return;
     if (!activePresetId) return;
     setPresetSaving(true);
     setPresetError(null);
@@ -215,7 +226,32 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
       );
       setPresetDirty(false);
     } catch (err) {
+      rejectPricingRef.current(err);
       setPresetError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPresetSaving(false);
+    }
+  };
+
+  const handleInitializePresets = async () => {
+    if (!workspaceOnly || readOnly || presetSaving || !pricingLoaded || presets.length) return;
+    if (!window.confirm("既存の既定料金表で「つなぐ用」「VGen用」のプリセットを作成しますか？ 保存済みの料金は上書きしません。案件の見積・契約・送信は変更しません。")) return;
+    setPresetSaving(true);
+    setPresetError(null);
+    try {
+      // The existing API ignores duplicate owner/preset keys, including a lost
+      // response or another tab initializing first. Read back its saved values.
+      const list = await seedDefaultPricingPresets();
+      setPresets(list);
+      const initial = list.find(preset => preset.isDefault) ?? list[0];
+      if (initial) {
+        setActivePresetId(initial.id);
+        setPricingConfig(initial.config);
+        setPresetDirty(false);
+      }
+    } catch (err) {
+      rejectPricingRef.current(err);
+      setPresetError("初期設定の保存結果を確認できません。再取得して保存済みの内容を確認してください。");
     } finally {
       setPresetSaving(false);
     }
@@ -275,7 +311,7 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
         <div className="mt-4">
           <Button
             onClick={handleSubmit}
-            disabled={!requestText.trim()}
+            disabled={!requestText.trim()||(workspaceOnly&&!pricingLoaded)}
             className={`${natoriAdminUi.btnPrimary} w-full sm:w-auto`}
           >
             <Calculator className="h-4 w-4" aria-hidden />
@@ -289,11 +325,19 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
             activePresetId={activePresetId}
             dirty={presetDirty}
             saving={presetSaving}
+            disabled={readOnly}
             error={presetError}
             onSelect={handleSelectPreset}
             onSave={handleSavePreset}
           />
         ) : null}
+        {workspaceOnly&&(!pricingLoaded||presetError)?<p role="alert" className="my-3 text-sm text-amber-900">料金の取得・保存を確認できません。新しい保存や送信は行わず認証と接続を確認してください。</p>:null}
+        {workspaceOnly && pricingLoaded && presets.length === 0 ? <div className="my-3 space-y-2 text-sm">
+          <p>保存済みの料金プリセットはありません。現在は既存の既定料金表を参照しています。</p>
+          <Button disabled={readOnly || presetSaving} onClick={() => void handleInitializePresets()} className={natoriAdminUi.btnSecondary}>
+            {presetSaving ? "初期設定を確認中…" : "料金プリセットの初期設定を確認"}
+          </Button>
+        </div> : null}
 
         <PricingTable
           pricingConfig={pricingConfig}
@@ -335,7 +379,7 @@ export default function EstimateForm({ demo, demoProjects, demoArtistName }: Est
               </p>
             </div>
 
-            {demo ? (
+            {workspaceOnly?<p className="text-sm">正式な提示や案件登録は、案件一覧から内容を確認して行ってください。</p>:demo ? (
               <p className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs leading-5 text-zinc-600">
                 実際の画面では、この見積もりをワンクリックで案件として登録したり、
                 問い合わせへの見積もりメール送信に引き継いだりできます（デモでは省略）。
@@ -517,6 +561,7 @@ function PresetSwitcher({
   activePresetId,
   dirty,
   saving,
+  disabled=false,
   error,
   onSelect,
   onSave,
@@ -525,6 +570,7 @@ function PresetSwitcher({
   activePresetId: string | null;
   dirty: boolean;
   saving: boolean;
+  disabled?:boolean;
   error: string | null;
   onSelect: (preset: NatoriPricingPreset) => void;
   onSave: () => Promise<void>;
@@ -541,7 +587,7 @@ function PresetSwitcher({
         {dirty ? (
           <Button
             onClick={() => void onSave()}
-            disabled={saving}
+            disabled={saving||disabled}
             className={natoriAdminUi.btnPrimary}
           >
             <Save className="h-3.5 w-3.5" aria-hidden />

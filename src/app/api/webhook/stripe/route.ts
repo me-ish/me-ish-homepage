@@ -2,6 +2,9 @@
 // Retired owner-test products are acknowledged without database/mail effects.
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { caseAcceptanceConfigured, assertServerAcceptanceTarget } from "@/lib/caseAcceptanceEnvironment";
+import { acceptanceContext, acceptanceStripeKey } from "@/features/natori/server/caseAcceptance";
+import { resolveTrustedNatoriOwnerId } from "@/features/natori/server/trustedNatoriOwner";
 import {
   claimStripeEvent,
   releaseStripeEvent,
@@ -15,13 +18,16 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 // 署名検証だけなので apiVersion 指定は必須ではないが、警告回避したい場合は指定しても良い
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
 
 function isUuidLike(v: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
 
 export async function POST(req: NextRequest) {
+  let stripe:Stripe;
+  try { stripe=new Stripe(caseAcceptanceConfigured()?acceptanceStripeKey(true):"sk_test_signature_verification_only"); }
+  catch { return NextResponse.json({error:"acceptance_configuration"},{status:503}); }
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
     console.error("[webhook/stripe] STRIPE_WEBHOOK_SECRET not configured");
@@ -46,6 +52,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "invalid_signature" }, { status: 400 });
   }
 
+
+  // A dedicated acceptance endpoint never dispatches other products/live/Connect
+  // events into the shared production consumers. A paused run may record late facts.
+  try {
+    if(assertServerAcceptanceTarget(true)){
+      const object=event.data.object as Stripe.Checkout.Session;
+      const project=object.metadata?.projectId,owner=resolveTrustedNatoriOwnerId();
+      if(!["checkout.session.completed","checkout.session.async_payment_succeeded"].includes(event.type)
+        ||event.livemode!==false||event.account||object.livemode!==false||object.metadata?.kind!=="natori_commission"
+        ||!project||!isUuidLike(project)||owner.kind!=="ok")return NextResponse.json({error:"acceptance_scope"},{status:400});
+      const c=await acceptanceContext(owner.ownerId,project,false);
+      if(!c||(await stripe.accounts.retrieve()).id!==c.account)return NextResponse.json({error:"acceptance_account"},{status:400});
+      if(!paymentIntegrityEnabled())return NextResponse.json({error:"acceptance_consumer_paused"},{status:503});
+    }
+  }catch{return NextResponse.json({error:"acceptance_unconfirmed"},{status:503});}
 
   // Refund objects are not Checkout Sessions. Dispatch before the checkout-only early return.
   if (isNatoriRefundEventType(event.type) && refundLedgerReadEnabled()

@@ -60,9 +60,6 @@ async function verifyTurnstile(token?: string, ip?: string) {
   }
 }
 
-/* ---------- Resend client ---------- */
-const resend = new Resend(RESEND_API_KEY);
-
 /* ---------- Handler ---------- */
 export async function POST(req: Request) {
   const ip = getIpFromRequest(req);
@@ -125,6 +122,7 @@ export async function POST(req: Request) {
         </div>
       `;
 
+      const resend = new Resend(RESEND_API_KEY);
       const { error: mailErr } = await resend.emails.send({
         from: FROM,
         to: [TO],

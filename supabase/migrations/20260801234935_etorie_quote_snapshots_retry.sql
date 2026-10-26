@@ -9,11 +9,40 @@ alter table public.natori_quotes
   add column if not exists idempotency_key text,
   add column if not exists issued_at timestamptz;
 
+-- Earlier project constraints already install these two CHECKs on a fresh replay.
+-- Compare parsed expressions/columns, not formatting of SQL source. Drift must stop.
+do $$
+declare item record; expected record; actual record;
+begin
+  create temporary table natori_snapshot_check_expected (
+    request_snapshot jsonb, pricing_snapshot jsonb,
+    constraint natori_quotes_request_snapshot_object_check
+      check (request_snapshot is null or jsonb_typeof(request_snapshot) = 'object'),
+    constraint natori_quotes_pricing_snapshot_object_check
+      check (pricing_snapshot is null or jsonb_typeof(pricing_snapshot) = 'object')
+  ) on commit drop;
+  for item in select * from (values
+    ('natori_quotes_request_snapshot_object_check','request_snapshot'),
+    ('natori_quotes_pricing_snapshot_object_check','pricing_snapshot')
+  ) as checks(name, column_name) loop
+    select pg_get_expr(c.conbin,c.conrelid) as expression into expected
+      from pg_constraint c where c.conrelid='pg_temp.natori_snapshot_check_expected'::regclass and c.conname=item.name;
+    select c.contype,c.connoinherit,pg_get_expr(c.conbin,c.conrelid) as expression,
+      (select array_agg(a.attname::text order by k.position) from unnest(c.conkey) with ordinality k(attnum,position)
+        join pg_attribute a on a.attrelid=c.conrelid and a.attnum=k.attnum) as columns into actual
+      from pg_constraint c where c.conrelid='public.natori_quotes'::regclass and c.conname=item.name;
+    if found then
+      if actual.contype<>'c' or actual.connoinherit or actual.expression is distinct from expected.expression
+        or actual.columns is distinct from array[item.column_name] then
+        raise exception 'snapshot_check_definition_mismatch: %',item.name;
+      end if;
+    else
+      execute format('alter table public.natori_quotes add constraint %I check (%I is null or jsonb_typeof(%I) = ''object'') not valid',item.name,item.column_name,item.column_name);
+    end if;
+  end loop;
+end $$;
+
 alter table public.natori_quotes
-  add constraint natori_quotes_request_snapshot_object_check
-    check (request_snapshot is null or jsonb_typeof(request_snapshot) = 'object') not valid,
-  add constraint natori_quotes_pricing_snapshot_object_check
-    check (pricing_snapshot is null or jsonb_typeof(pricing_snapshot) = 'object') not valid,
   add constraint natori_quotes_idempotency_key_check
     check (
       idempotency_key is null

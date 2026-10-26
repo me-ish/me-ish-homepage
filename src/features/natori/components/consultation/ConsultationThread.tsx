@@ -15,7 +15,7 @@ import { roughOkSignature, staffRoughOkListSchema } from "@/features/natori/lib/
 import RoughOkFollowups from "./RoughOkFollowups";
 
 type Props =
-  | { mode: "staff"; projectId: string; clientEmail?: string; standalone?: boolean; initialMessages?: never; token?: never; closed?: boolean; onChanged?: () => void; onDraftChange?: (hasDraft: boolean) => void }
+  | { mode: "staff"; readOnlyLookup?: boolean; workspaceExpected?:{title:string;clientName:string;email:string|null}; projectId: string; clientEmail?: string; standalone?: boolean; initialMessages?: never; token?: never; closed?: boolean; onChanged?: () => void; onDraftChange?: (hasDraft: boolean) => void }
   | { mode: "client"; token: string; initialMessages: ConsultationMessage[]; closed: boolean; projectId?: never; clientEmail?: never };
 
 type ComposerJob = { actor: string; generation: number };
@@ -123,6 +123,8 @@ export default function ConsultationThread(props: Props) {
   const [roughOkSendingEnabled, setRoughOkSendingEnabled] = useState(false);
   const [roughOkActionsAllowed, setRoughOkActionsAllowed] = useState(false);
   const [body, setBody] = useState("");
+  const [review,setReview]=useState(false);
+  const reviewGuard=useRef<unknown>();
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(props.mode === "staff");
   const [error, setError] = useState("");
@@ -143,6 +145,7 @@ export default function ConsultationThread(props: Props) {
   const polling = useRef(false);
   const changed = props.mode === "staff" ? props.onChanged : undefined;
   const onDraftChange = props.mode === "staff" ? props.onDraftChange : undefined;
+  const workspaceLookup=props.mode==="staff"&&props.readOnlyLookup;
   const fileRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
 
@@ -267,6 +270,10 @@ export default function ConsultationThread(props: Props) {
   useEffect(() => { onDraftChange?.(hasDraft); }, [hasDraft, onDraftChange]);
   const [pending,setPending]=useState<ConsultationOperation|null>(null);
   const [cacheReady,setCacheReady]=useState(false);
+  useEffect(()=>{if(!cacheReady||!workspaceLookup)return;
+    const key=cacheKey+"/draft";
+    try{if(body||draftFiles.length)sessionStorage.setItem(key,JSON.stringify({body,files:draftFiles.map(f=>f.file.name)}));else sessionStorage.removeItem(key);}catch{/* Keep the visible draft; leaving protection remains active. */}
+  },[cacheReady,cacheKey,body,draftFiles,workspaceLookup]);
   const [noticeExpired,setNoticeExpired]=useState(false);
   const cachedPendingMatches = (operation: ConsultationOperation) => {
     const raw = sessionStorage.getItem(cacheKey);
@@ -275,7 +282,7 @@ export default function ConsultationThread(props: Props) {
   };
   const retirePending = (operation: ConsultationOperation, job: ComposerJob) => {
     if (!ownsPending(operation, job) || !cachedPendingMatches(operation)) return false;
-    sessionStorage.removeItem(cacheKey);
+    sessionStorage.removeItem(cacheKey);sessionStorage.removeItem(cacheKey+"/guard");
     currentPending.current = null;
     operationGeneration.current++;
     setPending(null);setNoticeExpired(false);
@@ -287,9 +294,10 @@ export default function ConsultationThread(props: Props) {
     setBusy(false);
     setProgress(null);
   };
+  const expectedWorkspace=()=>{if(!workspaceLookup)return {};const raw=sessionStorage.getItem(cacheKey+"/guard");return {workspaceExpected:raw?JSON.parse(raw):props.mode==="staff"?props.workspaceExpected:undefined};};
   const callOperation=async(action:"commit"|"lookup"|"cancel",operation:ConsultationOperation)=>{
     const response=await fetch(postEndpoint,{method:"POST",headers:{...CSRF_HEADERS,"Content-Type":"application/json"},
-      body:JSON.stringify({...(props.mode==="staff"?{projectId:props.projectId}:{}),action,operation})});
+      body:JSON.stringify({...(props.mode==="staff"?{projectId:props.projectId}:{}),...expectedWorkspace(),action:props.mode==="staff"&&props.readOnlyLookup&&action==="lookup"?"inspect":action,operation})});
     const data:unknown=await response.json();
     if(!data||typeof data!=="object"||!("kind" in data))throw new Error("送信結果を確認できません。同じ送信で再試行してください。");
     return{response,data:data as {kind:string;messageId?:string;operationId?:string;requestHash?:string;files?:{id:string;path:string;uploaded:boolean;uploadToken?:string}[]}};
@@ -324,6 +332,9 @@ export default function ConsultationThread(props: Props) {
             else await recordSaved(restored,data,job);
           }
         }).catch(()=>{if(active&&ownsPending(restored,job))setError("前回の送信結果を確認できません。同じ送信で再試行してください。");});
+      }else if(props.mode==="staff"&&props.readOnlyLookup){
+        const rawDraft=sessionStorage.getItem(cacheKey+"/draft");
+        if(rawDraft){const saved=JSON.parse(rawDraft) as {body?:unknown;files?:unknown};if(typeof saved.body==="string")setBody(saved.body.slice(0,4000));if(Array.isArray(saved.files)&&saved.files.length)setError("本文の下書きを復元しました。添付の元ファイルをもう一度選択してください。");}
       }
       setCacheReady(true);
     }catch{setError("送信の記録を読み込めません。担当者にお問い合わせください。");}
@@ -349,6 +360,7 @@ export default function ConsultationThread(props: Props) {
     setDraftFiles(current=>[...current,...files.map(file=>({id:crypto.randomUUID(),file}))]);
   };
   const send=async()=>{
+    if(workspaceLookup&&props.mode==="staff"&&!props.clientEmail){setError("登録された宛先を確認できません。相談は送信しません。");return;}
     if(busyOwner.current||busy||noticeExpired||!cacheReady||(!pending&&!body.trim()&&!draftFiles.length)||!ownsActor())return;
     const job={actor:actorKey,generation:++operationGeneration.current};
     busyOwner.current=job;setBusy(true);setError("");setNotice("");
@@ -356,9 +368,10 @@ export default function ConsultationThread(props: Props) {
       const operation=pending??await freezeConsultationOperation(body,draftFiles);
       if (!ownsAttempt(job)) return;
       if (pending ? !cachedPendingMatches(operation) : sessionStorage.getItem(cacheKey) !== null) throw new Error("\u4fdd\u5b58\u3055\u308c\u305f\u9001\u4fe1\u306e\u8a18\u9332\u304c\u5909\u308f\u3063\u3066\u3044\u307e\u3059\u3002\u5165\u529b\u3092\u4fdd\u6301\u3057\u3066\u3001\u30da\u30fc\u30b8\u3092\u518d\u8aad\u307f\u8fbc\u307f\u3057\u3066\u78ba\u8a8d\u3057\u3066\u304f\u3060\u3055\u3044\u3002");
+      if(workspaceLookup&&!pending)sessionStorage.setItem(cacheKey+"/guard",JSON.stringify(reviewGuard.current??(props.mode==="staff"?props.workspaceExpected:null)));
       sessionStorage.setItem(cacheKey,JSON.stringify(operation));currentPending.current=operation;setPending(operation);
       const preparedResponse=await fetch("/api/natori/consultation-file",{method:"POST",headers:{...CSRF_HEADERS,"Content-Type":"application/json"},
-        body:JSON.stringify({...actor,action:"prepare",operation})});
+        body:JSON.stringify({...actor,...expectedWorkspace(),action:"prepare",operation})});
       const prepared=await preparedResponse.json() as {kind:string;messageId?:string;operationId?:string;requestHash?:string;files?:{id:string;path:string;uploaded:boolean;uploadToken?:string}[]};
       if (!ownsPending(operation, job)) return;
       if(await recordSaved(operation,prepared,job))return;
@@ -540,9 +553,10 @@ export default function ConsultationThread(props: Props) {
             placeholder="相談への返信や共有URLを入力してください" className={`${t.textarea} block`} />
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || loading || historyUnavailable} className={t.secondary}><Paperclip className="h-4 w-4" aria-hidden />添付を選ぶ</button>
-            <button type="button" onClick={() => void send()} disabled={(!pending&&!body.trim()&&!draftFiles.length)||busy||loading||historyUnavailable||!cacheReady||noticeExpired}
-              className={`ml-auto ${t.primary}`}><Send className="h-4 w-4" aria-hidden />{busy?"送信中…":pending?"同じ送信を確認・再試行":"メッセージを送信"}</button>
+            <button type="button" onClick={() => {if(workspaceLookup&&!pending){reviewGuard.current=props.mode==="staff"?props.workspaceExpected:undefined;setReview(true);}else void send();}} disabled={(!pending&&!body.trim()&&!draftFiles.length)||busy||loading||historyUnavailable||!cacheReady||noticeExpired}
+              className={`ml-auto ${t.primary}`}><Send className="h-4 w-4" aria-hidden />{busy?"送信中…":pending?"同じ送信を確認・再試行":workspaceLookup?"相談の送信前確認へ":"メッセージを送信"}</button>
           </div>
+          {props.mode==="staff"&&props.readOnlyLookup&&review?<div className="space-y-2 rounded-xl border border-pink-200 bg-pink-50 p-3 text-sm"><p className="font-semibold">相談の送信前確認</p><p>宛先：{props.clientEmail} / この案件の相談</p><pre className="whitespace-pre-wrap break-words">{body}</pre><ul>{draftFiles.map(f=><li key={f.id}>{f.file.name}</li>)}</ul><p>本文の保存と通知受付は別の結果です。</p><button type="button" className={t.primary} disabled={busy} onClick={()=>{setReview(false);void send();}}>確認した相談を送信</button><button type="button" className={t.secondary} onClick={()=>setReview(false)}>確認を取り消す</button></div>:null}
           </div>
         </div>
       ) : closed ? <p className={`border-t ${t.rule} ${t.pad} py-4 ${t.caption}`}>この相談は終了しています。履歴のみ確認できます。</p> : null}

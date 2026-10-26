@@ -1,4 +1,5 @@
 import "server-only";
+import { assertCaseSystemAdmission } from "./caseSystemHold";
 import { randomUUID } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveNatoriOwnerId } from "./natoriOwner";
@@ -117,6 +118,7 @@ export async function storePrivatePortfolioImage(
   const ownerId = await resolveNatoriOwnerId(),
     id = randomUUID(),
     path = pathFor(ownerId, id, "image");
+  await assertCaseSystemAdmission("command",ownerId);
   const uploaded = await bucket().upload(path, webp, {
     contentType: "image/webp",
     cacheControl: "0",
@@ -132,6 +134,7 @@ export async function storePrivatePortfolioImage(
     ready: true,
   });
   if (error) {
+    await assertCaseSystemAdmission("command",ownerId);
     await bucket().remove([path]); // Only this newly generated private object, never a legacy URL.
     return null;
   }
@@ -144,6 +147,7 @@ export async function preparePrivatePortfolioVideo(
   const ownerId = await resolveNatoriOwnerId(),
     id = randomUUID(),
     path = videoStagingPath(ownerId, id);
+  await assertCaseSystemAdmission("command",ownerId);
   const signed = await bucket().createSignedUploadUrl(path, { upsert: false });
   if (signed.error || !signed.data) return null;
   const { error } = await supabaseAdmin().from(TABLE).insert({
@@ -263,6 +267,7 @@ export async function finalizePrivatePortfolioVideo(id: string): Promise<boolean
   if (data.ready) return isReadyPath(data.path, ownerId, id, "video");
   if (data.path !== videoStagingPath(ownerId, id)) return false;
   const path = finalVideoPrefix(ownerId, id) + randomUUID() + ".mp4";
+  await assertCaseSystemAdmission("command",ownerId);
   const copied = await bucket().copy(data.path, path);
   if (copied.error) return false;
   if (!(await verifyVideoSnapshot(path, data.byte_size))) return false;

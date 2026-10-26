@@ -1,4 +1,6 @@
 import "server-only";
+import { assertCaseSystemAdmission } from "./caseSystemHold";
+import {caseAcceptanceConfigured} from "@/lib/caseAcceptanceEnvironment";
 
 // features/natori/server/deliveryService.ts
 // 納品フロー（ラフ確認・納品ファイル・納品ページ・受け取り確認）。
@@ -148,6 +150,7 @@ export async function signNatoriDeliveryUpload(input: {
   const ext = extMatch ? `.${extMatch[1].toLowerCase()}` : "";
   const path = `${input.projectId}/${input.folder}/${randomUUID()}${ext}`;
 
+  await assertCaseSystemAdmission("command",ownerId);
   const { data: signed, error: signError } = await admin.storage
     .from(BUCKET)
     .createSignedUploadUrl(path);
@@ -200,6 +203,7 @@ export async function deleteNatoriDeliveryFile(fileId: string): Promise<boolean>
   if (ownerError || !ownedProject) return false;
 
   // 実体の削除はベストエフォート（失敗しても台帳は消して見た目を揃える）
+  await assertCaseSystemAdmission("command",ownerId);
   const { error: removeError } = await admin.storage
     .from(BUCKET)
     .remove([data.storage_path as string]);
@@ -313,6 +317,7 @@ export async function getNatoriDeliveryByToken(
   token: string
 ): Promise<GetNatoriDeliveryResult> {
   if (deliveryIntegrityEnabled()) return getReadyDelivery(token);
+  if(caseAcceptanceConfigured())return{kind:"not-found"};
   const row = await fetchDeliveryRow(token);
   if (!row) return { kind: "not-found" };
   if (!row.payment_confirmed_at) return { kind: "not-found" };
@@ -377,6 +382,7 @@ export async function acceptNatoriDelivery(
   token: string,
 ): Promise<AcceptNatoriDeliveryResult> {
   if (deliveryIntegrityEnabled()) return acceptReadyDelivery(token);
+  if(caseAcceptanceConfigured())return{kind:"not-found"};
   if (!TOKEN_RE.test(token)) return { kind: "not-found" };
 
   const admin = supabaseAdmin();

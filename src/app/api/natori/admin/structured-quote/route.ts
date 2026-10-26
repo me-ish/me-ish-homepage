@@ -1,3 +1,4 @@
+import {caseDashboardPreviewMode} from "@/features/natori/server/caseDashboardPreview";
 import { withNatoriManagement } from "@/features/natori/server/natoriManagementRoute";
 import { NextResponse } from "next/server";
 import { checkCsrf } from "@/lib/auth/csrf";
@@ -17,6 +18,8 @@ export const POST = withNatoriManagement("structured-quote.POST", true, async fu
   if (csrfError) return csrfError;
 
   const raw = await request.json().catch(() => null);
+  const workspaceRevision=raw&&typeof raw==="object"&&"workspaceRevision" in raw?(raw as {workspaceRevision:unknown}).workspaceRevision:undefined;
+  if(workspaceRevision!==undefined&&(typeof workspaceRevision!=="string"||!/^[a-f0-9]{64}$/.test(workspaceRevision)||caseDashboardPreviewMode()!=="interactive"))return NextResponse.json({error:"workspace_unavailable"},{status:409});
   const parsed = validateNatoriQuoteIssuePayloadV1(raw);
   const attempt = validateStructuredQuoteDeliveryAttempt(raw);
   const draftRevision = raw && typeof raw === "object" && "draftRevision" in raw
@@ -35,8 +38,11 @@ export const POST = withNatoriManagement("structured-quote.POST", true, async fu
     ...parsed.data,
     ...attempt.data,
     draftRevision: Number(draftRevision),
+    ...(typeof workspaceRevision==="string"?{workspaceRevision}:{}),
   });
   switch (result.kind) {
+    case "result-unconfirmed":
+      return NextResponse.json({error:"操作結果を確認できません。送信し直さず、保存された同じ操作の結果を照会してください。",retryable:false,resultUnconfirmed:true},{status:409});
     case "not-found":
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     case "not-configured":

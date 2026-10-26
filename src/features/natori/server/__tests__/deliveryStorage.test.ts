@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHash } from "crypto";
 
+// Domain tests use an unheld admission boundary; actual denial/SQL are covered separately.
+vi.mock("../caseSystemHold",()=>({assertCaseSystemAdmission:vi.fn(async()=>{})}));
 vi.mock("server-only", () => ({}));
 
 const {

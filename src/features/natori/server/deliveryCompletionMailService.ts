@@ -1,4 +1,7 @@
 import "server-only";
+import {assertCaseSystemAdmission} from "./caseSystemHold";
+import { assertAcceptanceLegacyMailDisabled } from "@/lib/caseAcceptanceEnvironment";
+
 
 import { createHash } from "crypto";
 import { Resend } from "resend";
@@ -71,6 +74,8 @@ export async function sendNatoriDeliveryCompletionMail(token: string): Promise<b
     clientName: String(data.client_name ?? ""),
     title: String(data.title ?? ""),
   });
+  assertAcceptanceLegacyMailDisabled();
+  await assertCaseSystemAdmission("legacy-sender");
   const resend = new Resend(RESEND_API_KEY);
   const { error: mailError } = await resend.emails.send({
     from: FROM,

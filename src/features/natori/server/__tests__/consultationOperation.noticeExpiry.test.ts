@@ -1,5 +1,7 @@
 import {afterEach,beforeEach,describe,expect,it,vi} from "vitest";
 import {createHash,randomBytes} from "node:crypto";
+// Domain tests use an unheld admission boundary; actual denial/SQL are covered separately.
+vi.mock("../caseSystemHold",()=>({assertCaseSystemAdmission:vi.fn(async()=>{})}));
 vi.mock("server-only",()=>({}));
 const m=vi.hoisted(()=>({rpc:vi.fn(),info:vi.fn(),download:vi.fn(),sign:vi.fn(),remove:vi.fn(),schedule:vi.fn(),project:{id:"11111111-2222-4333-8444-555555555555",user_id:"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",title:"Fixture",client_name:"Fixture",client_email:"original@phase3b.invalid",note:null,request_data:null,status:"inquiry",deleted_at:null}}));
 vi.mock("@/lib/supabaseAdmin",()=>({supabaseAdmin:()=>({rpc:m.rpc,storage:{from:()=>({info:m.info,download:m.download,createSignedUploadUrl:m.sign,remove:m.remove})}})}));

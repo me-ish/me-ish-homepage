@@ -1,0 +1,203 @@
+{
+  "purpose": "Record already-applied production SQL; do not replay or repair migration history",
+  "original_history_entries_preserved": 43,
+  "applied_additions": 17,
+  "recorded_history_total": 60,
+  "executed_by_this_sync": false,
+  "migrations": [
+    {
+      "sequence": 1,
+      "history_version": "20261025130222",
+      "history_name": "source_20261020224935_natori_case_workspace_read",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025130222_source_20261020224935_natori_case_workspace_read.sql",
+      "applied_sha256": "d7ebb38056ddb0464555480739bf2e565245216e48550b394ec296bfbd1213ed",
+      "applied_bytes": 22012,
+      "historical_source": "supabase/migrations/20261020224935_natori_case_workspace_read.sql",
+      "historical_sha256": "d7ebb38056ddb0464555480739bf2e565245216e48550b394ec296bfbd1213ed",
+      "source_equals_applied": true
+    },
+    {
+      "sequence": 2,
+      "history_version": "20261025130318",
+      "history_name": "source_20261021032000_natori_case_payment_workspace",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025130318_source_20261021032000_natori_case_payment_workspace.sql",
+      "applied_sha256": "89dc12be75c5bee1ce2dc59f2cf8c80c529f6f8a9034d172c6c9d8348b149db7",
+      "applied_bytes": 10436,
+      "historical_source": "supabase/migrations/20261021032000_natori_case_payment_workspace.sql",
+      "historical_sha256": "89dc12be75c5bee1ce2dc59f2cf8c80c529f6f8a9034d172c6c9d8348b149db7",
+      "source_equals_applied": true
+    },
+    {
+      "sequence": 3,
+      "history_version": "20261025130327",
+      "history_name": "source_20261021100000_natori_case_payment_receipt_retirement",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025130327_source_20261021100000_natori_case_payment_receipt_retirement.sql",
+      "applied_sha256": "1708e61e76b4e5577d346c6d830fc61b3a31d05fa34fe7021419356508f170af",
+      "applied_bytes": 16646,
+      "historical_source": "supabase/migrations/20261021100000_natori_case_payment_receipt_retirement.sql",
+      "historical_sha256": "1708e61e76b4e5577d346c6d830fc61b3a31d05fa34fe7021419356508f170af",
+      "source_equals_applied": true
+    },
+    {
+      "sequence": 4,
+      "history_version": "20261025130336",
+      "history_name": "source_20261021180000_natori_case_reconciliation",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025130336_source_20261021180000_natori_case_reconciliation.sql",
+      "applied_sha256": "e2f080758a9b9d500a94d6d02251ac378b95db29272c019422efdbad39a43c0f",
+      "applied_bytes": 70451,
+      "historical_source": "supabase/migrations/20261021180000_natori_case_reconciliation.sql",
+      "historical_sha256": "e2f080758a9b9d500a94d6d02251ac378b95db29272c019422efdbad39a43c0f",
+      "source_equals_applied": true
+    },
+    {
+      "sequence": 5,
+      "history_version": "20261025130411",
+      "history_name": "source_20261021180100_natori_case_workspace_read",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025130411_source_20261021180100_natori_case_workspace_read.sql",
+      "applied_sha256": "71bd0538bc88c4a2fadecff7c183a904d183104159341bae758ee9615fa1b839",
+      "applied_bytes": 22282,
+      "historical_source": "supabase/migrations/20261021180100_natori_case_workspace_read.sql",
+      "historical_sha256": "71bd0538bc88c4a2fadecff7c183a904d183104159341bae758ee9615fa1b839",
+      "source_equals_applied": true
+    },
+    {
+      "sequence": 6,
+      "history_version": "20261025130419",
+      "history_name": "source_20261021210000_natori_case_work",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025130419_source_20261021210000_natori_case_work.sql",
+      "applied_sha256": "90e08d021aeca3ab12999f2c89af1b085277abd90d936d182b263a14981a1ac6",
+      "applied_bytes": 18862,
+      "historical_source": "supabase/migrations/20261021210000_natori_case_work.sql",
+      "historical_sha256": "90e08d021aeca3ab12999f2c89af1b085277abd90d936d182b263a14981a1ac6",
+      "source_equals_applied": true
+    },
+    {
+      "sequence": 7,
+      "history_version": "20261025130429",
+      "history_name": "source_20261021210100_natori_case_workspace_read",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025130429_source_20261021210100_natori_case_workspace_read.sql",
+      "applied_sha256": "9185da0009b9970cea4011077eee8daf6c77bdefa6db0368a861372a7653d7a4",
+      "applied_bytes": 23745,
+      "historical_source": "supabase/migrations/20261021210100_natori_case_workspace_read.sql",
+      "historical_sha256": "9185da0009b9970cea4011077eee8daf6c77bdefa6db0368a861372a7653d7a4",
+      "source_equals_applied": true
+    },
+    {
+      "sequence": 8,
+      "history_version": "20261025130439",
+      "history_name": "source_20261021220000_natori_case_acceptance",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025130439_source_20261021220000_natori_case_acceptance.sql",
+      "applied_sha256": "44813f0d5228587b053e97ddd2f69529ddca191de3456b017ed250beb13be19a",
+      "applied_bytes": 33748,
+      "historical_source": "supabase/migrations/20261021220000_natori_case_acceptance.sql",
+      "historical_sha256": "44813f0d5228587b053e97ddd2f69529ddca191de3456b017ed250beb13be19a",
+      "source_equals_applied": true
+    },
+    {
+      "sequence": 9,
+      "history_version": "20261025130447",
+      "history_name": "source_20261022130000_natori_case_entry_pages",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025130447_source_20261022130000_natori_case_entry_pages.sql",
+      "applied_sha256": "fead8da9ae2e67385acdda3f883f9b8dcb3172588c042989b9d319771ce4f1b1",
+      "applied_bytes": 4300,
+      "historical_source": "supabase/migrations/20261022130000_natori_case_entry_pages.sql",
+      "historical_sha256": "fead8da9ae2e67385acdda3f883f9b8dcb3172588c042989b9d319771ce4f1b1",
+      "source_equals_applied": true
+    },
+    {
+      "sequence": 10,
+      "history_version": "20261025130513",
+      "history_name": "source_20261022150000_natori_case_admin_operations",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025130513_source_20261022150000_natori_case_admin_operations.sql",
+      "applied_sha256": "2214cbac924480645824d4d56ff5a04a2cb6ddc760b2f1d16552b9a5101a8b2f",
+      "applied_bytes": 23991,
+      "historical_source": "supabase/migrations/20261022150000_natori_case_admin_operations.sql",
+      "historical_sha256": "2214cbac924480645824d4d56ff5a04a2cb6ddc760b2f1d16552b9a5101a8b2f",
+      "source_equals_applied": true
+    },
+    {
+      "sequence": 11,
+      "history_version": "20261025130521",
+      "history_name": "source_20261022170000_natori_case_screen_context",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025130521_source_20261022170000_natori_case_screen_context.sql",
+      "applied_sha256": "d4a11e7ba055be5b1293fcf4918a2226bc1623a7db8079923cdd374fde93fee8",
+      "applied_bytes": 7349,
+      "historical_source": "supabase/migrations/20261022170000_natori_case_screen_context.sql",
+      "historical_sha256": "d4a11e7ba055be5b1293fcf4918a2226bc1623a7db8079923cdd374fde93fee8",
+      "source_equals_applied": true
+    },
+    {
+      "sequence": 12,
+      "history_version": "20261025130530",
+      "history_name": "source_20261022190000_natori_case_history_read",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025130530_source_20261022190000_natori_case_history_read.sql",
+      "applied_sha256": "3f4e05d8723d0e87774fdc1607d051cb30aa368ef71057c7b45759254f85ecfd",
+      "applied_bytes": 13919,
+      "historical_source": "supabase/migrations/20261022190000_natori_case_history_read.sql",
+      "historical_sha256": "3f4e05d8723d0e87774fdc1607d051cb30aa368ef71057c7b45759254f85ecfd",
+      "source_equals_applied": true
+    },
+    {
+      "sequence": 13,
+      "history_version": "20261025130540",
+      "history_name": "source_20261022210000_natori_case_notice_target_read",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025130540_source_20261022210000_natori_case_notice_target_read.sql",
+      "applied_sha256": "0db49883d6ff93c09af9d7fb6733c03d8c0c21de37c07ce7cdb44eac43d60612",
+      "applied_bytes": 3158,
+      "historical_source": "supabase/migrations/20261022210000_natori_case_notice_target_read.sql",
+      "historical_sha256": "0db49883d6ff93c09af9d7fb6733c03d8c0c21de37c07ce7cdb44eac43d60612",
+      "source_equals_applied": true
+    },
+    {
+      "sequence": 14,
+      "history_version": "20261025130621",
+      "history_name": "source_20261023010000_natori_case_system_hold",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025130621_source_20261023010000_natori_case_system_hold.sql",
+      "applied_sha256": "7f43ab89faac7a88bd7ac2090ca502a1106f868ab04946cce9dd2878e392ea35",
+      "applied_bytes": 6055,
+      "historical_source": "supabase/migrations/20261023010000_natori_case_system_hold.sql",
+      "historical_sha256": "7f43ab89faac7a88bd7ac2090ca502a1106f868ab04946cce9dd2878e392ea35",
+      "source_equals_applied": true
+    },
+    {
+      "sequence": 15,
+      "history_version": "20261025130631",
+      "history_name": "source_20261023020000_natori_case_system_review",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025130631_source_20261023020000_natori_case_system_review.sql",
+      "applied_sha256": "187a55088086472cf4248310e5aaa17b6db266d602ba59705985a3f711b7ee87",
+      "applied_bytes": 12917,
+      "historical_source": "supabase/migrations/20261023020000_natori_case_system_review.sql",
+      "historical_sha256": "187a55088086472cf4248310e5aaa17b6db266d602ba59705985a3f711b7ee87",
+      "source_equals_applied": true
+    },
+    {
+      "sequence": 16,
+      "history_version": "20261025133133",
+      "history_name": "source_20261023030000_natori_case_system_fence",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025133133_source_20261023030000_natori_case_system_fence.sql",
+      "applied_sha256": "75efd36cc00b95d8a8abc6ef26bbfb161a4c9e69dc6608b49efd1a9a0d42430b",
+      "applied_bytes": 43684,
+      "historical_source": "supabase/migrations/20261023030000_natori_case_system_fence.sql",
+      "historical_sha256": "b10d58b48188a594847a25144bf00ec99082a64644147997b72a5f866b452369",
+      "source_equals_applied": false
+    },
+    {
+      "sequence": 17,
+      "history_version": "20261025135506",
+      "history_name": "source_20261025110000_natori_case_current_flow",
+      "applied_payload": "supabase/operations/production-applied-20261025/20261025135506_source_20261025110000_natori_case_current_flow.sql",
+      "applied_sha256": "2276e652619eaa74fda982fb3d4402b08f849045e3b9294bec89471e7061bbaf",
+      "applied_bytes": 28253,
+      "historical_source": "scripts/natori-case-production-upgrade/current-flow.sql",
+      "historical_sha256": "2276e652619eaa74fda982fb3d4402b08f849045e3b9294bec89471e7061bbaf",
+      "source_equals_applied": true
+    }
+  ],
+  "not_applied_to_production": [
+    {
+      "source": "supabase/migrations/20261025000000_natori_production_mail_evidence.sql",
+      "sha256": "68cdd825fecc26905a0a270a816ba8d0b9f9d9106956dd99bb41125c452593d8",
+      "reason": "Optional mail-evidence profile was excluded; retained historical source is not an installed-production claim"
+    }
+  ]
+}

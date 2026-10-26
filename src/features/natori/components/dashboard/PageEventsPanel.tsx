@@ -9,6 +9,7 @@ import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import {
   fetchNatoriPageEventSummary,
   type NatoriPageEventSummary,
+  NatoriPageEventsLoadError,
 } from "@/features/natori/data/pageEvents";
 
 const EVENT_META: Array<{ event: string; title: string; hint?: string }> = [
@@ -39,7 +40,7 @@ const EVENT_META: Array<{ event: string; title: string; hint?: string }> = [
   { event: "portfolio_sns_click", title: "SNSリンクのクリック", hint: "ポートフォリオ内の X / つなぐ" },
 ];
 
-export default function PageEventsPanel() {
+export default function PageEventsPanel({showUnavailable=false,onAccessRejected}:{showUnavailable?:boolean;onAccessRejected?:()=>void}={}) {
   const [open, setOpen] = useState(false);
   const [summary, setSummary] = useState<NatoriPageEventSummary | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
@@ -53,6 +54,7 @@ export default function PageEventsPanel() {
         setSummary(data);
         setState("ready");
       } catch (err) {
+        if(!cancelled&&err instanceof NatoriPageEventsLoadError&&err.status===401)onAccessRejected?.();
         console.error("[PageEventsPanel] load failed", err);
         if (!cancelled) setState("error");
       }
@@ -60,10 +62,10 @@ export default function PageEventsPanel() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [onAccessRejected]);
 
   // 未認可などで取れないときはパネルごと出さない
-  if (state === "error") return null;
+  if (state === "error") return showUnavailable?<p role="status">既存クリック解析を取得できません。0件とは断定していません。認証と接続を確認して画面を開き直してください。</p>:null;
 
   const total30 = summary?.counts.reduce((sum, entry) => sum + entry.last30Days, 0) ?? 0;
 
