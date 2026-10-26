@@ -299,6 +299,13 @@ async function main() {
       const ids = [...first.data.slice(0, 50), ...second.data].map((r: { id: string }) => r.id);
       check(new Set(ids).size === ids.length, "PAGINATION_DUPLICATE");
     });
+    await test("real-admission-stop-keeps-pending-notification-without-provider-call",async()=>{
+      const q=await quote();await acceptNatoriQuote(q.token);const id=(await jobs(q.id))[0].id,before=providerCalls;
+      const stopped=await admin.rpc("natori_case_system_control_v1",{p_owner:owner,p_action:"hold",p_generation:0,p_actor:{kind:"shared-key",userId:null}});
+      check(!stopped.error&&stopped.data?.result==="saved","STOP_NOT_SAVED");
+      await dispatchAcceptanceNotification(id);
+      check((await job(id)).status==="pending"&&providerCalls===before,"STOP_SENT_OR_CHANGED_NOTICE");
+    });
     writeFileSync("/results/phasen.json", JSON.stringify({ tests: results, passed: results.filter(r => r.status === "passed").length, failed: results.filter(r => r.status === "failed").length, skipped: 0, provider: "sealed-http-capture-not-real-resend", providerRequests: providerCalls, distinctAcceptedMessages: accepted.size }, null, 2));
     console.log(`PHASE N ${results.filter(r => r.status === "passed").length} passed / ${results.filter(r => r.status === "failed").length} failed / 0 skipped`);
     check(results.length >= 20 && results.every(r => r.status === "passed"), "MANDATORY_TEST_FAILED");

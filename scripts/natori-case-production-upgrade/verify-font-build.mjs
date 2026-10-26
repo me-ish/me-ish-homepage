@@ -12,7 +12,7 @@ mkdirSync(out);
 const {app} = await prepare(out);
 mkdirSync(app + '/scripts'); mkdirSync(app + '/patches');
 copyFileSync(root + '/scripts/build-bank-json.mjs', app + '/scripts/build-bank-json.mjs');
-copyFileSync(root + '/patches/next+15.5.27.patch', app + '/patches/next+15.5.27.patch');
+copyFileSync(root + '/patches/next+15.5.28.patch', app + '/patches/next+15.5.28.patch');
 // Exercise the real loader's missing-extension branch during the normal build.
 // These local Zen bytes stand in for transport only; this is not a typography test.
 const fontPath = out + '/fixture-font-without-extension';
@@ -56,7 +56,7 @@ writeFileSync(out+'/build-result.json',JSON.stringify({
   quoteIntegrity:'unset',paymentLinkIntegrity:'unset',paymentIntegrity:'unset',stripeMode:'unset',
   source:'full app copied without env files; production fonts source unchanged',
   portfolioFontSourceSha256:sha(root+'/src/features/natori/components/portfolio/portfolioFonts.ts'),
-  patchSha256:sha(root+'/patches/next+15.5.27.patch'),network:'all net.Socket.connect calls denied',
+  patchSha256:sha(root+'/patches/next+15.5.28.patch'),network:'all net.Socket.connect calls denied',
   substitutions:['synthetic target/owner and nonworking credentials','local font transport with suffixless path and existing Zen TTF fixture for all three families'],
   limitations:['not a hosted deployment','not a live DB/provider test','not a visual typography comparison','actual Google CSS/font retrieval blocked by CONNECT 403'],
 },null,2)+'\n');

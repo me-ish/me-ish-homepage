@@ -41,7 +41,8 @@ export async function currentFlowRpc(name: string, args: Record<string, unknown>
   return data;
 }
 export async function readCurrentOperation(owner: string, project: string, id?: string, kind?: string) {
-  const data = await currentFlowRpc("natori_case_current_read_v1", { p_owner: owner, p_project: project, p_id: id ?? null, p_kind: kind ?? null }, true);
+  const data = await currentFlowRpc("natori_case_current_read_v1", { p_owner: owner, p_project: project,
+    ...(id === undefined ? {} : { p_id: id }), ...(kind === undefined ? {} : { p_kind: kind }) }, true);
   return data === null ? null : operationSchema.parse(data);
 }
 

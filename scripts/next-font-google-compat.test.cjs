@@ -11,7 +11,7 @@ const root = resolve(__dirname, '..');
 const loaderPath = require.resolve('next/dist/compiled/@next/font/dist/google/loader');
 const realRequire = createRequire(loaderPath);
 const patched = readFileSync(loaderPath, 'utf8');
-const patch = readFileSync(resolve(root, 'patches/next+15.5.27.patch'), 'utf8');
+const patch = readFileSync(resolve(root, 'patches/next+15.5.28.patch'), 'utf8');
 const added = patch.split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++')).map(l => l.slice(1)).join('\n');
 const removed = patch.split('\n').filter(l => l.startsWith('-') && !l.startsWith('---')).map(l => l.slice(1)).join('\n');
 const original = patched.replace(added, removed);
@@ -36,7 +36,7 @@ function load(source, url, buffer) {
 }
 
 test('patch is confined to the pinned loader; original production failure reproduces', async () => {
-  assert.equal(require('next/package.json').version, '15.5.27');
+  assert.equal(require('next/package.json').version, '15.5.28');
   assert.equal(sha(original), '45e38a6da7efde1a8f53c29619af2eb8f202d352119dbc91c7714db07db385f4');
   for (const url of ['https://fonts.gstatic.com/l/font?kit=fixture&skey=fixture&v=v1', 'https://fonts.gstatic.com/font.woff2?v=1']) {
     const old = load(original, url, realWoff2);
@@ -85,10 +85,10 @@ test('postinstall applies to pristine installed Next and is idempotent, offline'
   const fixture = mkdtempSync('/workspace/next-font-install-check-');
   const target = resolve(fixture, 'node_modules/next/dist/compiled/@next/font/dist/google/loader.js');
   mkdirSync(dirname(target), { recursive: true }); writeFileSync(target, original);
-  writeFileSync(resolve(fixture, 'node_modules/next/package.json'), JSON.stringify({ name: 'next', version: '15.5.27' }));
-  writeFileSync(resolve(fixture, 'package.json'), JSON.stringify({ name: 'font-install-check', version: '1.0.0', dependencies: { next: '15.5.27' } }));
-  writeFileSync(resolve(fixture, 'package-lock.json'), JSON.stringify({ name: 'font-install-check', version: '1.0.0', lockfileVersion: 3, packages: { '': { dependencies: { next: '15.5.27' } }, 'node_modules/next': { version: '15.5.27' } } }));
-  mkdirSync(resolve(fixture, 'patches')); copyFileSync(resolve(root, 'patches/next+15.5.27.patch'), resolve(fixture, 'patches/next+15.5.27.patch'));
+  writeFileSync(resolve(fixture, 'node_modules/next/package.json'), JSON.stringify({ name: 'next', version: '15.5.28' }));
+  writeFileSync(resolve(fixture, 'package.json'), JSON.stringify({ name: 'font-install-check', version: '1.0.0', dependencies: { next: '15.5.28' } }));
+  writeFileSync(resolve(fixture, 'package-lock.json'), JSON.stringify({ name: 'font-install-check', version: '1.0.0', lockfileVersion: 3, packages: { '': { dependencies: { next: '15.5.28' } }, 'node_modules/next': { version: '15.5.28' } } }));
+  mkdirSync(resolve(fixture, 'patches')); copyFileSync(resolve(root, 'patches/next+15.5.28.patch'), resolve(fixture, 'patches/next+15.5.28.patch'));
   for (let i = 0; i < 2; i++) {
     execFileSync(process.execPath, [require.resolve('patch-package/index.js'), '--error-on-fail'], { cwd: fixture, env: { PATH: dirname(process.execPath), NODE_OPTIONS: '--require=' + resolve(root, 'scripts/natori-case-preview/deny-network.cjs') }, stdio: 'pipe' });
     assert.equal(readFileSync(target, 'utf8'), patched);

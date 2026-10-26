@@ -44,7 +44,7 @@
     "framer-motion": "^12.23.25",
     "jspdf": "4.2.1",
     "lucide-react": "^0.511.0",
-    "next": "15.5.27",
+    "next": "15.5.28",
     "next-intl": "^4.8.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -60,7 +60,7 @@
     "tailwindcss-animate": "^1.0.7",
     "tus-js-client": "4.3.1",
     "zengin-code": "^1.0.0-p20250825",
-    "zod": "^4.1.12"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -74,7 +74,7 @@
     "@vitest/coverage-v8": "4.1.11",
     "autoprefixer": "^10.4.21",
     "eslint": "^8.57.0",
-    "eslint-config-next": "15.5.27",
+    "eslint-config-next": "15.5.28",
     "jsdom": "^26.1.0",
     "patch-package": "^8.0.0",
     "postcss": "8.5.28",
@@ -86,6 +86,7 @@
   },
   "overrides": {
     "postcss": "$postcss",
-    "postcss-selector-parser": "7.1.6"
+    "postcss-selector-parser": "7.1.6",
+    "dompurify": "3.4.17"
   }
 }
