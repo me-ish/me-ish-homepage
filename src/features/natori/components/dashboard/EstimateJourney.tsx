@@ -3,6 +3,7 @@
 import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import {z} from "zod";
 import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { AlertTriangle, Check, CheckCircle2, Loader2, Plus, Trash2 } from "lucide-react";
 import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
@@ -12,13 +13,14 @@ import QuoteAcceptCard from "@/features/natori/components/quote/QuoteAcceptCard"
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { buildNatoriInquiryRequestView } from "@/features/natori/lib/inquiryRequestView";
 import { buildEstimateMailDraft, resolveClientEmail } from "@/features/natori/lib/orderMail";
-import { defaultEstimateTerms, estimateTotal, validateEstimateTermsForIssue, type NatoriAgreedTerms, type NatoriEstimateDraft, type NatoriEstimateDraftData } from "@/features/natori/lib/estimateDraft";
+import { estimateDraftSchema, defaultEstimateTerms, estimateTotal, validateEstimateTermsForIssue, type NatoriAgreedTerms, type NatoriEstimateDraft, type NatoriEstimateDraftData } from "@/features/natori/lib/estimateDraft";
 import { createNatoriEstimateSuggestionV1 } from "@/features/natori/lib/pricingSuggestion";
 import { createPortfolioStructuredPricingConfig } from "@/features/natori/lib/portfolioPricing";
 import { readNatoriRequestData } from "@/features/natori/lib/requestSchema";
 import { validateNatoriQuoteIssuePayloadV1 } from "@/features/natori/lib/quoteSnapshot";
 import { createStructuredQuoteOperationAttempt, validateStructuredQuoteDeliveryAttempt } from "@/features/natori/lib/structuredQuoteAttempt";
 import { formatYen } from "@/features/natori/lib/pricing";
+import {mutateCaseWork} from "@/features/natori/data/supabaseCaseWork";
 import { confirmNatoriProjectType } from "@/features/natori/data/supabaseProjects";
 import { NATORI_CONCRETE_PROJECT_TYPES, NATORI_PROJECT_TYPE_LABELS } from "@/features/natori/lib/projectReadModel";
 import type { NatoriConcreteProjectType, NatoriProject } from "@/features/natori/types/projects";
@@ -26,11 +28,17 @@ import type { NatoriQuoteSnapshotItemV1 } from "@/features/natori/types/quoteSna
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 
 type Step = 1 | 2 | 3;
-type Props = { project: NatoriProject; portfolioContent: PortfolioContent | null };
+type Workspace={revision:string;onChanged:()=>void;onDirty:(v:boolean)=>void;locked?:boolean;quoteNotice?:{to:string;subject:string;body:string;expiresAt:string;acceptedAt?:string|null}|null};
+type Props = { project: NatoriProject; portfolioContent: PortfolioContent | null;workspace?:Workspace };
 const field = natoriAdminUi.input;
 const scopeLabels: Record<NatoriAgreedTerms["scope"], string> = {
   undecided: "相談して決める", bust_up: "胸上", waist_up: "膝〜腰上", full_body: "全身", sd: "SD", other: "その他",
 };
+
+const workspaceQuoteDraftSchema=z.strictObject({
+ draft:estimateDraftSchema,saved:estimateDraftSchema.extend({revision:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER)}).nullable(),
+ to:z.string().max(20000),subject:z.string().max(20000),body:z.string().max(20000),templateBody:z.string().max(20000),step:z.union([z.literal(1),z.literal(2),z.literal(3)]),
+});
 
 function scopeText(terms: NatoriAgreedTerms) {
   return terms.scope === "other" ? terms.scopeNote.trim() : scopeLabels[terms.scope];
@@ -40,14 +48,18 @@ function editableItem(item: NatoriQuoteSnapshotItemV1): NatoriQuoteSnapshotItemV
   return { ...item, kind: "manual", automatic: false, presetItemId: null, sourceFields: [], ruleId: null };
 }
 
-export default function EstimateJourney({ project, portfolioContent }: Props) {
+export default function EstimateJourney({ project, portfolioContent,workspace }: Props) {
   const { confirm, confirmDialog } = useNatoriConfirm();
+  const workspaceDirty=workspace?.onDirty, workspaceRevision=workspace?.revision, workspaceLocked=workspace?.locked;
+  const inWorkspace=Boolean(workspace);
   const [currentProject, setCurrentProject] = useState(project);
   const [step, setStep] = useState<Step>(1);
   const [draft, setDraft] = useState<NatoriEstimateDraftData>({ agreedTerms: defaultEstimateTerms(project), items: [] });
   const [saved, setSaved] = useState<NatoriEstimateDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [recoveryReady, setRecoveryReady] = useState(false);
+  const [lookupOnly,setLookupOnly]=useState(false);
+  const [unconfirmedOperation,setUnconfirmedOperation]=useState<string|null>(null);
   const [editingLocked, setEditingLocked] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -60,6 +72,26 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
   const [acknowledged, setAcknowledged] = useState(false);
   const [issued, setIssued] = useState<{ quoteId: string; version: number; notificationId?: string; notificationStatus?: string } | null>(null);
   const attemptRef = useRef<Record<string, unknown> | null>(null);
+  const [workspaceEdited,setWorkspaceEdited]=useState(false);
+  const localDraft=useRef(false),invalidLocalDraft=useRef(false);
+  const latestWorkspaceInput=useRef("");
+  latestWorkspaceInput.current=JSON.stringify({draft,to,subject,body,templateBody});
+  useEffect(()=>{
+    if(!workspace)return;
+    try{const raw=sessionStorage.getItem(`natori-case-quote-draft/${project.id}`);if(!raw)return;
+      const value=workspaceQuoteDraftSchema.parse(JSON.parse(raw));const restored=value.draft,baseline=value.saved;
+      localDraft.current=true;setDraft(restored);setSaved(baseline);setTo(value.to);setSubject(value.subject);setBody(value.body);setTemplateBody(value.templateBody);setStep(value.step);setWorkspaceEdited(true);
+    }catch{localDraft.current=true;invalidLocalDraft.current=true;setEditingLocked(true);setError("保存した見積下書きを確認できません。新しい発行をせず結果を照会してください。");}
+  // Mounted by project ID; a later refresh must not overwrite a local draft.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[project.id]);
+  useEffect(()=>{
+    if(!workspace||loading)return;
+    try{const key=`natori-case-quote-draft/${project.id}`;if(workspaceEdited)sessionStorage.setItem(key,JSON.stringify({draft,saved,to,subject,body,templateBody,step}));else sessionStorage.removeItem(key);}catch{setEditingLocked(true);setError("下書きを保持できません。実行せず内容を控えてください。");}
+  },[workspaceEdited,loading,draft,saved,to,subject,body,templateBody,step,project.id,workspace]);
+  useEffect(()=>{workspaceDirty?.(workspaceEdited||busy||!!attemptRef.current&&!issued);return()=>workspaceDirty?.(false);},[workspaceDirty,workspaceEdited,busy,issued]);
+  useEffect(()=>{if(inWorkspace)setAcknowledged(false);},[to,subject,body,draft,saved,workspaceRevision,inWorkspace]);
+  useEffect(()=>{if(inWorkspace){setCurrentProject(project);setEditingLocked(Boolean(workspaceLocked)||invalidLocalDraft.current);}},[workspaceRevision,workspaceLocked,project,inWorkspace]);
 
   const original = useMemo(() => buildNatoriInquiryRequestView(project.requestData), [project.requestData]);
   const request = useMemo(() => readNatoriRequestData(project.requestData), [project.requestData]);
@@ -83,7 +115,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
       .then(({ draft: existing, editable }) => {
         if (cancelled) return;
         if (editable===false) { setEditingLocked(true); setStep(3); }
-        if (!existing || attemptRef.current) return;
+        if (!existing || attemptRef.current || localDraft.current) return;
         setSaved(existing);
         setDraft({ agreedTerms: existing.agreedTerms, items: existing.items });
         if (existing.mailDraft) { setSubject(existing.mailDraft.subject); setBody(existing.mailDraft.body); setTemplateBody(existing.mailDraft.templateBody); }
@@ -91,7 +123,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
       .catch((cause: unknown) => { if (!cancelled) setError(cause instanceof Error ? cause.message : "読み込みに失敗しました"); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [project.id]);
+  }, [project.id,workspace?.locked]);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,17 +151,24 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
       .then(result => {
         if (cancelled) return;
         setRecoveryReady(true);
-        if (result.issue) { sessionStorage.removeItem(key); attemptRef.current=null; setIssued(result.issue); }
+        setLookupOnly(result.lookupOnly===true);
+        if(result.lookupOnly&&result.issue?.notificationStatus==="unknown") {
+          setUnconfirmedOperation(result.issue.operationId);
+          if(result.issue.quoteId&&result.issue.version)setIssued(result.issue);
+          setError("結果は未確認です。同じ操作の結果を照会してください。新しい送信は行いません。");
+        }
+        else if (result.issue) { sessionStorage.removeItem(key); attemptRef.current=null; setIssued(result.issue); }
         else if (pending) { attemptRef.current=pending; setStep(3); setAcknowledged(false);
           if (typeof pending.subject==="string") setSubject(pending.subject);
           if (typeof pending.bodySnapshot==="string") setBody(pending.bodySnapshot);
           if (typeof pending.toEmail==="string") setTo(pending.toEmail);
-          setError("前の発行結果は未確認です。同じ内容の要求だけを再試行してください。");
+          setError(result.lookupOnly?"前の発行結果は未確認です。送信せず結果を照会してください。":"前の発行結果は未確認です。同じ内容の要求だけを再試行してください。");
+          if(result.lookupOnly)setUnconfirmedOperation(String(pending.idempotencyKey));
         }
       })
       .catch(cause => { if (!cancelled) setError(cause instanceof Error ? cause.message : "発行結果の確認に失敗しました。"); });
     return () => { cancelled = true; };
-  }, [project.id]);
+  }, [project.id,workspace?.locked]);
 
   const changeTerms = (key: keyof NatoriAgreedTerms, value: string) => {
     attemptRef.current = null;
@@ -138,6 +177,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
 
   const save = async (): Promise<NatoriEstimateDraft | null> => {
     setBusy(true); setError("");
+    const submittedInput=latestWorkspaceInput.current;
     try {
       const response = await fetch("/api/natori/admin/estimate-draft", {
         method: "PUT", headers: { "Content-Type": "application/json", ...CSRF_HEADERS },
@@ -148,6 +188,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
         ? "別の画面で下書きが更新されました。再読み込みして確認してください。"
         : "保存できませんでした。入力内容をご確認ください。");
       setSaved(result.draft);
+      if(workspace&&latestWorkspaceInput.current===submittedInput)setWorkspaceEdited(false);
       attemptRef.current = null;
       return result.draft;
     } catch (cause) {
@@ -167,6 +208,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
       scope: scopeText(terms), usage: terms.usage,
       commercialUse: terms.commercialUse === "yes" ? "あり" : "なし", publication: terms.publication,
     });
+    if(workspace)setWorkspaceEdited(true);
     if (!subject) setSubject(mail.subject);
     if (!body || body === templateBody) { setBody(mail.body); setTemplateBody(mail.body); }
     else if (mail.body !== templateBody) setReplacementBody(mail.body);
@@ -210,7 +252,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
       unitAmount: item.unitAmount, amount: item.amount, automatic: true,
       sourceFields: item.sourceFields, ruleId: item.ruleId, note: item.note ?? null,
     }));
-    setDraft((previous) => ({ ...previous, items })); setError("");
+    if(workspace)setWorkspaceEdited(true);setDraft((previous) => ({ ...previous, items })); setError("");
   };
 
   const updateItem = (id: string, fieldName: "labelSnapshot" | "quantity" | "unitAmount", value: string) => {
@@ -228,8 +270,9 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
     if (!typeSelection) return;
     setBusy(true); setError("");
     try {
-      await confirmNatoriProjectType(project.id, typeSelection);
+      if(workspace){const result=await mutateCaseWork({command:"confirm_type",projectId:project.id,revision:workspace.revision,projectType:typeSelection});if(result.result!=="applied")throw Error("type_conflict");}else await confirmNatoriProjectType(project.id, typeSelection);
       setCurrentProject((previous) => ({ ...previous, type: typeSelection }));
+      workspace?.onChanged();
     } catch { setError("案件種別を確定できませんでした。案件の状態をご確認ください。"); }
     finally { setBusy(false); }
   };
@@ -243,10 +286,12 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
       if (!attemptRef.current && stored) {
         try { attemptRef.current=JSON.parse(stored); } catch { throw new Error("前の発行情報を確認できませんでした。通知管理で保存結果を確認してください。"); }
       }
+      if(lookupOnly&&attemptRef.current){await inspectOperation(String(attemptRef.current.idempotencyKey));return;}
       const attempt = createStructuredQuoteOperationAttempt(project.id);
       const requestBody = attemptRef.current ?? {
         projectId: project.id, toEmail: to.trim(), subject: subject.trim(), bodySnapshot: body,
         ...attempt, draftRevision: saved!.revision,
+        ...(workspace?{workspaceRevision:workspace.revision}:{}),
         requestSnapshot: request.success ? request.data : null,
         pricingSnapshot: {
           schemaVersion: 1, mappingVersion: "natori-agreed-estimate-v1", pricingConfigVersion: 1,
@@ -262,16 +307,32 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
       const response = await fetch("/api/natori/admin/structured-quote", {
         method: "POST", headers: { "Content-Type": "application/json", ...CSRF_HEADERS }, body: JSON.stringify(requestBody),
       });
-      const result = await response.json() as { ok?: boolean; error?: string; quoteId?: string; version?: number; retryable?: boolean; notificationId?: string; notificationStatus?: string };
+      const result = await response.json() as { ok?: boolean; error?: string; quoteId?: string; version?: number; retryable?: boolean; resultUnconfirmed?:boolean; notificationId?: string; notificationStatus?: string };
       if (!response.ok || !result.ok || !result.quoteId || !result.version) {
-        if (response.status < 500 && !result.retryable) { attemptRef.current = null; sessionStorage.removeItem(`natori-quote-issue/${project.id}`); }
+        if (response.status < 500 && !result.retryable && !result.resultUnconfirmed) { attemptRef.current = null; sessionStorage.removeItem(`natori-quote-issue/${project.id}`); }
+        if(result.resultUnconfirmed)setUnconfirmedOperation(String(requestBody.idempotencyKey));
         throw new Error(result.error ?? "送信できませんでした。内容をご確認ください。");
       }
       sessionStorage.removeItem(`natori-quote-issue/${project.id}`);
       setIssued({ quoteId: result.quoteId, version: result.version, notificationId: result.notificationId, notificationStatus: result.notificationStatus });
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "送信できませんでした"); }
+      if(workspace){setWorkspaceEdited(false);workspace.onChanged();}
+    } catch (cause) { if(lookupOnly&&attemptRef.current)setUnconfirmedOperation(String(attemptRef.current.idempotencyKey));setError(cause instanceof Error ? cause.message : "送信できませんでした"); }
     finally { setBusy(false); }
   };
+
+  async function inspectOperation(id:string) {
+    setBusy(true);setError("");
+    try {
+      const response=await fetch(`/api/natori/admin/structured-quote?projectId=${encodeURIComponent(project.id)}&operationId=${encodeURIComponent(id)}`,{cache:"no-store"});
+      if(!response.ok)throw Error("結果を照会できませんでした。送信は行っていません。");
+      const result=await response.json();
+      if(!result.issue||result.issue.notificationStatus==="unknown"){setUnconfirmedOperation(id);setError("結果は未確認です。操作を保持し、新しい送信を止めています。");return;}
+      setUnconfirmedOperation(null);
+      if(result.issue.quoteId&&result.issue.version){setIssued(result.issue);sessionStorage.removeItem(`natori-quote-notification/${result.issue.quoteId}`);}
+      sessionStorage.removeItem(`natori-quote-issue/${project.id}`);attemptRef.current=null;
+    }catch(cause){setError(cause instanceof Error?cause.message:"結果を照会できませんでした。");}
+    finally{setBusy(false);}
+  }
 
   if (loading) {
     return (
@@ -287,10 +348,10 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5 pb-16">
+    <div className="mx-auto max-w-3xl space-y-5 pb-16" onChange={()=>{if(workspace)setWorkspaceEdited(true);}}>
       {confirmDialog}
-      <header className={`rounded-2xl ${natoriAdminUi.surface} p-5 sm:p-6`}>
-        <Link href="/natori/dashboard" className="text-sm font-semibold text-[#BE185D] underline-offset-4 hover:underline">← ダッシュボードへ戻る</Link>
+      <header hidden={Boolean(workspace)} className={`rounded-2xl ${natoriAdminUi.surface} p-5 sm:p-6`}>
+        {!workspace?<Link href="/natori/dashboard" className="text-sm font-semibold text-[#BE185D] underline-offset-4 hover:underline">← ダッシュボードへ戻る</Link>:null}
         <p className="mt-4 text-xs font-semibold text-[#BE185D]">{project.clientName} 様の見積り</p>
         <h1 className="mt-1 break-words text-xl font-bold tracking-tight text-zinc-950">{project.title}</h1>
         <p className="mt-2 text-sm leading-6 text-zinc-600">相談で決まった内容から見積りを作り、相手に見える内容を確かめて送信します。</p>
@@ -340,7 +401,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
               <div className="flex flex-wrap gap-2"><select id="estimate-type" value={typeSelection} onChange={(event) => setTypeSelection(event.target.value as NatoriConcreteProjectType | "")} className={`${field} flex-1`}>
                 <option value="">選択してください</option>{NATORI_CONCRETE_PROJECT_TYPES.map((type) => <option key={type} value={type}>{NATORI_PROJECT_TYPE_LABELS[type]}</option>)}
               </select><button type="button" disabled={!typeSelection || busy} onClick={confirmType} className="rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:opacity-50">種別を確定</button></div>
-            )}<p className="mt-1 text-xs text-zinc-600">確定すると制作タスクが作られます。変更が必要な場合は案件ボードで確認してください。</p>
+            )}<p className="mt-1 text-xs text-zinc-600">{workspace?"確定すると制作タスクが作られます。確定済みの種別は変更できません。":"確定すると制作タスクが作られます。変更が必要な場合は案件ボードで確認してください。"}</p>
           </div>
           <div><label htmlFor="estimate-scope" className="mb-1.5 block text-sm font-semibold text-zinc-800">制作範囲</label><select id="estimate-scope" className={field} value={draft.agreedTerms.scope} onChange={(event) => changeTerms("scope", event.target.value)}>
             {Object.entries(scopeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
@@ -360,11 +421,11 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
           <div><h2 className="text-lg font-bold tracking-tight">今回の金額を決める</h2><p className="mt-1 text-sm text-zinc-600">この案件だけの金額です。公開ポートフォリオの料金は変更されません。</p></div>
           {request.success && pricingConfig ? <button type="button" onClick={suggest} className={`${natoriAdminUi.btnSecondary} w-full`}>公開料金から参考明細を入れる</button> : <p className="rounded-xl bg-zinc-50 p-3 text-sm text-zinc-600">明細を手動で追加できます。</p>}
           {draft.items.map((item) => <div key={item.id} className="space-y-2 rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-3">
-            <div className="flex gap-2"><input aria-label="明細名" className={field} value={item.labelSnapshot} onChange={(event) => updateItem(item.id, "labelSnapshot", event.target.value)} /><button type="button" aria-label={`${item.labelSnapshot}を削除`} onClick={() => setDraft((previous) => ({ ...previous, items: previous.items.filter((entry) => entry.id !== item.id) }))} className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-red-600 transition-colors hover:bg-red-50"><Trash2 className="h-5 w-5" /></button></div>
+            <div className="flex gap-2"><input aria-label="明細名" className={field} value={item.labelSnapshot} onChange={(event) => updateItem(item.id, "labelSnapshot", event.target.value)} /><button type="button" aria-label={`${item.labelSnapshot}を削除`} onClick={() => {if(workspace)setWorkspaceEdited(true);setDraft((previous) => ({ ...previous, items: previous.items.filter((entry) => entry.id !== item.id) }));}} className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-red-600 transition-colors hover:bg-red-50"><Trash2 className="h-5 w-5" /></button></div>
             <div className="grid grid-cols-2 gap-2"><label className="text-xs font-semibold text-zinc-600">数量<input aria-label={`${item.labelSnapshot}の数量`} type="number" min={1} max={100} className={`${field} mt-1`} value={item.quantity} onChange={(event) => updateItem(item.id, "quantity", event.target.value)} /></label><label className="text-xs font-semibold text-zinc-600">単価（円）<input aria-label={`${item.labelSnapshot}の単価`} type="number" min={0} className={`${field} mt-1`} value={item.unitAmount} onChange={(event) => updateItem(item.id, "unitAmount", event.target.value)} /></label></div>
             <p className="text-right text-sm font-semibold tabular-nums text-zinc-800">小計 {Number.isFinite(item.amount) ? formatYen(item.amount) : "入力を確認"}</p>
           </div>)}
-          <button type="button" onClick={() => setDraft((previous) => ({ ...previous, items: [...previous.items, { id: crypto.randomUUID(), presetItemId: null, kind: "manual", labelSnapshot: "追加作業", quantity: 1, unitAmount: 0, amount: 0, automatic: false, sourceFields: [], ruleId: null, note: null }] }))} className={natoriAdminUi.btnSecondary}><Plus className="h-4 w-4" />明細を追加</button>
+          <button type="button" onClick={() => {if(workspace)setWorkspaceEdited(true);setDraft((previous) => ({ ...previous, items: [...previous.items, { id: crypto.randomUUID(), presetItemId: null, kind: "manual", labelSnapshot: "追加作業", quantity: 1, unitAmount: 0, amount: 0, automatic: false, sourceFields: [], ruleId: null, note: null }] }));}} className={natoriAdminUi.btnSecondary}><Plus className="h-4 w-4" />明細を追加</button>
           <div className="flex items-center justify-between rounded-xl bg-zinc-50 p-4 ring-1 ring-inset ring-zinc-200/80"><span className="text-sm font-semibold text-zinc-700">今回の見積り合計</span><span className="text-xl font-bold tabular-nums tracking-tight text-zinc-950">{draft.items.length ? formatYen(total) : "未入力"}</span></div>
           <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => setStep(1)} className="min-h-12 rounded-full border border-zinc-200 bg-white px-5 font-semibold text-zinc-800 shadow-[0_1px_2px_rgba(24,24,27,0.05)] transition-colors hover:bg-zinc-50">← 条件へ戻る</button><button type="button" disabled={busy} onClick={nextFromPrice} className={`min-h-12 flex-1 rounded-full px-5 font-bold ${natoriPrimaryActionClassName}`}>{busy ? "保存中…" : "明細を保存して送信確認へ →"}</button></div>
         </section>
@@ -390,7 +451,7 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
               {!issued && !editingLocked ? <div><button type="button" disabled={busy || Boolean(attemptRef.current)} className={natoriAdminUi.btnSecondary} onClick={() => void save()}>個別メールの編集を保存</button></div> : null}
             </div>
             <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-pink-50/70 p-4 text-sm ring-1 ring-inset ring-pink-500/15"><input type="checkbox" className={`${natoriAdminUi.checkbox} mt-0.5`} checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} /><span>依頼者に見える内容と宛先を確認しました。</span></label>
-            <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => setStep(2)} disabled={Boolean(attemptRef.current)} className="min-h-12 rounded-full border border-zinc-200 bg-white px-5 font-semibold text-zinc-800 shadow-[0_1px_2px_rgba(24,24,27,0.05)] transition-colors hover:bg-zinc-50 disabled:opacity-50">← 金額を修正</button><button type="button" onClick={issue} disabled={busy || !recoveryReady || (!attemptRef.current && (!ready || !acknowledged || !to.trim() || !subject.trim() || !body.trim()))} className={`min-h-12 flex-1 rounded-full px-5 font-bold ${natoriPrimaryActionClassName}`}>{busy ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : attemptRef.current ? "同じ内容で送信を再試行" : `正式見積り ${formatYen(total)} を発行`}</button></div>
+            <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => setStep(2)} disabled={Boolean(attemptRef.current)} className="min-h-12 rounded-full border border-zinc-200 bg-white px-5 font-semibold text-zinc-800 shadow-[0_1px_2px_rgba(24,24,27,0.05)] transition-colors hover:bg-zinc-50 disabled:opacity-50">← 金額を修正</button><button type="button" onClick={issue} disabled={busy || Boolean(unconfirmedOperation) || !recoveryReady || (!attemptRef.current && (!ready || !acknowledged || !to.trim() || !subject.trim() || !body.trim()))} className={`min-h-12 flex-1 rounded-full px-5 font-bold ${natoriPrimaryActionClassName}`}>{busy ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : attemptRef.current ? lookupOnly?"送信せず結果を照会":"同じ内容で送信を再試行" : `正式見積り ${formatYen(total)} を発行`}</button></div>
           </>}
         </section>
       ) : null}
@@ -399,14 +460,17 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
         <p className="font-bold">条件が変わりました。個別編集は保持しています。</p>
         <p className="mt-1 text-sm">以下は本文全体の置換候補です。必要な補足を控えてから更新するか、現在の本文を編集して条件を確認してください。</p>
         <pre className="mt-3 whitespace-pre-wrap text-sm">{replacementBody}</pre>
-        <button type="button" disabled={busy || Boolean(attemptRef.current)} className="mt-3 min-h-11 rounded-xl bg-amber-100 px-4 font-bold text-amber-950" onClick={() => { if (busy || attemptRef.current) return; setBody(replacementBody); setTemplateBody(replacementBody); setReplacementBody(null); setAcknowledged(false); }}>本文全体をこの候補へ更新</button>
+        <button type="button" disabled={busy || Boolean(attemptRef.current)} className="mt-3 min-h-11 rounded-xl bg-amber-100 px-4 font-bold text-amber-950" onClick={() => { if (busy || attemptRef.current) return; if(workspace)setWorkspaceEdited(true);setBody(replacementBody); setTemplateBody(replacementBody); setReplacementBody(null); setAcknowledged(false); }}>本文全体をこの候補へ更新</button>
         <button type="button" disabled={busy || Boolean(attemptRef.current)} className="ml-3 min-h-11 px-3 underline" onClick={() => { if (busy || attemptRef.current) return; setReplacementBody(null); }}>個別編集を保持</button>
       </section> : null}
+      {unconfirmedOperation?<button type="button" disabled={busy} className={natoriAdminUi.btnSecondary} onClick={()=>void inspectOperation(unconfirmedOperation)}>送信せず見積操作の結果を照会</button>:null}
       {issued ? <section className={`rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-5`}>
-        <button type="button" disabled={busy} className={natoriAdminUi.btnSecondary} onClick={async () => {
+        <button type="button" disabled={busy||Boolean(unconfirmedOperation)||Boolean(workspace&&!workspace.quoteNotice)} className={natoriAdminUi.btnSecondary} onClick={async () => {
+          const retained=sessionStorage.getItem(`natori-quote-notification/${issued.quoteId}`);
+          if(lookupOnly&&retained){await inspectOperation(retained);return;}
           const confirmed = await confirm({
             title: "再通知しますか？",
-            description: `第${issued.version}版の保存済み本文と宛先で再通知します。見積りの版・金額・承諾は変えません。送信しますか？`,
+            description: workspace?.quoteNotice?`第${issued.version}版。宛先：${workspace.quoteNotice.to}\n件名：${workspace.quoteNotice.subject}\n有効期限：${workspace.quoteNotice.acceptedAt?"承諾済み条件を保ち、閲覧リンクは発行時から14日（既存仕様）":workspace.quoteNotice.expiresAt}\n${workspace.quoteNotice.body}\n保存済み条件で再通知します。承諾・金額は変えません。`:`第${issued.version}版の保存済み本文と宛先で再通知します。見積りの版・金額・承諾は変えません。送信しますか？`,
             confirmLabel: "再通知する",
             tone: "primary",
           });
@@ -415,19 +479,19 @@ export default function EstimateJourney({ project, portfolioContent }: Props) {
           const operationId = sessionStorage.getItem(key) ?? crypto.randomUUID(); sessionStorage.setItem(key,operationId);
           setBusy(true); setError("");
           try {
-            const response = await fetch("/api/natori/admin/quote-notification", { method: "POST", headers: { "Content-Type": "application/json", ...CSRF_HEADERS }, body: JSON.stringify({ quoteId: issued.quoteId, operationId }) });
+            const response = await fetch("/api/natori/admin/quote-notification", { method: "POST", headers: { "Content-Type": "application/json", ...CSRF_HEADERS }, body: JSON.stringify({ quoteId: issued.quoteId, operationId,...(workspace?{workspaceRevision:workspace.revision}:{}) }) });
             const result = await response.json();
-            if (!response.ok || !result.ok) { if (response.status<500 && !result.retryable) sessionStorage.removeItem(key); throw new Error(result.reason === "notification_recovery_required" ? "前の通知結果を先に確認してください。下の通知再試行から回復できます。" : "同じ版の再通知結果を確認できませんでした。"); }
-            sessionStorage.removeItem(key); setIssued(result);
+            if (!response.ok || !result.ok) { if (response.status<500 && !result.retryable && !result.resultUnconfirmed) sessionStorage.removeItem(key);if(result.resultUnconfirmed)setUnconfirmedOperation(operationId); throw new Error(result.reason === "notification_recovery_required" ? "前の通知結果を先に確認してください。下の通知再試行から回復できます。" : "同じ版の再通知結果を確認できませんでした。"); }
+            sessionStorage.removeItem(key); setIssued(result);workspace?.onChanged();
           } catch (cause) { setError(cause instanceof Error ? cause.message : "再通知結果を確認できませんでした。"); }
           finally { setBusy(false); }
         }}>第{issued.version}版を同じ内容で再通知</button>
         <p className="mt-2 text-xs leading-5 text-zinc-600">条件を変更する新しい版の発行は別の操作です。承諾後・入金後は新しい版を発行できません。</p>
-        {!editingLocked && !currentProject.paymentConfirmedAt ? <button type="button" disabled={busy} className="mt-2 min-h-11 px-3 underline" onClick={() => { if (window.confirm("新しい版の条件と金額を確認します。承諾済みの見積りは変更できません。")) { sessionStorage.removeItem(`natori-quote-issue/${project.id}`); setIssued(null); attemptRef.current=null; setStep(1); setAcknowledged(false); } }}>新しい版の作成を確認</button> : null}
+        {!editingLocked && !unconfirmedOperation && !currentProject.paymentConfirmedAt ? <button type="button" disabled={busy} className="mt-2 min-h-11 px-3 underline" onClick={() => { if (window.confirm("新しい版の条件と金額を確認します。承諾済みの見積りは変更できません。")) { sessionStorage.removeItem(`natori-quote-issue/${project.id}`); setIssued(null); attemptRef.current=null; setStep(1); setAcknowledged(false); } }}>新しい版の作成を確認</button> : null}
       </section> : null}
       {issued?.notificationId ? <section className={`rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-5`}>
-        <p className="text-sm text-zinc-800">第{issued.version}版は保存済みです。通知: {issued.notificationStatus === "sent" ? "送信済み" : "未送信・確認待ち"}</p>
-        {issued.notificationStatus !== "sent" ? <button type="button" disabled={busy} className={`${natoriAdminUi.btnSecondary} mt-2`} onClick={async () => {
+        <p className="text-sm text-zinc-800">第{issued.version}版は保存済みです。通知: {issued.notificationStatus === "sent" ? "送信サービス受付済み" : "結果未確認・要確認"}</p>
+        {issued.notificationStatus !== "sent" && !workspace ? <button type="button" disabled={busy} className={`${natoriAdminUi.btnSecondary} mt-2`} onClick={async () => {
           setBusy(true); setError("");
           try {
             const retry = await fetch("/api/natori/admin/notifications", { method: "POST", headers: { "Content-Type": "application/json", ...CSRF_HEADERS }, body: JSON.stringify({ id: issued.notificationId }) });

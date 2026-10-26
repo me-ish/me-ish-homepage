@@ -1,4 +1,6 @@
 import "server-only";
+import { assertCaseSystemAdmission } from "./caseSystemHold";
+import {acceptanceProjectAllowed} from "./caseAcceptance";
 
 import { randomUUID } from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -16,6 +18,7 @@ async function ownedFile(id: string): Promise<{ row: FileRow; owner: string } | 
   const admin = supabaseAdmin();
   const file = await admin.from("natori_delivery_files").select("*").eq("id", id).maybeSingle();
   if (file.error || !file.data) return null;
+  if(!await acceptanceProjectAllowed(file.data.project_id,true))return null;
   const project = await admin.from("natori_projects").select("id").eq("id", file.data.project_id).eq("user_id", owner).maybeSingle();
   return !project.error && project.data ? { row: file.data, owner } : null;
 }
@@ -44,9 +47,11 @@ export async function reserveDeliveryUpload(input: {
   const id = input.fileId ?? randomUUID();
   if (!DELIVERY_UUID_RE.test(id)) return { kind: "invalid-state" };
   const owner = await resolveNatoriOwnerId();
+  if(!await acceptanceProjectAllowed(input.projectId,true))return{kind:"not-found"};
   const ext = input.fileName.match(/\.([A-Za-z0-9]{1,10})$/)?.[1]?.toLowerCase();
   const path = `${input.projectId}/${input.folder}/${id}${ext ? `.${ext}` : ""}`;
   const admin = supabaseAdmin();
+  await assertCaseSystemAdmission("command",owner);
   const reserved = await admin.rpc("natori_delivery_reserve_v1", { p_owner_id: owner,
     p_project_id: input.projectId, p_file_id: id, p_folder: input.folder, p_path: path,
     p_file_name: input.fileName, p_size_bytes: input.sizeBytes, p_content_type: input.contentType || "application/octet-stream" });
@@ -55,6 +60,7 @@ export async function reserveDeliveryUpload(input: {
   if (row?.result === "not-found") return { kind: "not-found" };
   if (row?.result === "too-many-files") return { kind: "too-many-files" };
   if (row?.result !== "reserved") return { kind: "invalid-state" };
+  await assertCaseSystemAdmission("command",owner);
   const signed = await admin.storage.from(DELIVERY_BUCKET).createSignedUploadUrl(path, { upsert: false });
   if (signed.error || !signed.data) return { kind: "storage-error" };
   return { kind: "ok", fileId: id, path, token: signed.data.token, requiresFinalize: true };
@@ -86,6 +92,7 @@ export async function removeDraftDeliveryFile(id: string): Promise<boolean> {
   if (claimed.error) return false;
   if (claimed.data === "deleted") return true;
   if (claimed.data !== "deleting") return false;
+  await assertCaseSystemAdmission("command",file.owner);
   const removed = await admin.storage.from(DELIVERY_BUCKET).remove([file.row.storage_path]);
   if (removed.error) return false;
   const finished = await admin.rpc("natori_delivery_delete_v1", { p_owner_id: file.owner, p_file_id: id, p_finish: true });

@@ -194,8 +194,6 @@ const templates = {
 
 type Kind = keyof typeof templates;
 
-const resend = new Resend(RESEND_API_KEY);
-
 /* ---------- Handler ---------- */
 export async function POST(req: NextRequest, props: { params: Promise<{ kind: string }> }) {
   const params = await props.params;
@@ -242,6 +240,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ kind: st
   const toAddress = kind === 'contact' ? SUPPORT_EMAIL : (parsed.data as any).to;
   const replyToAddress = kind === 'contact' ? (parsed.data as any).email : SUPPORT_EMAIL;
 
+  const resend = new Resend(RESEND_API_KEY);
   const { data: sent, error } = await resend.emails.send({
     from: FROM,
     to: [toAddress],

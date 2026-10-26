@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs';
+import {caseAdmissionFixture} from '../natori-phase-t/case-admission-fixture.mjs';
 const read = p => readFileSync(p, 'utf8');
 const section = (source, start, end) => {
   const a=source.indexOf(start),b=source.indexOf(end,a);
@@ -14,5 +15,6 @@ const sql=[read('scripts/natori-phase-0b/fixture.sql'),read('scripts/natori-phas
   section(activity,'create function public.record_natori_delivery_activity()','commit;'),
   read('supabase/migrations/20260927073530_natori_acceptance_notifications.sql'),
   read('scripts/natori-phase-n/faults.sql'),
+  caseAdmissionFixture(),
   "NOTIFY pgrst, 'reload schema';"].join('\n');
 writeFileSync(process.argv[2],sql);

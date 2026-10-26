@@ -1,5 +1,8 @@
-import { NATORI_INTAKE_COPY } from "@/features/natori/constants/portfolioContactCopy";
 import "server-only";
+import {assertCaseSystemAdmission} from "./caseSystemHold";
+import { assertAcceptanceLegacyMailDisabled } from "@/lib/caseAcceptanceEnvironment";
+import { NATORI_INTAKE_COPY } from "@/features/natori/constants/portfolioContactCopy";
+
 
 // features/natori/server/portfolioContactService.ts
 // /natori/portfolio のご依頼フォーム送信処理。
@@ -137,6 +140,8 @@ export async function sendPortfolioContactEmail(
     </div>
   `;
 
+  assertAcceptanceLegacyMailDisabled();
+  await assertCaseSystemAdmission("legacy-sender");
   const resend = new Resend(RESEND_API_KEY);
   const { error } = await resend.emails.send({
     from: FROM,
@@ -199,6 +204,8 @@ export async function sendPortfolioContactAutoReply(
     "ナトリ",
   ].join("\n");
 
+  assertAcceptanceLegacyMailDisabled();
+  await assertCaseSystemAdmission("legacy-sender");
   const resend = new Resend(RESEND_API_KEY);
   const { error } = await resend.emails.send({
     from: AUTO_REPLY_FROM,
@@ -327,6 +334,8 @@ export async function sendStructuredPortfolioContactEmail(
     </div>
   `;
 
+  assertAcceptanceLegacyMailDisabled();
+  await assertCaseSystemAdmission("legacy-sender");
   const resend = new Resend(RESEND_API_KEY);
   const { error } = await resend.emails.send({
     from: FROM,
@@ -378,6 +387,8 @@ export async function sendStructuredPortfolioContactAutoReply(
     "ナトリ",
   ].join("\n");
 
+  assertAcceptanceLegacyMailDisabled();
+  await assertCaseSystemAdmission("legacy-sender");
   const resend = new Resend(RESEND_API_KEY);
   const { error } = await resend.emails.send({
     from: AUTO_REPLY_FROM,

@@ -1,0 +1,54 @@
+import {chromium,expect} from '@playwright/test';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {randomUUID,createHmac} from 'node:crypto';
+export async function checkAcceptanceBrowser({out,app,api,anon,password,owner,users,check,sql,ids,run,secret}){
+ const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+ const evidence=()=>{try{return readFileSync(out+'/provider.jsonl','utf8').split('\n').filter(Boolean).map(JSON.parse);}catch{return[];}};
+ try{
+ const context=await browser.newContext({viewport:{width:1440,height:1050}}),errors=[],navigation=[];
+ await context.route('**/*',route=>{const u=new URL(route.request().url());if([app,api].includes(u.origin))return route.continue();if(u.hostname==='fonts.googleapis.com')return route.fulfill({status:200,contentType:'text/css',body:''});return route.abort();});
+ const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('framenavigated',frame=>{if(frame===page.mainFrame()){const u=new URL(frame.url());navigation.push({path:u.pathname,search:u.search});writeFileSync(out+'/r3-navigation.json',JSON.stringify(navigation,null,2));}});
+ const payment='/api/natori/admin/case-payment',reconciliation='/api/natori/admin/case-reconciliation';
+ const post=(path,data)=>context.request.post(app+path,{headers:{'x-requested-with':'me-ish'},data});
+ expect((await context.request.get(app+payment+'?projectId='+ids[0])).status()).toBe(401);
+ await page.goto(app+'/natori/dashboard/cases');await expect(page).toHaveURL(/admin-login/);await expect(page.getByRole('button',{name:'Googleでログイン',exact:true})).toBeVisible();await page.waitForLoadState('domcontentloaded');await page.addScriptTag({url:app+'/__case-local-auth.js'});
+ expect(await page.evaluate(async({email,password})=>(await window.localAuth.auth.signInWithPassword({email,password})).error?.message,{email:users.staff.email,password})).toBeUndefined();
+ expect(await page.evaluate(async()=>Boolean((await window.localAuth.auth.refreshSession()).data.session))).toBe(true);
+ check('R3 actual local Auth/staff Cookie and normal middleware allow explicit dedicated fixture target');
+ expect((await context.request.get(app+payment+'?projectId='+ids[15])).status()).toBe(404);
+ expect((await context.request.get(app+'/api/natori/admin/delivery-files?projectId='+ids[15])).status()).toBe(404);
+ expect((await context.request.get(app+'/api/natori/admin/case-workspace')).status()).toBe(200);const list=await (await context.request.get(app+'/api/natori/admin/case-workspace')).json();expect(list.records.some(r=>r.id===ids[15]||r.id===ids[10])).toBe(false);
+ expect((await context.request.post(app+'/api/contact',{data:{}})).status()).toBe(404);
+ check('R3 owner-owned unlisted cases, Storage signature entry and other-product APIs are denied before service operations');
+ const prepare=async id=>{const r=await post(payment,{action:'prepare',projectId:id,deadline:new Date(Date.now()+3*86400000).toISOString()});expect(r.status()).toBe(200);const d=await r.json();expect(d.result).toBe('prepared');return d.preview;};
+ const confirm=async p=>(await post(payment,{action:'confirm',projectId:p.projectId,operationId:p.operationId,token:p.token})).json();
+ let p=await prepare(ids[0]);await Promise.all([confirm(p),confirm(p)]);expect(sql(`select count(*) from natori_case_mail_bindings where project_id='${ids[0]}'`)).toBe('1');expect(evidence().filter(e=>e.boundary==='mail')).toHaveLength(1);expect(sql(`select used from natori_case_acceptance_runs where id='${run}'`)).toBe('1');
+ check('R3 concurrent confirmation traverses real API/PostgREST, one test-double mail, immutable provider binding and one cumulative spend');
+ const blocked=await prepare(ids[1]);sql(`update natori_case_acceptance_runs set allowed_to=ARRAY['client1@example.invalid','client3@example.invalid'] where id='${run}'`);await confirm(blocked);expect(evidence().filter(e=>e.boundary==='mail')).toHaveLength(1);expect(sql(`select used from natori_case_acceptance_runs where id='${run}'`)).toBe('1');
+ check('R3 common sender denies non-allowlisted recipient without external mail or budget refund');
+ p=await prepare(ids[2]);await confirm(p);const j=JSON.parse(sql(`select row_to_json(j) from natori_notification_jobs j where project_id='${ids[2]}' order by created_at desc limit 1`));expect(j.status).toBe('unknown');const sent=evidence().filter(e=>e.boundary==='mail').at(-1);expect(sent.tags).toHaveLength(3);expect(sql(`select used from natori_case_acceptance_runs where id='${run}'`)).toBe('2');
+ const event=(type,id)=>JSON.stringify({type,created_at:new Date().toISOString(),data:{email_id:'mail_fixture_unknown',tags:sent.tags}});
+ const webhook=async(raw,id,bad=false)=>{const stamp=Math.floor(Date.now()/1000),signature=createHmac('sha256',Buffer.from(secret.slice(6),'base64')).update(`${id}.${stamp}.${raw}`).digest('base64');return context.request.post(app+'/api/webhook/resend',{data:raw,headers:{'content-type':'application/json','svix-id':id,'svix-timestamp':String(stamp),'svix-signature':'v1,'+(bad?'invalid':signature)}});};
+ let raw=event('email.sent','evt_sent');expect((await webhook(raw,'evt_bad',true)).status()).toBe(401);expect(sql(`select count(*) from natori_case_mail_events`)).toBe('0');
+ expect((await webhook(event('email.delivered'),'evt_delivered')).status()).toBe(200);expect(sql(`select status from natori_notification_jobs where id='${j.id}'`)).toBe('unknown');expect((await webhook(raw,'evt_sent')).status()).toBe(200);expect((await webhook(raw,'evt_sent')).status()).toBe(200);expect(sql(`select count(*) from natori_case_mail_events where job_id='${j.id}'`)).toBe('2');
+ check('R3 raw signed webhook rejects invalid signature, records out-of-order acceptance/delivery and deduplicates replay without auto-resolving unknown');
+ sql(`update natori_case_acceptance_runs set enabled=false where id='${run}'`);
+ const warmed=await (await context.request.get(app+reconciliation+'?projectId='+ids[2])).json();expect(warmed.view.mailEvents).toHaveLength(2);
+ await page.goto(app+`/natori/dashboard/cases?case=${ids[2]}&section=transaction`);const panel=page.getByRole('region',{name:'結果不明の照合'});await expect(panel).toContainText('宛先サーバーへ到達',{timeout:15000});await expect(panel).toContainText('送信受付');await expect(page.locator('body')).not.toContainText('到達・既読は未確認');await panel.getByRole('button',{name:'メール受付を外部照合'}).click();await expect(panel).toContainText('肯定証拠あり');await expect(panel).toContainText('署名済み通知');expect(sql(`select status from natori_notification_jobs where id='${j.id}'`)).toBe('unknown');
+ await panel.getByRole('button',{name:'照合結果の保存内容を確認'}).click();await panel.getByRole('checkbox').check();await panel.getByRole('button',{name:'照合結果を保存',exact:true}).click();await expect(panel).toContainText('照合結果を保存済み');expect(sql(`select status from natori_notification_jobs where id='${j.id}'`)).toBe('sent');
+ check('R3 PC stopped run: actual R1 adapter reads signed SQL inbox/UTC timestamp; explicit evidence save remains available and records acceptance, not receipt or reading');
+ sql(`update natori_case_acceptance_runs set enabled=true where id='${run}'`);
+ const before=evidence().length;await page.setViewportSize({width:390,height:844});await page.reload();await expect(panel).toContainText('照合結果を保存済み');await page.goto(app+`/natori/dashboard/cases?entry=today&case=${ids[2]}&section=transaction`);await expect(panel).toContainText('署名済み通知');await page.goto(app+`/natori/dashboard/cases?entry=schedule&case=${ids[2]}&section=transaction`);await expect(panel).toContainText('署名済み通知');await page.goBack({waitUntil:'domcontentloaded'});await expect(page).toHaveURL(/entry=today/);await page.goForward({waitUntil:'domcontentloaded'});await expect(page).toHaveURL(/entry=schedule/);await expect(panel).toContainText('署名済み通知');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect(evidence().length).toBe(before);await page.screenshot({path:out+'/r3-mobile.png',fullPage:true});
+ check('R3 mobile reload/back-forward retain the same facts without another provider request or overflow');
+ const linkPreview=await prepare(ids[5]);await confirm(linkPreview);sql(`update natori_payment_link_attempts set lease_until=null where project_id='${ids[5]}'`);
+ const read=await (await context.request.get(app+reconciliation+'?projectId='+ids[5])).json();const view=read.view??read;const operation=sql(`select operation_id from natori_payment_link_operations where project_id='${ids[5]}' limit 1`);
+ const inspected=await post(reconciliation,{action:'inspect',projectId:ids[5],id:randomUUID(),kind:'link',target:operation,revision:view.revision});expect(inspected.status()).toBe(200);expect((await inspected.json()).result).toBe('saved');expect(sql(`select facts->>'state' from natori_case_reconciliation_evidence e join natori_case_reconciliation_jobs x on x.id=e.job_id where x.project_id='${ids[5]}' order by x.created_at desc limit 1`)).toBe('confirmed');expect(evidence().some(e=>e.boundary==='stripe-http')).toBe(true);
+ check('R3 real Stripe retrieval adapter uses mock HTTP/account/mode/amount/quote/generation to recover lost creation result without reissuing');
+ sql(`update natori_case_acceptance_runs set mail_limit=used,enabled=false where id='${run}'`);expect((await webhook(event('email.bounced'),'evt_bounce')).status()).toBe(200);expect((await context.request.get(app+reconciliation+'?projectId='+ids[2])).status()).toBe(200);
+ check('R3 kill switch retains DB inspection and late signed bounce history while preventing fresh sends');
+ await page.reload();await expect(panel).toContainText('配信失敗');await page.setViewportSize({width:1440,height:1050});await page.screenshot({path:out+'/r3-pc.png',fullPage:true});expect(errors).toEqual([]);
+ writeFileSync(out+'/r3-browser.json',JSON.stringify({errors,providerBoundaries:evidence(),limits:'Stripe/Resend mocked; local password Auth, Storage catalog fixture; no Google OAuth or actual provider'},null,2));
+ await page.close();await context.clearCookies();expect((await context.request.get(app+payment+'?projectId='+ids[0])).status()).toBe(401);check('R3 session refresh issues real cookies; cleared session is rejected before any provider operation');
+ return{errors,checks:'see results.checks',providerBoundaryCounts:evidence().reduce((a,e)=>(a[e.boundary]=(a[e.boundary]??0)+1,a),{})};
+ }finally{await browser.close();}
+}

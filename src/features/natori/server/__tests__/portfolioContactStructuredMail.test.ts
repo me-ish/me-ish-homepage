@@ -4,6 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+vi.mock("../caseSystemHold",async importOriginal=>({...await importOriginal<typeof import('../caseSystemHold')>(),assertCaseSystemAdmission:vi.fn(async()=>{})}));
 
 const { mockSend } = vi.hoisted(() => ({ mockSend: vi.fn() }));
 

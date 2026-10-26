@@ -2,6 +2,7 @@
 import createMiddleware from 'next-intl/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 import { routing } from './i18n/routing';
+import { assertServerAcceptanceTarget, caseAcceptanceConfigured } from '@/lib/caseAcceptanceEnvironment';
 import { isAnalyticsExcludedPath } from '@/lib/analyticsPrivacy';
 import {
   NATORI_KEY_COOKIE,
@@ -32,6 +33,18 @@ function protectPrivateResponse(response: NextResponse, pathname: string): NextR
 
 export default async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  if (caseAcceptanceConfigured()) {
+    try {
+      const target = assertServerAcceptanceTarget(true);
+      if (!target || request.nextUrl.origin !== target.origin) throw Error("acceptance_origin");
+      const fixtureEvents=pathname==='/api/natori/admin/events'&&Boolean(process.env.NATORI_CASE_ACCEPTANCE_EVENTS);
+      const entryIndex=pathname==='/api/natori/admin/case-workspace/entries'; // handler validates exact kind and fixture scope
+      if (pathname.startsWith('/api/') && !fixtureEvents&&!entryIndex&&!/^\/api\/(?:natori\/(?:admin\/(?:case-[a-z-]+|consultation(?:\/rough(?:-ok)?)?|delivery-files|payment-link|order-mail|notifications|structured-quote|estimate-draft)|consultation-file|consult\/[A-Za-z0-9_-]+(?:\/(?:rough-ok|renew|open))?|quote\/accept|delivery\/accept)|cron\/natori-payment-expiry|webhook\/(?:stripe|resend))$/.test(pathname)) {
+        return NextResponse.json({error:'acceptance_route_disabled'},{status:404});
+      }
+    } catch { return NextResponse.json({error:'acceptance_target_invalid'},{status:503}); }
+  }
+
   if (pathname === '/_next/image') {
     const source=request.nextUrl.searchParams.get('url');
     if (source) {

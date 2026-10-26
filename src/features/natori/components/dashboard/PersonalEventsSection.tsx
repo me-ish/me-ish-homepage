@@ -2,7 +2,7 @@
 
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { useNatoriConfirm } from "@/features/natori/components/admin/useNatoriConfirm";
-import { useState } from "react";
+import { useEffect,useState } from "react";
 import { CalendarPlus, Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ type PersonalEventsSectionProps = {
   onCreate: (input: { title: string; date: string; note?: string }) => Promise<void>;
   onUpdate: (id: string, input: { title: string; date: string; note?: string }) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onDraftChange?: (active:boolean)=>void;
 };
 
 export default function PersonalEventsSection({
@@ -28,6 +29,7 @@ export default function PersonalEventsSection({
   onCreate,
   onUpdate,
   onDelete,
+  onDraftChange,
 }: PersonalEventsSectionProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
@@ -88,6 +90,7 @@ export default function PersonalEventsSection({
   };
 
   const draftActive = adding || editingId !== null;
+  useEffect(()=>{onDraftChange?.(draftActive);return()=>onDraftChange?.(false);},[draftActive,onDraftChange]);
 
   return (
     <section className="mt-4 rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-3 sm:p-4">

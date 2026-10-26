@@ -1,4 +1,5 @@
 import "server-only";
+import { assertCaseSystemAdmission } from "./caseSystemHold";
 
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -59,6 +60,7 @@ export async function settlePublicIntakeOperation(operationId: string, requestHa
   const owner = resolvePublicIntakeOwnerId();
   if (owner.kind !== "ok") return { kind: "unavailable" };
   try {
+    await assertCaseSystemAdmission("command", owner.ownerId);
     const result = await supabaseAdmin().rpc("natori_intake_settle_v1", { p_owner_id: owner.ownerId, p_operation_id: operationId, p_request_hash: requestHash });
     const settled = result.error ? { kind: "unavailable" as const } : publicResult(readRow(result.data), operationId);
     if (settled.kind === "failed") await cleanDefinitivelyFailedOperation(owner.ownerId, operationId, requestHash);
@@ -71,6 +73,7 @@ async function cleanDefinitivelyFailedOperation(ownerId: string, operationId: st
     const result = await supabaseAdmin().rpc("natori_intake_cleanup_scope_v1", { p_owner_id: ownerId, p_operation_id: operationId, p_request_hash: requestHash });
     const parsed = z.array(z.string().regex(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.webp$/u)).max(5).safeParse(result.data);
     if (result.error || !parsed.success || parsed.data.length === 0) return;
+    await assertCaseSystemAdmission("command", ownerId);
     const removed = await supabaseAdmin().storage.from("natori-inquiry-refs").remove(parsed.data);
     if (removed.error) console.error("[natori-intake] scoped_cleanup_unconfirmed");
   } catch { console.error("[natori-intake] scoped_cleanup_unconfirmed"); }
@@ -94,6 +97,7 @@ export async function submitPublicIntakeOperation(operationId: string, input: Ca
   const fence = { p_owner_id: owner.ownerId, p_operation_id: operationId, p_request_hash: requestHash, p_claim_token: claimToken };
   try {
     const admin = supabaseAdmin();
+    await assertCaseSystemAdmission("command", owner.ownerId);
     const begun = await admin.rpc("natori_intake_begin_v1", { ...fence, p_manifest: input.manifest,
       p_file_ids: input.manifest.map((file, index) => intakeReferenceFileId(operationId, index, file.digest)), p_mass_production: isMassProductionIntake(input) });
     const row = begun.error ? null : readRow(begun.data);
@@ -104,6 +108,7 @@ export async function submitPublicIntakeOperation(operationId: string, input: Ca
     for (const [index, webp] of prepared.entries()) {
       const touch = await admin.rpc("natori_intake_touch_v1", fence);
       if (touch.error || touch.data !== true) return await lookupPublicIntakeOperation(operationId, requestHash);
+      await assertCaseSystemAdmission("command", owner.ownerId);
       const uploaded = await uploadIntakeReferenceImage(paths[index], webp);
       if (uploaded.kind !== "ok") {
         if (uploaded.kind === "mismatch") {

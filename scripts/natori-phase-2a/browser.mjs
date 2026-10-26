@@ -74,6 +74,9 @@ async function main(){
   }
  });
  await test('anonymous-and-cross-origin-write-remain-blocked',async()=>{const anon=await browser.newContext();const request=await anon.request.post(`${app}/api/natori/admin/quote-notification`,{data:{quoteId:randomUUID(),operationId:randomUUID()},headers:{'x-requested-with':'me-ish'}});check(request.status()===401,'ANON_DENIED');const denied=await context.request.post(`${app}/api/natori/admin/quote-notification`,{data:{quoteId:randomUUID(),operationId:randomUUID()}});check(denied.status()===403,'CSRF_DENIED');await anon.close();});
- await context.close();writeFileSync('/results/phase2a-browser.json',JSON.stringify({tests:results,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,engine:'Chromium 1.58.2; 390px viewport, not iPhone Safari',compileErrors:[...errors]},null,2));check(results.length===6&&results.every(r=>r.status==='passed')&&errors.size===0,'BROWSER_FAILED');
+ await context.close();writeFileSync('/results/phase2a-browser.json',JSON.stringify({tests:results,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:0,engine:'Chromium 1.58.2; 390px viewport, not iPhone Safari',compileErrors:[...errors]},null,2));
+ // Only fixed classifications leave the process; never print raw Next logs.
+ console.log('PHASE 2A browser final gate '+JSON.stringify({scenarioCount:results.length,failed:results.filter(r=>r.status!=='passed').length,compileErrors:[...errors]}));
+ check(results.length===6&&results.every(r=>r.status==='passed')&&errors.size===0,'BROWSER_FAILED');
 }
 main().catch(()=>{console.error(`Phase 2A browser failed at ${stage}; raw logs withheld`);process.exitCode=1;}).finally(async()=>{await browser?.close();if(server?.exitCode===null){server.kill('SIGTERM');await Promise.race([new Promise(r=>server.once('exit',r)),new Promise(r=>setTimeout(()=>{server.kill('SIGKILL');r();},5000))]);}});

@@ -1,4 +1,5 @@
 import "server-only";
+import { assertCaseSystemAdmission } from "./caseSystemHold";
 
 // Management thumbnails never become public portfolio assets.
 import sharp from "sharp";
@@ -98,6 +99,7 @@ export async function uploadNatoriProjectThumb(
     .eq("user_id", ownerId)
     .maybeSingle();
   if (projectError || !project) return { kind: "upload-error" };
+  await assertCaseSystemAdmission("command",ownerId);
   const { error } = await admin.storage
     .from(BUCKET)
     .upload(thumbPath(ownerId, projectId), webp, {
@@ -121,6 +123,7 @@ export async function deleteNatoriProjectThumb(
 ): Promise<void> {
   const ownerId = await resolveNatoriOwnerId();
   const admin = supabaseAdmin();
+  await assertCaseSystemAdmission("command",ownerId);
   const { error } = await admin.storage
     .from(BUCKET)
     .remove([thumbPath(ownerId, projectId)]);

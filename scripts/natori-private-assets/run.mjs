@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url";
 import { postgresReady } from "./postgres-ready.mjs";
 import { commandFailure } from "./command-error.mjs";
 import { assertNoEnvFiles } from "./env-guard.mjs";
+import {caseAdmissionFixture} from "../natori-phase-t/case-admission-fixture.mjs";
 const root = fileURLToPath(new URL("../../", import.meta.url));
 assertNoEnvFiles(root);
 for (const key of [
@@ -489,6 +490,7 @@ try {
       2,
     ),
   );
+  sql(caseAdmissionFixture());
   sql("NOTIFY pgrst,'reload schema';");
   stage = "synthetic-data-setup";
   const setup = child("setup.mjs", "setup.private.log");

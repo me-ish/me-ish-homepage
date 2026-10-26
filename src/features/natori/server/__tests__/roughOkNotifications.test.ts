@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
+vi.mock("../caseSystemHold",async importOriginal=>({...await importOriginal<typeof import('../caseSystemHold')>(),assertCaseSystemAdmission:vi.fn(async()=>{})}));
 const m = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("@/lib/supabaseAdmin", () => ({ supabaseAdmin: () => ({ rpc: m.rpc }) }));
 import { buildAcceptanceNotificationPayload, dispatchAcceptanceNotification, sendAcceptanceNotification, type NotificationPayload } from "../acceptanceNotifications";

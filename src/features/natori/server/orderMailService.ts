@@ -1,5 +1,10 @@
 import "server-only";
-import {paymentLinkIntegrityEnabled} from "./paymentLinkService";
+import {assertCaseSystemAdmission,CaseSystemHeld} from "./caseSystemHold";
+import { caseAcceptanceConfigured, assertAcceptanceLegacyMailDisabled } from "@/lib/caseAcceptanceEnvironment";
+import { currentNatoriFlow, currentFlowManaged, currentFlowRpc, hasCurrentFlowOperation, currentFlowOperationId, currentEffectStart, currentEffectRecorded, currentMailStart, currentMailAccepted } from "./caseCurrentFlow";
+import { z } from "zod";
+
+import {paymentLinkIntegrityEnabled,paymentLinkRpc} from "./paymentLinkService";
 import { quoteIntegrityEnabled, renotifyStructuredQuote } from "./structuredQuoteService";
 
 // features/natori/server/orderMailService.ts
@@ -94,9 +99,13 @@ function appendNote(note: string | null, entry: string): string {
   return note ? `${note}\n\n${entry}` : entry;
 }
 
-async function sendPlainMail(to: string, subject: string, body: string): Promise<boolean> {
+async function sendPlainMail(to: string, subject: string, body: string, fact = false): Promise<boolean> {
+  assertAcceptanceLegacyMailDisabled();
+  // User commands require the durable scoped claim. Fact notifications retain
+  // the existing webhook/acceptance caller and independently obey sender hold.
+  if (!hasCurrentFlowOperation()) await assertCaseSystemAdmission(fact && currentNatoriFlow() ? "sender" : "legacy-sender");
   const resend = new Resend(RESEND_API_KEY);
-  const { error } = await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from: FROM,
     to: [to],
     ...(BCC ? { bcc: [BCC] } : {}),
@@ -104,11 +113,12 @@ async function sendPlainMail(to: string, subject: string, body: string): Promise
     text: body,
     replyTo: REPLY_TO,
     headers: { "X-Meish-Template": "natori-order-mail" },
-  });
+  }, hasCurrentFlowOperation() ? { idempotencyKey: `natori-current-mail/${currentFlowOperationId()}` } : undefined);
   if (error) {
     console.error("[natori-order-mail] send failed", error);
     return false;
   }
+  if(hasCurrentFlowOperation())await currentMailAccepted(data?.id??"");
   return true;
 }
 
@@ -118,7 +128,12 @@ async function sendPlainMail(to: string, subject: string, body: string): Promise
  */
 export async function sendNatoriNoticeMail(subject: string, body: string): Promise<boolean> {
   if (!isNatoriOrderMailConfigured()) return false;
-  return sendPlainMail(REPLY_TO, subject, body);
+  return sendFactMail(REPLY_TO, subject, body);
+}
+
+/** A held follow-up mail never turns an already recorded payment into failure. */
+async function sendFactMail(to:string,subject:string,body:string):Promise<boolean>{
+ try{return await sendPlainMail(to,subject,body,true);}catch(error){if(error instanceof CaseSystemHeld)return false;throw error;}
 }
 
 export type SendNatoriOrderMailInput = {
@@ -219,6 +234,7 @@ export async function sendNatoriOrderMail(
     if (result.kind === "not-found" || result.kind === "not-configured" || result.kind === "db-error") return { kind: result.kind };
     return { kind: "invalid-state" };
   }
+  if (caseAcceptanceConfigured())return {kind:"invalid-state"};
   if (input.kind === "payment" && paymentLinkIntegrityEnabled()) return {kind:"invalid-state"};
   if (input.kind === "delivery") {
     // Publishing delivery must use the release RPC. The legacy branch would
@@ -232,6 +248,14 @@ export async function sendNatoriOrderMail(
   if (!ownerId) return { kind: "not-found" };
   const project = await fetchProjectRow(input.projectId, ownerId);
   if (!project) return { kind: "not-found" };
+  if (input.kind === "payment" && !hasCurrentFlowOperation()) {
+    // Scoped current operations already passed this fence atomically before claim.
+    // Rollback of a UI flag must never route generation/R1 data into legacy mail.
+    try {
+      const context = await paymentLinkRpc(ownerId,project.id,"context");
+      if (context.attempt || (await paymentLinkRpc(ownerId,project.id,"outbound_gate")).result !== "allowed") return {kind:"invalid-state"};
+    } catch { return {kind:"db-error"}; }
+  }
   if (project.type === "undecided") return { kind: "invalid-state" };
   const projectStatus = project.status as NatoriProjectStatus;
   if (!ALLOWED_MAIL_STATUSES[input.kind].has(projectStatus)) {
@@ -359,7 +383,9 @@ export async function sendNatoriOrderMail(
 
       if (project.payment_link_id) {
         try {
+          await currentEffectStart("deactivate");
           await stripe.paymentLinks.update(project.payment_link_id, { active: false });
+          await currentEffectRecorded("deactivate");
         } catch (err) {
           const code = (err as { code?: string } | null)?.code;
           if (code !== "resource_missing") {
@@ -374,6 +400,7 @@ export async function sendNatoriOrderMail(
             console.error("[natori-order-mail] old payment link deactivation failed", err);
             return { kind: "stripe-error" };
           }
+          await currentEffectRecorded("deactivate");
         }
       }
 
@@ -384,6 +411,7 @@ export async function sendNatoriOrderMail(
       const idempotencyBase =
         `natori-plink:${project.id}:${quoteId}:${input.amount}:${paymentLinkGeneration}`;
       try {
+        await currentEffectStart("price");
         const price = await stripe.prices.create(
           {
             currency: "jpy",
@@ -394,6 +422,8 @@ export async function sendNatoriOrderMail(
           },
           { idempotencyKey: `${idempotencyBase}:price` }
         );
+        await currentEffectRecorded("price", {id:price.id});
+        await currentEffectStart("link");
         const link = await stripe.paymentLinks.create(
           {
             line_items: [{ price: price.id, quantity: 1 }],
@@ -416,6 +446,10 @@ export async function sendNatoriOrderMail(
         paymentLinkUrl = link.url;
         paymentLinkId = link.id;
 
+        // A returned provider result remains recordable if a hold arrived in flight.
+        if (hasCurrentFlowOperation()) {
+          await currentEffectRecorded("link", {id:paymentLinkId,url:paymentLinkUrl,quoteId,amount:acceptedQuote?.amount??input.amount});
+        } else {
         // 顧客へメールする前に、リンクと対応する見積版を永続化する。
         const { data: persisted, error: persistError } = await supabaseAdmin()
           .from("natori_projects")
@@ -446,6 +480,7 @@ export async function sendNatoriOrderMail(
             .eq("user_id", ownerId)
             .eq("payment_link_status", "issuing");
           return { kind: "db-error" };
+        }
         }
       } catch (err) {
         await supabaseAdmin()
@@ -491,6 +526,14 @@ export async function sendNatoriOrderMail(
   // 送信試行もメールより先に durable log へ残す。本文は生成リンク差し込み前を
   // 保存し、承諾トークンや納品トークンの平文をDBへ残さない。
   const requestId = randomUUID();
+  if(hasCurrentFlowOperation()) {
+    // The operation RPC binds the active quote, recipient, exact link and its
+    // single mail attempt before this existing transport is called.
+    if(input.kind!=="payment"||!quoteId)return {kind:"invalid-state"};
+    await currentMailStart({kind:"payment",quoteId,to:input.to,amount:input.amount,subject:input.subject,body:input.body,link:paymentLinkUrl});
+    const mailed=await sendPlainMail(input.to,input.subject,body);
+    return mailed?{kind:"ok",paymentLinkUrl}:{kind:"mail-error"};
+  }
   const { error: logError } = await admin.from("natori_order_mail_logs").insert({
     request_id: requestId,
     project_id: project.id,
@@ -622,7 +665,7 @@ async function handleAmountMismatch(
       "",
       "ダッシュボード: https://www.me-ish.art/natori/projects",
     ].join("\n");
-    const sent = await sendPlainMail(
+    const sent = await sendFactMail(
       REPLY_TO,
       `【要確認】入金金額が見積もりと一致しません / ${project.client_name} 様 / ${project.title}`,
       noticeBody
@@ -662,6 +705,14 @@ async function handleQuoteMismatch(
 
 type UnresolvedPaymentReason = "project_type_unconfirmed" | "amount_unavailable" | "quote_unavailable";
 
+async function currentPaymentFact(project:string,session:string,amount:number|null,quote:string|null,reason:string|null){
+  try {
+    const data=z.array(z.object({result:z.string(),new_event:z.boolean(),recorded_amount:z.number().nullable().optional(),advanced:z.boolean().optional()})).parse(
+      await currentFlowRpc("natori_case_current_payment_fact_v1",{p_project:project,p_session:session,p_amount:amount,p_quote:quote,p_reason:reason}));
+    return {data,error:null};
+  } catch { return {data:null,error:"payment_fact_unconfirmed"}; }
+}
+
 /** 照合できない入金: DB関数で要確認として記録し、新規イベントだけナトリへ通知する。進行状態は変えない。 */
 async function recordUnresolvedPayment(
   project: ProjectRow,
@@ -669,7 +720,7 @@ async function recordUnresolvedPayment(
   amountTotal: number | null,
   reason: UnresolvedPaymentReason
 ): Promise<MarkNatoriCommissionPaidResult> {
-  const { data, error } = await supabaseAdmin().rpc("natori_record_unresolved_stripe_payment_v1", {
+  const { data, error } = currentFlowManaged() ? await currentPaymentFact(project.id,sessionId,amountTotal,null,reason) : await supabaseAdmin().rpc("natori_record_unresolved_stripe_payment_v1", {
     p_project_id: project.id,
     p_session_id: sessionId,
     p_amount: amountTotal,
@@ -732,7 +783,7 @@ export async function markNatoriCommissionPaid(
   if (unresolved) return recordUnresolvedPayment(project, sessionId, amountTotal, unresolved);
 
   const admin = supabaseAdmin();
-  const { data, error } = await admin.rpc("natori_record_stripe_payment", {
+  const { data, error } = currentFlowManaged() ? await currentPaymentFact(projectId,sessionId,amountTotal,quoteId,null) : await admin.rpc("natori_record_stripe_payment", {
     p_project_id: projectId,
     p_session_id: sessionId,
     p_amount: amountTotal as number,
@@ -745,6 +796,7 @@ export async function markNatoriCommissionPaid(
   const outcome = data?.[0] ?? null;
   if (!outcome || outcome.result === "not-found") return { kind: "not-found" };
   const recordedAmount = outcome.recorded_amount ?? amountTotal;
+  if(recordedAmount===null)return {kind:"db-error"};
 
   if (outcome.result === "amount-mismatch") {
     return handleAmountMismatch(project, sessionId, recordedAmount, outcome.new_event === true);
@@ -792,7 +844,7 @@ export async function markNatoriCommissionPaid(
       title: project.title,
       amount: recordedAmount,
     });
-    const sentToClient = await sendPlainMail(
+    const sentToClient = await sendFactMail(
       project.client_email,
       confirmation.subject,
       confirmation.body
@@ -823,7 +875,7 @@ export async function markNatoriCommissionPaid(
       statusLine,
       "ダッシュボード: https://www.me-ish.art/natori/projects",
     ].join("\n");
-    const sent = await sendPlainMail(
+    const sent = await sendFactMail(
       REPLY_TO,
       `【入金確認】${project.client_name} 様 / ${project.title}`,
       noticeBody

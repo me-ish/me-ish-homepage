@@ -1,4 +1,9 @@
 import "server-only";
+import {assertCaseSystemAdmission} from "./caseSystemHold";
+import {caseAcceptanceMailSuppressed} from "./caseNoMailAcceptance";
+import { acceptanceMailTags, reserveAcceptanceMail, withAcceptanceMail, acceptanceTransport, caseMailLink } from "./caseAcceptanceMail";
+import { resolveTrustedNatoriOwnerId } from "./trustedNatoriOwner";
+import { reserveProductionMail, withProductionMail, productionMailTransport, productionMailTags } from "./caseProductionMail";
 
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -9,7 +14,7 @@ import type { NatoriNotificationRow } from "@/types/supabase";
 import { openDeliveryNotification } from "./deliveryNotificationPayload";
 
 export const acceptanceOutboxEnabled = () => process.env.NATORI_ACCEPTANCE_OUTBOX_ENABLED === "1";
-export const notificationSendingEnabled = () => process.env.NATORI_NOTIFICATION_SENDING_ENABLED === "1";
+export const notificationSendingEnabled = () => !caseAcceptanceMailSuppressed() && process.env.NATORI_NOTIFICATION_SENDING_ENABLED === "1";
 
 const address = z.email().max(320);
 const payloadSchema = z.object({
@@ -45,7 +50,7 @@ export function buildAcceptanceNotificationPayload(job: Pick<NatoriNotificationR
       subject: `【ナトリ】${snapshot.beforeQuote ? "参考ラフ" : "ラフ"}に「OK」がありました`,
       text: [`${snapshot.clientName} 様の案件「${snapshot.title}」で、${snapshot.beforeQuote ? "見積もり前の参考ラフ" : "ラフ"}に「このラフでOK」の連絡がありました。`,
         `ラフID: ${snapshot.roughId}`, `OK記録: ${snapshot.clientOkAt}`, "",
-        "相談のやり取りでラフと次の対応を確認してください。", `https://www.me-ish.art/natori/inquiries?project=${snapshot.projectId}&view=conversation`, "",
+        "相談のやり取りでラフと次の対応を確認してください。", caseMailLink(`/natori/inquiries?project=${snapshot.projectId}&view=conversation`), "",
         "※これは制作を進めるための連絡で、見積もりの承認やお支払いではありません。"].join("\n"),
       headers: { "X-Meish-Template": "natori-rough_ok_artist" } });
   }
@@ -60,7 +65,7 @@ export function buildAcceptanceNotificationPayload(job: Pick<NatoriNotificationR
       text: [client ? `${snapshot.clientName} 様、ご依頼を受け付けました。` : "新しいご依頼を案件管理へ保存しました。",
         `受付確認用: ${snapshot.receipt}`, `案件: ${snapshot.title}`, "",
         client ? "内容を確認のうえ、2〜3日以内にご連絡いたします。確認メールが届かなくても再応募は不要です。" : "原回答と参考資料は案件管理でご確認ください。",
-        client ? `2〜3日を過ぎても連絡がない場合は ${recipient} へお問い合わせください。` : "https://www.me-ish.art/natori/projects",
+        client ? `2〜3日を過ぎても連絡がない場合は ${recipient} へお問い合わせください。` : caseMailLink("/natori/projects"),
         client ? "このメールに返信してご連絡いただくこともできます。" : ""].join("\n"),
       headers: { "X-Meish-Template": `natori-${job.purpose}` } });
   }
@@ -80,11 +85,11 @@ export function buildAcceptanceNotificationPayload(job: Pick<NatoriNotificationR
     subject = `【承諾】${snapshot.clientName} 様 / ${snapshot.title}`;
     text = ["見積もりが承諾されました。お支払いのご案内を送ってください。", "",
       `■ 案件: ${snapshot.title}`, `■ 依頼者: ${snapshot.clientName} 様`, `■ 承諾金額: ${formatYen(snapshot.amount!)}`, "",
-      "案件管理 → 該当案件 → 「支払い依頼メール」から送信できます。", "ダッシュボード: https://www.me-ish.art/natori/projects"].join("\n");
+      "案件管理 → 該当案件 → 「支払い依頼メール」から送信できます。", `ダッシュボード: ${caseMailLink("/natori/projects")}`].join("\n");
   } else if (job.purpose === "delivery_accept_artist") {
     subject = `【納品完了】${snapshot.clientName} 様 / ${snapshot.title}`;
     text = ["納品の受け取りが確認されました。案件は「対応完了」になり、実績に追加されています。", "",
-      `■ 案件: ${snapshot.title}`, `■ 依頼者: ${snapshot.clientName} 様`, "", "実績ページ: https://www.me-ish.art/natori/results"].join("\n");
+      `■ 案件: ${snapshot.title}`, `■ 依頼者: ${snapshot.clientName} 様`, "", `実績ページ: ${caseMailLink("/natori/results")}`].join("\n");
   } else if (job.purpose === "delivery_accept_client") {
     const mail = buildDeliveryCompletionMail(snapshot);
     subject = mail.subject;
@@ -116,13 +121,18 @@ export function buildAcceptanceNotificationPayload(job: Pick<NatoriNotificationR
 
 /** Fixed production endpoint. Tests inject a transport; there is no arbitrary endpoint environment variable. */
 export const sendAcceptanceNotification: NotificationTransport = async (payload, key) => {
+  if (caseAcceptanceMailSuppressed()) return { status: "failed", errorCode: "acceptance_mail_disabled" };
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { status: "failed", errorCode: "mail_configuration" };
   try {
+    const tags = await acceptanceMailTags(payload,key);
+    await assertCaseSystemAdmission("sender");
+    tags.push(...await productionMailTags(payload,key,apiKey));
+    if (caseAcceptanceMailSuppressed()) return { status: "failed", errorCode: "acceptance_mail_disabled" };
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST", redirect: "error", signal: AbortSignal.timeout(10000), cache: "no-store",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "Idempotency-Key": key },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({...payload,...(tags.length?{tags}:{})}),
     });
     const body: unknown = await response.json().catch(() => null);
     if (response.ok && body && typeof body === "object" && "id" in body && typeof body.id === "string" && body.id.length <= 200) {
@@ -137,23 +147,30 @@ export const sendAcceptanceNotification: NotificationTransport = async (payload,
 };
 
 /** One bounded attempt, fenced before send and on completion. Never throws into an acceptance response. */
+export type PaymentNotificationGate=(project:string,id:string,token:string,release?:boolean)=>Promise<boolean>;
 export async function dispatchAcceptanceNotification(
   id: string,
   manual = false,
   transport: NotificationTransport = sendAcceptanceNotification,
+  paymentGate?:PaymentNotificationGate,
 ): Promise<void> {
   if (!notificationSendingEnabled()) return;
   const admin = supabaseAdmin();
   const claimToken = randomUUID();
   let paymentMailProject: string | null = null;
+  let scopedPaymentGate=paymentGate;
   try {
+    await assertCaseSystemAdmission("sender");
     const claim = await admin.rpc("natori_notification_claim_v1", { p_id: id, p_claim_token: claimToken, p_manual: manual });
     const job = claim.data?.[0];
     if (claim.error || !job) return;
     if(job.purpose === "payment_link_client"){
       paymentMailProject=job.project_id;
+      if(job.payload&&typeof job.payload==="object"&&!Array.isArray(job.payload)&&job.payload.workspace==="natori-case-payment-v1"){
+        const {casePaymentMailGate}=await import("./casePaymentWorkspace");scopedPaymentGate=casePaymentMailGate;
+      }
       const {paymentLinkMailGate}=await import("./paymentLinkService");
-      if(!await paymentLinkMailGate(paymentMailProject,id,claimToken))return;
+      if(!await (scopedPaymentGate??paymentLinkMailGate)(paymentMailProject,id,claimToken))return;
     }
     let payload: NotificationPayload;
     try { payload = buildAcceptanceNotificationPayload(job); }
@@ -163,12 +180,26 @@ export async function dispatchAcceptanceNotification(
         p_status: job.send_started_at ? "unknown" : "failed", p_error_code: "mail_configuration" });
       return;
     }
+    const frozen = (job.purpose === "delivery_issue_client" || job.purpose === "quote_issue_client" || job.purpose === "payment_link_client" || job.purpose === "consultation_staff" || job.purpose === "consultation_client") ? job.payload! : payload;
+    const owner = resolveTrustedNatoriOwnerId();
+    let binding;
+    let productionBinding;
+    try {
+      productionBinding = await reserveProductionMail(owner.kind === "ok" ? owner.ownerId : "",job.project_id,id,claimToken,payload,frozen,job);
+      binding = await reserveAcceptanceMail(owner.kind === "ok" ? owner.ownerId : "",job.project_id,id,claimToken,payload,frozen);
+    } catch {
+      await admin.rpc("natori_notification_finish_v1", {p_id:id,p_claim_token:claimToken,p_status:job.send_started_at?"unknown":"failed",p_error_code:"acceptance_mail_denied"});
+      return;
+    }
     const started = await admin.rpc("natori_notification_start_v1", { p_id: id, p_claim_token: claimToken,
-      p_payload: (job.purpose === "delivery_issue_client" || job.purpose === "quote_issue_client" || job.purpose === "payment_link_client" || job.purpose === "consultation_staff" || job.purpose === "consultation_client") ? job.payload! : payload });
+      p_payload: frozen });
     const active = started.data?.[0];
     if (started.error || !active?.lease_expires_at || !active.send_started_at) return;
     if (Date.parse(active.lease_expires_at) <= Date.now() + 15000 || Date.parse(active.send_started_at) <= Date.now() - 23 * 3600000) return;
-    let result = await transport(payload, `natori-notice/${id}`);
+    let result = await withProductionMail(productionBinding, () => withAcceptanceMail(binding, () => acceptanceTransport(payload, `natori-notice/${id}`, async () => {
+      await assertCaseSystemAdmission("sender");
+      return productionMailTransport(payload, `natori-notice/${id}`, () => transport(payload, `natori-notice/${id}`));
+    })));
     // A rejection of this replay (for example a rotated/invalid API key) does not
     // prove an earlier interrupted request was rejected. Keep its original key.
     if (result.status === "failed" && job.send_started_at) result = { status: "unknown", errorCode: "provider_unknown" };
@@ -181,7 +212,7 @@ export async function dispatchAcceptanceNotification(
     // Lease expiry permits SAME key/payload recovery. No raw error contains an address, body or token.
     console.error("[natori-notification] attempt_interrupted");
   } finally {
-    if(paymentMailProject)try{const {paymentLinkMailGate}=await import("./paymentLinkService");await paymentLinkMailGate(paymentMailProject,id,claimToken,true);}catch{/* Lease expiry retains recovery without sending invalid links. */}
+    if(paymentMailProject)try{const {paymentLinkMailGate}=await import("./paymentLinkService");await (scopedPaymentGate??paymentLinkMailGate)(paymentMailProject,id,claimToken,true);}catch{/* Lease expiry retains recovery without sending invalid links. */}
   }
 }
 

@@ -1,4 +1,5 @@
 import {readFileSync,writeFileSync} from 'node:fs';
+import {currentPaymentWriterFixture} from './current-writer-fixture.mjs';
 const baseline=readFileSync('supabase/migrations/20260723111730_etorie_baseline.sql','utf8');
 const start=baseline.indexOf('create table public.natori_order_mail_logs ('),end=baseline.indexOf('create table public.natori_inquiry_reference_files',start);
 if(start<0||end<=start)throw new Error('Reviewed legacy mail fixture boundary changed');
@@ -8,7 +9,7 @@ grant select,insert,update on public.natori_order_mail_logs to service_role;
 grant usage,select on sequence public.natori_order_mail_logs_id_seq to service_role;
 `;
 writeFileSync(process.argv[2],`alter table public.natori_projects add column if not exists payment_link_id text, add column if not exists payment_link_url text;
-`+mail+readFileSync('supabase/migrations/20261001161401_natori_payment_link_generations.sql','utf8')+`
+`+mail+readFileSync('supabase/migrations/20261001161401_natori_payment_link_generations.sql','utf8')+currentPaymentWriterFixture()+`
 -- Fixture-only deterministic wait control, never part of the product migration.
 create function public.phase2c_hold_project_v1(p_project uuid,p_seconds double precision) returns boolean
 language plpgsql security invoker set search_path='' as $$

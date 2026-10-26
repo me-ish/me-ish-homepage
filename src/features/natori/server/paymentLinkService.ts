@@ -1,4 +1,7 @@
 import "server-only";
+import {assertCaseSystemAdmission} from "./caseSystemHold";
+import { acceptanceContext, acceptanceStripeKey } from "./caseAcceptance";
+import { assertServerAcceptanceTarget } from "@/lib/caseAcceptanceEnvironment";
 import { createHash, randomUUID } from "node:crypto";
 import Stripe from "stripe";
 import { z } from "zod";
@@ -19,11 +22,11 @@ const attemptSchema=z.object({id:uuid,project_id:uuid,quote_id:uuid,generation:z
  claim_generation:z.number().int(),price_started_at:z.string().nullable(),link_started_at:z.string().nullable()});
 type Attempt=z.infer<typeof attemptSchema>;
 const stopSchema=z.object({id:uuid,link_id:z.string(),livemode:z.boolean().nullable(),claim_generation:z.number().int()});
-const resultSchema=z.object({result:z.string(),attempt:attemptSchema.nullish(),job:stopSchema.optional(),notificationId:uuid.nullish(),
+export const paymentLinkResultSchema=z.object({result:z.string(),attempt:attemptSchema.nullish(),job:stopSchema.optional(),notificationId:uuid.nullish(),
  reason:z.string().nullish(),operationState:z.string().optional(),operationId:uuid.optional(),legacyLinkId:z.string().nullish(),legacyUrl:z.string().nullish(),quoteId:uuid.nullish(),projects:z.array(uuid).optional()}).passthrough();
-async function rpc(owner:string,project:string|null,command:string,input:Json={}){
+export async function paymentLinkRpc(owner:string,project:string|null,command:string,input:Json={}){
  const {data,error}=await supabaseAdmin().rpc("natori_payment_links_v1",{p_owner_id:owner,p_project_id:project,p_command:command,p_input:input});
- if(error)throw new Error("link_db_unavailable");return resultSchema.parse(data);
+ if(error)throw new Error("link_db_unavailable");return paymentLinkResultSchema.parse(data);
 }
 export type ProviderLink={id:string;url:string;active:boolean;livemode:boolean;projectId:string;quoteId:string;amount:number|null;currency:string|null;kind?:string;attemptId?:string;generation?:string;priceId?:string};
 export type ProviderSession={id:string;status:string|null;paymentStatus:string};
@@ -38,17 +41,39 @@ export type PaymentLinkProvider={
  expireSession:(id:string)=>Promise<void>;
  stopLink:(id:string)=>Promise<void>;
 };
+/** Guard semantic mutations too: injected adapters must not skip admission. */
+function admittedProvider(source:PaymentLinkProvider,owner:string):PaymentLinkProvider{
+ const invoke=async<T>(run:()=>Promise<T>)=>{await assertCaseSystemAdmission("sender",owner);return run();};
+ return {...source,
+  createPrice:(a,key)=>invoke(()=>source.createPrice(a,key)),
+  createLink:(a,price,key)=>invoke(()=>source.createLink(a,price,key)),
+  expireSession:id=>invoke(()=>source.expireSession(id)),
+  stopLink:id=>invoke(()=>source.stopLink(id)),
+ };
+}
+const rpc=paymentLinkRpc;
+export type PaymentLinkRpc=typeof paymentLinkRpc;
+export type PaymentLinkRuntime={rpc?:PaymentLinkRpc;dispatch?:(id:string)=>Promise<void>};
 function mode():boolean{const value=process.env.NATORI_STRIPE_MODE;if(value!=="test"&&value!=="live")throw new Error("link_configuration");return value==="live";}
 function provider():PaymentLinkProvider{
  if(!process.env.STRIPE_SECRET_KEY)throw new Error("link_configuration");
- const stripe=new Stripe(process.env.STRIPE_SECRET_KEY,{timeout:10000,maxNetworkRetries:0});
+ const stripe=new Stripe(acceptanceStripeKey(true),{timeout:10000,maxNetworkRetries:0});
+ const links=new Map<string,string>(),sessions=new Map<string,string>();
+ const guard=async(project:string|undefined)=>{
+  if(!assertServerAcceptanceTarget())return;
+  const owner=resolveTrustedNatoriOwnerId();if(owner.kind!=="ok"||!project)throw Error("acceptance_project_unverified");
+  const c=await acceptanceContext(owner.ownerId,project,true),account=(await stripe.accounts.retrieve()).id;
+  if(!c||account!==c.account)throw Error("acceptance_account_unverified");
+  await acceptanceContext(owner.ownerId,project,true);
+ };
  const read=async(id:string):Promise<ProviderLink>=>{
   const link=await stripe.paymentLinks.retrieve(id),items=await stripe.paymentLinks.listLineItems(id,{limit:2});
+  links.set(id,link.metadata.projectId??"");
   const item=items.data[0],price=item?.price;
   return {id:link.id,url:link.url,active:link.active,livemode:link.livemode,projectId:link.metadata.projectId??"",quoteId:link.metadata.quoteId??"",kind:link.metadata.kind,attemptId:link.metadata.attemptId,generation:link.metadata.generation,priceId:price?.id,
    amount:!items.has_more&&items.data.length===1&&item.quantity===1?price?.unit_amount??null:null,currency:price?.currency??null};
  };
- return {accountId:async()=>{const id=(await stripe.accounts.retrieve()).id;if(!/^acct_[A-Za-z0-9]+$/.test(id))throw new Error("link_configuration");return id;},readLink:read,
+ return {accountId:async()=>{const id=(await stripe.accounts.retrieve()).id;if(!/^acct_[A-Za-z0-9]+$/.test(id) || (assertServerAcceptanceTarget(true) && id!==process.env.NATORI_CASE_ACCEPTANCE_STRIPE_ACCOUNT))throw new Error("link_configuration");return id;},readLink:read,
   findLink:async(a,heartbeat)=>{let after:string|undefined;let found:string|undefined;
    // A bounded complete scan is required: a second match on a later page is ambiguous.
    for(let page=0;page<10;page++){await heartbeat();const list=await stripe.paymentLinks.list({limit:100,...(after?{starting_after:after}:{})});
@@ -59,25 +84,28 @@ function provider():PaymentLinkProvider{
      if(!verified(link,{...a,link_id:link.id,link_url:link.url},false,true))throw new Error("reconciliation_unverified");return link;}
     const next=list.data.at(-1)?.id;if(!next||next===after)break;after=next;
    }throw new Error("reconciliation_incomplete");},
-  createPrice:async(a,key)=>(await stripe.prices.create({currency:"jpy",unit_amount:a.amount,product_data:{name:"Natori commission"},metadata:{attemptId:a.id}}, {idempotencyKey:key})).id,
-  createLink:async(a,price,key)=>{const link=await stripe.paymentLinks.create({line_items:[{price,quantity:1}],payment_method_types:["card"],
+  createPrice:async(a,key)=>{await guard(a.project_id);return (await stripe.prices.create({currency:"jpy",unit_amount:a.amount,product_data:{name:"Natori commission"},metadata:assertServerAcceptanceTarget()?{kind:"natori_commission",projectId:a.project_id,quoteId:a.quote_id,attemptId:a.id,generation:String(a.generation)}:{attemptId:a.id}}, {idempotencyKey:key})).id;},
+  createLink:async(a,price,key)=>{await guard(a.project_id);const link=await stripe.paymentLinks.create({line_items:[{price,quantity:1}],payment_method_types:["card"],
    metadata:{kind:"natori_commission",projectId:a.project_id,quoteId:a.quote_id,attemptId:a.id,generation:String(a.generation)},
    restrictions:{completed_sessions:{limit:1}}},{idempotencyKey:key});return {id:link.id,url:link.url,active:link.active,livemode:link.livemode,projectId:link.metadata.projectId??"",quoteId:link.metadata.quoteId??"",kind:link.metadata.kind,attemptId:link.metadata.attemptId,generation:link.metadata.generation,priceId:price,amount:a.amount,currency:"jpy"};},
   sessions:async id=>{const all:ProviderSession[]=[];let after:string|undefined;for(let page=0;page<10;page++){
-   const sessions=await stripe.checkout.sessions.list({payment_link:id,limit:100,...(after?{starting_after:after}:{})});
-   all.push(...sessions.data.map(s=>({id:s.id,status:s.status,paymentStatus:s.payment_status})));
-   if(!sessions.has_more)return all;after=sessions.data.at(-1)?.id;if(!after)break;
+   const listed=await stripe.checkout.sessions.list({payment_link:id,limit:100,...(after?{starting_after:after}:{})});
+   for(const session of listed.data)sessions.set(session.id,links.get(id)??"");
+   all.push(...listed.data.map(s=>({id:s.id,status:s.status,paymentStatus:s.payment_status})));
+   if(!listed.has_more)return all;after=listed.data.at(-1)?.id;if(!after)break;
   }throw new Error("sessions_unresolved");},
-  expireSession:async id=>{await stripe.checkout.sessions.expire(id);},
-  stopLink:async id=>{const stopped=await stripe.paymentLinks.update(id,{active:false});if(stopped.id!==id||stopped.active)throw new Error("provider_stop_unconfirmed");},
+  expireSession:async id=>{await guard(sessions.get(id));await stripe.checkout.sessions.expire(id);},
+  stopLink:async id=>{await guard(links.get(id));const stopped=await stripe.paymentLinks.update(id,{active:false});if(stopped.id!==id||stopped.active)throw new Error("provider_stop_unconfirmed");},
  };
 }
 function generationVerified(link:ProviderLink,a:Attempt){return link.kind==="natori_commission"&&link.attemptId===a.id&&link.generation===String(a.generation)
  &&(a.price_id===null||link.priceId===a.price_id);}
 function verified(link:ProviderLink,a:Attempt,active=true,managed=a.price_id!==null){return link.id===a.link_id&&link.url===a.link_url&&link.livemode===a.livemode
  &&(!managed||generationVerified(link,a))&&link.projectId===a.project_id&&link.quoteId===a.quote_id&&link.amount===a.amount&&link.currency==="jpy"&&(!active||link.active);}
-async function result(owner:string,input:PaymentLinkRequest,noticeId?:string|null){
- if(noticeId)await dispatchAcceptanceNotification(noticeId);
+async function result(owner:string,input:PaymentLinkRequest,noticeId?:string|null,runtime:PaymentLinkRuntime={}){
+ if(noticeId)await (runtime.dispatch??dispatchAcceptanceNotification)(noticeId);
+ // Workspace callers obtain their richer, pure snapshot after the operation.
+ if(runtime.rpc)return {result:"completed"};
  const state=await getPaymentLinkState(input.projectId,owner);return {result:"completed",state};
 }
 export async function getPaymentLinkState(projectId:string,owner?:string){
@@ -91,7 +119,7 @@ export async function getRejectedPaymentLinkOperation(projectId:string,operation
 }
 export type PaymentLinkState=Awaited<ReturnType<typeof getPaymentLinkState>>;
 
-function paymentPayload(input:PaymentLinkRequest,url:string,deadline:string):Json{
+export function paymentPayload(input:PaymentLinkRequest,url:string,deadline:string):Json{
  const displayed=new Intl.DateTimeFormat("ja-JP",{timeZone:"Asia/Tokyo",dateStyle:"medium",timeStyle:"short"}).format(new Date(deadline));
  const payload={from:process.env.NATORI_ORDER_MAIL_FROM??"",to:[input.to!],reply_to:process.env.NATORI_PORTFOLIO_CONTACT_TO??"",
   ...(process.env.NATORI_MAIL_BCC?.trim()?{bcc:[process.env.NATORI_MAIL_BCC.trim()]}:{}),subject:input.subject!,
@@ -101,7 +129,8 @@ function paymentPayload(input:PaymentLinkRequest,url:string,deadline:string):Jso
  buildAcceptanceNotificationPayload({purpose:"payment_link_client",snapshot:{},payload:sealed});return sealed;
 }
 
-export async function executePaymentLinkOperation(value:unknown,injectedProvider?:PaymentLinkProvider){
+export async function executePaymentLinkOperation(value:unknown,injectedProvider?:PaymentLinkProvider,runtime:PaymentLinkRuntime={}){
+ const rpc=runtime.rpc??paymentLinkRpc;
  if(!paymentLinkIntegrityEnabled()||process.env.NATORI_ACCEPTANCE_OUTBOX_ENABLED!=="1"||process.env.NATORI_QUOTE_INTEGRITY_ENABLED!=="1"||process.env.NATORI_PAYMENT_INTEGRITY_ENABLED!=="1")return {result:"not_configured"};
  const parsed=paymentLinkRequestSchema.safeParse(value);if(!parsed.success)return {result:"invalid_request"};
  const input=parsed.data,owner=await resolveNatoriOwnerId(),token=randomUUID();
@@ -111,20 +140,15 @@ export async function executePaymentLinkOperation(value:unknown,injectedProvider
   // Inspect the old provider object before any new generation. Stop old open Checkout
   // sessions so a stale browser cannot silently pay a newly retired generation.
   const recovery=await rpc(owner,input.projectId,"operation",{operationId:input.operationId,hash:requestHash});
-  if(recovery.result==="completed")return result(owner,input,recovery.notificationId);
+  if(recovery.result==="completed")return runtime.rpc?{result:"completed"}:result(owner,input,recovery.notificationId,runtime);
   if(recovery.result==="rejected"&&recovery.operationId===input.operationId)return {result:recovery.reason??"invalid_state",operationState:"rejected",operationId:input.operationId};
   if(recovery.result==="conflict")return {result:"conflict"};
-  const live=mode(),external=injectedProvider??provider(),providerAccountId=await external.accountId();
+  if((await rpc(owner,input.projectId,"outbound_gate",{operationId:input.operationId})).result!=="allowed")return {result:"needs_review"};
+  const live=mode(),external=admittedProvider(injectedProvider??provider(),owner),providerAccountId=await external.accountId();
   if(!/^acct_[A-Za-z0-9]+$/.test(providerAccountId))throw new Error("link_configuration");
   const context=await rpc(owner,input.projectId,"context");
   if(context.attempt&&(context.attempt.provider_account_id!==providerAccountId||context.attempt.livemode!==live))return {result:"needs_review"};
   if(["issue","renotify","reissue"].includes(input.action))paymentPayload(input,"https://buy.stripe.com/configuration-check",new Date(Date.now()+3600000).toISOString());
-  if(input.action==="reissue"&&context.attempt?.state==="inactive"&&context.attempt.link_id){
-   const old=await external.readLink(context.attempt.link_id);
-   if(!verified(old,context.attempt,false)||old.active)return {result:"needs_review"};
-   const sessions=await external.sessions(old.id);if(sessions.some(s=>s.status==="complete"||s.paymentStatus==="paid"))return {result:"payment_review"};
-   for(const session of sessions.filter(s=>s.status==="open"))await external.expireSession(session.id);
-  }
   const beginInput:Record<string,Json>={operationId:input.operationId,token,hash:requestHash,action:input.action,livemode:live,providerAccountId,
    deadline:input.deadline&&Date.parse(input.deadline)>Date.now()?alignPaymentDeadlineToStopRun(input.deadline):input.deadline??null,revision:input.revision??null,confirmed:input.confirmed??false};
   if(input.action==="adopt"){
@@ -136,7 +160,7 @@ export async function executePaymentLinkOperation(value:unknown,injectedProvider
    Object.assign(beginInput,{linkId:old.id,url:old.url,active:old.active,reconciled:true});
   }
   claimed=await rpc(owner,input.projectId,"begin",beginInput);
-  if(claimed.result==="completed")return result(owner,input,claimed.notificationId);
+  if(claimed.result==="completed")return runtime.rpc?{result:"completed"}:result(owner,input,claimed.notificationId,runtime);
   if(claimed.result!=="claimed"||!claimed.attempt)return {result:claimed.result,
    ...(claimed.operationState==="rejected"&&claimed.operationId===input.operationId?{operationState:"rejected",operationId:input.operationId}:{})};
   let a=claimed.attempt;
@@ -145,6 +169,18 @@ export async function executePaymentLinkOperation(value:unknown,injectedProvider
    const saved=await rpc(owner,input.projectId,"stage",{operationId:input.operationId,token,generation:a.claim_generation,stage:name,value,...(reason?{reason}:{})});
    if(saved.result!=="saved"||!saved.attempt)throw new Error("link_save_unconfirmed");a=saved.attempt;
   };
+  if(input.action==="reissue"){
+   // Always re-enter this boundary on recovery; the latest context is already the
+   // new generation. The previous generation is pinned by the operation in SQL.
+   const source=await rpc(owner,input.projectId,"reissue_source",{operationId:input.operationId,token,generation:a.claim_generation});
+   const prior=source.attempt;
+   if(source.result!=="ok"||!prior||!prior.link_id){await stage("review",{},"old_link_unverified");return {result:"needs_review"};}
+   const old=await external.readLink(prior.link_id);
+   if(!verified(old,prior,false)||old.active){await stage("review",{},"old_link_unverified");return {result:"needs_review"};}
+   const sessions=await external.sessions(old.id);if(sessions.some(s=>s.status==="complete"||s.paymentStatus==="paid")){await stage("review",{},"old_session_unresolved");return {result:"payment_review"};}
+   for(const session of sessions.filter(s=>s.status==="open")){await stage("renew");await external.expireSession(session.id);}
+   if((await external.sessions(old.id)).some(s=>s.status==="open"||s.status==="complete"||s.paymentStatus==="paid")){await stage("review",{},"old_session_unresolved");return {result:"payment_review"};}
+  }
   if(a.state==="creating"){
    const key=`natori-plink/${a.id}`;
    if(!a.price_id){await stage("price_start");const id=await external.createPrice(a,key+"/price");await stage("price",{id});}
@@ -162,7 +198,7 @@ export async function executePaymentLinkOperation(value:unknown,injectedProvider
   }
   const done=await rpc(owner,input.projectId,"finish",finish);
   if(done.result!=="completed")return {result:done.result};
-  return result(owner,input,done.notificationId);
+  return result(owner,input,done.notificationId,runtime);
  }catch{
   // No destructive unlock or new key. Exact frozen operation recovers its lease and IDs.
   return {result:claimed?.result==="claimed"?"retry_same_operation":"temporarily_unavailable"};
@@ -171,7 +207,7 @@ export async function executePaymentLinkOperation(value:unknown,injectedProvider
 
 export async function stopDuePaymentLinks(injectedProvider?:PaymentLinkProvider){
  const owner=resolveTrustedNatoriOwnerId();if(owner.kind!=="ok"||!paymentLinkIntegrityEnabled())return {kind:"not-configured" as const};
- try{const external=injectedProvider??provider(),live=mode(),providerAccountId=await external.accountId(),scan=await rpc(owner.ownerId,null,"scan");let expired=0,skipped=0,failed=0;
+ try{const external=admittedProvider(injectedProvider??provider(),owner.ownerId),live=mode(),providerAccountId=await external.accountId(),scan=await rpc(owner.ownerId,null,"scan");let expired=0,skipped=0,failed=0;
   if(!/^acct_[A-Za-z0-9]+$/.test(providerAccountId))throw new Error("link_configuration");
   for(const id of scan.projects??[]){
    const context=await rpc(owner.ownerId,id,"context");
@@ -210,7 +246,8 @@ export async function stopDuePaymentLinks(injectedProvider?:PaymentLinkProvider)
  }catch{return {kind:"db-error" as const};}
 }
 
-export async function paymentLinkMailGate(projectId:string,jobId:string,token:string,release=false){
+export async function paymentLinkMailGate(projectId:string,jobId:string,token:string,release=false,call:PaymentLinkRpc=paymentLinkRpc){
+ const rpc=call;
  const owner=resolveTrustedNatoriOwnerId();if(owner.kind!=="ok")return false;
  if(release){await rpc(owner.ownerId,projectId,"mail_gate",{jobId,token,action:"release"});return true;}
  const gate=await rpc(owner.ownerId,projectId,"mail_gate",{jobId,token});if(gate.result!=="allowed")return false;

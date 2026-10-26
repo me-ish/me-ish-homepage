@@ -1,7 +1,8 @@
 import {afterEach,beforeEach,describe,it,expect,vi} from "vitest";
 import {createHash} from "node:crypto";
 vi.mock("server-only",()=>({}));
-const m=vi.hoisted(()=>({rpc:vi.fn(),info:vi.fn(),download:vi.fn(),sign:vi.fn(),remove:vi.fn(),schedule:vi.fn(),project:{id:"11111111-2222-4333-8444-555555555555",user_id:"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",title:"Fixture",client_name:"Fixture",client_email:"fixture@example.invalid",note:null,request_data:null,status:"inquiry",deleted_at:null}}));
+const m=vi.hoisted(()=>({admit:vi.fn(),rpc:vi.fn(),info:vi.fn(),download:vi.fn(),sign:vi.fn(),remove:vi.fn(),schedule:vi.fn(),project:{id:"11111111-2222-4333-8444-555555555555",user_id:"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",title:"Fixture",client_name:"Fixture",client_email:"fixture@example.invalid",note:null,request_data:null,status:"inquiry",deleted_at:null}}));
+vi.mock("../caseSystemHold",()=>({assertCaseSystemAdmission:m.admit}));
 vi.mock("@/lib/supabaseAdmin",()=>({supabaseAdmin:()=>({rpc:m.rpc,storage:{from:()=>({info:m.info,download:m.download,createSignedUploadUrl:m.sign,remove:m.remove})}})}));
 vi.mock("../consultationService",()=>({getClientProject:async()=>m.project,getStaffConsultation:async()=>({project:m.project,messages:[]})}));
 vi.mock("../natoriOwner",()=>({resolveNatoriOwnerId:async()=>m.project.user_id}));
@@ -12,7 +13,7 @@ const op="66666666-7777-4888-8999-aaaaaaaaaaaa",fid="77777777-8888-4999-8aaa-bbb
 function request(){const r={operationId:op,requestHash:"",body:"Fixture",files:[{id:fid,fileName:"fixture.png",mimeType:"image/png",sizeBytes:4,sha256:createHash("sha256").update("fake").digest("hex")}]};r.requestHash=hashConsultationOperation(r);return r;}
 let commands:string[];
 beforeEach(()=>{
- vi.clearAllMocks();m.sign.mockReset();commands=[];
+ vi.clearAllMocks();m.admit.mockReset();m.admit.mockResolvedValue(undefined);m.sign.mockReset();commands=[];
  const r=request(),file={...r.files[0],path:m.project.id+"/"+fid+".png"};
  m.rpc.mockImplementation(async(_name:string,args:{p_command:string})=>{commands.push(args.p_command);return{error:null,data:args.p_command==="lookup"?{result:"reserved"}:args.p_command==="claim"?{result:"claimed",files:[file]}:args.p_command==="renew"?{result:"renewed"}:args.p_command==="commit"?{result:"committed",messageId:mid,notificationId:nid,operationId:op,requestHash:r.requestHash}:{result:"reserved"}};});
  m.info.mockResolvedValue({data:{size:4,contentType:"image/png"},error:null});m.download.mockResolvedValue({data:new Blob(["fake"]),error:null});m.remove.mockResolvedValue({error:null});
@@ -20,6 +21,21 @@ beforeEach(()=>{
 afterEach(()=>{vi.useRealTimers();});
 
 describe("consultation verified atomic finalize",()=>{
+ it("workspace inspect reads a committed receipt without scheduling notification",async()=>{
+  m.rpc.mockResolvedValue({error:null,data:{result:"committed",messageId:mid,notificationId:nid,operationId:op,requestHash:request().requestHash}});
+  expect(await consultationOperation({projectId:m.project.id},request(),"inspect")).toMatchObject({kind:"committed"});
+  expect(m.rpc).toHaveBeenCalledTimes(1);expect(m.schedule).not.toHaveBeenCalled();expect(m.info).not.toHaveBeenCalled();
+ });
+ it.each(["lookup","inspect"] as const)("keeps exact %s receipt readable while new commands are held",async action=>{
+  m.admit.mockRejectedValue(Error("natori_system_held"));
+  expect(await consultationOperation({token:"synthetic-token"},request(),action)).toEqual({kind:"reserved"});
+  expect(m.admit).not.toHaveBeenCalled();expect(commands).toEqual(["lookup"]);expect(m.sign).not.toHaveBeenCalled();
+ });
+ it.each(["prepare","commit","cancel"] as const)("stops new %s after receipt lookup, before claim or Storage",async action=>{
+  m.admit.mockRejectedValue(Error("natori_system_held"));
+  expect(await consultationOperation({token:"synthetic-token"},request(),action)).toEqual({kind:"unavailable"});
+  expect(m.admit).toHaveBeenCalledExactlyOnceWith("command",m.project.user_id);expect(commands).toEqual(["lookup"]);expect(m.sign).not.toHaveBeenCalled();expect(m.remove).not.toHaveBeenCalled();
+ });
  it("verifies stored metadata and actual bytes before one commit and schedules the saved notice",async()=>{
   const result=await consultationOperation({token:"synthetic-token"},request(),"commit");
   expect(result).toMatchObject({kind:"committed",messageId:mid,operationId:op});expect(commands).toEqual(["lookup","claim","renew","renew","commit"]);expect(m.schedule).toHaveBeenCalledExactlyOnceWith([nid]);
@@ -87,6 +103,16 @@ describe("consultation verified atomic finalize",()=>{
  it('records a cancelled pending issuer expiry without returning its credential',async()=>{
   prepareCredentialRpc('cancelled');expect(await consultationOperation({token:'synthetic-token'},request(),'prepare')).toEqual({kind:'cancelled'});
   expect(commands.at(-1)).toBe('credential_finish');expect(m.sign).toHaveBeenCalledTimes(1);expect(m.remove).not.toHaveBeenCalled();
+ });
+ it('persists a returned credential expiry but withholds the token if stop arrives during signing',async()=>{
+  prepareCredentialRpc();
+  m.sign.mockImplementation(async()=>{
+   m.admit.mockRejectedValue(Error('natori_system_held'));
+   return{data:{token:syntheticUploadToken()},error:null};
+  });
+  expect(await consultationOperation({token:'synthetic-token'},request(),'prepare')).toEqual({kind:'unavailable'});
+  expect(commands).toEqual(['lookup','reserve','credential_begin','credential_finish']);
+  expect(m.sign).toHaveBeenCalledOnce();expect(m.remove).not.toHaveBeenCalled();expect(m.schedule).not.toHaveBeenCalled();
  });
  it('cannot sign under a replacement issuer while the first signer is pending',async()=>{
   prepareCredentialRpc();const ordinary=m.rpc.getMockImplementation()!;

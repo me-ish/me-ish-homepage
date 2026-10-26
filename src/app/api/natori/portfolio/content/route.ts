@@ -17,7 +17,14 @@ export const dynamic = "force-dynamic";
 // しまうため、このルートは常に最新を返す必要がある）
 export const fetchCache = "force-no-store";
 
+// Log only the Node version, once per loaded server module, during a read request.
+let nodeRuntimeVersionLogged = false;
+
 export async function GET() {
+  if (!nodeRuntimeVersionLogged) {
+    nodeRuntimeVersionLogged = true;
+    console.info("[node-runtime]", process.version);
+  }
   // Only the shared public projection is available without management auth.
   const content = await loadPortfolioContent();
   return NextResponse.json({ content }, { headers: { "Cache-Control": "no-store" } });

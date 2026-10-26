@@ -1,5 +1,9 @@
 import "server-only";
+import {assertCaseSystemAdmission} from "./caseSystemHold";
+import {caseAcceptanceConfigured} from "@/lib/caseAcceptanceEnvironment";
 import {paymentLinkIntegrityEnabled,stopDuePaymentLinks} from "./paymentLinkService";
+import {currentFlowManaged,currentFlowRpc} from "./caseCurrentFlow";
+import {randomUUID} from "node:crypto";
 
 import Stripe from "stripe";
 import { PAYMENT_DUE_DAYS } from "@/features/natori/lib/orderMail";
@@ -10,6 +14,7 @@ const INACTIVE_MESSAGE =
 
 type PaymentLinkCandidate = {
   id: string;
+  user_id?:string;
   payment_link_id: string | null;
   payment_link_url: string | null;
 };
@@ -44,13 +49,14 @@ export async function expireNatoriPaymentLinks(
   now: Date = new Date()
 ): Promise<ExpireNatoriPaymentLinksResult> {
   if(paymentLinkIntegrityEnabled())return stopDuePaymentLinks();
+  if(caseAcceptanceConfigured())return {kind:"not-configured"};
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) return { kind: "not-configured" };
 
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from("natori_projects")
-    .select("id, payment_link_id, payment_link_url")
+    .select("id, user_id, payment_link_id, payment_link_url")
     .eq("payment_link_status", "sent")
     .is("payment_confirmed_at", null)
     .not("payment_link_id", "is", null)
@@ -106,7 +112,12 @@ export async function expireNatoriPaymentLinks(
       continue;
     }
 
+    const operation=randomUUID();
+    const expiryArgs={p_owner:project.user_id,p_project:project.id,p_id:operation,p_link:project.payment_link_id,p_sent_at:sentAt,p_now:now.toISOString()};
     try {
+      if(currentFlowManaged()){
+        if(!project.user_id||await currentFlowRpc("natori_case_current_expiry_v1",{...expiryArgs,p_action:"claim"})!==true){skipped+=1;continue;}
+      }else await assertCaseSystemAdmission("legacy-sender");
       await stripe.paymentLinks.update(project.payment_link_id, {
         active: false,
         inactive_message: INACTIVE_MESSAGE,
@@ -121,6 +132,12 @@ export async function expireNatoriPaymentLinks(
         );
         continue;
       }
+    }
+
+    if(currentFlowManaged()){
+      try{if(await currentFlowRpc("natori_case_current_expiry_v1",{...expiryArgs,p_action:"record"})===true)expired+=1;else failed+=1;}
+      catch{failed+=1;}
+      continue;
     }
 
     const { data: voided, error: updateError } = await admin

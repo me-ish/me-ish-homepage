@@ -64,12 +64,14 @@ export default function DeliveryFilesManager({
   folder,
   demoMode,
   onFilesChange,
+  workspaceSafe=false,
 }: {
   projectId: string;
   folder: NatoriDeliveryFolder;
   /** デモ環境用: ダミー一覧を表示し、アップロード・削除は無効化する */
   demoMode?: boolean;
   onFilesChange?: (files: NatoriDeliveryFileView[] | null) => void;
+  workspaceSafe?:boolean;
 }) {
   const { confirm, confirmDialog } = useNatoriConfirm();
   const [files, setFiles] = useState<NatoriDeliveryFileView[] | null>(
@@ -94,7 +96,7 @@ export default function DeliveryFilesManager({
       } catch (err) {
         console.error("[delivery-files] load failed", err);
         if (!cancelled) {
-          setFiles([]);
+          setFiles(workspaceSafe?null:[]);
           setError("ファイル一覧の読み込みに失敗しました。");
         }
       }
@@ -102,7 +104,7 @@ export default function DeliveryFilesManager({
     return () => {
       cancelled = true;
     };
-  }, [reload, demoMode]);
+  }, [reload, demoMode,workspaceSafe]);
 
   const handleFiles = async (list: FileList | null) => {
     const selected = Array.from(list ?? []);
@@ -193,7 +195,7 @@ export default function DeliveryFilesManager({
       <p className="mt-2 text-xs text-zinc-500">ファイルは1つ{DELIVERY_MAX_SIZE_LABEL}までです。</p>
 
       {files === null ? (
-        <p className="mt-2 text-xs text-zinc-500">読み込み中…</p>
+        <p className="mt-2 text-xs text-zinc-500">{error?"ファイルの取得状態は未確認です。空一覧とは扱いません。":"読み込み中…"}</p>
       ) : files.length === 0 ? (
         <p className="mt-2 text-xs text-zinc-600">
           まだファイルがありません。「ファイルを追加」からアップロードしてください。

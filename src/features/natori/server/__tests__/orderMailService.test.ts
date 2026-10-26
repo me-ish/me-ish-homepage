@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PAYMENT_LINK_PLACEHOLDER } from "@/features/natori/lib/orderMail";
 
 vi.mock("server-only", () => ({}));
+vi.mock("../caseSystemHold",async importOriginal=>({...await importOriginal<typeof import('../caseSystemHold')>(),assertCaseSystemAdmission:vi.fn(async()=>{})}));
 
 const {
   mockSend,
@@ -191,7 +192,7 @@ beforeEach(() => {
     url: "https://pay.example.com/link-abc",
   });
   mockLinksUpdate.mockResolvedValue({ id: "plink_old", active: false });
-  mockRpc.mockResolvedValue({ data: "quote-1", error: null });
+  mockRpc.mockImplementation(async (name: string,args: {p_command?: string}) => name === "natori_payment_links_v1" ? {data:{result:args.p_command === "outbound_gate" ? "allowed":"ok"},error:null} : { data: "quote-1", error: null });
 });
 
 afterEach(() => vi.unstubAllEnvs());
@@ -384,6 +385,18 @@ describe("markNatoriCommissionPaid", () => {
     }));
     expect(mockSend).toHaveBeenCalledTimes(1);
   });
+  it.each([{outcome:"received",kind:"ok"},{outcome:"amount-mismatch",kind:"amount-mismatch"}])("keeps recorded $outcome acknowledgement when the follow-up sender is held",async({outcome,kind})=>{
+    const {markNatoriCommissionPaid}=await loadService();
+    const hold=await import("../caseSystemHold");
+    installDb(makeProjectRow({quoted_amount:12000,payment_quote_id:"quote-1"}));
+    mockRpc.mockResolvedValue({data:[{result:outcome,advanced:false,new_event:true,recorded_amount:12000}],error:null});
+    vi.mocked(hold.assertCaseSystemAdmission).mockRejectedValue(new hold.CaseSystemHeld());
+    try{
+      await expect(markNatoriCommissionPaid("proj-1","cs_holdfixture",12000,"quote-1")).resolves.toEqual({kind});
+      expect(mockSend).not.toHaveBeenCalled();
+      expect(mockRpc).toHaveBeenCalledWith("natori_record_stripe_payment",expect.objectContaining({p_session_id:"cs_holdfixture"}));
+    }finally{vi.mocked(hold.assertCaseSystemAdmission).mockResolvedValue(undefined);}
+  });
 });
 
 describe("sendNatoriOrderMail (estimate)", () => {
@@ -511,6 +524,12 @@ describe("sendNatoriOrderMail (payment)", () => {
     amount: 12000,
   };
 
+  it("feature flag rollback cannot bypass an unresolved R1 outbound fence", async () => {
+    const {sendNatoriOrderMail}=await loadService();
+    vi.stubEnv("NATORI_PAYMENT_LINK_INTEGRITY_ENABLED","0");installDb(makeProjectRow({status:"quoted",active_quote_id:"quote-1"}),{quote:acceptedQuote});
+    mockRpc.mockResolvedValue({data:{result:"needs_review"},error:null});
+    expect(await sendNatoriOrderMail(input)).toEqual({kind:"invalid-state"});expect(mockSend).not.toHaveBeenCalled();expect(mockPricesCreate).not.toHaveBeenCalled();expect(mockLinksUpdate).not.toHaveBeenCalled();
+  });
   it("承諾済み見積版と同額の場合だけ1回制限リンクを発行し、メール前に保存する", async () => {
     const { sendNatoriOrderMail } = await loadService();
     const db = installDb(makeProjectRow({ status: "quoted", active_quote_id: "quote-1" }), {
@@ -601,6 +620,87 @@ describe("sendNatoriOrderMail (payment)", () => {
       payment_confirmed_at: "2026-07-20T00:00:00Z",
     }), { quote: acceptedQuote });
     await expect(sendNatoriOrderMail(input)).resolves.toEqual({ kind: "already-paid" });
+    expect(mockLinksCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe("current production dispatch inside a confirmed case operation", () => {
+  function durableRpc() {
+    let operation: Record<string, unknown> | null = null;
+    const steps: Array<{action:string;input:Record<string,unknown>}> = [];
+    mockRpc.mockImplementation(async(name:string, args:Record<string,unknown>)=>{
+      if(name==="natori_payment_links_v1")return {data:{result:args.p_command==="outbound_gate"?"allowed":"ok"},error:null};
+      if(name==="natori_case_current_claim_v1"){
+        if(operation)return {data:{result:"existing",operation},error:null};
+        operation={id:args.p_id,kind:args.p_kind,status:"running",response:null,quote_id:"quote-1",sent_at:null,created_at:new Date().toISOString()};
+        return {data:{result:"claimed"},error:null};
+      }
+      if(name==="natori_case_current_step_v1"){
+        const action=String(args.p_action),input=args.p_input as Record<string,unknown>;steps.push({action,input});
+        if(action==="mail_accepted")operation!.sent_at=new Date().toISOString();
+        if(action==="unknown"||action==="finish"){
+          operation!.status=action==="finish"&&operation!.sent_at?"completed":"unknown";
+          operation!.response=operation!.status==="completed"?input.response:null;
+          return {data:{status:operation!.status},error:null};
+        }
+        return {data:true,error:null};
+      }
+      throw Error(`unexpected RPC ${name}`);
+    });
+    return {steps};
+  }
+  async function currentSetup(reuse=true) {
+    for(const k of ["NATORI_QUOTE_INTEGRITY_ENABLED","NATORI_PAYMENT_LINK_INTEGRITY_ENABLED","NATORI_PAYMENT_INTEGRITY_ENABLED","NATORI_STRIPE_MODE"])vi.stubEnv(k,undefined);
+    for(const k of ["NATORI_ACCEPTANCE_OUTBOX_ENABLED","NATORI_NOTIFICATION_SENDING_ENABLED","NATORI_DELIVERY_INTEGRITY_ENABLED","NATORI_CASE_RELEASE_ENABLED"])vi.stubEnv(k,"1");
+    vi.stubEnv("NATORI_CASE_BOOTSTRAP_PHASE","managed");
+    const project=makeProjectRow({status:"quoted",active_quote_id:"quote-1",quoted_amount:12000,quote_accepted_at:acceptedQuote.accepted_at,quote_accepted_amount:12000,
+      ...(reuse?{payment_quote_id:"quote-1",payment_link_id:"plink_old",payment_link_url:"https://pay.example.com/existing",payment_link_status:"sent"}:{})});
+    installDb(project,{quote:acceptedQuote});
+    mockSend.mockResolvedValue({data:{id:"provider-fixture"},error:null});
+    const service=await loadService(),flow=await import("../caseCurrentFlow");
+    const state=durableRpc();
+    const input={projectId:project.id,kind:"payment" as const,to:"client@example.com",amount:12000,subject:"Synthetic",body:PAYMENT_LINK_PLACEHOLDER};
+    const scope={owner:"owner-1",project:project.id,id:"operation-fixture",kind:"payment" as const,revision:"a".repeat(64),request:input};
+    return {service,flow,state,input,scope};
+  }
+  it("preserves direct Resend and existing link reuse with all three flags absent; replay never sends again",async()=>{
+    const {service,flow,state,input,scope}=await currentSetup();
+    expect(flow.currentNatoriFlow()).toBe(true);
+    expect(await flow.runCurrentOperation(scope,()=>service.sendNatoriOrderMail(input))).toMatchObject({kind:"ok"});
+    expect(await flow.runCurrentOperation(scope,()=>service.sendNatoriOrderMail(input))).toMatchObject({kind:"ok"});
+    expect(mockSend).toHaveBeenCalledTimes(1);expect(mockLinksCreate).not.toHaveBeenCalled();
+    expect(mockSend.mock.calls[0][1]).toEqual({idempotencyKey:"natori-current-mail/operation-fixture"});
+    expect(state.steps.map(s=>s.action)).toEqual(["mail_start","mail_accepted","finish"]);
+    expect(mockRpc.mock.calls.some(c=>String(c[0]).includes("acceptance")||String(c[0]).includes("production_mail"))).toBe(false);
+  });
+  it.each(["timeout","provider-error","missing-provider-id"])("%s retains an unresolved operation with no sent timestamp and no duplicate provider call",async mode=>{
+    const {service,flow,state,input,scope}=await currentSetup();
+    if(mode==="timeout")mockSend.mockRejectedValue(new Error("synthetic interruption"));
+    else mockSend.mockResolvedValue(mode==="provider-error"?{error:{message:"synthetic rejection"}}:{data:{},error:null});
+    expect(await flow.runCurrentOperation(scope,()=>service.sendNatoriOrderMail(input))).toEqual({kind:"result-unconfirmed"});
+    expect(await flow.runCurrentOperation(scope,()=>service.sendNatoriOrderMail(input))).toEqual({kind:"result-unconfirmed"});
+    expect(mockSend).toHaveBeenCalledTimes(1);expect(state.steps.some(s=>s.action==="mail_accepted")).toBe(false);
+  });
+  it("records exact newly created link through the fact envelope before mail; retains original Stripe idempotency",async()=>{
+    const {service,flow,state,input,scope}=await currentSetup(false);
+    expect(await flow.runCurrentOperation(scope,()=>service.sendNatoriOrderMail(input))).toMatchObject({kind:"ok"});
+    expect(mockLinksCreate).toHaveBeenCalledTimes(1);
+    expect(state.steps.find(s=>s.action==="record"&&s.input.effect==="link")?.input.result).toEqual({id:"plink_new",url:"https://pay.example.com/link-abc",quoteId:"quote-1",amount:12000});
+    expect(mockLinksCreate.mock.calls[0][1].idempotencyKey).toMatch(/^natori-plink:.*:quote-1:12000:initial:link$/);
+  });
+  it("keeps existing client and owner paid notices with the actual production flags; duplicate facts send neither again",async()=>{
+    const {service,input}=await currentSetup();
+    let recorded=false;
+    mockRpc.mockImplementation(async(name:string)=>{
+      if(name!=="natori_case_current_payment_fact_v1")throw Error(`unexpected RPC ${name}`);
+      const fresh=!recorded;recorded=true;
+      return {data:[{result:fresh?"received":"already-paid",new_event:fresh,advanced:fresh,recorded_amount:12000}],error:null};
+    });
+    expect(await service.markNatoriCommissionPaid(input.projectId,"cs_synthetic_current",12000,"quote-1")).toEqual({kind:"ok"});
+    expect(mockSend).toHaveBeenCalledTimes(2);
+    expect(mockSend.mock.calls[0][0]).toMatchObject({to:["client@example.com"]});
+    expect(await service.markNatoriCommissionPaid(input.projectId,"cs_synthetic_current",12000,"quote-1")).toEqual({kind:"already-paid"});
+    expect(mockSend).toHaveBeenCalledTimes(2);
     expect(mockLinksCreate).not.toHaveBeenCalled();
   });
 });

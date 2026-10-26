@@ -1,4 +1,6 @@
 import "server-only";
+import { assertCaseSystemAdmission } from "./caseSystemHold";
+import {acceptanceProjectAllowed} from "./caseAcceptance";
 import {createHash,randomBytes,randomUUID} from "node:crypto";
 import {z} from "zod";
 import {supabaseAdmin} from "@/lib/supabaseAdmin";
@@ -12,7 +14,7 @@ import {sealDeliveryNotification} from "./deliveryNotificationPayload";
 import {scheduleAcceptanceNotifications} from "./scheduleAcceptanceNotifications";
 import type {Json} from "@/types/supabase";
 export type ConsultationActor={projectId:string;token?:never}|{token:string;projectId?:never};
-type Context={project:ProjectRow;sender:"staff"|"client";ownerId:string|null;accessHash:string|null};
+type Context={project:ProjectRow;sender:"staff"|"client";ownerId:string|null;accessHash:string|null;workspace?:{title:string;clientName:string;email:string|null}};
 const fileRow=z.object({id:z.uuid(),path:z.string().regex(/^[a-f0-9-]{36}\/[a-f0-9-]{36}\.(jpg|jpeg|png|webp|pdf|mp3|m4a|wav)$/i),fileName:z.string().optional(),mimeType:z.string().optional(),sizeBytes:z.number().optional(),sha256:z.string().optional()});
 const outcome=z.object({result:z.string(),messageId:z.uuid().optional(),notificationId:z.uuid().optional(),operationId:z.uuid().optional(),requestHash:z.string().optional(),files:z.array(fileRow).max(10).optional(),paths:z.array(z.string()).max(10).optional(),fileId:z.uuid().optional(),issuer:z.uuid().optional(),expose:z.boolean().optional()});
 type Outcome=z.infer<typeof outcome>;
@@ -28,7 +30,8 @@ async function context(actor:ConsultationActor):Promise<Context|null>{
  return ownerId&&view?.project.user_id===ownerId?{project:view.project,sender:"staff",ownerId,accessHash:null}:null;
 }
 async function rpc(ctx:Context,request:ConsultationOperation,command:string,input:Json={},claim?:string):Promise<Outcome|null>{
- const result=await supabaseAdmin().rpc("natori_consultation_operation_v1",{p_project_id:ctx.project.id,p_sender:ctx.sender,p_operation_id:request.operationId,p_request_hash:request.requestHash,p_command:command,p_owner_id:ctx.ownerId,p_access_hash:ctx.accessHash,p_input:input,p_claim_token:claim??null});
+ const admin=supabaseAdmin(),call=admin.rpc.bind(admin) as unknown as (name:string,args:Record<string,Json>)=>PromiseLike<{data:unknown;error:unknown}>;
+ const result=await call(ctx.workspace?"natori_case_consultation_operation_v1":"natori_consultation_operation_v1",{p_project_id:ctx.project.id,p_sender:ctx.sender,p_operation_id:request.operationId,p_request_hash:request.requestHash,p_command:command,p_owner_id:ctx.ownerId,p_access_hash:ctx.accessHash,p_input:input,p_claim_token:claim??null,...(ctx.workspace?{p_workspace_guard:ctx.workspace}:{})});
  if(result.error){console.error("[natori-consultation-operation] transaction_unconfirmed");return null;}
  const parsed=outcome.safeParse(result.data);return parsed.success?parsed.data:null;
 }
@@ -60,13 +63,15 @@ function valid(input:unknown):ConsultationOperation|null{
  const parsed=consultationOperationSchema.safeParse(input);
  return parsed.success&&hashConsultationOperation(parsed.data)===parsed.data.requestHash?parsed.data:null;
 }
-export async function consultationOperation(actor:ConsultationActor,input:unknown,action:"prepare"|"commit"|"lookup"|"cancel"):Promise<ConsultationOperationResult>{
+export async function consultationOperation(actor:ConsultationActor,input:unknown,action:"prepare"|"commit"|"lookup"|"inspect"|"cancel",workspace?:unknown):Promise<ConsultationOperationResult>{
  const request=valid(input);if(!request)return{kind:"invalid"};
  try{
-  const ctx=await context(actor);if(!ctx)return{kind:"not_found"};
+  const ctx=await context(actor);if(ctx&&!await acceptanceProjectAllowed(ctx.project.id,!["lookup","inspect"].includes(action)))return{kind:"not_found"};if(!ctx)return{kind:"not_found"};
+  if(workspace!==undefined){if(ctx.sender!=="staff")return{kind:"invalid"};const parsed=z.strictObject({title:z.string(),clientName:z.string(),email:z.email()}).safeParse(workspace);if(!parsed.success)return{kind:"invalid"};ctx.workspace=parsed.data;}
   const current=await rpc(ctx,request,"lookup"),known=result(current);
-  if(known.kind==="committed"){scheduleAcceptanceNotifications([known.notificationId]);return known;}
-  if(action==="lookup")return known;
+  if(known.kind==="committed"){if(action!=="inspect"&&!ctx.workspace)scheduleAcceptanceNotifications([known.notificationId]);return known;}
+  if(action==="lookup"||action==="inspect")return known;
+  await assertCaseSystemAdmission("command",ctx.project.user_id);
   if(action==="cancel")return result(await rpc(ctx,request,"cancel"));
   if(known.kind==="cancelled"||known.kind==="conflict"||known.kind==="unavailable"||known.kind==="notice_expired")return known;
   if(action==="prepare"){
@@ -84,13 +89,17 @@ export async function consultationOperation(actor:ConsultationActor,input:unknow
     if(!missing)return{kind:"storage_error"};
     // The durable issuer is never replaced by another prepare. A lost signer/registration
     // stays protected from cleanup; fixed timeouts cannot prove a remote credential absent.
+    await assertCaseSystemAdmission("command",ctx.project.user_id);
     const issuer=randomUUID(),started=await rpc(ctx,request,'credential_begin',{fileId:reserved.id},issuer);
     if(started?.result!=='credential_started'||started.fileId!==reserved.id||started.issuer!==issuer)return result(started);
+    await assertCaseSystemAdmission("command",ctx.project.user_id);
     const signed=await supabaseAdmin().storage.from("natori-consultations").createSignedUploadUrl(reserved.path,{upsert:false});
     if(signed.error||!signed.data)return{kind:"storage_error"};
     const expiresAt=credentialExpiry(signed.data.token,reserved.path);if(!expiresAt)return{kind:"storage_error"};
     const registered=await rpc(ctx,request,'credential_finish',{fileId:reserved.id,expiresAt},issuer);
     if(registered?.result!=='credential_registered'||registered.fileId!==reserved.id||registered.issuer!==issuer)return result(registered);
+    // Save a returned issuer expiry even if stop arrived during signing; never expose its token after stop.
+    await assertCaseSystemAdmission("command",ctx.project.user_id);
     if(registered.expose!==true)return{kind:"cancelled"};
     files.push({id:reserved.id,path:reserved.path,uploaded:false,uploadToken:signed.data.token});
    }
@@ -129,7 +138,7 @@ export async function cleanupConsultationOperation(actor:ConsultationActor,input
  const proof=await rpc(ctx,request,"cleanup_scope");if(proof?.result!=="cleanup"||!proof.paths)return false;
  const pattern=new RegExp("^"+ctx.project.id+"/[a-f0-9-]{36}\\.(jpg|jpeg|png|webp|pdf|mp3|m4a|wav)$","i");
  if(!proof.paths.every(path=>pattern.test(path)))return false;
- if(proof.paths.length){const removed=await supabaseAdmin().storage.from("natori-consultations").remove(proof.paths);if(removed.error)return false;}
+ if(proof.paths.length){await assertCaseSystemAdmission("command",ctx.project.user_id);const removed=await supabaseAdmin().storage.from("natori-consultations").remove(proof.paths);if(removed.error)return false;}
  return(await rpc(ctx,request,"cleanup_done",{paths:proof.paths}))?.result==="cleaned";
 }
 
@@ -137,6 +146,7 @@ export async function cleanupConsultationOperation(actor:ConsultationActor,input
 export async function queueLegacyConsultationNotice(projectId:string,messageId:string):Promise<string|null>{
  try{
   const ctx=await context({projectId});if(!ctx)return null;
+  await assertCaseSystemAdmission("command",ctx.project.user_id);
   const evidence=notice(ctx);
   const queued=await supabaseAdmin().rpc("natori_consultation_legacy_notice_v1",{p_owner_id:ctx.ownerId!,p_project_id:projectId,p_message_id:messageId,p_payload:evidence.noticePayload,p_access_hash:evidence.noticeAccessHash,p_expires_at:evidence.noticeExpiresAt});
   if(queued.error||!queued.data)return null;scheduleAcceptanceNotifications([queued.data]);return queued.data;

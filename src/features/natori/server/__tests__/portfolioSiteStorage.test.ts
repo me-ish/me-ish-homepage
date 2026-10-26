@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Domain tests use an unheld admission boundary; actual denial/SQL are covered separately.
+vi.mock("../caseSystemHold",()=>({assertCaseSystemAdmission:vi.fn(async()=>{})}));
 vi.mock("server-only", () => ({}));
 
 const {
