@@ -24,6 +24,7 @@ import {CaseIntakePanel} from "./CaseIntakePanel";
 import {CaseHistoryPanel} from "./CaseHistoryPanel";
 import {CaseWorkspaceUtilities} from "./CaseWorkspaceUtilities";
 import {CaseStepList} from "./CaseStepList";
+import {CasePublicPages} from "./CasePublicPages";
 import {caseStepForSection,deriveCaseSteps} from "../../lib/caseSteps";
 
 export type CasePreviewLoader = (mode: CaseWorkspaceLocation["mode"], signal: AbortSignal) => Promise<readonly CaseWorkspaceRecord[]>;
@@ -147,6 +148,7 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
   const entryLocation=(entry:CaseEntry):CaseWorkspaceLocation=>({...(entry===nav.entry?nav:entryPositions.current.get(entry)??{...nav,query:"",filter:"all",selectedId:null,noticeId:null,page:1,noticePage:1}),entry,utility:"none",projectId:null,section:"overview"});
   const open=(id:string):CaseWorkspaceLocation=>({...nav,utility:"none",projectId:id,selectedId:id,noticeId:null,historyPage:1,section:nav.source==="estimate"?"transaction":deriveCaseGuidance(rows.find(r=>r.id===id)!).primary.section});
   const back={...nav,projectId:null,section:"overview" as const};
+  const pagesTab=!application||entryTools,pagesLocation:CaseWorkspaceLocation={...nav,utility:"pages",projectId:null,section:"overview"};
   const entryTitle=nav.entry==="schedule"?`${nav.date}の予定`:nav.entry==="cases"?"案件一覧":nav.entry==="notifications"?"案内・通知を確認する案件":"今日、確認すること";
   return <div data-natori-admin className="min-h-screen bg-[#F7F7F8] pb-24 text-zinc-900 lg:pb-6">
     {!application||readOnly?<div className="border-b border-pink-100 bg-pink-50 px-4 py-2 text-center text-xs leading-5 text-pink-950">{readOnly?"操作を停止しています。確定した記録と未確認の処理を読み取れます。":"架空データの表示確認用 · 実際の操作には未接続"}</div>:null}
@@ -154,13 +156,14 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
       <p className="text-xl font-semibold tracking-tight">natori<span className="ml-3 text-xs font-normal text-zinc-500">案件ワークスペース</span></p>
       {application&&entryTools?<div className="flex flex-wrap gap-3">{link({...nav,utility:"settings"},"設定・管理機能",ui.btnSecondary)}{link({...nav,utility:"estimate"},"概算の下書き",ui.btnSecondary)}</div>:null}
       <nav aria-label="主な入口" className="hidden items-center gap-2 lg:flex">{(Object.keys(entries) as CaseEntry[]).map(entry=>link(entryLocation(entry),entries[entry],
-        `${ui.btnSecondary} ${nav.entry===entry?"border-pink-300 bg-pink-50 text-pink-900":""}`,{"aria-current":nav.entry===entry?"page":undefined,key:entry}))}</nav>
+        `${ui.btnSecondary} ${nav.entry===entry&&nav.utility==="none"?"border-pink-300 bg-pink-50 text-pink-900":""}`,{"aria-current":nav.entry===entry&&nav.utility==="none"?"page":undefined,key:entry}))}{pagesTab?link(pagesLocation,"ページ",`${ui.btnSecondary} ${nav.utility==="pages"?"border-pink-300 bg-pink-50 text-pink-900":""}`,{"aria-current":nav.utility==="pages"?"page":undefined,key:"pages"}):null}</nav>
       {!application?<details className="text-xs text-zinc-600"><summary className="cursor-pointer rounded-lg p-2 focus-visible:outline">表示の検証</summary><label className="mt-2 block">架空データの取得状態
         <select className="ml-2 rounded border p-2" aria-label="架空データの取得状態" value={nav.mode} onChange={e=>move({...nav,mode:e.target.value as CaseWorkspaceLocation["mode"]})}>
           <option value="normal">通常</option><option value="partial">一部取得失敗</option><option value="failed">最新読取失敗</option></select></label></details>:null}
     </div></header>
     <div className="mx-auto max-w-[1440px] px-4 pt-4 sm:px-6">
-      {application&&entryTools&&nav.utility!=="none"?<div className="mb-5">{link({...nav,utility:"none"},"← 元の案件画面へ戻る",`${ui.btnLink} mb-4`)}{!accessError?<CaseWorkspaceUtilities key={nav.utility} mode={nav.utility} readOnly={readOnly} onDraftChange={setHasUtilityDraft} onAccessRejected={rejectAccess}/>:<p role="alert">認証を確認できないため設定の表示を消去しました。再取得して確認してください。</p>}</div>:null}
+      {!application&&nav.utility==="pages"?<section aria-label="公開ページ" className="mb-5"><h1 className="text-xl font-semibold">公開ページ</h1><p className="mb-4 mt-1 text-sm text-zinc-600">お客さんが見るページです。</p><CasePublicPages portfolioHref="/natori/portfolio" linksHref="/natori/links"/></section>:null}
+      {application&&entryTools&&nav.utility!=="none"?<div className="mb-5">{nav.utility!=="pages"?link({...nav,utility:"none"},"← 元の案件画面へ戻る",`${ui.btnLink} mb-4`):null}{!accessError?<CaseWorkspaceUtilities key={nav.utility} mode={nav.utility} readOnly={readOnly} onDraftChange={setHasUtilityDraft} onAccessRejected={rejectAccess}/>:<p role="alert">認証を確認できないため設定の表示を消去しました。再取得して確認してください。</p>}</div>:null}
       {failed?<div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"><p>{accessError==="unauthorized"?"認証を確認できません。案件の表示を消去しました。ログイン状態を確認してください。":accessError==="scope_unavailable"?"管理対象の設定を確認できません。案件の表示を消去しました。":loadDetail&&nav.projectId?"案件一覧を取得できません。対象の詳細は別に確認します。":`最新情報を取得できません。${records?"前回確認した記録を表示しています。":"案件データはまだ取得できていません。"}`}</p>
         <button type="button" className={ui.btnSecondary} disabled={pending} onClick={()=>setReload(v=>v+1)}>表示を再取得</button></div>:null}
       <div role="status" className="sr-only">{pending?"表示を読み取り中":failed?"最新の読み取りに失敗":"表示を取得しました"}</div>
@@ -226,6 +229,6 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
       </div>
     </div>
     <nav aria-label="スマホの主な入口" className="fixed inset-x-0 bottom-0 z-20 flex justify-around border-t border-zinc-200 bg-white px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-2 lg:hidden">{(Object.keys(entries) as CaseEntry[]).map(entry=>link(entryLocation(entry),entries[entry],
-      `flex min-h-11 flex-1 items-center justify-center rounded-xl text-sm font-semibold ${ui.focusRing} ${nav.entry===entry?"bg-pink-50 text-pink-900":"text-zinc-600"}`,{key:entry,"aria-current":nav.entry===entry?"page":undefined}))}</nav>
+      `flex min-h-11 flex-1 items-center justify-center rounded-xl text-sm font-semibold ${ui.focusRing} ${nav.entry===entry&&nav.utility==="none"?"bg-pink-50 text-pink-900":"text-zinc-600"}`,{key:entry,"aria-current":nav.entry===entry&&nav.utility==="none"?"page":undefined}))}{pagesTab?link(pagesLocation,"ページ",`flex min-h-11 flex-1 items-center justify-center rounded-xl text-sm font-semibold ${ui.focusRing} ${nav.utility==="pages"?"bg-pink-50 text-pink-900":"text-zinc-600"}`,{key:"pages","aria-current":nav.utility==="pages"?"page":undefined}):null}</nav>
   </div>;
 }

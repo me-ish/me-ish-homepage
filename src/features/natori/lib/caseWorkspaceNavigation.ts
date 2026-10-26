@@ -4,7 +4,7 @@ import { isPaymentTimestamp } from "./clientPayment";
 export type CaseWorkspaceLocation = {
   entry: CaseEntry; projectId: string | null; selectedId: string | null; section: CaseSection;
   query: string; filter: "all" | "staff" | "client" | "completed";
-  source:"all"|"inquiries"|"estimate";sort:"default"|"due"|"priority";utility:"none"|"settings"|"estimate";
+  source:"all"|"inquiries"|"estimate";sort:"default"|"due"|"priority";utility:"none"|"settings"|"estimate"|"pages";
   intakeFilter:"all"|"attention"|"rough-ok"|"ended"|"inquiry"|"estimating"|"quoted"|"awaiting_payment";
   date: string; month: string; noticeId: string | null; page:number;noticePage:number;historyPage?:number; mode: "normal" | "partial" | "failed";
 };
@@ -22,7 +22,7 @@ export function parseCaseWorkspaceLocation(search: string, today = "2026-10-20")
     filter: filter === "staff" || filter === "client" || filter === "completed" ? filter : "all",
     source:p.get("source")==="inquiries"||p.get("source")==="estimate"?p.get("source") as "inquiries"|"estimate":"all",
     sort:p.get("sort")==="due"||p.get("sort")==="priority"?p.get("sort") as "due"|"priority":"default",
-    utility:p.get("utility")==="settings"||p.get("utility")==="estimate"?p.get("utility") as "settings"|"estimate":"none",
+    utility:p.get("utility")==="settings"||p.get("utility")==="estimate"||p.get("utility")==="pages"?p.get("utility") as "settings"|"estimate"|"pages":"none",
     intakeFilter:["attention","rough-ok","ended","inquiry","estimating","quoted","awaiting_payment"].includes(p.get("intakeFilter")??p.get("filter")??"")?(p.get("intakeFilter")??p.get("filter")) as CaseWorkspaceLocation["intakeFilter"]:"all",
     date: date && /^\d{4}-\d{2}-\d{2}$/.test(date) && isPaymentTimestamp(`${date}T00:00:00Z`) ? date : today,
     month: /^\d{4}-\d{2}$/.test(p.get("month")??"") && isPaymentTimestamp(`${p.get("month")}-01T00:00:00Z`)

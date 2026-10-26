@@ -283,3 +283,17 @@ it("acceptance personal events never enable the unrelated case-registration form
   expect(screen.queryByRole("region",{name:"新しい案件の登録"})).toBeNull();
  }finally{vi.unstubAllEnvs();}
 });
+
+it.each(["主な入口","スマホの主な入口"])("opens the public pages from the %s and returns to the same entry",async label=>{
+  render(<CaseWorkspacePreview load={async()=>records} initialSearch="?entry=cases"/>);await screen.findByRole("link",{name:/森の表紙イラスト/});
+  fireEvent.click(within(screen.getByRole("navigation",{name:label})).getByRole("link",{name:"ページ"}));
+  expect(window.location.search).toContain("utility=pages");
+  const pages=within(screen.getByRole("region",{name:"公開ページ"}));
+  expect(pages.getAllByRole("link",{name:"編集する"}).map(a=>a.getAttribute("href"))).toEqual(["/natori/portfolio/edit","/natori/links/edit"]);
+  expect(pages.getAllByRole("link",{name:/見る/}).map(a=>[a.getAttribute("href"),a.getAttribute("target")])).toEqual([["/natori/portfolio","_blank"],["/natori/links","_blank"]]);
+  expect(pages.getByRole("link",{name:/実績/}).getAttribute("href")).toBe("/natori/results");
+  expect(within(screen.getByRole("navigation",{name:label})).getByRole("link",{name:"ページ"}).getAttribute("aria-current")).toBe("page");
+  fireEvent.click(within(screen.getByRole("navigation",{name:label})).getByRole("link",{name:"案件"}));
+  expect(window.location.search).not.toContain("utility=pages");
+  expect(screen.queryByRole("region",{name:"公開ページ"})).toBeNull();
+});
