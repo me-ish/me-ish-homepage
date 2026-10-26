@@ -25,6 +25,17 @@ async function main(){
  await page.goto(`${app}/ja/fixture-session`);await page.getByLabel('Email').fill(email);await page.getByLabel('Password').fill(password);await page.getByRole('button',{name:'Sign in'}).click();await expect(page.getByText('Session ready')).toBeVisible();
  await test('actual-session-anonymous-and-csrf-boundaries',async()=>{const anon=await browser.newContext();const a=await anon.request.post(`${app}/api/natori/admin/payment-link`,{data:{projectId:id,operationId:randomUUID(),action:'issue'},headers:{'x-requested-with':'me-ish'}});check(a.status()===401,'ANON_DENIED');const denied=await context.request.post(`${app}/api/natori/admin/payment-link`,{data:{projectId:id,operationId:randomUUID(),action:'issue'}});check(denied.status()===403,'CSRF_DENIED');await anon.close();});
  const panel=page.getByRole('dialog',{name:'支払リンクの管理'});
+ // Complete the prior synthetic notification through real outbox RPCs before
+ // testing another user operation. No provider is contacted by this fixture.
+ async function acceptPreparedNotice(){
+  const row=await admin.from('natori_notification_jobs').select('id,payload').eq('project_id',id).eq('status','pending').single();check(!row.error&&row.data,'NOTICE_FIXTURE');
+  const notice=row.data.id,token=randomUUID();
+  const claimed=await admin.rpc('natori_notification_claim_v1',{p_id:notice,p_claim_token:token});check(!claimed.error&&claimed.data?.length===1,'NOTICE_CLAIM');
+  const started=await admin.rpc('natori_notification_start_v1',{p_id:notice,p_claim_token:token,p_payload:row.data.payload});check(!started.error&&started.data?.[0]?.send_started_at,'NOTICE_STARTED');
+  const accepted=await admin.rpc('natori_notification_finish_v1',{p_id:notice,p_claim_token:token,p_status:'sent',p_provider_id:'synthetic-'+notice});check(!accepted.error&&accepted.data===true,'NOTICE_ACCEPTED');
+  const released=await admin.rpc('natori_payment_links_v1',{p_owner_id:owner,p_project_id:id,p_command:'mail_gate',p_input:{jobId:notice,token,action:'release'}});check(!released.error&&released.data?.result==='released','NOTICE_LEASE_RELEASED');
+ }
+
  const quotePage=await context.newPage(),quoteUrl=app+'/ja/natori/quote/'+quoteToken;
  const publicDeadline=()=>quotePage.getByText('現在の支払期限',{exact:true}).locator('..').locator('dd');
  const formattedDeadline=iso=>new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',dateStyle:'medium',timeStyle:'short'}).format(new Date(iso))+'（日本時間）';
@@ -76,6 +87,7 @@ async function main(){
   check(await quotePage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'PUBLIC_MOBILE_NO_OVERFLOW');
  });
  await test('renotify-keeps-deadline-and-url-in-actual-db',async()=>{
+  await acceptPreparedNotice();await page.reload();await expect(page.getByText('リンク有効',{exact:true})).toBeVisible();
   const before=(await admin.from('natori_payment_link_attempts').select('deadline,link_url,generation').eq('project_id',id).single()).data;
   await page.getByLabel('支払リンク操作').selectOption('renotify');await page.getByLabel('支払案内の本文').fill('Resend comment');await page.getByRole('button',{name:'選んだ操作を実行'}).click();
   await expect(page.getByRole('button',{name:'同じ操作で再試行'})).toHaveCount(0);await expect(page.getByRole('button',{name:'選んだ操作を実行'})).toBeEnabled();
@@ -83,6 +95,7 @@ async function main(){
   check(JSON.stringify(before)===JSON.stringify(after),'DEADLINE_URL_PRESERVED');await quotePage.reload();await expect(publicDeadline()).toContainText(formattedDeadline(before.deadline));await expect(quotePage.getByText('承諾時のお支払条件',{exact:true})).toBeVisible();check((await admin.from('natori_notification_jobs').select('id').eq('project_id',id)).data?.length===2,'NEW_NOTICE');
  });
  await test('explicit-extension-changes-revision-without-implicit-mail',async()=>{
+  await acceptPreparedNotice();await page.reload();await expect(page.getByText('リンク有効',{exact:true})).toBeVisible();
   const before=(await admin.from('natori_payment_link_attempts').select('deadline').eq('project_id',id).single()).data;
   await page.getByLabel('支払リンク操作').selectOption('extend');await page.getByLabel('新しい支払期限').fill(new Date(Date.now()+8*86400000).toISOString().slice(0,16));
   await page.getByRole('checkbox').check();await page.getByRole('button',{name:'選んだ操作を実行'}).click();await expect(page.getByRole('button',{name:'選んだ操作を実行'})).toBeEnabled();
