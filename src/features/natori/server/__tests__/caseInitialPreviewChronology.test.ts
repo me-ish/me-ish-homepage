@@ -66,23 +66,23 @@ describe("initial hosted preview chronology investigation", () => {
     expect(result.model.facts.quote).toEqual({ state: "unavailable", reason: "incomplete" });
     expect(result.model.agreement).toBe("unknown");
     expect(result.model.stage).toBe("unknown");
-    expect(guidance.status).toBe("見積の状態は未確認");
+    expect(guidance.status).toBe("見積の状態が分かりません");
     expect(guidance.facts).toEqual(expect.arrayContaining([
-      { label: "内部見積", value: "一部の記録を確認できません" },
-      { label: "合意した金額", value: "未確認" },
-      { label: "入金", value: "記録なし（取得済み）" },
+      { label: "見積", value: "一部を読み込めませんでした" },
+      { label: "決まった金額", value: "分かりません" },
+      { label: "入金", value: "まだ" },
     ]));
-    expect(guidance.waits).toEqual([{ key: "quote-unconfirmed", who: "staff", text: "見積の状態は未確認です。取引の記録を確認してください", section: "transaction" }]);
-    expect(guidance.primary).toEqual({ label: "取引の記録へ", section: "transaction" });
-    expect(guidance.unknown).toContain("内部見積：一部の記録を確認できません");
+    expect(guidance.waits).toEqual([{ key: "quote-unconfirmed", who: "staff", text: "見積の状態を読み込めませんでした。取引を開いて確認", section: "transaction" }]);
+    expect(guidance.primary).toEqual({ label: "取引を開く", section: "transaction" });
+    expect(guidance.unknown).toContain("見積：一部を読み込めませんでした");
     expect(result.model.actions.filter(action => action.execution !== "read_only").every(action => !action.available)).toBe(true);
   });
 
   it("does not use the case title or raw quoted status as proof of acceptance", async () => {
     const { result, guidance } = await read(fixture(false, "任意の案件名"));
     expect(result.model.agreement).toBe("unknown");
-    expect(guidance.status).toBe("見積の状態は未確認");
-    expect(guidance.facts).toContainEqual({ label: "合意した金額", value: "未確認" });
+    expect(guidance.status).toBe("見積の状態が分かりません");
+    expect(guidance.facts).toContainEqual({ label: "決まった金額", value: "分かりません" });
   });
 
   it("shows acceptance and staff payment-notice work when only the local control's three time fields are coherent", async () => {
@@ -91,9 +91,9 @@ describe("initial hosted preview chronology investigation", () => {
       id: quoteId, version: 1, acceptance: { quoteId, version: 1, money: { amount: 12000, currency: "JPY" } },
     } });
     expect(result.model.agreement).toBe("accepted");
-    expect(guidance.status).toBe("見積承諾済み");
-    expect(guidance.facts).toContainEqual({ label: "合意した金額", value: "￥12,000" });
-    expect(guidance.waits).toContainEqual(expect.objectContaining({ who: "staff", section: "transaction", text: "支払案内の状況を確認" }));
+    expect(guidance.status).toBe("見積OK・支払い前");
+    expect(guidance.facts).toContainEqual({ label: "決まった金額", value: "￥12,000" });
+    expect(guidance.waits).toContainEqual(expect.objectContaining({ who: "staff", section: "transaction", text: "支払いリンクを送る" }));
     expect(guidance.waits.some(wait => wait.who === "client")).toBe(false);
     expect(guidance.primary.section).toBe("transaction");
     expect(result.model.facts.payment.state).toBe("absent");
@@ -108,8 +108,8 @@ describe("initial hosted preview chronology investigation", () => {
     Object.assign(row.sections.financial_quotes.rows[0], generated.natori_quotes[0]);
     const { result, guidance } = await read(row);
     expect(result.model.agreement).toBe("accepted");
-    expect(guidance.status).toBe("見積承諾済み");
-    expect(guidance.facts).toContainEqual({ label: "合意した金額", value: "￥12,000" });
+    expect(guidance.status).toBe("見積OK・支払い前");
+    expect(guidance.facts).toContainEqual({ label: "決まった金額", value: "￥12,000" });
     expect(guidance.waits.some(wait => wait.who === "client")).toBe(false);
     expect(guidance.primary.section).toBe("transaction");
   });
