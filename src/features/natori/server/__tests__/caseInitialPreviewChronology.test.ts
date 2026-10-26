@@ -72,8 +72,8 @@ describe("initial hosted preview chronology investigation", () => {
       { label: "決まった金額", value: "分かりません" },
       { label: "入金", value: "まだ" },
     ]));
-    expect(guidance.waits).toEqual([{ key: "quote-unconfirmed", who: "staff", text: "見積の状態を読み込めませんでした。取引を開いて確認", section: "transaction" }]);
-    expect(guidance.primary).toEqual({ label: "取引を開く", section: "transaction" });
+    expect(guidance.waits).toEqual([{ key: "quote-unconfirmed", who: "staff", text: "見積の状態を読み込めませんでした。見積・支払いを開いて確認", section: "transaction" }]);
+    expect(guidance.primary).toEqual({ label: "見積・支払いを開く", section: "transaction" });
     expect(guidance.unknown).toContain("見積：一部を読み込めませんでした");
     expect(result.model.actions.filter(action => action.execution !== "read_only").every(action => !action.available)).toBe(true);
   });

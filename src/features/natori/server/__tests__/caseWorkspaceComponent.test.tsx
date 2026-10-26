@@ -19,7 +19,8 @@ beforeAll(async () => { records = await buildPreviewRecords(); });
 beforeEach(() => { window.history.replaceState(null, "", "/"); vi.spyOn(window,"scrollTo").mockImplementation(() => {}); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 const caseHeading = () => screen.getByRole("heading", { name: "森の表紙イラスト" });
-const sectionNav = () => within(screen.getByRole("navigation", { name: "案件の領域" }));
+const otherNav = () => within(screen.getByRole("navigation", { name: "案件のほかの画面" }));
+const stepList = () => within(screen.getByRole("region", { name: "案件の段階" }));
 
 it("searches the complete collection beyond page one and retains the selected page",async()=>{
  const many=Array.from({length:121},(_,n)=>({...records[0],id:`extra-${n}`,title:`架空大量案件${String(n).padStart(3,"0")}`}));
@@ -86,12 +87,12 @@ it.each(["today","cases","schedule","notifications"])("shows unavailable quote f
   await screen.findByRole("heading",{name:record.title});
   const guidance=within(screen.getByRole("region",{name:"案件の共通案内"}));
   expect(guidance.getByText("いまの段階：見積の状態が分かりません")).toBeTruthy();
-  expect(guidance.getByText("あなた：見積の状態を読み込めませんでした。取引を開いて確認")).toBeTruthy();
+  expect(guidance.getByText("あなた：見積の状態を読み込めませんでした。見積・支払いを開いて確認")).toBeTruthy();
   expect(guidance.queryByText("相談中")).toBeNull();
   expect(guidance.queryByText("見積OK・支払い前")).toBeNull();
   expect(guidance.queryByText(/お客さん：.*支払/)).toBeNull();
   expect(screen.queryByRole("button",{name:/送信|再送|発行/})).toBeNull();
-  fireEvent.click(guidance.getByRole("link",{name:"取引を開く"}));
+  fireEvent.click(guidance.getByRole("link",{name:"見積・支払いを開く"}));
   expect(window.location.search).toContain("section=transaction");
 });
 
@@ -179,9 +180,12 @@ it("opens one common case from the list and keeps filters and focus on returning
   fireEvent.change(screen.getByLabelText("対応で絞り込む"), { target: { value: "staff" } });
   fireEvent.click(screen.getByRole("link", { name: /依頼者A.*森の表紙イラスト/ }));
   expect(caseHeading()).toBe(document.activeElement);
-  fireEvent.click(screen.getByRole("link", { name: "支払いリンクを送る" }));
   expect(window.location.search).toContain("section=transaction");
-  for (const label of ["相談", "制作・納品", "履歴", "概要"]) fireEvent.click(sectionNav().getByRole("link", { name: label }));
+  expect(stepList().getByRole("link", { name: /^支払い/ }).getAttribute("aria-current")).toBe("step");
+  fireEvent.click(stepList().getByRole("link", { name: /^制作/ }));
+  expect(window.location.search).toContain("section=production");
+  expect(screen.getByRole("heading", { name: "制作・納品" })).toBe(document.activeElement);
+  for (const label of ["相談", "履歴", "その他"]) fireEvent.click(otherNav().getByRole("link", { name: label }));
   expect(caseHeading()).toBeTruthy();
   fireEvent.click(screen.getByRole("link", { name: "← 今日へ戻る" }));
   expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("森");
@@ -201,7 +205,7 @@ it("restores a deep link after data arrives and responds to browser history stat
   render(<CaseWorkspacePreview load={() => new Promise(done => { resolve = done; })} />);
   await act(async () => { resolve(records); });
   expect(caseHeading()).toBe(document.activeElement);
-  expect(sectionNav().getByRole("link", { name: "履歴" }).getAttribute("aria-current")).toBe("page");
+  expect(otherNav().getByRole("link", { name: "履歴" }).getAttribute("aria-current")).toBe("page");
   act(() => { window.history.replaceState(null, "", "/?entry=cases&q=雲"); window.dispatchEvent(new PopStateEvent("popstate")); });
   expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("雲");
   expect(screen.queryByRole("heading", { name: "森の表紙イラスト" })).toBeNull();
@@ -261,7 +265,7 @@ it.each(["unauthorized","scope_unavailable"] as const)("clears every previously 
   render(<CaseWorkspacePreview load={load} application initialSearch={`?case=${records[0].id}&section=history`} today="2026-10-21" basePath="/natori/dashboard/cases" />);
   await screen.findByRole("heading",{name:"森の表紙イラスト"});
   expect(screen.queryByLabelText("架空データの取得状態")).toBeNull();
-  expect(sectionNav().getByRole("link",{name:"取引"}).getAttribute("href")).toMatch(/^\/natori\/dashboard\/cases\?/);
+  expect(stepList().getByRole("link",{name:/^見積/}).getAttribute("href")).toMatch(/^\/natori\/dashboard\/cases\?/);
   fireEvent(window,new Event("focus"));
   expect((await screen.findByRole("alert")).textContent).toContain("案件の表示を消去");
   expect(screen.queryByRole("heading",{name:"森の表紙イラスト"})).toBeNull();

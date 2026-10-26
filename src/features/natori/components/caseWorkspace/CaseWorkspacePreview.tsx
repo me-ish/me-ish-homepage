@@ -23,6 +23,8 @@ import {getDeliveryPlanMeta} from "../../lib/deliveryPlans";
 import {CaseIntakePanel} from "./CaseIntakePanel";
 import {CaseHistoryPanel} from "./CaseHistoryPanel";
 import {CaseWorkspaceUtilities} from "./CaseWorkspaceUtilities";
+import {CaseStepList} from "./CaseStepList";
+import {caseStepForSection,deriveCaseSteps} from "../../lib/caseSteps";
 
 export type CasePreviewLoader = (mode: CaseWorkspaceLocation["mode"], signal: AbortSignal) => Promise<readonly CaseWorkspaceRecord[]>;
 const entries: Record<CaseEntry,string> = { today: "今日", cases: "案件", schedule: "予定", notifications: "通知" };
@@ -52,6 +54,7 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
   useEffect(()=>{if(!hasDraft)return;const guard=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue="";};window.addEventListener("beforeunload",guard);return()=>window.removeEventListener("beforeunload",guard);},[hasDraft]);
   useEffect(()=>{const pop=()=>{const next=parseCaseWorkspaceLocation(window.location.search,today);if(hasDraft&&(next.projectId!==nav.projectId||hasUtilityDraft&&next.utility!==nav.utility||hasEventDraft&&(next.date!==nav.date||next.entry!==nav.entry))&&!window.confirm("入力中または結果確認中の内容があります。画面から移動しますか？")){window.history.pushState(null,"",caseWorkspaceHref(nav,basePath));return;}setNav(next);};window.addEventListener("popstate",pop);return()=>window.removeEventListener("popstate",pop);},[today,hasDraft,hasEventDraft,hasUtilityDraft,nav,basePath]);
   const heading=useRef<HTMLHeadingElement>(null);
+  const workHeading=useRef<HTMLHeadingElement>(null),focusedCase=useRef<string|null>(null);
   const listPositions=useRef(new Map<string,number>());
   const entryPositions=useRef(new Map<CaseEntry,CaseWorkspaceLocation>());
   const restoredFocus=useRef<string>();
@@ -125,20 +128,24 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
     // entering/leaving a case, switching entry/section, or receiving initial data.
     if(restoredFocus.current===focusKey)return;
     restoredFocus.current=focusKey;
-    if(nav.projectId)heading.current?.focus();
+    // Moving between steps of the same case keeps the reader at the opened step.
+    if(nav.projectId){if(focusedCase.current===`${nav.projectId}:${selected?.id}`&&workHeading.current)workHeading.current.focus();else heading.current?.focus();focusedCase.current=`${nav.projectId}:${selected?.id}`;}
+    else focusedCase.current=null;
+    if(nav.projectId)return;
     else if(nav.selectedId){
       (document.getElementById(`index-notice-${nav.noticeId}`)??document.getElementById(`notice-${nav.noticeId}`)??document.getElementById(`case-${nav.selectedId}`))?.focus({preventScroll:true});
       const position=listPositions.current.get(positionKey);
       if(position!==undefined)window.scrollTo(0,position);
     }
-  },[nav.projectId,nav.section,nav.entry,nav.selectedId,nav.noticeId,focusKey,positionKey]);
+  },[nav.projectId,nav.section,nav.entry,nav.selectedId,nav.noticeId,focusKey,positionKey,selected?.id]);
   const guidance=selected?deriveCaseGuidance(selected):null;
+  const steps=selected?deriveCaseSteps(selected):[],openStep=caseStepForSection(steps,nav.section);
   const selectedNotice=selected&&nav.noticeId?caseKnown(selected.model.facts.notifications)?.find(n=>n.id===nav.noticeId):undefined;
   const indexNotice=selected&&nav.noticeId?noticeIndex?.items.find(n=>n.id===nav.noticeId&&n.projectId===selected.id):undefined;
   const visible=rows.filter(row=>matchesCaseEntry(row,nav,plansReady?plans:null,today)).sort((a,b)=>nav.sort==="due"?(a.registeredDueDate??"9999").localeCompare(b.registeredDueDate??"9999")||a.id.localeCompare(b.id):nav.sort==="priority"?(casePriority(b,plansReady?plans:null,today)?.score??-1)-(casePriority(a,plansReady?plans:null,today)?.score??-1)||a.id.localeCompare(b.id):0);
   const pages=Math.max(1,Math.ceil(visible.length/50)),pageRows=visible.slice((nav.page-1)*50,nav.page*50);
   const entryLocation=(entry:CaseEntry):CaseWorkspaceLocation=>({...(entry===nav.entry?nav:entryPositions.current.get(entry)??{...nav,query:"",filter:"all",selectedId:null,noticeId:null,page:1,noticePage:1}),entry,utility:"none",projectId:null,section:"overview"});
-  const open=(id:string):CaseWorkspaceLocation=>({...nav,utility:"none",projectId:id,selectedId:id,noticeId:null,historyPage:1,section:nav.source==="estimate"?"transaction":nav.entry==="notifications"?deriveCaseGuidance(rows.find(r=>r.id===id)!).primary.section:"overview"});
+  const open=(id:string):CaseWorkspaceLocation=>({...nav,utility:"none",projectId:id,selectedId:id,noticeId:null,historyPage:1,section:nav.source==="estimate"?"transaction":deriveCaseGuidance(rows.find(r=>r.id===id)!).primary.section});
   const back={...nav,projectId:null,section:"overview" as const};
   const entryTitle=nav.entry==="schedule"?`${nav.date}の予定`:nav.entry==="cases"?"案件一覧":nav.entry==="notifications"?"案内・通知を確認する案件":"今日、確認すること";
   return <div data-natori-admin className="min-h-screen bg-[#F7F7F8] pb-24 text-zinc-900 lg:pb-6">
@@ -196,22 +203,22 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
               <h1 ref={heading} tabIndex={-1} className="text-[22px] font-semibold leading-9 tracking-tight outline-none sm:text-2xl">{selected.title}</h1>
               {nav.noticeId?<aside aria-label="選択した通知" className="mt-3 rounded-xl border border-zinc-200 p-3 text-sm">{selectedNotice?<><p className="font-semibold">{CASE_NOTICE_PURPOSES[selectedNotice.purpose]} · {caseNoticeLabel(selectedNotice)}</p><p className="break-all text-xs">通知：{selectedNotice.id} · 対象：{selectedNotice.target.kind} / {selectedNotice.target.id} · 条件：{selectedNotice.target.revision}</p><p className="mt-1 text-xs">{selected.model.facts.notifications.state!=="ready"?"前回確認した通知です。":"保存された通知です。"}過去の版・条件の場合があります。現在の案件の記録と分けて確認します。受付は業務の完了を示しません。</p></>:indexNotice?<><p>{notificationPurposeName(indexNotice.purpose)} · 通知一覧の記録</p><p className="break-all text-xs">通知：{indexNotice.id} · 対象参照：{indexNotice.targetId??"未確認"} · 条件：{indexNotice.targetRevision??"未確認"}</p><p className="text-xs">案件内の系列全体は未確認です。この一覧だけでは業務結果の確定や再送許可を出しません。</p></>:"選択した通知の記録は、この取得結果では確認できません。別の通知で補っていません。"}</aside>:null}
               <p className="mt-3 text-sm font-semibold text-pink-900">{selectedFailed||selectedPending?"前回確認した段階：":"いまの段階："}{guidance.status}</p>
-              <dl className="my-4 grid gap-2 sm:grid-cols-3">{guidance.facts.filter(f=>f.label!=="支払リンク"&&(f.label!=="受取"||!!caseKnown(selected.display.receipt))).map(fact=><div key={fact.label} className="flex items-baseline justify-between gap-2 rounded-xl bg-zinc-50 p-3 sm:block"><dt className="shrink-0 text-xs text-zinc-500">{fact.label}</dt><dd className="text-sm font-semibold leading-6 sm:mt-1">{fact.value}</dd></div>)}</dl>
-              <div className="rounded-xl border border-pink-100 bg-pink-50 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold text-pink-900">{selectedFailed?"前回確認時の次にやること":"次にやること"}</p>
+              <div className="mt-3 rounded-xl border border-pink-100 bg-pink-50 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold text-pink-900">{selectedFailed?"前回確認時の次にやること":"次にやること"}</p>
                 <p className="mt-1 text-sm font-semibold leading-6">{guidance.waits[0]?caseWaitLine(guidance.waits[0]):"いまやることはありません"}</p></div>
-                {nav.section===guidance.primary.section?<p className="text-xs font-semibold text-pink-900">この下で進められます</p>:link({...nav,section:guidance.primary.section},guidance.primary.label,ui.btnPrimary)}</div></div>
+                {nav.section===guidance.primary.section?<p className="text-xs font-semibold text-pink-900">下の段階で進められます</p>:link({...nav,section:guidance.primary.section},guidance.primary.label,ui.btnPrimary)}</div></div>
               {selectedNotificationId&&nav.section!=="transaction"?<p className="mt-3 text-sm">{link({...nav,section:"transaction"},"この通知の状態・復旧を確認",ui.btnLink)}</p>:null}
             {guidance.waits.length>1?<ul aria-label="ほかにやること" className="mt-3 space-y-1">{guidance.waits.slice(1).map(wait=><li key={wait.key} className="text-sm">{link({...nav,section:wait.section},caseWaitLine(wait),ui.btnLink)}</li>)}</ul>:null}
               {guidance.unknown.filter(item=>item.startsWith("要確認：")).map(item=><p key={item} className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">{item}</p>)}
-              <p className="mt-4 text-xs leading-5 text-zinc-500">最終読取 {caseTime(selected.model.checkedAt)}</p>
             </section>
-            <label className="mb-5 block text-xs font-semibold text-zinc-600 sm:hidden">案件の領域<select value={nav.section} onChange={e=>move({...nav,section:e.target.value as CaseWorkspaceLocation["section"]})} className="mt-1 h-11 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm">{CASE_SECTIONS.map(section=><option key={section} value={section}>{CASE_SECTION_LABELS[section]}</option>)}</select></label>
-            <nav aria-label="案件の領域" className="mb-5 hidden grid-cols-5 gap-1 rounded-2xl border border-zinc-200 bg-white p-1 sm:grid">{CASE_SECTIONS.map(section=>link({...nav,section},CASE_SECTION_LABELS[section],
-              `flex min-h-11 items-center justify-center rounded-xl px-2 text-sm font-semibold ${ui.focusRing} ${nav.section===section?"bg-zinc-900 text-white":"text-zinc-600 hover:bg-zinc-100"}`,{key:section,"aria-current":nav.section===section?"page":undefined}))}</nav>
-            <h2 className="mb-4 text-lg font-semibold">{CASE_SECTION_LABELS[nav.section]}</h2><CaseWorkspaceSections selectedNotificationId={selectedNotificationId} record={selected} section={nav.section} application={application} readOnly={readOnly} onChanged={()=>setReload(v=>v+1)}/>
-            {application&&entryTools?<CaseHistoryPanel key={`history-${selected.id}`} projectId={selected.id} section={nav.section} refreshKey={selected.model.fingerprint} page={nav.historyPage??1} onNotice={id=>move({...nav,noticeId:id,section:"transaction"})} onPage={page=>move({...nav,historyPage:page})} onAccessRejected={rejectAccess}/>:null}
-            {application&&entryTools?<CaseIntakePanel key={`intake-${selected.id}`} projectId={selected.id} section={nav.section} readOnly={readOnly} refreshKey={selected.model.fingerprint} onChanged={()=>setReload(v=>v+1)} onDraftChange={setHasIntakeDraft} onAccessRejected={rejectAccess}/>:null}
-            {application&&!readOnly?<CaseWorkPanel selectedNotificationId={selectedNotificationId} key={selected.id} projectId={selected.id} section={nav.section} onChanged={()=>setReload(v=>v+1)} onDraftChange={setHasDraft}/>:null}
+            <CaseStepList steps={steps} selected={openStep} link={(step,content,className,attributes)=>link({...nav,section:step.section},content,`${className} ${ui.focusRing}`,{...attributes,key:step.key})}>
+              <h2 ref={workHeading} tabIndex={-1} className="mb-4 text-lg font-semibold outline-none">{CASE_SECTION_LABELS[nav.section]}</h2><CaseWorkspaceSections selectedNotificationId={selectedNotificationId} record={selected} section={nav.section} application={application} readOnly={readOnly} onChanged={()=>setReload(v=>v+1)}/>
+              {application&&entryTools?<CaseHistoryPanel key={`history-${selected.id}`} projectId={selected.id} section={nav.section} refreshKey={selected.model.fingerprint} page={nav.historyPage??1} onNotice={id=>move({...nav,noticeId:id,section:"transaction"})} onPage={page=>move({...nav,historyPage:page})} onAccessRejected={rejectAccess}/>:null}
+              {application&&entryTools?<CaseIntakePanel key={`intake-${selected.id}`} projectId={selected.id} section={nav.section} readOnly={readOnly} refreshKey={selected.model.fingerprint} onChanged={()=>setReload(v=>v+1)} onDraftChange={setHasIntakeDraft} onAccessRejected={rejectAccess}/>:null}
+              {application&&!readOnly?<CaseWorkPanel selectedNotificationId={selectedNotificationId} key={selected.id} projectId={selected.id} section={nav.section} onChanged={()=>setReload(v=>v+1)} onDraftChange={setHasDraft}/>:null}
+            </CaseStepList>
+            <nav aria-label="案件のほかの画面" className="mb-5 grid grid-cols-3 gap-2">{(["consultation","history","overview"] as const).map(section=>link({...nav,section},CASE_SECTION_LABELS[section],
+              `flex min-h-11 items-center justify-center rounded-xl border text-sm font-semibold ${ui.focusRing} ${nav.section===section?"border-zinc-900 bg-zinc-900 text-white":"border-zinc-200 bg-white text-zinc-700"}`,{key:section,"aria-current":nav.section===section?"page":undefined}))}</nav>
+            <p className="mb-5 text-xs leading-5 text-zinc-500">最終読取 {caseTime(selected.model.checkedAt)}</p>
             {guidance.unknown.length?<details className="mt-5 rounded-2xl border border-zinc-200 bg-white p-4" open={nav.mode==="partial"}><summary className="cursor-pointer text-sm font-semibold text-zinc-700">くわしく（記録の細かい状態）</summary><ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-600">{guidance.unknown.map(item=><li key={item}>{item}</li>)}</ul></details>:null}
           </>:nav.projectId?<div className={ui.card}><h1 ref={heading} tabIndex={-1} className="font-semibold outline-none">{selectedPending?"案件データを読み取り中":selectedFailed&&detail?.error!=="not_found"?"案件データを取得できません":"この表示で案件を確認できません"}</h1><p className="mt-3 text-sm text-zinc-600">{link(back,"一覧へ戻る",ui.btnLink)}</p></div>
             :<div className="grid min-h-[480px] place-content-center rounded-2xl border border-dashed border-zinc-300 bg-white p-8 text-center"><p className="mb-3 text-xs font-semibold uppercase tracking-[.2em] text-pink-800">Case workspace</p><h2 className="text-xl font-semibold">同じ案件の続きを、ここから。</h2><p className="mt-4 text-sm leading-7 text-zinc-600">左の案件を選ぶと、確定した事実と<br/>次に確認する領域をまとめて表示します。</p></div>}
