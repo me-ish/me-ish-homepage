@@ -77,7 +77,7 @@ it("does not keep retrying personal events that are outside the dedicated accept
  expect(events).not.toHaveBeenCalled();expect(screen.queryByRole("button",{name:"予定・通知を再取得"})).toBeNull();
 });
 
-it.each(["today","cases","schedule","notifications"])("shows unavailable quote facts and their transaction review consistently through %s",async entry=>{
+it.each(["cases","schedule","notifications"])("shows unavailable quote facts and their transaction review consistently through %s",async entry=>{
   const original=records[0],snapshotId=original.model.snapshotId;
   const model=deriveCaseReadModel({...original.model.facts,projectId:original.id,snapshotId,asOf:original.model.checkedAt,
     quote:{state:"unavailable",reason:"incomplete"}});
@@ -96,7 +96,7 @@ it.each(["today","cases","schedule","notifications"])("shows unavailable quote f
   expect(window.location.search).toContain("section=transaction");
 });
 
-it.each(["today","cases","schedule","notifications"])("shows unconfirmed payment sharing consistently through %s without changing commands",async entry=>{
+it.each(["cases","schedule","notifications"])("shows unconfirmed payment sharing consistently through %s without changing commands",async entry=>{
   const original=records[6],snapshotId=original.model.snapshotId;
   const model=deriveCaseReadModel({...original.model.facts,projectId:original.id,snapshotId,asOf:original.model.checkedAt,
     notifications:{state:"ready",snapshotId,observedAt:original.model.checkedAt,revision:"no-notice",value:[]}});
@@ -105,8 +105,8 @@ it.each(["today","cases","schedule","notifications"])("shows unconfirmed payment
   render(<CaseWorkspacePreview load={async()=>[record]}/>);
   await screen.findByRole("heading",{name:record.title});
   const guidance=within(screen.getByRole("region",{name:"案件の共通案内"}));
-  expect(guidance.getByText("あなた：支払いリンクのメールが届いたか確認")).toBeTruthy();
-  expect(guidance.queryByText(/お客さん：お支払い待ち/)).toBeNull();
+  expect(screen.getByRole("heading",{name:"あなた：支払いリンクのメールが届いたか確認"})).toBeTruthy();
+  expect(screen.queryByText(/お客さん：お支払い待ち/)).toBeNull();
   expect(screen.queryByRole("button",{name:/送信|再送|発行/})).toBeNull();
   expect(model.actions.find(a=>a.id==="prepare_payment_notice")?.blockedBy).toContain("link_already_exists");
 });
@@ -121,7 +121,7 @@ it("returns from an exact notification to its original filter and selection with
   expect(screen.getByRole("complementary",{name:"選択した通知"}).textContent).toContain(notice.value[0].target.revision);
   fireEvent.click(screen.getByRole("link",{name:"← 通知へ戻る"}));
   expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("光");
-  expect((screen.getByLabelText("対応で絞り込む") as HTMLSelectElement).value).toBe("staff");
+  expect(within(screen.getByRole("group",{name:"対応で絞り込む"})).getByRole("button",{name:/^自分の番/}).getAttribute("aria-pressed")).toBe("true");
   expect(document.activeElement?.id).toBe(`notice-${notice.value[0].id}`);
   expect(screen.queryByRole("button",{name:/送信|再送|発行/})).toBeNull();
 });
@@ -138,17 +138,17 @@ it("keeps separate entry searches, calendar month/date and selection while navig
   fireEvent.click(screen.getByRole("link",{name:"← 2026-11-12の予定へ戻る"}));
   expect((screen.getByLabelText("表示月") as HTMLInputElement).value).toBe("2026-11");
   expect((screen.getByLabelText("予定日") as HTMLInputElement).value).toBe("2026-11-12");
-  fireEvent.click(nav.getByRole("link",{name:"今日"}));expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("森");
+  fireEvent.click(nav.getByRole("link",{name:"案件"}));expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("森");
   fireEvent.click(nav.getByRole("link",{name:"予定"}));expect((screen.getByLabelText("表示月") as HTMLInputElement).value).toBe("2026-11");
 });
 
 it.each(["主な入口","スマホの主な入口"])("keeps current filters and selection when returning through the same %s",async label=>{
   render(<CaseWorkspacePreview load={async()=>records}/>);await screen.findByRole("link",{name:/森の表紙イラスト/});
-  fireEvent.change(screen.getByRole("searchbox"),{target:{value:"森"}});fireEvent.change(screen.getByLabelText("対応で絞り込む"),{target:{value:"staff"}});
+  fireEvent.change(screen.getByRole("searchbox"),{target:{value:"森"}});fireEvent.click(within(screen.getByRole("group",{name:"対応で絞り込む"})).getByRole("button",{name:/^自分の番/}));
   fireEvent.click(screen.getByRole("link",{name:/森の表紙イラスト/}));
-  fireEvent.click(within(screen.getByRole("navigation",{name:label})).getByRole("link",{name:"今日"}));
+  fireEvent.click(within(screen.getByRole("navigation",{name:label})).getByRole("link",{name:"案件"}));
   expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("森");
-  expect((screen.getByLabelText("対応で絞り込む") as HTMLSelectElement).value).toBe("staff");
+  expect(within(screen.getByRole("group",{name:"対応で絞り込む"})).getByRole("button",{name:/^自分の番/}).getAttribute("aria-pressed")).toBe("true");
   expect(document.activeElement?.id).toBe(`case-${records[0].id}`);
 });
 
@@ -175,10 +175,10 @@ it("does not report zero calendar counts before a read or after it fails",async(
 
 it("opens one common case from the list and keeps filters and focus on returning", async () => {
   render(<CaseWorkspacePreview load={async () => records} />);
-  await screen.findByRole("link", { name: /依頼者A.*森の表紙イラスト/ });
+  await screen.findByRole("link", { name: /森の表紙イラスト.*依頼者A/ });
   fireEvent.change(screen.getByRole("searchbox"), { target: { value: "森" } });
-  fireEvent.change(screen.getByLabelText("対応で絞り込む"), { target: { value: "staff" } });
-  fireEvent.click(screen.getByRole("link", { name: /依頼者A.*森の表紙イラスト/ }));
+  fireEvent.click(within(screen.getByRole("group",{name:"対応で絞り込む"})).getByRole("button",{name:/^自分の番/}));
+  fireEvent.click(screen.getByRole("link", { name: /森の表紙イラスト.*依頼者A/ }));
   expect(caseHeading()).toBe(document.activeElement);
   expect(window.location.search).toContain("section=transaction");
   expect(stepList().getByRole("link", { name: /^支払い/ }).getAttribute("aria-current")).toBe("step");
@@ -187,9 +187,9 @@ it("opens one common case from the list and keeps filters and focus on returning
   expect(screen.getByRole("heading", { name: "制作・納品" })).toBe(document.activeElement);
   for (const label of ["相談", "履歴", "その他"]) fireEvent.click(otherNav().getByRole("link", { name: label }));
   expect(caseHeading()).toBeTruthy();
-  fireEvent.click(screen.getByRole("link", { name: "← 今日へ戻る" }));
+  fireEvent.click(screen.getByRole("link", { name: "← 案件へ戻る" }));
   expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("森");
-  expect((screen.getByLabelText("対応で絞り込む") as HTMLSelectElement).value).toBe("staff");
+  expect(within(screen.getByRole("group",{name:"対応で絞り込む"})).getByRole("button",{name:/^自分の番/}).getAttribute("aria-pressed")).toBe("true");
   expect(document.activeElement?.id).toBe(`case-${records[0].id}`);
   const search=screen.getByRole("searchbox");
   search.focus();
@@ -296,4 +296,28 @@ it.each(["主な入口","スマホの主な入口"])("opens the public pages fro
   fireEvent.click(within(screen.getByRole("navigation",{name:label})).getByRole("link",{name:"案件"}));
   expect(window.location.search).not.toContain("utility=pages");
   expect(screen.queryByRole("region",{name:"公開ページ"})).toBeNull();
+});
+
+it("leads the case list with the staff's own turn and folds the client's turn into short rows",async()=>{
+  render(<CaseWorkspacePreview load={async()=>records}/>);
+  const mine=await screen.findByRole("link",{name:/森の表紙イラスト.*依頼者A.*あなた：支払いリンクを送る/});
+  const theirs=within(screen.getByRole("region",{name:"お客さんの番"}));
+  expect(theirs.getByRole("link",{name:/月のプロフィール画像/})).toBeTruthy();
+  expect(theirs.queryByRole("link",{name:/森の表紙イラスト/})).toBeNull();
+  expect(mine.compareDocumentPosition(screen.getByRole("region",{name:"お客さんの番"}))&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  fireEvent.click(within(screen.getByRole("group",{name:"対応で絞り込む"})).getByRole("button",{name:/^お客さんの番/}));
+  expect(window.location.search).toContain("filter=client");
+  expect(screen.queryByRole("region",{name:"お客さんの番"})).toBeNull();
+  expect(screen.queryByRole("link",{name:/森の表紙イラスト/})).toBeNull();
+});
+
+it("swaps the phone bottom bar for the case's own consultation, history and other links",async()=>{
+  render(<CaseWorkspacePreview load={async()=>records} initialSearch={`?case=${records[0].id}`}/>);
+  await screen.findByRole("heading",{name:"森の表紙イラスト"});
+  expect(screen.getByRole("navigation",{name:"スマホの主な入口"}).classList.contains("hidden")).toBe(true);
+  const caseNav=within(screen.getByRole("navigation",{name:"案件のほかの画面"}));
+  fireEvent.click(caseNav.getByRole("link",{name:/相談/}));
+  expect(window.location.search).toContain("section=consultation");
+  fireEvent.click(screen.getByRole("link",{name:"← 案件へ戻る"}));
+  expect(screen.getByRole("navigation",{name:"スマホの主な入口"}).classList.contains("hidden")).toBe(false);
 });

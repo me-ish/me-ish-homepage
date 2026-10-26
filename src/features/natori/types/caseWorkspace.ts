@@ -20,7 +20,7 @@ export type CaseDisplayEvidence = {
 
 export const CASE_SECTIONS = ["overview", "consultation", "transaction", "production", "history"] as const;
 export type CaseSection = typeof CASE_SECTIONS[number];
-export type CaseEntry = "today" | "cases" | "schedule" | "notifications";
+export type CaseEntry = "cases" | "schedule" | "notifications";
 export type CaseWorkspaceRecord = {
   id: string; title: string; clientLabel: string; registeredDueDate: string | null;
   model: CaseReadModel; display: CaseDisplayEvidence;

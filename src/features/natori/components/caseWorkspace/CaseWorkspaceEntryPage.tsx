@@ -7,7 +7,7 @@ import {acceptancePersonalEventsAvailable} from "../../server/caseAcceptanceEven
 import {assertCaseReleaseTarget} from "../../server/caseRelease";
 
 export type CaseEntrySearch = Record<string,string|string[]|undefined>;
-export async function CaseWorkspaceEntryPage({input,entry="today",source="all",preview=false,readOnly=false}:{input:CaseEntrySearch;entry?:CaseEntry;source?:"all"|"inquiries"|"estimate";preview?:boolean;readOnly?:boolean}) {
+export async function CaseWorkspaceEntryPage({input,entry="cases",source="all",preview=false,readOnly=false}:{input:CaseEntrySearch;entry?:CaseEntry;source?:"all"|"inquiries"|"estimate";preview?:boolean;readOnly?:boolean}) {
   const search=new URLSearchParams();
   for(const key of ["entry","case","selected","section","q","filter","date","month","notice","page","noticePage","historyPage","source","sort","utility","intakeFilter"])if(typeof input[key]==="string")search.set(key,input[key]);
   if(!search.has("entry"))search.set("entry",entry);
