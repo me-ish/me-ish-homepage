@@ -26,7 +26,7 @@ beforeEach(()=>{
 afterEach(()=>vi.unstubAllEnvs());
 
 it.each([
-  {entry:"today" as const,source:"all" as const},
+  {source:"all" as const},
   {entry:"cases" as const,source:"all" as const},
   {entry:"cases" as const,source:"inquiries" as const},
   {entry:"cases" as const,source:"estimate" as const},

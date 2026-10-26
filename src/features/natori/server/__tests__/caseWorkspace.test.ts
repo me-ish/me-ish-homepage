@@ -215,7 +215,7 @@ describe("local case URLs", () => {
   });
   it("rejects unknown routes, invalid calendar dates and arbitrary return destinations", () => {
     expect(parseCaseWorkspaceLocation("?entry=admin&case=https://evil.invalid&section=send&date=2026-02-30&return=https://evil.invalid"))
-      .toMatchObject({ entry: "today", projectId: null, section: "overview", date: "2026-10-20" });
+      .toMatchObject({ entry: "cases", projectId: null, section: "overview", date: "2026-10-20" });
     expect(caseWorkspaceHref(parseCaseWorkspaceLocation("?return=https://evil.invalid"))).not.toContain("evil");
   });
 });

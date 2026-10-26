@@ -15,7 +15,8 @@ export function parseCaseWorkspaceLocation(search: string, today = "2026-10-20")
   const date = p.get("date");
   const page=(key:string)=>{const v=p.get(key);return v&&/^[1-9]\d{0,6}$/.test(v)?Number(v):1;};
   return {
-    entry: entry === "cases" || entry === "schedule" || entry === "notifications" ? entry : "today",
+    // Old "today" links open the case list, which now leads with the staff's own turn.
+    entry: entry === "schedule" || entry === "notifications" ? entry : "cases",
     projectId: id("case")??id("project")??id("inquiry"), selectedId: id("selected"),
     section: CASE_SECTIONS.includes(section as CaseSection) ? section as CaseSection : p.get("view")==="conversation"?"consultation":"overview",
     query: (p.get("q") ?? "").slice(0,100),
