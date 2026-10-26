@@ -34,19 +34,19 @@ export function CasePaymentPanel({projectId,onChanged}:{projectId:string;onChang
   finally{lock.current=false;setBusy(false);}
  }
  if(!view&&!error)return null;
- return <section aria-label="支払案内の操作" className="space-y-4 rounded-2xl border border-pink-200 bg-white p-4 sm:p-5">
-  <h3 className="font-semibold">支払案内をこの案件で確認</h3>
+ return <section aria-label="支払案内の操作" className="space-y-3">
+  <h3 className="sr-only">支払案内をこの案件で確認</h3>
   {error?<p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm">{error}</p>:null}
-  {view?<><p role="status">{view.reason}</p><p className="text-sm text-zinc-600">見積 第{view.quoteVersion??"?"}版 · {view.amount?.toLocaleString("ja-JP")}円 · 送信サービス受付 {view.sentCount}件</p>
+  {view?<><p role="status" className="text-sm">{view.reason}</p><p className="text-xs text-zinc-500">見積 第{view.quoteVersion??"?"}版 · {view.amount?.toLocaleString("ja-JP")}円 · 送信サービス受付 {view.sentCount}件</p>
    {view.jobs.length?<ul className="space-y-1 text-sm">{view.jobs.map(j=><li key={j.id}>試行{j.attempt}：{j.status==="sent"?"送信サービス受付済み（到達・既読とは別の記録）":j.status==="failed"?"確定失敗":j.status==="unknown"?"受付結果不明":"送信ジョブ受付済み"}{j.sentAt?` · ${caseTime(j.sentAt)}`:""}</li>)}</ul>:null}
   </>:null}
-  <button type="button" className="rounded-lg border px-3 py-2 text-sm" disabled={busy} onClick={()=>{void refresh().then(onChanged).catch(fail);}}>送信せず結果を照会</button>
   {receipt&&!preview?<div className="space-y-2 rounded-xl bg-amber-50 p-3"><p className="text-sm">確認済みの操作を保持しています。まず結果を照会してください。リンク準備が未完了の場合だけ、同じ操作を続けられます。</p>
     {view?.operationState==="pending"&&view.phase==="processing"?<button type="button" className={button} disabled={busy} onClick={()=>void act({action:"confirm",projectId,...receipt},receipt)}>保存済みの同じ準備を続ける</button>:!view?.operationId?<button type="button" className="rounded-lg border px-3 py-2 text-sm" disabled={busy} onClick={()=>{remember(null);setError("未開始の確認を閉じました。現在の記録から確認し直してください。");}}>未開始の確認を閉じる</button>:null}
    </div>:null}
   {!receipt&&!preview&&view?.canPrepare&&!error?<div className="space-y-3">
    {view.deadlinePolicy==="sent_plus_7_days"?<p className="text-sm">送信成功から7日を自動設定します。再送に成功すると、その日から7日に延長します。{view.deadline?` 現在の期限：${caseTime(view.deadline)}`:""}</p>:!view.deadline?<label className="block text-sm">支払期限（端末の現地時刻）<input aria-label="支払期限" type="datetime-local" value={deadline} onChange={e=>setDeadline(e.target.value)} className="mt-1 block max-w-full rounded-lg border p-2"/></label>:<p className="text-sm">現行の支払期限：{caseTime(view.deadline)}（再送で延長しません）</p>}
-   <button type="button" className={button} disabled={busy||(view.deadlinePolicy!=="sent_plus_7_days"&&!view.deadline&&!deadline)} onClick={()=>{const d=view.deadlinePolicy!=="sent_plus_7_days"&&deadline?new Date(deadline):null;void act({action:"prepare",projectId,...(d&&Number.isFinite(d.getTime())?{deadline:d.toISOString()}:{})});}}>{view.sentCount?"再送の内容を確認":"初回案内の内容を確認"}</button>
+   <button type="button" className="w-full rounded-xl bg-pink-700 px-4 py-4 text-base font-semibold text-white disabled:opacity-50" disabled={busy||(view.deadlinePolicy!=="sent_plus_7_days"&&!view.deadline&&!deadline)} onClick={()=>{const d=view.deadlinePolicy!=="sent_plus_7_days"&&deadline?new Date(deadline):null;void act({action:"prepare",projectId,...(d&&Number.isFinite(d.getTime())?{deadline:d.toISOString()}:{})});}}>{view.sentCount?"再送の内容を確認":"初回案内の内容を確認"}</button>
+   <p className="text-xs text-zinc-500">押すと送信前の確認が出ます。まだ送られません。</p>
   </div>:null}
   {!receipt&&!preview&&view?.canRetry&&!error?<button type="button" className={button} disabled={busy} onClick={()=>void act({action:"prepare",projectId,retry:true})}>確定失敗した同じ内容の再試行を確認</button>:null}
   {!receipt&&!preview&&view?.canResume&&!error?<button type="button" className={button} disabled={busy} onClick={()=>void act({action:"prepare",projectId,resume:true})}>未送信の同じ案内を再確認して再開</button>:null}
@@ -59,5 +59,6 @@ export function CasePaymentPanel({projectId,onChanged}:{projectId:string;onChang
    <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>宛先・金額・見積・期限・内容を確認しました</label>
    <div className="flex flex-wrap gap-3"><button type="button" className={button} disabled={busy||!confirmed||Boolean(error)} onClick={()=>{const r={operationId:preview.operationId,token:preview.token};void act({action:"confirm",projectId,...r},r);}}>確認した案内を実行</button><button type="button" disabled={busy} className="rounded-lg border px-3 py-2 text-sm" onClick={()=>{setPreview(null);setConfirmed(false);}}>確認を閉じる</button></div>
   </div>:null}
+  <button type="button" className="rounded-lg px-1 py-2 text-sm font-semibold text-pink-800 underline-offset-4 hover:underline disabled:opacity-50" disabled={busy} onClick={()=>{void refresh().then(onChanged).catch(fail);}}>送信せず結果を照会</button>
  </section>;
 }
