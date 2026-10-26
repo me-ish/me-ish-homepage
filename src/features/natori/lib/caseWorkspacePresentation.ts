@@ -4,7 +4,10 @@ import type { CaseGuidance, CaseSection, CaseWorkspaceRecord } from "../types/ca
 export const CASE_SECTION_LABELS: Record<CaseSection, string> = {
   overview: "概要", consultation: "相談", transaction: "取引", production: "制作・納品", history: "履歴",
 };
-export const CASE_WHO_LABELS = { staff: "担当者", client: "依頼者", system: "システム" } as const;
+export const CASE_WHO_LABELS = { staff: "あなた", client: "お客さん", system: "自動処理" } as const;
+export const CASE_TASK_STAGE_LABELS = { material: "資料", rough: "ラフ", lineart: "線画", coloring: "着彩", finish: "仕上げ", delivery: "納品" } as const;
+/** One line for "who does what next", e.g. 「あなた：支払いリンクを送る」. */
+export const caseWaitLine = (wait: { who: keyof typeof CASE_WHO_LABELS; text: string }) => `${CASE_WHO_LABELS[wait.who]}：${wait.text}`;
 export function caseKnown<T>(value: CaseObservation<T>): T | undefined {
   return value.state === "ready" ? value.value : value.state === "unavailable" ? value.lastKnown?.value : undefined;
 }
@@ -17,10 +20,10 @@ export function caseMoney(value: { amount: number; currency: string } | null | u
   return value ? new Intl.NumberFormat("ja-JP", { style: "currency", currency: value.currency,
     maximumFractionDigits: 0 }).format(value.amount) : "金額未確認";
 }
-export function observationLabel(value: CaseObservation<unknown>, absent = "記録なし（取得済み）"): string {
-  return value.state === "absent" ? absent : value.state === "not_requested" ? "まだ取得していません"
-    : value.state === "unavailable" ? value.reason === "read_failed" ? "最新情報を取得できません"
-      : value.reason === "incomplete" ? "一部の記録を確認できません" : "この形式の対応は未確認です" : "取得済み";
+export function observationLabel(value: CaseObservation<unknown>, absent = "まだありません"): string {
+  return value.state === "absent" ? absent : value.state === "not_requested" ? "まだ読み込んでいません"
+    : value.state === "unavailable" ? value.reason === "read_failed" ? "読み込めませんでした"
+      : value.reason === "incomplete" ? "一部を読み込めませんでした" : "この形式は表示できません" : "読み込み済み";
 }
 export const caseTargetSection = (kind: string): CaseSection =>
   kind === "quote" || kind === "payment_link" ? "transaction"
@@ -40,22 +43,29 @@ function attentionSection(item: CaseAttention, record: CaseWorkspaceRecord): Cas
       : item.domain === "consultation" ? "consultation" : "overview";
 }
 
+// Plain "next action" wording. Staff items are verbs; client/system items say what is awaited.
 const attentionText: Readonly<Record<string, string>> = {
-  quote_expired: "見積の有効期限と条件を確認", quote_acceptance_pending: "見積の承諾状況を確認",
-  quote_draft: "見積の下書きと条件を確認", quote_needed: "見積の条件を確認",
-  payment_notice_needed: "支払案内の状況を確認", payment_pending: "支払状況の確認待ち",
-  payment_notice_unconfirmed: "リンク確認済み・案内送信は未確認",
-  paid_link_stop_unconfirmed: "入金後の支払リンク停止状況を確認",
-  current_notice_unconfirmed: "現在の条件のメール案内を確認",
-  notification_failed: "メール案内の失敗記録を確認",
-  notification_projection_review: "メール案内の保存結果を確認",
-  notification_unknown: "メール案内の受付結果を確認",
-  notification_pending: "メール案内の処理結果を確認", notification_sending: "メール案内の処理結果を確認",
-  notification_state_error: "メール案内の保存結果を確認",
-  rough_ok_unacknowledged: "ラフOKの内容を確認", rough_response_pending: "ラフの確認待ち",rough_revision_pending:"ラフへの修正対応待ち（担当記録）",delivery_notice_unconfirmed:"納品発行済み・案内送信は未確認",
-  consultation_response_required: "相談の対応記録を確認",
-  production_attention: "制作・納品の現在の記録を確認",
-  receipt_pending: "納品の受取確認待ち", delivery_access_expired: "納品の保存期限を確認",
+  quote_expired: "見積の期限が切れました。出し直すか決める", quote_acceptance_pending: "見積を確認中",
+  quote_draft: "見積の下書きを仕上げて送る", quote_needed: "見積を作る",
+  payment_notice_needed: "支払いリンクを送る", payment_pending: "お支払い待ち",
+  payment_notice_unconfirmed: "支払いリンクのメールが届いたか確認",
+  paid_link_stop_unconfirmed: "入金済みの支払いリンクが止まったか確認",
+  current_notice_unconfirmed: "最新の条件のメールが届いたか確認",
+  notification_failed: "送れなかったメールを確認",
+  notification_projection_review: "メールの送信結果を確認",
+  notification_unknown: "メールが届いたか確認",
+  notification_pending: "メールの送信結果待ち", notification_sending: "メールの送信結果待ち",
+  notification_state_error: "メールの送信結果を確認",
+  rough_ok_unacknowledged: "ラフOKを確認して制作を進める", rough_response_pending: "ラフを確認中", rough_revision_pending: "ラフを直す", delivery_notice_unconfirmed: "納品メールが届いたか確認",
+  consultation_response_required: "相談に返事する",
+  production_attention: "制作を進める",
+  receipt_pending: "納品の受け取り待ち", delivery_access_expired: "納品ページの期限切れ。延長するか決める",
+};
+// Button wording for the main next step. The button only opens the section;
+// sending still goes through that section's own confirmation.
+const attentionButton: Readonly<Record<string, string>> = {
+  payment_notice_needed: "支払いリンクを送る", quote_draft: "見積を仕上げる", quote_needed: "見積を作る",
+  quote_expired: "見積を見直す", consultation_response_required: "相談に返事する", rough_revision_pending: "ラフを直す",
 };
 
 /** Advisory navigation only. Never use this output to enable/disable commands. */
@@ -65,10 +75,12 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
   const link = caseKnown(m.facts.link), delivery = caseKnown(m.facts.delivery), receipt = caseKnown(d.receipt);
   const conversation = caseKnown(d.conversation);
   const waits: CaseGuidance["waits"][number][] = [];
+  const buttons = new Map<string, string>();
   const unknown: string[] = [];
-  const add = (key: string, who: "staff" | "client" | "system", text: string, section: CaseSection) => {
+  const add = (key: string, who: "staff" | "client" | "system", text: string, section: CaseSection, button?: string) => {
     if (!waits.some(wait => wait.key === key || (wait.who === who && wait.text === text && wait.section === section))) {
       waits.push({ key, who, text, section });
+      if (button && who === "staff") buttons.set(key, button);
     }
   };
   // Keep the common model's priority, owner and business checks. Missing legacy
@@ -81,38 +93,40 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
       "quote_acceptance_pending", "payment_pending", "payment_notice_needed", "payment_notice_unconfirmed","delivery_notice_unconfirmed"].includes(item.reason)) continue;
     if (payment && ["quote_acceptance_pending", "payment_pending", "payment_notice_needed", "payment_notice_unconfirmed"].includes(item.reason)) continue;
     const section = attentionSection(item, record);
-    const text = attentionText[item.reason] ?? (item.domain === "operations" ? "同じ処理の結果を確認"
-      : item.domain === "financialReview" ? "入金・返金の照合記録を確認"
-        : item.domain === "quote" ? "見積の条件と承諾記録の対応を確認"
-          : item.domain === "link" ? "支払リンクの状態を確認"
-            : `${CASE_SECTION_LABELS[section]}の記録の対応を確認`);
-    add(item.key, item.waitingOn, text, section);
+    const text = attentionText[item.reason] ?? (item.domain === "operations" ? "前回の処理の結果を確認"
+      : item.domain === "financialReview" ? "入金・返金の照合を確認"
+        : item.domain === "quote" ? "見積と承諾の内容が合っているか確認"
+          : item.domain === "link" ? "支払いリンクの状態を確認"
+            : `${CASE_SECTION_LABELS[section]}の内容を確認`);
+    add(item.key, item.waitingOn, text, section, attentionButton[item.reason]);
   }
   const inactive = !!project?.archivedAt || project?.rawStatus === "closed" || project?.rawStatus === "completed";
   const quoteUnconfirmed = !quote && (m.facts.quote.state === "unavailable" || m.facts.quote.state === "not_requested");
   // Missing quote evidence is not an earlier business stage. Preserve confirmed
   // downstream facts and the model's higher-priority operation checks.
   if (quoteUnconfirmed && !inactive && !receipt && !payment && !delivery) {
-    add("quote-unconfirmed", "staff", "見積の状態は未確認です。取引の記録を確認してください", "transaction");
+    add("quote-unconfirmed", "staff", "見積の状態を読み込めませんでした。取引を開いて確認", "transaction");
   }
   if (!inactive && !receipt) {
-    if (conversation?.latestSender === "client") add("conversation", "staff", "最後の依頼者の発言を確認", "consultation");
+    if (conversation?.latestSender === "client") add("conversation", "staff", "お客さんの最新メッセージを確認", "consultation", "相談を開く");
     if (!delivery && payment && !waits.some(wait => wait.section === "production")) {
-      add("production", "staff", "制作・納品の現在の記録を確認", "production");
+      const next = d.tasks.state === "ready" ? d.tasks.value.find(task => !task.done) : undefined;
+      add("production", "staff", next ? `制作を進める（次は${CASE_TASK_STAGE_LABELS[next.stage]}）` : "制作を進める", "production");
     } else if (!payment && m.agreement === "accepted" && !link) {
-      add("payment", "staff", "支払案内の状況を確認", "transaction");
+      add("payment", "staff", "支払いリンクを送る", "transaction", "支払いリンクを送る");
     } else if (!payment && quote && (m.agreement === "needs_review" || quote.state === "draft")) {
-      add("quote-review", "staff", "見積の条件と承諾記録の対応を確認", "transaction");
+      add("quote-review", "staff", quote.state === "draft" ? "見積の下書きを仕上げて送る" : "見積と承諾の内容が合っているか確認", "transaction",
+        quote.state === "draft" ? "見積を仕上げる" : undefined);
     }
   }
-  if (project?.origin === "unknown") unknown.push("受付元の分類は未確認です。保存済みの状態は表示しています。");
-  if (d.tasks.state === "ready" && d.tasks.value.length) unknown.push("作業の実着手・完了時刻は記録されていません。");
-  if (conversation) unknown.push("最新発言者を表示しています。既読や返信義務を表す記録ではありません。");
-  if (receipt?.correspondence === "unconfirmed") unknown.push("受取の記録はありますが、納品データとの対応は未確認です。");
-  if (payment?.correspondence === "unconfirmed") unknown.push("入金の記録はありますが、台帳との対応は未確認です。");
-  const domains = [["入金・返金の照合", m.facts.financialReview], ["メール案内", m.facts.notifications],
-    ["内部見積", m.facts.quote], ["支払リンク", m.facts.link], ["納品", m.facts.delivery],
-    ["制作タスク", d.tasks], ["相談の最新発言", d.conversation]] as const;
+  if (project?.origin === "unknown") unknown.push("どこから受け付けた案件かは分かりません（保存済みの状態は表示しています）。");
+  if (d.tasks.state === "ready" && d.tasks.value.length) unknown.push("制作の各工程を実際に始めた・終えた時刻は記録していません。");
+  if (conversation) unknown.push("相談は最後に書いた人だけを表示しています。既読や返事が必要かどうかは分かりません。");
+  if (receipt?.correspondence === "unconfirmed") unknown.push("要確認：受け取りの記録はありますが、どの納品に対するものかを確認できていません。");
+  if (payment?.correspondence === "unconfirmed") unknown.push("要確認：入金の記録はありますが、入金台帳と照らし合わせられていません。");
+  const domains = [["入金・返金の照合", m.facts.financialReview], ["メール", m.facts.notifications],
+    ["見積", m.facts.quote], ["支払いリンク", m.facts.link], ["納品", m.facts.delivery],
+    ["制作の工程", d.tasks], ["相談", d.conversation]] as const;
   for (const [label, observation] of domains) {
     if (observation.state === "unavailable" || observation.state === "not_requested") {
       unknown.push(`${label}：${observationLabel(observation)}`);
@@ -121,23 +135,24 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
   if (m.facts.payment.state === "unavailable" || m.facts.payment.state === "not_requested") {
     unknown.push(`入金：${observationLabel(m.facts.payment)}`);
   }
-  let status = receipt ? "受取の記録あり" : project?.archivedAt ? "保管中の案件"
-    : project?.rawStatus === "closed" ? "終了した案件" : project?.rawStatus === "completed" ? "完了の記録あり"
-      : delivery ? "納品発行済み" : payment ? "入金の記録あり"
-        : m.stage === "payment_notified" ? "支払案内送信済み・入金待ち" : m.agreement === "accepted" ? "見積承諾済み" : quoteUnconfirmed ? "見積の状態は未確認"
-          : quote ? "見積の記録あり" : "受付・条件の確認";
-  if (!project && !receipt && !payment && !delivery && !quote) status = "現在の情報は未確認";
-  const primary = waits[0] ? { label: `${CASE_SECTION_LABELS[waits[0].section]}の記録へ`, section: waits[0].section }
-    : receipt || inactive ? { label: "案件の履歴へ", section: "history" as const }
-      : { label: "相談の記録へ", section: "consultation" as const };
+  // Short stage names. They describe recorded facts only; they never unlock commands.
+  let status = receipt ? "受取済み" : project?.archivedAt ? "保管中"
+    : project?.rawStatus === "closed" ? "終了" : project?.rawStatus === "completed" ? "完了"
+      : delivery ? "納品済み・受取待ち" : payment ? "制作中"
+        : m.stage === "payment_notified" ? "入金待ち" : m.agreement === "accepted" ? "見積OK・支払い前" : quoteUnconfirmed ? "見積の状態が分かりません"
+          : quote?.state === "draft" ? "見積の準備中" : m.agreement === "needs_review" ? "見積の確認が必要" : quote ? "見積の返事待ち" : "相談中";
+  if (!project && !receipt && !payment && !delivery && !quote) status = "状態を読み込めていません";
+  const primary = waits[0] ? { label: buttons.get(waits[0].key) ?? `${CASE_SECTION_LABELS[waits[0].section]}を開く`, section: waits[0].section }
+    : receipt || inactive ? { label: "履歴を開く", section: "history" as const }
+      : { label: "相談を開く", section: "consultation" as const };
   return { status, primary, waits, unknown, facts: [
-    { label: "内部見積", value: quote ? `第${quote.version}版・${m.agreement === "accepted" ? "承諾済み" : m.agreement === "needs_review" ? "内容確認が必要" : "承諾記録なし"}`
-      : observationLabel(m.facts.quote, "内部見積の記録なし") },
-    { label: m.agreement === "needs_review" && quote?.acceptance ? "承諾記録の金額（対応未確認）" : "合意した金額",
-      value: quote?.acceptance && (m.agreement === "accepted" || m.agreement === "needs_review") ? caseMoney(quote.acceptance.money) : "未確認" },
-    { label: "入金", value: payment ? `${caseMoney(payment.money)}・記録あり` : observationLabel(m.facts.payment) },
-    { label: "受取", value: receipt ? `${caseTime(receipt.acceptedAt)}・記録あり` : observationLabel(d.receipt) },
-    { label: "支払リンク", value: link ? link.state === "active" ? "有効として保存された記録あり" : "状態の記録あり"
-      : observationLabel(m.facts.link, "内部リンクの記録なし") },
+    { label: "見積", value: quote ? `${quote.version > 1 ? `${quote.version}回目の見積` : "見積"}${m.agreement === "accepted" ? "でOK" : m.agreement === "needs_review" ? "（内容の確認が必要）" : quote.state === "draft" ? "（下書き）" : "（返事待ち）"}`
+      : observationLabel(m.facts.quote, "まだ") },
+    { label: m.agreement === "needs_review" && quote?.acceptance ? "OKをもらった金額（要確認）" : "決まった金額",
+      value: quote?.acceptance && (m.agreement === "accepted" || m.agreement === "needs_review") ? caseMoney(quote.acceptance.money) : quoteUnconfirmed ? "分かりません" : "まだ" },
+    { label: "入金", value: payment ? `${caseMoney(payment.money)}・入金済み` : observationLabel(m.facts.payment, "まだ") },
+    { label: "受取", value: receipt ? `${caseTime(receipt.acceptedAt)}・受取済み` : observationLabel(d.receipt, "まだ") },
+    { label: "支払リンク", value: link ? link.state === "active" ? "使える状態" : "作成済み"
+      : observationLabel(m.facts.link, "まだ") },
   ] };
 }

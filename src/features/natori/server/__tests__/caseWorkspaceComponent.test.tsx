@@ -85,13 +85,13 @@ it.each(["today","cases","schedule","notifications"])("shows unavailable quote f
   render(<CaseWorkspacePreview readOnly load={async()=>[record]}/>);
   await screen.findByRole("heading",{name:record.title});
   const guidance=within(screen.getByRole("region",{name:"案件の共通案内"}));
-  expect(guidance.getByText("現在確認できる状態：見積の状態は未確認")).toBeTruthy();
-  expect(guidance.getByText("担当者：見積の状態は未確認です。取引の記録を確認してください")).toBeTruthy();
-  expect(guidance.queryByText("受付・条件の確認")).toBeNull();
-  expect(guidance.queryByText("見積承諾済み")).toBeNull();
-  expect(guidance.queryByText(/依頼者：.*支払/)).toBeNull();
+  expect(guidance.getByText("いまの段階：見積の状態が分かりません")).toBeTruthy();
+  expect(guidance.getByText("あなた：見積の状態を読み込めませんでした。取引を開いて確認")).toBeTruthy();
+  expect(guidance.queryByText("相談中")).toBeNull();
+  expect(guidance.queryByText("見積OK・支払い前")).toBeNull();
+  expect(guidance.queryByText(/お客さん：.*支払/)).toBeNull();
   expect(screen.queryByRole("button",{name:/送信|再送|発行/})).toBeNull();
-  fireEvent.click(guidance.getByRole("link",{name:"取引の記録へ"}));
+  fireEvent.click(guidance.getByRole("link",{name:"取引を開く"}));
   expect(window.location.search).toContain("section=transaction");
 });
 
@@ -104,8 +104,8 @@ it.each(["today","cases","schedule","notifications"])("shows unconfirmed payment
   render(<CaseWorkspacePreview load={async()=>[record]}/>);
   await screen.findByRole("heading",{name:record.title});
   const guidance=within(screen.getByRole("region",{name:"案件の共通案内"}));
-  expect(guidance.getByText("担当者：リンク確認済み・案内送信は未確認")).toBeTruthy();
-  expect(guidance.queryByText(/依頼者：支払状況の確認待ち/)).toBeNull();
+  expect(guidance.getByText("あなた：支払いリンクのメールが届いたか確認")).toBeTruthy();
+  expect(guidance.queryByText(/お客さん：お支払い待ち/)).toBeNull();
   expect(screen.queryByRole("button",{name:/送信|再送|発行/})).toBeNull();
   expect(model.actions.find(a=>a.id==="prepare_payment_notice")?.blockedBy).toContain("link_already_exists");
 });
@@ -157,7 +157,7 @@ it("keeps evidence readable while the pause view omits every command panel",asyn
   expect(screen.getByText("操作を停止しています。確定した記録と未確認の処理を読み取れます。")).toBeTruthy();
   expect(screen.getByText("照会のみの画面です。送信・発行・外部照合・解決の保存は停止しています。")).toBeTruthy();
   expect(screen.queryByRole("button",{name:/送信|発行|照合|保存/})).toBeNull();
-  expect(screen.getByRole("region",{name:"案件の共通案内"}).textContent).toContain("見積承諾済み");
+  expect(screen.getByRole("region",{name:"案件の共通案内"}).textContent).toContain("見積OK・支払い前");
 });
 
 it("does not report zero calendar counts before a read or after it fails",async()=>{
@@ -179,7 +179,7 @@ it("opens one common case from the list and keeps filters and focus on returning
   fireEvent.change(screen.getByLabelText("対応で絞り込む"), { target: { value: "staff" } });
   fireEvent.click(screen.getByRole("link", { name: /依頼者A.*森の表紙イラスト/ }));
   expect(caseHeading()).toBe(document.activeElement);
-  fireEvent.click(screen.getByRole("link", { name: "取引の記録へ" }));
+  fireEvent.click(screen.getByRole("link", { name: "支払いリンクを送る" }));
   expect(window.location.search).toContain("section=transaction");
   for (const label of ["相談", "制作・納品", "履歴", "概要"]) fireEvent.click(sectionNav().getByRole("link", { name: label }));
   expect(caseHeading()).toBeTruthy();
@@ -215,7 +215,7 @@ it("retains known facts after refresh failure and recovers through the actual lo
   fireEvent.change(screen.getByLabelText("架空データの取得状態"), { target: { value: "failed" } });
   expect((await screen.findByRole("alert")).textContent).toContain("前回確認した記録");
   expect(caseHeading()).toBeTruthy();
-  expect(screen.getByText("前回確認した状態：見積承諾済み")).toBeTruthy();
+  expect(screen.getByText("前回確認した段階：見積OK・支払い前")).toBeTruthy();
   expect(screen.getByText(`前回確認：${records.length}案件`,{exact:true})).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "表示を再取得" }));
   await waitFor(() => expect(load).toHaveBeenCalledTimes(3));
@@ -249,9 +249,9 @@ it("presents unmatched acceptance consistently in overview and history", () => {
     quote: { ...quote, value: { ...quote.value, acceptance: { ...quote.value.acceptance, version: 99 } } },
   }) };
   const view = render(<CaseWorkspaceSections record={mismatched} section="overview" />);
-  expect(screen.getByText(/承諾の記録あり.*見積との対応未確認/)).toBeTruthy();
+  expect(screen.getByText(/でOK（要確認：見積との対応が未確認）/)).toBeTruthy();
   view.rerender(<CaseWorkspaceSections record={mismatched} section="history" />);
-  expect(screen.getByText("承諾の記録（見積との対応未確認）")).toBeTruthy();
+  expect(screen.getByText("OKの記録（要確認：見積との対応が未確認）")).toBeTruthy();
   expect(document.querySelector("form")).toBeNull();
   expect(screen.queryByRole("button")).toBeNull();
 });
