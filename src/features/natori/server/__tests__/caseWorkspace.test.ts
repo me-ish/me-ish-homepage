@@ -187,6 +187,12 @@ describe("local case URLs", () => {
     expect(guidance.status).toBe("見積OK・支払い前");expect(guidance.waits[0]).toMatchObject({who:"staff",section:"transaction"});
     expect(guidance.waits.some(w=>w.who==="client"&&w.text.includes("支払"))).toBe(false);
   });
+  it("does not call an accepted quote unpaid when payment facts could not be read",async()=>{
+    const record=(await buildPreviewRecords("normal",previewEnvelopes()))[0];
+    expect(deriveCaseGuidance(record).status).toBe("見積OK・支払い前");
+    const model={...record.model,facts:{...record.model.facts,payment:{state:"unavailable" as const,reason:"read_failed" as const}}};
+    expect(deriveCaseGuidance({...record,model}).status).toBe("見積OK・入金は確認できません");
+  });
   it("round-trips month and exact notification selection without accepting a return URL",()=>{
     const nav=parseCaseWorkspaceLocation("?entry=notifications&notice=legacy-mail%3A123&month=2026-12&date=2026-11-12&selected=old-case&q=森&return=https://evil.invalid");
     expect(parseCaseWorkspaceLocation(caseWorkspaceHref(nav).slice(1))).toEqual(nav);

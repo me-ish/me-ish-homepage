@@ -133,11 +133,12 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
   if (m.facts.payment.state === "unavailable" || m.facts.payment.state === "not_requested") {
     unknown.push(`入金：${observationLabel(m.facts.payment)}`);
   }
+  const paymentUnread = m.facts.payment.state === "unavailable" || m.facts.payment.state === "not_requested";
   // Short stage names. They describe recorded facts only; they never unlock commands.
   let status = receipt ? "受取済み" : project?.archivedAt ? "保管中"
     : project?.rawStatus === "closed" ? "終了" : project?.rawStatus === "completed" ? "完了"
       : delivery ? "納品済み・受取待ち" : payment ? "制作中"
-        : m.stage === "payment_notified" ? "入金待ち" : m.agreement === "accepted" ? "見積OK・支払い前" : quoteUnconfirmed ? "見積の状態が分かりません"
+        : m.stage === "payment_notified" ? "入金待ち" : m.agreement === "accepted" ? paymentUnread ? "見積OK・入金は確認できません" : "見積OK・支払い前" : quoteUnconfirmed ? "見積の状態が分かりません"
           : quote?.state === "draft" ? "見積の準備中" : m.agreement === "needs_review" ? "見積の確認が必要" : quote ? "見積の返事待ち" : "相談中";
   if (!project && !receipt && !payment && !delivery && !quote) status = "状態を読み込めていません";
   const primary = waits[0] ? { label: buttons.get(waits[0].key) ?? `${CASE_SECTION_LABELS[waits[0].section]}を開く`, section: waits[0].section }
