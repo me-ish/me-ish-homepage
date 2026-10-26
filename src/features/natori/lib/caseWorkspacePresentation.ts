@@ -61,11 +61,10 @@ const attentionText: Readonly<Record<string, string>> = {
   production_attention: "制作を進める",
   receipt_pending: "納品の受け取り待ち", delivery_access_expired: "納品ページの期限切れ。延長するか決める",
 };
-// Button wording for the main next step. The button only opens the section;
-// sending still goes through that section's own confirmation.
+// Button wording for the main next step, only where the target section can do it.
+// The button only opens the section; sending still goes through its own confirmation.
 const attentionButton: Readonly<Record<string, string>> = {
-  payment_notice_needed: "支払いリンクを送る", quote_draft: "見積を仕上げる", quote_needed: "見積を作る",
-  quote_expired: "見積を見直す", consultation_response_required: "相談に返事する", rough_revision_pending: "ラフを直す",
+  payment_notice_needed: "支払いリンクを送る", consultation_response_required: "相談に返事する", rough_revision_pending: "ラフを直す",
 };
 
 /** Advisory navigation only. Never use this output to enable/disable commands. */
@@ -115,8 +114,7 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
     } else if (!payment && m.agreement === "accepted" && !link) {
       add("payment", "staff", "支払いリンクを送る", "transaction", "支払いリンクを送る");
     } else if (!payment && quote && (m.agreement === "needs_review" || quote.state === "draft")) {
-      add("quote-review", "staff", quote.state === "draft" ? "見積の下書きを仕上げて送る" : "見積と承諾の内容が合っているか確認", "transaction",
-        quote.state === "draft" ? "見積を仕上げる" : undefined);
+      add("quote-review", "staff", quote.state === "draft" ? "見積の下書きを仕上げて送る" : "見積と承諾の内容が合っているか確認", "transaction");
     }
   }
   if (project?.origin === "unknown") unknown.push("どこから受け付けた案件かは分かりません（保存済みの状態は表示しています）。");

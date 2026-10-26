@@ -38,7 +38,7 @@ export function CaseWorkspaceSections({ record, section,application=false,readOn
     <Card title="ラフの確認">{roughs?.length ? <ul className="space-y-3">{roughs.map((rough,index) => <li key={rough.id}>ラフ{index+1}：{rough.clientOkAt ? `お客さんOK · ${rough.acknowledgedAt ? "確認済み" : "まだ確認していません"}` : "お客さんの返事待ち"}</li>)}</ul>
       : <p>{observationLabel(m.facts.roughs, "ラフはまだ出していません")}</p>}</Card>
     <Card title="納品と受取">{delivery ? <><p className="font-semibold">納品済み</p><p className="mt-2 text-sm">納品ページの期限：{delivery.expiresAt ? caseTime(delivery.expiresAt) : "未確認"}</p>
-      <p className="mt-2 text-sm text-zinc-600">{delivery.manifest === "verified" ? "納品ファイルの確認済み" : "要確認：納品ファイルの確認情報が足りません"}</p></>
+      <p className="mt-2 text-sm text-zinc-600">{delivery.manifest === "verified" ? "納品ファイルの記録は確認済み（今もダウンロードできるかは未確認）" : "要確認：納品ファイルの確認情報が足りません"}</p></>
       : <p>{observationLabel(m.facts.delivery, "まだ納品していません")}</p>}
       <p className="mt-4 border-t border-zinc-100 pt-4">{receipt ? `受け取り：${caseTime(receipt.acceptedAt)}${receipt.correspondence === "unconfirmed" ? "（要確認：どの納品に対するものか未確認）" : ""}` : observationLabel(d.receipt,"お客さんはまだ受け取っていません")}</p></Card>
     {!application?<p className="text-sm text-zinc-600">タスク編集・ファイル取得・納品発行・期限延長は未接続です。</p>:null}
@@ -56,7 +56,7 @@ export function CaseWorkspaceSections({ record, section,application=false,readOn
   </div>;
   return <div className="grid gap-4 sm:grid-cols-2">
     <Card title="決まったこと"><p className="font-semibold">{quote?.acceptance ? m.agreement === "accepted" ? `${caseMoney(quote.acceptance.money)}でOK（${quote.version}回目の見積）` : `${caseMoney(quote.acceptance.money)}でOK（要確認：見積との対応が未確認）` : "まだ見積のOKはもらっていません"}</p>
-      <p className="mt-3 text-sm text-zinc-600">納期：{record.registeredDueDate??"未登録"}</p></Card>
+      <p className="mt-3 text-sm text-zinc-600">納期の目安：{record.registeredDueDate??"未登録"}{record.registeredDueDate?"（登録した日付です。お客さんと約束した日とは限りません）":""}</p></Card>
     <Card title="制作"><p className="font-semibold">{tasks ? `${tasks.length}工程中${tasks.filter(task=>task.done).length}工程 完了` : observationLabel(d.tasks, "工程はまだ登録されていません")}</p></Card>
         {readOnly||!application?<Card title="この画面でできること"><p className="text-sm leading-7">{readOnly?"いまは見るだけです。送信や状態を変える操作は止めています。":"返信、保存、見積・支払い案内・納品の発行は未接続です。"}</p></Card>:null}
   </div>;
