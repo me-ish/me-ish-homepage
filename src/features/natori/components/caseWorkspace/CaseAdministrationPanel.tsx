@@ -493,7 +493,7 @@ function Lifecycle({
             onClick={() =>
               prepare({ command: "close", reason: reason.trim() }, [
                 `理由：${reason}`,
-                "この相談を見送ります。",
+                "この相談を見送ります。送ってある支払いリンクは、これだけでは止まりません。",
               ])
             }
           >
