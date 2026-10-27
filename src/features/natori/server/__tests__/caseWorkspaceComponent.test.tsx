@@ -64,9 +64,9 @@ it("retries a failed auxiliary index without treating it as an empty notificatio
  const notices=vi.spyOn(entryData,"loadCaseNoticeIndex").mockRejectedValueOnce(new CaseWorkspaceLoadError("unavailable")).mockResolvedValue({revision:"a".repeat(32),items:[]});
  render(<CaseWorkspacePreview application entryTools load={async()=>records} initialSearch="?entry=notifications"/>);
  const retry=await screen.findByRole("button",{name:"予定と通知を再読み込み"});
- expect(screen.queryByText("この条件の通知系列はありません。")).toBeNull();
+ expect(screen.queryByText("この条件のメールはありません。")).toBeNull();
  fireEvent.click(retry);await waitFor(()=>expect(notices).toHaveBeenCalledTimes(2));
- await screen.findByText("この条件の通知系列はありません。");expect(screen.queryByRole("button",{name:"予定と通知を再読み込み"})).toBeNull();
+ await screen.findByText("この条件のメールはありません。");expect(screen.queryByRole("button",{name:"予定と通知を再読み込み"})).toBeNull();
 });
 
 it("does not keep retrying personal events that are outside the dedicated acceptance profile",async()=>{

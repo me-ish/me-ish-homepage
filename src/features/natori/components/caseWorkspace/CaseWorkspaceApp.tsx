@@ -17,7 +17,7 @@ export function CaseWorkspaceApp({ initialSearch, today,readOnly=false,entryTool
    const timer=window.setInterval(focus,15000);window.addEventListener("focus",focus);
    return ()=>{generation++;controller?.abort();window.clearInterval(timer);window.removeEventListener("focus",focus);};
   },[]);
-  if(unauthorized)return <p role="alert">認証を確認できないため案件の表示を消去しました。ログインを確認して再読み込みしてください。</p>;
+  if(unauthorized)return <p role="alert">ログインが切れました。もう一度ログインしてください。</p>;
   // A stop latches for this page. Resumption requires a fresh server render;
   // no late poll or automatic retry can revive a stale confirmation panel.
   return <CaseWorkspacePreview load={loadCaseWorkspace} loadDetail={entryTools?loadCaseWorkspaceDetail:undefined} application entryTools={entryTools} personalEventsEnabled={personalEventsEnabled} readOnly={readOnly||paused} initialSearch={initialSearch} today={today} basePath="/natori/dashboard/cases" />;

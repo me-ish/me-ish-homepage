@@ -77,5 +77,5 @@ it("preserves configured public destinations while keeping editors fixed and rej
   expect(screen.getByRole("link",{name:"ポートフォリオを見る"}).getAttribute("href")).toBe("https://example.invalid/artist");
   expect(screen.getByRole("link",{name:"ポートフォリオを編集"}).getAttribute("href")).toBe("/natori/portfolio/edit");
   expect(screen.queryByRole("link",{name:"リンク集を見る"})).toBeNull();
-  expect(screen.getByText("リンク集を見る：保存済みURLを確認してください")).not.toBeNull();
+  expect(screen.getByText("リンク集を見る：URLが正しくありません")).not.toBeNull();
 });
