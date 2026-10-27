@@ -111,8 +111,8 @@ describe("synthetic reader to case workspace", () => {
     expect(deriveCaseGuidance(records[3]).status).toBe("受取済み");
     expect(deriveCaseGuidance(records[3]).waits.some(wait => wait.text === "納品の受け取り待ち")).toBe(false);
     expect(deriveCaseGuidance(records[4]).status).toBe("制作中");
-    expect(deriveCaseGuidance(records[4]).waits.some(wait => wait.text === "見積を確認中")).toBe(false);
-    expect(deriveCaseGuidance(records[3]).unknown.some(text => text.includes("どの納品に対するものかを確認できていません"))).toBe(true);
+    expect(deriveCaseGuidance(records[4]).waits.some(wait => wait.text === "見積の返事待ち")).toBe(false);
+    expect(deriveCaseGuidance(records[3]).unknown.some(text => text.includes("どの納品の受け取りか分かりません"))).toBe(true);
   });
   it("leads an accepted quote with no link to transaction, and a matched current link to client payment waiting", () => {
     expect(deriveCaseGuidance(normal[0]).primary.section).toBe("transaction");
@@ -136,7 +136,7 @@ describe("synthetic reader to case workspace", () => {
       created_at:"2026-10-19T01:00:00Z",updated_at:"2026-10-19T02:00:00Z"}]};
     const record=(await buildPreviewRecords("normal",data))[6],g=deriveCaseGuidance(record);
     expect(g.waits.some(w=>w.who==="client"&&w.text==="お支払い待ち")).toBe(status!=="failed");
-    if(status==="state_error")expect(g.waits).toContainEqual(expect.objectContaining({who:"staff",text:"メールの送信結果を確認"}));
+    if(status==="state_error")expect(g.waits).toContainEqual(expect.objectContaining({who:"staff",text:"メールの送信結果を見る"}));
     if(status==="failed")expect(g.waits).toContainEqual(expect.objectContaining({who:"staff",text:"支払いリンクのメールが届いたか確認"}));
   });
   it("suppresses new payment checks for known project payment/receipt despite incomplete correlated reads",async()=>{
@@ -195,7 +195,7 @@ describe("local case URLs", () => {
     const record=(await buildPreviewRecords("normal",previewEnvelopes()))[0];
     expect(deriveCaseGuidance(record).status).toBe("見積OK・支払い前");
     const model={...record.model,facts:{...record.model.facts,payment:{state:"unavailable" as const,reason:"read_failed" as const}}};
-    expect(deriveCaseGuidance({...record,model}).status).toBe("見積OK・入金は確認できません");
+    expect(deriveCaseGuidance({...record,model}).status).toBe("見積OK・入金は読み込めず");
   });
   it("round-trips month and exact notification selection without accepting a return URL",()=>{
     const nav=parseCaseWorkspaceLocation("?entry=notifications&notice=legacy-mail%3A123&month=2026-12&date=2026-11-12&selected=old-case&q=森&return=https://evil.invalid");

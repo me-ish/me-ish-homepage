@@ -41,7 +41,7 @@ it("immediately clears every cached view on an index 401 even if another read ne
  notices.mockRejectedValue(new CaseWorkspaceLoadError("unauthorized"));
  fireEvent(window,new Event("focus"));
  await waitFor(()=>expect(screen.queryByRole("heading",{name:records[0].title})).toBeNull());
- expect(screen.getByRole("alert").textContent).toContain("表示を消去しました");
+ expect(screen.getByRole("alert").textContent).toContain("ログインが切れました");
 });
 
 it("protects a personal event draft from being silently moved to another day",async()=>{
@@ -63,18 +63,18 @@ it("retries a failed auxiliary index without treating it as an empty notificatio
  vi.spyOn(entryData,"loadCasePersonalEvents").mockResolvedValue([]);
  const notices=vi.spyOn(entryData,"loadCaseNoticeIndex").mockRejectedValueOnce(new CaseWorkspaceLoadError("unavailable")).mockResolvedValue({revision:"a".repeat(32),items:[]});
  render(<CaseWorkspacePreview application entryTools load={async()=>records} initialSearch="?entry=notifications"/>);
- const retry=await screen.findByRole("button",{name:"予定・通知を再取得"});
+ const retry=await screen.findByRole("button",{name:"予定と通知を再読み込み"});
  expect(screen.queryByText("この条件の通知系列はありません。")).toBeNull();
  fireEvent.click(retry);await waitFor(()=>expect(notices).toHaveBeenCalledTimes(2));
- await screen.findByText("この条件の通知系列はありません。");expect(screen.queryByRole("button",{name:"予定・通知を再取得"})).toBeNull();
+ await screen.findByText("この条件の通知系列はありません。");expect(screen.queryByRole("button",{name:"予定と通知を再読み込み"})).toBeNull();
 });
 
 it("does not keep retrying personal events that are outside the dedicated acceptance profile",async()=>{
  const events=vi.spyOn(entryData,"loadCasePersonalEvents").mockResolvedValue([]);
  vi.spyOn(entryData,"loadCaseNoticeIndex").mockResolvedValue({revision:"a".repeat(32),items:[]});
  render(<CaseWorkspacePreview application entryTools personalEventsEnabled={false} load={async()=>records} initialSearch="?entry=schedule"/>);
- await screen.findByText("この検証設定では個人予定は対象外です。");await waitFor(()=>expect(screen.getByRole("status").textContent).toBe("表示を取得しました"));
- expect(events).not.toHaveBeenCalled();expect(screen.queryByRole("button",{name:"予定・通知を再取得"})).toBeNull();
+ await screen.findByText("この画面では自分の予定は使えません。");await waitFor(()=>expect(screen.getByRole("status").textContent).toBe("読み込みました"));
+ expect(events).not.toHaveBeenCalled();expect(screen.queryByRole("button",{name:"予定と通知を再読み込み"})).toBeNull();
 });
 
 it.each(["cases","schedule","notifications"])("shows unavailable quote facts and their transaction review consistently through %s",async entry=>{
@@ -87,7 +87,7 @@ it.each(["cases","schedule","notifications"])("shows unavailable quote facts and
   await screen.findByRole("heading",{name:record.title});
   const guidance=within(screen.getByRole("region",{name:"案件の共通案内"}));
   expect(guidance.getByText("いまの段階：見積の状態が分かりません")).toBeTruthy();
-  expect(guidance.getByText("あなた：見積の状態を読み込めませんでした。見積・支払いを開いて確認")).toBeTruthy();
+  expect(guidance.getByText("あなた：見積を読み込めませんでした。見積・支払いを開いて見る")).toBeTruthy();
   expect(guidance.queryByText("相談中")).toBeNull();
   expect(guidance.queryByText("見積OK・支払い前")).toBeNull();
   expect(guidance.queryByText(/お客さん：.*支払/)).toBeNull();
@@ -116,9 +116,9 @@ it("returns from an exact notification to its original filter and selection with
   if(notice.state!=="ready"||!notice.value.length)throw Error("notification fixture required");
   window.history.replaceState(null,"","/?entry=notifications&q=光&filter=staff&month=2026-11");
   render(<CaseWorkspacePreview load={async()=>records}/>);
-  const item=await screen.findByRole("link",{name:/納品案内.*受付結果は未確認/});fireEvent.click(item);
+  const item=await screen.findByRole("link",{name:/納品のメール.*送れたか分かりません/});fireEvent.click(item);
   expect(window.location.search).toContain(`notice=${notice.value[0].id}`);expect(window.location.search).toContain("section=production");
-  expect(screen.getByRole("complementary",{name:"選択した通知"}).textContent).toContain(notice.value[0].target.revision);
+  expect(screen.getByRole("complementary",{name:"選択した通知"}).textContent).toContain("納品のメール");
   fireEvent.click(screen.getByRole("link",{name:"← 通知へ戻る"}));
   expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("光");
   expect(within(screen.getByRole("group",{name:"対応で絞り込む"})).getByRole("button",{name:/^自分の番/}).getAttribute("aria-pressed")).toBe("true");
@@ -155,8 +155,8 @@ it.each(["主な入口","スマホの主な入口"])("keeps current filters and 
 it("keeps evidence readable while the pause view omits every command panel",async()=>{
   render(<CaseWorkspacePreview load={async()=>records} application readOnly initialSearch={`?case=${records[0].id}&section=transaction`}/>);
   await screen.findByRole("heading",{name:"森の表紙イラスト"});
-  expect(screen.getByText("操作を停止しています。確定した記録と未確認の処理を読み取れます。")).toBeTruthy();
-  expect(screen.getByText("照会のみの画面です。送信・発行・外部照合・解決の保存は停止しています。")).toBeTruthy();
+  expect(screen.getByText("いまは見るだけです。送信や保存はできません。")).toBeTruthy();
+  expect(screen.getByText("いまは見るだけです。送信や保存はできません。")).toBeTruthy();
   expect(screen.queryByRole("button",{name:/送信|発行|照合|保存/})).toBeNull();
   expect(screen.getByRole("region",{name:"案件の共通案内"}).textContent).toContain("見積OK・支払い前");
 });
@@ -166,7 +166,7 @@ it("does not report zero calendar counts before a read or after it fails",async(
   let fail!:(reason:Error)=>void;
   render(<CaseWorkspacePreview load={()=>new Promise((_resolve,reject)=>{fail=reject;})}/>);
   expect(screen.getByRole("button",{name:"2026-11-12 登録納期件数未確認"})).toBeTruthy();
-  expect(screen.getByText("件数未確認",{exact:true})).toBeTruthy();
+  expect(screen.getByText("件数を読み込み中",{exact:true})).toBeTruthy();
   await act(async()=>fail(new Error("synthetic read failure")));
   expect(screen.getByRole("button",{name:"2026-11-12 登録納期件数未確認"})).toBeTruthy();
   expect(screen.queryByRole("button",{name:"2026-11-12 登録納期0件"})).toBeNull();
@@ -217,11 +217,11 @@ it("retains known facts after refresh failure and recovers through the actual lo
   render(<CaseWorkspacePreview load={load} />);
   await screen.findByRole("heading", { name: "森の表紙イラスト" });
   fireEvent.change(screen.getByLabelText("架空データの取得状態"), { target: { value: "failed" } });
-  expect((await screen.findByRole("alert")).textContent).toContain("前回確認した記録");
+  expect((await screen.findByRole("alert")).textContent).toContain("前に読み込んだ内容");
   expect(caseHeading()).toBeTruthy();
-  expect(screen.getByText("前回確認した段階：見積OK・支払い前")).toBeTruthy();
-  expect(screen.getByText(`前回確認：${records.length}案件`,{exact:true})).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "表示を再取得" }));
+  expect(screen.getByText("前に読み込んだ時の段階：見積OK・支払い前")).toBeTruthy();
+  expect(screen.getByText(`前回：${records.length}案件`,{exact:true})).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
   await waitFor(() => expect(load).toHaveBeenCalledTimes(3));
   fireEvent.change(screen.getByLabelText("架空データの取得状態"), { target: { value: "normal" } });
   await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
@@ -229,8 +229,8 @@ it("retains known facts after refresh failure and recovers through the actual lo
 
 it("distinguishes an initial failed read from an empty case list", async () => {
   render(<CaseWorkspacePreview load={async () => { throw new Error("Synthetic failure"); }} />);
-  expect((await screen.findByRole("alert")).textContent).toContain("まだ取得できていません");
-  expect(screen.queryByText("この表示条件に合う案件はありません。")).toBeNull();
+  expect((await screen.findByRole("alert")).textContent).toContain("最新の情報を読み込めませんでした");
+  expect(screen.queryByText("この条件の案件はありません。")).toBeNull();
 });
 
 it("ignores a superseded read even when a loader does not honor abort", async () => {
@@ -253,9 +253,9 @@ it("presents unmatched acceptance consistently in overview and history", () => {
     quote: { ...quote, value: { ...quote.value, acceptance: { ...quote.value.acceptance, version: 99 } } },
   }) };
   const view = render(<CaseWorkspaceSections record={mismatched} section="overview" />);
-  expect(screen.getByText(/でOK（要確認：見積との対応が未確認）/)).toBeTruthy();
+  expect(screen.getByText(/でOK（要確認：どの見積へのOKか分かりません）/)).toBeTruthy();
   view.rerender(<CaseWorkspaceSections record={mismatched} section="history" />);
-  expect(screen.getByText("OKの記録（要確認：見積との対応が未確認）")).toBeTruthy();
+  expect(screen.getByText("OKの記録（要確認：どの見積へのOKか分かりません）")).toBeTruthy();
   expect(document.querySelector("form")).toBeNull();
   expect(screen.queryByRole("button")).toBeNull();
 });
@@ -267,7 +267,7 @@ it.each(["unauthorized","scope_unavailable"] as const)("clears every previously 
   expect(screen.queryByLabelText("架空データの取得状態")).toBeNull();
   expect(stepList().getByRole("link",{name:/^見積/}).getAttribute("href")).toMatch(/^\/natori\/dashboard\/cases\?/);
   fireEvent(window,new Event("focus"));
-  expect((await screen.findByRole("alert")).textContent).toContain("案件の表示を消去");
+  expect((await screen.findByRole("alert")).textContent).toMatch(/ログインが切れました|このアカウントでは案件を表示できません/);
   expect(screen.queryByRole("heading",{name:"森の表紙イラスト"})).toBeNull();
   expect(screen.queryByText("￥40,000")).toBeNull();
 });
@@ -279,7 +279,7 @@ it("acceptance personal events never enable the unrelated case-registration form
   vi.spyOn(entryData,"loadCasePersonalEvents").mockResolvedValue([]);
   vi.spyOn(entryData,"loadCaseNoticeIndex").mockResolvedValue({revision:"a".repeat(32),items:[]});
   render(<CaseWorkspacePreview application entryTools personalEventsEnabled load={async()=>records} initialSearch="?entry=cases"/>);
-  await waitFor(()=>expect(screen.getByRole("status").textContent).toBe("表示を取得しました"));
+  await waitFor(()=>expect(screen.getByRole("status").textContent).toBe("読み込みました"));
   expect(screen.queryByRole("region",{name:"新しい案件の登録"})).toBeNull();
  }finally{vi.unstubAllEnvs();}
 });

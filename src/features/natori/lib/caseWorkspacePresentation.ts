@@ -47,18 +47,18 @@ function attentionSection(item: CaseAttention, record: CaseWorkspaceRecord): Cas
 
 // Plain "next action" wording. Staff items are verbs; client/system items say what is awaited.
 const attentionText: Readonly<Record<string, string>> = {
-  quote_expired: "見積の期限が切れました。出し直すか決める", quote_acceptance_pending: "見積を確認中",
+  quote_expired: "見積の期限が切れました。出し直すか決める", quote_acceptance_pending: "見積の返事待ち",
   quote_draft: "見積の下書きを仕上げて送る", quote_needed: "見積を作る",
   payment_notice_needed: "支払いリンクを送る", payment_pending: "お支払い待ち",
   payment_notice_unconfirmed: "支払いリンクのメールが届いたか確認",
   paid_link_stop_unconfirmed: "入金済みの支払いリンクが止まったか確認",
   current_notice_unconfirmed: "最新の条件のメールが届いたか確認",
-  notification_failed: "送れなかったメールを確認",
-  notification_projection_review: "メールの送信結果を確認",
+  notification_failed: "送れなかったメールを送り直すか決める",
+  notification_projection_review: "メールの送信結果を見る",
   notification_unknown: "メールが届いたか確認",
   notification_pending: "メールの送信結果待ち", notification_sending: "メールの送信結果待ち",
-  notification_state_error: "メールの送信結果を確認",
-  rough_ok_unacknowledged: "ラフOKを確認して制作を進める", rough_response_pending: "ラフを確認中", rough_revision_pending: "ラフを直す", delivery_notice_unconfirmed: "納品メールが届いたか確認",
+  notification_state_error: "メールの送信結果を見る",
+  rough_ok_unacknowledged: "ラフにOKが出たので制作を進める", rough_response_pending: "ラフの返事待ち", rough_revision_pending: "ラフを直す", delivery_notice_unconfirmed: "納品メールが届いたか確認",
   consultation_response_required: "相談に返事する",
   production_attention: "制作を進める",
   receipt_pending: "納品の受け取り待ち", delivery_access_expired: "納品ページの期限切れ。延長するか決める",
@@ -94,11 +94,11 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
       "quote_acceptance_pending", "payment_pending", "payment_notice_needed", "payment_notice_unconfirmed","delivery_notice_unconfirmed"].includes(item.reason)) continue;
     if (payment && ["quote_acceptance_pending", "payment_pending", "payment_notice_needed", "payment_notice_unconfirmed"].includes(item.reason)) continue;
     const section = attentionSection(item, record);
-    const text = attentionText[item.reason] ?? (item.domain === "operations" ? "前回の処理の結果を確認"
-      : item.domain === "financialReview" ? "入金・返金の照合を確認"
-        : item.domain === "quote" ? "見積と承諾の内容が合っているか確認"
-          : item.domain === "link" ? "支払いリンクの状態を確認"
-            : `${CASE_SECTION_LABELS[section]}の内容を確認`);
+    const text = attentionText[item.reason] ?? (item.domain === "operations" ? "前回の処理の結果を見る"
+      : item.domain === "financialReview" ? "入金と返金の記録を見比べる"
+        : item.domain === "quote" ? "OKの内容と見積が合っているか見る"
+          : item.domain === "link" ? "支払いリンクの状態を見る"
+            : `${CASE_SECTION_LABELS[section]}を見る`);
     add(item.key, item.waitingOn, text, section, attentionButton[item.reason]);
   }
   const inactive = !!project?.archivedAt || project?.rawStatus === "closed" || project?.rawStatus === "completed";
@@ -106,25 +106,22 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
   // Missing quote evidence is not an earlier business stage. Preserve confirmed
   // downstream facts and the model's higher-priority operation checks.
   if (quoteUnconfirmed && !inactive && !receipt && !payment && !delivery) {
-    add("quote-unconfirmed", "staff", "見積の状態を読み込めませんでした。見積・支払いを開いて確認", "transaction");
+    add("quote-unconfirmed", "staff", "見積を読み込めませんでした。見積・支払いを開いて見る", "transaction");
   }
   if (!inactive && !receipt) {
-    if (conversation?.latestSender === "client") add("conversation", "staff", "お客さんの最新メッセージを確認", "consultation", "相談を開く");
+    if (conversation?.latestSender === "client") add("conversation", "staff", "お客さんのメッセージを読む", "consultation", "相談を開く");
     if (!delivery && payment && !waits.some(wait => wait.section === "production")) {
       const next = d.tasks.state === "ready" ? d.tasks.value.find(task => !task.done) : undefined;
       add("production", "staff", next ? `制作を進める（次は${CASE_TASK_STAGE_LABELS[next.stage]}）` : "制作を進める", "production");
     } else if (!payment && m.agreement === "accepted" && !link) {
       add("payment", "staff", "支払いリンクを送る", "transaction", "支払いリンクを送る");
     } else if (!payment && quote && (m.agreement === "needs_review" || quote.state === "draft")) {
-      add("quote-review", "staff", quote.state === "draft" ? "見積の下書きを仕上げて送る" : "見積と承諾の内容が合っているか確認", "transaction");
+      add("quote-review", "staff", quote.state === "draft" ? "見積の下書きを仕上げて送る" : "OKの内容と見積が合っているか見る", "transaction");
     }
   }
-  if (project?.origin === "unknown") unknown.push("どこから受け付けた案件かは分かりません（保存済みの状態は表示しています）。");
-  if (d.tasks.state === "ready" && d.tasks.value.length) unknown.push("制作の各工程を実際に始めた・終えた時刻は記録していません。");
-  if (conversation) unknown.push("相談は最後に書いた人だけを表示しています。既読や返事が必要かどうかは分かりません。");
-  if (receipt?.correspondence === "unconfirmed") unknown.push("要確認：受け取りの記録はありますが、どの納品に対するものかを確認できていません。");
-  if (payment?.correspondence === "unconfirmed") unknown.push("要確認：入金の記録はありますが、入金台帳と照らし合わせられていません。");
-  const domains = [["入金・返金の照合", m.facts.financialReview], ["メール", m.facts.notifications],
+  if (receipt?.correspondence === "unconfirmed") unknown.push("要確認：受け取りの記録はありますが、どの納品の受け取りか分かりません。");
+  if (payment?.correspondence === "unconfirmed") unknown.push("要確認：入金の記録はありますが、どの見積への入金かまだ分かりません。");
+  const domains = [["入金と返金の記録", m.facts.financialReview], ["メール", m.facts.notifications],
     ["見積", m.facts.quote], ["支払いリンク", m.facts.link], ["納品", m.facts.delivery],
     ["制作の工程", d.tasks], ["相談", d.conversation]] as const;
   for (const [label, observation] of domains) {
@@ -140,9 +137,9 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
   let status = receipt ? "受取済み" : project?.archivedAt ? "保管中"
     : project?.rawStatus === "closed" ? "終了" : project?.rawStatus === "completed" ? "完了"
       : delivery ? "納品済み・受取待ち" : payment ? "制作中"
-        : m.stage === "payment_notified" ? "入金待ち" : m.agreement === "accepted" ? paymentUnread ? "見積OK・入金は確認できません" : "見積OK・支払い前" : quoteUnconfirmed ? "見積の状態が分かりません"
+        : m.stage === "payment_notified" ? "入金待ち" : m.agreement === "accepted" ? paymentUnread ? "見積OK・入金は読み込めず" : "見積OK・支払い前" : quoteUnconfirmed ? "見積の状態が分かりません"
           : quote?.state === "draft" ? "見積の準備中" : m.agreement === "needs_review" ? "見積の確認が必要" : quote ? "見積の返事待ち" : "相談中";
-  if (!project && !receipt && !payment && !delivery && !quote) status = "状態を読み込めていません";
+  if (!project && !receipt && !payment && !delivery && !quote) status = "読み込めませんでした";
   const primary = waits[0] ? { label: buttons.get(waits[0].key) ?? `${CASE_SECTION_LABELS[waits[0].section]}を開く`, section: waits[0].section }
     : receipt || inactive ? { label: "履歴を開く", section: "history" as const }
       : { label: "相談を開く", section: "consultation" as const };
