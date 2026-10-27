@@ -8,12 +8,14 @@ type StepLink = (step: CaseStep, content: ReactNode, className: string, attribut
  * Vertical step view. The open step's work area sits right under that step; the
  * area keeps one position in the tree so drafts inside it survive step changes.
  */
-export function CaseStepList({ steps, selected, link, children }: {
+export function CaseStepList({ steps, selected, link, sheet = null, children }: {
   steps: readonly CaseStep[]; selected: CaseStepKey | null; link: StepLink; children: ReactNode;
+  /** On phones the work area opens as a bottom sheet over the steps instead of under one step. */
+  sheet?: { close: ReactNode; backdrop: ReactNode; onEscape: () => void } | null;
 }) {
-  const cut = selected ? steps.findIndex(step => step.key === selected) + 1 : steps.length;
+  const cut = selected && !sheet ? steps.findIndex(step => step.key === selected) + 1 : steps.length;
   const row = (step: CaseStep, index: number) => {
-    const open = step.key === selected, last = index === steps.length - 1;
+    const open = step.key === selected && !sheet, last = index === steps.length - 1;
     const dot = step.state === "done" ? "bg-zinc-900 text-white" : step.state === "current" ? "bg-pink-500 text-white ring-4 ring-pink-100" : "bg-zinc-200 text-zinc-500";
     return <li key={step.key} className="relative pb-2">
       {!last && !(open && index === cut - 1) ? <span aria-hidden="true" className="absolute bottom-0 left-[15px] top-8 w-0.5 bg-zinc-200" /> : null}
@@ -31,7 +33,13 @@ export function CaseStepList({ steps, selected, link, children }: {
   };
   return <section aria-label="案件の段階" className="mb-5">
     <ol key="before" className="list-none">{steps.slice(0, cut).map((step, index) => row(step, index))}</ol>
-    <div key="work" className={selected ? "mb-3 rounded-2xl border-2 border-pink-200 bg-white p-3 sm:p-5" : "mt-2"}>{children}</div>
+    {sheet ? sheet.backdrop : null}
+    <div key="work" onKeyDown={sheet ? event => { if (event.key === "Escape") sheet.onEscape(); } : undefined}
+      className={sheet ? "fixed inset-x-0 bottom-0 z-40 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 shadow-2xl lg:static lg:z-auto lg:mb-3 lg:max-h-none lg:overflow-visible lg:rounded-2xl lg:border-2 lg:border-pink-200 lg:p-5 lg:shadow-none"
+        : selected ? "mb-3 rounded-2xl border-2 border-pink-200 bg-white p-3 sm:p-5" : "mt-2"}>
+      {sheet ? <div className="mb-2 flex items-center justify-between gap-3"><span aria-hidden="true" className="mx-auto h-1.5 w-10 rounded-full bg-zinc-300 lg:hidden" /></div> : null}
+      {sheet ? <div className="float-right ml-3">{sheet.close}</div> : null}
+      {children}</div>
     <ol key="after" start={cut + 1} className="list-none">{steps.slice(cut).map((step, index) => row(step, cut + index))}</ol>
   </section>;
 }
