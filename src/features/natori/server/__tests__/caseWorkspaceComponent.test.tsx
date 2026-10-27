@@ -52,10 +52,10 @@ it("protects a personal event draft from being silently moved to another day",as
  fireEvent.click(await screen.findByRole("button",{name:"予定「月末の個人予定」を編集"}));
  fireEvent.change(screen.getByRole("textbox",{name:"タイトル"}),{target:{value:"保存前の予定"}});
  fireEvent.click(screen.getByRole("button",{name:/2026-12-01 登録納期/}));
- expect(confirm).toHaveBeenCalledTimes(1);expect((screen.getByLabelText("予定日") as HTMLInputElement).value).toBe("2026-11-30");
+ expect(confirm).toHaveBeenCalledTimes(1);expect(screen.getByRole("heading",{name:/^11\/30（月）の予定$/})).toBeTruthy();
  expect((screen.getByRole("textbox",{name:"タイトル"}) as HTMLInputElement).value).toBe("保存前の予定");
  confirm.mockReturnValue(true);fireEvent.click(screen.getByRole("button",{name:/2026-12-01 登録納期/}));
- expect((screen.getByLabelText("予定日") as HTMLInputElement).value).toBe("2026-12-01");
+ expect(screen.getByRole("heading",{name:/^12\/1（火）の予定$/})).toBeTruthy();
  expect(screen.queryByRole("textbox",{name:"タイトル"})).toBeNull();
 });
 
@@ -132,14 +132,14 @@ it("keeps separate entry searches, calendar month/date and selection while navig
   const nav=within(screen.getByRole("navigation",{name:"主な入口"}));
   fireEvent.click(nav.getByRole("link",{name:"予定"}));
   expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("");
-  fireEvent.change(screen.getByLabelText("表示月"),{target:{value:"2026-11"}});
+  fireEvent.click(screen.getByRole("button",{name:"次の月"}));
   fireEvent.click(screen.getByRole("button",{name:/2026-11-12 登録納期1件/}));
   fireEvent.click(screen.getByRole("link",{name:/森の表紙イラスト/}));
-  fireEvent.click(screen.getByRole("link",{name:"← 2026-11-12の予定へ戻る"}));
-  expect((screen.getByLabelText("表示月") as HTMLInputElement).value).toBe("2026-11");
-  expect((screen.getByLabelText("予定日") as HTMLInputElement).value).toBe("2026-11-12");
+  fireEvent.click(screen.getByRole("link",{name:"← 11/12（木）の予定へ戻る"}));
+  expect(screen.getByRole("heading",{name:"2026年11月"})).toBeTruthy();
+  expect(screen.getByRole("heading",{name:/^11\/12（木）の予定$/})).toBeTruthy();
   fireEvent.click(nav.getByRole("link",{name:"案件"}));expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("森");
-  fireEvent.click(nav.getByRole("link",{name:"予定"}));expect((screen.getByLabelText("表示月") as HTMLInputElement).value).toBe("2026-11");
+  fireEvent.click(nav.getByRole("link",{name:"予定"}));expect(screen.getByRole("heading",{name:/^2026年\d+月$/}).textContent).toBe("2026年11月");
 });
 
 it.each(["主な入口","スマホの主な入口"])("keeps current filters and selection when returning through the same %s",async label=>{

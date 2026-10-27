@@ -5,7 +5,7 @@ export const CASE_SECTION_LABELS: Record<CaseSection, string> = {
   overview: "その他", consultation: "相談", transaction: "見積・支払い", production: "制作・納品", history: "履歴",
 };
 export const CASE_WHO_LABELS = { staff: "あなた", client: "お客さん", system: "自動処理" } as const;
-export const CASE_TASK_STAGE_LABELS = { material: "資料", rough: "ラフ", lineart: "線画", coloring: "着彩", finish: "仕上げ", delivery: "納品" } as const;
+export const CASE_TASK_STAGE_LABELS = { material: "資料", rough: "ラフ", lineart: "線画", coloring: "着彩", finish: "仕上げ", delivery: "納品準備" } as const;
 /** One line for "who does what next", e.g. 「あなた：支払いリンクを送る」. */
 export const caseWaitLine = (wait: { who: keyof typeof CASE_WHO_LABELS; text: string }) => `${CASE_WHO_LABELS[wait.who]}：${wait.text}`;
 export function caseKnown<T>(value: CaseObservation<T>): T | undefined {
@@ -13,8 +13,20 @@ export function caseKnown<T>(value: CaseObservation<T>): T | undefined {
 }
 export function caseTime(value: string): string {
   return Number.isFinite(Date.parse(value)) ? new Intl.DateTimeFormat("ja-JP", {
-    month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tokyo",
+    month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Tokyo",
   }).format(new Date(value)) : "日時未確認";
+}
+const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
+/** A calendar date (YYYY-MM-DD) as 「11/12（水）」; the year is added only when it differs from today's. */
+export function caseDate(value: string | null | undefined, today?: string): string {
+  const match = value ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) : null;
+  if (!match) return value ?? "";
+  const [, year, month, day] = match, weekday = WEEKDAYS[new Date(Date.UTC(+year, +month - 1, +day)).getUTCDay()];
+  return `${today && today.slice(0, 4) !== year ? `${year}/` : ""}${+month}/${+day}（${weekday}）`;
+}
+/** Days from today to a calendar date; negative once it has passed. */
+export function caseDaysUntil(value: string, today: string): number {
+  return Math.round((Date.parse(`${value}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000);
 }
 export function caseMoney(value: { amount: number; currency: string } | null | undefined): string {
   return value ? new Intl.NumberFormat("ja-JP", { style: "currency", currency: value.currency,

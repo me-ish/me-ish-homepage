@@ -116,7 +116,6 @@ export function CaseWorkspaceUtilities({
         </>
       ) : (
         <>
-          <CaseSystemControl onAccessRejected={reject}/>
           {error ? <p role="alert">{error}</p> : null}
           {ready ? (
             <ProfileSettingsPanel
@@ -188,6 +187,11 @@ export function CaseWorkspaceUtilities({
           >
             ログアウト
           </button>
+          {/* Rarely needed, so it sits last and stays folded. */}
+          <details className="mt-6 rounded-xl border border-zinc-200 p-3">
+            <summary className="cursor-pointer text-sm font-semibold">困った時：緊急停止</summary>
+            <CaseSystemControl onAccessRejected={reject}/>
+          </details>
         </>
       )}
     </section>

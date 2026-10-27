@@ -10,8 +10,12 @@ import {assignBarLanes} from "../../lib/projects";
 export function CaseMonthPicker({nav,records,available,onChange,events,plans=null,today=nav.date}:{nav:CaseWorkspaceLocation;records:readonly CaseWorkspaceRecord[];available:boolean;onChange:(next:CaseWorkspaceLocation)=>void;events?:readonly CasePersonalEvent[]|null;plans?:CasePlanning|null;today?:string}) {
   const days=caseMonthDays(nav.month), start=days[0]?new Date(`${days[0]}T00:00:00Z`).getUTCDay():0;
   const bars=available?records.filter(r=>matchesCaseEntry(r,{...nav,entry:"cases"})).flatMap(r=>casePlannedBars(r,plans,today)):[],lanes=assignBarLanes(bars);
+  // Month names come from the page, not the browser's month input, which shows the device language.
+  const shift=(by:number)=>{const [year,month]=nav.month.split("-").map(Number),next=new Date(Date.UTC(year,month-1+by,1)),value=`${next.getUTCFullYear()}-${String(next.getUTCMonth()+1).padStart(2,"0")}`;if(caseMonthDays(value).length)onChange({...nav,month:value});};
   return <section aria-label="納期のカレンダー" className="space-y-2">
-    <label className="block text-xs font-semibold text-zinc-600">表示月<input type="month" value={nav.month} onChange={e=>{if(caseMonthDays(e.target.value).length)onChange({...nav,month:e.target.value});}} className="mt-1 h-11 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm"/></label>
+    <div className="flex items-center justify-between gap-2"><button type="button" aria-label="前の月" onClick={()=>shift(-1)} className="min-h-11 min-w-11 rounded-xl border border-zinc-200 bg-white text-lg text-zinc-700">‹</button>
+      <h2 className="text-base font-semibold" aria-live="polite">{Number(nav.month.slice(0,4))}年{Number(nav.month.slice(5,7))}月</h2>
+      <button type="button" aria-label="次の月" onClick={()=>shift(1)} className="min-h-11 min-w-11 rounded-xl border border-zinc-200 bg-white text-lg text-zinc-700">›</button></div>
     <div className="grid grid-cols-7 gap-1 text-center text-xs">
       {["日","月","火","水","木","金","土"].map(day=><span key={day} className="py-1 text-zinc-500">{day}</span>)}
       {Array.from({length:start},(_,i)=><span key={`blank-${i}`}/>)}
