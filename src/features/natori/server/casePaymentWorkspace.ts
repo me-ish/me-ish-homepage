@@ -48,21 +48,21 @@ function guard(v:Snapshot):Json {
 }
 function eligibility(v:Snapshot){
  const q=v.quote,p=v.project,a=v.link;
- if(p.paidAt)return "入金記録あり。支払案内は送信しません。";
- if(v.operation?.retirementReason)return "準備の再実行を停止しています。結果は未確定です。新しい案内は作らず、保存された操作・支払記録を照合してください。";
+ if(p.paidAt)return "入金済みです。支払いリンクは送りません。";
+ if(v.operation?.retirementReason)return "前の準備がうまくいったか分かりません。下の「結果が分からない処理を調べる」で調べてください。";
  const pendingGuard=v.operation?.status==="pending"?v.operation.guard as {link?:unknown}|null:null;
- if(pendingGuard?.link&&!isDeepStrictEqual(pendingGuard.link,v.link))return "確認時から支払リンク・期限の記録が変わりました。未完了の操作を照合してください。";
- if(!q?.acceptedAt||q.supersededAt||q.amount<50||p.acceptedAmount!==q.amount||!p.acceptedAt||!z.email().safeParse(p.email).success)return "対象見積の承諾・金額・宛先を確認してください。";
- if(p.deletedAt||!["quoted","awaiting_payment"].includes(p.status)||v.review)return "案件または入金の照合が必要です。";
- if(v.jobs.length>100||v.legacyCount>0)return "過去の案内記録を照合してください。この画面では新規送信しません。";
- if(a&&((a.state!=="active"&&!(v.pending&&a.state==="creating"))||a.quoteId!==q.id||a.amount!==q.amount||Date.parse(a.deadline)<=Date.now()+60000||(!a.url&&!v.pending)))return "既存リンクの状態・期限・見積を照合してください。再発行は行いません。";
- if(!a&&p.legacyLink)return "旧リンクの照合が必要です。";
+ if(pendingGuard?.link&&!isDeepStrictEqual(pendingGuard.link,v.link))return "支払いリンクか期限が変わりました。ページを読み込み直してください。";
+ if(!q?.acceptedAt||q.supersededAt||q.amount<50||p.acceptedAmount!==q.amount||!p.acceptedAt||!z.email().safeParse(p.email).success)return "見積のOK・金額・宛先のどれかが足りません。";
+ if(p.deletedAt||!["quoted","awaiting_payment"].includes(p.status)||v.review)return "入金の記録を調べる必要があります。";
+ if(v.jobs.length>100||v.legacyCount>0)return "前に送ったメールの結果を先に調べてください。";
+ if(a&&((a.state!=="active"&&!(v.pending&&a.state==="creating"))||a.quoteId!==q.id||a.amount!==q.amount||Date.parse(a.deadline)<=Date.now()+60000||(!a.url&&!v.pending)))return "いまの支払いリンクの状態を先に調べてください。";
+ if(!a&&p.legacyLink)return "前の支払いリンクの状態を調べる必要があります。";
  const currentGuard=guard(v) as {quote?:unknown;identity?:unknown};
  for(const j of v.jobs.filter(j=>j.status!=="sent")){
   const stored=v.noticeGuards[j.notification_key] as {quote?:unknown;identity?:unknown}|undefined;
-  if(stored&&(!isDeepStrictEqual(stored.quote,currentGuard.quote)||!isDeepStrictEqual(stored.identity,currentGuard.identity)))return "確認時から見積・宛先の情報が変わりました。未解決の案内を照合してください。";
+  if(stored&&(!isDeepStrictEqual(stored.quote,currentGuard.quote)||!isDeepStrictEqual(stored.identity,currentGuard.identity)))return "見積か宛先が変わりました。送っていないメールを先に調べてください。";
  }
- if(v.jobs.some(j=>j.quote_id!==q.id||!a||j.snapshot.attemptId!==a.id||j.snapshot.deadline!==a.deadline))return "案内と現行の見積・リンクの対応を照合してください。";
+ if(v.jobs.some(j=>j.quote_id!==q.id||!a||j.snapshot.attemptId!==a.id||j.snapshot.deadline!==a.deadline))return "送ったメールが、いまの見積と合っているか調べてください。";
  return null;
 }
 function view(v:Snapshot):CasePaymentView {
@@ -70,7 +70,7 @@ function view(v:Snapshot):CasePaymentView {
  const resumable=unresolved.length===1&&["pending","sending"].includes(unresolved[0].status)&&!unresolved[0].send_started_at&&(!unresolved[0].lease_expires_at||Date.parse(unresolved[0].lease_expires_at)<=Date.now());
  const retired=Boolean(v.operation?.retirementReason),pending=v.pending,unknown=unresolved.some(j=>j.status==="unknown"||(j.status==="sending"&&j.send_started_at&&(!j.lease_expires_at||Date.parse(j.lease_expires_at)<=Date.now()))),processing=unresolved.some(j=>["pending","sending"].includes(j.status));
  return {enabled:true,projectId:v.project.id,phase:v.project.paidAt?"paid":retired&&v.operation?.retirementReason?.endsWith("_unresolved")?"unknown":blocked?"blocked":pending?"processing":unknown?"unknown":processing?"processing":failed?"failed":v.jobs.length?"sent":"prepare",
-  reason:blocked??(pending?"リンクの準備処理が未完了です。保存済みの同じ操作を確認してください。":unknown?"送信サービスの受付結果は不明です。照会だけを行い、新しい案内は送信しません。":processing?"送信ジョブ受付済み。送信成功・到達はまだ確認できません。":failed?"確定失敗の記録があります。同じ内容の再試行を確認できます。":v.jobs.length?"送信サービス受付済み。到達・既読・入金は別の記録です。":"見積承諾済み。支払案内は未送信です。"),
+  reason:blocked??(pending?"支払いリンクを準備しています。少し待ってから「結果を見る」を押してください。":unknown?"送れたか分かりません。「結果を見る」を押してください。":processing?"送信中です。":failed?"送れませんでした。同じ内容で送り直せます。":v.jobs.length?"支払いリンクを送りました。":"見積にOKをもらいました。支払いリンクはまだ送っていません。"),
   quoteVersion:v.quote?.version??null,amount:v.quote?.amount??null,deadline:v.link?.deadline??null,recipient:v.project.email,sentCount:v.jobs.filter(j=>j.status==="sent").length,
   canPrepare:!blocked&&!pending&&!unresolved.length,canRetry:!blocked&&!pending&&failed&&unresolved[0].attempt_no<5,canResume:!blocked&&!pending&&resumable,
   operationId:v.operation?.id??null,operationState:v.rejection?"rejected":retired?"retired":v.operation?.status??null,receipt:v.operation?.status==="pending"&&!retired&&v.operation.request?encode(v.operation.request as Json):null,

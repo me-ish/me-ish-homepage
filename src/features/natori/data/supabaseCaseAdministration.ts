@@ -20,12 +20,12 @@ export async function loadCaseAdministration(
   if (!response.ok)
     throw Error(
       response.status === 401
-        ? "認証が失効しました。ログイン後に結果を照会してください。"
-        : "記録を取得できません。新しい操作を作らず、再照会してください。",
+        ? "ログインが切れました。ログインしてから「結果を見る」を押してください。"
+        : "記録を読み込めませんでした。少し待ってから、もう一度押してください。",
     );
   const value: unknown = await response.json(),
     v = value as { view: unknown; receipt: unknown };
-  if(notificationId){const selected=caseAdminView.parse(v.view);if(selected.project.id!==projectId||selected.selectedNotice?.id!==notificationId||selected.notices.length!==1||selected.notices[0].id!==notificationId)throw Error("通知の対象を確認できません。");}
+  if(notificationId){const selected=caseAdminView.parse(v.view);if(selected.project.id!==projectId||selected.selectedNotice?.id!==notificationId||selected.notices.length!==1||selected.notices[0].id!==notificationId)throw Error("このメールが見つかりませんでした。");}
   return {
     view: v.view ? caseAdminView.parse(v.view) : null,
     receipt: v.receipt ? caseAdminReceipt.parse(v.receipt) : null,
@@ -48,9 +48,9 @@ export async function submitCaseAdministration(
       body: JSON.stringify(request),
     });
   } catch {
-    throw Error("結果を確認できません。同じ操作の記録を照会してください。");
+    throw Error("うまくいったか分かりません。「結果を見る」を押してください。");
   }
   if (!response.ok)
-    throw Error("結果を確認できません。同じ操作の記録を照会してください。");
+    throw Error("うまくいったか分かりません。「結果を見る」を押してください。");
   return await response.json();
 }

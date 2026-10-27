@@ -40,7 +40,7 @@ export async function readCurrentPayment(project:string,operation?:string):Promi
   const last=sameLink.map(l=>Date.parse(l.sentAt!)).sort((a,b)=>b-a)[0];
   const can=eligible(s)&&!unknown;
   return {enabled:true,projectId:project,deadlinePolicy:policy,phase:s.project.paidAt?"paid":unknown?"unknown":!can?"blocked":sent.length?"sent":"prepare",
-    reason:s.project.paidAt?"入金記録あり。支払案内は送信しません。":unknown?"操作または送信結果が未確認です。新しい送信をせず、同じ操作の結果を照会してください。":!can?"見積・宛先・未解決の記録を確認してください。":sent.length?"送信サービス受付済み。再送に成功した日から支払期限が7日延長されます。":"見積承諾済み。送信に成功した日から支払期限を7日で自動設定します。",
+    reason:s.project.paidAt?"入金済みです。支払いリンクは送りません。":unknown?"送れたか分かりません。「結果を見る」を押してください。":!can?"見積か宛先が足りないか、終わっていない処理があります。":sent.length?"支払いリンクを送りました。送り直すと、その日から7日に期限が延びます。":"見積にOKをもらいました。支払いリンクを送ると、その日から7日が支払い期限になります。",
     quoteVersion:s.quote?.version??null,amount:s.quote?.amount??null,deadline:Number.isFinite(last)?new Date(last+PAYMENT_DUE_DAYS*86400000).toISOString():null,
     recipient:s.project.email,sentCount:sent.length,canPrepare:can,canRetry:false,canResume:false,
     operationId:op?.id??null,operationState:op?.status??null,receipt:null,
