@@ -7,7 +7,7 @@ import {getNatoriProjectActivityLabel,type NatoriProjectActivityEventType} from 
 import {caseTime} from "../../lib/caseWorkspacePresentation";
 import {natoriAdminUi as ui} from "../../constants/adminUi";
 import type {CaseSection} from "../../types/caseWorkspace";
-const money=(value:number|null)=>value===null?"未確認":`${value.toLocaleString('ja-JP')}円`;
+const money=(value:number|null)=>value===null?"—":`${value.toLocaleString('ja-JP')}円`;
 export function CaseHistoryPanel({projectId,section,page,refreshKey,onPage,onAccessRejected,onNotice}:{projectId:string;section:CaseSection;page:number;refreshKey:string;onNotice?:(id:string)=>void;onPage:(page:number)=>void;onAccessRejected:()=>void}){
  const [view,setView]=useState<CaseHistoryView|null>(null),[pending,setPending]=useState(false),[error,setError]=useState<"changed"|"failed"|null>(null),[reload,setReload]=useState(0);
  const [financial,setFinancial]=useState<CaseFinancialDisplay|null>(null),[legacy,setLegacy]=useState<CaseHistoryView['legacyLogs']>([]);
@@ -33,40 +33,36 @@ export function CaseHistoryPanel({projectId,section,page,refreshKey,onPage,onAcc
   return()=>controller.abort();
  },[projectId,active,page,reload,refreshKey]);
  const restart=()=>{cursor.current=null;setFinancial(null);setLegacy([]);onPage(1);setReload(v=>v+1);};
- return <section hidden={!active} className="mt-4 space-y-4" aria-label="案件の履歴と金銭参照">
-  <div className="rounded-2xl border bg-white p-4 sm:p-5"><h3 className="font-semibold">入金・返金の保存記録</h3>
-   {financial?<><dl className="my-3 grid gap-2 sm:grid-cols-3"><div><dt>確認できた元の入金</dt><dd>{money(financial.gross)}</dd></div><div><dt>照合済みの確定返金</dt><dd>{money(financial.refunded)}</dd></div><div><dt>純入金</dt><dd>{money(financial.net)}</dd></div></dl>
-    <p className="text-sm">{financial.method==="manual"?"担当者の手動入金記録":financial.method==="stripe"?"入金台帳との対応記録":"旧記録または方式未確認"} · {financial.confirmedAt?caseTime(financial.confirmedAt):"入金時刻未確認"}</p>
-    {financial.legacyRecordedAmount!==null?<p className="mt-2 text-sm">旧方式の金額記録：{money(financial.legacyRecordedAmount)}（台帳との対応未確認。上の確定額や純入金には含めていません）</p>:null}
-    <p className="mt-2 text-sm">返金処理中 {financial.pendingCount??"未確認"}件 / 要確認 {financial.reviewCount??"未確認"}件</p>
-    {financial.state!=="verified"?<p className="mt-2 text-sm text-amber-900">返金履歴・対応が未確認、または未解決の記録があります。返金総額と純入金は確定していません。登録金額では補っていません。</p>:null}
-   </>:<p className="mt-2 text-sm">{pending?"金銭記録を読み取り中":"金銭記録を確認できません。未入金・返金なしとは判断していません。"}</p>}
-   <p className="mt-2 text-xs">現在の見積・制作・送信許可とは別の参照です。新しい請求・入金登録・返金は行いません。</p>
-   {section==="transaction"?<><p className="mt-2 text-xs">{view?`参照時点：${caseTime(view.observedAt)}`:"参照時点未確認"}</p>{error?<p role="alert">金銭と履歴の最新版を確認できません。先頭から取得し直してください。</p>:null}<button className={`${ui.btnSecondary} mt-3`} disabled={pending} onClick={restart}>金銭と履歴を再取得</button></>:null}
+ return <section hidden={!active} className="mt-4 space-y-4" aria-label="入金と履歴">
+  <div className="rounded-2xl border bg-white p-4 sm:p-5"><h3 className="font-semibold">入金と返金</h3>
+   {financial?<><dl className="my-3 grid gap-2 sm:grid-cols-3"><div><dt>入金</dt><dd>{money(financial.gross)}</dd></div><div><dt>返金</dt><dd>{money(financial.refunded)}</dd></div><div><dt>差し引き</dt><dd>{money(financial.net)}</dd></div></dl>
+    <p className="text-sm">{financial.method==="manual"?"あなたが記録した入金":financial.method==="stripe"?"カード決済":"以前の方法での入金"}{financial.confirmedAt?` · ${caseTime(financial.confirmedAt)}`:""}</p>
+    {financial.legacyRecordedAmount!==null?<p className="mt-2 text-sm">以前の方法で記録した金額：{money(financial.legacyRecordedAmount)}（上の合計には入れていません）</p>:null}
+    {financial.pendingCount||financial.reviewCount?<p className="mt-2 text-sm">返金の手続き中 {financial.pendingCount??"—"}件 / 要確認 {financial.reviewCount??"—"}件</p>:null}
+    {financial.state!=="verified"?<p className="mt-2 text-sm text-amber-900">終わっていない返金があるので、差し引きの金額はまだ決まっていません。</p>:null}
+   </>:<p className="mt-2 text-sm">{pending?"読み込み中":"入金の記録を読み込めませんでした。"}</p>}
+   
+   {section==="transaction"?<>{error?<><p role="alert">最新の記録を読み込めませんでした。</p><button className={`${ui.btnSecondary} mt-3`} disabled={pending} onClick={restart}>再読み込み</button></>:null}</>:null}
   </div>
-  <div hidden={section!=="history"} className="rounded-2xl border bg-white p-4 sm:p-5"><h3 className="font-semibold">保存された履歴</h3>
-   <p className="my-2 text-xs">複数の台帳に同じ出来事が記録されます。行数や金額を加算して入金・送信・受取の確定にはしません。上書き前のタスクや記録されなかった過去は復元していません。</p>
-   {pending?<p role="status">履歴を読み取り中</p>:null}
-   {error?<p role="alert">{error==="changed"?"履歴が更新されました。古いページは表示せず、先頭から確認し直してください。":"履歴を取得できません。このページや全履歴が空とは判断していません。"}</p>:null}
-   <button className={ui.btnSecondary} disabled={pending} onClick={restart}>履歴を先頭から再取得</button>
-   {view?<><p className="my-3 text-sm" role="status">保存記録 {view.total}件中 {view.total===0?0:view.offset+1}〜{view.offset+view.rows.length}件 · 最終取得 {caseTime(view.observedAt)}{view.offset===0&&view.next===null?"（全件取得済み）":"（ページ取得・全件を同時取得していません）"}</p>
-    <details className="my-3 text-xs"><summary>取得対象の台帳と件数</summary><ul>{Object.entries(CASE_HISTORY_SOURCES).map(([key,label])=><li key={key}>{label}：{view.counts[key]??0}件</li>)}</ul></details>
+  <div hidden={section!=="history"} className="rounded-2xl border bg-white p-4 sm:p-5"><h3 className="font-semibold">細かい記録</h3>
+   {pending?<p role="status">読み込み中</p>:null}
+   {error?<p role="alert">{error==="changed"?"記録が増えました。最初のページから読み込み直してください。":"記録を読み込めませんでした。"}</p>:null}
+   <button className={ui.btnSecondary} disabled={pending} onClick={restart}>最初のページから読み込み直す</button>
+   {view?<><p className="my-3 text-sm" role="status">{view.total}件中 {view.total===0?0:view.offset+1}〜{view.offset+view.rows.length}件{view.offset===0&&view.next===null?"（全件）":""}</p>
     <ol className="space-y-3">{view.rows.map(row=><li key={row.id} className="rounded-xl border p-3 text-sm">
-     <p className="font-semibold">{CASE_HISTORY_SOURCES[row.source]}{row.source==='activity'&&['quote_issued','mail_sent','payment_recorded','delivery_sent','delivery_accepted'].includes(row.kind??'')?`：${getNatoriProjectActivityLabel(row.kind as NatoriProjectActivityEventType)}（旧台帳の記録）`:''}</p>
-     <p className="text-xs">{row.occurredAt?caseTime(row.occurredAt):"記録時刻未保存"} · 記録ID {row.recordId}</p>
-     {row.kind?<p className="break-all">種類：{row.kind}</p>:null}{row.state?<p>保存上の状態：{row.state}（業務完了とは別）</p>:null}
-     {row.source==='work-record'?<p>担当の手動記録・外部由来を含みます。依頼者のサイト上の操作とは別です。</p>:null}
-     {row.quoteId?<p>見積：{row.quoteVersion?`第${row.quoteVersion}版`:'版未確認'} · {row.quoteId}{row.quoteMatched===false?'（同案件との対応未確認）':''}</p>:null}
-     {row.amount!==null?<p>記録された額：{row.amount.toLocaleString('ja-JP')} {row.currency??'通貨未確認'}（この行だけで入金確定にはしません）</p>:null}
-     {row.acceptedAt?<p>承諾／受取の保存時刻：{caseTime(row.acceptedAt)}{row.legacy?'（旧方式・対応は別途確認）':''}</p>:null}
-     {row.sentAt?<p>送信受付の保存時刻：{caseTime(row.sentAt)}（到達・既読は別）</p>:null}
-     {row.relatedId?<p className="break-all text-xs">参照先ID：{row.relatedId}</p>:null}{row.retentionState==='retired'?<p>本文消去・再実行停止。結果不明を失敗に変更していません。</p>:null}
-     {row.source==='notice'&&onNotice?<button className={`${ui.btnSecondary} mt-2`} onClick={()=>onNotice(row.recordId)}>この通知を案件内で確認</button>:null}
-     {row.reason?<p>照合上の理由：{row.reason}</p>:null}
+     <p className="font-semibold">{CASE_HISTORY_SOURCES[row.source]}{row.source==='activity'&&['quote_issued','mail_sent','payment_recorded','delivery_sent','delivery_accepted'].includes(row.kind??'')?`：${getNatoriProjectActivityLabel(row.kind as NatoriProjectActivityEventType)}`:''}</p>
+     <p className="text-xs text-zinc-600">{row.occurredAt?caseTime(row.occurredAt):"日時なし"}</p>
+     {row.quoteId?<p>見積：{row.quoteVersion?`第${row.quoteVersion}版`:'—'}{row.quoteMatched===false?'（要確認：どの見積か分かりません）':''}</p>:null}
+     {row.amount!==null?<p>金額：{row.currency===null||row.currency?.toLowerCase()==='jpy'?`${row.amount.toLocaleString('ja-JP')}円`:`${row.amount.toLocaleString('ja-JP')} ${row.currency}`}</p>:null}
+     {row.acceptedAt?<p>OK・受け取り：{caseTime(row.acceptedAt)}</p>:null}
+     {row.sentAt?<p>送信：{caseTime(row.sentAt)}</p>:null}
+     {row.retentionState==='retired'?<p>本文は消しました。</p>:null}
+     {row.source==='notice'&&onNotice?<button className={`${ui.btnSecondary} mt-2`} onClick={()=>onNotice(row.recordId)}>このメールを見る</button>:null}
+     {row.reason?<p>理由：{row.reason}</p>:null}
     </li>)}</ol>
-    <nav aria-label="案件履歴のページ" className="mt-4 flex flex-wrap items-center gap-3"><button className={ui.btnSecondary} disabled={pending||page<=1} onClick={()=>onPage(page-1)}>前の履歴</button><span>{page}ページ</span><button className={ui.btnSecondary} disabled={pending||view.next===null} onClick={()=>onPage(page+1)}>次の履歴</button></nav>
+    <nav aria-label="案件履歴のページ" className="mt-4 flex flex-wrap items-center gap-3"><button className={ui.btnSecondary} disabled={pending||page<=1} onClick={()=>onPage(page-1)}>前へ</button><span>{page}ページ</span><button className={ui.btnSecondary} disabled={pending||view.next===null} onClick={()=>onPage(page+1)}>次へ</button></nav>
    </>:null}
-   {legacy.length?<aside className="mt-5 rounded-xl bg-amber-50 p-3 text-sm"><h4 className="font-semibold">旧メモ内の履歴（担当メモ・対応未確認）</h4><p className="text-xs">保存台帳とは別です。宛先・本文・支払URLは表示しません。</p><ul>{legacy.map((r,i)=><li key={i}>{r.dateISO} · {r.label}</li>)}</ul></aside>:null}
+   {legacy.length?<aside className="mt-5 rounded-xl bg-amber-50 p-3 text-sm"><h4 className="font-semibold">以前のメモ</h4><ul>{legacy.map((r,i)=><li key={i}>{r.dateISO} · {r.label}</li>)}</ul></aside>:null}
   </div>
  </section>;
 }

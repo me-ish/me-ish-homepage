@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { isPaymentTimestamp } from "./clientPayment";
 export const CASE_HISTORY_SOURCES = {
-  activity:"既存の対応履歴台帳",quote:"見積の保存版",payment:"入金台帳",refund:"返金台帳",
-  notice:"通知ジョブの試行", "legacy-mail":"旧メール送信記録",link:"支払リンク世代",
-  "link-operation":"支払リンク処理", "link-stop":"リンク停止処理", "quote-operation":"見積発行処理",
-  "work-record":"担当の制作・外部記録", "admin-operation":"管理操作の保存結果", message:"相談メッセージの登録",
-  "consultation-operation":"相談の保存処理",rough:"ラフの登録", "rough-ok":"依頼者のラフOK", "rough-ack":"担当のラフOK確認",
-  release:"納品発行・受取の記録", "delivery-operation":"納品の保存処理",extension:"納品期限の延長記録",
-  "reconciliation-job":"照合ジョブ",resolution:"照合の解決保存",evidence:"照合の証拠保存", "stripe-inbox":"決済通知の受信処理",
+  activity:"対応の記録",quote:"見積",payment:"入金",refund:"返金",
+  notice:"メール", "legacy-mail":"以前のメール",link:"支払いリンク",
+  "link-operation":"支払いリンクの処理", "link-stop":"支払いリンクの停止", "quote-operation":"見積の送信",
+  "work-record":"あなたが書いた記録", "admin-operation":"案件の設定の変更", message:"相談のメッセージ",
+  "consultation-operation":"相談の保存",rough:"ラフ", "rough-ok":"お客さんのラフOK", "rough-ack":"ラフOKを見た",
+  release:"納品と受け取り", "delivery-operation":"納品の処理",extension:"納品ページの期限延長",
+  "reconciliation-job":"結果の問い合わせ",resolution:"問い合わせ結果の記録",evidence:"問い合わせの結果", "stripe-inbox":"カード決済の知らせ",
 } as const;
 const time=z.string().refine(isPaymentTimestamp), text=z.string().max(500).nullable();
 export const caseHistoryRow=z.object({

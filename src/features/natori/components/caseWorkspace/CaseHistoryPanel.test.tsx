@@ -12,15 +12,15 @@ const first=():CaseHistoryView=>({projectId:id,revision:'a'.repeat(32),total:51,
 const panel=(page=1,key='one')=><CaseHistoryPanel key={key} projectId={id} section="history" page={page} refreshKey="facts" onPage={onPage} onAccessRejected={reject}/>;
 beforeEach(()=>{vi.clearAllMocks();m.load.mockResolvedValue(first());});afterEach(cleanup);
 it("labels a partial page and uncorrelated old money without calling it the full history or confirmed income",async()=>{
- render(panel());await screen.findByText(/51件中 1〜50件/);expect(screen.queryByText(/全件取得済み/)).toBeNull();
- expect(screen.getByText(/旧方式の金額記録：7,000円/)).not.toBeNull();expect(screen.getByText(/純入金は確定していません/)).not.toBeNull();
- fireEvent.click(screen.getByRole('button',{name:'次の履歴'}));expect(onPage).toHaveBeenCalledWith(2);
+ render(panel());await screen.findByText(/51件中 1〜50件/);expect(screen.queryByText(/（全件）/)).toBeNull();
+ expect(screen.getByText(/以前の方法で記録した金額：7,000円/)).not.toBeNull();expect(screen.getByText(/差し引きの金額はまだ決まっていません/)).not.toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'次へ'}));expect(onPage).toHaveBeenCalledWith(2);
 });
 it("clears old data on a changing cursor and requires explicit restart rather than silently returning an empty page",async()=>{
  const view=render(panel());await screen.findByText(/51件中 1〜50件/);
  m.load.mockRejectedValueOnce(new CaseHistoryChangedError('changed'));view.rerender(panel(2));await screen.findByRole('alert');
- expect(screen.queryByText(/51件中/)).toBeNull();expect(screen.getByText(/履歴が更新されました/)).not.toBeNull();
- fireEvent.click(screen.getByRole('button',{name:'履歴を先頭から再取得'}));expect(onPage).toHaveBeenCalledWith(1);
+ expect(screen.queryByText(/51件中/)).toBeNull();expect(screen.getByText(/記録が増えました/)).not.toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'最初のページから読み込み直す'}));expect(onPage).toHaveBeenCalledWith(1);
 });
 it("discards an obsolete in-flight read after the target panel unmounts",async()=>{
  let finish!:(v:CaseHistoryView)=>void;m.load.mockImplementationOnce(()=>new Promise(r=>{finish=r;}));const old=render(panel());old.unmount();
