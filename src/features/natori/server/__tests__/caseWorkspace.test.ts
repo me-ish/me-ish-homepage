@@ -84,6 +84,10 @@ describe("synthetic reader to case workspace", () => {
     expect(partial[0].display.conversation.state).toBe("unavailable");
     expect(observationLabel(partial[0].display.payment)).not.toContain("記録なし");
   });
+  it("labels a list that was read but is empty with the caller's empty text", () => {
+    const empty = { state: "ready", snapshotId: "s", observedAt: "2026-10-27T00:00:00Z", revision: "r", value: [] } as const;
+    expect(observationLabel(empty, "まだメールは送っていません")).toBe("まだメールは送っていません");
+  });
   it("keeps matched receipt and unknown delivery notification as separate facts", () => {
     const record = normal[7], guidance = deriveCaseGuidance(record);
     expect(record.model.stage).toBe("received");

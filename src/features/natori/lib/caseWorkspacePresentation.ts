@@ -21,7 +21,9 @@ export function caseMoney(value: { amount: number; currency: string } | null | u
     maximumFractionDigits: 0 }).format(value.amount) : "金額未確認";
 }
 export function observationLabel(value: CaseObservation<unknown>, absent = "まだありません"): string {
-  return value.state === "absent" ? absent : value.state === "not_requested" ? "まだ読み込んでいません"
+  // A list that was read but holds nothing is the same, for the reader, as nothing recorded.
+  const empty = value.state === "ready" && Array.isArray(value.value) && value.value.length === 0;
+  return value.state === "absent" || empty ? absent : value.state === "not_requested" ? "まだ読み込んでいません"
     : value.state === "unavailable" ? value.reason === "read_failed" ? "読み込めませんでした"
       : value.reason === "incomplete" ? "一部を読み込めませんでした" : "この形式は表示できません" : "読み込み済み";
 }
