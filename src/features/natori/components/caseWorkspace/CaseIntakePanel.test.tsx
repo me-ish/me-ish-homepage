@@ -97,8 +97,8 @@ it("reopens editing after a saved operation is closed and its newer source is ex
  m.submit.mockImplementation(async()=>{m.load.mockResolvedValue(source('b'.repeat(64),'保存したメモ'));return {result:'applied',projectId:id};});
  render(view('one'));await screen.findByLabelText('次にやること');
  fireEvent.change(screen.getByLabelText('次にやること'),{target:{value:'保存したメモ'}});fireEvent.click(screen.getByRole('button',{name:'メモを保存する'}));
- fireEvent.click(screen.getByRole('button',{name:'確認した内容で実行'}));await waitFor(()=>expect(screen.getByRole('button',{name:'確認済みの操作を閉じる'}).hasAttribute('disabled')).toBe(false));
- fireEvent.click(screen.getByRole('button',{name:'確認済みの操作を閉じる'}));await waitFor(()=>expect(screen.getByRole('button',{name:'最新の内容を読み込む'}).hasAttribute('disabled')).toBe(false));
+ fireEvent.click(screen.getByRole('button',{name:'この内容で保存する'}));await waitFor(()=>expect(screen.getByRole('button',{name:'閉じる'}).hasAttribute('disabled')).toBe(false));
+ fireEvent.click(screen.getByRole('button',{name:'閉じる'}));await waitFor(()=>expect(screen.getByRole('button',{name:'最新の内容を読み込む'}).hasAttribute('disabled')).toBe(false));
  fireEvent.click(screen.getByRole('button',{name:'最新の内容を読み込む'}));
  await waitFor(()=>expect(screen.getByLabelText('次にやること').closest('fieldset')!.disabled).toBe(false));
  expect(screen.queryByText(/保存を止めています/)).toBeNull();

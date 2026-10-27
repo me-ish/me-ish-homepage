@@ -97,18 +97,18 @@ export function CaseRegistration({
                   action: { command: "create", data },
                 },
                 [
-                  `登録方法：${data.mode === "external" ? "外部相談（種別・金額・納期は未確定）" : "担当による案件登録"}`,
-                  `案件：${data.title} / 依頼者：${data.clientName}`,
-                  `連絡先：${data.clientEmail || "未登録"}`,
+                  `登録のしかた：${data.mode === "external" ? "サイトの外で受けた相談（金額や納期はあとで決める）" : "決まっている案件を登録"}`,
+                  `案件：${data.title} / お客さん：${data.clientName}`,
+                  `メール：${data.clientEmail || "なし"}`,
                   data.mode === "manual"
-                    ? `種別：${data.type} / 管理額：${data.amount} JPY / 登録納期：${data.dueDate} / 旧進捗の記録：${data.status}`
-                    : "担当の明示登録として保存します。内部の見積承諾・送信・入金・受取は生成しません。",
+                    ? `種類：${data.type} / 金額：${Number(data.amount).toLocaleString("ja-JP")}円 / 納期：${data.dueDate} / いまの段階：${data.status}`
+                    : "案件だけを登録します。お客さんにメールは送りません。",
                   `メモ：${data.note}`,
                 ],
               );
               setError("");
             } catch {
-              setError("登録内容を確認してください。");
+              setError("入力に足りないところがあります。");
             }
           }}
         >
@@ -117,7 +117,7 @@ export function CaseRegistration({
             className="space-y-3"
           >
             <label className="block text-sm">
-              登録方法
+              登録のしかた
               <select
                 className={ui.input}
                 value={form.mode}
@@ -125,15 +125,15 @@ export function CaseRegistration({
                   setForm((v) => ({ ...v, mode: e.target.value }))
                 }
               >
-                <option value="external">外部で受けた相談を登録</option>
-                <option value="manual">担当が案件を登録</option>
+                <option value="external">サイトの外で受けた相談</option>
+                <option value="manual">決まっている案件</option>
               </select>
             </label>
             {(
               [
-                ["title", "登録する案件名"],
-                ["clientName", "登録する依頼者名"],
-                ["clientEmail", "登録する連絡先メール"],
+                ["title", "案件名"],
+                ["clientName", "お客さんの名前"],
+                ["clientEmail", "お客さんのメール"],
               ] as const
             ).map(([key, label]) => (
               <label key={key} className="block text-sm">
@@ -151,7 +151,7 @@ export function CaseRegistration({
             {form.mode === "manual" ? (
               <>
                 <label className="block text-sm">
-                  登録する種別
+                  依頼の種類
                   <select
                     className={ui.input}
                     value={form.type}
@@ -172,7 +172,7 @@ export function CaseRegistration({
                   </select>
                 </label>
                 <label className="block text-sm">
-                  登録する管理額
+                  金額（円）
                   <input
                     type="number"
                     min={0}
@@ -184,7 +184,7 @@ export function CaseRegistration({
                   />
                 </label>
                 <label className="block text-sm">
-                  旧進捗の記録（事実の証明とは別）
+                  いまの段階
                   <select
                     className={ui.input}
                     value={form.status}
@@ -193,15 +193,15 @@ export function CaseRegistration({
                     }
                   >
                     <option value="inquiry">相談受付</option>
-                    <option value="estimating">見積作成中</option>
-                    <option value="quoted">見積提示の記録</option>
+                    <option value="estimating">見積を作っている</option>
+                    <option value="quoted">見積を出した</option>
                     <option value="awaiting_payment">
-                      入金待ちの旧記録（案内送信は未確認）
+                      入金待ち
                     </option>
                   </select>
                 </label>
                 <label className="block text-sm">
-                  登録する納期プラン
+                  納期のプラン
                   <select
                     className={ui.input}
                     value={form.deliveryPlan}
@@ -215,7 +215,7 @@ export function CaseRegistration({
                   </select>
                 </label>
                 <label className="block text-sm">
-                  登録する着手日
+                  作業を始める日
                   <input
                     type="date"
                     className={ui.input}
@@ -226,7 +226,7 @@ export function CaseRegistration({
                   />
                 </label>
                 <label className="block text-sm">
-                  登録する納期
+                  納期
                   <input
                     type="date"
                     className={ui.input}
@@ -239,7 +239,7 @@ export function CaseRegistration({
               </>
             ) : null}
             <label className="block text-sm">
-              登録時の担当メモ
+              メモ
               <textarea
                 className={ui.input}
                 value={form.note}
@@ -248,7 +248,7 @@ export function CaseRegistration({
                 }
               />
             </label>
-            <button className={ui.btnSecondary}>登録内容の確認へ</button>
+            <button className={ui.btnSecondary}>登録する（前に内容を表示）</button>
           </fieldset>
           {error ? <p role="alert">{error}</p> : null}
         </form>
