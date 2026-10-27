@@ -321,3 +321,17 @@ it("swaps the phone bottom bar for the case's own consultation, history and othe
   fireEvent.click(screen.getByRole("link",{name:"← 案件へ戻る"}));
   expect(screen.getByRole("navigation",{name:"スマホの主な入口"}).classList.contains("hidden")).toBe(false);
 });
+
+it("opens a finished consultation as a sheet over the steps and closes it back to the current step",async()=>{
+  render(<CaseWorkspacePreview load={async()=>records} initialSearch={`?entry=cases&case=${records[0].id}&section=transaction`}/>);
+  await screen.findByRole("heading",{name:"森の表紙イラスト"});
+  fireEvent.click(otherNav().getByRole("link",{name:"相談"}));
+  expect(window.location.search).toContain("section=consultation");
+  expect(stepList().queryByRole("link",{current:"step"})).toBeNull();
+  fireEvent.click(screen.getByRole("link",{name:/^閉じる/}));
+  expect(window.location.search).toContain("section=transaction");
+  fireEvent.click(otherNav().getByRole("link",{name:"相談"}));
+  fireEvent.keyDown(screen.getByRole("heading",{name:"相談",level:2}),{key:"Escape"});
+  expect(window.location.search).toContain("section=transaction");
+  expect(screen.queryByRole("link",{name:/^閉じる/})).toBeNull();
+});
