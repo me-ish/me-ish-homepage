@@ -70,7 +70,7 @@ export function CaseIntakePanel({
           if (e instanceof CaseWorkspaceLoadError && e.kind === "unauthorized")
             rejectRef.current();
           setError(
-            "依頼内容・資料を取得できません。未提出とは断定せず再取得してください。",
+            "依頼内容を読み込めませんでした。「再読み込み」を押してください。",
           );
         }
         throw e;
@@ -127,18 +127,18 @@ export function CaseIntakePanel({
     <section
       hidden={section !== "overview" && section !== "consultation"}
       className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5"
-      aria-label="元の依頼と受付資料"
+      aria-label="依頼の内容"
     >
-      <h3 className="text-lg font-semibold">元の依頼と受付資料</h3>
+      <h3 className="text-lg font-semibold">依頼の内容</h3>
       <p className="mt-2 text-sm">
-        依頼者の原回答・受付時のメモと、担当が管理する内容を分けて表示します。
+        お客さんが送ってきた内容と、あなたのメモです。
       </p>
       {error ? <p role="alert">{error}</p> : null}
       <button
         className={`${ui.btnSecondary} my-3`}
         onClick={() => setReload((v) => v + 1)}
       >
-        依頼・資料を再取得
+        再読み込み
       </button>
       {view ? (
         <IntakeContent
@@ -216,7 +216,7 @@ function IntakeContent({
   const save = (action: CaseAdminRequest["action"], summary: string[]) => {
     if (stale) {
       setError(
-        "確認元が更新されました。入力を閉じて最新の保存内容を確認してください。",
+        "ほかの画面で内容が変わりました。「最新の内容を読み込む」を押してください。",
       );
       return;
     }
@@ -226,10 +226,10 @@ function IntakeContent({
     <div className="space-y-4">
       <InquiryRequestSummary view={request} />
       {request.kind === "legacy" ? (
-        <section aria-label="旧形式の依頼記録">
-          <h4 className="font-semibold">旧形式の依頼記録</h4>
+        <section aria-label="以前の形式の依頼">
+          <h4 className="font-semibold">以前の形式の依頼</h4>
           <p className="text-xs">
-            受付メモの表示です。サイト上の承諾・送信・入金を確定する証拠ではありません。
+            受け付けた時のメモです。
           </p>
           <dl>
             {note.fields.map((f) => (
@@ -240,7 +240,7 @@ function IntakeContent({
             ))}
           </dl>
           <p className="whitespace-pre-wrap break-words">
-            {note.details || note.plainNote || "原回答の保存記録なし"}
+            {note.details || note.plainNote || "内容の記録はありません"}
           </p>
           <p className="whitespace-pre-wrap">{note.message}</p>
           {note.refImages.map((url, i) =>
@@ -252,10 +252,10 @@ function IntakeContent({
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                旧資料{i + 1}を開く
+                資料{i + 1}を開く
               </a>
             ) : (
-              <p key={i}>旧資料{i + 1}のURLを確認できません</p>
+              <p key={i}>資料{i + 1}のURLが正しくありません</p>
             ),
           )}
           <p className="whitespace-pre-wrap break-words">{note.refText}</p>
@@ -265,10 +265,10 @@ function IntakeContent({
         files={view.files}
         acquisitionState={view.filesState}
       />
-      <section aria-label="受付の参考リンク">
+      <section aria-label="参考リンク">
         <h4 className="font-semibold">参考リンク（{view.links.length}/5件）</h4>
         {view.links.length === 0 ? (
-          <p>登録された参考リンクなし（取得済み）</p>
+          <p>まだありません</p>
         ) : (
           <ul>
             {view.links.map((l) => (
@@ -283,7 +283,7 @@ function IntakeContent({
                     {l.label || l.url}
                   </a>
                 ) : (
-                  <p>リンクのURLを確認できません</p>
+                  <p>リンクのURLが正しくありません</p>
                 )}
                 <button
                   className={`${ui.btnSecondary} ml-2`}
@@ -313,14 +313,14 @@ function IntakeContent({
                         label: null,
                       },
                       [
-                        "参考リンクだけを削除。受付資料ファイルと原回答は削除しません。",
+                        "この参考リンクを消します。お客さんの依頼内容や資料は消えません。",
                         l.label ?? l.url,
                         l.url,
                       ],
                     )
                   }
                 >
-                  このリンクの削除確認
+                  このリンクを消す
                 </button>
               </li>
             ))}
@@ -328,10 +328,10 @@ function IntakeContent({
         )}
         <fieldset disabled={disabled || stale} className="space-y-2">
           <legend>
-            {draft.mode === "edit" ? "参考リンクの編集" : "参考リンクの追加"}
+            {draft.mode === "edit" ? "参考リンクを直す" : "参考リンクを追加"}
           </legend>
           <label className="block">
-            参考リンクURL
+            URL
             <input
               className={ui.input}
               value={draft.url}
@@ -339,7 +339,7 @@ function IntakeContent({
             />
           </label>
           <label className="block">
-            リンクのラベル
+            名前（例：参考イラスト）
             <input
               className={ui.input}
               maxLength={100}
@@ -353,7 +353,7 @@ function IntakeContent({
             className={ui.btnSecondary}
             onClick={() => {
               if (!normalizeNatoriReferenceUrl(draft.url)) {
-                setError("認証情報を含まないHTTPSのURLを入力してください。");
+                setError("https:// で始まるURLを入れてください。");
                 return;
               }
               setError("");
@@ -367,25 +367,25 @@ function IntakeContent({
                 },
                 [
                   draft.mode === "edit"
-                    ? "選択した参考リンクの更新"
-                    : "参考リンクの追加",
+                    ? "参考リンクを直す"
+                    : "参考リンクを追加",
                   draft.url,
                   draft.label,
                 ],
               );
             }}
           >
-            リンクの保存内容を確認
+            リンクを保存する
           </button>
         </fieldset>
       </section>
       <fieldset disabled={disabled || stale} className="space-y-2">
-        <legend className="font-semibold">管理確認と次回メモ</legend>
+        <legend className="font-semibold">次にやることのメモ</legend>
         <p className="text-sm">
-          金額・登録納期・納期プランは基本情報で確認保存できます。このメモは共通の状態判定や依頼者の対応待ちを変更しません。
+          自分用のメモです。お客さんには見えません。金額や納期は「その他」で変えられます。
         </p>
         <label className="block">
-          担当の次回メモ
+          次にやること
           <input
             className={ui.input}
             maxLength={120}
@@ -397,12 +397,12 @@ function IntakeContent({
           className={ui.btnSecondary}
           onClick={() =>
             save({ command: "intake-memo", text: draft.memo }, [
-              "担当の次回メモだけを保存（進捗・承諾・入金は変更しません）",
+              "メモを保存",
               draft.memo,
             ])
           }
         >
-          次回メモの保存内容を確認
+          メモを保存する
         </button>
       </fieldset>
       <button
@@ -410,14 +410,14 @@ function IntakeContent({
         // This explicit read/discard can supersede an automatic read. Loading
         // must not cancel its click between pointerdown and pointerup.
         disabled={resetDisabled||resetting}
-        onClick={() =>{setResetting(true);void latest().then(fresh=>{reset({memo:fresh.project.nextAction,revision:fresh.revision,mode:"add",linkId:"",url:"",label:""});setError("");}).catch(()=>setError("最新の保存内容を取得できません。古い入力を保持し、保存は行っていません。")).finally(()=>setResetting(false));}}
+        onClick={() =>{setResetting(true);void latest().then(fresh=>{reset({memo:fresh.project.nextAction,revision:fresh.revision,mode:"add",linkId:"",url:"",label:""});setError("");}).catch(()=>setError("読み込めませんでした。書いた内容はそのまま残しています。")).finally(()=>setResetting(false));}}
       >
-        入力を閉じて最新の保存内容を使う
+        最新の内容を読み込む
       </button>
       {error ? <p role="alert">{error}</p> : null}
       {stale ? (
         <p role="alert">
-          確認元が更新されました。古い入力からの保存は停止しています。「入力を閉じて最新の保存内容を使う」で確認し直してください。
+          ほかの画面で内容が変わったので、保存を止めています。「最新の内容を読み込む」を押してください。
         </p>
       ) : null}
     </div>
