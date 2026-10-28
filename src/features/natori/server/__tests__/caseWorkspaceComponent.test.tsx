@@ -349,3 +349,15 @@ it("does not list a case whose only mails are old sent ones under mails still to
  expect(within(section).queryByText("以前のメールだけの案件")).toBeNull();
  expect(within(section).getByText("これから送る案件")).toBeTruthy();
 });
+
+it("tells staff to check an old-path paid link in Stripe instead of listing it as work",()=>{
+ const paid=records.find(row=>row.model.facts.payment.state==="ready");
+ if(!paid||paid.model.facts.payment.state!=="ready")throw new Error("fixture needs a paid case");
+ const {snapshotId,observedAt,revision}=paid.model.facts.payment;
+ const withLink=(source:"ledger"|"legacy_projection",providerState:"active"|"unverified"):CaseWorkspaceRecord=>({...paid,model:{...paid.model,facts:{...paid.model.facts,link:{state:"ready",snapshotId,observedAt,revision,value:{
+  id:"link-1",projectId:paid.id,revision:"r1",recordedAt:observedAt,source,quoteId:null,quoteVersion:null,generation:null,deadlineRevision:"d1",money:null,expiresAt:null,state:"active",providerState}}}}});
+ render(<CaseWorkspaceSections record={withLink("legacy_projection","unverified")} section="transaction" step="payment"/>);
+ expect(screen.getByText(/Stripe の管理画面でこの支払いリンクが「無効」になっているか見てください/)).toBeTruthy();
+ cleanup();render(<CaseWorkspaceSections record={withLink("ledger","active")} section="transaction" step="payment"/>);
+ expect(screen.queryByText(/Stripe の管理画面で/)).toBeNull();
+});
