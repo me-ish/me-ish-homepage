@@ -30,11 +30,10 @@ it.each([
   {entry:"cases" as const,source:"all" as const},
   {entry:"cases" as const,source:"inquiries" as const},
   {entry:"cases" as const,source:"estimate" as const},
-])("keeps the production $entry/$source entry interactive and its management links without a preview claim",async props=>{
+])("keeps the production $entry/$source entry interactive without a preview claim or a duplicate link bar",async props=>{
   const html=renderToStaticMarkup(await CaseWorkspaceEntryPage({input:{},preview:true,...props}));
   expect(html).not.toContain(warning);
-  for(const path of ["/natori/inquiries","/natori/estimate","/natori/results","/natori/portfolio/edit"])
-    expect(html).toContain(`href="${path}"`);
+  expect(html).not.toContain("<aside");
   expect(html).toContain('data-read-only="false"');
   expect(html).toContain('data-entry-tools="true"');
 });
