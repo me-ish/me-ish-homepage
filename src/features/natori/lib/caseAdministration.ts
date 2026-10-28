@@ -152,14 +152,14 @@ export function caseProject(p: NatoriTaskProjection): NatoriProject {
   };
 }
 export const caseAdminLabels = {
-  "intake-memo":"担当の次回メモを保存",
-  "reference-link":"参考リンクを確認保存",
+  "intake-memo":"メモを保存",
+  "reference-link":"参考リンクを保存",
   create: "案件を登録",
-  details: "基本情報を保存",
-  "manual-payment": "銀行振込等の手動入金を記録",
-  close: "相談を見送りにする",
-  reopen: "見送りから相談を再開",
-  archive: "復元可能な保管へ移す",
-  restore: "保管から復元",
-  "retry-notice": "確認した通知を復旧",
+  details: "案件の情報を保存",
+  "manual-payment": "振込などの入金を記録",
+  close: "この相談を見送る",
+  reopen: "相談を再開する",
+  archive: "しまっておく",
+  restore: "しまった案件を戻す",
+  "retry-notice": "メールを送り直す",
 };

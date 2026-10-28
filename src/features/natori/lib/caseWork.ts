@@ -45,6 +45,6 @@ export function openCaseRevisions(records:CaseWorkView["records"]){
  const handled=new Set(records.filter(r=>r.kind==="revision_handled").map(r=>r.data.requestId));
  return records.filter(r=>r.kind==="revision_open"&&!handled.has(r.id));
 }
-export const caseWorkLabels:Record<z.infer<typeof caseWorkKind>,string>={origin:"案件の由来",revision_open:"修正対応待ち",revision_handled:"担当の対応記録（依頼者OKとは別）",manual_agreement:"外部での合意・担当記録",manual_delivery:"外部での送付・担当記録",manual_receipt:"外部での受領・担当記録",manual_completion:"手動完了の担当記録（サイト受取とは別）"};
-export const caseOriginLabels={internal:"サイトで受付",external:"外部で受けた相談",manual:"担当が登録した稼働案件",historical:"過去の実績",unknown:"由来未確認"};
-export const caseWorkNoticeLabel=(status:string)=>({pending:"送信待ち",sending:"処理中（結果未確認）",sent:"送信サービス受付済み（到達・既読とは別の記録）",failed:"確定した送信失敗",unknown:"結果不明・要確認"}[status]??"結果未確認");
+export const caseWorkLabels:Record<z.infer<typeof caseWorkKind>,string>={origin:"どこで受けた案件か",revision_open:"修正の依頼",revision_handled:"修正に対応した",manual_agreement:"サイトの外で決まった",manual_delivery:"サイトの外で納品した",manual_receipt:"サイトの外で受け取ってもらった",manual_completion:"完了にした"};
+export const caseOriginLabels={internal:"このサイト",external:"サイトの外（SNS・メールなど）",manual:"あなたが登録した案件",historical:"過去の実績",unknown:"分からない"};
+export const caseWorkNoticeLabel=(status:string)=>({pending:"送信待ち",sending:"送信中",sent:"送信しました",failed:"送れませんでした",unknown:"送れたか分かりません"}[status]??"送れたか分かりません");

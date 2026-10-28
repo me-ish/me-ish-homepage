@@ -38,13 +38,13 @@ export function caseMonthDays(month: string): string[] {
     .filter(day=>isPaymentTimestamp(`${day}T00:00:00Z`));
 }
 export const CASE_NOTICE_PURPOSES: Record<CaseNotificationAttempt["purpose"],string> = {
-  quote_notice:"見積の案内",payment_notice:"支払案内",delivery_notice:"納品案内",receipt_notice:"受取の通知",
-  rough_notice:"ラフの通知",consultation_notice:"相談の通知",staff_notice:"担当者への通知",
+  quote_notice:"見積のメール",payment_notice:"支払いのメール",delivery_notice:"納品のメール",receipt_notice:"受け取りのお知らせ",
+  rough_notice:"ラフのメール",consultation_notice:"相談のメール",staff_notice:"あなたへのお知らせ",
 };
 export function caseNoticeLabel(row: CaseNotificationAttempt): string {
-  return row.status==="sent" ? "送信サービス受付済み"
-    : row.status==="state_error" ? row.sentAt?"送信受付済み・保存結果は要確認":"送信受付の保存結果は要確認"
-      : row.status==="unknown" ? "受付結果は未確認"
-        : row.status==="failed" ? "確定した失敗の記録"
-          : row.status==="sending" ? "送信処理中の記録" : "送信待ちの記録";
+  return row.status==="sent" ? "送信しました"
+    : row.status==="state_error" ? row.sentAt?"送信しました（記録は要確認）":"要確認：送れたか分かりません"
+      : row.status==="unknown" ? "送れたか分かりません"
+        : row.status==="failed" ? "送れませんでした"
+          : row.status==="sending" ? "送信中" : "送信待ち";
 }

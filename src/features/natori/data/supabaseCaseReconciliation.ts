@@ -2,7 +2,7 @@ import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { reconciliationView, type ReconciliationView } from "../lib/caseReconciliation";
 
 export class ReconciliationReadError extends Error {
-  constructor(readonly unauthorized: boolean) { super(unauthorized ? "ログインを確認してください。確認画面を閉じました。" : "結果を確認できません。操作を繰り返さず、現在の記録を照会してください。"); }
+  constructor(readonly unauthorized: boolean) { super(unauthorized ? "ログインが切れました。もう一度ログインしてください。" : "うまくいったか分かりません。「いまの記録を読み込む」を押してください。"); }
 }
 export async function readReconciliation(project: string, signal?: AbortSignal, notificationId?:string): Promise<ReconciliationView | null> {
   const r = await fetch(`/api/natori/admin/case-reconciliation?${new URLSearchParams({ projectId: project,...(notificationId?{notificationId}:{}) })}`, { cache: "no-store", signal });

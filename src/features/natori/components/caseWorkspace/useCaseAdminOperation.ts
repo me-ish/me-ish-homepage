@@ -17,51 +17,51 @@ const savedSchema = z.object({
 type Saved = z.infer<typeof savedSchema>;
 const savedResults = new Set(["applied", "queued"]);
 const refusalMessages = new Map<string, string>([
-  ["duplicate","同じ参考リンクが登録済みです。最新版の一覧を確認してください。"],
-  ["link_limit","参考リンクは既存の上限5件までです。最新版を確認してください。"],
+  ["duplicate","同じ参考リンクがもうあります。"],
+  ["link_limit","参考リンクは5件までです。"],
   [
     "stale",
-    "確認後に案件が更新されました。実行していません。最新版を取得して確認し直してください。",
+    "ほかの画面で案件が変わったので、保存していません。ページを読み込み直してください。",
   ],
   [
     "confirmation_stale",
-    "通知内容が確認後に変わりました。実行していません。最新版で確認し直してください。",
+    "メールの内容が変わったので、送っていません。ページを読み込み直してください。",
   ],
   [
     "agreement_locked",
-    "承諾・入金の記録があるため、金額を変更できません。取引の記録を確認してください。",
+    "お客さんのOKか入金があるので、金額は変えられません。",
   ],
   [
     "payment_review",
-    "入金は記録していません。種別・管理額・承諾額と、未解決の入金や請求リンクを確認してください。",
+    "入金を記録できませんでした。金額と、使える支払いリンクが残っていないかを見てください。",
   ],
   [
     "notice_review",
-    "この通知は復旧できません。最新の試行・対象版・期限・処理結果を確認してください。",
+    "このメールは送り直せません。新しいメールがあるか、期限が切れています。",
   ],
   [
     "review_required",
-    "未解決の処理があります。見送り・保管の前に取引内の照合で確認してください。",
+    "終わっていない処理があります。先に「見積・支払い」で結果を調べてください。",
   ],
   [
     "unresolved",
-    "未停止の請求リンク等があるため保管できません。取引の記録と停止結果を確認してください。",
+    "使える支払いリンクが残っているので、しまえません。",
   ],
   [
     "invalid_state",
-    "現在の案件状態では実行できません。最新の記録と必要な操作を確認してください。",
+    "いまの段階ではできません。",
   ],
   [
     "inactive",
-    "保管中の案件では実行できません。復元の必要性を先に確認してください。",
+    "しまってある案件なのでできません。先に戻してください。",
   ],
   [
     "not_found",
-    "対象の案件・通知を確認できません。表示とログイン状態を確認してください。",
+    "案件が見つかりません。ログインが切れていないか見てください。",
   ],
   [
     "invalid",
-    "入力した内容を保存していません。対象と内容を確認し直してください。",
+    "保存できませんでした。入力を見直してください。",
   ],
 ]);
 export function useCaseAdminOperation(
@@ -130,7 +130,7 @@ export function useCaseAdminOperation(
       setMessage("");
     } catch {
       setBlocked(true);
-      setMessage("確認内容を保存できません。実行していません。");
+      setMessage("保存できませんでした。");
     }
   };
   const lookup = async () => {
@@ -153,7 +153,7 @@ export function useCaseAdminOperation(
           }
           setDone(false);
           setMessage(
-            "保存記録の結果を判定できません。新しい操作を作らず、同じ操作の確認を続けてください。",
+            "うまくいったか分かりません。「結果を見る」を押してください。",
           );
           return;
         }
@@ -161,17 +161,17 @@ export function useCaseAdminOperation(
         setProjectId(next.receipt.projectId);
         setMessage(
           next.receipt.result === "queued"
-            ? "通知の復旧要求は保存済みです。送信結果は案件の通知記録で確認してください。"
-            : "同じ操作の保存済み結果を確認しました。",
+            ? "送り直しを受け付けました。結果は「履歴」で見られます。"
+            : "保存できていました。",
         );
         onChanged();
       } else
         setMessage(
-          "この照会では保存結果を確認できません。未実行とは断定していません。新しい操作を作らず同じ操作を確認してください。",
+          "まだ結果が分かりません。少し待ってから、もう一度「結果を見る」を押してください。",
         );
     } catch (e) {
       if (alive.current && current === generation.current)
-        setMessage(e instanceof Error ? e.message : "結果未確認");
+        setMessage(e instanceof Error ? e.message : "うまくいったか分かりません。");
     } finally {
       if (current === generation.current) {
         lock.current = false;
@@ -192,7 +192,7 @@ export function useCaseAdminOperation(
       if (!alive.current || current !== generation.current) return;
       if (result.result === "conflict") {
         setMessage(
-          "同じ操作IDに保存済みの別結果がある可能性があります。結果を照会して確認してください。",
+          "前の保存と食い違っているかもしれません。「結果を見る」を押してください。",
         );
         onChanged();
         return;
@@ -200,7 +200,7 @@ export function useCaseAdminOperation(
       const refused = refusalMessages.get(result.result);
       if (!savedResults.has(result.result) && !refused) {
         setMessage(
-          "保存結果を判定できません。新しい操作を作らず、同じ操作の結果を照会してください。",
+          "うまくいったか分かりません。「結果を見る」を押してください。",
         );
         onChanged();
         return;
@@ -209,15 +209,15 @@ export function useCaseAdminOperation(
       setProjectId(result.projectId ?? null);
       setMessage(
         result.result === "queued"
-          ? "通知の復旧要求を保存しました。受付・到達は最新の通知記録で別に確認してください。"
+          ? "送り直しを受け付けました。結果は「履歴」で見られます。"
           : result.result === "applied"
-            ? "記録を保存しました。"
+            ? "保存しました。"
             : refused!,
       );
       onChanged();
     } catch (e) {
       if (alive.current && current === generation.current) {
-        setMessage(e instanceof Error ? e.message : "結果未確認");
+        setMessage(e instanceof Error ? e.message : "うまくいったか分かりません。");
         onChanged();
       }
     } finally {

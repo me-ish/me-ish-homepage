@@ -111,7 +111,7 @@ it("an unfamiliar successful HTTP response stays unresolved and cannot be discar
   expect(result.current.done).toBe(false);
   act(() => result.current.close());
   expect(result.current.saved?.request.operationId).toBe(operationId);
-  expect(result.current.message).toContain("同じ操作の結果を照会");
+  expect(result.current.message).toContain("「結果を見る」");
   m.load.mockResolvedValue({
     receipt: { result: "unrecognized_after_upgrade", projectId },
   });

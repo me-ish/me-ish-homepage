@@ -27,7 +27,7 @@ export function CaseWorkspaceSections({ record, section,step=null,application=fa
     <Card title="相談">{conversation ? <><p className="font-semibold">最後に書いた人：{conversation.latestSender === "client" ? "お客さん" : "あなた"}</p>
       <p className="mt-2 text-sm text-zinc-600">{caseTime(conversation.latestAt)}</p></>
       : <p>{observationLabel(d.conversation)}</p>}</Card>
-    {!application?<p className="rounded-xl bg-zinc-100 p-4 text-sm text-zinc-600">会話本文・返信の入力と送信は、この表示確認用画面には接続していません。</p>:null}
+    {!application?<p className="rounded-xl bg-zinc-100 p-4 text-sm text-zinc-600">見本の画面なので、返信は送れません。</p>:null}
   </div>;
   const agreed = quote?.acceptance && m.agreement === "accepted" ? quote.acceptance : null;
   const quoteReply = m.agreement === "accepted" ? `OK · ${caseTime(quote!.acceptance!.acceptedAt)}` : m.agreement === "needs_review" ? "要確認" : "まだ";
@@ -36,15 +36,15 @@ export function CaseWorkspaceSections({ record, section,step=null,application=fa
       : <Rows rows={[["金額", agreed ? caseMoney(agreed.money) : quote ? `${caseMoney(quote.money)}（OK前）` : "—"], ["宛先", `${record.clientLabel}さん（登録メール）`],
         ["入金", payment ? `入金済み · ${caseTime(payment.confirmedAt)}` : "まだ"], ["支払いリンク", caseKnown(m.facts.link) ? "作成済み" : observationLabel(m.facts.link, "まだ")]]} />}
     {application&&!readOnly?<CaseReconciliationPanel selectedNotificationId={selectedNotificationId} key={`reconciliation-${record.id}`} projectId={record.id} onChanged={onChanged}/>:null}
-    {application&&!readOnly?<CasePaymentPanel key={record.id} projectId={record.id} onChanged={onChanged}/>:<p className="rounded-xl bg-pink-50 p-4 text-sm text-pink-950">{readOnly?"照会のみの画面です。送信・発行・外部照合・解決の保存は停止しています。":"見積の発行・入金登録・支払案内の送信は未接続です。この画面で請求や送信は行われません。"}</p>}
+    {application&&!readOnly?<CasePaymentPanel key={record.id} projectId={record.id} onChanged={onChanged}/>:<p className="rounded-xl bg-pink-50 p-4 text-sm text-pink-950">{readOnly?"いまは見るだけなので、支払いリンクは送れません。":"見本の画面なので、見積や支払いリンクは送れません。"}</p>}
     <Records title="見積・入金・メールの記録">
     <div className="grid gap-4 sm:grid-cols-2"><Card title="見積">{quote ? <><p className="font-semibold">第{quote.version}版 · {caseMoney(quote.money)}</p>
-      <p className="mt-2 text-sm">{m.agreement === "accepted" ? `OKをもらった日時：${caseTime(quote.acceptance!.acceptedAt)}` : m.agreement === "needs_review" ? "要確認：見積とOKの内容が合っているか確認してください" : "まだOKをもらっていません"}</p></>
+      <p className="mt-2 text-sm">{m.agreement === "accepted" ? `OKをもらった日時：${caseTime(quote.acceptance!.acceptedAt)}` : m.agreement === "needs_review" ? "要確認：OKの内容がこの見積と合っているか見てください" : "まだOKをもらっていません"}</p></>
       : <p>{observationLabel(m.facts.quote, "見積はまだありません")}</p>}</Card>
       <Card title="入金">{payment ? <><p className="font-semibold">{caseMoney(payment.money)} · 入金済み</p><p className="mt-2 text-sm">{caseTime(payment.confirmedAt)}</p>
-        <p className="mt-2 text-sm text-zinc-600">{payment.method === "manual" ? "手入力の入金" : payment.method === "stripe" ? "カード決済（Stripe）" : "旧方式の入金"}</p></>
+        <p className="mt-2 text-sm text-zinc-600">{payment.method === "manual" ? "あなたが記録した入金" : payment.method === "stripe" ? "カード決済（Stripe）" : "以前の方法での入金"}</p></>
         : <p>{observationLabel(m.facts.payment, "まだ入金はありません")}</p>}</Card></div>
-    <Card title="支払いリンクとメール"><p>{caseKnown(m.facts.link) ? "支払いリンクは作成済みです。メールが届いたかは下で確認できます。" : observationLabel(m.facts.link,"支払いリンクはまだ作っていません")}</p>
+    <Card title="支払いリンクとメール"><p>{caseKnown(m.facts.link) ? "支払いリンクは作ってあります。送ったメールは下にあります。" : observationLabel(m.facts.link,"支払いリンクはまだ作っていません")}</p>
       <div className="mt-4 border-t border-zinc-100 pt-4"><NotificationRows record={record} /></div></Card>
     </Records>
   </div>;
@@ -59,31 +59,31 @@ export function CaseWorkspaceSections({ record, section,step=null,application=fa
           : <p className="text-sm text-zinc-600">{observationLabel(d.tasks, "工程はまだ登録されていません")}</p>}</div>
     </>}
     <Records title="ラフ・納品・受取の記録">
-    <Card title="ラフの確認">{roughs?.length ? <ul className="space-y-3">{roughs.map((rough,index) => <li key={rough.id}>ラフ{index+1}：{rough.clientOkAt ? `お客さんOK · ${rough.acknowledgedAt ? "確認済み" : "まだ確認していません"}` : "お客さんの返事待ち"}</li>)}</ul>
+    <Card title="ラフ">{roughs?.length ? <ul className="space-y-3">{roughs.map((rough,index) => <li key={rough.id}>ラフ{index+1}：{rough.clientOkAt ? `お客さんOK · ${rough.acknowledgedAt ? "確認済み" : "まだ確認していません"}` : "お客さんの返事待ち"}</li>)}</ul>
       : <p>{observationLabel(m.facts.roughs, "ラフはまだ出していません")}</p>}</Card>
-    <Card title="納品と受取">{delivery ? <><p className="font-semibold">納品済み</p><p className="mt-2 text-sm">納品ページの期限：{delivery.expiresAt ? caseTime(delivery.expiresAt) : "未確認"}</p>
-      <p className="mt-2 text-sm text-zinc-600">{delivery.manifest === "verified" ? "納品ファイルの記録は確認済み（今もダウンロードできるかは未確認）" : "要確認：納品ファイルの確認情報が足りません"}</p></>
+    <Card title="納品と受取">{delivery ? <><p className="font-semibold">納品済み</p><p className="mt-2 text-sm">納品ページの期限：{delivery.expiresAt ? caseTime(delivery.expiresAt) : "—"}</p>
+      <p className="mt-2 text-sm text-zinc-600">{delivery.manifest === "verified" ? "納品ファイルはそろっています" : "要確認：納品ファイルの記録が足りません"}</p></>
       : <p>{observationLabel(m.facts.delivery, "まだ納品していません")}</p>}
-      <p className="mt-4 border-t border-zinc-100 pt-4">{receipt ? `受け取り：${caseTime(receipt.acceptedAt)}${receipt.correspondence === "unconfirmed" ? "（要確認：どの納品に対するものか未確認）" : ""}` : observationLabel(d.receipt,"お客さんはまだ受け取っていません")}</p></Card>
+      <p className="mt-4 border-t border-zinc-100 pt-4">{receipt ? `受け取り：${caseTime(receipt.acceptedAt)}${receipt.correspondence === "unconfirmed" ? "（要確認：どの納品の受け取りか分かりません）" : ""}` : observationLabel(d.receipt,"お客さんはまだ受け取っていません")}</p></Card>
     </Records>
-    {!application?<p className="text-sm text-zinc-600">タスク編集・ファイル取得・納品発行・期限延長は未接続です。</p>:null}
+    {!application?<p className="text-sm text-zinc-600">見本の画面なので、工程の変更や納品はできません。</p>:null}
   </div>;
   if (section === "history") return <div className="space-y-4">
     <Card title="これまでの流れ"><ol className="space-y-4 border-l-2 border-pink-100 pl-4">
-      {quote?.acceptance ? <li><p className="font-semibold">{m.agreement === "accepted" ? `見積（${quote.version}回目）にOK` : "OKの記録（要確認：見積との対応が未確認）"}</p><p className="text-sm text-zinc-600">{caseTime(quote.acceptance.acceptedAt)} · {caseMoney(quote.acceptance.money)}</p></li> : null}
+      {quote?.acceptance ? <li><p className="font-semibold">{m.agreement === "accepted" ? `見積（${quote.version}回目）にOK` : "OKの記録（要確認：どの見積へのOKか分かりません）"}</p><p className="text-sm text-zinc-600">{caseTime(quote.acceptance.acceptedAt)} · {caseMoney(quote.acceptance.money)}</p></li> : null}
       {payment ? <li><p className="font-semibold">入金</p><p className="text-sm text-zinc-600">{caseTime(payment.confirmedAt)} · {caseMoney(payment.money)}</p></li> : null}
       {delivery ? <li><p className="font-semibold">納品</p><p className="text-sm text-zinc-600">{caseTime(delivery.recordedAt)}</p></li> : null}
-      {receipt ? <li><p className="font-semibold">受け取り</p><p className="text-sm text-zinc-600">{caseTime(receipt.acceptedAt)} · {receipt.correspondence === "matched" ? "納品と一致" : "要確認：どの納品に対するものか未確認"}</p></li> : null}
-      {!quote?.acceptance && !payment && !delivery && !receipt ? <li>まだ見積のOK・入金・納品はありません。</li> : null}
+      {receipt ? <li><p className="font-semibold">受け取り</p><p className="text-sm text-zinc-600">{caseTime(receipt.acceptedAt)} · {receipt.correspondence === "matched" ? "納品と一致" : "要確認：どの納品の受け取りか分かりません"}</p></li> : null}
+      {!quote?.acceptance && !payment && !delivery && !receipt ? <li>まだ記録はありません。</li> : null}
     </ol></Card><Card title="送ったメール"><NotificationRows record={record} /></Card>
-    <Card title="保存・送信の処理">{caseKnown(m.facts.operations)?.length ? <ul className="space-y-2">{caseKnown(m.facts.operations)!.map((operation,index) => <li key={operation.id}>処理{index+1}：{operation.state === "succeeded" ? "完了" : operation.state === "unknown" ? "要確認：結果が分かりません" : "要確認：結果を確認してください"}</li>)}</ul>
+    <Card title="送信や保存の処理">{caseKnown(m.facts.operations)?.length ? <ul className="space-y-2">{caseKnown(m.facts.operations)!.map((operation,index) => <li key={operation.id}>処理{index+1}：{operation.state === "succeeded" ? "完了" : operation.state === "unknown" ? "要確認：結果が分かりません" : "要確認：うまくいかなかったかもしれません"}</li>)}</ul>
       : <p>{observationLabel(m.facts.operations,"途中の処理はありません")}</p>}</Card>
   </div>;
   return <div className="grid gap-4 sm:grid-cols-2">
-    <Card title="決まったこと"><p className="font-semibold">{quote?.acceptance ? m.agreement === "accepted" ? `${caseMoney(quote.acceptance.money)}でOK（${quote.version}回目の見積）` : `${caseMoney(quote.acceptance.money)}でOK（要確認：見積との対応が未確認）` : "まだ見積のOKはもらっていません"}</p>
+    <Card title="決まったこと"><p className="font-semibold">{quote?.acceptance ? m.agreement === "accepted" ? `${caseMoney(quote.acceptance.money)}でOK（${quote.version}回目の見積）` : `${caseMoney(quote.acceptance.money)}でOK（要確認：どの見積へのOKか分かりません）` : "まだ見積のOKはもらっていません"}</p>
       <p className="mt-3 text-sm text-zinc-600">納期の目安：{record.registeredDueDate??"未登録"}{record.registeredDueDate?"（登録した日付です。お客さんと約束した日とは限りません）":""}</p></Card>
     <Card title="制作"><p className="font-semibold">{tasks ? `${tasks.length}工程中${tasks.filter(task=>task.done).length}工程 完了` : observationLabel(d.tasks, "工程はまだ登録されていません")}</p></Card>
-        {readOnly||!application?<Card title="この画面でできること"><p className="text-sm leading-7">{readOnly?"いまは見るだけです。送信や状態を変える操作は止めています。":"返信、保存、見積・支払い案内・納品の発行は未接続です。"}</p></Card>:null}
+        {!application?<Card title="この画面でできること"><p className="text-sm leading-7">見本の画面なので、送信や保存はできません。</p></Card>:null}
   </div>;
 }
 

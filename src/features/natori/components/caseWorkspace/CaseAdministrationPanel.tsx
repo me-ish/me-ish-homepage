@@ -15,34 +15,32 @@ import { caseTime } from "../../lib/caseWorkspacePresentation";
 import { notificationPurposeName } from "../../lib/notificationLabels";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
 import type { CaseSection } from "../../types/caseWorkspace";
+const DETAIL_LABELS = { title: "案件名", client_name: "お客さんの名前", amount: "金額", delivery_plan: "納期のプラン", start_date: "作業を始める日", due_date: "納期", note: "メモ" } as const;
 const card = "space-y-3 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5";
 type Operation = ReturnType<typeof useCaseAdminOperation>;
 export function CaseAdminConfirmation({ operation }: { operation: Operation }) {
   const o = operation;
   return (
     <>
-      {!o.ready ? <p role="status">保存した操作を確認中…</p> : null}
+      {!o.ready ? <p role="status">読み込み中…</p> : null}
       {o.blocked ? (
         <p role="alert">
-          保存した操作情報を確認できません。新しい操作は行わず担当者に確認してください。
+          前の操作の記録を読み込めませんでした。ページを読み込み直してください。
         </p>
       ) : null}
       {o.saved ? (
         <section
-          aria-label="案件操作の確認"
+          aria-label="保存する前の確認"
           className="space-y-3 rounded-xl border-2 border-pink-200 bg-pink-50 p-4"
         >
           <h3 className="font-semibold">
-            {caseAdminLabels[o.saved.request.action.command]}の確認
+            {caseAdminLabels[o.saved.request.action.command]}
           </h3>
           {o.saved.summary.map((s, i) => (
             <p key={i} className="whitespace-pre-wrap break-words text-sm">
               {s}
             </p>
           ))}
-          <p className="text-xs break-all">
-            操作ID：{o.saved.request.operationId}
-          </p>
           {!o.done ? (
             <>
               <button
@@ -51,12 +49,12 @@ export function CaseAdminConfirmation({ operation }: { operation: Operation }) {
                 onClick={() => void o.execute()}
               >
                 {o.saved.started
-                  ? "同じ操作IDの保存を確認・再試行"
-                  : "確認した内容で実行"}
+                  ? "もう一度試す"
+                  : "この内容で保存する"}
               </button>
               {o.saved.started ? (
                 <p className="text-sm">
-                  前の要求が保存された可能性があります。新しい操作は作らず、同じIDだけで確認します。通知が保存済みなら再送しません。
+                  前の操作が届いているかもしれません。もう一度試しても、二重には保存されません。
                 </p>
               ) : null}
             </>
@@ -66,14 +64,14 @@ export function CaseAdminConfirmation({ operation }: { operation: Operation }) {
             disabled={o.busy}
             onClick={() => void o.lookup()}
           >
-            同じ操作の結果を照会
+            結果を見る
           </button>
           <button
             className={ui.btnSecondary}
               disabled={o.blocked || o.busy || (o.saved.started && !o.done)}
             onClick={o.close}
           >
-            {o.done ? "確認済みの操作を閉じる" : "実行前の確認を取り消す"}
+            {o.done ? "閉じる" : "やめる"}
           </button>
         </section>
       ) : null}
@@ -116,11 +114,11 @@ export function CaseAdministrationPanel({
       const v = await loadCaseAdministration(projectId,undefined,selectedNotificationId);
       if (current !== generation.current) return;
       setView(v.view);
-      setError(v.view ? "" : "案件を確認できません。");
+      setError(v.view ? "" : "案件が見つかりません。");
     } catch (e) {
       if (current !== generation.current) return;
       setView(null);
-      setError(e instanceof Error ? e.message : "取得できません。");
+      setError(e instanceof Error ? e.message : "読み込めませんでした。");
     }
   }, [projectId,selectedNotificationId]);
   useEffect(() => {
@@ -143,9 +141,9 @@ export function CaseAdministrationPanel({
   if (!view || (selectedNotificationId ? view.selectedNotice?.id!==selectedNotificationId : !!view.selectedNotice))
     return (
       <section className={card}>
-        <p role={error ? "alert" : "status"}>{error || "管理操作を確認中…"}</p>
+        <p role={error ? "alert" : "status"}>{error || "読み込み中…"}</p>
         <button className={ui.btnSecondary} onClick={() => void refresh()}>
-          管理操作を再取得
+          再読み込み
         </button>
       </section>
     );
@@ -167,14 +165,14 @@ export function CaseAdministrationPanel({
         revision: view.revision,
         action,
       },
-      [`対象：${p.title} / ${p.clientName}`, ...summary],
+      [`${p.title} / ${p.clientName}さん`, ...summary],
     );
   return (
-    <div className="mt-4 space-y-4" role="region" aria-label="既存操作の統合">
+    <div className="mt-4 space-y-4" role="region" aria-label="案件の設定">
       <CaseAdminConfirmation operation={operation} />
       <div hidden={section !== "overview"} className="space-y-4">
         <section className={card}>
-          <h3 className="font-semibold">案件の基本情報</h3>
+          <h3 className="font-semibold">案件の情報</h3>
           <BasicDetails
             key={projectId}
             view={view}
@@ -182,14 +180,14 @@ export function CaseAdministrationPanel({
             onDirty={setFormDirty}
             prepare={(patch) =>
               prepare({ command: "details", patch }, [
-                `保存する基本情報：${JSON.stringify(patch, null, 2)}`,
-                "登録日付・管理額の補正です。承諾済みの見積条件は変更しません。",
+                ...Object.entries(patch).map(([key, value]) => `${DETAIL_LABELS[key as keyof typeof DETAIL_LABELS] ?? key}：${value ?? "空欄"}`),
+                "OKをもらった見積の内容は変わりません。",
               ])
             }
           />
         </section>
         <section className={card}>
-          <h3 className="font-semibold">見送り・再開・保管</h3>
+          <h3 className="font-semibold">見送る・しまう</h3>
           <Lifecycle
             view={view}
             disabled={disabled}
@@ -200,32 +198,32 @@ export function CaseAdministrationPanel({
       </div>
       <div hidden={section !== "transaction"} className="space-y-4">
         <section className={card}>
-          <h3 className="font-semibold">銀行振込等の入金を手動で記録</h3>
+          <h3 className="font-semibold">振込などの入金を記録</h3>
           <p>
-            現在の管理額：{p.amount === null ? "未確定" : `${p.amount} JPY`} /{" "}
+            金額：{p.amount === null ? "まだ決まっていません" : `${p.amount.toLocaleString("ja-JP")}円`} /{" "}
             {paymentRecorded
-              ? `入金記録あり ${caseTime(p.paymentConfirmedAt ?? p.paidAt ?? "")}`
-              : "入金記録なし"}
+              ? `入金済み ${caseTime(p.paymentConfirmedAt ?? p.paidAt ?? "")}`
+              : "入金はまだ"}
           </p>
           <p className="text-sm">
-            実際に別途確認した入金だけを記録します。Stripeの結果不明や未停止リンクは、取引内の照合で先に確認してください。
+            カード決済ではなく、振込などで受け取った時に使います。
           </p>
           <button
             className={ui.btnSecondary}
             disabled={disabled || inactive || paymentRecorded}
             onClick={() =>
               prepare({ command: "manual-payment" }, [
-                `記録する額：${p.amount ?? "未確定"} JPY`,
-                `対象見積：${view.quote ? `第${view.quote.version}版 ${view.quote.id} / ${view.quote.amount} JPY / ${view.quote.acceptedAt ? "承諾記録あり" : "承諾記録なし"}` : "内部見積なし"}`,
-                "銀行振込等を担当が確認した記録です。Stripeの成功・見積承諾は生成しません。現在の確認時刻で保存し、既存ルールでラフ工程へ進みます。",
+                `金額：${p.amount === null ? "まだ決まっていません" : `${p.amount.toLocaleString("ja-JP")}円`}`,
+                `見積：${view.quote ? `第${view.quote.version}版 / ${view.quote.amount.toLocaleString("ja-JP")}円 / ${view.quote.acceptedAt ? "OKをもらった" : "OKはまだ"}` : "なし"}`,
+                "いまの時刻で入金を記録して、制作（ラフ）に進みます。",
               ])
             }
           >
-            手動入金の確認へ
+            入金を記録する（前に内容を表示）
           </button>
         </section>
         <section className={card}>
-          <h3 className="font-semibold">この案件の正式見積</h3>
+          <h3 className="font-semibold">見積</h3>
           <EstimateJourney
             key={projectId}
             project={{
@@ -247,33 +245,27 @@ export function CaseAdministrationPanel({
           />
         </section>
         <section className={card}>
-          <h3 className="font-semibold">通知の状態と復旧</h3>
-          <p className="text-sm">
-            送信サービス受付は到達・既読・入金・受取とは別です。結果不明は上の照合で確認し、再送では回避しません。
-          </p>
-          {view.selectedNotice?<p role="status">選択した通知1件だけを確認しています。別の系列・用途は取得済みや解決済みと扱いません。{view.selectedNotice.isLatest?"この系列の最新試行です。":"過去の試行です。この記録から復旧しません。"}</p>:null}
+          <h3 className="font-semibold">送ったメール</h3>
+          {view.selectedNotice?<p role="status">選んだメールだけを表示しています。{view.selectedNotice.isLatest?"":"これより新しいメールがあるので、ここからは送り直せません。"}</p>:null}
           {!view.complete&&!view.selectedNotice ? (
             <p role="status">
-              未完了を優先した最大200通知系列を表示しています。他の系列と過去の試行はこの一覧では未取得です。基本情報や入金の確認は案件全体の最新記録を使います。
+              メールが多いので、終わっていないものから200件だけ表示しています。
             </p>
           ) : null}
           {view.notices.length ? (
             view.notices.map((n) => (
               <article key={n.id} className="space-y-2 border-t pt-3 text-sm">
                 <p>
-                  {notificationPurposeName(n.purpose)} · 試行{n.attempt_no} ·{" "}
+                  {notificationPurposeName(n.purpose)} · {n.attempt_no}回目 ·{" "}
                   {n.status === "sent"
-                    ? "送信サービス受付済み"
+                    ? "送信しました"
                     : n.status === "failed"
-                      ? "確定失敗の記録"
+                      ? "送れませんでした"
                       : n.status === "pending"
-                        ? "送信待ちの記録"
-                        : "結果不明・要確認"}
+                        ? "送信待ち"
+                        : "送れたか分かりません"}
                 </p>
-                <p>
-                  対象見積：{n.quote_id ?? "別用途"} / 条件期限：
-                  {n.deadline ?? "この一覧では未確認"}
-                </p>
+                {n.deadline ? <p>期限：{caseTime(n.deadline)}</p> : null}
                 {n.retry_candidate ? (
                   <button
                     className={ui.btnSecondary}
@@ -286,22 +278,22 @@ export function CaseAdministrationPanel({
                           previewHash: n.preview!.hash,
                         },
                         [
-                          `通知：${n.id} / ${notificationPurposeName(n.purpose)} / 試行${n.attempt_no}`,
-                          `対象見積：${n.quote_id ?? "別用途"} / 条件期限：${n.deadline ?? "用途別に再確認"}`,
-                          `宛先：${n.preview?.to.join(", ")} / From：${n.preview?.from} / Reply-To：${n.preview?.replyTo ?? "なし"} / BCC：${n.preview?.bcc?.join(", ") ?? "なし"}`,
+                          `${notificationPurposeName(n.purpose)}（${n.attempt_no}回目）`,
+                          n.deadline ? `期限：${caseTime(n.deadline)}` : "",
+                          `宛先：${n.preview?.to.join(", ")} / 送り主：${n.preview?.from} / 返信先：${n.preview?.replyTo ?? "なし"} / BCC：${n.preview?.bcc?.join(", ") ?? "なし"}`,
                           `件名：${n.preview?.subject}\n${n.preview?.body}`,
-                          "保存済みの宛先・本文・同じ通知系列だけを復旧します。版の発行、入金や受取の変更は行いません。",
+                          "前と同じ宛先と本文で送り直します。",
                         ],
                       )
                     }
                   >
-                    この通知の復旧内容を確認
+                    このメールを送り直す（前に内容を表示）
                   </button>
                 ) : null}
               </article>
             ))
           ) : (
-            <p>通知記録なし（取得済み）</p>
+            <p>まだメールは送っていません</p>
           )}
         </section>
       </div>
@@ -343,7 +335,7 @@ function BasicDetails({
         try {
           if (form.revision !== view.revision)
             throw Error(
-              "取得後に案件が更新されました。入力を控え、最新版をフォームへ戻して確認してください。",
+              "ほかの画面で案件が変わりました。「最新の内容に戻す」を押してください。",
             );
           const { revision: _revision, ...fields } = form;
           const patch = caseBasicDetails.parse({
@@ -356,7 +348,7 @@ function BasicDetails({
           setError("");
           prepare(patch);
         } catch (e) {
-          setError(e instanceof Error ? e.message : "入力を確認してください。");
+          setError(e instanceof Error ? e.message : "入力に足りないところがあります。");
         }
       }}
     >
@@ -364,10 +356,10 @@ function BasicDetails({
         {(
           [
             ["title", "案件名"],
-            ["client_name", "依頼者名"],
-            ["amount", "管理額（円・空欄は未確定）"],
-            ["start_date", "登録着手日"],
-            ["due_date", "登録納期"],
+            ["client_name", "お客さんの名前"],
+            ["amount", "金額（円・決まっていなければ空欄）"],
+            ["start_date", "作業を始める日"],
+            ["due_date", "納期"],
           ] as const
         ).map(([key, label]) => (
           <label key={key} className="block text-sm">
@@ -403,14 +395,14 @@ function BasicDetails({
           </select>
         </label>
         <label className="block text-sm">
-          担当メモ
+          メモ
           <textarea
             className={ui.input}
             value={form.note}
             onChange={(e) => setForm((v) => ({ ...v, note: e.target.value }))}
           />
         </label>
-        <button className={ui.btnSecondary}>基本情報の確認へ</button>
+        <button className={ui.btnSecondary}>保存する（前に内容を表示）</button>
         <button
           type="button"
           className={ui.btnSecondary}
@@ -427,7 +419,7 @@ function BasicDetails({
             })
           }
         >
-          最新版を基本情報へ戻す
+          最新の内容に戻す
         </button>
       </fieldset>
       {error ? <p role="alert">{error}</p> : null}
@@ -460,11 +452,11 @@ function Lifecycle({
           disabled={disabled}
           onClick={() =>
             prepare({ command: "restore" }, [
-              "保管だけを解除します。見送り状態・入金・受取・停止済みリンクは変えません。",
+              "しまった案件を一覧に戻します。",
             ])
           }
         >
-          保管から復元の確認へ
+          一覧に戻す（前に内容を表示）
         </button>
       ) : p.status === "closed" ? (
         <button
@@ -472,11 +464,11 @@ function Lifecycle({
           disabled={disabled}
           onClick={() =>
             prepare({ command: "reopen" }, [
-              "見送りから相談受付へ戻します。古い支払リンクや送信を再開しません。",
+              "見送った相談を、相談中に戻します。前の支払いリンクは使えないままです。",
             ])
           }
         >
-          相談再開の確認へ
+          相談を再開する（前に内容を表示）
         </button>
       ) : [
           "inquiry",
@@ -501,11 +493,11 @@ function Lifecycle({
             onClick={() =>
               prepare({ command: "close", reason: reason.trim() }, [
                 `理由：${reason}`,
-                "相談を見送りとして記録します。リンク停止完了は別に確認し、未解決は保持します。",
+                "この相談を見送ります。送ってある支払いリンクは、これだけでは止まりません。",
               ])
             }
           >
-            見送りの確認へ
+            見送る（前に内容を表示）
           </button>
         </>
       ) : null}
@@ -515,11 +507,11 @@ function Lifecycle({
           disabled={disabled}
           onClick={() =>
             prepare({ command: "archive" }, [
-              "履歴とファイルを残して保管します。未停止リンクや未解決処理があれば実行しません。",
+              "記録とファイルは残したまま、一覧から外します。",
             ])
           }
         >
-          保管の確認へ
+          しまう（前に内容を表示）
         </button>
       ) : null}
     </>

@@ -12,14 +12,14 @@ afterEach(cleanup);
 it("opens an exact case while the unrelated collection fails, without calling it missing",async()=>{
  const load=vi.fn().mockRejectedValue(Error('list unavailable')),detail=vi.fn().mockResolvedValue(record);
  render(<CaseWorkspacePreview application readOnly load={load} loadDetail={detail} initialSearch={`?case=${record.id}`}/>);
- await screen.findByRole('heading',{name:record.title});expect(screen.getByText('案件一覧を取得できません。対象の詳細は別に確認します。')).not.toBeNull();
+ await screen.findByRole('heading',{name:record.title});expect(screen.getByText('案件の一覧を読み込めませんでした。')).not.toBeNull();
  expect(detail.mock.calls[0][0]).toBe(record.id);
 });
 it("restores authorized detail after a rejection even if the collection remains unavailable",async()=>{
  const load=vi.fn().mockRejectedValue(Error('list unavailable')),detail=vi.fn().mockRejectedValueOnce(new CaseWorkspaceLoadError('unauthorized')).mockResolvedValue(record);
  render(<CaseWorkspacePreview application readOnly load={load} loadDetail={detail} initialSearch={`?case=${record.id}`}/>);
- await screen.findByText('認証を確認できません。案件の表示を消去しました。ログイン状態を確認してください。');
- fireEvent.click(screen.getByRole('button',{name:'表示を再取得'}));
+ await screen.findByText('ログインが切れました。もう一度ログインしてください。');
+ fireEvent.click(screen.getByRole('button',{name:'再読み込み'}));
  await screen.findByRole('heading',{name:record.title});
 });
 it("discards a delayed former case when navigation has selected a different ID",async()=>{

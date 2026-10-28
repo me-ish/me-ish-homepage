@@ -64,14 +64,14 @@ export function CaseWorkspaceUtilities({
             setProfile(null);
             if (e instanceof NatoriProfileLoadError && e.status === 401)
               reject();
-            setError("設定を取得できません。ログイン状態を確認してください。");
+            setError("設定を読み込めませんでした。ログインが切れていないか見てください。");
           }
         });
     const { data } = createClient().auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT" && live) {
         reject();
         setError(
-          "ログインセッションが終了しました。管理キーによる認可は別です。画面を再取得して確認してください。",
+          "ログインが切れました。もう一度ログインしてください。",
         );
       }
     });
@@ -95,19 +95,17 @@ export function CaseWorkspaceUtilities({
   return (
     <section
       aria-label={
-        mode === "settings" ? "設定と既存の管理機能" : "案件未登録の概算ツール"
+        mode === "settings" ? "設定" : "ざっくり見積"
       }
       className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6"
     >
       <h1 className="text-xl font-semibold">
-        {mode === "settings"
-          ? "設定と既存の管理機能"
-          : "案件未登録の概算ツール"}
+        {mode === "settings" ? "設定" : "ざっくり見積"}
       </h1>
       {mode === "estimate" ? (
         <>
           <p className="my-3 text-sm">
-            概算の下書きです。正式な提示・送信・承諾は、登録した案件内で確認します。
+            案件にする前に、金額の目安を出せます。お客さんには送られません。
           </p>
           <EstimateForm
             workspaceOnly
@@ -131,10 +129,10 @@ export function CaseWorkspaceUtilities({
             />
           ) : null}
           <p className="mt-4 text-sm">
-            次の管理画面は別タブで開きます。このタブの案件・絞り込み・選択を残して戻れます。
+            下のページは別のタブで開きます。
           </p>
           <nav
-            aria-label="既存の公開管理"
+            aria-label="ほかのページ"
             className="my-4 flex flex-wrap gap-4"
           >
             <a
@@ -155,7 +153,7 @@ export function CaseWorkspaceUtilities({
                 className="underline"
               >
                 {l.label}
-              </a> : <span key={l.href}>{l.label}：保存済みURLを確認してください</span>;
+              </a> : <span key={l.href}>{l.label}：URLが正しくありません</span>;
             })}
           </nav>
           <PageEventsPanel showUnavailable onAccessRejected={reject}/>
@@ -165,7 +163,7 @@ export function CaseWorkspaceUtilities({
             onClick={() => {
               if (
                 !window.confirm(
-                  "ログインセッションを終了しますか？ 合言葉キーによるアクセスは別です。",
+                  "ログアウトしますか？",
                 )
               )
                 return;
@@ -177,22 +175,19 @@ export function CaseWorkspaceUtilities({
                   setProfile(null);
                   setReady(false);
                   setError(
-                    "ログインセッションを終了しました。共有キーがある場合の管理アクセスは継続します。",
+                    "ログアウトしました。",
                   );
                 })
                 .catch(() =>
                   setError(
-                    "セッション終了を確認できません。認証状態を再確認してください。",
+                    "ログアウトできたか分かりません。ページを読み込み直してください。",
                   ),
                 )
                 .finally(() => setBusy(false));
             }}
           >
-            ログインセッションを終了
+            ログアウト
           </button>
-          <p className="mt-2 text-xs">
-            共有キーの失効・管理権限の変更を行う操作ではありません。
-          </p>
         </>
       )}
     </section>

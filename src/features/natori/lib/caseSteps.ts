@@ -35,7 +35,7 @@ export function deriveCaseSteps(record: CaseWorkspaceRecord): CaseStep[] {
   const summaries: Record<CaseStepKey, string | null> = {
     consultation: null,
     quote: quote?.acceptance && accepted ? `${caseMoney(quote.acceptance.money)}でOK（${quote.version > 1 ? `${quote.version}回目の見積` : "見積"}）`
-      : quote ? `${caseMoney(quote.money)}・${quote.state === "draft" ? "下書き" : m.agreement === "needs_review" ? "内容の確認が必要" : "お客さんの返事待ち"}`
+      : quote ? `${caseMoney(quote.money)}・${quote.state === "draft" ? "下書き" : m.agreement === "needs_review" ? "要確認" : "お客さんの返事待ち"}`
         : quoteUnread ? "読み込めませんでした" : null,
     payment: payment ? `${caseMoney(payment.money)}・入金済み（${caseTime(payment.confirmedAt)}）`
       : m.stage === "payment_notified" ? "お支払い待ち" : caseKnown(m.facts.link) ? "支払いリンク作成済み" : null,

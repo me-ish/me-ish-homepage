@@ -56,28 +56,28 @@ const view = (key: string) => (
 );
 it("keeps the original revision with a draft and blocks rebasing it onto a later memo", async () => {
   const v = render(view("one"));
-  const field = await screen.findByLabelText("担当の次回メモ");
+  const field = await screen.findByLabelText("次にやること");
   fireEvent.change(field, { target: { value: "編集中の古い入力" } });
   m.load.mockResolvedValue(source("b".repeat(64), "別タブの最新メモ"));
   v.rerender(view("two"));
-  await screen.findByText(/古い入力からの保存は停止/);
+  await screen.findByText(/保存を止めています/);
   expect(
-    (screen.getByLabelText("担当の次回メモ") as HTMLInputElement).value,
+    (screen.getByLabelText("次にやること") as HTMLInputElement).value,
   ).toBe("編集中の古い入力");
   fireEvent.click(
-    screen.getByRole("button", { name: "次回メモの保存内容を確認" }),
+    screen.getByRole("button", { name: "メモを保存する" }),
   );
   expect(screen.queryByRole("region", { name: "案件操作の確認" })).toBeNull();
   expect(m.submit).not.toHaveBeenCalled();
   fireEvent.click(
-    screen.getByRole("button", { name: "入力を閉じて最新の保存内容を使う" }),
+    screen.getByRole("button", { name: "最新の内容を読み込む" }),
   );
-  await waitFor(()=>expect((screen.getByLabelText("担当の次回メモ") as HTMLInputElement).value).toBe("別タブの最新メモ"));
-  fireEvent.change(screen.getByLabelText("担当の次回メモ"), {
+  await waitFor(()=>expect((screen.getByLabelText("次にやること") as HTMLInputElement).value).toBe("別タブの最新メモ"));
+  fireEvent.change(screen.getByLabelText("次にやること"), {
     target: { value: "最新版を見た入力" },
   });
   fireEvent.click(
-    screen.getByRole("button", { name: "次回メモの保存内容を確認" }),
+    screen.getByRole("button", { name: "メモを保存する" }),
   );
   const saved = JSON.parse(
     sessionStorage.getItem(`natori-case-intake-op/${id}`)!,
@@ -91,64 +91,64 @@ it("clears source content on a failed read and never labels an unavailable file 
   v.rerender(view("two"));
   await screen.findByRole("alert");
   expect(screen.queryByText("受付時の記録")).toBeNull();
-  expect(screen.queryByText("登録された参考リンクなし（取得済み）")).toBeNull();
+  expect(screen.queryByText("まだありません")).toBeNull();
 });
 it("reopens editing after a saved operation is closed and its newer source is explicitly fetched",async()=>{
  m.submit.mockImplementation(async()=>{m.load.mockResolvedValue(source('b'.repeat(64),'保存したメモ'));return {result:'applied',projectId:id};});
- render(view('one'));await screen.findByLabelText('担当の次回メモ');
- fireEvent.change(screen.getByLabelText('担当の次回メモ'),{target:{value:'保存したメモ'}});fireEvent.click(screen.getByRole('button',{name:'次回メモの保存内容を確認'}));
- fireEvent.click(screen.getByRole('button',{name:'確認した内容で実行'}));await waitFor(()=>expect(screen.getByRole('button',{name:'確認済みの操作を閉じる'}).hasAttribute('disabled')).toBe(false));
- fireEvent.click(screen.getByRole('button',{name:'確認済みの操作を閉じる'}));await waitFor(()=>expect(screen.getByRole('button',{name:'入力を閉じて最新の保存内容を使う'}).hasAttribute('disabled')).toBe(false));
- fireEvent.click(screen.getByRole('button',{name:'入力を閉じて最新の保存内容を使う'}));
- await waitFor(()=>expect(screen.getByLabelText('担当の次回メモ').closest('fieldset')!.disabled).toBe(false));
- expect(screen.queryByText(/古い入力からの保存は停止/)).toBeNull();
+ render(view('one'));await screen.findByLabelText('次にやること');
+ fireEvent.change(screen.getByLabelText('次にやること'),{target:{value:'保存したメモ'}});fireEvent.click(screen.getByRole('button',{name:'メモを保存する'}));
+ fireEvent.click(screen.getByRole('button',{name:'この内容で保存する'}));await waitFor(()=>expect(screen.getByRole('button',{name:'閉じる'}).hasAttribute('disabled')).toBe(false));
+ fireEvent.click(screen.getByRole('button',{name:'閉じる'}));await waitFor(()=>expect(screen.getByRole('button',{name:'最新の内容を読み込む'}).hasAttribute('disabled')).toBe(false));
+ fireEvent.click(screen.getByRole('button',{name:'最新の内容を読み込む'}));
+ await waitFor(()=>expect(screen.getByLabelText('次にやること').closest('fieldset')!.disabled).toBe(false));
+ expect(screen.queryByText(/保存を止めています/)).toBeNull();
 });
 it("uses the newest automatic read without waiting for a superseded reset request", async () => {
   const v = render(view("one"));
-  await screen.findByLabelText("担当の次回メモ");
-  fireEvent.change(screen.getByLabelText("担当の次回メモ"), {
+  await screen.findByLabelText("次にやること");
+  fireEvent.change(screen.getByLabelText("次にやること"), {
     target: { value: "捨てる入力" },
   });
   let finishReset!: (value: ReturnType<typeof source>) => void;
   m.load.mockImplementationOnce(() => new Promise(resolve => { finishReset = resolve; }));
-  fireEvent.click(screen.getByRole("button", { name: "入力を閉じて最新の保存内容を使う" }));
+  fireEvent.click(screen.getByRole("button", { name: "最新の内容を読み込む" }));
   m.load.mockResolvedValue(source("c".repeat(64), "現在表示する保存内容"));
   v.rerender(view("two"));
   await waitFor(() => {
-    const field = screen.getByLabelText("担当の次回メモ") as HTMLInputElement;
+    const field = screen.getByLabelText("次にやること") as HTMLInputElement;
     expect(field.value).toBe("現在表示する保存内容");
     expect(field.closest("fieldset")!.disabled).toBe(false);
   });
-  expect(screen.queryByText(/古い入力からの保存は停止/)).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "次回メモの保存内容を確認" }));
+  expect(screen.queryByText(/保存を止めています/)).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "メモを保存する" }));
   expect(JSON.parse(sessionStorage.getItem(`natori-case-intake-op/${id}`)!).request.revision).toBe("c".repeat(64));
   expect(m.submit).not.toHaveBeenCalled();
   // Resolving the old transport later cannot overwrite either the view or draft.
   await act(async () => { finishReset(source("b".repeat(64), "遅れて届く古い応答")); });
-  expect((screen.getByLabelText("担当の次回メモ") as HTMLInputElement).value).toBe("現在表示する保存内容");
-  expect(screen.queryByText(/古い入力からの保存は停止/)).toBeNull();
+  expect((screen.getByLabelText("次にやること") as HTMLInputElement).value).toBe("現在表示する保存内容");
+  expect(screen.queryByText(/保存を止めています/)).toBeNull();
 });
 
 it("accepts an explicit discard during an automatic read without enabling stale writes", async () => {
-  const v=render(view("one"));await screen.findByLabelText("担当の次回メモ");
-  fireEvent.change(screen.getByLabelText("担当の次回メモ"),{target:{value:"破棄する古い入力"}});
+  const v=render(view("one"));await screen.findByLabelText("次にやること");
+  fireEvent.change(screen.getByLabelText("次にやること"),{target:{value:"破棄する古い入力"}});
   let finishAutomatic!:(value:ReturnType<typeof source>)=>void;
   m.load.mockImplementationOnce(()=>new Promise(resolve=>{finishAutomatic=resolve;}));
-  const reset=screen.getByRole("button",{name:"入力を閉じて最新の保存内容を使う"}) as HTMLButtonElement;
+  const reset=screen.getByRole("button",{name:"最新の内容を読み込む"}) as HTMLButtonElement;
   fireEvent.pointerDown(reset);
   v.rerender(view("two"));
-  await waitFor(()=>expect(screen.getByLabelText("担当の次回メモ").closest("fieldset")!.disabled).toBe(true));
+  await waitFor(()=>expect(screen.getByLabelText("次にやること").closest("fieldset")!.disabled).toBe(true));
   expect(reset.disabled).toBe(false);
   m.load.mockResolvedValue(source("c".repeat(64),"明示的に取得した保存内容"));
   fireEvent.pointerUp(reset);
   fireEvent.click(reset);
   await waitFor(()=>{
-    const field=screen.getByLabelText("担当の次回メモ") as HTMLInputElement;
+    const field=screen.getByLabelText("次にやること") as HTMLInputElement;
     expect(field.value).toBe("明示的に取得した保存内容");expect(field.closest("fieldset")!.disabled).toBe(false);
   });
   await act(async()=>finishAutomatic(source("b".repeat(64),"遅い自動読取")));
-  expect((screen.getByLabelText("担当の次回メモ") as HTMLInputElement).value).toBe("明示的に取得した保存内容");
-  fireEvent.click(screen.getByRole("button",{name:"次回メモの保存内容を確認"}));
+  expect((screen.getByLabelText("次にやること") as HTMLInputElement).value).toBe("明示的に取得した保存内容");
+  fireEvent.click(screen.getByRole("button",{name:"メモを保存する"}));
   expect(JSON.parse(sessionStorage.getItem(`natori-case-intake-op/${id}`)!).request.revision).toBe("c".repeat(64));
   expect(m.submit).not.toHaveBeenCalled();
 });
