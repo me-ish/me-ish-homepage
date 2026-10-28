@@ -81,7 +81,7 @@ export function CaseWorkspaceSections({ record, section,step=null,application=fa
   </div>;
   return <div className="grid gap-4 sm:grid-cols-2">
     <Card title="決まったこと"><p className="font-semibold">{quote?.acceptance ? m.agreement === "accepted" ? `${caseMoney(quote.acceptance.money)}でOK（${quote.version}回目の見積）` : `${caseMoney(quote.acceptance.money)}でOK（要確認：どの見積へのOKか分かりません）` : "まだ見積のOKはもらっていません"}</p>
-      <p className="mt-3 text-sm text-zinc-600">納期：{record.registeredDueDate?caseDate(record.registeredDueDate):"なし"}</p></Card>
+      <p className="mt-3 text-sm text-zinc-600">納期の目安：{record.registeredDueDate?<>{caseDate(record.registeredDueDate)}<span className="block text-xs text-zinc-500">登録した日付です。お客さんと約束した日は見積で確かめてください。</span></>:"なし"}</p></Card>
     <Card title="制作"><p className="font-semibold">{tasks ? `${tasks.length}工程中${tasks.filter(task=>task.done).length}工程 完了` : observationLabel(d.tasks, "工程はまだ登録されていません")}</p></Card>
         {!application?<Card title="この画面でできること"><p className="text-sm leading-7">見本の画面なので、送信や保存はできません。</p></Card>:null}
   </div>;

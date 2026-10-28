@@ -173,7 +173,7 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
   };
   const caseCard=(row:CaseWorkspaceRecord)=>{const g=deriveCaseGuidance(row),active=nav.projectId===row.id,step=deriveCaseSteps(row).find(s=>s.state==="current"),due=dueBadge(row);return <div key={row.id}>{link(open(row.id),<>
             <span className="flex flex-wrap gap-1.5"><span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${step?"bg-pink-50 text-pink-800":"bg-zinc-100 text-zinc-600"}`}>{step?.label??g.status}</span>{due}</span>
-            <p className="mt-1 text-[16px] font-semibold leading-6">{row.title}</p><p className="text-xs text-zinc-500">{row.clientLabel} · {row.registeredDueDate?`納期 ${caseDate(row.registeredDueDate,today)}`:"納期なし"}</p>
+            <p className="mt-1 text-[16px] font-semibold leading-6">{row.title}</p><p className="text-xs text-zinc-500">{row.clientLabel} · {row.registeredDueDate?`納期の目安 ${caseDate(row.registeredDueDate,today)}`:"納期なし"}</p>
             {g.waits[0]?<p className={`mt-1.5 text-[13px] leading-5 ${g.waits[0].who==="staff"?"font-bold text-pink-800":"text-zinc-500"}`}>{caseWaitLine(g.waits[0])}</p>:<p className="mt-1.5 text-[13px] text-zinc-500">{g.status}</p>}
             {nav.sort==="priority"?<p className="mt-2 text-xs">優先理由：{casePriority(row,plansReady?plans:null,today)?.reasons.join(" / ")??"理由は分かりません"}</p>:null}
             {nav.entry==="schedule"?<p className="mt-2 text-xs">{row.registeredDueDate===nav.date?"この日が納期":"作業の予定日"}{casePlannedBars(row,plansReady?plans:null,today).filter(b=>b.startISO<=nav.date&&b.endISO>=nav.date).map(b=>` · ${CASE_PLAN_STAGE_LABELS[b.stage]} ${caseDate(b.startISO,today)}〜${caseDate(b.endISO,today)}`).join("")}{(()=>{const p=casePlanProject(row,plansReady?plans:null);return p&&getDeliveryPlanMeta(p.deliveryPlan).isRush?` · ${getDeliveryPlanMeta(p.deliveryPlan).shortLabel}`:"";})()}</p>:null}
@@ -225,7 +225,8 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
               return items.length?<section key={group} aria-label={label}><h2 className="mb-2 mt-5 text-[13px] font-semibold text-zinc-600">{label}（{items.length}件）</h2><div className="space-y-1.5">{items.map(caseRow)}</div></section>:null;})}
           </>:nav.entry==="notifications"&&entryTools&&noticesReady?(()=>{
             // Mails already listed above are not repeated; only cases with a mail still to send stay here.
-            const listed=(row:CaseWorkspaceRecord)=>{const mails=caseKnown(row.model.facts.notifications);return !!mails?.length&&mails.every(mail=>noticeIndex?.items.some(n=>n.id===mail.id));};
+            // Old sent mails are never in the index, but nothing is left to send for them either.
+            const listed=(row:CaseWorkspaceRecord)=>{const mails=caseKnown(row.model.facts.notifications);return !!mails?.length&&mails.every(mail=>noticeIndex?.items.some(n=>n.id===mail.id)||mail.id.startsWith("legacy-mail:")&&mail.status==="sent");};
             const rest=pageRows.filter(row=>!listed(row));
             return rest.length?<section aria-label="これからメールを送る案件"><h2 className="mb-2 mt-5 text-[13px] font-semibold text-zinc-600">これからメールを送る案件（{rest.length}件）</h2><div className="space-y-3">{rest.map(caseCard)}</div></section>:null;
           })():pageRows.map(caseCard)}
@@ -239,7 +240,7 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
             <div className="mb-4">{link(back,`← ${nav.entry==="schedule"?`${caseDate(nav.date,today)}の予定`:entries[nav.entry]}へ戻る`,`${ui.btnLink} min-h-11`)}</div>
             <section className="mb-5 border-b border-zinc-200 pb-4" aria-label="案件の共通案内">
               <h1 ref={heading} tabIndex={-1} className="text-[22px] font-semibold leading-9 tracking-tight outline-none sm:text-2xl">{selected.title}</h1>
-              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-500"><span>{selected.clientLabel} · {selected.registeredDueDate?`納期 ${caseDate(selected.registeredDueDate,today)}`:"納期なし"}</span>{dueBadge(selected)}</p>
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-500"><span>{selected.clientLabel} · {selected.registeredDueDate?`納期の目安 ${caseDate(selected.registeredDueDate,today)}`:"納期なし"}</span>{dueBadge(selected)}</p>
               {nav.noticeId?<aside aria-label="選択した通知" className="mt-3 rounded-xl border border-zinc-200 p-3 text-sm">{selectedNotice?<><p className="font-semibold">{CASE_NOTICE_PURPOSES[selectedNotice.purpose]} · {caseNoticeLabel(selectedNotice)}</p><p className="mt-1 text-xs text-zinc-600">{caseTime(selectedNotice.recordedAt)} · 前の見積や条件について送ったメールのこともあります。</p></>:indexNotice?<p className="font-semibold">{notificationPurposeName(indexNotice.purpose)}のメール</p>:"このメールの記録が見つかりませんでした。"}</aside>:null}
               <p className={selectedFailed||selectedPending||(!openStep&&!sideView)||!steps.some(step=>step.state==="current")?"mt-3 text-sm font-semibold text-pink-900":"sr-only"}>{selectedFailed||selectedPending?"前に読み込んだ時の段階：":"いまの段階："}{guidance.status}</p>
               {!nextHere&&!consultSheet?<div className={`mt-3 rounded-xl border border-pink-100 bg-pink-50 ${sideView?"px-3 py-2":"p-4"}`}><div className="flex flex-wrap items-center justify-between gap-3"><div><p className={sideView?"sr-only":"text-xs font-semibold text-pink-900"}>{selectedFailed?"前に読み込んだ時の、次にやること":"次にやること"}</p>

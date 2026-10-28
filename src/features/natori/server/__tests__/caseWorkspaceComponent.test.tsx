@@ -335,3 +335,17 @@ it("opens a finished consultation as a sheet over the steps and closes it back t
   expect(window.location.search).toContain("section=transaction");
   expect(screen.queryByRole("link",{name:/^閉じる/})).toBeNull();
 });
+
+it("does not list a case whose only mails are old sent ones under mails still to send",async()=>{
+ vi.spyOn(entryData,"loadCasePersonalEvents").mockResolvedValue([]);
+ vi.spyOn(entryData,"loadCaseNoticeIndex").mockResolvedValue({revision:"a".repeat(32),items:[]});
+ const base=records.find(row=>row.model.facts.notifications.state==="ready"&&row.model.facts.notifications.value.length>0);
+ if(!base||base.model.facts.notifications.state!=="ready")throw new Error("fixture needs a case with mails");
+ const mails=base.model.facts.notifications.value.map((mail,n)=>({...mail,id:`legacy-mail:${n}`,status:"sent" as const}));
+ const legacy={...base,id:"legacy-case",title:"以前のメールだけの案件",model:{...base.model,facts:{...base.model.facts,notifications:{...base.model.facts.notifications,value:mails}}}};
+ const unsent={...records[0],id:"unsent-case",title:"これから送る案件",model:{...records[0].model,facts:{...records[0].model.facts,notifications:{...base.model.facts.notifications,value:[]}}}};
+ render(<CaseWorkspacePreview application entryTools load={async()=>[legacy,unsent]} initialSearch="?entry=notifications"/>);
+ const section=await screen.findByRole("region",{name:"これからメールを送る案件"});
+ expect(within(section).queryByText("以前のメールだけの案件")).toBeNull();
+ expect(within(section).getByText("これから送る案件")).toBeTruthy();
+});
