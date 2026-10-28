@@ -482,6 +482,15 @@ describe("quote, money and payment-link evidence", () => {
     expect(action(model, "prepare_payment_notice").blockedBy).toContain("link_already_exists");
   });
 
+  it("asks to confirm a paid link has stopped only when the link can be checked with Stripe", () => {
+    const reasons = (extra: Partial<CasePaymentLinkFact>) => deriveCaseReadModel(snapshot({
+      quote: ready(acceptedQuote()), link: ready(link(extra)), payment: ready(payment()),
+    })).attention.map(item => item.reason);
+    expect(reasons({})).toContain("paid_link_stop_unconfirmed");
+    expect(reasons({ source: "legacy_projection", providerState: "unverified" })).not.toContain("paid_link_stop_unconfirmed");
+    expect(reasons({ state: "stopped", providerState: "inactive" })).not.toContain("paid_link_stop_unconfirmed");
+  });
+
   it("does not present a last-known active link as currently payable after its read fails", () => {
     const previousLink = link();
     const model = deriveCaseReadModel(snapshot({

@@ -274,7 +274,10 @@ export function deriveCaseReadModel(input: CaseSnapshot): CaseReadModel {
     add("financialReview", item.id, item.kind,
       item.kind === "payment_processing" || item.kind === "refund_pending" ? "system" : "staff", 0, "review_evidence");
   }
-  if (link && (["preparing", "stopping", "failed", "unknown"].includes(link.state)
+  // Old-path links are never checked with Stripe, so after payment this would show on
+  // every case and could not be cleared; the payment section shows a note instead.
+  const legacyPaidLink = !!payment && link?.source === "legacy_projection" && link.providerState === "unverified";
+  if (link && !legacyPaidLink && (["preparing", "stopping", "failed", "unknown"].includes(link.state)
     || (payment && link.providerState !== "inactive"))) {
     add("link", link.id, payment ? "paid_link_stop_unconfirmed" : `link_operation_${link.state}`,
       link.state === "preparing" || link.state === "stopping" ? "system" : "staff", 0, "review_evidence");
