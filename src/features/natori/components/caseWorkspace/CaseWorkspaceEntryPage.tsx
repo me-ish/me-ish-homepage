@@ -1,5 +1,4 @@
 import "server-only";
-import Link from "next/link";
 import { CaseWorkspaceApp } from "./CaseWorkspaceApp";
 import type { CaseEntry } from "../../types/caseWorkspace";
 import {caseDashboardSystemMode} from "../../server/caseDashboardPreview";
@@ -21,7 +20,8 @@ export async function CaseWorkspaceEntryPage({input,entry="cases",source="all",p
   const mode=await caseDashboardSystemMode(),entryTools=mode!=="off",personalEventsEnabled=entryTools&&acceptancePersonalEventsAvailable();
   const showPreviewNotice=preview&&!assertCaseReleaseTarget();
   return <>
-    {preview?<aside className="border-b border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">{showPreviewNotice?"導線の検証プレビューです。本番切替・実サービス受入は未実施です。":null}<nav aria-label="既存の管理機能" className="mt-2 flex flex-wrap gap-4"><Link href="/natori/inquiries">問い合わせ</Link><Link href="/natori/estimate">見積編集</Link><Link href="/natori/results">実績</Link><Link href="/natori/portfolio/edit">公開ページ編集</Link></nav></aside>:null}
+    {/* 実績・公開ページ編集は「ページ」タブと「その他」から開ける。問い合わせ・見積編集はこの画面と同じなので、上部にリンクは置かない */}
+    {showPreviewNotice?<aside className="border-b border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">導線の検証プレビューです。本番切替・実サービス受入は未実施です。</aside>:null}
     <CaseWorkspaceApp initialSearch={`?${search}`} today={today} readOnly={readOnly||mode==="read-only"} entryTools={entryTools} personalEventsEnabled={personalEventsEnabled}/>
   </>;
 }
