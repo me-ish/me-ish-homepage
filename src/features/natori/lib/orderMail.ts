@@ -249,7 +249,7 @@ export function buildRoughMailDraft(input: NatoriWorkMailInput): NatoriOrderMail
     "",
     "相談リンクの期限が切れている場合は、そのページから新しいリンクを取り寄せられます。",
     "相談ページが見つからない場合は、このメールにご返信ください。",
-    "※メールへの直接返信は、相談ページの履歴には自動で入りません。",
+    "※このメールへの返信は、相談ページには載りません。",
     artist,
   ].join("\n");
   return { subject, body };

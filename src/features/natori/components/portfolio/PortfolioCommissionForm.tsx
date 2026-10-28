@@ -292,7 +292,7 @@ function PortfolioCommissionFormSession({
           style={{ color: c.textSoft }}
         >
           {commissionOpen
-            ? `まずはお気軽にご相談ください。${NATORI_INTAKE_COPY.notConfirmed}`
+            ? "まずはお気軽にご相談ください。"
             : "現在コミッションは停止中です。再開まで今しばらくお待ちください。"}
         </p>
         {tsunaguLink ? (
@@ -316,7 +316,6 @@ function PortfolioCommissionFormSession({
             className="rounded-2xl p-8 text-center"
             style={{ background: c.surface, boxShadow: `0 10px 22px ${c.shadowSoft}` }}
           >
-            <p className="mb-2 text-3xl" aria-hidden="true">🎉</p>
             <h3 ref={successHeadingRef} tabIndex={-1} className="mb-1 text-lg font-bold outline-none">
               送信ありがとうございます!
             </h3>

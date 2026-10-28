@@ -3,7 +3,6 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
-import { PROCESS_VIDEO_DEFAULT_CAPTION } from "@/features/natori/constants/portfolioProcessVideo";
 import type { PortfolioProcessVideo, PortfolioWork } from "@/features/natori/types/portfolio";
 import PortfolioProcessVideoEditor from "./PortfolioProcessVideoEditor";
 
@@ -51,7 +50,7 @@ describe("PortfolioProcessVideoEditor", () => {
     expect(caption.value).toBe("");
     // 既定の一文は入力欄ではなく、下の補足に書く（スマホでは入力欄の例が途中で切れるため）
     expect(caption.placeholder).toBe("例: 下描きから仕上げまでの様子です。");
-    expect(screen.getByText(`空欄なら「${PROCESS_VIDEO_DEFAULT_CAPTION}」と表示します。`)).toBeTruthy();
+    expect(screen.getByText("空欄なら見出しと動画だけを表示します。")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "YouTubeで開いて確認する" })).toBeNull();
 
     fireEvent.change(url, { target: { value: `https://youtu.be/${ID}` } });
@@ -168,7 +167,7 @@ describe("PortfolioProcessVideoEditor", () => {
     expect(caption.value).toBe("既存の説明");
     fireEvent.change(caption, { target: { value: "新しい説明" } });
     expect(onChange).toHaveBeenLastCalledWith({ url: `https://youtu.be/${ID}`, caption: "新しい説明" });
-    expect(screen.getByText(`空欄なら「${PROCESS_VIDEO_DEFAULT_CAPTION}」と表示します。`)).toBeTruthy();
+    expect(screen.getByText("空欄なら見出しと動画だけを表示します。")).toBeTruthy();
   });
 });
 

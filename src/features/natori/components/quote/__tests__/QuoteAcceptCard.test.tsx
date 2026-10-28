@@ -131,7 +131,7 @@ describe("QuoteAcceptCard", () => {
       acceptedAt="2026-10-01T00:00:00.000Z" expiresAt="2026-10-02T00:00:00.000Z"
       payment={{available:true,confirmedAt:null,requiresReview:false,processing:false,linkState:"absent",linkDeadline:null}}/>);
     expect(screen.getByText("承諾時のお支払条件")).toBeTruthy();
-    expect(screen.getByText("お支払案内の発行後に確定します")).toBeTruthy();
+    expect(screen.getByText("お支払いのご案内を送った時に決まります")).toBeTruthy();
     const current=screen.getByText("現在の支払期限").parentElement!.querySelector("dd")!;
     expect(current.textContent).not.toContain("7日以内");
   });

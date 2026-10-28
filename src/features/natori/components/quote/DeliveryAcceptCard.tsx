@@ -131,7 +131,7 @@ export default function DeliveryAcceptCard({
           </ul>
         )}
       </div>
-      {expiresAt && <p className={`mt-3 ${ui.small} ${ui.muted}`}>保存期限：{formatDate(expiresAt)}まで。リンクはこのページを更新すると再取得できます。期限までにお手元へ保存してください。</p>}
+      {expiresAt && <p className={`mt-3 ${ui.small} ${ui.muted}`}>保存期限：{formatDate(expiresAt)}までに保存してください。リンクが開けない時は、このページを開き直してください。</p>}
       {canAccept !== undefined && <button type="button" disabled={refreshing || status === "sending"}
         className={`mt-4 w-full ${ui.btnSecondary}`}
         onClick={() => startRefresh(() => router.refresh())}><RefreshCw className={`h-4 w-4 ${refreshing ? "motion-safe:animate-spin" : ""}`} aria-hidden="true" />{refreshing ? "更新中…" : "ファイルと受取状況を更新"}</button>}

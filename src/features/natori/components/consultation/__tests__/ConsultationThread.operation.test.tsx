@@ -51,14 +51,14 @@ describe("consultation local draft and exact recovery",()=>{
   fireEvent.change(screen.getByLabelText("相談ファイルを選ぶ"),{target:{files:[file()]}});loseCommit=true;
   fireEvent.click(screen.getByRole("button",{name:"メッセージを送信"}));await screen.findByRole("alert");
   expect((screen.getByRole("textbox") as HTMLTextAreaElement).disabled).toBe(true);
-  fireEvent.click(screen.getByRole("button",{name:"同じ送信を確認・再試行"}));await screen.findByText(/送信を保存しました/);
+  fireEvent.click(screen.getByRole("button",{name:"もう一度送る"}));await screen.findByText(/送信を保存しました/);
   expect(posts.map(post=>post.action)).toEqual(["prepare","commit","prepare"]);expect(posts[0].operation).toEqual(posts[2].operation);expect(tus.calls).toBe(1);
  });
  it("keeps the exact pending operation after upload failure and allows only confirmed cancellation to edit",async()=>{
   await mount();fireEvent.change(screen.getByRole("textbox"),{target:{value:"Keep draft"}});fireEvent.change(screen.getByLabelText("相談ファイルを選ぶ"),{target:{files:[file()]}});tus.fail=true;
   fireEvent.click(screen.getByRole("button",{name:"メッセージを送信"}));await screen.findByRole("alert");
   expect(posts.map(post=>post.action)).toEqual(["prepare"]);expect((screen.getByRole("textbox") as HTMLTextAreaElement).disabled).toBe(true);
-  fireEvent.click(screen.getByRole("button",{name:"送信の取消を確認"}));await screen.findByText(/送信を取り消しました/);
+  fireEvent.click(screen.getByRole("button",{name:"送るのをやめる"}));await screen.findByText(/送信を取り消しました/);
   expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("Keep draft");expect((screen.getByRole("textbox") as HTMLTextAreaElement).disabled).toBe(false);
  });
  it("retains a signed-link failure row and a distinct attachment-list failure indicator",async()=>{
