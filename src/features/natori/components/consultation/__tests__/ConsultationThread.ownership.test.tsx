@@ -38,7 +38,7 @@ beforeEach(()=>{
 afterEach(()=>{cleanup();sessionStorage.clear();vi.unstubAllGlobals();vi.unstubAllEnvs();vi.restoreAllMocks();});
 function mount(token="actor-A"){return render(<ConsultationThread mode="client" token={token} initialMessages={[]} closed={false}/>);}
 const textbox=()=>screen.getByRole("textbox") as HTMLTextAreaElement;
-const retry=()=>screen.getByRole("button",{name:"\u540c\u3058\u9001\u4fe1\u3092\u78ba\u8a8d\u30fb\u518d\u8a66\u884c"});
+const retry=()=>screen.getByRole("button",{name:"もう一度送る"});
 const send=()=>screen.getByRole("button",{name:"\u30e1\u30c3\u30bb\u30fc\u30b8\u3092\u9001\u4fe1"});
 async function loaded(){await waitFor(()=>expect(screen.queryByText("\u5c65\u6b74\u3092\u78ba\u8a8d\u4e2d\u2026")).toBeNull());}
 async function completeRetryA(){await loaded();await waitFor(()=>expect((retry() as HTMLButtonElement).disabled).toBe(false));fireEvent.click(retry());await waitFor(()=>expect(textbox().disabled).toBe(false));await waitFor(()=>expect(screen.queryByText("\u9001\u4fe1\u4e2d\u2026")).toBeNull());}
@@ -72,7 +72,7 @@ describe("consultation current actor and operation ownership",()=>{
   await act(async()=>gate.resolve(receipt(a)));
   expect(JSON.parse(sessionStorage.getItem(key("actor-A"))!)).toEqual(newer);expect(textbox().value).toBe(a.body);expect(reads).toHaveLength(1);
   fireEvent.click(retry());await waitFor(()=>expect(screen.queryByText("\u9001\u4fe1\u4e2d\u2026")).toBeNull());expect(JSON.parse(sessionStorage.getItem(key("actor-A"))!)).toEqual(newer);expect(posts.filter(post=>post.action==="prepare"||post.action==="commit")).toHaveLength(0);
-  fireEvent.click(screen.getByRole("button",{name:"\u9001\u4fe1\u306e\u53d6\u6d88\u3092\u78ba\u8a8d"}));await waitFor(()=>expect(screen.queryByText("\u9001\u4fe1\u4e2d\u2026")).toBeNull());expect(JSON.parse(sessionStorage.getItem(key("actor-A"))!)).toEqual(newer);expect(posts.filter(post=>post.action==="cancel")).toHaveLength(0);
+  fireEvent.click(screen.getByRole("button",{name:"送るのをやめる"}));await waitFor(()=>expect(screen.queryByText("\u9001\u4fe1\u4e2d\u2026")).toBeNull());expect(JSON.parse(sessionStorage.getItem(key("actor-A"))!)).toEqual(newer);expect(posts.filter(post=>post.action==="cancel")).toHaveLength(0);
  });
  it("fresh freeze cannot overwrite another durable active envelope",async()=>{
   mount();await loaded();fireEvent.change(textbox(),{target:{value:"New editable draft"}});sessionStorage.setItem(key("actor-A"),JSON.stringify(a));fireEvent.click(send());
@@ -139,7 +139,7 @@ describe("consultation current actor and operation ownership",()=>{
  });
  it("late cancellation A cannot release B's busy job or remove either unknown operation",async()=>{
   const cancelA=deferred<Response>(),prepareB=deferred<Response>();sessionStorage.setItem(key("actor-A"),JSON.stringify(a));cancel=()=>cancelA.promise;prepare=()=>prepareB.promise;
-  const view=mount();await loaded();fireEvent.click(screen.getByRole("button",{name:"\u9001\u4fe1\u306e\u53d6\u6d88\u3092\u78ba\u8a8d"}));await waitFor(()=>expect(posts.some(post=>post.action==="cancel")).toBe(true));
+  const view=mount();await loaded();fireEvent.click(screen.getByRole("button",{name:"送るのをやめる"}));await waitFor(()=>expect(posts.some(post=>post.action==="cancel")).toBe(true));
   view.rerender(<ConsultationThread mode="client" token="actor-B" initialMessages={[]} closed={false}/>);await loaded();fireEvent.change(textbox(),{target:{value:"B while cancellation"}});fireEvent.click(send());await waitFor(()=>expect(posts.some(post=>post.action==="prepare")).toBe(true));const b=posts.find(post=>post.action==="prepare")!.operation;
   await act(async()=>cancelA.resolve(Response.json({kind:"cancelled"})));expect(textbox().value).toBe("B while cancellation");expect(textbox().disabled).toBe(true);expect(JSON.parse(sessionStorage.getItem(key("actor-A"))!)).toEqual(a);expect(JSON.parse(sessionStorage.getItem(key("actor-B"))!)).toEqual(b);
   await act(async()=>prepareB.resolve(prepared(b)));await waitFor(()=>expect(textbox().disabled).toBe(false));

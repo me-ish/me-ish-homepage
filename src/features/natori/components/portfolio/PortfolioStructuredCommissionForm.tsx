@@ -614,7 +614,7 @@ export default function PortfolioStructuredCommissionForm({
               ? [massProductionSelected ? NATORI_MASS_PRODUCTION_ILLUSTRATION_LABEL : NATORI_REQUEST_TYPE_LABELS_V1[state.requestType],
                 massProductionSelected ? state.commissionScopeOther : NATORI_COMMISSION_SCOPE_LABELS_V1[state.commissionScope]].filter(Boolean).join("／")
               : undefined}
-            description={massProductionSelected ? "「おばけ」か「魔女」を選び、ご希望の表情をご記入ください。" : "作るもの（立ち絵・一枚絵など）と、人物を描く範囲（胸上・全身など）を選べます。未定のままでも相談できます。"}
+            description={massProductionSelected ? "「おばけ」か「魔女」を選び、ご希望の表情をご記入ください。" : undefined}
             collapsible
             required={massProductionSelected}
             open={openSections.requestType}
@@ -983,8 +983,7 @@ export default function PortfolioStructuredCommissionForm({
                   ))}
                 </select>
                 <p id="pf-commercial-help" className="mt-2 text-sm leading-relaxed" style={{ color: c.textSoft }}>
-                  収益化された配信・動画、グッズ、広告などで使う場合です。
-                  {commercialPrice ? ` 商用利用 ${commercialPrice}。` : ""}未定でも相談できます。
+                  収益化した配信・動画、グッズ、広告で使う場合{commercialPrice ? `は ${commercialPrice}です。` : "です。"}
                 </p>
               </div>
               ) : null}
@@ -1067,7 +1066,6 @@ export default function PortfolioStructuredCommissionForm({
             summary={state.budgetKind !== "undecided" || state.deadlineKind !== "undecided"
               ? `${NATORI_BUDGET_KIND_LABELS_V1[state.budgetKind]}／${NATORI_DEADLINE_KIND_LABELS_V1[state.deadlineKind]}`
               : undefined}
-            description="どちらも「未定・相談して決めたい」を選べます。"
             collapsible
             open={openSections.budget}
             onToggle={(next) => setOpenSections((current) => ({ ...current, budget: next }))}
@@ -1401,7 +1399,7 @@ export default function PortfolioStructuredCommissionForm({
                 参考URL<OptionalBadge />
               </legend>
               <p className="mb-2 text-xs" style={{ color: c.textSoft }}>
-                設定資料や衣装の参考などを共有できます。閲覧できる共有設定をご確認ください。https:// で始まるURLを入力してください。
+                ほかの人も開ける共有設定にしてください。
               </p>
               <ul className="space-y-3">
                 {state.referenceLinks.map((row, index) => {

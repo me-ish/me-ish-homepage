@@ -8,7 +8,6 @@ import { ExternalLink, Loader2, Upload } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import {
-  PROCESS_VIDEO_DEFAULT_CAPTION,
   PROCESS_VIDEO_DEFAULT_SHAPE,
   PROCESS_VIDEO_FILE_CONTENT_TYPE,
   PROCESS_VIDEO_FILE_MAX_LABEL,
@@ -387,7 +386,7 @@ export default function PortfolioProcessVideoEditor({
         value={video.caption ?? ""}
         onChange={(caption) => onChange({ ...video, caption })}
         placeholder="例: 下描きから仕上げまでの様子です。"
-        hint={`空欄なら「${PROCESS_VIDEO_DEFAULT_CAPTION}」と表示します。`}
+        hint="空欄なら見出しと動画だけを表示します。"
       />
     </div>
   );

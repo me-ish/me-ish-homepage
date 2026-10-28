@@ -44,7 +44,7 @@ function formatDate(iso: string): string {
 
 function formatPaymentDeadline(iso: string): string {
   const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) return "期限を確認できません。担当者にお問い合わせください。";
+  if (!Number.isFinite(date.getTime())) return "期限を確認できません。元のメールに返信してお知らせください。";
   return new Intl.DateTimeFormat("ja-JP", {
     timeZone: "Asia/Tokyo", dateStyle: "medium", timeStyle: "short",
   }).format(date) + "（日本時間）";
@@ -167,10 +167,9 @@ export default function QuoteAcceptCard({
           <div className={row}>
             <dt className={ui.label}>現在の支払期限</dt>
             <dd className={`${value} font-bold`}>
-              {payment.linkDeadline ? formatPaymentDeadline(payment.linkDeadline) : "お支払案内の発行後に確定します"}
+              {payment.linkDeadline ? formatPaymentDeadline(payment.linkDeadline) : "お支払いのご案内を送った時に決まります"}
               <span className={`mt-1 block font-normal ${ui.small} ${ui.muted}`}>
-                上記はお見積り発行時の条件です。現在の期限はこの欄でご確認ください。
-                再通知では期限は延長されません。担当者が期限を延長した場合は、この欄に反映します。
+                再通知では期限は延長されません。期限を延ばした場合は、ここの日付が変わります。
               </span>
             </dd>
           </div>
@@ -199,21 +198,20 @@ export default function QuoteAcceptCard({
         </p>
       ) : status === "accepted" ? (
         <div className={`mt-4 px-5 py-6 text-center ${ui.panel}`}>
-          <p className="mb-2 text-3xl" aria-hidden="true">🎉</p>
           <p className="mb-2 text-[17px] font-bold leading-7">ご依頼の確定ありがとうございます!</p>
           <p className={`${ui.phrase} ${ui.small} ${ui.muted}`}>
             {acceptedAt ? `${formatDate(acceptedAt)}にご承諾いただいています。` : ""}
-            {paymentState.status === "paid" ? "入金確認済みです。支払案内をお待ちいただく必要はありません。次の確認事項は担当者からご案内します。"
-              : paymentState.status === "unavailable" ? "入金状況を確認できませんでした。追加のお支払いはせず、再読み込みするか、担当者へメールでお問い合わせください。"
-              : paymentState.status === "review" ? "お支払いの記録を担当者が照合しています。追加のお支払いはせず、メールでお問い合わせください。"
-              : paymentState.status === "processing" ? "入金の確認処理中です。追加のお支払いはせず、再読み込みして状況をご確認ください。"
-              : paymentState.status === "terminal" ? "この案件は終了しています。新しいお支払いはせず、元のメールへの返信で担当者にお問い合わせください。"
-              : paymentState.status === "stopped" ? "お支払いリンクは停止済み、または停止確認中です。新しいご案内が必要な場合は元のメールへご返信ください。"
-              : paymentState.status === "expired" ? "お支払いの期限が過ぎています。追加のお支払いはせず、元のメールへの返信で担当者にお問い合わせください。"
-              : paymentState.status === "active" ? "お支払い案内をご確認ください。再通知で支払期限は延長されません。すでにお支払い済みの場合は追加のお支払いをせず、担当者へお問い合わせください。"
-              : paymentState.status === "creating" ? "お支払い案内の発行結果を確認中です。案内が届くまでお待ちください。お問い合わせは元のメールへの返信でご連絡ください。"
+            {paymentState.status === "paid" ? "お支払いを確認しました。この後のご連絡はメールでお送りします。"
+              : paymentState.status === "unavailable" ? "入金状況を確認できませんでした。追加のお支払いはせず、ページを読み込み直すか、元のメールに返信してお知らせください。"
+              : paymentState.status === "review" ? "お支払いの記録をナトリが確かめています。追加のお支払いはせず、元のメールに返信してお知らせください。"
+              : paymentState.status === "processing" ? "入金の確認処理中です。追加のお支払いはせず、少し待ってからページを読み込み直してください。"
+              : paymentState.status === "terminal" ? "この案件は終了しています。ご用件は元のメールに返信してお知らせください。"
+              : paymentState.status === "stopped" ? "お支払いリンクは止めています。新しいご案内が必要な場合は、元のメールに返信してお知らせください。"
+              : paymentState.status === "expired" ? "お支払いの期限が過ぎています。元のメールに返信していただければ、改めてご案内します。"
+              : paymentState.status === "active" ? "お支払い案内のメールからお支払いください。すでにお支払い済みの場合は、追加のお支払いはせず、元のメールに返信してお知らせください。"
+              : paymentState.status === "creating" ? "お支払いのご案内を準備しています。メールが届くまでお待ちください。"
               : "お支払いのご案内をメールでお送りしますので、今しばらくお待ちください。"}
-            {paymentState.status === "paid" && paymentState.requiresReview ? <span className="mt-2 block font-bold text-[#8A4800]">お支払いの記録に確認が必要な項目があります。追加のお支払いはせず、担当者へメールでお問い合わせください。</span> : null}
+            {paymentState.status === "paid" && paymentState.requiresReview ? <span className="mt-2 block font-bold text-[#8A4800]">お支払いの記録に確認が必要な項目があります。追加のお支払いはせず、元のメールに返信してお知らせください。</span> : null}
           </p>
         </div>
       ) : (

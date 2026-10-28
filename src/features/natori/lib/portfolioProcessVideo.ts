@@ -3,7 +3,7 @@
 // アップロード前のファイル検査、保存前の整形、公開側の表示内容。
 import {
   PROCESS_VIDEO_BUCKET,
-  PROCESS_VIDEO_DEFAULT_CAPTION,
+  PROCESS_VIDEO_LEGACY_CAPTION,
   PROCESS_VIDEO_DEFAULT_SHAPE,
   PROCESS_VIDEO_FILE_MAX_BYTES,
   PROCESS_VIDEO_FILE_MAX_LABEL,
@@ -202,9 +202,11 @@ export function resolveProcessVideoView(
   if (!video) return null;
   const source = parseProcessVideoSource(video.url);
   if (!source) return null;
+  // 見出しと動画で伝わるので、説明は先生が書いたときだけ出す
+  const caption = video.caption?.trim() ?? "";
   return {
     source,
-    caption: video.caption?.trim() || PROCESS_VIDEO_DEFAULT_CAPTION,
+    caption: caption === PROCESS_VIDEO_LEGACY_CAPTION ? "" : caption,
     shape: video.shape ?? PROCESS_VIDEO_DEFAULT_SHAPE,
     posterImage: processVideoPosterImage(
       video,

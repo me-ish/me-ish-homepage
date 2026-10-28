@@ -16,8 +16,8 @@ export const PROCESS_VIDEO_SHAPE_LABELS: Record<PortfolioProcessVideoShape, stri
 
 export const PROCESS_VIDEO_DEFAULT_SHAPE: PortfolioProcessVideoShape = "landscape";
 
-/** 見出し「制作過程」の下に出す一文。編集画面で説明を書いていないときに使う */
-export const PROCESS_VIDEO_DEFAULT_CAPTION = "作品ができるまでの様子を、早送りでご覧いただけます。";
+/** 以前は説明が空欄のときにこの一文を出していた。保存済みの内容に残っていても表示しない */
+export const PROCESS_VIDEO_LEGACY_CAPTION = "作品ができるまでの様子を、早送りでご覧いただけます。";
 
 /** 動画ファイルを置く公開バケットとフォルダ。保存できる公開URLの形はこの2つで決まる */
 export const PROCESS_VIDEO_BUCKET = "natori-portfolio";

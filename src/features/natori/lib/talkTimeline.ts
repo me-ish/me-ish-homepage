@@ -46,9 +46,9 @@ export function buildTalkTimeline(facts: TalkFacts, now: Date): TalkTimeline {
     const amount = accepted ? `¥${accepted.amount.toLocaleString("ja-JP")}` : undefined;
     const base = { id: "payment", kind: "payment" as const, title: "お支払い", ...(amount ? { amount } : {}) };
     if (paymentState.confirmedAt) cards.push({ ...base, badge: { label: "支払い完了", tone: "done" },
-      lines: [`${day(paymentState.confirmedAt)}に確認しました。`, ...(paymentState.requiresReview ? ["お支払いの記録を担当者が照合しています。追加のお支払いはせず、下のトークでご連絡ください。"] : [])] });
+      lines: [`${day(paymentState.confirmedAt)}に確認しました。`, ...(paymentState.requiresReview ? ["お支払いの記録をナトリが確かめています。追加のお支払いはせず、下のトークでご連絡ください。"] : [])] });
     else if (paymentState.status === "processing") cards.push({ ...base, badge: { label: "確認中", tone: "wait" }, lines: ["お支払いの確認を待っています。二重にお支払いしないでください。"] });
-    else if (paymentState.status === "review") cards.push({ ...base, badge: { label: "照合中", tone: "wait" }, lines: ["お支払いの記録を担当者が照合しています。追加のお支払いはせず、下のトークでご連絡ください。"] });
+    else if (paymentState.status === "review") cards.push({ ...base, badge: { label: "照合中", tone: "wait" }, lines: ["お支払いの記録をナトリが確かめています。追加のお支払いはせず、下のトークでご連絡ください。"] });
     else if (paymentState.status === "expired") cards.push({ ...base, badge: { label: "期限切れ", tone: "muted" }, lines: ["お支払いの期限が過ぎています。必要なときは下のトークでご連絡ください。"] });
     else if (paymentState.status === "active" && paymentState.url) cards.push({ ...base, badge: { label: "支払い待ち", tone: "action" },
       lines: [paymentState.deadline ? `${day(paymentState.deadline)}までにお願いします。（カード決済）` : "カード決済でお支払いいただけます。"],

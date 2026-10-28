@@ -307,7 +307,7 @@ export default function ConsultationThread(props: Props) {
     if (!retirePending(operation, job)) return false;
     setBody("");setDraftFiles([]);
     if(fileRef.current)fileRef.current.value="";
-    setNotice("送信を保存しました。メール通知の状態は送信内容と別に確認できます。");await refreshAfterSend();return true;
+    setNotice(props.mode === "client" ? "送信を保存しました。" : "送信を保存しました。メール通知の状態は送信内容と別に確認できます。");await refreshAfterSend();return true;
   };
   useEffect(()=>{
     let active=true;
@@ -337,7 +337,7 @@ export default function ConsultationThread(props: Props) {
         if(rawDraft){const saved=JSON.parse(rawDraft) as {body?:unknown;files?:unknown};if(typeof saved.body==="string")setBody(saved.body.slice(0,4000));if(Array.isArray(saved.files)&&saved.files.length)setError("本文の下書きを復元しました。添付の元ファイルをもう一度選択してください。");}
       }
       setCacheReady(true);
-    }catch{setError("送信の記録を読み込めません。担当者にお問い合わせください。");}
+    }catch{setError("送信の記録を読み込めません。ページを読み込み直してください。");}
     return()=>{active=false;};
     // Actor scopes one composer; restoration must run before editing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -348,7 +348,7 @@ export default function ConsultationThread(props: Props) {
     setError("");
     if(files.some(file=>!validConsultationFile(file.name,file.type,file.size))){setError("対応する画像・PDFは10MB、音声は50MBまでです。大きなファイルは共有URLをご利用ください。");return;}
     if(pending){
-      if(files.length!==pending.files.length){setError("前回と同じ添付を選択してください。変更する場合は送信の取消を確認してください。");return;}
+      if(files.length!==pending.files.length){setError("さっきと同じファイルを選んでください。変える時は「送るのをやめる」を押してください。");return;}
       const restored=await Promise.all(files.map(async(file,index)=>{
         const saved=pending.files[index];return saved&&file.name===saved.fileName&&file.type===saved.mimeType&&file.size===saved.sizeBytes&&await consultationDigest(await file.arrayBuffer())===saved.sha256?{id:saved.id,file}:null;
       }));
@@ -376,7 +376,7 @@ export default function ConsultationThread(props: Props) {
       if (!ownsPending(operation, job)) return;
       if(await recordSaved(operation,prepared,job))return;
       if(prepared.kind==="notice_expired"){setNoticeExpired(true);return;}
-      if(!preparedResponse.ok||prepared.kind!=="prepared"||!prepared.files||prepared.files.length!==operation.files.length)throw new Error("送信を確定できません。同じ送信で再試行するか、送信の取消を確認してください。");
+      if(!preparedResponse.ok||prepared.kind!=="prepared"||!prepared.files||prepared.files.length!==operation.files.length)throw new Error("送信を確定できません。「もう一度送る」か「送るのをやめる」を押してください。");
       for(const reservation of prepared.files){
         const descriptor=operation.files.find(file=>file.id===reservation.id);if(!descriptor)throw new Error("添付の予約を確認できません。");
         if(reservation.uploaded)continue;
@@ -493,7 +493,7 @@ export default function ConsultationThread(props: Props) {
         <button type="button" disabled={loading || busy} onClick={() => void refresh()} className={`${t.secondary} shrink-0`}><RefreshCw className={`h-4 w-4 ${loading ? "motion-safe:animate-spin" : ""}`} aria-hidden />履歴を更新</button>
       </div>
       <div className={`space-y-2 ${t.pad} pt-3`}>
-        <p className={t.caption}>{props.mode === "client" ? "ナトリからの返事はメールでもお知らせします。ご返信はこの相談ページからお願いします。" : "相談内容とメール通知の状態は別に記録されます。"} メールへの直接返信は、この履歴には自動で入りません。</p>
+        <p className={t.caption}>{props.mode === "client" ? "ナトリからの返事はメールでもお知らせします。ご返信はこの相談ページからお願いします。メールに返信しても、ここには載りません。" : "相談内容とメール通知の状態は別に記録されます。メールへの直接返信は、この履歴には自動で入りません。"}</p>
         {newMessages && !loading ? <button type="button" onClick={showLatest} className={`inline-flex items-center gap-1 ${t.textButton}`}><ArrowDown className="h-3.5 w-3.5" aria-hidden />新しいやり取りを見る</button> : null}
         {props.mode === "staff" && !props.clientEmail ? <p className={t.warning}>依頼者のメールアドレスがないため返信できません。</p> : null}
         {loading ? <p role="status" className={t.caption}>履歴を確認中…</p> : null}
@@ -506,7 +506,7 @@ export default function ConsultationThread(props: Props) {
             const own = props.mode === "client" ? message.sender === "client" : message.sender === "staff";
             return (
               <li id={`consultation-message-${message.id}`} key={message.id} ref={index === messages.length - 1 ? lastMessageRef : undefined} tabIndex={-1} className={`flex flex-col rounded-2xl ${natoriClientUi.focus} ${own ? "items-end" : "items-start"}`}>
-                <p className={`mb-1 px-1 ${t.meta}`}>{message.sender === "staff" ? "ナトリ" : "依頼者"} · {dateTime(message.createdAt)}</p>
+                <p className={`mb-1 px-1 ${t.meta}`}>{message.sender === "staff" ? "ナトリ" : props.mode === "client" ? "あなた" : "依頼者"} · {dateTime(message.createdAt)}</p>
                 <div className={`min-w-0 max-w-[88%] px-4 py-3 sm:max-w-[80%] ${own ? t.own : t.other}`}>
                   <p className={`whitespace-pre-wrap break-words ${t.body}`}>{renderText(message.body)}</p>
                   {message.filesState==="unavailable"?<p role="status" className={`mt-2 ${t.warning}`}>添付一覧を取得できません。資料の提出状況は、履歴を更新して確認してください。</p>:null}
@@ -536,7 +536,7 @@ export default function ConsultationThread(props: Props) {
       {!cannotSend ? (
         <div className={`space-y-3 border-t ${t.rule} ${t.pad} py-4`}>
           <input ref={fileRef} type="file" multiple accept=".jpg,.jpeg,.png,.webp,.pdf,.mp3,.m4a,.wav" className="hidden" aria-label="相談ファイルを選ぶ" onChange={(event)=>{const files=Array.from(event.target.files??[]);void chooseFiles(files);if(fileRef.current)fileRef.current.value="";}} />
-          <p className={t.caption}>選んだファイルは送信前の下書きです。取り消しや本文の編集後、送信ボタンでまとめて送れます。画像・PDFは10MB、音声は50MBまで。大きな楽曲は共有URLを貼ってください。</p>
+          <p className={t.caption}>画像・PDFは10MB、音声は50MBまで送れます。大きいファイルは共有URLを貼ってください。</p>
           {(pending?pending.files.map(file=>({id:file.id,name:file.fileName,size:file.sizeBytes})):draftFiles.map(({id,file})=>({id,name:file.name,size:file.size}))).map(file=>(
             <div key={file.id} className={`flex items-center justify-between gap-2 px-3 py-2 ${t.draft}`}>
               <Paperclip className="h-4 w-4 shrink-0 text-[#BE185D]" aria-hidden />
@@ -544,8 +544,8 @@ export default function ConsultationThread(props: Props) {
               {!pending?<button type="button" disabled={busy} onClick={()=>setDraftFiles(current=>current.filter(draft=>draft.id!==file.id))} aria-label={file.name+"の添付を取り消す"} className={`shrink-0 ${t.textButton}`}>取消</button>:null}
             </div>
           ))}
-          {pending?<p role="status" className={t.warning}>{noticeExpired?"この送信の通知期限が過ぎています。本文と添付の記録は保持しています。"+(pending.files.length>draftFiles.length?"添付は同じファイルを選び直してください。":"")+"送信の取消を確認してから、同じ内容を新しく送信してください。":"前回の送信結果を確認中です。同じ内容で確認・再試行します。変更する場合は先に取消を確認してください。"}</p>:null}
-          {pending?<button type="button" disabled={busy} onClick={()=>void cancelPending()} className={t.textButton}>送信の取消を確認</button>:null}
+          {pending?<p role="status" className={t.warning}>{noticeExpired?"送れたか確認できませんでした。書いた内容は残っています。"+(pending.files.length>draftFiles.length?"添付は同じファイルを選び直してください。":"")+"「送るのをやめる」を押してから、もう一度送ってください。":"前回の送信が届いたか確認しています。内容を変える時は、先に「送るのをやめる」を押してください。"}</p>:null}
+          {pending?<button type="button" disabled={busy} onClick={()=>void cancelPending()} className={t.textButton}>送るのをやめる</button>:null}
           {progress !== null ? <p role="status" className={`${t.caption} font-bold text-[#BE185D]`}>アップロード中 {progress}%</p> : null}
           <div className={sticky ? "max-sm:sticky max-sm:bottom-0 max-sm:z-10 max-sm:-mx-4 max-sm:space-y-2 max-sm:border-t max-sm:border-[#F6E3E9] max-sm:bg-white max-sm:px-4 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:pt-2" : "space-y-3"}>
           <label className={`block ${sticky ? "max-sm:sr-only " : ""}${t.label}`} htmlFor="consultation-reply">メッセージ</label>
@@ -554,7 +554,7 @@ export default function ConsultationThread(props: Props) {
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || loading || historyUnavailable} className={t.secondary}><Paperclip className="h-4 w-4" aria-hidden />添付を選ぶ</button>
             <button type="button" onClick={() => {if(workspaceLookup&&!pending){reviewGuard.current=props.mode==="staff"?props.workspaceExpected:undefined;setReview(true);}else void send();}} disabled={(!pending&&!body.trim()&&!draftFiles.length)||busy||loading||historyUnavailable||!cacheReady||noticeExpired}
-              className={`ml-auto ${t.primary}`}><Send className="h-4 w-4" aria-hidden />{busy?"送信中…":pending?"同じ送信を確認・再試行":workspaceLookup?"相談の送信前確認へ":"メッセージを送信"}</button>
+              className={`ml-auto ${t.primary}`}><Send className="h-4 w-4" aria-hidden />{busy?"送信中…":pending?"もう一度送る":workspaceLookup?"相談の送信前確認へ":"メッセージを送信"}</button>
           </div>
           {props.mode==="staff"&&props.readOnlyLookup&&review?<div className="space-y-2 rounded-xl border border-pink-200 bg-pink-50 p-3 text-sm"><p className="font-semibold">相談の送信前確認</p><p>宛先：{props.clientEmail} / この案件の相談</p><pre className="whitespace-pre-wrap break-words">{body}</pre><ul>{draftFiles.map(f=><li key={f.id}>{f.file.name}</li>)}</ul><p>本文の保存と通知受付は別の結果です。</p><button type="button" className={t.primary} disabled={busy} onClick={()=>{setReview(false);void send();}}>確認した相談を送信</button><button type="button" className={t.secondary} onClick={()=>setReview(false)}>確認を取り消す</button></div>:null}
           </div>

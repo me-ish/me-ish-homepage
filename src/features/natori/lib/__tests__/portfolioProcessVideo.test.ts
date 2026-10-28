@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
-import { PROCESS_VIDEO_DEFAULT_CAPTION } from "@/features/natori/constants/portfolioProcessVideo";
+import { PROCESS_VIDEO_LEGACY_CAPTION } from "@/features/natori/constants/portfolioProcessVideo";
 import type { PortfolioWork } from "@/features/natori/types/portfolio";
 import {
   checkProcessVideoFile,
@@ -135,14 +135,16 @@ describe("resolveProcessVideoView", () => {
     expect(view({ url: "https://example.com/video" })).toBeNull();
   });
 
-  it("説明・形が未設定なら既定（既定の一文・横長）で補う", () => {
+  it("説明が未設定なら出さず、形は横長で補う", () => {
     expect(view({ url: `https://youtu.be/${ID}` })).toEqual({
       source: { kind: "youtube", videoId: ID },
-      caption: PROCESS_VIDEO_DEFAULT_CAPTION,
+      caption: "",
       shape: "landscape",
       posterImage: null,
     });
-    expect(view({ url: `https://youtu.be/${ID}`, caption: "   " })?.caption).toBe(PROCESS_VIDEO_DEFAULT_CAPTION);
+    expect(view({ url: `https://youtu.be/${ID}`, caption: "   " })?.caption).toBe("");
+    // 以前の既定文が保存済みでも出さない
+    expect(view({ url: `https://youtu.be/${ID}`, caption: PROCESS_VIDEO_LEGACY_CAPTION })?.caption).toBe("");
   });
 
   it("書いた説明と形はそのまま使う", () => {

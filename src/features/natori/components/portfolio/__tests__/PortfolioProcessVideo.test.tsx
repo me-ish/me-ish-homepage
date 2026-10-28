@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import PortfolioProcessVideo from "@/features/natori/components/portfolio/PortfolioProcessVideo";
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
-import { PROCESS_VIDEO_DEFAULT_CAPTION } from "@/features/natori/constants/portfolioProcessVideo";
+import { PROCESS_VIDEO_LEGACY_CAPTION } from "@/features/natori/constants/portfolioProcessVideo";
 import type { PortfolioContent, PortfolioProcessVideo as ProcessVideo } from "@/features/natori/types/portfolio";
 
 afterEach(cleanup);
@@ -29,7 +29,7 @@ describe("PortfolioProcessVideo", () => {
 
     expect(screen.getByRole("heading", { level: 2, name: "制作過程" })).toBeTruthy();
     expect(document.querySelector("#process")).not.toBeNull();
-    expect(screen.getByText(PROCESS_VIDEO_DEFAULT_CAPTION)).toBeTruthy();
+    expect(screen.queryByText(PROCESS_VIDEO_LEGACY_CAPTION)).toBeNull();
     expect(screen.getByRole("button", { name: "制作過程の動画を再生する" })).toBeTruthy();
     expect(document.querySelector("iframe")).toBeNull();
     expect(document.querySelector("img")).toBeNull();
@@ -66,7 +66,7 @@ describe("PortfolioProcessVideo", () => {
       <PortfolioProcessVideo content={contentWith({ url: `https://youtu.be/${ID}`, caption: " 下描きから仕上げまで " })} />
     );
     expect(screen.getByText("下描きから仕上げまで")).toBeTruthy();
-    expect(screen.queryByText(PROCESS_VIDEO_DEFAULT_CAPTION)).toBeNull();
+    expect(screen.queryByText(PROCESS_VIDEO_LEGACY_CAPTION)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "制作過程の動画を再生する" }));
     expect(document.querySelector("iframe")).not.toBeNull();
@@ -127,7 +127,7 @@ describe("PortfolioProcessVideo 動画ファイル", () => {
     render(<PortfolioProcessVideo content={contentWith({ url: ` ${FILE_URL} ` })} />);
 
     expect(screen.getByRole("heading", { level: 2, name: "制作過程" })).toBeTruthy();
-    expect(screen.getByText(PROCESS_VIDEO_DEFAULT_CAPTION)).toBeTruthy();
+    expect(screen.queryByText(PROCESS_VIDEO_LEGACY_CAPTION)).toBeNull();
     expect(playButton()).not.toBeNull();
 
     const video = videoElement();
