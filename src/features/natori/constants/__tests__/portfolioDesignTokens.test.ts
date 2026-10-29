@@ -231,13 +231,20 @@ describe("PF-08 image and font loading", () => {
     resolve(process.cwd(), "src/features/natori/components/portfolio/portfolioFonts.ts"),
     "utf8"
   );
+  const siteFontsSource = readFileSync(
+    resolve(process.cwd(), "src/styles/siteFonts.ts"),
+    "utf8"
+  );
   const gallerySource = readFileSync(
     resolve(process.cwd(), "src/features/natori/components/portfolio/PortfolioGallery.tsx"),
     "utf8"
   );
 
   it("does not preload every Japanese font unicode-range fragment", () => {
-    expect(fontsSource).toContain("preload: false");
+    // 日本語フォントはサイト共通のインスタンス（src/styles/siteFonts.ts）を使う。
+    expect(fontsSource).toContain('from "@/styles/siteFonts"');
+    expect(siteFontsSource).toContain("Zen_Maru_Gothic");
+    expect(siteFontsSource).toContain("preload: false");
   });
 
   it("matches portrait and landscape image candidates to their responsive grid widths", () => {
