@@ -1,16 +1,10 @@
 // features/natori/components/portfolio/portfolioFonts.ts
 // /natori/portfolio 専用フォント。CSS変数として配下に配布する。
-import { Fredoka, Zen_Maru_Gothic } from "next/font/google";
+import { Fredoka } from "next/font/google";
+import { zenMaruGothic } from "@/styles/siteFonts";
 
-export const portfolioFontJp = Zen_Maru_Gothic({
-  subsets: ["latin"],
-  weight: ["400", "500", "700", "900"],
-  variable: "--pf-font-jp",
-  display: "swap",
-  // 日本語フォントは unicode-range ごとに多数のファイルへ分割される。
-  // 全断片の preload は初期転送を圧迫するため、実際に使う文字だけ通常読込する。
-  preload: false,
-});
+// 日本語はサイト共通の1インスタンスを使う（別に読み込むと同じ書体を二重に取りに行く）。
+export const portfolioFontJp = zenMaruGothic;
 
 export const portfolioFontEn = Fredoka({
   subsets: ["latin"],
