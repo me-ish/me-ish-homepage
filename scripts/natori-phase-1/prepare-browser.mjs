@@ -16,14 +16,15 @@ for (const path of ['src/app/api/natori/admin/delivery-files/route.ts', 'src/app
 const cssPath = 'src/app/globals.css';
 const sourceCss = readFileSync(resolve(output, cssPath), 'utf8');
 const fontImport = /^@import url\("https:\/\/fonts\.googleapis\.com\/css2\?[^"\r\n]+"\);[ \t]*\r?$/gm;
-if ([...sourceCss.matchAll(fontImport)].length !== 1) throw new Error('REVIEW_FONT_IMPORT_REQUIRED');
+// The product may drop this import (P1 font work); only more than one is a review case.
+if ([...sourceCss.matchAll(fontImport)].length > 1) throw new Error('REVIEW_FONT_IMPORT_REQUIRED');
 const fixtureCss = sourceCss.replace(fontImport, '/* Isolated browser shell uses system fonts. */');
 if (/@import[^;]*https?:\/\//i.test(fixtureCss)) throw new Error('UNREVIEWED_REMOTE_CSS_IMPORT');
 writeFileSync(resolve(output, 'phase1-source-globals.css'), sourceCss);
 checksums['phase1-source-globals.css'] = createHash('sha256').update(sourceCss).digest('hex');
 writeFileSync(resolve(output, cssPath), fixtureCss);
 checksums[cssPath] = createHash('sha256').update(fixtureCss).digest('hex');
-console.log('Phase 1 browser shell: one remote font import excluded; application CSS preserved');
+console.log('Phase 1 browser shell: remote font import excluded if present; application CSS preserved');
 copyFileSync('next.config.mjs', resolve(output, 'phase1-source-config.mjs'));
 checksums['phase1-source-config.mjs'] = checksums['next.config.mjs'];
 // Independent dev build caches: Phase N stops before Phase 1 starts in this app.
