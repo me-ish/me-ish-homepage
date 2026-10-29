@@ -9,7 +9,6 @@ import QueryProvider from "@/components/providers/QueryProvider";
 import { Analytics, SiteVercelAnalytics } from "@/components/Analytics";
 import "@/styles/auraFonts.css";
 import { zenMaruGothic } from "@/styles/siteFonts";
-import { notoSansJp } from "@/styles/adminFonts";
 
 const lilitaOne = Lilita_One({
   weight: "400",
@@ -64,7 +63,7 @@ export default async function RootLayout({
 }) {
   const locale = await getLocale();
   return (
-    <html lang={locale} className={`${zenMaruGothic.variable} ${lilitaOne.variable} ${notoSansJp.variable}`}>
+    <html lang={locale} className={`${zenMaruGothic.variable} ${lilitaOne.variable}`}>
       {/* 全体は今までどおり font-zen ベース */}
       <body className="font-zen text-lg leading-relaxed text-[#333]">
         <Suspense fallback={null}>

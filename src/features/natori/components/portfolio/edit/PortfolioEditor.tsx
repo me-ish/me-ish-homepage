@@ -40,6 +40,7 @@ import PortfolioPlanSampleField from "./PortfolioPlanSampleField";
 import PortfolioProcessVideoEditor from "./PortfolioProcessVideoEditor";
 import PortfolioWorkLinksEditor from "./PortfolioWorkLinksEditor";
 import SortableList from "./SortableList";
+import { NatoriAdminFont } from "../../admin/NatoriAdminFont";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -295,6 +296,7 @@ export default function PortfolioEditor({
   if (loadError) {
     return (
       <main data-natori-admin className="grid min-h-screen place-items-center bg-[#F7F7F8] px-4">
+        <NatoriAdminFont />
         <div className="w-full max-w-md">
           <NatoriLoadError
             resourceLabel="ページ内容"
@@ -309,6 +311,7 @@ export default function PortfolioEditor({
   if (!content) {
     return (
       <main data-natori-admin className="grid min-h-screen place-items-center bg-[#F7F7F8] px-4">
+        <NatoriAdminFont />
         <div className="w-full max-w-md space-y-3">
           <p role="status" className={natoriAdminUi.caption}>
             読み込んでいます
@@ -339,6 +342,7 @@ export default function PortfolioEditor({
   return (
     <FlaggedSectionContext.Provider value={flaggedSectionId}>
     <main data-natori-admin className="min-h-screen bg-[#F7F7F8] pb-[calc(7rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+      <NatoriAdminFont />
       {/* 上部バー */}
       <div className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 sm:px-6 lg:px-8">

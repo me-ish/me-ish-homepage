@@ -1,7 +1,8 @@
 /* =========================================
  * Fonts
  * - Zen Maru Gothic / Lilita One: layout.tsx の next/font（src/styles/siteFonts.ts）
- * - Noto Sans JP（Natori 管理画面）: src/styles/adminFonts.ts の next/font
+ * - Noto Sans JP（Natori 管理画面）: src/styles/adminFonts.ts の next/font。
+ *   管理画面の NatoriAdminFont を置いた画面だけで読み込む（公開ページでは読まない）
  * 以前ここにあった Google Fonts の @import は全ページの表示を止めていたため外した。
  * 一緒に読んでいた Shippori Mincho / Mochiy Pop One / DotGothic16 / Share Tech Mono は
  * 停止済み AURA のプリセット用で、どの画面からも使われていない。
@@ -85,7 +86,7 @@ img {
 }
 
 /* Natori 管理画面: すっきりしたゴシック体と詰め組み（palt）。
- * Apple 端末は端末のヒラギノ、それ以外は Noto Sans JP（src/styles/adminFonts.ts の next/font）。
+ * Apple 端末は端末のヒラギノ、それ以外は Noto Sans JP（NatoriAdminFont が --font-noto-jp を置く）。
  * ダイアログなど body 直下に出る要素にも効くよう body にも掛ける。 */
 [data-natori-admin],
 body:has([data-natori-admin]) {
