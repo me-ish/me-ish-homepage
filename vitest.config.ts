@@ -29,7 +29,6 @@ export default defineConfig({
         __dirname,
         './src/test/mocks/publicCommissionAvailability.ts',
       ),
-      '@/styles/adminFonts': path.resolve(__dirname, './src/test/mocks/adminFonts.ts'),
       '@': path.resolve(__dirname, './src'),
     },
   },
