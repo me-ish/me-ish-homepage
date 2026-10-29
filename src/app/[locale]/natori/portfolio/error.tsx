@@ -1,6 +1,6 @@
 "use client";
 // app/natori/portfolio/error.tsx
-// /natori/portfolio を表示できなかったときの画面。全ページ共通のエラー画面ではなく、
+// /natori/portfolio（と配下の contact・edit）を表示できなかったときの画面。全ページ共通のエラー画面ではなく、
 // ナトリのページの色で「もう一度読み込む」と問い合わせ先を出す。
 import { useEffect } from "react";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
