@@ -1,13 +1,11 @@
 /* =========================================
- * Google Fonts
- * - Lilita One / Zen Maru Gothic（既存）
- * - Noto Sans JP（クリーン系）
- * - Shippori Mincho（フォーマル / ラグジュアリー）
- * - Mochiy Pop One（ポップ）
- * - DotGothic16（レトロ・ドット）
- * - Share Tech Mono（テック / モノスペース）
+ * Fonts
+ * - Zen Maru Gothic / Lilita One: layout.tsx の next/font（src/styles/siteFonts.ts）
+ * - Noto Sans JP（Natori 管理画面）: src/styles/adminFonts.ts の next/font
+ * 以前ここにあった Google Fonts の @import は全ページの表示を止めていたため外した。
+ * 一緒に読んでいた Shippori Mincho / Mochiy Pop One / DotGothic16 / Share Tech Mono は
+ * 停止済み AURA のプリセット用で、どの画面からも使われていない。
  * ========================================= */
-@import url("https://fonts.googleapis.com/css2?family=Lilita+One&family=Zen+Maru+Gothic&family=Noto+Sans+JP:wght@400;500;700&family=Shippori+Mincho:wght@400;600&family=Mochiy+Pop+One&family=DotGothic16&family=Share+Tech+Mono&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -87,12 +85,12 @@ img {
 }
 
 /* Natori 管理画面: すっきりしたゴシック体と詰め組み（palt）。
- * Apple 端末は端末のヒラギノ、それ以外は Noto Sans JP（このファイル冒頭の @import で読込）。
+ * Apple 端末は端末のヒラギノ、それ以外は Noto Sans JP（src/styles/adminFonts.ts の next/font）。
  * ダイアログなど body 直下に出る要素にも効くよう body にも掛ける。 */
 [data-natori-admin],
 body:has([data-natori-admin]) {
   font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans",
-    "Hiragino Kaku Gothic ProN", "Noto Sans JP",
+    "Hiragino Kaku Gothic ProN", var(--font-noto-jp), "Noto Sans JP",
     "Yu Gothic UI", Meiryo, sans-serif;
   font-feature-settings: "palt";
   letter-spacing: 0.02em;
