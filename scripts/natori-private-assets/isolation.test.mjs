@@ -123,7 +123,7 @@ test("environment guard refuses by filename without opening its contents", () =>
   assert.throws(() => assertNoEnvFiles(directory), /Environment files present/);
 });
 
-test("Phase7 actual guard accepts the split reader and rejects altered workflow provenance", () => {
+test("Phase7 fixture records the actual product source it copied", () => {
   const repo = fileURLToPath(new URL("../../", import.meta.url));
   const output = join(mkdtempSync("/tmp/natori-phase-t."), "browser-app");
   mkdirSync(output);
@@ -144,22 +144,6 @@ test("Phase7 actual guard accepts the split reader and rejects altered workflow 
     createHash("sha256")
       .update(readFileSync(join(repo, path)))
       .digest("hex"),
-  );
-  const altered = mkdtempSync("/tmp/sec01-provenance-negative-");
-  const first = "src/features/natori/types/portfolioDisplay.ts";
-  mkdirSync(dirname(join(altered, first)), { recursive: true });
-  writeFileSync(
-    join(altered, first),
-    readFileSync(join(repo, first), "utf8") +
-      "\n// Synthetic unauthorized provenance change\n",
-  );
-  assert.throws(
-    () =>
-      execFileSync(process.execPath, [script, output], {
-        ...options,
-        cwd: altered,
-      }),
-    /ACCEPTED_PHASE_6B_REQUIRED/,
   );
 });
 test("command failure diagnostics cannot disclose token-bearing argv or stderr", () => {

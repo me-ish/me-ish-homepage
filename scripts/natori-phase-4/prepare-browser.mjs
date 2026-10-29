@@ -28,14 +28,15 @@ for (const path of [
 const cssPath = 'src/app/globals.css';
 const sourceCss = readFileSync(resolve(output, cssPath), 'utf8');
 const fontImport = /^@import url\("https:\/\/fonts\.googleapis\.com\/css2\?[^"\r\n]+"\);[ \t]*\r?$/gm;
-if ([...sourceCss.matchAll(fontImport)].length !== 1) throw new Error('REVIEW_FONT_IMPORT_REQUIRED');
+// The product may drop this import (P1 font work); only more than one is a review case.
+if ([...sourceCss.matchAll(fontImport)].length > 1) throw new Error('REVIEW_FONT_IMPORT_REQUIRED');
 const fixtureCss = sourceCss.replace(fontImport, '/* Isolated browser shell uses system fonts. */');
 if (/@import[^;]*https?:\/\//i.test(fixtureCss)) throw new Error('UNREVIEWED_REMOTE_CSS_IMPORT');
 writeFileSync(resolve(output, 'phase4-source-globals.css'), sourceCss);
 checksums['phase4-source-globals.css'] = createHash('sha256').update(sourceCss).digest('hex');
 writeFileSync(resolve(output, cssPath), fixtureCss);
 checksums[cssPath] = createHash('sha256').update(fixtureCss).digest('hex');
-console.log('Phase 4 browser shell: one remote font import excluded; application CSS preserved');
+console.log('Phase 4 browser shell: remote font import excluded if present; application CSS preserved');
 // Keep Next development badges away from mobile controls during failure injection.
 // Production has no dev badge. Keep runtime/hydration checks; disable only the
 // development indicator in this disposable test shell, never in product config.

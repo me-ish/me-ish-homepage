@@ -10,16 +10,24 @@ if (!target || !/\/natori-phase-t\.[A-Za-z0-9]+\/browser-app$/.test(target) || c
 if (!existsSync(resolve(target, 'source-checksums.json')) || realpathSync(target) === realpathSync(process.cwd())) throw new Error('VERIFIED_APP_SNAPSHOT_REQUIRED');
 const root = dirname(fileURLToPath(import.meta.url)), manifest = JSON.parse(readFileSync(resolve(root, 'font-assets.json'), 'utf8'));
 const cssPath = resolve(target, 'src/app/globals.css'), originalCss = readFileSync(cssPath, 'utf8');
-const reviewedImport = "@import url(\"https://fonts.googleapis.com/css2?family=Lilita+One&family=Zen+Maru+Gothic&family=Noto+Sans+JP:wght@400;500;700&family=Shippori+Mincho:wght@400;600&family=Mochiy+Pop+One&family=DotGothic16&family=Share+Tech+Mono&display=swap\");";
+// Any Google Fonts @import (or an earlier phase's exclusion comment) is replaced with the
+// pinned local faces; with neither present, the faces are prepended. Family/weight choices in
+// product CSS are not pinned here.
+const remoteFontImport = /^@import url\("https:\/\/fonts\.googleapis\.com\/css2\?[^"\r\n]+"\);[ \t]*\r?$/gm;
 const previousExclusion = '/* Isolated browser shell uses system fonts. */';
-const cssAnchor = originalCss.includes(reviewedImport) ? reviewedImport : previousExclusion;
-if (originalCss.split(cssAnchor).length !== 2) throw new Error('REVIEWED_GLOBAL_FONT_IMPORT_REQUIRED');
+if ([...originalCss.matchAll(remoteFontImport)].length > 1 || originalCss.split(previousExclusion).length > 2) throw new Error('REVIEWED_GLOBAL_FONT_IMPORT_REQUIRED');
 const globalZen = [[400,'Regular'],[500,'Medium'],[700,'Bold'],[900,'Black']].map(([weight,name]) => `@font-face{font-family:'Zen Maru Gothic';font-style:normal;font-weight:${weight};font-display:swap;src:url('/phase7-fonts/zenmarugothic/ZenMaruGothic-${name}.ttf') format('truetype');}`).join('\n');
-const fixtureCss = originalCss.replace(cssAnchor, `/* Isolated pinned official fonts; unrelated global families are unused by these Natori surfaces. */\n${globalZen}`);
+const pinnedFaces = `/* Isolated pinned official fonts; unrelated global families are unused by these Natori surfaces. */\n${globalZen}`;
+const strippedCss = originalCss.replace(remoteFontImport, previousExclusion);
+const fixtureCss = strippedCss.includes(previousExclusion)
+  ? strippedCss.replace(previousExclusion, pinnedFaces)
+  : `${pinnedFaces}\n${strippedCss}`;
 if (/@import[^;]*https?:\/\//i.test(fixtureCss)) throw new Error('UNREVIEWED_REMOTE_CSS_IMPORT');
 const actualLayout = readFileSync(resolve('src/app/layout.tsx'), 'utf8');
-const bodyTag = '<body className="font-zen text-lg leading-relaxed text-[#333]">';
-if (actualLayout.split(bodyTag).length !== 2) throw new Error('ACTUAL_ROOT_BODY_TYPOGRAPHY_REVIEW_REQUIRED');
+// Inherit whatever body classes the actual root layout uses (not a fixed class list).
+const bodyMatches = [...actualLayout.matchAll(/<body className="[^"]*">/g)];
+if (bodyMatches.length !== 1) throw new Error('ACTUAL_ROOT_BODY_TYPOGRAPHY_REVIEW_REQUIRED');
+const bodyTag = bodyMatches[0][0];
 const shellPath = resolve(target, 'src/app/layout.tsx'), shell = readFileSync(shellPath, 'utf8');
 if (shell.split('<body>').length !== 2) throw new Error('REVIEWED_TEST_SHELL_REQUIRED');
 const typedShell = shell.replace('<body>', bodyTag);
@@ -51,7 +59,7 @@ for (const item of prepared) {
 }
 const checksumPath = resolve(target, 'source-checksums.json'), checksums = JSON.parse(readFileSync(checksumPath, 'utf8'));
 for (const item of prepared) { const path = resolve(target, item.relative); mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, item.buffer); checksums[item.relative] = item.sha256; }
-checksums.phase7ShellTypography = { actual_root_source_sha256: createHash('sha256').update(actualLayout).digest('hex'), fixture_root_sha256: createHash('sha256').update(typedShell).digest('hex'), body_class: 'font-zen text-lg leading-relaxed text-[#333]', shell: 'Inherited actual body classes; existing test shell excludes global analytics/chrome' };
-checksums.phase7GlobalCssTransport = { original_sha256: createHash('sha256').update(originalCss).digest('hex'), fixture_sha256: createHash('sha256').update(fixtureCss).digest('hex'), semantics: 'Exact remote @import replaced only in disposable shell with pinned Zen faces; product CSS remains unchanged' };
+checksums.phase7ShellTypography = { actual_root_source_sha256: createHash('sha256').update(actualLayout).digest('hex'), fixture_root_sha256: createHash('sha256').update(typedShell).digest('hex'), body_class: bodyTag.slice('<body className="'.length, -2), shell: 'Inherited actual body classes; existing test shell excludes global analytics/chrome' };
+checksums.phase7GlobalCssTransport = { original_sha256: createHash('sha256').update(originalCss).digest('hex'), fixture_sha256: createHash('sha256').update(fixtureCss).digest('hex'), semantics: 'Remote font @import (if any) replaced only in disposable shell with pinned Zen faces; product CSS remains unchanged' };
 checksums.phase7Fonts = { source: 'Official google/fonts pinned commits; Git blob SHA1 + SHA256 verified during construction', delivery: 'Full TTF via installed Next font CSS test transport, no Google network at runtime', productFontSourceUnchanged: true };
 writeFileSync(checksumPath, JSON.stringify(checksums, null, 2));
