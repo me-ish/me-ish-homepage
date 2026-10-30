@@ -7,11 +7,13 @@ import { fontEnStyle } from "./portfolioFonts";
 
 const CONTACT_NAV_LABEL = "相談・見積もり";
 
-const NAV_LINKS = [
+const NAV_LINKS: ReadonlyArray<{ href: string; label: string; wideOnly?: boolean }> = [
   { href: "#gallery", label: "作品" },
   { href: "#pricing", label: "料金・ご依頼" },
   { href: "#flow", label: "制作の流れ" },
   { href: "#about", label: "プロフィール" },
+  // タブレット幅では屋号が切れるので、広い画面だけに出す。
+  { href: "#faq", label: "よくある質問", wideOnly: true },
   { href: "/natori/portfolio/contact", label: CONTACT_NAV_LABEL },
 ];
 
@@ -19,6 +21,7 @@ const MOBILE_NAV_LINKS = [
   { href: "#gallery", label: "作品" },
   { href: "#pricing", label: "料金" },
   { href: "#flow", label: "流れ" },
+  { href: "#faq", label: "質問" },
   { href: "/natori/portfolio/contact", label: "相談" },
 ];
 
@@ -81,7 +84,7 @@ export default function PortfolioHeader({
               className={
                 link.label === CONTACT_NAV_LABEL
                   ? "pf-cute-focus -my-1.5 rounded-full border-2 px-3 py-1.5 font-bold hover:opacity-70 lg:px-4"
-                  : "pf-cute-focus hover:opacity-70"
+                  : `pf-cute-focus hover:opacity-70${link.wideOnly ? " hidden lg:inline" : ""}`
               }
               style={link.label === CONTACT_NAV_LABEL ? { borderColor: c.action, color: c.text } : undefined}
             >

@@ -15,7 +15,7 @@ it("restores a legacy plan selected from the pricing page", () => {
   expect(screen.getByRole("heading", { level: 1, name: "ご相談・ご依頼" }).className).toContain("text-2xl");
   expect(screen.queryByRole("heading", { name: "ご依頼フォーム" })).toBeNull();
   expect(screen.queryByText("CONTACT")).toBeNull();
-  expect(screen.getByText("あとりえ").style.color).toBe("rgb(236, 72, 153)");
+  expect(screen.getByText("あとりえ").style.color).toBe("rgb(190, 24, 93)");
 });
 
 const works = [

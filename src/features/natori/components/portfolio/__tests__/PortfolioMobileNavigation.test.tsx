@@ -62,7 +62,7 @@ describe("PF-07 mobile navigation", () => {
       name: "メインナビゲーション（モバイル）",
     });
     const links = within(mobileNav).getAllByRole("link");
-    expect(links.map((link) => link.textContent)).toEqual(["作品", "料金", "流れ", "相談"]);
+    expect(links.map((link) => link.textContent)).toEqual(["作品", "料金", "流れ", "質問", "相談"]);
     for (const link of links) {
       expect(link.className).toContain("min-h-[44px]");
     }
