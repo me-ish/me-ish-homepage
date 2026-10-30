@@ -1,25 +1,30 @@
 /**
- * Look of the case workspace (案件・予定・通知・ページ): the public portfolio's soft hand-drawn feel —
- * warm paper ground, Zen Maru headings, slightly uneven ink outlines and the pink / light-blue / orange trio.
+ * Look of the case workspace (案件・予定・トーク・ページ): calm, Apple-like grouped lists —
+ * light grey ground, white rounded groups with hairline separators, large bold titles,
+ * a segmented control for filters and one pink accent. Text uses the admin's system font.
  * Older admin pages keep `natoriAdminUi`.
  */
-// The site loads Zen Maru Gothic through next/font, which only exposes it as --font-zen.
-const zen = "[font-family:var(--font-zen,'Zen_Maru_Gothic'),sans-serif]";
-
 export const workspaceLook = {
-  zen,
-  page: "min-h-screen bg-[#FBF7F4] text-zinc-900",
-  header: "border-b-2 border-dashed border-pink-200 bg-[#FBF7F4]",
-  brand: `${zen} text-[22px] font-bold tracking-tight`,
-  title: `${zen} font-bold tracking-tight`,
-  /** Hand-drawn card: uneven corners, ink outline, a soft pink offset shadow. */
-  card: "rounded-[18px_14px_20px_13px] border-[1.5px] border-[#3B2F33] bg-white p-4 shadow-[3px_3px_0_#FBCFE8]",
-  cardHover: "transition-transform motion-safe:hover:-translate-y-px hover:shadow-[4px_4px_0_#F9A8D4]",
-  /** Lighter outline for short rows and secondary boxes. */
-  row: "rounded-[14px_11px_15px_10px] border-[1.5px] border-[#3B2F33]/25 bg-white",
+  page: "min-h-screen min-h-dvh bg-[#F2F2F7] text-[#1C1C1E]",
+  header: "sticky top-0 z-20 border-b border-black/10 bg-[#F2F2F7]/85 backdrop-blur-xl backdrop-saturate-150 [@media(prefers-reduced-transparency:reduce)]:bg-[#F2F2F7] [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none",
+  brand: "text-[20px] font-bold tracking-[-0.02em]",
+  title: "font-bold tracking-[-0.02em]",
+  /** Large title at the top of a tab, as in iOS. */
+  largeTitle: "text-[30px] font-bold leading-9 tracking-[-0.03em]",
+  /** Small grey label above a group. */
+  groupLabel: "px-4 text-[13px] font-normal text-[#6E6E73]",
+  /** White rounded group whose rows are split by hairlines. */
+  group: "overflow-hidden rounded-2xl bg-white divide-y divide-black/[0.08]",
+  /** One tappable row inside a group. */
+  groupRow: "flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors [@media(hover:hover)_and_(pointer:fine)]:hover:bg-black/[0.03] active:bg-black/[0.06]",
+  card: "rounded-2xl bg-white p-4",
+  row: "rounded-2xl bg-white",
   /** The open step's work area. */
-  work: "rounded-[22px_16px_24px_15px] border-2 border-[#3B2F33] bg-white shadow-[4px_4px_0_#FBCFE8]",
-  chipOn: "border-pink-700 bg-pink-700 text-white",
-  chipOff: "border-[#3B2F33]/25 bg-white text-zinc-700 hover:border-pink-300",
-  tab: zen,
+  work: "rounded-2xl bg-white",
+  /** Segmented control: grey track, the chosen segment is a raised white pill. */
+  segments: "flex rounded-[10px] bg-[#767680]/[0.12] p-0.5",
+  segmentOn: "bg-white text-[#1C1C1E] shadow-[0_1px_3px_rgba(0,0,0,0.12),0_1px_1px_rgba(0,0,0,0.04)]",
+  segmentsLg: "lg:rounded-[10px] lg:bg-[#767680]/[0.12] lg:p-0.5",
+  segmentOff: "text-[#3C3C43]",
+  muted: "text-[#6E6E73]",
 } as const;

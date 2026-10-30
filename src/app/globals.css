@@ -101,6 +101,43 @@ body:has([data-natori-admin]) {
   background-color: #f7f7f8;
 }
 
+/* 管理画面をスマホでアプリらしく: タップ時の灰色の点滅と遅れをなくし、
+ * 長押しでボタンの文字が選択されないようにする（本文は選択できるまま）。 */
+[data-natori-admin] {
+  -webkit-tap-highlight-color: transparent;
+}
+[data-natori-admin] :is(a, button, summary, [role="button"]) {
+  touch-action: manipulation;
+}
+[data-natori-admin] :is(button, summary, nav a) {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+/* iOS は 16px 未満の入力欄にフォーカスすると画面を拡大したまま戻らない。 */
+@media (pointer: coarse) {
+  [data-natori-admin] :is(input, textarea, select) {
+    font-size: 16px;
+  }
+}
+/* 相談シートは下から出す（iOS のシートと同じ曲線）。動きを減らす設定では薄く出すだけ。 */
+@media (max-width: 1023px) {
+  [data-natori-admin] .natori-sheet {
+    animation: natori-sheet-in 320ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
+@keyframes natori-sheet-in {
+  from { transform: translateY(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-natori-admin] .natori-sheet {
+    animation: natori-fade-in 200ms ease;
+  }
+}
+@keyframes natori-fade-in {
+  from { opacity: 0; }
+}
+
 .fade-in-start {
   opacity: 0;
   transform: translateY(30px);
