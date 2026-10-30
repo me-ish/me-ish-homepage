@@ -1,5 +1,6 @@
 // features/natori/components/portfolio/PortfolioHeader.tsx
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import { publicFaqs } from "@/features/natori/lib/portfolioFaq";
 import { portfolioBrandSubName } from "@/features/natori/lib/portfolioShare";
 import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
 import PortfolioMobileNav from "./PortfolioMobileNav";
@@ -7,11 +8,13 @@ import { fontEnStyle } from "./portfolioFonts";
 
 const CONTACT_NAV_LABEL = "相談・見積もり";
 
-const NAV_LINKS = [
+const NAV_LINKS: ReadonlyArray<{ href: string; label: string; wideOnly?: boolean }> = [
   { href: "#gallery", label: "作品" },
   { href: "#pricing", label: "料金・ご依頼" },
   { href: "#flow", label: "制作の流れ" },
   { href: "#about", label: "プロフィール" },
+  // タブレット幅では屋号が切れるので、広い画面だけに出す。
+  { href: "#faq", label: "よくある質問", wideOnly: true },
   { href: "/natori/portfolio/contact", label: CONTACT_NAV_LABEL },
 ];
 
@@ -19,6 +22,7 @@ const MOBILE_NAV_LINKS = [
   { href: "#gallery", label: "作品" },
   { href: "#pricing", label: "料金" },
   { href: "#flow", label: "流れ" },
+  { href: "#faq", label: "質問" },
   { href: "/natori/portfolio/contact", label: "相談" },
 ];
 
@@ -35,10 +39,15 @@ export default function PortfolioHeader({
   contactPath?: string;
 }) {
   const showcase = variant === "showcase";
+  // FAQ が1件も公開されていないときは飛び先がないので出さない。
+  const hasFaq = publicFaqs(content).length > 0;
+  const fullLinks = <T extends { href: string }>(links: readonly T[]) => links
+    .filter((link) => link.href !== "#faq" || hasFaq)
+    .map((link) => link.href === "/natori/portfolio/contact" ? { ...link, href: contactPath } : link);
   const navLinks = showcase
     ? NAV_LINKS.filter((link) => SHOWCASE_NAV_HREFS.has(link.href))
-    : NAV_LINKS.map((link) => link.href === "/natori/portfolio/contact" ? { ...link, href: contactPath } : link);
-  const mobileLinks = showcase ? navLinks : MOBILE_NAV_LINKS.map((link) => link.href === "/natori/portfolio/contact" ? { ...link, href: contactPath } : link);
+    : fullLinks(NAV_LINKS);
+  const mobileLinks = showcase ? navLinks : fullLinks(MOBILE_NAV_LINKS);
   const titleAccent = content.heroTitleAccent.trim();
   const titleTail = content.heroTitleTail.trim();
   const subName = portfolioBrandSubName(content);
@@ -81,7 +90,7 @@ export default function PortfolioHeader({
               className={
                 link.label === CONTACT_NAV_LABEL
                   ? "pf-cute-focus -my-1.5 rounded-full border-2 px-3 py-1.5 font-bold hover:opacity-70 lg:px-4"
-                  : "pf-cute-focus hover:opacity-70"
+                  : `pf-cute-focus hover:opacity-70${link.wideOnly ? " hidden lg:inline" : ""}`
               }
               style={link.label === CONTACT_NAV_LABEL ? { borderColor: c.action, color: c.text } : undefined}
             >

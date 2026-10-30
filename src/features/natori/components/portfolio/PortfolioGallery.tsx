@@ -281,7 +281,7 @@ export default function PortfolioGallery({
     <section id="gallery" className="mx-auto max-w-6xl px-5 py-16">
       <div className="mb-10">
         <h2 className="text-2xl font-black md:text-3xl">
-          ご依頼実績 <span style={{ color: c.highlight }}>°˖✧</span>
+          ご依頼実績 <span aria-hidden="true" className="after:content-['°˖✧']" style={{ color: c.highlight }} />
         </h2>
         {intro?.trim() ? (
           <p
@@ -587,7 +587,8 @@ function PortfolioWorkCard({
             ? (event) => onSelect(work, collection.name, event.currentTarget)
             : undefined
         }
-        aria-label={work.image ? `${work.title} を拡大表示` : undefined}
+        disabled={!work.image}
+        aria-label={work.image ? `${work.title} を拡大表示` : work.title}
         className={`pf-cute-focus relative mb-2 flex w-full items-center justify-center overflow-hidden rounded-lg ${
           landscape
             ? "aspect-video lg:max-h-[32rem]"

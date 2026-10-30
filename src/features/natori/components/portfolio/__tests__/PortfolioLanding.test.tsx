@@ -92,6 +92,7 @@ describe("PF-01 portfolio information architecture", () => {
       { href: "#pricing", label: "料金・ご依頼" },
       { href: "#flow", label: "制作の流れ" },
       { href: "#about", label: "プロフィール" },
+      { href: "#faq", label: "よくある質問" },
       { href: "/natori/portfolio/contact", label: "相談・見積もり" },
     ]);
     const formCta = document.querySelector("#form a") as HTMLElement;

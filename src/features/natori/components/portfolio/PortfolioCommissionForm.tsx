@@ -550,7 +550,7 @@ function PortfolioCommissionFormSession({
                   type="button"
                   onClick={() => refFileInputRef.current?.click()}
                   className="pf-cute-focus inline-flex items-center gap-1.5 rounded-full border-2 bg-white px-4 py-2 text-sm font-bold disabled:opacity-50"
-                  style={{ borderColor: c.formBorderActive, color: c.formBorderActive }}
+                  style={{ borderColor: c.formBorderActive, color: c.actionTextSmall }}
                 >
                   ＋ 画像を追加
                 </button>

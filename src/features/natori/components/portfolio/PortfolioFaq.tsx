@@ -2,6 +2,7 @@
 // よくある質問。質問だけを並べ、開くと答えを読める形にして、ご依頼フォームの直前に置く。
 import { ChevronDown } from "lucide-react";
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import { publicFaqs } from "@/features/natori/lib/portfolioFaq";
 import type { PortfolioContent } from "@/features/natori/types/portfolio";
 import { fontEnStyle } from "./portfolioFonts";
 
@@ -10,10 +11,7 @@ export default function PortfolioFaq({ content, embedded = false }: {
   /** 「ご依頼前にご確認ください」の区画の中に続けて置くとき。見出しを一段下げる */
   embedded?: boolean;
 }) {
-  // 書きかけの項目（質問か答えが空）は公開ページに出さない。
-  const faqs = (content.faqs ?? []).filter(
-    (faq) => faq.question.trim().length > 0 && faq.answer.trim().length > 0
-  );
+  const faqs = publicFaqs(content);
   if (faqs.length === 0) return null;
 
   return (

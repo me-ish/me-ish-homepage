@@ -211,7 +211,7 @@ describe("PF-02 interaction states", () => {
 
   it("offsets in-page targets below the sticky header", () => {
     expect(stylesSource).toContain(
-      ":where(#gallery, #pricing, #flow, #about, #requests, #form)"
+      ":where(#gallery, #pricing, #flow, #about, #requests, #faq, #form)"
     );
     expect(stylesSource).toContain("scroll-margin-top: 128px");
     expect(stylesSource).toContain("scroll-margin-top: 88px");
