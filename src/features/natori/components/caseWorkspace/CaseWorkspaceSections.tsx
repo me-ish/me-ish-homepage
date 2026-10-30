@@ -1,6 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
-import type { CaseSection, CaseWorkspaceRecord } from "../../types/caseWorkspace";
+import type { CaseOverviewPart, CaseSection, CaseWorkspaceRecord } from "../../types/caseWorkspace";
 import type { CaseStepKey } from "../../lib/caseSteps";
 import { CASE_TASK_STAGE_LABELS as stages, caseDate, caseKnown, caseMoney, caseTime, observationLabel } from "../../lib/caseWorkspacePresentation";
 import { CASE_NOTICE_PURPOSES, caseNoticeLabel } from "../../lib/caseWorkspaceEntries";
@@ -19,7 +19,7 @@ function Rows({ rows }: { rows: [string, ReactNode][] }) {
 function Records({ title, children }: { title: string; children: ReactNode }) {
   return <details className="rounded-[18px_14px_20px_13px] border-[1.5px] border-dashed border-[#3B2F33]/25 bg-[#FBF7F4]"><summary className={`cursor-pointer rounded-2xl px-4 py-3 text-sm font-bold text-zinc-700 ${look.zen}`}>{title}</summary><div className="space-y-4 p-3 pt-0">{children}</div></details>;
 }
-export function CaseWorkspaceSections({ record, section,step=null,application=false,readOnly=false,onChanged=()=>{},selectedNotificationId }: {selectedNotificationId?:string; record: CaseWorkspaceRecord; section: CaseSection;step?:CaseStepKey|null;application?:boolean;readOnly?:boolean;onChanged?:()=>void }) {
+export function CaseWorkspaceSections({ record, section,step=null,application=false,readOnly=false,onChanged=()=>{},selectedNotificationId,overviewPart=null }: {selectedNotificationId?:string; record: CaseWorkspaceRecord; section: CaseSection;step?:CaseStepKey|null;application?:boolean;readOnly?:boolean;onChanged?:()=>void;overviewPart?:CaseOverviewPart|null }) {
   const { model: m, display: d } = record;
   const quote = caseKnown(m.facts.quote), payment = caseKnown(d.payment), delivery = caseKnown(m.facts.delivery);
   const receipt = caseKnown(d.receipt), tasks = caseKnown(d.tasks), conversation = caseKnown(d.conversation);
@@ -78,10 +78,13 @@ export function CaseWorkspaceSections({ record, section,step=null,application=fa
       {delivery ? <li><p className="font-semibold">納品</p><p className="text-sm text-zinc-600">{caseTime(delivery.recordedAt)}</p></li> : null}
       {receipt ? <li><p className="font-semibold">受け取り</p><p className="text-sm text-zinc-600">{caseTime(receipt.acceptedAt)} · {receipt.correspondence === "matched" ? "納品と一致" : "要確認：どの納品の受け取りか分かりません"}</p></li> : null}
       {!quote?.acceptance && !payment && !delivery && !receipt ? <li>まだ記録はありません。</li> : null}
-    </ol></Card><Card title="送ったメール"><NotificationRows record={record} /></Card>
+    </ol></Card>
+    {/* Mails and processing records stay one tap away so the history opens on the timeline alone. */}
+    <Records title="メールと処理の記録"><Card title="送ったメール"><NotificationRows record={record} /></Card>
     <Card title="送信や保存の処理">{caseKnown(m.facts.operations)?.length ? <ul className="space-y-2">{caseKnown(m.facts.operations)!.map((operation,index) => <li key={operation.id}>処理{index+1}：{operation.state === "succeeded" ? "完了" : operation.state === "unknown" ? "要確認：結果が分かりません" : "要確認：うまくいかなかったかもしれません"}</li>)}</ul>
-      : <p>{observationLabel(m.facts.operations,"途中の処理はありません")}</p>}</Card>
+      : <p>{observationLabel(m.facts.operations,"途中の処理はありません")}</p>}</Card></Records>
   </div>;
+  if (overviewPart !== "decided") return null;
   return <div className="grid gap-4 sm:grid-cols-2">
     <Card title="決まったこと"><p className="font-semibold">{quote?.acceptance ? m.agreement === "accepted" ? `${caseMoney(quote.acceptance.money)}でOK（${quote.version}回目の見積）` : `${caseMoney(quote.acceptance.money)}でOK（要確認：どの見積へのOKか分かりません）` : "まだ見積のOKはもらっていません"}</p>
       <p className="mt-3 text-sm text-zinc-600">納期の目安：{record.registeredDueDate?<>{caseDate(record.registeredDueDate)}<span className="block text-xs text-zinc-500">登録した日付です。お客さんと約束した日は見積で確かめてください。</span></>:"なし"}</p></Card>

@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, type AnchorHTMLAttributes, type Key, type ReactNode } from "react";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
-import { CASE_SECTIONS, type CaseEntry, type CaseWorkspaceRecord } from "../../types/caseWorkspace";
+import { CASE_SECTIONS, type CaseEntry, type CaseOverviewPart, type CaseWorkspaceRecord } from "../../types/caseWorkspace";
 import { caseDate, caseDaysUntil, caseKnown, caseTime, caseTargetSection, CASE_SECTION_LABELS, caseWaitLine, deriveCaseGuidance, observationLabel } from "../../lib/caseWorkspacePresentation";
 import { CASE_NOTICE_PURPOSES, caseNoticeLabel, matchesCaseEntry } from "../../lib/caseWorkspaceEntries";
 import { caseDefaultFilter, caseWorkspaceHref, parseCaseWorkspaceLocation, type CaseWorkspaceLocation } from "../../lib/caseWorkspaceNavigation";
@@ -33,6 +33,8 @@ import {WavyUnderline} from "./WavyUnderline";
 
 export type CasePreviewLoader = (mode: CaseWorkspaceLocation["mode"], signal: AbortSignal) => Promise<readonly CaseWorkspaceRecord[]>;
 const entries: Record<CaseEntry,string> = { cases: "案件", schedule: "予定", notifications: "通知" };
+/** The その他 menu: each item opens on its own instead of every panel at once. */
+const OVERVIEW_PARTS: readonly (readonly [CaseOverviewPart,string,"always"|"tools"|"edit"])[] = [["request","依頼の内容","tools"],["decided","決まったこと","always"],["details","案件の情報を直す","edit"],["outside","サイトの外であったことを書く","edit"],["lifecycle","この案件を見送る・しまう","edit"]];
 const CASE_FILTER_CHIPS = [["staff","自分の番"],["client","お客さんの番"],["all","すべて"],["completed","完了"]] as const;
 const listPositionKey = (nav: CaseWorkspaceLocation) => JSON.stringify([nav.entry,nav.query,nav.filter,nav.date,nav.month,nav.page,nav.noticePage,nav.source,nav.sort,nav.intakeFilter]);
 
@@ -62,6 +64,8 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
   useEffect(()=>{if(!application||!entryTools)return;let live=true;void fetchOwnNatoriProfile().then(p=>{if(live)setBrand(p?.displayName?.trim()||null);}).catch(()=>{});return()=>{live=false;};},[application,entryTools]);
   useEffect(()=>{if(!hasDraft)return;const guard=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue="";};window.addEventListener("beforeunload",guard);return()=>window.removeEventListener("beforeunload",guard);},[hasDraft]);
   useEffect(()=>{const pop=()=>{const next=parseCaseWorkspaceLocation(window.location.search,today);if(hasDraft&&(next.projectId!==nav.projectId||hasUtilityDraft&&next.utility!==nav.utility||hasEventDraft&&(next.date!==nav.date||next.entry!==nav.entry))&&!window.confirm("書きかけの内容があります。このページを離れますか？")){window.history.pushState(null,"",caseWorkspaceHref(nav,basePath));return;}setNav(next);};window.addEventListener("popstate",pop);return()=>window.removeEventListener("popstate",pop);},[today,hasDraft,hasEventDraft,hasUtilityDraft,nav,basePath]);
+  const [overviewPart,setOverviewPart]=useState<CaseOverviewPart|null>(null);
+  useEffect(()=>{setOverviewPart(null);},[nav.projectId,nav.section]);
   const heading=useRef<HTMLHeadingElement>(null);
   const workHeading=useRef<HTMLHeadingElement>(null),focusedCase=useRef<string|null>(null);
   const [searchOpen]=useState(()=>!!nav.query||nav.sort!=="default"||nav.source!=="all"||nav.intakeFilter!=="all");
@@ -260,10 +264,13 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
               backdrop:link(sheetClose,<span className="sr-only">相談を閉じる</span>,"fixed inset-0 z-30 bg-zinc-900/40 lg:hidden",{tabIndex:-1,"aria-hidden":true}),onEscape:()=>move(sheetClose)}:null}
               link={(step,content,className,attributes)=>link({...nav,section:step.section},content,`${className} ${ui.focusRing}`,{...attributes,key:step.key})}>
               {nextHere&&guidance.waits[0]?<p className="sr-only">{selectedFailed?"前に読み込んだ時の、次にやること":"次にやること"} · {CASE_SECTION_LABELS[nav.section]}</p>:null}
-              <h2 ref={workHeading} tabIndex={-1} className={`mb-3 text-base leading-7 outline-none ${look.title}`}>{nextHere&&guidance.waits[0]?caseWaitLine(guidance.waits[0]):CASE_SECTION_LABELS[nav.section]}</h2><CaseWorkspaceSections selectedNotificationId={selectedNotificationId} record={selected} section={nav.section} step={openStep} application={application} readOnly={readOnly} onChanged={()=>setReload(v=>v+1)}/>
+              <h2 ref={workHeading} tabIndex={-1} className={`mb-3 text-base leading-7 outline-none ${look.title}`}>{nextHere&&guidance.waits[0]?caseWaitLine(guidance.waits[0]):nav.section==="overview"&&overviewPart?OVERVIEW_PARTS.find(([key])=>key===overviewPart)?.[1]:CASE_SECTION_LABELS[nav.section]}</h2>
+              {nav.section==="overview"?overviewPart?<button type="button" className={`${ui.btnLink} -mt-2 mb-2`} onClick={()=>setOverviewPart(null)}>← その他に戻る</button>
+                :<ul aria-label="その他のメニュー" className="divide-y divide-dashed divide-zinc-300">{OVERVIEW_PARTS.filter(([,,need])=>need==="always"||need==="tools"&&application&&entryTools||need==="edit"&&application&&!readOnly).map(([key,label])=><li key={key}><button type="button" onClick={()=>setOverviewPart(key)} className={`flex min-h-12 w-full items-center justify-between gap-3 px-1 text-left text-[15px] font-semibold ${ui.focusRing}`}>{label}<span aria-hidden="true" className="text-zinc-400">›</span></button></li>)}</ul>:null}
+              <CaseWorkspaceSections selectedNotificationId={selectedNotificationId} record={selected} section={nav.section} step={openStep} application={application} readOnly={readOnly} onChanged={()=>setReload(v=>v+1)} overviewPart={overviewPart}/>
               {application&&entryTools?<CaseHistoryPanel key={`history-${selected.id}`} projectId={selected.id} section={nav.section} refreshKey={selected.model.fingerprint} page={nav.historyPage??1} onNotice={id=>move({...nav,noticeId:id,section:"transaction"})} onPage={page=>move({...nav,historyPage:page})} onAccessRejected={rejectAccess}/>:null}
-              {application&&entryTools?<CaseIntakePanel key={`intake-${selected.id}`} projectId={selected.id} section={nav.section} readOnly={readOnly} refreshKey={selected.model.fingerprint} onChanged={()=>setReload(v=>v+1)} onDraftChange={setHasIntakeDraft} onAccessRejected={rejectAccess}/>:null}
-              {application&&!readOnly?<CaseWorkPanel selectedNotificationId={selectedNotificationId} key={selected.id} projectId={selected.id} section={nav.section} onChanged={()=>setReload(v=>v+1)} onDraftChange={setHasDraft}/>:null}
+              {application&&entryTools?<CaseIntakePanel key={`intake-${selected.id}`} projectId={selected.id} section={nav.section} overviewPart={overviewPart} readOnly={readOnly} refreshKey={selected.model.fingerprint} onChanged={()=>setReload(v=>v+1)} onDraftChange={setHasIntakeDraft} onAccessRejected={rejectAccess}/>:null}
+              {application&&!readOnly?<CaseWorkPanel selectedNotificationId={selectedNotificationId} key={selected.id} projectId={selected.id} section={nav.section} overviewPart={overviewPart} onChanged={()=>setReload(v=>v+1)} onDraftChange={setHasDraft}/>:null}
             </CaseStepList>
             <nav aria-label="案件のほかの画面" className="fixed inset-x-0 bottom-0 z-20 flex justify-around border-t-2 border-dashed border-pink-200 bg-[#FBF7F4] px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-2 lg:static lg:mb-5 lg:grid lg:grid-cols-3 lg:gap-2 lg:border-0 lg:bg-transparent lg:p-0">{(["consultation","history","overview"] as const).map(section=>link({...nav,section},<>{CASE_SECTION_LABELS[section]}{section==="consultation"&&caseKnown(selected.display.conversation)?.latestSender==="client"?<span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-pink-500" role="img" aria-label="お客さんが最後に書いています"/>:null}</>,
               `flex min-h-11 flex-1 items-center justify-center rounded-xl ${look.zen} text-sm font-bold lg:border-[1.5px] ${ui.focusRing} ${nav.section===section?"bg-pink-100 text-pink-900 lg:border-pink-700 lg:bg-pink-700 lg:text-white":"text-zinc-600 lg:border-[#3B2F33]/25 lg:bg-white"}`,{key:section,"aria-current":nav.section===section?"page":undefined}))}</nav>

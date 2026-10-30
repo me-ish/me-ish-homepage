@@ -32,3 +32,6 @@ export type CaseGuidance = {
   primary: { label: string; section: CaseSection };
   unknown: readonly string[];
 };
+
+/** One item of a case's その他 menu; only that item is shown. */
+export type CaseOverviewPart = "request" | "decided" | "details" | "outside" | "lifecycle";

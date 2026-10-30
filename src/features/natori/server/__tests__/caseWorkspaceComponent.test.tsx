@@ -252,7 +252,7 @@ it("presents unmatched acceptance consistently in overview and history", () => {
     projectId: record.id, snapshotId: record.model.snapshotId, asOf: record.model.checkedAt,
     quote: { ...quote, value: { ...quote.value, acceptance: { ...quote.value.acceptance, version: 99 } } },
   }) };
-  const view = render(<CaseWorkspaceSections record={mismatched} section="overview" />);
+  const view = render(<CaseWorkspaceSections record={mismatched} section="overview" overviewPart="decided" />);
   expect(screen.getByText(/でOK（要確認：どの見積へのOKか分かりません）/)).toBeTruthy();
   view.rerender(<CaseWorkspaceSections record={mismatched} section="history" />);
   expect(screen.getByText("OKの記録（要確認：どの見積へのOKか分かりません）")).toBeTruthy();
@@ -325,6 +325,16 @@ it("leads the case list with the staff's own turn and folds the client's turn in
   expect(screen.queryByRole("link",{name:/森の表紙イラスト/})).toBeNull();
 });
 
+it("opens one その他 item at a time and returns to the menu",async()=>{
+  render(<CaseWorkspacePreview load={async()=>records} initialSearch={`?case=${records[0].id}&section=overview`}/>);
+  const menu=await screen.findByRole("list",{name:"その他のメニュー"});
+  expect(screen.queryByRole("heading",{name:"決まったこと",level:3})).toBeNull();
+  fireEvent.click(within(menu).getByRole("button",{name:/決まったこと/}));
+  expect(screen.queryByRole("list",{name:"その他のメニュー"})).toBeNull();
+  expect(screen.getByRole("heading",{name:"決まったこと",level:3})).toBeTruthy();
+  fireEvent.click(screen.getByRole("button",{name:"← その他に戻る"}));
+  expect(screen.getByRole("list",{name:"その他のメニュー"})).toBeTruthy();
+});
 it("keeps the case list when a pages link opens where workspace tools are off",async()=>{
   render(<CaseWorkspacePreview load={async()=>records} application initialSearch="?utility=pages&filter=all"/>);
   await screen.findByRole("link",{name:/森の表紙イラスト/});

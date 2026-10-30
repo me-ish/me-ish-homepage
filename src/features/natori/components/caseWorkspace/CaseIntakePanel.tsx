@@ -11,12 +11,13 @@ import { useCaseAdminOperation } from "./useCaseAdminOperation";
 import { CaseAdminConfirmation } from "./CaseAdministrationPanel";
 import { useCaseDraft } from "./useCaseDraft";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
-import type { CaseSection } from "../../types/caseWorkspace";
+import type { CaseOverviewPart, CaseSection } from "../../types/caseWorkspace";
 import { normalizeNatoriReferenceUrl } from "../../lib/referenceLinks";
 import { CaseWorkspaceLoadError } from "../../types/caseWorkspaceLoad";
 export function CaseIntakePanel({
   projectId,
   section,
+  overviewPart = null,
   readOnly = false,
   refreshKey,
   onChanged,
@@ -25,6 +26,7 @@ export function CaseIntakePanel({
 }: {
   projectId: string;
   section: CaseSection;
+  overviewPart?: CaseOverviewPart | null;
   readOnly?: boolean;
   refreshKey: string;
   onChanged: () => void;
@@ -125,7 +127,7 @@ export function CaseIntakePanel({
   );
   return (
     <section
-      hidden={section !== "overview" && section !== "consultation"}
+      hidden={section === "overview" ? overviewPart !== "request" : section !== "consultation"}
       className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5"
       aria-label="依頼の内容"
     >

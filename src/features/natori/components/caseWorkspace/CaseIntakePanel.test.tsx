@@ -48,6 +48,7 @@ const view = (key: string) => (
   <CaseIntakePanel
     projectId={id}
     section="overview"
+    overviewPart="request"
     refreshKey={key}
     onChanged={changed}
     onDraftChange={dirty}
