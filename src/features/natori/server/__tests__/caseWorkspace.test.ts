@@ -198,6 +198,14 @@ describe("local case URLs", () => {
     expect(matchesCaseEntry(as("active"),day)).toBe(true);expect(matchesCaseEntry(as("completed"),day)).toBe(true);
     expect(matchesCaseEntry(as("archived"),day)).toBe(false);expect(matchesCaseEntry(as("closed"),day)).toBe(false);
   });
+  it("puts each case in one turn only, so the turn counts match the すべて groups",async()=>{
+    const records=await buildPreviewRecords("normal",previewEnvelopes()),nav=parseCaseWorkspaceLocation("?entry=cases&filter=all");
+    // The fixtures include a case that waits on both sides; it belongs to its first wait.
+    expect(records.some(record=>{const waits=deriveCaseGuidance(record).waits;return waits[0]?.who==="staff"&&waits.some(wait=>wait.who==="client");})).toBe(true);
+    for(const who of ["staff","client"] as const)
+      expect(records.filter(record=>matchesCaseEntry(record,{...nav,filter:who})).map(record=>record.id))
+        .toEqual(records.filter(record=>deriveCaseGuidance(record).waits[0]?.who===who).map(record=>record.id));
+  });
   it("does not ask the client to pay an accepted quote after manual progress",async()=>{
     const data=previewEnvelopes();data[0].project.status="awaiting_payment";
     const record=(await buildPreviewRecords("normal",data))[0];
