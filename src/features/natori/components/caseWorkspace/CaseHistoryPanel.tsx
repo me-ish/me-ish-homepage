@@ -46,12 +46,12 @@ export function CaseHistoryPanel({projectId,section,page,refreshKey,onPage,onAcc
    {section==="transaction"?<>{error?<><p role="alert">最新の記録を読み込めませんでした。</p><button className={`${ui.btnSecondary} mt-3`} disabled={pending} onClick={restart}>再読み込み</button></>:null}</>:null}
   </div>
   {/* Every record is one line (date + what happened); its details open on tap. The full list is folded. */}
-  <details hidden={section!=="history"} className="rounded-[18px_14px_20px_13px] border-[1.5px] border-dashed border-[#3B2F33]/25 bg-[#FBF7F4] p-4 sm:p-5"><summary className="cursor-pointer font-semibold">細かい記録{view?`（${view.total}件）`:""}</summary>
+  <details hidden={section!=="history"} className="rounded-2xl bg-white p-4 sm:p-5"><summary className="cursor-pointer font-semibold">細かい記録{view?`（${view.total}件）`:""}</summary>
    {pending?<p role="status">読み込み中</p>:null}
    {error?<><p role="alert">{error==="changed"?"記録が増えました。最初のページから読み込み直してください。":"記録を読み込めませんでした。"}</p>
    <button className={ui.btnSecondary} disabled={pending} onClick={restart}>最初のページから読み込み直す</button></>:null}
    {view?<><p className="my-3 text-sm" role="status">{view.total}件中 {view.total===0?0:view.offset+1}〜{view.offset+view.rows.length}件{view.offset===0&&view.next===null?"（全件）":""}</p>
-    <ol className="divide-y divide-dashed divide-zinc-300">{view.rows.map(row=><li key={row.id} className="text-sm"><details>
+    <ol className="divide-y divide-black/[0.08]">{view.rows.map(row=><li key={row.id} className="text-sm"><details>
      <summary className="flex min-h-11 cursor-pointer items-center gap-3 py-1.5"><span className="w-20 shrink-0 text-xs text-zinc-600">{row.occurredAt?caseTime(row.occurredAt):"日時なし"}</span><span className="min-w-0 font-semibold">{CASE_HISTORY_SOURCES[row.source]}{row.source==='activity'&&['quote_issued','mail_sent','payment_recorded','delivery_sent','delivery_accepted'].includes(row.kind??'')?`：${getNatoriProjectActivityLabel(row.kind as NatoriProjectActivityEventType)}`:''}</span></summary>
      <div className="space-y-1 pb-3 pl-[5.75rem]">
      {row.quoteId?<p>見積：{row.quoteVersion?`第${row.quoteVersion}版`:'—'}{row.quoteMatched===false?'（要確認：どの見積か分かりません）':''}</p>:null}
