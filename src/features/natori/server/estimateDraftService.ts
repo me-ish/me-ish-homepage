@@ -16,6 +16,12 @@ export async function getEstimateDraft(projectId: string): Promise<Result> {
   if (!idPattern.test(projectId)) return { kind: "not-found" };
   const userId = await resolveNatoriOwnerId();
   if (!userId) return { kind: "not-found" };
+  return readEstimateDraftForOwner(userId, projectId);
+}
+
+/** Owner already resolved by the caller (management request or trusted background job). */
+export async function readEstimateDraftForOwner(userId: string, projectId: string): Promise<Result> {
+  if (!idPattern.test(projectId)) return { kind: "not-found" };
   const db = supabaseAdmin();
   const { data: project, error: projectError } = await db.from("natori_projects")
     .select("id, status, deleted_at, quote_accepted_at, payment_confirmed_at").eq("id", projectId).eq("user_id", userId).maybeSingle();
@@ -39,10 +45,16 @@ export async function getEstimateDraft(projectId: string): Promise<Result> {
 }
 
 export async function saveEstimateDraft(projectId: string, expectedRevision: number, input: NatoriEstimateDraftData): Promise<Result> {
+  if (!idPattern.test(projectId)) return { kind: "not-found" };
+  const userId = await resolveNatoriOwnerId();
+  if (!userId) return { kind: "not-found" };
+  return writeEstimateDraftForOwner(userId, projectId, expectedRevision, input);
+}
+
+/** Owner already resolved by the caller (management request or trusted background job). */
+export async function writeEstimateDraftForOwner(userId: string, projectId: string, expectedRevision: number, input: NatoriEstimateDraftData): Promise<Result> {
   if (quoteIntegrityEnabled()) {
     if (!idPattern.test(projectId)) return { kind: "not-found" };
-    const userId = await resolveNatoriOwnerId();
-    if (!userId) return { kind: "not-found" };
     const { data, error } = await supabaseAdmin().rpc("natori_save_estimate_draft_v1", {
       p_owner_id: userId, p_project_id: projectId, p_revision: expectedRevision,
       p_draft: JSON.parse(JSON.stringify(input)),
@@ -53,12 +65,10 @@ export async function saveEstimateDraft(projectId: string, expectedRevision: num
     if (result.result === "not-found" || result.result === "invalid-state" || result.result === "conflict") return { kind: result.result };
     return { kind: "db-error" };
   }
-  const existing = await getEstimateDraft(projectId);
+  const existing = await readEstimateDraftForOwner(userId, projectId);
   if (existing.kind !== "ok") return existing;
   if (existing.editable === false) return { kind: "invalid-state" };
   if ((existing.draft?.revision ?? 0) !== expectedRevision) return { kind: "conflict" };
-  const userId = await resolveNatoriOwnerId();
-  if (!userId) return { kind: "not-found" };
   const db = supabaseAdmin();
   const payload = { agreed_terms: input.agreedTerms, items: input.items, ...(quoteIntegrityEnabled() ? { mail_draft: input.mailDraft ?? null } : {}), updated_at: new Date().toISOString() };
   if (expectedRevision === 0) {

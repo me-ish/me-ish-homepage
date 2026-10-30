@@ -5,13 +5,14 @@ import { checkSameOrigin } from "@/lib/auth/origin";
 import { canUseNatoriManagement } from "@/features/natori/server/requireNatoriAdmin";
 import { estimateDraftSchema } from "@/features/natori/lib/estimateDraft";
 import { getEstimateDraft, saveEstimateDraft } from "@/features/natori/server/estimateDraftService";
+import { estimateAssistantEnabled } from "@/features/natori/server/estimateAssistantService";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function response(result: Awaited<ReturnType<typeof getEstimateDraft>>) {
   switch (result.kind) {
-    case "ok": return NextResponse.json({ ok: true, draft: result.draft, editable: result.editable !== false });
+    case "ok": return NextResponse.json({ ok: true, draft: result.draft, editable: result.editable !== false, assistant: estimateAssistantEnabled() });
     case "not-found": return NextResponse.json({ error: "not_found" }, { status: 404 });
     case "invalid-state": return NextResponse.json({ error: "invalid_state" }, { status: 409 });
     case "conflict": return NextResponse.json({ error: "draft_changed" }, { status: 409 });

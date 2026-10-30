@@ -44,7 +44,7 @@ export type NatoriEstimateDraftData = {
 };
 export type NatoriEstimateDraft = NatoriEstimateDraftData & { revision: number };
 
-export function defaultEstimateTerms(project: NatoriProject): NatoriAgreedTerms {
+export function defaultEstimateTerms(project: Pick<NatoriProject, "requestData" | "dueDate">): NatoriAgreedTerms {
   const parsed = readNatoriRequestData(project.requestData);
   const request = parsed.success ? parsed.data : null;
   const originalScope = request?.commissionScope;
