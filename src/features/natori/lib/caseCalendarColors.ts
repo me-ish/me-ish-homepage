@@ -11,15 +11,25 @@ export const CASE_CALENDAR_COLORS = [
 ] as const;
 
 /**
- * Gives each case shown in the month its own colour, in order of its first bar,
- * so two cases running side by side never share a colour unless more than six overlap.
+ * Gives each case shown in the month its own colour, in order of its first bar.
+ * A colour is reused only by a case that starts after the earlier case's last bar,
+ * so cases running side by side never share a colour unless more than six overlap.
  */
 export function caseCalendarColors(bars: readonly NatoriCalendarBar[]): Map<string, { color: string; title: string }> {
-  const first = new Map<string, { start: string; title: string }>();
+  const span = new Map<string, { start: string; end: string; title: string }>();
   for (const bar of bars) {
-    const seen = first.get(bar.project.id);
-    if (!seen || bar.startISO < seen.start) first.set(bar.project.id, { start: bar.startISO, title: bar.project.title });
+    const seen = span.get(bar.project.id);
+    span.set(bar.project.id, seen
+      ? { start: bar.startISO < seen.start ? bar.startISO : seen.start, end: bar.endISO > seen.end ? bar.endISO : seen.end, title: bar.startISO < seen.start ? bar.project.title : seen.title }
+      : { start: bar.startISO, end: bar.endISO, title: bar.project.title });
   }
-  const ordered = [...first.entries()].sort(([a, x], [b, y]) => x.start.localeCompare(y.start) || a.localeCompare(b));
-  return new Map(ordered.map(([id, { title }], i) => [id, { color: CASE_CALENDAR_COLORS[i % CASE_CALENDAR_COLORS.length], title }]));
+  const ordered = [...span.entries()].sort(([a, x], [b, y]) => x.start.localeCompare(y.start) || a.localeCompare(b));
+  const placed: { index: number; end: string }[] = [];
+  return new Map(ordered.map(([id, { start, end, title }], i) => {
+    const busy = new Set(placed.filter(p => p.end >= start).map(p => p.index));
+    const free = CASE_CALENDAR_COLORS.findIndex((_, n) => !busy.has(n));
+    const index = free >= 0 ? free : i % CASE_CALENDAR_COLORS.length;
+    placed.push({ index, end });
+    return [id, { color: CASE_CALENDAR_COLORS[index], title }];
+  }));
 }

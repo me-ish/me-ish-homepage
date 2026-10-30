@@ -16,4 +16,15 @@ describe("caseCalendarColors", () => {
     expect(colors.get("a")).toEqual({ color: CASE_CALENDAR_COLORS[0], title: "森の表紙" });
     expect(colors.get("b")?.color).toBe(CASE_CALENDAR_COLORS[1]);
   });
+
+  it("reuses a colour only for a case that starts after the earlier case has ended", () => {
+    const early = Array.from({ length: 5 }, (_, n) => bar(`e${n}`, `終わった${n}`, "rough", "2026-11-01", "2026-11-03"));
+    const colors = caseCalendarColors([
+      bar("a-long", "長い案件", "rough", "2026-11-01", "2026-11-30"), ...early,
+      bar("late", "あとの案件", "rough", "2026-11-10", "2026-11-12"),
+    ]);
+    expect(colors.get("a-long")?.color).toBe(CASE_CALENDAR_COLORS[0]);
+    expect(colors.get("late")?.color).not.toBe(colors.get("a-long")?.color);
+    expect(colors.get("late")?.color).toBe(CASE_CALENDAR_COLORS[1]);
+  });
 });
