@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { natoriAdminUi as ui } from "@/features/natori/constants/adminUi";
 import { workspaceLook as look } from "@/features/natori/constants/workspaceLook";
-import { WavyUnderline } from "../caseWorkspace/WavyUnderline";
 import { NatoriAdminFont } from "./NatoriAdminFont";
 import { NatoriToastProvider } from "./NatoriToast";
 
@@ -20,7 +19,7 @@ export function NatoriWorkspaceShell({ title, backHref, children }: { title: str
         </header>
         <main className="mx-auto max-w-[1440px] space-y-4 px-4 pt-4 sm:px-6">
           <Link href={backHref} className={ui.btnLink}>← ページへ戻る</Link>
-          <h1 className={`text-xl ${look.title}`}>{title}<WavyUnderline className="mt-0.5" /></h1>
+          <h1 className={`text-xl ${look.title}`}>{title}</h1>
           {children}
         </main>
       </div>

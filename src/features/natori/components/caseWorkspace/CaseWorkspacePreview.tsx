@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, type AnchorHTMLAttributes, ty
 import { natoriAdminUi as ui } from "../../constants/adminUi";
 import { CASE_SECTIONS, type CaseEntry, type CaseOverviewPart, type CaseWorkspaceRecord } from "../../types/caseWorkspace";
 import { caseDate, caseDaysUntil, caseKnown, caseTime, caseTargetSection, CASE_SECTION_LABELS, caseWaitLine, deriveCaseGuidance, observationLabel } from "../../lib/caseWorkspacePresentation";
-import { CASE_NOTICE_PURPOSES, caseNoticeLabel, matchesCaseEntry } from "../../lib/caseWorkspaceEntries";
+import { CASE_NOTICE_PURPOSES, caseNoticeLabel, caseShelved, matchesCaseEntry } from "../../lib/caseWorkspaceEntries";
 import { caseDefaultFilter, caseWorkspaceHref, parseCaseWorkspaceLocation, type CaseWorkspaceLocation } from "../../lib/caseWorkspaceNavigation";
 import {publicAcceptanceTarget} from "@/lib/caseAcceptanceEnvironment";
 import {CaseRegistration} from "./CaseRegistration";
@@ -28,7 +28,6 @@ import {CasePublicPages} from "./CasePublicPages";
 import {NatoriAdminFont} from "../admin/NatoriAdminFont";
 import {caseStepForSection,deriveCaseSteps} from "../../lib/caseSteps";
 import {workspaceLook as look} from "../../constants/workspaceLook";
-import {WavyUnderline} from "./WavyUnderline";
 
 export type CasePreviewLoader = (mode: CaseWorkspaceLocation["mode"], signal: AbortSignal) => Promise<readonly CaseWorkspaceRecord[]>;
 const entries: Record<CaseEntry,string> = { cases: "案件", schedule: "予定", notifications: "トーク" };
@@ -230,7 +229,7 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
       <div className={`${utilityOpen?"hidden":"grid"} gap-6 lg:grid-cols-[21rem_minmax(0,1fr)]`}>
         <aside aria-label={entryTitle} className={`${nav.projectId?"hidden lg:block":""} min-w-0`}>
           {/* Registration is a small button beside the case heading; its form opens below the heading. */}
-          <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2"><h1 className={`text-xl ${look.title}`}>{entryTitle}<WavyUnderline className="mt-0.5"/></h1><span className="text-xs text-zinc-500">{records===null?"件数を読み込み中":`${pending||failed?"前回：":""}${visible.length}案件`}</span>
+          <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2"><h1 className={`text-xl ${look.title}`}>{entryTitle}</h1><span className="text-xs text-zinc-500">{records===null?"件数を読み込み中":`${pending||failed?"前回：":""}${visible.length}案件`}</span>
             {nav.entry==="cases"&&application&&entryTools&&personalEventsEnabled&&!publicAcceptanceTarget(true)&&!readOnly?<CaseRegistration today={today} onChanged={()=>setReload(v=>v+1)} onDraftChange={setHasRegistrationDraft} onOpen={id=>{const next={...nav,entry:"cases" as const,projectId:id,selectedId:id,section:"overview" as const};move(next);setReload(v=>v+1);}}/>:null}</div>
           {nav.entry==="cases"?<div role="group" aria-label="対応で絞り込む" className="-mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">{CASE_FILTER_CHIPS.map(([value,label])=><button key={value} type="button" aria-pressed={nav.filter===value} onClick={()=>move({...nav,filter:value})}
             className={`min-h-9 shrink-0 whitespace-nowrap rounded-full border-[1.5px] px-2.5 ${look.zen} text-[13px] font-bold lg:px-2 lg:text-[12px] ${ui.focusRing} ${nav.filter===value?look.chipOn:look.chipOff}`}>{label}{records!==null?<span className="ml-1.5">{rows.filter(row=>matchesCaseEntry(row,{...nav,filter:value},plansReady?plans:null,today)).length}</span>:null}</button>)}</div>:null}
@@ -239,7 +238,7 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
             {nav.source!=="all"||nav.intakeFilter!=="all"?<><p className="text-xs">{nav.source==="inquiries"?"問い合わせの一覧から開いています。":nav.source==="estimate"?"見積の一覧から開いています。":"問い合わせの条件で絞り込んでいます。"}</p><label className="block text-xs font-semibold">問い合わせの絞り込み<select className={ui.input} value={nav.intakeFilter} onChange={e=>move({...nav,intakeFilter:e.target.value as CaseWorkspaceLocation["intakeFilter"]})}><option value="all">すべて</option><option value="attention">対応・確認が必要</option><option value="rough-ok">ラフOKをもらった</option><option value="ended">見送り・保管</option><option value="inquiry">相談受付</option><option value="estimating">見積下書き</option><option value="quoted">見積を出した</option><option value="awaiting_payment">支払い待ち</option></select></label></>:null}
           </div></details>
           <div className="mb-4 space-y-3">
-            {nav.entry==="schedule"?<><CaseMonthPicker nav={nav} records={rows} available={!pending&&!failed&&records!==null} onChange={move} plans={plansReady?plans:null} today={today} events={entryTools&&personalEventsEnabled?eventsReady?personalEvents:null:undefined}/></>:null}
+            {nav.entry==="schedule"?<><CaseMonthPicker nav={nav} records={rows.filter(row=>!caseShelved(row))} available={!pending&&!failed&&records!==null} onChange={move} plans={plansReady?plans:null} today={today} events={entryTools&&personalEventsEnabled?eventsReady?personalEvents:null:undefined}/></>:null}
           </div>
           {nav.entry==="schedule"&&application&&entryTools&&!plansReady?<p className="mb-4 text-xs leading-6 text-amber-900">作業の予定を読み込めなかったので、納期だけを表示しています。</p>:null}
           {nav.entry==="schedule"&&application&&entryTools?(personalEventsEnabled?<CasePersonalSchedule key={nav.date} date={nav.date} events={personalEvents} available={eventsReady} readOnly={readOnly} onChanged={()=>setReload(v=>v+1)} onDraftChange={setHasEventDraft}/>:<p className="mb-4 text-xs text-amber-900">この画面では自分の予定は使えません。</p>):null}

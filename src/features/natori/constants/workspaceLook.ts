@@ -23,7 +23,3 @@ export const workspaceLook = {
   chipOff: "border-[#3B2F33]/25 bg-white text-zinc-700 hover:border-pink-300",
   tab: zen,
 } as const;
-
-/** Small wavy pink line drawn under headings, like a pen stroke. */
-export const WAVY_UNDERLINE =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='6' viewBox='0 0 16 6'%3E%3Cpath d='M0 3 Q4 0 8 3 T16 3' fill='none' stroke='%23EC4899' stroke-width='1.6'/%3E%3C/svg%3E\")";

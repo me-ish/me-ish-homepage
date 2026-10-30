@@ -189,6 +189,15 @@ describe("local case URLs", () => {
     const partial=await buildPreviewRecords("partial",previewEnvelopes());
     expect(partial[0].display.conversation.state).toBe("unavailable");expect(matchesCaseEntry(partial[0],nav)).toBe(true);
   });
+  it("keeps finished and shelved cases out of トーク, and shelved ones out of the schedule",async()=>{
+    const talk=(await buildPreviewRecords("normal",previewEnvelopes()))[2],nav=parseCaseWorkspaceLocation("?entry=notifications");
+    const as=(eligibility:typeof talk.model.eligibility)=>({...talk,model:{...talk.model,eligibility}});
+    expect(matchesCaseEntry(as("active"),nav)).toBe(true);
+    for(const ended of ["closed","archived","completed","historical"] as const)expect(matchesCaseEntry(as(ended),nav)).toBe(false);
+    const day=parseCaseWorkspaceLocation(`?entry=schedule&date=${talk.registeredDueDate}`);
+    expect(matchesCaseEntry(as("active"),day)).toBe(true);expect(matchesCaseEntry(as("completed"),day)).toBe(true);
+    expect(matchesCaseEntry(as("archived"),day)).toBe(false);expect(matchesCaseEntry(as("closed"),day)).toBe(false);
+  });
   it("does not ask the client to pay an accepted quote after manual progress",async()=>{
     const data=previewEnvelopes();data[0].project.status="awaiting_payment";
     const record=(await buildPreviewRecords("normal",data))[0];
