@@ -39,7 +39,7 @@ export default function PortfolioFaq({ content, embedded = false }: {
                 Q
               </span>
               {/* 本文の既定が大きいので、スマホは 15px に下げる（PC は 20px のまま） */}
-              <span className="min-w-0 flex-1 text-[15px] leading-snug md:text-lg">{faq.question.trim()}</span>
+              <span className="min-w-0 flex-1 text-base leading-snug md:text-lg">{faq.question.trim()}</span>
               <ChevronDown
                 aria-hidden="true"
                 className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none"
@@ -47,7 +47,7 @@ export default function PortfolioFaq({ content, embedded = false }: {
               />
             </summary>
             <p
-              className="whitespace-pre-line px-4 pb-4 pl-10 text-[14px] leading-relaxed md:px-5 md:pl-11 md:text-base"
+              className="whitespace-pre-line px-4 pb-4 pl-10 text-sm leading-relaxed md:px-5 md:pl-11 md:text-base"
               style={{ color: c.textSoft }}
             >
               {faq.answer.trim()}

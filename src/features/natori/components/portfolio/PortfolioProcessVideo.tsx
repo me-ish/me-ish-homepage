@@ -16,7 +16,7 @@ export default function PortfolioProcessVideo({ content }: { content: PortfolioC
       <h2 className="text-center text-2xl font-black md:text-3xl">制作過程</h2>
       {/* 本文の既定が大きいので、スマホは 15px に下げる（PC は既定のまま） */}
       {view.caption ? (
-        <p className="mx-auto mt-3 max-w-xl text-center text-[15px] leading-relaxed md:text-base" style={{ color: c.textSoft }}>
+        <p className="mx-auto mt-3 max-w-xl text-center text-base leading-relaxed md:text-base" style={{ color: c.textSoft }}>
           {view.caption}
         </p>
       ) : null}
@@ -39,7 +39,7 @@ export default function PortfolioProcessVideo({ content }: { content: PortfolioC
         )}
       </div>
       {source.kind === "youtube" ? (
-        <p className="mt-3 text-center text-[13px] leading-relaxed" style={{ color: c.textSoft }}>
+        <p className="mt-3 text-center text-sm leading-relaxed" style={{ color: c.textSoft }}>
           再生するとYouTubeに接続します。
           <a
             href={youtubeWatchUrl(source.videoId)}

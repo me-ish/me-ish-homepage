@@ -49,7 +49,7 @@ function workMeta(work: PortfolioWork, collection: PortfolioCollection): string[
 function WorkMetaLine({ items }: { items: string[] }) {
   if (items.length === 0) return null;
   return (
-    <p className="mt-0.5 text-[13px] leading-snug" style={{ color: c.textSoft }}>
+    <p className="mt-0.5 text-sm leading-snug" style={{ color: c.textSoft }}>
       {items.map((item, index) => (
         <span key={`${item}-${index}`}>
           {index > 0 ? " " : null}
@@ -315,7 +315,7 @@ export default function PortfolioGallery({
               >
                   {collectionLabel(collection.name)}
                   {/* 件数は見た目の補足。読み上げは下の状況表示で伝える。 */}
-                  <span aria-hidden="true" className="ml-1.5 text-[13px] font-semibold opacity-75" style={fontEnStyle}>
+                  <span aria-hidden="true" className="ml-1.5 text-sm font-semibold opacity-75" style={fontEnStyle}>
                     {workCountByCollectionId.get(collection.id) ?? 0}
                   </span>
               </button>
@@ -466,7 +466,7 @@ export default function PortfolioGallery({
                 {canBrowse ? (
                   <span
                     aria-hidden="true"
-                    className="absolute left-2 top-2 rounded-full px-2.5 py-1 text-[13px] font-semibold"
+                    className="absolute left-2 top-2 rounded-full px-2.5 py-1 text-sm font-semibold"
                     style={{ ...fontEnStyle, background: c.pageTranslucent, color: c.text }}
                   >
                     {selectedPosition + 1} / {viewableWorks.length}
@@ -478,7 +478,7 @@ export default function PortfolioGallery({
                       type="button"
                       onClick={() => setCollapsedWorkId(null)}
                       aria-expanded="false"
-                      className="pf-cute-focus absolute bottom-2 left-1/2 inline-flex min-h-[40px] max-w-[calc(100%-1rem)] -translate-x-1/2 items-center gap-1 rounded-full border px-3.5 py-1.5 text-[13px] font-bold shadow-md"
+                      className="pf-cute-focus absolute bottom-2 left-1/2 inline-flex min-h-[40px] max-w-[calc(100%-1rem)] -translate-x-1/2 items-center gap-1 rounded-full border px-3.5 py-1.5 text-sm font-bold shadow-md"
                       style={{ background: c.pageTranslucent, borderColor: c.action, color: c.text }}
                     >
                       <span className="truncate">{relatedHeading}</span>
@@ -526,7 +526,7 @@ export default function PortfolioGallery({
                     <a
                       href={consultationHref}
                       onClick={() => trackNatoriPageEvent("portfolio_primary_cta_click", "gallery")}
-                      className="pf-cute-focus inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-full border-2 px-5 py-2 text-[13px] font-bold sm:text-sm"
+                      className="pf-cute-focus inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-full border-2 px-5 py-2 text-sm font-bold sm:text-sm"
                       style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
                     >
                       この雰囲気で相談する

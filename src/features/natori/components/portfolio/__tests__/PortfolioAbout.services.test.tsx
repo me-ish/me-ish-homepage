@@ -50,7 +50,7 @@ describe("PortfolioAbout service pills", () => {
     ]);
     expect(lists[0]?.className).toContain("flex-wrap");
     expect(firstPill.className).toContain("rounded-full");
-    expect(firstPill.className).toContain("text-[13px]");
+    expect(firstPill.className).toContain("text-sm");
     expect(firstPill.className).toContain("whitespace-nowrap");
   });
 });

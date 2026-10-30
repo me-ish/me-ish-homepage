@@ -62,7 +62,7 @@ export default function PortfolioHero({
         >
           <div className="order-2 min-w-0 px-5 md:order-none md:px-0">
             <p
-              className="mb-3 hidden text-[13px] font-semibold uppercase tracking-[0.2em] md:block"
+              className="mb-3 hidden text-sm font-semibold uppercase tracking-[0.2em] md:block"
               style={{ ...fontEnStyle, color: c.actionTextSmall }}
             >
               {content.roleEn}
@@ -86,7 +86,7 @@ export default function PortfolioHero({
 
           <div className="order-4 min-w-0 px-5 md:order-none md:px-0">
             <p
-              className={`max-w-lg text-[15px] leading-relaxed md:mb-6 md:text-lg ${hasArt ? "" : "md:mx-auto"}`}
+              className={`max-w-lg text-base leading-relaxed md:mb-6 md:text-lg ${hasArt ? "" : "md:mx-auto"}`}
               style={{ color: c.textSoft }}
             >
               {content.heroDescription}
@@ -109,10 +109,10 @@ export default function PortfolioHero({
                     className={`min-w-0 px-3 py-1.5 md:py-2.5 lg:px-4 ${index > 0 ? "border-l" : ""} ${hasArt ? "" : "md:text-center"}`}
                     style={{ borderColor: c.borderSubtle }}
                   >
-                    <dt className="truncate text-[13px] font-bold leading-snug" style={{ color: c.actionTextSmall }}>
+                    <dt className="truncate text-sm font-bold leading-snug" style={{ color: c.actionTextSmall }}>
                       {fact.label}
                     </dt>
-                    <dd className="text-[15px] font-black leading-snug md:text-base" style={{ color: c.text }}>
+                    <dd className="text-base font-black leading-snug md:text-base" style={{ color: c.text }}>
                       {fact.value}
                     </dd>
                   </div>
@@ -146,7 +146,7 @@ export default function PortfolioHero({
                 className="mt-3 flex items-baseline justify-center gap-2 text-sm"
                 style={{ color: c.textSoft }}
               >
-                <span className="text-[13px] font-semibold uppercase tracking-[0.16em]">
+                <span className="text-sm font-semibold uppercase tracking-[0.16em]">
                   Selected work
                 </span>
                 <span className="font-bold" style={{ color: c.text }}>

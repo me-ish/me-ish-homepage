@@ -68,7 +68,7 @@ import PortfolioFormStyles, { portfolioFormColors as c } from "./PortfolioFormSt
 
 const inputClass = "pf-cute-focus pf-form-control w-full rounded-lg border-2 px-3 py-2";
 const labelClass = "mb-1.5 block text-sm font-bold";
-const optionalBadgeClass = "ml-2 rounded-full px-2 py-0.5 text-[11px] font-bold";
+const optionalBadgeClass = "ml-2 rounded-full px-2 py-0.5 text-xs font-bold";
 
 type RefImageEntry = { file: File; previewUrl: string };
 type ServerFieldError = { path: string; message: string };
@@ -798,7 +798,7 @@ export default function PortfolioStructuredCommissionForm({
                         borderColor: checked ? c.formBorderActive : c.formBorder,
                       }}
                     >
-                      <label className="flex min-h-[44px] cursor-pointer items-center gap-2 p-3 text-[13px]">
+                      <label className="flex min-h-[44px] cursor-pointer items-center gap-2 p-3 text-sm">
                         <input
                           id={`pf-option-${choice.key}`}
                           {...errorAttributes(`pf-option-${choice.key}`)}
@@ -885,7 +885,7 @@ export default function PortfolioStructuredCommissionForm({
 
             {massProductionSelected ? (
               <>
-                <label className="flex cursor-pointer items-center gap-2 rounded-lg border-2 p-2 text-[13px]" style={{ borderColor: state.commercialUse === "yes" ? c.formBorderActive : c.formBorder }}>
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg border-2 p-2 text-sm" style={{ borderColor: state.commercialUse === "yes" ? c.formBorderActive : c.formBorder }}>
                   <input
                     id="pf-mass-commercial"
                     {...errorAttributes("pf-mass-commercial", "pf-mass-commercial-help")}
@@ -920,7 +920,7 @@ export default function PortfolioStructuredCommissionForm({
               <legend className={labelClass}>使用目的（複数選択可）</legend>
               <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
                 {NATORI_USAGE_TYPES_V1.filter((usage) => usage !== "original_character").map((usage) => (
-                  <label key={usage} className="flex min-h-[44px] cursor-pointer items-center gap-2 text-[13px]" style={{ color: c.textSoft }}>
+                  <label key={usage} className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm" style={{ color: c.textSoft }}>
                     <input type="checkbox" checked={state.usageTypes.includes(usage)} onChange={() => toggleUsageType(usage)} className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0" />
                     {NATORI_USAGE_TYPE_LABELS_V1[usage]}
                   </label>
@@ -929,7 +929,7 @@ export default function PortfolioStructuredCommissionForm({
             </fieldset>
             <fieldset>
               <legend className={labelClass}>題材<OptionalBadge /></legend>
-              <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-[13px]" style={{ color: c.textSoft }}>
+              <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm" style={{ color: c.textSoft }}>
                 <input type="checkbox" checked={state.usageTypes.includes("original_character")} onChange={() => toggleUsageType("original_character")} className="pf-choice-control pf-cute-focus h-4 w-4 shrink-0" />
                 {NATORI_USAGE_TYPE_LABELS_V1.original_character}
               </label>
@@ -1529,7 +1529,7 @@ export default function PortfolioStructuredCommissionForm({
         {stepLabels.map((label, index) => (
           <li key={label} className="min-w-0 flex-1" aria-current={index === step ? "step" : undefined}>
             <span className="block h-1 rounded-full" style={{ background: index <= step ? c.formBorderActive : c.borderSubtle }} />
-            <span className="mt-2 block text-center text-[11px] font-bold leading-tight sm:text-xs" style={{ color: index === step ? c.accentText : c.textSoft }}>
+            <span className="mt-2 block text-center text-xs font-bold leading-tight sm:text-xs" style={{ color: index === step ? c.accentText : c.textSoft }}>
               {label}
             </span>
           </li>

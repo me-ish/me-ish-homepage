@@ -78,7 +78,7 @@ export default function PortfolioGuidelines({ content, children }: { content: Po
               >
                 <h3
                   id={headingId}
-                  className="text-[15px] font-black md:text-base"
+                  className="text-base font-black md:text-base"
                   style={{ color: c.text }}
                 >
                   {group.title}
