@@ -64,9 +64,8 @@ it("retries a failed auxiliary index without treating it as an empty notificatio
  const notices=vi.spyOn(entryData,"loadCaseNoticeIndex").mockRejectedValueOnce(new CaseWorkspaceLoadError("unavailable")).mockResolvedValue({revision:"a".repeat(32),items:[]});
  render(<CaseWorkspacePreview application entryTools load={async()=>records} initialSearch="?entry=notifications"/>);
  const retry=await screen.findByRole("button",{name:"予定と通知を再読み込み"});
- expect(screen.queryByText("この条件のメールはありません。")).toBeNull();
  fireEvent.click(retry);await waitFor(()=>expect(notices).toHaveBeenCalledTimes(2));
- await screen.findByText("この条件のメールはありません。");expect(screen.queryByRole("button",{name:"予定と通知を再読み込み"})).toBeNull();
+ await waitFor(()=>expect(screen.queryByRole("button",{name:"予定と通知を再読み込み"})).toBeNull());
 });
 
 it("does not keep retrying personal events that are outside the dedicated acceptance profile",async()=>{
@@ -111,19 +110,50 @@ it.each(["cases","schedule","notifications"])("shows unconfirmed payment sharing
   expect(model.actions.find(a=>a.id==="prepare_payment_notice")?.blockedBy).toContain("link_already_exists");
 });
 
-it("returns from an exact notification to its original filter and selection without sending",async()=>{
-  const record=records[7],notice=record.model.facts.notifications;
-  if(notice.state!=="ready"||!notice.value.length)throw Error("notification fixture required");
-  window.history.replaceState(null,"","/?entry=notifications&q=光&month=2026-11");
-  render(<CaseWorkspacePreview load={async()=>records}/>);
-  const item=await screen.findByRole("link",{name:/納品のメール.*送れたか分かりません/});fireEvent.click(item);
-  expect(window.location.search).toContain(`notice=${notice.value[0].id}`);expect(window.location.search).toContain("section=production");
-  expect(screen.getByRole("complementary",{name:"選択した通知"}).textContent).toContain("納品のメール");
-  fireEvent.click(screen.getByRole("link",{name:"← 通知へ戻る"}));
-  expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("光");
-  expect(screen.queryByRole("group",{name:"対応で絞り込む"})).toBeNull();
-  expect(document.activeElement?.id).toBe(`notice-${notice.value[0].id}`);
-  expect(screen.queryByRole("button",{name:/送信|再送|発行/})).toBeNull();
+it("lists talks newest first and opens a case on its talk alone",async()=>{
+  const talk=records[2],talk2={...records[2],id:"older-talk",title:"前のトーク",display:{...records[2].display,conversation:{...records[2].display.conversation,value:{latestSender:"staff" as const,latestAt:"2026-10-01T03:00:00Z"}}}};
+  window.history.replaceState(null,"","/?entry=notifications&q=&month=2026-11");
+  render(<CaseWorkspacePreview load={async()=>[records[0],talk2,talk]}/>);
+  const list=within(await screen.findByRole("complementary",{name:"トーク"}));
+  const rows=list.getAllByRole("link").map(a=>a.id);
+  expect(rows).toEqual([`case-${talk.id}`,"case-older-talk"]);
+  expect(list.queryByText(records[0].title)).toBeNull();
+  expect(list.getByRole("link",{name:new RegExp(talk.title)}).textContent).toContain("お客さんが書きました");
+  expect(list.getByRole("link",{name:/前のトーク/}).textContent).toContain("あなたが書きました");
+  fireEvent.click(list.getByRole("link",{name:new RegExp(talk.title)}));
+  expect(window.location.search).toContain("section=consultation");
+  expect(screen.getByRole("heading",{name:"トーク",level:2})).toBeTruthy();
+  expect(screen.queryByRole("region",{name:"案件の段階"})).toBeNull();
+  expect(screen.getByRole("navigation",{name:"案件のほかの画面",hidden:true}).className).toContain("!hidden");
+  fireEvent.click(screen.getByRole("link",{name:/案件を見る/}));
+  expect(window.location.search).not.toContain("entry=notifications");
+  expect(screen.getByRole("region",{name:"案件の段階"})).toBeTruthy();
+  window.history.back();
+  await waitFor(()=>expect(window.location.search).toContain("entry=notifications"));
+  fireEvent.click(await screen.findByRole("link",{name:"← トークへ戻る"}));
+  expect(document.activeElement?.id).toBe(`case-${talk.id}`);
+});
+
+it("shows the latest talk line under a talk row and still lists talks when it cannot be read",async()=>{
+  vi.spyOn(entryData,"loadCasePersonalEvents").mockResolvedValue([]);
+  vi.spyOn(entryData,"loadCaseNoticeIndex").mockResolvedValue({revision:"a".repeat(32),items:[]});
+  const talks=vi.spyOn(entryData,"loadCaseTalkPreviews").mockResolvedValue([{projectId:records[2].id,messageId:"m1",excerpt:"ラフ見ました！髪色だけ…",latestSender:"client",latestAt:"2026-10-19T03:00:00Z"}]);
+  render(<CaseWorkspacePreview application entryTools load={async()=>records} initialSearch="?entry=notifications"/>);
+  expect(await screen.findByText("ラフ見ました！髪色だけ…")).toBeTruthy();
+  cleanup();talks.mockRejectedValue(new Error("unavailable"));
+  render(<CaseWorkspacePreview application entryTools load={async()=>records} initialSearch="?entry=notifications"/>);
+  expect((await screen.findByRole("link",{name:new RegExp(records[2].title)})).textContent).toContain("お客さんが書きました");
+  expect(screen.queryByText("ラフ見ました！髪色だけ…")).toBeNull();
+});
+
+it("shows who wrote and when for a talk too long for the case snapshot",async()=>{
+  vi.spyOn(entryData,"loadCasePersonalEvents").mockResolvedValue([]);
+  vi.spyOn(entryData,"loadCaseNoticeIndex").mockResolvedValue({revision:"a".repeat(32),items:[]});
+  const long={...records[2],id:"long-talk",title:"長いトーク",display:{...records[2].display,conversation:{state:"unavailable" as const,reason:"incomplete" as const}}};
+  vi.spyOn(entryData,"loadCaseTalkPreviews").mockResolvedValue([{projectId:"long-talk",messageId:"m9",excerpt:"続きです",latestSender:"staff",latestAt:"2026-10-20T03:00:00Z"}]);
+  render(<CaseWorkspacePreview application entryTools load={async()=>[long]} initialSearch="?entry=notifications"/>);
+  await screen.findByText("続きです");
+  expect(screen.getByRole("link",{name:/長いトーク/}).textContent).toContain("あなたが書きました");
 });
 
 it("keeps separate entry searches, calendar month/date and selection while navigating",async()=>{
@@ -252,7 +282,7 @@ it("presents unmatched acceptance consistently in overview and history", () => {
     projectId: record.id, snapshotId: record.model.snapshotId, asOf: record.model.checkedAt,
     quote: { ...quote, value: { ...quote.value, acceptance: { ...quote.value.acceptance, version: 99 } } },
   }) };
-  const view = render(<CaseWorkspaceSections record={mismatched} section="overview" />);
+  const view = render(<CaseWorkspaceSections record={mismatched} section="overview" overviewPart="decided" />);
   expect(screen.getByText(/でOK（要確認：どの見積へのOKか分かりません）/)).toBeTruthy();
   view.rerender(<CaseWorkspaceSections record={mismatched} section="history" />);
   expect(screen.getByText("OKの記録（要確認：どの見積へのOKか分かりません）")).toBeTruthy();
@@ -325,6 +355,16 @@ it("leads the case list with the staff's own turn and folds the client's turn in
   expect(screen.queryByRole("link",{name:/森の表紙イラスト/})).toBeNull();
 });
 
+it("opens one その他 item at a time and returns to the menu",async()=>{
+  render(<CaseWorkspacePreview load={async()=>records} initialSearch={`?case=${records[0].id}&section=overview`}/>);
+  const menu=await screen.findByRole("list",{name:"その他のメニュー"});
+  expect(screen.queryByRole("heading",{name:"決まったこと",level:3})).toBeNull();
+  fireEvent.click(within(menu).getByRole("button",{name:/決まったこと/}));
+  expect(screen.queryByRole("list",{name:"その他のメニュー"})).toBeNull();
+  expect(screen.getByRole("heading",{name:"決まったこと",level:3})).toBeTruthy();
+  fireEvent.click(screen.getByRole("button",{name:"← その他に戻る"}));
+  expect(screen.getByRole("list",{name:"その他のメニュー"})).toBeTruthy();
+});
 it("keeps the case list when a pages link opens where workspace tools are off",async()=>{
   render(<CaseWorkspacePreview load={async()=>records} application initialSearch="?utility=pages&filter=all"/>);
   await screen.findByRole("link",{name:/森の表紙イラスト/});
@@ -355,19 +395,6 @@ it("opens a finished consultation as a sheet over the steps and closes it back t
   expect(screen.queryByRole("link",{name:/^閉じる/})).toBeNull();
 });
 
-it("does not list a case whose only mails are old sent ones under mails still to send",async()=>{
- vi.spyOn(entryData,"loadCasePersonalEvents").mockResolvedValue([]);
- vi.spyOn(entryData,"loadCaseNoticeIndex").mockResolvedValue({revision:"a".repeat(32),items:[]});
- const base=records.find(row=>row.model.facts.notifications.state==="ready"&&row.model.facts.notifications.value.length>0);
- if(!base||base.model.facts.notifications.state!=="ready")throw new Error("fixture needs a case with mails");
- const mails=base.model.facts.notifications.value.map((mail,n)=>({...mail,id:`legacy-mail:${n}`,status:"sent" as const}));
- const legacy={...base,id:"legacy-case",title:"以前のメールだけの案件",model:{...base.model,facts:{...base.model.facts,notifications:{...base.model.facts.notifications,value:mails}}}};
- const unsent={...records[0],id:"unsent-case",title:"これから送る案件",model:{...records[0].model,facts:{...records[0].model.facts,notifications:{...base.model.facts.notifications,value:[]}}}};
- render(<CaseWorkspacePreview application entryTools load={async()=>[legacy,unsent]} initialSearch="?entry=notifications"/>);
- const section=await screen.findByRole("region",{name:"これからメールを送る案件"});
- expect(within(section).queryByText("以前のメールだけの案件")).toBeNull();
- expect(within(section).getByText("これから送る案件")).toBeTruthy();
-});
 
 it("tells staff to check an old-path paid link in Stripe instead of listing it as work",()=>{
  const paid=records.find(row=>row.model.facts.payment.state==="ready");

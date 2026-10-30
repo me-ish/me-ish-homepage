@@ -22,14 +22,8 @@ export function matchesCaseEntry(record: CaseWorkspaceRecord, nav: CaseWorkspace
   if (nav.filter==="completed" && project?.rawStatus!=="completed" && !caseKnown(record.display.receipt)) return false;
   if (nav.filter!=="all" && nav.filter!=="completed" && !guidance.waits.some(wait=>wait.who===nav.filter)) return false;
   if (nav.entry==="schedule" && record.registeredDueDate!==nav.date && !casePlannedBars(record,plans??null,today).some(b=>b.startISO<=nav.date&&b.endISO>=nav.date)) return false;
-  if (nav.entry==="notifications") {
-    const observation=record.model.facts.notifications;
-    return observation.state!=="ready" && observation.state!=="absent"
-      || Boolean(caseKnown(observation)?.length)
-      || record.model.attention.some(a=>a.domain==="notifications" || a.reason.includes("notice"))
-      || (record.model.agreement==="accepted" && !caseKnown(record.display.payment) && !caseKnown(record.display.receipt)
-        && !project?.archivedAt && project?.rawStatus!=="closed" && project?.rawStatus!=="completed");
-  }
+  // トーク: every case that has a talk, plus one whose talk could not be read (never hidden as "no talk").
+  if (nav.entry==="notifications") return record.display.conversation.state==="ready"||record.display.conversation.state==="unavailable";
   return true;
 }
 export function caseMonthDays(month: string): string[] {

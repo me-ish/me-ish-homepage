@@ -10,11 +10,11 @@ import { caseDeliveryRequest,caseWorkLabels,caseOriginLabels,caseWorkNoticeLabel
 import { buildDeliveryMailDraft,DELIVERY_EXTENSION_DAYS,DELIVERY_VALID_DAYS } from "../../lib/orderMail";
 import { caseTime } from "../../lib/caseWorkspacePresentation";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
-import type { CaseSection } from "../../types/caseWorkspace";
+import type { CaseOverviewPart, CaseSection } from "../../types/caseWorkspace";
 
 const card="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5";
 const fileTime=(value:string|null|undefined)=>value?caseTime(value):"—";
-export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selectedNotificationId}:{selectedNotificationId?:string;projectId:string;section:CaseSection;onChanged:()=>void;onDraftChange:(value:boolean)=>void}){
+export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selectedNotificationId,overviewPart=null}:{selectedNotificationId?:string;projectId:string;section:CaseSection;onChanged:()=>void;onDraftChange:(value:boolean)=>void;overviewPart?:CaseOverviewPart|null}){
  const [view,setView]=useState<CaseWorkView|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState("");
  const [draft,setDraft]=useState(false),[deliveryDraft,setDeliveryDraft]=useState(false);
  const [adminDraft,setAdminDraft]=useState(false),[recordDraft,setRecordDraft]=useState(false),[revisionDraft,setRevisionDraft]=useState(false);
@@ -35,8 +35,8 @@ export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selecte
  return <div className="mt-4 space-y-4">
   {error?<p role="alert" className="rounded-xl bg-amber-50 p-4">{error}</p>:null}{result?<p role="status">{result}</p>:null}
   
-  <CaseAdministrationPanel selectedNotificationId={selectedNotificationId} projectId={projectId} section={section} refreshKey={view.revision} onChanged={()=>void refresh()} onDraftChange={setAdminDraft}/>
-  <div hidden={section!=="overview"}>
+  <CaseAdministrationPanel selectedNotificationId={selectedNotificationId} projectId={projectId} section={section} overviewPart={overviewPart} refreshKey={view.revision} onChanged={()=>void refresh()} onDraftChange={setAdminDraft}/>
+  <div hidden={section!=="overview"||overviewPart!=="outside"}>
    <section className={`${card} mt-4`}><h3 className="font-semibold">サイトの外であったこと</h3><p className="text-sm text-zinc-600">{origin?`受けた場所：${caseOriginLabels[origin.data.origin??"unknown"]}`:"メールや SNS で決まったこと、手渡しした納品などを書き残せます。"}</p>
     <WorkRecordForm view={view} disabled={busy||inactive} save={command} onDirty={setRecordDraft}/></section>
   </div>

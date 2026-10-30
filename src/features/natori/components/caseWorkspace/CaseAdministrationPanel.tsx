@@ -14,7 +14,7 @@ import {
 import { caseTime } from "../../lib/caseWorkspacePresentation";
 import { notificationPurposeName } from "../../lib/notificationLabels";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
-import type { CaseSection } from "../../types/caseWorkspace";
+import type { CaseOverviewPart, CaseSection } from "../../types/caseWorkspace";
 const DETAIL_LABELS = { title: "案件名", client_name: "お客さんの名前", amount: "金額", delivery_plan: "納期のプラン", start_date: "作業を始める日", due_date: "納期", note: "メモ" } as const;
 const card = "space-y-3 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5";
 type Operation = ReturnType<typeof useCaseAdminOperation>;
@@ -86,6 +86,7 @@ export function CaseAdminConfirmation({ operation }: { operation: Operation }) {
 export function CaseAdministrationPanel({
   projectId,
   section,
+  overviewPart = null,
   onChanged,
   onDraftChange,
   refreshKey,
@@ -95,6 +96,7 @@ export function CaseAdministrationPanel({
   refreshKey: string;
   projectId: string;
   section: CaseSection;
+  overviewPart?: CaseOverviewPart | null;
   onChanged: () => void;
   onDraftChange: (v: boolean) => void;
 }) {
@@ -171,7 +173,7 @@ export function CaseAdministrationPanel({
     <div className="mt-4 space-y-4" role="region" aria-label="案件の設定">
       <CaseAdminConfirmation operation={operation} />
       <div hidden={section !== "overview"} className="space-y-4">
-        <section className={card}>
+        <section hidden={overviewPart !== "details"} className={card}>
           <h3 className="font-semibold">案件の情報</h3>
           <BasicDetails
             key={projectId}
@@ -186,7 +188,7 @@ export function CaseAdministrationPanel({
             }
           />
         </section>
-        <section className={card}>
+        <section hidden={overviewPart !== "lifecycle"} className={card}>
           <h3 className="font-semibold">見送る・しまう</h3>
           <Lifecycle
             view={view}

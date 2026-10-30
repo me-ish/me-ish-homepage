@@ -183,10 +183,15 @@ describe("synthetic reader to case workspace", () => {
 });
 
 describe("local case URLs", () => {
-  it("includes an accepted quote without any notification in the notification entry, even after manual progress",async()=>{
+  it("lists only cases with a talk, or whose talk could not be read, in the トーク entry",async()=>{
+    const nav=parseCaseWorkspaceLocation("?entry=notifications"),normal=await buildPreviewRecords("normal",previewEnvelopes());
+    expect(normal.filter(record=>matchesCaseEntry(record,nav)).map(record=>record.display.conversation.state)).toEqual(["ready"]);
+    const partial=await buildPreviewRecords("partial",previewEnvelopes());
+    expect(partial[0].display.conversation.state).toBe("unavailable");expect(matchesCaseEntry(partial[0],nav)).toBe(true);
+  });
+  it("does not ask the client to pay an accepted quote after manual progress",async()=>{
     const data=previewEnvelopes();data[0].project.status="awaiting_payment";
-    const record=(await buildPreviewRecords("normal",data))[0],nav=parseCaseWorkspaceLocation("?entry=notifications");
-    expect(matchesCaseEntry(record,nav)).toBe(true);
+    const record=(await buildPreviewRecords("normal",data))[0];
     const guidance=deriveCaseGuidance(record);
     expect(guidance.status).toBe("見積OK・支払い前");expect(guidance.waits[0]).toMatchObject({who:"staff",section:"transaction"});
     expect(guidance.waits.some(w=>w.who==="client"&&w.text.includes("支払"))).toBe(false);
