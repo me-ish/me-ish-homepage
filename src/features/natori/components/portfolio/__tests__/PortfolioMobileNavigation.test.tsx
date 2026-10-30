@@ -55,6 +55,11 @@ afterEach(() => {
 });
 
 describe("PF-07 mobile navigation", () => {
+  it("leaves the FAQ link out when no FAQ entry is complete", () => {
+    render(<PortfolioHeader content={{ ...defaultPortfolioContent, faqs: [{ question: "書きかけ", answer: " " }] }} />);
+    expect(screen.queryAllByRole("link").filter((link) => link.getAttribute("href") === "#faq")).toEqual([]);
+  });
+
   it("uses sufficient mobile targets and reveals a keyboard-focused link", () => {
     render(<PortfolioHeader content={defaultPortfolioContent} />);
 

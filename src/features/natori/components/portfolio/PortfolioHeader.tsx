@@ -1,5 +1,6 @@
 // features/natori/components/portfolio/PortfolioHeader.tsx
 import { portfolioColors as c } from "@/features/natori/constants/portfolioContent";
+import { publicFaqs } from "@/features/natori/lib/portfolioFaq";
 import { portfolioBrandSubName } from "@/features/natori/lib/portfolioShare";
 import type { PortfolioContent, PortfolioVariant } from "@/features/natori/types/portfolio";
 import PortfolioMobileNav from "./PortfolioMobileNav";
@@ -38,10 +39,15 @@ export default function PortfolioHeader({
   contactPath?: string;
 }) {
   const showcase = variant === "showcase";
+  // FAQ が1件も公開されていないときは飛び先がないので出さない。
+  const hasFaq = publicFaqs(content).length > 0;
+  const fullLinks = <T extends { href: string }>(links: readonly T[]) => links
+    .filter((link) => link.href !== "#faq" || hasFaq)
+    .map((link) => link.href === "/natori/portfolio/contact" ? { ...link, href: contactPath } : link);
   const navLinks = showcase
     ? NAV_LINKS.filter((link) => SHOWCASE_NAV_HREFS.has(link.href))
-    : NAV_LINKS.map((link) => link.href === "/natori/portfolio/contact" ? { ...link, href: contactPath } : link);
-  const mobileLinks = showcase ? navLinks : MOBILE_NAV_LINKS.map((link) => link.href === "/natori/portfolio/contact" ? { ...link, href: contactPath } : link);
+    : fullLinks(NAV_LINKS);
+  const mobileLinks = showcase ? navLinks : fullLinks(MOBILE_NAV_LINKS);
   const titleAccent = content.heroTitleAccent.trim();
   const titleTail = content.heroTitleTail.trim();
   const subName = portfolioBrandSubName(content);

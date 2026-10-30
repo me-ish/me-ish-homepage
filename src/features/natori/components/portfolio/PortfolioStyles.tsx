@@ -64,7 +64,7 @@ export default function PortfolioStyles() {
       .pf-choice-control[type="checkbox"]:checked {
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3.5 8.5 3 3 6-7' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
       }
-      .pf-portfolio-root :where(#gallery, #pricing, #flow, #about, #requests, #form) { scroll-margin-top: 128px; }
+      .pf-portfolio-root :where(#gallery, #pricing, #flow, #about, #requests, #faq, #form) { scroll-margin-top: 128px; }
       .pf-cute-focus:focus-visible,
       .pf-portfolio-root :where(a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
         outline: 3px solid ${c.accentHover};
@@ -75,7 +75,7 @@ export default function PortfolioStyles() {
         outline-color: ${c.formBorderActive};
       }
       @media (min-width: 768px) {
-        .pf-portfolio-root :where(#gallery, #pricing, #flow, #about, #requests, #form) { scroll-margin-top: 88px; }
+        .pf-portfolio-root :where(#gallery, #pricing, #flow, #about, #requests, #faq, #form) { scroll-margin-top: 88px; }
       }
       @media (prefers-reduced-motion: reduce) {
         .pf-floaty, .pf-wobble { animation: none; }
