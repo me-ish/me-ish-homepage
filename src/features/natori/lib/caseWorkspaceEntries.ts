@@ -6,6 +6,11 @@ import { isPaymentTimestamp } from "./clientPayment";
 import {casePlannedBars} from "./casePlanning";
 import type {CasePlanning} from "./caseScreenContext";
 
+/** Closed (見送り) or archived (保管) cases: kept for the record, not part of the day-to-day schedule. */
+export function caseShelved(record: CaseWorkspaceRecord): boolean {
+  return record.model.eligibility==="closed"||record.model.eligibility==="archived";
+}
+
 export function matchesCaseEntry(record: CaseWorkspaceRecord, nav: CaseWorkspaceLocation,plans?:CasePlanning|null,today=nav.date): boolean {
   const guidance=deriveCaseGuidance(record), project=caseKnown(record.display.project);
   const roughReview=caseKnown(record.model.facts.roughs)?.some(r=>r.clientOkAt&&!r.acknowledgedAt&&!r.supersededBy)??false;
@@ -21,8 +26,11 @@ export function matchesCaseEntry(record: CaseWorkspaceRecord, nav: CaseWorkspace
   if (!`${record.title} ${record.clientLabel}`.toLocaleLowerCase("ja").includes(nav.query.toLocaleLowerCase("ja"))) return false;
   if (nav.filter==="completed" && project?.rawStatus!=="completed" && !caseKnown(record.display.receipt)) return false;
   if (nav.filter!=="all" && nav.filter!=="completed" && !guidance.waits.some(wait=>wait.who===nav.filter)) return false;
+  if (nav.entry==="schedule" && caseShelved(record)) return false;
   if (nav.entry==="schedule" && record.registeredDueDate!==nav.date && !casePlannedBars(record,plans??null,today).some(b=>b.startISO<=nav.date&&b.endISO>=nav.date)) return false;
   // トーク: every case that has a talk, plus one whose talk could not be read (never hidden as "no talk").
+  // トーク lists only cases still in motion; finished or shelved talks stay reachable from the case itself.
+  if (nav.entry==="notifications" && ["closed","archived","completed","historical"].includes(record.model.eligibility)) return false;
   if (nav.entry==="notifications") return record.display.conversation.state==="ready"||record.display.conversation.state==="unavailable";
   return true;
 }
