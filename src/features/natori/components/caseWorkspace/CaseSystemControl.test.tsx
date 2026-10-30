@@ -15,7 +15,17 @@ it("StrictMode can read the held state; never automatically resumes or treats ze
  expect(screen.getByText(/要確認 \d+ 件/)).not.toBeNull();
  expect(m.submit).not.toHaveBeenCalled();
  expect((screen.getByRole("button",{name:"保存だけ再開する"}) as HTMLButtonElement).disabled).toBe(true);
- expect((screen.getByRole("button",{name:"送信も再開する"}) as HTMLButtonElement).disabled).toBe(true);
+ expect(screen.queryByRole("button",{name:"送信も再開する"})).toBeNull();
+ expect(screen.getByText("止めています")).not.toBeNull();
+ expect(screen.queryByRole("button",{name:"すべて止める"})).toBeNull();
+});
+it("while running, shows the state and only one stop button up front",async()=>{
+ m.load.mockResolvedValue({...state,armed:false,commandsHeld:false,sendersHeld:false});
+ render(<CaseSystemControl onAccessRejected={()=>{}}/>);
+ await screen.findByText("いつも通り動いています");
+ fireEvent.click(screen.getByRole("button",{name:"すべて止める"}));
+ await waitFor(()=>expect(m.submit).toHaveBeenCalledExactlyOnceWith({action:"hold",generation:2,revision:null,acknowledgePrior:false}));
+ expect(screen.queryByRole("checkbox")).toBeNull();
 });
 it("one explicit resume carries the exact reviewed revision, then removes the old confirmation",async()=>{
  let saved!:()=>void;m.submit.mockReturnValue(new Promise<void>(r=>{saved=r;}));
