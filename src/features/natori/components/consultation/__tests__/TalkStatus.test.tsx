@@ -34,10 +34,19 @@ describe("TalkStatus", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("marks no current step once every step is done", () => {
+    const finished = buildTalkTimeline({ ...timelineFacts, payment: { confirmedAt: "2026-10-12T01:00:00Z" },
+      delivery: { exists: true, expiresAt: null, acceptedAt: null, fileCount: 1, openable: false } }, now);
+    render(<TalkStatus timeline={finished} token="synthetic" />);
+    expect(screen.getByRole("list", { name: "進み具合" }).querySelector('[aria-current]')).toBeNull();
+  });
+
   it("lists the three steps and the cards", () => {
     render(<TalkStatus timeline={timeline} token="synthetic" />);
     const steps = within(screen.getByRole("list", { name: "進み具合" })).getAllByRole("listitem").map(li => li.textContent);
     expect(steps).toEqual(["見積もり承認（済み）", "お支払い（まだ）", "納品（まだ）"]);
+    const current = screen.getByRole("list", { name: "進み具合" }).querySelectorAll('[aria-current="step"]');
+    expect([...current].map(li => li.textContent)).toEqual(["お支払い（まだ）"]);
     expect(screen.getByText("承認済み")).toBeTruthy();
     expect(screen.getByText("支払い待ち")).toBeTruthy();
   });
