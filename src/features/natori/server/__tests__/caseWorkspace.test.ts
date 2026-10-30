@@ -206,12 +206,21 @@ describe("local case URLs", () => {
   });
   it("builds actual calendar days and preserves query/owner wait filters",()=>{
     expect(caseMonthDays("2028-02")).toHaveLength(29);expect(caseMonthDays("2026-02")).toHaveLength(28);expect(caseMonthDays("2026-13")).toEqual([]);
-    const nav=parseCaseWorkspaceLocation("?entry=schedule&date=2026-11-12&q=森&filter=staff");
+    const nav={...parseCaseWorkspaceLocation("?entry=schedule&date=2026-11-12&q=森"),filter:"staff" as const};
     expect(matchesCaseEntry(normal[0],nav)).toBe(true);expect(matchesCaseEntry(normal[1],nav)).toBe(false);
     expect(matchesCaseEntry(normal[0],{...nav,date:"2026-11-13"})).toBe(false);
   });
+  it("opens the case list on the staff's turn and the schedule on every case", () => {
+    expect(parseCaseWorkspaceLocation("").filter).toBe("staff");
+    expect(parseCaseWorkspaceLocation("?filter=all").filter).toBe("all");
+    expect(parseCaseWorkspaceLocation("?entry=schedule&filter=staff").filter).toBe("all");
+    expect(parseCaseWorkspaceLocation("?entry=notifications").filter).toBe("all");
+    expect(caseWorkspaceHref(parseCaseWorkspaceLocation(""))).not.toContain("filter=");
+    const all = parseCaseWorkspaceLocation("?filter=all");
+    expect(parseCaseWorkspaceLocation(caseWorkspaceHref(all).slice(1))).toEqual(all);
+  });
   it("round-trips case, section, entry, filters and selected date", () => {
-    const state = { ...parseCaseWorkspaceLocation(""), entry: "schedule" as const, projectId: normal[0].id,
+    const state = { ...parseCaseWorkspaceLocation(""), entry: "cases" as const, projectId: normal[0].id,
       selectedId: normal[0].id, section: "transaction" as const, query: "森 & A", filter: "staff" as const, date: "2026-11-12" };
     const href = caseWorkspaceHref(state);
     expect(href.startsWith("/?")).toBe(true);

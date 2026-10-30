@@ -8,19 +8,24 @@ export type CaseWorkspaceLocation = {
   intakeFilter:"all"|"attention"|"rough-ok"|"ended"|"inquiry"|"estimating"|"quoted"|"awaiting_payment";
   date: string; month: string; noticeId: string | null; page:number;noticePage:number;historyPage?:number; mode: "normal" | "partial" | "failed";
 };
+export function caseDefaultFilter(entry: CaseEntry): CaseWorkspaceLocation["filter"] {
+  return entry === "cases" ? "staff" : "all";
+}
 export function parseCaseWorkspaceLocation(search: string, today = "2026-10-20"): CaseWorkspaceLocation {
   const p = new URLSearchParams(search);
   const entry = p.get("entry"), section = p.get("section"), filter = p.get("filter"), mode = p.get("mode");
   const id = (key: string) => { const value = p.get(key); return value && /^[a-zA-Z0-9-]{1,80}$/.test(value) ? value : null; };
   const date = p.get("date");
   const page=(key:string)=>{const v=p.get(key);return v&&/^[1-9]\d{0,6}$/.test(v)?Number(v):1;};
+  const parsedEntry: CaseEntry = entry === "schedule" || entry === "notifications" ? entry : "cases";
   return {
     // Old "today" links open the case list, which now leads with the staff's own turn.
-    entry: entry === "schedule" || entry === "notifications" ? entry : "cases",
+    entry: parsedEntry,
     projectId: id("case")??id("project")??id("inquiry"), selectedId: id("selected"),
     section: CASE_SECTIONS.includes(section as CaseSection) ? section as CaseSection : p.get("view")==="conversation"?"consultation":"overview",
     query: (p.get("q") ?? "").slice(0,100),
-    filter: filter === "staff" || filter === "client" || filter === "completed" ? filter : "all",
+    // Only the case list has the turn chips and opens on the staff's own turn; schedule and mail show every case.
+    filter: parsedEntry !== "cases" ? "all" : filter === "staff" || filter === "client" || filter === "completed" || filter === "all" ? filter : caseDefaultFilter(parsedEntry),
     source:p.get("source")==="inquiries"||p.get("source")==="estimate"?p.get("source") as "inquiries"|"estimate":"all",
     sort:p.get("sort")==="due"||p.get("sort")==="priority"?p.get("sort") as "due"|"priority":"default",
     utility:p.get("utility")==="settings"||p.get("utility")==="estimate"||p.get("utility")==="pages"?p.get("utility") as "settings"|"estimate"|"pages":"none",
@@ -47,6 +52,6 @@ export function caseWorkspaceHref(location: CaseWorkspaceLocation, basePath = "/
   if(location.sort!=="default")p.set("sort",location.sort);
   if(location.utility!=="none")p.set("utility",location.utility);
   if(location.intakeFilter!=="all")p.set("intakeFilter",location.intakeFilter);
-  if (location.filter !== "all") p.set("filter",location.filter);
+  if (location.filter !== caseDefaultFilter(location.entry)) p.set("filter",location.filter);
   return `${basePath}?${p}`;
 }
