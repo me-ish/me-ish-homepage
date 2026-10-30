@@ -77,9 +77,12 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
           </p>
         </div>
       )}
-      <p className="mb-3 text-center text-[13px] leading-5 sm:mb-6 sm:text-sm" style={{ color: c.textSoft }}>
-        どのプランか迷ったら、フォームでプランを「未定」にしたまま相談できます。
-      </p>
+      {/* 受付停止中はフォームが送れないので、相談を促す一行は出さない */}
+      {content.commissionOpen ? (
+        <p className="mb-3 text-center text-[13px] leading-5 sm:mb-6 sm:text-sm" style={{ color: c.textSoft }}>
+          どのプランか迷ったら、フォームでプランを「未定」にしたまま相談できます。
+        </p>
+      ) : null}
 
 
       {/* スマホ: 作例は一覧の上に並べ、描く範囲の違いを見比べられるようにする */}

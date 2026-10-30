@@ -59,6 +59,14 @@ describe("PortfolioPricing", () => {
     expect(screen.getByText(/リテイク2回まで、簡単な小物・簡易背景/)).toBeTruthy();
   });
 
+  it("shows the undecided-plan hint only while commissions are open", () => {
+    const { unmount } = render(<PortfolioPricing content={{ ...defaultPortfolioContent, commissionOpen: true }} />);
+    expect(screen.getByText(/プランを「未定」にしたまま相談できます/)).toBeTruthy();
+    unmount();
+    render(<PortfolioPricing content={{ ...defaultPortfolioContent, commissionOpen: false }} />);
+    expect(screen.queryByText(/プランを「未定」にしたまま相談できます/)).toBeNull();
+  });
+
   it("records both the pricing CTA and selected public plan name", () => {
     render(<PortfolioPricing content={defaultPortfolioContent} />);
 
