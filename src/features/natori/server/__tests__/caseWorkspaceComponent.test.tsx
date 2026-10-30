@@ -134,6 +134,18 @@ it("lists talks newest first and opens a case on its talk alone",async()=>{
   expect(document.activeElement?.id).toBe(`case-${talk.id}`);
 });
 
+it("shows the latest talk line under a talk row and still lists talks when it cannot be read",async()=>{
+  vi.spyOn(entryData,"loadCasePersonalEvents").mockResolvedValue([]);
+  vi.spyOn(entryData,"loadCaseNoticeIndex").mockResolvedValue({revision:"a".repeat(32),items:[]});
+  const talks=vi.spyOn(entryData,"loadCaseTalkPreviews").mockResolvedValue([{projectId:records[2].id,messageId:"m1",excerpt:"ラフ見ました！髪色だけ…"}]);
+  render(<CaseWorkspacePreview application entryTools load={async()=>records} initialSearch="?entry=notifications"/>);
+  expect(await screen.findByText("ラフ見ました！髪色だけ…")).toBeTruthy();
+  cleanup();talks.mockRejectedValue(new Error("unavailable"));
+  render(<CaseWorkspacePreview application entryTools load={async()=>records} initialSearch="?entry=notifications"/>);
+  expect((await screen.findByRole("link",{name:new RegExp(records[2].title)})).textContent).toContain("お客さんが書きました");
+  expect(screen.queryByText("ラフ見ました！髪色だけ…")).toBeNull();
+});
+
 it("keeps separate entry searches, calendar month/date and selection while navigating",async()=>{
   render(<CaseWorkspacePreview load={async()=>records}/>);await screen.findByRole("link",{name:/森の表紙イラスト/});
   fireEvent.change(screen.getByRole("searchbox"),{target:{value:"森"}});
