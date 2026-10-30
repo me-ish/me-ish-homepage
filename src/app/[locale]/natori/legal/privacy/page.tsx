@@ -62,6 +62,12 @@ export default function NatoriPrivacyPage() {
             <p>クレジットカード番号等の決済情報はStripe上で入力・処理され、当サイトのご依頼フォームでは取得しません。</p>
           </div>
           <div>
+            <h3 className="font-black" style={{ color: "inherit" }}>Anthropic（AIアシスタント）</h3>
+            <p>お見積もりの下書きを作るため、Anthropic, PBC が提供するAIサービス「Claude」を利用する場合があります。</p>
+            <p>AIには、ご依頼フォームでお答えいただいたご依頼内容と、ご相談ページでのやり取りの本文（依頼者とナトリのどちらの発言かを含みます）だけを送信します。お名前（活動名）とメールアドレスの欄、お送りいただいた画像やファイルは送信しません。</p>
+            <p>AIが作るのはナトリが確認するための下書きです。お見積もりの金額や条件、お返事の内容は、必ずナトリが確認して決めます。</p>
+          </div>
+          <div>
             <h3 className="font-black" style={{ color: "inherit" }}>Google アナリティクス、Vercel Web Analytics</h3>
             <p>本ウェブサイトのアクセス解析に利用します（「5. アクセス解析」をご覧ください）。</p>
           </div>
@@ -137,7 +143,7 @@ export default function NatoriPrivacyPage() {
         <p>重要な変更を行う場合は、本ウェブサイト上への掲載その他適切な方法でお知らせします。</p>
       </LegalSection>
 
-      <p className="text-xs font-bold">制定日：2026年9月13日<br />最終改定日：2026年10月11日</p>
+      <p className="text-xs font-bold">制定日：2026年9月13日<br />最終改定日：2026年10月30日</p>
     </NatoriLegalPage>
   );
 }

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {z} from "zod";
 import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
-import { AlertTriangle, Check, CheckCircle2, Loader2, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { NatoriSkeleton } from "@/features/natori/components/admin/NatoriSkeleton";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { NatoriLoadError } from "@/features/natori/components/dashboard/NatoriLoadError";
@@ -15,6 +15,7 @@ import { buildNatoriInquiryRequestView } from "@/features/natori/lib/inquiryRequ
 import { buildEstimateMailDraft, resolveClientEmail } from "@/features/natori/lib/orderMail";
 import { estimateDraftSchema, defaultEstimateTerms, estimateTotal, validateEstimateTermsForIssue, type NatoriAgreedTerms, type NatoriEstimateDraft, type NatoriEstimateDraftData } from "@/features/natori/lib/estimateDraft";
 import { createNatoriEstimateSuggestionV1 } from "@/features/natori/lib/pricingSuggestion";
+import { isEstimateAssistantMemo } from "@/features/natori/lib/estimateAssistant";
 import { createPortfolioStructuredPricingConfig } from "@/features/natori/lib/portfolioPricing";
 import { readNatoriRequestData } from "@/features/natori/lib/requestSchema";
 import { validateNatoriQuoteIssuePayloadV1 } from "@/features/natori/lib/quoteSnapshot";
@@ -62,6 +63,8 @@ export default function EstimateJourney({ project, portfolioContent,workspace }:
   const [unconfirmedOperation,setUnconfirmedOperation]=useState<string|null>(null);
   const [editingLocked, setEditingLocked] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [assistantEnabled, setAssistantEnabled] = useState(false);
+  const [assistantBusy, setAssistantBusy] = useState(false);
   const [error, setError] = useState("");
   const [typeSelection, setTypeSelection] = useState<NatoriConcreteProjectType | "">("");
   const [to, setTo] = useState(resolveClientEmail(project) ?? "");
@@ -110,10 +113,11 @@ export default function EstimateJourney({ project, portfolioContent,workspace }:
     fetch(`/api/natori/admin/estimate-draft?projectId=${encodeURIComponent(project.id)}`, { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("見積りの下書きを読み込めませんでした。時間をおいて再試行してください。");
-        return response.json() as Promise<{ draft: NatoriEstimateDraft | null; editable?: boolean }>;
+        return response.json() as Promise<{ draft: NatoriEstimateDraft | null; editable?: boolean; assistant?: boolean }>;
       })
-      .then(({ draft: existing, editable }) => {
+      .then(({ draft: existing, editable, assistant }) => {
         if (cancelled) return;
+        setAssistantEnabled(assistant === true);
         if (editable===false) { setEditingLocked(true); setStep(3); }
         if (!existing || attemptRef.current || localDraft.current) return;
         setSaved(existing);
@@ -195,6 +199,38 @@ export default function EstimateJourney({ project, portfolioContent,workspace }:
       setError(cause instanceof Error ? cause.message : "保存できませんでした");
       return null;
     } finally { setBusy(false); }
+  };
+
+  const rebuildWithAssistant = async () => {
+    if (busy || assistantBusy) return;
+    const untouched = JSON.stringify(draft) === JSON.stringify({ agreedTerms: defaultEstimateTerms(project), items: [] });
+    if (saved || !untouched) {
+      const confirmed = await confirm({
+        title: "アシスタントに作り直してもらいますか？",
+        description: "依頼文とトークを読み直して、条件と明細を置き換えます。いま入力している内容は残りません。発行や送信はされません。",
+        confirmLabel: "作り直す",
+        tone: "primary",
+      });
+      if (!confirmed) return;
+    }
+    setAssistantBusy(true); setError("");
+    try {
+      const response = await fetch("/api/natori/admin/estimate-assistant", {
+        method: "POST", headers: { "Content-Type": "application/json", ...CSRF_HEADERS },
+        body: JSON.stringify({ projectId: project.id, revision: saved?.revision ?? 0 }),
+      });
+      const result = await response.json().catch(() => ({})) as { draft?: NatoriEstimateDraft };
+      if (!response.ok || !result.draft) throw new Error(response.status === 409
+        ? "下書きが別の画面で更新されたか、見積りを作れない段階です。再読み込みして確認してください。"
+        : response.status === 422 ? "最初の依頼を読み取れないため、アシスタントは下書きを作れません。"
+        : "アシスタントが下書きを作れませんでした。時間をおいてもう一度お試しください。");
+      setSaved(result.draft);
+      setDraft({ agreedTerms: result.draft.agreedTerms, items: result.draft.items });
+      attemptRef.current = null;
+      if (workspace) setWorkspaceEdited(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "アシスタントが下書きを作れませんでした。");
+    } finally { setAssistantBusy(false); }
   };
 
   const nextFromTerms = async () => { if (!dirty || await save()) { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); } };
@@ -383,6 +419,19 @@ export default function EstimateJourney({ project, portfolioContent,workspace }:
       {step === 1 && !editingLocked ? (
         <section className={`space-y-5 rounded-2xl ${natoriAdminUi.surface} p-4 sm:p-6`}>
           <div><h2 className="text-lg font-bold tracking-tight">今回決まった条件</h2><p className="mt-1 text-sm text-zinc-600">依頼者の最初の回答は残したまま、相談後の内容をここに記録します。</p></div>
+          {assistantEnabled ? (
+            <div className="rounded-xl bg-violet-50 p-3 text-sm text-violet-950 ring-1 ring-inset ring-violet-600/15">
+              <p className="flex items-center gap-1.5 font-bold"><Sparkles className="h-4 w-4 shrink-0" aria-hidden />アシスタント</p>
+              <p className="mt-1 leading-6">{isEstimateAssistantMemo(draft.agreedTerms.memo)
+                ? "依頼文を読んで下書きを用意しました。要点と依頼者に確認したいことは、下の内部メモにあります。金額は料金表から計算しています。"
+                : "依頼文とトークを読んで、条件と明細の下書きを作れます。"}</p>
+              <button type="button" onClick={rebuildWithAssistant} disabled={busy || assistantBusy}
+                className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white px-4 font-semibold text-violet-900 ring-1 ring-inset ring-violet-600/25 transition-colors hover:bg-violet-100 disabled:opacity-50">
+                {assistantBusy ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden />読んでいます…</> : isEstimateAssistantMemo(draft.agreedTerms.memo) ? "トークの内容も読んで作り直す" : "アシスタントに下書きを作ってもらう"}
+              </button>
+              <p className="mt-1 text-xs text-violet-900/80">発行と送信はしません。内容を確かめてから進めてください。</p>
+            </div>
+          ) : null}
           {original.kind === "structured" ? (
             <details className="rounded-xl border border-zinc-200/80 bg-zinc-50 p-3 text-sm">
               <summary className="cursor-pointer font-semibold text-zinc-800">最初に届いた依頼を見る</summary>
