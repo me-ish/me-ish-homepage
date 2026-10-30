@@ -7,8 +7,9 @@ import { CASE_NOTICE_PURPOSES, caseNoticeLabel } from "../../lib/caseWorkspaceEn
 
 import { CaseReconciliationPanel } from "./CaseReconciliationPanel";
 import { CasePaymentPanel } from "./CasePaymentPanel";
+import { workspaceLook as look } from "../../constants/workspaceLook";
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return <section className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5"><h3 className="mb-3 text-sm font-semibold text-zinc-600">{title}</h3>{children}</section>;
+  return <section className="rounded-[18px_14px_20px_13px] border-[1.5px] border-[#3B2F33]/25 bg-white p-4 sm:p-5"><h3 className={`mb-3 text-sm font-bold text-zinc-600 ${look.zen}`}>{title}</h3>{children}</section>;
 }
 /** Label/value lines at the top of the open step, as in the step-view mock. */
 function Rows({ rows }: { rows: [string, ReactNode][] }) {
@@ -16,7 +17,7 @@ function Rows({ rows }: { rows: [string, ReactNode][] }) {
     <dt className="shrink-0 text-zinc-600">{label}</dt><dd className="min-w-0 text-right font-semibold">{value}</dd></div>)}</dl>;
 }
 function Records({ title, children }: { title: string; children: ReactNode }) {
-  return <details className="rounded-2xl border border-zinc-200 bg-zinc-50"><summary className="cursor-pointer rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700">{title}</summary><div className="space-y-4 p-3 pt-0">{children}</div></details>;
+  return <details className="rounded-[18px_14px_20px_13px] border-[1.5px] border-dashed border-[#3B2F33]/25 bg-[#FBF7F4]"><summary className={`cursor-pointer rounded-2xl px-4 py-3 text-sm font-bold text-zinc-700 ${look.zen}`}>{title}</summary><div className="space-y-4 p-3 pt-0">{children}</div></details>;
 }
 export function CaseWorkspaceSections({ record, section,step=null,application=false,readOnly=false,onChanged=()=>{},selectedNotificationId }: {selectedNotificationId?:string; record: CaseWorkspaceRecord; section: CaseSection;step?:CaseStepKey|null;application?:boolean;readOnly?:boolean;onChanged?:()=>void }) {
   const { model: m, display: d } = record;
