@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { natoriAdminViewport } from "@/features/natori/constants/adminViewport";
 import ResultsBoard from "@/features/natori/components/dashboard/ResultsBoard";
-import { NatoriPageShell } from "@/features/natori/components/admin/NatoriPageShell";
+import { NatoriWorkspaceShell } from "@/features/natori/components/admin/NatoriWorkspaceShell";
 import { requireNatoriAccess } from "@/features/natori/server/requireNatoriAdmin";
 
 export const dynamic = "force-dynamic";
@@ -17,8 +17,8 @@ export default async function NatoriResultsPage() {
   await requireNatoriAccess("/natori/results");
 
   return (
-    <NatoriPageShell current="results" title="実績">
+    <NatoriWorkspaceShell title="実績" backHref="/natori/dashboard/cases?utility=pages">
       <ResultsBoard />
-    </NatoriPageShell>
+    </NatoriWorkspaceShell>
   );
 }

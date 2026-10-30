@@ -5,6 +5,7 @@ import { useCaseAdminOperation } from "./useCaseAdminOperation";
 import { CaseAdminConfirmation } from "./CaseAdministrationPanel";
 import { caseRegistration } from "../../lib/caseAdministration";
 import { calculateDueDate } from "../../lib/deliveryPlans";
+import { Plus } from "lucide-react";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
 export function CaseRegistration({
   today,
@@ -46,17 +47,21 @@ export function CaseRegistration({
   // Both the tab draft and frozen command participate in the workspace leaving guard.
   // Callback identities are stable state setters supplied by the workspace.
   const dirty = opDirty || formDirty;
+  // Closed, only the small button sits at the end of the heading row; open, the form takes the full width below it.
+  const wide = open || !!operation.saved || operation.blocked;
   return (
     <section
       aria-label="新しい案件の登録"
-      className="mb-4 space-y-3 rounded-xl border border-zinc-200 bg-white p-3"
+      className={wide ? "basis-full space-y-3 rounded-xl border border-zinc-200 bg-white p-3" : "ml-auto"}
     >
       <RegistrationDirty dirty={dirty} onChange={onDraftChange} />
       <button
-        className={ui.btnSecondary}
+        type="button"
+        className={`inline-flex h-9 items-center gap-1 rounded-full border px-3 text-[13px] font-semibold transition-colors ${ui.focusRing} ${open ? "border-pink-300 bg-pink-50 text-pink-900" : "border-zinc-200 bg-white text-zinc-700 hover:border-pink-300"}`}
         onClick={() => setOpen(!open)}
         aria-expanded={open}
       >
+        <Plus aria-hidden="true" size={14} />
         案件を登録
       </button>
       <CaseAdminConfirmation operation={operation} />

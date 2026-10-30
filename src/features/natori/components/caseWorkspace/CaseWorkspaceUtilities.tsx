@@ -10,7 +10,6 @@ import { ProfileSettingsPanel } from "../dashboard/NatoriDashboardLegacy";
 import PageEventsPanel from "../dashboard/PageEventsPanel";
 import EstimateForm from "../dashboard/EstimateForm";
 import { createClient } from "@/lib/supabase/client";
-import { NATORI_PUBLIC_PAGE_LINKS } from "../admin/navItems";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
 import { CasePublicPages } from "./CasePublicPages";
 function publicPageHref(fallback: string, profile: NatoriUserProfile | null) {
@@ -127,34 +126,6 @@ export function CaseWorkspaceUtilities({
               validateLinks
             />
           ) : null}
-          <p className="mt-4 text-sm">
-            下のページは別のタブで開きます。
-          </p>
-          <nav
-            aria-label="ほかのページ"
-            className="my-4 flex flex-wrap gap-4"
-          >
-            <a
-              href="/natori/results"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
-              実績
-            </a>
-            {NATORI_PUBLIC_PAGE_LINKS.map((l) => {
-              const href = publicPageHref(l.href, profile);
-              return href ? <a
-                key={l.href}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                {l.label}
-              </a> : <span key={l.href}>{l.label}：URLが正しくありません</span>;
-            })}
-          </nav>
           <PageEventsPanel showUnavailable onAccessRejected={reject}/>
           <button
             className={`${ui.btnSecondary} mt-4`}
