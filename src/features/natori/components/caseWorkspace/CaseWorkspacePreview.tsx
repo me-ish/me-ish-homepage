@@ -162,6 +162,8 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
   const entryLocation=(entry:CaseEntry):CaseWorkspaceLocation=>({...(entry===nav.entry?nav:entryPositions.current.get(entry)??{...nav,query:"",filter:caseDefaultFilter(entry),selectedId:null,noticeId:null,page:1,noticePage:1}),entry,utility:"none",projectId:null,section:"overview"});
   const open=(id:string):CaseWorkspaceLocation=>({...nav,utility:"none",projectId:id,selectedId:id,noticeId:null,historyPage:1,section:nav.source==="estimate"?"transaction":deriveCaseGuidance(rows.find(r=>r.id===id)!).primary.section});
   const back={...nav,projectId:null,section:"overview" as const};
+  // A utility link (e.g. back from 実績) must not leave a blank page where that utility cannot be shown.
+  const utilityOpen=nav.utility!=="none"&&(application?entryTools:nav.utility==="pages");
   const pagesTab=!application||entryTools,pagesLocation:CaseWorkspaceLocation={...nav,utility:"pages",projectId:null,section:"overview"};
   const entryTitle=nav.entry==="schedule"?`${caseDate(nav.date,today)}の予定`:nav.entry==="notifications"?"メールのある案件":"案件";
   // Urgency only while the work is still ahead: a delivered case no longer races its due date.
@@ -204,7 +206,7 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
         <button type="button" className={ui.btnSecondary} disabled={pending} onClick={()=>setReload(v=>v+1)}>再読み込み</button></div>:null}
       <div role="status" className="sr-only">{pending?"読み込み中":failed?"読み込めませんでした":"読み込みました"}</div>
       {entryTools&&!pending&&!failed&&(personalEventsEnabled&&!eventsReady||!noticesReady)?<button type="button" className={`${ui.btnSecondary} mb-4`} onClick={()=>setReload(v=>v+1)}>予定と通知を再読み込み</button>:null}
-      <div className={`${nav.utility!=="none"?"hidden":"grid"} gap-6 lg:grid-cols-[21rem_minmax(0,1fr)]`}>
+      <div className={`${utilityOpen?"hidden":"grid"} gap-6 lg:grid-cols-[21rem_minmax(0,1fr)]`}>
         <aside aria-label={entryTitle} className={`${nav.projectId?"hidden lg:block":""} min-w-0`}>
           {/* Registration is a small button beside the case heading; its form opens below the heading. */}
           <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2"><h1 className="text-xl font-semibold">{entryTitle}</h1><span className="text-xs text-zinc-500">{records===null?"件数を読み込み中":`${pending||failed?"前回：":""}${visible.length}案件`}</span>

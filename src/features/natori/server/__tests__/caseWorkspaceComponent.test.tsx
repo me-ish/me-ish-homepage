@@ -325,6 +325,11 @@ it("leads the case list with the staff's own turn and folds the client's turn in
   expect(screen.queryByRole("link",{name:/森の表紙イラスト/})).toBeNull();
 });
 
+it("keeps the case list when a pages link opens where workspace tools are off",async()=>{
+  render(<CaseWorkspacePreview load={async()=>records} application initialSearch="?utility=pages&filter=all"/>);
+  await screen.findByRole("link",{name:/森の表紙イラスト/});
+  expect(screen.getByRole("complementary",{name:"案件"}).parentElement?.classList.contains("hidden")).toBe(false);
+});
 it("swaps the phone bottom bar for the case's own consultation, history and other links",async()=>{
   render(<CaseWorkspacePreview load={async()=>records} initialSearch={`?case=${records[0].id}`}/>);
   await screen.findByRole("heading",{name:"森の表紙イラスト"});
