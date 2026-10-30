@@ -13,10 +13,10 @@ vi.mock("@/lib/supabaseAdmin",()=>({supabaseAdmin:()=>({from:(table:string)=>tab
 import {readCaseTalkPreviews} from "../caseEntryIndex";
 beforeEach(()=>{mocks.overviews.mockResolvedValue(new Map([[mine,{latestMessageId:message}]]));});
 it("returns only a short first line of the owner's latest messages",async()=>{
-  mocks.messages.mockResolvedValue({data:[{id:message,project_id:mine,body:"ラフ見ました！\n秘密の続き",attachment_count:0},{id:stray,project_id:other,body:"他人の本文",attachment_count:0}],error:null});
+  mocks.messages.mockResolvedValue({data:[{id:message,project_id:mine,sender:"client",created_at:"2026-10-30T10:00:00Z",body:"ラフ見ました！\n秘密の続き",attachment_count:0},{id:stray,project_id:other,sender:"client",created_at:"2026-10-30T10:00:00Z",body:"他人の本文",attachment_count:0}],error:null});
   const items=await readCaseTalkPreviews();
   expect(mocks.projectFilter).toHaveBeenCalledWith("user_id",owner);
-  expect(items).toEqual([{projectId:mine,messageId:message,excerpt:"ラフ見ました！"}]);
+  expect(items).toEqual([{projectId:mine,messageId:message,excerpt:"ラフ見ました！",latestSender:"client",latestAt:"2026-10-30T10:00:00Z"}]);
   expect(JSON.stringify(items)).not.toMatch(/秘密の続き|他人の本文/);
 });
 it("fails instead of returning an empty list when the talk overview cannot be read",async()=>{

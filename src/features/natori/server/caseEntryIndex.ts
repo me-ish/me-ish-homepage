@@ -33,7 +33,7 @@ export async function readCaseNoticeIndex(read?:CasePageRead):Promise<CaseNotice
  return {revision,items};
 }
 
-const talkSchema=z.object({id:z.uuid(),project_id:z.uuid(),body:z.string(),attachment_count:z.number().int().nonnegative().nullable().optional()});
+const talkSchema=z.object({id:z.uuid(),project_id:z.uuid(),sender:z.enum(["staff","client"]),created_at:z.string(),body:z.string(),attachment_count:z.number().int().nonnegative().nullable().optional()});
 /** Read only: the first line of each case's latest talk message. Full bodies never leave the server. */
 export async function readCaseTalkPreviews():Promise<readonly CaseTalkPreview[]>{
  const ownerId=await resolveNatoriOwnerId(),admin=supabaseAdmin();
@@ -45,10 +45,10 @@ export async function readCaseTalkPreviews():Promise<readonly CaseTalkPreview[]>
  if(!overviews)throw Error("talk_overview_unavailable");
  const latest=[...overviews.values()].flatMap(o=>o.latestMessageId?[o.latestMessageId]:[]),items:CaseTalkPreview[]=[];
  for(let offset=0;offset<latest.length;offset+=100){
-  const page=await admin.from("natori_consultation_messages").select("id, project_id, body, attachment_count").in("id",latest.slice(offset,offset+100));
+  const page=await admin.from("natori_consultation_messages").select("id, project_id, sender, created_at, body, attachment_count").in("id",latest.slice(offset,offset+100));
   if(page.error)throw Error("talk_messages_unavailable");
   for(const raw of page.data??[]){const row=talkSchema.parse(raw);if(!ids.includes(row.project_id))continue;
-   items.push({projectId:row.project_id,messageId:row.id,excerpt:caseTalkExcerpt(row.body,row.attachment_count)});}
+   items.push({projectId:row.project_id,messageId:row.id,excerpt:caseTalkExcerpt(row.body,row.attachment_count),latestSender:row.sender,latestAt:row.created_at});}
  }
  return items;
 }

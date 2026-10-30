@@ -137,13 +137,23 @@ it("lists talks newest first and opens a case on its talk alone",async()=>{
 it("shows the latest talk line under a talk row and still lists talks when it cannot be read",async()=>{
   vi.spyOn(entryData,"loadCasePersonalEvents").mockResolvedValue([]);
   vi.spyOn(entryData,"loadCaseNoticeIndex").mockResolvedValue({revision:"a".repeat(32),items:[]});
-  const talks=vi.spyOn(entryData,"loadCaseTalkPreviews").mockResolvedValue([{projectId:records[2].id,messageId:"m1",excerpt:"ラフ見ました！髪色だけ…"}]);
+  const talks=vi.spyOn(entryData,"loadCaseTalkPreviews").mockResolvedValue([{projectId:records[2].id,messageId:"m1",excerpt:"ラフ見ました！髪色だけ…",latestSender:"client",latestAt:"2026-10-19T03:00:00Z"}]);
   render(<CaseWorkspacePreview application entryTools load={async()=>records} initialSearch="?entry=notifications"/>);
   expect(await screen.findByText("ラフ見ました！髪色だけ…")).toBeTruthy();
   cleanup();talks.mockRejectedValue(new Error("unavailable"));
   render(<CaseWorkspacePreview application entryTools load={async()=>records} initialSearch="?entry=notifications"/>);
   expect((await screen.findByRole("link",{name:new RegExp(records[2].title)})).textContent).toContain("お客さんが書きました");
   expect(screen.queryByText("ラフ見ました！髪色だけ…")).toBeNull();
+});
+
+it("shows who wrote and when for a talk too long for the case snapshot",async()=>{
+  vi.spyOn(entryData,"loadCasePersonalEvents").mockResolvedValue([]);
+  vi.spyOn(entryData,"loadCaseNoticeIndex").mockResolvedValue({revision:"a".repeat(32),items:[]});
+  const long={...records[2],id:"long-talk",title:"長いトーク",display:{...records[2].display,conversation:{state:"unavailable" as const,reason:"incomplete" as const}}};
+  vi.spyOn(entryData,"loadCaseTalkPreviews").mockResolvedValue([{projectId:"long-talk",messageId:"m9",excerpt:"続きです",latestSender:"staff",latestAt:"2026-10-20T03:00:00Z"}]);
+  render(<CaseWorkspacePreview application entryTools load={async()=>[long]} initialSearch="?entry=notifications"/>);
+  await screen.findByText("続きです");
+  expect(screen.getByRole("link",{name:/長いトーク/}).textContent).toContain("あなたが書きました");
 });
 
 it("keeps separate entry searches, calendar month/date and selection while navigating",async()=>{

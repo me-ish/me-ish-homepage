@@ -14,7 +14,7 @@ import { CaseMonthPicker } from "./CaseMonthPicker";
 import {CasePersonalSchedule} from "./CasePersonalSchedule";
 import {loadCaseNoticeIndex,loadCasePersonalEvents,loadCaseTalkPreviews} from "../../data/supabaseCaseEntries";
 import {fetchOwnNatoriProfile} from "../../data/supabaseProfile";
-import type {CaseNoticeIndex,CasePersonalEvent} from "../../types/caseEntryIndex";
+import type {CaseTalkPreview,CaseNoticeIndex,CasePersonalEvent} from "../../types/caseEntryIndex";
 import {notificationPurposeName} from "../../lib/notificationLabels";
 import {loadCasePlanning} from "../../data/supabaseCaseScreen";
 import type {CasePlanning} from "../../lib/caseScreenContext";
@@ -58,7 +58,7 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
   const rejectAccess=useCallback((kind:"unauthorized"|"scope_unavailable"="unauthorized")=>{accessEpoch.current++;setDetail(null);setRecords(null);setPersonalEvents(null);setNoticeIndex(null);setPlans(null);setFailed(true);setAccessError(kind);setPending(false);},[]);
   const [personalEvents,setPersonalEvents]=useState<readonly CasePersonalEvent[]|null>(null),[eventsReady,setEventsReady]=useState(false);
   const [noticeIndex,setNoticeIndex]=useState<CaseNoticeIndex|null>(null),[noticesReady,setNoticesReady]=useState(false);
-  const [talkExcerpts,setTalkExcerpts]=useState<ReadonlyMap<string,string>>(new Map());
+  const [talkPreviews,setTalkPreviews]=useState<ReadonlyMap<string,CaseTalkPreview>>(new Map());
   const [brand,setBrand]=useState<string|null>(null);
   // The header shows the artist's own name once it is known; the product mark is only a fallback.
   useEffect(()=>{if(!application||!entryTools)return;let live=true;void fetchOwnNatoriProfile().then(p=>{if(live)setBrand(p?.displayName?.trim()||null);}).catch(()=>{});return()=>{live=false;};},[application,entryTools]);
@@ -112,7 +112,7 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
   useEffect(()=>{
     if(!talkEntry)return;
     const controller=new AbortController();
-    loadCaseTalkPreviews(controller.signal).then(items=>setTalkExcerpts(new Map(items.map(item=>[item.projectId,item.excerpt]))),()=>{});
+    loadCaseTalkPreviews(controller.signal).then(items=>setTalkPreviews(new Map(items.map(item=>[item.projectId,item]))),()=>{});
     return()=>controller.abort();
   },[talkEntry,reload]);
   useEffect(()=>{
@@ -173,7 +173,9 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
   const sheetClose:CaseWorkspaceLocation={...nav,section:currentStep&&currentStep.section!=="consultation"?currentStep.section:"overview"};
   const selectedNotice=selected&&nav.noticeId?caseKnown(selected.model.facts.notifications)?.find(n=>n.id===nav.noticeId):undefined;
   const indexNotice=selected&&nav.noticeId?noticeIndex?.items.find(n=>n.id===nav.noticeId&&n.projectId===selected.id):undefined;
-  const visible=rows.filter(row=>matchesCaseEntry(row,nav,plansReady?plans:null,today)).sort((a,b)=>nav.entry==="notifications"&&nav.sort==="default"?(caseKnown(b.display.conversation)?.latestAt??"").localeCompare(caseKnown(a.display.conversation)?.latestAt??"")||a.id.localeCompare(b.id):nav.sort==="due"?(a.registeredDueDate??"9999").localeCompare(b.registeredDueDate??"9999")||a.id.localeCompare(b.id):nav.sort==="priority"?(casePriority(b,plansReady?plans:null,today)?.score??-1)-(casePriority(a,plansReady?plans:null,today)?.score??-1)||a.id.localeCompare(b.id):0);
+  // A talk too long for the case snapshot still gets its sender and time from the トーク list read.
+  const talkOf=(row:CaseWorkspaceRecord)=>caseKnown(row.display.conversation)??talkPreviews.get(row.id)??null;
+  const visible=rows.filter(row=>matchesCaseEntry(row,nav,plansReady?plans:null,today)).sort((a,b)=>nav.entry==="notifications"&&nav.sort==="default"?(talkOf(b)?.latestAt??"").localeCompare(talkOf(a)?.latestAt??"")||a.id.localeCompare(b.id):nav.sort==="due"?(a.registeredDueDate??"9999").localeCompare(b.registeredDueDate??"9999")||a.id.localeCompare(b.id):nav.sort==="priority"?(casePriority(b,plansReady?plans:null,today)?.score??-1)-(casePriority(a,plansReady?plans:null,today)?.score??-1)||a.id.localeCompare(b.id):0);
   const pages=Math.max(1,Math.ceil(visible.length/50)),pageRows=visible.slice((nav.page-1)*50,nav.page*50);
   const entryLocation=(entry:CaseEntry):CaseWorkspaceLocation=>({...(entry===nav.entry?nav:entryPositions.current.get(entry)??{...nav,query:"",filter:caseDefaultFilter(entry),selectedId:null,noticeId:null,page:1,noticePage:1}),entry,utility:"none",projectId:null,section:"overview"});
   const open=(id:string):CaseWorkspaceLocation=>({...nav,utility:"none",projectId:id,selectedId:id,noticeId:null,historyPage:1,section:nav.source==="estimate"?"transaction":deriveCaseGuidance(rows.find(r=>r.id===id)!).primary.section});
@@ -202,10 +204,10 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
   const caseRow=(row:CaseWorkspaceRecord)=>{const g=deriveCaseGuidance(row),active=nav.projectId===row.id,due=dueBadge(row);return link(open(row.id),<><span className="min-w-0 truncate font-medium">{row.title}<span className="sr-only"> · {row.clientLabel}</span></span><span className="flex shrink-0 items-center gap-1.5 text-xs text-zinc-500">{due}{g.waits[0]?.text??g.status}</span></>,
     `flex min-h-11 items-center justify-between gap-3 px-3 py-2 text-sm ${look.row} ${active?"!border-pink-500":"hover:border-pink-300"} ${ui.focusRing}`,{key:row.id,id:`case-${row.id}`,"aria-current":active?"page":undefined});};
   // トーク tab: one line per case; who wrote last and when. Opening it shows only the talk.
-  const talkRow=(row:CaseWorkspaceRecord)=>{const talk=caseKnown(row.display.conversation),active=nav.projectId===row.id,theirs=talk?.latestSender==="client";return link({...open(row.id),section:"consultation"},<>
+  const talkRow=(row:CaseWorkspaceRecord)=>{const talk=talkOf(row),active=nav.projectId===row.id,theirs=talk?.latestSender==="client";return link({...open(row.id),section:"consultation"},<>
     <span className="flex items-center gap-2"><span className={`min-w-0 flex-1 truncate text-[15px] ${look.title}`}>{row.title}</span>{theirs?<span className="h-2.5 w-2.5 shrink-0 rounded-full bg-pink-500" role="img" aria-label="お客さんが最後に書いています"/>:null}</span>
     <span className={`mt-0.5 block text-xs ${theirs?"font-bold text-pink-800":"text-zinc-500"}`}>{row.clientLabel} · {talk?`${theirs?"お客さんが書きました":"あなたが書きました"} · ${caseTime(talk.latestAt)}`:observationLabel(row.display.conversation)}</span>
-    {talk&&talkExcerpts.get(row.id)?<span className="mt-1 block truncate text-[13px] text-zinc-700">{talkExcerpts.get(row.id)}</span>:null}
+    {talk&&talkPreviews.get(row.id)?.excerpt?<span className="mt-1 block truncate text-[13px] text-zinc-700">{talkPreviews.get(row.id)?.excerpt}</span>:null}
   </>,`block px-3 py-2.5 ${look.row} ${active?"!border-pink-500":"hover:border-pink-300"} ${ui.focusRing}`,{key:row.id,id:`case-${row.id}`,"aria-current":active?"page":undefined});};
   return <div data-natori-admin className={`${look.page} pb-24 lg:pb-6`}><NatoriAdminFont/>
     {!application||readOnly?<div className="border-b border-pink-100 bg-pink-50 px-4 py-2 text-center text-xs leading-5 text-pink-950">{readOnly?"いまは見るだけです。送信や保存はできません。":"見本の画面です。操作しても何も送られません。"}</div>:null}
