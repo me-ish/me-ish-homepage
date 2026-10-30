@@ -29,7 +29,7 @@ export const estimateAssistantOutputSchema = z.object({
 });
 export type EstimateAssistantOutput = z.infer<typeof estimateAssistantOutputSchema>;
 
-export type EstimateAssistantMessage = { sender: "client" | "staff"; body: string; createdAt: string };
+export type EstimateAssistantMessage = { sender: "client" | "staff"; body: string };
 
 export function isEstimateAssistantMemo(memo: string): boolean {
   return memo.startsWith(ESTIMATE_ASSISTANT_MEMO_MARK);
@@ -79,7 +79,7 @@ export function buildEstimateAssistantPrompt(input: {
     メッセージ: request.message,
   };
   const talk = input.messages.length
-    ? input.messages.map((message) => `[${message.createdAt.slice(0, 16)} ${message.sender === "client" ? "依頼者" : "ナトリ"}] ${message.body}`).join("\n")
+    ? input.messages.map((message) => `[${message.sender === "client" ? "依頼者" : "ナトリ"}] ${message.body}`).join("\n")
     : "（まだやり取りはありません）";
   return [
     `今日の日付: ${input.today}`,

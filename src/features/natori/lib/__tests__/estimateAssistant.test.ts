@@ -88,11 +88,12 @@ describe("buildEstimateAssistantPrompt", () => {
   it("料金表のオプションと依頼内容・トークを含め、基本料金の行は渡さない", () => {
     const prompt = buildEstimateAssistantPrompt({
       requestData, projectType: "standing", dueDate: null, pricingConfig, today: "2026-10-30",
-      messages: [{ sender: "client", body: "背景はなしで大丈夫です", createdAt: "2026-10-30T09:00:00Z" }],
+      messages: [{ sender: "client", body: "背景はなしで大丈夫です" }],
     });
     expect(prompt).toContain("id: expression_variation / 表情差分");
     expect(prompt).not.toContain("id: full_body");
     expect(prompt).toContain("銀髪の狐");
-    expect(prompt).toContain("依頼者] 背景はなしで大丈夫です");
+    expect(prompt).toContain("[依頼者] 背景はなしで大丈夫です");
+    expect(prompt).not.toContain("2026-10-30T09");
   });
 });

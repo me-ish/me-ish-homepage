@@ -203,7 +203,8 @@ export default function EstimateJourney({ project, portfolioContent,workspace }:
 
   const rebuildWithAssistant = async () => {
     if (busy || assistantBusy) return;
-    if (saved || dirty && draft.items.length > 0) {
+    const untouched = JSON.stringify(draft) === JSON.stringify({ agreedTerms: defaultEstimateTerms(project), items: [] });
+    if (saved || !untouched) {
       const confirmed = await confirm({
         title: "アシスタントに作り直してもらいますか？",
         description: "依頼文とトークを読み直して、条件と明細を置き換えます。いま入力している内容は残りません。発行や送信はされません。",

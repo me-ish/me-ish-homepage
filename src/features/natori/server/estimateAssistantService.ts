@@ -39,15 +39,15 @@ function nowLabelInTokyo(): string {
   return new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date());
 }
 
-/** Message bodies only: no names, addresses or file links leave the server. */
+/** Message bodies and who wrote them only: no names, addresses, times or file links leave the server. */
 async function readTalk(projectId: string): Promise<EstimateAssistantMessage[] | null> {
   const { data, error } = await supabaseAdmin().from("natori_consultation_messages")
-    .select("sender, body, created_at").eq("project_id", projectId)
+    .select("sender, body").eq("project_id", projectId)
     .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(MAX_MESSAGES);
   if (error) return null;
   return (data ?? []).reverse()
     .filter((row) => (row.sender === "client" || row.sender === "staff") && typeof row.body === "string" && row.body.trim())
-    .map((row) => ({ sender: row.sender as "client" | "staff", body: row.body.slice(0, MAX_MESSAGE_CHARS), createdAt: row.created_at }));
+    .map((row) => ({ sender: row.sender as "client" | "staff", body: row.body.slice(0, MAX_MESSAGE_CHARS) }));
 }
 
 /**
