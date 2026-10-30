@@ -42,7 +42,7 @@ describe("PortfolioPricing mobile details", () => {
       const cta = within(mobileList).getByRole("link", { name: `${plan.name}を選ぶ` });
       expect(cta.textContent).toBe("このプランで相談");
       expect(cta.className).toContain("rounded-full");
-      expect(cta.className).toContain("min-h-[32px]");
+      expect(cta.className).toContain("min-h-11");
     }
 
     expect(rows[0].className).toContain("py-2");

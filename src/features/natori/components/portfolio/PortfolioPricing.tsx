@@ -60,6 +60,28 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
 
       <p className="mb-2 text-sm font-black sm:mb-3">通常イラスト</p>
 
+      {/* プランの違いは描く範囲と料金だけなので、全プラン共通で含まれるものはカードの前に1回だけ出す */}
+      {commonFeatures.length > 0 && (
+        <div
+          className="mx-auto mb-2 flex max-w-3xl items-start gap-2 rounded-xl px-3 py-2 sm:mb-3 sm:items-center sm:gap-3 sm:px-4 sm:py-3"
+          style={{ background: c.surfaceSubtle }}
+        >
+          <span
+            className="shrink-0 rounded-full px-2 py-0.5 text-[13px] font-bold sm:px-2.5 sm:py-1"
+            style={{ background: c.surface, color: c.actionTextSmall }}
+          >
+            通常イラスト共通
+          </span>
+          <p className="text-[13px] font-medium leading-5 sm:text-sm sm:leading-relaxed" style={{ color: c.textSoft }}>
+            表示価格には、{includedFeatures}が含まれます。
+          </p>
+        </div>
+      )}
+      <p className="mb-3 text-center text-[13px] leading-5 sm:mb-6 sm:text-sm" style={{ color: c.textSoft }}>
+        どのプランか迷ったら、フォームでプランを「未定」にしたまま相談できます。
+      </p>
+
+
       {/* スマホ: 作例は一覧の上に並べ、描く範囲の違いを見比べられるようにする */}
       {hasPlanSamples ? (
         <div role="group" aria-label="通常イラストの作例" className="mb-3 flex flex-wrap justify-center gap-2 sm:hidden">
@@ -137,7 +159,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                 <a
                   href={planHref(plan)}
                   onClick={() => trackPlan(plan.name)}
-                  className="pf-cute-focus inline-flex min-h-[32px] shrink-0 items-center justify-center rounded-full border-2 px-3 py-1 text-[13px] font-bold"
+                  className="pf-cute-focus inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border-2 px-3 py-1 text-[13px] font-bold"
                   style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
                   aria-label={`${plan.name}を選ぶ`}
                 >
@@ -213,23 +235,6 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
           );
         })}
       </div>
-
-      {commonFeatures.length > 0 && (
-        <div
-          className="mx-auto mt-3 flex max-w-3xl items-start gap-2 rounded-xl px-3 py-2 sm:mt-6 sm:items-center sm:gap-3 sm:px-4 sm:py-3"
-          style={{ background: c.surfaceSubtle }}
-        >
-          <span
-            className="shrink-0 rounded-full px-2 py-0.5 text-[13px] font-bold sm:px-2.5 sm:py-1"
-            style={{ background: c.surface, color: c.actionTextSmall }}
-          >
-            通常イラスト共通
-          </span>
-          <p className="text-[13px] font-medium leading-5 sm:text-sm sm:leading-relaxed" style={{ color: c.textSoft }}>
-            表示価格には、{includedFeatures}が含まれます。
-          </p>
-        </div>
-      )}
 
       {/* 受付停止中は説明や作例を出さず、1行だけで知らせる */}
       {content.massProductionIllustrationOpen ? (
