@@ -114,14 +114,14 @@ it.each(["cases","schedule","notifications"])("shows unconfirmed payment sharing
 it("returns from an exact notification to its original filter and selection without sending",async()=>{
   const record=records[7],notice=record.model.facts.notifications;
   if(notice.state!=="ready"||!notice.value.length)throw Error("notification fixture required");
-  window.history.replaceState(null,"","/?entry=notifications&q=光&filter=staff&month=2026-11");
+  window.history.replaceState(null,"","/?entry=notifications&q=光&month=2026-11");
   render(<CaseWorkspacePreview load={async()=>records}/>);
   const item=await screen.findByRole("link",{name:/納品のメール.*送れたか分かりません/});fireEvent.click(item);
   expect(window.location.search).toContain(`notice=${notice.value[0].id}`);expect(window.location.search).toContain("section=production");
   expect(screen.getByRole("complementary",{name:"選択した通知"}).textContent).toContain("納品のメール");
   fireEvent.click(screen.getByRole("link",{name:"← 通知へ戻る"}));
   expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("光");
-  expect(within(screen.getByRole("group",{name:"対応で絞り込む"})).getByRole("button",{name:/^自分の番/}).getAttribute("aria-pressed")).toBe("true");
+  expect(screen.queryByRole("group",{name:"対応で絞り込む"})).toBeNull();
   expect(document.activeElement?.id).toBe(`notice-${notice.value[0].id}`);
   expect(screen.queryByRole("button",{name:/送信|再送|発行/})).toBeNull();
 });
@@ -212,7 +212,7 @@ it("restores a deep link after data arrives and responds to browser history stat
 });
 
 it("retains known facts after refresh failure and recovers through the actual loader", async () => {
-  window.history.replaceState(null, "", `/?case=${records[0].id}`);
+  window.history.replaceState(null, "", `/?case=${records[0].id}&filter=all`);
   const load = vi.fn<CasePreviewLoader>(async mode => { if (mode === "failed") throw new Error("Synthetic failure"); return records; });
   render(<CaseWorkspacePreview load={load} />);
   await screen.findByRole("heading", { name: "森の表紙イラスト" });
@@ -298,8 +298,22 @@ it.each(["主な入口","スマホの主な入口"])("opens the public pages fro
   expect(screen.queryByRole("region",{name:"公開ページ"})).toBeNull();
 });
 
+it("opens the case list on the staff's own turn",async()=>{
+  render(<CaseWorkspacePreview load={async()=>records} initialSearch=""/>);
+  await screen.findByRole("link",{name:/森の表紙イラスト.*依頼者A.*あなた：支払いリンクを送る/});
+  expect(within(screen.getByRole("group",{name:"対応で絞り込む"})).getByRole("button",{name:/^自分の番/}).getAttribute("aria-pressed")).toBe("true");
+  expect(screen.queryByRole("link",{name:/月のプロフィール画像/})).toBeNull();
+  fireEvent.click(within(screen.getByRole("group",{name:"対応で絞り込む"})).getByRole("button",{name:/^すべて/}));
+  expect(window.location.search).toContain("filter=all");
+  expect(screen.getByRole("link",{name:/月のプロフィール画像/})).toBeTruthy();
+});
+it("shows no turn chips on the schedule",async()=>{
+  render(<CaseWorkspacePreview load={async()=>records} initialSearch="?entry=schedule&filter=staff"/>);
+  await screen.findByRole("heading",{level:1});
+  expect(screen.queryByRole("group",{name:"対応で絞り込む"})).toBeNull();
+});
 it("leads the case list with the staff's own turn and folds the client's turn into short rows",async()=>{
-  render(<CaseWorkspacePreview load={async()=>records}/>);
+  render(<CaseWorkspacePreview load={async()=>records} initialSearch="?filter=all"/>);
   const mine=await screen.findByRole("link",{name:/森の表紙イラスト.*依頼者A.*あなた：支払いリンクを送る/});
   const theirs=within(screen.getByRole("region",{name:"お客さんの番"}));
   expect(theirs.getByRole("link",{name:/月のプロフィール画像/})).toBeTruthy();
