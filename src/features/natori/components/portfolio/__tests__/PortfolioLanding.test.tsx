@@ -93,15 +93,12 @@ describe("PF-01 portfolio information architecture", () => {
       { href: "#flow", label: "制作の流れ" },
       { href: "#about", label: "プロフィール" },
       { href: "/natori/portfolio/contact", label: "相談・見積もり" },
-      { href: "/natori/portfolio/contact?mode=consultation", label: "まず相談したい" },
-      { href: "/natori/portfolio/contact?mode=quote", label: "見積もりをお願いしたい" },
     ]);
-    const consult = screen.getByRole("link", { name: "まず相談したい" }) as HTMLElement;
-    const quote = screen.getByRole("link", { name: "見積もりをお願いしたい" }) as HTMLElement;
-    expect(consult.style.borderColor).toBe("rgb(236, 72, 153)");
-    expect(consult.style.backgroundColor).toBe("rgb(255, 255, 255)");
-    expect(quote.style.backgroundColor).toBe(""); // The shared CTA owns every interaction state.
-    expect(quote.className).toContain("bg-[#FFE4EF]");
+    const formCta = document.querySelector("#form a") as HTMLElement;
+    expect(formCta.textContent).toBe("相談・見積もり");
+    expect(formCta.getAttribute("href")).toBe("/natori/portfolio/contact");
+    expect(formCta.style.backgroundColor).toBe(""); // The shared CTA owns every interaction state.
+    expect(formCta.className).toContain("bg-[#FFE4EF]");
     for (const { href } of uniqueNavLinks()) {
       if (href.startsWith("#")) expect(document.querySelector(href)).not.toBeNull();
     }
