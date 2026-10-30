@@ -837,7 +837,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
     const headings = screen.getAllByRole("heading", { level: 3 });
     expect(headings.length).toBeGreaterThanOrEqual(3);
     expect(headings.map((heading) => heading.textContent)).toEqual([
-      "ご相談内容を教えてください", "ご連絡先", "ご相談内容",
+      "ご相談内容を教えてください", "ご相談内容", "ご連絡先",
     ]);
     expect(screen.queryByText("ご相談・ご依頼の内容")).toBeNull();
     const message = screen.getByLabelText(/ご相談・ご依頼の内容/) as HTMLTextAreaElement;
