@@ -67,19 +67,19 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
           style={{ background: c.surfaceSubtle }}
         >
           <span
-            className="shrink-0 rounded-full px-2 py-0.5 text-[13px] font-bold sm:px-2.5 sm:py-1"
+            className="shrink-0 rounded-full px-2 py-0.5 text-sm font-bold sm:px-2.5 sm:py-1"
             style={{ background: c.surface, color: c.actionTextSmall }}
           >
             通常イラスト共通
           </span>
-          <p className="text-[13px] font-medium leading-5 sm:text-sm sm:leading-relaxed" style={{ color: c.textSoft }}>
+          <p className="text-sm font-medium leading-5 sm:text-sm sm:leading-relaxed" style={{ color: c.textSoft }}>
             表示価格には、{includedFeatures}が含まれます。
           </p>
         </div>
       )}
       {/* 受付停止中はフォームが送れないので、相談を促す一行は出さない */}
       {content.commissionOpen ? (
-        <p className="mb-3 text-center text-[13px] leading-5 sm:mb-6 sm:text-sm" style={{ color: c.textSoft }}>
+        <p className="mb-3 text-center text-sm leading-5 sm:mb-6 sm:text-sm" style={{ color: c.textSoft }}>
           どのプランか迷ったら、フォームでプランを「未定」にしたまま相談できます。
         </p>
       ) : null}
@@ -102,7 +102,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                   style={{ borderColor: c.borderSubtle, background: c.surfaceSubtle }}
                 />
                 <figcaption
-                  className="mt-1 text-center text-[13px] font-bold leading-tight [overflow-wrap:anywhere]"
+                  className="mt-1 text-center text-sm font-bold leading-tight [overflow-wrap:anywhere]"
                   style={{ color: c.textSoft }}
                 >
                   {plan.name}
@@ -140,11 +140,11 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
               <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                 <div className="min-w-0">
                   {/* スマホでも 13px。切らずに折り返して、説明を最後まで読めるようにする */}
-                  <p className="text-[13px] leading-5" style={{ color: c.textSoft }}>
+                  <p className="text-sm leading-5" style={{ color: c.textSoft }}>
                     {planDescription(plan.desc)}
                   </p>
                   {planSpecificFeatures.length > 0 ? (
-                    <ul className="mt-0.5 space-y-0.5 text-[13px] leading-5">
+                    <ul className="mt-0.5 space-y-0.5 text-sm leading-5">
                       {planSpecificFeatures.map((feature) => (
                         <li key={feature} className="flex items-start gap-1.5">
                           <span style={{ color: c.actionText }} aria-hidden="true">
@@ -162,7 +162,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                 <a
                   href={planHref(plan)}
                   onClick={() => trackPlan(plan.name)}
-                  className="pf-cute-focus inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border-2 px-3 py-1 text-[13px] font-bold"
+                  className="pf-cute-focus inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border-2 px-3 py-1 text-sm font-bold"
                   style={{ borderColor: c.actionDisplay, color: c.text, background: c.surface }}
                   aria-label={`${plan.name}を選ぶ`}
                 >
@@ -196,7 +196,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                   />
                 ) : (
                   <div
-                    className="mb-4 flex aspect-[4/5] w-full items-center justify-center rounded-xl text-[13px] font-bold"
+                    className="mb-4 flex aspect-[4/5] w-full items-center justify-center rounded-xl text-sm font-bold"
                     style={{ background: c.surfaceSubtle, color: c.textSoft }}
                   >
                     作例は準備中です
@@ -255,7 +255,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
             <p className="mt-1 text-sm" style={{ color: c.textSoft }}>
               用意されたデザインから制作する、量産向けのイラストプランです。
             </p>
-            <p className="mt-1 text-[13px] leading-relaxed" style={{ color: c.textSoft }}>
+            <p className="mt-1 text-sm leading-relaxed" style={{ color: c.textSoft }}>
               ※量産イラストのため、原則としてリテイクはお受けしておりません。
             </p>
 
@@ -281,7 +281,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
                       style={{ borderColor: c.borderSubtle }}
                     />
                     <figcaption
-                      className="mt-1 text-center text-[13px] font-bold"
+                      className="mt-1 text-center text-sm font-bold"
                       style={{ color: c.textSoft }}
                     >
                       {sample.name}
@@ -307,7 +307,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
           style={{ background: c.surface, borderColor: c.borderSubtle }}
         >
           <h3 className="font-bold">量産イラスト</h3>
-          <p className="flex items-baseline gap-2 text-[13px] sm:text-sm" style={{ color: c.textSoft }}>
+          <p className="flex items-baseline gap-2 text-sm" style={{ color: c.textSoft }}>
             <span className="font-bold">{startingPriceLabel(massProductionPrice)}</span>
             <span className="rounded-full px-2.5 py-0.5 font-bold" style={{ background: c.surfaceSubtle }}>現在受付停止中</span>
           </p>
@@ -323,7 +323,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
           <summary className="pf-cute-focus flex min-h-[48px] cursor-pointer list-none items-center gap-3 rounded-2xl px-4 py-3 sm:px-6 md:px-8 md:py-4 [&::-webkit-details-marker]:hidden">
             <div className="min-w-0 flex-1">
               <h3 className="inline text-lg font-black md:text-xl">追加オプション</h3>
-              <span className="ml-2 text-[13px]" style={{ color: c.textSoft }}>{optionsHint(content.options)}</span>
+              <span className="ml-2 text-sm" style={{ color: c.textSoft }}>{optionsHint(content.options)}</span>
             </div>
             <ChevronDown
               aria-hidden="true"
@@ -366,7 +366,7 @@ export default function PortfolioPricing({ content, contactPath = "/natori/portf
       ) : null}
 
       {/* 特定商取引法に基づく表記の「販売価格」と同じ内容。免税事業者のため消費税を上乗せしない */}
-      <p className="mx-auto mt-4 max-w-3xl text-center text-[13px] leading-6 sm:text-sm" style={{ color: c.textSoft }}>
+      <p className="mx-auto mt-4 max-w-3xl text-center text-sm leading-6 sm:text-sm" style={{ color: c.textSoft }}>
         ※当方は消費税の免税事業者のため、表示価格に消費税はかかりません。
       </p>
     </section>

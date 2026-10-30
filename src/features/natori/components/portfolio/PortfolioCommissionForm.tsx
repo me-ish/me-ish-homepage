@@ -397,7 +397,7 @@ function PortfolioCommissionFormSession({
               {legacyStepLabels.map((label, index) => (
                 <li key={label} className="min-w-0 flex-1" aria-current={index === legacyStep ? "step" : undefined}>
                   <span className="block h-1 rounded-full" style={{ background: index <= legacyStep ? c.actionTextSmall : c.borderSubtle }} />
-                  <span className="mt-2 block text-center text-[11px] font-bold leading-tight sm:text-xs" style={{ color: index === legacyStep ? c.actionTextSmall : c.textSoft }}>{label}</span>
+                  <span className="mt-2 block text-center text-xs font-bold leading-tight sm:text-xs" style={{ color: index === legacyStep ? c.actionTextSmall : c.textSoft }}>{label}</span>
                 </li>
               ))}
             </ol>

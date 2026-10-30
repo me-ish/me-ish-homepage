@@ -122,7 +122,7 @@ export default function PortfolioAbout({
               {orderedServices.map((service) => (
                 <li
                   key={service}
-                  className="whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[13px] font-bold leading-none md:px-3"
+                  className="whitespace-nowrap rounded-full border px-2.5 py-1.5 text-sm font-bold leading-none md:px-3"
                   style={{
                     borderColor: c.borderSubtle,
                     color: c.textSoft,

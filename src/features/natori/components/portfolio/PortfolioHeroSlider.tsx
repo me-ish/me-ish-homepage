@@ -326,7 +326,7 @@ export default function PortfolioHeroSlider({ slides }: { slides: HeroSlide[] })
         ) : null}
       </div>
       {hasMultiple && reducedMotion ? (
-        <p className="mt-2 text-center text-[13px]" style={{ color: c.textSoft }}>
+        <p className="mt-2 text-center text-sm" style={{ color: c.textSoft }}>
           動きを減らす設定により、自動送りは停止しています。
         </p>
       ) : null}

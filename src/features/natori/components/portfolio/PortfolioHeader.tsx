@@ -71,7 +71,7 @@ export default function PortfolioHeader({
         </span>
         <nav
           aria-label="メインナビゲーション"
-          className="hidden shrink-0 items-center gap-4 whitespace-nowrap text-[13px] font-medium md:flex lg:gap-6 lg:text-sm"
+          className="hidden shrink-0 items-center gap-4 whitespace-nowrap text-sm font-medium md:flex lg:gap-6 lg:text-sm"
           style={{ color: c.textSoft }}
         >
           {navLinks.map((link) => (
@@ -92,7 +92,7 @@ export default function PortfolioHeader({
         {showcase ? null : (
           // 受付状況の札。緑の枠で目立たせるより、白い札に小さな灯りを置いてサイトの淡い配色になじませる。
           <span
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full py-1.5 pl-2.5 pr-3 text-[13px] font-bold md:text-xs"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full py-1.5 pl-2.5 pr-3 text-sm font-bold md:text-xs"
             style={{
               background: c.surface,
               color: content.commissionOpen ? c.text : c.textSoft,

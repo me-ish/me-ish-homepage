@@ -83,9 +83,8 @@ export default function PortfolioLanding({
               {content.commissionOpen ? "イメージが決まっていなくても大丈夫。まずは気軽にお話を聞かせてください。" : "現在コミッションは停止中です。再開まで今しばらくお待ちください。"}
             </p>
             {/* 入口はほかの主ボタンと同じ「相談・見積もり」1つにし、相談か見積もりかはフォームの中で選んでもらう。 */}
-            {content.commissionOpen && <div className="mt-6 flex flex-col items-center gap-2">
+            {content.commissionOpen && <div className="mt-6 flex justify-center">
               <a href={directContactPath} className={`${natoriSoftActionClassName} pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-full border-2 px-8 py-2 font-bold`}>相談・見積もり</a>
-              <p className="text-sm" style={{ color: c.textSoft }}>相談か見積もりかは、フォームの中で選べます。</p>
             </div>}
           </section>
           {content.commissionOpen ? <PortfolioMobileCta href={directContactPath} /> : null}
