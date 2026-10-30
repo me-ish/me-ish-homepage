@@ -34,14 +34,14 @@ export function CaseStepList({ steps, selected, link, sheet = null, trailing = f
           </span>
           {step.summary ? <span className="-mt-1 block text-xs leading-5 text-zinc-500">{step.summary}</span> : null}
         </span>
-      </>, `flex min-h-11 items-start gap-3 rounded-xl pr-1 ${open ? "" : "hover:bg-white"}`, { "aria-current": open ? "step" : undefined })}
+      </>, `flex min-h-11 items-start gap-3 rounded-xl pr-1 ${open ? "" : "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-white"}`, { "aria-current": open ? "step" : undefined })}
     </li>;
   };
   return <section aria-label={bare ? undefined : "案件の段階"} className="mb-5">
     <ol key="before" className="list-none">{shown.slice(0, cut).map((step, index) => row(step, index))}</ol>
     {sheet ? sheet.backdrop : null}
     <div key="work" onKeyDown={sheet ? event => { if (event.key === "Escape") sheet.onEscape(); } : undefined}
-      className={sheet ? "fixed inset-x-0 bottom-0 z-40 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 shadow-2xl lg:static lg:z-auto lg:mb-3 lg:max-h-none lg:overflow-visible lg:rounded-2xl lg:p-5 lg:shadow-sm"
+      className={sheet ? "natori-sheet fixed inset-x-0 bottom-0 z-40 max-h-[85vh] max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-3xl bg-white px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 shadow-2xl lg:static lg:z-auto lg:mb-3 lg:max-h-none lg:overflow-visible lg:rounded-2xl lg:p-5 lg:shadow-sm"
         : bare ? `p-3 sm:p-5 ${look.work}` : selected ? `mb-3 p-3 sm:p-5 ${look.work}` : trailing ? "mb-6" : "mt-2"}>
       {sheet ? <div className="mb-2 flex items-center justify-between gap-3"><span aria-hidden="true" className="mx-auto h-1.5 w-10 rounded-full bg-zinc-300 lg:hidden" /></div> : null}
       {sheet ? <div className="float-right ml-3">{sheet.close}</div> : null}

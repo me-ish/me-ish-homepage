@@ -5,8 +5,8 @@
  * Older admin pages keep `natoriAdminUi`.
  */
 export const workspaceLook = {
-  page: "min-h-screen bg-[#F2F2F7] text-[#1C1C1E]",
-  header: "sticky top-0 z-20 border-b border-black/10 bg-[#F2F2F7]/85 backdrop-blur-xl",
+  page: "min-h-screen min-h-dvh bg-[#F2F2F7] text-[#1C1C1E]",
+  header: "sticky top-0 z-20 border-b border-black/10 bg-[#F2F2F7]/85 backdrop-blur-xl backdrop-saturate-150 [@media(prefers-reduced-transparency:reduce)]:bg-[#F2F2F7] [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none",
   brand: "text-[20px] font-bold tracking-[-0.02em]",
   title: "font-bold tracking-[-0.02em]",
   /** Large title at the top of a tab, as in iOS. */
@@ -16,7 +16,7 @@ export const workspaceLook = {
   /** White rounded group whose rows are split by hairlines. */
   group: "overflow-hidden rounded-2xl bg-white divide-y divide-black/[0.08]",
   /** One tappable row inside a group. */
-  groupRow: "flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-black/[0.03] active:bg-black/[0.06]",
+  groupRow: "flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors [@media(hover:hover)_and_(pointer:fine)]:hover:bg-black/[0.03] active:bg-black/[0.06]",
   card: "rounded-2xl bg-white p-4",
   row: "rounded-2xl bg-white",
   /** The open step's work area. */

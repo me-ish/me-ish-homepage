@@ -9,4 +9,6 @@ export const natoriAdminViewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // ブラウザの上部バーを管理画面の背景色（workspaceLook.page）に合わせる。
+  themeColor: "#F2F2F7",
 };
