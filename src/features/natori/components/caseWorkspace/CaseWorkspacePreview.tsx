@@ -26,6 +26,7 @@ import {CaseHistoryPanel} from "./CaseHistoryPanel";
 import {CaseWorkspaceUtilities} from "./CaseWorkspaceUtilities";
 import {CaseStepList} from "./CaseStepList";
 import {CasePublicPages} from "./CasePublicPages";
+import {NatoriAdminFont} from "../admin/NatoriAdminFont";
 import {caseStepForSection,deriveCaseSteps} from "../../lib/caseSteps";
 
 export type CasePreviewLoader = (mode: CaseWorkspaceLocation["mode"], signal: AbortSignal) => Promise<readonly CaseWorkspaceRecord[]>;
@@ -185,7 +186,7 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
           </div>:null}</div>;};
   const caseRow=(row:CaseWorkspaceRecord)=>{const g=deriveCaseGuidance(row),active=nav.projectId===row.id,due=dueBadge(row);return link(open(row.id),<><span className="min-w-0 truncate font-medium">{row.title}<span className="sr-only"> · {row.clientLabel}</span></span><span className="flex shrink-0 items-center gap-1.5 text-xs text-zinc-500">{due}{g.waits[0]?.text??g.status}</span></>,
     `flex min-h-11 items-center justify-between gap-3 rounded-xl border bg-white px-3 py-2 text-sm ${active?"border-pink-400":"border-zinc-200 hover:border-pink-300"} ${ui.focusRing}`,{key:row.id,id:`case-${row.id}`,"aria-current":active?"page":undefined});};
-  return <div data-natori-admin className="min-h-screen bg-[#F7F7F8] pb-24 text-zinc-900 lg:pb-6">
+  return <div data-natori-admin className="min-h-screen bg-[#F7F7F8] pb-24 text-zinc-900 lg:pb-6"><NatoriAdminFont/>
     {!application||readOnly?<div className="border-b border-pink-100 bg-pink-50 px-4 py-2 text-center text-xs leading-5 text-pink-950">{readOnly?"いまは見るだけです。送信や保存はできません。":"見本の画面です。操作しても何も送られません。"}</div>:null}
     <header className="border-b border-zinc-200 bg-white"><div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
       {brand?<p className="min-w-0 truncate text-lg font-bold tracking-tight">{brand}</p>:<p className="text-xl font-bold tracking-tight">natori<span className="text-pink-500">.</span></p>}
