@@ -9,6 +9,12 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_HOST = SUPABASE_URL ? new URL(SUPABASE_URL).hostname : '';
 
+function isEphemeralTestApp() {
+  return Object.entries(process.env).some(
+    ([key, value]) => /^PHASE_[A-Z0-9]+_BROWSER$/.test(key) && value === 'ephemeral'
+  );
+}
+
 const nextConfig = {
   // The image ceiling remains 10 MiB; middleware also buffers multipart headers.
   // A bounded extra MiB prevents truncating a valid file at that exact ceiling.
@@ -59,7 +65,14 @@ const nextConfig = {
     ];
   },
 
-  webpack: (config, { isServer }) => {
+  webpack: (config, { dev, isServer }) => {
+    // CI の使い捨て試験アプリ（PHASE_*_BROWSER=ephemeral）で next dev を動かすときだけ、
+    // webpack のディスクキャッシュをメモリに切り替える。ディスクのキャッシュは書き換えの途中で
+    // 読まれると "Unexpected end of JSON input" になり、試験が全件成功でもジョブが落ちていた。
+    // 本番ビルドと普段の開発には影響しない。
+    if (dev && isEphemeralTestApp()) {
+      config.cache = { type: 'memory' };
+    }
     if (!isServer) {
       config.resolve.alias['pino-pretty'] = false;
       config.resolve.fallback = {

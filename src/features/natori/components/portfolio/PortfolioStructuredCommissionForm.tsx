@@ -1549,6 +1549,9 @@ export default function PortfolioStructuredCommissionForm({
           </div>
         </fieldset>
       )}
+      <div hidden={step === lastStep || (state.inquiryMode === "quote" && step !== 0)}>{messageSection}</div>
+      <div hidden={step === lastStep}>{optionalSection}</div>
+      {/* 連絡先は内容と資料のあとに聞く（何を頼むか決めてから名前を書くほうが入りやすい）。 */}
       <div hidden={step === lastStep || (state.inquiryMode === "quote" && step !== 1)}>
         <FormSection title="ご連絡先" description={NATORI_INTAKE_COPY.noAccount}>
           <div className="grid gap-4">
@@ -1565,8 +1568,6 @@ export default function PortfolioStructuredCommissionForm({
           </div>
         </FormSection>
       </div>
-      <div hidden={step === lastStep || (state.inquiryMode === "quote" && step !== 0)}>{messageSection}</div>
-      <div hidden={step === lastStep}>{optionalSection}</div>
       {step === lastStep && confirmationSubmission.success && (
         <section aria-label="送信前の確認" className="space-y-4">
           <p className="text-sm" style={{ color: c.textSoft }}>内容をご確認ください。各項目の修正ボタンから入力画面へ戻れます。</p>

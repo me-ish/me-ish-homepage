@@ -4,11 +4,19 @@ import { expect, test, type Page } from "@playwright/test";
 const DEMO_PATH = "/ja/etorie/demo/app/portfolio";
 const TWO_MIB_PLUS_ONE = 2 * 1024 * 1024 + 1;
 
-async function openInquiry(page: Page, label = "まず相談したい") {
-  await page.locator("#form").getByRole("link", { name: label }).click();
+async function openInquiry(page: Page, mode: "consultation" | "quote" = "consultation") {
+  // ページ最後の入口は「相談・見積もり」1つ。相談か見積もりかはフォームの中で選ぶ。
+  await page.locator("#form").getByRole("link", { name: "相談・見積もり" }).click();
   // The SSR heading can appear before the contact page's scripts load.
-  await page.waitForURL(/\/portfolio\/contact\?/, { waitUntil: "load" });
+  await page.waitForURL(/\/portfolio\/contact/, { waitUntil: "load" });
   await expect(page.getByRole("heading", { name: "ご相談・ご依頼", exact: true })).toBeVisible();
+  if (mode === "quote") {
+    // 読み込み直後に選ぶと、画面の準備が終わったときに選択が戻ることがあるので、見積もり用のボタンが出るまで選び直す。
+    await expect(async () => {
+      await page.getByRole("radio", { name: "見積もりを希望" }).check();
+      await expect(page.getByRole("button", { name: "条件・連絡先へ" })).toBeVisible({ timeout: 1000 });
+    }).toPass();
+  }
 }
 
 async function fillContact(page: Page, suffix: string) {
@@ -56,7 +64,7 @@ test.describe("Natori public intake rollout", () => {
 
   test("structured quote flow separates production details, conditions, and review", async ({ page }) => {
     await page.goto(`${DEMO_PATH}?structured=1`);
-    await openInquiry(page, "見積もりをお願いしたい");
+    await openInquiry(page, "quote");
     await expect(page.getByRole("radio", { name: "見積もりを希望" })).toBeChecked();
     await expect(page.getByLabel("ご依頼の種類")).toBeVisible();
     await expect(page.getByLabel("ご予算")).toBeHidden();
@@ -81,7 +89,7 @@ test.describe("Natori public intake rollout", () => {
     test(`Phase 5 padded option and named editing at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });
       await page.goto(`${DEMO_PATH}?structured=1`);
-      await openInquiry(page, "見積もりをお願いしたい");
+      await openInquiry(page, "quote");
       const checkbox = page.getByRole("checkbox", { name: /表情を追加する（表情差分）/ });
       const cardLabel = page.locator("label").filter({ has: checkbox });
       const box = await cardLabel.boundingBox();
@@ -127,7 +135,7 @@ test.describe("Natori public intake rollout", () => {
   test("Phase 5 reference overflow names omitted files and focuses the existing URL field", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`${DEMO_PATH}?structured=1`);
-    await openInquiry(page, "見積もりをお願いしたい");
+    await openInquiry(page, "quote");
     const materials = page.locator("summary").filter({ hasText: /^資料/ }).locator("..");
     await materials.locator("summary").first().click();
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAYAAACddGYaAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWN44zHzPwwzIHMA2KQQyVXgEtIAAAAASUVORK5CYII=", "base64");
@@ -144,7 +152,7 @@ test.describe("Natori public intake rollout", () => {
   test("Phase 5 all named edit targets preserve reviewed values and hidden Other answers are pruned", async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 844 });
     await page.goto(`${DEMO_PATH}?structured=1`);
-    await openInquiry(page, "見積もりをお願いしたい");
+    await openInquiry(page, "quote");
     await page.getByLabel("ご依頼の種類", { exact: true }).selectOption("other");
     await page.getByLabel(/ご依頼の種類（その他の内容）/).fill("イベント表紙");
     await page.getByRole("checkbox", { name: /表情を追加する（表情差分）/ }).check();
