@@ -4,7 +4,7 @@ vi.mock("../requireNatoriAdmin", () => ({ resolveNatoriOperator: () => { throw n
 vi.mock("../trustedNatoriOwner", () => ({ resolveTrustedNatoriOwnerId: () => { throw new Error("Unexpected live owner lookup"); } }));
 import { buildPreviewRecords, previewEnvelopes } from "../../../../../scripts/natori-case-preview/fixtureReader";
 import { deriveCaseReadModel } from "../../lib/caseReadModel";
-import { caseKnown, deriveCaseGuidance, observationLabel } from "../../lib/caseWorkspacePresentation";
+import { caseKnown, caseTurn, deriveCaseGuidance, observationLabel } from "../../lib/caseWorkspacePresentation";
 import { caseWorkspaceHref, parseCaseWorkspaceLocation } from "../../lib/caseWorkspaceNavigation";
 import type { CaseWorkspaceRecord } from "../../types/caseWorkspace";
 import {caseMonthDays,matchesCaseEntry} from "../../lib/caseWorkspaceEntries";
@@ -118,6 +118,18 @@ describe("synthetic reader to case workspace", () => {
     expect(deriveCaseGuidance(normal[0]).primary.section).toBe("transaction");
     expect(deriveCaseGuidance(normal[6]).waits).toContainEqual(expect.objectContaining({ who: "client", text: "お支払い待ち" }));
   });
+  it("keeps a mail check out of the staff turn and sorts it after real chores",async()=>{
+    const data=previewEnvelopes();data[6].sections.financial_notifications={total:0,rows:[]};
+    const [,,,,,,record]=await buildPreviewRecords("normal",data),g=deriveCaseGuidance(record);
+    const mail=g.waits.find(w=>w.text==="支払いリンクのメールが届いたか確認");
+    expect(mail).toEqual(expect.objectContaining({who:"staff",mailCheck:true}));
+    expect(g.waits.findIndex(w=>w.mailCheck)).toBeGreaterThanOrEqual(g.waits.filter(w=>!w.mailCheck).length);
+    expect(caseTurn({waits:[mail!]})).toBe("system");
+    expect(caseTurn({waits:[mail!,{key:"x",who:"staff",text:"相談に返事する",section:"consultation"}]})).toBe("staff");
+    expect(caseTurn({waits:[]})).toBeUndefined();
+    const nav=parseCaseWorkspaceLocation("?entry=cases&filter=staff");
+    if(caseTurn(g)!=="staff")expect(matchesCaseEntry(record,nav)).toBe(false);
+  });
   it("shows the link record and unconfirmed notice without asserting absence or client waiting",async()=>{
     const data=previewEnvelopes();data[6].sections.financial_notifications={total:0,rows:[]};
     const [,,,,,,record]=await buildPreviewRecords("normal",data),g=deriveCaseGuidance(record);
@@ -200,11 +212,11 @@ describe("local case URLs", () => {
   });
   it("puts each case in one turn only, so the turn counts match the すべて groups",async()=>{
     const records=await buildPreviewRecords("normal",previewEnvelopes()),nav=parseCaseWorkspaceLocation("?entry=cases&filter=all");
-    // The fixtures include a case that waits on both sides; it belongs to its first wait.
-    expect(records.some(record=>{const waits=deriveCaseGuidance(record).waits;return waits[0]?.who==="staff"&&waits.some(wait=>wait.who==="client");})).toBe(true);
+    // The fixtures include a case with a mail check for the staff and a wait on the client; the client's wait decides its turn.
+    expect(records.some(record=>{const g=deriveCaseGuidance(record);return caseTurn(g)==="client"&&g.waits.some(wait=>wait.who==="staff"&&wait.mailCheck);})).toBe(true);
     for(const who of ["staff","client"] as const)
       expect(records.filter(record=>matchesCaseEntry(record,{...nav,filter:who})).map(record=>record.id))
-        .toEqual(records.filter(record=>deriveCaseGuidance(record).waits[0]?.who===who).map(record=>record.id));
+        .toEqual(records.filter(record=>caseTurn(deriveCaseGuidance(record))===who).map(record=>record.id));
   });
   it("does not ask the client to pay an accepted quote after manual progress",async()=>{
     const data=previewEnvelopes();data[0].project.status="awaiting_payment";

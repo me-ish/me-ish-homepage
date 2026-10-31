@@ -1,7 +1,7 @@
 import type { CaseNotificationAttempt } from "../types/caseReadModel";
 import type { CaseWorkspaceRecord } from "../types/caseWorkspace";
 import type { CaseWorkspaceLocation } from "./caseWorkspaceNavigation";
-import { caseKnown, deriveCaseGuidance } from "./caseWorkspacePresentation";
+import { caseKnown, caseTurn, deriveCaseGuidance } from "./caseWorkspacePresentation";
 import { isPaymentTimestamp } from "./clientPayment";
 import {casePlannedBars} from "./casePlanning";
 import type {CasePlanning} from "./caseScreenContext";
@@ -26,7 +26,7 @@ export function matchesCaseEntry(record: CaseWorkspaceRecord, nav: CaseWorkspace
   if (!`${record.title} ${record.clientLabel}`.toLocaleLowerCase("ja").includes(nav.query.toLocaleLowerCase("ja"))) return false;
   if (nav.filter==="completed" && project?.rawStatus!=="completed" && !caseKnown(record.display.receipt)) return false;
   // A case belongs to one turn only, the one of its first wait, so the counts add up the way the すべて list groups them.
-  if (nav.filter!=="all" && nav.filter!=="completed" && guidance.waits[0]?.who!==nav.filter) return false;
+  if (nav.filter!=="all" && nav.filter!=="completed" && caseTurn(guidance)!==nav.filter) return false;
   if (nav.entry==="schedule" && caseShelved(record)) return false;
   if (nav.entry==="schedule" && record.registeredDueDate!==nav.date && !casePlannedBars(record,plans??null,today).some(b=>b.startISO<=nav.date&&b.endISO>=nav.date)) return false;
   // トーク: every case that has a talk, plus one whose talk could not be read (never hidden as "no talk").
