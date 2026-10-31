@@ -23,6 +23,7 @@ describe("portfolioWorkflow", () => {
     expect(resolved[1].body).toContain("2〜3日以内にお返事");
     expect(resolved[1].body).toContain("内容が決まったら、金額・納期");
     expect(resolved[0].body).toContain("フォームの送信だけでご依頼は確定しません");
+    expect(resolved[3].body).toContain("ご相談ページ");
     expect(resolved[1].body).not.toContain("以内にお見積もり");
     expect(resolved[2].body).toContain("カード決済用のお支払いリンク");
     expect(resolved[3].body).toContain("量産イラストは原則リテイクなし");
@@ -59,18 +60,20 @@ describe("portfolioWorkflow", () => {
 
 describe("observed public workflow compatibility", () => {
   const observed = () => publicSnapshot.workflow.map((step) => ({ ...step }));
-  it("projects only the three approved fields of the exact observed revision without changing input", () => {
+  it("projects only the approved fields of the exact observed revision without changing input", () => {
     const source = observed(), before = JSON.stringify(source);
     source.forEach(Object.freeze); Object.freeze(source);
     const resolved = resolvePortfolioWorkflow(source);
     expect(resolved).not.toBe(source);
     expect(resolved[0]).toEqual({ ...source[0], body: NATORI_PUBLIC_WORKFLOW[0].body });
     expect(resolved[1]).toEqual({ ...source[1], title: NATORI_PUBLIC_WORKFLOW[1].title, body: NATORI_PUBLIC_WORKFLOW[1].body });
-    for (let index = 2; index < source.length; index++) expect(resolved[index]).toBe(source[index]);
+    expect(resolved[3]).toEqual({ ...source[3], body: NATORI_PUBLIC_WORKFLOW[3].body });
+    for (const index of [2, 4]) expect(resolved[index]).toBe(source[index]);
     expect(JSON.stringify(source)).toBe(before);
     expect(resolved[1].body).toContain("2〜3日以内にお返事");
     expect(resolved[1].body).toContain("金額・納期とご依頼確定のページ");
     expect(resolved[0].body).toContain("フォームの送信だけでご依頼は確定しません");
+    expect(resolved[3].body).toContain("ご相談ページ");
   });
   it.each([0, 1, 2, 3, 4])("preserves a body customization in observed step %s", (index) => {
     const source = observed(); source[index].body += "\n独自の大切な条件です。";
