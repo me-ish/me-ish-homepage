@@ -32,4 +32,15 @@ describe("delivery acceptance safety", () => {
     expect(screen.queryByRole("button", { name: "内容を確認し、受け取りを完了する" })).toBeNull();
     expect(screen.getByText("missing.png")).toBeTruthy();
   });
+  it("shows a small picture only for image files and keeps the file-name link", () => {
+    const { container } = render(<DeliveryAcceptCard {...base} canAccept files={[
+      { id: "1", fileName: "final.PNG", sizeBytes: 20, url: "https://example.invalid/a" },
+      { id: "2", fileName: "layers.psd", sizeBytes: 20, url: "https://example.invalid/b" },
+    ]} />);
+    const pictures = container.querySelectorAll("img");
+    expect(pictures).toHaveLength(1);
+    expect(pictures[0].getAttribute("src")).toBe("https://example.invalid/a");
+    expect(screen.getByRole("link", { name: /final\.PNG/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /layers\.psd/ })).toBeTruthy();
+  });
 });

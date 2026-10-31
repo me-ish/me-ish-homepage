@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { ArrowDown, MessageCircle, Paperclip, RefreshCw, Send } from "lucide-react";
 import { consultationOperationSchema, freezeConsultationOperation, consultationDigest, type ConsultationOperation } from "@/features/natori/lib/consultationOperation";
-import { validConsultationFile } from "@/features/natori/lib/consultationFileRules";
+import { consultationFileExtension, validConsultationFile } from "@/features/natori/lib/consultationFileRules";
 import { consultationUploadEndpoint } from "@/features/natori/lib/consultationUploadEndpoint";
 import type { ConsultationMessage, StaffRoughOk } from "@/features/natori/types/consultation";
 import { roughSignature } from "@/features/natori/lib/roughSignature";
@@ -80,6 +80,8 @@ const threadTone = {
 function dateTime(value: string): string {
   return new Intl.DateTimeFormat("ja-JP", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Tokyo" }).format(new Date(value));
 }
+
+const IMAGE_EXTENSIONS: ReadonlySet<string> = new Set(["jpg", "jpeg", "png", "webp"]);
 
 function roughNote(rough: NonNullable<ConsultationMessage["rough"]>, mode: "staff" | "client"): string {
   const name = rough.beforeQuote ? (mode === "client" ? "参考ラフ（見積もり前）" : "参考ラフ") : "ラフ";
@@ -511,9 +513,18 @@ export default function ConsultationThread(props: Props) {
                   <p className={`whitespace-pre-wrap break-words ${t.body}`}>{renderText(message.body)}</p>
                   {message.filesState==="unavailable"?<p role="status" className={`mt-2 ${t.warning}`}>添付一覧を取得できません。資料の提出状況は、履歴を更新して確認してください。</p>:null}
                   {message.files?.map(file=>file.url?(
-                    <a key={file.id} href={file.url} target="_blank" rel="noopener noreferrer" className={`mt-2 flex items-center gap-2 break-all rounded-xl border px-3 py-2 text-[13px] font-bold leading-5 underline underline-offset-2 transition-colors ${t.file} ${natoriClientUi.focus}`}>
-                      <Paperclip className="h-4 w-4 shrink-0" aria-hidden/>{file.name} ({(file.sizeBytes/1024/1024).toFixed(1)}MB)
-                    </a>
+                    <div key={file.id}>
+                      {IMAGE_EXTENSIONS.has(consultationFileExtension(file.name))?(
+                        <a href={file.url} target="_blank" rel="noopener noreferrer" aria-hidden="true" tabIndex={-1} className="mt-2 block w-fit max-w-full overflow-hidden rounded-xl">
+                          {/* The file-name link below is the accessible one; this is a picture of the same file. */}
+                          {/* eslint-disable-next-line @next/next/no-img-element -- signed Storage URL, shown as-is */}
+                          <img src={file.url} alt="" loading="lazy" className="block max-h-60 w-auto max-w-full object-contain"/>
+                        </a>
+                      ):null}
+                      <a href={file.url} target="_blank" rel="noopener noreferrer" className={`mt-2 flex items-center gap-2 break-all rounded-xl border px-3 py-2 text-[13px] font-bold leading-5 underline underline-offset-2 transition-colors ${t.file} ${natoriClientUi.focus}`}>
+                        <Paperclip className="h-4 w-4 shrink-0" aria-hidden/>{file.name} ({(file.sizeBytes/1024/1024).toFixed(1)}MB)
+                      </a>
+                    </div>
                   ):<p key={file.id} role="status" className={`mt-2 break-all rounded-xl border border-dashed p-3 ${t.caption}`}>{file.name} — 提出済みの添付です。リンクの取得に失敗しました。履歴を更新してください。</p>)}
                 </div>
                 {message.notificationStatus === "failed" && (props.mode === "client" ? message.sender === "client" : message.sender !== "staff" || closed) ? <p className={`mt-1 px-1 ${t.warning}`}>メール通知に失敗 · 相談内容は保存済み</p> : null}
