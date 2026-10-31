@@ -40,11 +40,7 @@ const nextConfig = {
     return [
       { source: '/natori', destination: '/natori/portfolio', permanent: true },
       { source: '/ja/natori', destination: '/natori/portfolio', permanent: true },
-      // The English routes only repeat the Japanese page (lang=en on Japanese text),
-      // so the public pages send readers and search engines to the Japanese URL.
-      { source: '/en/natori', destination: '/natori/portfolio', permanent: true },
-      { source: '/en/natori/portfolio', destination: '/natori/portfolio', permanent: true },
-      { source: '/en/natori/legal/:path*', destination: '/natori/legal/:path*', permanent: true },
+      { source: '/en/natori', destination: '/en/natori/portfolio', permanent: true },
     ];
   },
 
