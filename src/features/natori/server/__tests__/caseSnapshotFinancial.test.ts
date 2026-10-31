@@ -432,6 +432,21 @@ describe("notification identity and provider evidence", () => {
     }], id.project_id)[0].currentSuccessIds).toEqual([]);
   });
 
+  it("reads past a sent intake mail instead of making every new inquiry's mail record unreadable", () => {
+    const intake = (purpose: string, status: string) => row(notice, {
+      id: `intake-${purpose}-${status}`, quote_id: null, purpose, status, snapshot: {},
+      sent_at: status === "sent" ? accepted : null,
+    });
+    const sent = adaptCaseFinancial(context({ financial_notifications: [
+      intake("intake_client", "sent"), intake("intake_artist", "sent"),
+    ] }));
+    expect(sent.notifications.state).toBe("ready");
+    expect(value(sent.notifications)).toEqual([]);
+    // 送信前・失敗の受付メールは今までどおり、読み飛ばさず未対応として扱う。
+    expect(adaptCaseFinancial(context({ financial_notifications: [intake("intake_client", "pending")] }))
+      .notifications.state).toBe("unavailable");
+  });
+
   it("does not call a staff rough-OK notification a rough submission notice", () => {
     const result = adaptCaseFinancial(context({ financial_notifications: [row(notice, {
       purpose: "rough_ok_artist", quote_id: null, rough_id: "rough-fixture", rough_ok_at: accepted,
@@ -443,7 +458,7 @@ describe("notification identity and provider evidence", () => {
   });
 
   it("exposes unsupported purpose boundaries without losing the separate payment domain", () => {
-    for (const purpose of ["payment_received_client", "refund_confirmed_artist", "intake_client", "future-purpose"]) {
+    for (const purpose of ["payment_received_client", "refund_confirmed_artist", "future-purpose"]) {
       const result = adaptCaseFinancial(context({
         financial_payments: [payment], financial_notifications: [row(notice, { purpose })],
       }, paidProject));

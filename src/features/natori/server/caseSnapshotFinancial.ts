@@ -388,6 +388,11 @@ function adaptNotifications(
   if (notices.state !== "ready" || legacy.state !== "ready") return incompleteSource();
   const facts: CaseNotificationAttempt[] = [];
   for (const j of notices.rows) {
+    // 受付フォームの受付メール（依頼者宛・ナトリ宛）は見積・支払い・納品のどの対象にも結びつかない。
+    // 送信済みなら案件の状態に関わらないので読み飛ばす。これを「未対応」と読むと、新しい依頼では
+    // メールの記録全体が読めない扱いになり、「見積を作る」が自分の番に出なくなる。
+    // 送信前・失敗のものは今までどおり未対応として扱う。
+    if ((j.purpose === "intake_client" || j.purpose === "intake_artist") && j.status === "sent") continue;
     if (!sourceOccurred(ctx, j.created_at) || !sourceOccurred(ctx, j.updated_at)
       || (j.status === "sent" ? !j.sent_at || !sourceOccurred(ctx, j.sent_at) : j.sent_at !== null)
       || !atOrAfter(j.updated_at, j.created_at)
