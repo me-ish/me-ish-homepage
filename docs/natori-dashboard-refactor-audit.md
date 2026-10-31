@@ -1,5 +1,7 @@
 # Natori Dashboard Refactor Audit
 
+> **過去の記録（2026-05 の計画）です。** ここに出てくる `src/components/natori/*` などの場所は、その後 `src/features/natori/` へ移しています。今の構成は `CLAUDE.md` を見てください。
+
 Date: 2026-05-21
 
 This note records the current structure and a low-risk migration plan for moving from the paused me-ish gallery product toward a Natori production support dashboard.
