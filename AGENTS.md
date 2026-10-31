@@ -3,11 +3,13 @@
 Shared working agreement for coding agents operating in this repo.
 
 ## Project basics
-- Repo: Next.js App Router + TypeScript + Tailwind + shadcn/ui + Supabase + Stripe + thirdweb.
-- App routes: `src/app`
-- Components: `src/components`
-- AURA logic: `src/lib/aura`
-- AURA components: `src/components/aura`
+- Repo: Next.js App Router + TypeScript + Tailwind + shadcn/ui + Supabase + Stripe + Resend.
+- The only active product is Natori (portfolio, intake, case management, quotes, payments, delivery).
+  The legacy gallery / AURA / CARD services were retired on 2026-10-10; do not add features to them
+  (see `docs/cleanup-index.md`).
+- App routes: `src/app` (Natori pages under `src/app/[locale]/natori/`, APIs under `src/app/api/natori/`)
+- Natori code: `src/features/natori/` (folder rules in `CLAUDE.md`)
+- Shared UI: `src/components/ui`
 
 ## Non-negotiables
 - Do not open `.env` / `.env.*` or read secrets.

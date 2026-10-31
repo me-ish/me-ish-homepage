@@ -1,10 +1,6 @@
 {
   "permissions": {
-    "allow": [
-      "Read(./src/lib/aura/**)",
-      "Edit(./src/lib/aura/**)",
-      "Write(./src/lib/aura/**)"
-    ],
+    "allow": [],
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)",

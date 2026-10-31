@@ -28,6 +28,39 @@ const TABLE_ROLE_OVERRIDES = {
   profiles: 'ユーザープロフィール',
   sales: '購入・売上トランザクション',
   special_thanks: 'Special Thanks表示管理',
+  admin_audit_log: '管理操作の記録',
+  processed_stripe_events: 'Stripe Webhookの処理済みイベント（二重処理の防止）',
+  natori_projects: 'ナトリ: 案件本体（依頼〜納品）',
+  natori_quotes: 'ナトリ: 見積',
+  natori_project_tasks: 'ナトリ: 案件の制作工程',
+  natori_project_reference_links: 'ナトリ: 案件の参考リンク',
+  natori_inquiry_reference_files: 'ナトリ: 依頼時の参考ファイル',
+  natori_intake_operations: 'ナトリ: 依頼受付の処理記録（二重送信の防止・再実行）',
+  natori_consultation_access: 'ナトリ: 相談ページ（トーク）のアクセス鍵',
+  natori_consultation_messages: 'ナトリ: トークのメッセージ',
+  natori_consultation_files: 'ナトリ: トークの添付ファイル',
+  natori_consultation_uploads: 'ナトリ: トークへのアップロード（確定前を含む）',
+  natori_project_activity: 'ナトリ: 案件の出来事の記録',
+  natori_quote_access: 'ナトリ: 見積ページのアクセス鍵',
+  natori_estimate_drafts: 'ナトリ: 見積の下書き',
+  natori_pricing_configs: 'ナトリ: 料金表の設定',
+  natori_payment_transactions: 'ナトリ: 支払いの記録',
+  natori_refund_ledger: 'ナトリ: 返金の記録',
+  natori_notification_jobs: 'ナトリ: 通知メールの送信待ち・送信結果',
+  natori_order_mail_logs: 'ナトリ: 見積・支払いなどの送信メール記録',
+  natori_stripe_event_inbox: 'ナトリ: Stripeからの通知の受け箱（処理待ち・処理済み）',
+  natori_delivery_files: 'ナトリ: 納品ファイル',
+  natori_delivery_releases: 'ナトリ: 納品ページに出す内容（公開版）',
+  natori_delivery_access: 'ナトリ: 納品ページのアクセス鍵',
+  natori_delivery_operations: 'ナトリ: 納品の送信操作（二重送信の防止）',
+  natori_delivery_extensions: 'ナトリ: 納品ページの公開期限の延長記録',
+  natori_case_acceptance_runs: 'ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）',
+  natori_events: 'ナトリ: 予定',
+  natori_user_profiles: 'ナトリ: 作家プロフィール（1日の作業時間など）',
+  natori_portfolio_content: 'ナトリ: ポートフォリオページの内容',
+  natori_portfolio_assets: 'ナトリ: ポートフォリオのアップロード素材',
+  natori_links_content: 'ナトリ: リンク集ページの内容',
+  natori_page_events: 'ナトリ: 公開ページの閲覧・クリック記録',
 };
 
 const COLUMN_DESC_OVERRIDES = {
@@ -175,20 +208,54 @@ function parseTables(schemaText) {
   const rows = lines.slice(start + 1, end);
   const tables = [];
 
+  // `Row: NatoriDeliveryReleaseRow` のように、ファイル先頭の型を参照している表のための列一覧
+  const rowAliases = new Map();
+  for (let j = 0; j < start; j += 1) {
+    const am = lines[j].match(/^export type ([A-Za-z0-9_]+) = \{$/);
+    if (!am) continue;
+    const aliasLines = [];
+    for (j += 1; j < start && !/^\}\s*$/.test(lines[j]); j += 1) {
+      if (/^\s{2}\S/.test(lines[j])) aliasLines.push(lines[j].trim());
+    }
+    rowAliases.set(am[1], aliasLines);
+  }
+
   for (let i = 0; i < rows.length; i += 1) {
     const tm = rows[i].match(/^\s{6}([a-zA-Z0-9_]+):\s\{$/);
     if (!tm) continue;
 
     const tableName = tm[1];
 
-    while (i < rows.length && !/^\s{8}Row:\s\{$/.test(rows[i])) i += 1;
-    if (i >= rows.length) break;
-    i += 1;
+    // Row を探すのは次のテーブルの見出しまで（Row が見つからない表で次の表の列を拾わない）
+    while (i < rows.length && !/^\s{8}Row:\s/.test(rows[i])) {
+      if (/^\s{6}[a-zA-Z0-9_]+:\s\{$/.test(rows[i + 1] ?? '')) break;
+      i += 1;
+    }
+    if (i >= rows.length || !/^\s{8}Row:\s/.test(rows[i])) continue;
+
+    // `Row: { a: string; b: number }` と1行で書く表、型名を参照する表、複数行で書く表を読む
+    const lines = [];
+    const inline = rows[i].match(/^\s{8}Row:\s\{\s*(.+?)\s*\}\s*$/);
+    const alias = rows[i].match(/^\s{8}Row:\s([A-Za-z0-9_]+)\s*$/);
+    if (alias) {
+      lines.push(...(rowAliases.get(alias[1]) ?? []));
+    } else if (inline) {
+      lines.push(inline[1]);
+    } else {
+      i += 1;
+      while (i < rows.length && !/^\s{8}\}\s*$/.test(rows[i])) {
+        // 型が次の行へ続く行（字下げが深い行）は読まない
+        if (/^\s{10}\S/.test(rows[i])) lines.push(rows[i].trim());
+        i += 1;
+      }
+    }
 
     const columns = [];
-    while (i < rows.length && !/^\s{8}\}\s*$/.test(rows[i])) {
-      const cm = rows[i].match(/^\s{10}([a-zA-Z0-9_]+):\s(.+)$/);
-      if (cm) {
+    for (const line of lines) {
+      // 1行に `a: string; b: number;` と複数列が並ぶ書き方にも対応する
+      for (const field of line.split(/;\s+(?=[a-zA-Z0-9_]+:\s)/)) {
+        const cm = field.match(/^([a-zA-Z0-9_]+):\s(.+?);?$/);
+        if (!cm) continue;
         const typeText = cm[2].trim();
         columns.push({
           name: cm[1],
@@ -196,7 +263,6 @@ function parseTables(schemaText) {
           nullable: /\|\snull\b/.test(typeText),
         });
       }
-      i += 1;
     }
 
     tables.push({ name: tableName, columns });
@@ -230,6 +296,8 @@ function generateMarkdown(tables) {
   lines.push('');
   lines.push(`- 生成元: \`src/types/supabase.ts\``);
   lines.push(`- 生成日時: \`${now}\``);
+  lines.push('- 型定義に載っているテーブルだけを並べています。DBにある全テーブルと最新の定義は `supabase/migrations/` を参照してください。');
+  lines.push('- 作り直し: `npm run docs:supabase`');
   lines.push('');
   lines.push('## 一覧');
   lines.push('');

@@ -10,12 +10,19 @@ Next.js App Router + TypeScript + Tailwind + Supabase + Stripe。
 
 ## まず読む資料
 
+- [開発時の共通ルール](AGENTS.md) / [ナトリの構成ルール](CLAUDE.md)
 - [現役・休止・保存用の整理索引](docs/cleanup-index.md)
+- [Supabaseテーブル説明](docs/supabase-tables-ja.md)（`npm run docs:supabase` で型定義から作り直す）
+
+旧サービスを整理したときの記録（2026-10-08〜10）:
+
 - [引き継ぎ・最終コード整理](docs/archive/legacy-support-20261010.md)
 - [DB/Storageの保持・削除候補・復元条件](docs/archive/cleanup-data-retention-20261010.md)
 - [旧サービスの停止範囲](docs/cleanup-legacy-service-stop-20261009.md)
 - [保全・停止・削除の条件](docs/archive/Cleanup_Backup_and_Stop_Gates_2026-10-08.md)
-- [開発時の共通ルール](AGENTS.md) / [ナトリの構成ルール](CLAUDE.md)
+
+`docs/natori/`、`docs/etorie-*`、`docs/artifacts/` などは、その時点の作業記録です。
+今のコードと食い違うことがあるので、仕様の根拠にはコードと `supabase/migrations/` を使ってください。
 
 ## 現在の構成
 
@@ -30,10 +37,27 @@ Next.js App Router + TypeScript + Tailwind + Supabase + Stripe。
 | `public/` | 公開素材。ページや保存データの参照先を保護 |
 | `docs/archive/` | 整理対象の台帳・復元方法。旧コード本体はGitの固定コミットに保管 |
 
-## 主要な公開URL
+## 主要なURL
+
+ナトリ（公開・依頼者向け）:
 
 - `/natori/portfolio` — ナトリのポートフォリオ
 - `/natori/portfolio/contact` — ご相談・ご依頼
+- `/natori/consult/[token]` — 案件ごとのトーク（依頼者とのやりとり）
+- `/natori/quote/[token]` — 見積の確認・承認
+- `/natori/delivery/[token]` — 納品ファイルの受け取り
+- `/natori/links` — リンク集
+- `/natori/legal/{terms,privacy,tokushoho}` — 利用規約・プライバシー・特商法
+
+ナトリ（管理画面）:
+
+- `/natori/dashboard` — 案件管理（案件ワークスペース。切り替え設定がオフのときは以前のダッシュボード）
+- `/natori/inquiries`、`/natori/projects`、`/natori/estimate`、`/natori/results` — 問い合わせ・案件・見積もり・実績
+- `/natori/portfolio/edit`、`/natori/links/edit` — ポートフォリオ・リンク集の編集
+- 入り方: Googleログイン（`admin_emails` テーブル、または環境変数 `NATORI_STAFF_EMAILS` / `NATORI_OWNER_EMAILS` に載っているメール）か、共有鍵（Cookie、8時間）。判定は `src/features/natori/server/requireNatoriAdmin.ts`
+
+その他:
+
 - `/etorie/demo/app/portfolio` — 受付試験にも使うデモ
 - `/`、`/artists/natori` — 現在のナトリポートフォリオへ転送
 - `/float`、`/white`、旧作品・作家、AURA / CARD — [公開終了](docs/archive/legacy-public-20261010.md)。保存データは維持
