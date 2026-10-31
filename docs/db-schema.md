@@ -1,5 +1,8 @@
 ﻿# Supabase Schema (public)
 
+> **古い記録です。** 旧サービスが動いていた頃の手動エクスポートで、ナトリのテーブル（`natori_*`）が載っていません。また AURA など終了済みサービスのテーブルを含みます。
+> 今のテーブルは [supabase-tables-ja.md](supabase-tables-ja.md)（型定義から生成）と `supabase/migrations/` を見てください。
+
 Source: Supabase SQL metadata export provided in this thread (tables/columns/constraints/indexes/RLS).
 
 ## Tables

@@ -28,6 +28,25 @@ const TABLE_ROLE_OVERRIDES = {
   profiles: 'ユーザープロフィール',
   sales: '購入・売上トランザクション',
   special_thanks: 'Special Thanks表示管理',
+  processed_stripe_events: 'Stripe Webhookの処理済みイベント（二重処理の防止）',
+  natori_projects: 'ナトリ: 案件本体（依頼〜納品）',
+  natori_quotes: 'ナトリ: 見積',
+  natori_project_tasks: 'ナトリ: 案件の制作工程',
+  natori_project_reference_links: 'ナトリ: 案件の参考リンク',
+  natori_inquiry_reference_files: 'ナトリ: 依頼時の参考ファイル',
+  natori_intake_operations: 'ナトリ: 依頼受付の処理記録（二重送信の防止・再実行）',
+  natori_consultation_access: 'ナトリ: 相談ページ（トーク）の出来事の記録',
+  natori_order_mail_logs: 'ナトリ: 見積・支払いなどの送信メール記録',
+  natori_stripe_event_inbox: 'ナトリ: Stripeからの支払い通知の受け箱',
+  natori_delivery_files: 'ナトリ: 納品ファイル',
+  natori_delivery_releases: 'ナトリ: 納品の公開操作の記録',
+  natori_case_acceptance_runs: 'ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）',
+  natori_events: 'ナトリ: 予定',
+  natori_user_profiles: 'ナトリ: 作家プロフィール（1日の作業時間など）',
+  natori_portfolio_content: 'ナトリ: ポートフォリオページの内容',
+  natori_portfolio_assets: 'ナトリ: ポートフォリオの表示プリセット',
+  natori_links_content: 'ナトリ: リンク集ページの内容',
+  natori_page_events: 'ナトリ: 公開ページの閲覧・クリック記録',
 };
 
 const COLUMN_DESC_OVERRIDES = {
@@ -187,8 +206,13 @@ function parseTables(schemaText) {
 
     const columns = [];
     while (i < rows.length && !/^\s{8}\}\s*$/.test(rows[i])) {
-      const cm = rows[i].match(/^\s{10}([a-zA-Z0-9_]+):\s(.+)$/);
-      if (cm) {
+      // 1行に `a: string; b: number;` と複数列が並ぶ書き方にも対応する
+      const fields = /^\s{10}\S/.test(rows[i])
+        ? rows[i].trim().split(/;\s+(?=[a-zA-Z0-9_]+:\s)/)
+        : [];
+      for (const field of fields) {
+        const cm = field.match(/^([a-zA-Z0-9_]+):\s(.+?);?$/);
+        if (!cm) continue;
         const typeText = cm[2].trim();
         columns.push({
           name: cm[1],
@@ -230,6 +254,8 @@ function generateMarkdown(tables) {
   lines.push('');
   lines.push(`- 生成元: \`src/types/supabase.ts\``);
   lines.push(`- 生成日時: \`${now}\``);
+  lines.push('- 型定義に載っているテーブルだけを並べています。DBにある全テーブルと最新の定義は `supabase/migrations/` を参照してください。');
+  lines.push('- 作り直し: `npm run docs:supabase`');
   lines.push('');
   lines.push('## 一覧');
   lines.push('');

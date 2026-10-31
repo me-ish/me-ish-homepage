@@ -1,4 +1,41 @@
 table,column,ts_type,nullable,table_role,column_description
+natori_case_acceptance_runs,id,string,NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,主キーID
+natori_case_acceptance_runs,owner_id,string,NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,owner_id（natori_case_acceptance_runs）
+natori_case_acceptance_runs,project_ref,string,NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,project_ref（natori_case_acceptance_runs）
+natori_case_acceptance_runs,origin,string,NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,origin（natori_case_acceptance_runs）
+natori_case_acceptance_runs,provider_scope,string,NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,provider_scope（natori_case_acceptance_runs）
+natori_case_acceptance_runs,stripe_account,string,NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,stripe_account（natori_case_acceptance_runs）
+natori_case_acceptance_runs,starts_at,string,NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,starts_at（natori_case_acceptance_runs）
+natori_case_acceptance_runs,ends_at,string,NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,ends_at（natori_case_acceptance_runs）
+natori_case_acceptance_runs,enabled,boolean,NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,enabled（natori_case_acceptance_runs）
+natori_case_acceptance_runs,allowed_to,string[],NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,allowed_to（natori_case_acceptance_runs）
+natori_case_acceptance_runs,human_to,string[],NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,human_to（natori_case_acceptance_runs）
+natori_case_acceptance_runs,sender,string,NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,sender（natori_case_acceptance_runs）
+natori_case_acceptance_runs,reply_to,string,NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,reply_to（natori_case_acceptance_runs）
+natori_case_acceptance_runs,mail_limit,number,NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,mail_limit（natori_case_acceptance_runs）
+natori_case_acceptance_runs,human_limit,number,NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,human_limit（natori_case_acceptance_runs）
+natori_case_acceptance_runs,used,number,NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,used（natori_case_acceptance_runs）
+natori_case_acceptance_runs,human_used,number,NO,ナトリ: 受け入れ確認の実行設定（送信先・期間・メール上限）,human_used（natori_case_acceptance_runs）
+natori_intake_operations,owner_id,string,NO,ナトリ: 依頼受付の処理記録（二重送信の防止・再実行）,owner_id（natori_intake_operations）
+natori_intake_operations,operation_id,string,NO,ナトリ: 依頼受付の処理記録（二重送信の防止・再実行）,operation_id（natori_intake_operations）
+natori_intake_operations,request_hash,string,NO,ナトリ: 依頼受付の処理記録（二重送信の防止・再実行）,request_hash（natori_intake_operations）
+natori_intake_operations,project_id,string,NO,ナトリ: 依頼受付の処理記録（二重送信の防止・再実行）,project_id（natori_intake_operations）
+natori_intake_operations,manifest,Json,NO,ナトリ: 依頼受付の処理記録（二重送信の防止・再実行）,manifest（natori_intake_operations）
+natori_intake_operations,reference_paths,Json,NO,ナトリ: 依頼受付の処理記録（二重送信の防止・再実行）,reference_paths（natori_intake_operations）
+natori_intake_operations,status,string,NO,ナトリ: 依頼受付の処理記録（二重送信の防止・再実行）,ステータス
+natori_intake_operations,claim_token,string | null,YES,ナトリ: 依頼受付の処理記録（二重送信の防止・再実行）,claim_token（natori_intake_operations）
+natori_intake_operations,lease_expires_at,string | null,YES,ナトリ: 依頼受付の処理記録（二重送信の防止・再実行）,lease_expires_at（natori_intake_operations）
+natori_intake_operations,replay_result,Json | null,YES,ナトリ: 依頼受付の処理記録（二重送信の防止・再実行）,replay_result（natori_intake_operations）
+natori_intake_operations,notification_ids,string[],NO,ナトリ: 依頼受付の処理記録（二重送信の防止・再実行）,notification_ids（natori_intake_operations）
+natori_intake_operations,created_at,string,NO,ナトリ: 依頼受付の処理記録（二重送信の防止・再実行）,作成日時
+natori_intake_operations,updated_at,string,NO,ナトリ: 依頼受付の処理記録（二重送信の防止・再実行）,更新日時
+natori_delivery_releases,action,string,NO,ナトリ: 納品の公開操作の記録,action（natori_delivery_releases）
+natori_delivery_releases,admin_email,string,NO,ナトリ: 納品の公開操作の記録,admin_email（natori_delivery_releases）
+natori_delivery_releases,created_at,string,NO,ナトリ: 納品の公開操作の記録,作成日時
+natori_delivery_releases,detail,Json | null,YES,ナトリ: 納品の公開操作の記録,detail（natori_delivery_releases）
+natori_delivery_releases,id,string,NO,ナトリ: 納品の公開操作の記録,主キーID
+natori_delivery_releases,resource_id,string | null,YES,ナトリ: 納品の公開操作の記録,resource_id（natori_delivery_releases）
+natori_delivery_releases,resource_type,string,NO,ナトリ: 納品の公開操作の記録,resource_type（natori_delivery_releases）
 admin_emails,email,string,NO,管理者メールの許可リスト,メールアドレス
 announcements,body_md,string,NO,サイトのお知らせ管理,本文（Markdown）
 announcements,category,string,NO,サイトのお知らせ管理,カテゴリ
@@ -19,36 +56,6 @@ artists_bank_accounts,branch_code,string,NO,作家の振込先口座情報,支�
 artists_bank_accounts,external_user_id,string,NO,作家の振込先口座情報,外部ユーザーID
 artists_bank_accounts,id,number,NO,作家の振込先口座情報,主キーID
 artists_bank_accounts,updated_at,string,NO,作家の振込先口座情報,更新日時
-aura_first20_redemptions,converted_to_meish_at,string | null,YES,AURAの初期特典利用履歴,converted_to_meish_at（aura_first20_redemptions）
-aura_first20_redemptions,created_at,string,NO,AURAの初期特典利用履歴,作成日時
-aura_first20_redemptions,email,string,NO,AURAの初期特典利用履歴,メールアドレス
-aura_first20_redemptions,request_id,string | null,YES,AURAの初期特典利用履歴,リクエストID
-aura_first20_redemptions,used_at,string,NO,AURAの初期特典利用履歴,使用日時
-aura_meish_free_claims,created_at,string,NO,AURA→ME-ISH無料付与の利用記録,作成日時
-aura_meish_free_claims,email,string,NO,AURA→ME-ISH無料付与の利用記録,メールアドレス
-aura_meish_free_claims,entry_id,number | null,YES,AURA→ME-ISH無料付与の利用記録,作品エントリーID
-aura_meish_free_claims,request_id,string | null,YES,AURA→ME-ISH無料付与の利用記録,リクエストID
-aura_meish_free_claims,used_at,string,NO,AURA→ME-ISH無料付与の利用記録,使用日時
-aura_promo_counters,key,string,NO,プロモーション上限のカウンタ管理,管理キー
-aura_promo_counters,limit_count,number,NO,プロモーション上限のカウンタ管理,上限数
-aura_requests,content,Json | null,YES,AURA生成リクエスト本体,内容（JSON）
-aura_requests,created_at,string,NO,AURA生成リクエスト本体,作成日時
-aura_requests,design,Json | null,YES,AURA生成リクエスト本体,デザイン設定（JSON）
-aura_requests,email,string | null,YES,AURA生成リクエスト本体,メールアドレス
-aura_requests,error,string | null,YES,AURA生成リクエスト本体,エラー内容
-aura_requests,id,string,NO,AURA生成リクエスト本体,主キーID
-aura_requests,paid_at,string | null,YES,AURA生成リクエスト本体,支払完了日時
-aura_requests,payload,Json | null,YES,AURA生成リクエスト本体,入力データ（JSON）
-aura_requests,payment_status,string,NO,AURA生成リクエスト本体,決済ステータス
-aura_requests,public_id,string | null,YES,AURA生成リクエスト本体,公開用ID
-aura_requests,public_slug,string | null,YES,AURA生成リクエスト本体,公開用スラッグ
-aura_requests,published_at,string | null,YES,AURA生成リクエスト本体,公開日時
-aura_requests,renderer_version,string,NO,AURA生成リクエスト本体,レンダラー版本
-aura_requests,session_token,string | null,YES,AURA生成リクエスト本体,セッショントークン
-aura_requests,slug,string | null,YES,AURA生成リクエスト本体,スラッグ
-aura_requests,status,string,NO,AURA生成リクエスト本体,ステータス
-aura_requests,updated_at,string,NO,AURA生成リクエスト本体,更新日時
-aura_requests,visibility,string,NO,AURA生成リクエスト本体,公開範囲
 cert_links,created_at,string,NO,証明書ダウンロードリンク管理,作成日時
 cert_links,entry_id,number,NO,証明書ダウンロードリンク管理,作品エントリーID
 cert_links,expires_at,string | null,YES,証明書ダウンロードリンク管理,有効期限
@@ -77,11 +84,17 @@ entries,edition_remaining,number | null,YES,作品エントリー本体（審査
 entries,edition_sold,number,NO,作品エントリー本体（審査・展示・販売・精算）,販売済みエディション数
 entries,edition_total,number | null,YES,作品エントリー本体（審査・展示・販売・精算）,総エディション数
 entries,email,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,メールアドレス
+entries,end_notified_at,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,end_notified_at（entries）
 entries,ending_soon_notified_at,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,終了間近通知送信日時
 entries,external_user_id,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,外部ユーザーID
 entries,file_name,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,ファイル名
 entries,force_wm,boolean,NO,作品エントリー本体（審査・展示・販売・精算）,強制ウォーターマーク適用フラグ
 entries,gallery_type,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,gallery_type（entries）
+entries,guarantee_extended_count,number | null,YES,作品エントリー本体（審査・展示・販売・精算）,guarantee_extended_count（entries）
+entries,guarantee_period_end,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,guarantee_period_end（entries）
+entries,guarantee_period_start,string | null,YES,作品エントリー本体（審査・展示・販売・精算）,guarantee_period_start（entries）
+entries,guarantee_remaining,number | null,YES,作品エントリー本体（審査・展示・販売・精算）,guarantee_remaining（entries）
+entries,guarantee_total,number | null,YES,作品エントリー本体（審査・展示・販売・精算）,guarantee_total（entries）
 entries,has_signature,boolean | null,YES,作品エントリー本体（審査・展示・販売・精算）,署名有無フラグ
 entries,id,number,NO,作品エントリー本体（審査・展示・販売・精算）,主キーID
 entries,image_url,string,NO,作品エントリー本体（審査・展示・販売・精算）,画像URL
@@ -117,21 +130,177 @@ entry_processing_jobs,locked_at,string | null,YES,作品処理の非同期ジョ
 entry_processing_jobs,locked_by,string | null,YES,作品処理の非同期ジョブ管理,locked_by（entry_processing_jobs）
 entry_processing_jobs,status,string,NO,作品処理の非同期ジョブ管理,ステータス
 entry_processing_jobs,updated_at,string,NO,作品処理の非同期ジョブ管理,更新日時
-entry_view_events,entry_id,number,NO,作品閲覧イベントログ,作品エントリーID
-entry_view_events,id,string,NO,作品閲覧イベントログ,主キーID
-entry_view_events,occurred_at,string,NO,作品閲覧イベントログ,occurred_at（entry_view_events）
-entry_view_events,session_id,string | null,YES,作品閲覧イベントログ,セッションID
-entry_view_events,viewer_user_id,string | null,YES,作品閲覧イベントログ,viewer_user_id（entry_view_events）
 inquiries,created_at,string | null,YES,問い合わせ管理,作成日時
 inquiries,email,string,NO,問い合わせ管理,メールアドレス
 inquiries,id,string,NO,問い合わせ管理,主キーID
 inquiries,is_read,boolean | null,YES,問い合わせ管理,既読フラグ
 inquiries,message,string,NO,問い合わせ管理,本文メッセージ
 inquiries,name,string,NO,問い合わせ管理,氏名
-likes,created_at,string,NO,いいね履歴,作成日時
-likes,entry_id,number,NO,いいね履歴,作品エントリーID
-likes,id,string,NO,いいね履歴,主キーID
-likes,user_id,string,NO,いいね履歴,ユーザーID
+natori_delivery_files,state,string,NO,ナトリ: 納品ファイル,state（natori_delivery_files）
+natori_delivery_files,content_type,string | null,YES,ナトリ: 納品ファイル,content_type（natori_delivery_files）
+natori_delivery_files,storage_version,string | null,YES,ナトリ: 納品ファイル,storage_version（natori_delivery_files）
+natori_delivery_files,verified_at,string | null,YES,ナトリ: 納品ファイル,verified_at（natori_delivery_files）
+natori_delivery_files,deleted_at,string | null,YES,ナトリ: 納品ファイル,deleted_at（natori_delivery_files）
+natori_delivery_files,created_at,string,NO,ナトリ: 納品ファイル,作成日時
+natori_delivery_files,file_name,string,NO,ナトリ: 納品ファイル,ファイル名
+natori_delivery_files,folder,string,NO,ナトリ: 納品ファイル,folder（natori_delivery_files）
+natori_delivery_files,id,string,NO,ナトリ: 納品ファイル,主キーID
+natori_delivery_files,project_id,string,NO,ナトリ: 納品ファイル,project_id（natori_delivery_files）
+natori_delivery_files,size_bytes,number,NO,ナトリ: 納品ファイル,size_bytes（natori_delivery_files）
+natori_delivery_files,storage_path,string,NO,ナトリ: 納品ファイル,storage_path（natori_delivery_files）
+natori_events,created_at,string,NO,ナトリ: 予定,作成日時
+natori_events,date,string,NO,ナトリ: 予定,date（natori_events）
+natori_events,id,string,NO,ナトリ: 予定,主キーID
+natori_events,note,string | null,YES,ナトリ: 予定,備考
+natori_events,title,string,NO,ナトリ: 予定,タイトル
+natori_events,updated_at,string,NO,ナトリ: 予定,更新日時
+natori_events,user_id,string,NO,ナトリ: 予定,ユーザーID
+natori_inquiry_reference_files,created_at,string,NO,ナトリ: 依頼時の参考ファイル,作成日時
+natori_inquiry_reference_files,id,string,NO,ナトリ: 依頼時の参考ファイル,主キーID
+natori_inquiry_reference_files,project_id,string,NO,ナトリ: 依頼時の参考ファイル,project_id（natori_inquiry_reference_files）
+natori_inquiry_reference_files,storage_path,string,NO,ナトリ: 依頼時の参考ファイル,storage_path（natori_inquiry_reference_files）
+natori_links_content,content,Json,NO,ナトリ: リンク集ページの内容,内容（JSON）
+natori_links_content,id,string,NO,ナトリ: リンク集ページの内容,主キーID
+natori_links_content,updated_at,string,NO,ナトリ: リンク集ページの内容,更新日時
+natori_order_mail_logs,amount,number,NO,ナトリ: 見積・支払いなどの送信メール記録,amount（natori_order_mail_logs）
+natori_order_mail_logs,body_snapshot,string,NO,ナトリ: 見積・支払いなどの送信メール記録,body_snapshot（natori_order_mail_logs）
+natori_order_mail_logs,created_at,string,NO,ナトリ: 見積・支払いなどの送信メール記録,作成日時
+natori_order_mail_logs,error_message,string | null,YES,ナトリ: 見積・支払いなどの送信メール記録,error_message（natori_order_mail_logs）
+natori_order_mail_logs,id,number,NO,ナトリ: 見積・支払いなどの送信メール記録,主キーID
+natori_order_mail_logs,kind,string,NO,ナトリ: 見積・支払いなどの送信メール記録,kind（natori_order_mail_logs）
+natori_order_mail_logs,link_url,string | null,YES,ナトリ: 見積・支払いなどの送信メール記録,リンクURL
+natori_order_mail_logs,project_id,string,NO,ナトリ: 見積・支払いなどの送信メール記録,project_id（natori_order_mail_logs）
+natori_order_mail_logs,quote_id,string | null,YES,ナトリ: 見積・支払いなどの送信メール記録,quote_id（natori_order_mail_logs）
+natori_order_mail_logs,request_id,string,NO,ナトリ: 見積・支払いなどの送信メール記録,リクエストID
+natori_order_mail_logs,sent_at,string | null,YES,ナトリ: 見積・支払いなどの送信メール記録,sent_at（natori_order_mail_logs）
+natori_order_mail_logs,status,string,NO,ナトリ: 見積・支払いなどの送信メール記録,ステータス
+natori_order_mail_logs,subject,string,NO,ナトリ: 見積・支払いなどの送信メール記録,subject（natori_order_mail_logs）
+natori_order_mail_logs,to_email,string,NO,ナトリ: 見積・支払いなどの送信メール記録,to_email（natori_order_mail_logs）
+natori_order_mail_logs,updated_at,string,NO,ナトリ: 見積・支払いなどの送信メール記録,更新日時
+natori_page_events,created_at,string,NO,ナトリ: 公開ページの閲覧・クリック記録,作成日時
+natori_page_events,event,string,NO,ナトリ: 公開ページの閲覧・クリック記録,event（natori_page_events）
+natori_page_events,id,number,NO,ナトリ: 公開ページの閲覧・クリック記録,主キーID
+natori_page_events,label,string,NO,ナトリ: 公開ページの閲覧・クリック記録,label（natori_page_events）
+natori_page_events,path,string,NO,ナトリ: 公開ページの閲覧・クリック記録,path（natori_page_events）
+natori_stripe_event_inbox,amount,number,NO,ナトリ: Stripeからの支払い通知の受け箱,amount（natori_stripe_event_inbox）
+natori_stripe_event_inbox,id,string,NO,ナトリ: Stripeからの支払い通知の受け箱,主キーID
+natori_stripe_event_inbox,note,string | null,YES,ナトリ: Stripeからの支払い通知の受け箱,備考
+natori_stripe_event_inbox,project_id,string,NO,ナトリ: Stripeからの支払い通知の受け箱,project_id（natori_stripe_event_inbox）
+natori_stripe_event_inbox,quote_id,string | null,YES,ナトリ: Stripeからの支払い通知の受け箱,quote_id（natori_stripe_event_inbox）
+natori_stripe_event_inbox,received_at,string,NO,ナトリ: Stripeからの支払い通知の受け箱,received_at（natori_stripe_event_inbox）
+natori_stripe_event_inbox,status,string,NO,ナトリ: Stripeからの支払い通知の受け箱,ステータス
+natori_stripe_event_inbox,stripe_account_scope,string | null,YES,ナトリ: Stripeからの支払い通知の受け箱,stripe_account_scope（natori_stripe_event_inbox）
+natori_stripe_event_inbox,stripe_livemode,boolean | null,YES,ナトリ: Stripeからの支払い通知の受け箱,stripe_livemode（natori_stripe_event_inbox）
+natori_stripe_event_inbox,stripe_payment_intent_id,string | null,YES,ナトリ: Stripeからの支払い通知の受け箱,stripe_payment_intent_id（natori_stripe_event_inbox）
+natori_stripe_event_inbox,stripe_charge_id,string | null,YES,ナトリ: Stripeからの支払い通知の受け箱,stripe_charge_id（natori_stripe_event_inbox）
+natori_stripe_event_inbox,stripe_currency,string | null,YES,ナトリ: Stripeからの支払い通知の受け箱,stripe_currency（natori_stripe_event_inbox）
+natori_stripe_event_inbox,stripe_session_id,string | null,YES,ナトリ: Stripeからの支払い通知の受け箱,stripe_session_id（natori_stripe_event_inbox）
+natori_portfolio_content,revision,number,NO,ナトリ: ポートフォリオページの内容,revision（natori_portfolio_content）
+natori_portfolio_content,content,Json,NO,ナトリ: ポートフォリオページの内容,内容（JSON）
+natori_portfolio_content,id,string,NO,ナトリ: ポートフォリオページの内容,主キーID
+natori_portfolio_content,updated_at,string,NO,ナトリ: ポートフォリオページの内容,更新日時
+natori_portfolio_assets,config,Json,NO,ナトリ: ポートフォリオの表示プリセット,config（natori_portfolio_assets）
+natori_portfolio_assets,created_at,string,NO,ナトリ: ポートフォリオの表示プリセット,作成日時
+natori_portfolio_assets,id,string,NO,ナトリ: ポートフォリオの表示プリセット,主キーID
+natori_portfolio_assets,is_default,boolean,NO,ナトリ: ポートフォリオの表示プリセット,is_default（natori_portfolio_assets）
+natori_portfolio_assets,name,string,NO,ナトリ: ポートフォリオの表示プリセット,氏名
+natori_portfolio_assets,preset_key,string,NO,ナトリ: ポートフォリオの表示プリセット,preset_key（natori_portfolio_assets）
+natori_portfolio_assets,sort_order,number,NO,ナトリ: ポートフォリオの表示プリセット,表示順
+natori_portfolio_assets,updated_at,string,NO,ナトリ: ポートフォリオの表示プリセット,更新日時
+natori_portfolio_assets,user_id,string,NO,ナトリ: ポートフォリオの表示プリセット,ユーザーID
+natori_consultation_access,created_at,string,NO,ナトリ: 相談ページ（トーク）の出来事の記録,作成日時
+natori_consultation_access,dedupe_key,string | null,YES,ナトリ: 相談ページ（トーク）の出来事の記録,dedupe_key（natori_consultation_access）
+natori_consultation_access,event_type,string,NO,ナトリ: 相談ページ（トーク）の出来事の記録,event_type（natori_consultation_access）
+natori_consultation_access,id,string,NO,ナトリ: 相談ページ（トーク）の出来事の記録,主キーID
+natori_consultation_access,occurred_at,string,NO,ナトリ: 相談ページ（トーク）の出来事の記録,occurred_at（natori_consultation_access）
+natori_consultation_access,payload,Json,NO,ナトリ: 相談ページ（トーク）の出来事の記録,入力データ（JSON）
+natori_consultation_access,project_id,string,NO,ナトリ: 相談ページ（トーク）の出来事の記録,project_id（natori_consultation_access）
+natori_consultation_access,source_id,string,NO,ナトリ: 相談ページ（トーク）の出来事の記録,source_id（natori_consultation_access）
+natori_consultation_access,source_type,string,NO,ナトリ: 相談ページ（トーク）の出来事の記録,source_type（natori_consultation_access）
+natori_consultation_access,user_id,string,NO,ナトリ: 相談ページ（トーク）の出来事の記録,ユーザーID
+natori_project_reference_links,created_at,string,NO,ナトリ: 案件の参考リンク,作成日時
+natori_project_reference_links,id,string,NO,ナトリ: 案件の参考リンク,主キーID
+natori_project_reference_links,label,string | null,YES,ナトリ: 案件の参考リンク,label（natori_project_reference_links）
+natori_project_reference_links,normalized_url,string,NO,ナトリ: 案件の参考リンク,normalized_url（natori_project_reference_links）
+natori_project_reference_links,project_id,string,NO,ナトリ: 案件の参考リンク,project_id（natori_project_reference_links）
+natori_project_reference_links,provider,string | null,YES,ナトリ: 案件の参考リンク,provider（natori_project_reference_links）
+natori_project_reference_links,sort_order,number,NO,ナトリ: 案件の参考リンク,表示順
+natori_project_reference_links,updated_at,string,NO,ナトリ: 案件の参考リンク,更新日時
+natori_project_reference_links,url,string,NO,ナトリ: 案件の参考リンク,url（natori_project_reference_links）
+natori_project_tasks,done,boolean,NO,ナトリ: 案件の制作工程,done（natori_project_tasks）
+natori_project_tasks,estimated_hours,number | null,YES,ナトリ: 案件の制作工程,estimated_hours（natori_project_tasks）
+natori_project_tasks,id,string,NO,ナトリ: 案件の制作工程,主キーID
+natori_project_tasks,label,string,NO,ナトリ: 案件の制作工程,label（natori_project_tasks）
+natori_project_tasks,project_id,string,NO,ナトリ: 案件の制作工程,project_id（natori_project_tasks）
+natori_project_tasks,sort_order,number,NO,ナトリ: 案件の制作工程,表示順
+natori_project_tasks,stage,string,NO,ナトリ: 案件の制作工程,stage（natori_project_tasks）
+natori_project_tasks,task_key,string,NO,ナトリ: 案件の制作工程,task_key（natori_project_tasks）
+natori_projects,active_quote_id,string | null,YES,ナトリ: 案件本体（依頼〜納品）,active_quote_id（natori_projects）
+natori_projects,amount,number | null,YES,ナトリ: 案件本体（依頼〜納品）,amount（natori_projects）
+natori_projects,client_email,string | null,YES,ナトリ: 案件本体（依頼〜納品）,client_email（natori_projects）
+natori_projects,client_name,string,NO,ナトリ: 案件本体（依頼〜納品）,client_name（natori_projects）
+natori_projects,completed_at,string | null,YES,ナトリ: 案件本体（依頼〜納品）,completed_at（natori_projects）
+natori_projects,created_at,string,NO,ナトリ: 案件本体（依頼〜納品）,作成日時
+natori_projects,deleted_at,string | null,YES,ナトリ: 案件本体（依頼〜納品）,deleted_at（natori_projects）
+natori_projects,delivered_mail_at,string | null,YES,ナトリ: 案件本体（依頼〜納品）,delivered_mail_at（natori_projects）
+natori_projects,delivery_accepted_at,string | null,YES,ナトリ: 案件本体（依頼〜納品）,delivery_accepted_at（natori_projects）
+natori_projects,delivery_plan,string,NO,ナトリ: 案件本体（依頼〜納品）,delivery_plan（natori_projects）
+natori_projects,delivery_token_expires_at,string | null,YES,ナトリ: 案件本体（依頼〜納品）,delivery_token_expires_at（natori_projects）
+natori_projects,delivery_token_hash,string | null,YES,ナトリ: 案件本体（依頼〜納品）,delivery_token_hash（natori_projects）
+natori_projects,due_date,string | null,YES,ナトリ: 案件本体（依頼〜納品）,due_date（natori_projects）
+natori_projects,id,string,NO,ナトリ: 案件本体（依頼〜納品）,主キーID
+natori_projects,next_action,string,NO,ナトリ: 案件本体（依頼〜納品）,next_action（natori_projects）
+natori_projects,mutation_revision,number,NO,ナトリ: 案件本体（依頼〜納品）,mutation_revision（natori_projects）
+natori_projects,note,string | null,YES,ナトリ: 案件本体（依頼〜納品）,備考
+natori_projects,paid_amount,number | null,YES,ナトリ: 案件本体（依頼〜納品）,paid_amount（natori_projects）
+natori_projects,paid_at,string | null,YES,ナトリ: 案件本体（依頼〜納品）,支払完了日時
+natori_projects,payment_confirmed_at,string | null,YES,ナトリ: 案件本体（依頼〜納品）,payment_confirmed_at（natori_projects）
+natori_projects,payment_link_id,string | null,YES,ナトリ: 案件本体（依頼〜納品）,payment_link_id（natori_projects）
+natori_projects,payment_link_status,string | null,YES,ナトリ: 案件本体（依頼〜納品）,payment_link_status（natori_projects）
+natori_projects,payment_link_url,string | null,YES,ナトリ: 案件本体（依頼〜納品）,payment_link_url（natori_projects）
+natori_projects,payment_quote_id,string | null,YES,ナトリ: 案件本体（依頼〜納品）,payment_quote_id（natori_projects）
+natori_projects,priority,string | null,YES,ナトリ: 案件本体（依頼〜納品）,priority（natori_projects）
+natori_projects,quote_accept_token_hash,string | null,YES,ナトリ: 案件本体（依頼〜納品）,quote_accept_token_hash（natori_projects）
+natori_projects,quote_accepted_amount,number | null,YES,ナトリ: 案件本体（依頼〜納品）,quote_accepted_amount（natori_projects）
+natori_projects,quote_accepted_at,string | null,YES,ナトリ: 案件本体（依頼〜納品）,quote_accepted_at（natori_projects）
+natori_projects,quote_token_expires_at,string | null,YES,ナトリ: 案件本体（依頼〜納品）,quote_token_expires_at（natori_projects）
+natori_projects,quoted_amount,number | null,YES,ナトリ: 案件本体（依頼〜納品）,quoted_amount（natori_projects）
+natori_projects,request_data,Json | null,YES,ナトリ: 案件本体（依頼〜納品）,request_data（natori_projects）
+natori_projects,start_date,string | null,YES,ナトリ: 案件本体（依頼〜納品）,start_date（natori_projects）
+natori_projects,status,string,NO,ナトリ: 案件本体（依頼〜納品）,ステータス
+natori_projects,stripe_payment_session_id,string | null,YES,ナトリ: 案件本体（依頼〜納品）,stripe_payment_session_id（natori_projects）
+natori_projects,title,string,NO,ナトリ: 案件本体（依頼〜納品）,タイトル
+natori_projects,type,string,NO,ナトリ: 案件本体（依頼〜納品）,種別
+natori_projects,updated_at,string,NO,ナトリ: 案件本体（依頼〜納品）,更新日時
+natori_projects,user_id,string,NO,ナトリ: 案件本体（依頼〜納品）,ユーザーID
+natori_quotes,accepted_at,string | null,YES,ナトリ: 見積,accepted_at（natori_quotes）
+natori_quotes,amount,number,NO,ナトリ: 見積,amount（natori_quotes）
+natori_quotes,body_snapshot,string,NO,ナトリ: 見積,body_snapshot（natori_quotes）
+natori_quotes,client_name,string,NO,ナトリ: 見積,client_name（natori_quotes）
+natori_quotes,created_at,string,NO,ナトリ: 見積,作成日時
+natori_quotes,expires_at,string,NO,ナトリ: 見積,有効期限
+natori_quotes,id,string,NO,ナトリ: 見積,主キーID
+natori_quotes,idempotency_key,string | null,YES,ナトリ: 見積,idempotency_key（natori_quotes）
+natori_quotes,issued_at,string | null,YES,ナトリ: 見積,issued_at（natori_quotes）
+natori_quotes,pricing_snapshot,Json | null,YES,ナトリ: 見積,pricing_snapshot（natori_quotes）
+natori_quotes,project_id,string,NO,ナトリ: 見積,project_id（natori_quotes）
+natori_quotes,quote_terms,Json | null,YES,ナトリ: 見積,quote_terms（natori_quotes）
+natori_quotes,request_snapshot,Json | null,YES,ナトリ: 見積,request_snapshot（natori_quotes）
+natori_quotes,subject,string,NO,ナトリ: 見積,subject（natori_quotes）
+natori_quotes,superseded_at,string | null,YES,ナトリ: 見積,superseded_at（natori_quotes）
+natori_quotes,title,string,NO,ナトリ: 見積,タイトル
+natori_quotes,to_email,string,NO,ナトリ: 見積,to_email（natori_quotes）
+natori_quotes,token_hash,string,NO,ナトリ: 見積,トークンハッシュ
+natori_quotes,user_id,string,NO,ナトリ: 見積,ユーザーID
+natori_quotes,version,number,NO,ナトリ: 見積,version（natori_quotes）
+natori_user_profiles,created_at,string,NO,ナトリ: 作家プロフィール（1日の作業時間など）,作成日時
+natori_user_profiles,daily_capacity_hours,number | null,YES,ナトリ: 作家プロフィール（1日の作業時間など）,daily_capacity_hours（natori_user_profiles）
+natori_user_profiles,display_name,string | null,YES,ナトリ: 作家プロフィール（1日の作業時間など）,表示名
+natori_user_profiles,handle,string | null,YES,ナトリ: 作家プロフィール（1日の作業時間など）,handle（natori_user_profiles）
+natori_user_profiles,links_url,string | null,YES,ナトリ: 作家プロフィール（1日の作業時間など）,links_url（natori_user_profiles）
+natori_user_profiles,portfolio_url,string | null,YES,ナトリ: 作家プロフィール（1日の作業時間など）,portfolio_url（natori_user_profiles）
+natori_user_profiles,updated_at,string,NO,ナトリ: 作家プロフィール（1日の作業時間など）,更新日時
+natori_user_profiles,user_id,string,NO,ナトリ: 作家プロフィール（1日の作業時間など）,ユーザーID
 payout_batches,artist_count,number | null,YES,支払バッチ（月次締め）,作家数
 payout_batches,closed_at,string | null,YES,支払バッチ（月次締め）,締め日時
 payout_batches,created_at,string | null,YES,支払バッチ（月次締め）,作成日時
@@ -155,17 +324,8 @@ payouts,scheduled_at,string | null,YES,作家ごとの支払管理,予定日時
 payouts,status,"Database[""public""][""Enums""][""payout_status""]",NO,作家ごとの支払管理,ステータス
 payouts,updated_at,string,NO,作家ごとの支払管理,更新日時
 payouts,user_id,string,NO,作家ごとの支払管理,ユーザーID
-portfolio_settings,bio_short,string | null,YES,ポートフォリオ公開設定,短い自己紹介
-portfolio_settings,contact_email,string | null,YES,ポートフォリオ公開設定,contact_email（portfolio_settings）
-portfolio_settings,contact_url,string | null,YES,ポートフォリオ公開設定,contact_url（portfolio_settings）
-portfolio_settings,created_at,string,NO,ポートフォリオ公開設定,作成日時
-portfolio_settings,headline,string | null,YES,ポートフォリオ公開設定,見出し
-portfolio_settings,is_public,boolean,NO,ポートフォリオ公開設定,公開フラグ
-portfolio_settings,public_display_name,string | null,YES,ポートフォリオ公開設定,公開表示名
-portfolio_settings,sort_key,string,NO,ポートフォリオ公開設定,並び順キー
-portfolio_settings,updated_at,string,NO,ポートフォリオ公開設定,更新日時
-portfolio_settings,user_id,string,NO,ポートフォリオ公開設定,ユーザーID
-portfolio_settings,works_filter,string,NO,ポートフォリオ公開設定,作品フィルタ条件
+processed_stripe_events,event_id,string,NO,Stripe Webhookの処理済みイベント（二重処理の防止）,event_id（processed_stripe_events）
+processed_stripe_events,received_at,string,NO,Stripe Webhookの処理済みイベント（二重処理の防止）,received_at（processed_stripe_events）
 profiles,avatar_url,string | null,YES,ユーザープロフィール,アバター画像URL
 profiles,banner_focus_x,number,NO,ユーザープロフィール,バナー焦点X
 profiles,banner_focus_y,number,NO,ユーザープロフィール,バナー焦点Y
@@ -190,12 +350,3 @@ sales,payout_status,"Database[""public""][""Enums""][""payout_status""]",NO,購�
 sales,price,number | null,YES,購入・売上トランザクション,価格
 sales,purchased_at,string | null,YES,購入・売上トランザクション,購入日時
 sales,stripe_session_id,string,NO,購入・売上トランザクション,Stripe CheckoutセッションID
-special_thanks,avatar_url,string | null,YES,Special Thanks表示管理,アバター画像URL
-special_thanks,display_name,string,NO,Special Thanks表示管理,表示名
-special_thanks,homepage_url,string | null,YES,Special Thanks表示管理,ホームページURL
-special_thanks,id,string,NO,Special Thanks表示管理,主キーID
-special_thanks,instagram_url,string | null,YES,Special Thanks表示管理,Instagram URL
-special_thanks,is_public,boolean,NO,Special Thanks表示管理,公開フラグ
-special_thanks,sort_order,number | null,YES,Special Thanks表示管理,表示順
-special_thanks,tagline,string | null,YES,Special Thanks表示管理,キャッチコピー
-special_thanks,twitter_url,string | null,YES,Special Thanks表示管理,X(Twitter) URL

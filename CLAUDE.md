@@ -1,10 +1,10 @@
-# me-ish / AURA: Claude Code Instructions
+# me-ish / ナトリ: Claude Code Instructions
 
 ## Project context
-- Repo: me-ish-next (Next.js App Router, TypeScript, Tailwind, shadcn/ui, Supabase, Stripe, thirdweb).
-- Products:
-  - me-ish gallery
-  - me-ish AURA
+- Repo: me-ish/me-ish-homepage (Next.js App Router, TypeScript, Tailwind, shadcn/ui, Supabase, Stripe, Resend).
+- 現役のプロダクトはナトリ（ポートフォリオ、依頼受付、案件管理、見積・支払い・納品）だけ。
+- 旧サービス（me-ish ギャラリー / AURA / CARD）は 2026-10-10 に新規受付・公開を終了済み。停止の判定は `src/lib/legacyServiceSuspension.ts`（middleware から呼ぶ）。旧コードは終了案内と記録確認のために一部残っているだけなので、新しい機能を足さない。何を残しているかは `docs/cleanup-index.md` を見る。
+- `src/features/etorie/` と `/etorie/demo/app` はナトリ受付のデモ・CI 試験に使っているので消さない。
 
 ## Non-negotiables
 1) Never read secrets:
@@ -27,22 +27,10 @@
 - 見た目・文言・運用ルールなど好みが分かれる変更は、実装前に案を2〜3個出して選んでもらう。
 
 ## Repo conventions
-- App Router: src/app
-- Components: src/components
-- AURA logic: src/lib/aura
-- AURA components: src/components/aura
-
-## AURA naming (unified as of 2025-01)
-- All paths now use "aura" naming (migration from "aiPortfolio" complete)
-- Public URLs: /aura/*
-- API: /api/aura/*
-- Library: src/lib/aura/
-- Components: src/components/aura/
-- Component prefix: Aura* (e.g., AuraHero, AuraContact)
-- DB table: aura_requests
-- Storage bucket: aura-assets
-- Style files: src/styles/auraFonts.*
-- Note: Old aiPortfolio directories are excluded from tsconfig and pending deletion
+- App Router: src/app（画面は `src/app/[locale]/natori/`、API は `src/app/api/natori/`）
+- ナトリのコード: `src/features/natori/`（下の構成ルールを守る）
+- 共通部品: `src/components/ui/`（shadcn/ui）、Supabase 接続 `src/lib/supabase*`、認証 `src/lib/auth/`
+- DB 定義: `supabase/migrations/`。テーブル一覧は `docs/supabase-tables-ja.md`（`npm run docs:supabase` で作り直す）
 
 ## natori feature structure (as of 2026-05)
 natori feature は `src/features/natori/` 配下に集約済み。旧 `src/lib/natori/*` / `src/types/natori/*` / `src/components/natori/*` の互換 shim はすべて削除済みで、natori コードは必ず `@/features/natori/...` を直参照すること。
