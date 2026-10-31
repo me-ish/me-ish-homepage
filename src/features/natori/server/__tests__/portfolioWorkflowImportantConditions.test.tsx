@@ -18,10 +18,10 @@ it.each(["default", "saved"])('retains the final revision limit in the %s legacy
   expect(renderToStaticMarkup(<PortfolioWorkflow content={view!} />)).toContain(revisionLimit);
   expect(view?.workflow).toEqual(workflow); expect(JSON.stringify(workflow)).toBe(before);
 });
-it('changes only the three approved observed public fields and retains all later condition text', () => {
+it('changes only the approved observed public fields and retains all later condition text', () => {
   const workflow = snapshot.workflow.map(step => ({ ...step })), before = JSON.stringify(workflow);
   const projected = resolvePortfolioWorkflow(workflow);
-  expect(projected.slice(2)).toEqual(workflow.slice(2));
+  expect([projected[2], projected[4]]).toEqual([workflow[2], workflow[4]]);
   expect(projected[4].body).not.toContain(revisionLimit);
   expect(JSON.stringify(workflow)).toBe(before);
 });

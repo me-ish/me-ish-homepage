@@ -56,7 +56,7 @@ export const NATORI_PUBLIC_WORKFLOW: Workflow = [
   },
   {
     title: "カラーラフのご確認",
-    body: "通常イラストは、ラフ確認用リンクをメールでお送りします。構図・表情・配色をご確認いただき、修正のご希望はメールでお知らせください。大きな修正はこの段階でお願いいたします（無料リテイク2回まで）。量産イラストは原則リテイクなしです。",
+    body: "通常イラストは、ラフができたらご相談ページ（メールのリンクから開けます）にお届けします。構図・表情・配色をご確認いただき、修正のご希望もそのページからお知らせください。大きな修正はこの段階でお願いいたします（無料リテイク2回まで）。量産イラストは原則リテイクなしです。",
   },
   {
     title: "清書・納品",
@@ -130,11 +130,13 @@ export function resolvePortfolioWorkflow(workflow: Workflow, allowCompatibilityP
   if (!allowCompatibilityProjection) return workflow;
   if (isLegacyDefaultWorkflow(workflow)) return NATORI_PUBLIC_WORKFLOW;
   if (!isObservedPublicWorkflow(workflow)) return workflow;
-  // Change only the three approved U09 fields. Keep all other observed wording,
+  // Change only the approved U09 fields plus the rough-check body (talk page, not mail). Keep all other observed wording,
   // input objects, custom content and saved history/snapshots untouched.
   return workflow.map((step, index) => index === 0
     ? { ...step, body: NATORI_PUBLIC_WORKFLOW[0].body }
     : index === 1
       ? { ...step, title: NATORI_PUBLIC_WORKFLOW[1].title, body: NATORI_PUBLIC_WORKFLOW[1].body }
-      : step);
+      : index === 3
+        ? { ...step, body: NATORI_PUBLIC_WORKFLOW[3].body }
+        : step);
 }

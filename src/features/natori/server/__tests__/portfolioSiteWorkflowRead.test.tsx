@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { defaultPortfolioContent } from "@/features/natori/constants/portfolioContent";
 import { NATORI_INTAKE_COPY } from "@/features/natori/constants/portfolioContactCopy";
+import { NATORI_PUBLIC_WORKFLOW } from "@/features/natori/lib/portfolioWorkflow";
 import publicSnapshot from "../../lib/__tests__/fixtures/portfolioWorkflow.public-20261001.json";
 import { parsePortfolioContent, preparePortfolioContentForSave, withPortfolioEditorStableIds } from "@/features/natori/lib/portfolioContent";
 import { parsePortfolioDisplayContent, preparePortfolioDisplayPreview } from "@/features/natori/lib/portfolioDisplay";
@@ -42,7 +43,7 @@ describe("raw stored workflow eligibility survives the real content reader", () 
     const html = renderView(content);
     expect(html).toContain(NATORI_INTAKE_COPY.reply);
     expect(html).toContain(NATORI_INTAKE_COPY.next);
-    expect(html).toContain(raw.workflow[3].body);
+    expect(html).toContain(NATORI_PUBLIC_WORKFLOW[3].body);
     expect(JSON.stringify(raw)).toBe(before);
     for (const mutation of [insert, update, upsert, remove]) expect(mutation).not.toHaveBeenCalled();
   });

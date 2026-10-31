@@ -63,8 +63,8 @@ export function buildAcceptanceNotificationPayload(job: Pick<NatoriNotificationR
     return payloadSchema.parse({ from, to: [client ? snapshot.clientEmail : recipient], reply_to: client ? recipient : snapshot.clientEmail,
       subject: client ? "【受付完了】ご依頼を受け付けました" : `【ご依頼受付】${snapshot.clientName} 様 / ${snapshot.title}`,
       text: [client ? `${snapshot.clientName} 様、ご依頼を受け付けました。` : "新しいご依頼を案件管理へ保存しました。",
-        `受付確認用: ${snapshot.receipt}`, `案件: ${snapshot.title}`, "",
-        client ? "内容を確認のうえ、2〜3日以内にご連絡いたします。確認メールが届かなくても再応募は不要です。" : "原回答と参考資料は案件管理でご確認ください。",
+        ...(client ? [] : [`受付確認用: ${snapshot.receipt}`]), `案件: ${snapshot.title}`, "",
+        client ? "内容を確認のうえ、2〜3日以内にご連絡いたします。確認メールが届かなくても送り直しは不要です。" : "原回答と参考資料は案件管理でご確認ください。",
         client ? `2〜3日を過ぎても連絡がない場合は ${recipient} へお問い合わせください。` : caseMailLink("/natori/projects"),
         client ? "このメールに返信してご連絡いただくこともできます。" : ""].join("\n"),
       headers: { "X-Meish-Template": `natori-${job.purpose}` } });

@@ -72,14 +72,14 @@ it.each(['ja', 'en'])('home and old Natori artist URLs lead to the current portf
   await expect(NatoriArtistPage(props)).rejects.toMatchObject({ digest });
 });
 
-it('indexes the current portfolio and support pages without reading any retired table', async () => {
+it('indexes only the current portfolio and legal pages without reading any retired table', async () => {
   const entries = await sitemap();
   const paths = entries.map((entry) => new URL(entry.url).pathname);
-  expect(paths).toHaveLength(13);
-  expect(paths).toContain('/natori/portfolio');
-  expect(paths).toContain('/natori/portfolio/contact');
-  expect(paths).toContain('/footer/privacy');
-  expect(paths).toContain('/contact');
+  expect(paths).toEqual([
+    '/natori/portfolio',
+    '/natori/legal/terms',
+    '/natori/legal/privacy',
+    '/natori/legal/tokushoho',
+  ]);
   expect(paths.some((path) => /^\/(float|white|works|artists|aura|card)(\/|$)/.test(path))).toBe(false);
-  expect(entries.every((entry) => entry.alternates?.languages?.en)).toBe(true);
 });

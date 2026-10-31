@@ -10,7 +10,7 @@ describe("separate intake notices use Phase N immutable payload",()=>{
   const artist=buildAcceptanceNotificationPayload({purpose:"intake_artist",snapshot,payload:null}),client=buildAcceptanceNotificationPayload({purpose:"intake_client",snapshot,payload:null});
   expect(artist.to).toEqual(["artist@example.invalid"]);expect(artist.reply_to).toBe(snapshot.clientEmail);
   expect(client.to).toEqual([snapshot.clientEmail]);expect(client.reply_to).toBe("artist@example.invalid");
-  expect(client.text).toContain(snapshot.receipt);expect(client.text).toContain("2〜3日");expect(client.text).toContain("再応募は不要");
+  expect(client.text).not.toContain(snapshot.receipt);expect(client.text).toContain("2〜3日");expect(client.text).toContain("送り直しは不要");
  });
  it("retry uses exact frozen payload after mail configuration changes and snapshot projection changes",()=>{
   vi.stubEnv("NATORI_PORTFOLIO_CONTACT_TO","artist@example.invalid");vi.stubEnv("NATORI_ORDER_MAIL_FROM","Fixture <sender@example.invalid>");

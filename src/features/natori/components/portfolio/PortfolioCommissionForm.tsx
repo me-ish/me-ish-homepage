@@ -323,7 +323,7 @@ function PortfolioCommissionFormSession({
               {NATORI_INTAKE_COPY.reply}{NATORI_INTAKE_COPY.next}
             </p>
             <p className="mt-2 text-xs" style={{ color: c.textSoft }}>
-              {completed ? "受付確認メールは別にお送りします。メールが届かない場合も、再応募は不要です。" : autoReplied
+              {completed ? "受付確認メールは別にお送りします。メールが届かない場合も、送り直しは不要です。" : autoReplied
                 ? "ご入力のメールアドレス宛に受付確認メールをお送りしました。届かない場合は迷惑メールフォルダをご確認ください。"
                 : "受付は完了しましたが、確認メールを送信できませんでした。2〜3日以内のご連絡をお待ちください。"}
             </p>
