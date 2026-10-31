@@ -27,6 +27,8 @@ type Props = {
 
 type Status = "idle" | "sending" | "accepted" | "error";
 
+const PREVIEW_EXTENSIONS: ReadonlySet<string> = new Set(["jpg", "jpeg", "png", "webp"]);
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" });
 }
@@ -107,9 +109,14 @@ export default function DeliveryAcceptCard({
                   rel="noopener noreferrer"
                   className={`flex items-center gap-3 rounded-2xl border border-[#F2D9E0] bg-white p-3 transition-colors hover:border-[#EC4899]/40 hover:bg-[#FFF8FA] ${ui.focus}`}
                 >
-                  <span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#FFF0F6] text-[#BE185D]">
-                    <FileImage className="h-5 w-5" />
-                  </span>
+                  {PREVIEW_EXTENSIONS.has(file.fileName.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] ?? "") ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- signed Storage URL, shown as-is
+                    <img src={file.url} alt="" loading="lazy" aria-hidden="true" className="h-16 w-16 shrink-0 rounded-xl border border-[#F2D9E0] bg-[#FFF8FA] object-contain" />
+                  ) : (
+                    <span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#FFF0F6] text-[#BE185D]">
+                      <FileImage className="h-5 w-5" />
+                    </span>
+                  )}
                   <span className="min-w-0 flex-1 break-all text-[15px] font-bold leading-6">{file.fileName}</span>
                   <span
                     className={`${natoriPrimaryActionClassName} inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-bold leading-5`}

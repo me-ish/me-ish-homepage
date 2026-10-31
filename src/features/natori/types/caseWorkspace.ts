@@ -28,7 +28,8 @@ export type CaseWorkspaceRecord = {
 export type CaseGuidance = {
   status: string;
   facts: ReadonlyArray<{ label: string; value: string }>;
-  waits: ReadonlyArray<{ key: string; who: "staff" | "client" | "system"; text: string; section: CaseSection }>;
+  /** mailCheck: only asks the staff to confirm a mail arrived. It stays listed but never makes the case the staff's turn. */
+  waits: ReadonlyArray<{ key: string; who: "staff" | "client" | "system"; text: string; section: CaseSection; mailCheck?: true }>;
   primary: { label: string; section: CaseSection };
   unknown: readonly string[];
 };

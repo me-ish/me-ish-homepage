@@ -81,6 +81,17 @@ const attentionButton: Readonly<Record<string, string>> = {
   payment_notice_needed: "支払いリンクを送る", consultation_response_required: "相談に返事する", rough_revision_pending: "ラフを直す",
 };
 
+// Reasons that only ask "did this mail arrive?". They stay visible but are kept out of the staff's turn.
+const MAIL_CHECK_REASONS: ReadonlySet<string> = new Set([
+  "notification_unknown", "payment_notice_unconfirmed", "current_notice_unconfirmed", "delivery_notice_unconfirmed",
+]);
+
+/** The turn a case belongs to: its first wait that is not a mail check. Only mail checks left means "other". */
+export function caseTurn(guidance: Pick<CaseGuidance, "waits">): "staff" | "client" | "system" | undefined {
+  const first = guidance.waits.find(wait => !wait.mailCheck);
+  return first ? first.who : guidance.waits.length ? "system" : undefined;
+}
+
 /** Advisory navigation only. Never use this output to enable/disable commands. */
 export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
   const { model: m, display: d } = record;
@@ -90,9 +101,9 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
   const waits: CaseGuidance["waits"][number][] = [];
   const buttons = new Map<string, string>();
   const unknown: string[] = [];
-  const add = (key: string, who: "staff" | "client" | "system", text: string, section: CaseSection, button?: string) => {
+  const add = (key: string, who: "staff" | "client" | "system", text: string, section: CaseSection, button?: string, mailCheck?: true) => {
     if (!waits.some(wait => wait.key === key || (wait.who === who && wait.text === text && wait.section === section))) {
-      waits.push({ key, who, text, section });
+      waits.push(mailCheck ? { key, who, text, section, mailCheck } : { key, who, text, section });
       if (button && who === "staff") buttons.set(key, button);
     }
   };
@@ -111,7 +122,7 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
         : item.domain === "quote" ? "OKの内容と見積が合っているか見る"
           : item.domain === "link" ? "支払いリンクの状態を見る"
             : `${CASE_SECTION_LABELS[section]}を見る`);
-    add(item.key, item.waitingOn, text, section, attentionButton[item.reason]);
+    add(item.key, item.waitingOn, text, section, attentionButton[item.reason], MAIL_CHECK_REASONS.has(item.reason) ? true : undefined);
   }
   const inactive = !!project?.archivedAt || project?.rawStatus === "closed" || project?.rawStatus === "completed";
   const quoteUnconfirmed = !quote && (m.facts.quote.state === "unavailable" || m.facts.quote.state === "not_requested");
@@ -152,6 +163,8 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
         : m.stage === "payment_notified" ? "入金待ち" : m.agreement === "accepted" ? paymentUnread ? "見積OK・入金は読み込めず" : "見積OK・支払い前" : quoteUnconfirmed ? "見積の状態が分かりません"
           : quote?.state === "draft" ? "見積の準備中" : m.agreement === "needs_review" ? "見積の確認が必要" : quote ? "見積の返事待ち" : "相談中";
   if (!project && !receipt && !payment && !delivery && !quote) status = "読み込めませんでした";
+  // Mail checks go last so the main next step is always a real one.
+  waits.sort((a, b) => Number(!!a.mailCheck) - Number(!!b.mailCheck));
   const primary = waits[0] ? { label: buttons.get(waits[0].key) ?? `${CASE_SECTION_LABELS[waits[0].section]}を開く`, section: waits[0].section }
     : receipt || inactive ? { label: "履歴を開く", section: "history" as const }
       : { label: "相談を開く", section: "consultation" as const };

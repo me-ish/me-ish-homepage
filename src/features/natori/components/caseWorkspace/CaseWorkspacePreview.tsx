@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState, type AnchorHTMLAttributes, type Key, type ReactNode } from "react";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
 import { CASE_SECTIONS, type CaseEntry, type CaseOverviewPart, type CaseWorkspaceRecord } from "../../types/caseWorkspace";
-import { caseDate, caseDaysUntil, caseKnown, caseTime, caseTargetSection, CASE_SECTION_LABELS, caseWaitLine, deriveCaseGuidance, observationLabel } from "../../lib/caseWorkspacePresentation";
+import { caseDate, caseDaysUntil, caseKnown, caseTime, caseTargetSection, CASE_SECTION_LABELS, caseTurn, caseWaitLine, deriveCaseGuidance, observationLabel } from "../../lib/caseWorkspacePresentation";
 import { CASE_NOTICE_PURPOSES, caseNoticeLabel, caseShelved, matchesCaseEntry } from "../../lib/caseWorkspaceEntries";
 import { caseDefaultFilter, caseWorkspaceHref, parseCaseWorkspaceLocation, type CaseWorkspaceLocation } from "../../lib/caseWorkspaceNavigation";
 import {publicAcceptanceTarget} from "@/lib/caseAcceptanceEnvironment";
@@ -204,7 +204,7 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
             <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className={`text-[16px] leading-6 ${look.title}`}>{row.title}</span>{due}</span>
             <span className={`mt-0.5 block text-xs ${look.muted}`}>{step?.label??g.status} · {row.clientLabel} · {row.registeredDueDate?`納期の目安 ${caseDate(row.registeredDueDate,today)}`:"納期なし"}</span>
-            {g.waits[0]?<span className={`mt-0.5 block text-[13px] leading-5 ${g.waits[0].who==="staff"?"font-semibold text-pink-700":look.muted}`}>{caseWaitLine(g.waits[0])}</span>:<span className={`mt-0.5 block text-[13px] ${look.muted}`}>{g.status}</span>}
+            {g.waits[0]?<span className={`mt-0.5 block text-[13px] leading-5 ${caseTurn(g)==="staff"?"font-semibold text-pink-700":look.muted}`}>{caseWaitLine(g.waits[0])}</span>:<span className={`mt-0.5 block text-[13px] ${look.muted}`}>{g.status}</span>}
             {nav.sort==="priority"?<span className="mt-1.5 block text-xs">優先理由：{casePriority(row,plansReady?plans:null,today)?.reasons.join(" / ")??"理由は分かりません"}</span>:null}
             {nav.entry==="schedule"?<span className="mt-1.5 block text-xs">{row.registeredDueDate===nav.date?"この日が納期":"作業の予定日"}{casePlannedBars(row,plansReady?plans:null,today).filter(b=>b.startISO<=nav.date&&b.endISO>=nav.date).map(b=>` · ${CASE_PLAN_STAGE_LABELS[b.stage]} ${caseDate(b.startISO,today)}〜${caseDate(b.endISO,today)}`).join("")}{(()=>{const p=casePlanProject(row,plansReady?plans:null);return p&&getDeliveryPlanMeta(p.deliveryPlan).isRush?` · ${getDeliveryPlanMeta(p.deliveryPlan).shortLabel}`:"";})()}</span>:null}
             {active||row.id===nav.selectedId?<span className="mt-1.5 block text-xs font-semibold text-pink-700">{active?"選択中":"さっき開いた案件"}</span>:null}
@@ -256,8 +256,8 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
           {nav.entry==="schedule"&&application&&entryTools&&!plansReady?<p className="mb-4 text-xs leading-6 text-amber-900">作業の予定を読み込めなかったので、納期だけを表示しています。</p>:null}
           {nav.entry==="schedule"&&application&&entryTools?(personalEventsEnabled?<CasePersonalSchedule key={nav.date} date={nav.date} events={personalEvents} available={eventsReady} readOnly={readOnly} onChanged={()=>setReload(v=>v+1)} onDraftChange={setHasEventDraft}/>:<p className="mb-4 text-xs text-amber-900">この画面では自分の予定は使えません。</p>):null}
           <div className="space-y-3">{nav.entry==="cases"&&nav.filter==="all"?<>
-            {pageRows.some(row=>deriveCaseGuidance(row).waits[0]?.who==="staff")?<div className={look.group}>{pageRows.filter(row=>deriveCaseGuidance(row).waits[0]?.who==="staff").map(caseCard)}</div>:null}
-            {([["client","お客さんの番"],["other","そのほか"]] as const).map(([group,label])=>{const items=pageRows.filter(row=>{const who=deriveCaseGuidance(row).waits[0]?.who;return group==="client"?who==="client":who!=="staff"&&who!=="client";});
+            {pageRows.some(row=>caseTurn(deriveCaseGuidance(row))==="staff")?<div className={look.group}>{pageRows.filter(row=>caseTurn(deriveCaseGuidance(row))==="staff").map(caseCard)}</div>:null}
+            {([["client","お客さんの番"],["other","そのほか"]] as const).map(([group,label])=>{const items=pageRows.filter(row=>{const who=caseTurn(deriveCaseGuidance(row));return group==="client"?who==="client":who!=="staff"&&who!=="client";});
               return items.length?<section key={group} aria-label={label}><h2 className={`mb-1.5 mt-6 ${look.groupLabel}`}>{label}（{items.length}件）</h2><div className={look.group}>{items.map(caseRow)}</div></section>:null;})}
           </>:nav.entry==="notifications"?pageRows.length?<div className={look.group}>{pageRows.map(talkRow)}</div>:null:pageRows.length?<div className={look.group}>{pageRows.map(caseCard)}</div>:null}
             {pending && records===null?<p className="p-4 text-sm text-zinc-600">読み込み中…</p>:!failed&&visible.length===0?<p className={`${look.card} text-sm ${look.muted}`}>{nav.entry==="notifications"?"まだトークのある案件はありません。":"この条件の案件はありません。"}</p>:null}

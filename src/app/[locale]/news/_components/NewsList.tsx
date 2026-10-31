@@ -29,7 +29,9 @@ export default async function NewsList({ q = '' }: { q?: string }) {
   }
 
   const { data, error } = await query;
-  if (error) {
+  // PGRST205: the announcements table was removed with the retired services.
+  // That is "nothing to show", not a failure worth an error log on every visit.
+  if (error && error.code !== 'PGRST205') {
     console.error('[news] fetch error:', error);
     return <p className="text-gray-500">読み込みに失敗しました。</p>;
   }
