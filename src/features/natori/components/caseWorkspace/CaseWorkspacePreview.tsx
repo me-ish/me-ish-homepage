@@ -215,12 +215,12 @@ export function CaseWorkspacePreview({ load, loadDetail, application=false, entr
   const caseRow=(row:CaseWorkspaceRecord)=>{const g=deriveCaseGuidance(row),active=nav.projectId===row.id,due=dueBadge(row),step=deriveCaseSteps(row).find(s=>s.state==="current");return link(open(row.id),<><CaseStageIcon stage={step?.key??null} size="sm"/><span className="min-w-0 flex-1 truncate text-[15px]">{row.title}<span className="sr-only"> · {row.clientLabel}</span></span><span className={`flex shrink-0 items-center gap-1.5 text-xs ${look.muted}`}>{due}{g.waits[0]?.text??g.status}</span>{chevron}</>,
     `${look.groupRow} min-h-12 py-2.5 ${active?"!bg-pink-50":""} ${ui.focusRing}`,{key:row.id,id:`case-${row.id}`,"aria-current":active?"page":undefined});};
   // トーク tab: one line per case; who wrote last and when. Opening it shows only the talk.
-  const talkRow=(row:CaseWorkspaceRecord)=>{const talk=talkOf(row),quoteSent=caseQuoteSentAt(row),active=nav.projectId===row.id,theirs=talk?.latestSender==="client";return link({...open(row.id),section:"consultation"},<>
+  const talkRow=(row:CaseWorkspaceRecord)=>{const talk=talkOf(row),sentAt=caseQuoteSentAt(row),quoteSent=sentAt&&(!talk||sentAt>talk.latestAt)?sentAt:null,active=nav.projectId===row.id,theirs=!quoteSent&&talk?.latestSender==="client";return link({...open(row.id),section:"consultation"},<>
     <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold ${theirs?"bg-pink-100 text-pink-700":"bg-[#E5E5EA] text-[#6E6E73]"}`} aria-hidden="true">{row.clientLabel.trim().slice(0,1)||"?"}</span>
     <span className="min-w-0 flex-1">
     <span className="flex items-center gap-2"><span className={`min-w-0 flex-1 truncate text-[15px] ${look.title}`}>{row.title}</span>{theirs?<span className="h-2.5 w-2.5 shrink-0 rounded-full bg-pink-500" role="img" aria-label="お客さんが最後に書いています"/>:null}</span>
-    <span className={`mt-0.5 block text-xs ${theirs?"font-semibold text-pink-700":look.muted}`}>{row.clientLabel} · {talk?`${theirs?"お客さんが書きました":"あなたが書きました"} · ${caseTime(talk.latestAt)}`:quoteSent?`見積もりを送りました · ${caseTime(quoteSent)}`:observationLabel(row.display.conversation)}</span>
-    {talk&&talkPreviews.get(row.id)?.excerpt?<span className="mt-1 block truncate text-[13px] text-[#3C3C43]">{talkPreviews.get(row.id)?.excerpt}</span>:null}
+    <span className={`mt-0.5 block text-xs ${theirs?"font-semibold text-pink-700":look.muted}`}>{row.clientLabel} · {quoteSent?`見積もりを送りました · ${caseTime(quoteSent)}`:talk?`${theirs?"お客さんが書きました":"あなたが書きました"} · ${caseTime(talk.latestAt)}`:observationLabel(row.display.conversation)}</span>
+    {talk&&!quoteSent&&talkPreviews.get(row.id)?.excerpt?<span className="mt-1 block truncate text-[13px] text-[#3C3C43]">{talkPreviews.get(row.id)?.excerpt}</span>:null}
     </span>
   </>,`${look.groupRow} items-start ${active?"!bg-pink-50":""} ${ui.focusRing}`,{key:row.id,id:`case-${row.id}`,"aria-current":active?"page":undefined});};
   return <div data-natori-admin className={`${look.page} pb-24 lg:pb-6`}><NatoriAdminFont/>
