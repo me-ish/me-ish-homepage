@@ -7,7 +7,7 @@ import { deriveCaseReadModel } from "../../lib/caseReadModel";
 import { caseKnown, caseTurn, deriveCaseGuidance, observationLabel } from "../../lib/caseWorkspacePresentation";
 import { caseWorkspaceHref, parseCaseWorkspaceLocation } from "../../lib/caseWorkspaceNavigation";
 import type { CaseWorkspaceRecord } from "../../types/caseWorkspace";
-import {caseMonthDays,matchesCaseEntry} from "../../lib/caseWorkspaceEntries";
+import {caseMonthDays,caseQuoteSentAt,matchesCaseEntry} from "../../lib/caseWorkspaceEntries";
 
 let normal: CaseWorkspaceRecord[], partial: CaseWorkspaceRecord[];
 beforeAll(async () => { normal = await buildPreviewRecords(); partial = await buildPreviewRecords("partial"); });
@@ -195,9 +195,11 @@ describe("synthetic reader to case workspace", () => {
 });
 
 describe("local case URLs", () => {
-  it("lists only cases with a talk, or whose talk could not be read, in the トーク entry",async()=>{
+  it("lists cases with a talk, whose talk could not be read, or whose quote mail was sent, in the トーク entry",async()=>{
     const nav=parseCaseWorkspaceLocation("?entry=notifications"),normal=await buildPreviewRecords("normal",previewEnvelopes());
-    expect(normal.filter(record=>matchesCaseEntry(record,nav)).map(record=>record.display.conversation.state)).toEqual(["ready"]);
+    expect(normal.filter(record=>matchesCaseEntry(record,nav)).map(record=>record.display.conversation.state)).toEqual(["ready","absent"]);
+    const quoteOnly=normal.filter(record=>record.display.conversation.state==="absent"&&matchesCaseEntry(record,nav));
+    expect(quoteOnly.every(record=>caseQuoteSentAt(record)!==null)).toBe(true);
     const partial=await buildPreviewRecords("partial",previewEnvelopes());
     expect(partial[0].display.conversation.state).toBe("unavailable");expect(matchesCaseEntry(partial[0],nav)).toBe(true);
   });

@@ -7,6 +7,14 @@ import {casePlannedBars} from "./casePlanning";
 import type {CasePlanning} from "./caseScreenContext";
 
 /** Closed (見送り) or archived (保管) cases: kept for the record, not part of the day-to-day schedule. */
+/** 見積もりのメールを最後に送れた時刻。トーク一覧は、メッセージが無くてもこの案件を載せる。 */
+export function caseQuoteSentAt(record: CaseWorkspaceRecord): string | null {
+  const sent = (caseKnown(record.model.facts.notifications) ?? [])
+    .filter(n => n.purpose === "quote_notice" && n.status === "sent" && n.sentAt)
+    .map(n => n.sentAt as string).sort();
+  return sent.length ? sent[sent.length - 1] : null;
+}
+
 export function caseShelved(record: CaseWorkspaceRecord): boolean {
   return record.model.eligibility==="closed"||record.model.eligibility==="archived";
 }
@@ -32,7 +40,7 @@ export function matchesCaseEntry(record: CaseWorkspaceRecord, nav: CaseWorkspace
   // トーク: every case that has a talk, plus one whose talk could not be read (never hidden as "no talk").
   // トーク lists only cases still in motion; finished or shelved talks stay reachable from the case itself.
   if (nav.entry==="notifications" && ["closed","archived","completed","historical"].includes(record.model.eligibility)) return false;
-  if (nav.entry==="notifications") return record.display.conversation.state==="ready"||record.display.conversation.state==="unavailable";
+  if (nav.entry==="notifications") return record.display.conversation.state==="ready"||record.display.conversation.state==="unavailable"||caseQuoteSentAt(record)!==null;
   return true;
 }
 export function caseMonthDays(month: string): string[] {
