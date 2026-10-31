@@ -376,7 +376,8 @@ export function deriveCaseReadModel(input: CaseSnapshot): CaseReadModel {
   if (consultation?.responseRequired) add("consultation", consultation.id, "response_required", "staff", 2, "view_consultation");
   for (const rough of roughs) {
     if(rough.revisionPending)add("roughs",rough.id,"rough_revision_pending","staff",2,"review_rough");
-    if (rough.clientOkAt && !rough.acknowledgedAt) add("roughs", rough.id, "rough_ok_unacknowledged", "staff", 2, "review_rough");
+    // 納品したあとは、ラフOKの確認待ちはもう制作の話ではないので「次にやること」に出さない。
+    if (rough.clientOkAt && !rough.acknowledgedAt) { if (!delivery && !receipt) add("roughs", rough.id, "rough_ok_unacknowledged", "staff", 2, "review_rough"); }
     else if (!rough.clientOkAt && !rough.supersededBy && !rough.revisionPending && eligibility === "active") add("roughs", rough.id, "rough_response_pending", "client", 4, "review_rough");
   }
   if (eligibility === "active") {
