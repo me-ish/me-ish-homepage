@@ -139,9 +139,10 @@ describe("buildPaidConfirmationMail", () => {
     expect(mail.body).toContain("テスト太郎 様");
     expect(mail.body).toContain(formatYen(12000));
     expect(mail.body).toContain("制作を開始いたします");
-    expect(mail.body).toContain("ご返信いただいても大丈夫です");
-    expect(mail.body).toContain("ご相談ページのリンクをメールでお送りします");
-    expect(mail.body).not.toContain("このメールアドレス宛にご連絡");
+    expect(mail.body).toContain("ご返信ください");
+    expect(mail.body).toContain("ラフが完成しましたら");
+    // 相談ページのリンクはこのメールの時点では届いているとは限らないので、約束しない
+    expect(mail.body).not.toContain("ご相談ページのリンクをメールでお送りします");
   });
 });
 
