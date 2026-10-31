@@ -159,7 +159,7 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
   }
   const paymentUnread = m.facts.payment.state === "unavailable" || m.facts.payment.state === "not_requested";
   // Short stage names. They describe recorded facts only; they never unlock commands.
-  let status = receipt ? "受取済み" : project?.archivedAt ? "保管中"
+  let status = receipt ? (project?.rawStatus === "completed" ? "完了" : "受取済み") : project?.archivedAt ? "保管中"
     : project?.rawStatus === "closed" ? "終了" : project?.rawStatus === "completed" ? "完了"
       : delivery ? "納品済み・受取待ち" : payment ? "制作中"
         : m.stage === "payment_notified" ? "入金待ち" : m.agreement === "accepted" ? paymentUnread ? "見積OK・入金は読み込めず" : "見積OK・支払い前" : quoteUnconfirmed ? "見積の状態が分かりません"

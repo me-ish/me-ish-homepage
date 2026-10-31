@@ -45,7 +45,7 @@ describe("synthetic reader to case workspace", () => {
     expect(guidance.waits.some(wait => wait.key === "quote-unconfirmed")).toBe(false);
   });
   it("retains paid, receipt and inactive facts ahead of unavailable quote navigation", () => {
-    for (const [index, expected] of [[2, "制作中"], [3, "受取済み"]] as const) {
+    for (const [index, expected] of [[2, "制作中"], [3, "完了"]] as const) {
       const record = normal[index], model = deriveCaseReadModel({ ...record.model.facts,
         quote: { state: "unavailable", reason: "incomplete" },
         projectId: record.id, snapshotId: record.model.snapshotId, asOf: record.model.checkedAt });
@@ -87,7 +87,7 @@ describe("synthetic reader to case workspace", () => {
   it("preserves project payment evidence and legacy receipt when related reads fail, without inventing delivery identity", () => {
     expect(caseKnown(partial[2].display.payment)).toMatchObject({ money: { amount: 40000 }, correspondence: "unconfirmed" });
     expect(caseKnown(partial[3].display.receipt)).toMatchObject({ deliveryId: null, correspondence: "unconfirmed" });
-    expect(deriveCaseGuidance(partial[3]).status).toBe("受取済み");
+    expect(deriveCaseGuidance(partial[3]).status).toBe("完了");
     expect(deriveCaseGuidance(partial[2]).unknown).toContain("入金：読み込めませんでした");
     expect(partial[0].display.payment.state).toBe("unavailable");
     expect(partial[0].display.conversation.state).toBe("unavailable");
@@ -100,7 +100,7 @@ describe("synthetic reader to case workspace", () => {
   it("keeps matched receipt and unknown delivery notification as separate facts", () => {
     const record = normal[7], guidance = deriveCaseGuidance(record);
     expect(record.model.stage).toBe("received");
-    expect(guidance.status).toBe("受取済み");
+    expect(guidance.status).toBe("完了");
     expect(guidance.waits).toContainEqual(expect.objectContaining({ who: "staff", section: "production", text: "メールが届いたか確認" }));
     expect(guidance.waits.some(wait => wait.text === "納品の受け取り待ち")).toBe(false);
   });
