@@ -139,7 +139,20 @@ describe("buildPaidConfirmationMail", () => {
     expect(mail.body).toContain("テスト太郎 様");
     expect(mail.body).toContain(formatYen(12000));
     expect(mail.body).toContain("制作を開始いたします");
-    expect(mail.body).toContain("ご返信ください");
+    expect(mail.body).toContain("ご返信いただいても大丈夫です");
+    expect(mail.body).toContain("ご相談ページのリンクをメールでお送りします");
+    expect(mail.body).not.toContain("このメールアドレス宛にご連絡");
+  });
+});
+
+describe("案件名が空のときの件名", () => {
+  it("「について」だけが浮かない", () => {
+    const base = { clientName: "テスト太郎", amount: 12000 };
+    expect(buildEstimateMailDraft({ ...base, title: "  " }).subject).toBe("【お見積もり】（ナトリ）");
+    expect(buildPaymentMailDraft({ ...base, title: "" }).subject).toBe("【お支払いのご案内】（ナトリ）");
+    expect(buildPaymentMailDraft({ ...base, title: "一枚絵 " }).subject).toBe(
+      "【お支払いのご案内】一枚絵 について（ナトリ）",
+    );
   });
 });
 

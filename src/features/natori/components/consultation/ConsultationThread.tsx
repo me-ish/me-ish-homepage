@@ -495,7 +495,7 @@ export default function ConsultationThread(props: Props) {
         <button type="button" disabled={loading || busy} onClick={() => void refresh()} className={`${t.secondary} shrink-0`}><RefreshCw className={`h-4 w-4 ${loading ? "motion-safe:animate-spin" : ""}`} aria-hidden />履歴を更新</button>
       </div>
       <div className={`space-y-2 ${t.pad} pt-3`}>
-        <p className={t.caption}>{props.mode === "client" ? "ナトリからの返事はメールでもお知らせします。ご返信はこの相談ページからお願いします。メールに返信しても、ここには載りません。" : "相談内容とメール通知の状態は別に記録されます。メールへの直接返信は、この履歴には自動で入りません。"}</p>
+        <p className={t.caption}>{props.mode === "client" ? "ナトリからの返事はメールでもお知らせします。ご返信は、この相談ページからでも、メールへのご返信でも大丈夫です。メールで返信した内容は、ここには載りません。" : "相談内容とメール通知の状態は別に記録されます。メールへの直接返信は、この履歴には自動で入りません。"}</p>
         {newMessages && !loading ? <button type="button" onClick={showLatest} className={`inline-flex items-center gap-1 ${t.textButton}`}><ArrowDown className="h-3.5 w-3.5" aria-hidden />新しいやり取りを見る</button> : null}
         {props.mode === "staff" && !props.clientEmail ? <p className={t.warning}>依頼者のメールアドレスがないため返信できません。</p> : null}
         {loading ? <p role="status" className={t.caption}>履歴を確認中…</p> : null}
