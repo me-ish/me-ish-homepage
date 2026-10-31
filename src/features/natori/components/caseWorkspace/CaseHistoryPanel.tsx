@@ -40,7 +40,7 @@ export function CaseHistoryPanel({projectId,section,page,refreshKey,onPage,onAcc
     <p className="text-sm">{financial.method===null?"入金の記録はありません":financial.method==="manual"?"あなたが記録した入金":financial.method==="stripe"?"カード決済":"以前の方法での入金"}{financial.method!==null&&financial.confirmedAt?` · ${caseTime(financial.confirmedAt)}`:""}</p>
     {financial.legacyRecordedAmount!==null?<p className="mt-2 text-sm">以前の方法で記録した金額：{money(financial.legacyRecordedAmount)}（上の合計には入れていません）</p>:null}
     {financial.pendingCount||financial.reviewCount?<p className="mt-2 text-sm">返金の手続き中 {financial.pendingCount??"—"}件 / 要確認 {financial.reviewCount??"—"}件</p>:null}
-    {financial.state!=="verified"?<p className="mt-2 text-sm text-amber-900">{financial.pendingCount||financial.reviewCount?"終わっていない返金があるので、":"入金と返金の記録を全部は確かめられなかったので、"}差し引きの金額はまだ決まっていません。</p>:null}
+    {financial.state!=="verified"?<p className="mt-2 text-sm text-amber-900">{financial.pendingCount||financial.reviewCount?"終わっていない返金があるので、":"入金と返金の記録を全部は確かめられなかったので、"}差し引きの金額はまだ決まっていません。{financial.pendingCount||financial.reviewCount||financial.method===null||financial.method==="manual"?"":"返金があったかは、Stripeの画面で確認してください。"}</p>:null}
    </>:<p className="mt-2 text-sm">{pending?"読み込み中":"入金の記録を読み込めませんでした。"}</p>}
    
    {section==="transaction"?<>{error?<><p role="alert">最新の記録を読み込めませんでした。</p><button className={`${ui.btnSecondary} mt-3`} disabled={pending} onClick={restart}>再読み込み</button></>:null}</>:null}

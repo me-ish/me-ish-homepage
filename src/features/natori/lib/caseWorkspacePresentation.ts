@@ -148,6 +148,8 @@ export function deriveCaseGuidance(record: CaseWorkspaceRecord): CaseGuidance {
     ["見積", m.facts.quote], ["支払いリンク", m.facts.link], ["納品", m.facts.delivery],
     ["制作の工程", d.tasks], ["相談", d.conversation]] as const;
   for (const [label, observation] of domains) {
+    // 旧方式の入金は、返金を追うための Stripe の情報が記録に無く、この形式では表示できない。入金そのものは読めているので、読み込み失敗の警告にはしない（返金はStripeの画面で確認する）。
+    if (observation === m.facts.financialReview && observation.state === "unavailable" && observation.reason === "unsupported" && m.facts.payment.state === "ready") continue;
     if (observation.state === "unavailable" || observation.state === "not_requested") {
       unknown.push(`${label}：${observationLabel(observation)}`);
     }

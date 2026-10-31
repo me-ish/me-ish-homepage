@@ -65,6 +65,15 @@ describe("synthetic reader to case workspace", () => {
       expect(guidance.waits.some(wait => wait.key === "quote-unconfirmed")).toBe(false);
     }
   });
+  it("does not warn about unreadable records when only the refund tracking of an old-style payment is missing", () => {
+    const paid = normal.find(record => record.model.facts.payment.state === "ready");
+    if (!paid) throw Error("Expected a fixture with a readable payment");
+    const derive = (facts: Partial<typeof paid.model.facts>) => deriveCaseGuidance({ ...paid, model: deriveCaseReadModel({
+      ...paid.model.facts, ...facts, projectId: paid.id, snapshotId: paid.model.snapshotId, asOf: paid.model.checkedAt }) });
+    const unsupported = { state: "unavailable", reason: "unsupported" } as const;
+    expect(derive({ financialReview: unsupported }).unknown.some(text => text.startsWith("入金と返金の記録："))).toBe(false);
+    expect(derive({ financialReview: { state: "unavailable", reason: "read_failed" } }).unknown).toContain("入金と返金の記録：読み込めませんでした");
+  });
   it("uses the authorized reader for eight cases without relaxing command prerequisites for unknown origins", () => {
     expect(normal).toHaveLength(8);
     for (const record of normal) {
