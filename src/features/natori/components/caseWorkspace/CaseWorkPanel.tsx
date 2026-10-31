@@ -14,7 +14,7 @@ import type { CaseOverviewPart, CaseSection } from "../../types/caseWorkspace";
 
 const card="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5";
 const fileTime=(value:string|null|undefined)=>value?caseTime(value):"—";
-export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selectedNotificationId,overviewPart=null}:{selectedNotificationId?:string;projectId:string;section:CaseSection;onChanged:()=>void;onDraftChange:(value:boolean)=>void;overviewPart?:CaseOverviewPart|null}){
+export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selectedNotificationId,overviewPart=null,talkEvents}:{talkEvents?:ReadonlyArray<{at:string;text:string}>;selectedNotificationId?:string;projectId:string;section:CaseSection;onChanged:()=>void;onDraftChange:(value:boolean)=>void;overviewPart?:CaseOverviewPart|null}){
  const [view,setView]=useState<CaseWorkView|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState("");
  const [draft,setDraft]=useState(false),[deliveryDraft,setDeliveryDraft]=useState(false);
  const [adminDraft,setAdminDraft]=useState(false),[recordDraft,setRecordDraft]=useState(false),[revisionDraft,setRevisionDraft]=useState(false);
@@ -42,7 +42,7 @@ export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selecte
   </div>
   <div hidden={section!=="consultation"}>
    
-   <ConsultationThread key={projectId} mode="staff" projectId={projectId} clientEmail={p.clientEmail??undefined} closed={inactive} readOnlyLookup workspaceExpected={{title:p.title,clientName:p.clientName,email:p.clientEmail}} onChanged={()=>{void refresh();}} onDraftChange={setDraft}/>
+   <ConsultationThread key={projectId} mode="staff" projectId={projectId} clientEmail={p.clientEmail??undefined} closed={inactive} events={talkEvents} readOnlyLookup workspaceExpected={{title:p.title,clientName:p.clientName,email:p.clientEmail}} onChanged={()=>{void refresh();}} onDraftChange={setDraft}/>
   </div>
   <div hidden={section!=="production"} className="space-y-4">
    <section className={card}><h3 className="font-semibold">工程を進める</h3><p className="text-sm text-zinc-600">終わった工程を押してください。</p>

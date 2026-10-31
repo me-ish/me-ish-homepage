@@ -3,7 +3,7 @@
 import { natoriPrimaryActionClassName } from "@/features/natori/constants/natoriPrimaryAction";
 import { natoriAdminUi } from "@/features/natori/constants/adminUi";
 import { natoriClientUi } from "@/features/natori/constants/clientUi";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { CSRF_HEADERS } from "@/lib/auth/csrf";
 import { ArrowDown, MessageCircle, Paperclip, RefreshCw, Send } from "lucide-react";
 import { consultationOperationSchema, freezeConsultationOperation, consultationDigest, type ConsultationOperation } from "@/features/natori/lib/consultationOperation";
@@ -15,7 +15,7 @@ import { roughOkSignature, staffRoughOkListSchema } from "@/features/natori/lib/
 import RoughOkFollowups from "./RoughOkFollowups";
 
 type Props =
-  | { mode: "staff"; readOnlyLookup?: boolean; workspaceExpected?:{title:string;clientName:string;email:string|null}; projectId: string; clientEmail?: string; standalone?: boolean; initialMessages?: never; token?: never; closed?: boolean; onChanged?: () => void; onDraftChange?: (hasDraft: boolean) => void }
+  | { mode: "staff"; readOnlyLookup?: boolean; workspaceExpected?:{title:string;clientName:string;email:string|null}; projectId: string; clientEmail?: string; standalone?: boolean; initialMessages?: never; token?: never; closed?: boolean; events?: ReadonlyArray<{ at: string; text: string }>; onChanged?: () => void; onDraftChange?: (hasDraft: boolean) => void }
   | { mode: "client"; token: string; initialMessages: ConsultationMessage[]; closed: boolean; projectId?: never; clientEmail?: never };
 
 type ComposerJob = { actor: string; generation: number };
@@ -483,6 +483,12 @@ export default function ConsultationThread(props: Props) {
     } finally { releaseBusy(job); }
   };
 
+  // 見積もりの送付など、メッセージではない出来事を、時刻の合う場所に一行で挟む（管理画面のみ）。
+  const at = (value: string) => Date.parse(value);
+  const staffEvents = props.mode === "staff" ? [...(props.events ?? [])].sort((a, b) => at(a.at) - at(b.at)) : [];
+  const eventLine = (event: { at: string; text: string }) => (
+    <li key={`event-${event.at}-${event.text}`} className={`py-1 text-center ${t.caption}`}>{event.text} · {dateTime(event.at)}</li>
+  );
   const cannotSend = closed || (props.mode === "staff" && !props.clientEmail);
   const t = threadTone[props.mode];
   // On phones the client's input bar stays at the bottom of the screen (LINE-like);
@@ -502,11 +508,14 @@ export default function ConsultationThread(props: Props) {
         {props.mode === "staff" && !loading && !historyUnavailable ? <RoughOkFollowups key={actorKey} rows={roughOks} messages={messages} closed={closed} actionsAllowed={roughOkActionsAllowed} busy={busy} sendingEnabled={roughOkSendingEnabled} onAction={roughOkAction} /> : null}
       </div>
       {!loading && !historyUnavailable && messages.length === 0 ? <p className={`${t.pad} py-6 text-center ${t.caption}`}>{closed ? "相談履歴はありません。" : "返信はまだありません。最初のメッセージを送れます。"}</p> : null}
-      {messages.length > 0 ? (
+      {messages.length > 0 || staffEvents.length > 0 ? (
         <ol className={`space-y-4 ${t.pad} py-4`}>
           {messages.map((message, index) => {
             const own = props.mode === "client" ? message.sender === "client" : message.sender === "staff";
+            const before = staffEvents.filter(event => at(event.at) <= at(message.createdAt) && (index === 0 || at(event.at) > at(messages[index - 1].createdAt)));
             return (
+              <Fragment key={message.id}>
+              {before.map(eventLine)}
               <li id={`consultation-message-${message.id}`} key={message.id} ref={index === messages.length - 1 ? lastMessageRef : undefined} tabIndex={-1} className={`flex flex-col rounded-2xl ${natoriClientUi.focus} ${own ? "items-end" : "items-start"}`}>
                 <p className={`mb-1 px-1 ${t.meta}`}>{message.sender === "staff" ? "ナトリ" : props.mode === "client" ? "あなた" : "依頼者"} · {dateTime(message.createdAt)}</p>
                 <div className={`min-w-0 max-w-[88%] px-4 py-3 sm:max-w-[80%] ${own ? t.own : t.other}`}>
@@ -539,8 +548,10 @@ export default function ConsultationThread(props: Props) {
                   <button type="button" disabled={busy} onClick={() => void retry(message.id)} className={`mt-1 px-1 ${t.retry} disabled:cursor-not-allowed disabled:text-zinc-500`}>メール通知に失敗 · 再送する</button>
                 ) : null}
               </li>
+              </Fragment>
             );
           })}
+          {staffEvents.filter(event => messages.length === 0 || at(event.at) > at(messages[messages.length - 1].createdAt)).map(eventLine)}
         </ol>
       ) : null}
       {messages.some((message) => message.files?.length) ? <p className={`${t.pad} pb-3 ${t.caption}`}>添付が開けない場合は、ページを再読み込みしてください。</p> : null}

@@ -15,6 +15,12 @@ export function caseQuoteSentAt(record: CaseWorkspaceRecord): string | null {
   return sent.length ? sent[sent.length - 1] : null;
 }
 
+/** トーク画面の中に、メッセージの合間の一行として出す出来事（いまは見積もりの送付）。 */
+export function caseTalkEvents(record: CaseWorkspaceRecord): ReadonlyArray<{ at: string; text: string }> {
+  const at = caseQuoteSentAt(record);
+  return at ? [{ at, text: "見積もりを送りました" }] : [];
+}
+
 export function caseShelved(record: CaseWorkspaceRecord): boolean {
   return record.model.eligibility==="closed"||record.model.eligibility==="archived";
 }
