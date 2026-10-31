@@ -42,6 +42,12 @@ export function extractClientEmailFromNote(note: string | undefined | null): str
   return null;
 }
 
+/** 件名の「○○ について」。案件名が空のときは「について」だけが浮かないよう省く。 */
+function subjectTopic(title: string): string {
+  const trimmed = title.trim();
+  return trimmed ? `${trimmed} について` : "";
+}
+
 export type NatoriOrderMailDraft = {
   subject: string;
   body: string;
@@ -69,7 +75,7 @@ export function buildEstimateMailDraft(input: NatoriEstimateMailInput): NatoriOr
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
     .map((line) => `　・${line}`);
-  const subject = `【お見積もり】${input.title} について（${artist}）`;
+  const subject = `【お見積もり】${subjectTopic(input.title)}（${artist}）`;
   const body = [
     `${input.clientName} 様`,
     "",
@@ -79,7 +85,7 @@ export function buildEstimateMailDraft(input: NatoriEstimateMailInput): NatoriOr
     "いただいた内容をもとに、お見積もりをご案内いたします。",
     "",
     "──────────────",
-    `■ ご依頼内容: ${input.title}`,
+    `■ ご依頼内容: ${input.title.trim()}`,
     ...(input.deliverables ? [`■ 制作するもの: ${input.deliverables}`] : []),
     ...(input.scope ? [`■ 制作範囲: ${input.scope}`] : []),
     ...(input.usage ? [`■ 用途: ${input.usage}`] : []),
@@ -113,7 +119,7 @@ export type NatoriPaymentMailInput = {
 
 export function buildPaymentMailDraft(input: NatoriPaymentMailInput): NatoriOrderMailDraft {
   const artist = input.artistName?.trim() || "ナトリ";
-  const subject = `【お支払いのご案内】${input.title} について（${artist}）`;
+  const subject = `【お支払いのご案内】${subjectTopic(input.title)}（${artist}）`;
   const body = [
     `${input.clientName} 様`,
     "",
@@ -121,7 +127,7 @@ export function buildPaymentMailDraft(input: NatoriPaymentMailInput): NatoriOrde
     "下記のリンクからお支払いをお願いいたします。",
     "",
     "──────────────",
-    `■ ご依頼内容: ${input.title}`,
+    `■ ご依頼内容: ${input.title.trim()}`,
     `■ お支払い金額: ${formatYen(input.amount)}`,
     `■ お支払い期限: 本メール送信日から${PAYMENT_DUE_DAYS}日以内`,
     "■ お支払いリンク（カード決済）:",
@@ -174,12 +180,12 @@ export function buildPaidConfirmationMail(
     "ご入金を確認いたしました。ありがとうございます。",
     "",
     "──────────────",
-    `■ ご依頼内容: ${input.title}`,
+    `■ ご依頼内容: ${input.title.trim()}`,
     `■ ご入金額: ${formatYen(input.amount)}`,
     "──────────────",
     "",
     "これより制作を開始いたします。",
-    "ラフが完成しだい、このメールアドレス宛にご連絡いたしますので、",
+    "ラフが完成しましたら、このメールアドレス宛にメールでお知らせします。",
     "今しばらくお待ちください。",
     "",
     "ご不明な点がありましたら、このメールにそのままご返信ください。",
@@ -226,7 +232,7 @@ export type NatoriWorkMailInput = {
 
 export function buildRoughMailDraft(input: NatoriWorkMailInput): NatoriOrderMailDraft {
   const artist = input.artistName?.trim() || "ナトリ";
-  const subject = `【ラフのご確認】${input.title} について（${artist}）`;
+  const subject = `【ラフのご確認】${subjectTopic(input.title)}（${artist}）`;
   const body = [
     `${input.clientName} 様`,
     "",
@@ -248,8 +254,7 @@ export function buildRoughMailDraft(input: NatoriWorkMailInput): NatoriOrderMail
     "問題がなければ、その旨も相談ページからお知らせください。清書に進みます。",
     "",
     "相談リンクの期限が切れている場合は、そのページから新しいリンクを取り寄せられます。",
-    "相談ページが見つからない場合は、このメールにご返信ください。",
-    "※このメールへの返信は、相談ページには載りません。",
+    "相談ページが見つからない場合や、メールでのご連絡をご希望の場合は、このメールにご返信いただいても大丈夫です。",
     artist,
   ].join("\n");
   return { subject, body };
@@ -257,7 +262,7 @@ export function buildRoughMailDraft(input: NatoriWorkMailInput): NatoriOrderMail
 
 export function buildDeliveryMailDraft(input: NatoriWorkMailInput): NatoriOrderMailDraft {
   const artist = input.artistName?.trim() || "ナトリ";
-  const subject = `【納品】${input.title} について（${artist}）`;
+  const subject = `【納品】${subjectTopic(input.title)}（${artist}）`;
   const body = [
     `${input.clientName} 様`,
     "",
