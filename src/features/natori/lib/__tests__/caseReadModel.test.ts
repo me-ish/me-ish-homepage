@@ -784,6 +784,13 @@ describe("terminal records, external boundaries and independent attention", () =
     expect(action(model, "prepare_payment_notice").available).toBe(false);
   });
 
+  it("does not keep asking to act on a rough OK once the work is delivered", () => {
+    const roughs = ready([rough("ok", { clientOkAt: RECORDED })]);
+    expect(reasons(deriveCaseReadModel(snapshot({ roughs })))).toContain("rough_ok_unacknowledged");
+    const delivered = deriveCaseReadModel(snapshot({ roughs, delivery: ready(delivery()) }));
+    expect(reasons(delivered)).not.toContain("rough_ok_unacknowledged");
+  });
+
   it("retains closed-case rough follow-up and new completed-case responses", () => {
     const closed = deriveCaseReadModel(snapshot({
       project: ready(project({ rawStatus: "closed" })),

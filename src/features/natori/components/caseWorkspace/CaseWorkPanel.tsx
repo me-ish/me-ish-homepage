@@ -31,7 +31,7 @@ export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selecte
   }catch(e){setError(e instanceof Error?e.message:"うまくいったか分かりません。");return false;}finally{gate.current=false;setBusy(false);}
  };
  if(!view)return <section className={card}><p role={error?"alert":"status"}>{error||"読み込み中…"}</p><button className={ui.btnSecondary} onClick={()=>void refresh()}>再読み込み</button></section>;
- const p=view.project,inactive=!!p.deletedAt||p.status==="closed",origin=view.records.find(r=>r.kind==="origin");
+ const p=view.project,inactive=!!p.deletedAt||p.status==="closed",deliveredStatus=p.status==="delivered"||p.status==="completed",origin=view.records.find(r=>r.kind==="origin");
  return <div className="mt-4 space-y-4">
   {error?<p role="alert" className="rounded-xl bg-amber-50 p-4">{error}</p>:null}{result?<p role="status">{result}</p>:null}
   
@@ -46,7 +46,7 @@ export function CaseWorkPanel({projectId,section,onChanged,onDraftChange,selecte
   </div>
   <div hidden={section!=="production"} className="space-y-4">
    <section className={card}><h3 className="font-semibold">工程を進める</h3><p className="text-sm text-zinc-600">終わった工程を押してください。</p>
-    {p.tasks.filter(t=>t.stage!=="material").map(t=><button key={t.id} aria-pressed={t.done} disabled={busy||inactive} className={`${ui.btnSecondary} mr-2`} onClick={()=>void command({command:"task",projectId,revision:view.revision,taskKey:t.id,done:!t.done})}>{t.done?"✓ ":""}{t.label}</button>)}
+    {p.tasks.filter(t=>t.stage!=="material").map(t=><button key={t.id} aria-pressed={t.done||(t.stage==="delivery"&&deliveredStatus)} disabled={busy||inactive} className={`${ui.btnSecondary} mr-2`} onClick={()=>void command({command:"task",projectId,revision:view.revision,taskKey:t.id,done:!t.done})}>{t.done||(t.stage==="delivery"&&deliveredStatus)?"✓ ":""}{t.label}</button>)}
     {p.type==="undecided"?<label className="block">依頼の種類（選ぶと工程ができます）<select defaultValue="" className={ui.input} disabled={busy||inactive} onChange={e=>{if(e.target.value)void command({command:"confirm_type",projectId,revision:view.revision,projectType:e.target.value});}}><option value="">選択してください</option><option value="icon">アイコン</option><option value="sd">SD</option><option value="standing">立ち絵</option><option value="illustration">イラスト</option></select></label>:null}</section>
    <section className={card}><h3 className="font-semibold">修正の依頼を記録</h3><p className="text-sm text-zinc-600">お客さんのメッセージと、どのラフかを選びます。追加料金がかかる時は、相談で決めてください。</p>
     <RevisionForm view={view} disabled={busy||inactive} save={command} onDirty={setRevisionDraft}/></section>
