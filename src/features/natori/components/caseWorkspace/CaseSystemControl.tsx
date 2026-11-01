@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useRef,useState} from "react";
 import {CaseSystemAccessRejected,loadCaseSystemReview,submitCaseSystemControl} from "../../data/supabaseCaseSystem";
 import type {CaseSystemControlInput,CaseSystemReview} from "../../lib/caseSystemControl";
+import {natoriAdminUi as ui} from "../../constants/adminUi";
 
 /** Administrative admission controls remain available inside a held workspace.
  * No automatic retry/resume; every resume binds a newly fetched local revision.
@@ -36,22 +37,22 @@ export function CaseSystemControl({onAccessRejected}:{onAccessRejected:()=>void}
   finally{if(current===epoch.current){setBusy(false);active.current=false;}}
  };
  const held=!!review&&(review.commandsHeld||review.sendersHeld||review.readOnly);
- const btn="min-h-11 rounded-full px-5 text-sm font-semibold disabled:opacity-50";
+ const btn=ui.btnSecondary;
  // The state comes first and large; only the one action that fits it is a button. Everything else is folded.
  return <section aria-label="緊急停止" className="my-4 space-y-3">
   {message?<p role="status" className="text-sm">{message}</p>:null}
-  {!review?<div className="flex flex-wrap items-center gap-3 rounded-2xl border border-zinc-200 p-4"><p className="text-sm text-zinc-600">{busy?"いまの状態を読み込んでいます…":"いまの状態が分かりません。"}</p><button disabled={busy} onClick={()=>void refresh()} className={`${btn} border border-zinc-300`}>いまの状態を見る</button></div>:<>
+  {!review?<div className="flex flex-wrap items-center gap-3 rounded-2xl border border-zinc-200 p-4"><p className="text-sm text-zinc-600">{busy?"いまの状態を読み込んでいます…":"いまの状態が分かりません。"}</p><button disabled={busy} onClick={()=>void refresh()} className={btn}>いまの状態を見る</button></div>:<>
    <div className={`rounded-2xl p-4 ${held?"bg-red-50 text-red-900":"bg-emerald-50 text-emerald-900"}`}>
     <p className="text-base font-bold">{review.readOnly?"見るだけにしています":held?"止めています":"いつも通り動いています"}</p>
     <p className="mt-1 text-sm">保存：{review.commandsHeld?"止めています":"使えます"} ／ 送信：{review.sendersHeld?"止めています":"使えます"}</p>
     {held?<p className="mt-1 text-xs">止めている間も、お客さんのOKや入金は記録されます。送ったメールは取り消せません。</p>:null}
    </div>
-   {!held?<button disabled={busy} onClick={()=>void control("hold")} className={`${btn} w-full bg-red-700 text-white`}>すべて止める</button>:null}
+   {!held?<button disabled={busy} onClick={()=>void control("hold")} className={`${ui.btnDangerSolid} w-full`}>すべて止める</button>:null}
    {held&&review.armed?<div className="space-y-3 rounded-2xl border border-zinc-200 p-4">
     <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={ack} disabled={busy} onChange={e=>setAck(e.target.checked)}/> 止める前の処理がこのあと終わることがあると分かりました</label>
     <div className="flex flex-wrap gap-2">
-     {review.commandsHeld?<button disabled={busy||!ack} onClick={()=>void control("resume-commands")} className={`${btn} border border-zinc-300`}>保存だけ再開する</button>:null}
-     {!review.commandsHeld&&!review.readOnly&&review.sendersHeld?<button disabled={busy||!ack} onClick={()=>void control("resume-senders")} className={`${btn} border border-zinc-300`}>送信も再開する</button>:null}
+     {review.commandsHeld?<button disabled={busy||!ack} onClick={()=>void control("resume-commands")} className={btn}>保存だけ再開する</button>:null}
+     {!review.commandsHeld&&!review.readOnly&&review.sendersHeld?<button disabled={busy||!ack} onClick={()=>void control("resume-senders")} className={btn}>送信も再開する</button>:null}
     </div>
     {review.commandsHeld?<p className="text-xs text-zinc-600">保存を再開したあと、送信を再開できます。</p>:null}
    </div>:null}
@@ -68,9 +69,9 @@ export function CaseSystemControl({onAccessRejected}:{onAccessRejected:()=>void}
       </li>)}</ul>
      </details>:null}
      <div className="flex flex-wrap gap-2">
-      {held?<button disabled={busy} onClick={()=>void control("hold")} className={`${btn} border border-zinc-300`}>送信と保存を止める</button>:null}
-      {!review.readOnly?<button disabled={busy} onClick={()=>void control("read-only")} className={`${btn} border border-zinc-300`}>見るだけにする</button>:null}
-      <button disabled={busy} onClick={()=>void refresh()} className={`${btn} border border-zinc-300`}>いまの状態を見る</button>
+      {held?<button disabled={busy} onClick={()=>void control("hold")} className={ui.btnDanger}>送信と保存を止める</button>:null}
+      {!review.readOnly?<button disabled={busy} onClick={()=>void control("read-only")} className={btn}>見るだけにする</button>:null}
+      <button disabled={busy} onClick={()=>void refresh()} className={btn}>いまの状態を見る</button>
      </div>
     </div>
    </details>

@@ -14,9 +14,10 @@ import {
 import { caseTime } from "../../lib/caseWorkspacePresentation";
 import { notificationPurposeName } from "../../lib/notificationLabels";
 import { natoriAdminUi as ui } from "../../constants/adminUi";
+import { workspaceLook as look } from "../../constants/workspaceLook";
 import type { CaseOverviewPart, CaseSection } from "../../types/caseWorkspace";
 const DETAIL_LABELS = { title: "案件名", client_name: "お客さんの名前", amount: "金額", delivery_plan: "納期のプラン", start_date: "作業を始める日", due_date: "納期", note: "メモ" } as const;
-const card = "space-y-3 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5";
+const card = `space-y-3 ${look.cardPadded}`;
 type Operation = ReturnType<typeof useCaseAdminOperation>;
 export function CaseAdminConfirmation({ operation }: { operation: Operation }) {
   const o = operation;
@@ -31,7 +32,7 @@ export function CaseAdminConfirmation({ operation }: { operation: Operation }) {
       {o.saved ? (
         <section
           aria-label="保存する前の確認"
-          className="space-y-3 rounded-xl border-2 border-pink-200 bg-pink-50 p-4"
+          className={look.confirm}
         >
           <h3 className="font-semibold">
             {caseAdminLabels[o.saved.request.action.command]}

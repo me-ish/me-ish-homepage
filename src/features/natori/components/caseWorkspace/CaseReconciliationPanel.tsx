@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { evidenceCanApply, type ReconciliationKind, type ReconciliationView } from "../../lib/caseReconciliation";
 import { postReconciliation, readReconciliation, ReconciliationReadError } from "../../data/supabaseCaseReconciliation";
+import { workspaceLook as look } from "../../constants/workspaceLook";
 
 const labels: Record<ReconciliationKind, string> = { price: "金額", link: "支払いリンク", mail: "メール", payment: "入金", stop: "古いリンクの停止" };
 type Confirmation = { kind: "apply"; job: ReconciliationView["jobs"][number]; resolutionId: string } | { kind: "stop"; target: string };
@@ -46,38 +47,38 @@ export function CaseReconciliationPanel({ projectId, onChanged,selectedNotificat
   }
   const inspect = (kind: ReconciliationKind, target: string) => view && execute({ action: "inspect", projectId, id: crypto.randomUUID(), kind, target, revision: view.revision });
   function open(c: Confirmation) { setChecked(false); setConfirmation(c); }
-  return <section aria-label="結果が分からない処理" className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5">
+  return <section aria-label="結果が分からない処理" className={`space-y-4 ${look.cardPadded}`}>
     <h3 className="font-semibold">結果が分からない処理を調べる</h3>
     <p className="text-sm text-zinc-600">Stripe やメールの送信サービスに問い合わせて、実際にどうなったかを調べます。分かるまで、同じ処理はやり直せません。</p>
-    <button type="button" disabled={busy} className="rounded-lg border px-3 py-2 text-sm" onClick={() => { void refresh(); }}>いまの記録を読み込む</button>
+    <button type="button" disabled={busy} className={look.btnSecondary} onClick={() => { void refresh(); }}>いまの記録を読み込む</button>
     {message ? <p role="status" className="text-sm">{message}</p> : null}
     {error ? <p role="alert" className="text-sm text-red-800">{error}</p> : null}
     {uncertain.current ? <p className="text-sm text-amber-900">結果が分からないので、ここでの操作を止めています。ページを読み込み直してください。</p> : null}
     {view&&(selectedNotificationId?view.selectedNotice===selectedNotificationId:!view.selectedNotice) ? <>
       {selectedNotificationId?<p className="text-sm">選んだメールについて調べます。</p>:null}
       {view.operations.length > 100 || view.notifications.length > 100 || view.jobs.length > 100 ? <p>件数が多すぎて全部は表示できません。</p> : null}
-      <ul className="space-y-4">{view.operations.slice(0,100).map((o,index) => <li key={o.id} className="rounded-xl bg-zinc-50 p-3 text-sm">
+      <ul className="space-y-4">{view.operations.slice(0,100).map((o,index) => <li key={o.id} className={`${look.inset} text-sm`}>
         <p className="font-semibold">支払いリンクの処理 {index+1} · {o.reconciliation_id ? "調べ終わりました" : o.status === "pending" ? "結果が分かりません" : "記録があります"}</p>
         
-        <div className="mt-3 flex flex-wrap gap-2">{(["price","link","payment","stop"] as const).map(kind => <button key={kind} type="button" className="rounded-lg border bg-white px-3 py-2" disabled={busy || uncertain.current} onClick={() => void inspect(kind,o.id)}>{kind === "stop" ? "止まったか調べる" : `${labels[kind]}を調べる`}</button>)}
-          <button type="button" className="rounded-lg border bg-white px-3 py-2" disabled={busy || uncertain.current} onClick={() => open({kind:"stop",target:o.id})}>古いリンクを止める</button></div>
+        <div className="mt-3 flex flex-wrap gap-2">{(["price","link","payment","stop"] as const).map(kind => <button key={kind} type="button" className={look.btnSecondary} disabled={busy || uncertain.current} onClick={() => void inspect(kind,o.id)}>{kind === "stop" ? "止まったか調べる" : `${labels[kind]}を調べる`}</button>)}
+          <button type="button" className={look.btnSecondary} disabled={busy || uncertain.current} onClick={() => open({kind:"stop",target:o.id})}>古いリンクを止める</button></div>
       </li>)}</ul>
-      {view.notifications.filter(n => n.status === "unknown" || n.status === "sending").slice(0,100).map(n => <div key={n.id} className="text-sm"><p>{n.purpose} · {n.attempt_no}回目 · 送れたか分かりません</p><button type="button" disabled={busy || uncertain.current} className="mt-2 rounded-lg border px-3 py-2" onClick={() => void inspect("mail",n.id)}>メールが送れたか調べる</button></div>)}
+      {view.notifications.filter(n => n.status === "unknown" || n.status === "sending").slice(0,100).map(n => <div key={n.id} className="text-sm"><p>{n.purpose} · {n.attempt_no}回目 · 送れたか分かりません</p><button type="button" disabled={busy || uncertain.current} className={`${look.btnSecondary} mt-2`} onClick={() => void inspect("mail",n.id)}>メールが送れたか調べる</button></div>)}
       {view.mailEvents.length ? <div className="space-y-2 text-sm" aria-label="送信サービスからの知らせ"><p>送信サービスからの知らせ：</p>{view.mailEvents.slice(0,100).map((e,index)=><p key={index}>{({"email.sent":"送信しました","email.delivered":"相手に届きました","email.bounced":"届きませんでした","email.complained":"迷惑メールとして報告されました","email.failed":"送れませんでした","email.delivery_delayed":"届くのが遅れています"} as Record<string,string>)[e.event_type]??"未分類"} · {new Date(e.occurred_at).toLocaleString("ja-JP")}</p>)}</div> : null}
-      <ol className="space-y-3">{view.jobs.slice(0,100).map(j => <li key={j.id} className="rounded-xl border p-3 text-sm">
+      <ol className="space-y-3">{view.jobs.slice(0,100).map(j => <li key={j.id} className={`${look.inset} text-sm`}>
         <p className="font-semibold">{labels[j.kind]} · {j.resolution_id ? "記録しました" : j.facts?.state === "confirmed" ? "確かめられました（まだ記録していません）" : j.facts?.state === "mismatch" ? "内容が合いません" : j.facts?.state === "unavailable" ? "調べられませんでした" : "まだ分かりません"}</p>
         <p>{new Date(j.created_at).toLocaleString("ja-JP")}</p>
         {j.facts ? <><p>{j.facts.source === "provider_webhook" ? "送信サービスからの知らせ" : "問い合わせた結果"}{j.facts.complete ? "" : "（一部だけ）"}{j.facts.identity.amount !== null && j.facts.identity.amount !== undefined ? ` · ${j.facts.identity.amount.toLocaleString("ja-JP")}円` : ""}{j.facts.identity.livemode === false ? " · テスト環境" : ""}</p></> : <p>調べています。少し待ってから「いまの記録を読み込む」を押してください。</p>}
-        {j.facts && !j.resolution_id && evidenceCanApply(j.kind,j.facts) ? <button type="button" disabled={busy || uncertain.current} className="mt-3 rounded-lg border px-3 py-2" onClick={() => open({kind:"apply",job:j,resolutionId:crypto.randomUUID()})}>この結果を記録する</button> : null}
+        {j.facts && !j.resolution_id && evidenceCanApply(j.kind,j.facts) ? <button type="button" disabled={busy || uncertain.current} className={`${look.btnSecondary} mt-3`} onClick={() => open({kind:"apply",job:j,resolutionId:crypto.randomUUID()})}>この結果を記録する</button> : null}
       </li>)}</ol>
       {!view.operations.length && !view.notifications.length ? <p className="text-sm">調べる処理はありません。</p> : null}
     </> : null}
-    {confirmation && view ? <div role="dialog" aria-modal="true" aria-label="記録する前の確認" className="space-y-3 rounded-xl border-2 border-pink-200 bg-pink-50 p-4">
+    {confirmation && view ? <div role="dialog" aria-modal="true" aria-label="記録する前の確認" className={look.confirm}>
       <h4 className="font-semibold">{confirmation.kind === "apply" ? "この結果を記録しますか" : "古いリンクを止めますか"}</h4>
       
       {confirmation.kind === "apply" ? <><p>{labels[confirmation.job.kind]}について、調べた結果を案件の記録にします。メールは送りません。</p></> : <p>前に作った支払いリンクを使えなくして、止まったかを調べます。新しいリンクは作りません。</p>}
       <label className="flex gap-2 text-sm"><input type="checkbox" checked={checked} onChange={e => setChecked(e.target.checked)} />内容を見ました</label>
-      <div className="flex flex-wrap gap-3"><button type="button" className="rounded-lg bg-pink-700 px-3 py-2 text-white" disabled={!checked || busy || uncertain.current} onClick={() => void execute(confirmation.kind === "apply" ? {action:"apply-evidence",projectId,id:confirmation.job.id,evidenceId:confirmation.job.evidence_id,resolutionId:confirmation.resolutionId,confirmed:true} : {action:"stop-old-link",projectId,id:crypto.randomUUID(),kind:"stop",target:confirmation.target,revision:view.revision,confirmed:true})}>{confirmation.kind === "apply" ? "記録する" : "リンクを止める"}</button><button type="button" disabled={busy} onClick={() => setConfirmation(null)}>やめる</button></div>
+      <div className="flex flex-wrap gap-3"><button type="button" className={look.btnPrimary} disabled={!checked || busy || uncertain.current} onClick={() => void execute(confirmation.kind === "apply" ? {action:"apply-evidence",projectId,id:confirmation.job.id,evidenceId:confirmation.job.evidence_id,resolutionId:confirmation.resolutionId,confirmed:true} : {action:"stop-old-link",projectId,id:crypto.randomUUID(),kind:"stop",target:confirmation.target,revision:view.revision,confirmed:true})}>{confirmation.kind === "apply" ? "記録する" : "リンクを止める"}</button><button type="button" className={look.btnSecondary} disabled={busy} onClick={() => setConfirmation(null)}>やめる</button></div>
     </div> : null}
   </section>;
 }
