@@ -353,8 +353,8 @@ export default function PortfolioGallery({
                 aria-expanded={expanded}
                 aria-controls="portfolio-gallery-results"
                 onClick={() => setExpanded((current) => !current)}
-                className="pf-cute-focus min-h-[44px] rounded-full border-2 px-5 py-2.5 text-sm font-bold"
-                style={{ borderColor: c.sketchLine, background: c.surface, color: c.text }}
+                className="pf-btn pf-btn-sm pf-cute-focus min-h-[44px] px-5 py-2.5 text-sm font-bold"
+                style={{ borderColor: c.ink, background: c.surface, color: c.text }}
               >
                 {expanded ? "最初の6作品だけ表示" : "全" + filteredWorks.length + "作品を見る"}
               </button>

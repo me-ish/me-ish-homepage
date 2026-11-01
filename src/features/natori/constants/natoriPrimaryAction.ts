@@ -14,14 +14,15 @@ export const natoriPrimaryActionClassName =
 
 /**
  * ポートフォリオ（公開ページ）の入口 CTA 用。濃いマゼンタ塗りだと絵より目立ちすぎるので、
- * 淡いピンク塗り＋ブランドピンクの縁＋濃い文字にする。フォームの送信ボタンは natoriPrimaryAction のまま。
+ * 淡いピンク塗り＋手描き線の墨色の縁＋濃い文字にする（「貼った紙」ボタン。厚みの影は .pf-btn が付ける）。
+ * フォームの送信ボタンは natoriPrimaryAction のまま。
  */
 export const natoriSoftActionColors = {
-  normal: { background: "#FFE4EF", foreground: "#242027" },
-  hover: { background: "#FFD3E2", foreground: "#242027" },
-  border: "#EC4899",
+  normal: { background: "#FFD3E2", foreground: "#242027" },
+  hover: { background: "#FFC6DE", foreground: "#242027" },
+  border: "#3B2F33",
   focusRing: "#831843",
 } as const;
 
 export const natoriSoftActionClassName =
-  "bg-[#FFE4EF] text-[#242027] border-[#EC4899] hover:bg-[#FFD3E2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#831843]";
+  "bg-[#FFD3E2] text-[#242027] border-[#3B2F33] hover:bg-[#FFC6DE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#831843]";

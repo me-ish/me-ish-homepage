@@ -46,6 +46,22 @@ export default function PortfolioStyles() {
         z-index: -1;
       }
       .pf-marker { isolation: isolate; }
+      /* 「貼った紙」ボタン。手描き枠と同じ線で囲い、右下に紙の厚みの影を落とす。押すと沈んで影が縮む。
+         枠の色と塗りは各ボタンの class / style で決める（濃いピンクの送信ボタンにも同じ厚みを付けるため）。 */
+      .pf-btn {
+        border-width: 2px;
+        border-style: solid;
+        border-radius: 18px 14px 20px 13px / 14px 19px 13px 20px;
+        box-shadow: 4px 4px 0 ${c.ink};
+        transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.15s ease;
+      }
+      .pf-btn-sm { box-shadow: 3px 3px 0 ${c.ink}; }
+      .pf-btn:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 ${c.ink}; }
+      .pf-btn-sm:hover:not(:disabled) { box-shadow: 4px 4px 0 ${c.ink}; }
+      .pf-btn:active:not(:disabled), .pf-btn-sm:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 1px 1px 0 ${c.ink}; }
+      .pf-btn:disabled { box-shadow: none; transform: none; }
+      .pf-btn-arrow { display: inline-block; margin-left: 0.4em; transition: transform 0.15s ease; }
+      .pf-btn:hover:not(:disabled) .pf-btn-arrow { transform: translateX(2px); }
       .pf-pin-card { transition: transform 0.25s ease; }
       .pf-pin-card:hover, .pf-pin-card:focus-within { transform: translateY(-4px); }
       .pf-portfolio-root #gallery .pf-pin-card > button > img[alt] {
@@ -99,6 +115,10 @@ export default function PortfolioStyles() {
         .pf-floaty, .pf-wobble { animation: none; }
         .pf-pin-card { transition: none; }
         .pf-pin-card:hover, .pf-pin-card:focus-within { transform: none; }
+        .pf-btn, .pf-btn-arrow { transition: none; }
+        .pf-btn:hover:not(:disabled) { transform: none; box-shadow: 4px 4px 0 ${c.ink}; }
+        .pf-btn-sm:hover:not(:disabled) { box-shadow: 3px 3px 0 ${c.ink}; }
+        .pf-btn:hover:not(:disabled) .pf-btn-arrow { transform: none; }
         .pf-choice-control { transition: none; }
       }
       @media (forced-colors: active) {

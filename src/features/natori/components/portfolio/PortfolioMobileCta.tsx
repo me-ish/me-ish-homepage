@@ -49,13 +49,13 @@ export default function PortfolioMobileCta({ href = "/natori/portfolio/contact" 
     <a
       href={href}
       onClick={() => trackNatoriPageEvent("portfolio_primary_cta_click", "mobile_sticky")}
-      className={`${natoriSoftActionClassName} pf-cute-focus fixed right-5 z-40 inline-flex min-h-[44px] items-center rounded-full border-2 px-4 py-2 text-sm font-black shadow-md md:hidden`}
+      className={`${natoriSoftActionClassName} pf-btn pf-btn-sm pf-cute-focus fixed right-5 z-40 inline-flex min-h-[44px] items-center px-4 py-2 text-sm font-black md:hidden`}
       style={{
         bottom: "calc(1.25rem + env(safe-area-inset-bottom))",
-        boxShadow: `0 6px 16px ${c.shadowFloating}`,
       }}
     >
       相談・見積もり
+      <span aria-hidden="true" className="pf-btn-arrow">→</span>
     </a>
   );
 }

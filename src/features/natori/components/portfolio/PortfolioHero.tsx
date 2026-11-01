@@ -118,20 +118,21 @@ export default function PortfolioHero({
                 ))}
               </dl>
             ) : null}
-            <div className={`flex flex-wrap gap-3 ${hasArt ? "" : "md:justify-center"}`}>
+            <div className={`flex flex-col gap-3 sm:flex-row sm:flex-wrap ${hasArt ? "" : "md:justify-center"}`}>
               {showcase ? null : (
                 <PortfolioHeroPrimaryCta
                   href={contactPath}
-                  className={`${natoriSoftActionClassName} pf-cute-focus inline-flex min-h-12 flex-1 items-center justify-center rounded-full border-2 px-6 py-3 text-base font-black sm:flex-none`}
+                  className={`${natoriSoftActionClassName} pf-btn pf-cute-focus inline-flex min-h-12 w-full items-center justify-center px-6 py-3 text-base font-black sm:w-auto`}
                   style={{}}
                 />
               )}
               <a
                 href="#gallery"
-                className="pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-full border-2 px-5 py-3 font-bold sm:px-6"
-                style={{ background: c.surface, borderColor: c.action, color: c.text }}
+                className="pf-btn pf-cute-focus inline-flex min-h-12 w-full items-center justify-center px-5 py-3 font-bold sm:w-auto sm:px-6"
+                style={{ background: c.surface, borderColor: c.ink, color: c.text }}
               >
                 作品を見る
+                <span aria-hidden="true" className="pf-btn-arrow">↓</span>
               </a>
             </div>
           </div>

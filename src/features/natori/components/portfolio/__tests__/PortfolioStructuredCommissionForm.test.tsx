@@ -847,7 +847,7 @@ describe("アクセシビリティ / モバイル想定 DOM", () => {
 
     const submitButton = screen.getByRole("button", { name: "内容を確認する" });
     expect(submitButton.className).toContain("font-black");
-    expect(submitButton.className).toContain("border-2");
+    expect(submitButton.className).toContain("pf-btn");
     expect(submitButton.style.background).toBe("");
     expect(submitButton.className).toContain("bg-[#BE185D]");
     expect(submitButton.className).toContain("disabled:opacity-100");

@@ -84,7 +84,7 @@ export default function PortfolioLanding({
             </p>
             {/* 入口はほかの主ボタンと同じ「相談・見積もり」1つにし、相談か見積もりかはフォームの中で選んでもらう。 */}
             {content.commissionOpen && <div className="mt-6 flex justify-center">
-              <a href={directContactPath} className={`${natoriSoftActionClassName} pf-cute-focus inline-flex min-h-12 items-center justify-center rounded-full border-2 px-8 py-2 font-bold`}>相談・見積もり</a>
+              <a href={directContactPath} className={`${natoriSoftActionClassName} pf-btn pf-cute-focus inline-flex min-h-12 items-center justify-center px-8 py-2 font-bold`}>相談・見積もり<span aria-hidden="true" className="pf-btn-arrow">→</span></a>
             </div>}
           </section>
           {content.commissionOpen ? <PortfolioMobileCta href={directContactPath} /> : null}
